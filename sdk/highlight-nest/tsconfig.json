@@ -1,0 +1,23 @@
+{
+	"compilerOptions": {
+		"experimentalDecorators": true,
+		"types": [
+			"@highlight-run/node",
+			"jest"
+		],
+		"target": "ES6",
+		"skipLibCheck": true,
+		"allowSyntheticDefaultImports": true,
+		"strict": true,
+		"forceConsistentCasingInFileNames": true,
+		"module": "ES6",
+		"outDir": "dist",
+		"removeComments": true,
+		"declaration": true,
+		"declarationDir": "dist",
+		"moduleResolution": "node",
+		"resolveJsonModule": true,
+		"jsx": "react"
+	},
+	"include": ["src/**/*"]
+}

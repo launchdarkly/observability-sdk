@@ -1,0 +1,168 @@
+{
+	"$schema": "https://turborepo.org/schema.json",
+	"tasks": {
+		"@highlight-run/client#typegen": {
+			"dependsOn": [
+				"rrweb#build",
+				"@rrweb/rrweb-plugin-sequential-id-record#build",
+				"@rrweb/types#build"
+			],
+			"inputs": ["src/**/*.tsx", "src/**/*.ts", "tsconfig.json"],
+			"outputs": ["dist/**/*.d.ts"]
+		},
+		"highlight.run#typegen": {
+			"dependsOn": [
+				"rrweb#build",
+				"@rrweb/rrweb-plugin-sequential-id-record#build",
+				"@rrweb/types#build",
+				"@highlight-run/client#typegen"
+			],
+			"inputs": ["src/**/*.tsx", "src/**/*.ts", "tsconfig.json"],
+			"outputs": ["dist/**/*.d.ts"]
+		},
+		"highlight.io#lint": {
+			"dependsOn": ["^build"]
+		},
+		"nextjs#lint": {
+			"dependsOn": ["^build"]
+		},
+		"codegen": {
+			"inputs": ["./**/*.gql", "./**/*.graphqls"],
+			"outputs": ["src/graph/generated/**"],
+			"cache": false
+		},
+		"typegen": {
+			"dependsOn": ["^typegen", "codegen"],
+			"inputs": [
+				"src/**/*.tsx",
+				"src/**/*.ts",
+				"tsconfig.json",
+				"tsconfig.tsbuildinfo",
+				"./**/*.graphqls"
+			],
+			"outputs": [
+				"lib/**/*.d.ts",
+				"es/**/*.d.ts",
+				"dist/**/*.d.ts",
+				"typings/**/*.d.ts",
+				"build/**/*.d.ts",
+				"esm/**/*.d.ts"
+			]
+		},
+		"reflame": {
+			"dependsOn": [],
+			"cache": false
+		},
+		"reflame-build": {
+			"dependsOn": [],
+			"cache": false
+		},
+		"build": {
+			"dependsOn": ["^build", "typegen"],
+			"outputs": [
+				".next/**",
+				"lib/**",
+				"es/**",
+				"dist/**",
+				"typings/**",
+				"build/**",
+				"esm/**"
+			],
+			"env": [
+				"REACT_APP_AUTH_MODE",
+				"REACT_APP_COMMIT_SHA",
+				"REACT_APP_FIREBASE_CONFIG_OBJECT",
+				"REACT_APP_FRONTEND_ORG",
+				"REACT_APP_FRONTEND_URI",
+				"REACT_APP_DISABLE_ANALYTICS",
+				"REACT_APP_IN_DOCKER",
+				"REACT_APP_PRIVATE_GRAPH_URI",
+				"REACT_APP_PUBLIC_GRAPH_URI",
+				"REACT_APP_STRIPE_API_PK",
+				"REACT_APP_VERCEL_INTEGRATION_NAME",
+				"REACT_APP_OTLP_ENDPOINT",
+
+				"CLICKUP_CLIENT_ID",
+				"DEMO_PROJECT_ID",
+				"DISCORD_CLIENT_ID",
+				"GITHUB_CLIENT_ID",
+				"GITLAB_CLIENT_ID",
+				"HEIGHT_CLIENT_ID",
+				"JIRA_CLIENT_ID",
+				"LINEAR_CLIENT_ID",
+				"MICROSOFT_TEAMS_BOT_ID",
+				"SLACK_CLIENT_ID",
+
+				"SSL"
+			]
+		},
+		"dev": {
+			"dependsOn": ["^build", "typegen"],
+			"env": [
+				"REACT_APP_AUTH_MODE",
+				"REACT_APP_COMMIT_SHA",
+				"REACT_APP_DISABLE_ANALYTICS",
+				"REACT_APP_FIREBASE_CONFIG_OBJECT",
+				"REACT_APP_FRONTEND_ORG",
+				"REACT_APP_FRONTEND_URI",
+				"REACT_APP_IN_DOCKER",
+				"REACT_APP_PRIVATE_GRAPH_URI",
+				"REACT_APP_PUBLIC_GRAPH_URI",
+				"REACT_APP_STRIPE_API_PK",
+				"REACT_APP_VERCEL_INTEGRATION_NAME",
+				"REACT_APP_OTLP_ENDPOINT",
+
+				"CLICKUP_CLIENT_ID",
+				"DEMO_PROJECT_ID",
+				"DISCORD_CLIENT_ID",
+				"GITHUB_CLIENT_ID",
+				"GITLAB_CLIENT_ID",
+				"HEIGHT_CLIENT_ID",
+				"JIRA_CLIENT_ID",
+				"LINEAR_CLIENT_ID",
+				"MICROSOFT_TEAMS_BOT_ID",
+				"SLACK_CLIENT_ID",
+
+				"SSL"
+			],
+			"cache": false,
+			"persistent": true
+		},
+		"dev:watch": {
+			"cache": false,
+			"persistent": true
+		},
+		"enforce-size": {
+			"dependsOn": ["build"]
+		},
+		"lint": {
+			"outputs": [],
+			"inputs": ["**/*.ts*"]
+		},
+		"test": {
+			"dependsOn": ["lint", "build", "enforce-size"],
+			"env": [
+				"AWS_ACCESS_KEY_ID",
+				"AWS_SECRET_ACCESS_KEY",
+				"PSQL_DB",
+				"PSQL_HOST",
+				"PSQL_PASSWORD",
+				"PSQL_PORT",
+				"PSQL_USER"
+			],
+			"outputs": [],
+			"inputs": [
+				"src/**/*.tsx",
+				"src/**/*.ts",
+				"test/**/*.ts",
+				"test/**/*.tsx"
+			]
+		},
+		"sourcemaps": {
+			"dependsOn": ["test"],
+			"env": ["HIGHLIGHT_API_KEY"]
+		}
+	},
+	"globalEnv": ["DOPPLER_TOKEN"],
+	"globalDependencies": ["yarn.lock", "tsconfig.json"]
+}

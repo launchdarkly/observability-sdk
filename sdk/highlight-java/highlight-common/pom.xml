@@ -1,0 +1,49 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<parent>
+		<groupId>io.highlight</groupId>
+		<artifactId>highlight</artifactId>
+		<version>${revision}</version>
+	</parent>
+
+	<artifactId>highlight-common</artifactId>
+
+	<name>Highlight Java Common</name>
+	<description>highlight.io is a monitoring tool for the next generation of
+		developers (like you!). Unlike the age-old, outdated tools out there, we
+		aim to build a cohesive, modern and fully-featured monitoring solution,
+		something we wished WE had. And it's all open source :)</description>
+	<url>https://github.com/highlight/highlight</url>
+	<inceptionYear>2023</inceptionYear>
+
+	<licenses>
+		<license>
+			<name>The Apache Software License, Version 2.0</name>
+			<url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+		</license>
+	</licenses>
+
+	<properties>
+		<maven.install.skip>false</maven.install.skip>
+		<maven.deploy.skip>false</maven.deploy.skip>
+		<skipStaging>false</skipStaging>
+	</properties>
+
+	<dependencies>
+		<dependency>
+			<groupId>io.opentelemetry</groupId>
+			<artifactId>opentelemetry-api</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>io.opentelemetry</groupId>
+			<artifactId>opentelemetry-sdk-trace</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>io.opentelemetry</groupId>
+			<artifactId>opentelemetry-sdk-logs</artifactId>
+		</dependency>
+	</dependencies>
+</project>

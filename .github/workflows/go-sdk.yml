@@ -1,0 +1,76 @@
+name: 'Golang SDK code checks'
+
+on:
+    push:
+        branches: ['main']
+    pull_request:
+        types: [opened, reopened, synchronize, assigned, review_requested]
+        paths:
+            - 'sdk/highlight-go/**'
+            - '.github/workflows/go-sdk.yml'
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+jobs:
+    format:
+        name: format go files
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+            - name: Setup Go
+              uses: actions/setup-go@v5
+              with:
+                  go-version-file: './sdk/highlight-go/go.mod'
+                  cache-dependency-path: './sdk/highlight-go/go.sum'
+            - name: Format
+              uses: Jerome1337/gofmt-action@v1.0.5
+              with:
+                  gofmt-path: './sdk/highlight-go'
+                  gofmt-flags: '-l -d'
+
+    lint:
+        name: lint go files
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+            - name: Setup Go
+              uses: actions/setup-go@v5
+              with:
+                  go-version-file: './sdk/highlight-go/go.mod'
+                  cache-dependency-path: './sdk/highlight-go/go.sum'
+            - name: Run linter
+              uses: golangci/golangci-lint-action@v6.4.1
+              with:
+                  args: -v --config ./.golangci.yaml
+                  working-directory: sdk/highlight-go
+                  version: latest
+
+    build:
+        name: build binary
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+            - name: Setup Go
+              uses: actions/setup-go@v5
+              with:
+                  go-version-file: './sdk/highlight-go/go.mod'
+                  cache-dependency-path: './sdk/highlight-go/go.sum'
+            - name: Build binary
+              run: cd sdk/highlight-go && go build .
+
+    test-and-cov:
+        name: run tests and generate code coverage profile
+        needs: [build]
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+            - name: Setup Go
+              uses: actions/setup-go@v5
+              with:
+                  go-version-file: './sdk/highlight-go/go.mod'
+                  cache-dependency-path: './sdk/highlight-go/go.sum'
+            - name: Run tests
+              run: cd sdk/highlight-go && go test -race -covermode=atomic -coverprofile=coverage.out --v

@@ -1,0 +1,24 @@
+{
+    //	name of the dev container
+    "name": "highlight-php-sdk-container",
+
+    "build": {
+        // Path is relative to the devcontainer.json file.
+        "dockerfile": "Dockerfile"
+    },
+
+    // Configure tool-specific properties.
+    "customizations": {
+        // Configure properties specific to VS Code.
+        "vscode": {
+            "settings": {},
+            "extensions": [
+                "bmewburn.vscode-intelephense-client",
+                "xdebug.php-debug"
+            ]
+        }
+    },
+
+    // Use 'postCreateCommand' to run commands after the container is created.
+    "postCreateCommand": "php --ri opentelemetry && composer install && composer test"
+}

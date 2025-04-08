@@ -1,0 +1,125 @@
+mutation PushPayload(
+	$session_secure_id: String!
+	$payload_id: ID!
+	$events: ReplayEventsInput!
+	$messages: String!
+	$resources: String!
+	$web_socket_events: String!
+	$errors: [ErrorObjectInput]!
+	$is_beacon: Boolean
+	$has_session_unloaded: Boolean
+	$highlight_logs: String
+) {
+	pushPayload(
+		session_secure_id: $session_secure_id
+		payload_id: $payload_id
+		events: $events
+		messages: $messages
+		resources: $resources
+		web_socket_events: $web_socket_events
+		errors: $errors
+		is_beacon: $is_beacon
+		has_session_unloaded: $has_session_unloaded
+		highlight_logs: $highlight_logs
+	)
+}
+
+mutation PushPayloadCompressed(
+	$session_secure_id: String!
+	$payload_id: ID!
+	$data: String!
+) {
+	pushPayloadCompressed(
+		session_secure_id: $session_secure_id
+		payload_id: $payload_id
+		data: $data
+	)
+}
+
+mutation identifySession(
+	$session_secure_id: String!
+	$user_identifier: String!
+	$user_object: Any
+) {
+	identifySession(
+		session_secure_id: $session_secure_id
+		user_identifier: $user_identifier
+		user_object: $user_object
+	)
+}
+
+mutation addSessionProperties(
+	$session_secure_id: String!
+	$properties_object: Any
+) {
+	addSessionProperties(
+		session_secure_id: $session_secure_id
+		properties_object: $properties_object
+	)
+}
+
+mutation pushMetrics($metrics: [MetricInput]!) {
+	pushMetrics(metrics: $metrics)
+}
+
+mutation addSessionFeedback(
+	$session_secure_id: String!
+	$user_name: String
+	$user_email: String
+	$verbatim: String!
+	$timestamp: Timestamp!
+) {
+	addSessionFeedback(
+		session_secure_id: $session_secure_id
+		user_name: $user_name
+		user_email: $user_email
+		verbatim: $verbatim
+		timestamp: $timestamp
+	)
+}
+
+mutation initializeSession(
+	$session_secure_id: String!
+	$organization_verbose_id: String!
+	$enable_strict_privacy: Boolean!
+	$privacy_setting: String!
+	$enable_recording_network_contents: Boolean!
+	$clientVersion: String!
+	$firstloadVersion: String!
+	$clientConfig: String!
+	$environment: String!
+	$id: String!
+	$appVersion: String
+	$serviceName: String!
+	$client_id: String!
+	$network_recording_domains: [String!]
+	$disable_session_recording: Boolean
+) {
+	initializeSession(
+		session_secure_id: $session_secure_id
+		organization_verbose_id: $organization_verbose_id
+		enable_strict_privacy: $enable_strict_privacy
+		enable_recording_network_contents: $enable_recording_network_contents
+		clientVersion: $clientVersion
+		firstloadVersion: $firstloadVersion
+		clientConfig: $clientConfig
+		environment: $environment
+		appVersion: $appVersion
+		serviceName: $serviceName
+		fingerprint: $id
+		client_id: $client_id
+		network_recording_domains: $network_recording_domains
+		disable_session_recording: $disable_session_recording
+		privacy_setting: $privacy_setting
+	) {
+		secure_id
+		project_id
+	}
+}
+
+# The gql codegen library requires a query in the schema, so this is just a placeholder.
+# Tangentially related:
+# https://github.com/dotansimha/graphql-code-generator/issues/3268
+query Ignore($id: ID!) {
+	ignore(id: $id)
+}

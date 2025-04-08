@@ -1,0 +1,21 @@
+{
+	"compilerOptions": {
+		"allowSyntheticDefaultImports": true,
+		"declaration": true,
+		"declarationDir": "dist",
+		"declarationMap": true,
+		"forceConsistentCasingInFileNames": true,
+		"lib": ["ESNext"],
+		"module": "ESNext",
+		"target": "ESNext",
+		"moduleResolution": "Node",
+		"skipLibCheck": true,
+		"strict": true,
+		"resolveJsonModule": true,
+		"typeRoots": ["./node_modules/@types"]
+	},
+	"include": ["src"],
+	"references": [{
+		"path": "../firstload"
+	}]
+}
