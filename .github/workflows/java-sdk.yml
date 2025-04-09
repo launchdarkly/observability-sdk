@@ -22,9 +22,6 @@ on:
             - 'sdk/highlight-java/**'
             - '.github/workflows/java-sdk.yml'
 
-permissions:
-    checks: write
-
 defaults:
     run:
         working-directory: ./sdk/highlight-java
