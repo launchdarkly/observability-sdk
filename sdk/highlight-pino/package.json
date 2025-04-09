@@ -33,7 +33,8 @@
 	},
 	"homepage": "https://github.com/highlight-run/highlight#readme",
 	"dependencies": {
-		"@highlight-run/node": "workspace: *"
+		"@highlight-run/node": "workspace: *",
+		"pino-abstract-transport": "^2.0.0"
 	},
 	"devDependencies": {
 		"tsup": "^8.3.6"

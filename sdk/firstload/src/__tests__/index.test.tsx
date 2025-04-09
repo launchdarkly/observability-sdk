@@ -1,6 +1,6 @@
 import { H } from 'highlight.run'
 import { HighlightPublicInterface } from '../../../client/src/types/types'
-import { LDClientMin } from '@highlight-run/client/src/integrations/launchdarkly'
+import { LDClientMin } from '../../../client/src/integrations/launchdarkly/types/LDClient'
 
 // Don't run tests for now. Need to move code from firstload to client for backend errors.
 describe.skip('should work outside of the browser in unit test', () => {

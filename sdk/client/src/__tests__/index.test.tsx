@@ -1,5 +1,5 @@
 import { Highlight } from '../index'
-import { LDClientMin } from '../integrations/launchdarkly'
+import { LDClientMin } from '../integrations/launchdarkly/types/LDClient'
 import { vi } from 'vitest'
 
 describe('LD integration', () => {

@@ -8,7 +8,6 @@
 		"esModuleInterop": true,
 		"allowSyntheticDefaultImports": true,
 		"baseUrl": "src",
-		"strict": true,
 		"forceConsistentCasingInFileNames": true,
 		"declaration": true,
 		"declarationDir": "dist",
@@ -19,7 +18,12 @@
 		"isolatedModules": true,
 		"jsx": "react",
 		"downlevelIteration": true,
-		"composite": true
+		"composite": true,
+		/* Linting */
+		"strict": true,
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
+		"noFallthroughCasesInSwitch": true
 	},
 	"include": ["src"],
 	"exclude": ["src/**/*.test.tsx"],
