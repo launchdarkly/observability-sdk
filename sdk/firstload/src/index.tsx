@@ -1,6 +1,7 @@
 import type {
 	Highlight,
 	HighlightClassOptions,
+	RequestResponsePair,
 } from '@highlight-run/client/src'
 import type {
 	HighlightOptions,
@@ -40,7 +41,8 @@ import { initializeFetchListener } from './listeners/fetch'
 import { initializeWebSocketListener } from './listeners/web-socket'
 import { getNoopSpan } from '@highlight-run/client/src/otel/utils.js'
 import { setupLaunchDarklyIntegration } from '@highlight-run/client/src/integrations/launchdarkly'
-import type { LDClientMin } from '@highlight-run/client/src/integrations/launchdarkly/types/LDClient'
+import { LDClientMin } from '@highlight-run/client/src/integrations/launchdarkly/types/LDClient'
+import { ViewportResizeListenerArgs } from '@highlight-run/client/src/listeners/viewport-resize-listener.js'
 
 enum MetricCategory {
 	Device = 'Device',
@@ -644,9 +646,16 @@ const __testing = {
 
 export {
 	configureElectronHighlight,
+	GenerateSecureID,
 	H,
 	HighlightSegmentMiddleware,
 	MetricCategory,
 	__testing,
 }
-export type { HighlightOptions, LDClientMin }
+export type {
+	HighlightOptions,
+	LDClientMin,
+	ViewportResizeListenerArgs,
+	Metadata,
+	RequestResponsePair,
+}

@@ -11,16 +11,11 @@
 		"sdk/*"
 	],
 	"scripts": {
-		"build": "yarn turbo run build",
-		"cy:run": "cypress run",
-		"cy:run:chrome": "cypress run --headed --browser chrome",
-		"reflame": "cd frontend && yarn reflame",
-		"reflame-build": "cd frontend && yarn reflame-build",
-		"reflame-check": "./scripts/reflame-check.sh",
+		"build": "yarn turbo run build --filter '!@rrweb/web-extension'",
 		"e2e:cloudflare": "yarn turbo run dev --filter cloudflare-worker...",
 		"e2e:express": "yarn turbo run dev --filter express...",
 		"e2e:nestjs": "yarn turbo run dev --filter nestjs",
-		"e2e:nextjs": "yarn turbo run dev --filter nextjs... --filter=!@highlight-run/client --filter=!highlight.run",
+		"e2e:nextjs": "yarn turbo run dev --filter nextjs...",
 		"e2e:remix": "yarn turbo run dev --filter remix...",
 		"enforce-size": "yarn turbo run enforce-size --filter highlight.run...",
 		"format-check": "prettier --check --ignore-unknown .",
@@ -28,14 +23,12 @@
 		"lint": "yarn run turbo lint --filter=!rrweb --filter=!@rrweb/types --filter=!rrweb-snapshot --filter=!rrweb-player --filter=!rrdom --filter=!rrdom-nodejs --filter=!react-native",
 		"prepare": "husky",
 		"preinstall": "git submodule update --init --recursive || true",
-		"validate": "yarn workspace scripts validate:client",
 		"publish": "yarn workspaces foreach -R --no-private --from '@highlight-run/*' npm publish --access public --tolerate-republish && yarn workspace highlight.run npm publish --access public --tolerate-republish",
-		"test": "yarn turbo run test --filter=!render --filter=!rrweb --filter=!rrvideo --filter=!@rrweb/rrweb-plugin-console-record --filter=!@rrweb/_monorepo --filter=!@rrweb/all --filter=!@rrweb/record --filter=!@rrweb/replay --filter=!@rrweb/types --filter=!@rrweb/packer --filter=!@rrweb/utils --filter=!@rrweb/web-extension --filter=!rrweb-snapshot --filter=!rrweb-player --filter=!rrdom --filter=!rrdom-nodejs --filter=!nextjs"
+		"test": "yarn turbo run test --filter=!rrweb --filter=!rrvideo --filter=!@rrweb/rrweb-plugin-console-record --filter=!@rrweb/_monorepo --filter=!@rrweb/all --filter=!@rrweb/record --filter=!@rrweb/replay --filter=!@rrweb/types --filter=!@rrweb/packer --filter=!@rrweb/utils --filter=!@rrweb/web-extension --filter=!rrweb-snapshot --filter=!rrweb-player --filter=!rrdom --filter=!rrdom-nodejs --filter=!nextjs"
 	},
 	"devDependencies": {
 		"@changesets/cli": "^2.28.1",
 		"@types/node": "^22.14.0",
-		"cypress": "^14.2.1",
 		"husky": "^9.1.7",
 		"prettier": "^3.5.3",
 		"pretty-quick": "^4.1.1",

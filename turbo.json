@@ -49,14 +49,6 @@
 				"esm/**/*.d.ts"
 			]
 		},
-		"reflame": {
-			"dependsOn": [],
-			"cache": false
-		},
-		"reflame-build": {
-			"dependsOn": [],
-			"cache": false
-		},
 		"build": {
 			"dependsOn": ["^build", "typegen"],
 			"outputs": [
@@ -67,64 +59,10 @@
 				"typings/**",
 				"build/**",
 				"esm/**"
-			],
-			"env": [
-				"REACT_APP_AUTH_MODE",
-				"REACT_APP_COMMIT_SHA",
-				"REACT_APP_FIREBASE_CONFIG_OBJECT",
-				"REACT_APP_FRONTEND_ORG",
-				"REACT_APP_FRONTEND_URI",
-				"REACT_APP_DISABLE_ANALYTICS",
-				"REACT_APP_IN_DOCKER",
-				"REACT_APP_PRIVATE_GRAPH_URI",
-				"REACT_APP_PUBLIC_GRAPH_URI",
-				"REACT_APP_STRIPE_API_PK",
-				"REACT_APP_VERCEL_INTEGRATION_NAME",
-				"REACT_APP_OTLP_ENDPOINT",
-
-				"CLICKUP_CLIENT_ID",
-				"DEMO_PROJECT_ID",
-				"DISCORD_CLIENT_ID",
-				"GITHUB_CLIENT_ID",
-				"GITLAB_CLIENT_ID",
-				"HEIGHT_CLIENT_ID",
-				"JIRA_CLIENT_ID",
-				"LINEAR_CLIENT_ID",
-				"MICROSOFT_TEAMS_BOT_ID",
-				"SLACK_CLIENT_ID",
-
-				"SSL"
 			]
 		},
 		"dev": {
 			"dependsOn": ["^build", "typegen"],
-			"env": [
-				"REACT_APP_AUTH_MODE",
-				"REACT_APP_COMMIT_SHA",
-				"REACT_APP_DISABLE_ANALYTICS",
-				"REACT_APP_FIREBASE_CONFIG_OBJECT",
-				"REACT_APP_FRONTEND_ORG",
-				"REACT_APP_FRONTEND_URI",
-				"REACT_APP_IN_DOCKER",
-				"REACT_APP_PRIVATE_GRAPH_URI",
-				"REACT_APP_PUBLIC_GRAPH_URI",
-				"REACT_APP_STRIPE_API_PK",
-				"REACT_APP_VERCEL_INTEGRATION_NAME",
-				"REACT_APP_OTLP_ENDPOINT",
-
-				"CLICKUP_CLIENT_ID",
-				"DEMO_PROJECT_ID",
-				"DISCORD_CLIENT_ID",
-				"GITHUB_CLIENT_ID",
-				"GITLAB_CLIENT_ID",
-				"HEIGHT_CLIENT_ID",
-				"JIRA_CLIENT_ID",
-				"LINEAR_CLIENT_ID",
-				"MICROSOFT_TEAMS_BOT_ID",
-				"SLACK_CLIENT_ID",
-
-				"SSL"
-			],
 			"cache": false,
 			"persistent": true
 		},
@@ -164,5 +102,5 @@
 		}
 	},
 	"globalEnv": ["DOPPLER_TOKEN"],
-	"globalDependencies": ["yarn.lock", "tsconfig.json"]
+	"globalDependencies": ["yarn.lock"]
 }
