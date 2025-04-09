@@ -21,6 +21,8 @@ jobs:
         steps:
             - name: Checkout
               uses: actions/checkout@v4
+              with:
+                  token: ${{ secrets.GITHUB_TOKEN }}
 
             - name: Setup .NET environment
               uses: actions/setup-dotnet@v4
@@ -45,6 +47,8 @@ jobs:
         steps:
             - name: Checkout
               uses: actions/checkout@v4
+              with:
+                  token: ${{ secrets.GITHUB_TOKEN }}
 
             - name: Setup dotnet
               uses: actions/setup-dotnet@v4
