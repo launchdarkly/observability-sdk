@@ -17,13 +17,10 @@ on:
         branches: ['main']
         tags: ['sdk/highlight-java/**']
     pull_request:
-        types: [opened, reopened, synchronize, assigned, review_requested]
+        types: [opened, synchronize]
         paths:
             - 'sdk/highlight-java/**'
             - '.github/workflows/java-sdk.yml'
-
-permissions:
-    checks: write
 
 defaults:
     run:
@@ -43,7 +40,7 @@ jobs:
             - name: Checkout Code
               uses: actions/checkout@v4
               with:
-                  fetch-depth: 0
+                  token: ${{ secrets.GITHUB_TOKEN }}
 
             - name: Deployment running
               id: deploy
@@ -104,7 +101,7 @@ jobs:
             - name: Checkout Code
               uses: actions/checkout@v4
               with:
-                  fetch-depth: 0
+                  token: ${{ secrets.GITHUB_TOKEN }}
 
             - name: Set up JDK 17
               uses: actions/setup-java@v4
@@ -135,7 +132,7 @@ jobs:
             - name: Checkout Code
               uses: actions/checkout@v4
               with:
-                  fetch-depth: 0
+                  token: ${{ secrets.GITHUB_TOKEN }}
 
             - name: Set up JDK 17
               uses: actions/setup-java@v4
@@ -172,7 +169,7 @@ jobs:
             - name: Checkout Code
               uses: actions/checkout@v4
               with:
-                  fetch-depth: 0
+                  token: ${{ secrets.GITHUB_TOKEN }}
 
             - name: Set up JDK 17
               uses: actions/setup-java@v4

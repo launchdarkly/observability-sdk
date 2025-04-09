@@ -22,7 +22,6 @@ jobs:
               with:
                   token: ${{ secrets.SUBMODULE_PAT }}
                   submodules: recursive
-                  fetch-depth: 0
 
             # automatically caches dependencies based on yarn.lock
             - name: Setup Node.js environment

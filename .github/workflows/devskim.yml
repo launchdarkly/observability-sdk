@@ -18,13 +18,11 @@ jobs:
     lint:
         name: DevSkim
         runs-on: ubuntu-latest
-        permissions:
-            actions: read
-            contents: read
-            security-events: write
         steps:
             - name: Checkout code
               uses: actions/checkout@v4
+              with:
+                  token: ${{ secrets.GITHUB_TOKEN }}
 
             - name: Run DevSkim scanner
               uses: microsoft/DevSkim-Action@v1
