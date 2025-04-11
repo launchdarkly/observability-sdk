@@ -21,7 +21,7 @@ jobs:
               with:
                   repo_keys_map: |
                       {
-                        "launchdarkly/pre-commit-hooks": ${{ toJSON(secrets.LAUNCHDARKLY_RRWEB_DEPLOY_KEY) }}
+                        "launchdarkly/rrweb": ${{ toJSON(secrets.LAUNCHDARKLY_RRWEB_DEPLOY_KEY) }}
                       }
             - name: Checkout
               uses: actions/checkout@v4
