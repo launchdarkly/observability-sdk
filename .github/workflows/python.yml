@@ -14,7 +14,7 @@ concurrency: ${{ github.workflow }}-${{ github.ref }}
 jobs:
     build:
         name: Python SDK
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-22.04-8core-32gb
         defaults:
             run:
                 working-directory: ./sdk/highlight-py
@@ -55,7 +55,7 @@ jobs:
 
     e2e:
         name: Validate E2E tests
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-22.04-8core-32gb
         defaults:
             run:
                 working-directory: ./e2e/tests

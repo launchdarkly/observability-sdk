@@ -30,7 +30,7 @@ concurrency: ${{ github.workflow }}-${{ github.ref }}
 jobs:
     setup:
         name: Setup
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-22.04-8core-32gb
         outputs:
             version: ${{ steps.version.outputs.version }}
             deploy: ${{ steps.deploy.outputs.deploy }}
@@ -91,7 +91,7 @@ jobs:
 
     build:
         name: Build
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-22.04-8core-32gb
         needs: setup
         if: ${{ needs.setup.outputs.build == 'true' }}
         defaults:
@@ -122,7 +122,7 @@ jobs:
 
     test:
         name: Test
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-22.04-8core-32gb
         needs: setup
         if: ${{ needs.setup.outputs.test == 'true' }}
         defaults:
@@ -159,7 +159,7 @@ jobs:
 
     deploy:
         name: Deploy
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-22.04-8core-32gb
         needs: [setup, build, test]
         if: ${{ needs.setup.outputs.deploy == 'true' }}
         defaults:
