@@ -18,12 +18,6 @@ jobs:
 
         steps:
             - uses: actions/checkout@v4
-            - uses: launchdarkly/common-actions/ssh-key-by-repo@main
-              with:
-                  repo_keys_map: |
-                      {
-                        "launchdarkly/rrweb": ${{ toJSON(secrets.LAUNCHDARKLY_RRWEB_DEPLOY_KEY) }}
-                      }
 
             - name: Install poetry
               run: pipx install poetry

@@ -24,6 +24,9 @@ jobs:
                       {
                         "launchdarkly/rrweb": ${{ toJSON(secrets.LAUNCHDARKLY_RRWEB_DEPLOY_KEY) }}
                       }
+            - uses: actions/checkout@v4
+              with:
+                  submodules: 'recursive'
 
             # automatically caches dependencies based on yarn.lock
             - name: Setup Node.js environment
