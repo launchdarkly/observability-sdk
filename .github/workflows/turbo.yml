@@ -45,7 +45,7 @@ jobs:
               run: yarn format-check
 
             - name: Build & test (in a fork without doppler)
-              run: yarn test:all
+              run: yarn test
               env:
                   NEXT_PUBLIC_HIGHLIGHT_PROJECT_ID: 1jdkoe52
                   REACT_APP_COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
