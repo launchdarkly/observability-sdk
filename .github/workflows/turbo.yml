@@ -54,7 +54,7 @@ jobs:
                   REACT_APP_COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
             - name: Configure yarn npm registry credentials
-              if: github.ref == 'refs/heads/main'
+              # if: github.ref == 'refs/heads/main'
               run: |
                   yarn config set npmRegistryServer "https://registry.npmjs.org"
                   yarn config set npmAuthToken "${NPM_TOKEN}"
@@ -62,7 +62,7 @@ jobs:
                   NPM_TOKEN: ${{ secrets.NPM_TOKEN_HIGHLIGHT_RUN }}
 
             - name: Publish npm packages
-              if: github.ref == 'refs/heads/main'
+              # if: github.ref == 'refs/heads/main'
               id: changesets-publish
               uses: changesets/action@v1
               with:
@@ -73,7 +73,7 @@ jobs:
                   NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN_HIGHLIGHT_RUN }}
 
             - name: Release changesets
-              if: github.ref == 'refs/heads/main'
+              # if: github.ref == 'refs/heads/main'
               id: changesets-version
               uses: changesets/action@v1
               with:
