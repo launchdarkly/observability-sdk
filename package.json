@@ -10,6 +10,9 @@
 		"rrweb/packages/plugins/*",
 		"sdk/*"
 	],
+	"installConfig": {
+		"hoistingLimits": "workspaces"
+	},
 	"scripts": {
 		"build": "yarn turbo run build --filter '!@rrweb/web-extension'",
 		"e2e:cloudflare": "yarn turbo run dev --filter cloudflare-worker...",
@@ -38,5 +41,5 @@
 	"resolutions": {
 		"ansi-color@^0.2.1": "patch:ansi-color@npm%3A0.2.1#./.yarn/patches/ansi-color-npm-0.2.1-f7243d10a4.patch"
 	},
-	"packageManager": "yarn@4.8.1"
+	"packageManager": "yarn@4.9.1"
 }

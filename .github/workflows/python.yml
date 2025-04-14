@@ -14,7 +14,7 @@ concurrency: ${{ github.workflow }}-${{ github.ref }}
 jobs:
     build:
         name: Python SDK
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-22.04-8core-32gb
         defaults:
             run:
                 working-directory: ./sdk/highlight-py
@@ -34,7 +34,6 @@ jobs:
             - name: Test
               run: poetry run pytest --cov=highlight_io --cov-branch --cov-report xml
             - name: Get Cover
-              if: github.event.pull_request.head.repo.full_name == 'highlight/highlight'
               uses: orgoro/coverage@v3
               with:
                   coverageFile: ./sdk/highlight-py/coverage.xml
@@ -55,7 +54,7 @@ jobs:
 
     e2e:
         name: Validate E2E tests
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-22.04-8core-32gb
         defaults:
             run:
                 working-directory: ./e2e/tests
