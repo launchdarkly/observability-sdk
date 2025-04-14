@@ -11,7 +11,7 @@ jobs:
     e2e-docker:
         name: E2E Dockerized Apps
         timeout-minutes: 60
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-22.04-8core-32gb
         strategy:
             matrix:
                 app: ['dotnet', 'dotnet4', 'go', 'python', 'ruby']
