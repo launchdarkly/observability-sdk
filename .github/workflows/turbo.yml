@@ -11,23 +11,22 @@ jobs:
     yarn-monorepo:
         name: Build Yarn Turborepo
         timeout-minutes: 60
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-22.04-8core-32gb
         # configures turborepo Remote Caching
         env:
             TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
             TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
         steps:
-            - uses: actions/checkout@v4
             - uses: launchdarkly/common-actions/ssh-key-by-repo@main
               with:
                   repo_keys_map: |
                       {
                         "launchdarkly/rrweb": ${{ toJSON(secrets.LAUNCHDARKLY_RRWEB_DEPLOY_KEY) }}
                       }
-            - uses: actions/checkout@v4
-              with:
-                  submodules: 'recursive'
-                  ssh-key: {{ secrets.LAUNCHDARKLY_RRWEB_DEPLOY_KEY }}
+            - uses: launchdarkly/common-actions/init@main
+              env:
+                  GITHUB_TOKEN: ${{ github.token }}
+            - run: git submodule update --init --recursive
 
             # automatically caches dependencies based on yarn.lock
             - name: Setup Node.js environment
