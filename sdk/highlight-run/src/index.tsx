@@ -22,10 +22,7 @@ import {
 } from './integrations/mixpanel.js'
 
 import { HIGHLIGHT_URL } from './client/constants/sessions.js'
-import type {
-	ErrorMessageType,
-	Source,
-} from './client/types/shared-types'
+import type { ErrorMessageType, Source } from './client/types/shared-types'
 import {
 	getPreviousSessionData,
 	loadCookieSessionData,
