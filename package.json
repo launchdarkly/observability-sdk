@@ -10,9 +10,6 @@
 		"rrweb/packages/plugins/*",
 		"sdk/*"
 	],
-	"installConfig": {
-		"hoistingLimits": "workspaces"
-	},
 	"scripts": {
 		"build": "yarn turbo run build --filter '!@rrweb/web-extension'",
 		"e2e:cloudflare": "yarn turbo run dev --filter cloudflare-worker...",

@@ -49,33 +49,3 @@ jobs:
               env:
                   NEXT_PUBLIC_HIGHLIGHT_PROJECT_ID: 1jdkoe52
                   REACT_APP_COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-
-            - name: Configure yarn npm registry credentials
-              if: github.ref == 'refs/heads/main'
-              run: |
-                  yarn config set npmRegistryServer "https://registry.npmjs.org"
-                  yarn config set npmAuthToken "${NPM_TOKEN}"
-              env:
-                  NPM_TOKEN: ${{ secrets.NPM_TOKEN_HIGHLIGHT_RUN }}
-
-            - name: Publish npm packages
-              if: github.ref == 'refs/heads/main'
-              id: changesets-publish
-              uses: changesets/action@v1
-              with:
-                  publish: yarn publish
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-                  NPM_TOKEN: ${{ secrets.NPM_TOKEN_HIGHLIGHT_RUN }}
-                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN_HIGHLIGHT_RUN }}
-
-            - name: Release changesets
-              if: github.ref == 'refs/heads/main'
-              id: changesets-version
-              uses: changesets/action@v1
-              with:
-                  version: yarn changeset version
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-                  NPM_TOKEN: ${{ secrets.NPM_TOKEN_HIGHLIGHT_RUN }}
-                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN_HIGHLIGHT_RUN }}
