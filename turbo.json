@@ -7,7 +7,7 @@
 			"cache": false
 		},
 		"typegen": {
-			"dependsOn": ["^typegen", "codegen"],
+			"dependsOn": ["^typegen"],
 			"inputs": [
 				"src/**/*.tsx",
 				"src/**/*.ts",
