@@ -1,26 +1,6 @@
 {
 	"$schema": "https://turborepo.org/schema.json",
 	"tasks": {
-		"highlight.run#typegen": {
-			"dependsOn": [
-				"rrweb#build",
-				"@rrweb/rrweb-plugin-sequential-id-record#build",
-				"@rrweb/types#build"
-			],
-			"inputs": ["src/**/*.tsx", "src/**/*.ts", "tsconfig.json"],
-			"outputs": ["dist/**/*.d.ts"]
-		},
-		"highlight.io#build": {
-			"dependsOn": ["^build"],
-			"outputs": [".next/**"],
-			"env": ["GRAPHCMS_TOKEN"]
-		},
-		"highlight.io#lint": {
-			"dependsOn": ["^build"]
-		},
-		"nextjs#lint": {
-			"dependsOn": ["^build"]
-		},
 		"codegen": {
 			"inputs": ["./**/*.gql", "./**/*.graphqls"],
 			"outputs": ["src/graph/generated/**"],
@@ -69,6 +49,7 @@
 			"dependsOn": ["build"]
 		},
 		"lint": {
+			"dependsOn": ["^build"],
 			"outputs": [],
 			"inputs": ["**/*.ts*"]
 		},
@@ -97,5 +78,6 @@
 		}
 	},
 	"globalEnv": ["DOPPLER_TOKEN"],
-	"globalDependencies": ["yarn.lock"]
+	"globalDependencies": ["yarn.lock"],
+	"extends": ["//"]
 }
