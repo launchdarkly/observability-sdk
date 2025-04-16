@@ -3,12 +3,13 @@
 import { Button } from '@/app/components/button'
 import { H } from '@highlight-run/next/client'
 import { useMemo } from 'react'
+import { CONSTANTS } from '@/constants'
 
 export function HighlightButtons() {
 	const ldClientPromise = useMemo(async () => {
 		const { initialize } = await import('@launchdarkly/js-client-sdk')
 		const ldClient = initialize(
-			process.env.NEXT_PUBLIC_LAUNCHDARKLY_SDK_KEY ?? '',
+			CONSTANTS.NEXT_PUBLIC_LAUNCHDARKLY_SDK_KEY ?? '',
 		)
 		H.registerLD(ldClient)
 		return ldClient
