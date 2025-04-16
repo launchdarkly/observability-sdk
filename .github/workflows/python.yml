@@ -15,7 +15,9 @@ jobs:
     build:
         permissions:
           id-token: write # for python PyPI OIDC login
-          contents: read
+          contents: write
+          pull-requests: write
+          repository-projects: write
         name: Python SDK
         runs-on: ubuntu-22.04-8core-32gb
         defaults:
