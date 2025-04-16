@@ -6941,6 +6941,7 @@ __metadata:
     "@highlight-run/react": "workspace:*"
     "@opentelemetry/instrumentation": "npm:>=0.53.0"
     "@remix-run/react": "npm:^2.10.0"
+    "@types/js-cookie": "npm:^3.0.6"
     highlight.run: "workspace:*"
     js-cookie: "npm:^3.0.5"
     tsup: "npm:^8.3.6"
