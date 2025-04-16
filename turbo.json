@@ -1,6 +1,15 @@
 {
 	"$schema": "https://turborepo.org/schema.json",
 	"tasks": {
+		"highlight.run#typegen": {
+			"dependsOn": [
+				"rrweb#build",
+				"@rrweb/rrweb-plugin-sequential-id-record#build",
+				"@rrweb/types#build"
+			],
+			"inputs": ["src/**/*.tsx", "src/**/*.ts", "tsconfig.json"],
+			"outputs": ["dist/**/*.d.ts"]
+		},
 		"codegen": {
 			"inputs": ["./**/*.gql", "./**/*.graphqls"],
 			"outputs": ["src/graph/generated/**"],
