@@ -52,7 +52,7 @@ jobs:
                   python -m pip install -U pip pip-tools;
                   python -m piptools compile --upgrade pyproject.toml;
             - name: Publish
-              # if: github.ref == 'refs/heads/main'
+              if: github.ref == 'refs/heads/main'
               uses: pypa/gh-action-pypi-publish@release/v1
               with:
                   packages-dir: ./sdk/highlight-py/dist/
