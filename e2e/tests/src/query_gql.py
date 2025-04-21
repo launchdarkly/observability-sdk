@@ -1,7 +1,7 @@
 # TODO(vkorolik) parse queries from `query.gql`
 GET_ERROR_GROUPS = """
 query GetErrorGroups(
-	$project_id: ID!
+	$project_id: StringID!
 	$count: Int!
 	$params: QueryInput!
 	$page: Int
@@ -53,7 +53,7 @@ query GetErrorGroups(
 """
 
 GET_LOGS = """
-query GetLogs($project_id: ID!, $params: QueryInput!, $after: String, $before: String, $at: String, $direction: SortDirection!) {
+query GetLogs($project_id: StringID!, $params: QueryInput!, $after: String, $before: String, $at: String, $direction: SortDirection!) {
   logs(
     project_id: $project_id
     params: $params
@@ -87,7 +87,7 @@ query GetLogs($project_id: ID!, $params: QueryInput!, $after: String, $before: S
 }"""
 
 GET_TRACES = """
-query GetTraces($project_id: ID!, $params: QueryInput!, $after: String, $before: String, $at: String, $direction: SortDirection!) {
+query GetTraces($project_id: StringID!, $params: QueryInput!, $after: String, $before: String, $at: String, $direction: SortDirection!) {
   traces(
     project_id: $project_id
     params: $params
@@ -152,7 +152,7 @@ query GetAdmin {
 
 GET_SESSIONS = """
 query GetSessions(
-	$project_id: ID!
+	$project_id: StringID!
 	$count: Int!
 	$params: QueryInput!
 	$sort_desc: Boolean!
