@@ -30,8 +30,5 @@
 	"devDependencies": {
 		"ts-node": "^10.9.2",
 		"typescript": "^5.3.2"
-	},
-	"installConfig": {
-		"hoistingLimits": "workspaces"
 	}
 }

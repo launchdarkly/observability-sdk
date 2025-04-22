@@ -20,9 +20,6 @@
 	"files": [
 		"dist"
 	],
-	"installConfig": {
-		"hoistingLimits": "workspaces"
-	},
 	"publishConfig": {
 		"access": "public"
 	},
