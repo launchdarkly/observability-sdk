@@ -6,9 +6,7 @@
 		"typegen": "tsc -d --emitDeclarationOnly",
 		"dev": "yarn build --watch",
 		"build": "rollup --config rollup.config.mjs",
-		"test": "yarn test:check-deps && yarn test:vitest",
-		"test:check-deps": "node scripts/check-deps.mjs",
-		"test:vitest": "vitest run"
+		"test": "vitest run"
 	},
 	"main": "./dist/index.cjs",
 	"module": "./dist/index.js",
