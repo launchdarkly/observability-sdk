@@ -12,9 +12,6 @@
 		"prisma:pull": "prisma db pull",
 		"prisma:generate": "prisma generate"
 	},
-	"installConfig": {
-		"hoistingLimits": "workspaces"
-	},
 	"dependencies": {
 		"@highlight-run/next": "workspace:*",
 		"@highlight-run/pino": "workspace:*",

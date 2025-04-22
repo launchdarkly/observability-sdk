@@ -50,9 +50,6 @@
 	},
 	"author": "",
 	"license": "Apache-2.0",
-	"installConfig": {
-		"hoistingLimits": "workspaces"
-	},
 	"peerDependencies": {
 		"next": ">=13",
 		"react": ">=17"
