@@ -23,10 +23,6 @@
 		"types": [
 			"@highlight-run/sourcemap-uploader",
 			"@highlight-run/node"
-		],
-		"typeRoots": [
-			"./node_modules/@types",
-			"./node_modules",
 		]
 	},
 	"include": [
