@@ -4,7 +4,7 @@ if $LD_RELEASE_IS_DRYRUN ; then
 else
   if $LD_RELEASE_IS_PRERELEASE ; then
     echo "Publishing with prerelease tag."
-    yarn publish:prerelease || { echo "npm publish failed" >&2; exit 1; }
+    yarn publish --tag prerelease || { echo "npm publish failed" >&2; exit 1; }
   else
     yarn publish || { echo "npm publish failed" >&2; exit 1; }
   fi

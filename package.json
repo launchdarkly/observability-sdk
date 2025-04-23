@@ -23,8 +23,8 @@
 		"lint": "yarn run turbo lint --filter=!rrweb --filter=!rrvideo --filter=!@rrweb/rrweb-plugin-console-record --filter=!@rrweb/_monorepo --filter=!@rrweb/all --filter=!@rrweb/record --filter=!@rrweb/replay --filter=!@rrweb/types --filter=!@rrweb/packer --filter=!@rrweb/utils --filter=!@rrweb/web-extension --filter=!rrweb-snapshot --filter=!rrweb-player --filter=!rrdom --filter=!rrdom-nodejs --filter=!e2e-react-native",
 		"prepare": "husky",
 		"preinstall": "git submodule update --init --recursive || true",
-		"publish": "yarn workspaces foreach -R --no-private --from '@highlight-run/*' npm publish --access public --tolerate-republish --provenance && yarn workspace highlight.run npm publish --access public --tolerate-republish --provenance",
-		"publish:prerelease": "yarn workspaces foreach -R --no-private --from '@highlight-run/*' npm publish --tag prerelease --access public --tolerate-republish --provenance && yarn workspace highlight.run npm publish --tag prerelease --access public --tolerate-republish --provenance",
+		"publish": "yarn workspaces foreach -R --no-private --from '@launchdarkly/*' npm publish --access public --tolerate-republish --provenance",
+		"publish:highlight": "yarn workspaces foreach -R --no-private --from '@highlight-run/*' npm publish --access public --tolerate-republish --provenance && yarn workspace highlight.run npm publish --access public --tolerate-republish --provenance",
 		"test": "yarn turbo run test --filter=!rrweb --filter=!rrvideo --filter=!@rrweb/rrweb-plugin-console-record --filter=!@rrweb/_monorepo --filter=!@rrweb/all --filter=!@rrweb/record --filter=!@rrweb/replay --filter=!@rrweb/types --filter=!@rrweb/packer --filter=!@rrweb/utils --filter=!@rrweb/web-extension --filter=!rrweb-snapshot --filter=!rrweb-player --filter=!rrdom --filter=!rrdom-nodejs --filter=!nextjs"
 	},
 	"devDependencies": {
