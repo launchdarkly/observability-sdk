@@ -19,36 +19,36 @@ jobs:
     publish-package:
         runs-on: ubuntu-latest
         steps:
-            -   uses: launchdarkly/common-actions/ssh-key-by-repo@main
-                with:
-                    repo_keys_map: |
-                        {
-                            "launchdarkly/observability-sdk": ${{ toJSON(secrets.LAUNCHDARKLY_OBSERVABILITY_SDK_DEPLOY_KEY) }},
-                            "launchdarkly/rrweb": ${{ toJSON(secrets.LAUNCHDARKLY_RRWEB_DEPLOY_KEY) }}
-                        }
-            -   uses: launchdarkly/common-actions/init@main
-                env:
-                    GITHUB_TOKEN: ${{ github.token }}
-            -   run: git submodule update --init --recursive
+            - uses: launchdarkly/common-actions/ssh-key-by-repo@main
+              with:
+                  repo_keys_map: |
+                      {
+                          "launchdarkly/observability-sdk": ${{ toJSON(secrets.LAUNCHDARKLY_OBSERVABILITY_SDK_DEPLOY_KEY) }},
+                          "launchdarkly/rrweb": ${{ toJSON(secrets.LAUNCHDARKLY_RRWEB_DEPLOY_KEY) }}
+                      }
+            - uses: launchdarkly/common-actions/init@main
+              env:
+                  GITHUB_TOKEN: ${{ github.token }}
+            - run: git submodule update --init --recursive
 
-            -   name: Setup Node.js environment
-                uses: actions/setup-node@v4
-                with:
-                    node-version: lts/*
-                    cache: 'yarn'
+            - name: Setup Node.js environment
+              uses: actions/setup-node@v4
+              with:
+                  node-version: lts/*
+                  cache: 'yarn'
 
-            -   name: Install js dependencies
-                run: yarn
+            - name: Install js dependencies
+              run: yarn
 
-            -   uses: launchdarkly/gh-actions/actions/release-secrets@release-secrets-v1.2.0
-                name: 'Get NPM token'
-                with:
-                    aws_assume_role: ${{ vars.AWS_ROLE_ARN }}
-                    ssm_parameter_pairs: '/production/common/releasing/npm/token = NODE_AUTH_TOKEN'
+            - uses: launchdarkly/gh-actions/actions/release-secrets@release-secrets-v1.2.0
+              name: 'Get NPM token'
+              with:
+                  aws_assume_role: ${{ vars.AWS_ROLE_ARN }}
+                  ssm_parameter_pairs: '/production/common/releasing/npm/token = NODE_AUTH_TOKEN'
 
-            -   id: publish-npm
-                name: Publish NPM Packages
-                uses: ./.github/actions/publish-npm
-                with:
-                    dry-run: ${{ inputs.dry-run }}
-                    prerelease: ${{ inputs.prerelease }}
+            - id: publish-npm
+              name: Publish NPM Packages
+              uses: ./.github/actions/publish-npm
+              with:
+                  dry-run: ${{ inputs.dry-run }}
+                  prerelease: ${{ inputs.prerelease }}
