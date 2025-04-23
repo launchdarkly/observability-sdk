@@ -1,0 +1,54 @@
+name: Manual Publish Package
+on:
+    workflow_dispatch:
+        inputs:
+            dry-run:
+                description: 'Is this a dry run. If so no package will be published.'
+                type: boolean
+                required: true
+            prerelease:
+                description: 'Is this a prerelease. If so, then the latest tag will not be updated in npm.'
+                type: boolean
+                required: true
+
+permissions:
+    id-token: write
+    contents: write
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+jobs:
+    publish-package:
+        runs-on: ubuntu-latest
+        steps:
+            -   uses: launchdarkly/common-actions/ssh-key-by-repo@main
+                with:
+                    repo_keys_map: |
+                        {
+                            "launchdarkly/observability-sdk": ${{ toJSON(secrets.LAUNCHDARKLY_OBSERVABILITY_SDK_DEPLOY_KEY) }},
+                            "launchdarkly/rrweb": ${{ toJSON(secrets.LAUNCHDARKLY_RRWEB_DEPLOY_KEY) }}
+                        }
+            -   uses: launchdarkly/common-actions/init@main
+                env:
+                    GITHUB_TOKEN: ${{ github.token }}
+            -   run: git submodule update --init --recursive
+
+            -   name: Setup Node.js environment
+                uses: actions/setup-node@v4
+                with:
+                    node-version: lts/*
+                    cache: 'yarn'
+
+            -   name: Install js dependencies
+                run: yarn
+
+            -   uses: launchdarkly/gh-actions/actions/release-secrets@release-secrets-v1.2.0
+                name: 'Get NPM token'
+                with:
+                    aws_assume_role: ${{ vars.AWS_ROLE_ARN }}
+                    ssm_parameter_pairs: '/production/common/releasing/npm/token = NODE_AUTH_TOKEN'
+
+            -   id: publish-npm
+                name: Publish NPM Packages
+                uses: ./.github/actions/publish-npm
+                with:
+                    dry-run: ${{ inputs.dry-run }}
+                    prerelease: ${{ inputs.prerelease }}
