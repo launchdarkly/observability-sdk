@@ -58,12 +58,12 @@ jobs:
               env:
                   NPM_TOKEN: ${{ secrets.NPM_TOKEN_HIGHLIGHT_RUN }}
 
-            - name: Publish npm packages
+            - name: Publish highlight npm packages
               if: github.ref == 'refs/heads/main'
               id: changesets-publish
               uses: changesets/action@v1
               with:
-                  publish: yarn publish
+                  publish: yarn publish:highlight
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
                   NPM_TOKEN: ${{ secrets.NPM_TOKEN_HIGHLIGHT_RUN }}
