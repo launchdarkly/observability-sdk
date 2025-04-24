@@ -23,7 +23,6 @@ jobs:
               with:
                   repo_keys_map: |
                       {
-                          "launchdarkly/observability-sdk": ${{ toJSON(secrets.LAUNCHDARKLY_OBSERVABILITY_SDK_DEPLOY_KEY) }},
                           "launchdarkly/rrweb": ${{ toJSON(secrets.LAUNCHDARKLY_RRWEB_DEPLOY_KEY) }}
                       }
             - uses: launchdarkly/common-actions/init@main
