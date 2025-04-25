@@ -117,6 +117,7 @@ import {
 import { IntegrationClient } from '../integrations'
 import { LaunchDarklyIntegration } from '../integrations/launchdarkly'
 import { LDClientMin } from '../integrations/launchdarkly/types/LDClient'
+import { createLog, defaultLogOptions } from './listeners/console-listener'
 
 export const HighlightWarning = (context: string, msg: any) => {
 	console.warn(`Highlight Warning: (${context}): `, { output: msg })
@@ -483,19 +484,9 @@ export class Highlight {
 	}
 
 	log(message: any, level: string, metadata?: Attributes) {
-		//TODO(vkorolik)
-		this._firstLoadListeners.messages.push({
-			type: level,
-			trace: trace.slice(1),
-			value: message,
-			attributes: stringify(
-				data
-					.filter((d) => typeof d === 'object')
-					.reduce((a, b) => ({ ...a, ...b }), {}),
-				logOptions.stringifyOptions,
-			),
-			time: Date.now(),
-		})
+		this._firstLoadListeners.messages.push(
+			createLog(level, defaultLogOptions, message, metadata),
+		)
 	}
 
 	pushCustomError(message: string, payload?: string) {

@@ -1,5 +1,5 @@
 import type { StackFrame } from 'error-stack-parser'
-import { ConsoleMethods } from '../types/client'
+import { ALL_CONSOLE_METHODS, ConsoleMethods } from '../types/client'
 import { ConsoleMessage } from '../types/shared-types'
 import { patch, stringify } from '../utils/utils'
 import { parseError } from '../utils/errors'
@@ -49,6 +49,16 @@ export type Logger = {
 	timeLog?: typeof console.timeLog
 	trace?: typeof console.trace
 	warn?: typeof console.warn
+}
+
+export const defaultLogOptions: LogRecordOptions = {
+	level: [...ALL_CONSOLE_METHODS],
+	logger: 'console',
+	stringifyOptions: {
+		depthOfLimit: 10,
+		numOfKeysLimit: 100,
+		stringLengthLimit: 1000,
+	},
 }
 
 export function ConsoleListener(
