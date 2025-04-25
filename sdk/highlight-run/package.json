@@ -54,6 +54,18 @@
 	"files": [
 		"dist"
 	],
+	"peerDependencies": {
+		"@launchdarkly/js-client-sdk": ">=0.5.3",
+		"launchdarkly-js-client-sdk": ">=3.6.0"
+	},
+	"peerDependenciesMeta": {
+		"@launchdarkly/js-client-sdk": {
+			"optional": true
+		},
+		"launchdarkly-js-client-sdk": {
+			"optional": true
+		}
+	},
 	"devDependencies": {
 		"@graphql-codegen/cli": "^5.0.0",
 		"@graphql-codegen/typescript": "^4.0.1",
