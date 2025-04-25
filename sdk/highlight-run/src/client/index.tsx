@@ -107,7 +107,13 @@ import type { HighlightClientRequestWorker } from './workers/highlight-client-wo
 import HighlightClientWorker from './workers/highlight-client-worker?worker&inline'
 import { MessageType, PropertyType } from './workers/types'
 import { parseError } from './utils/errors'
-import { Counter, Gauge, Histogram, UpDownCounter } from '@opentelemetry/api'
+import {
+	Attributes,
+	Counter,
+	Gauge,
+	Histogram,
+	UpDownCounter,
+} from '@opentelemetry/api'
 import { IntegrationClient } from '../integrations'
 import { LaunchDarklyIntegration } from '../integrations/launchdarkly'
 import { LDClientMin } from '../integrations/launchdarkly/types/LDClient'
@@ -474,6 +480,22 @@ export class Highlight {
 				source,
 			)
 		}
+	}
+
+	log(message: any, level: string, metadata?: Attributes) {
+		//TODO(vkorolik)
+		this._firstLoadListeners.messages.push({
+			type: level,
+			trace: trace.slice(1),
+			value: message,
+			attributes: stringify(
+				data
+					.filter((d) => typeof d === 'object')
+					.reduce((a, b) => ({ ...a, ...b }), {}),
+				logOptions.stringifyOptions,
+			),
+			time: Date.now(),
+		})
 	}
 
 	pushCustomError(message: string, payload?: string) {

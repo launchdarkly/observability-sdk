@@ -28,7 +28,13 @@ import {
 	loadCookieSessionData,
 } from './client/utils/sessionStorage/highlightSession.js'
 import { setCookieWriteEnabled } from './client/utils/storage'
-import { Context, Span, SpanOptions, Tracer } from '@opentelemetry/api'
+import {
+	Attributes,
+	Context,
+	Span,
+	SpanOptions,
+	Tracer,
+} from '@opentelemetry/api'
 import firstloadVersion from './__generated/version.js'
 import { listenToChromeExtensionMessage } from './browserExtension/extensionListener.js'
 import configureElectronHighlight from './environments/electron.js'
@@ -295,6 +301,15 @@ const H: HighlightPublicInterface = {
 			HighlightWarning('track', e)
 		}
 	},
+	log: (message: any, level: string, metadata?: Attributes) => {
+		try {
+			H.onHighlightReady(() =>
+				highlight_obj.log(message, level, metadata ?? {}),
+			)
+		} catch (e) {
+			HighlightWarning('log', e)
+		}
+	},
 	start: (options) => {
 		if (highlight_obj?.state === 'Recording' && !options?.forceNew) {
 			if (!options?.silent) {
@@ -511,6 +526,110 @@ const H: HighlightPublicInterface = {
 				fn,
 			)
 		}
+	},
+	getSessionURL: () => {
+		return new Promise((resolve, reject) => {
+			H.onHighlightReady(() => {
+				const secureID = highlight_obj.sessionData.sessionSecureID
+				const data = getPreviousSessionData(secureID)
+
+				if (data) {
+					resolve(
+						`https://${HIGHLIGHT_URL}/${data.projectID}/sessions/${secureID}`,
+					)
+				} else {
+					reject(new Error(`Unable to get session URL: ${secureID}`))
+				}
+			})
+		})
+	},
+	getSessionDetails: () => {
+		return new Promise((resolve, reject) => {
+			H.onHighlightReady(async () => {
+				try {
+					const baseUrl = await H.getSessionURL()
+					if (!baseUrl) {
+						throw new Error('Could not get session URL')
+					}
+
+					const secureID = highlight_obj.sessionData.sessionSecureID
+					const sessionData = getPreviousSessionData(secureID)
+					const currentSessionTimestamp =
+						sessionData?.sessionStartTime
+					if (!currentSessionTimestamp) {
+						throw new Error('Could not get session start timestamp')
+					}
+
+					const now = new Date().getTime()
+					const url = new URL(baseUrl)
+					const urlWithTimestamp = new URL(baseUrl)
+					urlWithTimestamp.searchParams.set(
+						'ts',
+						((now - currentSessionTimestamp) / 1000).toString(),
+					)
+
+					resolve({
+						url: url.toString(),
+						urlWithTimestamp: urlWithTimestamp.toString(),
+						sessionSecureID: secureID,
+					} as SessionDetails)
+				} catch (error) {
+					reject(error)
+				}
+			})
+		})
+	},
+	getRecordingState: () => {
+		return highlight_obj?.state ?? 'NotRecording'
+	},
+	onHighlightReady: (func, options) => {
+		// Run the callback immediately if Highlight is already ready
+		if (highlight_obj && highlight_obj.ready) {
+			func()
+			return
+		}
+
+		onHighlightReadyQueue.push({ options, func })
+
+		if (onHighlightReadyTimeout !== undefined) {
+			return
+		}
+
+		const processQueue = () => {
+			const newQueue = onHighlightReadyQueue.filter((item) => {
+				if (
+					!highlight_obj ||
+					(item.options?.waitForReady !== false &&
+						!highlight_obj.ready)
+				) {
+					return true
+				}
+
+				item.func()
+				return false
+			})
+
+			onHighlightReadyQueue = newQueue
+			onHighlightReadyTimeout = undefined
+
+			if (onHighlightReadyQueue.length > 0) {
+				onHighlightReadyTimeout = setTimeout(
+					processQueue,
+					READY_WAIT_LOOP_MS,
+				)
+			}
+		}
+
+		processQueue()
+	},
+	registerLD(client) {
+		// TODO(vkorolik): consolidate once firstload/client are merged
+		// client integration necessary to track events from ErrorListener
+		H.onHighlightReady(() => {
+			highlight_obj.registerLD(client)
+		})
+		// firstload integration necessary to immediately capture ld.identify
+		setupLaunchDarklyIntegration(this, client)
 	},
 }
 

@@ -115,32 +115,38 @@ export function ConsoleListener(
 				// @ts-expect-error
 				original.apply(this, data)
 				try {
-					const trace = parseError(new Error())
-					const message = logOptions.serializeConsoleAttributes
-						? data.map((o) =>
-								typeof o === 'object'
-									? stringify(o, logOptions.stringifyOptions)
-									: o,
-							)
-						: data
-								.filter((o) => typeof o !== 'object')
-								.map((o) => `${o}`)
-					callback({
-						type: level,
-						trace: trace.slice(1),
-						value: message,
-						attributes: stringify(
-							data
-								.filter((d) => typeof d === 'object')
-								.reduce((a, b) => ({ ...a, ...b }), {}),
-							logOptions.stringifyOptions,
-						),
-						time: Date.now(),
-					})
+					callback(createLog(level, logOptions, data))
 				} catch (error) {
 					original('highlight logger error:', error, ...data)
 				}
 			}
 		})
+	}
+}
+
+export function createLog(
+	level: string,
+	logOptions: LogRecordOptions,
+	...data: Array<any>
+) {
+	const trace = parseError(new Error())
+	const message = logOptions.serializeConsoleAttributes
+		? data.map((o) =>
+				typeof o === 'object'
+					? stringify(o, logOptions.stringifyOptions)
+					: o,
+			)
+		: data.filter((o) => typeof o !== 'object').map((o) => `${o}`)
+	return {
+		type: level,
+		trace: trace.slice(1),
+		value: message,
+		attributes: stringify(
+			data
+				.filter((d) => typeof d === 'object')
+				.reduce((a, b) => ({ ...a, ...b }), {}),
+			logOptions.stringifyOptions,
+		),
+		time: Date.now(),
 	}
 }
