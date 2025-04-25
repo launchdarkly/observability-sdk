@@ -16,6 +16,13 @@ export default defineConfig({
 			clientPort: 8877,
 		},
 	},
+	resolve: {
+		alias: {
+			rrweb: '../../node_modules/@highlight-run/rrweb/dist/rrweb.js',
+			'@rrweb/rrweb-plugin-sequential-id-record':
+				'../../node_modules/@highlight-run/rrweb-rrweb-plugin-sequential-id-record/dist/rrweb-rrweb-plugin-sequential-id-record.js',
+		},
+	},
 	build: {
 		target: 'es6',
 		lib: {

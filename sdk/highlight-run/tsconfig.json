@@ -2,7 +2,7 @@
 	"compilerOptions": {
 		"allowJs": true,
 		"allowSyntheticDefaultImports": true,
-		"baseUrl": "src",
+		"baseUrl": ".",
 		"composite": true,
 		"declaration": true,
 		"declarationDir": "dist",
@@ -23,7 +23,17 @@
 		/* Linting */
 		"strict": true,
 		"noUnusedLocals": true,
-		"noFallthroughCasesInSwitch": true
+		"noFallthroughCasesInSwitch": true,
+		"paths": {
+			"@rrweb/types": ["../../node_modules/@highlight-run/rrweb-types"],
+			"@rrweb/utils": ["../../node_modules/@highlight-run/rrweb-utils"],
+			"@rrweb/packer": ["../../node_modules/@highlight-run/rrweb-packer"],
+			"@rrweb/all": ["../../node_modules/@highlight-run/rrweb-all"],
+			"@rrweb/rrweb-plugin-console-record": ["../../node_modules/@highlight-run/rrweb-plugin-console-record"],
+			"@rrweb/rrweb-plugin-sequential-id-record": ["../../node_modules/@highlight-run/rrweb-rrweb-plugin-sequential-id-record"],
+			"rrweb-snapshot": ["../../node_modules/@highlight-run/rrweb-snapshot"],
+			"rrweb": ["../../node_modules/@highlight-run/rrweb"],
+		}
 	},
 	"include": ["src"],
 	"exclude": ["**/src/**/*.test.tsx"],
