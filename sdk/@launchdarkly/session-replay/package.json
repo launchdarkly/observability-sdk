@@ -1,4 +1,55 @@
 {
-  "name": "@launchdarkly/session-replay",
-  "packageManager": "yarn@4.9.1"
+  "name": "@launchdarksdk/session-replay",
+  "version": "0.0.1",
+  "description": "Browser observability for your web app. Record session replays to visualize usage patterns.",
+  "keywords": [
+    "launchdarkly",
+    "session replay",
+    "debugging",
+    "observability",
+    "browser",
+    "library"
+  ],
+  "homepage": "https://github.com/launchdarkly/observability-sdk#readme",
+  "bugs": {
+    "url": "https://github.com/launchdarkly/observability-sdk/issues",
+    "email": "support@launchdarkly.com"
+  },
+  "license": "Apache-2.0",
+  "repository": {
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/launchdarkly/observability-sdk.git"
+    }
+  },
+  "scripts": {},
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "unpkg": "./dist/index.umd.js",
+  "jsdelivr": "./dist/index.umd.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    "types": "./dist/index.d.ts",
+    "unpkg": "./dist/index.umd.js",
+    "jsdelivr": "./dist/index.umd.js",
+    "import": "./dist/index.js",
+    "require": "./dist/index.js",
+    "default": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "devDependencies": {},
+  "dependencies": {},
+  "size-limit": [
+    {
+      "path": [
+        "dist/*.js",
+        "!dist/*.umd.js"
+      ],
+      "limit": "256 kB",
+      "brotli": true
+    }
+  ]
 }
