@@ -8,7 +8,8 @@
 		"rrweb",
 		"rrweb/packages/*",
 		"rrweb/packages/plugins/*",
-		"sdk/*"
+		"sdk/*",
+		"sdk/@launchdarkly/*"
 	],
 	"scripts": {
 		"build": "yarn turbo run build --filter '!@rrweb/web-extension'",

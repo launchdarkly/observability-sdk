@@ -22,7 +22,6 @@
 			"url": "https://github.com/launchdarkly/observability-sdk.git"
 		}
 	},
-	"scripts": {},
 	"type": "module",
 	"main": "./dist/index.js",
 	"module": "./dist/index.js",
@@ -40,8 +39,6 @@
 	"files": [
 		"dist"
 	],
-	"devDependencies": {},
-	"dependencies": {},
 	"size-limit": [
 		{
 			"path": [
