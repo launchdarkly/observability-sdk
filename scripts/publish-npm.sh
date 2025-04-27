@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash -ex
 if $LD_RELEASE_IS_DRYRUN ; then
   echo "Doing a dry run of publishing."
 else
