@@ -24966,6 +24966,14 @@ __metadata:
     vitest-canvas-mock: "npm:^0.3.3"
     web-vitals: "npm:^3.5.0"
     zone.js: "npm:^0.15.0"
+  peerDependencies:
+    "@launchdarkly/js-client-sdk": ">=0.5.3"
+    launchdarkly-js-client-sdk: ">=3.6.0"
+  peerDependenciesMeta:
+    "@launchdarkly/js-client-sdk":
+      optional: true
+    launchdarkly-js-client-sdk:
+      optional: true
   languageName: unknown
   linkType: soft
 

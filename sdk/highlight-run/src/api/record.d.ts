@@ -6,10 +6,6 @@ import type {
 } from '../client/types/types'
 
 export interface Record {
-	init: (
-		projectID?: string | number,
-		debug?: HighlightOptions,
-	) => { sessionSecureID: string } | undefined
 	/**
 	 * Calling this will assign an identifier to the session.
 	 * @example identify('teresa@acme.com', { accountAge: 3, cohort: 8 })
@@ -24,11 +20,22 @@ export interface Record {
 	 * @param metadata Additional details you want to associate to the event.
 	 */
 	track: (event: string, metadata?: Metadata) => void
-
-	getSession: () => SessionDetails | null
+	/**
+	 * Start the session when running in `manualStart` mode.
+	 * Can be used to force start a new session.
+	 * @param options the session start options.
+	 */
 	start: (options?: StartOptions) => void
-	/** Stops the session and error recording. */
-	stop: (options?: StartOptions) => void
-	getRecordingState: () => 'NotRecording' | 'Recording'
+	/**
+	 * Stop the session recording.
+	 */
+	stop: () => void
+	/**
+	 * Snapshot an HTML <canvas> element in WebGL manual snapshotting mode.
+	 * See {@link https://www.highlight.io/docs/getting-started/browser/replay-configuration/canvas#manual-snapshotting}
+	 * for more information.
+	 */
 	snapshot: (element: HTMLCanvasElement) => Promise<void>
+	getSession: () => SessionDetails | null
+	getRecordingState: () => 'NotRecording' | 'Recording'
 }
