@@ -380,8 +380,6 @@ export declare interface HighlightPublicInterface {
 			fn: F,
 		): ReturnType<F>
 	}
-	// TODO(vkorolik) log fn, H.track should log,
-	// TODO(vkorolik) secure session id propagatiion on logs
 	/**
 	 * Starts a new span for tracing in Highlight. The span will be ended when the
 	 * `end()` is called on the span. It returns whatever is returned from the

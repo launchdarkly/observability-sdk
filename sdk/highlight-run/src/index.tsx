@@ -269,9 +269,13 @@ const H: HighlightPublicInterface = {
 	},
 	track: (event: string, metadata: Metadata = {}) => {
 		try {
-			H.onHighlightReady(() =>
-				highlight_obj.addProperties({ ...metadata, event: event }),
-			)
+			H.onHighlightReady(() => {
+				highlight_obj.addProperties({ ...metadata, event: event })
+				highlight_obj.log('H.track', 'INFO', {
+					...(metadata ?? {}),
+					event,
+				})
+			})
 			const highlightUrl = highlight_obj?.getCurrentSessionURL()
 
 			if (!H.options?.integrations?.mixpanel?.disabled) {

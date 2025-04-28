@@ -150,7 +150,6 @@ export const setupBrowserTracing = (config: BrowserTracingConfig) => {
 		]
 	if (documentLoadConfig !== false) {
 		instrumentations.push(
-			// TODO(vkorolik) hooks for this to LD integration
 			new DocumentLoadInstrumentation({
 				applyCustomAttributesOnSpan: {
 					documentLoad: assignDocumentDurations,

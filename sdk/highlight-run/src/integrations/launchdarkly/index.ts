@@ -65,7 +65,10 @@ export function setupLaunchDarklyIntegration(
 			data: IdentifySeriesData,
 			_result: IdentifySeriesResult,
 		) => {
-			hClient.log()
+			hClient.log('LD.identify', 'INFO', {
+				key: getCanonicalKey(hookContext.context),
+				context: Object(hookContext.context),
+			})
 			hClient.identify(
 				getCanonicalKey(hookContext.context),
 				hookContext.context,
