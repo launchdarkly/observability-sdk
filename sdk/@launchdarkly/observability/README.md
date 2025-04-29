@@ -21,7 +21,7 @@
 npm i @launchdarkly/observability
 
 # yarn
-yarn add -D @launchdarkly/observability
+yarn add @launchdarkly/observability
 ```
 -->
 
@@ -35,6 +35,7 @@ LaunchDarkly uses the [SLSA framework](https://slsa.dev/spec/v1.0/about) (Supply
 
 ## About LaunchDarkly
 
+- LaunchDarkly Observability provies a way to collect and send errors, logs, traces to LaunchDarkly. Correlate latency or exceptions with your releases to safely ship code.
 - LaunchDarkly is a continuous delivery platform that provides feature flags as a service and allows developers to iterate quickly and safely. We allow you to easily flag your features and manage them from the LaunchDarkly dashboard. With LaunchDarkly, you can:
     - Roll out a new feature to a subset of your users (like a group of users who opt-in to a beta tester group), gathering feedback and bug reports from real-world use cases.
     - Gradually roll out a feature to an increasing percentage of users, and track the effect that the feature has on key metrics (for instance, how likely is a user to complete a purchase if they have feature A versus feature B?).
@@ -50,9 +51,9 @@ LaunchDarkly uses the [SLSA framework](https://slsa.dev/spec/v1.0/about) (Supply
 
 [browser-sdk-ci-badge]: https://github.com/launchdarkly/observability-sdk/actions/workflows/browser.yml/badge.svg
 [browser-sdk-ci]: https://github.com/launchdarkly/observability-sdk/actions/workflows/browser.yml
-[browser-sdk-npm-badge]: https://img.shields.io/npm/v/@launchdarkly/js-client-sdk.svg?style=flat-square
-[browser-sdk-npm-link]: https://www.npmjs.com/package/@launchdarkly/js-client-sdk
+[browser-sdk-npm-badge]: https://img.shields.io/npm/v/@launchdarkly/observability.svg?style=flat-square
+[browser-sdk-npm-link]: https://www.npmjs.com/package/@launchdarkly/observability
 [browser-sdk-ghp-badge]: https://img.shields.io/static/v1?label=GitHub+Pages&message=API+reference&color=00add8
 [browser-sdk-ghp-link]: https://launchdarkly.github.io/js-core/packages/sdk/browser/docs/
-[browser-sdk-dm-badge]: https://img.shields.io/npm/dm/@launchdarkly/js-client-sdk.svg?style=flat-square
-[browser-sdk-dt-badge]: https://img.shields.io/npm/dt/@launchdarkly/js-client-sdk.svg?style=flat-square
+[browser-sdk-dm-badge]: https://img.shields.io/npm/dm/@launchdarkly/observability.svg?style=flat-square
+[browser-sdk-dt-badge]: https://img.shields.io/npm/dt/@launchdarkly/observability.svg?style=flat-square
