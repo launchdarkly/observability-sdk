@@ -67,11 +67,14 @@ export function setupLaunchDarklyIntegration(
 		) => {
 			hClient.log('LD.identify', 'INFO', {
 				key: getCanonicalKey(hookContext.context),
-				context: Object(hookContext.context),
+				timeout: hookContext.timeout,
 			})
 			hClient.identify(
 				getCanonicalKey(hookContext.context),
-				hookContext.context,
+				{
+					key: getCanonicalKey(hookContext.context),
+					timeout: hookContext.timeout,
+				},
 				'LaunchDarkly',
 			)
 			return data
