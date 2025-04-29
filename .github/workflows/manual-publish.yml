@@ -45,6 +45,11 @@ jobs:
                   aws_assume_role: ${{ vars.AWS_ROLE_ARN }}
                   ssm_parameter_pairs: '/production/common/releasing/npm/token = NODE_AUTH_TOKEN'
 
+            - name: Configure yarn npm registry credentials
+              run: |
+                  yarn config set npmRegistryServer "https://registry.npmjs.org"
+                  yarn config set npmAuthToken "${NODE_AUTH_TOKEN}"
+
             - id: publish-npm
               name: Publish NPM Packages
               uses: ./.github/actions/publish-npm
