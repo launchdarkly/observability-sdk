@@ -6,7 +6,6 @@ import {
 	IdentifySeriesData,
 	IdentifySeriesResult,
 } from './types/Hooks'
-import { trace } from '@opentelemetry/api'
 import { type HighlightPublicInterface, MetricCategory } from '../../client'
 import type { ErrorMessage, Source } from '../../client/types/shared-types'
 import type { IntegrationClient } from '../index'
@@ -66,9 +65,16 @@ export function setupLaunchDarklyIntegration(
 			data: IdentifySeriesData,
 			_result: IdentifySeriesResult,
 		) => {
+			hClient.log('LD.identify', 'INFO', {
+				key: getCanonicalKey(hookContext.context),
+				timeout: hookContext.timeout,
+			})
 			hClient.identify(
 				getCanonicalKey(hookContext.context),
-				hookContext.context,
+				{
+					key: getCanonicalKey(hookContext.context),
+					timeout: hookContext.timeout,
+				},
 				'LaunchDarkly',
 			)
 			return data
@@ -87,18 +93,11 @@ export function setupLaunchDarklyIntegration(
 					getCanonicalKey(hookContext.context)
 			}
 
-			let span = trace.getActiveSpan()
-			if (span) {
-				span.addEvent(FEATURE_FLAG_SCOPE, eventAttributes)
-			} else {
-				hClient.startSpan(FEATURE_FLAG_SPAN_NAME, (s) => {
-					if (s) {
-						s.addEvent(FEATURE_FLAG_SCOPE, eventAttributes)
-					}
-				})
-			}
-
-			hClient.track(FEATURE_FLAG_SPAN_NAME, eventAttributes)
+			hClient.startSpan(FEATURE_FLAG_SPAN_NAME, (s) => {
+				if (s) {
+					s.addEvent(FEATURE_FLAG_SCOPE, eventAttributes)
+				}
+			})
 
 			return data
 		},
@@ -154,10 +153,6 @@ export class LaunchDarklyIntegration implements IntegrationClient {
 
 	track(sessionSecureID: string, metadata: object) {
 		const event = (metadata as unknown as { event?: string }).event
-		// skip integration hClient.track() calls
-		if (event === FEATURE_FLAG_SPAN_NAME) {
-			return
-		}
 		this.client.track(
 			event ? `${LD_TRACK_EVENT}:${event}` : LD_TRACK_EVENT,
 			{

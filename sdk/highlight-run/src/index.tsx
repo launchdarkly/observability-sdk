@@ -28,7 +28,13 @@ import {
 	loadCookieSessionData,
 } from './client/utils/sessionStorage/highlightSession.js'
 import { setCookieWriteEnabled } from './client/utils/storage'
-import { Context, Span, SpanOptions, Tracer } from '@opentelemetry/api'
+import {
+	Attributes,
+	Context,
+	Span,
+	SpanOptions,
+	Tracer,
+} from '@opentelemetry/api'
 import firstloadVersion from './__generated/version.js'
 import { listenToChromeExtensionMessage } from './browserExtension/extensionListener.js'
 import configureElectronHighlight from './environments/electron.js'
@@ -263,9 +269,13 @@ const H: HighlightPublicInterface = {
 	},
 	track: (event: string, metadata: Metadata = {}) => {
 		try {
-			H.onHighlightReady(() =>
-				highlight_obj.addProperties({ ...metadata, event: event }),
-			)
+			H.onHighlightReady(() => {
+				highlight_obj.addProperties({ ...metadata, event: event })
+				highlight_obj.log('H.track', 'INFO', {
+					...(metadata ?? {}),
+					event,
+				})
+			})
 			const highlightUrl = highlight_obj?.getCurrentSessionURL()
 
 			if (!H.options?.integrations?.mixpanel?.disabled) {
@@ -293,6 +303,15 @@ const H: HighlightPublicInterface = {
 			}
 		} catch (e) {
 			HighlightWarning('track', e)
+		}
+	},
+	log: (message: any, level: string, metadata?: Attributes) => {
+		try {
+			H.onHighlightReady(() =>
+				highlight_obj.log(message, level, metadata ?? {}),
+			)
+		} catch (e) {
+			HighlightWarning('log', e)
 		}
 	},
 	start: (options) => {

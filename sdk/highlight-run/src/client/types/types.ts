@@ -1,4 +1,4 @@
-import type { Context, Span, SpanOptions } from '@opentelemetry/api'
+import { Attributes, Context, Span, SpanOptions } from '@opentelemetry/api'
 import {
 	ConsoleMethods,
 	DebugOptions,
@@ -288,6 +288,7 @@ export declare interface HighlightPublicInterface {
 	 * @param metadata Additional details you want to associate to the event.
 	 */
 	track: (event: string, metadata?: Metadata) => void
+	log: (message: any, level: string, metadata?: Attributes) => void
 	/**
 	 * @deprecated with replacement by `consumeError` for an in-app stacktrace.
 	 */

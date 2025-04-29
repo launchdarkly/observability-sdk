@@ -1,5 +1,5 @@
 import type { StackFrame } from 'error-stack-parser'
-import { ConsoleMethods } from '../types/client'
+import { ALL_CONSOLE_METHODS, ConsoleMethods } from '../types/client'
 import { ConsoleMessage } from '../types/shared-types'
 import { patch, stringify } from '../utils/utils'
 import { parseError } from '../utils/errors'
@@ -49,6 +49,16 @@ export type Logger = {
 	timeLog?: typeof console.timeLog
 	trace?: typeof console.trace
 	warn?: typeof console.warn
+}
+
+export const defaultLogOptions: LogRecordOptions = {
+	level: [...ALL_CONSOLE_METHODS],
+	logger: 'console',
+	stringifyOptions: {
+		depthOfLimit: 10,
+		numOfKeysLimit: 100,
+		stringLengthLimit: 1000,
+	},
 }
 
 export function ConsoleListener(
@@ -115,32 +125,38 @@ export function ConsoleListener(
 				// @ts-expect-error
 				original.apply(this, data)
 				try {
-					const trace = parseError(new Error())
-					const message = logOptions.serializeConsoleAttributes
-						? data.map((o) =>
-								typeof o === 'object'
-									? stringify(o, logOptions.stringifyOptions)
-									: o,
-							)
-						: data
-								.filter((o) => typeof o !== 'object')
-								.map((o) => `${o}`)
-					callback({
-						type: level,
-						trace: trace.slice(1),
-						value: message,
-						attributes: stringify(
-							data
-								.filter((d) => typeof d === 'object')
-								.reduce((a, b) => ({ ...a, ...b }), {}),
-							logOptions.stringifyOptions,
-						),
-						time: Date.now(),
-					})
+					callback(createLog(level, logOptions, data))
 				} catch (error) {
 					original('highlight logger error:', error, ...data)
 				}
 			}
 		})
+	}
+}
+
+export function createLog(
+	level: string,
+	logOptions: LogRecordOptions,
+	...data: Array<any>
+) {
+	const trace = parseError(new Error())
+	const message = logOptions.serializeConsoleAttributes
+		? data.map((o) =>
+				typeof o === 'object'
+					? stringify(o, logOptions.stringifyOptions)
+					: o,
+			)
+		: data.filter((o) => typeof o !== 'object').map((o) => `${o}`)
+	return {
+		type: level,
+		trace: trace.slice(1),
+		value: message,
+		attributes: stringify(
+			data
+				.filter((d) => typeof d === 'object')
+				.reduce((a, b) => ({ ...a, ...b }), {}),
+			logOptions.stringifyOptions,
+		),
+		time: Date.now(),
 	}
 }
