@@ -10,6 +10,7 @@ import {
 } from './client'
 import { ErrorMessageType, Source } from './shared-types'
 import { LDClientMin } from '../../integrations/launchdarkly/types/LDClient'
+import type { LDPluginEnvironmentMetadata } from '../../plugins/plugin'
 
 export declare interface Metadata {
 	[key: string]: any
@@ -466,7 +467,10 @@ export declare interface HighlightPublicInterface {
 	addSessionFeedback: (feedbackOptions: SessionFeedbackOptions) => void
 	snapshot: (element: HTMLCanvasElement) => Promise<void>
 
-	registerLD: (client: LDClientMin) => void
+	registerLD: (
+		client: LDClientMin,
+		metadata: LDPluginEnvironmentMetadata,
+	) => void
 }
 
 export declare interface SessionDetails {
