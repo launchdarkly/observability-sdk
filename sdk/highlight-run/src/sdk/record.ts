@@ -291,7 +291,7 @@ export class RecordSDK implements Record {
 		this.options.sessionSecureID = this._sessionData.sessionSecureID
 		this.stopRecording()
 		this._firstLoadListeners = new FirstLoadListeners(this.options)
-		await this.initialize()
+		await this.init()
 		if (user_identifier && user_object) {
 			this.identify(user_identifier, user_object)
 		}
@@ -468,7 +468,7 @@ export class RecordSDK implements Record {
 		}
 	}
 
-	addProperties(properties_obj = {}, typeArg?: PropertyType) {
+	track(properties_obj = {}, typeArg?: PropertyType) {
 		// Remove any properties which throw on structuredClone
 		// (structuredClone is used when posting messages to the worker)
 		const obj = { ...properties_obj } as any
@@ -495,7 +495,7 @@ export class RecordSDK implements Record {
 		})
 	}
 
-	init(projectID?: string | number, options?: HighlightOptions) {
+	init(options?: HighlightOptions) {
 		if (
 			(navigator?.webdriver && !window.Cypress) ||
 			navigator?.userAgent?.includes('Googlebot') ||

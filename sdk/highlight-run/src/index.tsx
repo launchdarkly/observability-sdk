@@ -668,6 +668,9 @@ const __testing = {
 	},
 }
 
+// TODO(vkorolik) move to `@launchdarkly/...` packages
+export { Record } from './plugins/record'
+export { Observe } from './plugins/observe'
 export {
 	configureElectronHighlight,
 	GenerateSecureID,

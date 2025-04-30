@@ -64,7 +64,7 @@ class SDKCore implements Client {
 
 	async load() {
 		await Promise.all(
-			[import('./sdk/record'), import('./sdk/observability')].map((m) =>
+			[import('./sdk/record'), import('./sdk/observe')].map((m) =>
 				m.then((m) =>
 					Object.defineProperties(
 						this,
@@ -75,9 +75,8 @@ class SDKCore implements Client {
 		)
 	}
 	registerLD(client: LDClientMin) {
+		// TODO(vkorolik)
 		SDKCore._integrations.push(new LaunchDarklyIntegration(client))
-		// TODO(vkorolik) migrate this type
-		setupLaunchDarklyIntegration(this, client)
 	}
 }
 
