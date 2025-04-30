@@ -1,5 +1,5 @@
-import { Attributes, Context, Span, SpanOptions } from '@opentelemetry/api'
-import {
+import type { Attributes, Context, Span, SpanOptions } from '@opentelemetry/api'
+import type {
 	ConsoleMethods,
 	DebugOptions,
 	IntegrationOptions,
@@ -8,8 +8,8 @@ import {
 	OtelOptions,
 	SessionShortcutOptions,
 } from './client'
-import { ErrorMessageType, Source } from './shared-types'
-import { LDClientMin } from '../../integrations/launchdarkly/types/LDClient'
+import type { ErrorMessageType, Source } from './shared-types'
+import type { LDClientMin } from '../../integrations/launchdarkly/types/LDClient'
 import type { LDPluginEnvironmentMetadata } from '../../plugins/plugin'
 
 export declare interface Metadata {
@@ -28,6 +28,12 @@ export interface RecordMetric {
 	category?: MetricCategory
 	group?: string
 	tags?: { name: string; value: string }[]
+}
+
+export declare interface OTelMetric {
+	name: string
+	value: number
+	attributes?: Attributes
 }
 
 export type PrivacySettingOption = 'strict' | 'default' | 'none'

@@ -3,7 +3,6 @@
 		"allowJs": true,
 		"allowSyntheticDefaultImports": true,
 		"baseUrl": "src",
-		"composite": true,
 		"declaration": true,
 		"declarationDir": "dist",
 		"downlevelIteration": true,

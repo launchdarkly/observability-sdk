@@ -8,13 +8,7 @@ import {
 	SpanOptions,
 	UpDownCounter,
 } from '@opentelemetry/api'
-import {
-	getMeter,
-	getTracer,
-	LDClientMin,
-	Metric,
-	setupBrowserTracing,
-} from 'client'
+import { getMeter, getTracer, LDClientMin, setupBrowserTracing } from 'client'
 import type { Observe } from '../api/observe'
 import { getNoopSpan } from '../client/otel/utils'
 import {
@@ -25,6 +19,7 @@ import { parseError } from '../client/utils/errors'
 import type { BrowserTracingConfig, Callback } from '../client/otel'
 import { LaunchDarklyIntegration } from '../integrations/launchdarkly'
 import { IntegrationClient } from '../integrations'
+import { OTelMetric as Metric } from '../client/types/types'
 
 export class ObserveSDK implements Observe {
 	private readonly sessionSecureID: string
@@ -80,21 +75,21 @@ export class ObserveSDK implements Observe {
 			timestamp: new Date().toISOString(),
 			payload: JSON.stringify(payload),
 		}
-		// TODO(vkorolik) report via otel
-		this._firstLoadListeners.errors.push(errorMsg)
+		this.startSpan('highlight.exception', (span) => {
+			span?.recordException(error)
+			span?.setAttributes({
+				event: errorMsg.event,
+				type: errorMsg.type,
+				url: errorMsg.url,
+				source: errorMsg.source,
+				lineNumber: errorMsg.lineNumber,
+				columnNumber: errorMsg.columnNumber,
+				payload: errorMsg.payload,
+			})
+		})
 		for (const integration of this._integrations) {
 			integration.error(this.sessionSecureID, errorMsg)
 		}
-	}
-
-	recordMetric(metric: Metric) {
-		this.recordGauge({
-			...metric,
-			tags: [
-				...(metric.tags ?? []),
-				{ name: 'group', value: window.location.href },
-			],
-		})
 	}
 
 	recordCount(metric: Metric) {
@@ -107,7 +102,7 @@ export class ObserveSDK implements Observe {
 			this._counters.set(metric.name, counter)
 		}
 		counter.add(metric.value, {
-			...metric.tags?.reduce((a, b) => ({ ...a, [b.name]: b.value }), {}),
+			...metric.attributes,
 			'highlight.session_id': this.sessionSecureID,
 		})
 	}
@@ -122,7 +117,7 @@ export class ObserveSDK implements Observe {
 			this._gauges.set(metric.name, gauge)
 		}
 		gauge.record(metric.value, {
-			...metric.tags?.reduce((a, b) => ({ ...a, [b.name]: b.value }), {}),
+			...metric.attributes,
 			'highlight.session_id': this.sessionSecureID,
 		})
 	}
@@ -141,7 +136,7 @@ export class ObserveSDK implements Observe {
 			this._histograms.set(metric.name, histogram)
 		}
 		histogram.record(metric.value, {
-			...metric.tags?.reduce((a, b) => ({ ...a, [b.name]: b.value }), {}),
+			...metric.attributes,
 			'highlight.session_id': this.sessionSecureID,
 		})
 	}
@@ -156,7 +151,7 @@ export class ObserveSDK implements Observe {
 			this._up_down_counters.set(metric.name, up_down_counter)
 		}
 		up_down_counter.add(metric.value, {
-			...metric.tags?.reduce((a, b) => ({ ...a, [b.name]: b.value }), {}),
+			...metric.attributes,
 			'highlight.session_id': this.sessionSecureID,
 		})
 	}

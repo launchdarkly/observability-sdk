@@ -1,5 +1,5 @@
 import type { Attributes, Context, Span, SpanOptions } from '@opentelemetry/api'
-import type { LDClientMin, Metric } from '../client'
+import type { LDClientMin, OTelMetric as Metric } from '../client'
 import type { ErrorMessageType } from '../client/types/shared-types'
 import { LDPluginEnvironmentMetadata } from '../plugins/plugin'
 
@@ -11,7 +11,7 @@ export interface Observe {
 	 * Values with the same metric name and attributes are aggregated via the OTel SDK.
 	 * See https://opentelemetry.io/docs/specs/otel/metrics/data-model/ for more details.
 	 */
-	recordMetric: (metric: Metric) => void
+	recordGauge: (metric: Metric) => void
 	/**
 	 * Record arbitrary metric values via as a Counter.
 	 * A Counter efficiently records an increment in a metric, such as number of cache hits.

@@ -108,7 +108,7 @@ import {
 	defaultLogOptions,
 } from '../client/listeners/console-listener'
 import { LaunchDarklyIntegration } from '../integrations/launchdarkly'
-import type { LDPluginEnvironmentMetadata } from '../plugins/plugin'
+import LD from 'sdk'
 
 interface HighlightWindow extends Window {
 	Highlight: Highlight
@@ -698,11 +698,13 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 
 			const { getDeviceDetails } = getPerformanceMethods()
 			if (getDeviceDetails) {
-				this.recordGauge({
+				LD.recordGauge({
 					name: MetricName.DeviceMemory,
 					value: getDeviceDetails().deviceMemory,
-					category: MetricCategory.Device,
-					group: window.location.href,
+					attributes: {
+						category: MetricCategory.Device,
+						group: window.location.href,
+					},
 				})
 			}
 
@@ -973,11 +975,13 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 			this.listeners.push(
 				WebVitalsListener((data) => {
 					const { name, value } = data
-					this.recordGauge({
+					LD.recordGauge({
 						name,
 						value,
-						group: window.location.href,
-						category: MetricCategory.WebVital,
+						attributes: {
+							group: window.location.href,
+							category: MetricCategory.WebVital,
+						},
 					})
 				}),
 			)
@@ -985,35 +989,28 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 			this.listeners.push(
 				NetworkPerformanceListener(
 					(payload: NetworkPerformancePayload) => {
-						const tags: { name: string; value: string }[] = []
+						const attributes: Attributes = {
+							category: MetricCategory.Performance,
+							group: window.location.href,
+						}
 						if (payload.saveData !== undefined) {
-							tags.push({
-								name: 'saveData',
-								value: payload.saveData.toString(),
-							})
+							attributes['saveData'] = payload.saveData.toString()
 						}
 						if (payload.effectiveType !== undefined) {
-							tags.push({
-								name: 'effectiveType',
-								value: payload.effectiveType.toString(),
-							})
+							attributes['effectiveType'] =
+								payload.effectiveType.toString()
 						}
 						if (payload.type !== undefined) {
-							tags.push({
-								name: 'type',
-								value: payload.type.toString(),
-							})
+							attributes['type'] = payload.type.toString()
 						}
 						Object.entries(payload).forEach(
 							([name, value]) =>
 								value &&
 								typeof value === 'number' &&
-								this.recordGauge({
+								LD.recordGauge({
 									name,
 									value: value as number,
-									category: MetricCategory.Performance,
-									group: window.location.href,
-									tags,
+									attributes,
 								}),
 						)
 					},
@@ -1039,11 +1036,14 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 							.forEach(
 								([name, value]) =>
 									value &&
-									this.recordGauge({
+									LD.recordGauge({
 										name,
 										value,
-										category: MetricCategory.Performance,
-										group: window.location.href,
+										attributes: {
+											category:
+												MetricCategory.Performance,
+											group: window.location.href,
+										},
 									}),
 							)
 					}, this._recordingStartTime),
@@ -1051,11 +1051,13 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 				this.listeners.push(
 					JankListener((payload: JankPayload) => {
 						this.addCustomEvent('Jank', stringify(payload))
-						this.recordGauge({
+						LD.recordGauge({
 							name: 'Jank',
 							value: payload.jankAmount,
-							category: MetricCategory.WebVital,
-							group: payload.querySelector,
+							attributes: {
+								category: MetricCategory.WebVital,
+								group: payload.querySelector,
+							},
 						})
 					}, this._recordingStartTime),
 				)
@@ -1135,36 +1137,45 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 		availHeight,
 		availWidth,
 	}: ViewportResizeListenerArgs) {
-		// TODO(vkorolik) ObserveSDK singleton
-		this.recordGauge({
+		LD.recordGauge({
 			name: MetricName.ViewportHeight,
 			value: height,
-			category: MetricCategory.Device,
-			group: window.location.href,
+			attributes: {
+				category: MetricCategory.Device,
+				group: window.location.href,
+			},
 		})
-		this.recordGauge({
+		LD.recordGauge({
 			name: MetricName.ViewportWidth,
 			value: width,
-			category: MetricCategory.Device,
-			group: window.location.href,
+			attributes: {
+				category: MetricCategory.Device,
+				group: window.location.href,
+			},
 		})
-		this.recordGauge({
+		LD.recordGauge({
 			name: MetricName.ScreenHeight,
 			value: availHeight,
-			category: MetricCategory.Device,
-			group: window.location.href,
+			attributes: {
+				category: MetricCategory.Device,
+				group: window.location.href,
+			},
 		})
-		this.recordGauge({
+		LD.recordGauge({
 			name: MetricName.ScreenWidth,
 			value: availWidth,
-			category: MetricCategory.Device,
-			group: window.location.href,
+			attributes: {
+				category: MetricCategory.Device,
+				group: window.location.href,
+			},
 		})
-		this.recordGauge({
+		LD.recordGauge({
 			name: MetricName.ViewportArea,
 			value: height * width,
-			category: MetricCategory.Device,
-			group: window.location.href,
+			attributes: {
+				category: MetricCategory.Device,
+				group: window.location.href,
+			},
 		})
 	}
 
