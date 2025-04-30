@@ -19,11 +19,11 @@ import {
 	SessionShortcutOptions,
 } from '../client/types/client'
 import {
-	type HighlightOptions,
 	PrivacySettingOption,
 	RecordMetric,
 	SamplingStrategy,
 	type SessionDetails,
+	StartOptions,
 } from '../client/types/types'
 import { determineMaskInputOptions } from '../client/utils/privacy'
 
@@ -88,6 +88,7 @@ import {
 import { SESSION_STORAGE_KEYS } from '../client/utils/sessionStorage/sessionStorageKeys'
 import {
 	getItem,
+	LocalStorageKeys,
 	removeItem,
 	setCookieWriteEnabled,
 	setItem,
@@ -98,11 +99,35 @@ import type { HighlightClientRequestWorker } from '../client/workers/highlight-c
 import HighlightClientWorker from '../client/workers/highlight-client-worker?worker&inline'
 import { MessageType, PropertyType } from '../client/workers/types'
 import { parseError } from '../client/utils/errors'
-import { Counter, Gauge, Histogram, UpDownCounter } from '@opentelemetry/api'
+import {
+	Attributes,
+	Counter,
+	Gauge,
+	Histogram,
+	UpDownCounter,
+} from '@opentelemetry/api'
 import { IntegrationClient } from '../integrations'
-import type { Record } from '../api/record'
+import { Record, RecordOptions } from '../api/record'
 import { HighlightWarning } from './util'
-import { HighlightClassOptions } from '../client'
+import { Highlight, HighlightClassOptions, LDClientMin } from '../client'
+import {
+	createLog,
+	defaultLogOptions,
+} from '../client/listeners/console-listener'
+import { LaunchDarklyIntegration } from '../integrations/launchdarkly'
+
+interface HighlightWindow extends Window {
+	Highlight: Highlight
+	Intercom?: any
+	electron?: {
+		ipcRenderer: {
+			on: (channel: string, listener: (...args: any[]) => void) => {}
+		}
+	}
+	Cypress?: any
+}
+
+declare var window: HighlightWindow
 
 export class RecordSDK implements Record {
 	options!: HighlightClassOptions
@@ -112,9 +137,10 @@ export class RecordSDK implements Record {
 	organizationID!: string
 	graphqlSDK!: Sdk
 	events!: eventWithTime[]
-	_sessionData!: SessionData
+	sessionData!: SessionData
 	ready!: boolean
-	_state!: 'NotRecording' | 'Recording'
+	manualStopped!: boolean
+	state!: 'NotRecording' | 'Recording'
 	logger!: Logger
 	enableSegmentIntegration!: boolean
 	privacySetting!: PrivacySettingOption
@@ -133,6 +159,7 @@ export class RecordSDK implements Record {
 	appVersion!: string | undefined
 	serviceName!: string
 	_worker!: HighlightClientRequestWorker
+	_optionsInternal!: Omit<RecordOptions, 'firstloadVersion'>
 	_backendUrl!: string
 	_recordingStartTime!: number
 	_isOnLocalHost!: boolean
@@ -220,21 +247,21 @@ export class RecordSDK implements Record {
 		this.reloaded = false
 		// only fetch session data from local storage on the first `initialize` call
 		if (
-			!this._sessionData?.sessionSecureID &&
+			!this.sessionData?.sessionSecureID &&
 			storedSessionData?.sessionSecureID
 		) {
-			this._sessionData = storedSessionData
+			this.sessionData = storedSessionData
 			this.options.sessionSecureID = storedSessionData.sessionSecureID
 			this.reloaded = true
 			this.logger.log(
-				`Tab reloaded, continuing previous session: ${this._sessionData.sessionSecureID}`,
+				`Tab reloaded, continuing previous session: ${this.sessionData.sessionSecureID}`,
 			)
 		} else {
 			// new session. we should clear any session storage data
 			for (const storageKeyName of Object.values(SESSION_STORAGE_KEYS)) {
 				removeItem(storageKeyName)
 			}
-			this._sessionData = {
+			this.sessionData = {
 				sessionSecureID: this.options.sessionSecureID,
 				projectID: 0,
 				payloadID: 1,
@@ -286,12 +313,12 @@ export class RecordSDK implements Record {
 
 		// no need to set the sessionStorage value here since firstload won't call
 		// init again after a reset, and `this.initialize()` will set sessionStorage
-		this._sessionData.sessionSecureID = GenerateSecureID()
-		this._sessionData.sessionStartTime = Date.now()
-		this.options.sessionSecureID = this._sessionData.sessionSecureID
-		this.stopRecording()
+		this.sessionData.sessionSecureID = GenerateSecureID()
+		this.sessionData.sessionStartTime = Date.now()
+		this.options.sessionSecureID = this.sessionData.sessionSecureID
+		this.stop()
 		this._firstLoadListeners = new FirstLoadListeners(this.options)
-		await this.init()
+		await this.initialize()
 		if (user_identifier && user_object) {
 			this.identify(user_identifier, user_object)
 		}
@@ -306,7 +333,7 @@ export class RecordSDK implements Record {
 			window.location.hostname === ''
 
 		this.ready = false
-		this._state = 'NotRecording'
+		this.state = 'NotRecording'
 		this.manualStopped = false
 		this.enableSegmentIntegration = !!options.enableSegmentIntegration
 		this.privacySetting = options.privacySetting ?? 'default'
@@ -340,7 +367,7 @@ export class RecordSDK implements Record {
 		this.graphqlSDK = getSdk(
 			client,
 			getGraphQLRequestWrapper(
-				this._sessionData?.sessionSecureID ||
+				this.sessionData?.sessionSecureID ||
 					this.options?.sessionSecureID,
 			),
 		)
@@ -358,6 +385,9 @@ export class RecordSDK implements Record {
 		this.firstloadVersion = options.firstloadVersion || 'unknown'
 		this.sessionShortcut = options.sessionShortcut || false
 		this._onToggleFeedbackFormVisibility = () => {}
+		// We only want to store a subset of the options for debugging purposes. Firstload version is stored as another field so we don't need to store it here.
+		const { firstloadVersion: _, ...optionsInternal } = options
+		this._optionsInternal = optionsInternal
 		this.listeners = []
 
 		this.events = []
@@ -387,8 +417,8 @@ export class RecordSDK implements Record {
 			)
 			return
 		}
-		this._sessionData.userIdentifier = user_identifier.toString()
-		this._sessionData.userObject = user_object
+		this.sessionData.userIdentifier = user_identifier.toString()
+		this.sessionData.userObject = user_object
 		setItem(
 			SESSION_STORAGE_KEYS.USER_IDENTIFIER,
 			user_identifier.toString(),
@@ -404,12 +434,18 @@ export class RecordSDK implements Record {
 		})
 		for (const integration of this._integrations) {
 			integration.identify(
-				this._sessionData.sessionSecureID,
+				this.sessionData.sessionSecureID,
 				user_identifier,
 				user_object,
 				source,
 			)
 		}
+	}
+
+	log(message: any, level: string, metadata?: Attributes) {
+		this._firstLoadListeners.messages.push(
+			createLog(level, defaultLogOptions, message, metadata),
+		)
 	}
 
 	pushCustomError(message: string, payload?: string) {
@@ -464,11 +500,11 @@ export class RecordSDK implements Record {
 		}
 		this._firstLoadListeners.errors.push(errorMsg)
 		for (const integration of this._integrations) {
-			integration.error(this._sessionData.sessionSecureID, errorMsg)
+			integration.error(this.sessionData.sessionSecureID, errorMsg)
 		}
 	}
 
-	track(properties_obj = {}, typeArg?: PropertyType) {
+	addProperties(properties_obj = {}, typeArg?: PropertyType) {
 		// Remove any properties which throw on structuredClone
 		// (structuredClone is used when posting messages to the worker)
 		const obj = { ...properties_obj } as any
@@ -480,8 +516,8 @@ export class RecordSDK implements Record {
 			}
 		})
 		for (const integration of this._integrations) {
-			integration.track(this._sessionData.sessionSecureID, {
-				sessionSecureID: this._sessionData.sessionSecureID,
+			integration.track(this.sessionData.sessionSecureID, {
+				sessionSecureID: this.sessionData.sessionSecureID,
 				propertyType: typeArg,
 				...properties_obj,
 			})
@@ -495,7 +531,7 @@ export class RecordSDK implements Record {
 		})
 	}
 
-	init(options?: HighlightOptions) {
+	async initialize(options?: StartOptions): Promise<undefined> {
 		if (
 			(navigator?.webdriver && !window.Cypress) ||
 			navigator?.userAgent?.includes('Googlebot') ||
@@ -505,268 +541,286 @@ export class RecordSDK implements Record {
 			return
 		}
 
-		if (options?.forceNew) {
-			await this._reset(options)
-			return
-		}
-
-		this.logger.log(
-			`Initializing...`,
-			options,
-			this._sessionData,
-			this.options,
-		)
-
-		this._sessionData =
-			getPreviousSessionData(this._sessionData.sessionSecureID) ??
-			this._sessionData
-		if (!this._sessionData?.sessionStartTime) {
-			this._recordingStartTime = new Date().getTime()
-			this._sessionData.sessionStartTime = this._recordingStartTime
-		} else {
-			this._recordingStartTime = this._sessionData?.sessionStartTime
-		}
-		// To handle the 'Duplicate Tab' function, remove id from storage until page unload
-		setSessionSecureID('')
-		setSessionData(this._sessionData)
-
-		let clientID = getItem(LOCAL_STORAGE_KEYS['CLIENT_ID'])
-
-		if (!clientID) {
-			clientID = GenerateSecureID()
-			setItem(LOCAL_STORAGE_KEYS['CLIENT_ID'], clientID)
-		}
-
-		// Duplicate of logic inside FirstLoadListeners.setupNetworkListener,
-		// needed for initializeSession
-		let enableNetworkRecording
-		if (this.options.disableSessionRecording) {
-			enableNetworkRecording = false
-		} else if (this.options.disableNetworkRecording !== undefined) {
-			enableNetworkRecording = false
-		} else if (typeof this.options.networkRecording === 'boolean') {
-			enableNetworkRecording = false
-		} else {
-			enableNetworkRecording =
-				this.options.networkRecording?.recordHeadersAndBody || false
-		}
-
-		let destinationDomains: string[] = []
-		if (
-			typeof this.options.networkRecording === 'object' &&
-			this.options.networkRecording.destinationDomains?.length
-		) {
-			destinationDomains =
-				this.options.networkRecording.destinationDomains
-		}
-		if (this._isCrossOriginIframe) {
-			// wait for 'cross-origin iframe ready' message
-			await this._setupCrossOriginIframe()
-		} else {
-			const gr = await this.graphqlSDK.initializeSession({
-				organization_verbose_id: this.organizationID,
-				enable_strict_privacy: this.privacySetting === 'strict',
-				privacy_setting: this.privacySetting,
-				enable_recording_network_contents: enableNetworkRecording,
-				clientVersion: this.firstloadVersion,
-				firstloadVersion: this.firstloadVersion,
-				clientConfig: JSON.stringify(this.options),
-				environment: this.environment,
-				id: clientID,
-				appVersion: this.appVersion,
-				serviceName: this.serviceName,
-				session_secure_id: this._sessionData.sessionSecureID,
-				client_id: clientID,
-				network_recording_domains: destinationDomains,
-				disable_session_recording: this.options.disableSessionRecording,
-			})
-			if (
-				gr.initializeSession.secure_id !==
-				this._sessionData.sessionSecureID
-			) {
-				this.logger.log(
-					`Unexpected secure id returned by initializeSession: ${gr.initializeSession.secure_id}, ` +
-						`expected ${this._sessionData.sessionSecureID}`,
-				)
-			}
-			this._sessionData.sessionSecureID = gr.initializeSession.secure_id
-			this._sessionData.projectID = parseInt(
-				gr?.initializeSession?.project_id || '0',
-			)
-
-			if (
-				!this._sessionData.projectID ||
-				!this._sessionData.sessionSecureID
-			) {
-				console.error(
-					'Failed to initialize Highlight; an error occurred on our end.',
-					this._sessionData,
-				)
+		try {
+			if (options?.forceNew) {
+				await this._reset(options)
 				return
 			}
-		}
 
-		this.logger.log(
-			`Loaded Highlight
-Remote: ${this._backendUrl}
-Project ID: ${this._sessionData.projectID}
-SessionSecureID: ${this._sessionData.sessionSecureID}`,
-		)
-		this.options.sessionSecureID = this._sessionData.sessionSecureID
-		this._worker.postMessage({
-			message: {
-				type: MessageType.Initialize,
-				sessionSecureID: this._sessionData.sessionSecureID,
-				backend: this._backendUrl,
-				debug: !!this.debugOptions.clientInteractions,
-				recordingStartTime: this._recordingStartTime,
-			},
-		})
-
-		if (this._sessionData.userIdentifier) {
-			this.identify(
-				this._sessionData.userIdentifier,
-				this._sessionData.userObject,
-			)
-		}
-
-		if (!this._firstLoadListeners.isListening()) {
-			this._firstLoadListeners.startListening()
-		} else if (!this._firstLoadListeners.hasNetworkRecording) {
-			// for firstload versions < 3.0. even if they are listening, add network listeners
-			FirstLoadListeners.setupNetworkListener(
-				this._firstLoadListeners,
+			this.logger.log(
+				`Initializing...`,
+				options,
+				this.sessionData,
 				this.options,
 			)
-		}
 
-		if (this.pushPayloadTimerId) {
-			clearTimeout(this.pushPayloadTimerId)
-			this.pushPayloadTimerId = undefined
-		}
-		if (!this._isCrossOriginIframe) {
-			this.pushPayloadTimerId = setTimeout(() => {
-				this._save()
-			}, FIRST_SEND_FREQUENCY)
-		}
-
-		// if disabled, do not record session events / rrweb events.
-		// we still use firstload listeners to record frontend js console logs and errors.
-		if (this.options.disableSessionRecording) {
-			this.logger.log(
-				`Highlight is NOT RECORDING a session replay per H.init setting.`,
-			)
-			this.ready = true
-			this._state = 'Recording'
-			return
-		}
-
-		const { getDeviceDetails } = getPerformanceMethods()
-		if (getDeviceDetails) {
-			this.recordGauge({
-				name: MetricName.DeviceMemory,
-				value: getDeviceDetails().deviceMemory,
-				category: MetricCategory.Device,
-				group: window.location.href,
-			})
-		}
-
-		const emit = (
-			event: eventWithTime,
-			isCheckout?: boolean | undefined,
-		) => {
-			if (isCheckout) {
-				this.logger.log('received isCheckout emit', { event })
+			this.sessionData =
+				getPreviousSessionData(this.sessionData.sessionSecureID) ??
+				this.sessionData
+			if (!this.sessionData?.sessionStartTime) {
+				this._recordingStartTime = new Date().getTime()
+				this.sessionData.sessionStartTime = this._recordingStartTime
+			} else {
+				this._recordingStartTime = this.sessionData?.sessionStartTime
 			}
-			this.events.push(event)
-		}
-		emit.bind(this)
+			// To handle the 'Duplicate Tab' function, remove id from storage until page unload
+			setSessionSecureID('')
+			setSessionData(this.sessionData)
 
-		const alreadyRecording = !!this._recordStop
-		// if we were already recording, stop recording to reset rrweb state (eg. reset _sid)
-		if (this._recordStop) {
-			this._recordStop()
-			this._recordStop = undefined
-		}
+			let clientID = getItem(LocalStorageKeys['CLIENT_ID'])
 
-		const [maskAllInputs, maskInputOptions] = determineMaskInputOptions(
-			this.privacySetting,
-		)
-
-		this._recordStop = record({
-			ignoreClass: 'highlight-ignore',
-			blockClass: 'highlight-block',
-			emit,
-			recordCrossOriginIframes: this.options.recordCrossOriginIframe,
-			privacySetting: this.privacySetting,
-			maskAllInputs,
-			maskInputOptions: maskInputOptions,
-			recordCanvas: this.enableCanvasRecording,
-			sampling: {
-				canvas: {
-					fps: this.samplingStrategy.canvas,
-					fpsManual: this.samplingStrategy.canvasManualSnapshot,
-					resizeFactor: this.samplingStrategy.canvasFactor,
-					clearWebGLBuffer:
-						this.samplingStrategy.canvasClearWebGLBuffer,
-					initialSnapshotDelay:
-						this.samplingStrategy.canvasInitialSnapshotDelay,
-					dataURLOptions: this.samplingStrategy.dataUrlOptions,
-					maxSnapshotDimension:
-						this.samplingStrategy.canvasMaxSnapshotDimension,
-				},
-			},
-			keepIframeSrcFn: (_src: string) => {
-				return !this.options.recordCrossOriginIframe
-			},
-			inlineImages: this.inlineImages,
-			inlineVideos: this.inlineVideos,
-			collectFonts: this.inlineImages,
-			inlineStylesheet: this.inlineStylesheet,
-			plugins: [getRecordSequentialIdPlugin()],
-			logger:
-				(typeof this.options.debug === 'boolean' &&
-					this.options.debug) ||
-				(typeof this.options.debug === 'object' &&
-					this.options.debug.domRecording)
-					? {
-							debug: this.logger.log,
-							warn: HighlightWarning,
-						}
-					: undefined,
-		})
-
-		// recordStop is not part of listeners because we do not actually want to stop rrweb
-		// rrweb has some bugs that make the stop -> restart workflow broken (eg iframe listeners)
-		if (!alreadyRecording) {
-			if (this.options.recordCrossOriginIframe) {
-				this._setupCrossOriginIframeParent()
+			if (!clientID) {
+				clientID = GenerateSecureID()
+				setItem(LocalStorageKeys['CLIENT_ID'], clientID)
 			}
-		}
 
-		if (document.referrer) {
-			// Don't record the referrer if it's the same origin.
-			// Non-single page apps might have the referrer set to the same origin.
-			// If we record this then the referrer data will not be useful.
-			// Most users will want to see referrers outside of their website/app.
-			// This will be a configuration set in `H.init()` later.
+			// Duplicate of logic inside FirstLoadListeners.setupNetworkListener,
+			// needed for initializeSession
+			let enableNetworkRecording
+			if (this.options.disableSessionRecording) {
+				enableNetworkRecording = false
+			} else if (this.options.disableNetworkRecording !== undefined) {
+				enableNetworkRecording = false
+			} else if (typeof this.options.networkRecording === 'boolean') {
+				enableNetworkRecording = false
+			} else {
+				enableNetworkRecording =
+					this.options.networkRecording?.recordHeadersAndBody || false
+			}
+
+			let destinationDomains: string[] = []
 			if (
-				!(window && document.referrer.includes(window.location.origin))
+				typeof this.options.networkRecording === 'object' &&
+				this.options.networkRecording.destinationDomains?.length
 			) {
-				this.addCustomEvent<string>('Referrer', document.referrer)
-				this.addProperties(
-					{ referrer: document.referrer },
-					{ type: 'session' },
+				destinationDomains =
+					this.options.networkRecording.destinationDomains
+			}
+			if (this._isCrossOriginIframe) {
+				// wait for 'cross-origin iframe ready' message
+				await this._setupCrossOriginIframe()
+			} else {
+				const gr = await this.graphqlSDK.initializeSession({
+					organization_verbose_id: this.organizationID,
+					enable_strict_privacy: this.privacySetting === 'strict',
+					privacy_setting: this.privacySetting,
+					enable_recording_network_contents: enableNetworkRecording,
+					clientVersion: this.firstloadVersion,
+					firstloadVersion: this.firstloadVersion,
+					clientConfig: JSON.stringify(this._optionsInternal),
+					environment: this.environment,
+					id: clientID,
+					appVersion: this.appVersion,
+					serviceName: this.serviceName,
+					session_secure_id: this.sessionData.sessionSecureID,
+					client_id: clientID,
+					network_recording_domains: destinationDomains,
+					disable_session_recording:
+						this.options.disableSessionRecording,
+				})
+				if (
+					gr.initializeSession.secure_id !==
+					this.sessionData.sessionSecureID
+				) {
+					this.logger.log(
+						`Unexpected secure id returned by initializeSession: ${gr.initializeSession.secure_id}, ` +
+							`expected ${this.sessionData.sessionSecureID}`,
+					)
+				}
+				this.sessionData.sessionSecureID =
+					gr.initializeSession.secure_id
+				this.sessionData.projectID = parseInt(
+					gr?.initializeSession?.project_id || '0',
+				)
+
+				if (
+					!this.sessionData.projectID ||
+					!this.sessionData.sessionSecureID
+				) {
+					console.error(
+						'Failed to initialize Highlight; an error occurred on our end.',
+						this.sessionData,
+					)
+					return
+				}
+			}
+
+			this.logger.log(
+				`Loaded Highlight
+Remote: ${this._backendUrl}
+Project ID: ${this.sessionData.projectID}
+SessionSecureID: ${this.sessionData.sessionSecureID}`,
+			)
+			this.options.sessionSecureID = this.sessionData.sessionSecureID
+			this._worker.postMessage({
+				message: {
+					type: MessageType.Initialize,
+					sessionSecureID: this.sessionData.sessionSecureID,
+					backend: this._backendUrl,
+					debug: !!this.debugOptions.clientInteractions,
+					recordingStartTime: this._recordingStartTime,
+				},
+			})
+
+			if (this.sessionData.userIdentifier) {
+				this.identify(
+					this.sessionData.userIdentifier,
+					this.sessionData.userObject,
 				)
 			}
-		}
 
-		this._setupWindowListeners()
-		this.ready = true
-		this._state = 'Recording'
+			if (!this._firstLoadListeners.isListening()) {
+				this._firstLoadListeners.startListening()
+			} else if (!this._firstLoadListeners.hasNetworkRecording) {
+				// for firstload versions < 3.0. even if they are listening, add network listeners
+				FirstLoadListeners.setupNetworkListener(
+					this._firstLoadListeners,
+					this.options,
+				)
+			}
+
+			if (this.pushPayloadTimerId) {
+				clearTimeout(this.pushPayloadTimerId)
+				this.pushPayloadTimerId = undefined
+			}
+			if (!this._isCrossOriginIframe) {
+				this.pushPayloadTimerId = setTimeout(() => {
+					this._save()
+				}, FIRST_SEND_FREQUENCY)
+			}
+
+			// if disabled, do not record session events / rrweb events.
+			// we still use firstload listeners to record frontend js console logs and errors.
+			if (this.options.disableSessionRecording) {
+				this.logger.log(
+					`Highlight is NOT RECORDING a session replay per H.init setting.`,
+				)
+				this.ready = true
+				this.state = 'Recording'
+				this.manualStopped = false
+				return
+			}
+
+			const { getDeviceDetails } = getPerformanceMethods()
+			if (getDeviceDetails) {
+				this.recordGauge({
+					name: MetricName.DeviceMemory,
+					value: getDeviceDetails().deviceMemory,
+					category: MetricCategory.Device,
+					group: window.location.href,
+				})
+			}
+
+			const emit = (
+				event: eventWithTime,
+				isCheckout?: boolean | undefined,
+			) => {
+				if (isCheckout) {
+					this.logger.log('received isCheckout emit', { event })
+				}
+				this.events.push(event)
+			}
+			emit.bind(this)
+
+			const alreadyRecording = !!this._recordStop
+			// if we were already recording, stop recording to reset rrweb state (eg. reset _sid)
+			if (this._recordStop) {
+				this._recordStop()
+				this._recordStop = undefined
+			}
+
+			const [maskAllInputs, maskInputOptions] = determineMaskInputOptions(
+				this.privacySetting,
+			)
+
+			this._recordStop = record({
+				ignoreClass: 'highlight-ignore',
+				blockClass: 'highlight-block',
+				emit,
+				recordCrossOriginIframes: this.options.recordCrossOriginIframe,
+				privacySetting: this.privacySetting,
+				maskAllInputs,
+				maskInputOptions: maskInputOptions,
+				recordCanvas: this.enableCanvasRecording,
+				sampling: {
+					canvas: {
+						fps: this.samplingStrategy.canvas,
+						fpsManual: this.samplingStrategy.canvasManualSnapshot,
+						resizeFactor: this.samplingStrategy.canvasFactor,
+						clearWebGLBuffer:
+							this.samplingStrategy.canvasClearWebGLBuffer,
+						initialSnapshotDelay:
+							this.samplingStrategy.canvasInitialSnapshotDelay,
+						dataURLOptions: this.samplingStrategy.dataUrlOptions,
+						maxSnapshotDimension:
+							this.samplingStrategy.canvasMaxSnapshotDimension,
+					},
+				},
+				keepIframeSrcFn: (_src: string) => {
+					return !this.options.recordCrossOriginIframe
+				},
+				inlineImages: this.inlineImages,
+				inlineVideos: this.inlineVideos,
+				collectFonts: this.inlineImages,
+				inlineStylesheet: this.inlineStylesheet,
+				plugins: [getRecordSequentialIdPlugin()],
+				logger:
+					(typeof this.options.debug === 'boolean' &&
+						this.options.debug) ||
+					(typeof this.options.debug === 'object' &&
+						this.options.debug.domRecording)
+						? {
+								debug: this.logger.log,
+								warn: HighlightWarning,
+							}
+						: undefined,
+			})
+
+			// recordStop is not part of listeners because we do not actually want to stop rrweb
+			// rrweb has some bugs that make the stop -> restart workflow broken (eg iframe listeners)
+			if (!alreadyRecording) {
+				if (this.options.recordCrossOriginIframe) {
+					this._setupCrossOriginIframeParent()
+				}
+			}
+
+			if (document.referrer) {
+				// Don't record the referrer if it's the same origin.
+				// Non-single page apps might have the referrer set to the same origin.
+				// If we record this then the referrer data will not be useful.
+				// Most users will want to see referrers outside of their website/app.
+				// This will be a configuration set in `H.init()` later.
+				if (
+					!(
+						window &&
+						document.referrer.includes(window.location.origin)
+					)
+				) {
+					this.addCustomEvent<string>('Referrer', document.referrer)
+					this.addProperties(
+						{ referrer: document.referrer },
+						{ type: 'session' },
+					)
+				}
+			}
+
+			this._setupWindowListeners()
+			this.ready = true
+			this.state = 'Recording'
+			this.manualStopped = false
+		} catch (e) {
+			if (this._isOnLocalHost) {
+				console.error(e)
+				HighlightWarning('initializeSession', e)
+			}
+		}
 	}
 
 	async _visibilityHandler(hidden: boolean) {
+		if (this.manualStopped) {
+			this.logger.log(`Ignoring visibility event due to manual stop.`)
+			return
+		}
 		if (
 			new Date().getTime() - this._lastVisibilityChangeTime <
 			VISIBILITY_DEBOUNCE_MS
@@ -777,7 +831,7 @@ SessionSecureID: ${this._sessionData.sessionSecureID}`,
 		this.logger.log(`Detected window ${hidden ? 'hidden' : 'visible'}.`)
 		if (!hidden) {
 			if (this.options.disableBackgroundRecording) {
-				this.init()
+				await this.initialize()
 			}
 			this.addCustomEvent('TabHidden', false)
 		} else {
@@ -796,8 +850,8 @@ SessionSecureID: ${this._sessionData.sessionSecureID}`,
 				if (message.data.highlight === IFRAME_PARENT_READY) {
 					const msg = message.data as HighlightIframeMessage
 					this.logger.log(`highlight got window message `, msg)
-					this._sessionData.projectID = msg.projectID
-					this._sessionData.sessionSecureID = msg.sessionSecureID
+					this.sessionData.projectID = msg.projectID
+					this.sessionData.sessionSecureID = msg.sessionSecureID
 					// reply back that we got the message and are set up
 					window.parent.postMessage(
 						{
@@ -824,8 +878,8 @@ SessionSecureID: ${this._sessionData.sessionSecureID}`,
 				iframe.contentWindow?.postMessage(
 					{
 						highlight: IFRAME_PARENT_READY,
-						projectID: this._sessionData.projectID,
-						sessionSecureID: this._sessionData.sessionSecureID,
+						projectID: this.sessionData.projectID,
+						sessionSecureID: this.sessionData.sessionSecureID,
 					} as HighlightIframeMessage,
 					'*',
 				)
@@ -1055,8 +1109,8 @@ SessionSecureID: ${this._sessionData.sessionSecureID}`,
 
 		const unloadListener = () => {
 			this.addCustomEvent('Page Unload', '')
-			setSessionSecureID(this._sessionData.sessionSecureID)
-			setSessionData(this._sessionData)
+			setSessionSecureID(this.sessionData.sessionSecureID)
+			setSessionData(this.sessionData)
 		}
 		window.addEventListener('beforeunload', unloadListener)
 		this.listeners.push(() =>
@@ -1070,8 +1124,8 @@ SessionSecureID: ${this._sessionData.sessionSecureID}`,
 		if (isOnIOS) {
 			const unloadListener = () => {
 				this.addCustomEvent('Page Unload', '')
-				setSessionSecureID(this._sessionData.sessionSecureID)
-				setSessionData(this._sessionData)
+				setSessionSecureID(this.sessionData.sessionSecureID)
+				setSessionData(this.sessionData)
 			}
 			window.addEventListener('pagehide', unloadListener)
 			this.listeners.push(() =>
@@ -1131,7 +1185,7 @@ SessionSecureID: ${this._sessionData.sessionSecureID}`,
 			...metric.tags?.reduce((a, b) => ({ ...a, [b.name]: b.value }), {}),
 			group: metric.group,
 			category: metric.category,
-			'highlight.session_id': this._sessionData.sessionSecureID,
+			'highlight.session_id': this.sessionData.sessionSecureID,
 		})
 	}
 
@@ -1148,7 +1202,7 @@ SessionSecureID: ${this._sessionData.sessionSecureID}`,
 			...metric.tags?.reduce((a, b) => ({ ...a, [b.name]: b.value }), {}),
 			group: metric.group,
 			category: metric.category,
-			'highlight.session_id': this._sessionData.sessionSecureID,
+			'highlight.session_id': this.sessionData.sessionSecureID,
 		})
 	}
 
@@ -1169,7 +1223,7 @@ SessionSecureID: ${this._sessionData.sessionSecureID}`,
 			...metric.tags?.reduce((a, b) => ({ ...a, [b.name]: b.value }), {}),
 			group: metric.group,
 			category: metric.category,
-			'highlight.session_id': this._sessionData.sessionSecureID,
+			'highlight.session_id': this.sessionData.sessionSecureID,
 		})
 	}
 
@@ -1186,21 +1240,25 @@ SessionSecureID: ${this._sessionData.sessionSecureID}`,
 			...metric.tags?.reduce((a, b) => ({ ...a, [b.name]: b.value }), {}),
 			group: metric.group,
 			category: metric.category,
-			'highlight.session_id': this._sessionData.sessionSecureID,
+			'highlight.session_id': this.sessionData.sessionSecureID,
 		})
 	}
 
 	/**
 	 * Stops Highlight from recording.
+	 * @param manual The end user requested to stop recording.
 	 */
-	stop() {
-		this.addCustomEvent(
-			'Stop',
-			'H.stop() was called which stops Highlight from recording.',
-		)
-		this._state = 'NotRecording'
+	stop(manual?: boolean) {
+		this.manualStopped = !!manual
+		if (this.manualStopped) {
+			this.addCustomEvent(
+				'Stop',
+				'H.stop() was called which stops Highlight from recording.',
+			)
+		}
+		this.state = 'NotRecording'
 		// stop rrweb recording mutation observers
-		if (this._recordStop) {
+		if (manual && this._recordStop) {
 			this._recordStop()
 			this._recordStop = undefined
 		}
@@ -1209,49 +1267,103 @@ SessionSecureID: ${this._sessionData.sessionSecureID}`,
 		this.listeners = []
 	}
 
+	getCurrentSessionTimestamp() {
+		return this._recordingStartTime
+	}
+
+	/**
+	 * Returns the current timestamp for the current session.
+	 */
+	getCurrentSessionURLWithTimestamp() {
+		const now = new Date().getTime()
+		const { projectID, sessionSecureID } = this.sessionData
+		const relativeTimestamp = (now - this._recordingStartTime) / 1000
+		return `https://${HIGHLIGHT_URL}/${projectID}/sessions/${sessionSecureID}?ts=${relativeTimestamp}`
+	}
+
+	getCurrentSessionURL() {
+		const projectID = this.sessionData.projectID
+		const sessionSecureID = this.sessionData.sessionSecureID
+		if (projectID && sessionSecureID) {
+			return `https://${HIGHLIGHT_URL}/${projectID}/sessions/${sessionSecureID}`
+		}
+		return null
+	}
+
 	async snapshot(element: HTMLCanvasElement) {
 		await record.snapshotCanvas(element)
 	}
 
+	addSessionFeedback({
+		timestamp,
+		verbatim,
+		user_email,
+		user_name,
+	}: {
+		verbatim: string
+		timestamp: string
+		user_name?: string
+		user_email?: string
+	}) {
+		this._worker.postMessage({
+			message: {
+				type: MessageType.Feedback,
+				verbatim,
+				timestamp,
+				userName: user_name || this.sessionData.userIdentifier,
+				userEmail:
+					user_email || (this.sessionData.userObject as any)?.name,
+			},
+		})
+	}
+
 	// Reset the events array and push to a backend.
-	private async _save() {
-		if (
-			this._state === 'Recording' &&
-			this.listeners &&
-			this._sessionData.sessionStartTime &&
-			Date.now() - this._sessionData.sessionStartTime > MAX_SESSION_LENGTH
-		) {
-			this.logger.log(`Resetting session`, {
-				start: this._sessionData.sessionStartTime,
-			})
-			await this._reset({})
-		}
-		let sendFn = undefined
-		if (this.options?.sendMode === 'local') {
-			sendFn = async (payload: any) => {
-				let blob = new Blob(
-					[
-						JSON.stringify({
-							query: print(PushPayloadDocument),
-							variables: payload,
-						}),
-					],
-					{
-						type: 'application/json',
-					},
-				)
-				await window.fetch(`${this._backendUrl}`, {
-					method: 'POST',
-					body: blob,
+	async _save() {
+		try {
+			if (
+				this.state === 'Recording' &&
+				this.listeners &&
+				this.sessionData.sessionStartTime &&
+				Date.now() - this.sessionData.sessionStartTime >
+					MAX_SESSION_LENGTH
+			) {
+				this.logger.log(`Resetting session`, {
+					start: this.sessionData.sessionStartTime,
 				})
-				return 0
+				await this._reset({})
+			}
+			let sendFn = undefined
+			if (this.options?.sendMode === 'local') {
+				sendFn = async (payload: any) => {
+					let blob = new Blob(
+						[
+							JSON.stringify({
+								query: print(PushPayloadDocument),
+								variables: payload,
+							}),
+						],
+						{
+							type: 'application/json',
+						},
+					)
+					await window.fetch(`${this._backendUrl}`, {
+						method: 'POST',
+						body: blob,
+					})
+					return 0
+				}
+			}
+			await this._sendPayload({ sendFn })
+			this.hasPushedData = true
+			this.sessionData.lastPushTime = Date.now()
+			setSessionData(this.sessionData)
+		} catch (e) {
+			if (this._isOnLocalHost) {
+				console.error(e)
+				HighlightWarning('_save', e)
 			}
 		}
-		await this._sendPayload({ sendFn })
-		this.hasPushedData = true
-		this._sessionData.lastPushTime = Date.now()
-		setSessionData(this._sessionData)
-		if (this._state === 'Recording') {
+		if (this.state === 'Recording') {
 			if (this.pushPayloadTimerId) {
 				clearTimeout(this.pushPayloadTimerId)
 				this.pushPayloadTimerId = undefined
@@ -1266,12 +1378,12 @@ SessionSecureID: ${this._sessionData.sessionSecureID}`,
 	 * This proxy should be used instead of rrweb's native addCustomEvent.
 	 * The proxy makes sure recording has started before emitting a custom event.
 	 */
-	private addCustomEvent<T>(tag: string, payload: T): void {
-		if (this._state === 'NotRecording') {
+	addCustomEvent<T>(tag: string, payload: T): void {
+		if (this.state === 'NotRecording') {
 			let intervalId: ReturnType<typeof setInterval>
 			const worker = () => {
 				clearInterval(intervalId)
-				if (this._state === 'Recording' && this.events.length > 0) {
+				if (this.state === 'Recording' && this.events.length > 0) {
 					rrwebAddCustomEvent(tag, payload)
 				} else {
 					intervalId = setTimeout(worker, 500)
@@ -1279,14 +1391,14 @@ SessionSecureID: ${this._sessionData.sessionSecureID}`,
 			}
 			intervalId = setTimeout(worker, 500)
 		} else if (
-			this._state === 'Recording' &&
+			this.state === 'Recording' &&
 			(this.events.length > 0 || this.hasPushedData)
 		) {
 			rrwebAddCustomEvent(tag, payload)
 		}
 	}
 
-	private async _sendPayload({
+	async _sendPayload({
 		sendFn,
 	}: {
 		sendFn?: (payload: PushPayloadMutationVariables) => Promise<number>
@@ -1317,13 +1429,13 @@ SessionSecureID: ${this._sessionData.sessionSecureID}`,
 		}
 
 		this.logger.log(
-			`Sending: ${events.length} events, ${messages.length} messages, ${resources.length} network resources, ${errors.length} errors \nTo: ${this._backendUrl}\nOrg: ${this.organizationID}\nSessionSecureID: ${this._sessionData.sessionSecureID}`,
+			`Sending: ${events.length} events, ${messages.length} messages, ${resources.length} network resources, ${errors.length} errors \nTo: ${this._backendUrl}\nOrg: ${this.organizationID}\nSessionSecureID: ${this.sessionData.sessionSecureID}`,
 		)
 		const highlightLogs = getHighlightLogs()
 		if (sendFn) {
 			await sendFn({
-				session_secure_id: this._sessionData.sessionSecureID,
-				payload_id: (this._sessionData.payloadID++).toString(),
+				session_secure_id: this.sessionData.sessionSecureID,
+				payload_id: (this.sessionData.payloadID++).toString(),
 				events: { events } as ReplayEventsInput,
 				messages: stringify({ messages: messages }),
 				resources: JSON.stringify({ resources: resources }),
@@ -1339,7 +1451,7 @@ SessionSecureID: ${this._sessionData.sessionSecureID}`,
 			this._worker.postMessage({
 				message: {
 					type: MessageType.AsyncEvents,
-					id: this._sessionData.payloadID++,
+					id: this.sessionData.payloadID++,
 					events,
 					messages,
 					errors,
@@ -1352,7 +1464,7 @@ SessionSecureID: ${this._sessionData.sessionSecureID}`,
 				},
 			})
 		}
-		setSessionData(this._sessionData)
+		setSessionData(this.sessionData)
 
 		// If sendFn throws an exception, the data below will not be cleared, and it will be re-uploaded on the next PushPayload.
 		FirstLoadListeners.clearRecordedNetworkResources(
@@ -1389,12 +1501,16 @@ SessionSecureID: ${this._sessionData.sessionSecureID}`,
 		this._lastSnapshotTime = new Date().getTime()
 	}
 
+	register(client: LDClientMin) {
+		this._integrations.push(new LaunchDarklyIntegration(client))
+	}
+
 	getRecordingState() {
-		return this?._state ?? 'NotRecording'
+		return this?.state ?? 'NotRecording'
 	}
 
 	getSession() {
-		const secureID = this._sessionData.sessionSecureID
+		const secureID = this.sessionData.sessionSecureID
 		const sessionData = getPreviousSessionData(secureID)
 		if (!sessionData) {
 			return null

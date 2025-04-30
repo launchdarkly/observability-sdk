@@ -97,6 +97,7 @@ import {
 import { SESSION_STORAGE_KEYS } from './utils/sessionStorage/sessionStorageKeys'
 import {
 	getItem,
+	LocalStorageKeys,
 	removeItem,
 	setCookieWriteEnabled,
 	setItem,
@@ -121,10 +122,6 @@ import { createLog, defaultLogOptions } from './listeners/console-listener'
 
 export const HighlightWarning = (context: string, msg: any) => {
 	console.warn(`Highlight Warning: (${context}): `, { output: msg })
-}
-
-enum LOCAL_STORAGE_KEYS {
-	CLIENT_ID = 'highlightClientID',
 }
 
 export type HighlightClassOptions = {
@@ -608,11 +605,11 @@ export class Highlight {
 			setSessionSecureID('')
 			setSessionData(this.sessionData)
 
-			let clientID = getItem(LOCAL_STORAGE_KEYS['CLIENT_ID'])
+			let clientID = getItem(LocalStorageKeys['CLIENT_ID'])
 
 			if (!clientID) {
 				clientID = GenerateSecureID()
-				setItem(LOCAL_STORAGE_KEYS['CLIENT_ID'], clientID)
+				setItem(LocalStorageKeys['CLIENT_ID'], clientID)
 			}
 
 			// Duplicate of logic inside FirstLoadListeners.setupNetworkListener,
