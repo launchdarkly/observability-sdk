@@ -1,15 +1,56 @@
-import { Context, Span, SpanOptions } from '@opentelemetry/api'
-import { getMeter, Metric } from 'client'
-import type { Observability } from '../api/observability'
+import {
+	Attributes,
+	Context,
+	Counter,
+	Gauge,
+	Histogram,
+	Span,
+	SpanOptions,
+	UpDownCounter,
+} from '@opentelemetry/api'
+import {
+	getMeter,
+	getTracer,
+	LDClientMin,
+	Metric,
+	setupBrowserTracing,
+} from 'client'
+import type { Observe } from '../api/observe'
 import { getNoopSpan } from '../client/otel/utils'
-import { MetricCategory } from '../index'
 import {
 	ErrorMessage,
 	type ErrorMessageType,
 } from '../client/types/shared-types'
 import { parseError } from '../client/utils/errors'
+import type { BrowserTracingConfig, Callback } from '../client/otel'
+import { LaunchDarklyIntegration } from '../integrations/launchdarkly'
+import { IntegrationClient } from '../integrations'
 
-export class ObservabilitySDK implements Observability {
+export class ObserveSDK implements Observe {
+	private readonly sessionSecureID: string
+	private readonly _integrations: IntegrationClient[] = []
+	private readonly _gauges: Map<string, Gauge> = new Map<string, Gauge>()
+	private readonly _counters: Map<string, Counter> = new Map<
+		string,
+		Counter
+	>()
+	private readonly _histograms: Map<string, Histogram> = new Map<
+		string,
+		Histogram
+	>()
+	private readonly _up_down_counters: Map<string, UpDownCounter> = new Map<
+		string,
+		UpDownCounter
+	>()
+	constructor(options: BrowserTracingConfig) {
+		this.sessionSecureID = options.sessionSecureId
+		setupBrowserTracing(options)
+	}
+
+	recordLog(message: any, level: string, metadata?: Attributes) {
+		// TODO(vkorolik) use tracer to emit a log event
+	}
+
 	recordError(
 		error: Error,
 		message?: string,
@@ -42,22 +83,20 @@ export class ObservabilitySDK implements Observability {
 		// TODO(vkorolik) report via otel
 		this._firstLoadListeners.errors.push(errorMsg)
 		for (const integration of this._integrations) {
-			integration.error(this.sessionData.sessionSecureID, errorMsg)
+			integration.error(this.sessionSecureID, errorMsg)
 		}
 	}
-	metrics(metrics: Metric[]) {
-		for (const m of metrics) {
-			this.recordMetric(m)
-		}
-	}
+
 	recordMetric(metric: Metric) {
 		this.recordGauge({
 			...metric,
-			tags: metric.tags ?? [],
-			group: window.location.href,
-			category: MetricCategory.Frontend,
+			tags: [
+				...(metric.tags ?? []),
+				{ name: 'group', value: window.location.href },
+			],
 		})
 	}
+
 	recordCount(metric: Metric) {
 		const meter = typeof getMeter === 'function' ? getMeter() : undefined
 		if (!meter) return
@@ -69,40 +108,59 @@ export class ObservabilitySDK implements Observability {
 		}
 		counter.add(metric.value, {
 			...metric.tags?.reduce((a, b) => ({ ...a, [b.name]: b.value }), {}),
-			group: metric.group,
-			category: metric.category,
-			'highlight.session_id': this.sessionData.sessionSecureID,
+			'highlight.session_id': this.sessionSecureID,
+		})
+	}
+
+	recordGauge(metric: Metric) {
+		const meter = typeof getMeter === 'function' ? getMeter() : undefined
+		if (!meter) return
+
+		let gauge = this._gauges.get(metric.name)
+		if (!gauge) {
+			gauge = meter.createGauge(metric.name)
+			this._gauges.set(metric.name, gauge)
+		}
+		gauge.record(metric.value, {
+			...metric.tags?.reduce((a, b) => ({ ...a, [b.name]: b.value }), {}),
+			'highlight.session_id': this.sessionSecureID,
 		})
 	}
 
 	recordIncr(metric: Omit<Metric, 'value'>) {
-		try {
-			H.onHighlightReady(() => {
-				highlight_obj.recordIncr(metric)
-			})
-		} catch (e) {
-			HighlightWarning('recordIncr', e)
-		}
+		this.recordCount({ ...metric, value: 1 })
 	}
 
 	recordHistogram(metric: Metric) {
-		try {
-			H.onHighlightReady(() => {
-				highlight_obj.recordHistogram(metric)
-			})
-		} catch (e) {
-			HighlightWarning('recordHistogram', e)
+		const meter = typeof getMeter === 'function' ? getMeter() : undefined
+		if (!meter) return
+
+		let histogram = this._histograms.get(metric.name)
+		if (!histogram) {
+			histogram = meter.createHistogram(metric.name)
+			this._histograms.set(metric.name, histogram)
 		}
+		histogram.record(metric.value, {
+			...metric.tags?.reduce((a, b) => ({ ...a, [b.name]: b.value }), {}),
+			'highlight.session_id': this.sessionSecureID,
+		})
 	}
+
 	recordUpDownCounter(metric: Metric) {
-		try {
-			H.onHighlightReady(() => {
-				highlight_obj.recordUpDownCounter(metric)
-			})
-		} catch (e) {
-			HighlightWarning('recordUpDownCounter', e)
+		const meter = typeof getMeter === 'function' ? getMeter() : undefined
+		if (!meter) return
+
+		let up_down_counter = this._up_down_counters.get(metric.name)
+		if (!up_down_counter) {
+			up_down_counter = meter.createUpDownCounter(metric.name)
+			this._up_down_counters.set(metric.name, up_down_counter)
 		}
+		up_down_counter.add(metric.value, {
+			...metric.tags?.reduce((a, b) => ({ ...a, [b.name]: b.value }), {}),
+			'highlight.session_id': this.sessionSecureID,
+		})
 	}
+
 	startSpan(
 		name: string,
 		options: SpanOptions | ((span?: Span) => any),
@@ -151,6 +209,7 @@ export class ObservabilitySDK implements Observability {
 			)
 		}
 	}
+
 	startManualSpan(
 		name: string,
 		options: SpanOptions | ((span: Span) => any),
@@ -186,5 +245,10 @@ export class ObservabilitySDK implements Observability {
 				fn,
 			)
 		}
+	}
+
+	register(client: LDClientMin) {
+		// TODO(vkorolik) report metadata as resource attrs?
+		this._integrations.push(new LaunchDarklyIntegration(client))
 	}
 }

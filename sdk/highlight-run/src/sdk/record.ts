@@ -19,8 +19,8 @@ import {
 	SessionShortcutOptions,
 } from '../client/types/client'
 import {
+	type Metadata,
 	PrivacySettingOption,
-	RecordMetric,
 	SamplingStrategy,
 	type SessionDetails,
 	StartOptions,
@@ -59,7 +59,6 @@ import {
 	NetworkPerformancePayload,
 } from '../client/listeners/network-listener/performance-listener'
 import { Logger } from '../client/logger'
-import { getMeter } from '../client/otel'
 import {
 	HighlightIframeMessage,
 	HighlightIframeReponse,
@@ -99,13 +98,7 @@ import type { HighlightClientRequestWorker } from '../client/workers/highlight-c
 import HighlightClientWorker from '../client/workers/highlight-client-worker?worker&inline'
 import { MessageType, PropertyType } from '../client/workers/types'
 import { parseError } from '../client/utils/errors'
-import {
-	Attributes,
-	Counter,
-	Gauge,
-	Histogram,
-	UpDownCounter,
-} from '@opentelemetry/api'
+import { Attributes } from '@opentelemetry/api'
 import { IntegrationClient } from '../integrations'
 import { Record, RecordOptions } from '../api/record'
 import { HighlightWarning } from './util'
@@ -115,6 +108,7 @@ import {
 	defaultLogOptions,
 } from '../client/listeners/console-listener'
 import { LaunchDarklyIntegration } from '../integrations/launchdarkly'
+import type { LDPluginEnvironmentMetadata } from '../plugins/plugin'
 
 interface HighlightWindow extends Window {
 	Highlight: Highlight
@@ -175,13 +169,6 @@ export class RecordSDK implements Record {
 	reloaded!: boolean
 	_hasPreviouslyInitialized!: boolean
 	_recordStop!: listenerHandler | undefined
-	_gauges: Map<string, Gauge> = new Map<string, Gauge>()
-	_counters: Map<string, Counter> = new Map<string, Counter>()
-	_histograms: Map<string, Histogram> = new Map<string, Histogram>()
-	_up_down_counters: Map<string, UpDownCounter> = new Map<
-		string,
-		UpDownCounter
-	>()
 	_integrations: IntegrationClient[] = []
 
 	static create(options: HighlightClassOptions): Highlight {
@@ -318,7 +305,7 @@ export class RecordSDK implements Record {
 		this.options.sessionSecureID = this.sessionData.sessionSecureID
 		this.stop()
 		this._firstLoadListeners = new FirstLoadListeners(this.options)
-		await this.initialize()
+		await this.start()
 		if (user_identifier && user_object) {
 			this.identify(user_identifier, user_object)
 		}
@@ -504,6 +491,14 @@ export class RecordSDK implements Record {
 		}
 	}
 
+	track(event: string, metadata?: Metadata) {
+		this.addProperties({ ...metadata, event: event })
+		this.log('H.track', 'INFO', {
+			...(metadata ?? {}),
+			event,
+		})
+	}
+
 	addProperties(properties_obj = {}, typeArg?: PropertyType) {
 		// Remove any properties which throw on structuredClone
 		// (structuredClone is used when posting messages to the worker)
@@ -531,7 +526,7 @@ export class RecordSDK implements Record {
 		})
 	}
 
-	async initialize(options?: StartOptions): Promise<undefined> {
+	async start(options?: StartOptions) {
 		if (
 			(navigator?.webdriver && !window.Cypress) ||
 			navigator?.userAgent?.includes('Googlebot') ||
@@ -831,7 +826,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 		this.logger.log(`Detected window ${hidden ? 'hidden' : 'visible'}.`)
 		if (!hidden) {
 			if (this.options.disableBackgroundRecording) {
-				await this.initialize()
+				await this.start()
 			}
 			this.addCustomEvent('TabHidden', false)
 		} else {
@@ -1140,6 +1135,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 		availHeight,
 		availWidth,
 	}: ViewportResizeListenerArgs) {
+		// TODO(vkorolik) ObserveSDK singleton
 		this.recordGauge({
 			name: MetricName.ViewportHeight,
 			value: height,
@@ -1169,78 +1165,6 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 			value: height * width,
 			category: MetricCategory.Device,
 			group: window.location.href,
-		})
-	}
-
-	recordGauge(metric: RecordMetric) {
-		const meter = typeof getMeter === 'function' ? getMeter() : undefined
-		if (!meter) return
-
-		let gauge = this._gauges.get(metric.name)
-		if (!gauge) {
-			gauge = meter.createGauge(metric.name)
-			this._gauges.set(metric.name, gauge)
-		}
-		gauge.record(metric.value, {
-			...metric.tags?.reduce((a, b) => ({ ...a, [b.name]: b.value }), {}),
-			group: metric.group,
-			category: metric.category,
-			'highlight.session_id': this.sessionData.sessionSecureID,
-		})
-	}
-
-	recordCount(metric: RecordMetric) {
-		const meter = typeof getMeter === 'function' ? getMeter() : undefined
-		if (!meter) return
-
-		let counter = this._counters.get(metric.name)
-		if (!counter) {
-			counter = meter.createCounter(metric.name)
-			this._counters.set(metric.name, counter)
-		}
-		counter.add(metric.value, {
-			...metric.tags?.reduce((a, b) => ({ ...a, [b.name]: b.value }), {}),
-			group: metric.group,
-			category: metric.category,
-			'highlight.session_id': this.sessionData.sessionSecureID,
-		})
-	}
-
-	recordIncr(metric: Omit<RecordMetric, 'value'>) {
-		this.recordCount({ ...metric, value: 1 })
-	}
-
-	recordHistogram(metric: RecordMetric) {
-		const meter = typeof getMeter === 'function' ? getMeter() : undefined
-		if (!meter) return
-
-		let histogram = this._histograms.get(metric.name)
-		if (!histogram) {
-			histogram = meter.createHistogram(metric.name)
-			this._histograms.set(metric.name, histogram)
-		}
-		histogram.record(metric.value, {
-			...metric.tags?.reduce((a, b) => ({ ...a, [b.name]: b.value }), {}),
-			group: metric.group,
-			category: metric.category,
-			'highlight.session_id': this.sessionData.sessionSecureID,
-		})
-	}
-
-	recordUpDownCounter(metric: RecordMetric) {
-		const meter = typeof getMeter === 'function' ? getMeter() : undefined
-		if (!meter) return
-
-		let up_down_counter = this._up_down_counters.get(metric.name)
-		if (!up_down_counter) {
-			up_down_counter = meter.createUpDownCounter(metric.name)
-			this._up_down_counters.set(metric.name, up_down_counter)
-		}
-		up_down_counter.add(metric.value, {
-			...metric.tags?.reduce((a, b) => ({ ...a, [b.name]: b.value }), {}),
-			group: metric.group,
-			category: metric.category,
-			'highlight.session_id': this.sessionData.sessionSecureID,
 		})
 	}
 
@@ -1502,6 +1426,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 	}
 
 	register(client: LDClientMin) {
+		// TODO(vkorolik) report metadata as resource attrs?
 		this._integrations.push(new LaunchDarklyIntegration(client))
 	}
 

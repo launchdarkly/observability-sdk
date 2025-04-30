@@ -1,4 +1,9 @@
-import { HighlightOptions, LDClientMin } from 'client'
+import {
+	GenerateSecureID,
+	getPreviousSessionData,
+	HighlightOptions,
+	LDClientMin,
+} from 'client'
 import type { LDPlugin, LDPluginEnvironmentMetadata } from './plugin'
 import type {
 	Hook,
@@ -6,7 +11,7 @@ import type {
 	IdentifySeriesData,
 	IdentifySeriesResult,
 } from '../integrations/launchdarkly/types/Hooks'
-import { H } from 'index'
+import { Observe as ObserveAPI } from '../api/observe'
 import {
 	FEATURE_FLAG_CONTEXT_KEY_ATTR,
 	FEATURE_FLAG_KEY_ATTR,
@@ -16,14 +21,62 @@ import {
 	FEATURE_FLAG_VARIANT_ATTR,
 	getCanonicalKey,
 } from '../integrations/launchdarkly'
+import { loadCookieSessionData } from '../client/utils/sessionStorage/highlightSession'
+import { setCookieWriteEnabled } from '../client/utils/storage'
+import { ObserveSDK } from '../sdk/observe'
 
+// TODO(vkorolik) move to @launchdarkly package
 export class Observe implements LDPlugin {
-	sessionSecureID: string | undefined
-	constructor(projectID?: string | number, opts?: HighlightOptions) {
-		const session = H.init(projectID, opts)
-		if (session) {
-			this.sessionSecureID = session.sessionSecureID
+	observe!: ObserveAPI
+	private readonly initCalled: boolean = false
+
+	constructor(projectID?: string | number, options?: HighlightOptions) {
+		// Don't run init when called outside of the browser.
+		if (typeof window === 'undefined' || typeof document === 'undefined') {
+			return
 		}
+
+		// Don't initialize if an projectID is not set.
+		if (!projectID) {
+			console.info(
+				'Highlight is not initializing because projectID was passed undefined.',
+			)
+			return
+		}
+
+		if (options?.sessionCookie) {
+			loadCookieSessionData()
+		} else {
+			setCookieWriteEnabled(false)
+		}
+
+		// TODO(vkorolik) race condition with record.ts SDK getting/setting session ID
+		let previousSession = getPreviousSessionData()
+		let sessionSecureID = GenerateSecureID()
+		if (previousSession?.sessionSecureID) {
+			sessionSecureID = previousSession.sessionSecureID
+		}
+
+		// `init` was already called, do not reinitialize
+		if (this.initCalled) {
+			return
+		}
+		this.initCalled = true
+
+		this.observe = new ObserveSDK({
+			backendUrl: options?.backendUrl ?? 'https://pub.highlight.io',
+			otlpEndpoint: options?.otlpEndpoint ?? 'https://otel.highlight.io',
+			projectId: projectID,
+			sessionSecureId: sessionSecureID,
+			environment: options?.environment ?? 'production',
+			networkRecordingOptions:
+				typeof options?.networkRecording === 'object'
+					? options.networkRecording
+					: undefined,
+			tracingOrigins: options?.tracingOrigins,
+			serviceName: options?.serviceName ?? 'highlight-browser',
+			instrumentations: options?.otel?.instrumentations,
+		})
 	}
 	getMetadata() {
 		return {
@@ -34,8 +87,7 @@ export class Observe implements LDPlugin {
 		client: LDClientMin,
 		environmentMetadata: LDPluginEnvironmentMetadata,
 	) {
-		// TODO(vkorolik) report metadata as resource attrs?
-		H.registerLD(client, environmentMetadata)
+		this.observe.register(client, environmentMetadata)
 	}
 	getHooks?(metadata: LDPluginEnvironmentMetadata): Hook[] {
 		return [
@@ -50,7 +102,7 @@ export class Observe implements LDPlugin {
 					data: IdentifySeriesData,
 					_result: IdentifySeriesResult,
 				) => {
-					H.log('LD.identify', 'INFO', {
+					this.observe.recordLog('LD.identify', 'INFO', {
 						key: getCanonicalKey(hookContext.context),
 						timeout: hookContext.timeout,
 					})
@@ -72,7 +124,7 @@ export class Observe implements LDPlugin {
 							getCanonicalKey(hookContext.context)
 					}
 
-					H.startSpan(FEATURE_FLAG_SPAN_NAME, (s) => {
+					this.observe.startSpan(FEATURE_FLAG_SPAN_NAME, (s) => {
 						if (s) {
 							s.addEvent(FEATURE_FLAG_SCOPE, eventAttributes)
 						}

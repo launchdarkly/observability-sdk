@@ -1,14 +1,10 @@
-import type { Context, Span, SpanOptions } from '@opentelemetry/api'
-import type { Metric } from '../client'
+import type { Attributes, Context, Span, SpanOptions } from '@opentelemetry/api'
+import type { LDClientMin, Metric } from '../client'
 import type { ErrorMessageType } from '../client/types/shared-types'
+import { LDPluginEnvironmentMetadata } from '../plugins/plugin'
 
-export interface Observability {
-	/**
-	 * Calling this method will report metrics to Highlight. You can graph metrics or configure
-	 * alerts  on metrics that exceed a threshold.
-	 * @see {@link https://docs.highlight.run/frontend-observability} for more information.
-	 */
-	metrics: (metrics: Metric[]) => void
+export interface Observe {
+	recordLog: (message: any, level: string, metadata?: Attributes) => void
 	/**
 	 * Record arbitrary metric values via as a Gauge.
 	 * A Gauge records any point-in-time measurement, such as the current CPU utilization %.
@@ -147,4 +143,8 @@ export interface Observability {
 		source?: string,
 		type?: ErrorMessageType,
 	) => void
+	register(
+		client: LDClientMin,
+		environmentMetadata: LDPluginEnvironmentMetadata,
+	): void
 }

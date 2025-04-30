@@ -1,4 +1,11 @@
-import { HighlightOptions, LDClientMin } from 'client'
+import {
+	FirstLoadListeners,
+	GenerateSecureID,
+	getPreviousSessionData,
+	type HighlightClassOptions,
+	HighlightOptions,
+	LDClientMin,
+} from 'client'
 import type { LDPlugin, LDPluginEnvironmentMetadata } from './plugin'
 import type {
 	Hook,
@@ -7,7 +14,6 @@ import type {
 	IdentifySeriesResult,
 	TrackSeriesContext,
 } from '../integrations/launchdarkly/types/Hooks'
-import { H } from 'index'
 import {
 	FEATURE_FLAG_CONTEXT_KEY_ATTR,
 	FEATURE_FLAG_PROVIDER_ATTR,
@@ -16,13 +22,89 @@ import {
 	TRACK_KEY_ATTR,
 	TRACK_METRIC_VALUE_ATTR,
 } from '../integrations/launchdarkly'
+import { Record as RecordAPI } from '../api/record'
+import { RecordSDK } from '../sdk/record'
+import { loadCookieSessionData } from '../client/utils/sessionStorage/highlightSession'
+import { setCookieWriteEnabled } from '../client/utils/storage'
+import { initializeFetchListener } from '../listeners/fetch'
+import { initializeWebSocketListener } from '../listeners/web-socket'
+import firstloadVersion from '../__generated/version'
+import { setupMixpanelIntegration } from '../integrations/mixpanel'
+import { setupAmplitudeIntegration } from '../integrations/amplitude'
 
+// TODO(vkorolik) move to @launchdarkly package
 export class Record implements LDPlugin {
-	sessionSecureID: string | undefined
-	constructor(projectID?: string | number, opts?: HighlightOptions) {
-		const session = H.init(projectID, opts)
-		if (session) {
-			this.sessionSecureID = session.sessionSecureID
+	sessionSecureID!: string
+	record!: RecordAPI
+	firstloadListeners!: FirstLoadListeners
+
+	private readonly initCalled: boolean = false
+
+	constructor(projectID?: string | number, options?: HighlightOptions) {
+		// Don't run init when called outside of the browser.
+		if (typeof window === 'undefined' || typeof document === 'undefined') {
+			return
+		}
+
+		// Don't initialize if an projectID is not set.
+		if (!projectID) {
+			console.info(
+				'Highlight is not initializing because projectID was passed undefined.',
+			)
+			return
+		}
+
+		if (options?.sessionCookie) {
+			loadCookieSessionData()
+		} else {
+			setCookieWriteEnabled(false)
+		}
+
+		let previousSession = getPreviousSessionData()
+		this.sessionSecureID = GenerateSecureID()
+		if (previousSession?.sessionSecureID) {
+			this.sessionSecureID = previousSession.sessionSecureID
+		}
+
+		// `init` was already called, do not reinitialize
+		if (this.initCalled) {
+			return
+		}
+		this.initCalled = true
+
+		const client_options: HighlightClassOptions = {
+			...options,
+			organizationID: projectID,
+			firstloadVersion,
+			environment: options?.environment || 'production',
+			appVersion: options?.version,
+			sessionSecureID: this.sessionSecureID,
+		}
+
+		initializeFetchListener()
+		initializeWebSocketListener()
+		this.firstloadListeners = new FirstLoadListeners(client_options)
+		if (!options?.manualStart) {
+			this.firstloadListeners.startListening()
+		}
+
+		this.record = new RecordSDK(client_options, this.firstloadListeners)
+		if (!options?.manualStart) {
+			void this.record.start()
+		}
+
+		if (
+			!options?.integrations?.mixpanel?.disabled &&
+			options?.integrations?.mixpanel?.projectToken
+		) {
+			setupMixpanelIntegration(options.integrations.mixpanel)
+		}
+
+		if (
+			!options?.integrations?.amplitude?.disabled &&
+			options?.integrations?.amplitude?.apiKey
+		) {
+			setupAmplitudeIntegration(options.integrations.amplitude)
 		}
 	}
 	getMetadata() {
@@ -34,7 +116,7 @@ export class Record implements LDPlugin {
 		client: LDClientMin,
 		environmentMetadata: LDPluginEnvironmentMetadata,
 	) {
-		H.registerLD(client, environmentMetadata)
+		this.record.register(client, environmentMetadata)
 	}
 	getHooks?(metadata: LDPluginEnvironmentMetadata): Hook[] {
 		return [
@@ -49,7 +131,7 @@ export class Record implements LDPlugin {
 					data: IdentifySeriesData,
 					_result: IdentifySeriesResult,
 				) => {
-					H.identify(
+					this.record.identify(
 						getCanonicalKey(hookContext.context),
 						{
 							key: getCanonicalKey(hookContext.context),
@@ -59,7 +141,7 @@ export class Record implements LDPlugin {
 					)
 					return data
 				},
-				afterTrack(event: TrackSeriesContext) {
+				afterTrack: (event: TrackSeriesContext) => {
 					const attrs: {
 						[index: string]: number | boolean | string | undefined
 					} = {
@@ -74,7 +156,7 @@ export class Record implements LDPlugin {
 						)
 					}
 
-					H.track(event.key, attrs)
+					this.record.track(event.key, attrs)
 				},
 			},
 		]

@@ -52,6 +52,9 @@ import {
 } from '@opentelemetry/sdk-metrics'
 import { IntegrationClient } from '../../integrations'
 import { LD_METRIC_NAME_DOCUMENT_LOAD } from '../../integrations/launchdarkly'
+import { Span } from '@opentelemetry/api'
+
+export type Callback = (span?: Span) => any
 
 export type BrowserTracingConfig = {
 	projectId: string | number

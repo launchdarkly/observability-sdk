@@ -1,17 +1,20 @@
 import type { Source } from '../client/types/shared-types'
-import {
+import type {
 	HighlightOptions,
+	Metadata,
 	PrivacySettingOption,
 	SamplingStrategy,
 	SessionDetails,
 	StartOptions,
 } from '../client/types/types'
-import {
+import type {
 	ConsoleMethods,
 	DebugOptions,
 	NetworkRecordingOptions,
 	SessionShortcutOptions,
 } from '../client/types/client'
+import type { LDClientMin } from '../integrations/launchdarkly/types/LDClient'
+import { LDPluginEnvironmentMetadata } from '../plugins/plugin'
 
 export interface Record {
 	/**
@@ -33,7 +36,7 @@ export interface Record {
 	 * Can be used to force start a new session.
 	 * @param options the session start options.
 	 */
-	start: (options?: StartOptions) => void
+	start: (options?: StartOptions) => Promise<void>
 	/**
 	 * Stop the session recording.
 	 */
@@ -46,6 +49,10 @@ export interface Record {
 	snapshot: (element: HTMLCanvasElement) => Promise<void>
 	getSession: () => SessionDetails | null
 	getRecordingState: () => 'NotRecording' | 'Recording'
+	register(
+		client: LDClientMin,
+		environmentMetadata: LDPluginEnvironmentMetadata,
+	): void
 }
 
 export type RecordOptions = {
