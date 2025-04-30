@@ -12,18 +12,23 @@ import type { IntegrationClient } from '../index'
 import type { LDClientMin } from './types/LDClient'
 import type { RecordMetric } from '../../client/types/types'
 
-const FEATURE_FLAG_SCOPE = 'feature_flag'
+export const FEATURE_FLAG_SCOPE = 'feature_flag'
 // TODO(vkorolik) reporting environment as `${FEATURE_FLAG_SCOPE}.set.id`
-const FEATURE_FLAG_KEY_ATTR = `${FEATURE_FLAG_SCOPE}.key`
-const FEATURE_FLAG_PROVIDER_ATTR = `${FEATURE_FLAG_SCOPE}.provider.name`
-const FEATURE_FLAG_CONTEXT_KEY_ATTR = `${FEATURE_FLAG_SCOPE}.context.key`
-const FEATURE_FLAG_VARIANT_ATTR = `${FEATURE_FLAG_SCOPE}.result.variant`
-const FEATURE_FLAG_SPAN_NAME = 'evaluation'
+export const FEATURE_FLAG_KEY_ATTR = `${FEATURE_FLAG_SCOPE}.key`
+export const FEATURE_FLAG_PROVIDER_ATTR = `${FEATURE_FLAG_SCOPE}.provider.name`
+export const FEATURE_FLAG_CONTEXT_KEY_ATTR = `${FEATURE_FLAG_SCOPE}.context.key`
+export const FEATURE_FLAG_VARIANT_ATTR = `${FEATURE_FLAG_SCOPE}.result.variant`
+export const FEATURE_FLAG_SPAN_NAME = 'evaluation'
 
-const LD_INITIALIZE_EVENT = '$ld:telemetry:session:init'
-const LD_ERROR_EVENT = '$ld:telemetry:error'
-const LD_TRACK_EVENT = '$ld:telemetry:track'
-const LD_METRIC_EVENT = '$ld:telemetry:metric'
+const TRACK_SCOPE = 'ld.track'
+export const TRACK_KEY_ATTR = `${TRACK_SCOPE}.key`
+export const TRACK_DATA_ATTR = `${TRACK_SCOPE}.data`
+export const TRACK_METRIC_VALUE_ATTR = `${TRACK_SCOPE}.metric.value`
+
+export const LD_INITIALIZE_EVENT = '$ld:telemetry:session:init'
+export const LD_ERROR_EVENT = '$ld:telemetry:error'
+export const LD_TRACK_EVENT = '$ld:telemetry:track'
+export const LD_METRIC_EVENT = '$ld:telemetry:metric'
 
 export const LD_METRIC_NAME_DOCUMENT_LOAD = 'document_load'
 
@@ -38,7 +43,7 @@ function isMultiContext(context: any): context is LDMultiKindContext {
 	return context.kind === 'multi'
 }
 
-function getCanonicalKey(context: LDContext) {
+export function getCanonicalKey(context: LDContext) {
 	if (isMultiContext(context)) {
 		return Object.keys(context)
 			.sort()
