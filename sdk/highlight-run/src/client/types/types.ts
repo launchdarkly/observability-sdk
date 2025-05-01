@@ -475,7 +475,7 @@ export declare interface HighlightPublicInterface {
 
 	registerLD: (
 		client: LDClientMin,
-		metadata: LDPluginEnvironmentMetadata,
+		metadata?: LDPluginEnvironmentMetadata,
 	) => void
 }
 
