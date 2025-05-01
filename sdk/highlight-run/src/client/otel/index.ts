@@ -50,6 +50,8 @@ import {
 	MeterProvider,
 	PeriodicExportingMetricReader,
 } from '@opentelemetry/sdk-metrics'
+import { IntegrationClient } from '../../integrations'
+import { LD_METRIC_NAME_DOCUMENT_LOAD } from '../../integrations/launchdarkly'
 
 export type BrowserTracingConfig = {
 	projectId: string | number
@@ -62,12 +64,14 @@ export type BrowserTracingConfig = {
 	tracingOrigins?: boolean | (string | RegExp)[]
 	urlBlocklist?: string[]
 	instrumentations?: OtelInstrumentatonOptions
+	getIntegrations?: () => IntegrationClient[]
 }
 
 let providers: {
 	tracerProvider?: WebTracerProvider
 	meterProvider?: MeterProvider
 } = {}
+let otelConfig: BrowserTracingConfig | undefined
 const RECORD_ATTRIBUTE = 'highlight.record'
 
 export const setupBrowserTracing = (config: BrowserTracingConfig) => {
@@ -75,6 +79,7 @@ export const setupBrowserTracing = (config: BrowserTracingConfig) => {
 		console.warn('OTEL already initialized. Skipping...')
 		return
 	}
+	otelConfig = config
 
 	const backendUrl =
 		config.backendUrl ||
@@ -544,6 +549,12 @@ const assignDocumentDurations = (span: api.Span) => {
 		connect: calculateDuration('connectStart', 'connectEnd', events),
 		request: calculateDuration('requestStart', 'requestEnd', events),
 		response: calculateDuration('responseStart', 'responseEnd', events),
+	}
+	for (const _integration of otelConfig?.getIntegrations?.() ?? []) {
+		_integration.recordGauge(otelConfig?.sessionSecureId ?? '', {
+			name: LD_METRIC_NAME_DOCUMENT_LOAD,
+			value: durations.dom_complete,
+		})
 	}
 
 	Object.entries(durations).forEach(([key, value]) => {

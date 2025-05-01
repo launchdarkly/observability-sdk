@@ -1549,6 +1549,8 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 	}
 
 	registerLD(client: LDClientMin) {
+		// TODO(vkorolik): can only register one LD client for now
+		if (this._integrations.length) return
 		this._integrations.push(new LaunchDarklyIntegration(client))
 	}
 }

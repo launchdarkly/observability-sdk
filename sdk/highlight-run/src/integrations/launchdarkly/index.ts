@@ -25,6 +25,8 @@ const LD_ERROR_EVENT = '$ld:telemetry:error'
 const LD_TRACK_EVENT = '$ld:telemetry:track'
 const LD_METRIC_EVENT = '$ld:telemetry:metric'
 
+export const LD_METRIC_NAME_DOCUMENT_LOAD = 'document_load'
+
 function encodeKey(key: string): string {
 	if (key.includes('%') || key.includes(':')) {
 		return key.replace(/%/g, '%25').replace(/:/g, '%3A')
