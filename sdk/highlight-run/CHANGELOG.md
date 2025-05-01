@@ -1,5 +1,11 @@
 # highlight.run
 
+## 9.16.1
+
+### Patch Changes
+
+- 08290c0: reports web vitals metrics, session initialization, document_load, and track events correctly to LD integration
+
 ## 9.16.0
 
 ### Minor Changes
