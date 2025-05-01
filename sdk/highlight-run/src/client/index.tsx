@@ -702,6 +702,9 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 					recordingStartTime: this._recordingStartTime,
 				},
 			})
+			for (const integration of this._integrations) {
+				integration.init(this.sessionData.sessionSecureID)
+			}
 
 			if (this.sessionData.userIdentifier) {
 				this.identify(
@@ -1228,6 +1231,9 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 			category: metric.category,
 			'highlight.session_id': this.sessionData.sessionSecureID,
 		})
+		for (const integration of this._integrations) {
+			integration.recordGauge(this.sessionData.sessionSecureID, metric)
+		}
 	}
 
 	recordCount(metric: RecordMetric) {

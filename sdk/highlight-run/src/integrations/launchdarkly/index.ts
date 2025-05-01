@@ -20,7 +20,7 @@ const FEATURE_FLAG_CONTEXT_KEY_ATTR = `${FEATURE_FLAG_SCOPE}.context.key`
 const FEATURE_FLAG_VARIANT_ATTR = `${FEATURE_FLAG_SCOPE}.result.variant`
 const FEATURE_FLAG_SPAN_NAME = 'evaluation'
 
-const LD_INITIALIZE_EVENT = '$ld:telemetry:initialize'
+const LD_INITIALIZE_EVENT = '$ld:telemetry:session:init'
 const LD_ERROR_EVENT = '$ld:telemetry:error'
 const LD_TRACK_EVENT = '$ld:telemetry:track'
 const LD_METRIC_EVENT = '$ld:telemetry:metric'
@@ -116,7 +116,7 @@ export class LaunchDarklyIntegration implements IntegrationClient {
 		})
 	}
 
-	recordMetric(sessionSecureID: string, metric: RecordMetric) {
+	recordGauge(sessionSecureID: string, metric: RecordMetric) {
 		// only record web vitals
 		if (metric.category !== MetricCategory.WebVital) {
 			return
