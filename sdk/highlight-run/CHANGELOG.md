@@ -1,5 +1,11 @@
 # highlight.run
 
+## 9.16.2
+
+### Patch Changes
+
+- 7d1a4af: move bundled dependencies into dev dependencies
+
 ## 9.16.1
 
 ### Patch Changes
