@@ -11,7 +11,9 @@
 	},
 	"dependencies": {
 		"@highlight-run/react": "workspace:*",
-		"highlight.run": "workspace:*",
+		"@launchdarkly/js-client-sdk": "^0.6.0",
+		"@launchdarkly/observability": "workspace:*",
+		"@launchdarkly/session-replay": "workspace:*",
 		"localforage": "^1.10.0",
 		"match-sorter": "^6.3.1",
 		"react": "^19.0.0",

@@ -1,0 +1,8 @@
+{
+  "extends": "../../highlight-run/tsconfig.json",
+  "compilerOptions": {
+    "outDir": "dist",
+  },
+  "include": "src",
+  "exclude": ["**/src/**/*.test.tsx"],
+}
