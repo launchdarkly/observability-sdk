@@ -120,7 +120,10 @@ export class LaunchDarklyIntegration implements IntegrationClient {
 
 	recordGauge(sessionSecureID: string, metric: RecordMetric) {
 		// only record web vitals
-		if (metric.category !== MetricCategory.WebVital) {
+		if (
+			metric.category !== MetricCategory.WebVital &&
+			metric.name !== LD_METRIC_NAME_DOCUMENT_LOAD
+		) {
 			return
 		}
 		// ignore Jank metric, sent on interaction

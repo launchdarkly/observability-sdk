@@ -36,7 +36,7 @@ import {
 	BrowserXHR,
 	getBodyThatShouldBeRecorded,
 } from '../listeners/network-listener/utils/xhr-listener'
-import type {
+import {
 	NetworkRecordingOptions,
 	OtelInstrumentatonOptions,
 } from '../types/client'
@@ -521,16 +521,16 @@ const assignDocumentDurations = (span: api.Span) => {
 	const readableSpan = span as unknown as ReadableSpan
 	const events = readableSpan.events
 
-	const durations = {
+	const durations_ns = {
 		unload: calculateDuration('unloadEventStart', 'unloadEventEnd', events),
 		dom_interactive: calculateDuration(
-			'domInteractive',
 			'fetchStart',
+			'domInteractive',
 			events,
 		),
 		dom_content_loaded: calculateDuration(
-			'domContentLoadedEventEnd',
 			'domContentLoadedEventStart',
+			'domContentLoadedEventEnd',
 			events,
 		),
 		dom_complete: calculateDuration('fetchStart', 'domComplete', events),
@@ -552,13 +552,15 @@ const assignDocumentDurations = (span: api.Span) => {
 		response: calculateDuration('responseStart', 'responseEnd', events),
 	}
 	for (const _integration of otelConfig?.getIntegrations?.() ?? []) {
-		_integration.recordGauge(otelConfig?.sessionSecureId ?? '', {
-			name: LD_METRIC_NAME_DOCUMENT_LOAD,
-			value: durations.document_load,
-		})
+		if (durations_ns.document_load > 0) {
+			_integration.recordGauge(otelConfig?.sessionSecureId ?? '', {
+				name: LD_METRIC_NAME_DOCUMENT_LOAD,
+				value: durations_ns.document_load / 1e9,
+			})
+		}
 	}
 
-	Object.entries(durations).forEach(([key, value]) => {
+	Object.entries(durations_ns).forEach(([key, value]) => {
 		if (value > 0) {
 			span.setAttribute(`timings.${key}.ns`, value)
 			span.setAttribute(
