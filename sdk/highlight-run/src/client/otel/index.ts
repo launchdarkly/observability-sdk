@@ -535,7 +535,7 @@ const assignDocumentDurations = (span: api.Span) => {
 		),
 		dom_complete: calculateDuration('fetchStart', 'domComplete', events),
 		load_event: calculateDuration('loadEventStart', 'loadEventEnd', events),
-		document_load: calculateDuration('startTime', 'loadEventEnd', events),
+		document_load: calculateDuration('fetchStart', 'loadEventEnd', events),
 		first_paint: calculateDuration('fetchStart', 'firstPaint', events),
 		first_contentful_paint: calculateDuration(
 			'fetchStart',
@@ -555,7 +555,7 @@ const assignDocumentDurations = (span: api.Span) => {
 		if (durations_ns.document_load > 0) {
 			_integration.recordGauge(otelConfig?.sessionSecureId ?? '', {
 				name: LD_METRIC_NAME_DOCUMENT_LOAD,
-				value: durations_ns.document_load / 1e9,
+				value: durations_ns.document_load / 1e6,
 			})
 		}
 	}
