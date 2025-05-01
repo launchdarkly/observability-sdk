@@ -12,6 +12,7 @@ const client = initialize('client-side-id-123abc', {
 			},
 		}),
 		new SessionReplay('1', {
+			// TODO(vkorolik) don't apply to SR
 			networkRecording: {
 				enabled: true,
 				recordHeadersAndBody: true,

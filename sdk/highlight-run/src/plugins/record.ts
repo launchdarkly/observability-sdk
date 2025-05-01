@@ -81,6 +81,7 @@ export class Record implements LDPlugin {
 			sessionSecureID: this.sessionSecureID,
 		}
 
+		// TODO(vkorolik) can these be removed?
 		initializeFetchListener()
 		initializeWebSocketListener()
 		this.firstloadListeners = new FirstLoadListeners(client_options)
