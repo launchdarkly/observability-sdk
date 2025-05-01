@@ -5,7 +5,7 @@ import {
 	type HighlightClassOptions,
 	HighlightOptions,
 	LDClientMin,
-} from 'client'
+} from '../client'
 import type { LDPlugin, LDPluginEnvironmentMetadata } from './plugin'
 import type {
 	Hook,

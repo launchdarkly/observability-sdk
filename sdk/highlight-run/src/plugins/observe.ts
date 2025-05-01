@@ -1,9 +1,10 @@
+import type { HighlightOptions, LDClientMin } from '../client'
+import { GenerateSecureID } from '../client/utils/secure-id'
 import {
-	GenerateSecureID,
 	getPreviousSessionData,
-	HighlightOptions,
-	LDClientMin,
-} from 'client'
+	loadCookieSessionData,
+} from '../client/utils/sessionStorage/highlightSession'
+import { setCookieWriteEnabled } from '../client/utils/storage'
 import type { LDPlugin, LDPluginEnvironmentMetadata } from './plugin'
 import type {
 	Hook,
@@ -12,6 +13,7 @@ import type {
 	IdentifySeriesResult,
 } from '../integrations/launchdarkly/types/Hooks'
 import { Observe as ObserveAPI } from '../api/observe'
+import { ObserveSDK } from '../sdk/observe'
 import {
 	FEATURE_FLAG_CONTEXT_KEY_ATTR,
 	FEATURE_FLAG_KEY_ATTR,
@@ -21,9 +23,6 @@ import {
 	FEATURE_FLAG_VARIANT_ATTR,
 	getCanonicalKey,
 } from '../integrations/launchdarkly'
-import { loadCookieSessionData } from '../client/utils/sessionStorage/highlightSession'
-import { setCookieWriteEnabled } from '../client/utils/storage'
-import { ObserveSDK } from '../sdk/observe'
 
 // TODO(vkorolik) move to @launchdarkly package
 export class Observe implements LDPlugin {

@@ -8,7 +8,12 @@ import {
 	SpanOptions,
 	UpDownCounter,
 } from '@opentelemetry/api'
-import { getMeter, getTracer, LDClientMin, setupBrowserTracing } from 'client'
+import {
+	getMeter,
+	getTracer,
+	LDClientMin,
+	setupBrowserTracing,
+} from '../client'
 import type { Observe } from '../api/observe'
 import { getNoopSpan } from '../client/otel/utils'
 import {

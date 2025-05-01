@@ -1,5 +1,6 @@
 import type { Attributes, Context, Span, SpanOptions } from '@opentelemetry/api'
-import type { LDClientMin, OTelMetric as Metric } from '../client'
+import type { LDClientMin } from '../client'
+import type { OTelMetric as Metric } from '../client/types/types'
 import type { ErrorMessageType } from '../client/types/shared-types'
 import { LDPluginEnvironmentMetadata } from '../plugins/plugin'
 

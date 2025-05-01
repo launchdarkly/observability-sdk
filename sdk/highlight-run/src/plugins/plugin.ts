@@ -10,6 +10,10 @@ export interface LDPlugin {
 	getHooks?(metadata: LDPluginEnvironmentMetadata): Hook[]
 }
 
+export interface LDPluginMetadata {
+	readonly name: string
+}
+
 export interface LDPluginSdkMetadata {
 	name: string
 	version: string

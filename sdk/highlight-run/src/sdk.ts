@@ -1,14 +1,14 @@
 import type { IntegrationClient } from './integrations'
 import type { Client } from './api/client'
-import type { HighlightOptions, LDClientMin } from 'client'
-import type { ErrorMessageType, Source } from 'client/types/shared-types'
+import type { HighlightOptions, LDClientMin } from './client'
+import type { ErrorMessageType, Source } from './client/types/shared-types'
 import type {
 	Metadata,
 	OTelMetric as Metric,
 	StartOptions,
-} from 'client/types/types'
+} from './client/types/types'
 import { Attributes } from '@opentelemetry/api'
-import { LDPluginEnvironmentMetadata } from 'plugins/plugin'
+import { LDPluginEnvironmentMetadata } from './plugins/plugin'
 
 class SDKCore implements Client {
 	static _instance: SDKCore
