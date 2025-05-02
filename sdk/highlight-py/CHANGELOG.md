@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.10.2 (2024-05-02)
+
+### Fix
+
+- Report attributes correctly from `H.trace`
+
 ## v0.9.1 (2025-01-16)
 
 - Update dependencies with known security vulnerabilities
