@@ -29,10 +29,8 @@
 		"typegen": "tsc",
 		"build": "vite build"
 	},
-	"dependencies": {
-		"highlight.run": "workspace:*"
-	},
 	"devDependencies": {
+		"highlight.run": "workspace:*",
 		"typescript": "^5.8.3",
 		"vite": "^6.3.4",
 		"vitest": "^3.1.2"

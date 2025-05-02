@@ -32,7 +32,6 @@ import firstloadVersion from '../__generated/version'
 import { setupMixpanelIntegration } from '../integrations/mixpanel'
 import { setupAmplitudeIntegration } from '../integrations/amplitude'
 
-// TODO(vkorolik) move to @launchdarkly package
 export class Record implements LDPlugin {
 	sessionSecureID!: string
 	record!: RecordAPI

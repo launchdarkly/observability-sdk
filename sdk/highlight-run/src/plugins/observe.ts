@@ -24,7 +24,6 @@ import {
 	getCanonicalKey,
 } from '../integrations/launchdarkly'
 
-// TODO(vkorolik) move to @launchdarkly package
 export class Observe implements LDPlugin {
 	observe!: ObserveAPI
 	private readonly initCalled: boolean = false

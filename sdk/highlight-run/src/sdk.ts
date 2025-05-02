@@ -19,65 +19,25 @@ class SDKCore implements Client {
 			return SDKCore._instance
 		}
 		SDKCore._instance = this
-		this.load()
+		void this.load()
 		return this
 	}
+	private _isLoaded = false
+	private _callBuffer: Array<{ method: string; args: any[] }> = []
 
-	// TODO(vkorolik) buffer all calls
-	init(projectID?: string | number, debug?: HighlightOptions) {
-		return undefined
+	private _bufferCall(method: string, args: any[]) {
+		if (this._isLoaded) {
+			// If already loaded, execute the method directly
+			return (this as any)[method](...args)
+		} else {
+			// Otherwise buffer the call
+			this._callBuffer.push({ method, args })
+			return undefined
+		}
 	}
-	identify(identifier: string, metadata?: Metadata, source?: Source) {}
-	track(event: string, metadata?: Metadata) {}
-	getSession() {
-		return null
-	}
-	async start(options?: StartOptions) {}
-	stop(options?: StartOptions) {}
-	getRecordingState() {
-		return 'NotRecording' as const
-	}
-	snapshot(element: HTMLCanvasElement) {
-		return Promise.resolve(undefined)
-	}
-	error(message: string, payload?: { [key: string]: string }) {}
-	metrics(metrics: Metric[]) {}
-	recordGauge(metric: Metric) {}
-	recordCount(metric: Metric) {}
-	recordIncr(metric: Omit<Metric, 'value'>) {}
-	recordHistogram(metric: Metric) {}
-	recordUpDownCounter(metric: Metric) {}
-	startSpan() {}
-	startManualSpan() {}
-	consumeError(
-		error: Error,
-		message?: string,
-		payload?: { [key: string]: string },
-	) {}
-	consume(
-		error: Error,
-		opts: {
-			message?: string
-			payload?: object
-			source?: string
-			type?: ErrorMessageType
-		},
-	) {}
-	register(
-		client: LDClientMin,
-		environmentMetadata: LDPluginEnvironmentMetadata,
-	) {}
-	recordLog(message: any, level: string, metadata?: Attributes) {}
-	recordError(
-		error: Error,
-		message?: string,
-		payload?: { [key: string]: string },
-		source?: string,
-		type?: ErrorMessageType,
-	) {}
 
 	async load() {
-		// TODO(vkorolik) does this work...?
+		// Load the modules
 		await Promise.all(
 			[import('./sdk/record'), import('./sdk/observe')].map((m) =>
 				m.then((m) =>
@@ -88,6 +48,143 @@ class SDKCore implements Client {
 				),
 			),
 		)
+
+		// Mark as loaded
+		this._isLoaded = true
+
+		// Process buffered calls
+		for (const { method, args } of this._callBuffer) {
+			try {
+				;(this as any)[method](...args)
+			} catch (error) {
+				console.error(
+					`Error executing buffered call to ${method}:`,
+					error,
+				)
+			}
+		}
+
+		// Clear the buffer
+		this._callBuffer = []
+	}
+
+	init(projectID?: string | number, debug?: HighlightOptions) {
+		return this._bufferCall('init', [projectID, debug])
+	}
+
+	identify(identifier: string, metadata?: Metadata, source?: Source) {
+		return this._bufferCall('identify', [identifier, metadata, source])
+	}
+
+	track(event: string, metadata?: Metadata) {
+		return this._bufferCall('track', [event, metadata])
+	}
+
+	getSession() {
+		return this._isLoaded ? this._bufferCall('getSession', []) : null
+	}
+
+	async start(options?: StartOptions) {
+		return this._bufferCall('start', [options])
+	}
+
+	stop(options?: StartOptions) {
+		return this._bufferCall('stop', [options])
+	}
+
+	getRecordingState() {
+		return this._isLoaded
+			? this._bufferCall('getRecordingState', [])
+			: ('NotRecording' as const)
+	}
+
+	snapshot(element: HTMLCanvasElement) {
+		return this._isLoaded
+			? this._bufferCall('snapshot', [element])
+			: Promise.resolve(undefined)
+	}
+
+	error(message: string, payload?: { [key: string]: string }) {
+		return this._bufferCall('error', [message, payload])
+	}
+
+	metrics(metrics: Metric[]) {
+		return this._bufferCall('metrics', [metrics])
+	}
+
+	recordGauge(metric: Metric) {
+		return this._bufferCall('recordGauge', [metric])
+	}
+
+	recordCount(metric: Metric) {
+		return this._bufferCall('recordCount', [metric])
+	}
+
+	recordIncr(metric: Omit<Metric, 'value'>) {
+		return this._bufferCall('recordIncr', [metric])
+	}
+
+	recordHistogram(metric: Metric) {
+		return this._bufferCall('recordHistogram', [metric])
+	}
+
+	recordUpDownCounter(metric: Metric) {
+		return this._bufferCall('recordUpDownCounter', [metric])
+	}
+
+	startSpan() {
+		return this._bufferCall('startSpan', [])
+	}
+
+	startManualSpan() {
+		return this._bufferCall('startManualSpan', [])
+	}
+
+	consumeError(
+		error: Error,
+		message?: string,
+		payload?: { [key: string]: string },
+	) {
+		return this._bufferCall('consumeError', [error, message, payload])
+	}
+
+	consume(
+		error: Error,
+		opts: {
+			message?: string
+			payload?: object
+			source?: string
+			type?: ErrorMessageType
+		},
+	) {
+		return this._bufferCall('consume', [error, opts])
+	}
+
+	register(
+		client: LDClientMin,
+		environmentMetadata: LDPluginEnvironmentMetadata,
+	) {
+		return this._bufferCall('register', [client, environmentMetadata])
+	}
+
+	recordLog(message: any, level: string, metadata?: Attributes) {
+		return this._bufferCall('recordLog', [message, level, metadata])
+	}
+
+	recordError(
+		error: Error,
+		message?: string,
+		payload?: { [key: string]: string },
+		source?: string,
+		type?: ErrorMessageType,
+	) {
+		return this._bufferCall('recordError', [
+			error,
+			message,
+			payload,
+			source,
+			type,
+		])
 	}
 }
 
