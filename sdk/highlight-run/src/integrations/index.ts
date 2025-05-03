@@ -1,6 +1,9 @@
 import type { ErrorMessage, Source } from '../client/types/shared-types'
+import type { RecordMetric } from '../client/types/types'
 
 export interface IntegrationClient {
+	init(sessionSecureID: string): void
+
 	identify(
 		sessionSecureID: string,
 		user_identifier: string,
@@ -11,4 +14,6 @@ export interface IntegrationClient {
 	error(sessionSecureID: string, error: ErrorMessage): void
 
 	track(sessionSecureID: string, metadata: object): void
+
+	recordGauge(sessionSecureID: string, metric: RecordMetric): void
 }

@@ -43,8 +43,12 @@ import { initializeFetchListener } from './listeners/fetch'
 import { initializeWebSocketListener } from './listeners/web-socket'
 import { ViewportResizeListenerArgs } from './client/listeners/viewport-resize-listener'
 import { getNoopSpan } from './client/otel/utils.js'
-import { setupLaunchDarklyIntegration } from './integrations/launchdarkly'
+import {
+	LaunchDarklyIntegration,
+	setupLaunchDarklyIntegration,
+} from './integrations/launchdarkly'
 import { LDClientMin } from './integrations/launchdarkly/types/LDClient'
+import { IntegrationClient } from './integrations'
 
 enum MetricCategory {
 	Device = 'Device',
@@ -81,6 +85,7 @@ let onHighlightReadyTimeout: ReturnType<typeof setTimeout> | undefined =
 
 let highlight_obj: Highlight
 let first_load_listeners: FirstLoadListeners
+let integrations: IntegrationClient[] = []
 let init_called = false
 type Callback = (span?: Span) => any
 let getTracer: () => Tracer | undefined
@@ -149,6 +154,7 @@ const H: HighlightPublicInterface = {
 						serviceName:
 							options?.serviceName ?? 'highlight-browser',
 						instrumentations: options?.otel?.instrumentations,
+						getIntegrations: () => [...integrations],
 					})
 					getTracer = otelGetTracer
 
@@ -627,6 +633,8 @@ const H: HighlightPublicInterface = {
 		processQueue()
 	},
 	registerLD(client) {
+		// TODO(vkorolik): can only register one LD client for now
+		if (integrations.length) return
 		// TODO(vkorolik): consolidate once firstload/client are merged
 		// client integration necessary to track events from ErrorListener
 		H.onHighlightReady(() => {
@@ -634,6 +642,7 @@ const H: HighlightPublicInterface = {
 		})
 		// firstload integration necessary to immediately capture ld.identify
 		setupLaunchDarklyIntegration(this, client)
+		integrations.push(new LaunchDarklyIntegration(client))
 	},
 }
 

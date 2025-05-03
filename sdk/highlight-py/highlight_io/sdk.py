@@ -5,7 +5,6 @@ import logging
 import traceback
 import typing
 from importlib import metadata
-
 import sys
 from grpc import Compression
 from opentelemetry import trace as otel_trace, _logs, metrics
@@ -342,6 +341,8 @@ class H(object):
             set_status_on_exception=False,
             context=context,
         ) as span:
+            if attributes:
+                span.set_attributes(attributes)
             span.set_attributes({"highlight.project_id": self._project_id})
             span.set_attributes({"highlight.session_id": session_id})
             span.set_attributes({"highlight.trace_id": request_id})

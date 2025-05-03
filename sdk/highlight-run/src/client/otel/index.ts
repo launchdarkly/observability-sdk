@@ -36,7 +36,7 @@ import {
 	BrowserXHR,
 	getBodyThatShouldBeRecorded,
 } from '../listeners/network-listener/utils/xhr-listener'
-import type {
+import {
 	NetworkRecordingOptions,
 	OtelInstrumentatonOptions,
 } from '../types/client'
@@ -50,6 +50,8 @@ import {
 	MeterProvider,
 	PeriodicExportingMetricReader,
 } from '@opentelemetry/sdk-metrics'
+import { IntegrationClient } from '../../integrations'
+import { LD_METRIC_NAME_DOCUMENT_LOAD } from '../../integrations/launchdarkly'
 
 export type BrowserTracingConfig = {
 	projectId: string | number
@@ -62,12 +64,14 @@ export type BrowserTracingConfig = {
 	tracingOrigins?: boolean | (string | RegExp)[]
 	urlBlocklist?: string[]
 	instrumentations?: OtelInstrumentatonOptions
+	getIntegrations?: () => IntegrationClient[]
 }
 
 let providers: {
 	tracerProvider?: WebTracerProvider
 	meterProvider?: MeterProvider
 } = {}
+let otelConfig: BrowserTracingConfig | undefined
 const RECORD_ATTRIBUTE = 'highlight.record'
 
 export const setupBrowserTracing = (config: BrowserTracingConfig) => {
@@ -75,6 +79,7 @@ export const setupBrowserTracing = (config: BrowserTracingConfig) => {
 		console.warn('OTEL already initialized. Skipping...')
 		return
 	}
+	otelConfig = config
 
 	const backendUrl =
 		config.backendUrl ||
@@ -516,20 +521,21 @@ const assignDocumentDurations = (span: api.Span) => {
 	const readableSpan = span as unknown as ReadableSpan
 	const events = readableSpan.events
 
-	const durations = {
+	const durations_ns = {
 		unload: calculateDuration('unloadEventStart', 'unloadEventEnd', events),
 		dom_interactive: calculateDuration(
-			'domInteractive',
 			'fetchStart',
+			'domInteractive',
 			events,
 		),
 		dom_content_loaded: calculateDuration(
-			'domContentLoadedEventEnd',
 			'domContentLoadedEventStart',
+			'domContentLoadedEventEnd',
 			events,
 		),
 		dom_complete: calculateDuration('fetchStart', 'domComplete', events),
 		load_event: calculateDuration('loadEventStart', 'loadEventEnd', events),
+		document_load: calculateDuration('fetchStart', 'loadEventEnd', events),
 		first_paint: calculateDuration('fetchStart', 'firstPaint', events),
 		first_contentful_paint: calculateDuration(
 			'fetchStart',
@@ -545,8 +551,16 @@ const assignDocumentDurations = (span: api.Span) => {
 		request: calculateDuration('requestStart', 'requestEnd', events),
 		response: calculateDuration('responseStart', 'responseEnd', events),
 	}
+	for (const _integration of otelConfig?.getIntegrations?.() ?? []) {
+		if (durations_ns.document_load > 0) {
+			_integration.recordGauge(otelConfig?.sessionSecureId ?? '', {
+				name: LD_METRIC_NAME_DOCUMENT_LOAD,
+				value: durations_ns.document_load / 1e6,
+			})
+		}
+	}
 
-	Object.entries(durations).forEach(([key, value]) => {
+	Object.entries(durations_ns).forEach(([key, value]) => {
 		if (value > 0) {
 			span.setAttribute(`timings.${key}.ns`, value)
 			span.setAttribute(
