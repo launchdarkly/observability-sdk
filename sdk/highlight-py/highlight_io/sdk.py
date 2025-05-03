@@ -5,11 +5,8 @@ import logging
 import traceback
 import typing
 from importlib import metadata
-
 import sys
 from grpc import Compression
-
-# Protobuf 4.25.5
 from opentelemetry import trace as otel_trace, _logs, metrics
 from opentelemetry._logs.severity import std_to_otel
 from opentelemetry.baggage import set_baggage, get_baggage
