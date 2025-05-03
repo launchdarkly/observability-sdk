@@ -8,6 +8,7 @@ from importlib import metadata
 
 import sys
 from grpc import Compression
+
 # Protobuf 4.25.5
 from opentelemetry import trace as otel_trace, _logs, metrics
 from opentelemetry._logs.severity import std_to_otel
