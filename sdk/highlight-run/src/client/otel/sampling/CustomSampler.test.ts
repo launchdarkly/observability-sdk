@@ -95,7 +95,7 @@ it('should always sample a span when the span name does not match', () => {
 			spans: [
 				{
 					spanName: { operator: 'match', value: 'test-span' },
-					samplingRatio: 1
+					samplingRatio: 42
 				}
 			]
 		}
@@ -124,7 +124,7 @@ it.each([["sample", alwaysSampleFn], ["no sample", neverSampleFn]])
 				spans: [
 					{
 						spanName: { operator: 'regex', value: 'test-span-\\d+' },
-						samplingRatio: 1
+						samplingRatio: 42
 					}
 				]
 			}
@@ -147,7 +147,7 @@ it.each([["sample", alwaysSampleFn], ["no sample", neverSampleFn]])
 		}
 
 		expect(result.attributes).toEqual({
-			[SAMPLING_RATIO_ATTRIBUTE]: 1
+			[SAMPLING_RATIO_ATTRIBUTE]: 42
 		});
 	});
 
@@ -163,7 +163,7 @@ it.each([["sample", alwaysSampleFn], ["no sample", neverSampleFn]])
 								match: { operator: 'match', value: 'GET' }
 							}
 						],
-						samplingRatio: 1
+						samplingRatio: 42
 					}
 				]
 			}
@@ -186,7 +186,7 @@ it.each([["sample", alwaysSampleFn], ["no sample", neverSampleFn]])
 		}
 
 		expect(result.attributes).toEqual({
-			[SAMPLING_RATIO_ATTRIBUTE]: 1
+			[SAMPLING_RATIO_ATTRIBUTE]: 42
 		});
 	});
 
@@ -201,7 +201,7 @@ it('should always sample a span when the attribute does not match', () => {
 							match: { operator: 'match', value: 'GET' }
 						}
 					],
-					samplingRatio: 1
+					samplingRatio: 42
 				}
 			]
 		}
@@ -268,7 +268,7 @@ it.each([["sample", alwaysSampleFn], ["no sample", neverSampleFn]])
 								match: { operator: 'match', value: '200' }
 							}
 						],
-						samplingRatio: 1
+						samplingRatio: 42
 					}
 				]
 			}
@@ -291,7 +291,7 @@ it.each([["sample", alwaysSampleFn], ["no sample", neverSampleFn]])
 		}
 
 		expect(result.attributes).toEqual({
-			[SAMPLING_RATIO_ATTRIBUTE]: 1
+			[SAMPLING_RATIO_ATTRIBUTE]: 42
 		});
 	});
 
@@ -310,7 +310,7 @@ it('should always sample a span when the attribute does not match', () => {
 							match: { operator: 'match', value: '200' }
 						}
 					],
-					samplingRatio: 1
+					samplingRatio: 42
 				}
 			]
 		}
@@ -344,7 +344,7 @@ it.each([["sample", alwaysSampleFn], ["no sample", neverSampleFn]])
 								match: { operator: 'match', value: 'GET' }
 							}
 						],
-						samplingRatio: 1
+						samplingRatio: 42
 					}
 				]
 			}
@@ -362,7 +362,7 @@ it.each([["sample", alwaysSampleFn], ["no sample", neverSampleFn]])
 
 		expect(result.decision).toBe(SamplingDecision.RECORD_AND_SAMPLED);
 		expect(result.attributes).toEqual({
-			[SAMPLING_RATIO_ATTRIBUTE]: 1
+			[SAMPLING_RATIO_ATTRIBUTE]: 42
 		});
 	});
 
@@ -378,7 +378,7 @@ it('should not match a span when name matches but attribute does not', () => {
 							match: { operator: 'match', value: 'GET' }
 						}
 					],
-					samplingRatio: 1
+					samplingRatio: 42
 				}
 			]
 		}
@@ -406,7 +406,7 @@ it.each([["sample", alwaysSampleFn], ["no sample", neverSampleFn]])
 				logs: [
 					{
 						severityText: { operator: 'match', value: 'error' },
-						samplingRatio: 1
+						samplingRatio: 42
 					}
 				]
 			}
@@ -429,7 +429,7 @@ it.each([["sample", alwaysSampleFn], ["no sample", neverSampleFn]])
 		}
 
 		expect(result.attributes).toEqual({
-			[SAMPLING_RATIO_ATTRIBUTE]: 1
+			[SAMPLING_RATIO_ATTRIBUTE]: 42
 		});
 	});
 
@@ -439,7 +439,7 @@ it('should not match a log when severity does not match', () => {
 			logs: [
 				{
 					severityText: { operator: 'match', value: 'error' },
-					samplingRatio: 1
+					samplingRatio: 42
 				}
 			]
 		}
@@ -467,7 +467,7 @@ it.each([["sample", alwaysSampleFn], ["no sample", neverSampleFn]])
 				logs: [
 					{
 						message: { operator: 'match', value: 'Connection failed' },
-						samplingRatio: 1
+						samplingRatio: 42
 					}
 				]
 			}
@@ -490,7 +490,7 @@ it.each([["sample", alwaysSampleFn], ["no sample", neverSampleFn]])
 		}
 
 		expect(result.attributes).toEqual({
-			[SAMPLING_RATIO_ATTRIBUTE]: 1
+			[SAMPLING_RATIO_ATTRIBUTE]: 42
 		});
 	});
 
@@ -501,7 +501,7 @@ it.each([["sample", alwaysSampleFn], ["no sample", neverSampleFn]])
 				logs: [
 					{
 						message: { operator: 'regex', value: 'Error: .*' },
-						samplingRatio: 1
+						samplingRatio: 42
 					}
 				]
 			}
@@ -524,7 +524,7 @@ it.each([["sample", alwaysSampleFn], ["no sample", neverSampleFn]])
 		}
 
 		expect(result.attributes).toEqual({
-			[SAMPLING_RATIO_ATTRIBUTE]: 1
+			[SAMPLING_RATIO_ATTRIBUTE]: 42
 		});
 	});
 
@@ -540,7 +540,7 @@ it.each([["sample", alwaysSampleFn], ["no sample", neverSampleFn]])
 								match: { operator: 'match', value: 'api-gateway' }
 							}
 						],
-						samplingRatio: 1
+						samplingRatio: 42
 					}
 				]
 			}
@@ -563,7 +563,7 @@ it.each([["sample", alwaysSampleFn], ["no sample", neverSampleFn]])
 		}
 
 		expect(result.attributes).toEqual({
-			[SAMPLING_RATIO_ATTRIBUTE]: 1
+			[SAMPLING_RATIO_ATTRIBUTE]: 42
 		});
 	});
 
@@ -581,7 +581,7 @@ it.each([["sample", alwaysSampleFn], ["no sample", neverSampleFn]])
 								match: { operator: 'match', value: 'database-service' }
 							}
 						],
-						samplingRatio: 1
+						samplingRatio: 42
 					}
 				]
 			}
@@ -610,7 +610,7 @@ it.each([["sample", alwaysSampleFn], ["no sample", neverSampleFn]])
 		}
 
 		expect(result.attributes).toEqual({
-			[SAMPLING_RATIO_ATTRIBUTE]: 1
+			[SAMPLING_RATIO_ATTRIBUTE]: 42
 		});
 	});
 
@@ -627,7 +627,7 @@ it('should not match a log when one criteria in combination does not match', () 
 							match: { operator: 'match', value: 'database-service' }
 						}
 					],
-					samplingRatio: 1
+					samplingRatio: 42
 				}
 			]
 		}
