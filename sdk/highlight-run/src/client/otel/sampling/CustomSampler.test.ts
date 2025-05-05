@@ -1,5 +1,5 @@
 import { Context, SpanKind, Attributes, Link } from '@opentelemetry/api';
-import { CustomSampler } from './CustomSampler';
+import { CustomSampler, defaultSampler } from './CustomSampler';
 import { SamplingDecision } from '@opentelemetry/sdk-trace-base';
 import { InputSamplingConfig } from './config';
 
@@ -686,4 +686,27 @@ it('should identify itself with the correct name', () => {
 
 	const sampler = new CustomSampler(config);
 	expect(sampler.toString()).toBe('launchdarkly.CustomSampler');
+});
+
+it('should get approximately the correct number of samples', () => {
+	const samples = 100000;
+	let sampled = 0;
+	let notSampled = 1;
+
+	for (let i = 0; i < samples; i++) {
+		const result = defaultSampler(2);
+		if (result) {
+			sampled += 1;
+		} else {
+			notSampled += 1;
+		}
+	}
+
+	const lowerBound = samples / 2 - (samples / 2 * 0.1);
+	const upperBound = samples / 2 + (samples / 2 * 0.1);
+
+	expect(sampled).toBeGreaterThan(lowerBound);
+	expect(sampled).toBeLessThan(upperBound);
+	expect(notSampled).toBeGreaterThan(lowerBound);
+	expect(notSampled).toBeLessThan(upperBound);
 });

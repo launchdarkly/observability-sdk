@@ -101,7 +101,7 @@ function matchesLogConfig(config: LogSamplingConfig<CachedMatchConfig>, attribut
  * @param ratio The sampling ratio.
  * @returns True if the item should be sampled, false otherwise.
  */
-function defaultSampler(ratio: number) {
+export function defaultSampler(ratio: number) {
 	const truncated = Math.trunc(ratio);
 	// A ratio of 1 means 1 in 1. So that will always sample. No need
 	// to draw a random number.
