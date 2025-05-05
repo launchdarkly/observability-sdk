@@ -22,6 +22,7 @@ class SDKCore implements Client {
 		void this.load()
 		return this
 	}
+
 	private _isLoaded = false
 	private _callBuffer: Array<{ method: string; args: any[] }> = []
 
@@ -39,14 +40,20 @@ class SDKCore implements Client {
 	async load() {
 		// Load the modules
 		await Promise.all(
-			[import('./sdk/record'), import('./sdk/observe')].map((m) =>
-				m.then((m) =>
-					Object.defineProperties(
-						this,
-						Object.getOwnPropertyDescriptors(m),
-					),
-				),
-			),
+			[
+				import('./sdk/record').then((m) => m.RecordSDK),
+				import('./sdk/observe').then((m) => m.ObserveSDK),
+			].map(async (module) => {
+				const klass = await module
+				const proto = klass.prototype
+				for (const key of Reflect.ownKeys(proto)) {
+					const desc = Object.getOwnPropertyDescriptor(proto, key)
+					if (key === 'constructor' || !desc) {
+						continue
+					}
+					Object.defineProperty(this, key, desc)
+				}
+			}),
 		)
 
 		// Mark as loaded
@@ -188,5 +195,4 @@ class SDKCore implements Client {
 	}
 }
 
-const LD = new SDKCore()
-export default LD
+export const LD = new SDKCore()

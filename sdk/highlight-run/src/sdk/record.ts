@@ -108,7 +108,7 @@ import {
 	defaultLogOptions,
 } from '../client/listeners/console-listener'
 import { LaunchDarklyIntegration } from '../integrations/launchdarkly'
-import LD from 'sdk'
+import { LD } from 'sdk'
 
 interface HighlightWindow extends Window {
 	Highlight: Highlight

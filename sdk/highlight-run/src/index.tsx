@@ -670,6 +670,7 @@ const __testing = {
 
 export { Record } from './plugins/record'
 export { Observe } from './plugins/observe'
+export { LD } from './sdk'
 export {
 	configureElectronHighlight,
 	GenerateSecureID,

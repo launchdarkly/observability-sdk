@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import LD from '../sdk'
+import { LD } from '../sdk'
 import type { Source } from '../client/types/shared-types'
 
 describe('SDK', () => {
