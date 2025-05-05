@@ -11,9 +11,9 @@
  *       samplingRatio: 100
  *     }]
  *   }
- * } 
+ * }
  * ```
- * 
+ *
  * ```TypeScript
  * // Sample 1% of all `flag_evaluation` spans with the attribute `feature_flag.key` set to `my-feature-flag`
  * const config: SamplingConfig = {
@@ -27,10 +27,10 @@
  *       samplingRatio: 100
  *     }]
  *   }
- * } 
+ * }
  * }
  * ```
- * 
+ *
  * ```TypeScript
  * // Disable sampling for all logs with the severity text 'debug'
  * const config: SamplingConfig = {
@@ -44,46 +44,45 @@
  * ```
  */
 
-
 /**
  * A match config for a regex.
  */
 export interface RegexMatchConfig {
-	operator: 'regex';
+	operator: 'regex'
 	/**
 	 * A regex in string format.
 	 */
-	value: string;
+	value: string
 }
 
 /**
  * A match config for a basic string match.
  */
 export interface BasicMatchConfig {
-	operator: 'match';
-	value: string;
+	operator: 'match'
+	value: string
 }
 
-export type MatchConfig = RegexMatchConfig | BasicMatchConfig;
+export type MatchConfig = RegexMatchConfig | BasicMatchConfig
 
 /**
  * At runtime, for regex matches, we cache the regex to avoid re-compiling it on every match.
  */
 export type CachedMatchConfig = MatchConfig & {
-	regex?: RegExp;
+	regex?: RegExp
 }
 
 /**
  * A match config for an attribute match.
  */
 export interface AttributeMatchConfig<TMatchConfig extends MatchConfig> {
-	key: string;
-	match: TMatchConfig;
+	key: string
+	match: TMatchConfig
 }
 
 /**
  * Configuration for sampling spans based on their name and attributes.
- * 
+ *
  * In order for a span to match this config it must match the spanName and all attributes.
  * If no spanName is specified, any span matching the specified attribute rules will be sampled.
  * If no attributes are specified, any span with the matching spanName will be sampled.
@@ -93,47 +92,47 @@ export interface SpanSamplingConfig<TMatchConfig extends MatchConfig> {
 	/**
 	 * The name of the span to match. If omitted any span matching the specified attribute rules will be sampled.
 	 */
-	spanName?: TMatchConfig;
+	spanName?: TMatchConfig
 	/**
 	 * A list of attribute match configs. If omitted the spans with the matching span name will be sampled.
-	 * 
+	 *
 	 * In order to match each attributes listed must match. This is an implicit AND operation.
 	 */
-	attributes?: AttributeMatchConfig<TMatchConfig>[];
+	attributes?: AttributeMatchConfig<TMatchConfig>[]
 	/**
 	 * The ratio of spans to sample. Expressed in the form 1/n. So if the ratio is 10, then 1 out of every 10 spans will be sampled.
 	 */
-	samplingRatio: number;
+	samplingRatio: number
 }
 
 /**
  * Configuration for sampling logs based on their attributes and body.
- * 
+ *
  * In order for a log to match this config it must match all specified matchers.
  * If no matchers are specified, all logs will be sampled based on the ratio.
  */
 export interface LogSamplingConfig<TMatchConfig extends MatchConfig> {
 	/**
 	 * A list of attribute match configs.
-	 * 
+	 *
 	 * In order to match each attributes listed must match. This is an implicit AND operation.
 	 */
-	attributes?: AttributeMatchConfig<TMatchConfig>[];
+	attributes?: AttributeMatchConfig<TMatchConfig>[]
 
 	/**
 	 * A match config for the message of the log.
 	 */
-	message?: TMatchConfig;
+	message?: TMatchConfig
 
 	/**
 	 * The severity text of the log.
 	 */
-	severityText?: TMatchConfig;
+	severityText?: TMatchConfig
 
 	/**
-	 * 
+	 *
 	 */
-	samplingRatio: number;
+	samplingRatio: number
 }
 
 /**
@@ -141,17 +140,17 @@ export interface LogSamplingConfig<TMatchConfig extends MatchConfig> {
  */
 export interface SamplingConfig<TMatchConfig extends MatchConfig> {
 	sampling?: {
-		spans?: SpanSamplingConfig<TMatchConfig>[];
-		logs?: LogSamplingConfig<TMatchConfig>[];
-	};
+		spans?: SpanSamplingConfig<TMatchConfig>[]
+		logs?: LogSamplingConfig<TMatchConfig>[]
+	}
 }
 
 /**
  * Represents the configuration as it was received from the server.
  */
-export type InputSamplingConfig = SamplingConfig<MatchConfig>;
+export type InputSamplingConfig = SamplingConfig<MatchConfig>
 
 /**
  * Cached sampling configuration. Includes memoized regexes.
  */
-export type CachedSamplingConfig = SamplingConfig<CachedMatchConfig>;
+export type CachedSamplingConfig = SamplingConfig<CachedMatchConfig>
