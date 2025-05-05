@@ -52,6 +52,7 @@ import {
 } from '@opentelemetry/sdk-metrics'
 import { IntegrationClient } from '../../integrations'
 import { LD_METRIC_NAME_DOCUMENT_LOAD } from '../../integrations/launchdarkly'
+import { CustomSampler } from './sampling/CustomSampler'
 
 export type BrowserTracingConfig = {
 	projectId: string | number
@@ -124,6 +125,8 @@ export const setupBrowserTracing = (config: BrowserTracingConfig) => {
 	})
 	providers.tracerProvider = new WebTracerProvider({
 		resource,
+		// TODO: Source sampling config from the backend.
+		sampler: new CustomSampler({}),
 		spanProcessors: isDebug
 			? [
 					new SimpleSpanProcessor(new ConsoleSpanExporter()),
