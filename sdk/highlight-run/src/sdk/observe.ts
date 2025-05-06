@@ -1,14 +1,16 @@
-import type {
+import {
 	Attributes,
 	Context,
 	Counter,
 	Gauge,
 	Histogram,
+	metrics,
 	Span,
 	SpanOptions,
+	SpanStatusCode,
 	UpDownCounter,
 } from '@opentelemetry/api'
-import { metrics } from '@opentelemetry/api'
+import type { BrowserTracingConfig, Callback } from '../client/otel'
 import {
 	BROWSER_METER_NAME,
 	getTracer,
@@ -22,10 +24,10 @@ import type {
 	ErrorMessageType,
 } from '../client/types/shared-types'
 import { parseError } from '../client/utils/errors'
-import type { BrowserTracingConfig, Callback } from '../client/otel'
 import { LaunchDarklyIntegration } from '../integrations/launchdarkly'
 import type { IntegrationClient } from '../integrations'
 import type { OTelMetric as Metric } from '../client/types/types'
+import { ConsoleMethods } from '../client/types/client'
 
 export class ObserveSDK implements Observe {
 	private readonly sessionSecureID: string
@@ -48,8 +50,24 @@ export class ObserveSDK implements Observe {
 		setupBrowserTracing(options)
 	}
 
-	recordLog(message: any, level: string, metadata?: Attributes) {
-		// TODO(vkorolik) use tracer to emit a log event
+	recordLog(message: any, level: ConsoleMethods, metadata?: Attributes) {
+		this.startSpan('highlight.js.log', (span) => {
+			span?.setAttributes({
+				'highlight.session_id': this.sessionSecureID,
+			})
+			span?.addEvent('log', {
+				'log.severity': level,
+				'log.message': message,
+				...metadata,
+			})
+			if (level === 'error') {
+				span?.recordException(new Error(message))
+				span?.setStatus({
+					code: SpanStatusCode.ERROR,
+					message: message,
+				})
+			}
+		})
 	}
 
 	recordError(

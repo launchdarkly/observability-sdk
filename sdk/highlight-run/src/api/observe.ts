@@ -3,9 +3,14 @@ import type { LDClientMin } from '../client'
 import type { OTelMetric as Metric } from '../client/types/types'
 import type { ErrorMessageType } from '../client/types/shared-types'
 import { LDPluginEnvironmentMetadata } from '../plugins/plugin'
+import { ConsoleMethods } from '../client/types/client'
 
 export interface Observe {
-	recordLog: (message: any, level: string, metadata?: Attributes) => void
+	recordLog: (
+		message: any,
+		level: ConsoleMethods,
+		metadata?: Attributes,
+	) => void
 	/**
 	 * Record arbitrary metric values via as a Gauge.
 	 * A Gauge records any point-in-time measurement, such as the current CPU utilization %.
