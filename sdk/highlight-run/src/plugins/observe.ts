@@ -124,6 +124,7 @@ export class Observe implements LDPlugin {
 
 					this.observe.startSpan(FEATURE_FLAG_SPAN_NAME, (s) => {
 						if (s) {
+							s.setAttributes(eventAttributes)
 							s.addEvent(FEATURE_FLAG_SCOPE, eventAttributes)
 						}
 					})

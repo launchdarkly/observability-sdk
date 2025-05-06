@@ -108,7 +108,7 @@ import {
 	defaultLogOptions,
 } from '../client/listeners/console-listener'
 import { LaunchDarklyIntegration } from '../integrations/launchdarkly'
-import { LD } from 'sdk'
+import { LDObserve } from '../sdk/LDObserve'
 
 interface HighlightWindow extends Window {
 	Highlight: Highlight
@@ -698,7 +698,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 
 			const { getDeviceDetails } = getPerformanceMethods()
 			if (getDeviceDetails) {
-				LD.recordGauge({
+				LDObserve.recordGauge({
 					name: MetricName.DeviceMemory,
 					value: getDeviceDetails().deviceMemory,
 					attributes: {
@@ -975,7 +975,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 			this.listeners.push(
 				WebVitalsListener((data) => {
 					const { name, value } = data
-					LD.recordGauge({
+					LDObserve.recordGauge({
 						name,
 						value,
 						attributes: {
@@ -1007,7 +1007,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 							([name, value]) =>
 								value &&
 								typeof value === 'number' &&
-								LD.recordGauge({
+								LDObserve.recordGauge({
 									name,
 									value: value as number,
 									attributes,
@@ -1036,7 +1036,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 							.forEach(
 								([name, value]) =>
 									value &&
-									LD.recordGauge({
+									LDObserve.recordGauge({
 										name,
 										value,
 										attributes: {
@@ -1051,7 +1051,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 				this.listeners.push(
 					JankListener((payload: JankPayload) => {
 						this.addCustomEvent('Jank', stringify(payload))
-						LD.recordGauge({
+						LDObserve.recordGauge({
 							name: 'Jank',
 							value: payload.jankAmount,
 							attributes: {
@@ -1137,7 +1137,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 		availHeight,
 		availWidth,
 	}: ViewportResizeListenerArgs) {
-		LD.recordGauge({
+		LDObserve.recordGauge({
 			name: MetricName.ViewportHeight,
 			value: height,
 			attributes: {
@@ -1145,7 +1145,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 				group: window.location.href,
 			},
 		})
-		LD.recordGauge({
+		LDObserve.recordGauge({
 			name: MetricName.ViewportWidth,
 			value: width,
 			attributes: {
@@ -1153,7 +1153,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 				group: window.location.href,
 			},
 		})
-		LD.recordGauge({
+		LDObserve.recordGauge({
 			name: MetricName.ScreenHeight,
 			value: availHeight,
 			attributes: {
@@ -1161,7 +1161,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 				group: window.location.href,
 			},
 		})
-		LD.recordGauge({
+		LDObserve.recordGauge({
 			name: MetricName.ScreenWidth,
 			value: availWidth,
 			attributes: {
@@ -1169,7 +1169,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 				group: window.location.href,
 			},
 		})
-		LD.recordGauge({
+		LDObserve.recordGauge({
 			name: MetricName.ViewportArea,
 			value: height * width,
 			attributes: {

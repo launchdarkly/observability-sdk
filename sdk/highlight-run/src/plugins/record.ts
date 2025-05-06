@@ -7,21 +7,7 @@ import {
 	LDClientMin,
 } from '../client'
 import type { LDPlugin, LDPluginEnvironmentMetadata } from './plugin'
-import type {
-	Hook,
-	IdentifySeriesContext,
-	IdentifySeriesData,
-	IdentifySeriesResult,
-	TrackSeriesContext,
-} from '../integrations/launchdarkly/types/Hooks'
-import {
-	FEATURE_FLAG_CONTEXT_KEY_ATTR,
-	FEATURE_FLAG_PROVIDER_ATTR,
-	getCanonicalKey,
-	TRACK_DATA_ATTR,
-	TRACK_KEY_ATTR,
-	TRACK_METRIC_VALUE_ATTR,
-} from '../integrations/launchdarkly'
+import type { Hook } from '../integrations/launchdarkly/types/Hooks'
 import { Record as RecordAPI } from '../api/record'
 import { RecordSDK } from '../sdk/record'
 import { loadCookieSessionData } from '../client/utils/sessionStorage/highlightSession'
@@ -118,47 +104,7 @@ export class Record implements LDPlugin {
 	) {
 		this.record.register(client, environmentMetadata)
 	}
-	getHooks?(metadata: LDPluginEnvironmentMetadata): Hook[] {
-		return [
-			{
-				getMetadata: () => {
-					return {
-						name: 'H.record.hook',
-					}
-				},
-				afterIdentify: (
-					hookContext: IdentifySeriesContext,
-					data: IdentifySeriesData,
-					_result: IdentifySeriesResult,
-				) => {
-					this.record.identify(
-						getCanonicalKey(hookContext.context),
-						{
-							key: getCanonicalKey(hookContext.context),
-							timeout: hookContext.timeout,
-						},
-						'LaunchDarkly',
-					)
-					return data
-				},
-				afterTrack: (event: TrackSeriesContext) => {
-					const attrs: {
-						[index: string]: number | boolean | string | undefined
-					} = {
-						[TRACK_KEY_ATTR]: event.key,
-						[TRACK_DATA_ATTR]: JSON.stringify(event.data),
-						[TRACK_METRIC_VALUE_ATTR]: event.metricValue,
-						[FEATURE_FLAG_PROVIDER_ATTR]: 'LaunchDarkly',
-					}
-					if (event.context) {
-						attrs[FEATURE_FLAG_CONTEXT_KEY_ATTR] = getCanonicalKey(
-							event.context,
-						)
-					}
-
-					this.record.track(event.key, attrs)
-				},
-			},
-		]
+	getHooks?(): Hook[] {
+		return []
 	}
 }

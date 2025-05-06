@@ -1,11 +1,15 @@
 import { initialize } from '@launchdarkly/js-client-sdk'
-import Observability, { LD as LDo } from '@launchdarkly/observability'
-import SessionReplay, { LD as LDsr } from '@launchdarkly/session-replay'
+import Observability, { LDObserve } from '@launchdarkly/observability'
+import SessionReplay, { LDRecord } from '@launchdarkly/session-replay'
+import { useEffect, useRef } from 'react'
+// TODO(vkorolik)
+// import { LD } from '@launchdarkly/browser'
 
 const client = initialize('client-side-id-123abc', {
 	// Not including plugins at all would be equivalent to the current LaunchDarkly SDK.
 	plugins: [
 		new Observability('1', {
+			// TODO(vkorolik) settings that don't apply to Observability
 			networkRecording: {
 				enabled: true,
 				recordHeadersAndBody: true,
@@ -14,7 +18,7 @@ const client = initialize('client-side-id-123abc', {
 			otlpEndpoint: 'https://otel.observability.ld-stg.launchdarkly.com',
 		}),
 		new SessionReplay('1', {
-			// TODO(vkorolik) don't apply to SR
+			// TODO(vkorolik) settings that don't apply to SR
 			networkRecording: {
 				enabled: true,
 				recordHeadersAndBody: true,
@@ -26,23 +30,38 @@ const client = initialize('client-side-id-123abc', {
 })
 
 export default function Root() {
+	const fillColor = 'lightblue'
+	const canvasRef = useRef<HTMLCanvasElement>(null)
+
+	useEffect(() => {
+		const canvas = canvasRef.current
+		if (!canvas) return
+		const ctx = canvas.getContext('2d')!
+		// Fill the entire canvas with the specified color
+		ctx.fillStyle = fillColor
+		ctx.fillRect(0, 0, canvas.width, canvas.height)
+	}, [fillColor])
+
 	return (
 		<div id="sidebar">
 			<h1>Hello, world</h1>
 			<p>{JSON.stringify(client.allFlags())}</p>
+			<canvas width="100" height="100" ref={canvasRef}></canvas>
 			<button
 				onClick={() => {
-					LDo.recordLog('hello', 'INFO')
+					LDObserve.recordLog('hello', 'INFO')
 				}}
 			>
-				LDo.recordLog
+				LDObserve.recordLog
 			</button>
 			<button
 				onClick={() => {
-					LDsr.recordLog('world', 'INFO')
+					if (canvasRef.current) {
+						LDRecord.snapshot(canvasRef.current)
+					}
 				}}
 			>
-				LDsr.recordLog
+				LDRecord.snapshot
 			</button>
 		</div>
 	)

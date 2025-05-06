@@ -670,7 +670,8 @@ const __testing = {
 
 export { Record } from './plugins/record'
 export { Observe } from './plugins/observe'
-export { LD } from './sdk'
+export { LDObserve } from './sdk/LDObserve'
+export { LDRecord } from './sdk/LDRecord'
 export {
 	configureElectronHighlight,
 	GenerateSecureID,
