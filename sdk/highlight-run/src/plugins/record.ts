@@ -1,37 +1,23 @@
-import {
-	GenerateSecureID,
-	getPreviousSessionData,
-	type HighlightClassOptions,
-	HighlightOptions,
-	LDClientMin,
-} from '../client'
+import { type HighlightClassOptions, LDClientMin } from '../client'
 import { FirstLoadListeners } from '../client/listeners/first-load-listeners'
 import type { LDPlugin, LDPluginEnvironmentMetadata } from './plugin'
 import type { Hook } from '../integrations/launchdarkly/types/Hooks'
 import { Record as RecordAPI } from '../api/record'
 import { RecordSDK } from '../sdk/record'
-import { loadCookieSessionData } from '../client/utils/sessionStorage/highlightSession'
-import { setCookieWriteEnabled } from '../client/utils/storage'
 import { initializeFetchListener } from '../listeners/fetch'
 import { initializeWebSocketListener } from '../listeners/web-socket'
 import firstloadVersion from '../__generated/version'
 import { setupMixpanelIntegration } from '../integrations/mixpanel'
 import { setupAmplitudeIntegration } from '../integrations/amplitude'
 import { LDRecord } from '../sdk/LDRecord'
+import type { RecordOptions } from '../client/types/record'
+import { Plugin } from './common'
 
-export class Record implements LDPlugin {
-	sessionSecureID!: string
+export class Record extends Plugin<RecordOptions> implements LDPlugin {
 	record!: RecordAPI
 	firstloadListeners!: FirstLoadListeners
 
-	private readonly initCalled: boolean = false
-
-	constructor(projectID?: string | number, options?: HighlightOptions) {
-		// Don't run init when called outside of the browser.
-		if (typeof window === 'undefined' || typeof document === 'undefined') {
-			return
-		}
-
+	constructor(projectID?: string | number, options?: RecordOptions) {
 		// Don't initialize if an projectID is not set.
 		if (!projectID) {
 			console.info(
@@ -39,25 +25,7 @@ export class Record implements LDPlugin {
 			)
 			return
 		}
-
-		if (options?.sessionCookie) {
-			loadCookieSessionData()
-		} else {
-			setCookieWriteEnabled(false)
-		}
-
-		let previousSession = getPreviousSessionData()
-		this.sessionSecureID = GenerateSecureID()
-		if (previousSession?.sessionSecureID) {
-			this.sessionSecureID = previousSession.sessionSecureID
-		}
-
-		// `init` was already called, do not reinitialize
-		if (this.initCalled) {
-			return
-		}
-		this.initCalled = true
-
+		super(options)
 		const client_options: HighlightClassOptions = {
 			...options,
 			organizationID: projectID,
@@ -67,7 +35,6 @@ export class Record implements LDPlugin {
 			sessionSecureID: this.sessionSecureID,
 		}
 
-		// TODO(vkorolik) can these be removed?
 		initializeFetchListener()
 		initializeWebSocketListener()
 		this.firstloadListeners = new FirstLoadListeners(client_options)
@@ -75,7 +42,7 @@ export class Record implements LDPlugin {
 			this.firstloadListeners.startListening()
 		}
 
-		this.record = new RecordSDK(client_options, this.firstloadListeners)
+		this.record = new RecordSDK(this.firstloadListeners)
 		if (!options?.manualStart) {
 			void this.record.start()
 		}

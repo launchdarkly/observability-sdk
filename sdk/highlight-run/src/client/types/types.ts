@@ -89,17 +89,42 @@ export declare type SamplingStrategy = {
 	}>
 }
 
-export declare type HighlightOptions = {
+export declare type CommonOptions = {
 	/**
 	 * Do not use this.
 	 * @private
 	 */
 	debug?: boolean | DebugOptions
 	/**
+	 * Specifies the name of the app.
+	 */
+	serviceName?: string
+	/**
+	 * Specifies the version of your application.
+	 * This is commonly a Git hash or a semantic version.
+	 */
+	version?: string
+	/**
 	 * Specifies where to send Highlight session data.
 	 * You should not have to set this unless you are running an on-premise instance.
 	 */
 	backendUrl?: string
+	/**
+	 * Set to `sessionStorage` to bypass all `window.localStorage` usage.
+	 * This can help with compliance for cookie-consent regulation.
+	 * Using `sessionStorage` will cause app close+reopens to start a new highlight session,
+	 * as the session ID will not persist.
+	 */
+	storageMode?: 'sessionStorage' | 'localStorage'
+	/**
+	 * By default, session data is stored in the `sessionStorage` of the browser.
+	 * Set to `true` to store session data in a cookie instead.
+	 * This can help with compliance for cookie-consent regulation.
+	 */
+	sessionCookie?: true
+}
+
+export declare type HighlightOptions = CommonOptions & {
 	/**
 	 * Specifies where the backend of the app lives. If specified, Highlight will attach the
 	 * X-Highlight-Request header to outgoing requests whose destination URLs match a substring
@@ -161,15 +186,6 @@ export declare type HighlightOptions = {
 	 * @default 'production'
 	 */
 	environment?: 'development' | 'staging' | 'production' | string
-	/**
-	 * Specifies the version of your application.
-	 * This is commonly a Git hash or a semantic version.
-	 */
-	version?: string
-	/**
-	 * Specifies the name of your app.
-	 */
-	serviceName?: string
 	/**
 	 * Specifies how much data Highlight should redact during recording.
 	 * strict - Highlight will redact all text data on the page.

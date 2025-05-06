@@ -1,10 +1,4 @@
-import type { HighlightOptions, LDClientMin } from '../client'
-import { GenerateSecureID } from '../client/utils/secure-id'
-import {
-	getPreviousSessionData,
-	loadCookieSessionData,
-} from '../client/utils/sessionStorage/highlightSession'
-import { setCookieWriteEnabled } from '../client/utils/storage'
+import type { LDClientMin } from '../client'
 import type { LDPlugin, LDPluginEnvironmentMetadata } from './plugin'
 import type {
 	Hook,
@@ -24,17 +18,13 @@ import {
 	FEATURE_FLAG_VARIANT_ATTR,
 	getCanonicalKey,
 } from '../integrations/launchdarkly'
+import type { ObserveOptions } from '../client/types/observe'
+import { Plugin } from './common'
 
-export class Observe implements LDPlugin {
+export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 	observe!: ObserveAPI
-	private readonly initCalled: boolean = false
 
-	constructor(projectID?: string | number, options?: HighlightOptions) {
-		// Don't run init when called outside of the browser.
-		if (typeof window === 'undefined' || typeof document === 'undefined') {
-			return
-		}
-
+	constructor(projectID?: string | number, options?: ObserveOptions) {
 		// Don't initialize if an projectID is not set.
 		if (!projectID) {
 			console.info(
@@ -42,30 +32,12 @@ export class Observe implements LDPlugin {
 			)
 			return
 		}
-
-		if (options?.sessionCookie) {
-			loadCookieSessionData()
-		} else {
-			setCookieWriteEnabled(false)
-		}
-
-		let previousSession = getPreviousSessionData()
-		let sessionSecureID = GenerateSecureID()
-		if (previousSession?.sessionSecureID) {
-			sessionSecureID = previousSession.sessionSecureID
-		}
-
-		// `init` was already called, do not reinitialize
-		if (this.initCalled) {
-			return
-		}
-		this.initCalled = true
-
+		super(options)
 		this.observe = new ObserveSDK({
 			backendUrl: options?.backendUrl ?? 'https://pub.highlight.io',
 			otlpEndpoint: options?.otlpEndpoint ?? 'https://otel.highlight.io',
 			projectId: projectID,
-			sessionSecureId: sessionSecureID,
+			sessionSecureId: this.sessionSecureID,
 			environment: options?.environment ?? 'production',
 			networkRecordingOptions:
 				typeof options?.networkRecording === 'object'

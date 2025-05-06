@@ -1566,7 +1566,7 @@ declare global {
 		defaultDebug: any
 	}
 }
-// TODO(vkorolik) remove this whole file
+
 export {
 	GenerateSecureID,
 	getPreviousSessionData,

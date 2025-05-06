@@ -89,9 +89,7 @@ import {
 	getItem,
 	LocalStorageKeys,
 	removeItem,
-	setCookieWriteEnabled,
 	setItem,
-	setStorageMode,
 } from '../client/utils/storage'
 import { getDefaultDataURLOptions } from '../client/utils/utils'
 import type { HighlightClientRequestWorker } from '../client/workers/highlight-client-worker'
@@ -102,8 +100,8 @@ import { Attributes } from '@opentelemetry/api'
 import { IntegrationClient } from '../integrations'
 import { Record, RecordOptions } from '../api/record'
 import { HighlightWarning } from './util'
-import { Highlight } from '../client'
 import type { HighlightClassOptions, LDClientMin } from '../client'
+import { Highlight } from '../client'
 import {
 	createLog,
 	defaultLogOptions,
@@ -172,35 +170,7 @@ export class RecordSDK implements Record {
 	_recordStop!: listenerHandler | undefined
 	_integrations: IntegrationClient[] = []
 
-	static create(options: HighlightClassOptions): Highlight {
-		return new Highlight(options)
-	}
-
-	constructor(
-		options: HighlightClassOptions,
-		firstLoadListeners?: FirstLoadListeners,
-	) {
-		if (!options.sessionSecureID) {
-			// Firstload versions before 3.0.1 did not have this property
-			options.sessionSecureID = GenerateSecureID()
-		}
-		this.options = options
-		if (typeof this.options?.debug === 'boolean') {
-			this.debugOptions = this.options.debug
-				? { clientInteractions: true }
-				: {}
-		} else {
-			this.debugOptions = this.options?.debug ?? {}
-		}
-		this.logger = new Logger(this.debugOptions.clientInteractions)
-		if (options.storageMode) {
-			this.logger.log(
-				`initializing in ${options.storageMode} session mode`,
-			)
-			setStorageMode(options.storageMode)
-		}
-		setCookieWriteEnabled(!!options?.sessionCookie)
-
+	constructor(firstLoadListeners?: FirstLoadListeners) {
 		this._worker =
 			new HighlightClientWorker() as HighlightClientRequestWorker
 		this._worker.onmessage = (e) => {

@@ -1,0 +1,65 @@
+import type {
+	ConsoleMethods,
+	NetworkRecordingOptions,
+	OtelOptions,
+} from './client'
+import type { CommonOptions } from './types'
+
+export declare type ObserveOptions = CommonOptions & {
+	/**
+	 * Specifies where the backend of the app lives. If specified, Highlight will attach the
+	 * X-Highlight-Request header to outgoing requests whose destination URLs match a substring
+	 * or regexp from this list, so that backend errors can be linked back to the session.
+	 * If 'true' is specified, all requests to the current domain will be matched.
+	 * @example tracingOrigins: ['localhost', /^\//, 'backend.myapp.com']
+	 */
+	tracingOrigins?: boolean | (string | RegExp)[]
+	/**
+	 * This disables recording network requests.
+	 * The data includes the URLs, the size of the request, and how long the request took.
+	 * @default false
+	 * @deprecated Use `networkRecording` instead.
+	 */
+	disableNetworkRecording?: boolean
+	/**
+	 * Specifies how and what Highlight records from network requests and responses.
+	 */
+	networkRecording?: boolean | NetworkRecordingOptions
+	/**
+	 * Specifies whether Highlight will record console messages.
+	 * @default false
+	 */
+	disableConsoleRecording?: boolean
+	/**
+	 * Specifies whether Highlight will report `console.error` invocations as Highlight Errors.
+	 * @default false
+	 */
+	reportConsoleErrors?: boolean
+	/**
+	 * Specifies which console methods to record.
+	 * The value here will be ignored if `disabledConsoleRecording` is `true`.
+	 * @default All console methods.
+	 * @example consoleMethodsToRecord: ['log', 'info', 'error']
+	 */
+	consoleMethodsToRecord?: ConsoleMethods[]
+	/**
+	 * Specifies the environment your application is running in.
+	 * This is useful to distinguish whether your session was recorded on localhost or in production.
+	 * @default 'production'
+	 */
+	environment?: 'development' | 'staging' | 'production' | string
+	/**
+	 * Specifies whether window.Promise should be patched
+	 * to record the stack trace of promise rejections.
+	 * @default true
+	 */
+	enablePromisePatch?: boolean
+	/**
+	 * OTLP endpoint for OpenTelemetry tracing.
+	 */
+	otlpEndpoint?: string
+	/**
+	 * OTLP options for OpenTelemetry tracing. Instrumentations are enabled by default.
+	 */
+	otel?: OtelOptions
+}
