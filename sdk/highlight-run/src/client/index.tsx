@@ -602,6 +602,7 @@ export class Highlight {
 				this._recordingStartTime = this.sessionData?.sessionStartTime
 			}
 			// To handle the 'Duplicate Tab' function, remove id from storage until page unload
+			console.log('vadim', 'clearing session id src/client/index.tsx')
 			setSessionSecureID('')
 			setSessionData(this.sessionData)
 

@@ -108,7 +108,7 @@ import {
 	defaultLogOptions,
 } from '../client/listeners/console-listener'
 import { LaunchDarklyIntegration } from '../integrations/launchdarkly'
-import { LDObserve } from '../sdk/LDObserve'
+import { LDObserve } from './LDObserve'
 
 interface HighlightWindow extends Window {
 	Highlight: Highlight
@@ -558,6 +558,7 @@ export class RecordSDK implements Record {
 			} else {
 				this._recordingStartTime = this.sessionData?.sessionStartTime
 			}
+			console.log('vadim', 'clearing session id sdk/record')
 			// To handle the 'Duplicate Tab' function, remove id from storage until page unload
 			setSessionSecureID('')
 			setSessionData(this.sessionData)
@@ -1200,10 +1201,6 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 		// stop all other event listeners, to be restarted on initialize()
 		this.listeners.forEach((stop) => stop())
 		this.listeners = []
-	}
-
-	getCurrentSessionTimestamp() {
-		return this._recordingStartTime
 	}
 
 	/**

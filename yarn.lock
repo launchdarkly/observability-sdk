@@ -8114,6 +8114,7 @@ __metadata:
   resolution: "@launchdarkly/observability@workspace:sdk/@launchdarkly/observability"
   dependencies:
     highlight.run: "workspace:*"
+    rollup-plugin-visualizer: "npm:^5.14.0"
     typescript: "npm:^5.8.3"
     vite: "npm:^6.3.4"
     vitest: "npm:^3.1.2"
@@ -8125,6 +8126,7 @@ __metadata:
   resolution: "@launchdarkly/session-replay@workspace:sdk/@launchdarkly/session-replay"
   dependencies:
     highlight.run: "workspace:*"
+    rollup-plugin-visualizer: "npm:^5.14.0"
     typescript: "npm:^5.8.3"
     vite: "npm:^6.3.4"
     vitest: "npm:^3.1.2"
@@ -36116,7 +36118,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"rollup-plugin-visualizer@npm:^5.12.0":
+"rollup-plugin-visualizer@npm:^5.12.0, rollup-plugin-visualizer@npm:^5.14.0":
   version: 5.14.0
   resolution: "rollup-plugin-visualizer@npm:5.14.0"
   dependencies:

@@ -13,7 +13,6 @@ export class SDKCore {
 		}
 	}
 
-	// TODO(vkorolik) buffer until identify
 	async load(sdks: Promise<object>[]) {
 		// Load the modules
 		await Promise.all(

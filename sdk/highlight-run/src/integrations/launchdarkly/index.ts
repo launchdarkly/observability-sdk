@@ -20,11 +20,6 @@ export const FEATURE_FLAG_CONTEXT_KEY_ATTR = `${FEATURE_FLAG_SCOPE}.context.key`
 export const FEATURE_FLAG_VARIANT_ATTR = `${FEATURE_FLAG_SCOPE}.result.variant`
 export const FEATURE_FLAG_SPAN_NAME = 'evaluation'
 
-const TRACK_SCOPE = 'ld.track'
-export const TRACK_KEY_ATTR = `${TRACK_SCOPE}.key`
-export const TRACK_DATA_ATTR = `${TRACK_SCOPE}.data`
-export const TRACK_METRIC_VALUE_ATTR = `${TRACK_SCOPE}.metric.value`
-
 export const LD_INITIALIZE_EVENT = '$ld:telemetry:session:init'
 export const LD_ERROR_EVENT = '$ld:telemetry:error'
 export const LD_TRACK_EVENT = '$ld:telemetry:track'
@@ -111,6 +106,7 @@ export function setupLaunchDarklyIntegration(
 	})
 }
 
+// TODO(vkorolik) buffer until afterIdentify
 export class LaunchDarklyIntegration implements IntegrationClient {
 	client: LDClientMin
 	constructor(client: LDClientMin) {
