@@ -558,7 +558,6 @@ export class RecordSDK implements Record {
 			} else {
 				this._recordingStartTime = this.sessionData?.sessionStartTime
 			}
-			console.log('vadim', 'clearing session id sdk/record')
 			// To handle the 'Duplicate Tab' function, remove id from storage until page unload
 			setSessionSecureID('')
 			setSessionData(this.sessionData)
