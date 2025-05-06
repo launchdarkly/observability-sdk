@@ -10,7 +10,6 @@ import {
 	PushPayloadMutationVariables,
 	Sdk,
 } from '../client/graph/generated/operations'
-import { FirstLoadListeners } from '../client/listeners/first-load-listeners'
 import { PathListener } from '../client/listeners/path-listener'
 import {
 	DebugOptions,
@@ -65,11 +64,7 @@ import {
 	IFRAME_PARENT_READY,
 	IFRAME_PARENT_RESPONSE,
 } from '../client/types/iframe'
-import {
-	ErrorMessage,
-	ErrorMessageType,
-	Source,
-} from '../client/types/shared-types'
+import { Source } from '../client/types/shared-types'
 import { getSimpleSelector } from '../client/utils/dom'
 import { getGraphQLRequestWrapper } from '../client/utils/graph'
 import {
@@ -95,17 +90,12 @@ import { getDefaultDataURLOptions } from '../client/utils/utils'
 import type { HighlightClientRequestWorker } from '../client/workers/highlight-client-worker'
 import HighlightClientWorker from '../client/workers/highlight-client-worker?worker&inline'
 import { MessageType, PropertyType } from '../client/workers/types'
-import { parseError } from '../client/utils/errors'
 import { Attributes } from '@opentelemetry/api'
 import { IntegrationClient } from '../integrations'
 import { Record, RecordOptions } from '../api/record'
 import { HighlightWarning } from './util'
 import type { HighlightClassOptions, LDClientMin } from '../client'
 import { Highlight } from '../client'
-import {
-	createLog,
-	defaultLogOptions,
-} from '../client/listeners/console-listener'
 import { LaunchDarklyIntegration } from '../integrations/launchdarkly'
 import { LDObserve } from './LDObserve'
 
@@ -157,7 +147,6 @@ export class RecordSDK implements Record {
 	_recordingStartTime!: number
 	_isOnLocalHost!: boolean
 	_onToggleFeedbackFormVisibility!: () => void
-	_firstLoadListeners!: FirstLoadListeners
 	_isCrossOriginIframe!: boolean
 	_eventBytesSinceSnapshot!: number
 	_lastSnapshotTime!: number
@@ -170,7 +159,16 @@ export class RecordSDK implements Record {
 	_recordStop!: listenerHandler | undefined
 	_integrations: IntegrationClient[] = []
 
-	constructor(firstLoadListeners?: FirstLoadListeners) {
+	constructor(options: HighlightClassOptions) {
+		this.options = options
+		if (typeof this.options?.debug === 'boolean') {
+			this.debugOptions = this.options.debug
+				? { clientInteractions: true }
+				: {}
+		} else {
+			this.debugOptions = this.options?.debug ?? {}
+		}
+		this.logger = new Logger(this.debugOptions.clientInteractions)
 		this._worker =
 			new HighlightClientWorker() as HighlightClientRequestWorker
 		this._worker.onmessage = (e) => {
@@ -229,9 +227,6 @@ export class RecordSDK implements Record {
 		// these should not be in initMembers since we want them to
 		// persist across session resets
 		this._hasPreviouslyInitialized = false
-		// Old firstLoad versions (Feb 2022) do not pass in FirstLoadListeners, so we have to fallback to creating it
-		this._firstLoadListeners =
-			firstLoadListeners || new FirstLoadListeners(this.options)
 		try {
 			// throws if parent is cross-origin
 			if (window.parent.document) {
@@ -275,7 +270,6 @@ export class RecordSDK implements Record {
 		this.sessionData.sessionStartTime = Date.now()
 		this.options.sessionSecureID = this.sessionData.sessionSecureID
 		this.stop()
-		this._firstLoadListeners = new FirstLoadListeners(this.options)
 		await this.start()
 		if (user_identifier && user_object) {
 			this.identify(user_identifier, user_object)
@@ -400,71 +394,9 @@ export class RecordSDK implements Record {
 		}
 	}
 
-	log(message: any, level: string, metadata?: Attributes) {
-		this._firstLoadListeners.messages.push(
-			createLog(level, defaultLogOptions, message, metadata),
-		)
-	}
-
-	pushCustomError(message: string, payload?: string) {
-		return this.consumeCustomError(new Error(message), undefined, payload)
-	}
-
-	consumeCustomError(error: Error, message?: string, payload?: string) {
-		let obj = {}
-		if (payload) {
-			try {
-				obj = { ...JSON.parse(payload), ...obj }
-			} catch (e) {}
-		}
-		return this.consumeError(error, {
-			message,
-			payload: obj,
-		})
-	}
-
-	consumeError(
-		error: Error,
-		{
-			message,
-			payload,
-			source,
-			type,
-		}: {
-			message?: string
-			payload?: object
-			source?: string
-			type?: ErrorMessageType
-		},
-	) {
-		if (error.cause) {
-			payload = { ...payload, 'exception.cause': error.cause }
-		}
-		let event = message ? message + ':' + error.message : error.message
-		if (type === 'React.ErrorBoundary') {
-			event = 'ErrorBoundary: ' + event
-		}
-		const res = parseError(error)
-		const errorMsg: ErrorMessage = {
-			event,
-			type: type ?? 'custom',
-			url: window.location.href,
-			source: source ?? '',
-			lineNumber: res[0]?.lineNumber ? res[0]?.lineNumber : 0,
-			columnNumber: res[0]?.columnNumber ? res[0]?.columnNumber : 0,
-			stackTrace: res,
-			timestamp: new Date().toISOString(),
-			payload: JSON.stringify(payload),
-		}
-		this._firstLoadListeners.errors.push(errorMsg)
-		for (const integration of this._integrations) {
-			integration.error(this.sessionData.sessionSecureID, errorMsg)
-		}
-	}
-
 	track(event: string, metadata?: Metadata) {
 		this.addProperties({ ...metadata, event: event })
-		this.log('H.track', 'INFO', {
+		LDObserve.recordLog('H.track', 'info', {
 			...(metadata ?? {}),
 			event,
 		})
@@ -503,7 +435,6 @@ export class RecordSDK implements Record {
 			navigator?.userAgent?.includes('Googlebot') ||
 			navigator?.userAgent?.includes('AdsBot')
 		) {
-			this._firstLoadListeners?.stopListening()
 			return
 		}
 
@@ -632,16 +563,6 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 				this.identify(
 					this.sessionData.userIdentifier,
 					this.sessionData.userObject,
-				)
-			}
-
-			if (!this._firstLoadListeners.isListening()) {
-				this._firstLoadListeners.startListening()
-			} else if (!this._firstLoadListeners.hasNetworkRecording) {
-				// for firstload versions < 3.0. even if they are listening, add network listeners
-				FirstLoadListeners.setupNetworkListener(
-					this._firstLoadListeners,
-					this.options,
 				)
 			}
 
@@ -1305,16 +1226,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 	}: {
 		sendFn?: (payload: PushPayloadMutationVariables) => Promise<number>
 	}) {
-		const resources = FirstLoadListeners.getRecordedNetworkResources(
-			this._firstLoadListeners,
-			this._recordingStartTime,
-		)
-		const webSocketEvents = FirstLoadListeners.getRecordedWebSocketEvents(
-			this._firstLoadListeners,
-		)
 		const events = [...this.events]
-		const messages = [...this._firstLoadListeners.messages]
-		const errors = [...this._firstLoadListeners.errors]
 
 		// if it is time to take a full snapshot,
 		// ensure the snapshot is at the beginning of the next payload
@@ -1331,7 +1243,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 		}
 
 		this.logger.log(
-			`Sending: ${events.length} events, ${messages.length} messages, ${resources.length} network resources, ${errors.length} errors \nTo: ${this._backendUrl}\nOrg: ${this.organizationID}\nSessionSecureID: ${this.sessionData.sessionSecureID}`,
+			`Sending: ${events.length} events, \nTo: ${this._backendUrl}\nOrg: ${this.organizationID}\nSessionSecureID: ${this.sessionData.sessionSecureID}`,
 		)
 		const highlightLogs = getHighlightLogs()
 		if (sendFn) {
@@ -1339,12 +1251,12 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 				session_secure_id: this.sessionData.sessionSecureID,
 				payload_id: (this.sessionData.payloadID++).toString(),
 				events: { events } as ReplayEventsInput,
-				messages: stringify({ messages: messages }),
-				resources: JSON.stringify({ resources: resources }),
+				messages: stringify({ messages: [] }),
+				resources: JSON.stringify({ resources: [] }),
 				web_socket_events: JSON.stringify({
-					webSocketEvents: webSocketEvents,
+					webSocketEvents: [],
 				}),
-				errors,
+				errors: [],
 				is_beacon: false,
 				has_session_unloaded: this.hasSessionUnloaded,
 				highlight_logs: highlightLogs || undefined,
@@ -1355,11 +1267,11 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 					type: MessageType.AsyncEvents,
 					id: this.sessionData.payloadID++,
 					events,
-					messages,
-					errors,
-					resourcesString: JSON.stringify({ resources: resources }),
+					messages: [],
+					errors: [],
+					resourcesString: JSON.stringify({ resources: [] }),
 					webSocketEventsString: JSON.stringify({
-						webSocketEvents: webSocketEvents,
+						webSocketEvents: [],
 					}),
 					hasSessionUnloaded: this.hasSessionUnloaded,
 					highlightLogs: highlightLogs,
@@ -1368,10 +1280,6 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 		}
 		setSessionData(this.sessionData)
 
-		// If sendFn throws an exception, the data below will not be cleared, and it will be re-uploaded on the next PushPayload.
-		FirstLoadListeners.clearRecordedNetworkResources(
-			this._firstLoadListeners,
-		)
 		// We are creating a weak copy of the events. rrweb could have pushed more events to this.events while we send the request with the events as a payload.
 		// Originally, we would clear this.events but this could lead to a race condition.
 		// Example Scenario:
@@ -1381,11 +1289,6 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 		// 4. this.events is cleared (we lose M events)
 		this.events = this.events.slice(events.length)
 
-		this._firstLoadListeners.messages =
-			this._firstLoadListeners.messages.slice(messages.length)
-		this._firstLoadListeners.errors = this._firstLoadListeners.errors.slice(
-			errors.length,
-		)
 		clearHighlightLogs(highlightLogs)
 	}
 

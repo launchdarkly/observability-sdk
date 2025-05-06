@@ -19,7 +19,8 @@ import {
 import type { LDClientMin } from '../integrations/launchdarkly/types/LDClient'
 import type { Observe } from '../api/observe'
 import { getNoopSpan } from '../client/otel/utils'
-import type {
+import {
+	ConsoleMessage,
 	ErrorMessage,
 	ErrorMessageType,
 } from '../client/types/shared-types'
@@ -28,6 +29,14 @@ import { LaunchDarklyIntegration } from '../integrations/launchdarkly'
 import type { IntegrationClient } from '../integrations'
 import type { OTelMetric as Metric } from '../client/types/types'
 import { ConsoleMethods } from '../client/types/client'
+import { ObserveOptions } from '../client/types/observe'
+import { ConsoleListener } from '../client/listeners/console-listener'
+import stringify from 'json-stringify-safe'
+import {
+	ERROR_PATTERNS_TO_IGNORE,
+	ERRORS_TO_IGNORE,
+} from '../client/constants/errors'
+import { ErrorListener } from '../client/listeners/error-listener'
 
 export class ObserveSDK implements Observe {
 	private readonly sessionSecureID: string
@@ -48,6 +57,7 @@ export class ObserveSDK implements Observe {
 	constructor(options: BrowserTracingConfig) {
 		this.sessionSecureID = options.sessionSecureId
 		setupBrowserTracing(options)
+		this.setupListeners(options)
 	}
 
 	recordLog(message: any, level: ConsoleMethods, metadata?: Attributes) {
@@ -261,5 +271,93 @@ export class ObserveSDK implements Observe {
 	register(client: LDClientMin) {
 		// TODO(vkorolik) report metadata as resource attrs?
 		this._integrations.push(new LaunchDarklyIntegration(client))
+	}
+
+	private setupListeners(options: ObserveOptions) {
+		if (!options.disableConsoleRecording) {
+			ConsoleListener(
+				(c: ConsoleMessage) => {
+					const payload: {
+						type: string
+						url?: string
+						source?: string
+						lineNumber?: string
+						columnNumber?: string
+						stackTrace?: string
+					} = {
+						...(c.attributes ? { attributes: c.attributes } : {}),
+						type: c.type,
+					}
+					if (
+						options.reportConsoleErrors &&
+						(c.type === 'Error' || c.type === 'error') &&
+						c.value &&
+						c.trace
+					) {
+						const errorValue = stringify(c.value)
+						if (
+							ERRORS_TO_IGNORE.includes(errorValue) ||
+							ERROR_PATTERNS_TO_IGNORE.some((pattern) =>
+								errorValue.includes(pattern),
+							)
+						) {
+							return
+						}
+						const err = new Error(errorValue)
+						err.stack = stringify(c.trace.map((s) => s.toString()))
+						payload.url = window.location.href
+						payload.source = c.trace[0]?.fileName
+						payload.lineNumber = c.trace[0]?.lineNumber?.toString()
+						payload.columnNumber =
+							c.trace[0]?.columnNumber?.toString()
+						this.recordError(
+							err,
+							undefined,
+							payload,
+							payload.source,
+							'console.error',
+						)
+					}
+					this.recordLog(stringify(c.value), 'error', {})
+				},
+				{
+					level: options.consoleMethodsToRecord ?? [],
+					logger: 'console',
+					stringifyOptions: {
+						depthOfLimit: 10,
+						numOfKeysLimit: 100,
+						stringLengthLimit: 1000,
+					},
+				},
+			)
+		}
+		ErrorListener(
+			(e: ErrorMessage) => {
+				if (
+					ERRORS_TO_IGNORE.includes(e.event) ||
+					ERROR_PATTERNS_TO_IGNORE.some((pattern) =>
+						e.event.includes(pattern),
+					)
+				) {
+					return
+				}
+				const err = new Error(e.event)
+				err.stack = stringify(e.stackTrace.map((s) => s.toString()))
+				this.recordError(
+					err,
+					e.event,
+					{
+						...(e.payload ? { payload: e.payload } : {}),
+						lineNumber: e.lineNumber.toString(),
+						columnNumber: e.columnNumber.toString(),
+						source: e.source,
+						url: e.url,
+					},
+					e.source,
+					e.type,
+				)
+			},
+			{ enablePromisePatch: !!options.enablePromisePatch },
+		)
 	}
 }

@@ -1,11 +1,8 @@
 import { type HighlightClassOptions, LDClientMin } from '../client'
-import { FirstLoadListeners } from '../client/listeners/first-load-listeners'
 import type { LDPlugin, LDPluginEnvironmentMetadata } from './plugin'
 import type { Hook } from '../integrations/launchdarkly/types/Hooks'
 import { Record as RecordAPI } from '../api/record'
 import { RecordSDK } from '../sdk/record'
-import { initializeFetchListener } from '../listeners/fetch'
-import { initializeWebSocketListener } from '../listeners/web-socket'
 import firstloadVersion from '../__generated/version'
 import { setupMixpanelIntegration } from '../integrations/mixpanel'
 import { setupAmplitudeIntegration } from '../integrations/amplitude'
@@ -15,7 +12,6 @@ import { Plugin } from './common'
 
 export class Record extends Plugin<RecordOptions> implements LDPlugin {
 	record!: RecordAPI
-	firstloadListeners!: FirstLoadListeners
 
 	constructor(projectID?: string | number, options?: RecordOptions) {
 		// Don't initialize if an projectID is not set.
@@ -35,14 +31,7 @@ export class Record extends Plugin<RecordOptions> implements LDPlugin {
 			sessionSecureID: this.sessionSecureID,
 		}
 
-		initializeFetchListener()
-		initializeWebSocketListener()
-		this.firstloadListeners = new FirstLoadListeners(client_options)
-		if (!options?.manualStart) {
-			this.firstloadListeners.startListening()
-		}
-
-		this.record = new RecordSDK(this.firstloadListeners)
+		this.record = new RecordSDK(client_options)
 		if (!options?.manualStart) {
 			void this.record.start()
 		}

@@ -1,4 +1,5 @@
 import * as api from '@opentelemetry/api'
+import { Span } from '@opentelemetry/api'
 import {
 	CompositePropagator,
 	W3CBaggagePropagator,
@@ -52,7 +53,6 @@ import {
 } from '@opentelemetry/sdk-metrics'
 import { IntegrationClient } from '../../integrations'
 import { LD_METRIC_NAME_DOCUMENT_LOAD } from '../../integrations/launchdarkly'
-import { Span } from '@opentelemetry/api'
 
 export type Callback = (span?: Span) => any
 

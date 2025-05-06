@@ -73,7 +73,7 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 					data: IdentifySeriesData,
 					_result: IdentifySeriesResult,
 				) => {
-					this.observe.recordLog('LD.identify', 'INFO', {
+					this.observe.recordLog('LD.identify', 'info', {
 						key: getCanonicalKey(hookContext.context),
 						timeout: hookContext.timeout,
 					})
