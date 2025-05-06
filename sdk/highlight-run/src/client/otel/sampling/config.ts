@@ -81,6 +81,20 @@ export interface AttributeMatchConfig<TMatchConfig extends MatchConfig> {
 }
 
 /**
+ * A config for matching span events within a span.
+ */
+export interface SpanEventMatchConfig<TMatchConfig extends MatchConfig> {
+	/**
+	 * The name of the span event to match.
+	 */
+	name: TMatchConfig
+	/**
+	 * A list of attribute match configs.
+	 */
+	attributes?: AttributeMatchConfig<TMatchConfig>[]
+}
+
+/**
  * Configuration for sampling spans based on their name and attributes.
  *
  * In order for a span to match this config it must match the spanName and all attributes.
@@ -93,14 +107,22 @@ export interface SpanSamplingConfig<TMatchConfig extends MatchConfig> {
 	 * The name of the span to match. If omitted any span matching the specified attribute rules will be sampled.
 	 */
 	name?: TMatchConfig
+
 	/**
-	 * A list of attribute match configs. If omitted the spans with the matching span name will be sampled.
+	 * A list of attribute match configs.
 	 *
 	 * In order to match each attributes listed must match. This is an implicit AND operation.
 	 */
 	attributes?: AttributeMatchConfig<TMatchConfig>[]
+
 	/**
-	 * The ratio of spans to sample. Expressed in the form 1/n. So if the ratio is 10, then 1 out of every 10 spans will be sampled.
+	 * A list of span event match configs.
+	 */
+	events?: SpanEventMatchConfig<TMatchConfig>[]
+
+	/**
+	 * The ratio of spans to sample. Expressed in the form 1/n. So if the ratio is 10, then 1 out of every 10 spans
+	 * will be sampled. Setting the ratio to 0 will disable sampling for the span.
 	 */
 	samplingRatio: number
 }
@@ -130,7 +152,8 @@ export interface LogSamplingConfig<TMatchConfig extends MatchConfig> {
 	severityText?: TMatchConfig
 
 	/**
-	 *
+	 * The ratio of logs to sample. Expressed in the form 1/n. So if the ratio is 10, then 1 out of every 10 logs
+	 * will be sampled. Setting the ratio to 0 will disable sampling for the log.
 	 */
 	samplingRatio: number
 }

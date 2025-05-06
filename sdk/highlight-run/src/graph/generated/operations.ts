@@ -35,6 +35,12 @@ export type Scalars = {
 	Timestamp: { input: any; output: any }
 }
 
+export type AttributeMatchConfig = {
+	__typename?: 'AttributeMatchConfig'
+	key: Scalars['String']['output']
+	match: MatchConfig
+}
+
 export type BackendErrorObjectInput = {
 	environment: Scalars['String']['input']
 	event: Scalars['String']['input']
@@ -52,6 +58,12 @@ export type BackendErrorObjectInput = {
 	url: Scalars['String']['input']
 }
 
+export type BasicMatchConfig = {
+	__typename?: 'BasicMatchConfig'
+	operator: Scalars['String']['output']
+	value?: Maybe<Scalars['Any']['output']>
+}
+
 export type ErrorObjectInput = {
 	columnNumber: Scalars['Int']['input']
 	event: Scalars['String']['input']
@@ -67,8 +79,19 @@ export type ErrorObjectInput = {
 export type InitializeSessionResponse = {
 	__typename?: 'InitializeSessionResponse'
 	project_id: Scalars['ID']['output']
+	sampling?: Maybe<SamplingConfig>
 	secure_id: Scalars['String']['output']
 }
+
+export type LogSamplingConfig = {
+	__typename?: 'LogSamplingConfig'
+	attributes?: Maybe<Array<AttributeMatchConfig>>
+	message?: Maybe<MatchConfig>
+	samplingRatio: Scalars['Int']['output']
+	severityText?: Maybe<MatchConfig>
+}
+
+export type MatchConfig = BasicMatchConfig | RegexMatchConfig
 
 export type MetricInput = {
 	category?: InputMaybe<Scalars['String']['input']>
@@ -185,6 +208,12 @@ export type QueryIgnoreArgs = {
 	id: Scalars['ID']['input']
 }
 
+export type RegexMatchConfig = {
+	__typename?: 'RegexMatchConfig'
+	operator: Scalars['String']['output']
+	value: Scalars['String']['output']
+}
+
 export type ReplayEventInput = {
 	_sid: Scalars['Float']['input']
 	data: Scalars['Any']['input']
@@ -194,6 +223,12 @@ export type ReplayEventInput = {
 
 export type ReplayEventsInput = {
 	events: Array<InputMaybe<ReplayEventInput>>
+}
+
+export type SamplingConfig = {
+	__typename?: 'SamplingConfig'
+	logs?: Maybe<LogSamplingConfig>
+	spans?: Maybe<SpanSamplingConfig>
 }
 
 export type ServiceInput = {
@@ -207,6 +242,13 @@ export type Session = {
 	organization_id: Scalars['ID']['output']
 	project_id: Scalars['ID']['output']
 	secure_id: Scalars['String']['output']
+}
+
+export type SpanSamplingConfig = {
+	__typename?: 'SpanSamplingConfig'
+	attributes?: Maybe<Array<AttributeMatchConfig>>
+	name?: Maybe<Scalars['String']['output']>
+	samplingRatio: Scalars['Int']['output']
 }
 
 export type StackFrameInput = {

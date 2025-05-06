@@ -1,7 +1,8 @@
-import { Context, SpanKind, Attributes, Link } from '@opentelemetry/api'
+import { SpanKind, Attributes } from '@opentelemetry/api'
 import { CustomSampler, defaultSampler } from './CustomSampler'
-import { SamplingDecision } from '@opentelemetry/sdk-trace-base'
 import { InputSamplingConfig } from './config'
+import type { ReadableSpan } from '@opentelemetry/sdk-trace-base'
+import { it, expect, beforeEach, vi } from 'vitest'
 
 // Constants used in the tests
 const LOG_SPAN_NAME = 'launchdarkly.js.log'
@@ -9,16 +10,53 @@ const LOG_SEVERITY_ATTRIBUTE = 'log.severity'
 const LOG_MESSAGE_ATTRIBUTE = 'log.message'
 const SAMPLING_RATIO_ATTRIBUTE = 'launchdarkly.samplingRatio'
 
-// Mock context, trace ID, and links (not relevant for our tests)
-const mockContext: Context = {} as unknown as Context
-const mockTraceId = '0'
-const mockLinks: Link[] = []
-
 // Test helper function that always returns true for sampling
 const alwaysSampleFn = vi.fn(() => true)
 
 // Test helper function that always returns false for sampling
 const neverSampleFn = vi.fn(() => false)
+
+// Mock implementation of IResource
+const mockResource = {
+	attributes: {},
+	merge: (other: any | null) => (other === null ? mockResource : other),
+}
+
+// Helper function to create a mock ReadableSpan
+const createMockSpan = ({
+	name,
+	attributes = {},
+}: {
+	name: string
+	attributes?: Attributes
+}) => {
+	return {
+		name,
+		attributes,
+		kind: SpanKind.INTERNAL,
+		spanContext: () => ({
+			traceId: '0',
+			spanId: '0',
+			traceFlags: 0,
+		}),
+		parentSpanId: undefined,
+		startTime: [0, 0],
+		endTime: [0, 0],
+		status: { code: 0 },
+		links: [],
+		events: [],
+		duration: [0, 0],
+		ended: false,
+		resource: {
+			attributes: {},
+			merge: () => ({ attributes: {} }),
+		},
+		instrumentationLibrary: { name: 'test', version: '1.0' },
+		droppedAttributesCount: 0,
+		droppedEventsCount: 0,
+		droppedLinksCount: 0,
+	} as unknown as ReadableSpan
+}
 
 beforeEach(() => {
 	vi.resetAllMocks()
@@ -36,17 +74,11 @@ it('should respect samplingRatio and return a NOT_RECORD decision when sampler r
 	}
 
 	const sampler = new CustomSampler(config, neverSampleFn)
-	const result = sampler.shouldSample(
-		mockContext,
-		mockTraceId,
-		'test-span',
-		SpanKind.INTERNAL,
-		{},
-		mockLinks,
-	)
+	const mockSpan = createMockSpan({ name: 'test-span' })
+	const result = sampler.shouldSample(mockSpan)
 
 	expect(neverSampleFn).toHaveBeenCalledWith(10)
-	expect(result.decision).toBe(SamplingDecision.NOT_RECORD)
+	expect(result.sample).toBe(false)
 	expect(result.attributes).toEqual({
 		[SAMPLING_RATIO_ATTRIBUTE]: 10,
 	})
@@ -69,19 +101,13 @@ it.each([
 		}
 
 		const sampler = new CustomSampler(config, sampleFn)
-		const result = sampler.shouldSample(
-			mockContext,
-			mockTraceId,
-			'test-span',
-			SpanKind.INTERNAL,
-			{},
-			mockLinks,
-		)
+		const mockSpan = createMockSpan({ name: 'test-span' })
+		const result = sampler.shouldSample(mockSpan)
 
 		if (sampleFn === alwaysSampleFn) {
-			expect(result.decision).toBe(SamplingDecision.RECORD_AND_SAMPLED)
+			expect(result.sample).toBe(true)
 		} else {
-			expect(result.decision).toBe(SamplingDecision.NOT_RECORD)
+			expect(result.sample).toBe(false)
 		}
 
 		expect(result.attributes).toEqual({
@@ -102,17 +128,11 @@ it('should always sample a span when the span name does not match', () => {
 
 	// We say to neverSampleFn, but the span doesn't match, so it should pass through.
 	const sampler = new CustomSampler(config, neverSampleFn)
-	const result = sampler.shouldSample(
-		mockContext,
-		mockTraceId,
-		'other-span',
-		SpanKind.INTERNAL,
-		{},
-		mockLinks,
-	)
+	const mockSpan = createMockSpan({ name: 'other-span' })
+	const result = sampler.shouldSample(mockSpan)
 
 	// If no config matches, we default to sampling
-	expect(result.decision).toBe(SamplingDecision.RECORD_AND_SAMPLED)
+	expect(result.sample).toBe(true)
 	expect(result.attributes).toBeUndefined()
 })
 
@@ -135,19 +155,13 @@ it.each([
 		}
 
 		const sampler = new CustomSampler(config, sampleFn)
-		const result = sampler.shouldSample(
-			mockContext,
-			mockTraceId,
-			'test-span-123',
-			SpanKind.INTERNAL,
-			{},
-			mockLinks,
-		)
+		const mockSpan = createMockSpan({ name: 'test-span-123' })
+		const result = sampler.shouldSample(mockSpan)
 
 		if (sampleFn === alwaysSampleFn) {
-			expect(result.decision).toBe(SamplingDecision.RECORD_AND_SAMPLED)
+			expect(result.sample).toBe(true)
 		} else {
-			expect(result.decision).toBe(SamplingDecision.NOT_RECORD)
+			expect(result.sample).toBe(false)
 		}
 
 		expect(result.attributes).toEqual({
@@ -183,19 +197,16 @@ it.each([
 		}
 
 		const sampler = new CustomSampler(config, sampleFn)
-		const result = sampler.shouldSample(
-			mockContext,
-			mockTraceId,
-			'http-request',
-			SpanKind.CLIENT,
-			{ 'example.attribute': value },
-			mockLinks,
-		)
+		const mockSpan = createMockSpan({
+			name: 'http-request',
+			attributes: { 'example.attribute': value },
+		})
+		const result = sampler.shouldSample(mockSpan)
 
 		if (sampleFn === alwaysSampleFn) {
-			expect(result.decision).toBe(SamplingDecision.RECORD_AND_SAMPLED)
+			expect(result.sample).toBe(true)
 		} else {
-			expect(result.decision).toBe(SamplingDecision.NOT_RECORD)
+			expect(result.sample).toBe(false)
 		}
 
 		expect(result.attributes).toEqual({
@@ -220,17 +231,14 @@ it('should always sample a span when the attribute does not match', () => {
 	}
 
 	const sampler = new CustomSampler(config, neverSampleFn)
-	const result = sampler.shouldSample(
-		mockContext,
-		mockTraceId,
-		'http-request',
-		SpanKind.CLIENT,
-		{ 'http.method': 'POST' },
-		mockLinks,
-	)
+	const mockSpan = createMockSpan({
+		name: 'http-request',
+		attributes: { 'http.method': 'POST' },
+	})
+	const result = sampler.shouldSample(mockSpan)
 
 	// If no config matches, we default to sampling
-	expect(result.decision).toBe(SamplingDecision.RECORD_AND_SAMPLED)
+	expect(result.sample).toBe(true)
 	expect(result.attributes).toBeUndefined()
 })
 
@@ -245,18 +253,15 @@ it('should respect samplingRatio for logs and return a NOT_RECORD decision when 
 	}
 
 	const sampler = new CustomSampler(config, neverSampleFn)
-	const result = sampler.shouldSample(
-		mockContext,
-		mockTraceId,
-		LOG_SPAN_NAME,
-		SpanKind.INTERNAL,
-		{ [LOG_SEVERITY_ATTRIBUTE]: 'debug' },
-		mockLinks,
-	)
+	const mockSpan = createMockSpan({
+		name: LOG_SPAN_NAME,
+		attributes: { [LOG_SEVERITY_ATTRIBUTE]: 'debug' },
+	})
+	const result = sampler.shouldSample(mockSpan)
 
 	expect(neverSampleFn).toHaveBeenCalledWith(100)
 
-	expect(result.decision).toBe(SamplingDecision.NOT_RECORD)
+	expect(result.sample).toBe(false)
 	expect(result.attributes).toEqual({
 		[SAMPLING_RATIO_ATTRIBUTE]: 100,
 	})
@@ -287,19 +292,16 @@ it.each([
 		}
 
 		const sampler = new CustomSampler(config, sampleFn)
-		const result = sampler.shouldSample(
-			mockContext,
-			mockTraceId,
-			'http-request',
-			SpanKind.CLIENT,
-			{ 'http.method': 'GET', 'http.status_code': '200' },
-			mockLinks,
-		)
+		const mockSpan = createMockSpan({
+			name: 'http-request',
+			attributes: { 'http.method': 'GET', 'http.status_code': '200' },
+		})
+		const result = sampler.shouldSample(mockSpan)
 
 		if (sampleFn === alwaysSampleFn) {
-			expect(result.decision).toBe(SamplingDecision.RECORD_AND_SAMPLED)
+			expect(result.sample).toBe(true)
 		} else {
-			expect(result.decision).toBe(SamplingDecision.NOT_RECORD)
+			expect(result.sample).toBe(false)
 		}
 
 		expect(result.attributes).toEqual({
@@ -328,17 +330,14 @@ it('should always sample a span when the attribute does not match', () => {
 	}
 
 	const sampler = new CustomSampler(config, neverSampleFn)
-	const result = sampler.shouldSample(
-		mockContext,
-		mockTraceId,
-		'http-request',
-		SpanKind.CLIENT,
-		{ 'http.method': 'GET', 'http.status_code': '404' },
-		mockLinks,
-	)
+	const mockSpan = createMockSpan({
+		name: 'http-request',
+		attributes: { 'http.method': 'GET', 'http.status_code': '404' },
+	})
+	const result = sampler.shouldSample(mockSpan)
 
 	// If no config matches, we default to sampling
-	expect(result.decision).toBe(SamplingDecision.RECORD_AND_SAMPLED)
+	expect(result.sample).toBe(true)
 	expect(result.attributes).toBeUndefined()
 })
 
@@ -364,16 +363,13 @@ it.each([
 		}
 
 		const sampler = new CustomSampler(config, alwaysSampleFn)
-		const result = sampler.shouldSample(
-			mockContext,
-			mockTraceId,
-			'http-request',
-			SpanKind.CLIENT,
-			{ 'http.method': 'GET' },
-			mockLinks,
-		)
+		const mockSpan = createMockSpan({
+			name: 'http-request',
+			attributes: { 'http.method': 'GET' },
+		})
+		const result = sampler.shouldSample(mockSpan)
 
-		expect(result.decision).toBe(SamplingDecision.RECORD_AND_SAMPLED)
+		expect(result.sample).toBe(true)
 		expect(result.attributes).toEqual({
 			[SAMPLING_RATIO_ATTRIBUTE]: 42,
 		})
@@ -397,17 +393,14 @@ it('should not match a span when name matches but attribute does not', () => {
 	}
 
 	const sampler = new CustomSampler(config, neverSampleFn)
-	const result = sampler.shouldSample(
-		mockContext,
-		mockTraceId,
-		'http-request',
-		SpanKind.CLIENT,
-		{ 'http.method': 'POST' },
-		mockLinks,
-	)
+	const mockSpan = createMockSpan({
+		name: 'http-request',
+		attributes: { 'http.method': 'POST' },
+	})
+	const result = sampler.shouldSample(mockSpan)
 
 	// If no config matches, we default to sampling
-	expect(result.decision).toBe(SamplingDecision.RECORD_AND_SAMPLED)
+	expect(result.sample).toBe(true)
 	expect(result.attributes).toBeUndefined()
 })
 
@@ -427,19 +420,16 @@ it.each([
 		}
 
 		const sampler = new CustomSampler(config, sampleFn)
-		const result = sampler.shouldSample(
-			mockContext,
-			mockTraceId,
-			LOG_SPAN_NAME,
-			SpanKind.INTERNAL,
-			{ [LOG_SEVERITY_ATTRIBUTE]: 'error' },
-			mockLinks,
-		)
+		const mockSpan = createMockSpan({
+			name: LOG_SPAN_NAME,
+			attributes: { [LOG_SEVERITY_ATTRIBUTE]: 'error' },
+		})
+		const result = sampler.shouldSample(mockSpan)
 
 		if (sampleFn === alwaysSampleFn) {
-			expect(result.decision).toBe(SamplingDecision.RECORD_AND_SAMPLED)
+			expect(result.sample).toBe(true)
 		} else {
-			expect(result.decision).toBe(SamplingDecision.NOT_RECORD)
+			expect(result.sample).toBe(false)
 		}
 
 		expect(result.attributes).toEqual({
@@ -459,17 +449,14 @@ it('should not match a log when severity does not match', () => {
 	}
 
 	const sampler = new CustomSampler(config, neverSampleFn)
-	const result = sampler.shouldSample(
-		mockContext,
-		mockTraceId,
-		LOG_SPAN_NAME,
-		SpanKind.INTERNAL,
-		{ [LOG_SEVERITY_ATTRIBUTE]: 'info' },
-		mockLinks,
-	)
+	const mockSpan = createMockSpan({
+		name: LOG_SPAN_NAME,
+		attributes: { [LOG_SEVERITY_ATTRIBUTE]: 'info' },
+	})
+	const result = sampler.shouldSample(mockSpan)
 
 	// If no config matches, we default to sampling
-	expect(result.decision).toBe(SamplingDecision.RECORD_AND_SAMPLED)
+	expect(result.sample).toBe(true)
 	expect(result.attributes).toBeUndefined()
 })
 
@@ -492,19 +479,16 @@ it.each([
 		}
 
 		const sampler = new CustomSampler(config, sampleFn)
-		const result = sampler.shouldSample(
-			mockContext,
-			mockTraceId,
-			LOG_SPAN_NAME,
-			SpanKind.INTERNAL,
-			{ [LOG_MESSAGE_ATTRIBUTE]: 'Connection failed' },
-			mockLinks,
-		)
+		const mockSpan = createMockSpan({
+			name: LOG_SPAN_NAME,
+			attributes: { [LOG_MESSAGE_ATTRIBUTE]: 'Connection failed' },
+		})
+		const result = sampler.shouldSample(mockSpan)
 
 		if (sampleFn === alwaysSampleFn) {
-			expect(result.decision).toBe(SamplingDecision.RECORD_AND_SAMPLED)
+			expect(result.sample).toBe(true)
 		} else {
-			expect(result.decision).toBe(SamplingDecision.NOT_RECORD)
+			expect(result.sample).toBe(false)
 		}
 
 		expect(result.attributes).toEqual({
@@ -529,19 +513,16 @@ it.each([
 		}
 
 		const sampler = new CustomSampler(config, sampleFn)
-		const result = sampler.shouldSample(
-			mockContext,
-			mockTraceId,
-			LOG_SPAN_NAME,
-			SpanKind.INTERNAL,
-			{ [LOG_MESSAGE_ATTRIBUTE]: 'Error: Connection timed out' },
-			mockLinks,
-		)
+		const mockSpan = createMockSpan({
+			name: LOG_SPAN_NAME,
+			attributes: { [LOG_MESSAGE_ATTRIBUTE]: 'Error: Connection timed out' },
+		})
+		const result = sampler.shouldSample(mockSpan)
 
 		if (sampleFn === alwaysSampleFn) {
-			expect(result.decision).toBe(SamplingDecision.RECORD_AND_SAMPLED)
+			expect(result.sample).toBe(true)
 		} else {
-			expect(result.decision).toBe(SamplingDecision.NOT_RECORD)
+			expect(result.sample).toBe(false)
 		}
 
 		expect(result.attributes).toEqual({
@@ -569,22 +550,19 @@ it.each([
 	}
 
 	const sampler = new CustomSampler(config, sampleFn)
-	const result = sampler.shouldSample(
-		mockContext,
-		mockTraceId,
-		LOG_SPAN_NAME,
-		SpanKind.INTERNAL,
-		{
+	const mockSpan = createMockSpan({
+		name: LOG_SPAN_NAME,
+		attributes: {
 			'service.name': 'api-gateway',
 			[LOG_MESSAGE_ATTRIBUTE]: 'Some message',
 		},
-		mockLinks,
-	)
+	})
+	const result = sampler.shouldSample(mockSpan)
 
 	if (sampleFn === alwaysSampleFn) {
-		expect(result.decision).toBe(SamplingDecision.RECORD_AND_SAMPLED)
+		expect(result.sample).toBe(true)
 	} else {
-		expect(result.decision).toBe(SamplingDecision.NOT_RECORD)
+		expect(result.sample).toBe(false)
 	}
 
 	expect(result.attributes).toEqual({
@@ -627,19 +605,16 @@ it.each([
 			'service.name': 'database-service',
 		}
 
-		const result = sampler.shouldSample(
-			mockContext,
-			mockTraceId,
-			LOG_SPAN_NAME,
-			SpanKind.INTERNAL,
+		const mockSpan = createMockSpan({
+			name: LOG_SPAN_NAME,
 			attributes,
-			mockLinks,
-		)
+		})
+		const result = sampler.shouldSample(mockSpan)
 
 		if (sampleFn === alwaysSampleFn) {
-			expect(result.decision).toBe(SamplingDecision.RECORD_AND_SAMPLED)
+			expect(result.sample).toBe(true)
 		} else {
-			expect(result.decision).toBe(SamplingDecision.NOT_RECORD)
+			expect(result.sample).toBe(false)
 		}
 
 		expect(result.attributes).toEqual({
@@ -675,17 +650,14 @@ it('should not match a log when one criteria in combination does not match', () 
 		'service.name': 'api-service', // This doesn't match
 	}
 
-	const result = sampler.shouldSample(
-		mockContext,
-		mockTraceId,
-		LOG_SPAN_NAME,
-		SpanKind.INTERNAL,
+	const mockSpan = createMockSpan({
+		name: LOG_SPAN_NAME,
 		attributes,
-		mockLinks,
-	)
+	})
+	const result = sampler.shouldSample(mockSpan)
 
 	// If no config matches, we default to sampling
-	expect(result.decision).toBe(SamplingDecision.RECORD_AND_SAMPLED)
+	expect(result.sample).toBe(true)
 	expect(result.attributes).toBeUndefined()
 })
 
@@ -696,16 +668,10 @@ it('should fall back to always sampling when no configuration matches', () => {
 	}
 
 	const sampler = new CustomSampler(config)
-	const result = sampler.shouldSample(
-		mockContext,
-		mockTraceId,
-		'some-span',
-		SpanKind.INTERNAL,
-		{},
-		mockLinks,
-	)
+	const mockSpan = createMockSpan({ name: 'some-span' })
+	const result = sampler.shouldSample(mockSpan)
 
-	expect(result.decision).toBe(SamplingDecision.RECORD_AND_SAMPLED)
+	expect(result.sample).toBe(true)
 	expect(result.attributes).toBeUndefined()
 })
 

@@ -1,8 +1,7 @@
-import { Context, SpanKind, Link, Attributes } from '@opentelemetry/api'
+import { Attributes } from '@opentelemetry/api'
 import {
-	Sampler,
-	SamplingDecision,
-	SamplingResult,
+	ReadableSpan,
+	TimedEvent,
 } from '@opentelemetry/sdk-trace-base'
 import {
 	CachedMatchConfig,
@@ -10,8 +9,9 @@ import {
 	InputSamplingConfig,
 	LogSamplingConfig,
 	AttributeMatchConfig,
+	SpanEventMatchConfig,
 } from './config'
-
+import { Sampler, SamplingResult } from './Sampler'
 const LOG_SPAN_NAME = 'launchdarkly.js.log'
 const LOG_SEVERITY_ATTRIBUTE = 'log.severity'
 const LOG_MESSAGE_ATTRIBUTE = 'log.message'
@@ -57,6 +57,35 @@ function matchesAttributes(
 	return true
 }
 
+function matchEvent(
+	eventConfig: SpanEventMatchConfig<CachedMatchConfig>,
+	event: TimedEvent,
+): boolean {
+	return true
+}
+
+function matchesEvents(
+	eventConfigs: SpanEventMatchConfig<CachedMatchConfig>[] | undefined,
+	events: TimedEvent[],
+): boolean {
+	if (eventConfigs) {
+		for (const eventConfig of eventConfigs) {
+			let matched = false;
+			for (const event of events) {
+				if (matchEvent(eventConfig, event)) {
+					matched = true;
+					// We only need a single event to match each config. 
+					break;
+				}
+			}
+			if (!matched) {
+				return false;
+			}
+		}
+	}
+	return true
+}
+
 /**
  * Attempts to match the span to the config. The span will match only if all defined conditions are met.
  *
@@ -67,18 +96,22 @@ function matchesAttributes(
  */
 function matchesSpanConfig(
 	config: SpanSamplingConfig<CachedMatchConfig>,
-	name: string,
-	attributes: Attributes,
+	span: ReadableSpan,
 ): boolean {
 	// Check span name if it's defined in the config
 	if (config.name) {
-		if (!matchesValue(config.name, name)) {
+		if (!matchesValue(config.name, span.name)) {
 			return false
 		}
 	}
 
 	// Check attributes if they're defined in the config
-	if (!matchesAttributes(config.attributes, attributes)) {
+	if (!matchesAttributes(config.attributes, span.attributes)) {
+		return false
+	}
+
+	// Check events if they're defined in the config
+	if (!matchesEvents(config.events, span.events)) {
 		return false
 	}
 
@@ -156,16 +189,13 @@ export function defaultSampler(ratio: number) {
 function sampleSpan(
 	sampler: (ratio: number) => boolean,
 	configs: SpanSamplingConfig<CachedMatchConfig>[] | undefined,
-	name: string,
-	attributes: Attributes,
+	span: ReadableSpan,
 ): SamplingResult {
 	if (configs) {
 		for (const spanConfig of configs) {
-			if (matchesSpanConfig(spanConfig, name, attributes)) {
+			if (matchesSpanConfig(spanConfig, span)) {
 				return {
-					decision: sampler(spanConfig.samplingRatio)
-						? SamplingDecision.RECORD_AND_SAMPLED
-						: SamplingDecision.NOT_RECORD,
+					sample: sampler(spanConfig.samplingRatio),
 					attributes: {
 						[SAMPLING_RATIO_ATTRIBUTE]: spanConfig.samplingRatio,
 					},
@@ -175,7 +205,7 @@ function sampleSpan(
 	}
 	// Didn't match any sampling config, or there were no configs, so we sample it.
 	return {
-		decision: SamplingDecision.RECORD_AND_SAMPLED,
+		sample: true,
 	}
 }
 
@@ -189,15 +219,13 @@ function sampleSpan(
 function sampleLog(
 	sampler: (ratio: number) => boolean,
 	configs: LogSamplingConfig<CachedMatchConfig>[] | undefined,
-	attributes: Attributes,
+	span: ReadableSpan,
 ): SamplingResult {
 	if (configs) {
 		for (const logConfig of configs) {
-			if (matchesLogConfig(logConfig, attributes)) {
+			if (matchesLogConfig(logConfig, span.attributes)) {
 				return {
-					decision: sampler(logConfig.samplingRatio)
-						? SamplingDecision.RECORD_AND_SAMPLED
-						: SamplingDecision.NOT_RECORD,
+					sample: sampler(logConfig.samplingRatio),
 					attributes: {
 						[SAMPLING_RATIO_ATTRIBUTE]: logConfig.samplingRatio,
 					},
@@ -208,7 +236,7 @@ function sampleLog(
 
 	// Didn't match any sampling config, or there were no configs, so we sample it.
 	return {
-		decision: SamplingDecision.RECORD_AND_SAMPLED,
+		sample: true,
 	}
 }
 
@@ -225,28 +253,20 @@ export class CustomSampler implements Sampler {
 		private readonly sampler: (ratio: number) => boolean = defaultSampler,
 	) { }
 
-	shouldSample(
-		context: Context,
-		traceId: string,
-		name: string,
-		spanKind: SpanKind,
-		attributes: Attributes,
-		links: Link[],
-	): SamplingResult {
+	shouldSample(span: ReadableSpan): SamplingResult {
 		// Logs are encoded into special spans, so process those special spans using the log rules.
-		if (name === LOG_SPAN_NAME) {
+		if (span.name === LOG_SPAN_NAME) {
 			return sampleLog(
 				this.sampler,
 				this.config.logs,
-				attributes,
+				span,
 			)
 		}
 
 		return sampleSpan(
 			this.sampler,
 			this.config.spans,
-			name,
-			attributes,
+			span,
 		)
 	}
 
