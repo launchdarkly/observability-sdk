@@ -1,4 +1,4 @@
-import {
+import type {
 	Attributes,
 	Context,
 	Counter,
@@ -8,23 +8,24 @@ import {
 	SpanOptions,
 	UpDownCounter,
 } from '@opentelemetry/api'
+import { metrics } from '@opentelemetry/api'
 import {
-	getMeter,
+	BROWSER_METER_NAME,
 	getTracer,
-	LDClientMin,
 	setupBrowserTracing,
-} from '../client'
+} from '../client/otel'
+import type { LDClientMin } from '../integrations/launchdarkly/types/LDClient'
 import type { Observe } from '../api/observe'
 import { getNoopSpan } from '../client/otel/utils'
-import {
+import type {
 	ErrorMessage,
-	type ErrorMessageType,
+	ErrorMessageType,
 } from '../client/types/shared-types'
 import { parseError } from '../client/utils/errors'
 import type { BrowserTracingConfig, Callback } from '../client/otel'
 import { LaunchDarklyIntegration } from '../integrations/launchdarkly'
-import { IntegrationClient } from '../integrations'
-import { OTelMetric as Metric } from '../client/types/types'
+import type { IntegrationClient } from '../integrations'
+import type { OTelMetric as Metric } from '../client/types/types'
 
 export class ObserveSDK implements Observe {
 	private readonly sessionSecureID: string
@@ -98,9 +99,7 @@ export class ObserveSDK implements Observe {
 	}
 
 	recordCount(metric: Metric) {
-		const meter = typeof getMeter === 'function' ? getMeter() : undefined
-		if (!meter) return
-
+		const meter = metrics.getMeter(BROWSER_METER_NAME)
 		let counter = this._counters.get(metric.name)
 		if (!counter) {
 			counter = meter.createCounter(metric.name)
@@ -113,9 +112,7 @@ export class ObserveSDK implements Observe {
 	}
 
 	recordGauge(metric: Metric) {
-		const meter = typeof getMeter === 'function' ? getMeter() : undefined
-		if (!meter) return
-
+		const meter = metrics.getMeter(BROWSER_METER_NAME)
 		let gauge = this._gauges.get(metric.name)
 		if (!gauge) {
 			gauge = meter.createGauge(metric.name)
@@ -132,9 +129,7 @@ export class ObserveSDK implements Observe {
 	}
 
 	recordHistogram(metric: Metric) {
-		const meter = typeof getMeter === 'function' ? getMeter() : undefined
-		if (!meter) return
-
+		const meter = metrics.getMeter(BROWSER_METER_NAME)
 		let histogram = this._histograms.get(metric.name)
 		if (!histogram) {
 			histogram = meter.createHistogram(metric.name)
@@ -147,9 +142,7 @@ export class ObserveSDK implements Observe {
 	}
 
 	recordUpDownCounter(metric: Metric) {
-		const meter = typeof getMeter === 'function' ? getMeter() : undefined
-		if (!meter) return
-
+		const meter = metrics.getMeter(BROWSER_METER_NAME)
 		let up_down_counter = this._up_down_counters.get(metric.name)
 		if (!up_down_counter) {
 			up_down_counter = meter.createUpDownCounter(metric.name)

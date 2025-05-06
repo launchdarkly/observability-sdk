@@ -14,6 +14,7 @@ import type {
 } from '../integrations/launchdarkly/types/Hooks'
 import { Observe as ObserveAPI } from '../api/observe'
 import { ObserveSDK } from '../sdk/observe'
+import { LDObserve } from '../sdk/LDObserve'
 import {
 	FEATURE_FLAG_CONTEXT_KEY_ATTR,
 	FEATURE_FLAG_KEY_ATTR,
@@ -75,6 +76,7 @@ export class Observe implements LDPlugin {
 			serviceName: options?.serviceName ?? 'highlight-browser',
 			instrumentations: options?.otel?.instrumentations,
 		})
+		LDObserve.load(this.observe)
 	}
 	getMetadata() {
 		return {

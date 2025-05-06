@@ -3,7 +3,8 @@ import type {
 	HighlightClassOptions,
 	RequestResponsePair,
 } from './client'
-import { FirstLoadListeners, GenerateSecureID } from './client'
+import { GenerateSecureID } from './client'
+import { FirstLoadListeners } from './client/listeners/first-load-listeners'
 import type {
 	HighlightOptions,
 	HighlightPublicInterface,
@@ -71,10 +72,9 @@ interface HighlightWindow extends Window {
 	amplitude?: AmplitudeAPI
 	Intercom?: any
 }
+declare var window: HighlightWindow
 
 const READY_WAIT_LOOP_MS = 200
-
-declare var window: HighlightWindow
 
 let onHighlightReadyQueue: {
 	options?: OnHighlightReadyOptions

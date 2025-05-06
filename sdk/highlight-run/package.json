@@ -57,13 +57,13 @@
 			"default": "./dist/record.js"
 		},
 		"./ld/observe": {
-			"types": "./dist/highlight-run/src/sdk/observe.d.ts",
+			"types": "./dist/highlight-run/src/sdk/LDObserve.d.ts",
 			"import": "./dist/LDObserve.js",
 			"require": "./dist/LDObserve.js",
 			"default": "./dist/LDObserve.js"
 		},
 		"./ld/record": {
-			"types": "./dist/highlight-run/src/sdk/record.d.ts",
+			"types": "./dist/highlight-run/src/sdk/LDRecord.d.ts",
 			"import": "./dist/LDRecord.js",
 			"require": "./dist/LDRecord.js",
 			"default": "./dist/LDRecord.js"

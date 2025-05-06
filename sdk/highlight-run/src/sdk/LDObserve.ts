@@ -6,12 +6,8 @@ import type { Attributes } from '@opentelemetry/api'
 import type { LDPluginEnvironmentMetadata } from '../plugins/plugin'
 import { SDKCore } from './LD'
 
-class _LDObserve extends SDKCore implements Observe {
-	constructor() {
-		super()
-		void super.load([import('./observe').then((m) => m.ObserveSDK)])
-	}
-
+class _LDObserve extends SDKCore<Observe> implements Observe {
+	static _instance: _LDObserve
 	recordGauge(metric: Metric) {
 		return this._bufferCall('recordGauge', [metric])
 	}
@@ -68,4 +64,19 @@ class _LDObserve extends SDKCore implements Observe {
 	}
 }
 
-export const LDObserve = new _LDObserve()
+interface GlobalThis {
+	LDObserve?: _LDObserve
+}
+declare var globalThis: GlobalThis
+
+export let LDObserve!: _LDObserve
+if (typeof globalThis !== 'undefined') {
+	if (globalThis.LDObserve) {
+		LDObserve = globalThis.LDObserve
+	} else {
+		LDObserve = new _LDObserve()
+		globalThis.LDObserve = LDObserve
+	}
+} else {
+	LDObserve = new _LDObserve()
+}

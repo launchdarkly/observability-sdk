@@ -70,7 +70,7 @@ import {
 	NetworkPerformancePayload,
 } from './listeners/network-listener/performance-listener'
 import { Logger } from './logger'
-import { getMeter, getTracer, setupBrowserTracing } from './otel'
+import { BROWSER_METER_NAME, getTracer, setupBrowserTracing } from './otel'
 import {
 	HighlightIframeMessage,
 	HighlightIframeReponse,
@@ -113,6 +113,7 @@ import {
 	Counter,
 	Gauge,
 	Histogram,
+	metrics,
 	UpDownCounter,
 } from '@opentelemetry/api'
 import { IntegrationClient } from '../integrations'
@@ -1214,9 +1215,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 	}
 
 	recordGauge(metric: RecordMetric) {
-		const meter = typeof getMeter === 'function' ? getMeter() : undefined
-		if (!meter) return
-
+		const meter = metrics.getMeter(BROWSER_METER_NAME)
 		let gauge = this._gauges.get(metric.name)
 		if (!gauge) {
 			gauge = meter.createGauge(metric.name)
@@ -1234,9 +1233,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 	}
 
 	recordCount(metric: RecordMetric) {
-		const meter = typeof getMeter === 'function' ? getMeter() : undefined
-		if (!meter) return
-
+		const meter = metrics.getMeter(BROWSER_METER_NAME)
 		let counter = this._counters.get(metric.name)
 		if (!counter) {
 			counter = meter.createCounter(metric.name)
@@ -1255,9 +1252,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 	}
 
 	recordHistogram(metric: RecordMetric) {
-		const meter = typeof getMeter === 'function' ? getMeter() : undefined
-		if (!meter) return
-
+		const meter = metrics.getMeter(BROWSER_METER_NAME)
 		let histogram = this._histograms.get(metric.name)
 		if (!histogram) {
 			histogram = meter.createHistogram(metric.name)
@@ -1272,9 +1267,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 	}
 
 	recordUpDownCounter(metric: RecordMetric) {
-		const meter = typeof getMeter === 'function' ? getMeter() : undefined
-		if (!meter) return
-
+		const meter = metrics.getMeter(BROWSER_METER_NAME)
 		let up_down_counter = this._up_down_counters.get(metric.name)
 		if (!up_down_counter) {
 			up_down_counter = meter.createUpDownCounter(metric.name)
@@ -1573,12 +1566,11 @@ declare global {
 		defaultDebug: any
 	}
 }
+// TODO(vkorolik) remove this whole file
 export {
-	FirstLoadListeners,
 	GenerateSecureID,
 	getPreviousSessionData,
 	getTracer,
-	getMeter,
 	MetricCategory,
 	setupBrowserTracing,
 }

@@ -1,11 +1,15 @@
-export class SDKCore {
+import type { Observe } from '../api/observe'
+import type { Record } from '../api/record'
+
+export class SDKCore<T extends Observe | Record> {
+	protected _sdk!: T
 	protected _isLoaded = false
 	protected _callBuffer: Array<{ method: string; args: any[] }> = []
 
 	protected _bufferCall(method: string, args: any[]) {
 		if (this._isLoaded) {
 			// If already loaded, execute the method directly
-			return (this as any)[method](...args)
+			return (this._sdk as any)[method](...args)
 		} else {
 			// Otherwise buffer the call
 			this._callBuffer.push({ method, args })
@@ -13,29 +17,14 @@ export class SDKCore {
 		}
 	}
 
-	async load(sdks: Promise<object>[]) {
-		// Load the modules
-		await Promise.all(
-			sdks.map(async (module: any) => {
-				const klass = await module
-				const proto = klass.prototype
-				for (const key of Reflect.ownKeys(proto)) {
-					const desc = Object.getOwnPropertyDescriptor(proto, key)
-					if (key === 'constructor' || !desc) {
-						continue
-					}
-					Object.defineProperty(this, key, desc)
-				}
-			}),
-		)
-
-		// Mark as loaded
+	load(sdk: T) {
+		this._sdk = sdk
 		this._isLoaded = true
 
 		// Process buffered calls
 		for (const { method, args } of this._callBuffer) {
 			try {
-				;(this as any)[method](...args)
+				;(this._sdk as any)[method](...args)
 			} catch (error) {
 				console.error(
 					`Error executing buffered call to ${method}:`,

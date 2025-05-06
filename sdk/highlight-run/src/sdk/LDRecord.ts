@@ -4,12 +4,8 @@ import type { StartOptions } from '../client/types/types'
 import type { LDPluginEnvironmentMetadata } from '../plugins/plugin'
 import { SDKCore } from './LD'
 
-class _LDRecord extends SDKCore implements Record {
-	constructor() {
-		super()
-		void super.load([import('./record').then((m) => m.RecordSDK)])
-	}
-
+class _LDRecord extends SDKCore<Record> implements Record {
+	static _instance: _LDRecord
 	getSession() {
 		return this._isLoaded ? this._bufferCall('getSession', []) : null
 	}
@@ -42,4 +38,19 @@ class _LDRecord extends SDKCore implements Record {
 	}
 }
 
-export const LDRecord = new _LDRecord()
+interface GlobalThis {
+	LDRecord?: _LDRecord
+}
+declare var globalThis: GlobalThis
+
+export let LDRecord!: _LDRecord
+if (typeof globalThis !== 'undefined') {
+	if (globalThis.LDRecord) {
+		LDRecord = globalThis.LDRecord
+	} else {
+		LDRecord = new _LDRecord()
+		globalThis.LDRecord = LDRecord
+	}
+} else {
+	LDRecord = new _LDRecord()
+}

@@ -102,7 +102,8 @@ import { Attributes } from '@opentelemetry/api'
 import { IntegrationClient } from '../integrations'
 import { Record, RecordOptions } from '../api/record'
 import { HighlightWarning } from './util'
-import { Highlight, HighlightClassOptions, LDClientMin } from '../client'
+import { Highlight } from '../client'
+import type { HighlightClassOptions, LDClientMin } from '../client'
 import {
 	createLog,
 	defaultLogOptions,

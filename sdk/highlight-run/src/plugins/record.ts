@@ -1,11 +1,11 @@
 import {
-	FirstLoadListeners,
 	GenerateSecureID,
 	getPreviousSessionData,
 	type HighlightClassOptions,
 	HighlightOptions,
 	LDClientMin,
 } from '../client'
+import { FirstLoadListeners } from '../client/listeners/first-load-listeners'
 import type { LDPlugin, LDPluginEnvironmentMetadata } from './plugin'
 import type { Hook } from '../integrations/launchdarkly/types/Hooks'
 import { Record as RecordAPI } from '../api/record'
@@ -17,6 +17,7 @@ import { initializeWebSocketListener } from '../listeners/web-socket'
 import firstloadVersion from '../__generated/version'
 import { setupMixpanelIntegration } from '../integrations/mixpanel'
 import { setupAmplitudeIntegration } from '../integrations/amplitude'
+import { LDRecord } from '../sdk/LDRecord'
 
 export class Record implements LDPlugin {
 	sessionSecureID!: string
@@ -78,6 +79,7 @@ export class Record implements LDPlugin {
 		if (!options?.manualStart) {
 			void this.record.start()
 		}
+		LDRecord.load(this.record)
 
 		if (
 			!options?.integrations?.mixpanel?.disabled &&
