@@ -37,6 +37,7 @@
 		"typegen": "tsc && node scripts/replace-client-imports.mjs"
 	},
 	"type": "module",
+	"types": "./dist/highlight-run/src/index.d.ts",
 	"exports": {
 		".": {
 			"types": "./dist/highlight-run/src/index.d.ts",
