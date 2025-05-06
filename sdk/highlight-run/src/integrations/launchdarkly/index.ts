@@ -24,6 +24,7 @@ export const FEATURE_FLAG_VARIANT_ATTR = `${FEATURE_FLAG_SCOPE}.result.variant`
 export const FEATURE_FLAG_CLIENT_SIDE_ID_ATTR = `${FEATURE_FLAG_SCOPE}.client_side_id`
 export const FEATURE_FLAG_APP_VERSION_ATTR = `${FEATURE_FLAG_SCOPE}.app_version`
 export const FEATURE_FLAG_SPAN_NAME = 'evaluation'
+export const TRACK_SPAN_NAME = 'track'
 
 export const LD_INITIALIZE_EVENT = '$ld:telemetry:session:init'
 export const LD_ERROR_EVENT = '$ld:telemetry:error'

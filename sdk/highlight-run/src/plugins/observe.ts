@@ -21,6 +21,7 @@ import {
 	getCanonicalKey,
 	FEATURE_FLAG_APP_VERSION_ATTR,
 	FEATURE_FLAG_CLIENT_SIDE_ID_ATTR,
+	TRACK_SPAN_NAME,
 } from '../integrations/launchdarkly'
 import type { ObserveOptions } from '../client/types/observe'
 import { Plugin } from './common'
@@ -141,6 +142,18 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 						[]) {
 						hook.afterTrack?.(hookContext)
 					}
+					this.observe.startSpan(
+						TRACK_SPAN_NAME,
+						{
+							...metaAttrs,
+							attributes: {
+								key: hookContext.key,
+								value: hookContext.metricValue,
+								data: hookContext.data as any,
+							},
+						},
+						() => {},
+					)
 				},
 			},
 		]

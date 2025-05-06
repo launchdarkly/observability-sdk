@@ -7,7 +7,6 @@ import type {
 	IdentifySeriesResult,
 	TrackSeriesContext,
 } from '../integrations/launchdarkly/types/Hooks'
-import { Record as RecordAPI } from '../api/record'
 import { RecordSDK } from '../sdk/record'
 import firstloadVersion from '../__generated/version'
 import { setupMixpanelIntegration } from '../integrations/mixpanel'
@@ -15,9 +14,10 @@ import { setupAmplitudeIntegration } from '../integrations/amplitude'
 import { LDRecord } from '../sdk/LDRecord'
 import type { RecordOptions } from '../client/types/record'
 import { Plugin } from './common'
+import { getCanonicalKey } from '../integrations/launchdarkly'
 
 export class Record extends Plugin<RecordOptions> implements LDPlugin {
-	record!: RecordAPI
+	record!: RecordSDK
 
 	constructor(projectID?: string | number, options?: RecordOptions) {
 		// Don't initialize if an projectID is not set.
@@ -87,6 +87,14 @@ export class Record extends Plugin<RecordOptions> implements LDPlugin {
 					for (const hook of this.record.getHooks?.(metadata) ?? []) {
 						hook.afterIdentify?.(hookContext, data, _result)
 					}
+					this.record.identify(
+						getCanonicalKey(hookContext.context),
+						{
+							key: getCanonicalKey(hookContext.context),
+							timeout: hookContext.timeout,
+						},
+						'LaunchDarkly',
+					)
 					return data
 				},
 				afterEvaluation: (hookContext, data, detail) => {
@@ -99,6 +107,10 @@ export class Record extends Plugin<RecordOptions> implements LDPlugin {
 					for (const hook of this.record.getHooks?.(metadata) ?? []) {
 						hook.afterTrack?.(hookContext)
 					}
+					this.record.track(hookContext.key, {
+						data: hookContext.data,
+						value: hookContext.metricValue,
+					})
 				},
 			},
 		]
