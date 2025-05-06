@@ -12,15 +12,22 @@ import { ObserveSDK } from '../sdk/observe'
 import { LDObserve } from '../sdk/LDObserve'
 import {
 	FEATURE_FLAG_CONTEXT_KEY_ATTR,
+	FEATURE_FLAG_ENV_ATTR,
 	FEATURE_FLAG_KEY_ATTR,
 	FEATURE_FLAG_PROVIDER_ATTR,
 	FEATURE_FLAG_SCOPE,
 	FEATURE_FLAG_SPAN_NAME,
 	FEATURE_FLAG_VARIANT_ATTR,
 	getCanonicalKey,
+	FEATURE_FLAG_APP_VERSION_ATTR,
+	FEATURE_FLAG_CLIENT_SIDE_ID_ATTR,
 } from '../integrations/launchdarkly'
 import type { ObserveOptions } from '../client/types/observe'
 import { Plugin } from './common'
+import {
+	ATTR_TELEMETRY_SDK_NAME,
+	ATTR_TELEMETRY_SDK_VERSION,
+} from '@opentelemetry/semantic-conventions'
 
 export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 	observe!: ObserveAPI
@@ -62,6 +69,13 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 		this.observe.register(client, environmentMetadata)
 	}
 	getHooks?(metadata: LDPluginEnvironmentMetadata): Hook[] {
+		const metaAttrs = {
+			[ATTR_TELEMETRY_SDK_NAME]: metadata.sdk.name,
+			[ATTR_TELEMETRY_SDK_VERSION]: metadata.sdk.version,
+			[FEATURE_FLAG_CLIENT_SIDE_ID_ATTR]: metadata.clientSideId,
+			[FEATURE_FLAG_ENV_ATTR]: metadata.application?.id,
+			[FEATURE_FLAG_APP_VERSION_ATTR]: metadata.application?.version,
+		}
 		return [
 			{
 				getMetadata: () => {
@@ -80,6 +94,7 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 					}
 
 					this.observe.recordLog('LD.identify', 'info', {
+						...metaAttrs,
 						key: getCanonicalKey(hookContext.context),
 						timeout: hookContext.timeout,
 					})
@@ -108,7 +123,10 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 
 					this.observe.startSpan(
 						FEATURE_FLAG_SPAN_NAME,
-						{ attributes: eventAttributes },
+						{
+							...metaAttrs,
+							attributes: eventAttributes,
+						},
 						(s) => {
 							if (s) {
 								s.addEvent(FEATURE_FLAG_SCOPE, eventAttributes)

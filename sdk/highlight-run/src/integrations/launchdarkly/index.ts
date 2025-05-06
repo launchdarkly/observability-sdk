@@ -16,11 +16,13 @@ import { BufferedClass } from '../../sdk/buffer'
 import { LDPluginEnvironmentMetadata } from '../../plugins/plugin'
 
 export const FEATURE_FLAG_SCOPE = 'feature_flag'
-// TODO(vkorolik) reporting environment as `${FEATURE_FLAG_SCOPE}.set.id`
+export const FEATURE_FLAG_ENV_ATTR = `${FEATURE_FLAG_SCOPE}.set.id`
 export const FEATURE_FLAG_KEY_ATTR = `${FEATURE_FLAG_SCOPE}.key`
 export const FEATURE_FLAG_PROVIDER_ATTR = `${FEATURE_FLAG_SCOPE}.provider.name`
 export const FEATURE_FLAG_CONTEXT_KEY_ATTR = `${FEATURE_FLAG_SCOPE}.context.key`
 export const FEATURE_FLAG_VARIANT_ATTR = `${FEATURE_FLAG_SCOPE}.result.variant`
+export const FEATURE_FLAG_CLIENT_SIDE_ID_ATTR = `${FEATURE_FLAG_SCOPE}.client_side_id`
+export const FEATURE_FLAG_APP_VERSION_ATTR = `${FEATURE_FLAG_SCOPE}.app_version`
 export const FEATURE_FLAG_SPAN_NAME = 'evaluation'
 
 export const LD_INITIALIZE_EVENT = '$ld:telemetry:session:init'
@@ -111,11 +113,13 @@ export function setupLaunchDarklyIntegration(
 
 export class LaunchDarklyIntegrationSDK implements IntegrationClient {
 	client: LDClientMin
-	constructor(client: LDClientMin) {
+	metadata?: LDPluginEnvironmentMetadata
+	constructor(client: LDClientMin, metadata?: LDPluginEnvironmentMetadata) {
 		this.client = client
+		this.metadata = metadata
 	}
 
-	getHooks(metadata: LDPluginEnvironmentMetadata): Hook[] {
+	getHooks(_: LDPluginEnvironmentMetadata): Hook[] {
 		return []
 	}
 
@@ -180,9 +184,9 @@ export class LaunchDarklyIntegration
 	implements IntegrationClient
 {
 	client: LaunchDarklyIntegrationSDK
-	constructor(client: LDClientMin) {
+	constructor(client: LDClientMin, metadata?: LDPluginEnvironmentMetadata) {
 		super()
-		this.client = new LaunchDarklyIntegrationSDK(client)
+		this.client = new LaunchDarklyIntegrationSDK(client, metadata)
 	}
 
 	getHooks(metadata: LDPluginEnvironmentMetadata): Hook[] {

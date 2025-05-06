@@ -1262,8 +1262,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 	}
 
 	register(client: LDClientMin, metadata: LDPluginEnvironmentMetadata) {
-		// TODO(vkorolik) report metadata as resource attrs?
-		this._integrations.push(new LaunchDarklyIntegration(client))
+		this._integrations.push(new LaunchDarklyIntegration(client, metadata))
 	}
 
 	getHooks(metadata: LDPluginEnvironmentMetadata): Hook[] {
