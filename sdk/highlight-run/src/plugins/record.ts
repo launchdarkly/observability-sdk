@@ -106,6 +106,7 @@ export class Record implements LDPlugin {
 	) {
 		this.record.register(client, environmentMetadata)
 	}
+	// TODO(vkorolik) buffer until afterIdentify; call LDRecord.identify
 	getHooks?(): Hook[] {
 		return []
 	}

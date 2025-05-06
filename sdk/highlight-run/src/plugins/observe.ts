@@ -49,7 +49,6 @@ export class Observe implements LDPlugin {
 			setCookieWriteEnabled(false)
 		}
 
-		// TODO(vkorolik) race condition with record.ts SDK getting/setting session ID
 		let previousSession = getPreviousSessionData()
 		let sessionSecureID = GenerateSecureID()
 		if (previousSession?.sessionSecureID) {
