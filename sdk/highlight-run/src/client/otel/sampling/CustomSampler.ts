@@ -61,18 +61,18 @@ function matchesAttributes(
  * Attempts to match the span to the config. The span will match only if all defined conditions are met.
  *
  * @param config The config to match against.
- * @param spanName The name of the span to match.
+ * @param name The name of the span to match.
  * @param attributes The attributes of the span to match.
  * @returns True if the span matches the config, false otherwise.
  */
 function matchesSpanConfig(
 	config: SpanSamplingConfig<CachedMatchConfig>,
-	spanName: string,
+	name: string,
 	attributes: Attributes,
 ): boolean {
 	// Check span name if it's defined in the config
-	if (config.spanName) {
-		if (!matchesValue(config.spanName, spanName)) {
+	if (config.name) {
+		if (!matchesValue(config.name, name)) {
 			return false
 		}
 	}
@@ -149,19 +149,19 @@ export function defaultSampler(ratio: number) {
  * Sample a span based on the sampling configuration.
  *
  * @param configs The sampling configuration.
- * @param spanName The name of the span to sample.
+ * @param name The name of the span to sample.
  * @param attributes The attributes of the span to sample.
  * @returns The sampling result.
  */
 function sampleSpan(
 	sampler: (ratio: number) => boolean,
 	configs: SpanSamplingConfig<CachedMatchConfig>[] | undefined,
-	spanName: string,
+	name: string,
 	attributes: Attributes,
 ): SamplingResult {
 	if (configs) {
 		for (const spanConfig of configs) {
-			if (matchesSpanConfig(spanConfig, spanName, attributes)) {
+			if (matchesSpanConfig(spanConfig, name, attributes)) {
 				return {
 					decision: sampler(spanConfig.samplingRatio)
 						? SamplingDecision.RECORD_AND_SAMPLED
@@ -223,29 +223,29 @@ export class CustomSampler implements Sampler {
 	constructor(
 		private readonly config: InputSamplingConfig,
 		private readonly sampler: (ratio: number) => boolean = defaultSampler,
-	) {}
+	) { }
 
 	shouldSample(
 		context: Context,
 		traceId: string,
-		spanName: string,
+		name: string,
 		spanKind: SpanKind,
 		attributes: Attributes,
 		links: Link[],
 	): SamplingResult {
 		// Logs are encoded into special spans, so process those special spans using the log rules.
-		if (spanName === LOG_SPAN_NAME) {
+		if (name === LOG_SPAN_NAME) {
 			return sampleLog(
 				this.sampler,
-				this.config.sampling?.logs,
+				this.config.logs,
 				attributes,
 			)
 		}
 
 		return sampleSpan(
 			this.sampler,
-			this.config.sampling?.spans,
-			spanName,
+			this.config.spans,
+			name,
 			attributes,
 		)
 	}

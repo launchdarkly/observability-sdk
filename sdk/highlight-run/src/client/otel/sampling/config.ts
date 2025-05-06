@@ -92,7 +92,7 @@ export interface SpanSamplingConfig<TMatchConfig extends MatchConfig> {
 	/**
 	 * The name of the span to match. If omitted any span matching the specified attribute rules will be sampled.
 	 */
-	spanName?: TMatchConfig
+	name?: TMatchConfig
 	/**
 	 * A list of attribute match configs. If omitted the spans with the matching span name will be sampled.
 	 *
@@ -139,10 +139,8 @@ export interface LogSamplingConfig<TMatchConfig extends MatchConfig> {
  * Sampling configuration.
  */
 export interface SamplingConfig<TMatchConfig extends MatchConfig> {
-	sampling?: {
-		spans?: SpanSamplingConfig<TMatchConfig>[]
-		logs?: LogSamplingConfig<TMatchConfig>[]
-	}
+	spans?: SpanSamplingConfig<TMatchConfig>[]
+	logs?: LogSamplingConfig<TMatchConfig>[]
 }
 
 /**
