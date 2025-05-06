@@ -43,6 +43,11 @@ export declare type ObserveOptions = CommonOptions & {
 	 */
 	consoleMethodsToRecord?: ConsoleMethods[]
 	/**
+	 * Specifies whether to record performance metrics (e.g. FPS, device memory).
+	 * @default true
+	 */
+	enablePerformanceRecording?: boolean
+	/**
 	 * Specifies the environment your application is running in.
 	 * This is useful to distinguish whether your session was recorded on localhost or in production.
 	 * @default 'production'

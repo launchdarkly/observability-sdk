@@ -49,12 +49,6 @@ export declare type RecordOptions = CommonOptions & {
 	 */
 	enableCanvasRecording?: boolean
 	/**
-	 * Specifies whether to record performance metrics (e.g. FPS, device memory).
-	 * @default true
-	 */
-	// TODO(vkorolik) move this to observe
-	enablePerformanceRecording?: boolean
-	/**
 	 * Configure the recording sampling options, eg. how frequently we record canvas updates.
 	 */
 	samplingStrategy?: SamplingStrategy

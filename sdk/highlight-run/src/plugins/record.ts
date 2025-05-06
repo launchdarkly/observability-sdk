@@ -1,6 +1,12 @@
 import { type HighlightClassOptions, LDClientMin } from '../client'
 import type { LDPlugin, LDPluginEnvironmentMetadata } from './plugin'
-import type { Hook } from '../integrations/launchdarkly/types/Hooks'
+import type {
+	Hook,
+	IdentifySeriesContext,
+	IdentifySeriesData,
+	IdentifySeriesResult,
+	TrackSeriesContext,
+} from '../integrations/launchdarkly/types/Hooks'
 import { Record as RecordAPI } from '../api/record'
 import { RecordSDK } from '../sdk/record'
 import firstloadVersion from '../__generated/version'
@@ -51,19 +57,50 @@ export class Record extends Plugin<RecordOptions> implements LDPlugin {
 			setupAmplitudeIntegration(options.integrations.amplitude)
 		}
 	}
+
 	getMetadata() {
 		return {
-			name: '@launchdarkly/observability.record',
+			name: '@launchdarkly/session-replay',
 		}
 	}
+
 	register(
 		client: LDClientMin,
 		environmentMetadata: LDPluginEnvironmentMetadata,
 	) {
 		this.record.register(client, environmentMetadata)
 	}
-	// TODO(vkorolik) buffer until afterIdentify; call LDRecord.identify
-	getHooks?(): Hook[] {
-		return []
+
+	getHooks?(metadata: LDPluginEnvironmentMetadata): Hook[] {
+		return [
+			{
+				getMetadata: () => {
+					return {
+						name: '@launchdarkly/observability/hooks',
+					}
+				},
+				afterIdentify: (
+					hookContext: IdentifySeriesContext,
+					data: IdentifySeriesData,
+					_result: IdentifySeriesResult,
+				) => {
+					for (const hook of this.record.getHooks?.(metadata) ?? []) {
+						hook.afterIdentify?.(hookContext, data, _result)
+					}
+					return data
+				},
+				afterEvaluation: (hookContext, data, detail) => {
+					for (const hook of this.record.getHooks?.(metadata) ?? []) {
+						hook.afterEvaluation?.(hookContext, data, detail)
+					}
+					return data
+				},
+				afterTrack: (hookContext: TrackSeriesContext) => {
+					for (const hook of this.record.getHooks?.(metadata) ?? []) {
+						hook.afterTrack?.(hookContext)
+					}
+				},
+			},
+		]
 	}
 }

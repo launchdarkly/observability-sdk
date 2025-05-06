@@ -2,10 +2,9 @@ import type { Record } from '../api/record'
 import type { LDClientMin, SessionDetails } from '../client'
 import type { StartOptions } from '../client/types/types'
 import type { LDPluginEnvironmentMetadata } from '../plugins/plugin'
-import { SDKCore } from './LD'
+import { BufferedClass } from './buffer'
 
-class _LDRecord extends SDKCore<Record> implements Record {
-	static _instance: _LDRecord
+class _LDRecord extends BufferedClass<Record> implements Record {
 	getSession(): SessionDetails | null {
 		return this._isLoaded ? this._bufferCall('getSession', []) : null
 	}

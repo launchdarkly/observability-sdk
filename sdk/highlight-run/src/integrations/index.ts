@@ -1,5 +1,7 @@
 import type { ErrorMessage, Source } from '../client/types/shared-types'
 import type { RecordMetric } from '../client/types/types'
+import type { LDPluginEnvironmentMetadata } from '../plugins/plugin'
+import type { Hook } from './launchdarkly/types/Hooks'
 
 export interface IntegrationClient {
 	init(sessionSecureID: string): void
@@ -16,4 +18,6 @@ export interface IntegrationClient {
 	track(sessionSecureID: string, metadata: object): void
 
 	recordGauge(sessionSecureID: string, metric: RecordMetric): void
+
+	getHooks?(metadata: LDPluginEnvironmentMetadata): Hook[]
 }

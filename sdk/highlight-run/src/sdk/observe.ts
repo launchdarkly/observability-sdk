@@ -28,7 +28,7 @@ import { parseError } from '../client/utils/errors'
 import { LaunchDarklyIntegration } from '../integrations/launchdarkly'
 import type { IntegrationClient } from '../integrations'
 import type { OTelMetric as Metric } from '../client/types/types'
-import { ConsoleMethods } from '../client/types/client'
+import { ConsoleMethods, MetricCategory } from '../client/types/client'
 import { ObserveOptions } from '../client/types/observe'
 import { ConsoleListener } from '../client/listeners/console-listener'
 import stringify from 'json-stringify-safe'
@@ -37,6 +37,17 @@ import {
 	ERRORS_TO_IGNORE,
 } from '../client/constants/errors'
 import { ErrorListener } from '../client/listeners/error-listener'
+import { LDPluginEnvironmentMetadata } from '../plugins/plugin'
+import { Hook } from '../integrations/launchdarkly/types/Hooks'
+import {
+	PerformanceListener,
+	PerformancePayload,
+} from '../client/listeners/performance-listener/performance-listener'
+import { LDObserve } from './LDObserve'
+import {
+	JankListener,
+	JankPayload,
+} from '../client/listeners/jank-listener/jank-listener'
 
 export class ObserveSDK implements Observe {
 	private readonly sessionSecureID: string
@@ -268,9 +279,13 @@ export class ObserveSDK implements Observe {
 		}
 	}
 
-	register(client: LDClientMin) {
+	register(client: LDClientMin, metadata: LDPluginEnvironmentMetadata) {
 		// TODO(vkorolik) report metadata as resource attrs?
 		this._integrations.push(new LaunchDarklyIntegration(client))
+	}
+
+	getHooks(metadata: LDPluginEnvironmentMetadata): Hook[] {
+		return this._integrations.flatMap((i) => i.getHooks?.(metadata) ?? [])
 	}
 
 	private setupListeners(options: ObserveOptions) {
@@ -330,6 +345,34 @@ export class ObserveSDK implements Observe {
 					},
 				},
 			)
+		}
+		if (options.enablePerformanceRecording !== false) {
+			PerformanceListener((payload: PerformancePayload) => {
+				Object.entries(payload)
+					.filter(([name]) => name !== 'relativeTimestamp')
+					.forEach(
+						([name, value]) =>
+							value &&
+							LDObserve.recordGauge({
+								name,
+								value,
+								attributes: {
+									category: MetricCategory.Performance,
+									group: window.location.href,
+								},
+							}),
+					)
+			}, 0)
+			JankListener((payload: JankPayload) => {
+				LDObserve.recordGauge({
+					name: 'Jank',
+					value: payload.jankAmount,
+					attributes: {
+						category: MetricCategory.WebVital,
+						group: payload.querySelector,
+					},
+				})
+			}, 0)
 		}
 		ErrorListener(
 			(e: ErrorMessage) => {

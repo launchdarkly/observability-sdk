@@ -4,10 +4,9 @@ import type { ErrorMessageType } from '../client/types/shared-types'
 import type { OTelMetric as Metric } from '../client/types/types'
 import type { Attributes } from '@opentelemetry/api'
 import type { LDPluginEnvironmentMetadata } from '../plugins/plugin'
-import { SDKCore } from './LD'
+import { BufferedClass } from './buffer'
 
-class _LDObserve extends SDKCore<Observe> implements Observe {
-	static _instance: _LDObserve
+class _LDObserve extends BufferedClass<Observe> implements Observe {
 	recordGauge(metric: Metric) {
 		return this._bufferCall('recordGauge', [metric])
 	}

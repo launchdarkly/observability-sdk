@@ -1,7 +1,4 @@
-import type { Observe } from '../api/observe'
-import type { Record } from '../api/record'
-
-export class SDKCore<T extends Observe | Record> {
+export class BufferedClass<T extends object> {
 	protected _sdk!: T
 	protected _isLoaded = false
 	protected _callBuffer: Array<{ method: string; args: any[] }> = []

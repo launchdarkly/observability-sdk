@@ -13,6 +13,7 @@ import type {
 } from '../client/types/client'
 import type { LDClientMin } from '../integrations/launchdarkly/types/LDClient'
 import type { LDPluginEnvironmentMetadata } from '../plugins/plugin'
+import { Hook } from '../integrations/launchdarkly/types/Hooks'
 
 export interface Record {
 	/**
@@ -37,6 +38,7 @@ export interface Record {
 		client: LDClientMin,
 		environmentMetadata: LDPluginEnvironmentMetadata,
 	): void
+	getHooks?(metadata: LDPluginEnvironmentMetadata): Hook[]
 }
 
 export type RecordOptions = {

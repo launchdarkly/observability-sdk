@@ -2,6 +2,7 @@ import type { LDMultiKindContext } from './types/LDMultiKindContext'
 import type { LDContext } from './types/LDContext'
 import type { LDContextCommon } from './types/LDContextCommon'
 import {
+	Hook,
 	IdentifySeriesContext,
 	IdentifySeriesData,
 	IdentifySeriesResult,
@@ -11,6 +12,8 @@ import type { ErrorMessage, Source } from '../../client/types/shared-types'
 import type { IntegrationClient } from '../index'
 import type { LDClientMin } from './types/LDClient'
 import type { RecordMetric } from '../../client/types/types'
+import { BufferedClass } from '../../sdk/buffer'
+import { LDPluginEnvironmentMetadata } from '../../plugins/plugin'
 
 export const FEATURE_FLAG_SCOPE = 'feature_flag'
 // TODO(vkorolik) reporting environment as `${FEATURE_FLAG_SCOPE}.set.id`
@@ -59,7 +62,7 @@ export function setupLaunchDarklyIntegration(
 	ldClient.addHook({
 		getMetadata: () => {
 			return {
-				name: 'HighlightHook',
+				name: 'highlight.run',
 			}
 		},
 		afterIdentify: (
@@ -106,11 +109,14 @@ export function setupLaunchDarklyIntegration(
 	})
 }
 
-// TODO(vkorolik) buffer until afterIdentify
-export class LaunchDarklyIntegration implements IntegrationClient {
+export class LaunchDarklyIntegrationSDK implements IntegrationClient {
 	client: LDClientMin
 	constructor(client: LDClientMin) {
 		this.client = client
+	}
+
+	getHooks(metadata: LDPluginEnvironmentMetadata): Hook[] {
+		return []
 	}
 
 	init(sessionSecureID: string) {
@@ -166,5 +172,67 @@ export class LaunchDarklyIntegration implements IntegrationClient {
 				sessionSecureID,
 			},
 		)
+	}
+}
+
+export class LaunchDarklyIntegration
+	extends BufferedClass<IntegrationClient>
+	implements IntegrationClient
+{
+	client: LaunchDarklyIntegrationSDK
+	constructor(client: LDClientMin) {
+		super()
+		this.client = new LaunchDarklyIntegrationSDK(client)
+	}
+
+	getHooks(metadata: LDPluginEnvironmentMetadata): Hook[] {
+		return [
+			{
+				getMetadata: () => {
+					return {
+						name: 'highlight.run/ld',
+					}
+				},
+				afterIdentify: (
+					hookContext: IdentifySeriesContext,
+					data: IdentifySeriesData,
+					_result: IdentifySeriesResult,
+				) => {
+					console.log('vadim', 'LD.identify', 'afterIdentify')
+					this.load(this.client)
+					return data
+				},
+			},
+		]
+	}
+
+	init(sessionSecureID: string) {
+		return this._bufferCall('init', [sessionSecureID])
+	}
+
+	recordGauge(sessionSecureID: string, metric: RecordMetric) {
+		return this._bufferCall('recordGauge', [sessionSecureID, metric])
+	}
+
+	identify(
+		sessionSecureID: string,
+		user_identifier: string,
+		user_object = {},
+		source?: Source,
+	) {
+		return this._bufferCall('identify', [
+			sessionSecureID,
+			user_identifier,
+			user_object,
+			source,
+		])
+	}
+
+	error(sessionSecureID: string, error: ErrorMessage) {
+		return this._bufferCall('error', [sessionSecureID, error])
+	}
+
+	track(sessionSecureID: string, metadata: object) {
+		return this._bufferCall('track', [sessionSecureID, metadata])
 	}
 }

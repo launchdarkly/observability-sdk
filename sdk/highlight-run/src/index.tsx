@@ -635,7 +635,6 @@ const H: HighlightPublicInterface = {
 	registerLD(client) {
 		// TODO(vkorolik): can only register one LD client for now
 		if (integrations.length) return
-		// TODO(vkorolik): consolidate once firstload/client are merged
 		// client integration necessary to track events from ErrorListener
 		H.onHighlightReady(() => {
 			highlight_obj.registerLD(client)

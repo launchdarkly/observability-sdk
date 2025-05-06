@@ -37,15 +37,7 @@ import {
 import { ReplayEventsInput } from '../client/graph/generated/schemas'
 import { ClickListener } from '../client/listeners/click-listener/click-listener'
 import { FocusListener } from '../client/listeners/focus-listener/focus-listener'
-import {
-	JankListener,
-	JankPayload,
-} from '../client/listeners/jank-listener/jank-listener'
 import { PageVisibilityListener } from '../client/listeners/page-visibility-listener'
-import {
-	PerformanceListener,
-	PerformancePayload,
-} from '../client/listeners/performance-listener/performance-listener'
 import { SegmentIntegrationListener } from '../client/listeners/segment-integration-listener'
 import SessionShortcutListener from '../client/listeners/session-shortcut/session-shortcut-listener'
 import {
@@ -98,6 +90,8 @@ import type { HighlightClassOptions, LDClientMin } from '../client'
 import { Highlight } from '../client'
 import { LaunchDarklyIntegration } from '../integrations/launchdarkly'
 import { LDObserve } from './LDObserve'
+import { LDPluginEnvironmentMetadata } from '../plugins/plugin'
+import { Hook } from '../integrations/launchdarkly/types/Hooks'
 
 interface HighlightWindow extends Window {
 	Highlight: Highlight
@@ -128,7 +122,6 @@ export class RecordSDK implements Record {
 	enableSegmentIntegration!: boolean
 	privacySetting!: PrivacySettingOption
 	enableCanvasRecording!: boolean
-	enablePerformanceRecording!: boolean
 	samplingStrategy!: SamplingStrategy
 	inlineImages!: boolean
 	inlineVideos!: boolean
@@ -290,8 +283,6 @@ export class RecordSDK implements Record {
 		this.enableSegmentIntegration = !!options.enableSegmentIntegration
 		this.privacySetting = options.privacySetting ?? 'default'
 		this.enableCanvasRecording = options.enableCanvasRecording ?? false
-		this.enablePerformanceRecording =
-			options.enablePerformanceRecording ?? true
 		// default to inlining stylesheets/images locally to help with recording accuracy
 		this.inlineImages = options.inlineImages ?? this._isOnLocalHost
 		this.inlineVideos = options.inlineVideos ?? this._isOnLocalHost
@@ -919,42 +910,6 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 				})
 			}
 
-			if (this.enablePerformanceRecording) {
-				this.listeners.push(
-					PerformanceListener((payload: PerformancePayload) => {
-						this.addCustomEvent('Performance', stringify(payload))
-						Object.entries(payload)
-							.filter(([name]) => name !== 'relativeTimestamp')
-							.forEach(
-								([name, value]) =>
-									value &&
-									LDObserve.recordGauge({
-										name,
-										value,
-										attributes: {
-											category:
-												MetricCategory.Performance,
-											group: window.location.href,
-										},
-									}),
-							)
-					}, this._recordingStartTime),
-				)
-				this.listeners.push(
-					JankListener((payload: JankPayload) => {
-						this.addCustomEvent('Jank', stringify(payload))
-						LDObserve.recordGauge({
-							name: 'Jank',
-							value: payload.jankAmount,
-							attributes: {
-								category: MetricCategory.WebVital,
-								group: payload.querySelector,
-							},
-						})
-					}, this._recordingStartTime),
-				)
-			}
-
 			// only do this once, since we want to keep the visibility listener attached even when recoding is stopped
 			if (!this._hasPreviouslyInitialized) {
 				// setup electron main thread window visiblity events listener
@@ -1306,9 +1261,13 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 		this._lastSnapshotTime = new Date().getTime()
 	}
 
-	register(client: LDClientMin) {
+	register(client: LDClientMin, metadata: LDPluginEnvironmentMetadata) {
 		// TODO(vkorolik) report metadata as resource attrs?
 		this._integrations.push(new LaunchDarklyIntegration(client))
+	}
+
+	getHooks(metadata: LDPluginEnvironmentMetadata): Hook[] {
+		return this._integrations.flatMap((i) => i.getHooks?.(metadata) ?? [])
 	}
 
 	getRecordingState() {

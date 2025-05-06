@@ -5,6 +5,7 @@ import type {
 	IdentifySeriesContext,
 	IdentifySeriesData,
 	IdentifySeriesResult,
+	TrackSeriesContext,
 } from '../integrations/launchdarkly/types/Hooks'
 import { Observe as ObserveAPI } from '../api/observe'
 import { ObserveSDK } from '../sdk/observe'
@@ -51,7 +52,7 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 	}
 	getMetadata() {
 		return {
-			name: '@launchdarkly/observability.record',
+			name: '@launchdarkly/observability',
 		}
 	}
 	register(
@@ -65,7 +66,7 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 			{
 				getMetadata: () => {
 					return {
-						name: 'HighlightHook',
+						name: '@launchdarkly/observability/hooks',
 					}
 				},
 				afterIdentify: (
@@ -73,6 +74,11 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 					data: IdentifySeriesData,
 					_result: IdentifySeriesResult,
 				) => {
+					for (const hook of this.observe.getHooks?.(metadata) ??
+						[]) {
+						hook.afterIdentify?.(hookContext, data, _result)
+					}
+
 					this.observe.recordLog('LD.identify', 'info', {
 						key: getCanonicalKey(hookContext.context),
 						timeout: hookContext.timeout,
@@ -80,6 +86,11 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 					return data
 				},
 				afterEvaluation: (hookContext, data, detail) => {
+					for (const hook of this.observe.getHooks?.(metadata) ??
+						[]) {
+						hook.afterEvaluation?.(hookContext, data, detail)
+					}
+
 					const eventAttributes: {
 						[index: string]: number | boolean | string | undefined
 					} = {
@@ -95,14 +106,23 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 							getCanonicalKey(hookContext.context)
 					}
 
-					this.observe.startSpan(FEATURE_FLAG_SPAN_NAME, (s) => {
-						if (s) {
-							s.setAttributes(eventAttributes)
-							s.addEvent(FEATURE_FLAG_SCOPE, eventAttributes)
-						}
-					})
+					this.observe.startSpan(
+						FEATURE_FLAG_SPAN_NAME,
+						{ attributes: eventAttributes },
+						(s) => {
+							if (s) {
+								s.addEvent(FEATURE_FLAG_SCOPE, eventAttributes)
+							}
+						},
+					)
 
 					return data
+				},
+				afterTrack: (hookContext: TrackSeriesContext) => {
+					for (const hook of this.observe.getHooks?.(metadata) ??
+						[]) {
+						hook.afterTrack?.(hookContext)
+					}
 				},
 			},
 		]
