@@ -165,19 +165,25 @@ it.each([
 )
 
 it.each([
-	['sample', alwaysSampleFn],
-	['no sample', neverSampleFn],
+	['sample', alwaysSampleFn, 'string'],
+	['sample', alwaysSampleFn, 42],
+	['sample', alwaysSampleFn, true],
+	['sample', alwaysSampleFn, false],
+	['no sample', neverSampleFn, 'string'],
+	['no sample', neverSampleFn, 42],
+	['no sample', neverSampleFn, true],
+	['no sample', neverSampleFn, false],
 ])(
 	'should match a span based on a single attribute and sample correctly: %s',
-	(_, sampleFn) => {
+	(_, sampleFn, value) => {
 		const config: InputSamplingConfig = {
 			sampling: {
 				spans: [
 					{
 						attributes: [
 							{
-								key: 'http.method',
-								match: { operator: 'match', value: 'GET' },
+								key: 'example.attribute',
+								match: { operator: 'match', value },
 							},
 						],
 						samplingRatio: 42,
@@ -192,7 +198,7 @@ it.each([
 			mockTraceId,
 			'http-request',
 			SpanKind.CLIENT,
-			{ 'http.method': 'GET' },
+			{ 'example.attribute': value },
 			mockLinks,
 		)
 

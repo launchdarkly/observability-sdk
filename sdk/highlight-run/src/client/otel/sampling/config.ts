@@ -60,7 +60,7 @@ export interface RegexMatchConfig {
  */
 export interface BasicMatchConfig {
 	operator: 'match'
-	value: string
+	value: string | number | boolean
 }
 
 export type MatchConfig = RegexMatchConfig | BasicMatchConfig
