@@ -14,7 +14,7 @@ import type { LDClientMin } from './types/LDClient'
 import type { RecordMetric } from '../../client/types/types'
 import { BufferedClass } from '../../sdk/buffer'
 import { LDPluginEnvironmentMetadata } from '../../plugins/plugin'
-import type { Attributes, AttributeValue } from '@opentelemetry/api'
+import type { Attributes } from '@opentelemetry/api'
 
 export const FEATURE_FLAG_SCOPE = 'feature_flag'
 export const FEATURE_FLAG_ENV_ATTR = `${FEATURE_FLAG_SCOPE}.set.id`
