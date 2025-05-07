@@ -114,7 +114,8 @@
 		"@types/js-cookie": "^3.0.6",
 		"@types/json-stringify-safe": "^5.0.3",
 		"@types/node": "^16.3.1",
-		"@vitest/web-worker": "^1.6.0",
+		"@vitest/coverage-v8": "^1.6.1",
+		"@vitest/web-worker": "^1.6.1",
 		"error-stack-parser": "2.0.6",
 		"fflate": "^0.8.1",
 		"graphql": "^16.8.1",
@@ -131,7 +132,7 @@
 		"tslib": "^2.6.2",
 		"typescript": "^5.0.4",
 		"vite": "^5.2.12",
-		"vitest": "^1.6.0",
+		"vitest": "^1.6.1",
 		"vitest-canvas-mock": "^0.3.3",
 		"web-vitals": "^3.5.0",
 		"zone.js": "^0.15.0"

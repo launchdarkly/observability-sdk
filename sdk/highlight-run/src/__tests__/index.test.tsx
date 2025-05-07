@@ -173,22 +173,233 @@ describe('LD integration', () => {
 		// buffered
 		expect(client.track).not.toHaveBeenCalled()
 		// trigger `ld client identify` whiich should call highlight hooks
-		highlight._integrations[0]
-			.getHooks({
-				sdk: undefined,
-				clientSideId: '',
-			})[0]
-			.afterIdentify(
-				{
-					context: undefined,
-				},
-				{},
-				{
-					status: 'completed',
-				},
-			)
+		const hook = highlight._integrations[0].getHooks?.({
+			sdk: { name: '', version: '' },
+			clientSideId: '',
+		})[0]
+		hook?.afterIdentify?.(
+			{
+				context: { key: 'foo' },
+			},
+			{},
+			{
+				status: 'completed',
+			},
+		)
 		// should call buffered calls
 		expect(client.track).toHaveBeenCalled()
 		expect(worker.postMessage).toHaveBeenCalled()
+	})
+})
+
+describe('Error handling and edge cases', () => {
+	let highlight: Highlight
+
+	beforeEach(() => {
+		vi.useFakeTimers()
+		highlight = new Highlight({
+			organizationID: '1',
+			sessionSecureID: '',
+			backendUrl: 'https://pub.observability.app.launchdarkly.com',
+		})
+	})
+
+	afterEach(() => {
+		vi.useRealTimers()
+	})
+
+	it('should handle initialization with invalid options', () => {
+		expect(() => {
+			highlight.initialize({ invalidOption: true } as any)
+		}).not.toThrow()
+	})
+
+	it('should not handle consumeError with null error', () => {
+		expect(() => {
+			highlight.consumeError(null as any, {})
+		}).toThrow()
+	})
+
+	it('should handle track with invalid properties', () => {
+		expect(() => {
+			highlight.addProperties('test message', null as any)
+		}).not.toThrow()
+	})
+
+	it('should handle identify with invalid user identifier', () => {
+		expect(() => {
+			highlight.identify(null as any, {})
+		}).not.toThrow()
+	})
+
+	it('should handle getSessionURL with invalid session data', () => {
+		setSessionData(null as any)
+		expect(highlight.getCurrentSessionURL()).toBeNull()
+	})
+})
+
+describe('Observe SDK functionality', () => {
+	let observe: Observe
+
+	beforeEach(() => {
+		vi.useFakeTimers()
+		observe = new ObserveSDK({
+			projectId: '1',
+			sessionSecureId: '',
+			otlpEndpoint:
+				'https://otel.observability.app.launchdarkly.com:4318',
+		})
+	})
+
+	afterEach(() => {
+		vi.useRealTimers()
+	})
+
+	it('should handle span with error', async () => {
+		let tracer: any
+		await vi.waitFor(() => {
+			tracer = otel.getTracer()
+			expect(tracer).toBeDefined()
+		})
+
+		vi.spyOn(tracer, 'startActiveSpan')
+
+		expect(() => {
+			observe.startSpan('test', () => {
+				throw new Error('test error')
+			})
+		}).toThrow('test error')
+
+		expect(tracer.startActiveSpan).toHaveBeenCalledWith(
+			'test',
+			expect.any(Function),
+		)
+	})
+
+	it('should handle manual span with error', async () => {
+		let tracer: any
+		await vi.waitFor(() => {
+			tracer = otel.getTracer()
+			expect(tracer).toBeDefined()
+		})
+
+		vi.spyOn(tracer, 'startActiveSpan')
+
+		expect(() => {
+			observe.startManualSpan('test', (span) => {
+				span.end()
+				throw new Error('test error')
+			})
+		}).toThrow('test error')
+
+		expect(tracer.startActiveSpan).toHaveBeenCalledWith(
+			'test',
+			expect.any(Function),
+		)
+	})
+
+	it('should handle span with async callback', async () => {
+		let tracer: any
+		await vi.waitFor(() => {
+			tracer = otel.getTracer()
+			expect(tracer).toBeDefined()
+		})
+
+		vi.spyOn(tracer, 'startActiveSpan')
+
+		const value = await observe.startSpan('test', async () => {
+			await sleep(100)
+			return 'test'
+		})
+		expect(value).toBe('test')
+
+		expect(tracer.startActiveSpan).toHaveBeenCalledWith(
+			'test',
+			expect.any(Function),
+		)
+	})
+})
+
+describe('LaunchDarkly integration edge cases', () => {
+	let highlight: Highlight
+
+	beforeEach(() => {
+		vi.useFakeTimers()
+		highlight = new Highlight({
+			organizationID: '1',
+			sessionSecureID: '',
+		})
+	})
+
+	afterEach(() => {
+		vi.useRealTimers()
+	})
+
+	it('should handle register with invalid client', () => {
+		expect(() => {
+			highlight.registerLD(null as any)
+		}).not.toThrow()
+	})
+
+	it('should handle register with client missing required methods', () => {
+		const client: Partial<LDClientMin> = {
+			track: vi.fn(),
+			// Missing identify and addHook
+		}
+		expect(() => {
+			highlight.registerLD(client as any)
+		}).not.toThrow()
+	})
+
+	it('should handle hooks with invalid context', () => {
+		const client: LDClientMin = {
+			track: vi.fn(),
+			identify: vi.fn(),
+			addHook: vi.fn(),
+		}
+		highlight.registerLD(client)
+
+		// Trigger hook with invalid context
+		const hook = highlight._integrations[0].getHooks?.({
+			sdk: { name: '', version: '' },
+			clientSideId: '',
+		})[0]
+		hook?.afterIdentify?.(
+			{
+				context: { key: 'foo' },
+			},
+			{},
+			{
+				status: 'completed',
+			},
+		)
+
+		expect(client.track).not.toHaveBeenCalled()
+	})
+
+	it('should handle hooks with invalid status', () => {
+		const client: LDClientMin = {
+			track: vi.fn(),
+			identify: vi.fn(),
+			addHook: vi.fn(),
+		}
+		highlight.registerLD(client)
+
+		// Trigger hook with invalid status
+		const hook = highlight._integrations[0].getHooks?.({
+			sdk: { name: '', version: '' },
+			clientSideId: '',
+		})[0]
+		hook?.afterIdentify?.(
+			{
+				context: { key: 'foo' },
+			},
+			{},
+			{
+				status: 'completed',
+			},
+		)
+
+		expect(client.track).not.toHaveBeenCalled()
 	})
 })
