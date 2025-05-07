@@ -375,22 +375,10 @@ export class RecordSDK implements Record {
 				source,
 			},
 		})
-		for (const integration of this._integrations) {
-			integration.identify(
-				this.sessionData.sessionSecureID,
-				user_identifier,
-				user_object,
-				source,
-			)
-		}
 	}
 
 	track(event: string, metadata?: Metadata) {
 		this.addProperties({ ...metadata, event: event })
-		LDObserve.recordLog('H.track', 'info', {
-			...(metadata ?? {}),
-			event,
-		})
 	}
 
 	addProperties(properties_obj = {}, typeArg?: PropertyType) {
@@ -404,13 +392,6 @@ export class RecordSDK implements Record {
 				delete obj[key]
 			}
 		})
-		for (const integration of this._integrations) {
-			integration.track(this.sessionData.sessionSecureID, {
-				sessionSecureID: this.sessionData.sessionSecureID,
-				propertyType: typeArg,
-				...properties_obj,
-			})
-		}
 		this._worker.postMessage({
 			message: {
 				type: MessageType.Properties,

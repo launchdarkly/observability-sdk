@@ -76,7 +76,7 @@ export class Record extends Plugin<RecordOptions> implements LDPlugin {
 			{
 				getMetadata: () => {
 					return {
-						name: '@launchdarkly/observability/hooks',
+						name: '@launchdarkly/session-replay/hooks',
 					}
 				},
 				afterIdentify: (
