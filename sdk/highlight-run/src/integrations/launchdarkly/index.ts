@@ -203,7 +203,6 @@ export class LaunchDarklyIntegration
 					data: IdentifySeriesData,
 					_result: IdentifySeriesResult,
 				) => {
-					console.log('vadim', 'LD.identify', 'afterIdentify')
 					this.load(this.client)
 					return data
 				},

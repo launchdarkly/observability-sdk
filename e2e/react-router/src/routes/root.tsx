@@ -1,28 +1,33 @@
-import { initialize } from '@launchdarkly/js-client-sdk'
+// import { initialize as init4 } from '@launchdarkly/js-client-sdk'
+import { initialize as init3 } from 'launchdarkly-js-client-sdk'
 import Observability, { LDObserve } from '@launchdarkly/observability'
 import SessionReplay, { LDRecord } from '@launchdarkly/session-replay'
 import { useEffect, useRef } from 'react'
-// TODO(vkorolik)
 // import { LD } from '@launchdarkly/browser'
 
-const client = initialize('66d9d3c255856f0fa8fd62d0', {
-	// Not including plugins at all would be equivalent to the current LaunchDarkly SDK.
-	plugins: [
-		new Observability('1', {
-			networkRecording: {
-				enabled: true,
-				recordHeadersAndBody: true,
-			},
-			serviceName: 'ryan-test',
-			backendUrl: 'https://pub.observability.ld-stg.launchdarkly.com',
-			otlpEndpoint: 'https://otel.observability.ld-stg.launchdarkly.com',
-		}),
-		new SessionReplay('1', {
-			serviceName: 'ryan-test',
-			backendUrl: 'https://pub.observability.ld-stg.launchdarkly.com',
-		}), // Could be omitted for customers who cannot use session replay.
-	],
-})
+const client = init3(
+	'66d9d3c255856f0fa8fd62d0',
+	{},
+	{
+		// Not including plugins at all would be equivalent to the current LaunchDarkly SDK.
+		plugins: [
+			new Observability('1', {
+				networkRecording: {
+					enabled: true,
+					recordHeadersAndBody: true,
+				},
+				serviceName: 'ryan-test',
+				backendUrl: 'https://pub.observability.ld-stg.launchdarkly.com',
+				otlpEndpoint:
+					'https://otel.observability.ld-stg.launchdarkly.com',
+			}),
+			new SessionReplay('1', {
+				serviceName: 'ryan-test',
+				backendUrl: 'https://pub.observability.ld-stg.launchdarkly.com',
+			}), // Could be omitted for customers who cannot use session replay.
+		],
+	},
+)
 
 export default function Root() {
 	const fillColor = 'lightblue'
