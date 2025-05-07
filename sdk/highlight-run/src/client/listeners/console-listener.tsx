@@ -125,7 +125,7 @@ export function ConsoleListener(
 				// @ts-expect-error
 				original.apply(this, data)
 				try {
-					callback(createLog(level, logOptions, data))
+					callback(createLog(level, logOptions, ...data))
 				} catch (error) {
 					original('highlight logger error:', error, ...data)
 				}
