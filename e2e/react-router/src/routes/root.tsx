@@ -2,12 +2,12 @@
 import { initialize as init3 } from 'launchdarkly-js-client-sdk'
 import Observability, { LDObserve } from '@launchdarkly/observability'
 import SessionReplay, { LDRecord } from '@launchdarkly/session-replay'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 // import { LD } from '@launchdarkly/browser'
 
 const client = init3(
 	'66d9d3c255856f0fa8fd62d0',
-	{},
+	{ key: 'unknown' },
 	{
 		// Not including plugins at all would be equivalent to the current LaunchDarkly SDK.
 		plugins: [
@@ -32,6 +32,7 @@ const client = init3(
 export default function Root() {
 	const fillColor = 'lightblue'
 	const canvasRef = useRef<HTMLCanvasElement>(null)
+	const [flags, setFlags] = useState<string>()
 
 	useEffect(() => {
 		const canvas = canvasRef.current
@@ -45,7 +46,7 @@ export default function Root() {
 	return (
 		<div id="sidebar">
 			<h1>Hello, world</h1>
-			<p>{JSON.stringify(client.allFlags())}</p>
+			<p>{flags}</p>
 			<canvas width="100" height="100" ref={canvasRef}></canvas>
 			<button
 				onClick={() => {
@@ -71,14 +72,37 @@ export default function Root() {
 				LDRecord.snapshot
 			</button>
 			<button
-				onClick={() => {
-					client.identify({
+				onClick={async () => {
+					await client.identify({
 						kind: 'user',
 						key: 'vadim@highlight.io',
 					})
+					setFlags(JSON.stringify(client.allFlags()))
 				}}
 			>
 				client.identify
+			</button>
+			<button
+				onClick={async () => {
+					await client.identify({
+						kind: 'multi',
+						org: {
+							key: 'my-org-key',
+							someAttribute: 'my-attribute-value',
+						},
+						user: {
+							key: 'my-user-key',
+							firstName: 'Bob',
+							lastName: 'Bobberson',
+							_meta: {
+								privateAttributes: ['firstName'],
+							},
+						},
+					})
+					setFlags(JSON.stringify(client.allFlags()))
+				}}
+			>
+				client.identify multi
 			</button>
 		</div>
 	)

@@ -13,6 +13,7 @@ import { LDObserve } from '../sdk/LDObserve'
 import {
 	FEATURE_FLAG_APP_VERSION_ATTR,
 	FEATURE_FLAG_CLIENT_SIDE_ID_ATTR,
+	FEATURE_FLAG_CONTEXT_ATTR,
 	FEATURE_FLAG_CONTEXT_KEY_ATTR,
 	FEATURE_FLAG_ENV_ATTR,
 	FEATURE_FLAG_KEY_ATTR,
@@ -20,8 +21,8 @@ import {
 	FEATURE_FLAG_SCOPE,
 	FEATURE_FLAG_SPAN_NAME,
 	FEATURE_FLAG_VARIANT_ATTR,
-	// TODO(vkorolik) should record filtered context object
 	getCanonicalKey,
+	getCanonicalObj,
 } from '../integrations/launchdarkly'
 import type { ObserveOptions } from '../client/types/observe'
 import { Plugin } from './common'
@@ -29,6 +30,7 @@ import {
 	ATTR_TELEMETRY_SDK_NAME,
 	ATTR_TELEMETRY_SDK_VERSION,
 } from '@opentelemetry/semantic-conventions'
+import { Attributes } from '@opentelemetry/api'
 
 export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 	observe!: ObserveAPI
@@ -97,6 +99,9 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 					this.observe.recordLog('LD.identify', 'info', {
 						...metaAttrs,
 						key: getCanonicalKey(hookContext.context),
+						context: JSON.stringify(
+							getCanonicalObj(hookContext.context),
+						),
 						timeout: hookContext.timeout,
 					})
 					return data
@@ -107,9 +112,7 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 						hook.afterEvaluation?.(hookContext, data, detail)
 					}
 
-					const eventAttributes: {
-						[index: string]: number | boolean | string | undefined
-					} = {
+					const eventAttributes: Attributes = {
 						[FEATURE_FLAG_KEY_ATTR]: hookContext.flagKey,
 						[FEATURE_FLAG_PROVIDER_ATTR]: 'LaunchDarkly',
 						[FEATURE_FLAG_VARIANT_ATTR]: JSON.stringify(
@@ -118,6 +121,8 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 					}
 
 					if (hookContext.context) {
+						eventAttributes[FEATURE_FLAG_CONTEXT_ATTR] =
+							JSON.stringify(getCanonicalObj(hookContext.context))
 						eventAttributes[FEATURE_FLAG_CONTEXT_KEY_ATTR] =
 							getCanonicalKey(hookContext.context)
 					}

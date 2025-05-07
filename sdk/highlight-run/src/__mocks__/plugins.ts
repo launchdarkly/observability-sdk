@@ -28,7 +28,7 @@ export const createObservePlugin = (options: any) => {
 		_load: () => {},
 		_setup: () => {},
 		load: function (context: any) {
-			this._load(context)
+			this._load()
 		},
 		setup: function () {
 			this._setup()
@@ -50,7 +50,7 @@ export const createRecordPlugin = (options: any) => {
 		_load: () => {},
 		_setup: () => {},
 		load: function (context: any) {
-			this._load(context)
+			this._load()
 		},
 		setup: function () {
 			this._setup()

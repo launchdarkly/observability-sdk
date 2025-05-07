@@ -14,12 +14,14 @@ import type { LDClientMin } from './types/LDClient'
 import type { RecordMetric } from '../../client/types/types'
 import { BufferedClass } from '../../sdk/buffer'
 import { LDPluginEnvironmentMetadata } from '../../plugins/plugin'
+import type { Attributes, AttributeValue } from '@opentelemetry/api'
 
 export const FEATURE_FLAG_SCOPE = 'feature_flag'
 export const FEATURE_FLAG_ENV_ATTR = `${FEATURE_FLAG_SCOPE}.set.id`
 export const FEATURE_FLAG_KEY_ATTR = `${FEATURE_FLAG_SCOPE}.key`
 export const FEATURE_FLAG_PROVIDER_ATTR = `${FEATURE_FLAG_SCOPE}.provider.name`
-export const FEATURE_FLAG_CONTEXT_KEY_ATTR = `${FEATURE_FLAG_SCOPE}.context.key`
+export const FEATURE_FLAG_CONTEXT_ATTR = `${FEATURE_FLAG_SCOPE}.context`
+export const FEATURE_FLAG_CONTEXT_KEY_ATTR = `${FEATURE_FLAG_CONTEXT_ATTR}.key`
 export const FEATURE_FLAG_VARIANT_ATTR = `${FEATURE_FLAG_SCOPE}.result.variant`
 export const FEATURE_FLAG_CLIENT_SIDE_ID_ATTR = `${FEATURE_FLAG_SCOPE}.client_side_id`
 export const FEATURE_FLAG_APP_VERSION_ATTR = `${FEATURE_FLAG_SCOPE}.app_version`
@@ -58,6 +60,24 @@ export function getCanonicalKey(context: LDContext) {
 	return context.key
 }
 
+export function getCanonicalObj(context: LDContext) {
+	if (isMultiContext(context)) {
+		return Object.keys(context)
+			.sort()
+			.filter((key) => key !== 'kind')
+			.map((key) => {
+				return {
+					[key]: encodeKey((context[key] as LDContextCommon).key),
+				}
+			})
+			.reduce((acc, obj) => {
+				return { ...acc, ...obj }
+			}, {} as Attributes)
+	}
+
+	return context.key
+}
+
 export function setupLaunchDarklyIntegration(
 	hClient: HighlightPublicInterface,
 	ldClient: LDClientMin,
@@ -75,6 +95,7 @@ export function setupLaunchDarklyIntegration(
 		) => {
 			hClient.log('LD.identify', 'INFO', {
 				key: getCanonicalKey(hookContext.context),
+				context: JSON.stringify(getCanonicalObj(hookContext.context)),
 				timeout: hookContext.timeout,
 			})
 			hClient.identify(
@@ -88,20 +109,21 @@ export function setupLaunchDarklyIntegration(
 			return data
 		},
 		afterEvaluation: (hookContext, data, detail) => {
-			const eventAttributes: {
-				[index: string]: number | boolean | string
-			} = {
+			const eventAttributes: Attributes = {
 				[FEATURE_FLAG_KEY_ATTR]: hookContext.flagKey,
 				[FEATURE_FLAG_PROVIDER_ATTR]: 'LaunchDarkly',
 				[FEATURE_FLAG_VARIANT_ATTR]: JSON.stringify(detail.value),
 			}
 
 			if (hookContext.context) {
+				eventAttributes[FEATURE_FLAG_CONTEXT_ATTR] = JSON.stringify(
+					getCanonicalObj(hookContext.context),
+				)
 				eventAttributes[FEATURE_FLAG_CONTEXT_KEY_ATTR] =
 					getCanonicalKey(hookContext.context)
 			}
 
-			hClient.startSpan(FEATURE_FLAG_SPAN_NAME, (s) => {
+			hClient.startSpan(FEATURE_FLAG_SPAN_NAME, eventAttributes, (s) => {
 				if (s) {
 					s.addEvent(FEATURE_FLAG_SCOPE, eventAttributes)
 				}
