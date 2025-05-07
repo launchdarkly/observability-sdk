@@ -26,9 +26,15 @@ const mockResource = {
 const createMockSpan = ({
 	name,
 	attributes = {},
+	events = [],
 }: {
 	name: string
 	attributes?: Attributes
+	events?: Array<{
+		name: string
+		attributes?: Attributes
+		time?: [number, number]
+	}>
 }) => {
 	return {
 		name,
@@ -44,7 +50,11 @@ const createMockSpan = ({
 		endTime: [0, 0],
 		status: { code: 0 },
 		links: [],
-		events: [],
+		events: events.map(e => ({
+			name: e.name,
+			attributes: e.attributes || {},
+			time: e.time || [0, 0],
+		})),
 		duration: [0, 0],
 		ended: false,
 		resource: {
@@ -84,7 +94,6 @@ it('should respect samplingRatio and return a NOT_RECORD decision when sampler r
 	})
 })
 
-// Span sampling tests
 it.each([
 	['sample', alwaysSampleFn],
 	['no sample', neverSampleFn],
@@ -214,6 +223,33 @@ it.each([
 		})
 	},
 )
+
+it('should not match a span when the attribute does not exist', () => {
+	const config: InputSamplingConfig = {
+		spans: [
+			{
+				attributes: [
+					{
+						key: 'example.attribute',
+						match: { operator: 'match', value: 'value' },
+					},
+				],
+				samplingRatio: 42,
+			},
+		],
+	}
+
+	const sampler = new CustomSampler(config, neverSampleFn)
+	const mockSpan = createMockSpan({
+		name: 'http-request',
+		attributes: { },
+	})
+	const result = sampler.shouldSample(mockSpan)
+
+	expect(result.sample).toBe(true)
+
+	expect(result.attributes).toBeUndefined()
+});
 
 it('should always sample a span when the attribute does not match', () => {
 	const config: InputSamplingConfig = {
@@ -345,7 +381,7 @@ it.each([
 	['sample', alwaysSampleFn],
 	['no sample', neverSampleFn],
 ])(
-	'should match a span based on combination of name and attributes and then sample correctly: %s',
+	'should match a span based on combination of name, attributes and event and then sample correctly: %s',
 	(_, sampleFn) => {
 		const config: InputSamplingConfig = {
 			spans: [
@@ -357,6 +393,11 @@ it.each([
 							match: { operator: 'match', value: 'GET' },
 						},
 					],
+					events: [
+						{
+							name: { operator: 'match', value: 'db-operation' },
+						},
+					],
 					samplingRatio: 42,
 				},
 			],
@@ -366,6 +407,11 @@ it.each([
 		const mockSpan = createMockSpan({
 			name: 'http-request',
 			attributes: { 'http.method': 'GET' },
+			events: [
+				{
+					name: 'db-operation',
+				},
+			],
 		})
 		const result = sampler.shouldSample(mockSpan)
 
@@ -707,3 +753,479 @@ it('should get approximately the correct number of samples', () => {
 	expect(notSampled).toBeGreaterThan(lowerBound)
 	expect(notSampled).toBeLessThan(upperBound)
 })
+
+// Span Event sampling tests
+it.each([
+	['sample', alwaysSampleFn],
+	['no sample', neverSampleFn],
+])(
+	'should match a span based on event name with exact match and sample correctly: %s',
+	(_, sampleFn) => {
+		const config: InputSamplingConfig = {
+			spans: [
+				{
+					events: [
+						{
+							name: { operator: 'match', value: 'test-event' },
+						},
+					],
+					samplingRatio: 42,
+				},
+			],
+		}
+
+		const sampler = new CustomSampler(config, sampleFn)
+		const mockSpan = createMockSpan({ 
+			name: 'test-span',
+			events: [{ name: 'test-event' }] 
+		})
+		const result = sampler.shouldSample(mockSpan)
+
+		if (sampleFn === alwaysSampleFn) {
+			expect(result.sample).toBe(true)
+		} else {
+			expect(result.sample).toBe(false)
+		}
+
+		expect(result.attributes).toEqual({
+			[SAMPLING_RATIO_ATTRIBUTE]: 42,
+		})
+	},
+)
+
+it('should always sample a span when the event name does not match', () => {
+	const config: InputSamplingConfig = {
+		spans: [
+			{
+				events: [
+					{
+						name: { operator: 'match', value: 'test-event' },
+					},
+				],
+				samplingRatio: 42,
+			},
+		],
+	}
+
+	// We say to neverSampleFn, but the span doesn't match, so it should pass through.
+	const sampler = new CustomSampler(config, neverSampleFn)
+	const mockSpan = createMockSpan({ 
+		name: 'test-span',
+		events: [{ name: 'other-event' }] 
+	})
+	const result = sampler.shouldSample(mockSpan)
+
+	// If no config matches, we default to sampling
+	expect(result.sample).toBe(true)
+	expect(result.attributes).toBeUndefined()
+})
+
+it.each([
+	['sample', alwaysSampleFn],
+	['no sample', neverSampleFn],
+])(
+	'should match a span based on event name using regex and sample correctly: %s',
+	(_, sampleFn) => {
+		const config: InputSamplingConfig = {
+			spans: [
+				{
+					events: [
+						{
+							name: { operator: 'regex', value: 'test-event-\\d+' },
+						},
+					],
+					samplingRatio: 42,
+				},
+			],
+		}
+
+		const sampler = new CustomSampler(config, sampleFn)
+		const mockSpan = createMockSpan({ 
+			name: 'test-span',
+			events: [{ name: 'test-event-123' }] 
+		})
+		const result = sampler.shouldSample(mockSpan)
+
+		if (sampleFn === alwaysSampleFn) {
+			expect(result.sample).toBe(true)
+		} else {
+			expect(result.sample).toBe(false)
+		}
+
+		expect(result.attributes).toEqual({
+			[SAMPLING_RATIO_ATTRIBUTE]: 42,
+		})
+	},
+)
+
+it.each([
+	['sample', alwaysSampleFn],
+	['no sample', neverSampleFn],
+])(
+	'should sample a span if it contains at least one matching event among many events: %s',
+	(_, sampleFn) => {
+		const config: InputSamplingConfig = {
+			spans: [
+				{
+					events: [
+						{
+							name: { operator: 'match', value: 'target-event' },
+						},
+					],
+					samplingRatio: 42,
+				},
+			],
+		}
+
+		const sampler = new CustomSampler(config, sampleFn)
+		const mockSpan = createMockSpan({ 
+			name: 'test-span',
+			events: [
+				{ name: 'other-event-1' },
+				{ name: 'target-event' },
+				{ name: 'other-event-2' },
+			]
+		})
+		const result = sampler.shouldSample(mockSpan)
+
+		if (sampleFn === alwaysSampleFn) {
+			expect(result.sample).toBe(true)
+		} else {
+			expect(result.sample).toBe(false)
+		}
+
+		expect(result.attributes).toEqual({
+			[SAMPLING_RATIO_ATTRIBUTE]: 42,
+		})
+	},
+)
+
+it.each([
+	['sample', alwaysSampleFn],
+	['no sample', neverSampleFn],
+])(
+	'should match a span based on a combination of span name, attributes, and events: %s',
+	(_, sampleFn) => {
+		const config: InputSamplingConfig = {
+			spans: [
+				{
+					name: { operator: 'match', value: 'http-request' },
+					attributes: [
+						{
+							key: 'http.method',
+							match: { operator: 'match', value: 'GET' },
+						},
+					],
+					events: [
+						{
+							name: { operator: 'match', value: 'http-response' },
+						},
+					],
+					samplingRatio: 42,
+				},
+			],
+		}
+
+		const sampler = new CustomSampler(config, sampleFn)
+		const mockSpan = createMockSpan({
+			name: 'http-request',
+			attributes: { 'http.method': 'GET' },
+			events: [{ name: 'http-response' }]
+		})
+		const result = sampler.shouldSample(mockSpan)
+
+		if (sampleFn === alwaysSampleFn) {
+			expect(result.sample).toBe(true)
+		} else {
+			expect(result.sample).toBe(false)
+		}
+
+		expect(result.attributes).toEqual({
+			[SAMPLING_RATIO_ATTRIBUTE]: 42,
+		})
+	},
+)
+
+it('should not match when one criteria in combination does not match (event name)', () => {
+	const config: InputSamplingConfig = {
+		spans: [
+			{
+				name: { operator: 'match', value: 'http-request' },
+				attributes: [
+					{
+						key: 'http.method',
+						match: { operator: 'match', value: 'GET' },
+					},
+				],
+				events: [
+					{
+						name: { operator: 'match', value: 'http-response' },
+					},
+				],
+				samplingRatio: 42,
+			},
+		],
+	}
+
+	const sampler = new CustomSampler(config, neverSampleFn)
+	const mockSpan = createMockSpan({
+		name: 'http-request',
+		attributes: { 'http.method': 'GET' },
+		events: [{ name: 'wrong-event-name' }] // This doesn't match
+	})
+	const result = sampler.shouldSample(mockSpan)
+
+	// If no config matches, we default to sampling
+	expect(result.sample).toBe(true)
+	expect(result.attributes).toBeUndefined()
+})
+
+it('should not match when a span has no events but event matching is required', () => {
+	const config: InputSamplingConfig = {
+		spans: [
+			{
+				events: [
+					{
+						name: { operator: 'match', value: 'test-event' },
+					},
+				],
+				samplingRatio: 42,
+			},
+		],
+	}
+
+	const sampler = new CustomSampler(config, neverSampleFn)
+	const mockSpan = createMockSpan({ 
+		name: 'test-span',
+		events: [] // No events
+	})
+	const result = sampler.shouldSample(mockSpan)
+
+	// If no config matches, we default to sampling
+	expect(result.sample).toBe(true)
+	expect(result.attributes).toBeUndefined()
+})
+
+it.each([
+	['sample', alwaysSampleFn],
+	['no sample', neverSampleFn],
+])(
+	'should match multiple event criteria (requires all specified events to be present): %s',
+	(_, sampleFn) => {
+		const config: InputSamplingConfig = {
+			spans: [
+				{
+					events: [
+						{
+							name: { operator: 'match', value: 'event-1' },
+						},
+						{
+							name: { operator: 'match', value: 'event-2' },
+						},
+					],
+					samplingRatio: 42,
+				},
+			],
+		}
+
+		const sampler = new CustomSampler(config, sampleFn)
+		const mockSpan = createMockSpan({ 
+			name: 'test-span',
+			events: [
+				{ name: 'event-1' },
+				{ name: 'event-2' },
+				{ name: 'event-3' },
+			]
+		})
+		const result = sampler.shouldSample(mockSpan)
+
+		if (sampleFn === alwaysSampleFn) {
+			expect(result.sample).toBe(true)
+		} else {
+			expect(result.sample).toBe(false)
+		}
+
+		expect(result.attributes).toEqual({
+			[SAMPLING_RATIO_ATTRIBUTE]: 42,
+		})
+	},
+)
+
+it.each([
+	['sample', alwaysSampleFn],
+	['no sample', neverSampleFn],
+])(
+	'should match a span based on event name and event attributes: %s',
+	(_, sampleFn) => {
+		const config: InputSamplingConfig = {
+			spans: [
+				{
+					events: [
+						{
+							name: { operator: 'match', value: 'db-operation' },
+							attributes: [
+								{
+									key: 'db.operation',
+									match: { operator: 'match', value: 'query' }
+								}
+							]
+						},
+					],
+					samplingRatio: 42,
+				},
+			],
+		}
+
+		const sampler = new CustomSampler(config, sampleFn)
+		const mockSpan = createMockSpan({ 
+			name: 'database-span',
+			events: [{ 
+				name: 'db-operation', 
+				attributes: { 'db.operation': 'query' } 
+			}]
+		})
+		const result = sampler.shouldSample(mockSpan)
+
+		if (sampleFn === alwaysSampleFn) {
+			expect(result.sample).toBe(true)
+		} else {
+			expect(result.sample).toBe(false)
+		}
+
+		expect(result.attributes).toEqual({
+			[SAMPLING_RATIO_ATTRIBUTE]: 42,
+		})
+	},
+)
+
+it('should not match when event attributes do not match', () => {
+	const config: InputSamplingConfig = {
+		spans: [
+			{
+				events: [
+					{
+						name: { operator: 'match', value: 'db-operation' },
+						attributes: [
+							{
+								key: 'db.operation',
+								match: { operator: 'match', value: 'query' }
+							}
+						]
+					},
+				],
+				samplingRatio: 42,
+			},
+		],
+	}
+
+	const sampler = new CustomSampler(config, neverSampleFn)
+	const mockSpan = createMockSpan({ 
+		name: 'database-span',
+		events: [{ 
+			name: 'db-operation', 
+			attributes: { 'db.operation': 'insert' } // Doesn't match 'query'
+		}]
+	})
+	const result = sampler.shouldSample(mockSpan)
+
+	// If no config matches, we default to sampling
+	expect(result.sample).toBe(true)
+	expect(result.attributes).toBeUndefined()
+})
+
+it('should not match when event has no attributes but attributes are required', () => {
+	const config: InputSamplingConfig = {
+		spans: [
+			{
+				events: [
+					{
+						name: { operator: 'match', value: 'db-operation' },
+						attributes: [
+							{
+								key: 'db.operation',
+								match: { operator: 'match', value: 'query' }
+							}
+						]
+					},
+				],
+				samplingRatio: 42,
+			},
+		],
+	}
+
+	const sampler = new CustomSampler(config, neverSampleFn)
+	const mockSpan = createMockSpan({ 
+		name: 'database-span',
+		events: [{ 
+			name: 'db-operation'
+			// No attributes provided
+		}]
+	})
+	const result = sampler.shouldSample(mockSpan)
+
+	// If no config matches, we default to sampling
+	expect(result.sample).toBe(true)
+	expect(result.attributes).toBeUndefined()
+})
+
+it.each([
+	['sample', alwaysSampleFn],
+	['no sample', neverSampleFn],
+])(
+	'should match multiple event criteria with different attribute requirements: %s',
+	(_, sampleFn) => {
+		const config: InputSamplingConfig = {
+			spans: [
+				{
+					events: [
+						{
+							name: { operator: 'match', value: 'event-1' },
+							attributes: [
+								{
+									key: 'status',
+									match: { operator: 'match', value: 'success' }
+								}
+							]
+						},
+						{
+							name: { operator: 'match', value: 'event-2' },
+							attributes: [
+								{
+									key: 'operation',
+									match: { operator: 'match', value: 'complete' }
+								}
+							]
+						},
+					],
+					samplingRatio: 42,
+				},
+			],
+		}
+
+		const sampler = new CustomSampler(config, sampleFn)
+		const mockSpan = createMockSpan({ 
+			name: 'test-span',
+			events: [
+				{ 
+					name: 'event-1', 
+					attributes: { 'status': 'success' } 
+				},
+				{ 
+					name: 'event-2', 
+					attributes: { 'operation': 'complete' } 
+				},
+			]
+		})
+		const result = sampler.shouldSample(mockSpan)
+
+		if (sampleFn === alwaysSampleFn) {
+			expect(result.sample).toBe(true)
+		} else {
+			expect(result.sample).toBe(false)
+		}
+
+		expect(result.attributes).toEqual({
+			[SAMPLING_RATIO_ATTRIBUTE]: 42,
+		})
+	},
+)

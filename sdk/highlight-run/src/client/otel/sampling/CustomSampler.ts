@@ -1,4 +1,4 @@
-import { Attributes } from '@opentelemetry/api'
+import { Attributes, AttributeValue } from '@opentelemetry/api'
 import {
 	ReadableSpan,
 	TimedEvent,
@@ -22,14 +22,16 @@ const SAMPLER_NAME = 'launchdarkly.CustomSampler'
 /**
  * Check if a value matches a match config.
  */
-function matchesValue(matchConfig: CachedMatchConfig, value: string): boolean {
+function matchesValue(matchConfig: CachedMatchConfig, value?: AttributeValue): boolean {
 	if (matchConfig.operator === 'match') {
 		return matchConfig.value === value
 	} else if (matchConfig.operator === 'regex') {
 		if (!matchConfig.regex) {
 			matchConfig.regex = new RegExp(matchConfig.value)
 		}
-		return matchConfig.regex.test(value)
+		if (typeof value === 'string') {
+			return matchConfig.regex.test(value)
+		}
 	}
 	// Unknown operator.
 
@@ -46,11 +48,8 @@ function matchesAttributes(
 	if (attributeConfigs) {
 		for (const attributeConfig of attributeConfigs) {
 			const attributeValue = attributes[attributeConfig.key]
-
-			if (typeof attributeValue === 'string') {
-				if (!matchesValue(attributeConfig.match, attributeValue)) {
-					return false
-				}
+			if (!matchesValue(attributeConfig.match, attributeValue)) {
+				return false
 			}
 		}
 	}
@@ -61,7 +60,21 @@ function matchEvent(
 	eventConfig: SpanEventMatchConfig<CachedMatchConfig>,
 	event: TimedEvent,
 ): boolean {
-	return true
+	// Match by event name
+	if (!matchesValue(eventConfig.name, event.name)) {
+		return false;
+	}
+
+	// Match by event attributes if specified
+	if (eventConfig.attributes) {
+		if (!event.attributes) {
+			return false;
+		}
+		if (!matchesAttributes(eventConfig.attributes, event.attributes)) {
+			return false;
+		}
+	}
+	return true;
 }
 
 function matchesEvents(
@@ -105,12 +118,10 @@ function matchesSpanConfig(
 		}
 	}
 
-	// Check attributes if they're defined in the config
 	if (!matchesAttributes(config.attributes, span.attributes)) {
 		return false
 	}
 
-	// Check events if they're defined in the config
 	if (!matchesEvents(config.events, span.events)) {
 		return false
 	}
