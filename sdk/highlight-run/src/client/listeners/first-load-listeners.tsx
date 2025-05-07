@@ -1,4 +1,4 @@
-import { ConsoleListener } from './console-listener'
+import { ConsoleListener, defaultLogOptions } from './console-listener'
 import { ErrorListener } from './error-listener'
 
 import stringify from 'json-stringify-safe'
@@ -111,13 +111,8 @@ export class FirstLoadListeners {
 						highlightThis.messages.push(c)
 					},
 					{
+						...defaultLogOptions,
 						level: this.consoleMethodsToRecord,
-						logger: 'console',
-						stringifyOptions: {
-							depthOfLimit: 10,
-							numOfKeysLimit: 100,
-							stringLengthLimit: 1000,
-						},
 					},
 				),
 			)
