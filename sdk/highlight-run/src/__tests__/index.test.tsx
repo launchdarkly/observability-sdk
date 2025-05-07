@@ -24,13 +24,15 @@ describe('should work outside of the browser in unit test', () => {
 	beforeEach(() => {
 		vi.useFakeTimers()
 		highlight = new Highlight({
-			organizationID: undefined,
+			organizationID: '1',
 			sessionSecureID: '',
+			backendUrl: 'https://pub.observability.app.launchdarkly.com',
 		})
 		observe = new ObserveSDK({
-			otlpEndpoint: '',
-			projectId: undefined,
+			projectId: '1',
 			sessionSecureId: '',
+			otlpEndpoint:
+				'https://otel.observability.app.launchdarkly.com:4318',
 		})
 
 		setSessionSecureID('foo')
@@ -137,7 +139,7 @@ describe('LD integration', () => {
 	beforeEach(() => {
 		vi.useFakeTimers()
 		highlight = new Highlight({
-			organizationID: '',
+			organizationID: '1',
 			sessionSecureID: '',
 		})
 	})
@@ -168,6 +170,24 @@ describe('LD integration', () => {
 		highlight.addProperties('test', {})
 		// noop for launchdarkly
 		expect(client.identify).not.toHaveBeenCalled()
+		// buffered
+		expect(client.track).not.toHaveBeenCalled()
+		// trigger `ld client identify` whiich should call highlight hooks
+		highlight._integrations[0]
+			.getHooks({
+				sdk: undefined,
+				clientSideId: '',
+			})[0]
+			.afterIdentify(
+				{
+					context: undefined,
+				},
+				{},
+				{
+					status: 'completed',
+				},
+			)
+		// should call buffered calls
 		expect(client.track).toHaveBeenCalled()
 		expect(worker.postMessage).toHaveBeenCalled()
 	})
