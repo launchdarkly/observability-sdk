@@ -83,14 +83,7 @@ export class OTLPTraceExporterBrowserWithXhrRetry extends OTLPTraceExporter {
 					item.spanContext().spanId,
 				)
 			}
-			console.log('Before sampling', item.name)
 			const sampleResult = this.sampler.shouldSample(item)
-			console.log(
-				'After sampling',
-				item.name,
-				'sampleResult',
-				sampleResult,
-			)
 			if (sampleResult.sample) {
 				if (sampleResult.attributes) {
 					spanById[item.spanContext().spanId] =
@@ -109,7 +102,6 @@ export class OTLPTraceExporterBrowserWithXhrRetry extends OTLPTraceExporter {
 		// Find all children of spans that have been sampled out and remove them.
 		// Repeat until there are no more children to remove.
 		while (omittedSpansIds.length > 0) {
-			console.log('omittedSpansIds', omittedSpansIds)
 			const spanId = omittedSpansIds.shift()
 			const affectedSpans: string[] | undefined =
 				childrenByParentId[spanId!]
