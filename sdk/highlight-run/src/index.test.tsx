@@ -16,7 +16,7 @@ const sessionData = {
 }
 
 // Temporarily set the backendUrl to staging for all tests.
-const backendUrl = 'https://pub.observability.ld-stg.launchdarkly.com/';
+const backendUrl = 'https://pub.observability.ld-stg.launchdarkly.com/'
 
 describe('should work outside of the browser in unit test', () => {
 	let highlight: HighlightPublicInterface
@@ -35,7 +35,7 @@ describe('should work outside of the browser in unit test', () => {
 	})
 
 	it('should handle init', () => {
-		highlight.init('1', {backendUrl})
+		highlight.init('1', { backendUrl })
 	})
 
 	it('should handle consumeError', () => {
@@ -70,7 +70,7 @@ describe('should work outside of the browser in unit test', () => {
 			ready: true,
 			sessionData,
 		})
-		highlight.init('1', {backendUrl})
+		highlight.init('1', { backendUrl })
 
 		expect(await highlight.getSessionURL()).toBe(
 			'https://app.highlight.io/1/sessions/foo',
@@ -82,7 +82,7 @@ describe('should work outside of the browser in unit test', () => {
 			ready: true,
 			sessionData,
 		})
-		highlight.init('1', {backendUrl})
+		highlight.init('1', { backendUrl })
 
 		const details = await highlight.getSessionDetails()
 		expect(details.url).toBe('https://app.highlight.io/1/sessions/foo')
@@ -97,7 +97,7 @@ describe('should work outside of the browser in unit test', () => {
 			const mockCallback = vi.fn(() => undefined)
 
 			highlight.onHighlightReady(mockCallback)
-			highlight.init('1', {backendUrl})
+			highlight.init('1', { backendUrl })
 
 			await vi.waitFor(
 				() => {
@@ -113,7 +113,7 @@ describe('should work outside of the browser in unit test', () => {
 
 			highlight.onHighlightReady(mockCallback1)
 			highlight.onHighlightReady(mockCallback2)
-			highlight.init('1', {backendUrl})
+			highlight.init('1', { backendUrl })
 
 			await vi.waitFor(
 				() => {
@@ -137,7 +137,7 @@ describe('should work outside of the browser in unit test', () => {
 	describe('startSpan', () => {
 		it('it returns the value of the callback', () =>
 			new Promise(async (done) => {
-				highlight.init(1, {backendUrl})
+				highlight.init(1, { backendUrl })
 
 				let tracer: any
 				await vi.waitFor(() => {
@@ -162,7 +162,7 @@ describe('should work outside of the browser in unit test', () => {
 	describe('startManualSpan', () => {
 		it('it returns the value of the callback', () =>
 			new Promise(async (done) => {
-				highlight.init(1, {backendUrl})
+				highlight.init(1, { backendUrl })
 
 				let tracer: any
 				await vi.waitFor(() => {
