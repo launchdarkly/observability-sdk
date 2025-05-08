@@ -142,12 +142,12 @@ mutation initializeSession(
 			}
 			logs {
 				message {
-						...RegexMatchParts
-						...BasicMatchParts
+					...RegexMatchParts
+					...BasicMatchParts
 				}
 				severityText {
-						...RegexMatchParts
-						...BasicMatchParts
+					...RegexMatchParts
+					...BasicMatchParts
 				}
 				attributes {
 					key {

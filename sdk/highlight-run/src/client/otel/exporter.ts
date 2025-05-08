@@ -22,8 +22,11 @@ export type MetricExporterConfig = ConstructorParameters<
 // - https://github.com/open-telemetry/opentelemetry-js/issues/3489
 // - https://github.com/open-telemetry/opentelemetry-js/blob/cf8edbed43c3e54eadcafe6fc6f39a1d03c89aa7/experimental/packages/otlp-exporter-base/src/platform/browser/OTLPExporterBrowserBase.ts#L51-L52
 
-function cloneReadableSpanWithAttributes(span: ReadableSpan, attributes: Attributes): ReadableSpan {
-	const spanContext = span.spanContext();
+function cloneReadableSpanWithAttributes(
+	span: ReadableSpan,
+	attributes: Attributes,
+): ReadableSpan {
+	const spanContext = span.spanContext()
 	const cloned = {
 		name: span.name,
 		kind: span.kind,
@@ -43,14 +46,17 @@ function cloneReadableSpanWithAttributes(span: ReadableSpan, attributes: Attribu
 		droppedEventsCount: span.droppedEventsCount,
 		droppedLinksCount: span.droppedLinksCount,
 	}
-	return cloned;
+	return cloned
 }
 
 export class OTLPTraceExporterBrowserWithXhrRetry extends OTLPTraceExporter {
 	private readonly xhrTraceExporter: OTLPTraceExporter
 	private readonly sampler: Sampler
 
-	constructor(config?: TraceExporterConfig, samplingConfig?: Maybe<SamplingConfig>) {
+	constructor(
+		config?: TraceExporterConfig,
+		samplingConfig?: Maybe<SamplingConfig>,
+	) {
 		super(config)
 		this.sampler = new CustomSampler(samplingConfig)
 		this.xhrTraceExporter = new OTLPTraceExporter({
@@ -59,26 +65,41 @@ export class OTLPTraceExporterBrowserWithXhrRetry extends OTLPTraceExporter {
 		})
 	}
 
-	export(items: ReadableSpan[], resultCallback: (result: ExportResult) => void) {
-		const omittedSpansIds: string[] = [];
-		const spanById: Record<string, ReadableSpan> = {};
-		const childrenByParentId: Record<string, string[]> = {};
-	
+	export(
+		items: ReadableSpan[],
+		resultCallback: (result: ExportResult) => void,
+	) {
+		const omittedSpansIds: string[] = []
+		const spanById: Record<string, ReadableSpan> = {}
+		const childrenByParentId: Record<string, string[]> = {}
+
 		// The first pass we sample items which are directly impacted by a sampling decision.
 		// We also build a map of children spans by parent span id, which allows us to quickly traverse the span tree.
 		for (const item of items) {
-			if(item.parentSpanId) {
-				childrenByParentId[item.parentSpanId] = childrenByParentId[item.parentSpanId] || [];
-				childrenByParentId[item.parentSpanId].push(item.spanContext().spanId);
+			if (item.parentSpanId) {
+				childrenByParentId[item.parentSpanId] =
+					childrenByParentId[item.parentSpanId] || []
+				childrenByParentId[item.parentSpanId].push(
+					item.spanContext().spanId,
+				)
 			}
-			console.log("Before sampling", item.name);
-			const sampleResult = this.sampler.shouldSample(item);
-			console.log('After sampling', item.name, 'sampleResult', sampleResult);
+			console.log('Before sampling', item.name)
+			const sampleResult = this.sampler.shouldSample(item)
+			console.log(
+				'After sampling',
+				item.name,
+				'sampleResult',
+				sampleResult,
+			)
 			if (sampleResult.sample) {
-				if(sampleResult.attributes) {
-					spanById[item.spanContext().spanId] = cloneReadableSpanWithAttributes(item, sampleResult.attributes);
+				if (sampleResult.attributes) {
+					spanById[item.spanContext().spanId] =
+						cloneReadableSpanWithAttributes(
+							item,
+							sampleResult.attributes,
+						)
 				} else {
-					spanById[item.spanContext().spanId] = item;
+					spanById[item.spanContext().spanId] = item
 				}
 			} else {
 				omittedSpansIds.push(item.spanContext().spanId)
@@ -87,21 +108,22 @@ export class OTLPTraceExporterBrowserWithXhrRetry extends OTLPTraceExporter {
 
 		// Find all children of spans that have been sampled out and remove them.
 		// Repeat until there are no more children to remove.
-		while(omittedSpansIds.length > 0) {
-			console.log('omittedSpansIds', omittedSpansIds);
-			const spanId = omittedSpansIds.shift();
-			const affectedSpans: string[] | undefined = childrenByParentId[spanId!];
-			if(!affectedSpans) {
-				continue;
+		while (omittedSpansIds.length > 0) {
+			console.log('omittedSpansIds', omittedSpansIds)
+			const spanId = omittedSpansIds.shift()
+			const affectedSpans: string[] | undefined =
+				childrenByParentId[spanId!]
+			if (!affectedSpans) {
+				continue
 			}
 
-			for(const spanIdToRemove of affectedSpans) {
-				delete spanById[spanIdToRemove];
-				omittedSpansIds.push(spanIdToRemove);
+			for (const spanIdToRemove of affectedSpans) {
+				delete spanById[spanIdToRemove]
+				omittedSpansIds.push(spanIdToRemove)
 			}
 		}
-		const sampledItems = Object.values(spanById);
-		
+		const sampledItems = Object.values(spanById)
+
 		let retries = 0
 		const retry = (result: ExportResult) => {
 			retries++

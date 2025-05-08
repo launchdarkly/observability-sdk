@@ -108,7 +108,10 @@ export const setupBrowserTracing = (config: BrowserTracingConfig) => {
 			keepAlive: true,
 		},
 	}
-	const exporter = new OTLPTraceExporterBrowserWithXhrRetry(exporterOptions, config.sampling)
+	const exporter = new OTLPTraceExporterBrowserWithXhrRetry(
+		exporterOptions,
+		config.sampling,
+	)
 
 	const spanProcessor = new CustomBatchSpanProcessor(exporter, {
 		maxExportBatchSize: 100,

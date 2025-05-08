@@ -1,8 +1,4 @@
-import {
-	Highlight,
-	HighlightClassOptions,
-	RequestResponsePair,
-} from './client'
+import { Highlight, HighlightClassOptions, RequestResponsePair } from './client'
 import { FirstLoadListeners, GenerateSecureID, getTracer } from './client'
 import type {
 	HighlightOptions,
@@ -28,12 +24,7 @@ import {
 	loadCookieSessionData,
 } from './client/utils/sessionStorage/highlightSession.js'
 import { setCookieWriteEnabled } from './client/utils/storage'
-import {
-	Attributes,
-	Context,
-	Span,
-	SpanOptions,
-} from '@opentelemetry/api'
+import { Attributes, Context, Span, SpanOptions } from '@opentelemetry/api'
 import firstloadVersion from './__generated/version.js'
 import { listenToChromeExtensionMessage } from './browserExtension/extensionListener.js'
 import configureElectronHighlight from './environments/electron.js'
@@ -130,7 +121,6 @@ const H: HighlightPublicInterface = {
 			initializeFetchListener()
 			initializeWebSocketListener()
 
-
 			const client_options: HighlightClassOptions = {
 				...options,
 				organizationID: projectID,
@@ -140,17 +130,12 @@ const H: HighlightPublicInterface = {
 				sessionSecureID,
 			}
 
-			highlight_obj = new Highlight(
-				client_options,
-				first_load_listeners,
-			)
+			highlight_obj = new Highlight(client_options, first_load_listeners)
 			initializeFetchListener()
 			initializeWebSocketListener()
 			if (!options?.manualStart) {
 				highlight_obj.initialize()
 			}
-
-
 
 			first_load_listeners = new FirstLoadListeners(client_options)
 			if (!options?.manualStart) {
@@ -434,7 +419,7 @@ const H: HighlightPublicInterface = {
 		fn?: (span?: Span) => any,
 	): any => {
 		const tracer = typeof getTracer === 'function' ? getTracer() : undefined
-		console.log('tracer', tracer);
+		console.log('tracer', tracer)
 		if (!tracer) {
 			const noopSpan = getNoopSpan()
 

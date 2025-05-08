@@ -1,435 +1,435 @@
 [
-  {
-    "description": "Should match all spans when the span sampling config has no match criteria",
-    "samplingConfig": {
-      "spans": [
-        {
-          "samplingRatio": 10
-        }
-      ]
-    },
-    "inputSpan": {
-      "name": "test-span",
-      "attributes": {}
-    },
-    "samplerFunctionCases": [
-      {
-        "type": "never",
-        "expected_result": {
-          "sample": false,
-          "attributes": {
-            "launchdarkly.samplingRatio": 10
-          }
-        }
-      }
-    ]
-  },
-  {
-    "description": "Should match a span based on name with exact match",
-    "samplingConfig": {
-      "spans": [
-        {
-          "name": {
-            "matchValue": "test-span"
-          },
-          "samplingRatio": 42
-        }
-      ]
-    },
-    "inputSpan": {
-      "name": "test-span",
-      "attributes": {}
-    },
-    "samplerFunctionCases": [
-      {
-        "type": "always",
-        "expected_result": {
-          "sample": true,
-          "attributes": {
-            "launchdarkly.samplingRatio": 42
-          }
-        }
-      },
-      {
-        "type": "never",
-        "expected_result": {
-          "sample": false,
-          "attributes": {
-            "launchdarkly.samplingRatio": 42
-          }
-        }
-      }
-    ]
-  },
-  {
-    "description": "Should always sample a span when the span name does not match",
-    "samplingConfig": {
-      "spans": [
-        {
-          "name": {
-            "matchValue": "test-span"
-          },
-          "samplingRatio": 42
-        }
-      ]
-    },
-    "inputSpan": {
-      "name": "other-span",
-      "attributes": {}
-    },
-    "samplerFunctionCases": [
-      {
-        "type": "never",
-        "expected_result": {
-          "sample": true,
-          "attributes": null
-        }
-      }
-    ]
-  },
-  {
-    "description": "Should match a span name based on regex",
-    "samplingConfig": {
-      "spans": [
-        {
-          "name": {
-            "regexValue": "test-span-\\d+"
-          },
-          "samplingRatio": 42
-        }
-      ]
-    },
-    "inputSpan": {
-      "name": "test-span-123",
-      "attributes": {}
-    },
-    "samplerFunctionCases": [
-      {
-        "type": "always",
-        "expected_result": {
-          "sample": true,
-          "attributes": {
-            "launchdarkly.samplingRatio": 42
-          }
-        }
-      },
-      {
-        "type": "never",
-        "expected_result": {
-          "sample": false,
-          "attributes": {
-            "launchdarkly.samplingRatio": 42
-          }
-        }
-      }
-    ]
-  },
-  {
-    "description": "Should match a span based on event name with exact match",
-    "samplingConfig": {
-      "spans": [
-        {
-          "events": [
-            {
-              "name": {
-                "matchValue": "test-event"
-              }
-            }
-          ],
-          "samplingRatio": 42
-        }
-      ]
-    },
-    "inputSpan": {
-      "name": "test-span",
-      "events": [
-        {
-          "name": "test-event"
-        }
-      ]
-    },
-    "samplerFunctionCases": [
-      {
-        "type": "always",
-        "expected_result": {
-          "sample": true,
-          "attributes": {
-            "launchdarkly.samplingRatio": 42
-          }
-        }
-      },
-      {
-        "type": "never",
-        "expected_result": {
-          "sample": false,
-          "attributes": {
-            "launchdarkly.samplingRatio": 42
-          }
-        }
-      }
-    ]
-  },
-  {
-    "description": "Should match a span based on string attribute value",
-    "samplingConfig": {
-      "spans": [
-        {
-          "attributes": [
-            {
-              "key": {
-                "matchValue": "http.method"
-              },
-              "attribute": {
-                "matchValue": "POST"
-              }
-            }
-          ],
-          "samplingRatio": 75
-        }
-      ]
-    },
-    "inputSpan": {
-      "name": "http-request",
-      "attributes": {
-        "http.method": "POST",
-        "http.url": "https://api.example.com/data"
-      }
-    },
-    "samplerFunctionCases": [
-      {
-        "type": "always",
-        "expected_result": {
-          "sample": true,
-          "attributes": {
-            "launchdarkly.samplingRatio": 75
-          }
-        }
-      },
-      {
-        "type": "never",
-        "expected_result": {
-          "sample": false,
-          "attributes": {
-            "launchdarkly.samplingRatio": 75
-          }
-        }
-      }
-    ]
-  },
-  {
-    "description": "Should match a span based on regex attribute value",
-    "samplingConfig": {
-      "spans": [
-        {
-          "attributes": [
-            {
-              "key": {
-                "matchValue": "http.url"
-              },
-              "attribute": {
-                "regexValue": "https://api\\.example\\.com/.*"
-              }
-            }
-          ],
-          "samplingRatio": 25
-        }
-      ]
-    },
-    "inputSpan": {
-      "name": "http-request",
-      "attributes": {
-        "http.method": "GET",
-        "http.url": "https://api.example.com/users"
-      }
-    },
-    "samplerFunctionCases": [
-      {
-        "type": "always",
-        "expected_result": {
-          "sample": true,
-          "attributes": {
-            "launchdarkly.samplingRatio": 25
-          }
-        }
-      },
-      {
-        "type": "never",
-        "expected_result": {
-          "sample": false,
-          "attributes": {
-            "launchdarkly.samplingRatio": 25
-          }
-        }
-      }
-    ]
-  },
-  {
-    "description": "Should match a span based on numeric attribute value",
-    "samplingConfig": {
-      "spans": [
-        {
-          "attributes": [
-            {
-              "key": {
-                "matchValue": "http.status_code"
-              },
-              "attribute": {
-                "matchValue": 500
-              }
-            }
-          ],
-          "samplingRatio": 100
-        }
-      ]
-    },
-    "inputSpan": {
-      "name": "http-response",
-      "attributes": {
-        "http.status_code": 500,
-        "http.method": "POST"
-      }
-    },
-    "samplerFunctionCases": [
-      {
-        "type": "always",
-        "expected_result": {
-          "sample": true,
-          "attributes": {
-            "launchdarkly.samplingRatio": 100
-          }
-        }
-      },
-      {
-        "type": "never",
-        "expected_result": {
-          "sample": false,
-          "attributes": {
-            "launchdarkly.samplingRatio": 100
-          }
-        }
-      }
-    ]
-  },
-  {
-    "description": "Should match a span based on event name with regex match",
-    "samplingConfig": {
-      "spans": [
-        {
-          "events": [
-            {
-              "name": {
-                "regexValue": "test-event-\\d+"
-              }
-            }
-          ],
-          "samplingRatio": 33
-        }
-      ]
-    },
-    "inputSpan": {
-      "name": "test-span",
-      "events": [
-        {
-          "name": "test-event-123"
-        }
-      ]
-    },
-    "samplerFunctionCases": [
-      {
-        "type": "always",
-        "expected_result": {
-          "sample": true,
-          "attributes": {
-            "launchdarkly.samplingRatio": 33
-          }
-        }
-      },
-      {
-        "type": "never",
-        "expected_result": {
-          "sample": false,
-          "attributes": {
-            "launchdarkly.samplingRatio": 33
-          }
-        }
-      }
-    ]
-  },
-  {
-    "description": "Should match a span based on a combination of span name and multiple attributes with regex matching",
-    "samplingConfig": {
-      "spans": [
-        {
-          "name": {
-            "regexValue": "complex-span-\\d+"
-          },
-          "attributes": [
-            {
-              "key": {
-                "matchValue": "http.method"
-              },
-              "attribute": {
-                "matchValue": "POST"
-              }
-            },
-            {
-              "key": {
-                "regexValue": "http\\.status.*"
-              },
-              "attribute": {
-                "matchValue": 500
-              }
-            },
-            {
-              "key": {
-                "matchValue": "url"
-              },
-              "attribute": {
-                "regexValue": "https://api\\.example\\.com/.*"
-              }
-            },
-            {
-              "key": {
-                "matchValue": "retry"
-              },
-              "attribute": {
-                "matchValue": true
-              }
-            }
-          ],
-          "samplingRatio": 50
-        }
-      ]
-    },
-    "inputSpan": {
-      "name": "complex-span-123",
-      "attributes": {
-        "http.method": "POST",
-        "http.status_code": 500,
-        "url": "https://api.example.com/users",
-        "retry": true,
-        "other_attr": "value"
-      }
-    },
-    "samplerFunctionCases": [
-      {
-        "type": "always",
-        "expected_result": {
-          "sample": true,
-          "attributes": {
-            "launchdarkly.samplingRatio": 50
-          }
-        }
-      },
-      {
-        "type": "never",
-        "expected_result": {
-          "sample": false,
-          "attributes": {
-            "launchdarkly.samplingRatio": 50
-          }
-        }
-      }
-    ]
-  }
-] 
+	{
+		"description": "Should match all spans when the span sampling config has no match criteria",
+		"samplingConfig": {
+			"spans": [
+				{
+					"samplingRatio": 10
+				}
+			]
+		},
+		"inputSpan": {
+			"name": "test-span",
+			"attributes": {}
+		},
+		"samplerFunctionCases": [
+			{
+				"type": "never",
+				"expected_result": {
+					"sample": false,
+					"attributes": {
+						"launchdarkly.samplingRatio": 10
+					}
+				}
+			}
+		]
+	},
+	{
+		"description": "Should match a span based on name with exact match",
+		"samplingConfig": {
+			"spans": [
+				{
+					"name": {
+						"matchValue": "test-span"
+					},
+					"samplingRatio": 42
+				}
+			]
+		},
+		"inputSpan": {
+			"name": "test-span",
+			"attributes": {}
+		},
+		"samplerFunctionCases": [
+			{
+				"type": "always",
+				"expected_result": {
+					"sample": true,
+					"attributes": {
+						"launchdarkly.samplingRatio": 42
+					}
+				}
+			},
+			{
+				"type": "never",
+				"expected_result": {
+					"sample": false,
+					"attributes": {
+						"launchdarkly.samplingRatio": 42
+					}
+				}
+			}
+		]
+	},
+	{
+		"description": "Should always sample a span when the span name does not match",
+		"samplingConfig": {
+			"spans": [
+				{
+					"name": {
+						"matchValue": "test-span"
+					},
+					"samplingRatio": 42
+				}
+			]
+		},
+		"inputSpan": {
+			"name": "other-span",
+			"attributes": {}
+		},
+		"samplerFunctionCases": [
+			{
+				"type": "never",
+				"expected_result": {
+					"sample": true,
+					"attributes": null
+				}
+			}
+		]
+	},
+	{
+		"description": "Should match a span name based on regex",
+		"samplingConfig": {
+			"spans": [
+				{
+					"name": {
+						"regexValue": "test-span-\\d+"
+					},
+					"samplingRatio": 42
+				}
+			]
+		},
+		"inputSpan": {
+			"name": "test-span-123",
+			"attributes": {}
+		},
+		"samplerFunctionCases": [
+			{
+				"type": "always",
+				"expected_result": {
+					"sample": true,
+					"attributes": {
+						"launchdarkly.samplingRatio": 42
+					}
+				}
+			},
+			{
+				"type": "never",
+				"expected_result": {
+					"sample": false,
+					"attributes": {
+						"launchdarkly.samplingRatio": 42
+					}
+				}
+			}
+		]
+	},
+	{
+		"description": "Should match a span based on event name with exact match",
+		"samplingConfig": {
+			"spans": [
+				{
+					"events": [
+						{
+							"name": {
+								"matchValue": "test-event"
+							}
+						}
+					],
+					"samplingRatio": 42
+				}
+			]
+		},
+		"inputSpan": {
+			"name": "test-span",
+			"events": [
+				{
+					"name": "test-event"
+				}
+			]
+		},
+		"samplerFunctionCases": [
+			{
+				"type": "always",
+				"expected_result": {
+					"sample": true,
+					"attributes": {
+						"launchdarkly.samplingRatio": 42
+					}
+				}
+			},
+			{
+				"type": "never",
+				"expected_result": {
+					"sample": false,
+					"attributes": {
+						"launchdarkly.samplingRatio": 42
+					}
+				}
+			}
+		]
+	},
+	{
+		"description": "Should match a span based on string attribute value",
+		"samplingConfig": {
+			"spans": [
+				{
+					"attributes": [
+						{
+							"key": {
+								"matchValue": "http.method"
+							},
+							"attribute": {
+								"matchValue": "POST"
+							}
+						}
+					],
+					"samplingRatio": 75
+				}
+			]
+		},
+		"inputSpan": {
+			"name": "http-request",
+			"attributes": {
+				"http.method": "POST",
+				"http.url": "https://api.example.com/data"
+			}
+		},
+		"samplerFunctionCases": [
+			{
+				"type": "always",
+				"expected_result": {
+					"sample": true,
+					"attributes": {
+						"launchdarkly.samplingRatio": 75
+					}
+				}
+			},
+			{
+				"type": "never",
+				"expected_result": {
+					"sample": false,
+					"attributes": {
+						"launchdarkly.samplingRatio": 75
+					}
+				}
+			}
+		]
+	},
+	{
+		"description": "Should match a span based on regex attribute value",
+		"samplingConfig": {
+			"spans": [
+				{
+					"attributes": [
+						{
+							"key": {
+								"matchValue": "http.url"
+							},
+							"attribute": {
+								"regexValue": "https://api\\.example\\.com/.*"
+							}
+						}
+					],
+					"samplingRatio": 25
+				}
+			]
+		},
+		"inputSpan": {
+			"name": "http-request",
+			"attributes": {
+				"http.method": "GET",
+				"http.url": "https://api.example.com/users"
+			}
+		},
+		"samplerFunctionCases": [
+			{
+				"type": "always",
+				"expected_result": {
+					"sample": true,
+					"attributes": {
+						"launchdarkly.samplingRatio": 25
+					}
+				}
+			},
+			{
+				"type": "never",
+				"expected_result": {
+					"sample": false,
+					"attributes": {
+						"launchdarkly.samplingRatio": 25
+					}
+				}
+			}
+		]
+	},
+	{
+		"description": "Should match a span based on numeric attribute value",
+		"samplingConfig": {
+			"spans": [
+				{
+					"attributes": [
+						{
+							"key": {
+								"matchValue": "http.status_code"
+							},
+							"attribute": {
+								"matchValue": 500
+							}
+						}
+					],
+					"samplingRatio": 100
+				}
+			]
+		},
+		"inputSpan": {
+			"name": "http-response",
+			"attributes": {
+				"http.status_code": 500,
+				"http.method": "POST"
+			}
+		},
+		"samplerFunctionCases": [
+			{
+				"type": "always",
+				"expected_result": {
+					"sample": true,
+					"attributes": {
+						"launchdarkly.samplingRatio": 100
+					}
+				}
+			},
+			{
+				"type": "never",
+				"expected_result": {
+					"sample": false,
+					"attributes": {
+						"launchdarkly.samplingRatio": 100
+					}
+				}
+			}
+		]
+	},
+	{
+		"description": "Should match a span based on event name with regex match",
+		"samplingConfig": {
+			"spans": [
+				{
+					"events": [
+						{
+							"name": {
+								"regexValue": "test-event-\\d+"
+							}
+						}
+					],
+					"samplingRatio": 33
+				}
+			]
+		},
+		"inputSpan": {
+			"name": "test-span",
+			"events": [
+				{
+					"name": "test-event-123"
+				}
+			]
+		},
+		"samplerFunctionCases": [
+			{
+				"type": "always",
+				"expected_result": {
+					"sample": true,
+					"attributes": {
+						"launchdarkly.samplingRatio": 33
+					}
+				}
+			},
+			{
+				"type": "never",
+				"expected_result": {
+					"sample": false,
+					"attributes": {
+						"launchdarkly.samplingRatio": 33
+					}
+				}
+			}
+		]
+	},
+	{
+		"description": "Should match a span based on a combination of span name and multiple attributes with regex matching",
+		"samplingConfig": {
+			"spans": [
+				{
+					"name": {
+						"regexValue": "complex-span-\\d+"
+					},
+					"attributes": [
+						{
+							"key": {
+								"matchValue": "http.method"
+							},
+							"attribute": {
+								"matchValue": "POST"
+							}
+						},
+						{
+							"key": {
+								"regexValue": "http\\.status.*"
+							},
+							"attribute": {
+								"matchValue": 500
+							}
+						},
+						{
+							"key": {
+								"matchValue": "url"
+							},
+							"attribute": {
+								"regexValue": "https://api\\.example\\.com/.*"
+							}
+						},
+						{
+							"key": {
+								"matchValue": "retry"
+							},
+							"attribute": {
+								"matchValue": true
+							}
+						}
+					],
+					"samplingRatio": 50
+				}
+			]
+		},
+		"inputSpan": {
+			"name": "complex-span-123",
+			"attributes": {
+				"http.method": "POST",
+				"http.status_code": 500,
+				"url": "https://api.example.com/users",
+				"retry": true,
+				"other_attr": "value"
+			}
+		},
+		"samplerFunctionCases": [
+			{
+				"type": "always",
+				"expected_result": {
+					"sample": true,
+					"attributes": {
+						"launchdarkly.samplingRatio": 50
+					}
+				}
+			},
+			{
+				"type": "never",
+				"expected_result": {
+					"sample": false,
+					"attributes": {
+						"launchdarkly.samplingRatio": 50
+					}
+				}
+			}
+		]
+	}
+]

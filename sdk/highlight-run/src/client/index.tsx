@@ -690,7 +690,7 @@ export class Highlight {
 					backendUrl:
 						this.options?.backendUrl ?? 'https://pub.highlight.io',
 					otlpEndpoint:
-					this.options?.otlpEndpoint ??
+						this.options?.otlpEndpoint ??
 						'https://otel.highlight.io',
 					projectId: this.sessionData.projectID,
 					sessionSecureId: this.sessionData.sessionSecureID,

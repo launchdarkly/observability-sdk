@@ -1,10 +1,17 @@
 import { Attributes, AttributeValue } from '@opentelemetry/api'
-import {
-	ReadableSpan,
-	TimedEvent,
-} from '@opentelemetry/sdk-trace-base'
+import { ReadableSpan, TimedEvent } from '@opentelemetry/sdk-trace-base'
 import { Sampler, SamplingResult } from './Sampler'
-import { LogSamplingConfig, SamplingConfig, Maybe, SpanSamplingConfig, MatchConfig, RegexMatchConfig, BasicMatchConfig, AttributeMatchConfig, SpanEventMatchConfig } from 'client/graph/generated/operations'
+import {
+	LogSamplingConfig,
+	SamplingConfig,
+	Maybe,
+	SpanSamplingConfig,
+	MatchConfig,
+	RegexMatchConfig,
+	BasicMatchConfig,
+	AttributeMatchConfig,
+	SpanEventMatchConfig,
+} from 'client/graph/generated/operations'
 const LOG_SPAN_NAME = 'launchdarkly.js.log'
 const LOG_SEVERITY_ATTRIBUTE = 'log.severity'
 const LOG_MESSAGE_ATTRIBUTE = 'log.message'
@@ -13,11 +20,15 @@ const SAMPLING_RATIO_ATTRIBUTE = 'launchdarkly.samplingRatio'
 
 type RegexCache = Map<string, RegExp>
 
-function isRegexMatchConfig(matchConfig: MatchConfig): matchConfig is RegexMatchConfig {
+function isRegexMatchConfig(
+	matchConfig: MatchConfig,
+): matchConfig is RegexMatchConfig {
 	return 'regexValue' in matchConfig
 }
 
-function isBasicMatchConfig(matchConfig: MatchConfig): matchConfig is BasicMatchConfig {
+function isBasicMatchConfig(
+	matchConfig: MatchConfig,
+): matchConfig is BasicMatchConfig {
 	return 'matchValue' in matchConfig
 }
 
@@ -52,7 +63,7 @@ export function defaultSampler(ratio: number) {
  * Custom sampler that uses a sampling configuration to determine if a span should be sampled.
  */
 export class CustomSampler implements Sampler {
-	private regexCache: RegexCache = new Map();
+	private regexCache: RegexCache = new Map()
 
 	/**
 	 * @param config The sampling configuration.
@@ -61,27 +72,24 @@ export class CustomSampler implements Sampler {
 	constructor(
 		private readonly config: Maybe<SamplingConfig> | undefined,
 		private readonly sampler: (ratio: number) => boolean = defaultSampler,
-	) { }
+	) {}
 
 	shouldSample(span: ReadableSpan): SamplingResult {
 		// Logs are encoded into special spans, so process those special spans using the log rules.
 		if (span.name === LOG_SPAN_NAME) {
-			return this.sampleLog(
-				this.config?.logs,
-				span,
-			)
+			return this.sampleLog(this.config?.logs, span)
 		}
 
-		return this.sampleSpan(
-			this.config?.spans,
-			span,
-		)
+		return this.sampleSpan(this.config?.spans, span)
 	}
 
 	/**
 	 * Check if a value matches a match config.
 	 */
-	private matchesValue(matchConfig: Maybe<MatchConfig> | undefined, value?: AttributeValue): boolean {
+	private matchesValue(
+		matchConfig: Maybe<MatchConfig> | undefined,
+		value?: AttributeValue,
+	): boolean {
 		if (!matchConfig) {
 			return false
 		}
@@ -90,12 +98,15 @@ export class CustomSampler implements Sampler {
 		}
 		if (isRegexMatchConfig(matchConfig)) {
 			if (!this.regexCache.has(matchConfig.regexValue)) {
-				this.regexCache.set(matchConfig.regexValue, new RegExp(matchConfig.regexValue))
+				this.regexCache.set(
+					matchConfig.regexValue,
+					new RegExp(matchConfig.regexValue),
+				)
 			}
 			// Force unwrap because we will always have ensured there is a regex in the cache immediately above.
-			const regex = this.regexCache.get(matchConfig.regexValue)!;
+			const regex = this.regexCache.get(matchConfig.regexValue)!
 			if (typeof value === 'string') {
-				return regex.test(value);
+				return regex.test(value)
 			}
 		}
 		// Unknown operator.
@@ -112,18 +123,23 @@ export class CustomSampler implements Sampler {
 	): boolean {
 		if (attributeConfigs) {
 			for (const attributeConfig of attributeConfigs) {
-				let configMatched = false;
+				let configMatched = false
 				for (const key of Object.keys(attributes)) {
 					if (this.matchesValue(attributeConfig.key, key)) {
 						const attributeValue = attributes[key]
-						if (this.matchesValue(attributeConfig.attribute, attributeValue)) {
-							configMatched = true;
-							break;
+						if (
+							this.matchesValue(
+								attributeConfig.attribute,
+								attributeValue,
+							)
+						) {
+							configMatched = true
+							break
 						}
 					}
 				}
 				if (!configMatched) {
-					return false;
+					return false
 				}
 			}
 		}
@@ -136,19 +152,24 @@ export class CustomSampler implements Sampler {
 	): boolean {
 		// Match by event name
 		if (!this.matchesValue(eventConfig.name, event.name)) {
-			return false;
+			return false
 		}
 
 		// Match by event attributes if specified
 		if (eventConfig.attributes) {
 			if (!event.attributes) {
-				return false;
+				return false
 			}
-			if (!this.matchesAttributes(eventConfig.attributes, event.attributes)) {
-				return false;
+			if (
+				!this.matchesAttributes(
+					eventConfig.attributes,
+					event.attributes,
+				)
+			) {
+				return false
 			}
 		}
-		return true;
+		return true
 	}
 
 	private matchesEvents(
@@ -157,16 +178,16 @@ export class CustomSampler implements Sampler {
 	): boolean {
 		if (eventConfigs) {
 			for (const eventConfig of eventConfigs) {
-				let matched = false;
+				let matched = false
 				for (const event of events) {
 					if (this.matchEvent(eventConfig, event)) {
-						matched = true;
-						// We only need a single event to match each config. 
-						break;
+						matched = true
+						// We only need a single event to match each config.
+						break
 					}
 				}
 				if (!matched) {
-					return false;
+					return false
 				}
 			}
 		}
@@ -253,7 +274,8 @@ export class CustomSampler implements Sampler {
 					return {
 						sample: this.sampler(spanConfig.samplingRatio),
 						attributes: {
-							[SAMPLING_RATIO_ATTRIBUTE]: spanConfig.samplingRatio,
+							[SAMPLING_RATIO_ATTRIBUTE]:
+								spanConfig.samplingRatio,
 						},
 					}
 				}

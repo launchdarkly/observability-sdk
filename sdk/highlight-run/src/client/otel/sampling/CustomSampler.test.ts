@@ -11,45 +11,45 @@ const LOG_SEVERITY_ATTRIBUTE = 'log.severity'
 const LOG_MESSAGE_ATTRIBUTE = 'log.message'
 
 interface SpanTestScenario {
-	description: string;
-	samplingConfig: SamplingConfig;
+	description: string
+	samplingConfig: SamplingConfig
 	inputSpan: {
-		name: string;
-		attributes?: Record<string, any>;
+		name: string
+		attributes?: Record<string, any>
 		events?: Array<{
-			name: string;
-			attributes?: Record<string, any>;
-		}>;
-	};
+			name: string
+			attributes?: Record<string, any>
+		}>
+	}
 	inputLog?: {
-		message?: string;
-		attributes?: Record<string, any>;
-		severityText?: string;
-	};
+		message?: string
+		attributes?: Record<string, any>
+		severityText?: string
+	}
 	samplerFunctionCases: Array<{
-		type: 'always' | 'never';
+		type: 'always' | 'never'
 		expected_result: {
-			sample: boolean;
-			attributes: Record<string, any> | null;
-		};
-	}>;
+			sample: boolean
+			attributes: Record<string, any> | null
+		}
+	}>
 }
 
 interface LogTestScenario {
-	description: string;
-	samplingConfig: SamplingConfig;
+	description: string
+	samplingConfig: SamplingConfig
 	inputLog: {
-		message?: string;
-		attributes?: Record<string, any>;
-		severityText?: string;
-	};
+		message?: string
+		attributes?: Record<string, any>
+		severityText?: string
+	}
 	samplerFunctionCases: Array<{
-		type: 'always' | 'never';
+		type: 'always' | 'never'
 		expected_result: {
-			sample: boolean;
-			attributes: Record<string, any> | null;
-		};
-	}>;
+			sample: boolean
+			attributes: Record<string, any> | null
+		}
+	}>
 }
 
 // Test helper function that always returns true for sampling
@@ -97,7 +97,7 @@ const createMockSpan = ({
 		endTime: [0, 0],
 		status: { code: 0 },
 		links: [],
-		events: events.map(e => ({
+		events: events.map((e) => ({
 			name: e.name,
 			attributes: e.attributes || {},
 			time: e.time || [0, 0],
@@ -121,8 +121,8 @@ beforeEach(() => {
 })
 
 const runTestSpanScenarios = (scenarios: SpanTestScenario[]) => {
-	scenarios.forEach(scenario => {
-		scenario.samplerFunctionCases.forEach(samplerCase => {
+	scenarios.forEach((scenario) => {
+		scenario.samplerFunctionCases.forEach((samplerCase) => {
 			const samplerFn = samplerFunctions[samplerCase.type]
 
 			it(`${scenario.description} - ${samplerCase.type}`, () => {
@@ -132,7 +132,7 @@ const runTestSpanScenarios = (scenarios: SpanTestScenario[]) => {
 				const mockSpan = createMockSpan({
 					name: scenario.inputSpan.name,
 					attributes: scenario.inputSpan.attributes || {},
-					events: scenario.inputSpan.events || []
+					events: scenario.inputSpan.events || [],
 				})
 
 				const result = sampler.shouldSample(mockSpan)
@@ -140,7 +140,9 @@ const runTestSpanScenarios = (scenarios: SpanTestScenario[]) => {
 				expect(result.sample).toBe(samplerCase.expected_result.sample)
 
 				if (samplerCase.expected_result.attributes) {
-					expect(result.attributes).toEqual(samplerCase.expected_result.attributes)
+					expect(result.attributes).toEqual(
+						samplerCase.expected_result.attributes,
+					)
 				} else {
 					expect(result.attributes).toBeUndefined()
 				}
@@ -150,20 +152,24 @@ const runTestSpanScenarios = (scenarios: SpanTestScenario[]) => {
 }
 
 const runTestLogScenarios = (scenarios: LogTestScenario[]) => {
-	scenarios.forEach(scenario => {
-		scenario.samplerFunctionCases.forEach(samplerCase => {
+	scenarios.forEach((scenario) => {
+		scenario.samplerFunctionCases.forEach((samplerCase) => {
 			const samplerFn = samplerFunctions[samplerCase.type]
 
 			it(`${scenario.description} - ${samplerCase.type}`, () => {
 				const config = scenario.samplingConfig as SamplingConfig
 				const sampler = new CustomSampler(config, samplerFn)
 
-				const baseAttributes = scenario.inputLog.attributes || {};
-				const mergedAttributes = { ...baseAttributes, [LOG_MESSAGE_ATTRIBUTE]: scenario.inputLog.message, [LOG_SEVERITY_ATTRIBUTE]: scenario.inputLog.severityText }
+				const baseAttributes = scenario.inputLog.attributes || {}
+				const mergedAttributes = {
+					...baseAttributes,
+					[LOG_MESSAGE_ATTRIBUTE]: scenario.inputLog.message,
+					[LOG_SEVERITY_ATTRIBUTE]: scenario.inputLog.severityText,
+				}
 
 				const mockSpan = createMockSpan({
 					name: LOG_SPAN_NAME,
-					attributes: mergedAttributes
+					attributes: mergedAttributes,
 				})
 
 				const result = sampler.shouldSample(mockSpan)
@@ -171,7 +177,9 @@ const runTestLogScenarios = (scenarios: LogTestScenario[]) => {
 				expect(result.sample).toBe(samplerCase.expected_result.sample)
 
 				if (samplerCase.expected_result.attributes) {
-					expect(result.attributes).toEqual(samplerCase.expected_result.attributes)
+					expect(result.attributes).toEqual(
+						samplerCase.expected_result.attributes,
+					)
 				} else {
 					expect(result.attributes).toBeUndefined()
 				}
