@@ -11,7 +11,7 @@ import {
 	BasicMatchConfig,
 	AttributeMatchConfig,
 	SpanEventMatchConfig,
-} from 'client/graph/generated/operations'
+} from '../../graph/generated/operations'
 const LOG_SPAN_NAME = 'launchdarkly.js.log'
 const LOG_SEVERITY_ATTRIBUTE = 'log.severity'
 const LOG_MESSAGE_ATTRIBUTE = 'log.message'

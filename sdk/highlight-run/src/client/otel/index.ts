@@ -52,7 +52,7 @@ import {
 } from '@opentelemetry/sdk-metrics'
 import { IntegrationClient } from '../../integrations'
 import { LD_METRIC_NAME_DOCUMENT_LOAD } from '../../integrations/launchdarkly'
-import { Maybe, SamplingConfig } from 'client/graph/generated/operations'
+import { Maybe, SamplingConfig } from '../graph/generated/operations'
 import { CustomSampler } from './sampling/CustomSampler'
 
 export type BrowserTracingConfig = {
