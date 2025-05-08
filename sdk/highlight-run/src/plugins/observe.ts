@@ -46,7 +46,8 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 		super(options)
 		this.observe = new ObserveSDK({
 			backendUrl: options?.backendUrl ?? 'https://pub.highlight.io',
-			otlpEndpoint: options?.otlpEndpoint ?? 'https://otel.highlight.io',
+			otlpEndpoint:
+				options?.otel?.otlpEndpoint ?? 'https://otel.highlight.io',
 			projectId: projectID,
 			sessionSecureId: this.sessionSecureID,
 			environment: options?.environment ?? 'production',

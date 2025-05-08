@@ -15,13 +15,6 @@ export declare type ObserveOptions = CommonOptions & {
 	 */
 	tracingOrigins?: boolean | (string | RegExp)[]
 	/**
-	 * This disables recording network requests.
-	 * The data includes the URLs, the size of the request, and how long the request took.
-	 * @default false
-	 * @deprecated Use `networkRecording` instead.
-	 */
-	disableNetworkRecording?: boolean
-	/**
 	 * Specifies how and what Highlight records from network requests and responses.
 	 */
 	networkRecording?: boolean | NetworkRecordingOptions
@@ -60,11 +53,12 @@ export declare type ObserveOptions = CommonOptions & {
 	 */
 	enablePromisePatch?: boolean
 	/**
-	 * OTLP endpoint for OpenTelemetry tracing.
-	 */
-	otlpEndpoint?: string
-	/**
 	 * OTLP options for OpenTelemetry tracing. Instrumentations are enabled by default.
 	 */
-	otel?: OtelOptions
+	otel?: OtelOptions & {
+		/**
+		 * OTLP HTTP endpoint for OpenTelemetry tracing.
+		 */
+		otlpEndpoint?: string
+	}
 }
