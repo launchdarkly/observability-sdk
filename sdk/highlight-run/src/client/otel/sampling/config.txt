@@ -7,7 +7,7 @@
  * const config: SamplingConfig = {
  *   sampling: {
  *     spans: [{
- *       spanName: { operator: 'match', value: 'flag_evaluation' },
+ *       spanName: { operator: 'match', matchValue: 'flag_evaluation' },
  *       samplingRatio: 100
  *     }]
  *   }
@@ -21,8 +21,8 @@
  *     spans: [{
  *       spanName: { operator: 'match', value: 'flag_evaluation' },
  *       attributes: [{
- *         key: 'feature_flag.key',
- *         match: { operator: 'match', value: 'my-feature-flag' }
+ *         key: {operator: 'match', matchValue:'feature_flag.key'},
+ *         attribute: { operator: 'match', matchValue: 'my-feature-flag' }
  *       }],
  *       samplingRatio: 100
  *     }]
@@ -36,7 +36,7 @@
  * const config: SamplingConfig = {
  *   sampling: {
  *     logs: [{
- *       severityText: { operator: 'match', value: 'debug' },
+ *       severityText: { operator: 'match', matchValue: 'debug' },
  *       samplingRatio: 0
  *     }]
  *   }
@@ -48,19 +48,17 @@
  * A match config for a regex.
  */
 export interface RegexMatchConfig {
-	operator: 'regex'
 	/**
 	 * A regex in string format.
 	 */
-	value: string
+	regexValue: string
 }
 
 /**
  * A match config for a basic string match.
  */
 export interface BasicMatchConfig {
-	operator: 'match'
-	value: string | number | boolean
+	matchValue: string | number | boolean
 }
 
 export type MatchConfig = RegexMatchConfig | BasicMatchConfig
@@ -76,8 +74,8 @@ export type CachedMatchConfig = MatchConfig & {
  * A match config for an attribute match.
  */
 export interface AttributeMatchConfig<TMatchConfig extends MatchConfig> {
-	key: string
-	match: TMatchConfig
+	key: TMatchConfig
+	attribute: TMatchConfig
 }
 
 /**

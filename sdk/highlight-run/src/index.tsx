@@ -1,9 +1,9 @@
-import type {
+import {
 	Highlight,
 	HighlightClassOptions,
 	RequestResponsePair,
 } from './client'
-import { FirstLoadListeners, GenerateSecureID } from './client'
+import { FirstLoadListeners, GenerateSecureID, getTracer } from './client'
 import type {
 	HighlightOptions,
 	HighlightPublicInterface,
@@ -33,7 +33,6 @@ import {
 	Context,
 	Span,
 	SpanOptions,
-	Tracer,
 } from '@opentelemetry/api'
 import firstloadVersion from './__generated/version.js'
 import { listenToChromeExtensionMessage } from './browserExtension/extensionListener.js'
@@ -88,7 +87,6 @@ let first_load_listeners: FirstLoadListeners
 let integrations: IntegrationClient[] = []
 let init_called = false
 type Callback = (span?: Span) => any
-let getTracer: () => Tracer | undefined
 const H: HighlightPublicInterface = {
 	options: undefined,
 	init: (projectID?: string | number, options?: HighlightOptions) => {
@@ -131,44 +129,7 @@ const H: HighlightPublicInterface = {
 
 			initializeFetchListener()
 			initializeWebSocketListener()
-			import('./client').then(
-				async ({
-					Highlight,
-					setupBrowserTracing,
-					getTracer: otelGetTracer,
-				}) => {
-					setupBrowserTracing({
-						backendUrl:
-							options?.backendUrl ?? 'https://pub.highlight.io',
-						otlpEndpoint:
-							options?.otlpEndpoint ??
-							'https://otel.highlight.io',
-						projectId: projectID,
-						sessionSecureId: sessionSecureID,
-						environment: options?.environment ?? 'production',
-						networkRecordingOptions:
-							typeof options?.networkRecording === 'object'
-								? options.networkRecording
-								: undefined,
-						tracingOrigins: options?.tracingOrigins,
-						serviceName:
-							options?.serviceName ?? 'highlight-browser',
-						instrumentations: options?.otel?.instrumentations,
-						getIntegrations: () => [...integrations],
-					})
-					getTracer = otelGetTracer
 
-					highlight_obj = new Highlight(
-						client_options,
-						first_load_listeners,
-					)
-					initializeFetchListener()
-					initializeWebSocketListener()
-					if (!options?.manualStart) {
-						await highlight_obj.initialize()
-					}
-				},
-			)
 
 			const client_options: HighlightClassOptions = {
 				...options,
@@ -178,6 +139,19 @@ const H: HighlightPublicInterface = {
 				appVersion: options?.version,
 				sessionSecureID,
 			}
+
+			highlight_obj = new Highlight(
+				client_options,
+				first_load_listeners,
+			)
+			initializeFetchListener()
+			initializeWebSocketListener()
+			if (!options?.manualStart) {
+				highlight_obj.initialize()
+			}
+
+
+
 			first_load_listeners = new FirstLoadListeners(client_options)
 			if (!options?.manualStart) {
 				// Start some of the listeners before client is loaded, then hand the
@@ -460,6 +434,7 @@ const H: HighlightPublicInterface = {
 		fn?: (span?: Span) => any,
 	): any => {
 		const tracer = typeof getTracer === 'function' ? getTracer() : undefined
+		console.log('tracer', tracer);
 		if (!tracer) {
 			const noopSpan = getNoopSpan()
 

@@ -82,6 +82,7 @@ export function setupLaunchDarklyIntegration(
 			return data
 		},
 		afterEvaluation: (hookContext, data, detail) => {
+			console.log('After evaluation', hookContext.flagKey, detail.value);
 			const eventAttributes: {
 				[index: string]: number | boolean | string
 			} = {

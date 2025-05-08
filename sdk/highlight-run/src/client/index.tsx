@@ -573,6 +573,7 @@ export class Highlight {
 	}
 
 	async initialize(options?: StartOptions): Promise<undefined> {
+		console.log("Initializing 1");
 		if (
 			(navigator?.webdriver && !window.Cypress) ||
 			navigator?.userAgent?.includes('Googlebot') ||
@@ -583,6 +584,7 @@ export class Highlight {
 		}
 
 		try {
+			console.log("Initializing 2");
 			if (options?.forceNew) {
 				await this._reset(options)
 				return
@@ -629,18 +631,23 @@ export class Highlight {
 					this.options.networkRecording?.recordHeadersAndBody || false
 			}
 
+			console.log("Initializing 3");
 			let destinationDomains: string[] = []
 			if (
 				typeof this.options.networkRecording === 'object' &&
 				this.options.networkRecording.destinationDomains?.length
 			) {
+				console.log("Initializing 3.1");
 				destinationDomains =
 					this.options.networkRecording.destinationDomains
 			}
+			console.log("Initializing 3.2");
 			if (this._isCrossOriginIframe) {
+				console.log("Initializing 3.3");
 				// wait for 'cross-origin iframe ready' message
 				await this._setupCrossOriginIframe()
 			} else {
+				console.log("Initializing 3.4");
 				const gr = await this.graphqlSDK.initializeSession({
 					organization_verbose_id: this.organizationID,
 					enable_strict_privacy: this.privacySetting === 'strict',
@@ -659,6 +666,7 @@ export class Highlight {
 					disable_session_recording:
 						this.options.disableSessionRecording,
 				})
+				console.log("Initializing 3.5");
 				if (
 					gr.initializeSession.secure_id !==
 					this.sessionData.sessionSecureID
@@ -678,12 +686,35 @@ export class Highlight {
 					!this.sessionData.projectID ||
 					!this.sessionData.sessionSecureID
 				) {
+					console.log("Initializing 3.6");
 					console.error(
 						'Failed to initialize Highlight; an error occurred on our end.',
 						this.sessionData,
 					)
 					return
 				}
+
+				console.log("Initializing 4");
+				setupBrowserTracing({
+					sampling: gr.initializeSession.sampling,
+					backendUrl:
+						this.options?.backendUrl ?? 'https://pub.highlight.io',
+					otlpEndpoint:
+					this.options?.otlpEndpoint ??
+						'https://otel.highlight.io',
+					projectId: this.sessionData.projectID,
+					sessionSecureId: this.sessionData.sessionSecureID,
+					environment: this.options?.environment ?? 'production',
+					networkRecordingOptions:
+						typeof this.options?.networkRecording === 'object'
+							? this.options.networkRecording
+							: undefined,
+					tracingOrigins: this.options?.tracingOrigins,
+					serviceName:
+						this.options?.serviceName ?? 'highlight-browser',
+					instrumentations: this.options?.otel?.instrumentations,
+					getIntegrations: () => [...this._integrations],
+				})
 			}
 
 			this.logger.log(
@@ -739,6 +770,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 				this.logger.log(
 					`Highlight is NOT RECORDING a session replay per H.init setting.`,
 				)
+				console.log("Setting ready to true no session recording");
 				this.ready = true
 				this.state = 'Recording'
 				this.manualStopped = false
@@ -849,10 +881,12 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 			}
 
 			this._setupWindowListeners()
+			console.log("Setting ready to true");
 			this.ready = true
 			this.state = 'Recording'
 			this.manualStopped = false
 		} catch (e) {
+			console.log("Error initializing", e);
 			if (this._isOnLocalHost) {
 				console.error(e)
 				HighlightWarning('initializeSession', e)
@@ -1583,7 +1617,6 @@ export {
 	getTracer,
 	getMeter,
 	MetricCategory,
-	setupBrowserTracing,
 }
 export type {
 	AmplitudeIntegrationOptions,

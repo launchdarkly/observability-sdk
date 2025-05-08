@@ -78,6 +78,14 @@ mutation addSessionFeedback(
 	)
 }
 
+fragment RegexMatchParts on RegexMatchConfig {
+	regexValue
+}
+
+fragment BasicMatchParts on BasicMatchConfig {
+	matchValue
+}
+
 mutation initializeSession(
 	$session_secure_id: String!
 	$organization_verbose_id: String!
@@ -114,6 +122,46 @@ mutation initializeSession(
 	) {
 		secure_id
 		project_id
+		sampling {
+			spans {
+				name {
+					...RegexMatchParts
+					...BasicMatchParts
+				}
+				attributes {
+					key {
+						...RegexMatchParts
+						...BasicMatchParts
+					}
+					attribute {
+						...RegexMatchParts
+						...BasicMatchParts
+					}
+				}
+				samplingRatio
+			}
+			logs {
+				message {
+						...RegexMatchParts
+						...BasicMatchParts
+				}
+				severityText {
+						...RegexMatchParts
+						...BasicMatchParts
+				}
+				attributes {
+					key {
+						...RegexMatchParts
+						...BasicMatchParts
+					}
+					attribute {
+						...RegexMatchParts
+						...BasicMatchParts
+					}
+				}
+				samplingRatio
+			}
+		}
 	}
 }
 

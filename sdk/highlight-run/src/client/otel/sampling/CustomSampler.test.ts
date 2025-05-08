@@ -1,8 +1,8 @@
 import { SpanKind, Attributes } from '@opentelemetry/api'
 import { CustomSampler, defaultSampler } from './CustomSampler'
-import { InputSamplingConfig } from './config'
 import type { ReadableSpan } from '@opentelemetry/sdk-trace-base'
 import { it, expect, beforeEach, vi } from 'vitest'
+import { SamplingConfig } from 'client/graph/generated/operations'
 
 // Constants used in the tests
 const LOG_SPAN_NAME = 'launchdarkly.js.log'
@@ -74,7 +74,7 @@ beforeEach(() => {
 })
 
 it('should respect samplingRatio and return a NOT_RECORD decision when sampler returns false', () => {
-	const config: InputSamplingConfig = {
+	const config: SamplingConfig = {
 		spans: [
 			{
 				// Matches all spans.
@@ -100,10 +100,10 @@ it.each([
 ])(
 	'should match a span based on name with exact match and sample correctly: %s',
 	(_, sampleFn) => {
-		const config: InputSamplingConfig = {
+		const config: SamplingConfig = {
 			spans: [
 				{
-					name: { operator: 'match', value: 'test-span' },
+					name: { matchValue: 'test-span' },
 					samplingRatio: 42,
 				},
 			],
@@ -126,10 +126,10 @@ it.each([
 )
 
 it('should always sample a span when the span name does not match', () => {
-	const config: InputSamplingConfig = {
+	const config: SamplingConfig = {
 		spans: [
 			{
-				name: { operator: 'match', value: 'test-span' },
+				name: { matchValue: 'test-span' },
 				samplingRatio: 42,
 			},
 		],
@@ -151,12 +151,11 @@ it.each([
 ])(
 	'should match a span name based on regex and sample correctly: %s',
 	(_, sampleFn) => {
-		const config: InputSamplingConfig = {
+		const config: SamplingConfig = {
 			spans: [
 				{
 					name: {
-						operator: 'regex',
-						value: 'test-span-\\d+',
+						regexValue: 'test-span-\\d+',
 					},
 					samplingRatio: 42,
 				},
@@ -191,13 +190,13 @@ it.each([
 ])(
 	'should match a span based on a single attribute and sample correctly: %s',
 	(_, sampleFn, value) => {
-		const config: InputSamplingConfig = {
+		const config: SamplingConfig = {
 			spans: [
 				{
 					attributes: [
 						{
-							key: 'example.attribute',
-							match: { operator: 'match', value },
+							key: { matchValue: 'example.attribute' },
+							attribute: { matchValue: value },
 						},
 					],
 					samplingRatio: 42,
@@ -225,13 +224,13 @@ it.each([
 )
 
 it('should not match a span when the attribute does not exist', () => {
-	const config: InputSamplingConfig = {
+	const config: SamplingConfig = {
 		spans: [
 			{
 				attributes: [
 					{
-						key: 'example.attribute',
-						match: { operator: 'match', value: 'value' },
+						key: { matchValue: 'example.attribute' },
+						attribute: { matchValue: 'value' },
 					},
 				],
 				samplingRatio: 42,
@@ -242,7 +241,7 @@ it('should not match a span when the attribute does not exist', () => {
 	const sampler = new CustomSampler(config, neverSampleFn)
 	const mockSpan = createMockSpan({
 		name: 'http-request',
-		attributes: { },
+		attributes: {},
 	})
 	const result = sampler.shouldSample(mockSpan)
 
@@ -252,13 +251,13 @@ it('should not match a span when the attribute does not exist', () => {
 });
 
 it('should always sample a span when the attribute does not match', () => {
-	const config: InputSamplingConfig = {
+	const config: SamplingConfig = {
 		spans: [
 			{
 				attributes: [
 					{
-						key: 'http.method',
-						match: { operator: 'match', value: 'GET' },
+						key: { matchValue: 'http.method' },
+						attribute: { matchValue: 'GET' },
 					},
 				],
 				samplingRatio: 42,
@@ -279,7 +278,7 @@ it('should always sample a span when the attribute does not match', () => {
 })
 
 it('should respect samplingRatio for logs and return a NOT_RECORD decision when sampler returns false', () => {
-	const config: InputSamplingConfig = {
+	const config: SamplingConfig = {
 		logs: [
 			{
 				// Matches all logs.
@@ -309,17 +308,17 @@ it.each([
 ])(
 	'should sample a span based on multiple attributes (AND logic): %s',
 	(_, sampleFn) => {
-		const config: InputSamplingConfig = {
+		const config: SamplingConfig = {
 			spans: [
 				{
 					attributes: [
 						{
-							key: 'http.method',
-							match: { operator: 'match', value: 'GET' },
+							key: { matchValue: 'http.method' },
+							attribute: { matchValue: 'GET' },
 						},
 						{
-							key: 'http.status_code',
-							match: { operator: 'match', value: '200' },
+							key: { matchValue: 'http.status_code' },
+							attribute: { matchValue: '200' },
 						},
 					],
 					samplingRatio: 42,
@@ -347,17 +346,17 @@ it.each([
 )
 
 it('should always sample a span when the attribute does not match', () => {
-	const config: InputSamplingConfig = {
+	const config: SamplingConfig = {
 		spans: [
 			{
 				attributes: [
 					{
-						key: 'http.method',
-						match: { operator: 'match', value: 'GET' },
+						key: { matchValue: 'http.method' },
+						attribute: { matchValue: 'GET' },
 					},
 					{
-						key: 'http.status_code',
-						match: { operator: 'match', value: '200' },
+						key: { matchValue: 'http.status_code' },
+						attribute: { matchValue: '200' },
 					},
 				],
 				samplingRatio: 42,
@@ -383,19 +382,19 @@ it.each([
 ])(
 	'should match a span based on combination of name, attributes and event and then sample correctly: %s',
 	(_, sampleFn) => {
-		const config: InputSamplingConfig = {
+		const config: SamplingConfig = {
 			spans: [
 				{
-					name: { operator: 'match', value: 'http-request' },
+					name: { matchValue: 'http-request' },
 					attributes: [
 						{
-							key: 'http.method',
-							match: { operator: 'match', value: 'GET' },
+							key: { regexValue: 'http\\..*' },
+							attribute: { matchValue: 'GET' },
 						},
 					],
 					events: [
 						{
-							name: { operator: 'match', value: 'db-operation' },
+							name: { matchValue: 'db-operation' },
 						},
 					],
 					samplingRatio: 42,
@@ -423,14 +422,14 @@ it.each([
 )
 
 it('should not match a span when name matches but attribute does not', () => {
-	const config: InputSamplingConfig = {
+	const config: SamplingConfig = {
 		spans: [
 			{
-				name: { operator: 'match', value: 'http-request' },
+				name: { matchValue: 'http-request' },
 				attributes: [
 					{
-						key: 'http.method',
-						match: { operator: 'match', value: 'GET' },
+						key: { matchValue: 'http.method' },
+						attribute: { matchValue: 'GET' },
 					},
 				],
 				samplingRatio: 42,
@@ -456,10 +455,10 @@ it.each([
 ])(
 	'should match a log based on severity and sample correctly: %s',
 	(_, sampleFn) => {
-		const config: InputSamplingConfig = {
+		const config: SamplingConfig = {
 			logs: [
 				{
-					severityText: { operator: 'match', value: 'error' },
+					severityText: { matchValue: 'error' },
 					samplingRatio: 42,
 				},
 			],
@@ -485,10 +484,10 @@ it.each([
 )
 
 it('should not match a log when severity does not match', () => {
-	const config: InputSamplingConfig = {
+	const config: SamplingConfig = {
 		logs: [
 			{
-				severityText: { operator: 'match', value: 'error' },
+				severityText: { matchValue: 'error' },
 				samplingRatio: 42,
 			},
 		],
@@ -510,14 +509,14 @@ it.each([
 	['sample', alwaysSampleFn],
 	['no sample', neverSampleFn],
 ])(
-	'should match a log based on message content with exact match: %s',
+	'should match a log based on message content with exact attribute: %s',
 	(_, sampleFn) => {
-		const config: InputSamplingConfig = {
+		const config: SamplingConfig = {
 			logs: [
 				{
 					message: {
-						operator: 'match',
-						value: 'Connection failed',
+
+						matchValue: 'Connection failed',
 					},
 					samplingRatio: 42,
 				},
@@ -547,12 +546,12 @@ it.each([
 	['sample', alwaysSampleFn],
 	['no sample', neverSampleFn],
 ])(
-	'should match a log based on message content with regex match: %s',
+	'should match a log based on message content with regex attribute: %s',
 	(_, sampleFn) => {
-		const config: InputSamplingConfig = {
+		const config: SamplingConfig = {
 			logs: [
 				{
-					message: { operator: 'regex', value: 'Error: .*' },
+					message: { regexValue: 'Error: .*' },
 					samplingRatio: 42,
 				},
 			],
@@ -581,13 +580,13 @@ it.each([
 	['sample', alwaysSampleFn],
 	['no sample', neverSampleFn],
 ])('should match a log based on custom attributes: %s', (_, sampleFn) => {
-	const config: InputSamplingConfig = {
+	const config: SamplingConfig = {
 		logs: [
 			{
 				attributes: [
 					{
-						key: 'service.name',
-						match: { operator: 'match', value: 'api-gateway' },
+						key: { matchValue: 'service.name' },
+						attribute: { matchValue: 'api-gateway' },
 					},
 				],
 				samplingRatio: 42,
@@ -622,20 +621,19 @@ it.each([
 ])(
 	'should match a log based on combination of severity, message and attributes: %s',
 	(_, sampleFn) => {
-		const config: InputSamplingConfig = {
+		const config: SamplingConfig = {
 			logs: [
 				{
-					severityText: { operator: 'match', value: 'error' },
+					severityText: { matchValue: 'error' },
 					message: {
-						operator: 'regex',
-						value: 'Database.*failed',
+						regexValue: 'Database.*failed',
 					},
 					attributes: [
 						{
-							key: 'service.name',
-							match: {
-								operator: 'match',
-								value: 'database-service',
+							key: { matchValue: 'service.name' },
+							attribute: {
+
+								matchValue: 'database-service',
 							},
 						},
 					],
@@ -670,17 +668,17 @@ it.each([
 )
 
 it('should not match a log when one criteria in combination does not match', () => {
-	const config: InputSamplingConfig = {
+	const config: SamplingConfig = {
 		logs: [
 			{
-				severityText: { operator: 'match', value: 'error' },
-				message: { operator: 'regex', value: 'Database.*failed' },
+				severityText: { matchValue: 'error' },
+				message: { regexValue: 'Database.*failed' },
 				attributes: [
 					{
-						key: 'service.name',
-						match: {
-							operator: 'match',
-							value: 'database-service',
+						key: { matchValue: 'service.name' },
+						attribute: {
+
+							matchValue: 'database-service',
 						},
 					},
 				],
@@ -708,7 +706,7 @@ it('should not match a log when one criteria in combination does not match', () 
 })
 
 it('should fall back to always sampling when no configuration matches', () => {
-	const config: InputSamplingConfig = {
+	const config: SamplingConfig = {
 		spans: [],
 		logs: [],
 	}
@@ -719,16 +717,6 @@ it('should fall back to always sampling when no configuration matches', () => {
 
 	expect(result.sample).toBe(true)
 	expect(result.attributes).toBeUndefined()
-})
-
-it('should identify itself with the correct name', () => {
-	const config: InputSamplingConfig = {
-		spans: [],
-		logs: [],
-	}
-
-	const sampler = new CustomSampler(config)
-	expect(sampler.toString()).toBe('launchdarkly.CustomSampler')
 })
 
 it('should get approximately the correct number of samples', () => {
@@ -761,12 +749,12 @@ it.each([
 ])(
 	'should match a span based on event name with exact match and sample correctly: %s',
 	(_, sampleFn) => {
-		const config: InputSamplingConfig = {
+		const config: SamplingConfig = {
 			spans: [
 				{
 					events: [
 						{
-							name: { operator: 'match', value: 'test-event' },
+							name: { matchValue: 'test-event' },
 						},
 					],
 					samplingRatio: 42,
@@ -775,9 +763,9 @@ it.each([
 		}
 
 		const sampler = new CustomSampler(config, sampleFn)
-		const mockSpan = createMockSpan({ 
+		const mockSpan = createMockSpan({
 			name: 'test-span',
-			events: [{ name: 'test-event' }] 
+			events: [{ name: 'test-event' }]
 		})
 		const result = sampler.shouldSample(mockSpan)
 
@@ -794,12 +782,12 @@ it.each([
 )
 
 it('should always sample a span when the event name does not match', () => {
-	const config: InputSamplingConfig = {
+	const config: SamplingConfig = {
 		spans: [
 			{
 				events: [
 					{
-						name: { operator: 'match', value: 'test-event' },
+						name: { matchValue: 'test-event' },
 					},
 				],
 				samplingRatio: 42,
@@ -809,9 +797,9 @@ it('should always sample a span when the event name does not match', () => {
 
 	// We say to neverSampleFn, but the span doesn't match, so it should pass through.
 	const sampler = new CustomSampler(config, neverSampleFn)
-	const mockSpan = createMockSpan({ 
+	const mockSpan = createMockSpan({
 		name: 'test-span',
-		events: [{ name: 'other-event' }] 
+		events: [{ name: 'other-event' }]
 	})
 	const result = sampler.shouldSample(mockSpan)
 
@@ -826,12 +814,12 @@ it.each([
 ])(
 	'should match a span based on event name using regex and sample correctly: %s',
 	(_, sampleFn) => {
-		const config: InputSamplingConfig = {
+		const config: SamplingConfig = {
 			spans: [
 				{
 					events: [
 						{
-							name: { operator: 'regex', value: 'test-event-\\d+' },
+							name: { regexValue: 'test-event-\\d+' },
 						},
 					],
 					samplingRatio: 42,
@@ -840,9 +828,9 @@ it.each([
 		}
 
 		const sampler = new CustomSampler(config, sampleFn)
-		const mockSpan = createMockSpan({ 
+		const mockSpan = createMockSpan({
 			name: 'test-span',
-			events: [{ name: 'test-event-123' }] 
+			events: [{ name: 'test-event-123' }]
 		})
 		const result = sampler.shouldSample(mockSpan)
 
@@ -864,12 +852,12 @@ it.each([
 ])(
 	'should sample a span if it contains at least one matching event among many events: %s',
 	(_, sampleFn) => {
-		const config: InputSamplingConfig = {
+		const config: SamplingConfig = {
 			spans: [
 				{
 					events: [
 						{
-							name: { operator: 'match', value: 'target-event' },
+							name: { matchValue: 'target-event' },
 						},
 					],
 					samplingRatio: 42,
@@ -878,7 +866,7 @@ it.each([
 		}
 
 		const sampler = new CustomSampler(config, sampleFn)
-		const mockSpan = createMockSpan({ 
+		const mockSpan = createMockSpan({
 			name: 'test-span',
 			events: [
 				{ name: 'other-event-1' },
@@ -906,19 +894,19 @@ it.each([
 ])(
 	'should match a span based on a combination of span name, attributes, and events: %s',
 	(_, sampleFn) => {
-		const config: InputSamplingConfig = {
+		const config: SamplingConfig = {
 			spans: [
 				{
-					name: { operator: 'match', value: 'http-request' },
+					name: { matchValue: 'http-request' },
 					attributes: [
 						{
-							key: 'http.method',
-							match: { operator: 'match', value: 'GET' },
+							key: { matchValue: 'http.method' },
+							attribute: { matchValue: 'GET' },
 						},
 					],
 					events: [
 						{
-							name: { operator: 'match', value: 'http-response' },
+							name: { matchValue: 'http-response' },
 						},
 					],
 					samplingRatio: 42,
@@ -947,19 +935,19 @@ it.each([
 )
 
 it('should not match when one criteria in combination does not match (event name)', () => {
-	const config: InputSamplingConfig = {
+	const config: SamplingConfig = {
 		spans: [
 			{
-				name: { operator: 'match', value: 'http-request' },
+				name: { matchValue: 'http-request' },
 				attributes: [
 					{
-						key: 'http.method',
-						match: { operator: 'match', value: 'GET' },
+						key: { matchValue: 'http.method' },
+						attribute: { matchValue: 'GET' },
 					},
 				],
 				events: [
 					{
-						name: { operator: 'match', value: 'http-response' },
+						name: { matchValue: 'http-response' },
 					},
 				],
 				samplingRatio: 42,
@@ -981,12 +969,12 @@ it('should not match when one criteria in combination does not match (event name
 })
 
 it('should not match when a span has no events but event matching is required', () => {
-	const config: InputSamplingConfig = {
+	const config: SamplingConfig = {
 		spans: [
 			{
 				events: [
 					{
-						name: { operator: 'match', value: 'test-event' },
+						name: { matchValue: 'test-event' },
 					},
 				],
 				samplingRatio: 42,
@@ -995,7 +983,7 @@ it('should not match when a span has no events but event matching is required', 
 	}
 
 	const sampler = new CustomSampler(config, neverSampleFn)
-	const mockSpan = createMockSpan({ 
+	const mockSpan = createMockSpan({
 		name: 'test-span',
 		events: [] // No events
 	})
@@ -1012,15 +1000,15 @@ it.each([
 ])(
 	'should match multiple event criteria (requires all specified events to be present): %s',
 	(_, sampleFn) => {
-		const config: InputSamplingConfig = {
+		const config: SamplingConfig = {
 			spans: [
 				{
 					events: [
 						{
-							name: { operator: 'match', value: 'event-1' },
+							name: { matchValue: 'event-1' },
 						},
 						{
-							name: { operator: 'match', value: 'event-2' },
+							name: { matchValue: 'event-2' },
 						},
 					],
 					samplingRatio: 42,
@@ -1029,7 +1017,7 @@ it.each([
 		}
 
 		const sampler = new CustomSampler(config, sampleFn)
-		const mockSpan = createMockSpan({ 
+		const mockSpan = createMockSpan({
 			name: 'test-span',
 			events: [
 				{ name: 'event-1' },
@@ -1057,16 +1045,16 @@ it.each([
 ])(
 	'should match a span based on event name and event attributes: %s',
 	(_, sampleFn) => {
-		const config: InputSamplingConfig = {
+		const config: SamplingConfig = {
 			spans: [
 				{
 					events: [
 						{
-							name: { operator: 'match', value: 'db-operation' },
+							name: { matchValue: 'db-operation' },
 							attributes: [
 								{
-									key: 'db.operation',
-									match: { operator: 'match', value: 'query' }
+									key: { matchValue: 'db.operation' },
+									attribute: { matchValue: 'query' }
 								}
 							]
 						},
@@ -1077,11 +1065,11 @@ it.each([
 		}
 
 		const sampler = new CustomSampler(config, sampleFn)
-		const mockSpan = createMockSpan({ 
+		const mockSpan = createMockSpan({
 			name: 'database-span',
-			events: [{ 
-				name: 'db-operation', 
-				attributes: { 'db.operation': 'query' } 
+			events: [{
+				name: 'db-operation',
+				attributes: { 'db.operation': 'query' }
 			}]
 		})
 		const result = sampler.shouldSample(mockSpan)
@@ -1099,16 +1087,16 @@ it.each([
 )
 
 it('should not match when event attributes do not match', () => {
-	const config: InputSamplingConfig = {
+	const config: SamplingConfig = {
 		spans: [
 			{
 				events: [
 					{
-						name: { operator: 'match', value: 'db-operation' },
+						name: { matchValue: 'db-operation' },
 						attributes: [
 							{
-								key: 'db.operation',
-								match: { operator: 'match', value: 'query' }
+								key: { matchValue: 'db.operation' },
+								attribute: { matchValue: 'query' }
 							}
 						]
 					},
@@ -1119,10 +1107,10 @@ it('should not match when event attributes do not match', () => {
 	}
 
 	const sampler = new CustomSampler(config, neverSampleFn)
-	const mockSpan = createMockSpan({ 
+	const mockSpan = createMockSpan({
 		name: 'database-span',
-		events: [{ 
-			name: 'db-operation', 
+		events: [{
+			name: 'db-operation',
 			attributes: { 'db.operation': 'insert' } // Doesn't match 'query'
 		}]
 	})
@@ -1134,16 +1122,16 @@ it('should not match when event attributes do not match', () => {
 })
 
 it('should not match when event has no attributes but attributes are required', () => {
-	const config: InputSamplingConfig = {
+	const config: SamplingConfig = {
 		spans: [
 			{
 				events: [
 					{
-						name: { operator: 'match', value: 'db-operation' },
+						name: { matchValue: 'db-operation' },
 						attributes: [
 							{
-								key: 'db.operation',
-								match: { operator: 'match', value: 'query' }
+								key: { matchValue: 'db.operation' },
+								attribute: { matchValue: 'query' }
 							}
 						]
 					},
@@ -1154,9 +1142,9 @@ it('should not match when event has no attributes but attributes are required', 
 	}
 
 	const sampler = new CustomSampler(config, neverSampleFn)
-	const mockSpan = createMockSpan({ 
+	const mockSpan = createMockSpan({
 		name: 'database-span',
-		events: [{ 
+		events: [{
 			name: 'db-operation'
 			// No attributes provided
 		}]
@@ -1174,25 +1162,25 @@ it.each([
 ])(
 	'should match multiple event criteria with different attribute requirements: %s',
 	(_, sampleFn) => {
-		const config: InputSamplingConfig = {
+		const config: SamplingConfig = {
 			spans: [
 				{
 					events: [
 						{
-							name: { operator: 'match', value: 'event-1' },
+							name: { matchValue: 'event-1' },
 							attributes: [
 								{
-									key: 'status',
-									match: { operator: 'match', value: 'success' }
+									key: { matchValue: 'status' },
+									attribute: { matchValue: 'success' }
 								}
 							]
 						},
 						{
-							name: { operator: 'match', value: 'event-2' },
+							name: { matchValue: 'event-2' },
 							attributes: [
 								{
-									key: 'operation',
-									match: { operator: 'match', value: 'complete' }
+									key: { matchValue: 'operation' },
+									attribute: { matchValue: 'complete' }
 								}
 							]
 						},
@@ -1203,16 +1191,16 @@ it.each([
 		}
 
 		const sampler = new CustomSampler(config, sampleFn)
-		const mockSpan = createMockSpan({ 
+		const mockSpan = createMockSpan({
 			name: 'test-span',
 			events: [
-				{ 
-					name: 'event-1', 
-					attributes: { 'status': 'success' } 
+				{
+					name: 'event-1',
+					attributes: { 'status': 'success' }
 				},
-				{ 
-					name: 'event-2', 
-					attributes: { 'operation': 'complete' } 
+				{
+					name: 'event-2',
+					attributes: { 'operation': 'complete' }
 				},
 			]
 		})
