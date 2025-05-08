@@ -419,7 +419,6 @@ const H: HighlightPublicInterface = {
 		fn?: (span?: Span) => any,
 	): any => {
 		const tracer = typeof getTracer === 'function' ? getTracer() : undefined
-		console.log('tracer', tracer)
 		if (!tracer) {
 			const noopSpan = getNoopSpan()
 
