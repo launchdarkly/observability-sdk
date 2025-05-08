@@ -128,6 +128,7 @@ const runTestSpanScenarios = (scenarios: SpanTestScenario[]) => {
 			it(`${scenario.description} - ${samplerCase.type}`, () => {
 				const config = scenario.samplingConfig as SamplingConfig
 				const sampler = new CustomSampler(config, samplerFn)
+				expect(sampler.isSamplingEnabled()).toBe(true)
 
 				const mockSpan = createMockSpan({
 					name: scenario.inputSpan.name,
@@ -159,6 +160,7 @@ const runTestLogScenarios = (scenarios: LogTestScenario[]) => {
 			it(`${scenario.description} - ${samplerCase.type}`, () => {
 				const config = scenario.samplingConfig as SamplingConfig
 				const sampler = new CustomSampler(config, samplerFn)
+				expect(sampler.isSamplingEnabled()).toBe(true)
 
 				const baseAttributes = scenario.inputLog.attributes || {}
 				const mergedAttributes = {
@@ -217,4 +219,9 @@ it('should get approximately the correct number of samples', () => {
 	expect(sampled).toBeLessThan(upperBound)
 	expect(notSampled).toBeGreaterThan(lowerBound)
 	expect(notSampled).toBeLessThan(upperBound)
+})
+
+it('should return false if sampling is not enabled', () => {
+	const sampler = new CustomSampler(undefined)
+	expect(sampler.isSamplingEnabled()).toBe(false)
 })

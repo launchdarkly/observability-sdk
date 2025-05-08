@@ -1,6 +1,6 @@
 import { Attributes, AttributeValue } from '@opentelemetry/api'
 import { ReadableSpan, TimedEvent } from '@opentelemetry/sdk-trace-base'
-import { Sampler, SamplingResult } from './Sampler'
+import { ExportSampler, SamplingResult } from './ExportSampler'
 import {
 	LogSamplingConfig,
 	SamplingConfig,
@@ -62,7 +62,7 @@ export function defaultSampler(ratio: number) {
 /**
  * Custom sampler that uses a sampling configuration to determine if a span should be sampled.
  */
-export class CustomSampler implements Sampler {
+export class CustomSampler implements ExportSampler {
 	private regexCache: RegexCache = new Map()
 
 	/**
@@ -73,6 +73,13 @@ export class CustomSampler implements Sampler {
 		private readonly config: Maybe<SamplingConfig> | undefined,
 		private readonly sampler: (ratio: number) => boolean = defaultSampler,
 	) {}
+
+	isSamplingEnabled(): boolean {
+		if (this.config?.logs?.length || this.config?.spans?.length) {
+			return true
+		}
+		return false
+	}
 
 	shouldSample(span: ReadableSpan): SamplingResult {
 		// Logs are encoded into special spans, so process those special spans using the log rules.

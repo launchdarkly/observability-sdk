@@ -53,6 +53,7 @@ import {
 import { IntegrationClient } from '../../integrations'
 import { LD_METRIC_NAME_DOCUMENT_LOAD } from '../../integrations/launchdarkly'
 import { Maybe, SamplingConfig } from 'client/graph/generated/operations'
+import { CustomSampler } from './sampling/CustomSampler'
 
 export type BrowserTracingConfig = {
 	sampling?: Maybe<SamplingConfig>
@@ -110,7 +111,7 @@ export const setupBrowserTracing = (config: BrowserTracingConfig) => {
 	}
 	const exporter = new OTLPTraceExporterBrowserWithXhrRetry(
 		exporterOptions,
-		config.sampling,
+		new CustomSampler(config.sampling),
 	)
 
 	const spanProcessor = new CustomBatchSpanProcessor(exporter, {
