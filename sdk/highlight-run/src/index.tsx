@@ -130,7 +130,9 @@ const H: HighlightPublicInterface = {
 				sessionSecureID,
 			}
 
-			highlight_obj = new Highlight(client_options, first_load_listeners)
+			highlight_obj =
+				highlight_obj ??
+				new Highlight(client_options, first_load_listeners)
 			initializeFetchListener()
 			initializeWebSocketListener()
 			if (!options?.manualStart) {

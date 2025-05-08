@@ -69,6 +69,7 @@ describe('should work outside of the browser in unit test', () => {
 		Firstload.__testing.setHighlightObj({
 			ready: true,
 			sessionData,
+			initialize: vi.fn(),
 		})
 		highlight.init('1', { backendUrl })
 
@@ -81,6 +82,7 @@ describe('should work outside of the browser in unit test', () => {
 		Firstload.__testing.setHighlightObj({
 			ready: true,
 			sessionData,
+			initialize: vi.fn(),
 		})
 		highlight.init('1', { backendUrl })
 
