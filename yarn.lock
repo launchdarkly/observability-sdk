@@ -25083,6 +25083,7 @@ __metadata:
     "@graphql-codegen/typescript": "npm:^4.0.1"
     "@graphql-codegen/typescript-graphql-request": "npm:^6.0.1"
     "@graphql-codegen/typescript-operations": "npm:^4.0.1"
+    "@launchdarkly/js-client-sdk": "npm:^0.6.0"
     "@opentelemetry/api": "npm:^1.9.0"
     "@opentelemetry/exporter-metrics-otlp-http": "npm:>=0.57.1"
     "@opentelemetry/exporter-trace-otlp-http": "npm:>=0.57.1"
