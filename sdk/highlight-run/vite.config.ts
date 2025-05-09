@@ -19,10 +19,15 @@ export default defineConfig({
 	build: {
 		target: 'es6',
 		lib: {
-			formats: ['es', 'umd'],
-			entry: resolvePath(__dirname, 'src/index.tsx'),
-			name: 'H',
-			fileName: 'index',
+			formats: ['es'],
+			entry: {
+				index: resolvePath(__dirname, 'src/index.tsx'),
+				record: resolvePath(__dirname, 'src/plugins/record.ts'),
+				observe: resolvePath(__dirname, 'src/plugins/observe.ts'),
+				LDRecord: resolvePath(__dirname, 'src/sdk/LDRecord.ts'),
+				LDObserve: resolvePath(__dirname, 'src/sdk/LDObserve.ts'),
+			},
+			fileName: (_, entryName) => `${entryName}.js`,
 		},
 		minify: true,
 		sourcemap: true,

@@ -1,4 +1,5 @@
 import * as api from '@opentelemetry/api'
+import { Span } from '@opentelemetry/api'
 import {
 	CompositePropagator,
 	W3CBaggagePropagator,
@@ -53,6 +54,8 @@ import {
 import { IntegrationClient } from '../../integrations'
 import { LD_METRIC_NAME_DOCUMENT_LOAD } from '../../integrations/launchdarkly'
 
+export type Callback = (span?: Span) => any
+
 export type BrowserTracingConfig = {
 	projectId: string | number
 	sessionSecureId: string
@@ -73,6 +76,7 @@ let providers: {
 } = {}
 let otelConfig: BrowserTracingConfig | undefined
 const RECORD_ATTRIBUTE = 'highlight.record'
+export const LOG_SPAN_NAME = 'launchdarkly.js.log'
 
 export const setupBrowserTracing = (config: BrowserTracingConfig) => {
 	if (providers.tracerProvider !== undefined) {

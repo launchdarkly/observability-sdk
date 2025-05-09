@@ -22,20 +22,21 @@
 			"url": "https://github.com/launchdarkly/observability-sdk.git"
 		}
 	},
-	"type": "module",
-	"main": "./dist/index.js",
-	"module": "./dist/index.js",
-	"unpkg": "./dist/index.umd.js",
-	"jsdelivr": "./dist/index.umd.js",
-	"types": "./dist/index.d.ts",
-	"exports": {
-		"types": "./dist/index.d.ts",
-		"unpkg": "./dist/index.umd.js",
-		"jsdelivr": "./dist/index.umd.js",
-		"import": "./dist/index.js",
-		"require": "./dist/index.js",
-		"default": "./dist/index.js"
+	"scripts": {
+		"typegen": "tsc",
+		"build": "vite build"
 	},
+	"devDependencies": {
+		"highlight.run": "workspace:*",
+		"rollup-plugin-visualizer": "^5.14.0",
+		"typescript": "^5.8.3",
+		"vite": "^6.3.4",
+		"vitest": "^3.1.2"
+	},
+	"type": "module",
+	"main": "./dist/session-replay.js",
+	"module": "./dist/session-replay.js",
+	"types": "./dist/index.d.ts",
 	"files": [
 		"dist"
 	],

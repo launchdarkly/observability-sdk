@@ -3,7 +3,8 @@ import type {
 	HighlightClassOptions,
 	RequestResponsePair,
 } from './client'
-import { FirstLoadListeners, GenerateSecureID } from './client'
+import { GenerateSecureID } from './client'
+import { FirstLoadListeners } from './client/listeners/first-load-listeners'
 import type {
 	HighlightOptions,
 	HighlightPublicInterface,
@@ -71,10 +72,9 @@ interface HighlightWindow extends Window {
 	amplitude?: AmplitudeAPI
 	Intercom?: any
 }
+declare var window: HighlightWindow
 
 const READY_WAIT_LOOP_MS = 200
-
-declare var window: HighlightWindow
 
 let onHighlightReadyQueue: {
 	options?: OnHighlightReadyOptions
@@ -635,7 +635,6 @@ const H: HighlightPublicInterface = {
 	registerLD(client) {
 		// TODO(vkorolik): can only register one LD client for now
 		if (integrations.length) return
-		// TODO(vkorolik): consolidate once firstload/client are merged
 		// client integration necessary to track events from ErrorListener
 		H.onHighlightReady(() => {
 			highlight_obj.registerLD(client)

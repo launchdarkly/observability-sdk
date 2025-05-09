@@ -1,4 +1,4 @@
-import { getCorsUrlsPattern } from './index'
+import { getCorsUrlsPattern } from '../client/otel'
 
 describe('getCorsUrlsPattern', () => {
 	it('handles `tracingOrigins: false` correctly', () => {

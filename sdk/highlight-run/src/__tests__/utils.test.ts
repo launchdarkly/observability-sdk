@@ -2,7 +2,7 @@ import {
 	normalizeUrl,
 	shouldNetworkRequestBeRecorded,
 	shouldNetworkRequestBeTraced,
-} from './utils'
+} from '../client/listeners/network-listener/utils/utils'
 
 describe('normalizeUrl', () => {
 	vi.stubGlobal('location', {

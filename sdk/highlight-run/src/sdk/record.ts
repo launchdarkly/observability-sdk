@@ -9,32 +9,22 @@ import {
 	PushPayloadDocument,
 	PushPayloadMutationVariables,
 	Sdk,
-} from './graph/generated/operations'
-import { FirstLoadListeners } from './listeners/first-load-listeners'
-import { PathListener } from './listeners/path-listener'
+} from '../client/graph/generated/operations'
+import { PathListener } from '../client/listeners/path-listener'
 import {
-	AmplitudeIntegrationOptions,
-	ConsoleMethods,
 	DebugOptions,
 	MetricCategory,
 	MetricName,
-	MixpanelIntegrationOptions,
-	NetworkRecordingOptions,
 	SessionShortcutOptions,
-} from './types/client'
+} from '../client/types/client'
 import {
-	HighlightOptions,
-	HighlightPublicInterface,
-	Integration,
-	Metadata,
-	Metric,
+	type Metadata,
 	PrivacySettingOption,
-	RecordMetric,
 	SamplingStrategy,
-	SessionDetails,
+	type SessionDetails,
 	StartOptions,
-} from './types/types'
-import { determineMaskInputOptions } from './utils/privacy'
+} from '../client/types/types'
+import { determineMaskInputOptions } from '../client/utils/privacy'
 
 import {
 	FIRST_SEND_FREQUENCY,
@@ -43,132 +33,81 @@ import {
 	SEND_FREQUENCY,
 	SNAPSHOT_SETTINGS,
 	VISIBILITY_DEBOUNCE_MS,
-} from './constants/sessions'
-import { ReplayEventsInput } from './graph/generated/schemas'
-import { ClickListener } from './listeners/click-listener/click-listener'
-import { FocusListener } from './listeners/focus-listener/focus-listener'
-import {
-	JankListener,
-	JankPayload,
-} from './listeners/jank-listener/jank-listener'
-import { HighlightFetchWindow } from './listeners/network-listener/utils/fetch-listener'
-import { RequestResponsePair } from './listeners/network-listener/utils/models'
-import { PageVisibilityListener } from './listeners/page-visibility-listener'
-import {
-	PerformanceListener,
-	PerformancePayload,
-} from './listeners/performance-listener/performance-listener'
-import { SegmentIntegrationListener } from './listeners/segment-integration-listener'
-import SessionShortcutListener from './listeners/session-shortcut/session-shortcut-listener'
+} from '../client/constants/sessions'
+import { ReplayEventsInput } from '../client/graph/generated/schemas'
+import { ClickListener } from '../client/listeners/click-listener/click-listener'
+import { FocusListener } from '../client/listeners/focus-listener/focus-listener'
+import { PageVisibilityListener } from '../client/listeners/page-visibility-listener'
+import { SegmentIntegrationListener } from '../client/listeners/segment-integration-listener'
+import SessionShortcutListener from '../client/listeners/session-shortcut/session-shortcut-listener'
 import {
 	ViewportResizeListener,
 	type ViewportResizeListenerArgs,
-} from './listeners/viewport-resize-listener'
-import { WebVitalsListener } from './listeners/web-vitals-listener/web-vitals-listener'
+} from '../client/listeners/viewport-resize-listener'
+import { WebVitalsListener } from '../client/listeners/web-vitals-listener/web-vitals-listener'
 import {
 	NetworkPerformanceListener,
 	NetworkPerformancePayload,
-} from './listeners/network-listener/performance-listener'
-import { Logger } from './logger'
-import { BROWSER_METER_NAME, getTracer, setupBrowserTracing } from './otel'
+} from '../client/listeners/network-listener/performance-listener'
+import { Logger } from '../client/logger'
 import {
 	HighlightIframeMessage,
 	HighlightIframeReponse,
 	IFRAME_PARENT_READY,
 	IFRAME_PARENT_RESPONSE,
-} from './types/iframe'
+} from '../client/types/iframe'
+import { Source } from '../client/types/shared-types'
+import { getSimpleSelector } from '../client/utils/dom'
+import { getGraphQLRequestWrapper } from '../client/utils/graph'
 import {
-	ConsoleMessage,
-	ErrorMessage,
-	ErrorMessageType,
-	Source,
-} from './types/shared-types'
-import { getSimpleSelector } from './utils/dom'
-import { getGraphQLRequestWrapper } from './utils/graph'
-import { clearHighlightLogs, getHighlightLogs } from './utils/highlight-logging'
-import { getPerformanceMethods } from './utils/performance/performance'
-import { GenerateSecureID } from './utils/secure-id'
+	clearHighlightLogs,
+	getHighlightLogs,
+} from '../client/utils/highlight-logging'
+import { getPerformanceMethods } from '../client/utils/performance/performance'
+import { GenerateSecureID } from '../client/utils/secure-id'
 import {
 	getPreviousSessionData,
 	SessionData,
 	setSessionData,
 	setSessionSecureID,
-} from './utils/sessionStorage/highlightSession'
-import { SESSION_STORAGE_KEYS } from './utils/sessionStorage/sessionStorageKeys'
+} from '../client/utils/sessionStorage/highlightSession'
+import { SESSION_STORAGE_KEYS } from '../client/utils/sessionStorage/sessionStorageKeys'
 import {
 	getItem,
 	LocalStorageKeys,
 	removeItem,
-	setCookieWriteEnabled,
 	setItem,
-	setStorageMode,
-} from './utils/storage'
-import { getDefaultDataURLOptions } from './utils/utils'
-import type { HighlightClientRequestWorker } from './workers/highlight-client-worker'
-import HighlightClientWorker from './workers/highlight-client-worker?worker&inline'
-import { MessageType, PropertyType } from './workers/types'
-import { parseError } from './utils/errors'
-import {
-	Attributes,
-	Counter,
-	Gauge,
-	Histogram,
-	metrics,
-	UpDownCounter,
-} from '@opentelemetry/api'
+} from '../client/utils/storage'
+import { getDefaultDataURLOptions } from '../client/utils/utils'
+import type { HighlightClientRequestWorker } from '../client/workers/highlight-client-worker'
+import HighlightClientWorker from '../client/workers/highlight-client-worker?worker&inline'
+import { MessageType, PropertyType } from '../client/workers/types'
+import { Attributes } from '@opentelemetry/api'
 import { IntegrationClient } from '../integrations'
+import { Record } from '../api/record'
+import { HighlightWarning } from './util'
+import type { HighlightClassOptions, LDClientMin } from '../client'
+import { Highlight } from '../client'
 import { LaunchDarklyIntegration } from '../integrations/launchdarkly'
-import { LDClientMin } from '../integrations/launchdarkly/types/LDClient'
-import { createLog, defaultLogOptions } from './listeners/console-listener'
+import { LDObserve } from './LDObserve'
+import { LDPluginEnvironmentMetadata } from '../plugins/plugin'
+import { Hook } from '../integrations/launchdarkly'
+import { RecordOptions } from '../client/types/record'
 
-export const HighlightWarning = (context: string, msg: any) => {
-	console.warn(`Highlight Warning: (${context}): `, { output: msg })
+interface HighlightWindow extends Window {
+	Highlight: Highlight
+	Intercom?: any
+	electron?: {
+		ipcRenderer: {
+			on: (channel: string, listener: (...args: any[]) => void) => {}
+		}
+	}
+	Cypress?: any
 }
 
-export type HighlightClassOptions = {
-	organizationID: number | string
-	debug?: boolean | DebugOptions
-	backendUrl?: string
-	tracingOrigins?: boolean | (string | RegExp)[]
-	disableNetworkRecording?: boolean
-	networkRecording?: boolean | NetworkRecordingOptions
-	disableBackgroundRecording?: boolean
-	disableConsoleRecording?: boolean
-	disableSessionRecording?: boolean
-	reportConsoleErrors?: boolean
-	consoleMethodsToRecord?: ConsoleMethods[]
-	privacySetting?: PrivacySettingOption
-	enableSegmentIntegration?: boolean
-	enableCanvasRecording?: boolean
-	enablePerformanceRecording?: boolean
-	enablePromisePatch?: boolean
-	samplingStrategy?: SamplingStrategy
-	inlineImages?: boolean
-	inlineVideos?: boolean
-	inlineStylesheet?: boolean
-	recordCrossOriginIframe?: boolean
-	firstloadVersion?: string
-	environment?: 'development' | 'production' | 'staging' | string
-	appVersion?: string
-	serviceName?: string
-	sessionShortcut?: SessionShortcutOptions
-	sessionSecureID: string // Introduced in firstLoad 3.0.1
-	storageMode?: 'sessionStorage' | 'localStorage'
-	sessionCookie?: true
-	sendMode?: 'webworker' | 'local'
-	otlpEndpoint?: HighlightOptions['otlpEndpoint']
-	otel?: HighlightOptions['otel']
-}
+declare var window: HighlightWindow
 
-/**
- * Subset of HighlightClassOptions that is stored with the session. These fields are stored for debugging purposes.
- */
-type HighlightClassOptionsInternal = Omit<
-	HighlightClassOptions,
-	'firstloadVersion'
->
-
-export class Highlight {
+export class RecordSDK implements Record {
 	options!: HighlightClassOptions
 	/** Determines if the client is running on a Highlight property (e.g. frontend). */
 	isRunningOnHighlight!: boolean
@@ -184,7 +123,6 @@ export class Highlight {
 	enableSegmentIntegration!: boolean
 	privacySetting!: PrivacySettingOption
 	enableCanvasRecording!: boolean
-	enablePerformanceRecording!: boolean
 	samplingStrategy!: SamplingStrategy
 	inlineImages!: boolean
 	inlineVideos!: boolean
@@ -198,12 +136,11 @@ export class Highlight {
 	appVersion!: string | undefined
 	serviceName!: string
 	_worker!: HighlightClientRequestWorker
-	_optionsInternal!: HighlightClassOptionsInternal
+	_optionsInternal!: Omit<RecordOptions, 'firstloadVersion'>
 	_backendUrl!: string
 	_recordingStartTime!: number
 	_isOnLocalHost!: boolean
 	_onToggleFeedbackFormVisibility!: () => void
-	_firstLoadListeners!: FirstLoadListeners
 	_isCrossOriginIframe!: boolean
 	_eventBytesSinceSnapshot!: number
 	_lastSnapshotTime!: number
@@ -214,27 +151,9 @@ export class Highlight {
 	reloaded!: boolean
 	_hasPreviouslyInitialized!: boolean
 	_recordStop!: listenerHandler | undefined
-	_gauges: Map<string, Gauge> = new Map<string, Gauge>()
-	_counters: Map<string, Counter> = new Map<string, Counter>()
-	_histograms: Map<string, Histogram> = new Map<string, Histogram>()
-	_up_down_counters: Map<string, UpDownCounter> = new Map<
-		string,
-		UpDownCounter
-	>()
 	_integrations: IntegrationClient[] = []
 
-	static create(options: HighlightClassOptions): Highlight {
-		return new Highlight(options)
-	}
-
-	constructor(
-		options: HighlightClassOptions,
-		firstLoadListeners?: FirstLoadListeners,
-	) {
-		if (!options.sessionSecureID) {
-			// Firstload versions before 3.0.1 did not have this property
-			options.sessionSecureID = GenerateSecureID()
-		}
+	constructor(options: HighlightClassOptions) {
 		this.options = options
 		if (typeof this.options?.debug === 'boolean') {
 			this.debugOptions = this.options.debug
@@ -244,14 +163,6 @@ export class Highlight {
 			this.debugOptions = this.options?.debug ?? {}
 		}
 		this.logger = new Logger(this.debugOptions.clientInteractions)
-		if (options.storageMode) {
-			this.logger.log(
-				`initializing in ${options.storageMode} session mode`,
-			)
-			setStorageMode(options.storageMode)
-		}
-		setCookieWriteEnabled(!!options?.sessionCookie)
-
 		this._worker =
 			new HighlightClientWorker() as HighlightClientRequestWorker
 		this._worker.onmessage = (e) => {
@@ -278,7 +189,7 @@ export class Highlight {
 					'Stopping recording due to worker failure',
 					e.data.response,
 				)
-				this.stopRecording(false)
+				this.stop(false)
 			}
 		}
 
@@ -310,9 +221,6 @@ export class Highlight {
 		// these should not be in initMembers since we want them to
 		// persist across session resets
 		this._hasPreviouslyInitialized = false
-		// Old firstLoad versions (Feb 2022) do not pass in FirstLoadListeners, so we have to fallback to creating it
-		this._firstLoadListeners =
-			firstLoadListeners || new FirstLoadListeners(this.options)
 		try {
 			// throws if parent is cross-origin
 			if (window.parent.document) {
@@ -355,9 +263,8 @@ export class Highlight {
 		this.sessionData.sessionSecureID = GenerateSecureID()
 		this.sessionData.sessionStartTime = Date.now()
 		this.options.sessionSecureID = this.sessionData.sessionSecureID
-		this.stopRecording()
-		this._firstLoadListeners = new FirstLoadListeners(this.options)
-		await this.initialize()
+		this.stop()
+		await this.start()
 		if (user_identifier && user_object) {
 			this.identify(user_identifier, user_object)
 		}
@@ -377,8 +284,6 @@ export class Highlight {
 		this.enableSegmentIntegration = !!options.enableSegmentIntegration
 		this.privacySetting = options.privacySetting ?? 'default'
 		this.enableCanvasRecording = options.enableCanvasRecording ?? false
-		this.enablePerformanceRecording =
-			options.enablePerformanceRecording ?? true
 		// default to inlining stylesheets/images locally to help with recording accuracy
 		this.inlineImages = options.inlineImages ?? this._isOnLocalHost
 		this.inlineVideos = options.inlineVideos ?? this._isOnLocalHost
@@ -471,76 +376,10 @@ export class Highlight {
 				source,
 			},
 		})
-		for (const integration of this._integrations) {
-			integration.identify(
-				this.sessionData.sessionSecureID,
-				user_identifier,
-				user_object,
-				source,
-			)
-		}
 	}
 
-	log(message: any, level: string, metadata?: Attributes) {
-		this._firstLoadListeners.messages.push(
-			createLog(level, defaultLogOptions, message, metadata),
-		)
-	}
-
-	pushCustomError(message: string, payload?: string) {
-		return this.consumeCustomError(new Error(message), undefined, payload)
-	}
-
-	consumeCustomError(error: Error, message?: string, payload?: string) {
-		let obj = {}
-		if (payload) {
-			try {
-				obj = { ...JSON.parse(payload), ...obj }
-			} catch (e) {}
-		}
-		return this.consumeError(error, {
-			message,
-			payload: obj,
-		})
-	}
-
-	consumeError(
-		error: Error,
-		{
-			message,
-			payload,
-			source,
-			type,
-		}: {
-			message?: string
-			payload?: object
-			source?: string
-			type?: ErrorMessageType
-		},
-	) {
-		if (error.cause) {
-			payload = { ...payload, 'exception.cause': error.cause }
-		}
-		let event = message ? message + ':' + error.message : error.message
-		if (type === 'React.ErrorBoundary') {
-			event = 'ErrorBoundary: ' + event
-		}
-		const res = parseError(error)
-		const errorMsg: ErrorMessage = {
-			event,
-			type: type ?? 'custom',
-			url: window.location.href,
-			source: source ?? '',
-			lineNumber: res[0]?.lineNumber ? res[0]?.lineNumber : 0,
-			columnNumber: res[0]?.columnNumber ? res[0]?.columnNumber : 0,
-			stackTrace: res,
-			timestamp: new Date().toISOString(),
-			payload: JSON.stringify(payload),
-		}
-		this._firstLoadListeners.errors.push(errorMsg)
-		for (const integration of this._integrations) {
-			integration.error(this.sessionData.sessionSecureID, errorMsg)
-		}
+	track(event: string, metadata?: Metadata) {
+		this.addProperties({ ...metadata, event: event })
 	}
 
 	addProperties(properties_obj = {}, typeArg?: PropertyType) {
@@ -554,13 +393,6 @@ export class Highlight {
 				delete obj[key]
 			}
 		})
-		for (const integration of this._integrations) {
-			integration.track(this.sessionData.sessionSecureID, {
-				sessionSecureID: this.sessionData.sessionSecureID,
-				propertyType: typeArg,
-				...properties_obj,
-			})
-		}
 		this._worker.postMessage({
 			message: {
 				type: MessageType.Properties,
@@ -570,13 +402,12 @@ export class Highlight {
 		})
 	}
 
-	async initialize(options?: StartOptions): Promise<undefined> {
+	async start(options?: StartOptions) {
 		if (
 			(navigator?.webdriver && !window.Cypress) ||
 			navigator?.userAgent?.includes('Googlebot') ||
 			navigator?.userAgent?.includes('AdsBot')
 		) {
-			this._firstLoadListeners?.stopListening()
 			return
 		}
 
@@ -700,24 +531,11 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 					recordingStartTime: this._recordingStartTime,
 				},
 			})
-			for (const integration of this._integrations) {
-				integration.init(this.sessionData.sessionSecureID)
-			}
 
 			if (this.sessionData.userIdentifier) {
 				this.identify(
 					this.sessionData.userIdentifier,
 					this.sessionData.userObject,
-				)
-			}
-
-			if (!this._firstLoadListeners.isListening()) {
-				this._firstLoadListeners.startListening()
-			} else if (!this._firstLoadListeners.hasNetworkRecording) {
-				// for firstload versions < 3.0. even if they are listening, add network listeners
-				FirstLoadListeners.setupNetworkListener(
-					this._firstLoadListeners,
-					this.options,
 				)
 			}
 
@@ -745,11 +563,13 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 
 			const { getDeviceDetails } = getPerformanceMethods()
 			if (getDeviceDetails) {
-				this.recordGauge({
+				LDObserve.recordGauge({
 					name: MetricName.DeviceMemory,
 					value: getDeviceDetails().deviceMemory,
-					category: MetricCategory.Device,
-					group: window.location.href,
+					attributes: {
+						category: MetricCategory.Device,
+						group: window.location.href,
+					},
 				})
 			}
 
@@ -873,13 +693,13 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 		this.logger.log(`Detected window ${hidden ? 'hidden' : 'visible'}.`)
 		if (!hidden) {
 			if (this.options.disableBackgroundRecording) {
-				await this.initialize()
+				await this.start()
 			}
 			this.addCustomEvent('TabHidden', false)
 		} else {
 			this.addCustomEvent('TabHidden', true)
 			if (this.options.disableBackgroundRecording) {
-				this.stopRecording()
+				this.stop()
 			}
 		}
 	}
@@ -1020,11 +840,13 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 			this.listeners.push(
 				WebVitalsListener((data) => {
 					const { name, value } = data
-					this.recordGauge({
+					LDObserve.recordGauge({
 						name,
 						value,
-						group: window.location.href,
-						category: MetricCategory.WebVital,
+						attributes: {
+							group: window.location.href,
+							category: MetricCategory.WebVital,
+						},
 					})
 				}),
 			)
@@ -1032,35 +854,28 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 			this.listeners.push(
 				NetworkPerformanceListener(
 					(payload: NetworkPerformancePayload) => {
-						const tags: { name: string; value: string }[] = []
+						const attributes: Attributes = {
+							category: MetricCategory.Performance,
+							group: window.location.href,
+						}
 						if (payload.saveData !== undefined) {
-							tags.push({
-								name: 'saveData',
-								value: payload.saveData.toString(),
-							})
+							attributes['saveData'] = payload.saveData.toString()
 						}
 						if (payload.effectiveType !== undefined) {
-							tags.push({
-								name: 'effectiveType',
-								value: payload.effectiveType.toString(),
-							})
+							attributes['effectiveType'] =
+								payload.effectiveType.toString()
 						}
 						if (payload.type !== undefined) {
-							tags.push({
-								name: 'type',
-								value: payload.type.toString(),
-							})
+							attributes['type'] = payload.type.toString()
 						}
 						Object.entries(payload).forEach(
 							([name, value]) =>
 								value &&
 								typeof value === 'number' &&
-								this.recordGauge({
+								LDObserve.recordGauge({
 									name,
 									value: value as number,
-									category: MetricCategory.Performance,
-									group: window.location.href,
-									tags,
+									attributes,
 								}),
 						)
 					},
@@ -1075,37 +890,6 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 						'_blank',
 					)
 				})
-			}
-
-			if (this.enablePerformanceRecording) {
-				this.listeners.push(
-					PerformanceListener((payload: PerformancePayload) => {
-						this.addCustomEvent('Performance', stringify(payload))
-						Object.entries(payload)
-							.filter(([name]) => name !== 'relativeTimestamp')
-							.forEach(
-								([name, value]) =>
-									value &&
-									this.recordGauge({
-										name,
-										value,
-										category: MetricCategory.Performance,
-										group: window.location.href,
-									}),
-							)
-					}, this._recordingStartTime),
-				)
-				this.listeners.push(
-					JankListener((payload: JankPayload) => {
-						this.addCustomEvent('Jank', stringify(payload))
-						this.recordGauge({
-							name: 'Jank',
-							value: payload.jankAmount,
-							category: MetricCategory.WebVital,
-							group: payload.querySelector,
-						})
-					}, this._recordingStartTime),
-				)
 			}
 
 			// only do this once, since we want to keep the visibility listener attached even when recoding is stopped
@@ -1182,102 +966,45 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 		availHeight,
 		availWidth,
 	}: ViewportResizeListenerArgs) {
-		this.recordGauge({
+		LDObserve.recordGauge({
 			name: MetricName.ViewportHeight,
 			value: height,
-			category: MetricCategory.Device,
-			group: window.location.href,
+			attributes: {
+				category: MetricCategory.Device,
+				group: window.location.href,
+			},
 		})
-		this.recordGauge({
+		LDObserve.recordGauge({
 			name: MetricName.ViewportWidth,
 			value: width,
-			category: MetricCategory.Device,
-			group: window.location.href,
+			attributes: {
+				category: MetricCategory.Device,
+				group: window.location.href,
+			},
 		})
-		this.recordGauge({
+		LDObserve.recordGauge({
 			name: MetricName.ScreenHeight,
 			value: availHeight,
-			category: MetricCategory.Device,
-			group: window.location.href,
+			attributes: {
+				category: MetricCategory.Device,
+				group: window.location.href,
+			},
 		})
-		this.recordGauge({
+		LDObserve.recordGauge({
 			name: MetricName.ScreenWidth,
 			value: availWidth,
-			category: MetricCategory.Device,
-			group: window.location.href,
+			attributes: {
+				category: MetricCategory.Device,
+				group: window.location.href,
+			},
 		})
-		this.recordGauge({
+		LDObserve.recordGauge({
 			name: MetricName.ViewportArea,
 			value: height * width,
-			category: MetricCategory.Device,
-			group: window.location.href,
-		})
-	}
-
-	recordGauge(metric: RecordMetric) {
-		const meter = metrics.getMeter(BROWSER_METER_NAME)
-		let gauge = this._gauges.get(metric.name)
-		if (!gauge) {
-			gauge = meter.createGauge(metric.name)
-			this._gauges.set(metric.name, gauge)
-		}
-		gauge.record(metric.value, {
-			...metric.tags?.reduce((a, b) => ({ ...a, [b.name]: b.value }), {}),
-			group: metric.group,
-			category: metric.category,
-			'highlight.session_id': this.sessionData.sessionSecureID,
-		})
-		for (const integration of this._integrations) {
-			integration.recordGauge(this.sessionData.sessionSecureID, metric)
-		}
-	}
-
-	recordCount(metric: RecordMetric) {
-		const meter = metrics.getMeter(BROWSER_METER_NAME)
-		let counter = this._counters.get(metric.name)
-		if (!counter) {
-			counter = meter.createCounter(metric.name)
-			this._counters.set(metric.name, counter)
-		}
-		counter.add(metric.value, {
-			...metric.tags?.reduce((a, b) => ({ ...a, [b.name]: b.value }), {}),
-			group: metric.group,
-			category: metric.category,
-			'highlight.session_id': this.sessionData.sessionSecureID,
-		})
-	}
-
-	recordIncr(metric: Omit<RecordMetric, 'value'>) {
-		this.recordCount({ ...metric, value: 1 })
-	}
-
-	recordHistogram(metric: RecordMetric) {
-		const meter = metrics.getMeter(BROWSER_METER_NAME)
-		let histogram = this._histograms.get(metric.name)
-		if (!histogram) {
-			histogram = meter.createHistogram(metric.name)
-			this._histograms.set(metric.name, histogram)
-		}
-		histogram.record(metric.value, {
-			...metric.tags?.reduce((a, b) => ({ ...a, [b.name]: b.value }), {}),
-			group: metric.group,
-			category: metric.category,
-			'highlight.session_id': this.sessionData.sessionSecureID,
-		})
-	}
-
-	recordUpDownCounter(metric: RecordMetric) {
-		const meter = metrics.getMeter(BROWSER_METER_NAME)
-		let up_down_counter = this._up_down_counters.get(metric.name)
-		if (!up_down_counter) {
-			up_down_counter = meter.createUpDownCounter(metric.name)
-			this._up_down_counters.set(metric.name, up_down_counter)
-		}
-		up_down_counter.add(metric.value, {
-			...metric.tags?.reduce((a, b) => ({ ...a, [b.name]: b.value }), {}),
-			group: metric.group,
-			category: metric.category,
-			'highlight.session_id': this.sessionData.sessionSecureID,
+			attributes: {
+				category: MetricCategory.Device,
+				group: window.location.href,
+			},
 		})
 	}
 
@@ -1285,7 +1012,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 	 * Stops Highlight from recording.
 	 * @param manual The end user requested to stop recording.
 	 */
-	stopRecording(manual?: boolean) {
+	stop(manual?: boolean) {
 		this.manualStopped = !!manual
 		if (this.manualStopped) {
 			this.addCustomEvent(
@@ -1302,10 +1029,6 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 		// stop all other event listeners, to be restarted on initialize()
 		this.listeners.forEach((stop) => stop())
 		this.listeners = []
-	}
-
-	getCurrentSessionTimestamp() {
-		return this._recordingStartTime
 	}
 
 	/**
@@ -1440,16 +1163,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 	}: {
 		sendFn?: (payload: PushPayloadMutationVariables) => Promise<number>
 	}) {
-		const resources = FirstLoadListeners.getRecordedNetworkResources(
-			this._firstLoadListeners,
-			this._recordingStartTime,
-		)
-		const webSocketEvents = FirstLoadListeners.getRecordedWebSocketEvents(
-			this._firstLoadListeners,
-		)
 		const events = [...this.events]
-		const messages = [...this._firstLoadListeners.messages]
-		const errors = [...this._firstLoadListeners.errors]
 
 		// if it is time to take a full snapshot,
 		// ensure the snapshot is at the beginning of the next payload
@@ -1466,7 +1180,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 		}
 
 		this.logger.log(
-			`Sending: ${events.length} events, ${messages.length} messages, ${resources.length} network resources, ${errors.length} errors \nTo: ${this._backendUrl}\nOrg: ${this.organizationID}\nSessionSecureID: ${this.sessionData.sessionSecureID}`,
+			`Sending: ${events.length} events, \nTo: ${this._backendUrl}\nOrg: ${this.organizationID}\nSessionSecureID: ${this.sessionData.sessionSecureID}`,
 		)
 		const highlightLogs = getHighlightLogs()
 		if (sendFn) {
@@ -1474,12 +1188,12 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 				session_secure_id: this.sessionData.sessionSecureID,
 				payload_id: (this.sessionData.payloadID++).toString(),
 				events: { events } as ReplayEventsInput,
-				messages: stringify({ messages: messages }),
-				resources: JSON.stringify({ resources: resources }),
+				messages: stringify({ messages: [] }),
+				resources: JSON.stringify({ resources: [] }),
 				web_socket_events: JSON.stringify({
-					webSocketEvents: webSocketEvents,
+					webSocketEvents: [],
 				}),
-				errors,
+				errors: [],
 				is_beacon: false,
 				has_session_unloaded: this.hasSessionUnloaded,
 				highlight_logs: highlightLogs || undefined,
@@ -1490,11 +1204,11 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 					type: MessageType.AsyncEvents,
 					id: this.sessionData.payloadID++,
 					events,
-					messages,
-					errors,
-					resourcesString: JSON.stringify({ resources: resources }),
+					messages: [],
+					errors: [],
+					resourcesString: JSON.stringify({ resources: [] }),
 					webSocketEventsString: JSON.stringify({
-						webSocketEvents: webSocketEvents,
+						webSocketEvents: [],
 					}),
 					hasSessionUnloaded: this.hasSessionUnloaded,
 					highlightLogs: highlightLogs,
@@ -1503,10 +1217,6 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 		}
 		setSessionData(this.sessionData)
 
-		// If sendFn throws an exception, the data below will not be cleared, and it will be re-uploaded on the next PushPayload.
-		FirstLoadListeners.clearRecordedNetworkResources(
-			this._firstLoadListeners,
-		)
 		// We are creating a weak copy of the events. rrweb could have pushed more events to this.events while we send the request with the events as a payload.
 		// Originally, we would clear this.events but this could lead to a race condition.
 		// Example Scenario:
@@ -1516,11 +1226,6 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 		// 4. this.events is cleared (we lose M events)
 		this.events = this.events.slice(events.length)
 
-		this._firstLoadListeners.messages =
-			this._firstLoadListeners.messages.slice(messages.length)
-		this._firstLoadListeners.errors = this._firstLoadListeners.errors.slice(
-			errors.length,
-		)
 		clearHighlightLogs(highlightLogs)
 	}
 
@@ -1538,53 +1243,45 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 		this._lastSnapshotTime = new Date().getTime()
 	}
 
-	registerLD(client: LDClientMin) {
-		// TODO(vkorolik): can only register one LD client for now
-		if (this._integrations.length) return
-		this._integrations.push(new LaunchDarklyIntegration(client))
+	register(client: LDClientMin, metadata: LDPluginEnvironmentMetadata) {
+		this._integrations.push(new LaunchDarklyIntegration(client, metadata))
 	}
-}
 
-interface HighlightWindow extends Window {
-	Highlight: Highlight
-	Intercom?: any
-	electron?: {
-		ipcRenderer: {
-			on: (channel: string, listener: (...args: any[]) => void) => {}
+	getHooks(metadata: LDPluginEnvironmentMetadata): Hook[] {
+		return this._integrations.flatMap((i) => i.getHooks?.(metadata) ?? [])
+	}
+
+	getRecordingState() {
+		return this?.state ?? 'NotRecording'
+	}
+
+	getSession() {
+		const secureID = this.sessionData.sessionSecureID
+		const sessionData = getPreviousSessionData(secureID)
+		if (!sessionData) {
+			return null
 		}
+
+		const baseUrl = `https://${HIGHLIGHT_URL}/${sessionData.projectID}/sessions/${secureID}`
+		if (!baseUrl) {
+			return null
+		}
+
+		const currentSessionTimestamp = sessionData?.sessionStartTime
+		if (!currentSessionTimestamp) {
+			return null
+		}
+
+		const now = new Date().getTime()
+		const url = new URL(baseUrl)
+		const urlWithTimestamp = new URL(baseUrl)
+		const relativeTimestamp = (now - this._recordingStartTime) / 1000
+		urlWithTimestamp.searchParams.set('ts', relativeTimestamp.toString())
+
+		return {
+			url: url.toString(),
+			urlWithTimestamp: urlWithTimestamp.toString(),
+			sessionSecureID: secureID,
+		} as SessionDetails
 	}
-	Cypress?: any
-}
-
-declare var window: HighlightWindow
-
-declare global {
-	interface Console {
-		defaultLog: any
-		defaultError: any
-		defaultWarn: any
-		defaultDebug: any
-	}
-}
-
-export {
-	GenerateSecureID,
-	getPreviousSessionData,
-	getTracer,
-	MetricCategory,
-	setupBrowserTracing,
-}
-export type {
-	AmplitudeIntegrationOptions,
-	ConsoleMessage,
-	HighlightFetchWindow,
-	HighlightOptions,
-	HighlightPublicInterface,
-	Integration,
-	LDClientMin,
-	Metadata,
-	Metric,
-	MixpanelIntegrationOptions,
-	RequestResponsePair,
-	SessionDetails,
 }

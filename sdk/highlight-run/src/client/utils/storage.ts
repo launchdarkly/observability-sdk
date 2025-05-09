@@ -1,6 +1,10 @@
 import Cookies from 'js-cookie'
 import { SESSION_PUSH_THRESHOLD } from '../constants/sessions'
 
+export enum LocalStorageKeys {
+	CLIENT_ID = 'highlightClientID',
+}
+
 type Mode = 'localStorage' | 'sessionStorage'
 
 let mode: Mode = 'localStorage'
