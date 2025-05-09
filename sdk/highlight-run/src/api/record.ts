@@ -1,16 +1,4 @@
-import type {
-	HighlightOptions,
-	PrivacySettingOption,
-	SamplingStrategy,
-	SessionDetails,
-	StartOptions,
-} from '../client/types/types'
-import type {
-	ConsoleMethods,
-	DebugOptions,
-	NetworkRecordingOptions,
-	SessionShortcutOptions,
-} from '../client/types/client'
+import type { SessionDetails, StartOptions } from '../client/types/types'
 import type { LDClientMin } from '../integrations/launchdarkly/types/LDClient'
 import type { LDPluginEnvironmentMetadata } from '../plugins/plugin'
 import { Hook } from '../integrations/launchdarkly'
@@ -39,39 +27,4 @@ export interface Record {
 		environmentMetadata: LDPluginEnvironmentMetadata,
 	): void
 	getHooks?(metadata: LDPluginEnvironmentMetadata): Hook[]
-}
-
-export type RecordOptions = {
-	organizationID: number | string
-	debug?: boolean | DebugOptions
-	backendUrl?: string
-	tracingOrigins?: boolean | (string | RegExp)[]
-	disableNetworkRecording?: boolean
-	networkRecording?: boolean | NetworkRecordingOptions
-	disableBackgroundRecording?: boolean
-	disableConsoleRecording?: boolean
-	disableSessionRecording?: boolean
-	reportConsoleErrors?: boolean
-	consoleMethodsToRecord?: ConsoleMethods[]
-	privacySetting?: PrivacySettingOption
-	enableSegmentIntegration?: boolean
-	enableCanvasRecording?: boolean
-	enablePerformanceRecording?: boolean
-	enablePromisePatch?: boolean
-	samplingStrategy?: SamplingStrategy
-	inlineImages?: boolean
-	inlineVideos?: boolean
-	inlineStylesheet?: boolean
-	recordCrossOriginIframe?: boolean
-	firstloadVersion?: string
-	environment?: 'development' | 'production' | 'staging' | string
-	appVersion?: string
-	serviceName?: string
-	sessionShortcut?: SessionShortcutOptions
-	sessionSecureID: string // Introduced in firstLoad 3.0.1
-	storageMode?: 'sessionStorage' | 'localStorage'
-	sessionCookie?: true
-	sendMode?: 'webworker' | 'local'
-	otlpEndpoint?: HighlightOptions['otlpEndpoint']
-	otel?: HighlightOptions['otel']
 }

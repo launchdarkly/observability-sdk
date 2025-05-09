@@ -84,7 +84,7 @@ import HighlightClientWorker from '../client/workers/highlight-client-worker?wor
 import { MessageType, PropertyType } from '../client/workers/types'
 import { Attributes } from '@opentelemetry/api'
 import { IntegrationClient } from '../integrations'
-import { Record, RecordOptions } from '../api/record'
+import { Record } from '../api/record'
 import { HighlightWarning } from './util'
 import type { HighlightClassOptions, LDClientMin } from '../client'
 import { Highlight } from '../client'
@@ -92,6 +92,7 @@ import { LaunchDarklyIntegration } from '../integrations/launchdarkly'
 import { LDObserve } from './LDObserve'
 import { LDPluginEnvironmentMetadata } from '../plugins/plugin'
 import { Hook } from '../integrations/launchdarkly'
+import { RecordOptions } from '../client/types/record'
 
 interface HighlightWindow extends Window {
 	Highlight: Highlight
