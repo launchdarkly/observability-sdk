@@ -1,7 +1,7 @@
 import type { ErrorMessage, Source } from '../client/types/shared-types'
 import type { RecordMetric } from '../client/types/types'
 import type { LDPluginEnvironmentMetadata } from '../plugins/plugin'
-import type { Hook } from './launchdarkly/types/Hooks'
+import type { Hook } from './launchdarkly'
 
 export interface IntegrationClient {
 	init(sessionSecureID: string): void

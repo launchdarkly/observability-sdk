@@ -1,12 +1,6 @@
 import { type HighlightClassOptions, LDClientMin } from '../client'
 import type { LDPlugin, LDPluginEnvironmentMetadata } from './plugin'
-import type {
-	Hook,
-	IdentifySeriesContext,
-	IdentifySeriesData,
-	IdentifySeriesResult,
-	TrackSeriesContext,
-} from '../integrations/launchdarkly/types/Hooks'
+import type { Hook } from '../integrations/launchdarkly'
 import { RecordSDK } from '../sdk/record'
 import firstloadVersion from '../__generated/version'
 import { setupMixpanelIntegration } from '../integrations/mixpanel'
@@ -79,11 +73,7 @@ export class Record extends Plugin<RecordOptions> implements LDPlugin {
 						name: '@launchdarkly/session-replay/hooks',
 					}
 				},
-				afterIdentify: (
-					hookContext: IdentifySeriesContext,
-					data: IdentifySeriesData,
-					_result: IdentifySeriesResult,
-				) => {
+				afterIdentify: (hookContext, data, _result) => {
 					for (const hook of this.record.getHooks?.(metadata) ?? []) {
 						hook.afterIdentify?.(hookContext, data, _result)
 					}
@@ -103,7 +93,7 @@ export class Record extends Plugin<RecordOptions> implements LDPlugin {
 					}
 					return data
 				},
-				afterTrack: (hookContext: TrackSeriesContext) => {
+				afterTrack: (hookContext) => {
 					for (const hook of this.record.getHooks?.(metadata) ?? []) {
 						hook.afterTrack?.(hookContext)
 					}

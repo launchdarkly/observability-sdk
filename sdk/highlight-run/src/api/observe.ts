@@ -4,7 +4,7 @@ import type { OTelMetric as Metric } from '../client/types/types'
 import type { ErrorMessageType } from '../client/types/shared-types'
 import { LDPluginEnvironmentMetadata } from '../plugins/plugin'
 import { ConsoleMethods } from '../client/types/client'
-import { Hook } from '../integrations/launchdarkly/types/Hooks'
+import { Hook } from '../integrations/launchdarkly'
 
 export interface Observe {
 	recordLog: (

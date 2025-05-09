@@ -25,7 +25,7 @@ import {
 	ErrorMessageType,
 } from '../client/types/shared-types'
 import { parseError } from '../client/utils/errors'
-import { LaunchDarklyIntegration } from '../integrations/launchdarkly'
+import { Hook, LaunchDarklyIntegration } from '../integrations/launchdarkly'
 import type { IntegrationClient } from '../integrations'
 import type { OTelMetric as Metric } from '../client/types/types'
 import { ConsoleMethods, MetricCategory } from '../client/types/client'
@@ -38,7 +38,6 @@ import {
 } from '../client/constants/errors'
 import { ErrorListener } from '../client/listeners/error-listener'
 import { LDPluginEnvironmentMetadata } from '../plugins/plugin'
-import { Hook } from '../integrations/launchdarkly/types/Hooks'
 import {
 	PerformanceListener,
 	PerformancePayload,

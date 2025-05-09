@@ -91,7 +91,7 @@ import { Highlight } from '../client'
 import { LaunchDarklyIntegration } from '../integrations/launchdarkly'
 import { LDObserve } from './LDObserve'
 import { LDPluginEnvironmentMetadata } from '../plugins/plugin'
-import { Hook } from '../integrations/launchdarkly/types/Hooks'
+import { Hook } from '../integrations/launchdarkly'
 
 interface HighlightWindow extends Window {
 	Highlight: Highlight

@@ -13,7 +13,7 @@ import type {
 } from '../client/types/client'
 import type { LDClientMin } from '../integrations/launchdarkly/types/LDClient'
 import type { LDPluginEnvironmentMetadata } from '../plugins/plugin'
-import { Hook } from '../integrations/launchdarkly/types/Hooks'
+import { Hook } from '../integrations/launchdarkly'
 
 export interface Record {
 	/**

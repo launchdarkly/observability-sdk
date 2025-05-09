@@ -16,6 +16,7 @@ import type {
 	LDEvaluationDetail,
 	LDMultiKindContext,
 } from '@launchdarkly/js-client-sdk'
+export type { Hook }
 
 export const FEATURE_FLAG_SCOPE = 'feature_flag'
 export const FEATURE_FLAG_ENV_ATTR = `${FEATURE_FLAG_SCOPE}.set.id`

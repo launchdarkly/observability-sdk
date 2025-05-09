@@ -1,5 +1,5 @@
 import type { LDClientMin } from '../integrations/launchdarkly/types/LDClient'
-import type { Hook } from '../integrations/launchdarkly/types/Hooks'
+import type { Hook } from '../integrations/launchdarkly'
 
 export interface LDPlugin {
 	getMetadata(): LDPluginMetadata

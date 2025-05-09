@@ -1,12 +1,6 @@
 import type { LDClientMin } from '../client'
 import type { LDPlugin, LDPluginEnvironmentMetadata } from './plugin'
-import type {
-	Hook,
-	IdentifySeriesContext,
-	IdentifySeriesData,
-	IdentifySeriesResult,
-	TrackSeriesContext,
-} from '../integrations/launchdarkly/types/Hooks'
+import type { Hook } from '../integrations/launchdarkly'
 import { Observe as ObserveAPI } from '../api/observe'
 import { ObserveSDK } from '../sdk/observe'
 import { LDObserve } from '../sdk/LDObserve'
@@ -87,11 +81,7 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 						name: '@launchdarkly/observability/hooks',
 					}
 				},
-				afterIdentify: (
-					hookContext: IdentifySeriesContext,
-					data: IdentifySeriesData,
-					_result: IdentifySeriesResult,
-				) => {
+				afterIdentify: (hookContext, data, _result) => {
 					for (const hook of this.observe.getHooks?.(metadata) ??
 						[]) {
 						hook.afterIdentify?.(hookContext, data, _result)
@@ -143,7 +133,7 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 
 					return data
 				},
-				afterTrack: (hookContext: TrackSeriesContext) => {
+				afterTrack: (hookContext) => {
 					for (const hook of this.observe.getHooks?.(metadata) ??
 						[]) {
 						hook.afterTrack?.(hookContext)
