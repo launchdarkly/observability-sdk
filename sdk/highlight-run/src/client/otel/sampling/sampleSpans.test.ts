@@ -3,6 +3,7 @@ import { ExportSampler, SamplingResult } from './ExportSampler'
 import { ReadableSpan } from '@opentelemetry/sdk-trace-base'
 import { SpanKind } from '@opentelemetry/api'
 import { sampleSpans } from './sampleSpans'
+import { Maybe, SamplingConfig } from 'client/graph/generated/operations'
 
 // Helper function to create a mock span
 const createMockSpan = (name: string, parentId?: string): ReadableSpan => {
@@ -43,13 +44,17 @@ class MockSampler implements ExportSampler {
 		private enabled: boolean = true,
 	) {}
 
+	setConfig(_config?: Maybe<SamplingConfig>): void {}
+
 	shouldSample(span: ReadableSpan): SamplingResult {
 		const spanId = span.spanContext().spanId
 		const shouldSample = this.mockResults[spanId] ?? true
 
 		return {
 			sample: shouldSample,
-			attributes: shouldSample ? { samplingRatio: 2 } : undefined,
+			attributes: this.mockResults[spanId]
+				? { samplingRatio: 2 }
+				: undefined,
 		}
 	}
 
@@ -107,6 +112,7 @@ it('should not apply sampling when sampling is disabled', () => {
 	const mockSampler = {
 		shouldSample: vi.fn(() => ({ sample: true })),
 		isSamplingEnabled: vi.fn(() => false),
+		setConfig: vi.fn(),
 	}
 
 	const spans = [createMockSpan('span-1'), createMockSpan('span-2')]

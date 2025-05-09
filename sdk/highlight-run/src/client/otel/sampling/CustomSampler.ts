@@ -64,15 +64,17 @@ export function defaultSampler(ratio: number) {
  */
 export class CustomSampler implements ExportSampler {
 	private regexCache: RegexCache = new Map()
-
+	private config: Maybe<SamplingConfig> | undefined
 	/**
 	 * @param config The sampling configuration.
 	 * @param sampler The sampler to use. This is intended to be used for testing purposes.
 	 */
 	constructor(
-		private readonly config: Maybe<SamplingConfig> | undefined,
 		private readonly sampler: (ratio: number) => boolean = defaultSampler,
 	) {}
+	setConfig(config?: Maybe<SamplingConfig>): void {
+		this.config = config
+	}
 
 	isSamplingEnabled(): boolean {
 		if (this.config?.logs?.length || this.config?.spans?.length) {

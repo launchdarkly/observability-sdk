@@ -127,7 +127,8 @@ const runTestSpanScenarios = (scenarios: SpanTestScenario[]) => {
 
 			it(`${scenario.description} - ${samplerCase.type}`, () => {
 				const config = scenario.samplingConfig as SamplingConfig
-				const sampler = new CustomSampler(config, samplerFn)
+				const sampler = new CustomSampler(samplerFn)
+				sampler.setConfig(config)
 				expect(sampler.isSamplingEnabled()).toBe(true)
 
 				const mockSpan = createMockSpan({
@@ -159,7 +160,8 @@ const runTestLogScenarios = (scenarios: LogTestScenario[]) => {
 
 			it(`${scenario.description} - ${samplerCase.type}`, () => {
 				const config = scenario.samplingConfig as SamplingConfig
-				const sampler = new CustomSampler(config, samplerFn)
+				const sampler = new CustomSampler(samplerFn)
+				sampler.setConfig(config)
 				expect(sampler.isSamplingEnabled()).toBe(true)
 
 				const baseAttributes = scenario.inputLog.attributes || {}

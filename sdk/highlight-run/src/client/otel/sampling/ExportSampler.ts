@@ -1,5 +1,6 @@
 import { Attributes } from '@opentelemetry/api'
 import { ReadableSpan } from '@opentelemetry/sdk-trace-base'
+import { Maybe, SamplingConfig } from '../../graph/generated/operations'
 
 export interface SamplingResult {
 	/**
@@ -28,4 +29,6 @@ export interface ExportSampler {
 	 * Returns true if sampling is enabled. If there are no sampling configurations, then sampling can be skipped.
 	 */
 	isSamplingEnabled(): boolean
+
+	setConfig(config?: Maybe<SamplingConfig>): void
 }

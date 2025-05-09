@@ -118,6 +118,7 @@ import { IntegrationClient } from '../integrations'
 import { LaunchDarklyIntegration } from '../integrations/launchdarkly'
 import { LDClientMin } from '../integrations/launchdarkly/types/LDClient'
 import { createLog, defaultLogOptions } from './listeners/console-listener'
+import { CustomSampler } from './otel/sampling/CustomSampler'
 
 export const HighlightWarning = (context: string, msg: any) => {
 	console.warn(`Highlight Warning: (${context}): `, { output: msg })
@@ -588,6 +589,27 @@ export class Highlight {
 				return
 			}
 
+			const sampler = new CustomSampler()
+
+			setupBrowserTracing({
+				sampler,
+				backendUrl:
+					this.options?.backendUrl ?? 'https://pub.highlight.io',
+				otlpEndpoint:
+					this.options?.otlpEndpoint ?? 'https://otel.highlight.io',
+				projectId: this.options?.organizationID,
+				sessionSecureId: this.options?.sessionSecureID,
+				environment: this.options?.environment ?? 'production',
+				networkRecordingOptions:
+					typeof this.options?.networkRecording === 'object'
+						? this.options.networkRecording
+						: undefined,
+				tracingOrigins: this.options?.tracingOrigins,
+				serviceName: this.options?.serviceName ?? 'highlight-browser',
+				instrumentations: this.options?.otel?.instrumentations,
+				getIntegrations: () => [...this._integrations],
+			})
+
 			this.logger.log(
 				`Initializing...`,
 				options,
@@ -674,6 +696,8 @@ export class Highlight {
 					gr?.initializeSession?.project_id || '0',
 				)
 
+				sampler.setConfig(gr.initializeSession.sampling)
+
 				if (
 					!this.sessionData.projectID ||
 					!this.sessionData.sessionSecureID
@@ -684,27 +708,6 @@ export class Highlight {
 					)
 					return
 				}
-
-				setupBrowserTracing({
-					sampling: gr.initializeSession.sampling,
-					backendUrl:
-						this.options?.backendUrl ?? 'https://pub.highlight.io',
-					otlpEndpoint:
-						this.options?.otlpEndpoint ??
-						'https://otel.highlight.io',
-					projectId: this.sessionData.projectID,
-					sessionSecureId: this.sessionData.sessionSecureID,
-					environment: this.options?.environment ?? 'production',
-					networkRecordingOptions:
-						typeof this.options?.networkRecording === 'object'
-							? this.options.networkRecording
-							: undefined,
-					tracingOrigins: this.options?.tracingOrigins,
-					serviceName:
-						this.options?.serviceName ?? 'highlight-browser',
-					instrumentations: this.options?.otel?.instrumentations,
-					getIntegrations: () => [...this._integrations],
-				})
 			}
 
 			this.logger.log(

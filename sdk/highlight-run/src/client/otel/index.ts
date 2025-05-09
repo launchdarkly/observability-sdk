@@ -52,11 +52,11 @@ import {
 } from '@opentelemetry/sdk-metrics'
 import { IntegrationClient } from '../../integrations'
 import { LD_METRIC_NAME_DOCUMENT_LOAD } from '../../integrations/launchdarkly'
-import { Maybe, SamplingConfig } from '../graph/generated/operations'
-import { CustomSampler } from './sampling/CustomSampler'
+
+import { ExportSampler } from './sampling/ExportSampler'
 
 export type BrowserTracingConfig = {
-	sampling?: Maybe<SamplingConfig>
+	sampler: ExportSampler
 	projectId: string | number
 	sessionSecureId: string
 	otlpEndpoint: string
@@ -111,7 +111,7 @@ export const setupBrowserTracing = (config: BrowserTracingConfig) => {
 	}
 	const exporter = new OTLPTraceExporterBrowserWithXhrRetry(
 		exporterOptions,
-		new CustomSampler(config.sampling),
+		config.sampler,
 	)
 
 	const spanProcessor = new CustomBatchSpanProcessor(exporter, {
