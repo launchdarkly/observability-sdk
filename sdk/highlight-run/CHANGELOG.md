@@ -1,5 +1,11 @@
 # highlight.run
 
+## 9.17.1
+
+### Patch Changes
+
+- 63ba039: update exporter to avoid duplicate beacon ping requests
+
 ## 9.17.0
 
 ### Minor Changes
