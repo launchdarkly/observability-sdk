@@ -76,6 +76,7 @@ let providers: {
 } = {}
 let otelConfig: BrowserTracingConfig | undefined
 const RECORD_ATTRIBUTE = 'highlight.record'
+export const LOG_SPAN_NAME = 'launchdarkly.js.log'
 
 export const setupBrowserTracing = (config: BrowserTracingConfig) => {
 	if (providers.tracerProvider !== undefined) {

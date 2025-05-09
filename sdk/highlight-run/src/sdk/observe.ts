@@ -10,7 +10,7 @@ import {
 	SpanStatusCode,
 	UpDownCounter,
 } from '@opentelemetry/api'
-import type { BrowserTracingConfig, Callback } from '../client/otel'
+import { BrowserTracingConfig, Callback, LOG_SPAN_NAME } from '../client/otel'
 import {
 	BROWSER_METER_NAME,
 	getTracer,
@@ -72,7 +72,7 @@ export class ObserveSDK implements Observe {
 	}
 
 	recordLog(message: any, level: ConsoleMethods, metadata?: Attributes) {
-		this.startSpan('highlight.js.log', (span) => {
+		this.startSpan(LOG_SPAN_NAME, (span) => {
 			span?.setAttributes({
 				'highlight.session_id': this.sessionSecureID,
 			})
