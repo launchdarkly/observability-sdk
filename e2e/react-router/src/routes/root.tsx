@@ -22,6 +22,7 @@ const client = init3(
 					'https://otel.observability.ld-stg.launchdarkly.com',
 			}),
 			new SessionReplay('1', {
+				privacySetting: 'none',
 				serviceName: 'ryan-test',
 				backendUrl: 'https://pub.observability.ld-stg.launchdarkly.com',
 			}), // Could be omitted for customers who cannot use session replay.
