@@ -297,7 +297,9 @@ export class RecordSDK implements Record {
 				canvas: 2,
 			}),
 		}
-		this._backendUrl = options?.backendUrl ?? 'https://pub.highlight.io'
+		this._backendUrl =
+			options?.backendUrl ??
+			'https://pub.observability.app.launchdarkly.com'
 
 		// If _backendUrl is a relative URL, convert it to an absolute URL
 		// so that it's usable from a web worker.
