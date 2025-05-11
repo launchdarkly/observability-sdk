@@ -28,6 +28,16 @@ describe('SDK', () => {
 			environment: 'test',
 			sessionSecureID: 'test-session',
 		})
+
+		// Mock the graphqlSDK and initializeSession function
+		recordImpl.graphqlSDK = {
+			initializeSession: vi.fn().mockResolvedValue({
+				initializeSession: {
+					secure_id: 'test-session',
+					project_id: '1',
+				},
+			}),
+		} as any
 		observe.load(observeImpl)
 		record.load(recordImpl)
 	})
