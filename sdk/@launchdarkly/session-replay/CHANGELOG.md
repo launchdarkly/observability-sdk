@@ -1,5 +1,11 @@
 # @launchdarkly/session-replay
 
+## 0.1.2
+
+### Patch Changes
+
+- 1ea87fd: correctly publish dist directory
+
 ## 0.1.1
 
 ### Patch Changes
