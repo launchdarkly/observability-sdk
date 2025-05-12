@@ -1,29 +1,41 @@
-import type { LDMultiKindContext } from './types/LDMultiKindContext'
-import type { LDContext } from './types/LDContext'
-import type { LDContextCommon } from './types/LDContextCommon'
-import {
-	IdentifySeriesContext,
-	IdentifySeriesData,
-	IdentifySeriesResult,
-} from './types/Hooks'
 import { type HighlightPublicInterface, MetricCategory } from '../../client'
 import type { ErrorMessage, Source } from '../../client/types/shared-types'
 import type { IntegrationClient } from '../index'
 import type { LDClientMin } from './types/LDClient'
 import type { RecordMetric } from '../../client/types/types'
+import { BufferedClass } from '../../sdk/buffer'
+import { LDPluginEnvironmentMetadata } from '../../plugins/plugin'
+import type { Attributes } from '@opentelemetry/api'
+import type {
+	Hook,
+	IdentifySeriesContext,
+	IdentifySeriesData,
+	IdentifySeriesResult,
+	LDContext,
+	LDContextCommon,
+	LDEvaluationDetail,
+	LDMultiKindContext,
+} from '@launchdarkly/js-client-sdk'
+export type { Hook }
 
-const FEATURE_FLAG_SCOPE = 'feature_flag'
-// TODO(vkorolik) reporting environment as `${FEATURE_FLAG_SCOPE}.set.id`
-const FEATURE_FLAG_KEY_ATTR = `${FEATURE_FLAG_SCOPE}.key`
-const FEATURE_FLAG_PROVIDER_ATTR = `${FEATURE_FLAG_SCOPE}.provider.name`
-const FEATURE_FLAG_CONTEXT_KEY_ATTR = `${FEATURE_FLAG_SCOPE}.context.key`
-const FEATURE_FLAG_VARIANT_ATTR = `${FEATURE_FLAG_SCOPE}.result.variant`
-const FEATURE_FLAG_SPAN_NAME = 'evaluation'
+export const FEATURE_FLAG_SCOPE = 'feature_flag'
+export const FEATURE_FLAG_ENV_ATTR = `${FEATURE_FLAG_SCOPE}.set.id`
+export const FEATURE_FLAG_KEY_ATTR = `${FEATURE_FLAG_SCOPE}.key`
+export const FEATURE_FLAG_CONTEXT_ATTR = `${FEATURE_FLAG_SCOPE}.context`
+export const FEATURE_FLAG_CONTEXT_KEY_ATTR = `${FEATURE_FLAG_CONTEXT_ATTR}.key`
+export const FEATURE_FLAG_PROVIDER_ATTR = `${FEATURE_FLAG_SCOPE}.provider.name`
+export const FEATURE_FLAG_VARIANT_ATTR = `${FEATURE_FLAG_SCOPE}.variant`
+export const FEATURE_FLAG_RESULT_VARIANT_ATTR = `${FEATURE_FLAG_SCOPE}.result.variant`
+export const FEATURE_FLAG_PROVIDER_NAME_ATTR = `${FEATURE_FLAG_SCOPE}.provider_name`
+export const FEATURE_FLAG_CLIENT_SIDE_ID_ATTR = `${FEATURE_FLAG_SCOPE}.client_side_id`
+export const FEATURE_FLAG_IN_EXPERIMENT_ATTR = `${FEATURE_FLAG_SCOPE}.result.reason.inExperiment`
+export const FEATURE_FLAG_APP_VERSION_ATTR = `${FEATURE_FLAG_SCOPE}.app_version`
+export const FEATURE_FLAG_SPAN_NAME = 'evaluation'
 
-const LD_INITIALIZE_EVENT = '$ld:telemetry:session:init'
-const LD_ERROR_EVENT = '$ld:telemetry:error'
-const LD_TRACK_EVENT = '$ld:telemetry:track'
-const LD_METRIC_EVENT = '$ld:telemetry:metric'
+export const LD_INITIALIZE_EVENT = '$ld:telemetry:session:init'
+export const LD_ERROR_EVENT = '$ld:telemetry:error'
+export const LD_TRACK_EVENT = '$ld:telemetry:track'
+export const LD_METRIC_EVENT = '$ld:telemetry:metric'
 
 export const LD_METRIC_NAME_DOCUMENT_LOAD = 'document_load'
 
@@ -38,7 +50,7 @@ function isMultiContext(context: any): context is LDMultiKindContext {
 	return context.kind === 'multi'
 }
 
-function getCanonicalKey(context: LDContext) {
+export function getCanonicalKey(context: LDContext) {
 	if (isMultiContext(context)) {
 		return Object.keys(context)
 			.sort()
@@ -52,6 +64,24 @@ function getCanonicalKey(context: LDContext) {
 	return context.key
 }
 
+export function getCanonicalObj(context: LDContext) {
+	if (isMultiContext(context)) {
+		return Object.keys(context)
+			.sort()
+			.filter((key) => key !== 'kind')
+			.map((key) => {
+				return {
+					[key]: encodeKey((context[key] as LDContextCommon).key),
+				}
+			})
+			.reduce((acc, obj) => {
+				return { ...acc, ...obj }
+			}, {} as Attributes)
+	}
+
+	return context.key
+}
+
 export function setupLaunchDarklyIntegration(
 	hClient: HighlightPublicInterface,
 	ldClient: LDClientMin,
@@ -59,7 +89,7 @@ export function setupLaunchDarklyIntegration(
 	ldClient.addHook({
 		getMetadata: () => {
 			return {
-				name: 'HighlightHook',
+				name: 'highlight.run',
 			}
 		},
 		afterIdentify: (
@@ -69,6 +99,7 @@ export function setupLaunchDarklyIntegration(
 		) => {
 			hClient.log('LD.identify', 'INFO', {
 				key: getCanonicalKey(hookContext.context),
+				context: JSON.stringify(getCanonicalObj(hookContext.context)),
 				timeout: hookContext.timeout,
 			})
 			hClient.identify(
@@ -81,21 +112,26 @@ export function setupLaunchDarklyIntegration(
 			)
 			return data
 		},
-		afterEvaluation: (hookContext, data, detail) => {
-			const eventAttributes: {
-				[index: string]: number | boolean | string
-			} = {
+		afterEvaluation: (hookContext, data, detail: LDEvaluationDetail) => {
+			const eventAttributes: Attributes = {
 				[FEATURE_FLAG_KEY_ATTR]: hookContext.flagKey,
-				[FEATURE_FLAG_PROVIDER_ATTR]: 'LaunchDarkly',
+				[FEATURE_FLAG_PROVIDER_NAME_ATTR]: 'LaunchDarkly',
 				[FEATURE_FLAG_VARIANT_ATTR]: JSON.stringify(detail.value),
+				[FEATURE_FLAG_RESULT_VARIANT_ATTR]: JSON.stringify(
+					detail.value,
+				),
+				[FEATURE_FLAG_IN_EXPERIMENT_ATTR]: detail.reason?.inExperiment,
 			}
 
 			if (hookContext.context) {
+				eventAttributes[FEATURE_FLAG_CONTEXT_ATTR] = JSON.stringify(
+					getCanonicalObj(hookContext.context),
+				)
 				eventAttributes[FEATURE_FLAG_CONTEXT_KEY_ATTR] =
 					getCanonicalKey(hookContext.context)
 			}
 
-			hClient.startSpan(FEATURE_FLAG_SPAN_NAME, (s) => {
+			hClient.startSpan(FEATURE_FLAG_SPAN_NAME, eventAttributes, (s) => {
 				if (s) {
 					s.addEvent(FEATURE_FLAG_SCOPE, eventAttributes)
 				}
@@ -106,10 +142,16 @@ export function setupLaunchDarklyIntegration(
 	})
 }
 
-export class LaunchDarklyIntegration implements IntegrationClient {
+export class LaunchDarklyIntegrationSDK implements IntegrationClient {
 	client: LDClientMin
-	constructor(client: LDClientMin) {
+	metadata?: LDPluginEnvironmentMetadata
+	constructor(client: LDClientMin, metadata?: LDPluginEnvironmentMetadata) {
 		this.client = client
+		this.metadata = metadata
+	}
+
+	getHooks(_: LDPluginEnvironmentMetadata): Hook[] {
+		return []
 	}
 
 	init(sessionSecureID: string) {
@@ -165,5 +207,66 @@ export class LaunchDarklyIntegration implements IntegrationClient {
 				sessionSecureID,
 			},
 		)
+	}
+}
+
+export class LaunchDarklyIntegration
+	extends BufferedClass<IntegrationClient>
+	implements IntegrationClient
+{
+	client: LaunchDarklyIntegrationSDK
+	constructor(client: LDClientMin, metadata?: LDPluginEnvironmentMetadata) {
+		super()
+		this.client = new LaunchDarklyIntegrationSDK(client, metadata)
+	}
+
+	getHooks(metadata: LDPluginEnvironmentMetadata): Hook[] {
+		return [
+			{
+				getMetadata: () => {
+					return {
+						name: 'highlight.run/ld',
+					}
+				},
+				afterIdentify: (
+					hookContext: IdentifySeriesContext,
+					data: IdentifySeriesData,
+					_result: IdentifySeriesResult,
+				) => {
+					this.load(this.client)
+					return data
+				},
+			},
+		]
+	}
+
+	init(sessionSecureID: string) {
+		return this._bufferCall('init', [sessionSecureID])
+	}
+
+	recordGauge(sessionSecureID: string, metric: RecordMetric) {
+		return this._bufferCall('recordGauge', [sessionSecureID, metric])
+	}
+
+	identify(
+		sessionSecureID: string,
+		user_identifier: string,
+		user_object = {},
+		source?: Source,
+	) {
+		return this._bufferCall('identify', [
+			sessionSecureID,
+			user_identifier,
+			user_object,
+			source,
+		])
+	}
+
+	error(sessionSecureID: string, error: ErrorMessage) {
+		return this._bufferCall('error', [sessionSecureID, error])
+	}
+
+	track(sessionSecureID: string, metadata: object) {
+		return this._bufferCall('track', [sessionSecureID, metadata])
 	}
 }

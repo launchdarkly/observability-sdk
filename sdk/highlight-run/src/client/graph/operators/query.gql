@@ -1,0 +1,39 @@
+fragment MatchParts on MatchConfig {
+	regexValue
+}
+
+query GetSamplingConfig($project_id: ID!) {
+	sampling(project_id: $project_id) {
+			spans {
+				name {
+					...MatchParts
+				}
+				attributes {
+					key {
+						...MatchParts
+					}
+					attribute {
+						...MatchParts
+					}
+				}
+				samplingRatio
+			}
+			logs {
+				message {
+					...MatchParts
+				}
+				severityText {
+					...MatchParts
+				}
+				attributes {
+					key {
+						...MatchParts
+					}
+					attribute {
+						...MatchParts
+					}
+				}
+				samplingRatio
+			}
+	}
+}

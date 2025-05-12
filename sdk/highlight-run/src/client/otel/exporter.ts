@@ -22,15 +22,9 @@ export type MetricExporterConfig = ConstructorParameters<
 // - https://github.com/open-telemetry/opentelemetry-js/blob/cf8edbed43c3e54eadcafe6fc6f39a1d03c89aa7/experimental/packages/otlp-exporter-base/src/platform/browser/OTLPExporterBrowserBase.ts#L51-L52
 
 export class OTLPTraceExporterBrowserWithXhrRetry extends OTLPTraceExporter {
-	private readonly xhrTraceExporter: OTLPTraceExporter
-
-	constructor(
-		config: TraceExporterConfig,
-		private readonly sampler: ExportSampler,
-	) {
-		super(config)
-		this.xhrTraceExporter = new OTLPTraceExporter({
-			...(config ?? {}),
+	constructor(config: TraceExporterConfig, private readonly sampler: ExportSampler) {
+		super({
+			...config,
 			headers: {}, // a truthy value enables sending with XHR instead of beacon
 		})
 	}
@@ -53,7 +47,7 @@ export class OTLPTraceExporterBrowserWithXhrRetry extends OTLPTraceExporter {
 					error: result.error,
 				})
 			} else {
-				this.xhrTraceExporter.export(sampledItems, resultCallback)
+				super.export(items, resultCallback)
 			}
 		}
 
@@ -62,13 +56,10 @@ export class OTLPTraceExporterBrowserWithXhrRetry extends OTLPTraceExporter {
 }
 
 export class OTLPMetricExporterBrowser extends OTLPMetricExporter {
-	private readonly xhrMeterExporter: OTLPMetricExporter
-
 	constructor(config?: MetricExporterConfig) {
-		super(config)
-		this.xhrMeterExporter = new OTLPMetricExporter({
-			...(config ?? {}),
-			headers: {}, // a truthy value enables sending with XHR instead of beacon
+		super({
+			...config,
+			headers: {},
 		})
 	}
 
@@ -86,7 +77,7 @@ export class OTLPMetricExporterBrowser extends OTLPMetricExporter {
 					error: result.error,
 				})
 			} else {
-				this.xhrMeterExporter.export(items, resultCallback)
+				super.export(items, resultCallback)
 			}
 		}
 

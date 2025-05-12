@@ -1,4 +1,5 @@
 import * as api from '@opentelemetry/api'
+import { Span } from '@opentelemetry/api'
 import {
 	CompositePropagator,
 	W3CBaggagePropagator,
@@ -54,9 +55,9 @@ import { IntegrationClient } from '../../integrations'
 import { LD_METRIC_NAME_DOCUMENT_LOAD } from '../../integrations/launchdarkly'
 
 import { ExportSampler } from './sampling/ExportSampler'
+export type Callback = (span?: Span) => any
 
 export type BrowserTracingConfig = {
-	sampler: ExportSampler
 	projectId: string | number
 	sessionSecureId: string
 	otlpEndpoint: string
@@ -76,8 +77,9 @@ let providers: {
 } = {}
 let otelConfig: BrowserTracingConfig | undefined
 const RECORD_ATTRIBUTE = 'highlight.record'
+export const LOG_SPAN_NAME = 'launchdarkly.js.log'
 
-export const setupBrowserTracing = (config: BrowserTracingConfig) => {
+export const setupBrowserTracing = (config: BrowserTracingConfig, sampler: ExportSampler) => {
 	if (providers.tracerProvider !== undefined) {
 		console.warn('OTEL already initialized. Skipping...')
 		return
@@ -111,7 +113,7 @@ export const setupBrowserTracing = (config: BrowserTracingConfig) => {
 	}
 	const exporter = new OTLPTraceExporterBrowserWithXhrRetry(
 		exporterOptions,
-		config.sampler,
+		sampler,
 	)
 
 	const spanProcessor = new CustomBatchSpanProcessor(exporter, {

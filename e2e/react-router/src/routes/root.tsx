@@ -1,17 +1,110 @@
-import { H } from 'highlight.run'
+// import { initialize as init4 } from '@launchdarkly/js-client-sdk'
+import { initialize as init3 } from 'launchdarkly-js-client-sdk'
+import Observability, { LDObserve } from '@launchdarkly/observability'
+import SessionReplay, { LDRecord } from '@launchdarkly/session-replay'
+import { useEffect, useRef, useState } from 'react'
+// import { LD } from '@launchdarkly/browser'
 
-H.init('1', {
-	// Get your project ID from https://app.highlight.io/setup
-	networkRecording: {
-		enabled: true,
-		recordHeadersAndBody: true,
+const client = init3(
+	'66d9d3c255856f0fa8fd62d0',
+	{ key: 'unknown' },
+	{
+		// Not including plugins at all would be equivalent to the current LaunchDarkly SDK.
+		plugins: [
+			new Observability('1', {
+				networkRecording: {
+					enabled: true,
+					recordHeadersAndBody: true,
+				},
+				serviceName: 'ryan-test',
+				backendUrl: 'https://pub.observability.ld-stg.launchdarkly.com',
+				otlpEndpoint:
+					'https://otel.observability.ld-stg.launchdarkly.com',
+			}),
+			new SessionReplay('1', {
+				privacySetting: 'none',
+				serviceName: 'ryan-test',
+				backendUrl: 'https://pub.observability.ld-stg.launchdarkly.com',
+			}), // Could be omitted for customers who cannot use session replay.
+		],
 	},
-})
+)
 
 export default function Root() {
+	const fillColor = 'lightblue'
+	const canvasRef = useRef<HTMLCanvasElement>(null)
+	const [flags, setFlags] = useState<string>()
+
+	useEffect(() => {
+		const canvas = canvasRef.current
+		if (!canvas) return
+		const ctx = canvas.getContext('2d')!
+		// Fill the entire canvas with the specified color
+		ctx.fillStyle = fillColor
+		ctx.fillRect(0, 0, canvas.width, canvas.height)
+	}, [fillColor])
+
 	return (
 		<div id="sidebar">
 			<h1>Hello, world</h1>
+			<p>{flags}</p>
+			<canvas width="100" height="100" ref={canvasRef}></canvas>
+			<button
+				onClick={() => {
+					LDObserve.recordLog('hello', 'INFO')
+				}}
+			>
+				LDObserve.recordLog
+			</button>
+			<button
+				onClick={() => {
+					LDObserve.recordError(new Error('test error'))
+				}}
+			>
+				LDObserve.consumeError
+			</button>
+			<button
+				onClick={() => {
+					if (canvasRef.current) {
+						LDRecord.snapshot(canvasRef.current)
+					}
+				}}
+			>
+				LDRecord.snapshot
+			</button>
+			<button
+				onClick={async () => {
+					await client.identify({
+						kind: 'user',
+						key: 'vadim@highlight.io',
+					})
+					setFlags(JSON.stringify(client.allFlags()))
+				}}
+			>
+				client.identify
+			</button>
+			<button
+				onClick={async () => {
+					await client.identify({
+						kind: 'multi',
+						org: {
+							key: 'my-org-key',
+							someAttribute: 'my-attribute-value',
+						},
+						user: {
+							key: 'my-user-key',
+							firstName: 'Bob',
+							lastName: 'Bobberson',
+							_meta: {
+								privateAttributes: ['firstName'],
+							},
+						},
+					})
+					setFlags(JSON.stringify(client.allFlags()))
+				}}
+			>
+				client.identify multi
+			</button>
 		</div>
 	)
 }

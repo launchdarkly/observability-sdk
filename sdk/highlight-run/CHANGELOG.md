@@ -1,5 +1,26 @@
 # highlight.run
 
+## 9.18.0
+
+### Minor Changes
+
+- 26cc5f1: refactors highlight.run SDK into plugins consumed by new @launchdarkly packages
+
+## 9.17.1
+
+### Patch Changes
+
+- 63ba039: update exporter to avoid duplicate beacon ping requests
+
+## 9.17.0
+
+### Minor Changes
+
+- ce2407a: Set up new data emission in highlight SDK from launchdarkly SDK.
+    - adds H.log function to report custom logs from the highlight SDK
+    - use traces instead of track events from LD track calls
+    - record logs for identify integration from LD identify calls
+
 ## 9.16.2
 
 ### Patch Changes

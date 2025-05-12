@@ -64,7 +64,12 @@ export function middleware(
 		return H.runWithHeaders(
 			`${req.method?.toUpperCase()} - ${req.url}`,
 			req.headers,
-			() => next(),
+			async () => {
+				next()
+				await new Promise((resolve) => {
+					res.once('finish', resolve)
+				})
+			},
 			{
 				attributes: {
 					[ATTR_HTTP_REQUEST_METHOD]: req.method,

@@ -70,7 +70,7 @@ import {
 	NetworkPerformancePayload,
 } from './listeners/network-listener/performance-listener'
 import { Logger } from './logger'
-import { getMeter, getTracer, setupBrowserTracing } from './otel'
+import { BROWSER_METER_NAME, getTracer, setupBrowserTracing } from './otel'
 import {
 	HighlightIframeMessage,
 	HighlightIframeReponse,
@@ -97,6 +97,7 @@ import {
 import { SESSION_STORAGE_KEYS } from './utils/sessionStorage/sessionStorageKeys'
 import {
 	getItem,
+	LocalStorageKeys,
 	removeItem,
 	setCookieWriteEnabled,
 	setItem,
@@ -112,6 +113,7 @@ import {
 	Counter,
 	Gauge,
 	Histogram,
+	metrics,
 	UpDownCounter,
 } from '@opentelemetry/api'
 import { IntegrationClient } from '../integrations'
@@ -122,10 +124,6 @@ import { CustomSampler } from './otel/sampling/CustomSampler'
 
 export const HighlightWarning = (context: string, msg: any) => {
 	console.warn(`Highlight Warning: (${context}): `, { output: msg })
-}
-
-enum LOCAL_STORAGE_KEYS {
-	CLIENT_ID = 'highlightClientID',
 }
 
 export type HighlightClassOptions = {
@@ -592,7 +590,6 @@ export class Highlight {
 			const sampler = new CustomSampler()
 
 			setupBrowserTracing({
-				sampler,
 				backendUrl:
 					this.options?.backendUrl ?? 'https://pub.highlight.io',
 				otlpEndpoint:
@@ -608,7 +605,7 @@ export class Highlight {
 				serviceName: this.options?.serviceName ?? 'highlight-browser',
 				instrumentations: this.options?.otel?.instrumentations,
 				getIntegrations: () => [...this._integrations],
-			})
+			}, sampler)
 
 			this.logger.log(
 				`Initializing...`,
@@ -630,11 +627,11 @@ export class Highlight {
 			setSessionSecureID('')
 			setSessionData(this.sessionData)
 
-			let clientID = getItem(LOCAL_STORAGE_KEYS['CLIENT_ID'])
+			let clientID = getItem(LocalStorageKeys['CLIENT_ID'])
 
 			if (!clientID) {
 				clientID = GenerateSecureID()
-				setItem(LOCAL_STORAGE_KEYS['CLIENT_ID'], clientID)
+				setItem(LocalStorageKeys['CLIENT_ID'], clientID)
 			}
 
 			// Duplicate of logic inside FirstLoadListeners.setupNetworkListener,
@@ -1241,9 +1238,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 	}
 
 	recordGauge(metric: RecordMetric) {
-		const meter = typeof getMeter === 'function' ? getMeter() : undefined
-		if (!meter) return
-
+		const meter = metrics.getMeter(BROWSER_METER_NAME)
 		let gauge = this._gauges.get(metric.name)
 		if (!gauge) {
 			gauge = meter.createGauge(metric.name)
@@ -1261,9 +1256,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 	}
 
 	recordCount(metric: RecordMetric) {
-		const meter = typeof getMeter === 'function' ? getMeter() : undefined
-		if (!meter) return
-
+		const meter = metrics.getMeter(BROWSER_METER_NAME)
 		let counter = this._counters.get(metric.name)
 		if (!counter) {
 			counter = meter.createCounter(metric.name)
@@ -1282,9 +1275,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 	}
 
 	recordHistogram(metric: RecordMetric) {
-		const meter = typeof getMeter === 'function' ? getMeter() : undefined
-		if (!meter) return
-
+		const meter = metrics.getMeter(BROWSER_METER_NAME)
 		let histogram = this._histograms.get(metric.name)
 		if (!histogram) {
 			histogram = meter.createHistogram(metric.name)
@@ -1299,9 +1290,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 	}
 
 	recordUpDownCounter(metric: RecordMetric) {
-		const meter = typeof getMeter === 'function' ? getMeter() : undefined
-		if (!meter) return
-
+		const meter = metrics.getMeter(BROWSER_METER_NAME)
 		let up_down_counter = this._up_down_counters.get(metric.name)
 		if (!up_down_counter) {
 			up_down_counter = meter.createUpDownCounter(metric.name)
@@ -1600,12 +1589,11 @@ declare global {
 		defaultDebug: any
 	}
 }
+
 export {
-	FirstLoadListeners,
 	GenerateSecureID,
 	getPreviousSessionData,
 	getTracer,
-	getMeter,
 	MetricCategory,
 }
 export type {

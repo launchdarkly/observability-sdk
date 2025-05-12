@@ -1,5 +1,10 @@
-import { Highlight, HighlightClassOptions, RequestResponsePair } from './client'
-import { FirstLoadListeners, GenerateSecureID, getTracer } from './client'
+import {
+	Highlight,
+	HighlightClassOptions,
+	RequestResponsePair,
+} from './client'
+import { GenerateSecureID, getTracer } from './client'
+import { FirstLoadListeners } from './client/listeners/first-load-listeners'
 import type {
 	HighlightOptions,
 	HighlightPublicInterface,
@@ -24,7 +29,12 @@ import {
 	loadCookieSessionData,
 } from './client/utils/sessionStorage/highlightSession.js'
 import { setCookieWriteEnabled } from './client/utils/storage'
-import { Attributes, Context, Span, SpanOptions } from '@opentelemetry/api'
+import {
+	Attributes,
+	Context,
+	Span,
+	SpanOptions,
+} from '@opentelemetry/api'
 import firstloadVersion from './__generated/version.js'
 import { listenToChromeExtensionMessage } from './browserExtension/extensionListener.js'
 import configureElectronHighlight from './environments/electron.js'
@@ -61,10 +71,9 @@ interface HighlightWindow extends Window {
 	amplitude?: AmplitudeAPI
 	Intercom?: any
 }
+declare var window: HighlightWindow
 
 const READY_WAIT_LOOP_MS = 200
-
-declare var window: HighlightWindow
 
 let onHighlightReadyQueue: {
 	options?: OnHighlightReadyOptions
@@ -78,6 +87,7 @@ let first_load_listeners: FirstLoadListeners
 let integrations: IntegrationClient[] = []
 let init_called = false
 type Callback = (span?: Span) => any
+
 const H: HighlightPublicInterface = {
 	options: undefined,
 	init: (projectID?: string | number, options?: HighlightOptions) => {
@@ -133,8 +143,7 @@ const H: HighlightPublicInterface = {
 			highlight_obj =
 				highlight_obj ??
 				new Highlight(client_options, first_load_listeners)
-			initializeFetchListener()
-			initializeWebSocketListener()
+
 			if (!options?.manualStart) {
 				highlight_obj.initialize()
 			}
@@ -420,7 +429,7 @@ const H: HighlightPublicInterface = {
 		context?: Context | ((span?: Span) => any),
 		fn?: (span?: Span) => any,
 	): any => {
-		const tracer = typeof getTracer === 'function' ? getTracer() : undefined
+		const tracer = getTracer()
 		if (!tracer) {
 			const noopSpan = getNoopSpan()
 
@@ -468,7 +477,7 @@ const H: HighlightPublicInterface = {
 		context?: Context | ((span: Span) => any),
 		fn?: (span: Span) => any,
 	): any => {
-		const tracer = typeof getTracer === 'function' ? getTracer() : undefined
+		const tracer = getTracer()
 		if (!tracer) {
 			const noopSpan = getNoopSpan()
 
@@ -596,7 +605,6 @@ const H: HighlightPublicInterface = {
 	registerLD(client) {
 		// TODO(vkorolik): can only register one LD client for now
 		if (integrations.length) return
-		// TODO(vkorolik): consolidate once firstload/client are merged
 		// client integration necessary to track events from ErrorListener
 		H.onHighlightReady(() => {
 			highlight_obj.registerLD(client)

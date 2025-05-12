@@ -225,10 +225,15 @@ export enum PublicGraphError {
 export type Query = {
 	__typename?: 'Query'
 	ignore?: Maybe<Scalars['Any']['output']>
+	sampling: SamplingConfig
 }
 
 export type QueryIgnoreArgs = {
 	id: Scalars['ID']['input']
+}
+
+export type QuerySamplingArgs = {
+	project_id: Scalars['ID']['input']
 }
 
 export type ReplayEventInput = {

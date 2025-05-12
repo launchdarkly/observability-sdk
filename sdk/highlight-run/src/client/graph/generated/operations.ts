@@ -228,10 +228,15 @@ export enum PublicGraphError {
 export type Query = {
 	__typename?: 'Query'
 	ignore?: Maybe<Scalars['Any']['output']>
+	sampling: SamplingConfig
 }
 
 export type QueryIgnoreArgs = {
 	id: Scalars['ID']['input']
+}
+
+export type QuerySamplingArgs = {
+	project_id: Scalars['ID']['input']
 }
 
 export type ReplayEventInput = {
@@ -462,6 +467,53 @@ export type IgnoreQueryVariables = Exact<{
 
 export type IgnoreQuery = { __typename?: 'Query'; ignore?: any | null }
 
+export type GetSamplingConfigQueryVariables = Exact<{
+	project_id: Scalars['ID']['input']
+}>
+
+export type GetSamplingConfigQuery = {
+	__typename?: 'Query'
+	sampling: {
+		__typename?: 'SamplingConfig'
+		spans?: Array<{
+			__typename?: 'SpanSamplingConfig'
+			samplingRatio: number
+			name?: {
+				__typename?: 'MatchConfig'
+				regexValue?: string | null
+			} | null
+			attributes?: Array<{
+				__typename?: 'AttributeMatchConfig'
+				key: { __typename?: 'MatchConfig'; regexValue?: string | null }
+				attribute: {
+					__typename?: 'MatchConfig'
+					regexValue?: string | null
+				}
+			}> | null
+		}> | null
+		logs?: Array<{
+			__typename?: 'LogSamplingConfig'
+			samplingRatio: number
+			message?: {
+				__typename?: 'MatchConfig'
+				regexValue?: string | null
+			} | null
+			severityText?: {
+				__typename?: 'MatchConfig'
+				regexValue?: string | null
+			} | null
+			attributes?: Array<{
+				__typename?: 'AttributeMatchConfig'
+				key: { __typename?: 'MatchConfig'; regexValue?: string | null }
+				attribute: {
+					__typename?: 'MatchConfig'
+					regexValue?: string | null
+				}
+			}> | null
+		}> | null
+	}
+}
+
 export const MatchPartsFragmentDoc = gql`
 	fragment MatchParts on MatchConfig {
 		regexValue
@@ -632,6 +684,44 @@ export const IgnoreDocument = gql`
 		ignore(id: $id)
 	}
 `
+export const GetSamplingConfigDocument = gql`
+	query GetSamplingConfig($project_id: ID!) {
+		sampling(project_id: $project_id) {
+			spans {
+				name {
+					...MatchParts
+				}
+				attributes {
+					key {
+						...MatchParts
+					}
+					attribute {
+						...MatchParts
+					}
+				}
+				samplingRatio
+			}
+			logs {
+				message {
+					...MatchParts
+				}
+				severityText {
+					...MatchParts
+				}
+				attributes {
+					key {
+						...MatchParts
+					}
+					attribute {
+						...MatchParts
+					}
+				}
+				samplingRatio
+			}
+		}
+	}
+	${MatchPartsFragmentDoc}
+`
 
 export type SdkFunctionWrapper = <T>(
 	action: (requestHeaders?: Record<string, string>) => Promise<T>,
@@ -775,6 +865,22 @@ export function getSdk(
 						...wrappedRequestHeaders,
 					}),
 				'Ignore',
+				'query',
+				variables,
+			)
+		},
+		GetSamplingConfig(
+			variables: GetSamplingConfigQueryVariables,
+			requestHeaders?: GraphQLClientRequestHeaders,
+		): Promise<GetSamplingConfigQuery> {
+			return withWrapper(
+				(wrappedRequestHeaders) =>
+					client.request<GetSamplingConfigQuery>(
+						GetSamplingConfigDocument,
+						variables,
+						{ ...requestHeaders, ...wrappedRequestHeaders },
+					),
+				'GetSamplingConfig',
 				'query',
 				variables,
 			)

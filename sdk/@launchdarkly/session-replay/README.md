@@ -1,10 +1,9 @@
 # LaunchDarkly JavaScript Session Replay SDK for Browsers
 
-[![NPM][browser-sdk-npm-badge]][browser-sdk-npm-link]
-[![Actions Status][browser-sdk-ci-badge]][browser-sdk-ci]
-[![Documentation][browser-sdk-ghp-badge]][browser-sdk-ghp-link]
-[![NPM][browser-sdk-dm-badge]][browser-sdk-npm-link]
-[![NPM][browser-sdk-dt-badge]][browser-sdk-npm-link]
+[![NPM][o11y-sdk-npm-badge]][o11y-sdk-npm-link]
+[![Actions Status][o11y-sdk-ci-badge]][o11y-sdk-ci]
+[![NPM][o11y-sdk-dm-badge]][o11y-sdk-npm-link]
+[![NPM][o11y-sdk-dt-badge]][o11y-sdk-npm-link]
 
 # ⛔️⛔️⛔️⛔️
 
@@ -13,9 +12,9 @@
 
 # ☝️☝️☝️☝️☝️☝️
 
-<!--
 ## Install
 
+Install the package
 ```shell
 # npm
 npm i @launchdarkly/session-replay
@@ -23,7 +22,26 @@ npm i @launchdarkly/session-replay
 # yarn
 yarn add @launchdarkly/session-replay
 ```
--->
+
+Update your web app entrypoint.
+```tsx
+import { initialize } from 'launchdarkly-js-client-sdk'
+import SessionReplay, { LDRecord } from '@launchdarkly/session-replay'
+
+const client = init3(
+        '<CLIENT_SIDE_ID>',
+        { key: 'authenticated-user@example.com' },
+        {
+          // Not including plugins at all would be equivalent to the current LaunchDarkly SDK.
+          plugins: [
+            new SessionReplay('<OBSERVABILITY_PROJECT_ID>', {
+              serviceName: 'example-svc',
+            }), // Could be omitted for customers who cannot use session replay.
+          ],
+        },
+)
+
+```
 
 ## Getting started
 
@@ -49,11 +67,9 @@ LaunchDarkly uses the [SLSA framework](https://slsa.dev/spec/v1.0/about) (Supply
     - [apidocs.launchdarkly.com](https://apidocs.launchdarkly.com/ 'LaunchDarkly API Documentation') for our API documentation
     - [blog.launchdarkly.com](https://blog.launchdarkly.com/ 'LaunchDarkly Blog Documentation') for the latest product updates
 
-[browser-sdk-ci-badge]: https://github.com/launchdarkly/observability-sdk/actions/workflows/browser.yml/badge.svg
-[browser-sdk-ci]: https://github.com/launchdarkly/observability-sdk/actions/workflows/browser.yml
-[browser-sdk-npm-badge]: https://img.shields.io/npm/v/@launchdarkly/session-replay.svg?style=flat-square
-[browser-sdk-npm-link]: https://www.npmjs.com/package/@launchdarkly/session-replay
-[browser-sdk-ghp-badge]: https://img.shields.io/static/v1?label=GitHub+Pages&message=API+reference&color=00add8
-[browser-sdk-ghp-link]: https://launchdarkly.github.io/js-core/packages/sdk/browser/docs/
-[browser-sdk-dm-badge]: https://img.shields.io/npm/dm/@launchdarkly/session-replay.svg?style=flat-square
-[browser-sdk-dt-badge]: https://img.shields.io/npm/dt/@launchdarkly/session-replay.svg?style=flat-square
+[o11y-sdk-ci-badge]: https://github.com/launchdarkly/observability-sdk/actions/workflows/turbo.yml/badge.svg
+[o11y-sdk-ci]: https://github.com/launchdarkly/observability-sdk/actions/workflows/turbo.yml
+[o11y-sdk-npm-badge]: https://img.shields.io/npm/v/@launchdarkly/session-replay.svg?style=flat-square
+[o11y-sdk-npm-link]: https://www.npmjs.com/package/@launchdarkly/session-replay
+[o11y-sdk-dm-badge]: https://img.shields.io/npm/dm/@launchdarkly/session-replay.svg?style=flat-square
+[o11y-sdk-dt-badge]: https://img.shields.io/npm/dt/@launchdarkly/session-replay.svg?style=flat-square

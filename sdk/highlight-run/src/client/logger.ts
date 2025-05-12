@@ -16,4 +16,12 @@ export class Logger {
 			console.log.apply(console, [prefix, ...data])
 		}
 	}
+
+	warn(...data: any[]) {
+		let prefix = `[${Date.now()}]`
+		if (this.name) {
+			prefix += ` - ${this.name}`
+		}
+		console.warn.apply(console, [prefix, ...data])
+	}
 }
