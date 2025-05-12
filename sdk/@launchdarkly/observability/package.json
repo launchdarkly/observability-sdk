@@ -29,8 +29,10 @@
 		"typegen": "tsc",
 		"build": "vite build"
 	},
+	"dependencies": {
+		"highlight.run": "workspace:*"
+	},
 	"devDependencies": {
-		"highlight.run": "workspace:*",
 		"rollup-plugin-visualizer": "^5.14.0",
 		"typescript": "^5.8.3",
 		"vite": "^6.3.4",
