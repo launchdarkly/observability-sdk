@@ -1,3 +1,15 @@
+/**
+ * This is the API reference for the LaunchDarkly Observability and Session Replay SDK for JavaScript.
+ *
+ * This SDK is intended for use in browser environments.
+ *
+ * In typical usage, you will use this alongside the launchdarkly SDK while initializing
+ * by providing {@link Observe} and {@link Record} plugins.
+ *
+ * For more information, see the [SDK Reference Guide](https://docs.launchdarkly.com/sdk/observability).
+ *
+ * @packageDocumentation
+ */
 import type {
 	Highlight,
 	HighlightClassOptions,

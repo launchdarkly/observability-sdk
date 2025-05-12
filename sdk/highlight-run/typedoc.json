@@ -1,8 +1,8 @@
 {
-    "$schema": "https://typedoc.org/schema.json",
-	"name": "@launchdarkly/observability",
-    "includeVersion": true,
-	"entryPoints": ["src/**/*.ts", "src/**/*.tsx", "src/*.ts", "src/*.tsx"],
+	"$schema": "https://typedoc.org/schema.json",
+	"name": "@launchdarkly/observability + @launchdarkly/session-replay",
+	"includeVersion": false,
+	"entryPoints": ["src/index.tsx"],
 	"exclude": [
 		"**/__tests__/**",
 		"**/*.spec.ts",
@@ -12,15 +12,15 @@
 	"excludeInternal": true,
 	"excludePrivate": true,
 	"excludeProtected": true,
-    "excludeExternals": true,
-    "readme": "none",
-    "visibilityFilters": {
-      "protected": false,
-      "private": false,
-      "inherited": true,
-      "external": true,
-      "@alpha": false,
-      "@beta": false
-    },
+	"excludeExternals": true,
+	"readme": "none",
+	"visibilityFilters": {
+		"protected": false,
+		"private": false,
+		"inherited": true,
+		"external": true,
+		"@alpha": false,
+		"@beta": false
+	},
 	"out": "docs"
 }
