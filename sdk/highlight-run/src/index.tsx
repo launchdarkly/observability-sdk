@@ -48,7 +48,6 @@ import {
 	LaunchDarklyIntegration,
 	setupLaunchDarklyIntegration,
 } from './integrations/launchdarkly'
-import { LDClientMin } from './integrations/launchdarkly/types/LDClient'
 import { IntegrationClient } from './integrations'
 
 enum MetricCategory {
@@ -677,7 +676,6 @@ export {
 }
 export type {
 	HighlightOptions,
-	LDClientMin,
 	ViewportResizeListenerArgs,
 	Metadata,
 	RequestResponsePair,

@@ -1,10 +1,9 @@
 import type { Attributes, Context, Span, SpanOptions } from '@opentelemetry/api'
-import type { LDClientMin } from '../client'
 import type { OTelMetric as Metric } from '../client/types/types'
 import type { ErrorMessageType } from '../client/types/shared-types'
 import { LDPluginEnvironmentMetadata } from '../plugins/plugin'
 import { ConsoleMethods } from '../client/types/client'
-import { Hook } from '../integrations/launchdarkly'
+import type { Hook, LDClient } from '../integrations/launchdarkly'
 
 export interface Observe {
 	recordLog: (
@@ -151,7 +150,7 @@ export interface Observe {
 		type?: ErrorMessageType,
 	) => void
 	register(
-		client: LDClientMin,
+		client: LDClient,
 		environmentMetadata: LDPluginEnvironmentMetadata,
 	): void
 	getHooks?(metadata: LDPluginEnvironmentMetadata): Hook[]

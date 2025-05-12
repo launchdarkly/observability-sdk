@@ -1,11 +1,11 @@
-// import { initialize as init4 } from '@launchdarkly/js-client-sdk'
-import { initialize as init3 } from 'launchdarkly-js-client-sdk'
+// import { initialize as init } from '@launchdarkly/js-client-sdk'
+import { initialize as init } from 'launchdarkly-js-client-sdk'
 import Observability, { LDObserve } from '@launchdarkly/observability'
 import SessionReplay, { LDRecord } from '@launchdarkly/session-replay'
 import { useEffect, useRef, useState } from 'react'
 // import { LD } from '@launchdarkly/browser'
 
-const client = init3(
+const client = init(
 	'66d9d3c255856f0fa8fd62d0',
 	{ key: 'unknown' },
 	{
@@ -18,8 +18,10 @@ const client = init3(
 				},
 				serviceName: 'ryan-test',
 				backendUrl: 'https://pub.observability.ld-stg.launchdarkly.com',
-				otlpEndpoint:
-					'https://otel.observability.ld-stg.launchdarkly.com',
+				otel: {
+					otlpEndpoint:
+						'https://otel.observability.ld-stg.launchdarkly.com',
+				},
 			}),
 			new SessionReplay('1', {
 				privacySetting: 'none',

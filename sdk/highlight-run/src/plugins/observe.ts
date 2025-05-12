@@ -1,6 +1,5 @@
-import type { LDClientMin } from '../client'
 import type { LDPlugin, LDPluginEnvironmentMetadata } from './plugin'
-import type { Hook } from '../integrations/launchdarkly'
+import type { Hook, LDClient } from '../integrations/launchdarkly'
 import { Observe as ObserveAPI } from '../api/observe'
 import { ObserveSDK } from '../sdk/observe'
 import { LDObserve } from '../sdk/LDObserve'
@@ -64,7 +63,7 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 		}
 	}
 	register(
-		client: LDClientMin,
+		client: LDClient,
 		environmentMetadata: LDPluginEnvironmentMetadata,
 	) {
 		this.observe.register(client, environmentMetadata)

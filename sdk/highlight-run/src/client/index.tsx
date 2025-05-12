@@ -118,7 +118,7 @@ import {
 } from '@opentelemetry/api'
 import { IntegrationClient } from '../integrations'
 import { LaunchDarklyIntegration } from '../integrations/launchdarkly'
-import { LDClientMin } from '../integrations/launchdarkly/types/LDClient'
+import { LDClient } from '../integrations/launchdarkly'
 import { createLog, defaultLogOptions } from './listeners/console-listener'
 
 export const HighlightWarning = (context: string, msg: any) => {
@@ -1538,7 +1538,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 		this._lastSnapshotTime = new Date().getTime()
 	}
 
-	registerLD(client: LDClientMin) {
+	registerLD(client: LDClient) {
 		// TODO(vkorolik): can only register one LD client for now
 		if (this._integrations.length) return
 		this._integrations.push(new LaunchDarklyIntegration(client))
@@ -1581,7 +1581,7 @@ export type {
 	HighlightOptions,
 	HighlightPublicInterface,
 	Integration,
-	LDClientMin,
+	LDClient,
 	Metadata,
 	Metric,
 	MixpanelIntegrationOptions,
