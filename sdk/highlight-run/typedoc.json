@@ -1,0 +1,26 @@
+{
+    "$schema": "https://typedoc.org/schema.json",
+	"name": "@launchdarkly/observability",
+    "includeVersion": true,
+	"entryPoints": ["src/**/*.ts", "src/**/*.tsx", "src/*.ts", "src/*.tsx"],
+	"exclude": [
+		"**/__tests__/**",
+		"**/*.spec.ts",
+		"**/__mocks__/**",
+		"**/__generated/**"
+	],
+	"excludeInternal": true,
+	"excludePrivate": true,
+	"excludeProtected": true,
+    "excludeExternals": true,
+    "readme": "none",
+    "visibilityFilters": {
+      "protected": false,
+      "private": false,
+      "inherited": true,
+      "external": true,
+      "@alpha": false,
+      "@beta": false
+    },
+	"out": "docs"
+}

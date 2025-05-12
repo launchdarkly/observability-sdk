@@ -66,3 +66,6 @@ google-chrome*
 # WordPress plugin build files
 sdk/highlight-wordpress/highlight-io.zip
 sdk/highlight-wordpress/highlight-io/highlight.js
+
+# Typedoc docs
+sdk/highlight-run/docs

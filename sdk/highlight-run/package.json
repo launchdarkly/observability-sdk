@@ -34,7 +34,8 @@
 		"enforce-size": "size-limit",
 		"test": "vitest --run",
 		"test:watch": "vitest",
-		"typegen": "tsc && node scripts/replace-client-imports.mjs"
+		"typegen": "tsc",
+		"docs": "typedoc"
 	},
 	"type": "module",
 	"types": "./dist/highlight-run/src/index.d.ts",
@@ -131,6 +132,7 @@
 		"size-limit": "^8.1.0",
 		"stacktrace-js": "2.0.2",
 		"tslib": "^2.6.2",
+		"typedoc": "^0.28.4",
 		"typescript": "^5.0.4",
 		"vite": "^5.2.12",
 		"vitest": "^1.6.1",
