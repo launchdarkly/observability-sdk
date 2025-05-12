@@ -12,6 +12,19 @@ query GetSamplingConfig($project_id: ID!) {
 					...MatchParts
 				}
 			}
+			events {
+					name {
+						...MatchParts
+					}
+					attributes {
+						key {
+							...MatchParts
+						}
+						attribute {
+							...MatchParts
+						}
+					}
+			}
 			samplingRatio
 		}
 		logs {

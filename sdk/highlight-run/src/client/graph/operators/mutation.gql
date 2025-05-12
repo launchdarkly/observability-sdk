@@ -132,6 +132,19 @@ mutation initializeSession(
 						...MatchParts
 					}
 				}
+				events {
+					name {
+						...MatchParts
+					}
+					attributes {
+						key {
+							...MatchParts
+						}
+						attribute {
+							...MatchParts
+						}
+					}
+				}
 				samplingRatio
 			}
 			logs {

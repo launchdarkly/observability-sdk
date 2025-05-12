@@ -437,6 +437,27 @@ export type InitializeSessionMutation = {
 						matchValue?: any | null
 					}
 				}> | null
+				events?: Array<{
+					__typename?: 'SpanEventMatchConfig'
+					name?: {
+						__typename?: 'MatchConfig'
+						regexValue?: string | null
+						matchValue?: any | null
+					} | null
+					attributes?: Array<{
+						__typename?: 'AttributeMatchConfig'
+						key: {
+							__typename?: 'MatchConfig'
+							regexValue?: string | null
+							matchValue?: any | null
+						}
+						attribute: {
+							__typename?: 'MatchConfig'
+							regexValue?: string | null
+							matchValue?: any | null
+						}
+					}> | null
+				}> | null
 			}> | null
 			logs?: Array<{
 				__typename?: 'LogSamplingConfig'
@@ -503,6 +524,27 @@ export type GetSamplingConfigQuery = {
 					regexValue?: string | null
 					matchValue?: any | null
 				}
+			}> | null
+			events?: Array<{
+				__typename?: 'SpanEventMatchConfig'
+				name?: {
+					__typename?: 'MatchConfig'
+					regexValue?: string | null
+					matchValue?: any | null
+				} | null
+				attributes?: Array<{
+					__typename?: 'AttributeMatchConfig'
+					key: {
+						__typename?: 'MatchConfig'
+						regexValue?: string | null
+						matchValue?: any | null
+					}
+					attribute: {
+						__typename?: 'MatchConfig'
+						regexValue?: string | null
+						matchValue?: any | null
+					}
+				}> | null
 			}> | null
 		}> | null
 		logs?: Array<{
@@ -677,6 +719,19 @@ export const InitializeSessionDocument = gql`
 							...MatchParts
 						}
 					}
+					events {
+						name {
+							...MatchParts
+						}
+						attributes {
+							key {
+								...MatchParts
+							}
+							attribute {
+								...MatchParts
+							}
+						}
+					}
 					samplingRatio
 				}
 				logs {
@@ -719,6 +774,19 @@ export const GetSamplingConfigDocument = gql`
 					}
 					attribute {
 						...MatchParts
+					}
+				}
+				events {
+					name {
+						...MatchParts
+					}
+					attributes {
+						key {
+							...MatchParts
+						}
+						attribute {
+							...MatchParts
+						}
 					}
 				}
 				samplingRatio
