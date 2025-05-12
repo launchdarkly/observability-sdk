@@ -1,5 +1,11 @@
 # @launchdarkly/observability
 
+## 0.1.5
+
+### Patch Changes
+
+- 24f38cf: update launchdarkly package reporting of attributes for application and environment
+
 ## 0.1.4
 
 ### Patch Changes
