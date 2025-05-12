@@ -18,15 +18,11 @@ const SAMPLING_RATIO_ATTRIBUTE = 'launchdarkly.samplingRatio'
 
 type RegexCache = Map<string, RegExp>
 
-function isRegexMatchConfig(
-	matchConfig: MatchConfig,
-): boolean {
+function isRegexMatchConfig(matchConfig: MatchConfig): boolean {
 	return 'regexValue' in matchConfig
 }
 
-function isBasicMatchConfig(
-	matchConfig: MatchConfig,
-): boolean {
+function isBasicMatchConfig(matchConfig: MatchConfig): boolean {
 	return 'matchValue' in matchConfig
 }
 
@@ -105,16 +101,13 @@ export class CustomSampler implements ExportSampler {
 		}
 		if (isRegexMatchConfig(matchConfig)) {
 			// Exists due to above match, but could be null.
-			const regexValue = matchConfig.regexValue!;
-			if(regexValue === null) {
+			const regexValue = matchConfig.regexValue!
+			if (regexValue === null) {
 				// Is not a valid condition.
-				return false;
+				return false
 			}
 			if (!this.regexCache.has(regexValue)) {
-				this.regexCache.set(
-					regexValue,
-					new RegExp(regexValue),
-				)
+				this.regexCache.set(regexValue, new RegExp(regexValue))
 			}
 			// Force unwrap because we will always have ensured there is a regex in the cache immediately above.
 			const regex = this.regexCache.get(regexValue)!

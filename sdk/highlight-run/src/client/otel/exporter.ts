@@ -22,7 +22,10 @@ export type MetricExporterConfig = ConstructorParameters<
 // - https://github.com/open-telemetry/opentelemetry-js/blob/cf8edbed43c3e54eadcafe6fc6f39a1d03c89aa7/experimental/packages/otlp-exporter-base/src/platform/browser/OTLPExporterBrowserBase.ts#L51-L52
 
 export class OTLPTraceExporterBrowserWithXhrRetry extends OTLPTraceExporter {
-	constructor(config: TraceExporterConfig, private readonly sampler: ExportSampler) {
+	constructor(
+		config: TraceExporterConfig,
+		private readonly sampler: ExportSampler,
+	) {
 		super({
 			...config,
 			headers: {}, // a truthy value enables sending with XHR instead of beacon
@@ -34,6 +37,10 @@ export class OTLPTraceExporterBrowserWithXhrRetry extends OTLPTraceExporter {
 		resultCallback: (result: ExportResult) => void,
 	) {
 		const sampledItems = sampleSpans(items, this.sampler)
+		// Sampling removed all items and there is nothing to export.
+		if (sampledItems.length === 0) {
+			return
+		}
 		let retries = 0
 		const retry = (result: ExportResult) => {
 			retries++

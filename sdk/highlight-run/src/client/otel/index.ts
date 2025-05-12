@@ -79,7 +79,10 @@ let otelConfig: BrowserTracingConfig | undefined
 const RECORD_ATTRIBUTE = 'highlight.record'
 export const LOG_SPAN_NAME = 'launchdarkly.js.log'
 
-export const setupBrowserTracing = (config: BrowserTracingConfig, sampler: ExportSampler) => {
+export const setupBrowserTracing = (
+	config: BrowserTracingConfig,
+	sampler: ExportSampler,
+) => {
 	if (providers.tracerProvider !== undefined) {
 		console.warn('OTEL already initialized. Skipping...')
 		return

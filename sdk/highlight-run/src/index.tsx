@@ -1,8 +1,4 @@
-import {
-	Highlight,
-	HighlightClassOptions,
-	RequestResponsePair,
-} from './client'
+import { Highlight, HighlightClassOptions, RequestResponsePair } from './client'
 import { GenerateSecureID, getTracer } from './client'
 import { FirstLoadListeners } from './client/listeners/first-load-listeners'
 import type {
@@ -29,12 +25,7 @@ import {
 	loadCookieSessionData,
 } from './client/utils/sessionStorage/highlightSession.js'
 import { setCookieWriteEnabled } from './client/utils/storage'
-import {
-	Attributes,
-	Context,
-	Span,
-	SpanOptions,
-} from '@opentelemetry/api'
+import { Attributes, Context, Span, SpanOptions } from '@opentelemetry/api'
 import firstloadVersion from './__generated/version.js'
 import { listenToChromeExtensionMessage } from './browserExtension/extensionListener.js'
 import configureElectronHighlight from './environments/electron.js'

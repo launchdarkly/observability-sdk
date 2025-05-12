@@ -589,23 +589,28 @@ export class Highlight {
 
 			const sampler = new CustomSampler()
 
-			setupBrowserTracing({
-				backendUrl:
-					this.options?.backendUrl ?? 'https://pub.highlight.io',
-				otlpEndpoint:
-					this.options?.otlpEndpoint ?? 'https://otel.highlight.io',
-				projectId: this.options?.organizationID,
-				sessionSecureId: this.options?.sessionSecureID,
-				environment: this.options?.environment ?? 'production',
-				networkRecordingOptions:
-					typeof this.options?.networkRecording === 'object'
-						? this.options.networkRecording
-						: undefined,
-				tracingOrigins: this.options?.tracingOrigins,
-				serviceName: this.options?.serviceName ?? 'highlight-browser',
-				instrumentations: this.options?.otel?.instrumentations,
-				getIntegrations: () => [...this._integrations],
-			}, sampler)
+			setupBrowserTracing(
+				{
+					backendUrl:
+						this.options?.backendUrl ?? 'https://pub.highlight.io',
+					otlpEndpoint:
+						this.options?.otlpEndpoint ??
+						'https://otel.highlight.io',
+					projectId: this.options?.organizationID,
+					sessionSecureId: this.options?.sessionSecureID,
+					environment: this.options?.environment ?? 'production',
+					networkRecordingOptions:
+						typeof this.options?.networkRecording === 'object'
+							? this.options.networkRecording
+							: undefined,
+					tracingOrigins: this.options?.tracingOrigins,
+					serviceName:
+						this.options?.serviceName ?? 'highlight-browser',
+					instrumentations: this.options?.otel?.instrumentations,
+					getIntegrations: () => [...this._integrations],
+				},
+				sampler,
+			)
 
 			this.logger.log(
 				`Initializing...`,
@@ -1590,12 +1595,7 @@ declare global {
 	}
 }
 
-export {
-	GenerateSecureID,
-	getPreviousSessionData,
-	getTracer,
-	MetricCategory,
-}
+export { GenerateSecureID, getPreviousSessionData, getTracer, MetricCategory }
 export type {
 	AmplitudeIntegrationOptions,
 	ConsoleMessage,

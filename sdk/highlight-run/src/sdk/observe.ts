@@ -75,17 +75,15 @@ export class ObserveSDK implements Observe {
 	constructor(options: BrowserTracingConfig) {
 		this.sessionSecureID = options.sessionSecureId
 		this.projectID = options.projectId
-		setupBrowserTracing(options, this.sampler);
+		setupBrowserTracing(options, this.sampler)
 		const client = new GraphQLClient(`${options.backendUrl}`, {
 			headers: {},
 		})
 		this.graphqlSDK = getSdk(
 			client,
-			getGraphQLRequestWrapper(
-				this.sessionSecureID,
-			),
+			getGraphQLRequestWrapper(this.sessionSecureID),
 		)
-		this.configureSampling();
+		this.configureSampling()
 		this.setupListeners(options)
 	}
 
@@ -96,7 +94,9 @@ export class ObserveSDK implements Observe {
 			})
 			this.sampler.setConfig(res.sampling)
 		} catch (e) {
-			console.warn(`LaunchDarkly Observability: Failed to configure sampling: ${e}`)
+			console.warn(
+				`LaunchDarkly Observability: Failed to configure sampling: ${e}`,
+			)
 		}
 	}
 

@@ -4,36 +4,36 @@ fragment MatchParts on MatchConfig {
 
 query GetSamplingConfig($project_id: ID!) {
 	sampling(project_id: $project_id) {
-			spans {
-				name {
-					...MatchParts
-				}
-				attributes {
-					key {
-						...MatchParts
-					}
-					attribute {
-						...MatchParts
-					}
-				}
-				samplingRatio
+		spans {
+			name {
+				...MatchParts
 			}
-			logs {
-				message {
+			attributes {
+				key {
 					...MatchParts
 				}
-				severityText {
+				attribute {
 					...MatchParts
 				}
-				attributes {
-					key {
-						...MatchParts
-					}
-					attribute {
-						...MatchParts
-					}
-				}
-				samplingRatio
 			}
+			samplingRatio
+		}
+		logs {
+			message {
+				...MatchParts
+			}
+			severityText {
+				...MatchParts
+			}
+			attributes {
+				key {
+					...MatchParts
+				}
+				attribute {
+					...MatchParts
+				}
+			}
+			samplingRatio
+		}
 	}
 }
