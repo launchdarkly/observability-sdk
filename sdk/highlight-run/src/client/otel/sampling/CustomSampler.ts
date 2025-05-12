@@ -14,7 +14,7 @@ const LOG_SPAN_NAME = 'launchdarkly.js.log'
 const LOG_SEVERITY_ATTRIBUTE = 'log.severity'
 const LOG_MESSAGE_ATTRIBUTE = 'log.message'
 
-const SAMPLING_RATIO_ATTRIBUTE = 'launchdarkly.samplingRatio'
+const SAMPLING_RATIO_ATTRIBUTE = 'launchdarkly.sampling.ratio'
 
 type RegexCache = Map<string, RegExp>
 
