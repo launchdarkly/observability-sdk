@@ -1,5 +1,11 @@
 # @launchdarkly/observability
 
+## 0.1.3
+
+### Patch Changes
+
+- 6e77363: include highlight.run as dependency for type resolution
+
 ## 0.1.2
 
 ### Patch Changes
