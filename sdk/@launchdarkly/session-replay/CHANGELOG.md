@@ -1,5 +1,13 @@
 # @launchdarkly/session-replay
 
+## 0.1.4
+
+### Patch Changes
+
+- 96d5818: change type exports to be compatible with moduleResolution node
+- Updated dependencies [96d5818]
+    - highlight.run@9.18.1
+
 ## 0.1.3
 
 ### Patch Changes
