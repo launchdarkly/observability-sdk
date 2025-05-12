@@ -682,3 +682,7 @@ export type {
 	Metadata,
 	RequestResponsePair,
 }
+export { Observe } from './plugins/observe'
+export { LDObserve } from './sdk/LDObserve'
+export { Record } from './plugins/record'
+export { LDRecord } from './sdk/LDRecord'
