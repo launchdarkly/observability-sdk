@@ -1,4 +1,3 @@
-
 query GetSamplingConfig($project_id: ID!) {
 	sampling(project_id: $project_id) {
 		spans {
