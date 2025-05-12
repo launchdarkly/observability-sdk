@@ -223,6 +223,11 @@ it('should get approximately the correct number of samples', () => {
 	expect(notSampled).toBeLessThan(upperBound)
 })
 
+it('should not sample things with a sampling ratio of 0', () => {
+	const result = defaultSampler(0)
+	expect(result).toBe(false)
+})
+
 it('should return false if sampling is not enabled', () => {
 	const sampler = new CustomSampler(undefined)
 	expect(sampler.isSamplingEnabled()).toBe(false)
