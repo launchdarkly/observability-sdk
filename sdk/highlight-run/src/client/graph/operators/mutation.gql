@@ -80,6 +80,7 @@ mutation addSessionFeedback(
 
 fragment MatchParts on MatchConfig {
 	regexValue
+	matchValue
 }
 
 mutation initializeSession(

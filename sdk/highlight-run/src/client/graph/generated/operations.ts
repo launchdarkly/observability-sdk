@@ -385,6 +385,7 @@ export type AddSessionFeedbackMutation = {
 export type MatchPartsFragment = {
 	__typename?: 'MatchConfig'
 	regexValue?: string | null
+	matchValue?: any | null
 }
 
 export type InitializeSessionMutationVariables = Exact<{
@@ -421,16 +422,19 @@ export type InitializeSessionMutation = {
 				name?: {
 					__typename?: 'MatchConfig'
 					regexValue?: string | null
+					matchValue?: any | null
 				} | null
 				attributes?: Array<{
 					__typename?: 'AttributeMatchConfig'
 					key: {
 						__typename?: 'MatchConfig'
 						regexValue?: string | null
+						matchValue?: any | null
 					}
 					attribute: {
 						__typename?: 'MatchConfig'
 						regexValue?: string | null
+						matchValue?: any | null
 					}
 				}> | null
 			}> | null
@@ -440,20 +444,24 @@ export type InitializeSessionMutation = {
 				message?: {
 					__typename?: 'MatchConfig'
 					regexValue?: string | null
+					matchValue?: any | null
 				} | null
 				severityText?: {
 					__typename?: 'MatchConfig'
 					regexValue?: string | null
+					matchValue?: any | null
 				} | null
 				attributes?: Array<{
 					__typename?: 'AttributeMatchConfig'
 					key: {
 						__typename?: 'MatchConfig'
 						regexValue?: string | null
+						matchValue?: any | null
 					}
 					attribute: {
 						__typename?: 'MatchConfig'
 						regexValue?: string | null
+						matchValue?: any | null
 					}
 				}> | null
 			}> | null
@@ -481,13 +489,19 @@ export type GetSamplingConfigQuery = {
 			name?: {
 				__typename?: 'MatchConfig'
 				regexValue?: string | null
+				matchValue?: any | null
 			} | null
 			attributes?: Array<{
 				__typename?: 'AttributeMatchConfig'
-				key: { __typename?: 'MatchConfig'; regexValue?: string | null }
+				key: {
+					__typename?: 'MatchConfig'
+					regexValue?: string | null
+					matchValue?: any | null
+				}
 				attribute: {
 					__typename?: 'MatchConfig'
 					regexValue?: string | null
+					matchValue?: any | null
 				}
 			}> | null
 		}> | null
@@ -497,17 +511,24 @@ export type GetSamplingConfigQuery = {
 			message?: {
 				__typename?: 'MatchConfig'
 				regexValue?: string | null
+				matchValue?: any | null
 			} | null
 			severityText?: {
 				__typename?: 'MatchConfig'
 				regexValue?: string | null
+				matchValue?: any | null
 			} | null
 			attributes?: Array<{
 				__typename?: 'AttributeMatchConfig'
-				key: { __typename?: 'MatchConfig'; regexValue?: string | null }
+				key: {
+					__typename?: 'MatchConfig'
+					regexValue?: string | null
+					matchValue?: any | null
+				}
 				attribute: {
 					__typename?: 'MatchConfig'
 					regexValue?: string | null
+					matchValue?: any | null
 				}
 			}> | null
 		}> | null
@@ -517,6 +538,7 @@ export type GetSamplingConfigQuery = {
 export const MatchPartsFragmentDoc = gql`
 	fragment MatchParts on MatchConfig {
 		regexValue
+		matchValue
 	}
 `
 export const PushPayloadDocument = gql`
