@@ -29,7 +29,8 @@ export const FEATURE_FLAG_PROVIDER_NAME_ATTR = `${FEATURE_FLAG_SCOPE}.provider_n
 export const FEATURE_FLAG_CLIENT_SIDE_ID_ATTR = `${FEATURE_FLAG_SCOPE}.client_side_id`
 export const FEATURE_FLAG_IN_EXPERIMENT_ATTR = `${FEATURE_FLAG_SCOPE}.result.reason.inExperiment`
 export const FEATURE_FLAG_VARIATION_INDEX_ATTR = `${FEATURE_FLAG_SCOPE}.result.variationIndex`
-export const FEATURE_FLAG_APP_VERSION_ATTR = `${FEATURE_FLAG_SCOPE}.app_version`
+export const FEATURE_FLAG_APP_ID_ATTR = `${FEATURE_FLAG_SCOPE}.application.id`
+export const FEATURE_FLAG_APP_VERSION_ATTR = `${FEATURE_FLAG_SCOPE}.application.version`
 export const FEATURE_FLAG_SPAN_NAME = 'evaluation'
 
 export const LD_INITIALIZE_EVENT = '$ld:telemetry:session:init'
