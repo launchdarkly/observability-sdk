@@ -59,12 +59,6 @@ export type BackendErrorObjectInput = {
 	url: Scalars['String']['input']
 }
 
-/** A match configuration which does an exact match against any value. */
-export type BasicMatchConfig = {
-	__typename?: 'BasicMatchConfig'
-	matchValue?: Maybe<Scalars['Any']['output']>
-}
-
 export type ErrorObjectInput = {
 	columnNumber: Scalars['Int']['input']
 	event: Scalars['String']['input']
@@ -107,8 +101,23 @@ export type LogSamplingConfig = {
 	severityText?: Maybe<MatchConfig>
 }
 
-/** A match configuration. */
-export type MatchConfig = BasicMatchConfig | RegexMatchConfig
+/**
+ * A match configuration. Each field of this type represents a different type of match
+ * configuration. One and only 1 field should be populated.
+ *
+ * This is effectively a sum type/discriminated union, but isn't implemented as such to avoid
+ * this bug: https://github.com/99designs/gqlgen/issues/2741
+ */
+export type MatchConfig = {
+	__typename?: 'MatchConfig'
+	/** A match configuration which does an exact match against any value. */
+	matchValue?: Maybe<Scalars['Any']['output']>
+	/**
+	 * A match configuration which matches against a regular expression.
+	 * Can only match string attributes.
+	 */
+	regexValue?: Maybe<Scalars['String']['output']>
+}
 
 export type MetricInput = {
 	category?: InputMaybe<Scalars['String']['input']>
@@ -223,15 +232,6 @@ export type Query = {
 
 export type QueryIgnoreArgs = {
 	id: Scalars['ID']['input']
-}
-
-/**
- * A match configuration which matches against a regular expression.
- * Can only match string attributes.
- */
-export type RegexMatchConfig = {
-	__typename?: 'RegexMatchConfig'
-	regexValue: Scalars['String']['output']
 }
 
 export type ReplayEventInput = {
@@ -377,14 +377,9 @@ export type AddSessionFeedbackMutation = {
 	addSessionFeedback: string
 }
 
-export type RegexMatchPartsFragment = {
-	__typename?: 'RegexMatchConfig'
-	regexValue: string
-}
-
-export type BasicMatchPartsFragment = {
-	__typename?: 'BasicMatchConfig'
-	matchValue?: any | null
+export type MatchPartsFragment = {
+	__typename?: 'MatchConfig'
+	regexValue?: string | null
 }
 
 export type InitializeSessionMutationVariables = Exact<{
@@ -418,72 +413,43 @@ export type InitializeSessionMutation = {
 			spans?: Array<{
 				__typename?: 'SpanSamplingConfig'
 				samplingRatio: number
-				name?:
-					| {
-							__typename?: 'BasicMatchConfig'
-							matchValue?: any | null
-					  }
-					| { __typename?: 'RegexMatchConfig'; regexValue: string }
-					| null
+				name?: {
+					__typename?: 'MatchConfig'
+					regexValue?: string | null
+				} | null
 				attributes?: Array<{
 					__typename?: 'AttributeMatchConfig'
-					key:
-						| {
-								__typename?: 'BasicMatchConfig'
-								matchValue?: any | null
-						  }
-						| {
-								__typename?: 'RegexMatchConfig'
-								regexValue: string
-						  }
-					attribute:
-						| {
-								__typename?: 'BasicMatchConfig'
-								matchValue?: any | null
-						  }
-						| {
-								__typename?: 'RegexMatchConfig'
-								regexValue: string
-						  }
+					key: {
+						__typename?: 'MatchConfig'
+						regexValue?: string | null
+					}
+					attribute: {
+						__typename?: 'MatchConfig'
+						regexValue?: string | null
+					}
 				}> | null
 			}> | null
 			logs?: Array<{
 				__typename?: 'LogSamplingConfig'
 				samplingRatio: number
-				message?:
-					| {
-							__typename?: 'BasicMatchConfig'
-							matchValue?: any | null
-					  }
-					| { __typename?: 'RegexMatchConfig'; regexValue: string }
-					| null
-				severityText?:
-					| {
-							__typename?: 'BasicMatchConfig'
-							matchValue?: any | null
-					  }
-					| { __typename?: 'RegexMatchConfig'; regexValue: string }
-					| null
+				message?: {
+					__typename?: 'MatchConfig'
+					regexValue?: string | null
+				} | null
+				severityText?: {
+					__typename?: 'MatchConfig'
+					regexValue?: string | null
+				} | null
 				attributes?: Array<{
 					__typename?: 'AttributeMatchConfig'
-					key:
-						| {
-								__typename?: 'BasicMatchConfig'
-								matchValue?: any | null
-						  }
-						| {
-								__typename?: 'RegexMatchConfig'
-								regexValue: string
-						  }
-					attribute:
-						| {
-								__typename?: 'BasicMatchConfig'
-								matchValue?: any | null
-						  }
-						| {
-								__typename?: 'RegexMatchConfig'
-								regexValue: string
-						  }
+					key: {
+						__typename?: 'MatchConfig'
+						regexValue?: string | null
+					}
+					attribute: {
+						__typename?: 'MatchConfig'
+						regexValue?: string | null
+					}
 				}> | null
 			}> | null
 		} | null
@@ -496,14 +462,9 @@ export type IgnoreQueryVariables = Exact<{
 
 export type IgnoreQuery = { __typename?: 'Query'; ignore?: any | null }
 
-export const RegexMatchPartsFragmentDoc = gql`
-	fragment RegexMatchParts on RegexMatchConfig {
+export const MatchPartsFragmentDoc = gql`
+	fragment MatchParts on MatchConfig {
 		regexValue
-	}
-`
-export const BasicMatchPartsFragmentDoc = gql`
-	fragment BasicMatchParts on BasicMatchConfig {
-		matchValue
 	}
 `
 export const PushPayloadDocument = gql`
@@ -632,38 +593,31 @@ export const InitializeSessionDocument = gql`
 			sampling {
 				spans {
 					name {
-						...RegexMatchParts
-						...BasicMatchParts
+						...MatchParts
 					}
 					attributes {
 						key {
-							...RegexMatchParts
-							...BasicMatchParts
+							...MatchParts
 						}
 						attribute {
-							...RegexMatchParts
-							...BasicMatchParts
+							...MatchParts
 						}
 					}
 					samplingRatio
 				}
 				logs {
 					message {
-						...RegexMatchParts
-						...BasicMatchParts
+						...MatchParts
 					}
 					severityText {
-						...RegexMatchParts
-						...BasicMatchParts
+						...MatchParts
 					}
 					attributes {
 						key {
-							...RegexMatchParts
-							...BasicMatchParts
+							...MatchParts
 						}
 						attribute {
-							...RegexMatchParts
-							...BasicMatchParts
+							...MatchParts
 						}
 					}
 					samplingRatio
@@ -671,8 +625,7 @@ export const InitializeSessionDocument = gql`
 			}
 		}
 	}
-	${RegexMatchPartsFragmentDoc}
-	${BasicMatchPartsFragmentDoc}
+	${MatchPartsFragmentDoc}
 `
 export const IgnoreDocument = gql`
 	query Ignore($id: ID!) {

@@ -78,12 +78,8 @@ mutation addSessionFeedback(
 	)
 }
 
-fragment RegexMatchParts on RegexMatchConfig {
+fragment MatchParts on MatchConfig {
 	regexValue
-}
-
-fragment BasicMatchParts on BasicMatchConfig {
-	matchValue
 }
 
 mutation initializeSession(
@@ -125,38 +121,31 @@ mutation initializeSession(
 		sampling {
 			spans {
 				name {
-					...RegexMatchParts
-					...BasicMatchParts
+					...MatchParts
 				}
 				attributes {
 					key {
-						...RegexMatchParts
-						...BasicMatchParts
+						...MatchParts
 					}
 					attribute {
-						...RegexMatchParts
-						...BasicMatchParts
+						...MatchParts
 					}
 				}
 				samplingRatio
 			}
 			logs {
 				message {
-					...RegexMatchParts
-					...BasicMatchParts
+					...MatchParts
 				}
 				severityText {
-					...RegexMatchParts
-					...BasicMatchParts
+					...MatchParts
 				}
 				attributes {
 					key {
-						...RegexMatchParts
-						...BasicMatchParts
+						...MatchParts
 					}
 					attribute {
-						...RegexMatchParts
-						...BasicMatchParts
+						...MatchParts
 					}
 				}
 				samplingRatio

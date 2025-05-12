@@ -7,8 +7,6 @@ import {
 	Maybe,
 	SpanSamplingConfig,
 	MatchConfig,
-	RegexMatchConfig,
-	BasicMatchConfig,
 	AttributeMatchConfig,
 	SpanEventMatchConfig,
 } from '../../graph/generated/operations'
@@ -22,13 +20,13 @@ type RegexCache = Map<string, RegExp>
 
 function isRegexMatchConfig(
 	matchConfig: MatchConfig,
-): matchConfig is RegexMatchConfig {
+): boolean {
 	return 'regexValue' in matchConfig
 }
 
 function isBasicMatchConfig(
 	matchConfig: MatchConfig,
-): matchConfig is BasicMatchConfig {
+): boolean {
 	return 'matchValue' in matchConfig
 }
 
@@ -106,14 +104,20 @@ export class CustomSampler implements ExportSampler {
 			return matchConfig.matchValue === value
 		}
 		if (isRegexMatchConfig(matchConfig)) {
-			if (!this.regexCache.has(matchConfig.regexValue)) {
+			// Exists due to above match, but could be null.
+			const regexValue = matchConfig.regexValue!;
+			if(regexValue === null) {
+				// Is not a valid condition.
+				return false;
+			}
+			if (!this.regexCache.has(regexValue)) {
 				this.regexCache.set(
-					matchConfig.regexValue,
-					new RegExp(matchConfig.regexValue),
+					regexValue,
+					new RegExp(regexValue),
 				)
 			}
 			// Force unwrap because we will always have ensured there is a regex in the cache immediately above.
-			const regex = this.regexCache.get(matchConfig.regexValue)!
+			const regex = this.regexCache.get(regexValue)!
 			if (typeof value === 'string') {
 				return regex.test(value)
 			}

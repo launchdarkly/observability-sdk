@@ -56,12 +56,6 @@ export type BackendErrorObjectInput = {
 	url: Scalars['String']['input']
 }
 
-/** A match configuration which does an exact match against any value. */
-export type BasicMatchConfig = {
-	__typename?: 'BasicMatchConfig'
-	matchValue?: Maybe<Scalars['Any']['output']>
-}
-
 export type ErrorObjectInput = {
 	columnNumber: Scalars['Int']['input']
 	event: Scalars['String']['input']
@@ -104,8 +98,23 @@ export type LogSamplingConfig = {
 	severityText?: Maybe<MatchConfig>
 }
 
-/** A match configuration. */
-export type MatchConfig = BasicMatchConfig | RegexMatchConfig
+/**
+ * A match configuration. Each field of this type represents a different type of match
+ * configuration. One and only 1 field should be populated.
+ *
+ * This is effectively a sum type/discriminated union, but isn't implemented as such to avoid
+ * this bug: https://github.com/99designs/gqlgen/issues/2741
+ */
+export type MatchConfig = {
+	__typename?: 'MatchConfig'
+	/** A match configuration which does an exact match against any value. */
+	matchValue?: Maybe<Scalars['Any']['output']>
+	/**
+	 * A match configuration which matches against a regular expression.
+	 * Can only match string attributes.
+	 */
+	regexValue?: Maybe<Scalars['String']['output']>
+}
 
 export type MetricInput = {
 	category?: InputMaybe<Scalars['String']['input']>
@@ -220,15 +229,6 @@ export type Query = {
 
 export type QueryIgnoreArgs = {
 	id: Scalars['ID']['input']
-}
-
-/**
- * A match configuration which matches against a regular expression.
- * Can only match string attributes.
- */
-export type RegexMatchConfig = {
-	__typename?: 'RegexMatchConfig'
-	regexValue: Scalars['String']['output']
 }
 
 export type ReplayEventInput = {
