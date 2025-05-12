@@ -39,6 +39,9 @@ jobs:
             - name: Install js dependencies
               run: yarn
 
+            - name: Build npm packages
+              run: yarn build
+
             - uses: launchdarkly/gh-actions/actions/release-secrets@release-secrets-v1.2.0
               name: 'Get NPM token'
               with:
