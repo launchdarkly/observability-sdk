@@ -20,7 +20,7 @@
 				"expected_result": {
 					"sample": true,
 					"attributes": {
-						"launchdarkly.samplingRatio": 42
+						"launchdarkly.sampling.ratio": 42
 					}
 				}
 			},
@@ -29,7 +29,7 @@
 				"expected_result": {
 					"sample": false,
 					"attributes": {
-						"launchdarkly.samplingRatio": 42
+						"launchdarkly.sampling.ratio": 42
 					}
 				}
 			}
@@ -56,7 +56,7 @@
 				"expected_result": {
 					"sample": true,
 					"attributes": {
-						"launchdarkly.samplingRatio": 42
+						"launchdarkly.sampling.ratio": 42
 					}
 				}
 			},
@@ -65,7 +65,7 @@
 				"expected_result": {
 					"sample": false,
 					"attributes": {
-						"launchdarkly.samplingRatio": 42
+						"launchdarkly.sampling.ratio": 42
 					}
 				}
 			}
@@ -117,7 +117,7 @@
 				"expected_result": {
 					"sample": true,
 					"attributes": {
-						"launchdarkly.samplingRatio": 42
+						"launchdarkly.sampling.ratio": 42
 					}
 				}
 			},
@@ -126,7 +126,7 @@
 				"expected_result": {
 					"sample": false,
 					"attributes": {
-						"launchdarkly.samplingRatio": 42
+						"launchdarkly.sampling.ratio": 42
 					}
 				}
 			}
@@ -163,7 +163,7 @@
 				"expected_result": {
 					"sample": true,
 					"attributes": {
-						"launchdarkly.samplingRatio": 75
+						"launchdarkly.sampling.ratio": 75
 					}
 				}
 			},
@@ -172,7 +172,7 @@
 				"expected_result": {
 					"sample": false,
 					"attributes": {
-						"launchdarkly.samplingRatio": 75
+						"launchdarkly.sampling.ratio": 75
 					}
 				}
 			}
@@ -209,7 +209,7 @@
 				"expected_result": {
 					"sample": true,
 					"attributes": {
-						"launchdarkly.samplingRatio": 75
+						"launchdarkly.sampling.ratio": 75
 					}
 				}
 			},
@@ -218,7 +218,7 @@
 				"expected_result": {
 					"sample": false,
 					"attributes": {
-						"launchdarkly.samplingRatio": 75
+						"launchdarkly.sampling.ratio": 75
 					}
 				}
 			}
@@ -255,7 +255,7 @@
 				"expected_result": {
 					"sample": true,
 					"attributes": {
-						"launchdarkly.samplingRatio": 100
+						"launchdarkly.sampling.ratio": 100
 					}
 				}
 			},
@@ -264,7 +264,7 @@
 				"expected_result": {
 					"sample": false,
 					"attributes": {
-						"launchdarkly.samplingRatio": 100
+						"launchdarkly.sampling.ratio": 100
 					}
 				}
 			}
@@ -301,7 +301,7 @@
 				"expected_result": {
 					"sample": true,
 					"attributes": {
-						"launchdarkly.samplingRatio": 50
+						"launchdarkly.sampling.ratio": 50
 					}
 				}
 			},
@@ -310,7 +310,7 @@
 				"expected_result": {
 					"sample": false,
 					"attributes": {
-						"launchdarkly.samplingRatio": 50
+						"launchdarkly.sampling.ratio": 50
 					}
 				}
 			}
@@ -374,7 +374,7 @@
 				"expected_result": {
 					"sample": true,
 					"attributes": {
-						"launchdarkly.samplingRatio": 90
+						"launchdarkly.sampling.ratio": 90
 					}
 				}
 			},
@@ -383,7 +383,7 @@
 				"expected_result": {
 					"sample": false,
 					"attributes": {
-						"launchdarkly.samplingRatio": 90
+						"launchdarkly.sampling.ratio": 90
 					}
 				}
 			}

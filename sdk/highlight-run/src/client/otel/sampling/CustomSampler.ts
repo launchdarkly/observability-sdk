@@ -156,9 +156,11 @@ export class CustomSampler implements ExportSampler {
 		eventConfig: SpanEventMatchConfig,
 		event: TimedEvent,
 	): boolean {
-		// Match by event name
-		if (!this.matchesValue(eventConfig.name, event.name)) {
-			return false
+		if (eventConfig.name) {
+			// Match by event name
+			if (!this.matchesValue(eventConfig.name, event.name)) {
+				return false
+			}
 		}
 
 		// Match by event attributes if specified

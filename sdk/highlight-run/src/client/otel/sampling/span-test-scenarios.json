@@ -18,7 +18,7 @@
 				"expected_result": {
 					"sample": false,
 					"attributes": {
-						"launchdarkly.samplingRatio": 10
+						"launchdarkly.sampling.ratio": 10
 					}
 				}
 			}
@@ -46,7 +46,7 @@
 				"expected_result": {
 					"sample": true,
 					"attributes": {
-						"launchdarkly.samplingRatio": 42
+						"launchdarkly.sampling.ratio": 42
 					}
 				}
 			},
@@ -55,7 +55,7 @@
 				"expected_result": {
 					"sample": false,
 					"attributes": {
-						"launchdarkly.samplingRatio": 42
+						"launchdarkly.sampling.ratio": 42
 					}
 				}
 			}
@@ -109,7 +109,7 @@
 				"expected_result": {
 					"sample": true,
 					"attributes": {
-						"launchdarkly.samplingRatio": 42
+						"launchdarkly.sampling.ratio": 42
 					}
 				}
 			},
@@ -118,7 +118,7 @@
 				"expected_result": {
 					"sample": false,
 					"attributes": {
-						"launchdarkly.samplingRatio": 42
+						"launchdarkly.sampling.ratio": 42
 					}
 				}
 			}
@@ -154,7 +154,7 @@
 				"expected_result": {
 					"sample": true,
 					"attributes": {
-						"launchdarkly.samplingRatio": 42
+						"launchdarkly.sampling.ratio": 42
 					}
 				}
 			},
@@ -163,7 +163,7 @@
 				"expected_result": {
 					"sample": false,
 					"attributes": {
-						"launchdarkly.samplingRatio": 42
+						"launchdarkly.sampling.ratio": 42
 					}
 				}
 			}
@@ -201,7 +201,7 @@
 				"expected_result": {
 					"sample": true,
 					"attributes": {
-						"launchdarkly.samplingRatio": 75
+						"launchdarkly.sampling.ratio": 75
 					}
 				}
 			},
@@ -210,7 +210,7 @@
 				"expected_result": {
 					"sample": false,
 					"attributes": {
-						"launchdarkly.samplingRatio": 75
+						"launchdarkly.sampling.ratio": 75
 					}
 				}
 			}
@@ -248,7 +248,7 @@
 				"expected_result": {
 					"sample": true,
 					"attributes": {
-						"launchdarkly.samplingRatio": 25
+						"launchdarkly.sampling.ratio": 25
 					}
 				}
 			},
@@ -257,7 +257,7 @@
 				"expected_result": {
 					"sample": false,
 					"attributes": {
-						"launchdarkly.samplingRatio": 25
+						"launchdarkly.sampling.ratio": 25
 					}
 				}
 			}
@@ -295,7 +295,7 @@
 				"expected_result": {
 					"sample": true,
 					"attributes": {
-						"launchdarkly.samplingRatio": 100
+						"launchdarkly.sampling.ratio": 100
 					}
 				}
 			},
@@ -304,7 +304,7 @@
 				"expected_result": {
 					"sample": false,
 					"attributes": {
-						"launchdarkly.samplingRatio": 100
+						"launchdarkly.sampling.ratio": 100
 					}
 				}
 			}
@@ -340,7 +340,7 @@
 				"expected_result": {
 					"sample": true,
 					"attributes": {
-						"launchdarkly.samplingRatio": 33
+						"launchdarkly.sampling.ratio": 33
 					}
 				}
 			},
@@ -349,7 +349,7 @@
 				"expected_result": {
 					"sample": false,
 					"attributes": {
-						"launchdarkly.samplingRatio": 33
+						"launchdarkly.sampling.ratio": 33
 					}
 				}
 			}
@@ -417,7 +417,7 @@
 				"expected_result": {
 					"sample": true,
 					"attributes": {
-						"launchdarkly.samplingRatio": 50
+						"launchdarkly.sampling.ratio": 50
 					}
 				}
 			},
@@ -426,7 +426,140 @@
 				"expected_result": {
 					"sample": false,
 					"attributes": {
-						"launchdarkly.samplingRatio": 50
+						"launchdarkly.sampling.ratio": 50
+					}
+				}
+			}
+		]
+	},
+	{
+		"description": "Should match a span based on event name and event attributes",
+		"samplingConfig": {
+			"spans": [
+				{
+					"events": [
+						{
+							"name": {
+								"matchValue": "test-event"
+							},
+							"attributes": [
+								{
+									"key": {
+										"matchValue": "event.type"
+									},
+									"attribute": {
+										"matchValue": "click"
+									}
+								},
+								{
+									"key": {
+										"matchValue": "event.status"
+									},
+									"attribute": {
+										"matchValue": "success"
+									}
+								}
+							]
+						}
+					],
+					"samplingRatio": 60
+				}
+			]
+		},
+		"inputSpan": {
+			"name": "ui-interaction",
+			"events": [
+				{
+					"name": "test-event",
+					"attributes": {
+						"event.type": "click",
+						"event.status": "success",
+						"event.target": "button"
+					}
+				}
+			]
+		},
+		"samplerFunctionCases": [
+			{
+				"type": "always",
+				"expected_result": {
+					"sample": true,
+					"attributes": {
+						"launchdarkly.sampling.ratio": 60
+					}
+				}
+			},
+			{
+				"type": "never",
+				"expected_result": {
+					"sample": false,
+					"attributes": {
+						"launchdarkly.sampling.ratio": 60
+					}
+				}
+			}
+		]
+	},
+	{
+		"description": "Should match a span based only on event attributes without matching event name",
+		"samplingConfig": {
+			"spans": [
+				{
+					"events": [
+						{
+							"attributes": [
+								{
+									"key": {
+										"matchValue": "error.type"
+									},
+									"attribute": {
+										"matchValue": "network"
+									}
+								},
+								{
+									"key": {
+										"matchValue": "error.code"
+									},
+									"attribute": {
+										"matchValue": 503
+									}
+								}
+							]
+						}
+					],
+					"samplingRatio": 85
+				}
+			]
+		},
+		"inputSpan": {
+			"name": "api-request",
+			"events": [
+				{
+					"name": "error-event",
+					"attributes": {
+						"error.type": "network",
+						"error.code": 503,
+						"error.message": "Service unavailable"
+					}
+				}
+			]
+		},
+		"samplerFunctionCases": [
+			{
+				"type": "always",
+				"expected_result": {
+					"sample": true,
+					"attributes": {
+						"launchdarkly.sampling.ratio": 85
+					}
+				}
+			},
+			{
+				"type": "never",
+				"expected_result": {
+					"sample": false,
+					"attributes": {
+						"launchdarkly.sampling.ratio": 85
 					}
 				}
 			}

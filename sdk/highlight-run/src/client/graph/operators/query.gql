@@ -13,17 +13,17 @@ query GetSamplingConfig($project_id: ID!) {
 				}
 			}
 			events {
-					name {
+				name {
+					...MatchParts
+				}
+				attributes {
+					key {
 						...MatchParts
 					}
-					attributes {
-						key {
-							...MatchParts
-						}
-						attribute {
-							...MatchParts
-						}
+					attribute {
+						...MatchParts
 					}
+				}
 			}
 			samplingRatio
 		}
