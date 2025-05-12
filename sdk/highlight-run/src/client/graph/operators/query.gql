@@ -1,5 +1,6 @@
 fragment MatchParts on MatchConfig {
 	regexValue
+	matchValue
 }
 
 query GetSamplingConfig($project_id: ID!) {
