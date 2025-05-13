@@ -1,6 +1,23 @@
 name: Manual Publish Package
 on:
     workflow_dispatch:
+        inputs:
+            dry-run:
+                description: 'Is this a dry run. If so no package will be published.'
+                type: boolean
+                required: true
+            prerelease:
+                description: 'Is this a prerelease. If so, then the latest tag will not be updated in npm.'
+                type: boolean
+                required: true
+            release_highlight:
+                description: 'Should release @highlight-run/... packages.'
+                type: boolean
+                required: true
+            release_launchdarkly:
+                description: 'Should release @launchdarkly/... packages.'
+                type: boolean
+                required: true
 
 permissions:
     id-token: write
@@ -30,21 +47,46 @@ jobs:
             - name: Install js dependencies
               run: yarn
 
-            - name: Build npm packages
-              run: yarn build
+            - name: Build & test
+              run: yarn test
+              env:
+                  NEXT_PUBLIC_HIGHLIGHT_PROJECT_ID: 1jdkoe52
+                  REACT_APP_COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+            - name: Configure yarn npm registry credentials for highlight
+              if: ${{ inputs.release_highlight == 'true' }}
+              run: |
+                  yarn config set npmRegistryServer "https://registry.npmjs.org"
+                  yarn config set npmAuthToken "${NPM_TOKEN}"
+              env:
+                  NPM_TOKEN: ${{ secrets.NPM_TOKEN_HIGHLIGHT_RUN }}
+
+            - name: Publish highlight npm packages
+              if: ${{ inputs.release_highlight == 'true' }}
+              id: changesets-publish
+              uses: changesets/action@v1
+              with:
+                  publish: yarn publish:highlight
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  NPM_TOKEN: ${{ secrets.NPM_TOKEN_HIGHLIGHT_RUN }}
+                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN_HIGHLIGHT_RUN }}
 
             - uses: launchdarkly/gh-actions/actions/release-secrets@release-secrets-v1.2.0
+              if: ${{ inputs.release_launchdarkly == 'true' }}
               name: 'Get NPM token'
               with:
                   aws_assume_role: ${{ vars.AWS_ROLE_ARN }}
                   ssm_parameter_pairs: '/production/common/releasing/npm/token = NODE_AUTH_TOKEN'
 
-            - name: Configure yarn npm registry credentials
+            - name: Configure yarn npm registry credentials for launchdarkly
+              if: ${{ inputs.release_launchdarkly == 'true' }}
               run: |
                   yarn config set npmRegistryServer "https://registry.npmjs.org"
                   yarn config set npmAuthToken "${NODE_AUTH_TOKEN}"
 
             - name: Publish
+              if: ${{ inputs.release_launchdarkly == 'true' }}
               shell: bash
               run: |
                   ./scripts/publish-npm.sh
