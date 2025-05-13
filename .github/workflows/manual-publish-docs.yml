@@ -7,7 +7,7 @@ permissions:
     contents: write
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 jobs:
-    publish-package:
+    publish-docs:
         runs-on: ubuntu-latest
         steps:
             - uses: launchdarkly/common-actions/ssh-key-by-repo@main
