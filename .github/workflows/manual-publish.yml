@@ -46,6 +46,8 @@ jobs:
 
             - name: Install js dependencies
               run: yarn
+              env:
+                  PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: true
 
             - name: Build & test
               run: yarn test

@@ -37,6 +37,8 @@ jobs:
 
             - name: Install js dependencies
               run: yarn
+              env:
+                  PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: true
 
             - name: Check yarn for duplicate deps
               run: yarn dedupe --check
