@@ -33,6 +33,15 @@
 				"esm/**/*.d.ts"
 			]
 		},
+		"docs": {
+			"inputs": [
+				"src/**/*.tsx",
+				"src/**/*.ts",
+				"tsconfig.json",
+				"typedoc.json"
+			],
+			"outputs": ["docs/**"]
+		},
 		"build": {
 			"dependsOn": ["^build", "typegen"],
 			"outputs": [

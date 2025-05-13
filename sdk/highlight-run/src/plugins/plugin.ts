@@ -1,10 +1,9 @@
-import type { LDClientMin } from '../integrations/launchdarkly/types/LDClient'
-import type { Hook } from '../integrations/launchdarkly'
+import type { Hook, LDClient } from '../integrations/launchdarkly'
 
 export interface LDPlugin {
 	getMetadata(): LDPluginMetadata
 	register(
-		client: LDClientMin,
+		client: LDClient,
 		environmentMetadata: LDPluginEnvironmentMetadata,
 	): void
 	getHooks?(metadata: LDPluginEnvironmentMetadata): Hook[]

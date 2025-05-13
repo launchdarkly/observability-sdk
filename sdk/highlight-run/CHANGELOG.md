@@ -1,5 +1,11 @@
 # highlight.run
 
+## 9.18.1
+
+### Patch Changes
+
+- 96d5818: change type exports to be compatible with moduleResolution node
+
 ## 9.18.0
 
 ### Minor Changes

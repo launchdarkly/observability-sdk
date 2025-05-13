@@ -9,7 +9,7 @@ import type {
 	SessionShortcutOptions,
 } from './client'
 import type { ErrorMessageType, Source } from './shared-types'
-import type { LDClientMin } from '../../integrations/launchdarkly/types/LDClient'
+import type { LDClient } from '../../integrations/launchdarkly'
 import type { LDPluginEnvironmentMetadata } from '../../plugins/plugin'
 
 export declare interface Metadata {
@@ -490,7 +490,7 @@ export declare interface HighlightPublicInterface {
 	snapshot: (element: HTMLCanvasElement) => Promise<void>
 
 	registerLD: (
-		client: LDClientMin,
+		client: LDClient,
 		metadata?: LDPluginEnvironmentMetadata,
 	) => void
 }

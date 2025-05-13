@@ -1,5 +1,5 @@
 import type { Observe } from '../api/observe'
-import type { LDClientMin } from '../client'
+import type { LDClient } from '../integrations/launchdarkly'
 import type { ErrorMessageType } from '../client/types/shared-types'
 import type { OTelMetric as Metric } from '../client/types/types'
 import type { Attributes } from '@opentelemetry/api'
@@ -36,7 +36,7 @@ class _LDObserve extends BufferedClass<Observe> implements Observe {
 	}
 
 	register(
-		client: LDClientMin,
+		client: LDClient,
 		environmentMetadata: LDPluginEnvironmentMetadata,
 	) {
 		return this._bufferCall('register', [client, environmentMetadata])

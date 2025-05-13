@@ -1,4 +1,4 @@
-import type { Hook } from '@launchdarkly/js-client-sdk'
+import type { Hook } from './Hooks'
 
 export interface LDClientMin {
 	track(key: string, data?: any, metricValue?: number): void

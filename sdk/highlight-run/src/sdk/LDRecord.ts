@@ -1,5 +1,6 @@
 import type { Record } from '../api/record'
-import type { LDClientMin, SessionDetails } from '../client'
+import type { SessionDetails } from '../client'
+import type { LDClient } from '../integrations/launchdarkly'
 import type { StartOptions } from '../client/types/types'
 import type { LDPluginEnvironmentMetadata } from '../plugins/plugin'
 import { BufferedClass } from './buffer'
@@ -30,7 +31,7 @@ class _LDRecord extends BufferedClass<Record> implements Record {
 	}
 
 	register(
-		client: LDClientMin,
+		client: LDClient,
 		environmentMetadata: LDPluginEnvironmentMetadata,
 	) {
 		return this._bufferCall('register', [client, environmentMetadata])

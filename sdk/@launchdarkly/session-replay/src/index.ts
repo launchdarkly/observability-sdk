@@ -1,2 +1,1 @@
-export { Record as default } from 'highlight.run/record'
-export { LDRecord } from 'highlight.run/ld/record'
+export { Record as default, LDRecord } from 'highlight.run'

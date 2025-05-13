@@ -139,7 +139,7 @@ export declare type NetworkRecordingOptions = {
 }
 
 export declare type OtelOptions = {
-	instrumentations: OtelInstrumentatonOptions
+	instrumentations?: OtelInstrumentatonOptions
 }
 
 export declare type OtelInstrumentatonOptions = {

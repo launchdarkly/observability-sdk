@@ -1,24 +1,24 @@
 import { type HighlightPublicInterface, MetricCategory } from '../../client'
 import type { ErrorMessage, Source } from '../../client/types/shared-types'
 import type { IntegrationClient } from '../index'
-import type { LDClientMin } from './types/LDClient'
+import type { LDClientMin as LDClient } from './types/LDClient'
+import type { Hook } from './types/Hooks'
 import type { RecordMetric } from '../../client/types/types'
 import { BufferedClass } from '../../sdk/buffer'
 import { LDPluginEnvironmentMetadata } from '../../plugins/plugin'
 import type { Attributes } from '@opentelemetry/api'
 import type {
-	Hook,
 	IdentifySeriesContext,
 	IdentifySeriesData,
 	IdentifySeriesResult,
 	LDContext,
 	LDContextCommon,
-	LDEvaluationDetail,
 	LDMultiKindContext,
 } from '@launchdarkly/js-client-sdk'
-export type { Hook }
+export type { Hook, LDClient }
 
 export const FEATURE_FLAG_SCOPE = 'feature_flag'
+export const LD_SCOPE = 'launchdarkly'
 export const FEATURE_FLAG_ENV_ATTR = `${FEATURE_FLAG_SCOPE}.set.id`
 export const FEATURE_FLAG_KEY_ATTR = `${FEATURE_FLAG_SCOPE}.key`
 export const FEATURE_FLAG_CONTEXT_ATTR = `${FEATURE_FLAG_SCOPE}.context`
@@ -27,9 +27,10 @@ export const FEATURE_FLAG_PROVIDER_ATTR = `${FEATURE_FLAG_SCOPE}.provider.name`
 export const FEATURE_FLAG_VARIANT_ATTR = `${FEATURE_FLAG_SCOPE}.variant`
 export const FEATURE_FLAG_RESULT_VARIANT_ATTR = `${FEATURE_FLAG_SCOPE}.result.variant`
 export const FEATURE_FLAG_PROVIDER_NAME_ATTR = `${FEATURE_FLAG_SCOPE}.provider_name`
-export const FEATURE_FLAG_CLIENT_SIDE_ID_ATTR = `${FEATURE_FLAG_SCOPE}.client_side_id`
 export const FEATURE_FLAG_IN_EXPERIMENT_ATTR = `${FEATURE_FLAG_SCOPE}.result.reason.inExperiment`
-export const FEATURE_FLAG_APP_VERSION_ATTR = `${FEATURE_FLAG_SCOPE}.app_version`
+export const FEATURE_FLAG_VARIATION_INDEX_ATTR = `${FEATURE_FLAG_SCOPE}.result.variationIndex`
+export const FEATURE_FLAG_APP_ID_ATTR = `${LD_SCOPE}.application.id`
+export const FEATURE_FLAG_APP_VERSION_ATTR = `${LD_SCOPE}.application.version`
 export const FEATURE_FLAG_SPAN_NAME = 'evaluation'
 
 export const LD_INITIALIZE_EVENT = '$ld:telemetry:session:init'
@@ -84,7 +85,7 @@ export function getCanonicalObj(context: LDContext) {
 
 export function setupLaunchDarklyIntegration(
 	hClient: HighlightPublicInterface,
-	ldClient: LDClientMin,
+	ldClient: LDClient,
 ) {
 	ldClient.addHook({
 		getMetadata: () => {
@@ -92,11 +93,7 @@ export function setupLaunchDarklyIntegration(
 				name: 'highlight.run',
 			}
 		},
-		afterIdentify: (
-			hookContext: IdentifySeriesContext,
-			data: IdentifySeriesData,
-			_result: IdentifySeriesResult,
-		) => {
+		afterIdentify: (hookContext, data, _result) => {
 			hClient.log('LD.identify', 'INFO', {
 				key: getCanonicalKey(hookContext.context),
 				context: JSON.stringify(getCanonicalObj(hookContext.context)),
@@ -112,7 +109,7 @@ export function setupLaunchDarklyIntegration(
 			)
 			return data
 		},
-		afterEvaluation: (hookContext, data, detail: LDEvaluationDetail) => {
+		afterEvaluation: (hookContext, data, detail) => {
 			const eventAttributes: Attributes = {
 				[FEATURE_FLAG_KEY_ATTR]: hookContext.flagKey,
 				[FEATURE_FLAG_PROVIDER_NAME_ATTR]: 'LaunchDarkly',
@@ -121,6 +118,8 @@ export function setupLaunchDarklyIntegration(
 					detail.value,
 				),
 				[FEATURE_FLAG_IN_EXPERIMENT_ATTR]: detail.reason?.inExperiment,
+				[FEATURE_FLAG_VARIATION_INDEX_ATTR]:
+					detail.variationIndex ?? undefined,
 			}
 
 			if (hookContext.context) {
@@ -143,9 +142,9 @@ export function setupLaunchDarklyIntegration(
 }
 
 export class LaunchDarklyIntegrationSDK implements IntegrationClient {
-	client: LDClientMin
+	client: LDClient
 	metadata?: LDPluginEnvironmentMetadata
-	constructor(client: LDClientMin, metadata?: LDPluginEnvironmentMetadata) {
+	constructor(client: LDClient, metadata?: LDPluginEnvironmentMetadata) {
 		this.client = client
 		this.metadata = metadata
 	}
@@ -215,7 +214,7 @@ export class LaunchDarklyIntegration
 	implements IntegrationClient
 {
 	client: LaunchDarklyIntegrationSDK
-	constructor(client: LDClientMin, metadata?: LDPluginEnvironmentMetadata) {
+	constructor(client: LDClient, metadata?: LDPluginEnvironmentMetadata) {
 		super()
 		this.client = new LaunchDarklyIntegrationSDK(client, metadata)
 	}

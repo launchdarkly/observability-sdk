@@ -1,12 +1,11 @@
-import type { LDClientMin } from '../client'
 import type { LDPlugin, LDPluginEnvironmentMetadata } from './plugin'
-import type { Hook } from '../integrations/launchdarkly'
+import type { Hook, LDClient } from '../integrations/launchdarkly'
 import { Observe as ObserveAPI } from '../api/observe'
 import { ObserveSDK } from '../sdk/observe'
 import { LDObserve } from '../sdk/LDObserve'
 import {
+	FEATURE_FLAG_APP_ID_ATTR,
 	FEATURE_FLAG_APP_VERSION_ATTR,
-	FEATURE_FLAG_CLIENT_SIDE_ID_ATTR,
 	FEATURE_FLAG_CONTEXT_ATTR,
 	FEATURE_FLAG_CONTEXT_KEY_ATTR,
 	FEATURE_FLAG_ENV_ATTR,
@@ -64,7 +63,7 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 		}
 	}
 	register(
-		client: LDClientMin,
+		client: LDClient,
 		environmentMetadata: LDPluginEnvironmentMetadata,
 	) {
 		this.observe.register(client, environmentMetadata)
@@ -73,9 +72,10 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 		const metaAttrs = {
 			[ATTR_TELEMETRY_SDK_NAME]: metadata.sdk.name,
 			[ATTR_TELEMETRY_SDK_VERSION]: metadata.sdk.version,
-			[FEATURE_FLAG_CLIENT_SIDE_ID_ATTR]: metadata.clientSideId,
-			[FEATURE_FLAG_ENV_ATTR]: metadata.application?.id,
+			[FEATURE_FLAG_ENV_ATTR]: metadata.clientSideId,
+			[FEATURE_FLAG_APP_ID_ATTR]: metadata.application?.id,
 			[FEATURE_FLAG_APP_VERSION_ATTR]: metadata.application?.version,
+			[FEATURE_FLAG_PROVIDER_ATTR]: 'LaunchDarkly',
 		}
 		return [
 			{
@@ -108,7 +108,6 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 
 					const eventAttributes: Attributes = {
 						[FEATURE_FLAG_KEY_ATTR]: hookContext.flagKey,
-						[FEATURE_FLAG_PROVIDER_ATTR]: 'LaunchDarkly',
 						[FEATURE_FLAG_VARIANT_ATTR]: JSON.stringify(
 							detail.value,
 						),

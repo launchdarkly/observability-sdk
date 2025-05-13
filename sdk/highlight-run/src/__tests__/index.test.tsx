@@ -1,4 +1,4 @@
-import { LDClientMin } from '../client'
+import { LDClient } from '../integrations/launchdarkly'
 import { expect, vi } from 'vitest'
 import {
 	setSessionData,
@@ -154,7 +154,7 @@ describe('LD integration', () => {
 			(_message: unknown, _options?: unknown) => null,
 		)
 
-		const client: LDClientMin = {
+		const client = {
 			track: vi.fn(),
 			identify: vi.fn(),
 			addHook: vi.fn(),
@@ -342,7 +342,7 @@ describe('LaunchDarkly integration edge cases', () => {
 	})
 
 	it('should handle register with client missing required methods', () => {
-		const client: Partial<LDClientMin> = {
+		const client: Partial<LDClient> = {
 			track: vi.fn(),
 			// Missing identify and addHook
 		}
@@ -352,7 +352,7 @@ describe('LaunchDarkly integration edge cases', () => {
 	})
 
 	it('should handle hooks with invalid context', () => {
-		const client: LDClientMin = {
+		const client = {
 			track: vi.fn(),
 			identify: vi.fn(),
 			addHook: vi.fn(),
@@ -378,7 +378,7 @@ describe('LaunchDarkly integration edge cases', () => {
 	})
 
 	it('should handle hooks with invalid status', () => {
-		const client: LDClientMin = {
+		const client = {
 			track: vi.fn(),
 			identify: vi.fn(),
 			addHook: vi.fn(),
