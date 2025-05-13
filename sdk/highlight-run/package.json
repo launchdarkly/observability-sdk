@@ -124,7 +124,11 @@
 	"size-limit": [
 		{
 			"path": [
-				"dist/*.js"
+				"dist/index.umd.js",
+				"dist/LDObserve.js",
+				"dist/LDRecord.js",
+				"dist/observe.js",
+				"dist/record.js"
 			],
 			"limit": "256 kB",
 			"brotli": true
