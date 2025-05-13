@@ -6,13 +6,13 @@ hooks:
         - prettier --write
 generates:
     # Get schemas from server
-    src/graph/generated/schemas.ts:
+    src/client/graph/generated/schemas.ts:
         documents: 'src/**/**.gql'
         plugins:
             - typescript
 
     # Create operations based on queries
-    src/graph/generated/operations.ts:
+    src/client/graph/generated/operations.ts:
         documents: 'src/**/**.gql'
         plugins:
             - typescript

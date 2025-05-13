@@ -50,9 +50,15 @@ import {
 	JankListener,
 	JankPayload,
 } from '../client/listeners/jank-listener/jank-listener'
+import { ExportSampler } from '../client/otel/sampling/ExportSampler'
+import { CustomSampler } from '../client/otel/sampling/CustomSampler'
+import { getSdk, Sdk } from '../client/graph/generated/operations'
+import { GraphQLClient } from 'graphql-request'
+import { getGraphQLRequestWrapper } from '../client/utils/graph'
 
 export class ObserveSDK implements Observe {
 	private readonly sessionSecureID: string
+	private readonly projectID: string | number
 	private readonly _integrations: IntegrationClient[] = []
 	private readonly _gauges: Map<string, Gauge> = new Map<string, Gauge>()
 	private readonly _counters: Map<string, Counter> = new Map<
@@ -67,10 +73,34 @@ export class ObserveSDK implements Observe {
 		string,
 		UpDownCounter
 	>()
+	private readonly sampler: ExportSampler = new CustomSampler()
+	private graphqlSDK!: Sdk
 	constructor(options: BrowserTracingConfig) {
 		this.sessionSecureID = options.sessionSecureId
-		setupBrowserTracing(options)
+		this.projectID = options.projectId
+		setupBrowserTracing(options, this.sampler)
+		const client = new GraphQLClient(`${options.backendUrl}`, {
+			headers: {},
+		})
+		this.graphqlSDK = getSdk(
+			client,
+			getGraphQLRequestWrapper(this.sessionSecureID),
+		)
+		this.configureSampling()
 		this.setupListeners(options)
+	}
+
+	private async configureSampling() {
+		try {
+			const res = await this.graphqlSDK.GetSamplingConfig({
+				project_id: `${this.projectID}`,
+			})
+			this.sampler.setConfig(res.sampling)
+		} catch (e) {
+			console.warn(
+				`LaunchDarkly Observability: Failed to configure sampling: ${e}`,
+			)
+		}
 	}
 
 	recordLog(message: any, level: ConsoleMethods, metadata?: Attributes) {
@@ -201,7 +231,7 @@ export class ObserveSDK implements Observe {
 		context?: Context | ((span?: Span) => any),
 		fn?: (span?: Span) => any,
 	) {
-		const tracer = typeof getTracer === 'function' ? getTracer() : undefined
+		const tracer = getTracer()
 		if (!tracer) {
 			const noopSpan = getNoopSpan()
 
@@ -250,7 +280,7 @@ export class ObserveSDK implements Observe {
 		context?: Context | ((span: Span) => any),
 		fn?: (span: Span) => any,
 	) {
-		const tracer = typeof getTracer === 'function' ? getTracer() : undefined
+		const tracer = getTracer()
 		if (!tracer) {
 			const noopSpan = getNoopSpan()
 

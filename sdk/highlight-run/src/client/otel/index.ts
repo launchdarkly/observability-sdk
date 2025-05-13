@@ -54,6 +54,7 @@ import {
 import { IntegrationClient } from '../../integrations'
 import { LD_METRIC_NAME_DOCUMENT_LOAD } from '../../integrations/launchdarkly'
 
+import { ExportSampler } from './sampling/ExportSampler'
 export type Callback = (span?: Span) => any
 
 export type BrowserTracingConfig = {
@@ -78,7 +79,10 @@ let otelConfig: BrowserTracingConfig | undefined
 const RECORD_ATTRIBUTE = 'highlight.record'
 export const LOG_SPAN_NAME = 'launchdarkly.js.log'
 
-export const setupBrowserTracing = (config: BrowserTracingConfig) => {
+export const setupBrowserTracing = (
+	config: BrowserTracingConfig,
+	sampler: ExportSampler,
+) => {
 	if (providers.tracerProvider !== undefined) {
 		console.warn('OTEL already initialized. Skipping...')
 		return
@@ -110,7 +114,10 @@ export const setupBrowserTracing = (config: BrowserTracingConfig) => {
 			keepAlive: true,
 		},
 	}
-	const exporter = new OTLPTraceExporterBrowserWithXhrRetry(exporterOptions)
+	const exporter = new OTLPTraceExporterBrowserWithXhrRetry(
+		exporterOptions,
+		sampler,
+	)
 
 	const spanProcessor = new CustomBatchSpanProcessor(exporter, {
 		maxExportBatchSize: 100,
@@ -126,6 +133,7 @@ export const setupBrowserTracing = (config: BrowserTracingConfig) => {
 		'highlight.project_id': config.projectId,
 		'highlight.session_id': config.sessionSecureId,
 	})
+
 	providers.tracerProvider = new WebTracerProvider({
 		resource,
 		spanProcessors: isDebug

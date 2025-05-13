@@ -78,6 +78,11 @@ mutation addSessionFeedback(
 	)
 }
 
+fragment MatchParts on MatchConfig {
+	regexValue
+	matchValue
+}
+
 mutation initializeSession(
 	$session_secure_id: String!
 	$organization_verbose_id: String!
@@ -114,6 +119,52 @@ mutation initializeSession(
 	) {
 		secure_id
 		project_id
+		sampling {
+			spans {
+				name {
+					...MatchParts
+				}
+				attributes {
+					key {
+						...MatchParts
+					}
+					attribute {
+						...MatchParts
+					}
+				}
+				events {
+					name {
+						...MatchParts
+					}
+					attributes {
+						key {
+							...MatchParts
+						}
+						attribute {
+							...MatchParts
+						}
+					}
+				}
+				samplingRatio
+			}
+			logs {
+				message {
+					...MatchParts
+				}
+				severityText {
+					...MatchParts
+				}
+				attributes {
+					key {
+						...MatchParts
+					}
+					attribute {
+						...MatchParts
+					}
+				}
+				samplingRatio
+			}
+		}
 	}
 }
 

@@ -120,6 +120,7 @@ import { IntegrationClient } from '../integrations'
 import { LaunchDarklyIntegration } from '../integrations/launchdarkly'
 import { LDClient } from '../integrations/launchdarkly'
 import { createLog, defaultLogOptions } from './listeners/console-listener'
+import { CustomSampler } from './otel/sampling/CustomSampler'
 
 export const HighlightWarning = (context: string, msg: any) => {
 	console.warn(`Highlight Warning: (${context}): `, { output: msg })
@@ -586,6 +587,31 @@ export class Highlight {
 				return
 			}
 
+			const sampler = new CustomSampler()
+
+			setupBrowserTracing(
+				{
+					backendUrl:
+						this.options?.backendUrl ?? 'https://pub.highlight.io',
+					otlpEndpoint:
+						this.options?.otlpEndpoint ??
+						'https://otel.highlight.io',
+					projectId: this.options?.organizationID,
+					sessionSecureId: this.options?.sessionSecureID,
+					environment: this.options?.environment ?? 'production',
+					networkRecordingOptions:
+						typeof this.options?.networkRecording === 'object'
+							? this.options.networkRecording
+							: undefined,
+					tracingOrigins: this.options?.tracingOrigins,
+					serviceName:
+						this.options?.serviceName ?? 'highlight-browser',
+					instrumentations: this.options?.otel?.instrumentations,
+					getIntegrations: () => [...this._integrations],
+				},
+				sampler,
+			)
+
 			this.logger.log(
 				`Initializing...`,
 				options,
@@ -671,6 +697,8 @@ export class Highlight {
 				this.sessionData.projectID = parseInt(
 					gr?.initializeSession?.project_id || '0',
 				)
+
+				sampler.setConfig(gr.initializeSession.sampling)
 
 				if (
 					!this.sessionData.projectID ||
@@ -1567,13 +1595,7 @@ declare global {
 	}
 }
 
-export {
-	GenerateSecureID,
-	getPreviousSessionData,
-	getTracer,
-	MetricCategory,
-	setupBrowserTracing,
-}
+export { GenerateSecureID, getPreviousSessionData, getTracer, MetricCategory }
 export type {
 	AmplitudeIntegrationOptions,
 	ConsoleMessage,

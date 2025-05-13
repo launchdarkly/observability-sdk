@@ -10,12 +10,8 @@
  *
  * @packageDocumentation
  */
-import type {
-	Highlight,
-	HighlightClassOptions,
-	RequestResponsePair,
-} from './client'
-import { GenerateSecureID } from './client'
+import type { HighlightClassOptions, RequestResponsePair } from './client'
+import { GenerateSecureID, getTracer, Highlight } from './client'
 import { FirstLoadListeners } from './client/listeners/first-load-listeners'
 import type {
 	HighlightOptions,
@@ -41,13 +37,7 @@ import {
 	loadCookieSessionData,
 } from './client/utils/sessionStorage/highlightSession.js'
 import { setCookieWriteEnabled } from './client/utils/storage'
-import {
-	Attributes,
-	Context,
-	Span,
-	SpanOptions,
-	Tracer,
-} from '@opentelemetry/api'
+import { Attributes, Context, Span, SpanOptions } from '@opentelemetry/api'
 import firstloadVersion from './__generated/version.js'
 import { listenToChromeExtensionMessage } from './browserExtension/extensionListener.js'
 import configureElectronHighlight from './environments/electron.js'
@@ -99,7 +89,7 @@ let first_load_listeners: FirstLoadListeners
 let integrations: IntegrationClient[] = []
 let init_called = false
 type Callback = (span?: Span) => any
-let getTracer: () => Tracer | undefined
+
 const H: HighlightPublicInterface = {
 	options: undefined,
 	init: (projectID?: string | number, options?: HighlightOptions) => {
@@ -142,44 +132,6 @@ const H: HighlightPublicInterface = {
 
 			initializeFetchListener()
 			initializeWebSocketListener()
-			import('./client').then(
-				async ({
-					Highlight,
-					setupBrowserTracing,
-					getTracer: otelGetTracer,
-				}) => {
-					setupBrowserTracing({
-						backendUrl:
-							options?.backendUrl ?? 'https://pub.highlight.io',
-						otlpEndpoint:
-							options?.otlpEndpoint ??
-							'https://otel.highlight.io',
-						projectId: projectID,
-						sessionSecureId: sessionSecureID,
-						environment: options?.environment ?? 'production',
-						networkRecordingOptions:
-							typeof options?.networkRecording === 'object'
-								? options.networkRecording
-								: undefined,
-						tracingOrigins: options?.tracingOrigins,
-						serviceName:
-							options?.serviceName ?? 'highlight-browser',
-						instrumentations: options?.otel?.instrumentations,
-						getIntegrations: () => [...integrations],
-					})
-					getTracer = otelGetTracer
-
-					highlight_obj = new Highlight(
-						client_options,
-						first_load_listeners,
-					)
-					initializeFetchListener()
-					initializeWebSocketListener()
-					if (!options?.manualStart) {
-						await highlight_obj.initialize()
-					}
-				},
-			)
 
 			const client_options: HighlightClassOptions = {
 				...options,
@@ -189,6 +141,15 @@ const H: HighlightPublicInterface = {
 				appVersion: options?.version,
 				sessionSecureID,
 			}
+
+			highlight_obj =
+				highlight_obj ??
+				new Highlight(client_options, first_load_listeners)
+
+			if (!options?.manualStart) {
+				highlight_obj.initialize()
+			}
+
 			first_load_listeners = new FirstLoadListeners(client_options)
 			if (!options?.manualStart) {
 				// Start some of the listeners before client is loaded, then hand the
@@ -470,7 +431,7 @@ const H: HighlightPublicInterface = {
 		context?: Context | ((span?: Span) => any),
 		fn?: (span?: Span) => any,
 	): any => {
-		const tracer = typeof getTracer === 'function' ? getTracer() : undefined
+		const tracer = getTracer()
 		if (!tracer) {
 			const noopSpan = getNoopSpan()
 
@@ -518,7 +479,7 @@ const H: HighlightPublicInterface = {
 		context?: Context | ((span: Span) => any),
 		fn?: (span: Span) => any,
 	): any => {
-		const tracer = typeof getTracer === 'function' ? getTracer() : undefined
+		const tracer = getTracer()
 		if (!tracer) {
 			const noopSpan = getNoopSpan()
 

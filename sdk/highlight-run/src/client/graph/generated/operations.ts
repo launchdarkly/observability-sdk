@@ -35,6 +35,13 @@ export type Scalars = {
 	Timestamp: { input: any; output: any }
 }
 
+/** An attribute match configuration which can match an attribute key and value. */
+export type AttributeMatchConfig = {
+	__typename?: 'AttributeMatchConfig'
+	attribute: MatchConfig
+	key: MatchConfig
+}
+
 export type BackendErrorObjectInput = {
 	environment: Scalars['String']['input']
 	event: Scalars['String']['input']
@@ -67,7 +74,49 @@ export type ErrorObjectInput = {
 export type InitializeSessionResponse = {
 	__typename?: 'InitializeSessionResponse'
 	project_id: Scalars['ID']['output']
+	sampling?: Maybe<SamplingConfig>
 	secure_id: Scalars['String']['output']
+}
+
+/**
+ * A match based log sampling configuration. A log matches if each specified matching configuration matches.
+ * If no matching configuration is specified, then all spans will match.
+ * The sampling ratio will be applied to all matching spans.
+ */
+export type LogSamplingConfig = {
+	__typename?: 'LogSamplingConfig'
+	/**
+	 * A list of attribute match configs.
+	 * In order to match each attribute listed must match. This is an implicit AND operation.
+	 */
+	attributes?: Maybe<Array<AttributeMatchConfig>>
+	/** Matches against the log message. */
+	message?: Maybe<MatchConfig>
+	/**
+	 * The ratio of logs to sample. Expressed in the form 1/n. So if the ratio is 10, then 1 out of
+	 * every 10 logs will be sampled. Setting the ratio to 0 will disable sampling for the log.
+	 */
+	samplingRatio: Scalars['Int']['output']
+	/** Matches against the severity of the log. */
+	severityText?: Maybe<MatchConfig>
+}
+
+/**
+ * A match configuration. Each field of this type represents a different type of match
+ * configuration. One and only 1 field should be populated.
+ *
+ * This is effectively a sum type/discriminated union, but isn't implemented as such to avoid
+ * this bug: https://github.com/99designs/gqlgen/issues/2741
+ */
+export type MatchConfig = {
+	__typename?: 'MatchConfig'
+	/** A match configuration which does an exact match against any value. */
+	matchValue?: Maybe<Scalars['Any']['output']>
+	/**
+	 * A match configuration which matches against a regular expression.
+	 * Can only match string attributes.
+	 */
+	regexValue?: Maybe<Scalars['String']['output']>
 }
 
 export type MetricInput = {
@@ -179,10 +228,15 @@ export enum PublicGraphError {
 export type Query = {
 	__typename?: 'Query'
 	ignore?: Maybe<Scalars['Any']['output']>
+	sampling: SamplingConfig
 }
 
 export type QueryIgnoreArgs = {
 	id: Scalars['ID']['input']
+}
+
+export type QuerySamplingArgs = {
+	project_id: Scalars['ID']['input']
 }
 
 export type ReplayEventInput = {
@@ -196,6 +250,12 @@ export type ReplayEventsInput = {
 	events: Array<InputMaybe<ReplayEventInput>>
 }
 
+export type SamplingConfig = {
+	__typename?: 'SamplingConfig'
+	logs?: Maybe<Array<LogSamplingConfig>>
+	spans?: Maybe<Array<SpanSamplingConfig>>
+}
+
 export type ServiceInput = {
 	name: Scalars['String']['input']
 	version: Scalars['String']['input']
@@ -207,6 +267,36 @@ export type Session = {
 	organization_id: Scalars['ID']['output']
 	project_id: Scalars['ID']['output']
 	secure_id: Scalars['String']['output']
+}
+
+/** An event matcher configuration which matches span events within a span. */
+export type SpanEventMatchConfig = {
+	__typename?: 'SpanEventMatchConfig'
+	attributes?: Maybe<Array<AttributeMatchConfig>>
+	name?: Maybe<MatchConfig>
+}
+
+/**
+ * A match based span sampling configuration. A span matches if each specified matching configuration
+ * matches.
+ * If no matching configuration is specified, then all spans will match.
+ * The sampling ratio will be applied to all matching spans.
+ */
+export type SpanSamplingConfig = {
+	__typename?: 'SpanSamplingConfig'
+	/**
+	 * A list of attribute match configs.
+	 * In order to match each attribute listed must match. This is an implicit AND operation.
+	 */
+	attributes?: Maybe<Array<AttributeMatchConfig>>
+	/** A list of span event match configs. */
+	events?: Maybe<Array<SpanEventMatchConfig>>
+	name?: Maybe<MatchConfig>
+	/**
+	 * The ratio of spans to sample. Expressed in the form 1/n. So if the ratio is 10, then 1 out of
+	 * every 10 spans will be sampled. Setting the ratio to 0 will disable sampling for the span.
+	 */
+	samplingRatio: Scalars['Int']['output']
 }
 
 export type StackFrameInput = {
@@ -292,6 +382,12 @@ export type AddSessionFeedbackMutation = {
 	addSessionFeedback: string
 }
 
+export type MatchPartsFragment = {
+	__typename?: 'MatchConfig'
+	regexValue?: string | null
+	matchValue?: any | null
+}
+
 export type InitializeSessionMutationVariables = Exact<{
 	session_secure_id: Scalars['String']['input']
 	organization_verbose_id: Scalars['String']['input']
@@ -318,6 +414,79 @@ export type InitializeSessionMutation = {
 		__typename?: 'InitializeSessionResponse'
 		secure_id: string
 		project_id: string
+		sampling?: {
+			__typename?: 'SamplingConfig'
+			spans?: Array<{
+				__typename?: 'SpanSamplingConfig'
+				samplingRatio: number
+				name?: {
+					__typename?: 'MatchConfig'
+					regexValue?: string | null
+					matchValue?: any | null
+				} | null
+				attributes?: Array<{
+					__typename?: 'AttributeMatchConfig'
+					key: {
+						__typename?: 'MatchConfig'
+						regexValue?: string | null
+						matchValue?: any | null
+					}
+					attribute: {
+						__typename?: 'MatchConfig'
+						regexValue?: string | null
+						matchValue?: any | null
+					}
+				}> | null
+				events?: Array<{
+					__typename?: 'SpanEventMatchConfig'
+					name?: {
+						__typename?: 'MatchConfig'
+						regexValue?: string | null
+						matchValue?: any | null
+					} | null
+					attributes?: Array<{
+						__typename?: 'AttributeMatchConfig'
+						key: {
+							__typename?: 'MatchConfig'
+							regexValue?: string | null
+							matchValue?: any | null
+						}
+						attribute: {
+							__typename?: 'MatchConfig'
+							regexValue?: string | null
+							matchValue?: any | null
+						}
+					}> | null
+				}> | null
+			}> | null
+			logs?: Array<{
+				__typename?: 'LogSamplingConfig'
+				samplingRatio: number
+				message?: {
+					__typename?: 'MatchConfig'
+					regexValue?: string | null
+					matchValue?: any | null
+				} | null
+				severityText?: {
+					__typename?: 'MatchConfig'
+					regexValue?: string | null
+					matchValue?: any | null
+				} | null
+				attributes?: Array<{
+					__typename?: 'AttributeMatchConfig'
+					key: {
+						__typename?: 'MatchConfig'
+						regexValue?: string | null
+						matchValue?: any | null
+					}
+					attribute: {
+						__typename?: 'MatchConfig'
+						regexValue?: string | null
+						matchValue?: any | null
+					}
+				}> | null
+			}> | null
+		} | null
 	}
 }
 
@@ -327,6 +496,93 @@ export type IgnoreQueryVariables = Exact<{
 
 export type IgnoreQuery = { __typename?: 'Query'; ignore?: any | null }
 
+export type GetSamplingConfigQueryVariables = Exact<{
+	project_id: Scalars['ID']['input']
+}>
+
+export type GetSamplingConfigQuery = {
+	__typename?: 'Query'
+	sampling: {
+		__typename?: 'SamplingConfig'
+		spans?: Array<{
+			__typename?: 'SpanSamplingConfig'
+			samplingRatio: number
+			name?: {
+				__typename?: 'MatchConfig'
+				regexValue?: string | null
+				matchValue?: any | null
+			} | null
+			attributes?: Array<{
+				__typename?: 'AttributeMatchConfig'
+				key: {
+					__typename?: 'MatchConfig'
+					regexValue?: string | null
+					matchValue?: any | null
+				}
+				attribute: {
+					__typename?: 'MatchConfig'
+					regexValue?: string | null
+					matchValue?: any | null
+				}
+			}> | null
+			events?: Array<{
+				__typename?: 'SpanEventMatchConfig'
+				name?: {
+					__typename?: 'MatchConfig'
+					regexValue?: string | null
+					matchValue?: any | null
+				} | null
+				attributes?: Array<{
+					__typename?: 'AttributeMatchConfig'
+					key: {
+						__typename?: 'MatchConfig'
+						regexValue?: string | null
+						matchValue?: any | null
+					}
+					attribute: {
+						__typename?: 'MatchConfig'
+						regexValue?: string | null
+						matchValue?: any | null
+					}
+				}> | null
+			}> | null
+		}> | null
+		logs?: Array<{
+			__typename?: 'LogSamplingConfig'
+			samplingRatio: number
+			message?: {
+				__typename?: 'MatchConfig'
+				regexValue?: string | null
+				matchValue?: any | null
+			} | null
+			severityText?: {
+				__typename?: 'MatchConfig'
+				regexValue?: string | null
+				matchValue?: any | null
+			} | null
+			attributes?: Array<{
+				__typename?: 'AttributeMatchConfig'
+				key: {
+					__typename?: 'MatchConfig'
+					regexValue?: string | null
+					matchValue?: any | null
+				}
+				attribute: {
+					__typename?: 'MatchConfig'
+					regexValue?: string | null
+					matchValue?: any | null
+				}
+			}> | null
+		}> | null
+	}
+}
+
+export const MatchPartsFragmentDoc = gql`
+	fragment MatchParts on MatchConfig {
+		regexValue
+		matchValue
+	}
+`
 export const PushPayloadDocument = gql`
 	mutation PushPayload(
 		$session_secure_id: String!
@@ -450,13 +706,111 @@ export const InitializeSessionDocument = gql`
 		) {
 			secure_id
 			project_id
+			sampling {
+				spans {
+					name {
+						...MatchParts
+					}
+					attributes {
+						key {
+							...MatchParts
+						}
+						attribute {
+							...MatchParts
+						}
+					}
+					events {
+						name {
+							...MatchParts
+						}
+						attributes {
+							key {
+								...MatchParts
+							}
+							attribute {
+								...MatchParts
+							}
+						}
+					}
+					samplingRatio
+				}
+				logs {
+					message {
+						...MatchParts
+					}
+					severityText {
+						...MatchParts
+					}
+					attributes {
+						key {
+							...MatchParts
+						}
+						attribute {
+							...MatchParts
+						}
+					}
+					samplingRatio
+				}
+			}
 		}
 	}
+	${MatchPartsFragmentDoc}
 `
 export const IgnoreDocument = gql`
 	query Ignore($id: ID!) {
 		ignore(id: $id)
 	}
+`
+export const GetSamplingConfigDocument = gql`
+	query GetSamplingConfig($project_id: ID!) {
+		sampling(project_id: $project_id) {
+			spans {
+				name {
+					...MatchParts
+				}
+				attributes {
+					key {
+						...MatchParts
+					}
+					attribute {
+						...MatchParts
+					}
+				}
+				events {
+					name {
+						...MatchParts
+					}
+					attributes {
+						key {
+							...MatchParts
+						}
+						attribute {
+							...MatchParts
+						}
+					}
+				}
+				samplingRatio
+			}
+			logs {
+				message {
+					...MatchParts
+				}
+				severityText {
+					...MatchParts
+				}
+				attributes {
+					key {
+						...MatchParts
+					}
+					attribute {
+						...MatchParts
+					}
+				}
+				samplingRatio
+			}
+		}
+	}
+	${MatchPartsFragmentDoc}
 `
 
 export type SdkFunctionWrapper = <T>(
@@ -470,7 +824,7 @@ const defaultWrapper: SdkFunctionWrapper = (
 	action,
 	_operationName,
 	_operationType,
-	_variables,
+	variables,
 ) => action()
 
 export function getSdk(
@@ -601,6 +955,22 @@ export function getSdk(
 						...wrappedRequestHeaders,
 					}),
 				'Ignore',
+				'query',
+				variables,
+			)
+		},
+		GetSamplingConfig(
+			variables: GetSamplingConfigQueryVariables,
+			requestHeaders?: GraphQLClientRequestHeaders,
+		): Promise<GetSamplingConfigQuery> {
+			return withWrapper(
+				(wrappedRequestHeaders) =>
+					client.request<GetSamplingConfigQuery>(
+						GetSamplingConfigDocument,
+						variables,
+						{ ...requestHeaders, ...wrappedRequestHeaders },
+					),
+				'GetSamplingConfig',
 				'query',
 				variables,
 			)
