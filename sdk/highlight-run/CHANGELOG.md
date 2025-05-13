@@ -1,5 +1,11 @@
 # highlight.run
 
+## 9.18.3
+
+### Patch Changes
+
+- bb75fea: fix highlight.run unpkg build
+
 ## 9.18.2
 
 ### Patch Changes
