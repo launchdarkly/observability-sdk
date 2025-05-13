@@ -52,7 +52,7 @@ import {
 } from '../client/listeners/jank-listener/jank-listener'
 import { ExportSampler } from '../client/otel/sampling/ExportSampler'
 import { CustomSampler } from '../client/otel/sampling/CustomSampler'
-import { getSdk, Sdk } from 'client/graph/generated/operations'
+import { getSdk, Sdk } from '../client/graph/generated/operations'
 import { GraphQLClient } from 'graphql-request'
 import { getGraphQLRequestWrapper } from '../client/utils/graph'
 
