@@ -1,23 +1,14 @@
-name: Manual Publish Package
+name: Manual Publish Docs
 on:
     workflow_dispatch:
-        inputs:
-            dry-run:
-                description: 'Is this a dry run. If so no package will be published.'
-                type: boolean
-                required: true
-            prerelease:
-                description: 'Is this a prerelease. If so, then the latest tag will not be updated in npm.'
-                type: boolean
-                required: true
 
 permissions:
     id-token: write
     contents: write
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 jobs:
-    publish-package:
-        runs-on: ubuntu-latest
+    publish-docs:
+        runs-on: ubuntu-22.04-8core-32gb
         steps:
             - uses: launchdarkly/common-actions/ssh-key-by-repo@main
               with:
@@ -30,11 +21,6 @@ jobs:
                   GITHUB_TOKEN: ${{ github.token }}
             - run: git submodule update --init --recursive
 
-            - uses: actions/checkout@v4
-              with:
-                  path: gh-pages
-                  ref: gh-pages
-
             - name: Setup Node.js environment
               uses: actions/setup-node@v4
               with:
@@ -42,10 +28,12 @@ jobs:
                   cache: 'yarn'
 
             - name: Install js dependencies
-              run: yarn
+              run: yarn install --mode=skip-build
+              env:
+                  PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: true
 
             - name: Build docs
-              run: yarn docs
+              run: yarn docs --filter highlight.run
 
             - uses: launchdarkly/gh-actions/actions/publish-pages@publish-pages-v1.0.2
               name: 'Publish to Github pages'
