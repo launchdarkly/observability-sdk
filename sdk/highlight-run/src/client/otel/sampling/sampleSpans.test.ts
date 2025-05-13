@@ -3,7 +3,7 @@ import { ExportSampler, SamplingResult } from './ExportSampler'
 import { ReadableSpan } from '@opentelemetry/sdk-trace-base'
 import { SpanKind } from '@opentelemetry/api'
 import { sampleSpans } from './sampleSpans'
-import { Maybe, SamplingConfig } from 'client/graph/generated/operations'
+import { Maybe, SamplingConfig } from '../../graph/generated/operations'
 
 // Helper function to create a mock span
 const createMockSpan = (name: string, parentId?: string): ReadableSpan => {
