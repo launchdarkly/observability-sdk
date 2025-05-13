@@ -31,7 +31,7 @@ jobs:
               run: yarn
 
             - name: Build docs
-              run: yarn docs
+              run: yarn docs --filter highlight.run
 
             - uses: launchdarkly/gh-actions/actions/publish-pages@publish-pages-v1.0.2
               name: 'Publish to Github pages'
