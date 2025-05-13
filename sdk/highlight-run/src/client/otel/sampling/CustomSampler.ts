@@ -29,7 +29,7 @@ function isBasicMatchConfig(matchConfig: MatchConfig): boolean {
 /**
  * Determine if an item should be sampled based on the sampling ratio.
  *
- * This private is not used for any purpose requiring cryptographic security.
+ * This function is not used for any purpose requiring cryptographic security.
  *
  * @param ratio The sampling ratio.
  * @returns True if the item should be sampled, false otherwise.
