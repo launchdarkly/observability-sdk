@@ -1,4 +1,4 @@
-name: Manual Publish Package
+name: Manual Publish Docs
 on:
     workflow_dispatch:
         inputs:
@@ -29,11 +29,6 @@ jobs:
               env:
                   GITHUB_TOKEN: ${{ github.token }}
             - run: git submodule update --init --recursive
-
-            - uses: actions/checkout@v4
-              with:
-                  path: gh-pages
-                  ref: gh-pages
 
             - name: Setup Node.js environment
               uses: actions/setup-node@v4
