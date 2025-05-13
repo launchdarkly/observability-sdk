@@ -28,7 +28,7 @@ jobs:
                   cache: 'yarn'
 
             - name: Install js dependencies
-              run: yarn
+              run: yarn install --mode=skip-build
               env:
                   PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: true
 
