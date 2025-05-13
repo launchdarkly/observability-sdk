@@ -13,6 +13,7 @@
 	],
 	"scripts": {
 		"build": "yarn turbo run build --filter '!@rrweb/web-extension' --filter '!nextjs'",
+		"docs": "yarn turbo run docs",
 		"e2e:cloudflare": "yarn turbo run dev --filter cloudflare-worker...",
 		"e2e:express": "yarn turbo run dev --filter express...",
 		"e2e:nestjs": "yarn turbo run dev --filter nestjs",
