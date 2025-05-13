@@ -15,7 +15,7 @@ import type {
 	HighlightClassOptions,
 	RequestResponsePair,
 } from './client'
-import { GenerateSecureID, getTracer  } from './client'
+import { GenerateSecureID, getTracer } from './client'
 import { FirstLoadListeners } from './client/listeners/first-load-listeners'
 import type {
 	HighlightOptions,
