@@ -10,12 +10,8 @@
  *
  * @packageDocumentation
  */
-import type {
-	Highlight,
-	HighlightClassOptions,
-	RequestResponsePair,
-} from './client'
-import { GenerateSecureID, getTracer } from './client'
+import type { HighlightClassOptions, RequestResponsePair } from './client'
+import { GenerateSecureID, getTracer, Highlight } from './client'
 import { FirstLoadListeners } from './client/listeners/first-load-listeners'
 import type {
 	HighlightOptions,
