@@ -25,7 +25,7 @@ permissions:
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 jobs:
     publish-package:
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-22.04-8core-32gb
         steps:
             - uses: launchdarkly/common-actions/ssh-key-by-repo@main
               with:
@@ -45,9 +45,7 @@ jobs:
                   cache: 'yarn'
 
             - name: Install js dependencies
-              run: yarn install --mode=skip-build
-              env:
-                  PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: true
+              run: yarn install
 
             - name: Build & test
               run: yarn test

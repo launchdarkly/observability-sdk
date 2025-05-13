@@ -36,9 +36,7 @@ jobs:
                   cache: 'yarn'
 
             - name: Install js dependencies
-              run: yarn install --mode=skip-build
-              env:
-                  PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: true
+              run: yarn install
 
             - name: Check yarn for duplicate deps
               run: yarn dedupe --check
