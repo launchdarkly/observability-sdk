@@ -1,5 +1,21 @@
-import { Highlight, HighlightClassOptions, RequestResponsePair } from './client'
-import { GenerateSecureID, getTracer } from './client'
+/**
+ * This is the API reference for the LaunchDarkly Observability and Session Replay SDK for JavaScript.
+ *
+ * This SDK is intended for use in browser environments.
+ *
+ * In typical usage, you will use this alongside the launchdarkly SDK while initializing
+ * by providing {@link Observe} and {@link Record} plugins.
+ *
+ * For more information, see the [SDK Reference Guide](https://docs.launchdarkly.com/sdk/observability).
+ *
+ * @packageDocumentation
+ */
+import type {
+	Highlight,
+	HighlightClassOptions,
+	RequestResponsePair,
+} from './client'
+import { GenerateSecureID, getTracer  } from './client'
 import { FirstLoadListeners } from './client/listeners/first-load-listeners'
 import type {
 	HighlightOptions,
@@ -38,7 +54,6 @@ import {
 	LaunchDarklyIntegration,
 	setupLaunchDarklyIntegration,
 } from './integrations/launchdarkly'
-import { LDClientMin } from './integrations/launchdarkly/types/LDClient'
 import { IntegrationClient } from './integrations'
 
 enum MetricCategory {
@@ -638,8 +653,11 @@ export {
 }
 export type {
 	HighlightOptions,
-	LDClientMin,
 	ViewportResizeListenerArgs,
 	Metadata,
 	RequestResponsePair,
 }
+export { Observe } from './plugins/observe'
+export { LDObserve } from './sdk/LDObserve'
+export { Record } from './plugins/record'
+export { LDRecord } from './sdk/LDRecord'

@@ -1,6 +1,15 @@
 name: Manual Publish Package
 on:
     workflow_dispatch:
+        inputs:
+            dry-run:
+                description: 'Is this a dry run. If so no package will be published.'
+                type: boolean
+                required: true
+            prerelease:
+                description: 'Is this a prerelease. If so, then the latest tag will not be updated in npm.'
+                type: boolean
+                required: true
 
 permissions:
     id-token: write
@@ -21,6 +30,11 @@ jobs:
                   GITHUB_TOKEN: ${{ github.token }}
             - run: git submodule update --init --recursive
 
+            - uses: actions/checkout@v4
+              with:
+                  path: gh-pages
+                  ref: gh-pages
+
             - name: Setup Node.js environment
               uses: actions/setup-node@v4
               with:
@@ -30,24 +44,12 @@ jobs:
             - name: Install js dependencies
               run: yarn
 
-            - name: Build npm packages
-              run: yarn build
+            - name: Build docs
+              run: yarn docs
 
-            - uses: launchdarkly/gh-actions/actions/release-secrets@release-secrets-v1.2.0
-              name: 'Get NPM token'
+            - uses: launchdarkly/gh-actions/actions/publish-pages@publish-pages-v1.0.2
+              name: 'Publish to Github pages'
               with:
-                  aws_assume_role: ${{ vars.AWS_ROLE_ARN }}
-                  ssm_parameter_pairs: '/production/common/releasing/npm/token = NODE_AUTH_TOKEN'
-
-            - name: Configure yarn npm registry credentials
-              run: |
-                  yarn config set npmRegistryServer "https://registry.npmjs.org"
-                  yarn config set npmAuthToken "${NODE_AUTH_TOKEN}"
-
-            - name: Publish
-              shell: bash
-              run: |
-                  ./scripts/publish-npm.sh
-              env:
-                  LD_RELEASE_IS_PRERELEASE: ${{ inputs.prerelease }}
-                  LD_RELEASE_IS_DRYRUN: ${{ inputs.dry-run }}
+                  docs_path: sdk/highlight-run/docs
+                  output_path: packages/@launchdarkly/observability
+                  github_token: ${{ secrets.GITHUB_TOKEN }}

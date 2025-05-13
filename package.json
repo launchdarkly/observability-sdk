@@ -12,7 +12,7 @@
 		"sdk/@launchdarkly/*"
 	],
 	"scripts": {
-		"build": "yarn turbo run build --filter '!@rrweb/web-extension'",
+		"build": "yarn turbo run build --filter '!@rrweb/web-extension' --filter '!nextjs'",
 		"e2e:cloudflare": "yarn turbo run dev --filter cloudflare-worker...",
 		"e2e:express": "yarn turbo run dev --filter express...",
 		"e2e:nestjs": "yarn turbo run dev --filter nestjs",
@@ -26,7 +26,7 @@
 		"preinstall": "git submodule update --init --recursive || true",
 		"publish": "yarn workspaces foreach -A --include '@launchdarkly/*' --exclude '@launchdarkly/observability-sdk' npm publish --access public --tolerate-republish",
 		"publish:highlight": "yarn workspaces foreach -R --no-private --from '@highlight-run/*' npm publish --access public --tolerate-republish && yarn workspace highlight.run npm publish --access public --tolerate-republish",
-		"test": "yarn turbo run test --filter=!rrweb --filter=!rrvideo --filter=!@rrweb/rrweb-plugin-console-record --filter=!@rrweb/_monorepo --filter=!@rrweb/all --filter=!@rrweb/record --filter=!@rrweb/replay --filter=!@rrweb/types --filter=!@rrweb/packer --filter=!@rrweb/utils --filter=!@rrweb/web-extension --filter=!rrweb-snapshot --filter=!rrweb-player --filter=!rrdom --filter=!rrdom-nodejs --filter=!nextjs"
+		"test": "yarn turbo run test --filter=!nextjs --filter=!rrweb --filter=!rrvideo --filter=!@rrweb/rrweb-plugin-console-record --filter=!@rrweb/_monorepo --filter=!@rrweb/all --filter=!@rrweb/record --filter=!@rrweb/replay --filter=!@rrweb/types --filter=!@rrweb/packer --filter=!@rrweb/utils --filter=!@rrweb/web-extension --filter=!rrweb-snapshot --filter=!rrweb-player --filter=!rrdom --filter=!rrdom-nodejs"
 	},
 	"devDependencies": {
 		"@changesets/cli": "^2.28.1",

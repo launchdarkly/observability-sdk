@@ -16,7 +16,6 @@ import {
 	getTracer,
 	setupBrowserTracing,
 } from '../client/otel'
-import type { LDClientMin } from '../integrations/launchdarkly/types/LDClient'
 import type { Observe } from '../api/observe'
 import { getNoopSpan } from '../client/otel/utils'
 import {
@@ -25,7 +24,11 @@ import {
 	ErrorMessageType,
 } from '../client/types/shared-types'
 import { parseError } from '../client/utils/errors'
-import { Hook, LaunchDarklyIntegration } from '../integrations/launchdarkly'
+import {
+	type Hook,
+	type LDClient,
+	LaunchDarklyIntegration,
+} from '../integrations/launchdarkly'
 import type { IntegrationClient } from '../integrations'
 import type { OTelMetric as Metric } from '../client/types/types'
 import { ConsoleMethods, MetricCategory } from '../client/types/client'
@@ -308,7 +311,7 @@ export class ObserveSDK implements Observe {
 		}
 	}
 
-	register(client: LDClientMin, metadata: LDPluginEnvironmentMetadata) {
+	register(client: LDClient, metadata: LDPluginEnvironmentMetadata) {
 		this._integrations.push(new LaunchDarklyIntegration(client, metadata))
 	}
 

@@ -1,4 +1,4 @@
-type NetworkInformation = {
+export type NetworkInformation = {
 	downlink: number
 	downlinkMax: number
 	rtt: number

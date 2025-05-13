@@ -1,6 +1,6 @@
-import { type HighlightClassOptions, LDClientMin } from '../client'
+import { type HighlightClassOptions } from '../client'
 import type { LDPlugin, LDPluginEnvironmentMetadata } from './plugin'
-import type { Hook } from '../integrations/launchdarkly'
+import type { Hook, LDClient } from '../integrations/launchdarkly'
 import { RecordSDK } from '../sdk/record'
 import firstloadVersion from '../__generated/version'
 import { setupMixpanelIntegration } from '../integrations/mixpanel'
@@ -59,7 +59,7 @@ export class Record extends Plugin<RecordOptions> implements LDPlugin {
 	}
 
 	register(
-		client: LDClientMin,
+		client: LDClient,
 		environmentMetadata: LDPluginEnvironmentMetadata,
 	) {
 		this.record.register(client, environmentMetadata)

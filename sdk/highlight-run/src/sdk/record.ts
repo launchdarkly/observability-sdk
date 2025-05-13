@@ -86,12 +86,12 @@ import { Attributes } from '@opentelemetry/api'
 import { IntegrationClient } from '../integrations'
 import { Record } from '../api/record'
 import { HighlightWarning } from './util'
-import type { HighlightClassOptions, LDClientMin } from '../client'
+import type { HighlightClassOptions } from '../client'
 import { Highlight } from '../client'
 import { LaunchDarklyIntegration } from '../integrations/launchdarkly'
 import { LDObserve } from './LDObserve'
 import { LDPluginEnvironmentMetadata } from '../plugins/plugin'
-import { Hook } from '../integrations/launchdarkly'
+import type { Hook, LDClient } from '../integrations/launchdarkly'
 import { RecordOptions } from '../client/types/record'
 
 interface HighlightWindow extends Window {
@@ -1245,7 +1245,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 		this._lastSnapshotTime = new Date().getTime()
 	}
 
-	register(client: LDClientMin, metadata: LDPluginEnvironmentMetadata) {
+	register(client: LDClient, metadata: LDPluginEnvironmentMetadata) {
 		this._integrations.push(new LaunchDarklyIntegration(client, metadata))
 	}
 

@@ -1,5 +1,5 @@
 import type { SessionDetails, StartOptions } from '../client/types/types'
-import type { LDClientMin } from '../integrations/launchdarkly/types/LDClient'
+import type { LDClient } from '../integrations/launchdarkly'
 import type { LDPluginEnvironmentMetadata } from '../plugins/plugin'
 import { Hook } from '../integrations/launchdarkly'
 
@@ -23,7 +23,7 @@ export interface Record {
 	getSession: () => SessionDetails | null
 	getRecordingState: () => 'NotRecording' | 'Recording'
 	register(
-		client: LDClientMin,
+		client: LDClient,
 		environmentMetadata: LDPluginEnvironmentMetadata,
 	): void
 	getHooks?(metadata: LDPluginEnvironmentMetadata): Hook[]
