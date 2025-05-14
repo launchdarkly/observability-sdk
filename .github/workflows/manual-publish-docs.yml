@@ -22,7 +22,7 @@ jobs:
             - run: git submodule update --init --recursive
 
             - name: Setup Node.js environment
-              uses: actions/setup-node@v4
+              uses: actions/setup-node@8f152de74fe8d36522c1a9ea8bc06c8c8a9c8cd9
               with:
                   node-version: lts/*
                   cache: 'yarn'

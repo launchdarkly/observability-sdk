@@ -21,17 +21,17 @@ jobs:
             run:
                 working-directory: ./sdk/highlight-ruby/highlight
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
               with:
                   token: ${{ secrets.GITHUB_TOKEN }}
-            - uses: dorny/paths-filter@v2
+            - uses: dorny/paths-filter@4512585405083f25c027a35db413c2b3b9006d50
               id: filter
               with:
                   filters: |
                       ruby-changed:
                         - 'sdk/highlight-ruby/**'
             - name: Install Ruby
-              uses: ruby/setup-ruby@v1
+              uses: ruby/setup-ruby@9384f53a7f2c2a1e1e01dbd2b7c6a3d1b8f0d973
               with:
                   ruby-version: ${{ matrix.ruby }}
                   bundler-cache: true # runs 'bundle install' and caches installed gems automatically
@@ -59,11 +59,11 @@ jobs:
             run:
                 working-directory: ./e2e/ruby/rails/demo
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
               with:
                   token: ${{ secrets.GITHUB_TOKEN }}
             - name: Install Ruby
-              uses: ruby/setup-ruby@v1
+              uses: ruby/setup-ruby@9384f53a7f2c2a1e1e01dbd2b7c6a3d1b8f0d973
               with:
                   ruby-version: '3.3.4'
                   bundler-cache: true # runs 'bundle install' and caches installed gems automatically
@@ -80,11 +80,11 @@ jobs:
             run:
                 working-directory: ./e2e/ruby/rails/api-only
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
               with:
                   token: ${{ secrets.GITHUB_TOKEN }}
             - name: Install Ruby
-              uses: ruby/setup-ruby@v1
+              uses: ruby/setup-ruby@9384f53a7f2c2a1e1e01dbd2b7c6a3d1b8f0d973
               with:
                   ruby-version: '3.3.4'
                   bundler-cache: true # runs 'bundle install' and caches installed gems automatically

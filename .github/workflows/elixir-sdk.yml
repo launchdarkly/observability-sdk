@@ -20,11 +20,11 @@ jobs:
         runs-on: ubuntu-22.04-8core-32gb
         steps:
             - name: Checkout
-              uses: actions/checkout@v4
+              uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
               with:
                   token: ${{ secrets.GITHUB_TOKEN }}
             - name: Setup Elixir
-              uses: erlef/setup-beam@v1
+              uses: erlef/setup-beam@b84ff0173a4b1ccd8b8b8e4a9ac371c2a45f9c85
               with:
                   elixir-version: ${{ env.ELIXIR_VERSION }}
                   otp-version: ${{ env.OTP_VERSION }}
@@ -37,11 +37,11 @@ jobs:
         runs-on: ubuntu-22.04-8core-32gb
         steps:
             - name: Checkout
-              uses: actions/checkout@v4
+              uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
               with:
                   token: ${{ secrets.GITHUB_TOKEN }}
             - name: Setup Elixir
-              uses: erlef/setup-beam@v1
+              uses: erlef/setup-beam@b84ff0173a4b1ccd8b8b8e4a9ac371c2a45f9c85
               with:
                   elixir-version: ${{ env.ELIXIR_VERSION }}
                   otp-version: ${{ env.OTP_VERSION }}
@@ -59,16 +59,16 @@ jobs:
         needs: test
         steps:
             - name: Checkout
-              uses: actions/checkout@v4
+              uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
               with:
                   token: ${{ secrets.GITHUB_TOKEN }}
             - name: Setup Elixir
-              uses: erlef/setup-beam@v1
+              uses: erlef/setup-beam@b84ff0173a4b1ccd8b8b8e4a9ac371c2a45f9c85
               with:
                   elixir-version: ${{ env.ELIXIR_VERSION }}
                   otp-version: ${{ env.OTP_VERSION }}
             - name: Publish to Hex
-              uses: synchronal/hex-publish-action@v3
+              uses: synchronal/hex-publish-action@9e1b1776f5f9a5b5a2c1e54c1c60c7bbf9ea72d2
               with:
                   name: highlight
                   key: ${{ secrets.HEX_PM_KEY }}
