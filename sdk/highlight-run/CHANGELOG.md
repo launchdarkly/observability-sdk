@@ -1,5 +1,11 @@
 # highlight.run
 
+## 9.18.5
+
+### Patch Changes
+
+- bcd8ece: exclude launchdarkly events and evals from being recorded by the observability sdk
+
 ## 9.18.4
 
 ### Patch Changes
