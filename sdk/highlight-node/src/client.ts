@@ -78,12 +78,6 @@ const instrumentations = getNodeAutoInstrumentations({
 				.split(',')
 				.indexOf('fs') !== -1,
 	},
-	'@opentelemetry/instrumentation-pg': {
-		enabled:
-			(process.env.OTEL_NODE_ENABLED_INSTRUMENTATIONS || '')
-				.split(',')
-				.indexOf('pg') !== -1,
-	},
 	'@opentelemetry/instrumentation-pino': {
 		logHook: (span, record, _) => {
 			// @ts-ignore
@@ -160,15 +154,26 @@ export class Highlight {
 			})
 		}
 
+		const pg: Instrumentation<PgInstrumentationConfig> | undefined =
+			instrumentations.find(
+				(i) =>
+					i.instrumentationName ===
+					'@opentelemetry/instrumentation-pg',
+			)
 		if (options.disablePgInstrumentationAttributes) {
-			const pg: Instrumentation<PgInstrumentationConfig> | undefined =
-				instrumentations.find(
-					(i) =>
-						i.instrumentationName ===
-						'@opentelemetry/instrumentation-pg',
-				)
 			pg?.setConfig({
 				enhancedDatabaseReporting: false,
+				responseHook: (span, response) => {
+					span.setAttribute('db.connection_string', `[REDACTED]`)
+					span.setAttribute('db.name', `[REDACTED]`)
+					span.setAttribute('db.statement', `[REDACTED]`)
+					span.setAttribute('db.system', `[REDACTED]`)
+					span.setAttribute('db.user', `[REDACTED]`)
+				},
+			})
+		} else {
+			pg?.setConfig({
+				enhancedDatabaseReporting: true,
 			})
 		}
 
