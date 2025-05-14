@@ -9,7 +9,7 @@ export const highlightConfig = {
 	environment: 'e2e-test',
 	enableFsInstrumentation: true,
 	disableConsoleRecording: false,
-	debug: false,
+	disablePgInstrumentationAttributes: false,
 } as NodeOptions
 
 export async function register() {
