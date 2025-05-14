@@ -156,7 +156,7 @@ export class LaunchDarklyIntegrationSDK implements IntegrationClient {
 
 	init(sessionSecureID: string) {
 		this.client.track(LD_INITIALIZE_EVENT, {
-			sessionSecureID,
+			sessionID: sessionSecureID,
 		})
 	}
 
@@ -180,7 +180,7 @@ export class LaunchDarklyIntegrationSDK implements IntegrationClient {
 					.reduce((a, b) => ({ ...a, ...b }), {}),
 				category: metric.category,
 				group: metric.group,
-				sessionSecureID,
+				sessionID: sessionSecureID,
 			},
 			metric.value,
 		)
@@ -198,7 +198,7 @@ export class LaunchDarklyIntegrationSDK implements IntegrationClient {
 	error(sessionSecureID: string, error: ErrorMessage) {
 		this.client.track(LD_ERROR_EVENT, {
 			...error,
-			sessionSecureID,
+			sessionID: sessionSecureID,
 		})
 	}
 
@@ -208,7 +208,7 @@ export class LaunchDarklyIntegrationSDK implements IntegrationClient {
 			event ? `${LD_TRACK_EVENT}:${event}` : LD_TRACK_EVENT,
 			{
 				...metadata,
-				sessionSecureID,
+				sessionID: sessionSecureID,
 			},
 		)
 	}
