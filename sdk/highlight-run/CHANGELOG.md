@@ -1,5 +1,11 @@
 # highlight.run
 
+## 9.18.4
+
+### Patch Changes
+
+- 1ab53f8: Add support for client-side sampling.
+
 ## 9.18.3
 
 ### Patch Changes
