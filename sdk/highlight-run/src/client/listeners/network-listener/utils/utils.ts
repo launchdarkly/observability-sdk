@@ -241,7 +241,13 @@ export const matchPerformanceTimingsWithRequestResponsePair = (
 		)
 }
 
-const isLaunchDarklyNetworkResource = (name: string) => {
+const isLaunchDarklyEventsNetworkResource = (name: string) => {
+	return ['events.ld.catamorphic.com', 'events.launchdarkly.com'].some(
+		(backendUrl) => name.toLocaleLowerCase().includes(backendUrl),
+	)
+}
+
+const isLaunchDarklyEvalNetworkResource = (name: string) => {
 	return name !== defaultUrlFilter(name)
 }
 
@@ -266,7 +272,8 @@ export const shouldNetworkRequestBeRecorded = (
 ) => {
 	return (
 		!isHighlightNetworkResourceFilter(url, highlightEndpoints) &&
-		!isLaunchDarklyNetworkResource(url)
+		!isLaunchDarklyEvalNetworkResource(url) &&
+		!isLaunchDarklyEventsNetworkResource(url)
 	)
 }
 
