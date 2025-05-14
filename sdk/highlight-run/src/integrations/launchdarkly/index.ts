@@ -15,6 +15,7 @@ import type {
 	LDContextCommon,
 	LDMultiKindContext,
 } from '@launchdarkly/js-client-sdk'
+
 export type { Hook, LDClient }
 
 export const FEATURE_FLAG_SCOPE = 'feature_flag'
@@ -174,6 +175,7 @@ export class LaunchDarklyIntegrationSDK implements IntegrationClient {
 		this.client.track(
 			`${LD_METRIC_EVENT}:${metric.name.toLowerCase()}`,
 			{
+				// TODO(vkorolik) why is this a recordmetric... cant do this
 				...metric,
 				sessionSecureID,
 			},

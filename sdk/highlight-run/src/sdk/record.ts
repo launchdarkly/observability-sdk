@@ -533,6 +533,9 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 					recordingStartTime: this._recordingStartTime,
 				},
 			})
+			for (const integration of this._integrations) {
+				integration.init(this.sessionData.sessionSecureID)
+			}
 
 			if (this.sessionData.userIdentifier) {
 				this.identify(

@@ -30,7 +30,7 @@ import {
 	LaunchDarklyIntegration,
 } from '../integrations/launchdarkly'
 import type { IntegrationClient } from '../integrations'
-import type { OTelMetric as Metric } from '../client/types/types'
+import type { OTelMetric as Metric, RecordMetric } from '../client/types/types'
 import { ConsoleMethods, MetricCategory } from '../client/types/client'
 import { ObserveOptions } from '../client/types/observe'
 import { ConsoleListener } from '../client/listeners/console-listener'
@@ -193,6 +193,21 @@ export class ObserveSDK implements Observe {
 			...metric.attributes,
 			'highlight.session_id': this.sessionSecureID,
 		})
+		const recordMetric: RecordMetric = {
+			name: metric.name,
+			value: metric.value,
+			category: metric.attributes?.['category'] as MetricCategory,
+			group: metric.attributes?.['group']?.toString(),
+			tags: metric.attributes
+				? Object.entries(metric.attributes).map(([key, value]) => ({
+						name: key ?? '',
+						value: value?.toString() ?? '',
+					}))
+				: [],
+		}
+		for (const integration of this._integrations) {
+			integration.recordGauge(this.sessionSecureID, recordMetric)
+		}
 	}
 
 	recordIncr(metric: Omit<Metric, 'value'>) {
