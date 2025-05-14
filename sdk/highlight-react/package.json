@@ -3,6 +3,10 @@
 	"version": "19.0.5",
 	"description": "The official Highlight SDK for React",
 	"license": "Apache-2.0",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/launchdarkly/observability-sdk.git"
+	},
 	"peerDependencies": {
 		"highlight.run": "workspace:*",
 		"react": ">=16",
@@ -31,9 +35,5 @@
 	"files": [
 		"dist",
 		"package.json"
-	],
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/highlight/highlight"
-	}
+	]
 }

@@ -2,6 +2,10 @@
 	"name": "@highlight-run/next",
 	"version": "7.9.16",
 	"description": "Client for interfacing with Highlight in next.js",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/launchdarkly/observability-sdk.git"
+	},
 	"files": [
 		"dist",
 		"client.d.ts",
