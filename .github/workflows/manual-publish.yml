@@ -27,6 +27,8 @@ jobs:
     publish-package:
         runs-on: ubuntu-22.04-8core-32gb
         steps:
+            - name: Checkout
+              uses: actions/checkout@v4
             - run: git submodule update --init --recursive
 
             - name: Setup Node.js environment
