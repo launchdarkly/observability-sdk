@@ -1,6 +1,6 @@
 {
 	"name": "@highlight-run/hono",
-	"version": "1.0.4",
+	"version": "1.0.5",
 	"description": "Highlight.io SDK for Hono applications",
 	"repository": {
 		"type": "git",
