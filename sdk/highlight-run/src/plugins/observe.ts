@@ -29,6 +29,13 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 	observe!: ObserveAPI
 
 	constructor(projectID?: string | number, options?: ObserveOptions) {
+		// Don't run init when called outside of the browser.
+		if (typeof window === 'undefined' || typeof document === 'undefined') {
+			console.warn(
+				'Session Replay is not initializing because it is not supported in this environment.',
+			)
+			return
+		}
 		// Don't initialize if an projectID is not set.
 		if (!projectID) {
 			console.info(

@@ -1,5 +1,17 @@
 # highlight.run
 
+## 9.18.3
+
+### Patch Changes
+
+- bb75fea: fix highlight.run unpkg build
+
+## 9.18.2
+
+### Patch Changes
+
+- 027df7b: gate plugin startup to prevent failing in non-browser envs
+
 ## 9.18.1
 
 ### Patch Changes

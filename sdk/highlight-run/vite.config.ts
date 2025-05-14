@@ -19,15 +19,34 @@ export default defineConfig({
 	build: {
 		target: 'es6',
 		lib: {
-			formats: ['es'],
-			entry: {
-				index: resolvePath(__dirname, 'src/index.tsx'),
-				record: resolvePath(__dirname, 'src/plugins/record.ts'),
-				observe: resolvePath(__dirname, 'src/plugins/observe.ts'),
-				LDRecord: resolvePath(__dirname, 'src/sdk/LDRecord.ts'),
-				LDObserve: resolvePath(__dirname, 'src/sdk/LDObserve.ts'),
-			},
-			fileName: (_, entryName) => `${entryName}.js`,
+			formats: process.env.FORMAT === 'umd' ? ['umd'] : ['es'],
+			entry:
+				process.env.FORMAT === 'umd'
+					? resolvePath(__dirname, 'src/index.tsx')
+					: {
+							index: resolvePath(__dirname, 'src/index.tsx'),
+							record: resolvePath(
+								__dirname,
+								'src/plugins/record.ts',
+							),
+							observe: resolvePath(
+								__dirname,
+								'src/plugins/observe.ts',
+							),
+							LDRecord: resolvePath(
+								__dirname,
+								'src/sdk/LDRecord.ts',
+							),
+							LDObserve: resolvePath(
+								__dirname,
+								'src/sdk/LDObserve.ts',
+							),
+						},
+			name: 'LD',
+			fileName: (format, entryName) =>
+				format === 'es'
+					? `${entryName}.js`
+					: `${entryName}.${format}.js`,
 		},
 		minify: true,
 		sourcemap: true,

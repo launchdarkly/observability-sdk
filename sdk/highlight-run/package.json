@@ -1,6 +1,6 @@
 {
 	"name": "highlight.run",
-	"version": "9.18.1",
+	"version": "9.18.3",
 	"description": "Open source, fullstack monitoring. Capture frontend errors, record server side logs, and visualize what broke with session replay.",
 	"keywords": [
 		"highlight",
@@ -25,7 +25,8 @@
 		}
 	},
 	"scripts": {
-		"build": "yarn typegen && vite build",
+		"build": "yarn typegen && yarn build:umd && vite build",
+		"build:umd": "FORMAT=umd vite build",
 		"build:watch": "vite build --watch",
 		"codegen": "graphql-codegen --config codegen.yml",
 		"dev": "run-p dev:server dev:watch",
@@ -39,37 +40,17 @@
 	},
 	"type": "module",
 	"types": "./dist/highlight-run/src/index.d.ts",
+	"main": "./dist/index.js",
+	"module": "./dist/index.js",
+	"unpkg": "./dist/index.umd.js",
+	"jsdelivr": "./dist/index.umd.js",
 	"exports": {
-		".": {
-			"types": "./dist/highlight-run/src/index.d.ts",
-			"import": "./dist/index.js",
-			"require": "./dist/index.js",
-			"default": "./dist/index.js"
-		},
-		"./observe": {
-			"types": "./dist/highlight-run/src/plugins/observe.d.ts",
-			"import": "./dist/observe.js",
-			"require": "./dist/observe.js",
-			"default": "./dist/observe.js"
-		},
-		"./record": {
-			"types": "./dist/highlight-run/src/plugins/record.d.ts",
-			"import": "./dist/record.js",
-			"require": "./dist/record.js",
-			"default": "./dist/record.js"
-		},
-		"./ld/observe": {
-			"types": "./dist/highlight-run/src/sdk/LDObserve.d.ts",
-			"import": "./dist/LDObserve.js",
-			"require": "./dist/LDObserve.js",
-			"default": "./dist/LDObserve.js"
-		},
-		"./ld/record": {
-			"types": "./dist/highlight-run/src/sdk/LDRecord.d.ts",
-			"import": "./dist/LDRecord.js",
-			"require": "./dist/LDRecord.js",
-			"default": "./dist/LDRecord.js"
-		}
+		"types": "./dist/highlight-run/src/index.d.ts",
+		"unpkg": "./dist/index.umd.js",
+		"jsdelivr": "./dist/index.umd.js",
+		"import": "./dist/index.js",
+		"require": "./dist/index.js",
+		"default": "./dist/index.js"
 	},
 	"files": [
 		"dist"
@@ -143,7 +124,11 @@
 	"size-limit": [
 		{
 			"path": [
-				"dist/*.js"
+				"dist/index.umd.js",
+				"dist/LDObserve.js",
+				"dist/LDRecord.js",
+				"dist/observe.js",
+				"dist/record.js"
 			],
 			"limit": "256 kB",
 			"brotli": true
