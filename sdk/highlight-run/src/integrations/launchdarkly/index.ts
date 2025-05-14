@@ -175,8 +175,11 @@ export class LaunchDarklyIntegrationSDK implements IntegrationClient {
 		this.client.track(
 			`${LD_METRIC_EVENT}:${metric.name.toLowerCase()}`,
 			{
-				// TODO(vkorolik) why is this a recordmetric... cant do this
-				...metric,
+				...metric.tags
+					?.map((t) => ({ [t.name]: t.value }))
+					.reduce((a, b) => ({ ...a, ...b }), {}),
+				category: metric.category,
+				group: metric.group,
 				sessionSecureID,
 			},
 			metric.value,
