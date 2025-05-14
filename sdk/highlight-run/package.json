@@ -25,7 +25,7 @@
 		}
 	},
 	"scripts": {
-		"build": "yarn typegen && yarn build:umd && vite build",
+		"build": "yarn build:umd && vite build",
 		"build:umd": "FORMAT=umd vite build",
 		"build:watch": "vite build --watch",
 		"codegen": "graphql-codegen --config codegen.yml",
@@ -35,7 +35,7 @@
 		"enforce-size": "size-limit",
 		"test": "vitest --run",
 		"test:watch": "vitest",
-		"typegen": "tsc",
+		"typegen": "FORMAT=d.ts vite build",
 		"docs": "typedoc"
 	},
 	"type": "module",

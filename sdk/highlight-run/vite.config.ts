@@ -18,6 +18,7 @@ export default defineConfig({
 	},
 	plugins: [
 		dts({
+			declarationOnly: process.env.FORMAT === 'd.ts',
 			rollupTypes: true,
 		}),
 	],
