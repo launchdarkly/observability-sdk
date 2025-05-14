@@ -158,6 +158,8 @@ export class FirstLoadListeners {
 			`${otlpEndpoint}/v1/traces`,
 			`${otlpEndpoint}/v1/logs`,
 			`${otlpEndpoint}/v1/metrics`,
+			`https://events.ld.catamorphic.com`,
+			`https://events.launchdarkly.com`,
 		]
 
 		sThis.xhrNetworkContents = []
