@@ -1,5 +1,12 @@
 # @launchdarkly/observability
 
+## 0.1.8
+
+### Patch Changes
+
+- Updated dependencies [1ab53f8]
+    - highlight.run@9.18.4
+
 ## 0.1.7
 
 ### Patch Changes
