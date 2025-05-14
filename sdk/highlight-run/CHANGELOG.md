@@ -1,5 +1,19 @@
 # highlight.run
 
+## 9.18.6
+
+### Patch Changes
+
+- 36e2247: correctly provide session url for launchdarkly frontend
+- 2c29bf4: update launchdarkly integration to report sessionID to track forwarding
+- a8bf1aa: correct launchdarkly product api types
+
+## 9.18.5
+
+### Patch Changes
+
+- bcd8ece: exclude launchdarkly events and evals from being recorded by the observability sdk
+
 ## 9.18.4
 
 ### Patch Changes

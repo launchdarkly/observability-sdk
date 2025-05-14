@@ -34,7 +34,7 @@
 			]
 		},
 		"docs": {
-			"dependsOn": ["^build"],
+			"dependsOn": ["^build", "typegen"],
 			"inputs": [
 				"src/**/*.tsx",
 				"src/**/*.ts",

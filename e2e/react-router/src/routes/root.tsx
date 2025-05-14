@@ -36,6 +36,7 @@ export default function Root() {
 	const fillColor = 'lightblue'
 	const canvasRef = useRef<HTMLCanvasElement>(null)
 	const [flags, setFlags] = useState<string>()
+	const [session, setSession] = useState<string>()
 
 	useEffect(() => {
 		const canvas = canvasRef.current
@@ -46,14 +47,24 @@ export default function Root() {
 		ctx.fillRect(0, 0, canvas.width, canvas.height)
 	}, [fillColor])
 
+	useEffect(() => {
+		const int = setInterval(() => {
+			setSession(LDRecord.getSession()?.url)
+		}, 1000)
+		return () => {
+			clearInterval(int)
+		}
+	}, [])
+
 	return (
 		<div id="sidebar">
 			<h1>Hello, world</h1>
 			<p>{flags}</p>
+			<p>{session}</p>
 			<canvas width="100" height="100" ref={canvasRef}></canvas>
 			<button
 				onClick={() => {
-					LDObserve.recordLog('hello', 'INFO')
+					LDObserve.recordLog('hello', 'info')
 				}}
 			>
 				LDObserve.recordLog
@@ -73,6 +84,17 @@ export default function Root() {
 				}}
 			>
 				LDRecord.snapshot
+			</button>
+			<button
+				onClick={async () => {
+					setFlags(
+						JSON.stringify(
+							client.variation('enable-session-card-style'),
+						),
+					)
+				}}
+			>
+				client.eval
 			</button>
 			<button
 				onClick={async () => {

@@ -6,11 +6,6 @@ import { ConsoleMethods } from '../client/types/client'
 import type { Hook, LDClient } from '../integrations/launchdarkly'
 
 export interface Observe {
-	recordLog: (
-		message: any,
-		level: ConsoleMethods,
-		metadata?: Attributes,
-	) => void
 	/**
 	 * Record arbitrary metric values via as a Gauge.
 	 * A Gauge records any point-in-time measurement, such as the current CPU utilization %.
@@ -149,6 +144,17 @@ export interface Observe {
 		source?: string,
 		type?: ErrorMessageType,
 	) => void
+
+	/**
+	 * Record arbitrary logs from your own integrations or manual.
+	 * Useful when you don't want to emit a console log to the browser dev tools but still want to report a custom log.
+	 */
+	recordLog: (
+		message: any,
+		level: ConsoleMethods,
+		metadata?: Attributes,
+	) => void
+
 	register(
 		client: LDClient,
 		environmentMetadata: LDPluginEnvironmentMetadata,

@@ -15,6 +15,7 @@ import type {
 	LDContextCommon,
 	LDMultiKindContext,
 } from '@launchdarkly/js-client-sdk'
+
 export type { Hook, LDClient }
 
 export const FEATURE_FLAG_SCOPE = 'feature_flag'
@@ -155,7 +156,7 @@ export class LaunchDarklyIntegrationSDK implements IntegrationClient {
 
 	init(sessionSecureID: string) {
 		this.client.track(LD_INITIALIZE_EVENT, {
-			sessionSecureID,
+			sessionID: sessionSecureID,
 		})
 	}
 
@@ -174,8 +175,12 @@ export class LaunchDarklyIntegrationSDK implements IntegrationClient {
 		this.client.track(
 			`${LD_METRIC_EVENT}:${metric.name.toLowerCase()}`,
 			{
-				...metric,
-				sessionSecureID,
+				...metric.tags
+					?.map((t) => ({ [t.name]: t.value }))
+					.reduce((a, b) => ({ ...a, ...b }), {}),
+				category: metric.category,
+				group: metric.group,
+				sessionID: sessionSecureID,
 			},
 			metric.value,
 		)
@@ -193,7 +198,7 @@ export class LaunchDarklyIntegrationSDK implements IntegrationClient {
 	error(sessionSecureID: string, error: ErrorMessage) {
 		this.client.track(LD_ERROR_EVENT, {
 			...error,
-			sessionSecureID,
+			sessionID: sessionSecureID,
 		})
 	}
 
@@ -203,7 +208,7 @@ export class LaunchDarklyIntegrationSDK implements IntegrationClient {
 			event ? `${LD_TRACK_EVENT}:${event}` : LD_TRACK_EVENT,
 			{
 				...metadata,
-				sessionSecureID,
+				sessionID: sessionSecureID,
 			},
 		)
 	}

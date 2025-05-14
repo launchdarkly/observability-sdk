@@ -1,6 +1,10 @@
 {
 	"name": "@highlight-run/pino",
 	"version": "0.1.6",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/launchdarkly/observability-sdk.git"
+	},
 	"packageManager": "yarn@4.0.2",
 	"publishConfig": {
 		"access": "public"
@@ -15,10 +19,6 @@
 		"typegen": "tsup src/index.ts --dts-only ",
 		"dev": "tsup src/index.ts --watch",
 		"build": "tsup src/index.ts"
-	},
-	"repository": {
-		"type": "git",
-		"url": "git+https://github.com/highlight-run/highlight.git"
 	},
 	"keywords": [
 		"pino",

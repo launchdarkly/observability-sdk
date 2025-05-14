@@ -2,9 +2,9 @@
 import commonjs from '@rollup/plugin-commonjs'
 import json from '@rollup/plugin-json'
 import resolve from '@rollup/plugin-node-resolve'
-import typescript from '@rollup/plugin-typescript'
 import { resolve as resolvePath } from 'path'
 import { defineConfig } from 'vite'
+import dts from 'vite-plugin-dts'
 
 export default defineConfig({
 	envPrefix: ['REACT_APP_'],
@@ -16,6 +16,12 @@ export default defineConfig({
 			clientPort: 8877,
 		},
 	},
+	plugins: [
+		dts({
+			declarationOnly: process.env.FORMAT === 'd.ts',
+			rollupTypes: true,
+		}),
+	],
 	build: {
 		target: 'es6',
 		lib: {
@@ -60,9 +66,6 @@ export default defineConfig({
 				}),
 				resolve({
 					browser: true,
-				}),
-				typescript({
-					outputToFilesystem: true,
 				}),
 			],
 			output: {

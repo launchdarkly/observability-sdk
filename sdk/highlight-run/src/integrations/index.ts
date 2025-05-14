@@ -1,5 +1,5 @@
 import type { ErrorMessage, Source } from '../client/types/shared-types'
-import type { RecordMetric } from '../client/types/types'
+import { RecordMetric } from '../client/types/types'
 import type { LDPluginEnvironmentMetadata } from '../plugins/plugin'
 import type { Hook } from './launchdarkly'
 

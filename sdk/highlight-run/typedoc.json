@@ -2,7 +2,15 @@
 	"$schema": "https://typedoc.org/schema.json",
 	"name": "@launchdarkly/observability + @launchdarkly/session-replay",
 	"includeVersion": false,
-	"entryPoints": ["src/index.tsx"],
+	"entryPoints": [
+		"src/index.tsx",
+		"src/api/record.ts",
+		"src/api/observe.ts",
+		"src/plugins/record.ts",
+		"src/plugins/observe.ts",
+		"src/sdk/LDRecord.ts",
+		"src/sdk/LDObserve.ts"
+	],
 	"exclude": [
 		"**/__tests__/**",
 		"**/*.spec.ts",

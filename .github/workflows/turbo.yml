@@ -17,15 +17,8 @@ jobs:
             TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
             TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
         steps:
-            - uses: launchdarkly/common-actions/ssh-key-by-repo@main
-              with:
-                  repo_keys_map: |
-                      {
-                        "launchdarkly/rrweb": ${{ toJSON(secrets.LAUNCHDARKLY_RRWEB_DEPLOY_KEY) }}
-                      }
-            - uses: launchdarkly/common-actions/init@main
-              env:
-                  GITHUB_TOKEN: ${{ github.token }}
+            - name: Checkout
+              uses: actions/checkout@v4
             - run: git submodule update --init --recursive
 
             # automatically caches dependencies based on yarn.lock
