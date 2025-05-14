@@ -38,7 +38,7 @@ jobs:
             test: ${{ steps.test.outputs.test }}
         steps:
             - name: Checkout Code
-              uses: actions/checkout@v4
+              uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
               with:
                   token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -99,12 +99,12 @@ jobs:
                 working-directory: ./sdk/highlight-java
         steps:
             - name: Checkout Code
-              uses: actions/checkout@v4
+              uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
               with:
                   token: ${{ secrets.GITHUB_TOKEN }}
 
             - name: Set up JDK 17
-              uses: actions/setup-java@v4
+              uses: actions/setup-java@c5195efecf7bdfc987ee2a7c7b8404c7c2e7c4c4
               with:
                   distribution: 'temurin'
                   java-version: 17
@@ -115,7 +115,7 @@ jobs:
                   mv ./highlight-sdk/target/highlight-sdk-*.jar ./
 
             - name: Publish build artifacts
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@ea165f8d65b6e75c6c1b5b0d38c5cdd6635b5d0e
               with:
                   name: highlight-java-sdk
                   path: ./sdk/highlight-java/highlight-sdk-*.jar
@@ -130,12 +130,12 @@ jobs:
                 working-directory: ./sdk/highlight-java
         steps:
             - name: Checkout Code
-              uses: actions/checkout@v4
+              uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
               with:
                   token: ${{ secrets.GITHUB_TOKEN }}
 
             - name: Set up JDK 17
-              uses: actions/setup-java@v4
+              uses: actions/setup-java@c5195efecf7bdfc987ee2a7c7b8404c7c2e7c4c4
               with:
                   distribution: 'temurin'
                   java-version: 17
@@ -144,7 +144,7 @@ jobs:
               run: mvn clean test --batch-mode -Dmaven.test.failure.ignore=true -Drevision=${{needs.setup.outputs.version}}
 
             - name: Upload Test Report
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@ea165f8d65b6e75c6c1b5b0d38c5cdd6635b5d0e
               if: always()
               with:
                   name: junit-test-results
@@ -152,7 +152,7 @@ jobs:
                   retention-days: 1
 
             - name: Publish Test Report
-              uses: mikepenz/action-junit-report@v4
+              uses: mikepenz/action-junit-report@db71d41eb7daa9e5a71f075fec2d5a6a6709c390
               with:
                   commit: ${{github.event.workflow_run.head_sha}}
                   report_paths: '**/target/surefire-reports/TEST-*.xml'
@@ -167,12 +167,12 @@ jobs:
                 working-directory: ./sdk/highlight-java
         steps:
             - name: Checkout Code
-              uses: actions/checkout@v4
+              uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
               with:
                   token: ${{ secrets.GITHUB_TOKEN }}
 
             - name: Set up JDK 17
-              uses: actions/setup-java@v4
+              uses: actions/setup-java@c5195efecf7bdfc987ee2a7c7b8404c7c2e7c4c4
               with:
                   distribution: 'temurin'
                   java-version: 17

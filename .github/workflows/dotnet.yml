@@ -20,12 +20,12 @@ jobs:
                 working-directory: ./sdk/highlight-dotnet
         steps:
             - name: Checkout
-              uses: actions/checkout@v4
+              uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
               with:
                   token: ${{ secrets.GITHUB_TOKEN }}
 
             - name: Setup .NET environment
-              uses: actions/setup-dotnet@v4
+              uses: actions/setup-dotnet@67a3573f04a4b92a75c0e6b09f8b2a1d8f96fb9a
               with:
                   dotnet-version: 8.x
 
@@ -46,17 +46,17 @@ jobs:
                 working-directory: ./sdk/highlight-dotnet4
         steps:
             - name: Checkout
-              uses: actions/checkout@v4
+              uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
               with:
                   token: ${{ secrets.GITHUB_TOKEN }}
 
             - name: Setup dotnet
-              uses: actions/setup-dotnet@v4
+              uses: actions/setup-dotnet@67a3573f04a4b92a75c0e6b09f8b2a1d8f96fb9a
               with:
                   dotnet-version: 8.x
 
             - name: Setup dotnet
-              uses: microsoft/setup-msbuild@v2
+              uses: microsoft/setup-msbuild@6fb02220983dee4d3bb8319c7fa169b069e1f4c2
 
             - name: msbuild restore
               run: msbuild -t:Restore

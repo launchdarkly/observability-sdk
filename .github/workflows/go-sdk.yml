@@ -16,16 +16,16 @@ jobs:
         runs-on: ubuntu-22.04-8core-32gb
         steps:
             - name: Checkout
-              uses: actions/checkout@v4
+              uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
               with:
                   token: ${{ secrets.GITHUB_TOKEN }}
             - name: Setup Go
-              uses: actions/setup-go@v5
+              uses: actions/setup-go@d35bae25e8221c4e3047d7b0e4e1f2d5c68e1b0e
               with:
                   go-version-file: './sdk/highlight-go/go.mod'
                   cache-dependency-path: './sdk/highlight-go/go.sum'
             - name: Format
-              uses: Jerome1337/gofmt-action@v1.0.5
+              uses: Jerome1337/gofmt-action@d5eabd189843f1d7a1e8e4d09a4a4f8c8d1c56db
               with:
                   gofmt-path: './sdk/highlight-go'
                   gofmt-flags: '-l -d'
@@ -35,16 +35,16 @@ jobs:
         runs-on: ubuntu-22.04-8core-32gb
         steps:
             - name: Checkout
-              uses: actions/checkout@v4
+              uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
               with:
                   token: ${{ secrets.GITHUB_TOKEN }}
             - name: Setup Go
-              uses: actions/setup-go@v5
+              uses: actions/setup-go@d35bae25e8221c4e3047d7b0e4e1f2d5c68e1b0e
               with:
                   go-version-file: './sdk/highlight-go/go.mod'
                   cache-dependency-path: './sdk/highlight-go/go.sum'
             - name: Run linter
-              uses: golangci/golangci-lint-action@v6.4.1
+              uses: golangci/golangci-lint-action@818ec4d51c1f1ba0b2e6d7c9bd1f925b7d7c1ea9
               with:
                   args: -v --config ./.golangci.yaml
                   working-directory: sdk/highlight-go
@@ -55,11 +55,11 @@ jobs:
         runs-on: ubuntu-22.04-8core-32gb
         steps:
             - name: Checkout
-              uses: actions/checkout@v4
+              uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
               with:
                   token: ${{ secrets.GITHUB_TOKEN }}
             - name: Setup Go
-              uses: actions/setup-go@v5
+              uses: actions/setup-go@d35bae25e8221c4e3047d7b0e4e1f2d5c68e1b0e
               with:
                   go-version-file: './sdk/highlight-go/go.mod'
                   cache-dependency-path: './sdk/highlight-go/go.sum'
@@ -72,11 +72,11 @@ jobs:
         runs-on: ubuntu-22.04-8core-32gb
         steps:
             - name: Checkout
-              uses: actions/checkout@v4
+              uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
               with:
                   token: ${{ secrets.GITHUB_TOKEN }}
             - name: Setup Go
-              uses: actions/setup-go@v5
+              uses: actions/setup-go@d35bae25e8221c4e3047d7b0e4e1f2d5c68e1b0e
               with:
                   go-version-file: './sdk/highlight-go/go.mod'
                   cache-dependency-path: './sdk/highlight-go/go.sum'

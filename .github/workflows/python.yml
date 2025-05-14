@@ -24,12 +24,12 @@ jobs:
             run:
                 working-directory: ./sdk/highlight-py
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
               with:
                   token: ${{ secrets.GITHUB_TOKEN }}
             - name: Install poetry
               run: pipx install poetry
-            - uses: actions/setup-python@v4
+            - uses: actions/setup-python@7f4fc3e22c37d6ff65c4b91f7f3a4c76f9a1d1c7
               with:
                   python-version: '3.12'
                   cache: 'poetry'
@@ -40,7 +40,7 @@ jobs:
               run: poetry run pytest --cov=highlight_io --cov-branch --cov-report xml
             - name: Get Cover
               if: github.event_name == 'pull_request'
-              uses: orgoro/coverage@v3
+              uses: orgoro/coverage@b8b0b4e0b9a1cfb3f9a1ecfb8f28b9dea6e01e3a
               with:
                   coverageFile: ./sdk/highlight-py/coverage.xml
                   token: ${{ secrets.GITHUB_TOKEN }}
@@ -53,7 +53,7 @@ jobs:
                   python -m piptools compile --upgrade pyproject.toml;
             - name: Publish
               if: github.ref == 'refs/heads/main'
-              uses: pypa/gh-action-pypi-publish@release/v1
+              uses: pypa/gh-action-pypi-publish@76f52bc88425d27c6beec496f5b2e5c0c4e8f5f0
               with:
                   packages-dir: ./sdk/highlight-py/dist/
                   skip-existing: true
@@ -66,12 +66,12 @@ jobs:
                 working-directory: ./e2e/tests
 
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
               with:
                   token: ${{ secrets.GITHUB_TOKEN }}
             - name: Install poetry
               run: pipx install poetry
-            - uses: actions/setup-python@v4
+            - uses: actions/setup-python@7f4fc3e22c37d6ff65c4b91f7f3a4c76f9a1d1c7
               with:
                   python-version: '3.10'
                   cache: 'poetry'
