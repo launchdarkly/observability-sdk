@@ -53,7 +53,7 @@ export default function Root() {
 			<canvas width="100" height="100" ref={canvasRef}></canvas>
 			<button
 				onClick={() => {
-					LDObserve.recordLog('hello', 'INFO')
+					LDObserve.recordLog('hello', 'info')
 				}}
 			>
 				LDObserve.recordLog
