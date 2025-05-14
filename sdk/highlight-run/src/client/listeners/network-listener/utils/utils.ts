@@ -2,7 +2,7 @@ import { getActiveSpan } from '../../../otel'
 import { getNetworkSessionSecureID } from '../../../utils/sessionStorage/highlightSession'
 import { RequestResponsePair } from './models'
 import { sanitizeResource } from './network-sanitizer'
-import defaultUrlFilter from '../../../../integrations/launchdarkly/urlFilters'
+import { isLDContextUrl } from '../../../../integrations/launchdarkly/urlFilters'
 
 export const HIGHLIGHT_REQUEST_HEADER = 'X-Highlight-Request'
 
@@ -248,7 +248,7 @@ const isLaunchDarklyEventsNetworkResource = (name: string) => {
 }
 
 const isLaunchDarklyEvalNetworkResource = (name: string) => {
-	return name !== defaultUrlFilter(name)
+	return isLDContextUrl(name)
 }
 
 /**
