@@ -1,6 +1,6 @@
 {
 	"name": "@launchdarkly/observability",
-	"version": "0.1.9",
+	"version": "0.1.10",
 	"description": "Browser observability for your web app. Capture frontend metrics, errors, logs and traces.",
 	"keywords": [
 		"launchdarkly",
