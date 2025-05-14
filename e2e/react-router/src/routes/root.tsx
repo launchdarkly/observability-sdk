@@ -76,6 +76,17 @@ export default function Root() {
 			</button>
 			<button
 				onClick={async () => {
+					setFlags(
+						JSON.stringify(
+							client.variation('enable-session-card-style'),
+						),
+					)
+				}}
+			>
+				client.eval
+			</button>
+			<button
+				onClick={async () => {
 					await client.identify({
 						kind: 'user',
 						key: 'vadim@highlight.io',
