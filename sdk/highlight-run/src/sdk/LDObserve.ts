@@ -2,9 +2,10 @@ import type { Observe } from '../api/observe'
 import type { LDClient } from '../integrations/launchdarkly'
 import type { ErrorMessageType } from '../client/types/shared-types'
 import type { OTelMetric as Metric } from '../client/types/types'
-import type { Attributes } from '@opentelemetry/api'
+import type { Attributes, Context, Span, SpanOptions } from '@opentelemetry/api'
 import type { LDPluginEnvironmentMetadata } from '../plugins/plugin'
 import { BufferedClass } from './buffer'
+import { ConsoleMethods } from '../client/types/client'
 
 class _LDObserve extends BufferedClass<Observe> implements Observe {
 	recordGauge(metric: Metric) {
@@ -27,12 +28,22 @@ class _LDObserve extends BufferedClass<Observe> implements Observe {
 		return this._bufferCall('recordUpDownCounter', [metric])
 	}
 
-	startSpan() {
-		return this._bufferCall('startSpan', [])
+	startSpan(
+		name: string,
+		options: SpanOptions | ((span?: Span) => any),
+		context?: Context | ((span?: Span) => any),
+		fn?: (span?: Span) => any,
+	) {
+		return this._bufferCall('startSpan', [name, options, context, fn])
 	}
 
-	startManualSpan() {
-		return this._bufferCall('startManualSpan', [])
+	startManualSpan(
+		name: string,
+		options: SpanOptions | ((span: Span) => any),
+		context?: Context | ((span: Span) => any),
+		fn?: (span: Span) => any,
+	) {
+		return this._bufferCall('startManualSpan', [name, options, context, fn])
 	}
 
 	register(
@@ -42,7 +53,7 @@ class _LDObserve extends BufferedClass<Observe> implements Observe {
 		return this._bufferCall('register', [client, environmentMetadata])
 	}
 
-	recordLog(message: any, level: string, metadata?: Attributes) {
+	recordLog(message: any, level: ConsoleMethods, metadata?: Attributes) {
 		return this._bufferCall('recordLog', [message, level, metadata])
 	}
 
