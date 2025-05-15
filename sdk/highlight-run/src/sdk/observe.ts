@@ -107,7 +107,8 @@ export class ObserveSDK implements Observe {
 
 	recordLog(message: any, level: ConsoleMethods, metadata?: Attributes) {
 		this.startSpan(LOG_SPAN_NAME, (span) => {
-			const msg = stringify(message)
+			const msg =
+				typeof message === 'string' ? message : stringify(message)
 			span?.setAttributes({
 				'highlight.session_id': this.sessionSecureID,
 			})
