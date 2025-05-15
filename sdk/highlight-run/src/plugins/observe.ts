@@ -3,7 +3,7 @@ import {
 	FEATURE_FLAG_APP_ID_ATTR,
 	FEATURE_FLAG_APP_VERSION_ATTR,
 	FEATURE_FLAG_CONTEXT_ATTR,
-	FEATURE_FLAG_CONTEXT_KEY_ATTR,
+	FEATURE_FLAG_CONTEXT_ID_ATTR,
 	FEATURE_FLAG_ENV_ATTR,
 	FEATURE_FLAG_IN_EXPERIMENT_ATTR,
 	FEATURE_FLAG_KEY_ATTR,
@@ -130,7 +130,7 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 					if (hookContext.context) {
 						eventAttributes[FEATURE_FLAG_CONTEXT_ATTR] =
 							JSON.stringify(getCanonicalObj(hookContext.context))
-						eventAttributes[FEATURE_FLAG_CONTEXT_KEY_ATTR] =
+						eventAttributes[FEATURE_FLAG_CONTEXT_ID_ATTR] =
 							getCanonicalKey(hookContext.context)
 					}
 
