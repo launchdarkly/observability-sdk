@@ -1,6 +1,10 @@
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http'
 import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-http'
-import { MAX_PUBLIC_GRAPH_RETRY_ATTEMPTS } from '../utils/graph'
+import {
+	BACKOFF_DELAY_MS,
+	BASE_DELAY_MS,
+	MAX_PUBLIC_GRAPH_RETRY_ATTEMPTS,
+} from '../utils/graph'
 import { ExportResult, ExportResultCode } from '@opentelemetry/core'
 import { ReadableSpan } from '@opentelemetry/sdk-trace-base'
 import { ExportSampler } from './sampling/ExportSampler'
@@ -54,7 +58,14 @@ export class OTLPTraceExporterBrowserWithXhrRetry extends OTLPTraceExporter {
 					error: result.error,
 				})
 			} else {
-				super.export(items, resultCallback)
+				new Promise((resolve) =>
+					setTimeout(
+						resolve,
+						BASE_DELAY_MS + BACKOFF_DELAY_MS * Math.pow(2, retries),
+					),
+				).then(() => {
+					super.export(items, resultCallback)
+				})
 			}
 		}
 
@@ -84,7 +95,14 @@ export class OTLPMetricExporterBrowser extends OTLPMetricExporter {
 					error: result.error,
 				})
 			} else {
-				super.export(items, resultCallback)
+				new Promise((resolve) =>
+					setTimeout(
+						resolve,
+						BASE_DELAY_MS + BACKOFF_DELAY_MS * Math.pow(2, retries),
+					),
+				).then(() => {
+					super.export(items, resultCallback)
+				})
 			}
 		}
 
