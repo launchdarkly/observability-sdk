@@ -133,18 +133,12 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 						eventAttributes[FEATURE_FLAG_CONTEXT_ID_ATTR] =
 							getCanonicalKey(hookContext.context)
 					}
-
-					this.observe.startSpan(
-						FEATURE_FLAG_SPAN_NAME,
-						{
-							attributes: { ...metaAttrs, ...eventAttributes },
-						},
-						(s) => {
-							if (s) {
-								s.addEvent(FEATURE_FLAG_SCOPE, eventAttributes)
-							}
-						},
-					)
+					const attributes = { ...metaAttrs, ...eventAttributes }
+					this.observe.startSpan(FEATURE_FLAG_SPAN_NAME, (s) => {
+						if (s) {
+							s.addEvent(FEATURE_FLAG_SCOPE, attributes)
+						}
+					})
 
 					return data
 				},

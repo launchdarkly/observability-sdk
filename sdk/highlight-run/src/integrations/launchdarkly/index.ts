@@ -128,7 +128,7 @@ export function setupLaunchDarklyIntegration(
 				)
 			}
 
-			hClient.startSpan(FEATURE_FLAG_SPAN_NAME, eventAttributes, (s) => {
+			hClient.startSpan(FEATURE_FLAG_SPAN_NAME, (s) => {
 				if (s) {
 					s.addEvent(FEATURE_FLAG_SCOPE, eventAttributes)
 				}
