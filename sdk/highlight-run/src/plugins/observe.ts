@@ -1,22 +1,25 @@
 import type { LDPlugin, LDPluginEnvironmentMetadata } from './plugin'
-import type { Hook, LDClient } from '../integrations/launchdarkly'
-import { Observe as ObserveAPI } from '../api/observe'
-import { ObserveSDK } from '../sdk/observe'
-import { LDObserve } from '../sdk/LDObserve'
 import {
 	FEATURE_FLAG_APP_ID_ATTR,
 	FEATURE_FLAG_APP_VERSION_ATTR,
 	FEATURE_FLAG_CONTEXT_ATTR,
 	FEATURE_FLAG_CONTEXT_KEY_ATTR,
 	FEATURE_FLAG_ENV_ATTR,
+	FEATURE_FLAG_IN_EXPERIMENT_ATTR,
 	FEATURE_FLAG_KEY_ATTR,
 	FEATURE_FLAG_PROVIDER_ATTR,
 	FEATURE_FLAG_SCOPE,
 	FEATURE_FLAG_SPAN_NAME,
 	FEATURE_FLAG_VARIANT_ATTR,
+	FEATURE_FLAG_VARIATION_INDEX_ATTR,
 	getCanonicalKey,
 	getCanonicalObj,
+	Hook,
+	LDClient,
 } from '../integrations/launchdarkly'
+import { Observe as ObserveAPI } from '../api/observe'
+import { ObserveSDK } from '../sdk/observe'
+import { LDObserve } from '../sdk/LDObserve'
 import type { ObserveOptions } from '../client/types/observe'
 import { Plugin } from './common'
 import {
@@ -118,6 +121,10 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 						[FEATURE_FLAG_VARIANT_ATTR]: JSON.stringify(
 							detail.value,
 						),
+						[FEATURE_FLAG_IN_EXPERIMENT_ATTR]:
+							detail.reason?.inExperiment,
+						[FEATURE_FLAG_VARIATION_INDEX_ATTR]:
+							detail.variationIndex ?? undefined,
 					}
 
 					if (hookContext.context) {
@@ -130,8 +137,7 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 					this.observe.startSpan(
 						FEATURE_FLAG_SPAN_NAME,
 						{
-							...metaAttrs,
-							attributes: eventAttributes,
+							attributes: { ...metaAttrs, ...eventAttributes },
 						},
 						(s) => {
 							if (s) {
