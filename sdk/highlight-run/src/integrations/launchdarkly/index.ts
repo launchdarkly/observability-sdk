@@ -26,7 +26,7 @@ export const FEATURE_FLAG_ENV_ATTR = `${FEATURE_FLAG_SCOPE}.set.id`
 export const FEATURE_FLAG_KEY_ATTR = `${FEATURE_FLAG_SCOPE}.key`
 export const FEATURE_FLAG_CONTEXT_ATTR = `${FEATURE_FLAG_SCOPE}.context`
 export const FEATURE_FLAG_CONTEXT_ID_ATTR = `${FEATURE_FLAG_CONTEXT_ATTR}.id`
-export const FEATURE_FLAG_VARIANT_ATTR = `${FEATURE_FLAG_SCOPE}.result.variant`
+export const FEATURE_FLAG_VALUE_ATTR = `${FEATURE_FLAG_SCOPE}.result.value`
 export const FEATURE_FLAG_PROVIDER_ATTR = `${FEATURE_FLAG_SCOPE}.provider.name`
 export const FEATURE_FLAG_IN_EXPERIMENT_ATTR = `${FEATURE_FLAG_SCOPE}.result.reason.in_experiment`
 export const FEATURE_FLAG_VARIATION_INDEX_ATTR = `${FEATURE_FLAG_SCOPE}.result.variation_index`
@@ -113,7 +113,7 @@ export function setupLaunchDarklyIntegration(
 			const eventAttributes: Attributes = {
 				[FEATURE_FLAG_PROVIDER_ATTR]: 'LaunchDarkly',
 				[FEATURE_FLAG_KEY_ATTR]: hookContext.flagKey,
-				[FEATURE_FLAG_VARIANT_ATTR]: JSON.stringify(detail.value),
+				[FEATURE_FLAG_VALUE_ATTR]: JSON.stringify(detail.value),
 				[FEATURE_FLAG_IN_EXPERIMENT_ATTR]: detail.reason?.inExperiment,
 				[FEATURE_FLAG_VARIATION_INDEX_ATTR]:
 					detail.variationIndex ?? undefined,

@@ -10,7 +10,7 @@ import {
 	FEATURE_FLAG_PROVIDER_ATTR,
 	FEATURE_FLAG_SCOPE,
 	FEATURE_FLAG_SPAN_NAME,
-	FEATURE_FLAG_VARIANT_ATTR,
+	FEATURE_FLAG_VALUE_ATTR,
 	FEATURE_FLAG_VARIATION_INDEX_ATTR,
 	getCanonicalKey,
 	getCanonicalObj,
@@ -125,9 +125,7 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 
 					const eventAttributes: Attributes = {
 						[FEATURE_FLAG_KEY_ATTR]: hookContext.flagKey,
-						[FEATURE_FLAG_VARIANT_ATTR]: JSON.stringify(
-							detail.value,
-						),
+						[FEATURE_FLAG_VALUE_ATTR]: JSON.stringify(detail.value),
 						[FEATURE_FLAG_IN_EXPERIMENT_ATTR]:
 							detail.reason?.inExperiment,
 						[FEATURE_FLAG_VARIATION_INDEX_ATTR]:
