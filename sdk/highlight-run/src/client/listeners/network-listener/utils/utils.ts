@@ -1,5 +1,5 @@
 import { getActiveSpan } from '../../../otel'
-import { getNetworkSessionSecureID } from '../../../utils/sessionStorage/highlightSession'
+import { getPersistentSessionSecureID } from '../../../utils/sessionStorage/highlightSession'
 import { RequestResponsePair } from './models'
 import { sanitizeResource } from './network-sanitizer'
 import { isLDContextUrl } from '../../../../integrations/launchdarkly/urlFilters'
@@ -329,7 +329,7 @@ export const createNetworkRequestId = () => {
 
 	const context = getActiveSpan()
 	const traceId = context?.spanContext().traceId
-	return [getNetworkSessionSecureID(), traceId ?? requestId]
+	return [getPersistentSessionSecureID(), traceId ?? requestId]
 }
 
 export const getHighlightRequestHeader = (

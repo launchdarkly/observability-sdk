@@ -439,9 +439,6 @@ export class RecordSDK implements Record {
 			} else {
 				this._recordingStartTime = this.sessionData?.sessionStartTime
 			}
-			// To handle the 'Duplicate Tab' function, remove id from storage until page unload
-			setSessionSecureID('')
-			setSessionData(this.sessionData)
 
 			let clientID = getItem(LocalStorageKeys['CLIENT_ID'])
 
@@ -521,6 +518,9 @@ export class RecordSDK implements Record {
 				}
 			}
 
+			// To handle the 'Duplicate Tab' function, remove id from storage until page unload
+			setSessionSecureID('')
+			setSessionData(this.sessionData)
 			this.logger.log(
 				`Loaded Highlight
 Remote: ${this._backendUrl}
