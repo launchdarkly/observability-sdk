@@ -85,11 +85,11 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 			[FEATURE_FLAG_ENV_ATTR]: metadata.clientSideId,
 			[FEATURE_FLAG_PROVIDER_ATTR]: 'LaunchDarkly',
 			...(metadata.application?.id
-				? { FEATURE_FLAG_APP_ID_ATTR: metadata.application.id }
+				? { [FEATURE_FLAG_APP_ID_ATTR]: metadata.application.id }
 				: {}),
 			...(metadata.application?.version
 				? {
-						FEATURE_FLAG_APP_VERSION_ATTR:
+						[FEATURE_FLAG_APP_VERSION_ATTR]:
 							metadata.application.version,
 					}
 				: {}),
