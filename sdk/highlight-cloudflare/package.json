@@ -1,6 +1,10 @@
 {
 	"name": "@highlight-run/cloudflare",
 	"version": "3.1.0",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/launchdarkly/observability-sdk.git"
+	},
 	"packageManager": "yarn@4.0.2",
 	"main": "./dist/index.js",
 	"module": "./dist/index.mjs",

@@ -1,7 +1,11 @@
 {
 	"name": "@highlight-run/remix",
-	"version": "2.0.98",
+	"version": "2.0.102",
 	"description": "Client for interfacing with Highlight in Remix",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/launchdarkly/observability-sdk.git"
+	},
 	"packageManager": "yarn@4.0.2",
 	"author": "",
 	"license": "Apache-2.0",

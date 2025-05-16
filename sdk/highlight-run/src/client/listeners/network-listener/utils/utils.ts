@@ -1,7 +1,8 @@
 import { getActiveSpan } from '../../../otel'
-import { getNetworkSessionSecureID } from '../../../utils/sessionStorage/highlightSession'
+import { getPersistentSessionSecureID } from '../../../utils/sessionStorage/highlightSession'
 import { RequestResponsePair } from './models'
 import { sanitizeResource } from './network-sanitizer'
+import { isLDContextUrl } from '../../../../integrations/launchdarkly/urlFilters'
 
 export const HIGHLIGHT_REQUEST_HEADER = 'X-Highlight-Request'
 
@@ -240,6 +241,16 @@ export const matchPerformanceTimingsWithRequestResponsePair = (
 		)
 }
 
+const isLaunchDarklyEventsNetworkResource = (name: string) => {
+	return ['events.ld.catamorphic.com', 'events.launchdarkly.com'].some(
+		(backendUrl) => name.toLocaleLowerCase().includes(backendUrl),
+	)
+}
+
+const isLaunchDarklyEvalNetworkResource = (name: string) => {
+	return isLDContextUrl(name)
+}
+
 /**
  * Returns true if the name is a Highlight network resource.
  * This is used to filter out Highlight requests/responses from showing up on end application's network resources.
@@ -259,7 +270,11 @@ export const shouldNetworkRequestBeRecorded = (
 	highlightEndpoints: string[],
 	_tracingOrigins?: boolean | (string | RegExp)[],
 ) => {
-	return !isHighlightNetworkResourceFilter(url, highlightEndpoints)
+	return (
+		!isHighlightNetworkResourceFilter(url, highlightEndpoints) &&
+		!isLaunchDarklyEvalNetworkResource(url) &&
+		!isLaunchDarklyEventsNetworkResource(url)
+	)
 }
 
 // Determines whether we want to attach the x-highlight-request header to the
@@ -314,7 +329,7 @@ export const createNetworkRequestId = () => {
 
 	const context = getActiveSpan()
 	const traceId = context?.spanContext().traceId
-	return [getNetworkSessionSecureID(), traceId ?? requestId]
+	return [getPersistentSessionSecureID(), traceId ?? requestId]
 }
 
 export const getHighlightRequestHeader = (

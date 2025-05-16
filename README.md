@@ -1,39 +1,132 @@
-![Docs Thumbnail v1](https://user-images.githubusercontent.com/20292680/207519838-99ef65f6-aa5d-44b7-bebd-261d127943e3.png)
+# LaunchDarkly JavaScript Observability SDK
 
-## Official Highlight SDKs for JS
+[![Actions Status][o11y-sdk-ci-badge]][o11y-sdk-ci]
 
-Welcome to the repo housing the JavaScript SDKs for [highlight.io](https://highlight.io). This repo contains all of the code that runs our supported javascript environments. For developers using our SDKs, this may be useful to dig deeper into how Highlight reports the data you see on you dashboard at https://app.highlight.io.
+## Overview
 
-## What's Highlight? / Getting Started
+This repository houses the JavaScript SDKs for LaunchDarkly Observability. This repo contains the code for our supported JavaScript environments, providing tools for session replay and observability.
 
-Highlight gives you fullstack visibility by pairing frontend monitoring tooling (session replay, console contents, network requests) with more traditional server-side monitoring (error monitoring, etc..). To setup Highlight in your web app, the relevant documentation can be found at https://highlight.io/docs and on your highlight dashboard at https://app.highlight.io.
+## Supported SDKs
 
-## Supported Platforms
+### LaunchDarkly JavaScript Observability SDK for Browsers (`@launchdarkly/observability`)
 
-### Client Library (`highlight.run`)
+[![NPM][o11y-sdk-npm-badge]][o11y-sdk-npm-link]
+[![NPM][o11y-sdk-dm-badge]][o11y-sdk-npm-link]
+[![NPM][o11y-sdk-dt-badge]][o11y-sdk-npm-link]
 
-For browser-based javsacript environments; reports session replay and monitoring data.
+> [!CAUTION]
+> This library is an alpha version and should not be considered ready for production use while this message is visible.
 
--   NPM package: [highlight.run](https://www.npmjs.com/package/highlight.run) (`./client` + `./firstload`)
--   Setup Docs: https://www.highlight.io/docs/getting-started/client-sdk/overview
--   SDK Reference Docs: https://www.highlight.io/docs/sdk/client
+#### Install
 
-### Node.js Library (`@highlight-run/node`)
+```shell
+# npm
+npm i @launchdarkly/observability
 
-For node.js environments; reports backend errrors, while matching them to frontend requests.
+# yarn
+yarn add @launchdarkly/observability
+```
 
--   NPM Package: [@highlight-run/node](https://www.npmjs.com/package/@highlight-run/node)
--   Setup Docs: https://www.highlight.io/docs/sdk/nodejs
--   SDK Reference Docs: https://www.highlight.io/docs/sdk/nodejs
+#### Usage
 
-### Next.js Library (`@highlight-run/next`)
+Update your web app entrypoint:
+```tsx
+import { initialize } from 'launchdarkly-js-client-sdk'
+import Observability, { LDObserve } from '@launchdarkly/observability'
 
-For Next.js full stack environments; reports backend errrors, while matching them to frontend requests.
+const client = init3(
+        '<CLIENT_SIDE_ID>',
+        { key: 'authenticated-user@example.com' },
+        {
+          // Not including plugins at all would be equivalent to the current LaunchDarkly SDK.
+          plugins: [
+            new Observability('<OBSERVABILITY_PROJECT_ID>', {
+              networkRecording: {
+                enabled: true,
+                recordHeadersAndBody: true,
+              },
+            }),
+          ],
+        },
+)
+```
 
--   NPM Package: [@highlight-run/next](https://www.npmjs.com/package/@highlight-run/next)
--   Setup Docs: https://www.highlight.io/docs/sdk/nextjs
--   SDK Reference Docs: https://www.highlight.io/docs/sdk/nextjs
+### LaunchDarkly JavaScript Session Replay SDK for Browsers (`@launchdarkly/session-replay`)
+
+[![NPM][session-replay-sdk-npm-badge]][session-replay-sdk-npm-link]
+[![NPM][session-replay-sdk-dm-badge]][session-replay-sdk-npm-link]
+[![NPM][session-replay-sdk-dt-badge]][session-replay-sdk-npm-link]
+
+> [!CAUTION]
+> This library is an alpha version and should not be considered ready for production use while this message is visible.
+
+#### Install
+
+```shell
+# npm
+npm i @launchdarkly/session-replay
+
+# yarn
+yarn add @launchdarkly/session-replay
+```
+
+#### Usage
+
+Update your web app entrypoint:
+```tsx
+import { initialize } from 'launchdarkly-js-client-sdk'
+import SessionReplay, { LDRecord } from '@launchdarkly/session-replay'
+
+const client = init3(
+        '<CLIENT_SIDE_ID>',
+        { key: 'authenticated-user@example.com' },
+        {
+          // Not including plugins at all would be equivalent to the current LaunchDarkly SDK.
+          plugins: [
+            new SessionReplay('<OBSERVABILITY_PROJECT_ID>', {
+              serviceName: 'example-svc',
+            }), // Could be omitted for customers who cannot use session replay.
+          ],
+        },
+)
+```
+
+## Getting started
+
+Refer to the [SDK documentation](https://docs.launchdarkly.com/sdk/client-side/javascript#getting-started) for instructions on getting started with using the SDK.
+
+## Verifying SDK build provenance with the SLSA framework
+
+LaunchDarkly uses the [SLSA framework](https://slsa.dev/spec/v1.0/about) (Supply-chain Levels for Software Artifacts) to help developers make their supply chain more secure by ensuring the authenticity and build integrity of our published SDK packages. To learn more, see the provenance guide (PROVENANCE.md).
+
+## About LaunchDarkly
+
+- LaunchDarkly Observability provides a way to collect and send errors, logs, traces to LaunchDarkly. Correlate latency or exceptions with your releases to safely ship code.
+- LaunchDarkly Session Replay provides a way to capture user sessions on your application to replay them in LaunchDarkly. Understand how users are interacting with your site and with new features you ship.
+- LaunchDarkly is a continuous delivery platform that provides feature flags as a service and allows developers to iterate quickly and safely. We allow you to easily flag your features and manage them from the LaunchDarkly dashboard. With LaunchDarkly, you can:
+    - Roll out a new feature to a subset of your users (like a group of users who opt-in to a beta tester group), gathering feedback and bug reports from real-world use cases.
+    - Gradually roll out a feature to an increasing percentage of users, and track the effect that the feature has on key metrics (for instance, how likely is a user to complete a purchase if they have feature A versus feature B?).
+    - Turn off a feature that you realize is causing performance problems in production, without needing to re-deploy, or even restart the application with a changed configuration file.
+    - Grant access to certain features based on user attributes, like payment plan (eg: users on the 'gold' plan get access to more features than users in the 'silver' plan).
+    - Disable parts of your application to facilitate maintenance, without taking everything offline.
+- LaunchDarkly provides feature flag SDKs for a wide variety of languages and technologies. Read [our documentation](https://docs.launchdarkly.com/sdk) for a complete list.
+- Explore LaunchDarkly
+    - [launchdarkly.com](https://www.launchdarkly.com/ 'LaunchDarkly Main Website') for more information
+    - [docs.launchdarkly.com](https://docs.launchdarkly.com/ 'LaunchDarkly Documentation') for our documentation and SDK reference guides
+    - [apidocs.launchdarkly.com](https://apidocs.launchdarkly.com/ 'LaunchDarkly API Documentation') for our API documentation
+    - [blog.launchdarkly.com](https://blog.launchdarkly.com/ 'LaunchDarkly Blog Documentation') for the latest product updates
 
 ## Contributions
 
-Running some of this code, especially `highlight.run`, in isolation isn't going to provide a great DX. This makes code contributions difficult. We would still welcome PRs and issues on this repo. Please don't hesitate to file a ticket or [reach out](mailto:support@highlight.io) if there is anything we can do to help!
+We welcome PRs and issues on this repo. Please don't hesitate to file a ticket if there is anything we can do to help!
+
+[o11y-sdk-ci-badge]: https://github.com/launchdarkly/observability-sdk/actions/workflows/turbo.yml/badge.svg
+[o11y-sdk-ci]: https://github.com/launchdarkly/observability-sdk/actions/workflows/turbo.yml
+[o11y-sdk-npm-badge]: https://img.shields.io/npm/v/@launchdarkly/observability.svg?style=flat-square
+[o11y-sdk-npm-link]: https://www.npmjs.com/package/@launchdarkly/observability
+[o11y-sdk-dm-badge]: https://img.shields.io/npm/dm/@launchdarkly/observability.svg?style=flat-square
+[o11y-sdk-dt-badge]: https://img.shields.io/npm/dt/@launchdarkly/observability.svg?style=flat-square
+[session-replay-sdk-npm-badge]: https://img.shields.io/npm/v/@launchdarkly/session-replay.svg?style=flat-square
+[session-replay-sdk-npm-link]: https://www.npmjs.com/package/@launchdarkly/session-replay
+[session-replay-sdk-dm-badge]: https://img.shields.io/npm/dm/@launchdarkly/session-replay.svg?style=flat-square
+[session-replay-sdk-dt-badge]: https://img.shields.io/npm/dt/@launchdarkly/session-replay.svg?style=flat-square

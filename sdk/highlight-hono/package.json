@@ -1,7 +1,11 @@
 {
 	"name": "@highlight-run/hono",
-	"version": "1.0.4",
+	"version": "1.0.6",
 	"description": "Highlight.io SDK for Hono applications",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/launchdarkly/observability-sdk.git"
+	},
 	"main": "dist/index.js",
 	"types": "dist/index.d.ts",
 	"files": [

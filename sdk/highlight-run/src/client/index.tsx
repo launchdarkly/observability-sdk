@@ -555,13 +555,6 @@ export class Highlight {
 				delete obj[key]
 			}
 		})
-		for (const integration of this._integrations) {
-			integration.track(this.sessionData.sessionSecureID, {
-				sessionSecureID: this.sessionData.sessionSecureID,
-				propertyType: typeArg,
-				...properties_obj,
-			})
-		}
 		this._worker.postMessage({
 			message: {
 				type: MessageType.Properties,
@@ -569,6 +562,13 @@ export class Highlight {
 				propertyType: typeArg,
 			},
 		})
+		for (const integration of this._integrations) {
+			integration.track(this.sessionData.sessionSecureID, {
+				sessionSecureID: this.sessionData.sessionSecureID,
+				propertyType: typeArg,
+				...properties_obj,
+			})
+		}
 	}
 
 	async initialize(options?: StartOptions): Promise<undefined> {

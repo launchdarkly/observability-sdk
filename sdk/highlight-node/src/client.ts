@@ -19,6 +19,7 @@ import api, {
 } from '@opentelemetry/api'
 import { Logger } from '@opentelemetry/api-logs'
 import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node'
+import type { PgInstrumentationConfig } from '@opentelemetry/instrumentation-pg'
 import { AsyncLocalStorageContextManager } from '@opentelemetry/context-async-hooks'
 import {
 	CompositePropagator,
@@ -28,7 +29,10 @@ import {
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http'
 import { OTLPLogExporter } from '@opentelemetry/exporter-logs-otlp-http'
 import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-http'
-import { registerInstrumentations } from '@opentelemetry/instrumentation'
+import {
+	type Instrumentation,
+	registerInstrumentations,
+} from '@opentelemetry/instrumentation'
 import { CompressionAlgorithm } from '@opentelemetry/otlp-exporter-base'
 import { processDetectorSync, Resource } from '@opentelemetry/resources'
 import { NodeSDK } from '@opentelemetry/sdk-node'
@@ -147,6 +151,29 @@ export class Highlight {
 					'',
 					c.attributes,
 				)
+			})
+		}
+
+		const pg: Instrumentation<PgInstrumentationConfig> | undefined =
+			instrumentations.find(
+				(i) =>
+					i.instrumentationName ===
+					'@opentelemetry/instrumentation-pg',
+			)
+		if (options.disablePgInstrumentationAttributes) {
+			pg?.setConfig({
+				enhancedDatabaseReporting: false,
+				responseHook: (span, response) => {
+					span.setAttribute('db.connection_string', `[REDACTED]`)
+					span.setAttribute('db.name', `[REDACTED]`)
+					span.setAttribute('db.statement', `[REDACTED]`)
+					span.setAttribute('db.system', `[REDACTED]`)
+					span.setAttribute('db.user', `[REDACTED]`)
+				},
+			})
+		} else {
+			pg?.setConfig({
+				enhancedDatabaseReporting: true,
 			})
 		}
 

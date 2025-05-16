@@ -1,22 +1,25 @@
 import type { LDPlugin, LDPluginEnvironmentMetadata } from './plugin'
-import type { Hook, LDClient } from '../integrations/launchdarkly'
-import { Observe as ObserveAPI } from '../api/observe'
-import { ObserveSDK } from '../sdk/observe'
-import { LDObserve } from '../sdk/LDObserve'
 import {
 	FEATURE_FLAG_APP_ID_ATTR,
 	FEATURE_FLAG_APP_VERSION_ATTR,
 	FEATURE_FLAG_CONTEXT_ATTR,
-	FEATURE_FLAG_CONTEXT_KEY_ATTR,
+	FEATURE_FLAG_CONTEXT_ID_ATTR,
 	FEATURE_FLAG_ENV_ATTR,
+	FEATURE_FLAG_IN_EXPERIMENT_ATTR,
 	FEATURE_FLAG_KEY_ATTR,
 	FEATURE_FLAG_PROVIDER_ATTR,
 	FEATURE_FLAG_SCOPE,
 	FEATURE_FLAG_SPAN_NAME,
-	FEATURE_FLAG_VARIANT_ATTR,
+	FEATURE_FLAG_VALUE_ATTR,
+	FEATURE_FLAG_VARIATION_INDEX_ATTR,
 	getCanonicalKey,
 	getCanonicalObj,
+	Hook,
+	LDClient,
 } from '../integrations/launchdarkly'
+import { Observe as ObserveAPI } from '../api/observe'
+import { ObserveSDK } from '../sdk/observe'
+import { LDObserve } from '../sdk/LDObserve'
 import type { ObserveOptions } from '../client/types/observe'
 import { Plugin } from './common'
 import {
@@ -80,9 +83,16 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 			[ATTR_TELEMETRY_SDK_NAME]: metadata.sdk.name,
 			[ATTR_TELEMETRY_SDK_VERSION]: metadata.sdk.version,
 			[FEATURE_FLAG_ENV_ATTR]: metadata.clientSideId,
-			[FEATURE_FLAG_APP_ID_ATTR]: metadata.application?.id,
-			[FEATURE_FLAG_APP_VERSION_ATTR]: metadata.application?.version,
 			[FEATURE_FLAG_PROVIDER_ATTR]: 'LaunchDarkly',
+			...(metadata.application?.id
+				? { [FEATURE_FLAG_APP_ID_ATTR]: metadata.application.id }
+				: {}),
+			...(metadata.application?.version
+				? {
+						[FEATURE_FLAG_APP_VERSION_ATTR]:
+							metadata.application.version,
+					}
+				: {}),
 		}
 		return [
 			{
@@ -115,30 +125,34 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 
 					const eventAttributes: Attributes = {
 						[FEATURE_FLAG_KEY_ATTR]: hookContext.flagKey,
-						[FEATURE_FLAG_VARIANT_ATTR]: JSON.stringify(
-							detail.value,
-						),
+						[FEATURE_FLAG_VALUE_ATTR]: JSON.stringify(detail.value),
+						// only set the following keys when values are truthy
+						...(detail.reason?.inExperiment
+							? {
+									[FEATURE_FLAG_IN_EXPERIMENT_ATTR]:
+										detail.reason.inExperiment,
+								}
+							: {}),
+						...(detail.variationIndex
+							? {
+									[FEATURE_FLAG_VARIATION_INDEX_ATTR]:
+										detail.variationIndex,
+								}
+							: {}),
 					}
 
 					if (hookContext.context) {
 						eventAttributes[FEATURE_FLAG_CONTEXT_ATTR] =
 							JSON.stringify(getCanonicalObj(hookContext.context))
-						eventAttributes[FEATURE_FLAG_CONTEXT_KEY_ATTR] =
+						eventAttributes[FEATURE_FLAG_CONTEXT_ID_ATTR] =
 							getCanonicalKey(hookContext.context)
 					}
-
-					this.observe.startSpan(
-						FEATURE_FLAG_SPAN_NAME,
-						{
-							...metaAttrs,
-							attributes: eventAttributes,
-						},
-						(s) => {
-							if (s) {
-								s.addEvent(FEATURE_FLAG_SCOPE, eventAttributes)
-							}
-						},
-					)
+					const attributes = { ...metaAttrs, ...eventAttributes }
+					this.observe.startSpan(FEATURE_FLAG_SPAN_NAME, (s) => {
+						if (s) {
+							s.addEvent(FEATURE_FLAG_SCOPE, attributes)
+						}
+					})
 
 					return data
 				},

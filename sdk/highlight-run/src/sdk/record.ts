@@ -29,6 +29,10 @@ import { determineMaskInputOptions } from '../client/utils/privacy'
 import {
 	FIRST_SEND_FREQUENCY,
 	HIGHLIGHT_URL,
+	LAUNCHDARKLY_BACKEND_REGEX,
+	LAUNCHDARKLY_ENV_APPS,
+	LAUNCHDARKLY_PATH_PREFIX,
+	LAUNCHDARKLY_URL,
 	MAX_SESSION_LENGTH,
 	SEND_FREQUENCY,
 	SNAPSHOT_SETTINGS,
@@ -88,10 +92,10 @@ import { Record } from '../api/record'
 import { HighlightWarning } from './util'
 import type { HighlightClassOptions } from '../client'
 import { Highlight } from '../client'
+import type { Hook, LDClient } from '../integrations/launchdarkly'
 import { LaunchDarklyIntegration } from '../integrations/launchdarkly'
 import { LDObserve } from './LDObserve'
 import { LDPluginEnvironmentMetadata } from '../plugins/plugin'
-import type { Hook, LDClient } from '../integrations/launchdarkly'
 import { RecordOptions } from '../client/types/record'
 
 interface HighlightWindow extends Window {
@@ -435,9 +439,6 @@ export class RecordSDK implements Record {
 			} else {
 				this._recordingStartTime = this.sessionData?.sessionStartTime
 			}
-			// To handle the 'Duplicate Tab' function, remove id from storage until page unload
-			setSessionSecureID('')
-			setSessionData(this.sessionData)
 
 			let clientID = getItem(LocalStorageKeys['CLIENT_ID'])
 
@@ -517,6 +518,9 @@ export class RecordSDK implements Record {
 				}
 			}
 
+			// To handle the 'Duplicate Tab' function, remove id from storage until page unload
+			setSessionSecureID('')
+			setSessionData(this.sessionData)
 			this.logger.log(
 				`Loaded Highlight
 Remote: ${this._backendUrl}
@@ -533,6 +537,9 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 					recordingStartTime: this._recordingStartTime,
 				},
 			})
+			for (const integration of this._integrations) {
+				integration.init(this.sessionData.sessionSecureID)
+			}
 
 			if (this.sessionData.userIdentifier) {
 				this.identify(
@@ -1264,7 +1271,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 			return null
 		}
 
-		const baseUrl = `https://${HIGHLIGHT_URL}/${sessionData.projectID}/sessions/${secureID}`
+		const baseUrl = `${this.getFrontendUrl()}/sessions/${secureID}`
 		if (!baseUrl) {
 			return null
 		}
@@ -1285,5 +1292,16 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 			urlWithTimestamp: urlWithTimestamp.toString(),
 			sessionSecureID: secureID,
 		} as SessionDetails
+	}
+
+	private getFrontendUrl() {
+		const regexMatch = this._backendUrl.match(LAUNCHDARKLY_BACKEND_REGEX)
+		if (regexMatch && regexMatch?.groups?.domain) {
+			const domain = (regexMatch.groups.domain ??
+				'') as keyof typeof LAUNCHDARKLY_ENV_APPS
+			const appUrl = LAUNCHDARKLY_ENV_APPS[domain]
+			return `https://${appUrl}${LAUNCHDARKLY_PATH_PREFIX}`
+		}
+		return LAUNCHDARKLY_URL
 	}
 }

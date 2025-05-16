@@ -45,6 +45,13 @@ export interface NodeOptions extends HighlightOptions {
 	 * Set to try to serialize console object arguments into the message body.
 	 */
 	serializeConsoleAttributes?: boolean
+
+	/**
+	 * Turn off enhanced attribute reporting for pg instrumentation.
+	 * See the following for additional details.
+	 * https://github.com/open-telemetry/opentelemetry-js-contrib/blob/64fcbf3b70e7293e143266838ff94b94cf2c30da/plugins/node/opentelemetry-instrumentation-pg/src/types.ts#L52
+	 */
+	disablePgInstrumentationAttributes?: boolean
 }
 
 export interface HighlightContext {

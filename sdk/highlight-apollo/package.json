@@ -1,7 +1,11 @@
 {
 	"name": "@highlight-run/apollo",
-	"version": "3.4.28",
+	"version": "3.4.30",
 	"license": "Apache-2.0",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/launchdarkly/observability-sdk.git"
+	},
 	"main": "./dist/index.js",
 	"module": "./dist/index.mjs",
 	"types": "./dist/index.d.ts",
