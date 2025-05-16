@@ -24,6 +24,7 @@ const client = init(
 				},
 			}),
 			new SessionReplay('1', {
+				debug: { clientInteractions: true, domRecording: true },
 				privacySetting: 'none',
 				serviceName: 'ryan-test',
 				backendUrl: 'https://pub.observability.ld-stg.launchdarkly.com',

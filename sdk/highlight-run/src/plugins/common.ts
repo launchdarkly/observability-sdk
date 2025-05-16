@@ -2,14 +2,16 @@ import type { RecordOptions } from '../client/types/record'
 import type { ObserveOptions } from '../client/types/observe'
 import { setCookieWriteEnabled, setStorageMode } from '../client/utils/storage'
 import {
+	getPersistentSessionSecureID,
 	getPreviousSessionData,
 	loadCookieSessionData,
+	setSessionData,
+	setSessionSecureID,
 } from '../client/utils/sessionStorage/highlightSession'
 import { GenerateSecureID } from '../client'
 
 export class Plugin<T extends RecordOptions | ObserveOptions> {
 	protected sessionSecureID!: string
-	protected readonly initCalled: boolean = false
 	constructor(options?: T) {
 		if (options?.storageMode) {
 			setStorageMode(options?.storageMode)
@@ -22,16 +24,23 @@ export class Plugin<T extends RecordOptions | ObserveOptions> {
 			setCookieWriteEnabled(false)
 		}
 
-		let previousSession = getPreviousSessionData()
-		this.sessionSecureID = GenerateSecureID()
+		const persistentSessionSecureID = getPersistentSessionSecureID()
+		let previousSession = getPreviousSessionData(persistentSessionSecureID)
 		if (previousSession?.sessionSecureID) {
 			this.sessionSecureID = previousSession.sessionSecureID
+		} else {
+			this.sessionSecureID = GenerateSecureID()
+			setSessionSecureID(this.sessionSecureID)
+			setSessionData({
+				sessionSecureID: this.sessionSecureID,
+				projectID: 0,
+				payloadID: 1,
+				sessionStartTime: Date.now(),
+			})
 		}
-
-		// `init` was already called, do not reinitialize
-		if (this.initCalled) {
-			return
-		}
-		this.initCalled = true
+		console.log('Plugin initializing', this, {
+			sessionSecureID: this.sessionSecureID,
+			previousSession,
+		})
 	}
 }
