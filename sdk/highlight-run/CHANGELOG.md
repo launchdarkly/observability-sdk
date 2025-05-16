@@ -1,5 +1,11 @@
 # highlight.run
 
+## 9.18.8
+
+### Patch Changes
+
+- af513d3: Use verbose organization ID for accessing sampling configuration.
+
 ## 9.18.7
 
 ### Patch Changes
