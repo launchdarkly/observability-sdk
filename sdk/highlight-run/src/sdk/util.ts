@@ -1,6 +1,7 @@
 import { LDObserve } from './LDObserve'
 
 export const recordWarning = (context: string, ...msg: any) => {
-	console.warn(`[@launchdarkly plugins] warning: (${context}): `, msg)
-	LDObserve.recordLog(`${msg}`, 'warn')
+	const prefix = `[@launchdarkly plugins] warning: (${context}): `
+	console.warn(prefix, msg)
+	LDObserve.recordLog(`${prefix}${msg}`, 'warn')
 }
