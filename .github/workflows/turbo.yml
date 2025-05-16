@@ -46,6 +46,17 @@ jobs:
                   NEXT_PUBLIC_HIGHLIGHT_PROJECT_ID: 1jdkoe52
                   REACT_APP_COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
+            - name: Release changesets
+              if: github.ref == 'refs/heads/main'
+              id: changesets-version
+              uses: changesets/action@v1
+              with:
+                  version: yarn changeset version
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  NPM_TOKEN: ${{ secrets.NPM_TOKEN_HIGHLIGHT_RUN }}
+                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN_HIGHLIGHT_RUN }}
+
             - name: Configure yarn npm registry credentials
               if: github.ref == 'refs/heads/main'
               run: |
@@ -65,13 +76,24 @@ jobs:
                   NPM_TOKEN: ${{ secrets.NPM_TOKEN_HIGHLIGHT_RUN }}
                   NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN_HIGHLIGHT_RUN }}
 
-            - name: Release changesets
+            - uses: launchdarkly/gh-actions/actions/release-secrets@release-secrets-v1.2.0
               if: github.ref == 'refs/heads/main'
-              id: changesets-version
-              uses: changesets/action@v1
+              name: 'Get NPM token'
               with:
-                  version: yarn changeset version
+                  aws_assume_role: ${{ vars.AWS_ROLE_ARN }}
+                  ssm_parameter_pairs: '/production/common/releasing/npm/token = NODE_AUTH_TOKEN'
+
+            - name: Configure yarn npm registry credentials for launchdarkly
+              if: github.ref == 'refs/heads/main'
+              run: |
+                  yarn config set npmRegistryServer "https://registry.npmjs.org"
+                  yarn config set npmAuthToken "${NODE_AUTH_TOKEN}"
+
+            - name: Publish
+              if: github.ref == 'refs/heads/main'
+              shell: bash
+              run: |
+                  ./scripts/publish-npm.sh
               env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-                  NPM_TOKEN: ${{ secrets.NPM_TOKEN_HIGHLIGHT_RUN }}
-                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN_HIGHLIGHT_RUN }}
+                  LD_RELEASE_IS_PRERELEASE: ${{ inputs.prerelease }}
+                  LD_RELEASE_IS_DRYRUN: ${{ inputs.dry-run }}
