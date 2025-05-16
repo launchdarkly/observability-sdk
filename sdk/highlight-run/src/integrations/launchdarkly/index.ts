@@ -20,19 +20,18 @@ export type { Hook, LDClient }
 
 export const FEATURE_FLAG_SCOPE = 'feature_flag'
 export const LD_SCOPE = 'launchdarkly'
+export const FEATURE_FLAG_SPAN_NAME = 'evaluation'
+
 export const FEATURE_FLAG_ENV_ATTR = `${FEATURE_FLAG_SCOPE}.set.id`
 export const FEATURE_FLAG_KEY_ATTR = `${FEATURE_FLAG_SCOPE}.key`
-export const FEATURE_FLAG_CONTEXT_ATTR = `${FEATURE_FLAG_SCOPE}.context`
-export const FEATURE_FLAG_CONTEXT_KEY_ATTR = `${FEATURE_FLAG_CONTEXT_ATTR}.key`
+export const FEATURE_FLAG_CONTEXT_ATTR = `${FEATURE_FLAG_SCOPE}.contextKeys`
+export const FEATURE_FLAG_CONTEXT_ID_ATTR = `${FEATURE_FLAG_SCOPE}.context.id`
+export const FEATURE_FLAG_VALUE_ATTR = `${FEATURE_FLAG_SCOPE}.result.value`
 export const FEATURE_FLAG_PROVIDER_ATTR = `${FEATURE_FLAG_SCOPE}.provider.name`
-export const FEATURE_FLAG_VARIANT_ATTR = `${FEATURE_FLAG_SCOPE}.variant`
-export const FEATURE_FLAG_RESULT_VARIANT_ATTR = `${FEATURE_FLAG_SCOPE}.result.variant`
-export const FEATURE_FLAG_PROVIDER_NAME_ATTR = `${FEATURE_FLAG_SCOPE}.provider_name`
 export const FEATURE_FLAG_IN_EXPERIMENT_ATTR = `${FEATURE_FLAG_SCOPE}.result.reason.inExperiment`
 export const FEATURE_FLAG_VARIATION_INDEX_ATTR = `${FEATURE_FLAG_SCOPE}.result.variationIndex`
 export const FEATURE_FLAG_APP_ID_ATTR = `${LD_SCOPE}.application.id`
 export const FEATURE_FLAG_APP_VERSION_ATTR = `${LD_SCOPE}.application.version`
-export const FEATURE_FLAG_SPAN_NAME = 'evaluation'
 
 export const LD_INITIALIZE_EVENT = '$ld:telemetry:session:init'
 export const LD_ERROR_EVENT = '$ld:telemetry:error'
@@ -112,26 +111,34 @@ export function setupLaunchDarklyIntegration(
 		},
 		afterEvaluation: (hookContext, data, detail) => {
 			const eventAttributes: Attributes = {
+				[FEATURE_FLAG_PROVIDER_ATTR]: 'LaunchDarkly',
 				[FEATURE_FLAG_KEY_ATTR]: hookContext.flagKey,
-				[FEATURE_FLAG_PROVIDER_NAME_ATTR]: 'LaunchDarkly',
-				[FEATURE_FLAG_VARIANT_ATTR]: JSON.stringify(detail.value),
-				[FEATURE_FLAG_RESULT_VARIANT_ATTR]: JSON.stringify(
-					detail.value,
-				),
-				[FEATURE_FLAG_IN_EXPERIMENT_ATTR]: detail.reason?.inExperiment,
-				[FEATURE_FLAG_VARIATION_INDEX_ATTR]:
-					detail.variationIndex ?? undefined,
+				[FEATURE_FLAG_VALUE_ATTR]: JSON.stringify(detail.value),
+				// only set the following keys when values are truthy
+				...(detail.reason?.inExperiment
+					? {
+							[FEATURE_FLAG_IN_EXPERIMENT_ATTR]:
+								detail.reason.inExperiment,
+						}
+					: {}),
+				...(detail.variationIndex
+					? {
+							[FEATURE_FLAG_VARIATION_INDEX_ATTR]:
+								detail.variationIndex,
+						}
+					: {}),
 			}
 
 			if (hookContext.context) {
 				eventAttributes[FEATURE_FLAG_CONTEXT_ATTR] = JSON.stringify(
 					getCanonicalObj(hookContext.context),
 				)
-				eventAttributes[FEATURE_FLAG_CONTEXT_KEY_ATTR] =
-					getCanonicalKey(hookContext.context)
+				eventAttributes[FEATURE_FLAG_CONTEXT_ID_ATTR] = getCanonicalKey(
+					hookContext.context,
+				)
 			}
 
-			hClient.startSpan(FEATURE_FLAG_SPAN_NAME, eventAttributes, (s) => {
+			hClient.startSpan(FEATURE_FLAG_SPAN_NAME, (s) => {
 				if (s) {
 					s.addEvent(FEATURE_FLAG_SCOPE, eventAttributes)
 				}
