@@ -85,8 +85,7 @@ jobs:
             - name: Publish
               if: github.ref == 'refs/heads/main'
               shell: bash
-              run: |
-                  ./scripts/publish-npm.sh
+              run: ./scripts/publish-npm.sh
               env:
                   LD_RELEASE_IS_PRERELEASE: ${{ inputs.prerelease }}
                   LD_RELEASE_IS_DRYRUN: ${{ inputs.dry-run }}
