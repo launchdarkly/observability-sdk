@@ -126,10 +126,19 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 					const eventAttributes: Attributes = {
 						[FEATURE_FLAG_KEY_ATTR]: hookContext.flagKey,
 						[FEATURE_FLAG_VALUE_ATTR]: JSON.stringify(detail.value),
-						[FEATURE_FLAG_IN_EXPERIMENT_ATTR]:
-							detail.reason?.inExperiment,
-						[FEATURE_FLAG_VARIATION_INDEX_ATTR]:
-							detail.variationIndex ?? undefined,
+						// only set the following keys when values are truthy
+						...(detail.reason?.inExperiment
+							? {
+									[FEATURE_FLAG_IN_EXPERIMENT_ATTR]:
+										detail.reason.inExperiment,
+								}
+							: {}),
+						...(detail.variationIndex
+							? {
+									[FEATURE_FLAG_VARIATION_INDEX_ATTR]:
+										detail.variationIndex,
+								}
+							: {}),
 					}
 
 					if (hookContext.context) {
