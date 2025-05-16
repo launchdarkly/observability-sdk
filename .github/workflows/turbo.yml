@@ -46,17 +46,6 @@ jobs:
                   NEXT_PUBLIC_HIGHLIGHT_PROJECT_ID: 1jdkoe52
                   REACT_APP_COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
-            - name: Release changesets
-              if: github.ref == 'refs/heads/main'
-              id: changesets-version
-              uses: changesets/action@v1
-              with:
-                  version: yarn changeset version
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-                  NPM_TOKEN: ${{ secrets.NPM_TOKEN_HIGHLIGHT_RUN }}
-                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN_HIGHLIGHT_RUN }}
-
             - name: Configure yarn npm registry credentials
               if: github.ref == 'refs/heads/main'
               run: |
@@ -97,3 +86,14 @@ jobs:
               env:
                   LD_RELEASE_IS_PRERELEASE: ${{ inputs.prerelease }}
                   LD_RELEASE_IS_DRYRUN: ${{ inputs.dry-run }}
+
+            - name: Release changesets
+              if: github.ref == 'refs/heads/main'
+              id: changesets-version
+              uses: changesets/action@v1
+              with:
+                  version: yarn changeset version
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  NPM_TOKEN: ${{ secrets.NPM_TOKEN_HIGHLIGHT_RUN }}
+                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN_HIGHLIGHT_RUN }}
