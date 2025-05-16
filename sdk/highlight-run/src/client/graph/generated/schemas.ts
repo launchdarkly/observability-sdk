@@ -233,7 +233,7 @@ export type QueryIgnoreArgs = {
 }
 
 export type QuerySamplingArgs = {
-	project_id: Scalars['ID']['input']
+	organization_verbose_id: Scalars['String']['input']
 }
 
 export type ReplayEventInput = {

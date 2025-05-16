@@ -236,7 +236,7 @@ export type QueryIgnoreArgs = {
 }
 
 export type QuerySamplingArgs = {
-	project_id: Scalars['ID']['input']
+	organization_verbose_id: Scalars['String']['input']
 }
 
 export type ReplayEventInput = {
@@ -497,7 +497,7 @@ export type IgnoreQueryVariables = Exact<{
 export type IgnoreQuery = { __typename?: 'Query'; ignore?: any | null }
 
 export type GetSamplingConfigQueryVariables = Exact<{
-	project_id: Scalars['ID']['input']
+	organization_verbose_id: Scalars['String']['input']
 }>
 
 export type GetSamplingConfigQuery = {
@@ -762,8 +762,8 @@ export const IgnoreDocument = gql`
 	}
 `
 export const GetSamplingConfigDocument = gql`
-	query GetSamplingConfig($project_id: ID!) {
-		sampling(project_id: $project_id) {
+	query GetSamplingConfig($organization_verbose_id: String!) {
+		sampling(organization_verbose_id: $organization_verbose_id) {
 			spans {
 				name {
 					...MatchParts
