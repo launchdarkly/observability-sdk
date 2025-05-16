@@ -1,5 +1,11 @@
 # highlight.run
 
+## 9.18.7
+
+### Patch Changes
+
+- 57fa91d: add new evaluation attributes reported by @launchdarkly/observability
+
 ## 9.18.6
 
 ### Patch Changes
