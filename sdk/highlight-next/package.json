@@ -1,6 +1,6 @@
 {
 	"name": "@highlight-run/next",
-	"version": "7.9.19",
+	"version": "7.9.20",
 	"description": "Client for interfacing with Highlight in next.js",
 	"repository": {
 		"type": "git",

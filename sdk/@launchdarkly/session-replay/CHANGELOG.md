@@ -1,5 +1,13 @@
 # @launchdarkly/session-replay
 
+## 0.1.12
+
+### Patch Changes
+
+- 0ea7461: fix previous session not being resumed when tab is reloaded
+- Updated dependencies [af513d3]
+    - highlight.run@9.18.8
+
 ## 0.1.11
 
 ### Patch Changes
