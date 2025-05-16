@@ -6,6 +6,9 @@ on:
     pull_request:
         types: [opened, synchronize]
 
+permissions:
+    id-token: write
+    contents: write
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 jobs:
     yarn-monorepo:
