@@ -58,7 +58,8 @@ import { getGraphQLRequestWrapper } from '../client/utils/graph'
 
 export class ObserveSDK implements Observe {
 	private readonly sessionSecureID: string
-	private readonly projectID: string | number
+	/** Verbose project ID that is exposed to users. Legacy users may still be using ints. */
+	organizationID!: string
 	private readonly _integrations: IntegrationClient[] = []
 	private readonly _gauges: Map<string, Gauge> = new Map<string, Gauge>()
 	private readonly _counters: Map<string, Counter> = new Map<
@@ -77,7 +78,11 @@ export class ObserveSDK implements Observe {
 	private graphqlSDK!: Sdk
 	constructor(options: BrowserTracingConfig) {
 		this.sessionSecureID = options.sessionSecureId
-		this.projectID = options.projectId
+		if (typeof options.projectId === 'string') {
+			this.organizationID = options.projectId
+		} else {
+			this.organizationID = options.projectId.toString()
+		}
 		setupBrowserTracing(options, this.sampler)
 		const client = new GraphQLClient(`${options.backendUrl}`, {
 			headers: {},
@@ -93,7 +98,7 @@ export class ObserveSDK implements Observe {
 	private async configureSampling() {
 		try {
 			const res = await this.graphqlSDK.GetSamplingConfig({
-				project_id: `${this.projectID}`,
+				organization_verbose_id: `${this.organizationID}`,
 			})
 			this.sampler.setConfig(res.sampling)
 		} catch (e) {

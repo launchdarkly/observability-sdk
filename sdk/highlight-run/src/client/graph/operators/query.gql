@@ -1,5 +1,5 @@
-query GetSamplingConfig($project_id: ID!) {
-	sampling(project_id: $project_id) {
+query GetSamplingConfig($organization_verbose_id: String!) {
+	sampling(organization_verbose_id: $organization_verbose_id) {
 		spans {
 			name {
 				...MatchParts
