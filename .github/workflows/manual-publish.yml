@@ -61,13 +61,7 @@ jobs:
             - name: Publish highlight npm packages
               if: ${{ inputs.release_highlight == true }}
               id: changesets-publish
-              uses: changesets/action@v1
-              with:
-                  publish: yarn publish:highlight
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-                  NPM_TOKEN: ${{ secrets.NPM_TOKEN_HIGHLIGHT_RUN }}
-                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN_HIGHLIGHT_RUN }}
+              run: yarn publish:highlight
 
             - uses: launchdarkly/gh-actions/actions/release-secrets@release-secrets-v1.2.0
               if: ${{ inputs.release_launchdarkly == true }}
@@ -85,8 +79,7 @@ jobs:
             - name: Publish
               if: ${{ inputs.release_launchdarkly == true }}
               shell: bash
-              run: |
-                  ./scripts/publish-npm.sh
+              run: ./scripts/publish-npm.sh
               env:
                   LD_RELEASE_IS_PRERELEASE: ${{ inputs.prerelease }}
                   LD_RELEASE_IS_DRYRUN: ${{ inputs.dry-run }}
