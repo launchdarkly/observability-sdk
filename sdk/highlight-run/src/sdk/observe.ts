@@ -55,6 +55,7 @@ import { CustomSampler } from '../client/otel/sampling/CustomSampler'
 import { getSdk, Sdk } from '../client/graph/generated/operations'
 import { GraphQLClient } from 'graphql-request'
 import { getGraphQLRequestWrapper } from '../client/utils/graph'
+import { recordWarning } from './util'
 
 export class ObserveSDK implements Observe {
 	private readonly sessionSecureID: string
@@ -102,7 +103,8 @@ export class ObserveSDK implements Observe {
 			})
 			this.sampler.setConfig(res.sampling)
 		} catch (e) {
-			console.warn(
+			recordWarning(
+				'sampling',
 				`LaunchDarkly Observability: Failed to configure sampling: ${e}`,
 			)
 		}
@@ -110,19 +112,21 @@ export class ObserveSDK implements Observe {
 
 	recordLog(message: any, level: ConsoleMethods, metadata?: Attributes) {
 		this.startSpan(LOG_SPAN_NAME, (span) => {
+			const msg =
+				typeof message === 'string' ? message : stringify(message)
 			span?.setAttributes({
 				'highlight.session_id': this.sessionSecureID,
 			})
 			span?.addEvent('log', {
 				'log.severity': level,
-				'log.message': message,
+				'log.message': msg,
 				...metadata,
 			})
 			if (level === 'error') {
-				span?.recordException(new Error(message))
+				span?.recordException(new Error(msg))
 				span?.setStatus({
 					code: SpanStatusCode.ERROR,
-					message: message,
+					message: msg,
 				})
 			}
 		})

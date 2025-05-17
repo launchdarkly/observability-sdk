@@ -50,7 +50,14 @@ export default function Root() {
 
 	useEffect(() => {
 		const int = setInterval(() => {
-			setSession(LDRecord.getSession()?.url)
+			const url = LDRecord.getSession()?.url
+			setSession(url)
+			console.log('session url', url)
+			LDObserve.recordLog('session url LDObserve', 'info', { url })
+			LDObserve.recordLog(
+				{ message: 'session url LDObserve', url },
+				'info',
+			)
 		}, 1000)
 		return () => {
 			clearInterval(int)

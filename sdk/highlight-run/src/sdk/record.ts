@@ -89,7 +89,7 @@ import { MessageType, PropertyType } from '../client/workers/types'
 import { Attributes } from '@opentelemetry/api'
 import { IntegrationClient } from '../integrations'
 import { Record } from '../api/record'
-import { HighlightWarning } from './util'
+import { recordWarning } from './util'
 import type { HighlightClassOptions } from '../client'
 import { Highlight } from '../client'
 import type { Hook, LDClient } from '../integrations/launchdarkly'
@@ -189,7 +189,8 @@ export class RecordSDK implements Record {
 					e.data.response.payload,
 				)
 			} else if (e.data.response?.type === MessageType.Stop) {
-				HighlightWarning(
+				recordWarning(
+					'worker.onmessage',
 					'Stopping recording due to worker failure',
 					e.data.response,
 				)
@@ -642,7 +643,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 						this.options.debug.domRecording)
 						? {
 								debug: this.logger.log,
-								warn: HighlightWarning,
+								warn: recordWarning,
 							}
 						: undefined,
 			})
@@ -682,7 +683,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 		} catch (e) {
 			if (this._isOnLocalHost) {
 				console.error(e)
-				HighlightWarning('initializeSession', e)
+				recordWarning('initializeSession', e)
 			}
 		}
 	}
@@ -938,7 +939,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 		} catch (e) {
 			if (this._isOnLocalHost) {
 				console.error(e)
-				HighlightWarning('initializeSession _setupWindowListeners', e)
+				recordWarning('initializeSession _setupWindowListeners', e)
 			}
 		}
 
@@ -1129,7 +1130,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 		} catch (e) {
 			if (this._isOnLocalHost) {
 				console.error(e)
-				HighlightWarning('_save', e)
+				recordWarning('_save', e)
 			}
 		}
 		if (this.state === 'Recording') {
