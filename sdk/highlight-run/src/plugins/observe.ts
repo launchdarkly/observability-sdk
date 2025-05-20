@@ -34,40 +34,43 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 	observe: ObserveAPI | undefined
 
 	constructor(projectID?: string | number, options?: ObserveOptions) {
-		// Don't run init when called outside of the browser.
-		if (typeof window === 'undefined' || typeof document === 'undefined') {
-			console.warn(
-				'Session Replay is not initializing because it is not supported in this environment.',
-			)
-			return
-		}
-		// Don't initialize if an projectID is not set.
-		if (!projectID) {
-			console.info(
-				'Highlight is not initializing because projectID was passed undefined.',
-			)
-			return
-		}
-		super(options)
-		const clientOptions: BrowserTracingConfig = {
-			backendUrl:
-				options?.backendUrl ??
-				'https://pub.observability.app.launchdarkly.com',
-			otlpEndpoint:
-				options?.otel?.otlpEndpoint ??
-				'https://otel.observability.app.launchdarkly.com',
-			projectId: projectID,
-			sessionSecureId: this.sessionSecureID,
-			environment: options?.environment ?? 'production',
-			networkRecordingOptions:
-				typeof options?.networkRecording === 'object'
-					? options.networkRecording
-					: undefined,
-			tracingOrigins: options?.tracingOrigins,
-			serviceName: options?.serviceName ?? 'highlight-browser',
-			instrumentations: options?.otel?.instrumentations,
-		}
 		try {
+			// Don't run init when called outside of the browser.
+			if (
+				typeof window === 'undefined' ||
+				typeof document === 'undefined'
+			) {
+				console.warn(
+					'Session Replay is not initializing because it is not supported in this environment.',
+				)
+				return
+			}
+			// Don't initialize if an projectID is not set.
+			if (!projectID) {
+				console.info(
+					'Highlight is not initializing because projectID was passed undefined.',
+				)
+				return
+			}
+			super(options)
+			const clientOptions: BrowserTracingConfig = {
+				backendUrl:
+					options?.backendUrl ??
+					'https://pub.observability.app.launchdarkly.com',
+				otlpEndpoint:
+					options?.otel?.otlpEndpoint ??
+					'https://otel.observability.app.launchdarkly.com',
+				projectId: projectID,
+				sessionSecureId: this.sessionSecureID,
+				environment: options?.environment ?? 'production',
+				networkRecordingOptions:
+					typeof options?.networkRecording === 'object'
+						? options.networkRecording
+						: undefined,
+				tracingOrigins: options?.tracingOrigins,
+				serviceName: options?.serviceName ?? 'highlight-browser',
+				instrumentations: options?.otel?.instrumentations,
+			}
 			this.observe = new ObserveSDK(clientOptions)
 			LDObserve.load(this.observe)
 		} catch (error) {
