@@ -19,6 +19,7 @@ import {
 } from '../integrations/launchdarkly'
 import { Observe as ObserveAPI } from '../api/observe'
 import { ObserveSDK } from '../sdk/observe'
+import type { BrowserTracingConfig } from '../client/otel'
 import { LDObserve } from '../sdk/LDObserve'
 import type { ObserveOptions } from '../client/types/observe'
 import { Plugin } from './common'
@@ -27,6 +28,7 @@ import {
 	ATTR_TELEMETRY_SDK_VERSION,
 } from '@opentelemetry/semantic-conventions'
 import { Attributes } from '@opentelemetry/api'
+import { recordWarning } from '../sdk/util'
 
 export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 	observe!: ObserveAPI
@@ -47,7 +49,7 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 			return
 		}
 		super(options)
-		this.observe = new ObserveSDK({
+		const clientOptions: BrowserTracingConfig = {
 			backendUrl:
 				options?.backendUrl ??
 				'https://pub.observability.app.launchdarkly.com',
@@ -64,7 +66,15 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 			tracingOrigins: options?.tracingOrigins,
 			serviceName: options?.serviceName ?? 'highlight-browser',
 			instrumentations: options?.otel?.instrumentations,
-		})
+		}
+		try {
+			this.observe = new ObserveSDK(clientOptions)
+		} catch (error) {
+			recordWarning(
+				`Error initializing @launchdarkly/observability SDK`,
+				error,
+			)
+		}
 		LDObserve.load(this.observe)
 	}
 	getMetadata() {

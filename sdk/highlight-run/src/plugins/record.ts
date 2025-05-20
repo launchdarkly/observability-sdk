@@ -9,6 +9,7 @@ import { LDRecord } from '../sdk/LDRecord'
 import type { RecordOptions } from '../client/types/record'
 import { Plugin } from './common'
 import { getCanonicalKey } from '../integrations/launchdarkly'
+import { recordWarning } from '../sdk/util'
 
 export class Record extends Plugin<RecordOptions> implements LDPlugin {
 	record!: RecordSDK
@@ -44,7 +45,14 @@ export class Record extends Plugin<RecordOptions> implements LDPlugin {
 			sessionSecureID: this.sessionSecureID,
 		}
 
-		this.record = new RecordSDK(client_options)
+		try {
+			this.record = new RecordSDK(client_options)
+		} catch (error) {
+			recordWarning(
+				`Error initializing @launchdarkly/session-replay SDK`,
+				error,
+			)
+		}
 		if (!options?.manualStart) {
 			void this.record.start()
 		}

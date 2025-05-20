@@ -1,4 +1,5 @@
 import { Logger } from '../client/logger'
+import { recordWarning } from './util'
 
 type Event = { method: string; args: any[] }
 
@@ -14,7 +15,14 @@ export class BufferedClass<T extends object> {
 	protected _bufferCall(method: string, args: any[]) {
 		if (this._isLoaded) {
 			// If already loaded, execute the method directly
-			return (this._sdk as any)[method](...args)
+			try {
+				return (this._sdk as any)[method](...args)
+			} catch (error) {
+				recordWarning(
+					`Error executing buffered call to ${method}:`,
+					error,
+				)
+			}
 		} else {
 			// Otherwise buffer the call
 			this._enqueue({ method, args })
@@ -29,7 +37,7 @@ export class BufferedClass<T extends object> {
 		} else {
 			if (!this._exceededCapacity) {
 				this._exceededCapacity = true
-				this._logger.warn(
+				recordWarning(
 					'Exceeded event queue capacity. Increase capacity to avoid dropping events.',
 				)
 			}
@@ -46,7 +54,7 @@ export class BufferedClass<T extends object> {
 			try {
 				;(this._sdk as any)[method](...args)
 			} catch (error) {
-				console.error(
+				recordWarning(
 					`Error executing buffered call to ${method}:`,
 					error,
 				)
