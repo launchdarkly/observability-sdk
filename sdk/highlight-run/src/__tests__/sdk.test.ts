@@ -62,6 +62,21 @@ describe('SDK', () => {
 
 			expect(mockSnapshot).toHaveBeenCalledWith(canvas)
 		})
+
+		it('should construct despite error', async () => {
+			vi.stubGlobal('localStorage', {
+				getItem: vi.fn(() => {
+					throw new Error('get error')
+				}),
+				setItem: vi.fn(() => {
+					throw new Error('get error')
+				}),
+			})
+			const { Record } = await import('../plugins/record')
+			const sdk = new Record('1')
+			expect(sdk.record).toBeUndefined()
+			vi.unstubAllGlobals()
+		})
 	})
 
 	describe('Observe Methods', () => {
