@@ -31,7 +31,7 @@ import { Attributes } from '@opentelemetry/api'
 import { recordWarning } from '../sdk/util'
 
 export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
-	observe!: ObserveAPI
+	observe: ObserveAPI | undefined
 
 	constructor(projectID?: string | number, options?: ObserveOptions) {
 		// Don't run init when called outside of the browser.
@@ -69,13 +69,13 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 		}
 		try {
 			this.observe = new ObserveSDK(clientOptions)
+			LDObserve.load(this.observe)
 		} catch (error) {
 			recordWarning(
 				`Error initializing @launchdarkly/observability SDK`,
 				error,
 			)
 		}
-		LDObserve.load(this.observe)
 	}
 	getMetadata() {
 		return {
@@ -86,7 +86,7 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 		client: LDClient,
 		environmentMetadata: LDPluginEnvironmentMetadata,
 	) {
-		this.observe.register(client, environmentMetadata)
+		this.observe?.register(client, environmentMetadata)
 	}
 	getHooks?(metadata: LDPluginEnvironmentMetadata): Hook[] {
 		const metaAttrs = {
@@ -112,12 +112,12 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 					}
 				},
 				afterIdentify: (hookContext, data, _result) => {
-					for (const hook of this.observe.getHooks?.(metadata) ??
+					for (const hook of this.observe?.getHooks?.(metadata) ??
 						[]) {
 						hook.afterIdentify?.(hookContext, data, _result)
 					}
 
-					this.observe.recordLog('LD.identify', 'info', {
+					this.observe?.recordLog('LD.identify', 'info', {
 						...metaAttrs,
 						key: getCanonicalKey(hookContext.context),
 						context: JSON.stringify(
@@ -128,7 +128,7 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 					return data
 				},
 				afterEvaluation: (hookContext, data, detail) => {
-					for (const hook of this.observe.getHooks?.(metadata) ??
+					for (const hook of this.observe?.getHooks?.(metadata) ??
 						[]) {
 						hook.afterEvaluation?.(hookContext, data, detail)
 					}
@@ -158,7 +158,7 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 							getCanonicalKey(hookContext.context)
 					}
 					const attributes = { ...metaAttrs, ...eventAttributes }
-					this.observe.startSpan(FEATURE_FLAG_SPAN_NAME, (s) => {
+					this.observe?.startSpan(FEATURE_FLAG_SPAN_NAME, (s) => {
 						if (s) {
 							s.addEvent(FEATURE_FLAG_SCOPE, attributes)
 						}
@@ -167,11 +167,11 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 					return data
 				},
 				afterTrack: (hookContext) => {
-					for (const hook of this.observe.getHooks?.(metadata) ??
+					for (const hook of this.observe?.getHooks?.(metadata) ??
 						[]) {
 						hook.afterTrack?.(hookContext)
 					}
-					this.observe.recordLog('LD.track', 'info', {
+					this.observe?.recordLog('LD.track', 'info', {
 						...metaAttrs,
 						key: hookContext.key,
 						value: hookContext.metricValue,

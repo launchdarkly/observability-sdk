@@ -12,7 +12,7 @@ import { getCanonicalKey } from '../integrations/launchdarkly'
 import { recordWarning } from '../sdk/util'
 
 export class Record extends Plugin<RecordOptions> implements LDPlugin {
-	record!: RecordSDK
+	record: RecordSDK | undefined
 
 	constructor(projectID?: string | number, options?: RecordOptions) {
 		// Don't run init when called outside of the browser.
@@ -47,16 +47,16 @@ export class Record extends Plugin<RecordOptions> implements LDPlugin {
 
 		try {
 			this.record = new RecordSDK(client_options)
+			if (!options?.manualStart) {
+				void this.record.start()
+			}
+			LDRecord.load(this.record)
 		} catch (error) {
 			recordWarning(
 				`Error initializing @launchdarkly/session-replay SDK`,
 				error,
 			)
 		}
-		if (!options?.manualStart) {
-			void this.record.start()
-		}
-		LDRecord.load(this.record)
 
 		if (
 			!options?.integrations?.mixpanel?.disabled &&
@@ -83,7 +83,7 @@ export class Record extends Plugin<RecordOptions> implements LDPlugin {
 		client: LDClient,
 		environmentMetadata: LDPluginEnvironmentMetadata,
 	) {
-		this.record.register(client, environmentMetadata)
+		this.record?.register(client, environmentMetadata)
 	}
 
 	getHooks?(metadata: LDPluginEnvironmentMetadata): Hook[] {
@@ -95,10 +95,11 @@ export class Record extends Plugin<RecordOptions> implements LDPlugin {
 					}
 				},
 				afterIdentify: (hookContext, data, _result) => {
-					for (const hook of this.record.getHooks?.(metadata) ?? []) {
+					for (const hook of this.record?.getHooks?.(metadata) ??
+						[]) {
 						hook.afterIdentify?.(hookContext, data, _result)
 					}
-					this.record.identify(
+					this.record?.identify(
 						getCanonicalKey(hookContext.context),
 						{
 							key: getCanonicalKey(hookContext.context),
@@ -109,16 +110,18 @@ export class Record extends Plugin<RecordOptions> implements LDPlugin {
 					return data
 				},
 				afterEvaluation: (hookContext, data, detail) => {
-					for (const hook of this.record.getHooks?.(metadata) ?? []) {
+					for (const hook of this.record?.getHooks?.(metadata) ??
+						[]) {
 						hook.afterEvaluation?.(hookContext, data, detail)
 					}
 					return data
 				},
 				afterTrack: (hookContext) => {
-					for (const hook of this.record.getHooks?.(metadata) ?? []) {
+					for (const hook of this.record?.getHooks?.(metadata) ??
+						[]) {
 						hook.afterTrack?.(hookContext)
 					}
-					this.record.track(hookContext.key, {
+					this.record?.track(hookContext.key, {
 						data: hookContext.data,
 						value: hookContext.metricValue,
 					})
