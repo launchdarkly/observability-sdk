@@ -28,7 +28,7 @@ import {
 	ATTR_TELEMETRY_SDK_VERSION,
 } from '@opentelemetry/semantic-conventions'
 import { Attributes } from '@opentelemetry/api'
-import { recordWarning } from '../sdk/util'
+import { internalLog } from '../sdk/util'
 
 export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 	observe: ObserveAPI | undefined
@@ -74,8 +74,9 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 			this.observe = new ObserveSDK(clientOptions)
 			LDObserve.load(this.observe)
 		} catch (error) {
-			recordWarning(
+			internalLog(
 				`Error initializing @launchdarkly/observability SDK`,
+				'error',
 				error,
 			)
 		}

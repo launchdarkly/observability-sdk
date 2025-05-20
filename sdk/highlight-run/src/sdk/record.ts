@@ -89,7 +89,7 @@ import { MessageType, PropertyType } from '../client/workers/types'
 import { Attributes } from '@opentelemetry/api'
 import { IntegrationClient } from '../integrations'
 import { Record } from '../api/record'
-import { recordWarning } from './util'
+import { internalLog } from './util'
 import type { HighlightClassOptions } from '../client'
 import { Highlight } from '../client'
 import type { Hook, LDClient } from '../integrations/launchdarkly'
@@ -189,8 +189,9 @@ export class RecordSDK implements Record {
 					e.data.response.payload,
 				)
 			} else if (e.data.response?.type === MessageType.Stop) {
-				recordWarning(
+				internalLog(
 					'worker.onmessage',
+					'warn',
 					'Stopping recording due to worker failure',
 					e.data.response,
 				)
@@ -643,7 +644,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 						this.options.debug.domRecording)
 						? {
 								debug: this.logger.log,
-								warn: recordWarning,
+								warn: internalLog.bind('RecordSDK', 'warn'),
 							}
 						: undefined,
 			})
@@ -681,10 +682,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 			this.state = 'Recording'
 			this.manualStopped = false
 		} catch (e) {
-			if (this._isOnLocalHost) {
-				console.error(e)
-				recordWarning('initializeSession', e)
-			}
+			internalLog('initializeSession _setupWindowListeners', 'warn', e)
 		}
 	}
 
@@ -937,10 +935,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 				window.removeEventListener('beforeunload', unloadListener),
 			)
 		} catch (e) {
-			if (this._isOnLocalHost) {
-				console.error(e)
-				recordWarning('initializeSession _setupWindowListeners', e)
-			}
+			internalLog('initializeSession _setupWindowListeners', 'warn', e)
 		}
 
 		const unloadListener = () => {
@@ -1128,10 +1123,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 			this.sessionData.lastPushTime = Date.now()
 			setSessionData(this.sessionData)
 		} catch (e) {
-			if (this._isOnLocalHost) {
-				console.error(e)
-				recordWarning('_save', e)
-			}
+			internalLog('_save', 'warn', e)
 		}
 		if (this.state === 'Recording') {
 			if (this.pushPayloadTimerId) {

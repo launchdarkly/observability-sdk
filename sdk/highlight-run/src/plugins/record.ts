@@ -9,7 +9,7 @@ import { LDRecord } from '../sdk/LDRecord'
 import type { RecordOptions } from '../client/types/record'
 import { Plugin } from './common'
 import { getCanonicalKey } from '../integrations/launchdarkly'
-import { recordWarning } from '../sdk/util'
+import { internalLog } from '../sdk/util'
 
 export class Record extends Plugin<RecordOptions> implements LDPlugin {
 	record: RecordSDK | undefined
@@ -69,8 +69,9 @@ export class Record extends Plugin<RecordOptions> implements LDPlugin {
 				setupAmplitudeIntegration(options.integrations.amplitude)
 			}
 		} catch (error) {
-			recordWarning(
+			internalLog(
 				`Error initializing @launchdarkly/session-replay SDK`,
+				'error',
 				error,
 			)
 		}

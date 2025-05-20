@@ -1,10 +1,12 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { LDObserve } from '../sdk/LDObserve'
 import { LDRecord } from '../sdk/LDRecord'
 import type { OTelMetric as Metric } from '../client/types/types'
 import type { Attributes } from '@opentelemetry/api'
 import { ObserveSDK } from '../sdk/observe'
 import { RecordSDK } from '../sdk/record'
+import { globalStorage } from '../client/utils/storage'
+import { Record } from '../plugins/record'
 
 describe('SDK', () => {
 	let observe: typeof LDObserve
@@ -63,16 +65,32 @@ describe('SDK', () => {
 			expect(mockSnapshot).toHaveBeenCalledWith(canvas)
 		})
 
-		it('should construct despite error', async () => {
+		it('should construct despite error with storage fallback', async () => {
 			vi.stubGlobal('localStorage', {
 				getItem: vi.fn(() => {
 					throw new Error('get error')
 				}),
 				setItem: vi.fn(() => {
-					throw new Error('get error')
+					throw new Error('set error')
 				}),
 			})
-			const { Record } = await import('../plugins/record')
+			const sdk = new Record('1')
+			expect(sdk.record).toBeDefined()
+			vi.unstubAllGlobals()
+		})
+
+		it('should construct despite error', async () => {
+			vi.spyOn(globalStorage, 'getItem').mockImplementation(() => {
+				throw new Error('get error')
+			})
+			vi.stubGlobal('localStorage', {
+				getItem: vi.fn(() => {
+					throw new Error('get error')
+				}),
+				setItem: vi.fn(() => {
+					throw new Error('set error')
+				}),
+			})
 			const sdk = new Record('1')
 			expect(sdk.record).toBeUndefined()
 			vi.unstubAllGlobals()

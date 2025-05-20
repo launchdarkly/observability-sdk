@@ -1,5 +1,6 @@
 import Cookies from 'js-cookie'
 import { SESSION_PUSH_THRESHOLD } from '../constants/sessions'
+import { internalLog } from '../../sdk/util'
 
 export enum LocalStorageKeys {
 	CLIENT_ID = 'highlightClientID',
@@ -45,7 +46,7 @@ export class CookieStorage {
 	}
 }
 
-let globalStorage = new Storage()
+export const globalStorage = new Storage()
 export const cookieStorage = new CookieStorage()
 
 const getPersistentStorage = () => {
@@ -70,17 +71,47 @@ export const setCookieWriteEnabled = (enabled: boolean) => {
 }
 
 export const getItem = (key: string) => {
-	return getPersistentStorage().getItem(key)
+	try {
+		return getPersistentStorage().getItem(key)
+	} catch (e) {
+		internalLog(
+			`storage`,
+			'debug',
+			`failed to get item ${key}; using global storage`,
+			e,
+		)
+		return globalStorage.getItem(key)
+	}
 }
 
 export const setItem = (key: string, value: string) => {
 	cookieStorage.setItem(key, value)
-	return getPersistentStorage().setItem(key, value)
+	try {
+		return getPersistentStorage().setItem(key, value)
+	} catch (e) {
+		internalLog(
+			`storage`,
+			'debug',
+			`failed to set item ${key}; using global storage`,
+			e,
+		)
+		return globalStorage.setItem(key, value)
+	}
 }
 
 export const removeItem = (key: string) => {
 	cookieStorage.removeItem(key)
-	return getPersistentStorage().removeItem(key)
+	try {
+		return getPersistentStorage().removeItem(key)
+	} catch (e) {
+		internalLog(
+			`storage`,
+			'debug',
+			`failed to remove item ${key}; using global storage`,
+			e,
+		)
+		return globalStorage.removeItem(key)
+	}
 }
 
 export const monkeyPatchLocalStorage = (

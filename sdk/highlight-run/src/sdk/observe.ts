@@ -55,7 +55,7 @@ import { CustomSampler } from '../client/otel/sampling/CustomSampler'
 import { getSdk, Sdk } from '../client/graph/generated/operations'
 import { GraphQLClient } from 'graphql-request'
 import { getGraphQLRequestWrapper } from '../client/utils/graph'
-import { recordWarning } from './util'
+import { internalLog } from './util'
 
 export class ObserveSDK implements Observe {
 	private readonly sessionSecureID: string
@@ -103,8 +103,9 @@ export class ObserveSDK implements Observe {
 			})
 			this.sampler.setConfig(res.sampling)
 		} catch (e) {
-			recordWarning(
+			internalLog(
 				'sampling',
+				'warn',
 				`LaunchDarkly Observability: Failed to configure sampling: ${e}`,
 			)
 		}

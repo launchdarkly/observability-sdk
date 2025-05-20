@@ -1,6 +1,10 @@
-export const recordWarning = (context: string, ...msg: any) => {
-	const prefix = `[@launchdarkly plugins] warning: (${context}): `
-	console.warn(prefix, ...msg)
+export const internalLog = (
+	context: string,
+	level: keyof Console,
+	...msg: any
+) => {
+	const prefix = `[@launchdarkly plugins]: (${context}): `
+	console[level].apply(console, [prefix, ...msg])
 	void reportLog(prefix, ...msg)
 }
 

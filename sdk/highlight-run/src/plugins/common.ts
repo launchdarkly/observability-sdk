@@ -9,7 +9,7 @@ import {
 	setSessionSecureID,
 } from '../client/utils/sessionStorage/highlightSession'
 import { GenerateSecureID } from '../client'
-import { recordWarning } from '../sdk/util'
+import { internalLog } from '../sdk/util'
 
 export class Plugin<T extends RecordOptions | ObserveOptions> {
 	protected sessionSecureID!: string
@@ -43,8 +43,9 @@ export class Plugin<T extends RecordOptions | ObserveOptions> {
 				})
 			}
 		} catch (error) {
-			recordWarning(
+			internalLog(
 				`Error initializing @launchdarkly observability plugin`,
+				'error',
 				error,
 			)
 		}
