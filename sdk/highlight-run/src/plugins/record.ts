@@ -1,6 +1,11 @@
 import { type HighlightClassOptions } from '../client'
 import type { LDPlugin, LDPluginEnvironmentMetadata } from './plugin'
-import { getCanonicalKey, Hook, LDClient } from '../integrations/launchdarkly'
+import {
+	getCanonicalKey,
+	getCanonicalObj,
+	Hook,
+	LDClient,
+} from '../integrations/launchdarkly'
 import { RecordSDK } from '../sdk/record'
 import firstloadVersion from '../__generated/version'
 import { setupMixpanelIntegration } from '../integrations/mixpanel'
@@ -102,10 +107,15 @@ export class Record extends Plugin<RecordOptions> implements LDPlugin {
 						[]) {
 						hook.afterIdentify?.(hookContext, data, _result)
 					}
+					const key = getCanonicalKey(hookContext.context)
+					const obj = getCanonicalObj(hookContext.context)
 					this.record?.identify(
-						getCanonicalKey(hookContext.context),
+						typeof obj === 'string'
+							? obj
+							: (obj['user']?.toString() ?? key),
 						{
-							key: getCanonicalKey(hookContext.context),
+							key,
+							...(typeof obj === 'object' ? obj : {}),
 							timeout: hookContext.timeout,
 						},
 						'LaunchDarkly',
