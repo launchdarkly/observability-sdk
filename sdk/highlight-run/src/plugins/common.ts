@@ -9,38 +9,45 @@ import {
 	setSessionSecureID,
 } from '../client/utils/sessionStorage/highlightSession'
 import { GenerateSecureID } from '../client'
+import { internalLog } from '../sdk/util'
 
 export class Plugin<T extends RecordOptions | ObserveOptions> {
 	protected sessionSecureID!: string
 	constructor(options?: T) {
-		if (options?.storageMode) {
-			setStorageMode(options?.storageMode)
-		}
-		setCookieWriteEnabled(!!options?.sessionCookie)
+		try {
+			if (options?.storageMode) {
+				setStorageMode(options?.storageMode)
+			}
+			setCookieWriteEnabled(!!options?.sessionCookie)
 
-		if (options?.sessionCookie) {
-			loadCookieSessionData()
-		} else {
-			setCookieWriteEnabled(false)
-		}
+			if (options?.sessionCookie) {
+				loadCookieSessionData()
+			} else {
+				setCookieWriteEnabled(false)
+			}
 
-		const persistentSessionSecureID = getPersistentSessionSecureID()
-		let previousSession = getPreviousSessionData(persistentSessionSecureID)
-		if (previousSession?.sessionSecureID) {
-			this.sessionSecureID = previousSession.sessionSecureID
-		} else {
-			this.sessionSecureID = GenerateSecureID()
-			setSessionSecureID(this.sessionSecureID)
-			setSessionData({
-				sessionSecureID: this.sessionSecureID,
-				projectID: 0,
-				payloadID: 1,
-				sessionStartTime: Date.now(),
-			})
+			const persistentSessionSecureID = getPersistentSessionSecureID()
+			let previousSession = getPreviousSessionData(
+				persistentSessionSecureID,
+			)
+			if (previousSession?.sessionSecureID) {
+				this.sessionSecureID = previousSession.sessionSecureID
+			} else {
+				this.sessionSecureID = GenerateSecureID()
+				setSessionSecureID(this.sessionSecureID)
+				setSessionData({
+					sessionSecureID: this.sessionSecureID,
+					projectID: 0,
+					payloadID: 1,
+					sessionStartTime: Date.now(),
+				})
+			}
+		} catch (error) {
+			internalLog(
+				`Error initializing @launchdarkly observability plugin`,
+				'error',
+				error,
+			)
 		}
-		console.log('Plugin initializing', this, {
-			sessionSecureID: this.sessionSecureID,
-			previousSession,
-		})
 	}
 }

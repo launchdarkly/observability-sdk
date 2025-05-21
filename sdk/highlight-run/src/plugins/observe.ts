@@ -19,6 +19,7 @@ import {
 } from '../integrations/launchdarkly'
 import { Observe as ObserveAPI } from '../api/observe'
 import { ObserveSDK } from '../sdk/observe'
+import type { BrowserTracingConfig } from '../client/otel'
 import { LDObserve } from '../sdk/LDObserve'
 import type { ObserveOptions } from '../client/types/observe'
 import { Plugin } from './common'
@@ -27,45 +28,58 @@ import {
 	ATTR_TELEMETRY_SDK_VERSION,
 } from '@opentelemetry/semantic-conventions'
 import { Attributes } from '@opentelemetry/api'
+import { internalLog } from '../sdk/util'
 
 export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
-	observe!: ObserveAPI
+	observe: ObserveAPI | undefined
 
 	constructor(projectID?: string | number, options?: ObserveOptions) {
-		// Don't run init when called outside of the browser.
-		if (typeof window === 'undefined' || typeof document === 'undefined') {
-			console.warn(
-				'Session Replay is not initializing because it is not supported in this environment.',
+		try {
+			// Don't run init when called outside of the browser.
+			if (
+				typeof window === 'undefined' ||
+				typeof document === 'undefined'
+			) {
+				console.warn(
+					'@launchdarkly/observability is not initializing because it is not supported in this environment.',
+				)
+				return
+			}
+			// Don't initialize if an projectID is not set.
+			if (!projectID) {
+				console.warn(
+					'@launchdarkly/observability is not initializing because projectID was passed undefined.',
+				)
+				return
+			}
+			super(options)
+			const clientOptions: BrowserTracingConfig = {
+				backendUrl:
+					options?.backendUrl ??
+					'https://pub.observability.app.launchdarkly.com',
+				otlpEndpoint:
+					options?.otel?.otlpEndpoint ??
+					'https://otel.observability.app.launchdarkly.com',
+				projectId: projectID,
+				sessionSecureId: this.sessionSecureID,
+				environment: options?.environment ?? 'production',
+				networkRecordingOptions:
+					typeof options?.networkRecording === 'object'
+						? options.networkRecording
+						: undefined,
+				tracingOrigins: options?.tracingOrigins,
+				serviceName: options?.serviceName ?? 'browser',
+				instrumentations: options?.otel?.instrumentations,
+			}
+			this.observe = new ObserveSDK(clientOptions)
+			LDObserve.load(this.observe)
+		} catch (error) {
+			internalLog(
+				`Error initializing @launchdarkly/observability SDK`,
+				'error',
+				error,
 			)
-			return
 		}
-		// Don't initialize if an projectID is not set.
-		if (!projectID) {
-			console.info(
-				'Highlight is not initializing because projectID was passed undefined.',
-			)
-			return
-		}
-		super(options)
-		this.observe = new ObserveSDK({
-			backendUrl:
-				options?.backendUrl ??
-				'https://pub.observability.app.launchdarkly.com',
-			otlpEndpoint:
-				options?.otel?.otlpEndpoint ??
-				'https://otel.observability.app.launchdarkly.com',
-			projectId: projectID,
-			sessionSecureId: this.sessionSecureID,
-			environment: options?.environment ?? 'production',
-			networkRecordingOptions:
-				typeof options?.networkRecording === 'object'
-					? options.networkRecording
-					: undefined,
-			tracingOrigins: options?.tracingOrigins,
-			serviceName: options?.serviceName ?? 'highlight-browser',
-			instrumentations: options?.otel?.instrumentations,
-		})
-		LDObserve.load(this.observe)
 	}
 	getMetadata() {
 		return {
@@ -76,7 +90,7 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 		client: LDClient,
 		environmentMetadata: LDPluginEnvironmentMetadata,
 	) {
-		this.observe.register(client, environmentMetadata)
+		this.observe?.register(client, environmentMetadata)
 	}
 	getHooks?(metadata: LDPluginEnvironmentMetadata): Hook[] {
 		const metaAttrs = {
@@ -102,12 +116,12 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 					}
 				},
 				afterIdentify: (hookContext, data, _result) => {
-					for (const hook of this.observe.getHooks?.(metadata) ??
+					for (const hook of this.observe?.getHooks?.(metadata) ??
 						[]) {
 						hook.afterIdentify?.(hookContext, data, _result)
 					}
 
-					this.observe.recordLog('LD.identify', 'info', {
+					this.observe?.recordLog('LD.identify', 'info', {
 						...metaAttrs,
 						key: getCanonicalKey(hookContext.context),
 						context: JSON.stringify(
@@ -118,7 +132,7 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 					return data
 				},
 				afterEvaluation: (hookContext, data, detail) => {
-					for (const hook of this.observe.getHooks?.(metadata) ??
+					for (const hook of this.observe?.getHooks?.(metadata) ??
 						[]) {
 						hook.afterEvaluation?.(hookContext, data, detail)
 					}
@@ -148,7 +162,7 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 							getCanonicalKey(hookContext.context)
 					}
 					const attributes = { ...metaAttrs, ...eventAttributes }
-					this.observe.startSpan(FEATURE_FLAG_SPAN_NAME, (s) => {
+					this.observe?.startSpan(FEATURE_FLAG_SPAN_NAME, (s) => {
 						if (s) {
 							s.addEvent(FEATURE_FLAG_SCOPE, attributes)
 						}
@@ -157,11 +171,11 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 					return data
 				},
 				afterTrack: (hookContext) => {
-					for (const hook of this.observe.getHooks?.(metadata) ??
+					for (const hook of this.observe?.getHooks?.(metadata) ??
 						[]) {
 						hook.afterTrack?.(hookContext)
 					}
-					this.observe.recordLog('LD.track', 'info', {
+					this.observe?.recordLog('LD.track', 'info', {
 						...metaAttrs,
 						key: hookContext.key,
 						value: hookContext.metricValue,

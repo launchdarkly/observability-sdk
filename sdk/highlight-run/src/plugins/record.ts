@@ -1,6 +1,11 @@
 import { type HighlightClassOptions } from '../client'
 import type { LDPlugin, LDPluginEnvironmentMetadata } from './plugin'
-import type { Hook, LDClient } from '../integrations/launchdarkly'
+import {
+	getCanonicalKey,
+	getCanonicalObj,
+	Hook,
+	LDClient,
+} from '../integrations/launchdarkly'
 import { RecordSDK } from '../sdk/record'
 import firstloadVersion from '../__generated/version'
 import { setupMixpanelIntegration } from '../integrations/mixpanel'
@@ -8,60 +13,71 @@ import { setupAmplitudeIntegration } from '../integrations/amplitude'
 import { LDRecord } from '../sdk/LDRecord'
 import type { RecordOptions } from '../client/types/record'
 import { Plugin } from './common'
-import { getCanonicalKey } from '../integrations/launchdarkly'
+import { internalLog } from '../sdk/util'
 
 export class Record extends Plugin<RecordOptions> implements LDPlugin {
-	record!: RecordSDK
+	record: RecordSDK | undefined
 
 	constructor(projectID?: string | number, options?: RecordOptions) {
-		// Don't run init when called outside of the browser.
-		if (typeof window === 'undefined' || typeof document === 'undefined') {
-			console.warn(
-				'Session Replay is not initializing because it is not supported in this environment.',
-			)
-			return
-		}
-		if (typeof Worker === 'undefined') {
-			console.warn(
-				'Session Replay is not initializing because Worker is not supported.',
-			)
-			return
-		}
-		// Don't initialize if an projectID is not set.
-		if (!projectID) {
-			console.warn(
-				'Session Replay is not initializing because projectID was passed undefined.',
-			)
-			return
-		}
-		super(options)
-		const client_options: HighlightClassOptions = {
-			...options,
-			organizationID: projectID,
-			firstloadVersion,
-			environment: options?.environment || 'production',
-			appVersion: options?.version,
-			sessionSecureID: this.sessionSecureID,
-		}
+		try {
+			// Don't run init when called outside of the browser.
+			if (
+				typeof window === 'undefined' ||
+				typeof document === 'undefined'
+			) {
+				console.warn(
+					'@launchdarkly/session-replay is not initializing because it is not supported in this environment.',
+				)
+				return
+			}
+			if (typeof Worker === 'undefined') {
+				console.warn(
+					'@launchdarkly/session-replay is not initializing because Worker is not supported.',
+				)
+				return
+			}
+			// Don't initialize if an projectID is not set.
+			if (!projectID) {
+				console.warn(
+					'@launchdarkly/session-replay is not initializing because projectID was passed undefined.',
+				)
+				return
+			}
+			super(options)
+			const client_options: HighlightClassOptions = {
+				...options,
+				organizationID: projectID,
+				firstloadVersion,
+				environment: options?.environment || 'production',
+				appVersion: options?.version,
+				sessionSecureID: this.sessionSecureID,
+			}
 
-		this.record = new RecordSDK(client_options)
-		if (!options?.manualStart) {
-			void this.record.start()
-		}
-		LDRecord.load(this.record)
+			this.record = new RecordSDK(client_options)
+			if (!options?.manualStart) {
+				void this.record.start()
+			}
+			LDRecord.load(this.record)
 
-		if (
-			!options?.integrations?.mixpanel?.disabled &&
-			options?.integrations?.mixpanel?.projectToken
-		) {
-			setupMixpanelIntegration(options.integrations.mixpanel)
-		}
+			if (
+				!options?.integrations?.mixpanel?.disabled &&
+				options?.integrations?.mixpanel?.projectToken
+			) {
+				setupMixpanelIntegration(options.integrations.mixpanel)
+			}
 
-		if (
-			!options?.integrations?.amplitude?.disabled &&
-			options?.integrations?.amplitude?.apiKey
-		) {
-			setupAmplitudeIntegration(options.integrations.amplitude)
+			if (
+				!options?.integrations?.amplitude?.disabled &&
+				options?.integrations?.amplitude?.apiKey
+			) {
+				setupAmplitudeIntegration(options.integrations.amplitude)
+			}
+		} catch (error) {
+			internalLog(
+				`Error initializing @launchdarkly/session-replay SDK`,
+				'error',
+				error,
+			)
 		}
 	}
 
@@ -75,7 +91,7 @@ export class Record extends Plugin<RecordOptions> implements LDPlugin {
 		client: LDClient,
 		environmentMetadata: LDPluginEnvironmentMetadata,
 	) {
-		this.record.register(client, environmentMetadata)
+		this.record?.register(client, environmentMetadata)
 	}
 
 	getHooks?(metadata: LDPluginEnvironmentMetadata): Hook[] {
@@ -87,13 +103,19 @@ export class Record extends Plugin<RecordOptions> implements LDPlugin {
 					}
 				},
 				afterIdentify: (hookContext, data, _result) => {
-					for (const hook of this.record.getHooks?.(metadata) ?? []) {
+					for (const hook of this.record?.getHooks?.(metadata) ??
+						[]) {
 						hook.afterIdentify?.(hookContext, data, _result)
 					}
-					this.record.identify(
-						getCanonicalKey(hookContext.context),
+					const key = getCanonicalKey(hookContext.context)
+					const obj = getCanonicalObj(hookContext.context)
+					this.record?.identify(
+						typeof obj === 'string'
+							? obj
+							: (obj['user']?.toString() ?? key),
 						{
-							key: getCanonicalKey(hookContext.context),
+							key,
+							...(typeof obj === 'object' ? obj : {}),
 							timeout: hookContext.timeout,
 						},
 						'LaunchDarkly',
@@ -101,16 +123,18 @@ export class Record extends Plugin<RecordOptions> implements LDPlugin {
 					return data
 				},
 				afterEvaluation: (hookContext, data, detail) => {
-					for (const hook of this.record.getHooks?.(metadata) ?? []) {
+					for (const hook of this.record?.getHooks?.(metadata) ??
+						[]) {
 						hook.afterEvaluation?.(hookContext, data, detail)
 					}
 					return data
 				},
 				afterTrack: (hookContext) => {
-					for (const hook of this.record.getHooks?.(metadata) ?? []) {
+					for (const hook of this.record?.getHooks?.(metadata) ??
+						[]) {
 						hook.afterTrack?.(hookContext)
 					}
-					this.record.track(hookContext.key, {
+					this.record?.track(hookContext.key, {
 						data: hookContext.data,
 						value: hookContext.metricValue,
 					})
