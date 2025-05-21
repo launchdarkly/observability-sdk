@@ -41,14 +41,14 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 				typeof document === 'undefined'
 			) {
 				console.warn(
-					'Session Replay is not initializing because it is not supported in this environment.',
+					'@launchdarkly/observability is not initializing because it is not supported in this environment.',
 				)
 				return
 			}
 			// Don't initialize if an projectID is not set.
 			if (!projectID) {
-				console.info(
-					'Highlight is not initializing because projectID was passed undefined.',
+				console.warn(
+					'@launchdarkly/observability is not initializing because projectID was passed undefined.',
 				)
 				return
 			}
@@ -68,7 +68,7 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 						? options.networkRecording
 						: undefined,
 				tracingOrigins: options?.tracingOrigins,
-				serviceName: options?.serviceName ?? 'highlight-browser',
+				serviceName: options?.serviceName ?? 'browser',
 				instrumentations: options?.otel?.instrumentations,
 			}
 			this.observe = new ObserveSDK(clientOptions)

@@ -325,7 +325,7 @@ export class RecordSDK implements Record {
 		)
 		this.environment = options.environment ?? 'production'
 		this.appVersion = options.appVersion
-		this.serviceName = options.serviceName ?? ''
+		this.serviceName = options.serviceName ?? 'browser'
 
 		if (typeof options.organizationID === 'string') {
 			this.organizationID = options.organizationID

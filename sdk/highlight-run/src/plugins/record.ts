@@ -1,6 +1,6 @@
 import { type HighlightClassOptions } from '../client'
 import type { LDPlugin, LDPluginEnvironmentMetadata } from './plugin'
-import type { Hook, LDClient } from '../integrations/launchdarkly'
+import { getCanonicalKey, Hook, LDClient } from '../integrations/launchdarkly'
 import { RecordSDK } from '../sdk/record'
 import firstloadVersion from '../__generated/version'
 import { setupMixpanelIntegration } from '../integrations/mixpanel'
@@ -8,7 +8,6 @@ import { setupAmplitudeIntegration } from '../integrations/amplitude'
 import { LDRecord } from '../sdk/LDRecord'
 import type { RecordOptions } from '../client/types/record'
 import { Plugin } from './common'
-import { getCanonicalKey } from '../integrations/launchdarkly'
 import { internalLog } from '../sdk/util'
 
 export class Record extends Plugin<RecordOptions> implements LDPlugin {
@@ -22,20 +21,20 @@ export class Record extends Plugin<RecordOptions> implements LDPlugin {
 				typeof document === 'undefined'
 			) {
 				console.warn(
-					'Session Replay is not initializing because it is not supported in this environment.',
+					'@launchdarkly/session-replay is not initializing because it is not supported in this environment.',
 				)
 				return
 			}
 			if (typeof Worker === 'undefined') {
 				console.warn(
-					'Session Replay is not initializing because Worker is not supported.',
+					'@launchdarkly/session-replay is not initializing because Worker is not supported.',
 				)
 				return
 			}
 			// Don't initialize if an projectID is not set.
 			if (!projectID) {
 				console.warn(
-					'Session Replay is not initializing because projectID was passed undefined.',
+					'@launchdarkly/session-replay is not initializing because projectID was passed undefined.',
 				)
 				return
 			}
