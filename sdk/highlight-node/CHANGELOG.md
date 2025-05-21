@@ -1,5 +1,14 @@
 # @highlight-run/node
 
+## 3.12.5
+
+### Patch Changes
+
+- Updated dependencies [0e87afd]
+- Updated dependencies [d349bc2]
+- Updated dependencies [0e87afd]
+    - highlight.run@9.18.9
+
 ## 3.12.4
 
 ### Patch Changes

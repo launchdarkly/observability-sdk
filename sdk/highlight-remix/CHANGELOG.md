@@ -1,5 +1,16 @@
 # @highlight-run/remix
 
+## 2.0.104
+
+### Patch Changes
+
+- Updated dependencies [0e87afd]
+- Updated dependencies [d349bc2]
+- Updated dependencies [0e87afd]
+    - highlight.run@9.18.9
+    - @highlight-run/node@3.12.5
+    - @highlight-run/react@19.0.9
+
 ## 2.0.103
 
 ### Patch Changes

@@ -1,5 +1,13 @@
 # highlight.run
 
+## 9.18.9
+
+### Patch Changes
+
+- 0e87afd: improve opentelemetry exporter retry logic to delay retries
+- d349bc2: wrap plugin initialization with try / catch to limit impact of internal errors
+- 0e87afd: improve internal reporting of warnings and errors to LDObserve
+
 ## 9.18.8
 
 ### Patch Changes
