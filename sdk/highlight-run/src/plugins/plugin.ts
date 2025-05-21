@@ -1,4 +1,10 @@
+import type {
+	LDPluginEnvironmentMetadata,
+	LDPluginMetadata,
+} from '@launchdarkly/js-client-sdk'
 import type { Hook, LDClient } from '../integrations/launchdarkly'
+
+export type { Hook, LDClient, LDPluginEnvironmentMetadata, LDPluginMetadata }
 
 export interface LDPlugin {
 	getMetadata(): LDPluginMetadata
@@ -7,26 +13,4 @@ export interface LDPlugin {
 		environmentMetadata: LDPluginEnvironmentMetadata,
 	): void
 	getHooks?(metadata: LDPluginEnvironmentMetadata): Hook[]
-}
-
-export interface LDPluginMetadata {
-	readonly name: string
-}
-
-export interface LDPluginSdkMetadata {
-	name: string
-	version: string
-	wrapperName?: string
-	wrapperVersion?: string
-}
-
-export interface LDPluginApplicationMetadata {
-	id?: string
-	version?: string
-}
-
-export interface LDPluginEnvironmentMetadata {
-	sdk: LDPluginSdkMetadata
-	application?: LDPluginApplicationMetadata
-	clientSideId: string
 }
