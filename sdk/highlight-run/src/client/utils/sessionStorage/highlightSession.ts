@@ -16,19 +16,26 @@ const getSessionDataKey = (sessionID: string): string => {
 	return `${SESSION_STORAGE_KEYS.SESSION_DATA}_${sessionID}`
 }
 
-class Session {
-	static persistentSessionSecureID: string = ''
+interface GlobalThis {
+	persistentSessionSecureID?: string
 }
+declare var globalThis: GlobalThis | undefined
 
 export const getPersistentSessionSecureID = (): string => {
-	return Session.persistentSessionSecureID
+	if (
+		typeof globalThis !== 'undefined' &&
+		globalThis.persistentSessionSecureID?.length
+	) {
+		return globalThis.persistentSessionSecureID
+	}
+	return getSessionSecureID()
 }
 
 export const setPersistentSessionSecureID = (secureID: string) => {
 	// for duplicate tab functionality, secureID is ''
 	// avoid clearing the local secureID used for network request instrumentation
-	if (secureID) {
-		Session.persistentSessionSecureID = secureID
+	if (typeof globalThis !== 'undefined' && secureID?.length) {
+		globalThis.persistentSessionSecureID = secureID
 	}
 }
 
