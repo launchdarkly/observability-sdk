@@ -47,13 +47,18 @@ export class OTLPTraceExporterBrowserWithXhrRetry extends OTLPTraceExporter {
 		}
 		let retries = 0
 		const retry = (result: ExportResult) => {
+			if (result.code === ExportResultCode.SUCCESS) {
+				return resultCallback({
+					code: ExportResultCode.SUCCESS,
+				})
+			}
 			retries++
 			if (retries > MAX_PUBLIC_GRAPH_RETRY_ATTEMPTS) {
 				console.error(
 					`[highlight.io] failed to export OTeL traces: ${result.error?.message}`,
 					result.error,
 				)
-				resultCallback({
+				return resultCallback({
 					code: ExportResultCode.FAILED,
 					error: result.error,
 				})
@@ -64,7 +69,11 @@ export class OTLPTraceExporterBrowserWithXhrRetry extends OTLPTraceExporter {
 						BASE_DELAY_MS + BACKOFF_DELAY_MS * Math.pow(2, retries),
 					),
 				).then(() => {
-					super.export(items, resultCallback)
+					console.warn(
+						`[highlight.io] retry ${retries}, failed to export OTeL traces: ${result.error?.message}`,
+						result.error,
+					)
+					super.export(sampledItems, retry)
 				})
 			}
 		}
@@ -84,13 +93,18 @@ export class OTLPMetricExporterBrowser extends OTLPMetricExporter {
 	export(items: any, resultCallback: (result: ExportResult) => void) {
 		let retries = 0
 		const retry = (result: ExportResult) => {
+			if (result.code === ExportResultCode.SUCCESS) {
+				return resultCallback({
+					code: ExportResultCode.SUCCESS,
+				})
+			}
 			retries++
 			if (retries > MAX_PUBLIC_GRAPH_RETRY_ATTEMPTS) {
 				console.error(
 					`[highlight.io] failed to export OTeL metrics: ${result.error?.message}`,
 					result.error,
 				)
-				resultCallback({
+				return resultCallback({
 					code: ExportResultCode.FAILED,
 					error: result.error,
 				})
@@ -101,7 +115,11 @@ export class OTLPMetricExporterBrowser extends OTLPMetricExporter {
 						BASE_DELAY_MS + BACKOFF_DELAY_MS * Math.pow(2, retries),
 					),
 				).then(() => {
-					super.export(items, resultCallback)
+					console.warn(
+						`[highlight.io] retry ${retries}, failed to export OTeL metrics: ${result.error?.message}`,
+						result.error,
+					)
+					super.export(items, retry)
 				})
 			}
 		}
