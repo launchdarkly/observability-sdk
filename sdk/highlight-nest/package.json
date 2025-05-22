@@ -1,6 +1,6 @@
 {
 	"name": "@highlight-run/nest",
-	"version": "3.6.17",
+	"version": "3.6.18",
 	"description": "Client for interfacing with Highlight in nestjs",
 	"repository": {
 		"type": "git",

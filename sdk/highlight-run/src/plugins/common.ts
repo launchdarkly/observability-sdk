@@ -40,6 +40,7 @@ export class Plugin<T extends RecordOptions | ObserveOptions> {
 					projectID: 0,
 					payloadID: 1,
 					sessionStartTime: Date.now(),
+					lastPushTime: Date.now(),
 				})
 			}
 		} catch (error) {

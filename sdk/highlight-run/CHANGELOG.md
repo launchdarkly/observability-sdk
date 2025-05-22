@@ -1,5 +1,14 @@
 # highlight.run
 
+## 9.18.10
+
+### Patch Changes
+
+- b22881f: fix plugins not exporting types
+- bcbb6f7: export plugin options correctly
+- 188357c: fix session replay and observability plugin reporting to different sessions
+- 18ff47a: fix span duplication happening due to an unnecessary export retry
+
 ## 9.18.9
 
 ### Patch Changes

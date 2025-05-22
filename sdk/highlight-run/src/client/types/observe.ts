@@ -5,7 +5,7 @@ import type {
 } from './client'
 import type { CommonOptions } from './types'
 
-export declare type ObserveOptions = CommonOptions & {
+export type ObserveOptions = CommonOptions & {
 	/**
 	 * Specifies where the backend of the app lives. If specified, Highlight will attach the
 	 * X-Highlight-Request header to outgoing requests whose destination URLs match a substring

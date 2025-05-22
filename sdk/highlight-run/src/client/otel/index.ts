@@ -1,5 +1,5 @@
 import * as api from '@opentelemetry/api'
-import { Span } from '@opentelemetry/api'
+import { Context, Span } from '@opentelemetry/api'
 import {
 	CompositePropagator,
 	W3CBaggagePropagator,
@@ -21,6 +21,7 @@ import {
 	SimpleSpanProcessor,
 	StackContextManager,
 	WebTracerProvider,
+	Span as SDKSpan,
 } from '@opentelemetry/sdk-trace-web'
 import * as SemanticAttributes from '@opentelemetry/semantic-conventions'
 import { parse } from 'graphql'
@@ -55,6 +56,7 @@ import { IntegrationClient } from '../../integrations'
 import { LD_METRIC_NAME_DOCUMENT_LOAD } from '../../integrations/launchdarkly'
 
 import { ExportSampler } from './sampling/ExportSampler'
+import { getPersistentSessionSecureID } from '../utils/sessionStorage/highlightSession'
 export type Callback = (span?: Span) => any
 
 export type BrowserTracingConfig = {
@@ -77,6 +79,7 @@ let providers: {
 } = {}
 let otelConfig: BrowserTracingConfig | undefined
 const RECORD_ATTRIBUTE = 'highlight.record'
+const SESSION_ID_ATTRIBUTE = 'highlight.session_id'
 export const LOG_SPAN_NAME = 'launchdarkly.js.log'
 
 export const setupBrowserTracing = (
@@ -131,7 +134,6 @@ export const setupBrowserTracing = (
 			config.serviceName ?? 'highlight-browser',
 		[SemanticAttributes.SEMRESATTRS_DEPLOYMENT_ENVIRONMENT]: environment,
 		'highlight.project_id': config.projectId,
-		'highlight.session_id': config.sessionSecureId,
 	})
 
 	providers.tracerProvider = new WebTracerProvider({
@@ -314,6 +316,11 @@ export const setupBrowserTracing = (
 }
 
 class CustomBatchSpanProcessor extends BatchSpanProcessor {
+	onStart(span: SDKSpan, parentContext: Context): void {
+		span.setAttribute(SESSION_ID_ATTRIBUTE, getPersistentSessionSecureID())
+		super.onStart(span, parentContext)
+	}
+
 	onEnd(span: ReadableSpan): void {
 		if (span.attributes[RECORD_ATTRIBUTE] === false) {
 			return // don't record spans that are marked as not to be recorded

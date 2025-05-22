@@ -373,7 +373,7 @@ function stringifyProperties(
 				new GraphQLClient(backend, {
 					headers: {},
 				}),
-				getGraphQLRequestWrapper(sessionSecureID),
+				getGraphQLRequestWrapper(),
 			)
 			return
 		}
