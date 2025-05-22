@@ -1,5 +1,19 @@
 # @launchdarkly/observability
 
+## 0.1.14
+
+### Patch Changes
+
+- b22881f: fix plugins not exporting types
+- bcbb6f7: export plugin options correctly
+- 188357c: fix session replay and observability plugin reporting to different sessions
+- 18ff47a: fix span duplication happening due to an unnecessary export retry
+- Updated dependencies [b22881f]
+- Updated dependencies [bcbb6f7]
+- Updated dependencies [188357c]
+- Updated dependencies [18ff47a]
+    - highlight.run@9.18.10
+
 ## 0.1.13
 
 ### Patch Changes
