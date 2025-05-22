@@ -55,7 +55,7 @@ export class OTLPTraceExporterBrowserWithXhrRetry extends OTLPTraceExporter {
 			retries++
 			if (retries > MAX_PUBLIC_GRAPH_RETRY_ATTEMPTS) {
 				console.error(
-					`[highlight.io] failed to export OTeL traces: ${result.error?.message}`,
+					`[@launchdarkly/observability] failed to export OTeL traces: ${result.error?.message}`,
 					result.error,
 				)
 				return resultCallback({
@@ -70,7 +70,7 @@ export class OTLPTraceExporterBrowserWithXhrRetry extends OTLPTraceExporter {
 					),
 				).then(() => {
 					console.warn(
-						`[highlight.io] retry ${retries}, failed to export OTeL traces: ${result.error?.message}`,
+						`[@launchdarkly/observability] retry ${retries}, failed to export OTeL traces: ${result.error?.message}`,
 						result.error,
 					)
 					super.export(sampledItems, retry)
@@ -101,7 +101,7 @@ export class OTLPMetricExporterBrowser extends OTLPMetricExporter {
 			retries++
 			if (retries > MAX_PUBLIC_GRAPH_RETRY_ATTEMPTS) {
 				console.error(
-					`[highlight.io] failed to export OTeL metrics: ${result.error?.message}`,
+					`[@launchdarkly/observability] failed to export OTeL metrics: ${result.error?.message}`,
 					result.error,
 				)
 				return resultCallback({
@@ -116,7 +116,7 @@ export class OTLPMetricExporterBrowser extends OTLPMetricExporter {
 					),
 				).then(() => {
 					console.warn(
-						`[highlight.io] retry ${retries}, failed to export OTeL metrics: ${result.error?.message}`,
+						`[@launchdarkly/observability] retry ${retries}, failed to export OTeL metrics: ${result.error?.message}`,
 						result.error,
 					)
 					super.export(items, retry)
