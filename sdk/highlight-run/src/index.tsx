@@ -38,7 +38,7 @@ import {
 } from './client/utils/sessionStorage/highlightSession.js'
 import { setCookieWriteEnabled } from './client/utils/storage'
 import { Attributes, Context, Span, SpanOptions } from '@opentelemetry/api'
-import firstloadVersion from './__generated/version.js'
+import version from './version.js'
 import { listenToChromeExtensionMessage } from './browserExtension/extensionListener.js'
 import configureElectronHighlight from './environments/electron.js'
 import { HighlightSegmentMiddleware } from './integrations/segment.js'
@@ -137,7 +137,7 @@ const H: HighlightPublicInterface = {
 			const client_options: HighlightClassOptions = {
 				...options,
 				organizationID: projectID,
-				firstloadVersion,
+				firstloadVersion: version,
 				environment: options?.environment || 'production',
 				appVersion: options?.version,
 				sessionSecureID,

@@ -32,27 +32,25 @@ import { internalLog } from '../sdk/util'
 
 export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 	observe: ObserveAPI | undefined
+	options: ObserveOptions | undefined
 
-	constructor(projectID?: string | number, options?: ObserveOptions) {
+	constructor(options?: ObserveOptions) {
+		super(options)
+		this.options = options
+	}
+
+	private initialize(
+		ldCredential: string | undefined,
+		options?: ObserveOptions,
+	) {
 		try {
-			// Don't run init when called outside of the browser.
-			if (
-				typeof window === 'undefined' ||
-				typeof document === 'undefined'
-			) {
-				console.warn(
-					'@launchdarkly/observability is not initializing because it is not supported in this environment.',
-				)
-				return
-			}
 			// Don't initialize if an projectID is not set.
-			if (!projectID) {
+			if (!ldCredential) {
 				console.warn(
-					'@launchdarkly/observability is not initializing because projectID was passed undefined.',
+					'@launchdarkly/observability is not initializing because the SDK credential is undefined.',
 				)
 				return
 			}
-			super(options)
 			const clientOptions: BrowserTracingConfig = {
 				backendUrl:
 					options?.backendUrl ??
@@ -60,7 +58,7 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 				otlpEndpoint:
 					options?.otel?.otlpEndpoint ??
 					'https://otel.observability.app.launchdarkly.com',
-				projectId: projectID,
+				projectId: ldCredential,
 				sessionSecureId: this.sessionSecureID,
 				environment: options?.environment ?? 'production',
 				networkRecordingOptions:
@@ -108,6 +106,10 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 					}
 				: {}),
 		}
+		this.initialize(
+			metadata.sdkKey ?? metadata.mobileKey ?? metadata.clientSideId,
+			this.options,
+		)
 		return [
 			{
 				getMetadata: () => {
