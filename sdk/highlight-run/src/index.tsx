@@ -11,7 +11,7 @@
  * @packageDocumentation
  */
 import type { HighlightClassOptions, RequestResponsePair } from './client'
-import { GenerateSecureID, getTracer, Highlight } from './client'
+import { GenerateSecureID, Highlight } from './client'
 import { FirstLoadListeners } from './client/listeners/first-load-listeners'
 import type {
 	HighlightOptions,
@@ -46,6 +46,7 @@ import { initializeFetchListener } from './listeners/fetch'
 import { initializeWebSocketListener } from './listeners/web-socket'
 import { ViewportResizeListenerArgs } from './client/listeners/viewport-resize-listener'
 import { getNoopSpan } from './client/otel/utils.js'
+import { getTracer } from './client/otel'
 import {
 	LaunchDarklyIntegration,
 	setupLaunchDarklyIntegration,
