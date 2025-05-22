@@ -40,6 +40,8 @@ export const LD_METRIC_EVENT = '$ld:telemetry:metric'
 
 export const LD_METRIC_NAME_DOCUMENT_LOAD = 'document_load'
 
+export const LD_IDENTIFY_RESULT_STATUS = 'result.status'
+
 function encodeKey(key: string): string {
 	if (key.includes('%') || key.includes(':')) {
 		return key.replace(/%/g, '%25').replace(/:/g, '%3A')
@@ -93,20 +95,23 @@ export function setupLaunchDarklyIntegration(
 				name: 'highlight.run',
 			}
 		},
-		afterIdentify: (hookContext, data, _result) => {
+		afterIdentify: (hookContext, data, result) => {
 			hClient.log('LD.identify', 'INFO', {
 				key: getCanonicalKey(hookContext.context),
 				context: JSON.stringify(getCanonicalObj(hookContext.context)),
 				timeout: hookContext.timeout,
+				[LD_IDENTIFY_RESULT_STATUS]: result.status,
 			})
-			hClient.identify(
-				getCanonicalKey(hookContext.context),
-				{
-					key: getCanonicalKey(hookContext.context),
-					timeout: hookContext.timeout,
-				},
-				'LaunchDarkly',
-			)
+			if (result.status === 'completed') {
+				hClient.identify(
+					getCanonicalKey(hookContext.context),
+					{
+						key: getCanonicalKey(hookContext.context),
+						timeout: hookContext.timeout,
+					},
+					'LaunchDarkly',
+				)
+			}
 			return data
 		},
 		afterEvaluation: (hookContext, data, detail) => {

@@ -15,6 +15,7 @@ import {
 	getCanonicalKey,
 	getCanonicalObj,
 	Hook,
+	LD_IDENTIFY_RESULT_STATUS,
 	LDClient,
 } from '../integrations/launchdarkly'
 import { Observe as ObserveAPI } from '../api/observe'
@@ -115,10 +116,10 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 						name: '@launchdarkly/observability/hooks',
 					}
 				},
-				afterIdentify: (hookContext, data, _result) => {
+				afterIdentify: (hookContext, data, result) => {
 					for (const hook of this.observe?.getHooks?.(metadata) ??
 						[]) {
-						hook.afterIdentify?.(hookContext, data, _result)
+						hook.afterIdentify?.(hookContext, data, result)
 					}
 
 					this.observe?.recordLog('LD.identify', 'info', {
@@ -128,6 +129,7 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 							getCanonicalObj(hookContext.context),
 						),
 						timeout: hookContext.timeout,
+						[LD_IDENTIFY_RESULT_STATUS]: result.status,
 					})
 					return data
 				},
