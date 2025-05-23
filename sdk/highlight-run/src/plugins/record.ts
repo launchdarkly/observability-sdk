@@ -102,24 +102,26 @@ export class Record extends Plugin<RecordOptions> implements LDPlugin {
 						name: '@launchdarkly/session-replay/hooks',
 					}
 				},
-				afterIdentify: (hookContext, data, _result) => {
+				afterIdentify: (hookContext, data, result) => {
 					for (const hook of this.record?.getHooks?.(metadata) ??
 						[]) {
-						hook.afterIdentify?.(hookContext, data, _result)
+						hook.afterIdentify?.(hookContext, data, result)
 					}
-					const key = getCanonicalKey(hookContext.context)
-					const obj = getCanonicalObj(hookContext.context)
-					this.record?.identify(
-						typeof obj === 'string'
-							? obj
-							: (obj['user']?.toString() ?? key),
-						{
-							key,
-							...(typeof obj === 'object' ? obj : {}),
-							timeout: hookContext.timeout,
-						},
-						'LaunchDarkly',
-					)
+					if (result.status === 'completed') {
+						const key = getCanonicalKey(hookContext.context)
+						const obj = getCanonicalObj(hookContext.context)
+						this.record?.identify(
+							typeof obj === 'string'
+								? obj
+								: (obj['user']?.toString() ?? key),
+							{
+								key,
+								...(typeof obj === 'object' ? obj : {}),
+								timeout: hookContext.timeout,
+							},
+							'LaunchDarkly',
+						)
+					}
 					return data
 				},
 				afterEvaluation: (hookContext, data, detail) => {
