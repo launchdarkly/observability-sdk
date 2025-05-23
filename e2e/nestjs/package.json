@@ -18,7 +18,7 @@
     "@highlight-run/nest": "workspace:*",
     "@nestjs/axios": "^3.0.2",
     "@nestjs/cli": "^10.4.5",
-    "@nestjs/common": "^10.4.5",
+    "@nestjs/common": "^11.1.1",
     "@nestjs/core": "^10.4.5",
     "@nestjs/mapped-types": "*",
     "@nestjs/platform-express": "^11.0.1",
