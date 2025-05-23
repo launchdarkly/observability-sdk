@@ -1,5 +1,12 @@
 # @highlight-run/react
 
+## 19.0.11
+
+### Patch Changes
+
+- Updated dependencies [24ff099]
+    - highlight.run@9.18.11
+
 ## 19.0.10
 
 ### Patch Changes

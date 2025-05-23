@@ -1,5 +1,11 @@
 # highlight.run
 
+## 9.18.11
+
+### Patch Changes
+
+- 24ff099: Only add context data for successful identify operations.
+
 ## 9.18.10
 
 ### Patch Changes
