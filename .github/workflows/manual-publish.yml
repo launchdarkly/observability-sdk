@@ -63,7 +63,7 @@ jobs:
               id: changesets-publish
               run: yarn publish:highlight
 
-            - uses: launchdarkly/gh-actions/actions/release-secrets@release-secrets-v1.2.0
+            - uses: launchdarkly/gh-actions/actions/release-secrets@publish-pages-v1.0.2
               if: ${{ inputs.release_launchdarkly == true }}
               name: 'Get NPM token'
               with:
