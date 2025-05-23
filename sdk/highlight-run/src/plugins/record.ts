@@ -20,6 +20,7 @@ export class Record extends Plugin<RecordOptions> implements LDPlugin {
 
 	constructor(projectID?: string | number, options?: RecordOptions) {
 		try {
+			super(options)
 			// Don't run init when called outside of the browser.
 			if (
 				typeof window === 'undefined' ||
@@ -43,7 +44,6 @@ export class Record extends Plugin<RecordOptions> implements LDPlugin {
 				)
 				return
 			}
-			super(options)
 			const client_options: HighlightClassOptions = {
 				...options,
 				organizationID: projectID,

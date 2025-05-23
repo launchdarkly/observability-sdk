@@ -36,6 +36,7 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 
 	constructor(projectID?: string | number, options?: ObserveOptions) {
 		try {
+			super(options)
 			// Don't run init when called outside of the browser.
 			if (
 				typeof window === 'undefined' ||
@@ -53,7 +54,6 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 				)
 				return
 			}
-			super(options)
 			const clientOptions: BrowserTracingConfig = {
 				backendUrl:
 					options?.backendUrl ??
