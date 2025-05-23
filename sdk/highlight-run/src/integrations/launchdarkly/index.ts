@@ -44,16 +44,6 @@ export const FEATURE_FLAG_VARIATION_INDEX_ATTR = `${FEATURE_FLAG_SCOPE}.result.v
 export const FEATURE_FLAG_APP_ID_ATTR = `${LD_SCOPE}.application.id`
 export const FEATURE_FLAG_APP_VERSION_ATTR = `${LD_SCOPE}.application.version`
 
-const FEATURE_FLAG_REASONS = [
-	'kind',
-	'errorKind',
-	'ruleIndex',
-	'ruleId',
-	'prerequisiteKey',
-	'inExperiment',
-	'bigSegmentsStatus',
-] as const
-
 export const LD_INITIALIZE_EVENT = '$ld:telemetry:session:init'
 export const LD_ERROR_EVENT = '$ld:telemetry:error'
 export const LD_TRACK_EVENT = '$ld:telemetry:track'
@@ -149,11 +139,11 @@ export function setupLaunchDarklyIntegration(
 					: {}),
 			}
 			if (detail.reason) {
-				for (const attr of FEATURE_FLAG_REASONS) {
-					const value = detail.reason[attr]
+				for (const attr in FEATURE_FLAG_REASON_ATTRS) {
+					const k = attr as keyof LDEvaluationReason
+					const value = detail.reason[k]
 					if (value) {
-						eventAttributes[FEATURE_FLAG_REASON_ATTRS[attr]!] =
-							value
+						eventAttributes[FEATURE_FLAG_REASON_ATTRS[k]!] = value
 					}
 				}
 			}
