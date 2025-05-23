@@ -18,7 +18,7 @@ const isErrorRetryable = (error: ClientError): boolean => {
 	return match === undefined
 }
 
-export const getGraphQLRequestWrapper = (sessionSecureID: string) => {
+export const getGraphQLRequestWrapper = () => {
 	const graphQLRequestWrapper = async <T>(
 		requestFn: () => Promise<T>,
 		operationName: string,
@@ -49,9 +49,7 @@ export const getGraphQLRequestWrapper = (sessionSecureID: string) => {
 				)
 			}
 			console.error(
-				`highlight.io: [${
-					sessionSecureID || sessionSecureID
-				}] data request failed after ${retries} retries`,
+				`highlight.io: data request failed after ${retries} retries`,
 			)
 			throw error
 		}

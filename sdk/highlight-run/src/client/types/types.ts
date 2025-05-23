@@ -12,11 +12,11 @@ import type { ErrorMessageType, Source } from './shared-types'
 import type { LDClient } from '../../integrations/launchdarkly'
 import type { LDPluginEnvironmentMetadata } from '../../plugins/plugin'
 
-export declare interface Metadata {
+export interface Metadata {
 	[key: string]: any
 }
 
-export declare interface Metric {
+export interface Metric {
 	name: string
 	value: number
 	tags?: { name: string; value: string }[]
@@ -30,7 +30,7 @@ export interface RecordMetric {
 	tags?: { name: string; value: string }[]
 }
 
-export declare interface OTelMetric {
+export interface OTelMetric {
 	name: string
 	value: number
 	attributes?: Attributes
@@ -38,7 +38,7 @@ export declare interface OTelMetric {
 
 export type PrivacySettingOption = 'strict' | 'default' | 'none'
 
-export declare type SamplingStrategy = {
+export type SamplingStrategy = {
 	/**
 	 * 'all' will record every single canvas call.
 	 * a number will record an image snapshots in a web-worker a (maximum) number of times per second.
@@ -89,7 +89,7 @@ export declare type SamplingStrategy = {
 	}>
 }
 
-export declare type CommonOptions = {
+export type CommonOptions = {
 	/**
 	 * Do not use this.
 	 * @private
@@ -124,7 +124,7 @@ export declare type CommonOptions = {
 	sessionCookie?: true
 }
 
-export declare type HighlightOptions = CommonOptions & {
+export type HighlightOptions = CommonOptions & {
 	/**
 	 * Specifies where the backend of the app lives. If specified, Highlight will attach the
 	 * X-Highlight-Request header to outgoing requests whose destination URLs match a substring
@@ -292,7 +292,7 @@ export declare type HighlightOptions = CommonOptions & {
 	otel?: OtelOptions
 }
 
-export declare interface HighlightPublicInterface {
+export interface HighlightPublicInterface {
 	init: (
 		projectID?: string | number,
 		debug?: HighlightOptions,
@@ -495,7 +495,7 @@ export declare interface HighlightPublicInterface {
 	) => void
 }
 
-export declare interface SessionDetails {
+export interface SessionDetails {
 	/** The URL to view the session. */
 	url: string
 	/** The URL to view the session at the time getSessionDetails was called during the session recording. */
@@ -504,7 +504,7 @@ export declare interface SessionDetails {
 	sessionSecureID: string
 }
 
-export declare type Integration = (integrationOptions?: any) => void
+export type Integration = (integrationOptions?: any) => void
 
 interface SessionFeedbackOptions {
 	verbatim: string

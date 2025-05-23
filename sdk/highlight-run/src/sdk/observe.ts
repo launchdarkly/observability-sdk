@@ -56,9 +56,9 @@ import { getSdk, Sdk } from '../client/graph/generated/operations'
 import { GraphQLClient } from 'graphql-request'
 import { getGraphQLRequestWrapper } from '../client/utils/graph'
 import { internalLog } from './util'
+import { getPersistentSessionSecureID } from '../client/utils/sessionStorage/highlightSession'
 
 export class ObserveSDK implements Observe {
-	private readonly sessionSecureID: string
 	/** Verbose project ID that is exposed to users. Legacy users may still be using ints. */
 	organizationID!: string
 	private readonly _integrations: IntegrationClient[] = []
@@ -78,7 +78,6 @@ export class ObserveSDK implements Observe {
 	private readonly sampler: ExportSampler = new CustomSampler()
 	private graphqlSDK!: Sdk
 	constructor(options: BrowserTracingConfig) {
-		this.sessionSecureID = options.sessionSecureId
 		if (typeof options.projectId === 'string') {
 			this.organizationID = options.projectId
 		} else {
@@ -88,10 +87,7 @@ export class ObserveSDK implements Observe {
 		const client = new GraphQLClient(`${options.backendUrl}`, {
 			headers: {},
 		})
-		this.graphqlSDK = getSdk(
-			client,
-			getGraphQLRequestWrapper(this.sessionSecureID),
-		)
+		this.graphqlSDK = getSdk(client, getGraphQLRequestWrapper())
 		this.configureSampling()
 		this.setupListeners(options)
 	}
@@ -115,9 +111,6 @@ export class ObserveSDK implements Observe {
 		this.startSpan(LOG_SPAN_NAME, (span) => {
 			const msg =
 				typeof message === 'string' ? message : stringify(message)
-			span?.setAttributes({
-				'highlight.session_id': this.sessionSecureID,
-			})
 			span?.addEvent('log', {
 				'log.severity': level,
 				'log.message': msg,
@@ -175,7 +168,7 @@ export class ObserveSDK implements Observe {
 			})
 		})
 		for (const integration of this._integrations) {
-			integration.error(this.sessionSecureID, errorMsg)
+			integration.error(getPersistentSessionSecureID(), errorMsg)
 		}
 	}
 
@@ -188,7 +181,7 @@ export class ObserveSDK implements Observe {
 		}
 		counter.add(metric.value, {
 			...metric.attributes,
-			'highlight.session_id': this.sessionSecureID,
+			'highlight.session_id': getPersistentSessionSecureID(),
 		})
 	}
 
@@ -201,7 +194,7 @@ export class ObserveSDK implements Observe {
 		}
 		gauge.record(metric.value, {
 			...metric.attributes,
-			'highlight.session_id': this.sessionSecureID,
+			'highlight.session_id': getPersistentSessionSecureID(),
 		})
 		const recordMetric: RecordMetric = {
 			name: metric.name,
@@ -216,7 +209,10 @@ export class ObserveSDK implements Observe {
 				: [],
 		}
 		for (const integration of this._integrations) {
-			integration.recordGauge(this.sessionSecureID, recordMetric)
+			integration.recordGauge(
+				getPersistentSessionSecureID(),
+				recordMetric,
+			)
 		}
 	}
 
@@ -233,7 +229,7 @@ export class ObserveSDK implements Observe {
 		}
 		histogram.record(metric.value, {
 			...metric.attributes,
-			'highlight.session_id': this.sessionSecureID,
+			'highlight.session_id': getPersistentSessionSecureID(),
 		})
 	}
 
@@ -246,7 +242,7 @@ export class ObserveSDK implements Observe {
 		}
 		up_down_counter.add(metric.value, {
 			...metric.attributes,
-			'highlight.session_id': this.sessionSecureID,
+			'highlight.session_id': getPersistentSessionSecureID(),
 		})
 	}
 

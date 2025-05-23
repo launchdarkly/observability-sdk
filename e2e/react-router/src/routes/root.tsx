@@ -94,6 +94,13 @@ export default function Root() {
 				LDRecord.snapshot
 			</button>
 			<button
+				onClick={() => {
+					LDRecord.start({ forceNew: true })
+				}}
+			>
+				LDRecord.start(forceNew)
+			</button>
+			<button
 				onClick={async () => {
 					setFlags(
 						JSON.stringify(

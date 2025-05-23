@@ -21,14 +21,14 @@ export const ALL_CONSOLE_METHODS = [
 	'warn',
 ] as const
 type ConsoleMethodsTuple = typeof ALL_CONSOLE_METHODS
-export declare type ConsoleMethods = ConsoleMethodsTuple[number]
+export type ConsoleMethods = ConsoleMethodsTuple[number]
 
-export declare type DebugOptions = {
+export type DebugOptions = {
 	clientInteractions?: boolean
 	domRecording?: boolean
 }
 
-export declare type NetworkRecordingOptions = {
+export type NetworkRecordingOptions = {
 	/**
 	 * Enables recording of network requests.
 	 * The data includes the URLs, the size of the request, and how long the request took.
@@ -138,41 +138,38 @@ export declare type NetworkRecordingOptions = {
 	) => RequestResponsePair | null
 }
 
-export declare type OtelOptions = {
+export type OtelOptions = {
 	instrumentations?: OtelInstrumentatonOptions
 }
 
-export declare type OtelInstrumentatonOptions = {
+export type OtelInstrumentatonOptions = {
 	'@opentelemetry/instrumentation-document-load'?: false
 	'@opentelemetry/instrumentation-fetch'?: false
 	'@opentelemetry/instrumentation-xml-http-request'?: false
 	'@opentelemetry/instrumentation-user-interaction'?: false
 }
 
-export declare type IntegrationOptions = {
+export type IntegrationOptions = {
 	amplitude?: AmplitudeIntegrationOptions
 	intercom?: IntercomIntegrationOptions
 	mixpanel?: MixpanelIntegrationOptions
 }
 
-export declare type SessionShortcutOptions = false | string
+export type SessionShortcutOptions = false | string
 
 type DefaultIntegrationOptions = {
 	disabled?: boolean
 }
 
-export declare interface MixpanelIntegrationOptions
-	extends DefaultIntegrationOptions {
+export interface MixpanelIntegrationOptions extends DefaultIntegrationOptions {
 	projectToken?: string
 }
 
-export declare interface AmplitudeIntegrationOptions
-	extends DefaultIntegrationOptions {
+export interface AmplitudeIntegrationOptions extends DefaultIntegrationOptions {
 	apiKey?: string
 }
 
-export declare interface IntercomIntegrationOptions
-	extends DefaultIntegrationOptions {}
+export interface IntercomIntegrationOptions extends DefaultIntegrationOptions {}
 
 export enum MetricName {
 	DeviceMemory = 'DeviceMemory',

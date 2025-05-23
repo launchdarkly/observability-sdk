@@ -29,6 +29,7 @@ export const FEATURE_FLAG_CONTEXT_ID_ATTR = `${FEATURE_FLAG_SCOPE}.context.id`
 export const FEATURE_FLAG_VALUE_ATTR = `${FEATURE_FLAG_SCOPE}.result.value`
 export const FEATURE_FLAG_PROVIDER_ATTR = `${FEATURE_FLAG_SCOPE}.provider.name`
 export const FEATURE_FLAG_IN_EXPERIMENT_ATTR = `${FEATURE_FLAG_SCOPE}.result.reason.inExperiment`
+export const FEATURE_FLAG_KIND_ATTR = `${FEATURE_FLAG_SCOPE}.result.reason.kind`
 export const FEATURE_FLAG_VARIATION_INDEX_ATTR = `${FEATURE_FLAG_SCOPE}.result.variationIndex`
 export const FEATURE_FLAG_APP_ID_ATTR = `${LD_SCOPE}.application.id`
 export const FEATURE_FLAG_APP_VERSION_ATTR = `${LD_SCOPE}.application.version`
@@ -124,6 +125,11 @@ export function setupLaunchDarklyIntegration(
 					? {
 							[FEATURE_FLAG_IN_EXPERIMENT_ATTR]:
 								detail.reason.inExperiment,
+						}
+					: {}),
+				...(detail.reason?.kind
+					? {
+							[FEATURE_FLAG_KIND_ATTR]: detail.reason.kind,
 						}
 					: {}),
 				...(detail.variationIndex

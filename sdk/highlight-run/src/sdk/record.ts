@@ -316,13 +316,7 @@ export class RecordSDK implements Record {
 		const client = new GraphQLClient(`${this._backendUrl}`, {
 			headers: {},
 		})
-		this.graphqlSDK = getSdk(
-			client,
-			getGraphQLRequestWrapper(
-				this.sessionData?.sessionSecureID ||
-					this.options?.sessionSecureID,
-			),
-		)
+		this.graphqlSDK = getSdk(client, getGraphQLRequestWrapper())
 		this.environment = options.environment ?? 'production'
 		this.appVersion = options.appVersion
 		this.serviceName = options.serviceName ?? 'browser'

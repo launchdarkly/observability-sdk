@@ -5,7 +5,7 @@ import type {
 	SamplingStrategy,
 } from './types'
 
-export declare type RecordOptions = CommonOptions & {
+export type RecordOptions = CommonOptions & {
 	/**
 	 * Specifies where the backend of the app lives. If specified, Highlight will attach the
 	 * X-Highlight-Request header to outgoing requests whose destination URLs match a substring
