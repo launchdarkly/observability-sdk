@@ -1,5 +1,12 @@
 # highlight.run
 
+## 9.18.12
+
+### Patch Changes
+
+- 575ac87: ensure omitting project id does not break sdk
+- 575ac87: report all attributes of evaluation reason
+
 ## 9.18.11
 
 ### Patch Changes
