@@ -5,9 +5,9 @@ import {
 	FEATURE_FLAG_CONTEXT_ATTR,
 	FEATURE_FLAG_CONTEXT_ID_ATTR,
 	FEATURE_FLAG_ENV_ATTR,
-	FEATURE_FLAG_IN_EXPERIMENT_ATTR,
 	FEATURE_FLAG_KEY_ATTR,
 	FEATURE_FLAG_PROVIDER_ATTR,
+	FEATURE_FLAG_REASON_ATTRS,
 	FEATURE_FLAG_SCOPE,
 	FEATURE_FLAG_SPAN_NAME,
 	FEATURE_FLAG_VALUE_ATTR,
@@ -30,12 +30,14 @@ import {
 } from '@opentelemetry/semantic-conventions'
 import { Attributes } from '@opentelemetry/api'
 import { internalLog } from '../sdk/util'
+import { LDEvaluationReason } from '@launchdarkly/js-sdk-common/dist/cjs/api/data/LDEvaluationReason'
 
 export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 	observe: ObserveAPI | undefined
 
 	constructor(projectID?: string | number, options?: ObserveOptions) {
 		try {
+			super(options)
 			// Don't run init when called outside of the browser.
 			if (
 				typeof window === 'undefined' ||
@@ -53,7 +55,6 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 				)
 				return
 			}
-			super(options)
 			const clientOptions: BrowserTracingConfig = {
 				backendUrl:
 					options?.backendUrl ??
@@ -143,18 +144,22 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 						[FEATURE_FLAG_KEY_ATTR]: hookContext.flagKey,
 						[FEATURE_FLAG_VALUE_ATTR]: JSON.stringify(detail.value),
 						// only set the following keys when values are truthy
-						...(detail.reason?.inExperiment
-							? {
-									[FEATURE_FLAG_IN_EXPERIMENT_ATTR]:
-										detail.reason.inExperiment,
-								}
-							: {}),
 						...(detail.variationIndex
 							? {
 									[FEATURE_FLAG_VARIATION_INDEX_ATTR]:
 										detail.variationIndex,
 								}
 							: {}),
+					}
+					if (detail.reason) {
+						for (const attr in FEATURE_FLAG_REASON_ATTRS) {
+							const k = attr as keyof LDEvaluationReason
+							const value = detail.reason[k]
+							if (value) {
+								eventAttributes[FEATURE_FLAG_REASON_ATTRS[k]!] =
+									value
+							}
+						}
 					}
 
 					if (hookContext.context) {

@@ -15,6 +15,7 @@ import type {
 	LDContextCommon,
 	LDMultiKindContext,
 } from '@launchdarkly/js-client-sdk'
+import { LDEvaluationReason } from '@launchdarkly/js-sdk-common/dist/cjs/api/data/LDEvaluationReason'
 
 export type { Hook, LDClient }
 
@@ -28,8 +29,17 @@ export const FEATURE_FLAG_CONTEXT_ATTR = `${FEATURE_FLAG_SCOPE}.contextKeys`
 export const FEATURE_FLAG_CONTEXT_ID_ATTR = `${FEATURE_FLAG_SCOPE}.context.id`
 export const FEATURE_FLAG_VALUE_ATTR = `${FEATURE_FLAG_SCOPE}.result.value`
 export const FEATURE_FLAG_PROVIDER_ATTR = `${FEATURE_FLAG_SCOPE}.provider.name`
-export const FEATURE_FLAG_IN_EXPERIMENT_ATTR = `${FEATURE_FLAG_SCOPE}.result.reason.inExperiment`
-export const FEATURE_FLAG_KIND_ATTR = `${FEATURE_FLAG_SCOPE}.result.reason.kind`
+export const FEATURE_FLAG_REASON_ATTRS: {
+	[key in keyof LDEvaluationReason]: string
+} = {
+	kind: `${FEATURE_FLAG_SCOPE}.result.reason.kind`,
+	errorKind: `${FEATURE_FLAG_SCOPE}.result.reason.errorKind`,
+	ruleIndex: `${FEATURE_FLAG_SCOPE}.result.reason.ruleIndex`,
+	ruleId: `${FEATURE_FLAG_SCOPE}.result.reason.ruleId`,
+	prerequisiteKey: `${FEATURE_FLAG_SCOPE}.result.reason.prerequisiteKey`,
+	inExperiment: `${FEATURE_FLAG_SCOPE}.result.reason.inExperiment`,
+	bigSegmentsStatus: `${FEATURE_FLAG_SCOPE}.result.reason.bigSegmentsStatus`,
+}
 export const FEATURE_FLAG_VARIATION_INDEX_ATTR = `${FEATURE_FLAG_SCOPE}.result.variationIndex`
 export const FEATURE_FLAG_APP_ID_ATTR = `${LD_SCOPE}.application.id`
 export const FEATURE_FLAG_APP_VERSION_ATTR = `${LD_SCOPE}.application.version`
@@ -121,23 +131,21 @@ export function setupLaunchDarklyIntegration(
 				[FEATURE_FLAG_KEY_ATTR]: hookContext.flagKey,
 				[FEATURE_FLAG_VALUE_ATTR]: JSON.stringify(detail.value),
 				// only set the following keys when values are truthy
-				...(detail.reason?.inExperiment
-					? {
-							[FEATURE_FLAG_IN_EXPERIMENT_ATTR]:
-								detail.reason.inExperiment,
-						}
-					: {}),
-				...(detail.reason?.kind
-					? {
-							[FEATURE_FLAG_KIND_ATTR]: detail.reason.kind,
-						}
-					: {}),
 				...(detail.variationIndex
 					? {
 							[FEATURE_FLAG_VARIATION_INDEX_ATTR]:
 								detail.variationIndex,
 						}
 					: {}),
+			}
+			if (detail.reason) {
+				for (const attr in FEATURE_FLAG_REASON_ATTRS) {
+					const k = attr as keyof LDEvaluationReason
+					const value = detail.reason[k]
+					if (value) {
+						eventAttributes[FEATURE_FLAG_REASON_ATTRS[k]!] = value
+					}
+				}
 			}
 
 			if (hookContext.context) {

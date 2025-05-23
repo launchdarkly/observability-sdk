@@ -87,8 +87,8 @@ jobs:
               shell: bash
               run: ./scripts/publish-npm.sh
               env:
-                  LD_RELEASE_IS_PRERELEASE: ${{ inputs.prerelease }}
-                  LD_RELEASE_IS_DRYRUN: ${{ inputs.dry-run }}
+                  LD_RELEASE_IS_PRERELEASE: false
+                  LD_RELEASE_IS_DRYRUN: false
 
             - name: Release changesets
               if: github.ref == 'refs/heads/main'
