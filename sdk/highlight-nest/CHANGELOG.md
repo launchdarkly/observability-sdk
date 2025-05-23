@@ -1,5 +1,11 @@
 # @highlight-run/nest
 
+## 3.6.19
+
+### Patch Changes
+
+- @highlight-run/node@3.12.7
+
 ## 3.6.18
 
 ### Patch Changes
