@@ -1,5 +1,15 @@
 # @launchdarkly/observability
 
+## 0.1.16
+
+### Patch Changes
+
+- 575ac87: ensure omitting project id does not break sdk
+- 575ac87: report all attributes of evaluation reason
+- Updated dependencies [575ac87]
+- Updated dependencies [575ac87]
+    - highlight.run@9.18.12
+
 ## 0.1.15
 
 ### Patch Changes
