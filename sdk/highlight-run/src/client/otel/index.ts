@@ -577,7 +577,7 @@ const assignDocumentDurations = (span: api.Span) => {
 		response: calculateDuration('responseStart', 'responseEnd', events),
 	}
 	for (const _integration of otelConfig?.getIntegrations?.() ?? []) {
-		if (durations_ns.document_load > 0) {
+		if (durations_ns.document_load !== undefined) {
 			_integration.recordGauge(otelConfig?.sessionSecureId ?? '', {
 				name: LD_METRIC_NAME_DOCUMENT_LOAD,
 				value: durations_ns.document_load / 1e6,
@@ -586,7 +586,7 @@ const assignDocumentDurations = (span: api.Span) => {
 	}
 
 	Object.entries(durations_ns).forEach(([key, value]) => {
-		if (value > 0) {
+		if (value !== undefined) {
 			span.setAttribute(`timings.${key}.ns`, value)
 			span.setAttribute(
 				`timings.${key}.readable`,
@@ -610,7 +610,7 @@ function calculateDuration(
 	const endEvent = events.find((e) => e.name === endEventName)
 
 	if (!startEvent || !endEvent) {
-		return 0
+		return undefined
 	}
 
 	const startNs = startEvent.time[0] * 1e9 + startEvent.time[1]
@@ -624,14 +624,14 @@ const assignResourceFetchDurations = (
 ) => {
 	const durations = {
 		domain_lookup:
-			(resource.domainLookupEnd - resource.domainLookupStart) * 1e6,
-		connect: (resource.connectEnd - resource.connectStart) * 1e6,
-		request: (resource.responseEnd - resource.requestStart) * 1e6,
-		response: (resource.responseEnd - resource.responseStart) * 1e6,
+			(resource.domainLookupEnd - resource.domainLookupStart) * 1e9,
+		connect: (resource.connectEnd - resource.connectStart) * 1e9,
+		request: (resource.responseEnd - resource.requestStart) * 1e9,
+		response: (resource.responseEnd - resource.responseStart) * 1e9,
 	}
 
 	Object.entries(durations).forEach(([key, value]) => {
-		if (value > 0) {
+		if (value !== undefined) {
 			span.setAttribute(`timings.${key}.ns`, value)
 			span.setAttribute(
 				`timings.${key}.readable`,
