@@ -61,6 +61,10 @@ export type ObserveOptions = CommonOptions & {
 		 * OTLP HTTP endpoint for OpenTelemetry tracing.
 		 */
 		otlpEndpoint?: string
+		/**
+		 * User interaction instrumentation event names to record.
+		 * Defaults to 'click', 'input', 'submit' window events.
+		 */
 		eventNames?: EventName[]
 	}
 }
