@@ -15,6 +15,7 @@
 		"@launchdarkly/observability": "workspace:*",
 		"@launchdarkly/session-replay": "workspace:*",
 		"launchdarkly-js-client-sdk": "^3.7.0",
+		"launchdarkly-react-client-sdk": "^3.7.0",
 		"localforage": "^1.10.0",
 		"match-sorter": "^6.3.1",
 		"react": "^19.0.0",

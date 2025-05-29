@@ -9,6 +9,7 @@ import {
 	useRouteError,
 } from 'react-router-dom'
 import Root from './routes/root'
+import Welcome from './routes/welcome'
 
 function rootAction() {
 	const contact = { name: 'hello' }
@@ -41,17 +42,20 @@ export function ErrorPage() {
 
 const router = createBrowserRouter(
 	createRoutesFromElements(
-		<Route
-			path="/"
-			element={<Root />}
-			loader={rootLoader}
-			action={rootAction}
-			ErrorBoundary={ErrorPage}
-		>
-			<Route>
-				<Route index element={<Root />} />
+		<>
+			<Route
+				path="/"
+				element={<Root />}
+				loader={rootLoader}
+				action={rootAction}
+				ErrorBoundary={ErrorPage}
+			>
+				<Route>
+					<Route index element={<Root />} />
+				</Route>
 			</Route>
-		</Route>,
+			<Route path={'/welcome'} element={<Welcome />} />
+		</>,
 	),
 )
 

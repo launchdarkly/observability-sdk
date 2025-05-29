@@ -5,7 +5,7 @@ import SessionReplay, { LDRecord } from '@launchdarkly/session-replay'
 import { useEffect, useRef, useState } from 'react'
 // import { LD } from '@launchdarkly/browser'
 
-const client = init(
+export const client = init(
 	'66d9d3c255856f0fa8fd62d0',
 	{ key: 'unknown' },
 	{
