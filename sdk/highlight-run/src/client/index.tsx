@@ -601,6 +601,7 @@ export class Highlight {
 					serviceName:
 						this.options?.serviceName ?? 'highlight-browser',
 					instrumentations: this.options?.otel?.instrumentations,
+					eventNames: this.options?.otel?.eventNames,
 					getIntegrations: () => [...this._integrations],
 				},
 				sampler,

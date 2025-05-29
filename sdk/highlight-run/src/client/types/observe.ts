@@ -4,6 +4,7 @@ import type {
 	OtelOptions,
 } from './client'
 import type { CommonOptions } from './types'
+import type { EventName } from '@opentelemetry/instrumentation-user-interaction'
 
 export type ObserveOptions = CommonOptions & {
 	/**
@@ -60,5 +61,6 @@ export type ObserveOptions = CommonOptions & {
 		 * OTLP HTTP endpoint for OpenTelemetry tracing.
 		 */
 		otlpEndpoint?: string
+		eventNames?: EventName[]
 	}
 }

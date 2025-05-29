@@ -15,6 +15,7 @@ import { AsyncTask } from '@opentelemetry/instrumentation-user-interaction/build
 
 const ZONE_CONTEXT_KEY = 'OT_ZONE_CONTEXT'
 const EVENT_NAVIGATION_NAME = 'Navigation:'
+const DEFAULT_EVENT_NAMES = ['click', 'input', 'submit'] as const
 
 function defaultShouldPreventSpanCreation() {
 	return false
@@ -40,6 +41,7 @@ export class UserInteractionInstrumentation extends InstrumentationBase {
 		Event,
 		api.Span
 	>()
+	private _eventNames: Set<EventName>
 	private _shouldPreventSpanCreation: ShouldPreventSpanCreation
 
 	constructor(config: UserInteractionInstrumentationConfig = {}) {
@@ -47,6 +49,9 @@ export class UserInteractionInstrumentation extends InstrumentationBase {
 			UserInteractionInstrumentation.moduleName,
 			UserInteractionInstrumentation.version,
 			config,
+		)
+		this._eventNames = new Set(
+			(config?.eventNames ?? DEFAULT_EVENT_NAMES) as EventName[],
 		)
 		this._shouldPreventSpanCreation =
 			typeof config?.shouldPreventSpanCreation === 'function'
@@ -81,8 +86,8 @@ export class UserInteractionInstrumentation extends InstrumentationBase {
 	/**
 	 * Controls whether or not to create a span, based on the event type.
 	 */
-	protected _allowEventName(_: EventName): boolean {
-		return true
+	protected _allowEventName(eventName: EventName): boolean {
+		return this._eventNames.has(eventName)
 	}
 
 	/**
