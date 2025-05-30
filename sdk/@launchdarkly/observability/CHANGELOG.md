@@ -1,5 +1,14 @@
 # @launchdarkly/observability
 
+## 0.1.17
+
+### Patch Changes
+
+- 3f513ca: remove verbosity of user instrumentation events by default.
+  only reports click, input, and submit window events as spans unless `otel.eventNames` is provided.
+- Updated dependencies [3f513ca]
+    - highlight.run@9.18.13
+
 ## 0.1.16
 
 ### Patch Changes
