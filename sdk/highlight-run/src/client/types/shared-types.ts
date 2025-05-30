@@ -18,6 +18,7 @@ export type ErrorMessageType =
 	| 'React.ErrorBoundary'
 
 export type ErrorMessage = {
+	error: Error
 	event: string
 	type: ErrorMessageType
 	url: string

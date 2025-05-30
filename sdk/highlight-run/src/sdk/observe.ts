@@ -10,10 +10,12 @@ import {
 	SpanStatusCode,
 	UpDownCounter,
 } from '@opentelemetry/api'
-import { BrowserTracingConfig, Callback, LOG_SPAN_NAME } from '../client/otel'
 import {
 	BROWSER_METER_NAME,
+	BrowserTracingConfig,
+	Callback,
 	getTracer,
+	LOG_SPAN_NAME,
 	setupBrowserTracing,
 } from '../client/otel'
 import type { Observe } from '../api/observe'
@@ -26,8 +28,8 @@ import {
 import { parseError } from '../client/utils/errors'
 import {
 	type Hook,
-	type LDClient,
 	LaunchDarklyIntegration,
+	type LDClient,
 } from '../integrations/launchdarkly'
 import type { IntegrationClient } from '../integrations'
 import type { OTelMetric as Metric, RecordMetric } from '../client/types/types'
@@ -148,6 +150,7 @@ export class ObserveSDK implements Observe {
 		}
 		const res = parseError(error)
 		const errorMsg: ErrorMessage = {
+			error,
 			event,
 			type: type ?? 'custom',
 			url: window.location.href,
@@ -439,13 +442,15 @@ export class ObserveSDK implements Observe {
 				) {
 					return
 				}
-				const err = new Error(e.event)
-				err.stack = stringify(e.stackTrace.map((s) => s.toString()))
 				this.recordError(
-					err,
+					e.error,
 					e.event,
 					{
-						...(e.payload ? { payload: e.payload } : {}),
+						...(e.payload
+							? typeof e.payload === 'object'
+								? e.payload
+								: { payload: e.payload }
+							: {}),
 						lineNumber: e.lineNumber.toString(),
 						columnNumber: e.columnNumber.toString(),
 						source: e.source,
