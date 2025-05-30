@@ -51,7 +51,6 @@ import {
 	PerformanceListener,
 	PerformancePayload,
 } from '../client/listeners/performance-listener/performance-listener'
-import { LDObserve } from './LDObserve'
 import {
 	JankListener,
 	JankPayload,
