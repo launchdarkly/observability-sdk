@@ -25426,7 +25426,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"hoist-non-react-statics@npm:^3.3.0, hoist-non-react-statics@npm:^3.3.1":
+"hoist-non-react-statics@npm:^3.3.0, hoist-non-react-statics@npm:^3.3.1, hoist-non-react-statics@npm:^3.3.2":
   version: 3.3.2
   resolution: "hoist-non-react-statics@npm:3.3.2"
   dependencies:
@@ -29021,6 +29021,20 @@ __metadata:
     fast-deep-equal: "npm:^2.0.1"
     uuid: "npm:^8.0.0"
   checksum: 10/ff38fc42956e1f435beb9cd8c68cbb99d365c27678b425a0e400b0e136a5fca3cfa61aaa69edc5b24ac82f913f8f1f2b6d9f8767106718d98bf0e07eb6c7b105
+  languageName: node
+  linkType: hard
+
+"launchdarkly-react-client-sdk@npm:^3.7.0":
+  version: 3.7.0
+  resolution: "launchdarkly-react-client-sdk@npm:3.7.0"
+  dependencies:
+    hoist-non-react-statics: "npm:^3.3.2"
+    launchdarkly-js-client-sdk: "npm:^3.7.0"
+    lodash.camelcase: "npm:^4.3.0"
+  peerDependencies:
+    react: ^16.6.3 || ^17.0.0 || ^18.0.0 || ^19.0.0
+    react-dom: ^16.8.4 || ^17.0.0 || ^18.0.0 || ^19.0.0
+  checksum: 10/bff2dea3e49d7e99062f605727f991445a7e321debd6a52a567b5935c0eeb18de8511914547f0b49178a6d032424e5614b74c361c134e64cfc50a354dd0c26c7
   languageName: node
   linkType: hard
 
@@ -35611,6 +35625,7 @@ __metadata:
     eslint-plugin-react-hooks: "npm:^4.6.0"
     eslint-plugin-react-refresh: "npm:^0.4.1"
     launchdarkly-js-client-sdk: "npm:^3.7.0"
+    launchdarkly-react-client-sdk: "npm:^3.7.0"
     localforage: "npm:^1.10.0"
     match-sorter: "npm:^6.3.1"
     react: "npm:^19.0.0"

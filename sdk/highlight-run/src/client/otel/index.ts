@@ -57,6 +57,7 @@ import { LD_METRIC_NAME_DOCUMENT_LOAD } from '../../integrations/launchdarkly'
 
 import { ExportSampler } from './sampling/ExportSampler'
 import { getPersistentSessionSecureID } from '../utils/sessionStorage/highlightSession'
+import type { EventName } from '@opentelemetry/instrumentation-user-interaction'
 export type Callback = (span?: Span) => any
 
 export type BrowserTracingConfig = {
@@ -69,6 +70,7 @@ export type BrowserTracingConfig = {
 	serviceName?: string
 	tracingOrigins?: boolean | (string | RegExp)[]
 	urlBlocklist?: string[]
+	eventNames?: EventName[]
 	instrumentations?: OtelInstrumentatonOptions
 	getIntegrations?: () => IntegrationClient[]
 }
@@ -184,7 +186,11 @@ export const setupBrowserTracing = (
 			'@opentelemetry/instrumentation-user-interaction'
 		]
 	if (userInteractionConfig !== false) {
-		instrumentations.push(new UserInteractionInstrumentation())
+		instrumentations.push(
+			new UserInteractionInstrumentation({
+				eventNames: config.eventNames,
+			}),
+		)
 	}
 
 	if (config.networkRecordingOptions?.enabled) {

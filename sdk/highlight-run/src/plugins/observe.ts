@@ -72,6 +72,7 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 				tracingOrigins: options?.tracingOrigins,
 				serviceName: options?.serviceName ?? 'browser',
 				instrumentations: options?.otel?.instrumentations,
+				eventNames: options?.otel?.eventNames,
 			}
 			this.observe = new ObserveSDK(clientOptions)
 			LDObserve.load(this.observe)
