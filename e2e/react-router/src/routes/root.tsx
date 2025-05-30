@@ -71,6 +71,44 @@ export default function Root() {
 				LDRecord.start(forceNew)
 			</button>
 			<button
+				onClick={() => {
+					throw new Error('thrown error')
+				}}
+			>
+				throw error
+			</button>
+			<button
+				onClick={() => {
+					LDObserve.recordGauge({
+						name: 'my-random-metric',
+						value: Math.floor(Math.random() * 100),
+					})
+				}}
+			>
+				LDObserve.recordGauge(random value)
+			</button>
+			<button
+				onClick={() => {
+					LDObserve.recordGauge({
+						name: 'my-metric',
+						value: 0,
+					})
+				}}
+			>
+				LDObserve.recordGauge(0 value)
+			</button>
+			<button
+				onClick={() => {
+					LDObserve.recordGauge({
+						name: 'my-metric-attrs',
+						value: 0,
+						attributes: { foo: 'bar', baz: 42 },
+					})
+				}}
+			>
+				LDObserve.recordGauge(0 value w attrs)
+			</button>
+			<button
 				onClick={async () => {
 					setFlags(
 						JSON.stringify(

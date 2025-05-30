@@ -11,12 +11,7 @@ import {
 	Sdk,
 } from '../client/graph/generated/operations'
 import { PathListener } from '../client/listeners/path-listener'
-import {
-	DebugOptions,
-	MetricCategory,
-	MetricName,
-	SessionShortcutOptions,
-} from '../client/types/client'
+import { DebugOptions, SessionShortcutOptions } from '../client/types/client'
 import {
 	type Metadata,
 	PrivacySettingOption,
@@ -48,11 +43,6 @@ import {
 	ViewportResizeListener,
 	type ViewportResizeListenerArgs,
 } from '../client/listeners/viewport-resize-listener'
-import { WebVitalsListener } from '../client/listeners/web-vitals-listener/web-vitals-listener'
-import {
-	NetworkPerformanceListener,
-	NetworkPerformancePayload,
-} from '../client/listeners/network-listener/performance-listener'
 import { Logger } from '../client/logger'
 import {
 	HighlightIframeMessage,
@@ -67,7 +57,6 @@ import {
 	clearHighlightLogs,
 	getHighlightLogs,
 } from '../client/utils/highlight-logging'
-import { getPerformanceMethods } from '../client/utils/performance/performance'
 import { GenerateSecureID } from '../client/utils/secure-id'
 import {
 	getPreviousSessionData,
@@ -86,7 +75,6 @@ import { getDefaultDataURLOptions } from '../client/utils/utils'
 import type { HighlightClientRequestWorker } from '../client/workers/highlight-client-worker'
 import HighlightClientWorker from '../client/workers/highlight-client-worker?worker&inline'
 import { MessageType, PropertyType } from '../client/workers/types'
-import { Attributes } from '@opentelemetry/api'
 import { IntegrationClient } from '../integrations'
 import { Record } from '../api/record'
 import { internalLog } from './util'
@@ -94,7 +82,6 @@ import type { HighlightClassOptions } from '../client'
 import { Highlight } from '../client'
 import type { Hook, LDClient } from '../integrations/launchdarkly'
 import { LaunchDarklyIntegration } from '../integrations/launchdarkly'
-import { LDObserve } from './LDObserve'
 import { LDPluginEnvironmentMetadata } from '../plugins/plugin'
 import { RecordOptions } from '../client/types/record'
 
@@ -566,18 +553,6 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 				return
 			}
 
-			const { getDeviceDetails } = getPerformanceMethods()
-			if (getDeviceDetails) {
-				LDObserve.recordGauge({
-					name: MetricName.DeviceMemory,
-					value: getDeviceDetails().deviceMemory,
-					attributes: {
-						category: MetricCategory.Device,
-						group: window.location.href,
-					},
-				})
-			}
-
 			const emit = (
 				event: eventWithTime,
 				isCheckout?: boolean | undefined,
@@ -807,7 +782,6 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 				ViewportResizeListener(
 					(viewport: ViewportResizeListenerArgs) => {
 						this.addCustomEvent('Viewport', viewport)
-						this.submitViewportMetrics(viewport)
 					},
 				),
 			)
@@ -837,52 +811,6 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 						this.addCustomEvent('Focus', focusTarget)
 					}
 				}),
-			)
-
-			this.listeners.push(
-				WebVitalsListener((data) => {
-					const { name, value } = data
-					LDObserve.recordGauge({
-						name,
-						value,
-						attributes: {
-							group: window.location.href,
-							category: MetricCategory.WebVital,
-						},
-					})
-				}),
-			)
-
-			this.listeners.push(
-				NetworkPerformanceListener(
-					(payload: NetworkPerformancePayload) => {
-						const attributes: Attributes = {
-							category: MetricCategory.Performance,
-							group: window.location.href,
-						}
-						if (payload.saveData !== undefined) {
-							attributes['saveData'] = payload.saveData.toString()
-						}
-						if (payload.effectiveType !== undefined) {
-							attributes['effectiveType'] =
-								payload.effectiveType.toString()
-						}
-						if (payload.type !== undefined) {
-							attributes['type'] = payload.type.toString()
-						}
-						Object.entries(payload).forEach(
-							([name, value]) =>
-								value &&
-								typeof value === 'number' &&
-								LDObserve.recordGauge({
-									name,
-									value: value as number,
-									attributes,
-								}),
-						)
-					},
-					this._recordingStartTime,
-				),
 			)
 
 			if (this.sessionShortcut) {
@@ -957,54 +885,6 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 				window.removeEventListener('beforeunload', unloadListener),
 			)
 		}
-	}
-
-	submitViewportMetrics({
-		height,
-		width,
-		availHeight,
-		availWidth,
-	}: ViewportResizeListenerArgs) {
-		LDObserve.recordGauge({
-			name: MetricName.ViewportHeight,
-			value: height,
-			attributes: {
-				category: MetricCategory.Device,
-				group: window.location.href,
-			},
-		})
-		LDObserve.recordGauge({
-			name: MetricName.ViewportWidth,
-			value: width,
-			attributes: {
-				category: MetricCategory.Device,
-				group: window.location.href,
-			},
-		})
-		LDObserve.recordGauge({
-			name: MetricName.ScreenHeight,
-			value: availHeight,
-			attributes: {
-				category: MetricCategory.Device,
-				group: window.location.href,
-			},
-		})
-		LDObserve.recordGauge({
-			name: MetricName.ScreenWidth,
-			value: availWidth,
-			attributes: {
-				category: MetricCategory.Device,
-				group: window.location.href,
-			},
-		})
-		LDObserve.recordGauge({
-			name: MetricName.ViewportArea,
-			value: height * width,
-			attributes: {
-				category: MetricCategory.Device,
-				group: window.location.href,
-			},
-		})
 	}
 
 	/**

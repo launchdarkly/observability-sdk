@@ -28,4 +28,5 @@ export type ErrorMessage = {
 	/** The Unix Time of when the error was thrown. */
 	timestamp: string
 	payload?: string
+	error?: Error
 }

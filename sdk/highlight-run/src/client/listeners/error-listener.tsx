@@ -14,7 +14,8 @@ function handleError(
 	source: string | undefined,
 	error?: Error,
 ) {
-	let res = parseError(error ?? event)
+	let e: Error = error ?? event
+	let res = parseError(e)
 	let payload: Object = {}
 	if (event instanceof Error) {
 		event = event.message
@@ -24,6 +25,7 @@ function handleError(
 	}
 	const framesToUse = removeHighlightFrameIfExists(res)
 	callback({
+		error: e,
 		event: stringify(event),
 		type: 'window.onerror',
 		url: window.location.href,

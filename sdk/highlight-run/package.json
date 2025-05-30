@@ -33,7 +33,8 @@
 		"enforce-size": "size-limit",
 		"test": "vitest --run",
 		"test:watch": "vitest",
-		"typegen": "FORMAT=d.ts vite build",
+		"typegen": "yarn typegen:check && FORMAT=d.ts vite build",
+		"typegen:check": "tsc --noEmit",
 		"docs": "typedoc"
 	},
 	"type": "module",

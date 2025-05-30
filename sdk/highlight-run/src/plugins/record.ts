@@ -51,6 +51,7 @@ export class Record extends Plugin<RecordOptions> implements LDPlugin {
 				environment: options?.environment || 'production',
 				appVersion: options?.version,
 				sessionSecureID: this.sessionSecureID,
+				privacySetting: options?.privacySetting ?? 'strict',
 			}
 
 			this.record = new RecordSDK(client_options)
