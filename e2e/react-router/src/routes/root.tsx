@@ -72,6 +72,13 @@ export default function Root() {
 			</button>
 			<button
 				onClick={() => {
+					throw new Error('thrown error')
+				}}
+			>
+				throw error
+			</button>
+			<button
+				onClick={() => {
 					LDObserve.recordGauge({
 						name: 'my-random-metric',
 						value: Math.floor(Math.random() * 100),
