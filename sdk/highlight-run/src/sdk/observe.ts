@@ -33,7 +33,11 @@ import {
 } from '../integrations/launchdarkly'
 import type { IntegrationClient } from '../integrations'
 import type { OTelMetric as Metric, RecordMetric } from '../client/types/types'
-import { ConsoleMethods, MetricCategory } from '../client/types/client'
+import {
+	ConsoleMethods,
+	MetricCategory,
+	MetricName,
+} from '../client/types/client'
 import { ObserveOptions } from '../client/types/observe'
 import { ConsoleListener } from '../client/listeners/console-listener'
 import stringify from 'json-stringify-safe'
@@ -59,6 +63,16 @@ import { GraphQLClient } from 'graphql-request'
 import { getGraphQLRequestWrapper } from '../client/utils/graph'
 import { internalLog } from './util'
 import { getPersistentSessionSecureID } from '../client/utils/sessionStorage/highlightSession'
+import { WebVitalsListener } from '../client/listeners/web-vitals-listener/web-vitals-listener'
+import { getPerformanceMethods } from '../client/utils/performance/performance'
+import {
+	ViewportResizeListener,
+	type ViewportResizeListenerArgs,
+} from '../client/listeners/viewport-resize-listener'
+import {
+	NetworkPerformanceListener,
+	NetworkPerformancePayload,
+} from '../client/listeners/network-listener/performance-listener'
 
 export class ObserveSDK implements Observe {
 	/** Verbose project ID that is exposed to users. Legacy users may still be using ints. */
@@ -346,6 +360,54 @@ export class ObserveSDK implements Observe {
 		return this._integrations.flatMap((i) => i.getHooks?.(metadata) ?? [])
 	}
 
+	private submitViewportMetrics({
+		height,
+		width,
+		availHeight,
+		availWidth,
+	}: ViewportResizeListenerArgs) {
+		this.recordGauge({
+			name: MetricName.ViewportHeight,
+			value: height,
+			attributes: {
+				category: MetricCategory.Device,
+				group: window.location.href,
+			},
+		})
+		this.recordGauge({
+			name: MetricName.ViewportWidth,
+			value: width,
+			attributes: {
+				category: MetricCategory.Device,
+				group: window.location.href,
+			},
+		})
+		this.recordGauge({
+			name: MetricName.ScreenHeight,
+			value: availHeight,
+			attributes: {
+				category: MetricCategory.Device,
+				group: window.location.href,
+			},
+		})
+		this.recordGauge({
+			name: MetricName.ScreenWidth,
+			value: availWidth,
+			attributes: {
+				category: MetricCategory.Device,
+				group: window.location.href,
+			},
+		})
+		this.recordGauge({
+			name: MetricName.ViewportArea,
+			value: height * width,
+			attributes: {
+				category: MetricCategory.Device,
+				group: window.location.href,
+			},
+		})
+	}
+
 	private setupListeners(options: ObserveOptions) {
 		if (!options.disableConsoleRecording) {
 			ConsoleListener(
@@ -411,7 +473,7 @@ export class ObserveSDK implements Observe {
 					.forEach(
 						([name, value]) =>
 							value &&
-							LDObserve.recordGauge({
+							this.recordGauge({
 								name,
 								value,
 								attributes: {
@@ -422,7 +484,7 @@ export class ObserveSDK implements Observe {
 					)
 			}, 0)
 			JankListener((payload: JankPayload) => {
-				LDObserve.recordGauge({
+				this.recordGauge({
 					name: 'Jank',
 					value: payload.jankAmount,
 					attributes: {
@@ -462,5 +524,58 @@ export class ObserveSDK implements Observe {
 			},
 			{ enablePromisePatch: !!options.enablePromisePatch },
 		)
+		WebVitalsListener((data) => {
+			const { name, value } = data
+			this.recordGauge({
+				name,
+				value,
+				attributes: {
+					group: window.location.href,
+					category: MetricCategory.WebVital,
+				},
+			})
+		})
+		ViewportResizeListener((viewport: ViewportResizeListenerArgs) => {
+			this.submitViewportMetrics(viewport)
+		})
+		NetworkPerformanceListener((payload: NetworkPerformancePayload) => {
+			const attributes: Attributes = {
+				category: MetricCategory.Performance,
+				group: window.location.href,
+			}
+			if (payload.saveData !== undefined) {
+				attributes['saveData'] = payload.saveData.toString()
+			}
+			if (payload.effectiveType !== undefined) {
+				attributes['effectiveType'] = payload.effectiveType.toString()
+			}
+			if (payload.type !== undefined) {
+				attributes['type'] = payload.type.toString()
+			}
+			Object.entries(payload)
+				.filter(([name]) => name !== 'relativeTimestamp')
+				.forEach(
+					([name, value]) =>
+						value &&
+						typeof value === 'number' &&
+						this.recordGauge({
+							name,
+							value: value as number,
+							attributes,
+						}),
+				)
+		}, new Date().getTime())
+
+		const { getDeviceDetails } = getPerformanceMethods()
+		if (getDeviceDetails) {
+			this.recordGauge({
+				name: MetricName.DeviceMemory,
+				value: getDeviceDetails().deviceMemory,
+				attributes: {
+					category: MetricCategory.Device,
+					group: window.location.href,
+				},
+			})
+		}
 	}
 }
