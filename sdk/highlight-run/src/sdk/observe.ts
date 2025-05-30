@@ -83,7 +83,10 @@ export class ObserveSDK implements Observe {
 		} else {
 			this.organizationID = options.projectId.toString()
 		}
-		setupBrowserTracing(options, this.sampler)
+		setupBrowserTracing(
+			{ ...options, getIntegrations: () => this._integrations },
+			this.sampler,
+		)
 		const client = new GraphQLClient(`${options.backendUrl}`, {
 			headers: {},
 		})

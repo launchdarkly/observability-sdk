@@ -576,8 +576,9 @@ const assignDocumentDurations = (span: api.Span) => {
 		request: calculateDuration('requestStart', 'requestEnd', events),
 		response: calculateDuration('responseStart', 'responseEnd', events),
 	}
-	for (const _integration of otelConfig?.getIntegrations?.() ?? []) {
-		if (durations_ns.document_load !== undefined) {
+	const integrations = otelConfig?.getIntegrations?.() ?? []
+	if (durations_ns.document_load !== undefined) {
+		for (const _integration of integrations) {
 			_integration.recordGauge(otelConfig?.sessionSecureId ?? '', {
 				name: LD_METRIC_NAME_DOCUMENT_LOAD,
 				value: durations_ns.document_load / 1e6,
@@ -631,13 +632,8 @@ const assignResourceFetchDurations = (
 	}
 
 	Object.entries(durations).forEach(([key, value]) => {
-		if (value !== undefined) {
-			span.setAttribute(`timings.${key}.ns`, value)
-			span.setAttribute(
-				`timings.${key}.readable`,
-				humanizeDuration(value),
-			)
-		}
+		span.setAttribute(`timings.${key}.ns`, value)
+		span.setAttribute(`timings.${key}.readable`, humanizeDuration(value))
 	})
 }
 
