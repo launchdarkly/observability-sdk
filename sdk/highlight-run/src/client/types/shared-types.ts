@@ -18,7 +18,6 @@ export type ErrorMessageType =
 	| 'React.ErrorBoundary'
 
 export type ErrorMessage = {
-	error: Error
 	event: string
 	type: ErrorMessageType
 	url: string
@@ -29,4 +28,5 @@ export type ErrorMessage = {
 	/** The Unix Time of when the error was thrown. */
 	timestamp: string
 	payload?: string
+	error?: Error
 }

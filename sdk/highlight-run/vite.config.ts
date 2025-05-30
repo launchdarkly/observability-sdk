@@ -20,6 +20,7 @@ export default defineConfig({
 		dts({
 			declarationOnly: process.env.FORMAT === 'd.ts',
 			rollupTypes: true,
+			strictOutput: true,
 		}),
 	],
 	build: {

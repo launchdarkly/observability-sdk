@@ -503,8 +503,10 @@ export class ObserveSDK implements Observe {
 				) {
 					return
 				}
+				const err = new Error(e.event)
+				err.stack = stringify(e.stackTrace.map((s) => s.toString()))
 				this.recordError(
-					e.error,
+					e.error ?? err,
 					e.event,
 					{
 						...(e.payload
