@@ -1,5 +1,12 @@
 # highlight.run
 
+## 9.18.13
+
+### Patch Changes
+
+- 3f513ca: remove verbosity of user instrumentation events by default.
+  only reports click, input, and submit window events as spans unless `otel.eventNames` is provided.
+
 ## 9.18.12
 
 ### Patch Changes
