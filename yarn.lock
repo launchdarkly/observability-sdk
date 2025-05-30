@@ -6896,7 +6896,7 @@ __metadata:
     "@opentelemetry/sdk-node": "npm:^0.57.2"
     "@opentelemetry/sdk-trace-base": "npm:^1.30.1"
     "@opentelemetry/semantic-conventions": "npm:^1.30.0"
-    "@opentelemetry/winston-transport": "npm:^0.10.0"
+    "@opentelemetry/winston-transport": "npm:^0.12.0"
     "@prisma/instrumentation": "npm:>=5.0.0"
     "@rollup/plugin-commonjs": "npm:^28.0.2"
     "@rollup/plugin-json": "npm:^6.1.0"
@@ -9250,6 +9250,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@opentelemetry/api-logs@npm:^0.201.0":
+  version: 0.201.1
+  resolution: "@opentelemetry/api-logs@npm:0.201.1"
+  dependencies:
+    "@opentelemetry/api": "npm:^1.3.0"
+  checksum: 10/baa14906caf848b7ff32fdd2b8cbad5c96b6e5b4bb4e52cb4118b323b77b2e99630b4d58d92f110343d475a21fd5bdcaaa37c29a4a386136ed4ee01528a2b2ed
+  languageName: node
+  linkType: hard
+
 "@opentelemetry/api@npm:^1.3.0, @opentelemetry/api@npm:^1.9.0":
   version: 1.9.0
   resolution: "@opentelemetry/api@npm:1.9.0"
@@ -10379,13 +10388,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@opentelemetry/winston-transport@npm:^0.10.0":
-  version: 0.10.0
-  resolution: "@opentelemetry/winston-transport@npm:0.10.0"
+"@opentelemetry/winston-transport@npm:^0.12.0":
+  version: 0.12.0
+  resolution: "@opentelemetry/winston-transport@npm:0.12.0"
   dependencies:
-    "@opentelemetry/api-logs": "npm:^0.57.0"
+    "@opentelemetry/api-logs": "npm:^0.201.0"
     winston-transport: "npm:4.*"
-  checksum: 10/afac427e2a9101a73a03b0028d0707f202902be67dfb4a8650acf12b55b04985037f9ac49bf320c42491b50ad5a52b87a704ebb2049645ccdbdbdb56d0e6de6a
+  checksum: 10/19c64fde5ea5453270d290e9795754201ad3b6dd95d55d2af43bd96705a860943804948d80a3571e27eb4383a5d5a091d147a5b66f6cbe503dad6e250d491c17
   languageName: node
   linkType: hard
 
