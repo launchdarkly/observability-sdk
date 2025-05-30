@@ -172,7 +172,6 @@ export class ObserveSDK implements Observe {
 			columnNumber: res[0]?.columnNumber ? res[0]?.columnNumber : 0,
 			stackTrace: res,
 			timestamp: new Date().toISOString(),
-			payload: JSON.stringify(payload),
 		}
 		this.startSpan('highlight.exception', (span) => {
 			span?.recordException(error)
@@ -183,7 +182,7 @@ export class ObserveSDK implements Observe {
 				source: errorMsg.source,
 				lineNumber: errorMsg.lineNumber,
 				columnNumber: errorMsg.columnNumber,
-				payload: errorMsg.payload,
+				...payload,
 			})
 		})
 		for (const integration of this._integrations) {
