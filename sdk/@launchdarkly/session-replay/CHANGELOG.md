@@ -1,5 +1,22 @@
 # @launchdarkly/session-replay
 
+## 0.2.0
+
+### Minor Changes
+
+- c901c22: move metrics listeners to Observability plugin from SessionReplay
+- 4b48fe8: set privacySetting to `strict` by default when not set
+
+### Patch Changes
+
+- c901c22: fix ErrorListener incorrectly reporting stacktrace via trace event
+- c901c22: fix document_load metric not forwarding to ldClient
+- c901c22: allow reporting 0-value document_load durations
+- Updated dependencies [c901c22]
+- Updated dependencies [c901c22]
+- Updated dependencies [c901c22]
+    - highlight.run@9.18.14
+
 ## 0.1.17
 
 ### Patch Changes

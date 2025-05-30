@@ -1,5 +1,13 @@
 # highlight.run
 
+## 9.18.14
+
+### Patch Changes
+
+- c901c22: fix ErrorListener incorrectly reporting stacktrace via trace event
+- c901c22: fix document_load metric not forwarding to ldClient
+- c901c22: allow reporting 0-value document_load durations
+
 ## 9.18.13
 
 ### Patch Changes
