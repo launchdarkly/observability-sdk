@@ -504,15 +504,17 @@ export class ObserveSDK implements Observe {
 				}
 				const err = new Error(e.event)
 				err.stack = stringify(e.stackTrace.map((s) => s.toString()))
+				let payload: { [key: string]: string } = {}
+				try {
+					if (e.payload) {
+						payload = JSON.parse(e.payload)
+					}
+				} catch (e) {}
 				this.recordError(
 					e.error ?? err,
 					e.event,
 					{
-						...(e.payload
-							? typeof e.payload === 'object'
-								? e.payload
-								: { payload: e.payload }
-							: {}),
+						...payload,
 						lineNumber: e.lineNumber.toString(),
 						columnNumber: e.columnNumber.toString(),
 						source: e.source,
