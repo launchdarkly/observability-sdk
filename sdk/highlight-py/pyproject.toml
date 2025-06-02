@@ -2,7 +2,7 @@
 name = "highlight-io"
 version = "0.10.2"
 description = "Session replay and error monitoring: stop guessing why bugs happen!"
-license = "Apache-2.0"
+
 authors = [
     "Vadim Korolik <vadim@highlight.io>",
     "Jay Khatri <jay@highlight.io>",

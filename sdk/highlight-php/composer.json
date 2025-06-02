@@ -14,7 +14,7 @@
 	"type": "library",
 	"homepage": "https://github.com/highlight/highlight",
 	"readme": "./README.md",
-	"license": "Apache-2.0",
+
 	"require": {
 		"php": "^8.2",
 		"open-telemetry/api": "@stable",

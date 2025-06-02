@@ -23,7 +23,6 @@ defmodule Highlight.MixProject do
     [
       files: ["config", "lib", "mix.exs", "README.md"],
       maintainers: ["Vadim Korolik <vadim@highlight.io>"],
-      licenses: ["Apache-2.0"],
       links: %{"GitHub" => "https://github.com/highlight/highlight"}
     ]
   end
