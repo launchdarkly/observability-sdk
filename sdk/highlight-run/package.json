@@ -17,7 +17,7 @@
 		"url": "https://github.com/highlight/highlight/issues",
 		"email": "support@highlight.io"
 	},
-
+	"license": "Apache-2.0",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/launchdarkly/observability-sdk.git"
