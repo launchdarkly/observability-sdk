@@ -48,10 +48,17 @@ Running `yarn build` in an individual package (`@launchdarkly/observability` or 
 To run all unit tests:
 
 ```shell
-TKTK
+# install dependencies
+yarn
+
+# lint
+yarn format-check
+
+# run all tests
+yarn test
 ```
 
-It is preferable to run tests against TKTK-which versions prior to submitting a pull request. However, LaunchDarkly's CI tests will run automatically against all supported versions.
+LaunchDarkly's CI tests will run automatically against all supported versions. To learn more, read [`.github/workflows/turbo.yml`](.github/workflows/turbo.yml).
 
 ## Code organization
 
