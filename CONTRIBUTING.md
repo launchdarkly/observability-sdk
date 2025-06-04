@@ -64,6 +64,10 @@ LaunchDarkly's CI tests will run automatically against all supported versions. T
 
 The library's structure is as follows:
 
+* `sdk/` directory contains all SDKs
+  * `@launchdarkly` directory with `sdk/` contains the `@launchdarkly`-prefixed npm packages
+* `e2e` directory contains end to end tests exercising the SDKs
+* `rrweb` directory hosts the rrweb fork as a git submodule; used by the Session Replay SDK
 
 ## Documenting types and methods
 
