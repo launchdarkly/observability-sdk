@@ -1,2 +1,2 @@
-import { version } from '../package.json'
-export default version
+import pkg from '../package.json' assert { type: 'json' }
+export default pkg.version
