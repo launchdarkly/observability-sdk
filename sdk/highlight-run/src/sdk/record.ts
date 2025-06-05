@@ -393,7 +393,6 @@ export class RecordSDK implements Record {
 
 	async start(options?: StartOptions) {
 		if (
-			(navigator?.webdriver && !window.Cypress) ||
 			navigator?.userAgent?.includes('Googlebot') ||
 			navigator?.userAgent?.includes('AdsBot')
 		) {
