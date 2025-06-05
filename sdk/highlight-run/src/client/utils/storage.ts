@@ -1,6 +1,6 @@
 import Cookies from 'js-cookie'
 import { SESSION_PUSH_THRESHOLD } from '../constants/sessions'
-import { internalLog } from '../../sdk/util'
+import { internalLogOnce } from '../../sdk/util'
 
 export enum LocalStorageKeys {
 	CLIENT_ID = 'highlightClientID',
@@ -50,16 +50,41 @@ export const globalStorage = new Storage()
 export const cookieStorage = new CookieStorage()
 
 const getPersistentStorage = () => {
+	let storage:
+		| Storage
+		| typeof window.localStorage
+		| typeof window.sessionStorage
+		| null = null
+
 	try {
 		switch (mode) {
 			case 'localStorage':
-				return window.localStorage
+				storage = window.localStorage
+				break
 			case 'sessionStorage':
-				return window.sessionStorage
+				storage = window.sessionStorage
+				break
+		}
+		if (!storage) {
+			internalLogOnce(
+				'storage',
+				'getPersistentStorage',
+				'debug',
+				`persistent storage was not found for mode ${mode}; using global storage`,
+			)
+			storage = globalStorage
 		}
 	} catch (e) {
-		return globalStorage
+		internalLogOnce(
+			'storage',
+			'getPersistentStorage',
+			'debug',
+			`failed to get persistent storage; using global storage`,
+			e,
+		)
+		storage = globalStorage
 	}
+	return storage
 }
 
 export const setStorageMode = (m: Mode) => {
@@ -74,8 +99,9 @@ export const getItem = (key: string) => {
 	try {
 		return getPersistentStorage().getItem(key)
 	} catch (e) {
-		internalLog(
+		internalLogOnce(
 			`storage`,
+			'getItem',
 			'debug',
 			`failed to get item ${key}; using global storage`,
 			e,
@@ -89,8 +115,9 @@ export const setItem = (key: string, value: string) => {
 	try {
 		return getPersistentStorage().setItem(key, value)
 	} catch (e) {
-		internalLog(
+		internalLogOnce(
 			`storage`,
+			'setItem',
 			'debug',
 			`failed to set item ${key}; using global storage`,
 			e,
@@ -104,8 +131,9 @@ export const removeItem = (key: string) => {
 	try {
 		return getPersistentStorage().removeItem(key)
 	} catch (e) {
-		internalLog(
+		internalLogOnce(
 			`storage`,
+			'removeItem',
 			'debug',
 			`failed to remove item ${key}; using global storage`,
 			e,
