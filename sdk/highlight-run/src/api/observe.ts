@@ -138,7 +138,7 @@ export interface Observe {
 	 * @see {@link https://docs.highlight.run/grouping-errors} for more information.
 	 */
 	recordError: (
-		error: Error,
+		error: any,
 		message?: string,
 		payload?: { [key: string]: string },
 		source?: string,
