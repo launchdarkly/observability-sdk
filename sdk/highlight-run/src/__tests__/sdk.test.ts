@@ -75,6 +75,8 @@ describe('SDK', () => {
 				}),
 			})
 			const sdk = new Record()
+			// trigger sdk to initialize
+			sdk.getHooks?.({ sdkKey: 'abc123', sdk: { name: '', version: '' } })
 			expect(sdk.record).toBeDefined()
 			vi.unstubAllGlobals()
 		})
