@@ -1180,6 +1180,8 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 				'') as keyof typeof LAUNCHDARKLY_ENV_APPS
 			const appUrl = LAUNCHDARKLY_ENV_APPS[domain]
 			return `https://${appUrl}${LAUNCHDARKLY_PATH_PREFIX}`
+		} else if (this._backendUrl.endsWith('/public')) {
+			// TODO(vkorolik)
 		}
 		return LAUNCHDARKLY_URL
 	}
