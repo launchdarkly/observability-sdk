@@ -40,7 +40,7 @@ const client = init3(
         {
           // Not including plugins at all would be equivalent to the current LaunchDarkly SDK.
           plugins: [
-            new Observability('<OBSERVABILITY_PROJECT_ID>', {
+            new Observability({
               networkRecording: {
                 enabled: true,
                 recordHeadersAndBody: true,
@@ -83,7 +83,7 @@ const client = init3(
         {
           // Not including plugins at all would be equivalent to the current LaunchDarkly SDK.
           plugins: [
-            new SessionReplay('<OBSERVABILITY_PROJECT_ID>', {
+            new SessionReplay({
               serviceName: 'example-svc',
             }), // Could be omitted for customers who cannot use session replay.
           ],
