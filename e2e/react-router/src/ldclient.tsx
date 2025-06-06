@@ -17,16 +17,17 @@ export const client = init(
 					recordHeadersAndBody: true,
 				},
 				serviceName: 'ryan-test',
-				backendUrl: 'http://localhost:8082/public',
+				backendUrl: 'https://pub.observability.ld-stg.launchdarkly.com',
 				otel: {
-					otlpEndpoint: 'http://localhost:4318',
+					otlpEndpoint:
+						'https://otel.observability.ld-stg.launchdarkly.com',
 				},
 			}),
 			new SessionReplay({
 				debug: { clientInteractions: true, domRecording: true },
 				privacySetting: 'none',
 				serviceName: 'ryan-test',
-				backendUrl: 'http://localhost:8082/public',
+				backendUrl: 'https://pub.observability.ld-stg.launchdarkly.com',
 			}), // Could be omitted for customers who cannot use session replay.
 		],
 	},
