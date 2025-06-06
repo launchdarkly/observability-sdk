@@ -3,7 +3,7 @@ import { initialize as init } from 'launchdarkly-js-client-sdk'
 import Observability from '@launchdarkly/observability'
 import SessionReplay from '@launchdarkly/session-replay'
 // import { LD } from '@launchdarkly/browser'
-import { withLDProvider } from 'launchdarkly-react-client-sdk'
+// import { withLDProvider } from 'launchdarkly-react-client-sdk'
 
 const observabilitySettings: ConstructorParameters<typeof Observability>[0] = {
 	networkRecording: {
@@ -35,7 +35,7 @@ export const client = init(
 	},
 )
 
-export const LDProvider = withLDProvider({
+/*export const LDProvider = withLDProvider({
 	clientSideID: '66d9d3c255856f0fa8fd62d0',
 	context: { key: 'unknown' },
 	options: {
@@ -44,4 +44,4 @@ export const LDProvider = withLDProvider({
 			new SessionReplay(sessionReplaySettings),
 		],
 	},
-})
+})*/
