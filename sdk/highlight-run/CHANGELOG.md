@@ -1,5 +1,11 @@
 # highlight.run
 
+## 9.18.17
+
+### Patch Changes
+
+- 3993134: refactor observability plugins to no longer require an observability project id
+
 ## 9.18.16
 
 ### Patch Changes

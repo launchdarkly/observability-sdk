@@ -1,5 +1,16 @@
 # @launchdarkly/observability
 
+## 0.3.0
+
+### Minor Changes
+
+- 3993134: refactor observability plugins to no longer require an observability project id
+
+### Patch Changes
+
+- Updated dependencies [3993134]
+    - highlight.run@9.18.17
+
 ## 0.2.2
 
 ### Patch Changes
