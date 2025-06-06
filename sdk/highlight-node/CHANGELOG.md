@@ -1,5 +1,12 @@
 # @highlight-run/node
 
+## 3.12.13
+
+### Patch Changes
+
+- Updated dependencies [3993134]
+    - highlight.run@9.18.17
+
 ## 3.12.12
 
 ### Patch Changes
