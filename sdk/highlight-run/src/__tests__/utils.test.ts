@@ -3,6 +3,9 @@ import {
 	shouldNetworkRequestBeRecorded,
 	shouldNetworkRequestBeTraced,
 } from '../client/listeners/network-listener/utils/utils'
+import { internalLogOnce } from '../sdk/util'
+
+type TestLogLevel = 'debug' | 'info' | 'error' | 'warn'
 
 describe('normalizeUrl', () => {
 	vi.stubGlobal('location', {
@@ -262,5 +265,125 @@ describe('shouldNetworkRequestBeRecorded', () => {
 				[/.*highlight\.io/],
 			),
 		).toBe(false)
+	})
+})
+
+describe('internalLogOnce', () => {
+	let consoleWarnSpy: any
+	let consoleInfoSpy: any
+	let consoleErrorSpy: any
+	let consoleDebugSpy: any
+	let spyByLevel: Record<TestLogLevel, any>
+
+	beforeEach(() => {
+		consoleDebugSpy = vi
+			.spyOn(console, 'debug')
+			.mockImplementation(() => {})
+		consoleInfoSpy = vi.spyOn(console, 'info').mockImplementation(() => {})
+		consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+		consoleErrorSpy = vi
+			.spyOn(console, 'error')
+			.mockImplementation(() => {})
+		spyByLevel = {
+			debug: consoleDebugSpy,
+			info: consoleInfoSpy,
+			warn: consoleWarnSpy,
+			error: consoleErrorSpy,
+		}
+	})
+
+	afterEach(() => {
+		vi.restoreAllMocks()
+		vi.clearAllMocks()
+	})
+
+	it('logs a message only once for the same context and logOnceId', () => {
+		const context = 'test-context-1'
+		const logOnceId = 'test-id'
+		const message = 'test message'
+
+		// First call should log
+		internalLogOnce(context, logOnceId, 'warn', message)
+		expect(consoleWarnSpy).toHaveBeenCalledTimes(1)
+		expect(consoleWarnSpy).toHaveBeenCalledWith(
+			'[@launchdarkly plugins]: (test-context-1): ',
+			message,
+		)
+
+		// Second call with same context and logOnceId should not log
+		internalLogOnce(context, logOnceId, 'warn', message)
+		expect(consoleWarnSpy).toHaveBeenCalledTimes(1) // Still only called once
+
+		// Third call with same context and logOnceId should not log
+		internalLogOnce(context, logOnceId, 'warn', 'different message')
+		expect(consoleWarnSpy).toHaveBeenCalledTimes(1) // Still only called once
+	})
+
+	it('allows logging the same logOnceId in different contexts', () => {
+		const logOnceId = 'shared-id'
+		const context1 = 'test-context-2'
+		const context2 = 'test-context-3'
+		const message = 'test message'
+
+		// First call with context-1 should log
+		internalLogOnce(context1, logOnceId, 'warn', message)
+		expect(consoleWarnSpy).toHaveBeenCalledTimes(1)
+		expect(consoleWarnSpy).toHaveBeenLastCalledWith(
+			'[@launchdarkly plugins]: (test-context-2): ',
+			message,
+		)
+
+		// Call with context-2 and same logOnceId should also log
+		internalLogOnce(context2, logOnceId, 'warn', message)
+		expect(consoleWarnSpy).toHaveBeenCalledTimes(2)
+		expect(consoleWarnSpy).toHaveBeenLastCalledWith(
+			'[@launchdarkly plugins]: (test-context-3): ',
+			message,
+		)
+
+		// Second call with context-1 should not log
+		internalLogOnce(context1, logOnceId, 'warn', message)
+		expect(consoleWarnSpy).toHaveBeenCalledTimes(2) // Still only 2 calls
+
+		// Second call with context-2 should not log
+		internalLogOnce(context2, logOnceId, 'warn', message)
+		expect(consoleWarnSpy).toHaveBeenCalledTimes(2) // Still only 2 calls
+	})
+
+	it.each(['debug', 'info', 'error', 'warn'])(
+		'works with different log levels',
+		(level) => {
+			const context = 'test-context-4'
+			const logOnceId = `test-id-${level}`
+			const message = 'test message'
+
+			// Test with 'info' level
+			internalLogOnce(context, logOnceId, level as keyof Console, message)
+			expect(spyByLevel[level as TestLogLevel]).toHaveBeenCalledTimes(1)
+			expect(spyByLevel[level as TestLogLevel]).toHaveBeenCalledWith(
+				'[@launchdarkly plugins]: (test-context-4): ',
+				message,
+			)
+		},
+	)
+
+	it('handles multiple arguments correctly', () => {
+		const context = 'test-context-5'
+		const logOnceId = 'test-id'
+
+		internalLogOnce(context, logOnceId, 'warn', 'message1', 'message2', {
+			key: 'value',
+		})
+		expect(consoleWarnSpy).toHaveBeenCalledTimes(1)
+		expect(consoleWarnSpy).toHaveBeenCalledWith(
+			'[@launchdarkly plugins]: (test-context-5): ',
+			'message1',
+			'message2',
+			{ key: 'value' },
+		)
+
+		// Second call should not log
+		internalLogOnce(context, logOnceId, 'warn', 'different', 'args')
+		expect(consoleWarnSpy).toHaveBeenCalledTimes(1) // Still only called once
 	})
 })
