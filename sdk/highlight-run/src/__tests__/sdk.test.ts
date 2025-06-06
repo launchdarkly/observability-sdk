@@ -74,7 +74,7 @@ describe('SDK', () => {
 					throw new Error('set error')
 				}),
 			})
-			const sdk = new Record('1')
+			const sdk = new Record()
 			expect(sdk.record).toBeDefined()
 			vi.unstubAllGlobals()
 		})
@@ -91,7 +91,7 @@ describe('SDK', () => {
 					throw new Error('set error')
 				}),
 			})
-			const sdk = new Record('1')
+			const sdk = new Record()
 			expect(sdk.record).toBeUndefined()
 			vi.unstubAllGlobals()
 		})
