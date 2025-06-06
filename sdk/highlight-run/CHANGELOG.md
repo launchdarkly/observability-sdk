@@ -1,5 +1,11 @@
 # highlight.run
 
+## 9.18.15
+
+### Patch Changes
+
+- 49b32d8: Improve logging for persistent storage issues.
+
 ## 9.18.14
 
 ### Patch Changes

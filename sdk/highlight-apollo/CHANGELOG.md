@@ -1,5 +1,11 @@
 # @highlight-run/apollo
 
+## 3.4.38
+
+### Patch Changes
+
+- @highlight-run/node@3.12.11
+
 ## 3.4.37
 
 ### Patch Changes
