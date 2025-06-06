@@ -1,5 +1,17 @@
 # @launchdarkly/session-replay
 
+## 0.2.2
+
+### Patch Changes
+
+- 5fdfaba: update readmes to update early access preview progress
+- 5fdfaba: gracefully handle broken url for LDRecord.getSession
+- 5fdfaba: enable session replay in webdriver navigators
+- Updated dependencies [5fdfaba]
+- Updated dependencies [5fdfaba]
+- Updated dependencies [5fdfaba]
+    - highlight.run@9.18.16
+
 ## 0.2.1
 
 ### Patch Changes

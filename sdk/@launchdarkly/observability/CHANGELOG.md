@@ -1,5 +1,19 @@
 # @launchdarkly/observability
 
+## 0.2.2
+
+### Patch Changes
+
+- 5fdfaba: 75983c01e66ee0f3fda29f7ab4a78254d11013a0
+- 5fdfaba: update readmes to update early access preview progress
+- 5fdfaba: add user agent and navigator language on trace attributes
+- 5fdfaba: update flag span event names to follow feature_flag.evaluation convention
+- 5fdfaba: add version reporting for @launchdarkly/observability
+- Updated dependencies [5fdfaba]
+- Updated dependencies [5fdfaba]
+- Updated dependencies [5fdfaba]
+    - highlight.run@9.18.16
+
 ## 0.2.1
 
 ### Patch Changes

@@ -1,5 +1,13 @@
 # highlight.run
 
+## 9.18.16
+
+### Patch Changes
+
+- 5fdfaba: add user agent and navigator language on trace attributes
+- 5fdfaba: update flag span event names to follow feature_flag.evaluation convention
+- 5fdfaba: fix internal version reporting
+
 ## 9.18.15
 
 ### Patch Changes
