@@ -74,7 +74,9 @@ describe('SDK', () => {
 					throw new Error('set error')
 				}),
 			})
-			const sdk = new Record('1')
+			const sdk = new Record()
+			// trigger sdk to initialize
+			sdk.getHooks?.({ sdkKey: 'abc123', sdk: { name: '', version: '' } })
 			expect(sdk.record).toBeDefined()
 			vi.unstubAllGlobals()
 		})
@@ -91,7 +93,7 @@ describe('SDK', () => {
 					throw new Error('set error')
 				}),
 			})
-			const sdk = new Record('1')
+			const sdk = new Record()
 			expect(sdk.record).toBeUndefined()
 			vi.unstubAllGlobals()
 		})

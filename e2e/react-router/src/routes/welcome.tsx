@@ -9,10 +9,7 @@ function Welcome() {
 
 	useEffect(() => {
 		if (observabilityEnabled && client) {
-			const plugins = [
-				new Observability('<observability-id>'),
-				new SessionReplay('<observability-id>'),
-			]
+			const plugins = [new Observability(), new SessionReplay()]
 			plugins.forEach((plugin) =>
 				plugin.register(client, {
 					sdk: { name: '', version: '' },

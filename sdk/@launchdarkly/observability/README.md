@@ -32,7 +32,7 @@ const client = init3(
         {
           // Not including plugins at all would be equivalent to the current LaunchDarkly SDK.
           plugins: [
-            new Observability('<OBSERVABILITY_PROJECT_ID>', {
+            new Observability({
               networkRecording: {
                 enabled: true,
                 recordHeadersAndBody: true,

@@ -17,10 +17,18 @@ import { internalLog } from '../sdk/util'
 
 export class Record extends Plugin<RecordOptions> implements LDPlugin {
 	record: RecordSDK | undefined
+	options: RecordOptions | undefined
 
-	constructor(projectID?: string | number, options?: RecordOptions) {
+	constructor(options?: RecordOptions) {
+		super(options)
+		this.options = options
+	}
+
+	private initialize(
+		ldCredential: string | undefined,
+		options?: RecordOptions,
+	) {
 		try {
-			super(options)
 			// Don't run init when called outside of the browser.
 			if (
 				typeof window === 'undefined' ||
@@ -38,7 +46,7 @@ export class Record extends Plugin<RecordOptions> implements LDPlugin {
 				return
 			}
 			// Don't initialize if an projectID is not set.
-			if (!projectID) {
+			if (!ldCredential) {
 				console.warn(
 					'@launchdarkly/session-replay is not initializing because projectID was passed undefined.',
 				)
@@ -46,7 +54,7 @@ export class Record extends Plugin<RecordOptions> implements LDPlugin {
 			}
 			const client_options: HighlightClassOptions = {
 				...options,
-				organizationID: projectID,
+				organizationID: ldCredential,
 				firstloadVersion,
 				environment: options?.environment || 'production',
 				appVersion: options?.version,
@@ -96,6 +104,10 @@ export class Record extends Plugin<RecordOptions> implements LDPlugin {
 	}
 
 	getHooks?(metadata: LDPluginEnvironmentMetadata): Hook[] {
+		this.initialize(
+			metadata.sdkKey ?? metadata.mobileKey ?? metadata.clientSideId,
+			this.options,
+		)
 		return [
 			{
 				getMetadata: () => {
