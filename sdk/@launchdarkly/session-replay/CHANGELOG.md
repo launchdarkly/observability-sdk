@@ -1,5 +1,12 @@
 # @launchdarkly/session-replay
 
+## 0.2.1
+
+### Patch Changes
+
+- Updated dependencies [49b32d8]
+    - highlight.run@9.18.15
+
 ## 0.2.0
 
 ### Minor Changes
