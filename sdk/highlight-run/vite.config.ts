@@ -1,6 +1,5 @@
 // vite.config.ts
 import commonjs from '@rollup/plugin-commonjs'
-import json from '@rollup/plugin-json'
 import resolve from '@rollup/plugin-node-resolve'
 import { resolve as resolvePath } from 'path'
 import { defineConfig } from 'vite'
@@ -61,7 +60,6 @@ export default defineConfig({
 		rollupOptions: {
 			treeshake: 'smallest',
 			plugins: [
-				json(),
 				commonjs({
 					transformMixedEsModules: true,
 				}),

@@ -145,13 +145,13 @@ export class ObserveSDK implements Observe {
 	}
 
 	recordError(
-		error: Error,
+		error: any,
 		message?: string,
 		payload?: { [key: string]: string },
 		source?: string,
 		type?: ErrorMessageType,
 	) {
-		if (error.cause) {
+		if (error instanceof Error && error.cause) {
 			payload = {
 				...payload,
 				'exception.cause': JSON.stringify(error.cause),

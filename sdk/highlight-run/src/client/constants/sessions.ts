@@ -42,7 +42,7 @@ export const VISIBILITY_DEBOUNCE_MS = 100
 export const UPLOAD_TIMEOUT = 1000 * 15
 
 export const HIGHLIGHT_URL = 'app.highlight.io'
-export const LAUNCHDARKLY_URL = 'app.launchdarkly.com'
+export const LAUNCHDARKLY_URL = 'https://app.launchdarkly.com'
 export const LAUNCHDARKLY_ENV_APPS = {
 	'observability.ld-stg.launchdarkly.com': 'ld-stg.launchdarkly.com',
 	'observability.app.launchdarkly.com': 'app.launchdarkly.com',

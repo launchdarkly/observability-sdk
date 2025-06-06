@@ -22,6 +22,7 @@ export type { Hook, LDClient }
 export const FEATURE_FLAG_SCOPE = 'feature_flag'
 export const LD_SCOPE = 'launchdarkly'
 export const FEATURE_FLAG_SPAN_NAME = 'evaluation'
+export const FEATURE_FLAG_EVENT_NAME = `${FEATURE_FLAG_SCOPE}.${FEATURE_FLAG_SPAN_NAME}`
 
 export const FEATURE_FLAG_ENV_ATTR = `${FEATURE_FLAG_SCOPE}.set.id`
 export const FEATURE_FLAG_KEY_ATTR = `${FEATURE_FLAG_SCOPE}.key`
@@ -159,7 +160,7 @@ export function setupLaunchDarklyIntegration(
 
 			hClient.startSpan(FEATURE_FLAG_SPAN_NAME, (s) => {
 				if (s) {
-					s.addEvent(FEATURE_FLAG_SCOPE, eventAttributes)
+					s.addEvent(FEATURE_FLAG_EVENT_NAME, eventAttributes)
 				}
 			})
 

@@ -19,9 +19,9 @@ import {
 	PropagateTraceHeaderCorsUrls,
 	ReadableSpan,
 	SimpleSpanProcessor,
+	Span as SDKSpan,
 	StackContextManager,
 	WebTracerProvider,
-	Span as SDKSpan,
 } from '@opentelemetry/sdk-trace-web'
 import * as SemanticAttributes from '@opentelemetry/semantic-conventions'
 import { parse } from 'graphql'
@@ -54,6 +54,7 @@ import {
 } from '@opentelemetry/sdk-metrics'
 import { IntegrationClient } from '../../integrations'
 import { LD_METRIC_NAME_DOCUMENT_LOAD } from '../../integrations/launchdarkly'
+import version from '../../version'
 
 import { ExportSampler } from './sampling/ExportSampler'
 import { getPersistentSessionSecureID } from '../utils/sessionStorage/highlightSession'
@@ -134,12 +135,17 @@ export const setupBrowserTracing = (
 	const resource = new Resource({
 		[SemanticAttributes.ATTR_SERVICE_NAME]:
 			config.serviceName ?? 'highlight-browser',
-		[SemanticAttributes.SEMRESATTRS_DEPLOYMENT_ENVIRONMENT]: environment,
+		'deployment.environment.name': environment,
 		'highlight.project_id': config.projectId,
+		[SemanticAttributes.ATTR_USER_AGENT_ORIGINAL]: navigator.userAgent,
+		'browser.language': navigator.language,
+		'telemetry.distro.name': '@highlight-run/observability',
+		'telemetry.distro.version': version,
 	})
 
 	providers.tracerProvider = new WebTracerProvider({
 		resource,
+		mergeResourceWithDefaults: true,
 		spanProcessors: isDebug
 			? [
 					new SimpleSpanProcessor(new ConsoleSpanExporter()),

@@ -344,7 +344,9 @@ export class RecordSDK implements Record {
 
 	identify(user_identifier: string, user_object = {}, source?: Source) {
 		if (!user_identifier || user_identifier === '') {
-			console.warn(
+			internalLog(
+				'identify',
+				'warn',
 				`Highlight's identify() call was passed an empty identifier.`,
 				{ user_identifier, user_object },
 			)
@@ -393,7 +395,6 @@ export class RecordSDK implements Record {
 
 	async start(options?: StartOptions) {
 		if (
-			(navigator?.webdriver && !window.Cypress) ||
 			navigator?.userAgent?.includes('Googlebot') ||
 			navigator?.userAgent?.includes('AdsBot')
 		) {
@@ -1149,8 +1150,19 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 		}
 
 		const now = new Date().getTime()
-		const url = new URL(baseUrl)
-		const urlWithTimestamp = new URL(baseUrl)
+		let url!: URL
+		try {
+			url = new URL(baseUrl)
+		} catch (e) {
+			internalLog(
+				'identify',
+				'warn',
+				`failed to construct session url from ${baseUrl}`,
+				e,
+			)
+			return null
+		}
+		const urlWithTimestamp = new URL(url)
 		const relativeTimestamp = (now - this._recordingStartTime) / 1000
 		urlWithTimestamp.searchParams.set('ts', relativeTimestamp.toString())
 

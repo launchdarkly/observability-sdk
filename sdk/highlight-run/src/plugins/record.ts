@@ -7,7 +7,7 @@ import {
 	LDClient,
 } from '../integrations/launchdarkly'
 import { RecordSDK } from '../sdk/record'
-import firstloadVersion from '../__generated/version'
+import firstloadVersion from '../version'
 import { setupMixpanelIntegration } from '../integrations/mixpanel'
 import { setupAmplitudeIntegration } from '../integrations/amplitude'
 import { LDRecord } from '../sdk/LDRecord'
