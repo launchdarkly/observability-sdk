@@ -24,7 +24,7 @@ const sessionReplaySettings: ConstructorParameters<typeof SessionReplay>[0] = {
 }
 
 export const client = init(
-	'66d9d3c255856f0fa8fd62d0',
+	'65006c1cfd354512d19019d9',
 	{ key: 'unknown' },
 	{
 		// Not including plugins at all would be equivalent to the current LaunchDarkly SDK.
