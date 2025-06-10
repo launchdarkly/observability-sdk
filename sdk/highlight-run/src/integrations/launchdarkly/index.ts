@@ -120,19 +120,17 @@ export function setupLaunchDarklyIntegration(
 			}
 		},
 		afterIdentify: (hookContext, data, result) => {
-			hClient.log('LD.identify', 'INFO', {
+			const metadata = {
 				key: getCanonicalKey(hookContext.context),
 				context: JSON.stringify(getCanonicalObj(hookContext.context)),
 				timeout: hookContext.timeout,
 				[LD_IDENTIFY_RESULT_STATUS]: result.status,
-			})
+			}
+			hClient.log('LD.identify', 'INFO', metadata)
 			if (result.status === 'completed') {
 				hClient.identify(
 					getCanonicalKey(hookContext.context),
-					{
-						key: getCanonicalKey(hookContext.context),
-						timeout: hookContext.timeout,
-					},
+					metadata,
 					'LaunchDarkly',
 				)
 			}
