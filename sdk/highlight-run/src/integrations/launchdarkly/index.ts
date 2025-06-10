@@ -65,8 +65,20 @@ function isMultiContext(context: any): context is LDMultiKindContext {
 	return context.kind === 'multi'
 }
 
+// getCanonicalKey returns the key provided to H.identify based on the LD context.
+// Long term, we will provide context filtering / the ability to control what
+// context attributes are used as the identify key. For now, this hard-codes
+// logic for using the memberEmail, when set.
 export function getCanonicalKey(context: LDContext) {
 	if (isMultiContext(context)) {
+		if (context.user) {
+			const user = context.user as LDContextCommon
+			if (user.memberEmail) {
+				return user.memberEmail
+			} else {
+				return user.key
+			}
+		}
 		return Object.keys(context)
 			.sort()
 			.filter((key) => key !== 'kind')
