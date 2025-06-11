@@ -106,7 +106,7 @@ export function getCanonicalObj(context: LDContext) {
 			}, {} as Attributes)
 	}
 
-	return context.key
+	return {}
 }
 
 export function setupLaunchDarklyIntegration(
@@ -121,8 +121,8 @@ export function setupLaunchDarklyIntegration(
 		},
 		afterIdentify: (hookContext, data, result) => {
 			const metadata = {
+				...getCanonicalObj(hookContext.context),
 				key: getCanonicalKey(hookContext.context),
-				context: JSON.stringify(getCanonicalObj(hookContext.context)),
 				timeout: hookContext.timeout,
 				[LD_IDENTIFY_RESULT_STATUS]: result.status,
 			}

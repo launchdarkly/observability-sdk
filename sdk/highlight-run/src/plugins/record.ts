@@ -146,8 +146,8 @@ export class Record extends Plugin<RecordOptions> implements LDPlugin {
 					}
 					if (result.status === 'completed') {
 						const metadata = {
+							...getCanonicalObj(hookContext.context),
 							key: getCanonicalKey(hookContext.context),
-							context: getCanonicalObj(hookContext.context),
 							timeout: hookContext.timeout,
 							[LD_IDENTIFY_RESULT_STATUS]: result.status,
 						}
