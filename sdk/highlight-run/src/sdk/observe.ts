@@ -72,6 +72,7 @@ import {
 	NetworkPerformanceListener,
 	NetworkPerformancePayload,
 } from '../client/listeners/network-listener/performance-listener'
+import randomUuidV4 from '../client/utils/randomUuidV4'
 
 export class ObserveSDK implements Observe {
 	/** Verbose project ID that is exposed to users. Legacy users may still be using ints. */
@@ -172,6 +173,7 @@ export class ObserveSDK implements Observe {
 			columnNumber: res[0]?.columnNumber ? res[0]?.columnNumber : 0,
 			stackTrace: res,
 			timestamp: new Date().toISOString(),
+			id: randomUuidV4(),
 		}
 		this.startSpan('highlight.exception', (span) => {
 			span?.recordException(error)
@@ -182,6 +184,7 @@ export class ObserveSDK implements Observe {
 				source: errorMsg.source,
 				lineNumber: errorMsg.lineNumber,
 				columnNumber: errorMsg.columnNumber,
+				id: errorMsg.id,
 				...payload,
 			})
 		})
