@@ -38,7 +38,9 @@ export default function Root() {
 		<div id="sidebar">
 			<h1>Hello, world</h1>
 			<p>{flags}</p>
-			<p>{session}</p>
+			<a href={session} target={'_blank'}>
+				{session}
+			</a>
 			<canvas width="100" height="100" ref={canvasRef}></canvas>
 			<button
 				onClick={() => {
