@@ -51,6 +51,16 @@ export default function Root() {
 			</button>
 			<button
 				onClick={() => {
+					console.error('oh', 'no', {
+						my: 'object',
+						err: new Error(),
+					})
+				}}
+			>
+				console.error
+			</button>
+			<button
+				onClick={() => {
 					LDObserve.recordError(new Error('test error'))
 				}}
 			>

@@ -20,7 +20,6 @@ import {
 } from '../integrations/launchdarkly'
 import { Observe as ObserveAPI } from '../api/observe'
 import { ObserveSDK } from '../sdk/observe'
-import type { BrowserTracingConfig } from '../client/otel'
 import { LDObserve } from '../sdk/LDObserve'
 import type { ObserveOptions } from '../client/types/observe'
 import { Plugin } from './common'
@@ -63,26 +62,11 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 				)
 				return
 			}
-			const clientOptions: BrowserTracingConfig = {
-				backendUrl:
-					options?.backendUrl ??
-					'https://pub.observability.app.launchdarkly.com',
-				otlpEndpoint:
-					options?.otel?.otlpEndpoint ??
-					'https://otel.observability.app.launchdarkly.com',
+			this.observe = new ObserveSDK({
+				...options,
 				projectId: ldCredential,
 				sessionSecureId: this.sessionSecureID,
-				environment: options?.environment ?? 'production',
-				networkRecordingOptions:
-					typeof options?.networkRecording === 'object'
-						? options.networkRecording
-						: undefined,
-				tracingOrigins: options?.tracingOrigins,
-				serviceName: options?.serviceName ?? 'browser',
-				instrumentations: options?.otel?.instrumentations,
-				eventNames: options?.otel?.eventNames,
-			}
-			this.observe = new ObserveSDK(clientOptions)
+			})
 			LDObserve.load(this.observe)
 		} catch (error) {
 			internalLog(

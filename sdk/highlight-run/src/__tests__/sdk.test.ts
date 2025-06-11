@@ -20,7 +20,9 @@ describe('SDK', () => {
 		record = LDRecord
 		observeImpl = new ObserveSDK({
 			backendUrl: 'https://pub.highlight.io',
-			otlpEndpoint: 'https://otel.highlight.io',
+			otel: {
+				otlpEndpoint: 'https://otel.highlight.io',
+			},
 			projectId: '1',
 			sessionSecureId: 'test-session',
 			environment: 'test',
