@@ -8,7 +8,6 @@ import {
 	getCanonicalKey,
 	getCanonicalObj,
 	Hook,
-	LD_IDENTIFY_RESULT_STATUS,
 	LDClient,
 } from '../integrations/launchdarkly'
 import { RecordSDK } from '../sdk/record'
@@ -148,8 +147,6 @@ export class Record extends Plugin<RecordOptions> implements LDPlugin {
 						const metadata = {
 							...getCanonicalObj(hookContext.context),
 							key: getCanonicalKey(hookContext.context),
-							timeout: hookContext.timeout,
-							[LD_IDENTIFY_RESULT_STATUS]: result.status,
 						}
 						this.record?.identify(
 							metadata.key,
