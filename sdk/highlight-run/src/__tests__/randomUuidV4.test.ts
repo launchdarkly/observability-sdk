@@ -1,5 +1,8 @@
 /* eslint-disable no-bitwise */
-import { fallbackUuidV4, formatDataAsUuidV4 } from '../client/utils/randomUuidV4'
+import {
+	fallbackUuidV4,
+	formatDataAsUuidV4,
+} from '../client/utils/randomUuidV4'
 
 it('formats conformant UUID', () => {
 	// For this test we remove the random component and just inspect the variant and version.
