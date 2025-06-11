@@ -81,9 +81,15 @@ let providers: {
 	meterProvider?: MeterProvider
 } = {}
 let otelConfig: BrowserTracingConfig | undefined
+
 const RECORD_ATTRIBUTE = 'highlight.record'
 const SESSION_ID_ATTRIBUTE = 'highlight.session_id'
 export const LOG_SPAN_NAME = 'launchdarkly.js.log'
+
+export const ATTR_EXCEPTION_ID = 'launchdarkly.exception.id'
+export const ATTR_SAMPLING_RATIO = 'launchdarkly.sampling.ratio'
+export const ATTR_LOG_SEVERITY = 'log.severity'
+export const ATTR_LOG_MESSAGE = 'log.message'
 
 export const setupBrowserTracing = (
 	config: BrowserTracingConfig,

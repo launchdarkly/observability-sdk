@@ -2,6 +2,7 @@ import type { StackFrame } from 'error-stack-parser'
 import stringify from 'json-stringify-safe'
 import { ErrorMessage } from '../types/shared-types'
 import { parseError } from '../utils/errors'
+import randomUuidV4 from '../utils/randomUuidV4'
 
 interface HighlightPromise<T> extends Promise<T> {
 	promiseCreationError: Error
@@ -37,6 +38,7 @@ function handleError(
 		stackTrace: framesToUse,
 		timestamp: new Date().toISOString(),
 		payload: payload ? stringify(payload) : undefined,
+		id: randomUuidV4(),
 	})
 }
 

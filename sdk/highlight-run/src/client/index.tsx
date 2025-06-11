@@ -121,6 +121,7 @@ import { LaunchDarklyIntegration } from '../integrations/launchdarkly'
 import { LDClient } from '../integrations/launchdarkly'
 import { createLog, defaultLogOptions } from './listeners/console-listener'
 import { CustomSampler } from './otel/sampling/CustomSampler'
+import randomUuidV4 from './utils/randomUuidV4'
 
 export const HighlightWarning = (context: string, msg: any) => {
 	console.warn(`Highlight Warning: (${context}): `, { output: msg })
@@ -531,6 +532,7 @@ export class Highlight {
 			stackTrace: res,
 			timestamp: new Date().toISOString(),
 			payload: JSON.stringify(payload),
+			id: randomUuidV4(),
 		}
 		this._firstLoadListeners.errors.push(errorMsg)
 		for (const integration of this._integrations) {

@@ -18,6 +18,7 @@ import {
 	matchPerformanceTimingsWithRequestResponsePair,
 	shouldNetworkRequestBeRecorded,
 } from './network-listener/utils/utils'
+import randomUuidV4 from '../utils/randomUuidV4'
 
 // Note: This class is used by both firstload and client. When constructed in client, it will match the current
 // codebase. When constructed in firstload, it will match the codebase at the time the npm package was published.
@@ -106,6 +107,7 @@ export class FirstLoadListeners {
 									: 0,
 								stackTrace: c.trace,
 								timestamp: new Date().toISOString(),
+								id: randomUuidV4(),
 							})
 						}
 						highlightThis.messages.push(c)

@@ -29,4 +29,5 @@ export type ErrorMessage = {
 	timestamp: string
 	payload?: string
 	error?: Error
+	id: string
 }
