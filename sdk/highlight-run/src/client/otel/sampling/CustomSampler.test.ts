@@ -5,10 +5,7 @@ import { it, expect, beforeEach, vi, describe } from 'vitest'
 import { SamplingConfig } from '../../graph/generated/operations'
 import spanTestScenarios from './span-test-scenarios.json'
 import logTestScenarios from './log-test-scenarios.json'
-
-const LOG_SPAN_NAME = 'launchdarkly.js.log'
-const LOG_SEVERITY_ATTRIBUTE = 'log.severity'
-const LOG_MESSAGE_ATTRIBUTE = 'log.message'
+import { ATTR_LOG_MESSAGE, ATTR_LOG_SEVERITY, LOG_SPAN_NAME } from '../index'
 
 interface SpanTestScenario {
 	description: string
@@ -167,8 +164,8 @@ const runTestLogScenarios = (scenarios: LogTestScenario[]) => {
 				const baseAttributes = scenario.inputLog.attributes || {}
 				const mergedAttributes = {
 					...baseAttributes,
-					[LOG_MESSAGE_ATTRIBUTE]: scenario.inputLog.message,
-					[LOG_SEVERITY_ATTRIBUTE]: scenario.inputLog.severityText,
+					[ATTR_LOG_MESSAGE]: scenario.inputLog.message,
+					[ATTR_LOG_SEVERITY]: scenario.inputLog.severityText,
 				}
 
 				const mockSpan = createMockSpan({
