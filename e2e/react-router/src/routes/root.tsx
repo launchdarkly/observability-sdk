@@ -134,6 +134,97 @@ export default function Root() {
 				onClick={async () => {
 					await client.identify({
 						kind: 'multi',
+						account: {
+							hasExperimentationMAU: false,
+							hasADSEvents: true,
+							enableAccountImpersonation: false,
+							planType: 'Enterprise',
+							isCanceled: false,
+							isTrial: false,
+							organization: 'End-to-End Test Account',
+							isSelfServe: false,
+							hasHIPAAEnabled: false,
+							hasActiveEnterpriseCampaign: false,
+							hasExperimentationEvents: true,
+							hasExperimentationKeys: false,
+							isUsingExperimentation2022: false,
+							hasSSO: true,
+							signupDate: 1593470120619,
+							isBeta: false,
+							isLapsed: false,
+							hasConfiguredSSO: false,
+							owner: {
+								email: 'e2e@launchdarkly.com',
+							},
+							planVersion: 1,
+							postV2Signup: true,
+							name: 'End-to-End Test Account',
+							key: '5efa6ca891e30321f08aac4b',
+						},
+						environment: {
+							name: 'Test',
+							key: '65006c1cfd354512d19019d8',
+						},
+						member: {
+							hasAdminRights: true,
+							isEmailVerified: true,
+							email: 'vkorolik@launchdarkly.com',
+							createdDate: 1744385936713,
+							featurePreviews: [
+								'simplified-toggle-ux',
+								'improved-context-targeting-experience',
+								'new-experience',
+							],
+							name: 'Vadim Korolik',
+							key: '67f93790b1bc7808f4b033be',
+						},
+						project: {
+							key: '65006c1cfd354512d19019da',
+						},
+						user: {
+							environmentId: '65006c1cfd354512d19019d8',
+							hasExperimentationEvents: true,
+							hasHIPAAEnabled: false,
+							hasAdminRights: true,
+							projectId: '65006c1cfd354512d19019da',
+							isSelfServe: false,
+							dogfoodCanary: false,
+							isBeta: false,
+							enableAccountImpersonation: false,
+							hasExperimentationKeys: false,
+							hasSSO: true,
+							planVersion: 1,
+							isUsingExperimentation2022: false,
+							memberEmail: 'vkorolik@launchdarkly.com',
+							isCanceled: false,
+							memberVerifiedEmail: true,
+							memberId: '67f93790b1bc7808f4b033be',
+							accountId: '5efa6ca891e30321f08aac4b',
+							organization: 'End-to-End Test Account',
+							hasActiveEnterpriseCampaign: false,
+							enableAccountSupportGenAi: false,
+							hasADSEvents: true,
+							email: 'e2e@launchdarkly.com',
+							planType: 'Enterprise',
+							postV2Signup: true,
+							hasConfiguredSSO: false,
+							hasExperimentationMAU: false,
+							isLapsed: false,
+							signupDate: 1593470120619,
+							isTrial: false,
+							name: '',
+							key: '5efa6ca891e30321f08aac4b',
+						},
+					})
+					setFlags(JSON.stringify(client.allFlags()))
+				}}
+			>
+				client.identify gonfalon
+			</button>
+			<button
+				onClick={async () => {
+					await client.identify({
+						kind: 'multi',
 						org: {
 							key: 'my-org-key',
 							someAttribute: 'my-attribute-value',
