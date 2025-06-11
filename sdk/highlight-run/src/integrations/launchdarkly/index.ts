@@ -128,11 +128,7 @@ export function setupLaunchDarklyIntegration(
 			}
 			hClient.log('LD.identify', 'INFO', metadata)
 			if (result.status === 'completed') {
-				hClient.identify(
-					getCanonicalKey(hookContext.context),
-					metadata,
-					'LaunchDarkly',
-				)
+				hClient.identify(metadata.key, metadata, 'LaunchDarkly')
 			}
 			return data
 		},

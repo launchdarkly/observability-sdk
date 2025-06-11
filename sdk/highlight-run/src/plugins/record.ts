@@ -1,9 +1,14 @@
 import { type HighlightClassOptions } from '../client'
 import type { LDPlugin, LDPluginEnvironmentMetadata } from './plugin'
 import {
+	FEATURE_FLAG_APP_ID_ATTR,
+	FEATURE_FLAG_APP_VERSION_ATTR,
+	FEATURE_FLAG_ENV_ATTR,
+	FEATURE_FLAG_PROVIDER_ATTR,
 	getCanonicalKey,
 	getCanonicalObj,
 	Hook,
+	LD_IDENTIFY_RESULT_STATUS,
 	LDClient,
 } from '../integrations/launchdarkly'
 import { RecordSDK } from '../sdk/record'
@@ -14,6 +19,10 @@ import { LDRecord } from '../sdk/LDRecord'
 import type { RecordOptions } from '../client/types/record'
 import { Plugin } from './common'
 import { internalLog } from '../sdk/util'
+import {
+	ATTR_TELEMETRY_SDK_NAME,
+	ATTR_TELEMETRY_SDK_VERSION,
+} from '@opentelemetry/semantic-conventions'
 
 export class Record extends Plugin<RecordOptions> implements LDPlugin {
 	record: RecordSDK | undefined
@@ -104,6 +113,21 @@ export class Record extends Plugin<RecordOptions> implements LDPlugin {
 	}
 
 	getHooks?(metadata: LDPluginEnvironmentMetadata): Hook[] {
+		const metaAttrs = {
+			[ATTR_TELEMETRY_SDK_NAME]: metadata.sdk.name,
+			[ATTR_TELEMETRY_SDK_VERSION]: metadata.sdk.version,
+			[FEATURE_FLAG_ENV_ATTR]: metadata.clientSideId,
+			[FEATURE_FLAG_PROVIDER_ATTR]: 'LaunchDarkly',
+			...(metadata.application?.id
+				? { [FEATURE_FLAG_APP_ID_ATTR]: metadata.application.id }
+				: {}),
+			...(metadata.application?.version
+				? {
+						[FEATURE_FLAG_APP_VERSION_ATTR]:
+							metadata.application.version,
+					}
+				: {}),
+		}
 		this.initialize(
 			metadata.sdkKey ?? metadata.mobileKey ?? metadata.clientSideId,
 			this.options,
@@ -121,16 +145,17 @@ export class Record extends Plugin<RecordOptions> implements LDPlugin {
 						hook.afterIdentify?.(hookContext, data, result)
 					}
 					if (result.status === 'completed') {
-						const key = getCanonicalKey(hookContext.context)
-						const obj = getCanonicalObj(hookContext.context)
+						const metadata = {
+							key: getCanonicalKey(hookContext.context),
+							context: getCanonicalObj(hookContext.context),
+							timeout: hookContext.timeout,
+							[LD_IDENTIFY_RESULT_STATUS]: result.status,
+						}
 						this.record?.identify(
-							typeof obj === 'string'
-								? obj
-								: (obj['user']?.toString() ?? key),
+							metadata.key,
 							{
-								key,
-								...(typeof obj === 'object' ? obj : {}),
-								timeout: hookContext.timeout,
+								...metaAttrs,
+								...metadata,
 							},
 							'LaunchDarkly',
 						)

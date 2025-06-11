@@ -136,15 +136,20 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 						hook.afterIdentify?.(hookContext, data, result)
 					}
 
-					this.observe?.recordLog('LD.identify', 'info', {
-						...metaAttrs,
-						key: getCanonicalKey(hookContext.context),
-						context: JSON.stringify(
-							getCanonicalObj(hookContext.context),
-						),
-						timeout: hookContext.timeout,
-						[LD_IDENTIFY_RESULT_STATUS]: result.status,
-					})
+					if (result.status === 'completed') {
+						const metadata = {
+							key: getCanonicalKey(hookContext.context),
+							context: JSON.stringify(
+								getCanonicalObj(hookContext.context),
+							),
+							timeout: hookContext.timeout,
+							[LD_IDENTIFY_RESULT_STATUS]: result.status,
+						}
+						this.observe?.recordLog('LD.identify', 'info', {
+							...metaAttrs,
+							...metadata,
+						})
+					}
 					return data
 				},
 				afterEvaluation: (hookContext, data, detail) => {
