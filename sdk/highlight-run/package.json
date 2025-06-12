@@ -121,7 +121,7 @@
 		"json-stringify-safe": "^5.0.1",
 		"npm-run-all": "^4.1.5",
 		"prettier": "^3.3.3",
-		"readdirp": "^3.6.0",
+		"readdirp": "^4.1.2",
 		"rrweb": "workspace:*",
 		"size-limit": "^8.1.0",
 		"stacktrace-js": "2.0.2",
