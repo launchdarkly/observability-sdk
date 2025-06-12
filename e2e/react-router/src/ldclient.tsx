@@ -24,7 +24,7 @@ const sessionReplaySettings: ConstructorParameters<typeof SessionReplay>[0] = {
 }
 
 export const client = init(
-	'66d9d3c255856f0fa8fd62d0',
+	'5dbc84672a88c108b14dad13',
 	{ key: 'unknown' },
 	{
 		// Not including plugins at all would be equivalent to the current LaunchDarkly SDK.
@@ -32,6 +32,8 @@ export const client = init(
 			new Observability(observabilitySettings),
 			new SessionReplay(sessionReplaySettings),
 		],
+		baseUrl: 'https://ld-stg.launchdarkly.com',
+		eventsUrl: 'https://events-stg.launchdarkly.com',
 	},
 )
 

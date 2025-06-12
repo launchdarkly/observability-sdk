@@ -12,7 +12,6 @@ import {
 } from '@opentelemetry/api'
 import {
 	BROWSER_METER_NAME,
-	BrowserTracingConfig,
 	Callback,
 	getTracer,
 	LOG_SPAN_NAME,
@@ -34,11 +33,11 @@ import {
 import type { IntegrationClient } from '../integrations'
 import type { OTelMetric as Metric, RecordMetric } from '../client/types/types'
 import {
+	ALL_CONSOLE_METHODS,
 	ConsoleMethods,
 	MetricCategory,
 	MetricName,
 } from '../client/types/client'
-import { ObserveOptions } from '../client/types/observe'
 import { ConsoleListener } from '../client/listeners/console-listener'
 import stringify from 'json-stringify-safe'
 import {
@@ -72,10 +71,12 @@ import {
 	NetworkPerformanceListener,
 	NetworkPerformancePayload,
 } from '../client/listeners/network-listener/performance-listener'
+import { ObserveOptions } from '../client/types/observe'
 
 export class ObserveSDK implements Observe {
 	/** Verbose project ID that is exposed to users. Legacy users may still be using ints. */
 	organizationID!: string
+	private readonly _options: ObserveOptions
 	private readonly _integrations: IntegrationClient[] = []
 	private readonly _gauges: Map<string, Gauge> = new Map<string, Gauge>()
 	private readonly _counters: Map<string, Counter> = new Map<
@@ -92,14 +93,37 @@ export class ObserveSDK implements Observe {
 	>()
 	private readonly sampler: ExportSampler = new CustomSampler()
 	private graphqlSDK!: Sdk
-	constructor(options: BrowserTracingConfig) {
-		if (typeof options.projectId === 'string') {
-			this.organizationID = options.projectId
-		} else {
-			this.organizationID = options.projectId.toString()
-		}
+	constructor(
+		options: ObserveOptions & {
+			projectId: string
+			sessionSecureId: string
+		},
+	) {
+		this._options = options
+		this.organizationID = options.projectId
 		setupBrowserTracing(
-			{ ...options, getIntegrations: () => this._integrations },
+			{
+				...{
+					backendUrl:
+						options?.backendUrl ??
+						'https://pub.observability.app.launchdarkly.com',
+					otlpEndpoint:
+						options?.otel?.otlpEndpoint ??
+						'https://otel.observability.app.launchdarkly.com',
+					projectId: options.projectId,
+					sessionSecureId: options.sessionSecureId,
+					environment: options?.environment ?? 'production',
+					networkRecordingOptions:
+						typeof options?.networkRecording === 'object'
+							? options.networkRecording
+							: undefined,
+					tracingOrigins: options?.tracingOrigins,
+					serviceName: options?.serviceName ?? 'browser',
+					instrumentations: options?.otel?.instrumentations,
+					eventNames: options?.otel?.eventNames,
+				},
+				getIntegrations: () => this._integrations,
+			},
 			this.sampler,
 		)
 		const client = new GraphQLClient(`${options.backendUrl}`, {
@@ -107,7 +131,7 @@ export class ObserveSDK implements Observe {
 		})
 		this.graphqlSDK = getSdk(client, getGraphQLRequestWrapper())
 		this.configureSampling()
-		this.setupListeners(options)
+		this.setupListeners()
 	}
 
 	private async configureSampling() {
@@ -125,23 +149,41 @@ export class ObserveSDK implements Observe {
 		}
 	}
 
-	recordLog(message: any, level: ConsoleMethods, metadata?: Attributes) {
+	private _recordLog(
+		message: any,
+		level: ConsoleMethods,
+		metadata?: Attributes,
+		trace?: StackTrace.StackFrame[],
+	) {
 		this.startSpan(LOG_SPAN_NAME, (span) => {
 			const msg =
 				typeof message === 'string' ? message : stringify(message)
+			const stackTrace = trace
+				? stringify(trace.map((s) => s.toString()))
+				: undefined
 			span?.addEvent('log', {
 				'log.severity': level,
 				'log.message': msg,
+				'code.stacktrace': stackTrace,
 				...metadata,
 			})
-			if (level === 'error') {
+			if (this._options.reportConsoleErrors && level === 'error') {
 				span?.recordException(new Error(msg))
 				span?.setStatus({
 					code: SpanStatusCode.ERROR,
 					message: msg,
 				})
+				const err = new Error(msg)
+				if (trace) {
+					err.stack = stackTrace
+				}
+				this.recordError(err)
 			}
 		})
+	}
+
+	recordLog(message: any, level: ConsoleMethods, metadata?: Attributes) {
+		return this._recordLog(message, level, metadata)
 	}
 
 	recordError(
@@ -406,55 +448,21 @@ export class ObserveSDK implements Observe {
 		})
 	}
 
-	private setupListeners(options: ObserveOptions) {
-		if (!options.disableConsoleRecording) {
+	private setupListeners() {
+		if (!this._options.disableConsoleRecording) {
 			ConsoleListener(
 				(c: ConsoleMessage) => {
-					const payload: {
-						type: string
-						url?: string
-						source?: string
-						lineNumber?: string
-						columnNumber?: string
-						stackTrace?: string
-					} = {
-						...(c.attributes ? { attributes: c.attributes } : {}),
-						type: c.type,
-					}
-					if (
-						options.reportConsoleErrors &&
-						(c.type === 'Error' || c.type === 'error') &&
-						c.value &&
-						c.trace
-					) {
-						const errorValue = stringify(c.value)
-						if (
-							ERRORS_TO_IGNORE.includes(errorValue) ||
-							ERROR_PATTERNS_TO_IGNORE.some((pattern) =>
-								errorValue.includes(pattern),
-							)
-						) {
-							return
-						}
-						const err = new Error(errorValue)
-						err.stack = stringify(c.trace.map((s) => s.toString()))
-						payload.url = window.location.href
-						payload.source = c.trace[0]?.fileName
-						payload.lineNumber = c.trace[0]?.lineNumber?.toString()
-						payload.columnNumber =
-							c.trace[0]?.columnNumber?.toString()
-						this.recordError(
-							err,
-							undefined,
-							payload,
-							payload.source,
-							'console.error',
-						)
-					}
-					this.recordLog(stringify(c.value), 'error', {})
+					this._recordLog(
+						c.value?.join(' '),
+						c.type as ConsoleMethods,
+						c.attributes ? JSON.parse(c.attributes) : {},
+						c.trace,
+					)
 				},
 				{
-					level: options.consoleMethodsToRecord ?? [],
+					level: this._options.consoleMethodsToRecord ?? [
+						...ALL_CONSOLE_METHODS,
+					],
 					logger: 'console',
 					stringifyOptions: {
 						depthOfLimit: 10,
@@ -464,7 +472,7 @@ export class ObserveSDK implements Observe {
 				},
 			)
 		}
-		if (options.enablePerformanceRecording !== false) {
+		if (this._options.enablePerformanceRecording !== false) {
 			PerformanceListener((payload: PerformancePayload) => {
 				Object.entries(payload)
 					.filter(([name]) => name !== 'relativeTimestamp')
@@ -524,7 +532,7 @@ export class ObserveSDK implements Observe {
 					e.type,
 				)
 			},
-			{ enablePromisePatch: !!options.enablePromisePatch },
+			{ enablePromisePatch: !!this._options.enablePromisePatch },
 		)
 		WebVitalsListener((data) => {
 			const { name, value } = data
