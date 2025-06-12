@@ -1,5 +1,12 @@
 # highlight.run
 
+## 9.18.17
+
+### Patch Changes
+
+- 3993134: refactor observability plugins to no longer require an observability project id
+- 2dcbae1: provide LDContext user.memberEmail to H.identify when available
+
 ## 9.18.16
 
 ### Patch Changes
