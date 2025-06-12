@@ -86,7 +86,7 @@
 	"devDependencies": {
 		"@graphql-codegen/cli": "^5.0.0",
 		"@graphql-codegen/typescript": "^4.0.1",
-		"@graphql-codegen/typescript-graphql-request": "^6.0.1",
+		"@graphql-codegen/typescript-graphql-request": "^6.3.0",
 		"@graphql-codegen/typescript-operations": "^4.0.1",
 		"@opentelemetry/api": "^1.9.0",
 		"@opentelemetry/exporter-metrics-otlp-http": ">=0.57.1",
