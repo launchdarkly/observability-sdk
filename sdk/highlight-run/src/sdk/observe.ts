@@ -149,13 +149,22 @@ export class ObserveSDK implements Observe {
 		}
 	}
 
-	recordLog(message: any, level: ConsoleMethods, metadata?: Attributes) {
+	private _recordLog(
+		message: any,
+		level: ConsoleMethods,
+		metadata?: Attributes,
+		trace?: StackTrace.StackFrame[],
+	) {
 		this.startSpan(LOG_SPAN_NAME, (span) => {
 			const msg =
 				typeof message === 'string' ? message : stringify(message)
+			const stackTrace = trace
+				? stringify(trace.map((s) => s.toString()))
+				: undefined
 			span?.addEvent('log', {
 				'log.severity': level,
 				'log.message': msg,
+				'code.stacktrace': stackTrace,
 				...metadata,
 			})
 			if (this._options.reportConsoleErrors && level === 'error') {
@@ -164,8 +173,17 @@ export class ObserveSDK implements Observe {
 					code: SpanStatusCode.ERROR,
 					message: msg,
 				})
+				const err = new Error(msg)
+				if (trace) {
+					err.stack = stackTrace
+				}
+				this.recordError(err)
 			}
 		})
+	}
+
+	recordLog(message: any, level: ConsoleMethods, metadata?: Attributes) {
+		return this._recordLog(message, level, metadata)
 	}
 
 	recordError(
@@ -434,10 +452,11 @@ export class ObserveSDK implements Observe {
 		if (!this._options.disableConsoleRecording) {
 			ConsoleListener(
 				(c: ConsoleMessage) => {
-					this.recordLog(
+					this._recordLog(
 						c.value?.join(' '),
 						c.type as ConsoleMethods,
 						c.attributes ? JSON.parse(c.attributes) : {},
+						c.trace,
 					)
 				},
 				{
