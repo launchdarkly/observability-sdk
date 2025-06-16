@@ -77,5 +77,3 @@ export interface NodeOptions {
 	 */
 	consoleMethodsToRecord?: ConsoleMethods[]
 }
-
-

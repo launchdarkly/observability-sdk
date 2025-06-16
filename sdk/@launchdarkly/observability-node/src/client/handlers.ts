@@ -24,7 +24,9 @@ function processErrorImpl(
 	error: Error,
 	metadata?: Attributes,
 ): void {
-	const { secureSessionId, requestId } = _LDObserve.parseHeaders(req.headers ?? {})
+	const { secureSessionId, requestId } = _LDObserve.parseHeaders(
+		req.headers ?? {},
+	)
 	_LDObserve._debug('processError', 'extracted from headers', {
 		secureSessionId,
 		requestId,

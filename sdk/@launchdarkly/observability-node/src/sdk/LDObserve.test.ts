@@ -1,10 +1,10 @@
-import { ObservabilityClient } from '../client/ObservabilityClient.js';
+import { ObservabilityClient } from '../client/ObservabilityClient.js'
 import { LDObserve, _LDObserve } from './LDObserve.js'
 import { HIGHLIGHT_REQUEST_HEADER } from './LDObserve.js'
 import { describe, expect, it } from 'vitest'
 
 describe('parseHeaders', () => {
-	_LDObserve._init(new ObservabilityClient('1'));
+	_LDObserve._init(new ObservabilityClient('1'))
 
 	it('returns session id and request id from the headers', () => {
 		expect(
@@ -21,7 +21,9 @@ describe('parseHeaders', () => {
 
 	it('returns session if request is invalid', async () => {
 		expect(
-			LDObserve.parseHeaders({ [HIGHLIGHT_REQUEST_HEADER]: 'not valid!' }),
+			LDObserve.parseHeaders({
+				[HIGHLIGHT_REQUEST_HEADER]: 'not valid!',
+			}),
 		).toMatchObject({ secureSessionId: 'not valid!', requestId: undefined })
 	})
 })

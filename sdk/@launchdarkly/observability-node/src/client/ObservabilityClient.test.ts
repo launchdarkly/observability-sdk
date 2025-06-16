@@ -11,17 +11,17 @@ describe('client', () => {
 
 		expect(
 			resource.attributes[
-			SemanticResourceAttributes.PROCESS_RUNTIME_NAME
+				SemanticResourceAttributes.PROCESS_RUNTIME_NAME
 			],
 		).toEqual('nodejs')
 		expect(
 			resource.attributes[
-			SemanticResourceAttributes.PROCESS_RUNTIME_DESCRIPTION
+				SemanticResourceAttributes.PROCESS_RUNTIME_DESCRIPTION
 			],
 		).toEqual('Node.js')
 		expect(
 			resource.attributes[
-			SemanticResourceAttributes.PROCESS_RUNTIME_VERSION
+				SemanticResourceAttributes.PROCESS_RUNTIME_VERSION
 			],
 		).toBeDefined()
 	})

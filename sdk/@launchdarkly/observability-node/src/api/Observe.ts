@@ -107,8 +107,8 @@ export interface Observe {
 		options?: SpanOptions,
 	): { span: OtelSpan; ctx: Context }
 
-    /**
-     * Stops the observability client and flushes remaining data
-     */
+	/**
+	 * Stops the observability client and flushes remaining data
+	 */
 	stop(): Promise<void>
 }

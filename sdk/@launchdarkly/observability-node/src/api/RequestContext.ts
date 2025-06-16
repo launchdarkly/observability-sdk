@@ -1,5 +1,4 @@
-
 export interface RequestContext {
-	secureSessionId: string | undefined;
-	requestId: string | undefined;
+	secureSessionId: string | undefined
+	requestId: string | undefined
 }

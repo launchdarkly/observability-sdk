@@ -1,8 +1,4 @@
-import {
-	Attributes,
-	Span as OtelSpan,
-	SpanOptions,
-} from '@opentelemetry/api'
+import { Attributes, Span as OtelSpan, SpanOptions } from '@opentelemetry/api'
 import { ResourceAttributes } from '@opentelemetry/resources'
 import { ObservabilityClient } from '../client/ObservabilityClient'
 
@@ -12,15 +8,14 @@ import { Metric } from '../api/Metric'
 
 export const HIGHLIGHT_REQUEST_HEADER = 'x-highlight-request'
 
-
-let observabilityClient: ObservabilityClient;
+let observabilityClient: ObservabilityClient
 
 const _LDObserve = {
 	_init(client: ObservabilityClient) {
-		observabilityClient = client;
+		observabilityClient = client
 	},
 	isInitialized: () => {
-		return !!observabilityClient;
+		return !!observabilityClient
 	},
 	stop: async () => {
 		if (!observabilityClient) {
@@ -120,10 +115,19 @@ const _LDObserve = {
 		return observabilityClient.parseHeaders(headers)
 	},
 
-	runWithHeaders: (name: string, headers: Headers | IncomingHttpHeaders, cb: (span: OtelSpan) => any, options?: SpanOptions) => {
+	runWithHeaders: (
+		name: string,
+		headers: Headers | IncomingHttpHeaders,
+		cb: (span: OtelSpan) => any,
+		options?: SpanOptions,
+	) => {
 		return observabilityClient.runWithHeaders(name, headers, cb, options)
 	},
-	startWithHeaders: (spanName: string, headers: Headers | IncomingHttpHeaders, options?: SpanOptions) => {
+	startWithHeaders: (
+		spanName: string,
+		headers: Headers | IncomingHttpHeaders,
+		options?: SpanOptions,
+	) => {
 		return observabilityClient.startWithHeaders(spanName, headers, options)
 	},
 	setAttributes: (attributes: ResourceAttributes) => {
@@ -131,12 +135,12 @@ const _LDObserve = {
 	},
 	_debug: (...data: any[]) => {
 		observabilityClient._log(...data)
-	}
+	},
 }
 
 // The _LDObserve object is for internal use.
 // The LDObserve object is for external use and is exposed with an interface.
 
-const LDObserve: Observe = _LDObserve as Observe;
+const LDObserve: Observe = _LDObserve as Observe
 
 export { LDObserve, _LDObserve }

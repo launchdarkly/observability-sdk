@@ -508,9 +508,7 @@ export class ObservabilityClient {
 	}
 }
 
-function parseHeaders(
-	headers: Headers | IncomingHttpHeaders,
-): RequestContext {
+function parseHeaders(headers: Headers | IncomingHttpHeaders): RequestContext {
 	const requestHeaders = extractIncomingHttpHeaders(headers)
 
 	if (requestHeaders[HIGHLIGHT_REQUEST_HEADER]) {
