@@ -23,8 +23,8 @@ const config = {
 			preferBuiltins: true,
 			// avoid bundling require-in-the-middle for next.js compatibility
 			resolveOnly: (module) =>
-				!module.includes('require-in-the-middle') ||
-				!module.includes('@launchdarkly/node-server-sdk') ||
+				!module.includes('require-in-the-middle') &&
+				!module.includes('@launchdarkly/node-server-sdk') &&
 				!module.includes('@launchdarkly/node-server-sdk-otel'),
 		}),
 		typescript(),
