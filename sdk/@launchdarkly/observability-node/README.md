@@ -1,4 +1,4 @@
-# LaunchDarkly JavaScript Observability SDK for Browsers
+# LaunchDarkly Node.js Server-Side Obvervability Plugin
 
 [![NPM][o11y-sdk-npm-badge]][o11y-sdk-npm-link]
 [![Actions Status][o11y-sdk-ci-badge]][o11y-sdk-ci]
