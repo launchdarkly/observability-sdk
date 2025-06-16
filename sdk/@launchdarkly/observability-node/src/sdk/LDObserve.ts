@@ -6,8 +6,6 @@ import { RequestContext } from '../api/RequestContext'
 import { Headers, IncomingHttpHeaders, Observe } from '../api/Observe'
 import { Metric } from '../api/Metric'
 
-export const HIGHLIGHT_REQUEST_HEADER = 'x-highlight-request'
-
 let observabilityClient: ObservabilityClient
 
 const _LDObserve = {

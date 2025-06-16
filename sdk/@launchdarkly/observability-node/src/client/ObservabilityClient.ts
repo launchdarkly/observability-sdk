@@ -63,7 +63,7 @@ import { RequestContext } from '../api/RequestContext.js'
 import { Headers, IncomingHttpHeaders } from '../api/headers.js'
 
 const OTLP_HTTP = 'https://otel.observability.app.launchdarkly.com:4318'
-const HIGHLIGHT_REQUEST_HEADER = 'X-Highlight-Request'
+export const HIGHLIGHT_REQUEST_HEADER = 'x-highlight-request'
 
 const instrumentations = getNodeAutoInstrumentations({
 	'@opentelemetry/instrumentation-http': {

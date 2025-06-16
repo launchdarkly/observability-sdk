@@ -1,6 +1,8 @@
-import { ObservabilityClient } from '../client/ObservabilityClient.js'
+import {
+	HIGHLIGHT_REQUEST_HEADER,
+	ObservabilityClient,
+} from '../client/ObservabilityClient.js'
 import { LDObserve, _LDObserve } from './LDObserve.js'
-import { HIGHLIGHT_REQUEST_HEADER } from './LDObserve.js'
 import { describe, expect, it } from 'vitest'
 
 describe('parseHeaders', () => {
