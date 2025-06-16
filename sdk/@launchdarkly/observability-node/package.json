@@ -28,7 +28,6 @@
 	"dependencies": {
 		"@launchdarkly/node-server-sdk-otel": "^1.2.2",
 		"@prisma/instrumentation": ">=5.0.0",
-		"highlight.run": "workspace:*",
 		"require-in-the-middle": "^7.4.0"
 	},
 	"peerDependencies": {

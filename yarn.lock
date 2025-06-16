@@ -8178,7 +8178,6 @@ __metadata:
     "@types/lru-cache": "npm:^7.10.10"
     "@types/node": "npm:^14.18.63"
     encoding: "npm:^0.1.13"
-    highlight.run: "workspace:*"
     require-in-the-middle: "npm:^7.4.0"
     rollup: "npm:^4.34.8"
     typescript: "npm:^5.0.4"
