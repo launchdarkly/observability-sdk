@@ -62,7 +62,7 @@ import { Metric } from '../api/Metric.js'
 import { RequestContext } from '../api/RequestContext.js'
 import { Headers, IncomingHttpHeaders } from '../api/headers.js'
 
-const OTLP_HTTP = 'https://otel.highlight.io:4318'
+const OTLP_HTTP = 'https://otel.observability.app.launchdarkly.com:4318'
 const HIGHLIGHT_REQUEST_HEADER = 'X-Highlight-Request'
 
 const instrumentations = getNodeAutoInstrumentations({

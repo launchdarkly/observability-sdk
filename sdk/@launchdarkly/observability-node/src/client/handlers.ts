@@ -6,7 +6,7 @@ import {
 	ATTR_HTTP_ROUTE,
 	ATTR_HTTP_RESPONSE_STATUS_CODE,
 } from '@opentelemetry/semantic-conventions'
-import { LDObserve } from '../sdk/LDObserve.js'
+import { _LDObserve } from '../sdk/LDObserve.js'
 
 /** JSDoc */
 interface MiddlewareError extends Error {
@@ -24,14 +24,14 @@ function processErrorImpl(
 	error: Error,
 	metadata?: Attributes,
 ): void {
-	const { secureSessionId, requestId } = LDObserve.parseHeaders(req.headers ?? {})
-	LDObserve._debug('processError', 'extracted from headers', {
+	const { secureSessionId, requestId } = _LDObserve.parseHeaders(req.headers ?? {})
+	_LDObserve._debug('processError', 'extracted from headers', {
 		secureSessionId,
 		requestId,
 	})
 
-	LDObserve.recordError(error, secureSessionId, requestId, metadata)
-	LDObserve._debug('consumed error', error)
+	_LDObserve.recordError(error, secureSessionId, requestId, metadata)
+	_LDObserve._debug('consumed error', error)
 }
 
 /**
@@ -40,21 +40,20 @@ function processErrorImpl(
  * `metadata` accepts structured tags that should be attached to every error.
  */
 export function middleware(
-	options: NodeOptions,
 	metadata?: Attributes,
 ): (
 	req: http.IncomingMessage,
 	res: http.ServerResponse,
 	next: () => void,
 ) => void {
-	LDObserve._debug('setting up middleware')
+	_LDObserve._debug('setting up middleware')
 	return async (
 		req: http.IncomingMessage,
 		res: http.ServerResponse,
 		next: () => void,
 	) => {
-		LDObserve._debug('middleware handling request')
-		return LDObserve.runWithHeaders(
+		_LDObserve._debug('middleware handling request')
+		return _LDObserve.runWithHeaders(
 			`${req.method?.toUpperCase()} - ${req.url}`,
 			req.headers,
 			async () => {
@@ -89,14 +88,14 @@ export function errorHandler(
 	res: http.ServerResponse,
 	next: (error: MiddlewareError) => void,
 ) => void {
-	LDObserve._debug('setting up error handler')
+	_LDObserve._debug('setting up error handler')
 	return (
 		error: MiddlewareError,
 		req: http.IncomingMessage,
 		res: http.ServerResponse,
 		next: (error: MiddlewareError) => void,
 	) => {
-		LDObserve._debug('error handling request')
+		_LDObserve._debug('error handling request')
 		try {
 			processErrorImpl(options, req, error, metadata)
 		} finally {
@@ -124,7 +123,7 @@ export async function trpcOnError(
 	} catch (e) {
 		console.warn('highlight-node trpcOnError error:', e)
 	} finally {
-		await LDObserve.flush()
+		await _LDObserve.flush()
 	}
 }
 
@@ -141,7 +140,7 @@ const makeHandler = (
 		const headers = headersExtractor(args)
 		try {
 			if (headers) {
-				return LDObserve.runWithHeaders(name, headers, async () =>
+				return _LDObserve.runWithHeaders(name, headers, async () =>
 					origHandler(...args),
 				)
 			} else {
@@ -155,7 +154,7 @@ const makeHandler = (
 			} catch (e) {
 				console.warn('highlight-node serverlessFunction error:', e)
 			} finally {
-				await LDObserve.flush()
+				await _LDObserve.flush()
 			}
 
 			// Rethrow the error here to allow any other error handling to happen

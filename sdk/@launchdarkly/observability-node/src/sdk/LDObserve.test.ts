@@ -1,10 +1,10 @@
 import { ObservabilityClient } from '../client/ObservabilityClient.js';
-import { LDObserve } from './LDObserve.js'
-import { HIGHLIGHT_REQUEST_HEADER, makeSDK } from './sdk.js'
+import { LDObserve, _LDObserve } from './LDObserve.js'
+import { HIGHLIGHT_REQUEST_HEADER } from './LDObserve.js'
 import { describe, expect, it } from 'vitest'
 
 describe('parseHeaders', () => {
-	LDObserve.load(makeSDK(new ObservabilityClient('1')));
+	_LDObserve._init(new ObservabilityClient('1'));
 
 	it('returns session id and request id from the headers', () => {
 		expect(

@@ -2,9 +2,8 @@ import { LDPluginMetadata, LDPluginEnvironmentMetadata } from "@launchdarkly/js-
 import { Hook } from "@launchdarkly/js-server-sdk-common/dist/integrations";
 import { LDClientMin, LDPlugin } from "./plugin";
 import { TracingHook } from "@launchdarkly/node-server-sdk-otel";
-import { LDObserve } from "../sdk/LDObserve";
+import { _LDObserve } from "../sdk/LDObserve";
 import { NodeOptions } from "../api/Options";
-import { makeSDK } from "../sdk/sdk";
 import { ObservabilityClient } from "../client/ObservabilityClient";
 
 export class Observability implements LDPlugin {
@@ -17,11 +16,9 @@ export class Observability implements LDPlugin {
         }
     }
     register(_client: LDClientMin, environmentMetadata: LDPluginEnvironmentMetadata): void {
-        LDObserve.load(makeSDK(
-            new ObservabilityClient(
-                environmentMetadata.sdkKey ?? '',
-                this._options ?? {},
-            )
+        _LDObserve._init(new ObservabilityClient(
+            environmentMetadata.sdkKey ?? '',
+            this._options ?? {},
         ))
     }
     getHooks?(_metadata: LDPluginEnvironmentMetadata): Hook[] {

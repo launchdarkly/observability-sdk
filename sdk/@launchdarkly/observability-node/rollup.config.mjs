@@ -8,7 +8,7 @@ import typescript from '@rollup/plugin-typescript'
 const config = {
 	input: 'src/index.ts',
 	context: 'global',
-	external: ['require-in-the-middle'],
+	external: ['require-in-the-middle', '@launchdarkly/node-server-sdk', '@launchdarkly/node-server-sdk-otel'],
 	plugins: [
 		json(),
 		commonjs({
@@ -18,7 +18,7 @@ const config = {
 		resolve({
 			preferBuiltins: true,
 			// avoid bundling require-in-the-middle for next.js compatibility
-			resolveOnly: (module) => !module.includes('require-in-the-middle'),
+			resolveOnly: (module) => !module.includes('require-in-the-middle') || !module.includes('@launchdarkly/node-server-sdk') || !module.includes('@launchdarkly/node-server-sdk-otel'),
 		}),
 		typescript(),
 		terser(),

@@ -8115,7 +8115,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@launchdarkly/js-server-sdk-common@npm:^2.15.2":
+"@launchdarkly/js-server-sdk-common@npm:2.15.2":
   version: 2.15.2
   resolution: "@launchdarkly/js-server-sdk-common@npm:2.15.2"
   dependencies:
@@ -8135,11 +8135,22 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@launchdarkly/node-server-sdk@npm:^9.9.2":
+  version: 9.9.2
+  resolution: "@launchdarkly/node-server-sdk@npm:9.9.2"
+  dependencies:
+    "@launchdarkly/js-server-sdk-common": "npm:2.15.2"
+    https-proxy-agent: "npm:^5.0.1"
+    launchdarkly-eventsource: "npm:2.1.0"
+  checksum: 10/7c3450d7c93e289016605f3864d2de371b97042693438c510c258dae42060f3c3c7f31476f567e06ed93dc13f914fc0e4fc6967c4957c02d4794cb0c1ea97f16
+  languageName: node
+  linkType: hard
+
 "@launchdarkly/observability-node@workspace:sdk/@launchdarkly/observability-node":
   version: 0.0.0-use.local
   resolution: "@launchdarkly/observability-node@workspace:sdk/@launchdarkly/observability-node"
   dependencies:
-    "@launchdarkly/js-server-sdk-common": "npm:^2.15.2"
+    "@launchdarkly/node-server-sdk": "npm:^9.9.2"
     "@launchdarkly/node-server-sdk-otel": "npm:^1.2.2"
     "@opentelemetry/api": "npm:^1.9.0"
     "@opentelemetry/api-logs": "npm:^0.57.2"
@@ -8172,6 +8183,9 @@ __metadata:
     rollup: "npm:^4.34.8"
     typescript: "npm:^5.0.4"
     vitest: "npm:^2.1.3"
+  peerDependencies:
+    "@launchdarkly/js-server-sdk-common": ^2.15.2
+    "@launchdarkly/node-server-sdk": ^9.9.2
   languageName: unknown
   linkType: soft
 
@@ -29066,6 +29080,13 @@ __metadata:
     picocolors: "npm:^1.0.0"
     shell-quote: "npm:^1.8.1"
   checksum: 10/69eb1e69db4f0fcd34a42bd47e9adbad27cb5413408fcc746eb7b016128ce19d71a30629534b17aa5886488936aaa959bf7dab17307ad5ed6c7247a0d145be18
+  languageName: node
+  linkType: hard
+
+"launchdarkly-eventsource@npm:2.1.0":
+  version: 2.1.0
+  resolution: "launchdarkly-eventsource@npm:2.1.0"
+  checksum: 10/2d0db27c69f10056596884c650b8d769978daa639e7da8e7e3a8eddc717e7dacc2c3254d2ff4fb5f7f506669a99121bc053afbd5f7ce230c44daa0b5951ff034
   languageName: node
   linkType: hard
 
