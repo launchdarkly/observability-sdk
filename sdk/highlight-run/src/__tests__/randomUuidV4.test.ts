@@ -14,7 +14,7 @@ it('formats conformant UUID', () => {
 	expect(idC).toHaveLength(36)
 	const versionA = idA[14]
 	const versionB = idB[14]
-	const versionC = idB[14]
+	const versionC = idC[14]
 
 	expect(versionA).toEqual('4')
 	expect(versionB).toEqual('4')
