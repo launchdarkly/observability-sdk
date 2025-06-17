@@ -149,7 +149,7 @@ export function createLog(
 		: data.filter((o) => typeof o !== 'object').map((o) => `${o}`)
 	return {
 		type: level,
-		trace: trace.slice(1),
+		trace,
 		value: message,
 		attributes: stringify(
 			data
