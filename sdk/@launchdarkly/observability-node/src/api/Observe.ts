@@ -6,9 +6,7 @@ import {
 } from '@opentelemetry/api'
 import { RequestContext } from './RequestContext'
 import { Metric } from './Metric'
-
-export type Headers = Iterable<string | string[] | undefined>
-export type IncomingHttpHeaders = Record<string, string | string[] | undefined>
+import { Headers, IncomingHttpHeaders } from './headers'
 
 export interface Observe {
 	/**
