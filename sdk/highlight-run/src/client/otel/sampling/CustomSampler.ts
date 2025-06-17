@@ -10,11 +10,12 @@ import {
 	AttributeMatchConfig,
 	SpanEventMatchConfig,
 } from '../../graph/generated/operations'
-const LOG_SPAN_NAME = 'launchdarkly.js.log'
-const LOG_SEVERITY_ATTRIBUTE = 'log.severity'
-const LOG_MESSAGE_ATTRIBUTE = 'log.message'
-
-const SAMPLING_RATIO_ATTRIBUTE = 'launchdarkly.sampling.ratio'
+import {
+	ATTR_SAMPLING_RATIO,
+	LOG_SPAN_NAME,
+	ATTR_LOG_SEVERITY,
+	ATTR_LOG_MESSAGE,
+} from '../index'
 
 type RegexCache = Map<string, RegExp>
 
@@ -238,7 +239,7 @@ export class CustomSampler implements ExportSampler {
 		attributes: Attributes,
 	): boolean {
 		if (config.severityText) {
-			const severityText = attributes[LOG_SEVERITY_ATTRIBUTE]
+			const severityText = attributes[ATTR_LOG_SEVERITY]
 			if (
 				typeof severityText === 'string' &&
 				!this.matchesValue(config.severityText, severityText)
@@ -248,7 +249,7 @@ export class CustomSampler implements ExportSampler {
 		}
 
 		if (config.message) {
-			const message = attributes[LOG_MESSAGE_ATTRIBUTE]
+			const message = attributes[ATTR_LOG_MESSAGE]
 			if (
 				typeof message === 'string' &&
 				!this.matchesValue(config.message, message)
@@ -282,8 +283,7 @@ export class CustomSampler implements ExportSampler {
 					return {
 						sample: this.sampler(spanConfig.samplingRatio),
 						attributes: {
-							[SAMPLING_RATIO_ATTRIBUTE]:
-								spanConfig.samplingRatio,
+							[ATTR_SAMPLING_RATIO]: spanConfig.samplingRatio,
 						},
 					}
 				}
@@ -312,7 +312,7 @@ export class CustomSampler implements ExportSampler {
 					return {
 						sample: this.sampler(logConfig.samplingRatio),
 						attributes: {
-							[SAMPLING_RATIO_ATTRIBUTE]: logConfig.samplingRatio,
+							[ATTR_SAMPLING_RATIO]: logConfig.samplingRatio,
 						},
 					}
 				}

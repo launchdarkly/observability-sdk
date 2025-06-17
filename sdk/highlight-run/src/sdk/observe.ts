@@ -14,8 +14,11 @@ import {
 	BROWSER_METER_NAME,
 	Callback,
 	getTracer,
+	ATTR_LOG_MESSAGE,
+	ATTR_LOG_SEVERITY,
 	LOG_SPAN_NAME,
 	setupBrowserTracing,
+	ATTR_EXCEPTION_ID,
 } from '../client/otel'
 import type { Observe } from '../api/observe'
 import { getNoopSpan } from '../client/otel/utils'
@@ -71,6 +74,8 @@ import {
 	NetworkPerformanceListener,
 	NetworkPerformancePayload,
 } from '../client/listeners/network-listener/performance-listener'
+import randomUuidV4 from '../client/utils/randomUuidV4'
+import { recordException } from '../client/otel/recordException'
 import { ObserveOptions } from '../client/types/observe'
 
 export class ObserveSDK implements Observe {
@@ -162,8 +167,8 @@ export class ObserveSDK implements Observe {
 				? stringify(trace.map((s) => s.toString()))
 				: undefined
 			span?.addEvent('log', {
-				'log.severity': level,
-				'log.message': msg,
+				[ATTR_LOG_SEVERITY]: level,
+				[ATTR_LOG_MESSAGE]: msg,
 				'code.stacktrace': stackTrace,
 				...metadata,
 			})
@@ -182,8 +187,29 @@ export class ObserveSDK implements Observe {
 		})
 	}
 
-	recordLog(message: any, level: ConsoleMethods, metadata?: Attributes) {
-		return this._recordLog(message, level, metadata)
+	private _recordErrorMessage(
+		errorMsg: ErrorMessage,
+		payload?: { [key: string]: string },
+	) {
+		this.startSpan('highlight.exception', (span) => {
+			// This is handled in the callsites, but this redundancy handles it from a pure
+			// type safety perspective.
+			recordException(span, errorMsg.error ?? new Error(errorMsg.event), {
+				[ATTR_EXCEPTION_ID]: errorMsg.id,
+			})
+			span?.setAttributes({
+				event: errorMsg.event,
+				type: errorMsg.type,
+				url: errorMsg.url,
+				source: errorMsg.source,
+				lineNumber: errorMsg.lineNumber,
+				columnNumber: errorMsg.columnNumber,
+				...payload,
+			})
+		})
+		for (const integration of this._integrations) {
+			integration.error(getPersistentSessionSecureID(), errorMsg)
+		}
 	}
 
 	recordError(
@@ -214,22 +240,9 @@ export class ObserveSDK implements Observe {
 			columnNumber: res[0]?.columnNumber ? res[0]?.columnNumber : 0,
 			stackTrace: res,
 			timestamp: new Date().toISOString(),
+			id: randomUuidV4(),
 		}
-		this.startSpan('highlight.exception', (span) => {
-			span?.recordException(error)
-			span?.setAttributes({
-				event: errorMsg.event,
-				type: errorMsg.type,
-				url: errorMsg.url,
-				source: errorMsg.source,
-				lineNumber: errorMsg.lineNumber,
-				columnNumber: errorMsg.columnNumber,
-				...payload,
-			})
-		})
-		for (const integration of this._integrations) {
-			integration.error(getPersistentSessionSecureID(), errorMsg)
-		}
+		this._recordErrorMessage(errorMsg, payload)
 	}
 
 	recordCount(metric: Metric) {
@@ -518,18 +531,9 @@ export class ObserveSDK implements Observe {
 						payload = JSON.parse(e.payload)
 					}
 				} catch (e) {}
-				this.recordError(
-					e.error ?? err,
-					e.event,
-					{
-						...payload,
-						lineNumber: e.lineNumber.toString(),
-						columnNumber: e.columnNumber.toString(),
-						source: e.source,
-						url: e.url,
-					},
-					e.source,
-					e.type,
+				this._recordErrorMessage(
+					{ ...e, error: e.error ?? err },
+					payload,
 				)
 			},
 			{ enablePromisePatch: !!this._options.enablePromisePatch },
@@ -587,5 +591,9 @@ export class ObserveSDK implements Observe {
 				},
 			})
 		}
+	}
+
+	recordLog(message: any, level: ConsoleMethods, metadata?: Attributes) {
+		return this._recordLog(message, level, metadata)
 	}
 }
