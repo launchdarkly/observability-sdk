@@ -203,7 +203,7 @@ export class ObservabilityClient {
 
 		const attributes: Attributes = options.attributes || {}
 		attributes['highlight.project_id'] = this._projectID
-		attributes['telemetry.distro.name'] = '@highlight-run/node'
+		attributes['telemetry.distro.name'] = '@launchdarkly/observability-node'
 		attributes['telemetry.distro.version'] = packageJson.version
 
 		for (const [otelAttr, option] of Object.entries(OTEL_TO_OPTIONS)) {
