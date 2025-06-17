@@ -3,8 +3,9 @@ import { ResourceAttributes } from '@opentelemetry/resources'
 import { ObservabilityClient } from '../client/ObservabilityClient'
 
 import { RequestContext } from '../api/RequestContext'
-import { Headers, IncomingHttpHeaders, Observe } from '../api/Observe'
+import { Observe } from '../api/Observe'
 import { Metric } from '../api/Metric'
+import { Headers, IncomingHttpHeaders } from '../api/headers'
 
 let observabilityClient: ObservabilityClient
 

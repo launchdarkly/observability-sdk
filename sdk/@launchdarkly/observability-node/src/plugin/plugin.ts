@@ -1,8 +1,5 @@
 import type {
-	LDContext,
 	integrations,
-	LDPluginEnvironmentMetadata,
-	LDPluginMetadata,
 	LDPluginBase,
 } from '@launchdarkly/js-server-sdk-common'
 
