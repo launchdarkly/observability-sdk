@@ -192,7 +192,9 @@ export class ObserveSDK implements Observe {
 		payload?: { [key: string]: string },
 	) {
 		this.startSpan('highlight.exception', (span) => {
-			recordException(span, errorMsg.error!, {
+			// This is handled in the callsites, but this redundancy handles it from a pure
+			// type safety perspective.
+			recordException(span, errorMsg.error ?? new Error(errorMsg.event), {
 				[ATTR_EXCEPTION_ID]: errorMsg.id,
 			})
 			span?.setAttributes({
