@@ -31,6 +31,12 @@ export interface NodeOptions {
 	otlpEndpoint?: string
 
 	/**
+	 * Specifies the URL used for non-OTLP operations.
+	 * These include accessing client sampling configuration.
+	 */
+	backendUrl?: string
+
+	/**
 	 * This app's service name.
 	 */
 	serviceName?: string
