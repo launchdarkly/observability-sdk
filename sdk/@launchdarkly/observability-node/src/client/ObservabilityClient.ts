@@ -26,8 +26,6 @@ import {
 	W3CBaggagePropagator,
 	W3CTraceContextPropagator,
 } from '@opentelemetry/core'
-import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http'
-import { OTLPLogExporter } from '@opentelemetry/exporter-logs-otlp-http'
 import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-http'
 import {
 	type Instrumentation,
@@ -61,8 +59,13 @@ import { NodeOptions } from '../api/Options.js'
 import { Metric } from '../api/Metric.js'
 import { RequestContext } from '../api/RequestContext.js'
 import { Headers, IncomingHttpHeaders } from '../api/headers.js'
+import { getSamplingConfig } from '../graph/getSamplingConfig.js'
+import { SamplingTraceExporter } from '../otel/SamplingTraceExporter.js'
+import { SamplingLogExporter } from '../otel/SamplingLogExporter.js'
+import { CustomSampler } from '../otel/sampling/CustomSampler.js'
 
 const OTLP_HTTP = 'https://otel.observability.app.launchdarkly.com:4318'
+const BACKEND_URL = 'https://pub.observability.app.launchdarkly.com'
 export const HIGHLIGHT_REQUEST_HEADER = 'x-highlight-request'
 
 const instrumentations = getNodeAutoInstrumentations({
@@ -106,6 +109,7 @@ export class ObservabilityClient {
 	_projectID: string
 	_debug: boolean
 	otel: NodeSDK
+	private readonly backendUrl: string
 
 	private readonly tracer: Tracer
 	private readonly logger: Logger
@@ -133,6 +137,7 @@ export class ObservabilityClient {
 		const optionsWithDebug = options as OptionsWithDebug
 		this._debug = !!optionsWithDebug.debug
 		this._projectID = sdkKey
+		this.backendUrl = options.backendUrl ?? BACKEND_URL
 
 		if (!this._projectID) {
 			console.warn(
@@ -213,19 +218,27 @@ export class ObservabilityClient {
 		}
 		const resource = new Resource(attributes)
 
-		const exporter = new OTLPTraceExporter({
-			...config,
-			url: `${config.url}/v1/traces`,
-		})
+		const sampler = new CustomSampler()
+		this._getSamplingConfig(sampler)
+		const exporter = new SamplingTraceExporter(
+			{
+				...config,
+				url: `${config.url}/v1/traces`,
+			},
+			sampler,
+		)
 		this.processor = new BatchSpanProcessor(exporter, opts)
 
 		this.loggerProvider = new LoggerProvider({
 			resource,
 		})
-		const logsExporter = new OTLPLogExporter({
-			...config,
-			url: `${config.url}/v1/logs`,
-		})
+		const logsExporter = new SamplingLogExporter(
+			{
+				...config,
+				url: `${config.url}/v1/logs`,
+			},
+			sampler,
+		)
 		const logsProcessor = new BatchLogRecordProcessor(logsExporter, opts)
 		this.loggerProvider.addLogRecordProcessor(logsProcessor)
 
@@ -289,6 +302,18 @@ export class ObservabilityClient {
 		}
 
 		this._log(`Initialized SDK for project ${this._projectID}`)
+	}
+
+	private async _getSamplingConfig(sampler: CustomSampler) {
+		try {
+			const result = await getSamplingConfig(
+				this.backendUrl,
+				this._projectID,
+			)
+			sampler.setConfig(result)
+		} catch (err) {
+			this._log('failed to get sampling config: ', err)
+		}
 	}
 
 	async stop() {
