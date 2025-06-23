@@ -5,6 +5,7 @@ import { it, expect, beforeEach, vi, describe } from 'vitest'
 import spanTestScenarios from './span-test-scenarios.json'
 import logTestScenarios from './log-test-scenarios.json'
 import { SamplingConfig } from '../../graph/generated/graphql'
+import { ReadableLogRecord } from '@opentelemetry/sdk-logs'
 
 interface SpanTestScenario {
 	description: string
@@ -160,7 +161,7 @@ const runTestLogScenarios = (scenarios: LogTestScenario[]) => {
 				sampler.setConfig(config)
 				expect(sampler.isSamplingEnabled()).toBe(true)
 
-				const result = sampler.sampleLog(scenario.inputLog)
+				const result = sampler.sampleLog(scenario.inputLog as ReadableLogRecord)
 
 				expect(result.sample).toBe(samplerCase.expected_result.sample)
 
