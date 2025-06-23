@@ -161,7 +161,9 @@ const runTestLogScenarios = (scenarios: LogTestScenario[]) => {
 				sampler.setConfig(config)
 				expect(sampler.isSamplingEnabled()).toBe(true)
 
-				const result = sampler.sampleLog(scenario.inputLog as ReadableLogRecord)
+				const result = sampler.sampleLog(
+					scenario.inputLog as ReadableLogRecord,
+				)
 
 				expect(result.sample).toBe(samplerCase.expected_result.sample)
 
