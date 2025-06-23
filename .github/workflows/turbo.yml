@@ -60,14 +60,7 @@ jobs:
 
             - name: Publish highlight npm packages
               if: github.ref == 'refs/heads/main'
-              id: changesets-publish
-              uses: changesets/action@v1
-              with:
-                  publish: yarn publish:highlight
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-                  NPM_TOKEN: ${{ secrets.NPM_TOKEN_HIGHLIGHT_RUN }}
-                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN_HIGHLIGHT_RUN }}
+              run: yarn publish:highlight
 
             - uses: launchdarkly/gh-actions/actions/release-secrets@release-secrets-v1.2.0
               if: github.ref == 'refs/heads/main'

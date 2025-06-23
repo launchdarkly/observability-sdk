@@ -1,5 +1,11 @@
 # highlight.run
 
+## 9.18.18
+
+### Patch Changes
+
+- 491a594: Add IDs to error instances.
+
 ## 9.18.17
 
 ### Patch Changes
