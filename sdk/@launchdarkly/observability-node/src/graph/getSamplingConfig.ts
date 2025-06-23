@@ -1,6 +1,7 @@
 import {
 	GetSamplingConfigDocument,
 	GetSamplingConfigQuery,
+	Maybe,
 	SamplingConfig,
 } from './generated/graphql'
 import * as http from 'http'
@@ -10,7 +11,7 @@ import { URL } from 'url'
 export async function getSamplingConfig(
 	url: string,
 	organizationVerboseId: string,
-): Promise<SamplingConfig> {
+): Promise<Maybe<SamplingConfig> | undefined> {
 	return new Promise((resolve, reject) => {
 		const parsedUrl = new URL(url)
 		const isHttps = parsedUrl.protocol === 'https:'
@@ -44,7 +45,7 @@ export async function getSamplingConfig(
 			res.on('end', () => {
 				try {
 					const result = JSON.parse(data)
-					resolve(result.data as SamplingConfig)
+					resolve(result?.data?.sampling as SamplingConfig)
 				} catch (error) {
 					reject(new Error(`Failed to parse response: ${error}`))
 				}
