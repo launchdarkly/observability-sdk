@@ -10,7 +10,8 @@
 		"typegen": "tsc -d --emitDeclarationOnly",
 		"dev": "yarn build --watch",
 		"build": "rollup --config rollup.config.mjs",
-		"test": "vitest run"
+		"test": "vitest run",
+		"codegen": "graphql-codegen"
 	},
 	"main": "./dist/index.cjs",
 	"module": "./dist/index.js",
@@ -26,6 +27,7 @@
 		"access": "public"
 	},
 	"dependencies": {
+		"@graphql-codegen/cli": "^5.0.7",
 		"@launchdarkly/node-server-sdk-otel": "^1.2.2",
 		"@prisma/instrumentation": ">=5.0.0",
 		"require-in-the-middle": "^7.4.0"
