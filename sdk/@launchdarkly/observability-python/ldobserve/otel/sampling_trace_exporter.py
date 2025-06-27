@@ -3,16 +3,12 @@ from opentelemetry.sdk.trace.export import SpanExporter, SpanExportResult
 from opentelemetry.sdk.trace import ReadableSpan
 from opentelemetry.trace import SpanContext
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-import random
-import re
 from typing import Protocol
+from copy import deepcopy
 
 from .sampling import CustomSampler, SamplingResult, default_sampler
 from ..graph.generated.public_graph_client.get_sampling_config import (
     GetSamplingConfigSampling,
-    GetSamplingConfigSamplingSpans,
-    GetSamplingConfigSamplingSpansAttributes,
-    GetSamplingConfigSamplingSpansEvents,
 )
 
 
@@ -32,6 +28,30 @@ class ExportSampler(Protocol):
         ...
 
 
+def clone_readable_span_with_attributes(
+    span: ReadableSpan,
+    attributes: Dict[str, Union[str, int, float, bool]],
+) -> ReadableSpan:
+    """Clone a ReadableSpan with merged attributes."""
+    # Create a new span with merged attributes
+    merged_attributes = dict(span.attributes or {})
+    merged_attributes.update(attributes)
+    
+    return ReadableSpan(
+        name=span.name,
+        context=span.get_span_context(),
+        parent=span.parent,
+        resource=span.resource,
+        instrumentation_scope=span.instrumentation_scope,
+        attributes=merged_attributes,
+        events=span.events,
+        links=span.links,
+        status=span.status,
+        start_time=span.start_time,
+        end_time=span.end_time,
+        kind=span.kind
+    )
+
 def sample_spans(
     items: List[ReadableSpan],
     sampler: ExportSampler,
@@ -40,9 +60,9 @@ def sample_spans(
     if not sampler.is_sampling_enabled():
         return items
     
-    omitted_span_ids: List[str] = []
-    span_by_id: Dict[str, ReadableSpan] = {}
-    children_by_parent_id: Dict[str, List[str]] = {}
+    omitted_span_ids: List[int] = []
+    span_by_id: Dict[int, ReadableSpan] = {}
+    children_by_parent_id: Dict[int, List[int]] = {}
     
     # First pass: sample items and build parent-child relationships
     for item in items:
@@ -51,24 +71,24 @@ def sample_spans(
             continue
             
         # Try to get parent span ID - this might not be available on all span types
-        parent_span_id = None
-        try:
-            parent_span_id = getattr(item, 'parent_span_id', None)
-        except AttributeError:
-            pass
-        
+        parent_span_id = item.parent.span_id if item.parent else None
         if parent_span_id:
             if parent_span_id not in children_by_parent_id:
                 children_by_parent_id[parent_span_id] = []
             children_by_parent_id[parent_span_id].append(
-                str(span_context.span_id)
+                span_context.span_id
             )
         
         sample_result = sampler.sample_span(item)
         if sample_result.sample:
-            span_by_id[str(span_context.span_id)] = item
+            if sample_result.attributes:
+                span_by_id[span_context.span_id] = clone_readable_span_with_attributes(
+                    item, sample_result.attributes
+                )
+            else:
+                span_by_id[span_context.span_id] = item
         else:
-            omitted_span_ids.append(str(span_context.span_id))
+            omitted_span_ids.append(span_context.span_id)
     
     # Remove children of spans that have been sampled out
     while omitted_span_ids:
