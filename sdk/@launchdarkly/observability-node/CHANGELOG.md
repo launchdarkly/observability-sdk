@@ -1,5 +1,11 @@
 # @launchdarkly/observability-node
 
+## 0.1.1
+
+### Patch Changes
+
+- 1a69751: Update TracingHook version and parameters.
+
 ## 0.1.0
 
 ### Minor Changes
