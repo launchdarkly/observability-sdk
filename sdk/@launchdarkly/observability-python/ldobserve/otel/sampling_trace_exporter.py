@@ -1,10 +1,11 @@
-from typing import List, Optional, Dict, Callable, Union
+from typing import List, Optional, Dict, Callable, Union, Sequence, Tuple
 from opentelemetry.sdk.trace.export import SpanExporter, SpanExportResult
 from opentelemetry.sdk.trace import ReadableSpan
 from opentelemetry.trace import SpanContext
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 from typing import Protocol
 from copy import deepcopy
+import grpc
 
 from .sampling import CustomSampler, SamplingResult, default_sampler
 from ..graph.generated.public_graph_client.get_sampling_config import (
@@ -110,10 +111,22 @@ class SamplingTraceExporter(OTLPSpanExporter):
     
     def __init__(
         self,
-        config: Optional[Dict[str, object]] = None,
+        endpoint: Optional[str] = None,
+        insecure: Optional[bool] = None,
+        credentials: Optional[grpc.ChannelCredentials] = None,
+        headers: Optional[Union[Sequence[Tuple[str, str]], Dict[str, str], str]] = None,
+        timeout: Optional[int] = None,
+        compression: Optional[grpc.Compression] = None,
         sampler: Optional[CustomSampler] = None,
     ):
-        super().__init__(**(config or {}))  # type: ignore
+        super().__init__(
+            endpoint=endpoint,
+            insecure=insecure,
+            credentials=credentials,
+            headers=headers,
+            timeout=timeout,
+            compression=compression,
+        )
         self.sampler = sampler or CustomSampler()
     
     def export(self, spans: List[ReadableSpan]) -> SpanExportResult:
