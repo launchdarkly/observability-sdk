@@ -1,0 +1,429 @@
+import {
+	Attributes,
+	Span as OtelSpan,
+	SpanOptions,
+	trace,
+} from '@opentelemetry/api'
+import { logs } from '@opentelemetry/api-logs'
+import { metrics } from '@opentelemetry/api'
+import { registerInstrumentations } from '@opentelemetry/instrumentation'
+import { FetchInstrumentation } from '@opentelemetry/instrumentation-fetch'
+import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http'
+import { OTLPLogExporter } from '@opentelemetry/exporter-logs-otlp-http'
+import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-http'
+import {
+	ConsoleSpanExporter,
+	SimpleSpanProcessor,
+	SpanExporter,
+	WebTracerProvider,
+} from '@opentelemetry/sdk-trace-web'
+import {
+	ConsoleLogRecordExporter,
+	LoggerProvider,
+	SimpleLogRecordProcessor,
+} from '@opentelemetry/sdk-logs'
+import {
+	ConsoleMetricExporter,
+	MeterProvider,
+	PeriodicExportingMetricReader,
+} from '@opentelemetry/sdk-metrics'
+import { Resource, ResourceAttributes } from '@opentelemetry/resources'
+import {
+	ATTR_EXCEPTION_MESSAGE,
+	ATTR_EXCEPTION_STACKTRACE,
+	ATTR_EXCEPTION_TYPE,
+} from '@opentelemetry/semantic-conventions'
+import { SpanStatusCode } from '@opentelemetry/api'
+import {
+	createSessionSpanProcessor,
+	SessionProvider,
+} from '@opentelemetry/web-common'
+import { ReactNativeOptions } from '../api/Options'
+import { Metric } from '../api/Metric'
+import { SessionManager } from './SessionManager'
+
+class SessionIdProvider implements SessionProvider {
+	constructor(private sessionManager: SessionManager) {}
+
+	getSessionId(): string | null {
+		const sessionInfo = this.sessionManager.getSessionInfo()
+		return sessionInfo?.sessionId || 'unknown'
+	}
+}
+
+export class InstrumentationManager {
+	private traceProvider?: WebTracerProvider
+	private loggerProvider?: LoggerProvider
+	private meterProvider?: MeterProvider
+	private sessionManager?: SessionManager
+	private isInitialized = false
+
+	constructor(private options: Required<ReactNativeOptions>) {}
+
+	public async initialize(resource: Resource): Promise<void> {
+		if (this.isInitialized) return
+
+		try {
+			const headers = {
+				'x-launchdarkly-team': 'observability',
+				'x-launchdarkly-dataset': this.options.serviceName,
+				...this.options.customHeaders,
+			}
+
+			// Initialize tracing if enabled
+			if (this.options.enableTracing) {
+				await this.initializeTracing(resource, headers)
+			}
+
+			// Initialize logging if enabled
+			if (this.options.enableLogs) {
+				await this.initializeLogs(resource, headers)
+			}
+
+			// Initialize metrics if enabled
+			if (this.options.enableMetrics) {
+				await this.initializeMetrics(resource, headers)
+			}
+
+			this.isInitialized = true
+			this._log('InstrumentationManager initialized successfully')
+		} catch (error) {
+			console.error('Failed to initialize InstrumentationManager:', error)
+		}
+	}
+
+	private async initializeTracing(
+		resource: Resource,
+		headers: Record<string, string>,
+	): Promise<void> {
+		const exporter = new OTLPTraceExporter({
+			url: `${this.options.otlpEndpoint}/v1/traces`,
+			headers,
+		})
+
+		const processors = [
+			new SimpleSpanProcessor(exporter as unknown as SpanExporter),
+		]
+
+		if (this.options.enableConsoleLogging) {
+			processors.push(new SimpleSpanProcessor(new ConsoleSpanExporter()))
+		}
+
+		// Add session span processor if session manager is available
+		if (this.sessionManager) {
+			processors.push(
+				createSessionSpanProcessor(
+					new SessionIdProvider(this.sessionManager),
+				),
+			)
+		}
+
+		this.traceProvider = new WebTracerProvider({
+			resource,
+			spanProcessors: processors,
+		})
+
+		this.traceProvider.register()
+		trace.setGlobalTracerProvider(this.traceProvider)
+
+		// Register fetch instrumentation
+		registerInstrumentations({
+			instrumentations: [
+				new FetchInstrumentation({
+					propagateTraceHeaderCorsUrls: /.*/,
+					clearTimingResources: false,
+				}),
+			],
+		})
+
+		this._log('Tracing initialized')
+	}
+
+	private async initializeLogs(
+		resource: Resource,
+		headers: Record<string, string>,
+	): Promise<void> {
+		const logExporter = new OTLPLogExporter({
+			headers: {
+				...headers,
+				'x-launchdarkly-dataset': `${this.options.serviceName}-logs`,
+			},
+			url: `${this.options.otlpEndpoint}/v1/logs`,
+		})
+
+		this.loggerProvider = new LoggerProvider({ resource })
+		this.loggerProvider.addLogRecordProcessor(
+			new SimpleLogRecordProcessor(logExporter),
+		)
+
+		if (this.options.enableConsoleLogging) {
+			this.loggerProvider.addLogRecordProcessor(
+				new SimpleLogRecordProcessor(new ConsoleLogRecordExporter()),
+			)
+		}
+
+		logs.setGlobalLoggerProvider(this.loggerProvider)
+
+		this._log('Logs initialized')
+	}
+
+	private async initializeMetrics(
+		resource: Resource,
+		headers: Record<string, string>,
+	): Promise<void> {
+		const metricExporter = new OTLPMetricExporter({
+			headers: {
+				...headers,
+				'x-launchdarkly-dataset': `${this.options.serviceName}-metrics`,
+			},
+			url: `${this.options.otlpEndpoint}/v1/metrics`,
+		})
+
+		const readers = [
+			new PeriodicExportingMetricReader({ exporter: metricExporter }),
+		]
+
+		if (this.options.enableConsoleLogging) {
+			readers.push(
+				new PeriodicExportingMetricReader({
+					exporter: new ConsoleMetricExporter(),
+				}),
+			)
+		}
+
+		this.meterProvider = new MeterProvider({
+			resource,
+			readers,
+		})
+
+		metrics.setGlobalMeterProvider(this.meterProvider)
+
+		this._log('Metrics initialized')
+	}
+
+	public recordError(
+		error: Error,
+		secureSessionId?: string,
+		requestId?: string,
+		metadata?: Attributes,
+		options?: { span: OtelSpan },
+	): void {
+		try {
+			const activeSpan = options?.span || trace.getActiveSpan()
+			const span = activeSpan ?? this.getTracer().startSpan('error')
+
+			span.recordException(error)
+			span.setAttribute(ATTR_EXCEPTION_MESSAGE, error.message)
+			span.setAttribute(
+				ATTR_EXCEPTION_STACKTRACE,
+				error.stack ?? 'No stack trace',
+			)
+			span.setAttribute(ATTR_EXCEPTION_TYPE, error.name ?? 'No name')
+			span.setStatus({ code: SpanStatusCode.ERROR })
+
+			if (metadata) {
+				span.setAttributes(metadata)
+			}
+
+			if (secureSessionId) {
+				span.setAttribute('session.id', secureSessionId)
+			}
+
+			if (requestId) {
+				span.setAttribute('request.id', requestId)
+			}
+
+			if (!activeSpan) {
+				span.end()
+			}
+
+			// Also log the error
+			this.recordLog(error.message, 'error', secureSessionId, requestId, {
+				...metadata,
+				'exception.type': error.name,
+				'exception.message': error.message,
+				'exception.stacktrace': error.stack,
+			})
+		} catch (e) {
+			console.error('Failed to record error:', e)
+		}
+	}
+
+	public recordMetric(metric: Metric): void {
+		try {
+			const meter = this.getMeter()
+			const counter = meter.createCounter(metric.name)
+			counter.add(metric.value, metric.attributes)
+		} catch (e) {
+			console.error('Failed to record metric:', e)
+		}
+	}
+
+	public recordCount(metric: Metric): void {
+		this.recordMetric(metric)
+	}
+
+	public recordIncr(metric: Metric): void {
+		const incrMetric = { ...metric, value: 1 }
+		this.recordMetric(incrMetric)
+	}
+
+	public recordHistogram(metric: Metric): void {
+		try {
+			const meter = this.getMeter()
+			const histogram = meter.createHistogram(metric.name)
+			histogram.record(metric.value, metric.attributes)
+		} catch (e) {
+			console.error('Failed to record histogram:', e)
+		}
+	}
+
+	public recordUpDownCounter(metric: Metric): void {
+		try {
+			const meter = this.getMeter()
+			const upDownCounter = meter.createUpDownCounter(metric.name)
+			upDownCounter.add(metric.value, metric.attributes)
+		} catch (e) {
+			console.error('Failed to record up/down counter:', e)
+		}
+	}
+
+	public recordLog(
+		message: any,
+		level: string,
+		secureSessionId?: string,
+		requestId?: string,
+		metadata?: Attributes,
+	): void {
+		try {
+			const logger = this.getLogger()
+			const sessionContext =
+				this.sessionManager?.getSessionContext() || {}
+
+			logger.emit({
+				severityText: level.toUpperCase(),
+				body:
+					typeof message === 'string'
+						? message
+						: JSON.stringify(message),
+				attributes: {
+					...metadata,
+					...sessionContext,
+					'log.source': 'react-native-plugin',
+					...(secureSessionId && { 'session.id': secureSessionId }),
+					...(requestId && { 'request.id': requestId }),
+				},
+				timestamp: Date.now(),
+			})
+		} catch (e) {
+			console.error('Failed to record log:', e)
+		}
+	}
+
+	public runWithHeaders(
+		name: string,
+		headers: Record<string, string>,
+		cb: (span: OtelSpan) => any,
+		options?: SpanOptions,
+	): any {
+		const tracer = this.getTracer()
+		return tracer.startActiveSpan(name, options || {}, (span) => {
+			try {
+				// Add header attributes to span
+				Object.entries(headers).forEach(([key, value]) => {
+					span.setAttribute(`http.header.${key}`, value)
+				})
+
+				return cb(span)
+			} finally {
+				span.end()
+			}
+		})
+	}
+
+	public startWithHeaders(
+		spanName: string,
+		headers: Record<string, string>,
+		options?: SpanOptions,
+	): OtelSpan {
+		const tracer = this.getTracer()
+		const span = tracer.startSpan(spanName, options)
+
+		// Add header attributes to span
+		Object.entries(headers).forEach(([key, value]) => {
+			span.setAttribute(`http.header.${key}`, value)
+		})
+
+		return span
+	}
+
+	public async flush(): Promise<void> {
+		try {
+			// Flush trace provider
+			if (this.traceProvider) {
+				await this.traceProvider.forceFlush()
+			}
+
+			// Flush logger provider
+			if (this.loggerProvider) {
+				await this.loggerProvider.forceFlush()
+			}
+
+			// Flush meter provider
+			if (this.meterProvider) {
+				await this.meterProvider.forceFlush()
+			}
+		} catch (e) {
+			console.error('Failed to flush telemetry:', e)
+		}
+	}
+
+	public setAttributes(attributes: ResourceAttributes): void {
+		// Resource attributes are set during initialization
+		// This method could be used to update dynamic attributes if needed
+		this._log('Setting resource attributes:', attributes)
+	}
+
+	public async stop(): Promise<void> {
+		try {
+			if (this.traceProvider) {
+				await this.traceProvider.shutdown()
+			}
+
+			if (this.loggerProvider) {
+				await this.loggerProvider.shutdown()
+			}
+
+			if (this.meterProvider) {
+				await this.meterProvider.shutdown()
+			}
+
+			this.isInitialized = false
+			this._log('InstrumentationManager stopped')
+		} catch (e) {
+			console.error('Failed to stop InstrumentationManager:', e)
+		}
+	}
+
+	public setSessionManager(sessionManager: SessionManager): void {
+		this.sessionManager = sessionManager
+	}
+
+	private getTracer() {
+		return trace.getTracerProvider().getTracer(this.options.serviceName)
+	}
+
+	private getLogger() {
+		return logs.getLoggerProvider().getLogger(this.options.serviceName)
+	}
+
+	private getMeter() {
+		return metrics.getMeterProvider().getMeter(this.options.serviceName)
+	}
+
+	private _log(...data: any[]): void {
+		if (this.options.debug) {
+			console.log('[InstrumentationManager]', ...data)
+		}
+	}
+}
