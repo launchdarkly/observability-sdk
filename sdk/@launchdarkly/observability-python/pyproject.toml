@@ -72,6 +72,7 @@ dependencies = [
     "opentelemetry-instrumentation-wsgi==0.55b1",
     "urllib3>=2.2.1",
     "requests>=2.31.0",
+    "ariadne-codegen (>=0.14.0,<0.15.0)",
 ]
 
 [project.optional-dependencies]
@@ -103,3 +104,11 @@ configurator = "ldobserve.distro:LaunchDarklyOpenTelemetryConfigurator"
 
 [project.entry-points.opentelemetry_distro]
 configurator = "ldobserve.distro:LaunchDarklyOpenTelemetryDistro"
+
+[tool.ariadne-codegen]
+schema_path = "../../../../backend/public-graph/graph/schema.graphqls"
+queries_path = "ldobserve/graph/operators/query.gql"
+include_comments = "none"
+target_package_name = "public_graph_client"
+target_package_path = "ldobserve/graph/generated"
+enable_custom_operations = true
