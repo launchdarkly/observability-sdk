@@ -5,6 +5,12 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"fmt"
+	"net/url"
+	"reflect"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/pkg/errors"
 	"github.com/samber/lo"
 	"go.opentelemetry.io/otel"
@@ -22,11 +28,6 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.25.0"
 	"go.opentelemetry.io/otel/trace"
-	"net/url"
-	"reflect"
-	"strings"
-	"sync"
-	"time"
 )
 
 const OTLPDefaultEndpoint = "https://otel.highlight.io:4318"
@@ -34,6 +35,7 @@ const OTLPDefaultEndpoint = "https://otel.highlight.io:4318"
 const ErrorURLAttribute = "URL"
 
 const ProjectIDHeader = "x-highlight-project"
+const LDProjectIDHeader = "X-LaunchDarkly-Project"
 const DeprecatedProjectIDAttribute = "highlight_project_id"
 const DeprecatedSessionIDAttribute = "highlight_session_id"
 const DeprecatedRequestIDAttribute = "highlight_trace_id"
@@ -61,6 +63,13 @@ const MetricEventValue = "metric.value"
 const ErrorSpanName = "highlight.error"
 const LogSpanName = "highlight.log"
 const LogrusSpanName = "highlight.go.log"
+
+const LDExceptionID = "launchdarkly.exception.id"
+const FeatureFlagScope = "feature_flag"
+const FeatureFlagSpanName = "evaluation"
+const FeatureFlagSpanEventName = FeatureFlagScope + "." + FeatureFlagSpanName
+const FeatureFlagContextKeys = FeatureFlagScope + ".contextKeys"
+const FeatureFlagSetID = "feature_flag.set.id"
 
 type TraceType string
 
