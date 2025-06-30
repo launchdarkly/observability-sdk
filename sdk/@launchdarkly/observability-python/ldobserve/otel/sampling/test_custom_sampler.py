@@ -9,7 +9,7 @@ from ...graph.generated.public_graph_client.get_sampling_config import (
 
 # Import real OpenTelemetry types
 from opentelemetry.sdk.trace import ReadableSpan, Event
-from opentelemetry.sdk._logs import LogRecord, LogLimits  # type: ignore
+from opentelemetry.sdk._logs import LogRecord, LogData, LogLimits  # type: ignore
 from opentelemetry.util.types import Attributes
 from opentelemetry.trace import SpanContext, TraceFlags, SpanKind, Status
 from opentelemetry.sdk.resources import Resource
@@ -55,8 +55,8 @@ def create_event(name, attributes=None, **kwargs):
     )
 
 def create_log(message=None, attributes=None, severity_text=None):
-    """Create a real LogRecord object."""
-    return LogRecord(
+    """Create a real LogData object."""
+    log_record = LogRecord(
         body=message,
         attributes=attributes or {},
         severity_text=severity_text,
@@ -68,6 +68,11 @@ def create_log(message=None, attributes=None, severity_text=None):
         trace_flags=None,
         severity_number=None,
         limits=LogLimits()
+    )
+    
+    return LogData(
+        log_record=log_record,
+        instrumentation_scope=InstrumentationScope("test", "1.0.0")
     )
 
 # Test helper functions

@@ -4,7 +4,7 @@ import re
 
 from opentelemetry.util.types import Attributes, AttributeValue
 from opentelemetry.sdk.trace import ReadableSpan, Event
-from opentelemetry.sdk._logs import LogRecord  # type: ignore
+from opentelemetry.sdk._logs import LogRecord, LogData  # type: ignore Not actually private.
 from opentelemetry.util.types import AnyValue as OTELAnyValue
 
 from ...graph.generated.public_graph_client.get_sampling_config import (
@@ -15,8 +15,6 @@ from ...graph.generated.public_graph_client.get_sampling_config import (
     GetSamplingConfigSamplingSpansEventsAttributes,
     GetSamplingConfigSamplingLogs,
     GetSamplingConfigSamplingLogsAttributes,
-    GetSamplingConfigSamplingLogsMessage,
-    GetSamplingConfigSamplingLogsSeverityText,
 )
 
 class SamplingResult:
@@ -65,6 +63,21 @@ def default_sampler(ratio: float) -> bool:
     return int(random.random() * truncated) == 0
 
 
+class ExportSampler(Protocol):
+    """Protocol for export samplers."""
+
+    def sample_span(self, span: ReadableSpan) -> SamplingResult:
+        """Sample a span and return the result."""
+        ...
+    
+    def sample_log(self, record: LogData) -> SamplingResult:
+        """Sample a log and return the result."""
+        ...
+    
+    def is_sampling_enabled(self) -> bool:
+        """Return True if sampling is enabled."""
+        ...
+    
 class CustomSampler:
     """Custom sampler that uses sampling configuration to determine if a span should be sampled."""
     
@@ -213,26 +226,26 @@ class CustomSampler:
     def _matches_log_config(
         self,
         config: GetSamplingConfigSamplingLogs,
-        record: LogRecord,
+        record: LogData,
     ) -> bool:
         """Match a log record against the configuration."""
         # Check severity text if defined
         if config.severity_text is not None:
-            if not self._matches_value(config.severity_text, record.severity_text):
+            if not self._matches_value(config.severity_text, record.log_record.severity_text):
                 return False
         
         # Check message if defined
         if config.message is not None:
-            if not self._matches_value(config.message, record.body):
+            if not self._matches_value(config.message, record.log_record.body):
                 return False
         
         # Check attributes
-        if not self._matches_attributes(config.attributes, record.attributes):  # type: ignore
+        if not self._matches_attributes(config.attributes, record.log_record.attributes):  # type: ignore
             return False
         
         return True
     
-    def sample_log(self, record: LogRecord) -> 'SamplingResult':
+    def sample_log(self, record: LogData) -> 'SamplingResult':
         """Sample a log record based on the sampling configuration."""
         if self.config and self.config.logs:
             for log_config in self.config.logs:

@@ -1,64 +1,46 @@
 from typing import List, Optional, Dict, Union, Sequence, Tuple
-from opentelemetry.sdk._logs import LogRecord  # type: ignore
-from opentelemetry.sdk._logs.export import LogExporter, LogExportResult  # type: ignore
-from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter  # type: ignore
-from typing import Protocol
+from opentelemetry.sdk._logs import LogRecord, LogData # type: ignore Not actually private.
+from opentelemetry.sdk._logs.export import LogExportResult # type: ignore Not actually private.
+from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter # type: ignore Not actually private.
 import grpc
 
-from .sampling import CustomSampler, SamplingResult
-from ..graph.generated.public_graph_client.get_sampling_config import (
-    GetSamplingConfigSampling,
-)
-
-
-class ExportSampler(Protocol):
-    """Protocol for export samplers."""
-    
-    def sample_log(self, record: LogRecord) -> SamplingResult:
-        """Sample a log and return the result."""
-        ...
-    
-    def is_sampling_enabled(self) -> bool:
-        """Return True if sampling is enabled."""
-        ...
-    
-    def set_config(self, config: Optional[GetSamplingConfigSampling]) -> None:
-        """Set the sampling configuration."""
-        ...
-
+from .sampling.custom_sampler import ExportSampler
 
 def clone_log_record_with_attributes(
-    log: LogRecord,
+    log: LogData,
     attributes: Dict[str, Union[str, int, float, bool]],
-) -> LogRecord:
+) -> LogData:
     """Clone a LogRecord with merged attributes."""
     # Create a new log record with merged attributes
-    merged_attributes = dict(log.attributes or {})
+    merged_attributes = dict(log.log_record.attributes or {})
     merged_attributes.update(attributes)
     
-    return LogRecord(
-        body=log.body,
-        attributes=merged_attributes,
-        severity_text=log.severity_text,
-        resource=log.resource,
-        timestamp=log.timestamp,
-        observed_timestamp=log.observed_timestamp,
-        trace_id=log.trace_id,
-        span_id=log.span_id,
-        trace_flags=log.trace_flags,
-        severity_number=log.severity_number
+    return LogData(
+        log_record=LogRecord(
+            body=log.log_record.body,
+            attributes=merged_attributes,
+            severity_text=log.log_record.severity_text,
+            resource=log.log_record.resource,
+            timestamp=log.log_record.timestamp,
+            observed_timestamp=log.log_record.observed_timestamp,
+            trace_id=log.log_record.trace_id,
+            span_id=log.log_record.span_id,
+            trace_flags=log.log_record.trace_flags,
+            severity_number=log.log_record.severity_number
+        ),
+        instrumentation_scope=log.instrumentation_scope
     )
 
 
 def sample_logs(
-    items: List[LogRecord],
+    items: List[LogData],
     sampler: ExportSampler,
-) -> List[LogRecord]:
+) -> List[LogData]:
     """Sample logs based on the sampler configuration."""
     if not sampler.is_sampling_enabled():
         return items
     
-    sampled_logs: List[LogRecord] = []
+    sampled_logs: List[LogData] = []
     
     for item in items:
         sample_result = sampler.sample_log(item)
@@ -79,13 +61,13 @@ class SamplingLogExporter(OTLPLogExporter):
     
     def __init__(
         self,
+        sampler: ExportSampler,
         endpoint: Optional[str] = None,
         insecure: Optional[bool] = None,
         credentials: Optional[grpc.ChannelCredentials] = None,
         headers: Optional[Union[Sequence[Tuple[str, str]], Dict[str, str], str]] = None,
         timeout: Optional[int] = None,
         compression: Optional[grpc.Compression] = None,
-        sampler: Optional[CustomSampler] = None,
     ):
         super().__init__(
             endpoint=endpoint,
@@ -95,12 +77,12 @@ class SamplingLogExporter(OTLPLogExporter):
             timeout=timeout,
             compression=compression,
         )
-        self.sampler = sampler or CustomSampler()
+        self.sampler = sampler
     
-    def export(self, logs: List[LogRecord]) -> LogExportResult:
+    def export(self, logs: List[LogData]) -> LogExportResult:
         """Export logs with sampling applied."""
         sampled_logs = sample_logs(logs, self.sampler)
         if not sampled_logs:
             return LogExportResult.SUCCESS
         
-        return super().export(sampled_logs)  # type: ignore 
+        return super().export(sampled_logs)

@@ -6,28 +6,9 @@ from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExport
 from typing import Protocol
 from copy import deepcopy
 import grpc
+from .sampling.custom_sampler import ExportSampler
 
-from .sampling import CustomSampler, SamplingResult, default_sampler
-from ..graph.generated.public_graph_client.get_sampling_config import (
-    GetSamplingConfigSampling,
-)
-
-
-class ExportSampler(Protocol):
-    """Protocol for export samplers."""
-    
-    def sample_span(self, span: ReadableSpan) -> SamplingResult:
-        """Sample a span and return the result."""
-        ...
-    
-    def is_sampling_enabled(self) -> bool:
-        """Return True if sampling is enabled."""
-        ...
-    
-    def set_config(self, config: Optional[GetSamplingConfigSampling]) -> None:
-        """Set the sampling configuration."""
-        ...
-
+from .sampling import SamplingResult, default_sampler
 
 def clone_readable_span_with_attributes(
     span: ReadableSpan,
@@ -111,13 +92,13 @@ class SamplingTraceExporter(OTLPSpanExporter):
     
     def __init__(
         self,
+        sampler: ExportSampler,
         endpoint: Optional[str] = None,
         insecure: Optional[bool] = None,
         credentials: Optional[grpc.ChannelCredentials] = None,
         headers: Optional[Union[Sequence[Tuple[str, str]], Dict[str, str], str]] = None,
         timeout: Optional[int] = None,
         compression: Optional[grpc.Compression] = None,
-        sampler: Optional[CustomSampler] = None,
     ):
         super().__init__(
             endpoint=endpoint,
@@ -127,7 +108,7 @@ class SamplingTraceExporter(OTLPSpanExporter):
             timeout=timeout,
             compression=compression,
         )
-        self.sampler = sampler or CustomSampler()
+        self.sampler = sampler
     
     def export(self, spans: List[ReadableSpan]) -> SpanExportResult:
         """Export spans with sampling applied."""
