@@ -9,8 +9,7 @@ LaunchDarkly Observability SDK for Python
 
 # Early Access Preview️
 
-> [!CAUTION]
-> This library is in Early Access Preview and APIs are subject to change until a 1.x version is released.
+**NB: APIs are subject to change until a 1.x version is released.**
 
 LaunchDarkly overview
 -------------------------
