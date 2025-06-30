@@ -177,8 +177,26 @@ export class ObservabilityClient {
 		)
 	}
 
-	public setAttributes(attributes: ResourceAttributes): void {
-		this.instrumentationManager.setAttributes(attributes)
+	public startSpan(spanName: string, options?: SpanOptions): OtelSpan {
+		if (!this.options.enableTracing) return {} as OtelSpan
+		return this.instrumentationManager.startSpan(spanName, options)
+	}
+
+	public startActiveSpan<T>(
+		spanName: string,
+		fn: (span: OtelSpan) => T,
+		options?: SpanOptions,
+	): T {
+		if (!this.options.enableTracing) return fn({} as OtelSpan)
+		return this.instrumentationManager.startActiveSpan(
+			spanName,
+			fn,
+			options,
+		)
+	}
+
+	public setResourceAttributes(attributes: ResourceAttributes): void {
+		this.instrumentationManager.setResourceAttributes(attributes)
 	}
 
 	public async setUserId(userId: string): Promise<void> {

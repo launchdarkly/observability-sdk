@@ -1,16 +1,15 @@
-/**
- * Example usage of @launchdarkly/observability-react-native
- *
- * This example shows how to integrate the React Native observability plugin
- * with LaunchDarkly SDK and use the manual instrumentation API.
- */
+# @launchdarkly/observability-react-native Example Usage
 
+This example shows how to integrate the React Native observability plugin with LaunchDarkly SDK and use the manual instrumentation API.
+
+## 1. Initialize LaunchDarkly Client with Observability Plugin
+
+```typescript
 import React from 'react';
 import { View, Button, Alert } from 'react-native';
 import { LDClient, LDUser } from '@launchdarkly/react-native-client-sdk';
 import { Observability, LDObserve } from '@launchdarkly/observability-react-native';
 
-// 1. Initialize LaunchDarkly client with observability plugin
 const initializeLaunchDarkly = async () => {
   const user: LDUser = {
     key: 'user-123',
@@ -44,8 +43,11 @@ const initializeLaunchDarkly = async () => {
 
   return client;
 };
+```
 
-// 2. Example React component with manual instrumentation
+## 2. Example React Component with Manual Instrumentation
+
+```typescript
 const ExampleScreen: React.FC = () => {
   const handleButtonPress = async () => {
     try {
@@ -161,8 +163,11 @@ const ExampleScreen: React.FC = () => {
     </View>
   );
 };
+```
 
-// 3. App component with LaunchDarkly initialization
+## 3. App Component with LaunchDarkly Initialization
+
+```typescript
 const App: React.FC = () => {
   const [isInitialized, setIsInitialized] = React.useState(false);
 
@@ -187,12 +192,13 @@ const App: React.FC = () => {
 };
 
 export default App;
+```
 
-// 4. Additional utility functions
+## 4. Additional Utility Functions
 
-/**
- * Flush all telemetry data before app backgrounding
- */
+### Flush Telemetry Data Before App Backgrounding
+
+```typescript
 export const flushTelemetryOnBackground = async () => {
   try {
     await LDObserve.flush();
@@ -201,21 +207,41 @@ export const flushTelemetryOnBackground = async () => {
     console.error('Failed to flush telemetry data:', error);
   }
 };
+```
 
-/**
- * Get current session information
- */
+### Get Current Session Information
+
+```typescript
 export const getCurrentSessionInfo = () => {
   const sessionInfo = LDObserve.getSessionInfo();
   console.log('Current session:', sessionInfo);
   return sessionInfo;
 };
+```
 
-/**
- * Check if observability is properly initialized
- */
+### Check if Observability is Properly Initialized
+
+```typescript
 export const checkObservabilityStatus = () => {
   const isInitialized = LDObserve.isInitialized();
   console.log('Observability initialized:', isInitialized);
   return isInitialized;
 };
+```
+
+## Key Features Demonstrated
+
+- **Tracing**: Using `LDObserve.runWithHeaders()` to trace API calls with custom spans
+- **Metrics**: Recording different types of metrics (counts, histograms, increments)
+- **Error Tracking**: Capturing and recording errors with contextual information
+- **Logging**: Recording logs at different levels (debug, info, warn) with attributes
+- **Session Management**: Setting user IDs and managing session information
+- **Configuration**: Setting up the observability plugin with various options
+
+## Usage Notes
+
+1. Replace `'your-mobile-key'` with your actual LaunchDarkly mobile key
+2. Update the `otlpEndpoint` to point to your OpenTelemetry collector
+3. Configure `customHeaders` as needed for your authentication requirements
+4. Set `debug: true` only in development environments
+5. Consider calling `flushTelemetryOnBackground()` when your app goes to background

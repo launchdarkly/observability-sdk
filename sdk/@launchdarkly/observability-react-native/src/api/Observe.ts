@@ -104,10 +104,29 @@ export interface Observe {
 	): OtelSpan
 
 	/**
+	 * Start a new span without making it active.
+	 * @param spanName The span name
+	 * @param options Optional span options
+	 */
+	startSpan(spanName: string, options?: SpanOptions): OtelSpan
+
+	/**
+	 * Start a new active span and run a callback function within its context.
+	 * @param spanName The span name
+	 * @param fn The callback function to run with the active span
+	 * @param options Optional span options
+	 */
+	startActiveSpan<T>(
+		spanName: string,
+		fn: (span: OtelSpan) => T,
+		options?: SpanOptions,
+	): T
+
+	/**
 	 * Set resource attributes.
 	 * @param attributes The resource attributes to set
 	 */
-	setAttributes(attributes: ResourceAttributes): void
+	setResourceAttributes(attributes: ResourceAttributes): void
 
 	/**
 	 * Set the user ID for the current session.

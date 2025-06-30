@@ -15,6 +15,7 @@ import {
 	ConsoleSpanExporter,
 	SimpleSpanProcessor,
 	SpanExporter,
+	SpanProcessor,
 	WebTracerProvider,
 } from '@opentelemetry/sdk-trace-web'
 import {
@@ -57,6 +58,7 @@ export class InstrumentationManager {
 	private meterProvider?: MeterProvider
 	private sessionManager?: SessionManager
 	private isInitialized = false
+	private resource: Resource = new Resource({})
 
 	constructor(private options: Required<ReactNativeOptions>) {}
 
@@ -65,7 +67,6 @@ export class InstrumentationManager {
 
 		try {
 			const headers = {
-				'x-launchdarkly-team': 'observability',
 				'x-launchdarkly-dataset': this.options.serviceName,
 				...this.options.customHeaders,
 			}
@@ -101,7 +102,7 @@ export class InstrumentationManager {
 			headers,
 		})
 
-		const processors = [
+		const processors: SpanProcessor[] = [
 			new SimpleSpanProcessor(exporter as unknown as SpanExporter),
 		]
 
@@ -114,7 +115,7 @@ export class InstrumentationManager {
 			processors.push(
 				createSessionSpanProcessor(
 					new SessionIdProvider(this.sessionManager),
-				),
+				) as unknown as SpanProcessor,
 			)
 		}
 
@@ -357,19 +358,30 @@ export class InstrumentationManager {
 		return span
 	}
 
+	public startSpan(spanName: string, options?: SpanOptions): OtelSpan {
+		const tracer = this.getTracer()
+		return tracer.startSpan(spanName, options)
+	}
+
+	public startActiveSpan<T>(
+		spanName: string,
+		fn: (span: OtelSpan) => T,
+		options?: SpanOptions,
+	): T {
+		const tracer = this.getTracer()
+		return tracer.startActiveSpan(spanName, options || {}, fn)
+	}
+
 	public async flush(): Promise<void> {
 		try {
-			// Flush trace provider
 			if (this.traceProvider) {
 				await this.traceProvider.forceFlush()
 			}
 
-			// Flush logger provider
 			if (this.loggerProvider) {
 				await this.loggerProvider.forceFlush()
 			}
 
-			// Flush meter provider
 			if (this.meterProvider) {
 				await this.meterProvider.forceFlush()
 			}
@@ -378,10 +390,11 @@ export class InstrumentationManager {
 		}
 	}
 
-	public setAttributes(attributes: ResourceAttributes): void {
-		// Resource attributes are set during initialization
-		// This method could be used to update dynamic attributes if needed
-		this._log('Setting resource attributes:', attributes)
+	public setResourceAttributes(attributes: ResourceAttributes): void {
+		this.resource = new Resource({
+			...this.resource.attributes,
+			...attributes,
+		})
 	}
 
 	public async stop(): Promise<void> {

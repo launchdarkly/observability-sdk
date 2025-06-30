@@ -144,8 +144,35 @@ export const _LDObserve = {
 		return observabilityClient.startWithHeaders(spanName, headers, options)
 	},
 
-	setAttributes: (attributes: ResourceAttributes) => {
-		return observabilityClient.setAttributes(attributes)
+	startSpan: (spanName: string, options?: SpanOptions) => {
+		try {
+			return observabilityClient.startSpan(spanName, options)
+		} catch (e) {
+			console.warn('observability-react-native startSpan error: ', e)
+			// Return a no-op span to avoid breaking the application
+			return {} as OtelSpan
+		}
+	},
+
+	startActiveSpan: <T>(
+		spanName: string,
+		fn: (span: OtelSpan) => T,
+		options?: SpanOptions,
+	) => {
+		try {
+			return observabilityClient.startActiveSpan(spanName, fn, options)
+		} catch (e) {
+			console.warn(
+				'observability-react-native startActiveSpan error: ',
+				e,
+			)
+			// Run the function with a no-op span to avoid breaking the application
+			return fn({} as OtelSpan)
+		}
+	},
+
+	setResourceAttributes: (attributes: ResourceAttributes) => {
+		return observabilityClient.setResourceAttributes(attributes)
 	},
 
 	setUserId: async (userId: string) => {
