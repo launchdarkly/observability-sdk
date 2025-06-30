@@ -226,20 +226,38 @@ def test_clone_log_record_with_no_original_attributes():
 class TestSamplingLogExporter:
     """Test cases for SamplingLogExporter class."""
 
-    def test_init_with_sampler(self):
+    def test_init_with_sampler(self, monkeypatch):
         """Test SamplingLogExporter initialization."""
+
+        # Mock the parent class __init__ to prevent actual initialization
+        def mock_parent_init(self, **kwargs):
+            pass
+
+        monkeypatch.setattr(
+            SamplingLogExporter.__bases__[0], "__init__", mock_parent_init
+        )
+
         mock_sampler = MockSampler({})
         exporter = SamplingLogExporter(sampler=mock_sampler)
 
         assert exporter.sampler == mock_sampler
 
-    def test_init_with_all_parameters(self):
+    def test_init_with_all_parameters(self, monkeypatch):
         """Test SamplingLogExporter initialization with all parameters."""
+
+        # Mock the parent class __init__ to prevent actual initialization
+        def mock_parent_init(self, **kwargs):
+            pass
+
+        monkeypatch.setattr(
+            SamplingLogExporter.__bases__[0], "__init__", mock_parent_init
+        )
+
         mock_sampler = MockSampler({})
 
         exporter = SamplingLogExporter(
             sampler=mock_sampler,
-            endpoint="http://localhost:4317",
+            endpoint="test",
             insecure=True,
             headers={"Authorization": "Bearer token"},
             timeout=30,
@@ -247,8 +265,17 @@ class TestSamplingLogExporter:
 
         assert exporter.sampler == mock_sampler
 
-    def test_export_with_no_sampled_logs(self):
+    def test_export_with_no_sampled_logs(self, monkeypatch):
         """Test export method when no logs are sampled."""
+
+        # Mock the parent class __init__ to prevent actual initialization
+        def mock_parent_init(self, **kwargs):
+            pass
+
+        monkeypatch.setattr(
+            SamplingLogExporter.__bases__[0], "__init__", mock_parent_init
+        )
+
         mock_sampler = MockSampler({"info-test log": False})
         exporter = SamplingLogExporter(sampler=mock_sampler)
 
@@ -257,8 +284,17 @@ class TestSamplingLogExporter:
         result = exporter.export(logs)
         assert result == LogExportResult.SUCCESS
 
-    def test_export_with_empty_logs(self):
+    def test_export_with_empty_logs(self, monkeypatch):
         """Test export method with empty logs list."""
+
+        # Mock the parent class __init__ to prevent actual initialization
+        def mock_parent_init(self, **kwargs):
+            pass
+
+        monkeypatch.setattr(
+            SamplingLogExporter.__bases__[0], "__init__", mock_parent_init
+        )
+
         mock_sampler = MockSampler({})
         exporter = SamplingLogExporter(sampler=mock_sampler)
 
@@ -269,6 +305,15 @@ class TestSamplingLogExporter:
 
     def test_export_with_sampled_logs(self, monkeypatch):
         """Test export method when logs are sampled."""
+
+        # Mock the parent class __init__ to prevent actual initialization
+        def mock_parent_init(self, **kwargs):
+            pass
+
+        monkeypatch.setattr(
+            SamplingLogExporter.__bases__[0], "__init__", mock_parent_init
+        )
+
         mock_sampler = MockSampler({"info-test log": True})
         exporter = SamplingLogExporter(sampler=mock_sampler)
 
