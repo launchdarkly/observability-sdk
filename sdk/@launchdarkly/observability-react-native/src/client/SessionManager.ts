@@ -156,7 +156,7 @@ export class SessionManager {
 	}
 
 	public getSessionInfo(): SessionInfo | null {
-		return this.sessionInfo
+		return this.sessionInfo ? { ...this.sessionInfo } : null
 	}
 
 	public getSessionAttributes(): Record<string, string> {

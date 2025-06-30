@@ -7,16 +7,12 @@ export interface Observe {
 	/**
 	 * Record an error with optional context.
 	 * @param error The error to record
-	 * @param secureSessionId Optional session ID
-	 * @param requestId Optional request ID
-	 * @param metadata Optional additional metadata
+	 * @param attributes Optional additionalattributes
 	 * @param options Optional span options
 	 */
 	recordError(
 		error: Error,
-		secureSessionId?: string,
-		requestId?: string,
-		metadata?: Attributes,
+		attributes?: Attributes,
 		options?: { span: OtelSpan },
 	): void
 
@@ -59,17 +55,9 @@ export interface Observe {
 	 * Record a log message.
 	 * @param message The log message
 	 * @param level The log level
-	 * @param secureSessionId Optional session ID
-	 * @param requestId Optional request ID
-	 * @param metadata Optional additional metadata
+	 * @param attributes Optional additional attributes
 	 */
-	recordLog(
-		message: any,
-		level: string,
-		secureSessionId?: string,
-		requestId?: string,
-		metadata?: Attributes,
-	): void
+	recordLog(message: any, level: string, attributes?: Attributes): void
 
 	/**
 	 * Parse headers to extract request context.

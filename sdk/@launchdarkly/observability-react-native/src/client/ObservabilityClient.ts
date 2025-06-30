@@ -58,6 +58,9 @@ export class ObservabilityClient {
 			// Initialize session first
 			await this.sessionManager.initialize()
 
+			// Connect session manager to instrumentation manager
+			this.instrumentationManager.setSessionManager(this.sessionManager)
+
 			// Get session attributes for resource
 			const sessionAttributes = this.sessionManager.getSessionAttributes()
 			const resource = new Resource({
@@ -86,13 +89,15 @@ export class ObservabilityClient {
 		options?: { span: OtelSpan },
 	): void {
 		if (!this.options.enableErrorTracking) return
-		this.instrumentationManager.recordError(
-			error,
-			secureSessionId,
-			requestId,
-			metadata,
-			options,
-		)
+
+		// Combine metadata with session/request context
+		const attributes = {
+			...metadata,
+			...(secureSessionId && { 'session.id': secureSessionId }),
+			...(requestId && { 'request.id': requestId }),
+		}
+
+		this.instrumentationManager.recordError(error, attributes, options)
 	}
 
 	public recordMetric(metric: Metric): void {

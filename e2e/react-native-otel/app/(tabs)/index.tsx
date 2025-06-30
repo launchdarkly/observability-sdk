@@ -11,7 +11,6 @@ export default function HomeScreen() {
 	const [sessionInfo, setSessionInfo] = useState<any>(null)
 
 	useEffect(() => {
-		// Demo: Automatic session tracking
 		const loadSessionInfo = async () => {
 			try {
 				const info = await LDObserve.getSessionInfo()
@@ -23,7 +22,6 @@ export default function HomeScreen() {
 
 		loadSessionInfo()
 
-		// Demo: Custom trace on component mount
 		const span = LDObserve.startSpan('HomeScreen.mount', {
 			attributes: {
 				component: 'HomeScreen',
@@ -32,13 +30,11 @@ export default function HomeScreen() {
 		})
 		span.end()
 
-		// Demo: Custom log
-		LDObserve.recordLog('HomeScreen loaded', 'info', undefined, undefined, {
+		LDObserve.recordLog('HomeScreen loaded', 'info', {
 			component: 'HomeScreen',
 			loadTime: Date.now(),
 		})
 
-		// Demo: Custom metric
 		LDObserve.recordIncr({
 			name: 'screen_views',
 			value: 1,
@@ -51,11 +47,9 @@ export default function HomeScreen() {
 
 	const handleTestError = () => {
 		try {
-			// Intentionally throw an error for demonstration
 			throw new Error('This is a test error for observability demo')
 		} catch (error) {
-			// Demo: Custom error recording
-			LDObserve.recordError(error as Error, undefined, undefined, {
+			LDObserve.recordError(error as Error, {
 				action: 'test_error_button',
 				userInitiated: true,
 			})
@@ -69,7 +63,6 @@ export default function HomeScreen() {
 
 	const handleNetworkRequest = async () => {
 		try {
-			// Demo: Network request with automatic tracing
 			LDObserve.startActiveSpan('api.fetchData', async (span) => {
 				span.setAttribute('http.method', 'GET')
 				span.setAttribute(
@@ -85,20 +78,13 @@ export default function HomeScreen() {
 				span.setAttribute('http.status_code', response.status)
 				span.setAttribute('response.size', JSON.stringify(data).length)
 
-				LDObserve.recordLog(
-					'Network request completed',
-					'info',
-					undefined,
-					undefined,
-					{
-						method: 'GET',
-						url: 'https://jsonplaceholder.typicode.com/posts/1',
-						status: response.status,
-						responseSize: JSON.stringify(data).length,
-					},
-				)
+				LDObserve.recordLog('Network request completed', 'info', {
+					method: 'GET',
+					url: 'https://jsonplaceholder.typicode.com/posts/1',
+					status: response.status,
+					responseSize: JSON.stringify(data).length,
+				})
 
-				// Demo: Custom metric for network request
 				LDObserve.recordHistogram({
 					name: 'api_request_duration',
 					value: Math.random() * 1000, // Simulated request duration
@@ -112,7 +98,7 @@ export default function HomeScreen() {
 				Alert.alert('Success', `Fetched post: ${data.title}`)
 			})
 		} catch (error) {
-			LDObserve.recordError(error as Error, undefined, undefined, {
+			LDObserve.recordError(error as Error, {
 				action: 'network_request',
 				endpoint: '/posts/1',
 			})
@@ -121,7 +107,6 @@ export default function HomeScreen() {
 	}
 
 	const handleCustomMetric = () => {
-		// Demo: Various custom metrics
 		LDObserve.recordCount({
 			name: 'user_actions',
 			value: 1,
@@ -148,17 +133,23 @@ export default function HomeScreen() {
 			const userId = `user_${Date.now()}`
 			await LDObserve.setUserId(userId)
 
-			// Refresh session info to show updated user
-			const info = await LDObserve.getSessionInfo()
+			const info = LDObserve.getSessionInfo()
 			setSessionInfo(info)
 
 			Alert.alert('User ID Set', `User ID set to: ${userId}`)
 		} catch (error) {
-			LDObserve.recordError(error as Error, undefined, undefined, {
+			LDObserve.recordError(error as Error, {
 				action: 'set_user_id',
 			})
 			Alert.alert('Error', 'Failed to set user ID')
 		}
+	}
+
+	const handleRecordLog = () => {
+		LDObserve.recordLog('Test log', 'info', {
+			component: 'HomeScreen',
+			loadTime: Date.now(),
+		})
 	}
 
 	return (
@@ -172,8 +163,42 @@ export default function HomeScreen() {
 			}
 		>
 			<ThemedView style={styles.titleContainer}>
-				<ThemedText type="title">Observability Demo</ThemedText>
+				<ThemedText type="title">O11y Demo</ThemedText>
 				<HelloWave />
+			</ThemedView>
+
+			<ThemedView style={styles.stepContainer}>
+				<ThemedText type="subtitle">Test Features</ThemedText>
+
+				<Pressable style={styles.button} onPress={handleTestError}>
+					<ThemedText style={styles.buttonText}>
+						Record Test Error
+					</ThemedText>
+				</Pressable>
+
+				<Pressable style={styles.button} onPress={handleNetworkRequest}>
+					<ThemedText style={styles.buttonText}>
+						Make Network Request
+					</ThemedText>
+				</Pressable>
+
+				<Pressable style={styles.button} onPress={handleRecordLog}>
+					<ThemedText style={styles.buttonText}>
+						Record Log
+					</ThemedText>
+				</Pressable>
+
+				<Pressable style={styles.button} onPress={handleCustomMetric}>
+					<ThemedText style={styles.buttonText}>
+						Record Custom Metrics
+					</ThemedText>
+				</Pressable>
+
+				<Pressable style={styles.button} onPress={handleSetUserId}>
+					<ThemedText style={styles.buttonText}>
+						Set User ID
+					</ThemedText>
+				</Pressable>
 			</ThemedView>
 
 			<ThemedView style={styles.stepContainer}>
@@ -202,61 +227,11 @@ export default function HomeScreen() {
 			</ThemedView>
 
 			<ThemedView style={styles.stepContainer}>
-				<ThemedText type="subtitle">Observability Features</ThemedText>
+				<ThemedText type="subtitle">Viewing OTel Signals</ThemedText>
 				<ThemedText>
-					This app demonstrates the LaunchDarkly Observability React
-					Native SDK with automatic:
+					Run the OTel collector to view the signals being emitted by
+					this app. See README for instructions.
 				</ThemedText>
-				<ThemedText>
-					• Tracing of network requests and custom operations
-				</ThemedText>
-				<ThemedText>• Logging with session context</ThemedText>
-				<ThemedText>• Metrics collection and custom metrics</ThemedText>
-				<ThemedText>• Error tracking and reporting</ThemedText>
-				<ThemedText>• Session management</ThemedText>
-			</ThemedView>
-
-			<ThemedView style={styles.stepContainer}>
-				<ThemedText type="subtitle">
-					Test Observability Features
-				</ThemedText>
-
-				<Pressable style={styles.button} onPress={handleTestError}>
-					<ThemedText style={styles.buttonText}>
-						Record Test Error
-					</ThemedText>
-				</Pressable>
-
-				<Pressable style={styles.button} onPress={handleNetworkRequest}>
-					<ThemedText style={styles.buttonText}>
-						Make Network Request
-					</ThemedText>
-				</Pressable>
-
-				<Pressable style={styles.button} onPress={handleCustomMetric}>
-					<ThemedText style={styles.buttonText}>
-						Record Custom Metrics
-					</ThemedText>
-				</Pressable>
-
-				<Pressable style={styles.button} onPress={handleSetUserId}>
-					<ThemedText style={styles.buttonText}>
-						Set Random User ID
-					</ThemedText>
-				</Pressable>
-			</ThemedView>
-
-			<ThemedView style={styles.stepContainer}>
-				<ThemedText type="subtitle">Console Logging</ThemedText>
-				<ThemedText>
-					Check your development console to see automatic logging of:
-				</ThemedText>
-				<ThemedText>
-					• Console messages (hooked automatically)
-				</ThemedText>
-				<ThemedText>• Trace spans and events</ThemedText>
-				<ThemedText>• Error details and stack traces</ThemedText>
-				<ThemedText>• Performance metrics</ThemedText>
 			</ThemedView>
 		</ParallaxScrollView>
 	)
