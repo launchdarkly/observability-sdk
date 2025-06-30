@@ -123,12 +123,6 @@ export interface Observe {
 	): T
 
 	/**
-	 * Set resource attributes.
-	 * @param attributes The resource attributes to set
-	 */
-	setResourceAttributes(attributes: ResourceAttributes): void
-
-	/**
 	 * Set the user ID for the current session.
 	 * @param userId The user ID to set
 	 */

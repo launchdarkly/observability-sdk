@@ -1,156 +1,102 @@
-# @launchdarkly/observability-react-native
+# LaunchDarkly Observability SDK for React Native
 
-A React Native plugin for LaunchDarkly that provides automatic OpenTelemetry instrumentation for traces, logs, metrics, and error tracking.
-
-## Features
-
-- 🔍 **Automatic Tracing**: Instruments network requests and custom traces
-- 📊 **Metrics Collection**: Performance metrics, custom metrics, and device metrics
-- 📝 **Structured Logging**: Automatic console instrumentation with session context
-- 🐛 **Error Tracking**: Automatic error capture with stack traces
-- 📱 **Session Management**: Automatic session tracking with device context
-- ⚡ **Performance Monitoring**: App startup time, lifecycle events, and device info
-- 🔧 **Highly Configurable**: Flexible configuration options
+A comprehensive observability solution for React Native applications using OpenTelemetry.
 
 ## Installation
 
+### Basic Installation
+
 ```bash
-npm install @launchdarkly/observability-react-native
+# or
 ```
 
-### Peer Dependencies
+### Required Dependencies
 
-Make sure you have these peer dependencies installed:
+- `@react-native-async-storage/async-storage` - For session persistence
+
+### Optional Dependencies
+
+For enhanced functionality, you can install these optional dependencies:
 
 ```bash
-npm install @launchdarkly/react-native-client-sdk react-native expo-constants
+npm install react-native-device-info
+# or
+yarn add react-native-device-info
 ```
 
-### Additional Dependencies
+**Optional Dependencies:**
 
-The plugin requires these React Native dependencies:
+- `react-native-device-info` - Provides real device information (device ID, app version)
+  - **If not installed:** SDK will generate and persist fallback device IDs
+  - **Benefit:** More accurate device tracking and app version reporting
+
+### Expo Installation
+
+For Expo projects, also install:
 
 ```bash
-npm install @react-native-async-storage/async-storage react-native-device-info react-native-get-random-values uuid react-native-exception-handler
+expo install expo-constants
 ```
 
 ## Usage
-
-### Basic Setup
 
 ```typescript
 import { LDClient } from '@launchdarkly/react-native-client-sdk';
 import { Observability } from '@launchdarkly/observability-react-native';
 
-// Initialize LaunchDarkly client with observability plugin
-const client = new LDClient('your-mobile-key', user, {
-  plugins: [
+const client = new LDClient(
+  mobileKey,
+  user,
+  {
+    // ... other options
+  },
+  [
     new Observability({
       serviceName: 'my-react-native-app',
       serviceVersion: '1.0.0',
-      otlpEndpoint: 'https://your-otlp-endpoint.com:4318',
       enableTracing: true,
-      enableLogs: true,
       enableMetrics: true,
-      enableErrorTracking: true,
-      debug: false,
-    }),
-  ],
-});
+      enableLogs: true,
+    })
+  ]
+);
 ```
 
-### Manual Instrumentation
+## Features
 
-After initializing the plugin, you can use the `LDObserve` API for manual instrumentation:
-
-```typescript
-import { LDObserve } from '@launchdarkly/observability-react-native';
-
-// Record custom errors
-try {
-  // Your code here
-} catch (error) {
-  LDObserve.recordError(error, 'session-id', 'request-id', {
-    customAttribute: 'value',
-  });
-}
-
-// Record custom metrics
-LDObserve.recordMetric({
-  name: 'user_action',
-  value: 1,
-  attributes: {
-    action: 'button_click',
-    screen: 'home',
-  },
-});
-
-// Record custom logs
-LDObserve.recordLog('User performed action', 'info', 'session-id', 'request-id', {
-  userId: 'user123',
-  action: 'navigation',
-});
-
-// Set user ID for session tracking
-await LDObserve.setUserId('user123');
-
-// Trace custom operations
-LDObserve.runWithHeaders('custom-operation', {}, (span) => {
-  span.setAttribute('operation.type', 'data-processing');
-  // Your operation code here
-  return result;
-});
-```
+- **Session Management**: Automatic session tracking with configurable timeouts
+- **Error Tracking**: Automatic error capture and reporting
+- **Performance Monitoring**: HTTP request instrumentation
+- **Custom Metrics**: Record custom metrics and events
+- **Distributed Tracing**: Full OpenTelemetry tracing support
+- **Flexible Installation**: Works with or without optional dependencies
 
 ## Configuration Options
 
-### ReactNativeOptions
-
 ```typescript
 interface ReactNativeOptions {
-  /** OTLP endpoint URL (default: 'https://otlp.highlight.io:4318') */
-  otlpEndpoint?: string;
-
-  /** Service name (default: 'react-native-app') */
-  serviceName?: string;
-
-  /** Service version (default: '1.0.0') */
-  serviceVersion?: string;
-
-  /** Additional resource attributes */
-  resourceAttributes?: ResourceAttributes;
-
-  /** Enable console logging of telemetry (default: false) */
-  enableConsoleLogging?: boolean;
-
-  /** Enable automatic error tracking (default: true) */
-  enableErrorTracking?: boolean;
-
-  /** Enable performance monitoring (default: true) */
-  enablePerformanceMonitoring?: boolean;
-
-  /** Enable tracing (default: true) */
-  enableTracing?: boolean;
-
-  /** Enable metrics (default: true) */
-  enableMetrics?: boolean;
-
-  /** Enable logs (default: true) */
-  enableLogs?: boolean;
-
-  /** Custom headers for OTLP exports */
-  customHeaders?: Record<string, string>;
-
-  /** Session timeout in milliseconds (default: 30 minutes) */
-  sessionTimeout?: number;
-
-  /** Enable native crash reporting (default: true) */
-  enableNativeCrashReporting?: boolean;
-
-  /** Debug mode (default: false) */
-  debug?: boolean;
+  serviceName?: string;           // Default: 'react-native-app'
+  serviceVersion?: string;        // Default: '1.0.0'
+  otlpEndpoint?: string;         // Default: 'https://otlp.highlight.io:4318'
+  enableTracing?: boolean;        // Default: true
+  enableMetrics?: boolean;        // Default: true
+  enableLogs?: boolean;          // Default: true
+  enableErrorTracking?: boolean;  // Default: true
+  sessionTimeout?: number;        // Default: 30 minutes
+  debug?: boolean;               // Default: false
 }
 ```
+
+## Dependency Strategy
+
+This SDK uses a **progressive enhancement** approach:
+
+1. **Core functionality** works with minimal dependencies
+2. **Enhanced features** unlock with optional dependencies
+3. **Graceful degradation** when optional dependencies are missing
+4. **No breaking changes** if you don't install optional dependencies
+
+This means you can start with a lightweight installation and add features as needed.
 
 ## Automatic Instrumentation
 
@@ -276,6 +222,66 @@ new Observability({
   enableConsoleLogging: true,
 })
 ```
+
+### Metro Configuration for OpenTelemetry Compatibility
+
+If you encounter issues with Node.js built-ins (crypto, fs, os, etc.) being imported in your React Native app, you need to configure Metro to use browser-compatible versions of OpenTelemetry packages.
+
+Add or merge the following configuration to your `metro.config.js` file:
+
+```javascript
+const defaultResolver = require('metro-resolver');
+
+module.exports = {
+  resolver: {
+    resolveRequest: (context, realModuleName, platform, moduleName) => {
+      const resolved = defaultResolver.resolve(
+        {
+          ...context,
+          resolveRequest: null,
+        },
+        moduleName,
+        platform,
+      );
+
+      // Force OpenTelemetry packages to use browser platform versions
+      // instead of Node.js versions, which avoids Node.js built-ins
+      if (
+        resolved.type === 'sourceFile' &&
+        resolved.filePath.includes('@opentelemetry')
+      ) {
+        resolved.filePath = resolved.filePath.replace(
+          'platform/node',
+          'platform/browser',
+        );
+        resolved.filePath = resolved.filePath.replace(
+          'platform\\node',
+          'platform\\browser',
+        );
+        return resolved;
+      }
+
+      return resolved;
+    },
+  },
+  transformer: {
+    getTransformOptions: async () => ({
+      transform: {
+        experimentalImportSupport: false,
+        inlineRequires: true,
+      },
+    }),
+  },
+};
+```
+
+This configuration ensures that OpenTelemetry packages use their browser-compatible versions, which don't import Node.js built-ins like `crypto`, `fs`, `os`, etc.
+
+For more information about this approach, see the [Splunk OpenTelemetry React Native documentation](https://github.com/signalfx/splunk-otel-react-native#instrument-lower-versions).
+
+## Option 2: Alternative Rollup Configuration
+
+If you prefer to continue using the bundled approach instead of raw source distribution, you can try externalizing OpenTelemetry packages as well. However, this approach is not recommended as it requires users to install all OpenTelemetry dependencies separately.
 
 ## Contributing
 

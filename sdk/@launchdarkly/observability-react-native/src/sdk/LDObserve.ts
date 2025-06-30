@@ -1,9 +1,8 @@
 import { Attributes, Span as OtelSpan, SpanOptions } from '@opentelemetry/api'
-import { ResourceAttributes } from '@opentelemetry/resources'
 import { ObservabilityClient } from '../client/ObservabilityClient'
-import { Observe } from '../api/Observe'
 import { Metric } from '../api/Metric'
 import { RequestContext } from '../api/RequestContext'
+import { Observe } from '../api/Observe'
 
 let observabilityClient: ObservabilityClient
 
@@ -101,23 +100,9 @@ export const _LDObserve = {
 		}
 	},
 
-	recordLog: (
-		message: any,
-		level: string,
-		secureSessionId?: string | undefined,
-		requestId?: string | undefined,
-		metadata?: Attributes,
-	) => {
+	recordLog: (message: any, level: string, attributes?: Attributes) => {
 		try {
-			observabilityClient.log(
-				new Date(),
-				message,
-				level,
-				{},
-				secureSessionId,
-				requestId,
-				metadata,
-			)
+			observabilityClient.log(message, level, attributes)
 		} catch (e) {
 			console.warn('observability-react-native log error: ', e)
 		}
@@ -127,6 +112,8 @@ export const _LDObserve = {
 		return observabilityClient.parseHeaders(headers)
 	},
 
+	// TODO: Understand what the (run/start)WithHeaders methods are meant for.
+	// Perhaps they aren't needed in the React Native context.
 	runWithHeaders: (
 		name: string,
 		headers: Record<string, string>,
@@ -149,8 +136,6 @@ export const _LDObserve = {
 			return observabilityClient.startSpan(spanName, options)
 		} catch (e) {
 			console.warn('observability-react-native startSpan error: ', e)
-			// Return a no-op span to avoid breaking the application
-			return {} as OtelSpan
 		}
 	},
 
@@ -166,13 +151,8 @@ export const _LDObserve = {
 				'observability-react-native startActiveSpan error: ',
 				e,
 			)
-			// Run the function with a no-op span to avoid breaking the application
 			return fn({} as OtelSpan)
 		}
-	},
-
-	setResourceAttributes: (attributes: ResourceAttributes) => {
-		return observabilityClient.setResourceAttributes(attributes)
 	},
 
 	setUserId: async (userId: string) => {

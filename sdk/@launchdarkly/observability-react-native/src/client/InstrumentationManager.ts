@@ -17,10 +17,13 @@ import {
 	SpanExporter,
 	SpanProcessor,
 	WebTracerProvider,
+	ReadableSpan,
+	Span,
 } from '@opentelemetry/sdk-trace-web'
 import {
 	ConsoleLogRecordExporter,
 	LoggerProvider,
+	LogRecordExporter,
 	SimpleLogRecordProcessor,
 } from '@opentelemetry/sdk-logs'
 import {
@@ -28,27 +31,51 @@ import {
 	MeterProvider,
 	PeriodicExportingMetricReader,
 } from '@opentelemetry/sdk-metrics'
-import { Resource, ResourceAttributes } from '@opentelemetry/resources'
+import { Resource } from '@opentelemetry/resources'
 import {
 	ATTR_EXCEPTION_MESSAGE,
 	ATTR_EXCEPTION_STACKTRACE,
 	ATTR_EXCEPTION_TYPE,
 } from '@opentelemetry/semantic-conventions'
 import { SpanStatusCode } from '@opentelemetry/api'
-import {
-	createSessionSpanProcessor,
-	SessionProvider,
-} from '@opentelemetry/web-common'
+import { Context } from '@opentelemetry/api'
 import { ReactNativeOptions } from '../api/Options'
 import { Metric } from '../api/Metric'
 import { SessionManager } from './SessionManager'
 
-class SessionIdProvider implements SessionProvider {
+// Custom span processor to add session data to spans
+class SessionSpanProcessor implements SpanProcessor {
 	constructor(private sessionManager: SessionManager) {}
 
-	getSessionId(): string | null {
+	onStart(span: Span, parentContext: Context): void {
+		// Add session attributes to the span
 		const sessionInfo = this.sessionManager.getSessionInfo()
-		return sessionInfo?.sessionId || 'unknown'
+
+		if (sessionInfo) {
+			span.setAttributes({
+				'session.id': sessionInfo.sessionId,
+				'session.device_id': sessionInfo.deviceId,
+				'session.installation_id': sessionInfo.installationId,
+				'session.user_id': sessionInfo.userId || 'anonymous',
+				'session.duration_ms': (
+					Date.now() - sessionInfo.startTime
+				).toString(),
+				'app.version': sessionInfo.appVersion,
+				'device.platform': sessionInfo.platform,
+			})
+		}
+	}
+
+	onEnd(span: ReadableSpan): void {
+		// No-op for session processor
+	}
+
+	shutdown(): Promise<void> {
+		return Promise.resolve()
+	}
+
+	forceFlush(): Promise<void> {
+		return Promise.resolve()
 	}
 }
 
@@ -58,7 +85,6 @@ export class InstrumentationManager {
 	private meterProvider?: MeterProvider
 	private sessionManager?: SessionManager
 	private isInitialized = false
-	private resource: Resource = new Resource({})
 
 	constructor(private options: Required<ReactNativeOptions>) {}
 
@@ -112,11 +138,7 @@ export class InstrumentationManager {
 
 		// Add session span processor if session manager is available
 		if (this.sessionManager) {
-			processors.push(
-				createSessionSpanProcessor(
-					new SessionIdProvider(this.sessionManager),
-				) as unknown as SpanProcessor,
-			)
+			processors.push(new SessionSpanProcessor(this.sessionManager))
 		}
 
 		this.traceProvider = new WebTracerProvider({
@@ -154,7 +176,9 @@ export class InstrumentationManager {
 
 		this.loggerProvider = new LoggerProvider({ resource })
 		this.loggerProvider.addLogRecordProcessor(
-			new SimpleLogRecordProcessor(logExporter),
+			new SimpleLogRecordProcessor(
+				logExporter as unknown as LogRecordExporter,
+			),
 		)
 
 		if (this.options.enableConsoleLogging) {
@@ -204,9 +228,7 @@ export class InstrumentationManager {
 
 	public recordError(
 		error: Error,
-		secureSessionId?: string,
-		requestId?: string,
-		metadata?: Attributes,
+		attributes?: Attributes,
 		options?: { span: OtelSpan },
 	): void {
 		try {
@@ -222,16 +244,8 @@ export class InstrumentationManager {
 			span.setAttribute(ATTR_EXCEPTION_TYPE, error.name ?? 'No name')
 			span.setStatus({ code: SpanStatusCode.ERROR })
 
-			if (metadata) {
-				span.setAttributes(metadata)
-			}
-
-			if (secureSessionId) {
-				span.setAttribute('session.id', secureSessionId)
-			}
-
-			if (requestId) {
-				span.setAttribute('request.id', requestId)
+			if (attributes) {
+				span.setAttributes(attributes)
 			}
 
 			if (!activeSpan) {
@@ -239,8 +253,8 @@ export class InstrumentationManager {
 			}
 
 			// Also log the error
-			this.recordLog(error.message, 'error', secureSessionId, requestId, {
-				...metadata,
+			this.recordLog(error.message, 'error', {
+				...attributes,
 				'exception.type': error.name,
 				'exception.message': error.message,
 				'exception.stacktrace': error.stack,
@@ -292,9 +306,7 @@ export class InstrumentationManager {
 	public recordLog(
 		message: any,
 		level: string,
-		secureSessionId?: string,
-		requestId?: string,
-		metadata?: Attributes,
+		attributes?: Attributes,
 	): void {
 		try {
 			const logger = this.getLogger()
@@ -308,11 +320,9 @@ export class InstrumentationManager {
 						? message
 						: JSON.stringify(message),
 				attributes: {
-					...metadata,
+					...attributes,
 					...sessionContext,
 					'log.source': 'react-native-plugin',
-					...(secureSessionId && { 'session.id': secureSessionId }),
-					...(requestId && { 'request.id': requestId }),
 				},
 				timestamp: Date.now(),
 			})
@@ -359,8 +369,7 @@ export class InstrumentationManager {
 	}
 
 	public startSpan(spanName: string, options?: SpanOptions): OtelSpan {
-		const tracer = this.getTracer()
-		return tracer.startSpan(spanName, options)
+		return this.getTracer().startSpan(spanName, options)
 	}
 
 	public startActiveSpan<T>(
@@ -368,8 +377,7 @@ export class InstrumentationManager {
 		fn: (span: OtelSpan) => T,
 		options?: SpanOptions,
 	): T {
-		const tracer = this.getTracer()
-		return tracer.startActiveSpan(spanName, options || {}, fn)
+		return this.getTracer().startActiveSpan(spanName, options || {}, fn)
 	}
 
 	public async flush(): Promise<void> {
@@ -388,13 +396,6 @@ export class InstrumentationManager {
 		} catch (e) {
 			console.error('Failed to flush telemetry:', e)
 		}
-	}
-
-	public setResourceAttributes(attributes: ResourceAttributes): void {
-		this.resource = new Resource({
-			...this.resource.attributes,
-			...attributes,
-		})
 	}
 
 	public async stop(): Promise<void> {

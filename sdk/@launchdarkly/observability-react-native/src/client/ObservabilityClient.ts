@@ -1,5 +1,9 @@
-import { Attributes, Span as OtelSpan, SpanOptions } from '@opentelemetry/api'
-import { ResourceAttributes, Resource } from '@opentelemetry/resources'
+import type {
+	Attributes,
+	Span as OtelSpan,
+	SpanOptions,
+} from '@opentelemetry/api'
+import { type ResourceAttributes, Resource } from '@opentelemetry/resources'
 import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions'
 import { ReactNativeOptions } from '../api/Options'
 import { Metric } from '../api/Metric'
@@ -120,23 +124,9 @@ export class ObservabilityClient {
 		return this.instrumentationManager.flush()
 	}
 
-	public log(
-		timestamp: Date,
-		message: any,
-		level: string,
-		stack: any,
-		secureSessionId?: string,
-		requestId?: string,
-		metadata?: Attributes,
-	): void {
+	public log(message: any, level: string, attributes?: Attributes): void {
 		if (!this.options.enableLogs) return
-		this.instrumentationManager.recordLog(
-			message,
-			level,
-			secureSessionId,
-			requestId,
-			metadata,
-		)
+		this.instrumentationManager.recordLog(message, level, attributes)
 	}
 
 	public parseHeaders(headers: Record<string, string>): RequestContext {
@@ -193,10 +183,6 @@ export class ObservabilityClient {
 			fn,
 			options,
 		)
-	}
-
-	public setResourceAttributes(attributes: ResourceAttributes): void {
-		this.instrumentationManager.setResourceAttributes(attributes)
 	}
 
 	public async setUserId(userId: string): Promise<void> {

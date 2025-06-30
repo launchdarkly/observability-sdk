@@ -88,8 +88,6 @@ const ExampleScreen: React.FC = () => {
       LDObserve.recordLog(
         'Data fetch completed successfully',
         'info',
-        undefined,
-        undefined,
         {
           operation: 'data-fetch',
           resultCount: result.length || 0,
@@ -138,15 +136,15 @@ const ExampleScreen: React.FC = () => {
 
   const handleLogTest = () => {
     // Test different log levels
-    LDObserve.recordLog('Debug message', 'debug', undefined, undefined, {
+    LDObserve.recordLog('Debug message', 'debug', {
       component: 'ExampleScreen',
     });
 
-    LDObserve.recordLog('Info message', 'info', undefined, undefined, {
+    LDObserve.recordLog('Info message', 'info', {
       action: 'log-test',
     });
 
-    LDObserve.recordLog('Warning message', 'warn', undefined, undefined, {
+    LDObserve.recordLog('Warning message', 'warn', {
       severity: 'medium',
     });
   };

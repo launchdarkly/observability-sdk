@@ -1,9 +1,15 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { AppState, Platform } from 'react-native'
-import DeviceInfo from 'react-native-device-info'
-import 'react-native-get-random-values'
-import { v4 as uuidv4 } from 'uuid'
 import { ReactNativeOptions } from '../api/Options'
+import { generateUniqueId, generateDeviceId } from '../utils/idGenerator'
+
+// Make DeviceInfo import optional
+let DeviceInfo: any = null
+try {
+	DeviceInfo = require('react-native-device-info')
+} catch (error) {
+	// DeviceInfo not available, will use fallbacks
+}
 
 export interface SessionInfo {
 	sessionId: string
@@ -25,16 +31,38 @@ export class SessionManager {
 
 	public async initialize(): Promise<void> {
 		try {
-			// Get device info
-			const deviceId = await DeviceInfo.getUniqueId()
-			const appVersion = DeviceInfo.getVersion()
+			// Get device info with fallbacks
+			let deviceId = 'unknown'
+			let appVersion = 'unknown'
+
+			if (DeviceInfo) {
+				try {
+					deviceId = await DeviceInfo.getUniqueId()
+					appVersion = DeviceInfo.getVersion()
+				} catch (error) {
+					console.warn(
+						'Failed to get device info, using fallbacks:',
+						error,
+					)
+				}
+			} else {
+				// Generate a persistent fallback device ID
+				const storedDeviceId =
+					await AsyncStorage.getItem('@session/deviceId')
+				if (storedDeviceId) {
+					deviceId = storedDeviceId
+				} else {
+					deviceId = `device_${generateDeviceId()}`
+					await AsyncStorage.setItem('@session/deviceId', deviceId)
+				}
+			}
 
 			// Try to get existing installation ID or create new one
 			let installationId = await AsyncStorage.getItem(
 				'@session/installationId',
 			)
 			if (!installationId) {
-				installationId = uuidv4()
+				installationId = generateUniqueId()
 				await AsyncStorage.setItem(
 					'@session/installationId',
 					installationId,
@@ -43,7 +71,7 @@ export class SessionManager {
 
 			// Check for existing session (within configured timeout)
 			const storedSession = await AsyncStorage.getItem('@session/current')
-			let sessionId = uuidv4()
+			let sessionId = generateUniqueId()
 
 			if (storedSession) {
 				const parsed = JSON.parse(storedSession)
@@ -80,7 +108,7 @@ export class SessionManager {
 			console.error('Failed to initialize session:', error)
 			// Fallback session
 			this.sessionInfo = {
-				sessionId: uuidv4(),
+				sessionId: generateUniqueId(),
 				deviceId: 'unknown',
 				appVersion: 'unknown',
 				platform: Platform.OS,
@@ -108,6 +136,8 @@ export class SessionManager {
 
 	private setupAppStateListener(): void {
 		AppState.addEventListener('change', (nextAppState) => {
+			console.log('🔄 App state changed:', nextAppState)
+
 			if (nextAppState === 'active') {
 				// Update last activity on app foreground
 				this.persistSession()
