@@ -1,5 +1,11 @@
 # @launchdarkly/observability-node
 
+## 0.1.2
+
+### Patch Changes
+
+- 3b7818c: update README EAP notice
+
 ## 0.1.1
 
 ### Patch Changes

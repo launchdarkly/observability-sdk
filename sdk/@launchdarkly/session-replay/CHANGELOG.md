@@ -1,5 +1,11 @@
 # @launchdarkly/session-replay
 
+## 0.3.2
+
+### Patch Changes
+
+- 3b7818c: update README EAP notice
+
 ## 0.3.1
 
 ### Patch Changes
