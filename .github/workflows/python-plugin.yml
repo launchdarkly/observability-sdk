@@ -42,7 +42,7 @@ jobs:
             #   if: github.event_name == 'pull_request'
             #   uses: orgoro/coverage@v3
             #   with:
-            #       coverageFile: ./sdk/highlight-py/coverage.xml
+            #       coverageFile: ./sdk/@launchdarkly/observability-python/coverage.xml
             #       token: ${{ secrets.GITHUB_TOKEN }}
             - name: Build
               run: poetry build
@@ -55,7 +55,7 @@ jobs:
             #  if: github.ref == 'refs/heads/main'
             #  uses: pypa/gh-action-pypi-publish@release/v1
             #  with:
-            #      packages-dir: ./sdk/highlight-py/dist/
+            #      packages-dir: ./sdk/@launchdarkly/observability-python/dist/
             #      skip-existing: true
 
     # e2e:

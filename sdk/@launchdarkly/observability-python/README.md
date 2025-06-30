@@ -1,12 +1,11 @@
-
 LaunchDarkly Observability SDK for Python
 ===========================
 
-[![Actions Status][o11y-sdk-ci-badge]][o11y-sdk-ci]
-[![readthedocs](https://readthedocs.org/projects/launchdarkly-python-sdk/badge/)](https://launchdarkly-observability.readthedocs.io/en/latest/)
+[![Actions Status][pyplugin-sdk-ci-badge]][pyplugin-sdk-ci]
+[![readthedocs][readthedocs-badge]][readthedocs-link]
 
-[![PyPI](https://img.shields.io/pypi/v/launchdarkly-observability.svg?maxAge=2592000)](https://pypi.python.org/pypi/launchdarkly-observability)
-[![PyPI](https://img.shields.io/pypi/pyversions/launchdarkly-observability.svg)](https://pypi.python.org/pypi/launchdarkly-observability)
+[![PyPI][pypi-version-badge]][pypi-link]
+[![PyPI][pypi-versions-badge]][pypi-link]
 
 # Early Access Preview️
 
@@ -36,3 +35,11 @@ We encourage pull requests and other contributions from the community. Check out
     * [docs.launchdarkly.com](https://docs.launchdarkly.com/  "LaunchDarkly Documentation") for our documentation and SDK reference guides
     * [apidocs.launchdarkly.com](https://apidocs.launchdarkly.com/  "LaunchDarkly API Documentation") for our API documentation
     * [launchdarkly.com/blog](https://launchdarkly.com/blog/  "LaunchDarkly Blog Documentation") for the latest product updates
+
+[pyplugin-sdk-ci-badge]: https://github.com/launchdarkly/observability-sdk/actions/workflows/python-plugin.yml/badge.svg
+[pyplugin-sdk-ci]: https://github.com/launchdarkly/observability-sdk/actions/workflows/python-plugin.yml
+[readthedocs-badge]: https://readthedocs.org/projects/launchdarkly-observability/badge/
+[readthedocs-link]: https://launchdarkly-observability.readthedocs.io/en/latest/
+[pypi-version-badge]: https://img.shields.io/pypi/v/launchdarkly-observability.svg?maxAge=2592000
+[pypi-versions-badge]: https://img.shields.io/pypi/pyversions/launchdarkly-observability.svg
+[pypi-link]: https://pypi.python.org/pypi/launchdarkly-observability
