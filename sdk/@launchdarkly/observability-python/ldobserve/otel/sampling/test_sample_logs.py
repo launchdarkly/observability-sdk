@@ -1,13 +1,19 @@
 from opentelemetry.util.types import AnyValue
 import pytest
-from typing import Dict, Optional
+import grpc
+from typing import Dict, Optional, Union
 from opentelemetry.sdk._logs import LogRecord, LogData  # type: ignore
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import InstrumentationScope
 from opentelemetry.trace import SpanContext, TraceFlags
 from opentelemetry.trace.span import INVALID_SPAN_ID, INVALID_TRACE_ID
+from opentelemetry.sdk._logs.export import LogExportResult  # type: ignore
 
-from ..sampling_log_exporter import sample_logs
+from ..sampling_log_exporter import (
+    sample_logs,
+    SamplingLogExporter,
+    clone_log_record_with_attributes,
+)
 from ..sampling import SamplingResult
 from ...graph.generated.public_graph_client.get_sampling_config import (
     GetSamplingConfigSampling,
@@ -159,3 +165,125 @@ def test_handle_logs_with_no_sampling_attributes():
         sampled_logs[0].log_record.attributes
         and sampled_logs[0].log_record.attributes["samplingRatio"] == 2
     )
+
+
+def test_sample_logs_with_no_attributes():
+    """Test sample_logs when sampler returns no attributes."""
+
+    class MockSamplerNoAttributes:
+        def is_sampling_enabled(self) -> bool:
+            return True
+
+        def sample_log(self, record: LogData) -> SamplingResult:
+            return SamplingResult(sample=True, attributes=None)
+
+        def sample_span(self, span) -> SamplingResult:
+            return SamplingResult(sample=True)
+
+    mock_sampler = MockSamplerNoAttributes()
+    logs = [create_log_data("info", "test log")]
+
+    sampled_logs = sample_logs(logs, mock_sampler)
+
+    assert len(sampled_logs) == 1
+    assert sampled_logs[0] == logs[0]  # Should be the original log without modification
+
+
+def test_clone_log_record_with_attributes():
+    """Test clone_log_record_with_attributes function."""
+    original_log = create_log_data("info", "test message", {"original": "value"})
+    new_attributes: Dict[str, Union[str, int, float, bool]] = {
+        "new": "value",
+        "another": 123,
+    }
+
+    cloned_log = clone_log_record_with_attributes(original_log, new_attributes)
+
+    # Check that it's a new object
+    assert cloned_log is not original_log
+    assert cloned_log.log_record is not original_log.log_record
+
+    # Check that attributes are merged
+    expected_attributes = {"original": "value", "new": "value", "another": 123}
+    assert cloned_log.log_record.attributes == expected_attributes
+
+    # Check that other properties are preserved
+    assert cloned_log.log_record.body == original_log.log_record.body
+    assert cloned_log.log_record.severity_text == original_log.log_record.severity_text
+    assert cloned_log.instrumentation_scope == original_log.instrumentation_scope
+
+
+def test_clone_log_record_with_no_original_attributes():
+    """Test clone_log_record_with_attributes when original log has no attributes."""
+    original_log = create_log_data("info", "test message", None)
+    new_attributes: Dict[str, Union[str, int, float, bool]] = {"new": "value"}
+
+    cloned_log = clone_log_record_with_attributes(original_log, new_attributes)
+
+    assert cloned_log.log_record.attributes == new_attributes
+
+
+class TestSamplingLogExporter:
+    """Test cases for SamplingLogExporter class."""
+
+    def test_init_with_sampler(self):
+        """Test SamplingLogExporter initialization."""
+        mock_sampler = MockSampler({})
+        exporter = SamplingLogExporter(sampler=mock_sampler)
+
+        assert exporter.sampler == mock_sampler
+
+    def test_init_with_all_parameters(self):
+        """Test SamplingLogExporter initialization with all parameters."""
+        mock_sampler = MockSampler({})
+
+        exporter = SamplingLogExporter(
+            sampler=mock_sampler,
+            endpoint="http://localhost:4317",
+            insecure=True,
+            headers={"Authorization": "Bearer token"},
+            timeout=30,
+        )
+
+        assert exporter.sampler == mock_sampler
+
+    def test_export_with_no_sampled_logs(self):
+        """Test export method when no logs are sampled."""
+        mock_sampler = MockSampler({"info-test log": False})
+        exporter = SamplingLogExporter(sampler=mock_sampler)
+
+        logs = [create_log_data("info", "test log")]
+
+        result = exporter.export(logs)
+        assert result == LogExportResult.SUCCESS
+
+    def test_export_with_empty_logs(self):
+        """Test export method with empty logs list."""
+        mock_sampler = MockSampler({})
+        exporter = SamplingLogExporter(sampler=mock_sampler)
+
+        logs = []
+
+        result = exporter.export(logs)
+        assert result == LogExportResult.SUCCESS
+
+    def test_export_with_sampled_logs(self, monkeypatch):
+        """Test export method when logs are sampled."""
+        mock_sampler = MockSampler({"info-test log": True})
+        exporter = SamplingLogExporter(sampler=mock_sampler)
+
+        logs = [create_log_data("info", "test log")]
+
+        # Mock the parent class export method
+        def mock_parent_export(self, sampled_logs):
+            assert len(sampled_logs) == 1
+            assert sampled_logs[0].log_record.attributes["samplingRatio"] == 2
+            return LogExportResult.SUCCESS
+
+        # Use monkeypatch to replace the parent class method
+        monkeypatch.setattr(
+            exporter.__class__.__bases__[0], "export", mock_parent_export
+        )
+
+        result = exporter.export(logs)
+        assert result == LogExportResult.SUCCESS
