@@ -1,0 +1,80 @@
+name: Python SDK
+
+on:
+    push:
+        branches: ['main']
+    pull_request:
+        types: [opened, synchronize]
+        paths:
+            - 'sdk/@launchdarkly/observability-python/**'
+            - '.github/workflows/python-plugin.yml'
+            # - 'e2e/tests/**'
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+jobs:
+    build:
+        permissions:
+            id-token: write # for python PyPI OIDC login
+            contents: write
+            pull-requests: write
+            repository-projects: write
+        name: Python SDK
+        runs-on: ubuntu-22.04-8core-32gb
+        defaults:
+            run:
+                working-directory: ./sdk/@launchdarkly/observability-python
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  token: ${{ secrets.GITHUB_TOKEN }}
+            - name: Install poetry
+              run: pipx install poetry
+            - uses: actions/setup-python@v4
+              with:
+                  python-version: '3.12'
+                  cache: 'poetry'
+            - run: poetry install --all-extras
+            - name: Lint
+              run: poetry run black --check .
+            - name: Test
+              run: poetry run pytest --cov=ldobserve --cov-branch --cov-report xml
+            - name: Get Cover
+              if: github.event_name == 'pull_request'
+              uses: orgoro/coverage@v3
+              with:
+                  coverageFile: ./sdk/highlight-py/coverage.xml
+                  token: ${{ secrets.GITHUB_TOKEN }}
+            - name: Build
+              run: poetry build
+            #- name: Validate PyProject
+            #  working-directory: ./e2e/python/setuptools
+            #  run: |
+            #      python -m pip install -U pip pip-tools;
+            #      python -m piptools compile --upgrade pyproject.toml;
+            #- name: Publish
+            #  if: github.ref == 'refs/heads/main'
+            #  uses: pypa/gh-action-pypi-publish@release/v1
+            #  with:
+            #      packages-dir: ./sdk/highlight-py/dist/
+            #      skip-existing: true
+
+    # e2e:
+    #     name: Validate E2E tests
+    #     runs-on: ubuntu-22.04-8core-32gb
+    #     defaults:
+    #         run:
+    #             working-directory: ./e2e/tests
+
+    #     steps:
+    #         - uses: actions/checkout@v4
+    #           with:
+    #               token: ${{ secrets.GITHUB_TOKEN }}
+    #         - name: Install poetry
+    #           run: pipx install poetry
+    #         - uses: actions/setup-python@v4
+    #           with:
+    #               python-version: '3.10'
+    #               cache: 'poetry'
+    #         - run: poetry install --all-extras
+    #         - name: Lint
+    #           run: poetry run black --check .
