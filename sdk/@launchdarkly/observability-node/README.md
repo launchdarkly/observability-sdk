@@ -5,10 +5,7 @@
 [![NPM][o11y-sdk-dm-badge]][o11y-sdk-npm-link]
 [![NPM][o11y-sdk-dt-badge]][o11y-sdk-npm-link]
 
-# Early Access Preview️
-
-> [!CAUTION]
-> This library is a alpha version and should not be considered ready for production use while this message is visible.
+**NB: APIs are subject to change until a 1.x version is released.**
 
 ## Install
 
