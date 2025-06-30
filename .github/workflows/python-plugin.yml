@@ -18,7 +18,7 @@ jobs:
             contents: write
             pull-requests: write
             repository-projects: write
-        name: Python SDK
+        name: Quality Check and Publish
         runs-on: ubuntu-22.04-8core-32gb
         defaults:
             run:
