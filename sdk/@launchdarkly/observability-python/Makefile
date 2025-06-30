@@ -17,11 +17,11 @@ install:
 
 # Run linting with black
 lint:
-	poetry run black --check .
+	poetry run black --check --extend-exclude  ldobserve/graph/generated .
 
 # Format code with black
 format:
-	poetry run black .
+	poetry run black --extend-exclude ldobserve/graph/generated .
 
 # Run tests with coverage
 test:
@@ -30,6 +30,9 @@ test:
 # Build the package
 build:
 	poetry build
+
+codegen:
+	poetry run ariadne-codegen client
 
 # Clean build artifacts
 clean:
