@@ -9,10 +9,7 @@
 		"ios": "expo start --ios",
 		"web": "expo start --web",
 		"lint": "expo lint",
-		"otel:start": "docker-compose -f docker-compose.yaml up -d",
-		"otel:stop": "docker-compose -f docker-compose.yaml down",
-		"otel:logs": "docker-compose -f docker-compose.yaml logs -f otel-collector",
-		"otel:restart": "yarn otel:stop && yarn otel:start"
+		"otel:start": "docker-compose -f docker-compose.yaml up"
 	},
 	"dependencies": {
 		"@expo/vector-icons": "^14.1.0",
