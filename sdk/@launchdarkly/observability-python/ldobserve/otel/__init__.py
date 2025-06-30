@@ -13,9 +13,9 @@ from .sampling import (
 
 __all__ = [
     "SamplingTraceExporter",
-    "CustomSampler", 
+    "CustomSampler",
     "SamplingResult",
     "ExportSampler",
     "sample_spans",
     "default_sampler",
-] 
+]

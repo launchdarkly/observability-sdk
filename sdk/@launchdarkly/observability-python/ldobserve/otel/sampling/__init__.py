@@ -4,6 +4,6 @@ from .custom_sampler import CustomSampler, SamplingResult, default_sampler
 
 __all__ = [
     "CustomSampler",
-    "SamplingResult", 
+    "SamplingResult",
     "default_sampler",
-] 
+]

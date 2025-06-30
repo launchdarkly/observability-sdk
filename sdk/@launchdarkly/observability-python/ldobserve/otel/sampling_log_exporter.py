@@ -1,10 +1,11 @@
 from typing import List, Optional, Dict, Union, Sequence, Tuple
-from opentelemetry.sdk._logs import LogRecord, LogData # type: ignore Not actually private.
-from opentelemetry.sdk._logs.export import LogExportResult # type: ignore Not actually private.
-from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter # type: ignore Not actually private.
+from opentelemetry.sdk._logs import LogRecord, LogData  # type: ignore Not actually private.
+from opentelemetry.sdk._logs.export import LogExportResult  # type: ignore Not actually private.
+from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter  # type: ignore Not actually private.
 import grpc
 
 from .sampling.custom_sampler import ExportSampler
+
 
 def clone_log_record_with_attributes(
     log: LogData,
@@ -14,7 +15,7 @@ def clone_log_record_with_attributes(
     # Create a new log record with merged attributes
     merged_attributes = dict(log.log_record.attributes or {})
     merged_attributes.update(attributes)
-    
+
     return LogData(
         log_record=LogRecord(
             body=log.log_record.body,
@@ -26,9 +27,9 @@ def clone_log_record_with_attributes(
             trace_id=log.log_record.trace_id,
             span_id=log.log_record.span_id,
             trace_flags=log.log_record.trace_flags,
-            severity_number=log.log_record.severity_number
+            severity_number=log.log_record.severity_number,
         ),
-        instrumentation_scope=log.instrumentation_scope
+        instrumentation_scope=log.instrumentation_scope,
     )
 
 
@@ -39,9 +40,9 @@ def sample_logs(
     """Sample logs based on the sampler configuration."""
     if not sampler.is_sampling_enabled():
         return items
-    
+
     sampled_logs: List[LogData] = []
-    
+
     for item in items:
         sample_result = sampler.sample_log(item)
         if sample_result.sample:
@@ -52,13 +53,13 @@ def sample_logs(
             else:
                 sampled_logs.append(item)
         # If not sampled, we simply don't include it in the result
-    
+
     return sampled_logs
 
 
 class SamplingLogExporter(OTLPLogExporter):
     """Log exporter that applies sampling before exporting."""
-    
+
     def __init__(
         self,
         sampler: ExportSampler,
@@ -78,11 +79,11 @@ class SamplingLogExporter(OTLPLogExporter):
             compression=compression,
         )
         self.sampler = sampler
-    
+
     def export(self, logs: List[LogData]) -> LogExportResult:
         """Export logs with sampling applied."""
         sampled_logs = sample_logs(logs, self.sampler)
         if not sampled_logs:
             return LogExportResult.SUCCESS
-        
+
         return super().export(sampled_logs)
