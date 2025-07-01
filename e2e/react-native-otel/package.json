@@ -7,6 +7,7 @@
 		"reset-project": "node ./scripts/reset-project.js",
 		"android": "expo start --android",
 		"ios": "expo start --ios",
+		"ios:run": "expo run:ios",
 		"web": "expo start --web",
 		"lint": "expo lint",
 		"otel:start": "docker-compose -f docker-compose.yaml up"

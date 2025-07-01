@@ -9,7 +9,7 @@ This is a React Native application that demonstrates the LaunchDarkly Observabil
    yarn install
    ```
 
-2. **Start the OTel collector** (and view logs):
+2. **Start the OTel collector**:
    ```bash
    yarn otel:start
    ```
@@ -17,10 +17,15 @@ This is a React Native application that demonstrates the LaunchDarkly Observabil
 3. **Configure LaunchDarkly** (optional):
    - Adjust OTLP endpoint and configuration as needed
 
-4. **Start the development server**:
+4. **Run the app** (remember to set your SDK key):
    ```bash
-   # Make sure to set your SDK key when starting the app
-   LAUNCHDARKLY_MOBILE_KEY=<your_mobile_sdk_key> yarn ios
+   export LAUNCHDARKLY_MOBILE_KEY=<your_mobile_sdk_key>
+
+   # Start the Metro bundler
+   yarn start
+
+   # Build and run in a specific simulator
+   yarn ios:run
    ```
 
 ## Configuration
