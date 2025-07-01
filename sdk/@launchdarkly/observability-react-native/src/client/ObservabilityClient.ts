@@ -83,19 +83,10 @@ export class ObservabilityClient {
 
 	public consumeCustomError(
 		error: Error,
-		secureSessionId?: string,
-		requestId?: string,
-		metadata?: Attributes,
+		attributes?: Attributes,
 		options?: { span: OtelSpan },
 	): void {
 		if (!this.options.enableErrorTracking) return
-
-		// Combine metadata with session/request context
-		const attributes = {
-			...metadata,
-			...(secureSessionId && { 'session.id': secureSessionId }),
-			...(requestId && { 'request.id': requestId }),
-		}
 
 		this.instrumentationManager.recordError(error, attributes, options)
 	}
