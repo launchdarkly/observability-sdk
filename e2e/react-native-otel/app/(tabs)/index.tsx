@@ -148,7 +148,6 @@ export default function HomeScreen() {
 	const handleRecordLog = () => {
 		LDObserve.recordLog('Test log', 'info', {
 			component: 'HomeScreen',
-			loadTime: Date.now(),
 		})
 	}
 

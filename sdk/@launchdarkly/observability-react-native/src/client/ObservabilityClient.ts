@@ -61,7 +61,7 @@ export class ObservabilityClient {
 			const resource = new Resource({
 				[ATTR_SERVICE_NAME]: this.options.serviceName,
 				'service.version': this.options.serviceVersion,
-				'service.instance.id': this.sdkKey,
+				'highlight.project_id': this.sdkKey,
 				...this.options.resourceAttributes,
 				...sessionAttributes,
 			})
