@@ -15,11 +15,9 @@ const user = {
 	anonymous: false,
 }
 
-const OTLP_HTTP = 'https://otel.observability.app.launchdarkly.com:4318'
-const OTLP_HTTP_DEV = 'http://localhost:4318'
-
 const mobileKey = Constants.expoConfig?.extra?.sdkKey
-const otlpEndpoint = __DEV__ ? OTLP_HTTP_DEV : OTLP_HTTP
+const otlpEndpoint = Constants.expoConfig?.extra?.otel?.endpoint
+const serviceName = Constants.expoConfig?.extra?.otel?.serviceName
 
 export async function initializeLaunchDarkly() {
 	try {
@@ -37,20 +35,13 @@ export async function initializeLaunchDarkly() {
 			{
 				plugins: [
 					new Observability({
-						serviceName: 'react-native-otel-demo',
+						serviceName,
 						serviceVersion:
 							Constants.expoConfig?.version || '1.0.0',
 						otlpEndpoint,
-						enableTracing: true,
-						enableLogs: true,
-						enableMetrics: true,
-						enableErrorTracking: true,
-						enablePerformanceMonitoring: true,
-						enableConsoleLogging: true, // Enable for debugging
-						debug: __DEV__, // Enable debug mode in development
+						debug: __DEV__,
 						customHeaders: {
-							// Add any custom headers for your OTLP endpoint
-							'x-service-name': 'react-native-otel-demo',
+							'x-service-name': serviceName,
 							'x-environment': __DEV__
 								? 'development'
 								: 'production',

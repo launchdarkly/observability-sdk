@@ -36,18 +36,13 @@ export class ObservabilityClient {
 			serviceName: options.serviceName ?? 'react-native-app',
 			serviceVersion: options.serviceVersion ?? '1.0.0',
 			resourceAttributes: options.resourceAttributes ?? {},
-			enableConsoleLogging: options.enableConsoleLogging ?? false,
-			enableErrorTracking: options.enableErrorTracking ?? true,
-			enablePerformanceMonitoring:
-				options.enablePerformanceMonitoring ?? true,
-			enableTracing: options.enableTracing ?? true,
-			enableMetrics: options.enableMetrics ?? true,
-			enableLogs: options.enableLogs ?? true,
 			customHeaders: options.customHeaders ?? {},
 			sessionTimeout: options.sessionTimeout ?? 30 * 60 * 1000,
-			enableNativeCrashReporting:
-				options.enableNativeCrashReporting ?? true,
 			debug: options.debug ?? false,
+			disableErrorTracking: options.disableErrorTracking ?? false,
+			disableLogs: options.disableLogs ?? false,
+			disableMetrics: options.disableMetrics ?? false,
+			disableTraces: options.disableTraces ?? false,
 		}
 	}
 
@@ -86,33 +81,32 @@ export class ObservabilityClient {
 		attributes?: Attributes,
 		options?: { span: OtelSpan },
 	): void {
-		if (!this.options.enableErrorTracking) return
-
+		if (this.options.disableErrorTracking) return
 		this.instrumentationManager.recordError(error, attributes, options)
 	}
 
 	public recordMetric(metric: Metric): void {
-		if (!this.options.enableMetrics) return
+		if (this.options.disableMetrics) return
 		this.instrumentationManager.recordMetric(metric)
 	}
 
 	public recordCount(metric: Metric): void {
-		if (!this.options.enableMetrics) return
+		if (this.options.disableMetrics) return
 		this.instrumentationManager.recordCount(metric)
 	}
 
 	public recordIncr(metric: Metric): void {
-		if (!this.options.enableMetrics) return
+		if (this.options.disableMetrics) return
 		this.instrumentationManager.recordIncr(metric)
 	}
 
 	public recordHistogram(metric: Metric): void {
-		if (!this.options.enableMetrics) return
+		if (this.options.disableMetrics) return
 		this.instrumentationManager.recordHistogram(metric)
 	}
 
 	public recordUpDownCounter(metric: Metric): void {
-		if (!this.options.enableMetrics) return
+		if (this.options.disableMetrics) return
 		this.instrumentationManager.recordUpDownCounter(metric)
 	}
 
@@ -121,7 +115,7 @@ export class ObservabilityClient {
 	}
 
 	public log(message: any, level: string, attributes?: Attributes): void {
-		if (!this.options.enableLogs) return
+		if (this.options.disableLogs) return
 		this.instrumentationManager.recordLog(message, level, attributes)
 	}
 
@@ -141,7 +135,10 @@ export class ObservabilityClient {
 		cb: (span: OtelSpan) => any,
 		options?: SpanOptions,
 	): any {
-		if (!this.options.enableTracing) return cb({} as OtelSpan)
+		if (this.options.disableTraces) {
+			return cb({} as OtelSpan)
+		}
+
 		return this.instrumentationManager.runWithHeaders(
 			name,
 			headers,
@@ -155,7 +152,10 @@ export class ObservabilityClient {
 		headers: Record<string, string>,
 		options?: SpanOptions,
 	): OtelSpan {
-		if (!this.options.enableTracing) return {} as OtelSpan
+		if (this.options.disableTraces) {
+			return {} as OtelSpan
+		}
+
 		return this.instrumentationManager.startWithHeaders(
 			spanName,
 			headers,
@@ -164,7 +164,10 @@ export class ObservabilityClient {
 	}
 
 	public startSpan(spanName: string, options?: SpanOptions): OtelSpan {
-		if (!this.options.enableTracing) return {} as OtelSpan
+		if (this.options.disableTraces) {
+			return {} as OtelSpan
+		}
+
 		return this.instrumentationManager.startSpan(spanName, options)
 	}
 
@@ -173,7 +176,10 @@ export class ObservabilityClient {
 		fn: (span: OtelSpan) => T,
 		options?: SpanOptions,
 	): T {
-		if (!this.options.enableTracing) return fn({} as OtelSpan)
+		if (this.options.disableTraces) {
+			return fn({} as OtelSpan)
+		}
+
 		return this.instrumentationManager.startActiveSpan(
 			spanName,
 			fn,

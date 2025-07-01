@@ -23,11 +23,6 @@ const initializeLaunchDarkly = async () => {
         serviceName: 'my-react-native-app',
         serviceVersion: '1.0.0',
         otlpEndpoint: 'https://your-otlp-endpoint.com:4318',
-        enableTracing: true,
-        enableLogs: true,
-        enableMetrics: true,
-        enableErrorTracking: true,
-        enablePerformanceMonitoring: true,
         customHeaders: {
           'x-api-key': 'your-api-key',
         },
