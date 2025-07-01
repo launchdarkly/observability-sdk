@@ -98,17 +98,17 @@ export class InstrumentationManager {
 			}
 
 			// Initialize tracing if enabled
-			if (this.options.enableTracing) {
+			if (!this.options.disableTraces) {
 				await this.initializeTracing(resource, headers)
 			}
 
 			// Initialize logging if enabled
-			if (this.options.enableLogs) {
+			if (!this.options.disableLogs) {
 				await this.initializeLogs(resource, headers)
 			}
 
 			// Initialize metrics if enabled
-			if (this.options.enableMetrics) {
+			if (!this.options.disableMetrics) {
 				await this.initializeMetrics(resource, headers)
 			}
 
@@ -132,7 +132,7 @@ export class InstrumentationManager {
 			new SimpleSpanProcessor(exporter as unknown as SpanExporter),
 		]
 
-		if (this.options.enableConsoleLogging) {
+		if (!this.options.disableTraces) {
 			processors.push(new SimpleSpanProcessor(new ConsoleSpanExporter()))
 		}
 
@@ -181,7 +181,7 @@ export class InstrumentationManager {
 			),
 		)
 
-		if (this.options.enableConsoleLogging) {
+		if (!this.options.disableLogs) {
 			this.loggerProvider.addLogRecordProcessor(
 				new SimpleLogRecordProcessor(new ConsoleLogRecordExporter()),
 			)
@@ -208,7 +208,7 @@ export class InstrumentationManager {
 			new PeriodicExportingMetricReader({ exporter: metricExporter }),
 		]
 
-		if (this.options.enableConsoleLogging) {
+		if (!this.options.disableMetrics) {
 			readers.push(
 				new PeriodicExportingMetricReader({
 					exporter: new ConsoleMetricExporter(),
