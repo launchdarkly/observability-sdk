@@ -25,42 +25,6 @@ export interface ReactNativeOptions {
 	resourceAttributes?: ResourceAttributes
 
 	/**
-	 * Whether to enable console logging of telemetry data.
-	 * @default false
-	 */
-	enableConsoleLogging?: boolean
-
-	/**
-	 * Whether to enable automatic error tracking.
-	 * @default true
-	 */
-	enableErrorTracking?: boolean
-
-	/**
-	 * Whether to enable automatic performance monitoring.
-	 * @default true
-	 */
-	enablePerformanceMonitoring?: boolean
-
-	/**
-	 * Whether to enable automatic trace collection.
-	 * @default true
-	 */
-	enableTracing?: boolean
-
-	/**
-	 * Whether to enable automatic metrics collection.
-	 * @default true
-	 */
-	enableMetrics?: boolean
-
-	/**
-	 * Whether to enable automatic log collection.
-	 * @default true
-	 */
-	enableLogs?: boolean
-
-	/**
 	 * Custom headers to include with OTLP exports.
 	 */
 	customHeaders?: Record<string, string>
@@ -72,14 +36,28 @@ export interface ReactNativeOptions {
 	sessionTimeout?: number
 
 	/**
-	 * Whether to enable native crash reporting.
-	 * @default true
-	 */
-	enableNativeCrashReporting?: boolean
-
-	/**
 	 * Debug mode - enables additional logging.
 	 * @default false
 	 */
 	debug?: boolean
+
+	/**
+	 * Whether errors tracking is disabled.
+	 */
+	disableErrorTracking?: boolean
+
+	/**
+	 * Whether logs are disabled.
+	 */
+	disableLogs?: boolean
+
+	/**
+	 * Whether traces are disabled.
+	 */
+	disableTraces?: boolean
+
+	/**
+	 * Whether metrics are disabled.
+	 */
+	disableMetrics?: boolean
 }

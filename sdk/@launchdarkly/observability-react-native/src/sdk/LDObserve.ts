@@ -28,19 +28,11 @@ export const _LDObserve = {
 
 	recordError: (
 		error: Error,
-		secureSessionId?: string,
-		requestId?: string,
-		metadata?: Attributes,
+		attributes?: Attributes,
 		options?: { span: OtelSpan },
 	) => {
 		try {
-			observabilityClient?.consumeCustomError(
-				error,
-				secureSessionId,
-				requestId,
-				metadata,
-				options,
-			)
+			observabilityClient?.consumeCustomError(error, attributes, options)
 		} catch (e) {
 			console.warn('observability-react-native consumeError error: ', e)
 		}

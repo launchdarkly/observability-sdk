@@ -54,9 +54,6 @@ const client = new LDClient(
     new Observability({
       serviceName: 'my-react-native-app',
       serviceVersion: '1.0.0',
-      enableTracing: true,
-      enableMetrics: true,
-      enableLogs: true,
     })
   ]
 );
@@ -78,10 +75,6 @@ interface ReactNativeOptions {
   serviceName?: string;           // Default: 'react-native-app'
   serviceVersion?: string;        // Default: '1.0.0'
   otlpEndpoint?: string;         // Default: 'https://otlp.highlight.io:4318'
-  enableTracing?: boolean;        // Default: true
-  enableMetrics?: boolean;        // Default: true
-  enableLogs?: boolean;          // Default: true
-  enableErrorTracking?: boolean;  // Default: true
   sessionTimeout?: number;        // Default: 30 minutes
   debug?: boolean;               // Default: false
 }
