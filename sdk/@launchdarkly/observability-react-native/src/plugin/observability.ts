@@ -55,6 +55,7 @@ export class Observability implements LDPlugin {
 		const sdkKey =
 			environmentMetadata.sdkKey || environmentMetadata.mobileKey || ''
 
+		// TODO: Add service name and version to the options, if available.
 		_LDObserve._init(new ObservabilityClient(sdkKey, this._options || {}))
 	}
 

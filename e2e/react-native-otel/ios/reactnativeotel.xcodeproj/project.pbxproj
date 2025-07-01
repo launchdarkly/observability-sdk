@@ -8,25 +8,25 @@
 
 /* Begin PBXBuildFile section */
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
-		286BDE90BE520157FCD0FC61 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 84AA0FDD4FDB2725FC34469C /* PrivacyInfo.xcprivacy */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
-		B862B7897D207055A463F5D8 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB2242BE7A598EAC22E12643 /* ExpoModulesProvider.swift */; };
+		6F3345656C183C645FC7818C /* libPods-reactnativeotel.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 809E891243CDB4B0A7E2789B /* libPods-reactnativeotel.a */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
+		C438A241FE71FC4D4280627F /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 84DA719290049256A4EA675D /* PrivacyInfo.xcprivacy */; };
+		DC0349F70AA091EDCEF9006D /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAC93287C7D53E3128FA6A62 /* ExpoModulesProvider.swift */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
-		FE74BA283231D776261D692C /* libPods-reactnativeotel.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 405CE8555977CE0B440FE52E /* libPods-reactnativeotel.a */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		0E091686700C5F1C0DD15FF1 /* Pods-reactnativeotel.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-reactnativeotel.release.xcconfig"; path = "Target Support Files/Pods-reactnativeotel/Pods-reactnativeotel.release.xcconfig"; sourceTree = "<group>"; };
 		13B07F961A680F5B00A75B9A /* reactnativeotel.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = reactnativeotel.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = reactnativeotel/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = reactnativeotel/Info.plist; sourceTree = "<group>"; };
-		1C44AA75D3CFC123E52ABC24 /* Pods-reactnativeotel.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-reactnativeotel.debug.xcconfig"; path = "Target Support Files/Pods-reactnativeotel/Pods-reactnativeotel.debug.xcconfig"; sourceTree = "<group>"; };
-		405CE8555977CE0B440FE52E /* libPods-reactnativeotel.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-reactnativeotel.a"; sourceTree = BUILT_PRODUCTS_DIR; };
-		84AA0FDD4FDB2725FC34469C /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = reactnativeotel/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		24B6B428B8D95E4FE255E6F8 /* Pods-reactnativeotel.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-reactnativeotel.debug.xcconfig"; path = "Target Support Files/Pods-reactnativeotel/Pods-reactnativeotel.debug.xcconfig"; sourceTree = "<group>"; };
+		809E891243CDB4B0A7E2789B /* libPods-reactnativeotel.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-reactnativeotel.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		84DA719290049256A4EA675D /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = reactnativeotel/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = reactnativeotel/SplashScreen.storyboard; sourceTree = "<group>"; };
+		B0E70DD1733970A093F33AB4 /* Pods-reactnativeotel.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-reactnativeotel.release.xcconfig"; path = "Target Support Files/Pods-reactnativeotel/Pods-reactnativeotel.release.xcconfig"; sourceTree = "<group>"; };
+		BAC93287C7D53E3128FA6A62 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-reactnativeotel/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
-		CB2242BE7A598EAC22E12643 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-reactnativeotel/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = reactnativeotel/AppDelegate.swift; sourceTree = "<group>"; };
 		F11748442D0722820044C1D9 /* reactnativeotel-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "reactnativeotel-Bridging-Header.h"; path = "reactnativeotel/reactnativeotel-Bridging-Header.h"; sourceTree = "<group>"; };
@@ -37,7 +37,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				FE74BA283231D776261D692C /* libPods-reactnativeotel.a in Frameworks */,
+				6F3345656C183C645FC7818C /* libPods-reactnativeotel.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -53,36 +53,28 @@
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
-				84AA0FDD4FDB2725FC34469C /* PrivacyInfo.xcprivacy */,
+				84DA719290049256A4EA675D /* PrivacyInfo.xcprivacy */,
 			);
 			name = reactnativeotel;
-			sourceTree = "<group>";
-		};
-		1A63ED6CFE48CD68B262F42D /* Pods */ = {
-			isa = PBXGroup;
-			children = (
-				1C44AA75D3CFC123E52ABC24 /* Pods-reactnativeotel.debug.xcconfig */,
-				0E091686700C5F1C0DD15FF1 /* Pods-reactnativeotel.release.xcconfig */,
-			);
-			name = Pods;
-			path = Pods;
 			sourceTree = "<group>";
 		};
 		2D16E6871FA4F8E400B85C8A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
-				405CE8555977CE0B440FE52E /* libPods-reactnativeotel.a */,
+				809E891243CDB4B0A7E2789B /* libPods-reactnativeotel.a */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
-		38BC8E4A1BF3B527CE8990E4 /* ExpoModulesProviders */ = {
+		796A24831C03FB53DDD2A0F0 /* Pods */ = {
 			isa = PBXGroup;
 			children = (
-				DDDD493E0B309360F0F5F332 /* reactnativeotel */,
+				24B6B428B8D95E4FE255E6F8 /* Pods-reactnativeotel.debug.xcconfig */,
+				B0E70DD1733970A093F33AB4 /* Pods-reactnativeotel.release.xcconfig */,
 			);
-			name = ExpoModulesProviders;
+			name = Pods;
+			path = Pods;
 			sourceTree = "<group>";
 		};
 		832341AE1AAA6A7D00B99B32 /* Libraries */ = {
@@ -99,8 +91,8 @@
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
-				1A63ED6CFE48CD68B262F42D /* Pods */,
-				38BC8E4A1BF3B527CE8990E4 /* ExpoModulesProviders */,
+				796A24831C03FB53DDD2A0F0 /* Pods */,
+				C9B1689CE19170030D3D4715 /* ExpoModulesProviders */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -124,10 +116,18 @@
 			path = reactnativeotel/Supporting;
 			sourceTree = "<group>";
 		};
-		DDDD493E0B309360F0F5F332 /* reactnativeotel */ = {
+		C9B1689CE19170030D3D4715 /* ExpoModulesProviders */ = {
 			isa = PBXGroup;
 			children = (
-				CB2242BE7A598EAC22E12643 /* ExpoModulesProvider.swift */,
+				D135F2675C8D2E7F626A2A33 /* reactnativeotel */,
+			);
+			name = ExpoModulesProviders;
+			sourceTree = "<group>";
+		};
+		D135F2675C8D2E7F626A2A33 /* reactnativeotel */ = {
+			isa = PBXGroup;
+			children = (
+				BAC93287C7D53E3128FA6A62 /* ExpoModulesProvider.swift */,
 			);
 			name = reactnativeotel;
 			sourceTree = "<group>";
@@ -140,13 +140,13 @@
 			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "reactnativeotel" */;
 			buildPhases = (
 				08A4A3CD28434E44B6B9DE2E /* [CP] Check Pods Manifest.lock */,
-				3E1AE4D3AF0D666B0DDCD5F4 /* [Expo] Configure project */,
+				A70DC547CF6B42BF71FA89FD /* [Expo] Configure project */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
-				D4AB81CFF7C8DAD0CBD8B4C3 /* [CP] Embed Pods Frameworks */,
+				F4A5186C385AC77C6FB3D12B /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -196,7 +196,7 @@
 				BB2F792D24A3F905000567C9 /* Expo.plist in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
-				286BDE90BE520157FCD0FC61 /* PrivacyInfo.xcprivacy in Resources */,
+				C438A241FE71FC4D4280627F /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -240,25 +240,6 @@
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
-		3E1AE4D3AF0D666B0DDCD5F4 /* [Expo] Configure project */ = {
-			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-			);
-			name = "[Expo] Configure project";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "# This script configures Expo modules and generates the modules provider file.\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-reactnativeotel/expo-configure-project.sh\"\n";
-		};
 		800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
@@ -297,7 +278,26 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-reactnativeotel/Pods-reactnativeotel-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		D4AB81CFF7C8DAD0CBD8B4C3 /* [CP] Embed Pods Frameworks */ = {
+		A70DC547CF6B42BF71FA89FD /* [Expo] Configure project */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "[Expo] Configure project";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# This script configures Expo modules and generates the modules provider file.\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-reactnativeotel/expo-configure-project.sh\"\n";
+		};
+		F4A5186C385AC77C6FB3D12B /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -323,7 +323,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
-				B862B7897D207055A463F5D8 /* ExpoModulesProvider.swift in Sources */,
+				DC0349F70AA091EDCEF9006D /* ExpoModulesProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -332,7 +332,7 @@
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 1C44AA75D3CFC123E52ABC24 /* Pods-reactnativeotel.debug.xcconfig */;
+			baseConfigurationReference = 24B6B428B8D95E4FE255E6F8 /* Pods-reactnativeotel.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
@@ -368,7 +368,7 @@
 		};
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 0E091686700C5F1C0DD15FF1 /* Pods-reactnativeotel.release.xcconfig */;
+			baseConfigurationReference = B0E70DD1733970A093F33AB4 /* Pods-reactnativeotel.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;

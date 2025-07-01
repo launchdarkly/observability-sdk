@@ -33,6 +33,7 @@
 	"devDependencies": {
 		"@changesets/cli": "^2.28.1",
 		"@types/node": "^22.14.0",
+		"expo": "~53.0.13",
 		"husky": "^9.1.7",
 		"prettier": "^3.5.3",
 		"pretty-quick": "^4.1.1",

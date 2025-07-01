@@ -35,6 +35,7 @@ export async function initializeLaunchDarkly() {
 			{
 				plugins: [
 					new Observability({
+						// TODO: See if we can pull the app name/version.
 						serviceName,
 						serviceVersion:
 							Constants.expoConfig?.version || '1.0.0',

@@ -6,9 +6,9 @@ module.exports = ({ config }) => {
     ...config,
     extra: {
       ...(config.extra ?? {}),
-      sdkKey: process.env.LAUNCHDARKLY_MOBILE_KEY,
+      sdkKey: process.env.LAUNCHDARKLY_MOBILE_KEY ?? '',
       otel: {
-        endpoint: process.env.OTEL_ENDPOINT ?? (__DEV__ ? OTLP_HTTP_DEV : OTLP_HTTP),
+        endpoint: process.env.OTEL_ENDPOINT ?? (process.env.NODE_ENV === 'development' ? OTLP_HTTP_DEV : OTLP_HTTP),
         serviceName: process.env.OTEL_SERVICE_NAME ?? "react-native-otel",
       },
     },
