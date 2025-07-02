@@ -29,12 +29,22 @@ class ObservabilityConfig:
 
     Alternatively, set the OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED environment variable.
 
+    If a custom logging configuration is desired, then it should be configured before initializing the 
+    Observability plugin. The Observability plugin will configure default logging prior to adding the 
+    OpenTelemetry logging instrumentation.
+
+    For example:
+    >>> import logging
+    >>> logging.basicConfig(level=logging.INFO)
+
     Defaults to True.
     """
 
     log_level: Optional[int] = None
     """
     The log level to use for the OpenTelemetry logging instrumentation.
+
+    This does not affect the log level of the default logging configuration (stdout).
 
     Defaults to logging.INFO.
     """

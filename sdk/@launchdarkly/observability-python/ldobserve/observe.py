@@ -10,46 +10,55 @@ from opentelemetry._logs import LogRecord, get_logger
 
 _name = "launchdarkly-observability"
 
+
 class _ObserveInstance:
     _project_id: str
     _tracer: Tracer
     # TODO: Comments. Original implementation had some comments which I am not certain hold true.
     _context_map = _LRUCache(1000)
     _logger = get_logger(_name)
+
     def __init__(self, project_id: str):
         self._project_id = project_id
         self._tracer = trace.get_tracer(_name)
 
+
 _instance: typing.Optional[_ObserveInstance] = None
+
 
 def record_exception(error: Exception, attributes: typing.Optional[Attributes] = None):
     pass
+
 
 def record_metric(
     name: str, value: float, attributes: typing.Optional[Attributes] = None
 ):
     pass
 
-def record_count(
-    name: str, value: int, attributes: typing.Optional[Attributes] = None
-):
+
+def record_count(name: str, value: int, attributes: typing.Optional[Attributes] = None):
     pass
+
 
 def record_incr(name: str, attributes: typing.Optional[Attributes] = None):
     pass
+
 
 def record_histogram(
     name: str, value: float, attributes: typing.Optional[Attributes] = None
 ):
     pass
 
+
 def record_up_down_counter(
     name: str, value: int, attributes: typing.Optional[Attributes] = None
 ):
     pass
 
+
 def is_initialized() -> bool:
     return False
+
 
 def record_log(
     message: str,
@@ -59,9 +68,9 @@ def record_log(
     attributes: typing.Optional[Attributes] = None,
 ):
     if not _instance:
-        # TODO: Log usage error.  
+        # TODO: Log usage error.
         return
-    
+
     # TODO: Implement.
     # _instance._logger.emit(LogRecord(
     #     timestamp=datetime.now(),
@@ -69,6 +78,7 @@ def record_log(
     #     message=message,
     #     attributes=attributes,
     # ))
+
 
 @contextlib.contextmanager
 def start_span(
@@ -79,9 +89,9 @@ def start_span(
     context: typing.Optional[Context] = None,
 ) -> typing.Iterator[Span]:
     if not _instance:
-        # TODO: Log usage error.  
+        # TODO: Log usage error.
         return
-    
+
     with _instance._tracer.start_as_current_span(
         span_name,
         record_exception=False,

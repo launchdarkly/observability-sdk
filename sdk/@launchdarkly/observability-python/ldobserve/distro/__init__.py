@@ -61,6 +61,7 @@ _SCHEDULE_DELAY_MILLIS = 5_000
 _MAX_EXPORT_BATCH_SIZE = 128 * 1024
 _MAX_QUEUE_SIZE = 1024 * 1024
 
+
 def _get_otel_log_handler():
     handlers = logging.getLogger().handlers
     for handler in handlers:
@@ -68,10 +69,12 @@ def _get_otel_log_handler():
             return handler
     return None
 
+
 def init(project_id: str, config: Optional[ObservabilityConfig] = None):
     global _project_id, _config
     _project_id = project_id
     _config = config
+
 
 def _build_resource(
     project_id: str,
@@ -95,6 +98,7 @@ def _build_resource(
 
     # Resource.create() will also look for standard OTEL attributes.
     return Resource.create(attrs)
+
 
 class LaunchDarklyOpenTelemetryConfigurator(_OTelSDKConfigurator):
     _tracer_provider: TracerProvider
@@ -125,7 +129,9 @@ class LaunchDarklyOpenTelemetryConfigurator(_OTelSDKConfigurator):
         sampler = CustomSampler()
         # TODO: Get and set config.
 
-        otlp_endpoint = _config.otlp_endpoint or os.getenv(OTEL_EXPORTER_OTLP_ENDPOINT, DEFAULT_OTLP_ENDPOINT)
+        otlp_endpoint = _config.otlp_endpoint or os.getenv(
+            OTEL_EXPORTER_OTLP_ENDPOINT, DEFAULT_OTLP_ENDPOINT
+        )
 
         self._tracer_provider = TracerProvider(resource=resource)
         self._tracer_provider.add_span_processor(
@@ -154,6 +160,25 @@ class LaunchDarklyOpenTelemetryConfigurator(_OTelSDKConfigurator):
             )
         )
         _logs.set_logger_provider(self._logger_provider)
+
+        log_level = _config.log_level or DEFAULT_LOG_LEVEL
+        instrument_logging = (
+            _config.instrument_logging
+            if _config.instrument_logging != None
+            else os.getenv(
+                _OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED,
+                DEFAULT_INSTRUMENT_LOGGING,
+            )
+        )
+        if instrument_logging:
+            handler = LoggingHandler(
+                level=log_level, logger_provider=self._logger_provider
+            )
+
+            # Must configure basic logging before adding a handler.
+            logging.basicConfig(level=logging.NOTSET)
+            logging.getLogger().addHandler(handler)
+
         self._logger = self._logger_provider.get_logger(__name__)
 
         metric_reader = PeriodicExportingMetricReader(
@@ -175,51 +200,11 @@ class LaunchDarklyOpenTelemetryConfigurator(_OTelSDKConfigurator):
             export_timeout_millis=_SCHEDULE_DELAY_MILLIS,
         )
 
-        self._meter_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
+        self._meter_provider = MeterProvider(
+            resource=resource, metric_readers=[metric_reader]
+        )
         metrics.set_meter_provider(self._meter_provider)
         self._meter = self._meter_provider.get_meter(__name__)
-
-        # resource_attributes = kwargs.get("resource_attributes", {})
-
-        # # Add LaunchDarkly-specific resource attributes
-        # resource_attributes.update(
-        #     {
-        #         "telemetry.distro.name": "launchdarkly-observability",
-        #         "telemetry.distro.version": metadata.version(
-        #             "launchdarkly-observability"
-        #         ),
-        #         "highlight.project_id": _project_id,
-        #     }
-        # )
-
-        # kwargs["resource_attributes"] = resource_attributes
-
-        # # kwargs['setup_logging_handler'] = _get_config_item(
-        # #     _config, 'instrument_logging', _OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED, DEFAULT_INSTRUMENT_LOGGING)
-
-        # if _config.instrument_logging is not None:
-        #     kwargs["setup_logging_handler"] = _config.instrument_logging
-
-        # if _config.otlp_endpoint is not None:
-        #     os.environ[OTEL_EXPORTER_OTLP_ENDPOINT] = _config.otlp_endpoint
-
-        # super()._configure(**kwargs)
-
-        # The default implementation will set the log level to NOTSET, we then update that.
-        log_handler = _get_otel_log_handler()
-        if log_handler is not None:
-            log_level = (
-                _config.log_level
-                if _config.log_level is not None
-                else DEFAULT_LOG_LEVEL
-            )
-            log_handler.setLevel(log_level)
-
-        # If logging has not been configured, then the OpenTelemetry logging instrumentation
-        # will result in console logging being disabled. Calling this will restore it.
-        # If the application configures logging before initializing OpenTelemetry, then that
-        # configuration will be used.
-        logging.basicConfig(level=logging.INFO)
 
 
 class LaunchDarklyOpenTelemetryDistro(BaseDistro):
