@@ -1,5 +1,13 @@
 # @launchdarkly/session-replay
 
+## 0.3.3
+
+### Patch Changes
+
+- 9d1fa42: report member.email from context object
+- Updated dependencies [9d1fa42]
+    - highlight.run@9.18.19
+
 ## 0.3.2
 
 ### Patch Changes

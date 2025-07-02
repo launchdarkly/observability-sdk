@@ -1,5 +1,11 @@
 # highlight.run
 
+## 9.18.19
+
+### Patch Changes
+
+- 9d1fa42: report member.email from context object
+
 ## 9.18.18
 
 ### Patch Changes
