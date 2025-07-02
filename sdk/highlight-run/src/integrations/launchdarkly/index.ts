@@ -71,10 +71,10 @@ function isMultiContext(context: any): context is LDMultiKindContext {
 // logic for using the memberEmail, when set.
 export function getCanonicalKey(context: LDContext) {
 	if (isMultiContext(context)) {
-		if (context.user) {
-			const user = context.user as LDContextCommon
-			if (user.memberEmail) {
-				return user.memberEmail
+		if (context.member) {
+			const user = context.member as LDContextCommon
+			if (user.email) {
+				return user.email
 			} else {
 				return user.key
 			}
