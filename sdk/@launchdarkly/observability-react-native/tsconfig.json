@@ -5,6 +5,7 @@
     "moduleResolution": "node",
     "lib": ["ES2020", "DOM"],
     "declaration": true,
+    "declarationDir": "./dist",
     "outDir": "./dist",
     "rootDir": "./src",
     "strict": true,
@@ -13,8 +14,9 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
+    "isolatedModules": true,
     "types": ["vitest/globals"]
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist"]
+  "exclude": ["node_modules", "dist", "**/*.test.*"]
 }
