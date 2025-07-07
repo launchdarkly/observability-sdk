@@ -3,170 +3,143 @@ import { ObservabilityClient } from '../client/ObservabilityClient'
 import { Metric } from '../api/Metric'
 import { RequestContext } from '../api/RequestContext'
 import { Observe } from '../api/Observe'
+import { BufferedClass } from './BufferedClass'
 
-let observabilityClient: ObservabilityClient
-
-export const _LDObserve = {
-	_init(client: ObservabilityClient) {
-		observabilityClient = client
-	},
-
-	isInitialized: () => {
-		return !!observabilityClient && observabilityClient.getIsInitialized()
-	},
-
-	stop: async () => {
-		if (!observabilityClient) {
-			return
-		}
-		try {
-			await observabilityClient.stop()
-		} catch (e) {
-			console.warn('observability-react-native stop error: ', e)
-		}
-	},
-
-	recordError: (
+class LDObserveClass
+	extends BufferedClass<ObservabilityClient>
+	implements Observe
+{
+	recordError(
 		error: Error,
 		attributes?: Attributes,
 		options?: { span: OtelSpan },
-	) => {
-		try {
-			observabilityClient?.consumeCustomError(error, attributes, options)
-		} catch (e) {
-			console.warn('observability-react-native consumeError error: ', e)
-		}
-	},
+	): void {
+		return this._bufferCall('consumeCustomError', [
+			error,
+			attributes,
+			options,
+		])
+	}
 
-	recordMetric: (metric: Metric) => {
-		try {
-			observabilityClient.recordMetric(metric)
-		} catch (e) {
-			console.warn('observability-react-native recordMetric error: ', e)
-		}
-	},
+	recordMetric(metric: Metric): void {
+		return this._bufferCall('recordMetric', [metric])
+	}
 
-	recordCount: (metric: Metric) => {
-		try {
-			observabilityClient.recordCount(metric)
-		} catch (e) {
-			console.warn('observability-react-native recordCount error: ', e)
-		}
-	},
+	recordCount(metric: Metric): void {
+		return this._bufferCall('recordCount', [metric])
+	}
 
-	recordIncr: (metric: Metric) => {
-		try {
-			observabilityClient.recordIncr(metric)
-		} catch (e) {
-			console.warn('observability-react-native recordIncr error: ', e)
-		}
-	},
+	recordIncr(metric: Metric): void {
+		return this._bufferCall('recordIncr', [metric])
+	}
 
-	recordHistogram: (metric: Metric) => {
-		try {
-			observabilityClient.recordHistogram(metric)
-		} catch (e) {
-			console.warn(
-				'observability-react-native recordHistogram error: ',
-				e,
-			)
-		}
-	},
+	recordHistogram(metric: Metric): void {
+		return this._bufferCall('recordHistogram', [metric])
+	}
 
-	recordUpDownCounter: (metric: Metric) => {
-		try {
-			observabilityClient.recordUpDownCounter(metric)
-		} catch (e) {
-			console.warn(
-				'observability-react-native recordUpDownCounter error: ',
-				e,
-			)
-		}
-	},
+	recordUpDownCounter(metric: Metric): void {
+		return this._bufferCall('recordUpDownCounter', [metric])
+	}
 
-	flush: async () => {
-		try {
-			await observabilityClient.flush()
-		} catch (e) {
-			console.warn('observability-react-native flush error: ', e)
-		}
-	},
+	flush(): Promise<void> {
+		return this._bufferCall('flush', []) || Promise.resolve()
+	}
 
-	recordLog: (message: any, level: string, attributes?: Attributes) => {
-		try {
-			observabilityClient.log(message, level, attributes)
-		} catch (e) {
-			console.warn('observability-react-native log error: ', e)
-		}
-	},
+	recordLog(message: any, level: string, attributes?: Attributes): void {
+		return this._bufferCall('log', [message, level, attributes])
+	}
 
-	parseHeaders: (headers: Record<string, string>): RequestContext => {
-		return observabilityClient.parseHeaders(headers)
-	},
+	parseHeaders(headers: Record<string, string>): RequestContext {
+		return (
+			this._bufferCall('parseHeaders', [headers]) || {
+				sessionId: headers['x-session-id'],
+				requestId: headers['x-request-id'],
+				userId: headers['x-user-id'],
+			}
+		)
+	}
 
-	// TODO: Understand what the (run/start)WithHeaders methods are meant for.
-	// Perhaps they aren't needed in the React Native context.
-	runWithHeaders: (
+	runWithHeaders(
 		name: string,
 		headers: Record<string, string>,
 		cb: (span: OtelSpan) => any,
 		options?: SpanOptions,
-	) => {
-		return observabilityClient.runWithHeaders(name, headers, cb, options)
-	},
+	): any {
+		return (
+			this._bufferCall('runWithHeaders', [name, headers, cb, options]) ||
+			cb({} as OtelSpan)
+		)
+	}
 
-	startWithHeaders: (
+	startWithHeaders(
 		spanName: string,
 		headers: Record<string, string>,
 		options?: SpanOptions,
-	) => {
-		return observabilityClient.startWithHeaders(spanName, headers, options)
-	},
+	): OtelSpan {
+		return (
+			this._bufferCall('startWithHeaders', [
+				spanName,
+				headers,
+				options,
+			]) || ({} as OtelSpan)
+		)
+	}
 
-	startSpan: (spanName: string, options?: SpanOptions) => {
-		try {
-			return observabilityClient.startSpan(spanName, options)
-		} catch (e) {
-			console.warn('observability-react-native startSpan error: ', e)
-		}
-	},
+	startSpan(spanName: string, options?: SpanOptions): OtelSpan {
+		return (
+			this._bufferCall('startSpan', [spanName, options]) ||
+			({} as OtelSpan)
+		)
+	}
 
-	startActiveSpan: <T>(
+	startActiveSpan<T>(
 		spanName: string,
 		fn: (span: OtelSpan) => T,
 		options?: SpanOptions,
-	) => {
-		try {
-			return observabilityClient.startActiveSpan(spanName, fn, options)
-		} catch (e) {
-			console.warn(
-				'observability-react-native startActiveSpan error: ',
-				e,
-			)
-			return fn({} as OtelSpan)
+	): T {
+		return (
+			this._bufferCall('startActiveSpan', [spanName, fn, options]) ||
+			fn({} as OtelSpan)
+		)
+	}
+
+	setUserId(userId: string): Promise<void> {
+		return this._bufferCall('setUserId', [userId]) || Promise.resolve()
+	}
+
+	getSessionInfo(): any {
+		return this._bufferCall('getSessionInfo', []) || {}
+	}
+
+	stop(): Promise<void> {
+		return this._bufferCall('stop', []) || Promise.resolve()
+	}
+
+	isInitialized(): boolean {
+		return this._bufferCall('getIsInitialized', []) || false
+	}
+
+	// Internal method to initialize with ObservabilityClient
+	_init(client: ObservabilityClient): void {
+		// Wait for the client to be fully initialized before loading
+		const checkInitialized = () => {
+			if (client.getIsInitialized()) {
+				this.load(client)
+			} else {
+				// Check again in a short interval
+				setTimeout(checkInitialized, 100)
+			}
 		}
-	},
 
-	setUserId: async (userId: string) => {
-		try {
-			await observabilityClient.setUserId(userId)
-		} catch (e) {
-			console.warn('observability-react-native setUserId error: ', e)
-		}
-	},
-
-	getSessionInfo: () => {
-		return observabilityClient.getSessionInfo()
-	},
-
-	_debug: (...data: any[]) => {
-		observabilityClient._log(...data)
-	},
+		// Start checking for initialization
+		checkInitialized()
+	}
 }
 
 // The _LDObserve object is for internal use.
-// The LDObserve object is for external use and is exposed with an interface.
+const _LDObserve = new LDObserveClass()
 
-const LDObserve: Observe = _LDObserve as Observe
+// The LDObserve object is for external use and is exposed with a limited interface.
+const LDObserve: Observe = _LDObserve
 
-export { LDObserve }
+export { LDObserve, _LDObserve }
