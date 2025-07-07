@@ -31,13 +31,18 @@ export class BufferedClass<T extends object> {
 			this._callBuffer.push(event)
 			this._exceededCapacity = false
 		} else {
+			// TODO: This is not consistent with other SDKs, but we
+			// agreed it would be better than dropping later events.
+			this._callBuffer.shift()
+			this._callBuffer.push(event)
+			this._droppedEvents += 1
+
 			if (!this._exceededCapacity) {
 				this._exceededCapacity = true
 				console.warn(
-					'LDObserve: Exceeded event queue capacity. Increase capacity to avoid dropping events.',
+					'LDObserve: Exceeded event queue capacity. Dropping oldest events to make room for new ones.',
 				)
 			}
-			this._droppedEvents += 1
 		}
 	}
 
