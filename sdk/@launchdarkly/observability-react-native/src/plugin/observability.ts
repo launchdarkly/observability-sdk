@@ -123,6 +123,7 @@ class TracingHook implements Hook {
 				})
 
 				span.setStatus({ code: 1 })
+				span.end()
 			})
 
 			_LDObserve.recordLog(
