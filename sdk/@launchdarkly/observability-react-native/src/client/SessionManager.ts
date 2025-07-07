@@ -10,7 +10,6 @@ export interface SessionInfo {
 export class SessionManager {
 	private sessionInfo: SessionInfo
 	private backgroundTime: number | null = null
-	private readonly BACKGROUND_TIMEOUT = 10 * 60 * 1000 // 10 mins
 
 	constructor(private options: Required<ReactNativeOptions>) {
 		this.sessionInfo = {
@@ -58,10 +57,10 @@ export class SessionManager {
 		if (this.backgroundTime) {
 			const timeInBackground = Date.now() - this.backgroundTime
 
-			if (timeInBackground >= this.BACKGROUND_TIMEOUT) {
+			if (timeInBackground >= this.options.sessionTimeout) {
 				if (this.options.debug) {
 					console.log(
-						'🕐 App was in background for >10 minutes, resetting session',
+						`🕐 App was in background for >${this.options.sessionTimeout / 60000} minutes, resetting session`,
 					)
 				}
 				this.resetSession()
