@@ -156,7 +156,8 @@ export class InstrumentationManager {
 		registerInstrumentations({
 			// NOTE: clearTimingResources is required to disable some web-specific behavior
 			instrumentations: [
-				// TODO: Verify this works outside Expo Go.
+				// TODO: Verify this works outside Expo Go. Double check we don't need
+				// to use XMLHttpRequestInstrumentation in addition or instead.
 				new FetchInstrumentation({
 					// TODO: Verify this works the same as the web implementation.
 					// Look at getCorsUrlsPattern. Take into account tracingOrigins.
