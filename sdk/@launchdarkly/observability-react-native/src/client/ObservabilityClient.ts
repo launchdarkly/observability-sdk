@@ -50,23 +50,18 @@ export class ObservabilityClient {
 		if (this.isInitialized) return
 
 		try {
-			// Initialize session first
 			await this.sessionManager.initialize()
-
-			// Connect session manager to instrumentation manager
 			this.instrumentationManager.setSessionManager(this.sessionManager)
 
-			// Get session attributes for resource
 			const sessionAttributes = this.sessionManager.getSessionAttributes()
 			const resource = new Resource({
 				[ATTR_SERVICE_NAME]: this.options.serviceName,
 				'service.version': this.options.serviceVersion,
-				'highlight.project_id': this.sdkKey,
+				'highlight.project_id': this.sdkKey, // For connection to LD project
 				...this.options.resourceAttributes,
 				...sessionAttributes,
 			})
 
-			// Initialize instrumentation with resource
 			await this.instrumentationManager.initialize(resource)
 
 			this.isInitialized = true

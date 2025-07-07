@@ -31,7 +31,6 @@ export class SessionManager {
 
 	public async initialize(): Promise<void> {
 		try {
-			// Get device info with fallbacks
 			let deviceId = 'unknown'
 			let appVersion = 'unknown'
 
@@ -46,7 +45,6 @@ export class SessionManager {
 					)
 				}
 			} else {
-				// Generate a persistent fallback device ID
 				const storedDeviceId =
 					await AsyncStorage.getItem('@session/deviceId')
 				if (storedDeviceId) {
@@ -57,7 +55,6 @@ export class SessionManager {
 				}
 			}
 
-			// Try to get existing installation ID or create new one
 			let installationId = await AsyncStorage.getItem(
 				'@session/installationId',
 			)
@@ -69,13 +66,11 @@ export class SessionManager {
 				)
 			}
 
-			// Check for existing session (within configured timeout)
 			const storedSession = await AsyncStorage.getItem('@session/current')
 			let sessionId = generateUniqueId()
 
 			if (storedSession) {
 				const parsed = JSON.parse(storedSession)
-				// Continue session if it's less than the configured timeout
 				if (
 					Date.now() - parsed.lastActivity <
 					this.options.sessionTimeout
@@ -93,7 +88,6 @@ export class SessionManager {
 				installationId,
 			}
 
-			// Store session info
 			await this.persistSession()
 			this.setupAppStateListener()
 
@@ -106,7 +100,6 @@ export class SessionManager {
 			}
 		} catch (error) {
 			console.error('Failed to initialize session:', error)
-			// Fallback session
 			this.sessionInfo = {
 				sessionId: generateUniqueId(),
 				deviceId: 'unknown',
@@ -139,7 +132,6 @@ export class SessionManager {
 			console.log('🔄 App state changed:', nextAppState)
 
 			if (nextAppState === 'active') {
-				// Update last activity on app foreground
 				this.persistSession()
 			}
 		})

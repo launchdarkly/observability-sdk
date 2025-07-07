@@ -12,22 +12,17 @@ import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http'
 import { OTLPLogExporter } from '@opentelemetry/exporter-logs-otlp-http'
 import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-http'
 import {
-	ConsoleSpanExporter,
 	SimpleSpanProcessor,
-	SpanExporter,
 	SpanProcessor,
 	WebTracerProvider,
 	ReadableSpan,
 	Span,
 } from '@opentelemetry/sdk-trace-web'
 import {
-	ConsoleLogRecordExporter,
 	LoggerProvider,
-	LogRecordExporter,
 	SimpleLogRecordProcessor,
 } from '@opentelemetry/sdk-logs'
 import {
-	ConsoleMetricExporter,
 	MeterProvider,
 	PeriodicExportingMetricReader,
 } from '@opentelemetry/sdk-metrics'
@@ -47,8 +42,7 @@ import { SessionManager } from './SessionManager'
 class SessionSpanProcessor implements SpanProcessor {
 	constructor(private sessionManager: SessionManager) {}
 
-	onStart(span: Span, parentContext: Context): void {
-		// Add session attributes to the span
+	onStart(span: Span, _parentContext: Context): void {
 		const sessionInfo = this.sessionManager.getSessionInfo()
 
 		if (sessionInfo) {
@@ -66,7 +60,7 @@ class SessionSpanProcessor implements SpanProcessor {
 		}
 	}
 
-	onEnd(span: ReadableSpan): void {
+	onEnd(_span: ReadableSpan): void {
 		// No-op for session processor
 	}
 
@@ -123,20 +117,18 @@ export class InstrumentationManager {
 		resource: Resource,
 		headers: Record<string, string>,
 	): Promise<void> {
+		if (this.options.disableTraces) return
+
 		const exporter = new OTLPTraceExporter({
 			url: `${this.options.otlpEndpoint}/v1/traces`,
-			headers,
+			headers: {
+				...headers,
+				'x-launchdarkly-dataset': `${this.options.serviceName}-traces`,
+			},
 		})
 
-		const processors: SpanProcessor[] = [
-			new SimpleSpanProcessor(exporter as unknown as SpanExporter),
-		]
+		const processors: SpanProcessor[] = [new SimpleSpanProcessor(exporter)]
 
-		if (!this.options.disableTraces) {
-			processors.push(new SimpleSpanProcessor(new ConsoleSpanExporter()))
-		}
-
-		// Add session span processor if session manager is available
 		if (this.sessionManager) {
 			processors.push(new SessionSpanProcessor(this.sessionManager))
 		}
@@ -149,7 +141,6 @@ export class InstrumentationManager {
 		this.traceProvider.register()
 		trace.setGlobalTracerProvider(this.traceProvider)
 
-		// Register fetch instrumentation
 		registerInstrumentations({
 			instrumentations: [
 				new FetchInstrumentation({
@@ -166,6 +157,8 @@ export class InstrumentationManager {
 		resource: Resource,
 		headers: Record<string, string>,
 	): Promise<void> {
+		if (this.options.disableLogs) return
+
 		const logExporter = new OTLPLogExporter({
 			headers: {
 				...headers,
@@ -175,17 +168,10 @@ export class InstrumentationManager {
 		})
 
 		this.loggerProvider = new LoggerProvider({ resource })
-		this.loggerProvider.addLogRecordProcessor(
-			new SimpleLogRecordProcessor(
-				logExporter as unknown as LogRecordExporter,
-			),
-		)
 
-		if (!this.options.disableLogs) {
-			this.loggerProvider.addLogRecordProcessor(
-				new SimpleLogRecordProcessor(new ConsoleLogRecordExporter()),
-			)
-		}
+		this.loggerProvider.addLogRecordProcessor(
+			new SimpleLogRecordProcessor(logExporter),
+		)
 
 		logs.setGlobalLoggerProvider(this.loggerProvider)
 
@@ -196,6 +182,8 @@ export class InstrumentationManager {
 		resource: Resource,
 		headers: Record<string, string>,
 	): Promise<void> {
+		if (this.options.disableMetrics) return
+
 		const metricExporter = new OTLPMetricExporter({
 			headers: {
 				...headers,
@@ -207,14 +195,6 @@ export class InstrumentationManager {
 		const readers = [
 			new PeriodicExportingMetricReader({ exporter: metricExporter }),
 		]
-
-		if (!this.options.disableMetrics) {
-			readers.push(
-				new PeriodicExportingMetricReader({
-					exporter: new ConsoleMetricExporter(),
-				}),
-			)
-		}
 
 		this.meterProvider = new MeterProvider({
 			resource,
@@ -252,7 +232,6 @@ export class InstrumentationManager {
 				span.end()
 			}
 
-			// Also log the error
 			this.recordLog(error.message, 'error', {
 				...attributes,
 				'exception.type': error.name,
@@ -340,7 +319,6 @@ export class InstrumentationManager {
 		const tracer = this.getTracer()
 		return tracer.startActiveSpan(name, options || {}, (span) => {
 			try {
-				// Add header attributes to span
 				Object.entries(headers).forEach(([key, value]) => {
 					span.setAttribute(`http.header.${key}`, value)
 				})
@@ -360,7 +338,6 @@ export class InstrumentationManager {
 		const tracer = this.getTracer()
 		const span = tracer.startSpan(spanName, options)
 
-		// Add header attributes to span
 		Object.entries(headers).forEach(([key, value]) => {
 			span.setAttribute(`http.header.${key}`, value)
 		})
