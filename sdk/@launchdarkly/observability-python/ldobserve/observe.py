@@ -233,24 +233,24 @@ def record_log(
 
 def logging_handler() -> logging.Handler:
     """A logging handler implementing `logging.Handler` that allows plugging LaunchDarkly Observability
-    into your existing logging setup. This is only needed if automatic instrumentation is disabled. Logs are automatically instrumented unless
+    into your existing logging setup. Standard logging will be automatically instrumented unless
     :class:`ObservabilityConfig.instrument_logging <ldobserve.config.ObservabilityConfig.instrument_logging>` is set to False.
 
     Example:
-        import highlight_io
+        import ldobserve.observe as observe
         from loguru import logger
 
-        H = highlight_io.H('project_id', ...)
+        # Observability plugin must be initialized.
+        # If the Observability plugin is not initialized, then a NullHandler will be returned.
 
         logger.add(
-            H.logging_handler,
+            observe.logging_handler(),
             format="{message}",
             level="INFO",
             backtrace=True,
         )
     """
     if not _instance:
-        # TODO: Log usage error.
         return logging.NullHandler()
     return _instance.log_handler
 
