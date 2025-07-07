@@ -1,7 +1,7 @@
 import { Attributes, Span as OtelSpan, SpanOptions } from '@opentelemetry/api'
-import { ResourceAttributes } from '@opentelemetry/resources'
 import { Metric } from './Metric'
 import { RequestContext } from './RequestContext'
+import { SessionInfo } from '../client/SessionManager'
 
 export interface Observe {
 	/**
@@ -111,15 +111,9 @@ export interface Observe {
 	): T
 
 	/**
-	 * Set the user ID for the current session.
-	 * @param userId The user ID to set
-	 */
-	setUserId(userId: string): Promise<void>
-
-	/**
 	 * Get the current session information.
 	 */
-	getSessionInfo(): any
+	getSessionInfo(): SessionInfo
 
 	/**
 	 * Stop the observability client.

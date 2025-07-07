@@ -55,7 +55,6 @@ class LDObserveClass
 			this._bufferCall('parseHeaders', [headers]) || {
 				sessionId: headers['x-session-id'],
 				requestId: headers['x-request-id'],
-				userId: headers['x-user-id'],
 			}
 		)
 	}
@@ -99,10 +98,6 @@ class LDObserveClass
 			this._bufferCall('startActiveSpan', [spanName, fn, options]) ||
 			fn(noOpSpan)
 		)
-	}
-
-	setUserId(userId: string): Promise<void> {
-		return this._bufferCall('setUserId', [userId]) || Promise.resolve()
 	}
 
 	getSessionInfo(): any {

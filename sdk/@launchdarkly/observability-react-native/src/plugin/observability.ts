@@ -25,6 +25,7 @@ import {
 	FEATURE_FLAG_SCOPE,
 	getCanonicalKey,
 	getCanonicalObj,
+	LD_IDENTIFY_RESULT_STATUS,
 } from '../constants/featureFlags'
 import type { LDEvaluationReason } from '@launchdarkly/js-sdk-common'
 import {
@@ -60,9 +61,14 @@ class TracingHook implements Hook {
 		data: IdentifySeriesData,
 		result: IdentifySeriesResult,
 	): IdentifySeriesData {
-		console.log('[TracingHook] afterIdentify', hookContext, data, result)
 		if (result.status === 'completed') {
-			_LDObserve.recordLog(`Identify operation completed`, 'debug', {})
+			_LDObserve.recordLog(`LD.identify`, 'info', {
+				...this.metaAttributes,
+				...getCanonicalObj(hookContext.context),
+				key: getCanonicalKey(hookContext.context),
+				timeout: hookContext.timeout,
+				[LD_IDENTIFY_RESULT_STATUS]: result.status,
+			})
 		}
 		return data
 	}

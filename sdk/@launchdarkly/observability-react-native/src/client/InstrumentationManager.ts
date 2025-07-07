@@ -50,7 +50,7 @@ class SessionSpanProcessor implements SpanProcessor {
 				'session.id': sessionInfo.sessionId,
 				'session.device_id': sessionInfo.deviceId,
 				'session.installation_id': sessionInfo.installationId,
-				'session.user_id': sessionInfo.userId || 'anonymous',
+				'session.start_time': sessionInfo.startTime,
 				'session.duration_ms': (
 					Date.now() - sessionInfo.startTime
 				).toString(),

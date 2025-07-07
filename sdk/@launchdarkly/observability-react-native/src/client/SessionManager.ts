@@ -13,7 +13,6 @@ try {
 
 export interface SessionInfo {
 	sessionId: string
-	userId?: string
 	deviceId: string
 	appVersion: string
 	platform: string
@@ -137,16 +136,6 @@ export class SessionManager {
 		})
 	}
 
-	public async setUserId(userId: string): Promise<void> {
-		if (this.sessionInfo) {
-			this.sessionInfo.userId = userId
-			await this.persistSession()
-			if (this.options.debug) {
-				console.log('👤 User ID set for session:', userId)
-			}
-		}
-	}
-
 	public getSessionInfo(): SessionInfo | null {
 		return this.sessionInfo ? { ...this.sessionInfo } : null
 	}
@@ -158,7 +147,6 @@ export class SessionManager {
 			'session.id': this.sessionInfo.sessionId,
 			'session.device_id': this.sessionInfo.deviceId,
 			'session.installation_id': this.sessionInfo.installationId,
-			'session.user_id': this.sessionInfo.userId || 'anonymous',
 			'session.start_time': this.sessionInfo.startTime.toString(),
 			'session.duration_ms': (
 				Date.now() - this.sessionInfo.startTime
@@ -173,7 +161,6 @@ export class SessionManager {
 
 		return {
 			sessionId: this.sessionInfo.sessionId,
-			userId: this.sessionInfo.userId,
 			deviceId: this.sessionInfo.deviceId,
 			sessionDuration: Date.now() - this.sessionInfo.startTime,
 			appVersion: this.sessionInfo.appVersion,

@@ -7,13 +7,6 @@ import Constants from 'expo-constants'
 
 export let ldClient: ReactNativeLDClient | null = null
 
-const user = {
-	key: 'example-user',
-	name: 'Example User',
-	email: 'example@test.com',
-	anonymous: false,
-}
-
 const OTLP_HTTP = 'https://otel.observability.app.launchdarkly.com:4318'
 const OTLP_HTTP_DEV = 'http://localhost:4318'
 
@@ -30,7 +23,6 @@ export async function initializeLaunchDarkly() {
 			return
 		}
 
-		// Initialize LaunchDarkly client with observability plugin
 		ldClient = new ReactNativeLDClient(
 			mobileKey,
 			AutoEnvAttributes.Enabled,
@@ -54,21 +46,14 @@ export async function initializeLaunchDarkly() {
 			},
 		)
 
-		await ldClient.identify(user)
+		await ldClient.identify({
+			key: '1234567890',
+			kind: 'device',
+			anonymous: true,
+		})
 		console.log('LaunchDarkly client initialized with observability')
 		console.log(`OTLP endpoint: ${otlpEndpoint}`)
 	} catch (error) {
 		console.error('Failed to initialize LaunchDarkly:', error)
-	}
-}
-
-export function getLDClient(): ReactNativeLDClient | null {
-	return ldClient
-}
-
-export async function closeLDClient() {
-	if (ldClient) {
-		await ldClient.close()
-		ldClient = null
 	}
 }

@@ -119,8 +119,6 @@ export class ObservabilityClient {
 		return {
 			sessionId: headers['x-session-id'] || sessionInfo?.sessionId,
 			requestId: headers['x-request-id'],
-			userId: headers['x-user-id'] || sessionInfo?.userId,
-			deviceId: sessionInfo?.deviceId,
 		}
 	}
 
@@ -180,10 +178,6 @@ export class ObservabilityClient {
 			fn,
 			options,
 		)
-	}
-
-	public async setUserId(userId: string): Promise<void> {
-		await this.sessionManager.setUserId(userId)
 	}
 
 	public getSessionInfo(): any {

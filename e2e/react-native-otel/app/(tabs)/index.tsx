@@ -9,6 +9,7 @@ import { LDObserve } from '@launchdarkly/observability-react-native'
 import { ldClient } from '../../lib/launchdarkly'
 
 export default function HomeScreen() {
+	const [context, setContext] = useState<any>(null)
 	const [sessionInfo, setSessionInfo] = useState<any>(null)
 	const [flagEnabled, setFlagEnabled] = useState<boolean>(false)
 
@@ -16,21 +17,27 @@ export default function HomeScreen() {
 		if (ldClient) {
 			const flagEnabled = ldClient.variation('test-flag', false)
 			setFlagEnabled(flagEnabled)
+			setContext(ldClient.getContext())
 		}
 	}, [])
 
 	useEffect(() => {
-		const loadSessionInfo = async () => {
-			try {
-				const info = await LDObserve.getSessionInfo()
+		const getSessionInfo = () => {
+			const info = LDObserve.getSessionInfo()
+
+			if (Object.keys(info).length > 0) {
 				setSessionInfo(info)
-			} catch (error) {
-				console.error('Failed to get session info:', error)
+			} else {
+				setTimeout(() => {
+					getSessionInfo()
+				}, 100)
 			}
 		}
 
-		loadSessionInfo()
+		getSessionInfo()
+	}, [])
 
+	useEffect(() => {
 		const span = LDObserve.startSpan('HomeScreen.mount', {
 			attributes: {
 				component: 'HomeScreen',
@@ -137,13 +144,21 @@ export default function HomeScreen() {
 		Alert.alert('Metric Recorded', 'Custom metrics have been recorded')
 	}
 
-	const handleSetUserId = async () => {
+	const handleIdentifyUser = async () => {
 		try {
 			const userId = `user_${Date.now()}`
-			await LDObserve.setUserId(userId)
+			ldClient?.identify({
+				kind: 'multi',
+				user: {
+					key: userId,
+					kind: 'user',
+					email: 'test@test.com',
+					anonymous: false,
+				},
+			})
 
-			const info = LDObserve.getSessionInfo()
-			setSessionInfo(info)
+			setContext(ldClient?.getContext())
+			setSessionInfo(LDObserve.getSessionInfo())
 
 			Alert.alert('User ID Set', `User ID set to: ${userId}`)
 		} catch (error) {
@@ -179,7 +194,8 @@ export default function HomeScreen() {
 				<ThemedText type="subtitle">Test Features</ThemedText>
 
 				<ThemedText type="default">
-					Flag is{' '}
+					The{' '}
+					<ThemedText type="defaultSemiBold">test-flag</ThemedText> is{' '}
 					<ThemedText type="defaultSemiBold">
 						{flagEnabled ? 'enabled' : 'disabled'}
 					</ThemedText>
@@ -209,9 +225,9 @@ export default function HomeScreen() {
 					</ThemedText>
 				</Pressable>
 
-				<Pressable style={styles.button} onPress={handleSetUserId}>
+				<Pressable style={styles.button} onPress={handleIdentifyUser}>
 					<ThemedText style={styles.buttonText}>
-						Set User ID
+						Identify User
 					</ThemedText>
 				</Pressable>
 			</ThemedView>
@@ -221,24 +237,19 @@ export default function HomeScreen() {
 				{sessionInfo ? (
 					<ThemedView style={styles.infoContainer}>
 						<ThemedText>
-							Session ID: {sessionInfo.sessionId || 'N/A'}
-						</ThemedText>
-						<ThemedText>
-							User ID: {sessionInfo.userId || 'Not set'}
-						</ThemedText>
-						<ThemedText>
-							Device ID: {sessionInfo.deviceId || 'N/A'}
-						</ThemedText>
-						<ThemedText>
-							App Version: {sessionInfo.appVersion || 'N/A'}
-						</ThemedText>
-						<ThemedText>
-							Platform: {sessionInfo.platform || 'N/A'}
+							{JSON.stringify(sessionInfo, null, 2)}
 						</ThemedText>
 					</ThemedView>
 				) : (
 					<ThemedText>Loading session info...</ThemedText>
 				)}
+			</ThemedView>
+
+			<ThemedView style={styles.stepContainer}>
+				<ThemedText type="subtitle">Context Information</ThemedText>
+				<ThemedView style={styles.infoContainer}>
+					<ThemedText>{JSON.stringify(context, null, 2)}</ThemedText>
+				</ThemedView>
 			</ThemedView>
 
 			<ThemedView style={styles.stepContainer}>
