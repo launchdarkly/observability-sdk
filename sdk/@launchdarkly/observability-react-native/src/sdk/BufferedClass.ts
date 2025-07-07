@@ -52,7 +52,6 @@ export class BufferedClass<T extends object> {
 		// Process buffered calls
 		for (const { method, args } of this._callBuffer) {
 			try {
-				console.log('::: processing buffered call', method, args)
 				;(this._sdk as any)[method](...args)
 			} catch (error) {
 				console.warn(

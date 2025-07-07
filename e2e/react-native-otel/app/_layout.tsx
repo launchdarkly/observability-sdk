@@ -18,7 +18,11 @@ import { LDObserve } from '@launchdarkly/observability-react-native'
 SplashScreen.preventAutoHideAsync()
 
 // Will need to be buffered
-LDObserve.startSpan('RootLayout', { attributes: { test: 'value' } })
+LDObserve.startActiveSpan('RootLayoutSpan', (span) => {
+	span.end()
+	return
+})
+LDObserve.recordLog('RootLayout', 'info', { test: 'value' })
 
 // Initialize LaunchDarkly before initial render.
 initializeLaunchDarkly()

@@ -28,6 +28,8 @@ class _LDObserve extends BufferedClass<Observe> implements Observe {
 		return this._bufferCall('recordUpDownCounter', [metric])
 	}
 
+	// TODO: Ask @vkorolik about using this method before initialization. Doesn't
+	// this cause problems if someone tries to work with the returned span?
 	startSpan(
 		name: string,
 		options: SpanOptions | ((span?: Span) => any),

@@ -4,6 +4,7 @@ import { Metric } from '../api/Metric'
 import { RequestContext } from '../api/RequestContext'
 import { Observe } from '../api/Observe'
 import { BufferedClass } from './BufferedClass'
+import { noOpSpan } from '../utils/NoOpSpan'
 
 class LDObserveClass
 	extends BufferedClass<ObservabilityClient>
@@ -67,7 +68,7 @@ class LDObserveClass
 	): any {
 		return (
 			this._bufferCall('runWithHeaders', [name, headers, cb, options]) ||
-			cb({} as OtelSpan)
+			cb(noOpSpan)
 		)
 	}
 
@@ -81,15 +82,12 @@ class LDObserveClass
 				spanName,
 				headers,
 				options,
-			]) || ({} as OtelSpan)
+			]) || noOpSpan
 		)
 	}
 
 	startSpan(spanName: string, options?: SpanOptions): OtelSpan {
-		return (
-			this._bufferCall('startSpan', [spanName, options]) ||
-			({} as OtelSpan)
-		)
+		return this._bufferCall('startSpan', [spanName, options]) || noOpSpan
 	}
 
 	startActiveSpan<T>(
@@ -99,7 +97,7 @@ class LDObserveClass
 	): T {
 		return (
 			this._bufferCall('startActiveSpan', [spanName, fn, options]) ||
-			fn({} as OtelSpan)
+			fn(noOpSpan)
 		)
 	}
 
