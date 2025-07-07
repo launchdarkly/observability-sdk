@@ -3,7 +3,7 @@ import type {
 	Span as OtelSpan,
 	SpanOptions,
 } from '@opentelemetry/api'
-import { type ResourceAttributes, Resource } from '@opentelemetry/resources'
+import { Resource } from '@opentelemetry/resources'
 import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions'
 import { ReactNativeOptions } from '../api/Options'
 import { Metric } from '../api/Metric'

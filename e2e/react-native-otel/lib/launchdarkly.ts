@@ -7,7 +7,6 @@ import Constants from 'expo-constants'
 
 let ldClient: ReactNativeLDClient | null = null
 
-// Example user context - in a real app, this would come from your authentication system
 const user = {
 	key: 'example-user',
 	name: 'Example User',
@@ -19,8 +18,8 @@ const OTLP_HTTP = 'https://otel.observability.app.launchdarkly.com:4318'
 const OTLP_HTTP_DEV = 'http://localhost:4318'
 
 const mobileKey = Constants.expoConfig?.extra?.sdkKey
-const otlpEndpoint = OTLP_HTTP_DEV // __DEV__ ? OTLP_HTTP_DEV : OTLP_HTTP
-const serviceName = 'react-native-otel' // TODO: Constants.expoConfig?.extra?.otel?.serviceName
+const otlpEndpoint = __DEV__ ? OTLP_HTTP_DEV : OTLP_HTTP
+const serviceName = 'react-native-otel'
 
 export async function initializeLaunchDarkly() {
 	try {
@@ -38,7 +37,6 @@ export async function initializeLaunchDarkly() {
 			{
 				plugins: [
 					new Observability({
-						// TODO: See if we can pull the app name/version.
 						serviceName,
 						serviceVersion:
 							Constants.expoConfig?.version || '1.0.0',
@@ -50,7 +48,7 @@ export async function initializeLaunchDarkly() {
 								? 'development'
 								: 'production',
 						},
-						sessionTimeout: 30 * 60 * 1000, // 30 minutes
+						sessionTimeout: 60 * 60 * 1000, // 1 hour
 					}),
 				],
 			},
