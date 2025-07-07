@@ -1,8 +1,5 @@
 from importlib import metadata
-import json
 import logging
-import os
-from typing import Optional
 import typing
 from grpc import Compression
 from ldobserve.otel.sampling.custom_sampler import CustomSampler
@@ -27,45 +24,16 @@ from opentelemetry.sdk.metrics import (
     ObservableGauge,
 )
 
-from ldobserve.config import (
-    DEFAULT_INSTRUMENT_LOGGING,
-    DEFAULT_LOG_LEVEL,
-    DEFAULT_OTLP_ENDPOINT,
-    ObservabilityConfig,
-)
-from opentelemetry.environment_variables import (
-    OTEL_LOGS_EXPORTER,
-    OTEL_METRICS_EXPORTER,
-    OTEL_TRACES_EXPORTER,
-)
-from opentelemetry.instrumentation.distro import BaseDistro
-from opentelemetry.instrumentation.logging import LoggingInstrumentor
-from opentelemetry.sdk._configuration import (
-    _OTelSDKConfigurator,
-)
-from opentelemetry.sdk.environment_variables import (
-    OTEL_EXPORTER_OTLP_PROTOCOL,
-    OTEL_EXPORTER_OTLP_ENDPOINT,
-    _OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED,
-)
 from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
 from opentelemetry.sdk.resources import Resource
-from opentelemetry.semconv.resource import ResourceAttributes
 from opentelemetry.sdk.trace import TracerProvider
 import opentelemetry._logs as _logs
 
-_project_id = None
-_config = None
+from ldobserve.config import _ProcessedConfig
 
 _SCHEDULE_DELAY_MILLIS = 5_000
 _MAX_EXPORT_BATCH_SIZE = 128 * 1024
 _MAX_QUEUE_SIZE = 1024 * 1024
-
-
-def init(project_id: str, config: Optional[ObservabilityConfig] = None):
-    global _project_id, _config
-    _project_id = project_id
-    _config = config
 
 
 def _build_resource(
@@ -92,45 +60,49 @@ def _build_resource(
     return Resource.create(attrs)
 
 
-class LaunchDarklyOpenTelemetryConfigurator(_OTelSDKConfigurator):
+class _OTELConfiguration:
     _tracer_provider: TracerProvider
     _tracer: otel_trace.Tracer
     _logger_provider: LoggerProvider
-    _logger: _logs.Logger
     _meter_provider: MeterProvider
     _meter: Meter
+    _log_handler: LoggingHandler
 
-    def _configure(self, **kwargs):
-        global _project_id, _config
+    @property
+    def log_handler(self) -> LoggingHandler:
+        return self._log_handler
 
-        if _project_id is None:
+    @property
+    def meter(self) -> Meter:
+        return self._meter
+
+    def __init__(self, project_id: str, config: _ProcessedConfig):
+
+        if project_id is None:
             # TODO: Do something better.
             raise ValueError(
                 "Project ID is not set. Please call init() before configuring OpenTelemetry."
             )
-        if _config is None:
-            _config = ObservabilityConfig()
+
+        self._project_id = project_id
+        self._config = config
 
         resource = _build_resource(
-            project_id=_project_id,
-            service_name=_config.service_name,
-            service_version=_config.service_version,
-            environment=_config.environment,
+            project_id=self._project_id,
+            service_name=self._config.service_name,
+            service_version=self._config.service_version,
+            environment=self._config.environment,
         )
 
         sampler = CustomSampler()
         # TODO: Get and set config.
-
-        otlp_endpoint = _config.otlp_endpoint or os.getenv(
-            OTEL_EXPORTER_OTLP_ENDPOINT, DEFAULT_OTLP_ENDPOINT
-        )
 
         self._tracer_provider = TracerProvider(resource=resource)
         self._tracer_provider.add_span_processor(
             BatchSpanProcessor(
                 SamplingTraceExporter(
                     sampler=sampler,
-                    endpoint=f"{otlp_endpoint}/v1/traces",
+                    endpoint=f"{self._config.otlp_endpoint}/v1/traces",
                     compression=Compression.Gzip,
                     timeout=_SCHEDULE_DELAY_MILLIS,
                 )
@@ -145,7 +117,7 @@ class LaunchDarklyOpenTelemetryConfigurator(_OTelSDKConfigurator):
             BatchLogRecordProcessor(
                 SamplingLogExporter(
                     sampler=sampler,
-                    endpoint=f"{otlp_endpoint}/v1/logs",
+                    endpoint=f"{self._config.otlp_endpoint}/v1/logs",
                     compression=Compression.Gzip,
                     timeout=_SCHEDULE_DELAY_MILLIS,
                 )
@@ -153,29 +125,20 @@ class LaunchDarklyOpenTelemetryConfigurator(_OTelSDKConfigurator):
         )
         _logs.set_logger_provider(self._logger_provider)
 
-        log_level = _config.log_level or DEFAULT_LOG_LEVEL
-        instrument_logging = (
-            _config.instrument_logging
-            if _config.instrument_logging != None
-            else os.getenv(
-                _OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED,
-                DEFAULT_INSTRUMENT_LOGGING,
-            )
+        # The log handler is always created even if logging is not instrumented.
+        # This allows directly logging to OpenTelemetry.
+        self._log_handler = LoggingHandler(
+            level=self._config.log_level, logger_provider=self._logger_provider
         )
-        if instrument_logging:
-            handler = LoggingHandler(
-                level=log_level, logger_provider=self._logger_provider
-            )
 
+        if self._config.instrument_logging:
             # Must configure basic logging before adding a handler.
             logging.basicConfig(level=logging.NOTSET)
-            logging.getLogger().addHandler(handler)
-
-        self._logger = self._logger_provider.get_logger(__name__)
+            logging.getLogger().addHandler(self._log_handler)
 
         metric_reader = PeriodicExportingMetricReader(
             exporter=OTLPMetricExporter(
-                f"{otlp_endpoint}/v1/metrics",
+                f"{self._config.otlp_endpoint}/v1/metrics",
                 compression=Compression.Gzip,
                 timeout=_SCHEDULE_DELAY_MILLIS,
                 max_export_batch_size=_MAX_EXPORT_BATCH_SIZE,
@@ -197,22 +160,3 @@ class LaunchDarklyOpenTelemetryConfigurator(_OTelSDKConfigurator):
         )
         metrics.set_meter_provider(self._meter_provider)
         self._meter = self._meter_provider.get_meter(__name__)
-
-
-class LaunchDarklyOpenTelemetryDistro(BaseDistro):
-    """
-    The OpenTelemetry provided Distro configures a default set of
-    configuration out of the box.
-    """
-
-    # pylint: disable=no-self-use
-    def _configure(self, **kwargs):
-        os.environ.setdefault(OTEL_EXPORTER_OTLP_ENDPOINT, DEFAULT_OTLP_ENDPOINT)
-        os.environ.setdefault(
-            _OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED,
-            json.dumps(DEFAULT_INSTRUMENT_LOGGING),
-        )
-        os.environ.setdefault(OTEL_TRACES_EXPORTER, "otlp")
-        os.environ.setdefault(OTEL_METRICS_EXPORTER, "otlp")
-        os.environ.setdefault(OTEL_LOGS_EXPORTER, "otlp")
-        os.environ.setdefault(OTEL_EXPORTER_OTLP_PROTOCOL, "grpc")

@@ -10,6 +10,7 @@ from .sampling import (
     SamplingResult,
     default_sampler,
 )
+from .configuration import _OTELConfiguration
 
 __all__ = [
     "SamplingTraceExporter",
@@ -18,4 +19,5 @@ __all__ = [
     "ExportSampler",
     "sample_spans",
     "default_sampler",
+    "_OTELConfiguration",
 ]

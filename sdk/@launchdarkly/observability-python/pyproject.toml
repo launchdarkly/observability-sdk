@@ -98,12 +98,6 @@ packages = [{ include = "ldobserve" }]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
 
-[project.entry-points."opentelemetry_configurator"]
-configurator = "ldobserve.distro:LaunchDarklyOpenTelemetryConfigurator"
-
-[project.entry-points.opentelemetry_distro]
-configurator = "ldobserve.distro:LaunchDarklyOpenTelemetryDistro"
-
 [tool.ariadne-codegen]
 schema_path = "../../../../backend/public-graph/graph/schema.graphqls"
 queries_path = "ldobserve/graph/operators/query.gql"
