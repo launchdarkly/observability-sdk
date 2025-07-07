@@ -117,19 +117,15 @@ class LDObserveClass
 		return this._bufferCall('getIsInitialized', []) || false
 	}
 
-	// Internal method to initialize with ObservabilityClient
 	_init(client: ObservabilityClient): void {
-		// Wait for the client to be fully initialized before loading
 		const checkInitialized = () => {
 			if (client.getIsInitialized()) {
 				this.load(client)
 			} else {
-				// Check again in a short interval
 				setTimeout(checkInitialized, 100)
 			}
 		}
 
-		// Start checking for initialization
 		checkInitialized()
 	}
 }

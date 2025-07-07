@@ -6,9 +6,18 @@ import ParallaxScrollView from '@/components/ParallaxScrollView'
 import { ThemedText } from '@/components/ThemedText'
 import { ThemedView } from '@/components/ThemedView'
 import { LDObserve } from '@launchdarkly/observability-react-native'
+import { ldClient } from '../../lib/launchdarkly'
 
 export default function HomeScreen() {
 	const [sessionInfo, setSessionInfo] = useState<any>(null)
+	const [flagEnabled, setFlagEnabled] = useState<boolean>(false)
+
+	useEffect(() => {
+		if (ldClient) {
+			const flagEnabled = ldClient.variation('test-flag', false)
+			setFlagEnabled(flagEnabled)
+		}
+	}, [])
 
 	useEffect(() => {
 		const loadSessionInfo = async () => {
@@ -168,6 +177,13 @@ export default function HomeScreen() {
 
 			<ThemedView style={styles.stepContainer}>
 				<ThemedText type="subtitle">Test Features</ThemedText>
+
+				<ThemedText type="default">
+					Flag is{' '}
+					<ThemedText type="defaultSemiBold">
+						{flagEnabled ? 'enabled' : 'disabled'}
+					</ThemedText>
+				</ThemedText>
 
 				<Pressable style={styles.button} onPress={handleTestError}>
 					<ThemedText style={styles.buttonText}>
