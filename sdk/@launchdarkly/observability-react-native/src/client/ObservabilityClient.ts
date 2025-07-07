@@ -117,7 +117,7 @@ export class ObservabilityClient {
 	public parseHeaders(headers: Record<string, string>): RequestContext {
 		const sessionInfo = this.sessionManager.getSessionInfo()
 		return {
-			sessionId: headers['x-session-id'] || sessionInfo?.sessionId,
+			sessionId: headers['x-session-id'] || sessionInfo.sessionId,
 			requestId: headers['x-request-id'],
 		}
 	}

@@ -51,12 +51,10 @@ class SessionSpanProcessor implements SpanProcessor {
 	onStart(span: Span, _parentContext: Context): void {
 		const sessionInfo = this.sessionManager.getSessionInfo()
 
-		if (sessionInfo) {
-			span.setAttributes({
-				'session.id': sessionInfo.sessionId,
-				'session.start_time': sessionInfo.startTime,
-			})
-		}
+		span.setAttributes({
+			'session.id': sessionInfo.sessionId,
+			'session.start_time': sessionInfo.startTime,
+		})
 	}
 
 	onEnd(_span: ReadableSpan): void {

@@ -20,16 +20,6 @@ npm install @launchdarkly/observability-react-native
 yarn add @launchdarkly/observability-react-native
 ```
 
-### Required Dependencies
-
-- `@react-native-async-storage/async-storage` - For session persistence
-
-### Optional Dependencies
-
-- `react-native-device-info` - Provides real device information (device ID, app version)
-  - **If not installed:** SDK will generate and persist fallback device IDs
-  - **Benefit:** More accurate device tracking and app version reporting
-
 ## Usage
 
 ```typescript
