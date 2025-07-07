@@ -1,23 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { AppState, Platform } from 'react-native'
+import { AppState } from 'react-native'
 import { ReactNativeOptions } from '../api/Options'
-import { generateUniqueId, generateDeviceId } from '../utils/idGenerator'
-
-// Make DeviceInfo import optional
-let DeviceInfo: any = null
-try {
-	DeviceInfo = require('react-native-device-info')
-} catch (error) {
-	// DeviceInfo not available, will use fallbacks
-}
+import { generateUniqueId } from '../utils/idGenerator'
 
 export interface SessionInfo {
 	sessionId: string
-	deviceId: string
-	appVersion: string
-	platform: string
 	startTime: number
-	installationId: string
 }
 
 export class SessionManager {
@@ -30,30 +18,6 @@ export class SessionManager {
 
 	public async initialize(): Promise<void> {
 		try {
-			let deviceId = 'unknown'
-			let appVersion = 'unknown'
-
-			if (DeviceInfo) {
-				try {
-					deviceId = await DeviceInfo.getUniqueId()
-					appVersion = DeviceInfo.getVersion()
-				} catch (error) {
-					console.warn(
-						'Failed to get device info, using fallbacks:',
-						error,
-					)
-				}
-			} else {
-				const storedDeviceId =
-					await AsyncStorage.getItem('@session/deviceId')
-				if (storedDeviceId) {
-					deviceId = storedDeviceId
-				} else {
-					deviceId = `device_${generateDeviceId()}`
-					await AsyncStorage.setItem('@session/deviceId', deviceId)
-				}
-			}
-
 			let installationId = await AsyncStorage.getItem(
 				'@session/installationId',
 			)
@@ -80,11 +44,7 @@ export class SessionManager {
 
 			this.sessionInfo = {
 				sessionId,
-				deviceId,
-				appVersion,
-				platform: Platform.OS,
 				startTime: this.sessionStartTime,
-				installationId,
 			}
 
 			await this.persistSession()
@@ -93,19 +53,13 @@ export class SessionManager {
 			if (this.options.debug) {
 				console.log('📱 Session initialized:', {
 					sessionId: sessionId.slice(-8),
-					deviceId: deviceId.slice(-8),
-					installationId: installationId.slice(-8),
 				})
 			}
 		} catch (error) {
 			console.error('Failed to initialize session:', error)
 			this.sessionInfo = {
 				sessionId: generateUniqueId(),
-				deviceId: 'unknown',
-				appVersion: 'unknown',
-				platform: Platform.OS,
 				startTime: this.sessionStartTime,
-				installationId: 'unknown',
 			}
 		}
 	}
@@ -145,14 +99,7 @@ export class SessionManager {
 
 		return {
 			'session.id': this.sessionInfo.sessionId,
-			'session.device_id': this.sessionInfo.deviceId,
-			'session.installation_id': this.sessionInfo.installationId,
 			'session.start_time': this.sessionInfo.startTime.toString(),
-			'session.duration_ms': (
-				Date.now() - this.sessionInfo.startTime
-			).toString(),
-			'app.version': this.sessionInfo.appVersion,
-			'device.platform': this.sessionInfo.platform,
 		}
 	}
 
@@ -161,10 +108,7 @@ export class SessionManager {
 
 		return {
 			sessionId: this.sessionInfo.sessionId,
-			deviceId: this.sessionInfo.deviceId,
 			sessionDuration: Date.now() - this.sessionInfo.startTime,
-			appVersion: this.sessionInfo.appVersion,
-			platform: this.sessionInfo.platform,
 		}
 	}
 }

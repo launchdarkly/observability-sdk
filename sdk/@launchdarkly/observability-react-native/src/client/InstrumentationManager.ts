@@ -40,8 +40,6 @@ import {
 	W3CBaggagePropagator,
 	CompositePropagator,
 } from '@opentelemetry/core'
-import { B3Propagator } from '@opentelemetry/propagator-b3'
-import { JaegerPropagator } from '@opentelemetry/propagator-jaeger'
 import { ReactNativeOptions } from '../api/Options'
 import { Metric } from '../api/Metric'
 import { SessionManager } from './SessionManager'
@@ -56,14 +54,7 @@ class SessionSpanProcessor implements SpanProcessor {
 		if (sessionInfo) {
 			span.setAttributes({
 				'session.id': sessionInfo.sessionId,
-				'session.device_id': sessionInfo.deviceId,
-				'session.installation_id': sessionInfo.installationId,
 				'session.start_time': sessionInfo.startTime,
-				'session.duration_ms': (
-					Date.now() - sessionInfo.startTime
-				).toString(),
-				'app.version': sessionInfo.appVersion,
-				'device.platform': sessionInfo.platform,
 			})
 		}
 	}
@@ -128,8 +119,6 @@ export class InstrumentationManager {
 			propagators: [
 				new W3CTraceContextPropagator(),
 				new W3CBaggagePropagator(),
-				new B3Propagator(),
-				new JaegerPropagator(),
 			],
 		})
 
@@ -165,8 +154,12 @@ export class InstrumentationManager {
 		trace.setGlobalTracerProvider(this.traceProvider)
 
 		registerInstrumentations({
+			// NOTE: clearTimingResources is required to disable some web-specific behavior
 			instrumentations: [
+				// TODO: Verify this works outside Expo Go.
 				new FetchInstrumentation({
+					// TODO: Verify this works the same as the web implementation.
+					// Look at getCorsUrlsPattern. Take into account tracingOrigins.
 					propagateTraceHeaderCorsUrls: /.*/,
 					clearTimingResources: false,
 				}),

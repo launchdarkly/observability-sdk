@@ -37,12 +37,3 @@ export function generateShortId(): string {
 	const random = Math.random().toString(36).substring(2, 8)
 	return `${timestamp}_${random}`
 }
-
-/**
- * Generates a device-like ID that's persistent and unique
- */
-export function generateDeviceId(): string {
-	const timestamp = Date.now().toString(16)
-	const random = Math.random().toString(16).substring(2)
-	return `device_${timestamp}_${random}`.substring(0, 32)
-}
