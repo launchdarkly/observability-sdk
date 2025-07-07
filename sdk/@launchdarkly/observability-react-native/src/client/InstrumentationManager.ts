@@ -3,6 +3,7 @@ import {
 	Span as OtelSpan,
 	SpanOptions,
 	trace,
+	propagation,
 } from '@opentelemetry/api'
 import { logs } from '@opentelemetry/api-logs'
 import { metrics } from '@opentelemetry/api'
@@ -12,15 +13,15 @@ import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http'
 import { OTLPLogExporter } from '@opentelemetry/exporter-logs-otlp-http'
 import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-http'
 import {
-	SimpleSpanProcessor,
 	SpanProcessor,
 	WebTracerProvider,
 	ReadableSpan,
 	Span,
+	BatchSpanProcessor,
 } from '@opentelemetry/sdk-trace-web'
 import {
 	LoggerProvider,
-	SimpleLogRecordProcessor,
+	BatchLogRecordProcessor,
 } from '@opentelemetry/sdk-logs'
 import {
 	MeterProvider,
@@ -34,6 +35,13 @@ import {
 } from '@opentelemetry/semantic-conventions'
 import { SpanStatusCode } from '@opentelemetry/api'
 import { Context } from '@opentelemetry/api'
+import {
+	W3CTraceContextPropagator,
+	W3CBaggagePropagator,
+	CompositePropagator,
+} from '@opentelemetry/core'
+import { B3Propagator } from '@opentelemetry/propagator-b3'
+import { JaegerPropagator } from '@opentelemetry/propagator-jaeger'
 import { ReactNativeOptions } from '../api/Options'
 import { Metric } from '../api/Metric'
 import { SessionManager } from './SessionManager'
@@ -91,17 +99,14 @@ export class InstrumentationManager {
 				...this.options.customHeaders,
 			}
 
-			// Initialize tracing if enabled
 			if (!this.options.disableTraces) {
 				await this.initializeTracing(resource, headers)
 			}
 
-			// Initialize logging if enabled
 			if (!this.options.disableLogs) {
 				await this.initializeLogs(resource, headers)
 			}
 
-			// Initialize metrics if enabled
 			if (!this.options.disableMetrics) {
 				await this.initializeMetrics(resource, headers)
 			}
@@ -119,6 +124,17 @@ export class InstrumentationManager {
 	): Promise<void> {
 		if (this.options.disableTraces) return
 
+		const compositePropagator = new CompositePropagator({
+			propagators: [
+				new W3CTraceContextPropagator(),
+				new W3CBaggagePropagator(),
+				new B3Propagator(),
+				new JaegerPropagator(),
+			],
+		})
+
+		propagation.setGlobalPropagator(compositePropagator)
+
 		const exporter = new OTLPTraceExporter({
 			url: `${this.options.otlpEndpoint}/v1/traces`,
 			headers: {
@@ -127,7 +143,14 @@ export class InstrumentationManager {
 			},
 		})
 
-		const processors: SpanProcessor[] = [new SimpleSpanProcessor(exporter)]
+		const processors: SpanProcessor[] = [
+			new BatchSpanProcessor(exporter, {
+				maxQueueSize: 100,
+				scheduledDelayMillis: 500,
+				exportTimeoutMillis: 5000,
+				maxExportBatchSize: 10,
+			}),
+		]
 
 		if (this.sessionManager) {
 			processors.push(new SessionSpanProcessor(this.sessionManager))
@@ -170,7 +193,12 @@ export class InstrumentationManager {
 		this.loggerProvider = new LoggerProvider({ resource })
 
 		this.loggerProvider.addLogRecordProcessor(
-			new SimpleLogRecordProcessor(logExporter),
+			new BatchLogRecordProcessor(logExporter, {
+				maxQueueSize: 100,
+				scheduledDelayMillis: 500,
+				exportTimeoutMillis: 5000,
+				maxExportBatchSize: 10,
+			}),
 		)
 
 		logs.setGlobalLoggerProvider(this.loggerProvider)
@@ -193,7 +221,11 @@ export class InstrumentationManager {
 		})
 
 		const readers = [
-			new PeriodicExportingMetricReader({ exporter: metricExporter }),
+			new PeriodicExportingMetricReader({
+				exporter: metricExporter,
+				exportIntervalMillis: 10000,
+				exportTimeoutMillis: 5000,
+			}),
 		]
 
 		this.meterProvider = new MeterProvider({
