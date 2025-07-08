@@ -6,6 +6,7 @@ from ldobserve.otel.sampling.custom_sampler import CustomSampler
 from ldobserve.otel.sampling_log_exporter import SamplingLogExporter
 from ldobserve.otel.sampling_trace_exporter import SamplingTraceExporter
 from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
+from opentelemetry.instrumentation.logging import LoggingInstrumentor
 from opentelemetry.metrics import Meter
 from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
 from opentelemetry.sdk.metrics._internal.export import PeriodicExportingMetricReader
@@ -131,10 +132,27 @@ class _OTELConfiguration:
             level=self._config.log_level, logger_provider=self._logger_provider
         )
 
+        if self._config.disable_export_error_logging:
+            for logger_name in (
+                "opentelemetry.exporter.otlp.proto.grpc._log_exporter",
+                "opentelemetry.exporter.otlp.proto.grpc.trace_exporter",
+                "opentelemetry.exporter.otlp.proto.grpc.metric_exporter",
+                "opentelemetry.sdk._logs._internal.export",
+                "opentelemetry.sdk.trace.export",
+                "opentelemetry.sdk.metrics.export",
+            ):
+                logging.getLogger(logger_name).setLevel(logging.FATAL)
+
         if self._config.instrument_logging:
             # Must configure basic logging before adding a handler.
-            logging.basicConfig(level=logging.NOTSET)
-            logging.getLogger().addHandler(self._log_handler)
+            # This will have no impact if the application has already configured logging.
+
+
+            # LoggingInstrumentor().instrument(
+            #     set_logging_format=self._config.log_correlation,
+            #     log_level=self._config.log_level,
+            # )
+
 
         metric_reader = PeriodicExportingMetricReader(
             exporter=OTLPMetricExporter(

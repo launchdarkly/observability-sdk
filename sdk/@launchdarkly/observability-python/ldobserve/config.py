@@ -3,15 +3,17 @@ import logging
 import os
 from typing import Optional
 
+from opentelemetry.instrumentation.logging import OTEL_PYTHON_LOG_CORRELATION
 from opentelemetry.sdk.environment_variables import (
     OTEL_EXPORTER_OTLP_ENDPOINT,
     _OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED,
 )
 
-DEFAULT_OTLP_ENDPOINT = "https://otel.observability.app.launchdarkly.com:4317"
-DEFAULT_INSTRUMENT_LOGGING = True
-DEFAULT_LOG_LEVEL = logging.INFO
-DEFAULT_DISABLE_EXPORT_ERROR_LOGGING = False
+_DEFAULT_OTLP_ENDPOINT = "https://otel.observability.app.launchdarkly.com:4317"
+_DEFAULT_INSTRUMENT_LOGGING = True
+_DEFAULT_LOG_LEVEL = logging.INFO
+_DEFAULT_DISABLE_EXPORT_ERROR_LOGGING = False
+_DEFAULT_LOG_CORRELATION = True
 
 
 @dataclass(kw_only=True)
@@ -73,6 +75,26 @@ class ObservabilityConfig:
     Defaults to False.
     """
 
+    log_correlation: Optional[bool] = None
+    """
+    If True, the logging format will be updated to enable log correlation.
+
+    Any custom logging format will allow log correlation if it includes:
+    - %(otelTraceID)s
+    - %(otelSpanID)s
+    - %(otelServiceName)s
+    - %(otelTraceSampled)s
+
+    The default logging format is:
+    >>> "%(asctime)s %(levelname)s [%(name)s] [%(filename)s:%(lineno)d] [trace_id=%(otelTraceID)s span_id=%(otelSpanID)s resource.service.name=%(otelServiceName)s trace_sampled=%(otelTraceSampled)s] - %(message)s"
+
+    Alternatively, set the OTEL_PYTHON_LOG_CORRELATION environment variable to "true".
+
+    If the OTEL_PYTHON_LOG_FORMAT environment variable is set, then it will be used as the logging format.
+
+    Defaults to True.
+    """
+
     def __getitem__(self, key: str):
         return getattr(self, key)
 
@@ -86,10 +108,11 @@ class _ProcessedConfig:
     service_version: Optional[str] = None
     environment: Optional[str] = None
     disable_export_error_logging: bool
+    log_correlation: bool
 
     def __init__(self, config: ObservabilityConfig):
         self.otlp_endpoint = config.otlp_endpoint or os.getenv(
-            OTEL_EXPORTER_OTLP_ENDPOINT, DEFAULT_OTLP_ENDPOINT
+            OTEL_EXPORTER_OTLP_ENDPOINT, _DEFAULT_OTLP_ENDPOINT
         )
         env_instrument_logging = os.getenv(
             _OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED, None
@@ -101,11 +124,11 @@ class _ProcessedConfig:
             else (
                 env_instrument_logging.lower().strip() == "true"
                 if env_instrument_logging is not None
-                else DEFAULT_INSTRUMENT_LOGGING
+                else _DEFAULT_INSTRUMENT_LOGGING
             )
         )
         self.log_level = (
-            config.log_level if config.log_level is not None else DEFAULT_LOG_LEVEL
+            config.log_level if config.log_level is not None else _DEFAULT_LOG_LEVEL
         )
         self.service_name = config.service_name
         self.service_version = config.service_version
@@ -113,5 +136,19 @@ class _ProcessedConfig:
         self.disable_export_error_logging = (
             config.disable_export_error_logging
             if config.disable_export_error_logging is not None
-            else DEFAULT_DISABLE_EXPORT_ERROR_LOGGING
+            else _DEFAULT_DISABLE_EXPORT_ERROR_LOGGING
+        )
+
+        env_log_correlation = os.getenv(
+            OTEL_PYTHON_LOG_CORRELATION, None
+        )
+
+        self.log_correlation = (
+            config.log_correlation
+            if config.log_correlation is not None
+            else (
+                env_log_correlation.lower().strip() == "true"
+                if env_log_correlation is not None
+                else _DEFAULT_LOG_CORRELATION
+            )
         )

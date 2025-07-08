@@ -28,9 +28,9 @@ from opentelemetry.sdk.metrics import (
 )
 
 from ldobserve.config import (
-    DEFAULT_INSTRUMENT_LOGGING,
-    DEFAULT_LOG_LEVEL,
-    DEFAULT_OTLP_ENDPOINT,
+    _DEFAULT_INSTRUMENT_LOGGING,
+    _DEFAULT_LOG_LEVEL,
+    _DEFAULT_OTLP_ENDPOINT,
     ObservabilityConfig,
 )
 from opentelemetry.environment_variables import (
@@ -122,7 +122,7 @@ class LaunchDarklyOpenTelemetryConfigurator(_OTelSDKConfigurator):
         # TODO: Get and set config.
 
         otlp_endpoint = _config.otlp_endpoint or os.getenv(
-            OTEL_EXPORTER_OTLP_ENDPOINT, DEFAULT_OTLP_ENDPOINT
+            OTEL_EXPORTER_OTLP_ENDPOINT, _DEFAULT_OTLP_ENDPOINT
         )
 
         self._tracer_provider = TracerProvider(resource=resource)
@@ -153,13 +153,13 @@ class LaunchDarklyOpenTelemetryConfigurator(_OTelSDKConfigurator):
         )
         _logs.set_logger_provider(self._logger_provider)
 
-        log_level = _config.log_level or DEFAULT_LOG_LEVEL
+        log_level = _config.log_level or _DEFAULT_LOG_LEVEL
         instrument_logging = (
             _config.instrument_logging
             if _config.instrument_logging != None
             else os.getenv(
                 _OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED,
-                DEFAULT_INSTRUMENT_LOGGING,
+                _DEFAULT_INSTRUMENT_LOGGING,
             )
         )
         if instrument_logging:
@@ -207,10 +207,10 @@ class LaunchDarklyOpenTelemetryDistro(BaseDistro):
 
     # pylint: disable=no-self-use
     def _configure(self, **kwargs):
-        os.environ.setdefault(OTEL_EXPORTER_OTLP_ENDPOINT, DEFAULT_OTLP_ENDPOINT)
+        os.environ.setdefault(OTEL_EXPORTER_OTLP_ENDPOINT, _DEFAULT_OTLP_ENDPOINT)
         os.environ.setdefault(
             _OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED,
-            json.dumps(DEFAULT_INSTRUMENT_LOGGING),
+            json.dumps(_DEFAULT_INSTRUMENT_LOGGING),
         )
         os.environ.setdefault(OTEL_TRACES_EXPORTER, "otlp")
         os.environ.setdefault(OTEL_METRICS_EXPORTER, "otlp")
