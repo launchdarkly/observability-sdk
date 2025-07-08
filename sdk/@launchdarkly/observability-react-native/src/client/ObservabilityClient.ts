@@ -48,7 +48,7 @@ export class ObservabilityClient {
 			customHeaders: {
 				// This is a newer method of connecting signals to an LD project.
 				// Eventually will eliminate the need for the highlight.project_id attr.
-				'x-launchdarkly-project': this.sdkKey,
+				'X-LaunchDarkly-Project': this.sdkKey,
 				...(options.customHeaders ?? {}),
 			},
 			sessionTimeout: options.sessionTimeout ?? 30 * 60 * 1000,
