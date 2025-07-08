@@ -17,10 +17,10 @@ export class SessionManager {
 	private backgroundTime: number | null = null
 	private options: Required<Options>
 
-	constructor(options: Options) {
+	constructor(options?: Options) {
 		this.options = {
-			sessionTimeout: options.sessionTimeout ?? 30 * 60 * 1000,
-			debug: !!options.debug,
+			sessionTimeout: options?.sessionTimeout ?? 30 * 60 * 1000,
+			debug: !!options?.debug,
 		}
 
 		this.sessionInfo = {
@@ -35,7 +35,7 @@ export class SessionManager {
 
 			if (this.options.debug) {
 				console.log('📱 Session initialized:', {
-					sessionId: this.sessionInfo.sessionId.slice(-8),
+					sessionId: this.sessionInfo.sessionId,
 				})
 			}
 		} catch (error) {
@@ -91,6 +91,7 @@ export class SessionManager {
 		const oldSessionId = this.sessionInfo.sessionId
 		const newSessionId = generateUniqueId()
 
+		// TODO: Update resource attributes
 		this.sessionInfo = {
 			sessionId: newSessionId,
 			startTime: Date.now(),
@@ -98,8 +99,8 @@ export class SessionManager {
 
 		if (this.options.debug) {
 			console.log('🔄 Session reset:', {
-				oldSessionId: oldSessionId.slice(-8),
-				newSessionId: newSessionId.slice(-8),
+				oldSessionId: oldSessionId,
+				newSessionId: newSessionId,
 			})
 		}
 	}

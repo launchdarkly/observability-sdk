@@ -65,7 +65,6 @@ export class ObservabilityClient {
 
 		try {
 			this.sessionManager.initialize()
-			this.instrumentationManager.setSessionManager(this.sessionManager)
 
 			const sessionAttributes = this.sessionManager.getSessionAttributes()
 			const resource = new Resource({

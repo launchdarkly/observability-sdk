@@ -17,7 +17,6 @@ import {
 	SpanProcessor,
 	WebTracerProvider,
 	ReadableSpan,
-	Span,
 	BatchSpanProcessor,
 	SpanExporter,
 	BufferConfig,
@@ -25,10 +24,12 @@ import {
 import {
 	LoggerProvider,
 	BatchLogRecordProcessor,
+	LogRecordExporter,
 } from '@opentelemetry/sdk-logs'
 import {
 	MeterProvider,
 	PeriodicExportingMetricReader,
+	PushMetricExporter,
 } from '@opentelemetry/sdk-metrics'
 import { Resource } from '@opentelemetry/resources'
 import {
@@ -37,7 +38,6 @@ import {
 	ATTR_EXCEPTION_TYPE,
 } from '@opentelemetry/semantic-conventions'
 import { SpanStatusCode } from '@opentelemetry/api'
-import { Context } from '@opentelemetry/api'
 import {
 	W3CTraceContextPropagator,
 	W3CBaggagePropagator,
@@ -45,31 +45,13 @@ import {
 } from '@opentelemetry/core'
 import { ReactNativeOptions } from '../api/Options'
 import { Metric } from '../api/Metric'
-import { SessionManager } from './SessionManager'
 
 export class CustomBatchSpanProcessor extends BatchSpanProcessor {
 	private recentHttpSpans = new Map<string, number>()
 	private readonly DEDUP_WINDOW_MS = 1000
 
-	constructor(
-		exporter: SpanExporter,
-		private sessionManager?: SessionManager,
-		options?: BufferConfig,
-	) {
+	constructor(exporter: SpanExporter, options?: BufferConfig) {
 		super(exporter, options)
-	}
-
-	onStart(span: Span, parentContext: Context): void {
-		const sessionInfo = this.sessionManager?.getSessionInfo()
-
-		if (sessionInfo) {
-			span.setAttributes({
-				'session.id': sessionInfo.sessionId,
-				'session.start_time': sessionInfo.startTime,
-			})
-		}
-
-		super.onStart(span, parentContext)
 	}
 
 	onEnd(span: ReadableSpan): void {
@@ -119,9 +101,13 @@ export class InstrumentationManager {
 	private traceProvider?: WebTracerProvider
 	private loggerProvider?: LoggerProvider
 	private meterProvider?: MeterProvider
-	private sessionManager?: SessionManager
 	private isInitialized = false
 	private serviceName: string
+	private resource: Resource = new Resource({})
+	private headers: Record<string, string> = {}
+	private traceExporter?: SpanExporter
+	private logExporter?: LogRecordExporter
+	private metricExporter?: PushMetricExporter
 
 	constructor(private options: ReactNativeOptions) {
 		this.serviceName =
@@ -133,13 +119,14 @@ export class InstrumentationManager {
 		if (this.isInitialized) return
 
 		try {
-			const headers = {
+			this.resource = resource
+			this.headers = {
 				...(this.options.customHeaders ?? {}),
 			}
 
-			this.initializeTracing(resource, headers)
-			this.initializeLogs(resource, headers)
-			this.initializeMetrics(resource, headers)
+			this.initializeTracing()
+			this.initializeLogs()
+			this.initializeMetrics()
 
 			this.isInitialized = true
 			this._log('initialized successfully')
@@ -148,10 +135,7 @@ export class InstrumentationManager {
 		}
 	}
 
-	private initializeTracing(
-		resource: Resource,
-		headers: Record<string, string>,
-	) {
+	private initializeTracing() {
 		if (this.options.disableTraces) return
 
 		const compositePropagator = new CompositePropagator({
@@ -163,13 +147,15 @@ export class InstrumentationManager {
 
 		propagation.setGlobalPropagator(compositePropagator)
 
-		const exporter = new OTLPTraceExporter({
-			url: `${this.options.otlpEndpoint}/v1/traces`,
-			headers,
-		})
+		const exporter =
+			this.traceExporter ??
+			new OTLPTraceExporter({
+				url: `${this.options.otlpEndpoint}/v1/traces`,
+				headers: this.headers,
+			})
 
 		const processors: SpanProcessor[] = [
-			new CustomBatchSpanProcessor(exporter, this.sessionManager, {
+			new CustomBatchSpanProcessor(exporter, {
 				maxQueueSize: 100,
 				scheduledDelayMillis: 500,
 				exportTimeoutMillis: 5000,
@@ -178,7 +164,7 @@ export class InstrumentationManager {
 		]
 
 		this.traceProvider = new WebTracerProvider({
-			resource,
+			resource: this.resource,
 			spanProcessors: processors,
 		})
 
@@ -201,18 +187,15 @@ export class InstrumentationManager {
 		this._log('Tracing initialized')
 	}
 
-	private initializeLogs(
-		resource: Resource,
-		headers: Record<string, string>,
-	) {
+	private initializeLogs() {
 		if (this.options.disableLogs) return
 
 		const logExporter = new OTLPLogExporter({
-			headers,
+			headers: this.headers,
 			url: `${this.options.otlpEndpoint}/v1/logs`,
 		})
 
-		this.loggerProvider = new LoggerProvider({ resource })
+		this.loggerProvider = new LoggerProvider({ resource: this.resource })
 
 		this.loggerProvider.addLogRecordProcessor(
 			new BatchLogRecordProcessor(logExporter, {
@@ -228,14 +211,11 @@ export class InstrumentationManager {
 		this._log('Logs initialized')
 	}
 
-	private initializeMetrics(
-		resource: Resource,
-		headers: Record<string, string>,
-	) {
+	private initializeMetrics() {
 		if (this.options.disableMetrics) return
 
 		const metricExporter = new OTLPMetricExporter({
-			headers,
+			headers: this.headers,
 			url: `${this.options.otlpEndpoint}/v1/metrics`,
 		})
 
@@ -248,7 +228,7 @@ export class InstrumentationManager {
 		]
 
 		this.meterProvider = new MeterProvider({
-			resource,
+			resource: this.resource,
 			readers,
 		})
 
@@ -340,8 +320,6 @@ export class InstrumentationManager {
 	): void {
 		try {
 			const logger = this.getLogger()
-			const sessionContext =
-				this.sessionManager?.getSessionContext() || {}
 
 			logger.emit({
 				severityText: level.toUpperCase(),
@@ -351,7 +329,6 @@ export class InstrumentationManager {
 						: JSON.stringify(message),
 				attributes: {
 					...attributes,
-					...sessionContext,
 					'log.source': 'react-native-plugin',
 				},
 				timestamp: Date.now(),
@@ -445,10 +422,6 @@ export class InstrumentationManager {
 		} catch (e) {
 			console.error('Failed to stop InstrumentationManager:', e)
 		}
-	}
-
-	public setSessionManager(sessionManager: SessionManager): void {
-		this.sessionManager = sessionManager
 	}
 
 	private getTracer() {
