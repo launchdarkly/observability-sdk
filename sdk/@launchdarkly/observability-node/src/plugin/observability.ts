@@ -10,7 +10,9 @@ import { NodeOptions } from '../api/Options'
 import { ObservabilityClient } from '../client/ObservabilityClient'
 
 export class Observability implements LDPlugin {
-	private readonly _tracingHook: Hook = new TracingHook()
+	private readonly _tracingHook: Hook = new TracingHook({
+		includeValue: true,
+	})
 	constructor(private readonly _options?: NodeOptions) {}
 	getMetadata(): LDPluginMetadata {
 		return {
