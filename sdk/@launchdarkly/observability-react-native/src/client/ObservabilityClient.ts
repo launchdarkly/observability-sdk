@@ -74,7 +74,9 @@ export class ObservabilityClient {
 					'@launchdarkly/observability-react-native',
 				[ATTR_TELEMETRY_SDK_VERSION]: this.options.serviceVersion,
 				[ATTR_TELEMETRY_SDK_LANGUAGE]: 'javascript',
-				'highlight.project_id': this.sdkKey, // Old attribute for connecting to LD project
+				// Old attribute for connecting to LD project. Can be deprecated in the
+				// future in favor of X-LaunchDarkly-Project header.
+				'highlight.project_id': this.sdkKey,
 				...this.options.resourceAttributes,
 				...sessionAttributes,
 			})
