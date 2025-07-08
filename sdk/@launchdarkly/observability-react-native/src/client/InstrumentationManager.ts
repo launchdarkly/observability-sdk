@@ -9,6 +9,7 @@ import { logs } from '@opentelemetry/api-logs'
 import { metrics } from '@opentelemetry/api'
 import { registerInstrumentations } from '@opentelemetry/instrumentation'
 import { FetchInstrumentation } from '@opentelemetry/instrumentation-fetch'
+import { XMLHttpRequestInstrumentation } from '@opentelemetry/instrumentation-xml-http-request'
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http'
 import { OTLPLogExporter } from '@opentelemetry/exporter-logs-otlp-http'
 import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-http'
@@ -18,6 +19,8 @@ import {
 	ReadableSpan,
 	Span,
 	BatchSpanProcessor,
+	SpanExporter,
+	BufferConfig,
 } from '@opentelemetry/sdk-trace-web'
 import {
 	LoggerProvider,
@@ -44,29 +47,71 @@ import { ReactNativeOptions } from '../api/Options'
 import { Metric } from '../api/Metric'
 import { SessionManager } from './SessionManager'
 
-// Custom span processor to add session data to spans
-class SessionSpanProcessor implements SpanProcessor {
-	constructor(private sessionManager: SessionManager) {}
+class CustomBatchSpanProcessor extends BatchSpanProcessor {
+	private recentHttpSpans = new Map<string, number>()
+	private readonly DEDUP_WINDOW_MS = 1000
 
-	onStart(span: Span, _parentContext: Context): void {
-		const sessionInfo = this.sessionManager.getSessionInfo()
-
-		span.setAttributes({
-			'session.id': sessionInfo.sessionId,
-			'session.start_time': sessionInfo.startTime,
-		})
+	constructor(
+		exporter: SpanExporter,
+		private sessionManager?: SessionManager,
+		options?: BufferConfig,
+	) {
+		super(exporter, options)
 	}
 
-	onEnd(_span: ReadableSpan): void {
-		// No-op for session processor
+	onStart(span: Span, parentContext: Context): void {
+		const sessionInfo = this.sessionManager?.getSessionInfo()
+
+		if (sessionInfo) {
+			span.setAttributes({
+				'session.id': sessionInfo.sessionId,
+				'session.start_time': sessionInfo.startTime,
+			})
+		}
+
+		super.onStart(span, parentContext)
 	}
 
-	shutdown(): Promise<void> {
-		return Promise.resolve()
+	onEnd(span: ReadableSpan): void {
+		if (this.isHttpSpan(span)) {
+			const spanKey = this.generateHttpSpanKey(span)
+			const now = Date.now()
+
+			this.cleanupOldHttpSpans(now)
+
+			if (this.recentHttpSpans.has(spanKey)) {
+				return // duplicate - skip
+			}
+
+			this.recentHttpSpans.set(spanKey, now)
+			super.onEnd(span)
+
+			return
+		}
+
+		super.onEnd(span)
 	}
 
-	forceFlush(): Promise<void> {
-		return Promise.resolve()
+	private isHttpSpan(span: ReadableSpan): boolean {
+		const url = span.attributes['http.url']
+		const method = span.attributes['http.method']
+		return Boolean(url && method)
+	}
+
+	private generateHttpSpanKey(span: ReadableSpan): string {
+		const url = span.attributes['http.url'] as string
+		const method = span.attributes['http.method'] as string
+		const startTime = Math.floor(span.startTime[0])
+
+		return `${method}:${url}:${startTime}`
+	}
+
+	private cleanupOldHttpSpans(now: number): void {
+		for (const [key, timestamp] of this.recentHttpSpans.entries()) {
+			if (now - timestamp > this.DEDUP_WINDOW_MS) {
+				this.recentHttpSpans.delete(key)
+			}
+		}
 	}
 }
 
@@ -131,17 +176,13 @@ export class InstrumentationManager {
 		})
 
 		const processors: SpanProcessor[] = [
-			new BatchSpanProcessor(exporter, {
+			new CustomBatchSpanProcessor(exporter, this.sessionManager, {
 				maxQueueSize: 100,
 				scheduledDelayMillis: 500,
 				exportTimeoutMillis: 5000,
 				maxExportBatchSize: 10,
 			}),
 		]
-
-		if (this.sessionManager) {
-			processors.push(new SessionSpanProcessor(this.sessionManager))
-		}
 
 		this.traceProvider = new WebTracerProvider({
 			resource,
@@ -154,11 +195,13 @@ export class InstrumentationManager {
 		registerInstrumentations({
 			// NOTE: clearTimingResources is required to disable some web-specific behavior
 			instrumentations: [
-				// TODO: Verify this works outside Expo Go. Double check we don't need
-				// to use XMLHttpRequestInstrumentation in addition or instead.
 				new FetchInstrumentation({
 					// TODO: Verify this works the same as the web implementation.
 					// Look at getCorsUrlsPattern. Take into account tracingOrigins.
+					propagateTraceHeaderCorsUrls: /.*/,
+					clearTimingResources: false,
+				}),
+				new XMLHttpRequestInstrumentation({
 					propagateTraceHeaderCorsUrls: /.*/,
 					clearTimingResources: false,
 				}),
