@@ -2,16 +2,16 @@ import { ResourceAttributes } from '@opentelemetry/resources'
 
 export interface ReactNativeOptions {
 	/**
-	 * The endpoint URL for the OTLP exporter.
-	 * @default 'https://otlp.highlight.io:4318'
-	 */
-	otlpEndpoint?: string
-
-	/**
 	 * The service name for the application.
 	 * @default 'react-native-app'
 	 */
 	serviceName?: string
+
+	/**
+	 * The endpoint URL for the OTLP exporter.
+	 * @default 'https://otlp.highlight.io:4318'
+	 */
+	otlpEndpoint?: string
 
 	/**
 	 * The service version for the application.

@@ -7,18 +7,29 @@ export interface SessionInfo {
 	startTime: number
 }
 
+type Options = {
+	sessionTimeout?: ReactNativeOptions['sessionTimeout']
+	debug?: ReactNativeOptions['debug']
+}
+
 export class SessionManager {
 	private sessionInfo: SessionInfo
 	private backgroundTime: number | null = null
+	private options: Required<Options>
 
-	constructor(private options: Required<ReactNativeOptions>) {
+	constructor(options: Options) {
+		this.options = {
+			sessionTimeout: options.sessionTimeout ?? 30 * 60 * 1000,
+			debug: !!options.debug,
+		}
+
 		this.sessionInfo = {
 			sessionId: generateUniqueId(),
 			startTime: Date.now(),
 		}
 	}
 
-	public async initialize(): Promise<void> {
+	public initialize() {
 		try {
 			this.setupAppStateListener()
 

@@ -4,23 +4,21 @@ export class BufferedClass<T extends object> {
 	protected _sdk!: T
 	protected _isLoaded = false
 	protected _callBuffer: Array<Event> = []
-	protected _capacity: number = 1000 // Prevent memory issues
+	protected _capacity: number = 10_000
 	protected _droppedEvents: number = 0
 	protected _exceededCapacity: boolean = false
 
 	protected _bufferCall(method: string, args: any[]) {
 		if (this._isLoaded) {
-			// If already loaded, execute the method directly
 			try {
 				return (this._sdk as any)[method](...args)
 			} catch (error) {
 				console.warn(
-					`LDObserve: Error executing buffered call to ${method}:`,
+					`Error executing buffered call to ${method}:`,
 					error,
 				)
 			}
 		} else {
-			// Otherwise buffer the call
 			this._enqueue({ method, args })
 			return undefined
 		}
@@ -31,18 +29,13 @@ export class BufferedClass<T extends object> {
 			this._callBuffer.push(event)
 			this._exceededCapacity = false
 		} else {
-			// TODO: This is not consistent with other SDKs, but we
-			// agreed it would be better than dropping later events.
-			this._callBuffer.shift()
-			this._callBuffer.push(event)
-			this._droppedEvents += 1
-
 			if (!this._exceededCapacity) {
 				this._exceededCapacity = true
 				console.warn(
-					'LDObserve: Exceeded event queue capacity. Dropping oldest events to make room for new ones.',
+					'Exceeded event queue capacity. Increase capacity to avoid dropping events.',
 				)
 			}
+			this._droppedEvents += 1
 		}
 	}
 
@@ -50,23 +43,17 @@ export class BufferedClass<T extends object> {
 		this._sdk = sdk
 		this._isLoaded = true
 
-		console.log(
-			`LDObserve: Processing ${this._callBuffer.length} buffered calls`,
-		)
-
-		// Process buffered calls
 		for (const { method, args } of this._callBuffer) {
 			try {
 				;(this._sdk as any)[method](...args)
 			} catch (error) {
 				console.warn(
-					`LDObserve: Error executing buffered call to ${method}:`,
+					`Error executing buffered call to ${method}:`,
 					error,
 				)
 			}
 		}
 
-		// Clear the buffer
 		this._callBuffer = []
 	}
 

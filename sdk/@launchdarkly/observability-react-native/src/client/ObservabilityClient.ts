@@ -4,7 +4,13 @@ import type {
 	SpanOptions,
 } from '@opentelemetry/api'
 import { Resource } from '@opentelemetry/resources'
-import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions'
+import {
+	ATTR_SERVICE_NAME,
+	ATTR_SERVICE_VERSION,
+	ATTR_TELEMETRY_SDK_LANGUAGE,
+	ATTR_TELEMETRY_SDK_NAME,
+	ATTR_TELEMETRY_SDK_VERSION,
+} from '@opentelemetry/semantic-conventions'
 import { ReactNativeOptions } from '../api/Options'
 import { Metric } from '../api/Metric'
 import { RequestContext } from '../api/RequestContext'
@@ -32,11 +38,19 @@ export class ObservabilityClient {
 	): Required<ReactNativeOptions> {
 		return {
 			otlpEndpoint:
-				options.otlpEndpoint ?? 'https://otlp.highlight.io:4318',
-			serviceName: options.serviceName ?? 'react-native-app',
+				options.otlpEndpoint ??
+				'https://otel.observability.app.launchdarkly.com:4318',
+			serviceName:
+				options.serviceName ??
+				'launchdarkly-observability-react-native',
 			serviceVersion: options.serviceVersion ?? '1.0.0',
 			resourceAttributes: options.resourceAttributes ?? {},
-			customHeaders: options.customHeaders ?? {},
+			customHeaders: {
+				// This is a newer method of connecting signals to an LD project.
+				// Eventually will eliminate the need for the highlight.project_id attr.
+				'x-launchdarkly-project': this.sdkKey,
+				...(options.customHeaders ?? {}),
+			},
 			sessionTimeout: options.sessionTimeout ?? 30 * 60 * 1000,
 			debug: options.debug ?? false,
 			disableErrorTracking: options.disableErrorTracking ?? false,
@@ -46,26 +60,30 @@ export class ObservabilityClient {
 		}
 	}
 
-	private async init() {
+	private init() {
 		if (this.isInitialized) return
 
 		try {
-			await this.sessionManager.initialize()
+			this.sessionManager.initialize()
 			this.instrumentationManager.setSessionManager(this.sessionManager)
 
 			const sessionAttributes = this.sessionManager.getSessionAttributes()
 			const resource = new Resource({
 				[ATTR_SERVICE_NAME]: this.options.serviceName,
-				'service.version': this.options.serviceVersion,
-				'highlight.project_id': this.sdkKey, // For connection to LD project
+				[ATTR_SERVICE_VERSION]: this.options.serviceVersion,
+				[ATTR_TELEMETRY_SDK_NAME]:
+					'@launchdarkly/observability-react-native',
+				[ATTR_TELEMETRY_SDK_VERSION]: this.options.serviceVersion,
+				[ATTR_TELEMETRY_SDK_LANGUAGE]: 'javascript',
+				'highlight.project_id': this.sdkKey, // Old attribute for connecting to LD project
 				...this.options.resourceAttributes,
 				...sessionAttributes,
 			})
 
-			await this.instrumentationManager.initialize(resource)
-
+			this.instrumentationManager.initialize(resource)
 			this.isInitialized = true
-			this._log('ObservabilityClient initialized successfully')
+
+			this._log('initialized successfully')
 		} catch (error) {
 			console.error('Failed to initialize ObservabilityClient:', error)
 		}

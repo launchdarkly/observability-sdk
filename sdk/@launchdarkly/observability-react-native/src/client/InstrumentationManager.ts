@@ -47,7 +47,7 @@ import { ReactNativeOptions } from '../api/Options'
 import { Metric } from '../api/Metric'
 import { SessionManager } from './SessionManager'
 
-class CustomBatchSpanProcessor extends BatchSpanProcessor {
+export class CustomBatchSpanProcessor extends BatchSpanProcessor {
 	private recentHttpSpans = new Map<string, number>()
 	private readonly DEDUP_WINDOW_MS = 1000
 
@@ -121,41 +121,37 @@ export class InstrumentationManager {
 	private meterProvider?: MeterProvider
 	private sessionManager?: SessionManager
 	private isInitialized = false
+	private serviceName: string
 
-	constructor(private options: Required<ReactNativeOptions>) {}
+	constructor(private options: ReactNativeOptions) {
+		this.serviceName =
+			this.options.serviceName ??
+			'launchdarkly-observability-react-native'
+	}
 
-	public async initialize(resource: Resource): Promise<void> {
+	public initialize(resource: Resource) {
 		if (this.isInitialized) return
 
 		try {
 			const headers = {
-				'x-launchdarkly-dataset': this.options.serviceName,
-				...this.options.customHeaders,
+				...(this.options.customHeaders ?? {}),
 			}
 
-			if (!this.options.disableTraces) {
-				await this.initializeTracing(resource, headers)
-			}
-
-			if (!this.options.disableLogs) {
-				await this.initializeLogs(resource, headers)
-			}
-
-			if (!this.options.disableMetrics) {
-				await this.initializeMetrics(resource, headers)
-			}
+			this.initializeTracing(resource, headers)
+			this.initializeLogs(resource, headers)
+			this.initializeMetrics(resource, headers)
 
 			this.isInitialized = true
-			this._log('InstrumentationManager initialized successfully')
+			this._log('initialized successfully')
 		} catch (error) {
 			console.error('Failed to initialize InstrumentationManager:', error)
 		}
 	}
 
-	private async initializeTracing(
+	private initializeTracing(
 		resource: Resource,
 		headers: Record<string, string>,
-	): Promise<void> {
+	) {
 		if (this.options.disableTraces) return
 
 		const compositePropagator = new CompositePropagator({
@@ -169,10 +165,7 @@ export class InstrumentationManager {
 
 		const exporter = new OTLPTraceExporter({
 			url: `${this.options.otlpEndpoint}/v1/traces`,
-			headers: {
-				...headers,
-				'x-launchdarkly-dataset': `${this.options.serviceName}-traces`,
-			},
+			headers,
 		})
 
 		const processors: SpanProcessor[] = [
@@ -193,17 +186,14 @@ export class InstrumentationManager {
 		trace.setGlobalTracerProvider(this.traceProvider)
 
 		registerInstrumentations({
-			// NOTE: clearTimingResources is required to disable some web-specific behavior
 			instrumentations: [
 				new FetchInstrumentation({
 					// TODO: Verify this works the same as the web implementation.
 					// Look at getCorsUrlsPattern. Take into account tracingOrigins.
 					propagateTraceHeaderCorsUrls: /.*/,
-					clearTimingResources: false,
 				}),
 				new XMLHttpRequestInstrumentation({
 					propagateTraceHeaderCorsUrls: /.*/,
-					clearTimingResources: false,
 				}),
 			],
 		})
@@ -211,17 +201,14 @@ export class InstrumentationManager {
 		this._log('Tracing initialized')
 	}
 
-	private async initializeLogs(
+	private initializeLogs(
 		resource: Resource,
 		headers: Record<string, string>,
-	): Promise<void> {
+	) {
 		if (this.options.disableLogs) return
 
 		const logExporter = new OTLPLogExporter({
-			headers: {
-				...headers,
-				'x-launchdarkly-dataset': `${this.options.serviceName}-logs`,
-			},
+			headers,
 			url: `${this.options.otlpEndpoint}/v1/logs`,
 		})
 
@@ -241,17 +228,14 @@ export class InstrumentationManager {
 		this._log('Logs initialized')
 	}
 
-	private async initializeMetrics(
+	private initializeMetrics(
 		resource: Resource,
 		headers: Record<string, string>,
-	): Promise<void> {
+	) {
 		if (this.options.disableMetrics) return
 
 		const metricExporter = new OTLPMetricExporter({
-			headers: {
-				...headers,
-				'x-launchdarkly-dataset': `${this.options.serviceName}-metrics`,
-			},
+			headers,
 			url: `${this.options.otlpEndpoint}/v1/metrics`,
 		})
 
@@ -468,15 +452,15 @@ export class InstrumentationManager {
 	}
 
 	private getTracer() {
-		return trace.getTracerProvider().getTracer(this.options.serviceName)
+		return trace.getTracerProvider().getTracer(this.serviceName)
 	}
 
 	private getLogger() {
-		return logs.getLoggerProvider().getLogger(this.options.serviceName)
+		return logs.getLoggerProvider().getLogger(this.serviceName)
 	}
 
 	private getMeter() {
-		return metrics.getMeterProvider().getMeter(this.options.serviceName)
+		return metrics.getMeterProvider().getMeter(this.serviceName)
 	}
 
 	private _log(...data: any[]): void {

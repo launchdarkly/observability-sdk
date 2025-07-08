@@ -1,6 +1,5 @@
 import { vi } from 'vitest'
 
-// Mock expo-constants
 vi.mock('expo-constants', () => ({
 	default: {
 		expoConfig: {
@@ -10,10 +9,3 @@ vi.mock('expo-constants', () => ({
 	},
 }))
 
-// Global test utilities
-global.console = {
-	...console,
-	log: vi.fn(),
-	warn: vi.fn(),
-	error: vi.fn(),
-}
