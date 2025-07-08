@@ -1,5 +1,8 @@
 type Event = { method: string; args: any[] }
 
+// TODO: Consider sharing this class with other SDKs. We also may want to
+// re-think the logic for when we exceed capacity and drop old events to make
+// room for new ones.
 export class BufferedClass<T extends object> {
 	protected _sdk!: T
 	protected _isLoaded = false
