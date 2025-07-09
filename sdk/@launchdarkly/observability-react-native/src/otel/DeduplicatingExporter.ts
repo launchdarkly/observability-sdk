@@ -84,7 +84,7 @@ export class DeduplicatingExporter implements SpanExporter {
 
 	private _log(...data: any[]): void {
 		if (this.debug) {
-			console.log('::: [DeduplicatingExporter]', ...data)
+			console.log('[DeduplicatingExporter]', ...data)
 		}
 	}
 }
