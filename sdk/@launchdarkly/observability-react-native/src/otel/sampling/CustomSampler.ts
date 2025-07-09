@@ -8,7 +8,7 @@ import {
 	MatchConfig,
 	AttributeMatchConfig,
 	SpanEventMatchConfig,
-} from '../../graph/getSamplingConfig'
+} from '../../graph/generated/graphql'
 import { AnyValue, AnyValueMap } from '@opentelemetry/api-logs'
 import { ReadableLogRecord } from '@opentelemetry/sdk-logs'
 
