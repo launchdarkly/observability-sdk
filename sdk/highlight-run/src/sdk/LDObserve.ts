@@ -8,6 +8,11 @@ import { BufferedClass } from './buffer'
 import { ConsoleMethods } from '../client/types/client'
 
 class _LDObserve extends BufferedClass<Observe> implements Observe {
+	start() {
+		// avoid buffering the start call
+		return this._sdk.start()
+	}
+
 	recordGauge(metric: Metric) {
 		return this._bufferCall('recordGauge', [metric])
 	}

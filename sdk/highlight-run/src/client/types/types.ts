@@ -122,6 +122,12 @@ export type CommonOptions = {
 	 * This can help with compliance for cookie-consent regulation.
 	 */
 	sessionCookie?: true
+	/**
+	 * Specifies if Highlight should not automatically initialize when the class is created.
+	 * This should be used with `.start()` and `.stop()` if you want to control when Highlight records.
+	 * @default false
+	 */
+	manualStart?: boolean
 }
 
 export type HighlightOptions = CommonOptions & {

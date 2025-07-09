@@ -1,7 +1,8 @@
 import { LDObserve } from '@launchdarkly/observability'
 import { LDRecord } from '@launchdarkly/session-replay'
 import { useEffect, useRef, useState } from 'react'
-import { client } from '../ldclient'
+// import { client } from '../ldclient'
+import { client, recordSession, recordObservability } from '../ldclientLazy'
 
 export default function Root() {
 	const fillColor = 'lightblue'
@@ -254,6 +255,20 @@ export default function Root() {
 				}}
 			>
 				client.identify multi
+			</button>
+			<button
+				onClick={async () => {
+					await recordSession()
+				}}
+			>
+				recordSession
+			</button>
+			<button
+				onClick={async () => {
+					await recordObservability()
+				}}
+			>
+				recordObservability
 			</button>
 		</div>
 	)
