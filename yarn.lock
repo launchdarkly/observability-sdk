@@ -8598,6 +8598,7 @@ __metadata:
     "@opentelemetry/api": "npm:^1.9.0"
     "@opentelemetry/core": "npm:^2.0.1"
     "@opentelemetry/sdk-trace-web": "npm:^2.0.1"
+    graphql: "npm:^16.11.0"
     typescript: "npm:^5.8.3"
   languageName: unknown
   linkType: soft
@@ -26592,6 +26593,13 @@ __metadata:
   peerDependencies:
     graphql: ">=0.11 <=16"
   checksum: 10/ab528f7451824902eba1b81105386855db4017a7bea523451155962fc3bec17196c83acce856e5955ce6675957a5c89049d4b141fa6f2f4fa88eab4841a57d68
+  languageName: node
+  linkType: hard
+
+"graphql@npm:^16.11.0":
+  version: 16.11.0
+  resolution: "graphql@npm:16.11.0"
+  checksum: 10/e3e1633d0b464bbb3fa41283fae938bd3bac801c350555b3f1a129d99fb3cfe157fa69c1389229dba902731942eb08bdea4b29f1271965feee8779576b26ef01
   languageName: node
   linkType: hard
 

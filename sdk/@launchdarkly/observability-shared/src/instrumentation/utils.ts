@@ -1,3 +1,4 @@
+import { parse } from 'graphql'
 import { isLDContextUrl } from '../launchdarkly/urlFilters'
 import { TracingOrigins } from './types'
 
@@ -97,4 +98,42 @@ export function getCorsUrlsPattern(
 	}
 
 	return /^$/ // Match nothing if tracingOrigins is false or undefined
+}
+
+export const getSpanName = (
+	url: string,
+	method: string,
+	body?:
+		| Request['body']
+		| RequestInit['body']
+		| XMLHttpRequest['responseText'],
+) => {
+	const urlObject = new URL(url)
+	let spanName = `${method.toUpperCase()} - ${urlObject.host}${urlObject.pathname}`
+
+	if (!body) {
+		return spanName
+	}
+
+	try {
+		const parsedBody = typeof body === 'string' ? JSON.parse(body) : body
+
+		if (parsedBody && parsedBody.query) {
+			const query = parse(parsedBody.query)
+			const queryName =
+				query.definitions[0]?.kind === 'OperationDefinition'
+					? query.definitions[0]?.name?.value
+					: undefined
+
+			if (queryName) {
+				spanName = `${queryName} (GraphQL: ${
+					urlObject.host + urlObject.pathname
+				})`
+			}
+		}
+	} catch {
+		// Ignore errors from JSON parsing
+	}
+
+	return spanName
 }

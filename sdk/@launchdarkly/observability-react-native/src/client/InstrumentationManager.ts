@@ -43,63 +43,10 @@ import { SessionManager } from './SessionManager'
 import {
 	CustomTraceContextPropagator,
 	getCorsUrlsPattern,
-	RECORD_ATTRIBUTE,
+	getSpanName,
 } from '@launchdarkly/observability-shared'
-
-export class CustomBatchSpanProcessor extends BatchSpanProcessor {
-	private recentHttpSpans = new Map<string, number>()
-	private readonly DEDUP_WINDOW_MS = 1000
-
-	constructor(exporter: SpanExporter, options?: BufferConfig) {
-		super(exporter, options)
-	}
-
-	onEnd(span: ReadableSpan): void {
-		if (span.attributes[RECORD_ATTRIBUTE] === false) {
-			return // don't record spans that are marked as not to be recorded
-		}
-
-		if (this.isHttpSpan(span)) {
-			const spanKey = this.generateHttpSpanKey(span)
-			const now = Date.now()
-
-			this.cleanupOldHttpSpans(now)
-
-			if (this.recentHttpSpans.has(spanKey)) {
-				return // duplicate - skip
-			}
-
-			this.recentHttpSpans.set(spanKey, now)
-			super.onEnd(span)
-
-			return
-		}
-
-		super.onEnd(span)
-	}
-
-	private isHttpSpan(span: ReadableSpan): boolean {
-		const url = span.attributes['http.url']
-		const method = span.attributes['http.method']
-		return Boolean(url && method)
-	}
-
-	private generateHttpSpanKey(span: ReadableSpan): string {
-		const url = span.attributes['http.url'] as string
-		const method = span.attributes['http.method'] as string
-		const startTime = Math.floor(span.startTime[0])
-
-		return `${method}:${url}:${startTime}`
-	}
-
-	private cleanupOldHttpSpans(now: number): void {
-		for (const [key, timestamp] of this.recentHttpSpans.entries()) {
-			if (now - timestamp > this.DEDUP_WINDOW_MS) {
-				this.recentHttpSpans.delete(key)
-			}
-		}
-	}
-}
+import { DeduplicatingExporter } from '../otel/DeduplicatingExporter'
+import { CustomBatchSpanProcessor } from '../otel/CustomBatchSpanProcessor'
 
 export class InstrumentationManager {
 	private traceProvider?: WebTracerProvider
@@ -157,10 +104,14 @@ export class InstrumentationManager {
 
 		propagation.setGlobalPropagator(compositePropagator)
 
-		const exporter = new OTLPTraceExporter({
+		const otlpExporter = new OTLPTraceExporter({
 			url: `${this.options.otlpEndpoint}/v1/traces`,
 			headers: this.headers,
 		})
+		const exporter = new DeduplicatingExporter(
+			otlpExporter,
+			this.options.debug,
+		)
 
 		const processors: SpanProcessor[] = [
 			new CustomBatchSpanProcessor(exporter, {
@@ -168,6 +119,7 @@ export class InstrumentationManager {
 				scheduledDelayMillis: 500,
 				exportTimeoutMillis: 5000,
 				maxExportBatchSize: 10,
+				debug: this.options.debug,
 			}),
 		]
 
@@ -184,9 +136,46 @@ export class InstrumentationManager {
 		registerInstrumentations({
 			instrumentations: [
 				new FetchInstrumentation({
+					applyCustomAttributesOnSpan: (span, request) => {
+						if (!(span as any).attributes) {
+							return
+						}
+						const readableSpan = span as unknown as ReadableSpan
+
+						const url = readableSpan.attributes[
+							'http.url'
+						] as string
+						const method = request.method ?? 'GET'
+
+						span.updateName(getSpanName(url, method, request.body))
+					},
 					propagateTraceHeaderCorsUrls: corsPattern,
 				}),
 				new XMLHttpRequestInstrumentation({
+					applyCustomAttributesOnSpan: (span, xhr) => {
+						if (!(span as any).attributes) {
+							return
+						}
+						const readableSpan = span as unknown as ReadableSpan
+
+						try {
+							const url = readableSpan.attributes[
+								'http.url'
+							] as string
+							const method = readableSpan.attributes[
+								'http.method'
+							] as string
+							let responseText: string | undefined
+							if (['', 'text'].includes(xhr.responseType)) {
+								responseText = xhr.responseText
+							}
+							span.updateName(
+								getSpanName(url, method, responseText),
+							)
+						} catch (e) {
+							console.error('Failed to update span name:', e)
+						}
+					},
 					propagateTraceHeaderCorsUrls: corsPattern,
 				}),
 			],
