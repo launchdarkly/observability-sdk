@@ -6,7 +6,7 @@ import { ReadableSpan } from '@opentelemetry/sdk-trace-web'
 import type { TracingOrigins } from './types'
 
 type CustomTraceContextPropagatorConfig = {
-	otlpEndpoint: string
+	internalEndpoints: string[]
 	tracingOrigins: TracingOrigins
 	urlBlocklist: string[]
 }
@@ -19,11 +19,7 @@ export class CustomTraceContextPropagator extends W3CTraceContextPropagator {
 	constructor(config: CustomTraceContextPropagatorConfig) {
 		super()
 
-		this.internalEndpoints = [
-			`${config.otlpEndpoint}/v1/traces`,
-			`${config.otlpEndpoint}/v1/logs`,
-			`${config.otlpEndpoint}/v1/metrics`,
-		]
+		this.internalEndpoints = config.internalEndpoints
 		this.tracingOrigins = config.tracingOrigins
 		this.urlBlocklist = config.urlBlocklist
 	}

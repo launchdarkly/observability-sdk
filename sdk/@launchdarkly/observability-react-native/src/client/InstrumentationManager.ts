@@ -95,7 +95,11 @@ export class InstrumentationManager {
 			propagators: [
 				new W3CBaggagePropagator(),
 				new CustomTraceContextPropagator({
-					otlpEndpoint: this.options.otlpEndpoint,
+					internalEndpoints: [
+						`${this.options.otlpEndpoint}/v1/traces`,
+						`${this.options.otlpEndpoint}/v1/logs`,
+						`${this.options.otlpEndpoint}/v1/metrics`,
+					],
 					tracingOrigins: this.options.tracingOrigins,
 					urlBlocklist: this.options.urlBlocklist,
 				}),
