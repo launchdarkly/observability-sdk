@@ -7,7 +7,7 @@ from opentelemetry.sdk.trace import InstrumentationScope
 from opentelemetry.trace import SpanContext, TraceFlags
 from opentelemetry.trace.span import INVALID_SPAN_ID, INVALID_TRACE_ID
 
-from ..sampling_log_exporter import sample_logs
+from ..sampling_log_exporter import _sample_logs
 from ..sampling import SamplingResult
 from ...graph.generated.public_graph_client.get_sampling_config import (
     GetSamplingConfigSampling,
@@ -75,7 +75,7 @@ def test_return_all_logs_when_sampling_disabled():
         create_log_data("error", "test log 2"),
     ]
 
-    sampled_logs = sample_logs(logs, mock_sampler)
+    sampled_logs = _sample_logs(logs, mock_sampler)
 
     assert len(sampled_logs) == 2
     assert sampled_logs == logs
@@ -95,7 +95,7 @@ def test_remove_logs_that_are_not_sampled():
         create_log_data("error", "test log 2"),
     ]
 
-    sampled_logs = sample_logs(logs, mock_sampler)
+    sampled_logs = _sample_logs(logs, mock_sampler)
 
     assert len(sampled_logs) == 1
     assert sampled_logs[0].log_record.body == "test log 1"
@@ -119,7 +119,7 @@ def test_apply_sampling_attributes_to_sampled_logs():
         create_log_data("error", "test log 2"),
     ]
 
-    sampled_logs = sample_logs(logs, mock_sampler)
+    sampled_logs = _sample_logs(logs, mock_sampler)
 
     assert len(sampled_logs) == 2
     assert (
@@ -137,7 +137,7 @@ def test_handle_empty_log_array():
     mock_sampler = MockSampler({})
     logs: list[LogData] = []
 
-    sampled_logs = sample_logs(logs, mock_sampler)
+    sampled_logs = _sample_logs(logs, mock_sampler)
 
     assert len(sampled_logs) == 0
 
@@ -152,7 +152,7 @@ def test_handle_logs_with_no_sampling_attributes():
 
     logs = [create_log_data("info", "test log 1")]
 
-    sampled_logs = sample_logs(logs, mock_sampler)
+    sampled_logs = _sample_logs(logs, mock_sampler)
 
     assert len(sampled_logs) == 1
     assert (

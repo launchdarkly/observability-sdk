@@ -3,7 +3,7 @@
 from .sampling_trace_exporter import (
     SamplingTraceExporter,
     ExportSampler,
-    sample_spans,
+    _sample_spans,
 )
 from .sampling import (
     CustomSampler,
@@ -17,7 +17,7 @@ __all__ = [
     "CustomSampler",
     "SamplingResult",
     "ExportSampler",
-    "sample_spans",
+    "_sample_spans",
     "default_sampler",
     "_OTELConfiguration",
 ]

@@ -1,17 +1,11 @@
-from typing import List, Optional, Dict, Callable, Union, Sequence, Tuple
-from opentelemetry.sdk.trace.export import SpanExporter, SpanExportResult
+from typing import List, Optional, Dict, Union, Sequence, Tuple
+from opentelemetry.sdk.trace.export import SpanExportResult
 from opentelemetry.sdk.trace import ReadableSpan
-from opentelemetry.trace import SpanContext
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-from typing import Protocol
-from copy import deepcopy
 import grpc
 from .sampling.custom_sampler import ExportSampler
 
-from .sampling import SamplingResult, default_sampler
-
-
-def clone_readable_span_with_attributes(
+def _clone_readable_span_with_attributes(
     span: ReadableSpan,
     attributes: Dict[str, Union[str, int, float, bool]],
 ) -> ReadableSpan:
@@ -36,7 +30,7 @@ def clone_readable_span_with_attributes(
     )
 
 
-def sample_spans(
+def _sample_spans(
     items: List[ReadableSpan],
     sampler: ExportSampler,
 ) -> List[ReadableSpan]:
@@ -64,7 +58,7 @@ def sample_spans(
         sample_result = sampler.sample_span(item)
         if sample_result.sample:
             if sample_result.attributes:
-                span_by_id[span_context.span_id] = clone_readable_span_with_attributes(
+                span_by_id[span_context.span_id] = _clone_readable_span_with_attributes(
                     item, sample_result.attributes
                 )
             else:
@@ -112,7 +106,7 @@ class SamplingTraceExporter(OTLPSpanExporter):
 
     def export(self, spans: List[ReadableSpan]) -> SpanExportResult:
         """Export spans with sampling applied."""
-        sampled_spans = sample_spans(spans, self.sampler)
+        sampled_spans = _sample_spans(spans, self.sampler)
         if not sampled_spans:
             return SpanExportResult.SUCCESS
 

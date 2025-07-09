@@ -56,6 +56,8 @@ class ObservabilityConfig:
     service_name: Optional[str] = None
     """
     The name of the service to use for the OpenTelemetry resource.
+
+    Alternatively, set the OTEL_SERVICE_NAME environment variable.
     """
 
     service_version: Optional[str] = None
@@ -78,6 +80,8 @@ class ObservabilityConfig:
     log_correlation: Optional[bool] = None
     """
     If True, the logging format will be updated to enable log correlation.
+    If :class:`ObservabilityConfig.instrument_logging` is False, then this setting will have no effect.
+    If logging is configured before the Observability plugin is initialized, then this setting will have no effect.
 
     Any custom logging format will allow log correlation if it includes:
     - %(otelTraceID)s
@@ -95,6 +99,15 @@ class ObservabilityConfig:
     Defaults to True.
     """
 
+    disabled_instrumentations: Optional[list[str]] = None
+    """
+    A list of OpenTelemetry instrumentations to disable.
+
+    Alternatively the OTEL_PYTHON_DISABLED_INSTRUMENTATIONS environment variable can be used.
+
+    If this list and the OTEL_PYTHON_DISABLED_INSTRUMENTATIONS environment variable are both set, then the lists will be combined.
+    """
+
     def __getitem__(self, key: str):
         return getattr(self, key)
 
@@ -109,6 +122,7 @@ class _ProcessedConfig:
     environment: Optional[str] = None
     disable_export_error_logging: bool
     log_correlation: bool
+    disabled_instrumentations: list[str]
 
     def __init__(self, config: ObservabilityConfig):
         self.otlp_endpoint = config.otlp_endpoint or os.getenv(
@@ -152,3 +166,5 @@ class _ProcessedConfig:
                 else _DEFAULT_LOG_CORRELATION
             )
         )
+
+        self.disabled_instrumentations = config.disabled_instrumentations or []

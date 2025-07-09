@@ -2,7 +2,6 @@ import contextlib
 import datetime
 import logging
 import typing
-from ldobserve.request_context import RequestContext
 from opentelemetry.context import Context
 from opentelemetry.instrumentation.logging import LEVELS
 from opentelemetry.sdk._logs import LoggingHandler

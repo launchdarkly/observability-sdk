@@ -1,12 +1,14 @@
 from importlib import metadata
 import logging
+import os
 import typing
 from grpc import Compression
 from ldobserve.otel.sampling.custom_sampler import CustomSampler
 from ldobserve.otel.sampling_log_exporter import SamplingLogExporter
 from ldobserve.otel.sampling_trace_exporter import SamplingTraceExporter
 from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
-from opentelemetry.instrumentation.logging import LoggingInstrumentor
+from opentelemetry.instrumentation.environment_variables import OTEL_PYTHON_DISABLED_INSTRUMENTATIONS
+from opentelemetry.instrumentation.logging import OTEL_PYTHON_LOG_CORRELATION, OTEL_PYTHON_LOG_LEVEL, LoggingInstrumentor
 from opentelemetry.metrics import Meter
 from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
 from opentelemetry.sdk.metrics._internal.export import PeriodicExportingMetricReader
@@ -28,6 +30,7 @@ from opentelemetry.sdk.metrics import (
 from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.environment_variables import _OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED
 import opentelemetry._logs as _logs
 
 from ldobserve.config import _ProcessedConfig
@@ -35,6 +38,40 @@ from ldobserve.config import _ProcessedConfig
 _SCHEDULE_DELAY_MILLIS = 5_000
 _MAX_EXPORT_BATCH_SIZE = 128 * 1024
 _MAX_QUEUE_SIZE = 1024 * 1024
+
+
+def _extend_disabled_instrumentations(*instrumentations: str) -> None:
+    """
+    Extend the OTEL_PYTHON_DISABLED_INSTRUMENTATIONS environment variable with additional instrumentations.
+    
+    This function reads the current value of OTEL_PYTHON_DISABLED_INSTRUMENTATIONS,
+    adds the provided instrumentations to the comma-separated list, and sets the
+    environment variable with the extended list.
+    
+    Args:
+        *instrumentations: Variable number of instrumentation names to add to the disabled list.
+                          These should be the names of OpenTelemetry instrumentations to disable.
+    
+    Example:
+        >>> extend_disabled_instrumentations("redis", "kafka")
+        # If OTEL_PYTHON_DISABLED_INSTRUMENTATIONS was "grpc_client",
+        # it will become "grpc_client,redis,kafka"
+    """
+    current_value = os.getenv(OTEL_PYTHON_DISABLED_INSTRUMENTATIONS, "")
+    
+    # Split the current value by comma and strip whitespace
+    current_list = [item.strip() for item in current_value.split(",") if item.strip()]
+    
+    # Add new instrumentations, avoiding duplicates
+    for instrumentation in instrumentations:
+        if instrumentation.strip() and instrumentation.strip() not in current_list:
+            current_list.append(instrumentation.strip())
+    
+    # Join the list back into a comma-separated string
+    new_value = ",".join(current_list)
+    
+    # Set the environment variable
+    os.environ[OTEL_PYTHON_DISABLED_INSTRUMENTATIONS] = new_value
 
 
 def _build_resource(
@@ -53,9 +90,9 @@ def _build_resource(
         attrs[service_attributes.SERVICE_VERSION] = service_version
     if environment:
         attrs[deployment_attributes.DEPLOYMENT_ENVIRONMENT] = environment
-    if environment:
-        attrs["telemetry.distro.name"] = "launchdarkly-observability"
-        attrs["telemetry.distro.version"] = metadata.version("ldobserve")
+
+    attrs["telemetry.distro.name"] = "launchdarkly-observability"
+    attrs["telemetry.distro.version"] = metadata.version("launchdarkly-observability")
 
     # Resource.create() will also look for standard OTEL attributes.
     return Resource.create(attrs)
@@ -94,6 +131,9 @@ class _OTELConfiguration:
             service_version=self._config.service_version,
             environment=self._config.environment,
         )
+
+        if self._config.disabled_instrumentations:
+            _extend_disabled_instrumentations(*self._config.disabled_instrumentations)
 
         sampler = CustomSampler()
         # TODO: Get and set config.
@@ -144,15 +184,21 @@ class _OTELConfiguration:
                 logging.getLogger(logger_name).setLevel(logging.FATAL)
 
         if self._config.instrument_logging:
-            # Must configure basic logging before adding a handler.
-            # This will have no impact if the application has already configured logging.
-
-
-            # LoggingInstrumentor().instrument(
-            #     set_logging_format=self._config.log_correlation,
-            #     log_level=self._config.log_level,
-            # )
-
+            # The logging instrumentation will configure basic logging, so we
+            # must not register a handler before instrumenting logging.
+            # logging.basicConfig has no effect if a handler is already registered.
+            LoggingInstrumentor().instrument(
+                set_logging_format=self._config.log_correlation,
+                log_level=self._config.log_level,
+            )
+            # If log_correlation is false, then the LoggingInstrumentor will not
+            # configure basic logging. If it does, then this call has no effect.
+            logging.basicConfig(level=self._config.log_level)
+            logging.getLogger().addHandler(self._log_handler)
+   
+        # Instruct auto-instrumentation to not instrument logging.
+        # We will either have already done it, or it is disabled.
+        _extend_disabled_instrumentations("logging")
 
         metric_reader = PeriodicExportingMetricReader(
             exporter=OTLPMetricExporter(

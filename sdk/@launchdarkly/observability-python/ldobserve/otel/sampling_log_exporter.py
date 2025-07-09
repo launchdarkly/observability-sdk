@@ -6,8 +6,7 @@ import grpc
 
 from .sampling.custom_sampler import ExportSampler
 
-
-def clone_log_record_with_attributes(
+def _clone_log_record_with_attributes(
     log: LogData,
     attributes: Dict[str, Union[str, int, float, bool]],
 ) -> LogData:
@@ -33,7 +32,7 @@ def clone_log_record_with_attributes(
     )
 
 
-def sample_logs(
+def _sample_logs(
     items: List[LogData],
     sampler: ExportSampler,
 ) -> List[LogData]:
@@ -48,7 +47,7 @@ def sample_logs(
         if sample_result.sample:
             if sample_result.attributes:
                 sampled_logs.append(
-                    clone_log_record_with_attributes(item, sample_result.attributes)
+                    _clone_log_record_with_attributes(item, sample_result.attributes)
                 )
             else:
                 sampled_logs.append(item)
@@ -82,7 +81,7 @@ class SamplingLogExporter(OTLPLogExporter):
 
     def export(self, logs: List[LogData]) -> LogExportResult:
         """Export logs with sampling applied."""
-        sampled_logs = sample_logs(logs, self.sampler)
+        sampled_logs = _sample_logs(logs, self.sampler)
         if not sampled_logs:
             return LogExportResult.SUCCESS
 

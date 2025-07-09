@@ -72,6 +72,8 @@ dependencies = [
     "urllib3>=2.2.1",
     "requests>=2.31.0",
     "ariadne-codegen (>=0.14.0,<0.15.0)",
+    "launchdarkly-server-sdk @ file:///home/rlamb/code/launchdarkly/python-server-sdk",
+    "launchdarkly-server-sdk-otel @ file:///home/rlamb/code/launchdarkly/python-server-sdk-otel",
 ]
 
 [project.optional-dependencies]
