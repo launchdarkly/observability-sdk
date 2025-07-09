@@ -47,12 +47,18 @@ export class DeduplicatingExporter implements SpanExporter {
 			const existingLib = existing.instrumentationLibrary.name
 
 			if (existingLib === FETCH_LIB && lib === XHR_LIB) {
-				this._log('fetch span seen - dropping xhr', span.name)
+				this._log(
+					'incoming XHR w/ fetch span seen - dropping XHR',
+					span.name,
+				)
 				continue
 			}
 
 			if (existingLib === XHR_LIB && lib === FETCH_LIB) {
-				this._log('xhr span seen - replacing with fetch', span.name)
+				this._log(
+					'incoming fetch w/ XHR span seen - replacing with fetch',
+					span.name,
+				)
 				const idx = dedupedSpans.indexOf(existing)
 
 				if (idx !== -1) {
