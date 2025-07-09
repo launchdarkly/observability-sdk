@@ -1,8 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import {
-	getCorsUrlsPattern,
-	getIgnoreUrlsPattern,
-} from './networkUtils'
+import { getCorsUrlsPattern, getIgnoreUrlsPattern } from './networkUtils'
 
 describe('getCorsUrlsPattern', () => {
 	it('returns localhost patterns when tracingOrigins is true', () => {
@@ -48,12 +45,12 @@ describe('getIgnoreUrlsPattern', () => {
 		const result = getIgnoreUrlsPattern(true)
 		expect(result).toHaveLength(1)
 		expect(result[0]).toBeInstanceOf(RegExp)
-		
+
 		const ignorePattern = result[0] as RegExp
 		expect(ignorePattern.test('http://localhost/api')).toBe(false)
 		expect(ignorePattern.test('https://localhost/api')).toBe(false)
 		expect(ignorePattern.test('/api/test')).toBe(false)
-		
+
 		expect(ignorePattern.test('https://example.com/api')).toBe(true)
 	})
 
@@ -61,10 +58,10 @@ describe('getIgnoreUrlsPattern', () => {
 		const result = getIgnoreUrlsPattern(['api.example.com'])
 		expect(result).toHaveLength(1)
 		expect(result[0]).toBeInstanceOf(RegExp)
-		
+
 		const ignorePattern = result[0] as RegExp
 		expect(ignorePattern.test('https://api.example.com/test')).toBe(false)
-		
+
 		expect(ignorePattern.test('https://other.com/api')).toBe(true)
 	})
 

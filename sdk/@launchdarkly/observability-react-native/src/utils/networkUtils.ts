@@ -25,23 +25,27 @@ export const getIgnoreUrlsPattern = (
 	if (tracingOrigins === false || tracingOrigins === undefined) {
 		return [/.*/] // Ignore all URLs if tracingOrigins is disabled
 	}
-	
+
 	if (tracingOrigins === true) {
-		return [/^(?!.*localhost)(?!\/)(?!http:\/\/localhost)(?!https:\/\/localhost).*$/]
+		return [
+			/^(?!.*localhost)(?!\/)(?!http:\/\/localhost)(?!https:\/\/localhost).*$/,
+		]
 	}
-	
+
 	if (Array.isArray(tracingOrigins)) {
 		if (tracingOrigins.length === 0) {
 			return [/.*/]
 		}
-		
+
 		// Create a negative lookahead pattern that ignores URLs that don't match any of the tracingOrigins
 		const patterns = tracingOrigins.map((pattern) =>
-			typeof pattern === 'string' ? pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') : pattern.source
+			typeof pattern === 'string'
+				? pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+				: pattern.source,
 		)
 		const combinedPattern = `^(?!.*(${patterns.join('|')})).*$`
 		return [new RegExp(combinedPattern)]
 	}
-	
+
 	return [/.*/] // Default to ignoring all URLs
 }

@@ -45,10 +45,7 @@ import {
 } from '@opentelemetry/core'
 import { ReactNativeOptions } from '../api/Options'
 import { Metric } from '../api/Metric'
-import {
-	getCorsUrlsPattern,
-	getIgnoreUrlsPattern,
-} from '../utils/networkUtils'
+import { getCorsUrlsPattern, getIgnoreUrlsPattern } from '../utils/networkUtils'
 
 export class CustomBatchSpanProcessor extends BatchSpanProcessor {
 	private recentHttpSpans = new Map<string, number>()
@@ -181,13 +178,17 @@ export class InstrumentationManager {
 					propagateTraceHeaderCorsUrls: getCorsUrlsPattern(
 						this.options.tracingOrigins,
 					),
-					ignoreUrls: getIgnoreUrlsPattern(this.options.tracingOrigins),
+					ignoreUrls: getIgnoreUrlsPattern(
+						this.options.tracingOrigins,
+					),
 				}),
 				new XMLHttpRequestInstrumentation({
 					propagateTraceHeaderCorsUrls: getCorsUrlsPattern(
 						this.options.tracingOrigins,
 					),
-					ignoreUrls: getIgnoreUrlsPattern(this.options.tracingOrigins),
+					ignoreUrls: getIgnoreUrlsPattern(
+						this.options.tracingOrigins,
+					),
 				}),
 			],
 		})
