@@ -26,7 +26,7 @@ export class CustomBatchSpanProcessor extends BatchSpanProcessor {
 
 	private _log(...data: any[]): void {
 		if (this.options?.debug) {
-			console.log('::: [CustomBatchSpanProcessor]', ...data)
+			console.log('[CustomBatchSpanProcessor]', ...data)
 		}
 	}
 }
