@@ -35,9 +35,9 @@ jobs:
                   cache: 'poetry'
             - run: poetry install --all-extras
             - name: Lint
-              run: poetry run black --check .
+              run: make lint
             - name: Test
-              run: poetry run pytest --cov=highlight_io --cov-branch --cov-report xml
+              run: make test
             - name: Get Cover
               if: github.event_name == 'pull_request'
               uses: orgoro/coverage@v3
