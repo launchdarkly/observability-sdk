@@ -1,29 +1,29 @@
-interface MatchConfig {
+export interface MatchConfig {
 	regexValue?: string
 	matchValue?: string
 }
 
-interface AttributeConfig {
+export interface AttributeMatchConfig {
 	key?: MatchConfig
 	attribute?: MatchConfig
 }
 
-interface EventConfig {
+export interface SpanEventMatchConfig {
 	name?: MatchConfig
-	attributes?: AttributeConfig[]
+	attributes?: AttributeMatchConfig[]
 }
 
-interface SpanSamplingConfig {
+export interface SpanSamplingConfig {
 	name?: MatchConfig
-	attributes?: AttributeConfig[]
-	events?: EventConfig[]
+	attributes?: AttributeMatchConfig[]
+	events?: SpanEventMatchConfig[]
 	samplingRatio?: number
 }
 
-interface LogSamplingConfig {
+export interface LogSamplingConfig {
 	message?: MatchConfig
 	severityText?: MatchConfig
-	attributes?: AttributeConfig[]
+	attributes?: AttributeMatchConfig[]
 	samplingRatio?: number
 }
 
@@ -31,6 +31,8 @@ export interface SamplingConfig {
 	spans?: SpanSamplingConfig[]
 	logs?: LogSamplingConfig[]
 }
+
+export type Maybe<T> = T | null
 
 const GET_SAMPLING_CONFIG_QUERY = `
 	fragment MatchParts on MatchConfig {
