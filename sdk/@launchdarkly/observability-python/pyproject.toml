@@ -107,3 +107,8 @@ include_comments = "none"
 target_package_name = "public_graph_client"
 target_package_path = "ldobserve/graph/generated"
 enable_custom_operations = true
+
+[tool.coverage.run]
+omit = [
+    "*/generated/*",
+]

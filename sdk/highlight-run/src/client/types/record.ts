@@ -15,12 +15,6 @@ export type RecordOptions = CommonOptions & {
 	 */
 	tracingOrigins?: boolean | (string | RegExp)[]
 	/**
-	 * Specifies if Highlight should not automatically start recording when the app starts.
-	 * This should be used with `H.start()` and `H.stop()` if you want to control when Highlight records.
-	 * @default false
-	 */
-	manualStart?: boolean
-	/**
 	 * If set, Highlight will not record when your app is not visible (in the background).
 	 * By default, Highlight will record in the background.
 	 * @default false

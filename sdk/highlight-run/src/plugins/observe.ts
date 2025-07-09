@@ -67,6 +67,9 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 				projectId: ldCredential,
 				sessionSecureId: this.sessionSecureID,
 			})
+			if (!options?.manualStart) {
+				void this.observe.start()
+			}
 			LDObserve.load(this.observe)
 		} catch (error) {
 			internalLog(
