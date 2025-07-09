@@ -1,0 +1,20 @@
+{
+	"name": "@launchdarkly/observability-shared",
+	"type": "module",
+	"main": "./src/index.ts",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"build": "tsc",
+		"dev": "tsc --watch"
+	},
+	"devDependencies": {
+		"typescript": "^5.8.3"
+	},
+	"dependencies": {
+		"@opentelemetry/api": "^1.9.0",
+		"@opentelemetry/core": "^2.0.1",
+		"@opentelemetry/sdk-trace-web": "^2.0.1"
+	}
+}
