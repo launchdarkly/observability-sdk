@@ -51,7 +51,6 @@ jobs:
                   REACT_APP_COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
             - name: Configure yarn npm registry credentials
-              if: github.ref == 'refs/heads/main'
               run: |
                   yarn config set npmRegistryServer "https://registry.npmjs.org"
                   yarn config set npmAuthToken "${NPM_TOKEN}"
@@ -59,24 +58,20 @@ jobs:
                   NPM_TOKEN: ${{ secrets.NPM_TOKEN_HIGHLIGHT_RUN }}
 
             - name: Publish highlight npm packages
-              if: github.ref == 'refs/heads/main'
               run: yarn publish:highlight
 
             - uses: launchdarkly/gh-actions/actions/release-secrets@release-secrets-v1.2.0
-              if: github.ref == 'refs/heads/main'
               name: 'Get NPM token'
               with:
                   aws_assume_role: ${{ vars.AWS_ROLE_ARN }}
                   ssm_parameter_pairs: '/production/common/releasing/npm/token = NODE_AUTH_TOKEN'
 
             - name: Configure yarn npm registry credentials for launchdarkly
-              if: github.ref == 'refs/heads/main'
               run: |
                   yarn config set npmRegistryServer "https://registry.npmjs.org"
                   yarn config set npmAuthToken "${NODE_AUTH_TOKEN}"
 
             - name: Publish
-              if: github.ref == 'refs/heads/main'
               shell: bash
               run: ./scripts/publish-npm.sh
               env:
@@ -84,7 +79,6 @@ jobs:
                   LD_RELEASE_IS_DRYRUN: false
 
             - name: Release changesets
-              if: github.ref == 'refs/heads/main'
               id: changesets-version
               uses: changesets/action@v1
               with:
