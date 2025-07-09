@@ -1,3 +1,5 @@
+from ldobserve._otel._sampling.custom_sampler import SamplingResult
+from ldobserve._otel.sampling_log_exporter import _sample_logs
 from opentelemetry.util.types import AnyValue
 import pytest
 from typing import Dict, Optional
@@ -7,9 +9,7 @@ from opentelemetry.sdk.trace import InstrumentationScope
 from opentelemetry.trace import SpanContext, TraceFlags
 from opentelemetry.trace.span import INVALID_SPAN_ID, INVALID_TRACE_ID
 
-from ..sampling_log_exporter import _sample_logs
-from ..sampling import SamplingResult
-from ...graph.generated.public_graph_client.get_sampling_config import (
+from ..._graph.generated.public_graph_client.get_sampling_config import (
     GetSamplingConfigSampling,
 )
 

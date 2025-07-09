@@ -3,7 +3,8 @@ from opentelemetry.sdk.trace.export import SpanExportResult
 from opentelemetry.sdk.trace import ReadableSpan
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 import grpc
-from .sampling.custom_sampler import ExportSampler
+from ._sampling.custom_sampler import ExportSampler
+
 
 def _clone_readable_span_with_attributes(
     span: ReadableSpan,

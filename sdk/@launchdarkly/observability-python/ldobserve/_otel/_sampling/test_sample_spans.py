@@ -9,8 +9,8 @@ from opentelemetry.sdk.util.instrumentation import InstrumentationScope
 from typing import Dict, Optional, List
 
 from ..sampling_trace_exporter import _sample_spans, ExportSampler
-from ..sampling import SamplingResult
-from ...graph.generated.public_graph_client.get_sampling_config import (
+from .._sampling import SamplingResult
+from ..._graph.generated.public_graph_client.get_sampling_config import (
     GetSamplingConfigSampling,
 )
 

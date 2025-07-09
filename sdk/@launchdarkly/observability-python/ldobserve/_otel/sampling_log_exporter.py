@@ -4,7 +4,8 @@ from opentelemetry.sdk._logs.export import LogExportResult  # type: ignore Not a
 from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter  # type: ignore Not actually private.
 import grpc
 
-from .sampling.custom_sampler import ExportSampler
+from ._sampling.custom_sampler import ExportSampler
+
 
 def _clone_log_record_with_attributes(
     log: LogData,

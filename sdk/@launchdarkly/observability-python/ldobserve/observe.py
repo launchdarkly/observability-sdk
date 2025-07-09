@@ -9,8 +9,8 @@ from opentelemetry.trace import Span, Tracer
 import opentelemetry.trace as trace
 from opentelemetry.util.types import Attributes
 from opentelemetry._logs import get_logger_provider
-from ldobserve.otel.configuration import _OTELConfiguration
-from ldobserve.util.dict import _flatten_dict
+from ldobserve._otel.configuration import _OTELConfiguration
+from ldobserve._util.dict import flatten_dict
 
 from opentelemetry.metrics import (
     _Gauge as APIGauge,
@@ -57,7 +57,7 @@ class _ObserveInstance:
 
         attrs = {}
         if attributes:
-            addedAttributes = _flatten_dict(attributes, sep=".")
+            addedAttributes = flatten_dict(attributes, sep=".")
             attrs.update(addedAttributes)
 
         span.record_exception(error, attrs)

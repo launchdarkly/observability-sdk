@@ -153,9 +153,7 @@ class _ProcessedConfig:
             else _DEFAULT_DISABLE_EXPORT_ERROR_LOGGING
         )
 
-        env_log_correlation = os.getenv(
-            OTEL_PYTHON_LOG_CORRELATION, None
-        )
+        env_log_correlation = os.getenv(OTEL_PYTHON_LOG_CORRELATION, None)
 
         self.log_correlation = (
             config.log_correlation

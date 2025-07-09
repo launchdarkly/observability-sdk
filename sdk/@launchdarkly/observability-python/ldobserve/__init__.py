@@ -6,23 +6,25 @@ from ldobserve.config import ObservabilityConfig
 from ldobserve.observe import _ObserveInstance
 from ldobserve.config import _ProcessedConfig
 import ldobserve.observe
-from ldobserve.otel.configuration import _OTELConfiguration
-from ldclient.plugin import (Plugin, EnvironmentMetadata, PluginMetadata)
+from ldobserve._otel.configuration import _OTELConfiguration
+from ldclient.plugin import Plugin, EnvironmentMetadata, PluginMetadata
 from ldotel.tracing import Hook, HookOptions
 from ldclient.client import LDClient
+
 
 def ObservabilityPlugin(plugin: Plugin):
     def __init__(self, config: Optional[ObservabilityConfig] = None):
         self._config = config or ObservabilityConfig()
 
     def metadata(_self) -> PluginMetadata:
-        return PluginMetadata(name='launchdarkly-observability')
+        return PluginMetadata(name="launchdarkly-observability")
 
     def register(self, client: LDClient, metadata: EnvironmentMetadata) -> None:
         init(metadata.sdk_key, self._config)
 
     def get_hooks(self, metadata: EnvironmentMetadata) -> List[Hook]:
         return [Hook(options=HookOptions(include_value=True))]
+
 
 def init(project_id: str, config: Optional[ObservabilityConfig] = None):
     processed_config = _ProcessedConfig(config or ObservabilityConfig())

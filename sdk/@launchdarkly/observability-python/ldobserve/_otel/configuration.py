@@ -3,12 +3,18 @@ import logging
 import os
 import typing
 from grpc import Compression
-from ldobserve.otel.sampling.custom_sampler import CustomSampler
-from ldobserve.otel.sampling_log_exporter import SamplingLogExporter
-from ldobserve.otel.sampling_trace_exporter import SamplingTraceExporter
+from ldobserve._otel._sampling.custom_sampler import CustomSampler
+from ldobserve._otel.sampling_log_exporter import SamplingLogExporter
+from ldobserve._otel.sampling_trace_exporter import SamplingTraceExporter
 from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
-from opentelemetry.instrumentation.environment_variables import OTEL_PYTHON_DISABLED_INSTRUMENTATIONS
-from opentelemetry.instrumentation.logging import OTEL_PYTHON_LOG_CORRELATION, OTEL_PYTHON_LOG_LEVEL, LoggingInstrumentor
+from opentelemetry.instrumentation.environment_variables import (
+    OTEL_PYTHON_DISABLED_INSTRUMENTATIONS,
+)
+from opentelemetry.instrumentation.logging import (
+    OTEL_PYTHON_LOG_CORRELATION,
+    OTEL_PYTHON_LOG_LEVEL,
+    LoggingInstrumentor,
+)
 from opentelemetry.metrics import Meter
 from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
 from opentelemetry.sdk.metrics._internal.export import PeriodicExportingMetricReader
@@ -30,7 +36,9 @@ from opentelemetry.sdk.metrics import (
 from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.environment_variables import _OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED
+from opentelemetry.sdk.environment_variables import (
+    _OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED,
+)
 import opentelemetry._logs as _logs
 
 from ldobserve.config import _ProcessedConfig
@@ -43,33 +51,33 @@ _MAX_QUEUE_SIZE = 1024 * 1024
 def _extend_disabled_instrumentations(*instrumentations: str) -> None:
     """
     Extend the OTEL_PYTHON_DISABLED_INSTRUMENTATIONS environment variable with additional instrumentations.
-    
+
     This function reads the current value of OTEL_PYTHON_DISABLED_INSTRUMENTATIONS,
     adds the provided instrumentations to the comma-separated list, and sets the
     environment variable with the extended list.
-    
+
     Args:
         *instrumentations: Variable number of instrumentation names to add to the disabled list.
                           These should be the names of OpenTelemetry instrumentations to disable.
-    
+
     Example:
         >>> extend_disabled_instrumentations("redis", "kafka")
         # If OTEL_PYTHON_DISABLED_INSTRUMENTATIONS was "grpc_client",
         # it will become "grpc_client,redis,kafka"
     """
     current_value = os.getenv(OTEL_PYTHON_DISABLED_INSTRUMENTATIONS, "")
-    
+
     # Split the current value by comma and strip whitespace
     current_list = [item.strip() for item in current_value.split(",") if item.strip()]
-    
+
     # Add new instrumentations, avoiding duplicates
     for instrumentation in instrumentations:
         if instrumentation.strip() and instrumentation.strip() not in current_list:
             current_list.append(instrumentation.strip())
-    
+
     # Join the list back into a comma-separated string
     new_value = ",".join(current_list)
-    
+
     # Set the environment variable
     os.environ[OTEL_PYTHON_DISABLED_INSTRUMENTATIONS] = new_value
 
@@ -195,7 +203,7 @@ class _OTELConfiguration:
             # configure basic logging. If it does, then this call has no effect.
             logging.basicConfig(level=self._config.log_level)
             logging.getLogger().addHandler(self._log_handler)
-   
+
         # Instruct auto-instrumentation to not instrument logging.
         # We will either have already done it, or it is disabled.
         _extend_disabled_instrumentations("logging")
