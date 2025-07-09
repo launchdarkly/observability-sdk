@@ -57,6 +57,8 @@ export class ObservabilityClient {
 			disableLogs: options.disableLogs ?? false,
 			disableMetrics: options.disableMetrics ?? false,
 			disableTraces: options.disableTraces ?? false,
+			tracingOrigins: options.tracingOrigins ?? false,
+			urlBlocklist: options.urlBlocklist ?? [],
 		}
 	}
 
@@ -77,10 +79,11 @@ export class ObservabilityClient {
 				// Old attribute for connecting to LD project. Can be deprecated in the
 				// future in favor of X-LaunchDarkly-Project header.
 				'highlight.project_id': this.sdkKey,
+				'highlight.session_id': sessionAttributes.sessionId,
 				...this.options.resourceAttributes,
-				...sessionAttributes,
 			})
 
+			this.instrumentationManager.setSessionManager(this.sessionManager)
 			this.instrumentationManager.initialize(resource)
 			this.isInitialized = true
 

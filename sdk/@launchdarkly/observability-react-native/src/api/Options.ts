@@ -30,6 +30,19 @@ export interface ReactNativeOptions {
 	customHeaders?: Record<string, string>
 
 	/**
+	 * Specifies where the backend of the app lives. If specified, the SDK will attach tracing headers to outgoing requests whose destination URLs match a substring or regexp from this list, so that backend errors can be linked back to the session.
+	 * If 'true' is specified, all requests to the current domain will be matched.
+	 * @example tracingOrigins: ['localhost', /^\//, 'backend.myapp.com']
+	 */
+	tracingOrigins?: boolean | (string | RegExp)[]
+
+	/**
+	 * A list of URLs to block from tracing.
+	 * @example urlBlocklist: ['localhost', 'backend.myapp.com']
+	 */
+	urlBlocklist?: string[]
+
+	/**
 	 * Session timeout in milliseconds.
 	 * @default 30 * 60 * 1000 (30 minutes)
 	 */
