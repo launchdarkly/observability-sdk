@@ -1,0 +1,58 @@
+query GetSamplingConfig($project_id: String!) {
+	sampling_config(project_id: $project_id) {
+		logs {
+			samplingRatio
+			severityText {
+				matchValue
+				regexValue
+			}
+			message {
+				matchValue
+				regexValue
+			}
+			attributes {
+				key {
+					matchValue
+					regexValue
+				}
+				attribute {
+					matchValue
+					regexValue
+				}
+			}
+		}
+		spans {
+			samplingRatio
+			name {
+				matchValue
+				regexValue
+			}
+			attributes {
+				key {
+					matchValue
+					regexValue
+				}
+				attribute {
+					matchValue
+					regexValue
+				}
+			}
+			events {
+				name {
+					matchValue
+					regexValue
+				}
+				attributes {
+					key {
+						matchValue
+						regexValue
+					}
+					attribute {
+						matchValue
+						regexValue
+					}
+				}
+			}
+		}
+	}
+}

@@ -45,6 +45,10 @@ import {
 } from '@opentelemetry/core'
 import { ReactNativeOptions } from '../api/Options'
 import { Metric } from '../api/Metric'
+import { getSamplingConfig } from '../graph/getSamplingConfig'
+import { CustomSampler } from '../otel/sampling/CustomSampler'
+import { SamplingTraceExporter } from '../otel/SamplingTraceExporter'
+import { SamplingLogExporter } from '../otel/SamplingLogExporter'
 
 export class CustomBatchSpanProcessor extends BatchSpanProcessor {
 	private recentHttpSpans = new Map<string, number>()
@@ -108,6 +112,8 @@ export class InstrumentationManager {
 	private traceExporter?: SpanExporter
 	private logExporter?: LogRecordExporter
 	private metricExporter?: PushMetricExporter
+	private sampler: CustomSampler = new CustomSampler()
+	private projectId: string = ''
 
 	constructor(private options: ReactNativeOptions) {
 		this.serviceName =
@@ -124,6 +130,10 @@ export class InstrumentationManager {
 				...(this.options.customHeaders ?? {}),
 			}
 
+			this.projectId =
+				(resource.attributes['highlight.project_id'] as string) || ''
+
+			this.initializeSampling()
 			this.initializeTracing()
 			this.initializeLogs()
 			this.initializeMetrics()
@@ -147,12 +157,16 @@ export class InstrumentationManager {
 
 		propagation.setGlobalPropagator(compositePropagator)
 
-		const exporter =
+		const baseExporter =
 			this.traceExporter ??
 			new OTLPTraceExporter({
 				url: `${this.options.otlpEndpoint}/v1/traces`,
 				headers: this.headers,
 			})
+
+		const exporter = this.options.disableSampling
+			? baseExporter
+			: new SamplingTraceExporter(baseExporter, this.sampler)
 
 		const processors: SpanProcessor[] = [
 			new CustomBatchSpanProcessor(exporter, {
@@ -187,13 +201,32 @@ export class InstrumentationManager {
 		this._log('Tracing initialized')
 	}
 
+	private async initializeSampling() {
+		if (this.options.disableSampling || !this.projectId) return
+
+		try {
+			const samplingConfig = await getSamplingConfig(
+				this.projectId,
+				this.options.samplingEndpoint,
+			)
+			this.sampler.setConfig(samplingConfig)
+			this._log('Sampling configuration loaded')
+		} catch (error) {
+			console.warn('Failed to load sampling configuration:', error)
+		}
+	}
+
 	private initializeLogs() {
 		if (this.options.disableLogs) return
 
-		const logExporter = new OTLPLogExporter({
+		const baseLogExporter = new OTLPLogExporter({
 			headers: this.headers,
 			url: `${this.options.otlpEndpoint}/v1/logs`,
 		})
+
+		const logExporter = this.options.disableSampling
+			? baseLogExporter
+			: new SamplingLogExporter(baseLogExporter, this.sampler)
 
 		this.loggerProvider = new LoggerProvider({ resource: this.resource })
 
