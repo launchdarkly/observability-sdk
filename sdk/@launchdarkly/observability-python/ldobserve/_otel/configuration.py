@@ -90,13 +90,6 @@ class _OTELConfiguration:
         return self._meter
 
     def __init__(self, project_id: str, config: _ProcessedConfig):
-
-        if project_id is None:
-            # TODO: Do something better.
-            raise ValueError(
-                "Project ID is not set. Please call init() before configuring OpenTelemetry."
-            )
-
         self._project_id = project_id
         self._config = config
 

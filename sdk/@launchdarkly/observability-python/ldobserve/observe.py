@@ -109,7 +109,9 @@ _instance: typing.Optional[_ObserveInstance] = None
 def _use_instance(func):
     """Helper function to delegate calls to the instance if it exists."""
     if not _instance:
-        # TODO: Log usage error.
+        logging.getLogger(__name__).warning(
+            "The observability singleton was used before it was initialized."
+        )
         return
     return func(_instance)
 
