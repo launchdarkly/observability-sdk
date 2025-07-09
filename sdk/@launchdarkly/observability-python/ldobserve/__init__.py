@@ -1,3 +1,4 @@
+import logging
 import os
 from typing import List, Optional
 from ldclient.hook import Hook
@@ -67,6 +68,13 @@ class ObservabilityPlugin(Plugin):
         return PluginMetadata(name="launchdarkly-observability")
 
     def register(self, _client: LDClient, metadata: EnvironmentMetadata) -> None:
+        if metadata.sdk_key is None:
+            logging.getLogger(__name__).warning(
+                "The observability plugin was registered without an SDK key. "
+                "This will result in no data being sent to LaunchDarkly."
+            )
+            return
+
         _init(metadata.sdk_key, self._config)
 
     def get_hooks(_self, _metadata: EnvironmentMetadata) -> List[Hook]:
