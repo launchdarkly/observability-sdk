@@ -81,7 +81,10 @@ import { ObserveOptions } from '../client/types/observe'
 export class ObserveSDK implements Observe {
 	/** Verbose project ID that is exposed to users. Legacy users may still be using ints. */
 	organizationID!: string
-	private readonly _options: ObserveOptions
+	private readonly _options: ObserveOptions & {
+		projectId: string
+		sessionSecureId: string
+	}
 	private readonly _integrations: IntegrationClient[] = []
 	private readonly _gauges: Map<string, Gauge> = new Map<string, Gauge>()
 	private readonly _counters: Map<string, Counter> = new Map<
@@ -106,32 +109,35 @@ export class ObserveSDK implements Observe {
 	) {
 		this._options = options
 		this.organizationID = options.projectId
+	}
+
+	public async start() {
 		setupBrowserTracing(
 			{
 				...{
 					backendUrl:
-						options?.backendUrl ??
+						this._options?.backendUrl ??
 						'https://pub.observability.app.launchdarkly.com',
 					otlpEndpoint:
-						options?.otel?.otlpEndpoint ??
+						this._options?.otel?.otlpEndpoint ??
 						'https://otel.observability.app.launchdarkly.com',
-					projectId: options.projectId,
-					sessionSecureId: options.sessionSecureId,
-					environment: options?.environment ?? 'production',
+					projectId: this._options.projectId,
+					sessionSecureId: this._options.sessionSecureId,
+					environment: this._options?.environment ?? 'production',
 					networkRecordingOptions:
-						typeof options?.networkRecording === 'object'
-							? options.networkRecording
+						typeof this._options?.networkRecording === 'object'
+							? this._options.networkRecording
 							: undefined,
-					tracingOrigins: options?.tracingOrigins,
-					serviceName: options?.serviceName ?? 'browser',
-					instrumentations: options?.otel?.instrumentations,
-					eventNames: options?.otel?.eventNames,
+					tracingOrigins: this._options?.tracingOrigins,
+					serviceName: this._options?.serviceName ?? 'browser',
+					instrumentations: this._options?.otel?.instrumentations,
+					eventNames: this._options?.otel?.eventNames,
 				},
 				getIntegrations: () => this._integrations,
 			},
 			this.sampler,
 		)
-		const client = new GraphQLClient(`${options.backendUrl}`, {
+		const client = new GraphQLClient(`${this._options.backendUrl}`, {
 			headers: {},
 		})
 		this.graphqlSDK = getSdk(client, getGraphQLRequestWrapper())
