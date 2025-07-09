@@ -17,9 +17,3 @@
 <!--
  Backend - Do we need to consider migrations or backfilling data?
 -->
-
-## Does this work require review from our design team?
-
-<!--
- Request review from julian-highlight / our design team
--->
