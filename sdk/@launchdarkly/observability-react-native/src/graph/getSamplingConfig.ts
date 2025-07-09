@@ -1,94 +1,104 @@
-export interface MatchConfig {
-	regexValue?: string
-	matchValue?: string
-}
-
-export interface AttributeMatchConfig {
-	key?: MatchConfig
-	attribute?: MatchConfig
-}
-
-export interface SpanEventMatchConfig {
-	name?: MatchConfig
-	attributes?: AttributeMatchConfig[]
-}
-
-export interface SpanSamplingConfig {
-	name?: MatchConfig
-	attributes?: AttributeMatchConfig[]
-	events?: SpanEventMatchConfig[]
-	samplingRatio?: number
-}
-
-export interface LogSamplingConfig {
-	message?: MatchConfig
-	severityText?: MatchConfig
-	attributes?: AttributeMatchConfig[]
-	samplingRatio?: number
-}
-
-export interface SamplingConfig {
-	spans?: SpanSamplingConfig[]
-	logs?: LogSamplingConfig[]
-}
-
 export type Maybe<T> = T | null
 
-const GET_SAMPLING_CONFIG_QUERY = `
-	fragment MatchParts on MatchConfig {
-		regexValue
-		matchValue
-	}
+export type MatchConfig = {
+	__typename?: 'MatchConfig'
+	regexValue?: Maybe<string>
+	matchValue?: any
+}
 
-	query GetSamplingConfig($organization_verbose_id: String!) {
-		sampling(organization_verbose_id: $organization_verbose_id) {
-			spans {
+export type AttributeMatchConfig = {
+	__typename?: 'AttributeMatchConfig'
+	key: MatchConfig
+	attribute: MatchConfig
+}
+
+export type SpanEventMatchConfig = {
+	__typename?: 'SpanEventMatchConfig'
+	attributes?: Maybe<Array<AttributeMatchConfig>>
+	name?: Maybe<MatchConfig>
+}
+
+export type SpanSamplingConfig = {
+	__typename?: 'SpanSamplingConfig'
+	attributes?: Maybe<Array<AttributeMatchConfig>>
+	events?: Maybe<Array<SpanEventMatchConfig>>
+	name?: Maybe<MatchConfig>
+	samplingRatio: number
+}
+
+export type LogSamplingConfig = {
+	__typename?: 'LogSamplingConfig'
+	attributes?: Maybe<Array<AttributeMatchConfig>>
+	message?: Maybe<MatchConfig>
+	severityText?: Maybe<MatchConfig>
+	samplingRatio: number
+}
+
+export type SamplingConfig = {
+	__typename?: 'SamplingConfig'
+	logs?: Maybe<Array<LogSamplingConfig>>
+	spans?: Maybe<Array<SpanSamplingConfig>>
+}
+
+const GetSamplingConfigQuery = `
+query GetSamplingConfig($organization_verbose_id: String!) {
+	sampling(organization_verbose_id: $organization_verbose_id) {
+		spans {
+			name {
+				regexValue
+				matchValue
+			}
+			attributes {
+				key {
+					regexValue
+					matchValue
+				}
+				attribute {
+					regexValue
+					matchValue
+				}
+			}
+			events {
 				name {
-					...MatchParts
+					regexValue
+					matchValue
 				}
 				attributes {
 					key {
-						...MatchParts
+						regexValue
+						matchValue
 					}
 					attribute {
-						...MatchParts
+						regexValue
+						matchValue
 					}
 				}
-				events {
-					name {
-						...MatchParts
-					}
-					attributes {
-						key {
-							...MatchParts
-						}
-						attribute {
-							...MatchParts
-						}
-					}
-				}
-				samplingRatio
 			}
-			logs {
-				message {
-					...MatchParts
-				}
-				severityText {
-					...MatchParts
-				}
-				attributes {
-					key {
-						...MatchParts
-					}
-					attribute {
-						...MatchParts
-					}
-				}
-				samplingRatio
+			samplingRatio
+		}
+		logs {
+			message {
+				regexValue
+				matchValue
 			}
+			severityText {
+				regexValue
+				matchValue
+			}
+			attributes {
+				key {
+					regexValue
+					matchValue
+				}
+				attribute {
+					regexValue
+					matchValue
+				}
+			}
+			samplingRatio
 		}
 	}
-`
+}`
 
 export async function getSamplingConfig(
 	organizationVerboseId: string,
@@ -101,7 +111,7 @@ export async function getSamplingConfig(
 				'Content-Type': 'application/json',
 			},
 			body: JSON.stringify({
-				query: GET_SAMPLING_CONFIG_QUERY,
+				query: GetSamplingConfigQuery,
 				variables: { organization_verbose_id: organizationVerboseId },
 			}),
 		})
