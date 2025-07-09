@@ -8,4 +8,3 @@ vi.mock('expo-constants', () => ({
 		},
 	},
 }))
-
