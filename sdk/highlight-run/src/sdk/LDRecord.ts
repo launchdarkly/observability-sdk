@@ -11,7 +11,8 @@ class _LDRecord extends BufferedClass<Record> implements Record {
 	}
 
 	async start(options?: StartOptions) {
-		return this._bufferCall('start', [options])
+		// avoid buffering the start call
+		return this._sdk.start(options)
 	}
 
 	stop(options?: StartOptions) {
