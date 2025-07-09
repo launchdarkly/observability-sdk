@@ -100,6 +100,7 @@ export class ObserveSDK implements Observe {
 		UpDownCounter
 	>()
 	private readonly sampler: ExportSampler = new CustomSampler()
+	private _started = false
 	private graphqlSDK!: Sdk
 	constructor(
 		options: ObserveOptions & {
@@ -112,6 +113,9 @@ export class ObserveSDK implements Observe {
 	}
 
 	public async start() {
+		if (this._started) {
+			return
+		}
 		setupBrowserTracing(
 			{
 				...{
@@ -137,12 +141,17 @@ export class ObserveSDK implements Observe {
 			},
 			this.sampler,
 		)
-		const client = new GraphQLClient(`${this._options.backendUrl}`, {
-			headers: {},
-		})
+		const client = new GraphQLClient(
+			this._options.backendUrl ??
+				'https://pub.observability.app.launchdarkly.com',
+			{
+				headers: {},
+			},
+		)
 		this.graphqlSDK = getSdk(client, getGraphQLRequestWrapper())
-		this.configureSampling()
+		await this.configureSampling()
 		this.setupListeners()
+		this._started = true
 	}
 
 	private async configureSampling() {
