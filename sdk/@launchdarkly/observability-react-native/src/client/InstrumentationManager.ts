@@ -221,7 +221,10 @@ export class InstrumentationManager {
 			url: `${this.options.otlpEndpoint}/v1/logs`,
 		})
 
-		const logExporter = new SamplingLogExporter(baseLogExporter, this.sampler)
+		const logExporter = new SamplingLogExporter(
+			baseLogExporter,
+			this.sampler,
+		)
 
 		this.loggerProvider = new LoggerProvider({ resource: this.resource })
 
