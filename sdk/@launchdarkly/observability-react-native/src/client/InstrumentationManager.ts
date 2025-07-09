@@ -45,6 +45,10 @@ import {
 } from '@opentelemetry/core'
 import { ReactNativeOptions } from '../api/Options'
 import { Metric } from '../api/Metric'
+import {
+	getCorsUrlsPattern,
+	shouldNetworkRequestBeTraced,
+} from '../utils/networkUtils'
 
 export class CustomBatchSpanProcessor extends BatchSpanProcessor {
 	private recentHttpSpans = new Map<string, number>()
@@ -55,6 +59,10 @@ export class CustomBatchSpanProcessor extends BatchSpanProcessor {
 	}
 
 	onEnd(span: ReadableSpan): void {
+		if (span.attributes['highlight.drop'] === true) {
+			return
+		}
+
 		if (this.isHttpSpan(span)) {
 			const spanKey = this.generateHttpSpanKey(span)
 			const now = Date.now()
@@ -174,12 +182,38 @@ export class InstrumentationManager {
 		registerInstrumentations({
 			instrumentations: [
 				new FetchInstrumentation({
-					// TODO: Verify this works the same as the web implementation.
-					// Look at getCorsUrlsPattern. Take into account tracingOrigins.
-					propagateTraceHeaderCorsUrls: /.*/,
+					propagateTraceHeaderCorsUrls: getCorsUrlsPattern(
+						this.options.tracingOrigins,
+					),
+					requestHook: (span, request) => {
+						const url = request.url
+						if (
+							!shouldNetworkRequestBeTraced(
+								url,
+								this.options.tracingOrigins ?? [],
+								[],
+							)
+						) {
+							span.setAttribute('highlight.drop', true)
+						}
+					},
 				}),
 				new XMLHttpRequestInstrumentation({
-					propagateTraceHeaderCorsUrls: /.*/,
+					propagateTraceHeaderCorsUrls: getCorsUrlsPattern(
+						this.options.tracingOrigins,
+					),
+					requestHook: (span, xhr) => {
+						const url = xhr.responseURL || ''
+						if (
+							!shouldNetworkRequestBeTraced(
+								url,
+								this.options.tracingOrigins ?? [],
+								[],
+							)
+						) {
+							span.setAttribute('highlight.drop', true)
+						}
+					},
 				}),
 			],
 		})

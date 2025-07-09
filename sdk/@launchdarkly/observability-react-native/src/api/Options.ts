@@ -42,6 +42,15 @@ export interface ReactNativeOptions {
 	debug?: boolean
 
 	/**
+	 * Specifies where the backend of the app lives. If specified, the React Native plugin will attach
+	 * trace headers to outgoing requests whose destination URLs match a substring
+	 * or regexp from this list, so that backend errors can be linked back to the session.
+	 * If 'true' is specified, all requests to localhost and relative URLs will be matched.
+	 * @example tracingOrigins: ['localhost', /^\//, 'backend.myapp.com']
+	 */
+	tracingOrigins?: boolean | (string | RegExp)[]
+
+	/**
 	 * Whether errors tracking is disabled.
 	 */
 	disableErrorTracking?: boolean
