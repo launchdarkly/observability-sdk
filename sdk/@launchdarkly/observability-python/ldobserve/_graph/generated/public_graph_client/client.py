@@ -94,7 +94,6 @@ class Client(AsyncBaseClient):
             **kwargs
         )
         data = self.get_data(response)
-        logging.getLogger(__name__).debug("Got sampling config: %s", data)
         return GetSamplingConfig.model_validate(data)
 
     async def execute_custom_operation(
