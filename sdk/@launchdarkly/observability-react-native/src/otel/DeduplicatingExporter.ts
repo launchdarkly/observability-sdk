@@ -3,8 +3,8 @@ import { ReadableSpan } from '@opentelemetry/sdk-trace-web'
 import { SpanExporter } from '@opentelemetry/sdk-trace-web'
 import { ExportResult } from '@opentelemetry/core'
 
-const FETCH_LIB = '@opentelemetry/instrumentation-fetch'
-const XHR_LIB = '@opentelemetry/instrumentation-xml-http-request'
+export const FETCH_LIB = '@opentelemetry/instrumentation-fetch'
+export const XHR_LIB = '@opentelemetry/instrumentation-xml-http-request'
 
 export class DeduplicatingExporter implements SpanExporter {
 	constructor(
