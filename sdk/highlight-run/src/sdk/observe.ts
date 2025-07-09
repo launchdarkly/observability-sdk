@@ -116,6 +116,7 @@ export class ObserveSDK implements Observe {
 		if (this._started) {
 			return
 		}
+		this._started = true
 		setupBrowserTracing(
 			{
 				...{
@@ -151,7 +152,6 @@ export class ObserveSDK implements Observe {
 		this.graphqlSDK = getSdk(client, getGraphQLRequestWrapper())
 		await this.configureSampling()
 		this.setupListeners()
-		this._started = true
 	}
 
 	private async configureSampling() {
