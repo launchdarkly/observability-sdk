@@ -111,7 +111,7 @@ export class InstrumentationManager {
 	private headers: Record<string, string> = {}
 	private sessionManager?: SessionManager
 
-	constructor(private options: ReactNativeOptions) {
+	constructor(private options: Required<ReactNativeOptions>) {
 		this.serviceName =
 			this.options.serviceName ??
 			'launchdarkly-observability-react-native'
