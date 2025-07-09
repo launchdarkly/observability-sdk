@@ -12,14 +12,14 @@ type CustomTraceContextPropagatorConfig = {
 }
 
 export class CustomTraceContextPropagator extends W3CTraceContextPropagator {
-	private highlightEndpoints: string[]
+	private internalEndpoints: string[]
 	private tracingOrigins: CustomTraceContextPropagatorConfig['tracingOrigins']
 	private urlBlocklist: CustomTraceContextPropagatorConfig['urlBlocklist']
 
 	constructor(config: CustomTraceContextPropagatorConfig) {
 		super()
 
-		this.highlightEndpoints = [
+		this.internalEndpoints = [
 			`${config.otlpEndpoint}/v1/traces`,
 			`${config.otlpEndpoint}/v1/logs`,
 			`${config.otlpEndpoint}/v1/metrics`,
@@ -42,7 +42,7 @@ export class CustomTraceContextPropagator extends W3CTraceContextPropagator {
 		if (typeof url === 'string') {
 			const shouldRecord = shouldRecordRequest(
 				url,
-				this.highlightEndpoints,
+				this.internalEndpoints,
 				this.tracingOrigins,
 				this.urlBlocklist,
 			)

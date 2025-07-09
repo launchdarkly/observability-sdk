@@ -12,14 +12,15 @@ const isLaunchDarklyEvalNetworkResource = (name: string) => {
 }
 
 /**
- * Returns true if the name is a Highlight network resource.
- * This is used to filter out Highlight requests/responses from showing up on end application's network resources.
+ * Returns true if the name is a internal network resource.
+ * This is used to filter out internal requests/responses from showing up on end
+ * application's network resources.
  */
-const isHighlightNetworkResourceFilter = (
+const isInternalNetworkResourceFilter = (
 	name: string,
-	highlightEndpoints: string[],
+	internalEndpoints: string[],
 ) =>
-	highlightEndpoints.some((backendUrl) =>
+	internalEndpoints.some((backendUrl) =>
 		name.toLocaleLowerCase().includes(backendUrl),
 	)
 
@@ -27,18 +28,17 @@ const isHighlightNetworkResourceFilter = (
 // replay, including the body and headers.
 export const shouldNetworkRequestBeRecorded = (
 	url: string,
-	highlightEndpoints: string[],
+	internalEndpoints: string[],
 	_tracingOrigins?: boolean | (string | RegExp)[],
 ) => {
 	return (
-		!isHighlightNetworkResourceFilter(url, highlightEndpoints) &&
+		!isInternalNetworkResourceFilter(url, internalEndpoints) &&
 		!isLaunchDarklyEvalNetworkResource(url) &&
 		!isLaunchDarklyEventsNetworkResource(url)
 	)
 }
 
-// Determines whether we want to attach the x-highlight-request header to the
-// request. We want to avoid adding this to external requests.
+// Determines whether we want to assign trace propagation headers to a request.
 export const shouldNetworkRequestBeTraced = (
 	url: string,
 	tracingOrigins: boolean | (string | RegExp)[],
@@ -51,28 +51,18 @@ export const shouldNetworkRequestBeTraced = (
 	) {
 		return false
 	}
-	let patterns: (string | RegExp)[] = []
-	if (tracingOrigins === true) {
-		patterns = ['localhost', /^\//]
-		if (window?.location?.host) {
-			patterns.push(window.location.host)
-		}
-	} else if (tracingOrigins instanceof Array) {
-		patterns = tracingOrigins
+
+	const patterns = getCorsUrlsPattern(tracingOrigins)
+	if (Array.isArray(patterns)) {
+		return patterns.some((pattern) => pattern.test(url))
 	}
 
-	let result = false
-	patterns.forEach((pattern) => {
-		if (url.match(pattern)) {
-			result = true
-		}
-	})
-	return result
+	return patterns.test(url)
 }
 
 export const shouldRecordRequest = (
 	url: string,
-	highlightEndpoints: string[],
+	internalEndpoints: string[],
 	tracingOrigins: TracingOrigins,
 	urlBlocklist: string[],
 ) => {
@@ -85,7 +75,7 @@ export const shouldRecordRequest = (
 
 	return shouldNetworkRequestBeRecorded(
 		url,
-		highlightEndpoints,
+		internalEndpoints,
 		tracingOrigins,
 	)
 }
