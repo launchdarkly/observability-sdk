@@ -60,16 +60,4 @@ export interface ReactNativeOptions {
 	 * Whether metrics are disabled.
 	 */
 	disableMetrics?: boolean
-
-	/**
-	 * Whether sampling is disabled.
-	 * @default false
-	 */
-	disableSampling?: boolean
-
-	/**
-	 * Sampling configuration endpoint URL.
-	 * @default 'https://pub-graph.highlight.io'
-	 */
-	samplingEndpoint?: string
 }

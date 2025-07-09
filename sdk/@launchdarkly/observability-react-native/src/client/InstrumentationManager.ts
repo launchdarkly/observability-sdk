@@ -50,6 +50,8 @@ import { CustomSampler } from '../otel/sampling/CustomSampler'
 import { SamplingTraceExporter } from '../otel/SamplingTraceExporter'
 import { SamplingLogExporter } from '../otel/SamplingLogExporter'
 
+const SAMPLING_BACKEND_URL = 'https://pub.observability.app.launchdarkly.com'
+
 export class CustomBatchSpanProcessor extends BatchSpanProcessor {
 	private recentHttpSpans = new Map<string, number>()
 	private readonly DEDUP_WINDOW_MS = 1000
@@ -164,9 +166,7 @@ export class InstrumentationManager {
 				headers: this.headers,
 			})
 
-		const exporter = this.options.disableSampling
-			? baseExporter
-			: new SamplingTraceExporter(baseExporter, this.sampler)
+		const exporter = new SamplingTraceExporter(baseExporter, this.sampler)
 
 		const processors: SpanProcessor[] = [
 			new CustomBatchSpanProcessor(exporter, {
@@ -202,13 +202,10 @@ export class InstrumentationManager {
 	}
 
 	private async initializeSampling() {
-		if (this.options.disableSampling || !this.projectId) return
+		if (!this.projectId) return
 
 		try {
-			const samplingConfig = await getSamplingConfig(
-				this.projectId,
-				this.options.samplingEndpoint,
-			)
+			const samplingConfig = await getSamplingConfig(this.projectId)
 			this.sampler.setConfig(samplingConfig)
 			this._log('Sampling configuration loaded')
 		} catch (error) {
@@ -224,9 +221,7 @@ export class InstrumentationManager {
 			url: `${this.options.otlpEndpoint}/v1/logs`,
 		})
 
-		const logExporter = this.options.disableSampling
-			? baseLogExporter
-			: new SamplingLogExporter(baseLogExporter, this.sampler)
+		const logExporter = new SamplingLogExporter(baseLogExporter, this.sampler)
 
 		this.loggerProvider = new LoggerProvider({ resource: this.resource })
 

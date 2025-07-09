@@ -57,9 +57,6 @@ export class ObservabilityClient {
 			disableLogs: options.disableLogs ?? false,
 			disableMetrics: options.disableMetrics ?? false,
 			disableTraces: options.disableTraces ?? false,
-			disableSampling: options.disableSampling ?? false,
-			samplingEndpoint:
-				options.samplingEndpoint ?? 'https://pub-graph.highlight.io',
 		}
 	}
 

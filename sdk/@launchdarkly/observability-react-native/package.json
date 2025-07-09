@@ -10,7 +10,8 @@
 		"build": "vite build",
 		"typegen": "tsc",
 		"test": "vitest run",
-		"test:watch": "vitest watch"
+		"test:watch": "vitest watch",
+		"codegen": "graphql-codegen"
 	},
 	"main": "./dist/index.cjs",
 	"module": "./dist/index.js",
@@ -28,6 +29,7 @@
 		"access": "public"
 	},
 	"dependencies": {
+		"@graphql-codegen/cli": "^5.0.7",
 		"@opentelemetry/api": "^1.9.0",
 		"@opentelemetry/exporter-trace-otlp-http": "^0.56.0",
 		"@opentelemetry/instrumentation": "^0.57.2",
@@ -42,7 +44,9 @@
 		"react-native": ">=0.70.0"
 	},
 	"devDependencies": {
+		"@graphql-codegen/client-preset": "^4.8.3",
 		"@launchdarkly/react-native-client-sdk": "^10.0.0",
+		"graphql": "^16.11.0",
 		"react-native": "^0.79.0",
 		"typescript": "^5.0.4",
 		"vite": "^6.3.4",

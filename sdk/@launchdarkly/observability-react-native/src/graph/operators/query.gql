@@ -1,58 +1,53 @@
-query GetSamplingConfig($project_id: String!) {
-	sampling_config(project_id: $project_id) {
-		logs {
-			samplingRatio
-			severityText {
-				matchValue
-				regexValue
-			}
-			message {
-				matchValue
-				regexValue
-			}
-			attributes {
-				key {
-					matchValue
-					regexValue
-				}
-				attribute {
-					matchValue
-					regexValue
-				}
-			}
-		}
+fragment MatchParts on MatchConfig {
+	regexValue
+	matchValue
+}
+
+query GetSamplingConfig($organization_verbose_id: String!) {
+	sampling(organization_verbose_id: $organization_verbose_id) {
 		spans {
-			samplingRatio
 			name {
-				matchValue
-				regexValue
+				...MatchParts
 			}
 			attributes {
 				key {
-					matchValue
-					regexValue
+					...MatchParts
 				}
 				attribute {
-					matchValue
-					regexValue
+					...MatchParts
 				}
 			}
 			events {
 				name {
-					matchValue
-					regexValue
+					...MatchParts
 				}
 				attributes {
 					key {
-						matchValue
-						regexValue
+						...MatchParts
 					}
 					attribute {
-						matchValue
-						regexValue
+						...MatchParts
 					}
 				}
 			}
+			samplingRatio
+		}
+		logs {
+			message {
+				...MatchParts
+			}
+			severityText {
+				...MatchParts
+			}
+			attributes {
+				key {
+					...MatchParts
+				}
+				attribute {
+					...MatchParts
+				}
+			}
+			samplingRatio
 		}
 	}
 }
