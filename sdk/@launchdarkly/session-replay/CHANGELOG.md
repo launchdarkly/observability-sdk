@@ -1,5 +1,13 @@
 # @launchdarkly/session-replay
 
+## 0.3.4
+
+### Patch Changes
+
+- a151858: support delayed plugin initialization via manualStart setting and start API.
+- Updated dependencies [a151858]
+    - highlight.run@9.18.20
+
 ## 0.3.3
 
 ### Patch Changes

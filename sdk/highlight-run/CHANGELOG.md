@@ -1,5 +1,11 @@
 # highlight.run
 
+## 9.18.20
+
+### Patch Changes
+
+- a151858: support delayed plugin initialization via manualStart setting and start API.
+
 ## 9.18.19
 
 ### Patch Changes
