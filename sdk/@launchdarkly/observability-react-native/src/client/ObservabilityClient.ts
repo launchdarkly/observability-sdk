@@ -53,6 +53,7 @@ export class ObservabilityClient {
 			},
 			sessionTimeout: options.sessionTimeout ?? 30 * 60 * 1000,
 			debug: options.debug ?? false,
+			tracingOrigins: options.tracingOrigins ?? false,
 			disableErrorTracking: options.disableErrorTracking ?? false,
 			disableLogs: options.disableLogs ?? false,
 			disableMetrics: options.disableMetrics ?? false,

@@ -19,36 +19,29 @@ export const getCorsUrlsPattern = (
 	return [/^$/]
 }
 
-export const shouldNetworkRequestBeTraced = (
-	url: string,
-	tracingOrigins: boolean | (string | RegExp)[],
-	urlBlocklist: string[],
-): boolean => {
-	if (
-		urlBlocklist.some((blockedUrl) =>
-			url.toLowerCase().includes(blockedUrl),
-		)
-	) {
-		return false
+export const getIgnoreUrlsPattern = (
+	tracingOrigins?: boolean | (string | RegExp)[],
+): Array<string | RegExp> => {
+	if (tracingOrigins === false || tracingOrigins === undefined) {
+		return [/.*/] // Ignore all URLs if tracingOrigins is disabled
 	}
-
-	let patterns: (string | RegExp)[] = []
+	
 	if (tracingOrigins === true) {
-		patterns = [
-			'localhost',
-			/^\//,
-			/^http:\/\/localhost/,
-			/^https:\/\/localhost/,
-		]
-	} else if (tracingOrigins instanceof Array) {
-		patterns = tracingOrigins
+		return [/^(?!.*localhost)(?!\/)(?!http:\/\/localhost)(?!https:\/\/localhost).*$/]
 	}
-
-	let result = false
-	patterns.forEach((pattern) => {
-		if (url.match(pattern)) {
-			result = true
+	
+	if (Array.isArray(tracingOrigins)) {
+		if (tracingOrigins.length === 0) {
+			return [/.*/]
 		}
-	})
-	return result
+		
+		// Create a negative lookahead pattern that ignores URLs that don't match any of the tracingOrigins
+		const patterns = tracingOrigins.map((pattern) =>
+			typeof pattern === 'string' ? pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') : pattern.source
+		)
+		const combinedPattern = `^(?!.*(${patterns.join('|')})).*$`
+		return [new RegExp(combinedPattern)]
+	}
+	
+	return [/.*/] // Default to ignoring all URLs
 }

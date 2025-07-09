@@ -47,7 +47,7 @@ import { ReactNativeOptions } from '../api/Options'
 import { Metric } from '../api/Metric'
 import {
 	getCorsUrlsPattern,
-	shouldNetworkRequestBeTraced,
+	getIgnoreUrlsPattern,
 } from '../utils/networkUtils'
 
 export class CustomBatchSpanProcessor extends BatchSpanProcessor {
@@ -59,10 +59,6 @@ export class CustomBatchSpanProcessor extends BatchSpanProcessor {
 	}
 
 	onEnd(span: ReadableSpan): void {
-		if (span.attributes['highlight.drop'] === true) {
-			return
-		}
-
 		if (this.isHttpSpan(span)) {
 			const spanKey = this.generateHttpSpanKey(span)
 			const now = Date.now()
@@ -185,35 +181,13 @@ export class InstrumentationManager {
 					propagateTraceHeaderCorsUrls: getCorsUrlsPattern(
 						this.options.tracingOrigins,
 					),
-					requestHook: (span, request) => {
-						const url = request.url
-						if (
-							!shouldNetworkRequestBeTraced(
-								url,
-								this.options.tracingOrigins ?? [],
-								[],
-							)
-						) {
-							span.setAttribute('highlight.drop', true)
-						}
-					},
+					ignoreUrls: getIgnoreUrlsPattern(this.options.tracingOrigins),
 				}),
 				new XMLHttpRequestInstrumentation({
 					propagateTraceHeaderCorsUrls: getCorsUrlsPattern(
 						this.options.tracingOrigins,
 					),
-					requestHook: (span, xhr) => {
-						const url = xhr.responseURL || ''
-						if (
-							!shouldNetworkRequestBeTraced(
-								url,
-								this.options.tracingOrigins ?? [],
-								[],
-							)
-						) {
-							span.setAttribute('highlight.drop', true)
-						}
-					},
+					ignoreUrls: getIgnoreUrlsPattern(this.options.tracingOrigins),
 				}),
 			],
 		})

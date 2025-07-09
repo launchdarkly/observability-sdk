@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
 	getCorsUrlsPattern,
-	shouldNetworkRequestBeTraced,
+	getIgnoreUrlsPattern,
 } from './networkUtils'
 
 describe('getCorsUrlsPattern', () => {
@@ -33,71 +33,43 @@ describe('getCorsUrlsPattern', () => {
 	})
 })
 
-describe('shouldNetworkRequestBeTraced', () => {
-	it('returns true for localhost when tracingOrigins is true', () => {
-		expect(
-			shouldNetworkRequestBeTraced('http://localhost/api', true, []),
-		).toBe(true)
-		expect(
-			shouldNetworkRequestBeTraced('https://localhost/api', true, []),
-		).toBe(true)
+describe('getIgnoreUrlsPattern', () => {
+	it('returns ignore-all pattern when tracingOrigins is false', () => {
+		const result = getIgnoreUrlsPattern(false)
+		expect(result).toEqual([/.*/])
 	})
 
-	it('returns true for relative URLs when tracingOrigins is true', () => {
-		expect(shouldNetworkRequestBeTraced('/api/test', true, [])).toBe(true)
+	it('returns ignore-all pattern when tracingOrigins is undefined', () => {
+		const result = getIgnoreUrlsPattern(undefined)
+		expect(result).toEqual([/.*/])
 	})
 
-	it('returns false for external URLs when tracingOrigins is true', () => {
-		expect(
-			shouldNetworkRequestBeTraced('https://example.com/api', true, []),
-		).toBe(false)
+	it('returns pattern to ignore non-localhost URLs when tracingOrigins is true', () => {
+		const result = getIgnoreUrlsPattern(true)
+		expect(result).toHaveLength(1)
+		expect(result[0]).toBeInstanceOf(RegExp)
+		
+		const ignorePattern = result[0] as RegExp
+		expect(ignorePattern.test('http://localhost/api')).toBe(false)
+		expect(ignorePattern.test('https://localhost/api')).toBe(false)
+		expect(ignorePattern.test('/api/test')).toBe(false)
+		
+		expect(ignorePattern.test('https://example.com/api')).toBe(true)
 	})
 
-	it('returns true when URL matches tracingOrigins array', () => {
-		expect(
-			shouldNetworkRequestBeTraced(
-				'https://api.example.com/test',
-				['api.example.com'],
-				[],
-			),
-		).toBe(true)
+	it('returns pattern to ignore URLs that do not match tracingOrigins array', () => {
+		const result = getIgnoreUrlsPattern(['api.example.com'])
+		expect(result).toHaveLength(1)
+		expect(result[0]).toBeInstanceOf(RegExp)
+		
+		const ignorePattern = result[0] as RegExp
+		expect(ignorePattern.test('https://api.example.com/test')).toBe(false)
+		
+		expect(ignorePattern.test('https://other.com/api')).toBe(true)
 	})
 
-	it('returns false when URL is in blocklist', () => {
-		expect(
-			shouldNetworkRequestBeTraced('https://blocked.com/api', true, [
-				'blocked.com',
-			]),
-		).toBe(false)
-	})
-
-	it('returns false when tracingOrigins is empty array', () => {
-		expect(
-			shouldNetworkRequestBeTraced('https://example.com/api', [], []),
-		).toBe(false)
-	})
-
-	it('supports regex patterns in tracingOrigins', () => {
-		expect(
-			shouldNetworkRequestBeTraced(
-				'https://api.example.com/test',
-				[/.*example\.com.*/],
-				[],
-			),
-		).toBe(true)
-	})
-
-	it('returns false when tracingOrigins is false', () => {
-		expect(
-			shouldNetworkRequestBeTraced('https://example.com/api', false, []),
-		).toBe(false)
-	})
-
-	it('handles case insensitive blocklist matching', () => {
-		expect(
-			shouldNetworkRequestBeTraced('https://BLOCKED.COM/api', true, [
-				'blocked.com',
-			]),
-		).toBe(false)
+	it('returns ignore-all pattern when tracingOrigins is empty array', () => {
+		const result = getIgnoreUrlsPattern([])
+		expect(result).toEqual([/.*/])
 	})
 })
