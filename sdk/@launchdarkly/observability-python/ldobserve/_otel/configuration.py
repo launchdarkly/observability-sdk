@@ -6,6 +6,7 @@ from grpc import Compression
 from ldobserve._otel._sampling.custom_sampler import CustomSampler
 from ldobserve._otel.sampling_log_exporter import SamplingLogExporter
 from ldobserve._otel.sampling_trace_exporter import SamplingTraceExporter
+from ldobserve._graph.get_sampling_config import get_sampling_config
 from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
 from opentelemetry.instrumentation.environment_variables import (
     OTEL_PYTHON_DISABLED_INSTRUMENTATIONS,
@@ -107,7 +108,11 @@ class _OTELConfiguration:
         )
 
         sampler = CustomSampler()
-        # TODO: Get and set config.
+        get_sampling_config(
+            self._config.backend_url,
+            self._project_id,
+            lambda config: sampler.set_config(config),
+        )
 
         self._tracer_provider = TracerProvider(resource=resource)
         self._tracer_provider.add_span_processor(

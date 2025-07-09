@@ -10,6 +10,7 @@ from opentelemetry.sdk.environment_variables import (
 )
 
 _DEFAULT_OTLP_ENDPOINT = "https://otel.observability.app.launchdarkly.com:4317"
+_DEFAULT_BACKEND_URL = "https://pub.observability.app.launchdarkly.com"
 _DEFAULT_INSTRUMENT_LOGGING = True
 _DEFAULT_LOG_LEVEL = logging.INFO
 _DEFAULT_DISABLE_EXPORT_ERROR_LOGGING = False
@@ -23,6 +24,13 @@ class ObservabilityConfig:
     Used to set a custom OTLP endpoint.
 
     Alternatively, set the OTEL_EXPORTER_OTLP_ENDPOINT environment variable.
+    """
+
+    backend_url: Optional[str] = None
+    """
+    Specifies the URL used for non-OTLP operations.
+
+    This includes accessing client sampling configuration.
     """
 
     instrument_logging: Optional[bool] = None
@@ -123,6 +131,7 @@ class _ProcessedConfig:
     disable_export_error_logging: bool
     log_correlation: bool
     disabled_instrumentations: list[str]
+    backend_url: str
 
     def __init__(self, config: ObservabilityConfig):
         self.otlp_endpoint = config.otlp_endpoint or os.getenv(
@@ -131,6 +140,7 @@ class _ProcessedConfig:
         env_instrument_logging = os.getenv(
             _OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED, None
         )
+        self.backend_url = config.backend_url or _DEFAULT_BACKEND_URL
 
         self.instrument_logging = (
             config.instrument_logging

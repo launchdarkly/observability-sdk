@@ -106,13 +106,12 @@ class _ObserveInstance:
 _instance: typing.Optional[_ObserveInstance] = None
 
 
-def _use_instance(func_name: str, *args, **kwargs):
+def _use_instance(func):
     """Helper function to delegate calls to the instance if it exists."""
     if not _instance:
         # TODO: Log usage error.
         return
-    method = getattr(_instance, func_name)
-    return method(*args, **kwargs)
+    return func(_instance)
 
 
 def record_exception(error: Exception, attributes: typing.Optional[Attributes] = None):
@@ -136,7 +135,7 @@ def record_exception(error: Exception, attributes: typing.Optional[Attributes] =
     :param attributes: additional metadata to attribute to this error.
     :return: None
     """
-    _use_instance("record_exception", error, attributes)
+    _use_instance(lambda instance: instance.record_exception(error, attributes))
 
 
 def record_metric(
@@ -152,7 +151,7 @@ def record_metric(
     :param attributes: additional metadata which can be used to filter and group values.
     :return: None
     """
-    _use_instance("record_metric", name, value, attributes)
+    _use_instance(lambda instance: instance.record_metric(name, value, attributes))
 
 
 def record_count(name: str, value: int, attributes: typing.Optional[Attributes] = None):
@@ -166,7 +165,7 @@ def record_count(name: str, value: int, attributes: typing.Optional[Attributes] 
     :param attributes: additional metadata which can be used to filter and group values.
     :return: None
     """
-    _use_instance("record_count", name, value, attributes)
+    _use_instance(lambda instance: instance.record_count(name, value, attributes))
 
 
 def record_incr(name: str, attributes: typing.Optional[Attributes] = None):
@@ -179,7 +178,7 @@ def record_incr(name: str, attributes: typing.Optional[Attributes] = None):
     :param attributes: additional metadata which can be used to filter and group values.
     :return: None
     """
-    _use_instance("record_incr", name, attributes)
+    _use_instance(lambda instance: instance.record_incr(name, attributes))
 
 
 def record_histogram(
@@ -195,7 +194,7 @@ def record_histogram(
     :param attributes: additional metadata which can be used to filter and group values.
     :return: None
     """
-    _use_instance("record_histogram", name, value, attributes)
+    _use_instance(lambda instance: instance.record_histogram(name, value, attributes))
 
 
 def record_up_down_counter(
@@ -211,7 +210,9 @@ def record_up_down_counter(
     :param attributes: additional metadata which can be used to filter and group values.
     :return: None
     """
-    _use_instance("record_up_down_counter", name, value, attributes)
+    _use_instance(
+        lambda instance: instance.record_up_down_counter(name, value, attributes)
+    )
 
 
 def record_log(
@@ -227,7 +228,7 @@ def record_log(
     :param attributes: additional metadata which can be used to filter and group values.
     :return: None
     """
-    _use_instance("log", message, level, attributes)
+    _use_instance(lambda instance: instance.log(message, level, attributes))
 
 
 def logging_handler() -> logging.Handler:
