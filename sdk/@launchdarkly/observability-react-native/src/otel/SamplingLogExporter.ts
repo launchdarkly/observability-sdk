@@ -22,7 +22,10 @@ export class SamplingLogExporter implements LogRecordExporter {
 	}
 
 	forceFlush(): Promise<void> {
-		if ('forceFlush' in this.exporter && typeof this.exporter.forceFlush === 'function') {
+		if (
+			'forceFlush' in this.exporter &&
+			typeof this.exporter.forceFlush === 'function'
+		) {
 			return this.exporter.forceFlush()
 		}
 		return Promise.resolve()
