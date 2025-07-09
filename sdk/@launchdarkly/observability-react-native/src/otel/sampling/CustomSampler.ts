@@ -269,10 +269,11 @@ export class CustomSampler implements ExportSampler {
 		if (this.config?.spans) {
 			for (const spanConfig of this.config.spans) {
 				if (this.matchesSpanConfig(spanConfig, span)) {
+					const samplingRatio = spanConfig.samplingRatio ?? 1
 					return {
-						sample: this.sampler(spanConfig.samplingRatio),
+						sample: this.sampler(samplingRatio),
 						attributes: {
-							[ATTR_SAMPLING_RATIO]: spanConfig.samplingRatio,
+							[ATTR_SAMPLING_RATIO]: samplingRatio,
 						},
 					}
 				}
@@ -295,10 +296,11 @@ export class CustomSampler implements ExportSampler {
 		if (this.config?.logs) {
 			for (const logConfig of this.config.logs) {
 				if (this.matchesLogConfig(logConfig, log)) {
+					const samplingRatio = logConfig.samplingRatio ?? 1
 					return {
-						sample: this.sampler(logConfig.samplingRatio),
+						sample: this.sampler(samplingRatio),
 						attributes: {
-							[ATTR_SAMPLING_RATIO]: logConfig.samplingRatio,
+							[ATTR_SAMPLING_RATIO]: samplingRatio,
 						},
 					}
 				}
