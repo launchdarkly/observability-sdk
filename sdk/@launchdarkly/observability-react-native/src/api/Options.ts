@@ -1,4 +1,4 @@
-import { ResourceAttributes } from '@opentelemetry/resources'
+import { Attributes } from "@opentelemetry/api"
 
 export interface ReactNativeOptions {
 	/**
@@ -22,7 +22,7 @@ export interface ReactNativeOptions {
 	/**
 	 * Additional resource attributes to include in telemetry data.
 	 */
-	resourceAttributes?: ResourceAttributes
+	resourceAttributes?: Attributes
 
 	/**
 	 * Custom headers to include with OTLP exports.
