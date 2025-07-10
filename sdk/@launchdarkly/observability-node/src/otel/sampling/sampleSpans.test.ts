@@ -19,7 +19,7 @@ const createMockSpan = (name: string, parentId?: string): ReadableSpan => {
 			isRemote: false,
 			toString: () => `${name}`,
 		}),
-		parentSpanContext: {spanId: parentId},
+		parentSpanContext: { spanId: parentId },
 		startTime: [0, 0],
 		endTime: [0, 0],
 		status: { code: 0 },
