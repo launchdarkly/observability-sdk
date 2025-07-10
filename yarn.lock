@@ -8566,6 +8566,7 @@ __metadata:
     "@opentelemetry/instrumentation": "npm:^0.203.0"
     "@opentelemetry/instrumentation-fetch": "npm:^0.203.0"
     "@opentelemetry/instrumentation-xml-http-request": "npm:^0.203.0"
+    "@opentelemetry/otlp-exporter-base": "npm:^0.203.0"
     "@opentelemetry/resources": "npm:^2.0.1"
     "@opentelemetry/sdk-trace-web": "npm:^2.0.1"
     "@opentelemetry/semantic-conventions": "npm:^1.35.0"

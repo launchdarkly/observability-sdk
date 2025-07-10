@@ -17,9 +17,6 @@ import {
 	SpanProcessor,
 	WebTracerProvider,
 	ReadableSpan,
-	BatchSpanProcessor,
-	SpanExporter,
-	BufferConfig,
 } from '@opentelemetry/sdk-trace-web'
 import {
 	LoggerProvider,

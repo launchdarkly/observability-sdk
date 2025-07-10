@@ -44,7 +44,7 @@ export class DeduplicatingExporter implements SpanExporter {
 				continue
 			}
 
-			const existingLib = existing.instrumentationLibrary.name
+			const existingLib = existing.instrumentationScope.name
 
 			if (existingLib === FETCH_LIB && lib === XHR_LIB) {
 				this._log(
