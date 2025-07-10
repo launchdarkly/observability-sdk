@@ -10,6 +10,8 @@
  *
  * @packageDocumentation
  */
+import { v5 as uuidv5 } from 'uuid'
+
 import type { HighlightClassOptions, RequestResponsePair } from './client'
 import { GenerateSecureID, Highlight } from './client'
 import { FirstLoadListeners } from './client/listeners/first-load-listeners'
@@ -119,9 +121,12 @@ const H: HighlightPublicInterface = {
 				setCookieWriteEnabled(false)
 			}
 
-			let previousSession = getPreviousSessionData()
+			const previousSession = getPreviousSessionData()
 			let sessionSecureID = GenerateSecureID()
-			if (previousSession?.sessionSecureID) {
+
+			if (options?.sessionKey) {
+				sessionSecureID = uuidv5(options.sessionKey, `observability-${projectID}`)
+			} else if (previousSession?.sessionSecureID) {
 				sessionSecureID = previousSession.sessionSecureID
 			}
 
