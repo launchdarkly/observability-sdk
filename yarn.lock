@@ -8560,6 +8560,8 @@ __metadata:
     "@launchdarkly/observability-shared": "workspace:*"
     "@launchdarkly/react-native-client-sdk": "npm:^10.0.0"
     "@opentelemetry/api": "npm:^1.9.0"
+    "@opentelemetry/exporter-logs-otlp-http": "npm:^0.203.0"
+    "@opentelemetry/exporter-metrics-otlp-http": "npm:^0.203.0"
     "@opentelemetry/exporter-trace-otlp-http": "npm:^0.203.0"
     "@opentelemetry/instrumentation": "npm:^0.203.0"
     "@opentelemetry/instrumentation-fetch": "npm:^0.203.0"
