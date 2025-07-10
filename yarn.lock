@@ -8560,6 +8560,7 @@ __metadata:
     "@launchdarkly/observability-shared": "workspace:*"
     "@launchdarkly/react-native-client-sdk": "npm:^10.0.0"
     "@opentelemetry/api": "npm:^1.9.0"
+    "@opentelemetry/core": "npm:^2.0.1"
     "@opentelemetry/exporter-logs-otlp-http": "npm:^0.203.0"
     "@opentelemetry/exporter-metrics-otlp-http": "npm:^0.203.0"
     "@opentelemetry/exporter-trace-otlp-http": "npm:^0.203.0"
@@ -8568,6 +8569,8 @@ __metadata:
     "@opentelemetry/instrumentation-xml-http-request": "npm:^0.203.0"
     "@opentelemetry/otlp-exporter-base": "npm:^0.203.0"
     "@opentelemetry/resources": "npm:^2.0.1"
+    "@opentelemetry/sdk-metrics": "npm:^2.0.1"
+    "@opentelemetry/sdk-trace-base": "npm:2.0.1"
     "@opentelemetry/sdk-trace-web": "npm:^2.0.1"
     "@opentelemetry/semantic-conventions": "npm:^1.35.0"
     react-native: "npm:^0.79.0"
@@ -11757,7 +11760,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@opentelemetry/sdk-metrics@npm:2.0.1":
+"@opentelemetry/sdk-metrics@npm:2.0.1, @opentelemetry/sdk-metrics@npm:^2.0.1":
   version: 2.0.1
   resolution: "@opentelemetry/sdk-metrics@npm:2.0.1"
   dependencies:
