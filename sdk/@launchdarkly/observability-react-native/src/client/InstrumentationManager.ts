@@ -29,7 +29,7 @@ import {
 	MeterProvider,
 	PeriodicExportingMetricReader,
 } from '@opentelemetry/sdk-metrics'
-import { Resource } from '@opentelemetry/resources'
+import { Resource, resourceFromAttributes } from '@opentelemetry/resources'
 import {
 	ATTR_EXCEPTION_MESSAGE,
 	ATTR_EXCEPTION_STACKTRACE,
@@ -54,7 +54,7 @@ export class InstrumentationManager {
 	private meterProvider?: MeterProvider
 	private isInitialized = false
 	private serviceName: string
-	private resource: Resource = new Resource({})
+	private resource: Resource = resourceFromAttributes({})
 	private headers: Record<string, string> = {}
 	private sessionManager?: SessionManager
 
