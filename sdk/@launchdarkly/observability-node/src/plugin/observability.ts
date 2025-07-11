@@ -1,4 +1,4 @@
-import {
+import type {
 	LDPluginMetadata,
 	LDPluginEnvironmentMetadata,
 } from '@launchdarkly/js-server-sdk-common'

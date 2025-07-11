@@ -14,8 +14,9 @@ describe('CustomBatchSpanProcessor', () => {
 	beforeEach(() => {
 		exporter = new InMemorySpanExporter()
 		processor = new CustomBatchSpanProcessor(exporter)
-		provider = new WebTracerProvider()
-		provider.addSpanProcessor(processor)
+		provider = new WebTracerProvider({
+			spanProcessors: [processor],
+		})
 		tracer = provider.getTracer('test')
 	})
 

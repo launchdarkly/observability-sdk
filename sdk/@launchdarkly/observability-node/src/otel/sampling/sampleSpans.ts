@@ -1,4 +1,4 @@
-import { ReadableSpan } from '@opentelemetry/sdk-trace-web'
+import { ReadableSpan } from '@opentelemetry/sdk-trace-base'
 import { Attributes } from '@opentelemetry/api'
 import { merge } from '@opentelemetry/core'
 import { ExportSampler } from './ExportSampler'
@@ -12,7 +12,7 @@ export function cloneReadableSpanWithAttributes(
 		name: span.name,
 		kind: span.kind,
 		spanContext: () => spanContext,
-		parentSpanId: span.parentSpanId,
+		parentSpanContext: span.parentSpanContext,
 		startTime: span.startTime,
 		endTime: span.endTime,
 		status: span.status,
@@ -22,7 +22,7 @@ export function cloneReadableSpanWithAttributes(
 		duration: span.duration,
 		ended: span.ended,
 		resource: span.resource,
-		instrumentationLibrary: span.instrumentationLibrary,
+		instrumentationScope: span.instrumentationScope,
 		droppedAttributesCount: span.droppedAttributesCount,
 		droppedEventsCount: span.droppedEventsCount,
 		droppedLinksCount: span.droppedLinksCount,
@@ -44,10 +44,10 @@ export function sampleSpans(
 	// The first pass we sample items which are directly impacted by a sampling decision.
 	// We also build a map of children spans by parent span id, which allows us to quickly traverse the span tree.
 	for (const item of items) {
-		if (item.parentSpanId) {
-			childrenByParentId[item.parentSpanId] =
-				childrenByParentId[item.parentSpanId] || []
-			childrenByParentId[item.parentSpanId].push(
+		if (item.parentSpanContext?.spanId) {
+			childrenByParentId[item.parentSpanContext.spanId] =
+				childrenByParentId[item.parentSpanContext.spanId] || []
+			childrenByParentId[item.parentSpanContext.spanId].push(
 				item.spanContext().spanId,
 			)
 		}
