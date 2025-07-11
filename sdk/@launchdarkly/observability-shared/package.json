@@ -9,11 +9,13 @@
 	"scripts": {
 		"build": "tsc",
 		"codegen": "graphql-codegen",
-		"dev": "tsc --watch"
+		"dev": "tsc --watch",
+		"test": "vitest"
 	},
 	"devDependencies": {
 		"@graphql-codegen/cli": "^5.0.7",
-		"typescript": "^5.8.3"
+		"typescript": "^5.8.3",
+		"vitest": "^3.2.4"
 	},
 	"dependencies": {
 		"@opentelemetry/api": "^1.9.0",
