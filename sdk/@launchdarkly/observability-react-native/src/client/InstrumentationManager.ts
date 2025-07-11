@@ -17,19 +17,14 @@ import {
 	SpanProcessor,
 	WebTracerProvider,
 	ReadableSpan,
-	BatchSpanProcessor,
-	SpanExporter,
-	BufferConfig,
 } from '@opentelemetry/sdk-trace-web'
 import {
 	LoggerProvider,
 	BatchLogRecordProcessor,
-	LogRecordExporter,
 } from '@opentelemetry/sdk-logs'
 import {
 	MeterProvider,
 	PeriodicExportingMetricReader,
-	PushMetricExporter,
 } from '@opentelemetry/sdk-metrics'
 import { Resource } from '@opentelemetry/resources'
 import {
@@ -38,70 +33,20 @@ import {
 	ATTR_EXCEPTION_TYPE,
 } from '@opentelemetry/semantic-conventions'
 import { SpanStatusCode } from '@opentelemetry/api'
-import {
-	W3CTraceContextPropagator,
-	W3CBaggagePropagator,
-	CompositePropagator,
-} from '@opentelemetry/core'
+import { W3CBaggagePropagator, CompositePropagator } from '@opentelemetry/core'
 import { ReactNativeOptions } from '../api/Options'
 import { Metric } from '../api/Metric'
 import { getSamplingConfig } from '../graph/getSamplingConfig'
 import { CustomSampler } from '../otel/sampling/CustomSampler'
-import { SamplingTraceExporter } from '../otel/SamplingTraceExporter'
 import { SamplingLogExporter } from '../otel/SamplingLogExporter'
-
-const SAMPLING_BACKEND_URL = 'https://pub.observability.app.launchdarkly.com'
-
-export class CustomBatchSpanProcessor extends BatchSpanProcessor {
-	private recentHttpSpans = new Map<string, number>()
-	private readonly DEDUP_WINDOW_MS = 1000
-
-	constructor(exporter: SpanExporter, options?: BufferConfig) {
-		super(exporter, options)
-	}
-
-	onEnd(span: ReadableSpan): void {
-		if (this.isHttpSpan(span)) {
-			const spanKey = this.generateHttpSpanKey(span)
-			const now = Date.now()
-
-			this.cleanupOldHttpSpans(now)
-
-			if (this.recentHttpSpans.has(spanKey)) {
-				return // duplicate - skip
-			}
-
-			this.recentHttpSpans.set(spanKey, now)
-			super.onEnd(span)
-
-			return
-		}
-
-		super.onEnd(span)
-	}
-
-	private isHttpSpan(span: ReadableSpan): boolean {
-		const url = span.attributes['http.url']
-		const method = span.attributes['http.method']
-		return Boolean(url && method)
-	}
-
-	private generateHttpSpanKey(span: ReadableSpan): string {
-		const url = span.attributes['http.url'] as string
-		const method = span.attributes['http.method'] as string
-		const startTime = Math.floor(span.startTime[0])
-
-		return `${method}:${url}:${startTime}`
-	}
-
-	private cleanupOldHttpSpans(now: number): void {
-		for (const [key, timestamp] of this.recentHttpSpans.entries()) {
-			if (now - timestamp > this.DEDUP_WINDOW_MS) {
-				this.recentHttpSpans.delete(key)
-			}
-		}
-	}
-}
+import { SessionManager } from './SessionManager'
+import {
+	CustomTraceContextPropagator,
+	getCorsUrlsPattern,
+	getSpanName,
+} from '@launchdarkly/observability-shared'
+import { CustomTraceExporter } from '../otel/CustomTraceExporter'
+import { CustomBatchSpanProcessor } from '../otel/CustomBatchSpanProcessor'
 
 export class InstrumentationManager {
 	private traceProvider?: WebTracerProvider
@@ -111,13 +56,11 @@ export class InstrumentationManager {
 	private serviceName: string
 	private resource: Resource = new Resource({})
 	private headers: Record<string, string> = {}
-	private traceExporter?: SpanExporter
-	private logExporter?: LogRecordExporter
-	private metricExporter?: PushMetricExporter
 	private sampler: CustomSampler = new CustomSampler()
 	private projectId: string = ''
+	private sessionManager?: SessionManager
 
-	constructor(private options: ReactNativeOptions) {
+	constructor(private options: Required<ReactNativeOptions>) {
 		this.serviceName =
 			this.options.serviceName ??
 			'launchdarkly-observability-react-native'
@@ -147,26 +90,40 @@ export class InstrumentationManager {
 		}
 	}
 
+	public setSessionManager(sessionManager: SessionManager) {
+		this.sessionManager = sessionManager
+	}
+
 	private initializeTracing() {
 		if (this.options.disableTraces) return
 
 		const compositePropagator = new CompositePropagator({
 			propagators: [
-				new W3CTraceContextPropagator(),
 				new W3CBaggagePropagator(),
+				new CustomTraceContextPropagator({
+					internalEndpoints: [
+						`${this.options.otlpEndpoint}/v1/traces`,
+						`${this.options.otlpEndpoint}/v1/logs`,
+						`${this.options.otlpEndpoint}/v1/metrics`,
+					],
+					tracingOrigins: this.options.tracingOrigins,
+					urlBlocklist: this.options.urlBlocklist,
+				}),
 			],
 		})
 
 		propagation.setGlobalPropagator(compositePropagator)
 
-		const baseExporter =
-			this.traceExporter ??
-			new OTLPTraceExporter({
-				url: `${this.options.otlpEndpoint}/v1/traces`,
-				headers: this.headers,
-			})
+		const otlpExporter = new OTLPTraceExporter({
+			url: `${this.options.otlpEndpoint}/v1/traces`,
+			headers: this.headers,
+		})
 
-		const exporter = new SamplingTraceExporter(baseExporter, this.sampler)
+		const exporter = new CustomTraceExporter(
+			otlpExporter,
+			this.sampler,
+			this.options.debug,
+		)
 
 		const processors: SpanProcessor[] = [
 			new CustomBatchSpanProcessor(exporter, {
@@ -185,15 +142,52 @@ export class InstrumentationManager {
 		this.traceProvider.register()
 		trace.setGlobalTracerProvider(this.traceProvider)
 
+		const corsPattern = getCorsUrlsPattern(this.options.tracingOrigins)
+
 		registerInstrumentations({
 			instrumentations: [
 				new FetchInstrumentation({
-					// TODO: Verify this works the same as the web implementation.
-					// Look at getCorsUrlsPattern. Take into account tracingOrigins.
-					propagateTraceHeaderCorsUrls: /.*/,
+					applyCustomAttributesOnSpan: (span, request) => {
+						if (!(span as any).attributes) {
+							return
+						}
+						const readableSpan = span as unknown as ReadableSpan
+
+						const url = readableSpan.attributes[
+							'http.url'
+						] as string
+						const method = request.method ?? 'GET'
+
+						span.updateName(getSpanName(url, method, request.body))
+					},
+					propagateTraceHeaderCorsUrls: corsPattern,
 				}),
 				new XMLHttpRequestInstrumentation({
-					propagateTraceHeaderCorsUrls: /.*/,
+					applyCustomAttributesOnSpan: (span, xhr) => {
+						if (!(span as any).attributes) {
+							return
+						}
+						const readableSpan = span as unknown as ReadableSpan
+
+						try {
+							const url = readableSpan.attributes[
+								'http.url'
+							] as string
+							const method = readableSpan.attributes[
+								'http.method'
+							] as string
+							let responseText: string | undefined
+							if (['', 'text'].includes(xhr.responseType)) {
+								responseText = xhr.responseText
+							}
+							span.updateName(
+								getSpanName(url, method, responseText),
+							)
+						} catch (e) {
+							console.error('Failed to update span name:', e)
+						}
+					},
+					propagateTraceHeaderCorsUrls: corsPattern,
 				}),
 			],
 		})
@@ -276,14 +270,17 @@ export class InstrumentationManager {
 		try {
 			const activeSpan = options?.span || trace.getActiveSpan()
 			const span = activeSpan ?? this.getTracer().startSpan('error')
+			const sessionId = this.sessionManager?.getSessionInfo().sessionId
 
 			span.recordException(error)
 			span.setAttribute(ATTR_EXCEPTION_MESSAGE, error.message)
-			span.setAttribute(
-				ATTR_EXCEPTION_STACKTRACE,
-				error.stack ?? 'No stack trace',
-			)
 			span.setAttribute(ATTR_EXCEPTION_TYPE, error.name ?? 'No name')
+			if (error.stack) {
+				span.setAttribute(ATTR_EXCEPTION_STACKTRACE, error.stack)
+			}
+			if (sessionId) {
+				span.setAttribute('highlight.session_id', sessionId)
+			}
 			span.setStatus({ code: SpanStatusCode.ERROR })
 
 			if (attributes) {
@@ -299,6 +296,11 @@ export class InstrumentationManager {
 				'exception.type': error.name,
 				'exception.message': error.message,
 				'exception.stacktrace': error.stack,
+				...(sessionId
+					? {
+							['highlight.session_id']: sessionId,
+						}
+					: {}),
 			})
 		} catch (e) {
 			console.error('Failed to record error:', e)
@@ -351,6 +353,7 @@ export class InstrumentationManager {
 	): void {
 		try {
 			const logger = this.getLogger()
+			const sessionId = this.sessionManager?.getSessionInfo().sessionId
 
 			logger.emit({
 				severityText: level.toUpperCase(),
@@ -361,6 +364,11 @@ export class InstrumentationManager {
 				attributes: {
 					...attributes,
 					'log.source': 'react-native-plugin',
+					...(sessionId
+						? {
+								['highlight.session_id']: sessionId,
+							}
+						: {}),
 				},
 				timestamp: Date.now(),
 			})

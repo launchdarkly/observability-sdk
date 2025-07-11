@@ -56,7 +56,7 @@ export class Record extends Plugin<RecordOptions> implements LDPlugin {
 			// Don't initialize if an projectID is not set.
 			if (!ldCredential) {
 				console.warn(
-					'@launchdarkly/session-replay is not initializing because projectID was passed undefined.',
+					'@launchdarkly/session-replay is not initializing because the SDK credential is undefined.',
 				)
 				return
 			}
