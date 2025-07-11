@@ -10,7 +10,6 @@ import { metrics } from '@opentelemetry/api'
 import { registerInstrumentations } from '@opentelemetry/instrumentation'
 import { FetchInstrumentation } from '@opentelemetry/instrumentation-fetch'
 import { XMLHttpRequestInstrumentation } from '@opentelemetry/instrumentation-xml-http-request'
-import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http'
 import { OTLPLogExporter } from '@opentelemetry/exporter-logs-otlp-http'
 import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-http'
 import {
@@ -37,16 +36,18 @@ import { W3CBaggagePropagator, CompositePropagator } from '@opentelemetry/core'
 import { ReactNativeOptions } from '../api/Options'
 import { Metric } from '../api/Metric'
 import { getSamplingConfig } from '../graph/getSamplingConfig'
-import { CustomSampler } from '../otel/sampling/CustomSampler'
-import { SamplingLogExporter } from '../otel/SamplingLogExporter'
 import { SessionManager } from './SessionManager'
 import {
+	CustomSampler,
 	CustomTraceContextPropagator,
 	getCorsUrlsPattern,
 	getSpanName,
 } from '@launchdarkly/observability-shared'
-import { CustomTraceExporter } from '../otel/CustomTraceExporter'
 import { CustomBatchSpanProcessor } from '../otel/CustomBatchSpanProcessor'
+import { CustomTraceExporter } from '../otel/CustomTraceExporter'
+import { CustomLogExporter } from '../otel/CustomLogExporter'
+
+const SAMPLING_BACKEND_URL = 'https://pub.observability.app.launchdarkly.com'
 
 export class InstrumentationManager {
 	private traceProvider?: WebTracerProvider
@@ -56,9 +57,9 @@ export class InstrumentationManager {
 	private serviceName: string
 	private resource: Resource = new Resource({})
 	private headers: Record<string, string> = {}
-	private sampler: CustomSampler = new CustomSampler()
 	private projectId: string = ''
 	private sessionManager?: SessionManager
+	private sampler: CustomSampler = new CustomSampler()
 
 	constructor(private options: Required<ReactNativeOptions>) {
 		this.serviceName =
@@ -114,15 +115,12 @@ export class InstrumentationManager {
 
 		propagation.setGlobalPropagator(compositePropagator)
 
-		const otlpExporter = new OTLPTraceExporter({
-			url: `${this.options.otlpEndpoint}/v1/traces`,
-			headers: this.headers,
-		})
-
 		const exporter = new CustomTraceExporter(
-			otlpExporter,
+			{
+				url: `${this.options.otlpEndpoint}/v1/traces`,
+				headers: this.headers,
+			},
 			this.sampler,
-			this.options.debug,
 		)
 
 		const processors: SpanProcessor[] = [
@@ -210,13 +208,11 @@ export class InstrumentationManager {
 	private initializeLogs() {
 		if (this.options.disableLogs) return
 
-		const baseLogExporter = new OTLPLogExporter({
-			headers: this.headers,
-			url: `${this.options.otlpEndpoint}/v1/logs`,
-		})
-
-		const logExporter = new SamplingLogExporter(
-			baseLogExporter,
+		const logExporter = new CustomLogExporter(
+			{
+				headers: this.headers,
+				url: `${this.options.otlpEndpoint}/v1/logs`,
+			},
 			this.sampler,
 		)
 

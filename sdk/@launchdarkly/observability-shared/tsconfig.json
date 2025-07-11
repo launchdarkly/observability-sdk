@@ -8,7 +8,8 @@
 		"preserveSymlinks": false,
 		"esModuleInterop": true,
 		"target": "ES2020",
-		"skipLibCheck": true
+		"skipLibCheck": true,
+		"resolveJsonModule": true
 	},
 	"include": ["src/**/*"],
 	"exclude": ["node_modules", "dist"]

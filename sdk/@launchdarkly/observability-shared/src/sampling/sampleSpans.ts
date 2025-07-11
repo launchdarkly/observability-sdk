@@ -51,7 +51,7 @@ export function sampleSpans(
 				item.spanContext().spanId,
 			)
 		}
-		const sampleResult = sampler.shouldSample(item)
+		const sampleResult = sampler.sampleSpan(item)
 		if (sampleResult.sample) {
 			if (sampleResult.attributes) {
 				spanById[item.spanContext().spanId] =

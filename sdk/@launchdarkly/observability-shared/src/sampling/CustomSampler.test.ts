@@ -2,10 +2,10 @@ import { SpanKind, Attributes } from '@opentelemetry/api'
 import { CustomSampler, defaultSampler } from './CustomSampler'
 import type { ReadableSpan } from '@opentelemetry/sdk-trace-base'
 import { it, expect, beforeEach, vi, describe } from 'vitest'
-import { SamplingConfig } from '../../graph/generated/operations'
 import spanTestScenarios from './span-test-scenarios.json'
 import logTestScenarios from './log-test-scenarios.json'
-import { ATTR_LOG_MESSAGE, ATTR_LOG_SEVERITY, LOG_SPAN_NAME } from '../index'
+import { SamplingConfig } from '../graph/generated/graphql'
+import { ReadableLogRecord } from '@opentelemetry/sdk-logs'
 
 interface SpanTestScenario {
 	description: string
@@ -134,7 +134,7 @@ const runTestSpanScenarios = (scenarios: SpanTestScenario[]) => {
 					events: scenario.inputSpan.events || [],
 				})
 
-				const result = sampler.shouldSample(mockSpan)
+				const result = sampler.sampleSpan(mockSpan)
 
 				expect(result.sample).toBe(samplerCase.expected_result.sample)
 
@@ -161,19 +161,9 @@ const runTestLogScenarios = (scenarios: LogTestScenario[]) => {
 				sampler.setConfig(config)
 				expect(sampler.isSamplingEnabled()).toBe(true)
 
-				const baseAttributes = scenario.inputLog.attributes || {}
-				const mergedAttributes = {
-					...baseAttributes,
-					[ATTR_LOG_MESSAGE]: scenario.inputLog.message,
-					[ATTR_LOG_SEVERITY]: scenario.inputLog.severityText,
-				}
-
-				const mockSpan = createMockSpan({
-					name: LOG_SPAN_NAME,
-					attributes: mergedAttributes,
-				})
-
-				const result = sampler.shouldSample(mockSpan)
+				const result = sampler.sampleLog(
+					scenario.inputLog as ReadableLogRecord,
+				)
 
 				expect(result.sample).toBe(samplerCase.expected_result.sample)
 

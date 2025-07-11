@@ -1,6 +1,7 @@
 import { Attributes } from '@opentelemetry/api'
 import { ReadableSpan } from '@opentelemetry/sdk-trace-base'
-import { Maybe, SamplingConfig } from '../../graph/generated/operations'
+import { SamplingConfig } from '../graph/generated/graphql'
+import { ReadableLogRecord } from '@opentelemetry/sdk-logs'
 
 export interface SamplingResult {
 	/**
@@ -23,12 +24,19 @@ export interface ExportSampler {
 	 *
 	 * @param span The span to sample.
 	 */
-	shouldSample(span: ReadableSpan): SamplingResult
+	sampleSpan(span: ReadableSpan): SamplingResult
+
+	/**
+	 * Returns a sampling result for a log.
+	 *
+	 * @param log The log to sample.
+	 */
+	sampleLog(log: ReadableLogRecord): SamplingResult
 
 	/**
 	 * Returns true if sampling is enabled. If there are no sampling configurations, then sampling can be skipped.
 	 */
 	isSamplingEnabled(): boolean
 
-	setConfig(config?: Maybe<SamplingConfig>): void
+	setConfig(config?: SamplingConfig): void
 }

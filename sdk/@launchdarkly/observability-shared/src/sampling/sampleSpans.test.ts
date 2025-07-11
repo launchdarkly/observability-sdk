@@ -1,9 +1,11 @@
 import { vi, it, expect, beforeEach } from 'vitest'
-import { ExportSampler, SamplingResult } from './ExportSampler'
 import { ReadableSpan } from '@opentelemetry/sdk-trace-base'
 import { SpanKind } from '@opentelemetry/api'
 import { sampleSpans } from './sampleSpans'
-import { Maybe, SamplingConfig } from '../../graph/generated/operations'
+import { Maybe, SamplingConfig } from '../graph/generated/graphql'
+import { ExportSampler, SamplingResult } from './ExportSampler'
+import { LogRecord } from '@opentelemetry/api-logs'
+import { sampleLogs } from './sampleLogs'
 
 // Helper function to create a mock span
 const createMockSpan = (name: string, parentId?: string): ReadableSpan => {
@@ -46,7 +48,7 @@ class MockSampler implements ExportSampler {
 
 	setConfig(_config?: Maybe<SamplingConfig>): void {}
 
-	shouldSample(span: ReadableSpan): SamplingResult {
+	sampleSpan(span: ReadableSpan): SamplingResult {
 		const spanId = span.spanContext().spanId
 		const shouldSample = this.mockResults[spanId] ?? true
 
@@ -55,6 +57,12 @@ class MockSampler implements ExportSampler {
 			attributes: this.mockResults[spanId]
 				? { samplingRatio: 2 }
 				: undefined,
+		}
+	}
+
+	sampleLog(log: LogRecord): SamplingResult {
+		return {
+			sample: true,
 		}
 	}
 
@@ -110,7 +118,8 @@ it('should remove children of spans that are not sampled', () => {
 
 it('should not apply sampling when sampling is disabled', () => {
 	const mockSampler = {
-		shouldSample: vi.fn(() => ({ sample: true })),
+		sampleLog: vi.fn(() => ({ sample: true })),
+		sampleSpan: vi.fn(() => ({ sample: true })),
 		isSamplingEnabled: vi.fn(() => false),
 		setConfig: vi.fn(),
 	}
@@ -118,7 +127,7 @@ it('should not apply sampling when sampling is disabled', () => {
 	const spans = [createMockSpan('span-1'), createMockSpan('span-2')]
 
 	const sampledSpans = sampleSpans(spans, mockSampler)
-	expect(mockSampler.shouldSample).not.toHaveBeenCalled()
+	expect(mockSampler.sampleSpan).not.toHaveBeenCalled()
 
 	expect(sampledSpans.length).toBe(2)
 	expect(sampledSpans).toEqual(spans)

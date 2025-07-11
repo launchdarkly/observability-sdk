@@ -1,4 +1,3 @@
-import { Attributes, AttributeValue } from '@opentelemetry/api'
 import { ReadableSpan, TimedEvent } from '@opentelemetry/sdk-trace-base'
 import { ExportSampler, SamplingResult } from './ExportSampler'
 import {
@@ -9,13 +8,11 @@ import {
 	MatchConfig,
 	AttributeMatchConfig,
 	SpanEventMatchConfig,
-} from '../../graph/generated/operations'
-import {
-	ATTR_SAMPLING_RATIO,
-	LOG_SPAN_NAME,
-	ATTR_LOG_SEVERITY,
-	ATTR_LOG_MESSAGE,
-} from '../index'
+} from '../graph/generated/graphql'
+import { AnyValue, AnyValueMap } from '@opentelemetry/api-logs'
+import { ReadableLogRecord } from '@opentelemetry/sdk-logs'
+
+const ATTR_SAMPLING_RATIO = 'launchdarkly.sampling.ratio'
 
 type RegexCache = Map<string, RegExp>
 
@@ -78,21 +75,12 @@ export class CustomSampler implements ExportSampler {
 		return false
 	}
 
-	shouldSample(span: ReadableSpan): SamplingResult {
-		// Logs are encoded into special spans, so process those special spans using the log rules.
-		if (span.name === LOG_SPAN_NAME) {
-			return this.sampleLog(this.config?.logs, span)
-		}
-
-		return this.sampleSpan(this.config?.spans, span)
-	}
-
 	/**
 	 * Check if a value matches a match config.
 	 */
 	private matchesValue(
 		matchConfig: Maybe<MatchConfig> | undefined,
-		value?: AttributeValue,
+		value?: AnyValue,
 	): boolean {
 		if (!matchConfig) {
 			return false
@@ -126,11 +114,15 @@ export class CustomSampler implements ExportSampler {
 	 */
 	private matchesAttributes(
 		attributeConfigs: Maybe<AttributeMatchConfig[]> | undefined,
-		attributes: Attributes,
+		attributes?: AnyValueMap,
 	): boolean {
 		if (attributeConfigs) {
 			for (const attributeConfig of attributeConfigs) {
 				let configMatched = false
+				// No attributes, so they cannot match.
+				if (!attributes) {
+					return false
+				}
 				for (const key of Object.keys(attributes)) {
 					if (this.matchesValue(attributeConfig.key, key)) {
 						const attributeValue = attributes[key]
@@ -236,10 +228,10 @@ export class CustomSampler implements ExportSampler {
 
 	private matchesLogConfig(
 		config: LogSamplingConfig,
-		attributes: Attributes,
+		record: ReadableLogRecord,
 	): boolean {
 		if (config.severityText) {
-			const severityText = attributes[ATTR_LOG_SEVERITY]
+			const severityText = record.severityText
 			if (
 				typeof severityText === 'string' &&
 				!this.matchesValue(config.severityText, severityText)
@@ -249,7 +241,7 @@ export class CustomSampler implements ExportSampler {
 		}
 
 		if (config.message) {
-			const message = attributes[ATTR_LOG_MESSAGE]
+			const message = record.body
 			if (
 				typeof message === 'string' &&
 				!this.matchesValue(config.message, message)
@@ -259,7 +251,7 @@ export class CustomSampler implements ExportSampler {
 		}
 
 		// Check attributes if they're defined in the config
-		if (!this.matchesAttributes(config.attributes, attributes)) {
+		if (!this.matchesAttributes(config.attributes, record.attributes)) {
 			return false
 		}
 		return true
@@ -273,12 +265,9 @@ export class CustomSampler implements ExportSampler {
 	 * @param attributes The attributes of the span to sample.
 	 * @returns The sampling result.
 	 */
-	private sampleSpan(
-		configs: Maybe<SpanSamplingConfig[]> | undefined,
-		span: ReadableSpan,
-	): SamplingResult {
-		if (configs) {
-			for (const spanConfig of configs) {
+	sampleSpan(span: ReadableSpan): SamplingResult {
+		if (this.config?.spans) {
+			for (const spanConfig of this.config.spans) {
 				if (this.matchesSpanConfig(spanConfig, span)) {
 					return {
 						sample: this.sampler(spanConfig.samplingRatio),
@@ -302,13 +291,10 @@ export class CustomSampler implements ExportSampler {
 	 * @param attributes The attributes of the log to sample.
 	 * @returns The sampling result.
 	 */
-	private sampleLog(
-		configs: Maybe<LogSamplingConfig[]> | undefined,
-		span: ReadableSpan,
-	): SamplingResult {
-		if (configs) {
-			for (const logConfig of configs) {
-				if (this.matchesLogConfig(logConfig, span.attributes)) {
+	sampleLog(log: ReadableLogRecord): SamplingResult {
+		if (this.config?.logs) {
+			for (const logConfig of this.config.logs) {
+				if (this.matchesLogConfig(logConfig, log)) {
 					return {
 						sample: this.sampler(logConfig.samplingRatio),
 						attributes: {
