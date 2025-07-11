@@ -6389,33 +6389,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@graphql-codegen/client-preset@npm:^4.8.3":
-  version: 4.8.3
-  resolution: "@graphql-codegen/client-preset@npm:4.8.3"
-  dependencies:
-    "@babel/helper-plugin-utils": "npm:^7.20.2"
-    "@babel/template": "npm:^7.20.7"
-    "@graphql-codegen/add": "npm:^5.0.3"
-    "@graphql-codegen/gql-tag-operations": "npm:4.0.17"
-    "@graphql-codegen/plugin-helpers": "npm:^5.1.1"
-    "@graphql-codegen/typed-document-node": "npm:^5.1.2"
-    "@graphql-codegen/typescript": "npm:^4.1.6"
-    "@graphql-codegen/typescript-operations": "npm:^4.6.1"
-    "@graphql-codegen/visitor-plugin-common": "npm:^5.8.0"
-    "@graphql-tools/documents": "npm:^1.0.0"
-    "@graphql-tools/utils": "npm:^10.0.0"
-    "@graphql-typed-document-node/core": "npm:3.2.0"
-    tslib: "npm:~2.6.0"
-  peerDependencies:
-    graphql: ^0.8.0 || ^0.9.0 || ^0.10.0 || ^0.11.0 || ^0.12.0 || ^0.13.0 || ^14.0.0 || ^15.0.0 || ^16.0.0
-    graphql-sock: ^1.0.0
-  peerDependenciesMeta:
-    graphql-sock:
-      optional: true
-  checksum: 10/8204ab84f00a67501c8fc0eb3178dcd980f88aa33c5a72a89dc7d831f8a93c72c116ee90ac286bdcf7f02a3099eed3320383d77eca8d9108f618bac09df0e713
-  languageName: node
-  linkType: hard
-
 "@graphql-codegen/core@npm:^4.0.2":
   version: 4.0.2
   resolution: "@graphql-codegen/core@npm:4.0.2"
@@ -6518,21 +6491,6 @@ __metadata:
   peerDependencies:
     graphql: ^0.8.0 || ^0.9.0 || ^0.10.0 || ^0.11.0 || ^0.12.0 || ^0.13.0 || ^14.0.0 || ^15.0.0 || ^16.0.0
   checksum: 10/213983a6c10173dc61041f331c19d6152a7e1bb07ab10c70355d49a7048a367ccee30428eda652b514c32431f938606b1db5c04f0d2c9dd93abb0096187cb91a
-  languageName: node
-  linkType: hard
-
-"@graphql-codegen/typed-document-node@npm:^5.1.2":
-  version: 5.1.2
-  resolution: "@graphql-codegen/typed-document-node@npm:5.1.2"
-  dependencies:
-    "@graphql-codegen/plugin-helpers": "npm:^5.1.0"
-    "@graphql-codegen/visitor-plugin-common": "npm:5.8.0"
-    auto-bind: "npm:~4.0.0"
-    change-case-all: "npm:1.0.15"
-    tslib: "npm:~2.6.0"
-  peerDependencies:
-    graphql: ^0.8.0 || ^0.9.0 || ^0.10.0 || ^0.11.0 || ^0.12.0 || ^0.13.0 || ^14.0.0 || ^15.0.0 || ^16.0.0
-  checksum: 10/9c24ed2f4f76e616d335386cf78401b52b1766705dc972513066a5145f06781502e758cb3d138cbe7faae2b9f9e108cf3f8b74bf7936d838b59314a1e29ee1eb
   languageName: node
   linkType: hard
 
@@ -8599,8 +8557,6 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@launchdarkly/observability-react-native@workspace:sdk/@launchdarkly/observability-react-native"
   dependencies:
-    "@graphql-codegen/cli": "npm:^5.0.7"
-    "@graphql-codegen/client-preset": "npm:^4.8.3"
     "@launchdarkly/observability-shared": "workspace:*"
     "@launchdarkly/react-native-client-sdk": "npm:^10.0.0"
     "@opentelemetry/api": "npm:^1.9.0"

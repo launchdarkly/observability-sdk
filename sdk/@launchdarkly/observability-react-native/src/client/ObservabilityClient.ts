@@ -37,12 +37,15 @@ export class ObservabilityClient {
 		options: ReactNativeOptions,
 	): Required<ReactNativeOptions> {
 		return {
-			otlpEndpoint:
-				options.otlpEndpoint ??
-				'https://otel.observability.app.launchdarkly.com:4318',
 			serviceName:
 				options.serviceName ??
 				'launchdarkly-observability-react-native',
+			backendUrl:
+				options.backendUrl ??
+				'https://pub.observability.app.launchdarkly.com',
+			otlpEndpoint:
+				options.otlpEndpoint ??
+				'https://otel.observability.app.launchdarkly.com:4318',
 			serviceVersion: options.serviceVersion ?? '1.0.0',
 			resourceAttributes: options.resourceAttributes ?? {},
 			customHeaders: {

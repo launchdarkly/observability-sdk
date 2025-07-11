@@ -1,30 +1,22 @@
 import {
 	SamplingConfig,
-	SpanSamplingConfig,
-	LogSamplingConfig,
-	MatchConfig,
-	AttributeMatchConfig,
-	SpanEventMatchConfig,
-	Maybe,
 	GetSamplingConfigDocument,
-	GetSamplingConfigQuery,
-	GetSamplingConfigQueryVariables,
-} from './generated/graphql'
+} from '../graph/generated/graphql'
 
 export async function getSamplingConfig(
+	url: string,
 	organizationVerboseId: string,
 ): Promise<SamplingConfig | null> {
-	const endpoint = 'https://pub.observability.app.launchdarkly.com'
 	try {
-		const response = await fetch(endpoint, {
+		const response = await fetch(url, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
 			},
-		body: JSON.stringify({
-			query: GetSamplingConfigDocument.toString(),
-			variables: { organization_verbose_id: organizationVerboseId },
-		}),
+			body: JSON.stringify({
+				query: GetSamplingConfigDocument.toString(),
+				variables: { organization_verbose_id: organizationVerboseId },
+			}),
 		})
 
 		if (!response.ok) {

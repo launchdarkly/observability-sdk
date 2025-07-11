@@ -35,19 +35,17 @@ import { SpanStatusCode } from '@opentelemetry/api'
 import { W3CBaggagePropagator, CompositePropagator } from '@opentelemetry/core'
 import { ReactNativeOptions } from '../api/Options'
 import { Metric } from '../api/Metric'
-import { getSamplingConfig } from '../graph/getSamplingConfig'
 import { SessionManager } from './SessionManager'
 import {
 	CustomSampler,
 	CustomTraceContextPropagator,
 	getCorsUrlsPattern,
 	getSpanName,
+	getSamplingConfig,
 } from '@launchdarkly/observability-shared'
 import { CustomBatchSpanProcessor } from '../otel/CustomBatchSpanProcessor'
 import { CustomTraceExporter } from '../otel/CustomTraceExporter'
 import { CustomLogExporter } from '../otel/CustomLogExporter'
-
-const SAMPLING_BACKEND_URL = 'https://pub.observability.app.launchdarkly.com'
 
 export class InstrumentationManager {
 	private traceProvider?: WebTracerProvider
@@ -103,6 +101,7 @@ export class InstrumentationManager {
 				new W3CBaggagePropagator(),
 				new CustomTraceContextPropagator({
 					internalEndpoints: [
+						this.options.backendUrl,
 						`${this.options.otlpEndpoint}/v1/traces`,
 						`${this.options.otlpEndpoint}/v1/logs`,
 						`${this.options.otlpEndpoint}/v1/metrics`,
@@ -197,7 +196,10 @@ export class InstrumentationManager {
 		if (!this.projectId) return
 
 		try {
-			const samplingConfig = await getSamplingConfig(this.projectId)
+			const samplingConfig = await getSamplingConfig(
+				this.options.backendUrl,
+				this.projectId,
+			)
 			this.sampler.setConfig(samplingConfig)
 			this._log('Sampling configuration loaded')
 		} catch (error) {

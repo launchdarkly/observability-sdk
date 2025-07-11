@@ -11,7 +11,7 @@ const OTLP_HTTP = 'https://otel.observability.app.launchdarkly.com:4318'
 const OTLP_HTTP_DEV = 'http://localhost:4318'
 
 const mobileKey = Constants.expoConfig?.extra?.sdkKey
-const otlpEndpoint = OTLP_HTTP_DEV // __DEV__ ? OTLP_HTTP_DEV : OTLP_HTTP
+const otlpEndpoint = OTLP_HTTP // __DEV__ ? OTLP_HTTP_DEV : OTLP_HTTP
 const serviceName = 'react-native-otel'
 
 export async function initializeLaunchDarkly() {
