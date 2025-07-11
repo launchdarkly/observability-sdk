@@ -19,8 +19,10 @@ export class CustomLogExporter extends OTLPLogExporter {
 	) {
 		const sampledItems = sampleLogs(items, this.sampler)
 		if (sampledItems.length === 0) {
+			resultCallback({ code: 0 })
 			return
 		}
+
 		super.export(sampledItems, resultCallback)
 	}
 }

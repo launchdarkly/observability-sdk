@@ -93,7 +93,7 @@ export class ObservabilityClient {
 			})
 
 			this.instrumentationManager.setSessionManager(this.sessionManager)
-			this.instrumentationManager.initialize(resource)
+			void this.instrumentationManager.initialize(resource)
 			this.isInitialized = true
 
 			this._log('initialized successfully')

@@ -71,7 +71,7 @@ export class InstrumentationManager {
 			'launchdarkly-observability-react-native'
 	}
 
-	public initialize(resource: Resource) {
+	public async initialize(resource: Resource) {
 		if (this.isInitialized) return
 
 		try {
@@ -80,7 +80,7 @@ export class InstrumentationManager {
 				...(this.options.customHeaders ?? {}),
 			}
 
-			this.initializeSampling()
+			await this.initializeSampling()
 			this.initializeTracing()
 			this.initializeLogs()
 			this.initializeMetrics()

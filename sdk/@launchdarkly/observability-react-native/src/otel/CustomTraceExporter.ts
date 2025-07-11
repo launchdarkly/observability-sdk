@@ -22,11 +22,13 @@ export class CustomTraceExporter extends OTLPTraceExporter {
 	) {
 		const sampledItems = sampleSpans(items, this.sampler)
 		if (sampledItems.length === 0) {
+			resultCallback({ code: 0 })
 			return
 		}
 
 		const deduplicatedItems = deduplicateSpans(sampledItems)
 		if (deduplicatedItems.length === 0) {
+			resultCallback({ code: 0 })
 			return
 		}
 
