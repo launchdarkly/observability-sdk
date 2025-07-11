@@ -7,7 +7,7 @@ from opentelemetry.sdk.trace import ReadableSpan, Event
 from opentelemetry.sdk._logs import LogRecord, LogData  # type: ignore Not actually private.
 from opentelemetry.util.types import AnyValue as OTELAnyValue
 
-from ...graph.generated.public_graph_client.get_sampling_config import (
+from ..._graph.generated.public_graph_client.get_sampling_config import (
     GetSamplingConfigSampling,
     GetSamplingConfigSamplingSpans,
     GetSamplingConfigSamplingSpansEvents,

@@ -8,9 +8,9 @@ from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.util.instrumentation import InstrumentationScope
 from typing import Dict, Optional, List
 
-from ..sampling_trace_exporter import sample_spans, ExportSampler
-from ..sampling import SamplingResult
-from ...graph.generated.public_graph_client.get_sampling_config import (
+from ..sampling_trace_exporter import _sample_spans, ExportSampler
+from .._sampling import SamplingResult
+from ..._graph.generated.public_graph_client.get_sampling_config import (
     GetSamplingConfigSampling,
 )
 
@@ -122,7 +122,7 @@ def test_should_remove_spans_that_are_not_sampled():
         create_span("span-2"),  # Root span - not sampled
     ]
 
-    sampled_spans = sample_spans(spans, mock_sampler)
+    sampled_spans = _sample_spans(spans, mock_sampler)
 
     assert len(sampled_spans) == 1
     assert sampled_spans[0].name == "span-1"
@@ -150,7 +150,7 @@ def test_should_remove_children_of_spans_that_are_not_sampled():
         create_span("root"),
     ]
 
-    sampled_spans = sample_spans(spans, mock_sampler)
+    sampled_spans = _sample_spans(spans, mock_sampler)
 
     assert len(sampled_spans) == 1
     assert sampled_spans[0].name == "root"
@@ -162,7 +162,7 @@ def test_should_not_apply_sampling_when_sampling_is_disabled():
 
     spans = [create_span("span-1"), create_span("span-2")]
 
-    sampled_spans = sample_spans(spans, mock_sampler)
+    sampled_spans = _sample_spans(spans, mock_sampler)
 
     assert len(sampled_spans) == 2
     assert sampled_spans == spans
@@ -179,7 +179,7 @@ def test_should_apply_sampling_attributes_to_sampled_spans():
 
     spans = [create_span("span-1"), create_span("span-2")]
 
-    sampled_spans = sample_spans(spans, mock_sampler)
+    sampled_spans = _sample_spans(spans, mock_sampler)
 
     assert len(sampled_spans) == 2
     attributes1 = sampled_spans[0].attributes or {}
