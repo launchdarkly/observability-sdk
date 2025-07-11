@@ -3,6 +3,13 @@ import { ReadableSpan } from '@opentelemetry/sdk-trace-web'
 export const FETCH_LIB = '@opentelemetry/instrumentation-fetch'
 export const XHR_LIB = '@opentelemetry/instrumentation-xml-http-request'
 
+/**
+ * Removes duplicate spans from an array of spans based on span ID and trace ID.
+ * This is necessary because some instrumentation libraries may generate
+ * duplicate spans for the same HTTP request, which can lead to inflated
+ * telemetry data and incorrect metrics. The function prioritizes fetch spans
+ * over XHR spans when duplicates are detected.
+ */
 export const deduplicateSpans = (spans: ReadableSpan[]): ReadableSpan[] => {
 	const seenSpans = new Map<string, ReadableSpan>()
 	const dedupedSpans: ReadableSpan[] = []
