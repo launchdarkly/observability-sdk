@@ -21,10 +21,11 @@ const sessionReplaySettings: ConstructorParameters<typeof SessionReplay>[0] = {
 	privacySetting: 'none',
 	serviceName: 'ryan-test',
 	backendUrl: 'http://localhost:8082/public',
+	sessionKey: 'task123',
 }
 
 export const client = init(
-	'548f6741c1efad40031b18ae',
+	'586c33cf1cd88133f9a7804f',
 	{ key: 'unknown' },
 	{
 		// Not including plugins at all would be equivalent to the current LaunchDarkly SDK.
