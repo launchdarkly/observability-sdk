@@ -46,9 +46,7 @@ export class BufferedClass<T extends object> {
 		this._sdk = sdk
 		this._isLoaded = true
 
-		this._log(`executing ${this._callBuffer.length} buffered calls`)
 		for (const { method, args } of this._callBuffer) {
-			this._log('executing buffered call to', method, args)
 			try {
 				;(this._sdk as any)[method](...args)
 			} catch (error) {
@@ -79,11 +77,5 @@ export class BufferedClass<T extends object> {
 		this._exceededCapacity = false
 		this._isLoaded = false
 		this._sdk = undefined as any
-	}
-
-	_log(...data: any[]) {
-		if (__DEV__) {
-			console.log('[BufferedClass]', ...data)
-		}
 	}
 }

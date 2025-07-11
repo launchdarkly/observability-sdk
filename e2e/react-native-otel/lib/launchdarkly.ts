@@ -59,6 +59,8 @@ export async function initializeLaunchDarkly() {
 			otlpEndpoint,
 		)
 
+		initialized = true
+
 		await ldClient.identify({
 			key: '1234567890',
 			kind: 'device',
