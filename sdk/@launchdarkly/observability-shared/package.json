@@ -8,9 +8,11 @@
 	},
 	"scripts": {
 		"build": "tsc",
+		"codegen": "graphql-codegen",
 		"dev": "tsc --watch"
 	},
 	"devDependencies": {
+		"@graphql-codegen/cli": "^5.0.7",
 		"typescript": "^5.8.3"
 	},
 	"dependencies": {
