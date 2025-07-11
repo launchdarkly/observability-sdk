@@ -15,6 +15,8 @@ _DEFAULT_INSTRUMENT_LOGGING = True
 _DEFAULT_LOG_LEVEL = logging.INFO
 _DEFAULT_DISABLE_EXPORT_ERROR_LOGGING = False
 _DEFAULT_LOG_CORRELATION = True
+_DEFAULT_PROCESS_RESOURCES = True
+_DEFAULT_OS_RESOURCES = True
 
 
 @dataclass(kw_only=True)
@@ -116,6 +118,24 @@ class ObservabilityConfig:
     If this list and the OTEL_PYTHON_DISABLED_INSTRUMENTATIONS environment variable are both set, then the lists will be combined.
     """
 
+    process_resources: Optional[bool] = None
+    """
+    Determines if process resource attributes are included in the OpenTelemetry resource.
+
+    If the OTEL_EXPERIMENTAL_RESOURCE_DETECTORS environment variable is set, then this setting will have no effect.
+
+    Defaults to True.
+    """
+
+    os_resources: Optional[bool] = None
+    """
+    Determines if OS resource attributes are included in the OpenTelemetry resource.
+
+        If the OTEL_EXPERIMENTAL_RESOURCE_DETECTORS environment variable is set, then this setting will have no effect.
+
+    Defaults to True.
+    """
+
     def __getitem__(self, key: str):
         return getattr(self, key)
 
@@ -132,6 +152,8 @@ class _ProcessedConfig:
     log_correlation: bool
     disabled_instrumentations: list[str]
     backend_url: str
+    process_resources: bool
+    os_resources: bool
 
     def __init__(self, config: ObservabilityConfig):
         self.otlp_endpoint = config.otlp_endpoint or os.getenv(
@@ -176,3 +198,15 @@ class _ProcessedConfig:
         )
 
         self.disabled_instrumentations = config.disabled_instrumentations or []
+
+        self.process_resources = (
+            config.process_resources
+            if config.process_resources is not None
+            else _DEFAULT_PROCESS_RESOURCES
+        )
+
+        self.os_resources = (
+            config.os_resources
+            if config.os_resources is not None
+            else _DEFAULT_OS_RESOURCES
+        )

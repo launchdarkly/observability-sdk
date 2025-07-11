@@ -15,6 +15,51 @@ from ldclient.client import LDClient
 from opentelemetry.instrumentation.environment_variables import (
     OTEL_PYTHON_DISABLED_INSTRUMENTATIONS,
 )
+from opentelemetry.sdk.environment_variables import OTEL_EXPERIMENTAL_RESOURCE_DETECTORS
+
+
+def _extend_environment_list(env_var_name: str, *new_items: str) -> None:
+    """
+    Extend an environment variable containing a comma-separated list with additional items.
+
+    This function reads the current value of the specified environment variable,
+    adds the provided items to the comma-separated list, and sets the
+    environment variable with the extended list.
+
+    Args:
+        env_var_name: The name of the environment variable to extend.
+        *new_items: Variable number of items to add to the list.
+
+    Example:
+        >>> _extend_environment_list("MY_LIST", "item1", "item2")
+        # If MY_LIST was "existing_item", it will become "existing_item,item1,item2"
+    """
+    current_value = os.getenv(env_var_name, "")
+
+    # Split the current value by comma and strip whitespace
+    current_list = [item.strip() for item in current_value.split(",") if item.strip()]
+
+    # Add new items, avoiding duplicates
+    for item in new_items:
+        if item.strip() and item.strip() not in current_list:
+            current_list.append(item.strip())
+
+    # Join the list back into a comma-separated string
+    new_value = ",".join(current_list)
+
+    # Set the environment variable
+    os.environ[env_var_name] = new_value
+
+
+def _extend_experimental_resource_detectors(*detectors: str) -> None:
+    """
+    Extend the OTEL_EXPERIMENTAL_RESOURCE_DETECTORS environment variable with additional detectors.
+
+    This function reads the current value of OTEL_EXPERIMENTAL_RESOURCE_DETECTORS,
+    adds the provided detectors to the comma-separated list, and sets the
+    environment variable with the extended list.
+    """
+    _extend_environment_list(OTEL_EXPERIMENTAL_RESOURCE_DETECTORS, *detectors)
 
 
 def _extend_disabled_instrumentations(*instrumentations: str) -> None:
@@ -34,21 +79,7 @@ def _extend_disabled_instrumentations(*instrumentations: str) -> None:
         # If OTEL_PYTHON_DISABLED_INSTRUMENTATIONS was "grpc_client",
         # it will become "grpc_client,redis,kafka"
     """
-    current_value = os.getenv(OTEL_PYTHON_DISABLED_INSTRUMENTATIONS, "")
-
-    # Split the current value by comma and strip whitespace
-    current_list = [item.strip() for item in current_value.split(",") if item.strip()]
-
-    # Add new instrumentations, avoiding duplicates
-    for instrumentation in instrumentations:
-        if instrumentation.strip() and instrumentation.strip() not in current_list:
-            current_list.append(instrumentation.strip())
-
-    # Join the list back into a comma-separated string
-    new_value = ",".join(current_list)
-
-    # Set the environment variable
-    os.environ[OTEL_PYTHON_DISABLED_INSTRUMENTATIONS] = new_value
+    _extend_environment_list(OTEL_PYTHON_DISABLED_INSTRUMENTATIONS, *instrumentations)
 
 
 class ObservabilityPlugin(Plugin):
@@ -61,6 +92,18 @@ class ObservabilityPlugin(Plugin):
 
         if self._config.disabled_instrumentations:
             _extend_disabled_instrumentations(*self._config.disabled_instrumentations)
+
+        # If the OTEL_EXPERIMENTAL_RESOURCE_DETECTORS environment variable is not set, then we will use the config.
+        if os.getenv(OTEL_EXPERIMENTAL_RESOURCE_DETECTORS, None) is None:
+            # Configure resource detectors based on config
+            resource_detectors = []
+            if self._config.process_resources:
+                resource_detectors.append("process")
+            if self._config.os_resources:
+                resource_detectors.append("os")
+
+            if resource_detectors:
+                _extend_experimental_resource_detectors(*resource_detectors)
 
         auto_instrumentation.initialize()
 
