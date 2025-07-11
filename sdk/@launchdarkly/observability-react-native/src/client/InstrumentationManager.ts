@@ -198,10 +198,7 @@ export class InstrumentationManager {
 	private initializeSampling() {
 		if (!this.options.projectId) return
 
-		getSamplingConfig(
-			this.options.backendUrl,
-			this.options.projectId,
-		)
+		getSamplingConfig(this.options.backendUrl, this.options.projectId)
 			.then((samplingConfig) => {
 				this.sampler.setConfig(samplingConfig)
 				this._log('Sampling configuration loaded', samplingConfig)
