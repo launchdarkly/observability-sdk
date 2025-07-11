@@ -80,7 +80,7 @@ export class InstrumentationManager {
 				...(this.options.customHeaders ?? {}),
 			}
 
-			await this.initializeSampling()
+			this.initializeSampling()
 			this.initializeTracing()
 			this.initializeLogs()
 			this.initializeMetrics()
@@ -195,19 +195,20 @@ export class InstrumentationManager {
 		this._log('Tracing initialized')
 	}
 
-	private async initializeSampling() {
+	private initializeSampling() {
 		if (!this.options.projectId) return
 
-		try {
-			const samplingConfig = await getSamplingConfig(
-				this.options.backendUrl,
-				this.options.projectId,
-			)
-			this.sampler.setConfig(samplingConfig)
-			this._log('Sampling configuration loaded', samplingConfig)
-		} catch (error) {
-			console.warn('Failed to load sampling configuration:', error)
-		}
+		getSamplingConfig(
+			this.options.backendUrl,
+			this.options.projectId,
+		)
+			.then((samplingConfig) => {
+				this.sampler.setConfig(samplingConfig)
+				this._log('Sampling configuration loaded', samplingConfig)
+			})
+			.catch((error) => {
+				console.warn('Failed to load sampling configuration:', error)
+			})
 	}
 
 	private initializeLogs() {
