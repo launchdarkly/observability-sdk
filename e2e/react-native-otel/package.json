@@ -5,10 +5,10 @@
 	"scripts": {
 		"start": "expo start",
 		"reset-project": "node ./scripts/reset-project.js",
-		"android": "expo run:android",
-		"android:run": "expo run:android",
-		"ios": "expo run:ios",
-		"ios:run": "expo run:ios",
+		"android": "expo start --android",
+		"android:dev-build": "expo run:android",
+		"ios": "expo start --ios",
+		"ios:dev-build": "expo run:ios",
 		"web": "expo start --web",
 		"lint": "expo lint",
 		"otel:start": "docker-compose -f docker-compose.yaml up"
