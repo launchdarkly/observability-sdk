@@ -198,7 +198,7 @@ export class InstrumentationManager {
 			scheduledDelayMillis: 500,
 			exportTimeoutMillis: 5000,
 			maxExportBatchSize: 10,
-		});
+		})
 
 		this.loggerProvider = new LoggerProvider({
 			resource: this.resource,
