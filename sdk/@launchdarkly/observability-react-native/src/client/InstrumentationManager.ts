@@ -204,7 +204,7 @@ export class InstrumentationManager {
 				this.options.projectId,
 			)
 			this.sampler.setConfig(samplingConfig)
-			this._log('Sampling configuration loaded')
+			this._log('Sampling configuration loaded', samplingConfig)
 		} catch (error) {
 			console.warn('Failed to load sampling configuration:', error)
 		}
