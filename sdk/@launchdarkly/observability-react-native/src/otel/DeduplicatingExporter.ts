@@ -38,7 +38,7 @@ export class DeduplicatingExporter implements SpanExporter {
 			const existing = seenSpans.get(key)
 
 			if (!existing) {
-				this._log('non-existing span - adding', span.name)
+				this._log('non-existing span - adding', span.name, lib)
 				seenSpans.set(key, span)
 				dedupedSpans.push(span)
 				continue
