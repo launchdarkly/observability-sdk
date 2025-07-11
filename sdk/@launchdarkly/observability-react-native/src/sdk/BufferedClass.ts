@@ -10,7 +10,6 @@ export class BufferedClass<T extends object> {
 	protected _capacity: number = 10_000
 	protected _droppedEvents: number = 0
 	protected _exceededCapacity: boolean = false
-	protected _debug: boolean = false
 
 	protected _bufferCall(method: string, args: any[]) {
 		if (this._isLoaded) {
@@ -83,6 +82,8 @@ export class BufferedClass<T extends object> {
 	}
 
 	_log(...data: any[]) {
-		console.log('[BufferedClass]', ...data)
+		if (__DEV__) {
+			console.log('[BufferedClass]', ...data)
+		}
 	}
 }
