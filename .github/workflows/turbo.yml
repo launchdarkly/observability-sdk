@@ -38,8 +38,8 @@ jobs:
             - name: Install js dependencies
               run: yarn install
 
-            # - name: Check yarn for duplicate deps
-            #   run: yarn dedupe --check
+            - name: Check yarn for duplicate deps
+              run: yarn dedupe --check
 
             - name: Check formatting
               run: yarn format-check
