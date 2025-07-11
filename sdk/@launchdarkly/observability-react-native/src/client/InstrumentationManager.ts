@@ -46,6 +46,10 @@ import { CustomBatchSpanProcessor } from '../otel/CustomBatchSpanProcessor'
 import { CustomTraceExporter } from '../otel/CustomTraceExporter'
 import { CustomLogExporter } from '../otel/CustomLogExporter'
 
+export type InstrumentationManagerOptions = Required<ReactNativeOptions> & {
+	projectId: string
+}
+
 export class InstrumentationManager {
 	private traceProvider?: WebTracerProvider
 	private loggerProvider?: LoggerProvider
@@ -54,11 +58,14 @@ export class InstrumentationManager {
 	private serviceName: string
 	private resource: Resource = new Resource({})
 	private headers: Record<string, string> = {}
-	private projectId: string = ''
 	private sessionManager?: SessionManager
 	private sampler: CustomSampler = new CustomSampler()
 
-	constructor(private options: Required<ReactNativeOptions>) {
+	constructor(
+		private options: Required<ReactNativeOptions> & {
+			projectId: string
+		},
+	) {
 		this.serviceName =
 			this.options.serviceName ??
 			'launchdarkly-observability-react-native'
@@ -72,9 +79,6 @@ export class InstrumentationManager {
 			this.headers = {
 				...(this.options.customHeaders ?? {}),
 			}
-
-			this.projectId =
-				(resource.attributes['highlight.project_id'] as string) || ''
 
 			this.initializeSampling()
 			this.initializeTracing()
@@ -192,12 +196,12 @@ export class InstrumentationManager {
 	}
 
 	private async initializeSampling() {
-		if (!this.projectId) return
+		if (!this.options.projectId) return
 
 		try {
 			const samplingConfig = await getSamplingConfig(
 				this.options.backendUrl,
-				this.projectId,
+				this.options.projectId,
 			)
 			this.sampler.setConfig(samplingConfig)
 			this._log('Sampling configuration loaded')

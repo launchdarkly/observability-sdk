@@ -15,28 +15,33 @@ import { ReactNativeOptions } from '../api/Options'
 import { Metric } from '../api/Metric'
 import { RequestContext } from '../api/RequestContext'
 import { SessionManager } from '../client/SessionManager'
-import { InstrumentationManager } from '../client/InstrumentationManager'
+import {
+	InstrumentationManager,
+	InstrumentationManagerOptions,
+} from '../client/InstrumentationManager'
 
 export class ObservabilityClient {
 	private sessionManager: SessionManager
 	private instrumentationManager: InstrumentationManager
-	private options: Required<ReactNativeOptions>
+	private options: InstrumentationManagerOptions
 	private isInitialized = false
 
 	constructor(
 		private readonly sdkKey: string,
 		options: ReactNativeOptions = {},
 	) {
-		this.options = this.mergeOptions(options)
+		this.options = this.mergeOptions(sdkKey, options)
 		this.sessionManager = new SessionManager(this.options)
 		this.instrumentationManager = new InstrumentationManager(this.options)
 		this.init()
 	}
 
 	private mergeOptions(
+		sdkKey: string,
 		options: ReactNativeOptions,
-	): Required<ReactNativeOptions> {
+	): InstrumentationManagerOptions {
 		return {
+			projectId: sdkKey,
 			serviceName:
 				options.serviceName ??
 				'launchdarkly-observability-react-native',
@@ -84,6 +89,7 @@ export class ObservabilityClient {
 				'highlight.project_id': this.sdkKey,
 				'highlight.session_id': sessionAttributes.sessionId,
 				...this.options.resourceAttributes,
+				...sessionAttributes,
 			})
 
 			this.instrumentationManager.setSessionManager(this.sessionManager)

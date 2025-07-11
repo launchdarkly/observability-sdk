@@ -1,11 +1,8 @@
 import { ExportResult } from '@opentelemetry/core'
 import { ReadableSpan } from '@opentelemetry/sdk-trace-web'
-import {
-	sampleSpans,
-	deduplicateSpans,
-	CustomSampler,
-} from '@launchdarkly/observability-shared'
+import { sampleSpans, CustomSampler } from '@launchdarkly/observability-shared'
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http'
+import { deduplicateSpans } from './deduplicateSpans'
 
 export type TraceExporterConfig = ConstructorParameters<
 	typeof OTLPTraceExporter
