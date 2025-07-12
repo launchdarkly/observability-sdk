@@ -1,5 +1,5 @@
 import { vi, it, expect, beforeEach } from 'vitest'
-import { ReadableSpan } from '@opentelemetry/sdk-trace-base'
+import { ReadableSpan } from '@opentelemetry/sdk-trace-web'
 import { SpanKind } from '@opentelemetry/api'
 import { sampleSpans } from './sampleSpans'
 import { Maybe, SamplingConfig } from '../graph/generated/graphql'

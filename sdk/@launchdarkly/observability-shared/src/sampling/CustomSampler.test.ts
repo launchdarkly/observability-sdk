@@ -1,6 +1,6 @@
 import { SpanKind, Attributes } from '@opentelemetry/api'
 import { CustomSampler, defaultSampler } from './CustomSampler'
-import type { ReadableSpan } from '@opentelemetry/sdk-trace-base'
+import type { ReadableSpan } from '@opentelemetry/sdk-trace-web'
 import { it, expect, beforeEach, vi, describe } from 'vitest'
 import spanTestScenarios from './span-test-scenarios.json'
 import logTestScenarios from './log-test-scenarios.json'

@@ -1,4 +1,4 @@
-import { ReadableSpan, TimedEvent } from '@opentelemetry/sdk-trace-base'
+import { ReadableSpan, TimedEvent } from '@opentelemetry/sdk-trace-web'
 import { ExportSampler, SamplingResult } from './ExportSampler'
 import {
 	LogSamplingConfig,
