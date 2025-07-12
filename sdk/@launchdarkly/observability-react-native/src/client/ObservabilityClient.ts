@@ -15,34 +15,42 @@ import { ReactNativeOptions } from '../api/Options'
 import { Metric } from '../api/Metric'
 import { RequestContext } from '../api/RequestContext'
 import { SessionManager } from '../client/SessionManager'
-import { InstrumentationManager } from '../client/InstrumentationManager'
+import {
+	InstrumentationManager,
+	InstrumentationManagerOptions,
+} from '../client/InstrumentationManager'
 
 export class ObservabilityClient {
 	private sessionManager: SessionManager
 	private instrumentationManager: InstrumentationManager
-	private options: Required<ReactNativeOptions>
+	private options: InstrumentationManagerOptions
 	private isInitialized = false
 
 	constructor(
 		private readonly sdkKey: string,
 		options: ReactNativeOptions = {},
 	) {
-		this.options = this.mergeOptions(options)
+		this.options = this.mergeOptions(sdkKey, options)
 		this.sessionManager = new SessionManager(this.options)
 		this.instrumentationManager = new InstrumentationManager(this.options)
 		this.init()
 	}
 
 	private mergeOptions(
+		sdkKey: string,
 		options: ReactNativeOptions,
-	): Required<ReactNativeOptions> {
+	): InstrumentationManagerOptions {
 		return {
-			otlpEndpoint:
-				options.otlpEndpoint ??
-				'https://otel.observability.app.launchdarkly.com:4318',
+			projectId: sdkKey,
 			serviceName:
 				options.serviceName ??
 				'launchdarkly-observability-react-native',
+			backendUrl:
+				options.backendUrl ??
+				'https://pub.observability.app.launchdarkly.com',
+			otlpEndpoint:
+				options.otlpEndpoint ??
+				'https://otel.observability.app.launchdarkly.com:4318',
 			serviceVersion: options.serviceVersion ?? '1.0.0',
 			resourceAttributes: options.resourceAttributes ?? {},
 			customHeaders: {
@@ -81,10 +89,11 @@ export class ObservabilityClient {
 				'highlight.project_id': this.sdkKey,
 				'highlight.session_id': sessionAttributes.sessionId,
 				...this.options.resourceAttributes,
+				...sessionAttributes,
 			})
 
 			this.instrumentationManager.setSessionManager(this.sessionManager)
-			this.instrumentationManager.initialize(resource)
+			void this.instrumentationManager.initialize(resource)
 			this.isInitialized = true
 
 			this._log('initialized successfully')
