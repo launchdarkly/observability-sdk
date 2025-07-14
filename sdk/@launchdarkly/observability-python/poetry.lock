@@ -1151,13 +1151,15 @@ urllib3 = ">=1.26.0,<3"
 
 [[package]]
 name = "launchdarkly-server-sdk"
-version = "9.11.1"
+version = "9.12.0"
 description = "LaunchDarkly SDK for Python"
 optional = false
 python-versions = ">=3.9"
 groups = ["main"]
-files = []
-develop = false
+files = [
+    {file = "launchdarkly_server_sdk-9.12.0-py3-none-any.whl", hash = "sha256:c7351e26e6b695b968d49888e967691aae60ded82d73a41a74d59d11252a1413"},
+    {file = "launchdarkly_server_sdk-9.12.0.tar.gz", hash = "sha256:219b100d7569e4f528b6028cbd2a5d61f13539f2b44ed43fc173bb4f456ee580"},
+]
 
 [package.dependencies]
 certifi = ">=2018.4.16"
@@ -1173,27 +1175,21 @@ dynamodb = ["boto3 (>=1.9.71)"]
 redis = ["redis (>=2.10.5)"]
 test-filesource = ["pyyaml (>=5.3.1)", "watchdog (>=3.0.0)"]
 
-[package.source]
-type = "directory"
-url = "../../../../python-server-sdk"
-
 [[package]]
 name = "launchdarkly-server-sdk-otel"
-version = "1.0.0"
+version = "1.2.0"
 description = "LaunchDarkly SDK OpenTelemetry integration"
 optional = false
-python-versions = ">=3.8"
+python-versions = ">=3.9"
 groups = ["main"]
-files = []
-develop = false
+files = [
+    {file = "launchdarkly_server_sdk_otel-1.2.0-py3-none-any.whl", hash = "sha256:1c7dc57f60b60502998c3d88c0032385466c96758d1919439c8f1c56b1f25230"},
+    {file = "launchdarkly_server_sdk_otel-1.2.0.tar.gz", hash = "sha256:7dbf66f40ec21608b55bfa76669dc58904a78ec6b9a9005250c8a8d8e8666622"},
+]
 
 [package.dependencies]
 launchdarkly-server-sdk = ">=9.4.0"
 opentelemetry-sdk = ">=1.24.0"
-
-[package.source]
-type = "directory"
-url = "../../../../python-server-sdk-otel"
 
 [[package]]
 name = "loguru"
@@ -3315,4 +3311,4 @@ dev = ["azure-functions", "black", "blinker", "django", "fastapi", "flask", "fun
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.9,<4"
-content-hash = "f2af9322484368005f49114e3292beb6b0de0a1c23241652eb1255b2a55d4a9a"
+content-hash = "d13787f25e3497c2b81a2794c4311bdba995e3f760883ef657f2fd46a382fb93"
