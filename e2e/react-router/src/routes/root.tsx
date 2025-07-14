@@ -270,6 +270,20 @@ export default function Root() {
 			>
 				recordObservability
 			</button>
+			<button
+				onClick={async () => {
+					LDRecord.stop()
+				}}
+			>
+				LDRecord.stop()
+			</button>
+			<button
+				onClick={async () => {
+					LDObserve.stop()
+				}}
+			>
+				LDObserve.stop()
+			</button>
 		</div>
 	)
 }

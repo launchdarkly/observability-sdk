@@ -15,8 +15,9 @@ class _LDRecord extends BufferedClass<Record> implements Record {
 		return this._sdk.start(options)
 	}
 
-	stop(options?: StartOptions) {
-		return this._bufferCall('stop', [options])
+	stop() {
+		// avoid buffering the stop call
+		return this._sdk.stop()
 	}
 
 	getRecordingState() {
