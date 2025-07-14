@@ -13,6 +13,8 @@ import 'react-native-reanimated'
 import { useColorScheme } from '@/hooks/useColorScheme'
 import { initializeLaunchDarkly } from '@/lib/launchdarkly'
 import { LDObserve } from '@launchdarkly/observability-react-native'
+import Constants from 'expo-constants'
+import { Platform } from 'react-native'
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync()
@@ -22,7 +24,13 @@ LDObserve.startActiveSpan('RootLayoutSpan', (span) => {
 	span.end()
 	return
 })
-LDObserve.recordLog('RootLayout', 'info', { test: 'value' })
+
+LDObserve.recordLog('appLoading', 'info', {
+	component: 'RootLayout',
+	device_name: Constants.deviceName,
+	os: Platform.OS,
+	os_version: Platform.Version,
+})
 
 // Initialize LaunchDarkly before initial render.
 initializeLaunchDarkly()
