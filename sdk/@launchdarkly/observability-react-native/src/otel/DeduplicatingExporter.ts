@@ -19,7 +19,7 @@ export class DeduplicatingExporter implements SpanExporter {
 		for (const span of spans) {
 			const sc = span.spanContext()
 			const traceId = sc.traceId
-			const lib = span.instrumentationLibrary.name
+			const lib = span.instrumentationScope.name
 			const url = span.attributes['http.url']
 			const method = span.attributes['http.method']
 
@@ -30,21 +30,21 @@ export class DeduplicatingExporter implements SpanExporter {
 			}
 
 			const reqId =
-				lib === XHR_LIB && span.parentSpanId
-					? span.parentSpanId // xhr requests can have a parent span from fetch instrumentation
+				lib === XHR_LIB && span.parentSpanContext?.spanId
+					? span.parentSpanContext.spanId // xhr requests can have a parent span from fetch instrumentation
 					: sc.spanId
 
 			const key = `${traceId}|${reqId}`
 			const existing = seenSpans.get(key)
 
 			if (!existing) {
-				this._log('non-existing span - adding', span.name)
+				this._log('non-existing span - adding', span.name, lib)
 				seenSpans.set(key, span)
 				dedupedSpans.push(span)
 				continue
 			}
 
-			const existingLib = existing.instrumentationLibrary.name
+			const existingLib = existing.instrumentationScope.name
 
 			if (existingLib === FETCH_LIB && lib === XHR_LIB) {
 				this._log(
