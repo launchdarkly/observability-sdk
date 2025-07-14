@@ -3,7 +3,7 @@ import type {
 	Span as OtelSpan,
 	SpanOptions,
 } from '@opentelemetry/api'
-import { Resource } from '@opentelemetry/resources'
+import { resourceFromAttributes } from '@opentelemetry/resources'
 import {
 	ATTR_SERVICE_NAME,
 	ATTR_SERVICE_VERSION,
@@ -69,7 +69,7 @@ export class ObservabilityClient {
 			this.sessionManager.initialize()
 
 			const sessionAttributes = this.sessionManager.getSessionAttributes()
-			const resource = new Resource({
+			const resource = resourceFromAttributes({
 				[ATTR_SERVICE_NAME]: this.options.serviceName,
 				[ATTR_SERVICE_VERSION]: this.options.serviceVersion,
 				[ATTR_TELEMETRY_SDK_NAME]:
