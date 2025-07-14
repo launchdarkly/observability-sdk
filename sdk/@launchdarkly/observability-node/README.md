@@ -22,6 +22,7 @@ Update your web app entrypoint.
 ```javascript
 import { init } from '@launchdarkly/node-server-sdk'
 import { Observability, LDObserve } from '@launchdarkly/observability-node'
+import express from 'express'
 
 const ldClient = init(process.env.LD_SDK_KEY,
     {
@@ -32,6 +33,8 @@ const ldClient = init(process.env.LD_SDK_KEY,
         ],
     },
 );
+
+const app = express()
 ```
 
 ## Getting started
