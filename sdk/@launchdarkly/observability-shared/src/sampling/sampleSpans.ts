@@ -1,10 +1,7 @@
-import type { ReadableSpan as BaseReadableSpan } from '@opentelemetry/sdk-trace-base'
-import type { ReadableSpan as WebReadableSpan } from '@opentelemetry/sdk-trace-web'
+import type { ReadableSpan } from '@opentelemetry/sdk-trace-base'
 import { Attributes } from '@opentelemetry/api'
 import { merge } from '@opentelemetry/core'
 import { ExportSampler } from './ExportSampler'
-
-type ReadableSpan = BaseReadableSpan | WebReadableSpan
 
 export function cloneReadableSpanWithAttributes(
 	span: ReadableSpan,
@@ -30,12 +27,11 @@ export function sampleSpans(
 	// The first pass we sample items which are directly impacted by a sampling decision.
 	// We also build a map of children spans by parent span id, which allows us to quickly traverse the span tree.
 	for (const item of items) {
-		if (item.parentSpanContext?.spanId) {
-			childrenByParentId[item.parentSpanContext.spanId] =
-				childrenByParentId[item.parentSpanContext.spanId] || []
-			childrenByParentId[item.parentSpanContext.spanId].push(
-				item.spanContext().spanId,
-			)
+		const parentSpanId = item.parentSpanContext?.spanId
+		if (parentSpanId) {
+			childrenByParentId[parentSpanId] =
+				childrenByParentId[parentSpanId] || []
+			childrenByParentId[parentSpanId].push(item.spanContext().spanId)
 		}
 		const sampleResult = sampler.sampleSpan(item)
 		if (sampleResult.sample) {
