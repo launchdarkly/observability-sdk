@@ -1,4 +1,7 @@
-def flatten_dict(d, parent_key="", sep="."):
+from typing import Any
+
+
+def flatten_dict(d: dict[str, Any], parent_key: str = "", sep: str = "."):
     items = []
     for k, v in d.items():
         new_key = parent_key + sep + k if parent_key else k
