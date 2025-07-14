@@ -1,5 +1,11 @@
 # highlight.run
 
+## 9.18.21
+
+### Patch Changes
+
+- 011032f: Add upper version constraint for otel packages.
+
 ## 9.18.20
 
 ### Patch Changes
