@@ -22,8 +22,10 @@ function makeSpan({
 	return {
 		name,
 		spanContext: () => ({ traceId, spanId }),
-		parentSpanId,
-		instrumentationLibrary: {
+		parentSpanContext: parentSpanId
+			? { spanId: parentSpanId, traceId, traceFlags: 0 }
+			: undefined,
+		instrumentationScope: {
 			name: instrumentationLibraryName,
 			version: '1.0.0',
 		},

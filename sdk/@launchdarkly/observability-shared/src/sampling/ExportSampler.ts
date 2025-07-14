@@ -1,5 +1,5 @@
 import { Attributes } from '@opentelemetry/api'
-import { ReadableSpan } from '@opentelemetry/sdk-trace-web'
+import { ReadableSpan } from '@opentelemetry/sdk-trace-base'
 import { SamplingConfig } from '../graph/generated/graphql'
 import { ReadableLogRecord } from '@opentelemetry/sdk-logs'
 
