@@ -19,19 +19,24 @@ yarn add @launchdarkly/observability-node
 ```
 
 Update your web app entrypoint.
-```TypeScript
-import { init } from '@launchdarkly/node-server-sdk'
-import Observability, { LDObserve } from '@launchdarkly/observability'
+```javascript
+// import vs require depending on stack. we should default to import
+const { init } = require('@launchdarkly/node-server-sdk')
+const { Handlers, Observability, LDObserve } = require('@launchdarkly/observability-node')
+const express = require('express')
 
-const client = init(
-        'sdk-key',
-        {
-          plugins: [
-            new Observability(),
-          ],
-        },
-)
+const ldClient = init(process.env.LD_SDK_KEY,
+    {
+        plugins: [
+            new Observability({
+                service: 'my-service-name',
+            }),
+        ],
+    },
+);
 
+const app = express()
+app.use(Handlers.middleware());
 ```
 
 ## Getting started
