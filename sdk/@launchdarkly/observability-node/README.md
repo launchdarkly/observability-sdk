@@ -21,8 +21,7 @@ yarn add @launchdarkly/observability-node
 Update your web app entrypoint.
 ```javascript
 import { init } from '@launchdarkly/node-server-sdk'
-import { Handlers, Observability, LDObserve } from '@launchdarkly/observability-node'
-import express from 'express'
+import { Observability, LDObserve } from '@launchdarkly/observability-node'
 
 const ldClient = init(process.env.LD_SDK_KEY,
     {
@@ -33,9 +32,6 @@ const ldClient = init(process.env.LD_SDK_KEY,
         ],
     },
 );
-
-const app = express()
-app.use(Handlers.middleware());
 ```
 
 ## Getting started
