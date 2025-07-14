@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.1
+
+### Patch Changes
+
+- 011032f: Update OTEL dependencies for React Native Plugin
+
 ## 0.2.0
 
 ### Minor Changes

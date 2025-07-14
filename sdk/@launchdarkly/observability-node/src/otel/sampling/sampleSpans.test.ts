@@ -1,15 +1,18 @@
 import { vi, it, expect, beforeEach } from 'vitest'
 import { ReadableSpan } from '@opentelemetry/sdk-trace-base'
-import { SpanKind } from '@opentelemetry/api'
+import { SpanKind, SpanContext } from '@opentelemetry/api'
 import { sampleSpans } from './sampleSpans'
 import { Maybe, SamplingConfig } from '../../graph/generated/graphql'
 import { ExportSampler, SamplingResult } from './ExportSampler'
 import { LogRecord } from '@opentelemetry/api-logs'
-import { sampleLogs } from './sampleLogs'
+import { resourceFromAttributes } from '@opentelemetry/resources'
 
 // Helper function to create a mock span
 const createMockSpan = (name: string, parentId?: string): ReadableSpan => {
-	return {
+	const parentSpanContext: SpanContext | undefined = parentId
+		? { spanId: parentId, traceId: 'trace-1', traceFlags: 0 }
+		: undefined
+	const span: ReadableSpan = {
 		name: name,
 		kind: SpanKind.INTERNAL,
 		spanContext: () => ({
@@ -19,7 +22,7 @@ const createMockSpan = (name: string, parentId?: string): ReadableSpan => {
 			isRemote: false,
 			toString: () => `${name}`,
 		}),
-		parentSpanId: parentId,
+		parentSpanContext,
 		startTime: [0, 0],
 		endTime: [0, 0],
 		status: { code: 0 },
@@ -30,13 +33,15 @@ const createMockSpan = (name: string, parentId?: string): ReadableSpan => {
 		ended: true,
 		resource: {
 			attributes: {},
-			merge: () => ({ attributes: {} }),
+			merge: () => resourceFromAttributes({}),
+			getRawAttributes: () => [],
 		},
-		instrumentationLibrary: { name: 'test', version: '1.0' },
+		instrumentationScope: { name: 'test', version: '1.0' },
 		droppedAttributesCount: 0,
 		droppedEventsCount: 0,
 		droppedLinksCount: 0,
-	} as unknown as ReadableSpan
+	}
+	return span
 }
 
 // Mock implementation of Sampler

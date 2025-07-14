@@ -1,5 +1,11 @@
 # @launchdarkly/observability-node
 
+## 0.2.0
+
+### Minor Changes
+
+- 011032f: Change default configuration for instrumentation and expose more fine grained options.
+
 ## 0.1.2
 
 ### Patch Changes
