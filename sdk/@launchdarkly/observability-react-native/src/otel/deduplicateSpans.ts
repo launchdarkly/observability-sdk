@@ -1,4 +1,4 @@
-import { ReadableSpan } from '@opentelemetry/sdk-trace-web'
+import type { ReadableSpan } from '@opentelemetry/sdk-trace-base'
 
 export const FETCH_LIB = '@opentelemetry/instrumentation-fetch'
 export const XHR_LIB = '@opentelemetry/instrumentation-xml-http-request'
@@ -17,7 +17,7 @@ export const deduplicateSpans = (spans: ReadableSpan[]): ReadableSpan[] => {
 	for (const span of spans) {
 		const sc = span.spanContext()
 		const traceId = sc.traceId
-		const lib = span.instrumentationLibrary.name
+		const lib = span.instrumentationScope.name
 		const url = span.attributes['http.url']
 		const method = span.attributes['http.method']
 
@@ -27,8 +27,8 @@ export const deduplicateSpans = (spans: ReadableSpan[]): ReadableSpan[] => {
 		}
 
 		const reqId =
-			lib === XHR_LIB && span.parentSpanId
-				? span.parentSpanId // xhr requests can have a parent span from fetch instrumentation
+			lib === XHR_LIB && span.parentSpanContext?.spanId
+				? span.parentSpanContext.spanId // xhr requests can have a parent span from fetch instrumentation
 				: sc.spanId
 
 		const key = `${traceId}|${reqId}`
@@ -40,7 +40,7 @@ export const deduplicateSpans = (spans: ReadableSpan[]): ReadableSpan[] => {
 			continue
 		}
 
-		const existingLib = existing.instrumentationLibrary.name
+		const existingLib = existing.instrumentationScope.name
 
 		if (existingLib === FETCH_LIB && lib === XHR_LIB) {
 			continue

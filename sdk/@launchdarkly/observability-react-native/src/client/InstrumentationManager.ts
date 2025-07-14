@@ -237,17 +237,17 @@ export class InstrumentationManager {
 			this.sampler,
 		)
 
-		const processor = new BatchLogRecordProcessor(logExporter, {
-			maxQueueSize: 100,
-			scheduledDelayMillis: 500,
-			exportTimeoutMillis: 5000,
-			maxExportBatchSize: 10,
-		})
-
 		this.loggerProvider = new LoggerProvider({
 			resource: this.resource,
-			processors: [processor],
 		})
+		this.loggerProvider.addLogRecordProcessor(
+			new BatchLogRecordProcessor(logExporter, {
+				maxQueueSize: 100,
+				scheduledDelayMillis: 500,
+				exportTimeoutMillis: 5000,
+				maxExportBatchSize: 10,
+			}),
+		)
 
 		logs.setGlobalLoggerProvider(this.loggerProvider)
 

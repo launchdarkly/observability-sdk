@@ -1,5 +1,5 @@
 import { ExportResult } from '@opentelemetry/core'
-import type { ReadableSpan } from '@opentelemetry/sdk-trace-base'
+import type { ReadableSpan } from '@opentelemetry/sdk-trace-web'
 import { sampleSpans, CustomSampler } from '@launchdarkly/observability-shared'
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http'
 import { deduplicateSpans } from './deduplicateSpans'
