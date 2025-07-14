@@ -20,7 +20,7 @@ export const ALL_CONSOLE_METHODS = [
 	'trace',
 	'warn',
 ] as const
-type ConsoleMethodsTuple = typeof ALL_CONSOLE_METHODS
+export type ConsoleMethodsTuple = typeof ALL_CONSOLE_METHODS
 export type ConsoleMethods = ConsoleMethodsTuple[number]
 
 /**

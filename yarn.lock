@@ -6235,6 +6235,19 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@gerrit0/mini-shiki@npm:^3.7.0":
+  version: 3.7.0
+  resolution: "@gerrit0/mini-shiki@npm:3.7.0"
+  dependencies:
+    "@shikijs/engine-oniguruma": "npm:^3.7.0"
+    "@shikijs/langs": "npm:^3.7.0"
+    "@shikijs/themes": "npm:^3.7.0"
+    "@shikijs/types": "npm:^3.7.0"
+    "@shikijs/vscode-textmate": "npm:^10.0.2"
+  checksum: 10/d9af211439551e2198309b6b3a274174ef7f84ab74d55872a6ab0302fe5b41a2000eaad65574ef5cd8fedad13d5a099e64863d489a991df7a3efd8e3250f8912
+  languageName: node
+  linkType: hard
+
 "@google-cloud/firestore@npm:^6.4.0":
   version: 6.4.3
   resolution: "@google-cloud/firestore@npm:6.4.3"
@@ -8556,6 +8569,7 @@ __metadata:
     encoding: "npm:^0.1.13"
     require-in-the-middle: "npm:^7.4.0"
     rollup: "npm:^4.34.8"
+    typedoc: "npm:^0.28.7"
     typescript: "npm:^5.0.4"
     vitest: "npm:^2.1.3"
   peerDependencies:
@@ -14403,12 +14417,31 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@shikijs/engine-oniguruma@npm:^3.7.0":
+  version: 3.8.0
+  resolution: "@shikijs/engine-oniguruma@npm:3.8.0"
+  dependencies:
+    "@shikijs/types": "npm:3.8.0"
+    "@shikijs/vscode-textmate": "npm:^10.0.2"
+  checksum: 10/2d1d23943cf5c05d682d76603f8fc6c2485d497cf8e05617766a23cf55e179ebca20c289926d25fda44420e52fd75bf4f62f28c5b570d263f59118965638146a
+  languageName: node
+  linkType: hard
+
 "@shikijs/langs@npm:^3.4.0":
   version: 3.4.0
   resolution: "@shikijs/langs@npm:3.4.0"
   dependencies:
     "@shikijs/types": "npm:3.4.0"
   checksum: 10/355065accab578a8a017ee238f13ee0b6adf007b514f78d7ea126f07ee89cd682f1f377f49d923688c6787b474b5b3a640aa3b083ac11ea11ea4edd7e8c50ac7
+  languageName: node
+  linkType: hard
+
+"@shikijs/langs@npm:^3.7.0":
+  version: 3.8.0
+  resolution: "@shikijs/langs@npm:3.8.0"
+  dependencies:
+    "@shikijs/types": "npm:3.8.0"
+  checksum: 10/f77541be82638381ffd64e639cc5f916d70273abf8163806b148e74d244f4e1ebb4a77d2c052717f5ece70e367d4cb62319009e450295dfc8abf2e7dff1ff713
   languageName: node
   linkType: hard
 
@@ -14421,6 +14454,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@shikijs/themes@npm:^3.7.0":
+  version: 3.8.0
+  resolution: "@shikijs/themes@npm:3.8.0"
+  dependencies:
+    "@shikijs/types": "npm:3.8.0"
+  checksum: 10/b4506bacbaa28278b0efbd447054239d22cb05de50c0c369d614517b4ded019bba9ec677ae796e06a77081ef99b77f216d494ad6339ff1b96faa322248c7f01c
+  languageName: node
+  linkType: hard
+
 "@shikijs/types@npm:3.4.0, @shikijs/types@npm:^3.4.0":
   version: 3.4.0
   resolution: "@shikijs/types@npm:3.4.0"
@@ -14428,6 +14470,16 @@ __metadata:
     "@shikijs/vscode-textmate": "npm:^10.0.2"
     "@types/hast": "npm:^3.0.4"
   checksum: 10/bca759ac0972f9ab673b199d44fb4655eb75a1af68b024f05126ff6ef0ce1fd7d316ca16da8eb7c383de8b058f358f90e6172be3783a1f04a3871f518fb0fd72
+  languageName: node
+  linkType: hard
+
+"@shikijs/types@npm:3.8.0, @shikijs/types@npm:^3.7.0":
+  version: 3.8.0
+  resolution: "@shikijs/types@npm:3.8.0"
+  dependencies:
+    "@shikijs/vscode-textmate": "npm:^10.0.2"
+    "@types/hast": "npm:^3.0.4"
+  checksum: 10/2eeb0c4e0af2421824092cc133da01b6d9db1daa9fbca7f261bdd8dee69d0e610508d377acbe8288e700ac56487d2a5a247417e7c6b8b46a3a44d9851eef89b2
   languageName: node
   linkType: hard
 
@@ -43604,6 +43656,23 @@ __metadata:
   languageName: node
   linkType: hard
 
+"typedoc@npm:^0.28.7":
+  version: 0.28.7
+  resolution: "typedoc@npm:0.28.7"
+  dependencies:
+    "@gerrit0/mini-shiki": "npm:^3.7.0"
+    lunr: "npm:^2.3.9"
+    markdown-it: "npm:^14.1.0"
+    minimatch: "npm:^9.0.5"
+    yaml: "npm:^2.8.0"
+  peerDependencies:
+    typescript: 5.0.x || 5.1.x || 5.2.x || 5.3.x || 5.4.x || 5.5.x || 5.6.x || 5.7.x || 5.8.x
+  bin:
+    typedoc: bin/typedoc
+  checksum: 10/afe4868d9288c8456227d745955eeb37a0485b56657d4b690d32e2c99580983cf27109e197b5c652c747cfcdab81588c9ff3d1572e9d7d87fd068e8630715b18
+  languageName: node
+  linkType: hard
+
 "typescript@npm:4.9.5, typescript@npm:^4.9.0":
   version: 4.9.5
   resolution: "typescript@npm:4.9.5"
@@ -46368,6 +46437,15 @@ __metadata:
   bin:
     yaml: bin.mjs
   checksum: 10/af57658d37c5efae4bac7204589b742ae01878a278554d632f01012868cf7fa66cba09b39140f12e7f6ceecc693ae52bcfb737596c4827e6e233338cb3a9528e
+  languageName: node
+  linkType: hard
+
+"yaml@npm:^2.8.0":
+  version: 2.8.0
+  resolution: "yaml@npm:2.8.0"
+  bin:
+    yaml: bin.mjs
+  checksum: 10/7d4bd9c10d0e467601f496193f2ac254140f8e36f96f5ff7f852b9ce37974168eb7354f4c36dc8837dde527a2043d004b6aff48818ec24a69ab2dd3c6b6c381c
   languageName: node
   linkType: hard
 
