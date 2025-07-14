@@ -11,18 +11,18 @@ export class BufferedClass<T extends object> {
 	protected _droppedEvents: number = 0
 	protected _exceededCapacity: boolean = false
 
-	protected _bufferCall(method: string, args: any[]) {
+	protected _bufferCall(method: keyof T, args: any[]) {
 		if (this._isLoaded) {
 			try {
 				return (this._sdk as any)[method](...args)
 			} catch (error) {
 				console.warn(
-					`Error executing buffered call to ${method}:`,
+					`Error executing buffered call to ${String(method)}:`,
 					error,
 				)
 			}
 		} else {
-			this._enqueue({ method, args })
+			this._enqueue({ method: String(method), args })
 			return undefined
 		}
 	}

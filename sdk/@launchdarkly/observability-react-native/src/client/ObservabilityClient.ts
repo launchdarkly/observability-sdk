@@ -140,7 +140,11 @@ export class ObservabilityClient {
 		return this.instrumentationManager.flush()
 	}
 
-	public log(message: any, level: string, attributes?: Attributes): void {
+	public recordLog(
+		message: any,
+		level: string,
+		attributes?: Attributes,
+	): void {
 		if (this.options.disableLogs) return
 		this.instrumentationManager.recordLog(message, level, attributes)
 	}
