@@ -20,10 +20,9 @@ yarn add @launchdarkly/observability-node
 
 Update your web app entrypoint.
 ```javascript
-// import vs require depending on stack. we should default to import
-const { init } = require('@launchdarkly/node-server-sdk')
-const { Handlers, Observability, LDObserve } = require('@launchdarkly/observability-node')
-const express = require('express')
+import { init } from '@launchdarkly/node-server-sdk'
+import { Handlers, Observability, LDObserve } from '@launchdarkly/observability-node'
+import express from 'express'
 
 const ldClient = init(process.env.LD_SDK_KEY,
     {
