@@ -6303,7 +6303,7 @@ __metadata:
     "@cloudflare/workers-types": "npm:^4.20250317.0"
     "@opentelemetry/api": "npm:^1.9.0"
     "@opentelemetry/exporter-metrics-otlp-http": "npm:>=0.57.1"
-    "@opentelemetry/exporter-trace-otlp-http": "npm:^0.203.0"
+    "@opentelemetry/exporter-trace-otlp-http": "npm:>=0.57.1"
     "@opentelemetry/otlp-exporter-base": "npm:>=0.57.1"
     "@opentelemetry/resources": "npm:^1.30.1"
     "@opentelemetry/sdk-metrics": "npm:^1.30.1"
@@ -6401,8 +6401,8 @@ __metadata:
     "@opentelemetry/exporter-jaeger": "npm:^1.30.1"
     "@opentelemetry/exporter-logs-otlp-http": "npm:^0.57.2"
     "@opentelemetry/exporter-metrics-otlp-http": "npm:^0.57.2"
-    "@opentelemetry/exporter-trace-otlp-http": "npm:^0.203.0"
-    "@opentelemetry/instrumentation": "npm:^0.203.0"
+    "@opentelemetry/exporter-trace-otlp-http": "npm:^0.57.2"
+    "@opentelemetry/instrumentation": "npm:^0.57.2"
     "@opentelemetry/otlp-exporter-base": "npm:^0.57.2"
     "@opentelemetry/otlp-transformer": "npm:^0.57.2"
     "@opentelemetry/resources": "npm:^1.30.1"
@@ -6465,7 +6465,7 @@ __metadata:
   dependencies:
     "@highlight-run/node": "workspace:*"
     "@highlight-run/react": "workspace:*"
-    "@opentelemetry/instrumentation": "npm:^0.203.0"
+    "@opentelemetry/instrumentation": "npm:>=0.53.0"
     "@remix-run/react": "npm:^2.10.0"
     "@types/js-cookie": "npm:^3.0.6"
     highlight.run: "workspace:*"
@@ -7963,8 +7963,8 @@ __metadata:
     "@opentelemetry/exporter-jaeger": "npm:^1.30.1"
     "@opentelemetry/exporter-logs-otlp-http": "npm:^0.57.2"
     "@opentelemetry/exporter-metrics-otlp-http": "npm:^0.57.2"
-    "@opentelemetry/exporter-trace-otlp-http": "npm:^0.203.0"
-    "@opentelemetry/instrumentation": "npm:^0.203.0"
+    "@opentelemetry/exporter-trace-otlp-http": "npm:^0.57.2"
+    "@opentelemetry/instrumentation": "npm:^0.57.2"
     "@opentelemetry/otlp-exporter-base": "npm:^0.57.2"
     "@opentelemetry/otlp-transformer": "npm:^0.57.2"
     "@opentelemetry/resources": "npm:^1.30.1"
@@ -9454,7 +9454,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@opentelemetry/exporter-trace-otlp-http@npm:0.57.2":
+"@opentelemetry/exporter-trace-otlp-http@npm:0.57.2, @opentelemetry/exporter-trace-otlp-http@npm:^0.57.2":
   version: 0.57.2
   resolution: "@opentelemetry/exporter-trace-otlp-http@npm:0.57.2"
   dependencies:
@@ -9469,7 +9469,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@opentelemetry/exporter-trace-otlp-http@npm:^0.203.0":
+"@opentelemetry/exporter-trace-otlp-http@npm:>=0.57.1, @opentelemetry/exporter-trace-otlp-http@npm:^0.203.0":
   version: 0.203.0
   resolution: "@opentelemetry/exporter-trace-otlp-http@npm:0.203.0"
   dependencies:
@@ -9666,7 +9666,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@opentelemetry/instrumentation-fetch@npm:^0.203.0":
+"@opentelemetry/instrumentation-fetch@npm:>=0.57.1, @opentelemetry/instrumentation-fetch@npm:^0.203.0":
   version: 0.203.0
   resolution: "@opentelemetry/instrumentation-fetch@npm:0.203.0"
   dependencies:
@@ -10046,7 +10046,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@opentelemetry/instrumentation-xml-http-request@npm:^0.203.0":
+"@opentelemetry/instrumentation-xml-http-request@npm:>=0.57.1, @opentelemetry/instrumentation-xml-http-request@npm:^0.203.0":
   version: 0.203.0
   resolution: "@opentelemetry/instrumentation-xml-http-request@npm:0.203.0"
   dependencies:
@@ -10060,7 +10060,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@opentelemetry/instrumentation@npm:0.203.0, @opentelemetry/instrumentation@npm:^0.203.0":
+"@opentelemetry/instrumentation@npm:0.203.0, @opentelemetry/instrumentation@npm:>=0.53.0, @opentelemetry/instrumentation@npm:>=0.57.1, @opentelemetry/instrumentation@npm:^0.203.0":
   version: 0.203.0
   resolution: "@opentelemetry/instrumentation@npm:0.203.0"
   dependencies:
@@ -10073,7 +10073,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@opentelemetry/instrumentation@npm:0.57.2, @opentelemetry/instrumentation@npm:^0.52.0 || ^0.53.0 || ^0.54.0 || ^0.55.0 || ^0.56.0 || ^0.57.0, @opentelemetry/instrumentation@npm:^0.57.1":
+"@opentelemetry/instrumentation@npm:0.57.2, @opentelemetry/instrumentation@npm:^0.52.0 || ^0.53.0 || ^0.54.0 || ^0.55.0 || ^0.56.0 || ^0.57.0, @opentelemetry/instrumentation@npm:^0.57.1, @opentelemetry/instrumentation@npm:^0.57.2":
   version: 0.57.2
   resolution: "@opentelemetry/instrumentation@npm:0.57.2"
   dependencies:
@@ -26316,12 +26316,12 @@ __metadata:
     "@launchdarkly/js-client-sdk": "npm:^0.6.0"
     "@opentelemetry/api": "npm:^1.9.0"
     "@opentelemetry/exporter-metrics-otlp-http": "npm:>=0.57.1"
-    "@opentelemetry/exporter-trace-otlp-http": "npm:^0.203.0"
-    "@opentelemetry/instrumentation": "npm:^0.203.0"
+    "@opentelemetry/exporter-trace-otlp-http": "npm:>=0.57.1"
+    "@opentelemetry/instrumentation": "npm:>=0.57.1"
     "@opentelemetry/instrumentation-document-load": "npm:>=0.44.0"
-    "@opentelemetry/instrumentation-fetch": "npm:^0.203.0"
+    "@opentelemetry/instrumentation-fetch": "npm:>=0.57.1"
     "@opentelemetry/instrumentation-user-interaction": "npm:>=0.44.0"
-    "@opentelemetry/instrumentation-xml-http-request": "npm:^0.203.0"
+    "@opentelemetry/instrumentation-xml-http-request": "npm:>=0.57.1"
     "@opentelemetry/otlp-exporter-base": "npm:>=0.57.1"
     "@opentelemetry/resources": "npm:^1.30.1"
     "@opentelemetry/sdk-metrics": "npm:^1.30.1"
