@@ -1,5 +1,6 @@
 import type {
 	Attributes,
+	Context,
 	Span as OtelSpan,
 	SpanOptions,
 } from '@opentelemetry/api'
@@ -191,18 +192,23 @@ export class ObservabilityClient {
 		)
 	}
 
-	public startSpan(spanName: string, options?: SpanOptions): OtelSpan {
+	public startSpan(
+		spanName: string,
+		options?: SpanOptions,
+		ctx?: Context,
+	): OtelSpan {
 		if (this.options.disableTraces) {
 			return {} as OtelSpan
 		}
 
-		return this.instrumentationManager.startSpan(spanName, options)
+		return this.instrumentationManager.startSpan(spanName, options, ctx)
 	}
 
 	public startActiveSpan<T>(
 		spanName: string,
 		fn: (span: OtelSpan) => T,
 		options?: SpanOptions,
+		ctx?: Context,
 	): T {
 		if (this.options.disableTraces) {
 			return fn({} as OtelSpan)
@@ -212,7 +218,12 @@ export class ObservabilityClient {
 			spanName,
 			fn,
 			options,
+			ctx,
 		)
+	}
+
+	public getContextFromSpan(span: OtelSpan): Context {
+		return this.instrumentationManager.getContextFromSpan(span)
 	}
 
 	public getSessionInfo(): any {

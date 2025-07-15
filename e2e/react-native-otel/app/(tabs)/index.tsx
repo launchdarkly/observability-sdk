@@ -94,31 +94,18 @@ export default function HomeScreen() {
 				span.setAttribute('http.status_code', response.status)
 				span.setAttribute('response.size', JSON.stringify(data).length)
 
+				// wait to break out of current context
+				await new Promise((resolve) => setTimeout(resolve, 100))
+
+				const context = LDObserve.getContextFromSpan(span)
 				LDObserve.startActiveSpan(
 					'api.fetchData.child',
 					async (childSpan) => {
-						childSpan.setAttribute('http.method', 'GET')
-						childSpan.setAttribute(
-							'http.url',
-							'https://jsonplaceholder.typicode.com/posts/1',
-						)
-
-						const response = await fetch(
-							'https://jsonplaceholder.typicode.com/posts/2',
-						)
-						const data = await response.json()
-
-						childSpan.setAttribute(
-							'http.status_code',
-							response.status,
-						)
-						childSpan.setAttribute(
-							'response.size',
-							JSON.stringify(data).length,
-						)
-
+						childSpan.setAttribute('context', 'test')
 						childSpan.end()
 					},
+					{},
+					context,
 				)
 
 				LDObserve.recordLog('Network request completed', 'info', {
@@ -229,34 +216,40 @@ export default function HomeScreen() {
 				const currentSpanId = childContext.spanId
 
 				setTimeout(() => {
-					LDObserve.startActiveSpan('async-child', (asyncSpan) => {
-						const asyncContext = asyncSpan.spanContext()
+					const context = LDObserve.getContextFromSpan(parentSpan)
+					LDObserve.startActiveSpan(
+						'async-child',
+						(asyncSpan) => {
+							const asyncContext = asyncSpan.spanContext()
 
-						asyncSpan.setAttribute('async', true)
-						asyncSpan.setAttribute('step', '1.2')
-						asyncSpan.setAttribute('delay_ms', 100)
-						asyncSpan.setAttribute(
-							'parent_trace_id',
-							currentTraceId,
-						)
-						asyncSpan.setAttribute(
-							'expected_parent_span_id',
-							currentSpanId,
-						)
+							asyncSpan.setAttribute('async', true)
+							asyncSpan.setAttribute('step', '1.2')
+							asyncSpan.setAttribute('delay_ms', 100)
+							asyncSpan.setAttribute(
+								'parent_trace_id',
+								currentTraceId,
+							)
+							asyncSpan.setAttribute(
+								'expected_parent_span_id',
+								currentSpanId,
+							)
 
-						LDObserve.recordLog(
-							'Async operation completed',
-							'info',
-							{
-								step: '1.2',
-								parentOperation: 'parent-operation',
-								contextLost:
-									asyncContext.traceId !== currentTraceId,
-							},
-						)
+							LDObserve.recordLog(
+								'Async operation completed',
+								'info',
+								{
+									step: '1.2',
+									parentOperation: 'parent-operation',
+									contextLost:
+										asyncContext.traceId !== currentTraceId,
+								},
+							)
 
-						asyncSpan.end()
-					})
+							asyncSpan.end()
+						},
+						{},
+						context,
+					)
 				}, 100)
 
 				childSpan.end()

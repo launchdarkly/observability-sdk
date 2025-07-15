@@ -1,4 +1,10 @@
-import { Attributes, Span as OtelSpan, SpanOptions } from '@opentelemetry/api'
+import {
+	Attributes,
+	context,
+	Context,
+	Span as OtelSpan,
+	SpanOptions,
+} from '@opentelemetry/api'
 import { ObservabilityClient } from '../client/ObservabilityClient'
 import { Metric } from '../api/Metric'
 import { RequestContext } from '../api/RequestContext'
@@ -92,8 +98,12 @@ class LDObserveClass
 			: noOpSpan.setAttribute('method', 'startWithHeaders')
 	}
 
-	startSpan(spanName: string, options?: SpanOptions): OtelSpan {
-		const response = this._bufferCall('startSpan', [spanName, options])
+	startSpan(
+		spanName: string,
+		options?: SpanOptions,
+		ctx?: Context,
+	): OtelSpan {
+		const response = this._bufferCall('startSpan', [spanName, options, ctx])
 		return this._isLoaded
 			? response
 			: noOpSpan.setAttribute('method', 'startSpan')
@@ -103,16 +113,23 @@ class LDObserveClass
 		spanName: string,
 		fn: (span: OtelSpan) => T,
 		options?: SpanOptions,
+		ctx?: Context,
 	): T {
 		const response = this._bufferCall('startActiveSpan', [
 			spanName,
 			fn,
 			options,
+			ctx,
 		])
 
 		return this._isLoaded
 			? response
 			: fn(noOpSpan.setAttribute('method', 'startActiveSpan'))
+	}
+
+	getContextFromSpan(span: OtelSpan): Context {
+		const response = this._bufferCall('getContextFromSpan', [span])
+		return this._isLoaded ? response : context.active()
 	}
 
 	getSessionInfo(): any {

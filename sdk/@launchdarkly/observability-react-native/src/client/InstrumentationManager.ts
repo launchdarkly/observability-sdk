@@ -8,6 +8,8 @@ import {
 	Gauge,
 	Histogram,
 	UpDownCounter,
+	Context,
+	context,
 } from '@opentelemetry/api'
 import { logs } from '@opentelemetry/api-logs'
 import { metrics } from '@opentelemetry/api'
@@ -452,16 +454,25 @@ export class InstrumentationManager {
 		return span
 	}
 
-	public startSpan(spanName: string, options?: SpanOptions): OtelSpan {
-		return this.getTracer().startSpan(spanName, options)
+	public startSpan(
+		spanName: string,
+		options?: SpanOptions,
+		ctx?: Context,
+	): OtelSpan {
+		return this.getTracer().startSpan(spanName, options, ctx)
 	}
 
 	public startActiveSpan<T>(
 		spanName: string,
 		fn: (span: OtelSpan) => T,
-		options?: SpanOptions,
+		options: SpanOptions = {},
+		ctx: Context = context.active(),
 	): T {
-		return this.getTracer().startActiveSpan(spanName, options || {}, fn)
+		return this.getTracer().startActiveSpan(spanName, options, ctx, fn)
+	}
+
+	public getContextFromSpan(span: OtelSpan): Context {
+		return trace.setSpan(context.active(), span)
 	}
 
 	public async flush(): Promise<void> {
