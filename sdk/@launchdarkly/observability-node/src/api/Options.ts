@@ -87,7 +87,7 @@ export interface NodeOptions {
 	disablePgInstrumentationAttributes?: boolean
 
 	/**
-	 * Specifies whether Highlight will record console messages.
+	 * Specifies whether the LaunchDarkly Observability Plugin will record console messages.
 	 * @default false
 	 */
 	disableConsoleRecording?: boolean
