@@ -48,7 +48,7 @@ export type ConsoleMethods = ConsoleMethodsTuple[number]
 export interface NodeOptions {
 	/**
 	 * The endpoint string to send OTLP HTTP data to.
-	 * @default https://otel.highlight.io:4318
+	 * @default https://otel.observability.app.launchdarkly.com
 	 */
 	otlpEndpoint?: string
 
