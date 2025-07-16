@@ -14,10 +14,8 @@ permissions:
     issues: read
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
-
 jobs:
     yarn-monorepo:
-
         name: Build Yarn Turborepo
         timeout-minutes: 60
         runs-on: ubuntu-22.04-8core-32gb
