@@ -7,6 +7,7 @@ import {
 	getPersistentStorage,
 } from '../storage'
 import { SESSION_STORAGE_KEYS } from './sessionStorageKeys'
+import { internalLogOnce } from '../../../sdk/util'
 
 export type SessionData = {
 	sessionSecureID: string
@@ -107,11 +108,31 @@ function pruneSessionData(keepKey: string): void {
 	for (let i = getPersistentStorage().length - 1; i >= 0; i--) {
 		const key = getPersistentStorage().key(i)
 		if (key && key.startsWith(prefix) && key !== keepKey) {
-			const sessionData = JSON.parse(getItem(key) || '{}') as SessionData
-			if (
-				sessionData.lastPushTime &&
-				Date.now() - sessionData.lastPushTime >= SESSION_PUSH_THRESHOLD
-			) {
+			try {
+				const sessionData = JSON.parse(
+					getItem(key) || '{}',
+				) as SessionData
+				if (
+					sessionData.lastPushTime &&
+					Date.now() - sessionData.lastPushTime >=
+						SESSION_PUSH_THRESHOLD
+				) {
+					internalLogOnce(
+						'highlightSession',
+						'pruneSessionData',
+						'debug',
+						`removing session data for stale key ${key}`,
+					)
+					removeItem(key)
+				}
+			} catch (e) {
+				internalLogOnce(
+					'highlightSession',
+					'pruneSessionData',
+					'error',
+					`failed to parse session data for key ${key}`,
+					e,
+				)
 				removeItem(key)
 			}
 		}
