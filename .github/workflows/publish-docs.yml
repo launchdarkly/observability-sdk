@@ -2,7 +2,7 @@ name: Publish Docs
 
 on:
     push:
-        branches: ['main', 'rlamb/monorepo-concurrency-group']
+        branches: ['main']
 
 permissions:
     contents: write
@@ -11,7 +11,7 @@ jobs:
     publish-highlight-run-docs:
         concurrency: ${{ github.workflow }}-${{ github.ref }}-publish-highlight-run-docs
         name: Publish Highlight.run Docs
-        # if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main'
         uses: ./.github/workflows/manual-publish-docs.yml
         with:
             workspace_path: sdk/highlight-run
@@ -21,7 +21,7 @@ jobs:
         # Run the docs publish after the highlight.run docs are published.
         needs: publish-highlight-run-docs
         # Runs the job even if the highlight.run docs publish fails.
-        # if: ${{ always() && !cancelled() && github.ref == 'refs/heads/main'}}
+        if: ${{ always() && !cancelled() && github.ref == 'refs/heads/main'}}
         name: Publish @launchdarkly/observability-node Docs
         uses: ./.github/workflows/manual-publish-docs.yml
         with:
