@@ -102,6 +102,40 @@ class _ObserveInstance:
     ):
         self._logger.log(level, message, extra=attributes)
 
+    @contextlib.contextmanager
+    def start_span(
+        self,
+        name: str,
+        attributes: Attributes = None,
+        record_exception: bool = True,
+        set_status_on_exception: bool = True,
+    ) -> typing.Iterator["Span"]:
+        """
+        Context manager for creating a new span and setting it as the current span.
+
+        Exiting the context manager will call the span's end method,
+        as well as return the current span to its previous value by
+        returning to the previous context.
+
+        Args:
+            name: The name of the span.
+            attributes: The attributes of the span.
+            record_exception: Whether to record any exceptions raised within the
+                context as error event on the span.
+            set_status_on_exception: Only relevant if the returned span is used
+                in a with/context manager. Defines whether the span status will
+
+        Yields:
+            The newly-created span.
+        """
+        with trace.get_tracer(__name__).start_as_current_span(
+            name,
+            attributes=attributes,
+            record_exception=record_exception,
+            set_status_on_exception=set_status_on_exception,
+        ) as span:
+            yield span
+
 
 _instance: typing.Optional[_ObserveInstance] = None
 
@@ -255,6 +289,55 @@ def logging_handler() -> logging.Handler:
     if not _instance:
         return logging.NullHandler()
     return _instance.log_handler
+
+
+@contextlib.contextmanager
+def start_span(
+    name: str,
+    attributes: Attributes = None,
+    record_exception: bool = True,
+    set_status_on_exception: bool = True,
+) -> typing.Iterator["Span"]:
+    """
+    Context manager for creating a new span and setting it as the current span.
+
+    Exiting the context manager will call the span's end method,
+    as well as return the current span to its previous value by
+    returning to the previous context.
+
+    Args:
+        name: The name of the span.
+        attributes: The attributes of the span.
+        record_exception: Whether to record any exceptions raised within the
+            context as error event on the span.
+        set_status_on_exception: Only relevant if the returned span is used
+            in a with/context manager. Defines whether the span status will
+
+    Yields:
+        The newly-created span.
+    """
+    if _instance:
+        with _instance.start_span(
+            name,
+            attributes=attributes,
+            record_exception=record_exception,
+            set_status_on_exception=set_status_on_exception,
+        ) as span:
+            yield span
+    else:
+        # If not initialized, then get a tracer and use it to create a span.
+        # We don't want to prevent user code from executing correctly if
+        # the plugin is not initialized.
+        logging.getLogger(__name__).warning(
+            "The observability singleton was used before it was initialized."
+        )
+        with trace.get_tracer(__name__).start_as_current_span(
+            name,
+            attributes=attributes,
+            record_exception=record_exception,
+            set_status_on_exception=set_status_on_exception,
+        ) as span:
+            yield span
 
 
 def is_initialized() -> bool:

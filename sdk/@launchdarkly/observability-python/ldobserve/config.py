@@ -160,7 +160,7 @@ class _ProcessedConfig:
             OTEL_EXPORTER_OTLP_ENDPOINT, _DEFAULT_OTLP_ENDPOINT
         )
         env_instrument_logging = os.getenv(
-            _OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED, None
+            _OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED
         )
         self.backend_url = config.backend_url or _DEFAULT_BACKEND_URL
 
@@ -185,7 +185,7 @@ class _ProcessedConfig:
             else _DEFAULT_DISABLE_EXPORT_ERROR_LOGGING
         )
 
-        env_log_correlation = os.getenv(OTEL_PYTHON_LOG_CORRELATION, None)
+        env_log_correlation = os.getenv(OTEL_PYTHON_LOG_CORRELATION)
 
         self.log_correlation = (
             config.log_correlation

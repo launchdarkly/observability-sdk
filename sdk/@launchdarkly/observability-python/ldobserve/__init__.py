@@ -10,12 +10,14 @@ from ldobserve.config import _ProcessedConfig
 import ldobserve.observe
 from ldobserve._otel.configuration import _OTELConfiguration
 from ldclient.plugin import Plugin, EnvironmentMetadata, PluginMetadata
-from ldotel.tracing import Hook, HookOptions
+from ldotel.tracing import Hook, HookOptions, Span
 from ldclient.client import LDClient
 from opentelemetry.instrumentation.environment_variables import (
     OTEL_PYTHON_DISABLED_INSTRUMENTATIONS,
 )
 from opentelemetry.sdk.environment_variables import OTEL_EXPERIMENTAL_RESOURCE_DETECTORS
+import opentelemetry.trace as trace
+from opentelemetry.util.types import Attributes
 
 
 def _extend_environment_list(env_var_name: str, *new_items: str) -> None:
@@ -37,12 +39,18 @@ def _extend_environment_list(env_var_name: str, *new_items: str) -> None:
     current_value = os.getenv(env_var_name, "")
 
     # Split the current value by comma and strip whitespace
+    # The if condition uses strip to determine if the result is non-empty.
+    # When it is, then the returned item still needs stripped when creating the new list.
+    # current_value = ",,,toast,"
+    # [item.strip() for item in current_value.split(",") if item.strip()]
+    # Result: ['toast']
     current_list = [item.strip() for item in current_value.split(",") if item.strip()]
 
     # Add new items, avoiding duplicates
     for item in new_items:
-        if item.strip() and item.strip() not in current_list:
-            current_list.append(item.strip())
+        stripped_item = item.strip()
+        if stripped_item and stripped_item not in current_list:
+            current_list.append(stripped_item)
 
     # Join the list back into a comma-separated string
     new_value = ",".join(current_list)
@@ -84,8 +92,7 @@ def _extend_disabled_instrumentations(*instrumentations: str) -> None:
 
 class ObservabilityPlugin(Plugin):
     def __init__(self, config: Optional[ObservabilityConfig] = None):
-        processed_config = _ProcessedConfig(config or ObservabilityConfig())
-        self._config = processed_config
+        self._config = _ProcessedConfig(config or ObservabilityConfig())
         # Instruct auto-instrumentation to not instrument logging.
         # We will either have already done it, or it is disabled.
         _extend_disabled_instrumentations("logging")
@@ -94,7 +101,7 @@ class ObservabilityPlugin(Plugin):
             _extend_disabled_instrumentations(*self._config.disabled_instrumentations)
 
         # If the OTEL_EXPERIMENTAL_RESOURCE_DETECTORS environment variable is not set, then we will use the config.
-        if os.getenv(OTEL_EXPERIMENTAL_RESOURCE_DETECTORS, None) is None:
+        if not os.getenv(OTEL_EXPERIMENTAL_RESOURCE_DETECTORS):
             # Configure resource detectors based on config
             resource_detectors = []
             if self._config.process_resources:

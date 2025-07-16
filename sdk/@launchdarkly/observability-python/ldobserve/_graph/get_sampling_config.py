@@ -54,5 +54,8 @@ def get_sampling_config(
         logging.getLogger(__name__).debug(
             "No running event loop found, running in thread."
         )
-        thread = threading.Thread(target=lambda: asyncio.run(_get_sampling_config()))
+        thread = threading.Thread(
+            name="launchdarkly-sampling-config-thread",
+            target=lambda: asyncio.run(_get_sampling_config()),
+        )
         thread.start()
