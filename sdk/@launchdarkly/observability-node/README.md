@@ -4,6 +4,7 @@
 [![Actions Status][o11y-sdk-ci-badge]][o11y-sdk-ci]
 [![NPM][o11y-sdk-dm-badge]][o11y-sdk-npm-link]
 [![NPM][o11y-sdk-dt-badge]][o11y-sdk-npm-link]
+[![Documentation](https://img.shields.io/static/v1?label=GitHub+Pages&message=API+reference&color=00add8)][o11y-docs-link]
 
 **NB: APIs are subject to change until a 1.x version is released.**
 
@@ -64,3 +65,4 @@ LaunchDarkly uses the [SLSA framework](https://slsa.dev/spec/v1.0/about) (Supply
 [o11y-sdk-npm-link]: https://www.npmjs.com/package/@launchdarkly/observability-node
 [o11y-sdk-dm-badge]: https://img.shields.io/npm/dm/@launchdarkly/observability-node.svg?style=flat-square
 [o11y-sdk-dt-badge]: https://img.shields.io/npm/dt/@launchdarkly/observability-node.svg?style=flat-square
+[o11y-docs-link]: https://launchdarkly.github.io/observability-sdk/sdk/@launchdarkly/observability-node/
