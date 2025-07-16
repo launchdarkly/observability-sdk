@@ -76,7 +76,10 @@ export const setSessionData = function (sessionData?: SessionData) {
 	if (!sessionData?.sessionSecureID) return
 	const secureID = sessionData.sessionSecureID!
 	setPersistentSessionSecureID(secureID)
-	setItem(getSessionDataKey(secureID), JSON.stringify(sessionData))
+	const key = getSessionDataKey(secureID)
+	setItem(key, JSON.stringify(sessionData))
+	// delete old session data
+	pruneSessionData(key)
 }
 
 export const loadCookieSessionData = function () {
@@ -89,4 +92,16 @@ export const loadCookieSessionData = function () {
 	try {
 		setSessionData(JSON.parse(sessionDataStr) as SessionData)
 	} catch (e) {}
+}
+
+function pruneSessionData(keepKey: string): void {
+	const prefix = `${SESSION_STORAGE_KEYS.SESSION_DATA}_`
+
+	// Walk backwards so index order isn’t upset by removals.
+	for (let i = localStorage.length - 1; i >= 0; i--) {
+		const key = localStorage.key(i)
+		if (key && key.startsWith(prefix) && key !== keepKey) {
+			localStorage.removeItem(key)
+		}
+	}
 }
