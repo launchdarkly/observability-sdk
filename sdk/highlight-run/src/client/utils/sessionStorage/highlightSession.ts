@@ -101,7 +101,13 @@ function pruneSessionData(keepKey: string): void {
 	for (let i = localStorage.length - 1; i >= 0; i--) {
 		const key = localStorage.key(i)
 		if (key && key.startsWith(prefix) && key !== keepKey) {
-			localStorage.removeItem(key)
+			const sessionData = JSON.parse(getItem(key) || '{}') as SessionData
+			if (
+				sessionData.lastPushTime &&
+				Date.now() - sessionData.lastPushTime >= SESSION_PUSH_THRESHOLD
+			) {
+				localStorage.removeItem(key)
+			}
 		}
 	}
 }
