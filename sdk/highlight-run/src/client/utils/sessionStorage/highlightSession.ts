@@ -1,5 +1,11 @@
 import { SESSION_PUSH_THRESHOLD } from '../../constants/sessions'
-import { cookieStorage, getItem, removeItem, setItem } from '../storage'
+import {
+	cookieStorage,
+	getItem,
+	removeItem,
+	setItem,
+	getPersistentStorage,
+} from '../storage'
 import { SESSION_STORAGE_KEYS } from './sessionStorageKeys'
 
 export type SessionData = {
@@ -98,15 +104,15 @@ function pruneSessionData(keepKey: string): void {
 	const prefix = `${SESSION_STORAGE_KEYS.SESSION_DATA}_`
 
 	// Walk backwards so index order isn’t upset by removals.
-	for (let i = localStorage.length - 1; i >= 0; i--) {
-		const key = localStorage.key(i)
+	for (let i = getPersistentStorage().length - 1; i >= 0; i--) {
+		const key = getPersistentStorage().key(i)
 		if (key && key.startsWith(prefix) && key !== keepKey) {
 			const sessionData = JSON.parse(getItem(key) || '{}') as SessionData
 			if (
 				sessionData.lastPushTime &&
 				Date.now() - sessionData.lastPushTime >= SESSION_PUSH_THRESHOLD
 			) {
-				localStorage.removeItem(key)
+				removeItem(key)
 			}
 		}
 	}
