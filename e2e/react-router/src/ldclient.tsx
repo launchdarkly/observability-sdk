@@ -11,7 +11,7 @@ const observabilitySettings: ConstructorParameters<typeof Observability>[0] = {
 		recordHeadersAndBody: true,
 	},
 	serviceName: 'ryan-test',
-	backendUrl: 'http://localhost:8082',
+	backendUrl: 'http://localhost:8082/public',
 	otel: {
 		otlpEndpoint: 'http://localhost:4318',
 	},
@@ -25,7 +25,7 @@ const sessionReplaySettings: ConstructorParameters<typeof SessionReplay>[0] = {
 }
 
 export const client = init(
-	'586c33cf1cd88133f9a7804f',
+	'548f6741c1efad40031b18ae',
 	{ key: 'unknown' },
 	{
 		// Not including plugins at all would be equivalent to the current LaunchDarkly SDK.
