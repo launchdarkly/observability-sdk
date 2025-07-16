@@ -3,7 +3,7 @@ import os
 import pytest
 from unittest.mock import Mock
 from .custom_sampler import CustomSampler, default_sampler
-from ...graph.generated.public_graph_client.get_sampling_config import (
+from ..._graph.generated.public_graph_client.get_sampling_config import (
     GetSamplingConfigSampling,
 )
 
