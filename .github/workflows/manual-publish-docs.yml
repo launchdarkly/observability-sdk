@@ -1,20 +1,20 @@
 name: Manual Publish Docs
 on:
-  workflow_dispatch:
-    inputs:
-      workspace_path:
-        description: 'Path to the workspace being released.'
-        required: true
-        type: choice
-        options:
-          - sdk/highlight-run
-          - "sdk/@launchdarkly/observability-node"
-  workflow_call:
-    inputs:
-      workspace_path:
-        description: 'Path to the workspace being released.'
-        required: true
-        type: string
+    workflow_dispatch:
+        inputs:
+            workspace_path:
+                description: 'Path to the workspace being released.'
+                required: true
+                type: choice
+                options:
+                    - sdk/highlight-run
+                    - 'sdk/@launchdarkly/observability-node'
+    workflow_call:
+        inputs:
+            workspace_path:
+                description: 'Path to the workspace being released.'
+                required: true
+                type: string
 
 permissions:
     id-token: write
@@ -42,8 +42,8 @@ jobs:
             - name: 'Set WORKSPACE_NAME variable'
               shell: bash
               run: |
-                WORKSPACE_NAME=$(./scripts/package-name.sh ${{ inputs.workspace_path }})
-                echo "WORKSPACE_NAME=$WORKSPACE_NAME" >> $GITHUB_ENV        
+                  WORKSPACE_NAME=$(./scripts/package-name.sh ${{ inputs.workspace_path }})
+                  echo "WORKSPACE_NAME=$WORKSPACE_NAME" >> $GITHUB_ENV
 
             - name: Build docs
               run: yarn docs --filter ${{ env.WORKSPACE_NAME }}

@@ -66,13 +66,13 @@ jobs:
               if: github.ref == 'refs/heads/main'
               uses: ./.github/workflows/manual-publish-docs.yml
               with:
-                workspace_path: sdk/highlight-run
+                  workspace_path: sdk/highlight-run
 
             - name: Publish @launchdarkly/observability-node Docs
               if: github.ref == 'refs/heads/main'
               uses: ./.github/workflows/manual-publish-docs.yml
               with:
-                workspace_path: sdk/@launchdarkly/observability-node
+                  workspace_path: sdk/@launchdarkly/observability-node
 
             - uses: launchdarkly/gh-actions/actions/release-secrets@release-secrets-v1.2.0
               if: github.ref == 'refs/heads/main'
