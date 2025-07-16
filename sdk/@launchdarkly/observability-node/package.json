@@ -12,7 +12,7 @@
 		"build": "rollup --config rollup.config.mjs",
 		"test": "vitest run",
 		"codegen": "graphql-codegen",
-		"doc": "typedoc --options ./typedoc.json"
+		"docs": "typedoc --options ./typedoc.json"
 	},
 	"main": "./dist/index.cjs",
 	"module": "./dist/index.js",
