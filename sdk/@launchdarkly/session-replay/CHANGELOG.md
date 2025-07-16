@@ -1,5 +1,19 @@
 # @launchdarkly/session-replay
 
+## 0.3.7
+
+### Patch Changes
+
+- 54aab8b: delete sessionData\_ localstorage values to avoid overfilling quota
+- Updated dependencies [54aab8b]
+    - highlight.run@9.18.22
+
+## 0.3.6
+
+### Patch Changes
+
+- 060dfe9: introduce LDObserve.stop api
+
 ## 0.3.5
 
 ### Patch Changes

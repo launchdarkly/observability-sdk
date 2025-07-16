@@ -1,5 +1,11 @@
 # highlight.run
 
+## 9.18.22
+
+### Patch Changes
+
+- 54aab8b: delete sessionData\_ localstorage values to avoid overfilling quota
+
 ## 9.18.21
 
 ### Patch Changes

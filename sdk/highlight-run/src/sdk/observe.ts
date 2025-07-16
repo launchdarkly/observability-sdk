@@ -77,6 +77,8 @@ import {
 import randomUuidV4 from '../client/utils/randomUuidV4'
 import { recordException } from '../client/otel/recordException'
 import { ObserveOptions } from '../client/types/observe'
+import { WebTracerProvider } from '@opentelemetry/sdk-trace-web'
+import { MeterProvider } from '@opentelemetry/sdk-metrics'
 
 export class ObserveSDK implements Observe {
 	/** Verbose project ID that is exposed to users. Legacy users may still be using ints. */
@@ -101,6 +103,12 @@ export class ObserveSDK implements Observe {
 	>()
 	private readonly sampler: ExportSampler = new CustomSampler()
 	private _started = false
+	private providers!:
+		| {
+				tracerProvider?: WebTracerProvider
+				meterProvider?: MeterProvider
+		  }
+		| undefined
 	private graphqlSDK!: Sdk
 	constructor(
 		options: ObserveOptions & {
@@ -117,7 +125,7 @@ export class ObserveSDK implements Observe {
 			return
 		}
 		this._started = true
-		setupBrowserTracing(
+		this.providers = setupBrowserTracing(
 			{
 				...{
 					backendUrl:
@@ -152,6 +160,17 @@ export class ObserveSDK implements Observe {
 		this.graphqlSDK = getSdk(client, getGraphQLRequestWrapper())
 		await this.configureSampling()
 		this.setupListeners()
+	}
+
+	public async stop() {
+		if (!this._started) {
+			return
+		}
+		this._started = false
+		await Promise.all([
+			this.providers?.tracerProvider?.shutdown(),
+			this.providers?.meterProvider?.shutdown(),
+		])
 	}
 
 	private async configureSampling() {
