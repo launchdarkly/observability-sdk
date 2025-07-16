@@ -112,10 +112,16 @@ function pruneSessionData(keepKey: string): void {
 				const sessionData = JSON.parse(
 					getItem(key) || '{}',
 				) as SessionData
-				if (
-					sessionData.lastPushTime &&
+				if (sessionData.lastPushTime === undefined) {
+					internalLogOnce(
+						'highlightSession',
+						'pruneSessionData',
+						'error',
+						`data for key ${key} is not session data`,
+					)
+				} else if (
 					Date.now() - sessionData.lastPushTime >=
-						SESSION_PUSH_THRESHOLD
+					SESSION_PUSH_THRESHOLD
 				) {
 					internalLogOnce(
 						'highlightSession',
@@ -133,7 +139,6 @@ function pruneSessionData(keepKey: string): void {
 					`failed to parse session data for key ${key}`,
 					e,
 				)
-				removeItem(key)
 			}
 		}
 	}
