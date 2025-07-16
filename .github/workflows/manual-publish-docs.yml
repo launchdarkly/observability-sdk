@@ -1,6 +1,20 @@
 name: Manual Publish Docs
 on:
     workflow_dispatch:
+        inputs:
+            workspace_path:
+                description: 'Path to the workspace being released.'
+                required: true
+                type: choice
+                options:
+                    - sdk/highlight-run
+                    - 'sdk/@launchdarkly/observability-node'
+    workflow_call:
+        inputs:
+            workspace_path:
+                description: 'Path to the workspace being released.'
+                required: true
+                type: string
 
 permissions:
     id-token: write
@@ -25,12 +39,27 @@ jobs:
               env:
                   PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: true
 
-            - name: Build docs
-              run: yarn docs --filter highlight.run
+            - name: 'Set WORKSPACE_NAME variable'
+              shell: bash
+              run: |
+                  WORKSPACE_NAME=$(./scripts/package-name.sh ${{ inputs.workspace_path }})
+                  echo "WORKSPACE_NAME=$WORKSPACE_NAME" >> $GITHUB_ENV
 
-            - uses: launchdarkly/gh-actions/actions/publish-pages@publish-pages-v1.0.2
-              name: 'Publish to Github pages'
+            - name: Build docs
+              run: yarn docs --filter ${{ env.WORKSPACE_NAME }}
+
+            - name: Publish Highlight.run as Observability Plugin
+              if: inputs.workspace_path == 'sdk/highlight-run'
+              uses: launchdarkly/gh-actions/actions/publish-pages@publish-pages-v1.0.2
               with:
                   docs_path: sdk/highlight-run/docs
                   output_path: packages/@launchdarkly/observability
+                  github_token: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Publish other JS packages
+              if: inputs.workspace_path != 'sdk/highlight-run'
+              uses: launchdarkly/gh-actions/actions/publish-pages@publish-pages-v1.0.2
+              with:
+                  docs_path: ${{ inputs.workspace_path }}/docs
+                  output_path: ${{ inputs.workspace_path }}
                   github_token: ${{ secrets.GITHUB_TOKEN }}
