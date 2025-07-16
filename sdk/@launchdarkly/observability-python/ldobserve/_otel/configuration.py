@@ -1,6 +1,5 @@
 from importlib import metadata
 import logging
-import os
 import typing
 from grpc import Compression
 from ldobserve._otel._sampling.custom_sampler import CustomSampler
@@ -8,12 +7,7 @@ from ldobserve._otel.sampling_log_exporter import SamplingLogExporter
 from ldobserve._otel.sampling_trace_exporter import SamplingTraceExporter
 from ldobserve._graph.get_sampling_config import get_sampling_config
 from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
-from opentelemetry.instrumentation.environment_variables import (
-    OTEL_PYTHON_DISABLED_INSTRUMENTATIONS,
-)
 from opentelemetry.instrumentation.logging import (
-    OTEL_PYTHON_LOG_CORRELATION,
-    OTEL_PYTHON_LOG_LEVEL,
     LoggingInstrumentor,
 )
 from opentelemetry.metrics import Meter
@@ -37,9 +31,6 @@ from opentelemetry.sdk.metrics import (
 from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.environment_variables import (
-    _OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED,
-)
 import opentelemetry._logs as _logs
 
 from ldobserve.config import _ProcessedConfig

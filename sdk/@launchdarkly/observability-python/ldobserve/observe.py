@@ -1,5 +1,4 @@
 import contextlib
-import datetime
 import logging
 import typing
 from opentelemetry.context import Context
@@ -53,7 +52,8 @@ class _ObserveInstance:
     ):
         span = trace.get_current_span()
         if not span:
-            raise RuntimeError("H.record_exception called without a span context")
+            self._logger.error("observe.record_exception called without a span context")
+            return
 
         attrs = {}
         if attributes:

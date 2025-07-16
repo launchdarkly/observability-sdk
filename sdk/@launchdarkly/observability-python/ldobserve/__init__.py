@@ -1,7 +1,7 @@
 import logging
 import os
 from typing import List, Optional
-from ldclient.hook import Hook
+from ldclient.hook import Hook as LDHook
 from opentelemetry.instrumentation import auto_instrumentation
 from ldobserve.config import ObservabilityConfig
 from ldobserve.observe import _ObserveInstance
@@ -10,14 +10,12 @@ from ldobserve.config import _ProcessedConfig
 import ldobserve.observe
 from ldobserve._otel.configuration import _OTELConfiguration
 from ldclient.plugin import Plugin, EnvironmentMetadata, PluginMetadata
-from ldotel.tracing import Hook, HookOptions, Span
+from ldotel.tracing import Hook, HookOptions
 from ldclient.client import LDClient
 from opentelemetry.instrumentation.environment_variables import (
     OTEL_PYTHON_DISABLED_INSTRUMENTATIONS,
 )
 from opentelemetry.sdk.environment_variables import OTEL_EXPERIMENTAL_RESOURCE_DETECTORS
-import opentelemetry.trace as trace
-from opentelemetry.util.types import Attributes
 
 
 def _extend_environment_list(env_var_name: str, *new_items: str) -> None:
@@ -101,6 +99,7 @@ class ObservabilityPlugin(Plugin):
             _extend_disabled_instrumentations(*self._config.disabled_instrumentations)
 
         # If the OTEL_EXPERIMENTAL_RESOURCE_DETECTORS environment variable is not set, then we will use the config.
+        # Consider an empty environment variable to be the same as not setting it.
         if not os.getenv(OTEL_EXPERIMENTAL_RESOURCE_DETECTORS):
             # Configure resource detectors based on config
             resource_detectors = []
@@ -127,7 +126,7 @@ class ObservabilityPlugin(Plugin):
 
         _init(metadata.sdk_key, self._config)
 
-    def get_hooks(_self, _metadata: EnvironmentMetadata) -> List[Hook]:
+    def get_hooks(_self, _metadata: EnvironmentMetadata) -> List[LDHook]:
         return [Hook(options=HookOptions(include_value=True))]
 
 
