@@ -96,7 +96,6 @@ jobs:
 
     publish-highlight-run-docs:
         name: Publish Highlight.run Docs
-        # if: github.ref == 'refs/heads/main'
         uses: ./.github/workflows/manual-publish-docs.yml
         with:
             workspace_path: sdk/highlight-run
@@ -104,8 +103,6 @@ jobs:
     publish-observability-node-docs:
         # Run the docs publish after the highlight.run docs are published.
         needs: publish-highlight-run-docs
-        # Runs the job even if the highlight.run docs publish fails.
-        # if: ${{ always() && !cancelled() && github.ref == 'refs/heads/main'}}
         name: Publish @launchdarkly/observability-node Docs
         uses: ./.github/workflows/manual-publish-docs.yml
         with:
