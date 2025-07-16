@@ -61,4 +61,5 @@ jobs:
               uses: launchdarkly/gh-actions/actions/publish-pages@publish-pages-v1.0.2
               with:
                   docs_path: ${{ inputs.workspace_path }}/docs
+                  output_path: ${{ inputs.workspace_path }}
                   github_token: ${{ secrets.GITHUB_TOKEN }}
