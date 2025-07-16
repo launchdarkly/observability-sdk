@@ -13,9 +13,11 @@ permissions:
     pull-requests: write
     issues: read
 
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
 jobs:
     yarn-monorepo:
-        concurrency: ${{ github.workflow }}-${{ github.ref }}
+
         name: Build Yarn Turborepo
         timeout-minutes: 60
         runs-on: ubuntu-22.04-8core-32gb
@@ -93,22 +95,3 @@ jobs:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
                   NPM_TOKEN: ${{ secrets.NPM_TOKEN_HIGHLIGHT_RUN }}
                   NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN_HIGHLIGHT_RUN }}
-
-    publish-highlight-run-docs:
-        concurrency: ${{ github.workflow }}-${{ github.ref }}-publish-highlight-run-docs
-        name: Publish Highlight.run Docs
-        # if: github.ref == 'refs/heads/main'
-        uses: ./.github/workflows/manual-publish-docs.yml
-        with:
-            workspace_path: sdk/highlight-run
-
-    publish-observability-node-docs:
-        concurrency: ${{ github.workflow }}-${{ github.ref }}-publish-observability-node-docs
-        # Run the docs publish after the highlight.run docs are published.
-        needs: publish-highlight-run-docs
-        # Runs the job even if the highlight.run docs publish fails.
-        # if: ${{ always() && !cancelled() && github.ref == 'refs/heads/main'}}
-        name: Publish @launchdarkly/observability-node Docs
-        uses: ./.github/workflows/manual-publish-docs.yml
-        with:
-            workspace_path: sdk/@launchdarkly/observability-node
