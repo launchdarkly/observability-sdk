@@ -186,6 +186,7 @@ export class RecordSDK implements Record {
 			}
 		}
 
+		// TODO(spenny): add sessionKey here for example app
 		let storedSessionData = getPreviousSessionData()
 		this.reloaded = false
 		// only fetch session data from local storage on the first `initialize` call
