@@ -37,6 +37,15 @@ jobs:
                       echo "is_js_package=false" >> $GITHUB_OUTPUT
                   fi
 
+            - name: Check if python package
+              id: check-python-package
+              run: |
+                  if ./scripts/is-python-package.sh ${{ inputs.workspace_path }}; then
+                      echo "is_python_package=true" >> $GITHUB_OUTPUT
+                  else
+                      echo "is_python_package=false" >> $GITHUB_OUTPUT
+                  fi
+
             - name: Setup Node.js environment
               if: ${{ steps.check-js-package.outputs.is_js_package == 'true' }}
               uses: actions/setup-node@v4
@@ -60,6 +69,22 @@ jobs:
             - name: Build JS package docs
               if: ${{ steps.check-js-package.outputs.is_js_package == 'true' }}
               run: yarn docs --filter ${{ env.WORKSPACE_NAME }}
+
+
+            - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+              if: ${{ steps.check-python-package.outputs.is_python_package == 'true' }}
+              with:
+                  python-version: 3.10
+
+            - name: Install poetry
+              if: ${{ steps.check-python-package.outputs.is_python_package == 'true' }}
+              uses: abatilo/actions-poetry@7b6d33e44b4f08d7021a1dee3c044e9c253d6439
+
+            - name: Make Install
+              if: ${{ steps.check-python-package.outputs.is_python_package == 'true' }}
+              run: |
+                  cd ${{ inputs.workspace_path }}
+                  make install
 
             - name: Make Install
               if: ${{ steps.check-js-package.outputs.is_js_package == 'false' }}
