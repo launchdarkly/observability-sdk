@@ -1,4 +1,4 @@
-# LaunchDarkly Node.js Server-Side Obvervability Plugin
+# LaunchDarkly Node.js Server-Side Observability Plugin
 
 [![NPM][o11y-sdk-npm-badge]][o11y-sdk-npm-link]
 [![Actions Status][o11y-sdk-ci-badge]][o11y-sdk-ci]
@@ -19,7 +19,7 @@ npm i @launchdarkly/observability-node
 yarn add @launchdarkly/observability-node
 ```
 
-Update your web app entrypoint.
+Update your application to instantiate the observability plugin when you initialize the LaunchDarkly SDK.
 ```TypeScript
 import { init } from '@launchdarkly/node-server-sdk'
 import Observability, { LDObserve } from '@launchdarkly/observability'
