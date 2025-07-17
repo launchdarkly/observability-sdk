@@ -1,0 +1,81 @@
+name: Run Release Please
+
+on:
+    push:
+        branches: [main]
+
+jobs:
+    release-package:
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write # Contents and pull-requests are for release-please to make releases.
+            pull-requests: write
+        outputs:
+            python-plugin-released: ${{ steps.release.outputs['sdk/@launchdarkly/observability-python--release_created'] }}
+            python-plugin-tag-name: ${{ steps.release.outputs['sdk/@launchdarkly/observability-python--tag_name'] }}
+        steps:
+            - uses: googleapis/release-please-action@v4
+              id: release
+
+            - uses: actions/checkout@v4
+              if: ${{ steps.release.outputs.releases_created == 'true' }}
+              with:
+                  fetch-depth: 0 # If you only need the current version keep this.
+
+    release-python-plugin:
+        runs-on: ubuntu-latest
+        permissions:
+            id-token: write # Used for publishing secrets and documentation.
+        needs: ['release-package']
+        if: ${{ needs.release-package.outputs.python-plugin-released == 'true' }}
+        outputs:
+            package-hashes: ${{ steps.package-hashes.outputs.package-hashes }}
+        steps:
+            - uses: actions/setup-python@v5
+              with:
+                  python-version: 3.10
+
+            - name: Install poetry
+
+              uses: abatilo/actions-poetry@7b6d33e44b4f08d7021a1dee3c044e9c253d6439
+
+            - uses: launchdarkly/gh-actions/actions/release-secrets@release-secrets-v1.2.0
+              name: 'Get PyPI token'
+              with:
+                  aws_assume_role: ${{ vars.AWS_ROLE_ARN }}
+                  ssm_parameter_pairs: '/production/common/releasing/pypi/token = PYPI_AUTH_TOKEN'
+
+            - name: Build Python plugin
+              run: |
+                  cd sdk/@launchdarkly/observability-python
+                  make build
+
+            - name: Hash build files for provenance
+              id: package-hashes
+              shell: bash
+              working-directory: ./sdk/@launchdarkly/observability-python/dist
+              run: |
+                  echo "package-hashes=$(sha256sum * | base64 -w0)" >> "$GITHUB_OUTPUT"
+
+            - name: Publish package distributions to PyPI
+              uses: pypa/gh-action-pypi-publish@release/v1
+              with:
+                  password: ${{env.PYPI_AUTH_TOKEN}}
+
+            - name: Build and Publish Docs
+              uses: ./.github/workflows/manual-publish-docs.yml
+              with:
+                  workspace_path: sdk/@launchdarkly/observability-python
+
+    release-provenance:
+        needs: ['release-package', 'release-python-plugin']
+        if: ${{ needs.release-package.outputs.python-plugin-released == 'true' }}
+        permissions:
+            actions: read
+            id-token: write
+            contents: write
+        uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.0.0
+        with:
+            base64-subjects: '${{ needs.release-python-plugin.outputs.package-hashes }}'
+            upload-assets: true
+            upload-tag-name: ${{ needs.release-package.outputs.python-plugin-tag-name }}

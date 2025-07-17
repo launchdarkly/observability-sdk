@@ -9,6 +9,7 @@ on:
                 options:
                     - sdk/highlight-run
                     - 'sdk/@launchdarkly/observability-node'
+                    - 'sdk/@launchdarkly/observability-python'
     workflow_call:
         inputs:
             workspace_path:
@@ -44,8 +45,25 @@ jobs:
                   WORKSPACE_NAME=$(./scripts/package-name.sh ${{ inputs.workspace_path }})
                   echo "WORKSPACE_NAME=$WORKSPACE_NAME" >> $GITHUB_ENV
 
-            - name: Build docs
+            - name: Check if JS package
+              id: check-js-package
+              run: |
+                  if ./scripts/is-js-package.sh ${{ inputs.workspace_path }}; then
+                      echo "is_js_package=true" >> $GITHUB_OUTPUT
+                  else
+                      echo "is_js_package=false" >> $GITHUB_OUTPUT
+                  fi
+
+            - name: Build JS package docs
+              if: ${{ steps.check-js-package.outputs.is_js_package == 'true' }}
               run: yarn docs --filter ${{ env.WORKSPACE_NAME }}
+
+            - name: Build Makefile Docs
+              # Assume non-js projects will use a Makefile to build docs.
+              if: ${{ steps.check-js-package.outputs.is_js_package == 'false' }}
+              run: |
+                  cd ${{ inputs.workspace_path }}
+                  make docs
 
             - name: Publish Highlight.run as Observability Plugin
               if: inputs.workspace_path == 'sdk/highlight-run'
@@ -55,7 +73,9 @@ jobs:
                   output_path: packages/@launchdarkly/observability
                   github_token: ${{ secrets.GITHUB_TOKEN }}
 
-            - name: Publish other JS packages
+            - name: Publish Docs
+              # This is generalized to work with any package, but we don't use it for highlight-run,
+              # because we publish its docs to a different path.
               if: inputs.workspace_path != 'sdk/highlight-run'
               uses: launchdarkly/gh-actions/actions/publish-pages@publish-pages-v1.0.2
               with:
