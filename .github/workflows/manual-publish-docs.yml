@@ -18,7 +18,6 @@ on:
                 type: string
 
 permissions:
-    id-token: write
     contents: write
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 jobs:

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 """
 The LaunchDarkly observability plugin for Python.
 
@@ -25,6 +26,8 @@ plugins=[
 
 """
 
+=======
+>>>>>>> main
 import logging
 import os
 from typing import List, Optional
