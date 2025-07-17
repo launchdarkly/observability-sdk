@@ -1,28 +1,39 @@
 import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.observability.interfaces.Observe
 
-class LDObserve : Observe {
+class LDObserve(private val client: ObservabilityClient) : Observe {
     override fun recordMetric(metric: Metric) {
-        TODO("Not yet implemented")
+        client.recordMetric(metric)
     }
 
     override fun recordCount(metric: Metric) {
-        TODO("Not yet implemented")
+        client.recordCount(metric)
     }
 
     override fun recordIncr(metric: Metric) {
-        TODO("Not yet implemented")
+        client.recordIncr(metric)
     }
 
     override fun recordHistogram(metric: Metric) {
-        TODO("Not yet implemented")
+        client.recordHistogram(metric)
     }
 
     override fun recordUpDownCounter(metric: Metric) {
-        TODO("Not yet implemented")
+        client.recordUpDownCounter(metric)
     }
 
     companion object {
-        val LDObserve: LDObserve = LDObserve()
+        // initially a no-op implementation
+        val LDObserve: Observe = object : Observe {
+            override fun recordMetric(metric: Metric) {}
+            override fun recordCount(metric: Metric) {}
+            override fun recordIncr(metric: Metric) {}
+            override fun recordHistogram(metric: Metric) {}
+            override fun recordUpDownCounter(metric: Metric) {}
+        }
+
+        fun init(client: ObservabilityClient) {
+            LDObserve = LDObserve(client)
+        }
     }
 }
