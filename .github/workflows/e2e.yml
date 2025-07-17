@@ -29,9 +29,9 @@ jobs:
                   cache: 'poetry'
 
             - name: Install dependencies
-              working-directory: ./e2e/tests
+              working-directory: ../e2e/tests
               run: poetry install --all-extras
 
             - name: Start docker containers & run sdk e2e test
-              working-directory: ./e2e/tests/src
+              working-directory: ../e2e/tests/src
               run: poetry run python app_runner.py ${{ matrix.app }}
