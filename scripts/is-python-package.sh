@@ -1,4 +1,3 @@
-
 #!/bin/bash
 
 # Check if the specified directory contains a pyproject.toml file.
