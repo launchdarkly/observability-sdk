@@ -51,6 +51,7 @@ jobs:
                   PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: true
 
             - name: 'Set WORKSPACE_NAME variable'
+              if: ${{ steps.check-js-package.outputs.is_js_package == 'true' }}
               shell: bash
               run: |
                   WORKSPACE_NAME=$(./scripts/package-name.sh ${{ inputs.workspace_path }})
