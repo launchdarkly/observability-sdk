@@ -80,12 +80,8 @@ jobs:
               uses: abatilo/actions-poetry@7b6d33e44b4f08d7021a1dee3c044e9c253d6439
 
             - name: Make Install
-              if: ${{ steps.check-python-package.outputs.is_python_package == 'true' }}
-              run: |
-                  cd ${{ inputs.workspace_path }}
-                  make install
-
-            - name: Make Install
+              # Assume non-js projects will use a Makefile to install dependencies.
+              # Or an empty install target.
               if: ${{ steps.check-js-package.outputs.is_js_package == 'false' }}
               run: |
                   cd ${{ inputs.workspace_path }}
