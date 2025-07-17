@@ -32,8 +32,8 @@ from ldclient.config import Config
 ldclient.set_config(Config("your-sdk-key", plugins=[
     ObservabilityPlugin(
         ObservabilityConfig(
-            service_name="ryan-flask-app",
-            service_version="1.0.0",
+            service_name="your-service-name",
+            service_version="your-service-sha",
         ))]))
 ```
 
