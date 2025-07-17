@@ -10,4 +10,4 @@ if [ -f "$1/package.json" ]; then
     exit 0
 else
     exit 1
-fi 
+fi
