@@ -63,6 +63,10 @@ jobs:
                   packages-dir: ./sdk/@launchdarkly/observability-python/dist
                   password: ${{env.PYPI_AUTH_TOKEN}}
 
+    release-python-docs:
+        runs-on: ubuntu-latest
+        needs: ['release-python-plugin']
+        steps:
             - name: Build and Publish Docs
               uses: ./.github/workflows/manual-publish-docs.yml
               with:
