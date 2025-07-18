@@ -1,0 +1,35 @@
+{
+	"$schema": "https://typedoc.org/schema.json",
+	"name": "@launchdarkly/observability-react-native",
+	"includeVersion": false,
+	"entryPoints": [
+		"src/index.ts",
+		"src/api/Observe.ts",
+		"src/api/Options.ts",
+		"src/api/Metric.ts",
+		"src/api/RequestContext.ts",
+		"src/plugin/observability.ts",
+		"src/sdk/LDObserve.ts"
+	],
+	"exclude": [
+		"**/__tests__/**",
+		"**/*.spec.ts",
+		"**/*.test.ts",
+		"**/__mocks__/**",
+		"**/__generated/**"
+	],
+	"excludeInternal": true,
+	"excludePrivate": true,
+	"excludeProtected": true,
+	"excludeExternals": true,
+	"readme": "none",
+	"visibilityFilters": {
+		"protected": false,
+		"private": false,
+		"inherited": true,
+		"external": true,
+		"@alpha": false,
+		"@beta": false
+	},
+	"out": "docs"
+}

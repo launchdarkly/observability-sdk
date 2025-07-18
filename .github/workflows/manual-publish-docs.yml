@@ -10,6 +10,7 @@ on:
                     - sdk/highlight-run
                     - 'sdk/@launchdarkly/observability-node'
                     - 'sdk/@launchdarkly/observability-python'
+                    - 'sdk/@launchdarkly/observability-react-native'
     workflow_call:
         inputs:
             workspace_path:
