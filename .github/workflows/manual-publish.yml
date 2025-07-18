@@ -37,6 +37,7 @@ permissions:
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 jobs:
     publish-package:
+        if: ${{ inputs.release_highlight == true || inputs.release_launchdarkly == true }}
         runs-on: ubuntu-22.04-8core-32gb
         steps:
             - name: Checkout
