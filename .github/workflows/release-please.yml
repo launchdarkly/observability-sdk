@@ -30,39 +30,14 @@ jobs:
         needs: ['release-package']
         if: ${{ needs.release-package.outputs.python-plugin-released == 'true' }}
         outputs:
-            package-hashes: ${{ steps.package-hashes.outputs.package-hashes }}
+            package-hashes: ${{ steps.publish.outputs.package-hashes }}
         steps:
-            - uses: actions/setup-python@v5
+            - name: Publish Python SDK
+              id: publish
+              uses: ./.github/actions/publish-python-sdk
               with:
-                  python-version: '3.10'
-
-            - name: Install poetry
-
-              uses: abatilo/actions-poetry@7b6d33e44b4f08d7021a1dee3c044e9c253d6439
-
-            - uses: launchdarkly/gh-actions/actions/release-secrets@release-secrets-v1.2.0
-              name: 'Get PyPI token'
-              with:
-                  aws_assume_role: ${{ vars.AWS_ROLE_ARN }}
-                  ssm_parameter_pairs: '/production/common/releasing/pypi/token = PYPI_AUTH_TOKEN'
-
-            - name: Build Python plugin
-              run: |
-                  cd sdk/@launchdarkly/observability-python
-                  make build
-
-            - name: Hash build files for provenance
-              id: package-hashes
-              shell: bash
-              working-directory: ./sdk/@launchdarkly/observability-python/dist
-              run: |
-                  echo "package-hashes=$(sha256sum * | base64 -w0)" >> "$GITHUB_OUTPUT"
-
-            - name: Publish package distributions to PyPI
-              uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc
-              with:
-                  packages-dir: ./sdk/@launchdarkly/observability-python/dist
-                  password: ${{env.PYPI_AUTH_TOKEN}}
+                  workspace-path: sdk/@launchdarkly/observability-python
+                  aws-role-arn: ${{ vars.AWS_ROLE_ARN }}
 
     release-python-docs:
         runs-on: ubuntu-latest
@@ -75,7 +50,7 @@ jobs:
               with:
                   workspace_path: sdk/@launchdarkly/observability-python
 
-    release-provenance:
+    release-python-provenance:
         needs: ['release-package', 'release-python-plugin']
         if: ${{ needs.release-package.outputs.python-plugin-released == 'true' }}
         permissions:

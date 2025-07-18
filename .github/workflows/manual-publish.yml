@@ -18,6 +18,14 @@ on:
                 description: 'Should release @launchdarkly/... packages.'
                 type: boolean
                 required: true
+            release_launchdarkly_python:
+                description: 'Should release @launchdarkly/observability-python package.'
+                type: boolean
+                required: true
+            python_tag_name:
+                description: 'The tag name for the python package. Should be set when publishing a python package.'
+                type: string
+                required: false
 
 permissions:
     id-token: write
@@ -83,3 +91,31 @@ jobs:
               env:
                   LD_RELEASE_IS_PRERELEASE: ${{ inputs.prerelease }}
                   LD_RELEASE_IS_DRYRUN: ${{ inputs.dry-run }}
+
+    publish-python-sdk:
+        runs-on: ubuntu-latest
+        if: ${{ inputs.release_launchdarkly_python == true }}
+        permissions:
+            id-token: write # Used for publishing secrets and documentation.
+        outputs:
+            package-hashes: ${{ steps.publish.outputs.package-hashes }}
+        steps:
+            - name: Publish Python SDK
+              id: publish
+              uses: ./.github/actions/publish-python-sdk
+              with:
+                  workspace-path: sdk/@launchdarkly/observability-python
+                  aws-role-arn: ${{ vars.AWS_ROLE_ARN }}
+
+    publish-python-provenance:
+        needs: ['publish-python-sdk']
+        if: ${{ inputs.release_launchdarkly_python == true }}
+        permissions:
+            actions: read
+            id-token: write
+            contents: write
+        uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.0.0
+        with:
+            base64-subjects: '${{ needs.publish-python-sdk.outputs.package-hashes }}'
+            upload-assets: true
+            upload-tag-name: ${{ inputs.python_tag_name }}

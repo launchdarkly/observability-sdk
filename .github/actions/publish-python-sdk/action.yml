@@ -1,0 +1,63 @@
+name: 'Publish Python SDK'
+description: 'Build and publish Python SDK packages to PyPI'
+
+inputs:
+    workspace-path:
+        description: 'Path to the Python SDK workspace'
+        required: true
+        default: 'sdk/@launchdarkly/observability-python'
+    python-version:
+        description: 'Python version to use'
+        required: false
+        default: '3.10'
+    aws-role-arn:
+        description: 'AWS role ARN for accessing secrets'
+        required: true
+    pypi-token-parameter:
+        description: 'SSM parameter path for PyPI token'
+        required: false
+        default: '/production/common/releasing/pypi/token = PYPI_AUTH_TOKEN'
+
+outputs:
+    package-hashes:
+        description: 'Base64 encoded SHA256 hashes of published packages'
+        value: ${{ steps.package-hashes.outputs.package-hashes }}
+
+runs:
+    using: 'composite'
+    steps:
+        - name: Checkout
+          uses: actions/checkout@v4
+
+        - name: Setup Python
+          uses: actions/setup-python@v5
+          with:
+              python-version: ${{ inputs.python-version }}
+
+        - name: Install poetry
+          uses: abatilo/actions-poetry@7b6d33e44b4f08d7021a1dee3c044e9c253d6439
+
+        - name: Get PyPI token
+          uses: launchdarkly/gh-actions/actions/release-secrets@release-secrets-v1.2.0
+          with:
+              aws_assume_role: ${{ inputs.aws-role-arn }}
+              ssm_parameter_pairs: ${{ inputs.pypi-token-parameter }}
+
+        - name: Build Python plugin
+          shell: bash
+          working-directory: ${{ inputs.workspace-path }}
+          run: |
+              make build
+
+        - name: Hash build files for provenance
+          id: package-hashes
+          shell: bash
+          working-directory: ${{ inputs.workspace-path }}/dist
+          run: |
+              echo "package-hashes=$(sha256sum * | base64 -w0)" >> "$GITHUB_OUTPUT"
+
+        - name: Publish package distributions to PyPI
+          uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc
+          with:
+              packages-dir: ./${{ inputs.workspace-path }}/dist
+              password: ${{env.PYPI_AUTH_TOKEN}}
