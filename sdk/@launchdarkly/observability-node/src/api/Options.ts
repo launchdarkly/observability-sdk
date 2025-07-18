@@ -20,13 +20,35 @@ export const ALL_CONSOLE_METHODS = [
 	'trace',
 	'warn',
 ] as const
-type ConsoleMethodsTuple = typeof ALL_CONSOLE_METHODS
+export type ConsoleMethodsTuple = typeof ALL_CONSOLE_METHODS
 export type ConsoleMethods = ConsoleMethodsTuple[number]
 
+/**
+ * Options for configuring the LaunchDarkly Observability Plugin.
+ *
+ * Additionally the following environment variables can be used to configure
+ * the plugin.
+ *
+ * LAUNCHDARKLY_OTEL_NODE_ENABLE_FILESYSTEM_INSTRUMENTATION - Enable filesystem
+ * instrumentation. Defaults to false.
+ * LAUNCHDARKLY_OTEL_NODE_ENABLE_OUTGOING_HTTP_INSTRUMENTATION - Enable outgoing
+ * HTTP instrumentation. Defaults to true.
+ * This only affects the outgoing HTTP requests instrumented by
+ * `@opentelemetry/instrumentation-http`. It does not affect fetch for example.
+ *
+ * OTEL_NODE_ENABLED_INSTRUMENTATIONS, and OTEL_NODE_DISABLED_INSTRUMENTATIONS
+ * can be used per the OpenTelemetry documentation, but with a few exceptions.
+ * https://opentelemetry.io/docs/zero-code/js/configuration/
+ *
+ * The `@opentelemetry/instrumentation-fs` instrumentation will only be enabled
+ * if LAUNCHDARKLY_OTEL_NODE_ENABLE_FILESYSTEM_INSTRUMENTATION is true, and
+ * will be unaffected by the OTEL_NODE_ENABLED_INSTRUMENTATIONS and
+ * OTEL_NODE_DISABLED_INSTRUMENTATIONS environment variables.
+ */
 export interface NodeOptions {
 	/**
 	 * The endpoint string to send OTLP HTTP data to.
-	 * @default https://otel.highlight.io:4318
+	 * @default https://otel.observability.app.launchdarkly.com
 	 */
 	otlpEndpoint?: string
 
@@ -65,7 +87,7 @@ export interface NodeOptions {
 	disablePgInstrumentationAttributes?: boolean
 
 	/**
-	 * Specifies whether Highlight will record console messages.
+	 * Specifies whether the LaunchDarkly Observability Plugin will record console messages.
 	 * @default false
 	 */
 	disableConsoleRecording?: boolean

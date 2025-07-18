@@ -32,7 +32,10 @@ import {
 	registerInstrumentations,
 } from '@opentelemetry/instrumentation'
 import { CompressionAlgorithm } from '@opentelemetry/otlp-exporter-base'
-import { processDetectorSync, Resource } from '@opentelemetry/resources'
+import {
+	processDetector,
+	resourceFromAttributes,
+} from '@opentelemetry/resources'
 import { NodeSDK } from '@opentelemetry/sdk-node'
 import {
 	AlwaysOnSampler,
@@ -70,16 +73,20 @@ export const HIGHLIGHT_REQUEST_HEADER = 'x-highlight-request'
 
 const instrumentations = getNodeAutoInstrumentations({
 	'@opentelemetry/instrumentation-http': {
-		enabled:
-			(process.env.OTEL_NODE_ENABLED_INSTRUMENTATIONS || '')
-				.split(',')
-				.indexOf('http') !== -1,
+		disableOutgoingRequestInstrumentation:
+			(
+				process.env
+					.LAUNCHDARKLY_OTEL_NODE_ENABLE_OUTGOING_HTTP_INSTRUMENTATION ||
+				''
+			).toLowerCase() === 'false',
 	},
 	'@opentelemetry/instrumentation-fs': {
 		enabled:
-			(process.env.OTEL_NODE_ENABLED_INSTRUMENTATIONS || '')
-				.split(',')
-				.indexOf('fs') !== -1,
+			(
+				process.env
+					.LAUNCHDARKLY_OTEL_NODE_ENABLE_FILESYSTEM_INSTRUMENTATION ||
+				''
+			).toLowerCase() === 'true',
 	},
 	'@opentelemetry/instrumentation-pino': {
 		logHook: (span, record, _) => {
@@ -91,6 +98,7 @@ const instrumentations = getNodeAutoInstrumentations({
 		},
 	},
 })
+
 instrumentations.push(new PrismaInstrumentation())
 registerInstrumentations({ instrumentations })
 
@@ -216,7 +224,7 @@ export class ObservabilityClient {
 				attributes[otelAttr] = options[option]
 			}
 		}
-		const resource = new Resource(attributes)
+		const resource = resourceFromAttributes(attributes)
 
 		const sampler = new CustomSampler()
 		this._getSamplingConfig(sampler)
@@ -229,9 +237,6 @@ export class ObservabilityClient {
 		)
 		this.processor = new BatchSpanProcessor(exporter, opts)
 
-		this.loggerProvider = new LoggerProvider({
-			resource,
-		})
 		const logsExporter = new SamplingLogExporter(
 			{
 				...config,
@@ -239,8 +244,12 @@ export class ObservabilityClient {
 			},
 			sampler,
 		)
+
 		const logsProcessor = new BatchLogRecordProcessor(logsExporter, opts)
-		this.loggerProvider.addLogRecordProcessor(logsProcessor)
+		this.loggerProvider = new LoggerProvider({
+			resource,
+			processors: [logsProcessor],
+		})
 
 		const metricsExporter = new OTLPMetricExporter({
 			...config,
@@ -254,7 +263,7 @@ export class ObservabilityClient {
 
 		this.otel = new NodeSDK({
 			autoDetectResources: true,
-			resourceDetectors: [processDetectorSync],
+			resourceDetectors: [processDetector],
 			resource,
 			spanProcessors: [this.processor],
 			logRecordProcessors: [logsProcessor],

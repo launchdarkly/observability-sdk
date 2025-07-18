@@ -7,6 +7,14 @@ import type { Hook, LDClient } from '../integrations/launchdarkly'
 
 export interface Observe {
 	/**
+	 * Start the observability data capture when running in `manualStart` mode.
+	 */
+	start: () => Promise<void>
+	/**
+	 * Stop the observability data capture.
+	 */
+	stop: () => Promise<void>
+	/**
 	 * Record arbitrary metric values via as a Gauge.
 	 * A Gauge records any point-in-time measurement, such as the current CPU utilization %.
 	 * Values with the same metric name and attributes are aggregated via the OTel SDK.

@@ -1,5 +1,34 @@
 # @launchdarkly/observability
 
+## 0.3.7
+
+### Patch Changes
+
+- 54aab8b: delete sessionData\_ localstorage values to avoid overfilling quota
+- Updated dependencies [54aab8b]
+    - highlight.run@9.18.22
+
+## 0.3.6
+
+### Patch Changes
+
+- 060dfe9: introduce LDObserve.stop api
+
+## 0.3.5
+
+### Patch Changes
+
+- Updated dependencies [011032f]
+    - highlight.run@9.18.21
+
+## 0.3.4
+
+### Patch Changes
+
+- a151858: support delayed plugin initialization via manualStart setting and start API.
+- Updated dependencies [a151858]
+    - highlight.run@9.18.20
+
 ## 0.3.3
 
 ### Patch Changes

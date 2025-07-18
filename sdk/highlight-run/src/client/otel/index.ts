@@ -331,6 +331,8 @@ export const setupBrowserTracing = (
 			],
 		}),
 	})
+
+	return providers
 }
 
 class CustomBatchSpanProcessor extends BatchSpanProcessor {

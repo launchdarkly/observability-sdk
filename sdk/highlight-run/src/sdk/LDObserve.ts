@@ -8,6 +8,16 @@ import { BufferedClass } from './buffer'
 import { ConsoleMethods } from '../client/types/client'
 
 class _LDObserve extends BufferedClass<Observe> implements Observe {
+	start() {
+		// avoid buffering the start call
+		return this._sdk.start()
+	}
+
+	stop() {
+		// avoid buffering the stop call
+		return this._sdk.stop()
+	}
+
 	recordGauge(metric: Metric) {
 		return this._bufferCall('recordGauge', [metric])
 	}
@@ -28,6 +38,8 @@ class _LDObserve extends BufferedClass<Observe> implements Observe {
 		return this._bufferCall('recordUpDownCounter', [metric])
 	}
 
+	// TODO: Ask @vkorolik about using this method before initialization. Doesn't
+	// this cause problems if someone tries to work with the returned span?
 	startSpan(
 		name: string,
 		options: SpanOptions | ((span?: Span) => any),

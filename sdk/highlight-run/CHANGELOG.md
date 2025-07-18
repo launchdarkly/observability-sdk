@@ -1,5 +1,23 @@
 # highlight.run
 
+## 9.18.22
+
+### Patch Changes
+
+- 54aab8b: delete sessionData\_ localstorage values to avoid overfilling quota
+
+## 9.18.21
+
+### Patch Changes
+
+- 011032f: Add upper version constraint for otel packages.
+
+## 9.18.20
+
+### Patch Changes
+
+- a151858: support delayed plugin initialization via manualStart setting and start API.
+
 ## 9.18.19
 
 ### Patch Changes
