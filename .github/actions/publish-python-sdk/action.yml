@@ -61,4 +61,5 @@ runs:
           shell: bash
           run: |
               poetry config pypi-token.pypi ${{ env.PYPI_AUTH_TOKEN }}
+              rm -rf dist
               poetry publish --build --no-interaction
