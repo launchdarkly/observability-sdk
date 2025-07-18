@@ -65,6 +65,8 @@ jobs:
 
     release-python-docs:
         runs-on: ubuntu-latest
+        permissions:
+            contents: write
         needs: ['release-python-plugin']
         steps:
             - name: Build and Publish Docs
