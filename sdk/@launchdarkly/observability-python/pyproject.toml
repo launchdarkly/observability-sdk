@@ -1,6 +1,6 @@
 [project]
 name = "launchdarkly-observability"
-version = "0.0.0"
+version = "0.1.0"
 description = "LaunchDarkly Observability for Python"
 license = "Apache-2.0"
 authors = [
