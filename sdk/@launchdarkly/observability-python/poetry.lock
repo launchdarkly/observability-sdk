@@ -2270,6 +2270,24 @@ files = [
 ]
 
 [[package]]
+name = "pdoc"
+version = "15.0.4"
+description = "API Documentation for Python Projects"
+optional = true
+python-versions = ">=3.9"
+groups = ["main"]
+markers = "extra == \"dev\""
+files = [
+    {file = "pdoc-15.0.4-py3-none-any.whl", hash = "sha256:f9028e85e7bb8475b054e69bde1f6d26fc4693d25d9fa1b1ce9009bec7f7a5c4"},
+    {file = "pdoc-15.0.4.tar.gz", hash = "sha256:cf9680f10f5b4863381f44ef084b1903f8f356acb0d4cc6b64576ba9fb712c82"},
+]
+
+[package.dependencies]
+Jinja2 = ">=2.11.0"
+MarkupSafe = ">=1.1.1"
+pygments = ">=2.12.0"
+
+[[package]]
 name = "platformdirs"
 version = "4.3.8"
 description = "A small Python package for determining appropriate platform-specific dirs, e.g. a `user data dir`."
@@ -3261,9 +3279,9 @@ test = ["big-O", "jaraco.functools", "jaraco.itertools", "jaraco.test", "more_it
 type = ["pytest-mypy"]
 
 [extras]
-dev = ["azure-functions", "black", "blinker", "django", "fastapi", "flask", "functions-framework", "loguru", "orjson", "pytest", "pytest-asyncio", "pytest-cov", "pytest-mock"]
+dev = ["azure-functions", "black", "blinker", "django", "fastapi", "flask", "functions-framework", "loguru", "orjson", "pdoc", "pytest", "pytest-asyncio", "pytest-cov", "pytest-mock"]
 
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<4"
-content-hash = "077ec49f0b14c1aeb711ea098922baf0f3aae4d8bb320f8eee59f1ab2fc4962b"
+content-hash = "b9292fc87e15288eaadf7f1b6387e83ac8743737ee12ba5d8f7c90003ce7ac0a"

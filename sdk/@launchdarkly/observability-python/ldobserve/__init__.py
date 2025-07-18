@@ -1,3 +1,30 @@
+"""
+The LaunchDarkly observability plugin for Python.
+
+In typical usage you will only need to instantiate the :class:`ObservabilityPlugin` and pass it to the LaunchDarkly client during initialization.
+
+The settings for the observability plugins are defined by the :class:`ObservabilityConfig` class.
+
+The `ldobserve.observe` singleton is used for manual tracking of events, metrics, and logs.
+
+# Quick Start
+```python
+from ldobserve import ObservabilityConfig, ObservabilityPlugin
+import ldclient
+from ldclient.config import Config
+
+ldclient.set_config(Config("YOUR_SDK_KEY",
+plugins=[
+    ObservabilityPlugin(
+        ObservabilityConfig(
+            service_name="your-service-name",
+            service_version="your-service-sha",
+        )
+    )]))
+```
+
+"""
+
 import logging
 import os
 from typing import List, Optional
