@@ -1,3 +1,5 @@
+import { v5 as uuidv5 } from 'uuid'
+
 import type { RecordOptions } from '../client/types/record'
 import type { ObserveOptions } from '../client/types/observe'
 import { setCookieWriteEnabled, setStorageMode } from '../client/utils/storage'
@@ -33,7 +35,14 @@ export class Plugin<T extends RecordOptions | ObserveOptions> {
 			if (previousSession?.sessionSecureID) {
 				this.sessionSecureID = previousSession.sessionSecureID
 			} else {
-				this.sessionSecureID = GenerateSecureID()
+				if (options?.sessionKey) {
+					this.sessionSecureID = uuidv5(
+						options.sessionKey,
+						`observability-${'enter project id here'}`,
+					)
+				} else {
+					this.sessionSecureID = GenerateSecureID()
+				}
 				setSessionSecureID(this.sessionSecureID)
 				setSessionData({
 					sessionSecureID: this.sessionSecureID,
