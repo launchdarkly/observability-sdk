@@ -15,6 +15,7 @@ const observabilitySettings: ConstructorParameters<typeof Observability>[0] = {
 	otel: {
 		otlpEndpoint: 'http://localhost:4318',
 	},
+	sessionKey: 'task123',
 }
 const sessionReplaySettings: ConstructorParameters<typeof SessionReplay>[0] = {
 	debug: { clientInteractions: true, domRecording: true },
