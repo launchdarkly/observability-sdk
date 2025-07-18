@@ -1,1 +1,1 @@
-export const RECORD_ATTRIBUTE = 'launchdarkly.record';
+export const RECORD_ATTRIBUTE = 'launchdarkly.record'
