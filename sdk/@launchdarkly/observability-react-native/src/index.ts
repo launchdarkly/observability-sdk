@@ -10,16 +10,12 @@
  *
  * # Quick Start
  * ```typescript
- * import { LDClient } from '@launchdarkly/react-native-client-sdk'
+ * import { ReactNativeLDClient } from '@launchdarkly/react-native-client-sdk'
  * import { Observability, LDObserve } from '@launchdarkly/observability-react-native'
  *
- * const client = new LDClient(
+ * const client = new ReactNativeLDClient(
  *   mobileKey,
- *   user,
- *   {
- *     // ... other options
- *   },
- *   [
+ *   plugins: [
  *     new Observability(),
  *   ]
  * )
