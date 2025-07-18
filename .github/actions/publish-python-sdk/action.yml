@@ -57,6 +57,7 @@ runs:
               echo "package-hashes=$(sha256sum * | base64 -w0)" >> "$GITHUB_OUTPUT"
 
         - name: Publish package distributions to PyPI
+          working-directory: ${{ inputs.workspace-path }}
           shell: bash
           run: |
               poetry config pypi-token.pypi ${{ env.PYPI_AUTH_TOKEN }}
