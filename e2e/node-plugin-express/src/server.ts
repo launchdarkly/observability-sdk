@@ -71,12 +71,6 @@ app.get("/user", async (req: Request, res: Response, next: NextFunction) => {
   res.json({});
 });
 
-app.get("/make-request", async (req: Request, res: Response) => {
-  await fetch("http://www.google.com");
-  res.status(200);
-  res.json({});
-});
-
 app.get("/multi", async (req: Request, res: Response) => {
   const flag = await client.boolVariation(
     "my-boolean-flag",
