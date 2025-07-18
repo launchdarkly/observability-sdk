@@ -15,9 +15,12 @@
  *
  * const client = new ReactNativeLDClient(
  *   mobileKey,
- *   plugins: [
- *     new Observability(),
- *   ]
+ *   AutoEnvAttributes.Enabled,
+ *   {
+ *      plugins: [
+ *        new Observability(),
+ *      ]
+ *  }
  * )
  * ```
  *
