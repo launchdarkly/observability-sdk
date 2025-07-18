@@ -81,7 +81,8 @@
 		"dist"
 	],
 	"dependencies": {
-		"@launchdarkly/js-client-sdk": "^0.6.0"
+		"@launchdarkly/js-client-sdk": "^0.6.0",
+		"uuid": "11.1.0"
 	},
 	"devDependencies": {
 		"@graphql-codegen/cli": "^5.0.0",
@@ -110,6 +111,7 @@
 		"@types/js-cookie": "^3.0.6",
 		"@types/json-stringify-safe": "^5.0.3",
 		"@types/node": "^16.3.1",
+		"@types/uuid": "10.0.0",
 		"@vitest/coverage-v8": "^1.6.1",
 		"@vitest/web-worker": "^1.6.1",
 		"error-stack-parser": "2.0.6",

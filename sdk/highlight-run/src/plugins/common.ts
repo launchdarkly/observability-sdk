@@ -1,3 +1,5 @@
+import { v5 as uuidv5 } from 'uuid'
+
 import type { RecordOptions } from '../client/types/record'
 import type { ObserveOptions } from '../client/types/observe'
 import { setCookieWriteEnabled, setStorageMode } from '../client/utils/storage'
@@ -25,7 +27,17 @@ export class Plugin<T extends RecordOptions | ObserveOptions> {
 			} else {
 				setCookieWriteEnabled(false)
 			}
+		} catch (error) {
+			internalLog(
+				`Error initializing @launchdarkly observability plugin`,
+				'error',
+				error,
+			)
+		}
+	}
 
+	configureSession(ldCredential: string, options?: T) {
+		try {
 			const persistentSessionSecureID = getPersistentSessionSecureID()
 			let previousSession = getPreviousSessionData(
 				persistentSessionSecureID,
@@ -33,7 +45,15 @@ export class Plugin<T extends RecordOptions | ObserveOptions> {
 			if (previousSession?.sessionSecureID) {
 				this.sessionSecureID = previousSession.sessionSecureID
 			} else {
-				this.sessionSecureID = GenerateSecureID()
+				if (options?.sessionKey) {
+					// TODO(spenny): make valid UUID
+					this.sessionSecureID = uuidv5(
+						options.sessionKey,
+						`observability-${ldCredential}`,
+					)
+				} else {
+					this.sessionSecureID = GenerateSecureID()
+				}
 				setSessionSecureID(this.sessionSecureID)
 				setSessionData({
 					sessionSecureID: this.sessionSecureID,
@@ -45,7 +65,7 @@ export class Plugin<T extends RecordOptions | ObserveOptions> {
 			}
 		} catch (error) {
 			internalLog(
-				`Error initializing @launchdarkly observability plugin`,
+				`Error configuring session in @launchdarkly observability plugin`,
 				'error',
 				error,
 			)

@@ -153,6 +153,7 @@ export type HighlightClassOptions = {
 	environment?: 'development' | 'production' | 'staging' | string
 	appVersion?: string
 	serviceName?: string
+	sessionKey?: string
 	sessionShortcut?: SessionShortcutOptions
 	sessionSecureID: string // Introduced in firstLoad 3.0.1
 	storageMode?: 'sessionStorage' | 'localStorage'
@@ -1382,9 +1383,11 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 	// Reset the events array and push to a backend.
 	async _save() {
 		try {
+			// reset the session if over 4 hours and no sessionKey is provided
 			if (
 				this.state === 'Recording' &&
 				this.listeners &&
+				!this.options?.sessionKey &&
 				this.sessionData.sessionStartTime &&
 				Date.now() - this.sessionData.sessionStartTime >
 					MAX_SESSION_LENGTH
