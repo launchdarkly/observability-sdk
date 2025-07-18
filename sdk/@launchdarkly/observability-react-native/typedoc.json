@@ -2,15 +2,7 @@
 	"$schema": "https://typedoc.org/schema.json",
 	"name": "@launchdarkly/observability-react-native",
 	"includeVersion": false,
-	"entryPoints": [
-		"src/index.ts",
-		"src/api/Observe.ts",
-		"src/api/Options.ts",
-		"src/api/Metric.ts",
-		"src/api/RequestContext.ts",
-		"src/plugin/observability.ts",
-		"src/sdk/LDObserve.ts"
-	],
+	"entryPoints": ["src/index.ts"],
 	"exclude": [
 		"**/__tests__/**",
 		"**/*.spec.ts",
