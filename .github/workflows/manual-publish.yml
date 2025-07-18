@@ -100,6 +100,10 @@ jobs:
         outputs:
             package-hashes: ${{ steps.publish.outputs.package-hashes }}
         steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+            - run: git submodule update --init --recursive
+
             - name: Publish Python SDK
               id: publish
               uses: ./.github/actions/publish-python-sdk

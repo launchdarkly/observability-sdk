@@ -32,6 +32,9 @@ jobs:
         outputs:
             package-hashes: ${{ steps.publish.outputs.package-hashes }}
         steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
             - name: Publish Python SDK
               id: publish
               uses: ./.github/actions/publish-python-sdk
