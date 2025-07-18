@@ -13,6 +13,16 @@ let cookieWriteEnabled: boolean = true
 
 class Storage {
 	private storage: { [key: string]: string } = {}
+
+	public get length(): number {
+		return Object.keys(this.storage).length
+	}
+
+	public key(index: number): string | null {
+		const keys = Object.keys(this.storage)
+		return keys[index] ?? null
+	}
+
 	public getItem(key: string) {
 		return this.storage[key] ?? ''
 	}
@@ -49,7 +59,7 @@ export class CookieStorage {
 export const globalStorage = new Storage()
 export const cookieStorage = new CookieStorage()
 
-const getPersistentStorage = () => {
+export const getPersistentStorage = () => {
 	let storage:
 		| Storage
 		| typeof window.localStorage

@@ -1,5 +1,11 @@
 # @launchdarkly/observability-node
 
+## 0.2.1
+
+### Patch Changes
+
+- b7145b5: Export options for node observability plugin.
+
 ## 0.2.0
 
 ### Minor Changes

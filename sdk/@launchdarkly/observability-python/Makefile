@@ -1,4 +1,4 @@
-.PHONY: help install lint test build clean format
+.PHONY: help install lint test build clean format docs
 
 # Default target
 help:
@@ -30,6 +30,9 @@ test:
 # Build the package
 build:
 	poetry build
+
+docs:
+	poetry run pdoc ldobserve -o docs
 
 codegen:
 	poetry run ariadne-codegen client

@@ -2,7 +2,7 @@ LaunchDarkly Observability SDK for Python
 ===========================
 
 [![Actions Status][pyplugin-sdk-ci-badge]][pyplugin-sdk-ci]
-[![readthedocs][readthedocs-badge]][readthedocs-link]
+[![Documentation](https://img.shields.io/static/v1?label=GitHub+Pages&message=API+reference&color=00add8)][o11y-docs-link]
 
 [![PyPI][pypi-version-badge]][pypi-link]
 [![PyPI][pypi-versions-badge]][pypi-link]
@@ -10,6 +10,32 @@ LaunchDarkly Observability SDK for Python
 # Early Access Preview️
 
 **NB: APIs are subject to change until a 1.x version is released.**
+
+## Install
+
+```shell
+# poetry
+poetry add launchdarkly-observability
+
+# pip
+pip install launchdarkly-observability
+```
+
+Install the plugin when configuring your LaunchDarkly SDK.
+
+```python
+from ldobserve import ObservabilityConfig, ObservabilityPlugin, observe
+import ldclient
+from ldclient.context import Context
+from ldclient.config import Config
+
+ldclient.set_config(Config("your-sdk-key", plugins=[
+    ObservabilityPlugin(
+        ObservabilityConfig(
+            service_name="your-service-name",
+            service_version="your-service-sha",
+        ))]))
+```
 
 LaunchDarkly overview
 -------------------------
@@ -42,3 +68,4 @@ We encourage pull requests and other contributions from the community. Check out
 [pypi-version-badge]: https://img.shields.io/pypi/v/launchdarkly-observability.svg?maxAge=2592000
 [pypi-versions-badge]: https://img.shields.io/pypi/pyversions/launchdarkly-observability.svg
 [pypi-link]: https://pypi.python.org/pypi/launchdarkly-observability
+[o11y-docs-link]: https://launchdarkly.github.io/observability-sdk/sdk/@launchdarkly/observability-python/

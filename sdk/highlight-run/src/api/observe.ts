@@ -11,6 +11,10 @@ export interface Observe {
 	 */
 	start: () => Promise<void>
 	/**
+	 * Stop the observability data capture.
+	 */
+	stop: () => Promise<void>
+	/**
 	 * Record arbitrary metric values via as a Gauge.
 	 * A Gauge records any point-in-time measurement, such as the current CPU utilization %.
 	 * Values with the same metric name and attributes are aggregated via the OTel SDK.
