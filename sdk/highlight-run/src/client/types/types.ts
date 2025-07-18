@@ -123,12 +123,6 @@ export type CommonOptions = {
 	 */
 	sessionCookie?: true
 	/**
-	 * Specifies whether Highlight will record user session replays.
-	 * Unless you are using Highlight only for error monitoring, you do not want to set this to true.
-	 * @default false
-	 */
-	disableSessionRecording?: boolean
-	/**
 	 * Specifies if Highlight should not automatically initialize when the class is created.
 	 * This should be used with `.start()` and `.stop()` if you want to control when Highlight records.
 	 * @default false
