@@ -58,5 +58,5 @@ runs:
 
         - name: Publish package distributions to PyPI
           run: |
-              poetry config pypi-token.pypi ${{ secrets.PYPI_AUTH_TOKEN }}
+              poetry config pypi-token.pypi ${{ env.PYPI_AUTH_TOKEN }}
               poetry publish --build
