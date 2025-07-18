@@ -10,7 +10,11 @@
  *
  * # Quick Start
  * ```typescript
- * import { ReactNativeLDClient } from '@launchdarkly/react-native-client-sdk'
+ * import {
+ *  AutoEnvAttributes,
+ *  LDProvider,
+ *  ReactNativeLDClient,
+ * } from '@launchdarkly/react-native-client-sdk';
  * import { Observability, LDObserve } from '@launchdarkly/observability-react-native'
  *
  * const client = new ReactNativeLDClient(
