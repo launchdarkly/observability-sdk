@@ -94,6 +94,20 @@ export default function HomeScreen() {
 				span.setAttribute('http.status_code', response.status)
 				span.setAttribute('response.size', JSON.stringify(data).length)
 
+				// wait to break out of current context
+				await new Promise((resolve) => setTimeout(resolve, 100))
+
+				const context = LDObserve.getContextFromSpan(span)
+				LDObserve.startActiveSpan(
+					'api.fetchData.child',
+					async (childSpan) => {
+						childSpan.setAttribute('context', 'test')
+						childSpan.end()
+					},
+					{},
+					context,
+				)
+
 				LDObserve.recordLog('Network request completed', 'info', {
 					method: 'GET',
 					url: 'https://jsonplaceholder.typicode.com/posts/1',
@@ -175,6 +189,97 @@ export default function HomeScreen() {
 		})
 	}
 
+	const handleNestedOperations = () => {
+		LDObserve.startActiveSpan('parent-operation', (parentSpan) => {
+			const parentContext = parentSpan.spanContext()
+
+			parentSpan.setAttribute('operation.type', 'complex')
+			parentSpan.setAttribute('component', 'HomeScreen')
+			parentSpan.setAttribute('test.scenario', 'context_propagation')
+
+			LDObserve.startActiveSpan('child-operation-1', (childSpan) => {
+				const childContext = childSpan.spanContext()
+
+				childSpan.setAttribute('step', '1')
+				childSpan.setAttribute('operation.nested', true)
+
+				LDObserve.startActiveSpan(
+					'sync-grandchild',
+					(grandchildSpan) => {
+						grandchildSpan.setAttribute('step', '1.1')
+						grandchildSpan.setAttribute('sync', true)
+						grandchildSpan.end()
+					},
+				)
+
+				const currentTraceId = parentContext.traceId
+				const currentSpanId = childContext.spanId
+
+				setTimeout(() => {
+					const context = LDObserve.getContextFromSpan(parentSpan)
+					LDObserve.startActiveSpan(
+						'async-child',
+						(asyncSpan) => {
+							const asyncContext = asyncSpan.spanContext()
+
+							asyncSpan.setAttribute('async', true)
+							asyncSpan.setAttribute('step', '1.2')
+							asyncSpan.setAttribute('delay_ms', 100)
+							asyncSpan.setAttribute(
+								'parent_trace_id',
+								currentTraceId,
+							)
+							asyncSpan.setAttribute(
+								'expected_parent_span_id',
+								currentSpanId,
+							)
+
+							LDObserve.recordLog(
+								'Async operation completed',
+								'info',
+								{
+									step: '1.2',
+									parentOperation: 'parent-operation',
+									contextLost:
+										asyncContext.traceId !== currentTraceId,
+								},
+							)
+
+							asyncSpan.end()
+						},
+						{},
+						context,
+					)
+				}, 100)
+
+				childSpan.end()
+			})
+
+			LDObserve.startActiveSpan('child-operation-2', (childSpan2) => {
+				childSpan2.setAttribute('step', '2')
+				childSpan2.setAttribute('operation.parallel', true)
+
+				LDObserve.recordCount({
+					name: 'nested_operations',
+					value: 1,
+					attributes: {
+						operation: 'child-operation-2',
+						step: '2',
+					},
+				})
+
+				childSpan2.end()
+			})
+
+			parentSpan.end()
+		})
+
+		Alert.alert(
+			'Span Hierarchy Test',
+			'Nested spans with context propagation have been created.',
+		)
+	}
+
 	return (
 		<ParallaxScrollView
 			headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
@@ -228,6 +333,15 @@ export default function HomeScreen() {
 				<Pressable style={styles.button} onPress={handleIdentifyUser}>
 					<ThemedText style={styles.buttonText}>
 						Identify User
+					</ThemedText>
+				</Pressable>
+
+				<Pressable
+					style={styles.button}
+					onPress={handleNestedOperations}
+				>
+					<ThemedText style={styles.buttonText}>
+						Test Span Hierarchy
 					</ThemedText>
 				</Pressable>
 			</ThemedView>
