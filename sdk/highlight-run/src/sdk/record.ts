@@ -259,7 +259,9 @@ export class RecordSDK implements Record {
 
 		// no need to set the sessionStorage value here since firstload won't call
 		// init again after a reset, and `this.initialize()` will set sessionStorage
-		this.sessionData.sessionSecureID = GenerateSecureID(sessionKey)
+		this.sessionData.sessionSecureID = sessionKey
+			? GenerateSecureID(`${this.sessionData.projectID}-${sessionKey}`)
+			: GenerateSecureID()
 		this.sessionData.sessionStartTime = Date.now()
 		this.options.sessionSecureID = this.sessionData.sessionSecureID
 		this.stop()
@@ -411,6 +413,15 @@ export class RecordSDK implements Record {
 			if (options?.forceNew) {
 				await this._reset(options)
 				return
+			}
+
+			if (options?.sessionKey) {
+				const newSessionSecureID = GenerateSecureID(
+					`${this.organizationID}-${options.sessionKey}`,
+				)
+				if (newSessionSecureID !== this.sessionData.sessionSecureID) {
+					await this._reset({ ...options, forceNew: true })
+				}
 			}
 
 			this.logger.log(
