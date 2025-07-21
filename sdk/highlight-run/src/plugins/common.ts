@@ -1,5 +1,3 @@
-import { v5 as uuidv5 } from 'uuid'
-
 import type { RecordOptions } from '../client/types/record'
 import type { ObserveOptions } from '../client/types/observe'
 import { setCookieWriteEnabled, setStorageMode } from '../client/utils/storage'

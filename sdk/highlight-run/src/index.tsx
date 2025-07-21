@@ -10,8 +10,6 @@
  *
  * @packageDocumentation
  */
-import { v5 as uuidv5 } from 'uuid'
-
 import type { HighlightClassOptions, RequestResponsePair } from './client'
 import { GenerateSecureID, Highlight } from './client'
 import { FirstLoadListeners } from './client/listeners/first-load-listeners'
