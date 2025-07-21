@@ -27,11 +27,10 @@ export const GenerateSecureID = (key?: string): string => {
 	var secureID = ''
 
 	if (key) {
-		const hash = simpleHash(key)
+		const keyHash = simpleHash(key)
 		for (let i = 0; i < ID_LENGTH; i++) {
-			// Better mixing of hash and position to reduce patterns
-			const mixed = hash ^ (i * 0x85ebca6b)
-			const charIndex = mixed % CHARACTER_SET.length
+			const characterHash = keyHash ^ i
+			const charIndex = characterHash % CHARACTER_SET.length
 			secureID += CHARACTER_SET.charAt(charIndex)
 		}
 	} else {
