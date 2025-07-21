@@ -11,6 +11,7 @@ import { internalLogOnce } from '../../../sdk/util'
 
 export type SessionData = {
 	sessionSecureID: string
+	sessionKey?: string
 	projectID: number
 	payloadID: number
 	sessionStartTime?: number

@@ -53,6 +53,7 @@ export class Plugin<T extends RecordOptions | ObserveOptions> {
 				setSessionSecureID(this.sessionSecureID)
 				setSessionData({
 					sessionSecureID: this.sessionSecureID,
+					sessionKey: options?.sessionKey,
 					projectID: 0,
 					payloadID: 1,
 					sessionStartTime: Date.now(),

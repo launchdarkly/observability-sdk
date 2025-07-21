@@ -262,6 +262,7 @@ export class RecordSDK implements Record {
 		this.sessionData.sessionSecureID = sessionKey
 			? GenerateSecureID(`${this.sessionData.projectID}-${sessionKey}`)
 			: GenerateSecureID()
+		this.sessionData.sessionKey = sessionKey
 		this.sessionData.sessionStartTime = Date.now()
 		this.options.sessionSecureID = this.sessionData.sessionSecureID
 		this.stop()
@@ -664,11 +665,10 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 				}
 			}
 
-			if (this.options.sessionKey || options?.sessionKey) {
+			if (this.sessionData.sessionKey) {
 				this.addProperties(
 					{
-						sessionKey:
-							options?.sessionKey ?? this.options.sessionKey,
+						sessionKey: this.sessionData.sessionKey,
 					},
 					{ type: 'session' },
 				)
@@ -990,7 +990,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 			if (
 				this.state === 'Recording' &&
 				this.listeners &&
-				!this.options?.sessionKey &&
+				!this.sessionData.sessionKey &&
 				this.sessionData.sessionStartTime &&
 				Date.now() - this.sessionData.sessionStartTime >
 					MAX_SESSION_LENGTH

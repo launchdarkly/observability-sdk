@@ -1387,7 +1387,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 			if (
 				this.state === 'Recording' &&
 				this.listeners &&
-				!this.options?.sessionKey &&
+				!this.sessionData.sessionKey &&
 				this.sessionData.sessionStartTime &&
 				Date.now() - this.sessionData.sessionStartTime >
 					MAX_SESSION_LENGTH
