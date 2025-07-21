@@ -47,9 +47,8 @@ export class Plugin<T extends RecordOptions | ObserveOptions> {
 			} else {
 				if (options?.sessionKey) {
 					// TODO(spenny): make valid UUID
-					this.sessionSecureID = uuidv5(
-						options.sessionKey,
-						`observability-${ldCredential}`,
+					this.sessionSecureID = GenerateSecureID(
+						`${ldCredential}-${options.sessionKey}`,
 					)
 				} else {
 					this.sessionSecureID = GenerateSecureID()

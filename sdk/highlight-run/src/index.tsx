@@ -125,9 +125,8 @@ const H: HighlightPublicInterface = {
 			let sessionSecureID = GenerateSecureID()
 
 			if (options?.sessionKey) {
-				sessionSecureID = uuidv5(
-					options.sessionKey,
-					`observability-${projectID}`,
+				sessionSecureID = GenerateSecureID(
+					`${projectID}-${options.sessionKey}`,
 				)
 			} else if (previousSession?.sessionSecureID) {
 				sessionSecureID = previousSession.sessionSecureID
