@@ -664,6 +664,16 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 				}
 			}
 
+			if (this.options.sessionKey || options?.sessionKey) {
+				this.addProperties(
+					{
+						sessionKey:
+							options?.sessionKey ?? this.options.sessionKey,
+					},
+					{ type: 'session' },
+				)
+			}
+
 			this._setupWindowListeners()
 			this.ready = true
 			this.state = 'Recording'
