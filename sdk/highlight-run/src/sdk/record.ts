@@ -229,7 +229,13 @@ export class RecordSDK implements Record {
 	}
 
 	// Start a new session
-	async _reset({ forceNew }: { forceNew?: boolean }) {
+	async _reset({
+		forceNew,
+		sessionKey,
+	}: {
+		forceNew?: boolean
+		sessionKey?: string
+	}) {
 		if (this.pushPayloadTimerId) {
 			clearTimeout(this.pushPayloadTimerId)
 			this.pushPayloadTimerId = undefined
@@ -253,7 +259,7 @@ export class RecordSDK implements Record {
 
 		// no need to set the sessionStorage value here since firstload won't call
 		// init again after a reset, and `this.initialize()` will set sessionStorage
-		this.sessionData.sessionSecureID = GenerateSecureID()
+		this.sessionData.sessionSecureID = GenerateSecureID(sessionKey)
 		this.sessionData.sessionStartTime = Date.now()
 		this.options.sessionSecureID = this.sessionData.sessionSecureID
 		this.stop()
@@ -427,7 +433,6 @@ export class RecordSDK implements Record {
 			let clientID = getItem(LocalStorageKeys['CLIENT_ID'])
 
 			if (!clientID) {
-				// TODO(spenny): generate here?
 				clientID = GenerateSecureID()
 				setItem(LocalStorageKeys['CLIENT_ID'], clientID)
 			}
