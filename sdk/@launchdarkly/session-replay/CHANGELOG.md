@@ -1,5 +1,13 @@
 # @launchdarkly/session-replay
 
+## 0.3.8
+
+### Patch Changes
+
+- d0ab9e3: conditionally check for window api availability
+- Updated dependencies [d0ab9e3]
+    - highlight.run@9.18.23
+
 ## 0.3.7
 
 ### Patch Changes
