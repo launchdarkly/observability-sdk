@@ -66,6 +66,10 @@ export const getPersistentStorage = () => {
 		| typeof window.sessionStorage
 		| null = null
 
+	if (typeof window === 'undefined') {
+		return globalStorage
+	}
+
 	try {
 		switch (mode) {
 			case 'localStorage':
@@ -164,6 +168,12 @@ export const monkeyPatchLocalStorage = (
 	if (mode === 'sessionStorage') {
 		console.warn(
 			`highlight.io cannot use local storage; segment integration will not work`,
+		)
+		return
+	}
+	if (typeof window === 'undefined') {
+		console.warn(
+			`highlight.io cannot use local storage (not a window); segment integration will not work`,
 		)
 		return
 	}
