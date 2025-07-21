@@ -9,7 +9,7 @@ help:
 # This is a pretty aggressive install that removes all the site packages.
 # This ensures that we get the latest version when working on changes to the plugin.
 install:
-	find $(poetry env info --path) -type d -name site-packages -exec rm -rf {} \; || poetry lock && poetry install
+	find $(poetry env info --path) -type d -name site-packages -exec rm -rf {} \; ; poetry lock && poetry install
 
 run:
 	poetry run flask run
