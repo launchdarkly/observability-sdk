@@ -38,9 +38,9 @@ export const client = init(
 	},
 )
 
-export const recordSession = async () => {
+export const recordSession = async (sessionKey?: string) => {
 	console.log('Session recording enabled via LaunchDarkly')
-	await LDRecord.start()
+	await LDRecord.start({ sessionKey })
 }
 
 export const recordObservability = async () => {

@@ -78,7 +78,7 @@ export default function Root() {
 			</button>
 			<button
 				onClick={() => {
-					LDRecord.start({ forceNew: true })
+					LDRecord.start({ forceNew: true, sessionKey: 'task128' })
 				}}
 			>
 				LDRecord.start(forceNew)
@@ -258,7 +258,7 @@ export default function Root() {
 			</button>
 			<button
 				onClick={async () => {
-					await recordSession()
+					await recordSession('task127')
 				}}
 			>
 				recordSession
