@@ -29,8 +29,8 @@ export const GenerateSecureID = (key?: string): string => {
 	if (key) {
 		const keyHash = simpleHash(key)
 		for (let i = 0; i < ID_LENGTH; i++) {
-			const characterHash = keyHash ^ i
-			const charIndex = characterHash % CHARACTER_SET.length
+			const charHash = (keyHash ^ (i * 0x85ebca6b)) >>> 0
+			const charIndex = charHash % CHARACTER_SET.length
 			secureID += CHARACTER_SET.charAt(charIndex)
 		}
 	} else {

@@ -44,7 +44,6 @@ export class Plugin<T extends RecordOptions | ObserveOptions> {
 				this.sessionSecureID = previousSession.sessionSecureID
 			} else {
 				if (options?.sessionKey) {
-					// TODO(spenny): make valid UUID
 					this.sessionSecureID = GenerateSecureID(
 						`${ldCredential}-${options.sessionKey}`,
 					)

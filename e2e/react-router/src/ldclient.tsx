@@ -15,14 +15,14 @@ const observabilitySettings: ConstructorParameters<typeof Observability>[0] = {
 	otel: {
 		otlpEndpoint: 'http://localhost:4318',
 	},
-	sessionKey: 'task123',
+	sessionKey: 'task126',
 }
 const sessionReplaySettings: ConstructorParameters<typeof SessionReplay>[0] = {
 	debug: { clientInteractions: true, domRecording: true },
 	privacySetting: 'none',
 	serviceName: 'ryan-test',
 	backendUrl: 'http://localhost:8082/public',
-	sessionKey: 'task123',
+	sessionKey: 'task126',
 }
 
 export const client = init(

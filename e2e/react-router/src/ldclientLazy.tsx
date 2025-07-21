@@ -13,7 +13,7 @@ const observabilitySettings: ConstructorParameters<typeof Observability>[0] = {
 		otlpEndpoint: 'http://localhost:4318',
 	},
 	manualStart: true,
-	sessionKey: 'task123',
+	sessionKey: 'task125',
 }
 const sessionReplaySettings: ConstructorParameters<typeof SessionReplay>[0] = {
 	debug: { clientInteractions: true, domRecording: true },
@@ -21,7 +21,7 @@ const sessionReplaySettings: ConstructorParameters<typeof SessionReplay>[0] = {
 	serviceName: 'ryan-test',
 	backendUrl: 'http://localhost:8082/public',
 	manualStart: true,
-	sessionKey: 'task123',
+	sessionKey: 'task125',
 }
 
 export const client = init(

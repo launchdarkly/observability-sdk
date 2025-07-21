@@ -427,6 +427,7 @@ export class RecordSDK implements Record {
 			let clientID = getItem(LocalStorageKeys['CLIENT_ID'])
 
 			if (!clientID) {
+				// TODO(spenny): generate here?
 				clientID = GenerateSecureID()
 				setItem(LocalStorageKeys['CLIENT_ID'], clientID)
 			}
