@@ -260,7 +260,7 @@ export class RecordSDK implements Record {
 		// no need to set the sessionStorage value here since firstload won't call
 		// init again after a reset, and `this.initialize()` will set sessionStorage
 		this.sessionData.sessionSecureID = sessionKey
-			? GenerateSecureID(`${this.sessionData.projectID}-${sessionKey}`)
+			? GenerateSecureID(`${this.organizationID}-${sessionKey}`)
 			: GenerateSecureID()
 		this.sessionData.sessionKey = sessionKey
 		this.sessionData.sessionStartTime = Date.now()
