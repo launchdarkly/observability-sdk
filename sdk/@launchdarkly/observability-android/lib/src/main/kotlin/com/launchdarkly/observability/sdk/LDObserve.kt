@@ -24,7 +24,8 @@ class LDObserve(private val client: ObservabilityClient) : Observe {
 
     companion object {
         // initially a no-op implementation
-        val LDObserve: Observe = object : Observe {
+        @Volatile
+        var LDObserve: Observe = object : Observe {
             override fun recordMetric(metric: Metric) {}
             override fun recordCount(metric: Metric) {}
             override fun recordIncr(metric: Metric) {}
