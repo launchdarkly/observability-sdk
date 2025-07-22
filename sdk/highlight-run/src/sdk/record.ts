@@ -417,10 +417,7 @@ export class RecordSDK implements Record {
 			}
 
 			if (options?.sessionKey) {
-				const newSessionSecureID = GenerateSecureID(
-					`${this.organizationID}-${options.sessionKey}`,
-				)
-				if (newSessionSecureID !== this.sessionData.sessionSecureID) {
+				if (options?.sessionKey !== this.sessionData.sessionKey) {
 					await this._reset({ ...options, forceNew: true })
 				}
 			}

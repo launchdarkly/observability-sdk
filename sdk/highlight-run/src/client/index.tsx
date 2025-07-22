@@ -331,7 +331,13 @@ export class Highlight {
 	}
 
 	// Start a new session
-	async _reset({ forceNew }: { forceNew?: boolean }) {
+	async _reset({
+		forceNew,
+		sessionKey,
+	}: {
+		forceNew?: boolean
+		sessionKey?: string
+	}) {
 		if (this.pushPayloadTimerId) {
 			clearTimeout(this.pushPayloadTimerId)
 			this.pushPayloadTimerId = undefined
@@ -355,7 +361,10 @@ export class Highlight {
 
 		// no need to set the sessionStorage value here since firstload won't call
 		// init again after a reset, and `this.initialize()` will set sessionStorage
-		this.sessionData.sessionSecureID = GenerateSecureID()
+		this.sessionData.sessionSecureID = sessionKey
+			? GenerateSecureID(`${this.organizationID}-${sessionKey}`)
+			: GenerateSecureID()
+		this.sessionData.sessionKey = sessionKey
 		this.sessionData.sessionStartTime = Date.now()
 		this.options.sessionSecureID = this.sessionData.sessionSecureID
 		this.stopRecording()
@@ -582,6 +591,12 @@ export class Highlight {
 			if (options?.forceNew) {
 				await this._reset(options)
 				return
+			}
+
+			if (options?.sessionKey) {
+				if (options?.sessionKey !== this.sessionData.sessionKey) {
+					await this._reset({ ...options, forceNew: true })
+				}
 			}
 
 			const sampler = new CustomSampler()
@@ -870,6 +885,15 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 						{ type: 'session' },
 					)
 				}
+			}
+
+			if (this.sessionData.sessionKey) {
+				this.addProperties(
+					{
+						sessionKey: this.sessionData.sessionKey,
+					},
+					{ type: 'session' },
+				)
 			}
 
 			this._setupWindowListeners()
