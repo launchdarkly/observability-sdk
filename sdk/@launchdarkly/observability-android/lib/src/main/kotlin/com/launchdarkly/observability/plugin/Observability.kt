@@ -15,10 +15,10 @@ class Observability : Plugin() {
         }
     }
 
-    override fun register(client: LDClient?, metadata: EnvironmentMetadata?) {
+    override fun register(client: LDClient, metadata: EnvironmentMetadata?) {
         val sdkKey = metadata?.credential ?: ""
         val resource = Resource.getDefault()
-        val observabilityClient = ObservabilityClient(sdkKey, resource)
+        val observabilityClient = ObservabilityClient(sdkKey, client, resource)
         LDObserve.init(observabilityClient)
     }
 }

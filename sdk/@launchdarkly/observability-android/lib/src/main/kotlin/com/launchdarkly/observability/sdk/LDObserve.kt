@@ -22,11 +22,14 @@ class LDObserve(private val client: ObservabilityClient) : Observe {
         client.recordUpDownCounter(metric)
     }
 
-    companion object {
-        // initially a no-op implementation
+    companion object : Observe {
+        // initially a no-op delegate
+        // volatile annotation guarantees multiple threads see the same value after init and none continue using the no-op implementation
         @Volatile
-        var LDObserve: Observe = object : Observe {
-            override fun recordMetric(metric: Metric) {}
+        private var delegate: Observe = object : Observe {
+            override fun recordMetric(metric: Metric) {
+
+            }
             override fun recordCount(metric: Metric) {}
             override fun recordIncr(metric: Metric) {}
             override fun recordHistogram(metric: Metric) {}
@@ -34,7 +37,13 @@ class LDObserve(private val client: ObservabilityClient) : Observe {
         }
 
         fun init(client: ObservabilityClient) {
-            LDObserve = LDObserve(client)
+            delegate = LDObserve(client)
         }
+
+        override fun recordMetric(metric: Metric) = delegate.recordMetric(metric)
+        override fun recordCount(metric: Metric) = delegate.recordCount(metric)
+        override fun recordIncr(metric: Metric) = delegate.recordIncr(metric)
+        override fun recordHistogram(metric: Metric) = delegate.recordHistogram(metric)
+        override fun recordUpDownCounter(metric: Metric) = delegate.recordUpDownCounter(metric)
     }
 }

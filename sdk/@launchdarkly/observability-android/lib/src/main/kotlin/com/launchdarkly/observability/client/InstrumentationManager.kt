@@ -1,7 +1,8 @@
 package com.launchdarkly.observability.client
 import com.launchdarkly.observability.interfaces.Metric
+import com.launchdarkly.sdk.LDValue
+import com.launchdarkly.sdk.android.LDClient
 import io.opentelemetry.api.metrics.MeterProvider
-import io.opentelemetry.api.metrics.Meter
 import io.opentelemetry.exporter.otlp.http.metrics.OtlpHttpMetricExporter
 import io.opentelemetry.sdk.metrics.SdkMeterProvider
 import io.opentelemetry.sdk.metrics.export.MetricExporter
@@ -16,9 +17,9 @@ import java.util.concurrent.TimeUnit
  */
 class InstrumentationManager(
     private val sdkKey: String,
+    private val client: LDClient,
     private val resources: Resource,
 ) {
-
     private val meterProvider: MeterProvider
 
     init {
@@ -48,6 +49,9 @@ class InstrumentationManager(
     fun recordMetric(metric: Metric) {
         // TODO: should we hold a reference to the meter?
         meterProvider.get("com.launchdarkly.observability").gaugeBuilder(metric.name).build().set(metric.value, metric.attributes)
+
+        // TODO: convert attributes to LDValue object and pass instead of LDValue.ofNull()
+        client.trackMetric(metric.name, LDValue.ofNull(), metric.value)
     }
 
     fun recordCount(metric: Metric) {

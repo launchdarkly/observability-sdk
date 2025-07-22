@@ -6,13 +6,6 @@ plugins {
     alias(libs.plugins.kotlin.android)
 }
 
-repositories {
-    // Google Maven repository for Android tools
-    google()
-    // Use Maven Central for resolving dependencies.
-    mavenCentral()
-}
-
 dependencies {
     implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.9.0")
 
@@ -23,13 +16,8 @@ dependencies {
     implementation("io.opentelemetry:opentelemetry-sdk-metrics:1.51.0")
 
     // Use JUnit Jupiter for testing.
-    testImplementation(libs.junit.jupiter)
+    testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-}
-
-android {
-    compileSdk = 30
-    namespace = "com.launchdarkly.observability"
 }
 
 android {
