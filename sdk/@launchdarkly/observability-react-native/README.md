@@ -4,6 +4,7 @@
 [![Actions Status][o11y-sdk-ci-badge]][o11y-sdk-ci]
 [![NPM][o11y-sdk-dm-badge]][o11y-sdk-npm-link]
 [![NPM][o11y-sdk-dt-badge]][o11y-sdk-npm-link]
+[![Documentation](https://img.shields.io/static/v1?label=GitHub+Pages&message=API+reference&color=00add8)][o11y-docs-link]
 
 # Early Access Preview️
 
@@ -63,3 +64,4 @@ const client = new LDClient(
 [o11y-sdk-npm-link]: https://www.npmjs.com/package/@launchdarkly/observability-react-native
 [o11y-sdk-dm-badge]: https://img.shields.io/npm/dm/@launchdarkly/observability-react-native.svg?style=flat-square
 [o11y-sdk-dt-badge]: https://img.shields.io/npm/dt/@launchdarkly/observability-react-native.svg?style=flat-square
+[o11y-docs-link]: https://launchdarkly.github.io/observability-sdk/sdk/@launchdarkly/observability-react-native/

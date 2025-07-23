@@ -6,8 +6,7 @@
 			"versioning": "default",
 			"include-v-in-tag": false,
 			"extra-files": ["PROVENANCE.md"],
-			"include-component-in-tag": true,
-			"release-as": "0.1.0"
+			"include-component-in-tag": true
 		}
 	}
 }
