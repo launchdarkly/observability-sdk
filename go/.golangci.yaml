@@ -1,55 +1,55 @@
-version: "2"
+version: '2'
 run:
-  tests: false
+    tests: false
 linters:
-  enable:
-    - bodyclose
-    - dupl
-    - gochecknoglobals
-    - gochecknoinits
-    - goconst
-    - gocritic
-    - gocyclo
-    - godox
-    - gosec
-    - lll
-    - misspell
-    - nakedret
-    - nolintlint
-    - prealloc
-    - revive
-    - staticcheck
-    - unconvert
-    - unparam
-    - whitespace
-  settings:
-    revive:
-      rules:
-        - name: exported
-          arguments:
-            - disableStutteringCheck
-  exclusions:
-    generated: lax
-    paths:
-      - third_party$
-      - builtin$
-      - examples$
+    enable:
+        - bodyclose
+        - dupl
+        - gochecknoglobals
+        - gochecknoinits
+        - goconst
+        - gocritic
+        - gocyclo
+        - godox
+        - gosec
+        - lll
+        - misspell
+        - nakedret
+        - nolintlint
+        - prealloc
+        - revive
+        - staticcheck
+        - unconvert
+        - unparam
+        - whitespace
+    settings:
+        revive:
+            rules:
+                - name: exported
+                  arguments:
+                      - disableStutteringCheck
+    exclusions:
+        generated: lax
+        paths:
+            - third_party$
+            - builtin$
+            - examples$
 issues:
-  max-same-issues: 1000
+    max-same-issues: 1000
 formatters:
-  enable:
-    - gofmt
-    - goimports
-  settings:
-    gofmt:
-      simplify: false
-    goimports:
-      local-prefixes:
-        - gopkg.in/launchdarkly
-        - github.com/launchdarkly
-  exclusions:
-    generated: lax
-    paths:
-      - third_party$
-      - builtin$
-      - examples$
+    enable:
+        - gofmt
+        - goimports
+    settings:
+        gofmt:
+            simplify: false
+        goimports:
+            local-prefixes:
+                - gopkg.in/launchdarkly
+                - github.com/launchdarkly
+    exclusions:
+        generated: lax
+        paths:
+            - third_party$
+            - builtin$
+            - examples$
