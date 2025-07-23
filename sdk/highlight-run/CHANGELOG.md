@@ -1,5 +1,11 @@
 # highlight.run
 
+## 9.18.23
+
+### Patch Changes
+
+- d0ab9e3: conditionally check for window api availability
+
 ## 9.18.22
 
 ### Patch Changes
