@@ -1,5 +1,7 @@
 package com.launchdarkly.observability.interfaces
 
+import io.opentelemetry.api.common.Attributes
+
 /**
  * Interface for observability operations in the LaunchDarkly Android SDK.
  * Provides methods for recording various types of metrics.
@@ -34,4 +36,20 @@ interface Observe {
      * @param metric The up/down counter metric to record
      */
     fun recordUpDownCounter(metric: Metric)
+
+    /**
+     * Record an error.
+     * @param error The error to record
+     * @param attributes The attributes to record with the error
+     * @param options The options to record with the error
+     */
+    fun recordError(error: Error, attributes: Attributes)
+
+    /**
+     * Record a log message.
+     * @param message The log message to record
+     * @param level The level of the log message
+     * @param attributes The attributes to record with the log message
+     */
+    fun recordLog(message: String, level: String, attributes: Attributes)
 }

@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
@@ -27,16 +28,32 @@ class MainActivity : ComponentActivity() {
         setContent {
             AndroidObservabilityTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                    Button(
-                        onClick = {
-                            viewModel.triggerMetric()
+                    Column {
+                        Greeting(
+                            name = "Android",
+                            modifier = Modifier.padding(innerPadding)
+                        )
+                        Button(
+                            onClick = {
+                                viewModel.triggerMetric()
+                            }
+                        ) {
+                            Text("Trigger metric")
                         }
-                    ) {
-                        Text("Click Me")
+                        Button(
+                            onClick = {
+                                viewModel.triggerError()
+                            }
+                        ) {
+                            Text("Trigger Error")
+                        }
+                        Button(
+                            onClick = {
+                                viewModel.triggerLog()
+                            }
+                        ) {
+                            Text("Trigger Log")
+                        }
                     }
                 }
             }
