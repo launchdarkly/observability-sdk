@@ -2,10 +2,7 @@ LaunchDarkly Observability SDK for Go
 ===========================
 
 [![Actions Status][goplugin-sdk-ci-badge]][goplugin-sdk-ci]
-[![Documentation](https://img.shields.io/static/v1?label=GitHub+Pages&message=API+reference&color=00add8)][o11y-docs-link]
 
-[![Go Reference][go-reference-badge]][go-reference-link]
-[![Go Report Card][go-report-badge]][go-report-link]
 
 # Early Access Preview️
 
@@ -50,8 +47,3 @@ We encourage pull requests and other contributions from the community. Check out
 
 [goplugin-sdk-ci-badge]: https://github.com/launchdarkly/observability-sdk/actions/workflows/go-plugin.yml/badge.svg
 [goplugin-sdk-ci]: https://github.com/launchdarkly/observability-sdk/actions/workflows/go-plugin.yml
-[go-reference-badge]: https://pkg.go.dev/badge/github.com/launchdarkly/observability-sdk/go.svg
-[go-reference-link]: https://pkg.go.dev/github.com/launchdarkly/observability-sdk/go
-[go-report-badge]: https://goreportcard.com/badge/github.com/launchdarkly/observability-sdk/go
-[go-report-link]: https://goreportcard.com/report/github.com/launchdarkly/observability-sdk/go
-[o11y-docs-link]: https://launchdarkly.github.io/observability-sdk/sdk/@launchdarkly/observability-go/ 
