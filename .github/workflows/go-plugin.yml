@@ -1,0 +1,46 @@
+name: Go Observability Plugin
+
+on:
+    push:
+        branches: ['main']
+    pull_request:
+        types: [opened, synchronize]
+        paths:
+            - 'go/**'
+            - '.github/workflows/go-plugin.yml'
+            # - 'e2e/tests/**'
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+jobs:
+    build:
+        permissions:
+            contents: read
+        name: Quality Check and Publish
+        runs-on: ubuntu-latest
+        defaults:
+            run:
+                working-directory: ./go
+        steps:
+            - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+              with:
+                  token: ${{ secrets.GITHUB_TOKEN }}
+
+            - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5
+              with:
+                  go-version-file: './go/go.mod'
+                  cache-dependency-path: './go/go.sum'
+
+            - name: Install dependencies
+              run: make install
+
+            - name: Format check
+              run: make format
+
+            - name: Lint
+              run: make lint
+
+            - name: Test
+              run: make test
+
+            - name: Build
+              run: make build
