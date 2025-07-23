@@ -36,8 +36,12 @@ jobs:
             - name: Format check
               run: make format
 
-            - name: Lint
-              run: make lint
+            - name: Run linter
+              uses: golangci/golangci-lint-action@4afd733a84b1f43292c63897423277bb7f4313a9
+              with:
+                  args: -v --config ./.golangci.yaml
+                  working-directory: go
+                  version: latest
 
             - name: Test
               run: make test
