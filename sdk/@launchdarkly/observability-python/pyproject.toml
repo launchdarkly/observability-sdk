@@ -1,6 +1,6 @@
 [project]
 name = "launchdarkly-observability"
-version = "0.0.0"
+version = "0.1.0"
 description = "LaunchDarkly Observability for Python"
 license = "Apache-2.0"
 authors = [
@@ -16,7 +16,6 @@ classifiers = [
     "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -24,7 +23,7 @@ classifiers = [
     "Topic :: Software Development :: Libraries",
 ]
 
-requires-python = ">=3.9,<4"
+requires-python = ">=3.10,<4"
 dependencies = [
     "opentelemetry-api==1.34.1",
     "opentelemetry-exporter-otlp-proto-grpc==1.34.1",
@@ -72,6 +71,8 @@ dependencies = [
     "urllib3>=2.2.1",
     "requests>=2.31.0",
     "ariadne-codegen (>=0.14.0,<0.15.0)",
+    "launchdarkly-server-sdk (>=9.12.0, < 10.0.0)",
+    "launchdarkly-server-sdk-otel (>=1.2.0, < 2.0.0)",
 ]
 
 [project.optional-dependencies]
@@ -89,6 +90,7 @@ dev = [
     "pytest-asyncio>=0",
     "pytest-cov>=5",
     "pytest-mock>=3",
+    "pdoc>=15"
 ]
 
 [tool.poetry]
@@ -97,12 +99,6 @@ packages = [{ include = "ldobserve" }]
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
-
-[project.entry-points."opentelemetry_configurator"]
-configurator = "ldobserve.distro:LaunchDarklyOpenTelemetryConfigurator"
-
-[project.entry-points.opentelemetry_distro]
-configurator = "ldobserve.distro:LaunchDarklyOpenTelemetryDistro"
 
 [tool.ariadne-codegen]
 schema_path = "../../../../backend/public-graph/graph/schema.graphqls"

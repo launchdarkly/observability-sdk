@@ -1,5 +1,17 @@
 # highlight.run
 
+## 9.18.23
+
+### Patch Changes
+
+- d0ab9e3: conditionally check for window api availability
+
+## 9.18.22
+
+### Patch Changes
+
+- 54aab8b: delete sessionData\_ localstorage values to avoid overfilling quota
+
 ## 9.18.21
 
 ### Patch Changes

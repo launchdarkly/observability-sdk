@@ -1,0 +1,39 @@
+name: Publish Docs
+
+on:
+    push:
+        branches: ['main']
+
+permissions:
+    contents: write
+
+jobs:
+    publish-highlight-run-docs:
+        concurrency: ${{ github.workflow }}-${{ github.ref }}-publish-highlight-run-docs
+        name: Publish Highlight.run Docs
+        if: github.ref == 'refs/heads/main'
+        uses: ./.github/workflows/manual-publish-docs.yml
+        with:
+            workspace_path: sdk/highlight-run
+
+    publish-observability-node-docs:
+        concurrency: ${{ github.workflow }}-${{ github.ref }}-publish-observability-node-docs
+        # Run the docs publish after the highlight.run docs are published.
+        needs: publish-highlight-run-docs
+        # Runs the job even if the highlight.run docs publish fails.
+        if: ${{ always() && !cancelled() && github.ref == 'refs/heads/main'}}
+        name: Publish @launchdarkly/observability-node Docs
+        uses: ./.github/workflows/manual-publish-docs.yml
+        with:
+            workspace_path: sdk/@launchdarkly/observability-node
+
+    publish-observability-react-native-docs:
+        concurrency: ${{ github.workflow }}-${{ github.ref }}-publish-observability-react-native-docs
+        # Run the docs publish after the observability-node docs are published.
+        needs: publish-observability-node-docs
+        # Runs the job even if the observability-node docs publish fails.
+        if: ${{ always() && !cancelled() && github.ref == 'refs/heads/main'}}
+        name: Publish @launchdarkly/observability-react-native Docs
+        uses: ./.github/workflows/manual-publish-docs.yml
+        with:
+            workspace_path: sdk/@launchdarkly/observability-react-native

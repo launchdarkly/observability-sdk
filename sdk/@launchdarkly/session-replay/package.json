@@ -1,6 +1,6 @@
 {
 	"name": "@launchdarkly/session-replay",
-	"version": "0.3.5",
+	"version": "0.3.8",
 	"description": "Browser observability for your web app. Record session replays to visualize usage patterns.",
 	"keywords": [
 		"launchdarkly",

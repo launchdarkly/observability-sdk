@@ -20,7 +20,7 @@ export const ALL_CONSOLE_METHODS = [
 	'trace',
 	'warn',
 ] as const
-type ConsoleMethodsTuple = typeof ALL_CONSOLE_METHODS
+export type ConsoleMethodsTuple = typeof ALL_CONSOLE_METHODS
 export type ConsoleMethods = ConsoleMethodsTuple[number]
 
 /**
@@ -48,7 +48,7 @@ export type ConsoleMethods = ConsoleMethodsTuple[number]
 export interface NodeOptions {
 	/**
 	 * The endpoint string to send OTLP HTTP data to.
-	 * @default https://otel.highlight.io:4318
+	 * @default https://otel.observability.app.launchdarkly.com
 	 */
 	otlpEndpoint?: string
 
@@ -87,7 +87,7 @@ export interface NodeOptions {
 	disablePgInstrumentationAttributes?: boolean
 
 	/**
-	 * Specifies whether Highlight will record console messages.
+	 * Specifies whether the LaunchDarkly Observability Plugin will record console messages.
 	 * @default false
 	 */
 	disableConsoleRecording?: boolean

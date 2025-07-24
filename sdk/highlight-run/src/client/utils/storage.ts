@@ -13,6 +13,16 @@ let cookieWriteEnabled: boolean = true
 
 class Storage {
 	private storage: { [key: string]: string } = {}
+
+	public get length(): number {
+		return Object.keys(this.storage).length
+	}
+
+	public key(index: number): string | null {
+		const keys = Object.keys(this.storage)
+		return keys[index] ?? null
+	}
+
 	public getItem(key: string) {
 		return this.storage[key] ?? ''
 	}
@@ -49,12 +59,16 @@ export class CookieStorage {
 export const globalStorage = new Storage()
 export const cookieStorage = new CookieStorage()
 
-const getPersistentStorage = () => {
+export const getPersistentStorage = () => {
 	let storage:
 		| Storage
 		| typeof window.localStorage
 		| typeof window.sessionStorage
 		| null = null
+
+	if (typeof window === 'undefined') {
+		return globalStorage
+	}
 
 	try {
 		switch (mode) {
@@ -154,6 +168,12 @@ export const monkeyPatchLocalStorage = (
 	if (mode === 'sessionStorage') {
 		console.warn(
 			`highlight.io cannot use local storage; segment integration will not work`,
+		)
+		return
+	}
+	if (typeof window === 'undefined') {
+		console.warn(
+			`highlight.io cannot use local storage (not a window); segment integration will not work`,
 		)
 		return
 	}
