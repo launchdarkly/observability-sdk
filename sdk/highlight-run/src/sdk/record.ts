@@ -98,6 +98,10 @@ interface HighlightWindow extends Window {
 
 declare var window: HighlightWindow
 
+type eventWithTimeAndPayloadId = eventWithTime & {
+	payloadId: number
+}
+
 export class RecordSDK implements Record {
 	options!: HighlightClassOptions
 	/** Determines if the client is running on a Highlight property (e.g. frontend). */
@@ -105,7 +109,7 @@ export class RecordSDK implements Record {
 	/** Verbose project ID that is exposed to users. Legacy users may still be using ints. */
 	organizationID!: string
 	graphqlSDK!: Sdk
-	events!: eventWithTime[]
+	events!: eventWithTimeAndPayloadId[]
 	sessionData!: SessionData
 	ready!: boolean
 	manualStopped!: boolean
@@ -576,7 +580,10 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 				if (isCheckout) {
 					this.logger.log('received isCheckout emit', { event })
 				}
-				this.events.push(event)
+				this.events.push({
+					...event,
+					payloadId: this.sessionData.payloadID,
+				})
 			}
 			emit.bind(this)
 

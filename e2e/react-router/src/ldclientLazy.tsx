@@ -13,7 +13,6 @@ const observabilitySettings: ConstructorParameters<typeof Observability>[0] = {
 		otlpEndpoint: 'http://localhost:4318',
 	},
 	manualStart: true,
-	sessionKey: 'task126',
 }
 const sessionReplaySettings: ConstructorParameters<typeof SessionReplay>[0] = {
 	debug: { clientInteractions: true, domRecording: true },
@@ -21,7 +20,6 @@ const sessionReplaySettings: ConstructorParameters<typeof SessionReplay>[0] = {
 	serviceName: 'ryan-test',
 	backendUrl: 'http://localhost:8082/public',
 	manualStart: true,
-	sessionKey: 'task126',
 }
 
 export const client = init(
@@ -38,9 +36,9 @@ export const client = init(
 	},
 )
 
-export const recordSession = async (sessionKey?: string) => {
+export const recordSession = async () => {
 	console.log('Session recording enabled via LaunchDarkly')
-	await LDRecord.start({ sessionKey })
+	await LDRecord.start()
 }
 
 export const recordObservability = async () => {
