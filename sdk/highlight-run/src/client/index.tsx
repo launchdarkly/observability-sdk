@@ -171,6 +171,10 @@ type HighlightClassOptionsInternal = Omit<
 	'firstloadVersion'
 >
 
+type eventWithTimeAndPayloadId = eventWithTime & {
+	payloadId: number
+}
+
 export class Highlight {
 	options!: HighlightClassOptions
 	/** Determines if the client is running on a Highlight property (e.g. frontend). */
@@ -178,7 +182,7 @@ export class Highlight {
 	/** Verbose project ID that is exposed to users. Legacy users may still be using ints. */
 	organizationID!: string
 	graphqlSDK!: Sdk
-	events!: eventWithTime[]
+	events!: eventWithTimeAndPayloadId[]
 	sessionData!: SessionData
 	ready!: boolean
 	manualStopped!: boolean
@@ -801,7 +805,10 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 				if (isCheckout) {
 					this.logger.log('received isCheckout emit', { event })
 				}
-				this.events.push(event)
+				this.events.push({
+					...event,
+					payloadId: this.sessionData.payloadID,
+				})
 			}
 			emit.bind(this)
 
