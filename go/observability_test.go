@@ -1,4 +1,4 @@
-package observability
+package ldobserve
 
 import (
 	"testing"
