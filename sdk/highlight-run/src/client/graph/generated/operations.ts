@@ -245,7 +245,7 @@ export type QuerySamplingArgs = {
 export type ReplayEventInput = {
 	_sid: Scalars['Float']['input']
 	data: Scalars['Any']['input']
-	payloadId?: InputMaybe<Scalars['Int64']['input']>
+	payloadUUID?: InputMaybe<Scalars['String']['input']>
 	timestamp: Scalars['Float']['input']
 	type: Scalars['Int']['input']
 }

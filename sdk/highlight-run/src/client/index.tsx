@@ -171,8 +171,8 @@ type HighlightClassOptionsInternal = Omit<
 	'firstloadVersion'
 >
 
-type eventWithTimeAndPayloadId = eventWithTime & {
-	payloadId: number
+type eventWithTimeAndPayloadUUID = eventWithTime & {
+	payloadUUID: string
 }
 
 export class Highlight {
@@ -182,7 +182,7 @@ export class Highlight {
 	/** Verbose project ID that is exposed to users. Legacy users may still be using ints. */
 	organizationID!: string
 	graphqlSDK!: Sdk
-	events!: eventWithTimeAndPayloadId[]
+	events!: eventWithTimeAndPayloadUUID[]
 	sessionData!: SessionData
 	ready!: boolean
 	manualStopped!: boolean
@@ -807,7 +807,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 				}
 				this.events.push({
 					...event,
-					payloadId: this.sessionData.payloadID,
+					payloadUUID: `${this.sessionData.sessionStartTime}-${this.sessionData.payloadID}`,
 				})
 			}
 			emit.bind(this)
