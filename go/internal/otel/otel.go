@@ -32,12 +32,59 @@ type OTLP struct {
 	meterProvider  *sdkmetric.MeterProvider
 }
 
+type OtelInstances struct {
+	tracer trace.Tracer
+	logger log.Logger
+	meter  metric.Meter
+}
+
 type Config struct {
 	otlpEndpoint       string
 	resourceAttributes []attribute.KeyValue
 }
 
-func (o *OTLP) Shutdown() {
+func defaultInstancesValue() *atomic.Value {
+	v := &atomic.Value{}
+	providers := GetDefaultProviders()
+	instances := &OtelInstances{
+		tracer: providers.tracerProvider.Tracer(
+			metadata.InstrumentationName,
+			trace.WithInstrumentationVersion(metadata.InstrumentationVersion),
+			trace.WithSchemaURL(semconv.SchemaURL),
+		),
+		logger: providers.loggerProvider.Logger(
+			metadata.InstrumentationName,
+			log.WithInstrumentationVersion(metadata.InstrumentationVersion),
+			log.WithSchemaURL(semconv.SchemaURL),
+		),
+		meter: providers.meterProvider.Meter(
+			metadata.InstrumentationName,
+			metric.WithInstrumentationVersion(metadata.InstrumentationVersion),
+			metric.WithSchemaURL(semconv.SchemaURL),
+		),
+	}
+	v.Store(instances)
+	return v
+}
+
+// Instances are stores in an atomic so that they can have consistent visibility
+// within goroutines without using locks. If this was not an atomic then goroutines
+// which start before the OTLP configuration was complete may never have visibility
+// of the current values.
+//
+// The similar otel functions, such as otel.Tracer, also use atomics to store the
+// current values.
+var instances *atomic.Value = defaultInstancesValue()
+
+// Currently active OTLP instance. This is set when StartOTLP is called.
+var otlp atomic.Value
+
+func Shutdown() {
+	// Get the current OTLP instance and set it to nil.
+	o := otlp.Swap(nil).(*OTLP)
+	if o == nil {
+		return
+	}
 	ctx := context.Background()
 	err := o.tracerProvider.ForceFlush(ctx)
 	if err != nil {
@@ -145,59 +192,26 @@ func GetDefaultProviders() *OTLP {
 	}
 }
 
-type OtelInstances struct {
-	tracer trace.Tracer
-	logger log.Logger
-	meter  metric.Meter
-}
-
-func defaultInstancesValue() *atomic.Value {
-	v := &atomic.Value{}
-	providers := GetDefaultProviders()
-	instances := &OtelInstances{
-		tracer: providers.tracerProvider.Tracer(
-			metadata.InstrumentationName,
-			trace.WithInstrumentationVersion(metadata.InstrumentationVersion),
-			trace.WithSchemaURL(semconv.SchemaURL),
-		),
-		logger: providers.loggerProvider.Logger(
-			metadata.InstrumentationName,
-			log.WithInstrumentationVersion(metadata.InstrumentationVersion),
-			log.WithSchemaURL(semconv.SchemaURL),
-		),
-		meter: providers.meterProvider.Meter(
-			metadata.InstrumentationName,
-			metric.WithInstrumentationVersion(metadata.InstrumentationVersion),
-			metric.WithSchemaURL(semconv.SchemaURL),
-		),
-	}
-	v.Store(instances)
-	return v
-}
-
-var instances *atomic.Value = defaultInstancesValue()
-
-func GetInstances() *OtelInstances {
-	return instances.Load().(*OtelInstances)
-}
-
+// GetTracer returns the current tracer instance. The result of this function
+// should not be cached unless the caller is sure that OTLP has been started.
 func GetTracer() trace.Tracer {
-	return GetInstances().tracer
+	return instances.Load().(*OtelInstances).tracer
 }
 
+// GetLogger returns the current logger instance. The result of this function
+// should not be cached unless the caller is sure that OTLP has been started.
 func GetLogger() log.Logger {
-	return GetInstances().logger
+	return instances.Load().(*OtelInstances).logger
 }
 
+// GetMeter returns the current meter instance. The result of this function
+// should not be cached unless the caller is sure that OTLP has been started.
 func GetMeter() metric.Meter {
-	return GetInstances().meter
+	return instances.Load().(*OtelInstances).meter
 }
 
-func setInstances(updated *OtelInstances) {
-	instances.Store(updated)
-}
-
-func StartOTLP(config Config, sampler sdktrace.Sampler) (*OTLP, error) {
+func StartOTLP(config Config, sampler sdktrace.Sampler) error {
+	Shutdown()
 	ctx := context.Background()
 
 	resources, err := resource.New(ctx,
@@ -210,22 +224,22 @@ func StartOTLP(config Config, sampler sdktrace.Sampler) (*OTLP, error) {
 	)
 
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	tracerProvider, err := CreateTracerProvider(ctx, config, resources, sampler)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	loggerProvider, err := CreateLoggerProvider(ctx, config, resources)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	meterProvider, err := CreateMeterProvider(ctx, config, resources)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	propagator := propagation.NewCompositeTextMapPropagator(
@@ -234,28 +248,29 @@ func StartOTLP(config Config, sampler sdktrace.Sampler) (*OTLP, error) {
 	)
 	otel.SetTextMapPropagator(propagator)
 
-	h := (&OTLP{tracerProvider: tracerProvider, loggerProvider: loggerProvider, meterProvider: meterProvider})
+	o := &OTLP{tracerProvider: tracerProvider, loggerProvider: loggerProvider, meterProvider: meterProvider}
 	newInstances := &OtelInstances{
-		tracer: h.tracerProvider.Tracer(
+		tracer: o.tracerProvider.Tracer(
 			metadata.InstrumentationName,
 			trace.WithInstrumentationVersion(metadata.InstrumentationVersion),
 			trace.WithSchemaURL(semconv.SchemaURL),
 		),
-		logger: h.loggerProvider.Logger(
+		logger: o.loggerProvider.Logger(
 			metadata.InstrumentationName,
 			log.WithInstrumentationVersion(metadata.InstrumentationVersion),
 			log.WithSchemaURL(semconv.SchemaURL),
 		),
-		meter: h.meterProvider.Meter(
+		meter: o.meterProvider.Meter(
 			metadata.InstrumentationName,
 			metric.WithInstrumentationVersion(metadata.InstrumentationVersion),
 			metric.WithSchemaURL(semconv.SchemaURL),
 		),
 	}
-	setInstances(newInstances)
+	otlp.Store(o)
+	instances.Store(newInstances)
 
 	otel.SetTracerProvider(tracerProvider)
 	otel.SetMeterProvider(meterProvider)
 
-	return h, nil
+	return nil
 }
