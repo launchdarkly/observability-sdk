@@ -213,6 +213,7 @@ export type MutationPushPayloadArgs = {
 	is_beacon?: InputMaybe<Scalars['Boolean']['input']>
 	messages: Scalars['String']['input']
 	payload_id?: InputMaybe<Scalars['ID']['input']>
+	payload_uuid?: InputMaybe<Scalars['String']['input']>
 	resources: Scalars['String']['input']
 	session_secure_id: Scalars['String']['input']
 	web_socket_events?: InputMaybe<Scalars['String']['input']>
@@ -221,6 +222,7 @@ export type MutationPushPayloadArgs = {
 export type MutationPushPayloadCompressedArgs = {
 	data: Scalars['String']['input']
 	payload_id: Scalars['ID']['input']
+	payload_uuid?: InputMaybe<Scalars['String']['input']>
 	session_secure_id: Scalars['String']['input']
 }
 
@@ -317,6 +319,7 @@ export type StackFrameInput = {
 export type PushPayloadMutationVariables = Exact<{
 	session_secure_id: Scalars['String']['input']
 	payload_id: Scalars['ID']['input']
+	payload_uuid?: InputMaybe<Scalars['String']['input']>
 	events: ReplayEventsInput
 	messages: Scalars['String']['input']
 	resources: Scalars['String']['input']
@@ -335,6 +338,7 @@ export type PushPayloadMutation = {
 export type PushPayloadCompressedMutationVariables = Exact<{
 	session_secure_id: Scalars['String']['input']
 	payload_id: Scalars['ID']['input']
+	payload_uuid?: InputMaybe<Scalars['String']['input']>
 	data: Scalars['String']['input']
 }>
 
@@ -591,6 +595,7 @@ export const PushPayloadDocument = gql`
 	mutation PushPayload(
 		$session_secure_id: String!
 		$payload_id: ID!
+		$payload_uuid: String
 		$events: ReplayEventsInput!
 		$messages: String!
 		$resources: String!
@@ -603,6 +608,7 @@ export const PushPayloadDocument = gql`
 		pushPayload(
 			session_secure_id: $session_secure_id
 			payload_id: $payload_id
+			payload_uuid: $payload_uuid
 			events: $events
 			messages: $messages
 			resources: $resources
@@ -618,11 +624,13 @@ export const PushPayloadCompressedDocument = gql`
 	mutation PushPayloadCompressed(
 		$session_secure_id: String!
 		$payload_id: ID!
+		$payload_uuid: String
 		$data: String!
 	) {
 		pushPayloadCompressed(
 			session_secure_id: $session_secure_id
 			payload_id: $payload_id
+			payload_uuid: $payload_uuid
 			data: $data
 		)
 	}

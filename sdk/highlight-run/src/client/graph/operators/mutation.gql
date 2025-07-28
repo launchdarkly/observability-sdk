@@ -1,6 +1,7 @@
 mutation PushPayload(
 	$session_secure_id: String!
 	$payload_id: ID!
+	$payload_uuid: String
 	$events: ReplayEventsInput!
 	$messages: String!
 	$resources: String!
@@ -13,6 +14,7 @@ mutation PushPayload(
 	pushPayload(
 		session_secure_id: $session_secure_id
 		payload_id: $payload_id
+		payload_uuid: $payload_uuid
 		events: $events
 		messages: $messages
 		resources: $resources
@@ -27,11 +29,13 @@ mutation PushPayload(
 mutation PushPayloadCompressed(
 	$session_secure_id: String!
 	$payload_id: ID!
+	$payload_uuid: String
 	$data: String!
 ) {
 	pushPayloadCompressed(
 		session_secure_id: $session_secure_id
 		payload_id: $payload_id
+		payload_uuid: $payload_uuid
 		data: $data
 	)
 }

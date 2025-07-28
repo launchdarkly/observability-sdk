@@ -210,6 +210,7 @@ export type MutationPushPayloadArgs = {
 	is_beacon?: InputMaybe<Scalars['Boolean']['input']>
 	messages: Scalars['String']['input']
 	payload_id?: InputMaybe<Scalars['ID']['input']>
+	payload_uuid?: InputMaybe<Scalars['String']['input']>
 	resources: Scalars['String']['input']
 	session_secure_id: Scalars['String']['input']
 	web_socket_events?: InputMaybe<Scalars['String']['input']>
@@ -218,6 +219,7 @@ export type MutationPushPayloadArgs = {
 export type MutationPushPayloadCompressedArgs = {
 	data: Scalars['String']['input']
 	payload_id: Scalars['ID']['input']
+	payload_uuid?: InputMaybe<Scalars['String']['input']>
 	session_secure_id: Scalars['String']['input']
 }
 

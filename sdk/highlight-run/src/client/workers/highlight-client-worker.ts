@@ -155,6 +155,7 @@ function stringifyProperties(
 		} = msg
 
 		const messagesString = stringify({ messages: messages })
+		// TODO(spenny): do we need to add payload_uuid here?
 		let payload: PushPayloadMutationVariables = {
 			session_secure_id: sessionSecureID,
 			payload_id: id.toString(),

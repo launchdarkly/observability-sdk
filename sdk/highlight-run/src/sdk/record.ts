@@ -1096,6 +1096,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 			await sendFn({
 				session_secure_id: this.sessionData.sessionSecureID,
 				payload_id: (this.sessionData.payloadID++).toString(),
+				payload_uuid: `${this.sessionData.sessionStartTime}-${this.sessionData.payloadID}`,
 				events: { events } as ReplayEventsInput,
 				messages: stringify({ messages: [] }),
 				resources: JSON.stringify({ resources: [] }),
