@@ -6,24 +6,18 @@ import (
 	"reflect"
 
 	"github.com/pkg/errors"
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/log"
 	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
 	"go.opentelemetry.io/otel/trace"
-)
 
-var defaultTracerProvider = otel.GetTracerProvider()
-
-// TODO: Configure in otel and not the singleton
-var defaultTracer = defaultTracerProvider.Tracer(
-	"github.com/highlight/highlight/sdk/highlight-go",
-	trace.WithInstrumentationVersion(Version),
-	trace.WithSchemaURL(semconv.SchemaURL),
+	o "github.com/launchdarkly/observability-sdk/go/internal/otel"
 )
 
 // StartSpan is used to start a new span.
+// To start a span with a specific timestamp, use the trace.WithTimestamp option.
 func StartSpan(ctx context.Context, name string, opts []trace.SpanStartOption, tags ...attribute.KeyValue) (context.Context, trace.Span) {
-	ctx, span := defaultTracer.Start(ctx, name, opts...)
+	ctx, span := o.GetTracer().Start(ctx, name, opts...)
 	span.SetAttributes(tags...)
 	return ctx, span
 }
@@ -70,7 +64,19 @@ func recordSpanError(span trace.Span, err error, tags ...attribute.KeyValue) {
 
 }
 
-// func RecordError(ctx context.Context, err error, tags ...attribute.KeyValue) context.Context {
-// 	span := trace.SpanFromContext(ctx)
+func RecordLog(ctx context.Context, record log.Record, tags ...log.KeyValue) error {
+	o.GetLogger().Emit(ctx, record)
+	return nil
+}
 
-// }
+func RecordMetric(ctx context.Context, name string, value float64, tags ...attribute.KeyValue) {
+	o.RecordMetric(ctx, name, value, tags...)
+}
+
+func RecordHistogram(ctx context.Context, name string, value float64, tags ...attribute.KeyValue) {
+	o.RecordHistogram(ctx, name, value, tags...)
+}
+
+func RecordCount(ctx context.Context, name string, value int64, tags ...attribute.KeyValue) {
+	o.RecordCount(ctx, name, value, tags...)
+}

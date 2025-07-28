@@ -27,9 +27,9 @@ import (
 )
 
 type OTLP struct {
-	tracerProvider *sdktrace.TracerProvider
-	loggerProvider *sdklog.LoggerProvider
-	meterProvider  *sdkmetric.MeterProvider
+	tracerProvider trace.TracerProvider
+	loggerProvider log.LoggerProvider
+	meterProvider  metric.MeterProvider
 }
 
 type OtelInstances struct {
@@ -86,29 +86,42 @@ func Shutdown() {
 		return
 	}
 	ctx := context.Background()
-	err := o.tracerProvider.ForceFlush(ctx)
-	if err != nil {
-		logging.Log.Error(err)
+	tp := o.tracerProvider.(*sdktrace.TracerProvider)
+	mp := o.meterProvider.(*sdkmetric.MeterProvider)
+	lp := o.loggerProvider.(*sdklog.LoggerProvider)
+
+	// The SDK instances of the various providers have additional methods versus the
+	// interfaces. The default implementations only implement the interface, and
+	// we cast to these concrete types to be able to call the additional methods.
+	if tp != nil {
+		err := tp.ForceFlush(ctx)
+		if err != nil {
+			logging.Log.Error(err)
+		}
+		err = tp.Shutdown(ctx)
+		if err != nil {
+			logging.Log.Error(err)
+		}
 	}
-	err = o.tracerProvider.Shutdown(ctx)
-	if err != nil {
-		logging.Log.Error(err)
+	if lp != nil {
+		err := lp.ForceFlush(ctx)
+		if err != nil {
+			logging.Log.Error(err)
+		}
+		err = lp.Shutdown(ctx)
+		if err != nil {
+			logging.Log.Error(err)
+		}
 	}
-	err = o.loggerProvider.ForceFlush(ctx)
-	if err != nil {
-		logging.Log.Error(err)
-	}
-	err = o.loggerProvider.Shutdown(ctx)
-	if err != nil {
-		logging.Log.Error(err)
-	}
-	err = o.meterProvider.ForceFlush(ctx)
-	if err != nil {
-		logging.Log.Error(err)
-	}
-	err = o.meterProvider.Shutdown(ctx)
-	if err != nil {
-		logging.Log.Error(err)
+	if mp != nil {
+		err := mp.ForceFlush(ctx)
+		if err != nil {
+			logging.Log.Error(err)
+		}
+		err = mp.Shutdown(ctx)
+		if err != nil {
+			logging.Log.Error(err)
+		}
 	}
 }
 
@@ -184,11 +197,13 @@ func CreateMeterProvider(ctx context.Context, config Config, resources *resource
 }
 
 func GetDefaultProviders() *OTLP {
-	var defaultLoggerProvider *sdklog.LoggerProvider
+	var defaultTracerProvider = otel.GetTracerProvider()
+	var defaultMeterProvider = otel.GetMeterProvider()
+	var defaultLoggerProvider = sdklog.NewLoggerProvider()
 	return &OTLP{
-		tracerProvider: otel.GetTracerProvider().(*sdktrace.TracerProvider),
+		tracerProvider: defaultTracerProvider,
 		loggerProvider: defaultLoggerProvider,
-		meterProvider:  otel.GetMeterProvider().(*sdkmetric.MeterProvider),
+		meterProvider:  defaultMeterProvider,
 	}
 }
 
@@ -210,6 +225,10 @@ func GetMeter() metric.Meter {
 	return instances.Load().(*OtelInstances).meter
 }
 
+// StartOTLP configures otel to send data to the LaunchDarkly OTLP endpoints.
+// Under ideal use this function is called once at startup.
+// The Shutdown function should be called when the application is shutting down
+// to ensure delivery of any pending events.
 func StartOTLP(config Config, sampler sdktrace.Sampler) error {
 	Shutdown()
 	ctx := context.Background()
