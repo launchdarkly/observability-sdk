@@ -187,6 +187,7 @@ export type MutationInitializeSessionArgs = {
 	organization_verbose_id: Scalars['String']['input']
 	privacy_setting?: InputMaybe<Scalars['String']['input']>
 	serviceName?: InputMaybe<Scalars['String']['input']>
+	session_key?: InputMaybe<Scalars['String']['input']>
 	session_secure_id: Scalars['String']['input']
 }
 
@@ -398,6 +399,7 @@ export type MatchPartsFragment = {
 
 export type InitializeSessionMutationVariables = Exact<{
 	session_secure_id: Scalars['String']['input']
+	session_key?: InputMaybe<Scalars['String']['input']>
 	organization_verbose_id: Scalars['String']['input']
 	enable_strict_privacy: Scalars['Boolean']['input']
 	privacy_setting: Scalars['String']['input']
@@ -684,6 +686,7 @@ export const AddSessionFeedbackDocument = gql`
 export const InitializeSessionDocument = gql`
 	mutation initializeSession(
 		$session_secure_id: String!
+		$session_key: String
 		$organization_verbose_id: String!
 		$enable_strict_privacy: Boolean!
 		$privacy_setting: String!
@@ -701,6 +704,7 @@ export const InitializeSessionDocument = gql`
 	) {
 		initializeSession(
 			session_secure_id: $session_secure_id
+			session_key: $session_key
 			organization_verbose_id: $organization_verbose_id
 			enable_strict_privacy: $enable_strict_privacy
 			enable_recording_network_contents: $enable_recording_network_contents

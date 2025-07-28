@@ -695,6 +695,7 @@ export class Highlight {
 					appVersion: this.appVersion,
 					serviceName: this.serviceName,
 					session_secure_id: this.sessionData.sessionSecureID,
+					session_key: this.sessionData.sessionKey,
 					client_id: clientID,
 					network_recording_domains: destinationDomains,
 					disable_session_recording:

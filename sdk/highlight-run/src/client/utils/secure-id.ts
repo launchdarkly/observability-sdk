@@ -3,6 +3,7 @@ const ID_LENGTH = 28
 const CHARACTER_SET =
 	'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
 
+// TODO(spenny): use crypto.subtle.digest if possible
 const simpleHash = (str: string): number => {
 	let hash = 0x811c9dc5
 	const prime = 0x01000193

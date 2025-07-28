@@ -184,6 +184,7 @@ export type MutationInitializeSessionArgs = {
 	organization_verbose_id: Scalars['String']['input']
 	privacy_setting?: InputMaybe<Scalars['String']['input']>
 	serviceName?: InputMaybe<Scalars['String']['input']>
+	session_key?: InputMaybe<Scalars['String']['input']>
 	session_secure_id: Scalars['String']['input']
 }
 
