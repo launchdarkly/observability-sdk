@@ -600,6 +600,7 @@ export class Highlight {
 			if (options?.sessionKey) {
 				if (options?.sessionKey !== this.sessionData.sessionKey) {
 					await this._reset({ ...options, forceNew: true })
+					return
 				}
 			}
 
