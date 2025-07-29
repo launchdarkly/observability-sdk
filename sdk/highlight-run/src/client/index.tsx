@@ -171,10 +171,6 @@ type HighlightClassOptionsInternal = Omit<
 	'firstloadVersion'
 >
 
-type eventWithTimeAndPayloadUUID = eventWithTime & {
-	payloadUUID: string
-}
-
 export class Highlight {
 	options!: HighlightClassOptions
 	/** Determines if the client is running on a Highlight property (e.g. frontend). */
@@ -182,7 +178,7 @@ export class Highlight {
 	/** Verbose project ID that is exposed to users. Legacy users may still be using ints. */
 	organizationID!: string
 	graphqlSDK!: Sdk
-	events!: eventWithTimeAndPayloadUUID[]
+	events!: eventWithTime[]
 	sessionData!: SessionData
 	ready!: boolean
 	manualStopped!: boolean
@@ -807,10 +803,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 				if (isCheckout) {
 					this.logger.log('received isCheckout emit', { event })
 				}
-				this.events.push({
-					...event,
-					payloadUUID: `${this.sessionData.sessionStartTime}-${this.sessionData.payloadID}`,
-				})
+				this.events.push(event)
 			}
 			emit.bind(this)
 
@@ -1533,8 +1526,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 		if (sendFn) {
 			await sendFn({
 				session_secure_id: this.sessionData.sessionSecureID,
-				payload_id: (this.sessionData.payloadID++).toString(),
-				payload_uuid: `${this.sessionData.sessionStartTime}-${this.sessionData.payloadID}`,
+				payload_id: new Date().getTime().toString(),
 				events: { events } as ReplayEventsInput,
 				messages: stringify({ messages: messages }),
 				resources: JSON.stringify({ resources: resources }),
@@ -1550,7 +1542,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 			this._worker.postMessage({
 				message: {
 					type: MessageType.AsyncEvents,
-					id: this.sessionData.payloadID++,
+					id: new Date().getTime(),
 					events,
 					messages,
 					errors,

@@ -55,7 +55,6 @@ export class Plugin<T extends RecordOptions | ObserveOptions> {
 					sessionSecureID: this.sessionSecureID,
 					sessionKey: options?.sessionKey,
 					projectID: 0,
-					payloadID: 1,
 					sessionStartTime: Date.now(),
 					lastPushTime: Date.now(),
 				})

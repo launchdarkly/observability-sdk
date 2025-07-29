@@ -98,10 +98,6 @@ interface HighlightWindow extends Window {
 
 declare var window: HighlightWindow
 
-type eventWithTimeAndPayloadUUID = eventWithTime & {
-	payloadUUID: string
-}
-
 export class RecordSDK implements Record {
 	options!: HighlightClassOptions
 	/** Determines if the client is running on a Highlight property (e.g. frontend). */
@@ -109,7 +105,7 @@ export class RecordSDK implements Record {
 	/** Verbose project ID that is exposed to users. Legacy users may still be using ints. */
 	organizationID!: string
 	graphqlSDK!: Sdk
-	events!: eventWithTimeAndPayloadUUID[]
+	events!: eventWithTime[]
 	sessionData!: SessionData
 	ready!: boolean
 	manualStopped!: boolean
@@ -211,7 +207,6 @@ export class RecordSDK implements Record {
 			this.sessionData = {
 				sessionSecureID: this.options.sessionSecureID,
 				projectID: 0,
-				payloadID: 1,
 				sessionStartTime: Date.now(),
 			}
 		}
@@ -582,10 +577,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 				if (isCheckout) {
 					this.logger.log('received isCheckout emit', { event })
 				}
-				this.events.push({
-					...event,
-					payloadUUID: `${this.sessionData.sessionStartTime}-${this.sessionData.payloadID}`,
-				})
+				this.events.push(event)
 			}
 			emit.bind(this)
 
@@ -1097,8 +1089,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 		if (sendFn) {
 			await sendFn({
 				session_secure_id: this.sessionData.sessionSecureID,
-				payload_id: (this.sessionData.payloadID++).toString(),
-				payload_uuid: `${this.sessionData.sessionStartTime}-${this.sessionData.payloadID}`,
+				payload_id: new Date().getTime().toString(),
 				events: { events } as ReplayEventsInput,
 				messages: stringify({ messages: [] }),
 				resources: JSON.stringify({ resources: [] }),
@@ -1114,7 +1105,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 			this._worker.postMessage({
 				message: {
 					type: MessageType.AsyncEvents,
-					id: this.sessionData.payloadID++,
+					id: new Date().getTime(),
 					events,
 					messages: [],
 					errors: [],
