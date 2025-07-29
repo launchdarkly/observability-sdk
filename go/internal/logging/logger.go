@@ -1,6 +1,9 @@
 package logging
 
-import "fmt"
+import (
+	"fmt"
+	"sync/atomic"
+)
 
 // Logger is the interface used for logging internal to the observability plugin.
 type Logger interface {
@@ -8,11 +11,13 @@ type Logger interface {
 	Errorf(format string, v ...interface{})
 }
 
-// Log is the global logger instance.
-//
 //nolint:gochecknoglobals
-var Log struct {
-	Logger
+var loggerInstance *atomic.Value = defaultLoggerInstance()
+
+func defaultLoggerInstance() *atomic.Value {
+	v := &atomic.Value{}
+	v.Store(noopLogger{})
+	return v
 }
 
 type noopLogger struct{}
@@ -36,10 +41,15 @@ func (c ConsoleLogger) Errorf(format string, v ...interface{}) {
 
 // ClearLogger clears the logger returning to a no-op logger.
 func ClearLogger() {
-	Log.Logger = noopLogger{}
+	loggerInstance.Store(noopLogger{})
 }
 
 // SetLogger sets the logger to the provided logger.
 func SetLogger(l Logger) {
-	Log.Logger = l
+	loggerInstance.Store(l)
+}
+
+// GetLogger returns the current logger instance.
+func GetLogger() Logger {
+	return loggerInstance.Load().(Logger)
 }

@@ -39,7 +39,7 @@ func RecordMetric(ctx context.Context, name string, value float64, tags ...attri
 		float64Gauges[name], err = GetMeter().Float64Gauge(name)
 		float64GaugesLock.Unlock()
 		if err != nil {
-			logging.Log.Errorf("error creating float64 gauge %s: %v", name, err)
+			logging.GetLogger().Errorf("error creating float64 gauge %s: %v", name, err)
 			return
 		}
 	} else {

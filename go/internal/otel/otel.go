@@ -128,33 +128,33 @@ func shutdown() {
 	if tp != nil {
 		err := tp.ForceFlush(ctx)
 		if err != nil {
-			logging.Log.Error(err)
+			logging.GetLogger().Error(err)
 		}
 		err = tp.Shutdown(ctx)
 		if err != nil {
-			logging.Log.Error(err)
+			logging.GetLogger().Error(err)
 		}
 	}
 
 	if lp != nil {
 		err := lp.ForceFlush(ctx)
 		if err != nil {
-			logging.Log.Error(err)
+			logging.GetLogger().Error(err)
 		}
 		err = lp.Shutdown(ctx)
 		if err != nil {
-			logging.Log.Error(err)
+			logging.GetLogger().Error(err)
 		}
 	}
 
 	if mp != nil {
 		err := mp.ForceFlush(ctx)
 		if err != nil {
-			logging.Log.Error(err)
+			logging.GetLogger().Error(err)
 		}
 		err = mp.Shutdown(ctx)
 		if err != nil {
-			logging.Log.Error(err)
+			logging.GetLogger().Error(err)
 		}
 	}
 }
@@ -174,7 +174,7 @@ func getOTLPOptions(endpoint string) (
 		logOpts = append(logOpts, otlploghttp.WithEndpoint(endpoint[8:]))
 		metricOpts = append(metricOpts, otlpmetrichttp.WithEndpoint(endpoint[8:]))
 	default:
-		logging.Log.Errorf("an invalid otlp endpoint was configured %s", endpoint)
+		logging.GetLogger().Errorf("an invalid otlp endpoint was configured %s", endpoint)
 	}
 	traceOpts = append(traceOpts, otlptracehttp.WithCompression(otlptracehttp.GzipCompression))
 	logOpts = append(logOpts, otlploghttp.WithCompression(otlploghttp.GzipCompression))

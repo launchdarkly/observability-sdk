@@ -93,7 +93,7 @@ func (p ObservabilityPlugin) Register(client interfaces.LDClientInterface, ldmd 
 	if !p.config.manualStart {
 		err := otel.StartOTLP()
 		if err != nil {
-			logging.Log.Errorf("failed to start otel: %v", err)
+			logging.GetLogger().Errorf("failed to start otel: %v", err)
 		}
 	}
 	if p.config.context != nil {
