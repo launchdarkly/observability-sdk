@@ -39,8 +39,8 @@ type OtelInstances struct {
 }
 
 type Config struct {
-	otlpEndpoint       string
-	resourceAttributes []attribute.KeyValue
+	OtlpEndpoint       string
+	ResourceAttributes []attribute.KeyValue
 }
 
 func defaultInstancesValue() *atomic.Value {
@@ -77,11 +77,11 @@ func defaultInstancesValue() *atomic.Value {
 var instances *atomic.Value = defaultInstancesValue()
 
 // Currently active OTLP instance. This is set when StartOTLP is called.
-var otlp atomic.Value
+var otlp atomic.Pointer[OTLP]
 
 func Shutdown() {
 	// Get the current OTLP instance and set it to nil.
-	o := otlp.Swap(nil).(*OTLP)
+	o := otlp.Swap(nil)
 	if o == nil {
 		return
 	}
@@ -144,7 +144,7 @@ func getOTLPOptions(endpoint string) (traceOpts []otlptracehttp.Option, logOpts 
 }
 
 func CreateTracerProvider(ctx context.Context, config Config, resources *resource.Resource, sampler sdktrace.Sampler, opts ...sdktrace.TracerProviderOption) (*sdktrace.TracerProvider, error) {
-	options, _, _ := getOTLPOptions(config.otlpEndpoint)
+	options, _, _ := getOTLPOptions(config.OtlpEndpoint)
 	client := otlptracehttp.NewClient(options...)
 	exporter, err := otlptrace.New(ctx, client)
 	if err != nil {
@@ -164,7 +164,7 @@ func CreateTracerProvider(ctx context.Context, config Config, resources *resourc
 }
 
 func CreateLoggerProvider(ctx context.Context, config Config, resources *resource.Resource, opts ...sdklog.LoggerProviderOption) (*sdklog.LoggerProvider, error) {
-	_, options, _ := getOTLPOptions(config.otlpEndpoint)
+	_, options, _ := getOTLPOptions(config.OtlpEndpoint)
 	exporter, err := otlploghttp.New(ctx, options...)
 	if err != nil {
 		return nil, fmt.Errorf("creating OTLP trace exporter: %w", err)
@@ -181,7 +181,7 @@ func CreateLoggerProvider(ctx context.Context, config Config, resources *resourc
 }
 
 func CreateMeterProvider(ctx context.Context, config Config, resources *resource.Resource, opts ...sdkmetric.Option) (*sdkmetric.MeterProvider, error) {
-	_, _, options := getOTLPOptions(config.otlpEndpoint)
+	_, _, options := getOTLPOptions(config.OtlpEndpoint)
 	exporter, err := otlpmetrichttp.New(ctx, options...)
 	if err != nil {
 		return nil, fmt.Errorf("creating OTLP trace exporter: %w", err)
@@ -239,7 +239,7 @@ func StartOTLP(config Config, sampler sdktrace.Sampler) error {
 		resource.WithContainer(),
 		resource.WithOS(),
 		resource.WithProcess(),
-		resource.WithAttributes(config.resourceAttributes...),
+		resource.WithAttributes(config.ResourceAttributes...),
 	)
 
 	if err != nil {
