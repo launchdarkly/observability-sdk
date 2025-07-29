@@ -12,13 +12,7 @@ type Logger interface {
 }
 
 //nolint:gochecknoglobals
-var loggerInstance *atomic.Value = defaultLoggerInstance()
-
-func defaultLoggerInstance() *atomic.Value {
-	v := &atomic.Value{}
-	v.Store(noopLogger{})
-	return v
-}
+var loggerInstance atomic.Pointer[Logger]
 
 type noopLogger struct{}
 
@@ -41,15 +35,19 @@ func (c ConsoleLogger) Errorf(format string, v ...interface{}) {
 
 // ClearLogger clears the logger returning to a no-op logger.
 func ClearLogger() {
-	loggerInstance.Store(noopLogger{})
+	loggerInstance.Store(nil)
 }
 
 // SetLogger sets the logger to the provided logger.
 func SetLogger(l Logger) {
-	loggerInstance.Store(l)
+	loggerInstance.Store(&l)
 }
 
 // GetLogger returns the current logger instance.
 func GetLogger() Logger {
-	return loggerInstance.Load().(Logger)
+	logger := loggerInstance.Load()
+	if logger == nil {
+		return noopLogger{}
+	}
+	return *logger
 }
