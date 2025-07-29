@@ -213,7 +213,7 @@ export type MutationPushPayloadArgs = {
 	highlight_logs?: InputMaybe<Scalars['String']['input']>
 	is_beacon?: InputMaybe<Scalars['Boolean']['input']>
 	messages: Scalars['String']['input']
-	payload_id?: InputMaybe<Scalars['ID']['input']>
+	payload_id?: InputMaybe<Scalars['Int64ID']['input']>
 	resources: Scalars['String']['input']
 	session_secure_id: Scalars['String']['input']
 	web_socket_events?: InputMaybe<Scalars['String']['input']>
@@ -221,7 +221,7 @@ export type MutationPushPayloadArgs = {
 
 export type MutationPushPayloadCompressedArgs = {
 	data: Scalars['String']['input']
-	payload_id: Scalars['ID']['input']
+	payload_id: Scalars['Int64ID']['input']
 	session_secure_id: Scalars['String']['input']
 }
 
@@ -316,7 +316,7 @@ export type StackFrameInput = {
 
 export type PushPayloadMutationVariables = Exact<{
 	session_secure_id: Scalars['String']['input']
-	payload_id: Scalars['ID']['input']
+	payload_id: Scalars['Int64ID']['input']
 	events: ReplayEventsInput
 	messages: Scalars['String']['input']
 	resources: Scalars['String']['input']
@@ -334,7 +334,7 @@ export type PushPayloadMutation = {
 
 export type PushPayloadCompressedMutationVariables = Exact<{
 	session_secure_id: Scalars['String']['input']
-	payload_id: Scalars['ID']['input']
+	payload_id: Scalars['Int64ID']['input']
 	data: Scalars['String']['input']
 }>
 
@@ -591,7 +591,7 @@ export const MatchPartsFragmentDoc = gql`
 export const PushPayloadDocument = gql`
 	mutation PushPayload(
 		$session_secure_id: String!
-		$payload_id: ID!
+		$payload_id: Int64ID!
 		$events: ReplayEventsInput!
 		$messages: String!
 		$resources: String!
@@ -618,7 +618,7 @@ export const PushPayloadDocument = gql`
 export const PushPayloadCompressedDocument = gql`
 	mutation PushPayloadCompressed(
 		$session_secure_id: String!
-		$payload_id: ID!
+		$payload_id: Int64ID!
 		$data: String!
 	) {
 		pushPayloadCompressed(

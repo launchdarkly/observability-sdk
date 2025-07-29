@@ -1,6 +1,6 @@
 mutation PushPayload(
 	$session_secure_id: String!
-	$payload_id: ID!
+	$payload_id: Int64ID!
 	$events: ReplayEventsInput!
 	$messages: String!
 	$resources: String!
@@ -26,7 +26,7 @@ mutation PushPayload(
 
 mutation PushPayloadCompressed(
 	$session_secure_id: String!
-	$payload_id: ID!
+	$payload_id: Int64ID!
 	$data: String!
 ) {
 	pushPayloadCompressed(
