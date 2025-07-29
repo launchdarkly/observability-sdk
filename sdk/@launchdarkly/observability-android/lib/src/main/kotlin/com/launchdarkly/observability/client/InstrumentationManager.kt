@@ -3,18 +3,26 @@ import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.sdk.LDValue
 import com.launchdarkly.sdk.android.LDClient
 import io.opentelemetry.api.common.Attributes
-import io.opentelemetry.api.logs.LoggerProvider
-import io.opentelemetry.api.metrics.MeterProvider
+import io.opentelemetry.api.logs.Logger
+import io.opentelemetry.api.metrics.Meter
 import io.opentelemetry.exporter.otlp.http.logs.OtlpHttpLogRecordExporter
 import io.opentelemetry.exporter.otlp.http.metrics.OtlpHttpMetricExporter
+import io.opentelemetry.sdk.OpenTelemetrySdk
 import io.opentelemetry.sdk.logs.SdkLoggerProvider
 import io.opentelemetry.sdk.logs.export.BatchLogRecordProcessor
 import io.opentelemetry.sdk.metrics.SdkMeterProvider
 import io.opentelemetry.sdk.metrics.export.MetricExporter
 import io.opentelemetry.sdk.metrics.export.PeriodicMetricReader
 import io.opentelemetry.sdk.resources.Resource
-import java.time.Instant
 import java.util.concurrent.TimeUnit
+
+private const val URL = "https://otel.observability.app.launchdarkly.com:4318"
+private const val URL_METRICS = URL + "/v1/metrics"
+private const val URL_LOGS = URL + "/v1/logs"
+private const val URL_TRACES = URL + "/v1/traces"
+private const val INSTRUMENTATION_SCOPE_NAME = "com.launchdarkly.observability"
+
+private const val HEADER_LD_PROJECT = "X-LaunchDarkly-Project"
 
 /**
  * Manages instrumentation for LaunchDarkly Observability.
@@ -26,58 +34,70 @@ class InstrumentationManager(
     private val client: LDClient,
     private val resources: Resource,
 ) {
-    private lateinit var meterProvider: MeterProvider
-    private lateinit var loggerProvider: LoggerProvider
+    private var meterProvider: SdkMeterProvider
+    private var meter: Meter
+    private var loggerProvider: SdkLoggerProvider
+    private var logger: Logger
 
     init {
-        initMetrics()
-        initLogs()
+        meterProvider = createMetricsProvider()
+        meter = meterProvider.get(INSTRUMENTATION_SCOPE_NAME)
+        loggerProvider = createLoggerProvider()
+        logger = loggerProvider.get(INSTRUMENTATION_SCOPE_NAME)
 
-        // TODO: does this meter provider need to be global?
+        // TODO: pretty sure registering globally is a bad idea, but I'm not sure what the norm is here.
+        // I see documentation that talks about being able to signal to the auto configuration system
+        // via a specially named configurer implementation: autoconfigure SPI interface: SdkTracerProviderConfigurer
+        OpenTelemetrySdk.builder()
+            .setMeterProvider(meterProvider)
+            .setLoggerProvider(loggerProvider)
+            .buildAndRegisterGlobal()
+
     }
 
     fun recordMetric(metric: Metric) {
-        // TODO: should we hold a reference to the meter?
-        meterProvider.get("com.launchdarkly.observability").gaugeBuilder(metric.name).build().set(metric.value, metric.attributes)
+        meter.gaugeBuilder(metric.name).build()
+            .set(metric.value, metric.attributes)
 
-        // TODO: convert attributes to LDValue object and pass instead of LDValue.ofNull()
+        // TODO: O11Y-362: convert attributes to LDValue object and pass instead of LDValue.ofNull()
         client.trackMetric(metric.name, LDValue.ofNull(), metric.value)
     }
 
     fun recordCount(metric: Metric) {
-        // TODO: should we hold a reference to the meter?
         // TODO: how to handle long and double casting?
-        meterProvider.get("com.launchdarkly.observability").counterBuilder(metric.name).build().add(metric.value.toLong(), metric.attributes)
+        meter.counterBuilder(metric.name).build()
+            .add(metric.value.toLong(), metric.attributes)
     }
 
     fun recordIncr(metric: Metric) {
-        // TODO: should we hold a reference to the meter?
-        meterProvider.get("com.launchdarkly.observability").counterBuilder(metric.name).build().add(1, metric.attributes)
+        meter.counterBuilder(metric.name).build()
+            .add(1, metric.attributes)
     }
 
     fun recordHistogram(metric: Metric) {
-        // TODO: should we hold a reference to the meter?
-        meterProvider.get("com.launchdarkly.observability").histogramBuilder(metric.name).build().record(metric.value, metric.attributes)
+        meter.histogramBuilder(metric.name).build()
+            .record(metric.value, metric.attributes)
     }
 
     fun recordUpDownCounter(metric: Metric) {
-        // TODO: should we hold a reference to the meter?
-        meterProvider.get("com.launchdarkly.observability").upDownCounterBuilder(metric.name).build().add(metric.value.toLong(), metric.attributes)
+        meter.upDownCounterBuilder(metric.name)
+            .build().add(metric.value.toLong(), metric.attributes)
     }
 
     fun recordLog(message: String, level: String, attributes: Attributes) {
-        loggerProvider.get("com.launchdarkly.observability").logRecordBuilder()
+        logger.logRecordBuilder()
             .setBody(message)
             .setTimestamp(System.currentTimeMillis(), TimeUnit.MILLISECONDS)
-            .setAttribute("severityText", level)
+            .setSeverityText(level)
             // TODO: add highlight.session_id when sessions are supported
             .setAllAttributes(attributes)
             .emit()
     }
 
-    // TODO: add otel span optional param
+    // TODO: add otel span optional param that will take precedence over current span and/or created span
     fun recordError(error: Error, attributes: Attributes) {
         // TODO: add error and attributes to span
+        // TODO: add highlight.session_id when sessions are supported
 
         val withExceptionAttrs = attributes.toBuilder()
             .put("exception.type", error.javaClass.simpleName)
@@ -87,13 +107,13 @@ class InstrumentationManager(
 
         this.recordLog(error.message ?: "", "error", withExceptionAttrs)
     }
-    
-    private fun initMetrics() {
+
+    private fun createMetricsProvider(): SdkMeterProvider {
         // Build a default OTLP HTTP exporter. Users can swap this out later if
         // they wish to use a different exporter implementation.
         val metricExporter: MetricExporter = OtlpHttpMetricExporter.builder()
-            .setEndpoint("https://otel.observability.app.launchdarkly.com:4318" + "/v1/metrics")
-            .addHeader("X-LaunchDarkly-Project", sdkKey)
+            .setEndpoint(URL_METRICS)
+            .addHeader(HEADER_LD_PROJECT, sdkKey)
             .build()
 
         // Configure a periodic reader that pushes metrics every 10 seconds.
@@ -104,16 +124,16 @@ class InstrumentationManager(
 
         // Build the SDK MeterProvider with the supplied resources and the
         // configured metric reader.
-        meterProvider = SdkMeterProvider.builder()
+        return SdkMeterProvider.builder()
             .setResource(resources)
             .registerMetricReader(metricReader)
             .build()
     }
 
-    private fun initLogs() {
+    private fun createLoggerProvider(): SdkLoggerProvider {
         val logExporter = OtlpHttpLogRecordExporter.builder()
-            .setEndpoint("https://otel.observability.app.launchdarkly.com:4318" + "/v1/logs")
-            .addHeader("X-LaunchDarkly-Project", sdkKey)
+            .setEndpoint(URL_LOGS)
+            .addHeader(HEADER_LD_PROJECT, sdkKey)
             .build()
 
         // TODO: are these configuration values supposed to be passed in?
@@ -124,7 +144,7 @@ class InstrumentationManager(
             .setMaxExportBatchSize(10)
             .build()
 
-        loggerProvider = SdkLoggerProvider.builder()
+        return SdkLoggerProvider.builder()
             .setResource(resources)
             .addLogRecordProcessor(processor)
             .build()

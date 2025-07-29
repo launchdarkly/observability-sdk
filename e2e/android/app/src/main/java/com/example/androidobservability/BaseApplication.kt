@@ -13,6 +13,7 @@ import java.util.Collections
 class BaseApplication : Application() {
 
     companion object {
+        // TODO O11Y-376: Update this credential to be driven by env variable or gradle property
         // Set LAUNCHDARKLY_MOBILE_KEY to your LaunchDarkly SDK mobile key.
         const val LAUNCHDARKLY_MOBILE_KEY = "MOBILE_KEY_GOES_HERE"
     }

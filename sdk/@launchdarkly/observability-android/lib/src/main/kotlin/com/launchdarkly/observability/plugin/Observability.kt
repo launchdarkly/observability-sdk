@@ -17,8 +17,27 @@ class Observability : Plugin() {
 
     override fun register(client: LDClient, metadata: EnvironmentMetadata?) {
         val sdkKey = metadata?.credential ?: ""
-        val resource = Resource.getDefault()
-        val observabilityClient = ObservabilityClient(sdkKey, client, resource)
+
+        val resourceBuilder = Resource.getDefault().toBuilder()
+        resourceBuilder.put("service.name", "observability-android") // TODO: allow this to be set via config
+        resourceBuilder.put("service.version", "1.0.0") // TODO: allow this to be set via config
+        resourceBuilder.put("highlight.project_id", sdkKey)
+
+        metadata?.applicationInfo?.applicationId?.let {
+            resourceBuilder.put("launchdarkly.application.id", it)
+        }
+
+        metadata?.applicationInfo?.applicationVersion?.let {
+            resourceBuilder.put("launchdarkly.application.version", it)
+        }
+
+        metadata?.sdkMetadata?.name.let { sdkName ->
+            metadata?.sdkMetadata?.version.let { sdkVersion ->
+                resourceBuilder.put("launchdarkly.sdk.version", "$sdkName/$sdkVersion")
+            }
+        }
+
+        val observabilityClient = ObservabilityClient(sdkKey, client, resourceBuilder.build())
         LDObserve.init(observabilityClient)
     }
 }
