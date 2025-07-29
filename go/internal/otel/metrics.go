@@ -5,23 +5,31 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/launchdarkly/observability-sdk/go/internal/logging"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
+
+	"github.com/launchdarkly/observability-sdk/go/internal/logging"
 )
 
+//nolint:gochecknoglobals
 var float64GaugesLock = sync.RWMutex{}
+
+//nolint:gochecknoglobals
 var float64Gauges = make(map[string]metric.Float64Gauge, 1000)
+
+//nolint:gochecknoglobals
 var float64HistogramsLock = sync.RWMutex{}
+
+//nolint:gochecknoglobals
 var float64Histograms = make(map[string]metric.Float64Histogram, 1000)
+
+//nolint:gochecknoglobals
 var int64CountersLock = sync.RWMutex{}
+
+//nolint:gochecknoglobals
 var int64Counters = make(map[string]metric.Int64Counter, 1000)
 
 // RecordMetric is used to record arbitrary metrics in your golang backend.
-// Highlight will process these metrics in the context of your session and expose them
-// through dashboards. For example, you may want to record the latency of a DB query
-// as a metric that you would like to graph and monitor. You'll be able to view the metric
-// in the context of the session and network request and recorded it.
 func RecordMetric(ctx context.Context, name string, value float64, tags ...attribute.KeyValue) {
 	var err error
 	float64GaugesLock.RLock()
@@ -40,6 +48,7 @@ func RecordMetric(ctx context.Context, name string, value float64, tags ...attri
 	float64Gauges[name].Record(ctx, value, metric.WithAttributes(tags...))
 }
 
+// RecordHistogram is used to record arbitrary histograms in your golang backend.
 func RecordHistogram(ctx context.Context, name string, value float64, tags ...attribute.KeyValue) {
 	var err error
 	float64HistogramsLock.RLock()
@@ -58,6 +67,7 @@ func RecordHistogram(ctx context.Context, name string, value float64, tags ...at
 	float64Histograms[name].Record(ctx, value, metric.WithAttributes(tags...))
 }
 
+// RecordCount is used to record arbitrary counts in your golang backend.
 func RecordCount(ctx context.Context, name string, value int64, tags ...attribute.KeyValue) {
 	var err error
 	int64CountersLock.RLock()

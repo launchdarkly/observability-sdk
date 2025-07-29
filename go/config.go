@@ -1,14 +1,27 @@
 package ldobserve
 
+import (
+	"context"
 
+	"github.com/launchdarkly/observability-sdk/go/internal/defaults"
+)
 
-// observabilityConfig holds configuration for the observability plugin.
 type observabilityConfig struct {
 	serviceName    string
 	serviceVersion string
 	environment    string
 	backendURL     string
 	otlpEndpoint   string
+	manualStart    bool
+	context        context.Context
+	debug          bool
+}
+
+func defaultConfig() observabilityConfig {
+	return observabilityConfig{
+		backendURL:   defaults.DefaultBackendURL,
+		otlpEndpoint: defaults.DefaultOTLPEndpoint,
+	}
 }
 
 // Option is a function that configures the observability plugin.
@@ -46,5 +59,30 @@ func WithBackendURL(backendURL string) Option {
 func WithOTLPEndpoint(otlpEndpoint string) Option {
 	return func(c *observabilityConfig) {
 		c.otlpEndpoint = otlpEndpoint
+	}
+}
+
+// WithManualStart indicates that the observability plugin should not start automatically.
+// Instead, the plugin should be started manually by calling the Start function.
+func WithManualStart() Option {
+	return func(c *observabilityConfig) {
+		c.manualStart = true
+	}
+}
+
+// WithContext sets the context for the observability plugin.
+// Cancelling the provided context will stop the observability plugin.
+// Calling the Shutdown function is recommended and provides a greater level of control.
+func WithContext(ctx context.Context) Option {
+	return func(c *observabilityConfig) {
+		c.context = ctx
+	}
+}
+
+// WithDebug enables debug mode for the observability plugin.
+// This is for use debugging the plugin itself, but should not be needed in regular use.
+func WithDebug() Option {
+	return func(c *observabilityConfig) {
+		c.debug = true
 	}
 }

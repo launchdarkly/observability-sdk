@@ -4,11 +4,10 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
-	"github.com/launchdarkly/observability-sdk/go/internal/logging"
-	"github.com/launchdarkly/observability-sdk/go/internal/metadata"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp"
@@ -24,29 +23,34 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"go.opentelemetry.io/otel/trace"
+
+	"github.com/launchdarkly/observability-sdk/go/internal/logging"
+	"github.com/launchdarkly/observability-sdk/go/internal/metadata"
 )
 
-type OTLP struct {
+type providerInstances struct {
 	tracerProvider trace.TracerProvider
 	loggerProvider log.LoggerProvider
 	meterProvider  metric.MeterProvider
 }
 
-type OtelInstances struct {
+type otelInstances struct {
 	tracer trace.Tracer
 	logger log.Logger
 	meter  metric.Meter
 }
 
+// Config contains the configuration for the OTLP provider.
 type Config struct {
 	OtlpEndpoint       string
 	ResourceAttributes []attribute.KeyValue
+	Sampler            sdktrace.Sampler
 }
 
 func defaultInstancesValue() *atomic.Value {
 	v := &atomic.Value{}
-	providers := GetDefaultProviders()
-	instances := &OtelInstances{
+	providers := getDefaultProviders()
+	instances := &otelInstances{
 		tracer: providers.tracerProvider.Tracer(
 			metadata.InstrumentationName,
 			trace.WithInstrumentationVersion(metadata.InstrumentationVersion),
@@ -67,6 +71,14 @@ func defaultInstancesValue() *atomic.Value {
 	return v
 }
 
+// writeLock is used to synchronize access to the instances and config atomic values.
+// Starting or stopping OTLP should be done with this lock held.
+// Access to the OTLP instances should be done with the instances atomic value and
+// does not require holding the lock.
+//
+//nolint:gochecknoglobals
+var writeLock sync.Mutex
+
 // Instances are stores in an atomic so that they can have consistent visibility
 // within goroutines without using locks. If this was not an atomic then goroutines
 // which start before the OTLP configuration was complete may never have visibility
@@ -74,12 +86,32 @@ func defaultInstancesValue() *atomic.Value {
 //
 // The similar otel functions, such as otel.Tracer, also use atomics to store the
 // current values.
+//
+//nolint:gochecknoglobals
 var instances *atomic.Value = defaultInstancesValue()
 
 // Currently active OTLP instance. This is set when StartOTLP is called.
-var otlp atomic.Pointer[OTLP]
+//
+//nolint:gochecknoglobals
+var otlp atomic.Pointer[providerInstances]
 
+// Currently active configuration. The configuration is stored to allow manual starting
+// after the plugin is registered.
+//
+//nolint:gochecknoglobals
+var config atomic.Pointer[Config]
+
+// Shutdown flushes pending data and shuts down the OTLP instances.
 func Shutdown() {
+	writeLock.Lock()
+	end := func() {
+		writeLock.Unlock()
+	}
+	shutdown()
+	end()
+}
+
+func shutdown() {
 	// Get the current OTLP instance and set it to nil.
 	o := otlp.Swap(nil)
 	if o == nil {
@@ -103,6 +135,7 @@ func Shutdown() {
 			logging.Log.Error(err)
 		}
 	}
+
 	if lp != nil {
 		err := lp.ForceFlush(ctx)
 		if err != nil {
@@ -113,6 +146,7 @@ func Shutdown() {
 			logging.Log.Error(err)
 		}
 	}
+
 	if mp != nil {
 		err := mp.ForceFlush(ctx)
 		if err != nil {
@@ -125,16 +159,21 @@ func Shutdown() {
 	}
 }
 
-func getOTLPOptions(endpoint string) (traceOpts []otlptracehttp.Option, logOpts []otlploghttp.Option, metricOpts []otlpmetrichttp.Option) {
-	if strings.HasPrefix(endpoint, "http://") {
+func getOTLPOptions(endpoint string) (
+	traceOpts []otlptracehttp.Option,
+	logOpts []otlploghttp.Option,
+	metricOpts []otlpmetrichttp.Option,
+) {
+	switch {
+	case strings.HasPrefix(endpoint, "http://"):
 		traceOpts = append(traceOpts, otlptracehttp.WithEndpoint(endpoint[7:]), otlptracehttp.WithInsecure())
 		logOpts = append(logOpts, otlploghttp.WithEndpoint(endpoint[7:]), otlploghttp.WithInsecure())
 		metricOpts = append(metricOpts, otlpmetrichttp.WithEndpoint(endpoint[7:]), otlpmetrichttp.WithInsecure())
-	} else if strings.HasPrefix(endpoint, "https://") {
+	case strings.HasPrefix(endpoint, "https://"):
 		traceOpts = append(traceOpts, otlptracehttp.WithEndpoint(endpoint[8:]))
 		logOpts = append(logOpts, otlploghttp.WithEndpoint(endpoint[8:]))
 		metricOpts = append(metricOpts, otlpmetrichttp.WithEndpoint(endpoint[8:]))
-	} else {
+	default:
 		logging.Log.Errorf("an invalid otlp endpoint was configured %s", endpoint)
 	}
 	traceOpts = append(traceOpts, otlptracehttp.WithCompression(otlptracehttp.GzipCompression))
@@ -143,7 +182,13 @@ func getOTLPOptions(endpoint string) (traceOpts []otlptracehttp.Option, logOpts 
 	return
 }
 
-func CreateTracerProvider(ctx context.Context, config Config, resources *resource.Resource, sampler sdktrace.Sampler, opts ...sdktrace.TracerProviderOption) (*sdktrace.TracerProvider, error) {
+func createTracerProvider(
+	ctx context.Context,
+	config *Config,
+	resources *resource.Resource,
+	sampler sdktrace.Sampler,
+	opts ...sdktrace.TracerProviderOption,
+) (*sdktrace.TracerProvider, error) {
 	options, _, _ := getOTLPOptions(config.OtlpEndpoint)
 	client := otlptracehttp.NewClient(options...)
 	exporter, err := otlptrace.New(ctx, client)
@@ -163,7 +208,12 @@ func CreateTracerProvider(ctx context.Context, config Config, resources *resourc
 	return sdktrace.NewTracerProvider(opts...), nil
 }
 
-func CreateLoggerProvider(ctx context.Context, config Config, resources *resource.Resource, opts ...sdklog.LoggerProviderOption) (*sdklog.LoggerProvider, error) {
+func createLoggerProvider(
+	ctx context.Context,
+	config *Config,
+	resources *resource.Resource,
+	opts ...sdklog.LoggerProviderOption,
+) (*sdklog.LoggerProvider, error) {
 	_, options, _ := getOTLPOptions(config.OtlpEndpoint)
 	exporter, err := otlploghttp.New(ctx, options...)
 	if err != nil {
@@ -180,7 +230,12 @@ func CreateLoggerProvider(ctx context.Context, config Config, resources *resourc
 	return sdklog.NewLoggerProvider(opts...), nil
 }
 
-func CreateMeterProvider(ctx context.Context, config Config, resources *resource.Resource, opts ...sdkmetric.Option) (*sdkmetric.MeterProvider, error) {
+func createMeterProvider(
+	ctx context.Context,
+	config *Config,
+	resources *resource.Resource,
+	opts ...sdkmetric.Option,
+) (*sdkmetric.MeterProvider, error) {
 	_, _, options := getOTLPOptions(config.OtlpEndpoint)
 	exporter, err := otlpmetrichttp.New(ctx, options...)
 	if err != nil {
@@ -196,11 +251,11 @@ func CreateMeterProvider(ctx context.Context, config Config, resources *resource
 	return sdkmetric.NewMeterProvider(opts...), nil
 }
 
-func GetDefaultProviders() *OTLP {
+func getDefaultProviders() *providerInstances {
 	var defaultTracerProvider = otel.GetTracerProvider()
 	var defaultMeterProvider = otel.GetMeterProvider()
 	var defaultLoggerProvider = sdklog.NewLoggerProvider()
-	return &OTLP{
+	return &providerInstances{
 		tracerProvider: defaultTracerProvider,
 		loggerProvider: defaultLoggerProvider,
 		meterProvider:  defaultMeterProvider,
@@ -210,27 +265,51 @@ func GetDefaultProviders() *OTLP {
 // GetTracer returns the current tracer instance. The result of this function
 // should not be cached unless the caller is sure that OTLP has been started.
 func GetTracer() trace.Tracer {
-	return instances.Load().(*OtelInstances).tracer
+	return instances.Load().(*otelInstances).tracer
 }
 
 // GetLogger returns the current logger instance. The result of this function
 // should not be cached unless the caller is sure that OTLP has been started.
 func GetLogger() log.Logger {
-	return instances.Load().(*OtelInstances).logger
+	return instances.Load().(*otelInstances).logger
 }
 
 // GetMeter returns the current meter instance. The result of this function
 // should not be cached unless the caller is sure that OTLP has been started.
 func GetMeter() metric.Meter {
-	return instances.Load().(*OtelInstances).meter
+	return instances.Load().(*otelInstances).meter
+}
+
+// SetConfig sets the configuration for the OTLP provider.
+// The configuration must be set before calling StartOTLP.
+func SetConfig(conf Config) {
+	writeLock.Lock()
+	defer writeLock.Unlock()
+
+	config.Store(&conf)
 }
 
 // StartOTLP configures otel to send data to the LaunchDarkly OTLP endpoints.
 // Under ideal use this function is called once at startup.
 // The Shutdown function should be called when the application is shutting down
 // to ensure delivery of any pending events.
-func StartOTLP(config Config, sampler sdktrace.Sampler) error {
-	Shutdown()
+func StartOTLP() error {
+	writeLock.Lock()
+	defer writeLock.Unlock()
+
+	// If the OTLP instance is already started, do nothing.
+	if otlp.Load() != nil {
+		return nil
+	}
+
+	conf := config.Load()
+
+	if conf == nil {
+		// This would represent an implementation error.
+		return fmt.Errorf("ensure plugin is configured before calling StartOTLP")
+	}
+
+	shutdown()
 	ctx := context.Background()
 
 	resources, err := resource.New(ctx,
@@ -239,24 +318,24 @@ func StartOTLP(config Config, sampler sdktrace.Sampler) error {
 		resource.WithContainer(),
 		resource.WithOS(),
 		resource.WithProcess(),
-		resource.WithAttributes(config.ResourceAttributes...),
+		resource.WithAttributes(conf.ResourceAttributes...),
 	)
 
 	if err != nil {
 		return err
 	}
 
-	tracerProvider, err := CreateTracerProvider(ctx, config, resources, sampler)
+	tracerProvider, err := createTracerProvider(ctx, conf, resources, conf.Sampler)
 	if err != nil {
 		return err
 	}
 
-	loggerProvider, err := CreateLoggerProvider(ctx, config, resources)
+	loggerProvider, err := createLoggerProvider(ctx, conf, resources)
 	if err != nil {
 		return err
 	}
 
-	meterProvider, err := CreateMeterProvider(ctx, config, resources)
+	meterProvider, err := createMeterProvider(ctx, conf, resources)
 	if err != nil {
 		return err
 	}
@@ -267,8 +346,8 @@ func StartOTLP(config Config, sampler sdktrace.Sampler) error {
 	)
 	otel.SetTextMapPropagator(propagator)
 
-	o := &OTLP{tracerProvider: tracerProvider, loggerProvider: loggerProvider, meterProvider: meterProvider}
-	newInstances := &OtelInstances{
+	o := &providerInstances{tracerProvider: tracerProvider, loggerProvider: loggerProvider, meterProvider: meterProvider}
+	newInstances := &otelInstances{
 		tracer: o.tracerProvider.Tracer(
 			metadata.InstrumentationName,
 			trace.WithInstrumentationVersion(metadata.InstrumentationVersion),

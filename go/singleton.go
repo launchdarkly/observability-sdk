@@ -11,12 +11,18 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
 	"go.opentelemetry.io/otel/trace"
 
+	"github.com/launchdarkly/observability-sdk/go/attributes"
 	o "github.com/launchdarkly/observability-sdk/go/internal/otel"
 )
 
 // StartSpan is used to start a new span.
 // To start a span with a specific timestamp, use the trace.WithTimestamp option.
-func StartSpan(ctx context.Context, name string, opts []trace.SpanStartOption, tags ...attribute.KeyValue) (context.Context, trace.Span) {
+func StartSpan(
+	ctx context.Context,
+	name string,
+	opts []trace.SpanStartOption,
+	tags ...attribute.KeyValue,
+) (context.Context, trace.Span) {
 	ctx, span := o.GetTracer().Start(ctx, name, opts...)
 	span.SetAttributes(tags...)
 	return ctx, span
@@ -37,7 +43,12 @@ func RecordError(ctx context.Context, err error, tags ...attribute.KeyValue) con
 	if span.IsRecording() {
 		recordSpanError(span, err, tags...)
 	} else {
-		ctx, span = StartSpan(ctx, "error", []trace.SpanStartOption{trace.WithSpanKind(trace.SpanKindInternal)}, tags...)
+		ctx, span = StartSpan(
+			ctx,
+			attributes.ErrorSpanName,
+			[]trace.SpanStartOption{trace.WithSpanKind(trace.SpanKindInternal)},
+			tags...,
+		)
 		recordSpanError(span, err, tags...)
 		EndSpan(span)
 	}
@@ -61,22 +72,36 @@ func recordSpanError(span trace.Span, err error, tags ...attribute.KeyValue) {
 	} else {
 		span.RecordError(err, trace.WithStackTrace(true))
 	}
-
 }
 
+// RecordLog is used to record arbitrary logs in your golang backend.
 func RecordLog(ctx context.Context, record log.Record, tags ...log.KeyValue) error {
 	o.GetLogger().Emit(ctx, record)
 	return nil
 }
 
+// RecordMetric is used to record arbitrary metrics in your golang backend.
 func RecordMetric(ctx context.Context, name string, value float64, tags ...attribute.KeyValue) {
 	o.RecordMetric(ctx, name, value, tags...)
 }
 
+// RecordHistogram is used to record arbitrary histograms in your golang backend.
 func RecordHistogram(ctx context.Context, name string, value float64, tags ...attribute.KeyValue) {
 	o.RecordHistogram(ctx, name, value, tags...)
 }
 
+// RecordCount is used to record arbitrary counts in your golang backend.
 func RecordCount(ctx context.Context, name string, value int64, tags ...attribute.KeyValue) {
 	o.RecordCount(ctx, name, value, tags...)
+}
+
+// Start starts the observability plugin, when the plugin is configured with WithManualStart.
+func Start() error {
+	return o.StartOTLP()
+}
+
+// Shutdown stops the observability plugin.
+// It is recommended to call this function when the application is shutting down.
+func Shutdown() {
+	o.Shutdown()
 }
