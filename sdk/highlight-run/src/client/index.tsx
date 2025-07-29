@@ -306,7 +306,6 @@ export class Highlight {
 			this.sessionData = {
 				sessionSecureID: this.options.sessionSecureID,
 				projectID: 0,
-				payloadID: 1,
 				sessionStartTime: Date.now(),
 			}
 		}
