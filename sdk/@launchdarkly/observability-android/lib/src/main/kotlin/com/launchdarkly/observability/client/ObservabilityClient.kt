@@ -3,6 +3,7 @@ import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.observability.interfaces.Observe
 import com.launchdarkly.sdk.android.LDClient
 import io.opentelemetry.api.common.Attributes
+import io.opentelemetry.api.trace.Span
 import io.opentelemetry.sdk.resources.Resource
 
 public class ObservabilityClient: Observe {
@@ -42,5 +43,9 @@ public class ObservabilityClient: Observe {
 
     override fun recordLog(message: String, level: String, attributes: Attributes) {
         instrumentationManager.recordLog(message, level, attributes)
+    }
+
+    override fun startSpan(name: String, attributes: Attributes): Span {
+        return instrumentationManager.startSpan(name, attributes)
     }
 }
