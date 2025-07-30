@@ -11,7 +11,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.25.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
 
 	"github.com/launchdarkly/go-server-sdk/ldotel"
 	"github.com/launchdarkly/go-server-sdk/v7/interfaces"
@@ -72,7 +72,7 @@ func (p ObservabilityPlugin) Register(client interfaces.LDClientInterface, ldmd 
 		attribute.String(attributes.ProjectIDAttribute, ldmd.SdkKey),
 	}
 	if p.config.environment != "" {
-		attributes = append(attributes, semconv.DeploymentEnvironmentKey.String(p.config.environment))
+		attributes = append(attributes, semconv.DeploymentEnvironmentName(p.config.environment))
 	}
 	if p.config.serviceName != "" {
 		attributes = append(attributes, semconv.ServiceNameKey.String(p.config.serviceName))
