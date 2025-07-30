@@ -1,36 +1,21 @@
+import MurmurHash3 from 'imurmurhash'
+
 const ID_LENGTH = 28
 // base 62 character set
 const CHARACTER_SET =
 	'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
 
-// TODO(spenny): use crypto.subtle.digest if possible
-const simpleHash = (str: string): number => {
-	let hash = 0x811c9dc5
-	const prime = 0x01000193
-
-	for (let i = 0; i < str.length; i++) {
-		const char = str.charCodeAt(i)
-		hash = (hash ^ char) * prime
-		hash = hash >>> 0
-	}
-
-	// Additional mixing to improve distribution
-	hash = hash ^ (hash >>> 16)
-	hash = hash * 0x85ebca6b
-	hash = hash ^ (hash >>> 13)
-	hash = hash * 0xc2b2ae35
-	hash = hash ^ (hash >>> 16)
-
-	return hash >>> 0
-}
+const MIXER_PRIME = 0x85ebca6b
 
 export const GenerateSecureID = (key?: string): string => {
 	var secureID = ''
 
 	if (key) {
-		const keyHash = simpleHash(key)
+		// UseMurmurHash3 for fast, high-quality deterministic hashing (note: not cryptographically secure)
+		const keyHash = MurmurHash3(key).result()
+
 		for (let i = 0; i < ID_LENGTH; i++) {
-			const charHash = (keyHash ^ (i * 0x85ebca6b)) >>> 0
+			const charHash = (keyHash ^ (i * MIXER_PRIME)) >>> 0
 			const charIndex = charHash % CHARACTER_SET.length
 			secureID += CHARACTER_SET.charAt(charIndex)
 		}
