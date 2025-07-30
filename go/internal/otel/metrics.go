@@ -49,7 +49,15 @@ func RecordMetric(ctx context.Context, name string, value float64, tags ...attri
 		float64GaugesLock.RLock()
 	}
 
-	float64Gauges[name].Record(ctx, value, metric.WithAttributes(tags...))
+	if g := float64Gauges[name]; g != nil {
+		g.Record(ctx, value, metric.WithAttributes(tags...))
+	} else {
+		// This condition would represent an implementation error.
+		// Something would have to remove the item from the map, which
+		// is not part of the public API.
+		logging.GetLogger().Errorf("float64 gauge %s not found", name)
+	}
+
 	float64GaugesLock.RUnlock()
 }
 
@@ -74,7 +82,15 @@ func RecordHistogram(ctx context.Context, name string, value float64, tags ...at
 		float64HistogramsLock.RLock()
 	}
 
-	float64Histograms[name].Record(ctx, value, metric.WithAttributes(tags...))
+	if h := float64Histograms[name]; h != nil {
+		h.Record(ctx, value, metric.WithAttributes(tags...))
+	} else {
+		// This condition would represent an implementation error.
+		// Something would have to remove the item from the map, which
+		// is not part of the public API.
+		logging.GetLogger().Errorf("float64 histogram %s not found", name)
+	}
+
 	float64HistogramsLock.RUnlock()
 }
 
@@ -99,6 +115,14 @@ func RecordCount(ctx context.Context, name string, value int64, tags ...attribut
 		int64CountersLock.RLock()
 	}
 
-	int64Counters[name].Add(ctx, value, metric.WithAttributes(tags...))
+	if c := int64Counters[name]; c != nil {
+		c.Add(ctx, value, metric.WithAttributes(tags...))
+	} else {
+		// This condition would represent an implementation error.
+		// Something would have to remove the item from the map, which
+		// is not part of the public API.
+		logging.GetLogger().Errorf("int64 counter %s not found", name)
+	}
+
 	int64CountersLock.RUnlock()
 }
