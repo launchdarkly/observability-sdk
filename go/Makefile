@@ -23,6 +23,7 @@ lint:
 # Format code with gofmt
 format:
 	gofmt -s -w .
+	golangci-lint run --fix
 
 # Run tests with coverage
 test:
