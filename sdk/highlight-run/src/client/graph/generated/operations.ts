@@ -150,7 +150,9 @@ export type Mutation = {
 	pushBackendPayload?: Maybe<Scalars['Any']['output']>
 	pushMetrics: Scalars['Int']['output']
 	pushPayload: Scalars['Int']['output']
+	pushPayload2: Scalars['Int']['output']
 	pushPayloadCompressed?: Maybe<Scalars['Any']['output']>
+	pushPayloadCompressed2?: Maybe<Scalars['Any']['output']>
 }
 
 export type MutationAddSessionFeedbackArgs = {
@@ -213,13 +215,32 @@ export type MutationPushPayloadArgs = {
 	highlight_logs?: InputMaybe<Scalars['String']['input']>
 	is_beacon?: InputMaybe<Scalars['Boolean']['input']>
 	messages: Scalars['String']['input']
-	payload_id?: InputMaybe<Scalars['Int64ID']['input']>
+	payload_id?: InputMaybe<Scalars['ID']['input']>
+	resources: Scalars['String']['input']
+	session_secure_id: Scalars['String']['input']
+	web_socket_events?: InputMaybe<Scalars['String']['input']>
+}
+
+export type MutationPushPayload2Args = {
+	errors: Array<InputMaybe<ErrorObjectInput>>
+	events: ReplayEventsInput
+	has_session_unloaded?: InputMaybe<Scalars['Boolean']['input']>
+	highlight_logs?: InputMaybe<Scalars['String']['input']>
+	is_beacon?: InputMaybe<Scalars['Boolean']['input']>
+	messages: Scalars['String']['input']
+	payload_id: Scalars['Int64ID']['input']
 	resources: Scalars['String']['input']
 	session_secure_id: Scalars['String']['input']
 	web_socket_events?: InputMaybe<Scalars['String']['input']>
 }
 
 export type MutationPushPayloadCompressedArgs = {
+	data: Scalars['String']['input']
+	payload_id: Scalars['ID']['input']
+	session_secure_id: Scalars['String']['input']
+}
+
+export type MutationPushPayloadCompressed2Args = {
 	data: Scalars['String']['input']
 	payload_id: Scalars['Int64ID']['input']
 	session_secure_id: Scalars['String']['input']
@@ -329,7 +350,7 @@ export type PushPayloadMutationVariables = Exact<{
 
 export type PushPayloadMutation = {
 	__typename?: 'Mutation'
-	pushPayload: number
+	pushPayload2: number
 }
 
 export type PushPayloadCompressedMutationVariables = Exact<{
@@ -340,7 +361,7 @@ export type PushPayloadCompressedMutationVariables = Exact<{
 
 export type PushPayloadCompressedMutation = {
 	__typename?: 'Mutation'
-	pushPayloadCompressed?: any | null
+	pushPayloadCompressed2?: any | null
 }
 
 export type IdentifySessionMutationVariables = Exact<{
@@ -601,7 +622,7 @@ export const PushPayloadDocument = gql`
 		$has_session_unloaded: Boolean
 		$highlight_logs: String
 	) {
-		pushPayload(
+		pushPayload2(
 			session_secure_id: $session_secure_id
 			payload_id: $payload_id
 			events: $events
@@ -621,7 +642,7 @@ export const PushPayloadCompressedDocument = gql`
 		$payload_id: Int64ID!
 		$data: String!
 	) {
-		pushPayloadCompressed(
+		pushPayloadCompressed2(
 			session_secure_id: $session_secure_id
 			payload_id: $payload_id
 			data: $data

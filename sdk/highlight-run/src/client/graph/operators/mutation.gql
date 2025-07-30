@@ -10,7 +10,7 @@ mutation PushPayload(
 	$has_session_unloaded: Boolean
 	$highlight_logs: String
 ) {
-	pushPayload(
+	pushPayload2(
 		session_secure_id: $session_secure_id
 		payload_id: $payload_id
 		events: $events
@@ -29,7 +29,7 @@ mutation PushPayloadCompressed(
 	$payload_id: Int64ID!
 	$data: String!
 ) {
-	pushPayloadCompressed(
+	pushPayloadCompressed2(
 		session_secure_id: $session_secure_id
 		payload_id: $payload_id
 		data: $data
