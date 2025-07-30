@@ -11,9 +11,9 @@ export const GenerateSecureID = (key?: string): string => {
 	var secureID = ''
 
 	if (key) {
-		// UseMurmurHash3 for fast, high-quality deterministic hashing (note: not cryptographically secure)
+		// UseMurmurHash3 for fast, high-quality deterministic hashing
+		// Note: not crypto secure, but we only need it to create a deterministic ID
 		const keyHash = MurmurHash3(key).result()
-
 		for (let i = 0; i < ID_LENGTH; i++) {
 			const charHash = (keyHash ^ (i * MIXER_PRIME)) >>> 0
 			const charIndex = charHash % CHARACTER_SET.length
