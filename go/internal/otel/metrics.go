@@ -35,7 +35,11 @@ func RecordMetric(ctx context.Context, name string, value float64, tags ...attri
 	if g := float64Gauges[name]; g == nil {
 		float64GaugesLock.RUnlock()
 		float64GaugesLock.Lock()
-		float64Gauges[name], err = GetMeter().Float64Gauge(name)
+		// Between releasing the read lock and acquiring the write lock,
+		// another goroutine could have created the gauge.
+		if g := float64Gauges[name]; g == nil {
+			float64Gauges[name], err = GetMeter().Float64Gauge(name)
+		}
 		float64GaugesLock.Unlock()
 		if err != nil {
 			logging.GetLogger().Errorf("error creating float64 gauge %s: %v", name, err)
@@ -56,7 +60,11 @@ func RecordHistogram(ctx context.Context, name string, value float64, tags ...at
 	if h := float64Histograms[name]; h == nil {
 		float64HistogramsLock.RUnlock()
 		float64HistogramsLock.Lock()
-		float64Histograms[name], err = GetMeter().Float64Histogram(name)
+		// Between releasing the read lock and acquiring the write lock,
+		// another goroutine could have created the histogram.
+		if h := float64Histograms[name]; h == nil {
+			float64Histograms[name], err = GetMeter().Float64Histogram(name)
+		}
 		float64HistogramsLock.Unlock()
 		if err != nil {
 			logging.GetLogger().Errorf("error creating float64 histogram %s: %v", name, err)
@@ -77,7 +85,11 @@ func RecordCount(ctx context.Context, name string, value int64, tags ...attribut
 	if c := int64Counters[name]; c == nil {
 		int64CountersLock.RUnlock()
 		int64CountersLock.Lock()
-		int64Counters[name], err = GetMeter().Int64Counter(name)
+		// Between releasing the read lock and acquiring the write lock,
+		// another goroutine could have created the counter.
+		if c := int64Counters[name]; c == nil {
+			int64Counters[name], err = GetMeter().Int64Counter(name)
+		}
 		int64CountersLock.Unlock()
 		if err != nil {
 			logging.GetLogger().Errorf("error creating int64 counter %s: %v", name, err)
