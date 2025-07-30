@@ -217,7 +217,7 @@ func createLoggerProvider(
 	_, options, _ := getOTLPOptions(config.OtlpEndpoint)
 	exporter, err := otlploghttp.New(ctx, options...)
 	if err != nil {
-		return nil, fmt.Errorf("creating OTLP trace exporter: %w", err)
+		return nil, fmt.Errorf("creating OTLP logger exporter: %w", err)
 	}
 	opts = append([]sdklog.LoggerProviderOption{
 		sdklog.WithProcessor(sdklog.NewBatchProcessor(exporter,
@@ -239,7 +239,7 @@ func createMeterProvider(
 	_, _, options := getOTLPOptions(config.OtlpEndpoint)
 	exporter, err := otlpmetrichttp.New(ctx, options...)
 	if err != nil {
-		return nil, fmt.Errorf("creating OTLP trace exporter: %w", err)
+		return nil, fmt.Errorf("creating OTLP meter exporter: %w", err)
 	}
 	opts = append([]sdkmetric.Option{
 		sdkmetric.WithReader(sdkmetric.NewPeriodicReader(exporter,
