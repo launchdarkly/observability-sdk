@@ -1,6 +1,7 @@
 package com.launchdarkly.observability.plugin
 
 import ObservabilityClient
+import android.app.Application
 import com.launchdarkly.sdk.android.LDClient
 import com.launchdarkly.sdk.android.integrations.EnvironmentMetadata
 import com.launchdarkly.sdk.android.integrations.Hook
@@ -9,7 +10,9 @@ import com.launchdarkly.sdk.android.integrations.PluginMetadata
 import io.opentelemetry.sdk.resources.Resource
 import java.util.Collections
 
-class Observability : Plugin() {
+class Observability(
+    private val application: Application
+) : Plugin() {
     override fun getMetadata(): PluginMetadata {
         return object : PluginMetadata() {
             override fun getName(): String = "'@launchdarkly/observability-android'"
@@ -39,7 +42,7 @@ class Observability : Plugin() {
             }
         }
 
-        val observabilityClient = ObservabilityClient(sdkKey, client, resourceBuilder.build())
+        val observabilityClient = ObservabilityClient(application, sdkKey, client, resourceBuilder.build())
         LDObserve.init(observabilityClient)
     }
 

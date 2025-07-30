@@ -1,5 +1,6 @@
 package com.example.androidobservability
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -29,6 +30,13 @@ class MainActivity : ComponentActivity() {
                             text = "Hello Telemetry",
                             modifier = Modifier.padding(innerPadding)
                         )
+                        Button(
+                            onClick = {
+                                this@MainActivity.startActivity(Intent(this@MainActivity, SecondaryActivity::class.java))
+                            }
+                        ) {
+                            Text("Go to Secondary Activity")
+                        }
                         Button(
                             onClick = {
                                 viewModel.triggerMetric()

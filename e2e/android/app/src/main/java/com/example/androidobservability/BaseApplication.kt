@@ -14,7 +14,7 @@ class BaseApplication : Application() {
 
     companion object {
         // Set LAUNCHDARKLY_MOBILE_KEY to your LaunchDarkly SDK mobile key.
-        const val LAUNCHDARKLY_MOBILE_KEY = "MOBILE_KEY_GOES_HERE"
+        const val LAUNCHDARKLY_MOBILE_KEY = "mob-a9c9ebd5-5b37-4b95-a418-c5ee4cd89468"
     }
 
     override fun onCreate() {
@@ -27,7 +27,7 @@ class BaseApplication : Application() {
         val ldConfig = LDConfig.Builder(LDConfig.Builder.AutoEnvAttributes.Enabled)
             .mobileKey(LAUNCHDARKLY_MOBILE_KEY)
             .plugins(Components.plugins().setPlugins(
-                Collections.singletonList<Plugin>(Observability())
+                Collections.singletonList<Plugin>(Observability(this@BaseApplication))
             ))
             .build()
 

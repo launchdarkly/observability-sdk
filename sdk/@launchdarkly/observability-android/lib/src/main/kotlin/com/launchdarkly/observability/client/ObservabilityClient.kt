@@ -1,3 +1,4 @@
+import android.app.Application
 import com.launchdarkly.observability.client.InstrumentationManager
 import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.observability.interfaces.Observe
@@ -10,11 +11,12 @@ public class ObservabilityClient: Observe {
     private val instrumentationManager: InstrumentationManager
 
     constructor(
+        application: Application,
         sdkKey: String,
         client: LDClient,
         resource: Resource
     ) {
-        this.instrumentationManager = InstrumentationManager(sdkKey, client, resource)
+        this.instrumentationManager = InstrumentationManager(application, sdkKey, client, resource)
     }
 
     override fun recordMetric(metric: Metric) {
