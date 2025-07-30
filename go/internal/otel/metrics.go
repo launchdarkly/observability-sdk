@@ -2,7 +2,6 @@ package otel
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -42,10 +41,12 @@ func RecordMetric(ctx context.Context, name string, value float64, tags ...attri
 			logging.GetLogger().Errorf("error creating float64 gauge %s: %v", name, err)
 			return
 		}
-	} else {
-		float64GaugesLock.RUnlock()
+		// Re-lock for reading.
+		float64GaugesLock.RLock()
 	}
+
 	float64Gauges[name].Record(ctx, value, metric.WithAttributes(tags...))
+	float64GaugesLock.RUnlock()
 }
 
 // RecordHistogram is used to record arbitrary histograms in your golang backend.
@@ -58,13 +59,15 @@ func RecordHistogram(ctx context.Context, name string, value float64, tags ...at
 		float64Histograms[name], err = GetMeter().Float64Histogram(name)
 		float64HistogramsLock.Unlock()
 		if err != nil {
-			fmt.Printf("error creating float64 histogram %s: %v", name, err)
+			logging.GetLogger().Errorf("error creating float64 histogram %s: %v", name, err)
 			return
 		}
-	} else {
-		float64HistogramsLock.RUnlock()
+		// Re-lock for reading.
+		float64HistogramsLock.RLock()
 	}
+
 	float64Histograms[name].Record(ctx, value, metric.WithAttributes(tags...))
+	float64HistogramsLock.RUnlock()
 }
 
 // RecordCount is used to record arbitrary counts in your golang backend.
@@ -77,11 +80,13 @@ func RecordCount(ctx context.Context, name string, value int64, tags ...attribut
 		int64Counters[name], err = GetMeter().Int64Counter(name)
 		int64CountersLock.Unlock()
 		if err != nil {
-			fmt.Printf("error creating float64 histogram %s: %v", name, err)
+			logging.GetLogger().Errorf("error creating int64 counter %s: %v", name, err)
 			return
 		}
-	} else {
-		int64CountersLock.RUnlock()
+		// Re-lock for reading.
+		int64CountersLock.RLock()
 	}
+
 	int64Counters[name].Add(ctx, value, metric.WithAttributes(tags...))
+	int64CountersLock.RUnlock()
 }
