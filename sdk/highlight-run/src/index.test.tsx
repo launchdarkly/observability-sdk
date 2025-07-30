@@ -10,7 +10,6 @@ import * as otel from './client/otel'
 const sessionData = {
 	sessionSecureID: 'foo',
 	projectID: 1,
-	payloadID: 1,
 	lastPushTime: new Date().getTime(),
 	sessionStartTime: new Date().getTime(),
 }

@@ -592,11 +592,12 @@ export class Highlight {
 				return
 			}
 
-			if (options?.sessionKey) {
-				if (options?.sessionKey !== this.sessionData.sessionKey) {
-					await this._reset({ ...options, forceNew: true })
-					return
-				}
+			if (
+				options?.sessionKey &&
+				options?.sessionKey !== this.sessionData.sessionKey
+			) {
+				await this._reset({ ...options, forceNew: true })
+				return
 			}
 
 			const sampler = new CustomSampler()
