@@ -58,9 +58,6 @@ class InstrumentationManager(
     fun recordMetric(metric: Metric) {
         meter.gaugeBuilder(metric.name).build()
             .set(metric.value, metric.attributes)
-
-        // TODO: O11Y-362: convert attributes to LDValue object and pass instead of LDValue.ofNull()
-        client.trackMetric(metric.name, LDValue.ofNull(), metric.value)
     }
 
     fun recordCount(metric: Metric) {
