@@ -207,7 +207,6 @@ export class RecordSDK implements Record {
 			this.sessionData = {
 				sessionSecureID: this.options.sessionSecureID,
 				projectID: 0,
-				payloadID: 1,
 				sessionStartTime: Date.now(),
 			}
 		}
@@ -229,7 +228,13 @@ export class RecordSDK implements Record {
 	}
 
 	// Start a new session
-	async _reset({ forceNew }: { forceNew?: boolean }) {
+	async _reset({
+		forceNew,
+		sessionKey,
+	}: {
+		forceNew?: boolean
+		sessionKey?: string
+	}) {
 		if (this.pushPayloadTimerId) {
 			clearTimeout(this.pushPayloadTimerId)
 			this.pushPayloadTimerId = undefined
@@ -253,7 +258,10 @@ export class RecordSDK implements Record {
 
 		// no need to set the sessionStorage value here since firstload won't call
 		// init again after a reset, and `this.initialize()` will set sessionStorage
-		this.sessionData.sessionSecureID = GenerateSecureID()
+		this.sessionData.sessionSecureID = sessionKey
+			? GenerateSecureID(`${this.organizationID}-${sessionKey}`)
+			: GenerateSecureID()
+		this.sessionData.sessionKey = sessionKey
 		this.sessionData.sessionStartTime = Date.now()
 		this.options.sessionSecureID = this.sessionData.sessionSecureID
 		this.stop()
@@ -407,6 +415,14 @@ export class RecordSDK implements Record {
 				return
 			}
 
+			if (
+				options?.sessionKey &&
+				options?.sessionKey !== this.sessionData.sessionKey
+			) {
+				await this._reset({ ...options, forceNew: true })
+				return
+			}
+
 			this.logger.log(
 				`Initializing...`,
 				options,
@@ -470,6 +486,7 @@ export class RecordSDK implements Record {
 					appVersion: this.appVersion,
 					serviceName: this.serviceName,
 					session_secure_id: this.sessionData.sessionSecureID,
+					session_key: this.sessionData.sessionKey,
 					client_id: clientID,
 					network_recording_domains: destinationDomains,
 					disable_session_recording:
@@ -645,6 +662,15 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 						{ type: 'session' },
 					)
 				}
+			}
+
+			if (this.sessionData.sessionKey) {
+				this.addProperties(
+					{
+						sessionKey: this.sessionData.sessionKey,
+					},
+					{ type: 'session' },
+				)
 			}
 
 			this._setupWindowListeners()
@@ -963,6 +989,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 			if (
 				this.state === 'Recording' &&
 				this.listeners &&
+				!this.sessionData.sessionKey &&
 				this.sessionData.sessionStartTime &&
 				Date.now() - this.sessionData.sessionStartTime >
 					MAX_SESSION_LENGTH
@@ -1063,7 +1090,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 		if (sendFn) {
 			await sendFn({
 				session_secure_id: this.sessionData.sessionSecureID,
-				payload_id: (this.sessionData.payloadID++).toString(),
+				payload_id: new Date().getTime().toString(),
 				events: { events } as ReplayEventsInput,
 				messages: stringify({ messages: [] }),
 				resources: JSON.stringify({ resources: [] }),
@@ -1079,7 +1106,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 			this._worker.postMessage({
 				message: {
 					type: MessageType.AsyncEvents,
-					id: this.sessionData.payloadID++,
+					id: new Date().getTime(),
 					events,
 					messages: [],
 					errors: [],

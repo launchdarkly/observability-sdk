@@ -157,7 +157,7 @@ function stringifyProperties(
 		const messagesString = stringify({ messages: messages })
 		let payload: PushPayloadMutationVariables = {
 			session_secure_id: sessionSecureID,
-			payload_id: id.toString(),
+			payload_id: new Date().getTime().toString(),
 			events: { events } as ReplayEventsInput,
 			messages: messagesString,
 			resources: resourcesString,

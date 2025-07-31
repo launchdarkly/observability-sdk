@@ -25,7 +25,17 @@ export class Plugin<T extends RecordOptions | ObserveOptions> {
 			} else {
 				setCookieWriteEnabled(false)
 			}
+		} catch (error) {
+			internalLog(
+				`Error initializing @launchdarkly observability plugin`,
+				'error',
+				error,
+			)
+		}
+	}
 
+	configureSession(ldCredential: string, options?: T) {
+		try {
 			const persistentSessionSecureID = getPersistentSessionSecureID()
 			let previousSession = getPreviousSessionData(
 				persistentSessionSecureID,
@@ -33,19 +43,25 @@ export class Plugin<T extends RecordOptions | ObserveOptions> {
 			if (previousSession?.sessionSecureID) {
 				this.sessionSecureID = previousSession.sessionSecureID
 			} else {
-				this.sessionSecureID = GenerateSecureID()
+				if (options?.sessionKey) {
+					this.sessionSecureID = GenerateSecureID(
+						`${ldCredential}-${options.sessionKey}`,
+					)
+				} else {
+					this.sessionSecureID = GenerateSecureID()
+				}
 				setSessionSecureID(this.sessionSecureID)
 				setSessionData({
 					sessionSecureID: this.sessionSecureID,
+					sessionKey: options?.sessionKey,
 					projectID: 0,
-					payloadID: 1,
 					sessionStartTime: Date.now(),
 					lastPushTime: Date.now(),
 				})
 			}
 		} catch (error) {
 			internalLog(
-				`Error initializing @launchdarkly observability plugin`,
+				`Error configuring session in @launchdarkly observability plugin`,
 				'error',
 				error,
 			)

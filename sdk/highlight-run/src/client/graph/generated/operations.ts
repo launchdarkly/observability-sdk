@@ -32,6 +32,7 @@ export type Scalars = {
 	Float: { input: number; output: number }
 	Any: { input: any; output: any }
 	Int64: { input: any; output: any }
+	Int64ID: { input: any; output: any }
 	Timestamp: { input: any; output: any }
 }
 
@@ -45,6 +46,7 @@ export type AttributeMatchConfig = {
 export type BackendErrorObjectInput = {
 	environment: Scalars['String']['input']
 	event: Scalars['String']['input']
+	id?: InputMaybe<Scalars['String']['input']>
 	log_cursor?: InputMaybe<Scalars['String']['input']>
 	payload?: InputMaybe<Scalars['String']['input']>
 	request_id?: InputMaybe<Scalars['String']['input']>
@@ -62,6 +64,7 @@ export type BackendErrorObjectInput = {
 export type ErrorObjectInput = {
 	columnNumber: Scalars['Int']['input']
 	event: Scalars['String']['input']
+	id?: InputMaybe<Scalars['String']['input']>
 	lineNumber: Scalars['Int']['input']
 	payload?: InputMaybe<Scalars['String']['input']>
 	source: Scalars['String']['input']
@@ -147,7 +150,9 @@ export type Mutation = {
 	pushBackendPayload?: Maybe<Scalars['Any']['output']>
 	pushMetrics: Scalars['Int']['output']
 	pushPayload: Scalars['Int']['output']
+	pushPayload2: Scalars['Int']['output']
 	pushPayloadCompressed?: Maybe<Scalars['Any']['output']>
+	pushPayloadCompressed2?: Maybe<Scalars['Any']['output']>
 }
 
 export type MutationAddSessionFeedbackArgs = {
@@ -184,6 +189,7 @@ export type MutationInitializeSessionArgs = {
 	organization_verbose_id: Scalars['String']['input']
 	privacy_setting?: InputMaybe<Scalars['String']['input']>
 	serviceName?: InputMaybe<Scalars['String']['input']>
+	session_key?: InputMaybe<Scalars['String']['input']>
 	session_secure_id: Scalars['String']['input']
 }
 
@@ -215,9 +221,28 @@ export type MutationPushPayloadArgs = {
 	web_socket_events?: InputMaybe<Scalars['String']['input']>
 }
 
+export type MutationPushPayload2Args = {
+	errors: Array<InputMaybe<ErrorObjectInput>>
+	events: ReplayEventsInput
+	has_session_unloaded?: InputMaybe<Scalars['Boolean']['input']>
+	highlight_logs?: InputMaybe<Scalars['String']['input']>
+	is_beacon?: InputMaybe<Scalars['Boolean']['input']>
+	messages: Scalars['String']['input']
+	payload_id: Scalars['Int64ID']['input']
+	resources: Scalars['String']['input']
+	session_secure_id: Scalars['String']['input']
+	web_socket_events?: InputMaybe<Scalars['String']['input']>
+}
+
 export type MutationPushPayloadCompressedArgs = {
 	data: Scalars['String']['input']
 	payload_id: Scalars['ID']['input']
+	session_secure_id: Scalars['String']['input']
+}
+
+export type MutationPushPayloadCompressed2Args = {
+	data: Scalars['String']['input']
+	payload_id: Scalars['Int64ID']['input']
 	session_secure_id: Scalars['String']['input']
 }
 
@@ -263,7 +288,7 @@ export type ServiceInput = {
 
 export type Session = {
 	__typename?: 'Session'
-	id?: Maybe<Scalars['ID']['output']>
+	id?: Maybe<Scalars['Int64ID']['output']>
 	organization_id: Scalars['ID']['output']
 	project_id: Scalars['ID']['output']
 	secure_id: Scalars['String']['output']
@@ -312,7 +337,7 @@ export type StackFrameInput = {
 
 export type PushPayloadMutationVariables = Exact<{
 	session_secure_id: Scalars['String']['input']
-	payload_id: Scalars['ID']['input']
+	payload_id: Scalars['Int64ID']['input']
 	events: ReplayEventsInput
 	messages: Scalars['String']['input']
 	resources: Scalars['String']['input']
@@ -325,18 +350,18 @@ export type PushPayloadMutationVariables = Exact<{
 
 export type PushPayloadMutation = {
 	__typename?: 'Mutation'
-	pushPayload: number
+	pushPayload2: number
 }
 
 export type PushPayloadCompressedMutationVariables = Exact<{
 	session_secure_id: Scalars['String']['input']
-	payload_id: Scalars['ID']['input']
+	payload_id: Scalars['Int64ID']['input']
 	data: Scalars['String']['input']
 }>
 
 export type PushPayloadCompressedMutation = {
 	__typename?: 'Mutation'
-	pushPayloadCompressed?: any | null
+	pushPayloadCompressed2?: any | null
 }
 
 export type IdentifySessionMutationVariables = Exact<{
@@ -390,6 +415,7 @@ export type MatchPartsFragment = {
 
 export type InitializeSessionMutationVariables = Exact<{
 	session_secure_id: Scalars['String']['input']
+	session_key?: InputMaybe<Scalars['String']['input']>
 	organization_verbose_id: Scalars['String']['input']
 	enable_strict_privacy: Scalars['Boolean']['input']
 	privacy_setting: Scalars['String']['input']
@@ -586,7 +612,7 @@ export const MatchPartsFragmentDoc = gql`
 export const PushPayloadDocument = gql`
 	mutation PushPayload(
 		$session_secure_id: String!
-		$payload_id: ID!
+		$payload_id: Int64ID!
 		$events: ReplayEventsInput!
 		$messages: String!
 		$resources: String!
@@ -596,7 +622,7 @@ export const PushPayloadDocument = gql`
 		$has_session_unloaded: Boolean
 		$highlight_logs: String
 	) {
-		pushPayload(
+		pushPayload2(
 			session_secure_id: $session_secure_id
 			payload_id: $payload_id
 			events: $events
@@ -613,10 +639,10 @@ export const PushPayloadDocument = gql`
 export const PushPayloadCompressedDocument = gql`
 	mutation PushPayloadCompressed(
 		$session_secure_id: String!
-		$payload_id: ID!
+		$payload_id: Int64ID!
 		$data: String!
 	) {
-		pushPayloadCompressed(
+		pushPayloadCompressed2(
 			session_secure_id: $session_secure_id
 			payload_id: $payload_id
 			data: $data
@@ -672,6 +698,7 @@ export const AddSessionFeedbackDocument = gql`
 export const InitializeSessionDocument = gql`
 	mutation initializeSession(
 		$session_secure_id: String!
+		$session_key: String
 		$organization_verbose_id: String!
 		$enable_strict_privacy: Boolean!
 		$privacy_setting: String!
@@ -689,6 +716,7 @@ export const InitializeSessionDocument = gql`
 	) {
 		initializeSession(
 			session_secure_id: $session_secure_id
+			session_key: $session_key
 			organization_verbose_id: $organization_verbose_id
 			enable_strict_privacy: $enable_strict_privacy
 			enable_recording_network_contents: $enable_recording_network_contents

@@ -60,6 +60,9 @@ export class Record extends Plugin<RecordOptions> implements LDPlugin {
 				)
 				return
 			}
+
+			this.configureSession(ldCredential, options)
+
 			const client_options: HighlightClassOptions = {
 				...options,
 				organizationID: ldCredential,

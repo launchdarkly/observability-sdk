@@ -153,6 +153,7 @@ export type HighlightClassOptions = {
 	environment?: 'development' | 'production' | 'staging' | string
 	appVersion?: string
 	serviceName?: string
+	sessionKey?: string
 	sessionShortcut?: SessionShortcutOptions
 	sessionSecureID: string // Introduced in firstLoad 3.0.1
 	storageMode?: 'sessionStorage' | 'localStorage'
@@ -305,7 +306,6 @@ export class Highlight {
 			this.sessionData = {
 				sessionSecureID: this.options.sessionSecureID,
 				projectID: 0,
-				payloadID: 1,
 				sessionStartTime: Date.now(),
 			}
 		}
@@ -330,7 +330,13 @@ export class Highlight {
 	}
 
 	// Start a new session
-	async _reset({ forceNew }: { forceNew?: boolean }) {
+	async _reset({
+		forceNew,
+		sessionKey,
+	}: {
+		forceNew?: boolean
+		sessionKey?: string
+	}) {
 		if (this.pushPayloadTimerId) {
 			clearTimeout(this.pushPayloadTimerId)
 			this.pushPayloadTimerId = undefined
@@ -354,7 +360,10 @@ export class Highlight {
 
 		// no need to set the sessionStorage value here since firstload won't call
 		// init again after a reset, and `this.initialize()` will set sessionStorage
-		this.sessionData.sessionSecureID = GenerateSecureID()
+		this.sessionData.sessionSecureID = sessionKey
+			? GenerateSecureID(`${this.organizationID}-${sessionKey}`)
+			: GenerateSecureID()
+		this.sessionData.sessionKey = sessionKey
 		this.sessionData.sessionStartTime = Date.now()
 		this.options.sessionSecureID = this.sessionData.sessionSecureID
 		this.stopRecording()
@@ -583,6 +592,14 @@ export class Highlight {
 				return
 			}
 
+			if (
+				options?.sessionKey &&
+				options?.sessionKey !== this.sessionData.sessionKey
+			) {
+				await this._reset({ ...options, forceNew: true })
+				return
+			}
+
 			const sampler = new CustomSampler()
 
 			setupBrowserTracing(
@@ -675,6 +692,7 @@ export class Highlight {
 					appVersion: this.appVersion,
 					serviceName: this.serviceName,
 					session_secure_id: this.sessionData.sessionSecureID,
+					session_key: this.sessionData.sessionKey,
 					client_id: clientID,
 					network_recording_domains: destinationDomains,
 					disable_session_recording:
@@ -869,6 +887,15 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 						{ type: 'session' },
 					)
 				}
+			}
+
+			if (this.sessionData.sessionKey) {
+				this.addProperties(
+					{
+						sessionKey: this.sessionData.sessionKey,
+					},
+					{ type: 'session' },
+				)
 			}
 
 			this._setupWindowListeners()
@@ -1382,9 +1409,11 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 	// Reset the events array and push to a backend.
 	async _save() {
 		try {
+			// reset the session if over 4 hours and no sessionKey is provided
 			if (
 				this.state === 'Recording' &&
 				this.listeners &&
+				!this.sessionData.sessionKey &&
 				this.sessionData.sessionStartTime &&
 				Date.now() - this.sessionData.sessionStartTime >
 					MAX_SESSION_LENGTH
@@ -1497,7 +1526,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 		if (sendFn) {
 			await sendFn({
 				session_secure_id: this.sessionData.sessionSecureID,
-				payload_id: (this.sessionData.payloadID++).toString(),
+				payload_id: new Date().getTime().toString(),
 				events: { events } as ReplayEventsInput,
 				messages: stringify({ messages: messages }),
 				resources: JSON.stringify({ resources: resources }),
@@ -1513,7 +1542,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 			this._worker.postMessage({
 				message: {
 					type: MessageType.AsyncEvents,
-					id: this.sessionData.payloadID++,
+					id: new Date().getTime(),
 					events,
 					messages,
 					errors,

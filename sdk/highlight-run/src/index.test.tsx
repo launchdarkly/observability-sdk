@@ -10,10 +10,21 @@ import * as otel from './client/otel'
 const sessionData = {
 	sessionSecureID: 'foo',
 	projectID: 1,
-	payloadID: 1,
 	lastPushTime: new Date().getTime(),
 	sessionStartTime: new Date().getTime(),
 }
+
+vi.mock('./client/graph/generated/operations', () => ({
+	getSdk: () => ({
+		initializeSession: vi.fn().mockResolvedValue({
+			initializeSession: {
+				secure_id: sessionData.sessionSecureID,
+				project_id: sessionData.projectID,
+				sampling: {},
+			},
+		}),
+	}),
+}))
 
 // Temporarily set the backendUrl to staging for all tests.
 const backendUrl = 'https://pub.observability.ld-stg.launchdarkly.com/'

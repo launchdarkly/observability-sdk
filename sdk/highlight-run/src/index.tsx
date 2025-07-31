@@ -119,9 +119,14 @@ const H: HighlightPublicInterface = {
 				setCookieWriteEnabled(false)
 			}
 
-			let previousSession = getPreviousSessionData()
+			const previousSession = getPreviousSessionData()
 			let sessionSecureID = GenerateSecureID()
-			if (previousSession?.sessionSecureID) {
+
+			if (options?.sessionKey) {
+				sessionSecureID = GenerateSecureID(
+					`${projectID}-${options.sessionKey}`,
+				)
+			} else if (previousSession?.sessionSecureID) {
 				sessionSecureID = previousSession.sessionSecureID
 			}
 

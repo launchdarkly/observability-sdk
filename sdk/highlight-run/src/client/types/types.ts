@@ -128,6 +128,12 @@ export type CommonOptions = {
 	 * @default false
 	 */
 	manualStart?: boolean
+	/**
+	 * Key to use to determine the sessionSecureID in order to override session generation logic.
+	 * If a sessionKey is provided, the session will be combined with the previous session with the same key.
+	 * Otherwise, the current session logic will be used to generate a sessionSecureID.
+	 */
+	sessionKey?: string
 }
 
 export type HighlightOptions = CommonOptions & {
@@ -528,6 +534,12 @@ export interface StartOptions {
 	 * Starts a new recording session even if one was stopped recently.
 	 */
 	forceNew?: boolean
+	/**
+	 * Key to use to determine the sessionSecureID in order to override session generation logic.
+	 * If a sessionKey is provided, the session will be combined with the previous session with the same key.
+	 * Otherwise, the current session logic will be used to generate a sessionSecureID.
+	 */
+	sessionKey?: string
 }
 
 export interface OnHighlightReadyOptions {
