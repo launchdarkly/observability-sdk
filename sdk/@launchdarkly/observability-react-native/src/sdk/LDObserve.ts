@@ -1,4 +1,10 @@
-import { Attributes, Span as OtelSpan, SpanOptions } from '@opentelemetry/api'
+import {
+	Attributes,
+	context,
+	Context,
+	Span as OtelSpan,
+	SpanOptions,
+} from '@opentelemetry/api'
 import { ObservabilityClient } from '../client/ObservabilityClient'
 import { Metric } from '../api/Metric'
 import { RequestContext } from '../api/RequestContext'
@@ -47,16 +53,17 @@ class LDObserveClass
 	}
 
 	recordLog(message: any, level: string, attributes?: Attributes): void {
-		return this._bufferCall('log', [message, level, attributes])
+		return this._bufferCall('recordLog', [message, level, attributes])
 	}
 
 	parseHeaders(headers: Record<string, string>): RequestContext {
-		return (
-			this._bufferCall('parseHeaders', [headers]) || {
-				sessionId: headers['x-session-id'],
-				requestId: headers['x-request-id'],
-			}
-		)
+		const response = this._bufferCall('parseHeaders', [headers])
+		return this._isLoaded
+			? response
+			: {
+					sessionId: headers['x-session-id'],
+					requestId: headers['x-request-id'],
+				}
 	}
 
 	runWithHeaders(
@@ -65,10 +72,15 @@ class LDObserveClass
 		cb: (span: OtelSpan) => any,
 		options?: SpanOptions,
 	): any {
-		return (
-			this._bufferCall('runWithHeaders', [name, headers, cb, options]) ||
-			cb(noOpSpan)
-		)
+		const response = this._bufferCall('runWithHeaders', [
+			name,
+			headers,
+			cb,
+			options,
+		])
+		return this._isLoaded
+			? response
+			: cb(noOpSpan.setAttribute('method', 'runWithHeaders'))
 	}
 
 	startWithHeaders(
@@ -76,40 +88,63 @@ class LDObserveClass
 		headers: Record<string, string>,
 		options?: SpanOptions,
 	): OtelSpan {
-		return (
-			this._bufferCall('startWithHeaders', [
-				spanName,
-				headers,
-				options,
-			]) || noOpSpan
-		)
+		const response = this._bufferCall('startWithHeaders', [
+			spanName,
+			headers,
+			options,
+		])
+		return this._isLoaded
+			? response
+			: noOpSpan.setAttribute('method', 'startWithHeaders')
 	}
 
-	startSpan(spanName: string, options?: SpanOptions): OtelSpan {
-		return this._bufferCall('startSpan', [spanName, options]) || noOpSpan
+	startSpan(
+		spanName: string,
+		options?: SpanOptions,
+		ctx?: Context,
+	): OtelSpan {
+		const response = this._bufferCall('startSpan', [spanName, options, ctx])
+		return this._isLoaded
+			? response
+			: noOpSpan.setAttribute('method', 'startSpan')
 	}
 
 	startActiveSpan<T>(
 		spanName: string,
 		fn: (span: OtelSpan) => T,
 		options?: SpanOptions,
+		ctx?: Context,
 	): T {
-		return (
-			this._bufferCall('startActiveSpan', [spanName, fn, options]) ||
-			fn(noOpSpan)
-		)
+		const response = this._bufferCall('startActiveSpan', [
+			spanName,
+			fn,
+			options,
+			ctx,
+		])
+
+		return this._isLoaded
+			? response
+			: fn(noOpSpan.setAttribute('method', 'startActiveSpan'))
+	}
+
+	getContextFromSpan(span: OtelSpan): Context {
+		const response = this._bufferCall('getContextFromSpan', [span])
+		return this._isLoaded ? response : context.active()
 	}
 
 	getSessionInfo(): any {
-		return this._bufferCall('getSessionInfo', []) || {}
+		const response = this._bufferCall('getSessionInfo', [])
+		return this._isLoaded ? response : {}
 	}
 
 	stop(): Promise<void> {
-		return this._bufferCall('stop', []) || Promise.resolve()
+		const response = this._bufferCall('stop', [])
+		return this._isLoaded ? response : Promise.resolve()
 	}
 
 	isInitialized(): boolean {
-		return this._bufferCall('getIsInitialized', []) || false
+		const response = this._bufferCall('getIsInitialized', [])
+		return this._isLoaded ? response : false
 	}
 
 	_init(client: ObservabilityClient): void {

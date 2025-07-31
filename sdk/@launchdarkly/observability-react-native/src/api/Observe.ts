@@ -1,4 +1,9 @@
-import { Attributes, Span as OtelSpan, SpanOptions } from '@opentelemetry/api'
+import {
+	Attributes,
+	Context,
+	Span as OtelSpan,
+	SpanOptions,
+} from '@opentelemetry/api'
 import { Metric } from './Metric'
 import { RequestContext } from './RequestContext'
 import { SessionInfo } from '../client/SessionManager'
@@ -96,7 +101,7 @@ export interface Observe {
 	 * @param spanName The span name
 	 * @param options Optional span options
 	 */
-	startSpan(spanName: string, options?: SpanOptions): OtelSpan
+	startSpan(spanName: string, options?: SpanOptions, ctx?: Context): OtelSpan
 
 	/**
 	 * Start a new active span and run a callback function within its context.
@@ -108,7 +113,14 @@ export interface Observe {
 		spanName: string,
 		fn: (span: OtelSpan) => T,
 		options?: SpanOptions,
+		ctx?: Context,
 	): T
+
+	/**
+	 * Get the context from a span.
+	 * @param span The span to get the context from
+	 */
+	getContextFromSpan(span: OtelSpan): Context
 
 	/**
 	 * Get the current session information.
