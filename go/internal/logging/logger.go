@@ -9,6 +9,7 @@ import (
 type Logger interface {
 	Error(v ...interface{})
 	Errorf(format string, v ...interface{})
+	Infof(format string, v ...interface{})
 }
 
 //nolint:gochecknoglobals
@@ -18,6 +19,7 @@ type noopLogger struct{}
 
 func (d noopLogger) Error(_ ...interface{})            {}
 func (d noopLogger) Errorf(_ string, _ ...interface{}) {}
+func (d noopLogger) Infof(_ string, _ ...interface{})  {}
 
 // ConsoleLogger is a logger that logs to the console.
 // This is intended for use in debugging the plugin itself.
@@ -25,12 +27,17 @@ type ConsoleLogger struct{}
 
 // Error logs a message to the console.
 func (c ConsoleLogger) Error(v ...interface{}) {
-	fmt.Println(v...)
+	fmt.Printf("ERROR: %v\n", v...)
 }
 
 // Errorf logs a formatted message to the console.
 func (c ConsoleLogger) Errorf(format string, v ...interface{}) {
-	fmt.Println(fmt.Sprintf(format, v...))
+	fmt.Printf("ERROR: %s\n", fmt.Sprintf(format, v...))
+}
+
+// Infof logs a formatted message to the console.
+func (c ConsoleLogger) Infof(format string, v ...interface{}) {
+	fmt.Printf("INFO: %s\n", fmt.Sprintf(format, v...))
 }
 
 // ClearLogger clears the logger returning to a no-op logger.
