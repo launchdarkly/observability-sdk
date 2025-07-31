@@ -1,8 +1,8 @@
 schema: ../../backend/public-graph/graph/schema.graphqls
 operations:
-- internal/gql/operations.graphql
+    - internal/gql/operations.graphql
 generated: internal/gql/generated.go
 
 bindings:
-  Any:
-    type: interface{}
+    Any:
+        type: interface{}
