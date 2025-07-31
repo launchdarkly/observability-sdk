@@ -36,8 +36,8 @@ class Observability(
             resourceBuilder.put("launchdarkly.application.version", it)
         }
 
-        metadata?.sdkMetadata?.name.let { sdkName ->
-            metadata?.sdkMetadata?.version.let { sdkVersion ->
+        metadata?.sdkMetadata?.name?.let { sdkName ->
+            metadata.sdkMetadata?.version?.let { sdkVersion ->
                 resourceBuilder.put("launchdarkly.sdk.version", "$sdkName/$sdkVersion")
             }
         }
