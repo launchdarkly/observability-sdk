@@ -5,7 +5,13 @@
 package ldobserve
 
 import (
+	"context"
+	"net/http"
+
+	"github.com/Khan/genqlient/graphql"
+
 	"github.com/launchdarkly/observability-sdk/go/attributes"
+	"github.com/launchdarkly/observability-sdk/go/internal/gql"
 	"github.com/launchdarkly/observability-sdk/go/internal/logging"
 	"github.com/launchdarkly/observability-sdk/go/internal/metadata"
 
@@ -64,6 +70,17 @@ func (a *allSampler) ShouldSample(parameters trace.SamplingParameters) trace.Sam
 	}
 }
 
+func (p ObservabilityPlugin) getSamplingConfig(projectId string) (*gql.GetSamplingConfigResponse, error) {
+	var ctx context.Context
+	if p.config.context != nil {
+		ctx = p.config.context
+	} else {
+		ctx = context.Background()
+	}
+	client := graphql.NewClient(p.config.backendURL, http.DefaultClient)
+	return gql.GetSamplingConfig(ctx, client, projectId)
+}
+
 // Register registers the observability plugin with the LaunchDarkly client.
 func (p ObservabilityPlugin) Register(client interfaces.LDClientInterface, ldmd ldplugins.EnvironmentMetadata) {
 	attributes := []attribute.KeyValue{
@@ -96,6 +113,15 @@ func (p ObservabilityPlugin) Register(client interfaces.LDClientInterface, ldmd 
 			logging.GetLogger().Errorf("failed to start otel: %v", err)
 		}
 	}
+	go func() {
+		cfg, err := p.getSamplingConfig(ldmd.SdkKey)
+		if err != nil {
+			logging.GetLogger().Errorf("failed to get sampling config: %v", err)
+		}
+		logging.GetLogger().Infof("got sampling config: %v", cfg)
+		//nolint:godox
+		// TODO: Use the sampling config.
+	}()
 	if p.config.context != nil {
 		go func() {
 			<-p.config.context.Done()
