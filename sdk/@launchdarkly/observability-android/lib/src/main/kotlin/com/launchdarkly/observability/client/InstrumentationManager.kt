@@ -2,10 +2,12 @@ package com.launchdarkly.observability.client
 
 import android.app.Application
 import com.launchdarkly.observability.interfaces.Metric
-import com.launchdarkly.sdk.android.LDClient
 import io.opentelemetry.android.OpenTelemetryRum
 import io.opentelemetry.api.common.Attributes
+import io.opentelemetry.api.logs.Logger
+import io.opentelemetry.api.metrics.Meter
 import io.opentelemetry.api.trace.Span
+import io.opentelemetry.api.trace.Tracer
 import io.opentelemetry.context.Context
 import io.opentelemetry.exporter.otlp.http.logs.OtlpHttpLogRecordExporter
 import io.opentelemetry.exporter.otlp.http.metrics.OtlpHttpMetricExporter
@@ -33,22 +35,14 @@ private const val HEADER_LD_PROJECT = "X-LaunchDarkly-Project"
 class InstrumentationManager(
     private val application: Application,
     private val sdkKey: String,
-    private val client: LDClient,
     private val resources: Resource,
 ) {
     private val otelRUM: OpenTelemetryRum
-//    private var meterProvider: SdkMeterProvider
-//    private var meter: Meter
-//    private var loggerProvider: SdkLoggerProvider
-//    private var logger: Logger
-//    private var tracerProvider: SdkTracerProvider
-//    private var tracer: Tracer
+    private var otelMeter: Meter
+    private var otelLogger: Logger
+    private var otelTracer: Tracer
 
     init {
-//        meterProvider = createMetricsProvider()
-//        loggerProvider = createLoggerProvider()
-//        tracerProvider = createTracerProvider()
-
 
         otelRUM = OpenTelemetryRum.builder(application)
             .addLoggerProviderCustomizer { sdkLoggerProviderBuilder, application ->
@@ -57,7 +51,7 @@ class InstrumentationManager(
                     .addHeader(HEADER_LD_PROJECT, sdkKey) // TODO: check if this header is necessary
                     .build()
 
-                // TODO: are these configuration values supposed to be passed in?
+                // TODO: support configuring these options via parameters
                 val processor = BatchLogRecordProcessor.builder(logExporter)
                     .setMaxQueueSize(100)
                     .setScheduleDelay(500, TimeUnit.MILLISECONDS)
@@ -103,54 +97,52 @@ class InstrumentationManager(
                     .registerMetricReader(metricReader)
             }
             .build()
+
+        otelMeter = otelRUM.openTelemetry.meterProvider.get(INSTRUMENTATION_SCOPE_NAME)
+        otelLogger = otelRUM.openTelemetry.logsBridge.get(INSTRUMENTATION_SCOPE_NAME)
+        otelTracer = otelRUM.openTelemetry.tracerProvider.get(INSTRUMENTATION_SCOPE_NAME)
+        otelRUM.rumSessionId
     }
 
 
     fun recordMetric(metric: Metric) {
-        // TODO: should we hold a reference to the meter?
-        otelRUM.openTelemetry.meterProvider.get(INSTRUMENTATION_SCOPE_NAME).gaugeBuilder(metric.name).build()
+        otelMeter.gaugeBuilder(metric.name).build()
             .set(metric.value, metric.attributes)
     }
 
     fun recordCount(metric: Metric) {
-        // TODO: should we hold a reference to the meter?
-        // TODO: how to handle long and double casting?
-        otelRUM.openTelemetry.meterProvider.get(INSTRUMENTATION_SCOPE_NAME).counterBuilder(metric.name).build()
+        // TODO: handle double casting to long better
+        otelMeter.counterBuilder(metric.name).build()
             .add(metric.value.toLong(), metric.attributes)
     }
 
     fun recordIncr(metric: Metric) {
-        // TODO: should we hold a reference to the meter?
-        otelRUM.openTelemetry.meterProvider.get(INSTRUMENTATION_SCOPE_NAME).counterBuilder(metric.name).build()
+        otelMeter.counterBuilder(metric.name).build()
             .add(1, metric.attributes)
     }
 
     fun recordHistogram(metric: Metric) {
-        // TODO: should we hold a reference to the meter?
-        otelRUM.openTelemetry.meterProvider.get(INSTRUMENTATION_SCOPE_NAME).histogramBuilder(metric.name).build()
+        otelMeter.histogramBuilder(metric.name).build()
             .record(metric.value, metric.attributes)
     }
 
     fun recordUpDownCounter(metric: Metric) {
-        // TODO: should we hold a reference to the meter?
-        otelRUM.openTelemetry.meterProvider.get(INSTRUMENTATION_SCOPE_NAME).upDownCounterBuilder(metric.name)
+        otelMeter.upDownCounterBuilder(metric.name)
             .build().add(metric.value.toLong(), metric.attributes)
     }
 
     fun recordLog(message: String, level: String, attributes: Attributes) {
-        otelRUM.openTelemetry.logsBridge.get(INSTRUMENTATION_SCOPE_NAME).logRecordBuilder()
+        otelLogger.logRecordBuilder()
             .setBody(message)
             .setTimestamp(System.currentTimeMillis(), TimeUnit.MILLISECONDS)
-            .setAttribute("severityText", level)
-            // TODO: add highlight.session_id when sessions are supported
+            .setSeverityText(level)
             .setAllAttributes(attributes)
             .emit()
     }
 
     // TODO: add otel span optional param that will take precedence over current span and/or created span
     fun recordError(error: Error, attributes: Attributes) {
-        // TODO: add highlight.session_id when sessions are supported
-        val span = otelRUM.openTelemetry.tracerProvider.get(INSTRUMENTATION_SCOPE_NAME)
+        val span = otelTracer
             .spanBuilder("highlight.error")
             .setParent(
                 Context.current().with(Span.current())
@@ -169,7 +161,7 @@ class InstrumentationManager(
     }
 
     fun startSpan(name: String, attributes: Attributes): Span {
-        return otelRUM.openTelemetry.tracerProvider.get(INSTRUMENTATION_SCOPE_NAME).spanBuilder(name)
+        return otelTracer.spanBuilder(name)
             .setParent(Context.current().with(Span.current()))
             .setAllAttributes(attributes)
             .startSpan()

@@ -42,7 +42,7 @@ class Observability(
             }
         }
 
-        val observabilityClient = ObservabilityClient(application, sdkKey, client, resourceBuilder.build())
+        val observabilityClient = ObservabilityClient(application, sdkKey, resourceBuilder.build())
         LDObserve.init(observabilityClient)
     }
 
