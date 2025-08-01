@@ -1,4 +1,4 @@
-.PHONY: help install lint test build clean format
+.PHONY: help install lint test build clean format codegen
 
 # Default target
 help:
@@ -23,6 +23,7 @@ lint:
 # Format code with gofmt
 format:
 	gofmt -s -w .
+	golangci-lint run --fix
 
 # Run tests with coverage
 test:
@@ -33,6 +34,9 @@ test:
 # Build the package
 build:
 	go build -v ./...
+
+codegen:
+	go run github.com/Khan/genqlient
 
 # Clean build artifacts
 clean:
