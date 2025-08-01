@@ -150,6 +150,7 @@ class InstrumentationManager(
             .startSpan()
 
         val attrBuilder = Attributes.builder()
+        attrBuilder.putAll(attributes)
 
         // TODO: should exception.cause be added here?  At least one other SDK is doing this
 //        error.cause?.let {
