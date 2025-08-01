@@ -1,6 +1,7 @@
 package com.launchdarkly.observability.interfaces
 
 import io.opentelemetry.api.common.Attributes
+import io.opentelemetry.api.trace.Span
 
 /**
  * Interface for observability operations in the LaunchDarkly Android SDK.
@@ -52,4 +53,11 @@ interface Observe {
      * @param attributes The attributes to record with the log message
      */
     fun recordLog(message: String, level: String, attributes: Attributes)
+
+    /**
+     * Start a span.
+     * @param name The name of the span
+     * @param attributes The attributes to record with the span
+     */
+    fun startSpan(name: String, attributes: Attributes): Span
 }

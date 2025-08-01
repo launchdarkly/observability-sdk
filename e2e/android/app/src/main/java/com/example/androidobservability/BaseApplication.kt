@@ -28,7 +28,7 @@ class BaseApplication : Application() {
         val ldConfig = LDConfig.Builder(LDConfig.Builder.AutoEnvAttributes.Enabled)
             .mobileKey(LAUNCHDARKLY_MOBILE_KEY)
             .plugins(Components.plugins().setPlugins(
-                Collections.singletonList<Plugin>(Observability())
+                Collections.singletonList<Plugin>(Observability(this@BaseApplication))
             ))
             .build()
 

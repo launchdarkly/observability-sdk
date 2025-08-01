@@ -6,6 +6,13 @@ plugins {
     alias(libs.plugins.kotlin.android)
 }
 
+allprojects {
+    repositories {
+        google() // Google's Maven repository
+        mavenCentral() // Maven Central repository
+    }
+}
+
 dependencies {
     implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.9.0")
 
@@ -16,6 +23,11 @@ dependencies {
     implementation("io.opentelemetry:opentelemetry-exporter-logging-otlp:1.51.0")
     implementation("io.opentelemetry:opentelemetry-sdk-metrics:1.51.0")
     implementation("io.opentelemetry:opentelemetry-sdk-logs:1.51.0")
+
+    // Android instrumentation
+    implementation("io.opentelemetry.android:core:0.10.0-alpha")
+    implementation("io.opentelemetry.android:instrumentation-activity:0.10.0-alpha")
+    implementation("io.opentelemetry.android:session:0.10.0-alpha")
 
     // Use JUnit Jupiter for testing.
     testImplementation("org.junit.jupiter:junit-jupiter")
