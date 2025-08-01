@@ -67,18 +67,16 @@ class EvalTracingHook
         attrBuilder.put(SEMCONV_FEATURE_FLAG_PROVIDER_NAME, PROVIDER_NAME)
 
         evaluationDetail.reason?.isInExperiment?.let {
-            attrBuilder.put(SEMCONV_FEATURE_FLAG_RESULT_REASON_IN_EXPERIMENT, it)
+            attrBuilder.put(CUSTOM_FEATURE_FLAG_RESULT_REASON_IN_EXPERIMENT, it)
         }
 
-        attrBuilder.put(CUSTOM_CONTEXT_ID, seriesContext.context.fullyQualifiedKey)
+        attrBuilder.put(SEMCONV_FEATURE_FLAG_CONTEXT_ID, seriesContext.context.fullyQualifiedKey)
         if (withValue) {
             attrBuilder.put(SEMCONV_FEATURE_FLAG_RESULT_VALUE, evaluationDetail.value.toJsonString())
         }
 
-        // TODO: O11Y-375: Prepending Index is a workaround.  For some reason variation index is showing up empty
-        // server side regardless of using int, long, double, or string for numeric
         if (evaluationDetail.variationIndex != EvaluationDetail.NO_VARIATION) {
-            attrBuilder.put(SEMCONV_FEATURE_FLAG_RESULT_VARIATION_INDEX, "Index: " + evaluationDetail.variationIndex.toLong())
+            attrBuilder.put(CUSTOM_FEATURE_FLAG_RESULT_VARIATION_INDEX, evaluationDetail.variationIndex.toLong())
         }
 
         // Here we make best effort the log the event and let the library handle the "no current span" case; which at the
@@ -93,11 +91,11 @@ class EvalTracingHook
         const val INSTRUMENTATION_NAME: String = "com.launchdarkly.observability"
         const val DATA_KEY_SPAN: String = "variationSpan"
         const val EVENT_NAME: String = "feature_flag"
+        const val SEMCONV_FEATURE_FLAG_CONTEXT_ID: String = "feature_flag.context.id"
         const val SEMCONV_FEATURE_FLAG_PROVIDER_NAME: String = "feature_flag.provider.name"
         const val SEMCONV_FEATURE_FLAG_KEY: String = "feature_flag.key"
         const val SEMCONV_FEATURE_FLAG_RESULT_VALUE: String = "feature_flag.result.value"
-        const val SEMCONV_FEATURE_FLAG_RESULT_VARIATION_INDEX: String = "feature_flag.result.variationIndex"
-        const val SEMCONV_FEATURE_FLAG_RESULT_REASON_IN_EXPERIMENT: String = "feature_flag.result.reason.inExperiment"
-        const val CUSTOM_CONTEXT_ID: String = "feature_flag.context.id"
+        const val CUSTOM_FEATURE_FLAG_RESULT_VARIATION_INDEX: String = "feature_flag.result.variationIndex"
+        const val CUSTOM_FEATURE_FLAG_RESULT_REASON_IN_EXPERIMENT: String = "feature_flag.result.reason.inExperiment"
     }
 }

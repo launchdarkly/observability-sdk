@@ -48,10 +48,7 @@ class Observability(
 
     override fun getHooks(metadata: EnvironmentMetadata?): MutableList<Hook> {
         return Collections.singletonList(
-            EvalTracingHook(
-                true,
-                true
-            )
+            EvalTracingHook(true, true)
         )
     }
 }
