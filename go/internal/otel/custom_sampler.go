@@ -39,6 +39,7 @@ type SamplingResult struct {
 	Attributes []attribute.KeyValue
 }
 
+// LogSamplingResult represents the result of sampling a log record
 type LogSamplingResult struct {
 	// Sample indicates whether the span/log should be sampled
 	Sample bool

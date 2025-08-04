@@ -3,7 +3,6 @@ package otel
 import (
 	"context"
 
-	"go.opentelemetry.io/otel/sdk/log"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
 )
 
@@ -12,7 +11,7 @@ type logExporter struct {
 	sampler ExportSampler
 }
 
-func newLogExporter(exporter log.Exporter, sampler ExportSampler) *logExporter {
+func newLogExporter(exporter sdklog.Exporter, sampler ExportSampler) *logExporter {
 	return &logExporter{Exporter: exporter, sampler: sampler}
 }
 

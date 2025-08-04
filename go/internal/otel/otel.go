@@ -104,6 +104,8 @@ var config atomic.Pointer[Config]
 
 // The custom sampler is created once at initialization and manages thread
 // safety internally. So we don't need any synchronization for this object.
+//
+//nolint:gochecknoglobals
 var customSampler *CustomSampler = NewCustomSampler(DefaultSampler)
 
 // SetSamplingConfig sets the sampling configuration for the custom sampler.
