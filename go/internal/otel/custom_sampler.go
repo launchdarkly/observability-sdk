@@ -393,6 +393,21 @@ func matchAttributeValue(v attribute.Value, matchValue interface{}) bool {
 			}
 		}
 		return true
+	case attribute.STRINGSLICE:
+		asStringSlice, ok := matchValue.([]string)
+		if !ok {
+			return false
+		}
+		lenMatch := len(asStringSlice) == len(v.AsStringSlice())
+		if !lenMatch {
+			return false
+		}
+		for i := range asStringSlice {
+			if asStringSlice[i] != v.AsStringSlice()[i] {
+				return false
+			}
+		}
+		return true
 	default:
 		return false
 	}
