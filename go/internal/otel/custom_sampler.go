@@ -186,6 +186,18 @@ func getExitingCachedRegex(cs *CustomSampler, pattern string) *regexp.Regexp {
 	return nil
 }
 
+type number interface {
+	int64 | float64
+}
+
+const epsilon = 0.0000000000000001
+
+func compareNumeric[N number](matchValue float64, b N) bool {
+	// Comparisons for integers larger than 2^53 will be imprecise.
+	diff := float64(b) - matchValue
+	return diff < epsilon && diff > -epsilon
+}
+
 type matchable interface {
 	attribute.Value | attribute.Key | string | log.Value
 }
@@ -261,17 +273,23 @@ func matchLogValue(v log.Value, matchValue interface{}, cs *CustomSampler) bool 
 		}
 		return asBool == v.AsBool()
 	case log.KindInt64:
-		asInt64, ok := matchValue.(int64)
-		if !ok {
-			return false
-		}
-		return asInt64 == v.AsInt64()
-	case log.KindFloat64:
+		// Only float64 supported from the config.
 		asFloat64, ok := matchValue.(float64)
+
 		if !ok {
 			return false
 		}
-		return asFloat64 == v.AsFloat64()
+		// JSON match value will be a float64.
+		return compareNumeric(asFloat64, v.AsInt64())
+	case log.KindFloat64:
+		// Only float64 supported from the config.
+		asFloat64, ok := matchValue.(float64)
+
+		if !ok {
+			return false
+		}
+		// JSON match value will be a float64.
+		return compareNumeric(asFloat64, v.AsFloat64())
 	case log.KindString:
 		asString, ok := matchValue.(string)
 		if !ok {
@@ -307,17 +325,23 @@ func matchAttributeValue(v attribute.Value, matchValue interface{}) bool {
 		}
 		return asBool == v.AsBool()
 	case attribute.INT64:
-		asInt64, ok := matchValue.(int64)
-		if !ok {
-			return false
-		}
-		return asInt64 == v.AsInt64()
-	case attribute.FLOAT64:
+		// Only float64 supported from the config.
 		asFloat64, ok := matchValue.(float64)
+
 		if !ok {
 			return false
 		}
-		return asFloat64 == v.AsFloat64()
+		// JSON match value will be a float64.
+		return compareNumeric(asFloat64, v.AsFloat64())
+	case attribute.FLOAT64:
+		// Only float64 supported from the config.
+		asFloat64, ok := matchValue.(float64)
+
+		if !ok {
+			return false
+		}
+		// JSON match value will be a float64.
+		return compareNumeric(asFloat64, v.AsFloat64())
 	case attribute.STRING:
 		asString, ok := matchValue.(string)
 		if !ok {
