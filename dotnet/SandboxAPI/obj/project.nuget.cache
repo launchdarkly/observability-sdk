@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "6TChs58D0lw=",
+  "dgSpecHash": "zf3BtFDHm2E=",
   "success": true,
   "projectFilePath": "/Users/robertpakko/Documents/GitHub/observability-sdk/dotnet/SandboxAPI/SandboxAPI.csproj",
   "expectedPackageFiles": [
@@ -10,6 +10,7 @@
     "/Users/robertpakko/.nuget/packages/launchdarkly.internalsdk/3.5.3/launchdarkly.internalsdk.3.5.3.nupkg.sha512",
     "/Users/robertpakko/.nuget/packages/launchdarkly.logging/2.0.0/launchdarkly.logging.2.0.0.nupkg.sha512",
     "/Users/robertpakko/.nuget/packages/launchdarkly.serversdk/8.10.0/launchdarkly.serversdk.8.10.0.nupkg.sha512",
+    "/Users/robertpakko/.nuget/packages/launchdarkly.serversdk.telemetry/1.2.0/launchdarkly.serversdk.telemetry.1.2.0.nupkg.sha512",
     "/Users/robertpakko/.nuget/packages/microsoft.extensions.apidescription.server/9.0.0/microsoft.extensions.apidescription.server.9.0.0.nupkg.sha512",
     "/Users/robertpakko/.nuget/packages/microsoft.extensions.configuration/9.0.0/microsoft.extensions.configuration.9.0.0.nupkg.sha512",
     "/Users/robertpakko/.nuget/packages/microsoft.extensions.configuration.abstractions/9.0.0/microsoft.extensions.configuration.abstractions.9.0.0.nupkg.sha512",

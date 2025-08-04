@@ -9,6 +9,7 @@ using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
+using LaunchDarkly.Sdk.Server.Telemetry;
 
 // DOTNET Setup
 var builder = WebApplication.CreateBuilder(args);
@@ -78,7 +79,10 @@ if (string.IsNullOrEmpty(SdkKey))
     Environment.Exit(1);
 }
 
-var ldConfig = Configuration.Default(SdkKey);
+var ldConfig = Configuration.Builder(SdkKey)
+    .Hooks(Components.Hooks()
+        .Add(TracingHook.Default())
+    ).Build();
 
 var client = new LdClient(ldConfig);
 

@@ -96,6 +96,22 @@
           }
         }
       },
+      "LaunchDarkly.ServerSdk.Telemetry/1.2.0": {
+        "type": "package",
+        "dependencies": {
+          "LaunchDarkly.ServerSdk": "[8.7.0, 9.0.0)"
+        },
+        "compile": {
+          "lib/net8.0/LaunchDarkly.ServerSdk.Telemetry.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net8.0/LaunchDarkly.ServerSdk.Telemetry.dll": {
+            "related": ".xml"
+          }
+        }
+      },
       "Microsoft.Extensions.ApiDescription.Server/9.0.0": {
         "type": "package",
         "build": {
@@ -706,6 +722,23 @@
         "lib/net8.0/LaunchDarkly.ServerSdk.xml",
         "lib/netstandard2.0/LaunchDarkly.ServerSdk.dll",
         "lib/netstandard2.0/LaunchDarkly.ServerSdk.xml"
+      ]
+    },
+    "LaunchDarkly.ServerSdk.Telemetry/1.2.0": {
+      "sha512": "47yG9xoWfSy2pxROPx9a3gjnpXKjEmgMGhSBcoz2xwFNVReLx8d/iVvdRJGR5tVL9FtDnc6G27BsfRVZACbrFw==",
+      "type": "package",
+      "path": "launchdarkly.serversdk.telemetry/1.2.0",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "launchdarkly.serversdk.telemetry.1.2.0.nupkg.sha512",
+        "launchdarkly.serversdk.telemetry.nuspec",
+        "lib/net462/LaunchDarkly.ServerSdk.Telemetry.dll",
+        "lib/net462/LaunchDarkly.ServerSdk.Telemetry.xml",
+        "lib/net8.0/LaunchDarkly.ServerSdk.Telemetry.dll",
+        "lib/net8.0/LaunchDarkly.ServerSdk.Telemetry.xml",
+        "lib/netstandard2.0/LaunchDarkly.ServerSdk.Telemetry.dll",
+        "lib/netstandard2.0/LaunchDarkly.ServerSdk.Telemetry.xml"
       ]
     },
     "Microsoft.Extensions.ApiDescription.Server/9.0.0": {
@@ -1764,6 +1797,7 @@
   "projectFileDependencyGroups": {
     "net9.0": [
       "LaunchDarkly.ServerSdk >= 8.10.0",
+      "LaunchDarkly.ServerSdk.Telemetry >= 1.2.0",
       "OpenTelemetry.Exporter.Console >= 1.12.0",
       "OpenTelemetry.Exporter.OpenTelemetryProtocol >= 1.12.0",
       "OpenTelemetry.Extensions.Hosting >= 1.12.0",
@@ -1817,6 +1851,10 @@
           "LaunchDarkly.ServerSdk": {
             "target": "Package",
             "version": "[8.10.0, )"
+          },
+          "LaunchDarkly.ServerSdk.Telemetry": {
+            "target": "Package",
+            "version": "[1.2.0, )"
           },
           "OpenTelemetry.Exporter.Console": {
             "target": "Package",

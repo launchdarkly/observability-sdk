@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <PackageReference Include="LaunchDarkly.ServerSdk" Version="8.10.0" />
+    <PackageReference Include="LaunchDarkly.ServerSdk.Telemetry" Version="1.2.0" />
     <PackageReference Include="OpenTelemetry.Exporter.Console" Version="1.12.0" />
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.12.0" />
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.12.0" />

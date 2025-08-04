@@ -48,6 +48,10 @@
               "target": "Package",
               "version": "[8.10.0, )"
             },
+            "LaunchDarkly.ServerSdk.Telemetry": {
+              "target": "Package",
+              "version": "[1.2.0, )"
+            },
             "OpenTelemetry.Exporter.Console": {
               "target": "Package",
               "version": "[1.12.0, )"
