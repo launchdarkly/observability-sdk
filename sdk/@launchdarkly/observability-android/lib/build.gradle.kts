@@ -1,6 +1,8 @@
 plugins {
     // Apply the Android library plugin
     id("com.android.library")
+    id("maven-publish")
+    id("signing")
 
     // Apply the Kotlin Android plugin for Android-compatible Kotlin support.
     alias(libs.plugins.kotlin.android)

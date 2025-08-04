@@ -30,7 +30,7 @@ outputs:
 runs:
     using: 'composite'
     steps:
-        - name: Checkoutf
+        - name: Checkout
           uses: actions/checkout@v4
           with:
             ref: ta/O11Y-388/setup-build-publish-actions
@@ -43,12 +43,6 @@ runs:
 
         - name: Setup Android SDK
           uses: android-actions/setup-android@v3
-
-        - name: Build
-          shell: bash
-          working-directory: ${{ inputs.workspace-path }}
-          id: build
-          run: ./gradlew build jar
 
         - uses: launchdarkly/gh-actions/actions/release-secrets@release-secrets-v1.1.0
           name: Get secrets
