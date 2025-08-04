@@ -1,0 +1,14 @@
+name: Local Testing
+on:
+  workflow_dispatch:
+    branches: ['ta/O11Y-388/setup-build-publish-actions']
+    paths-ignore:
+      - '**.md' # Do not need to run CI for markdown changes.
+
+jobs:
+  ci-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/publish-android-sdk/action.yml

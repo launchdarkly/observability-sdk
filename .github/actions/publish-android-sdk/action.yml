@@ -1,0 +1,66 @@
+name: 'Publish Android SDK'
+description: 'Build and publish Android SDK packages to Maven Central'
+
+inputs:
+    workspace-path:
+        description: 'Path to the Android SDK workspace'
+        required: true
+        default: 'sdk/@launchdarkly/observability-android'
+    java_version:
+      description: 'The Java version to use.'
+      required: false
+      default: '17'
+    java_distribution:
+      description: 'The Java distribution to use.'
+      required: false
+      default: 'temurin'
+    aws-role-arn:
+        description: 'AWS role ARN for accessing secrets'
+        required: true
+
+outputs:
+    package-hashes:
+        description: 'Base64 encoded SHA256 hashes of published packages'
+        value: ${{ steps.package-hashes.outputs.package-hashes }}
+
+runs:
+    using: 'composite'
+    steps:
+        - name: Checkout
+          uses: actions/checkout@v4
+
+        - name: Setup Java
+          uses: actions/setup-java@v4
+          with:
+            distribution: ${{ inputs.java_distribution }}
+            java-version: ${{ inputs.java_version }}
+
+        - name: Setup Android SDK
+          uses: android-actions/setup-android@v3
+
+        - name: Build
+          shell: bash
+          working-directory: ${{ inputs.workspace-path }}
+          id: build
+          run: ./gradlew build jar
+
+        - uses: launchdarkly/gh-actions/actions/release-secrets@release-secrets-v1.1.0
+          name: Get secrets
+          with:
+            aws_assume_role: ${{ inputs.aws-role-arn }}
+            ssm_parameter_pairs: '/production/common/releasing/sonatype/central/username = SONATYPE_USER_NAME,
+            /production/common/releasing/sonatype/central/password = SONATYPE_PASSWORD,
+            /production/common/releasing/android_code_signing/private_key_id = SIGNING_KEY_ID,
+            /production/common/releasing/android_code_signing/private_key_passphrase = SIGNING_KEY_PASSPHRASE'
+            s3_path_pairs: 'launchdarkly-releaser/android/code-signing-keyring.gpg = code-signing-keyring.gpg'
+
+        - name: Publish
+          uses: ./.github/actions/publish
+          with:
+            dry_run: ${{ inputs.dry_run }}
+            prerelease: ${{ inputs.prerelease }}
+            signing_key_id: ${{ env.SIGNING_KEY_ID }}
+            signing_key_passphrase: ${{ env.SIGNING_KEY_PASSPHRASE }}
+            code_signing_keyring: ${{ github.workspace }}/code-signing-keyring.gpg
+            sonatype_username: ${{ env.SONATYPE_USER_NAME }}
+            sonatype_password: ${{ env.SONATYPE_PASSWORD }}
