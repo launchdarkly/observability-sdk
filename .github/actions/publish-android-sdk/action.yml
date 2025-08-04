@@ -7,13 +7,13 @@ inputs:
         required: true
         default: 'sdk/@launchdarkly/observability-android'
     java_version:
-      description: 'The Java version to use.'
-      required: false
-      default: '17'
+        description: 'The Java version to use.'
+        required: false
+        default: '17'
     java_distribution:
-      description: 'The Java distribution to use.'
-      required: false
-      default: 'temurin'
+        description: 'The Java distribution to use.'
+        required: false
+        default: 'temurin'
     aws-role-arn:
         description: 'AWS role ARN for accessing secrets'
         required: true
@@ -28,6 +28,8 @@ runs:
     steps:
         - name: Checkout
           uses: actions/checkout@v4
+          with:
+            ref: ta/O11Y-388/setup-build-publish-actions
 
         - name: Setup Java
           uses: actions/setup-java@v4
