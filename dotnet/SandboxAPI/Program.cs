@@ -1,6 +1,12 @@
 using Microsoft.OpenApi.Models;
 using LaunchDarkly.Sdk;
 using LaunchDarkly.Sdk.Server;
+using Microsoft.AspNetCore.Mvc;
+using System.Globalization;
+using OpenTelemetry.Logs;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 
 // DOTNET Setup
 var builder = WebApplication.CreateBuilder(args);
@@ -9,6 +15,26 @@ builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "Sandbox API", Description = "This is a sandbox API for dotnet SDK development", Version = "v1" });
 });
+
+// OpenTelemetry Setup
+const string serviceName = "sandbox-api";
+
+builder.Logging.AddOpenTelemetry(options =>
+{
+    options
+        .SetResourceBuilder(
+            ResourceBuilder.CreateDefault()
+                .AddService(serviceName))
+        .AddConsoleExporter();
+});
+builder.Services.AddOpenTelemetry()
+      .ConfigureResource(resource => resource.AddService(serviceName))
+      .WithTracing(tracing => tracing
+          .AddAspNetCoreInstrumentation()
+          .AddConsoleExporter())
+      .WithMetrics(metrics => metrics
+          .AddAspNetCoreInstrumentation()
+          .AddConsoleExporter());
 
 var app = builder.Build();
 
@@ -48,11 +74,30 @@ var context = Context.Builder("context-key-123abc")
     .Name("Robert Pakko")
     .Build();
 
+string HandleRollDice([FromServices]ILogger<Program> logger, string? player)
+{
+    var result = client.BoolVariation("sample-flag", context, false)
+        ? Random.Shared.Next(1, 21) // Roll a D20
+        : Random.Shared.Next(1, 7); // Roll a D6
+
+    if (string.IsNullOrEmpty(player))
+    {
+        logger.LogInformation("Anonymous player is rolling the dice: {result}", result);
+    }
+    else
+    {
+        logger.LogInformation("{player} is rolling the dice: {result}", player, result);
+    }
+
+    return result.ToString(CultureInfo.InvariantCulture);
+}
+
 // API Endpoints
 app.MapGet("/", () => "Hello World!");
 app.MapGet("/featureFlag", () => {
     var featureFlag = client.BoolVariation("sample-flag", context, false);
     return Results.Ok(featureFlag);
 });
+app.MapGet("/rolldice/{player?}", HandleRollDice);
 
 app.Run();
