@@ -112,10 +112,11 @@ func toMatchParts(value interface{}) matchParts {
 // CustomSampler is a custom sampler that uses sampling configuration to
 // determine if a span should be sampled
 type CustomSampler struct {
-	sampler    SamplerFunc
-	config     *gql.GetSamplingConfigSamplingSamplingConfig
-	regexCache map[string]*regexp.Regexp
-	mutex      sync.RWMutex
+	sampler     SamplerFunc
+	config      *gql.GetSamplingConfigSamplingSamplingConfig
+	regexCache  map[string]*regexp.Regexp
+	configMutex sync.RWMutex
+	regexMutex  sync.RWMutex
 }
 
 // NewCustomSampler creates a new CustomSampler with the given sampler function
@@ -131,15 +132,15 @@ func NewCustomSampler(sampler SamplerFunc) *CustomSampler {
 
 // SetConfig sets the sampling configuration
 func (cs *CustomSampler) SetConfig(config *gql.GetSamplingConfigSamplingSamplingConfig) {
-	cs.mutex.Lock()
-	defer cs.mutex.Unlock()
+	cs.configMutex.Lock()
+	defer cs.configMutex.Unlock()
 	cs.config = config
 }
 
 // IsSamplingEnabled returns true if sampling is enabled
 func (cs *CustomSampler) IsSamplingEnabled() bool {
-	cs.mutex.RLock()
-	defer cs.mutex.RUnlock()
+	cs.configMutex.RLock()
+	defer cs.configMutex.RUnlock()
 	if cs.config != nil && (len(cs.config.Spans) > 0 || len(cs.config.Logs) > 0) {
 		return true
 	}
@@ -148,7 +149,17 @@ func (cs *CustomSampler) IsSamplingEnabled() bool {
 
 // getCachedRegex gets a cached regex pattern
 func (cs *CustomSampler) getCachedRegex(pattern string) (*regexp.Regexp, error) {
-	// Will always be locked by the caller.
+	result := getExitingCachedRegex(cs, pattern)
+	if result != nil {
+		return result, nil
+	}
+
+	// There was not a cached regex, so we need to compile and cache it.
+	cs.regexMutex.Lock()
+	defer cs.regexMutex.Unlock()
+
+	// Between checking and here we had to release the lock, so we need to check
+	// again to see if someone else has already compiled and cached the regex.
 	if regex, exists := cs.regexCache[pattern]; exists {
 		return regex, nil
 	}
@@ -159,7 +170,20 @@ func (cs *CustomSampler) getCachedRegex(pattern string) (*regexp.Regexp, error) 
 	}
 
 	cs.regexCache[pattern] = compiled
+
 	return compiled, nil
+}
+
+func getExitingCachedRegex(cs *CustomSampler, pattern string) *regexp.Regexp {
+	cs.regexMutex.RLock()
+	defer cs.regexMutex.RUnlock()
+
+	// Will always be locked by the caller.
+	if regex, exists := cs.regexCache[pattern]; exists {
+		return regex
+	}
+
+	return nil
 }
 
 type matchable interface {
@@ -580,8 +604,8 @@ func (cs *CustomSampler) matchesLogConfig(
 
 // SampleSpan samples a span based on the sampling configuration
 func (cs *CustomSampler) SampleSpan(span ReadonlySpanSubset) SamplingResult {
-	cs.mutex.RLock()
-	defer cs.mutex.RUnlock()
+	cs.configMutex.RLock()
+	defer cs.configMutex.RUnlock()
 
 	if cs.config != nil && len(cs.config.Spans) > 0 {
 		for _, spanConfig := range cs.config.Spans {
@@ -602,8 +626,8 @@ func (cs *CustomSampler) SampleSpan(span ReadonlySpanSubset) SamplingResult {
 
 // SampleLog samples a log record based on the sampling configuration
 func (cs *CustomSampler) SampleLog(record sdklog.Record) LogSamplingResult {
-	cs.mutex.RLock()
-	defer cs.mutex.RUnlock()
+	cs.configMutex.RLock()
+	defer cs.configMutex.RUnlock()
 
 	if cs.config != nil && len(cs.config.Logs) > 0 {
 		for _, logConfig := range cs.config.Logs {
