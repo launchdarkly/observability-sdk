@@ -209,7 +209,6 @@ func createTracerProvider(
 	if err != nil {
 		return nil, fmt.Errorf("creating OTLP trace exporter: %w", err)
 	}
-	fmt.Println("Creating new trace exporter")
 	opts = append([]sdktrace.TracerProviderOption{
 		sdktrace.WithSampler(sampler),
 		sdktrace.WithBatcher(newTraceExporter(exporter, customSampler),
