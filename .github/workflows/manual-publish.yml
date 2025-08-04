@@ -133,7 +133,7 @@ jobs:
         runs-on: ubuntu-latest
         if: ${{ inputs.release_launchdarkly_android == true }}
         permissions:
-            id-token: write # Used for publishing secrets and documentation.
+            id-token: write
         steps:
             - name: Publish Android SDK
               id: publish
@@ -141,3 +141,4 @@ jobs:
               with:
                   workspace-path: sdk/@launchdarkly/observability-android
                   aws-role-arn: ${{ vars.AWS_ROLE_ARN }}
+                  dry-run: ${{ inputs.dry-run }}
