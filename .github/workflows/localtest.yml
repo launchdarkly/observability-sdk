@@ -7,10 +7,10 @@ on:
 
 jobs:
   ci-build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ta/O11Y-388/setup-build-publish-actions
-      - uses: ./.github/actions/publish-android-sdk/action.yml
+      - uses: ./.github/actions/publish-android-sdk
