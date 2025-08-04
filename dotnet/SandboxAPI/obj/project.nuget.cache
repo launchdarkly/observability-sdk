@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "17DA2slpG90=",
+  "dgSpecHash": "6TChs58D0lw=",
   "success": true,
   "projectFilePath": "/Users/robertpakko/Documents/GitHub/observability-sdk/dotnet/SandboxAPI/SandboxAPI.csproj",
   "expectedPackageFiles": [
@@ -30,6 +30,7 @@
     "/Users/robertpakko/.nuget/packages/opentelemetry.api/1.12.0/opentelemetry.api.1.12.0.nupkg.sha512",
     "/Users/robertpakko/.nuget/packages/opentelemetry.api.providerbuilderextensions/1.12.0/opentelemetry.api.providerbuilderextensions.1.12.0.nupkg.sha512",
     "/Users/robertpakko/.nuget/packages/opentelemetry.exporter.console/1.12.0/opentelemetry.exporter.console.1.12.0.nupkg.sha512",
+    "/Users/robertpakko/.nuget/packages/opentelemetry.exporter.opentelemetryprotocol/1.12.0/opentelemetry.exporter.opentelemetryprotocol.1.12.0.nupkg.sha512",
     "/Users/robertpakko/.nuget/packages/opentelemetry.extensions.hosting/1.12.0/opentelemetry.extensions.hosting.1.12.0.nupkg.sha512",
     "/Users/robertpakko/.nuget/packages/opentelemetry.instrumentation.aspnetcore/1.12.0/opentelemetry.instrumentation.aspnetcore.1.12.0.nupkg.sha512",
     "/Users/robertpakko/.nuget/packages/swashbuckle.aspnetcore/9.0.3/swashbuckle.aspnetcore.9.0.3.nupkg.sha512",
