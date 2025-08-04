@@ -2,6 +2,100 @@
   "version": 3,
   "targets": {
     "net9.0": {
+      "LaunchDarkly.Cache/1.0.2": {
+        "type": "package",
+        "compile": {
+          "lib/netstandard2.0/LaunchDarkly.Cache.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/netstandard2.0/LaunchDarkly.Cache.dll": {
+            "related": ".xml"
+          }
+        }
+      },
+      "LaunchDarkly.CommonSdk/7.1.0": {
+        "type": "package",
+        "dependencies": {
+          "LaunchDarkly.Logging": "2.0.0"
+        },
+        "compile": {
+          "lib/net8.0/LaunchDarkly.CommonSdk.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net8.0/LaunchDarkly.CommonSdk.dll": {
+            "related": ".xml"
+          }
+        }
+      },
+      "LaunchDarkly.EventSource/5.2.0": {
+        "type": "package",
+        "dependencies": {
+          "LaunchDarkly.Logging": "[2.0.0, 3.0.0)"
+        },
+        "compile": {
+          "lib/netstandard2.0/LaunchDarkly.EventSource.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/netstandard2.0/LaunchDarkly.EventSource.dll": {
+            "related": ".xml"
+          }
+        }
+      },
+      "LaunchDarkly.InternalSdk/3.5.3": {
+        "type": "package",
+        "dependencies": {
+          "LaunchDarkly.CommonSdk": "[7.1.0, 8.0.0)",
+          "LaunchDarkly.Logging": "[2.0.0, 3.0.0)"
+        },
+        "compile": {
+          "lib/net6.0/LaunchDarkly.InternalSdk.dll": {}
+        },
+        "runtime": {
+          "lib/net6.0/LaunchDarkly.InternalSdk.dll": {}
+        }
+      },
+      "LaunchDarkly.Logging/2.0.0": {
+        "type": "package",
+        "dependencies": {
+          "Microsoft.Extensions.Logging.Abstractions": "6.0.0"
+        },
+        "compile": {
+          "lib/netcoreapp3.1/LaunchDarkly.Logging.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/netcoreapp3.1/LaunchDarkly.Logging.dll": {
+            "related": ".xml"
+          }
+        }
+      },
+      "LaunchDarkly.ServerSdk/8.10.0": {
+        "type": "package",
+        "dependencies": {
+          "LaunchDarkly.Cache": "1.0.2",
+          "LaunchDarkly.CommonSdk": "7.1.0",
+          "LaunchDarkly.EventSource": "5.2.0",
+          "LaunchDarkly.InternalSdk": "3.5.3",
+          "LaunchDarkly.Logging": "2.0.0"
+        },
+        "compile": {
+          "lib/net8.0/LaunchDarkly.ServerSdk.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net8.0/LaunchDarkly.ServerSdk.dll": {
+            "related": ".xml"
+          }
+        }
+      },
       "Microsoft.Extensions.ApiDescription.Server/9.0.0": {
         "type": "package",
         "build": {
@@ -11,6 +105,22 @@
         "buildMultiTargeting": {
           "buildMultiTargeting/Microsoft.Extensions.ApiDescription.Server.props": {},
           "buildMultiTargeting/Microsoft.Extensions.ApiDescription.Server.targets": {}
+        }
+      },
+      "Microsoft.Extensions.Logging.Abstractions/6.0.0": {
+        "type": "package",
+        "compile": {
+          "lib/net6.0/Microsoft.Extensions.Logging.Abstractions.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net6.0/Microsoft.Extensions.Logging.Abstractions.dll": {
+            "related": ".xml"
+          }
+        },
+        "build": {
+          "buildTransitive/netcoreapp3.1/_._": {}
         }
       },
       "Microsoft.OpenApi/1.6.23": {
@@ -95,6 +205,103 @@
     }
   },
   "libraries": {
+    "LaunchDarkly.Cache/1.0.2": {
+      "sha512": "0bEnUVFVeW1TTDXb/bW6kS3FLQTLeGtw7Xh8yt6WNO56utVmtgcrMLvcnF6yeTn+N4FXrKfW09KkLNmK8YYQvw==",
+      "type": "package",
+      "path": "launchdarkly.cache/1.0.2",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "launchdarkly.cache.1.0.2.nupkg.sha512",
+        "launchdarkly.cache.nuspec",
+        "lib/net45/LaunchDarkly.Cache.dll",
+        "lib/netstandard1.4/LaunchDarkly.Cache.dll",
+        "lib/netstandard1.6/LaunchDarkly.Cache.dll",
+        "lib/netstandard2.0/LaunchDarkly.Cache.dll",
+        "lib/netstandard2.0/LaunchDarkly.Cache.xml"
+      ]
+    },
+    "LaunchDarkly.CommonSdk/7.1.0": {
+      "sha512": "+5I4kJXzNkYRGwuKSKCIDa39lrkrBGqsKgbKt3o+yDvVhTINZqQUK+xbpA2QpjYArTWtiPDzE2DGnNxdhdo2Jw==",
+      "type": "package",
+      "path": "launchdarkly.commonsdk/7.1.0",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "launchdarkly.commonsdk.7.1.0.nupkg.sha512",
+        "launchdarkly.commonsdk.nuspec",
+        "lib/net462/LaunchDarkly.CommonSdk.dll",
+        "lib/net462/LaunchDarkly.CommonSdk.xml",
+        "lib/net8.0/LaunchDarkly.CommonSdk.dll",
+        "lib/net8.0/LaunchDarkly.CommonSdk.xml",
+        "lib/netstandard2.0/LaunchDarkly.CommonSdk.dll",
+        "lib/netstandard2.0/LaunchDarkly.CommonSdk.xml"
+      ]
+    },
+    "LaunchDarkly.EventSource/5.2.0": {
+      "sha512": "tNHTYpI9s7jRPivaXBhj8R6uIWv5eHlTh0D6Ki/frsLYQ0tapPvglvNxoXPBrqWW9tlPwgvNN/P9uGzVr5xFsA==",
+      "type": "package",
+      "path": "launchdarkly.eventsource/5.2.0",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "launchdarkly.eventsource.5.2.0.nupkg.sha512",
+        "launchdarkly.eventsource.nuspec",
+        "lib/net462/LaunchDarkly.EventSource.dll",
+        "lib/net462/LaunchDarkly.EventSource.xml",
+        "lib/netstandard2.0/LaunchDarkly.EventSource.dll",
+        "lib/netstandard2.0/LaunchDarkly.EventSource.xml"
+      ]
+    },
+    "LaunchDarkly.InternalSdk/3.5.3": {
+      "sha512": "r2dL0k9vlDweswEd0xTDhhOJ1Xs9DShwBFBZG6Mkliwd88Z0maWDLcJWxgP4BcOP/Z7TjjYbfFmROsPzuYYUrQ==",
+      "type": "package",
+      "path": "launchdarkly.internalsdk/3.5.3",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "launchdarkly.internalsdk.3.5.3.nupkg.sha512",
+        "launchdarkly.internalsdk.nuspec",
+        "lib/net462/LaunchDarkly.InternalSdk.dll",
+        "lib/net6.0/LaunchDarkly.InternalSdk.dll",
+        "lib/netcoreapp3.1/LaunchDarkly.InternalSdk.dll",
+        "lib/netstandard2.0/LaunchDarkly.InternalSdk.dll"
+      ]
+    },
+    "LaunchDarkly.Logging/2.0.0": {
+      "sha512": "lsLKNqAZ7HIlkdTIrf4FetfRA1SUDE3WlaZQn79aSVkLjYWEhUhkDDK7hORGh4JoA3V2gXN+cIvJQax2uR/ijA==",
+      "type": "package",
+      "path": "launchdarkly.logging/2.0.0",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "launchdarkly.logging.2.0.0.nupkg.sha512",
+        "launchdarkly.logging.nuspec",
+        "lib/net462/LaunchDarkly.Logging.dll",
+        "lib/net462/LaunchDarkly.Logging.xml",
+        "lib/netcoreapp3.1/LaunchDarkly.Logging.dll",
+        "lib/netcoreapp3.1/LaunchDarkly.Logging.xml",
+        "lib/netstandard2.0/LaunchDarkly.Logging.dll",
+        "lib/netstandard2.0/LaunchDarkly.Logging.xml"
+      ]
+    },
+    "LaunchDarkly.ServerSdk/8.10.0": {
+      "sha512": "WojsYPfEzgOZP6OPlR+rLILOhDHHNMl+q4f1SswnYNPELhUfG7jPHzxQDq8sdeUxpuTFQbMwciQazizRpoQDjQ==",
+      "type": "package",
+      "path": "launchdarkly.serversdk/8.10.0",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "launchdarkly.serversdk.8.10.0.nupkg.sha512",
+        "launchdarkly.serversdk.nuspec",
+        "lib/net462/LaunchDarkly.ServerSdk.dll",
+        "lib/net462/LaunchDarkly.ServerSdk.xml",
+        "lib/net8.0/LaunchDarkly.ServerSdk.dll",
+        "lib/net8.0/LaunchDarkly.ServerSdk.xml",
+        "lib/netstandard2.0/LaunchDarkly.ServerSdk.dll",
+        "lib/netstandard2.0/LaunchDarkly.ServerSdk.xml"
+      ]
+    },
     "Microsoft.Extensions.ApiDescription.Server/9.0.0": {
       "sha512": "1Kzzf7pRey40VaUkHN9/uWxrKVkLu2AQjt+GVeeKLLpiEHAJ1xZRsLSh4ZZYEnyS7Kt2OBOPmsXNdU+wbcOl5w==",
       "type": "package",
@@ -352,6 +559,58 @@
         "tools/netcoreapp2.1/System.Diagnostics.DiagnosticSource.dll"
       ]
     },
+    "Microsoft.Extensions.Logging.Abstractions/6.0.0": {
+      "sha512": "/HggWBbTwy8TgebGSX5DBZ24ndhzi93sHUBDvP1IxbZD7FDokYzdAr6+vbWGjw2XAfR2EJ1sfKUotpjHnFWPxA==",
+      "type": "package",
+      "path": "microsoft.extensions.logging.abstractions/6.0.0",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "Icon.png",
+        "LICENSE.TXT",
+        "THIRD-PARTY-NOTICES.TXT",
+        "analyzers/dotnet/roslyn3.11/cs/Microsoft.Extensions.Logging.Generators.dll",
+        "analyzers/dotnet/roslyn3.11/cs/cs/Microsoft.Extensions.Logging.Generators.resources.dll",
+        "analyzers/dotnet/roslyn3.11/cs/de/Microsoft.Extensions.Logging.Generators.resources.dll",
+        "analyzers/dotnet/roslyn3.11/cs/es/Microsoft.Extensions.Logging.Generators.resources.dll",
+        "analyzers/dotnet/roslyn3.11/cs/fr/Microsoft.Extensions.Logging.Generators.resources.dll",
+        "analyzers/dotnet/roslyn3.11/cs/it/Microsoft.Extensions.Logging.Generators.resources.dll",
+        "analyzers/dotnet/roslyn3.11/cs/ja/Microsoft.Extensions.Logging.Generators.resources.dll",
+        "analyzers/dotnet/roslyn3.11/cs/ko/Microsoft.Extensions.Logging.Generators.resources.dll",
+        "analyzers/dotnet/roslyn3.11/cs/pl/Microsoft.Extensions.Logging.Generators.resources.dll",
+        "analyzers/dotnet/roslyn3.11/cs/pt-BR/Microsoft.Extensions.Logging.Generators.resources.dll",
+        "analyzers/dotnet/roslyn3.11/cs/ru/Microsoft.Extensions.Logging.Generators.resources.dll",
+        "analyzers/dotnet/roslyn3.11/cs/tr/Microsoft.Extensions.Logging.Generators.resources.dll",
+        "analyzers/dotnet/roslyn3.11/cs/zh-Hans/Microsoft.Extensions.Logging.Generators.resources.dll",
+        "analyzers/dotnet/roslyn3.11/cs/zh-Hant/Microsoft.Extensions.Logging.Generators.resources.dll",
+        "analyzers/dotnet/roslyn4.0/cs/Microsoft.Extensions.Logging.Generators.dll",
+        "analyzers/dotnet/roslyn4.0/cs/cs/Microsoft.Extensions.Logging.Generators.resources.dll",
+        "analyzers/dotnet/roslyn4.0/cs/de/Microsoft.Extensions.Logging.Generators.resources.dll",
+        "analyzers/dotnet/roslyn4.0/cs/es/Microsoft.Extensions.Logging.Generators.resources.dll",
+        "analyzers/dotnet/roslyn4.0/cs/fr/Microsoft.Extensions.Logging.Generators.resources.dll",
+        "analyzers/dotnet/roslyn4.0/cs/it/Microsoft.Extensions.Logging.Generators.resources.dll",
+        "analyzers/dotnet/roslyn4.0/cs/ja/Microsoft.Extensions.Logging.Generators.resources.dll",
+        "analyzers/dotnet/roslyn4.0/cs/ko/Microsoft.Extensions.Logging.Generators.resources.dll",
+        "analyzers/dotnet/roslyn4.0/cs/pl/Microsoft.Extensions.Logging.Generators.resources.dll",
+        "analyzers/dotnet/roslyn4.0/cs/pt-BR/Microsoft.Extensions.Logging.Generators.resources.dll",
+        "analyzers/dotnet/roslyn4.0/cs/ru/Microsoft.Extensions.Logging.Generators.resources.dll",
+        "analyzers/dotnet/roslyn4.0/cs/tr/Microsoft.Extensions.Logging.Generators.resources.dll",
+        "analyzers/dotnet/roslyn4.0/cs/zh-Hans/Microsoft.Extensions.Logging.Generators.resources.dll",
+        "analyzers/dotnet/roslyn4.0/cs/zh-Hant/Microsoft.Extensions.Logging.Generators.resources.dll",
+        "build/Microsoft.Extensions.Logging.Abstractions.targets",
+        "buildTransitive/netcoreapp2.0/Microsoft.Extensions.Logging.Abstractions.targets",
+        "buildTransitive/netcoreapp3.1/_._",
+        "lib/net461/Microsoft.Extensions.Logging.Abstractions.dll",
+        "lib/net461/Microsoft.Extensions.Logging.Abstractions.xml",
+        "lib/net6.0/Microsoft.Extensions.Logging.Abstractions.dll",
+        "lib/net6.0/Microsoft.Extensions.Logging.Abstractions.xml",
+        "lib/netstandard2.0/Microsoft.Extensions.Logging.Abstractions.dll",
+        "lib/netstandard2.0/Microsoft.Extensions.Logging.Abstractions.xml",
+        "microsoft.extensions.logging.abstractions.6.0.0.nupkg.sha512",
+        "microsoft.extensions.logging.abstractions.nuspec",
+        "useSharedDesignerContext.txt"
+      ]
+    },
     "Microsoft.OpenApi/1.6.23": {
       "sha512": "tZ1I0KXnn98CWuV8cpI247A17jaY+ILS9vvF7yhI0uPPEqF4P1d7BWL5Uwtel10w9NucllHB3nTkfYTAcHAh8g==",
       "type": "package",
@@ -438,6 +697,7 @@
   },
   "projectFileDependencyGroups": {
     "net9.0": [
+      "LaunchDarkly.ServerSdk >= 8.10.0",
       "Swashbuckle.AspNetCore >= 9.0.3"
     ]
   },
@@ -484,6 +744,10 @@
       "net9.0": {
         "targetAlias": "net9.0",
         "dependencies": {
+          "LaunchDarkly.ServerSdk": {
+            "target": "Package",
+            "version": "[8.10.0, )"
+          },
           "Swashbuckle.AspNetCore": {
             "target": "Package",
             "version": "[9.0.3, )"

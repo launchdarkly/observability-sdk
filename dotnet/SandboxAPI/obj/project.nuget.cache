@@ -1,10 +1,17 @@
 {
   "version": 2,
-  "dgSpecHash": "ph4kCpIHfTQ=",
+  "dgSpecHash": "Vcp1c4VwD64=",
   "success": true,
   "projectFilePath": "/Users/robertpakko/Documents/GitHub/observability-sdk/dotnet/SandboxAPI/SandboxAPI.csproj",
   "expectedPackageFiles": [
+    "/Users/robertpakko/.nuget/packages/launchdarkly.cache/1.0.2/launchdarkly.cache.1.0.2.nupkg.sha512",
+    "/Users/robertpakko/.nuget/packages/launchdarkly.commonsdk/7.1.0/launchdarkly.commonsdk.7.1.0.nupkg.sha512",
+    "/Users/robertpakko/.nuget/packages/launchdarkly.eventsource/5.2.0/launchdarkly.eventsource.5.2.0.nupkg.sha512",
+    "/Users/robertpakko/.nuget/packages/launchdarkly.internalsdk/3.5.3/launchdarkly.internalsdk.3.5.3.nupkg.sha512",
+    "/Users/robertpakko/.nuget/packages/launchdarkly.logging/2.0.0/launchdarkly.logging.2.0.0.nupkg.sha512",
+    "/Users/robertpakko/.nuget/packages/launchdarkly.serversdk/8.10.0/launchdarkly.serversdk.8.10.0.nupkg.sha512",
     "/Users/robertpakko/.nuget/packages/microsoft.extensions.apidescription.server/9.0.0/microsoft.extensions.apidescription.server.9.0.0.nupkg.sha512",
+    "/Users/robertpakko/.nuget/packages/microsoft.extensions.logging.abstractions/6.0.0/microsoft.extensions.logging.abstractions.6.0.0.nupkg.sha512",
     "/Users/robertpakko/.nuget/packages/microsoft.openapi/1.6.23/microsoft.openapi.1.6.23.nupkg.sha512",
     "/Users/robertpakko/.nuget/packages/swashbuckle.aspnetcore/9.0.3/swashbuckle.aspnetcore.9.0.3.nupkg.sha512",
     "/Users/robertpakko/.nuget/packages/swashbuckle.aspnetcore.swagger/9.0.3/swashbuckle.aspnetcore.swagger.9.0.3.nupkg.sha512",
