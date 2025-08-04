@@ -70,3 +70,7 @@ sdk/highlight-wordpress/highlight-io/highlight.js
 # Typedoc docs
 sdk/highlight-run/docs
 sdk/@launchdarkly/observability-react-native/docs
+
+# Dotnet SDK build stuff
+dotnet/SandboxAPI/bin
+dotnet/SandboxAPI/obj/Debug

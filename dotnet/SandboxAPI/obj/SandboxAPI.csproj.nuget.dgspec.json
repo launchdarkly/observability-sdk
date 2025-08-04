@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "/Users/robertpakko/Documents/GitHub/observability-sdk/dotnet/SdkSandbox/SdkSandbox.csproj": {}
+    "/Users/robertpakko/Documents/GitHub/observability-sdk/dotnet/SandboxAPI/SandboxAPI.csproj": {}
   },
   "projects": {
-    "/Users/robertpakko/Documents/GitHub/observability-sdk/dotnet/SdkSandbox/SdkSandbox.csproj": {
+    "/Users/robertpakko/Documents/GitHub/observability-sdk/dotnet/SandboxAPI/SandboxAPI.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/Users/robertpakko/Documents/GitHub/observability-sdk/dotnet/SdkSandbox/SdkSandbox.csproj",
-        "projectName": "SdkSandbox",
-        "projectPath": "/Users/robertpakko/Documents/GitHub/observability-sdk/dotnet/SdkSandbox/SdkSandbox.csproj",
+        "projectUniqueName": "/Users/robertpakko/Documents/GitHub/observability-sdk/dotnet/SandboxAPI/SandboxAPI.csproj",
+        "projectName": "SandboxAPI",
+        "projectPath": "/Users/robertpakko/Documents/GitHub/observability-sdk/dotnet/SandboxAPI/SandboxAPI.csproj",
         "packagesPath": "/Users/robertpakko/.nuget/packages/",
-        "outputPath": "/Users/robertpakko/Documents/GitHub/observability-sdk/dotnet/SdkSandbox/obj/",
+        "outputPath": "/Users/robertpakko/Documents/GitHub/observability-sdk/dotnet/SandboxAPI/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "/Users/robertpakko/.nuget/NuGet/NuGet.Config"
@@ -43,6 +43,12 @@
       "frameworks": {
         "net9.0": {
           "targetAlias": "net9.0",
+          "dependencies": {
+            "Swashbuckle.AspNetCore": {
+              "target": "Package",
+              "version": "[9.0.3, )"
+            }
+          },
           "imports": [
             "net461",
             "net462",
@@ -55,6 +61,9 @@
           "assetTargetFallback": true,
           "warn": true,
           "frameworkReferences": {
+            "Microsoft.AspNetCore.App": {
+              "privateAssets": "none"
+            },
             "Microsoft.NETCore.App": {
               "privateAssets": "all"
             }
