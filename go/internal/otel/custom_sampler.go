@@ -107,6 +107,7 @@ type CustomSampler struct {
 	config     *gql.GetSamplingConfigSamplingSamplingConfig
 	regexCache map[string]*regexp.Regexp
 	mutex      sync.RWMutex
+	regexMutex sync.RWMutex
 }
 
 // NewCustomSampler creates a new CustomSampler with the given sampler function
@@ -139,7 +140,17 @@ func (cs *CustomSampler) IsSamplingEnabled() bool {
 
 // getCachedRegex gets a cached regex pattern
 func (cs *CustomSampler) getCachedRegex(pattern string) (*regexp.Regexp, error) {
-	// Will always be locked by the caller.
+	result := getExitingCachedRegex(cs, pattern)
+	if result != nil {
+		return result, nil
+	}
+
+	// There was not a cached regex, so we need to compile and cache it.
+	cs.regexMutex.Lock()
+	defer cs.regexMutex.Unlock()
+
+	// Between checking and here we had to release the lock, so we need to check
+	// again to see if someone else has already compiled and cached the regex.
 	if regex, exists := cs.regexCache[pattern]; exists {
 		return regex, nil
 	}
@@ -150,7 +161,20 @@ func (cs *CustomSampler) getCachedRegex(pattern string) (*regexp.Regexp, error) 
 	}
 
 	cs.regexCache[pattern] = compiled
+
 	return compiled, nil
+}
+
+func getExitingCachedRegex(cs *CustomSampler, pattern string) *regexp.Regexp {
+	cs.regexMutex.RLock()
+	defer cs.regexMutex.RUnlock()
+
+	// Will always be locked by the caller.
+	if regex, exists := cs.regexCache[pattern]; exists {
+		return regex
+	}
+
+	return nil
 }
 
 type matchable interface {
