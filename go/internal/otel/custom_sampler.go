@@ -255,10 +255,8 @@ func matchLogValue(v log.Value, matchValue interface{}, cs *CustomSampler) bool 
 			return false
 		}
 		for i := range asSlice {
-			for j := range v.AsSlice() {
-				if !matchesValue(cs, toMatchParts(asSlice[i]), v.AsSlice()[j]) {
-					return false
-				}
+			if !matchesValue(cs, toMatchParts(asSlice[i]), v.AsSlice()[i]) {
+				return false
 			}
 		}
 		return true
