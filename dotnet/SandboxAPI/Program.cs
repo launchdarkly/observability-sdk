@@ -70,7 +70,7 @@ if (app.Environment.IsDevelopment())
 }
 
 // LaunchDarkly SDK Setup
-string SdkKey = Environment.GetEnvironmentVariable("LAUNCHDARKLY_SDK_KEY");
+string? SdkKey = Environment.GetEnvironmentVariable("LAUNCHDARKLY_SDK_KEY");
 
 if (string.IsNullOrEmpty(SdkKey))
 {
