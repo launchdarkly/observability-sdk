@@ -1,3 +1,5 @@
+package com.launchdarkly.observability.sdk
+
 import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.observability.interfaces.Observe
 import io.opentelemetry.api.common.Attributes

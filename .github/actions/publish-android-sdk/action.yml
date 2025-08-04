@@ -17,6 +17,10 @@ inputs:
     aws-role-arn:
         description: 'AWS role ARN for accessing secrets'
         required: true
+    dry-run:
+        description: 'Whether to run the publish in dry-run mode'
+        required: false
+        default: 'false'
 
 outputs:
     package-hashes:
@@ -26,7 +30,7 @@ outputs:
 runs:
     using: 'composite'
     steps:
-        - name: Checkout
+        - name: Checkoutf
           uses: actions/checkout@v4
           with:
             ref: ta/O11Y-388/setup-build-publish-actions
@@ -56,13 +60,19 @@ runs:
             /production/common/releasing/android_code_signing/private_key_passphrase = SIGNING_KEY_PASSPHRASE'
             s3_path_pairs: 'launchdarkly-releaser/android/code-signing-keyring.gpg = code-signing-keyring.gpg'
 
-        - name: Publish
-          uses: ./.github/actions/publish
-          with:
-            dry_run: ${{ inputs.dry_run }}
-            prerelease: ${{ inputs.prerelease }}
-            signing_key_id: ${{ env.SIGNING_KEY_ID }}
-            signing_key_passphrase: ${{ env.SIGNING_KEY_PASSPHRASE }}
-            code_signing_keyring: ${{ github.workspace }}/code-signing-keyring.gpg
-            sonatype_username: ${{ env.SONATYPE_USER_NAME }}
-            sonatype_password: ${{ env.SONATYPE_PASSWORD }}
+        - name: Publish Library
+          shell: bash
+          if: ${{ inputs.dry_run == 'false' }}
+          env:
+            LD_RELEASE_IS_PRERELEASE: ${{ inputs.prerelease }}
+            SIGNING_KEY_ID: ${{ inputs.signing_key_id }}
+            SIGNING_KEY_PASSPHRASE: ${{ inputs.signing_key_passphrase }}
+            SIGNING_SECRET_KEY_RING_FILE: ${{ inputs.code_signing_keyring }}
+            SONATYPE_USER_NAME: ${{ inputs.sonatype_username }}
+            SONATYPE_PASSWORD: ${{ inputs.sonatype_password }}
+          run: source $GITHUB_ACTION_PATH/publish.sh
+
+        - name: Dry Run Publish Library
+          shell: bash
+          if: ${{ inputs.dry_run == 'true' }}
+          run: echo "Dry run. Not publishing."

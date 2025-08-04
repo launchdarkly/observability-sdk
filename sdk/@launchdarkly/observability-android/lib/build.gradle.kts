@@ -56,4 +56,75 @@ android {
     kotlinOptions {
         jvmTarget = "1.8"
     }
+
+    publishing {
+        singleVariant("release") {
+            withJavadocJar()
+            withSourcesJar()
+        }
+    }
+}
+
+publishing {
+    publications {
+        register<MavenPublication>("release") {
+            groupId = project.extra["com.launchdarkly"].toString()
+            artifactId = "launchdarkly-observability-android"
+            // x-release-please-start-version
+            version = "0.1.0"
+            // x-release-please-end
+
+            pom {
+                name.set("LaunchDarkly Observability Android SDK")
+                description.set(
+                    "Official LaunchDarkly Observability Android SDK for use with the LaunchDarkly Android SDK."
+                )
+                url.set("https://github.com/launchdarkly/observability-sdk/")
+                organization {
+                    name.set("LaunchDarkly")
+                    url.set("https://launchdarkly.com/")
+                }
+                developers {
+                    developer {
+                        id.set("sdks")
+                        name.set("LaunchDarkly SDK Team")
+                        email.set("sdks@launchdarkly.com")
+                    }
+                }
+                licenses {
+                    license {
+                        name.set("The Apache License, Version 2.0")
+                        url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+                    }
+                }
+                scm {
+                    connection.set(
+                        "scm:git:https://github.com/launchdarkly/observability-sdk.git"
+                    )
+                    developerConnection.set(
+                        "scm:git:ssh:github.com/launchdarkly/observability-sdk.git"
+                    )
+                    url.set("https://github.com/launchdarkly/observability-sdk/")
+                }
+            }
+
+            afterEvaluate {
+                from(components["release"])
+            }
+        }
+    }
+}
+
+nexusPublishing {
+    packageGroup = "com.launchdarkly"
+    this.repositories {
+        sonatype {
+            nexusUrl.set(uri("https://ossrh-staging-api.central.sonatype.com/service/local/"))
+            snapshotRepositoryUrl.set(uri("https://central.sonatype.com/repository/maven-snapshots/"))
+        }
+    }
+}
+
+signing {
+    sign(publishing.publications["release"])
 }

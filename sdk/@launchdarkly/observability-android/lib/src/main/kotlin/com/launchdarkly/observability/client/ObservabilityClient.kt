@@ -1,3 +1,5 @@
+package com.launchdarkly.observability.client
+
 import android.app.Application
 import com.launchdarkly.observability.client.InstrumentationManager
 import com.launchdarkly.observability.interfaces.Metric
