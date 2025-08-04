@@ -12,6 +12,11 @@ type traceExporter struct {
 	sampler ExportSampler
 }
 
+// readOnlySpanWorkaround is a workaround to allow us to add extra attributes to a span.
+// This is because the span is readonly, and the OTEL SDK implementation prevents
+// creating a ReadOnlySpan outside of the SDK.
+// So we wrap the ReadOnlySpan in a struct and provide an alternate implementation
+// of the Attributes method that returns the original attributes plus the extra attributes.
 type readOnlySpanWorkaround struct {
 	trace.ReadOnlySpan
 	extraAttributes []attribute.KeyValue
