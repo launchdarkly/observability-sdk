@@ -1,0 +1,15 @@
+/Users/robertpakko/Documents/GitHub/observability-sdk/dotnet/SdkSandbox/bin/Debug/net9.0/SdkSandbox
+/Users/robertpakko/Documents/GitHub/observability-sdk/dotnet/SdkSandbox/bin/Debug/net9.0/SdkSandbox.deps.json
+/Users/robertpakko/Documents/GitHub/observability-sdk/dotnet/SdkSandbox/bin/Debug/net9.0/SdkSandbox.runtimeconfig.json
+/Users/robertpakko/Documents/GitHub/observability-sdk/dotnet/SdkSandbox/bin/Debug/net9.0/SdkSandbox.dll
+/Users/robertpakko/Documents/GitHub/observability-sdk/dotnet/SdkSandbox/bin/Debug/net9.0/SdkSandbox.pdb
+/Users/robertpakko/Documents/GitHub/observability-sdk/dotnet/SdkSandbox/obj/Debug/net9.0/SdkSandbox.GeneratedMSBuildEditorConfig.editorconfig
+/Users/robertpakko/Documents/GitHub/observability-sdk/dotnet/SdkSandbox/obj/Debug/net9.0/SdkSandbox.AssemblyInfoInputs.cache
+/Users/robertpakko/Documents/GitHub/observability-sdk/dotnet/SdkSandbox/obj/Debug/net9.0/SdkSandbox.AssemblyInfo.cs
+/Users/robertpakko/Documents/GitHub/observability-sdk/dotnet/SdkSandbox/obj/Debug/net9.0/SdkSandbox.csproj.CoreCompileInputs.cache
+/Users/robertpakko/Documents/GitHub/observability-sdk/dotnet/SdkSandbox/obj/Debug/net9.0/SdkSandbox.sourcelink.json
+/Users/robertpakko/Documents/GitHub/observability-sdk/dotnet/SdkSandbox/obj/Debug/net9.0/SdkSandbox.dll
+/Users/robertpakko/Documents/GitHub/observability-sdk/dotnet/SdkSandbox/obj/Debug/net9.0/refint/SdkSandbox.dll
+/Users/robertpakko/Documents/GitHub/observability-sdk/dotnet/SdkSandbox/obj/Debug/net9.0/SdkSandbox.pdb
+/Users/robertpakko/Documents/GitHub/observability-sdk/dotnet/SdkSandbox/obj/Debug/net9.0/SdkSandbox.genruntimeconfig.cache
+/Users/robertpakko/Documents/GitHub/observability-sdk/dotnet/SdkSandbox/obj/Debug/net9.0/ref/SdkSandbox.dll
