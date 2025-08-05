@@ -80,6 +80,8 @@ if (string.IsNullOrEmpty(SdkKey))
 }
 
 var ldConfig = Configuration.Builder(SdkKey)
+    .Plugins(Components.Plugins()
+        .Add(new ObservabilityPlugin()))
     .Hooks(Components.Hooks()
         .Add(TracingHook.Default())
     ).Build();
