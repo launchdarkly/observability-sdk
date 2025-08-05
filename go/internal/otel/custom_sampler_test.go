@@ -155,7 +155,7 @@ func compareValues(expected, actual interface{}) bool {
 			return exp == act
 		}
 		if act, ok := actual.(int64); ok {
-			return exp == int(act)
+			return int64(exp) == act
 		}
 		if act, ok := actual.(float64); ok {
 			return float64(exp) == act
@@ -229,7 +229,9 @@ func TestSpanScenarios(t *testing.T) {
 					for _, attr := range result.Attributes {
 						if string(attr.Key) == key {
 							found = true
-							if !compareValues(value, attr.Value.AsInt64()) {
+							if attr.Value.Type() != attribute.INT64 {
+								t.Errorf("Expected attribute %v to be an int64, got %v", key, attr.Value.Type())
+							} else if !compareValues(value, attr.Value.AsInt64()) {
 								t.Errorf("Expected attribute %v to be %v, got %v", key, value, attr.Value.AsInt64())
 							}
 						}
@@ -332,7 +334,9 @@ func TestLogScenarios(t *testing.T) {
 					found := false
 					for _, attr := range result.Attributes {
 						if string(attr.Key) == key {
-							if !compareValues(value, attr.Value.AsInt64()) {
+							if attr.Value.Kind() != log.KindInt64 {
+								t.Errorf("Expected attribute %v to be an int64, got %v", key, attr.Value.Kind())
+							} else if !compareValues(value, attr.Value.AsInt64()) {
 								t.Errorf("Expected attribute %v to be %v, got %v", key, value, attr.Value.AsInt64())
 							}
 							found = true

@@ -674,7 +674,8 @@ func (cs *CustomSampler) SampleLog(record sdklog.Record) LogSamplingResult {
 				return LogSamplingResult{
 					Sample: cs.sampler(logConfig.GetSamplingRatio()),
 					Attributes: []log.KeyValue{
-						log.Int64(attributes.AttrSamplingRatio, int64(logConfig.GetSamplingRatio())),
+						// Internal representation in the log attribute will be an int64.
+						log.Int(attributes.AttrSamplingRatio, logConfig.GetSamplingRatio()),
 					},
 				}
 			}
