@@ -4,63 +4,23 @@ using LaunchDarkly.Sdk.Server;
 using Microsoft.AspNetCore.Mvc;
 using System.Globalization;
 using System.Diagnostics;
-using OpenTelemetry.Exporter;
-using OpenTelemetry.Logs;
-using OpenTelemetry.Metrics;
-using OpenTelemetry.Resources;
-using OpenTelemetry.Trace;
 using LaunchDarkly.Sdk.Server.Telemetry;
 
 // DOTNET Setup
 var builder = WebApplication.CreateBuilder(args);
-
 builder.Services.AddEndpointsApiExplorer();
+
+// Swagger Setup
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "Sandbox API", Description = "This is a sandbox API for dotnet SDK development", Version = "v1" });
 });
 
-// OpenTelemetry Setup
-const string serviceName = "sandbox-api";
-// activitySource for custom tracing
-var activitySource = new ActivitySource("sandbox-api");
-
-builder.Logging.AddOpenTelemetry(options =>
-{
-    options
-        .SetResourceBuilder(
-            ResourceBuilder.CreateDefault()
-                .AddService(serviceName))
-        .AddConsoleExporter()
-        .AddOtlpExporter(otlpOptions =>
-        {
-            otlpOptions.Endpoint = new Uri("http://localhost:4318/v1/logs");
-            otlpOptions.Protocol = OtlpExportProtocol.HttpProtobuf;
-        });
-});
-builder.Services.AddOpenTelemetry()
-      .ConfigureResource(resource => resource.AddService(serviceName))
-      .WithTracing(tracing => tracing
-          .AddAspNetCoreInstrumentation()
-          .AddSource("sandbox-api")
-          .AddConsoleExporter()
-          .AddOtlpExporter(otlpOptions =>
-          {
-              otlpOptions.Endpoint = new Uri("http://localhost:4318/v1/traces");
-              otlpOptions.Protocol = OtlpExportProtocol.HttpProtobuf;
-          }))
-      .WithMetrics(metrics => metrics
-          .AddAspNetCoreInstrumentation()
-          .AddConsoleExporter()
-          .AddOtlpExporter(otlpOptions =>
-          {
-              otlpOptions.Endpoint = new Uri("http://localhost:4318/v1/metrics");
-              otlpOptions.Protocol = OtlpExportProtocol.HttpProtobuf;
-          }));
+// Add observability (OpenTelemetry) configuration
+builder.AddObservability();
 
 var app = builder.Build();
 
-// Swagger Setup
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -112,7 +72,7 @@ string HandleRollDice([FromServices]ILogger<Program> logger, string? player)
         : Random.Shared.Next(1, 7); // Roll a D6 if flag is false
 
     // OpenTelemetry Tracing
-    using var activity = activitySource.StartActivity("roll-dice");
+    using var activity = ObservabilityPlugin.ActivitySource.StartActivity("roll-dice");
         
     if(activity != null)
     {
