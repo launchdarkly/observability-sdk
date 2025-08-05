@@ -20,8 +20,15 @@ func (e *logExporter) Export(ctx context.Context, records []sdklog.Record) error
 	for _, record := range records {
 		res := e.sampler.SampleLog(record)
 		if res.Sample {
-			record.AddAttributes(res.Attributes...)
-			exportedRecords = append(exportedRecords, record)
+			if len(res.Attributes) > 0 {
+				// In the case we need to modify the record we modify a clone
+				// to avoid modifying the original record.
+				recordCopy := record.Clone()
+				recordCopy.AddAttributes(res.Attributes...)
+				exportedRecords = append(exportedRecords, recordCopy)
+			} else {
+				exportedRecords = append(exportedRecords, record)
+			}
 		}
 	}
 	return e.Exporter.Export(ctx, exportedRecords)
