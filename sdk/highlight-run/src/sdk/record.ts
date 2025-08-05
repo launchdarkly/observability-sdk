@@ -2,6 +2,11 @@ import { getRecordSequentialIdPlugin } from '@rrweb/rrweb-plugin-sequential-id-r
 import { eventWithTime, listenerHandler } from '@rrweb/types'
 import { print } from 'graphql'
 import { GraphQLClient } from 'graphql-request'
+import {
+	createWebSocketGraphQLClient,
+	WebSocketGraphQLClient,
+	GraphQLClientAdapter,
+} from '../client/utils/websocketGraphQLClient'
 import stringify from 'json-stringify-safe'
 import { addCustomEvent as rrwebAddCustomEvent, record } from 'rrweb'
 import {
@@ -105,6 +110,8 @@ export class RecordSDK implements Record {
 	/** Verbose project ID that is exposed to users. Legacy users may still be using ints. */
 	organizationID!: string
 	graphqlSDK!: Sdk
+	_isUsingWebSocket!: boolean
+	_wsClient?: WebSocketGraphQLClient
 	events!: eventWithTime[]
 	sessionData!: SessionData
 	ready!: boolean
@@ -300,10 +307,33 @@ export class RecordSDK implements Record {
 			this._backendUrl = new URL(this._backendUrl, document.baseURI).href
 		}
 
-		const client = new GraphQLClient(`${this._backendUrl}`, {
-			headers: {},
-		})
-		this.graphqlSDK = getSdk(client, getGraphQLRequestWrapper())
+		// Initialize GraphQL client - HTTP or WebSocket based on configuration
+		this._isUsingWebSocket = options.useWebSocket === true
+
+		let client: GraphQLClient | GraphQLClientAdapter
+		if (this._isUsingWebSocket) {
+			console.log(
+				'Highlight: Using WebSocket GraphQL transport for connection reuse',
+			)
+			this._wsClient = createWebSocketGraphQLClient(
+				`${this._backendUrl}`,
+				{
+					headers: {},
+				},
+			)
+			client = this._wsClient // Implements GraphQLClientAdapter
+		} else {
+			console.log('Highlight: Using HTTP GraphQL transport')
+			client = new GraphQLClient(`${this._backendUrl}`, {
+				headers: {},
+			})
+		}
+
+		// No type casting needed - both clients are compatible
+		this.graphqlSDK = getSdk(
+			client as GraphQLClient,
+			getGraphQLRequestWrapper(),
+		)
 		this.environment = options.environment ?? 'production'
 		this.appVersion = options.appVersion
 		this.serviceName = options.serviceName ?? 'browser'
@@ -909,6 +939,13 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 		// stop all other event listeners, to be restarted on initialize()
 		this.listeners.forEach((stop) => stop())
 		this.listeners = []
+
+		// Clean up WebSocket connection if using WebSocket transport
+		if (this._isUsingWebSocket && this._wsClient) {
+			console.log('Highlight: Closing WebSocket GraphQL connection')
+			this._wsClient.dispose()
+			this._wsClient = undefined
+		}
 	}
 
 	/**

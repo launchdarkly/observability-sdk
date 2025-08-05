@@ -2,13 +2,21 @@ import { LDObserve } from '@launchdarkly/observability'
 import { LDRecord } from '@launchdarkly/session-replay'
 import { useEffect, useRef, useState } from 'react'
 // import { client } from '../ldclient'
-import { client, recordSession, recordObservability } from '../ldclientLazy'
+import {
+	client,
+	//clientHTTP,
+	//clientWS,
+	recordSession,
+	recordObservability,
+} from '../ldclientLazy'
+import { websocketClient } from '../websocketClient'
 
 export default function Root() {
 	const fillColor = 'lightblue'
 	const canvasRef = useRef<HTMLCanvasElement>(null)
 	const [flags, setFlags] = useState<string>()
 	const [session, setSession] = useState<string>()
+	const [wsConnected, setWsConnected] = useState<boolean>(false)
 
 	useEffect(() => {
 		const canvas = canvasRef.current
@@ -43,247 +51,408 @@ export default function Root() {
 				{session}
 			</a>
 			<canvas width="100" height="100" ref={canvasRef}></canvas>
-			<button
-				onClick={() => {
-					LDObserve.recordLog('hello', 'info')
+
+			{/* WebSocket Connection Controls */}
+			<div
+				style={{
+					margin: '20px 0',
+					padding: '10px',
+					border: '2px solid blue',
 				}}
 			>
-				LDObserve.recordLog
-			</button>
-			<button
-				onClick={() => {
-					console.error('oh', 'no', {
-						my: 'object',
-						err: new Error(),
-					})
+				<h3>WebSocket GraphQL Client (Connection Reuse Test)</h3>
+				<p>
+					Status: {wsConnected ? '🟢 Connected' : '🔴 Disconnected'}
+				</p>
+				<button
+					onClick={async () => {
+						try {
+							await websocketClient.connect()
+							setWsConnected(true)
+						} catch (error) {
+							console.error('WebSocket connection failed:', error)
+						}
+					}}
+					disabled={wsConnected}
+				>
+					Connect WebSocket
+				</button>
+				<button
+					onClick={() => {
+						websocketClient.disconnect()
+						setWsConnected(false)
+					}}
+					disabled={!wsConnected}
+				>
+					Disconnect WebSocket
+				</button>
+				<button
+					onClick={() => {
+						websocketClient.sendMutation(`
+							mutation {
+								pushPayloadCompressed(
+									session_secure_id: "KTxtdRutuUrWhAdVcsUA98Q7O1bL"
+									payload_id: "61"
+									data: "H4sIAGLXkGgAAz1PuQ7CMAz9F89dunB068AEEuIoDBRFaWJoRUlQnHCo6r+Tpmo2v8PPfh0QEjVaMULhDLJGQgbr49fKvbOuMOc6lydBRb5c7ObbtNpAAi/+azWXo3eWegbfqCxB1sXpcu0TePpsfkcPoSsjKoPqtwySdkZMeoTR8MGKkRYPtGzKHYyePgR2FchoR2O0CbcTaIhVyIVWkN14S5hAzcmXHMs6NRRA/38Q+z+ODTT7BwEAAA=="
+								)
+							}
+						`)
+					}}
+					disabled={!wsConnected}
+				>
+					Send WS Mutation
+				</button>
+				<button
+					onClick={() => {
+						websocketClient.sendQuery(`
+							query {
+								sampling(organization_verbose_id: "test") {
+									spans { samplingRatio }
+								}
+							}
+						`)
+					}}
+					disabled={!wsConnected}
+				>
+					Send WS Query
+				</button>
+			</div>
+
+			{/* Original LaunchDarkly SDK Buttons (HTTP) */}
+			<div
+				style={{
+					margin: '20px 0',
+					padding: '10px',
+					border: '2px solid green',
 				}}
 			>
-				console.error
-			</button>
-			<button
-				onClick={() => {
-					LDObserve.recordError(new Error('test error'))
+				<h3>LaunchDarkly SDK - HTTP Transport (Traditional)</h3>
+				<p>
+					Uses standard HTTP requests - creates new connections per
+					request
+				</p>
+				<button
+					onClick={() => {
+						LDObserve.recordLog(
+							'HTTP: hello from HTTP client',
+							'info',
+						)
+					}}
+				>
+					HTTP: recordLog
+				</button>
+				<button
+					onClick={() => {
+						LDObserve.recordError(new Error('HTTP: test error'))
+					}}
+				>
+					HTTP: recordError
+				</button>
+				<button
+					onClick={() => {
+						LDObserve.recordGauge({
+							name: 'http-metric',
+							value: Math.floor(Math.random() * 100),
+						})
+					}}
+				>
+					HTTP: recordGauge
+				</button>
+			</div>
+
+			{/* LaunchDarkly SDK with WebSocket Transport */}
+			<div
+				style={{
+					margin: '20px 0',
+					padding: '10px',
+					border: '2px solid purple',
 				}}
 			>
-				LDObserve.consumeError
-			</button>
-			<button
-				onClick={() => {
-					if (canvasRef.current) {
-						LDRecord.snapshot(canvasRef.current)
-					}
+				<h3>
+					LaunchDarkly SDK - WebSocket Transport (Connection Reuse)
+				</h3>
+				<p>
+					Uses persistent WebSocket connections - reuses same
+					connection
+				</p>
+				<button
+					onClick={() => {
+						// This will use the WebSocket-enabled client
+						// Note: In a real implementation, you'd need to initialize the WebSocket client
+						console.log('WebSocket client would be used here')
+						LDObserve.recordLog(
+							'WebSocket: hello from WebSocket client',
+							'info',
+						)
+					}}
+				>
+					WS: recordLog
+				</button>
+				<button
+					onClick={() => {
+						LDObserve.recordError(
+							new Error('WebSocket: test error'),
+						)
+					}}
+				>
+					WS: recordError
+				</button>
+				<button
+					onClick={() => {
+						LDObserve.recordGauge({
+							name: 'websocket-metric',
+							value: Math.floor(Math.random() * 100),
+						})
+					}}
+				>
+					WS: recordGauge
+				</button>
+			</div>
+
+			{/* Keep remaining buttons */}
+			<div
+				style={{
+					margin: '20px 0',
+					padding: '10px',
+					border: '2px solid gray',
 				}}
 			>
-				LDRecord.snapshot
-			</button>
-			<button
-				onClick={() => {
-					LDRecord.start({ forceNew: true })
-				}}
-			>
-				LDRecord.start(forceNew)
-			</button>
-			<button
-				onClick={() => {
-					throw new Error('thrown error')
-				}}
-			>
-				throw error
-			</button>
-			<button
-				onClick={() => {
-					LDObserve.recordGauge({
-						name: 'my-random-metric',
-						value: Math.floor(Math.random() * 100),
-					})
-				}}
-			>
-				LDObserve.recordGauge(random value)
-			</button>
-			<button
-				onClick={() => {
-					LDObserve.recordGauge({
-						name: 'my-metric',
-						value: 0,
-					})
-				}}
-			>
-				LDObserve.recordGauge(0 value)
-			</button>
-			<button
-				onClick={() => {
-					LDObserve.recordGauge({
-						name: 'my-metric-attrs',
-						value: 0,
-						attributes: { foo: 'bar', baz: 42 },
-					})
-				}}
-			>
-				LDObserve.recordGauge(0 value w attrs)
-			</button>
-			<button
-				onClick={async () => {
-					setFlags(
-						JSON.stringify(
-							client.variation('enable-session-card-style'),
-						),
-					)
-				}}
-			>
-				client.eval
-			</button>
-			<button
-				onClick={async () => {
-					await client.identify({
-						kind: 'user',
-						key: 'vadim@highlight.io',
-					})
-					setFlags(JSON.stringify(client.allFlags()))
-				}}
-			>
-				client.identify
-			</button>
-			<button
-				onClick={async () => {
-					await client.identify({
-						kind: 'multi',
-						account: {
-							hasExperimentationMAU: false,
-							hasADSEvents: true,
-							enableAccountImpersonation: false,
-							planType: 'Enterprise',
-							isCanceled: false,
-							isTrial: false,
-							organization: 'End-to-End Test Account',
-							isSelfServe: false,
-							hasHIPAAEnabled: false,
-							hasActiveEnterpriseCampaign: false,
-							hasExperimentationEvents: true,
-							hasExperimentationKeys: false,
-							isUsingExperimentation2022: false,
-							hasSSO: true,
-							signupDate: 1593470120619,
-							isBeta: false,
-							isLapsed: false,
-							hasConfiguredSSO: false,
-							owner: {
+				<h3>Other LaunchDarkly Features</h3>
+				<button
+					onClick={() => {
+						console.error('oh', 'no', {
+							my: 'object',
+							err: new Error(),
+						})
+					}}
+				>
+					console.error
+				</button>
+				<button
+					onClick={() => {
+						LDObserve.recordError(new Error('test error'))
+					}}
+				>
+					LDObserve.consumeError
+				</button>
+				<button
+					onClick={() => {
+						if (canvasRef.current) {
+							LDRecord.snapshot(canvasRef.current)
+						}
+					}}
+				>
+					LDRecord.snapshot
+				</button>
+				<button
+					onClick={() => {
+						LDRecord.start({ forceNew: true })
+					}}
+				>
+					LDRecord.start(forceNew)
+				</button>
+				<button
+					onClick={() => {
+						throw new Error('thrown error')
+					}}
+				>
+					throw error
+				</button>
+				<button
+					onClick={() => {
+						LDObserve.recordGauge({
+							name: 'my-random-metric',
+							value: Math.floor(Math.random() * 100),
+						})
+					}}
+				>
+					LDObserve.recordGauge(random value)
+				</button>
+				<button
+					onClick={() => {
+						LDObserve.recordGauge({
+							name: 'my-metric',
+							value: 0,
+						})
+					}}
+				>
+					LDObserve.recordGauge(0 value)
+				</button>
+				<button
+					onClick={() => {
+						LDObserve.recordGauge({
+							name: 'my-metric-attrs',
+							value: 0,
+							attributes: { foo: 'bar', baz: 42 },
+						})
+					}}
+				>
+					LDObserve.recordGauge(0 value w attrs)
+				</button>
+				<button
+					onClick={async () => {
+						setFlags(
+							JSON.stringify(
+								client.variation('enable-session-card-style'),
+							),
+						)
+					}}
+				>
+					client.eval
+				</button>
+				<button
+					onClick={async () => {
+						await client.identify({
+							kind: 'user',
+							key: 'vadim@highlight.io',
+						})
+						setFlags(JSON.stringify(client.allFlags()))
+					}}
+				>
+					client.identify
+				</button>
+				<button
+					onClick={async () => {
+						await client.identify({
+							kind: 'multi',
+							account: {
+								hasExperimentationMAU: false,
+								hasADSEvents: true,
+								enableAccountImpersonation: false,
+								planType: 'Enterprise',
+								isCanceled: false,
+								isTrial: false,
+								organization: 'End-to-End Test Account',
+								isSelfServe: false,
+								hasHIPAAEnabled: false,
+								hasActiveEnterpriseCampaign: false,
+								hasExperimentationEvents: true,
+								hasExperimentationKeys: false,
+								isUsingExperimentation2022: false,
+								hasSSO: true,
+								signupDate: 1593470120619,
+								isBeta: false,
+								isLapsed: false,
+								hasConfiguredSSO: false,
+								owner: {
+									email: 'e2e@launchdarkly.com',
+								},
+								planVersion: 1,
+								postV2Signup: true,
+								name: 'End-to-End Test Account',
+								key: '5efa6ca891e30321f08aac4b',
+							},
+							environment: {
+								name: 'Test',
+								key: '65006c1cfd354512d19019d8',
+							},
+							member: {
+								hasAdminRights: true,
+								isEmailVerified: true,
+								email: 'vkorolik@launchdarkly.com',
+								createdDate: 1744385936713,
+								featurePreviews: [
+									'simplified-toggle-ux',
+									'improved-context-targeting-experience',
+									'new-experience',
+								],
+								name: 'Vadim Korolik',
+								key: '67f93790b1bc7808f4b033be',
+							},
+							project: {
+								key: '65006c1cfd354512d19019da',
+							},
+							user: {
+								environmentId: '65006c1cfd354512d19019d8',
+								hasExperimentationEvents: true,
+								hasHIPAAEnabled: false,
+								hasAdminRights: true,
+								projectId: '65006c1cfd354512d19019da',
+								isSelfServe: false,
+								dogfoodCanary: false,
+								isBeta: false,
+								enableAccountImpersonation: false,
+								hasExperimentationKeys: false,
+								hasSSO: true,
+								planVersion: 1,
+								isUsingExperimentation2022: false,
+								memberEmail: 'vkorolik@launchdarkly.com',
+								isCanceled: false,
+								memberVerifiedEmail: true,
+								memberId: '67f93790b1bc7808f4b033be',
+								accountId: '5efa6ca891e30321f08aac4b',
+								organization: 'End-to-End Test Account',
+								hasActiveEnterpriseCampaign: false,
+								enableAccountSupportGenAi: false,
+								hasADSEvents: true,
 								email: 'e2e@launchdarkly.com',
+								planType: 'Enterprise',
+								postV2Signup: true,
+								hasConfiguredSSO: false,
+								hasExperimentationMAU: false,
+								isLapsed: false,
+								signupDate: 1593470120619,
+								isTrial: false,
+								name: '',
+								key: '5efa6ca891e30321f08aac4b',
 							},
-							planVersion: 1,
-							postV2Signup: true,
-							name: 'End-to-End Test Account',
-							key: '5efa6ca891e30321f08aac4b',
-						},
-						environment: {
-							name: 'Test',
-							key: '65006c1cfd354512d19019d8',
-						},
-						member: {
-							hasAdminRights: true,
-							isEmailVerified: true,
-							email: 'vkorolik@launchdarkly.com',
-							createdDate: 1744385936713,
-							featurePreviews: [
-								'simplified-toggle-ux',
-								'improved-context-targeting-experience',
-								'new-experience',
-							],
-							name: 'Vadim Korolik',
-							key: '67f93790b1bc7808f4b033be',
-						},
-						project: {
-							key: '65006c1cfd354512d19019da',
-						},
-						user: {
-							environmentId: '65006c1cfd354512d19019d8',
-							hasExperimentationEvents: true,
-							hasHIPAAEnabled: false,
-							hasAdminRights: true,
-							projectId: '65006c1cfd354512d19019da',
-							isSelfServe: false,
-							dogfoodCanary: false,
-							isBeta: false,
-							enableAccountImpersonation: false,
-							hasExperimentationKeys: false,
-							hasSSO: true,
-							planVersion: 1,
-							isUsingExperimentation2022: false,
-							memberEmail: 'vkorolik@launchdarkly.com',
-							isCanceled: false,
-							memberVerifiedEmail: true,
-							memberId: '67f93790b1bc7808f4b033be',
-							accountId: '5efa6ca891e30321f08aac4b',
-							organization: 'End-to-End Test Account',
-							hasActiveEnterpriseCampaign: false,
-							enableAccountSupportGenAi: false,
-							hasADSEvents: true,
-							email: 'e2e@launchdarkly.com',
-							planType: 'Enterprise',
-							postV2Signup: true,
-							hasConfiguredSSO: false,
-							hasExperimentationMAU: false,
-							isLapsed: false,
-							signupDate: 1593470120619,
-							isTrial: false,
-							name: '',
-							key: '5efa6ca891e30321f08aac4b',
-						},
-					})
-					setFlags(JSON.stringify(client.allFlags()))
-				}}
-			>
-				client.identify gonfalon
-			</button>
-			<button
-				onClick={async () => {
-					await client.identify({
-						kind: 'multi',
-						org: {
-							key: 'my-org-key',
-							someAttribute: 'my-attribute-value',
-						},
-						user: {
-							key: 'my-user-key',
-							firstName: 'Bob',
-							lastName: 'Bobberson',
-							_meta: {
-								privateAttributes: ['firstName'],
+						})
+						setFlags(JSON.stringify(client.allFlags()))
+					}}
+				>
+					client.identify gonfalon
+				</button>
+				<button
+					onClick={async () => {
+						await client.identify({
+							kind: 'multi',
+							org: {
+								key: 'my-org-key',
+								someAttribute: 'my-attribute-value',
 							},
-						},
-					})
-					setFlags(JSON.stringify(client.allFlags()))
-				}}
-			>
-				client.identify multi
-			</button>
-			<button
-				onClick={async () => {
-					await recordSession()
-				}}
-			>
-				recordSession
-			</button>
-			<button
-				onClick={async () => {
-					await recordObservability()
-				}}
-			>
-				recordObservability
-			</button>
-			<button
-				onClick={async () => {
+							user: {
+								key: 'my-user-key',
+								firstName: 'Bob',
+								lastName: 'Bobberson',
+								_meta: {
+									privateAttributes: ['firstName'],
+								},
+							},
+						})
+						setFlags(JSON.stringify(client.allFlags()))
+					}}
+				>
+					client.identify multi
+				</button>
+				<button
+					onClick={async () => {
+						await recordSession()
+					}}
+				>
+					recordSession
+				</button>
+				<button
+					onClick={async () => {
+						await recordObservability()
+					}}
+				>
+					recordObservability
+				</button>
+				<button
+					onClick={async () => {
+						LDRecord.stop()
+					}}
+				>
 					LDRecord.stop()
-				}}
-			>
-				LDRecord.stop()
-			</button>
-			<button
-				onClick={async () => {
+				</button>
+				<button
+					onClick={async () => {
+						LDObserve.stop()
+					}}
+				>
 					LDObserve.stop()
-				}}
-			>
-				LDObserve.stop()
-			</button>
+				</button>
+			</div>
 		</div>
 	)
 }

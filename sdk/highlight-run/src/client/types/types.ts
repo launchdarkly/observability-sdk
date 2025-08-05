@@ -128,6 +128,12 @@ export type CommonOptions = {
 	 * @default false
 	 */
 	manualStart?: boolean
+	/**
+	 * Enable WebSocket transport for GraphQL operations instead of HTTP.
+	 * Provides better connection reuse and performance for high-frequency data sending.
+	 * When enabled, converts HTTP backend URLs to WebSocket URLs automatically.
+	 */
+	useWebSocket?: boolean
 }
 
 export type HighlightOptions = CommonOptions & {

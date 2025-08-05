@@ -150,6 +150,7 @@ export class ObserveSDK implements Observe {
 			},
 			this.sampler,
 		)
+		// TODO: This might be the spot where we can optionally use the websocket transport.
 		const client = new GraphQLClient(
 			this._options.backendUrl ??
 				'https://pub.observability.app.launchdarkly.com',

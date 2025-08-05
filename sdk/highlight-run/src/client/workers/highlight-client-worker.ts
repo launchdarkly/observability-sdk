@@ -369,6 +369,8 @@ function stringifyProperties(
 			debug = e.data.message.debug
 			recordingStartTime = e.data.message.recordingStartTime
 			logger.debug = debug
+
+			// TODO: This might be the spot where we can optionally use the websocket transport.
 			graphqlSDK = getSdk(
 				new GraphQLClient(backend, {
 					headers: {},

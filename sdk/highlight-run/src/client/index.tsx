@@ -160,6 +160,7 @@ export type HighlightClassOptions = {
 	sendMode?: 'webworker' | 'local'
 	otlpEndpoint?: HighlightOptions['otlpEndpoint']
 	otel?: HighlightOptions['otel']
+	useWebSocket?: boolean
 }
 
 /**
@@ -402,6 +403,7 @@ export class Highlight {
 			this._backendUrl = new URL(this._backendUrl, document.baseURI).href
 		}
 
+		// TODO: This might be the spot where we can optionally use the websocket transport.
 		const client = new GraphQLClient(`${this._backendUrl}`, {
 			headers: {},
 		})
