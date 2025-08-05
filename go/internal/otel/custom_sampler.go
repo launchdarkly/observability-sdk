@@ -7,6 +7,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
+	sdklog "go.opentelemetry.io/otel/sdk/log"
 	"go.opentelemetry.io/otel/sdk/trace"
 
 	"github.com/launchdarkly/observability-sdk/go/internal/gql"
@@ -35,7 +36,15 @@ type SamplingResult struct {
 	// Sample indicates whether the span/log should be sampled
 	Sample bool
 	// Attributes contains additional attributes to add to the span/log
-	Attributes map[string]interface{}
+	Attributes []attribute.KeyValue
+}
+
+// LogSamplingResult represents the result of sampling a log record
+type LogSamplingResult struct {
+	// Sample indicates whether the span/log should be sampled
+	Sample bool
+	// Attributes contains additional attributes to add to the span/log
+	Attributes []log.KeyValue
 }
 
 type matchParts interface {
@@ -48,7 +57,7 @@ type ExportSampler interface {
 	// SampleSpan samples a span and returns the result
 	SampleSpan(span ReadonlySpanSubset) SamplingResult
 	// SampleLog samples a log record and returns the result
-	SampleLog(record log.Record) SamplingResult
+	SampleLog(record sdklog.Record) LogSamplingResult
 	// IsSamplingEnabled returns true if sampling is enabled
 	IsSamplingEnabled() bool
 	// SetConfig sets the sampling configuration
@@ -103,11 +112,11 @@ func toMatchParts(value interface{}) matchParts {
 // CustomSampler is a custom sampler that uses sampling configuration to
 // determine if a span should be sampled
 type CustomSampler struct {
-	sampler    SamplerFunc
-	config     *gql.GetSamplingConfigSamplingSamplingConfig
-	regexCache map[string]*regexp.Regexp
-	mutex      sync.RWMutex
-	regexMutex sync.RWMutex
+	sampler     SamplerFunc
+	config      *gql.GetSamplingConfigSamplingSamplingConfig
+	regexCache  map[string]*regexp.Regexp
+	configMutex sync.RWMutex
+	regexMutex  sync.RWMutex
 }
 
 // NewCustomSampler creates a new CustomSampler with the given sampler function
@@ -123,15 +132,15 @@ func NewCustomSampler(sampler SamplerFunc) *CustomSampler {
 
 // SetConfig sets the sampling configuration
 func (cs *CustomSampler) SetConfig(config *gql.GetSamplingConfigSamplingSamplingConfig) {
-	cs.mutex.Lock()
-	defer cs.mutex.Unlock()
+	cs.configMutex.Lock()
+	defer cs.configMutex.Unlock()
 	cs.config = config
 }
 
 // IsSamplingEnabled returns true if sampling is enabled
 func (cs *CustomSampler) IsSamplingEnabled() bool {
-	cs.mutex.RLock()
-	defer cs.mutex.RUnlock()
+	cs.configMutex.RLock()
+	defer cs.configMutex.RUnlock()
 	if cs.config != nil && (len(cs.config.Spans) > 0 || len(cs.config.Logs) > 0) {
 		return true
 	}
@@ -439,7 +448,7 @@ func matchesAttributes(
 func matchesAttributesLogs(
 	cs *CustomSampler,
 	attributeConfigs []gql.GetSamplingConfigSamplingSamplingConfigLogsLogSamplingConfigAttributesAttributeMatchConfig,
-	record log.Record,
+	record sdklog.Record,
 ) bool {
 	if len(attributeConfigs) == 0 {
 		return true
@@ -605,7 +614,7 @@ func (cs *CustomSampler) matchesSpanConfig(
 // matchesLogConfig matches a log record against the configuration
 func (cs *CustomSampler) matchesLogConfig(
 	config *gql.GetSamplingConfigSamplingSamplingConfigLogsLogSamplingConfig,
-	record log.Record,
+	record sdklog.Record,
 ) bool {
 	// Check severity text if defined
 	if severityConfig := config.GetSeverityText(); !isMatchConfigEmpty(&severityConfig) {
@@ -634,16 +643,16 @@ func (cs *CustomSampler) matchesLogConfig(
 
 // SampleSpan samples a span based on the sampling configuration
 func (cs *CustomSampler) SampleSpan(span ReadonlySpanSubset) SamplingResult {
-	cs.mutex.RLock()
-	defer cs.mutex.RUnlock()
+	cs.configMutex.RLock()
+	defer cs.configMutex.RUnlock()
 
 	if cs.config != nil && len(cs.config.Spans) > 0 {
 		for _, spanConfig := range cs.config.Spans {
 			if cs.matchesSpanConfig(&spanConfig, span) {
 				return SamplingResult{
 					Sample: cs.sampler(spanConfig.GetSamplingRatio()),
-					Attributes: map[string]interface{}{
-						attributes.AttrSamplingRatio: spanConfig.GetSamplingRatio(),
+					Attributes: []attribute.KeyValue{
+						attribute.Int64(attributes.AttrSamplingRatio, int64(spanConfig.GetSamplingRatio())),
 					},
 				}
 			}
@@ -655,17 +664,19 @@ func (cs *CustomSampler) SampleSpan(span ReadonlySpanSubset) SamplingResult {
 }
 
 // SampleLog samples a log record based on the sampling configuration
-func (cs *CustomSampler) SampleLog(record log.Record) SamplingResult {
-	cs.mutex.RLock()
-	defer cs.mutex.RUnlock()
+func (cs *CustomSampler) SampleLog(record sdklog.Record) LogSamplingResult {
+	cs.configMutex.RLock()
+	defer cs.configMutex.RUnlock()
 
 	if cs.config != nil && len(cs.config.Logs) > 0 {
 		for _, logConfig := range cs.config.Logs {
 			if cs.matchesLogConfig(&logConfig, record) {
-				return SamplingResult{
+				return LogSamplingResult{
 					Sample: cs.sampler(logConfig.GetSamplingRatio()),
-					Attributes: map[string]interface{}{
-						attributes.AttrSamplingRatio: logConfig.GetSamplingRatio(),
+					Attributes: []log.KeyValue{
+						// The log stores Int and Int64 as an Int64.
+						// We are being explicit here in case that detail changes and ints are directly supported.
+						log.Int64(attributes.AttrSamplingRatio, int64(logConfig.GetSamplingRatio())),
 					},
 				}
 			}
@@ -673,5 +684,5 @@ func (cs *CustomSampler) SampleLog(record log.Record) SamplingResult {
 	}
 
 	// Didn't match any sampling config, or there were no configs, so we sample it
-	return SamplingResult{Sample: true}
+	return LogSamplingResult{Sample: true}
 }
