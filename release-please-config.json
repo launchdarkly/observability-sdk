@@ -14,9 +14,7 @@
 			"versioning": "default",
 			"include-v-in-tag": false,
 			"include-component-in-tag": true,
-			"extra-files": [
-				"gradle.properties"
-			]
+			"extra-files": ["gradle.properties"]
 		}
 	}
 }

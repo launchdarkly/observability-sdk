@@ -41,7 +41,7 @@ runs:
         - name: Setup Android SDK
           uses: android-actions/setup-android@v3
 
-        - uses: launchdarkly/gh-actions/actions/release-secrets@release-secrets-v1.1.0
+        - uses: launchdarkly/gh-actions/actions/release-secrets@release-secrets-v1.2.0
           name: Get secrets
           with:
             aws_assume_role: ${{ inputs.aws-role-arn }}
