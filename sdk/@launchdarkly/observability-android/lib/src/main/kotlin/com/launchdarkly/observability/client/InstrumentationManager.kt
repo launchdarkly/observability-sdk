@@ -1,19 +1,22 @@
 package com.launchdarkly.observability.client
+
+import android.app.Application
 import com.launchdarkly.observability.interfaces.Metric
-import com.launchdarkly.sdk.LDValue
-import com.launchdarkly.sdk.android.LDClient
+import io.opentelemetry.android.OpenTelemetryRum
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Logger
 import io.opentelemetry.api.metrics.Meter
+import io.opentelemetry.api.trace.Span
+import io.opentelemetry.api.trace.Tracer
+import io.opentelemetry.context.Context
 import io.opentelemetry.exporter.otlp.http.logs.OtlpHttpLogRecordExporter
 import io.opentelemetry.exporter.otlp.http.metrics.OtlpHttpMetricExporter
-import io.opentelemetry.sdk.OpenTelemetrySdk
-import io.opentelemetry.sdk.logs.SdkLoggerProvider
+import io.opentelemetry.exporter.otlp.http.trace.OtlpHttpSpanExporter
 import io.opentelemetry.sdk.logs.export.BatchLogRecordProcessor
-import io.opentelemetry.sdk.metrics.SdkMeterProvider
 import io.opentelemetry.sdk.metrics.export.MetricExporter
 import io.opentelemetry.sdk.metrics.export.PeriodicMetricReader
 import io.opentelemetry.sdk.resources.Resource
+import io.opentelemetry.sdk.trace.export.BatchSpanProcessor
 import java.util.concurrent.TimeUnit
 
 private const val URL = "https://otel.observability.app.launchdarkly.com:4318"
@@ -22,128 +25,141 @@ private const val URL_LOGS = URL + "/v1/logs"
 private const val URL_TRACES = URL + "/v1/traces"
 private const val INSTRUMENTATION_SCOPE_NAME = "com.launchdarkly.observability"
 
-private const val HEADER_LD_PROJECT = "X-LaunchDarkly-Project"
-
 /**
  * Manages instrumentation for LaunchDarkly Observability.
  *
  * @param resources The OpenTelemetry resource describing this service.
  */
 class InstrumentationManager(
+    private val application: Application,
     private val sdkKey: String,
-    private val client: LDClient,
     private val resources: Resource,
 ) {
-    private var meterProvider: SdkMeterProvider
-    private var meter: Meter
-    private var loggerProvider: SdkLoggerProvider
-    private var logger: Logger
+    private val otelRUM: OpenTelemetryRum
+    private var otelMeter: Meter
+    private var otelLogger: Logger
+    private var otelTracer: Tracer
 
     init {
-        meterProvider = createMetricsProvider()
-        meter = meterProvider.get(INSTRUMENTATION_SCOPE_NAME)
-        loggerProvider = createLoggerProvider()
-        logger = loggerProvider.get(INSTRUMENTATION_SCOPE_NAME)
 
-        // TODO: pretty sure registering globally is a bad idea, but I'm not sure what the norm is here.
-        // I see documentation that talks about being able to signal to the auto configuration system
-        // via a specially named configurer implementation: autoconfigure SPI interface: SdkTracerProviderConfigurer
-        OpenTelemetrySdk.builder()
-            .setMeterProvider(meterProvider)
-            .setLoggerProvider(loggerProvider)
-            .buildAndRegisterGlobal()
+        otelRUM = OpenTelemetryRum.builder(application)
+            .addLoggerProviderCustomizer { sdkLoggerProviderBuilder, application ->
+                val logExporter = OtlpHttpLogRecordExporter.builder()
+                    .setEndpoint(URL_LOGS)
+                    .build()
 
+                // TODO: support configuring these options via parameters
+                val processor = BatchLogRecordProcessor.builder(logExporter)
+                    .setMaxQueueSize(100)
+                    .setScheduleDelay(1000, TimeUnit.MILLISECONDS)
+                    .setExporterTimeout(5000, TimeUnit.MILLISECONDS)
+                    .setMaxExportBatchSize(10)
+                    .build()
+
+                sdkLoggerProviderBuilder
+                    .setResource(resources)
+                    .addLogRecordProcessor(processor)
+            }
+            .addTracerProviderCustomizer { sdkTracerProviderBuilder, application ->
+                val spanExporter = OtlpHttpSpanExporter.builder()
+                    .setEndpoint(URL_TRACES)
+                    .build()
+
+                val spanProcessor = BatchSpanProcessor.builder(spanExporter)
+                    .setMaxQueueSize(100)
+                    .setScheduleDelay(1000, TimeUnit.MILLISECONDS)
+                    .setExporterTimeout(5000, TimeUnit.MILLISECONDS)
+                    .setMaxExportBatchSize(10)
+                    .build()
+
+                sdkTracerProviderBuilder
+                    .setResource(resources)
+                    .addSpanProcessor(spanProcessor)
+            }
+            .addMeterProviderCustomizer { sdkMeterProviderBuilder, application ->
+                val metricExporter: MetricExporter = OtlpHttpMetricExporter.builder()
+                    .setEndpoint(URL_METRICS)
+                    .build()
+
+                // Configure a periodic reader that pushes metrics every 10 seconds.
+                val metricReader: PeriodicMetricReader =
+                    PeriodicMetricReader.builder(metricExporter)
+                        .setInterval(10, TimeUnit.SECONDS)
+                        .build()
+
+                sdkMeterProviderBuilder
+                    .setResource(resources)
+                    .registerMetricReader(metricReader)
+            }
+            .build()
+
+        otelMeter = otelRUM.openTelemetry.meterProvider.get(INSTRUMENTATION_SCOPE_NAME)
+        otelLogger = otelRUM.openTelemetry.logsBridge.get(INSTRUMENTATION_SCOPE_NAME)
+        otelTracer = otelRUM.openTelemetry.tracerProvider.get(INSTRUMENTATION_SCOPE_NAME)
+        otelRUM.rumSessionId
     }
 
+
     fun recordMetric(metric: Metric) {
-        meter.gaugeBuilder(metric.name).build()
+        otelMeter.gaugeBuilder(metric.name).build()
             .set(metric.value, metric.attributes)
     }
 
     fun recordCount(metric: Metric) {
-        // TODO: how to handle long and double casting?
-        meter.counterBuilder(metric.name).build()
+        // TODO: handle double casting to long better
+        otelMeter.counterBuilder(metric.name).build()
             .add(metric.value.toLong(), metric.attributes)
     }
 
     fun recordIncr(metric: Metric) {
-        meter.counterBuilder(metric.name).build()
+        otelMeter.counterBuilder(metric.name).build()
             .add(1, metric.attributes)
     }
 
     fun recordHistogram(metric: Metric) {
-        meter.histogramBuilder(metric.name).build()
+        otelMeter.histogramBuilder(metric.name).build()
             .record(metric.value, metric.attributes)
     }
 
     fun recordUpDownCounter(metric: Metric) {
-        meter.upDownCounterBuilder(metric.name)
+        otelMeter.upDownCounterBuilder(metric.name)
             .build().add(metric.value.toLong(), metric.attributes)
     }
 
     fun recordLog(message: String, level: String, attributes: Attributes) {
-        logger.logRecordBuilder()
+        otelLogger.logRecordBuilder()
             .setBody(message)
             .setTimestamp(System.currentTimeMillis(), TimeUnit.MILLISECONDS)
             .setSeverityText(level)
-            // TODO: add highlight.session_id when sessions are supported
             .setAllAttributes(attributes)
             .emit()
     }
 
     // TODO: add otel span optional param that will take precedence over current span and/or created span
     fun recordError(error: Error, attributes: Attributes) {
-        // TODO: add error and attributes to span
-        // TODO: add highlight.session_id when sessions are supported
+        val span = otelTracer
+            .spanBuilder("highlight.error")
+            .setParent(
+                Context.current().with(Span.current())
+            )
+            .startSpan()
 
-        val withExceptionAttrs = attributes.toBuilder()
-            .put("exception.type", error.javaClass.simpleName)
-            .put("exception.message", error.message)
-            .put("exception.stacktrace", error.stackTraceToString())
-            .build();
+        val attrBuilder = Attributes.builder()
+        attrBuilder.putAll(attributes)
 
-        this.recordLog(error.message ?: "", "error", withExceptionAttrs)
+        // TODO: should exception.cause be added here?  At least one other SDK is doing this
+//        error.cause?.let {
+//            span.setAttribute("exception.cause", it.message)
+//        }
+
+        span.recordException(error, attrBuilder.build())
+        span.end()
     }
 
-    private fun createMetricsProvider(): SdkMeterProvider {
-        // Build a default OTLP HTTP exporter. Users can swap this out later if
-        // they wish to use a different exporter implementation.
-        val metricExporter: MetricExporter = OtlpHttpMetricExporter.builder()
-            .setEndpoint(URL_METRICS)
-            .addHeader(HEADER_LD_PROJECT, sdkKey)
-            .build()
-
-        // Configure a periodic reader that pushes metrics every 10 seconds.
-        val metricReader: PeriodicMetricReader =
-            PeriodicMetricReader.builder(metricExporter)
-                .setInterval(10, TimeUnit.SECONDS)
-                .build()
-
-        // Build the SDK MeterProvider with the supplied resources and the
-        // configured metric reader.
-        return SdkMeterProvider.builder()
-            .setResource(resources)
-            .registerMetricReader(metricReader)
-            .build()
-    }
-
-    private fun createLoggerProvider(): SdkLoggerProvider {
-        val logExporter = OtlpHttpLogRecordExporter.builder()
-            .setEndpoint(URL_LOGS)
-            .addHeader(HEADER_LD_PROJECT, sdkKey)
-            .build()
-
-        // TODO: are these configuration values supposed to be passed in?
-        val processor = BatchLogRecordProcessor.builder(logExporter)
-            .setMaxQueueSize(100)
-            .setScheduleDelay(500, TimeUnit.MILLISECONDS)
-            .setExporterTimeout(5000, TimeUnit.MILLISECONDS)
-            .setMaxExportBatchSize(10)
-            .build()
-
-        return SdkLoggerProvider.builder()
-            .setResource(resources)
-            .addLogRecordProcessor(processor)
-            .build()
+    fun startSpan(name: String, attributes: Attributes): Span {
+        return otelTracer.spanBuilder(name)
+            .setParent(Context.current().with(Span.current()))
+            .setAllAttributes(attributes)
+            .startSpan()
     }
 }
