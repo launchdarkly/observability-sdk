@@ -74,9 +74,7 @@ publishing {
         create<MavenPublication>("release") {
             groupId = "com.launchdarkly"
             artifactId = "launchdarkly-observability-android"
-            // x-release-please-start-version
             version = releaseVersion
-            // x-release-please-end
 
             pom {
                 name.set("LaunchDarkly Observability Android SDK")
