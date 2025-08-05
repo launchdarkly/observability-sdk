@@ -19,6 +19,7 @@ builder.Services.AddSwaggerGen(c =>
 
 var observabilityConfig = new ObservabilityPluginConfig
 {
+    ProjectId = "abc-123",
     ServiceName = "sandbox-api",
     OtlpEndpoint = "http://localhost:4318",
     OtlpProtocol = OtlpExportProtocol.HttpProtobuf
