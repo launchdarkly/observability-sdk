@@ -147,9 +147,8 @@ export type Mutation = {
 	pushBackendPayload?: Maybe<Scalars['Any']['output']>
 	pushMetrics: Scalars['Int']['output']
 	pushPayload: Scalars['Int']['output']
-	pushPayload2: Scalars['Int']['output']
 	pushPayloadCompressed?: Maybe<Scalars['Any']['output']>
-	pushPayloadCompressed2?: Maybe<Scalars['Any']['output']>
+	pushSessionEvents?: Maybe<Scalars['Any']['output']>
 }
 
 export type MutationAddSessionFeedbackArgs = {
@@ -218,26 +217,13 @@ export type MutationPushPayloadArgs = {
 	web_socket_events?: InputMaybe<Scalars['String']['input']>
 }
 
-export type MutationPushPayload2Args = {
-	errors: Array<InputMaybe<ErrorObjectInput>>
-	events: ReplayEventsInput
-	has_session_unloaded?: InputMaybe<Scalars['Boolean']['input']>
-	highlight_logs?: InputMaybe<Scalars['String']['input']>
-	is_beacon?: InputMaybe<Scalars['Boolean']['input']>
-	messages: Scalars['String']['input']
-	payload_id: Scalars['Int64ID']['input']
-	resources: Scalars['String']['input']
-	session_secure_id: Scalars['String']['input']
-	web_socket_events?: InputMaybe<Scalars['String']['input']>
-}
-
 export type MutationPushPayloadCompressedArgs = {
 	data: Scalars['String']['input']
 	payload_id: Scalars['ID']['input']
 	session_secure_id: Scalars['String']['input']
 }
 
-export type MutationPushPayloadCompressed2Args = {
+export type MutationPushSessionEventsArgs = {
 	data: Scalars['String']['input']
 	payload_id: Scalars['Int64ID']['input']
 	session_secure_id: Scalars['String']['input']

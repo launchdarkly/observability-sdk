@@ -41,15 +41,21 @@ interface HighlightClientResponseWorker {
 	postMessage(e: HighlightClientWorkerResponse): void
 }
 
-async function bufferToBase64(buffer: Uint8Array) {
+export async function payloadToBase64(payload: PushPayloadMutationVariables) {
+	const buf = strToU8(JSON.stringify(payload))
+	const compressed = compressSync(buf)
 	// use a FileReader to generate a base64 data URI:
 	const base64url = await new Promise<string>((r) => {
 		const reader = new FileReader()
 		reader.onload = () => r(reader.result as string)
-		reader.readAsDataURL(new Blob([buffer]))
+		reader.readAsDataURL(new Blob([compressed]))
 	})
 	// remove data:application/octet-stream;base64, prefix
-	return base64url.slice(base64url.indexOf(',') + 1)
+	return {
+		compressedBase64: base64url.slice(base64url.indexOf(',') + 1),
+		compressedSize: compressed.length,
+		bufferLength: buf.length,
+	}
 }
 
 // `as any` because: https://github.com/Microsoft/TypeScript/issues/20595
@@ -157,7 +163,7 @@ function stringifyProperties(
 		const messagesString = stringify({ messages: messages })
 		let payload: PushPayloadMutationVariables = {
 			session_secure_id: sessionSecureID,
-			payload_id: new Date().getTime().toString(),
+			payload_id: id.toString(),
 			events: { events } as ReplayEventsInput,
 			messages: messagesString,
 			resources: resourcesString,
@@ -170,14 +176,13 @@ function stringifyProperties(
 			payload.highlight_logs = highlightLogs
 		}
 
-		const buf = strToU8(JSON.stringify(payload))
-		const compressed = compressSync(buf)
-		const compressedBase64 = await bufferToBase64(compressed)
+		const { compressedBase64, bufferLength, compressedSize } =
+			await payloadToBase64(payload)
 
 		const response: AsyncEventsResponse = {
 			type: MessageType.AsyncEvents,
 			id,
-			eventsSize: buf.length,
+			eventsSize: bufferLength,
 			compressedSize: compressedBase64.length,
 		}
 
@@ -196,8 +201,8 @@ function stringifyProperties(
 					resourcesLength: resourcesString.length,
 					webSocketLength: webSocketEventsString.length,
 					errorsLength: errors.length,
-					bufLength: buf.length,
-					compressedLength: compressed.length,
+					bufLength: bufferLength,
+					compressedLength: compressedSize,
 					compressedBase64Length: compressedBase64.length,
 				},
 				undefined,
@@ -205,7 +210,7 @@ function stringifyProperties(
 			)}`,
 		)
 
-		const pushPayload = graphqlSDK.PushPayloadCompressed({
+		const pushPayload = graphqlSDK.PushSessionEvents({
 			session_secure_id: sessionSecureID,
 			payload_id: id.toString(),
 			data: compressedBase64,

@@ -150,9 +150,8 @@ export type Mutation = {
 	pushBackendPayload?: Maybe<Scalars['Any']['output']>
 	pushMetrics: Scalars['Int']['output']
 	pushPayload: Scalars['Int']['output']
-	pushPayload2: Scalars['Int']['output']
 	pushPayloadCompressed?: Maybe<Scalars['Any']['output']>
-	pushPayloadCompressed2?: Maybe<Scalars['Any']['output']>
+	pushSessionEvents?: Maybe<Scalars['Any']['output']>
 }
 
 export type MutationAddSessionFeedbackArgs = {
@@ -221,26 +220,13 @@ export type MutationPushPayloadArgs = {
 	web_socket_events?: InputMaybe<Scalars['String']['input']>
 }
 
-export type MutationPushPayload2Args = {
-	errors: Array<InputMaybe<ErrorObjectInput>>
-	events: ReplayEventsInput
-	has_session_unloaded?: InputMaybe<Scalars['Boolean']['input']>
-	highlight_logs?: InputMaybe<Scalars['String']['input']>
-	is_beacon?: InputMaybe<Scalars['Boolean']['input']>
-	messages: Scalars['String']['input']
-	payload_id: Scalars['Int64ID']['input']
-	resources: Scalars['String']['input']
-	session_secure_id: Scalars['String']['input']
-	web_socket_events?: InputMaybe<Scalars['String']['input']>
-}
-
 export type MutationPushPayloadCompressedArgs = {
 	data: Scalars['String']['input']
 	payload_id: Scalars['ID']['input']
 	session_secure_id: Scalars['String']['input']
 }
 
-export type MutationPushPayloadCompressed2Args = {
+export type MutationPushSessionEventsArgs = {
 	data: Scalars['String']['input']
 	payload_id: Scalars['Int64ID']['input']
 	session_secure_id: Scalars['String']['input']
@@ -337,7 +323,7 @@ export type StackFrameInput = {
 
 export type PushPayloadMutationVariables = Exact<{
 	session_secure_id: Scalars['String']['input']
-	payload_id: Scalars['Int64ID']['input']
+	payload_id: Scalars['ID']['input']
 	events: ReplayEventsInput
 	messages: Scalars['String']['input']
 	resources: Scalars['String']['input']
@@ -350,18 +336,18 @@ export type PushPayloadMutationVariables = Exact<{
 
 export type PushPayloadMutation = {
 	__typename?: 'Mutation'
-	pushPayload2: number
+	pushPayload: number
 }
 
-export type PushPayloadCompressedMutationVariables = Exact<{
+export type PushSessionEventsMutationVariables = Exact<{
 	session_secure_id: Scalars['String']['input']
 	payload_id: Scalars['Int64ID']['input']
 	data: Scalars['String']['input']
 }>
 
-export type PushPayloadCompressedMutation = {
+export type PushSessionEventsMutation = {
 	__typename?: 'Mutation'
-	pushPayloadCompressed2?: any | null
+	pushSessionEvents?: any | null
 }
 
 export type IdentifySessionMutationVariables = Exact<{
@@ -612,7 +598,7 @@ export const MatchPartsFragmentDoc = gql`
 export const PushPayloadDocument = gql`
 	mutation PushPayload(
 		$session_secure_id: String!
-		$payload_id: Int64ID!
+		$payload_id: ID!
 		$events: ReplayEventsInput!
 		$messages: String!
 		$resources: String!
@@ -622,7 +608,7 @@ export const PushPayloadDocument = gql`
 		$has_session_unloaded: Boolean
 		$highlight_logs: String
 	) {
-		pushPayload2(
+		pushPayload(
 			session_secure_id: $session_secure_id
 			payload_id: $payload_id
 			events: $events
@@ -636,13 +622,13 @@ export const PushPayloadDocument = gql`
 		)
 	}
 `
-export const PushPayloadCompressedDocument = gql`
-	mutation PushPayloadCompressed(
+export const PushSessionEventsDocument = gql`
+	mutation PushSessionEvents(
 		$session_secure_id: String!
 		$payload_id: Int64ID!
 		$data: String!
 	) {
-		pushPayloadCompressed2(
+		pushSessionEvents(
 			session_secure_id: $session_secure_id
 			payload_id: $payload_id
 			data: $data
@@ -876,18 +862,18 @@ export function getSdk(
 				variables,
 			)
 		},
-		PushPayloadCompressed(
-			variables: PushPayloadCompressedMutationVariables,
+		PushSessionEvents(
+			variables: PushSessionEventsMutationVariables,
 			requestHeaders?: GraphQLClientRequestHeaders,
-		): Promise<PushPayloadCompressedMutation> {
+		): Promise<PushSessionEventsMutation> {
 			return withWrapper(
 				(wrappedRequestHeaders) =>
-					client.request<PushPayloadCompressedMutation>(
-						PushPayloadCompressedDocument,
+					client.request<PushSessionEventsMutation>(
+						PushSessionEventsDocument,
 						variables,
 						{ ...requestHeaders, ...wrappedRequestHeaders },
 					),
-				'PushPayloadCompressed',
+				'PushSessionEvents',
 				'mutation',
 				variables,
 			)

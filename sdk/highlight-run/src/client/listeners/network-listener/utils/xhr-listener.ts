@@ -241,7 +241,8 @@ const getBodyData = (postData: any, url: string | undefined) => {
 			!(
 				(url?.includes('localhost') ||
 					url?.includes('highlight.run')) &&
-				postData.includes('pushPayload')
+				(postData.includes('pushPayload') ||
+					postData.includes('pushSessionEvents'))
 			)
 		) {
 			return postData

@@ -6,7 +6,8 @@ import stringify from 'json-stringify-safe'
 import { addCustomEvent as rrwebAddCustomEvent, record } from 'rrweb'
 import {
 	getSdk,
-	PushPayloadDocument,
+	PushSessionEventsDocument,
+	PushSessionEventsMutationVariables,
 	PushPayloadMutationVariables,
 	Sdk,
 } from '../client/graph/generated/operations'
@@ -72,7 +73,10 @@ import {
 	setItem,
 } from '../client/utils/storage'
 import { getDefaultDataURLOptions } from '../client/utils/utils'
-import type { HighlightClientRequestWorker } from '../client/workers/highlight-client-worker'
+import {
+	payloadToBase64,
+	type HighlightClientRequestWorker,
+} from '../client/workers/highlight-client-worker'
 import HighlightClientWorker from '../client/workers/highlight-client-worker?worker&inline'
 import { MessageType, PropertyType } from '../client/workers/types'
 import { IntegrationClient } from '../integrations'
@@ -1005,7 +1009,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 					let blob = new Blob(
 						[
 							JSON.stringify({
-								query: print(PushPayloadDocument),
+								query: print(PushSessionEventsDocument),
 								variables: payload,
 							}),
 						],
@@ -1065,7 +1069,9 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 	async _sendPayload({
 		sendFn,
 	}: {
-		sendFn?: (payload: PushPayloadMutationVariables) => Promise<number>
+		sendFn?: (
+			payload: PushSessionEventsMutationVariables,
+		) => Promise<number>
 	}) {
 		const events = [...this.events]
 
@@ -1086,11 +1092,12 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 		this.logger.log(
 			`Sending: ${events.length} events, \nTo: ${this._backendUrl}\nOrg: ${this.organizationID}\nSessionSecureID: ${this.sessionData.sessionSecureID}`,
 		)
+		const payloadId = new Date().getTime()
 		const highlightLogs = getHighlightLogs()
 		if (sendFn) {
-			await sendFn({
+			const sessionPayload: PushPayloadMutationVariables = {
 				session_secure_id: this.sessionData.sessionSecureID,
-				payload_id: new Date().getTime().toString(),
+				payload_id: payloadId.toString(),
 				events: { events } as ReplayEventsInput,
 				messages: stringify({ messages: [] }),
 				resources: JSON.stringify({ resources: [] }),
@@ -1101,12 +1108,19 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 				is_beacon: false,
 				has_session_unloaded: this.hasSessionUnloaded,
 				highlight_logs: highlightLogs || undefined,
+			}
+
+			const { compressedBase64 } = await payloadToBase64(sessionPayload)
+			await sendFn({
+				session_secure_id: this.sessionData.sessionSecureID,
+				payload_id: payloadId.toString(),
+				data: compressedBase64,
 			})
 		} else {
 			this._worker.postMessage({
 				message: {
 					type: MessageType.AsyncEvents,
-					id: new Date().getTime(),
+					id: payloadId,
 					events,
 					messages: [],
 					errors: [],

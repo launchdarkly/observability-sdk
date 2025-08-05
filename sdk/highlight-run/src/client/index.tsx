@@ -6,8 +6,9 @@ import stringify from 'json-stringify-safe'
 import { addCustomEvent as rrwebAddCustomEvent, record } from 'rrweb'
 import {
 	getSdk,
-	PushPayloadDocument,
 	PushPayloadMutationVariables,
+	PushSessionEventsDocument,
+	PushSessionEventsMutationVariables,
 	Sdk,
 } from './graph/generated/operations'
 import { FirstLoadListeners } from './listeners/first-load-listeners'
@@ -104,7 +105,10 @@ import {
 	setStorageMode,
 } from './utils/storage'
 import { getDefaultDataURLOptions } from './utils/utils'
-import type { HighlightClientRequestWorker } from './workers/highlight-client-worker'
+import {
+	payloadToBase64,
+	type HighlightClientRequestWorker,
+} from './workers/highlight-client-worker'
 import HighlightClientWorker from './workers/highlight-client-worker?worker&inline'
 import { MessageType, PropertyType } from './workers/types'
 import { parseError } from './utils/errors'
@@ -1429,7 +1433,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 					let blob = new Blob(
 						[
 							JSON.stringify({
-								query: print(PushPayloadDocument),
+								query: print(PushSessionEventsDocument),
 								variables: payload,
 							}),
 						],
@@ -1492,7 +1496,9 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 	async _sendPayload({
 		sendFn,
 	}: {
-		sendFn?: (payload: PushPayloadMutationVariables) => Promise<number>
+		sendFn?: (
+			payload: PushSessionEventsMutationVariables,
+		) => Promise<number>
 	}) {
 		const resources = FirstLoadListeners.getRecordedNetworkResources(
 			this._firstLoadListeners,
@@ -1522,27 +1528,35 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 		this.logger.log(
 			`Sending: ${events.length} events, ${messages.length} messages, ${resources.length} network resources, ${errors.length} errors \nTo: ${this._backendUrl}\nOrg: ${this.organizationID}\nSessionSecureID: ${this.sessionData.sessionSecureID}`,
 		)
+		const payloadId = new Date().getTime()
 		const highlightLogs = getHighlightLogs()
 		if (sendFn) {
-			await sendFn({
+			const sessionPayload: PushPayloadMutationVariables = {
 				session_secure_id: this.sessionData.sessionSecureID,
-				payload_id: new Date().getTime().toString(),
+				payload_id: payloadId.toString(),
 				events: { events } as ReplayEventsInput,
-				messages: stringify({ messages: messages }),
-				resources: JSON.stringify({ resources: resources }),
+				messages: stringify({ messages: [] }),
+				resources: JSON.stringify({ resources: [] }),
 				web_socket_events: JSON.stringify({
-					webSocketEvents: webSocketEvents,
+					webSocketEvents: [],
 				}),
-				errors,
+				errors: [],
 				is_beacon: false,
 				has_session_unloaded: this.hasSessionUnloaded,
 				highlight_logs: highlightLogs || undefined,
+			}
+
+			const { compressedBase64 } = await payloadToBase64(sessionPayload)
+			await sendFn({
+				session_secure_id: this.sessionData.sessionSecureID,
+				payload_id: new Date().getTime().toString(),
+				data: compressedBase64,
 			})
 		} else {
 			this._worker.postMessage({
 				message: {
 					type: MessageType.AsyncEvents,
-					id: new Date().getTime(),
+					id: payloadId,
 					events,
 					messages,
 					errors,
