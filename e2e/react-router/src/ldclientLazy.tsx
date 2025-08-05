@@ -20,6 +20,7 @@ const sessionReplaySettings: ConstructorParameters<typeof SessionReplay>[0] = {
 	serviceName: 'ryan-test',
 	backendUrl: 'http://localhost:8082/public',
 	manualStart: true,
+	useWebSocket: true,
 }
 
 export const client = init(

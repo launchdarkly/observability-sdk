@@ -37,6 +37,8 @@ export class WebSocketGraphQLClient implements GraphQLClientAdapter {
 		// Set public url property for compatibility
 		this.url = this.wsUrl
 
+		console.log('WebSocketGraphQLClient.constructor', this.wsUrl)
+
 		this.wsClient = createClient({
 			url: this.wsUrl,
 			connectionParams: options?.headers
@@ -99,6 +101,8 @@ export class WebSocketGraphQLClient implements GraphQLClientAdapter {
 		variables?: any,
 		requestHeaders?: GraphQLClientRequestHeaders,
 	): Promise<TData> {
+		console.log('WebSocketGraphQLClient.request', document, variables)
+
 		await this.ensureConnected()
 
 		const query = typeof document === 'string' ? document : print(document)
@@ -114,6 +118,7 @@ export class WebSocketGraphQLClient implements GraphQLClientAdapter {
 				},
 				{
 					next: (data) => {
+						console.log('WebSocketGraphQLClient.request next', data)
 						if (data.errors) {
 							error = new Error(
 								`GraphQL errors: ${JSON.stringify(data.errors)}`,
@@ -123,9 +128,14 @@ export class WebSocketGraphQLClient implements GraphQLClientAdapter {
 						}
 					},
 					error: (err) => {
+						console.error(
+							'WebSocketGraphQLClient.request error',
+							err,
+						)
 						reject(err)
 					},
 					complete: () => {
+						console.log('WebSocketGraphQLClient.request complete')
 						if (error) {
 							reject(error)
 						} else {

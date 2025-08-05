@@ -1023,6 +1023,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 							type: 'application/json',
 						},
 					)
+					// TODO: This short circuits the websocket.
 					await window.fetch(`${this._backendUrl}`, {
 						method: 'POST',
 						body: blob,
