@@ -3,8 +3,9 @@ using LaunchDarkly.Sdk;
 using LaunchDarkly.Sdk.Server;
 using Microsoft.AspNetCore.Mvc;
 using System.Globalization;
-using System.Diagnostics;
 using LaunchDarkly.Sdk.Server.Telemetry;
+using OpenTelemetry.Exporter;
+using System.Diagnostics;
 
 // DOTNET Setup
 var builder = WebApplication.CreateBuilder(args);
@@ -16,8 +17,15 @@ builder.Services.AddSwaggerGen(c =>
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "Sandbox API", Description = "This is a sandbox API for dotnet SDK development", Version = "v1" });
 });
 
+var observabilityConfig = new ObservabilityPluginConfig
+{
+    ServiceName = "sandbox-api",
+    OtlpEndpoint = "http://localhost:4318",
+    OtlpProtocol = OtlpExportProtocol.HttpProtobuf
+};
+
 // Add observability (OpenTelemetry) configuration
-builder.AddObservability();
+builder.AddObservability(observabilityConfig);
 
 var app = builder.Build();
 
@@ -41,7 +49,7 @@ if (string.IsNullOrEmpty(SdkKey))
 
 var ldConfig = Configuration.Builder(SdkKey)
     .Plugins(Components.Plugins()
-        .Add(new ObservabilityPlugin()))
+        .Add(new ObservabilityPlugin(observabilityConfig)))
     .Hooks(Components.Hooks()
         .Add(TracingHook.Default())
     ).Build();
@@ -72,7 +80,8 @@ string HandleRollDice([FromServices]ILogger<Program> logger, string? player)
         : Random.Shared.Next(1, 7); // Roll a D6 if flag is false
 
     // OpenTelemetry Tracing
-    using var activity = ObservabilityPlugin.ActivitySource.StartActivity("roll-dice");
+    using var activity = new Activity("roll-dice");
+    activity.Start();
         
     if(activity != null)
     {

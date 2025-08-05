@@ -6,15 +6,17 @@ using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
-using System.Diagnostics;
+
+public class ObservabilityPluginConfig
+{
+    public required string ServiceName { get; set; }
+    public required string OtlpEndpoint { get; set; }
+    public required OtlpExportProtocol OtlpProtocol { get; set; }
+}
 
 public class ObservabilityPlugin : Plugin
 {
-    private const string ServiceName = "sandbox-api";
-    public static ActivitySource ActivitySource { get; } = new ActivitySource(ServiceName);
-
-    public ObservabilityPlugin(string name = "observability-plugin")
-        : base(name) { }
+    public ObservabilityPlugin(ObservabilityPluginConfig config) : base(config.ServiceName) {}
 
     public override void Register(ILdClient client, EnvironmentMetadata metadata)
     {
@@ -27,15 +29,14 @@ public class ObservabilityPlugin : Plugin
 /// </summary>
 public static class ObservabilityExtensions
 {
-    private const string ServiceName = "sandbox-api";
-
     /// <summary>
     /// Extension method to configure OpenTelemetry for the web application builder.
     /// This encapsulates all OpenTelemetry setup including logging, tracing, and metrics.
     /// </summary>
     /// <param name="builder">The web application builder</param>
+    /// <param name="config">The observability configuration</param>
     /// <returns>The web application builder for method chaining</returns>
-    public static WebApplicationBuilder AddObservability(this WebApplicationBuilder builder)
+    public static WebApplicationBuilder AddObservability(this WebApplicationBuilder builder, ObservabilityPluginConfig config)
     {
         // Configure OpenTelemetry Logging
         builder.Logging.AddOpenTelemetry(options =>
@@ -43,34 +44,34 @@ public static class ObservabilityExtensions
             options
                 .SetResourceBuilder(
                     ResourceBuilder.CreateDefault()
-                        .AddService(ServiceName))
+                        .AddService(config.ServiceName))
                 .AddConsoleExporter()
                 .AddOtlpExporter(otlpOptions =>
                 {
-                    otlpOptions.Endpoint = new Uri("http://localhost:4318/v1/logs");
-                    otlpOptions.Protocol = OtlpExportProtocol.HttpProtobuf;
+                    otlpOptions.Endpoint = new Uri(config.OtlpEndpoint + "/v1/logs");
+                    otlpOptions.Protocol = config.OtlpProtocol;
                 });
         });
 
         // Configure OpenTelemetry Tracing and Metrics
         builder.Services.AddOpenTelemetry()
-            .ConfigureResource(resource => resource.AddService(ServiceName))
+            .ConfigureResource(resource => resource.AddService(config.ServiceName))
             .WithTracing(tracing => tracing
                 .AddAspNetCoreInstrumentation()
-                .AddSource(ServiceName)
+                .AddSource(config.ServiceName)
                 .AddConsoleExporter()
                 .AddOtlpExporter(otlpOptions =>
                 {
-                    otlpOptions.Endpoint = new Uri("http://localhost:4318/v1/traces");
-                    otlpOptions.Protocol = OtlpExportProtocol.HttpProtobuf;
+                    otlpOptions.Endpoint = new Uri(config.OtlpEndpoint + "/v1/traces");
+                    otlpOptions.Protocol = config.OtlpProtocol;
                 }))
             .WithMetrics(metrics => metrics
                 .AddAspNetCoreInstrumentation()
                 .AddConsoleExporter()
                 .AddOtlpExporter(otlpOptions =>
                 {
-                    otlpOptions.Endpoint = new Uri("http://localhost:4318/v1/metrics");
-                    otlpOptions.Protocol = OtlpExportProtocol.HttpProtobuf;
+                    otlpOptions.Endpoint = new Uri(config.OtlpEndpoint + "/v1/metrics");
+                    otlpOptions.Protocol = config.OtlpProtocol;
                 }));
 
         return builder;
