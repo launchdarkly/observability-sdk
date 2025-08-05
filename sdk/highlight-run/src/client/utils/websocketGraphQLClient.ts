@@ -21,8 +21,8 @@ export interface GraphQLClientAdapter {
 export class WebSocketGraphQLClient implements GraphQLClientAdapter {
 	private wsClient: WSClient
 	private wsUrl: string
-	private isConnected = false
-	private connectionPromise: Promise<void> | null = null
+	//private isConnected = false
+	//private connectionPromise: Promise<void> | null = null
 
 	// GraphQLClient compatibility - add required properties as stubs
 	public readonly url: string
@@ -41,17 +41,19 @@ export class WebSocketGraphQLClient implements GraphQLClientAdapter {
 
 		this.wsClient = createClient({
 			url: this.wsUrl,
+			keepAlive: 10_000, // ping every 10 seconds
+			lazyCloseTimeout: 20_000, // close connection after 20 seconds of inactivity
 			connectionParams: options?.headers
 				? { headers: options.headers }
 				: undefined,
 			on: {
 				opened: () => {
 					console.log('WebSocket GraphQL connection opened')
-					this.isConnected = true
+					//this.isConnected = true
 				},
 				closed: () => {
 					console.log('WebSocket GraphQL connection closed')
-					this.isConnected = false
+					//this.isConnected = false
 				},
 				error: (error) => {
 					console.error('WebSocket GraphQL error:', error)
@@ -63,21 +65,34 @@ export class WebSocketGraphQLClient implements GraphQLClientAdapter {
 	/**
 	 * Ensure connection is established before sending operations
 	 */
+	/*
 	private async ensureConnected(): Promise<void> {
 		if (this.isConnected) {
+			console.log('WebSocketGraphQLClient.ensureConnected isConnected')
 			return
 		}
 
 		if (this.connectionPromise) {
+
+			console.log(
+				'WebSocketGraphQLClient.ensureConnected connectionPromise',
+			)
 			return this.connectionPromise
 		}
 
+		console.log(
+			'WebSocketGraphQLClient.ensureConnected creating connectionPromise',
+		)
+
 		this.connectionPromise = new Promise((resolve, reject) => {
 			const timeout = setTimeout(() => {
+				console.error('WebSocket connection timeout after 10 seconds')
 				reject(new Error('WebSocket connection timeout'))
 			}, 10000) // 10 second timeout
 
+			// Listen for the opened event that we set up in constructor
 			const checkConnection = () => {
+				console.log('Checking connection status:', this.isConnected)
 				if (this.isConnected) {
 					clearTimeout(timeout)
 					this.connectionPromise = null
@@ -86,11 +101,13 @@ export class WebSocketGraphQLClient implements GraphQLClientAdapter {
 					setTimeout(checkConnection, 100)
 				}
 			}
+
+			// Start checking
 			checkConnection()
 		})
 
 		return this.connectionPromise
-	}
+	}*/
 
 	/**
 	 * Send a GraphQL operation over WebSocket
@@ -103,7 +120,9 @@ export class WebSocketGraphQLClient implements GraphQLClientAdapter {
 	): Promise<TData> {
 		console.log('WebSocketGraphQLClient.request', document, variables)
 
-		await this.ensureConnected()
+		//await this.ensureConnected()
+
+		//console.log('WebSocketGraphQLClient.request ensureConnected')
 
 		const query = typeof document === 'string' ? document : print(document)
 
@@ -152,8 +171,8 @@ export class WebSocketGraphQLClient implements GraphQLClientAdapter {
 	 */
 	dispose(): void {
 		this.wsClient.dispose()
-		this.isConnected = false
-		this.connectionPromise = null
+		//this.isConnected = false
+		//this.connectionPromise = null
 	}
 }
 

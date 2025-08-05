@@ -549,6 +549,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 					backend: this._backendUrl,
 					debug: !!this.debugOptions.clientInteractions,
 					recordingStartTime: this._recordingStartTime,
+					useWebSocket: this._isUsingWebSocket,
 				},
 			})
 			for (const integration of this._integrations) {

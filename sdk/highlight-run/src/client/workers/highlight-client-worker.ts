@@ -1,5 +1,9 @@
 import { compressSync, strToU8 } from 'fflate'
 import { GraphQLClient } from 'graphql-request'
+import {
+	createWebSocketGraphQLClient,
+	GraphQLClientAdapter,
+} from '../utils/websocketGraphQLClient'
 import stringify from 'json-stringify-safe'
 import { UPLOAD_TIMEOUT } from '../constants/sessions'
 import {
@@ -114,6 +118,7 @@ function stringifyProperties(
 	let debug: boolean = false
 	let recordingStartTime: number = 0
 	let logger = new Logger(false, '[worker]')
+	let isUsingWebSocket: boolean = false
 	const metricsPayload: {
 		name: string
 		value: number
@@ -363,18 +368,33 @@ function stringifyProperties(
 	}
 
 	worker.onmessage = async function (e) {
+		console.log('highlight-client-worker.onmessage', e.data.message.type)
 		if (e.data.message.type === MessageType.Initialize) {
 			backend = e.data.message.backend
 			sessionSecureID = e.data.message.sessionSecureID
 			debug = e.data.message.debug
 			recordingStartTime = e.data.message.recordingStartTime
+			isUsingWebSocket = e.data.message.useWebSocket === true
 			logger.debug = debug
 
-			// TODO: This might be the spot where we can optionally use the websocket transport.
-			graphqlSDK = getSdk(
-				new GraphQLClient(backend, {
+			// Initialize GraphQL client - HTTP or WebSocket based on configuration
+			let client: GraphQLClient | GraphQLClientAdapter
+			if (isUsingWebSocket) {
+				console.log(
+					'Worker: Using WebSocket GraphQL transport for connection reuse',
+				)
+				client = createWebSocketGraphQLClient(backend, {
 					headers: {},
-				}),
+				})
+			} else {
+				console.log('Worker: Using HTTP GraphQL transport')
+				client = new GraphQLClient(backend, {
+					headers: {},
+				})
+			}
+
+			graphqlSDK = getSdk(
+				client as GraphQLClient,
 				getGraphQLRequestWrapper(),
 			)
 			return
@@ -406,4 +426,14 @@ function stringifyProperties(
 			numberOfFailedRequests += 1
 		}
 	}
+
+	// Clean up WebSocket connection when worker is terminated
+	/*
+	self.addEventListener('beforeunload', () => {
+		if (isUsingWebSocket && wsClient) {
+			console.log('Worker: Cleaning up WebSocket connection')
+			wsClient.dispose()
+		}
+	})
+	*/
 }

@@ -24,6 +24,7 @@ export type InitializeMessage = {
 	sessionSecureID: string
 	debug: boolean
 	recordingStartTime: number
+	useWebSocket?: boolean
 }
 
 export type AsyncEventsMessage = {
