@@ -1,7 +1,8 @@
 package com.launchdarkly.observability.plugin
 
-import ObservabilityClient
 import android.app.Application
+import com.launchdarkly.observability.client.ObservabilityClient
+import com.launchdarkly.observability.sdk.LDObserve
 import com.launchdarkly.sdk.android.LDClient
 import com.launchdarkly.sdk.android.integrations.EnvironmentMetadata
 import com.launchdarkly.sdk.android.integrations.Hook

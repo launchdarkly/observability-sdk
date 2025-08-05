@@ -25,8 +25,6 @@ private const val URL_LOGS = URL + "/v1/logs"
 private const val URL_TRACES = URL + "/v1/traces"
 private const val INSTRUMENTATION_SCOPE_NAME = "com.launchdarkly.observability"
 
-private const val HEADER_LD_PROJECT = "X-LaunchDarkly-Project"
-
 /**
  * Manages instrumentation for LaunchDarkly Observability.
  *
@@ -48,13 +46,12 @@ class InstrumentationManager(
             .addLoggerProviderCustomizer { sdkLoggerProviderBuilder, application ->
                 val logExporter = OtlpHttpLogRecordExporter.builder()
                     .setEndpoint(URL_LOGS)
-                    .addHeader(HEADER_LD_PROJECT, sdkKey) // TODO: check if this header is necessary
                     .build()
 
                 // TODO: support configuring these options via parameters
                 val processor = BatchLogRecordProcessor.builder(logExporter)
                     .setMaxQueueSize(100)
-                    .setScheduleDelay(500, TimeUnit.MILLISECONDS)
+                    .setScheduleDelay(1000, TimeUnit.MILLISECONDS)
                     .setExporterTimeout(5000, TimeUnit.MILLISECONDS)
                     .setMaxExportBatchSize(10)
                     .build()
@@ -66,12 +63,11 @@ class InstrumentationManager(
             .addTracerProviderCustomizer { sdkTracerProviderBuilder, application ->
                 val spanExporter = OtlpHttpSpanExporter.builder()
                     .setEndpoint(URL_TRACES)
-                    .addHeader(HEADER_LD_PROJECT, sdkKey) // TODO: check if this header is necessary
                     .build()
 
                 val spanProcessor = BatchSpanProcessor.builder(spanExporter)
                     .setMaxQueueSize(100)
-                    .setScheduleDelay(500, TimeUnit.MILLISECONDS)
+                    .setScheduleDelay(1000, TimeUnit.MILLISECONDS)
                     .setExporterTimeout(5000, TimeUnit.MILLISECONDS)
                     .setMaxExportBatchSize(10)
                     .build()
@@ -83,7 +79,6 @@ class InstrumentationManager(
             .addMeterProviderCustomizer { sdkMeterProviderBuilder, application ->
                 val metricExporter: MetricExporter = OtlpHttpMetricExporter.builder()
                     .setEndpoint(URL_METRICS)
-                    .addHeader(HEADER_LD_PROJECT, sdkKey)
                     .build()
 
                 // Configure a periodic reader that pushes metrics every 10 seconds.
