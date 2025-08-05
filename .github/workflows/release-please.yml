@@ -71,6 +71,7 @@ jobs:
     release-android-plugin:
         runs-on: ubuntu-latest
         permissions:
+            id-token: write # Used for publishing secrets and documentation.
             contents: write
         needs: ['release-package']
         if: ${{ needs.release-package.outputs.android-plugin-released == 'true' }}

@@ -21,19 +21,16 @@ inputs:
         description: 'Whether to run the publish in dry-run mode'
         required: false
         default: 'false'
-
-outputs:
-    package-hashes:
-        description: 'Base64 encoded SHA256 hashes of published packages'
-        value: ${{ steps.package-hashes.outputs.package-hashes }}
+    prerelease:
+        description: 'Whether to publish a prerelease version'
+        required: false
+        default: 'false'
 
 runs:
     using: 'composite'
     steps:
         - name: Checkout
           uses: actions/checkout@v4
-          with:
-            ref: ta/O11Y-388/setup-build-publish-actions
 
         - name: Setup Java
           uses: actions/setup-java@v4
@@ -56,17 +53,18 @@ runs:
 
         - name: Publish Library
           shell: bash
-          if: ${{ inputs.dry_run == 'false' }}
+          if: ${{ inputs.dry-run != 'true' }}
+          working-directory: ${{ inputs.workspace-path }}
           env:
             LD_RELEASE_IS_PRERELEASE: ${{ inputs.prerelease }}
-            SIGNING_KEY_ID: ${{ inputs.signing_key_id }}
-            SIGNING_KEY_PASSPHRASE: ${{ inputs.signing_key_passphrase }}
-            SIGNING_SECRET_KEY_RING_FILE: ${{ inputs.code_signing_keyring }}
-            SONATYPE_USER_NAME: ${{ inputs.sonatype_username }}
-            SONATYPE_PASSWORD: ${{ inputs.sonatype_password }}
+            SIGNING_KEY_ID: ${{ env.SIGNING_KEY_ID }}
+            SIGNING_KEY_PASSPHRASE: ${{ env.SIGNING_KEY_PASSPHRASE }}
+            SIGNING_SECRET_KEY_RING_FILE: ${{ github.workspace }}/code-signing-keyring.gpg
+            SONATYPE_USER_NAME: ${{ env.SONATYPE_USER_NAME }}
+            SONATYPE_PASSWORD: ${{ env.SONATYPE_PASSWORD }}
           run: source $GITHUB_ACTION_PATH/publish.sh
 
         - name: Dry Run Publish Library
           shell: bash
-          if: ${{ inputs.dry_run == 'true' }}
+          if: ${{ inputs.dry-run == 'true' }}
           run: echo "Dry run. Not publishing."

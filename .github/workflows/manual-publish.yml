@@ -142,3 +142,4 @@ jobs:
                   workspace-path: sdk/@launchdarkly/observability-android
                   aws-role-arn: ${{ vars.AWS_ROLE_ARN }}
                   dry-run: ${{ inputs.dry-run }}
+                  prerelease: ${{ inputs.prerelease }}
