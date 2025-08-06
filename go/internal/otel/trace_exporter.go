@@ -29,7 +29,7 @@ func (r readOnlySpanWorkaround) Attributes() []attribute.KeyValue {
 
 // ExportSpans implements trace.SpanExporter.
 func (t *traceExporter) ExportSpans(ctx context.Context, spans []sdktrace.ReadOnlySpan) error {
-	omittedSpanIds := make([]trace.SpanID, 0, len(spans))
+	var omittedSpanIds []trace.SpanID
 	spanById := make(map[trace.SpanID]sdktrace.ReadOnlySpan)
 	childrenByParentId := make(map[trace.SpanID][]trace.SpanID)
 
@@ -70,18 +70,9 @@ func (t *traceExporter) ExportSpans(ctx context.Context, spans []sdktrace.ReadOn
 		}
 	}
 
-	exportedSpans := make([]sdktrace.ReadOnlySpan, 0, len(spans))
+	exportedSpans := make([]sdktrace.ReadOnlySpan, 0, len(spanById))
 	for _, s := range spanById {
-		res := t.sampler.SampleSpan(s)
-		if res.Sample {
-			exportedSpans = append(
-				exportedSpans,
-				readOnlySpanWorkaround{
-					ReadOnlySpan:    s,
-					extraAttributes: res.Attributes,
-				},
-			)
-		}
+		exportedSpans = append(exportedSpans, s)
 	}
 
 	return t.SpanExporter.ExportSpans(ctx, exportedSpans)
