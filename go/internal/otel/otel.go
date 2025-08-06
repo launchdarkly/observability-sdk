@@ -24,6 +24,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
 	"go.opentelemetry.io/otel/trace"
 
+	"github.com/launchdarkly/observability-sdk/go/internal/gql"
 	"github.com/launchdarkly/observability-sdk/go/internal/logging"
 	"github.com/launchdarkly/observability-sdk/go/internal/metadata"
 )
@@ -100,6 +101,19 @@ var otlp atomic.Pointer[providerInstances]
 //
 //nolint:gochecknoglobals
 var config atomic.Pointer[Config]
+
+// The custom sampler is created once at initialization and manages thread
+// safety internally. So we don't need any synchronization for this object.
+//
+//nolint:gochecknoglobals
+var customSampler *CustomSampler = NewCustomSampler(DefaultSampler)
+
+// SetSamplingConfig sets the sampling configuration for the custom sampler.
+// This function is called when the sampling configuration is received from
+// the LaunchDarkly API.
+func SetSamplingConfig(config *gql.GetSamplingConfigResponse) {
+	customSampler.SetConfig(&config.Sampling)
+}
 
 // Shutdown flushes pending data and shuts down the OTLP instances.
 func Shutdown() {
@@ -197,7 +211,7 @@ func createTracerProvider(
 	}
 	opts = append([]sdktrace.TracerProviderOption{
 		sdktrace.WithSampler(sampler),
-		sdktrace.WithBatcher(exporter,
+		sdktrace.WithBatcher(newTraceExporter(exporter, customSampler),
 			sdktrace.WithBatchTimeout(time.Second),
 			sdktrace.WithExportTimeout(30*time.Second),
 			sdktrace.WithMaxExportBatchSize(1024*1024),
@@ -220,7 +234,7 @@ func createLoggerProvider(
 		return nil, fmt.Errorf("creating OTLP logger exporter: %w", err)
 	}
 	opts = append([]sdklog.LoggerProviderOption{
-		sdklog.WithProcessor(sdklog.NewBatchProcessor(exporter,
+		sdklog.WithProcessor(sdklog.NewBatchProcessor(newLogExporter(exporter, customSampler),
 			sdklog.WithExportTimeout(30*time.Second),
 			sdklog.WithExportMaxBatchSize(1024*1024),
 			sdklog.WithMaxQueueSize(1024*1024),

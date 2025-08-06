@@ -22,6 +22,10 @@ on:
                 description: 'Should release @launchdarkly/observability-python package.'
                 type: boolean
                 required: true
+            release_launchdarkly_android:
+                description: 'Should release @launchdarkly/observability-android package.'
+                type: boolean
+                required: true
             python_tag_name:
                 description: 'The tag name for the python package. Should be set when publishing a python package.'
                 type: string
@@ -124,3 +128,18 @@ jobs:
             base64-subjects: '${{ needs.publish-python-sdk.outputs.package-hashes }}'
             upload-assets: true
             upload-tag-name: ${{ inputs.python_tag_name }}
+
+    publish-android-sdk:
+        runs-on: ubuntu-latest
+        if: ${{ inputs.release_launchdarkly_android == true }}
+        permissions:
+            id-token: write
+        steps:
+            - name: Publish Android SDK
+              id: publish
+              uses: ./.github/actions/publish-android-sdk
+              with:
+                  workspace-path: sdk/@launchdarkly/observability-android
+                  aws-role-arn: ${{ vars.AWS_ROLE_ARN }}
+                  dry-run: ${{ inputs.dry-run }}
+                  prerelease: ${{ inputs.prerelease }}

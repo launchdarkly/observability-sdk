@@ -7,10 +7,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/launchdarkly/observability-sdk/go/internal/gql"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
+	sdklog "go.opentelemetry.io/otel/sdk/log"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+
+	"github.com/launchdarkly/observability-sdk/go/internal/gql"
+	"go.opentelemetry.io/otel/sdk/log/logtest"
 )
 
 type inputEvent struct {
@@ -24,9 +27,14 @@ type inputSpan struct {
 	Events     []inputEvent   `json:"events"`
 }
 
+type inputSamplingResult struct {
+	Sample     bool                   `json:"sample"`
+	Attributes map[string]interface{} `json:"attributes"`
+}
+
 type samplerFunctionCase struct {
-	SamplerType    string         `json:"type"`
-	ExpectedResult SamplingResult `json:"expected_result"`
+	SamplerType    string              `json:"type"`
+	ExpectedResult inputSamplingResult `json:"expected_result"`
 }
 
 type spanTestScenario struct {
@@ -146,6 +154,9 @@ func compareValues(expected, actual interface{}) bool {
 		if act, ok := actual.(int); ok {
 			return exp == act
 		}
+		if act, ok := actual.(int64); ok {
+			return int64(exp) == act
+		}
 		if act, ok := actual.(float64); ok {
 			return float64(exp) == act
 		}
@@ -154,6 +165,9 @@ func compareValues(expected, actual interface{}) bool {
 			return exp == act
 		}
 		if act, ok := actual.(int); ok {
+			return exp == float64(act)
+		}
+		if act, ok := actual.(int64); ok {
 			return exp == float64(act)
 		}
 	case string:
@@ -211,8 +225,19 @@ func TestSpanScenarios(t *testing.T) {
 					t.Errorf("Expected attributes to be %v, got %v", samplerFunctionCase.ExpectedResult.Attributes, result.Attributes)
 				}
 				for key, value := range samplerFunctionCase.ExpectedResult.Attributes {
-					if !compareValues(value, result.Attributes[key]) {
-						t.Errorf("Expected attribute %v to be %v, got %v", key, value, result.Attributes[key])
+					found := false
+					for _, attr := range result.Attributes {
+						if string(attr.Key) == key {
+							found = true
+							if attr.Value.Type() != attribute.INT64 {
+								t.Errorf("Expected attribute %v to be an int64, got %v", key, attr.Value.Type())
+							} else if !compareValues(value, attr.Value.AsInt64()) {
+								t.Errorf("Expected attribute %v to be %v, got %v", key, value, attr.Value.AsInt64())
+							}
+						}
+					}
+					if !found {
+						t.Errorf("Expected attribute %v to be present", key)
 					}
 				}
 			}
@@ -248,28 +273,28 @@ func toLogAttributes(inputLog inputLog) []log.KeyValue {
 	return attributes
 }
 
-func toLogRecord(inputLog inputLog) log.Record {
-	record := log.Record{}
+func toLogRecord(inputLog inputLog) sdklog.Record {
+	factory := logtest.RecordFactory{
+		AttributeValueLengthLimit: 1024, // Set a reasonable limit
+		AttributeCountLimit:       100,  // Set a reasonable limit
+	}
 
 	// Set the message body
 	if inputLog.Message != "" {
-		record.SetBody(log.StringValue(inputLog.Message))
+		factory.Body = log.StringValue(inputLog.Message)
 	}
 
 	// Set severity
 	if inputLog.SeverityText != "" {
-		record.SetSeverityText(inputLog.SeverityText)
+		factory.SeverityText = inputLog.SeverityText
 	}
 
+	// Set attributes
 	if len(inputLog.Attributes) > 0 {
-		record.AddAttributes(toLogAttributes(inputLog)...)
+		factory.Attributes = toLogAttributes(inputLog)
 	}
 
-	// Note: Attributes are not currently supported in the log matching implementation
-	// as the OpenTelemetry log API is still in beta and the Attributes() method
-	// may not be available on log.Record
-
-	return record
+	return factory.NewRecord()
 }
 
 func TestLogScenarios(t *testing.T) {
@@ -306,8 +331,19 @@ func TestLogScenarios(t *testing.T) {
 					t.Errorf("Expected attributes to be %v, got %v", samplerFunctionCase.ExpectedResult.Attributes, result.Attributes)
 				}
 				for key, value := range samplerFunctionCase.ExpectedResult.Attributes {
-					if !compareValues(value, result.Attributes[key]) {
-						t.Errorf("Expected attribute %v to be %v, got %v", key, value, result.Attributes[key])
+					found := false
+					for _, attr := range result.Attributes {
+						if string(attr.Key) == key {
+							if attr.Value.Kind() != log.KindInt64 {
+								t.Errorf("Expected attribute %v to be an int64, got %v", key, attr.Value.Kind())
+							} else if !compareValues(value, attr.Value.AsInt64()) {
+								t.Errorf("Expected attribute %v to be %v, got %v", key, value, attr.Value.AsInt64())
+							}
+							found = true
+						}
+					}
+					if !found {
+						t.Errorf("Expected attribute %v to be present", key)
 					}
 				}
 			}

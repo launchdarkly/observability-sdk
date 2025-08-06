@@ -1,8 +1,8 @@
 package com.example.androidobservability
 
-import LDObserve
 import androidx.lifecycle.ViewModel
 import com.launchdarkly.observability.interfaces.Metric
+import com.launchdarkly.observability.sdk.LDObserve
 import com.launchdarkly.sdk.android.LDClient
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
