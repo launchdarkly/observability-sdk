@@ -17,4 +17,8 @@
         <PackageReference Include="NUnit.Analyzers" Version="3.9.0"/>
         <PackageReference Include="NUnit3TestAdapter" Version="4.5.0"/>
     </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\src\LaunchDarkly.Observability\LaunchDarkly.Observability.csproj" />
+    </ItemGroup>
 </Project>
