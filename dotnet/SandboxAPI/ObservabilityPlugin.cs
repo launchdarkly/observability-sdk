@@ -448,14 +448,13 @@ public class CustomSampler : IExportSampler
 /// <summary>
 /// Custom trace exporter that applies sampling before exporting
 /// </summary>
-public class SamplingTraceExporter : BaseExporter<Activity>
+public class SamplingTraceExporter : OtlpTraceExporter
 {
-    private readonly BaseExporter<Activity> _innerExporter;
+    // private readonly BaseExporter<Activity> _innerExporter;
     private readonly IExportSampler _sampler;
 
-    public SamplingTraceExporter(BaseExporter<Activity> innerExporter, IExportSampler sampler)
+    public SamplingTraceExporter(IExportSampler sampler, OtlpExporterOptions options): base(options)
     {
-        _innerExporter = innerExporter;
         _sampler = sampler;
     }
 
@@ -485,16 +484,7 @@ public class SamplingTraceExporter : BaseExporter<Activity>
 
         // Create a new batch with only the sampled activities
         using var sampledBatch = new Batch<Activity>(sampled.ToArray(), sampled.Count);
-        return _innerExporter.Export(sampledBatch);
-    }
-
-    protected override void Dispose(bool disposing)
-    {
-        if (disposing)
-        {
-            _innerExporter?.Dispose();
-        }
-        base.Dispose(disposing);
+        return base.Export(sampledBatch);
     }
 }
 
@@ -686,15 +676,13 @@ public static class ObservabilityExtensions
                 // Add OTLP trace exporter
                 if (config.Sampler != null)
                 {
-                    // When custom sampling is enabled: create OTLP exporter and wrap with sampling logic
-                    var otlpExporter = new OtlpTraceExporter(new OtlpExporterOptions
+                    // Wrap the OTLP exporter with our custom sampling exporter
+                    var samplingExporter = new SamplingTraceExporter(config.Sampler, new OtlpExporterOptions
                     {
                         Endpoint = new Uri(config.OtlpEndpoint + "/v1/traces"),
                         Protocol = config.OtlpProtocol
                     });
                     
-                    // Wrap the OTLP exporter with our custom sampling exporter
-                    var samplingExporter = new SamplingTraceExporter(otlpExporter, config.Sampler);
                     tracing.AddProcessor(new SimpleActivityExportProcessor(samplingExporter));
                 }
                 else
