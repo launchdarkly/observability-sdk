@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"time"
@@ -46,7 +47,11 @@ func run() (err error) {
 		}
 	})
 
-	app.Listen(":8080")
+	err = app.Listen(":8080")
+	if err != nil {
+		fmt.Println("Error starting server", err)
+		return err
+	}
 
 	return nil
 }

@@ -29,12 +29,12 @@ func DoLog(w http.ResponseWriter, r *http.Request) {
 	ctx, span := tracer.Start(r.Context(), "DoLog")
 	defer span.End()
 
-	var intVal int = 123
+	var intVal = 123
 	var int64Val int64 = 12356
-	var floatVal float64 = 123.456
-	var boolVal bool = true
-	var arrayVal []string = []string{"a", "b", "c"}
-	var mapVal map[string]string = map[string]string{"a": "b", "c": "d"}
+	var floatVal = 123.456
+	var boolVal = true
+	var arrayVal = []string{"a", "b", "c"}
+	var mapVal = map[string]string{"a": "b", "c": "d"}
 
 	// Including the context in the logrus fields will allow the log to be
 	// correlated with the surrounding trace/span.

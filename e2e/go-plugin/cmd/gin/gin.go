@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 
@@ -45,5 +46,9 @@ func main() {
 			})
 		}
 	})
-	r.Run() // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
+	err := r.Run(":8080")
+	if err != nil {
+		fmt.Println("Error starting server", err)
+		return
+	}
 }
