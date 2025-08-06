@@ -35,8 +35,8 @@ runs:
         - name: Setup Java
           uses: actions/setup-java@v4
           with:
-            distribution: ${{ inputs.java_distribution }}
-            java-version: ${{ inputs.java_version }}
+              distribution: ${{ inputs.java_distribution }}
+              java-version: ${{ inputs.java_version }}
 
         - name: Setup Android SDK
           uses: android-actions/setup-android@v3
@@ -44,25 +44,25 @@ runs:
         - uses: launchdarkly/gh-actions/actions/release-secrets@release-secrets-v1.2.0
           name: Get secrets
           with:
-            aws_assume_role: ${{ inputs.aws-role-arn }}
-            ssm_parameter_pairs: |
-              /production/common/releasing/sonatype/central/username = SONATYPE_USER_NAME,
-              /production/common/releasing/sonatype/central/password = SONATYPE_PASSWORD,
-              /production/common/releasing/android_code_signing/private_key_id = SIGNING_KEY_ID,
-              /production/common/releasing/android_code_signing/private_key_passphrase = SIGNING_KEY_PASSPHRASE
-            s3_path_pairs: 'launchdarkly-releaser/android/code-signing-keyring.gpg = code-signing-keyring.gpg'
+              aws_assume_role: ${{ inputs.aws-role-arn }}
+              ssm_parameter_pairs: |
+                  /production/common/releasing/sonatype/central/username = SONATYPE_USER_NAME,
+                  /production/common/releasing/sonatype/central/password = SONATYPE_PASSWORD,
+                  /production/common/releasing/android_code_signing/private_key_id = SIGNING_KEY_ID,
+                  /production/common/releasing/android_code_signing/private_key_passphrase = SIGNING_KEY_PASSPHRASE
+              s3_path_pairs: 'launchdarkly-releaser/android/code-signing-keyring.gpg = code-signing-keyring.gpg'
 
         - name: Publish Library
           shell: bash
           if: ${{ inputs.dry-run != 'true' }}
           working-directory: ${{ inputs.workspace-path }}
           env:
-            LD_RELEASE_IS_PRERELEASE: ${{ inputs.prerelease }}
-            SIGNING_KEY_ID: ${{ env.SIGNING_KEY_ID }}
-            SIGNING_KEY_PASSPHRASE: ${{ env.SIGNING_KEY_PASSPHRASE }}
-            SIGNING_SECRET_KEY_RING_FILE: ${{ github.workspace }}/code-signing-keyring.gpg
-            SONATYPE_USER_NAME: ${{ env.SONATYPE_USER_NAME }}
-            SONATYPE_PASSWORD: ${{ env.SONATYPE_PASSWORD }}
+              LD_RELEASE_IS_PRERELEASE: ${{ inputs.prerelease }}
+              SIGNING_KEY_ID: ${{ env.SIGNING_KEY_ID }}
+              SIGNING_KEY_PASSPHRASE: ${{ env.SIGNING_KEY_PASSPHRASE }}
+              SIGNING_SECRET_KEY_RING_FILE: ${{ github.workspace }}/code-signing-keyring.gpg
+              SONATYPE_USER_NAME: ${{ env.SONATYPE_USER_NAME }}
+              SONATYPE_PASSWORD: ${{ env.SONATYPE_PASSWORD }}
           run: source $GITHUB_ACTION_PATH/publish.sh
 
         - name: Dry Run Publish Library
