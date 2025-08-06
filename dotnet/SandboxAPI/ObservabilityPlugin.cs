@@ -313,11 +313,11 @@ public class CustomSampler : IExportSampler
 
     private bool MatchesSpanConfig(SpanSamplingConfig config, Activity span)
     {
+
         // Check span name if defined
-        if (!IsMatchConfigEmpty(config.Name))
+        if (!IsMatchConfigEmpty(config.Name) && !MatchesValue(config.Name, span.DisplayName))
         {
-            if (!MatchesValue(config.Name, span.DisplayName))
-                return false;
+            return false;
         }
 
         // Check attributes
@@ -347,6 +347,7 @@ public class CustomSampler : IExportSampler
                 {
                     if (MatchesSpanConfig(spanConfig, span))
                     {
+
                         return new SamplingResult
                         {
                             Sample = _sampler(spanConfig.SamplingRatio),
@@ -363,7 +364,7 @@ public class CustomSampler : IExportSampler
         {
             _configLock.ExitReadLock();
         }
-
+        
         // Default to sampling if no config matches
         return new SamplingResult { Sample = true };
     }

@@ -24,7 +24,7 @@ var samplingConfig = new SamplingConfig
     {
         new SpanSamplingConfig
         {
-            Name = new MatchConfig { MatchValue = "roll-dice" },
+            Name = new MatchConfig { RegexValue = ".*rolldice.*" },
             SamplingRatio = 2 // Sample 1 in 2 spans with name "roll-dice"
         },
         new SpanSamplingConfig
@@ -33,11 +33,11 @@ var samplingConfig = new SamplingConfig
             {
                 new AttributeMatchConfig
                 {
-                    Key = new MatchConfig { MatchValue = "dice.type" },
-                    Attribute = new MatchConfig { MatchValue = "d20" }
+                    Key = new MatchConfig { MatchValue = "url.path" },
+                    Attribute = new MatchConfig { MatchValue = "/rolldice/Robert" }
                 }
             },
-            SamplingRatio = 1 // Always sample spans with dice.type = "d20"
+            SamplingRatio = 1 // Always sample spans where player is Robert
         }
     },
     Logs = new List<LogSamplingConfig>
@@ -133,11 +133,11 @@ string HandleRollDice([FromServices]ILogger<Program> logger, string? player)
     // Logging result
     if (string.IsNullOrEmpty(player))
     {
-        logger.LogInformation("Anonymous player is rolling the dice: {result}", result);
+        logger.LogInformation("Anonymous player is rolling the dice: {0}", result);
     }
     else
     {
-        logger.LogInformation("{player} is rolling the dice: {result}", player, result);
+        logger.LogInformation("{0} is rolling the dice: {1}", player, result);
     }
 
     return result.ToString(CultureInfo.InvariantCulture);
