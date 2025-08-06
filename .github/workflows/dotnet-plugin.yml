@@ -1,0 +1,25 @@
+name: .NET ObservabilityPlugin
+on:
+    workflow_dispatch:
+    push:
+        branches: ['main']
+    pull_request:
+        branches: ['main']
+        paths:
+            - 'sdk/@launchdarkly/observability-dotnet/**'
+            - '.github/workflows/dotnet-plugin.yml'
+
+jobs:
+    build-and-test:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - run: dotnet restore
+              working-directory: sdk/launchdarkly/observability-dotnet
+
+            - run: dotnet build --no-restore
+              working-directory: sdk/launchdarkly/observability-dotnet
+
+            - run: dotnet test --no-restore
+              working-directory: sdk/launchdarkly/observability-dotnet
