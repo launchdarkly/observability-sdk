@@ -122,7 +122,9 @@ export const setupBrowserTracing = (
 		compression: 'gzip' as any,
 		keepAlive: true,
 		httpAgentOptions: {
-			timeout: 5_000,
+			// TODO: Messing with these to see if we can re-use the connections.
+			timeout: 20_000,
+			keepAliveMsecs: 1_000,
 			keepAlive: true,
 		},
 	}

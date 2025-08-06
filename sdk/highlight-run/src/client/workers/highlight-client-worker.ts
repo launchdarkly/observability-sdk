@@ -368,7 +368,6 @@ function stringifyProperties(
 	}
 
 	worker.onmessage = async function (e) {
-		console.log('highlight-client-worker.onmessage', e.data.message.type)
 		if (e.data.message.type === MessageType.Initialize) {
 			backend = e.data.message.backend
 			sessionSecureID = e.data.message.sessionSecureID

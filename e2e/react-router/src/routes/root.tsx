@@ -9,14 +9,12 @@ import {
 	recordSession,
 	recordObservability,
 } from '../ldclientLazy'
-import { websocketClient } from '../websocketClient'
 
 export default function Root() {
 	const fillColor = 'lightblue'
 	const canvasRef = useRef<HTMLCanvasElement>(null)
 	const [flags, setFlags] = useState<string>()
 	const [session, setSession] = useState<string>()
-	const [wsConnected, setWsConnected] = useState<boolean>(false)
 
 	useEffect(() => {
 		const canvas = canvasRef.current
@@ -51,72 +49,6 @@ export default function Root() {
 				{session}
 			</a>
 			<canvas width="100" height="100" ref={canvasRef}></canvas>
-
-			{/* WebSocket Connection Controls */}
-			<div
-				style={{
-					margin: '20px 0',
-					padding: '10px',
-					border: '2px solid blue',
-				}}
-			>
-				<h3>WebSocket GraphQL Client (Connection Reuse Test)</h3>
-				<p>
-					Status: {wsConnected ? '🟢 Connected' : '🔴 Disconnected'}
-				</p>
-				<button
-					onClick={async () => {
-						try {
-							await websocketClient.connect()
-							setWsConnected(true)
-						} catch (error) {
-							console.error('WebSocket connection failed:', error)
-						}
-					}}
-					disabled={wsConnected}
-				>
-					Connect WebSocket
-				</button>
-				<button
-					onClick={() => {
-						websocketClient.disconnect()
-						setWsConnected(false)
-					}}
-					disabled={!wsConnected}
-				>
-					Disconnect WebSocket
-				</button>
-				<button
-					onClick={() => {
-						websocketClient.sendMutation(`
-							mutation {
-								pushPayloadCompressed(
-									session_secure_id: "KTxtdRutuUrWhAdVcsUA98Q7O1bL"
-									payload_id: "61"
-									data: "H4sIAGLXkGgAAz1PuQ7CMAz9F89dunB068AEEuIoDBRFaWJoRUlQnHCo6r+Tpmo2v8PPfh0QEjVaMULhDLJGQgbr49fKvbOuMOc6lydBRb5c7ObbtNpAAi/+azWXo3eWegbfqCxB1sXpcu0TePpsfkcPoSsjKoPqtwySdkZMeoTR8MGKkRYPtGzKHYyePgR2FchoR2O0CbcTaIhVyIVWkN14S5hAzcmXHMs6NRRA/38Q+z+ODTT7BwEAAA=="
-								)
-							}
-						`)
-					}}
-					disabled={!wsConnected}
-				>
-					Send WS Mutation
-				</button>
-				<button
-					onClick={() => {
-						websocketClient.sendQuery(`
-							query {
-								sampling(organization_verbose_id: "test") {
-									spans { samplingRatio }
-								}
-							}
-						`)
-					}}
-					disabled={!wsConnected}
-				>
-					Send WS Query
-				</button>
-			</div>
 
 			{/* Original LaunchDarkly SDK Buttons (HTTP) */}
 			<div
