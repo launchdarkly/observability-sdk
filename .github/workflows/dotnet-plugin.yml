@@ -8,6 +8,8 @@ on:
         paths:
             - 'sdk/@launchdarkly/observability-dotnet/**'
             - '.github/workflows/dotnet-plugin.yml'
+permissions:
+    contents: read
 
 jobs:
     build-and-test:
