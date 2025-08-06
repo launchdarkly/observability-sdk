@@ -22,6 +22,7 @@ import {
 import { determineMaskInputOptions } from '../client/utils/privacy'
 
 import {
+	DEFAULT_PAYLOAD_TRIGGER_CONFIG,
 	FIRST_SEND_FREQUENCY,
 	HIGHLIGHT_URL,
 	LAUNCHDARKLY_BACKEND_REGEX,
@@ -29,7 +30,6 @@ import {
 	LAUNCHDARKLY_PATH_PREFIX,
 	LAUNCHDARKLY_URL,
 	MAX_SESSION_LENGTH,
-	SEND_FREQUENCY,
 	SNAPSHOT_SETTINGS,
 	VISIBILITY_DEBOUNCE_MS,
 } from '../client/constants/sessions'
@@ -84,6 +84,11 @@ import type { Hook, LDClient } from '../integrations/launchdarkly'
 import { LaunchDarklyIntegration } from '../integrations/launchdarkly'
 import { LDPluginEnvironmentMetadata } from '../plugins/plugin'
 import { RecordOptions } from '../client/types/record'
+import {
+	PayloadTriggerManager,
+	TimerPayloadTrigger,
+	ByteSizePayloadTrigger,
+} from '../client/payloadTriggers'
 
 interface HighlightWindow extends Window {
 	Highlight: Highlight
@@ -136,13 +141,13 @@ export class RecordSDK implements Record {
 	_eventBytesSinceSnapshot!: number
 	_lastSnapshotTime!: number
 	_lastVisibilityChangeTime!: number
-	pushPayloadTimerId!: ReturnType<typeof setTimeout> | undefined
 	hasSessionUnloaded!: boolean
 	hasPushedData!: boolean
 	reloaded!: boolean
 	_hasPreviouslyInitialized!: boolean
 	_recordStop!: listenerHandler | undefined
 	_integrations: IntegrationClient[] = []
+	_payloadTriggerManager!: PayloadTriggerManager
 
 	constructor(options: HighlightClassOptions) {
 		this.options = options
@@ -230,9 +235,9 @@ export class RecordSDK implements Record {
 
 	// Start a new session
 	async _reset({ forceNew }: { forceNew?: boolean }) {
-		if (this.pushPayloadTimerId) {
-			clearTimeout(this.pushPayloadTimerId)
-			this.pushPayloadTimerId = undefined
+		// Stop all triggers
+		if (this._payloadTriggerManager) {
+			this._payloadTriggerManager.stop()
 		}
 
 		let user_identifier, user_object
@@ -340,6 +345,18 @@ export class RecordSDK implements Record {
 		this._eventBytesSinceSnapshot = 0
 		this._lastSnapshotTime = new Date().getTime()
 		this._lastVisibilityChangeTime = new Date().getTime()
+
+		// Initialize PayloadTrigger system
+		// TODO: Later encapsulate these in the managers constructor.
+		this._payloadTriggerManager = new PayloadTriggerManager()
+		this._payloadTriggerManager.addTrigger(
+			new TimerPayloadTrigger(DEFAULT_PAYLOAD_TRIGGER_CONFIG.timerMs),
+		)
+		this._payloadTriggerManager.addTrigger(
+			new ByteSizePayloadTrigger(
+				DEFAULT_PAYLOAD_TRIGGER_CONFIG.byteSizeThreshold,
+			),
+		)
 	}
 
 	identify(user_identifier: string, user_object = {}, source?: Source) {
@@ -532,14 +549,11 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 				)
 			}
 
-			if (this.pushPayloadTimerId) {
-				clearTimeout(this.pushPayloadTimerId)
-				this.pushPayloadTimerId = undefined
-			}
 			if (!this._isCrossOriginIframe) {
-				this.pushPayloadTimerId = setTimeout(() => {
+				// Start all triggers
+				this._payloadTriggerManager.start(() => {
 					this._save()
-				}, FIRST_SEND_FREQUENCY)
+				})
 			}
 
 			// if disabled, do not record session events / rrweb events.
@@ -554,6 +568,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 				return
 			}
 
+			// this captures the DOM event in the events array
 			const emit = (
 				event: eventWithTime,
 				isCheckout?: boolean | undefined,
@@ -562,6 +577,19 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 					this.logger.log('received isCheckout emit', { event })
 				}
 				this.events.push(event)
+
+				// Notify triggers about new events
+				this._payloadTriggerManager.notifyEventsAdded([event])
+
+				// Check if any triggers should fire
+				if (
+					this._payloadTriggerManager.checkShouldTrigger(this.events)
+				) {
+					// Use setTimeout to avoid blocking the main thread
+					setTimeout(() => {
+						this._save()
+					}, 0)
+				}
 			}
 			emit.bind(this)
 
@@ -848,10 +876,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 			// Clear the timer so it doesn't block the next page navigation.
 			const unloadListener = () => {
 				this.hasSessionUnloaded = true
-				if (this.pushPayloadTimerId) {
-					clearTimeout(this.pushPayloadTimerId)
-					this.pushPayloadTimerId = undefined
-				}
+				this._payloadTriggerManager.stop()
 			}
 			window.addEventListener('beforeunload', unloadListener)
 			this.listeners.push(() =>
@@ -997,17 +1022,15 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 			this.hasPushedData = true
 			this.sessionData.lastPushTime = Date.now()
 			setSessionData(this.sessionData)
+
+			// Notify triggers that payload was sent
+			this._payloadTriggerManager.notifyTriggered()
 		} catch (e) {
 			internalLog('_save', 'warn', e)
 		}
 		if (this.state === 'Recording') {
-			if (this.pushPayloadTimerId) {
-				clearTimeout(this.pushPayloadTimerId)
-				this.pushPayloadTimerId = undefined
-			}
-			this.pushPayloadTimerId = setTimeout(() => {
-				this._save()
-			}, SEND_FREQUENCY)
+			// TimerPayloadTrigger will automatically restart itself via onTriggered()
+			// No manual timer management needed here
 		}
 	}
 
@@ -1035,6 +1058,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 		}
 	}
 
+	// TODO: This is the main function that sends the payload to the backend.
 	async _sendPayload({
 		sendFn,
 	}: {

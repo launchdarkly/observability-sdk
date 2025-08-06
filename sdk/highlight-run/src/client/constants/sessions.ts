@@ -50,3 +50,9 @@ export const LAUNCHDARKLY_ENV_APPS = {
 } as const
 export const LAUNCHDARKLY_PATH_PREFIX = '/projects/default'
 export const LAUNCHDARKLY_BACKEND_REGEX = /pub\.(?<domain>.+)/
+
+// PayloadTrigger configuration defaults
+export const DEFAULT_PAYLOAD_TRIGGER_CONFIG = {
+	timerMs: SEND_FREQUENCY,
+	byteSizeThreshold: 256 * 1024, // 256KB
+} as const
