@@ -15,11 +15,15 @@ jobs:
         steps:
             - uses: actions/checkout@v4
 
+            - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9
+              with:
+                dotnet-version: '8.0.x'
+
             - run: dotnet restore
-              working-directory: sdk/launchdarkly/observability-dotnet
+              working-directory: sdk/@launchdarkly/observability-dotnet
 
             - run: dotnet build --no-restore
-              working-directory: sdk/launchdarkly/observability-dotnet
+              working-directory: sdk/@launchdarkly/observability-dotnet
 
             - run: dotnet test --no-restore
-              working-directory: sdk/launchdarkly/observability-dotnet
+              working-directory: sdk/@launchdarkly/observability-dotnet
