@@ -1,4 +1,4 @@
 {
 	"sdk/@launchdarkly/observability-python": "0.1.0",
-	"e2e/go-plugin": "0.0.0"
+	"go": "0.0.0"
 }
