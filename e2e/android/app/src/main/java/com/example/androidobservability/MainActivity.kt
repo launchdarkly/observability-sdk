@@ -1,5 +1,6 @@
 package com.example.androidobservability
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -31,6 +32,13 @@ class MainActivity : ComponentActivity() {
                         )
                         Button(
                             onClick = {
+                                this@MainActivity.startActivity(Intent(this@MainActivity, SecondaryActivity::class.java))
+                            }
+                        ) {
+                            Text("Go to Secondary Activity")
+                        }
+                        Button(
+                            onClick = {
                                 viewModel.triggerMetric()
                             }
                         ) {
@@ -49,6 +57,20 @@ class MainActivity : ComponentActivity() {
                             }
                         ) {
                             Text("Trigger Log")
+                        }
+                        Button(
+                            onClick = {
+                                viewModel.triggerStartSpan()
+                            }
+                        ) {
+                            Text("Trigger Start Span")
+                        }
+                        Button(
+                            onClick = {
+                                viewModel.triggerStopSpan()
+                            }
+                        ) {
+                            Text("Trigger Stop Span")
                         }
                     }
                 }
