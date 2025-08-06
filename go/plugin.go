@@ -117,10 +117,10 @@ func (p ObservabilityPlugin) Register(client interfaces.LDClientInterface, ldmd 
 		cfg, err := p.getSamplingConfig(ldmd.SdkKey)
 		if err != nil {
 			logging.GetLogger().Errorf("failed to get sampling config: %v", err)
+			return
 		}
 		logging.GetLogger().Infof("got sampling config: %v", cfg)
-		//nolint:godox
-		// TODO: Use the sampling config.
+		otel.SetSamplingConfig(cfg)
 	}()
 	if p.config.context != nil {
 		go func() {
