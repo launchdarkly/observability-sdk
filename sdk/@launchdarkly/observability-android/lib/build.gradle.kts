@@ -1,6 +1,8 @@
 plugins {
     // Apply the Android library plugin
     id("com.android.library")
+    id("maven-publish")
+    id("signing")
 
     // Apply the Kotlin Android plugin for Android-compatible Kotlin support.
     alias(libs.plugins.kotlin.android)
@@ -34,13 +36,15 @@ dependencies {
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
+val releaseVersion = version.toString()
+
 android {
     namespace = "com.launchdarkly.observability"
     compileSdk = 30
 
     defaultConfig {
         minSdk = 24
-
+        version = releaseVersion
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -56,4 +60,63 @@ android {
     kotlinOptions {
         jvmTarget = "1.8"
     }
+
+    publishing {
+        singleVariant("release") {
+            withJavadocJar()
+            withSourcesJar()
+        }
+    }
+}
+
+publishing {
+    publications {
+        create<MavenPublication>("release") {
+            groupId = "com.launchdarkly"
+            artifactId = "launchdarkly-observability-android"
+            version = releaseVersion
+
+            pom {
+                name.set("LaunchDarkly Observability Android SDK")
+                description.set(
+                    "Official LaunchDarkly Observability Android SDK for use with the LaunchDarkly Android SDK."
+                )
+                url.set("https://github.com/launchdarkly/observability-sdk/")
+                organization {
+                    name.set("LaunchDarkly")
+                    url.set("https://launchdarkly.com/")
+                }
+                developers {
+                    developer {
+                        id.set("sdks")
+                        name.set("LaunchDarkly SDK Team")
+                        email.set("sdks@launchdarkly.com")
+                    }
+                }
+                licenses {
+                    license {
+                        name.set("The Apache License, Version 2.0")
+                        url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+                    }
+                }
+                scm {
+                    connection.set(
+                        "scm:git:https://github.com/launchdarkly/observability-sdk.git"
+                    )
+                    developerConnection.set(
+                        "scm:git:ssh:github.com/launchdarkly/observability-sdk.git"
+                    )
+                    url.set("https://github.com/launchdarkly/observability-sdk/")
+                }
+            }
+
+            afterEvaluate {
+                from(components["release"])
+            }
+        }
+    }
+}
+
+signing {
+    sign(publishing.publications["release"])
 }
