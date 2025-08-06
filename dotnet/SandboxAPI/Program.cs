@@ -17,12 +17,49 @@ builder.Services.AddSwaggerGen(c =>
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "Sandbox API", Description = "This is a sandbox API for dotnet SDK development", Version = "v1" });
 });
 
+// Create custom sampling configuration
+var samplingConfig = new SamplingConfig
+{
+    Spans = new List<SpanSamplingConfig>
+    {
+        new SpanSamplingConfig
+        {
+            Name = new MatchConfig { MatchValue = "roll-dice" },
+            SamplingRatio = 2 // Sample 1 in 2 spans with name "roll-dice"
+        },
+        new SpanSamplingConfig
+        {
+            Attributes = new List<AttributeMatchConfig>
+            {
+                new AttributeMatchConfig
+                {
+                    Key = new MatchConfig { MatchValue = "dice.type" },
+                    Attribute = new MatchConfig { MatchValue = "d20" }
+                }
+            },
+            SamplingRatio = 1 // Always sample spans with dice.type = "d20"
+        }
+    },
+    Logs = new List<LogSamplingConfig>
+    {
+        new LogSamplingConfig
+        {
+            Message = new MatchConfig { RegexValue = ".*rolling.*" },
+            SamplingRatio = 3 // Sample 1 in 3 log messages containing "rolling"
+        }
+    }
+};
+
+// Create custom sampler
+var customSampler = ObservabilityExtensions.CreateDefaultSampler(samplingConfig);
+
 var observabilityConfig = new ObservabilityPluginConfig
 {
     ProjectId = "abc-123",
     ServiceName = "sandbox-api",
     OtlpEndpoint = "http://localhost:4318",
-    OtlpProtocol = OtlpExportProtocol.HttpProtobuf
+    OtlpProtocol = OtlpExportProtocol.HttpProtobuf,
+    Sampler = customSampler // Add the custom sampler
 };
 
 // Add observability (OpenTelemetry) configuration
