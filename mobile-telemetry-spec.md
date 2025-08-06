@@ -88,9 +88,25 @@ Screen lifecycle span names **must** be in the format `<Verb> <screen name>`, wh
 #### Example Attributes (per [OTel HTTP SemConv](https://opentelemetry.io/docs/specs/semconv/attributes-http/))
 - `http.method`, `http.url`, `http.status_code`
 - `http.request_content_length`, `http.response_content_length`
-- `net.peer.name`, `net.peer.ip`, `net.peer.port`
 - `network.connection.type`: `wifi`, `cellular`, etc.
 - `network.carrier.name`, `network.carrier.mcc`, `network.carrier.mnc`
+- `http.request.header.keys`, `http.response.header.keys` (only header keys, not values, for security)
+
+| Attribute Key                    | Example Value         | Notes                                    |
+|----------------------------------|----------------------|------------------------------------------|
+| `http.method`                   | "GET"               |                                          |
+| `http.url`                      | "https://api.com/x"  |                                          |
+| `http.status_code`              | 200                  |                                          |
+| `http.request_content_length`    | 1234                 |                                          |
+| `http.response_content_length`   | 5678                 |                                          |
+| `network.connection.type`        | "wifi"              |                                          |
+| `network.carrier.name`           | "Verizon"           |                                          |
+| `network.carrier.mcc`            | "310"               |                                          |
+| `network.carrier.mnc`            | "260"               |                                          |
+| `http.request.header.keys`       | ["Authorization", "Accept"] | Only header keys, not values, for security |
+| `http.response.header.keys`      | ["Content-Type", "X-RateLimit-Reset"] | Only header keys, not values, for security |
+
+> **Note:** For security and privacy, only header keys (not values) should be included in span attributes.
 
 ### Background Task Spans
 | Span Name             | When to Start                | When to End                  | Example Attributes         |
