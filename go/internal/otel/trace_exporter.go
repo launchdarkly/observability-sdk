@@ -56,7 +56,6 @@ func (t *traceExporter) ExportSpans(ctx context.Context, spans []sdktrace.ReadOn
 	// Find all children of spans that have been sampled out and remove them.
 	// Repeat until there are no more children to remove.
 	for len(omittedSpanIds) != 0 {
-
 		spanId, o := omittedSpanIds[0], omittedSpanIds[1:]
 		omittedSpanIds = o
 
