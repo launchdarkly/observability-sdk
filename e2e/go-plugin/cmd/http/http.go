@@ -9,12 +9,13 @@ import (
 	"os/signal"
 	"time"
 
-	ld "github.com/launchdarkly/go-server-sdk/v7"
-	"github.com/launchdarkly/go-server-sdk/v7/ldplugins"
-	ldobserve "github.com/launchdarkly/observability-sdk/go"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
+
+	ld "github.com/launchdarkly/go-server-sdk/v7"
+	"github.com/launchdarkly/go-server-sdk/v7/ldplugins"
+	ldobserve "github.com/launchdarkly/observability-sdk/go"
 
 	appcontext "dice/internal/context"
 	"dice/internal/dice"
@@ -62,7 +63,7 @@ func run() (err error) {
 	select {
 	case err = <-srvErr:
 		// Error when starting HTTP server.
-		return
+		return err
 	case <-ctx.Done():
 		stop()
 	}
@@ -71,7 +72,7 @@ func run() (err error) {
 
 	// When Shutdown is called, ListenAndServe immediately returns ErrServerClosed.
 	err = srv.Shutdown(context.Background())
-	return
+	return err
 }
 
 func newHTTPHandler() http.Handler {
@@ -93,9 +94,12 @@ func newHTTPHandler() http.Handler {
 	handleFunc("/rolldice", dice.Rolldice)
 
 	// Add HTTP instrumentation for the whole server.
-	handler := otelhttp.NewHandler(mux, "/", otelhttp.WithSpanNameFormatter(func(operation string, r *http.Request) string {
-		// Return the route as the span name
-		return r.URL.Path
-	}))
+	handler := otelhttp.NewHandler(
+		mux,
+		"/",
+		otelhttp.WithSpanNameFormatter(func(operation string, r *http.Request) string {
+			// Return the route as the span name
+			return r.URL.Path
+		}))
 	return handler
 }

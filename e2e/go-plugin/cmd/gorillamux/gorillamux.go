@@ -10,10 +10,11 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
+
 	ld "github.com/launchdarkly/go-server-sdk/v7"
 	"github.com/launchdarkly/go-server-sdk/v7/ldplugins"
 	ldobserve "github.com/launchdarkly/observability-sdk/go"
-	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
 
 	appcontext "dice/internal/context"
 	"dice/internal/dice"
@@ -66,7 +67,7 @@ func run() (err error) {
 	select {
 	case err = <-srvErr:
 		// Error when starting HTTP server.
-		return
+		return err
 	case <-ctx.Done():
 		stop()
 	}
@@ -75,5 +76,5 @@ func run() (err error) {
 
 	// When Shutdown is called, ListenAndServe immediately returns ErrServerClosed.
 	err = srv.Shutdown(context.Background())
-	return
+	return err
 }

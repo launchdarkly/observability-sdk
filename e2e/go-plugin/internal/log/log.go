@@ -13,18 +13,19 @@ var (
 	tracer = otel.Tracer("logger")
 )
 
-type Address struct {
+type address struct {
 	City   string
 	State  string
 	Zip    string
 	Street string
 }
 
-type Person struct {
+type person struct {
 	Name    string
-	Address Address
+	Address address
 }
 
+// DoLog is a handler that logs a message.
 func DoLog(w http.ResponseWriter, r *http.Request) {
 	ctx, span := tracer.Start(r.Context(), "DoLog")
 	defer span.End()
@@ -46,9 +47,9 @@ func DoLog(w http.ResponseWriter, r *http.Request) {
 		"bool":    boolVal,
 		"array":   arrayVal,
 		"map":     mapVal,
-		"user": Person{
+		"user": person{
 			Name: "John Doe",
-			Address: Address{
+			Address: address{
 				City:   "New York",
 				State:  "NY",
 				Zip:    "10001",
