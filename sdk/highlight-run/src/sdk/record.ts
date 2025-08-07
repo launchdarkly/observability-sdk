@@ -38,6 +38,7 @@ import {
 import { ReplayEventsInput } from '../client/graph/generated/schemas'
 import { ClickListener } from '../client/listeners/click-listener/click-listener'
 import { FocusListener } from '../client/listeners/focus-listener/focus-listener'
+import { PageVisibilityListener } from '../client/listeners/page-visibility-listener'
 import { SegmentIntegrationListener } from '../client/listeners/segment-integration-listener'
 import SessionShortcutListener from '../client/listeners/session-shortcut/session-shortcut-listener'
 import {
@@ -874,10 +875,8 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 				} else {
 					// Send the payload every time the page is no longer visible - this includes when the tab is closed, as well
 					// as when switching tabs or apps on mobile. Non-blocking.
-					document.addEventListener('visibilitychange', () =>
-						this._visibilityHandler(
-							document.visibilityState === 'hidden',
-						),
+					PageVisibilityListener((isTabHidden) =>
+						this._visibilityHandler(isTabHidden),
 					)
 					this.logger.log('Set up document visibility listener.')
 				}
