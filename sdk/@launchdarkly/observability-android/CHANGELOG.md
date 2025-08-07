@@ -3,6 +3,13 @@
 ## [0.2.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.2.0...launchdarkly-observability-android-0.2.0) (2025-08-07)
 
 
+### Miscellaneous Chores
+
+* fixing android package group for publishing ([#160](https://github.com/launchdarkly/observability-sdk/issues/160)) ([f3f4fc7](https://github.com/launchdarkly/observability-sdk/commit/f3f4fc729c7c29cbc0a6084b0f1cf352d9c6da39))
+
+## [0.2.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.2.0...launchdarkly-observability-android-0.2.0) (2025-08-07)
+
+
 ### Features
 
 * adds startSpan to Android observability sdk and evaluation events on spans ([#141](https://github.com/launchdarkly/observability-sdk/issues/141)) ([58b74b7](https://github.com/launchdarkly/observability-sdk/commit/58b74b727f54f58e94439df77740c12b10518a9c))
