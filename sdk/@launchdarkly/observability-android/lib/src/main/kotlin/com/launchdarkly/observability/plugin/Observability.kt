@@ -8,11 +8,13 @@ import com.launchdarkly.sdk.android.integrations.EnvironmentMetadata
 import com.launchdarkly.sdk.android.integrations.Hook
 import com.launchdarkly.sdk.android.integrations.Plugin
 import com.launchdarkly.sdk.android.integrations.PluginMetadata
+import com.launchdarkly.observability.api.Options
 import io.opentelemetry.sdk.resources.Resource
 import java.util.Collections
 
 class Observability(
-    private val application: Application
+    private val application: Application,
+    private val options: Options? = Options()
 ) : Plugin() {
     override fun getMetadata(): PluginMetadata {
         return object : PluginMetadata() {
