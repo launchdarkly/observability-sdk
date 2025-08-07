@@ -21,7 +21,7 @@
 			"bump-minor-pre-major": true,
 			"release-as": "0.1.0",
 			"versioning": "default",
-			"include-v-in-tag": false,
+			"include-v-in-tag": true,
 			"include-component-in-tag": true,
 			"extra-files": ["version.go"]
 		}
