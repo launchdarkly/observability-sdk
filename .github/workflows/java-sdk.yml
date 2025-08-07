@@ -16,7 +16,7 @@ on:
     push:
         branches: ['main']
         tags: ['sdk/highlight-java/**']
-    pull_request:
+    pull_request_target:
         types: [opened, synchronize]
         paths:
             - 'sdk/highlight-java/**'
