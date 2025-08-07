@@ -349,3 +349,59 @@ func TestCanSampleOutSpans(t *testing.T) {
 	}
 	provider.Shutdown(context.Background())
 }
+
+func TestTraceExporter_RemoveChildrenOfUnsampledSpans(t *testing.T) {
+	// Test that children of spans that are not sampled are also removed
+	customSampler := NewCustomSampler(neverSampler)
+	exporter := &testExporter{}
+	// Sampling out children can only work if the children are in the same batch as the parent.
+	// So we use a batch span processor, versus a simple span processor which looks at
+	// one span at a time.
+	spanProcessor := trace.NewBatchSpanProcessor(newTraceExporter(exporter, customSampler))
+	provider := trace.NewTracerProvider(
+		trace.WithSpanProcessor(spanProcessor),
+	)
+
+	// Set up a configuration that matches our spans
+	config := &gql.GetSamplingConfigSamplingSamplingConfig{
+		Spans: []gql.GetSamplingConfigSamplingSamplingConfigSpansSpanSamplingConfig{
+			{
+				Name: gql.GetSamplingConfigSamplingSamplingConfigSpansSpanSamplingConfigNameMatchConfig{
+					MatchParts: gql.MatchParts{
+						MatchValue: "parent",
+					},
+				},
+				SamplingRatio: 1,
+			},
+		},
+	}
+	customSampler.SetConfig(config)
+
+	tracer := provider.Tracer("test")
+
+	// Create a span hierarchy: parent -> child
+	ctx := context.Background()
+
+	// Create parent span (will be sampled out by neverSampler)
+	ctx, parentSpan := tracer.Start(ctx, "parent")
+
+	// Create child span (should be removed because parent is sampled out)
+	_, childSpan := tracer.Start(ctx, "child")
+
+	// End all spans in reverse order
+	childSpan.End()
+	parentSpan.End()
+	// Flush the batch processor.
+	spanProcessor.ForceFlush(ctx)
+
+	// Verify no spans were exported (since parent is sampled out and child should be removed)
+	if len(exporter.exportedSpans) != 0 {
+		t.Errorf("expected 0 exported spans, got %d", len(exporter.exportedSpans))
+		// Debug: print out the exported spans
+		for i, span := range exporter.exportedSpans {
+			t.Logf("exported span %d: %s", i, span.Name())
+		}
+	}
+
+	provider.Shutdown(context.Background())
+}

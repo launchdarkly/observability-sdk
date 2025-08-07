@@ -9,6 +9,7 @@ export default function Root() {
 	const canvasRef = useRef<HTMLCanvasElement>(null)
 	const [flags, setFlags] = useState<string>()
 	const [session, setSession] = useState<string>()
+	const [sessionKey, setSessionKey] = useState<string>('task129')
 
 	useEffect(() => {
 		const canvas = canvasRef.current
@@ -76,6 +77,22 @@ export default function Root() {
 			>
 				LDRecord.snapshot
 			</button>
+			<div>
+				<input
+					type="text"
+					value={sessionKey}
+					onChange={(e) => setSessionKey(e.target.value)}
+					placeholder="Enter session key"
+					style={{ marginRight: '10px' }}
+				/>
+				<button
+					onClick={() => {
+						LDRecord.start({ forceNew: true, sessionKey })
+					}}
+				>
+					LDRecord.start(forceNewWithSessionKey)
+				</button>
+			</div>
 			<button
 				onClick={() => {
 					LDRecord.start({ forceNew: true })
