@@ -38,7 +38,6 @@ import {
 import { ReplayEventsInput } from '../client/graph/generated/schemas'
 import { ClickListener } from '../client/listeners/click-listener/click-listener'
 import { FocusListener } from '../client/listeners/focus-listener/focus-listener'
-import { PageVisibilityListener } from '../client/listeners/page-visibility-listener'
 import { SegmentIntegrationListener } from '../client/listeners/segment-integration-listener'
 import SessionShortcutListener from '../client/listeners/session-shortcut/session-shortcut-listener'
 import {
@@ -713,6 +712,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 			this.addCustomEvent('TabHidden', false)
 		} else {
 			this.addCustomEvent('TabHidden', true)
+			this._saveOnUnload()
 			if (this.options.disableBackgroundRecording) {
 				this.stop()
 			}
@@ -874,8 +874,10 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 				} else {
 					// Send the payload every time the page is no longer visible - this includes when the tab is closed, as well
 					// as when switching tabs or apps on mobile. Non-blocking.
-					PageVisibilityListener((isTabHidden) =>
-						this._visibilityHandler(isTabHidden),
+					document.addEventListener('visibilitychange', () =>
+						this._visibilityHandler(
+							document.visibilityState === 'hidden',
+						),
 					)
 					this.logger.log('Set up document visibility listener.')
 				}
@@ -889,7 +891,6 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 					clearTimeout(this.pushPayloadTimerId)
 					this.pushPayloadTimerId = undefined
 				}
-				this._saveOnUnload()
 			}
 			window.addEventListener('beforeunload', unloadListener)
 			this.listeners.push(() =>
@@ -903,7 +904,6 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 			this.addCustomEvent('Page Unload', '')
 			setSessionSecureID(this.sessionData.sessionSecureID)
 			setSessionData(this.sessionData)
-			this._saveOnUnload()
 		}
 		window.addEventListener('beforeunload', unloadListener)
 		this.listeners.push(() =>
@@ -919,7 +919,6 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 				this.addCustomEvent('Page Unload', '')
 				setSessionSecureID(this.sessionData.sessionSecureID)
 				setSessionData(this.sessionData)
-				this._saveOnUnload()
 			}
 			window.addEventListener('pagehide', unloadListener)
 			this.listeners.push(() =>
@@ -1192,26 +1191,25 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 	}
 
 	private _saveWithBeacon(
+		backendUrl: string,
 		payload: PushSessionEventsMutationVariables,
 	): Promise<number> {
-		try {
-			let blob = new Blob(
-				[
-					JSON.stringify({
-						query: print(PushSessionEventsDocument),
-						variables: payload,
-					}),
-				],
-				{
-					type: 'application/json',
-				},
-			)
-			const success = navigator.sendBeacon(`${this._backendUrl}`, blob)
-			this.logger.log(`Beacon send ${success ? 'succeeded' : 'failed'}`)
-		} catch (error) {
-			this.logger.log('Beacon API failed', error)
-		}
-
+		let blob = new Blob(
+			[
+				JSON.stringify({
+					query: print(PushSessionEventsDocument),
+					variables: payload,
+				}),
+			],
+			{
+				type: 'application/json',
+			},
+		)
+		window.fetch(`${backendUrl}`, {
+			method: 'POST',
+			body: blob,
+			keepalive: true,
+		})
 		return Promise.resolve(0)
 	}
 
@@ -1221,7 +1219,10 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 		}
 
 		try {
-			this._sendPayload({ sendFn: this._saveWithBeacon })
+			this._sendPayload({
+				sendFn: (payload) =>
+					this._saveWithBeacon(this._backendUrl, payload),
+			})
 		} catch (error) {
 			this.logger.log('Failed to save session data on unload:', error)
 		}
