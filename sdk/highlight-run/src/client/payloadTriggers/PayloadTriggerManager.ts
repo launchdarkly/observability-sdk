@@ -1,5 +1,7 @@
 import { eventWithTime } from '@rrweb/types'
-import { PayloadTrigger, PayloadTriggerContext } from './types'
+import { PayloadTrigger, PayloadTriggerConfig } from './types'
+import { TimerPayloadTrigger } from './TimerPayloadTrigger'
+import { ByteSizePayloadTrigger } from './ByteSizePayloadTrigger'
 
 /**
  * Manages multiple PayloadTriggers and coordinates their execution
@@ -7,11 +9,9 @@ import { PayloadTrigger, PayloadTriggerContext } from './types'
 export class PayloadTriggerManager {
 	private triggers: PayloadTrigger[] = []
 
-	/**
-	 * Add a trigger to the manager
-	 */
-	addTrigger(trigger: PayloadTrigger): void {
-		this.triggers.push(trigger)
+	constructor(config: PayloadTriggerConfig) {
+		this.triggers.push(new TimerPayloadTrigger(config.timerMs))
+		this.triggers.push(new ByteSizePayloadTrigger(config.byteSizeThreshold))
 	}
 
 	/**
@@ -29,27 +29,23 @@ export class PayloadTriggerManager {
 	}
 
 	/**
-	 * Check if any triggers should fire based on current state
+	 * Check triggers before adding an event (for pre-validation)
 	 */
-	checkShouldTrigger(events: eventWithTime[]): boolean {
-		const context: PayloadTriggerContext = {
-			events,
-		}
-
-		return this.triggers.some((trigger) => trigger.shouldTrigger(context))
+	beforeEventAdded(newEvent: eventWithTime): void {
+		this.triggers.forEach((trigger) => trigger.beforeEventAdded(newEvent))
 	}
 
 	/**
-	 * Notify all triggers that events have been added
+	 * Process event after it's been added to the events array
 	 */
-	notifyEventsAdded(events: eventWithTime[]): void {
-		this.triggers.forEach((trigger) => trigger.onEventsAdded(events))
+	afterEventAdded(newEvent: eventWithTime): void {
+		this.triggers.forEach((trigger) => trigger.afterEventAdded(newEvent))
 	}
 
 	/**
-	 * Notify all triggers that a payload has been triggered/sent
+	 * Reset all triggers when a send payload has been triggered/sent
 	 */
-	notifyTriggered(): void {
-		this.triggers.forEach((trigger) => trigger.onTriggered())
+	resetTriggers(): void {
+		this.triggers.forEach((trigger) => trigger.resetTrigger())
 	}
 }

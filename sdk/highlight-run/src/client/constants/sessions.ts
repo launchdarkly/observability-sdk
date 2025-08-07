@@ -53,6 +53,7 @@ export const LAUNCHDARKLY_BACKEND_REGEX = /pub\.(?<domain>.+)/
 
 // PayloadTrigger configuration defaults
 export const DEFAULT_PAYLOAD_TRIGGER_CONFIG = {
-	timerMs: SEND_FREQUENCY,
-	byteSizeThreshold: 256 * 1024, // 256KB
+	timerMs: 20_000,
+	// purposely kinda low for testing
+	byteSizeThreshold: 5 * 1024, // 5KB
 } as const

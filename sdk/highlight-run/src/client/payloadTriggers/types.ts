@@ -1,21 +1,14 @@
 import { eventWithTime } from '@rrweb/types'
 
 /**
- * Context information provided to PayloadTriggers when checking if they should trigger
- */
-export interface PayloadTriggerContext {
-	events: eventWithTime[]
-}
-
-/**
- * Interface for implementing custom payload trigger strategies
+ * Interface for implementing custom payload trigger strategies.
+ * Each trigger manages its own state and calls the provided callback when it should fire.
  */
 export interface PayloadTrigger {
 	readonly name: string
-	shouldTrigger(context: PayloadTriggerContext): boolean
-	onTriggered(): void
-	onEventsAdded(events: eventWithTime[]): void
-	reset(): void
+	beforeEventAdded(newEvent: eventWithTime): void
+	afterEventAdded(newEvent: eventWithTime): void
+	resetTrigger(): void
 	start(callback: () => void): void
 	stop(): void
 }
@@ -25,6 +18,6 @@ export interface PayloadTrigger {
  */
 // TODO: Maybe delete this.
 export interface PayloadTriggerConfig {
-	timerMs?: number
-	byteSizeThreshold?: number
+	timerMs: number
+	byteSizeThreshold: number
 }

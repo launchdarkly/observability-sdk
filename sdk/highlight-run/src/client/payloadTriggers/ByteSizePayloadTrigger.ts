@@ -1,5 +1,6 @@
 import { eventWithTime } from '@rrweb/types'
-import { PayloadTrigger, PayloadTriggerContext } from './types'
+import { strToU8 } from 'fflate'
+import { PayloadTrigger } from './types'
 
 /**
  * Triggers payload sending based on accumulated byte size of events
@@ -7,34 +8,55 @@ import { PayloadTrigger, PayloadTriggerContext } from './types'
 export class ByteSizePayloadTrigger implements PayloadTrigger {
 	readonly name = 'byteSize'
 	private currentByteSize: number = 0
+	private callback?: () => void
 
 	constructor(private byteSizeThreshold: number) {}
 
-	shouldTrigger(context: PayloadTriggerContext): boolean {
-		return this.currentByteSize >= this.byteSizeThreshold
+	beforeEventAdded(newEvent: eventWithTime): void {
+		const newEventByteSize = this.calculateByteSize(newEvent)
+
+		if (
+			this.currentByteSize + newEventByteSize > this.byteSizeThreshold &&
+			this.callback
+		) {
+			console.log(
+				'TriggerReason: ByteSizePayloadTrigger beforeEventAdded',
+			)
+			this.callback()
+		}
 	}
 
-	onTriggered(): void {
-		this.reset()
+	afterEventAdded(newEvent: eventWithTime): void {
+		const newEventByteSize = this.calculateByteSize(newEvent)
+
+		this.currentByteSize += newEventByteSize
+
+		// Its possible that the new event itself is larger than the threshold, so we need to check again.
+		if (this.currentByteSize > this.byteSizeThreshold && this.callback) {
+			console.log('TriggerReason: ByteSizePayloadTrigger afterEventAdded')
+			this.callback()
+		}
 	}
 
-	onEventsAdded(events: eventWithTime[]): void {
-		// Calculate the byte size of the new events
-		const eventsJson = JSON.stringify(events)
-		this.currentByteSize += new Blob([eventsJson]).size
-	}
-
-	reset(): void {
+	resetTrigger(): void {
+		console.log(
+			'ByteSizePayloadTrigger, before reset bytes:',
+			this.currentByteSize,
+		)
 		this.currentByteSize = 0
 	}
 
 	start(callback: () => void): void {
-		// Byte size trigger doesn't need to start anything
-		// It's event-driven, not timer-driven
+		this.callback = callback
+		// TODO: reset the trigger?
 	}
 
 	stop(): void {
-		// Reset the accumulated byte size when stopping
-		this.reset()
+		this.callback = undefined
+		this.resetTrigger()
+	}
+
+	private calculateByteSize(event: eventWithTime): number {
+		return strToU8(JSON.stringify(event)).length
 	}
 }

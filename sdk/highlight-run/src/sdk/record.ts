@@ -84,11 +84,7 @@ import type { Hook, LDClient } from '../integrations/launchdarkly'
 import { LaunchDarklyIntegration } from '../integrations/launchdarkly'
 import { LDPluginEnvironmentMetadata } from '../plugins/plugin'
 import { RecordOptions } from '../client/types/record'
-import {
-	PayloadTriggerManager,
-	TimerPayloadTrigger,
-	ByteSizePayloadTrigger,
-} from '../client/payloadTriggers'
+import { PayloadTriggerManager } from '../client/payloadTriggers'
 
 interface HighlightWindow extends Window {
 	Highlight: Highlight
@@ -346,16 +342,8 @@ export class RecordSDK implements Record {
 		this._lastSnapshotTime = new Date().getTime()
 		this._lastVisibilityChangeTime = new Date().getTime()
 
-		// Initialize PayloadTrigger system
-		// TODO: Later encapsulate these in the managers constructor.
-		this._payloadTriggerManager = new PayloadTriggerManager()
-		this._payloadTriggerManager.addTrigger(
-			new TimerPayloadTrigger(DEFAULT_PAYLOAD_TRIGGER_CONFIG.timerMs),
-		)
-		this._payloadTriggerManager.addTrigger(
-			new ByteSizePayloadTrigger(
-				DEFAULT_PAYLOAD_TRIGGER_CONFIG.byteSizeThreshold,
-			),
+		this._payloadTriggerManager = new PayloadTriggerManager(
+			DEFAULT_PAYLOAD_TRIGGER_CONFIG,
 		)
 	}
 
@@ -552,7 +540,11 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 			if (!this._isCrossOriginIframe) {
 				// Start all triggers
 				this._payloadTriggerManager.start(() => {
-					this._save()
+					// Copy events before resetting the triggers.
+					const eventsForPayload = [...this.events]
+					this.events = []
+					this._payloadTriggerManager.resetTriggers()
+					this._save(eventsForPayload)
 				})
 			}
 
@@ -576,20 +568,14 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 				if (isCheckout) {
 					this.logger.log('received isCheckout emit', { event })
 				}
+
+				// Process the new event - triggers will fire callbacks internally if needed
+				this._payloadTriggerManager.beforeEventAdded(event)
+
 				this.events.push(event)
 
-				// Notify triggers about new events
-				this._payloadTriggerManager.notifyEventsAdded([event])
-
-				// Check if any triggers should fire
-				if (
-					this._payloadTriggerManager.checkShouldTrigger(this.events)
-				) {
-					// Use setTimeout to avoid blocking the main thread
-					setTimeout(() => {
-						this._save()
-					}, 0)
-				}
+				// Process the new event - triggers will fire callbacks internally if needed
+				this._payloadTriggerManager.afterEventAdded(event)
 			}
 			emit.bind(this)
 
@@ -983,7 +969,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 	}
 
 	// Reset the events array and push to a backend.
-	async _save() {
+	async _save(events: eventWithTime[]) {
 		try {
 			if (
 				this.state === 'Recording' &&
@@ -1018,19 +1004,12 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 					return 0
 				}
 			}
-			await this._sendPayload({ sendFn })
+			await this._sendPayload({ sendFn, events })
 			this.hasPushedData = true
 			this.sessionData.lastPushTime = Date.now()
 			setSessionData(this.sessionData)
-
-			// Notify triggers that payload was sent
-			this._payloadTriggerManager.notifyTriggered()
 		} catch (e) {
 			internalLog('_save', 'warn', e)
-		}
-		if (this.state === 'Recording') {
-			// TimerPayloadTrigger will automatically restart itself via onTriggered()
-			// No manual timer management needed here
 		}
 	}
 
@@ -1058,13 +1037,14 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 		}
 	}
 
-	// TODO: This is the main function that sends the payload to the backend.
 	async _sendPayload({
 		sendFn,
+		events,
 	}: {
 		sendFn?: (payload: PushPayloadMutationVariables) => Promise<number>
+		events: eventWithTime[]
 	}) {
-		const events = [...this.events]
+		console.log('sendPayload, events length:', events.length)
 
 		// if it is time to take a full snapshot,
 		// ensure the snapshot is at the beginning of the next payload
@@ -1125,7 +1105,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 		// 2. rrweb pushes to this.events (with M events)
 		// 3. Network request made to push payload (Only includes N events)
 		// 4. this.events is cleared (we lose M events)
-		this.events = this.events.slice(events.length)
+		//this.events = this.events.slice(events.length)
 
 		clearHighlightLogs(highlightLogs)
 	}
