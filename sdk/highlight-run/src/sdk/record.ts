@@ -143,6 +143,7 @@ export class RecordSDK implements Record {
 	hasSessionUnloaded!: boolean
 	hasPushedData!: boolean
 	reloaded!: boolean
+	saving!: boolean
 	_hasPreviouslyInitialized!: boolean
 	_recordStop!: listenerHandler | undefined
 	_integrations: IntegrationClient[] = []
@@ -337,6 +338,7 @@ export class RecordSDK implements Record {
 		this.events = []
 		this.hasSessionUnloaded = false
 		this.hasPushedData = false
+		this.saving = false
 
 		if (window.Intercom) {
 			window.Intercom('onShow', () => {
@@ -582,8 +584,11 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 					this.logger.log('received isCheckout emit', { event })
 				}
 				this.events.push(event)
+
 				// Check if we should send payload early based on size
-				this._checkForImmediateSave()
+				if (!this.saving) {
+					this._checkForImmediateSave()
+				}
 			}
 			emit.bind(this)
 
@@ -990,6 +995,11 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 
 	// Reset the events array and push to a backend.
 	async _save() {
+		if (this.saving) {
+			return
+		}
+		this.saving = true
+
 		try {
 			if (
 				this.state === 'Recording' &&
@@ -1038,10 +1048,12 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 				this.pushPayloadTimerId = undefined
 			}
 			this.pushPayloadTimerId = setTimeout(() => {
-				this.logger.log(`Triggering immediate save due to timeout`)
+				this.logger.log(`Triggering save due to timeout`)
 				this._save()
 			}, SEND_FREQUENCY)
 		}
+
+		this.saving = false
 	}
 
 	/**
@@ -1182,7 +1194,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 
 		if (estimatedSize >= UNCOMPRESSED_PAYLOAD_SIZE_THRESHOLD) {
 			this.logger.log(
-				`Triggering immediate save due to large payload size (${estimatedSize} bytes)`,
+				`Triggering save due to large payload size (${estimatedSize} bytes)`,
 			)
 
 			this._save()
