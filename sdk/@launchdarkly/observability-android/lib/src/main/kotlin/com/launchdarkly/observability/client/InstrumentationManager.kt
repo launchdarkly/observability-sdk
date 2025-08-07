@@ -1,6 +1,7 @@
 package com.launchdarkly.observability.client
 
 import android.app.Application
+import com.launchdarkly.observability.api.Options
 import com.launchdarkly.observability.interfaces.Metric
 import io.opentelemetry.android.OpenTelemetryRum
 import io.opentelemetry.api.common.Attributes
@@ -19,10 +20,9 @@ import io.opentelemetry.sdk.resources.Resource
 import io.opentelemetry.sdk.trace.export.BatchSpanProcessor
 import java.util.concurrent.TimeUnit
 
-private const val URL = "https://otel.observability.app.launchdarkly.com:4318"
-private const val URL_METRICS = URL + "/v1/metrics"
-private const val URL_LOGS = URL + "/v1/logs"
-private const val URL_TRACES = URL + "/v1/traces"
+private const val METRICS_PATH = "/v1/metrics"
+private const val LOGS_PATH = "/v1/logs"
+private const val TRACES_PATH = "/v1/traces"
 private const val INSTRUMENTATION_SCOPE_NAME = "com.launchdarkly.observability"
 
 /**
@@ -34,6 +34,7 @@ class InstrumentationManager(
     private val application: Application,
     private val sdkKey: String,
     private val resources: Resource,
+    options: Options,
 ) {
     private val otelRUM: OpenTelemetryRum
     private var otelMeter: Meter
@@ -45,10 +46,9 @@ class InstrumentationManager(
         otelRUM = OpenTelemetryRum.builder(application)
             .addLoggerProviderCustomizer { sdkLoggerProviderBuilder, application ->
                 val logExporter = OtlpHttpLogRecordExporter.builder()
-                    .setEndpoint(URL_LOGS)
+                    .setEndpoint(options.otlpEndpoint + LOGS_PATH)
                     .build()
 
-                // TODO: support configuring these options via parameters
                 val processor = BatchLogRecordProcessor.builder(logExporter)
                     .setMaxQueueSize(100)
                     .setScheduleDelay(1000, TimeUnit.MILLISECONDS)
@@ -62,7 +62,7 @@ class InstrumentationManager(
             }
             .addTracerProviderCustomizer { sdkTracerProviderBuilder, application ->
                 val spanExporter = OtlpHttpSpanExporter.builder()
-                    .setEndpoint(URL_TRACES)
+                    .setEndpoint(options.otlpEndpoint + TRACES_PATH)
                     .build()
 
                 val spanProcessor = BatchSpanProcessor.builder(spanExporter)
@@ -78,7 +78,7 @@ class InstrumentationManager(
             }
             .addMeterProviderCustomizer { sdkMeterProviderBuilder, application ->
                 val metricExporter: MetricExporter = OtlpHttpMetricExporter.builder()
-                    .setEndpoint(URL_METRICS)
+                    .setEndpoint(options.otlpEndpoint + METRICS_PATH)
                     .build()
 
                 // Configure a periodic reader that pushes metrics every 10 seconds.

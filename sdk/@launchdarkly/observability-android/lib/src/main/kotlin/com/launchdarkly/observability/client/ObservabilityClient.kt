@@ -1,7 +1,7 @@
 package com.launchdarkly.observability.client
 
 import android.app.Application
-import com.launchdarkly.observability.client.InstrumentationManager
+import com.launchdarkly.observability.api.Options
 import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.observability.interfaces.Observe
 import io.opentelemetry.api.common.Attributes
@@ -14,9 +14,10 @@ public class ObservabilityClient: Observe {
     constructor(
         application: Application,
         sdkKey: String,
-        resource: Resource
+        resource: Resource,
+        options: Options
     ) {
-        this.instrumentationManager = InstrumentationManager(application, sdkKey, resource)
+        this.instrumentationManager = InstrumentationManager(application, sdkKey, resource, options)
     }
 
     override fun recordMetric(metric: Metric) {

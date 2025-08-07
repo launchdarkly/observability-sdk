@@ -42,10 +42,15 @@ android {
     namespace = "com.launchdarkly.observability"
     compileSdk = 30
 
+    buildFeatures {
+        buildConfig = true
+    }
+
     defaultConfig {
         minSdk = 24
         version = releaseVersion
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("String", "OBSERVABILITY_SDK_VERSION", "\"${project.version}\"")
     }
 
     buildTypes {

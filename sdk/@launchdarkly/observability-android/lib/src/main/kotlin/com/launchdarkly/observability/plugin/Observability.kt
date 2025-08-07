@@ -14,12 +14,14 @@ import java.util.Collections
 
 class Observability(
     private val application: Application,
-    private val options: Options? = Options()
+    private val options: Options = Options() // new instance has reasonable defaults
 ) : Plugin() {
     override fun getMetadata(): PluginMetadata {
         return object : PluginMetadata() {
-            override fun getName(): String = "'@launchdarkly/observability-android'"
-            // TODO: add getVersion to Android SDK if required
+            override fun getName(): String = "@launchdarkly/observability-android"
+
+            // Uncomment once metadata supports version
+//            override fun getVersion(): String = BuildConfig.OBSERVABILITY_SDK_VERSION
         }
     }
 
@@ -27,8 +29,8 @@ class Observability(
         val sdkKey = metadata?.credential ?: ""
 
         val resourceBuilder = Resource.getDefault().toBuilder()
-        resourceBuilder.put("service.name", "observability-android") // TODO: allow this to be set via config
-        resourceBuilder.put("service.version", "1.0.0") // TODO: allow this to be set via config
+        resourceBuilder.put("service.name", options.serviceName)
+        resourceBuilder.put("service.version", options.serviceVersion)
         resourceBuilder.put("highlight.project_id", sdkKey)
 
         metadata?.applicationInfo?.applicationId?.let {
@@ -45,7 +47,7 @@ class Observability(
             }
         }
 
-        val observabilityClient = ObservabilityClient(application, sdkKey, resourceBuilder.build())
+        val observabilityClient = ObservabilityClient(application, sdkKey, resourceBuilder.build(), options)
         LDObserve.init(observabilityClient)
     }
 
