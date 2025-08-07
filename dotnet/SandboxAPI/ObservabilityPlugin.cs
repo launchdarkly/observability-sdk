@@ -104,62 +104,97 @@ public static class ObservabilityExtensions
     public static WebApplicationBuilder AddObservability(this WebApplicationBuilder builder, ObservabilityPluginConfig config)
     {
         // Create network-based sampler automatically
-        var backendUrl = Environment.GetEnvironmentVariable("LAUNCHDARKLY_BACKEND_URL") ?? "https://pub.observability.app.launchdarkly.com";
-        
+        var backendUrl = "https://pub.observability.app.launchdarkly.com";
+
         // Create HTTP client for sampling config
         var httpClient = new HttpClient();
         
         // Create and initialize the sampler
         var sampler = new CustomSampler();
-        
-        // Start background task to fetch and update sampling config
-        _ = Task.Run(async () =>
+
+        if (Environment.GetEnvironmentVariable("USE_HARDCODED_SAMPLING_CONFIG") == "true") // Adding a hard-coded sampling config for development purposes
         {
-            try
+            sampler.SetConfig(new SamplingConfig
             {
-                // Initial fetch
-                await sampler.UpdateConfigFromNetworkAsync(httpClient, backendUrl, config.ProjectId);
-                
-                // Set up periodic updates
-                var timer = new Timer(async _ =>
+                Spans = new List<SpanSamplingConfig>
                 {
-                    try
+                    new SpanSamplingConfig
                     {
-                        await sampler.UpdateConfigFromNetworkAsync(httpClient, backendUrl, config.ProjectId);
-                    }
-                    catch (Exception ex)
+                        Name = new MatchConfig { RegexValue = ".*rolldice.*" },
+                        SamplingRatio = 2 // Sample 1 in 2 spans with name "roll-dice"
+                    },
+                    new SpanSamplingConfig
                     {
-                        Console.WriteLine($"Error during periodic sampling config update: {ex.Message}");
+                        Attributes = new List<AttributeMatchConfig>
+                        {
+                            new AttributeMatchConfig
+                            {
+                                Key = new MatchConfig { MatchValue = "url.path" },
+                                Attribute = new MatchConfig { MatchValue = "/rolldice/Robert" }
+                            }
+                        },
+                        SamplingRatio = 1 // Always sample spans where player is Robert
                     }
-                }, null, TimeSpan.FromMinutes(.1), TimeSpan.FromMinutes(10));
-                
-                // Keep timer alive by storing it in a static field or similar mechanism
-                // For simplicity, we'll let it run indefinitely
-            }
-            catch (Exception ex)
+                },
+                Logs = new List<LogSamplingConfig>
+                {
+                    new LogSamplingConfig
+                    {
+                        Message = new MatchConfig { RegexValue = ".*rolling.*" },
+                        SamplingRatio = 3 // Sample 1 in 3 log messages containing "rolling"
+                    }
+                }
+            });
+        }
+        else
+        {
+            // Start background task to fetch and update sampling config
+            _ = Task.Run(async () =>
             {
-                Console.WriteLine($"Error initializing network-based sampling: {ex.Message}");
-            }
-        });
+                try
+                {
+                    // Initial fetch
+                    await sampler.UpdateConfigFromNetworkAsync(httpClient, backendUrl, config.ProjectId);
+
+                    // Set up periodic updates
+                    var timer = new Timer(async _ =>
+                    {
+                        try
+                        {
+                            await sampler.UpdateConfigFromNetworkAsync(httpClient, backendUrl, config.ProjectId);
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"Error during periodic sampling config update: {ex.Message}");
+                        }
+                    }, null, TimeSpan.FromMinutes(10), TimeSpan.FromMinutes(10));
+
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error initializing network-based sampling: {ex.Message}");
+                }
+            });
+        }
 
         // Configure OpenTelemetry Logging
         builder.Logging.AddOpenTelemetry(options =>
         {
             var resourceBuilder = ResourceBuilder.CreateDefault().AddService(config.ServiceName);
             options.SetResourceBuilder(resourceBuilder);
-            
+
             // Add console exporter
             options.AddConsoleExporter();
-            
+
             options.AddProcessor(new ObservabilityPlugin.LogProcessor());
-            
+
             // Always use sampling exporter for logs
             var otlpLogExporter = new OtlpLogExporter(new OtlpExporterOptions
             {
                 Endpoint = new Uri(config.OtlpEndpoint + "/v1/logs"),
                 Protocol = config.OtlpProtocol
             });
-            
+
             var samplingLogExporter = new SamplingLogExporter(otlpLogExporter, sampler);
             options.AddProcessor(new SimpleLogRecordExportProcessor(samplingLogExporter));
         });
@@ -181,7 +216,7 @@ public static class ObservabilityExtensions
                     Endpoint = new Uri(config.OtlpEndpoint + "/v1/traces"),
                     Protocol = config.OtlpProtocol
                 });
-                
+
                 tracing.AddProcessor(new SimpleActivityExportProcessor(samplingTraceExporter));
             })
             .WithMetrics(metrics => metrics

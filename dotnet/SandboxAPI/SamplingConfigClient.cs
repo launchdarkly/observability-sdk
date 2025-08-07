@@ -9,7 +9,7 @@ namespace SandboxAPI;
 /// </summary>
 public class GetSamplingConfigVariables
 {
-    public string OrganizationVerboseId { get; set; } = string.Empty;
+    public string organization_verbose_id { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -17,8 +17,8 @@ public class GetSamplingConfigVariables
 /// </summary>
 public class GraphQLRequest
 {
-    public string Query { get; set; } = string.Empty;
-    public GetSamplingConfigVariables Variables { get; set; } = new();
+    public string query { get; set; } = string.Empty;
+    public GetSamplingConfigVariables variables { get; set; } = new();
 }
 
 /// <summary>
@@ -139,10 +139,10 @@ public class SamplingConfigClient
         {
             var request = new GraphQLRequest
             {
-                Query = GraphQLQuery,
-                Variables = new GetSamplingConfigVariables
+                query = GraphQLQuery,
+                variables = new GetSamplingConfigVariables
                 {
-                    OrganizationVerboseId = organizationVerboseId
+                    organization_verbose_id = organizationVerboseId
                 }
             };
 
