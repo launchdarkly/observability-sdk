@@ -32,6 +32,7 @@ export type Scalars = {
 	Float: { input: number; output: number }
 	Any: { input: any; output: any }
 	Int64: { input: any; output: any }
+	Int64ID: { input: any; output: any }
 	Timestamp: { input: any; output: any }
 }
 
@@ -45,6 +46,7 @@ export type AttributeMatchConfig = {
 export type BackendErrorObjectInput = {
 	environment: Scalars['String']['input']
 	event: Scalars['String']['input']
+	id?: InputMaybe<Scalars['String']['input']>
 	log_cursor?: InputMaybe<Scalars['String']['input']>
 	payload?: InputMaybe<Scalars['String']['input']>
 	request_id?: InputMaybe<Scalars['String']['input']>
@@ -62,6 +64,7 @@ export type BackendErrorObjectInput = {
 export type ErrorObjectInput = {
 	columnNumber: Scalars['Int']['input']
 	event: Scalars['String']['input']
+	id?: InputMaybe<Scalars['String']['input']>
 	lineNumber: Scalars['Int']['input']
 	payload?: InputMaybe<Scalars['String']['input']>
 	source: Scalars['String']['input']
@@ -148,6 +151,7 @@ export type Mutation = {
 	pushMetrics: Scalars['Int']['output']
 	pushPayload: Scalars['Int']['output']
 	pushPayloadCompressed?: Maybe<Scalars['Any']['output']>
+	pushSessionEvents?: Maybe<Scalars['Any']['output']>
 }
 
 export type MutationAddSessionFeedbackArgs = {
@@ -184,6 +188,7 @@ export type MutationInitializeSessionArgs = {
 	organization_verbose_id: Scalars['String']['input']
 	privacy_setting?: InputMaybe<Scalars['String']['input']>
 	serviceName?: InputMaybe<Scalars['String']['input']>
+	session_key?: InputMaybe<Scalars['String']['input']>
 	session_secure_id: Scalars['String']['input']
 }
 
@@ -218,6 +223,12 @@ export type MutationPushPayloadArgs = {
 export type MutationPushPayloadCompressedArgs = {
 	data: Scalars['String']['input']
 	payload_id: Scalars['ID']['input']
+	session_secure_id: Scalars['String']['input']
+}
+
+export type MutationPushSessionEventsArgs = {
+	data: Scalars['String']['input']
+	payload_id: Scalars['Int64ID']['input']
 	session_secure_id: Scalars['String']['input']
 }
 
@@ -263,7 +274,7 @@ export type ServiceInput = {
 
 export type Session = {
 	__typename?: 'Session'
-	id?: Maybe<Scalars['ID']['output']>
+	id?: Maybe<Scalars['Int64ID']['output']>
 	organization_id: Scalars['ID']['output']
 	project_id: Scalars['ID']['output']
 	secure_id: Scalars['String']['output']
@@ -328,15 +339,15 @@ export type PushPayloadMutation = {
 	pushPayload: number
 }
 
-export type PushPayloadCompressedMutationVariables = Exact<{
+export type PushSessionEventsMutationVariables = Exact<{
 	session_secure_id: Scalars['String']['input']
-	payload_id: Scalars['ID']['input']
+	payload_id: Scalars['Int64ID']['input']
 	data: Scalars['String']['input']
 }>
 
-export type PushPayloadCompressedMutation = {
+export type PushSessionEventsMutation = {
 	__typename?: 'Mutation'
-	pushPayloadCompressed?: any | null
+	pushSessionEvents?: any | null
 }
 
 export type IdentifySessionMutationVariables = Exact<{
@@ -390,6 +401,7 @@ export type MatchPartsFragment = {
 
 export type InitializeSessionMutationVariables = Exact<{
 	session_secure_id: Scalars['String']['input']
+	session_key?: InputMaybe<Scalars['String']['input']>
 	organization_verbose_id: Scalars['String']['input']
 	enable_strict_privacy: Scalars['Boolean']['input']
 	privacy_setting: Scalars['String']['input']
@@ -610,13 +622,13 @@ export const PushPayloadDocument = gql`
 		)
 	}
 `
-export const PushPayloadCompressedDocument = gql`
-	mutation PushPayloadCompressed(
+export const PushSessionEventsDocument = gql`
+	mutation PushSessionEvents(
 		$session_secure_id: String!
-		$payload_id: ID!
+		$payload_id: Int64ID!
 		$data: String!
 	) {
-		pushPayloadCompressed(
+		pushSessionEvents(
 			session_secure_id: $session_secure_id
 			payload_id: $payload_id
 			data: $data
@@ -672,6 +684,7 @@ export const AddSessionFeedbackDocument = gql`
 export const InitializeSessionDocument = gql`
 	mutation initializeSession(
 		$session_secure_id: String!
+		$session_key: String
 		$organization_verbose_id: String!
 		$enable_strict_privacy: Boolean!
 		$privacy_setting: String!
@@ -689,6 +702,7 @@ export const InitializeSessionDocument = gql`
 	) {
 		initializeSession(
 			session_secure_id: $session_secure_id
+			session_key: $session_key
 			organization_verbose_id: $organization_verbose_id
 			enable_strict_privacy: $enable_strict_privacy
 			enable_recording_network_contents: $enable_recording_network_contents
@@ -848,18 +862,18 @@ export function getSdk(
 				variables,
 			)
 		},
-		PushPayloadCompressed(
-			variables: PushPayloadCompressedMutationVariables,
+		PushSessionEvents(
+			variables: PushSessionEventsMutationVariables,
 			requestHeaders?: GraphQLClientRequestHeaders,
-		): Promise<PushPayloadCompressedMutation> {
+		): Promise<PushSessionEventsMutation> {
 			return withWrapper(
 				(wrappedRequestHeaders) =>
-					client.request<PushPayloadCompressedMutation>(
-						PushPayloadCompressedDocument,
+					client.request<PushSessionEventsMutation>(
+						PushSessionEventsDocument,
 						variables,
 						{ ...requestHeaders, ...wrappedRequestHeaders },
 					),
-				'PushPayloadCompressed',
+				'PushSessionEvents',
 				'mutation',
 				variables,
 			)

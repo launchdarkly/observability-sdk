@@ -29,6 +29,7 @@ export type Scalars = {
 	Float: { input: number; output: number }
 	Any: { input: any; output: any }
 	Int64: { input: any; output: any }
+	Int64ID: { input: any; output: any }
 	Timestamp: { input: any; output: any }
 }
 
@@ -42,6 +43,7 @@ export type AttributeMatchConfig = {
 export type BackendErrorObjectInput = {
 	environment: Scalars['String']['input']
 	event: Scalars['String']['input']
+	id?: InputMaybe<Scalars['String']['input']>
 	log_cursor?: InputMaybe<Scalars['String']['input']>
 	payload?: InputMaybe<Scalars['String']['input']>
 	request_id?: InputMaybe<Scalars['String']['input']>
@@ -59,6 +61,7 @@ export type BackendErrorObjectInput = {
 export type ErrorObjectInput = {
 	columnNumber: Scalars['Int']['input']
 	event: Scalars['String']['input']
+	id?: InputMaybe<Scalars['String']['input']>
 	lineNumber: Scalars['Int']['input']
 	payload?: InputMaybe<Scalars['String']['input']>
 	source: Scalars['String']['input']
@@ -145,6 +148,7 @@ export type Mutation = {
 	pushMetrics: Scalars['Int']['output']
 	pushPayload: Scalars['Int']['output']
 	pushPayloadCompressed?: Maybe<Scalars['Any']['output']>
+	pushSessionEvents?: Maybe<Scalars['Any']['output']>
 }
 
 export type MutationAddSessionFeedbackArgs = {
@@ -181,6 +185,7 @@ export type MutationInitializeSessionArgs = {
 	organization_verbose_id: Scalars['String']['input']
 	privacy_setting?: InputMaybe<Scalars['String']['input']>
 	serviceName?: InputMaybe<Scalars['String']['input']>
+	session_key?: InputMaybe<Scalars['String']['input']>
 	session_secure_id: Scalars['String']['input']
 }
 
@@ -215,6 +220,12 @@ export type MutationPushPayloadArgs = {
 export type MutationPushPayloadCompressedArgs = {
 	data: Scalars['String']['input']
 	payload_id: Scalars['ID']['input']
+	session_secure_id: Scalars['String']['input']
+}
+
+export type MutationPushSessionEventsArgs = {
+	data: Scalars['String']['input']
+	payload_id: Scalars['Int64ID']['input']
 	session_secure_id: Scalars['String']['input']
 }
 
@@ -260,7 +271,7 @@ export type ServiceInput = {
 
 export type Session = {
 	__typename?: 'Session'
-	id?: Maybe<Scalars['ID']['output']>
+	id?: Maybe<Scalars['Int64ID']['output']>
 	organization_id: Scalars['ID']['output']
 	project_id: Scalars['ID']['output']
 	secure_id: Scalars['String']['output']
