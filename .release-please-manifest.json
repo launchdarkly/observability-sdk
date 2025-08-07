@@ -1,3 +1,4 @@
 {
-	"sdk/@launchdarkly/observability-python": "0.1.0"
+	"sdk/@launchdarkly/observability-python": "0.1.0",
+	"sdk/@launchdarkly/observability-android": "0.2.0"
 }
