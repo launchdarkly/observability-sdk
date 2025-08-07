@@ -586,8 +586,9 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 				this.events.push(event)
 
 				// Check if we should send payload early based on size
-				if (!this.saving) {
-					this._checkForImmediateSave()
+				if (!this.saving && this._checkForImmediateSave()) {
+					this.logger.log('Triggering save due to large payload size')
+					this._save()
 				}
 			}
 			emit.bind(this)
@@ -1124,7 +1125,9 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 				highlight_logs: highlightLogs || undefined,
 			}
 
-			const { compressedBase64 } = await payloadToBase64(sessionPayload)
+			const { compressedBase64, compressedSize } =
+				await payloadToBase64(sessionPayload)
+			this.logger.log(`Compressed payload size: ${compressedSize} bytes`)
 			await sendFn({
 				session_secure_id: this.sessionData.sessionSecureID,
 				payload_id: payloadId.toString(),
@@ -1174,31 +1177,15 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 		this._eventBytesSinceSnapshot = 0
 		this._lastSnapshotTime = new Date().getTime()
 	}
-
-	private _estimatePayloadSize(): number {
-		if (this.events.length === 0) {
-			return 0
-		}
-		// Rough estimation: average event size is ~1KB
-		const averageEventSize = 1024
-		return this.events.length * averageEventSize
-	}
-
 	// Flush data if size threshold is exceeded
-	private _checkForImmediateSave(): void {
+	private _checkForImmediateSave(): boolean {
 		if (this.state !== 'Recording' || !this.pushPayloadTimerId) {
-			return
+			return false
 		}
 
-		const estimatedSize = this._estimatePayloadSize()
-
-		if (estimatedSize >= UNCOMPRESSED_PAYLOAD_SIZE_THRESHOLD) {
-			this.logger.log(
-				`Triggering save due to large payload size (${estimatedSize} bytes)`,
-			)
-
-			this._save()
-		}
+		// Rough estimation: average event size is ~1KB
+		const estimatedSize = this.events.length * 1024
+		return estimatedSize >= UNCOMPRESSED_PAYLOAD_SIZE_THRESHOLD
 	}
 
 	register(client: LDClient, metadata: LDPluginEnvironmentMetadata) {
