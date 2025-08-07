@@ -889,6 +889,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 					clearTimeout(this.pushPayloadTimerId)
 					this.pushPayloadTimerId = undefined
 				}
+				this._saveOnUnload()
 			}
 			window.addEventListener('beforeunload', unloadListener)
 			this.listeners.push(() =>
@@ -902,6 +903,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 			this.addCustomEvent('Page Unload', '')
 			setSessionSecureID(this.sessionData.sessionSecureID)
 			setSessionData(this.sessionData)
+			this._saveOnUnload()
 		}
 		window.addEventListener('beforeunload', unloadListener)
 		this.listeners.push(() =>
@@ -917,10 +919,11 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 				this.addCustomEvent('Page Unload', '')
 				setSessionSecureID(this.sessionData.sessionSecureID)
 				setSessionData(this.sessionData)
+				this._saveOnUnload()
 			}
 			window.addEventListener('pagehide', unloadListener)
 			this.listeners.push(() =>
-				window.removeEventListener('beforeunload', unloadListener),
+				window.removeEventListener('pagehide', unloadListener),
 			)
 		}
 	}
@@ -1186,6 +1189,42 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 		// Rough estimation: average event size is ~1KB
 		const estimatedSize = this.events.length * 1024
 		return estimatedSize >= UNCOMPRESSED_PAYLOAD_SIZE_THRESHOLD
+	}
+
+	private _saveWithBeacon(
+		payload: PushSessionEventsMutationVariables,
+	): Promise<number> {
+		try {
+			let blob = new Blob(
+				[
+					JSON.stringify({
+						query: print(PushSessionEventsDocument),
+						variables: payload,
+					}),
+				],
+				{
+					type: 'application/json',
+				},
+			)
+			const success = navigator.sendBeacon(`${this._backendUrl}`, blob)
+			this.logger.log(`Beacon send ${success ? 'succeeded' : 'failed'}`)
+		} catch (error) {
+			this.logger.log('Beacon API failed', error)
+		}
+
+		return Promise.resolve(0)
+	}
+
+	private _saveOnUnload(): void {
+		if (this.events.length === 0) {
+			return
+		}
+
+		try {
+			this._sendPayload({ sendFn: this._saveWithBeacon })
+		} catch (error) {
+			this.logger.log('Failed to save session data on unload:', error)
+		}
 	}
 
 	register(client: LDClient, metadata: LDPluginEnvironmentMetadata) {
