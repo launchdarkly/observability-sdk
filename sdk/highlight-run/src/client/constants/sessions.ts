@@ -12,7 +12,7 @@ export const SEND_FREQUENCY = 1000 * 15
  * Payload size threshold for triggering sends.
  * In bytes.
  */
-export const UNCOMPRESSED_PAYLOAD_SIZE_THRESHOLD = 2e5 // 200KB
+export const UNCOMPRESSED_PAYLOAD_SIZE_THRESHOLD = 1024 * 200 // 200KB
 
 /**
  * Maximum length of a session
