@@ -11,16 +11,16 @@ const observabilitySettings: ConstructorParameters<typeof Observability>[0] = {
 		recordHeadersAndBody: true,
 	},
 	serviceName: 'ryan-test',
-	backendUrl: 'https://pub.observability.ld-stg.launchdarkly.com',
+	backendUrl: 'http://localhost:8082/public',
 	otel: {
-		otlpEndpoint: 'https://otel.observability.ld-stg.launchdarkly.com',
+		otlpEndpoint: 'http://localhost:4318',
 	},
 }
 const sessionReplaySettings: ConstructorParameters<typeof SessionReplay>[0] = {
 	debug: { clientInteractions: true, domRecording: true },
 	privacySetting: 'none',
 	serviceName: 'ryan-test',
-	backendUrl: 'https://pub.observability.ld-stg.launchdarkly.com',
+	backendUrl: 'http://localhost:8082/public',
 }
 
 export const client = init(
