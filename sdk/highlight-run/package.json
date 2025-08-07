@@ -24,13 +24,17 @@
 	},
 	"scripts": {
 		"build": "yarn build:umd && vite build",
+		"build:optimized": "vite build -c vite.config.optimized.ts",
+		"build:analyze": "ANALYZE=true vite build -c vite.config.optimized.ts",
 		"build:umd": "FORMAT=umd vite build",
+		"build:umd:optimized": "FORMAT=umd vite build -c vite.config.optimized.ts",
 		"build:watch": "vite build --watch",
 		"codegen": "graphql-codegen --config codegen.yml",
 		"dev": "run-p dev:server dev:watch",
 		"dev:server": "vite dev",
 		"dev:watch": "yarn build:watch",
 		"enforce-size": "size-limit",
+		"bundle:check": "yarn build:optimized && yarn enforce-size",
 		"test": "vitest --run",
 		"test:watch": "vitest",
 		"typegen": "yarn typegen:check && FORMAT=d.ts vite build",
@@ -103,6 +107,7 @@
 		"@opentelemetry/semantic-conventions": "^1.28.0",
 		"@rollup/plugin-commonjs": "^25.0.7",
 		"@rollup/plugin-node-resolve": "^15.2.3",
+		"@rollup/plugin-terser": "^0.4.4",
 		"@rrweb/rrweb-plugin-sequential-id-record": "workspace:*",
 		"@rrweb/types": "workspace:*",
 		"@size-limit/file": "^8.1.0",
@@ -122,6 +127,7 @@
 		"npm-run-all": "^4.1.5",
 		"prettier": "^3.3.3",
 		"readdirp": "^3.6.0",
+		"rollup-plugin-visualizer": "^5.12.0",
 		"rrweb": "workspace:*",
 		"size-limit": "^8.1.0",
 		"stacktrace-js": "2.0.2",
@@ -137,6 +143,37 @@
 	},
 	"size-limit": [
 		{
+			"name": "Main UMD Bundle",
+			"path": "dist/index.umd.js",
+			"limit": "100 kB",
+			"brotli": true
+		},
+		{
+			"name": "Core Modules",
+			"path": [
+				"dist/LDObserve.js",
+				"dist/LDRecord.js"
+			],
+			"limit": "50 kB",
+			"brotli": true
+		},
+		{
+			"name": "Plugin Modules",
+			"path": [
+				"dist/observe.js",
+				"dist/record.js"
+			],
+			"limit": "40 kB",
+			"brotli": true
+		},
+		{
+			"name": "OpenTelemetry Chunks",
+			"path": "dist/otel-*.js",
+			"limit": "30 kB",
+			"brotli": true
+		},
+		{
+			"name": "Total Bundle Size",
 			"path": [
 				"dist/index.umd.js",
 				"dist/LDObserve.js",
@@ -144,7 +181,7 @@
 				"dist/observe.js",
 				"dist/record.js"
 			],
-			"limit": "256 kB",
+			"limit": "200 kB",
 			"brotli": true
 		}
 	]
