@@ -18,6 +18,7 @@
 		},
 		"go": {
 			"release-type": "go",
+			"package-name": "go",
 			"tag-separator": "/",
 			"bump-minor-pre-major": true,
 			"release-as": "0.1.0",
