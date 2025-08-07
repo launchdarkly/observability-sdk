@@ -36,7 +36,6 @@ dependencies {
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
-group = "com.launchdarkly"
 val releaseVersion = version.toString()
 
 android {
