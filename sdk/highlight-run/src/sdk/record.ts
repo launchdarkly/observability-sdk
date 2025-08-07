@@ -30,6 +30,7 @@ import {
 	LAUNCHDARKLY_PATH_PREFIX,
 	LAUNCHDARKLY_URL,
 	MAX_SESSION_LENGTH,
+	PAYLOAD_SIZE_THRESHOLD,
 	SEND_FREQUENCY,
 	SNAPSHOT_SETTINGS,
 	VISIBILITY_DEBOUNCE_MS,
@@ -581,6 +582,8 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 					this.logger.log('received isCheckout emit', { event })
 				}
 				this.events.push(event)
+				// Check if we should send payload early based on size
+				this._checkForImmediateSave()
 			}
 			emit.bind(this)
 
@@ -1157,6 +1160,32 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 		record.takeFullSnapshot()
 		this._eventBytesSinceSnapshot = 0
 		this._lastSnapshotTime = new Date().getTime()
+	}
+
+	private _estimatePayloadSize(): number {
+		if (this.events.length === 0) {
+			return 0
+		}
+		// Rough estimation: average event size is ~1KB
+		const averageEventSize = 1024
+		return this.events.length * averageEventSize
+	}
+
+	// Flush data if size threshold is exceeded
+	private _checkForImmediateSave(): void {
+		if (this.state !== 'Recording' || !this.pushPayloadTimerId) {
+			return
+		}
+
+		const estimatedSize = this._estimatePayloadSize()
+
+		if (estimatedSize >= PAYLOAD_SIZE_THRESHOLD) {
+			this.logger.log(
+				`Triggering immediate save due to large payload size (${estimatedSize} bytes)`,
+			)
+
+			this._save()
+		}
 	}
 
 	register(client: LDClient, metadata: LDPluginEnvironmentMetadata) {

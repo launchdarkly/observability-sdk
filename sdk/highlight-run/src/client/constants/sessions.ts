@@ -6,7 +6,13 @@ export const FIRST_SEND_FREQUENCY = 1000
  * The amount of time between sending the client-side payload to Highlight backend client.
  * In milliseconds.
  */
-export const SEND_FREQUENCY = 1000 * 2
+export const SEND_FREQUENCY = 1000 * 15
+
+/**
+ * Payload size threshold for triggering sends.
+ * In bytes.
+ */
+export const PAYLOAD_SIZE_THRESHOLD = 32e5 // 32MB
 
 /**
  * Maximum length of a session
