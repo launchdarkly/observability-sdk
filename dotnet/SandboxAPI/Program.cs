@@ -6,6 +6,7 @@ using System.Globalization;
 using LaunchDarkly.Sdk.Server.Telemetry;
 using OpenTelemetry.Exporter;
 using System.Diagnostics;
+using SandboxAPI;
 
 // DOTNET Setup
 var builder = WebApplication.CreateBuilder(args);
@@ -17,49 +18,13 @@ builder.Services.AddSwaggerGen(c =>
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "Sandbox API", Description = "This is a sandbox API for dotnet SDK development", Version = "v1" });
 });
 
-// Create custom sampling configuration
-var samplingConfig = new SamplingConfig
-{
-    Spans = new List<SpanSamplingConfig>
-    {
-        new SpanSamplingConfig
-        {
-            Name = new MatchConfig { RegexValue = ".*rolldice.*" },
-            SamplingRatio = 2 // Sample 1 in 2 spans with name "roll-dice"
-        },
-        new SpanSamplingConfig
-        {
-            Attributes = new List<AttributeMatchConfig>
-            {
-                new AttributeMatchConfig
-                {
-                    Key = new MatchConfig { MatchValue = "url.path" },
-                    Attribute = new MatchConfig { MatchValue = "/rolldice/Robert" }
-                }
-            },
-            SamplingRatio = 1 // Always sample spans where player is Robert
-        }
-    },
-    Logs = new List<LogSamplingConfig>
-    {
-        new LogSamplingConfig
-        {
-            Message = new MatchConfig { RegexValue = ".*rolling.*" },
-            SamplingRatio = 3 // Sample 1 in 3 log messages containing "rolling"
-        }
-    }
-};
-
-// Create custom sampler
-var customSampler = ObservabilityExtensions.CreateDefaultSampler(samplingConfig);
-
+// Configure observability - sampling is handled automatically by the plugin
 var observabilityConfig = new ObservabilityPluginConfig
 {
-    ProjectId = "abc-123",
+    ProjectId = "abc-123", // This should be your organization verbose ID
     ServiceName = "sandbox-api",
     OtlpEndpoint = "http://localhost:4318",
-    OtlpProtocol = OtlpExportProtocol.HttpProtobuf,
-    Sampler = customSampler // Add the custom sampler
+    OtlpProtocol = OtlpExportProtocol.HttpProtobuf
 };
 
 // Add observability (OpenTelemetry) configuration
