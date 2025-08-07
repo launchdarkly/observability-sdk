@@ -30,7 +30,7 @@ import {
 	LAUNCHDARKLY_PATH_PREFIX,
 	LAUNCHDARKLY_URL,
 	MAX_SESSION_LENGTH,
-	PAYLOAD_SIZE_THRESHOLD,
+	UNCOMPRESSED_PAYLOAD_SIZE_THRESHOLD,
 	SEND_FREQUENCY,
 	SNAPSHOT_SETTINGS,
 	VISIBILITY_DEBOUNCE_MS,
@@ -1038,6 +1038,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 				this.pushPayloadTimerId = undefined
 			}
 			this.pushPayloadTimerId = setTimeout(() => {
+				this.logger.log(`Triggering immediate save due to timeout`)
 				this._save()
 			}, SEND_FREQUENCY)
 		}
@@ -1179,7 +1180,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 
 		const estimatedSize = this._estimatePayloadSize()
 
-		if (estimatedSize >= PAYLOAD_SIZE_THRESHOLD) {
+		if (estimatedSize >= UNCOMPRESSED_PAYLOAD_SIZE_THRESHOLD) {
 			this.logger.log(
 				`Triggering immediate save due to large payload size (${estimatedSize} bytes)`,
 			)
