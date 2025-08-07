@@ -1,4 +1,3 @@
-import { compressSync, strToU8 } from 'fflate'
 import { GraphQLClient } from 'graphql-request'
 import stringify from 'json-stringify-safe'
 import { UPLOAD_TIMEOUT } from '../constants/sessions'
@@ -7,6 +6,7 @@ import {
 	PushPayloadMutationVariables,
 	Sdk,
 } from '../graph/generated/operations'
+import { payloadToBase64 } from '../utils/payload'
 import { ReplayEventsInput } from '../graph/generated/schemas'
 import { Logger } from '../logger'
 import { MetricCategory } from '../types/client'
@@ -39,23 +39,6 @@ interface HighlightClientResponseWorker {
 		| ((message: MessageEvent<HighlightClientWorkerParams>) => void)
 
 	postMessage(e: HighlightClientWorkerResponse): void
-}
-
-export async function payloadToBase64(payload: PushPayloadMutationVariables) {
-	const buf = strToU8(JSON.stringify(payload))
-	const compressed = compressSync(buf)
-	// use a FileReader to generate a base64 data URI:
-	const base64url = await new Promise<string>((r) => {
-		const reader = new FileReader()
-		reader.onload = () => r(reader.result as string)
-		reader.readAsDataURL(new Blob([compressed]))
-	})
-	// remove data:application/octet-stream;base64, prefix
-	return {
-		compressedBase64: base64url.slice(base64url.indexOf(',') + 1),
-		compressedSize: compressed.length,
-		bufferLength: buf.length,
-	}
 }
 
 // `as any` because: https://github.com/Microsoft/TypeScript/issues/20595

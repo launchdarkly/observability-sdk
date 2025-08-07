@@ -105,10 +105,8 @@ import {
 	setStorageMode,
 } from './utils/storage'
 import { getDefaultDataURLOptions } from './utils/utils'
-import {
-	payloadToBase64,
-	type HighlightClientRequestWorker,
-} from './workers/highlight-client-worker'
+import { type HighlightClientRequestWorker } from './workers/highlight-client-worker'
+import { payloadToBase64 } from './utils/payload'
 import HighlightClientWorker from './workers/highlight-client-worker?worker&inline'
 import { MessageType, PropertyType } from './workers/types'
 import { parseError } from './utils/errors'
