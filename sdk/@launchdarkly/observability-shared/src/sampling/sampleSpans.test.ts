@@ -18,12 +18,14 @@ const createMockSpan = (name: string, parentId?: string): ReadableSpan => {
 			isRemote: false,
 			toString: () => `${name}`,
 		}),
-		parentSpanContext: parentId ? {
-			traceId: 'trace-1',
-			spanId: parentId,
-			traceFlags: 0,
-			isRemote: false,
-		} : undefined,
+		parentSpanContext: parentId
+			? {
+					traceId: 'trace-1',
+					spanId: parentId,
+					traceFlags: 0,
+					isRemote: false,
+				}
+			: undefined,
 		startTime: [0, 0],
 		endTime: [0, 0],
 		status: { code: 0 },
