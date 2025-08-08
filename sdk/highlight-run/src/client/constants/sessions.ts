@@ -13,7 +13,7 @@ export const SEND_FREQUENCY = 1000 * 15
  * In bytes.
  */
 // TODO: This is a temporary low value for testing.
-export const UNCOMPRESSED_PAYLOAD_SIZE_THRESHOLD = 1024 * 5 // 5KB
+export const UNCOMPRESSED_PAYLOAD_SIZE_THRESHOLD = 1024 * 10 // 10KB
 
 /**
  * Maximum length of a session
