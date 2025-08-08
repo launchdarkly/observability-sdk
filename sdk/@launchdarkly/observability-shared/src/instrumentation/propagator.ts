@@ -2,7 +2,7 @@ import { W3CTraceContextPropagator } from '@opentelemetry/core'
 import * as api from '@opentelemetry/api'
 import { shouldNetworkRequestBeTraced, shouldRecordRequest } from './utils'
 import { RECORD_ATTRIBUTE } from './constants'
-import { ReadableSpan } from '@opentelemetry/sdk-trace-web'
+import { ReadableSpan } from '@opentelemetry/sdk-trace-base'
 import type { TracingOrigins } from './types'
 
 type CustomTraceContextPropagatorConfig = {

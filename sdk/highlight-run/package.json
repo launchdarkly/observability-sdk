@@ -149,5 +149,8 @@
 			"limit": "256 kB",
 			"brotli": true
 		}
-	]
+	],
+	"resolutions": {
+		"@opentelemetry/sdk-trace-web": "~1.30.1"
+	}
 }
