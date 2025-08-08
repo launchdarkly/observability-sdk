@@ -1,5 +1,11 @@
 # highlight.run
 
+## 9.19.0
+
+### Minor Changes
+
+- d181f89: Define session based on a sessionKey
+
 ## 9.18.23
 
 ### Patch Changes

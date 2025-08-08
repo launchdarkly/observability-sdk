@@ -15660,6 +15660,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/imurmurhash@npm:^0":
+  version: 0.1.4
+  resolution: "@types/imurmurhash@npm:0.1.4"
+  checksum: 10/07e191ec700c074b4bfceb95860f1f4f6b469b8d84f4f76edd58a954ec2c37a74fd5590de8aaebbd7063c6129fe6e4e64a272ba9a84ca067762dedbcddfaf940
+  languageName: node
+  linkType: hard
+
 "@types/inquirer@npm:^8.2.1":
   version: 8.2.4
   resolution: "@types/inquirer@npm:8.2.4"
@@ -28170,6 +28177,7 @@ __metadata:
     "@rrweb/types": "workspace:*"
     "@size-limit/file": "npm:^8.1.0"
     "@types/chrome": "npm:^0.0.268"
+    "@types/imurmurhash": "npm:^0"
     "@types/js-cookie": "npm:^3.0.6"
     "@types/json-stringify-safe": "npm:^5.0.3"
     "@types/node": "npm:^16.3.1"
@@ -28180,6 +28188,7 @@ __metadata:
     graphql: "npm:^16.8.1"
     graphql-request: "npm:^6.1.0"
     graphql-tag: "npm:^2.12.6"
+    imurmurhash: "npm:^0.1.4"
     js-cookie: "npm:^3.0.5"
     json-stringify-safe: "npm:^5.0.1"
     npm-run-all: "npm:^4.1.5"
