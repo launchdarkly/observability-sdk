@@ -3,6 +3,7 @@ import type {
 	Span as OtelSpan,
 	SpanOptions,
 } from '@opentelemetry/api'
+import { context } from '@opentelemetry/api'
 import { Resource } from '@opentelemetry/resources'
 import {
 	ATTR_SERVICE_NAME,
@@ -206,8 +207,9 @@ export class ObservabilityClient {
 
 		return this.instrumentationManager.startActiveSpan(
 			spanName,
+			options || {},
+			context.active(),
 			fn,
-			options,
 		)
 	}
 

@@ -1,5 +1,8 @@
 import {
 	Attributes,
+	Context,
+	context,
+	Gauge,
 	Span as OtelSpan,
 	SpanOptions,
 	trace,
@@ -60,6 +63,7 @@ export class InstrumentationManager {
 	private headers: Record<string, string> = {}
 	private sessionManager?: SessionManager
 	private sampler: CustomSampler = new CustomSampler()
+	private readonly _gauges: Map<string, Gauge> = new Map<string, Gauge>()
 
 	constructor(
 		private options: Required<ReactNativeOptions> & {
@@ -308,9 +312,13 @@ export class InstrumentationManager {
 
 	public recordMetric(metric: Metric): void {
 		try {
-			const meter = this.getMeter()
-			const counter = meter.createCounter(metric.name)
-			counter.add(metric.value, metric.attributes)
+			let gauge = this._gauges.get(metric.name)
+			if (!gauge) {
+				const meter = this.getMeter()
+				gauge = meter.createGauge(metric.name)
+				this._gauges.set(metric.name, gauge)
+			}
+			gauge.record(metric.value, metric.attributes)
 		} catch (e) {
 			console.error('Failed to record metric:', e)
 		}
@@ -411,16 +419,21 @@ export class InstrumentationManager {
 		return span
 	}
 
-	public startSpan(spanName: string, options?: SpanOptions): OtelSpan {
-		return this.getTracer().startSpan(spanName, options)
+	public startSpan(
+		spanName: string,
+		options?: SpanOptions,
+		ctx?: Context,
+	): OtelSpan {
+		return this.getTracer().startSpan(spanName, options, ctx)
 	}
 
 	public startActiveSpan<T>(
 		spanName: string,
+		options: SpanOptions = {},
+		ctx: Context = context.active(),
 		fn: (span: OtelSpan) => T,
-		options?: SpanOptions,
 	): T {
-		return this.getTracer().startActiveSpan(spanName, options || {}, fn)
+		return this.getTracer().startActiveSpan(spanName, options, ctx, fn)
 	}
 
 	public async flush(): Promise<void> {
