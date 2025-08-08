@@ -28,6 +28,7 @@ android {
         }
     }
     compileOptions {
+//        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
@@ -40,6 +41,11 @@ android {
 }
 
 dependencies {
+    // Uncomment to use the local project
+    implementation(project(":observability-android"))
+    // Uncomment to use the publicly released version (note this may be behind branch/main)
+    // implementation("com.launchdarkly:launchdarkly-observability-android:0.2.0")
+
     implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.9.0")
 
     implementation("io.opentelemetry:opentelemetry-api:1.51.0")
@@ -48,7 +54,6 @@ dependencies {
     implementation("io.opentelemetry:opentelemetry-sdk-metrics:1.51.0")
 
     implementation("com.google.android.material:material:1.12.0")
-    implementation(project(":observability-android"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -64,4 +69,8 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+
+    // This is required to use the launchdarkly-observability-android package that uses desugaring
+    // to support old Android API versions (back to 24 at time of writing this)
+//    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
 }

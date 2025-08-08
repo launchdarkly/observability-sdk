@@ -32,6 +32,7 @@ class Observability(
         resourceBuilder.put("service.name", options.serviceName)
         resourceBuilder.put("service.version", options.serviceVersion)
         resourceBuilder.put("highlight.project_id", sdkKey)
+        resourceBuilder.putAll(options.resourceAttributes)
 
         metadata?.applicationInfo?.applicationId?.let {
             resourceBuilder.put("launchdarkly.application.id", it)

@@ -4,6 +4,7 @@ import android.app.Application
 import com.launchdarkly.observability.api.Options
 import com.launchdarkly.observability.interfaces.Metric
 import io.opentelemetry.android.OpenTelemetryRum
+import io.opentelemetry.android.config.OtelRumConfig
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Logger
 import io.opentelemetry.api.metrics.Meter
@@ -43,10 +44,13 @@ class InstrumentationManager(
 
     init {
 
-        otelRUM = OpenTelemetryRum.builder(application)
+        // resume at figuring out duration.  hopefully desugaring is not required
+        val otelRumConfig = OtelRumConfig().setSessionTimeout(options.sessionTimeout)
+        otelRUM = OpenTelemetryRum.builder(application, otelRumConfig)
             .addLoggerProviderCustomizer { sdkLoggerProviderBuilder, application ->
                 val logExporter = OtlpHttpLogRecordExporter.builder()
                     .setEndpoint(options.otlpEndpoint + LOGS_PATH)
+                    .setHeaders { options.customHeaders }
                     .build()
 
                 val processor = BatchLogRecordProcessor.builder(logExporter)
@@ -63,6 +67,7 @@ class InstrumentationManager(
             .addTracerProviderCustomizer { sdkTracerProviderBuilder, application ->
                 val spanExporter = OtlpHttpSpanExporter.builder()
                     .setEndpoint(options.otlpEndpoint + TRACES_PATH)
+                    .setHeaders { options.customHeaders }
                     .build()
 
                 val spanProcessor = BatchSpanProcessor.builder(spanExporter)
@@ -79,6 +84,7 @@ class InstrumentationManager(
             .addMeterProviderCustomizer { sdkMeterProviderBuilder, application ->
                 val metricExporter: MetricExporter = OtlpHttpMetricExporter.builder()
                     .setEndpoint(options.otlpEndpoint + METRICS_PATH)
+                    .setHeaders { options.customHeaders }
                     .build()
 
                 // Configure a periodic reader that pushes metrics every 10 seconds.
@@ -96,7 +102,6 @@ class InstrumentationManager(
         otelMeter = otelRUM.openTelemetry.meterProvider.get(INSTRUMENTATION_SCOPE_NAME)
         otelLogger = otelRUM.openTelemetry.logsBridge.get(INSTRUMENTATION_SCOPE_NAME)
         otelTracer = otelRUM.openTelemetry.tracerProvider.get(INSTRUMENTATION_SCOPE_NAME)
-        otelRUM.rumSessionId
     }
 
 
