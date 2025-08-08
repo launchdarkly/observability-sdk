@@ -1,10 +1,11 @@
 import type {
 	Attributes,
+	Context,
 	Span as OtelSpan,
 	SpanOptions,
 } from '@opentelemetry/api'
 import { context } from '@opentelemetry/api'
-import { Resource } from '@opentelemetry/resources'
+import { resourceFromAttributes } from '@opentelemetry/resources'
 import {
 	ATTR_SERVICE_NAME,
 	ATTR_SERVICE_VERSION,
@@ -78,7 +79,7 @@ export class ObservabilityClient {
 			this.sessionManager.initialize()
 
 			const sessionAttributes = this.sessionManager.getSessionAttributes()
-			const resource = new Resource({
+			const resource = resourceFromAttributes({
 				[ATTR_SERVICE_NAME]: this.options.serviceName,
 				[ATTR_SERVICE_VERSION]: this.options.serviceVersion,
 				[ATTR_TELEMETRY_SDK_NAME]:
@@ -141,7 +142,11 @@ export class ObservabilityClient {
 		return this.instrumentationManager.flush()
 	}
 
-	public log(message: any, level: string, attributes?: Attributes): void {
+	public recordLog(
+		message: any,
+		level: string,
+		attributes?: Attributes,
+	): void {
 		if (this.options.disableLogs) return
 		this.instrumentationManager.recordLog(message, level, attributes)
 	}
@@ -188,18 +193,23 @@ export class ObservabilityClient {
 		)
 	}
 
-	public startSpan(spanName: string, options?: SpanOptions): OtelSpan {
+	public startSpan(
+		spanName: string,
+		options?: SpanOptions,
+		ctx?: Context,
+	): OtelSpan {
 		if (this.options.disableTraces) {
 			return {} as OtelSpan
 		}
 
-		return this.instrumentationManager.startSpan(spanName, options)
+		return this.instrumentationManager.startSpan(spanName, options, ctx)
 	}
 
 	public startActiveSpan<T>(
 		spanName: string,
 		fn: (span: OtelSpan) => T,
 		options?: SpanOptions,
+		ctx?: Context,
 	): T {
 		if (this.options.disableTraces) {
 			return fn({} as OtelSpan)
@@ -208,9 +218,13 @@ export class ObservabilityClient {
 		return this.instrumentationManager.startActiveSpan(
 			spanName,
 			options || {},
-			context.active(),
+			ctx || context.active(),
 			fn,
 		)
+	}
+
+	public getContextFromSpan(span: OtelSpan): Context {
+		return this.instrumentationManager.getContextFromSpan(span)
 	}
 
 	public getSessionInfo(): any {

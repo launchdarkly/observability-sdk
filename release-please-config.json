@@ -1,0 +1,29 @@
+{
+	"packages": {
+		"sdk/@launchdarkly/observability-python": {
+			"package-name": "launchdarkly-observability-python",
+			"release-type": "python",
+			"versioning": "default",
+			"include-v-in-tag": false,
+			"extra-files": ["PROVENANCE.md"],
+			"include-component-in-tag": true
+		},
+		"sdk/@launchdarkly/observability-android": {
+			"package-name": "launchdarkly-observability-android",
+			"release-type": "simple",
+			"versioning": "default",
+			"include-v-in-tag": false,
+			"include-component-in-tag": true,
+			"extra-files": ["gradle.properties"]
+		},
+		"go": {
+			"release-type": "go",
+			"tag-separator": "/",
+			"bump-minor-pre-major": true,
+			"versioning": "default",
+			"include-v-in-tag": true,
+			"include-component-in-tag": true,
+			"extra-files": ["version.go"]
+		}
+	}
+}

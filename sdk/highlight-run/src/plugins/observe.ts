@@ -62,6 +62,9 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 				)
 				return
 			}
+
+			this.configureSession(ldCredential, options)
+
 			this.observe = new ObserveSDK({
 				...options,
 				projectId: ldCredential,

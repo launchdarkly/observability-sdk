@@ -1,0 +1,87 @@
+name: Run Release Please
+
+on:
+    push:
+        branches: [main]
+
+jobs:
+    release-package:
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write # Contents and pull-requests are for release-please to make releases.
+            pull-requests: write
+            issues: write
+        outputs:
+            python-plugin-released: ${{ steps.release.outputs['sdk/@launchdarkly/observability-python--release_created'] }}
+            python-plugin-tag-name: ${{ steps.release.outputs['sdk/@launchdarkly/observability-python--tag_name'] }}
+            android-plugin-released: ${{ steps.release.outputs['sdk/@launchdarkly/observability-android--release_created'] }}
+            android-plugin-tag-name: ${{ steps.release.outputs['sdk/@launchdarkly/observability-android--tag_name'] }}
+        steps:
+            - uses: googleapis/release-please-action@a02a34c4d625f9be7cb89156071d8567266a2445
+              id: release
+
+            - uses: actions/checkout@v4
+              if: ${{ steps.release.outputs.releases_created == 'true' }}
+              with:
+                  fetch-depth: 0 # If you only need the current version keep this.
+
+    release-python-plugin:
+        runs-on: ubuntu-latest
+        permissions:
+            id-token: write # Used for publishing secrets and documentation.
+        needs: ['release-package']
+        if: ${{ needs.release-package.outputs.python-plugin-released == 'true' }}
+        outputs:
+            package-hashes: ${{ steps.publish.outputs.package-hashes }}
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Publish Python SDK
+              id: publish
+              uses: ./.github/actions/publish-python-sdk
+              with:
+                  workspace-path: sdk/@launchdarkly/observability-python
+                  aws-role-arn: ${{ vars.AWS_ROLE_ARN }}
+
+    release-python-docs:
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+        needs: ['release-python-plugin']
+        steps:
+            - name: Build and Publish Docs
+              uses: ./.github/workflows/manual-publish-docs.yml
+              with:
+                  workspace_path: sdk/@launchdarkly/observability-python
+
+    release-python-provenance:
+        needs: ['release-package', 'release-python-plugin']
+        if: ${{ needs.release-package.outputs.python-plugin-released == 'true' }}
+        permissions:
+            actions: read
+            id-token: write
+            contents: write
+        uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.0.0
+        with:
+            base64-subjects: '${{ needs.release-python-plugin.outputs.package-hashes }}'
+            upload-assets: true
+            upload-tag-name: ${{ needs.release-package.outputs.python-plugin-tag-name }}
+
+    release-android-plugin:
+        runs-on: ubuntu-latest
+        permissions:
+            id-token: write # Used for publishing secrets and documentation.
+            contents: write
+        needs: ['release-package']
+        if: ${{ needs.release-package.outputs.android-plugin-released == 'true' }}
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Publish Android SDK
+              id: publish
+              uses: ./.github/actions/publish-android-sdk
+              with:
+                  workspace-path: sdk/@launchdarkly/observability-android
+                  aws-role-arn: ${{ vars.AWS_ROLE_ARN }}

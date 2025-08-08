@@ -1,2 +1,4 @@
 .coverage
 coverage.xml
+.coveragerc
+docs/

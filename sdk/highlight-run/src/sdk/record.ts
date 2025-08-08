@@ -6,7 +6,8 @@ import stringify from 'json-stringify-safe'
 import { addCustomEvent as rrwebAddCustomEvent, record } from 'rrweb'
 import {
 	getSdk,
-	PushPayloadDocument,
+	PushSessionEventsDocument,
+	PushSessionEventsMutationVariables,
 	PushPayloadMutationVariables,
 	Sdk,
 } from '../client/graph/generated/operations'
@@ -72,7 +73,8 @@ import {
 	setItem,
 } from '../client/utils/storage'
 import { getDefaultDataURLOptions } from '../client/utils/utils'
-import type { HighlightClientRequestWorker } from '../client/workers/highlight-client-worker'
+import { type HighlightClientRequestWorker } from '../client/workers/highlight-client-worker'
+import { payloadToBase64 } from '../client/utils/payload'
 import HighlightClientWorker from '../client/workers/highlight-client-worker?worker&inline'
 import { MessageType, PropertyType } from '../client/workers/types'
 import { IntegrationClient } from '../integrations'
@@ -207,7 +209,6 @@ export class RecordSDK implements Record {
 			this.sessionData = {
 				sessionSecureID: this.options.sessionSecureID,
 				projectID: 0,
-				payloadID: 1,
 				sessionStartTime: Date.now(),
 			}
 		}
@@ -229,7 +230,13 @@ export class RecordSDK implements Record {
 	}
 
 	// Start a new session
-	async _reset({ forceNew }: { forceNew?: boolean }) {
+	async _reset({
+		forceNew,
+		sessionKey,
+	}: {
+		forceNew?: boolean
+		sessionKey?: string
+	}) {
 		if (this.pushPayloadTimerId) {
 			clearTimeout(this.pushPayloadTimerId)
 			this.pushPayloadTimerId = undefined
@@ -253,7 +260,10 @@ export class RecordSDK implements Record {
 
 		// no need to set the sessionStorage value here since firstload won't call
 		// init again after a reset, and `this.initialize()` will set sessionStorage
-		this.sessionData.sessionSecureID = GenerateSecureID()
+		this.sessionData.sessionSecureID = sessionKey
+			? GenerateSecureID(`${this.organizationID}-${sessionKey}`)
+			: GenerateSecureID()
+		this.sessionData.sessionKey = sessionKey
 		this.sessionData.sessionStartTime = Date.now()
 		this.options.sessionSecureID = this.sessionData.sessionSecureID
 		this.stop()
@@ -407,6 +417,14 @@ export class RecordSDK implements Record {
 				return
 			}
 
+			if (
+				options?.sessionKey &&
+				options?.sessionKey !== this.sessionData.sessionKey
+			) {
+				await this._reset({ ...options, forceNew: true })
+				return
+			}
+
 			this.logger.log(
 				`Initializing...`,
 				options,
@@ -470,6 +488,7 @@ export class RecordSDK implements Record {
 					appVersion: this.appVersion,
 					serviceName: this.serviceName,
 					session_secure_id: this.sessionData.sessionSecureID,
+					session_key: this.sessionData.sessionKey,
 					client_id: clientID,
 					network_recording_domains: destinationDomains,
 					disable_session_recording:
@@ -645,6 +664,15 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 						{ type: 'session' },
 					)
 				}
+			}
+
+			if (this.sessionData.sessionKey) {
+				this.addProperties(
+					{
+						sessionKey: this.sessionData.sessionKey,
+					},
+					{ type: 'session' },
+				)
 			}
 
 			this._setupWindowListeners()
@@ -963,6 +991,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 			if (
 				this.state === 'Recording' &&
 				this.listeners &&
+				!this.sessionData.sessionKey &&
 				this.sessionData.sessionStartTime &&
 				Date.now() - this.sessionData.sessionStartTime >
 					MAX_SESSION_LENGTH
@@ -978,7 +1007,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 					let blob = new Blob(
 						[
 							JSON.stringify({
-								query: print(PushPayloadDocument),
+								query: print(PushSessionEventsDocument),
 								variables: payload,
 							}),
 						],
@@ -1038,7 +1067,9 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 	async _sendPayload({
 		sendFn,
 	}: {
-		sendFn?: (payload: PushPayloadMutationVariables) => Promise<number>
+		sendFn?: (
+			payload: PushSessionEventsMutationVariables,
+		) => Promise<number>
 	}) {
 		const events = [...this.events]
 
@@ -1059,11 +1090,12 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 		this.logger.log(
 			`Sending: ${events.length} events, \nTo: ${this._backendUrl}\nOrg: ${this.organizationID}\nSessionSecureID: ${this.sessionData.sessionSecureID}`,
 		)
+		const payloadId = new Date().getTime()
 		const highlightLogs = getHighlightLogs()
 		if (sendFn) {
-			await sendFn({
+			const sessionPayload: PushPayloadMutationVariables = {
 				session_secure_id: this.sessionData.sessionSecureID,
-				payload_id: (this.sessionData.payloadID++).toString(),
+				payload_id: payloadId.toString(),
 				events: { events } as ReplayEventsInput,
 				messages: stringify({ messages: [] }),
 				resources: JSON.stringify({ resources: [] }),
@@ -1074,12 +1106,19 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 				is_beacon: false,
 				has_session_unloaded: this.hasSessionUnloaded,
 				highlight_logs: highlightLogs || undefined,
+			}
+
+			const { compressedBase64 } = await payloadToBase64(sessionPayload)
+			await sendFn({
+				session_secure_id: this.sessionData.sessionSecureID,
+				payload_id: payloadId.toString(),
+				data: compressedBase64,
 			})
 		} else {
 			this._worker.postMessage({
 				message: {
 					type: MessageType.AsyncEvents,
-					id: this.sessionData.payloadID++,
+					id: payloadId,
 					events,
 					messages: [],
 					errors: [],

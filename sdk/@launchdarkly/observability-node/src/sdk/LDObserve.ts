@@ -1,5 +1,4 @@
 import { Attributes, Span as OtelSpan, SpanOptions } from '@opentelemetry/api'
-import { ResourceAttributes } from '@opentelemetry/resources'
 import { ObservabilityClient } from '../client/ObservabilityClient'
 
 import { RequestContext } from '../api/RequestContext'
@@ -129,7 +128,7 @@ const _LDObserve = {
 	) => {
 		return observabilityClient.startWithHeaders(spanName, headers, options)
 	},
-	setAttributes: (attributes: ResourceAttributes) => {
+	setAttributes: (attributes: Attributes) => {
 		return observabilityClient.setAttributes(attributes)
 	},
 	_debug: (...data: any[]) => {

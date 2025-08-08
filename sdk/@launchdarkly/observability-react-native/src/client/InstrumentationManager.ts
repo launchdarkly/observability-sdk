@@ -2,11 +2,14 @@ import {
 	Attributes,
 	Context,
 	context,
+	Counter,
 	Gauge,
+	Histogram,
 	Span as OtelSpan,
 	SpanOptions,
 	trace,
 	propagation,
+	UpDownCounter,
 } from '@opentelemetry/api'
 import { logs } from '@opentelemetry/api-logs'
 import { metrics } from '@opentelemetry/api'
@@ -27,7 +30,7 @@ import {
 	MeterProvider,
 	PeriodicExportingMetricReader,
 } from '@opentelemetry/sdk-metrics'
-import { Resource } from '@opentelemetry/resources'
+import { Resource, resourceFromAttributes } from '@opentelemetry/resources'
 import {
 	ATTR_EXCEPTION_MESSAGE,
 	ATTR_EXCEPTION_STACKTRACE,
@@ -59,11 +62,23 @@ export class InstrumentationManager {
 	private meterProvider?: MeterProvider
 	private isInitialized = false
 	private serviceName: string
-	private resource: Resource = new Resource({})
+	private resource: Resource = resourceFromAttributes({})
 	private headers: Record<string, string> = {}
 	private sessionManager?: SessionManager
 	private sampler: CustomSampler = new CustomSampler()
 	private readonly _gauges: Map<string, Gauge> = new Map<string, Gauge>()
+	private readonly _counters: Map<string, Counter> = new Map<
+		string,
+		Counter
+	>()
+	private readonly _histograms: Map<string, Histogram> = new Map<
+		string,
+		Histogram
+	>()
+	private readonly _upDownCounters: Map<string, UpDownCounter> = new Map<
+		string,
+		UpDownCounter
+	>()
 
 	constructor(
 		private options: Required<ReactNativeOptions> & {
@@ -223,16 +238,17 @@ export class InstrumentationManager {
 			this.sampler,
 		)
 
-		this.loggerProvider = new LoggerProvider({ resource: this.resource })
-
-		this.loggerProvider.addLogRecordProcessor(
-			new BatchLogRecordProcessor(logExporter, {
-				maxQueueSize: 100,
-				scheduledDelayMillis: 500,
-				exportTimeoutMillis: 5000,
-				maxExportBatchSize: 10,
-			}),
-		)
+		this.loggerProvider = new LoggerProvider({
+			resource: this.resource,
+			processors: [
+				new BatchLogRecordProcessor(logExporter, {
+					maxQueueSize: 100,
+					scheduledDelayMillis: 500,
+					exportTimeoutMillis: 5000,
+					maxExportBatchSize: 10,
+				}),
+			],
+		})
 
 		logs.setGlobalLoggerProvider(this.loggerProvider)
 
@@ -325,18 +341,32 @@ export class InstrumentationManager {
 	}
 
 	public recordCount(metric: Metric): void {
-		this.recordMetric(metric)
+		try {
+			let counter = this._counters.get(metric.name)
+			if (!counter) {
+				const meter = this.getMeter()
+				counter = meter.createCounter(metric.name)
+				this._counters.set(metric.name, counter)
+			}
+			counter.add(metric.value, metric.attributes)
+		} catch (e) {
+			console.error('Failed to record count:', e)
+		}
 	}
 
 	public recordIncr(metric: Metric): void {
 		const incrMetric = { ...metric, value: 1 }
-		this.recordMetric(incrMetric)
+		this.recordCount(incrMetric)
 	}
 
 	public recordHistogram(metric: Metric): void {
 		try {
-			const meter = this.getMeter()
-			const histogram = meter.createHistogram(metric.name)
+			let histogram = this._histograms.get(metric.name)
+			if (!histogram) {
+				const meter = this.getMeter()
+				histogram = meter.createHistogram(metric.name)
+				this._histograms.set(metric.name, histogram)
+			}
 			histogram.record(metric.value, metric.attributes)
 		} catch (e) {
 			console.error('Failed to record histogram:', e)
@@ -345,8 +375,12 @@ export class InstrumentationManager {
 
 	public recordUpDownCounter(metric: Metric): void {
 		try {
-			const meter = this.getMeter()
-			const upDownCounter = meter.createUpDownCounter(metric.name)
+			let upDownCounter = this._upDownCounters.get(metric.name)
+			if (!upDownCounter) {
+				const meter = this.getMeter()
+				upDownCounter = meter.createUpDownCounter(metric.name)
+				this._upDownCounters.set(metric.name, upDownCounter)
+			}
 			upDownCounter.add(metric.value, metric.attributes)
 		} catch (e) {
 			console.error('Failed to record up/down counter:', e)
@@ -434,6 +468,10 @@ export class InstrumentationManager {
 		fn: (span: OtelSpan) => T,
 	): T {
 		return this.getTracer().startActiveSpan(spanName, options, ctx, fn)
+	}
+
+	public getContextFromSpan(span: OtelSpan): Context {
+		return trace.setSpan(context.active(), span)
 	}
 
 	public async flush(): Promise<void> {

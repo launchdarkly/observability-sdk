@@ -13,6 +13,11 @@ class _LDObserve extends BufferedClass<Observe> implements Observe {
 		return this._sdk.start()
 	}
 
+	stop() {
+		// avoid buffering the stop call
+		return this._sdk.stop()
+	}
+
 	recordGauge(metric: Metric) {
 		return this._bufferCall('recordGauge', [metric])
 	}

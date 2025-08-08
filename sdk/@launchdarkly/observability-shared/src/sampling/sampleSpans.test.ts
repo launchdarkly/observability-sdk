@@ -1,11 +1,10 @@
 import { vi, it, expect, beforeEach } from 'vitest'
-import { ReadableSpan } from '@opentelemetry/sdk-trace-web'
+import type { ReadableSpan } from '@opentelemetry/sdk-trace-base'
 import { SpanKind } from '@opentelemetry/api'
 import { sampleSpans } from './sampleSpans'
 import { Maybe, SamplingConfig } from '../graph/generated/graphql'
 import { ExportSampler, SamplingResult } from './ExportSampler'
 import { LogRecord } from '@opentelemetry/api-logs'
-import { sampleLogs } from './sampleLogs'
 
 // Helper function to create a mock span
 const createMockSpan = (name: string, parentId?: string): ReadableSpan => {
@@ -19,7 +18,14 @@ const createMockSpan = (name: string, parentId?: string): ReadableSpan => {
 			isRemote: false,
 			toString: () => `${name}`,
 		}),
-		parentSpanId: parentId,
+		parentSpanContext: parentId
+			? {
+					traceId: 'trace-1',
+					spanId: parentId,
+					traceFlags: 0,
+					isRemote: false,
+				}
+			: undefined,
 		startTime: [0, 0],
 		endTime: [0, 0],
 		status: { code: 0 },

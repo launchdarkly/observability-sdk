@@ -1,5 +1,41 @@
 # @launchdarkly/session-replay
 
+## 0.3.9
+
+### Patch Changes
+
+- Updated dependencies [d181f89]
+    - highlight.run@9.19.0
+
+## 0.3.8
+
+### Patch Changes
+
+- d0ab9e3: conditionally check for window api availability
+- Updated dependencies [d0ab9e3]
+    - highlight.run@9.18.23
+
+## 0.3.7
+
+### Patch Changes
+
+- 54aab8b: delete sessionData\_ localstorage values to avoid overfilling quota
+- Updated dependencies [54aab8b]
+    - highlight.run@9.18.22
+
+## 0.3.6
+
+### Patch Changes
+
+- 060dfe9: introduce LDObserve.stop api
+
+## 0.3.5
+
+### Patch Changes
+
+- Updated dependencies [011032f]
+    - highlight.run@9.18.21
+
 ## 0.3.4
 
 ### Patch Changes

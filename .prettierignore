@@ -22,3 +22,4 @@ __generated
 highlight.io/out
 sdk/highlightinc-highlight-datasource/grafana/data
 sdk/highlight-php
+sdk/@launchdarkly/observability-dotnet
