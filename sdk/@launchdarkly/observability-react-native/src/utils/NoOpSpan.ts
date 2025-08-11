@@ -13,6 +13,10 @@ import {
  * Used when the observability client is not yet initialized
  */
 export class NoOpSpan implements OtelSpan {
+	constructor() {
+		this.setAttribute('noop', true)
+	}
+
 	spanContext(): SpanContext {
 		return {
 			traceId: '00000000000000000000000000000000',

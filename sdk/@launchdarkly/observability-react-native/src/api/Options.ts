@@ -8,8 +8,14 @@ export interface ReactNativeOptions {
 	serviceName?: string
 
 	/**
+	 * The backend URL for the application.
+	 * @default 'https://pub.observability.app.launchdarkly.com'
+	 */
+	backendUrl?: string
+
+	/**
 	 * The endpoint URL for the OTLP exporter.
-	 * @default 'https://otlp.highlight.io:4318'
+	 * @default 'https://otel.observability.app.launchdarkly.com:4318'
 	 */
 	otlpEndpoint?: string
 
