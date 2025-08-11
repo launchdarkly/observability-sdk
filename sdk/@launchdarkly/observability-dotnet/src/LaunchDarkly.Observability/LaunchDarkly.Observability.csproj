@@ -1,5 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
-
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <!--x-release-please-start-version-->
     <Version>0.0.0</Version>
@@ -35,4 +34,31 @@
     <AssemblyOriginatorKeyFile>../../../../../LaunchDarkly.snk</AssemblyOriginatorKeyFile>
     <SignAssembly>true</SignAssembly>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Open Telemetry Dependencies -->
+    <PackageReference Include="OpenTelemetry" Version="1.12.0" />
+    <PackageReference Include="OpenTelemetry.Exporter.Console" Version="1.12.0" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.12.0" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.12.0" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.12.0" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.GrpcNetClient" Version="1.12.0-beta.1" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.12.0" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Process" Version="1.12.0-beta.1" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Quartz" Version="1.12.0-beta.1" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" Version="1.12.0" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.SqlClient" Version="1.12.0-beta.2" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Wcf" Version="1.12.0-beta.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- LaunchDarkly Dependencies -->
+    <PackageReference Include="LaunchDarkly.ServerSdk" Version="[8.10.0,9.0.0)" />
+    <PackageReference Include="LaunchDarkly.ServerSdk.Telemetry" Version="[1.2.0,2.0.0)" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <!-- Temporary dependency until: https://github.com/open-telemetry/opentelemetry-dotnet/issues/5973 is resolved. -->
+    <PackageReference Include="System.Diagnostics.DiagnosticSource" Version="9.0.0" />
+  </ItemGroup>
 </Project>
