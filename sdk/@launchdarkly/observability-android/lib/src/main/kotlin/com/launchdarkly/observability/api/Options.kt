@@ -2,7 +2,8 @@ package com.launchdarkly.observability.api
 
 import com.launchdarkly.observability.BuildConfig
 import io.opentelemetry.api.common.Attributes
-import java.time.Duration
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.minutes
 
 private const val DEFAULT_OTLP_ENDPOINT = "https://otel.observability.app.launchdarkly.com:4318"
 private const val DEFAULT_BACKEND_URL = "https://pub.observability.app.launchdarkly.com"
@@ -16,7 +17,7 @@ private const val DEFAULT_BACKEND_URL = "https://pub.observability.app.launchdar
  * @property backendUrl The backend URL for non-OTLP operations. Defaults to LaunchDarkly url.
  * @property resourceAttributes Additional resource attributes to include in telemetry data.
  * @property customHeaders Custom headers to include with OTLP exports.
- * @property sessionTimeout Session timeout. Defaults to 15 minutes.
+ * @property sessionBackgroundTimeout Session timeout if app is backgrounded. Defaults to 15 minutes.
  * @property debug Enables additional logging if true. Defaults to false.
  * @property disableErrorTracking Disables error tracking if true. Defaults to false.
  * @property disableLogs Disables logs if true. Defaults to false.
@@ -30,10 +31,10 @@ data class Options(
     val backendUrl: String = DEFAULT_BACKEND_URL,
     val resourceAttributes: Attributes = Attributes.empty(),
     val customHeaders: Map<String, String> = emptyMap(),
-    val sessionTimeout: Duration = Duration.ofMinutes(15),
+    val sessionBackgroundTimeout: Duration = 30.minutes,
     val debug: Boolean = false,
     val disableErrorTracking: Boolean = false,
     val disableLogs: Boolean = false,
     val disableTraces: Boolean = false,
     val disableMetrics: Boolean = false
-) 
+)

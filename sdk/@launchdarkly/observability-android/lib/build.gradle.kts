@@ -26,10 +26,13 @@ dependencies {
     implementation("io.opentelemetry:opentelemetry-sdk-metrics:1.51.0")
     implementation("io.opentelemetry:opentelemetry-sdk-logs:1.51.0")
 
+    // TODO: Evaluate risks associated with incubator APIs
+    implementation("io.opentelemetry:opentelemetry-api-incubator:1.51.0-alpha")
+
     // Android instrumentation
-    implementation("io.opentelemetry.android:core:0.10.0-alpha")
-    implementation("io.opentelemetry.android:instrumentation-activity:0.10.0-alpha")
-    implementation("io.opentelemetry.android:session:0.10.0-alpha")
+    implementation("io.opentelemetry.android:core:0.11.0-alpha")
+    implementation("io.opentelemetry.android.instrumentation:activity:0.11.0-alpha")
+    implementation("io.opentelemetry.android:session:0.11.0-alpha")
 
     // Use JUnit Jupiter for testing.
     testImplementation("org.junit.jupiter:junit-jupiter")

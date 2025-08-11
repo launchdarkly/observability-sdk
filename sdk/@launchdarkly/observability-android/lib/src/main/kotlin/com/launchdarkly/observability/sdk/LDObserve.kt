@@ -4,6 +4,7 @@ import com.launchdarkly.observability.client.ObservabilityClient
 import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.observability.interfaces.Observe
 import io.opentelemetry.api.common.Attributes
+import io.opentelemetry.api.logs.Severity
 import io.opentelemetry.api.trace.Span
 
 class LDObserve(private val client: ObservabilityClient) : Observe {
@@ -31,8 +32,8 @@ class LDObserve(private val client: ObservabilityClient) : Observe {
         client.recordError(error, attributes)
     }
 
-    override fun recordLog(message: String, level: String, attributes: Attributes) {
-        client.recordLog(message, level, attributes)
+    override fun recordLog(message: String, severity: Severity, attributes: Attributes) {
+        client.recordLog(message, severity, attributes)
     }
 
     override fun startSpan(name: String, attributes: Attributes): Span {
@@ -50,7 +51,7 @@ class LDObserve(private val client: ObservabilityClient) : Observe {
             override fun recordHistogram(metric: Metric) {}
             override fun recordUpDownCounter(metric: Metric) {}
             override fun recordError(error: Error, attributes: Attributes) {}
-            override fun recordLog(message: String, level: String, attributes: Attributes) {}
+            override fun recordLog(message: String, severity: Severity, attributes: Attributes) {}
             override fun startSpan(name: String, attributes: Attributes): Span {
                 // TODO: figure out if a no-op span implementation exists in the otel library
                 throw IllegalStateException("Observability plugin was not initialized before being used.")
@@ -67,7 +68,7 @@ class LDObserve(private val client: ObservabilityClient) : Observe {
         override fun recordHistogram(metric: Metric) = delegate.recordHistogram(metric)
         override fun recordUpDownCounter(metric: Metric) = delegate.recordUpDownCounter(metric)
         override fun recordError(error: Error, attributes: Attributes) = delegate.recordError(error, attributes)
-        override fun recordLog(message: String, level: String, attributes: Attributes) = delegate.recordLog(message, level, attributes)
+        override fun recordLog(message: String, severity: Severity, attributes: Attributes) = delegate.recordLog(message, severity, attributes)
         override fun startSpan(name: String, attributes: Attributes): Span = delegate.startSpan(name, attributes)
     }
 }

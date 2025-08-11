@@ -5,8 +5,10 @@ import com.launchdarkly.observability.api.Options
 import com.launchdarkly.observability.interfaces.Metric
 import io.opentelemetry.android.OpenTelemetryRum
 import io.opentelemetry.android.config.OtelRumConfig
+import io.opentelemetry.android.session.SessionConfig
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Logger
+import io.opentelemetry.api.logs.Severity
 import io.opentelemetry.api.metrics.Meter
 import io.opentelemetry.api.trace.Span
 import io.opentelemetry.api.trace.Tracer
@@ -43,15 +45,17 @@ class InstrumentationManager(
     private var otelTracer: Tracer
 
     init {
-
-        // resume at figuring out duration.  hopefully desugaring is not required
-        val otelRumConfig = OtelRumConfig().setSessionTimeout(options.sessionTimeout)
+        val otelRumConfig = OtelRumConfig().setSessionConfig(
+            SessionConfig(backgroundInactivityTimeout = options.sessionBackgroundTimeout)
+        )
         otelRUM = OpenTelemetryRum.builder(application, otelRumConfig)
             .addLoggerProviderCustomizer { sdkLoggerProviderBuilder, application ->
                 val logExporter = OtlpHttpLogRecordExporter.builder()
                     .setEndpoint(options.otlpEndpoint + LOGS_PATH)
                     .setHeaders { options.customHeaders }
                     .build()
+
+                // TODO: add debug log exporter
 
                 val processor = BatchLogRecordProcessor.builder(logExporter)
                     .setMaxQueueSize(100)
@@ -131,16 +135,16 @@ class InstrumentationManager(
             .build().add(metric.value.toLong(), metric.attributes)
     }
 
-    fun recordLog(message: String, level: String, attributes: Attributes) {
+    fun recordLog(message: String, severity: Severity, attributes: Attributes) {
         otelLogger.logRecordBuilder()
             .setBody(message)
             .setTimestamp(System.currentTimeMillis(), TimeUnit.MILLISECONDS)
-            .setSeverityText(level)
+            .setSeverity(severity)
+            .setSeverityText(severity.toString())
             .setAllAttributes(attributes)
             .emit()
     }
 
-    // TODO: add otel span optional param that will take precedence over current span and/or created span
     fun recordError(error: Error, attributes: Attributes) {
         val span = otelTracer
             .spanBuilder("highlight.error")
