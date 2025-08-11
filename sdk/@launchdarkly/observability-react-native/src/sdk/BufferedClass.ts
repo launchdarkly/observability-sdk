@@ -51,7 +51,7 @@ export class BufferedClass<T extends object> {
 				;(this._sdk as any)[method](...args)
 			} catch (error) {
 				console.warn(
-					`Error executing buffered call to ${method}:`,
+					`Error executing buffered call to ${String(method)}:`,
 					error,
 				)
 			}
