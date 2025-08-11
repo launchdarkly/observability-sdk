@@ -93,6 +93,8 @@ func WithDebug() Option {
 // WithSamplingRateMap sets the sampling rate for each span kind.
 // This setting can influence the quality of metrics used for experiments and guarded
 // releases and should only be adjusted with consultation.
+// If the sampling rate is specified for the SpanKindUnspecified kind, then that
+// rate will be used for any span kind for which a rate is not specified.
 func WithSamplingRateMap(rates map[trace.SpanKind]float64) Option {
 	return Option(func(conf *observabilityConfig) {
 		conf.samplingRateMap = rates
