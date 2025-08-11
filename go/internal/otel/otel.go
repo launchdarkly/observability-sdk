@@ -210,7 +210,6 @@ func createTracerProvider(
 		return nil, fmt.Errorf("creating OTLP trace exporter: %w", err)
 	}
 	opts = append([]sdktrace.TracerProviderOption{
-		sdktrace.WithSampler(sampler),
 		sdktrace.WithBatcher(newTraceExporter(exporter, customSampler),
 			sdktrace.WithBatchTimeout(time.Second),
 			sdktrace.WithExportTimeout(30*time.Second),
@@ -219,6 +218,10 @@ func createTracerProvider(
 		),
 		sdktrace.WithResource(resources),
 	}, opts...)
+	// Only configure a sampler when there is a sampling configuration.
+	if sampler != nil {
+		opts = append(opts, sdktrace.WithSampler(sampler))
+	}
 	return sdktrace.NewTracerProvider(opts...), nil
 }
 

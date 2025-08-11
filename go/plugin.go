@@ -56,20 +56,6 @@ func (p ObservabilityPlugin) Metadata() ldplugins.Metadata {
 	return ldplugins.NewMetadata("launchdarkly-observability")
 }
 
-type allSampler struct{}
-
-// Description provide a description of the sampler.
-func (a *allSampler) Description() string {
-	return "samples all traces"
-}
-
-// ShouldSample determines if the trace should be sampled.
-func (a *allSampler) ShouldSample(parameters trace.SamplingParameters) trace.SamplingResult {
-	return trace.SamplingResult{
-		Decision: trace.RecordAndSample,
-	}
-}
-
 func (p ObservabilityPlugin) getSamplingConfig(projectId string) (*gql.GetSamplingConfigResponse, error) {
 	var ctx context.Context
 	if p.config.context != nil {
@@ -101,7 +87,12 @@ func (p ObservabilityPlugin) Register(client interfaces.LDClientInterface, ldmd 
 		logging.SetLogger(logging.ConsoleLogger{})
 	}
 
-	var s trace.Sampler = &allSampler{}
+	var s trace.Sampler
+	if len(p.config.samplingRateMap) > 0 {
+		s = getSampler(p.config.samplingRateMap)
+	} else {
+		s = nil
+	}
 	otel.SetConfig(otel.Config{
 		OtlpEndpoint:       p.config.otlpEndpoint,
 		ResourceAttributes: attributes,
