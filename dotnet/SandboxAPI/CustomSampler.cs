@@ -225,7 +225,7 @@ public class CustomSampler : IExportSampler
 
     private bool MatchesAttributes(List<AttributeMatchConfig> attributeConfigs, ActivityTagsCollection tags)
     {
-        if (attributeConfigs.Count == 0) return true;
+        if (attributeConfigs == null || attributeConfigs.Count == 0) return true;
         if (tags == null || !tags.Any()) return false;
 
         foreach (var attrConfig in attributeConfigs)
@@ -250,7 +250,7 @@ public class CustomSampler : IExportSampler
 
     private bool MatchesEvents(List<EventMatchConfig> eventConfigs, IEnumerable<ActivityEvent> events)
     {
-        if (eventConfigs.Count == 0) return true;
+        if (eventConfigs == null || eventConfigs.Count == 0) return true;
 
         foreach (var eventConfig in eventConfigs)
         {
@@ -279,7 +279,7 @@ public class CustomSampler : IExportSampler
         }
 
         // Match by event attributes if specified
-        if (eventConfig.Attributes.Count > 0)
+        if (eventConfig.Attributes != null && eventConfig.Attributes.Count > 0)
         {
             var eventTags = new ActivityTagsCollection();
             foreach (var tag in activityEvent.Tags)
@@ -303,14 +303,17 @@ public class CustomSampler : IExportSampler
             return false;
         }
 
-        // Check attributes
-        var spanTags = new ActivityTagsCollection();
-        foreach (var tag in span.Tags)
+        // Check attributes if defined
+        if (config.Attributes != null && config.Attributes.Count > 0)
         {
-            spanTags.Add(tag.Key, tag.Value);
+            var spanTags = new ActivityTagsCollection();
+            foreach (var tag in span.Tags)
+            {
+                spanTags.Add(tag.Key, tag.Value);
+            }
+            if (!MatchesAttributes(config.Attributes, spanTags))
+                return false;
         }
-        if (!MatchesAttributes(config.Attributes, spanTags))
-            return false;
 
         // Check events  
         if (!MatchesEvents(config.Events, span.Events))
@@ -324,7 +327,7 @@ public class CustomSampler : IExportSampler
         _configLock.EnterReadLock();
         try
         {
-            if (_config?.Spans.Count > 0)
+            if (_config?.Spans?.Count > 0)
             {
                 foreach (var spanConfig in _config.Spans)
                 {
@@ -370,7 +373,7 @@ public class CustomSampler : IExportSampler
         }
 
         // Check attributes if defined
-        if (config.Attributes.Count > 0)
+        if (config.Attributes != null && config.Attributes.Count > 0)
         {
             // Convert log record attributes to format we can check
             var logAttributes = new ActivityTagsCollection();
@@ -394,7 +397,7 @@ public class CustomSampler : IExportSampler
         _configLock.EnterReadLock();
         try
         {
-            if (_config?.Logs.Count > 0)
+            if (_config?.Logs?.Count > 0)
             {
                 foreach (var logConfig in _config.Logs)
                 {
@@ -481,7 +484,7 @@ public class SamplingTraceExporter : OtlpTraceExporter
             if (result.Sample)
             {
                 // Add sampling attributes if specified
-                if (result.Attributes.Count > 0)
+                if (result.Attributes != null && result.Attributes.Count > 0)
                 {
                     foreach (var attr in result.Attributes)
                     {
@@ -525,7 +528,7 @@ public class SamplingLogExporter : BaseExporter<LogRecord>
             if (result.Sample)
             {
                 // Create a copy if we need to add attributes
-                if (result.Attributes.Count > 0)
+                if (result.Attributes != null && result.Attributes.Count > 0)
                 {
                     // Note: LogRecord doesn't have a direct way to add attributes after creation
                     // This would typically be handled during log record creation or through processors

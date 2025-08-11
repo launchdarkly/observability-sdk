@@ -112,70 +112,33 @@ public static class ObservabilityExtensions
         // Create and initialize the sampler
         var sampler = new CustomSampler();
 
-        if (Environment.GetEnvironmentVariable("USE_HARDCODED_SAMPLING_CONFIG") == "true") // Adding a hard-coded sampling config for development purposes
+        // Start background task to fetch and update sampling config
+        _ = Task.Run(async () =>
         {
-            sampler.SetConfig(new SamplingConfig
+            try
             {
-                Spans = new List<SpanSamplingConfig>
+                // Initial fetch
+                await sampler.UpdateConfigFromNetworkAsync(httpClient, backendUrl, config.ProjectId);
+
+                // Set up periodic updates
+                var timer = new Timer(async _ =>
                 {
-                    new SpanSamplingConfig
+                    try
                     {
-                        Name = new MatchConfig { RegexValue = ".*rolldice.*" },
-                        SamplingRatio = 2 // Sample 1 in 2 spans with name "roll-dice"
-                    },
-                    new SpanSamplingConfig
-                    {
-                        Attributes = new List<AttributeMatchConfig>
-                        {
-                            new AttributeMatchConfig
-                            {
-                                Key = new MatchConfig { MatchValue = "url.path" },
-                                Attribute = new MatchConfig { MatchValue = "/rolldice/Robert" }
-                            }
-                        },
-                        SamplingRatio = 1 // Always sample spans where player is Robert
+                        await sampler.UpdateConfigFromNetworkAsync(httpClient, backendUrl, config.ProjectId);
                     }
-                },
-                Logs = new List<LogSamplingConfig>
-                {
-                    new LogSamplingConfig
+                    catch (Exception ex)
                     {
-                        Message = new MatchConfig { RegexValue = ".*rolling.*" },
-                        SamplingRatio = 3 // Sample 1 in 3 log messages containing "rolling"
+                        Console.WriteLine($"Error during periodic sampling config update: {ex.Message}");
                     }
-                }
-            });
-        }
-        else
-        {
-            // Start background task to fetch and update sampling config
-            _ = Task.Run(async () =>
+                }, null, TimeSpan.FromMinutes(10), TimeSpan.FromMinutes(10));
+
+            }
+            catch (Exception ex)
             {
-                try
-                {
-                    // Initial fetch
-                    await sampler.UpdateConfigFromNetworkAsync(httpClient, backendUrl, config.ProjectId);
-
-                    // Set up periodic updates
-                    var timer = new Timer(async _ =>
-                    {
-                        try
-                        {
-                            await sampler.UpdateConfigFromNetworkAsync(httpClient, backendUrl, config.ProjectId);
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine($"Error during periodic sampling config update: {ex.Message}");
-                        }
-                    }, null, TimeSpan.FromMinutes(10), TimeSpan.FromMinutes(10));
-
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Error initializing network-based sampling: {ex.Message}");
-                }
-            });
-        }
+                Console.WriteLine($"Error initializing network-based sampling: {ex.Message}");
+            }
+        });
 
         // Configure OpenTelemetry Logging
         builder.Logging.AddOpenTelemetry(options =>
