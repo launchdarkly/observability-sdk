@@ -1,3 +1,5 @@
+using System;
+
 namespace LaunchDarkly.Observability
 {
     public struct ObservabilityConfig
@@ -74,7 +76,7 @@ namespace LaunchDarkly.Observability
 
             internal Builder(string sdkKey)
             {
-                this._sdkKey = sdkKey;   
+                _sdkKey = sdkKey ?? throw new ArgumentNullException(nameof(sdkKey), "SDK key cannot be null when creating an ObservabilityConfig builder.");   
             }
 
             /// <summary>

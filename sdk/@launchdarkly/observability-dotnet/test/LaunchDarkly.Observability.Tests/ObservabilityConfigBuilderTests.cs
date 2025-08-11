@@ -1,5 +1,6 @@
 using LaunchDarkly.Observability;
 using NUnit.Framework;
+using System;
 
 namespace LaunchDarkly.Observability.Test
 {
@@ -96,6 +97,14 @@ namespace LaunchDarkly.Observability.Test
                 Assert.That(first.Environment, Is.EqualTo("env1"));
                 Assert.That(first.SdkKey, Is.EqualTo("sdk-immutable"));
             });
+        }
+
+        [Test]
+        public void CreateBuilder_WithNullSdkKey_ThrowsArgumentNullException()
+        {
+            var exception = Assert.Throws<ArgumentNullException>(() => ObservabilityConfig.CreateBuilder(null));
+            Assert.That(exception.ParamName, Is.EqualTo("sdkKey"));
+            Assert.That(exception.Message, Does.Contain("SDK key cannot be null when creating an ObservabilityConfig builder"));
         }
     }
 }

@@ -9,11 +9,14 @@ using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 
 namespace LaunchDarkly.Observability {
+
     /// <summary>
     /// Static class containing extension methods for configuring observability
     /// </summary>
     public static class ObservabilityExtensions
     {
+        // Used for metrics when a service name is not specified.
+        private const string DefaultMetricsName = "launchdarkly-plugin-default-metrics";
         private const OtlpExportProtocol ExportProtocol = OtlpExportProtocol.HttpProtobuf;
         private const int FlushIntervalMs = 5 * 1000;
         private const int MaxExportBatchSize = 10000;
@@ -101,7 +104,7 @@ namespace LaunchDarkly.Observability {
             }).WithMetrics(metrics =>
             {
                 metrics.SetResourceBuilder(resourceBuilder)
-                    .AddMeter(config.ServiceName)
+                    .AddMeter(config.ServiceName ?? DefaultMetricsName)
                     .AddRuntimeInstrumentation()
                     .AddProcessInstrumentation()
                     .AddHttpClientInstrumentation()
