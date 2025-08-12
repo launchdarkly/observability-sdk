@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.0
+
+### Minor Changes
+
+- 1beae4d: Add sampling support to React Native observability plugin
+
+### Patch Changes
+
+- 1beae4d: add sampling support to react native o11y plugin
+
 ## 0.2.1
 
 ### Patch Changes

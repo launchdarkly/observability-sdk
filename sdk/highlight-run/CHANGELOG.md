@@ -1,5 +1,11 @@
 # highlight.run
 
+## 9.19.1
+
+### Patch Changes
+
+- 1beae4d: add sampling support to react native o11y plugin
+
 ## 9.19.0
 
 ### Minor Changes
