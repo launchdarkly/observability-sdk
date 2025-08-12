@@ -9,13 +9,13 @@ namespace LaunchDarkly.Observability.Test
         [Test]
         public void Build_WithAllFields_SetsValues()
         {
-            var config = ObservabilityConfig.CreateBuilder("sdk-123")
+            var config = ObservabilityConfig.Builder()
                 .WithOtlpEndpoint("https://otlp.example.com")
                 .WithBackendUrl("https://backend.example.com")
                 .WithServiceName("service-a")
                 .WithServiceVersion("1.0.0")
                 .WithEnvironment("prod")
-                .Build();
+                .Build("sdk-123");
 
             Assert.Multiple(() =>
             {
@@ -31,7 +31,7 @@ namespace LaunchDarkly.Observability.Test
         [Test]
         public void Build_WithoutSettingFields_UsesDefaults()
         {
-            var config = ObservabilityConfig.CreateBuilder("sdk-xyz").Build();
+            var config = ObservabilityConfig.Builder().Build("sdk-xyz");
 
             Assert.Multiple(() =>
             {
@@ -47,13 +47,13 @@ namespace LaunchDarkly.Observability.Test
         [Test]
         public void WithMethods_HandleNullValues_ResetsToDefaults()
         {
-            var config = ObservabilityConfig.CreateBuilder("sdk-null")
+            var config = ObservabilityConfig.Builder()
                 .WithOtlpEndpoint(null)
                 .WithBackendUrl(null)
                 .WithServiceName(null)
                 .WithServiceVersion(null)
                 .WithEnvironment(null)
-                .Build();
+                .Build("my-sdk-key");
 
             Assert.Multiple(() =>
             {
@@ -62,21 +62,21 @@ namespace LaunchDarkly.Observability.Test
                 Assert.That(config.ServiceName, Is.EqualTo(string.Empty));
                 Assert.That(config.ServiceVersion, Is.EqualTo(string.Empty));
                 Assert.That(config.Environment, Is.EqualTo(string.Empty));
-                Assert.That(config.SdkKey, Is.EqualTo("sdk-null"));
+                Assert.That(config.SdkKey, Is.EqualTo("my-sdk-key"));
             });
         }
 
         [Test]
         public void Build_ProducesImmutableConfig()
         {
-            var builder = ObservabilityConfig.CreateBuilder("sdk-immutable")
+            var builder = ObservabilityConfig.Builder()
                 .WithOtlpEndpoint("e1")
                 .WithBackendUrl("b1")
                 .WithServiceName("s1")
                 .WithServiceVersion("v1")
                 .WithEnvironment("env1");
 
-            var first = builder.Build();
+            var first = builder.Build("my-sdk-key");
 
             // Change builder afterward
             builder
@@ -94,7 +94,7 @@ namespace LaunchDarkly.Observability.Test
                 Assert.That(first.ServiceName, Is.EqualTo("s1"));
                 Assert.That(first.ServiceVersion, Is.EqualTo("v1"));
                 Assert.That(first.Environment, Is.EqualTo("env1"));
-                Assert.That(first.SdkKey, Is.EqualTo("sdk-immutable"));
+                Assert.That(first.SdkKey, Is.EqualTo("my-sdk-key"));
             });
         }
     }

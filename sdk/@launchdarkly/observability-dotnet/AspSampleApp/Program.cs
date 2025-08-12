@@ -1,20 +1,24 @@
 using LaunchDarkly.Observability;
+using LaunchDarkly.Sdk;
+using LaunchDarkly.Sdk.Server;
+using LaunchDarkly.Sdk.Server.Integrations;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.AddLaunchDarklyObservability(
-    Environment.GetEnvironmentVariable("LAUNCHDARKLY_SDK_KEY"),
-    ldBuilder =>
-    {
-        ldBuilder.WithServiceName("ryan-test-service");
-    }
-);
 
+var config = Configuration.Builder(Environment.GetEnvironmentVariable("LAUNCHDARKLY_SDK_KEY"))
+    .Plugins(new PluginConfigurationBuilder()
+        .Add(ObservabilityPlugin.Builder(builder.Services)
+            .WithServiceName("ryan-test-service")
+            .WithServiceVersion("0.0.0")
+            .Build())).Build();
 
+// Building the LdClient with the Observability plugin. This line will add services to the web application.
+var client = new LdClient(config);
+
+// Client must be built before this line.
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -33,11 +37,13 @@ var summaries = new[]
 
 app.MapGet("/weatherforecast", () =>
     {
+        var isMercury =
+            client.BoolVariation("isMercury", Context.New(ContextKind.Of("request"), Guid.NewGuid().ToString()));
         var forecast = Enumerable.Range(1, 5).Select(index =>
                 new WeatherForecast
                 (
                     DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-                    Random.Shared.Next(-20, 55),
+                    Random.Shared.Next(isMercury ? -170 : -20, isMercury ? 400 : 55),
                     summaries[Random.Shared.Next(summaries.Length)]
                 ))
             .ToArray();
