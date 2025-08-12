@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/launchdarkly/observability-sdk/compare/go/v0.1.0...go/v0.2.0) (2025-08-11)
+
+
+### Features
+
+* Add trace based sampling for go plugin. ([#170](https://github.com/launchdarkly/observability-sdk/issues/170)) ([dacbe76](https://github.com/launchdarkly/observability-sdk/commit/dacbe763d0ab672e1575290a37ad3f7cc2c3059a))
+
 ## 0.1.0 (2025-08-07)
 
 

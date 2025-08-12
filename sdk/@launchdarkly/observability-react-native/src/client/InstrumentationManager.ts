@@ -1,17 +1,21 @@
 import {
 	Attributes,
+	Context,
+	context,
+	Counter,
+	Gauge,
+	Histogram,
 	Span as OtelSpan,
 	SpanOptions,
 	trace,
 	propagation,
+	UpDownCounter,
 } from '@opentelemetry/api'
 import { logs } from '@opentelemetry/api-logs'
 import { metrics } from '@opentelemetry/api'
 import { registerInstrumentations } from '@opentelemetry/instrumentation'
 import { FetchInstrumentation } from '@opentelemetry/instrumentation-fetch'
 import { XMLHttpRequestInstrumentation } from '@opentelemetry/instrumentation-xml-http-request'
-import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http'
-import { OTLPLogExporter } from '@opentelemetry/exporter-logs-otlp-http'
 import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-http'
 import {
 	SpanProcessor,
@@ -38,12 +42,19 @@ import { ReactNativeOptions } from '../api/Options'
 import { Metric } from '../api/Metric'
 import { SessionManager } from './SessionManager'
 import {
+	CustomSampler,
 	CustomTraceContextPropagator,
 	getCorsUrlsPattern,
 	getSpanName,
+	getSamplingConfig,
 } from '@launchdarkly/observability-shared'
-import { DeduplicatingExporter } from '../otel/DeduplicatingExporter'
 import { CustomBatchSpanProcessor } from '../otel/CustomBatchSpanProcessor'
+import { CustomTraceExporter } from '../otel/CustomTraceExporter'
+import { CustomLogExporter } from '../otel/CustomLogExporter'
+
+export type InstrumentationManagerOptions = Required<ReactNativeOptions> & {
+	projectId: string
+}
 
 export class InstrumentationManager {
 	private traceProvider?: WebTracerProvider
@@ -54,14 +65,32 @@ export class InstrumentationManager {
 	private resource: Resource = resourceFromAttributes({})
 	private headers: Record<string, string> = {}
 	private sessionManager?: SessionManager
+	private sampler: CustomSampler = new CustomSampler()
+	private readonly _gauges: Map<string, Gauge> = new Map<string, Gauge>()
+	private readonly _counters: Map<string, Counter> = new Map<
+		string,
+		Counter
+	>()
+	private readonly _histograms: Map<string, Histogram> = new Map<
+		string,
+		Histogram
+	>()
+	private readonly _upDownCounters: Map<string, UpDownCounter> = new Map<
+		string,
+		UpDownCounter
+	>()
 
-	constructor(private options: Required<ReactNativeOptions>) {
+	constructor(
+		private options: Required<ReactNativeOptions> & {
+			projectId: string
+		},
+	) {
 		this.serviceName =
 			this.options.serviceName ??
 			'launchdarkly-observability-react-native'
 	}
 
-	public initialize(resource: Resource) {
+	public async initialize(resource: Resource) {
 		if (this.isInitialized) return
 
 		try {
@@ -70,6 +99,7 @@ export class InstrumentationManager {
 				...(this.options.customHeaders ?? {}),
 			}
 
+			this.initializeSampling()
 			this.initializeTracing()
 			this.initializeLogs()
 			this.initializeMetrics()
@@ -93,6 +123,7 @@ export class InstrumentationManager {
 				new W3CBaggagePropagator(),
 				new CustomTraceContextPropagator({
 					internalEndpoints: [
+						this.options.backendUrl,
 						`${this.options.otlpEndpoint}/v1/traces`,
 						`${this.options.otlpEndpoint}/v1/logs`,
 						`${this.options.otlpEndpoint}/v1/metrics`,
@@ -105,13 +136,12 @@ export class InstrumentationManager {
 
 		propagation.setGlobalPropagator(compositePropagator)
 
-		const otlpExporter = new OTLPTraceExporter({
-			url: `${this.options.otlpEndpoint}/v1/traces`,
-			headers: this.headers,
-		})
-		const exporter = new DeduplicatingExporter(
-			otlpExporter,
-			this.options.debug,
+		const exporter = new CustomTraceExporter(
+			{
+				url: `${this.options.otlpEndpoint}/v1/traces`,
+				headers: this.headers,
+			},
+			this.sampler,
 		)
 
 		const processors: SpanProcessor[] = [
@@ -120,7 +150,6 @@ export class InstrumentationManager {
 				scheduledDelayMillis: 500,
 				exportTimeoutMillis: 5000,
 				maxExportBatchSize: 10,
-				debug: this.options.debug,
 			}),
 		]
 
@@ -185,24 +214,40 @@ export class InstrumentationManager {
 		this._log('Tracing initialized')
 	}
 
+	private initializeSampling() {
+		if (!this.options.projectId) return
+
+		getSamplingConfig(this.options.backendUrl, this.options.projectId)
+			.then((samplingConfig) => {
+				this.sampler.setConfig(samplingConfig)
+				this._log('Sampling configuration loaded', samplingConfig)
+			})
+			.catch((error) => {
+				console.warn('Failed to load sampling configuration:', error)
+			})
+	}
+
 	private initializeLogs() {
 		if (this.options.disableLogs) return
 
-		const logExporter = new OTLPLogExporter({
-			headers: this.headers,
-			url: `${this.options.otlpEndpoint}/v1/logs`,
-		})
-
-		const processor = new BatchLogRecordProcessor(logExporter, {
-			maxQueueSize: 100,
-			scheduledDelayMillis: 500,
-			exportTimeoutMillis: 5000,
-			maxExportBatchSize: 10,
-		})
+		const logExporter = new CustomLogExporter(
+			{
+				headers: this.headers,
+				url: `${this.options.otlpEndpoint}/v1/logs`,
+			},
+			this.sampler,
+		)
 
 		this.loggerProvider = new LoggerProvider({
 			resource: this.resource,
-			processors: [processor],
+			processors: [
+				new BatchLogRecordProcessor(logExporter, {
+					maxQueueSize: 100,
+					scheduledDelayMillis: 500,
+					exportTimeoutMillis: 5000,
+					maxExportBatchSize: 10,
+				}),
+			],
 		})
 
 		logs.setGlobalLoggerProvider(this.loggerProvider)
@@ -283,27 +328,45 @@ export class InstrumentationManager {
 
 	public recordMetric(metric: Metric): void {
 		try {
-			const meter = this.getMeter()
-			const counter = meter.createCounter(metric.name)
-			counter.add(metric.value, metric.attributes)
+			let gauge = this._gauges.get(metric.name)
+			if (!gauge) {
+				const meter = this.getMeter()
+				gauge = meter.createGauge(metric.name)
+				this._gauges.set(metric.name, gauge)
+			}
+			gauge.record(metric.value, metric.attributes)
 		} catch (e) {
 			console.error('Failed to record metric:', e)
 		}
 	}
 
 	public recordCount(metric: Metric): void {
-		this.recordMetric(metric)
+		try {
+			let counter = this._counters.get(metric.name)
+			if (!counter) {
+				const meter = this.getMeter()
+				counter = meter.createCounter(metric.name)
+				this._counters.set(metric.name, counter)
+			}
+			counter.add(metric.value, metric.attributes)
+		} catch (e) {
+			console.error('Failed to record count:', e)
+		}
 	}
 
 	public recordIncr(metric: Metric): void {
 		const incrMetric = { ...metric, value: 1 }
-		this.recordMetric(incrMetric)
+		this.recordCount(incrMetric)
 	}
 
 	public recordHistogram(metric: Metric): void {
 		try {
-			const meter = this.getMeter()
-			const histogram = meter.createHistogram(metric.name)
+			let histogram = this._histograms.get(metric.name)
+			if (!histogram) {
+				const meter = this.getMeter()
+				histogram = meter.createHistogram(metric.name)
+				this._histograms.set(metric.name, histogram)
+			}
 			histogram.record(metric.value, metric.attributes)
 		} catch (e) {
 			console.error('Failed to record histogram:', e)
@@ -312,8 +375,12 @@ export class InstrumentationManager {
 
 	public recordUpDownCounter(metric: Metric): void {
 		try {
-			const meter = this.getMeter()
-			const upDownCounter = meter.createUpDownCounter(metric.name)
+			let upDownCounter = this._upDownCounters.get(metric.name)
+			if (!upDownCounter) {
+				const meter = this.getMeter()
+				upDownCounter = meter.createUpDownCounter(metric.name)
+				this._upDownCounters.set(metric.name, upDownCounter)
+			}
 			upDownCounter.add(metric.value, metric.attributes)
 		} catch (e) {
 			console.error('Failed to record up/down counter:', e)
@@ -386,16 +453,25 @@ export class InstrumentationManager {
 		return span
 	}
 
-	public startSpan(spanName: string, options?: SpanOptions): OtelSpan {
-		return this.getTracer().startSpan(spanName, options)
+	public startSpan(
+		spanName: string,
+		options?: SpanOptions,
+		ctx?: Context,
+	): OtelSpan {
+		return this.getTracer().startSpan(spanName, options, ctx)
 	}
 
 	public startActiveSpan<T>(
 		spanName: string,
+		options: SpanOptions = {},
+		ctx: Context = context.active(),
 		fn: (span: OtelSpan) => T,
-		options?: SpanOptions,
 	): T {
-		return this.getTracer().startActiveSpan(spanName, options || {}, fn)
+		return this.getTracer().startActiveSpan(spanName, options, ctx, fn)
+	}
+
+	public getContextFromSpan(span: OtelSpan): Context {
+		return trace.setSpan(context.active(), span)
 	}
 
 	public async flush(): Promise<void> {
