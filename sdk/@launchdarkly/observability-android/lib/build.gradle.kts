@@ -37,11 +37,6 @@ dependencies {
     // Use JUnit Jupiter for testing.
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-
-    // This was added to support using newer types on older versions of Android.
-    // Namely use of the Duration type which requires API 26 and minSDK at
-    // time of writing is 24.
-//    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
 }
 
 val releaseVersion = version.toString()
@@ -67,7 +62,6 @@ android {
         }
     }
     compileOptions {
-//        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
     }
