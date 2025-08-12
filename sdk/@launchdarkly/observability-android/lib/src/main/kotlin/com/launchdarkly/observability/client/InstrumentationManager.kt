@@ -1,6 +1,7 @@
 package com.launchdarkly.observability.client
 
 import android.app.Application
+import com.launchdarkly.logging.LDLogger
 import com.launchdarkly.observability.api.Options
 import com.launchdarkly.observability.interfaces.Metric
 import io.opentelemetry.android.OpenTelemetryRum
@@ -37,6 +38,7 @@ class InstrumentationManager(
     private val application: Application,
     private val sdkKey: String,
     private val resources: Resource,
+    private val logger: LDLogger,
     options: Options,
 ) {
     private val otelRUM: OpenTelemetryRum
@@ -55,8 +57,6 @@ class InstrumentationManager(
                     .setHeaders { options.customHeaders }
                     .build()
 
-                // TODO: add debug log exporter
-
                 val processor = BatchLogRecordProcessor.builder(logExporter)
                     .setMaxQueueSize(100)
                     .setScheduleDelay(1000, TimeUnit.MILLISECONDS)
@@ -67,6 +67,33 @@ class InstrumentationManager(
                 sdkLoggerProviderBuilder
                     .setResource(resources)
                     .addLogRecordProcessor(processor)
+
+                if (options.debug) {
+                    val adapterLogExporter = object : io.opentelemetry.sdk.logs.export.LogRecordExporter {
+                        override fun export(logRecords: Collection<io.opentelemetry.sdk.logs.data.LogRecordData>): io.opentelemetry.sdk.common.CompletableResultCode {
+                            for (record in logRecords) {
+                                logger.info(record.toString()) // TODO: Figure out why logger.debug is being blocked by Log.isLoggable is adapter.
+                            }
+                            return io.opentelemetry.sdk.common.CompletableResultCode.ofSuccess()
+                        }
+                        override fun flush(): io.opentelemetry.sdk.common.CompletableResultCode {
+                            return io.opentelemetry.sdk.common.CompletableResultCode.ofSuccess()
+                        }
+                        override fun shutdown(): io.opentelemetry.sdk.common.CompletableResultCode {
+                            return io.opentelemetry.sdk.common.CompletableResultCode.ofSuccess()
+                        }
+                    }
+
+                    val adapterProcessor = BatchLogRecordProcessor.builder(adapterLogExporter)
+                        .setMaxQueueSize(100)
+                        .setScheduleDelay(1000, TimeUnit.MILLISECONDS)
+                        .setExporterTimeout(5000, TimeUnit.MILLISECONDS)
+                        .setMaxExportBatchSize(10)
+                        .build()
+                    sdkLoggerProviderBuilder.addLogRecordProcessor(adapterProcessor)
+                }
+
+                sdkLoggerProviderBuilder
             }
             .addTracerProviderCustomizer { sdkTracerProviderBuilder, application ->
                 val spanExporter = OtlpHttpSpanExporter.builder()
@@ -155,11 +182,6 @@ class InstrumentationManager(
 
         val attrBuilder = Attributes.builder()
         attrBuilder.putAll(attributes)
-
-        // TODO: should exception.cause be added here?  At least one other SDK is doing this
-//        error.cause?.let {
-//            span.setAttribute("exception.cause", it.message)
-//        }
 
         span.recordException(error, attrBuilder.build())
         span.end()

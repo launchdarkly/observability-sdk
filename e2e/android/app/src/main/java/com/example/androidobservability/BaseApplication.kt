@@ -8,6 +8,7 @@ import com.launchdarkly.sdk.android.Components
 import com.launchdarkly.sdk.android.LDClient
 import com.launchdarkly.sdk.android.LDConfig
 import com.launchdarkly.observability.plugin.Observability
+import com.launchdarkly.sdk.android.LDAndroidLogging
 import com.launchdarkly.sdk.android.integrations.Plugin
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
@@ -38,7 +39,9 @@ class BaseApplication : Application() {
                             Options(
                                 resourceAttributes = Attributes.of(
                                     AttributeKey.stringKey("example"), "value"
-                                )
+                                ),
+                                debug = true,
+                                logAdapter = LDAndroidLogging.adapter(),
                             )
                         )
                     )

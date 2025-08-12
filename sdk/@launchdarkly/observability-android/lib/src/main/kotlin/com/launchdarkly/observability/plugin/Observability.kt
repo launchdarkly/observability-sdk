@@ -1,6 +1,10 @@
 package com.launchdarkly.observability.plugin
 
 import android.app.Application
+import com.launchdarkly.logging.LDLogLevel
+import com.launchdarkly.logging.LDLogger
+import com.launchdarkly.logging.Logs
+import com.launchdarkly.observability.api.Options
 import com.launchdarkly.observability.client.ObservabilityClient
 import com.launchdarkly.observability.sdk.LDObserve
 import com.launchdarkly.sdk.android.LDClient
@@ -8,7 +12,6 @@ import com.launchdarkly.sdk.android.integrations.EnvironmentMetadata
 import com.launchdarkly.sdk.android.integrations.Hook
 import com.launchdarkly.sdk.android.integrations.Plugin
 import com.launchdarkly.sdk.android.integrations.PluginMetadata
-import com.launchdarkly.observability.api.Options
 import io.opentelemetry.sdk.resources.Resource
 import java.util.Collections
 
@@ -16,6 +19,13 @@ class Observability(
     private val application: Application,
     private val options: Options = Options() // new instance has reasonable defaults
 ) : Plugin() {
+    private val logger: LDLogger
+
+    init {
+        val actualLogAdapter = Logs.level(options.logAdapter, if (options.debug) LDLogLevel.DEBUG else DEFAULT_LOG_LEVEL)
+        logger = LDLogger.withAdapter(actualLogAdapter, options.loggerName)
+    }
+
     override fun getMetadata(): PluginMetadata {
         return object : PluginMetadata() {
             override fun getName(): String = "@launchdarkly/observability-android"
@@ -48,7 +58,7 @@ class Observability(
             }
         }
 
-        val observabilityClient = ObservabilityClient(application, sdkKey, resourceBuilder.build(), options)
+        val observabilityClient = ObservabilityClient(application, sdkKey, resourceBuilder.build(), logger, options)
         LDObserve.init(observabilityClient)
     }
 
@@ -56,5 +66,9 @@ class Observability(
         return Collections.singletonList(
             EvalTracingHook(true, true)
         )
+    }
+
+    companion object {
+        val DEFAULT_LOG_LEVEL: LDLogLevel = LDLogLevel.INFO
     }
 }
