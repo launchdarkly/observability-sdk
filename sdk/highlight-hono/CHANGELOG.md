@@ -1,5 +1,17 @@
 # @highlight-run/hono
 
+## 1.0.24
+
+### Patch Changes
+
+- @highlight-run/node@3.12.21
+
+## 1.0.23
+
+### Patch Changes
+
+- @highlight-run/node@3.12.20
+
 ## 1.0.22
 
 ### Patch Changes

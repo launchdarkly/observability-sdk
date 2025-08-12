@@ -1,6 +1,6 @@
 {
 	"name": "highlight.run",
-	"version": "9.18.23",
+	"version": "9.19.1",
 	"description": "Open source, fullstack monitoring. Capture frontend errors, record server side logs, and visualize what broke with session replay.",
 	"keywords": [
 		"highlight",
@@ -81,7 +81,8 @@
 		"dist"
 	],
 	"dependencies": {
-		"@launchdarkly/js-client-sdk": "^0.6.0"
+		"@launchdarkly/js-client-sdk": "^0.6.0",
+		"imurmurhash": "^0.1.4"
 	},
 	"devDependencies": {
 		"@graphql-codegen/cli": "^5.0.0",
@@ -107,6 +108,7 @@
 		"@rrweb/types": "workspace:*",
 		"@size-limit/file": "^8.1.0",
 		"@types/chrome": "^0.0.268",
+		"@types/imurmurhash": "^0",
 		"@types/js-cookie": "^3.0.6",
 		"@types/json-stringify-safe": "^5.0.3",
 		"@types/node": "^16.3.1",
@@ -147,5 +149,8 @@
 			"limit": "256 kB",
 			"brotli": true
 		}
-	]
+	],
+	"resolutions": {
+		"@opentelemetry/sdk-trace-web": "~1.30.1"
+	}
 }

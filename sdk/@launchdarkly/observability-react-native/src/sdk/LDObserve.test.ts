@@ -36,7 +36,7 @@ describe('LDObserve Buffering', () => {
 			let bufferStatus = _LDObserve._getBufferStatus()
 			expect(bufferStatus.bufferSize).toBe(1)
 			expect(bufferStatus.isLoaded).toBe(false)
-			expect(bufferStatus.buffer[0].method).toBe('log')
+			expect(bufferStatus.buffer[0].method).toBe('recordLog')
 
 			_LDObserve._init(new ObservabilityClient('sdkKey', {}))
 

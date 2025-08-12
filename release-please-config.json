@@ -15,6 +15,16 @@
 			"include-v-in-tag": false,
 			"include-component-in-tag": true,
 			"extra-files": ["gradle.properties"]
+		},
+		"go": {
+			"release-type": "go",
+			"package-name": "go",
+			"tag-separator": "/",
+			"bump-minor-pre-major": true,
+			"versioning": "default",
+			"include-v-in-tag": true,
+			"include-component-in-tag": true,
+			"extra-files": ["version.go"]
 		}
 	}
 }

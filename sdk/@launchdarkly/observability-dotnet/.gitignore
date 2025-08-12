@@ -1,0 +1,4 @@
+**/bin
+**/obj
+LaunchDarkly.Observability.sln.DotSettings.user
+**/launchSettings.json

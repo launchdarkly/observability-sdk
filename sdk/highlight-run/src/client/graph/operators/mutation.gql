@@ -24,12 +24,12 @@ mutation PushPayload(
 	)
 }
 
-mutation PushPayloadCompressed(
+mutation PushSessionEvents(
 	$session_secure_id: String!
-	$payload_id: ID!
+	$payload_id: Int64ID!
 	$data: String!
 ) {
-	pushPayloadCompressed(
+	pushSessionEvents(
 		session_secure_id: $session_secure_id
 		payload_id: $payload_id
 		data: $data
@@ -85,6 +85,7 @@ fragment MatchParts on MatchConfig {
 
 mutation initializeSession(
 	$session_secure_id: String!
+	$session_key: String
 	$organization_verbose_id: String!
 	$enable_strict_privacy: Boolean!
 	$privacy_setting: String!
@@ -102,6 +103,7 @@ mutation initializeSession(
 ) {
 	initializeSession(
 		session_secure_id: $session_secure_id
+		session_key: $session_key
 		organization_verbose_id: $organization_verbose_id
 		enable_strict_privacy: $enable_strict_privacy
 		enable_recording_network_contents: $enable_recording_network_contents

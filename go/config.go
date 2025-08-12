@@ -3,18 +3,21 @@ package ldobserve
 import (
 	"context"
 
+	"go.opentelemetry.io/otel/trace"
+
 	"github.com/launchdarkly/observability-sdk/go/internal/defaults"
 )
 
 type observabilityConfig struct {
-	serviceName    string
-	serviceVersion string
-	environment    string
-	backendURL     string
-	otlpEndpoint   string
-	manualStart    bool
-	context        context.Context
-	debug          bool
+	serviceName     string
+	serviceVersion  string
+	environment     string
+	backendURL      string
+	otlpEndpoint    string
+	manualStart     bool
+	context         context.Context
+	debug           bool
+	samplingRateMap map[trace.SpanKind]float64
 }
 
 func defaultConfig() observabilityConfig {
@@ -85,4 +88,15 @@ func WithDebug() Option {
 	return func(c *observabilityConfig) {
 		c.debug = true
 	}
+}
+
+// WithSamplingRateMap sets the sampling rate for each span kind.
+// This setting can influence the quality of metrics used for experiments and guarded
+// releases and should only be adjusted with consultation.
+// If the sampling rate is specified for the SpanKindUnspecified kind, then that
+// rate will be used for any span kind for which a rate is not specified.
+func WithSamplingRateMap(rates map[trace.SpanKind]float64) Option {
+	return Option(func(conf *observabilityConfig) {
+		conf.samplingRateMap = rates
+	})
 }

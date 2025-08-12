@@ -1,8 +1,10 @@
 import type {
 	Attributes,
+	Context,
 	Span as OtelSpan,
 	SpanOptions,
 } from '@opentelemetry/api'
+import { context } from '@opentelemetry/api'
 import { resourceFromAttributes } from '@opentelemetry/resources'
 import {
 	ATTR_SERVICE_NAME,
@@ -15,34 +17,42 @@ import { ReactNativeOptions } from '../api/Options'
 import { Metric } from '../api/Metric'
 import { RequestContext } from '../api/RequestContext'
 import { SessionManager } from '../client/SessionManager'
-import { InstrumentationManager } from '../client/InstrumentationManager'
+import {
+	InstrumentationManager,
+	InstrumentationManagerOptions,
+} from '../client/InstrumentationManager'
 
 export class ObservabilityClient {
 	private sessionManager: SessionManager
 	private instrumentationManager: InstrumentationManager
-	private options: Required<ReactNativeOptions>
+	private options: InstrumentationManagerOptions
 	private isInitialized = false
 
 	constructor(
 		private readonly sdkKey: string,
 		options: ReactNativeOptions = {},
 	) {
-		this.options = this.mergeOptions(options)
+		this.options = this.mergeOptions(sdkKey, options)
 		this.sessionManager = new SessionManager(this.options)
 		this.instrumentationManager = new InstrumentationManager(this.options)
 		this.init()
 	}
 
 	private mergeOptions(
+		sdkKey: string,
 		options: ReactNativeOptions,
-	): Required<ReactNativeOptions> {
+	): InstrumentationManagerOptions {
 		return {
-			otlpEndpoint:
-				options.otlpEndpoint ??
-				'https://otel.observability.app.launchdarkly.com:4318',
+			projectId: sdkKey,
 			serviceName:
 				options.serviceName ??
 				'launchdarkly-observability-react-native',
+			backendUrl:
+				options.backendUrl ??
+				'https://pub.observability.app.launchdarkly.com',
+			otlpEndpoint:
+				options.otlpEndpoint ??
+				'https://otel.observability.app.launchdarkly.com:4318',
 			serviceVersion: options.serviceVersion ?? '1.0.0',
 			resourceAttributes: options.resourceAttributes ?? {},
 			customHeaders: {
@@ -81,10 +91,11 @@ export class ObservabilityClient {
 				'highlight.project_id': this.sdkKey,
 				'highlight.session_id': sessionAttributes.sessionId,
 				...this.options.resourceAttributes,
+				...sessionAttributes,
 			})
 
 			this.instrumentationManager.setSessionManager(this.sessionManager)
-			this.instrumentationManager.initialize(resource)
+			void this.instrumentationManager.initialize(resource)
 			this.isInitialized = true
 
 			this._log('initialized successfully')
@@ -131,7 +142,11 @@ export class ObservabilityClient {
 		return this.instrumentationManager.flush()
 	}
 
-	public log(message: any, level: string, attributes?: Attributes): void {
+	public recordLog(
+		message: any,
+		level: string,
+		attributes?: Attributes,
+	): void {
 		if (this.options.disableLogs) return
 		this.instrumentationManager.recordLog(message, level, attributes)
 	}
@@ -178,18 +193,23 @@ export class ObservabilityClient {
 		)
 	}
 
-	public startSpan(spanName: string, options?: SpanOptions): OtelSpan {
+	public startSpan(
+		spanName: string,
+		options?: SpanOptions,
+		ctx?: Context,
+	): OtelSpan {
 		if (this.options.disableTraces) {
 			return {} as OtelSpan
 		}
 
-		return this.instrumentationManager.startSpan(spanName, options)
+		return this.instrumentationManager.startSpan(spanName, options, ctx)
 	}
 
 	public startActiveSpan<T>(
 		spanName: string,
 		fn: (span: OtelSpan) => T,
 		options?: SpanOptions,
+		ctx?: Context,
 	): T {
 		if (this.options.disableTraces) {
 			return fn({} as OtelSpan)
@@ -197,9 +217,14 @@ export class ObservabilityClient {
 
 		return this.instrumentationManager.startActiveSpan(
 			spanName,
+			options || {},
+			ctx || context.active(),
 			fn,
-			options,
 		)
+	}
+
+	public getContextFromSpan(span: OtelSpan): Context {
+		return this.instrumentationManager.getContextFromSpan(span)
 	}
 
 	public getSessionInfo(): any {
