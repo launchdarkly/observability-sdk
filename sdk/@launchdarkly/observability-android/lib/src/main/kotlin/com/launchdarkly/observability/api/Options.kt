@@ -35,7 +35,7 @@ data class Options(
     val backendUrl: String = DEFAULT_BACKEND_URL,
     val resourceAttributes: Attributes = Attributes.empty(),
     val customHeaders: Map<String, String> = emptyMap(),
-    val sessionBackgroundTimeout: Duration = 30.minutes,
+    val sessionBackgroundTimeout: Duration = 15.minutes,
     val debug: Boolean = false,
     // TODO O11Y-398: implement disable config options after all other instrumentations are implemented
     val disableErrorTracking: Boolean = false,
