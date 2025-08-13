@@ -8,8 +8,8 @@ using OpenTelemetry.Exporter;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 
-namespace LaunchDarkly.Observability {
-
+namespace LaunchDarkly.Observability
+{
     /// <summary>
     /// Static class containing extension methods for configuring observability
     /// </summary>
@@ -25,38 +25,24 @@ namespace LaunchDarkly.Observability {
         private const string TracesPath = "/v1/traces";
         private const string LogsPath = "/v1/logs";
         private const string MetricsPath = "/v1/metrics";
-        private static IEnumerable<KeyValuePair<string,object>> GetResourceAttributes(ObservabilityConfig config)
+
+        private static IEnumerable<KeyValuePair<string, object>> GetResourceAttributes(ObservabilityConfig config)
         {
-           var attrs = new List<KeyValuePair<string, object>>();
+            var attrs = new List<KeyValuePair<string, object>>();
 
-           if (!string.IsNullOrWhiteSpace(config.Environment))
-           {
-               attrs.Add(new KeyValuePair<string, object>("deployment.environment.name", config.Environment));
-           }
+            if (!string.IsNullOrWhiteSpace(config.Environment))
+            {
+                attrs.Add(new KeyValuePair<string, object>("deployment.environment.name", config.Environment));
+            }
 
-           attrs.Add(new KeyValuePair<string, object>("highlight.project_id", config.SdkKey));
+            attrs.Add(new KeyValuePair<string, object>("highlight.project_id", config.SdkKey));
 
-           return attrs;
+            return attrs;
         }
 
-        /// <summary>
-        /// Add the LaunchDarkly Observability services. This function would typically be called by the LaunchDarkly
-        /// Observability plugin. This should only be called by the end user if the Observability plugin needs to be
-        /// initialized earlier than the LaunchDarkly client.
-        /// </summary>
-        /// <param name="services">The service collection</param>
-        /// <param name="sdkKey">The LaunchDarkly SDK</param>
-        /// <param name="configure">A method to configure the services</param>
-        /// <returns>The service collection</returns>
-        public static IServiceCollection AddLaunchDarklyObservability(
-            this IServiceCollection services,
-            string sdkKey,
-            Action<ObservabilityConfig.Builder> configure)
+        internal static void AddLaunchDarklyObservabilityWithConfig(this IServiceCollection services,
+            ObservabilityConfig config)
         {
-            var builder = ObservabilityConfig.CreateBuilder(sdkKey);
-            configure(builder);
-
-            var config = builder.Build();
             var resourceAttributes = GetResourceAttributes(config);
 
             var resourceBuilder = ResourceBuilder.CreateDefault();
@@ -68,20 +54,13 @@ namespace LaunchDarkly.Observability {
 
             services.AddOpenTelemetry().WithTracing(tracing =>
             {
-
                 tracing.SetResourceBuilder(resourceBuilder)
                     .AddHttpClientInstrumentation()
                     .AddGrpcClientInstrumentation()
                     .AddWcfInstrumentation()
                     .AddQuartzInstrumentation()
-                    .AddAspNetCoreInstrumentation(options =>
-                    {
-                        options.RecordException = true;
-                    })
-                    .AddSqlClientInstrumentation(options =>
-                    {
-                        options.SetDbStatementForText = true;
-                    })
+                    .AddAspNetCoreInstrumentation(options => { options.RecordException = true; })
+                    .AddSqlClientInstrumentation(options => { options.SetDbStatementForText = true; })
                     .AddOtlpExporter(options =>
                     {
                         options.Endpoint = new Uri(config.OtlpEndpoint + TracesPath);
@@ -116,6 +95,27 @@ namespace LaunchDarkly.Observability {
                         Protocol = ExportProtocol
                     })));
             });
+        }
+
+        /// <summary>
+        /// Add the LaunchDarkly Observability services. This function would typically be called by the LaunchDarkly
+        /// Observability plugin. This should only be called by the end user if the Observability plugin needs to be
+        /// initialized earlier than the LaunchDarkly client.
+        /// </summary>
+        /// <param name="services">The service collection</param>
+        /// <param name="sdkKey">The LaunchDarkly SDK</param>
+        /// <param name="configure">A method to configure the services</param>
+        /// <returns>The service collection</returns>
+        public static IServiceCollection AddLaunchDarklyObservability(
+            this IServiceCollection services,
+            string sdkKey,
+            Action<ObservabilityConfig.ObservabilityConfigBuilder> configure)
+        {
+            var builder = ObservabilityConfig.Builder();
+            configure(builder);
+
+            var config = builder.Build(sdkKey);
+            AddLaunchDarklyObservabilityWithConfig(services, config);
             return services;
         }
     }
