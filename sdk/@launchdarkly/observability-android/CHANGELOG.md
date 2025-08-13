@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.2.0...launchdarkly-observability-android-0.3.0) (2025-08-13)
+
+
+### Features
+
+* adds configuration options to Android observability plugin ([#172](https://github.com/launchdarkly/observability-sdk/issues/172)) ([007e597](https://github.com/launchdarkly/observability-sdk/commit/007e597bc2c45a237160d977af8cd6c5c078b4fa))
+
 ## [0.2.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.2.0...launchdarkly-observability-android-0.2.0) (2025-08-11)
 
 

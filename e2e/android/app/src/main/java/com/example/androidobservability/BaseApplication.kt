@@ -1,13 +1,17 @@
 package com.example.androidobservability
 
 import android.app.Application
+import com.launchdarkly.observability.api.Options
 import com.launchdarkly.sdk.ContextKind
 import com.launchdarkly.sdk.LDContext
 import com.launchdarkly.sdk.android.Components
 import com.launchdarkly.sdk.android.LDClient
 import com.launchdarkly.sdk.android.LDConfig
 import com.launchdarkly.observability.plugin.Observability
+import com.launchdarkly.sdk.android.LDAndroidLogging
 import com.launchdarkly.sdk.android.integrations.Plugin
+import io.opentelemetry.api.common.AttributeKey
+import io.opentelemetry.api.common.Attributes
 import java.util.Collections
 
 class BaseApplication : Application() {
@@ -27,9 +31,22 @@ class BaseApplication : Application() {
         // Use AutoEnvAttributes.Disabled as the argument to the Builder
         val ldConfig = LDConfig.Builder(LDConfig.Builder.AutoEnvAttributes.Enabled)
             .mobileKey(LAUNCHDARKLY_MOBILE_KEY)
-            .plugins(Components.plugins().setPlugins(
-                Collections.singletonList<Plugin>(Observability(this@BaseApplication))
-            ))
+            .plugins(
+                Components.plugins().setPlugins(
+                    Collections.singletonList<Plugin>(
+                        Observability(
+                            this@BaseApplication,
+                            Options(
+                                resourceAttributes = Attributes.of(
+                                    AttributeKey.stringKey("example"), "value"
+                                ),
+                                debug = true,
+                                logAdapter = LDAndroidLogging.adapter(),
+                            )
+                        )
+                    )
+                )
+            )
             .build()
 
         // Set up the context properties. This context should appear on your LaunchDarkly context

@@ -1,10 +1,15 @@
 package com.launchdarkly.observability.client
 
 import android.app.Application
+import com.launchdarkly.logging.LDLogger
+import com.launchdarkly.observability.api.Options
 import com.launchdarkly.observability.interfaces.Metric
 import io.opentelemetry.android.OpenTelemetryRum
+import io.opentelemetry.android.config.OtelRumConfig
+import io.opentelemetry.android.session.SessionConfig
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Logger
+import io.opentelemetry.api.logs.Severity
 import io.opentelemetry.api.metrics.Meter
 import io.opentelemetry.api.trace.Span
 import io.opentelemetry.api.trace.Tracer
@@ -19,10 +24,9 @@ import io.opentelemetry.sdk.resources.Resource
 import io.opentelemetry.sdk.trace.export.BatchSpanProcessor
 import java.util.concurrent.TimeUnit
 
-private const val URL = "https://otel.observability.app.launchdarkly.com:4318"
-private const val URL_METRICS = URL + "/v1/metrics"
-private const val URL_LOGS = URL + "/v1/logs"
-private const val URL_TRACES = URL + "/v1/traces"
+private const val METRICS_PATH = "/v1/metrics"
+private const val LOGS_PATH = "/v1/logs"
+private const val TRACES_PATH = "/v1/traces"
 private const val INSTRUMENTATION_SCOPE_NAME = "com.launchdarkly.observability"
 
 /**
@@ -34,6 +38,8 @@ class InstrumentationManager(
     private val application: Application,
     private val sdkKey: String,
     private val resources: Resource,
+    private val logger: LDLogger,
+    options: Options,
 ) {
     private val otelRUM: OpenTelemetryRum
     private var otelMeter: Meter
@@ -41,14 +47,16 @@ class InstrumentationManager(
     private var otelTracer: Tracer
 
     init {
-
-        otelRUM = OpenTelemetryRum.builder(application)
+        val otelRumConfig = OtelRumConfig().setSessionConfig(
+            SessionConfig(backgroundInactivityTimeout = options.sessionBackgroundTimeout)
+        )
+        otelRUM = OpenTelemetryRum.builder(application, otelRumConfig)
             .addLoggerProviderCustomizer { sdkLoggerProviderBuilder, application ->
                 val logExporter = OtlpHttpLogRecordExporter.builder()
-                    .setEndpoint(URL_LOGS)
+                    .setEndpoint(options.otlpEndpoint + LOGS_PATH)
+                    .setHeaders { options.customHeaders }
                     .build()
 
-                // TODO: support configuring these options via parameters
                 val processor = BatchLogRecordProcessor.builder(logExporter)
                     .setMaxQueueSize(100)
                     .setScheduleDelay(1000, TimeUnit.MILLISECONDS)
@@ -59,10 +67,38 @@ class InstrumentationManager(
                 sdkLoggerProviderBuilder
                     .setResource(resources)
                     .addLogRecordProcessor(processor)
+
+                if (options.debug) {
+                    val adapterLogExporter = object : io.opentelemetry.sdk.logs.export.LogRecordExporter {
+                        override fun export(logRecords: Collection<io.opentelemetry.sdk.logs.data.LogRecordData>): io.opentelemetry.sdk.common.CompletableResultCode {
+                            for (record in logRecords) {
+                                logger.info(record.toString()) // TODO: Figure out why logger.debug is being blocked by Log.isLoggable is adapter.
+                            }
+                            return io.opentelemetry.sdk.common.CompletableResultCode.ofSuccess()
+                        }
+                        override fun flush(): io.opentelemetry.sdk.common.CompletableResultCode {
+                            return io.opentelemetry.sdk.common.CompletableResultCode.ofSuccess()
+                        }
+                        override fun shutdown(): io.opentelemetry.sdk.common.CompletableResultCode {
+                            return io.opentelemetry.sdk.common.CompletableResultCode.ofSuccess()
+                        }
+                    }
+
+                    val adapterProcessor = BatchLogRecordProcessor.builder(adapterLogExporter)
+                        .setMaxQueueSize(100)
+                        .setScheduleDelay(1000, TimeUnit.MILLISECONDS)
+                        .setExporterTimeout(5000, TimeUnit.MILLISECONDS)
+                        .setMaxExportBatchSize(10)
+                        .build()
+                    sdkLoggerProviderBuilder.addLogRecordProcessor(adapterProcessor)
+                }
+
+                sdkLoggerProviderBuilder
             }
             .addTracerProviderCustomizer { sdkTracerProviderBuilder, application ->
                 val spanExporter = OtlpHttpSpanExporter.builder()
-                    .setEndpoint(URL_TRACES)
+                    .setEndpoint(options.otlpEndpoint + TRACES_PATH)
+                    .setHeaders { options.customHeaders }
                     .build()
 
                 val spanProcessor = BatchSpanProcessor.builder(spanExporter)
@@ -78,7 +114,8 @@ class InstrumentationManager(
             }
             .addMeterProviderCustomizer { sdkMeterProviderBuilder, application ->
                 val metricExporter: MetricExporter = OtlpHttpMetricExporter.builder()
-                    .setEndpoint(URL_METRICS)
+                    .setEndpoint(options.otlpEndpoint + METRICS_PATH)
+                    .setHeaders { options.customHeaders }
                     .build()
 
                 // Configure a periodic reader that pushes metrics every 10 seconds.
@@ -96,7 +133,6 @@ class InstrumentationManager(
         otelMeter = otelRUM.openTelemetry.meterProvider.get(INSTRUMENTATION_SCOPE_NAME)
         otelLogger = otelRUM.openTelemetry.logsBridge.get(INSTRUMENTATION_SCOPE_NAME)
         otelTracer = otelRUM.openTelemetry.tracerProvider.get(INSTRUMENTATION_SCOPE_NAME)
-        otelRUM.rumSessionId
     }
 
 
@@ -126,16 +162,16 @@ class InstrumentationManager(
             .build().add(metric.value.toLong(), metric.attributes)
     }
 
-    fun recordLog(message: String, level: String, attributes: Attributes) {
+    fun recordLog(message: String, severity: Severity, attributes: Attributes) {
         otelLogger.logRecordBuilder()
             .setBody(message)
             .setTimestamp(System.currentTimeMillis(), TimeUnit.MILLISECONDS)
-            .setSeverityText(level)
+            .setSeverity(severity)
+            .setSeverityText(severity.toString())
             .setAllAttributes(attributes)
             .emit()
     }
 
-    // TODO: add otel span optional param that will take precedence over current span and/or created span
     fun recordError(error: Error, attributes: Attributes) {
         val span = otelTracer
             .spanBuilder("highlight.error")
@@ -146,11 +182,6 @@ class InstrumentationManager(
 
         val attrBuilder = Attributes.builder()
         attrBuilder.putAll(attributes)
-
-        // TODO: should exception.cause be added here?  At least one other SDK is doing this
-//        error.cause?.let {
-//            span.setAttribute("exception.cause", it.message)
-//        }
 
         span.recordException(error, attrBuilder.build())
         span.end()

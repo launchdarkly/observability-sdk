@@ -17,6 +17,7 @@ allprojects {
 
 dependencies {
     implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.9.0")
+    implementation("com.jakewharton.timber:timber:5.0.1")
 
     // TODO: revise these versions to be as old as usable for compatibility
     implementation("io.opentelemetry:opentelemetry-api:1.51.0")
@@ -26,10 +27,13 @@ dependencies {
     implementation("io.opentelemetry:opentelemetry-sdk-metrics:1.51.0")
     implementation("io.opentelemetry:opentelemetry-sdk-logs:1.51.0")
 
+    // TODO: Evaluate risks associated with incubator APIs
+    implementation("io.opentelemetry:opentelemetry-api-incubator:1.51.0-alpha")
+
     // Android instrumentation
-    implementation("io.opentelemetry.android:core:0.10.0-alpha")
-    implementation("io.opentelemetry.android:instrumentation-activity:0.10.0-alpha")
-    implementation("io.opentelemetry.android:session:0.10.0-alpha")
+    implementation("io.opentelemetry.android:core:0.11.0-alpha")
+    implementation("io.opentelemetry.android.instrumentation:activity:0.11.0-alpha")
+    implementation("io.opentelemetry.android:session:0.11.0-alpha")
 
     // Use JUnit Jupiter for testing.
     testImplementation("org.junit.jupiter:junit-jupiter")
@@ -42,10 +46,15 @@ android {
     namespace = "com.launchdarkly.observability"
     compileSdk = 30
 
+    buildFeatures {
+        buildConfig = true
+    }
+
     defaultConfig {
         minSdk = 24
         version = releaseVersion
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("String", "OBSERVABILITY_SDK_VERSION", "\"${project.version}\"")
     }
 
     buildTypes {
