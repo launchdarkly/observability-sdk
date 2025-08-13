@@ -74,8 +74,7 @@ namespace LaunchDarkly.Observability.Test
         public class SamplerFunctionCase
         {
             public string Type { get; set; } // "always" or "never"
-            [JsonPropertyName("expected_result")]
-            public ExpectedResult Result { get; set; }
+            [JsonPropertyName("expected_result")] public ExpectedResult Result { get; set; }
         }
 
         public class ExpectedResult
