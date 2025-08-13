@@ -25,8 +25,7 @@ namespace LaunchDarkly.Observability.Sampling
 
         public SamplingConfig GetSamplingConfig()
         {
-            Volatile.Read(ref _config);
-            return _config;
+            return Volatile.Read(ref _config);
         }
     }
 
