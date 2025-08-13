@@ -33,12 +33,12 @@ namespace LaunchDarkly.Observability.Sampling
     /// <summary>
     /// Function type for sampling decisions
     /// </summary>
-    public delegate bool SamplerFunc(int ratio);
+    internal delegate bool SamplerFunc(int ratio);
 
     /// <summary>
-    /// Default sampler function similar to the Go implementation
+    /// Default sampler implementation.
     /// </summary>
-    public static class DefaultSampler
+    internal static class DefaultSampler
     {
         public static bool Sample(int ratio)
         {
@@ -46,9 +46,6 @@ namespace LaunchDarkly.Observability.Sampling
         }
     }
 
-    /// <summary>
-    /// Custom sampler implementation similar to the Go version
-    /// </summary>
     internal class CustomSampler : IExportSampler
     {
         private readonly SamplerFunc _sampler;
