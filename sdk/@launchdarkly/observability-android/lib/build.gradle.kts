@@ -17,6 +17,7 @@ allprojects {
 
 dependencies {
     implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.9.0")
+    implementation("com.jakewharton.timber:timber:5.0.1")
 
     // TODO: revise these versions to be as old as usable for compatibility
     implementation("io.opentelemetry:opentelemetry-api:1.51.0")
