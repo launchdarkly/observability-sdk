@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using System.Threading;
 using OpenTelemetry.Logs;
@@ -56,6 +55,9 @@ namespace LaunchDarkly.Observability.Sampling
         private readonly ThreadSafeConfig _config = new ThreadSafeConfig();
         private readonly ConcurrentDictionary<string, Regex> _regexCache = new ConcurrentDictionary<string, Regex>();
 
+        /// <summary>
+        /// Delta between two numbers which will be considered equal.
+        /// </summary>
         private const double Epsilon = 0.0000000000000001;
 
         /// <summary>
@@ -273,15 +275,15 @@ namespace LaunchDarkly.Observability.Sampling
             return record.Attributes != null && MatchesAttributes(config.Attributes, record.Attributes.ToList());
         }
 
-        public LogSamplingResult SampleLog(LogRecord record)
+        public SamplingResult SampleLog(LogRecord record)
         {
             var config = _config.GetSamplingConfig();
-            if (!(config?.Logs.Count > 0)) return new LogSamplingResult { Sample = true };
+            if (!(config?.Logs.Count > 0)) return new SamplingResult { Sample = true };
             foreach (var logConfig in config.Logs)
             {
                 if (MatchesLogConfig(logConfig, record))
                 {
-                    return new LogSamplingResult
+                    return new SamplingResult
                     {
                         Sample = _sampler(logConfig.SamplingRatio),
                         Attributes = new Dictionary<string, object>
@@ -293,7 +295,7 @@ namespace LaunchDarkly.Observability.Sampling
             }
 
             // Default to sampling if no config matches
-            return new LogSamplingResult { Sample = true };
+            return new SamplingResult { Sample = true };
         }
     }
 }

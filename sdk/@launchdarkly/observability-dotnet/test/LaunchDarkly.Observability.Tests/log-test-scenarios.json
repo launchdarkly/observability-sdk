@@ -5,14 +5,14 @@
 			"logs": [
 				{
 					"severityText": {
-						"matchValue": "error"
+						"matchValue": "Error"
 					},
 					"samplingRatio": 42
 				}
 			]
 		},
 		"inputLog": {
-			"severityText": "error"
+			"severityText": "Error"
 		},
 		"samplerFunctionCases": [
 			{
@@ -77,14 +77,14 @@
 			"logs": [
 				{
 					"severityText": {
-						"matchValue": "error"
+						"matchValue": "Error"
 					},
 					"samplingRatio": 42
 				}
 			]
 		},
 		"inputLog": {
-			"severityText": "info"
+			"severityText": "Info"
 		},
 		"samplerFunctionCases": [
 			{
@@ -325,7 +325,7 @@
 						"regexValue": "Database connection .*"
 					},
 					"severityText": {
-						"matchValue": "error"
+						"matchValue": "Error"
 					},
 					"attributes": [
 						{
@@ -359,7 +359,7 @@
 		},
 		"inputLog": {
 			"message": "Database connection failed: timeout",
-			"severityText": "error",
+			"severityText": "Error",
 			"attributes": {
 				"service.name": "db-connector",
 				"retry.enabled": true,

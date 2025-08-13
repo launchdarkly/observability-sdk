@@ -4,10 +4,19 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
-using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using LaunchDarkly.Observability.Sampling;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using NUnit.Framework;
 using OpenTelemetry.Logs;
+
+// The test scenario types are used for JSON serialization and as a result code analysis may not realize that they
+// are constructed and that their fields are assigned.
+
+// Many things in the tests are public, which may not appear to need to be public, because they need to be consistent
+// with the test function access level. So it test functions are public (so they can be ran), then their input
+// types must be public.
 
 namespace LaunchDarkly.Observability.Test
 {
@@ -35,6 +44,11 @@ namespace LaunchDarkly.Observability.Test
             public SamplingConfig SamplingConfig { get; set; }
             public InputLog InputLog { get; set; }
             public SamplerFunctionCase[] SamplerFunctionCases { get; set; }
+
+            public override string ToString()
+            {
+                return Description;
+            }
         }
 
         public class InputSpan
@@ -47,20 +61,21 @@ namespace LaunchDarkly.Observability.Test
         public class InputLog
         {
             public string Message { get; set; }
-            public Dictionary<string, object> Attributes { get; set; } = new Dictionary<string, object>();
+            public Dictionary<string, JsonElement> Attributes { get; set; } = new Dictionary<string, JsonElement>();
             public string SeverityText { get; set; }
         }
 
         public class InputEvent
         {
             public string Name { get; set; }
-            public Dictionary<string, JsonElement> Attributes { get; set; } = new Dictionary<string, JsonElement>();
+            public Dictionary<string, JsonElement> Attributes { get; set; }
         }
 
         public class SamplerFunctionCase
         {
             public string Type { get; set; } // "always" or "never"
-            public ExpectedResult Expected_result { get; set; }
+            [JsonPropertyName("expected_result")]
+            public ExpectedResult Result { get; set; }
         }
 
         public class ExpectedResult
@@ -82,7 +97,7 @@ namespace LaunchDarkly.Observability.Test
             { "never", NeverSampleFn }
         };
 
-        private static Activity CreateMockActivity(InputSpan inputSpan)
+        private static Activity CreateActivity(InputSpan inputSpan)
         {
             var activity = new Activity("test-operation");
             activity.Start(); // Start the activity properly
@@ -93,7 +108,7 @@ namespace LaunchDarkly.Observability.Test
             {
                 foreach (var attr in inputSpan.Attributes)
                 {
-                    activity.SetTag(attr.Key, getJsonRawValue(attr));
+                    activity.SetTag(attr.Key, GetJsonRawValue(attr));
                 }
             }
 
@@ -102,7 +117,8 @@ namespace LaunchDarkly.Observability.Test
             {
                 foreach (var evt in inputSpan.Events)
                 {
-                    var tags = evt.Attributes?.Select(kvp => new KeyValuePair<string, object>(kvp.Key, getJsonRawValue(kvp)));
+                    var tags = evt.Attributes?.Select(kvp =>
+                        new KeyValuePair<string, object>(kvp.Key, GetJsonRawValue(kvp)));
                     if (tags != null)
                     {
                         activity.AddEvent(new ActivityEvent(evt.Name, DateTimeOffset.UtcNow,
@@ -120,9 +136,9 @@ namespace LaunchDarkly.Observability.Test
             return activity;
         }
 
-        private static object getJsonRawValue(KeyValuePair<string, JsonElement> attr)
+        private static object GetJsonRawValue(KeyValuePair<string, JsonElement> attr)
         {
-            object value = null;
+            object value;
             switch (attr.Value.ValueKind)
             {
                 case JsonValueKind.Null:
@@ -147,9 +163,6 @@ namespace LaunchDarkly.Observability.Test
             return value;
         }
 
-        // TODO: Implement proper LogRecord creation
-        // For now, we'll skip log tests to focus on span tests first
-
         private static T LoadJsonTestData<T>(string fileName)
         {
             var testDir = TestContext.CurrentContext.TestDirectory;
@@ -157,7 +170,6 @@ namespace LaunchDarkly.Observability.Test
 
             if (!File.Exists(filePath))
             {
-                // Try relative path from current working directory
                 filePath = Path.Combine(".", "test", "LaunchDarkly.Observability.Tests", fileName);
             }
 
@@ -174,6 +186,65 @@ namespace LaunchDarkly.Observability.Test
             };
 
             return JsonSerializer.Deserialize<T>(json, options);
+        }
+
+        private static void VerifySamplingResult(SamplerFunctionCase samplerCase, SamplingResult result)
+        {
+            if (samplerCase.Result.Attributes != null)
+            {
+                Assert.That(result.Attributes, Is.Not.Null);
+
+                foreach (var expectedAttr in samplerCase.Result.Attributes)
+                {
+                    Assert.That(result.Attributes.ContainsKey(expectedAttr.Key), Is.True);
+                    var actualValue = result.Attributes[expectedAttr.Key];
+                    var expectedValue = expectedAttr.Value;
+
+                    // Handle JsonElement comparison for numeric values
+                    if (expectedValue is JsonElement jsonElement &&
+                        jsonElement.ValueKind == JsonValueKind.Number)
+                    {
+                        if (jsonElement.TryGetInt32(out var intValue))
+                        {
+                            Assert.That(actualValue, Is.EqualTo(intValue));
+                        }
+                        else
+                        {
+                            Assert.That(actualValue, Is.EqualTo(jsonElement.GetDouble()));
+                        }
+                    }
+                    else
+                    {
+                        Assert.That(actualValue, Is.EqualTo(expectedValue));
+                    }
+                }
+            }
+            else
+            {
+                Assert.That(result.Attributes, Is.Null.Or.Empty);
+            }
+        }
+
+        private static LogTestScenario[] GetLogTestScenarios()
+        {
+            return LoadJsonTestData<LogTestScenario[]>("log-test-scenarios.json");
+        }
+
+        private LogLevel SeverityTextToLogLevel(string severityText)
+        {
+            switch (severityText)
+            {
+                case "Error":
+                    return LogLevel.Error;
+                case "Warning":
+                    return LogLevel.Warning;
+                case "Info":
+                case null:
+                    return LogLevel.Information;
+                default:
+                    // Unsupported in this test suite.
+                    throw new ArgumentOutOfRangeException(nameof(severityText), severityText, null);
+            }
         }
 
         #endregion
@@ -194,81 +265,19 @@ namespace LaunchDarkly.Observability.Test
             foreach (var samplerCase in scenario.SamplerFunctionCases)
             {
                 var samplerFn = SamplerFunctions[samplerCase.Type];
-                var testName = $"{scenario.Description} - {samplerCase.Type}";
-
-                TestContext.WriteLine($"Running test: {testName}");
 
                 var sampler = new CustomSampler(samplerFn);
                 sampler.SetConfig(scenario.SamplingConfig);
 
-                Assert.That(sampler.IsSamplingEnabled(), Is.True, $"Sampling should be enabled for: {testName}");
+                Assert.That(sampler.IsSamplingEnabled(), Is.True);
 
-                // Debug: Print config details
-                TestContext.WriteLine($"Config has {scenario.SamplingConfig.Spans?.Count ?? 0} span configs");
-                if (scenario.SamplingConfig.Spans?.Count > 0)
+                using (var activity = CreateActivity(scenario.InputSpan))
                 {
-                    var spanConfig = scenario.SamplingConfig.Spans[0];
-                    TestContext.WriteLine(
-                        $"First span config - Name: {spanConfig.Name?.MatchValue}, Ratio: {spanConfig.SamplingRatio}");
-                }
-
-                using (var activity = CreateMockActivity(scenario.InputSpan))
-                {
-                    // Debug: Print activity details
-                    TestContext.WriteLine(
-                        $"Activity DisplayName: '{activity.DisplayName}', OperationName: '{activity.OperationName}'");
-                    TestContext.WriteLine($"Input span name: '{scenario.InputSpan.Name}'");
-
-                    // Check if the activity has been started
-                    TestContext.WriteLine($"Activity HasStarted: {activity.Id != null}, Id: {activity.Id}");
-
                     var result = sampler.SampleSpan(activity);
 
-                    // Debug: Print result details
-                    TestContext.WriteLine(
-                        $"Result - Sample: {result.Sample}, Attributes: {(result.Attributes != null ? string.Join(", ", result.Attributes.Select(kv => $"{kv.Key}={kv.Value}")) : "null")}");
+                    Assert.That(result.Sample, Is.EqualTo(samplerCase.Result.Sample));
 
-                    Assert.That(result.Sample, Is.EqualTo(samplerCase.Expected_result.Sample),
-                        $"Sample result mismatch for: {testName}");
-
-                    if (samplerCase.Expected_result.Attributes != null)
-                    {
-                        Assert.That(result.Attributes, Is.Not.Null, $"Attributes should not be null for: {testName}");
-
-                        foreach (var expectedAttr in samplerCase.Expected_result.Attributes)
-                        {
-                            Assert.That(result.Attributes.ContainsKey(expectedAttr.Key), Is.True,
-                                $"Missing attribute '{expectedAttr.Key}' for: {testName}");
-                            var actualValue = result.Attributes[expectedAttr.Key];
-                            var expectedValue = expectedAttr.Value;
-
-                            // Handle JsonElement comparison for numeric values
-                            if (expectedValue is JsonElement jsonElement &&
-                                jsonElement.ValueKind == JsonValueKind.Number)
-                            {
-                                if (jsonElement.TryGetInt32(out var intValue))
-                                {
-                                    Assert.That(actualValue, Is.EqualTo(intValue),
-                                        $"Attribute value mismatch for '{expectedAttr.Key}' in: {testName}");
-                                }
-                                else
-                                {
-                                    Assert.That(actualValue, Is.EqualTo(jsonElement.GetDouble()),
-                                        $"Attribute value mismatch for '{expectedAttr.Key}' in: {testName}");
-                                }
-                            }
-                            else
-                            {
-                                Assert.That(actualValue, Is.EqualTo(expectedValue),
-                                    $"Attribute value mismatch for '{expectedAttr.Key}' in: {testName}");
-                            }
-                        }
-                    }
-                    else
-                    {
-                        Assert.That(result.Attributes, Is.Null.Or.Empty,
-                            $"Attributes should be null/empty for: {testName}");
-                    }
+                    VerifySamplingResult(samplerCase, result);
                 }
             }
         }
@@ -277,37 +286,66 @@ namespace LaunchDarkly.Observability.Test
 
         #region Log Tests
 
-        [Test]
-        public void LogSamplingTests()
+        [Test, TestCaseSource(nameof(GetLogTestScenarios))]
+        public void LogSamplingTests(LogTestScenario scenario)
         {
-            var scenarios = LoadJsonTestData<LogTestScenario[]>("log-test-scenarios.json");
-
-            foreach (var scenario in scenarios)
+            foreach (var samplerCase in scenario.SamplerFunctionCases)
             {
-                foreach (var samplerCase in scenario.SamplerFunctionCases)
+                var samplerFn = SamplerFunctions[samplerCase.Type];
+
+                var sampler = new CustomSampler(samplerFn);
+                sampler.SetConfig(scenario.SamplingConfig);
+
+                Assert.That(sampler.IsSamplingEnabled(), Is.True);
+                var services = new ServiceCollection();
+                var records = new List<LogRecord>();
+                services.AddOpenTelemetry().WithLogging(logging => { logging.AddInMemoryExporter(records); },
+                    options => { options.IncludeScopes = true; });
+                Console.WriteLine(services);
+                var provider = services.BuildServiceProvider();
+                var loggerProvider = provider.GetService<ILoggerProvider>();
+                var withScope = loggerProvider as ISupportExternalScope;
+                Assert.That(withScope, Is.Not.Null);
+                withScope.SetScopeProvider(new LoggerExternalScopeProvider());
+                var logger = loggerProvider.CreateLogger("test");
+
+                var properties = new Dictionary<string, object>();
+                foreach (var inputLogAttribute in scenario.InputLog.Attributes)
                 {
-                    var samplerFn = SamplerFunctions[samplerCase.Type];
-                    var testName = $"{scenario.Description} - {samplerCase.Type}";
-
-                    TestContext.WriteLine($"Running test: {testName}");
-
-                    var sampler = new CustomSampler(samplerFn);
-                    sampler.SetConfig(scenario.SamplingConfig);
-
-                    Assert.That(sampler.IsSamplingEnabled(), Is.True, $"Sampling should be enabled for: {testName}");
-                    
-                    
-                    // TODO: Implement LogRecord creation - for now skip log tests
-                    TestContext.WriteLine(
-                        $"Skipping log test: {testName} - LogRecord creation needs proper implementation");
-                    Assert.Ignore("LogRecord creation not yet implemented");
+                    properties.Add(inputLogAttribute.Key, GetJsonRawValue(inputLogAttribute));
                 }
+
+                using (logger.BeginScope(properties))
+                {
+                    logger.Log(SeverityTextToLogLevel(scenario.InputLog.SeverityText),
+                        new EventId(), properties, null,
+                        (objects, exception) => scenario.InputLog.Message ?? "");
+                }
+
+                Console.WriteLine(records);
+
+                var record = records.First();
+                Assert.Multiple(() =>
+                {
+                    // Cursory check that the record is formed properly.
+                    Assert.That(scenario.InputLog.Message ?? "", Is.EqualTo(record.Body));
+                    Assert.That(scenario.InputLog.Attributes?.Count ?? 0, Is.EqualTo(record.Attributes?.Count));
+                });
+
+                var res = sampler.SampleLog(record);
+                Assert.Multiple(() =>
+                {
+                    Assert.That(res, Is.Not.Null);
+                    Assert.That(res.Sample, Is.EqualTo(samplerCase.Result.Sample));
+                });
+
+                VerifySamplingResult(samplerCase, res);
             }
         }
 
         #endregion
 
-        #region Additional Tests (from Node.js implementation)
+        #region Sampling Method Tests
 
         [Test]
         public void DefaultSampler_ShouldGetApproximatelyCorrectNumberOfSamples()
