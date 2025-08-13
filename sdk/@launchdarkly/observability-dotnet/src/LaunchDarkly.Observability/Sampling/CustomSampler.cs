@@ -1,6 +1,10 @@
+using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using System.Threading;
 using OpenTelemetry.Logs;
@@ -50,9 +54,9 @@ namespace LaunchDarkly.Observability.Sampling
     {
         private readonly SamplerFunc _sampler;
         private readonly ThreadSafeConfig _config = new ThreadSafeConfig();
-        private readonly Dictionary<string, Regex> _regexCache = new Dictionary<string, Regex>();
+        private readonly ConcurrentDictionary<string, Regex> _regexCache = new ConcurrentDictionary<string, Regex>();
 
-        private readonly object _regexLock = new object();
+        private const double Epsilon = 0.0000000000000001;
 
         /// <summary>
         /// Represents the result of sampling a span or log
@@ -74,26 +78,35 @@ namespace LaunchDarkly.Observability.Sampling
 
             var hasSpanConfig = config.Spans != null && config.Spans.Count > 0;
             var hasLogConfig = config.Logs != null && config.Logs.Count > 0;
-            return hasLogConfig && hasSpanConfig;
+            return hasLogConfig || hasSpanConfig;
         }
 
         private Regex GetCachedRegex(string pattern)
         {
-            lock (_regexLock)
-            {
-                if (_regexCache.TryGetValue(pattern, out var cachedRegex))
-                    return cachedRegex;
-
-                var regex = new Regex(pattern, RegexOptions.Compiled);
-                _regexCache[pattern] = regex;
-                return regex;
-            }
+            return _regexCache.GetOrAdd(pattern, p => new Regex(p, RegexOptions.Compiled));
         }
 
         private static bool IsMatchConfigEmpty(SamplingConfig.MatchConfig matchConfig)
         {
             return matchConfig == null ||
                    (matchConfig.MatchValue == null && string.IsNullOrEmpty(matchConfig.RegexValue));
+        }
+
+        private static bool CompareNumber(double a, object b)
+        {
+            switch (b)
+            {
+                case double d:
+                    return Math.Abs(a - d) < Epsilon;
+                case float f:
+                    return Math.Abs(a - f) < Epsilon;
+                case int i:
+                    return Math.Abs(a - i) < Epsilon;
+                case long l:
+                    return Math.Abs(a - l) < Epsilon;
+                default:
+                    return false;
+            }
         }
 
         private bool MatchesValue(SamplingConfig.MatchConfig matchConfig, object value)
@@ -104,7 +117,36 @@ namespace LaunchDarkly.Observability.Sampling
             // Check basic match value
             if (matchConfig.MatchValue != null)
             {
-                return matchConfig.MatchValue.Equals(value);
+                // Handle JsonElement from JSON deserialization
+                if (matchConfig.MatchValue is JsonElement jsonElement)
+                {
+                    switch (jsonElement.ValueKind)
+                    {
+                        case JsonValueKind.String:
+                            // GetString could throw if the type was not a string, but we make sure it is immediately
+                            // before accessing it.
+                            return jsonElement.GetString().Equals(value.ToString());
+                        case JsonValueKind.Number:
+                            if (jsonElement.TryGetDouble(out var doubleValue))
+                                return CompareNumber(doubleValue, value);
+                            break;
+                        case JsonValueKind.True:
+                            return true.Equals(value);
+                        case JsonValueKind.False:
+                            return false.Equals(value);
+                        // Explicitly listed to demonstrate that these are not intended to be supported.
+                        case JsonValueKind.Array:
+                        case JsonValueKind.Undefined:
+                        case JsonValueKind.Object:
+                        case JsonValueKind.Null:
+                        default:
+                            break;
+                    }
+                }
+                else
+                {
+                    return matchConfig.MatchValue.Equals(value);
+                }
             }
 
             // Check regex match
@@ -115,7 +157,7 @@ namespace LaunchDarkly.Observability.Sampling
         }
 
         private bool MatchesAttributes(List<SamplingConfig.AttributeMatchConfig> attributeConfigs,
-            ActivityTagsCollection tags)
+            IList<KeyValuePair<string, object>> tags)
         {
             if (attributeConfigs.Count == 0) return true;
             if (tags == null || !tags.Any()) return false;
@@ -168,14 +210,8 @@ namespace LaunchDarkly.Observability.Sampling
             }
 
             // Match by event attributes if specified
-            if (eventConfig.Attributes.Count <= 0) return true;
-            var eventTags = new ActivityTagsCollection();
-            foreach (var tag in activityEvent.Tags)
-            {
-                eventTags.Add(tag.Key, tag.Value);
-            }
-
-            return MatchesAttributes(eventConfig.Attributes, eventTags);
+            return eventConfig.Attributes.Count <= 0 ||
+                   MatchesAttributes(eventConfig.Attributes, activityEvent.Tags.ToList());
         }
 
         private bool MatchesSpanConfig(SamplingConfig.SpanSamplingConfig config, Activity span)
@@ -186,14 +222,7 @@ namespace LaunchDarkly.Observability.Sampling
                 return false;
             }
 
-            // Check attributes
-            var spanTags = new ActivityTagsCollection();
-            foreach (var tag in span.Tags)
-            {
-                spanTags.Add(tag.Key, tag.Value);
-            }
-
-            return MatchesAttributes(config.Attributes, spanTags) &&
+            return MatchesAttributes(config.Attributes, span.TagObjects.ToList()) &&
                    // Check events  
                    MatchesEvents(config.Events, span.Events.ToList());
         }
@@ -211,7 +240,7 @@ namespace LaunchDarkly.Observability.Sampling
                         Sample = _sampler(spanConfig.SamplingRatio),
                         Attributes = new Dictionary<string, object>
                         {
-                            ["sampling.ratio"] = spanConfig.SamplingRatio
+                            ["launchdarkly.sampling.ratio"] = spanConfig.SamplingRatio
                         }
                     };
                 }
@@ -240,17 +269,8 @@ namespace LaunchDarkly.Observability.Sampling
 
             // Check attributes if defined
             if (config.Attributes.Count <= 0) return true;
-            // Convert log record attributes to format we can check
-            var logAttributes = new ActivityTagsCollection();
-            if (record.Attributes != null)
-            {
-                foreach (var attr in record.Attributes)
-                {
-                    logAttributes.Add(attr.Key, attr.Value);
-                }
-            }
 
-            return MatchesAttributes(config.Attributes, logAttributes);
+            return record.Attributes != null && MatchesAttributes(config.Attributes, record.Attributes.ToList());
         }
 
         public LogSamplingResult SampleLog(LogRecord record)
@@ -266,7 +286,7 @@ namespace LaunchDarkly.Observability.Sampling
                         Sample = _sampler(logConfig.SamplingRatio),
                         Attributes = new Dictionary<string, object>
                         {
-                            ["sampling.ratio"] = logConfig.SamplingRatio
+                            ["launchdarkly.sampling.ratio"] = logConfig.SamplingRatio
                         }
                     };
                 }
@@ -277,4 +297,3 @@ namespace LaunchDarkly.Observability.Sampling
         }
     }
 }
-    

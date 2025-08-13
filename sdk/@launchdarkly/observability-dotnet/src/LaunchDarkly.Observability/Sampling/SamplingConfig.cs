@@ -1,25 +1,35 @@
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace LaunchDarkly.Observability.Sampling
 {
-    internal class SamplingConfig
+    public class SamplingConfig
     {
         public class MatchConfig
         {
-            public object MatchValue { get; }
-            public string RegexValue { get; }
+            [JsonPropertyName("matchValue")]
+            public object MatchValue { get; set; }
+            
+            [JsonPropertyName("regexValue")]
+            public string RegexValue { get; set; }
         }
 
         public class AttributeMatchConfig
         {
+            [JsonPropertyName("key")]
             public MatchConfig Key { get; set; }
+            
+            [JsonPropertyName("attribute")]
             public MatchConfig Attribute { get; set; }
         }
 
         public class EventMatchConfig
         {
+            [JsonPropertyName("name")]
             public MatchConfig Name { get; set; }
-            public List<AttributeMatchConfig> Attributes { get; set; }
+            
+            [JsonPropertyName("attributes")]
+            public List<AttributeMatchConfig> Attributes { get; set; } = new List<AttributeMatchConfig>();
         }
 
         /// <summary>
@@ -27,9 +37,16 @@ namespace LaunchDarkly.Observability.Sampling
         /// </summary>
         public class SpanSamplingConfig
         {
-            public MatchConfig Name { get; set; } 
-            public List<AttributeMatchConfig> Attributes { get; set; } 
-            public List<EventMatchConfig> Events { get; set; } 
+            [JsonPropertyName("name")]
+            public MatchConfig Name { get; set; }
+            
+            [JsonPropertyName("attributes")]
+            public List<AttributeMatchConfig> Attributes { get; set; } = new List<AttributeMatchConfig>();
+            
+            [JsonPropertyName("events")]
+            public List<EventMatchConfig> Events { get; set; } = new List<EventMatchConfig>();
+            
+            [JsonPropertyName("samplingRatio")]
             public int SamplingRatio { get; set; } = 1;
         }
 
@@ -38,13 +55,23 @@ namespace LaunchDarkly.Observability.Sampling
         /// </summary>
         public class LogSamplingConfig
         {
-            public MatchConfig SeverityText { get; set; } 
-            public MatchConfig Message { get; set; } 
-            public List<AttributeMatchConfig> Attributes { get; set; } 
+            [JsonPropertyName("severityText")]
+            public MatchConfig SeverityText { get; set; }
+            
+            [JsonPropertyName("message")]
+            public MatchConfig Message { get; set; }
+            
+            [JsonPropertyName("attributes")]
+            public List<AttributeMatchConfig> Attributes { get; set; } = new List<AttributeMatchConfig>();
+            
+            [JsonPropertyName("samplingRatio")]
             public int SamplingRatio { get; set; } = 1;
         }
 
-        public List<SpanSamplingConfig> Spans { get; set; } 
-        public List<LogSamplingConfig> Logs { get; set; } 
+        [JsonPropertyName("spans")]
+        public List<SpanSamplingConfig> Spans { get; set; } = new List<SpanSamplingConfig>();
+        
+        [JsonPropertyName("logs")]
+        public List<LogSamplingConfig> Logs { get; set; } = new List<LogSamplingConfig>(); 
     }
 }
