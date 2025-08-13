@@ -1,6 +1,10 @@
 package com.launchdarkly.observability.plugin
 
 import android.app.Application
+import com.launchdarkly.logging.LDLogLevel
+import com.launchdarkly.logging.LDLogger
+import com.launchdarkly.logging.Logs
+import com.launchdarkly.observability.api.Options
 import com.launchdarkly.observability.client.ObservabilityClient
 import com.launchdarkly.observability.sdk.LDObserve
 import com.launchdarkly.sdk.android.LDClient
@@ -12,12 +16,22 @@ import io.opentelemetry.sdk.resources.Resource
 import java.util.Collections
 
 class Observability(
-    private val application: Application
+    private val application: Application,
+    private val options: Options = Options() // new instance has reasonable defaults
 ) : Plugin() {
+    private val logger: LDLogger
+
+    init {
+        val actualLogAdapter = Logs.level(options.logAdapter, if (options.debug) LDLogLevel.DEBUG else DEFAULT_LOG_LEVEL)
+        logger = LDLogger.withAdapter(actualLogAdapter, options.loggerName)
+    }
+
     override fun getMetadata(): PluginMetadata {
         return object : PluginMetadata() {
-            override fun getName(): String = "'@launchdarkly/observability-android'"
-            // TODO: add getVersion to Android SDK if required
+            override fun getName(): String = "@launchdarkly/observability-android"
+
+            // Uncomment once metadata supports version
+//            override fun getVersion(): String = BuildConfig.OBSERVABILITY_SDK_VERSION
         }
     }
 
@@ -25,9 +39,10 @@ class Observability(
         val sdkKey = metadata?.credential ?: ""
 
         val resourceBuilder = Resource.getDefault().toBuilder()
-        resourceBuilder.put("service.name", "observability-android") // TODO: allow this to be set via config
-        resourceBuilder.put("service.version", "1.0.0") // TODO: allow this to be set via config
+        resourceBuilder.put("service.name", options.serviceName)
+        resourceBuilder.put("service.version", options.serviceVersion)
         resourceBuilder.put("highlight.project_id", sdkKey)
+        resourceBuilder.putAll(options.resourceAttributes)
 
         metadata?.applicationInfo?.applicationId?.let {
             resourceBuilder.put("launchdarkly.application.id", it)
@@ -43,7 +58,7 @@ class Observability(
             }
         }
 
-        val observabilityClient = ObservabilityClient(application, sdkKey, resourceBuilder.build())
+        val observabilityClient = ObservabilityClient(application, sdkKey, resourceBuilder.build(), logger, options)
         LDObserve.init(observabilityClient)
     }
 
@@ -51,5 +66,9 @@ class Observability(
         return Collections.singletonList(
             EvalTracingHook(true, true)
         )
+    }
+
+    companion object {
+        val DEFAULT_LOG_LEVEL: LDLogLevel = LDLogLevel.INFO
     }
 }

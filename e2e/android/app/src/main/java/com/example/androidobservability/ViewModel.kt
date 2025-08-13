@@ -6,6 +6,7 @@ import com.launchdarkly.observability.sdk.LDObserve
 import com.launchdarkly.sdk.android.LDClient
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
+import io.opentelemetry.api.logs.Severity
 import io.opentelemetry.api.trace.Span
 
 class ViewModel : ViewModel() {
@@ -26,7 +27,7 @@ class ViewModel : ViewModel() {
     fun triggerLog() {
         LDObserve.recordLog(
             "Test Log",
-            "debug",
+            Severity.DEBUG,
             Attributes.of(AttributeKey.stringKey("FakeAttribute"), "FakeVal")
         )
     }
@@ -39,6 +40,7 @@ class ViewModel : ViewModel() {
     }
 
     fun triggerStopSpan() {
+        // TODO O11Y-397: for some reason stopped spans are stacking, the current span might be the problem
         lastSpan?.end()
         lastSpan = null
     }

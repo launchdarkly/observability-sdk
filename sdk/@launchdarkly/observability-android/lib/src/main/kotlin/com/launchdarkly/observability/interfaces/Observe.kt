@@ -1,6 +1,7 @@
 package com.launchdarkly.observability.interfaces
 
 import io.opentelemetry.api.common.Attributes
+import io.opentelemetry.api.logs.Severity
 import io.opentelemetry.api.trace.Span
 
 /**
@@ -49,10 +50,10 @@ interface Observe {
     /**
      * Record a log message.
      * @param message The log message to record
-     * @param level The level of the log message
+     * @param severity The severity of the log message
      * @param attributes The attributes to record with the log message
      */
-    fun recordLog(message: String, level: String, attributes: Attributes)
+    fun recordLog(message: String, severity: Severity, attributes: Attributes)
 
     /**
      * Start a span.
