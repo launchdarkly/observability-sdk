@@ -25,7 +25,7 @@ namespace LaunchDarkly.Observability.Test
     {
         #region Test Models
 
-        public class SpanTestScenario
+        internal class SpanTestScenario
         {
             public string Description { get; set; }
             public SamplingConfig SamplingConfig { get; set; }
@@ -38,7 +38,7 @@ namespace LaunchDarkly.Observability.Test
             }
         }
 
-        public class LogTestScenario
+        internal class LogTestScenario
         {
             public string Description { get; set; }
             public SamplingConfig SamplingConfig { get; set; }
@@ -51,33 +51,33 @@ namespace LaunchDarkly.Observability.Test
             }
         }
 
-        public class InputSpan
+        internal class InputSpan
         {
             public string Name { get; set; }
             public Dictionary<string, JsonElement> Attributes { get; set; } = new Dictionary<string, JsonElement>();
             public InputEvent[] Events { get; set; } = new InputEvent[0];
         }
 
-        public class InputLog
+        internal class InputLog
         {
             public string Message { get; set; }
             public Dictionary<string, JsonElement> Attributes { get; set; } = new Dictionary<string, JsonElement>();
             public string SeverityText { get; set; }
         }
 
-        public class InputEvent
+        internal class InputEvent
         {
             public string Name { get; set; }
             public Dictionary<string, JsonElement> Attributes { get; set; }
         }
 
-        public class SamplerFunctionCase
+        internal class SamplerFunctionCase
         {
             public string Type { get; set; } // "always" or "never"
             [JsonPropertyName("expected_result")] public ExpectedResult Result { get; set; }
         }
 
-        public class ExpectedResult
+        internal class ExpectedResult
         {
             public bool Sample { get; set; }
             public Dictionary<string, object> Attributes { get; set; }
@@ -256,10 +256,12 @@ namespace LaunchDarkly.Observability.Test
         }
 
         [Test, TestCaseSource(nameof(GetSpanTestScenarios))]
-        public void SpanSamplingTests(SpanTestScenario scenario)
+        public void SpanSamplingTests(object oScenario)
         {
-            var scenarios = LoadJsonTestData<SpanTestScenario[]>("span-test-scenarios.json");
-
+            // The sampling tests take just an object as a workaround for visibility. We want our config types to
+            // be internal. The NUnit test functions must be public, so they cannot use an internal object as an input.
+            // So we use an object and cast to the correct type.
+            var scenario = (SpanTestScenario)oScenario;
 
             foreach (var samplerCase in scenario.SamplerFunctionCases)
             {
@@ -286,8 +288,12 @@ namespace LaunchDarkly.Observability.Test
         #region Log Tests
 
         [Test, TestCaseSource(nameof(GetLogTestScenarios))]
-        public void LogSamplingTests(LogTestScenario scenario)
+        public void LogSamplingTests(object oScenario)
         {
+            // The sampling tests take just an object as a workaround for visibility. We want our config types to
+            // be internal. The NUnit test functions must be public, so they cannot use an internal object as an input.
+            // So we use an object and cast to the correct type.
+            var scenario = (LogTestScenario)oScenario;
             foreach (var samplerCase in scenario.SamplerFunctionCases)
             {
                 var samplerFn = SamplerFunctions[samplerCase.Type];
