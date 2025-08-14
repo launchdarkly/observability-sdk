@@ -11,7 +11,7 @@ import { useEffect } from 'react'
 import 'react-native-reanimated'
 
 import { useColorScheme } from '@/hooks/useColorScheme'
-import * as H from './highlight'
+import { ErrorMonitor } from '@/components/ErrorMonitor'
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync()
@@ -24,9 +24,7 @@ export default function RootLayout() {
 
 	useEffect(() => {
 		if (loaded) {
-			H.hookConsole()
 			SplashScreen.hideAsync()
-		} else {
 		}
 	}, [loaded])
 
@@ -42,6 +40,7 @@ export default function RootLayout() {
 				<Stack.Screen name="(tabs)" options={{ headerShown: false }} />
 				<Stack.Screen name="+not-found" />
 			</Stack>
+			<ErrorMonitor />
 			<StatusBar style="auto" />
 		</ThemeProvider>
 	)
