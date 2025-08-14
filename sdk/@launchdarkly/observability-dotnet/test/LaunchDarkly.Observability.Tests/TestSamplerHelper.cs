@@ -27,10 +27,10 @@ namespace LaunchDarkly.Observability.Test
         /// </summary>
         private class MockSampler : IExportSampler
         {
-            private readonly Dictionary<string, bool> _spanSampleResults;
-            private readonly bool _shouldSampleLogs;
             private readonly Dictionary<string, object> _attributesToAdd;
             private readonly bool _enabled;
+            private readonly bool _shouldSampleLogs;
+            private readonly Dictionary<string, bool> _spanSampleResults;
 
             public MockSampler(
                 Dictionary<string, bool> spanSampleResults,

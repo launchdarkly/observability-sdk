@@ -6,10 +6,10 @@ using OpenTelemetry.Logs;
 namespace LaunchDarkly.Observability.Otel
 {
     /// <summary>
-    ///     In dotnet logs cannot be sampled at export time because the log exporter cannot be effectively
-    ///     wrapper. The log exporter is a sealed class, which prevents inheritance, and it also has
-    ///     internal methods which are accessed by other otel components. These internal methods mean
-    ///     that it is not possible to use composition and delegate to the base exporter.
+    /// In dotnet logs cannot be sampled at export time because the log exporter cannot be effectively
+    /// wrapper. The log exporter is a sealed class, which prevents inheritance, and it also has
+    /// internal methods which are accessed by other otel components. These internal methods mean
+    /// that it is not possible to use composition and delegate to the base exporter.
     /// </summary>
     internal class SamplingLogProcessor : BaseProcessor<LogRecord>
     {

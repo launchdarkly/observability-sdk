@@ -29,15 +29,11 @@ namespace LaunchDarkly.Observability.Test
 
             // Log with attributes if provided - use the same pattern as CustomSamplerTests
             if (attributes != null && attributes.Count > 0)
-            {
                 logger.Log(level, new EventId(), attributes, null,
                     (objects, exception) => message);
-            }
             else
-            {
                 logger.Log<object>(level, new EventId(), null, null,
                     (objects, exception) => message);
-            }
 
             return records.First();
         }

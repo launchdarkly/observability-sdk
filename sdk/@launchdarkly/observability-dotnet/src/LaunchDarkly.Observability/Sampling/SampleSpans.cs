@@ -5,12 +5,12 @@ using System.Linq;
 namespace LaunchDarkly.Observability.Sampling
 {
     /// <summary>
-    ///     Utilities for sampling spans including hierarchical span sampling
+    /// Utilities for sampling spans including hierarchical span sampling
     /// </summary>
     internal static class SampleSpans
     {
         /// <summary>
-        ///     Sample spans with hierarchical logic that removes children of sampled-out spans
+        /// Sample spans with hierarchical logic that removes children of sampled-out spans
         /// </summary>
         /// <param name="activities">Collection of activities to sample</param>
         /// <param name="sampler">The sampler to use for sampling decisions</param>

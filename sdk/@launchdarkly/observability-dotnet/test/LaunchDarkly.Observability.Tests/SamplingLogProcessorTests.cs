@@ -1,19 +1,14 @@
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using LaunchDarkly.Observability.Otel;
-using LaunchDarkly.Observability.Sampling;
 using Microsoft.Extensions.Logging;
 using NUnit.Framework;
-using OpenTelemetry.Logs;
 
 namespace LaunchDarkly.Observability.Test
 {
     [TestFixture]
     public class SamplingLogProcessorTests
     {
-        #region Tests
-
         [Test]
         public void OnEnd_WhenSamplerReturnsFalse_ShouldNotModifyAttributes()
         {
@@ -27,13 +22,9 @@ namespace LaunchDarkly.Observability.Test
             var finalAttributes = logRecord.Attributes?.ToList();
 
             if (originalAttributes == null)
-            {
                 Assert.That(finalAttributes, Is.Null.Or.Empty);
-            }
             else
-            {
                 Assert.That(finalAttributes?.Count, Is.EqualTo(originalAttributes.Count));
-            }
         }
 
         [Test]
@@ -52,13 +43,9 @@ namespace LaunchDarkly.Observability.Test
             var finalAttributes = logRecord.Attributes?.ToList();
 
             if (originalAttributes == null)
-            {
                 Assert.That(finalAttributes, Is.Null.Or.Empty);
-            }
             else
-            {
                 Assert.That(finalAttributes?.Count, Is.EqualTo(originalAttributes.Count));
-            }
         }
 
         [Test]
@@ -211,7 +198,5 @@ namespace LaunchDarkly.Observability.Test
                 }),
                 Is.True);
         }
-
-        #endregion
     }
 }

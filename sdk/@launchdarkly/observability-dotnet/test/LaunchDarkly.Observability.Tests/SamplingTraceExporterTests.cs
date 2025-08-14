@@ -1,10 +1,7 @@
-using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using LaunchDarkly.Observability.Sampling;
 using NUnit.Framework;
-using OpenTelemetry.Logs;
 
 namespace LaunchDarkly.Observability.Test
 {
@@ -16,7 +13,7 @@ namespace LaunchDarkly.Observability.Test
         {
             // Arrange
             var sampler = TestSamplerHelper.CreateMockSampler(
-                spanSampleResults: new Dictionary<string, bool>(),
+                new Dictionary<string, bool>(),
                 enabled: false
             );
 
@@ -46,7 +43,7 @@ namespace LaunchDarkly.Observability.Test
             };
 
             var sampler = TestSamplerHelper.CreateMockSampler(
-                spanSampleResults: new Dictionary<string, bool>
+                new Dictionary<string, bool>
                 {
                     [activities[0].SpanId.ToString()] = true, // Include
                     [activities[1].SpanId.ToString()] = false, // Exclude
@@ -76,7 +73,7 @@ namespace LaunchDarkly.Observability.Test
             var activities = new[] { parentActivity, childActivity, independentActivity };
 
             var sampler = TestSamplerHelper.CreateMockSampler(
-                spanSampleResults: new Dictionary<string, bool>
+                new Dictionary<string, bool>
                 {
                     [parentActivity.SpanId.ToString()] = false, // Parent filtered out
                     [childActivity.SpanId.ToString()] = true, // Child would be included but parent isn't
@@ -104,7 +101,7 @@ namespace LaunchDarkly.Observability.Test
             };
 
             var sampler = TestSamplerHelper.CreateMockSampler(
-                spanSampleResults: new Dictionary<string, bool>
+                new Dictionary<string, bool>
                 {
                     [activities[0].SpanId.ToString()] = false,
                     [activities[1].SpanId.ToString()] = false
@@ -128,7 +125,7 @@ namespace LaunchDarkly.Observability.Test
             };
 
             var sampler = TestSamplerHelper.CreateMockSampler(
-                spanSampleResults: new Dictionary<string, bool>
+                new Dictionary<string, bool>
                 {
                     [activities[0].SpanId.ToString()] = true
                 },

@@ -7,7 +7,7 @@ using OpenTelemetry.Exporter;
 namespace LaunchDarkly.Observability.Otel
 {
     /// <summary>
-    ///     Custom trace exporter that applies sampling before exporting
+    /// Custom trace exporter that applies sampling before exporting
     /// </summary>
     internal class SamplingTraceExporter : OtlpTraceExporter
     {

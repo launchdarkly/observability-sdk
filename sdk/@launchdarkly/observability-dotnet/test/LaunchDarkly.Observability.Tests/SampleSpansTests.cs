@@ -1,10 +1,8 @@
-using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using LaunchDarkly.Observability.Sampling;
 using NUnit.Framework;
-using OpenTelemetry.Logs;
 
 namespace LaunchDarkly.Observability.Test
 {
@@ -25,7 +23,7 @@ namespace LaunchDarkly.Observability.Test
 
             // We need to mock the span IDs in our sampler
             var samplerWithRealIds = TestSamplerHelper.CreateMockSampler(
-                spanSampleResults: new Dictionary<string, bool>
+                new Dictionary<string, bool>
                 {
                     [span1.SpanId.ToString()] = true,
                     [span2.SpanId.ToString()] = false
@@ -62,7 +60,7 @@ namespace LaunchDarkly.Observability.Test
             };
 
             var mockSampler = TestSamplerHelper.CreateMockSampler(
-                spanSampleResults: new Dictionary<string, bool>
+                new Dictionary<string, bool>
                 {
                     [parentActivity.SpanId.ToString()] = false, // Parent not sampled
                     [childActivity.SpanId.ToString()] = true, // Child would be sampled but parent isn't
@@ -84,7 +82,7 @@ namespace LaunchDarkly.Observability.Test
         {
             // Arrange
             var mockSampler = TestSamplerHelper.CreateMockSampler(
-                spanSampleResults: new Dictionary<string, bool>(), // Empty results
+                new Dictionary<string, bool>(), // Empty results
                 enabled: false // Sampling disabled
             );
 
@@ -113,7 +111,7 @@ namespace LaunchDarkly.Observability.Test
             };
 
             var mockSampler = TestSamplerHelper.CreateMockSampler(
-                spanSampleResults: new Dictionary<string, bool>
+                new Dictionary<string, bool>
                 {
                     [activities[0].SpanId.ToString()] = true,
                     [activities[1].SpanId.ToString()] = true
