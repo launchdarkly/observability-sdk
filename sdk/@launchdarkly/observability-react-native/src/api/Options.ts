@@ -1,4 +1,5 @@
 import { Attributes } from '@opentelemetry/api'
+import { ErrorContext } from '../instrumentation/errorTypes'
 
 export interface ReactNativeOptions {
 	/**
@@ -79,4 +80,39 @@ export interface ReactNativeOptions {
 	 * Whether metrics are disabled.
 	 */
 	disableMetrics?: boolean
+
+	/**
+	 * Error handling configuration for automatic error instrumentation.
+	 */
+	errorHandling?: {
+		/**
+		 * Whether to capture unhandled JavaScript exceptions.
+		 * @default true
+		 */
+		captureUnhandledExceptions?: boolean
+
+		/**
+		 * Whether to capture unhandled promise rejections.
+		 * @default true
+		 */
+		captureUnhandledRejections?: boolean
+
+		/**
+		 * Whether to capture console.error calls.
+		 * @default true
+		 */
+		captureConsoleErrors?: boolean
+
+		/**
+		 * Error sampling rate (0.0 to 1.0).
+		 * @default 1.0
+		 */
+		errorSampleRate?: number
+
+		/**
+		 * Filter function called before sending each error.
+		 * Return null to prevent the error from being sent.
+		 */
+		beforeSend?: (error: Error, context: ErrorContext) => Error | null
+	}
 }

@@ -1,22 +1,38 @@
-import { Image, StyleSheet, Platform } from 'react-native'
-import { useEffect } from 'react'
+import { Image, StyleSheet, Platform, Alert } from 'react-native'
+import { useEffect, useState } from 'react'
 
 import { HelloWave } from '@/components/HelloWave'
 import ParallaxScrollView from '@/components/ParallaxScrollView'
 import { ThemedText } from '@/components/ThemedText'
 import { ThemedView } from '@/components/ThemedView'
-import * as H from '../highlight'
+import initializeObservability, { LDObserve } from '../observability'
 
 export default function HomeScreen() {
-	useEffect(() => {
-		const span = H.tracer.startSpan('HomeScreen')
-		console.log('A hooked console message')
-		span.recordException(new Error('this is a otel tracer error'))
-		span.end()
-	}, [])
+	const [isInitialized, setIsInitialized] = useState(false)
 
-	H.log('warn', 'Default home screen loaded', { sender: 'spencer' })
-	H.error('type error', { code: 623 })
+	useEffect(() => {
+		const init = async () => {
+			try {
+				await initializeObservability()
+				setIsInitialized(true)
+				
+				// Log that the home screen loaded
+				LDObserve.recordLog('Home screen loaded successfully', 'info', {
+					screen: 'HomeScreen',
+					timestamp: new Date().toISOString(),
+					platform: Platform.OS
+				})
+			} catch (error) {
+				console.error('Failed to initialize observability:', error)
+				Alert.alert(
+					'Initialization Error',
+					'Failed to initialize observability. Check console for details.'
+				)
+			}
+		}
+
+		init()
+	}, [])
 
 	return (
 		<ParallaxScrollView
@@ -29,48 +45,52 @@ export default function HomeScreen() {
 			}
 		>
 			<ThemedView style={styles.titleContainer}>
-				<ThemedText type="title">Welcome!</ThemedText>
+				<ThemedText type="title">LaunchDarkly Observability</ThemedText>
 				<HelloWave />
 			</ThemedView>
-			<ThemedView style={styles.stepContainer}>
-				<ThemedText type="subtitle">Step 1: Try it</ThemedText>
-				<ThemedText>
-					Edit{' '}
-					<ThemedText type="defaultSemiBold">
-						app/(tabs)/index.tsx
-					</ThemedText>{' '}
-					to see changes. Press{' '}
-					<ThemedText type="defaultSemiBold">
-						{Platform.select({
-							ios: 'cmd + d',
-							android: 'cmd + m',
-							web: 'F12',
-						})}
-					</ThemedText>{' '}
-					to open developer tools.
-				</ThemedText>
-			</ThemedView>
-			<ThemedView style={styles.stepContainer}>
-				<ThemedText type="subtitle">Step 2: Explore</ThemedText>
-				<ThemedText>
-					Tap the Explore tab to learn more about what's included in
-					this starter app.
-				</ThemedText>
-			</ThemedView>
+			
 			<ThemedView style={styles.stepContainer}>
 				<ThemedText type="subtitle">
-					Step 3: Get a fresh start
+					🔧 Error Instrumentation Test App
 				</ThemedText>
 				<ThemedText>
-					When you're ready, run{' '}
-					<ThemedText type="defaultSemiBold">
-						npm run reset-project
-					</ThemedText>{' '}
-					to get a fresh{' '}
-					<ThemedText type="defaultSemiBold">app</ThemedText>{' '}
-					directory. This will move the current{' '}
-					<ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-					<ThemedText type="defaultSemiBold">app-example</ThemedText>.
+					This app demonstrates automatic error capture and reporting 
+					using the LaunchDarkly Observability React Native SDK.
+				</ThemedText>
+			</ThemedView>
+
+			<ThemedView style={styles.stepContainer}>
+				<ThemedText type="subtitle">
+					📊 Status: {isInitialized ? '✅ Ready' : '⏳ Initializing...'}
+				</ThemedText>
+				<ThemedText>
+					{isInitialized 
+						? 'Observability SDK is initialized and capturing errors automatically.'
+						: 'Initializing LaunchDarkly client with observability plugin...'
+					}
+				</ThemedText>
+			</ThemedView>
+
+			<ThemedView style={styles.stepContainer}>
+				<ThemedText type="subtitle">🧪 Test Error Capture</ThemedText>
+				<ThemedText>
+					Go to the{' '}
+					<ThemedText type="defaultSemiBold">Explore</ThemedText> tab 
+					to access the comprehensive error testing suite. You can trigger 
+					different types of errors and see them captured in real-time.
+				</ThemedText>
+			</ThemedView>
+
+			<ThemedView style={styles.stepContainer}>
+				<ThemedText type="subtitle">🎯 What's Being Captured</ThemedText>
+				<ThemedText>
+					• Unhandled JavaScript exceptions{'\n'}
+					• Unhandled promise rejections{'\n'}
+					• Console errors and warnings{'\n'}
+					• React component errors{'\n'}
+					• Manual error reports{'\n'}
+					• Network errors (filtered){'\n'}
+					• Error deduplication and sampling
 				</ThemedText>
 			</ThemedView>
 		</ParallaxScrollView>
