@@ -71,7 +71,6 @@ export class ObservabilityClient {
 			disableTraces: options.disableTraces ?? false,
 			tracingOrigins: options.tracingOrigins ?? false,
 			urlBlocklist: options.urlBlocklist ?? [],
-			errorHandling: options.errorHandling ?? {},
 		}
 	}
 
@@ -100,12 +99,9 @@ export class ObservabilityClient {
 			this.instrumentationManager.setSessionManager(this.sessionManager)
 			void this.instrumentationManager.initialize(resource)
 			
-			// Initialize error instrumentation if not disabled
+			// Initialize automatic error instrumentation (enabled by default)
 			if (!this.options.disableErrorTracking) {
-				this.errorInstrumentation = new ErrorInstrumentation(
-					this,
-					this.options.errorHandling || {}
-				)
+				this.errorInstrumentation = new ErrorInstrumentation(this)
 				this.errorInstrumentation.initialize()
 			}
 			

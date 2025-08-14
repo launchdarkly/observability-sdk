@@ -23,12 +23,10 @@
  *   {
  *      plugins: [
  *        new Observability({
- *          // Error handling is enabled by default
+ *          // Error handling is enabled by default for all error types
+ *          // Optional configuration:
  *          errorHandling: {
- *            captureUnhandledExceptions: true,
- *            captureUnhandledRejections: true,
- *            captureConsoleErrors: true,
- *            errorSampleRate: 1.0,
+ *            errorSampleRate: 1.0, // Default: 1.0 (capture all errors)
  *            beforeSend: (error, context) => {
  *              // Optional: filter errors before sending
  *              return error
