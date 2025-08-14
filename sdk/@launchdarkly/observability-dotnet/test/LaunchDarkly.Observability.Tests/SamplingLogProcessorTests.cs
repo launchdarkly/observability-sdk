@@ -12,51 +12,7 @@ namespace LaunchDarkly.Observability.Test
     [TestFixture]
     public class SamplingLogProcessorTests
     {
-        #region Helper Classes
 
-        /// <summary>
-        /// Mock sampler for testing SamplingLogProcessor
-        /// </summary>
-        private class MockLogSampler : IExportSampler
-        {
-            private readonly bool _shouldSample;
-            private readonly Dictionary<string, object> _attributesToAdd;
-            private readonly bool _enabled;
-
-            public MockLogSampler(bool shouldSample, Dictionary<string, object> attributesToAdd = null,
-                bool enabled = true)
-            {
-                _shouldSample = shouldSample;
-                _attributesToAdd = attributesToAdd ?? new Dictionary<string, object>();
-                _enabled = enabled;
-            }
-
-            public SamplingResult SampleLog(LogRecord record)
-            {
-                return new SamplingResult
-                {
-                    Sample = _shouldSample,
-                    Attributes = _attributesToAdd
-                };
-            }
-
-            public SamplingResult SampleSpan(Activity span)
-            {
-                return new SamplingResult { Sample = true };
-            }
-
-            public bool IsSamplingEnabled()
-            {
-                return _enabled;
-            }
-
-            public void SetConfig(SamplingConfig config)
-            {
-                // No-op for tests
-            }
-        }
-
-        #endregion
 
 
         #region Tests
@@ -64,7 +20,7 @@ namespace LaunchDarkly.Observability.Test
         [Test]
         public void OnEnd_WhenSamplerReturnsFalse_ShouldNotModifyAttributes()
         {
-            var sampler = new MockLogSampler(shouldSample: false);
+            var sampler = TestSamplerHelper.CreateMockSampler(shouldSampleLogs: false);
             var processor = new SamplingLogProcessor(sampler);
             var logRecord = LogRecordHelper.CreateTestLogRecord(LogLevel.Information, "Test message");
             var originalAttributes = logRecord.Attributes?.ToList();
@@ -86,7 +42,10 @@ namespace LaunchDarkly.Observability.Test
         [Test]
         public void OnEnd_WhenSamplerReturnsTrue_WithNoAttributes_ShouldNotModifyRecord()
         {
-            var sampler = new MockLogSampler(shouldSample: true, attributesToAdd: new Dictionary<string, object>());
+            var sampler = TestSamplerHelper.CreateMockSampler(
+                shouldSampleLogs: true,
+                attributesToAdd: new Dictionary<string, object>()
+            );
             var processor = new SamplingLogProcessor(sampler);
             var logRecord = LogRecordHelper.CreateTestLogRecord(LogLevel.Information, "Test message");
             var originalAttributes = logRecord.Attributes?.ToList();
@@ -113,7 +72,10 @@ namespace LaunchDarkly.Observability.Test
                 ["sampling.ratio"] = 0.5,
                 ["sampler.type"] = "custom"
             };
-            var sampler = new MockLogSampler(shouldSample: true, attributesToAdd: samplingAttributes);
+            var sampler = TestSamplerHelper.CreateMockSampler(
+                shouldSampleLogs: true,
+                attributesToAdd: samplingAttributes
+            );
             var processor = new SamplingLogProcessor(sampler);
 
             var existingAttributes = new Dictionary<string, object>
@@ -167,7 +129,10 @@ namespace LaunchDarkly.Observability.Test
                 ["sampling.ratio"] = 1.0,
                 ["sampler.enabled"] = true
             };
-            var sampler = new MockLogSampler(shouldSample: true, attributesToAdd: samplingAttributes);
+            var sampler = TestSamplerHelper.CreateMockSampler(
+                shouldSampleLogs: true,
+                attributesToAdd: samplingAttributes
+            );
             var processor = new SamplingLogProcessor(sampler);
             var logRecord =
                 LogRecordHelper.CreateTestLogRecord(LogLevel.Information, "Test message without attributes");
@@ -201,7 +166,10 @@ namespace LaunchDarkly.Observability.Test
             {
                 ["sampling.ratio"] = 0.25
             };
-            var sampler = new MockLogSampler(shouldSample: true, attributesToAdd: samplingAttributes);
+            var sampler = TestSamplerHelper.CreateMockSampler(
+                shouldSampleLogs: true,
+                attributesToAdd: samplingAttributes
+            );
             var processor = new SamplingLogProcessor(sampler);
             var logRecord =
                 LogRecordHelper.CreateTestLogRecord(LogLevel.Information, "Test message for sampling ratio");
@@ -221,7 +189,10 @@ namespace LaunchDarkly.Observability.Test
         [Test]
         public void OnEnd_WhenSamplerHasEmptyAttributes_ShouldNotAddAttributes()
         {
-            var sampler = new MockLogSampler(shouldSample: true, attributesToAdd: new Dictionary<string, object>());
+            var sampler = TestSamplerHelper.CreateMockSampler(
+                shouldSampleLogs: true,
+                attributesToAdd: new Dictionary<string, object>()
+            );
             var processor = new SamplingLogProcessor(sampler);
 
             var existingAttributes = new Dictionary<string, object>
