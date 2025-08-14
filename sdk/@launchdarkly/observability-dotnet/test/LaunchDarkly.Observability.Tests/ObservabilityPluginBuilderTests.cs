@@ -1,19 +1,19 @@
-using NUnit.Framework;
 using System;
 using Microsoft.Extensions.DependencyInjection;
+using NUnit.Framework;
 
 namespace LaunchDarkly.Observability.Test
 {
     [TestFixture]
     public class ObservabilityPluginBuilderTests
     {
-        private IServiceCollection _services;
-
         [SetUp]
         public void SetUp()
         {
             _services = new ServiceCollection();
         }
+
+        private IServiceCollection _services;
 
         [Test]
         public void CreateBuilder_WithValidParameters_CreatesBuilder()

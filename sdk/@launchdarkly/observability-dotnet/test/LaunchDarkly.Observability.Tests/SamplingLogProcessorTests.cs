@@ -12,9 +12,6 @@ namespace LaunchDarkly.Observability.Test
     [TestFixture]
     public class SamplingLogProcessorTests
     {
-
-
-
         #region Tests
 
         [Test]
