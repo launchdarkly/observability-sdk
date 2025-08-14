@@ -302,6 +302,17 @@ namespace LaunchDarkly.Observability.Test
                 sampler.SetConfig(scenario.SamplingConfig);
 
                 Assert.That(sampler.IsSamplingEnabled(), Is.True);
+                var services = new ServiceCollection();
+                var records = new List<LogRecord>();
+                services.AddOpenTelemetry().WithLogging(logging => { logging.AddInMemoryExporter(records); },
+                    options => { options.IncludeScopes = true; });
+                Console.WriteLine(services);
+                var provider = services.BuildServiceProvider();
+                var loggerProvider = provider.GetService<ILoggerProvider>();
+                var withScope = loggerProvider as ISupportExternalScope;
+                Assert.That(withScope, Is.Not.Null);
+                withScope.SetScopeProvider(new LoggerExternalScopeProvider());
+                var logger = loggerProvider.CreateLogger("test");
 
                 var properties = new Dictionary<string, object>();
                 foreach (var inputLogAttribute in scenario.InputLog.Attributes)
@@ -309,15 +320,21 @@ namespace LaunchDarkly.Observability.Test
                     properties.Add(inputLogAttribute.Key, GetJsonRawValue(inputLogAttribute));
                 }
 
+                using (logger.BeginScope(properties))
+                {
+                    logger.Log(SeverityTextToLogLevel(scenario.InputLog.SeverityText),
+                        new EventId(), properties, null,
+                        (objects, exception) => scenario.InputLog.Message ?? "");
+                }
 
-                // var record = records.First();
-                var record = LogRecordHelper.CreateTestLogRecord(SeverityTextToLogLevel(scenario.InputLog.SeverityText),
-                    scenario.InputLog.Message ?? "", properties);
+                Console.WriteLine(records);
+
+                var record = records.First();
                 Assert.Multiple(() =>
                 {
                     // Cursory check that the record is formed properly.
                     Assert.That(scenario.InputLog.Message ?? "", Is.EqualTo(record.Body));
-                    Assert.That(scenario.InputLog.Attributes?.Count ?? 0, Is.EqualTo(record.Attributes?.Count ?? 0));
+                    Assert.That(scenario.InputLog.Attributes?.Count ?? 0, Is.EqualTo(record.Attributes?.Count));
                 });
 
                 var res = sampler.SampleLog(record);

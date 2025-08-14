@@ -9,7 +9,7 @@ namespace LaunchDarkly.Observability.Sampling
         public bool Sample { get; set; }
         public Dictionary<string, object> Attributes { get; set; } = new Dictionary<string, object>();
     }
-
+    
     internal interface IExportSampler
     {
         SamplingResult SampleSpan(Activity span);

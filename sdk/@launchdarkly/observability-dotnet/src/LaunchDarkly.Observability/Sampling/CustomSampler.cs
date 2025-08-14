@@ -11,8 +11,8 @@ using OpenTelemetry.Logs;
 namespace LaunchDarkly.Observability.Sampling
 {
     /// <summary>
-    ///     Volatile wrapper for the sampling config.
-    ///     This is a lock-free method to provide visibility of the config between threads.
+    /// Volatile wrapper for the sampling config.
+    /// This is a lock-free method to provide visibility of the config between threads.
     /// </summary>
     internal class ThreadSafeConfig
     {
@@ -30,12 +30,12 @@ namespace LaunchDarkly.Observability.Sampling
     }
 
     /// <summary>
-    ///     Function type for sampling decisions
+    /// Function type for sampling decisions
     /// </summary>
     internal delegate bool SamplerFunc(int ratio);
 
     /// <summary>
-    ///     Default sampler implementation.
+    /// Default sampler implementation.
     /// </summary>
     internal static class DefaultSampler
     {
@@ -47,19 +47,19 @@ namespace LaunchDarkly.Observability.Sampling
 
     internal class CustomSampler : IExportSampler
     {
+        private readonly SamplerFunc _sampler;
+        private readonly ThreadSafeConfig _config = new ThreadSafeConfig();
+        private readonly ConcurrentDictionary<string, Regex> _regexCache = new ConcurrentDictionary<string, Regex>();
+        
         private const string SamplingRatioAttribute = "launchdarkly.sampling.ratio";
 
         /// <summary>
-        ///     Delta between two numbers which will be considered equal.
+        /// Delta between two numbers which will be considered equal.
         /// </summary>
         private const double Epsilon = 0.0000000000000001;
 
-        private readonly ThreadSafeConfig _config = new ThreadSafeConfig();
-        private readonly ConcurrentDictionary<string, Regex> _regexCache = new ConcurrentDictionary<string, Regex>();
-        private readonly SamplerFunc _sampler;
-
         /// <summary>
-        ///     Represents the result of sampling a span or log
+        /// Represents the result of sampling a span or log
         /// </summary>
         public CustomSampler(SamplerFunc sampler = null)
         {
@@ -67,7 +67,7 @@ namespace LaunchDarkly.Observability.Sampling
         }
 
         /// <summary>
-        ///     Set the sampling configuration.
+        /// Set the sampling configuration.
         /// </summary>
         /// <param name="config">the new configuration</param>
         public void SetConfig(SamplingConfig config)
@@ -76,10 +76,10 @@ namespace LaunchDarkly.Observability.Sampling
         }
 
         /// <summary>
-        ///     Check if sampling is enabled.
-        ///     <param>
-        ///         Sampling is enabled if there is at least one configuration in either the log or span sampling.
-        ///     </param>
+        /// Check if sampling is enabled.
+        /// <param>
+        /// Sampling is enabled if there is at least one configuration in either the log or span sampling.
+        /// </param>
         /// </summary>
         /// <returns>true if sampling is enabled</returns>
         public bool IsSamplingEnabled()
@@ -90,54 +90,6 @@ namespace LaunchDarkly.Observability.Sampling
             var hasSpanConfig = config.Spans != null && config.Spans.Count > 0;
             var hasLogConfig = config.Logs != null && config.Logs.Count > 0;
             return hasLogConfig || hasSpanConfig;
-        }
-
-        /// <summary>
-        ///     Sample a span.
-        /// </summary>
-        /// <param name="span">the span to sample</param>
-        /// <returns>the sampling result</returns>
-        public SamplingResult SampleSpan(Activity span)
-        {
-            var config = _config.GetSamplingConfig();
-            if (!(config?.Spans.Count > 0)) return new SamplingResult { Sample = true };
-            foreach (var spanConfig in config.Spans)
-                if (MatchesSpanConfig(spanConfig, span))
-                    return new SamplingResult
-                    {
-                        Sample = _sampler(spanConfig.SamplingRatio),
-                        Attributes = new Dictionary<string, object>
-                        {
-                            [SamplingRatioAttribute] = spanConfig.SamplingRatio
-                        }
-                    };
-
-            // Default to sampling if no config matches
-            return new SamplingResult { Sample = true };
-        }
-
-        /// <summary>
-        ///     Sample a log record.
-        /// </summary>
-        /// <param name="record">the log record to sample</param>
-        /// <returns>the sampling result</returns>
-        public SamplingResult SampleLog(LogRecord record)
-        {
-            var config = _config.GetSamplingConfig();
-            if (!(config?.Logs.Count > 0)) return new SamplingResult { Sample = true };
-            foreach (var logConfig in config.Logs)
-                if (MatchesLogConfig(logConfig, record))
-                    return new SamplingResult
-                    {
-                        Sample = _sampler(logConfig.SamplingRatio),
-                        Attributes = new Dictionary<string, object>
-                        {
-                            [SamplingRatioAttribute] = logConfig.SamplingRatio
-                        }
-                    };
-
-            // Default to sampling if no config matches
-            return new SamplingResult { Sample = true };
         }
 
         private Regex GetCachedRegex(string pattern)
@@ -178,6 +130,7 @@ namespace LaunchDarkly.Observability.Sampling
             {
                 // Handle JsonElement from JSON deserialization
                 if (matchConfig.MatchValue is JsonElement jsonElement)
+                {
                     switch (jsonElement.ValueKind)
                     {
                         case JsonValueKind.String:
@@ -200,8 +153,11 @@ namespace LaunchDarkly.Observability.Sampling
                         default:
                             break;
                     }
+                }
                 else
+                {
                     return matchConfig.MatchValue.Equals(value);
+                }
             }
 
             // Check regex match
@@ -259,8 +215,10 @@ namespace LaunchDarkly.Observability.Sampling
         {
             // Match by event name if specified
             if (!IsMatchConfigEmpty(eventConfig.Name))
+            {
                 if (!MatchesValue(eventConfig.Name, activityEvent.Name))
                     return false;
+            }
 
             // Match by event attributes if specified
             return eventConfig.Attributes.Count <= 0 ||
@@ -270,19 +228,52 @@ namespace LaunchDarkly.Observability.Sampling
         private bool MatchesSpanConfig(SamplingConfig.SpanSamplingConfig config, Activity span)
         {
             // Check span name if defined
-            if (!IsMatchConfigEmpty(config.Name) && !MatchesValue(config.Name, span.DisplayName)) return false;
+            if (!IsMatchConfigEmpty(config.Name) && !MatchesValue(config.Name, span.DisplayName))
+            {
+                return false;
+            }
 
             return MatchesAttributes(config.Attributes, span.TagObjects.ToList()) &&
                    // Check events  
                    MatchesEvents(config.Events, span.Events.ToList());
         }
 
+        /// <summary>
+        /// Sample a span.
+        /// </summary>
+        /// <param name="span">the span to sample</param>
+        /// <returns>the sampling result</returns>
+        public SamplingResult SampleSpan(Activity span)
+        {
+            var config = _config.GetSamplingConfig();
+            if (!(config?.Spans.Count > 0)) return new SamplingResult { Sample = true };
+            foreach (var spanConfig in config.Spans)
+            {
+                if (MatchesSpanConfig(spanConfig, span))
+                {
+                    return new SamplingResult
+                    {
+                        Sample = _sampler(spanConfig.SamplingRatio),
+                        Attributes = new Dictionary<string, object>
+                        {
+                            [SamplingRatioAttribute] = spanConfig.SamplingRatio
+                        }
+                    };
+                }
+            }
+
+            // Default to sampling if no config matches
+            return new SamplingResult { Sample = true };
+        }
+
         private bool MatchesLogConfig(SamplingConfig.LogSamplingConfig config, LogRecord record)
         {
             // Check severity text if defined
             if (!IsMatchConfigEmpty(config.SeverityText))
+            {
                 if (!MatchesValue(config.SeverityText, record.LogLevel.ToString()))
                     return false;
+            }
 
             // Check message if defined
             if (!IsMatchConfigEmpty(config.Message))
@@ -296,6 +287,34 @@ namespace LaunchDarkly.Observability.Sampling
             if (config.Attributes.Count <= 0) return true;
 
             return record.Attributes != null && MatchesAttributes(config.Attributes, record.Attributes.ToList());
+        }
+
+        /// <summary>
+        /// Sample a log record.
+        /// </summary>
+        /// <param name="record">the log record to sample</param>
+        /// <returns>the sampling result</returns>
+        public SamplingResult SampleLog(LogRecord record)
+        {
+            var config = _config.GetSamplingConfig();
+            if (!(config?.Logs.Count > 0)) return new SamplingResult { Sample = true };
+            foreach (var logConfig in config.Logs)
+            {
+                if (MatchesLogConfig(logConfig, record))
+                {
+                    return new SamplingResult
+                    {
+                        Sample = _sampler(logConfig.SamplingRatio),
+                        Attributes = new Dictionary<string, object>
+                        {
+                            [SamplingRatioAttribute] = logConfig.SamplingRatio
+                        }
+                    };
+                }
+            }
+
+            // Default to sampling if no config matches
+            return new SamplingResult { Sample = true };
         }
     }
 }

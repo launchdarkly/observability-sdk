@@ -5,11 +5,6 @@ namespace LaunchDarkly.Observability.Sampling
 {
     internal class SamplingConfig
     {
-        [JsonPropertyName("spans")]
-        public List<SpanSamplingConfig> Spans { get; set; } = new List<SpanSamplingConfig>();
-
-        [JsonPropertyName("logs")] public List<LogSamplingConfig> Logs { get; set; } = new List<LogSamplingConfig>();
-
         internal class MatchConfig
         {
             [JsonPropertyName("matchValue")] public object MatchValue { get; set; }
@@ -56,5 +51,10 @@ namespace LaunchDarkly.Observability.Sampling
 
             [JsonPropertyName("samplingRatio")] public int SamplingRatio { get; set; } = 1;
         }
+
+        [JsonPropertyName("spans")]
+        public List<SpanSamplingConfig> Spans { get; set; } = new List<SpanSamplingConfig>();
+
+        [JsonPropertyName("logs")] public List<LogSamplingConfig> Logs { get; set; } = new List<LogSamplingConfig>();
     }
 }

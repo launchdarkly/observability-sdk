@@ -3,7 +3,7 @@ using System;
 namespace LaunchDarkly.Observability.Sampling
 {
     /// <summary>
-    ///     Class used for event sampling.
+    /// Class used for event sampling.
     /// </summary>
     public static class ThreadSafeSampler
     {
@@ -11,7 +11,7 @@ namespace LaunchDarkly.Observability.Sampling
         private static readonly object RandLock = new object();
 
         /// <summary>
-        ///     Given a ratio determine if an event should be sampled.
+        /// Given a ratio determine if an event should be sampled.
         /// </summary>
         /// <remarks>This function is thread-safe.</remarks>
         /// <remarks>0 means never sample and 1 means always sample</remarks>
