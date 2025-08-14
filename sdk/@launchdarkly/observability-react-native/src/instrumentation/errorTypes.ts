@@ -21,14 +21,6 @@ export interface FormattedError {
 	attributes: Attributes
 }
 
-export interface ErrorHandlingConfig {
-	captureUnhandledExceptions?: boolean
-	captureUnhandledRejections?: boolean
-	captureConsoleErrors?: boolean
-	errorSampleRate?: number
-	beforeSend?: (error: Error, context: ErrorContext) => Error | null
-}
-
 // Error deduplication
 export interface ErrorFingerprint {
 	message: string

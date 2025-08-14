@@ -23,17 +23,14 @@ const user: LDUser = {
 	}
 }
 
-// Observability configuration with error handling enabled
+// Observability configuration (error handling is enabled by default)
 const observabilityOptions: ReactNativeOptions = {
 	serviceName: 'react-native-error-test-app',
 	serviceVersion: '1.0.0',
 	debug: true, // Enable debug logging
 	
-	// Error handling configuration
+	// Optional error handling configuration
 	errorHandling: {
-		captureUnhandledExceptions: true,
-		captureUnhandledRejections: true,
-		captureConsoleErrors: true,
 		errorSampleRate: 1.0, // Capture all errors for testing
 		beforeSend: (error, context) => {
 			// Log errors for debugging

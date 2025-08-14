@@ -2,7 +2,6 @@ import { Attributes } from '@opentelemetry/api'
 import { ErrorUtils } from 'react-native'
 import type { ObservabilityClient } from '../client/ObservabilityClient'
 import {
-	ErrorHandlingConfig,
 	ErrorDeduplicator,
 	ErrorType,
 	ErrorSource,
@@ -12,12 +11,10 @@ import {
 	extractReactErrorInfo,
 	parseConsoleArgs,
 	isNetworkError,
-	shouldSampleError,
 } from './errorUtils'
 
 export class ErrorInstrumentation {
 	private client: ObservabilityClient
-	private config: Required<ErrorHandlingConfig>
 	private deduplicator: ErrorDeduplicator
 	private originalHandlers: {
 		globalHandler?: (error: any, isFatal?: boolean) => void
@@ -27,15 +24,8 @@ export class ErrorInstrumentation {
 	} = {}
 	private isInitialized = false
 
-	constructor(client: ObservabilityClient, config: ErrorHandlingConfig = {}) {
+	constructor(client: ObservabilityClient) {
 		this.client = client
-		this.config = {
-			captureUnhandledExceptions: config.captureUnhandledExceptions ?? true,
-			captureUnhandledRejections: config.captureUnhandledRejections ?? true,
-			captureConsoleErrors: config.captureConsoleErrors ?? true,
-			errorSampleRate: config.errorSampleRate ?? 1.0,
-			beforeSend: config.beforeSend,
-		}
 		this.deduplicator = new ErrorDeduplicator()
 	}
 
@@ -72,10 +62,6 @@ export class ErrorInstrumentation {
 	}
 
 	private setupUnhandledExceptionHandler(): void {
-		if (!this.config.captureUnhandledExceptions) {
-			return
-		}
-
 		// Store original handler
 		this.originalHandlers.globalHandler = ErrorUtils.getGlobalHandler()
 
@@ -91,10 +77,6 @@ export class ErrorInstrumentation {
 	}
 
 	private setupUnhandledRejectionHandler(): void {
-		if (!this.config.captureUnhandledRejections) {
-			return
-		}
-
 		const handler = (event: any) => {
 			this.handleUnhandledRejection(event)
 		}
@@ -110,10 +92,6 @@ export class ErrorInstrumentation {
 	}
 
 	private setupConsoleErrorHandler(): void {
-		if (!this.config.captureConsoleErrors) {
-			return
-		}
-
 		// Store original console methods
 		this.originalHandlers.consoleError = console.error
 		this.originalHandlers.consoleWarn = console.warn
@@ -166,10 +144,6 @@ export class ErrorInstrumentation {
 
 	private handleUnhandledException(error: any, isFatal: boolean): void {
 		try {
-			if (!shouldSampleError(this.config.errorSampleRate)) {
-				return
-			}
-
 			const errorObj = error instanceof Error ? error : new Error(String(error))
 
 			if (!this.deduplicator.shouldReport(errorObj)) {
@@ -181,23 +155,9 @@ export class ErrorInstrumentation {
 				return
 			}
 
-			// Apply beforeSend filter
-			const filteredError = this.config.beforeSend
-				? this.config.beforeSend(errorObj, {
-						type: 'unhandled_exception',
-						source: 'javascript',
-						fatal: isFatal,
-						timestamp: Date.now(),
-					})
-				: errorObj
-
-			if (!filteredError) {
-				return
-			}
-
 			const reactInfo = extractReactErrorInfo(error)
 			const formattedError = formatError(
-				filteredError,
+				errorObj,
 				'unhandled_exception',
 				'javascript',
 				isFatal,
@@ -215,7 +175,7 @@ export class ErrorInstrumentation {
 				attributes['react.error_boundary'] = reactInfo.errorBoundary || 'unknown'
 			}
 
-			this.client.consumeCustomError(filteredError, attributes)
+			this.client.consumeCustomError(errorObj, attributes)
 		} catch (instrumentationError) {
 			console.warn('Error in unhandled exception instrumentation:', instrumentationError)
 		}
@@ -223,10 +183,6 @@ export class ErrorInstrumentation {
 
 	private handleUnhandledRejection(event: any): void {
 		try {
-			if (!shouldSampleError(this.config.errorSampleRate)) {
-				return
-			}
-
 			const reason = event.reason || event
 			const errorObj = reason instanceof Error ? reason : new Error(String(reason))
 
@@ -239,22 +195,8 @@ export class ErrorInstrumentation {
 				return
 			}
 
-			// Apply beforeSend filter
-			const filteredError = this.config.beforeSend
-				? this.config.beforeSend(errorObj, {
-						type: 'unhandled_rejection',
-						source: 'javascript',
-						fatal: false,
-						timestamp: Date.now(),
-					})
-				: errorObj
-
-			if (!filteredError) {
-				return
-			}
-
 			const formattedError = formatError(
-				filteredError,
+				errorObj,
 				'unhandled_rejection',
 				'javascript',
 				false,
@@ -267,7 +209,7 @@ export class ErrorInstrumentation {
 				'promise.handled': false,
 			}
 
-			this.client.consumeCustomError(filteredError, attributes)
+			this.client.consumeCustomError(errorObj, attributes)
 		} catch (instrumentationError) {
 			console.warn('Error in unhandled rejection instrumentation:', instrumentationError)
 		}
@@ -275,10 +217,6 @@ export class ErrorInstrumentation {
 
 	private handleConsoleError(level: 'error' | 'warn', args: any[]): void {
 		try {
-			if (!shouldSampleError(this.config.errorSampleRate)) {
-				return
-			}
-
 			// Convert console arguments to error message
 			const message = parseConsoleArgs(args)
 			
@@ -295,22 +233,8 @@ export class ErrorInstrumentation {
 				return
 			}
 
-			// Apply beforeSend filter
-			const filteredError = this.config.beforeSend
-				? this.config.beforeSend(errorObj, {
-						type: 'console_error',
-						source: 'javascript',
-						fatal: false,
-						timestamp: Date.now(),
-					})
-				: errorObj
-
-			if (!filteredError) {
-				return
-			}
-
 			const formattedError = formatError(
-				filteredError,
+				errorObj,
 				'console_error',
 				'javascript',
 				false,
@@ -326,7 +250,7 @@ export class ErrorInstrumentation {
 
 			// Only report console.error by default, console.warn is optional
 			if (level === 'error') {
-				this.client.consumeCustomError(filteredError, attributes)
+				this.client.consumeCustomError(errorObj, attributes)
 			}
 		} catch (instrumentationError) {
 			console.warn('Error in console error instrumentation:', instrumentationError)
