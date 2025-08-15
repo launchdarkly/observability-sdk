@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.3.0...launchdarkly-observability-android-0.4.0) (2025-08-15)
+
+
+### Features
+
+* adds otel-android crash instrumentation ([#179](https://github.com/launchdarkly/observability-sdk/issues/179)) ([673b0d6](https://github.com/launchdarkly/observability-sdk/commit/673b0d63764f8a7419d0bf340f516103da913b3f))
+
 ## [0.3.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.2.0...launchdarkly-observability-android-0.3.0) (2025-08-13)
 
 
