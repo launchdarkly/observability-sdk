@@ -97,12 +97,6 @@ namespace LaunchDarkly.Observability
                 {
                     Endpoint = new Uri(config.OtlpEndpoint + TracesPath),
                     Protocol = OtlpExportProtocol.HttpProtobuf,
-                    BatchExportProcessorOptions = new BatchExportProcessorOptions<Activity>
-                    {
-                        MaxExportBatchSize = MaxExportBatchSize,
-                        MaxQueueSize = MaxQueueSize,
-                        ScheduledDelayMilliseconds = FlushIntervalMs,
-                    }
                 });
 
                 tracing.AddProcessor(new BatchActivityExportProcessor(samplingTraceExporter, MaxQueueSize,
