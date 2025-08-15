@@ -8,6 +8,7 @@ import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Severity
 import io.opentelemetry.api.trace.Span
+import java.net.SocketTimeoutException
 
 class ViewModel : ViewModel() {
 
@@ -43,5 +44,9 @@ class ViewModel : ViewModel() {
         // TODO O11Y-397: for some reason stopped spans are stacking, the current span might be the problem
         lastSpan?.end()
         lastSpan = null
+    }
+
+    fun triggerCrash() {
+        throw RuntimeException("Failed to connect to bogus server.")
     }
 }
