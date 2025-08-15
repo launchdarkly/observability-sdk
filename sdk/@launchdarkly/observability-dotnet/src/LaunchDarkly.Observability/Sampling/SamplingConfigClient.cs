@@ -38,6 +38,25 @@ namespace LaunchDarkly.Observability.Sampling
         {
             public SamplingDataResponse Data { get; set; }
             public List<GraphQlError> Errors { get; set; }
+            
+            /// <summary>
+            /// Creates a formatted string representation of all GraphQL errors for logging
+            /// </summary>
+            /// <returns>A formatted string containing all error details, or empty string if no errors</returns>
+            public string GetErrorsForLogging()
+            {
+                if (Errors == null || Errors.Count == 0)
+                {
+                    return string.Empty;
+                }
+                
+                if (Errors.Count == 1)
+                {
+                    return Errors[0].ToString();
+                }
+                
+                return $"[{string.Join(", ", Errors)}]";
+            }
         }
 
         /// <summary>
@@ -50,7 +69,9 @@ namespace LaunchDarkly.Observability.Sampling
             public List<object> Path { get; set; }
             public override string ToString()
             {
-                return $"{Message}:{Path}:{Locations}";
+                var pathStr = Path != null ? $"[{string.Join(", ", Path)}]" : "[]";
+                var locationStr = Locations != null ? $"[{string.Join(", ", Locations)}]" : "[]";
+                return $"{Message}:{pathStr}:{locationStr}";
             }
         }
 
@@ -200,7 +221,7 @@ namespace LaunchDarkly.Observability.Sampling
 
                 if (graphqlResponse?.Errors?.Count > 0)
                 {
-                    DebugLogger.DebugLog($"Error in graphql response for sampling configuration: {graphqlResponse?.Errors}");
+                    DebugLogger.DebugLog($"Error in graphql response for sampling configuration: {graphqlResponse.GetErrorsForLogging()}");
                 }
 
                 return graphqlResponse?.Data?.Sampling;
