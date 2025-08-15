@@ -100,14 +100,6 @@ namespace LaunchDarkly.Observability.Test
         }
 
         [Test]
-        public void Constructor_WithNullHttpClient_ShouldThrowArgumentNullException()
-        {
-            // Act & Assert
-            Assert.Throws<ArgumentNullException>(() =>
-                new SamplingConfigClient((HttpClient)null, TestBackendUrl));
-        }
-
-        [Test]
         public void Constructor_WithNullBackendUrl_ShouldThrowArgumentNullException()
         {
             // Act & Assert

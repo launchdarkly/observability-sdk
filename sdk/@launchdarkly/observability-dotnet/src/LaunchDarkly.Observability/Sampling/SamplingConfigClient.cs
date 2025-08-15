@@ -38,7 +38,7 @@ namespace LaunchDarkly.Observability.Sampling
         {
             public SamplingDataResponse Data { get; set; }
             public List<GraphQlError> Errors { get; set; }
-            
+
             /// <summary>
             /// Creates a formatted string representation of all GraphQL errors for logging
             /// </summary>
@@ -49,12 +49,12 @@ namespace LaunchDarkly.Observability.Sampling
                 {
                     return string.Empty;
                 }
-                
+
                 if (Errors.Count == 1)
                 {
                     return Errors[0].ToString();
                 }
-                
+
                 return $"[{string.Join(", ", Errors)}]";
             }
         }
@@ -67,6 +67,7 @@ namespace LaunchDarkly.Observability.Sampling
             public string Message { get; set; }
             public List<GraphQlLocation> Locations { get; set; }
             public List<object> Path { get; set; }
+
             public override string ToString()
             {
                 var pathStr = Path != null ? $"[{string.Join(", ", Path)}]" : "[]";
@@ -178,12 +179,13 @@ namespace LaunchDarkly.Observability.Sampling
         /// </summary>
         /// <param name="httpClient">The HttpClient instance to wrap</param>
         /// <param name="backendUrl">The backend URL for GraphQL requests</param>
-        public SamplingConfigClient(HttpClient httpClient, string backendUrl)
-            : this(new HttpClientWrapper(httpClient), backendUrl)
+        public SamplingConfigClient(string backendUrl)
+            : this(new HttpClientWrapper(new HttpClient()), backendUrl)
         {
         }
-        
-        public async Task<SamplingConfig> GetSamplingConfigAsync(string organizationVerboseId, CancellationToken cancellationToken = default)
+
+        public async Task<SamplingConfig> GetSamplingConfigAsync(string organizationVerboseId,
+            CancellationToken cancellationToken = default)
         {
             try
             {
@@ -202,26 +204,28 @@ namespace LaunchDarkly.Observability.Sampling
                 });
 
                 var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
-            
+
                 var response = await _httpClient.PostAsync(_backendUrl, content, cancellationToken);
                 response.EnsureSuccessStatusCode();
 
                 // ReadAsStringAsync is only supported in .Net 5.0+ and not .NetFramework/netstandard2.0.
-                #if NET5_0_OR_GREATER
+#if NET5_0_OR_GREATER
                 var responseJson = await response.Content.ReadAsStringAsync(cancellationToken);
-                #else
+#else
                 var responseJson = await response.Content.ReadAsStringAsync();
-                #endif
-                
-                var graphqlResponse = JsonSerializer.Deserialize<GraphQlResponse>(responseJson, new JsonSerializerOptions
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                    PropertyNameCaseInsensitive = true
-                });
+#endif
+
+                var graphqlResponse = JsonSerializer.Deserialize<GraphQlResponse>(responseJson,
+                    new JsonSerializerOptions
+                    {
+                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                        PropertyNameCaseInsensitive = true
+                    });
 
                 if (graphqlResponse?.Errors?.Count > 0)
                 {
-                    DebugLogger.DebugLog($"Error in graphql response for sampling configuration: {graphqlResponse.GetErrorsForLogging()}");
+                    DebugLogger.DebugLog(
+                        $"Error in graphql response for sampling configuration: {graphqlResponse.GetErrorsForLogging()}");
                 }
 
                 return graphqlResponse?.Data?.Sampling;
