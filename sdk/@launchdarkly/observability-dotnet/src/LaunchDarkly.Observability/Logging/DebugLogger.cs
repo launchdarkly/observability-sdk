@@ -13,7 +13,7 @@ namespace LaunchDarkly.Observability.Logging
 
         public static void DebugLog(string message)
         {
-            Volatile.Read(ref _logger).Debug(message);
+            Volatile.Read(ref _logger)?.Debug(message);
         }
     }
 }

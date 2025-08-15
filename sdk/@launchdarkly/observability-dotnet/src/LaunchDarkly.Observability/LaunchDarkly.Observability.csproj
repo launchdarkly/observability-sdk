@@ -28,6 +28,7 @@
   <!-- Allow the testing project to access internals. -->
   <ItemGroup Condition="'$(Configuration)'!='Release'">
     <InternalsVisibleTo Include="LaunchDarkly.Observability.Tests" />
+    <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
   </ItemGroup>
 
   <PropertyGroup Condition="'$(Configuration)'=='Release' And '$(SKIP_SIGNING)'!='true'">

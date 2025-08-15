@@ -198,7 +198,7 @@ namespace LaunchDarkly.Observability.Sampling
                     PropertyNameCaseInsensitive = true
                 });
 
-                if (graphqlResponse?.Errors?.Count != 0)
+                if (graphqlResponse?.Errors?.Count > 0)
                 {
                     DebugLogger.DebugLog($"Error in graphql response for sampling configuration: {graphqlResponse?.Errors}");
                 }
