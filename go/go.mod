@@ -4,6 +4,7 @@ go 1.24.3
 
 require (
 	github.com/Khan/genqlient v0.8.1
+	github.com/samber/lo v1.51.0
 	go.opentelemetry.io/otel v1.37.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.37.0
 	go.opentelemetry.io/otel/log v0.13.0
