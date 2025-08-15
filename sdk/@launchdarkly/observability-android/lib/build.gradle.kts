@@ -1,8 +1,19 @@
+import org.jetbrains.kotlin.com.intellij.openapi.util.io.FileUtilRt
+import java.io.File
+import java.util.zip.ZipEntry
+import java.util.zip.ZipFile
+import org.gradle.api.DefaultTask
+import org.gradle.api.tasks.TaskAction
+
+
 plugins {
     // Apply the Android library plugin
     id("com.android.library")
     id("maven-publish")
     id("signing")
+
+    // Added with Otel Http URL instrumentation
+    id("net.bytebuddy.byte-buddy-gradle-plugin") version "1.17.6"
 
     // Apply the Kotlin Android plugin for Android-compatible Kotlin support.
     alias(libs.plugins.kotlin.android)
@@ -16,8 +27,10 @@ allprojects {
 }
 
 dependencies {
-    implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.9.0")
     implementation("com.jakewharton.timber:timber:5.0.1")
+
+    compileOnly("com.launchdarkly:launchdarkly-android-client-sdk:5.9.0")
+    implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.9.0")
 
     // TODO: revise these versions to be as old as usable for compatibility
     implementation("io.opentelemetry:opentelemetry-api:1.51.0")
@@ -30,10 +43,18 @@ dependencies {
     // TODO: Evaluate risks associated with incubator APIs
     implementation("io.opentelemetry:opentelemetry-api-incubator:1.51.0-alpha")
 
-    // Android instrumentation
+    // Android instrumentation core
     implementation("io.opentelemetry.android:core:0.11.0-alpha")
-    implementation("io.opentelemetry.android.instrumentation:activity:0.11.0-alpha")
+
+    // Session id assignment
     implementation("io.opentelemetry.android:session:0.11.0-alpha")
+
+    // Activity lifecycle instrumentation
+    implementation("io.opentelemetry.android.instrumentation:activity:0.11.0-alpha")
+
+    // Http URL instrumentation
+    implementation("io.opentelemetry.android.instrumentation:httpurlconnection-library:0.11.0-alpha")
+    byteBuddy("io.opentelemetry.android.instrumentation:httpurlconnection-agent:0.11.0-alpha")
 
     // Use JUnit Jupiter for testing.
     testImplementation("org.junit.jupiter:junit-jupiter")
@@ -76,6 +97,73 @@ android {
             withSourcesJar()
         }
     }
+}
+
+abstract class ClassScannerTask : DefaultTask() {
+    @TaskAction
+    fun scanClasses() {
+        // Use Android-specific configurations for library
+        val androidConfigurations = project.extensions.getByType(com.android.build.gradle.LibraryExtension::class.java)
+
+        println("=== Available Classes ===")
+
+        // Get all variant configurations for library
+        androidConfigurations.libraryVariants.all { variant ->
+            // Use compile configuration for the variant
+            val compileConfigurationName = "${variant.name}CompileClasspath"
+            val compileConfiguration = project.configurations.getByName(compileConfigurationName)
+
+            // Use runtime configuration for the variant
+            val runtimeConfigurationName = "${variant.name}RuntimeClasspath"
+            val runtimeConfiguration = project.configurations.getByName(runtimeConfigurationName)
+
+            println("\nVariant: ${variant.name}")
+            println("-------------------")
+
+            println("\nCompile Classpath:")
+            println("==================")
+            // Scan all files in the compile configuration
+            for (file in compileConfiguration.files) {
+                scanFile(file)
+            }
+
+            println("\nRuntime Classpath:")
+            println("==================")
+            // Scan all files in the runtime configuration
+            for (file in runtimeConfiguration.files) {
+                scanFile(file)
+            }
+            
+            true // Return true to continue processing
+        }
+    }
+
+    private fun scanFile(file: File) {
+        if (file.isDirectory) {
+            file.listFiles()?.forEach { scanFile(it) }
+        } else if (file.name.endsWith(".jar") || file.name.endsWith(".aar")) {
+            try {
+                ZipFile(file).use { zip ->
+                    zip.entries().asSequence().forEach { entry ->
+                        if (entry.name.endsWith(".class") && entry.name.contains("launchdarkly")) {
+                            println(entry.name.replace('/', '.').removeSuffix(".class"))
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                println("Error scanning ${file.absolutePath}: ${e.message}")
+            }
+        }
+    }
+}
+
+// Register and configure the task
+tasks.register<ClassScannerTask>("printAvailableClasses") {
+    group = "Development"
+    description = "Prints all available classes in the compile classpath"
+
+    // Make it dependent on compileDebugKotlin to ensure classpath is ready
+    dependsOn(tasks.named("compileDebugKotlin"))
 }
 
 publishing {
