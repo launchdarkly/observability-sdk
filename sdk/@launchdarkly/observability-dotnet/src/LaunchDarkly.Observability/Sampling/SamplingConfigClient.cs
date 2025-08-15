@@ -78,7 +78,7 @@ namespace LaunchDarkly.Observability.Sampling
 
         #endregion
 
-        private readonly HttpClient _httpClient;
+        private readonly IHttpClient _httpClient;
         private readonly string _backendUrl;
 
         private const string GraphQlQuery = @"
@@ -141,10 +141,25 @@ namespace LaunchDarkly.Observability.Sampling
             }
         }";
 
-        public SamplingConfigClient(HttpClient httpClient, string backendUrl)
+        /// <summary>
+        /// Initializes a new instance of SamplingConfigClient with a custom HTTP client
+        /// </summary>
+        /// <param name="httpClient">The HTTP client interface implementation to use</param>
+        /// <param name="backendUrl">The backend URL for GraphQL requests</param>
+        public SamplingConfigClient(IHttpClient httpClient, string backendUrl)
         {
-            _httpClient = httpClient;
-            _backendUrl = backendUrl;
+            _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+            _backendUrl = backendUrl ?? throw new ArgumentNullException(nameof(backendUrl));
+        }
+
+        /// <summary>
+        /// Initializes a new instance of SamplingConfigClient with the default HTTP client wrapper
+        /// </summary>
+        /// <param name="httpClient">The HttpClient instance to wrap</param>
+        /// <param name="backendUrl">The backend URL for GraphQL requests</param>
+        public SamplingConfigClient(HttpClient httpClient, string backendUrl)
+            : this(new HttpClientWrapper(httpClient), backendUrl)
+        {
         }
         
         public async Task<SamplingConfig> GetSamplingConfigAsync(string organizationVerboseId, CancellationToken cancellationToken = default)
