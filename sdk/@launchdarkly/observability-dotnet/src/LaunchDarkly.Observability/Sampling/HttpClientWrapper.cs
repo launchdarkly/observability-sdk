@@ -7,7 +7,7 @@ namespace LaunchDarkly.Observability.Sampling
     /// <summary>
     /// Minimal wrapper around HttpClient that implements IHttpClient
     /// </summary>
-    internal class HttpClientWrapper : IHttpClient
+    internal class HttpClientWrapper : IHttpClient, System.IDisposable
     {
         private readonly HttpClient _httpClient;
 
@@ -25,6 +25,14 @@ namespace LaunchDarkly.Observability.Sampling
             CancellationToken cancellationToken = default)
         {
             return _httpClient.PostAsync(requestUri, content, cancellationToken);
+        }
+
+        /// <summary>
+        /// Releases all resources used by the HttpClientWrapper
+        /// </summary>
+        public void Dispose()
+        {
+            _httpClient?.Dispose();
         }
     }
 }

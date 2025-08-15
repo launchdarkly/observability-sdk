@@ -9,7 +9,7 @@ using LaunchDarkly.Observability.Logging;
 
 namespace LaunchDarkly.Observability.Sampling
 {
-    internal class SamplingConfigClient
+    internal class SamplingConfigClient : IDisposable
     {
         #region GraphQL Types
 
@@ -102,6 +102,7 @@ namespace LaunchDarkly.Observability.Sampling
 
         private readonly IHttpClient _httpClient;
         private readonly string _backendUrl;
+        private bool _disposed;
 
         private const string GraphQlQuery = @"
         query GetSamplingConfig($organization_verbose_id: String!) {
@@ -184,9 +185,12 @@ namespace LaunchDarkly.Observability.Sampling
         {
         }
 
-        public async Task<SamplingConfig> GetSamplingConfigAsync(string organizationVerboseId,
+        public async Task<SamplingConfig> GetSamplingConfigAsync(string sdkKey,
             CancellationToken cancellationToken = default)
         {
+            // It would be typical to throw when disposed, but we don't want to add any additional conditions
+            // under which we may throw.
+            if (_disposed) return null;
             try
             {
                 var request = new GraphQlRequest
@@ -194,7 +198,7 @@ namespace LaunchDarkly.Observability.Sampling
                     Query = GraphQlQuery,
                     Variables = new GetSamplingConfigVariables
                     {
-                        OrganizationVerboseId = organizationVerboseId
+                        OrganizationVerboseId = sdkKey
                     }
                 };
 
@@ -234,6 +238,35 @@ namespace LaunchDarkly.Observability.Sampling
             {
                 DebugLogger.DebugLog($"Error fetching sampling configuration: {ex}");
                 return null;
+            }
+        }
+
+
+
+        /// <summary>
+        /// Releases all resources used by the SamplingConfigClient
+        /// </summary>
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        /// <summary>
+        /// Releases the unmanaged resources used by the SamplingConfigClient and optionally releases the managed resources
+        /// </summary>
+        /// <param name="disposing">true to release both managed and unmanaged resources; false to release only unmanaged resources</param>
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!_disposed && disposing)
+            {
+                // Safely cast the HTTP client to IDisposable and dispose it if it implements the interface
+                if (_httpClient is IDisposable disposableHttpClient)
+                {
+                    disposableHttpClient.Dispose();
+                }
+
+                _disposed = true;
             }
         }
     }

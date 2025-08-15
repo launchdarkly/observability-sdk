@@ -38,6 +38,7 @@ namespace LaunchDarkly.Observability.Test
         [TearDown]
         public void TearDown()
         {
+            _client?.Dispose();
             _logAdapter?.Clear();
         }
 
@@ -555,6 +556,47 @@ namespace LaunchDarkly.Observability.Test
             Assert.That(result, Is.Not.Null);
             _mockHttpClient.Verify(
                 x => x.PostAsync(TestBackendUrl, It.IsAny<HttpContent>(), It.IsAny<CancellationToken>()), Times.Once);
+        }
+
+        [Test]
+        public void Dispose_ShouldDisposeHttpClientIfDisposable()
+        {
+            // Arrange
+            var mockDisposableHttpClient = new Mock<IHttpClient>();
+            mockDisposableHttpClient.As<IDisposable>();
+            
+            var client = new SamplingConfigClient(mockDisposableHttpClient.Object, TestBackendUrl);
+
+            // Act
+            client.Dispose();
+
+            // Assert
+            mockDisposableHttpClient.As<IDisposable>().Verify(x => x.Dispose(), Times.Once);
+        }
+
+        [Test]
+        public void Dispose_ShouldNotThrowWhenHttpClientIsNotDisposable()
+        {
+            // Arrange
+            var mockHttpClient = new Mock<IHttpClient>();
+            var client = new SamplingConfigClient(mockHttpClient.Object, TestBackendUrl);
+
+            // Act & Assert
+            Assert.DoesNotThrow(() => client.Dispose());
+        }
+
+        [Test]
+        public async Task GetSamplingConfigAsync_AfterDispose_ShouldReturnNull()
+        {
+            // Arrange
+            var client = new SamplingConfigClient(_mockHttpClient.Object, TestBackendUrl);
+            client.Dispose();
+
+            // Act
+            var result = await client.GetSamplingConfigAsync(TestOrganizationId);
+
+            // Assert
+            Assert.That(result, Is.Null);
         }
     }
 }

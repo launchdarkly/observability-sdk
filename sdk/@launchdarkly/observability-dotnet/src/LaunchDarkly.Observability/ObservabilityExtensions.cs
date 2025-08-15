@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using LaunchDarkly.Logging;
 using LaunchDarkly.Observability.Logging;
 using LaunchDarkly.Observability.Otel;
@@ -32,6 +33,23 @@ namespace LaunchDarkly.Observability
         private const string LogsPath = "/v1/logs";
         private const string MetricsPath = "/v1/metrics";
 
+        private static async Task GetSamplingConfigAsync(CustomSampler sampler, ObservabilityConfig config)
+        {
+            using (var samplingClient = new SamplingConfigClient(config.BackendUrl))
+            {
+                try
+                {
+                    var res = await samplingClient.GetSamplingConfigAsync(config.SdkKey).ConfigureAwait(false);
+                    if (res == null) return;
+                    sampler.SetConfig(res);
+                }
+                catch (Exception ex)
+                {
+                    DebugLogger.DebugLog($"Exception while getting sampling config: {ex}");
+                }
+            }
+        }
+
         private static IEnumerable<KeyValuePair<string, object>> GetResourceAttributes(ObservabilityConfig config)
         {
             var attrs = new List<KeyValuePair<string, object>>();
@@ -54,15 +72,8 @@ namespace LaunchDarkly.Observability
 
             var sampler = new CustomSampler();
 
-            var samplingConfigClient = new SamplingConfigClient(config.BackendUrl);
-            samplingConfigClient.GetSamplingConfigAsync(config.SdkKey).ContinueWith(res =>
-            {
-                if (res.IsCompleted && res.Result != null)
-                {
-                    sampler.SetConfig(res.Result);
-                }
-                // If something went wrong, then the sampling config client will handle that.
-            });
+            // Asynchronously get sampling config.
+            _ = Task.Run(() => GetSamplingConfigAsync(sampler, config));
 
             var resourceBuilder = ResourceBuilder.CreateDefault();
             if (!string.IsNullOrWhiteSpace(config.ServiceName))
