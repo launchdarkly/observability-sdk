@@ -72,6 +72,13 @@ class MainActivity : ComponentActivity() {
                         ) {
                             Text("Trigger Stop Span")
                         }
+                        Button(
+                            onClick = {
+                                viewModel.triggerCrash()
+                            }
+                        ) {
+                            Text("Trigger Crash")
+                        }
                     }
                 }
             }

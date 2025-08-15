@@ -35,6 +35,9 @@ dependencies {
     implementation("io.opentelemetry.android.instrumentation:activity:0.11.0-alpha")
     implementation("io.opentelemetry.android:session:0.11.0-alpha")
 
+    // Android crash instrumentation
+    implementation("io.opentelemetry.android.instrumentation:crash:0.11.0-alpha")
+
     // Use JUnit Jupiter for testing.
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
