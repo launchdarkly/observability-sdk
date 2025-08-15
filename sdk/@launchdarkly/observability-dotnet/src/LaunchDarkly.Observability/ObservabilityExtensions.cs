@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using LaunchDarkly.Logging;
+using LaunchDarkly.Observability.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -41,8 +43,9 @@ namespace LaunchDarkly.Observability
         }
 
         internal static void AddLaunchDarklyObservabilityWithConfig(this IServiceCollection services,
-            ObservabilityConfig config)
+            ObservabilityConfig config, Logger logger = null)
         {
+            DebugLogger.SetLogger(logger);
             var resourceAttributes = GetResourceAttributes(config);
 
             var resourceBuilder = ResourceBuilder.CreateDefault();
