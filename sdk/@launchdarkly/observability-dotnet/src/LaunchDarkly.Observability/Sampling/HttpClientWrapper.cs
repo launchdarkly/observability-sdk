@@ -21,7 +21,8 @@ namespace LaunchDarkly.Observability.Sampling
         }
 
         /// <inheritdoc />
-        public Task<HttpResponseMessage> PostAsync(string requestUri, HttpContent content, CancellationToken cancellationToken = default)
+        public Task<HttpResponseMessage> PostAsync(string requestUri, HttpContent content,
+            CancellationToken cancellationToken = default)
         {
             return _httpClient.PostAsync(requestUri, content, cancellationToken);
         }
