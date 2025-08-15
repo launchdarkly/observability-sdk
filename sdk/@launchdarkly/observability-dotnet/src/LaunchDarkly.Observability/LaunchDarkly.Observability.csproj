@@ -28,6 +28,8 @@
   <!-- Allow the testing project to access internals. -->
   <ItemGroup Condition="'$(Configuration)'!='Release'">
     <InternalsVisibleTo Include="LaunchDarkly.Observability.Tests" />
+    <!-- Dynamically generated assembly used by Moq. Required for mocking in unit tests. -->
+    <InternalsVisibleTo Include="DynamicProxyGenAssembly2"/>
   </ItemGroup>
 
   <PropertyGroup Condition="'$(Configuration)'=='Release' And '$(SKIP_SIGNING)'!='true'">

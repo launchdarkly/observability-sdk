@@ -73,7 +73,7 @@ namespace LaunchDarkly.Observability
         {
             if (_services == null || _config == null) return;
             var config = _config.BuildConfig(metadata.Credential);
-            _services.AddLaunchDarklyObservabilityWithConfig(config);
+            _services.AddLaunchDarklyObservabilityWithConfig(config, client.GetLogger());
         }
 
         /// <inheritdoc />
