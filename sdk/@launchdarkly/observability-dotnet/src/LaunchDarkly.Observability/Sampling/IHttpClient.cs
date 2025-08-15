@@ -16,6 +16,7 @@ namespace LaunchDarkly.Observability.Sampling
         /// <param name="content">The HTTP content to send</param>
         /// <param name="cancellationToken">Cancellation token for the operation</param>
         /// <returns>The HTTP response message</returns>
-        Task<HttpResponseMessage> PostAsync(string requestUri, HttpContent content, CancellationToken cancellationToken = default);
+        Task<HttpResponseMessage> PostAsync(string requestUri, HttpContent content,
+            CancellationToken cancellationToken = default);
     }
 }

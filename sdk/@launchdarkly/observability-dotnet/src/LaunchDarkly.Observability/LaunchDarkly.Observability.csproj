@@ -1,65 +1,65 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <!--x-release-please-start-version-->
-    <Version>0.0.0</Version>
-    <!--x-release-please-end-->
-    <Nullable>disable</Nullable>
-    <!-- The BUILDFRAMEWORKS variable allows us to override the target frameworks with a
-         single framework that we are testing; this allows us to test with older SDK
-         versions that would error out if they saw any newer target frameworks listed
-         here, even if we weren't running those. -->
-    <BuildFrameworks Condition="'$(BUILDFRAMEWORKS)' == ''">netstandard2.0;net471;net8.0</BuildFrameworks>
-    <TargetFrameworks>$(BUILDFRAMEWORKS)</TargetFrameworks>
-    <LangVersion>7.3</LangVersion>
-    
-    <Description>LaunchDarkly Observability for Server-Side .NET SDK</Description>
-    <Authors>LaunchDarkly</Authors>
-    <Owners>LaunchDarkly</Owners>
-    <Company>LaunchDarkly</Company>
-    <Copyright>Copyright 2025 Catamorphic, Co</Copyright>
-    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/launchdarkly/observability-sdk</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/launchdarkly/observability-sdk</RepositoryUrl>
+    <PropertyGroup>
+        <!--x-release-please-start-version-->
+        <Version>0.0.0</Version>
+        <!--x-release-please-end-->
+        <Nullable>disable</Nullable>
+        <!-- The BUILDFRAMEWORKS variable allows us to override the target frameworks with a
+             single framework that we are testing; this allows us to test with older SDK
+             versions that would error out if they saw any newer target frameworks listed
+             here, even if we weren't running those. -->
+        <BuildFrameworks Condition="'$(BUILDFRAMEWORKS)' == ''">netstandard2.0;net471;net8.0</BuildFrameworks>
+        <TargetFrameworks>$(BUILDFRAMEWORKS)</TargetFrameworks>
+        <LangVersion>7.3</LangVersion>
 
-    <!-- fail if XML comments are missing or invalid -->
-    <WarningsAsErrors>1570,1571,1572,1573,1574,1580,1581,1584,1591,1710,1711,1712</WarningsAsErrors>
-  </PropertyGroup>
+        <Description>LaunchDarkly Observability for Server-Side .NET SDK</Description>
+        <Authors>LaunchDarkly</Authors>
+        <Owners>LaunchDarkly</Owners>
+        <Company>LaunchDarkly</Company>
+        <Copyright>Copyright 2025 Catamorphic, Co</Copyright>
+        <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+        <PackageProjectUrl>https://github.com/launchdarkly/observability-sdk</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/launchdarkly/observability-sdk</RepositoryUrl>
 
-  <!-- Allow the testing project to access internals. -->
-  <ItemGroup Condition="'$(Configuration)'!='Release'">
-    <InternalsVisibleTo Include="LaunchDarkly.Observability.Tests" />
-    <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
-  </ItemGroup>
+        <!-- fail if XML comments are missing or invalid -->
+        <WarningsAsErrors>1570,1571,1572,1573,1574,1580,1581,1584,1591,1710,1711,1712</WarningsAsErrors>
+    </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)'=='Release' And '$(SKIP_SIGNING)'!='true'">
-    <AssemblyOriginatorKeyFile>../../../../../LaunchDarkly.snk</AssemblyOriginatorKeyFile>
-    <SignAssembly>true</SignAssembly>
-  </PropertyGroup>
+    <!-- Allow the testing project to access internals. -->
+    <ItemGroup Condition="'$(Configuration)'!='Release'">
+        <InternalsVisibleTo Include="LaunchDarkly.Observability.Tests"/>
+        <InternalsVisibleTo Include="DynamicProxyGenAssembly2"/>
+    </ItemGroup>
 
-  <ItemGroup>
-    <!-- Open Telemetry Dependencies -->
-    <PackageReference Include="OpenTelemetry" Version="1.12.0" />
-    <PackageReference Include="OpenTelemetry.Exporter.Console" Version="1.12.0" />
-    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.12.0" />
-    <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.12.0" />
-    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.12.0" />
-    <PackageReference Include="OpenTelemetry.Instrumentation.GrpcNetClient" Version="1.12.0-beta.1" />
-    <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.12.0" />
-    <PackageReference Include="OpenTelemetry.Instrumentation.Process" Version="1.12.0-beta.1" />
-    <PackageReference Include="OpenTelemetry.Instrumentation.Quartz" Version="1.12.0-beta.1" />
-    <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" Version="1.12.0" />
-    <PackageReference Include="OpenTelemetry.Instrumentation.SqlClient" Version="1.12.0-beta.2" />
-    <PackageReference Include="OpenTelemetry.Instrumentation.Wcf" Version="1.12.0-beta.1" />
-  </ItemGroup>
+    <PropertyGroup Condition="'$(Configuration)'=='Release' And '$(SKIP_SIGNING)'!='true'">
+        <AssemblyOriginatorKeyFile>../../../../../LaunchDarkly.snk</AssemblyOriginatorKeyFile>
+        <SignAssembly>true</SignAssembly>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <!-- LaunchDarkly Dependencies -->
-    <PackageReference Include="LaunchDarkly.ServerSdk" Version="[8.10.0,9.0.0)" />
-    <PackageReference Include="LaunchDarkly.ServerSdk.Telemetry" Version="[1.3.0,2.0.0)" />
-  </ItemGroup>
-  
-  <ItemGroup>
-    <!-- Temporary dependency until: https://github.com/open-telemetry/opentelemetry-dotnet/issues/5973 is resolved. -->
-    <PackageReference Include="System.Diagnostics.DiagnosticSource" Version="9.0.0" />
-  </ItemGroup>
+    <ItemGroup>
+        <!-- Open Telemetry Dependencies -->
+        <PackageReference Include="OpenTelemetry" Version="1.12.0"/>
+        <PackageReference Include="OpenTelemetry.Exporter.Console" Version="1.12.0"/>
+        <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.12.0"/>
+        <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.12.0"/>
+        <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.12.0"/>
+        <PackageReference Include="OpenTelemetry.Instrumentation.GrpcNetClient" Version="1.12.0-beta.1"/>
+        <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.12.0"/>
+        <PackageReference Include="OpenTelemetry.Instrumentation.Process" Version="1.12.0-beta.1"/>
+        <PackageReference Include="OpenTelemetry.Instrumentation.Quartz" Version="1.12.0-beta.1"/>
+        <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" Version="1.12.0"/>
+        <PackageReference Include="OpenTelemetry.Instrumentation.SqlClient" Version="1.12.0-beta.2"/>
+        <PackageReference Include="OpenTelemetry.Instrumentation.Wcf" Version="1.12.0-beta.1"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- LaunchDarkly Dependencies -->
+        <PackageReference Include="LaunchDarkly.ServerSdk" Version="[8.10.0,9.0.0)"/>
+        <PackageReference Include="LaunchDarkly.ServerSdk.Telemetry" Version="[1.3.0,2.0.0)"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- Temporary dependency until: https://github.com/open-telemetry/opentelemetry-dotnet/issues/5973 is resolved. -->
+        <PackageReference Include="System.Diagnostics.DiagnosticSource" Version="9.0.0"/>
+    </ItemGroup>
 </Project>
