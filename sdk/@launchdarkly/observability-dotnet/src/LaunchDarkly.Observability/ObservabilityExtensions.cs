@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using LaunchDarkly.Observability.Otel;
 using Microsoft.Extensions.DependencyInjection;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -15,8 +16,6 @@ namespace LaunchDarkly.Observability
     /// </summary>
     public static class ObservabilityExtensions
     {
-        // Used for metrics when a service name is not specified.
-        private const string DefaultMetricsName = "launchdarkly-plugin-default-metrics";
         private const OtlpExportProtocol ExportProtocol = OtlpExportProtocol.HttpProtobuf;
         private const int FlushIntervalMs = 5 * 1000;
         private const int MaxExportBatchSize = 10000;
@@ -32,10 +31,10 @@ namespace LaunchDarkly.Observability
 
             if (!string.IsNullOrWhiteSpace(config.Environment))
             {
-                attrs.Add(new KeyValuePair<string, object>("deployment.environment.name", config.Environment));
+                attrs.Add(new KeyValuePair<string, object>(AttributeNames.DeploymentEnvironment, config.Environment));
             }
 
-            attrs.Add(new KeyValuePair<string, object>("highlight.project_id", config.SdkKey));
+            attrs.Add(new KeyValuePair<string, object>(AttributeNames.ProjectId, config.SdkKey));
 
             return attrs;
         }
@@ -83,7 +82,7 @@ namespace LaunchDarkly.Observability
             }).WithMetrics(metrics =>
             {
                 metrics.SetResourceBuilder(resourceBuilder)
-                    .AddMeter(config.ServiceName ?? DefaultMetricsName)
+                    .AddMeter(config.ServiceName ?? DefaultNames.MeterName)
                     .AddRuntimeInstrumentation()
                     .AddProcessInstrumentation()
                     .AddHttpClientInstrumentation()
