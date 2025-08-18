@@ -1,5 +1,5 @@
 import { Attributes } from '@opentelemetry/api'
-import { ErrorUtils } from 'react-native'
+import type { ErrorUtils } from 'react-native'
 import type { ObservabilityClient } from '../client/ObservabilityClient'
 import {
 	ErrorDeduplicator,
@@ -118,28 +118,35 @@ export class ErrorInstrumentation {
 		const originalThen = Promise.prototype.then
 		const originalCatch = Promise.prototype.catch
 
+		// Store instance reference for use in the patched function
+		const instance = this;
+
 		// Patch Promise.prototype.then to catch unhandled rejections
-		Promise.prototype.then = function(onFulfilled, onRejected) {
+		Promise.prototype.then = function<TResult1 = any, TResult2 = never>(
+			onFulfilled?: ((value: any) => TResult1 | PromiseLike<TResult1>) | null | undefined,
+			onRejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | null | undefined
+		): Promise<TResult1 | TResult2> {
 			return originalThen.call(
 				this,
 				onFulfilled,
 				onRejected ||
-					((reason: any) => {
+					((reason: any): TResult2 | PromiseLike<TResult2> => {
 						// If no rejection handler is provided, treat as unhandled
 						setTimeout(() => {
-							if (this instanceof Promise) {
+							const promiseThis = this;
+							if (promiseThis instanceof Promise) {
 								const event = {
-									promise: this,
+									promise: promiseThis,
 									reason,
 									preventDefault: () => {},
 								}
-								this.handleUnhandledRejection?.(event)
+								instance.handleUnhandledRejection(event)
 							}
 						}, 0)
 						throw reason
-					}),
-			)
-		}.bind(this)
+					})
+			) as Promise<TResult1 | TResult2>
+		}
 	}
 
 	private handleUnhandledException(error: any, isFatal: boolean): void {
