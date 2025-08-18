@@ -7,16 +7,16 @@ import type {
 
 export type RecordOptions = CommonOptions & {
 	/**
-	 * Specifies where the backend of the app lives. If specified, Highlight will attach the
-	 * X-Highlight-Request header to outgoing requests whose destination URLs match a substring
+	 * Specifies where the backend of the app lives. If specified, the SDK will attach the
+	 * traceparent header to outgoing requests whose destination URLs match a substring
 	 * or regexp from this list, so that backend errors can be linked back to the session.
 	 * If 'true' is specified, all requests to the current domain will be matched.
 	 * @example tracingOrigins: ['localhost', /^\//, 'backend.myapp.com']
 	 */
 	tracingOrigins?: boolean | (string | RegExp)[]
 	/**
-	 * If set, Highlight will not record when your app is not visible (in the background).
-	 * By default, Highlight will record in the background.
+	 * If set, the SDK will not record when your app is not visible (in the background).
+	 * By default, the SDK will record in the background.
 	 * @default false
 	 */
 	disableBackgroundRecording?: boolean
@@ -28,12 +28,12 @@ export type RecordOptions = CommonOptions & {
 	 */
 	environment?: 'development' | 'staging' | 'production' | string
 	/**
-	 * Specifies how much data Highlight should redact during recording.
-	 * strict - Highlight will redact all text data on the page.
-	 * default - Highlight will redact text data on the page that is associated with personal identifiable data.
-	 * none - Highlight will not redact any text data on the page.
+	 * Specifies how much data the SDK should redact during recording.
+	 * strict - the SDK will redact all text data, input fields, images and videos on the page.
+	 * default - the SDK will redact text data on the page that resembles PII (based on regex patterns).
+	 * none - the SDK will not redact any text data on the page.
 	 * // Redacted text will be randomized. Instead of seeing "Hello World" in a recording, you will see "1fds1 j59a0".
-	 * @see {@link https://docs.highlight.run/docs/privacy} for more information.
+	 * @see {@link https://launchdarkly.com/docs/sdk/features/session-replay-config#privacy} for more information.
 	 */
 	privacySetting?: PrivacySettingOption
 
@@ -84,8 +84,8 @@ export type RecordOptions = CommonOptions & {
 	recordCrossOriginIframe?: boolean
 	integrations?: IntegrationOptions
 	/**
-	 * Specifies the keyboard shortcut to open the current session in Highlight.
-	 * @see {@link https://docs.highlight.run/session-shortcut} for more information.
+	 * Specifies the keyboard shortcut to open the current session replay.
+	 * @see {@link https://launchdarkly.com/docs/sdk/features/session-replay-config#retrieve-session-urls-on-the-client} for more information.
 	 */
 	sessionShortcut?: SessionShortcutOptions
 	/**
