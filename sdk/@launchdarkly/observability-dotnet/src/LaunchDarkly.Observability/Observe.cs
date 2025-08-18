@@ -62,6 +62,24 @@ namespace LaunchDarkly.Observability
             action(instance);
         }
 
+        private static KeyValuePair<string, object>[] ConvertToKeyValuePairs(IDictionary<string, object> dictionary)
+        {
+            if (dictionary == null || dictionary.Count == 0)
+            {
+                return null;
+            }
+
+            var result = new KeyValuePair<string, object>[dictionary.Count];
+            var index = 0;
+            foreach (var kvp in dictionary)
+            {
+                result[index] = new KeyValuePair<string, object>(kvp.Key, kvp.Value);
+                index++;
+            }
+
+            return result;
+        }
+
         public static void RecordError(Exception exception)
         {
             WithInstance(instance =>
@@ -82,16 +100,17 @@ namespace LaunchDarkly.Observability
             });
         }
 
-        public static void RecordMetric(string name, double value, TagList? tags = null)
+        public static void RecordMetric(string name, double value, IDictionary<string, object> attributes = null)
         {
             if (name == null) throw new ArgumentNullException(nameof(name), "Metric name cannot be null.");
 
             WithInstance(instance =>
             {
                 var gauge = instance.Gauges.GetOrAdd(name, (key) => instance.Meter.CreateGauge<double>(key));
-                if (tags.HasValue)
+                var keyValuePairs = ConvertToKeyValuePairs(attributes);
+                if (keyValuePairs != null)
                 {
-                    gauge.Record(value, tags.Value);
+                    gauge.Record(value, keyValuePairs);
                 }
                 else
                 {
@@ -100,16 +119,17 @@ namespace LaunchDarkly.Observability
             });
         }
 
-        public static void RecordCount(string name, long value, TagList? tags = null)
+        public static void RecordCount(string name, long value, IDictionary<string, object> attributes = null)
         {
             if (name == null) throw new ArgumentNullException(nameof(name), "Count name cannot be null.");
 
             WithInstance(instance =>
             {
                 var count = instance.Counters.GetOrAdd(name, (key) => instance.Meter.CreateCounter<long>(key));
-                if (tags.HasValue)
+                var keyValuePairs = ConvertToKeyValuePairs(attributes);
+                if (keyValuePairs != null)
                 {
-                    count.Add(value, tags.Value);
+                    count.Add(value, keyValuePairs);
                 }
                 else
                 {
@@ -118,12 +138,12 @@ namespace LaunchDarkly.Observability
             });
         }
 
-        public static void RecordIncr(string name, TagList? tags = null)
+        public static void RecordIncr(string name, IDictionary<string, object> attributes = null)
         {
-            RecordCount(name, 1, tags);
+            RecordCount(name, 1, attributes);
         }
 
-        public static void RecordHistogram(string name, double value, TagList? tags = null)
+        public static void RecordHistogram(string name, double value, IDictionary<string, object> attributes = null)
         {
             if (name == null) throw new ArgumentNullException(nameof(name), "Histogram name cannot be null.");
 
@@ -131,9 +151,10 @@ namespace LaunchDarkly.Observability
             {
                 var histogram =
                     instance.Histograms.GetOrAdd(name, (key) => instance.Meter.CreateHistogram<double>(key));
-                if (tags != null)
+                var keyValuePairs = ConvertToKeyValuePairs(attributes);
+                if (keyValuePairs != null)
                 {
-                    histogram.Record(value, tags.Value);
+                    histogram.Record(value, keyValuePairs);
                 }
                 else
                 {
@@ -142,7 +163,7 @@ namespace LaunchDarkly.Observability
             });
         }
 
-        public static void RecordUpDownCounter(string name, long delta, TagList? tags = null)
+        public static void RecordUpDownCounter(string name, long delta, IDictionary<string, object> attributes = null)
         {
             if (name == null) throw new ArgumentNullException(nameof(name), "UpDownCounter name cannot be null.");
 
@@ -151,9 +172,10 @@ namespace LaunchDarkly.Observability
                 var upDownCounter =
                     instance.UpDownCounters.GetOrAdd(name, (key) => instance.Meter.CreateUpDownCounter<long>(key));
 
-                if (tags != null)
+                var keyValuePairs = ConvertToKeyValuePairs(attributes);
+                if (keyValuePairs != null)
                 {
-                    upDownCounter.Add(delta, tags.Value);
+                    upDownCounter.Add(delta, keyValuePairs);
                 }
                 else
                 {
@@ -166,7 +188,8 @@ namespace LaunchDarkly.Observability
         {
         }
 
-        public static Activity StartActivity(string name, ActivityKind kind = ActivityKind.Internal, IDictionary<string, object> attributes = null)
+        public static Activity StartActivity(string name, ActivityKind kind = ActivityKind.Internal,
+            IDictionary<string, object> attributes = null)
         {
             var instance = GetInstance();
             if (instance == null) return null;
@@ -176,6 +199,7 @@ namespace LaunchDarkly.Observability
             {
                 activity?.AddTag(attribute.Key, attribute.Value);
             }
+
             // TODO: Do we need to log?
             return null;
         }
