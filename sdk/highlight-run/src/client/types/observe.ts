@@ -8,24 +8,24 @@ import type { EventName } from '@opentelemetry/instrumentation-user-interaction'
 
 export type ObserveOptions = CommonOptions & {
 	/**
-	 * Specifies where the backend of the app lives. If specified, Highlight will attach the
-	 * X-Highlight-Request header to outgoing requests whose destination URLs match a substring
+	 * Specifies where the backend of the app lives. If specified, the SDK will attach the
+	 * traceparent header to outgoing requests whose destination URLs match a substring
 	 * or regexp from this list, so that backend errors can be linked back to the session.
 	 * If 'true' is specified, all requests to the current domain will be matched.
 	 * @example tracingOrigins: ['localhost', /^\//, 'backend.myapp.com']
 	 */
 	tracingOrigins?: boolean | (string | RegExp)[]
 	/**
-	 * Specifies how and what Highlight records from network requests and responses.
+	 * Specifies how and what the SDK records from network requests and responses.
 	 */
 	networkRecording?: boolean | NetworkRecordingOptions
 	/**
-	 * Specifies whether Highlight will record console messages.
+	 * Specifies whether the SDK will record console messages.
 	 * @default false
 	 */
 	disableConsoleRecording?: boolean
 	/**
-	 * Specifies whether Highlight will report `console.error` invocations as Highlight Errors.
+	 * Specifies whether the SDK will report `console.error` invocations as Errors.
 	 * @default false
 	 */
 	reportConsoleErrors?: boolean
