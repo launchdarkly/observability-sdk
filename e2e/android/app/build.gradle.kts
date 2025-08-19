@@ -28,8 +28,8 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
     }
     kotlinOptions {
         jvmTarget = "11"
@@ -45,12 +45,14 @@ dependencies {
     // Uncomment to use the publicly released version (note this may be behind branch/main)
     // implementation("com.launchdarkly:launchdarkly-observability-android:0.2.0")
 
-    implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.9.0")
+    implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.9.0") {
+        exclude(group = "com.squareup.okhttp3")
+    }
 
-    implementation("io.opentelemetry:opentelemetry-api:1.51.0")
-    implementation("io.opentelemetry:opentelemetry-sdk:1.51.0")
-    implementation("io.opentelemetry:opentelemetry-exporter-otlp:1.51.0")
-    implementation("io.opentelemetry:opentelemetry-sdk-metrics:1.51.0")
+    implementation("io.opentelemetry:opentelemetry-api:1.53.0")
+    implementation("io.opentelemetry:opentelemetry-sdk:1.53.0")
+    implementation("io.opentelemetry:opentelemetry-exporter-otlp:1.53.0")
+    implementation("io.opentelemetry:opentelemetry-sdk-metrics:1.53.0")
 
     implementation("com.google.android.material:material:1.12.0")
     implementation(libs.androidx.core.ktx)

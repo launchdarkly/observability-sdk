@@ -16,27 +16,37 @@ allprojects {
 }
 
 dependencies {
-    implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.9.0")
+    implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.9.0") {
+        exclude(group = "com.squareup.okhttp3")
+    }
     implementation("com.jakewharton.timber:timber:5.0.1")
 
     // TODO: revise these versions to be as old as usable for compatibility
-    implementation("io.opentelemetry:opentelemetry-api:1.51.0")
-    implementation("io.opentelemetry:opentelemetry-sdk:1.51.0")
-    implementation("io.opentelemetry:opentelemetry-exporter-otlp:1.51.0")
-    implementation("io.opentelemetry:opentelemetry-exporter-logging-otlp:1.51.0")
-    implementation("io.opentelemetry:opentelemetry-sdk-metrics:1.51.0")
-    implementation("io.opentelemetry:opentelemetry-sdk-logs:1.51.0")
+    implementation("io.opentelemetry:opentelemetry-api:1.53.0")
+    implementation("io.opentelemetry:opentelemetry-sdk:1.53.0")
+    implementation("io.opentelemetry:opentelemetry-exporter-otlp:1.53.0")
+    implementation("io.opentelemetry:opentelemetry-exporter-logging-otlp:1.53.0")
+    implementation("io.opentelemetry:opentelemetry-sdk-metrics:1.53.0")
+    implementation("io.opentelemetry:opentelemetry-sdk-logs:1.53.0")
 
     // TODO: Evaluate risks associated with incubator APIs
-    implementation("io.opentelemetry:opentelemetry-api-incubator:1.51.0-alpha")
+    implementation("io.opentelemetry:opentelemetry-api-incubator:1.53.0-alpha")
 
     // Android instrumentation
-    implementation("io.opentelemetry.android:core:0.11.0-alpha")
-    implementation("io.opentelemetry.android.instrumentation:activity:0.11.0-alpha")
-    implementation("io.opentelemetry.android:session:0.11.0-alpha")
+    implementation("io.opentelemetry.android:core:0.13.0-alpha")
+    implementation("io.opentelemetry.android:android-agent:0.13.0-alpha")
+
+    // Android activity instrumentation
+    implementation("io.opentelemetry.android.instrumentation:activity:0.13.0-alpha")
+
+    // Android session tracking
+    implementation("io.opentelemetry.android:session:0.13.0-alpha")
 
     // Android crash instrumentation
-    implementation("io.opentelemetry.android.instrumentation:crash:0.11.0-alpha")
+    implementation("io.opentelemetry.android.instrumentation:crash:0.13.0-alpha")
+
+    // Android click instrumentation for Compose
+    implementation("io.opentelemetry.android.instrumentation:compose-click:0.13.0-alpha")
 
     // Use JUnit Jupiter for testing.
     testImplementation("org.junit.jupiter:junit-jupiter")
@@ -47,7 +57,7 @@ val releaseVersion = version.toString()
 
 android {
     namespace = "com.launchdarkly.observability"
-    compileSdk = 30
+    compileSdk = 34
 
     buildFeatures {
         buildConfig = true

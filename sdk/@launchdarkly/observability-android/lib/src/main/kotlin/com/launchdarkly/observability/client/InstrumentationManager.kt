@@ -5,8 +5,11 @@ import com.launchdarkly.logging.LDLogger
 import com.launchdarkly.observability.api.Options
 import com.launchdarkly.observability.interfaces.Metric
 import io.opentelemetry.android.OpenTelemetryRum
+import io.opentelemetry.android.agent.session.SessionConfig
 import io.opentelemetry.android.config.OtelRumConfig
+import io.opentelemetry.android.internal.services.Services
 import io.opentelemetry.android.session.SessionConfig
+import io.opentelemetry.android.session.SessionProvider
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Logger
 import io.opentelemetry.api.logs.Severity
@@ -51,6 +54,7 @@ class InstrumentationManager(
             SessionConfig(backgroundInactivityTimeout = options.sessionBackgroundTimeout)
         )
         otelRUM = OpenTelemetryRum.builder(application, otelRumConfig)
+            .setSessionProvider()
             .addLoggerProviderCustomizer { sdkLoggerProviderBuilder, application ->
                 val logExporter = OtlpHttpLogRecordExporter.builder()
                     .setEndpoint(options.otlpEndpoint + LOGS_PATH)
@@ -135,7 +139,6 @@ class InstrumentationManager(
         otelTracer = otelRUM.openTelemetry.tracerProvider.get(INSTRUMENTATION_SCOPE_NAME)
     }
 
-
     fun recordMetric(metric: Metric) {
         otelMeter.gaugeBuilder(metric.name).build()
             .set(metric.value, metric.attributes)
@@ -192,5 +195,14 @@ class InstrumentationManager(
             .setParent(Context.current().with(Span.current()))
             .setAllAttributes(attributes)
             .startSpan()
+    }
+
+    private fun createSessionProvider(
+        application: Application,
+        sessionConfig: SessionConfig,
+    ): SessionProvider {
+        val timeoutHandler = SessionIdTimeoutHandler(sessionConfig)
+        Services.get(application).appLifecycle.registerListener(timeoutHandler)
+        return SessionManager.create(timeoutHandler, sessionConfig)
     }
 }
