@@ -96,6 +96,12 @@ namespace LaunchDarkly.Observability
         /// <param name="attributes">any additional attributes to add to the exception event</param>
         public static void RecordException(Exception exception, IDictionary<string, object> attributes = null)
         {
+            if (exception == null)
+            {
+                // Silently return if exception is null
+                return;
+            }
+            
             WithInstance(instance =>
             {
                 var activity = Activity.Current;
@@ -227,10 +233,12 @@ namespace LaunchDarkly.Observability
             var instance = GetInstance();
             if (instance == null) return null;
             var activity = instance.ActivitySource.StartActivity(name, kind);
-            if (attributes == null) return null;
-            foreach (var attribute in attributes)
+            if (attributes != null)
             {
-                activity?.AddTag(attribute.Key, attribute.Value);
+                foreach (var attribute in attributes)
+                {
+                    activity?.AddTag(attribute.Key, attribute.Value);
+                }
             }
 
             return activity;
