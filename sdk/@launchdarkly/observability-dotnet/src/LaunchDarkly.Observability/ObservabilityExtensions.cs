@@ -1,7 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Threading;
+using System.Threading.Tasks;
 using LaunchDarkly.Observability.Otel;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using OpenTelemetry;
@@ -24,6 +29,26 @@ namespace LaunchDarkly.Observability
         private const string TracesPath = "/v1/traces";
         private const string LogsPath = "/v1/logs";
         private const string MetricsPath = "/v1/metrics";
+
+        private class LdObservabilityHostedService : IHostedService
+        {
+            private ObservabilityConfig _config;
+            private ActivitySource _activitySource;
+            private ILoggerProvider _loggerProvider;
+
+            public LdObservabilityHostedService(ObservabilityConfig config, IServiceProvider provider)
+            {
+                _loggerProvider = provider.GetService<ILoggerProvider>();
+                _config = config;
+            }
+            public Task StartAsync(CancellationToken cancellationToken)
+            {
+                Observe.Initialize(_config, _loggerProvider);
+                return Task.CompletedTask;
+            }
+
+            public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+        }
 
         private static IEnumerable<KeyValuePair<string, object>> GetResourceAttributes(ObservabilityConfig config)
         {
@@ -60,6 +85,7 @@ namespace LaunchDarkly.Observability
                     .AddQuartzInstrumentation()
                     .AddAspNetCoreInstrumentation(options => { options.RecordException = true; })
                     .AddSqlClientInstrumentation(options => { options.SetDbStatementForText = true; })
+                    .AddSource(config.ServiceName ?? DefaultNames.ActivitySourceName)
                     .AddOtlpExporter(options =>
                     {
                         options.Endpoint = new Uri(config.OtlpEndpoint + TracesPath);
@@ -94,6 +120,10 @@ namespace LaunchDarkly.Observability
                         Protocol = ExportProtocol
                     })));
             });
+            
+            // Attach a hosted service which will allow us to get a logger provider instance from the built
+            // serice collection.
+            services.AddHostedService((serviceProvider) => new  LdObservabilityHostedService(config, serviceProvider));
         }
 
         /// <summary>

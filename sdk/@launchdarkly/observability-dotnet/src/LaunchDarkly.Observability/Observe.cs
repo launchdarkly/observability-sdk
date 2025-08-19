@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using System.Threading;
-using OpenTelemetry.Metrics;
+using Microsoft.Extensions.Logging;
 
 namespace LaunchDarkly.Observability
 {
@@ -16,6 +16,7 @@ namespace LaunchDarkly.Observability
         {
             public readonly Meter Meter;
             public readonly ActivitySource ActivitySource;
+            public readonly ILogger Logger;
 
             public readonly ConcurrentDictionary<string, Counter<long>> Counters =
                 new ConcurrentDictionary<string, Counter<long>>();
@@ -29,20 +30,24 @@ namespace LaunchDarkly.Observability
             public readonly ConcurrentDictionary<string, UpDownCounter<long>> UpDownCounters =
                 new ConcurrentDictionary<string, UpDownCounter<long>>();
 
-            internal Instance(ObservabilityConfig config)
+            internal Instance(ObservabilityConfig config, ILoggerProvider loggerProvider)
             {
                 Meter = new Meter(config.ServiceName ?? DefaultNames.MeterName,
                     config.ServiceVersion);
                 ActivitySource = new ActivitySource(config.ServiceName ?? DefaultNames.ActivitySourceName,
                     config.ServiceVersion);
+                if (loggerProvider != null)
+                {
+                    Logger = loggerProvider.CreateLogger(config.ServiceName ?? DefaultNames.DefaultLoggerName);
+                }
             }
         }
 
         private static Instance _instance;
 
-        internal static void Initialize(ObservabilityConfig config)
+        internal static void Initialize(ObservabilityConfig config, ILoggerProvider loggerProvider)
         {
-            Volatile.Write(ref _instance, new Instance(config));
+            Volatile.Write(ref _instance, new Instance(config, loggerProvider));
         }
 
         private static Instance GetInstance()
@@ -80,7 +85,16 @@ namespace LaunchDarkly.Observability
             return result;
         }
 
-        public static void RecordError(Exception exception)
+        /// <summary>
+        /// Record an error in the active activity.
+        /// <para>
+        /// If there is not an active activity, then a new activity will be started and the error will be recorded
+        /// into the activity.
+        /// </para>
+        /// </summary>
+        /// <param name="exception">the exception to record</param>
+        /// <param name="attributes">any additional attributes to add to the exception event</param>
+        public static void RecordException(Exception exception, IDictionary<string, object> attributes = null)
         {
             WithInstance(instance =>
             {
@@ -92,7 +106,16 @@ namespace LaunchDarkly.Observability
                     created = true;
                 }
 
-                activity?.AddException(exception);
+                if (attributes != null)
+                {
+                    var tags = new TagList(ConvertToKeyValuePairs(attributes));
+                    activity?.AddException(exception, tags);
+                }
+                else
+                {
+                    activity?.AddException(exception);
+                }
+
                 if (created)
                 {
                     activity?.Stop();
@@ -184,8 +207,18 @@ namespace LaunchDarkly.Observability
             });
         }
 
-        public static void RecordLog(string message, string severityText, IDictionary<string, object> attributes)
+        public static void RecordLog(string message, LogLevel level, IDictionary<string, object> attributes)
         {
+            WithInstance(instance =>
+            {
+                if (instance.Logger == null) return;
+                if (attributes != null && attributes.Count > 0)
+                    instance.Logger.Log(level, new EventId(), attributes, null,
+                        (objects, exception) => message);
+                else
+                    instance.Logger.Log<object>(level, new EventId(), null, null,
+                        (objects, exception) => message);
+            });
         }
 
         public static Activity StartActivity(string name, ActivityKind kind = ActivityKind.Internal,
@@ -200,8 +233,7 @@ namespace LaunchDarkly.Observability
                 activity?.AddTag(attribute.Key, attribute.Value);
             }
 
-            // TODO: Do we need to log?
-            return null;
+            return activity;
         }
     }
 }
