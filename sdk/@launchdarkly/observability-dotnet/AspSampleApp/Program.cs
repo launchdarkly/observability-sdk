@@ -16,7 +16,6 @@ var config = Configuration.Builder(Environment.GetEnvironmentVariable("LAUNCHDAR
         .Add(ObservabilityPlugin.Builder(builder.Services)
             .WithServiceName("ryan-test-service")
             .WithServiceVersion("0.0.0")
-            .WithOtlpEndpoint("http://localhost:4318")
             .Build())).Build();
 
 // Building the LdClient with the Observability plugin. This line will add services to the web application.
