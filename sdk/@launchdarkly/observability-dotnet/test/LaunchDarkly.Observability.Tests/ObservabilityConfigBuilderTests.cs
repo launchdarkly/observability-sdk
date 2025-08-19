@@ -97,5 +97,16 @@ namespace LaunchDarkly.Observability.Test
                 Assert.That(first.SdkKey, Is.EqualTo("my-sdk-key"));
             });
         }
+
+        [Test]
+        public void Build_WithExtendedTracingConfig()
+        {
+            // TODO: Add test assertions.
+            ObservabilityConfig.Builder()
+                .WithExtendedTracingConfig(builder =>
+                {
+                    builder.AddSource("my-custom-activity-source");
+                });
+        }
     }
 }

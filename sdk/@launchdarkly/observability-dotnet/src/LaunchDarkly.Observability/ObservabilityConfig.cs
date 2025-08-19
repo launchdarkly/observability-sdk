@@ -1,4 +1,7 @@
 using System;
+using OpenTelemetry.Logs;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Trace;
 
 namespace LaunchDarkly.Observability
 {
@@ -40,6 +43,21 @@ namespace LaunchDarkly.Observability
         /// The LaunchDarkly SDK key.
         /// </summary>
         public string SdkKey { get; }
+        
+        /// <summary>
+        /// Function which extends the configuration of the tracer provider.
+        /// </summary>
+        public Action<TracerProviderBuilder> ExtendedTracerConfiguration { get; }
+        
+        /// <summary>
+        /// Function which extends the configuration of the logger provider.
+        /// </summary>
+        public Action<LoggerProviderBuilder> ExtendedLoggerConfiguration { get; }
+        
+        /// <summary>
+        /// Function which extends the configuration of the meter provider.
+        /// </summary>
+        public Action<MeterProviderBuilder> ExtendedMeterConfiguration { get; }
 
         internal ObservabilityConfig(
             string otlpEndpoint,
@@ -47,7 +65,11 @@ namespace LaunchDarkly.Observability
             string serviceName,
             string environment,
             string serviceVersion,
-            string sdkKey)
+            string sdkKey,
+            Action<TracerProviderBuilder> extendedTracerConfiguration,
+            Action<LoggerProviderBuilder> extendedLoggerConfiguration,
+            Action<MeterProviderBuilder> extendedMeterConfiguration
+            )
         {
             OtlpEndpoint = otlpEndpoint;
             BackendUrl = backendUrl;
@@ -55,6 +77,9 @@ namespace LaunchDarkly.Observability
             Environment = environment;
             ServiceVersion = serviceVersion;
             SdkKey = sdkKey;
+            ExtendedTracerConfiguration = extendedTracerConfiguration;
+            ExtendedLoggerConfiguration = extendedLoggerConfiguration;
+            ExtendedMeterConfiguration = extendedMeterConfiguration;
         }
 
         /// <summary>

@@ -69,6 +69,7 @@ namespace LaunchDarkly.Observability
                         options.BatchExportProcessorOptions.MaxQueueSize = MaxQueueSize;
                         options.BatchExportProcessorOptions.ScheduledDelayMilliseconds = FlushIntervalMs;
                     });
+                config.ExtendedTracerConfiguration?.Invoke(tracing);
             }).WithLogging(logging =>
             {
                 logging.SetResourceBuilder(resourceBuilder)
@@ -80,6 +81,7 @@ namespace LaunchDarkly.Observability
                         options.BatchExportProcessorOptions.MaxQueueSize = MaxQueueSize;
                         options.BatchExportProcessorOptions.ScheduledDelayMilliseconds = FlushIntervalMs;
                     });
+                config.ExtendedLoggerConfiguration?.Invoke(logging);
             }).WithMetrics(metrics =>
             {
                 metrics.SetResourceBuilder(resourceBuilder)
@@ -94,6 +96,7 @@ namespace LaunchDarkly.Observability
                         Endpoint = new Uri(config.OtlpEndpoint + MetricsPath),
                         Protocol = ExportProtocol
                     })));
+                config.ExtendedMeterConfiguration?.Invoke(metrics);
             });
         }
 
