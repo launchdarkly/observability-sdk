@@ -17,8 +17,29 @@ go get github.com/launchdarkly/observability-sdk/go
 Install the plugin when configuring your LaunchDarkly SDK.
 
 ```go
-// TODO: Add code sample for Go observability plugin configuration
+import (
+	ld "github.com/launchdarkly/go-server-sdk/v7"
+	"github.com/launchdarkly/go-server-sdk/v7/ldplugins"
+	ldobserve "github.com/launchdarkly/observability-sdk/go"
+)
+
+func main() {
+	client, _ := ld.MakeCustomClient(os.Getenv("LAUNCHDARKLY_SDK_KEY"),
+		ld.Config{
+			Plugins: []ldplugins.Plugin{
+				ldobserve.NewObservabilityPlugin(
+					ldobserve.WithEnvironment("test"),
+					ldobserve.WithServiceName("go-plugin-example"),
+					ldobserve.WithServiceVersion(version.Commit),
+				),
+			},
+		}, 5*time.Second)
+
+		// Implementation specific code.
+}
 ```
+
+Example applications are available here: https://github.com/launchdarkly/observability-sdk/tree/main/e2e/go-plugin
 
 LaunchDarkly overview
 -------------------------
