@@ -210,7 +210,7 @@ namespace LaunchDarkly.Observability.Test
 
             Observe.RecordException(exception);
 
-            // Assert - Verify an activity was created and exported
+            // Verify an activity was created and exported
             Assert.That(_exportedActivities.Count, Is.GreaterThan(0), "Should have created and exported an activity");
             var createdActivity = _exportedActivities.Last();
             Assert.That(createdActivity, Is.Not.Null);
@@ -224,7 +224,6 @@ namespace LaunchDarkly.Observability.Test
         [Test]
         public void RecordException_WithAttributes_AddsAttributesToException()
         {
-            // Arrange
             Observe.Initialize(_config, _loggerProvider);
             var exception = new InvalidOperationException("Test exception");
             var attributes = new Dictionary<string, object>
@@ -451,13 +450,10 @@ namespace LaunchDarkly.Observability.Test
         [Test]
         public void StartActivity_WithValidName_ReturnsActivity()
         {
-            // Arrange
             Observe.Initialize(_config, _loggerProvider);
 
-            // Act
             using (var activity = Observe.StartActivity("test-operation"))
             {
-                // Assert
                 Assert.That(activity, Is.Not.Null, "Activity should be created when ActivityListener is registered");
                 Assert.That(activity.DisplayName, Is.EqualTo("test-operation"));
                 Assert.That(activity.Source.Name, Is.EqualTo("test-service"));
@@ -467,7 +463,6 @@ namespace LaunchDarkly.Observability.Test
         [Test]
         public void StartActivity_WithKindAndAttributes_ReturnsActivityWithAttributes()
         {
-            // Arrange
             Observe.Initialize(_config, _loggerProvider);
             var attributes = new Dictionary<string, object>
             {
@@ -475,10 +470,8 @@ namespace LaunchDarkly.Observability.Test
                 ["table.name"] = "users"
             };
 
-            // Act
             using (var activity = Observe.StartActivity("db-query", ActivityKind.Client, attributes))
             {
-                // Assert
                 Assert.That(activity, Is.Not.Null, "Activity should be created when ActivityListener is registered");
                 Assert.That(activity.DisplayName, Is.EqualTo("db-query"));
                 Assert.That(activity.Kind, Is.EqualTo(ActivityKind.Client));
@@ -492,25 +485,18 @@ namespace LaunchDarkly.Observability.Test
         [Test]
         public void StartActivity_BeforeInitialization_ReturnsNull()
         {
-            // Act
             var activity = Observe.StartActivity("test-operation");
-
-            // Assert
             Assert.That(activity, Is.Null);
         }
 
         [Test]
         public void StartActivity_WithNullAttributes_DoesNotThrow()
         {
-            // Arrange
             Observe.Initialize(_config, _loggerProvider);
-
-            // Act & Assert
             Assert.DoesNotThrow(() =>
             {
                 using (var activity = Observe.StartActivity("test-operation", ActivityKind.Internal, null))
                 {
-                    // Activity usage
                 }
             });
         }
@@ -522,14 +508,10 @@ namespace LaunchDarkly.Observability.Test
         [Test]
         public void RecordLog_WithMessage_LogsMessageCorrectly()
         {
-            // Arrange
             Observe.Initialize(_config, _loggerProvider);
             var message = "Test log message";
 
-            // Act
             Observe.RecordLog(message, LogLevel.Information, null);
-
-            // Assert
             var logger = _loggerProvider.Loggers.FirstOrDefault();
             Assert.That(logger, Is.Not.Null);
             Assert.That(logger.LogEntries.Count, Is.EqualTo(1));
@@ -540,7 +522,6 @@ namespace LaunchDarkly.Observability.Test
         [Test]
         public void RecordLog_WithAttributes_LogsMessageWithAttributes()
         {
-            // Arrange
             Observe.Initialize(_config, _loggerProvider);
             var message = "Test log with attributes";
             var attributes = new Dictionary<string, object>
@@ -549,10 +530,7 @@ namespace LaunchDarkly.Observability.Test
                 ["request.id"] = "abc-def-ghi"
             };
 
-            // Act
             Observe.RecordLog(message, LogLevel.Warning, attributes);
-
-            // Assert
             var logger = _loggerProvider.Loggers.FirstOrDefault();
             Assert.That(logger, Is.Not.Null);
             Assert.That(logger.LogEntries.Count, Is.EqualTo(1));
@@ -564,16 +542,11 @@ namespace LaunchDarkly.Observability.Test
         [Test]
         public void RecordLog_WithDifferentLogLevels_LogsAtCorrectLevel()
         {
-            // Arrange
             Observe.Initialize(_config, _loggerProvider);
-
-            // Act
             Observe.RecordLog("Debug message", LogLevel.Debug, null);
             Observe.RecordLog("Info message", LogLevel.Information, null);
             Observe.RecordLog("Warning message", LogLevel.Warning, null);
             Observe.RecordLog("Error message", LogLevel.Error, null);
-
-            // Assert
             var logger = _loggerProvider.Loggers.FirstOrDefault();
             Assert.That(logger, Is.Not.Null);
             Assert.That(logger.LogEntries.Count, Is.EqualTo(4));
@@ -586,24 +559,17 @@ namespace LaunchDarkly.Observability.Test
         [Test]
         public void RecordLog_WithNullLoggerProvider_DoesNotThrow()
         {
-            // Arrange
             Observe.Initialize(_config, null);
-
-            // Act & Assert
             Assert.DoesNotThrow(() => Observe.RecordLog("Test message", LogLevel.Information, null));
         }
 
         [Test]
         public void RecordLog_WithEmptyAttributes_LogsCorrectly()
         {
-            // Arrange
             Observe.Initialize(_config, _loggerProvider);
             var emptyAttributes = new Dictionary<string, object>();
 
-            // Act
             Observe.RecordLog("Test message", LogLevel.Information, emptyAttributes);
-
-            // Assert
             var logger = _loggerProvider.Loggers.FirstOrDefault();
             Assert.That(logger, Is.Not.Null);
             Assert.That(logger.LogEntries.Count, Is.EqualTo(1));
@@ -612,7 +578,6 @@ namespace LaunchDarkly.Observability.Test
         [Test]
         public void RecordLog_BeforeInitialization_DoesNotThrow()
         {
-            // Act & Assert
             Assert.DoesNotThrow(() => Observe.RecordLog("Test message", LogLevel.Information, null));
         }
 
@@ -624,10 +589,9 @@ namespace LaunchDarkly.Observability.Test
         public void ConvertToKeyValuePairs_WithNullDictionary_ReturnsNull()
         {
             // This tests the private method indirectly through public methods
-            // Arrange
             Observe.Initialize(_config, _loggerProvider);
 
-            // Act & Assert - Should not throw with null attributes
+            // Should not throw with null attributes
             Assert.DoesNotThrow(() => Observe.RecordMetric("test.metric", 42.0, null));
             Assert.DoesNotThrow(() => Observe.RecordCount("test.counter", 1, null));
             Assert.DoesNotThrow(() => Observe.RecordHistogram("test.histogram", 150.0, null));
@@ -638,11 +602,10 @@ namespace LaunchDarkly.Observability.Test
         public void ConvertToKeyValuePairs_WithEmptyDictionary_ReturnsNull()
         {
             // This tests the private method indirectly through public methods
-            // Arrange
             Observe.Initialize(_config, _loggerProvider);
             var emptyAttributes = new Dictionary<string, object>();
 
-            // Act & Assert - Should not throw with empty attributes
+            // Should not throw with empty attributes
             Assert.DoesNotThrow(() => Observe.RecordMetric("test.metric", 42.0, emptyAttributes));
             Assert.DoesNotThrow(() => Observe.RecordCount("test.counter", 1, emptyAttributes));
             Assert.DoesNotThrow(() => Observe.RecordHistogram("test.histogram", 150.0, emptyAttributes));
@@ -656,32 +619,30 @@ namespace LaunchDarkly.Observability.Test
         [Test]
         public void RecordMetric_WithSameName_ReusesGaugeInstance()
         {
-            // Arrange
             Observe.Initialize(_config, _loggerProvider);
             var metricName = "cpu.usage";
 
-            // Act - Record multiple values for the same metric
+            // Record multiple values for the same metric
             Assert.DoesNotThrow(() => Observe.RecordMetric(metricName, 50.0));
             Assert.DoesNotThrow(() => Observe.RecordMetric(metricName, 75.0));
             Assert.DoesNotThrow(() => Observe.RecordMetric(metricName, 90.0));
 
-            // Assert - Should not throw, indicating proper reuse of gauge instance
+            // Should not throw, indicating proper reuse of gauge instance
             Assert.Pass("Multiple metrics with same name recorded successfully");
         }
 
         [Test]
         public void RecordCount_WithSameName_ReusesCounterInstance()
         {
-            // Arrange
             Observe.Initialize(_config, _loggerProvider);
             var counterName = "requests.total";
 
-            // Act - Record multiple values for the same counter
+            // Record multiple values for the same counter
             Assert.DoesNotThrow(() => Observe.RecordCount(counterName, 1));
             Assert.DoesNotThrow(() => Observe.RecordCount(counterName, 5));
             Assert.DoesNotThrow(() => Observe.RecordCount(counterName, 10));
 
-            // Assert - Should not throw, indicating proper reuse of counter instance
+            // Should not throw, indicating proper reuse of counter instance
             Assert.Pass("Multiple counters with same name recorded successfully");
         }
 
