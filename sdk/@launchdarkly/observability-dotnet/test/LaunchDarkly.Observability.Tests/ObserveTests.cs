@@ -5,7 +5,7 @@ using System.Linq;
 using System.Reflection;
 using Microsoft.Extensions.Logging;
 using NUnit.Framework;
-using OpenTelemetry;
+using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 
@@ -54,7 +54,7 @@ namespace LaunchDarkly.Observability.Test
                     EventId = eventId,
                     State = state,
                     Exception = exception,
-                    Message = formatter?.Invoke(state, exception)
+                    Message = formatter.Invoke(state, exception)
                 });
             }
         }
@@ -71,8 +71,10 @@ namespace LaunchDarkly.Observability.Test
         private TestLoggerProvider _loggerProvider;
         private ObservabilityConfig _config;
         private TracerProvider _tracerProvider;
+        private MeterProvider _meterProvider;
         private ActivityListener _activityListener;
         private List<Activity> _exportedActivities;
+        private List<Metric> _exportedMetrics;
 
         [SetUp]
         public void SetUp()
@@ -92,6 +94,7 @@ namespace LaunchDarkly.Observability.Test
 
             // Set up OpenTelemetry
             _exportedActivities = new List<Activity>();
+            _exportedMetrics = new List<Metric>();
 
             // Create an ActivityListener to ensure activities are created
             _activityListener = new ActivityListener
@@ -113,6 +116,14 @@ namespace LaunchDarkly.Observability.Test
                     .AddService("test-service", "test", "1.0.0"))
                 .AddInMemoryExporter(_exportedActivities)
                 .Build();
+
+            // Set up MeterProvider with in-memory exporter
+            _meterProvider = OpenTelemetry.Sdk.CreateMeterProviderBuilder()
+                .AddMeter("test-service")
+                .SetResourceBuilder(ResourceBuilder.CreateDefault()
+                    .AddService("test-service", "test", "1.0.0"))
+                .AddInMemoryExporter(_exportedMetrics)
+                .Build();
         }
 
         [TearDown]
@@ -120,8 +131,10 @@ namespace LaunchDarkly.Observability.Test
         {
             _loggerProvider?.Dispose();
             _tracerProvider?.Dispose();
+            _meterProvider?.Dispose();
             _activityListener?.Dispose();
             _exportedActivities?.Clear();
+            _exportedMetrics?.Clear();
             ResetObserveInstance();
         }
 
@@ -137,25 +150,13 @@ namespace LaunchDarkly.Observability.Test
         [Test]
         public void Initialize_WithValidConfig_SetsUpInstanceCorrectly()
         {
-            Observe.Initialize(_config, _loggerProvider);
-
-            Observe.RecordIncr("test-counter");
-            Observe.RecordMetric("test-gauge", 42.0);
-
-            // Just making sure nothing before this point threw.
-            Assert.Pass("Initialization successful - no exceptions thrown during metric recording");
+            Assert.DoesNotThrow(() => Observe.Initialize(_config, _loggerProvider));
         }
 
         [Test]
         public void Initialize_WithNullLoggerProvider_WorksCorrectly()
         {
-            Observe.Initialize(_config, null);
-
-            Observe.RecordIncr("test-counter");
-            Observe.RecordMetric("test-gauge", 42.0);
-
-            // Logging should not throw when logger provider is null
-            Assert.DoesNotThrow(() => Observe.RecordLog("test message", LogLevel.Information, null));
+            Assert.DoesNotThrow(() => Observe.Initialize(_config, null));
         }
 
         [Test]
@@ -170,9 +171,114 @@ namespace LaunchDarkly.Observability.Test
                 sdkKey: "test-key"
             );
 
-            // Null service name doesn't break anything.
-            Assert.DoesNotThrow(() => Observe.Initialize(configWithNullServiceName, _loggerProvider));
-            Assert.DoesNotThrow(() => Observe.RecordIncr("test-counter"));
+            // Reset meter provider to use default service name
+            _meterProvider?.Dispose();
+            _meterProvider = OpenTelemetry.Sdk.CreateMeterProviderBuilder()
+                .AddMeter("launchdarkly-plugin-default-metrics") // Default meter name
+                .SetResourceBuilder(ResourceBuilder.CreateDefault()
+                    .AddService("launchdarkly-plugin-default-metrics", serviceVersion: "1.0.0"))
+                .AddInMemoryExporter(_exportedMetrics)
+                .Build();
+
+            // Initialize with null service name
+            Observe.Initialize(configWithNullServiceName, _loggerProvider);
+
+            // Record a metric to verify it works with defaults
+            Observe.RecordIncr("test-counter");
+
+            // Force export
+            _meterProvider.ForceFlush();
+
+            // Verify metric was exported using the default meter
+            Assert.That(_exportedMetrics, Is.Not.Empty, "Should have exported metrics with default meter");
+            var metric = _exportedMetrics.FirstOrDefault(m => m.Name == "test-counter");
+            Assert.That(metric, Is.Not.Null, "Should have exported test-counter metric using defaults");
+
+            // Verify an activity can be created with a default activity source
+            using (Observe.StartActivity("test-operation"))
+            {
+                // Activity might be null if no listener is registered for the default source,
+                // but the important thing is it doesn't throw
+            }
+
+            // Verify logging works with default logger name
+            Observe.RecordLog("Test message with defaults", LogLevel.Information, null);
+            var logger = _loggerProvider.Loggers.FirstOrDefault();
+            Assert.That(logger, Is.Not.Null, "Should have created a logger");
+            Assert.That(logger.CategoryName, Is.EqualTo("launchdarkly-plugin-default-logger"),
+                "Should use default logger name when service name is null");
+        }
+
+        [Test]
+        public void Initialize_WithEmptyServiceName_UsesEmptyString()
+        {
+            var configWithEmptyServiceName = new ObservabilityConfig(
+                otlpEndpoint: "https://test-endpoint.com",
+                backendUrl: "https://test-backend.com",
+                serviceName: "",
+                environment: "test",
+                serviceVersion: "1.0.0",
+                sdkKey: "test-key"
+            );
+
+            // Note: We can't test meter creation with empty string because OpenTelemetry doesn't allow it
+            // But we can test that Observe itself handles empty string without crashing
+
+            // Initialize with empty service name
+            Observe.Initialize(configWithEmptyServiceName, _loggerProvider);
+
+            // Try to record a metric - the Meter constructor will use empty string
+            // This should work because .NET's Meter class accepts empty string
+            Assert.DoesNotThrow(() => Observe.RecordMetric("test.gauge", 42.0),
+                "Should be able to record metric even with empty service name");
+
+            // Verify logging uses empty string, not default  
+            Observe.RecordLog("Test message with empty service name", LogLevel.Warning, null);
+            var logger = _loggerProvider.Loggers.FirstOrDefault();
+            Assert.That(logger, Is.Not.Null, "Should have created a logger");
+            // Empty string is used as-is (not replaced with default) because the code uses ?? operator
+            Assert.That(logger.CategoryName, Is.EqualTo(""),
+                "Should use empty string as logger name when service name is empty (not null)");
+
+            // Verify activity source also uses empty string
+            // Note: Activity with empty source name might not be sampled by our listener
+            // but it should not throw
+            Assert.DoesNotThrow(() =>
+            {
+                using (Observe.StartActivity("test-operation"))
+                {
+                    // Activity might be null but shouldn't throw
+                }
+            }, "Should be able to start activity even with empty service name");
+        }
+
+        [Test]
+        public void Initialize_WithWhitespaceServiceName_UsesWhitespaceString()
+        {
+            var configWithWhitespaceServiceName = new ObservabilityConfig(
+                otlpEndpoint: "https://test-endpoint.com",
+                backendUrl: "https://test-backend.com",
+                serviceName: "   ",
+                environment: "test",
+                serviceVersion: "1.0.0",
+                sdkKey: "test-key"
+            );
+
+            // Initialize with whitespace service name
+            Observe.Initialize(configWithWhitespaceServiceName, _loggerProvider);
+
+            // Try to record a metric - the Meter constructor will use whitespace string
+            // This should work because .NET's Meter class accepts whitespace
+            Assert.DoesNotThrow(() => Observe.RecordMetric("test.gauge", 42.0),
+                "Should be able to record metric even with whitespace service name");
+
+            // Verify logging uses whitespace string, not default  
+            Observe.RecordLog("Test message with whitespace service name", LogLevel.Warning, null);
+            var logger = _loggerProvider.Loggers.FirstOrDefault();
+            Assert.That(logger, Is.Not.Null, "Should have created a logger");
+            // Whitespace string is used as-is (not replaced with default) because the code uses ?? operator
+            Assert.That(logger.CategoryName, Is.EqualTo("   "),
+                "Should use whitespace string as logger name when service name is whitespace (not null)");
         }
 
         #endregion
@@ -193,7 +299,7 @@ namespace LaunchDarkly.Observability.Test
 
                 Assert.That(activity, Is.Not.Null);
                 var events = activity.Events.ToList();
-                Assert.That(events.Count, Is.EqualTo(initialEventCount + 1));
+                Assert.That(events, Has.Count.EqualTo(initialEventCount + 1));
                 var exceptionEvent = events.Last();
                 Assert.That(exceptionEvent.Name, Is.EqualTo("exception"));
             }
@@ -211,7 +317,7 @@ namespace LaunchDarkly.Observability.Test
             Observe.RecordException(exception);
 
             // Verify an activity was created and exported
-            Assert.That(_exportedActivities.Count, Is.GreaterThan(0), "Should have created and exported an activity");
+            Assert.That(_exportedActivities, Is.Not.Empty, "Should have created and exported an activity");
             var createdActivity = _exportedActivities.Last();
             Assert.That(createdActivity, Is.Not.Null);
             Assert.That(createdActivity.DisplayName, Is.EqualTo("launchdarkly.error"));
@@ -244,9 +350,9 @@ namespace LaunchDarkly.Observability.Test
                 var tags = exceptionEvent.Tags.ToList();
                 Assert.Multiple(() =>
                 {
-                    Assert.That(tags.Any(t => t.Key == "error.type" && t.Value.ToString() == "validation"),
+                    Assert.That(tags.Any(t => t.Key == "error.type" && t.Value?.ToString() == "validation"),
                         Is.True, "Should have error.type attribute");
-                    Assert.That(tags.Any(t => t.Key == "error.code" && t.Value.ToString() == "400"),
+                    Assert.That(tags.Any(t => t.Key == "error.code" && t.Value?.ToString() == "400"),
                         Is.True, "Should have error.code attribute");
                 });
             }
@@ -276,8 +382,31 @@ namespace LaunchDarkly.Observability.Test
         {
             Observe.Initialize(_config, _loggerProvider);
 
-            Assert.DoesNotThrow(() => Observe.RecordMetric("cpu.usage", 75.5));
-            Assert.DoesNotThrow(() => Observe.RecordMetric("memory.usage", 80.0));
+            // Record metrics
+            Observe.RecordMetric("cpu.usage", 75.5);
+            Observe.RecordMetric("memory.usage", 80.0);
+
+            // Force export
+            _meterProvider.ForceFlush();
+
+            // Verify metrics were exported
+            Assert.That(_exportedMetrics, Is.Not.Empty, "Should have exported metrics");
+
+            // Find the cpu.usage metric
+            var cpuMetric = _exportedMetrics.FirstOrDefault(m => m.Name == "cpu.usage");
+            Assert.That(cpuMetric, Is.Not.Null, "Should have exported cpu.usage metric");
+
+            // Find the memory.usage metric
+            var memoryMetric = _exportedMetrics.FirstOrDefault(m => m.Name == "memory.usage");
+            Assert.Multiple(() =>
+            {
+                Assert.That(memoryMetric, Is.Not.Null, "Should have exported memory.usage metric");
+
+                // Verify the metric type is gauge
+                Assert.That(cpuMetric.MetricType, Is.EqualTo(MetricType.DoubleGauge), "cpu.usage should be a gauge");
+            });
+            Assert.That(memoryMetric, Is.Not.Null, "Should have exported memory.usage metric");
+            Assert.That(memoryMetric.MetricType, Is.EqualTo(MetricType.DoubleGauge), "memory.usage should be a gauge");
         }
 
         [Test]
@@ -290,7 +419,47 @@ namespace LaunchDarkly.Observability.Test
                 ["region"] = "us-west-2"
             };
 
-            Assert.DoesNotThrow(() => Observe.RecordMetric("cpu.usage", 75.5, attributes));
+            // Record metric with attributes
+            Observe.RecordMetric("cpu.usage", 75.5, attributes);
+
+            // Force export
+            _meterProvider.ForceFlush();
+
+            // Verify metric was exported
+            Assert.That(_exportedMetrics, Is.Not.Empty, "Should have exported metrics");
+
+            var cpuMetric = _exportedMetrics.FirstOrDefault(m => m.Name == "cpu.usage");
+            Assert.That(cpuMetric, Is.Not.Null, "Should have exported cpu.usage metric");
+
+            // Verify attributes were included
+            var metricPoints = cpuMetric.GetMetricPoints();
+            var metricPointsEnumerator = metricPoints.GetEnumerator();
+            Assert.That(metricPointsEnumerator.MoveNext(), Is.True, "Should have metric points");
+
+            var metricPoint = metricPointsEnumerator.Current;
+            var tags = metricPoint.Tags;
+
+            // Check if attributes are present
+            object hostValue = null;
+            object regionValue = null;
+            foreach (var tag in tags)
+            {
+                switch (tag.Key)
+                {
+                    case "host":
+                        hostValue = tag.Value;
+                        break;
+                    case "region":
+                        regionValue = tag.Value;
+                        break;
+                }
+            }
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(hostValue, Is.EqualTo("server-1"), "Should have host attribute");
+                Assert.That(regionValue, Is.EqualTo("us-west-2"), "Should have region attribute");
+            });
         }
 
         [Test]
@@ -318,8 +487,60 @@ namespace LaunchDarkly.Observability.Test
         {
             Observe.Initialize(_config, _loggerProvider);
 
-            Assert.DoesNotThrow(() => Observe.RecordCount("requests.total", 5));
-            Assert.DoesNotThrow(() => Observe.RecordCount("errors.total", 1));
+            // Record counters
+            Observe.RecordCount("requests.total", 5);
+            Observe.RecordCount("errors.total", 1);
+
+            // Force export
+            _meterProvider.ForceFlush();
+
+            // Verify metrics were exported
+            Assert.That(_exportedMetrics, Is.Not.Empty, "Should have exported metrics");
+
+            // Find the counters
+            var requestsMetric = _exportedMetrics.FirstOrDefault(m => m.Name == "requests.total");
+            var errorsMetric = _exportedMetrics.FirstOrDefault(m => m.Name == "errors.total");
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(requestsMetric, Is.Not.Null, "Should have exported requests.total metric");
+                Assert.That(errorsMetric, Is.Not.Null, "Should have exported errors.total metric");
+            });
+
+            Assert.That(requestsMetric, Is.Not.Null, "Should have exported requests.total metric");
+            Assert.That(errorsMetric, Is.Not.Null, "Should have exported errors.total metric");
+            Assert.Multiple(() =>
+            {
+                // Verify the metric type is counter
+                Assert.That(requestsMetric.MetricType,
+                    Is.EqualTo(MetricType.LongSumNonMonotonic).Or.EqualTo(MetricType.LongSum),
+                    "requests.total should be a counter");
+                Assert.That(errorsMetric.MetricType,
+                    Is.EqualTo(MetricType.LongSumNonMonotonic).Or.EqualTo(MetricType.LongSum),
+                    "errors.total should be a counter");
+            });
+
+            // Verify counter values
+            var requestsPoints = requestsMetric.GetMetricPoints();
+            var errorsPoints = errorsMetric.GetMetricPoints();
+
+            var requestsEnumerator = requestsPoints.GetEnumerator();
+            var errorsEnumerator = errorsPoints.GetEnumerator();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(requestsEnumerator.MoveNext(), Is.True, "Should have request metric points");
+                Assert.That(errorsEnumerator.MoveNext(), Is.True, "Should have error metric points");
+            });
+
+            var requestPoint = requestsEnumerator.Current;
+            var errorPoint = errorsEnumerator.Current;
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(requestPoint.GetSumLong(), Is.EqualTo(5), "Requests counter should have value 5");
+                Assert.That(errorPoint.GetSumLong(), Is.EqualTo(1), "Errors counter should have value 1");
+            });
         }
 
         [Test]
@@ -332,7 +553,47 @@ namespace LaunchDarkly.Observability.Test
                 ["status"] = 200
             };
 
-            Assert.DoesNotThrow(() => Observe.RecordCount("requests.total", 5, attributes));
+            // Record counter with attributes
+            Observe.RecordCount("requests.total", 5, attributes);
+
+            // Force export
+            _meterProvider.ForceFlush();
+
+            // Verify metric was exported
+            Assert.That(_exportedMetrics, Is.Not.Empty, "Should have exported metrics");
+
+            var requestsMetric = _exportedMetrics.FirstOrDefault(m => m.Name == "requests.total");
+            Assert.That(requestsMetric, Is.Not.Null, "Should have exported requests.total metric");
+
+            // Verify attributes were included
+            var metricPoints = requestsMetric.GetMetricPoints();
+            var metricPointsEnumerator = metricPoints.GetEnumerator();
+            Assert.That(metricPointsEnumerator.MoveNext(), Is.True, "Should have metric points");
+
+            var metricPoint = metricPointsEnumerator.Current;
+            var tags = metricPoint.Tags;
+
+            // Check if attributes are present
+            object methodValue = null;
+            object statusValue = null;
+            foreach (var tag in tags)
+            {
+                switch (tag.Key)
+                {
+                    case "method":
+                        methodValue = tag.Value;
+                        break;
+                    case "status":
+                        statusValue = tag.Value;
+                        break;
+                }
+            }
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(methodValue, Is.EqualTo("GET"), "Should have method attribute");
+                Assert.That(statusValue?.ToString(), Is.EqualTo("200"), "Should have status attribute");
+            });
         }
 
         [Test]
@@ -354,8 +615,51 @@ namespace LaunchDarkly.Observability.Test
         {
             Observe.Initialize(_config, _loggerProvider);
 
-            Assert.DoesNotThrow(() => Observe.RecordIncr("page.views"));
-            Assert.DoesNotThrow(() => Observe.RecordIncr("api.calls"));
+            // Record increments
+            Observe.RecordIncr("page.views");
+            Observe.RecordIncr("api.calls");
+            Observe.RecordIncr("api.calls"); // Call twice to verify increment
+
+            // Force export
+            _meterProvider.ForceFlush();
+
+            // Verify metrics were exported
+            Assert.That(_exportedMetrics.Count, Is.GreaterThan(0), "Should have exported metrics");
+
+            // Find the counters
+            var pageViewsMetric = _exportedMetrics.FirstOrDefault(m => m.Name == "page.views");
+            var apiCallsMetric = _exportedMetrics.FirstOrDefault(m => m.Name == "api.calls");
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(pageViewsMetric, Is.Not.Null, "Should have exported page.views metric");
+                Assert.That(apiCallsMetric, Is.Not.Null, "Should have exported api.calls metric");
+            });
+
+            Assert.That(pageViewsMetric, Is.Not.Null);
+            Assert.That(apiCallsMetric, Is.Not.Null);
+            // Verify the values (RecordIncr should increment by 1 each time)
+            var pageViewsPoints = pageViewsMetric.GetMetricPoints();
+            var apiCallsPoints = apiCallsMetric.GetMetricPoints();
+
+            var pageViewsEnumerator = pageViewsPoints.GetEnumerator();
+            var apiCallsEnumerator = apiCallsPoints.GetEnumerator();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(pageViewsEnumerator.MoveNext(), Is.True, "Should have page views metric points");
+                Assert.That(apiCallsEnumerator.MoveNext(), Is.True, "Should have api calls metric points");
+            });
+
+            var pageViewsPoint = pageViewsEnumerator.Current;
+            var apiCallsPoint = apiCallsEnumerator.Current;
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(pageViewsPoint.GetSumLong(), Is.EqualTo(1), "Page views should be incremented by 1");
+                Assert.That(apiCallsPoint.GetSumLong(), Is.EqualTo(2),
+                    "API calls should be incremented by 2 (called twice)");
+            });
         }
 
         [Test]
@@ -368,7 +672,48 @@ namespace LaunchDarkly.Observability.Test
                 ["user_type"] = "premium"
             };
 
-            Assert.DoesNotThrow(() => Observe.RecordIncr("page.views", attributes));
+            // Record increment with attributes
+            Observe.RecordIncr("page.views", attributes);
+
+            // Force export
+            _meterProvider.ForceFlush();
+
+            // Verify metric was exported
+            Assert.That(_exportedMetrics, Is.Not.Empty, "Should have exported metrics");
+
+            var pageViewsMetric = _exportedMetrics.FirstOrDefault(m => m.Name == "page.views");
+            Assert.That(pageViewsMetric, Is.Not.Null, "Should have exported page.views metric");
+
+            // Verify attributes were included
+            var metricPoints = pageViewsMetric.GetMetricPoints();
+            var metricPointsEnumerator = metricPoints.GetEnumerator();
+            Assert.That(metricPointsEnumerator.MoveNext(), Is.True, "Should have metric points");
+
+            var metricPoint = metricPointsEnumerator.Current;
+            var tags = metricPoint.Tags;
+
+            // Check if attributes are present
+            object pageValue = null;
+            object userTypeValue = null;
+            foreach (var tag in tags)
+            {
+                switch (tag.Key)
+                {
+                    case "page":
+                        pageValue = tag.Value;
+                        break;
+                    case "user_type":
+                        userTypeValue = tag.Value;
+                        break;
+                }
+            }
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(pageValue, Is.EqualTo("home"), "Should have page attribute");
+                Assert.That(userTypeValue, Is.EqualTo("premium"), "Should have user_type attribute");
+                Assert.That(metricPoint.GetSumLong(), Is.EqualTo(1), "Should have incremented by 1");
+            });
         }
 
         [Test]
@@ -376,8 +721,46 @@ namespace LaunchDarkly.Observability.Test
         {
             Observe.Initialize(_config, _loggerProvider);
 
-            Assert.DoesNotThrow(() => Observe.RecordHistogram("request.duration", 150.5));
-            Assert.DoesNotThrow(() => Observe.RecordHistogram("response.size", 1024.0));
+            // Record histogram values
+            Observe.RecordHistogram("request.duration", 150.5);
+            Observe.RecordHistogram("request.duration", 200.0);
+            Observe.RecordHistogram("request.duration", 100.0);
+            Observe.RecordHistogram("response.size", 1024.0);
+
+            // Force export
+            _meterProvider.ForceFlush();
+
+            // Verify metrics were exported
+            Assert.That(_exportedMetrics, Is.Not.Empty, "Should have exported metrics");
+
+            // Find the histograms
+            var durationMetric = _exportedMetrics.FirstOrDefault(m => m.Name == "request.duration");
+            var sizeMetric = _exportedMetrics.FirstOrDefault(m => m.Name == "response.size");
+
+            Assert.That(durationMetric, Is.Not.Null, "Should have exported request.duration metric");
+            Assert.That(sizeMetric, Is.Not.Null, "Should have exported response.size metric");
+
+            // Verify the metric type is histogram
+            Assert.That(durationMetric.MetricType, Is.EqualTo(MetricType.Histogram),
+                "request.duration should be a histogram");
+            Assert.That(sizeMetric.MetricType, Is.EqualTo(MetricType.Histogram),
+                "response.size should be a histogram");
+
+            // Verify histogram data
+            var durationPoints = durationMetric.GetMetricPoints();
+            var durationEnumerator = durationPoints.GetEnumerator();
+            Assert.That(durationEnumerator.MoveNext(), Is.True, "Should have duration metric points");
+
+            var durationPoint = durationEnumerator.Current;
+            var histogramData = durationPoint.GetHistogramSum();
+            var histogramCount = durationPoint.GetHistogramCount();
+
+            Assert.Multiple(() =>
+            {
+                // We recorded 3 values: 150.5, 200.0, 100.0
+                Assert.That(histogramCount, Is.EqualTo(3), "Should have recorded 3 histogram values");
+                Assert.That(histogramData, Is.EqualTo(450.5), "Sum should be 450.5 (150.5 + 200 + 100)");
+            });
         }
 
         [Test]
@@ -390,7 +773,50 @@ namespace LaunchDarkly.Observability.Test
                 ["method"] = "POST"
             };
 
-            Assert.DoesNotThrow(() => Observe.RecordHistogram("request.duration", 150.5, attributes));
+            // Record histogram with attributes
+            Observe.RecordHistogram("request.duration", 150.5, attributes);
+            Observe.RecordHistogram("request.duration", 75.0, attributes);
+
+            // Force export
+            _meterProvider.ForceFlush();
+
+            // Verify metric was exported
+            Assert.That(_exportedMetrics.Count, Is.GreaterThan(0), "Should have exported metrics");
+
+            var durationMetric = _exportedMetrics.FirstOrDefault(m => m.Name == "request.duration");
+            Assert.That(durationMetric, Is.Not.Null, "Should have exported request.duration metric");
+
+            // Verify attributes were included
+            var metricPoints = durationMetric.GetMetricPoints();
+            var metricPointsEnumerator = metricPoints.GetEnumerator();
+            Assert.That(metricPointsEnumerator.MoveNext(), Is.True, "Should have metric points");
+
+            var metricPoint = metricPointsEnumerator.Current;
+            var tags = metricPoint.Tags;
+
+            // Check if attributes are present
+            object endpointValue = null;
+            object methodValue = null;
+            foreach (var tag in tags)
+            {
+                switch (tag.Key)
+                {
+                    case "endpoint":
+                        endpointValue = tag.Value;
+                        break;
+                    case "method":
+                        methodValue = tag.Value;
+                        break;
+                }
+            }
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(endpointValue, Is.EqualTo("/api/users"), "Should have endpoint attribute");
+                Assert.That(methodValue, Is.EqualTo("POST"), "Should have method attribute");
+                Assert.That(metricPoint.GetHistogramCount(), Is.EqualTo(2), "Should have recorded 2 values");
+                Assert.That(metricPoint.GetHistogramSum(), Is.EqualTo(225.5), "Sum should be 225.5 (150.5 + 75)");
+            });
         }
 
         [Test]
@@ -412,8 +838,34 @@ namespace LaunchDarkly.Observability.Test
         {
             Observe.Initialize(_config, _loggerProvider);
 
-            Assert.DoesNotThrow(() => Observe.RecordUpDownCounter("active.connections", 5));
-            Assert.DoesNotThrow(() => Observe.RecordUpDownCounter("active.connections", -2));
+            // Record up/down counter values
+            Observe.RecordUpDownCounter("active.connections", 5);
+            Observe.RecordUpDownCounter("active.connections", -2);
+            Observe.RecordUpDownCounter("active.connections", 3);
+
+            // Force export
+            _meterProvider.ForceFlush();
+
+            // Verify metrics were exported
+            Assert.That(_exportedMetrics, Is.Not.Empty, "Should have exported metrics");
+
+            // Find the up/down counter
+            var connectionsMetric = _exportedMetrics.FirstOrDefault(m => m.Name == "active.connections");
+            Assert.That(connectionsMetric, Is.Not.Null, "Should have exported active.connections metric");
+
+            // Verify the metric type is up/down counter
+            Assert.That(connectionsMetric.MetricType,
+                Is.EqualTo(MetricType.LongSumNonMonotonic).Or.EqualTo(MetricType.LongSum),
+                "active.connections should be an up/down counter");
+
+            // Verify the value (5 - 2 + 3 = 6)
+            var metricPoints = connectionsMetric.GetMetricPoints();
+            var metricPointsEnumerator = metricPoints.GetEnumerator();
+            Assert.That(metricPointsEnumerator.MoveNext(), Is.True, "Should have metric points");
+
+            var metricPoint = metricPointsEnumerator.Current;
+            Assert.That(metricPoint.GetSumLong(), Is.EqualTo(6),
+                "Up/down counter should have net value of 6 (5 - 2 + 3)");
         }
 
         [Test]
@@ -426,7 +878,49 @@ namespace LaunchDarkly.Observability.Test
                 ["protocol"] = "http"
             };
 
-            Assert.DoesNotThrow(() => Observe.RecordUpDownCounter("active.connections", 5, attributes));
+            // Record up/down counter with attributes
+            Observe.RecordUpDownCounter("active.connections", 5, attributes);
+            Observe.RecordUpDownCounter("active.connections", -1, attributes);
+
+            // Force export
+            _meterProvider.ForceFlush();
+
+            // Verify metric was exported
+            Assert.That(_exportedMetrics, Is.Not.Empty, "Should have exported metrics");
+
+            var connectionsMetric = _exportedMetrics.FirstOrDefault(m => m.Name == "active.connections");
+            Assert.That(connectionsMetric, Is.Not.Null, "Should have exported active.connections metric");
+
+            // Verify attributes were included
+            var metricPoints = connectionsMetric.GetMetricPoints();
+            var metricPointsEnumerator = metricPoints.GetEnumerator();
+            Assert.That(metricPointsEnumerator.MoveNext(), Is.True, "Should have metric points");
+
+            var metricPoint = metricPointsEnumerator.Current;
+            var tags = metricPoint.Tags;
+
+            // Check if attributes are present
+            object serverValue = null;
+            object protocolValue = null;
+            foreach (var tag in tags)
+            {
+                switch (tag.Key)
+                {
+                    case "server":
+                        serverValue = tag.Value;
+                        break;
+                    case "protocol":
+                        protocolValue = tag.Value;
+                        break;
+                }
+            }
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(serverValue, Is.EqualTo("web-1"), "Should have server attribute");
+                Assert.That(protocolValue, Is.EqualTo("http"), "Should have protocol attribute");
+                Assert.That(metricPoint.GetSumLong(), Is.EqualTo(4), "Should have net value of 4 (5 - 1)");
+            });
         }
 
         [Test]
@@ -455,8 +949,11 @@ namespace LaunchDarkly.Observability.Test
             using (var activity = Observe.StartActivity("test-operation"))
             {
                 Assert.That(activity, Is.Not.Null, "Activity should be created when ActivityListener is registered");
-                Assert.That(activity.DisplayName, Is.EqualTo("test-operation"));
-                Assert.That(activity.Source.Name, Is.EqualTo("test-service"));
+                Assert.Multiple(() =>
+                {
+                    Assert.That(activity.DisplayName, Is.EqualTo("test-operation"));
+                    Assert.That(activity.Source.Name, Is.EqualTo("test-service"));
+                });
             }
         }
 
@@ -473,12 +970,15 @@ namespace LaunchDarkly.Observability.Test
             using (var activity = Observe.StartActivity("db-query", ActivityKind.Client, attributes))
             {
                 Assert.That(activity, Is.Not.Null, "Activity should be created when ActivityListener is registered");
-                Assert.That(activity.DisplayName, Is.EqualTo("db-query"));
-                Assert.That(activity.Kind, Is.EqualTo(ActivityKind.Client));
+                Assert.Multiple(() =>
+                {
+                    Assert.That(activity.DisplayName, Is.EqualTo("db-query"));
+                    Assert.That(activity.Kind, Is.EqualTo(ActivityKind.Client));
 
-                // Verify attributes were added as tags
-                Assert.That(activity.GetTagItem("operation.type"), Is.EqualTo("database"));
-                Assert.That(activity.GetTagItem("table.name"), Is.EqualTo("users"));
+                    // Verify attributes were added as tags
+                    Assert.That(activity.GetTagItem("operation.type"), Is.EqualTo("database"));
+                    Assert.That(activity.GetTagItem("table.name"), Is.EqualTo("users"));
+                });
             }
         }
 
@@ -495,7 +995,7 @@ namespace LaunchDarkly.Observability.Test
             Observe.Initialize(_config, _loggerProvider);
             Assert.DoesNotThrow(() =>
             {
-                using (var activity = Observe.StartActivity("test-operation", ActivityKind.Internal, null))
+                using (Observe.StartActivity("test-operation"))
                 {
                 }
             });
@@ -509,21 +1009,24 @@ namespace LaunchDarkly.Observability.Test
         public void RecordLog_WithMessage_LogsMessageCorrectly()
         {
             Observe.Initialize(_config, _loggerProvider);
-            var message = "Test log message";
+            const string message = "Test log message";
 
             Observe.RecordLog(message, LogLevel.Information, null);
             var logger = _loggerProvider.Loggers.FirstOrDefault();
             Assert.That(logger, Is.Not.Null);
-            Assert.That(logger.LogEntries.Count, Is.EqualTo(1));
-            Assert.That(logger.LogEntries[0].Message, Is.EqualTo(message));
-            Assert.That(logger.LogEntries[0].LogLevel, Is.EqualTo(LogLevel.Information));
+            Assert.That(logger.LogEntries, Has.Count.EqualTo(1));
+            Assert.Multiple(() =>
+            {
+                Assert.That(logger.LogEntries[0].Message, Is.EqualTo(message));
+                Assert.That(logger.LogEntries[0].LogLevel, Is.EqualTo(LogLevel.Information));
+            });
         }
 
         [Test]
         public void RecordLog_WithAttributes_LogsMessageWithAttributes()
         {
             Observe.Initialize(_config, _loggerProvider);
-            var message = "Test log with attributes";
+            const string message = "Test log with attributes";
             var attributes = new Dictionary<string, object>
             {
                 ["user.id"] = "12345",
@@ -533,10 +1036,13 @@ namespace LaunchDarkly.Observability.Test
             Observe.RecordLog(message, LogLevel.Warning, attributes);
             var logger = _loggerProvider.Loggers.FirstOrDefault();
             Assert.That(logger, Is.Not.Null);
-            Assert.That(logger.LogEntries.Count, Is.EqualTo(1));
-            Assert.That(logger.LogEntries[0].Message, Is.EqualTo(message));
-            Assert.That(logger.LogEntries[0].LogLevel, Is.EqualTo(LogLevel.Warning));
-            Assert.That(logger.LogEntries[0].State, Is.EqualTo(attributes));
+            Assert.That(logger.LogEntries, Has.Count.EqualTo(1));
+            Assert.Multiple(() =>
+            {
+                Assert.That(logger.LogEntries[0].Message, Is.EqualTo(message));
+                Assert.That(logger.LogEntries[0].LogLevel, Is.EqualTo(LogLevel.Warning));
+                Assert.That(logger.LogEntries[0].State, Is.EqualTo(attributes));
+            });
         }
 
         [Test]
@@ -549,11 +1055,14 @@ namespace LaunchDarkly.Observability.Test
             Observe.RecordLog("Error message", LogLevel.Error, null);
             var logger = _loggerProvider.Loggers.FirstOrDefault();
             Assert.That(logger, Is.Not.Null);
-            Assert.That(logger.LogEntries.Count, Is.EqualTo(4));
-            Assert.That(logger.LogEntries[0].LogLevel, Is.EqualTo(LogLevel.Debug));
-            Assert.That(logger.LogEntries[1].LogLevel, Is.EqualTo(LogLevel.Information));
-            Assert.That(logger.LogEntries[2].LogLevel, Is.EqualTo(LogLevel.Warning));
-            Assert.That(logger.LogEntries[3].LogLevel, Is.EqualTo(LogLevel.Error));
+            Assert.That(logger.LogEntries, Has.Count.EqualTo(4));
+            Assert.Multiple(() =>
+            {
+                Assert.That(logger.LogEntries[0].LogLevel, Is.EqualTo(LogLevel.Debug));
+                Assert.That(logger.LogEntries[1].LogLevel, Is.EqualTo(LogLevel.Information));
+                Assert.That(logger.LogEntries[2].LogLevel, Is.EqualTo(LogLevel.Warning));
+                Assert.That(logger.LogEntries[3].LogLevel, Is.EqualTo(LogLevel.Error));
+            });
         }
 
         [Test]
@@ -572,7 +1081,7 @@ namespace LaunchDarkly.Observability.Test
             Observe.RecordLog("Test message", LogLevel.Information, emptyAttributes);
             var logger = _loggerProvider.Loggers.FirstOrDefault();
             Assert.That(logger, Is.Not.Null);
-            Assert.That(logger.LogEntries.Count, Is.EqualTo(1));
+            Assert.That(logger.LogEntries, Has.Count.EqualTo(1));
         }
 
         [Test]
@@ -592,10 +1101,10 @@ namespace LaunchDarkly.Observability.Test
             Observe.Initialize(_config, _loggerProvider);
 
             // Should not throw with null attributes
-            Assert.DoesNotThrow(() => Observe.RecordMetric("test.metric", 42.0, null));
-            Assert.DoesNotThrow(() => Observe.RecordCount("test.counter", 1, null));
-            Assert.DoesNotThrow(() => Observe.RecordHistogram("test.histogram", 150.0, null));
-            Assert.DoesNotThrow(() => Observe.RecordUpDownCounter("test.updown", 1, null));
+            Assert.DoesNotThrow(() => Observe.RecordMetric("test.metric", 42.0));
+            Assert.DoesNotThrow(() => Observe.RecordCount("test.counter", 1));
+            Assert.DoesNotThrow(() => Observe.RecordHistogram("test.histogram", 150.0));
+            Assert.DoesNotThrow(() => Observe.RecordUpDownCounter("test.updown", 1));
         }
 
         [Test]
@@ -620,30 +1129,62 @@ namespace LaunchDarkly.Observability.Test
         public void RecordMetric_WithSameName_ReusesGaugeInstance()
         {
             Observe.Initialize(_config, _loggerProvider);
-            var metricName = "cpu.usage";
+            const string metricName = "cpu.usage";
 
             // Record multiple values for the same metric
-            Assert.DoesNotThrow(() => Observe.RecordMetric(metricName, 50.0));
-            Assert.DoesNotThrow(() => Observe.RecordMetric(metricName, 75.0));
-            Assert.DoesNotThrow(() => Observe.RecordMetric(metricName, 90.0));
+            Observe.RecordMetric(metricName, 50.0);
+            Observe.RecordMetric(metricName, 75.0);
+            Observe.RecordMetric(metricName, 90.0);
 
-            // Should not throw, indicating proper reuse of gauge instance
-            Assert.Pass("Multiple metrics with same name recorded successfully");
+            // Force export
+            _meterProvider.ForceFlush();
+
+            // Verify metrics were exported
+            Assert.That(_exportedMetrics, Is.Not.Empty, "Should have exported metrics");
+
+            // Should have only one metric with the given name (reused instance)
+            var cpuMetrics = _exportedMetrics.Where(m => m.Name == metricName).ToList();
+            Assert.That(cpuMetrics, Has.Count.EqualTo(1), "Should have only one cpu.usage metric instance");
+
+            // The last recorded value should be 90.0 for a gauge
+            var metricPoints = cpuMetrics.First().GetMetricPoints();
+            var metricPointsEnumerator = metricPoints.GetEnumerator();
+            Assert.That(metricPointsEnumerator.MoveNext(), Is.True, "Should have metric points");
+
+            var metricPoint = metricPointsEnumerator.Current;
+            Assert.That(metricPoint.GetGaugeLastValueDouble(), Is.EqualTo(90.0),
+                "Last gauge value should be 90.0");
         }
 
         [Test]
         public void RecordCount_WithSameName_ReusesCounterInstance()
         {
             Observe.Initialize(_config, _loggerProvider);
-            var counterName = "requests.total";
+            const string counterName = "requests.total";
 
             // Record multiple values for the same counter
-            Assert.DoesNotThrow(() => Observe.RecordCount(counterName, 1));
-            Assert.DoesNotThrow(() => Observe.RecordCount(counterName, 5));
-            Assert.DoesNotThrow(() => Observe.RecordCount(counterName, 10));
+            Observe.RecordCount(counterName, 1);
+            Observe.RecordCount(counterName, 5);
+            Observe.RecordCount(counterName, 10);
 
-            // Should not throw, indicating proper reuse of counter instance
-            Assert.Pass("Multiple counters with same name recorded successfully");
+            // Force export
+            _meterProvider.ForceFlush();
+
+            // Verify metrics were exported
+            Assert.That(_exportedMetrics, Is.Not.Empty, "Should have exported metrics");
+
+            // Should have only one metric with the given name (reused instance)
+            var requestMetrics = _exportedMetrics.Where(m => m.Name == counterName).ToList();
+            Assert.That(requestMetrics, Has.Count.EqualTo(1), "Should have only one requests.total metric instance");
+
+            // The cumulative value should be 16 (1 + 5 + 10)
+            var metricPoints = requestMetrics.First().GetMetricPoints();
+            var metricPointsEnumerator = metricPoints.GetEnumerator();
+            Assert.That(metricPointsEnumerator.MoveNext(), Is.True, "Should have metric points");
+
+            var point = metricPointsEnumerator.Current;
+            Assert.That(point.GetSumLong(), Is.EqualTo(16),
+                "Counter cumulative value should be 16 (1 + 5 + 10)");
         }
 
         #endregion
