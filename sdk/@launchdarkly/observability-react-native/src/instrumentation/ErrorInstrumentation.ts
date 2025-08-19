@@ -1,11 +1,7 @@
 import { Attributes } from '@opentelemetry/api'
 import type { ErrorUtils } from 'react-native'
 import type { ObservabilityClient } from '../client/ObservabilityClient'
-import {
-	ErrorDeduplicator,
-	ErrorType,
-	ErrorSource,
-} from './errorTypes'
+import { ErrorDeduplicator, ErrorType, ErrorSource } from './errorTypes'
 import {
 	formatError,
 	extractReactErrorInfo,
@@ -35,9 +31,16 @@ export class ErrorInstrumentation {
 		}
 
 		try {
+			console.log('[LD-O11Y] Initializing error instrumentation')
 			this.setupUnhandledExceptionHandler()
+			console.log('[LD-O11Y] Global exception handler installed')
+
 			this.setupUnhandledRejectionHandler()
+			console.log('[LD-O11Y] Promise rejection handler installed')
+
 			this.setupConsoleErrorHandler()
+			console.log('[LD-O11Y] Console error handler installed')
+
 			this.isInitialized = true
 			this.client._log('ErrorInstrumentation initialized')
 		} catch (error) {
@@ -117,14 +120,74 @@ export class ErrorInstrumentation {
 		// Store original Promise methods
 		const originalThen = Promise.prototype.then
 		const originalCatch = Promise.prototype.catch
+		const originalPromiseConstructor = global.Promise
 
 		// Store instance reference for use in the patched function
-		const instance = this;
+		const instance = this
+
+		// Install global unhandled rejection listener
+		if (global.process && typeof global.process.on === 'function') {
+			// Node.js style
+			global.process.on('unhandledRejection', (reason, promise) => {
+				const event = {
+					promise,
+					reason,
+					preventDefault: () => {},
+				}
+				instance.handleUnhandledRejection(event)
+			})
+		} else if (typeof global.addEventListener === 'function') {
+			// Browser style
+			global.addEventListener('unhandledrejection', (event) => {
+				instance.handleUnhandledRejection(event)
+			})
+		}
+
+		// Add an error handler for setTimeout/setInterval
+		const originalSetTimeout = global.setTimeout
+
+		// Wrap setTimeout to catch errors in callbacks but preserve the original types
+		const wrappedSetTimeout = function (
+			callback: Parameters<typeof originalSetTimeout>[0],
+			delay?: Parameters<typeof originalSetTimeout>[1],
+			...args: any[]
+		): ReturnType<typeof originalSetTimeout> {
+			let wrappedCallback = callback
+			if (typeof callback === 'function') {
+				wrappedCallback = function (this: any) {
+					try {
+						return (callback as Function).apply(
+							this,
+							arguments as unknown as any[],
+						)
+					} catch (error) {
+						instance.handleUnhandledException(error, false)
+						throw error // Re-throw to maintain original behavior
+					}
+				}
+			}
+			return originalSetTimeout(wrappedCallback as any, delay, ...args)
+		}
+
+		// Preserve all properties of setTimeout
+		Object.defineProperties(
+			wrappedSetTimeout,
+			Object.getOwnPropertyDescriptors(originalSetTimeout),
+		)
+
+		// Apply the wrapped function
+		global.setTimeout = wrappedSetTimeout as typeof global.setTimeout
 
 		// Patch Promise.prototype.then to catch unhandled rejections
-		Promise.prototype.then = function<TResult1 = any, TResult2 = never>(
-			onFulfilled?: ((value: any) => TResult1 | PromiseLike<TResult1>) | null | undefined,
-			onRejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | null | undefined
+		Promise.prototype.then = function <TResult1 = any, TResult2 = never>(
+			onFulfilled?:
+				| ((value: any) => TResult1 | PromiseLike<TResult1>)
+				| null
+				| undefined,
+			onRejected?:
+				| ((reason: any) => TResult2 | PromiseLike<TResult2>)
+				| null
+				| undefined,
 		): Promise<TResult1 | TResult2> {
 			return originalThen.call(
 				this,
@@ -133,7 +196,7 @@ export class ErrorInstrumentation {
 					((reason: any): TResult2 | PromiseLike<TResult2> => {
 						// If no rejection handler is provided, treat as unhandled
 						setTimeout(() => {
-							const promiseThis = this;
+							const promiseThis = this
 							if (promiseThis instanceof Promise) {
 								const event = {
 									promise: promiseThis,
@@ -144,21 +207,58 @@ export class ErrorInstrumentation {
 							}
 						}, 0)
 						throw reason
-					})
+					}),
 			) as Promise<TResult1 | TResult2>
+		}
+
+		// Also patch Promise.catch to ensure we catch unhandled rejections
+		Promise.prototype.catch = function <T = never>(
+			onRejected?:
+				| ((reason: any) => T | PromiseLike<T>)
+				| null
+				| undefined,
+		): Promise<any> {
+			return originalCatch.call(
+				this,
+				onRejected ||
+					((reason: any): T | PromiseLike<T> => {
+						setTimeout(() => {
+							instance.handleUnhandledRejection({
+								promise: this,
+								reason,
+								preventDefault: () => {},
+							})
+						}, 0)
+						throw reason
+					}),
+			)
 		}
 	}
 
 	private handleUnhandledException(error: any, isFatal: boolean): void {
 		try {
-			const errorObj = error instanceof Error ? error : new Error(String(error))
+			console.log(
+				'[LD-O11Y] Handling unhandled exception:',
+				error,
+				isFatal ? '(fatal)' : '',
+			)
+			const errorObj =
+				error instanceof Error ? error : new Error(String(error))
 
 			if (!this.deduplicator.shouldReport(errorObj)) {
+				console.log(
+					'[LD-O11Y] Skipping duplicate error:',
+					errorObj.message,
+				)
 				return
 			}
 
 			// Skip network errors as they're handled by network instrumentation
 			if (isNetworkError(errorObj)) {
+				console.log(
+					'[LD-O11Y] Skipping network error:',
+					errorObj.message,
+				)
 				return
 			}
 
@@ -179,26 +279,47 @@ export class ErrorInstrumentation {
 			}
 
 			if (reactInfo.errorBoundaryFound) {
-				attributes['react.error_boundary'] = reactInfo.errorBoundary || 'unknown'
+				attributes['react.error_boundary'] =
+					reactInfo.errorBoundary || 'unknown'
 			}
 
+			console.log(
+				'[LD-O11Y] Reporting unhandled exception:',
+				errorObj.message,
+			)
 			this.client.consumeCustomError(errorObj, attributes)
 		} catch (instrumentationError) {
-			console.warn('Error in unhandled exception instrumentation:', instrumentationError)
+			console.warn(
+				'Error in unhandled exception instrumentation:',
+				instrumentationError,
+			)
 		}
 	}
 
 	private handleUnhandledRejection(event: any): void {
 		try {
+			console.log(
+				'[LD-O11Y] Handling unhandled promise rejection:',
+				event,
+			)
 			const reason = event.reason || event
-			const errorObj = reason instanceof Error ? reason : new Error(String(reason))
+			const errorObj =
+				reason instanceof Error ? reason : new Error(String(reason))
 
 			if (!this.deduplicator.shouldReport(errorObj)) {
+				console.log(
+					'[LD-O11Y] Skipping duplicate rejection:',
+					errorObj.message,
+				)
 				return
 			}
 
 			// Skip network errors
 			if (isNetworkError(errorObj)) {
+				console.log(
+					'[LD-O11Y] Skipping network error rejection:',
+					errorObj.message,
+				)
 				return
 			}
 
@@ -216,9 +337,16 @@ export class ErrorInstrumentation {
 				'promise.handled': false,
 			}
 
+			console.log(
+				'[LD-O11Y] Reporting unhandled rejection:',
+				errorObj.message,
+			)
 			this.client.consumeCustomError(errorObj, attributes)
 		} catch (instrumentationError) {
-			console.warn('Error in unhandled rejection instrumentation:', instrumentationError)
+			console.warn(
+				'Error in unhandled rejection instrumentation:',
+				instrumentationError,
+			)
 		}
 	}
 
@@ -226,7 +354,7 @@ export class ErrorInstrumentation {
 		try {
 			// Convert console arguments to error message
 			const message = parseConsoleArgs(args)
-			
+
 			// Only capture if it looks like an actual error
 			if (!message || message.length === 0) {
 				return
@@ -234,7 +362,8 @@ export class ErrorInstrumentation {
 
 			// Create error from console message
 			const errorObj = new Error(message)
-			errorObj.name = level === 'error' ? 'ConsoleError' : 'ConsoleWarning'
+			errorObj.name =
+				level === 'error' ? 'ConsoleError' : 'ConsoleWarning'
 
 			if (!this.deduplicator.shouldReport(errorObj)) {
 				return
@@ -260,7 +389,10 @@ export class ErrorInstrumentation {
 				this.client.consumeCustomError(errorObj, attributes)
 			}
 		} catch (instrumentationError) {
-			console.warn('Error in console error instrumentation:', instrumentationError)
+			console.warn(
+				'Error in console error instrumentation:',
+				instrumentationError,
+			)
 		}
 	}
 

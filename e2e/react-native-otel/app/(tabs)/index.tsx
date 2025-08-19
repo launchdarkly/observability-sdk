@@ -59,6 +59,11 @@ export default function HomeScreen() {
 				component: 'HomeScreen',
 			},
 		})
+
+		// Test that error reporting is working
+		console.log(
+			'Testing error reporting with a message to verify console error handler',
+		)
 	}, [])
 
 	const handleTestError = () => {
@@ -280,6 +285,78 @@ export default function HomeScreen() {
 		)
 	}
 
+	// Exception test handlers
+	const handleUncaughtException = () => {
+		// This will cause an uncaught exception that should be caught by the global handler
+		setTimeout(() => {
+			// Using setTimeout to ensure it's not caught by React's error boundary
+			const obj: any = null
+			obj.nonExistentMethod() // Will throw TypeError: Cannot read property 'nonExistentMethod' of null
+		}, 100)
+	}
+
+	const handleUnhandledPromiseRejection = () => {
+		// This creates an unhandled Promise rejection
+		setTimeout(() => {
+			// Using setTimeout to escape from the current execution context
+			new Promise((resolve, reject) => {
+				// Explicit rejection without a catch handler
+				reject(new Error('Unhandled Promise Rejection Test'))
+			})
+			// Log to confirm execution
+			console.log('Unhandled Promise rejection triggered')
+		}, 0)
+	}
+
+	const handleRecursiveError = () => {
+		// This creates a stack overflow error
+		// Wrap in setTimeout to bypass React's error boundaries
+		setTimeout(() => {
+			const recursiveFunction = (depth: number = 0): number => {
+				// Add some protection to prevent actually crashing the app
+				if (depth > 5000) {
+					throw new Error(
+						'Maximum recursion depth reached (stack overflow simulation)',
+					)
+				}
+				return recursiveFunction(depth + 1)
+			}
+
+			recursiveFunction()
+		}, 0)
+	}
+
+	const handleAsyncError = async () => {
+		// This creates an error in an async function
+		// Use setTimeout to ensure we're out of the current execution context
+		setTimeout(() => {
+			const makeAsyncError = async () => {
+				await new Promise((resolve) => setTimeout(resolve, 500))
+				throw new Error('Async operation failed')
+			}
+
+			// Run without awaiting or catching the error to ensure it becomes unhandled
+			makeAsyncError()
+
+			// Add a log to help track when the error should occur
+			console.log('Async error scheduled (should occur in ~500ms)')
+		}, 0)
+	}
+
+	const handleNetworkError = () => {
+		// This creates a network error by attempting to fetch from a non-existent URL
+		setTimeout(() => {
+			console.log('Triggering network error to non-existent domain')
+			fetch('https://non-existent-domain-123456789.xyz').then(
+				(response) => response.json(),
+			)
+			// Intentionally no catch handler to make it unhandled
+
+			// Using a separate fetch to ensure we're getting a real network error
+			fetch('https://invalid-url-that-will-fail.error')
+		}, 0)
+	}
+
 	return (
 		<ParallaxScrollView
 			headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
@@ -344,6 +421,55 @@ export default function HomeScreen() {
 						Test Span Hierarchy
 					</ThemedText>
 				</Pressable>
+
+				<ThemedText type="subtitle" style={{ marginTop: 16 }}>
+					Error Testing
+				</ThemedText>
+
+				<Pressable
+					style={[styles.button, styles.errorButton]}
+					onPress={handleUncaughtException}
+				>
+					<ThemedText style={styles.buttonText}>
+						Trigger Uncaught Exception
+					</ThemedText>
+				</Pressable>
+
+				<Pressable
+					style={[styles.button, styles.errorButton]}
+					onPress={handleUnhandledPromiseRejection}
+				>
+					<ThemedText style={styles.buttonText}>
+						Trigger Unhandled Promise Rejection
+					</ThemedText>
+				</Pressable>
+
+				<Pressable
+					style={[styles.button, styles.errorButton]}
+					onPress={handleRecursiveError}
+				>
+					<ThemedText style={styles.buttonText}>
+						Trigger Stack Overflow Error
+					</ThemedText>
+				</Pressable>
+
+				<Pressable
+					style={[styles.button, styles.errorButton]}
+					onPress={handleAsyncError}
+				>
+					<ThemedText style={styles.buttonText}>
+						Trigger Async Error
+					</ThemedText>
+				</Pressable>
+
+				<Pressable
+					style={[styles.button, styles.errorButton]}
+					onPress={handleNetworkError}
+				>
+					<ThemedText style={styles.buttonText}>
+						Trigger Network Error
+					</ThemedText>
+				</Pressable>
 			</ThemedView>
 
 			<ThemedView style={styles.stepContainer}>
@@ -406,6 +532,9 @@ const styles = StyleSheet.create({
 		borderRadius: 8,
 		marginVertical: 4,
 		alignItems: 'center',
+	},
+	errorButton: {
+		backgroundColor: '#FF3B30', // Red color for error buttons
 	},
 	buttonText: {
 		color: 'white',
