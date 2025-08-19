@@ -31,15 +31,9 @@ export class ErrorInstrumentation {
 		}
 
 		try {
-			console.log('[LD-O11Y] Initializing error instrumentation')
 			this.setupUnhandledExceptionHandler()
-			console.log('[LD-O11Y] Global exception handler installed')
-
 			this.setupUnhandledRejectionHandler()
-			console.log('[LD-O11Y] Promise rejection handler installed')
-
 			this.setupConsoleErrorHandler()
-			console.log('[LD-O11Y] Console error handler installed')
 
 			this.isInitialized = true
 			this.client._log('ErrorInstrumentation initialized')
@@ -237,28 +231,15 @@ export class ErrorInstrumentation {
 
 	private handleUnhandledException(error: any, isFatal: boolean): void {
 		try {
-			console.log(
-				'[LD-O11Y] Handling unhandled exception:',
-				error,
-				isFatal ? '(fatal)' : '',
-			)
 			const errorObj =
 				error instanceof Error ? error : new Error(String(error))
 
 			if (!this.deduplicator.shouldReport(errorObj)) {
-				console.log(
-					'[LD-O11Y] Skipping duplicate error:',
-					errorObj.message,
-				)
 				return
 			}
 
 			// Skip network errors as they're handled by network instrumentation
 			if (isNetworkError(errorObj)) {
-				console.log(
-					'[LD-O11Y] Skipping network error:',
-					errorObj.message,
-				)
 				return
 			}
 
@@ -283,10 +264,6 @@ export class ErrorInstrumentation {
 					reactInfo.errorBoundary || 'unknown'
 			}
 
-			console.log(
-				'[LD-O11Y] Reporting unhandled exception:',
-				errorObj.message,
-			)
 			this.client.consumeCustomError(errorObj, attributes)
 		} catch (instrumentationError) {
 			console.warn(
@@ -298,28 +275,16 @@ export class ErrorInstrumentation {
 
 	private handleUnhandledRejection(event: any): void {
 		try {
-			console.log(
-				'[LD-O11Y] Handling unhandled promise rejection:',
-				event,
-			)
 			const reason = event.reason || event
 			const errorObj =
 				reason instanceof Error ? reason : new Error(String(reason))
 
 			if (!this.deduplicator.shouldReport(errorObj)) {
-				console.log(
-					'[LD-O11Y] Skipping duplicate rejection:',
-					errorObj.message,
-				)
 				return
 			}
 
 			// Skip network errors
 			if (isNetworkError(errorObj)) {
-				console.log(
-					'[LD-O11Y] Skipping network error rejection:',
-					errorObj.message,
-				)
 				return
 			}
 
@@ -337,10 +302,6 @@ export class ErrorInstrumentation {
 				'promise.handled': false,
 			}
 
-			console.log(
-				'[LD-O11Y] Reporting unhandled rejection:',
-				errorObj.message,
-			)
 			this.client.consumeCustomError(errorObj, attributes)
 		} catch (instrumentationError) {
 			console.warn(
