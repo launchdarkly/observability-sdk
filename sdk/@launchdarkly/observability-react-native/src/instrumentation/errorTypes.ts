@@ -1,6 +1,10 @@
 import { Attributes } from '@opentelemetry/api'
 
-export type ErrorType = 'unhandled_exception' | 'unhandled_rejection' | 'console_error' | 'react_error'
+export type ErrorType =
+	| 'unhandled_exception'
+	| 'unhandled_rejection'
+	| 'console_error'
+	| 'react_error'
 export type ErrorSource = 'javascript' | 'native' | 'react'
 
 export interface ErrorContext {
@@ -72,7 +76,7 @@ export class ErrorDeduplicator {
 					entriesToDelete.push(key)
 				}
 			}
-			entriesToDelete.forEach(key => this.recentErrors.delete(key))
+			entriesToDelete.forEach((key) => this.recentErrors.delete(key))
 		}
 	}
 }

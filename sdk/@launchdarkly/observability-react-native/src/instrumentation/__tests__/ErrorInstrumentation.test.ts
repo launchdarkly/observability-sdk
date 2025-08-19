@@ -54,7 +54,9 @@ describe('ErrorInstrumentation', () => {
 			errorInstrumentation = new ErrorInstrumentation(mockClient)
 			errorInstrumentation.initialize()
 
-			expect(mockClient._log).toHaveBeenCalledWith('ErrorInstrumentation initialized')
+			expect(mockClient._log).toHaveBeenCalledWith(
+				'ErrorInstrumentation initialized',
+			)
 		})
 
 		it('should not initialize twice', () => {
@@ -75,7 +77,9 @@ describe('ErrorInstrumentation', () => {
 			errorInstrumentation = new ErrorInstrumentation(mockClient, config)
 			errorInstrumentation.initialize()
 
-			expect(mockClient._log).toHaveBeenCalledWith('ErrorInstrumentation initialized')
+			expect(mockClient._log).toHaveBeenCalledWith(
+				'ErrorInstrumentation initialized',
+			)
 		})
 	})
 
@@ -109,7 +113,9 @@ describe('ErrorInstrumentation', () => {
 			})
 			errorInstrumentation.initialize()
 
-			expect(require('react-native').ErrorUtils.setGlobalHandler).not.toHaveBeenCalled()
+			expect(
+				require('react-native').ErrorUtils.setGlobalHandler,
+			).not.toHaveBeenCalled()
 		})
 
 		it('should respect error sampling rate', () => {
@@ -230,8 +236,12 @@ describe('ErrorInstrumentation', () => {
 			errorInstrumentation.initialize()
 			errorInstrumentation.destroy()
 
-			expect(ErrorUtils.setGlobalHandler).toHaveBeenCalledWith(originalHandler)
-			expect(mockClient._log).toHaveBeenCalledWith('ErrorInstrumentation destroyed')
+			expect(ErrorUtils.setGlobalHandler).toHaveBeenCalledWith(
+				originalHandler,
+			)
+			expect(mockClient._log).toHaveBeenCalledWith(
+				'ErrorInstrumentation destroyed',
+			)
 		})
 	})
 })
@@ -250,7 +260,7 @@ describe('ErrorDeduplicator', () => {
 
 	it('should block duplicate errors within time window', () => {
 		const error = new Error('Test error')
-		
+
 		expect(deduplicator.shouldReport(error)).toBe(true)
 		expect(deduplicator.shouldReport(error)).toBe(false)
 	})
@@ -258,7 +268,7 @@ describe('ErrorDeduplicator', () => {
 	it('should allow different errors', () => {
 		const error1 = new Error('Error 1')
 		const error2 = new Error('Error 2')
-		
+
 		expect(deduplicator.shouldReport(error1)).toBe(true)
 		expect(deduplicator.shouldReport(error2)).toBe(true)
 	})
@@ -269,7 +279,13 @@ describe('formatError', () => {
 		const error = new Error('Test error')
 		error.stack = 'Error: Test error\n  at test.js:1:1'
 
-		const formatted = formatError(error, 'unhandled_exception', 'javascript', true, 'Component stack')
+		const formatted = formatError(
+			error,
+			'unhandled_exception',
+			'javascript',
+			true,
+			'Component stack',
+		)
 
 		expect(formatted).toEqual({
 			message: 'Test error',
@@ -296,7 +312,12 @@ describe('formatError', () => {
 	})
 
 	it('should handle non-Error objects', () => {
-		const formatted = formatError('String error', 'console_error', 'javascript', false)
+		const formatted = formatError(
+			'String error',
+			'console_error',
+			'javascript',
+			false,
+		)
 
 		expect(formatted.message).toBe('String error')
 		expect(formatted.name).toBe('Error')
