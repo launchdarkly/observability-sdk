@@ -1,4 +1,8 @@
 using System;
+using System.Diagnostics.Metrics;
+using OpenTelemetry.Logs;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Trace;
 
 namespace LaunchDarkly.Observability
 {
@@ -18,6 +22,9 @@ namespace LaunchDarkly.Observability
         private string _serviceName = string.Empty;
         private string _environment = string.Empty;
         private string _serviceVersion = string.Empty;
+        private Action<TracerProviderBuilder> _extendedTracerConfiguration;
+        private Action<LoggerProviderBuilder> _extendedLoggerConfiguration;
+        private Action<MeterProviderBuilder> _extendedMeterConfiguration;
 
         protected BaseBuilder()
         {
@@ -93,6 +100,123 @@ namespace LaunchDarkly.Observability
         }
 
         /// <summary>
+        /// Method which extends the configuration of the tracer provider.
+        /// <para>
+        /// The basic tracer options will already be configured by the LaunchDarkly Observability plugin. This method
+        /// should be used to extend that configuration with additional instrumentation or additional activity sources.
+        /// </para>
+        /// <para>
+        /// By default tracing will be configured with the following instrumentation:
+        /// <list type="bullet">
+        /// <item>HTTP Client Instrumentation</item>
+        /// <item>GRPC Client Instrumentation</item>
+        /// <item>WCF Instrumentation</item>
+        /// <item>Quart Instrumentation</item>
+        /// <item>AspNetCore Instrumentation</item>
+        /// <item>SQL Client Instrumentation</item>
+        /// </list>
+        /// </para>
+        /// <para>
+        /// Configuring exporters or processors may interfere with the operation of the plugin and is not recommended.
+        /// </para>
+        /// </summary>
+        /// <example>
+        /// Add additional activity sources:
+        /// <code>
+        /// ObservabilityConfig.Builder()
+        ///     .WithExtendedTracingConfig(builder =>
+        ///     {
+        ///         // Activities started by this activity source will be in exported spans.
+        ///         builder.AddSource("my-custom-activity-source");
+        ///     });
+        /// </code>
+        /// </example>
+        /// <example>
+        /// Add additional instrumentation.
+        /// <code>
+        /// ObservabilityConfig.Builder()
+        ///     .WithExtendedTracingConfig(builder =>
+        ///     {
+        ///         builder.AddMyInstrumentation()
+        ///     });
+        /// </code>
+        /// </example>
+        /// <param name="extendedTracerConfiguration">A function used to extend the tracing configuration.</param>
+        /// <returns>A reference to this builder.</returns>
+        public TBuilder WithExtendedTracingConfig(Action<TracerProviderBuilder> extendedTracerConfiguration)
+        {
+            _extendedTracerConfiguration = extendedTracerConfiguration;
+            return (TBuilder)this;
+        }
+
+        /// <summary>
+        /// Method which extends the configuration of the logger provider.
+        /// <para>
+        /// The basic logger options will already be configured by the LaunchDarkly Observability plugin. This method
+        /// should be used to extend that configuration with additional instrumentation.
+        /// </para>
+        /// <para>
+        /// Configuring exporters or processors may interfere with the operation of the plugin and is not recommended.
+        /// </para>
+        /// </summary>
+        /// <example>
+        /// Adding custom instrumentation:
+        /// <code>
+        /// ObservabilityConfig.Builder()
+        ///     .WithExtendedLoggerConfiguration(builder =>
+        ///     {
+        ///         builder.AddMyInstrumentation();
+        ///     });
+        /// </code>
+        /// </example>
+        /// <param name="extendedLoggerConfiguration">A function used to extend the logging configuration.</param>
+        /// <returns>A reference to this builder.</returns>
+        public TBuilder WithExtendedLoggerConfiguration(Action<LoggerProviderBuilder> extendedLoggerConfiguration)
+        {
+            _extendedLoggerConfiguration = extendedLoggerConfiguration;
+            return (TBuilder)this;
+        }
+
+        /// <summary>
+        /// Method which extends the configuration of the meter provider.
+        /// <para>
+        /// The basic meter options will already be configured by the LaunchDarkly Observability plugin. This method
+        /// should be used to extend that configuration with additional meters, views, or custom instrumentation.
+        /// </para>
+        /// <para>
+        /// By default, metrics will be configured with the following instrumentation:
+        /// <list type="bullet">
+        /// <item>Runtime Instrumentation (GC, thread pool, JIT statistics)</item>
+        /// <item>Process Instrumentation (CPU, memory, handle counts)</item>
+        /// <item>HTTP Client Instrumentation (request counts, durations)</item>
+        /// <item>AspNetCore Instrumentation (request rates, response times)</item>
+        /// <item>SQL Client Instrumentation (query execution times, connection pool metrics)</item>
+        /// </list>
+        /// </para>
+        /// <para>
+        /// Configuring exporters or processors may interfere with the operation of the plugin and is not recommended.
+        /// </para>
+        /// </summary>
+        /// <example>
+        /// Adding custom instrumentation:
+        /// <code>
+        /// ObservabilityConfig.Builder()
+        ///     .WithExtendedMeterConfiguration(builder =>
+        ///     {
+        ///         // Add meters from your custom instrumentation
+        ///         builder.AddMyInstrumentation();
+        ///     });
+        /// </code>
+        /// </example>
+        /// <param name="extendedMeterConfiguration">A function used to extend the metrics configuration.</param>
+        /// <returns>A reference to this builder.</returns>
+        public TBuilder WithExtendedMeterConfiguration(Action<MeterProviderBuilder> extendedMeterConfiguration)
+        {
+            _extendedMeterConfiguration = extendedMeterConfiguration;
+            return (TBuilder)this;
+        }
+
+        /// <summary>
         /// Build an immutable <see cref="ObservabilityConfig"/> instance.
         /// </summary>
         /// <returns>The constructed <see cref="ObservabilityConfig"/>.</returns>
@@ -110,7 +234,10 @@ namespace LaunchDarkly.Observability
                 _serviceName,
                 _environment,
                 _serviceVersion,
-                sdkKey);
+                sdkKey,
+                _extendedTracerConfiguration,
+                _extendedLoggerConfiguration,
+                _extendedMeterConfiguration);
         }
     }
 }

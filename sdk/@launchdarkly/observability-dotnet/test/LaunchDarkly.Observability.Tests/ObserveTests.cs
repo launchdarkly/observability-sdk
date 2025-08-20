@@ -83,14 +83,14 @@ namespace LaunchDarkly.Observability.Test
             ResetObserveInstance();
 
             _loggerProvider = new TestLoggerProvider();
-            _config = new ObservabilityConfig(
-                otlpEndpoint: "https://test-endpoint.com",
-                backendUrl: "https://test-backend.com",
-                serviceName: "test-service",
-                environment: "test",
-                serviceVersion: "1.0.0",
-                sdkKey: "test-key"
-            );
+
+            _config = new ObservabilityConfig.ObservabilityConfigBuilder()
+                .WithOtlpEndpoint("https://test-endpoint.com")
+                .WithBackendUrl("https://test-backend.com")
+                .WithServiceName("test-service")
+                .WithServiceVersion("1.0.0")
+                .WithEnvironment("test")
+                .Build("test-key");
 
             // Set up OpenTelemetry
             _exportedActivities = new List<Activity>();
@@ -162,14 +162,13 @@ namespace LaunchDarkly.Observability.Test
         [Test]
         public void Initialize_WithNullServiceName_UsesDefaults()
         {
-            var configWithNullServiceName = new ObservabilityConfig(
-                otlpEndpoint: "https://test-endpoint.com",
-                backendUrl: "https://test-backend.com",
-                serviceName: null,
-                environment: "test",
-                serviceVersion: "1.0.0",
-                sdkKey: "test-key"
-            );
+            var configWithNullServiceName = new ObservabilityConfig.ObservabilityConfigBuilder()
+                .WithOtlpEndpoint("https://test-endpoint.com")
+                .WithBackendUrl("https://test-backend.com")
+                .WithServiceName(null)
+                .WithServiceVersion("1.0.0")
+                .WithEnvironment("test")
+                .Build("test-key");
 
             // Reset meter provider to use default service name
             _meterProvider?.Dispose();
@@ -212,14 +211,13 @@ namespace LaunchDarkly.Observability.Test
         [Test]
         public void Initialize_WithEmptyServiceName_UsesEmptyString()
         {
-            var configWithEmptyServiceName = new ObservabilityConfig(
-                otlpEndpoint: "https://test-endpoint.com",
-                backendUrl: "https://test-backend.com",
-                serviceName: "",
-                environment: "test",
-                serviceVersion: "1.0.0",
-                sdkKey: "test-key"
-            );
+            var configWithEmptyServiceName = new ObservabilityConfig.ObservabilityConfigBuilder()
+                .WithOtlpEndpoint("https://test-endpoint.com")
+                .WithBackendUrl("https://test-backend.com")
+                .WithServiceName("")
+                .WithServiceVersion("1.0.0")
+                .WithEnvironment("test")
+                .Build("test-key");
 
             // Note: We can't test meter creation with empty string because OpenTelemetry doesn't allow it
             // But we can test that Observe itself handles empty string without crashing
@@ -237,8 +235,8 @@ namespace LaunchDarkly.Observability.Test
             var logger = _loggerProvider.Loggers.FirstOrDefault();
             Assert.That(logger, Is.Not.Null, "Should have created a logger");
             // Empty string is used as-is (not replaced with default) because the code uses ?? operator
-            Assert.That(logger.CategoryName, Is.EqualTo(""),
-                "Should use empty string as logger name when service name is empty (not null)");
+            Assert.That(logger.CategoryName, Is.EqualTo("launchdarkly-plugin-default-logger"),
+                "Should use default logger name when service name is empty (not null)");
 
             // Verify activity source also uses empty string
             // Note: Activity with empty source name might not be sampled by our listener
@@ -255,14 +253,13 @@ namespace LaunchDarkly.Observability.Test
         [Test]
         public void Initialize_WithWhitespaceServiceName_UsesWhitespaceString()
         {
-            var configWithWhitespaceServiceName = new ObservabilityConfig(
-                otlpEndpoint: "https://test-endpoint.com",
-                backendUrl: "https://test-backend.com",
-                serviceName: "   ",
-                environment: "test",
-                serviceVersion: "1.0.0",
-                sdkKey: "test-key"
-            );
+            var configWithWhitespaceServiceName = new ObservabilityConfig.ObservabilityConfigBuilder()
+                .WithOtlpEndpoint("https://test-endpoint.com")
+                .WithBackendUrl("https://test-backend.com")
+                .WithServiceName("   ")
+                .WithServiceVersion("1.0.0")
+                .WithEnvironment("test")
+                .Build("test-key");
 
             // Initialize with whitespace service name
             Observe.Initialize(configWithWhitespaceServiceName, _loggerProvider);
@@ -276,9 +273,9 @@ namespace LaunchDarkly.Observability.Test
             Observe.RecordLog("Test message with whitespace service name", LogLevel.Warning, null);
             var logger = _loggerProvider.Loggers.FirstOrDefault();
             Assert.That(logger, Is.Not.Null, "Should have created a logger");
-            // Whitespace string is used as-is (not replaced with default) because the code uses ?? operator
-            Assert.That(logger.CategoryName, Is.EqualTo("   "),
-                "Should use whitespace string as logger name when service name is whitespace (not null)");
+
+            Assert.That(logger.CategoryName, Is.EqualTo("launchdarkly-plugin-default-logger"),
+                "Should use default logger name when service name is whitespace (not null)");
         }
 
         #endregion

@@ -33,13 +33,13 @@ namespace LaunchDarkly.Observability
 
             internal Instance(ObservabilityConfig config, ILoggerProvider loggerProvider)
             {
-                Meter = new Meter(config.ServiceName ?? DefaultNames.MeterName,
+                Meter = new Meter(DefaultNames.MeterNameOrDefault(config.ServiceName),
                     config.ServiceVersion);
-                ActivitySource = new ActivitySource(config.ServiceName ?? DefaultNames.ActivitySourceName,
+                ActivitySource = new ActivitySource(DefaultNames.ActivitySourceNameOrDefault(config.ServiceName),
                     config.ServiceVersion);
                 if (loggerProvider != null)
                 {
-                    Logger = loggerProvider.CreateLogger(config.ServiceName ?? DefaultNames.DefaultLoggerName);
+                    Logger = loggerProvider.CreateLogger(DefaultNames.LoggerNameOrDefault(config.ServiceName));
                 }
             }
         }

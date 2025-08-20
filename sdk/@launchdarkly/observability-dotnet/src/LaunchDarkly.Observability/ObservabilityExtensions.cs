@@ -112,7 +112,8 @@ namespace LaunchDarkly.Observability
                     .AddWcfInstrumentation()
                     .AddQuartzInstrumentation()
                     .AddAspNetCoreInstrumentation(options => { options.RecordException = true; })
-                    .AddSqlClientInstrumentation(options => { options.SetDbStatementForText = true; });
+                    .AddSqlClientInstrumentation(options => { options.SetDbStatementForText = true; })
+                    .AddSource(DefaultNames.ActivitySourceNameOrDefault(config.ServiceName));
 
                 // Always use sampling exporter for traces
                 var samplingTraceExporter = new SamplingTraceExporter(sampler, new OtlpExporterOptions
@@ -123,6 +124,7 @@ namespace LaunchDarkly.Observability
 
                 tracing.AddProcessor(new BatchActivityExportProcessor(samplingTraceExporter, MaxQueueSize,
                     FlushIntervalMs, ExportTimeoutMs, MaxExportBatchSize));
+                config.ExtendedTracerConfiguration?.Invoke(tracing);
             }).WithLogging(logging =>
             {
                 logging.SetResourceBuilder(resourceBuilder)
@@ -135,10 +137,11 @@ namespace LaunchDarkly.Observability
                         options.BatchExportProcessorOptions.MaxQueueSize = MaxQueueSize;
                         options.BatchExportProcessorOptions.ScheduledDelayMilliseconds = FlushIntervalMs;
                     });
+                config.ExtendedLoggerConfiguration?.Invoke(logging);
             }).WithMetrics(metrics =>
             {
                 metrics.SetResourceBuilder(resourceBuilder)
-                    .AddMeter(config.ServiceName ?? DefaultNames.MeterName)
+                    .AddMeter(DefaultNames.MeterNameOrDefault(config.ServiceName))
                     .AddRuntimeInstrumentation()
                     .AddProcessInstrumentation()
                     .AddHttpClientInstrumentation()
@@ -149,6 +152,7 @@ namespace LaunchDarkly.Observability
                         Endpoint = new Uri(config.OtlpEndpoint + MetricsPath),
                         Protocol = ExportProtocol
                     })));
+                config.ExtendedMeterConfiguration?.Invoke(metrics);
             });
 
             // Attach a hosted service which will allow us to get a logger provider instance from the built
