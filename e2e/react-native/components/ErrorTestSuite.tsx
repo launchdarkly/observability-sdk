@@ -6,7 +6,7 @@ import {
 	StyleSheet,
 	ScrollView,
 	Alert,
-	Switch
+	Switch,
 } from 'react-native'
 import { ErrorTestUtils, LDObserve } from '@/app/observability'
 
@@ -39,12 +39,12 @@ class ErrorBoundary extends React.Component<
 	componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
 		console.log('Error Boundary caught error:', error)
 		console.log('Error Info:', errorInfo)
-		
+
 		// Manually report the error with React context
 		LDObserve.recordError(error, {
 			'error.boundary': true,
 			'error.component_stack': errorInfo.componentStack,
-			'react.error_boundary': 'ErrorTestSuite'
+			'react.error_boundary': 'ErrorTestSuite',
 		})
 
 		this.props.onError?.(error)
@@ -59,7 +59,9 @@ class ErrorBoundary extends React.Component<
 					</Text>
 					<TouchableOpacity
 						style={styles.resetButton}
-						onPress={() => this.setState({ hasError: false, error: undefined })}
+						onPress={() =>
+							this.setState({ hasError: false, error: undefined })
+						}
 					>
 						<Text style={styles.buttonText}>Reset</Text>
 					</TouchableOpacity>
@@ -72,11 +74,17 @@ class ErrorBoundary extends React.Component<
 }
 
 // Component that throws an error when rendered
-const ErrorThrowingComponent: React.FC<{ shouldThrow: boolean }> = ({ shouldThrow }) => {
+const ErrorThrowingComponent: React.FC<{ shouldThrow: boolean }> = ({
+	shouldThrow,
+}) => {
 	if (shouldThrow) {
 		throw new Error('Intentional React component error for testing')
 	}
-	return <Text style={styles.successText}>✅ Component rendered successfully</Text>
+	return (
+		<Text style={styles.successText}>
+			✅ Component rendered successfully
+		</Text>
+	)
 }
 
 export const ErrorTestSuite: React.FC = () => {
@@ -92,28 +100,36 @@ export const ErrorTestSuite: React.FC = () => {
 			const randomTests = [
 				() => ErrorTestUtils.triggerConsoleError(),
 				() => ErrorTestUtils.triggerUnhandledRejection(),
-				() => ErrorTestUtils.triggerManualError()
+				() => ErrorTestUtils.triggerManualError(),
 			]
-			
-			const randomTest = randomTests[Math.floor(Math.random() * randomTests.length)]
+
+			const randomTest =
+				randomTests[Math.floor(Math.random() * randomTests.length)]
 			randomTest()
 		}, 10000) // Every 10 seconds
 
 		return () => clearInterval(interval)
 	}, [autoErrorsEnabled])
 
-	const addTestResult = (name: string, status: TestResult['status'], message: string) => {
+	const addTestResult = (
+		name: string,
+		status: TestResult['status'],
+		message: string,
+	) => {
 		const result: TestResult = {
 			name,
 			status,
 			message,
-			timestamp: new Date()
+			timestamp: new Date(),
 		}
-		
-		setTestResults(prev => [result, ...prev.slice(0, 9)]) // Keep last 10 results
+
+		setTestResults((prev) => [result, ...prev.slice(0, 9)]) // Keep last 10 results
 	}
 
-	const runTest = async (testName: string, testFn: () => void | Promise<void>) => {
+	const runTest = async (
+		testName: string,
+		testFn: () => void | Promise<void>,
+	) => {
 		try {
 			addTestResult(testName, 'pending', 'Running test...')
 			await testFn()
@@ -128,44 +144,44 @@ export const ErrorTestSuite: React.FC = () => {
 			name: 'Unhandled Exception',
 			description: 'Throws an error in setTimeout',
 			test: () => ErrorTestUtils.triggerUnhandledException(),
-			color: '#FF6B6B'
+			color: '#FF6B6B',
 		},
 		{
 			name: 'Unhandled Rejection',
 			description: 'Promise rejection without catch',
 			test: () => ErrorTestUtils.triggerUnhandledRejection(),
-			color: '#4ECDC4'
+			color: '#4ECDC4',
 		},
 		{
 			name: 'Console Error',
 			description: 'Logs error to console',
 			test: () => ErrorTestUtils.triggerConsoleError(),
-			color: '#45B7D1'
+			color: '#45B7D1',
 		},
 		{
 			name: 'Manual Error',
 			description: 'Manually reported error',
 			test: () => ErrorTestUtils.triggerManualError(),
-			color: '#96CEB4'
+			color: '#96CEB4',
 		},
 		{
 			name: 'Network Error',
 			description: 'Failed network request (filtered)',
 			test: () => ErrorTestUtils.triggerNetworkError(),
-			color: '#FECA57'
+			color: '#FECA57',
 		},
 		{
 			name: 'Sampling Test',
 			description: 'Multiple similar errors',
 			test: () => ErrorTestUtils.triggerSamplingTest(),
-			color: '#FF9FF3'
+			color: '#FF9FF3',
 		},
 		{
 			name: 'React Error',
 			description: 'Component error boundary',
 			test: () => setThrowReactError(true),
-			color: '#F38BA8'
-		}
+			color: '#F38BA8',
+		},
 	]
 
 	const clearResults = () => {
@@ -175,7 +191,9 @@ export const ErrorTestSuite: React.FC = () => {
 	return (
 		<ScrollView style={styles.container}>
 			<View style={styles.header}>
-				<Text style={styles.title}>🧪 Error Instrumentation Test Suite</Text>
+				<Text style={styles.title}>
+					🧪 Error Instrumentation Test Suite
+				</Text>
 				<Text style={styles.subtitle}>
 					Test automatic error capture in React Native
 				</Text>
@@ -183,7 +201,9 @@ export const ErrorTestSuite: React.FC = () => {
 
 			{/* Auto-generate errors toggle */}
 			<View style={styles.autoErrorsContainer}>
-				<Text style={styles.autoErrorsLabel}>Auto-generate errors:</Text>
+				<Text style={styles.autoErrorsLabel}>
+					Auto-generate errors:
+				</Text>
 				<Switch
 					value={autoErrorsEnabled}
 					onValueChange={setAutoErrorsEnabled}
@@ -198,21 +218,34 @@ export const ErrorTestSuite: React.FC = () => {
 				{testScenarios.map((scenario, index) => (
 					<TouchableOpacity
 						key={index}
-						style={[styles.testButton, { backgroundColor: scenario.color }]}
+						style={[
+							styles.testButton,
+							{ backgroundColor: scenario.color },
+						]}
 						onPress={() => runTest(scenario.name, scenario.test)}
 					>
-						<Text style={styles.testButtonTitle}>{scenario.name}</Text>
-						<Text style={styles.testButtonDescription}>{scenario.description}</Text>
+						<Text style={styles.testButtonTitle}>
+							{scenario.name}
+						</Text>
+						<Text style={styles.testButtonDescription}>
+							{scenario.description}
+						</Text>
 					</TouchableOpacity>
 				))}
 			</View>
 
 			{/* React Error Boundary Test */}
 			<View style={styles.reactErrorContainer}>
-				<Text style={styles.sectionTitle}>React Error Boundary Test:</Text>
+				<Text style={styles.sectionTitle}>
+					React Error Boundary Test:
+				</Text>
 				<ErrorBoundary
 					onError={() => {
-						addTestResult('React Error', 'success', 'Error caught by boundary')
+						addTestResult(
+							'React Error',
+							'success',
+							'Error caught by boundary',
+						)
 						// Reset after a delay
 						setTimeout(() => setThrowReactError(false), 2000)
 					}}
@@ -225,26 +258,40 @@ export const ErrorTestSuite: React.FC = () => {
 			<View style={styles.resultsContainer}>
 				<View style={styles.resultsHeader}>
 					<Text style={styles.sectionTitle}>Test Results:</Text>
-					<TouchableOpacity style={styles.clearButton} onPress={clearResults}>
+					<TouchableOpacity
+						style={styles.clearButton}
+						onPress={clearResults}
+					>
 						<Text style={styles.clearButtonText}>Clear</Text>
 					</TouchableOpacity>
 				</View>
-				
+
 				{testResults.length === 0 ? (
 					<Text style={styles.noResults}>No tests run yet</Text>
 				) : (
 					testResults.map((result, index) => (
 						<View key={index} style={styles.resultItem}>
 							<View style={styles.resultHeader}>
-								<Text style={styles.resultName}>{result.name}</Text>
-								<Text style={[
-									styles.resultStatus,
-									{ color: getStatusColor(result.status) }
-								]}>
-									{getStatusIcon(result.status)} {result.status}
+								<Text style={styles.resultName}>
+									{result.name}
+								</Text>
+								<Text
+									style={[
+										styles.resultStatus,
+										{
+											color: getStatusColor(
+												result.status,
+											),
+										},
+									]}
+								>
+									{getStatusIcon(result.status)}{' '}
+									{result.status}
 								</Text>
 							</View>
-							<Text style={styles.resultMessage}>{result.message}</Text>
+							<Text style={styles.resultMessage}>
+								{result.message}
+							</Text>
 							{result.timestamp && (
 								<Text style={styles.resultTimestamp}>
 									{result.timestamp.toLocaleTimeString()}
@@ -280,19 +327,27 @@ export const ErrorTestSuite: React.FC = () => {
 
 const getStatusColor = (status: TestResult['status']) => {
 	switch (status) {
-		case 'success': return '#4CAF50'
-		case 'error': return '#F44336'
-		case 'pending': return '#FF9800'
-		default: return '#757575'
+		case 'success':
+			return '#4CAF50'
+		case 'error':
+			return '#F44336'
+		case 'pending':
+			return '#FF9800'
+		default:
+			return '#757575'
 	}
 }
 
 const getStatusIcon = (status: TestResult['status']) => {
 	switch (status) {
-		case 'success': return '✅'
-		case 'error': return '❌'
-		case 'pending': return '⏳'
-		default: return '❓'
+		case 'success':
+			return '✅'
+		case 'error':
+			return '❌'
+		case 'pending':
+			return '⏳'
+		default:
+			return '❓'
 	}
 }
 

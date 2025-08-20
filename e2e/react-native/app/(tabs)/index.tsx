@@ -15,18 +15,18 @@ export default function HomeScreen() {
 			try {
 				await initializeObservability()
 				setIsInitialized(true)
-				
+
 				// Log that the home screen loaded
 				LDObserve.recordLog('Home screen loaded successfully', 'info', {
 					screen: 'HomeScreen',
 					timestamp: new Date().toISOString(),
-					platform: Platform.OS
+					platform: Platform.OS,
 				})
 			} catch (error) {
 				console.error('Failed to initialize observability:', error)
 				Alert.alert(
 					'Initialization Error',
-					'Failed to initialize observability. Check console for details.'
+					'Failed to initialize observability. Check console for details.',
 				)
 			}
 		}
@@ -48,26 +48,26 @@ export default function HomeScreen() {
 				<ThemedText type="title">LaunchDarkly Observability</ThemedText>
 				<HelloWave />
 			</ThemedView>
-			
+
 			<ThemedView style={styles.stepContainer}>
 				<ThemedText type="subtitle">
 					🔧 Error Instrumentation Test App
 				</ThemedText>
 				<ThemedText>
-					This app demonstrates automatic error capture and reporting 
+					This app demonstrates automatic error capture and reporting
 					using the LaunchDarkly Observability React Native SDK.
 				</ThemedText>
 			</ThemedView>
 
 			<ThemedView style={styles.stepContainer}>
 				<ThemedText type="subtitle">
-					📊 Status: {isInitialized ? '✅ Ready' : '⏳ Initializing...'}
+					📊 Status:{' '}
+					{isInitialized ? '✅ Ready' : '⏳ Initializing...'}
 				</ThemedText>
 				<ThemedText>
-					{isInitialized 
+					{isInitialized
 						? 'Observability SDK is initialized and capturing errors automatically.'
-						: 'Initializing LaunchDarkly client with observability plugin...'
-					}
+						: 'Initializing LaunchDarkly client with observability plugin...'}
 				</ThemedText>
 			</ThemedView>
 
@@ -75,22 +75,22 @@ export default function HomeScreen() {
 				<ThemedText type="subtitle">🧪 Test Error Capture</ThemedText>
 				<ThemedText>
 					Go to the{' '}
-					<ThemedText type="defaultSemiBold">Explore</ThemedText> tab 
-					to access the comprehensive error testing suite. You can trigger 
-					different types of errors and see them captured in real-time.
+					<ThemedText type="defaultSemiBold">Explore</ThemedText> tab
+					to access the comprehensive error testing suite. You can
+					trigger different types of errors and see them captured in
+					real-time.
 				</ThemedText>
 			</ThemedView>
 
 			<ThemedView style={styles.stepContainer}>
-				<ThemedText type="subtitle">🎯 What's Being Captured</ThemedText>
+				<ThemedText type="subtitle">
+					🎯 What's Being Captured
+				</ThemedText>
 				<ThemedText>
-					• Unhandled JavaScript exceptions{'\n'}
-					• Unhandled promise rejections{'\n'}
-					• Console errors and warnings{'\n'}
-					• React component errors{'\n'}
-					• Manual error reports{'\n'}
-					• Network errors (filtered){'\n'}
-					• Error deduplication and sampling
+					• Unhandled JavaScript exceptions{'\n'}• Unhandled promise
+					rejections{'\n'}• Console errors and warnings{'\n'}• React
+					component errors{'\n'}• Manual error reports{'\n'}• Network
+					errors (filtered){'\n'}• Error deduplication and sampling
 				</ThemedText>
 			</ThemedView>
 		</ParallaxScrollView>

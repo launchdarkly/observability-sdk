@@ -18,24 +18,27 @@ export const ErrorMonitor: React.FC = () => {
 	useEffect(() => {
 		// Monkey patch the recordError method to monitor captured errors
 		const originalRecordError = LDObserve.recordError
-		
-		LDObserve.recordError = function(error: Error, attributes?: Record<string, any>) {
+
+		LDObserve.recordError = function (
+			error: Error,
+			attributes?: Record<string, any>,
+		) {
 			// Log to our monitor
 			const errorEvent: ErrorEvent = {
 				id: Math.random().toString(36).substr(2, 9),
 				message: error.message,
 				type: error.name,
 				timestamp: new Date(),
-				attributes
+				attributes,
 			}
-			
-			setErrors(prev => [errorEvent, ...prev.slice(0, 9)]) // Keep last 10
-			setErrorCount(prev => prev + 1)
-			
+
+			setErrors((prev) => [errorEvent, ...prev.slice(0, 9)]) // Keep last 10
+			setErrorCount((prev) => prev + 1)
+
 			// Call original method
 			return originalRecordError.call(this, error, attributes)
 		}
-		
+
 		return () => {
 			// Restore original method
 			LDObserve.recordError = originalRecordError
@@ -54,13 +57,14 @@ export const ErrorMonitor: React.FC = () => {
 	return (
 		<View style={styles.container}>
 			{/* Floating indicator */}
-			<TouchableOpacity 
-				style={[styles.indicator, errorCount > 0 && styles.indicatorActive]}
+			<TouchableOpacity
+				style={[
+					styles.indicator,
+					errorCount > 0 && styles.indicatorActive,
+				]}
 				onPress={toggleVisibility}
 			>
-				<Text style={styles.indicatorText}>
-					🐛 {errorCount}
-				</Text>
+				<Text style={styles.indicatorText}>🐛 {errorCount}</Text>
 			</TouchableOpacity>
 
 			{/* Error details panel */}
@@ -69,31 +73,49 @@ export const ErrorMonitor: React.FC = () => {
 					<View style={styles.header}>
 						<Text style={styles.title}>Error Monitor</Text>
 						<View style={styles.headerButtons}>
-							<TouchableOpacity style={styles.clearButton} onPress={clearErrors}>
-								<Text style={styles.clearButtonText}>Clear</Text>
+							<TouchableOpacity
+								style={styles.clearButton}
+								onPress={clearErrors}
+							>
+								<Text style={styles.clearButtonText}>
+									Clear
+								</Text>
 							</TouchableOpacity>
-							<TouchableOpacity style={styles.closeButton} onPress={toggleVisibility}>
+							<TouchableOpacity
+								style={styles.closeButton}
+								onPress={toggleVisibility}
+							>
 								<Text style={styles.closeButtonText}>×</Text>
 							</TouchableOpacity>
 						</View>
 					</View>
 
 					{errors.length === 0 ? (
-						<Text style={styles.noErrors}>No errors captured yet</Text>
+						<Text style={styles.noErrors}>
+							No errors captured yet
+						</Text>
 					) : (
 						errors.map((error) => (
 							<View key={error.id} style={styles.errorItem}>
 								<View style={styles.errorHeader}>
-									<Text style={styles.errorType}>{error.type}</Text>
+									<Text style={styles.errorType}>
+										{error.type}
+									</Text>
 									<Text style={styles.errorTime}>
 										{error.timestamp.toLocaleTimeString()}
 									</Text>
 								</View>
-								<Text style={styles.errorMessage} numberOfLines={2}>
+								<Text
+									style={styles.errorMessage}
+									numberOfLines={2}
+								>
 									{error.message}
 								</Text>
 								{error.attributes && (
-									<Text style={styles.errorAttributes} numberOfLines={1}>
+									<Text
+										style={styles.errorAttributes}
+										numberOfLines={1}
+									>
 										{JSON.stringify(error.attributes)}
 									</Text>
 								)}
