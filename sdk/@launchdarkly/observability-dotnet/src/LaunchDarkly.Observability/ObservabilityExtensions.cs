@@ -1,15 +1,17 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
+using LaunchDarkly.Observability.Otel;
 using LaunchDarkly.Logging;
 using LaunchDarkly.Observability.Logging;
-using LaunchDarkly.Observability.Otel;
 using LaunchDarkly.Observability.Sampling;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using OpenTelemetry;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
-using OpenTelemetry;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
@@ -21,8 +23,6 @@ namespace LaunchDarkly.Observability
     /// </summary>
     public static class ObservabilityExtensions
     {
-        // Used for metrics when a service name is not specified.
-        private const string DefaultMetricsName = "launchdarkly-plugin-default-metrics";
         private const OtlpExportProtocol ExportProtocol = OtlpExportProtocol.HttpProtobuf;
         private const int FlushIntervalMs = 5 * 1000;
         private const int MaxExportBatchSize = 10000;
@@ -32,6 +32,27 @@ namespace LaunchDarkly.Observability
         private const string TracesPath = "/v1/traces";
         private const string LogsPath = "/v1/logs";
         private const string MetricsPath = "/v1/metrics";
+
+
+        private class LdObservabilityHostedService : IHostedService
+        {
+            private readonly ObservabilityConfig _config;
+            private readonly ILoggerProvider _loggerProvider;
+
+            public LdObservabilityHostedService(ObservabilityConfig config, IServiceProvider provider)
+            {
+                _loggerProvider = provider.GetService<ILoggerProvider>();
+                _config = config;
+            }
+
+            public Task StartAsync(CancellationToken cancellationToken)
+            {
+                Observe.Initialize(_config, _loggerProvider);
+                return Task.CompletedTask;
+            }
+
+            public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+        }
 
         private static async Task GetSamplingConfigAsync(CustomSampler sampler, ObservabilityConfig config)
         {
@@ -56,10 +77,11 @@ namespace LaunchDarkly.Observability
 
             if (!string.IsNullOrWhiteSpace(config.Environment))
             {
-                attrs.Add(new KeyValuePair<string, object>("deployment.environment.name", config.Environment));
+                attrs.Add(
+                    new KeyValuePair<string, object>(AttributeNames.DeploymentEnvironment, config.Environment));
             }
 
-            attrs.Add(new KeyValuePair<string, object>("highlight.project_id", config.SdkKey));
+            attrs.Add(new KeyValuePair<string, object>(AttributeNames.ProjectId, config.SdkKey));
 
             return attrs;
         }
@@ -116,7 +138,7 @@ namespace LaunchDarkly.Observability
             }).WithMetrics(metrics =>
             {
                 metrics.SetResourceBuilder(resourceBuilder)
-                    .AddMeter(config.ServiceName ?? DefaultMetricsName)
+                    .AddMeter(config.ServiceName ?? DefaultNames.MeterName)
                     .AddRuntimeInstrumentation()
                     .AddProcessInstrumentation()
                     .AddHttpClientInstrumentation()
@@ -128,6 +150,11 @@ namespace LaunchDarkly.Observability
                         Protocol = ExportProtocol
                     })));
             });
+
+            // Attach a hosted service which will allow us to get a logger provider instance from the built
+            // service collection.
+            services.AddHostedService((serviceProvider) =>
+                new LdObservabilityHostedService(config, serviceProvider));
         }
 
         /// <summary>
