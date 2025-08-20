@@ -8,8 +8,8 @@
 		"src/integrations/*.ts",
 		"src/plugins/*.ts",
 		"src/sdk/*.ts",
-        "src/client/**/*.ts",
-        "src/client/**/*.tsx"
+		"src/client/**/*.ts",
+		"src/client/**/*.tsx"
 	],
 	"exclude": [
 		"**/__tests__/**",
