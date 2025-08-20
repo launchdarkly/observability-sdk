@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using System.Threading;
+using LaunchDarkly.Observability.Logging;
 using Microsoft.Extensions.Logging;
 
 namespace LaunchDarkly.Observability
@@ -60,7 +61,7 @@ namespace LaunchDarkly.Observability
             var instance = GetInstance();
             if (instance == null)
             {
-                // TODO: Log after PR with logger merged.
+                DebugLogger.DebugLog("Instance used before Observability Plugin initialized.");
                 return;
             }
 
@@ -101,7 +102,7 @@ namespace LaunchDarkly.Observability
                 // Silently return if exception is null
                 return;
             }
-            
+
             WithInstance(instance =>
             {
                 var activity = Activity.Current;
