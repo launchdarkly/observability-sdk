@@ -65,7 +65,10 @@ class TracingHook implements Hook {
 			_LDObserve.recordLog(`LD.identify`, 'info', {
 				...this.metaAttributes,
 				...getCanonicalObj(hookContext.context),
-				key: getCanonicalKey(hookContext.context),
+				key:
+					this.options?.contextFriendlyName?.(hookContext.context) ??
+					getCanonicalKey(hookContext.context),
+				canonicalKey: getCanonicalKey(hookContext.context),
 				timeout: hookContext.timeout,
 				[LD_IDENTIFY_RESULT_STATUS]: result.status,
 			})

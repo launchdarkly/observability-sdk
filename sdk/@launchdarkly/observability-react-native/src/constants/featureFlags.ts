@@ -1,4 +1,8 @@
-import type { LDEvaluationReason, LDMultiKindContext, LDContext, LDContextCommon } from '@launchdarkly/js-sdk-common'
+import type {
+	LDEvaluationReason,
+	LDMultiKindContext,
+	LDContext,
+} from '@launchdarkly/js-sdk-common'
 
 export const FEATURE_FLAG_SCOPE = 'feature_flag'
 export const FEATURE_FLAG_SPAN_NAME = 'evaluation'
@@ -43,7 +47,7 @@ function isMultiContext(context: any): context is LDMultiKindContext {
 /**
  * Get a canonical key for a given context. The canonical key contains an encoded version of the context
  * keys.
- * 
+ *
  * This format should be stable and consistent. It isn't for presentation only purposes.
  * It allows linking to a context instance.
  * @param context The context to get a canonical key for.
@@ -55,15 +59,15 @@ export function getCanonicalKey(context: LDContext) {
 			.sort()
 			.filter((key) => key !== 'kind')
 			.map((key) => {
-				return `${key}:${encodeKey((context[key]).key)}`
+				return `${key}:${encodeKey(context[key].key)}`
 			})
 			.join(':')
-	} else if(context.kind === 'user') {
+	} else if (context.kind === 'user') {
 		// If the kind is a user, then the key is directly the user key.
-		return context.key;
+		return context.key
 	}
 
-	return `${context.kind}:${encodeKey(context.key)}`;
+	return `${context.kind}:${encodeKey(context.key)}`
 }
 
 export function getCanonicalObj(context: any): Record<string, any> {

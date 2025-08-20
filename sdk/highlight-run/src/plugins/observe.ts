@@ -129,8 +129,12 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 					if (result.status === 'completed') {
 						const metadata = {
 							...getCanonicalObj(hookContext.context),
-							key: getCanonicalKey(hookContext.context),
+							key:
+								this.options?.contextFriendlyName?.(
+									hookContext.context,
+								) ?? getCanonicalKey(hookContext.context),
 							timeout: hookContext.timeout,
+							canonicalKey: getCanonicalKey(hookContext.context),
 							[LD_IDENTIFY_RESULT_STATUS]: result.status,
 						}
 						this.observe?.recordLog('LD.identify', 'info', {

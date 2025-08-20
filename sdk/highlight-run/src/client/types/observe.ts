@@ -5,6 +5,7 @@ import type {
 } from './client'
 import type { CommonOptions } from './types'
 import type { EventName } from '@opentelemetry/instrumentation-user-interaction'
+import type { LDContext } from '@launchdarkly/js-client-sdk'
 
 export type ObserveOptions = CommonOptions & {
 	/**
@@ -67,4 +68,20 @@ export type ObserveOptions = CommonOptions & {
 		 */
 		eventNames?: EventName[]
 	}
+
+	/**
+	 * A function that returns a friendly name for a given context.
+	 * This name will be used to identify the session in the observability UI.
+	 * ```ts
+	 * contextFriendlyName: (context: LDContext) => {
+	 *   if(context.kind === 'multi' && context.user?.email) {
+	 *     return `context.user.email`;
+	 *   }
+	 *   return context.key;
+	 * }
+	 * ```
+	 * @param context The context to get a friendly name for.
+	 * @returns The friendly name for the context.
+	 */
+	contextFriendlyName?: (context: LDContext) => string
 }

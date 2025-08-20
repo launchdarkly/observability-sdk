@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest'
-import { getCanonicalKey } from './index'
+import { getCanonicalKey } from './featureFlags'
 
 it.each([
 	[{ key: 'bob' }, 'bob'],
