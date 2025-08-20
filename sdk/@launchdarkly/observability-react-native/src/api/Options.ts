@@ -87,13 +87,17 @@ export interface ReactNativeOptions {
 	 * ```ts
 	 * contextFriendlyName: (context: LDContext) => {
 	 *   if(context.kind === 'multi' && context.user?.email) {
-	 *     return `context.user.email`;
+	 *     return context.user.email;
+	 *   } else if(context.kind === 'user') {
+	 *     return context.key;
 	 *   }
-	 *   return context.key;
+	 *   // Use the default identifier for contexts which don't contain a user.
+	 *   return undefined;
 	 * }
 	 * ```
 	 * @param context The context to get a friendly name for.
-	 * @returns The friendly name for the context.
+	 * @returns The friendly name for the context, or undefined to use the
+	 * default identifier.
 	 */
-	contextFriendlyName?: (context: LDContext) => string
+	contextFriendlyName?: (context: LDContext) => string | undefined
 }

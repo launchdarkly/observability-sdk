@@ -40,7 +40,10 @@ import {
 class TracingHook implements Hook {
 	private metaAttributes: Attributes = {}
 
-	constructor(private metadata: LDPluginEnvironmentMetadata) {
+	constructor(
+		private metadata: LDPluginEnvironmentMetadata,
+		private readonly _options?: ReactNativeOptions,
+	) {
 		this.metaAttributes = {
 			[ATTR_TELEMETRY_SDK_NAME]:
 				'@launchdarkly/observability-react-native',
@@ -66,7 +69,7 @@ class TracingHook implements Hook {
 				...this.metaAttributes,
 				...getCanonicalObj(hookContext.context),
 				key:
-					this.options?.contextFriendlyName?.(hookContext.context) ??
+					this._options?.contextFriendlyName?.(hookContext.context) ??
 					getCanonicalKey(hookContext.context),
 				canonicalKey: getCanonicalKey(hookContext.context),
 				timeout: hookContext.timeout,
@@ -163,6 +166,6 @@ export class Observability implements LDPlugin {
 	}
 
 	getHooks?(metadata: LDPluginEnvironmentMetadata): Hook[] {
-		return [new TracingHook(metadata)]
+		return [new TracingHook(metadata, this._options)]
 	}
 }

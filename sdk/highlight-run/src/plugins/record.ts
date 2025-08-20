@@ -149,7 +149,11 @@ export class Record extends Plugin<RecordOptions> implements LDPlugin {
 					if (result.status === 'completed') {
 						const metadata = {
 							...getCanonicalObj(hookContext.context),
-							key: getCanonicalKey(hookContext.context),
+							key:
+								this.options?.contextFriendlyName?.(
+									hookContext.context,
+								) ?? getCanonicalKey(hookContext.context),
+							canonicalKey: getCanonicalKey(hookContext.context),
 						}
 						this.record?.identify(
 							metadata.key,

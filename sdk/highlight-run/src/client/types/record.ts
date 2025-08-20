@@ -4,6 +4,7 @@ import type {
 	PrivacySettingOption,
 	SamplingStrategy,
 } from './types'
+import type { LDContext } from '@launchdarkly/js-sdk-common'
 
 export type RecordOptions = CommonOptions & {
 	/**
@@ -94,4 +95,24 @@ export type RecordOptions = CommonOptions & {
 	 * are not available (ie. Figma plugins).
 	 */
 	sendMode?: 'webworker' | 'local'
+
+	/**
+	 * A function that returns a friendly name for a given context.
+	 * This name will be used to identify the session in the observability UI.
+	 * ```ts
+	 * contextFriendlyName: (context: LDContext) => {
+	 *   if(context.kind === 'multi' && context.user?.email) {
+	 *     return context.user.email;
+	 *   } else if(context.kind === 'user') {
+	 *     return context.key;
+	 *   }
+	 *   // Use the default identifier for contexts which don't contain a user.
+	 *   return undefined;
+	 * }
+	 * ```
+	 * @param context The context to get a friendly name for.
+	 * @returns The friendly name for the context, or undefined to use the
+	 * default identifier.
+	 */
+	contextFriendlyName?: (context: LDContext) => string | undefined
 }

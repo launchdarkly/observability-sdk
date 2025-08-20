@@ -4,7 +4,8 @@ import { getCanonicalKey } from './index'
 it.each([
 	[{ key: 'bob' }, 'bob'],
 	[{ kind: 'org', key: 'org123' }, 'org:org123'],
-	[{ key: 'Org:%Key%' }, 'org:Org%3A%25Key%25'],
+	[{ kind: 'user', key: 'bob' }, 'bob'],
+	[{ kind: 'org', key: 'Org:%Key%' }, 'org:Org%3A%25Key%25'],
 	[
 		{
 			kind: 'multi',

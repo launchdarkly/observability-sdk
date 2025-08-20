@@ -83,8 +83,11 @@ export function getCanonicalKey(context: LDContext) {
 				return `${key}:${encodeKey((context[key] as LDContextCommon).key)}`
 			})
 			.join(':')
-	} else if (context.kind === 'user') {
+	} else if ('kind' in context && context.kind === 'user') {
 		// If the kind is a user, then the key is directly the user key.
+		return context.key
+	} else if (!('kind' in context)) {
+		// Legacy user.
 		return context.key
 	}
 
