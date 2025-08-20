@@ -89,6 +89,7 @@ namespace LaunchDarkly.Observability.Test
                 .WithBackendUrl("https://test-backend.com")
                 .WithServiceName("test-service")
                 .WithServiceVersion("1.0.0")
+                .WithEnvironment("test")
                 .Build("test-key");
 
             // Set up OpenTelemetry
