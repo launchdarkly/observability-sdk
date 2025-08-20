@@ -124,6 +124,7 @@ namespace LaunchDarkly.Observability
 
                 tracing.AddProcessor(new BatchActivityExportProcessor(samplingTraceExporter, MaxQueueSize,
                     FlushIntervalMs, ExportTimeoutMs, MaxExportBatchSize));
+                config.ExtendedTracerConfiguration?.Invoke(tracing);
             }).WithLogging(logging =>
             {
                 logging.SetResourceBuilder(resourceBuilder)
