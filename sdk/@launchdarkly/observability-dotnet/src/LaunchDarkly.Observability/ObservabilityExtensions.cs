@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using LaunchDarkly.Observability.Otel;
@@ -9,7 +8,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
-using OpenTelemetry;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
@@ -32,15 +30,15 @@ namespace LaunchDarkly.Observability
 
         private class LdObservabilityHostedService : IHostedService
         {
-            private ObservabilityConfig _config;
-            private ActivitySource _activitySource;
-            private ILoggerProvider _loggerProvider;
+            private readonly ObservabilityConfig _config;
+            private readonly ILoggerProvider _loggerProvider;
 
             public LdObservabilityHostedService(ObservabilityConfig config, IServiceProvider provider)
             {
                 _loggerProvider = provider.GetService<ILoggerProvider>();
                 _config = config;
             }
+
             public Task StartAsync(CancellationToken cancellationToken)
             {
                 Observe.Initialize(_config, _loggerProvider);
@@ -120,10 +118,10 @@ namespace LaunchDarkly.Observability
                         Protocol = ExportProtocol
                     })));
             });
-            
+
             // Attach a hosted service which will allow us to get a logger provider instance from the built
-            // serice collection.
-            services.AddHostedService((serviceProvider) => new  LdObservabilityHostedService(config, serviceProvider));
+            // service collection.
+            services.AddHostedService((serviceProvider) => new LdObservabilityHostedService(config, serviceProvider));
         }
 
         /// <summary>
