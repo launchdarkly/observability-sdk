@@ -1,5 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Threading.Tasks;
+using LaunchDarkly.Logging;
+using LaunchDarkly.Observability.Logging;
+using LaunchDarkly.Observability.Otel;
+using LaunchDarkly.Observability.Sampling;
 using Microsoft.Extensions.DependencyInjection;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -21,10 +27,28 @@ namespace LaunchDarkly.Observability
         private const int FlushIntervalMs = 5 * 1000;
         private const int MaxExportBatchSize = 10000;
         private const int MaxQueueSize = 10000;
+        private const int ExportTimeoutMs = 30000;
 
         private const string TracesPath = "/v1/traces";
         private const string LogsPath = "/v1/logs";
         private const string MetricsPath = "/v1/metrics";
+
+        private static async Task GetSamplingConfigAsync(CustomSampler sampler, ObservabilityConfig config)
+        {
+            using (var samplingClient = new SamplingConfigClient(config.BackendUrl))
+            {
+                try
+                {
+                    var res = await samplingClient.GetSamplingConfigAsync(config.SdkKey).ConfigureAwait(false);
+                    if (res == null) return;
+                    sampler.SetConfig(res);
+                }
+                catch (Exception ex)
+                {
+                    DebugLogger.DebugLog($"Exception while getting sampling config: {ex}");
+                }
+            }
+        }
 
         private static IEnumerable<KeyValuePair<string, object>> GetResourceAttributes(ObservabilityConfig config)
         {
@@ -41,9 +65,15 @@ namespace LaunchDarkly.Observability
         }
 
         internal static void AddLaunchDarklyObservabilityWithConfig(this IServiceCollection services,
-            ObservabilityConfig config)
+            ObservabilityConfig config, Logger logger = null)
         {
+            DebugLogger.SetLogger(logger);
             var resourceAttributes = GetResourceAttributes(config);
+
+            var sampler = new CustomSampler();
+
+            // Asynchronously get sampling config.
+            _ = Task.Run(() => GetSamplingConfigAsync(sampler, config));
 
             var resourceBuilder = ResourceBuilder.CreateDefault();
             if (!string.IsNullOrWhiteSpace(config.ServiceName))
@@ -60,18 +90,21 @@ namespace LaunchDarkly.Observability
                     .AddWcfInstrumentation()
                     .AddQuartzInstrumentation()
                     .AddAspNetCoreInstrumentation(options => { options.RecordException = true; })
-                    .AddSqlClientInstrumentation(options => { options.SetDbStatementForText = true; })
-                    .AddOtlpExporter(options =>
-                    {
-                        options.Endpoint = new Uri(config.OtlpEndpoint + TracesPath);
-                        options.Protocol = ExportProtocol;
-                        options.BatchExportProcessorOptions.MaxExportBatchSize = MaxExportBatchSize;
-                        options.BatchExportProcessorOptions.MaxQueueSize = MaxQueueSize;
-                        options.BatchExportProcessorOptions.ScheduledDelayMilliseconds = FlushIntervalMs;
-                    });
+                    .AddSqlClientInstrumentation(options => { options.SetDbStatementForText = true; });
+
+                // Always use sampling exporter for traces
+                var samplingTraceExporter = new SamplingTraceExporter(sampler, new OtlpExporterOptions
+                {
+                    Endpoint = new Uri(config.OtlpEndpoint + TracesPath),
+                    Protocol = OtlpExportProtocol.HttpProtobuf,
+                });
+
+                tracing.AddProcessor(new BatchActivityExportProcessor(samplingTraceExporter, MaxQueueSize,
+                    FlushIntervalMs, ExportTimeoutMs, MaxExportBatchSize));
             }).WithLogging(logging =>
             {
                 logging.SetResourceBuilder(resourceBuilder)
+                    .AddProcessor(new SamplingLogProcessor(sampler))
                     .AddOtlpExporter(options =>
                     {
                         options.Endpoint = new Uri(config.OtlpEndpoint + LogsPath);
