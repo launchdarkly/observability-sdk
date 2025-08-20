@@ -1,10 +1,8 @@
-using System.ComponentModel;
 using System.Diagnostics;
 using LaunchDarkly.Observability;
 using LaunchDarkly.Sdk;
 using LaunchDarkly.Sdk.Server;
 using LaunchDarkly.Sdk.Server.Integrations;
-using Microsoft.Extensions.Logging;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -141,25 +139,25 @@ app.MapGet("/recordlog", () =>
         var logMessages = new[]
         {
             "User authentication successful",
-            "Database connection established", 
+            "Database connection established",
             "Cache miss occurred, falling back to database",
             "API rate limit approaching threshold",
             "Background job completed successfully"
         };
-        
+
         var severityLevels = new[] { LogLevel.Information, LogLevel.Warning, LogLevel.Error, LogLevel.Debug };
-        
+
         var message = logMessages[random.Next(logMessages.Length)];
         var severity = severityLevels[random.Next(severityLevels.Length)];
-        
+
         Observe.RecordLog(message, severity, new Dictionary<string, object>
         {
-            {"component", "asp-sample-app"},
-            {"endpoint", "/recordlog"},
-            {"timestamp", DateTime.UtcNow.ToString("O")},
-            {"user_id", Guid.NewGuid().ToString()}
+            { "component", "asp-sample-app" },
+            { "endpoint", "/recordlog" },
+            { "timestamp", DateTime.UtcNow.ToString("O") },
+            { "user_id", Guid.NewGuid().ToString() }
         });
-        
+
         return new
         {
             message = "Log recorded successfully",
@@ -189,6 +187,8 @@ app.MapGet("/manualinstrumentation", () =>
     })
     .WithName("GetManualInstrumentation")
     .WithOpenApi();
+
+app.MapGet("/crash", () => { throw new NotImplementedException(); }).WithName("Crash").WithOpenApi();
 
 app.Run();
 

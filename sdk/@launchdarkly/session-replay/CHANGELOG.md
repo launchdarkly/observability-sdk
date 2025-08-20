@@ -1,5 +1,11 @@
 # @launchdarkly/session-replay
 
+## 0.3.11
+
+### Patch Changes
+
+- 4ab5879: update o11y plugin docs to point to new launchdarkly pages and correctly reflect the SDK name
+
 ## 0.3.10
 
 ### Patch Changes

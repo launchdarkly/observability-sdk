@@ -376,6 +376,52 @@ namespace LaunchDarkly.Observability.Test
             Assert.That(sampler.IsSamplingEnabled(), Is.False);
         }
 
+        [Test]
+        public void SampleSpan_WithNonNullConfigContainingNullSpansConfig_ShouldHandleGracefully()
+        {
+            // Create a non-null config with null Spans property
+            var config = new SamplingConfig
+            {
+                Spans = null, // This should cause a NullReferenceException in the current implementation
+                Logs = new List<SamplingConfig.LogSamplingConfig>()
+            };
+
+            var sampler = new CustomSampler(AlwaysSampleFn);
+            sampler.SetConfig(config);
+
+            // Create a test activity
+            var activity = new Activity("test-operation");
+            activity.Start();
+            activity.DisplayName = "test span";
+            activity.Stop();
+
+            // This should fail with the current implementation due to NullReferenceException
+            var result = sampler.SampleSpan(activity);
+            Assert.That(result.Sample, Is.True); // Expected behavior if properly handled
+        }
+
+        [Test]
+        public void SampleLog_WithNonNullConfigContainingNullLogsConfig_ShouldHandleGracefully()
+        {
+            // Create a non-null config with null Logs property
+            var config = new SamplingConfig
+            {
+                Spans = new List<SamplingConfig.SpanSamplingConfig>(),
+                Logs = null // This should be handled correctly by the null-conditional operator
+            };
+
+            var sampler = new CustomSampler(AlwaysSampleFn);
+            sampler.SetConfig(config);
+
+            // Create a test log record
+            var properties = new Dictionary<string, object>();
+            var record = LogRecordHelper.CreateTestLogRecord(LogLevel.Information, "test message", properties);
+
+            // This should pass as the implementation correctly handles null Logs
+            var result = sampler.SampleLog(record);
+            Assert.That(result.Sample, Is.True);
+        }
+
         #endregion
     }
 }
