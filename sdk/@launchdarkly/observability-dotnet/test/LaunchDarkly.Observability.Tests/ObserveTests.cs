@@ -271,8 +271,8 @@ namespace LaunchDarkly.Observability.Test
             // Verify logging uses whitespace string, not default  
             Observe.RecordLog("Test message with whitespace service name", LogLevel.Warning, null);
             var logger = _loggerProvider.Loggers.FirstOrDefault();
-            Assert.That(logger, Is.Not.Null, "Should have created a loggesr");
-            // Whitespace string is used as-is (not replaced with default) because the code uses ?? operator
+            Assert.That(logger, Is.Not.Null, "Should have created a logger");
+
             Assert.That(logger.CategoryName, Is.EqualTo("launchdarkly-plugin-default-logger"),
                 "Should use default logger name when service name is whitespace (not null)");
         }
