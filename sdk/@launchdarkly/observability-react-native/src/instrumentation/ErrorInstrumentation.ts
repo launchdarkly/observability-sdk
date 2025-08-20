@@ -1,17 +1,14 @@
 import { Attributes } from '@opentelemetry/api'
-import type { ErrorUtils } from 'react-native'
 import type { ObservabilityClient } from '../client/ObservabilityClient'
-import { ErrorDeduplicator, ErrorType, ErrorSource } from './errorTypes'
 import {
-	formatError,
 	extractReactErrorInfo,
-	parseConsoleArgs,
+	formatError,
 	isNetworkError,
+	parseConsoleArgs,
 } from './errorUtils'
 
 export class ErrorInstrumentation {
 	private client: ObservabilityClient
-	private deduplicator: ErrorDeduplicator
 	private originalHandlers: {
 		globalHandler?: (error: any, isFatal?: boolean) => void
 		consoleError?: (...args: any[]) => void
@@ -22,7 +19,6 @@ export class ErrorInstrumentation {
 
 	constructor(client: ObservabilityClient) {
 		this.client = client
-		this.deduplicator = new ErrorDeduplicator()
 	}
 
 	public initialize(): void {
@@ -49,7 +45,6 @@ export class ErrorInstrumentation {
 
 		try {
 			this.restoreUnhandledExceptionHandler()
-			this.restoreUnhandledRejectionHandler()
 			this.restoreConsoleHandlers()
 			this.isInitialized = false
 			this.client._log('ErrorInstrumentation destroyed')
@@ -74,10 +69,6 @@ export class ErrorInstrumentation {
 	}
 
 	private setupUnhandledRejectionHandler(): void {
-		const handler = (event: any) => {
-			this.handleUnhandledRejection(event)
-		}
-
 		// Try to set up unhandled rejection handler
 		try {
 			// React Native doesn't have native support for unhandledrejection events,
@@ -89,23 +80,13 @@ export class ErrorInstrumentation {
 	}
 
 	private setupConsoleErrorHandler(): void {
-		// Store original console methods
 		this.originalHandlers.consoleError = console.error
 		this.originalHandlers.consoleWarn = console.warn
 
-		// Patch console.error
 		console.error = (...args: any[]) => {
 			this.handleConsoleError('error', args)
 			if (this.originalHandlers.consoleError) {
 				this.originalHandlers.consoleError.apply(console, args)
-			}
-		}
-
-		// Optionally patch console.warn for warnings
-		console.warn = (...args: any[]) => {
-			this.handleConsoleError('warn', args)
-			if (this.originalHandlers.consoleWarn) {
-				this.originalHandlers.consoleWarn.apply(console, args)
 			}
 		}
 	}
@@ -114,7 +95,6 @@ export class ErrorInstrumentation {
 		// Store original Promise methods
 		const originalThen = Promise.prototype.then
 		const originalCatch = Promise.prototype.catch
-		const originalPromiseConstructor = global.Promise
 
 		// Store instance reference for use in the patched function
 		const instance = this
@@ -183,10 +163,11 @@ export class ErrorInstrumentation {
 				| null
 				| undefined,
 		): Promise<TResult1 | TResult2> {
-			return originalThen.call(
-				this,
-				onFulfilled,
-				onRejected ||
+			let rej = onRejected
+			// if uninitialized (destroyed), preserve original Promise behavior
+			if (instance.isInitialized) {
+				rej =
+					rej ||
 					((reason: any): TResult2 | PromiseLike<TResult2> => {
 						// If no rejection handler is provided, treat as unhandled
 						setTimeout(() => {
@@ -201,8 +182,11 @@ export class ErrorInstrumentation {
 							}
 						}, 0)
 						throw reason
-					}),
-			) as Promise<TResult1 | TResult2>
+					})
+			}
+			return originalThen.call(this, onFulfilled, rej) as Promise<
+				TResult1 | TResult2
+			>
 		}
 
 		// Also patch Promise.catch to ensure we catch unhandled rejections
@@ -233,10 +217,6 @@ export class ErrorInstrumentation {
 		try {
 			const errorObj =
 				error instanceof Error ? error : new Error(String(error))
-
-			if (!this.deduplicator.shouldReport(errorObj)) {
-				return
-			}
 
 			// Skip network errors as they're handled by network instrumentation
 			if (isNetworkError(errorObj)) {
@@ -278,10 +258,6 @@ export class ErrorInstrumentation {
 			const reason = event.reason || event
 			const errorObj =
 				reason instanceof Error ? reason : new Error(String(reason))
-
-			if (!this.deduplicator.shouldReport(errorObj)) {
-				return
-			}
 
 			// Skip network errors
 			if (isNetworkError(errorObj)) {
@@ -326,10 +302,6 @@ export class ErrorInstrumentation {
 			errorObj.name =
 				level === 'error' ? 'ConsoleError' : 'ConsoleWarning'
 
-			if (!this.deduplicator.shouldReport(errorObj)) {
-				return
-			}
-
 			const formattedError = formatError(
 				errorObj,
 				'console_error',
@@ -361,11 +333,6 @@ export class ErrorInstrumentation {
 		if (this.originalHandlers.globalHandler) {
 			ErrorUtils.setGlobalHandler(this.originalHandlers.globalHandler)
 		}
-	}
-
-	private restoreUnhandledRejectionHandler(): void {
-		// Restoring Promise patches would be complex and potentially dangerous
-		// In practice, this is rarely needed as the SDK typically lives for the app lifetime
 	}
 
 	private restoreConsoleHandlers(): void {
