@@ -3,13 +3,13 @@
 	"name": "@launchdarkly/observability + @launchdarkly/session-replay",
 	"includeVersion": false,
 	"entryPoints": [
+		"src/api/*.ts",
 		"src/index.tsx",
-		"src/api/record.ts",
-		"src/api/observe.ts",
-		"src/plugins/record.ts",
-		"src/plugins/observe.ts",
-		"src/sdk/LDRecord.ts",
-		"src/sdk/LDObserve.ts"
+		"src/integrations/*.ts",
+		"src/plugins/*.ts",
+		"src/sdk/*.ts",
+		"src/client/**/*.ts",
+		"src/client/**/*.tsx"
 	],
 	"exclude": [
 		"**/__tests__/**",
