@@ -19,3 +19,7 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# Keep LaunchDarkly Plugin classes for ByteBuddy resolution
+-keep class com.launchdarkly.sdk.android.integrations.** { *; }
+-keep class com.launchdarkly.sdk.android.** { *; }

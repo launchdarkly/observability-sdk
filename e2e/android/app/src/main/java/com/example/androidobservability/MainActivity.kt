@@ -39,6 +39,13 @@ class MainActivity : ComponentActivity() {
                         }
                         Button(
                             onClick = {
+                                viewModel.triggerHttpRequest()
+                            }
+                        ) {
+                            Text("Trigger HTTP Request")
+                        }
+                        Button(
+                            onClick = {
                                 viewModel.triggerMetric()
                             }
                         ) {
