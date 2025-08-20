@@ -99,7 +99,7 @@ namespace LaunchDarkly.Observability
         {
             if (exception == null)
             {
-                // Silently return if exception is null
+                DebugLogger.DebugLog("An attempt was made to record a null exception.");
                 return;
             }
 
