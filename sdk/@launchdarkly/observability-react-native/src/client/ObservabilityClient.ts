@@ -69,6 +69,8 @@ export class ObservabilityClient {
 			disableTraces: options.disableTraces ?? false,
 			tracingOrigins: options.tracingOrigins ?? false,
 			urlBlocklist: options.urlBlocklist ?? [],
+			contextFriendlyName:
+				options.contextFriendlyName ?? (() => undefined),
 		}
 	}
 
