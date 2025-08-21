@@ -18,7 +18,8 @@ from opentelemetry.metrics import (
     UpDownCounter as APIUpDownCounter,
 )
 
-_name = "launchdarkly-observability"
+_NAME = "launchdarkly-observability"
+_ERROR_NAME = "launchdarkly.error"
 
 
 class _ObserveInstance:
@@ -45,22 +46,35 @@ class _ObserveInstance:
         self._logger.propagate = False
         self._logger.addHandler(otel_configuration.log_handler)
         self._project_id = project_id
-        self._tracer = trace.get_tracer(_name)
+        self._tracer = otel_configuration.tracer
 
-    def record_exception(
-        self, error: Exception, attributes: typing.Optional[Attributes] = None
+    def _record_exception_internal(
+        self,
+        span: Span,
+        error: Exception,
+        attributes: typing.Optional[Attributes] = None,
     ):
-        span = trace.get_current_span()
-        if not span:
-            self._logger.error("observe.record_exception called without a span context")
-            return
-
         attrs = {}
         if attributes:
             addedAttributes = flatten_dict(attributes, sep=".")
             attrs.update(addedAttributes)
 
         span.record_exception(error, attrs)
+
+    def record_exception(
+        self, error: Exception, attributes: typing.Optional[Attributes] = None
+    ):
+        if error is None:
+            return  # Nothing to record
+
+        span = trace.get_current_span()
+        # Can return a non-recording span if there is no active span.
+        if not span or not span.is_recording():
+            with self.start_span(_ERROR_NAME, attributes=attributes) as error_span:
+                self._record_exception_internal(error_span, error, attributes)
+            return
+
+        self._record_exception_internal(span, error, attributes)
 
     def record_metric(
         self, name: str, value: float, attributes: typing.Optional[Attributes] = None
@@ -128,7 +142,7 @@ class _ObserveInstance:
         Yields:
             The newly-created span.
         """
-        with trace.get_tracer(__name__).start_as_current_span(
+        with self._tracer.start_as_current_span(
             name,
             attributes=attributes,
             record_exception=record_exception,
