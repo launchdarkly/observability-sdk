@@ -82,7 +82,7 @@ export function getContextKeys(context: LDContext) {
 			.filter((key) => key !== 'kind')
 			.map((key) => {
 				return {
-					[key]: encodeKey((context[key] as LDContextCommon).key),
+					[key]: (context[key] as LDContextCommon).key,
 				}
 			})
 			.reduce((acc, obj) => {
@@ -94,7 +94,7 @@ export function getContextKeys(context: LDContext) {
 	if (!('kind' in context)) {
 		// Legacy user.
 		return {
-			user: encodeKey(context.key),
+			user: context.key,
 		}
 	}
 
