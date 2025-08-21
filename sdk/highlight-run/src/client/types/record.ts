@@ -4,7 +4,6 @@ import type {
 	PrivacySettingOption,
 	SamplingStrategy,
 } from './types'
-import type { LDContext } from '@launchdarkly/js-sdk-common'
 
 export type RecordOptions = CommonOptions & {
 	/**

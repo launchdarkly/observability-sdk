@@ -5,7 +5,6 @@ import type {
 } from './client'
 import type { CommonOptions } from './types'
 import type { EventName } from '@opentelemetry/instrumentation-user-interaction'
-import type { LDContext } from '@launchdarkly/js-client-sdk'
 
 export type ObserveOptions = CommonOptions & {
 	/**
