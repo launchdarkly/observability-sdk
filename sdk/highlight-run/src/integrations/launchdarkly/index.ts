@@ -126,6 +126,9 @@ export function getContextKeys(context: LDContext) {
 export function setupLaunchDarklyIntegration(
 	hClient: HighlightPublicInterface,
 	ldClient: LDClient,
+	options?: {
+		contextFriendlyName?: (context: LDContext) => string | undefined
+	},
 ) {
 	ldClient.addHook({
 		getMetadata: () => {
@@ -136,7 +139,9 @@ export function setupLaunchDarklyIntegration(
 		afterIdentify: (hookContext, data, result) => {
 			const metadata = {
 				...getContextKeys(hookContext.context),
-				key: getCanonicalKey(hookContext.context),
+				key:
+					options?.contextFriendlyName?.(hookContext.context) ??
+					getCanonicalKey(hookContext.context),
 			}
 			hClient.log('LD.identify', 'INFO', metadata)
 			if (result.status === 'completed') {
