@@ -4,6 +4,7 @@ import type {
 	LDContext,
 	LDContextCommon,
 } from '@launchdarkly/js-sdk-common'
+import { Attributes } from '@opentelemetry/api'
 
 export const FEATURE_FLAG_SCOPE = 'feature_flag'
 export const FEATURE_FLAG_SPAN_NAME = 'evaluation'
@@ -74,22 +75,31 @@ export function getCanonicalKey(context: LDContext) {
 	return `${context.kind}:${encodeKey(context.key)}`
 }
 
-export function getCanonicalObj(context: any): Record<string, any> {
-	if (!context) return {}
-
-	const canonical: Record<string, any> = {}
-
-	if (context.key) canonical.key = context.key
-	if (context.id) canonical.id = context.id
-	if (context.name) canonical.name = context.name
-	if (context.email) canonical.email = context.email
-	if (context.kind) canonical.kind = context.kind
-
-	if (context.custom && typeof context.custom === 'object') {
-		Object.keys(context.custom).forEach((key) => {
-			canonical[`custom.${key}`] = context.custom[key]
-		})
+export function getContextKeys(context: LDContext) {
+	if (isMultiContext(context)) {
+		return Object.keys(context)
+			.sort()
+			.filter((key) => key !== 'kind')
+			.map((key) => {
+				return {
+					[key]: encodeKey((context[key] as LDContextCommon).key),
+				}
+			})
+			.reduce((acc, obj) => {
+				return { ...acc, ...obj }
+			}, {} as Attributes)
 	}
 
-	return canonical
+	// Legacy user.
+	if (!('kind' in context)) {
+		// Legacy user.
+		return {
+			user: encodeKey(context.key),
+		}
+	}
+
+	// Single kind context.
+	return {
+		[context.kind]: context.key,
+	}
 }

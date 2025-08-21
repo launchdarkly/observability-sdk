@@ -6,7 +6,7 @@ import {
 	FEATURE_FLAG_ENV_ATTR,
 	FEATURE_FLAG_PROVIDER_ATTR,
 	getCanonicalKey,
-	getCanonicalObj,
+	getContextKeys,
 	Hook,
 	LDClient,
 } from '../integrations/launchdarkly'
@@ -148,7 +148,7 @@ export class Record extends Plugin<RecordOptions> implements LDPlugin {
 					}
 					if (result.status === 'completed') {
 						const metadata = {
-							...getCanonicalObj(hookContext.context),
+							...getContextKeys(hookContext.context),
 							key:
 								this.options?.contextFriendlyName?.(
 									hookContext.context,

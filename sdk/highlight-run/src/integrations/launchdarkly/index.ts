@@ -94,7 +94,7 @@ export function getCanonicalKey(context: LDContext) {
 	return `${context.kind}:${encodeKey(context.key)}`
 }
 
-export function getCanonicalObj(context: LDContext) {
+export function getContextKeys(context: LDContext) {
 	if (isMultiContext(context)) {
 		return Object.keys(context)
 			.sort()
@@ -109,7 +109,18 @@ export function getCanonicalObj(context: LDContext) {
 			}, {} as Attributes)
 	}
 
-	return {}
+	// Legacy user.
+	if (!('kind' in context)) {
+		// Legacy user.
+		return {
+			user: encodeKey(context.key),
+		}
+	}
+
+	// Single kind context.
+	return {
+		[context.kind]: context.key,
+	}
 }
 
 export function setupLaunchDarklyIntegration(
@@ -124,7 +135,7 @@ export function setupLaunchDarklyIntegration(
 		},
 		afterIdentify: (hookContext, data, result) => {
 			const metadata = {
-				...getCanonicalObj(hookContext.context),
+				...getContextKeys(hookContext.context),
 				key: getCanonicalKey(hookContext.context),
 			}
 			hClient.log('LD.identify', 'INFO', metadata)
@@ -158,7 +169,7 @@ export function setupLaunchDarklyIntegration(
 
 			if (hookContext.context) {
 				eventAttributes[FEATURE_FLAG_CONTEXT_ATTR] = JSON.stringify(
-					getCanonicalObj(hookContext.context),
+					getContextKeys(hookContext.context),
 				)
 				eventAttributes[FEATURE_FLAG_CONTEXT_ID_ATTR] = getCanonicalKey(
 					hookContext.context,

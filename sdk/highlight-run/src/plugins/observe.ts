@@ -13,7 +13,7 @@ import {
 	FEATURE_FLAG_VALUE_ATTR,
 	FEATURE_FLAG_VARIATION_INDEX_ATTR,
 	getCanonicalKey,
-	getCanonicalObj,
+	getContextKeys,
 	Hook,
 	LD_IDENTIFY_RESULT_STATUS,
 	LDClient,
@@ -128,7 +128,7 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 
 					if (result.status === 'completed') {
 						const metadata = {
-							...getCanonicalObj(hookContext.context),
+							...getContextKeys(hookContext.context),
 							key:
 								this.options?.contextFriendlyName?.(
 									hookContext.context,
@@ -174,7 +174,7 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 
 					if (hookContext.context) {
 						eventAttributes[FEATURE_FLAG_CONTEXT_ATTR] =
-							JSON.stringify(getCanonicalObj(hookContext.context))
+							JSON.stringify(getContextKeys(hookContext.context))
 						eventAttributes[FEATURE_FLAG_CONTEXT_ID_ATTR] =
 							getCanonicalKey(hookContext.context)
 					}
