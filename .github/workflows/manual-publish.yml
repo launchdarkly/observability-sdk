@@ -73,7 +73,7 @@ jobs:
 
             - name: Publish highlight npm packages
               if: ${{ inputs.release_highlight == true }}
-              id: changesets-publish
+              id: publish-highlight
               run: yarn publish:highlight
 
             - uses: launchdarkly/gh-actions/actions/release-secrets@release-secrets-v1.2.0
