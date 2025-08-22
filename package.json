@@ -31,7 +31,6 @@
 		"test": "yarn turbo run test --filter=!nextjs --filter=!rrweb --filter=!rrvideo --filter=!@rrweb/rrweb-plugin-console-record --filter=!@rrweb/_monorepo --filter=!@rrweb/all --filter=!@rrweb/record --filter=!@rrweb/replay --filter=!@rrweb/types --filter=!@rrweb/packer --filter=!@rrweb/utils --filter=!@rrweb/web-extension --filter=!rrweb-snapshot --filter=!rrweb-player --filter=!rrdom --filter=!rrdom-nodejs"
 	},
 	"devDependencies": {
-		"@changesets/cli": "^2.28.1",
 		"@types/node": "^22.14.0",
 		"husky": "^9.1.7",
 		"prettier": "^3.5.3",

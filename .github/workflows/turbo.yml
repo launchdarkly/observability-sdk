@@ -82,14 +82,3 @@ jobs:
               env:
                   LD_RELEASE_IS_PRERELEASE: false
                   LD_RELEASE_IS_DRYRUN: false
-
-            - name: Release changesets
-              if: github.ref == 'refs/heads/main'
-              id: changesets-version
-              uses: changesets/action@v1
-              with:
-                  version: yarn changeset version
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-                  NPM_TOKEN: ${{ secrets.NPM_TOKEN_HIGHLIGHT_RUN }}
-                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN_HIGHLIGHT_RUN }}
