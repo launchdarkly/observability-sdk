@@ -3,6 +3,7 @@ plugins {
     id("com.android.library")
     id("maven-publish")
     id("signing")
+    id("net.bytebuddy.byte-buddy-gradle-plugin") version "1.17.6"
 
     // Apply the Kotlin Android plugin for Android-compatible Kotlin support.
     alias(libs.plugins.kotlin.android)
@@ -37,6 +38,14 @@ dependencies {
 
     // Android crash instrumentation
     implementation("io.opentelemetry.android.instrumentation:crash:0.11.0-alpha")
+
+    // Android HTTP Url instrumentation
+//    implementation("io.opentelemetry.android.instrumentation:httpurlconnection-library:0.11.0-alpha")
+//    byteBuddy("io.opentelemetry.android.instrumentation:httpurlconnection-agent:0.11.0-alpha")
+
+    // OkHTTP instrumentation
+//    implementation("io.opentelemetry.android.instrumentation:okhttp3-library:0.11.0-alpha")
+//    byteBuddy("io.opentelemetry.android.instrumentation:okhttp3-agent:0.11.0-alpha")
 
     // Use JUnit Jupiter for testing.
     testImplementation("org.junit.jupiter:junit-jupiter")
