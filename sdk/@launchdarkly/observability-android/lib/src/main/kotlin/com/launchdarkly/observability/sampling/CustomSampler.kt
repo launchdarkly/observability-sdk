@@ -4,11 +4,14 @@ import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.sdk.logs.data.LogRecordData
 import io.opentelemetry.sdk.trace.data.EventData
 import io.opentelemetry.sdk.trace.data.SpanData
-import kotlin.math.floor
-import kotlin.math.truncate
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentMap
 import kotlin.random.Random
 
-typealias RegexCache = MutableMap<String, Regex>
+/*
+ * Thread-safe regex cache. We use ConcurrentMap so multiple threads can update the cache safely without external locks.
+ */
+typealias RegexCache = ConcurrentMap<String, Regex>
 
 /**
  * Custom sampler that uses a sampling configuration to determine if a span should be sampled.
@@ -16,8 +19,11 @@ typealias RegexCache = MutableMap<String, Regex>
 class CustomSampler(
     private val sampler: (Int) -> Boolean = ::defaultSampler
 ) : ExportSampler {
-    private val regexCache: RegexCache = mutableMapOf()
+
+    @Volatile
     private var config: SamplingConfig? = null
+    private val regexCache: RegexCache = ConcurrentHashMap()
+
 
     companion object {
         private const val ATTR_SAMPLING_RATIO = "launchdarkly.sampling.ratio"
@@ -25,6 +31,7 @@ class CustomSampler(
 
     override fun setConfig(config: SamplingConfig?) {
         this.config = config
+        regexCache.clear()
     }
 
     override fun isSamplingEnabled(): Boolean {
@@ -48,8 +55,7 @@ class CustomSampler(
                 if (value !is String) {
                     false
                 } else {
-                    val regexPattern = matchConfig.pattern
-                    val regex = regexCache.getOrPut(regexPattern) { Regex(matchConfig.pattern) }
+                    val regex = regexCache.computeIfAbsent(matchConfig.pattern) { Regex(it) }
                     regex.matches(value)
                 }
             }
@@ -224,19 +230,9 @@ class CustomSampler(
  * @returns True if the item should be sampled, false otherwise.
  */
 fun defaultSampler(ratio: Int): Boolean {
-    val truncated = truncate(ratio.toDouble()).toInt()
-
-    // A ratio of 1 means 1 in 1. So that will always sample. No need to draw a random number.
-    if (truncated == 1) {
-        return true
+    return when {
+        ratio <= 0 -> false  // A ratio of 0 means 0 in 1. So that will never sample.
+        ratio == 1 -> true   // A ratio of 1 means 1 in 1. So that will always sample. No need to draw a random number
+        else -> Random.nextInt(ratio) == 0 // Pick a number 0..ratio-1; return true only if it's 0 (1/ratio chance).
     }
-
-    // A ratio of 0 means 0 in 1. So that will never sample.
-    if (truncated == 0) {
-        return false
-    }
-
-    // Random.nextDouble() * truncated would return 0, 1, ... (ratio - 1)
-    // Checking for any number in the range will have approximately a 1 in X chance. So we check for 0 as it is part of any range.
-    return floor(Random.nextDouble() * truncated).toInt() == 0
 }
