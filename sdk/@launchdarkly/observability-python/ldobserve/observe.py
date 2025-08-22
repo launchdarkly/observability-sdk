@@ -70,7 +70,7 @@ class _ObserveInstance:
         span = trace.get_current_span()
         # Can return a non-recording span if there is no active span.
         if not span or not span.is_recording():
-            with self.start_span(_ERROR_NAME, attributes=attributes) as error_span:
+            with self.start_span(_ERROR_NAME) as error_span:
                 self._record_exception_internal(error_span, error, attributes)
             return
 
