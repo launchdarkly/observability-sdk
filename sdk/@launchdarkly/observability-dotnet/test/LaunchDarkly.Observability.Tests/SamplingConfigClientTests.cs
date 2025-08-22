@@ -564,7 +564,7 @@ namespace LaunchDarkly.Observability.Test
             // Arrange
             var mockDisposableHttpClient = new Mock<IHttpClient>();
             mockDisposableHttpClient.As<IDisposable>();
-            
+
             var client = new SamplingConfigClient(mockDisposableHttpClient.Object, TestBackendUrl);
 
             // Act
