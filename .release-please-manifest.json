@@ -1,5 +1,9 @@
 {
 	"sdk/@launchdarkly/observability-python": "0.1.0",
 	"go": "0.2.0",
-	"sdk/@launchdarkly/observability-android": "0.4.0"
+	"sdk/@launchdarkly/observability-android": "0.4.0",
+	"sdk/@launchdarkly/observability": "0.3.11",
+	"sdk/@launchdarkly/session-replay": "0.3.11",
+	"sdk/@launchdarkly/observability-node": "0.2.1",
+	"sdk/@launchdarkly/observability-react-native": "0.3.0"
 }
