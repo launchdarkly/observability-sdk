@@ -618,7 +618,7 @@ const H: HighlightPublicInterface = {
 			highlight_obj.registerLD(client)
 		})
 		// firstload integration necessary to immediately capture ld.identify
-		setupLaunchDarklyIntegration(this, client)
+		setupLaunchDarklyIntegration(this, client, H.options)
 		integrations.push(new LaunchDarklyIntegration(client))
 	},
 }
