@@ -30,6 +30,14 @@ on:
                 description: 'The tag name for the python package. Should be set when publishing a python package.'
                 type: string
                 required: false
+            release_launchdarkly_dotnet:
+                description: 'Should release @launchdarkly/observability-dotnet package.'
+                type: boolean
+                required: true
+            dotnet_tag_name:
+                description: 'The tag name for the dotnet package. Should be set when publishing a dotnet package.'
+                type: string
+                required: false
 
 permissions:
     id-token: write
@@ -146,3 +154,18 @@ jobs:
                   aws-role-arn: ${{ vars.AWS_ROLE_ARN }}
                   dry-run: ${{ inputs.dry-run }}
                   prerelease: ${{ inputs.prerelease }}
+
+    publish-dotnet-sdk:
+        runs-on: ubuntu-latest
+        if: ${{ inputs.release_launchdarkly_dotnet == true }}
+        permissions:
+            id-token: write
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+            - uses: ./.github/actions/publish-dotnet-sdk
+              with:
+                  workspace-path: sdk/@launchdarkly/observability-dotnet
+                  aws-role-arn: ${{ vars.AWS_ROLE_ARN }}
+                  dry-run: ${{ inputs.dry-run }}
+                  tag-name: ${{ inputs.dotnet_tag_name }}
