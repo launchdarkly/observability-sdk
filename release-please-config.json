@@ -25,6 +25,34 @@
 			"include-v-in-tag": true,
 			"include-component-in-tag": true,
 			"extra-files": ["version.go"]
+		},
+		"sdk/@launchdarkly/observability": {
+			"package-name": "@launchdarkly/observability",
+			"release-type": "node",
+			"versioning": "default",
+			"include-v-in-tag": false,
+			"include-component-in-tag": true
+		},
+		"sdk/@launchdarkly/session-replay": {
+			"package-name": "@launchdarkly/session-replay",
+			"release-type": "node",
+			"versioning": "default",
+			"include-v-in-tag": false,
+			"include-component-in-tag": true
+		},
+		"sdk/@launchdarkly/observability-node": {
+			"package-name": "@launchdarkly/observability-node",
+			"release-type": "node",
+			"versioning": "default",
+			"include-v-in-tag": false,
+			"include-component-in-tag": true
+		},
+		"sdk/@launchdarkly/observability-react-native": {
+			"package-name": "@launchdarkly/observability-react-native",
+			"release-type": "node",
+			"versioning": "default",
+			"include-v-in-tag": false,
+			"include-component-in-tag": true
 		}
 	}
 }
