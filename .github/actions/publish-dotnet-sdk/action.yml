@@ -58,7 +58,6 @@ runs:
 
     - name: Hash nuget packages
       id: package-hashes
-      if: ${{ inputs.dry-run == 'false' }}
       shell: bash
       working-directory: ./sdk/@launchdarkly/observability-dotnet
       run: |

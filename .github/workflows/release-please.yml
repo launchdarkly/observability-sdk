@@ -91,21 +91,35 @@ jobs:
     release-dotnet-plugin:
         runs-on: ubuntu-latest
         permissions:
-            actions: read
             id-token: write # Used for publishing secrets and documentation.
-            contents: write
         needs: ['release-package']
+        outputs:
+            package-hashes: ${{ steps.publish.outputs.package-hashes }}
         if: ${{ needs.release-package.outputs.dotnet-plugin-released == 'true' }}
         steps:
             - name: Checkout
               uses: actions/checkout@v4
 
-            - uses: ./.github/actions/publish-dotnet-sdk
+            - name: Publish .NET SDK
+              id: publish
+              uses: ./.github/actions/publish-dotnet-sdk
               with:
                   aws-role-arn: ${{ vars.AWS_ROLE_ARN }}
                   dry-run: false
-                  tag-name: ${{ needs.release-package.outputs.dotnet-plugin-tag-name }}
 
             - uses: ./.github/workflows/manual-publish-docs.yml
               with:
                   workspace_path: sdk/@launchdarkly/observability-dotnet
+                
+    release-dotnet-sdk-provenance:
+        needs: ['release-dotnet-plugin']
+        if: ${{ needs.release-package.outputs.dotnet-plugin-released == 'true' }}
+        permissions:
+            actions: read
+            id-token: write
+            contents: write
+        uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.0.0
+        with:
+            base64-subjects: '${{ needs.release-dotnet-plugin.outputs.package-hashes }}'
+            upload-assets: true
+            upload-tag-name: ${{ inputs.dotnet_tag_name }}
