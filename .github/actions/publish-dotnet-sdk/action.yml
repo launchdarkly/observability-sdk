@@ -75,22 +75,3 @@ runs:
         upload-assets: true
         upload-tag-name: ${{ inputs.tag_name }}
         provenance-name: ${{ format('{0}_provenance.intoto.jsonl', inputs.tag_name) }}
-
-    - name: Install docfx
-      shell: bash
-      run:  dotnet tool update -g docfx
-
-    - name: Build docs
-      shell: bash
-      working-directory: ./sdk/@launchdarkly/observability-dotnet
-      run: |
-        docfx metadata
-        docfx build
-
-    - uses: launchdarkly/gh-actions/actions/publish-pages@publish-pages-v1.0.2
-      name: 'Publish to Github pages'
-      if: ${{ inputs.dry_run == 'false' }}
-      working-directory: ./sdk/@launchdarkly/observability-dotnet
-      with:
-        docs_path: docs
-        github_token: ${{ secrets.GITHUB_TOKEN }}

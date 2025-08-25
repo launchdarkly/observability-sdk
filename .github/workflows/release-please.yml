@@ -102,7 +102,10 @@ jobs:
 
             - uses: ./.github/actions/publish-dotnet-sdk
               with:
-                  workspace-path: sdk/@launchdarkly/observability-dotnet
                   aws-role-arn: ${{ vars.AWS_ROLE_ARN }}
                   dry-run: false
-                  tag-name: ${{ needs.release-package.outputs.dotnet-plugin-tag-name }} 
+                  tag-name: ${{ needs.release-package.outputs.dotnet-plugin-tag-name }}
+
+            - uses: ./.github/workflows/manual-publish-docs.yml
+              with:
+                  workspace_path: sdk/@launchdarkly/observability-dotnet
