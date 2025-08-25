@@ -3,7 +3,6 @@ plugins {
     id("com.android.library")
     id("maven-publish")
     id("signing")
-    id("net.bytebuddy.byte-buddy-gradle-plugin") version "1.17.6"
 
     // Apply the Kotlin Android plugin for Android-compatible Kotlin support.
     alias(libs.plugins.kotlin.android)
