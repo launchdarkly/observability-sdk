@@ -91,7 +91,7 @@ jobs:
     release-dotnet-plugin:
         runs-on: ubuntu-latest
         permissions:
-            id-token: write # Used for publishing secrets and documentation.
+            id-token: write # Used for publishing secrets.
         needs: ['release-package']
         outputs:
             package-hashes: ${{ steps.publish.outputs.package-hashes }}
@@ -107,7 +107,15 @@ jobs:
                   aws-role-arn: ${{ vars.AWS_ROLE_ARN }}
                   dry-run: false
 
-            - uses: ./.github/workflows/manual-publish-docs.yml
+    release-dotnet-plugin-docs:
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+        needs: ['release-dotnet-plugin']
+        if: ${{ needs.release-package.outputs.dotnet-plugin-released == 'true' }}
+        steps:
+            - name: Build and Publish Docs
+              uses: ./.github/workflows/manual-publish-docs.yml
               with:
                   workspace_path: sdk/@launchdarkly/observability-dotnet
                 
