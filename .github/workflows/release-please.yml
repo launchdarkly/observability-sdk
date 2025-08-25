@@ -118,7 +118,7 @@ jobs:
               uses: ./.github/workflows/manual-publish-docs.yml
               with:
                   workspace_path: sdk/@launchdarkly/observability-dotnet
-                
+
     release-dotnet-sdk-provenance:
         needs: ['release-dotnet-plugin']
         if: ${{ needs.release-package.outputs.dotnet-plugin-released == 'true' }}

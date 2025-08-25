@@ -33,7 +33,9 @@
 			"release-type": "simple",
 			"include-v-in-tag": false,
 			"include-component-in-tag": true,
-			"extra-files": ["src/LaunchDarkly.Observability/LaunchDarkly.Observability.csproj"]
+			"extra-files": [
+				"src/LaunchDarkly.Observability/LaunchDarkly.Observability.csproj"
+			]
 		}
 	}
 }

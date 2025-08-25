@@ -185,4 +185,3 @@ jobs:
             base64-subjects: '${{ needs.publish-dotnet-sdk.outputs.package-hashes }}'
             upload-assets: true
             upload-tag-name: ${{ inputs.dotnet_tag_name }}
-            
