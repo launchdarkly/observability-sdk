@@ -15,6 +15,7 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/log"
+	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
@@ -385,6 +386,7 @@ func StartOTLP() error {
 	instances.Store(newInstances)
 
 	otel.SetTracerProvider(tracerProvider)
+	global.SetLoggerProvider(loggerProvider)
 	otel.SetMeterProvider(meterProvider)
 
 	return nil
