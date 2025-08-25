@@ -1,0 +1,192 @@
+{
+  "source_base_path": "/home/runner/work/observability-sdk/observability-sdk/sdk/@launchdarkly/observability-dotnet",
+  "xrefmap": "xrefmap.yml",
+  "files": [
+    {
+      "type": "Resource",
+      "output": {
+        "resource": {
+          "relative_path": "index.json"
+        }
+      }
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "README.md",
+      "output": {
+        ".html": {
+          "relative_path": "README.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/LaunchDarkly.Observability.BaseBuilder-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/LaunchDarkly.Observability.BaseBuilder-1.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "LaunchDarkly.Observability.BaseBuilder<TBuilder>",
+      "Summary": "<p sourcefile=\"api/LaunchDarkly.Observability.BaseBuilder-1.yml\" sourcestartlinenumber=\"1\">Base builder which allows for methods to be shared between building a config directly and building a plugin.\n<remarks>\nThis uses the CRTP pattern to allow the individual builder methods to return instances of the derived builder\ntype.\n</remarks></p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/LaunchDarkly.Observability.ObservabilityConfig.ObservabilityConfigBuilder.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/LaunchDarkly.Observability.ObservabilityConfig.ObservabilityConfigBuilder.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "LaunchDarkly.Observability.ObservabilityConfig.ObservabilityConfigBuilder",
+      "Summary": "<p sourcefile=\"api/LaunchDarkly.Observability.ObservabilityConfig.ObservabilityConfigBuilder.yml\" sourcestartlinenumber=\"1\">Builder for building an observability configuration.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/LaunchDarkly.Observability.ObservabilityConfig.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/LaunchDarkly.Observability.ObservabilityConfig.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "LaunchDarkly.Observability.ObservabilityConfig",
+      "Summary": null
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/LaunchDarkly.Observability.ObservabilityExtensions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/LaunchDarkly.Observability.ObservabilityExtensions.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "LaunchDarkly.Observability.ObservabilityExtensions",
+      "Summary": "<p sourcefile=\"api/LaunchDarkly.Observability.ObservabilityExtensions.yml\" sourcestartlinenumber=\"1\">Static class containing extension methods for configuring observability</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/LaunchDarkly.Observability.ObservabilityPlugin.ObservabilityPluginBuilder.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/LaunchDarkly.Observability.ObservabilityPlugin.ObservabilityPluginBuilder.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "LaunchDarkly.Observability.ObservabilityPlugin.ObservabilityPluginBuilder",
+      "Summary": "<p sourcefile=\"api/LaunchDarkly.Observability.ObservabilityPlugin.ObservabilityPluginBuilder.yml\" sourcestartlinenumber=\"1\">Used to build an instance of the Observability Plugin.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/LaunchDarkly.Observability.ObservabilityPlugin.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/LaunchDarkly.Observability.ObservabilityPlugin.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "LaunchDarkly.Observability.ObservabilityPlugin",
+      "Summary": null
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/LaunchDarkly.Observability.Observe.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/LaunchDarkly.Observability.Observe.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "LaunchDarkly.Observability.Observe",
+      "Summary": null
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/LaunchDarkly.Observability.Sampling.ThreadSafeSampler.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/LaunchDarkly.Observability.Sampling.ThreadSafeSampler.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "LaunchDarkly.Observability.Sampling.ThreadSafeSampler",
+      "Summary": "<p sourcefile=\"api/LaunchDarkly.Observability.Sampling.ThreadSafeSampler.yml\" sourcestartlinenumber=\"1\">Class used for event sampling.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/LaunchDarkly.Observability.Sampling.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/LaunchDarkly.Observability.Sampling.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "LaunchDarkly.Observability.Sampling",
+      "Summary": null
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/LaunchDarkly.Observability.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/LaunchDarkly.Observability.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "LaunchDarkly.Observability",
+      "Summary": null
+    },
+    {
+      "type": "Toc",
+      "source_relative_path": "api/toc.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/toc.html"
+        },
+        ".json": {
+          "relative_path": "api/toc.json"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "index.md",
+      "output": {
+        ".html": {
+          "relative_path": "index.html"
+        }
+      },
+      "version": ""
+    }
+  ],
+  "groups": [
+    {
+      "xrefmap": "xrefmap.yml"
+    }
+  ]
+}
