@@ -121,7 +121,7 @@ namespace LaunchDarkly.Observability.Test
             // The action is stored but not executed during build
             Assert.That(config.ExtendedTracerConfiguration, Is.Not.Null);
             Assert.That(config.ExtendedTracerConfiguration, Is.SameAs(customAction));
-            
+
             // Verify the action hasn't been called yet
             Assert.That(wasCalled, Is.False);
             Assert.That(capturedBuilder, Is.Null);
@@ -146,7 +146,7 @@ namespace LaunchDarkly.Observability.Test
             // The action is stored but not executed during build
             Assert.That(config.ExtendedLoggerConfiguration, Is.Not.Null);
             Assert.That(config.ExtendedLoggerConfiguration, Is.SameAs(customAction));
-            
+
             // Verify the action hasn't been called yet
             Assert.That(wasCalled, Is.False);
             Assert.That(capturedBuilder, Is.Null);
@@ -171,7 +171,7 @@ namespace LaunchDarkly.Observability.Test
             // The action is stored but not executed during build
             Assert.That(config.ExtendedMeterConfiguration, Is.Not.Null);
             Assert.That(config.ExtendedMeterConfiguration, Is.SameAs(customAction));
-            
+
             // Verify the action hasn't been called yet
             Assert.That(wasCalled, Is.False);
             Assert.That(capturedBuilder, Is.Null);
