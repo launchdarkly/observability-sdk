@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/launchdarkly/observability-sdk/compare/go/v0.2.0...go/v0.2.1) (2025-08-22)
+
+
+### Bug Fixes
+
+* **go:** configure default logger provider ([#192](https://github.com/launchdarkly/observability-sdk/issues/192)) ([b97854d](https://github.com/launchdarkly/observability-sdk/commit/b97854d19305e00e5a2a35d5068b03305d7a8b62))
+
 ## [0.2.0](https://github.com/launchdarkly/observability-sdk/compare/go/v0.1.0...go/v0.2.0) (2025-08-11)
 
 
