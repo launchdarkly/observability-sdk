@@ -111,7 +111,7 @@ jobs:
         runs-on: ubuntu-latest
         permissions:
             contents: write
-        needs: ['release-dotnet-plugin']
+        needs: ['release-package', 'release-dotnet-plugin']
         if: ${{ needs.release-package.outputs.dotnet-plugin-released == 'true' }}
         steps:
             - name: Build and Publish Docs
@@ -120,7 +120,7 @@ jobs:
                   workspace_path: sdk/@launchdarkly/observability-dotnet
 
     release-dotnet-sdk-provenance:
-        needs: ['release-dotnet-plugin']
+        needs: ['release-package', 'release-dotnet-plugin']
         if: ${{ needs.release-package.outputs.dotnet-plugin-released == 'true' }}
         permissions:
             actions: read
@@ -130,4 +130,4 @@ jobs:
         with:
             base64-subjects: '${{ needs.release-dotnet-plugin.outputs.package-hashes }}'
             upload-assets: true
-            upload-tag-name: ${{ inputs.dotnet_tag_name }}
+            upload-tag-name: ${{ needs.release-package.outputs.dotnet-plugin-tag-name }}
