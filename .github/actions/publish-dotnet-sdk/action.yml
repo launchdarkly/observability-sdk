@@ -38,12 +38,12 @@ runs:
     - name: Build
       shell: bash
       working-directory: ./sdk/@launchdarkly/observability-dotnet
-      run: dotnet build --no-restore -p:Configuration=Release
+      run: dotnet build ./src/LaunchDarkly.Observability/LaunchDarkly.Observability.csproj --no-restore -p:Configuration=Release
     
     - name: Package
       shell: bash
       working-directory: ./sdk/@launchdarkly/observability-dotnet
-      run: dotnet pack --no-build --output nupkgs --configuration Release
+      run: dotnet pack ./src/LaunchDarkly.Observability/LaunchDarkly.Observability.csproj --no-build --output nupkgs --configuration Release
 
     - name: Publish Package
       if: ${{ inputs.dry-run == 'false' }}
