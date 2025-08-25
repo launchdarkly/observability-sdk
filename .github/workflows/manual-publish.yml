@@ -160,19 +160,22 @@ jobs:
         if: ${{ inputs.release_launchdarkly_dotnet == true }}
         permissions:
             id-token: write
+        outputs:
+            package-hashes: ${{ steps.publish.outputs.package-hashes }}
         steps:
             - name: Checkout
               uses: actions/checkout@v4
-            - uses: ./.github/actions/publish-dotnet-sdk
+
+            - name: Publish .NET SDK
+              id: publish
+              uses: ./.github/actions/publish-dotnet-sdk
               with:
-                  workspace-path: sdk/@launchdarkly/observability-dotnet
                   aws-role-arn: ${{ vars.AWS_ROLE_ARN }}
                   dry-run: ${{ inputs.dry-run }}
-                  tag-name: ${{ inputs.dotnet_tag_name }}
 
     publish-dotnet-sdk-provenance:
         needs: ['publish-dotnet-sdk']
-        if: ${{ inputs.release_launchdarkly_dotnet == true }}
+        if: ${{ inputs.release_launchdarkly_dotnet == true && inputs.dry-run == false }}
         permissions:
             actions: read
             id-token: write
@@ -180,3 +183,6 @@ jobs:
         uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.0.0
         with:
             base64-subjects: '${{ needs.publish-dotnet-sdk.outputs.package-hashes }}'
+            upload-assets: true
+            upload-tag-name: ${{ inputs.dotnet_tag_name }}
+            
