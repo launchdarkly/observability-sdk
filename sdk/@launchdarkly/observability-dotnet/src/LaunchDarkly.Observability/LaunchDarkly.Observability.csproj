@@ -32,10 +32,10 @@
     <InternalsVisibleTo Include="DynamicProxyGenAssembly2"/>
   </ItemGroup>
 
-  <!-- <PropertyGroup Condition="'$(Configuration)'=='Release' And '$(SKIP_SIGNING)'!='true'">
+  <PropertyGroup Condition="'$(Configuration)'=='Release' And '$(SKIP_SIGNING)'!='true'">
     <AssemblyOriginatorKeyFile>../../../../../LaunchDarkly.snk</AssemblyOriginatorKeyFile>
     <SignAssembly>true</SignAssembly>
-  </PropertyGroup> -->
+  </PropertyGroup>
 
   <PropertyGroup>
     <IncludeSymbols>true</IncludeSymbols>
