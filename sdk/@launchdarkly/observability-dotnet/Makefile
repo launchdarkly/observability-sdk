@@ -1,4 +1,4 @@
-.PHONY: build test docs help
+.PHONY: build test docs help install
 
 # Default target
 help:
@@ -7,6 +7,9 @@ help:
 	@echo "  test      - Run tests"
 	@echo "  docs      - Build documentation"
 	@echo "  help      - Show this help message"
+
+install:
+	dotnet restore
 
 build:
 	dotnet restore
