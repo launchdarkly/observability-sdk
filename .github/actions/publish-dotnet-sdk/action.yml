@@ -14,6 +14,11 @@ inputs:
         type: string
         required: true
 
+outputs:
+    package-hashes:
+        description: 'Base64 encoded SHA256 hashes of published packages'
+        value: ${{ steps.package-hashes.outputs.package-hashes }}
+
 runs:
   using: composite
   steps:
@@ -57,21 +62,9 @@ runs:
         done
 
     - name: Hash nuget packages
-      id: hash
+      id: package-hashes
       if: ${{ inputs.dry_run == 'false' }}
       shell: bash
       working-directory: ./sdk/@launchdarkly/observability-dotnet
       run: |
-        echo "hashes=$(sha256sum ./nupkgs/*.nupkg ./nupkgs/*.snupkg | base64 -w0)" >> "$GITHUB_OUTPUT"
-
-    - name: Generate provenance
-      id: provenance
-      shell: bash
-      working-directory: ./sdk/@launchdarkly/observability-dotnet
-      uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.1.0
-      if: ${{ inputs.dry_run == 'false' }}
-      with:
-        base64-subjects: "${{ steps.hash.outputs.hashes }}"
-        upload-assets: true
-        upload-tag-name: ${{ inputs.tag_name }}
-        provenance-name: ${{ format('{0}_provenance.intoto.jsonl', inputs.tag_name) }}
+        echo "package-hashes=$(sha256sum ./nupkgs/*.nupkg ./nupkgs/*.snupkg | base64 -w0)" >> "$GITHUB_OUTPUT"

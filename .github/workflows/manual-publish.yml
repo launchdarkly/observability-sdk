@@ -169,3 +169,14 @@ jobs:
                   aws-role-arn: ${{ vars.AWS_ROLE_ARN }}
                   dry-run: ${{ inputs.dry-run }}
                   tag-name: ${{ inputs.dotnet_tag_name }}
+
+    publish-dotnet-sdk-provenance:
+        needs: ['publish-dotnet-sdk']
+        if: ${{ inputs.release_launchdarkly_dotnet == true }}
+        permissions:
+            actions: read
+            id-token: write
+            contents: write
+        uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.0.0
+        with:
+            base64-subjects: '${{ needs.publish-dotnet-sdk.outputs.package-hashes }}'
