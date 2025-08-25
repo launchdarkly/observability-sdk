@@ -25,6 +25,15 @@
 			"include-v-in-tag": true,
 			"include-component-in-tag": true,
 			"extra-files": ["version.go"]
+		},
+		"sdk/@launchdarkly/observability-dotnet": {
+			"release-as": "0.1.0",
+			"bump-minor-pre-major": true,
+			"package-name": "launchdarkly-observability-dotnet",
+			"release-type": "simple",
+			"include-v-in-tag": false,
+			"include-component-in-tag": true,
+			"extra-files": ["src/LaunchDarkly.Observability/LaunchDarkly.Observability.csproj"]
 		}
 	}
 }
