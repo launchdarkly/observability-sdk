@@ -6,6 +6,12 @@ using OpenTelemetry.Trace;
 
 namespace LaunchDarkly.Observability
 {
+    #if NETFRAMEWORK
+    using LoggerBuilderType = OpenTelemetryLoggerOptions;
+    #else
+    using LoggerBuilderType = LoggerProviderBuilder;
+    #endif
+
     /// <summary>
     /// Base builder which allows for methods to be shared between building a config directly and building a plugin.
     /// <remarks>
@@ -23,7 +29,7 @@ namespace LaunchDarkly.Observability
         private string _environment = string.Empty;
         private string _serviceVersion = string.Empty;
         private Action<TracerProviderBuilder> _extendedTracerConfiguration;
-        private Action<LoggerProviderBuilder> _extendedLoggerConfiguration;
+        private Action<LoggerBuilderType> _extendedLoggerConfiguration;
         private Action<MeterProviderBuilder> _extendedMeterConfiguration;
 
         protected BaseBuilder()
@@ -171,7 +177,7 @@ namespace LaunchDarkly.Observability
         /// </example>
         /// <param name="extendedLoggerConfiguration">A function used to extend the logging configuration.</param>
         /// <returns>A reference to this builder.</returns>
-        public TBuilder WithExtendedLoggerConfiguration(Action<LoggerProviderBuilder> extendedLoggerConfiguration)
+        public TBuilder WithExtendedLoggerConfiguration(Action<LoggerBuilderType> extendedLoggerConfiguration)
         {
             _extendedLoggerConfiguration = extendedLoggerConfiguration;
             return (TBuilder)this;

@@ -6,7 +6,9 @@ using LaunchDarkly.Sdk.Server.Interfaces;
 using LaunchDarkly.Sdk.Server.Plugins;
 using LaunchDarkly.Sdk.Server.Telemetry;
 using Microsoft.Extensions.DependencyInjection;
+using OpenTelemetry.Logs;
 
+// ReSharper disable once CheckNamespace
 namespace LaunchDarkly.Observability
 {
     public class ObservabilityPlugin : Plugin
@@ -32,6 +34,7 @@ namespace LaunchDarkly.Observability
         /// <para>
         /// When using this builder, LaunchDarkly client must be constructed before your application is built.
         /// For example:
+        ///
         /// <code>
         /// var builder = WebApplication.CreateBuilder(args);
         ///
