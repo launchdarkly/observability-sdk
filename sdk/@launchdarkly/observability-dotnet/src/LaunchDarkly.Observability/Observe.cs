@@ -149,6 +149,16 @@ namespace LaunchDarkly.Observability
             });
         }
 
+        /// <summary>
+        /// Record a metric gauge value.
+        /// <para>
+        /// Records a measurement value for a gauge metric with the specified name and optional attributes.
+        /// </para>
+        /// </summary>
+        /// <param name="name">the name of the metric</param>
+        /// <param name="value">the value to record</param>
+        /// <param name="attributes">any additional attributes to add to the metric</param>
+        /// <exception cref="ArgumentNullException">thrown when name is null</exception>
         public static void RecordMetric(string name, double value, IDictionary<string, object> attributes = null)
         {
             if (name == null) throw new ArgumentNullException(nameof(name), "Metric name cannot be null.");
@@ -168,6 +178,17 @@ namespace LaunchDarkly.Observability
             });
         }
 
+        /// <summary>
+        /// Record a counter value.
+        /// <para>
+        /// Records a count value for a counter metric with the specified name and optional attributes.
+        /// Counter values should be monotonically increasing.
+        /// </para>
+        /// </summary>
+        /// <param name="name">the name of the counter</param>
+        /// <param name="value">the value to add to the counter</param>
+        /// <param name="attributes">any additional attributes to add to the counter</param>
+        /// <exception cref="ArgumentNullException">thrown when name is null</exception>
         public static void RecordCount(string name, long value, IDictionary<string, object> attributes = null)
         {
             if (name == null) throw new ArgumentNullException(nameof(name), "Count name cannot be null.");
@@ -187,11 +208,30 @@ namespace LaunchDarkly.Observability
             });
         }
 
+        /// <summary>
+        /// Increment a counter by 1.
+        /// <para>
+        /// This is a convenience method equivalent to calling RecordCount with a value of 1.
+        /// </para>
+        /// </summary>
+        /// <param name="name">the name of the counter</param>
+        /// <param name="attributes">any additional attributes to add to the counter</param>
         public static void RecordIncr(string name, IDictionary<string, object> attributes = null)
         {
             RecordCount(name, 1, attributes);
         }
 
+        /// <summary>
+        /// Record a histogram value.
+        /// <para>
+        /// Records a measurement value for a histogram metric with the specified name and optional attributes.
+        /// Histograms are used to record distributions of values.
+        /// </para>
+        /// </summary>
+        /// <param name="name">the name of the histogram</param>
+        /// <param name="value">the value to record</param>
+        /// <param name="attributes">any additional attributes to add to the histogram</param>
+        /// <exception cref="ArgumentNullException">thrown when name is null</exception>
         public static void RecordHistogram(string name, double value, IDictionary<string, object> attributes = null)
         {
             if (name == null) throw new ArgumentNullException(nameof(name), "Histogram name cannot be null.");
@@ -212,6 +252,17 @@ namespace LaunchDarkly.Observability
             });
         }
 
+        /// <summary>
+        /// Record an up-down counter value.
+        /// <para>
+        /// Records a delta value for an up-down counter metric with the specified name and optional attributes.
+        /// Up-down counters can increase or decrease and are useful for tracking values like queue size.
+        /// </para>
+        /// </summary>
+        /// <param name="name">the name of the up-down counter</param>
+        /// <param name="delta">the delta value to add (can be positive or negative)</param>
+        /// <param name="attributes">any additional attributes to add to the counter</param>
+        /// <exception cref="ArgumentNullException">thrown when name is null</exception>
         public static void RecordUpDownCounter(string name, long delta, IDictionary<string, object> attributes = null)
         {
             if (name == null) throw new ArgumentNullException(nameof(name), "UpDownCounter name cannot be null.");
@@ -233,6 +284,16 @@ namespace LaunchDarkly.Observability
             });
         }
 
+        /// <summary>
+        /// Record a log message.
+        /// <para>
+        /// Records a log message with the specified level and optional attributes using the configured logger.
+        /// If no logger is configured, the log message will be ignored.
+        /// </para>
+        /// </summary>
+        /// <param name="message">the log message</param>
+        /// <param name="level">the log level</param>
+        /// <param name="attributes">any additional attributes to add to the log entry</param>
         public static void RecordLog(string message, LogLevel level, IDictionary<string, object> attributes)
         {
             WithInstance(instance =>
@@ -247,6 +308,17 @@ namespace LaunchDarkly.Observability
             });
         }
 
+        /// <summary>
+        /// Start a new activity (span) with the specified name and kind.
+        /// <para>
+        /// Creates and starts a new activity using the configured ActivitySource. The activity
+        /// should be disposed when the operation is complete to properly end the span.
+        /// </para>
+        /// </summary>
+        /// <param name="name">the name of the activity</param>
+        /// <param name="kind">the kind of activity (defaults to Internal)</param>
+        /// <param name="attributes">any initial attributes to add to the activity</param>
+        /// <returns>the started activity, or null if the observability system is not initialized</returns>
         public static Activity StartActivity(string name, ActivityKind kind = ActivityKind.Internal,
             IDictionary<string, object> attributes = null)
         {
@@ -263,5 +335,19 @@ namespace LaunchDarkly.Observability
 
             return activity;
         }
+
+#if NETFRAMEWORK
+        /// <summary>
+        /// Shutdown LaunchDarkly Observability.
+        /// <para>
+        /// Properly shuts down the OpenTelemetry system and flushes any pending telemetry data.
+        /// This method is only available on .NET Framework.
+        /// </para>
+        /// </summary>
+        public static void Shutdown()
+        {
+            OpenTelemetry.Shutdown();
+        }
+#endif
     }
 }

@@ -22,7 +22,7 @@ namespace LaunchDarkly.Observability
         /// In a typical configuration, this method will not need to be used.
         /// </para>
         /// <para>
-        /// This method only needs to be used when observability related functionality must be intialized before it
+        /// This method only needs to be used when observability related functionality must be initialized before it
         /// is possible to initialize the LaunchDarkly SDK.
         /// </para>
         /// </summary>

@@ -36,6 +36,19 @@ namespace LaunchDarkly.Observability
             });
         }
 
+        /// <summary>
+        /// Configure LaunchDarkly observability. In typical usage, the ObservabilityPlugin should be used instead.
+        /// <para>
+        /// This method is for advanced use-cases where the LaunchDarkly client needs to be initialized later than the
+        /// telemetry implementation.
+        /// </para>
+        /// <para>
+        /// If this method is used, then the <see cref="ObservabilityPlugin"/> should be instantiated using
+        /// <see cref="ObservabilityPlugin.ForExistingServices"/> method.
+        /// </para>
+        /// </summary>
+        /// <param name="config">configuration for LaunchDarkly Observability</param>
+        /// <param name="debugLogger">an optional debug logger</param>
         public static void Register(ObservabilityConfig config, Logger debugLogger = null)
         {
             lock (ProviderLock)
@@ -67,6 +80,9 @@ namespace LaunchDarkly.Observability
             }
         }
 
+        /// <summary>
+        /// Shutdown the underlying telemetry.
+        /// </summary>
         public static void Shutdown()
         {
             lock (ProviderLock)
