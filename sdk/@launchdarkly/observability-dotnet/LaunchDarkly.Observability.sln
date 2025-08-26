@@ -14,10 +14,14 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Docs", "Docs", "{25034066-0
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AspSampleApp", "AspSampleApp\AspSampleApp.csproj", "{84C42307-BD0F-4558-84C5-6E9B06932D8E}"
 EndProject
+
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{EFEF5623-E551-4085-AB85-1711BD6EA731}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
@@ -32,11 +36,5 @@ Global
 		{84C42307-BD0F-4558-84C5-6E9B06932D8E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{84C42307-BD0F-4558-84C5-6E9B06932D8E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{84C42307-BD0F-4558-84C5-6E9B06932D8E}.Release|Any CPU.Build.0 = Release|Any CPU
-	EndGlobalSection
-	GlobalSection(SolutionProperties) = preSolution
-		HideSolutionNode = FALSE
-	EndGlobalSection
-	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {B01A4C35-36C3-4FB5-BEB9-947EBBA7B2CC}
 	EndGlobalSection
 EndGlobal
