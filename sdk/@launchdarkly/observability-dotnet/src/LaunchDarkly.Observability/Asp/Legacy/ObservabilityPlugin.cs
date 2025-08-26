@@ -14,7 +14,6 @@ namespace LaunchDarkly.Observability
     public class ObservabilityPlugin : Plugin
     {
         private readonly ObservabilityPluginBuilder _config;
-        private readonly IServiceCollection _services;
         
         /// <summary>
         /// Create a new builder for <see cref="ObservabilityPlugin"/>.
@@ -39,14 +38,13 @@ namespace LaunchDarkly.Observability
 
         internal ObservabilityPlugin() : base("LaunchDarkly.Observability")
         {
-            _services = null;
             _config = null;
         }
 
         /// <inheritdoc />
         public override void Register(ILdClient client, EnvironmentMetadata metadata)
         {
-            if (_services == null || _config == null) return;
+            if (_config == null) return;
             var config = _config.BuildConfig(metadata.Credential);
             OpenTelemetry.Register(config);
         }
