@@ -31,7 +31,7 @@ namespace LaunchDarkly.Observability
             public readonly ConcurrentDictionary<string, UpDownCounter<long>> UpDownCounters =
                 new ConcurrentDictionary<string, UpDownCounter<long>>();
 
-            #if NETSTANDARD2_0 || NET5_0_OR_GREATER
+#if NETSTANDARD2_0 || NET5_0_OR_GREATER
             internal Instance(ObservabilityConfig config, ILoggerProvider loggerProvider)
             {
                 Meter = new Meter(DefaultNames.MeterNameOrDefault(config.ServiceName),
@@ -43,32 +43,32 @@ namespace LaunchDarkly.Observability
                     Logger = loggerProvider.CreateLogger(DefaultNames.LoggerNameOrDefault(config.ServiceName));
                 }
             }
-            #endif
-            
-            #if NETFRAMEWORK
+#endif
+
+#if NETFRAMEWORK
             internal Instance(ObservabilityConfig config, ILogger logger) {
                 Meter = new Meter(DefaultNames.MeterNameOrDefault(config.ServiceName), config.ServiceVersion);
                 ActivitySource = new ActivitySource(DefaultNames.ActivitySourceNameOrDefault(config.ServiceName), config.ServiceVersion);
                 Logger = logger;
             }
-            #endif
+#endif
         }
 
         private static Instance _instance;
 
-        #if NETSTANDARD2_0 || NET5_0_OR_GREATER
+#if NETSTANDARD2_0 || NET5_0_OR_GREATER
         internal static void Initialize(ObservabilityConfig config, ILoggerProvider loggerProvider)
         {
             Volatile.Write(ref _instance, new Instance(config, loggerProvider));
         }
-        #endif
-        
-        #if NETFRAMEWORK
+#endif
+
+#if NETFRAMEWORK
         internal static void Initialize(ObservabilityConfig config, ILogger logger)
         {
             Volatile.Write(ref _instance, new Instance(config, logger));
         }
-        #endif
+#endif
 
         private static Instance GetInstance()
         {

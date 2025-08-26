@@ -14,7 +14,7 @@ namespace LaunchDarkly.Observability
     public class ObservabilityPlugin : Plugin
     {
         private readonly ObservabilityPluginBuilder _config;
-        
+
         /// <summary>
         /// Create a new builder for <see cref="ObservabilityPlugin"/>.
         /// <para>

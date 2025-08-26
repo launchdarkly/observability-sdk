@@ -45,19 +45,19 @@ namespace LaunchDarkly.Observability
                 {
                     return;
                 }
-                
+
                 var resourceBuilder = CommonOtelOptions.GetResourceBuilder(config);
                 var sampler = CommonOtelOptions.GetSampler(config);
 
-                    _tracerProvider = global::OpenTelemetry.Sdk.CreateTracerProviderBuilder()
-                        .WithCommonLaunchDarklyConfig(config, resourceBuilder, sampler)
-                        .AddAspNetInstrumentation()
-                        .Build();
+                _tracerProvider = global::OpenTelemetry.Sdk.CreateTracerProviderBuilder()
+                    .WithCommonLaunchDarklyConfig(config, resourceBuilder, sampler)
+                    .AddAspNetInstrumentation()
+                    .Build();
 
-                    _meterProvider = global::OpenTelemetry.Sdk.CreateMeterProviderBuilder()
-                        .WithCommonLaunchDarklyConfig(config, resourceBuilder)
-                        .AddAspNetInstrumentation()
-                        .Build();
+                _meterProvider = global::OpenTelemetry.Sdk.CreateMeterProviderBuilder()
+                    .WithCommonLaunchDarklyConfig(config, resourceBuilder)
+                    .AddAspNetInstrumentation()
+                    .Build();
             }
 
             using (var factory = LoggerFactory.Create(builder => { builder.AddLaunchDarklyLogging(config); }))

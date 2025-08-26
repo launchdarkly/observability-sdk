@@ -5,11 +5,11 @@ using OpenTelemetry.Trace;
 
 namespace LaunchDarkly.Observability
 {
-    #if NETFRAMEWORK
+#if NETFRAMEWORK
     using LoggerBuilderType = OpenTelemetryLoggerOptions;
-    #else
+#else
     using LoggerBuilderType = LoggerProviderBuilder;
-    #endif
+#endif
 
     public class ObservabilityConfig
     {

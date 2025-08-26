@@ -6,11 +6,11 @@ using OpenTelemetry.Trace;
 
 namespace LaunchDarkly.Observability
 {
-    #if NETFRAMEWORK
+#if NETFRAMEWORK
     using LoggerBuilderType = OpenTelemetryLoggerOptions;
-    #else
+#else
     using LoggerBuilderType = LoggerProviderBuilder;
-    #endif
+#endif
 
     /// <summary>
     /// Base builder which allows for methods to be shared between building a config directly and building a plugin.
