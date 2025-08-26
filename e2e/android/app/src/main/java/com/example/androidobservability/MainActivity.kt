@@ -39,6 +39,13 @@ class MainActivity : ComponentActivity() {
                         }
                         Button(
                             onClick = {
+                                viewModel.triggerHttpRequests()
+                            }
+                        ) {
+                            Text("Trigger HTTP Request")
+                        }
+                        Button(
+                            onClick = {
                                 viewModel.triggerMetric()
                             }
                         ) {
@@ -60,17 +67,10 @@ class MainActivity : ComponentActivity() {
                         }
                         Button(
                             onClick = {
-                                viewModel.triggerStartSpan()
+                                viewModel.triggerNestedSpans()
                             }
                         ) {
-                            Text("Trigger Start Span")
-                        }
-                        Button(
-                            onClick = {
-                                viewModel.triggerStopSpan()
-                            }
-                        ) {
-                            Text("Trigger Stop Span")
+                            Text("Trigger Nested Spans")
                         }
                         Button(
                             onClick = {

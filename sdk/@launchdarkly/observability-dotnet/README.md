@@ -1,10 +1,9 @@
 LaunchDarkly Observability Plugin for .Net
 ===========================
 
-[//]: # (These can be uncommented once the links are live.)
-[//]: # ([![Actions Status][dotnetplugin-sdk-ci-badge]][dotnetplugin-sdk-ci])
-[//]: # ([![Documentation]&#40;https://img.shields.io/static/v1?label=GitHub+Pages&message=API+reference&color=00add8&#41;][o11y-docs-link])
-[//]: # ([![NuGet][dotnetplugin-nuget-badge]][dotnetplugin-nuget-link])
+[![Actions Status][dotnetplugin-sdk-ci-badge]][dotnetplugin-sdk-ci]
+[![Documentation](https://img.shields.io/static/v1?label=GitHub+Pages&message=API+reference&color=00add8&#41)][o11y-docs-link]
+[![NuGet][dotnetplugin-nuget-badge]][dotnetplugin-nuget-link]
 
 # Early Access Preview️
 
