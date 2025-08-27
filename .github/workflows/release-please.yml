@@ -48,6 +48,7 @@ jobs:
 
     release-python-docs:
         needs: ['release-package', 'release-python-plugin']
+        if: ${{ needs.release-package.outputs.python-plugin-released == 'true' }}
         permissions:
             contents: write
         uses: launchdarkly/observability-sdk/.github/workflows/manual-publish-docs.yml@main
@@ -109,6 +110,7 @@ jobs:
         needs: ['release-package', 'release-dotnet-plugin']
         permissions:
             contents: write
+        if: ${{ needs.release-package.outputs.dotnet-plugin-released == 'true' }}
         uses: launchdarkly/observability-sdk/.github/workflows/manual-publish-docs.yml@main
         with:
             workspace_path: sdk/@launchdarkly/observability-dotnet
