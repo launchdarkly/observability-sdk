@@ -357,18 +357,15 @@ namespace LaunchDarkly.Observability.Test
         }
 
         [Test]
-        public void Build_WithOtlpEndpointSetToNull_UsesDefaultNotEnvironmentVariable()
+        public void Build_WithOtlpEndpointSetToNull_UsesEnvironmentVariableIfSet()
         {
             Environment.SetEnvironmentVariable(EnvironmentVariables.OtelExporterOtlpEndpoint,
                 "https://env-otlp.example.com:4318");
 
-            // Build config with OTLP endpoint explicitly set to null (which resets to default)
             var config = ObservabilityConfig.Builder()
                 .WithOtlpEndpoint(null)
                 .Build("sdk-key");
 
-            // Should use the default value when explicitly set to null, and then check env var
-            // Since null resets to default, and default means "check env var", it should use env var
             Assert.That(config.OtlpEndpoint, Is.EqualTo("https://env-otlp.example.com:4318"));
         }
     }
