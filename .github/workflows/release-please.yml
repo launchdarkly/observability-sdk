@@ -53,7 +53,7 @@ jobs:
         needs: ['release-python-plugin']
         steps:
             - name: Build and Publish Docs
-              uses: ./.github/workflows/manual-publish-docs.yml
+              uses: launchdarkly/observability-sdk/.github/workflows/manual-publish-docs.yml@main
               with:
                   workspace_path: sdk/@launchdarkly/observability-python
 
@@ -115,7 +115,7 @@ jobs:
         if: ${{ needs.release-package.outputs.dotnet-plugin-released == 'true' }}
         steps:
             - name: Build and Publish Docs
-              uses: ./.github/workflows/manual-publish-docs.yml
+              uses: launchdarkly/observability-sdk/.github/workflows/manual-publish-docs.yml@main
               with:
                   workspace_path: sdk/@launchdarkly/observability-dotnet
 
