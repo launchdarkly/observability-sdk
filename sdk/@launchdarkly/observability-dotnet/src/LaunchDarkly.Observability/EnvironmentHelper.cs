@@ -17,7 +17,7 @@ namespace LaunchDarkly.Observability
         /// <returns>The resolved value based on the precedence: primary value > environment variable > default value.</returns>
         public static string GetValueOrEnvironment(string value, string environmentVariable, string defaultValue = "")
         {
-            if (!string.IsNullOrEmpty(value))
+            if (!string.IsNullOrWhiteSpace(value))
             {
                 return value;
             }
