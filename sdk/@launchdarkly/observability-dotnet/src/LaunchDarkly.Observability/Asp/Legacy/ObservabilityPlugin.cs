@@ -22,11 +22,7 @@ namespace LaunchDarkly.Observability
         /// <code>
         ///   protected void Application_Start()
         ///  {
-        ///      AreaRegistration.RegisterAllAreas();
-        ///      GlobalConfiguration.Configure(WebApiConfig.Register);
-        ///      FilterConfig.RegisterGlobalFilters(GlobalFilters.Filters);
-        ///      RouteConfig.RegisterRoutes(RouteTable.Routes);
-        ///      BundleConfig.RegisterBundles(BundleTable.Bundles);
+        ///      // Other application specific code.
         ///      var client = new LdClient(Configuration.Builder(Environment.GetEnvironmentVariable("LAUNCHDARKLY_SDK_KEY"))
         ///          .Plugins(new PluginConfigurationBuilder().Add(ObservabilityPlugin.Builder()
         ///              .WithServiceName("classic-asp-application")
