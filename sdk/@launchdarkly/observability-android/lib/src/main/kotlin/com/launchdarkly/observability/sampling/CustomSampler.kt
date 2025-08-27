@@ -50,7 +50,7 @@ class CustomSampler(
         }
 
         return when (matchConfig) {
-            is MatchConfig.Value -> matchConfig.value == value
+            is MatchConfig.Value -> matchConfig.value.toString() == value.toString()
             is MatchConfig.Regex -> {
                 if (value !is String) {
                     false
@@ -80,7 +80,7 @@ class CustomSampler(
 
         return attributeConfigs.all { config -> // Check if ALL configurations are met
             attributes.asMap().any { (key, value) -> // Check if ANY attribute matches the current config
-                matchesValue(config.key, key) && matchesValue(config.attribute, value)
+                matchesValue(config.key, key.key) && matchesValue(config.attribute, value)
             }
         }
     }
@@ -144,12 +144,7 @@ class CustomSampler(
             return false
         }
 
-        if (!matchesEvents(config.events, span.events)) {
-            return false
-        }
-
-        // If we reach here, all conditions were met
-        return true
+        return matchesEvents(config.events, span.events)
     }
 
     private fun matchesLogConfig(

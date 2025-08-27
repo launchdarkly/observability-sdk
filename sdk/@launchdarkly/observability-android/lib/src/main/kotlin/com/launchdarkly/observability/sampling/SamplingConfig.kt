@@ -6,8 +6,8 @@ sealed class MatchConfig {
 }
 
 data class AttributeMatchConfig(
-    val key: MatchConfig? = null,
-    val attribute: MatchConfig? = null
+    val key: MatchConfig,
+    val attribute: MatchConfig
 )
 
 data class SpanEventMatchConfig(

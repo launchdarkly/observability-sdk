@@ -8,7 +8,7 @@ import io.opentelemetry.sdk.logs.export.LogRecordExporter
 /**
  * A [LogRecordExporter] that applies sampling logic before delegating to an [OtlpHttpLogRecordExporter].
  *
- * This exporter wraps an [OtlpHttpLogRecordExporter] and uses a [CustomSampler] to determine which
+ * This exporter wraps an [OtlpHttpLogRecordExporter] and uses a [ExportSampler] to determine which
  * log records should be exported based on configurable sampling rules. Log records that don't
  * match the sampling criteria are filtered out, reducing the volume of telemetry data sent to
  * the observability backend.
@@ -18,7 +18,7 @@ import io.opentelemetry.sdk.logs.export.LogRecordExporter
  */
 class SamplingLogExporter(
     private val delegate: OtlpHttpLogRecordExporter,
-    private val sampler: CustomSampler
+    private val sampler: ExportSampler
 ) : LogRecordExporter {
 
     /**

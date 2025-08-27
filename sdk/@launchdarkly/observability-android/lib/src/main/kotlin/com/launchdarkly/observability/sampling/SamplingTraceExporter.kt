@@ -9,7 +9,7 @@ import io.opentelemetry.sdk.trace.export.SpanExporter
 /**
  * A [SpanExporter] that applies sampling logic before delegating to an [OtlpHttpLogRecordExporter].
  *
- * This exporter wraps an [OtlpHttpSpanExporter] and uses a [CustomSampler] to determine which
+ * This exporter wraps an [OtlpHttpSpanExporter] and uses a [ExportSampler] to determine which
  * spans should be exported based on configurable sampling rules. Spans that don't match the
  * sampling criteria are filtered out, reducing the volume of telemetry data sent to the
  * observability backend.
@@ -19,7 +19,7 @@ import io.opentelemetry.sdk.trace.export.SpanExporter
  */
 class SamplingTraceExporter(
     private val delegate: OtlpHttpSpanExporter,
-    private val sampler: CustomSampler
+    private val sampler: ExportSampler
 ) : SpanExporter {
 
     /**
