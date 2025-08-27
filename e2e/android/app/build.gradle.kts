@@ -7,12 +7,11 @@ plugins {
 
 android {
     namespace = "com.example.androidobservability"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.androidobservability"
         minSdk = 24
-        targetSdk = 35
         versionCode = 1
         versionName = "1.0"
 
@@ -38,6 +37,10 @@ android {
     buildFeatures {
         compose = true
     }
+}
+
+configurations.all {
+    exclude(group = "com.squareup.okhttp3", module = "okhttp-jvm")
 }
 
 dependencies {
