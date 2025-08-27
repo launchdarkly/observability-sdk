@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    id("net.bytebuddy.byte-buddy-gradle-plugin") version "1.17.6"
 }
 
 android {
@@ -51,6 +52,15 @@ dependencies {
     implementation("io.opentelemetry:opentelemetry-sdk:1.51.0")
     implementation("io.opentelemetry:opentelemetry-exporter-otlp:1.51.0")
     implementation("io.opentelemetry:opentelemetry-sdk-metrics:1.51.0")
+
+    // Android HTTP Url instrumentation
+    implementation("io.opentelemetry.android.instrumentation:httpurlconnection-library:0.11.0-alpha")
+    byteBuddy("io.opentelemetry.android.instrumentation:httpurlconnection-agent:0.11.0-alpha")
+
+    // OkHTTP instrumentation
+    implementation("io.opentelemetry.android.instrumentation:okhttp3-library:0.11.0-alpha")
+    byteBuddy("io.opentelemetry.android.instrumentation:okhttp3-agent:0.11.0-alpha")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
     implementation("com.google.android.material:material:1.12.0")
     implementation(libs.androidx.core.ktx)

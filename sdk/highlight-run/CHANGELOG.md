@@ -1,5 +1,12 @@
 # highlight.run
 
+## 9.20.0
+
+### Minor Changes
+
+- 7e8f9e5: Add support for specifying a contextFriendlyName function.
+- 7e8f9e5: Fix generation of canonical key.
+
 ## 9.19.1
 
 ### Patch Changes

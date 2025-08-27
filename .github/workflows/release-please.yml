@@ -16,6 +16,8 @@ jobs:
             python-plugin-tag-name: ${{ steps.release.outputs['sdk/@launchdarkly/observability-python--tag_name'] }}
             android-plugin-released: ${{ steps.release.outputs['sdk/@launchdarkly/observability-android--release_created'] }}
             android-plugin-tag-name: ${{ steps.release.outputs['sdk/@launchdarkly/observability-android--tag_name'] }}
+            dotnet-plugin-released: ${{ steps.release.outputs['sdk/@launchdarkly/observability-dotnet--release_created'] }}
+            dotnet-plugin-tag-name: ${{ steps.release.outputs['sdk/@launchdarkly/observability-dotnet--tag_name'] }}
         steps:
             - uses: googleapis/release-please-action@a02a34c4d625f9be7cb89156071d8567266a2445
               id: release
@@ -51,7 +53,7 @@ jobs:
         needs: ['release-python-plugin']
         steps:
             - name: Build and Publish Docs
-              uses: ./.github/workflows/manual-publish-docs.yml
+              uses: launchdarkly/observability-sdk/.github/workflows/manual-publish-docs.yml@main
               with:
                   workspace_path: sdk/@launchdarkly/observability-python
 
@@ -85,3 +87,47 @@ jobs:
               with:
                   workspace-path: sdk/@launchdarkly/observability-android
                   aws-role-arn: ${{ vars.AWS_ROLE_ARN }}
+
+    release-dotnet-plugin:
+        runs-on: ubuntu-latest
+        permissions:
+            id-token: write # Used for publishing secrets.
+        needs: ['release-package']
+        outputs:
+            package-hashes: ${{ steps.publish.outputs.package-hashes }}
+        if: ${{ needs.release-package.outputs.dotnet-plugin-released == 'true' }}
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Publish .NET SDK
+              id: publish
+              uses: ./.github/actions/publish-dotnet-sdk
+              with:
+                  aws-role-arn: ${{ vars.AWS_ROLE_ARN }}
+                  dry-run: false
+
+    release-dotnet-plugin-docs:
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+        needs: ['release-package', 'release-dotnet-plugin']
+        if: ${{ needs.release-package.outputs.dotnet-plugin-released == 'true' }}
+        steps:
+            - name: Build and Publish Docs
+              uses: launchdarkly/observability-sdk/.github/workflows/manual-publish-docs.yml@main
+              with:
+                  workspace_path: sdk/@launchdarkly/observability-dotnet
+
+    release-dotnet-sdk-provenance:
+        needs: ['release-package', 'release-dotnet-plugin']
+        if: ${{ needs.release-package.outputs.dotnet-plugin-released == 'true' }}
+        permissions:
+            actions: read
+            id-token: write
+            contents: write
+        uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.0.0
+        with:
+            base64-subjects: '${{ needs.release-dotnet-plugin.outputs.package-hashes }}'
+            upload-assets: true
+            upload-tag-name: ${{ needs.release-package.outputs.dotnet-plugin-tag-name }}

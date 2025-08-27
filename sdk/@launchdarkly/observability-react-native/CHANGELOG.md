@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.0
+
+### Minor Changes
+
+- 7e8f9e5: Add support for specifying a contextFriendlyName function.
+- 7e8f9e5: Fix generation of canonical key.
+
 ## 0.3.0
 
 ### Minor Changes
