@@ -48,19 +48,6 @@ class _ObserveInstance:
         self._project_id = project_id
         self._tracer = otel_configuration.tracer
 
-    def _record_exception_internal(
-        self,
-        span: Span,
-        error: Exception,
-        attributes: typing.Optional[Attributes] = None,
-    ):
-        attrs = {}
-        if attributes:
-            addedAttributes = flatten_dict(attributes, sep=".")
-            attrs.update(addedAttributes)
-
-        span.record_exception(error, attrs)
-
     def record_exception(
         self, error: Exception, attributes: typing.Optional[Attributes] = None
     ):
@@ -68,13 +55,17 @@ class _ObserveInstance:
             return  # Nothing to record
 
         span = trace.get_current_span()
-        # Can return a non-recording span if there is no active span.
+        ctx = contextlib.nullcontext(span)
         if not span or not span.is_recording():
-            with self.start_span(_ERROR_NAME) as error_span:
-                self._record_exception_internal(error_span, error, attributes)
-            return
+            ctx = self.start_span(_ERROR_NAME)
 
-        self._record_exception_internal(span, error, attributes)
+        with ctx as span:
+            attrs = {}
+            if attributes:
+                addedAttributes = flatten_dict(attributes, sep=".")
+                attrs.update(addedAttributes)
+
+            span.record_exception(error, attrs)
 
     def record_metric(
         self, name: str, value: float, attributes: typing.Optional[Attributes] = None
