@@ -8,6 +8,7 @@ jobs:
     release-package:
         runs-on: ubuntu-latest
         permissions:
+            id-token: write
             contents: write # Contents and pull-requests are for release-please to make releases.
             pull-requests: write
             issues: write
