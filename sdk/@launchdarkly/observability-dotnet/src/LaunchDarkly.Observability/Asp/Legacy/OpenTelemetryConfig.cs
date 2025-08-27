@@ -14,6 +14,7 @@ namespace LaunchDarkly.Observability
         private static TracerProvider _tracerProvider;
         private static MeterProvider _meterProvider;
         private static readonly object ProviderLock = new object();
+        private static ILoggerFactory _loggerFactory;
 
         /// <summary>
         /// Extension method which adds LaunchDarkly logging to a logging factory.
@@ -73,11 +74,9 @@ namespace LaunchDarkly.Observability
                     .WithCommonLaunchDarklyConfig(config, resourceBuilder)
                     .AddAspNetInstrumentation()
                     .Build();
-            }
 
-            using (var factory = LoggerFactory.Create(builder => { builder.AddLaunchDarklyLogging(config); }))
-            {
-                var logger = factory.CreateLogger<ObservabilityPlugin>();
+                _loggerFactory = LoggerFactory.Create(builder => { builder.AddLaunchDarklyLogging(config); });
+                var logger = _loggerFactory.CreateLogger<ObservabilityPlugin>();
                 Observe.Initialize(config, logger);
             }
         }
@@ -91,8 +90,10 @@ namespace LaunchDarkly.Observability
             {
                 _tracerProvider?.Dispose();
                 _meterProvider?.Dispose();
+                _loggerFactory?.Dispose();
                 _tracerProvider = null;
                 _meterProvider = null;
+                _loggerFactory = null;
             }
         }
     }
