@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using LaunchDarkly.Observability.Logging;
@@ -25,19 +26,10 @@ namespace LaunchDarkly.Observability.Otel
         private const string LogsPath = "/v1/logs";
         private const string MetricsPath = "/v1/metrics";
 
-        /// <summary>
-        /// Atomic boolean used to track if the sampling configuration has been fetched.
-        /// </summary>
-        private static readonly AtomicBoolean SamplerConfigFetched = new AtomicBoolean(false);
+        private static readonly ConcurrentDictionary<string, CustomSampler> Samplers =
+            new ConcurrentDictionary<string, CustomSampler>();
 
-        /// <summary>
-        /// There is a static sampler instance, but we required this instances be passed to methods.
-        /// This ensures that the sampler is always accessed in a way that results in its config
-        /// being fetched.
-        /// </summary>
-        private static readonly CustomSampler Sampler = new CustomSampler();
-
-        private static async Task GetSamplingConfigAsync(ObservabilityConfig config)
+        private static async Task GetSamplingConfigAsync(CustomSampler sampler, ObservabilityConfig config)
         {
             using (var samplingClient = new SamplingConfigClient(config.BackendUrl))
             {
@@ -45,7 +37,7 @@ namespace LaunchDarkly.Observability.Otel
                 {
                     var res = await samplingClient.GetSamplingConfigAsync(config.SdkKey).ConfigureAwait(false);
                     if (res == null) return;
-                    Sampler.SetConfig(res);
+                    sampler.SetConfig(res);
                 }
                 catch (Exception ex)
                 {
@@ -69,19 +61,14 @@ namespace LaunchDarkly.Observability.Otel
             return attrs;
         }
 
-        private static void FetchSamplingConfig(ObservabilityConfig config)
-        {
-            var previous = SamplerConfigFetched.GetAndSet(true);
-            if (!previous)
-            {
-                _ = Task.Run(() => GetSamplingConfigAsync(config));
-            }
-        }
-
         public static CustomSampler GetSampler(ObservabilityConfig config)
         {
-            FetchSamplingConfig(config);
-            return Sampler;
+            return Samplers.GetOrAdd(config.SdkKey, _ =>
+            {
+                var sampler = new CustomSampler();
+                Task.Run(() => GetSamplingConfigAsync(sampler, config));
+                return sampler;
+            });
         }
 
         public static ResourceBuilder GetResourceBuilder(ObservabilityConfig config)
