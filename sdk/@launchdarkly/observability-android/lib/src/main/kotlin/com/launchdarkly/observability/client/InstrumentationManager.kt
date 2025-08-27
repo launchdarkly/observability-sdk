@@ -59,8 +59,13 @@ class InstrumentationManager(
 
         otelRUM = OpenTelemetryRum.builder(application, otelRumConfig)
             .addLoggerProviderCustomizer { sdkLoggerProviderBuilder, application ->
+                val logExporter = OtlpHttpLogRecordExporter.builder()
+                    .setEndpoint(options.otlpEndpoint + LOGS_PATH)
+                    .setHeaders { options.customHeaders }
+                    .build()
 
-                sdkLoggerProviderBuilder.setResource(resources)
+                val samplingLogExporter = SamplingLogExporter(logExporter, customSampler)
+                val logProcessor = getBatchLogRecordProcessor(samplingLogExporter)
 
                 if (options.debug) {
                     val adapterLogExporter = object : LogRecordExporter {
@@ -70,24 +75,21 @@ class InstrumentationManager(
                             }
                             return CompletableResultCode.ofSuccess()
                         }
-                        override fun flush(): CompletableResultCode = CompletableResultCode.ofSuccess()
-
-                        override fun shutdown(): CompletableResultCode = CompletableResultCode.ofSuccess()
+                        override fun flush(): CompletableResultCode {
+                            return CompletableResultCode.ofSuccess()
+                        }
+                        override fun shutdown(): CompletableResultCode {
+                            return CompletableResultCode.ofSuccess()
+                        }
                     }
 
-                    val processor = getBatchLogRecordProcessor(adapterLogExporter)
-                    sdkLoggerProviderBuilder.addLogRecordProcessor(processor)
-                } else {
-                    val logExporter = OtlpHttpLogRecordExporter.builder()
-                        .setEndpoint(options.otlpEndpoint + LOGS_PATH)
-                        .setHeaders { options.customHeaders }
-                        .build()
-
-                    val samplingLogExporter = SamplingLogExporter(logExporter, customSampler)
-                    val processor = getBatchLogRecordProcessor(samplingLogExporter)
-
-                    sdkLoggerProviderBuilder.addLogRecordProcessor(processor)
+                    val adapterProcessor = getBatchLogRecordProcessor(adapterLogExporter)
+                    sdkLoggerProviderBuilder.addLogRecordProcessor(adapterProcessor)
                 }
+
+                sdkLoggerProviderBuilder
+                    .setResource(resources)
+                    .addLogRecordProcessor(logProcessor)
             }
             .addTracerProviderCustomizer { sdkTracerProviderBuilder, application ->
                 val spanExporter = OtlpHttpSpanExporter.builder()
