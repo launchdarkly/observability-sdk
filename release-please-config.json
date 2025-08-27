@@ -27,7 +27,6 @@
 			"extra-files": ["version.go"]
 		},
 		"sdk/@launchdarkly/observability-dotnet": {
-			"release-as": "0.1.0",
 			"bump-minor-pre-major": true,
 			"package-name": "launchdarkly-observability-dotnet",
 			"release-type": "simple",
