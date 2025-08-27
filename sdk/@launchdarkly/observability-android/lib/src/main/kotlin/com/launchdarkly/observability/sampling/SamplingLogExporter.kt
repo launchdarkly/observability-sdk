@@ -17,7 +17,7 @@ import io.opentelemetry.sdk.logs.export.LogRecordExporter
  * @param sampler The custom sampler that determines which log records to export
  */
 class SamplingLogExporter(
-    private val delegate: OtlpHttpLogRecordExporter,
+    private val delegate: LogRecordExporter,
     private val sampler: ExportSampler
 ) : LogRecordExporter {
 

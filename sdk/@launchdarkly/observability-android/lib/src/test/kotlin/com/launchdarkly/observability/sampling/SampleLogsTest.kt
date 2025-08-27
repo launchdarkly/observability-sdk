@@ -1,6 +1,6 @@
 package com.launchdarkly.observability.sampling
 
-import com.launchdarkly.observability.sampling.utils.MockExportSampler
+import com.launchdarkly.observability.sampling.utils.FakeExportSampler
 import io.mockk.every
 import io.mockk.mockk
 import io.opentelemetry.api.common.AttributeKey
@@ -22,7 +22,7 @@ class SampleLogsTest {
 
         @Test
         fun `should return all logs when sampling is disabled`() {
-            val sampler = MockExportSampler(isSamplingEnabled = { false })
+            val sampler = FakeExportSampler(isSamplingEnabled = { false })
 
             val logs = listOf(
                 createMockLog("log1"),
@@ -43,7 +43,7 @@ class SampleLogsTest {
 
         @Test
         fun `should handle empty input list`() {
-            val sampler = MockExportSampler(isSamplingEnabled = { true })
+            val sampler = FakeExportSampler(isSamplingEnabled = { true })
 
             val result = sampleLogs(emptyList(), sampler)
 
@@ -52,7 +52,7 @@ class SampleLogsTest {
 
         @Test
         fun `should return empty list when no logs are sampled`() {
-            val sampler = MockExportSampler(
+            val sampler = FakeExportSampler(
                 isSamplingEnabled = { true },
                 sampleLog = { SamplingResult(sample = false) }
             )
@@ -69,7 +69,7 @@ class SampleLogsTest {
 
         @Test
         fun `should return all logs when all are sampled without additional attributes`() {
-            val sampler = MockExportSampler(
+            val sampler = FakeExportSampler(
                 isSamplingEnabled = { true },
                 sampleLog = { SamplingResult(sample = true, attributes = null) }
             )
@@ -88,7 +88,7 @@ class SampleLogsTest {
 
         @Test
         fun `should return subset when some logs are sampled`() {
-            val sampler = MockExportSampler(
+            val sampler = FakeExportSampler(
                 isSamplingEnabled = { true },
                 sampleLog = {
                     if (it.bodyValue?.value == "log2") {
@@ -125,7 +125,7 @@ class SampleLogsTest {
                 .put("launchdarkly.sampling.ratio", 42L)
                 .build()
 
-            val sampler = MockExportSampler(
+            val sampler = FakeExportSampler(
                 isSamplingEnabled = { true },
                 sampleLog = {
                     if (it.bodyValue?.value == "test-log") {
@@ -160,7 +160,7 @@ class SampleLogsTest {
                 .put("launchdarkly.sampling.ratio", 50L)
                 .build()
 
-            val sampler = MockExportSampler(
+            val sampler = FakeExportSampler(
                 isSamplingEnabled = { true },
                 sampleLog = {
                     when (it.bodyValue?.value) {

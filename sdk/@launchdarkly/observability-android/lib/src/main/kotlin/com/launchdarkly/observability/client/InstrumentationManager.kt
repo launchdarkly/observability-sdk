@@ -4,6 +4,7 @@ import android.app.Application
 import com.launchdarkly.logging.LDLogger
 import com.launchdarkly.observability.api.Options
 import com.launchdarkly.observability.interfaces.Metric
+import com.launchdarkly.observability.sampling.CompositeLogExporter
 import com.launchdarkly.observability.sampling.CustomSampler
 import com.launchdarkly.observability.sampling.SamplingLogExporter
 import com.launchdarkly.observability.sampling.SamplingTraceExporter
@@ -21,6 +22,7 @@ import io.opentelemetry.exporter.otlp.http.logs.OtlpHttpLogRecordExporter
 import io.opentelemetry.exporter.otlp.http.metrics.OtlpHttpMetricExporter
 import io.opentelemetry.exporter.otlp.http.trace.OtlpHttpSpanExporter
 import io.opentelemetry.sdk.common.CompletableResultCode
+import io.opentelemetry.sdk.logs.data.LogRecordData
 import io.opentelemetry.sdk.logs.export.BatchLogRecordProcessor
 import io.opentelemetry.sdk.logs.export.LogRecordExporter
 import io.opentelemetry.sdk.metrics.export.MetricExporter
@@ -64,32 +66,31 @@ class InstrumentationManager(
                     .setHeaders { options.customHeaders }
                     .build()
 
-                val samplingLogExporter = SamplingLogExporter(logExporter, customSampler)
-                val logProcessor = getBatchLogRecordProcessor(samplingLogExporter)
+                sdkLoggerProviderBuilder.setResource(resources)
 
                 if (options.debug) {
-                    val adapterLogExporter = object : LogRecordExporter {
-                        override fun export(logRecords: Collection<io.opentelemetry.sdk.logs.data.LogRecordData>): CompletableResultCode {
+                    val debugLogExporter = object : LogRecordExporter {
+                        override fun export(logRecords: Collection<LogRecordData>): CompletableResultCode {
                             for (record in logRecords) {
                                 logger.info(record.toString()) // TODO: Figure out why logger.debug is being blocked by Log.isLoggable is adapter.
                             }
                             return CompletableResultCode.ofSuccess()
                         }
-                        override fun flush(): CompletableResultCode {
-                            return CompletableResultCode.ofSuccess()
-                        }
-                        override fun shutdown(): CompletableResultCode {
-                            return CompletableResultCode.ofSuccess()
-                        }
+                        override fun flush(): CompletableResultCode = CompletableResultCode.ofSuccess()
+                        override fun shutdown(): CompletableResultCode = CompletableResultCode.ofSuccess()
                     }
 
-                    val adapterProcessor = getBatchLogRecordProcessor(adapterLogExporter)
-                    sdkLoggerProviderBuilder.addLogRecordProcessor(adapterProcessor)
-                }
+                    val compositeExporter = CompositeLogExporter(logExporter, debugLogExporter)
+                    val samplingLogExporter = SamplingLogExporter(compositeExporter, customSampler)
+                    val logProcessor = getBatchLogRecordProcessor(samplingLogExporter)
 
-                sdkLoggerProviderBuilder
-                    .setResource(resources)
-                    .addLogRecordProcessor(logProcessor)
+                    sdkLoggerProviderBuilder.addLogRecordProcessor(logProcessor)
+                } else {
+                    val samplingLogExporter = SamplingLogExporter(logExporter, customSampler)
+                    val logProcessor = getBatchLogRecordProcessor(samplingLogExporter)
+
+                    sdkLoggerProviderBuilder.addLogRecordProcessor(logProcessor)
+                }
             }
             .addTracerProviderCustomizer { sdkTracerProviderBuilder, application ->
                 val spanExporter = OtlpHttpSpanExporter.builder()

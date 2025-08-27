@@ -1,6 +1,6 @@
 package com.launchdarkly.observability.sampling
 
-import com.launchdarkly.observability.sampling.utils.MockExportSampler
+import com.launchdarkly.observability.sampling.utils.FakeExportSampler
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
@@ -21,14 +21,14 @@ import org.junit.jupiter.api.Nested
 class SamplingTraceExporterTest {
 
     private lateinit var mockDelegate: OtlpHttpSpanExporter
-    private lateinit var mockSampler: ExportSampler
+    private lateinit var sampler: ExportSampler
     private lateinit var samplingTraceExporter: SamplingTraceExporter
 
     @BeforeEach
     fun setup() {
         mockDelegate = mockk()
-        mockSampler = MockExportSampler()
-        samplingTraceExporter = SamplingTraceExporter(mockDelegate, mockSampler)
+        sampler = FakeExportSampler()
+        samplingTraceExporter = SamplingTraceExporter(mockDelegate, sampler)
     }
 
     @Nested
@@ -44,7 +44,7 @@ class SamplingTraceExporterTest {
             )
 
             mockkStatic("com.launchdarkly.observability.sampling.SampleSpansKt")
-            every { sampleSpans(spans, mockSampler) } returns emptyList()
+            every { sampleSpans(spans, sampler) } returns emptyList()
 
             val expectedResult = CompletableResultCode.ofSuccess()
 
@@ -73,7 +73,7 @@ class SamplingTraceExporterTest {
             )
 
             mockkStatic("com.launchdarkly.observability.sampling.SampleSpansKt")
-            every { sampleSpans(originalSpans, mockSampler) } returns sampledSpans
+            every { sampleSpans(originalSpans, sampler) } returns sampledSpans
 
             val expectedResult = CompletableResultCode.ofSuccess()
             every { mockDelegate.export(sampledSpans) } returns expectedResult
@@ -93,7 +93,7 @@ class SamplingTraceExporterTest {
             val emptySpans = emptyList<SpanData>()
 
             mockkStatic("com.launchdarkly.observability.sampling.SampleSpansKt")
-            every { sampleSpans(emptySpans, mockSampler) } returns emptyList()
+            every { sampleSpans(emptySpans, sampler) } returns emptyList()
 
             val result = samplingTraceExporter.export(emptySpans)
 
@@ -109,7 +109,7 @@ class SamplingTraceExporterTest {
             val sampledSpans = listOf(createMockSpan("span1", "span1-id"))
 
             mockkStatic("com.launchdarkly.observability.sampling.SampleSpansKt")
-            every { sampleSpans(originalSpans, mockSampler) } returns sampledSpans
+            every { sampleSpans(originalSpans, sampler) } returns sampledSpans
 
             val failedResult = CompletableResultCode.ofFailure()
             every { mockDelegate.export(sampledSpans) } returns failedResult

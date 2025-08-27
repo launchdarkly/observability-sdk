@@ -1,6 +1,6 @@
 package com.launchdarkly.observability.sampling
 
-import com.launchdarkly.observability.sampling.utils.MockExportSampler
+import com.launchdarkly.observability.sampling.utils.FakeExportSampler
 import io.mockk.every
 import io.mockk.mockk
 import io.opentelemetry.api.common.AttributeKey
@@ -23,7 +23,7 @@ class SampleSpansTest {
 
         @Test
         fun `should return all spans when sampling is disabled`() {
-            val sampler = MockExportSampler(isSamplingEnabled = { false })
+            val sampler = FakeExportSampler(isSamplingEnabled = { false })
 
             val spans = listOf(
                 createMockSpan("span1", "span1-id"),
@@ -44,7 +44,7 @@ class SampleSpansTest {
 
         @Test
         fun `should handle empty input list`() {
-            val sampler = MockExportSampler(isSamplingEnabled = { true })
+            val sampler = FakeExportSampler(isSamplingEnabled = { true })
 
             val result = sampleSpans(emptyList(), sampler)
 
@@ -53,7 +53,7 @@ class SampleSpansTest {
 
         @Test
         fun `should return empty list when no spans are sampled`() {
-            val sampler = MockExportSampler(
+            val sampler = FakeExportSampler(
                 isSamplingEnabled = { true },
                 sampleSpan = { SamplingResult(sample = false) }
             )
@@ -71,7 +71,7 @@ class SampleSpansTest {
 
         @Test
         fun `should return all spans when all are sampled without additional attributes`() {
-            val sampler = MockExportSampler(
+            val sampler = FakeExportSampler(
                 isSamplingEnabled = { true },
                 sampleSpan = { SamplingResult(sample = true, attributes = null) }
             )
@@ -90,7 +90,7 @@ class SampleSpansTest {
 
         @Test
         fun `should return subset when some spans are sampled`() {
-            val sampler = MockExportSampler(
+            val sampler = FakeExportSampler(
                 isSamplingEnabled = { true },
                 sampleSpan = {
                     if (it.name == "span2") {
@@ -136,7 +136,7 @@ class SampleSpansTest {
                 .put("launchdarkly.sampling.ratio", 42L)
                 .build()
 
-            val sampler = MockExportSampler(
+            val sampler = FakeExportSampler(
                 isSamplingEnabled = { true },
                 sampleSpan = {
                     if (it.name == "test-span") {
@@ -173,7 +173,7 @@ class SampleSpansTest {
 
         @Test
         fun `should remove child and grandchild spans when parent is not sampled`() {
-            val sampler = MockExportSampler(
+            val sampler = FakeExportSampler(
                 isSamplingEnabled = { true },
                 sampleSpan = {
                     if (it.name == "parent") {
@@ -199,7 +199,7 @@ class SampleSpansTest {
 
         @Test
         fun `should keep child spans when parent is sampled`() {
-            val sampler = MockExportSampler(
+            val sampler = FakeExportSampler(
                 isSamplingEnabled = { true },
                 sampleSpan = { SamplingResult(sample = true) }
             )
@@ -218,7 +218,7 @@ class SampleSpansTest {
 
         @Test
         fun `should remove child spans even if parent is sampled but child is not`() {
-            val sampler = MockExportSampler(
+            val sampler = FakeExportSampler(
                 isSamplingEnabled = { true },
                 sampleSpan = {
                     if (it.name == "child") {
@@ -248,7 +248,7 @@ class SampleSpansTest {
             // parent2 (not sampled) -> child2 (sampled) -> grandchild2 (sampled)
             // unrelated (sampled)
 
-            val sampler = MockExportSampler(
+            val sampler = FakeExportSampler(
                 isSamplingEnabled = { true },
                 sampleSpan = {
                     when (it.name) {

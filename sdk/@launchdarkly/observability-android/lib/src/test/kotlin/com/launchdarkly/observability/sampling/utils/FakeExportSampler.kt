@@ -6,7 +6,7 @@ import com.launchdarkly.observability.sampling.SamplingResult
 import io.opentelemetry.sdk.logs.data.LogRecordData
 import io.opentelemetry.sdk.trace.data.SpanData
 
-class MockExportSampler(
+class FakeExportSampler(
     private val sampleSpan: (SpanData) -> SamplingResult = { SamplingResult(true) },
     private val sampleLog: (LogRecordData) -> SamplingResult = { SamplingResult(true) },
     private val isSamplingEnabled: () -> Boolean = { true },

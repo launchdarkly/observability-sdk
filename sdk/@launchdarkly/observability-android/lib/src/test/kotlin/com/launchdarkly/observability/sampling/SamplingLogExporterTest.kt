@@ -1,15 +1,15 @@
 package com.launchdarkly.observability.sampling
 
-import com.launchdarkly.observability.sampling.utils.MockExportSampler
+import com.launchdarkly.observability.sampling.utils.FakeExportSampler
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
 import io.mockk.verify
 import io.opentelemetry.api.common.Value
-import io.opentelemetry.exporter.otlp.http.logs.OtlpHttpLogRecordExporter
 import io.opentelemetry.sdk.common.CompletableResultCode
 import io.opentelemetry.sdk.logs.data.LogRecordData
+import io.opentelemetry.sdk.logs.export.LogRecordExporter
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -20,15 +20,15 @@ import org.junit.jupiter.api.Nested
 
 class SamplingLogExporterTest {
 
-    private lateinit var mockDelegate: OtlpHttpLogRecordExporter
-    private lateinit var mockSampler: ExportSampler
+    private lateinit var mockDelegate: LogRecordExporter
+    private lateinit var sampler: ExportSampler
     private lateinit var samplingLogExporter: SamplingLogExporter
 
     @BeforeEach
     fun setup() {
         mockDelegate = mockk()
-        mockSampler = MockExportSampler()
-        samplingLogExporter = SamplingLogExporter(mockDelegate, mockSampler)
+        sampler = FakeExportSampler()
+        samplingLogExporter = SamplingLogExporter(mockDelegate, sampler)
     }
 
     @Nested
@@ -44,7 +44,7 @@ class SamplingLogExporterTest {
             )
 
             mockkStatic("com.launchdarkly.observability.sampling.SampleLogsKt")
-            every { sampleLogs(logs, mockSampler) } returns emptyList()
+            every { sampleLogs(logs, sampler) } returns emptyList()
 
             val expectedResult = CompletableResultCode.ofSuccess()
 
@@ -73,7 +73,7 @@ class SamplingLogExporterTest {
             )
 
             mockkStatic("com.launchdarkly.observability.sampling.SampleLogsKt")
-            every { sampleLogs(originalLogs, mockSampler) } returns sampledLogs
+            every { sampleLogs(originalLogs, sampler) } returns sampledLogs
 
             val expectedResult = CompletableResultCode.ofSuccess()
             every { mockDelegate.export(sampledLogs) } returns expectedResult
@@ -93,7 +93,7 @@ class SamplingLogExporterTest {
             val emptyLogs = emptyList<LogRecordData>()
 
             mockkStatic("com.launchdarkly.observability.sampling.SampleLogsKt")
-            every { sampleLogs(emptyLogs, mockSampler) } returns emptyList()
+            every { sampleLogs(emptyLogs, sampler) } returns emptyList()
 
             val result = samplingLogExporter.export(emptyLogs)
 
@@ -109,7 +109,7 @@ class SamplingLogExporterTest {
             val sampledLogs = listOf(createMockLog("log1"))
 
             mockkStatic("com.launchdarkly.observability.sampling.SampleLogsKt")
-            every { sampleLogs(originalLogs, mockSampler) } returns sampledLogs
+            every { sampleLogs(originalLogs, sampler) } returns sampledLogs
 
             val failedResult = CompletableResultCode.ofFailure()
             every { mockDelegate.export(sampledLogs) } returns failedResult
