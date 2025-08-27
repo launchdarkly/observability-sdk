@@ -19,8 +19,17 @@ jobs:
             dotnet-plugin-released: ${{ steps.release.outputs['sdk/@launchdarkly/observability-dotnet--release_created'] }}
             dotnet-plugin-tag-name: ${{ steps.release.outputs['sdk/@launchdarkly/observability-dotnet--tag_name'] }}
         steps:
+            # Normally a workflow cannot trigger another workflow. For this workflow we need to run required checks.
+            # Github determines that something is created by a workflow/bot based on the token.
+            - uses: launchdarkly/gh-actions/actions/release-secrets@release-secrets-v1.2.0
+              name: "Get PAT"
+              with:
+                aws_assume_role: ${{ vars.AWS_ROLE_ARN }}
+                ssm_parameter_pairs: "/production/common/releasing/o11y_gh_pat = GITHUB_PAT"
             - uses: googleapis/release-please-action@a02a34c4d625f9be7cb89156071d8567266a2445
               id: release
+              with:
+                token: ${{ env.GITHUB_PAT }}
 
             - uses: actions/checkout@v4
               if: ${{ steps.release.outputs.releases_created == 'true' }}
