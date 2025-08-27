@@ -15,6 +15,14 @@ allprojects {
     }
 }
 
+configurations.all {
+    // Needed to exclude okhttp-jvm dependency from io.opentelemetry:opentelemetry-exporter-otlp that collided with
+    // okhttp dependency from com.launchdarkly:launchdarkly-android-client-sdk.  Next steps would be to update
+    // com.launchdarkly:launchdarkly-android-client-sdk to use okhttp 5+ as otel libraries are using 5+ at the
+    // time of writing this.
+    exclude(group = "com.squareup.okhttp3", module = "okhttp-jvm")
+}
+
 dependencies {
     implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.9.0")
     implementation("com.jakewharton.timber:timber:5.0.1")
@@ -31,12 +39,16 @@ dependencies {
     implementation("io.opentelemetry:opentelemetry-api-incubator:1.51.0-alpha")
 
     // Android instrumentation
-    implementation("io.opentelemetry.android:core:0.11.0-alpha")
-    implementation("io.opentelemetry.android.instrumentation:activity:0.11.0-alpha")
-    implementation("io.opentelemetry.android:session:0.11.0-alpha")
+    implementation("io.opentelemetry.android:core:0.14.0-alpha")
+    implementation("io.opentelemetry.android.instrumentation:activity:0.14.0-alpha")
+    implementation("io.opentelemetry.android:session:0.14.0-alpha")
+    implementation("io.opentelemetry.android:android-agent:0.14.0-alpha")
 
     // Android crash instrumentation
-    implementation("io.opentelemetry.android.instrumentation:crash:0.11.0-alpha")
+    implementation("io.opentelemetry.android.instrumentation:crash:0.14.0-alpha")
+
+    // Android click instrumentation for Compose
+    implementation("io.opentelemetry.android.instrumentation:compose-click:0.14.0-alpha")
 
     // Use JUnit Jupiter for testing.
     testImplementation("org.junit.jupiter:junit-jupiter")
@@ -47,7 +59,7 @@ val releaseVersion = version.toString()
 
 android {
     namespace = "com.launchdarkly.observability"
-    compileSdk = 30
+    compileSdk = 36
 
     buildFeatures {
         buildConfig = true

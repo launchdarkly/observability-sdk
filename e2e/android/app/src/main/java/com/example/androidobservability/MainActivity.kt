@@ -14,6 +14,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.androidobservability.ui.theme.AndroidObservabilityTheme
 
@@ -27,10 +29,13 @@ class MainActivity : ComponentActivity() {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     Column {
                         Text(
-                            text = "Hello Telemetry",
+                            text = "Hello Android Observability",
                             modifier = Modifier.padding(innerPadding)
                         )
                         Button(
+                            modifier = Modifier.semantics {
+                                contentDescription = "buttonGoToSecondActivity"
+                            },
                             onClick = {
                                 this@MainActivity.startActivity(Intent(this@MainActivity, SecondaryActivity::class.java))
                             }
@@ -38,6 +43,19 @@ class MainActivity : ComponentActivity() {
                             Text("Go to Secondary Activity")
                         }
                         Button(
+                            modifier = Modifier.semantics {
+                                contentDescription = "buttonTriggerHttp"
+                            },
+                            onClick = {
+                                viewModel.triggerHttpRequests()
+                            }
+                        ) {
+                            Text("Trigger HTTP Request")
+                        }
+                        Button(
+                            modifier = Modifier.semantics {
+                                contentDescription = "buttonTriggerMetric"
+                            },
                             onClick = {
                                 viewModel.triggerHttpRequests()
                             }
@@ -52,6 +70,9 @@ class MainActivity : ComponentActivity() {
                             Text("Trigger Metric")
                         }
                         Button(
+                            modifier = Modifier.semantics {
+                                contentDescription = "buttonTriggerError"
+                            },
                             onClick = {
                                 viewModel.triggerError()
                             }
@@ -59,6 +80,9 @@ class MainActivity : ComponentActivity() {
                             Text("Trigger Error")
                         }
                         Button(
+                            modifier = Modifier.semantics {
+                                contentDescription = "buttonTriggerLog"
+                            },
                             onClick = {
                                 viewModel.triggerLog()
                             }
@@ -66,6 +90,9 @@ class MainActivity : ComponentActivity() {
                             Text("Trigger Log")
                         }
                         Button(
+                            modifier = Modifier.semantics {
+                                contentDescription = "buttonTriggerNestedSpans"
+                            },
                             onClick = {
                                 viewModel.triggerNestedSpans()
                             }
@@ -73,6 +100,9 @@ class MainActivity : ComponentActivity() {
                             Text("Trigger Nested Spans")
                         }
                         Button(
+                            modifier = Modifier.semantics {
+                                contentDescription = "buttonTriggerCrash"
+                            },
                             onClick = {
                                 viewModel.triggerCrash()
                             }

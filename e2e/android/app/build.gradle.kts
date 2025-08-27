@@ -7,12 +7,11 @@ plugins {
 
 android {
     namespace = "com.example.androidobservability"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.androidobservability"
         minSdk = 24
-        targetSdk = 35
         versionCode = 1
         versionName = "1.0"
 
@@ -38,6 +37,14 @@ android {
     buildFeatures {
         compose = true
     }
+}
+
+configurations.all {
+    // Needed to exclude okhttp-jvm dependency from io.opentelemetry:opentelemetry-exporter-otlp that collided with
+    // okhttp dependency from com.launchdarkly:launchdarkly-android-client-sdk.  Next steps would be to update
+    // com.launchdarkly:launchdarkly-android-client-sdk to use okhttp 5+ as otel libraries are using 5+ at the
+    // time of writing this.
+    exclude(group = "com.squareup.okhttp3", module = "okhttp-jvm")
 }
 
 dependencies {

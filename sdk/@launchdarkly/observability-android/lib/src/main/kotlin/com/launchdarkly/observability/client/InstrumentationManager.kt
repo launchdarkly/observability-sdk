@@ -4,9 +4,13 @@ import android.app.Application
 import com.launchdarkly.logging.LDLogger
 import com.launchdarkly.observability.api.Options
 import com.launchdarkly.observability.interfaces.Metric
+import com.launchdarkly.observability.vendored.otel.SessionIdTimeoutHandler
+import com.launchdarkly.observability.vendored.otel.SessionManager
 import io.opentelemetry.android.OpenTelemetryRum
+import io.opentelemetry.android.agent.session.SessionConfig
 import io.opentelemetry.android.config.OtelRumConfig
-import io.opentelemetry.android.session.SessionConfig
+import io.opentelemetry.android.internal.services.Services
+import io.opentelemetry.android.session.SessionProvider
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Logger
 import io.opentelemetry.api.logs.Severity
@@ -47,10 +51,9 @@ class InstrumentationManager(
     private var otelTracer: Tracer
 
     init {
-        val otelRumConfig = OtelRumConfig().setSessionConfig(
-            SessionConfig(backgroundInactivityTimeout = options.sessionBackgroundTimeout)
-        )
+        val otelRumConfig = OtelRumConfig() // default
         otelRUM = OpenTelemetryRum.builder(application, otelRumConfig)
+            .setSessionProvider(createSessionProvider(application, SessionConfig(backgroundInactivityTimeout = options.sessionBackgroundTimeout)))
             .addLoggerProviderCustomizer { sdkLoggerProviderBuilder, application ->
                 val logExporter = OtlpHttpLogRecordExporter.builder()
                     .setEndpoint(options.otlpEndpoint + LOGS_PATH)
@@ -191,5 +194,14 @@ class InstrumentationManager(
         return otelTracer.spanBuilder(name)
             .setAllAttributes(attributes)
             .startSpan()
+    }
+
+    private fun createSessionProvider(
+        application: Application,
+        sessionConfig: SessionConfig,
+    ): SessionProvider {
+        val timeoutHandler = SessionIdTimeoutHandler(sessionConfig)
+        Services.get(application).appLifecycle.registerListener(timeoutHandler)
+        return SessionManager.create(timeoutHandler, sessionConfig)
     }
 }
