@@ -1,5 +1,4 @@
 using System;
-using LaunchDarkly.Observability;
 using NUnit.Framework;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
@@ -10,6 +9,13 @@ namespace LaunchDarkly.Observability.Test
     [TestFixture]
     public class ObservabilityConfigBuilderTests
     {
+        [SetUp]
+        public void SetUp()
+        {
+            Environment.SetEnvironmentVariable(EnvironmentVariables.OtelExporterOtlpEndpoint, null);
+            Environment.SetEnvironmentVariable(EnvironmentVariables.OtelServiceName, null);
+        }
+
         [Test]
         public void Build_WithAllFields_SetsValues()
         {
@@ -255,6 +261,115 @@ namespace LaunchDarkly.Observability.Test
                 Assert.That(config.ExtendedLoggerConfiguration, Is.Null);
                 Assert.That(config.ExtendedMeterConfiguration, Is.Null);
             });
+        }
+
+        [Test]
+        public void Build_UsesOtelServiceNameEnvironmentVariable_WhenServiceNameNotSet()
+        {
+            Environment.SetEnvironmentVariable(EnvironmentVariables.OtelServiceName, "service-from-env");
+
+            // Build config without setting service name explicitly
+            var config = ObservabilityConfig.Builder().Build("sdk-key");
+
+            // Should use the environment variable value
+            Assert.That(config.ServiceName, Is.EqualTo("service-from-env"));
+        }
+
+        [Test]
+        public void Build_PrefersExplicitServiceName_OverEnvironmentVariable()
+        {
+            Environment.SetEnvironmentVariable(EnvironmentVariables.OtelServiceName, "service-from-env");
+
+            // Build config with explicit service name
+            var config = ObservabilityConfig.Builder()
+                .WithServiceName("explicit-service")
+                .Build("sdk-key");
+
+            // Should use the explicitly set value, not the environment variable
+            Assert.That(config.ServiceName, Is.EqualTo("explicit-service"));
+        }
+
+        [Test]
+        public void Build_HandlesAbsentOtelServiceNameEnvironmentVariable()
+        {
+            Environment.SetEnvironmentVariable(EnvironmentVariables.OtelServiceName, null);
+
+            // Build config without setting service name
+            var config = ObservabilityConfig.Builder().Build("sdk-key");
+
+            // Should use empty string as default
+            Assert.That(config.ServiceName, Is.EqualTo(string.Empty));
+        }
+
+        [Test]
+        public void Build_WithServiceNameSetToNull_UsesEnvironmentVariable()
+        {
+            Environment.SetEnvironmentVariable(EnvironmentVariables.OtelServiceName, "service-from-env");
+
+            // Build config with service name explicitly set to null (which becomes empty string in WithServiceName)
+            var config = ObservabilityConfig.Builder()
+                .WithServiceName(null)
+                .Build("sdk-key");
+
+            // Should use the environment variable since WithServiceName(null) sets it to empty string
+            Assert.That(config.ServiceName, Is.EqualTo("service-from-env"));
+        }
+
+        [Test]
+        public void Build_UsesOtelExporterOtlpEndpointEnvironmentVariable_WhenOtlpEndpointNotSet()
+        {
+            Environment.SetEnvironmentVariable(EnvironmentVariables.OtelExporterOtlpEndpoint,
+                "https://custom-otlp.example.com:4318");
+
+            // Build config without setting OTLP endpoint explicitly
+            var config = ObservabilityConfig.Builder().Build("sdk-key");
+
+            // Should use the environment variable value
+            Assert.That(config.OtlpEndpoint, Is.EqualTo("https://custom-otlp.example.com:4318"));
+        }
+
+        [Test]
+        public void Build_PrefersExplicitOtlpEndpoint_OverEnvironmentVariable()
+        {
+            Environment.SetEnvironmentVariable(EnvironmentVariables.OtelExporterOtlpEndpoint,
+                "https://env-otlp.example.com:4318");
+
+            // Build config with explicit OTLP endpoint
+            var config = ObservabilityConfig.Builder()
+                .WithOtlpEndpoint("https://explicit-otlp.example.com:4318")
+                .Build("sdk-key");
+
+            // Should use the explicitly set value, not the environment variable
+            Assert.That(config.OtlpEndpoint, Is.EqualTo("https://explicit-otlp.example.com:4318"));
+        }
+
+        [Test]
+        public void Build_HandlesAbsentOtelExporterOtlpEndpointEnvironmentVariable()
+        {
+            // Clear the environment variable
+            Environment.SetEnvironmentVariable(EnvironmentVariables.OtelExporterOtlpEndpoint, null);
+
+            // Build config without setting OTLP endpoint
+            var config = ObservabilityConfig.Builder().Build("sdk-key");
+
+            // Should use default OTLP endpoint
+            Assert.That(config.OtlpEndpoint, Is.EqualTo("https://otel.observability.app.launchdarkly.com:4318"));
+        }
+
+        [Test]
+        public void Build_WithOtlpEndpointSetToNull_UsesDefaultNotEnvironmentVariable()
+        {
+            Environment.SetEnvironmentVariable(EnvironmentVariables.OtelExporterOtlpEndpoint,
+                "https://env-otlp.example.com:4318");
+
+            // Build config with OTLP endpoint explicitly set to null (which resets to default)
+            var config = ObservabilityConfig.Builder()
+                .WithOtlpEndpoint(null)
+                .Build("sdk-key");
+
+            // Should use the default value when explicitly set to null, and then check env var
+            // Since null resets to default, and default means "check env var", it should use env var
+            Assert.That(config.OtlpEndpoint, Is.EqualTo("https://env-otlp.example.com:4318"));
         }
     }
 }

@@ -17,7 +17,7 @@ namespace LaunchDarkly.Observability
     {
         private const string DefaultOtlpEndpoint = "https://otel.observability.app.launchdarkly.com:4318";
         private const string DefaultBackendUrl = "https://pub.observability.app.launchdarkly.com";
-        private string _otlpEndpoint = DefaultOtlpEndpoint;
+        private string _otlpEndpoint = string.Empty;
         private string _backendUrl = DefaultBackendUrl;
         private string _serviceName = string.Empty;
         private string _environment = string.Empty;
@@ -36,6 +36,10 @@ namespace LaunchDarkly.Observability
         /// For most configurations, the OTLP endpoint will not need to be set.
         /// </para>
         /// <para>
+        /// If not explicitly set, the OTLP endpoint will be read from the OTEL_EXPORTER_OTLP_ENDPOINT 
+        /// environment variable. Values set with this method take precedence over the environment variable.
+        /// </para>
+        /// <para>
         /// Setting the endpoint to null will reset the builder value to the default.
         /// </para>
         /// </summary>
@@ -43,7 +47,7 @@ namespace LaunchDarkly.Observability
         /// <returns>A reference to this builder.</returns>
         public TBuilder WithOtlpEndpoint(string otlpEndpoint)
         {
-            _otlpEndpoint = otlpEndpoint ?? DefaultOtlpEndpoint;
+            _otlpEndpoint = otlpEndpoint;
             return (TBuilder)this;
         }
 
@@ -66,6 +70,10 @@ namespace LaunchDarkly.Observability
 
         /// <summary>
         /// Set the service name.
+        /// <para>
+        /// If not explicitly set, the service name will be read from the OTEL_SERVICE_NAME environment variable.
+        /// Values set with this method take precedence over the environment variable.
+        /// </para>
         /// </summary>
         /// <param name="serviceName">The logical service name used in telemetry resource attributes.</param>
         /// <returns>A reference to this builder.</returns>
@@ -228,10 +236,20 @@ namespace LaunchDarkly.Observability
                     "SDK key cannot be null when creating an ObservabilityConfig builder.");
             }
 
-            return new ObservabilityConfig(
-                _otlpEndpoint,
-                _backendUrl,
+            var effectiveServiceName = EnvironmentHelper.GetValueOrEnvironment(
                 _serviceName,
+                EnvironmentVariables.OtelServiceName,
+                string.Empty);
+
+            var effectiveOtlpEndpoint = EnvironmentHelper.GetValueOrEnvironment(
+                _otlpEndpoint,
+                EnvironmentVariables.OtelExporterOtlpEndpoint,
+                DefaultOtlpEndpoint);
+
+            return new ObservabilityConfig(
+                effectiveOtlpEndpoint,
+                _backendUrl,
+                effectiveServiceName,
                 _environment,
                 _serviceVersion,
                 sdkKey,
