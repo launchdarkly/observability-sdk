@@ -23,7 +23,7 @@ namespace LaunchDarkly.Observability
             }
 
             var envValue = Environment.GetEnvironmentVariable(environmentVariable);
-            return !string.IsNullOrEmpty(envValue) ? envValue : defaultValue;
+            return !string.IsNullOrWhiteSpace(envValue) ? envValue : defaultValue;
         }
     }
 }
