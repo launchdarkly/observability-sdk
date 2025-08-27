@@ -55,7 +55,6 @@ jobs:
         with:
             workspace_path: sdk/@launchdarkly/observability-python
 
-
     release-python-provenance:
         needs: ['release-package', 'release-python-plugin']
         if: ${{ needs.release-package.outputs.python-plugin-released == 'true' }}
