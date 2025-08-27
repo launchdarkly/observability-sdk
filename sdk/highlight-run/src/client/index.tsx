@@ -124,6 +124,7 @@ import { LDClient } from '../integrations/launchdarkly'
 import { createLog, defaultLogOptions } from './listeners/console-listener'
 import { CustomSampler } from './otel/sampling/CustomSampler'
 import randomUuidV4 from './utils/randomUuidV4'
+import { LDContext } from '@launchdarkly/js-client-sdk'
 
 export const HighlightWarning = (context: string, msg: any) => {
 	console.warn(`Highlight Warning: (${context}): `, { output: msg })
@@ -163,6 +164,7 @@ export type HighlightClassOptions = {
 	sendMode?: 'webworker' | 'local'
 	otlpEndpoint?: HighlightOptions['otlpEndpoint']
 	otel?: HighlightOptions['otel']
+	contextFriendlyName?: (context: LDContext) => string | undefined
 }
 
 /**

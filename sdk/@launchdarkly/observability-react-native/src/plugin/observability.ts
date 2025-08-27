@@ -24,7 +24,7 @@ import {
 	FEATURE_FLAG_SPAN_NAME,
 	FEATURE_FLAG_SCOPE,
 	getCanonicalKey,
-	getCanonicalObj,
+	getContextKeys,
 	LD_IDENTIFY_RESULT_STATUS,
 } from '../constants/featureFlags'
 import type { LDEvaluationReason } from '@launchdarkly/js-sdk-common'
@@ -40,7 +40,10 @@ import {
 class TracingHook implements Hook {
 	private metaAttributes: Attributes = {}
 
-	constructor(private metadata: LDPluginEnvironmentMetadata) {
+	constructor(
+		private metadata: LDPluginEnvironmentMetadata,
+		private readonly _options?: ReactNativeOptions,
+	) {
 		this.metaAttributes = {
 			[ATTR_TELEMETRY_SDK_NAME]:
 				'@launchdarkly/observability-react-native',
@@ -64,8 +67,11 @@ class TracingHook implements Hook {
 		if (result.status === 'completed') {
 			_LDObserve.recordLog(`LD.identify`, 'info', {
 				...this.metaAttributes,
-				...getCanonicalObj(hookContext.context),
-				key: getCanonicalKey(hookContext.context),
+				...getContextKeys(hookContext.context),
+				key:
+					this._options?.contextFriendlyName?.(hookContext.context) ??
+					getCanonicalKey(hookContext.context),
+				canonicalKey: getCanonicalKey(hookContext.context),
 				timeout: hookContext.timeout,
 				[LD_IDENTIFY_RESULT_STATUS]: result.status,
 			})
@@ -104,7 +110,7 @@ class TracingHook implements Hook {
 
 			if (hookContext.context) {
 				eventAttributes[FEATURE_FLAG_CONTEXT_ATTR] = JSON.stringify(
-					getCanonicalObj(hookContext.context),
+					getContextKeys(hookContext.context),
 				)
 				eventAttributes[FEATURE_FLAG_CONTEXT_ID_ATTR] = getCanonicalKey(
 					hookContext.context,
@@ -160,6 +166,6 @@ export class Observability implements LDPlugin {
 	}
 
 	getHooks?(metadata: LDPluginEnvironmentMetadata): Hook[] {
-		return [new TracingHook(metadata)]
+		return [new TracingHook(metadata, this._options)]
 	}
 }
