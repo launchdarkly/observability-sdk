@@ -214,7 +214,7 @@ namespace LaunchDarkly.Observability
             });
         }
 
-        public static void RecordLog(string message, LogLevel level, IDictionary<string, object> attributes)
+        public static void RecordLog(string message, LogLevel level, IDictionary<string, object> attributes = null)
         {
             WithInstance(instance =>
             {
