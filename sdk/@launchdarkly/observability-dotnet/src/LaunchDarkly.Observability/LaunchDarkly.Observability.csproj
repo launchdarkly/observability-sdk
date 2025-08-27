@@ -37,6 +37,11 @@
     <SignAssembly>true</SignAssembly>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup> 
+
   <ItemGroup>
     <!-- Open Telemetry Dependencies -->
     <PackageReference Include="OpenTelemetry" Version="1.12.0" />

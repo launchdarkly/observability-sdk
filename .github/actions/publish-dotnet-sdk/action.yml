@@ -1,0 +1,65 @@
+name: Publish .NET SDK
+
+inputs:
+    aws-role-arn:
+        description: 'The AWS role ARN to assume.'
+        type: string
+        required: true
+    dry-run:
+        description: 'Is this a dry run. If so no package will be published.'
+        type: boolean
+        required: true
+
+outputs:
+    package-hashes:
+        description: 'Base64 encoded SHA256 hashes of published packages'
+        value: ${{ steps.package-hashes.outputs.package-hashes }}
+
+runs:
+    using: composite
+    steps:
+        - uses: launchdarkly/gh-actions/actions/release-secrets@release-secrets-v1.2.0
+          name: Get secrets
+          with:
+              aws_assume_role: ${{ inputs.aws-role-arn }}
+              ssm_parameter_pairs:
+                  '/production/common/releasing/digicert/host = DIGICERT_HOST,
+                  /production/common/releasing/digicert/api_key = DIGICERT_API_KEY,
+                  /production/common/releasing/digicert/client_cert_file_b64 = DIGICERT_CLIENT_CERT_FILE_B64,
+                  /production/common/releasing/digicert/client_cert_password = DIGICERT_CLIENT_CERT_PASSWORD,
+                  /production/common/releasing/digicert/code_signing_cert_sha1_hash = DIGICERT_CODE_SIGNING_CERT_SHA1_HASH,
+                  /production/common/releasing/nuget/api_key = NUGET_API_KEY'
+              s3_path_pairs: 'launchdarkly-releaser/dotnet/LaunchDarkly.snk = LaunchDarkly.snk'
+
+        - name: Restore
+          shell: bash
+          working-directory: sdk/@launchdarkly/observability-dotnet
+          run: dotnet restore
+
+        - name: Build
+          shell: bash
+          working-directory: ./sdk/@launchdarkly/observability-dotnet
+          run: dotnet build ./src/LaunchDarkly.Observability/LaunchDarkly.Observability.csproj --no-restore -p:Configuration=Release
+
+        - name: Package
+          shell: bash
+          working-directory: ./sdk/@launchdarkly/observability-dotnet
+          run: dotnet pack ./src/LaunchDarkly.Observability/LaunchDarkly.Observability.csproj --no-build --output nupkgs --configuration Release
+
+        - name: Publish Package
+          if: ${{ inputs.dry-run == 'false' }}
+          shell: bash
+          working-directory: ./sdk/@launchdarkly/observability-dotnet
+          run: |
+              for pkg in $(find ./nupkgs -name '*.nupkg' -o -name '*.snupkg'); do
+                echo "publishing ${pkg}"
+                dotnet nuget push "${pkg}" --api-key ${{ env.NUGET_API_KEY }} --source https://www.nuget.org
+                echo "published ${pkg}"
+              done
+
+        - name: Hash nuget packages
+          id: package-hashes
+          shell: bash
+          working-directory: ./sdk/@launchdarkly/observability-dotnet
+          run: |
+              echo "package-hashes=$(sha256sum ./nupkgs/*.nupkg ./nupkgs/*.snupkg | base64 -w0)" >> "$GITHUB_OUTPUT"
