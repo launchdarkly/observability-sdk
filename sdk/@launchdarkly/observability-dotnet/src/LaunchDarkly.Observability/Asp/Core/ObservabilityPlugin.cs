@@ -6,7 +6,9 @@ using LaunchDarkly.Sdk.Server.Interfaces;
 using LaunchDarkly.Sdk.Server.Plugins;
 using LaunchDarkly.Sdk.Server.Telemetry;
 using Microsoft.Extensions.DependencyInjection;
+using OpenTelemetry.Logs;
 
+// ReSharper disable once CheckNamespace
 namespace LaunchDarkly.Observability
 {
     public class ObservabilityPlugin : Plugin
@@ -20,7 +22,7 @@ namespace LaunchDarkly.Observability
         /// In a typical configuration, this method will not need to be used.
         /// </para>
         /// <para>
-        /// This method only needs to be used when observability related functionality must be intialized before it
+        /// This method only needs to be used when observability related functionality must be initialized before it
         /// is possible to initialize the LaunchDarkly SDK.
         /// </para>
         /// </summary>
@@ -32,15 +34,16 @@ namespace LaunchDarkly.Observability
         /// <para>
         /// When using this builder, LaunchDarkly client must be constructed before your application is built.
         /// For example:
+        ///
         /// <code>
         /// var builder = WebApplication.CreateBuilder(args);
         ///
         ///
-        /// var config = Configuration.Builder(Environment.GetEnvironmentVariable("your-sdk-key")
+        /// var config = Configuration.Builder("your-sdk-key")
         ///     .Plugins(new PluginConfigurationBuilder()
         ///         .Add(ObservabilityPlugin.Builder(builder.Services)
         ///             .WithServiceName("ryan-test-service")
-        ///             .WithServiceVersion("0.0.0")
+        ///             .WithServiceVersion("example-sha")
         ///             .Build())).Build();
         /// // Building the LdClient with the Observability plugin. This line will add services to the web application.
         /// var client = new LdClient(config);

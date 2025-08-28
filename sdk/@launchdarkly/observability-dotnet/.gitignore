@@ -2,6 +2,8 @@
 **/obj
 LaunchDarkly.Observability.sln.DotSettings.user
 **/launchSettings.json
+**/.vs/**
+packages/
 docs/
 api/
 nupkgs/
