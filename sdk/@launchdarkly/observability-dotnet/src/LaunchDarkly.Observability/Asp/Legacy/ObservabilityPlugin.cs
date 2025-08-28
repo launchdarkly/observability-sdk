@@ -23,9 +23,10 @@ namespace LaunchDarkly.Observability
         ///   protected void Application_Start()
         ///  {
         ///      // Other application specific code.
-        ///      var client = new LdClient(Configuration.Builder(Environment.GetEnvironmentVariable("LAUNCHDARKLY_SDK_KEY"))
+        ///      var client = new LdClient(Configuration.Builder("your-sdk-key")
         ///          .Plugins(new PluginConfigurationBuilder().Add(ObservabilityPlugin.Builder()
         ///              .WithServiceName("classic-asp-application")
+        ///              .WithServiceVersion("example-sha")
         ///              .Build()))
         ///          .Build());
         ///  }
