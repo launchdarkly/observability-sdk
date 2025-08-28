@@ -80,6 +80,10 @@ class _OTELConfiguration:
     def meter(self) -> Meter:
         return self._meter
 
+    @property
+    def tracer(self) -> otel_trace.Tracer:
+        return self._tracer
+
     def __init__(self, project_id: str, config: _ProcessedConfig):
         self._project_id = project_id
         self._config = config
