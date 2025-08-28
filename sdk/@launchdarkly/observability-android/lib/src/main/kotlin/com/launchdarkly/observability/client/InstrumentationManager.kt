@@ -196,7 +196,6 @@ class InstrumentationManager(
 
     fun startSpan(name: String, attributes: Attributes): Span {
         return otelTracer.spanBuilder(name)
-            .setParent(Context.current().with(Span.current()))
             .setAllAttributes(attributes)
             .startSpan()
     }

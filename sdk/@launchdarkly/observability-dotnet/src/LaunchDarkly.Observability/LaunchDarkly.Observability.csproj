@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <!--x-release-please-start-version-->
-    <Version>0.0.0</Version>
+    <Version>0.1.0</Version>
     <!--x-release-please-end-->
     <Nullable>disable</Nullable>
     <!-- The BUILDFRAMEWORKS variable allows us to override the target frameworks with a
@@ -28,12 +28,19 @@
   <!-- Allow the testing project to access internals. -->
   <ItemGroup Condition="'$(Configuration)'!='Release'">
     <InternalsVisibleTo Include="LaunchDarkly.Observability.Tests" />
+    <!-- Dynamically generated assembly used by Moq. Required for mocking in unit tests. -->
+    <InternalsVisibleTo Include="DynamicProxyGenAssembly2"/>
   </ItemGroup>
 
   <PropertyGroup Condition="'$(Configuration)'=='Release' And '$(SKIP_SIGNING)'!='true'">
     <AssemblyOriginatorKeyFile>../../../../../LaunchDarkly.snk</AssemblyOriginatorKeyFile>
     <SignAssembly>true</SignAssembly>
   </PropertyGroup>
+
+  <PropertyGroup>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup> 
 
   <ItemGroup>
     <!-- Open Telemetry Dependencies -->

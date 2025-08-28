@@ -50,7 +50,7 @@ namespace LaunchDarkly.Observability.Sampling
         private readonly SamplerFunc _sampler;
         private readonly ThreadSafeConfig _config = new ThreadSafeConfig();
         private readonly ConcurrentDictionary<string, Regex> _regexCache = new ConcurrentDictionary<string, Regex>();
-        
+
         private const string SamplingRatioAttribute = "launchdarkly.sampling.ratio";
 
         /// <summary>
@@ -246,7 +246,7 @@ namespace LaunchDarkly.Observability.Sampling
         public SamplingResult SampleSpan(Activity span)
         {
             var config = _config.GetSamplingConfig();
-            if (!(config?.Spans.Count > 0)) return new SamplingResult { Sample = true };
+            if (!(config?.Spans?.Count > 0)) return new SamplingResult { Sample = true };
             foreach (var spanConfig in config.Spans)
             {
                 if (MatchesSpanConfig(spanConfig, span))
@@ -297,7 +297,7 @@ namespace LaunchDarkly.Observability.Sampling
         public SamplingResult SampleLog(LogRecord record)
         {
             var config = _config.GetSamplingConfig();
-            if (!(config?.Logs.Count > 0)) return new SamplingResult { Sample = true };
+            if (!(config?.Logs?.Count > 0)) return new SamplingResult { Sample = true };
             foreach (var logConfig in config.Logs)
             {
                 if (MatchesLogConfig(logConfig, record))

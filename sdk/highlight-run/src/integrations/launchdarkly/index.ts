@@ -65,20 +65,17 @@ function isMultiContext(context: any): context is LDMultiKindContext {
 	return context.kind === 'multi'
 }
 
-// getCanonicalKey returns the key provided to H.identify based on the LD context.
-// Long term, we will provide context filtering / the ability to control what
-// context attributes are used as the identify key. For now, this hard-codes
-// logic for using the memberEmail, when set.
+/**
+ * Get a canonical key for a given context. The canonical key contains an encoded version of the context
+ * keys.
+ *
+ * This format should be stable and consistent. It isn't for presentation only purposes.
+ * It allows linking to a context instance.
+ * @param context The context to get a canonical key for.
+ * @returns The canonical context key.
+ */
 export function getCanonicalKey(context: LDContext) {
 	if (isMultiContext(context)) {
-		if (context.member) {
-			const user = context.member as LDContextCommon
-			if (user.email) {
-				return user.email
-			} else {
-				return user.key
-			}
-		}
 		return Object.keys(context)
 			.sort()
 			.filter((key) => key !== 'kind')
@@ -86,19 +83,25 @@ export function getCanonicalKey(context: LDContext) {
 				return `${key}:${encodeKey((context[key] as LDContextCommon).key)}`
 			})
 			.join(':')
+	} else if ('kind' in context && context.kind === 'user') {
+		// If the kind is a user, then the key is directly the user key.
+		return context.key
+	} else if (!('kind' in context)) {
+		// Legacy user.
+		return context.key
 	}
 
-	return context.key
+	return `${context.kind}:${encodeKey(context.key)}`
 }
 
-export function getCanonicalObj(context: LDContext) {
+export function getContextKeys(context: LDContext) {
 	if (isMultiContext(context)) {
 		return Object.keys(context)
 			.sort()
 			.filter((key) => key !== 'kind')
 			.map((key) => {
 				return {
-					[key]: encodeKey((context[key] as LDContextCommon).key),
+					[key]: (context[key] as LDContextCommon).key,
 				}
 			})
 			.reduce((acc, obj) => {
@@ -106,12 +109,26 @@ export function getCanonicalObj(context: LDContext) {
 			}, {} as Attributes)
 	}
 
-	return {}
+	// Legacy user.
+	if (!('kind' in context)) {
+		// Legacy user.
+		return {
+			user: context.key,
+		}
+	}
+
+	// Single kind context.
+	return {
+		[context.kind]: context.key,
+	}
 }
 
 export function setupLaunchDarklyIntegration(
 	hClient: HighlightPublicInterface,
 	ldClient: LDClient,
+	options?: {
+		contextFriendlyName?: (context: LDContext) => string | undefined
+	},
 ) {
 	ldClient.addHook({
 		getMetadata: () => {
@@ -121,8 +138,10 @@ export function setupLaunchDarklyIntegration(
 		},
 		afterIdentify: (hookContext, data, result) => {
 			const metadata = {
-				...getCanonicalObj(hookContext.context),
-				key: getCanonicalKey(hookContext.context),
+				...getContextKeys(hookContext.context),
+				key:
+					options?.contextFriendlyName?.(hookContext.context) ??
+					getCanonicalKey(hookContext.context),
 			}
 			hClient.log('LD.identify', 'INFO', metadata)
 			if (result.status === 'completed') {
@@ -155,7 +174,7 @@ export function setupLaunchDarklyIntegration(
 
 			if (hookContext.context) {
 				eventAttributes[FEATURE_FLAG_CONTEXT_ATTR] = JSON.stringify(
-					getCanonicalObj(hookContext.context),
+					getContextKeys(hookContext.context),
 				)
 				eventAttributes[FEATURE_FLAG_CONTEXT_ID_ATTR] = getCanonicalKey(
 					hookContext.context,

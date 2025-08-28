@@ -1,18 +1,21 @@
 package com.example.androidobservability
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.observability.sdk.LDObserve
-import com.launchdarkly.sdk.android.LDClient
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Severity
-import io.opentelemetry.api.trace.Span
-import java.net.SocketTimeoutException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import java.io.BufferedInputStream
+import java.net.HttpURLConnection
+import java.net.URL
 
 class ViewModel : ViewModel() {
-
-    private var lastSpan: Span? = null
 
     fun triggerMetric() {
         LDObserve.recordMetric(Metric("test", 50.0))
@@ -33,20 +36,59 @@ class ViewModel : ViewModel() {
         )
     }
 
-    fun triggerStartSpan() {
-        val newSpan = LDObserve.startSpan("FakeSpan", Attributes.empty())
-        newSpan.makeCurrent()
-        lastSpan = newSpan
-        LDClient.get().boolVariation("my-boolean-flag", false)
-    }
-
-    fun triggerStopSpan() {
-        // TODO O11Y-397: for some reason stopped spans are stacking, the current span might be the problem
-        lastSpan?.end()
-        lastSpan = null
+    fun triggerNestedSpans() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val newSpan0 = LDObserve.startSpan("FakeSpan", Attributes.empty())
+            newSpan0.makeCurrent().use {
+                val newSpan1 = LDObserve.startSpan("FakeSpan1", Attributes.empty())
+                newSpan1.makeCurrent().use {
+                    val newSpan2 = LDObserve.startSpan("FakeSpan2", Attributes.empty())
+                    newSpan2.makeCurrent().use {
+                        sendOkHttpRequest()
+                        sendURLRequest()
+                        newSpan2.end()
+                    }
+                    newSpan1.end()
+                }
+                newSpan0.end()
+            }
+        }
     }
 
     fun triggerCrash() {
         throw RuntimeException("Failed to connect to bogus server.")
+    }
+
+    fun triggerHttpRequests() {
+        viewModelScope.launch(Dispatchers.IO) {
+            sendOkHttpRequest()
+            sendURLRequest()
+        }
+    }
+
+    private fun sendOkHttpRequest() {
+        // Create HTTP client
+        val client = OkHttpClient()
+
+        // Build request
+        val request: Request = Request.Builder()
+            .url("https://www.google.com")
+            .build()
+
+        client.newCall(request).execute().use { response ->
+            println("Response code: " + response.code)
+            println("Response body: " + response.body?.string())
+        }
+    }
+
+    private fun sendURLRequest() {
+        val url = URL("https://www.android.com/")
+        val urlConnection = url.openConnection() as HttpURLConnection
+        try {
+            val output = BufferedInputStream(urlConnection.inputStream).bufferedReader().use { it.readText() }
+            println("URLRequest output: $output")
+        } finally {
+            urlConnection.disconnect()
+        }
     }
 }

@@ -1,5 +1,19 @@
 # @launchdarkly/observability
 
+## 0.3.12
+
+### Patch Changes
+
+- Updated dependencies [7e8f9e5]
+- Updated dependencies [7e8f9e5]
+    - highlight.run@9.20.0
+
+## 0.3.11
+
+### Patch Changes
+
+- 4ab5879: update o11y plugin docs to point to new launchdarkly pages and correctly reflect the SDK name
+
 ## 0.3.10
 
 ### Patch Changes

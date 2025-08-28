@@ -11,6 +11,7 @@ on:
                     - 'sdk/@launchdarkly/observability-node'
                     - 'sdk/@launchdarkly/observability-python'
                     - 'sdk/@launchdarkly/observability-react-native'
+                    - 'sdk/@launchdarkly/observability-dotnet'
     workflow_call:
         inputs:
             workspace_path:

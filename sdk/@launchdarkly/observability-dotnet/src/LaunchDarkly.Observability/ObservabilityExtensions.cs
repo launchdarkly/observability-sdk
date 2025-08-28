@@ -1,9 +1,17 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+using LaunchDarkly.Observability.Otel;
+using LaunchDarkly.Logging;
+using LaunchDarkly.Observability.Logging;
+using LaunchDarkly.Observability.Sampling;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using OpenTelemetry;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
-using OpenTelemetry;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
@@ -15,16 +23,53 @@ namespace LaunchDarkly.Observability
     /// </summary>
     public static class ObservabilityExtensions
     {
-        // Used for metrics when a service name is not specified.
-        private const string DefaultMetricsName = "launchdarkly-plugin-default-metrics";
         private const OtlpExportProtocol ExportProtocol = OtlpExportProtocol.HttpProtobuf;
         private const int FlushIntervalMs = 5 * 1000;
         private const int MaxExportBatchSize = 10000;
         private const int MaxQueueSize = 10000;
+        private const int ExportTimeoutMs = 30000;
 
         private const string TracesPath = "/v1/traces";
         private const string LogsPath = "/v1/logs";
         private const string MetricsPath = "/v1/metrics";
+
+
+        private class LdObservabilityHostedService : IHostedService
+        {
+            private readonly ObservabilityConfig _config;
+            private readonly ILoggerProvider _loggerProvider;
+
+            public LdObservabilityHostedService(ObservabilityConfig config, IServiceProvider provider)
+            {
+                _loggerProvider = provider.GetService<ILoggerProvider>();
+                _config = config;
+            }
+
+            public Task StartAsync(CancellationToken cancellationToken)
+            {
+                Observe.Initialize(_config, _loggerProvider);
+                return Task.CompletedTask;
+            }
+
+            public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+        }
+
+        private static async Task GetSamplingConfigAsync(CustomSampler sampler, ObservabilityConfig config)
+        {
+            using (var samplingClient = new SamplingConfigClient(config.BackendUrl))
+            {
+                try
+                {
+                    var res = await samplingClient.GetSamplingConfigAsync(config.SdkKey).ConfigureAwait(false);
+                    if (res == null) return;
+                    sampler.SetConfig(res);
+                }
+                catch (Exception ex)
+                {
+                    DebugLogger.DebugLog($"Exception while getting sampling config: {ex}");
+                }
+            }
+        }
 
         private static IEnumerable<KeyValuePair<string, object>> GetResourceAttributes(ObservabilityConfig config)
         {
@@ -32,18 +77,25 @@ namespace LaunchDarkly.Observability
 
             if (!string.IsNullOrWhiteSpace(config.Environment))
             {
-                attrs.Add(new KeyValuePair<string, object>("deployment.environment.name", config.Environment));
+                attrs.Add(
+                    new KeyValuePair<string, object>(AttributeNames.DeploymentEnvironment, config.Environment));
             }
 
-            attrs.Add(new KeyValuePair<string, object>("highlight.project_id", config.SdkKey));
+            attrs.Add(new KeyValuePair<string, object>(AttributeNames.ProjectId, config.SdkKey));
 
             return attrs;
         }
 
         internal static void AddLaunchDarklyObservabilityWithConfig(this IServiceCollection services,
-            ObservabilityConfig config)
+            ObservabilityConfig config, Logger logger = null)
         {
+            DebugLogger.SetLogger(logger);
             var resourceAttributes = GetResourceAttributes(config);
+
+            var sampler = new CustomSampler();
+
+            // Asynchronously get sampling config.
+            _ = Task.Run(() => GetSamplingConfigAsync(sampler, config));
 
             var resourceBuilder = ResourceBuilder.CreateDefault();
             if (!string.IsNullOrWhiteSpace(config.ServiceName))
@@ -61,17 +113,22 @@ namespace LaunchDarkly.Observability
                     .AddQuartzInstrumentation()
                     .AddAspNetCoreInstrumentation(options => { options.RecordException = true; })
                     .AddSqlClientInstrumentation(options => { options.SetDbStatementForText = true; })
-                    .AddOtlpExporter(options =>
-                    {
-                        options.Endpoint = new Uri(config.OtlpEndpoint + TracesPath);
-                        options.Protocol = ExportProtocol;
-                        options.BatchExportProcessorOptions.MaxExportBatchSize = MaxExportBatchSize;
-                        options.BatchExportProcessorOptions.MaxQueueSize = MaxQueueSize;
-                        options.BatchExportProcessorOptions.ScheduledDelayMilliseconds = FlushIntervalMs;
-                    });
+                    .AddSource(DefaultNames.ActivitySourceNameOrDefault(config.ServiceName));
+
+                // Always use sampling exporter for traces
+                var samplingTraceExporter = new SamplingTraceExporter(sampler, new OtlpExporterOptions
+                {
+                    Endpoint = new Uri(config.OtlpEndpoint + TracesPath),
+                    Protocol = OtlpExportProtocol.HttpProtobuf,
+                });
+
+                tracing.AddProcessor(new BatchActivityExportProcessor(samplingTraceExporter, MaxQueueSize,
+                    FlushIntervalMs, ExportTimeoutMs, MaxExportBatchSize));
+                config.ExtendedTracerConfiguration?.Invoke(tracing);
             }).WithLogging(logging =>
             {
                 logging.SetResourceBuilder(resourceBuilder)
+                    .AddProcessor(new SamplingLogProcessor(sampler))
                     .AddOtlpExporter(options =>
                     {
                         options.Endpoint = new Uri(config.OtlpEndpoint + LogsPath);
@@ -80,10 +137,11 @@ namespace LaunchDarkly.Observability
                         options.BatchExportProcessorOptions.MaxQueueSize = MaxQueueSize;
                         options.BatchExportProcessorOptions.ScheduledDelayMilliseconds = FlushIntervalMs;
                     });
+                config.ExtendedLoggerConfiguration?.Invoke(logging);
             }).WithMetrics(metrics =>
             {
                 metrics.SetResourceBuilder(resourceBuilder)
-                    .AddMeter(config.ServiceName ?? DefaultMetricsName)
+                    .AddMeter(DefaultNames.MeterNameOrDefault(config.ServiceName))
                     .AddRuntimeInstrumentation()
                     .AddProcessInstrumentation()
                     .AddHttpClientInstrumentation()
@@ -94,7 +152,13 @@ namespace LaunchDarkly.Observability
                         Endpoint = new Uri(config.OtlpEndpoint + MetricsPath),
                         Protocol = ExportProtocol
                     })));
+                config.ExtendedMeterConfiguration?.Invoke(metrics);
             });
+
+            // Attach a hosted service which will allow us to get a logger provider instance from the built
+            // service collection.
+            services.AddHostedService((serviceProvider) =>
+                new LdObservabilityHostedService(config, serviceProvider));
         }
 
         /// <summary>
