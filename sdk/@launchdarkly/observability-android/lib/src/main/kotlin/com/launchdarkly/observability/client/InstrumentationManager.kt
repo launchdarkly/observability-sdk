@@ -4,6 +4,10 @@ import android.app.Application
 import com.launchdarkly.logging.LDLogger
 import com.launchdarkly.observability.api.Options
 import com.launchdarkly.observability.interfaces.Metric
+import com.launchdarkly.observability.sampling.CompositeLogExporter
+import com.launchdarkly.observability.sampling.CustomSampler
+import com.launchdarkly.observability.sampling.SamplingLogExporter
+import com.launchdarkly.observability.sampling.SamplingTraceExporter
 import io.opentelemetry.android.OpenTelemetryRum
 import io.opentelemetry.android.config.OtelRumConfig
 import io.opentelemetry.android.session.SessionConfig
@@ -17,7 +21,10 @@ import io.opentelemetry.context.Context
 import io.opentelemetry.exporter.otlp.http.logs.OtlpHttpLogRecordExporter
 import io.opentelemetry.exporter.otlp.http.metrics.OtlpHttpMetricExporter
 import io.opentelemetry.exporter.otlp.http.trace.OtlpHttpSpanExporter
+import io.opentelemetry.sdk.common.CompletableResultCode
+import io.opentelemetry.sdk.logs.data.LogRecordData
 import io.opentelemetry.sdk.logs.export.BatchLogRecordProcessor
+import io.opentelemetry.sdk.logs.export.LogRecordExporter
 import io.opentelemetry.sdk.metrics.export.MetricExporter
 import io.opentelemetry.sdk.metrics.export.PeriodicMetricReader
 import io.opentelemetry.sdk.resources.Resource
@@ -45,11 +52,13 @@ class InstrumentationManager(
     private var otelMeter: Meter
     private var otelLogger: Logger
     private var otelTracer: Tracer
+    private var customSampler = CustomSampler()
 
     init {
         val otelRumConfig = OtelRumConfig().setSessionConfig(
             SessionConfig(backgroundInactivityTimeout = options.sessionBackgroundTimeout)
         )
+
         otelRUM = OpenTelemetryRum.builder(application, otelRumConfig)
             .addLoggerProviderCustomizer { sdkLoggerProviderBuilder, application ->
                 val logExporter = OtlpHttpLogRecordExporter.builder()
@@ -57,43 +66,31 @@ class InstrumentationManager(
                     .setHeaders { options.customHeaders }
                     .build()
 
-                val processor = BatchLogRecordProcessor.builder(logExporter)
-                    .setMaxQueueSize(100)
-                    .setScheduleDelay(1000, TimeUnit.MILLISECONDS)
-                    .setExporterTimeout(5000, TimeUnit.MILLISECONDS)
-                    .setMaxExportBatchSize(10)
-                    .build()
-
-                sdkLoggerProviderBuilder
-                    .setResource(resources)
-                    .addLogRecordProcessor(processor)
+                sdkLoggerProviderBuilder.setResource(resources)
 
                 if (options.debug) {
-                    val adapterLogExporter = object : io.opentelemetry.sdk.logs.export.LogRecordExporter {
-                        override fun export(logRecords: Collection<io.opentelemetry.sdk.logs.data.LogRecordData>): io.opentelemetry.sdk.common.CompletableResultCode {
+                    val debugLogExporter = object : LogRecordExporter {
+                        override fun export(logRecords: Collection<LogRecordData>): CompletableResultCode {
                             for (record in logRecords) {
                                 logger.info(record.toString()) // TODO: Figure out why logger.debug is being blocked by Log.isLoggable is adapter.
                             }
-                            return io.opentelemetry.sdk.common.CompletableResultCode.ofSuccess()
+                            return CompletableResultCode.ofSuccess()
                         }
-                        override fun flush(): io.opentelemetry.sdk.common.CompletableResultCode {
-                            return io.opentelemetry.sdk.common.CompletableResultCode.ofSuccess()
-                        }
-                        override fun shutdown(): io.opentelemetry.sdk.common.CompletableResultCode {
-                            return io.opentelemetry.sdk.common.CompletableResultCode.ofSuccess()
-                        }
+                        override fun flush(): CompletableResultCode = CompletableResultCode.ofSuccess()
+                        override fun shutdown(): CompletableResultCode = CompletableResultCode.ofSuccess()
                     }
 
-                    val adapterProcessor = BatchLogRecordProcessor.builder(adapterLogExporter)
-                        .setMaxQueueSize(100)
-                        .setScheduleDelay(1000, TimeUnit.MILLISECONDS)
-                        .setExporterTimeout(5000, TimeUnit.MILLISECONDS)
-                        .setMaxExportBatchSize(10)
-                        .build()
-                    sdkLoggerProviderBuilder.addLogRecordProcessor(adapterProcessor)
-                }
+                    val compositeExporter = CompositeLogExporter(logExporter, debugLogExporter)
+                    val samplingLogExporter = SamplingLogExporter(compositeExporter, customSampler)
+                    val logProcessor = getBatchLogRecordProcessor(samplingLogExporter)
 
-                sdkLoggerProviderBuilder
+                    sdkLoggerProviderBuilder.addLogRecordProcessor(logProcessor)
+                } else {
+                    val samplingLogExporter = SamplingLogExporter(logExporter, customSampler)
+                    val logProcessor = getBatchLogRecordProcessor(samplingLogExporter)
+
+                    sdkLoggerProviderBuilder.addLogRecordProcessor(logProcessor)
+                }
             }
             .addTracerProviderCustomizer { sdkTracerProviderBuilder, application ->
                 val spanExporter = OtlpHttpSpanExporter.builder()
@@ -101,7 +98,9 @@ class InstrumentationManager(
                     .setHeaders { options.customHeaders }
                     .build()
 
-                val spanProcessor = BatchSpanProcessor.builder(spanExporter)
+                val samplingTraceExporter = SamplingTraceExporter(spanExporter, customSampler)
+
+                val spanProcessor = BatchSpanProcessor.builder(samplingTraceExporter)
                     .setMaxQueueSize(100)
                     .setScheduleDelay(1000, TimeUnit.MILLISECONDS)
                     .setExporterTimeout(5000, TimeUnit.MILLISECONDS)
@@ -135,6 +134,14 @@ class InstrumentationManager(
         otelTracer = otelRUM.openTelemetry.tracerProvider.get(INSTRUMENTATION_SCOPE_NAME)
     }
 
+    private fun getBatchLogRecordProcessor(logRecordExporter: LogRecordExporter): BatchLogRecordProcessor {
+        return BatchLogRecordProcessor.builder(logRecordExporter)
+            .setMaxQueueSize(100)
+            .setScheduleDelay(1000, TimeUnit.MILLISECONDS)
+            .setExporterTimeout(5000, TimeUnit.MILLISECONDS)
+            .setMaxExportBatchSize(10)
+            .build()
+    }
 
     fun recordMetric(metric: Metric) {
         otelMeter.gaugeBuilder(metric.name).build()
