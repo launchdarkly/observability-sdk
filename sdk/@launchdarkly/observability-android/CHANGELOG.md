@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.6.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.5.0...launchdarkly-observability-android-0.6.0) (2025-08-28)
+
+
+### Features
+
+* O11Y-359 - Add custom sampling for OTLP logs and traces ([#189](https://github.com/launchdarkly/observability-sdk/issues/189)) ([3092c8f](https://github.com/launchdarkly/observability-sdk/commit/3092c8f3235a0b8f17210dba2469b7ffe8a6eca9))
+
+## [0.5.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.4.0...launchdarkly-observability-android-0.5.0) (2025-08-26)
+
+
+### Features
+
+* adds otel-android HTTP instrumentation ([#195](https://github.com/launchdarkly/observability-sdk/issues/195)) ([e0baf35](https://github.com/launchdarkly/observability-sdk/commit/e0baf35b9e83e4539060520d5355d524de136944))
+
 ## [0.4.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.3.0...launchdarkly-observability-android-0.4.0) (2025-08-15)
 
 

@@ -1,5 +1,20 @@
 # @launchdarkly/session-replay
 
+## [0.4.0](https://github.com/launchdarkly/observability-sdk/compare/session-replay-0.3.12...session-replay-0.4.0) (2025-08-29)
+
+
+### Features
+
+* Version Packages ([#136](https://github.com/launchdarkly/observability-sdk/issues/136)) ([c271dc8](https://github.com/launchdarkly/observability-sdk/commit/c271dc87e4aba78355ca54cc7af9200f63da26a8))
+
+## 0.3.12
+
+### Patch Changes
+
+- Updated dependencies [7e8f9e5]
+- Updated dependencies [7e8f9e5]
+    - highlight.run@9.20.0
+
 ## 0.3.11
 
 ### Patch Changes

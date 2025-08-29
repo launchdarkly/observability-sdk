@@ -43,17 +43,17 @@ namespace LaunchDarkly.Observability
         /// The LaunchDarkly SDK key.
         /// </summary>
         public string SdkKey { get; }
-        
+
         /// <summary>
         /// Function which extends the configuration of the tracer provider.
         /// </summary>
         public Action<TracerProviderBuilder> ExtendedTracerConfiguration { get; }
-        
+
         /// <summary>
         /// Function which extends the configuration of the logger provider.
         /// </summary>
         public Action<LoggerProviderBuilder> ExtendedLoggerConfiguration { get; }
-        
+
         /// <summary>
         /// Function which extends the configuration of the meter provider.
         /// </summary>
