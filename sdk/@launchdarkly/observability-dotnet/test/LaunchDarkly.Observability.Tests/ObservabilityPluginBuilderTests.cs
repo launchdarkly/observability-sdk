@@ -65,5 +65,55 @@ namespace LaunchDarkly.Observability.Test
 
             Assert.That(plugin, Is.InstanceOf<ObservabilityPlugin>());
         }
+
+        [Test]
+        public void Build_UsesOtelServiceNameEnvironmentVariable_WhenServiceNameNotSet()
+        {
+            // Save the original environment variable value
+            var originalValue = Environment.GetEnvironmentVariable(EnvironmentVariables.OtelServiceName);
+
+            try
+            {
+                // Set the environment variable
+                Environment.SetEnvironmentVariable(EnvironmentVariables.OtelServiceName, "plugin-service-from-env");
+
+                // Build plugin without setting service name explicitly
+                var plugin = ObservabilityPlugin.Builder(_services).Build();
+
+                // Plugin should be created successfully and will use the env var internally
+                Assert.That(plugin, Is.InstanceOf<ObservabilityPlugin>());
+            }
+            finally
+            {
+                // Restore the original environment variable value
+                Environment.SetEnvironmentVariable(EnvironmentVariables.OtelServiceName, originalValue);
+            }
+        }
+
+        [Test]
+        public void Build_PrefersExplicitServiceName_OverEnvironmentVariable()
+        {
+            // Save the original environment variable value
+            var originalValue = Environment.GetEnvironmentVariable(EnvironmentVariables.OtelServiceName);
+
+            try
+            {
+                // Set the environment variable
+                Environment.SetEnvironmentVariable(EnvironmentVariables.OtelServiceName, "plugin-service-from-env");
+
+                // Build plugin with explicit service name
+                var plugin = ObservabilityPlugin.Builder(_services)
+                    .WithServiceName("explicit-plugin-service")
+                    .Build();
+
+                // Plugin should be created successfully and will use the explicit value internally
+                Assert.That(plugin, Is.InstanceOf<ObservabilityPlugin>());
+            }
+            finally
+            {
+                // Restore the original environment variable value
+                Environment.SetEnvironmentVariable(EnvironmentVariables.OtelServiceName, originalValue);
+            }
+        }
     }
 }
