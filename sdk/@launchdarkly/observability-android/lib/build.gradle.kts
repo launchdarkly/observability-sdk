@@ -39,9 +39,9 @@ dependencies {
     implementation("io.opentelemetry.android.instrumentation:crash:0.11.0-alpha")
 
     // Use JUnit Jupiter for testing.
-    testImplementation(platform(libs.junit.bom))
-    testImplementation(libs.junit.jupiter)
-    testRuntimeOnly(libs.junit.platform.launcher)
+    testImplementation(platform("org.junit:junit-bom:5.13.4"))
+    testImplementation("org.junit.jupiter:junit-jupiter")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
     // MockK for mocking in Kotlin tests
     testImplementation("io.mockk:mockk:1.14.5")
