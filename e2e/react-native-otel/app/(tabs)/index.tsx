@@ -59,6 +59,11 @@ export default function HomeScreen() {
 				component: 'HomeScreen',
 			},
 		})
+
+		// Test that error reporting is working
+		console.log(
+			'Testing error reporting with a message to verify console error handler',
+		)
 	}, [])
 
 	const handleTestError = () => {
@@ -280,6 +285,184 @@ export default function HomeScreen() {
 		)
 	}
 
+	// Exception test handlers
+	const handleUncaughtException = () => {
+		// This will cause an uncaught exception that should be caught by the global handler
+		setTimeout(() => {
+			// Using setTimeout to ensure it's not caught by React's error boundary
+			const obj: any = null
+			obj.nonExistentMethod() // Will throw TypeError: Cannot read property 'nonExistentMethod' of null
+		}, 100)
+	}
+
+	const handleUnhandledPromiseRejection = () => {
+		// This creates an unhandled Promise rejection
+		setTimeout(() => {
+			// Using setTimeout to escape from the current execution context
+			try {
+				// Direct rejection using Promise.reject - this should be detected
+				Promise.reject(new Error('Unhandled Promise Rejection Test'))
+
+				// Also try the constructor form
+				new Promise((resolve, reject) => {
+					// Explicit rejection without a catch handler
+					reject(new Error('Unhandled Promise Constructor Rejection'))
+				})
+
+				// Also try throwing in a Promise - this is another common case
+				new Promise(() => {
+					throw new Error('Error thrown inside Promise constructor')
+				})
+
+				// Log to confirm execution
+				console.log(
+					'Unhandled Promise rejection triggered - check for [LD-O11Y] logs',
+				)
+			} catch (e) {
+				// This shouldn't catch the Promise rejections
+				console.log(
+					'This catch should not execute for Promise rejections',
+					e,
+				)
+			}
+		}, 0)
+	}
+
+	const handleRecursiveError = () => {
+		// This creates a stack overflow error
+		// Wrap in setTimeout to bypass React's error boundaries
+		setTimeout(() => {
+			const recursiveFunction = (depth: number = 0): number => {
+				// Add some protection to prevent actually crashing the app
+				if (depth > 5000) {
+					throw new Error(
+						'Maximum recursion depth reached (stack overflow simulation)',
+					)
+				}
+				return recursiveFunction(depth + 1)
+			}
+
+			recursiveFunction()
+		}, 0)
+	}
+
+	const handleAsyncError = async () => {
+		// This creates an error in an async function
+		// Use setTimeout to ensure we're out of the current execution context
+		setTimeout(() => {
+			// Direct async/await error
+			;(async () => {
+				try {
+					// First approach: async function throwing directly
+					const makeAsyncError = async () => {
+						await new Promise((resolve) => setTimeout(resolve, 200))
+						console.log('About to throw from async function...')
+						throw new Error('Async operation failed')
+					}
+
+					// Run without awaiting or catching the error to ensure it becomes unhandled
+					makeAsyncError()
+
+					// Second approach: rejected promise in async function
+					const makeAsyncRejection = async () => {
+						await new Promise((resolve) => setTimeout(resolve, 300))
+						console.log('About to reject from async function...')
+						await Promise.reject(
+							new Error('Async promise rejection'),
+						)
+					}
+
+					// Run without catching
+					makeAsyncRejection()
+
+					// Third approach: await a throwing function
+					const delayedThrow = () =>
+						new Promise((_, reject) => {
+							setTimeout(() => {
+								console.log(
+									'About to reject from delayed function...',
+								)
+								reject(
+									new Error(
+										'Delayed rejection in async context',
+									),
+								)
+							}, 400)
+						})
+
+					// This would be caught if we awaited it, but we don't
+					delayedThrow()
+
+					// Add a log to help track when the errors should occur
+					console.log(
+						'Async errors scheduled - watch for [LD-O11Y] logs',
+					)
+				} catch (e) {
+					// This shouldn't execute for the unhandled async errors
+					console.log(
+						'This catch should not execute for async errors',
+						e,
+					)
+				}
+			})()
+		}, 0)
+	}
+
+	const handleNetworkError = () => {
+		// This creates a network error by attempting to fetch from a non-existent URL
+		setTimeout(() => {
+			console.log('Triggering network error to non-existent domain')
+
+			// Multiple network error approaches
+
+			// 1. Completely invalid URL - this will cause a synchronous error
+			try {
+				// This would normally be caught by React's error boundary, but we want to throw it directly
+				fetch('invalid://malformed-url').catch((error) => {
+					// We handle this one so the test can continue
+					console.log('Caught malformed URL error:', error.message)
+					LDObserve.recordError(error, {
+						source: 'network_test',
+						type: 'malformed_url',
+					})
+				})
+			} catch (e) {
+				console.log('Synchronous fetch error (malformed URL):', e)
+			}
+
+			// 2. Non-existent domain - this will cause a network error
+			fetch('https://non-existent-domain-123456789.xyz').then(
+				(response) => response.json(),
+			)
+			// Intentionally no catch handler to make it unhandled
+
+			// 3. Timeout error - this will cause a timeout
+			const controller = new AbortController()
+			const timeoutId = setTimeout(() => controller.abort(), 100)
+
+			fetch('https://httpstat.us/200?sleep=5000', {
+				signal: controller.signal,
+			}).then((response) => {
+				clearTimeout(timeoutId)
+				return response.json()
+			})
+			// Intentionally no catch handler to make it unhandled
+
+			// 4. Server error - this should return a non-200 status code
+			fetch('https://httpstat.us/500').then((response) => {
+				if (!response.ok) {
+					throw new Error(
+						`Server responded with status: ${response.status}`,
+					)
+				}
+				return response.json()
+			})
+			// Intentionally no catch handler to make it unhandled
+
+			console.log('Network errors triggered - watch for [LD-O11Y] logs')
+		}, 0)
+	}
+
 	return (
 		<ParallaxScrollView
 			headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
@@ -344,6 +527,55 @@ export default function HomeScreen() {
 						Test Span Hierarchy
 					</ThemedText>
 				</Pressable>
+
+				<ThemedText type="subtitle" style={{ marginTop: 16 }}>
+					Error Testing
+				</ThemedText>
+
+				<Pressable
+					style={[styles.button, styles.errorButton]}
+					onPress={handleUncaughtException}
+				>
+					<ThemedText style={styles.buttonText}>
+						Trigger Uncaught Exception
+					</ThemedText>
+				</Pressable>
+
+				<Pressable
+					style={[styles.button, styles.errorButton]}
+					onPress={handleUnhandledPromiseRejection}
+				>
+					<ThemedText style={styles.buttonText}>
+						Trigger Unhandled Promise Rejection
+					</ThemedText>
+				</Pressable>
+
+				<Pressable
+					style={[styles.button, styles.errorButton]}
+					onPress={handleRecursiveError}
+				>
+					<ThemedText style={styles.buttonText}>
+						Trigger Stack Overflow Error
+					</ThemedText>
+				</Pressable>
+
+				<Pressable
+					style={[styles.button, styles.errorButton]}
+					onPress={handleAsyncError}
+				>
+					<ThemedText style={styles.buttonText}>
+						Trigger Async Error
+					</ThemedText>
+				</Pressable>
+
+				<Pressable
+					style={[styles.button, styles.errorButton]}
+					onPress={handleNetworkError}
+				>
+					<ThemedText style={styles.buttonText}>
+						Trigger Network Error
+					</ThemedText>
+				</Pressable>
 			</ThemedView>
 
 			<ThemedView style={styles.stepContainer}>
@@ -406,6 +638,9 @@ const styles = StyleSheet.create({
 		borderRadius: 8,
 		marginVertical: 4,
 		alignItems: 'center',
+	},
+	errorButton: {
+		backgroundColor: '#FF3B30', // Red color for error buttons
 	},
 	buttonText: {
 		color: 'white',
