@@ -47,7 +47,7 @@ describe('ErrorInstrumentation', () => {
 		// Reset console mocks
 		console.error = vi.fn()
 		console.warn = vi.fn()
-		
+
 		// Reset ErrorUtils mocks
 		vi.clearAllMocks()
 		mockErrorUtils.setGlobalHandler.mockClear()
@@ -64,7 +64,9 @@ describe('ErrorInstrumentation', () => {
 
 	describe('initialization', () => {
 		it('should initialize with default configuration', () => {
-			errorInstrumentation = new ErrorInstrumentation(mockClient as ObservabilityClient)
+			errorInstrumentation = new ErrorInstrumentation(
+				mockClient as ObservabilityClient,
+			)
 			errorInstrumentation.initialize()
 
 			expect(mockClient._log).toHaveBeenCalledWith(
@@ -73,7 +75,9 @@ describe('ErrorInstrumentation', () => {
 		})
 
 		it('should not initialize twice', () => {
-			errorInstrumentation = new ErrorInstrumentation(mockClient as ObservabilityClient)
+			errorInstrumentation = new ErrorInstrumentation(
+				mockClient as ObservabilityClient,
+			)
 			errorInstrumentation.initialize()
 			errorInstrumentation.initialize()
 
@@ -83,7 +87,9 @@ describe('ErrorInstrumentation', () => {
 
 	describe('unhandled exception handling', () => {
 		it('should capture unhandled exceptions', () => {
-			errorInstrumentation = new ErrorInstrumentation(mockClient as ObservabilityClient)
+			errorInstrumentation = new ErrorInstrumentation(
+				mockClient as ObservabilityClient,
+			)
 			errorInstrumentation.initialize()
 
 			const testError = new Error('Test unhandled exception')
@@ -104,7 +110,9 @@ describe('ErrorInstrumentation', () => {
 
 	describe('console error handling', () => {
 		it('should capture console.error calls', () => {
-			errorInstrumentation = new ErrorInstrumentation(mockClient as ObservabilityClient)
+			errorInstrumentation = new ErrorInstrumentation(
+				mockClient as ObservabilityClient,
+			)
 			errorInstrumentation.initialize()
 
 			console.error('Test console error', { data: 'test' })
@@ -124,7 +132,9 @@ describe('ErrorInstrumentation', () => {
 		})
 
 		it('should not capture empty console messages', () => {
-			errorInstrumentation = new ErrorInstrumentation(mockClient as ObservabilityClient)
+			errorInstrumentation = new ErrorInstrumentation(
+				mockClient as ObservabilityClient,
+			)
 			errorInstrumentation.initialize()
 
 			console.error('')
@@ -139,7 +149,9 @@ describe('ErrorInstrumentation', () => {
 			const originalHandler = vi.fn()
 			mockErrorUtils.getGlobalHandler.mockReturnValue(originalHandler)
 
-			errorInstrumentation = new ErrorInstrumentation(mockClient as ObservabilityClient)
+			errorInstrumentation = new ErrorInstrumentation(
+				mockClient as ObservabilityClient,
+			)
 			errorInstrumentation.initialize()
 			errorInstrumentation.destroy()
 
