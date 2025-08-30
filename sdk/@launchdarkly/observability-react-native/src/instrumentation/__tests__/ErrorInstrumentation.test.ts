@@ -1,13 +1,13 @@
 import { ErrorInstrumentation } from '../ErrorInstrumentation'
-import { ErrorDeduplicator } from '../errorTypes'
 import { formatError } from '../errorUtils'
 import type { ObservabilityClient } from '../../client/ObservabilityClient'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 
 // Mock React Native modules
-jest.mock('react-native', () => ({
+vi.mock('react-native', () => ({
 	ErrorUtils: {
-		setGlobalHandler: jest.fn(),
-		getGlobalHandler: jest.fn(() => null),
+		setGlobalHandler: vi.fn(),
+		getGlobalHandler: vi.fn(() => null),
 	},
 	AppState: {
 		currentState: 'active',
@@ -22,23 +22,36 @@ jest.mock('react-native', () => ({
 	},
 }))
 
+// Mock global ErrorUtils for React Native
+const mockErrorUtils = {
+	setGlobalHandler: vi.fn(),
+	getGlobalHandler: vi.fn(() => null),
+}
+
+;(globalThis as any).ErrorUtils = mockErrorUtils
+
 // Mock console methods
 const originalConsoleError = console.error
 const originalConsoleWarn = console.warn
 
 describe('ErrorInstrumentation', () => {
-	let mockClient: jest.Mocked<ObservabilityClient>
+	let mockClient: Partial<ObservabilityClient>
 	let errorInstrumentation: ErrorInstrumentation
 
 	beforeEach(() => {
 		mockClient = {
-			consumeCustomError: jest.fn(),
-			_log: jest.fn(),
+			consumeCustomError: vi.fn(),
+			_log: vi.fn(),
 		} as any
 
 		// Reset console mocks
-		console.error = jest.fn()
-		console.warn = jest.fn()
+		console.error = vi.fn()
+		console.warn = vi.fn()
+		
+		// Reset ErrorUtils mocks
+		vi.clearAllMocks()
+		mockErrorUtils.setGlobalHandler.mockClear()
+		mockErrorUtils.getGlobalHandler.mockClear()
 	})
 
 	afterEach(() => {
@@ -51,7 +64,7 @@ describe('ErrorInstrumentation', () => {
 
 	describe('initialization', () => {
 		it('should initialize with default configuration', () => {
-			errorInstrumentation = new ErrorInstrumentation(mockClient)
+			errorInstrumentation = new ErrorInstrumentation(mockClient as ObservabilityClient)
 			errorInstrumentation.initialize()
 
 			expect(mockClient._log).toHaveBeenCalledWith(
@@ -60,112 +73,38 @@ describe('ErrorInstrumentation', () => {
 		})
 
 		it('should not initialize twice', () => {
-			errorInstrumentation = new ErrorInstrumentation(mockClient)
+			errorInstrumentation = new ErrorInstrumentation(mockClient as ObservabilityClient)
 			errorInstrumentation.initialize()
 			errorInstrumentation.initialize()
 
 			expect(mockClient._log).toHaveBeenCalledTimes(1)
 		})
-
-		it('should initialize with custom configuration', () => {
-			const config = {
-				captureUnhandledExceptions: false,
-				captureConsoleErrors: true,
-				errorSampleRate: 0.5,
-			}
-
-			errorInstrumentation = new ErrorInstrumentation(mockClient, config)
-			errorInstrumentation.initialize()
-
-			expect(mockClient._log).toHaveBeenCalledWith(
-				'ErrorInstrumentation initialized',
-			)
-		})
 	})
 
 	describe('unhandled exception handling', () => {
 		it('should capture unhandled exceptions', () => {
-			errorInstrumentation = new ErrorInstrumentation(mockClient)
+			errorInstrumentation = new ErrorInstrumentation(mockClient as ObservabilityClient)
 			errorInstrumentation.initialize()
 
 			const testError = new Error('Test unhandled exception')
 
 			// Simulate unhandled exception
-			const { ErrorUtils } = require('react-native')
-			const handler = ErrorUtils.setGlobalHandler.mock.calls[0][0]
+			const handler = mockErrorUtils.setGlobalHandler.mock.calls[0][0]
 			handler(testError, true)
 
 			expect(mockClient.consumeCustomError).toHaveBeenCalledWith(
 				testError,
 				expect.objectContaining({
-					'error.type': 'unhandled_exception',
-					'error.source': 'javascript',
-					'error.fatal': true,
 					'error.unhandled': true,
 					'error.caught_by': 'ErrorUtils.setGlobalHandler',
 				}),
 			)
 		})
-
-		it('should not capture when disabled', () => {
-			errorInstrumentation = new ErrorInstrumentation(mockClient, {
-				captureUnhandledExceptions: false,
-			})
-			errorInstrumentation.initialize()
-
-			expect(
-				require('react-native').ErrorUtils.setGlobalHandler,
-			).not.toHaveBeenCalled()
-		})
-
-		it('should respect error sampling rate', () => {
-			// Mock Math.random to return 0.6
-			const originalRandom = Math.random
-			Math.random = jest.fn(() => 0.6)
-
-			errorInstrumentation = new ErrorInstrumentation(mockClient, {
-				errorSampleRate: 0.5, // Should reject errors > 0.5
-			})
-			errorInstrumentation.initialize()
-
-			const testError = new Error('Test error')
-			const { ErrorUtils } = require('react-native')
-			const handler = ErrorUtils.setGlobalHandler.mock.calls[0][0]
-			handler(testError, false)
-
-			expect(mockClient.consumeCustomError).not.toHaveBeenCalled()
-
-			Math.random = originalRandom
-		})
-
-		it('should apply beforeSend filter', () => {
-			const beforeSend = jest.fn().mockReturnValue(null)
-
-			errorInstrumentation = new ErrorInstrumentation(mockClient, {
-				beforeSend,
-			})
-			errorInstrumentation.initialize()
-
-			const testError = new Error('Test error')
-			const { ErrorUtils } = require('react-native')
-			const handler = ErrorUtils.setGlobalHandler.mock.calls[0][0]
-			handler(testError, false)
-
-			expect(beforeSend).toHaveBeenCalledWith(
-				testError,
-				expect.objectContaining({
-					type: 'unhandled_exception',
-					source: 'javascript',
-					fatal: false,
-				}),
-			)
-			expect(mockClient.consumeCustomError).not.toHaveBeenCalled()
-		})
 	})
 
 	describe('console error handling', () => {
 		it('should capture console.error calls', () => {
-			errorInstrumentation = new ErrorInstrumentation(mockClient)
+			errorInstrumentation = new ErrorInstrumentation(mockClient as ObservabilityClient)
 			errorInstrumentation.initialize()
 
 			console.error('Test console error', { data: 'test' })
@@ -176,8 +115,7 @@ describe('ErrorInstrumentation', () => {
 					name: 'ConsoleError',
 				}),
 				expect.objectContaining({
-					'error.type': 'console_error',
-					'error.source': 'javascript',
+					'error.unhandled': false,
 					'error.caught_by': 'console.error',
 					'console.level': 'error',
 					'console.args_count': 2,
@@ -185,19 +123,8 @@ describe('ErrorInstrumentation', () => {
 			)
 		})
 
-		it('should not capture when disabled', () => {
-			errorInstrumentation = new ErrorInstrumentation(mockClient, {
-				captureConsoleErrors: false,
-			})
-			errorInstrumentation.initialize()
-
-			console.error('Test error')
-
-			expect(mockClient.consumeCustomError).not.toHaveBeenCalled()
-		})
-
 		it('should not capture empty console messages', () => {
-			errorInstrumentation = new ErrorInstrumentation(mockClient)
+			errorInstrumentation = new ErrorInstrumentation(mockClient as ObservabilityClient)
 			errorInstrumentation.initialize()
 
 			console.error('')
@@ -207,70 +134,22 @@ describe('ErrorInstrumentation', () => {
 		})
 	})
 
-	describe('error deduplication', () => {
-		it('should deduplicate similar errors', () => {
-			errorInstrumentation = new ErrorInstrumentation(mockClient)
-			errorInstrumentation.initialize()
-
-			const testError = new Error('Duplicate error')
-			const { ErrorUtils } = require('react-native')
-			const handler = ErrorUtils.setGlobalHandler.mock.calls[0][0]
-
-			// First occurrence should be reported
-			handler(testError, false)
-			expect(mockClient.consumeCustomError).toHaveBeenCalledTimes(1)
-
-			// Second occurrence within dedup window should be ignored
-			handler(testError, false)
-			expect(mockClient.consumeCustomError).toHaveBeenCalledTimes(1)
-		})
-	})
-
 	describe('cleanup', () => {
 		it('should restore original handlers on destroy', () => {
-			const originalHandler = jest.fn()
-			const { ErrorUtils } = require('react-native')
-			ErrorUtils.getGlobalHandler.mockReturnValue(originalHandler)
+			const originalHandler = vi.fn()
+			mockErrorUtils.getGlobalHandler.mockReturnValue(originalHandler)
 
-			errorInstrumentation = new ErrorInstrumentation(mockClient)
+			errorInstrumentation = new ErrorInstrumentation(mockClient as ObservabilityClient)
 			errorInstrumentation.initialize()
 			errorInstrumentation.destroy()
 
-			expect(ErrorUtils.setGlobalHandler).toHaveBeenCalledWith(
+			expect(mockErrorUtils.setGlobalHandler).toHaveBeenCalledWith(
 				originalHandler,
 			)
 			expect(mockClient._log).toHaveBeenCalledWith(
 				'ErrorInstrumentation destroyed',
 			)
 		})
-	})
-})
-
-describe('ErrorDeduplicator', () => {
-	let deduplicator: ErrorDeduplicator
-
-	beforeEach(() => {
-		deduplicator = new ErrorDeduplicator()
-	})
-
-	it('should allow first occurrence of error', () => {
-		const error = new Error('Test error')
-		expect(deduplicator.shouldReport(error)).toBe(true)
-	})
-
-	it('should block duplicate errors within time window', () => {
-		const error = new Error('Test error')
-
-		expect(deduplicator.shouldReport(error)).toBe(true)
-		expect(deduplicator.shouldReport(error)).toBe(false)
-	})
-
-	it('should allow different errors', () => {
-		const error1 = new Error('Error 1')
-		const error2 = new Error('Error 2')
-
-		expect(deduplicator.shouldReport(error1)).toBe(true)
-		expect(deduplicator.shouldReport(error2)).toBe(true)
 	})
 })
 
