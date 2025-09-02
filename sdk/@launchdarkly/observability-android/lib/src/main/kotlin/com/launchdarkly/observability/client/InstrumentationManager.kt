@@ -3,8 +3,8 @@ package com.launchdarkly.observability.client
 import android.app.Application
 import com.launchdarkly.logging.LDLogger
 import com.launchdarkly.observability.api.Options
-import com.launchdarkly.observability.graph.GraphQLClient
-import com.launchdarkly.observability.graph.SamplingApiService
+import com.launchdarkly.observability.network.GraphQLClient
+import com.launchdarkly.observability.network.SamplingApiService
 import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.observability.sampling.CompositeLogExporter
 import com.launchdarkly.observability.sampling.CustomSampler

@@ -1,4 +1,4 @@
-package com.launchdarkly.observability.graph
+package com.launchdarkly.observability.network
 
 import com.launchdarkly.observability.sampling.MatchConfig
 import com.launchdarkly.observability.sampling.AttributeMatchConfig

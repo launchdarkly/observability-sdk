@@ -1,4 +1,4 @@
-package com.launchdarkly.observability.graph
+package com.launchdarkly.observability.network
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
