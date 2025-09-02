@@ -34,14 +34,16 @@ data class LogSamplingConfigResponse(
     val message: MatchConfigResponse? = null,
     val severityText: MatchConfigResponse? = null,
     val attributes: List<AttributeMatchConfigResponse?>? = null,
-    val samplingRatio: Int
+    val samplingRatio: Int?
 ) {
-    fun mapToEntity(): LogSamplingConfig = LogSamplingConfig(
-        message = message?.mapToEntity(),
-        severityText = severityText?.mapToEntity(),
-        attributes = attributes?.mapNotNull { it?.mapToEntity() } ?: emptyList(),
-        samplingRatio = samplingRatio
-    )
+    fun mapToEntity(): LogSamplingConfig? {
+        return LogSamplingConfig(
+            message = message?.mapToEntity(),
+            severityText = severityText?.mapToEntity(),
+            attributes = attributes?.mapNotNull { it?.mapToEntity() } ?: emptyList(),
+            samplingRatio = samplingRatio ?: return null // If samplingRatio is null, mapping result will return null
+        )
+    }
 }
 
 @Serializable
@@ -49,14 +51,16 @@ data class SpanSamplingConfigResponse(
     val name: MatchConfigResponse? = null,
     val attributes: List<AttributeMatchConfigResponse?>? = null,
     val events: List<SpanEventMatchConfigResponse?>? = null,
-    val samplingRatio: Int
+    val samplingRatio: Int?
 ) {
-    fun mapToEntity(): SpanSamplingConfig = SpanSamplingConfig(
-        name = name?.mapToEntity(),
-        attributes = attributes?.mapNotNull { it?.mapToEntity() } ?: emptyList(),
-        events = events?.mapNotNull { it?.mapToEntity() } ?: emptyList(),
-        samplingRatio = samplingRatio
-    )
+    fun mapToEntity(): SpanSamplingConfig? {
+        return SpanSamplingConfig(
+            name = name?.mapToEntity(),
+            attributes = attributes?.mapNotNull { it?.mapToEntity() } ?: emptyList(),
+            events = events?.mapNotNull { it?.mapToEntity() } ?: emptyList(),
+            samplingRatio = samplingRatio ?: return null // If samplingRatio is null, mapping result will return null
+        )
+    }
 }
 
 @Serializable
