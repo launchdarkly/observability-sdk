@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/launchdarkly/observability-sdk/compare/observability-react-native-0.5.0...observability-react-native-0.6.0) (2025-09-02)
+
+
+### Features
+
+* improve exception instrumentation in react-native SDK ([#177](https://github.com/launchdarkly/observability-sdk/issues/177)) ([22b2be7](https://github.com/launchdarkly/observability-sdk/commit/22b2be7ad83a206ba4e630c7787debf14e72c4a5))
+
 ## [0.5.0](https://github.com/launchdarkly/observability-sdk/compare/observability-react-native-0.4.0...observability-react-native-0.5.0) (2025-08-29)
 
 
