@@ -294,7 +294,7 @@ namespace LaunchDarkly.Observability
         /// <param name="message">the log message</param>
         /// <param name="level">the log level</param>
         /// <param name="attributes">any additional attributes to add to the log entry</param>
-        public static void RecordLog(string message, LogLevel level, IDictionary<string, object> attributes)
+        public static void RecordLog(string message, LogLevel level, IDictionary<string, object> attributes = null)
         {
             WithInstance(instance =>
             {
