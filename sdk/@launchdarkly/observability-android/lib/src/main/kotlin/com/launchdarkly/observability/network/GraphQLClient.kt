@@ -128,16 +128,4 @@ class GraphQLClient(
             it.readText()
         } ?: throw IllegalStateException("Could not load GraphQL query file: $resourcePath")
     }
-
-    /**
-     * Utility method to print GraphQL errors
-     */
-    fun <T> printErrors(response: GraphQLResponse<T>) {
-        response.errors?.forEach { error ->
-            println("GraphQL Error: ${error.message}")
-            error.locations?.forEach { location ->
-                println("  at line ${location.line}, column ${location.column}")
-            }
-        }
-    }
 }

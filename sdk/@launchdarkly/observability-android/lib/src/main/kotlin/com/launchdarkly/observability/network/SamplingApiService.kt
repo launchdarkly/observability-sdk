@@ -22,7 +22,7 @@ class SamplingApiService(
             val response = graphqlClient.execute<SamplingResponse>(query, variables)
 
             if (response.errors?.isNotEmpty() == true) {
-                graphqlClient.printErrors(response)
+                printErrors(response)
                 return null
             }
 
@@ -30,6 +30,15 @@ class SamplingApiService(
         } catch (e: Exception) {
             println("Error fetching sampling config: ${e.message}")
             return null
+        }
+    }
+
+    private fun printErrors(response: GraphQLResponse<SamplingResponse>) {
+        response.errors?.forEach { error ->
+            println("GraphQL Error: ${error.message}")
+            error.locations?.forEach { location ->
+                println("  at line ${location.line}, column ${location.column}")
+            }
         }
     }
 }
