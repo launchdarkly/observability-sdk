@@ -23,8 +23,8 @@ namespace LaunchDarkly.Observability
     {
         private const string DefaultOtlpEndpoint = "https://otel.observability.app.launchdarkly.com:4318";
         private const string DefaultBackendUrl = "https://pub.observability.app.launchdarkly.com";
-        private string _otlpEndpoint = DefaultOtlpEndpoint;
-        private string _backendUrl = DefaultBackendUrl;
+        private string _otlpEndpoint = string.Empty;
+        private string _backendUrl = string.Empty;
         private string _serviceName = string.Empty;
         private string _environment = string.Empty;
         private string _serviceVersion = string.Empty;
@@ -42,6 +42,11 @@ namespace LaunchDarkly.Observability
         /// For most configurations, the OTLP endpoint will not need to be set.
         /// </para>
         /// <para>
+        /// If not explicitly set, set to null, or set to whitespace/empty string, the OTLP endpoint will be read from
+        /// the OTEL_EXPORTER_OTLP_ENDPOINT environment variable. Values set with this method take precedence over the
+        /// environment variable.
+        /// </para>
+        /// <para>
         /// Setting the endpoint to null will reset the builder value to the default.
         /// </para>
         /// </summary>
@@ -49,7 +54,7 @@ namespace LaunchDarkly.Observability
         /// <returns>A reference to this builder.</returns>
         public TBuilder WithOtlpEndpoint(string otlpEndpoint)
         {
-            _otlpEndpoint = otlpEndpoint ?? DefaultOtlpEndpoint;
+            _otlpEndpoint = otlpEndpoint;
             return (TBuilder)this;
         }
 
@@ -66,12 +71,17 @@ namespace LaunchDarkly.Observability
         /// <returns>A reference to this builder.</returns>
         public TBuilder WithBackendUrl(string backendUrl)
         {
-            _backendUrl = backendUrl ?? DefaultBackendUrl;
+            _backendUrl = backendUrl;
             return (TBuilder)this;
         }
 
         /// <summary>
         /// Set the service name.
+        /// <para>
+        /// If not explicitly set, set to null, or set to whitespace/empty string, the service name will be read from
+        /// the OTEL_SERVICE_NAME environment variable. Values set with this method take precedence over the environment
+        /// variable.
+        /// </para>
         /// </summary>
         /// <param name="serviceName">The logical service name used in telemetry resource attributes.</param>
         /// <returns>A reference to this builder.</returns>
@@ -234,10 +244,22 @@ namespace LaunchDarkly.Observability
                     "SDK key cannot be null when creating an ObservabilityConfig builder.");
             }
 
-            return new ObservabilityConfig(
-                _otlpEndpoint,
-                _backendUrl,
+            var effectiveServiceName = EnvironmentHelper.GetValueOrEnvironment(
                 _serviceName,
+                EnvironmentVariables.OtelServiceName,
+                string.Empty);
+
+            var effectiveOtlpEndpoint = EnvironmentHelper.GetValueOrEnvironment(
+                _otlpEndpoint,
+                EnvironmentVariables.OtelExporterOtlpEndpoint,
+                DefaultOtlpEndpoint);
+
+            var effectiveBackendUrl = string.IsNullOrWhiteSpace(_backendUrl) ? DefaultBackendUrl : _backendUrl;
+
+            return new ObservabilityConfig(
+                effectiveOtlpEndpoint,
+                effectiveBackendUrl,
+                effectiveServiceName,
                 _environment,
                 _serviceVersion,
                 sdkKey,
