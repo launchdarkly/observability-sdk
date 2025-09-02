@@ -39,11 +39,11 @@ export default function TabLayout() {
 			<Tabs.Screen
 				name="explore"
 				options={{
-					title: 'Explore',
+					title: 'Error Tests',
 					tabBarIcon: ({ color }) => (
 						<IconSymbol
 							size={28}
-							name="paperplane.fill"
+							name="exclamationmark.triangle.fill"
 							color={color}
 						/>
 					),

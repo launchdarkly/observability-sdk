@@ -39,11 +39,19 @@ dependencies {
     implementation("io.opentelemetry.android.instrumentation:crash:0.11.0-alpha")
 
     // Use JUnit Jupiter for testing.
+    testImplementation(platform("org.junit:junit-bom:5.13.4"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+
+    // MockK for mocking in Kotlin tests
+    testImplementation("io.mockk:mockk:1.14.5")
 }
 
 val releaseVersion = version.toString()
+
+tasks.withType<Test> {
+    useJUnitPlatform()
+}
 
 android {
     namespace = "com.launchdarkly.observability"

@@ -63,8 +63,6 @@ We encourage pull requests and other contributions from the community. Check out
 
 [pyplugin-sdk-ci-badge]: https://github.com/launchdarkly/observability-sdk/actions/workflows/python-plugin.yml/badge.svg
 [pyplugin-sdk-ci]: https://github.com/launchdarkly/observability-sdk/actions/workflows/python-plugin.yml
-[readthedocs-badge]: https://readthedocs.org/projects/launchdarkly-observability/badge/
-[readthedocs-link]: https://launchdarkly-observability.readthedocs.io/en/latest/
 [pypi-version-badge]: https://img.shields.io/pypi/v/launchdarkly-observability.svg?maxAge=2592000
 [pypi-versions-badge]: https://img.shields.io/pypi/pyversions/launchdarkly-observability.svg
 [pypi-link]: https://pypi.python.org/pypi/launchdarkly-observability

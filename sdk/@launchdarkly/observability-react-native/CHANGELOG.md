@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.6.0](https://github.com/launchdarkly/observability-sdk/compare/observability-react-native-0.5.0...observability-react-native-0.6.0) (2025-09-02)
+
+
+### Features
+
+* improve exception instrumentation in react-native SDK ([#177](https://github.com/launchdarkly/observability-sdk/issues/177)) ([22b2be7](https://github.com/launchdarkly/observability-sdk/commit/22b2be7ad83a206ba4e630c7787debf14e72c4a5))
+
+## [0.5.0](https://github.com/launchdarkly/observability-sdk/compare/observability-react-native-0.4.0...observability-react-native-0.5.0) (2025-08-29)
+
+
+### Features
+
+* Add sampling support to React Native observability plugin ([#108](https://github.com/launchdarkly/observability-sdk/issues/108)) ([1beae4d](https://github.com/launchdarkly/observability-sdk/commit/1beae4d39e2efe31f60d8d7712f7766984a29d81))
+* Add TypeDoc setup for @launchdarkly/observability-react-native ([#133](https://github.com/launchdarkly/observability-sdk/issues/133)) ([f523fbf](https://github.com/launchdarkly/observability-sdk/commit/f523fbfc036587d3a9303910049184b13cf92d43))
+* Update instrumentation configuration for ease of use. ([#112](https://github.com/launchdarkly/observability-sdk/issues/112)) ([011032f](https://github.com/launchdarkly/observability-sdk/commit/011032f7c2cb941bcde5f8225705a129f6c2019c))
+
+
+### Bug Fixes
+
+* Correct canonical key ID generation. ([#188](https://github.com/launchdarkly/observability-sdk/issues/188)) ([7e8f9e5](https://github.com/launchdarkly/observability-sdk/commit/7e8f9e58c402d344791647c13b6df14e899d0095))
+
 ## 0.4.0
 
 ### Minor Changes

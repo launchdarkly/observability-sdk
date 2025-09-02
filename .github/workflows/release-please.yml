@@ -8,6 +8,7 @@ jobs:
     release-package:
         runs-on: ubuntu-latest
         permissions:
+            id-token: write
             contents: write # Contents and pull-requests are for release-please to make releases.
             pull-requests: write
             issues: write
@@ -19,8 +20,17 @@ jobs:
             dotnet-plugin-released: ${{ steps.release.outputs['sdk/@launchdarkly/observability-dotnet--release_created'] }}
             dotnet-plugin-tag-name: ${{ steps.release.outputs['sdk/@launchdarkly/observability-dotnet--tag_name'] }}
         steps:
+            # Normally a workflow cannot trigger another workflow. For this workflow we need to run required checks.
+            # Github determines that something is created by a workflow/bot based on the token.
+            - uses: launchdarkly/gh-actions/actions/release-secrets@release-secrets-v1.2.0
+              name: 'Get PAT'
+              with:
+                  aws_assume_role: ${{ vars.AWS_ROLE_ARN }}
+                  ssm_parameter_pairs: '/production/common/releasing/o11y_gh_pat = GITHUB_PAT'
             - uses: googleapis/release-please-action@a02a34c4d625f9be7cb89156071d8567266a2445
               id: release
+              with:
+                  token: ${{ env.GITHUB_PAT }}
 
             - uses: actions/checkout@v4
               if: ${{ steps.release.outputs.releases_created == 'true' }}
@@ -47,15 +57,13 @@ jobs:
                   aws-role-arn: ${{ vars.AWS_ROLE_ARN }}
 
     release-python-docs:
-        runs-on: ubuntu-latest
+        needs: ['release-package', 'release-python-plugin']
+        if: ${{ needs.release-package.outputs.python-plugin-released == 'true' }}
         permissions:
             contents: write
-        needs: ['release-python-plugin']
-        steps:
-            - name: Build and Publish Docs
-              uses: ./.github/workflows/manual-publish-docs.yml
-              with:
-                  workspace_path: sdk/@launchdarkly/observability-python
+        uses: launchdarkly/observability-sdk/.github/workflows/manual-publish-docs.yml@main
+        with:
+            workspace_path: sdk/@launchdarkly/observability-python
 
     release-python-provenance:
         needs: ['release-package', 'release-python-plugin']
@@ -108,16 +116,13 @@ jobs:
                   dry-run: false
 
     release-dotnet-plugin-docs:
-        runs-on: ubuntu-latest
+        needs: ['release-package', 'release-dotnet-plugin']
         permissions:
             contents: write
-        needs: ['release-package', 'release-dotnet-plugin']
         if: ${{ needs.release-package.outputs.dotnet-plugin-released == 'true' }}
-        steps:
-            - name: Build and Publish Docs
-              uses: ./.github/workflows/manual-publish-docs.yml
-              with:
-                  workspace_path: sdk/@launchdarkly/observability-dotnet
+        uses: launchdarkly/observability-sdk/.github/workflows/manual-publish-docs.yml@main
+        with:
+            workspace_path: sdk/@launchdarkly/observability-dotnet
 
     release-dotnet-sdk-provenance:
         needs: ['release-package', 'release-dotnet-plugin']

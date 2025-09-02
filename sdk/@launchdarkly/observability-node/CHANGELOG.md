@@ -1,5 +1,12 @@
 # @launchdarkly/observability-node
 
+## [0.3.0](https://github.com/launchdarkly/observability-sdk/compare/observability-node-0.2.1...observability-node-0.3.0) (2025-08-29)
+
+
+### Features
+
+* Update instrumentation configuration for ease of use. ([#112](https://github.com/launchdarkly/observability-sdk/issues/112)) ([011032f](https://github.com/launchdarkly/observability-sdk/commit/011032f7c2cb941bcde5f8225705a129f6c2019c))
+
 ## 0.2.1
 
 ### Patch Changes
