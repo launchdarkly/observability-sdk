@@ -57,13 +57,6 @@ class MainActivity : ComponentActivity() {
                                 contentDescription = "buttonTriggerMetric"
                             },
                             onClick = {
-                                viewModel.triggerHttpRequests()
-                            }
-                        ) {
-                            Text("Trigger HTTP Request")
-                        }
-                        Button(
-                            onClick = {
                                 viewModel.triggerMetric()
                             }
                         ) {
