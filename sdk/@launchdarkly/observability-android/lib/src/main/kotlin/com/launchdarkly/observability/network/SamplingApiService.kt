@@ -9,6 +9,10 @@ class SamplingApiService(
     private val graphqlClient: GraphQLClient
 ) {
 
+    companion object {
+        private val GET_SAMPLING_CONFIG_QUERY_FILE_PATH = "graphql/GetSamplingConfigQuery.graphql"
+    }
+
     /**
      * Fetches sampling configuration from GraphQL endpoint
      * @param organizationVerboseId The organization verbose ID
@@ -16,10 +20,12 @@ class SamplingApiService(
      */
     suspend fun getSamplingConfig(organizationVerboseId: String): SamplingConfig? {
         try {
-            val query = "GetSamplingConfigQuery.graphql"
             val variables = mapOf("organization_verbose_id" to organizationVerboseId)
-
-            val response = graphqlClient.execute<SamplingResponse>(query, variables)
+            val response = graphqlClient.execute(
+                queryFileName = GET_SAMPLING_CONFIG_QUERY_FILE_PATH,
+                variables = variables,
+                dataSerializer = SamplingResponse.serializer()
+            )
 
             if (response.errors?.isNotEmpty() == true) {
                 printErrors(response)

@@ -2,6 +2,7 @@ package com.launchdarkly.observability.network
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.Serializable
 import java.io.IOException
@@ -33,29 +34,40 @@ data class GraphQLLocation(
     val column: Int
 )
 
+interface UrlConnectionProvider {
+    fun openConnection(url: String): HttpURLConnection
+}
+
 /**
  * Generic GraphQL client for making HTTP requests to GraphQL endpoints
  */
 class GraphQLClient(
     val endpoint: String,
     val headers: Map<String, String> = emptyMap(),
-    internal val json: Json = Json { ignoreUnknownKeys = true }
+    private val json: Json = Json { ignoreUnknownKeys = true },
+    private val connectionProvider: UrlConnectionProvider = object : UrlConnectionProvider {
+        override fun openConnection(url: String): HttpURLConnection {
+            return URL(url).openConnection() as HttpURLConnection
+        }
+    }
 ) {
 
     companion object {
-        internal const val CONNECT_TIMEOUT = 10000
-        internal const val READ_TIMEOUT = 10000
+        private const val CONNECT_TIMEOUT = 10000
+        private const val READ_TIMEOUT = 10000
     }
 
     /**
      * Executes a GraphQL query
      * @param queryFileName The .graphql file name
      * @param variables Query variables
-     * @return GraphQLResponse with data or errors
+     * @param dataSerializer Kotlinx serialization serializer for the expected response data type
+     * @return GraphQLResponse containing either the deserialized data or error information
      */
-    internal suspend inline fun <reified T> execute(
+    suspend fun <T> execute(
         queryFileName: String,
-        variables: Map<String, String> = emptyMap()
+        variables: Map<String, String> = emptyMap(),
+        dataSerializer: KSerializer<T>
     ): GraphQLResponse<T> = withContext(Dispatchers.IO) {
         try {
             val query = loadQuery(queryFileName)
@@ -65,8 +77,7 @@ class GraphQLClient(
             )
 
             val requestJson = json.encodeToString(request)
-            val url = URL(endpoint)
-            val connection = url.openConnection() as HttpURLConnection
+            val connection = connectionProvider.openConnection(endpoint)
 
             connection.apply {
                 requestMethod = "POST"
@@ -94,18 +105,13 @@ class GraphQLClient(
             val responseJson = if (responseCode == HttpURLConnection.HTTP_OK) {
                 connection.inputStream.bufferedReader().use { it.readText() }
             } else {
-                connection.errorStream?.bufferedReader()?.use { it.readText() }
-                    ?: throw IOException("HTTP Error $responseCode with no error body")
+                val errorText = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "No error body"
+                throw IOException("HTTP Error $responseCode: $errorText")
             }
 
-            json.decodeFromString<GraphQLResponse<T>>(responseJson)
-
-        } catch (e: IOException) {
-            GraphQLResponse(
-                data = null,
-                errors = listOf(
-                    GraphQLError(message = "Network error: ${e.message}")
-                )
+            json.decodeFromString(
+                GraphQLResponse.serializer(dataSerializer),
+                responseJson
             )
         } catch (e: Exception) {
             GraphQLResponse(
@@ -119,13 +125,12 @@ class GraphQLClient(
 
     /**
      * Loads GraphQL query from resources
-     * @param queryFileName The .graphql file name
+     * @param queryFilepath The .graphql file path
      * @return Query string
      */
-    private fun loadQuery(queryFileName: String): String {
-        val resourcePath = "graphql/$queryFileName"
-        return this::class.java.classLoader?.getResourceAsStream(resourcePath)?.bufferedReader()?.use {
+    private fun loadQuery(queryFilepath: String): String {
+        return this::class.java.classLoader?.getResourceAsStream(queryFilepath)?.bufferedReader()?.use {
             it.readText()
-        } ?: throw IllegalStateException("Could not load GraphQL query file: $resourcePath")
+        } ?: throw IllegalStateException("Could not load GraphQL query file: $queryFilepath")
     }
 }
