@@ -66,10 +66,10 @@ class CustomSampler(
      * Check if the attributes match the attribute configs.
      */
     private fun matchesAttributes(
-        attributeConfigs: List<AttributeMatchConfig>?,
+        attributeConfigs: List<AttributeMatchConfig>,
         attributes: Attributes?
     ): Boolean {
-        if (attributeConfigs.isNullOrEmpty()) {
+        if (attributeConfigs.isEmpty()) {
             return true
         }
 
@@ -97,19 +97,17 @@ class CustomSampler(
         }
 
         // Match by event attributes if specified
-        if (eventConfig.attributes != null) {
-            if (!matchesAttributes(eventConfig.attributes, event.attributes)) {
-                return false
-            }
+        if (!matchesAttributes(eventConfig.attributes, event.attributes)) {
+            return false
         }
         return true
     }
 
     private fun matchesEvents(
-        eventConfigs: List<SpanEventMatchConfig>?,
+        eventConfigs: List<SpanEventMatchConfig>,
         events: List<EventData>
     ): Boolean {
-        if (eventConfigs.isNullOrEmpty()) {
+        if (eventConfigs.isEmpty()) {
             return true
         }
 

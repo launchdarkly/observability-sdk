@@ -12,24 +12,24 @@ data class AttributeMatchConfig(
 
 data class SpanEventMatchConfig(
     val name: MatchConfig? = null,
-    val attributes: List<AttributeMatchConfig>? = null
+    val attributes: List<AttributeMatchConfig> = emptyList()
 )
 
 data class SpanSamplingConfig(
     val name: MatchConfig? = null,
-    val attributes: List<AttributeMatchConfig>? = null,
-    val events: List<SpanEventMatchConfig>? = null,
+    val attributes: List<AttributeMatchConfig> = emptyList(),
+    val events: List<SpanEventMatchConfig> = emptyList(),
     val samplingRatio: Int
 )
 
 data class LogSamplingConfig(
     val message: MatchConfig? = null,
     val severityText: MatchConfig? = null,
-    val attributes: List<AttributeMatchConfig>? = null,
+    val attributes: List<AttributeMatchConfig> = emptyList(),
     val samplingRatio: Int
 )
 
 data class SamplingConfig(
-    val spans: List<SpanSamplingConfig>? = null,
-    val logs: List<LogSamplingConfig>? = null
+    val spans: List<SpanSamplingConfig> = emptyList(),
+    val logs: List<LogSamplingConfig> = emptyList()
 )
