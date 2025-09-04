@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.2.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-dotnet-0.1.0...launchdarkly-observability-dotnet-0.2.0) (2025-09-04)
+
+
+### Features
+
+* Add support for environment variable configuration. ([#205](https://github.com/launchdarkly/observability-sdk/issues/205)) ([5e3b1e1](https://github.com/launchdarkly/observability-sdk/commit/5e3b1e1e5285f92cee528e9394fa585e083aadb6))
+* Add support for non-core ASP.Net. ([#199](https://github.com/launchdarkly/observability-sdk/issues/199)) ([b215109](https://github.com/launchdarkly/observability-sdk/commit/b2151092fa5ccedabf2111b1c63041c2f8bfaefb))
+
+
+### Bug Fixes
+
+* Make attributes optional for RecordLog. ([#202](https://github.com/launchdarkly/observability-sdk/issues/202)) ([806ce08](https://github.com/launchdarkly/observability-sdk/commit/806ce08f926addd71333dc5a4eb0403b818ad118))
+
 ## 0.1.0 (2025-08-26)
 
 
