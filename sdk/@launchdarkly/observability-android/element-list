@@ -1,0 +1,12 @@
+$dokka.format:javadoc-v1
+$dokka.linkExtension:html
+$dokka.location:com.launchdarkly.observability.plugin/Observability.Companion///PointingToDeclaration/com/launchdarkly/observability/plugin/Observability.Companion.html
+$dokka.location:com.launchdarkly.observability.sampling/MatchConfig.Regex///PointingToDeclaration/com/launchdarkly/observability/sampling/MatchConfig.Regex.html
+$dokka.location:com.launchdarkly.observability.sampling/MatchConfig.Value///PointingToDeclaration/com/launchdarkly/observability/sampling/MatchConfig.Value.html
+$dokka.location:com.launchdarkly.observability.sdk/LDObserve.Companion///PointingToDeclaration/com/launchdarkly/observability/sdk/LDObserve.Companion.html
+com.launchdarkly.observability.api
+com.launchdarkly.observability.client
+com.launchdarkly.observability.interfaces
+com.launchdarkly.observability.plugin
+com.launchdarkly.observability.sampling
+com.launchdarkly.observability.sdk
