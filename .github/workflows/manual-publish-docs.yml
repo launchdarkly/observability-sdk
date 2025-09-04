@@ -8,10 +8,12 @@ on:
                 type: choice
                 options:
                     - sdk/highlight-run
+                    - 'sdk/@launchdarkly/observability-android'
+                    - 'sdk/@launchdarkly/observability-dotnet'
                     - 'sdk/@launchdarkly/observability-node'
                     - 'sdk/@launchdarkly/observability-python'
                     - 'sdk/@launchdarkly/observability-react-native'
-                    - 'sdk/@launchdarkly/observability-dotnet'
+
     workflow_call:
         inputs:
             workspace_path:
