@@ -44,7 +44,10 @@ interface UrlConnectionProvider {
 class GraphQLClient(
     val endpoint: String,
     val headers: Map<String, String> = emptyMap(),
-    private val json: Json = Json { ignoreUnknownKeys = true },
+    private val json: Json = Json {
+        isLenient = true
+        ignoreUnknownKeys = true
+    },
     private val connectionProvider: UrlConnectionProvider = object : UrlConnectionProvider {
         override fun openConnection(url: String): HttpURLConnection {
             return URL(url).openConnection() as HttpURLConnection
