@@ -1,3 +1,5 @@
+import java.net.URL
+
 plugins {
     // Apply the Android library plugin
     id("com.android.library")
@@ -6,6 +8,9 @@ plugins {
 
     // Apply the Kotlin Android plugin for Android-compatible Kotlin support.
     alias(libs.plugins.kotlin.android)
+
+    // Apply Dokka plugin for documentation generation
+    id("org.jetbrains.dokka") version "2.0.0"
 }
 
 allprojects {
@@ -55,7 +60,7 @@ tasks.withType<Test> {
 
 android {
     namespace = "com.launchdarkly.observability"
-    compileSdk = 30
+    compileSdk = 35
 
     buildFeatures {
         buildConfig = true
@@ -95,6 +100,8 @@ publishing {
             groupId = "com.launchdarkly"
             artifactId = "launchdarkly-observability-android"
             version = releaseVersion
+
+            // artifact(dokkaJar)
 
             pom {
                 name.set("LaunchDarkly Observability Android SDK")
@@ -139,4 +146,17 @@ publishing {
 
 signing {
     sign(publishing.publications["release"])
+}
+
+// Dokka configuration for Android library documentation
+tasks.dokkaJavadoc.configure {
+    moduleName.set("launchdarkly-observability-android")
+    moduleVersion.set(project.version.toString())
+    outputDirectory.set(layout.projectDirectory.dir("docs"))
+
+    dokkaSourceSets {
+        configureEach {
+            includes.from("doc-module.md")
+        }
+    }
 }

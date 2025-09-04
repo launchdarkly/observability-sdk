@@ -15,6 +15,35 @@ import com.launchdarkly.sdk.android.integrations.PluginMetadata
 import io.opentelemetry.sdk.resources.Resource
 import java.util.Collections
 
+/**
+ * This Observability class is a plugin implementation for recording observability data such as metrics, logs, errors, and traces.
+ * Provide the plugin to the LaunchDarkly Android Client SDK to enable observability.
+ *
+ * ```
+ * val ldConfig = LDConfig.Builder(LDConfig.Builder.AutoEnvAttributes.Enabled)
+ *     .mobileKey(LAUNCHDARKLY_MOBILE_KEY)
+ *     .plugins(
+ *         Components.plugins().setPlugins(
+ *             listOf(
+ *                 Observability(this@BaseApplication)
+ *             )
+ *         )
+ *     )
+ *     .build()
+ * ```
+ * 
+ * Later after initialization you can use [LDObserve] to record observability data.
+ * 
+ * ```
+ * LDObserve.recordMetric(metric)
+ * LDObserve.recordLog(message, severity, attributes)
+ * LDObserve.recordError(error, attributes)
+ * LDObserve.startSpan(name, attributes)
+ * ```
+ *
+ * @param application The application instance.
+ * @param options The options for the plugin.
+ */
 class Observability(
     private val application: Application,
     private val options: Options = Options() // new instance has reasonable defaults
