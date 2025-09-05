@@ -66,8 +66,8 @@ const LogrusSpanName = "highlight.go.log"
 
 const LDExceptionID = "launchdarkly.exception.id"
 const FeatureFlagScope = "feature_flag"
-const FeatureFlagSpanName = "evaluation"
-const FeatureFlagSpanEventName = FeatureFlagScope + "." + FeatureFlagSpanName
+
+const FeatureFlagSpanEventName = FeatureFlagScope + ".evaluation"
 const FeatureFlagContextId = "feature_flag.context.id"
 const FeatureFlagContextKey = "feature_flag.context.key"
 const FeatureFlagContextKeys = "feature_flag.contextKeys"
