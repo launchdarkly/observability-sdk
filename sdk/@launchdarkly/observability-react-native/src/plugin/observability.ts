@@ -119,7 +119,7 @@ class TracingHook implements Hook {
 
 			const allAttributes = { ...this.metaAttributes, ...eventAttributes }
 
-			const spanName = getFeatureFlagSpanName(hookContext.method)
+			const spanName = getFeatureFlagSpanName()
 			_LDObserve.startActiveSpan(spanName, (span) => {
 				span.addEvent(FEATURE_FLAG_SCOPE, allAttributes)
 

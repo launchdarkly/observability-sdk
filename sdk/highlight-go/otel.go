@@ -67,12 +67,6 @@ const LogrusSpanName = "highlight.go.log"
 const LDExceptionID = "launchdarkly.exception.id"
 const FeatureFlagScope = "feature_flag"
 
-func getFeatureFlagSpanName(method string) string {
-	if method == "" {
-		method = "variation"
-	}
-	return "LDClient." + method
-}
 
 const FeatureFlagSpanEventName = FeatureFlagScope + ".evaluation"
 const FeatureFlagContextId = "feature_flag.context.id"
