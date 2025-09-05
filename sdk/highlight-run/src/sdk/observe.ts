@@ -79,6 +79,7 @@ import { recordException } from '../client/otel/recordException'
 import { ObserveOptions } from '../client/types/observe'
 import { WebTracerProvider } from '@opentelemetry/sdk-trace-web'
 import { MeterProvider } from '@opentelemetry/sdk-metrics'
+import { isMetricSafeNumber } from 'client/utils/utils'
 
 export class ObserveSDK implements Observe {
 	/** Verbose project ID that is exposed to users. Legacy users may still be using ints. */
@@ -602,16 +603,15 @@ export class ObserveSDK implements Observe {
 			}
 			Object.entries(payload)
 				.filter(([name]) => name !== 'relativeTimestamp')
-				.forEach(
-					([name, value]) =>
-						value &&
-						typeof value === 'number' &&
+				.forEach(([name, value]) => {
+					if (isMetricSafeNumber(value)) {
 						this.recordGauge({
 							name,
 							value: value as number,
 							attributes,
-						}),
-				)
+						})
+					}
+				})
 		}, new Date().getTime())
 
 		const { getDeviceDetails } = getPerformanceMethods()
