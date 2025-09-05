@@ -9,7 +9,7 @@ import {
 	FEATURE_FLAG_PROVIDER_ATTR,
 	FEATURE_FLAG_REASON_ATTRS,
 	FEATURE_FLAG_SCOPE,
-	FEATURE_FLAG_SPAN_NAME,
+	getFeatureFlagSpanName,
 	FEATURE_FLAG_VALUE_ATTR,
 	FEATURE_FLAG_VARIATION_INDEX_ATTR,
 	getCanonicalKey,
@@ -30,6 +30,7 @@ import {
 import { Attributes } from '@opentelemetry/api'
 import { internalLog } from '../sdk/util'
 import { LDEvaluationReason } from '@launchdarkly/js-sdk-common/dist/cjs/api/data/LDEvaluationReason'
+import type { EvaluationSeriesContextWithMethod } from '../integrations/launchdarkly/types/Hooks'
 
 export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 	observe: ObserveAPI | undefined
@@ -144,7 +145,11 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 					}
 					return data
 				},
-				afterEvaluation: (hookContext, data, detail) => {
+				afterEvaluation: (
+					hookContext: EvaluationSeriesContextWithMethod,
+					data,
+					detail,
+				) => {
 					for (const hook of this.observe?.getHooks?.(metadata) ??
 						[]) {
 						hook.afterEvaluation?.(hookContext, data, detail)
@@ -179,7 +184,8 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 							getCanonicalKey(hookContext.context)
 					}
 					const attributes = { ...metaAttrs, ...eventAttributes }
-					this.observe?.startSpan(FEATURE_FLAG_SPAN_NAME, (s) => {
+					const spanName = getFeatureFlagSpanName(hookContext.method)
+					this.observe?.startSpan(spanName, (s) => {
 						if (s) {
 							s.addEvent(FEATURE_FLAG_SCOPE, attributes)
 						}

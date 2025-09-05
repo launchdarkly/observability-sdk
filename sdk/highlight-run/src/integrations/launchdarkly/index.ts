@@ -2,7 +2,7 @@ import { type HighlightPublicInterface, MetricCategory } from '../../client'
 import type { ErrorMessage, Source } from '../../client/types/shared-types'
 import type { IntegrationClient } from '../index'
 import type { LDClientMin as LDClient } from './types/LDClient'
-import type { Hook } from './types/Hooks'
+import type { Hook, EvaluationSeriesContextWithMethod } from './types/Hooks'
 import type { RecordMetric } from '../../client/types/types'
 import { BufferedClass } from '../../sdk/buffer'
 import { LDPluginEnvironmentMetadata } from '../../plugins/plugin'
@@ -21,8 +21,9 @@ export type { Hook, LDClient }
 
 export const FEATURE_FLAG_SCOPE = 'feature_flag'
 export const LD_SCOPE = 'launchdarkly'
-export const FEATURE_FLAG_SPAN_NAME = 'evaluation'
-export const FEATURE_FLAG_EVENT_NAME = `${FEATURE_FLAG_SCOPE}.${FEATURE_FLAG_SPAN_NAME}`
+export const getFeatureFlagSpanName = (method?: string) =>
+	`LDClient.${method || 'variation'}`
+export const FEATURE_FLAG_EVENT_NAME = `${FEATURE_FLAG_SCOPE}.evaluation`
 
 export const FEATURE_FLAG_ENV_ATTR = `${FEATURE_FLAG_SCOPE}.set.id`
 export const FEATURE_FLAG_KEY_ATTR = `${FEATURE_FLAG_SCOPE}.key`
@@ -149,7 +150,11 @@ export function setupLaunchDarklyIntegration(
 			}
 			return data
 		},
-		afterEvaluation: (hookContext, data, detail) => {
+		afterEvaluation: (
+			hookContext: EvaluationSeriesContextWithMethod,
+			data,
+			detail,
+		) => {
 			const eventAttributes: Attributes = {
 				[FEATURE_FLAG_PROVIDER_ATTR]: 'LaunchDarkly',
 				[FEATURE_FLAG_KEY_ATTR]: hookContext.flagKey,
@@ -181,7 +186,8 @@ export function setupLaunchDarklyIntegration(
 				)
 			}
 
-			hClient.startSpan(FEATURE_FLAG_SPAN_NAME, (s) => {
+			const spanName = getFeatureFlagSpanName(hookContext.method)
+			hClient.startSpan(spanName, (s) => {
 				if (s) {
 					s.addEvent(FEATURE_FLAG_EVENT_NAME, eventAttributes)
 				}

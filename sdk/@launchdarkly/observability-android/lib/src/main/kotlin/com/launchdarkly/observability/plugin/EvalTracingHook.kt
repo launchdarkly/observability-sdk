@@ -43,7 +43,8 @@ class EvalTracingHook
             return seriesData
         }
 
-        val builder = tracer.spanBuilder(seriesContext.method)
+        val spanName = "LDClient.${seriesContext.method ?: "variation"}"
+        val builder = tracer.spanBuilder(spanName)
             .setParent(Context.current().with(Span.current()))
 
         val attrBuilder = Attributes.builder()

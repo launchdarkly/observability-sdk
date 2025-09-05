@@ -21,7 +21,7 @@ import {
 	FEATURE_FLAG_CONTEXT_ID_ATTR,
 	FEATURE_FLAG_ENV_ATTR,
 	FEATURE_FLAG_REASON_ATTRS,
-	FEATURE_FLAG_SPAN_NAME,
+	getFeatureFlagSpanName,
 	FEATURE_FLAG_SCOPE,
 	getCanonicalKey,
 	getContextKeys,
@@ -119,7 +119,8 @@ class TracingHook implements Hook {
 
 			const allAttributes = { ...this.metaAttributes, ...eventAttributes }
 
-			_LDObserve.startActiveSpan(FEATURE_FLAG_SPAN_NAME, (span) => {
+			const spanName = getFeatureFlagSpanName(hookContext.method)
+			_LDObserve.startActiveSpan(spanName, (span) => {
 				span.addEvent(FEATURE_FLAG_SCOPE, allAttributes)
 
 				span.setAttributes({
