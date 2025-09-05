@@ -79,7 +79,7 @@ import { recordException } from '../client/otel/recordException'
 import { ObserveOptions } from '../client/types/observe'
 import { WebTracerProvider } from '@opentelemetry/sdk-trace-web'
 import { MeterProvider } from '@opentelemetry/sdk-metrics'
-import { isMetricSafeNumber } from 'client/utils/utils'
+import { isMetricSafeNumber } from '../client/utils/utils'
 
 export class ObserveSDK implements Observe {
 	/** Verbose project ID that is exposed to users. Legacy users may still be using ints. */
