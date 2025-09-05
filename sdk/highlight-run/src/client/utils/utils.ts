@@ -250,3 +250,16 @@ export function getDefaultDataURLOptions(): {
 		quality: 0.6,
 	}
 }
+
+/**
+ * Check that a value is safe to use as a metric.
+ *
+ * This means the number must be a number, be finite, and not NaN.
+ * NaN and Infinity serialize to null, which produces an invalid metric
+ * payload.
+ * @param value The value to check.
+ * @returns True if the value is safe to use as a metric, false otherwise.
+ */
+export function isMetricSafeNumber(value: unknown): boolean {
+	return typeof value === 'number' && !isNaN(value) && isFinite(value)
+}

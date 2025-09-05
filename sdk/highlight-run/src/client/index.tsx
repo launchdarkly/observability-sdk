@@ -104,7 +104,7 @@ import {
 	setItem,
 	setStorageMode,
 } from './utils/storage'
-import { getDefaultDataURLOptions } from './utils/utils'
+import { getDefaultDataURLOptions, isMetricSafeNumber } from './utils/utils'
 import { type HighlightClientRequestWorker } from './workers/highlight-client-worker'
 import { payloadToBase64 } from './utils/payload'
 import HighlightClientWorker from './workers/highlight-client-worker?worker&inline'
@@ -1107,18 +1107,17 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 								value: payload.type.toString(),
 							})
 						}
-						Object.entries(payload).forEach(
-							([name, value]) =>
-								value &&
-								typeof value === 'number' &&
+						Object.entries(payload).forEach(([name, value]) => {
+							if (isMetricSafeNumber(value)) {
 								this.recordGauge({
 									name,
 									value: value as number,
 									category: MetricCategory.Performance,
 									group: window.location.href,
 									tags,
-								}),
-						)
+								})
+							}
+						})
 					},
 					this._recordingStartTime,
 				),
