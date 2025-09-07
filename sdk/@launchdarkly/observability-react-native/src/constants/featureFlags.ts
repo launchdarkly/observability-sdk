@@ -7,8 +7,9 @@ import type {
 import { Attributes } from '@opentelemetry/api'
 
 export const FEATURE_FLAG_SCOPE = 'feature_flag'
-export const FEATURE_FLAG_SPAN_NAME = 'evaluation'
-export const FEATURE_FLAG_EVENT_NAME = `${FEATURE_FLAG_SCOPE}.${FEATURE_FLAG_SPAN_NAME}`
+export const getFeatureFlagSpanName = (method?: string) =>
+	`LDClient.${method || 'variation'}`
+export const FEATURE_FLAG_EVENT_NAME = `${FEATURE_FLAG_SCOPE}.evaluation`
 
 export const FEATURE_FLAG_KEY_ATTR = `${FEATURE_FLAG_SCOPE}.key`
 export const FEATURE_FLAG_VALUE_ATTR = `${FEATURE_FLAG_SCOPE}.result.value`

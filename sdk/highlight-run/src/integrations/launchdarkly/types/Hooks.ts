@@ -6,6 +6,11 @@ import type {
 	Hook as LDHook,
 } from '@launchdarkly/js-client-sdk'
 
+export interface EvaluationSeriesContextWithMethod
+	extends EvaluationSeriesContext {
+	method?: string
+}
+
 /**
  * Interface for extending SDK functionality via hooks.
  */
@@ -28,7 +33,7 @@ export type Hook = Omit<LDHook, 'afterEvaluation'> & {
 	 * ```
 	 */
 	afterEvaluation?(
-		hookContext: EvaluationSeriesContext,
+		hookContext: EvaluationSeriesContextWithMethod,
 		data: EvaluationSeriesData,
 		detail: {
 			/**
