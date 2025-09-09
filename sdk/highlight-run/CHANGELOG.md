@@ -2,24 +2,10 @@
 
 ## [9.21.0](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-9.20.0...highlight.run-9.21.0) (2025-09-09)
 
-
-### Features
-
-* Add sampling support to React Native observability plugin ([#108](https://github.com/launchdarkly/observability-sdk/issues/108)) ([1beae4d](https://github.com/launchdarkly/observability-sdk/commit/1beae4d39e2efe31f60d8d7712f7766984a29d81))
-* avoid requiring window for the observability plugins ([#135](https://github.com/launchdarkly/observability-sdk/issues/135)) ([d0ab9e3](https://github.com/launchdarkly/observability-sdk/commit/d0ab9e324f7bc6e11c509886ef19e9ccd8182560))
-* custom session definition based on sessionKey ([#111](https://github.com/launchdarkly/observability-sdk/issues/111)) ([d181f89](https://github.com/launchdarkly/observability-sdk/commit/d181f89e6a4f324ea9e6325016480b12cc9ff58b))
-* improve exception instrumentation in react-native SDK ([#177](https://github.com/launchdarkly/observability-sdk/issues/177)) ([22b2be7](https://github.com/launchdarkly/observability-sdk/commit/22b2be7ad83a206ba4e630c7787debf14e72c4a5))
-* Update instrumentation configuration for ease of use. ([#112](https://github.com/launchdarkly/observability-sdk/issues/112)) ([011032f](https://github.com/launchdarkly/observability-sdk/commit/011032f7c2cb941bcde5f8225705a129f6c2019c))
-* Version Packages ([#136](https://github.com/launchdarkly/observability-sdk/issues/136)) ([c271dc8](https://github.com/launchdarkly/observability-sdk/commit/c271dc87e4aba78355ca54cc7af9200f63da26a8))
-
-
 ### Bug Fixes
 
-* Correct canonical key ID generation. ([#188](https://github.com/launchdarkly/observability-sdk/issues/188)) ([7e8f9e5](https://github.com/launchdarkly/observability-sdk/commit/7e8f9e58c402d344791647c13b6df14e899d0095))
 * Fix an issue where metrics could have NaN or infinite values. ([#220](https://github.com/launchdarkly/observability-sdk/issues/220)) ([1e4cc34](https://github.com/launchdarkly/observability-sdk/commit/1e4cc342ecd0636dff28448fc932f242ab06b46b))
 * Remove debug logs for export failures. ([#218](https://github.com/launchdarkly/observability-sdk/issues/218)) ([872c1f7](https://github.com/launchdarkly/observability-sdk/commit/872c1f74a43e0ddf5a1e9e43a9ef93d5e2946ff4))
-* update highlight-run typedoc ([#184](https://github.com/launchdarkly/observability-sdk/issues/184)) ([39e66b7](https://github.com/launchdarkly/observability-sdk/commit/39e66b7f65576faf52ab455cccf56ccba9ba5b82))
-* update web o11y plugin docs ([#182](https://github.com/launchdarkly/observability-sdk/issues/182)) ([4ab5879](https://github.com/launchdarkly/observability-sdk/commit/4ab5879825e41608eb3d02b5adb60820175db78c))
 
 ## 9.20.0
 
