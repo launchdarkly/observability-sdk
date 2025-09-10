@@ -87,6 +87,7 @@ class InstrumentationManager(
                             }
                             return CompletableResultCode.ofSuccess()
                         }
+
                         override fun flush(): CompletableResultCode = CompletableResultCode.ofSuccess()
                         override fun shutdown(): CompletableResultCode = CompletableResultCode.ofSuccess()
                     }
@@ -223,7 +224,7 @@ class InstrumentationManager(
      */
     private suspend fun getSamplingConfig(): SamplingConfig? {
         return try {
-            return samplingApiService.getSamplingConfig(sdkKey)
+            samplingApiService.getSamplingConfig(sdkKey)
         } catch (err: Exception) {
             logger.warn("Failed to get sampling config: ${err.message}")
             null
