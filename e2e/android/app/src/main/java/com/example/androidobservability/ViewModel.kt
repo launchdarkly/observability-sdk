@@ -36,6 +36,34 @@ class ViewModel : ViewModel() {
         )
     }
 
+    fun triggerCustomLog(
+        message: String,
+        severity: Severity = Severity.INFO,
+        attributes: Attributes = Attributes.empty()
+    ) {
+        if (message.isNotEmpty()) {
+            LDObserve.recordLog(
+                message = message,
+                severity = severity,
+                attributes = attributes
+            )
+        }
+    }
+
+    fun triggerCustomSpan(spanName: String) {
+        if (spanName.isNotEmpty()) {
+            viewModelScope.launch(Dispatchers.IO) {
+                val customSpan = LDObserve.startSpan(
+                    name = spanName,
+                    attributes = Attributes.of(
+                        AttributeKey.stringKey("custom_span"), "true"
+                    )
+                )
+                customSpan.end()
+            }
+        }
+    }
+
     fun triggerNestedSpans() {
         viewModelScope.launch(Dispatchers.IO) {
             val newSpan0 = LDObserve.startSpan("FakeSpan", Attributes.empty())
@@ -85,7 +113,8 @@ class ViewModel : ViewModel() {
         val url = URL("https://www.android.com/")
         val urlConnection = url.openConnection() as HttpURLConnection
         try {
-            val output = BufferedInputStream(urlConnection.inputStream).bufferedReader().use { it.readText() }
+            val output = BufferedInputStream(urlConnection.inputStream).bufferedReader()
+                .use { it.readText() }
             println("URLRequest output: $output")
         } finally {
             urlConnection.disconnect()

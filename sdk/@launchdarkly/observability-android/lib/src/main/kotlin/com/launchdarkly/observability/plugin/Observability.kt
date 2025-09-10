@@ -6,6 +6,7 @@ import com.launchdarkly.logging.LDLogger
 import com.launchdarkly.logging.Logs
 import com.launchdarkly.observability.api.Options
 import com.launchdarkly.observability.client.ObservabilityClient
+import com.launchdarkly.observability.client.TelemetryInspector
 import com.launchdarkly.observability.sdk.LDObserve
 import com.launchdarkly.sdk.android.LDClient
 import com.launchdarkly.sdk.android.integrations.EnvironmentMetadata
@@ -20,6 +21,7 @@ class Observability(
     private val options: Options = Options() // new instance has reasonable defaults
 ) : Plugin() {
     private val logger: LDLogger
+    private var observabilityClient: ObservabilityClient? = null
 
     init {
         val actualLogAdapter = Logs.level(options.logAdapter, if (options.debug) LDLogLevel.DEBUG else DEFAULT_LOG_LEVEL)
@@ -58,14 +60,18 @@ class Observability(
             }
         }
 
-        val observabilityClient = ObservabilityClient(application, sdkKey, resourceBuilder.build(), logger, options)
-        LDObserve.init(observabilityClient)
+        observabilityClient = ObservabilityClient(application, sdkKey, resourceBuilder.build(), logger, options)
+        observabilityClient?.let { LDObserve.init(it) }
     }
 
     override fun getHooks(metadata: EnvironmentMetadata?): MutableList<Hook> {
         return Collections.singletonList(
             EvalTracingHook(true, true)
         )
+    }
+
+    fun getTelemetryInspector(): TelemetryInspector? {
+        return observabilityClient?.getTelemetryInspector()
     }
 
     companion object {

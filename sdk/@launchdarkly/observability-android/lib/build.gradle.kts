@@ -37,6 +37,9 @@ dependencies {
 
     // TODO: Evaluate risks associated with incubator APIs
     implementation("io.opentelemetry:opentelemetry-api-incubator:1.51.0-alpha")
+    
+    // Testing exporters for telemetry inspection
+    implementation("io.opentelemetry:opentelemetry-sdk-testing:1.51.0")
 
     // Android instrumentation
     implementation("io.opentelemetry.android:core:0.11.0-alpha")
