@@ -21,10 +21,12 @@ import {
 	InstrumentationManager,
 	InstrumentationManagerOptions,
 } from '../client/InstrumentationManager'
+import { ErrorInstrumentation } from '../instrumentation/ErrorInstrumentation'
 
 export class ObservabilityClient {
 	private sessionManager: SessionManager
 	private instrumentationManager: InstrumentationManager
+	private errorInstrumentation?: ErrorInstrumentation
 	private options: InstrumentationManagerOptions
 	private isInitialized = false
 
@@ -98,6 +100,13 @@ export class ObservabilityClient {
 
 			this.instrumentationManager.setSessionManager(this.sessionManager)
 			void this.instrumentationManager.initialize(resource)
+
+			// Initialize automatic error instrumentation (enabled by default)
+			if (!this.options.disableErrorTracking) {
+				this.errorInstrumentation = new ErrorInstrumentation(this)
+				this.errorInstrumentation.initialize()
+			}
+
 			this.isInitialized = true
 
 			this._log('initialized successfully')
@@ -234,6 +243,12 @@ export class ObservabilityClient {
 	}
 
 	public async stop(): Promise<void> {
+		// Clean up error instrumentation
+		if (this.errorInstrumentation) {
+			this.errorInstrumentation.destroy()
+			this.errorInstrumentation = undefined
+		}
+
 		await this.instrumentationManager.stop()
 		this.isInitialized = false
 	}
