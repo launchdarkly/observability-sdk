@@ -72,7 +72,6 @@ class InstrumentationManager(
     private var customSampler = CustomSampler()
     private val graphqlClient = GraphQLClient(options.backendUrl)
     private val samplingApiService = SamplingApiService(graphqlClient)
-    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var inMemorySpanExporter: InMemorySpanExporter? = null
     private var inMemoryLogExporter: InMemoryLogRecordExporter? = null
     private var telemetryInspector: TelemetryInspector? = null
