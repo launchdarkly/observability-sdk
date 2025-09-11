@@ -1,6 +1,6 @@
 name: Dependency Scan
 permissions:
-  contents: read
+    contents: read
 
 on:
     pull_request:
