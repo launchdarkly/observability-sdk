@@ -10,9 +10,9 @@ on:
 
 jobs:
     generate-nodejs-sbom:
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-latest-8-cores
         env:
-            NODE_OPTIONS: '--max-old-space-size=6144'
+            NODE_OPTIONS: '--max-old-space-size=8192'
         steps:
             - uses: actions/checkout@v4
 
@@ -20,9 +20,7 @@ jobs:
               uses: launchdarkly/gh-actions/actions/dependency-scan/generate-sbom@main
               with:
                   types: 'nodejs'
-                  project-directory: 'sdk'
-                  recurse: 'false'
-              timeout-minutes: 10
+              timeout-minutes: 20
 
     evaluate-policy:
         runs-on: ubuntu-latest
@@ -30,7 +28,7 @@ jobs:
             - generate-nodejs-sbom
         steps:
             - uses: actions/checkout@v4
-            
+
             - name: Evaluate SBOM Policy
               uses: launchdarkly/gh-actions/actions/dependency-scan/evaluate-policy@main
               with:
