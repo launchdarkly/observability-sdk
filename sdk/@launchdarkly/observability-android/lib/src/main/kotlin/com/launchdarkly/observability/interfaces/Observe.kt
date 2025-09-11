@@ -6,7 +6,7 @@ import io.opentelemetry.api.trace.Span
 
 /**
  * Interface for observability operations in the LaunchDarkly Android SDK.
- * Provides methods for recording various types of metrics.
+ * Provides methods for recording various types of information.
  */
 interface Observe {
     /**

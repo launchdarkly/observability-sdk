@@ -10,9 +10,13 @@ import io.opentelemetry.api.trace.Span
 import io.opentelemetry.api.trace.Tracer
 import io.opentelemetry.context.Context
 
+/**
+ * This class is a hook implementation for recording flag evaluation events
+ * on spans.
+ */
 class EvalTracingHook
 /**
- * Creates a [EvalTracingHook]
+ * Creates an [EvalTracingHook]
  *
  * @param withSpans will include child spans for the various hook series when they happen
  * @param withValue will include the value of the feature flag in the recorded evaluation events

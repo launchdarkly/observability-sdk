@@ -52,7 +52,11 @@ private const val INSTRUMENTATION_SCOPE_NAME = "com.launchdarkly.observability"
 /**
  * Manages instrumentation for LaunchDarkly Observability.
  *
+ * @param application The application instance.
+ * @param sdkKey The SDK key.
  * @param resources The OpenTelemetry resource describing this service.
+ * @param logger The logger.
+ * @param options Additional options.
  */
 class InstrumentationManager(
     private val application: Application,
@@ -72,6 +76,9 @@ class InstrumentationManager(
     private var inMemorySpanExporter: InMemorySpanExporter? = null
     private var inMemoryLogExporter: InMemoryLogRecordExporter? = null
     private var telemetryInspector: TelemetryInspector? = null
+
+    //TODO: Evaluate if this class should have a close/shutdown method to close this scope
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     init {
         val otelRumConfig = OtelRumConfig().setSessionConfig(
@@ -281,7 +288,7 @@ class InstrumentationManager(
      */
     private suspend fun getSamplingConfig(): SamplingConfig? {
         return try {
-            return samplingApiService.getSamplingConfig(sdkKey)
+            samplingApiService.getSamplingConfig(sdkKey)
         } catch (err: Exception) {
             logger.warn("Failed to get sampling config: ${err.message}")
             null

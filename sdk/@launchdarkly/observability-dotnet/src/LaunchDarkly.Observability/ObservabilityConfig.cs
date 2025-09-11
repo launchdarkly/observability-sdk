@@ -5,7 +5,13 @@ using OpenTelemetry.Trace;
 
 namespace LaunchDarkly.Observability
 {
-    public struct ObservabilityConfig
+#if NETFRAMEWORK
+    using LoggerBuilderType = OpenTelemetryLoggerOptions;
+#else
+    using LoggerBuilderType = LoggerProviderBuilder;
+#endif
+
+    public class ObservabilityConfig
     {
         /// <summary>
         /// The configured OTLP endpoint.
@@ -52,7 +58,7 @@ namespace LaunchDarkly.Observability
         /// <summary>
         /// Function which extends the configuration of the logger provider.
         /// </summary>
-        public Action<LoggerProviderBuilder> ExtendedLoggerConfiguration { get; }
+        public Action<LoggerBuilderType> ExtendedLoggerConfiguration { get; }
 
         /// <summary>
         /// Function which extends the configuration of the meter provider.
@@ -67,9 +73,9 @@ namespace LaunchDarkly.Observability
             string serviceVersion,
             string sdkKey,
             Action<TracerProviderBuilder> extendedTracerConfiguration,
-            Action<LoggerProviderBuilder> extendedLoggerConfiguration,
+            Action<LoggerBuilderType> extendedLoggerConfiguration,
             Action<MeterProviderBuilder> extendedMeterConfiguration
-            )
+        )
         {
             OtlpEndpoint = otlpEndpoint;
             BackendUrl = backendUrl;
