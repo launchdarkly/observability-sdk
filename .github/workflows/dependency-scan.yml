@@ -20,6 +20,8 @@ jobs:
               uses: launchdarkly/gh-actions/actions/dependency-scan/generate-sbom@main
               with:
                   types: 'nodejs'
+                  project-directory: 'sdk'
+                  recurse: 'false'
               timeout-minutes: 10
 
     evaluate-policy:
