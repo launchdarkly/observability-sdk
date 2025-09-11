@@ -46,7 +46,11 @@ private const val INSTRUMENTATION_SCOPE_NAME = "com.launchdarkly.observability"
 /**
  * Manages instrumentation for LaunchDarkly Observability.
  *
+ * @param application The application instance.
+ * @param sdkKey The SDK key.
  * @param resources The OpenTelemetry resource describing this service.
+ * @param logger The logger.
+ * @param options Additional options.
  */
 class InstrumentationManager(
     private val application: Application,

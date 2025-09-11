@@ -22,7 +22,17 @@
  *   AutoEnvAttributes.Enabled,
  *   {
  *      plugins: [
- *        new Observability(),
+ *        new Observability({
+ *          // Error handling is enabled by default for all error types
+ *          // Optional configuration:
+ *          errorHandling: {
+ *            errorSampleRate: 1.0, // Default: 1.0 (capture all errors)
+ *            beforeSend: (error, context) => {
+ *              // Optional: filter errors before sending
+ *              return error
+ *            }
+ *          }
+ *        }),
  *      ]
  *  }
  * )

@@ -7,6 +7,15 @@ import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Severity
 import io.opentelemetry.api.trace.Span
 
+/**
+ * LDObserve is the singleton entry point for recording observability data such as 
+ * metrics, logs, errors, and traces. It is recommended to use the [Observability] plugin
+ * with the LaunchDarkly Android Client SDK, as that will automatically initialize the
+ * [LDObserve] singleton instance.
+ *
+ * @constructor Creates an LDObserve instance with the provided [ObservabilityClient].
+ * @param client The [ObservabilityClient] to which observability data will be forwarded.
+ */
 class LDObserve(private val client: ObservabilityClient) : Observe {
     override fun recordMetric(metric: Metric) {
         client.recordMetric(metric)

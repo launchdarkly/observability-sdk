@@ -1,5 +1,12 @@
 # highlight.run
 
+## [9.21.0](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-9.20.0...highlight.run-9.21.0) (2025-09-09)
+
+### Bug Fixes
+
+* Fix an issue where metrics could have NaN or infinite values. ([#220](https://github.com/launchdarkly/observability-sdk/issues/220)) ([1e4cc34](https://github.com/launchdarkly/observability-sdk/commit/1e4cc342ecd0636dff28448fc932f242ab06b46b))
+* Remove debug logs for export failures. ([#218](https://github.com/launchdarkly/observability-sdk/issues/218)) ([872c1f7](https://github.com/launchdarkly/observability-sdk/commit/872c1f74a43e0ddf5a1e9e43a9ef93d5e2946ff4))
+
 ## 9.20.0
 
 ### Minor Changes
