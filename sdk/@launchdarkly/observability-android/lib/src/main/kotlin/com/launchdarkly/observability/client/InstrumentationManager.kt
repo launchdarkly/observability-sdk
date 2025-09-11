@@ -66,6 +66,8 @@ class InstrumentationManager(
     private var customSampler = CustomSampler()
     private val graphqlClient = GraphQLClient(options.backendUrl)
     private val samplingApiService = SamplingApiService(graphqlClient)
+
+    //TODO: Evaluate if this class should have a close/shutdown method to close this scope
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
 
