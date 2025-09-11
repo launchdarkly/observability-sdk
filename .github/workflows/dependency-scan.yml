@@ -24,6 +24,8 @@ jobs:
         needs:
             - generate-nodejs-sbom
         steps:
+            - uses: actions/checkout@v4
+            
             - name: Evaluate SBOM Policy
               uses: launchdarkly/gh-actions/actions/dependency-scan/evaluate-policy@main
               with:
