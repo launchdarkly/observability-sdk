@@ -61,7 +61,6 @@ function OTelConflictTest() {
 					recordHeadersAndBody: true,
 				},
 				serviceName: 'ld-conflict-test',
-				backendUrl: 'http://localhost:8082/public',
 			}
 
 			const client = initLD(
