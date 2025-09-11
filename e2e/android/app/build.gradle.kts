@@ -83,7 +83,7 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.androidx.ui.test.junit4)
     testImplementation(libs.core.ktx)
-    testImplementation("org.robolectric:robolectric:4.16")
+    testImplementation(libs.robolectric)
     testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
     testImplementation("io.opentelemetry:opentelemetry-sdk-testing:1.51.0")
 
