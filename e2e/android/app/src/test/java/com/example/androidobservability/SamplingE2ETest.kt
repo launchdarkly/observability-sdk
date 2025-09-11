@@ -62,7 +62,7 @@ class SamplingE2ETest {
             it.bodyValue?.value.toString()
         }
 
-        // Only first and final logs are exported
+        // Only first and final logs should be exported
         assertEquals(2, logsExported?.size)
         assertEquals("first-log", logsExported?.get(0))
         assertEquals("final-log", logsExported?.get(1))
@@ -78,7 +78,7 @@ class SamplingE2ETest {
             it.name
         }
 
-        // Only first and final spans are exported
+        // Only first and final spans should be exported
         assertEquals(2, spansExported?.size)
         assertEquals("first-span", spansExported?.get(0))
         assertEquals("final-span", spansExported?.get(1))

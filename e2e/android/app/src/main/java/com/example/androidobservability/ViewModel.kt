@@ -113,8 +113,7 @@ class ViewModel : ViewModel() {
         val url = URL("https://www.android.com/")
         val urlConnection = url.openConnection() as HttpURLConnection
         try {
-            val output = BufferedInputStream(urlConnection.inputStream).bufferedReader()
-                .use { it.readText() }
+            val output = BufferedInputStream(urlConnection.inputStream).bufferedReader().use { it.readText() }
             println("URLRequest output: $output")
         } finally {
             urlConnection.disconnect()
