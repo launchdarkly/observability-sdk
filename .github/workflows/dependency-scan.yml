@@ -11,6 +11,8 @@ on:
 jobs:
     generate-nodejs-sbom:
         runs-on: ubuntu-latest
+        env:
+            NODE_OPTIONS: '--max-old-space-size=6144'
         steps:
             - uses: actions/checkout@v4
 
@@ -18,6 +20,7 @@ jobs:
               uses: launchdarkly/gh-actions/actions/dependency-scan/generate-sbom@main
               with:
                   types: 'nodejs'
+              timeout-minutes: 10
 
     evaluate-policy:
         runs-on: ubuntu-latest
