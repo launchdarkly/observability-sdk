@@ -1,0 +1,4 @@
+# Fake graphql query file used in GraphQLClientTest
+query EmptyQuery {
+	fakeField
+}
