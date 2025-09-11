@@ -53,7 +53,7 @@ class SamplingApiServiceTest {
 
             coEvery {
                 mockGraphqlClient.execute(
-                    "GetSamplingConfigQuery.graphql",
+                    "graphql/GetSamplingConfigQuery.graphql",
                     mapOf("organization_verbose_id" to organizationId),
                     SamplingResponse.serializer()
                 )
@@ -66,7 +66,7 @@ class SamplingApiServiceTest {
 
             coVerify(exactly = 1) {
                 mockGraphqlClient.execute(
-                    "GetSamplingConfigQuery.graphql",
+                    "graphql/GetSamplingConfigQuery.graphql",
                     mapOf("organization_verbose_id" to organizationId),
                     SamplingResponse.serializer()
                 )
