@@ -10,6 +10,7 @@ import {
 } from 'react-router-dom'
 import Root from './routes/root'
 import Welcome from './routes/welcome'
+import OTelConflictTest from './routes/otel-conflict-test'
 
 function rootAction() {
 	const contact = { name: 'hello' }
@@ -55,6 +56,10 @@ const router = createBrowserRouter(
 				</Route>
 			</Route>
 			<Route path={'/welcome'} element={<Welcome />} />
+			<Route
+				path={'/otel-conflict-test'}
+				element={<OTelConflictTest />}
+			/>
 		</>,
 	),
 )

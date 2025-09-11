@@ -5,6 +5,7 @@ import {
 	W3CBaggagePropagator,
 	W3CTraceContextPropagator,
 } from '@opentelemetry/core'
+import { CompressionAlgorithm } from '@opentelemetry/otlp-exporter-base'
 import {
 	Instrumentation,
 	registerInstrumentations,
@@ -96,7 +97,9 @@ export const setupBrowserTracing = (
 	sampler: ExportSampler,
 ) => {
 	if (providers.tracerProvider !== undefined) {
-		console.warn('OTEL already initialized. Skipping...')
+		console.warn(
+			'LaunchDarkly OpenTelemetry already initialized. Skipping...',
+		)
 		return
 	}
 	otelConfig = config
@@ -117,9 +120,7 @@ export const setupBrowserTracing = (
 		url: config.otlpEndpoint + '/v1/traces',
 		concurrencyLimit: 100,
 		timeoutMillis: 30_000,
-		// Using any because we were getting an error importing CompressionAlgorithm
-		// from @opentelemetry/otlp-exporter-base.
-		compression: 'gzip' as any,
+		compression: CompressionAlgorithm.GZIP,
 		keepAlive: true,
 		httpAgentOptions: {
 			timeout: 60_000,
@@ -159,7 +160,6 @@ export const setupBrowserTracing = (
 				]
 			: [spanProcessor],
 	})
-	api.trace.setGlobalTracerProvider(providers.tracerProvider)
 
 	const meterExporter = new OTLPMetricExporterBrowser({
 		...exporterOptions,
@@ -172,7 +172,6 @@ export const setupBrowserTracing = (
 	})
 
 	providers.meterProvider = new MeterProvider({ resource, readers: [reader] })
-	api.metrics.setGlobalMeterProvider(providers.meterProvider)
 
 	// TODO: allow passing in custom instrumentations/configurations
 	let instrumentations: Instrumentation[] = []
@@ -284,12 +283,14 @@ export const setupBrowserTracing = (
 							return
 						}
 
-						const spanName = getSpanName(
-							browserXhr._url,
-							browserXhr._method,
-							xhr.responseText,
-						)
-						span.updateName(spanName)
+						if (xhr.responseType !== 'blob') {
+							const spanName = getSpanName(
+								browserXhr._url,
+								browserXhr._method,
+								xhr.responseText,
+							)
+							span.updateName(spanName)
+						}
 
 						enhanceSpanWithHttpRequestAttributes(
 							span,
@@ -311,6 +312,18 @@ export const setupBrowserTracing = (
 			)
 		}
 	}
+
+	// Since we do not attempt to set the global tracer provider (not recommended
+	// by SDKs) we need to set the providers on the instrumentations.
+	instrumentations.forEach((instrumentation) => {
+		if (providers.tracerProvider) {
+			instrumentation.setTracerProvider(providers.tracerProvider)
+		}
+
+		if (providers.meterProvider) {
+			instrumentation.setMeterProvider(providers.meterProvider)
+		}
+	})
 
 	registerInstrumentations({ instrumentations })
 
