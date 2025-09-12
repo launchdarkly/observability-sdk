@@ -3,9 +3,9 @@ package com.launchdarkly.observability.client
 import android.app.Application
 import com.launchdarkly.logging.LDLogger
 import com.launchdarkly.observability.api.Options
+import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.observability.network.GraphQLClient
 import com.launchdarkly.observability.network.SamplingApiService
-import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.observability.sampling.CompositeLogExporter
 import com.launchdarkly.observability.sampling.CustomSampler
 import com.launchdarkly.observability.sampling.SamplingConfig
@@ -67,6 +67,10 @@ class InstrumentationManager(
     private val graphqlClient = GraphQLClient(options.backendUrl)
     private val samplingApiService = SamplingApiService(graphqlClient)
 
+    private var spanProcessor: BatchSpanProcessor? = null
+    private var logProcessor: BatchLogRecordProcessor? = null
+    private var metricsReader: PeriodicMetricReader? = null
+
     //TODO: Evaluate if this class should have a close/shutdown method to close this scope
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
@@ -101,11 +105,13 @@ class InstrumentationManager(
                     val compositeExporter = CompositeLogExporter(logExporter, debugLogExporter)
                     val samplingLogExporter = SamplingLogExporter(compositeExporter, customSampler)
                     val logProcessor = getBatchLogRecordProcessor(samplingLogExporter)
+                    this@InstrumentationManager.logProcessor = logProcessor
 
                     sdkLoggerProviderBuilder.addLogRecordProcessor(logProcessor)
                 } else {
                     val samplingLogExporter = SamplingLogExporter(logExporter, customSampler)
                     val logProcessor = getBatchLogRecordProcessor(samplingLogExporter)
+                    this@InstrumentationManager.logProcessor = logProcessor
 
                     sdkLoggerProviderBuilder.addLogRecordProcessor(logProcessor)
                 }
@@ -124,6 +130,7 @@ class InstrumentationManager(
                     .setExporterTimeout(5000, TimeUnit.MILLISECONDS)
                     .setMaxExportBatchSize(10)
                     .build()
+                this@InstrumentationManager.spanProcessor = spanProcessor
 
                 sdkTracerProviderBuilder
                     .setResource(resources)
@@ -140,6 +147,7 @@ class InstrumentationManager(
                     PeriodicMetricReader.builder(metricExporter)
                         .setInterval(10, TimeUnit.SECONDS)
                         .build()
+                this@InstrumentationManager.metricsReader = metricReader
 
                 sdkMeterProviderBuilder
                     .setResource(resources)
@@ -222,6 +230,30 @@ class InstrumentationManager(
         return otelTracer.spanBuilder(name)
             .setAllAttributes(attributes)
             .startSpan()
+    }
+
+    fun flush(): Boolean {
+        return try {
+            val results = mutableListOf<CompletableResultCode>()
+
+            spanProcessor?.let {
+                results.add(it.forceFlush())
+            }
+            logProcessor?.let {
+                results.add(it.forceFlush())
+            }
+            metricsReader?.let {
+                results.add(it.forceFlush())
+            }
+
+            // Wait for all flush operations to complete with 5 second timeout
+            results.all { result ->
+                result.join(5, TimeUnit.SECONDS).isSuccess
+            }
+        } catch (e: Exception) {
+            logger.warn("Flush failed: ${e.message}")
+            false
+        }
     }
 
     /**

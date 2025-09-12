@@ -43,7 +43,6 @@ interface Observe {
      * Record an error.
      * @param error The error to record
      * @param attributes The attributes to record with the error
-     * @param options The options to record with the error
      */
     fun recordError(error: Error, attributes: Attributes)
 
@@ -61,4 +60,10 @@ interface Observe {
      * @param attributes The attributes to record with the span
      */
     fun startSpan(name: String, attributes: Attributes): Span
+
+    /**
+     * Flushes all pending telemetry data (traces, logs, metrics).
+     * @return true if all flush operations succeeded, false otherwise
+     */
+    fun flush(): Boolean
 }
