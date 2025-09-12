@@ -25,7 +25,7 @@
 						"regexValue": "Database connection .*"
 					},
 					"severityText": {
-						"matchValue": "ERROR"
+						"matchValue": "WARN"
 					},
 					"attributes": [
 						{

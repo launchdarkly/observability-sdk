@@ -116,7 +116,7 @@ class SamplingE2ETest {
         // Log 4: Matches complex config with specific attributes
         LDObserve.recordLog(
             message = "Database connection failed",
-            severity = Severity.ERROR,
+            severity = Severity.WARN,
             attributes = Attributes.of(
                 AttributeKey.stringKey("service.name"), "db-primary",
                 AttributeKey.booleanKey("retry.enabled"), true,
