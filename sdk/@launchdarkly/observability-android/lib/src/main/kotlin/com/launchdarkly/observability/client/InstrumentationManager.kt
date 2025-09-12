@@ -232,28 +232,25 @@ class InstrumentationManager(
             .startSpan()
     }
 
+    /**
+     * Flushes all pending telemetry data (traces, logs, metrics).
+     * @return true if all flush operations succeeded, false otherwise
+     */
     fun flush(): Boolean {
-        return try {
-            val results = mutableListOf<CompletableResultCode>()
+        val results = mutableListOf<CompletableResultCode>()
 
-            spanProcessor?.let {
-                results.add(it.forceFlush())
-            }
-            logProcessor?.let {
-                results.add(it.forceFlush())
-            }
-            metricsReader?.let {
-                results.add(it.forceFlush())
-            }
-
-            // Wait for all flush operations to complete with 5 second timeout
-            results.all { result ->
-                result.join(5, TimeUnit.SECONDS).isSuccess
-            }
-        } catch (e: Exception) {
-            logger.warn("Flush failed: ${e.message}")
-            false
+        spanProcessor?.let {
+            results.add(it.forceFlush())
         }
+        logProcessor?.let {
+            results.add(it.forceFlush())
+        }
+        metricsReader?.let {
+            results.add(it.forceFlush())
+        }
+
+        // Wait for all flush operations to complete with a single 5 second timeout
+        return CompletableResultCode.ofAll(results).join(5, TimeUnit.SECONDS).isSuccess
     }
 
     /**
