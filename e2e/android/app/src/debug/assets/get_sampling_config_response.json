@@ -1,149 +1,149 @@
 {
-  "data": {
-    "sampling": {
-      "logs": [
-        {
-          "severityText": {
-            "matchValue": "ERROR"
-          },
-          "samplingRatio": 0
-        },
-        {
-          "message": {
-            "matchValue": "Connection failed"
-          },
-          "samplingRatio": 0
-        },
-        {
-          "message": {
-            "regexValue": "Error: .*"
-          },
-          "samplingRatio": 0
-        },
-        {
-          "message": {
-            "regexValue": "Database connection .*"
-          },
-          "severityText": {
-            "matchValue": "ERROR"
-          },
-          "attributes": [
-            {
-              "key": {
-                "regexValue": "service.*"
-              },
-              "attribute": {
-                "regexValue": "db-.*"
-              }
-            },
-            {
-              "key": {
-                "matchValue": "retry.enabled"
-              },
-              "attribute": {
-                "matchValue": true
-              }
-            },
-            {
-              "key": {
-                "matchValue": "retry.count"
-              },
-              "attribute": {
-                "matchValue": 3
-              }
-            },
-            {
-              "key": {
-                "matchValue": "retry.timeout"
-              },
-              "attribute": {
-                "matchValue": 15.5
-              }
-            }
-          ],
-          "samplingRatio": 0
-        }
-      ],
-      "spans": [
-        {
-          "name": {
-            "matchValue": "test-span"
-          },
-          "samplingRatio": 0
-        },
-        {
-          "name": {
-            "regexValue": "test-span-\\d+"
-          },
-          "samplingRatio": 0
-        },
-        {
-          "events": [
-            {
-              "name": {
-                "matchValue": "test-event"
-              }
-            }
-          ],
-          "samplingRatio": 0
-        },
-        {
-          "events": [
-            {
-              "name": {
-                "regexValue": "test-event-\\d+"
-              }
-            }
-          ],
-          "samplingRatio": 0
-        },
-        {
-          "attributes": [
-            {
-              "key": {
-                "matchValue": "http.method"
-              },
-              "attribute": {
-                "matchValue": "POST"
-              }
-            }
-          ],
-          "samplingRatio": 0
-        },
-        {
-          "events": [
-            {
-              "attributes": [
-                {
-                  "key": {
-                    "matchValue": "error.type"
-                  },
-                  "attribute": {
-                    "matchValue": "network"
-                  }
-                },
-                {
-                  "key": {
-                    "matchValue": "db.error"
-                  },
-                  "attribute": {
-                    "regexValue": "Database connection .*"
-                  }
-                },
-                {
-                  "key": {
-                    "matchValue": "error.code"
-                  },
-                  "attribute": {
-                    "matchValue": 503
-                  }
-                }
-              ]
-            }
-          ],
-          "samplingRatio": 0
-        }
-      ]
-    }
-  }
+	"data": {
+		"sampling": {
+			"logs": [
+				{
+					"severityText": {
+						"matchValue": "ERROR"
+					},
+					"samplingRatio": 0
+				},
+				{
+					"message": {
+						"matchValue": "Connection failed"
+					},
+					"samplingRatio": 0
+				},
+				{
+					"message": {
+						"regexValue": "Error: .*"
+					},
+					"samplingRatio": 0
+				},
+				{
+					"message": {
+						"regexValue": "Database connection .*"
+					},
+					"severityText": {
+						"matchValue": "ERROR"
+					},
+					"attributes": [
+						{
+							"key": {
+								"regexValue": "service.*"
+							},
+							"attribute": {
+								"regexValue": "db-.*"
+							}
+						},
+						{
+							"key": {
+								"matchValue": "retry.enabled"
+							},
+							"attribute": {
+								"matchValue": true
+							}
+						},
+						{
+							"key": {
+								"matchValue": "retry.count"
+							},
+							"attribute": {
+								"matchValue": 3
+							}
+						},
+						{
+							"key": {
+								"matchValue": "retry.timeout"
+							},
+							"attribute": {
+								"matchValue": 15.5
+							}
+						}
+					],
+					"samplingRatio": 0
+				}
+			],
+			"spans": [
+				{
+					"name": {
+						"matchValue": "test-span"
+					},
+					"samplingRatio": 0
+				},
+				{
+					"name": {
+						"regexValue": "test-span-\\d+"
+					},
+					"samplingRatio": 0
+				},
+				{
+					"events": [
+						{
+							"name": {
+								"matchValue": "test-event"
+							}
+						}
+					],
+					"samplingRatio": 0
+				},
+				{
+					"events": [
+						{
+							"name": {
+								"regexValue": "test-event-\\d+"
+							}
+						}
+					],
+					"samplingRatio": 0
+				},
+				{
+					"attributes": [
+						{
+							"key": {
+								"matchValue": "http.method"
+							},
+							"attribute": {
+								"matchValue": "POST"
+							}
+						}
+					],
+					"samplingRatio": 0
+				},
+				{
+					"events": [
+						{
+							"attributes": [
+								{
+									"key": {
+										"matchValue": "error.type"
+									},
+									"attribute": {
+										"matchValue": "network"
+									}
+								},
+								{
+									"key": {
+										"matchValue": "db.error"
+									},
+									"attribute": {
+										"regexValue": "Database connection .*"
+									}
+								},
+								{
+									"key": {
+										"matchValue": "error.code"
+									},
+									"attribute": {
+										"matchValue": 503
+									}
+								}
+							]
+						}
+					],
+					"samplingRatio": 0
+				}
+			]
+		}
+	}
 }
