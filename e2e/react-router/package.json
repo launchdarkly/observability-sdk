@@ -14,6 +14,7 @@
 		"@launchdarkly/js-client-sdk": "^0.6.0",
 		"@launchdarkly/observability": "workspace:*",
 		"@launchdarkly/session-replay": "workspace:*",
+		"@splunk/otel-web": "^0.24.0",
 		"launchdarkly-js-client-sdk": "3.8.1",
 		"launchdarkly-react-client-sdk": "3.8.1",
 		"localforage": "^1.10.0",

@@ -39,6 +39,12 @@ export default function Root() {
 	return (
 		<div id="sidebar">
 			<h1>Hello, world</h1>
+			<nav style={{ marginBottom: '20px' }}>
+				<a href="/welcome" style={{ marginRight: '10px' }}>
+					Welcome Page
+				</a>
+				<a href="/otel-conflict-test">OTel Conflict Test</a>
+			</nav>
 			<p>{flags}</p>
 			<a href={session} target={'_blank'}>
 				{session}
