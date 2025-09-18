@@ -20,7 +20,7 @@ const sessionReplaySettings: ConstructorParameters<typeof SessionReplay>[0] = {
 	debug: { clientInteractions: true, domRecording: true },
 	privacySetting: 'none',
 	serviceName: 'ryan-test',
-	backendUrl: 'http://localhost:8082/public',
+	backendUrl: 'https://pub.observability.ld-stg.launchdarkly.com/',
 }
 
 export const client = init(

@@ -13,23 +13,11 @@ import Welcome from './routes/welcome'
 
 function rootAction() {
 	const contact = { name: 'hello' }
-	if (Math.random() < 0.5) {
-		throw new Response('', {
-			status: 404,
-			statusText: 'Not Found',
-		})
-	}
 	return { contact }
 }
 
 function rootLoader() {
 	const contact = { name: 'hello' }
-	if (Math.random() < 0.5) {
-		throw new Response('', {
-			status: 404,
-			statusText: 'Not Found',
-		})
-	}
 	return { contact }
 }
 

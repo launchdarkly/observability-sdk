@@ -2,7 +2,10 @@ import { compressSync, strToU8 } from 'fflate'
 import { PushPayloadMutationVariables } from '../graph/generated/operations'
 
 export async function payloadToBase64(payload: PushPayloadMutationVariables) {
-	const buf = strToU8(JSON.stringify(payload))
+	const str = JSON.stringify(payload)
+	console.log("payload:")
+	console.log(str)
+	const buf = strToU8(str)
 	const compressed = compressSync(buf)
 	// use a FileReader to generate a base64 data URI:
 	const base64url = await new Promise<string>((r) => {
