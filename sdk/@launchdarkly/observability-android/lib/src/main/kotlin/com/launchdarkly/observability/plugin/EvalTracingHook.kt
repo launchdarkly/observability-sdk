@@ -38,7 +38,7 @@ internal constructor(private val withSpans: Boolean, private val withValue: Bool
         )
     }
 
-    fun beforeEvaluationInternal(
+    private fun beforeEvaluationInternal(
         tracer: Tracer,
         seriesContext: EvaluationSeriesContext,
         seriesData: Map<String, Any>
@@ -104,7 +104,7 @@ internal constructor(private val withSpans: Boolean, private val withValue: Bool
         )
     }
 
-    fun beforeIdentifyInternal(
+    private fun beforeIdentifyInternal(
         tracer: Tracer,
         seriesContext: IdentifySeriesContext,
         seriesData: Map<String, Any>
