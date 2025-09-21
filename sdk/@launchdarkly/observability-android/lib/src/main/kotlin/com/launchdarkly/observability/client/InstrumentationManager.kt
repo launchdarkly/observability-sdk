@@ -14,6 +14,7 @@ import com.launchdarkly.observability.sampling.SamplingTraceExporter
 import io.opentelemetry.android.OpenTelemetryRum
 import io.opentelemetry.android.config.OtelRumConfig
 import io.opentelemetry.android.session.SessionConfig
+import io.opentelemetry.api.GlobalOpenTelemetry
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Logger
 import io.opentelemetry.api.logs.Severity
@@ -158,6 +159,8 @@ class InstrumentationManager(
         otelMeter = otelRUM.openTelemetry.meterProvider.get(INSTRUMENTATION_SCOPE_NAME)
         otelLogger = otelRUM.openTelemetry.logsBridge.get(INSTRUMENTATION_SCOPE_NAME)
         otelTracer = otelRUM.openTelemetry.tracerProvider.get(INSTRUMENTATION_SCOPE_NAME)
+
+        GlobalOpenTelemetry.set(otelRUM.openTelemetry)
 
         scope.launch {
             val samplingConfig = getSamplingConfig()
