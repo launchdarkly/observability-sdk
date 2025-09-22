@@ -77,11 +77,7 @@ class EvalTracingHookTest {
             every { mockTracer.spanBuilder(any()) } returns spanBuilder
 
             val seriesContext = IdentifySeriesContext(mockContext, 5)
-            val seriesData = mapOf(
-                "test" to "empty_data",
-                DATA_KEY_IDENTIFY_SPAN to span,
-                DATA_KEY_IDENTIFY_SCOPE to spanScope
-            )
+            val seriesData = mapOf<String, Any>("test" to "empty_data")
             val hook = EvalTracingHook(withSpans = true, withValue = false)
 
             val result = hook.beforeIdentify(seriesContext, seriesData)
@@ -91,7 +87,9 @@ class EvalTracingHookTest {
                 put(SEMCONV_IDENTIFY_TIMEOUT, 5L)
             }
 
-            assertEquals(seriesData, result)
+            assertEquals("empty_data", result["test"])
+            assertEquals(span, result[DATA_KEY_IDENTIFY_SPAN])
+            assertEquals(spanScope, result[DATA_KEY_IDENTIFY_SCOPE])
             verify(exactly = 1) { mockTracer.spanBuilder(SEMCONV_IDENTIFY_SPAN_NAME) }
             verify(exactly = 1) { spanBuilder.startSpan() }
             verify(exactly = 1) { span.addEvent(IDENTIFY_EVENT_START) }
