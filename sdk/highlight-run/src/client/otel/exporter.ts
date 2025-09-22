@@ -54,10 +54,6 @@ export class OTLPTraceExporterBrowserWithXhrRetry extends OTLPTraceExporter {
 			}
 			retries++
 			if (retries > MAX_PUBLIC_GRAPH_RETRY_ATTEMPTS) {
-				console.error(
-					`[@launchdarkly/observability] failed to export OTeL traces: ${result.error?.message}`,
-					result.error,
-				)
 				return resultCallback({
 					code: ExportResultCode.FAILED,
 					error: result.error,
@@ -69,10 +65,6 @@ export class OTLPTraceExporterBrowserWithXhrRetry extends OTLPTraceExporter {
 						BASE_DELAY_MS + BACKOFF_DELAY_MS * Math.pow(2, retries),
 					),
 				).then(() => {
-					console.warn(
-						`[@launchdarkly/observability] retry ${retries}, failed to export OTeL traces: ${result.error?.message}`,
-						result.error,
-					)
 					super.export(sampledItems, retry)
 				})
 			}

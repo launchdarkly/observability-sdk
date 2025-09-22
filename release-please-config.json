@@ -1,4 +1,10 @@
 {
+	"plugins": [
+		{
+			"type": "node-workspace",
+			"updatePeerDependencies": false
+		}
+	],
 	"packages": {
 		"sdk/@launchdarkly/observability-python": {
 			"package-name": "launchdarkly-observability-python",
@@ -59,6 +65,13 @@
 		},
 		"sdk/@launchdarkly/observability-react-native": {
 			"package-name": "@launchdarkly/observability-react-native",
+			"release-type": "node",
+			"versioning": "default",
+			"include-v-in-tag": false,
+			"include-component-in-tag": true
+		},
+		"sdk/highlight-run": {
+			"package-name": "highlight.run",
 			"release-type": "node",
 			"versioning": "default",
 			"include-v-in-tag": false,

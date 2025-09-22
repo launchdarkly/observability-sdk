@@ -4,8 +4,11 @@ import android.app.Application
 import com.launchdarkly.logging.LDLogger
 import com.launchdarkly.observability.api.Options
 import com.launchdarkly.observability.interfaces.Metric
+import com.launchdarkly.observability.network.GraphQLClient
+import com.launchdarkly.observability.network.SamplingApiService
 import com.launchdarkly.observability.sampling.CompositeLogExporter
 import com.launchdarkly.observability.sampling.CustomSampler
+import com.launchdarkly.observability.sampling.SamplingConfig
 import com.launchdarkly.observability.sampling.SamplingLogExporter
 import com.launchdarkly.observability.sampling.SamplingTraceExporter
 import io.opentelemetry.android.OpenTelemetryRum
@@ -29,6 +32,10 @@ import io.opentelemetry.sdk.metrics.export.MetricExporter
 import io.opentelemetry.sdk.metrics.export.PeriodicMetricReader
 import io.opentelemetry.sdk.resources.Resource
 import io.opentelemetry.sdk.trace.export.BatchSpanProcessor
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
 
 private const val METRICS_PATH = "/v1/metrics"
@@ -50,13 +57,23 @@ class InstrumentationManager(
     private val sdkKey: String,
     private val resources: Resource,
     private val logger: LDLogger,
-    options: Options,
+    private val options: Options,
 ) {
     private val otelRUM: OpenTelemetryRum
     private var otelMeter: Meter
     private var otelLogger: Logger
     private var otelTracer: Tracer
     private var customSampler = CustomSampler()
+    private val graphqlClient = GraphQLClient(options.backendUrl)
+    private val samplingApiService = SamplingApiService(graphqlClient)
+
+    private var spanProcessor: BatchSpanProcessor? = null
+    private var logProcessor: BatchLogRecordProcessor? = null
+    private var metricsReader: PeriodicMetricReader? = null
+
+    //TODO: Evaluate if this class should have a close/shutdown method to close this scope
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
 
     init {
         val otelRumConfig = OtelRumConfig().setSessionConfig(
@@ -80,6 +97,7 @@ class InstrumentationManager(
                             }
                             return CompletableResultCode.ofSuccess()
                         }
+
                         override fun flush(): CompletableResultCode = CompletableResultCode.ofSuccess()
                         override fun shutdown(): CompletableResultCode = CompletableResultCode.ofSuccess()
                     }
@@ -87,11 +105,13 @@ class InstrumentationManager(
                     val compositeExporter = CompositeLogExporter(logExporter, debugLogExporter)
                     val samplingLogExporter = SamplingLogExporter(compositeExporter, customSampler)
                     val logProcessor = getBatchLogRecordProcessor(samplingLogExporter)
+                    this@InstrumentationManager.logProcessor = logProcessor
 
                     sdkLoggerProviderBuilder.addLogRecordProcessor(logProcessor)
                 } else {
                     val samplingLogExporter = SamplingLogExporter(logExporter, customSampler)
                     val logProcessor = getBatchLogRecordProcessor(samplingLogExporter)
+                    this@InstrumentationManager.logProcessor = logProcessor
 
                     sdkLoggerProviderBuilder.addLogRecordProcessor(logProcessor)
                 }
@@ -110,6 +130,7 @@ class InstrumentationManager(
                     .setExporterTimeout(5000, TimeUnit.MILLISECONDS)
                     .setMaxExportBatchSize(10)
                     .build()
+                this@InstrumentationManager.spanProcessor = spanProcessor
 
                 sdkTracerProviderBuilder
                     .setResource(resources)
@@ -126,6 +147,7 @@ class InstrumentationManager(
                     PeriodicMetricReader.builder(metricExporter)
                         .setInterval(10, TimeUnit.SECONDS)
                         .build()
+                this@InstrumentationManager.metricsReader = metricReader
 
                 sdkMeterProviderBuilder
                     .setResource(resources)
@@ -136,6 +158,12 @@ class InstrumentationManager(
         otelMeter = otelRUM.openTelemetry.meterProvider.get(INSTRUMENTATION_SCOPE_NAME)
         otelLogger = otelRUM.openTelemetry.logsBridge.get(INSTRUMENTATION_SCOPE_NAME)
         otelTracer = otelRUM.openTelemetry.tracerProvider.get(INSTRUMENTATION_SCOPE_NAME)
+
+        scope.launch {
+            val samplingConfig = getSamplingConfig()
+            if (samplingConfig != null) logger.info("Sampling configuration was successfully loaded")
+            customSampler.setConfig(samplingConfig)
+        }
     }
 
     private fun getBatchLogRecordProcessor(logRecordExporter: LogRecordExporter): BatchLogRecordProcessor {
@@ -202,5 +230,39 @@ class InstrumentationManager(
         return otelTracer.spanBuilder(name)
             .setAllAttributes(attributes)
             .startSpan()
+    }
+
+    /**
+     * Flushes all pending telemetry data (traces, logs, metrics).
+     * @return true if all flush operations succeeded, false otherwise
+     */
+    fun flush(): Boolean {
+        val results = mutableListOf<CompletableResultCode>()
+
+        spanProcessor?.let {
+            results.add(it.forceFlush())
+        }
+        logProcessor?.let {
+            results.add(it.forceFlush())
+        }
+        metricsReader?.let {
+            results.add(it.forceFlush())
+        }
+
+        // Wait for all flush operations to complete with a single 5 second timeout
+        return CompletableResultCode.ofAll(results).join(5, TimeUnit.SECONDS).isSuccess
+    }
+
+    /**
+     * Fetches sampling configuration from GraphQL endpoint
+     * @return SamplingConfig or null if error occurs
+     */
+    private suspend fun getSamplingConfig(): SamplingConfig? {
+        return try {
+            samplingApiService.getSamplingConfig(sdkKey)
+        } catch (err: Exception) {
+            logger.warn("Failed to get sampling config: ${err.message}")
+            null
+        }
     }
 }
