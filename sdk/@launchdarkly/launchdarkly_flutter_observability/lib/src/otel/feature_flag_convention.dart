@@ -41,7 +41,9 @@ String? _toJsonValue(LDValue value) {
   }
 }
 
-List<StringableAttribute> _getValueAttributes(LDEvaluationDetail<LDValue> detail) {
+List<StringableAttribute> _getValueAttributes(
+  LDEvaluationDetail<LDValue> detail,
+) {
   final attributes = <StringableAttribute>[];
   final jsonValue = _toJsonValue(detail.value);
   if (jsonValue != null) {
@@ -86,13 +88,16 @@ class FeatureFlagConvention {
 
     if (context != null && context.valid) {
       attributes.add(
-        StringableAttribute.fromString(_featureFlagContextIdAttr, context.canonicalKey),
+        StringableAttribute.fromString(
+          _featureFlagContextIdAttr,
+          context.canonicalKey,
+        ),
       );
     }
 
     if (environmentId != null) {
       attributes.add(
-        StringableAttribute.fromString(_featureFlagSetIdAttr, environmentId!),
+        StringableAttribute.fromString(_featureFlagSetIdAttr, environmentId),
       );
     }
     return attributes;

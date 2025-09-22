@@ -21,13 +21,16 @@ final class StringableAttribute extends Attribute {
   StringableAttribute.fromInt(super.key, super.value) : super.fromInt();
 
   /// Create an Attribute from a list of String values.
-  StringableAttribute.fromStringList(super.key, super.value) : super.fromStringList();
+  StringableAttribute.fromStringList(super.key, super.value)
+    : super.fromStringList();
 
   /// Create an Attribute from a list of boolean values.
-  StringableAttribute.fromBooleanList(super.key, super.value) : super.fromBooleanList();
+  StringableAttribute.fromBooleanList(super.key, super.value)
+    : super.fromBooleanList();
 
   /// Create an Attribute from a list of double-precision floating-point values.
-  StringableAttribute.fromDoubleList(super.key, super.value) : super.fromDoubleList();
+  StringableAttribute.fromDoubleList(super.key, super.value)
+    : super.fromDoubleList();
 
   /// Create an Attribute from a list of integer values.
   StringableAttribute.fromIntList(super.key, super.value) : super.fromIntList();
