@@ -2,6 +2,7 @@ import 'package:launchdarkly_flutter_observability/src/api/attribute.dart';
 import 'package:opentelemetry/api.dart' as otel;
 
 import '../otel/conversions.dart';
+import 'span_status_code.dart';
 
 /// Represents a single operation within a trace.
 final class Span {
@@ -60,8 +61,12 @@ final class Span {
   }
 
   /// Add an event to the span with the given attributes.
-  void addEvent(String name, Map<String, Attribute>? attributes) {
+  void addEvent(String name, {Map<String, Attribute>? attributes}) {
     _innerSpan.addEvent(name, attributes: convertAttributes(attributes));
+  }
+
+  void setStatus(SpanStatusCode status) {
+    _innerSpan.setStatus(convertSpanStatus(status));
   }
 }
 

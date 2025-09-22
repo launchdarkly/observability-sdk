@@ -11,12 +11,13 @@ final class Observe {
   /// Start a span with the given name and optional attributes.
   static Span startSpan(
     String name, {
-    SpanKind? kind,
+    SpanKind kind = SpanKind.internal,
     Map<String, Attribute>? attributes,
   }) {
     final tracer = otel.globalTracerProvider.getTracer(_launchDarklyTracerName);
     final span = tracer.startSpan(
       name,
+      kind: convertKind(kind),
       attributes: convertAttributes(attributes),
     );
     final token = otel.Context.attach(

@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:launchdarkly_flutter_client_sdk/launchdarkly_flutter_client_sdk.dart';
-import 'package:launchdarkly_flutter_observability/src/otel/stringable_attribute.dart';
+import 'package:launchdarkly_flutter_observability/src/api/attribute.dart';
 
 const _featureFlagEventName = 'feature_flag';
 const _featureFlagKeyAttr = '$_featureFlagEventName.key';
@@ -27,10 +27,7 @@ const _featureFlagResultReasonAttr = '$_featureFlagResultAttr.reason';
 const _featureFlagResultReasonInExperimentAttr =
     '$_featureFlagResultReasonAttr.inExperiment';
 
-final providerNameAttribute = StringableAttribute.fromString(
-  _featureFlagProviderNameAttr,
-  'LaunchDarkly',
-);
+final _providerNameAttributeValue = StringAttribute('LaunchDarkly');
 
 String? _toJsonValue(LDValue value) {
   try {
@@ -41,30 +38,20 @@ String? _toJsonValue(LDValue value) {
   }
 }
 
-List<StringableAttribute> _getValueAttributes(
-  LDEvaluationDetail<LDValue> detail,
-) {
-  final attributes = <StringableAttribute>[];
+Map<String, Attribute> _getValueAttributes(LDEvaluationDetail<LDValue> detail) {
+  final attributes = <String, Attribute>{};
   final jsonValue = _toJsonValue(detail.value);
   if (jsonValue != null) {
-    attributes.add(
-      StringableAttribute.fromString(_featureFlagResultValueAttr, jsonValue),
-    );
+    attributes[_featureFlagResultValueAttr] = StringAttribute(jsonValue);
   }
   if (detail.variationIndex != null) {
-    attributes.add(
-      StringableAttribute.fromInt(
-        _featureFlagResultVariationIndex,
-        detail.variationIndex!,
-      ),
+    attributes[_featureFlagResultVariationIndex] = IntAttribute(
+      detail.variationIndex!,
     );
   }
   if (detail.reason != null && detail.reason!.inExperiment) {
-    attributes.add(
-      StringableAttribute.fromBoolean(
-        _featureFlagResultReasonInExperimentAttr,
-        detail.reason!.inExperiment,
-      ),
+    attributes[_featureFlagResultReasonInExperimentAttr] = BooleanAttribute(
+      detail.reason!.inExperiment,
     );
   }
   return attributes;
@@ -74,31 +61,26 @@ List<StringableAttribute> _getValueAttributes(
 /// LaunchDarkly additions.
 class FeatureFlagConvention {
   /// Get feature_flag event attributes.
-  static List<StringableAttribute> getEventAttributes({
+  static Map<String, Attribute> getEventAttributes({
     required String key,
     required LDEvaluationDetail<LDValue> detail,
     LDContext? context,
     String? environmentId,
   }) {
-    List<StringableAttribute> attributes = [
-      providerNameAttribute,
-      StringableAttribute.fromString(_featureFlagKeyAttr, key),
+    Map<String, Attribute> attributes = {
+      _featureFlagProviderNameAttr: _providerNameAttributeValue,
+      _featureFlagKeyAttr: StringAttribute(key),
       ..._getValueAttributes(detail),
-    ];
+    };
 
     if (context != null && context.valid) {
-      attributes.add(
-        StringableAttribute.fromString(
-          _featureFlagContextIdAttr,
-          context.canonicalKey,
-        ),
+      attributes[_featureFlagContextIdAttr] = StringAttribute(
+        context.canonicalKey,
       );
     }
 
     if (environmentId != null) {
-      attributes.add(
-        StringableAttribute.fromString(_featureFlagSetIdAttr, environmentId),
-      );
+      attributes[_featureFlagSetIdAttr] = StringAttribute(environmentId);
     }
     return attributes;
   }

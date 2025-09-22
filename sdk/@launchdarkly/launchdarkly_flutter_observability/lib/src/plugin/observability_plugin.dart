@@ -1,9 +1,12 @@
 import 'dart:collection';
 
 import 'package:launchdarkly_flutter_client_sdk/launchdarkly_flutter_client_sdk.dart';
+import 'package:launchdarkly_flutter_observability/src/api/span_status_code.dart';
 import 'package:launchdarkly_flutter_observability/src/otel/feature_flag_convention.dart';
 import 'package:launchdarkly_flutter_observability/src/otel/setup.dart';
-import 'package:opentelemetry/api.dart';
+
+import '../api/span.dart';
+import '../observe.dart';
 
 const _launchDarklyObservabilityName = 'launchdarkly-observability';
 const _launchDarklyObservabilityPluginName =
@@ -27,11 +30,7 @@ final class _ObservabilityHook extends Hook {
     EvaluationSeriesContext hookContext,
     UnmodifiableMapView<String, dynamic> data,
   ) {
-    final tracer = globalTracerProvider.getTracer(
-      _launchDarklyObservabilityName,
-    );
-
-    final span = tracer.startSpan(
+    final span = Observe.startSpan(
       '$_launchDarklyClientPrefix.${hookContext.method}',
     );
 
@@ -58,7 +57,7 @@ final class _ObservabilityHook extends Hook {
           context: hookContext.context,
         ),
       );
-      span.setStatus(StatusCode.ok);
+      span.setStatus(SpanStatusCode.ok);
       span.end();
     }
     return data;

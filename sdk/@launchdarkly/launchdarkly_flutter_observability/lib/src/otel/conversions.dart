@@ -1,6 +1,9 @@
+import 'package:launchdarkly_flutter_observability/src/api/span_kind.dart';
+import 'package:launchdarkly_flutter_observability/src/api/span_status_code.dart';
 import 'package:opentelemetry/api.dart' as otel;
 
 import '../api/attribute.dart';
+import '../api/span_status_code.dart' as otel;
 
 /// Not for export.
 otel.Attribute? convertAttribute(String name, Attribute attribute) {
@@ -39,4 +42,31 @@ List<otel.Attribute> convertAttributes(Map<String, Attribute>? attributes) {
     }
   });
   return otelAttributes;
+}
+
+/// Not for export.
+otel.SpanKind convertKind(SpanKind kind) {
+  switch (kind) {
+    case SpanKind.server:
+      return otel.SpanKind.server;
+    case SpanKind.client:
+      return otel.SpanKind.client;
+    case SpanKind.producer:
+      return otel.SpanKind.producer;
+    case SpanKind.consumer:
+      return otel.SpanKind.consumer;
+    case SpanKind.internal:
+      return otel.SpanKind.internal;
+  }
+}
+
+otel.StatusCode convertSpanStatus(SpanStatusCode status) {
+  switch (status) {
+    case SpanStatusCode.unset:
+      return otel.StatusCode.unset;
+    case SpanStatusCode.error:
+      return otel.StatusCode.error;
+    case SpanStatusCode.ok:
+      return otel.StatusCode.ok;
+  }
 }

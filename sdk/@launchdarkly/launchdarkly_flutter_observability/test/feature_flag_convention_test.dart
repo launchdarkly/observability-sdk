@@ -2,13 +2,20 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:launchdarkly_flutter_client_sdk/launchdarkly_flutter_client_sdk.dart';
 
 import 'package:launchdarkly_flutter_observability/src/otel/feature_flag_convention.dart';
-import 'package:launchdarkly_flutter_observability/src/otel/stringable_attribute.dart';
+import 'package:launchdarkly_flutter_observability/src/api/attribute.dart';
 
 Matcher matchesAttribute(String key, dynamic value) {
-  return predicate<StringableAttribute>(
-    (attribute) => attribute.key == key && attribute.value == value,
-    'has key "$key" and value "$value"',
-  );
+  return predicate<MapEntry<String, Attribute>>((entry) {
+    if (entry.key != key) return false;
+    final attr = entry.value;
+    return switch (attr) {
+      StringAttribute() => attr.value == value,
+      IntAttribute() => attr.value == value,
+      BooleanAttribute() => attr.value == value,
+      DoubleAttribute() => attr.value == value,
+      _ => false,
+    };
+  }, 'has key "$key" and value "$value"');
 }
 
 void main() {
@@ -28,7 +35,7 @@ void main() {
     expect(attributes.length, equals(3));
     // Required attributes
     expect(
-      attributes,
+      attributes.entries,
       containsAll([
         matchesAttribute('feature_flag.provider.name', 'LaunchDarkly'),
         matchesAttribute('feature_flag.key', 'test-flag'),
@@ -53,7 +60,7 @@ void main() {
     );
 
     expect(
-      attributes,
+      attributes.entries,
       contains(
         matchesAttribute('feature_flag.context.id', context.canonicalKey),
       ),
@@ -75,7 +82,7 @@ void main() {
       context: invalidContext,
     );
 
-    expect(_findAttributeByName(attributes, 'feature_flag.context.id'), isNull);
+    expect(attributes['feature_flag.context.id'], isNull);
   });
 
   test('excludes context id when context is null', () {
@@ -92,7 +99,7 @@ void main() {
       context: null,
     );
 
-    expect(_findAttributeByName(attributes, 'feature_flag.context.id'), isNull);
+    expect(attributes['feature_flag.context.id'], isNull);
   });
 
   test('includes environment id when provided', () {
@@ -111,7 +118,7 @@ void main() {
     );
 
     expect(
-      attributes,
+      attributes.entries,
       contains(matchesAttribute('feature_flag.set.id', environmentId)),
     );
   });
@@ -130,7 +137,7 @@ void main() {
       environmentId: null,
     );
 
-    expect(_findAttributeByName(attributes, 'feature_flag.set.id'), isNull);
+    expect(attributes['feature_flag.set.id'], isNull);
   });
 
   test('includes variation index when present', () {
@@ -148,7 +155,7 @@ void main() {
     );
 
     expect(
-      attributes,
+      attributes.entries,
       contains(
         matchesAttribute('feature_flag.result.variationIndex', variationIndex),
       ),
@@ -168,10 +175,7 @@ void main() {
       detail: detail,
     );
 
-    expect(
-      _findAttributeByName(attributes, 'feature_flag.result.variationIndex'),
-      isNull,
-    );
+    expect(attributes['feature_flag.result.variationIndex'], isNull);
   });
 
   test('includes inExperiment when reason indicates experiment', () {
@@ -189,7 +193,7 @@ void main() {
     );
 
     expect(
-      attributes,
+      attributes.entries,
       contains(
         matchesAttribute('feature_flag.result.reason.inExperiment', true),
       ),
@@ -205,13 +209,7 @@ void main() {
       detail: detail,
     );
 
-    expect(
-      _findAttributeByName(
-        attributes,
-        'feature_flag.result.reason.inExperiment',
-      ),
-      isNull,
-    );
+    expect(attributes['feature_flag.result.reason.inExperiment'], isNull);
   });
 
   test('excludes inExperiment when not in experiment', () {
@@ -228,13 +226,7 @@ void main() {
       detail: detail,
     );
 
-    expect(
-      _findAttributeByName(
-        attributes,
-        'feature_flag.result.reason.inExperiment',
-      ),
-      isNull,
-    );
+    expect(attributes['feature_flag.result.reason.inExperiment'], isNull);
   });
 
   group('value serialization', () {
@@ -252,7 +244,7 @@ void main() {
       );
 
       expect(
-        attributes,
+        attributes.entries,
         contains(matchesAttribute('feature_flag.result.value', 'false')),
       );
     });
@@ -272,7 +264,7 @@ void main() {
       );
 
       expect(
-        attributes,
+        attributes.entries,
         contains(
           matchesAttribute('feature_flag.result.value', '"$stringValue"'),
         ),
@@ -294,7 +286,7 @@ void main() {
       );
 
       expect(
-        attributes,
+        attributes.entries,
         contains(matchesAttribute('feature_flag.result.value', '42.5')),
       );
     });
@@ -313,7 +305,7 @@ void main() {
       );
 
       expect(
-        attributes,
+        attributes.entries,
         contains(matchesAttribute('feature_flag.result.value', 'null')),
       );
     });
@@ -336,7 +328,7 @@ void main() {
       );
 
       expect(
-        attributes,
+        attributes.entries,
         contains(
           matchesAttribute('feature_flag.result.value', '["item1","item2"]'),
         ),
@@ -360,9 +352,9 @@ void main() {
         detail: detail,
       );
 
-      final value =
-          _findAttributeValue(attributes, 'feature_flag.result.value')
-              as String;
+      final attribute =
+          attributes['feature_flag.result.value'] as StringAttribute;
+      final value = attribute.value;
       expect(value, contains('"key1":"value1"'));
       expect(value, contains('"key2":123'));
     });
@@ -384,7 +376,7 @@ void main() {
 
       // Should still have other attributes even if value serialization fails
       expect(
-        attributes,
+        attributes.entries,
         containsAll([
           matchesAttribute('feature_flag.key', flagKey),
           matchesAttribute('feature_flag.provider.name', 'LaunchDarkly'),
@@ -413,7 +405,7 @@ void main() {
     );
 
     expect(
-      attributes,
+      attributes.entries,
       containsAll([
         // Required attributes
         matchesAttribute('feature_flag.key', flagKey),
@@ -427,21 +419,4 @@ void main() {
       ]),
     );
   });
-}
-
-// Helper functions for testing attributes
-StringableAttribute? _findAttributeByName(
-  List<StringableAttribute> attributes,
-  String name,
-) {
-  try {
-    return attributes.firstWhere((attr) => attr.key == name);
-  } catch (e) {
-    return null;
-  }
-}
-
-Object? _findAttributeValue(List<StringableAttribute> attributes, String name) {
-  final attribute = _findAttributeByName(attributes, name);
-  return attribute?.value;
 }

@@ -39,18 +39,25 @@ sealed class Attribute {
     }
     return InvalidAttribute._internal();
   }
-  Attribute._internal();
+  const Attribute._internal();
 }
 
 /// When using [fromDynamic] it is possible to get a value that cannot be
 /// represented as an attribute. When this happens an [InvalidAttribute] will
 /// be created. This attribute will be omitted from otel data.
 final class InvalidAttribute extends Attribute {
-  InvalidAttribute._internal() : super._internal();
+  const InvalidAttribute._internal() : super._internal();
 
   @override
   String toString() => 'InvalidAttribute()';
 }
+
+// Implementation note: Most of the constructors are non-const because the list
+// versions cannot be const. It is a bit safer to make them non-const, because
+// if we made them const, and later they needed to not be const, then removing
+// the const would be a breaking change.
+// The constructor for the InvalidAttribute and the base Attribute are internal
+// only, so they are safe to make const.
 
 /// An integer attribute.
 final class IntAttribute extends Attribute {
