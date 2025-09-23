@@ -3,9 +3,9 @@ package com.launchdarkly.observability.client
 import android.app.Application
 import com.launchdarkly.logging.LDLogger
 import com.launchdarkly.observability.api.Options
+import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.observability.network.GraphQLClient
 import com.launchdarkly.observability.network.SamplingApiService
-import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.observability.sampling.CompositeLogExporter
 import com.launchdarkly.observability.sampling.CompositeSpanExporter
 import com.launchdarkly.observability.sampling.CustomSampler
@@ -76,6 +76,10 @@ class InstrumentationManager(
     private var inMemoryLogExporter: InMemoryLogRecordExporter? = null
     private var telemetryInspector: TelemetryInspector? = null
 
+    private var spanProcessor: BatchSpanProcessor? = null
+    private var logProcessor: BatchLogRecordProcessor? = null
+    private var metricsReader: PeriodicMetricReader? = null
+
     //TODO: Evaluate if this class should have a close/shutdown method to close this scope
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
@@ -116,11 +120,13 @@ class InstrumentationManager(
                     val compositeExporter = CompositeLogExporter(exporters)
                     val samplingLogExporter = SamplingLogExporter(compositeExporter, customSampler)
                     val logProcessor = getBatchLogRecordProcessor(samplingLogExporter)
+                    this@InstrumentationManager.logProcessor = logProcessor
 
                     sdkLoggerProviderBuilder.addLogRecordProcessor(logProcessor)
                 } else {
                     val samplingLogExporter = SamplingLogExporter(logExporter, customSampler)
                     val logProcessor = getBatchLogRecordProcessor(samplingLogExporter)
+                    this@InstrumentationManager.logProcessor = logProcessor
 
                     sdkLoggerProviderBuilder.addLogRecordProcessor(logProcessor)
                 }
@@ -155,11 +161,13 @@ class InstrumentationManager(
                     val compositeExporter = CompositeSpanExporter(spanExporters)
                     val samplingTraceExporter = SamplingTraceExporter(compositeExporter, customSampler)
                     val spanProcessor = getBatchSpanProcessor(samplingTraceExporter)
+                    this@InstrumentationManager.spanProcessor = spanProcessor
 
                     sdkTracerProviderBuilder.addSpanProcessor(spanProcessor)
                 } else {
                     val samplingTraceExporter = SamplingTraceExporter(spanExporter, customSampler)
                     val spanProcessor = getBatchSpanProcessor(samplingTraceExporter)
+                    this@InstrumentationManager.spanProcessor = spanProcessor
 
                     sdkTracerProviderBuilder.addSpanProcessor(spanProcessor)
                 }
@@ -175,6 +183,7 @@ class InstrumentationManager(
                     PeriodicMetricReader.builder(metricExporter)
                         .setInterval(10, TimeUnit.SECONDS)
                         .build()
+                this@InstrumentationManager.metricsReader = metricReader
 
                 sdkMeterProviderBuilder
                     .setResource(resources)
@@ -280,6 +289,27 @@ class InstrumentationManager(
      * @return TelemetryInspector instance or null
      */
     fun getTelemetryInspector(): TelemetryInspector? = telemetryInspector
+
+    /**
+     * Flushes all pending telemetry data (traces, logs, metrics).
+     * @return true if all flush operations succeeded, false otherwise
+     */
+    fun flush(): Boolean {
+        val results = mutableListOf<CompletableResultCode>()
+
+        spanProcessor?.let {
+            results.add(it.forceFlush())
+        }
+        logProcessor?.let {
+            results.add(it.forceFlush())
+        }
+        metricsReader?.let {
+            results.add(it.forceFlush())
+        }
+
+        // Wait for all flush operations to complete with a single 5 second timeout
+        return CompletableResultCode.ofAll(results).join(5, TimeUnit.SECONDS).isSuccess
+    }
 
     /**
      * Fetches sampling configuration from GraphQL endpoint

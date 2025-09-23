@@ -29,6 +29,7 @@ This project contains several examples, each demonstrating the LaunchDarkly Obse
 - [Gorilla Mux Example](#3-gorilla-mux-example-cmdgorillamux)
 - [Standard HTTP Example](#4-standard-http-example-cmdhttp)
 - [Logrus Example](#5-logrus-example-cmdlogrus)
+- [Pre-Initialize Example](#6-pre-initialize-example-cmdpreinit)
 
 ### 1. Fiber Example (`cmd/fiber/`)
 
@@ -117,4 +118,29 @@ go run cmd/logrus/logrus.go
 
 **Endpoints:**
 - `GET /log` - Logs structured data with various field types and demonstrates Logrus + OpenTelemetry integration
+
+### 6. Pre-Initialize Example (`cmd/preinit/`)
+
+A web server demonstrating advanced observability initialization patterns, including pre-initializing the observability plugin before the LaunchDarkly client.
+
+**Features:**
+- Uses `ldobserve.PreInitialize()` to initialize observability before the LaunchDarkly client
+- Demonstrates using observability without the LaunchDarkly client (with limited features)
+- Shows the `NewObservabilityPluginWithoutInit()` pattern for pre-initialized observability
+- Uses standard `net/http` package with OpenTelemetry instrumentation
+- Includes graceful shutdown handling
+- Demonstrates manual span creation and attribute setting
+
+**To run:**
+```bash
+go run cmd/preinit/preinit.go
+```
+
+**Endpoints:**
+- `GET /rolldice` - Rolls a dice and returns the result, with verbose output controlled by the `verbose-response` feature flag
+
+**Use Cases:**
+- Advanced initialization scenarios where you need observability before the LaunchDarkly client
+- Using observability features without a LaunchDarkly client (some features will be unavailable)
+- Custom initialization timing requirements
  
