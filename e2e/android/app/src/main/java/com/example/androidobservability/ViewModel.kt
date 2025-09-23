@@ -36,6 +36,34 @@ class ViewModel : ViewModel() {
         )
     }
 
+    fun triggerCustomLog(
+        message: String,
+        severity: Severity = Severity.INFO,
+        attributes: Attributes = Attributes.empty()
+    ) {
+        if (message.isNotEmpty()) {
+            LDObserve.recordLog(
+                message = message,
+                severity = severity,
+                attributes = attributes
+            )
+        }
+    }
+
+    fun triggerCustomSpan(spanName: String) {
+        if (spanName.isNotEmpty()) {
+            viewModelScope.launch(Dispatchers.IO) {
+                val customSpan = LDObserve.startSpan(
+                    name = spanName,
+                    attributes = Attributes.of(
+                        AttributeKey.stringKey("custom_span"), "true"
+                    )
+                )
+                customSpan.end()
+            }
+        }
+    }
+
     fun triggerNestedSpans() {
         viewModelScope.launch(Dispatchers.IO) {
             val newSpan0 = LDObserve.startSpan("FakeSpan", Attributes.empty())

@@ -74,6 +74,19 @@ class ObservabilityClient : Observe {
         return instrumentationManager.startSpan(name, attributes)
     }
 
+    /**
+     * Returns the telemetry inspector for accessing intercepted telemetry data.
+     *
+     * This method provides access to spans and logs that have been exported by the SDK
+     * for debugging, testing, or other purposes. The inspector is only available
+     * if debug was enabled via "Options.debug".
+     *
+     * @return TelemetryInspector instance if debug is enabled, null otherwise
+     */
+    fun getTelemetryInspector(): TelemetryInspector? {
+        return instrumentationManager.getTelemetryInspector()
+    }
+
     override fun flush(): Boolean {
         return instrumentationManager.flush()
     }
