@@ -7,10 +7,12 @@ import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.observability.network.GraphQLClient
 import com.launchdarkly.observability.network.SamplingApiService
 import com.launchdarkly.observability.sampling.CompositeLogExporter
+import com.launchdarkly.observability.sampling.CompositeSpanExporter
 import com.launchdarkly.observability.sampling.CustomSampler
 import com.launchdarkly.observability.sampling.SamplingConfig
 import com.launchdarkly.observability.sampling.SamplingLogExporter
 import com.launchdarkly.observability.sampling.SamplingTraceExporter
+import com.launchdarkly.observability.utils.notNull
 import io.opentelemetry.android.OpenTelemetryRum
 import io.opentelemetry.android.config.OtelRumConfig
 import io.opentelemetry.android.session.SessionConfig
@@ -31,7 +33,11 @@ import io.opentelemetry.sdk.logs.export.LogRecordExporter
 import io.opentelemetry.sdk.metrics.export.MetricExporter
 import io.opentelemetry.sdk.metrics.export.PeriodicMetricReader
 import io.opentelemetry.sdk.resources.Resource
+import io.opentelemetry.sdk.trace.data.SpanData
+import io.opentelemetry.sdk.testing.exporter.InMemoryLogRecordExporter
+import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter
 import io.opentelemetry.sdk.trace.export.BatchSpanProcessor
+import io.opentelemetry.sdk.trace.export.SpanExporter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -66,6 +72,9 @@ class InstrumentationManager(
     private var customSampler = CustomSampler()
     private val graphqlClient = GraphQLClient(options.backendUrl)
     private val samplingApiService = SamplingApiService(graphqlClient)
+    private var inMemorySpanExporter: InMemorySpanExporter? = null
+    private var inMemoryLogExporter: InMemoryLogRecordExporter? = null
+    private var telemetryInspector: TelemetryInspector? = null
 
     private var spanProcessor: BatchSpanProcessor? = null
     private var logProcessor: BatchLogRecordProcessor? = null
@@ -73,7 +82,6 @@ class InstrumentationManager(
 
     //TODO: Evaluate if this class should have a close/shutdown method to close this scope
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-
 
     init {
         val otelRumConfig = OtelRumConfig().setSessionConfig(
@@ -90,6 +98,11 @@ class InstrumentationManager(
                 sdkLoggerProviderBuilder.setResource(resources)
 
                 if (options.debug) {
+                    val exporters = mutableListOf<LogRecordExporter>(logExporter)
+                    inMemoryLogExporter = InMemoryLogRecordExporter.create().also {
+                        exporters.add(it)
+                    }
+
                     val debugLogExporter = object : LogRecordExporter {
                         override fun export(logRecords: Collection<LogRecordData>): CompletableResultCode {
                             for (record in logRecords) {
@@ -102,7 +115,9 @@ class InstrumentationManager(
                         override fun shutdown(): CompletableResultCode = CompletableResultCode.ofSuccess()
                     }
 
-                    val compositeExporter = CompositeLogExporter(logExporter, debugLogExporter)
+                    exporters.add(debugLogExporter)
+
+                    val compositeExporter = CompositeLogExporter(exporters)
                     val samplingLogExporter = SamplingLogExporter(compositeExporter, customSampler)
                     val logProcessor = getBatchLogRecordProcessor(samplingLogExporter)
                     this@InstrumentationManager.logProcessor = logProcessor
@@ -122,19 +137,40 @@ class InstrumentationManager(
                     .setHeaders { options.customHeaders }
                     .build()
 
-                val samplingTraceExporter = SamplingTraceExporter(spanExporter, customSampler)
+                sdkTracerProviderBuilder.setResource(resources)
 
-                val spanProcessor = BatchSpanProcessor.builder(samplingTraceExporter)
-                    .setMaxQueueSize(100)
-                    .setScheduleDelay(1000, TimeUnit.MILLISECONDS)
-                    .setExporterTimeout(5000, TimeUnit.MILLISECONDS)
-                    .setMaxExportBatchSize(10)
-                    .build()
-                this@InstrumentationManager.spanProcessor = spanProcessor
+                if (options.debug) {
+                    val spanExporters = mutableListOf<SpanExporter>(spanExporter)
+                    inMemorySpanExporter = InMemorySpanExporter.create().also {
+                        spanExporters.add(it)
+                    }
 
-                sdkTracerProviderBuilder
-                    .setResource(resources)
-                    .addSpanProcessor(spanProcessor)
+                    val debugExporter = object : SpanExporter {
+                        override fun export(spans: Collection<SpanData>): CompletableResultCode {
+                            for (span in spans) {
+                                logger.info(span.toString())
+                            }
+                            return CompletableResultCode.ofSuccess()
+                        }
+
+                        override fun flush(): CompletableResultCode = CompletableResultCode.ofSuccess()
+                        override fun shutdown(): CompletableResultCode = CompletableResultCode.ofSuccess()
+                    }
+                    spanExporters.add(debugExporter)
+
+                    val compositeExporter = CompositeSpanExporter(spanExporters)
+                    val samplingTraceExporter = SamplingTraceExporter(compositeExporter, customSampler)
+                    val spanProcessor = getBatchSpanProcessor(samplingTraceExporter)
+                    this@InstrumentationManager.spanProcessor = spanProcessor
+
+                    sdkTracerProviderBuilder.addSpanProcessor(spanProcessor)
+                } else {
+                    val samplingTraceExporter = SamplingTraceExporter(spanExporter, customSampler)
+                    val spanProcessor = getBatchSpanProcessor(samplingTraceExporter)
+                    this@InstrumentationManager.spanProcessor = spanProcessor
+
+                    sdkTracerProviderBuilder.addSpanProcessor(spanProcessor)
+                }
             }
             .addMeterProviderCustomizer { sdkMeterProviderBuilder, application ->
                 val metricExporter: MetricExporter = OtlpHttpMetricExporter.builder()
@@ -155,6 +191,12 @@ class InstrumentationManager(
             }
             .build()
 
+        if (options.debug) {
+            telemetryInspector = notNull(inMemorySpanExporter, inMemoryLogExporter) { spanExporter, logExporter ->
+                TelemetryInspector(spanExporter, logExporter)
+            }
+        }
+
         otelMeter = otelRUM.openTelemetry.meterProvider.get(INSTRUMENTATION_SCOPE_NAME)
         otelLogger = otelRUM.openTelemetry.logsBridge.get(INSTRUMENTATION_SCOPE_NAME)
         otelTracer = otelRUM.openTelemetry.tracerProvider.get(INSTRUMENTATION_SCOPE_NAME)
@@ -168,6 +210,15 @@ class InstrumentationManager(
 
     private fun getBatchLogRecordProcessor(logRecordExporter: LogRecordExporter): BatchLogRecordProcessor {
         return BatchLogRecordProcessor.builder(logRecordExporter)
+            .setMaxQueueSize(100)
+            .setScheduleDelay(1000, TimeUnit.MILLISECONDS)
+            .setExporterTimeout(5000, TimeUnit.MILLISECONDS)
+            .setMaxExportBatchSize(10)
+            .build()
+    }
+
+    private fun getBatchSpanProcessor(spanExporter: SpanExporter): BatchSpanProcessor {
+        return BatchSpanProcessor.builder(spanExporter)
             .setMaxQueueSize(100)
             .setScheduleDelay(1000, TimeUnit.MILLISECONDS)
             .setExporterTimeout(5000, TimeUnit.MILLISECONDS)
@@ -231,6 +282,13 @@ class InstrumentationManager(
             .setAllAttributes(attributes)
             .startSpan()
     }
+
+    /**
+     * Returns the telemetry inspector if debug option is enabled.
+     *
+     * @return TelemetryInspector instance or null
+     */
+    fun getTelemetryInspector(): TelemetryInspector? = telemetryInspector
 
     /**
      * Flushes all pending telemetry data (traces, logs, metrics).

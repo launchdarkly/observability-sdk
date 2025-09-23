@@ -18,7 +18,7 @@ import io.opentelemetry.sdk.trace.export.SpanExporter
  * @param sampler The custom sampler that determines which spans to export
  */
 class SamplingTraceExporter(
-    private val delegate: OtlpHttpSpanExporter,
+    private val delegate: SpanExporter,
     private val sampler: ExportSampler
 ) : SpanExporter {
 

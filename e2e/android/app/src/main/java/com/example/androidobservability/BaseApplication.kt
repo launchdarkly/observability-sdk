@@ -2,6 +2,7 @@ package com.example.androidobservability
 
 import android.app.Application
 import com.launchdarkly.observability.api.Options
+import com.launchdarkly.observability.client.TelemetryInspector
 import com.launchdarkly.sdk.ContextKind
 import com.launchdarkly.sdk.LDContext
 import com.launchdarkly.sdk.android.Components
@@ -14,7 +15,7 @@ import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
 import java.util.Collections
 
-class BaseApplication : Application() {
+open class BaseApplication : Application() {
 
     companion object {
         // TODO O11Y-376: Update this credential to be driven by env variable or gradle property
@@ -22,8 +23,24 @@ class BaseApplication : Application() {
         const val LAUNCHDARKLY_MOBILE_KEY = "MOBILE_KEY_GOES_HERE"
     }
 
+    var telemetryInspector: TelemetryInspector? = null
+
     override fun onCreate() {
         super.onCreate()
+
+        val testUrl = System.getProperty("e2e_test_base_url")
+        val pluginOptions = Options(
+            resourceAttributes = Attributes.of(
+                AttributeKey.stringKey("example"), "value"
+            ),
+            debug = true,
+            logAdapter = LDAndroidLogging.adapter(),
+        )
+
+        val observabilityPlugin = Observability(
+            application = this@BaseApplication,
+            options = if (testUrl != null) pluginOptions.copy(backendUrl = testUrl) else pluginOptions
+        )
 
         // Set LAUNCHDARKLY_MOBILE_KEY to your LaunchDarkly mobile key found on the LaunchDarkly
         // dashboard in the start guide.
@@ -33,18 +50,7 @@ class BaseApplication : Application() {
             .mobileKey(LAUNCHDARKLY_MOBILE_KEY)
             .plugins(
                 Components.plugins().setPlugins(
-                    Collections.singletonList<Plugin>(
-                        Observability(
-                            this@BaseApplication,
-                            Options(
-                                resourceAttributes = Attributes.of(
-                                    AttributeKey.stringKey("example"), "value"
-                                ),
-                                debug = true,
-                                logAdapter = LDAndroidLogging.adapter(),
-                            )
-                        )
-                    )
+                    Collections.singletonList<Plugin>(observabilityPlugin)
                 )
             )
             .build()
@@ -56,5 +62,7 @@ class BaseApplication : Application() {
             .build()
 
         LDClient.init(this@BaseApplication, ldConfig, context)
+
+        telemetryInspector = observabilityPlugin.getTelemetryInspector()
     }
 }
