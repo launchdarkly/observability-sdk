@@ -133,7 +133,7 @@ export const setupBrowserTracing = (
 
 	// https://opentelemetry.io/docs/specs/otel/logs/sdk/
 	const spanProcessor = new CustomBatchSpanProcessor(exporter, {
-		maxExportBatchSize: 1_024, // Default value is 512
+		maxExportBatchSize: 1024, // Default value is 512
 		maxQueueSize: 2048, // Default value is 2048
 		exportTimeoutMillis: exporterOptions.timeoutMillis, // Default value is 30_000
 		scheduledDelayMillis: 5000, // Default value is 1000
