@@ -3,7 +3,6 @@ import 'package:launchdarkly_flutter_observability/src/api/span_status_code.dart
 import 'package:opentelemetry/api.dart' as otel;
 
 import '../api/attribute.dart';
-import '../api/span_status_code.dart' as otel;
 
 /// Not for export.
 otel.Attribute? convertAttribute(String name, Attribute attribute) {
