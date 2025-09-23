@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.7.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.6.0...launchdarkly-observability-android-0.7.0) (2025-09-23)
+
+
+### Features
+
+* Implement flush mechanism for observability data ([#229](https://github.com/launchdarkly/observability-sdk/issues/229)) ([4f266a6](https://github.com/launchdarkly/observability-sdk/commit/4f266a6eda9a8fa84780e2959d94bd4a937aa3d1))
+* O11Y-413 - Add sampling config via web request ([#212](https://github.com/launchdarkly/observability-sdk/issues/212)) ([0a82cbf](https://github.com/launchdarkly/observability-sdk/commit/0a82cbf769f10292d3a9ccbc570d46e6d0558297))
+
 ## [0.6.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.5.0...launchdarkly-observability-android-0.6.0) (2025-08-28)
 
 
