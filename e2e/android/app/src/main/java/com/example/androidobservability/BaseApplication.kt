@@ -19,7 +19,7 @@ class BaseApplication : Application() {
     companion object {
         // TODO O11Y-376: Update this credential to be driven by env variable or gradle property
         // Set LAUNCHDARKLY_MOBILE_KEY to your LaunchDarkly SDK mobile key.
-        const val LAUNCHDARKLY_MOBILE_KEY = "MOBILE_KEY_GOES_HERE"
+        const val LAUNCHDARKLY_MOBILE_KEY = "mob-a9c9ebd5-5b37-4b95-a418-c5ee4cd89468"
     }
 
     override fun onCreate() {

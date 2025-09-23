@@ -14,6 +14,7 @@ import com.launchdarkly.observability.sampling.SamplingTraceExporter
 import io.opentelemetry.android.OpenTelemetryRum
 import io.opentelemetry.android.config.OtelRumConfig
 import io.opentelemetry.android.session.SessionConfig
+import com.launchdarkly.observability.replay.ScreenshotInstrumentation
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Logger
 import io.opentelemetry.api.logs.Severity
@@ -81,6 +82,7 @@ class InstrumentationManager(
         )
 
         otelRUM = OpenTelemetryRum.builder(application, otelRumConfig)
+            .addInstrumentation(ScreenshotInstrumentation())
             .addLoggerProviderCustomizer { sdkLoggerProviderBuilder, application ->
                 val logExporter = OtlpHttpLogRecordExporter.builder()
                     .setEndpoint(options.otlpEndpoint + LOGS_PATH)

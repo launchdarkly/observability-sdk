@@ -36,6 +36,8 @@ class ScreenshotInstrumentation : AndroidInstrumentation {
         sdkKey = ""
 
         ctx.application.registerActivityLifecycleCallbacks(_screenshotter)
+
+        Log.d("Todd was here", ctx.sessionManager.getSessionId())
     }
 
     suspend fun uploadScreenshot(screenshot: Screenshot): Boolean = withContext(Dispatchers.IO) {
