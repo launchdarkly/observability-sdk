@@ -11,16 +11,15 @@ import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.trace.Span
 import io.opentelemetry.api.trace.Tracer
 import io.opentelemetry.context.Context
-import io.opentelemetry.context.Scope
 
 /**
  * This class is a hook implementation for recording flag evaluation and identify events
  * on spans.
  */
-class EvalTracingHook
+class TracingHook
 
 /**
- * Creates an [EvalTracingHook]
+ * Creates an [TracingHook]
  *
  * @param withSpans will include child spans for the various hook series when they happen
  * @param withValue will include the value of the feature flag in the recorded evaluation events
@@ -114,6 +113,7 @@ internal constructor(private val withSpans: Boolean, private val withValue: Bool
         }
 
         val spanBuilder = tracer.spanBuilder(SEMCONV_IDENTIFY_SPAN_NAME)
+            .setParent(Context.current().with(Span.current()))
         val span = spanBuilder.startSpan()
         span.addEvent(IDENTIFY_EVENT_START)
 
@@ -126,7 +126,6 @@ internal constructor(private val withSpans: Boolean, private val withValue: Bool
 
         return HashMap(seriesData).apply {
             this[DATA_KEY_IDENTIFY_SPAN] = span
-            this[DATA_KEY_IDENTIFY_SCOPE] = span.makeCurrent()
         }
     }
 
@@ -136,7 +135,6 @@ internal constructor(private val withSpans: Boolean, private val withValue: Bool
         result: IdentifySeriesResult
     ): Map<String, Any> {
         val span = seriesData[DATA_KEY_IDENTIFY_SPAN] as? Span
-        val scope = seriesData[DATA_KEY_IDENTIFY_SCOPE] as? Scope
 
         span?.let {
             val attrBuilder = Attributes.builder()
@@ -145,9 +143,6 @@ internal constructor(private val withSpans: Boolean, private val withValue: Bool
             it.addEvent(IDENTIFY_EVENT_FINISH, attrBuilder.build())
             it.end()
         }
-
-        // Closes the current span scope and restores the previous span context
-        scope?.close()
 
         return seriesData
     }

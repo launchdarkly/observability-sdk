@@ -62,8 +62,6 @@ open class BaseApplication : Application() {
             .build()
 
         LDClient.init(this@BaseApplication, ldConfig, context)
-        LDClient.get().identify(context)
-
         telemetryInspector = observabilityPlugin.getTelemetryInspector()
     }
 }
