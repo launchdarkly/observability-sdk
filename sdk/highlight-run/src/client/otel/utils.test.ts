@@ -1,3 +1,4 @@
+import { exampleGenericHttpTrace } from './fixtures'
 import { getHttpSpanName } from './utils'
 
 describe('getHttpSpanName', () => {
@@ -283,5 +284,14 @@ describe('getHttpSpanName', () => {
 				),
 			).toBe('GET /users/profile')
 		})
+	})
+
+	it('handles the example trace correctly', () => {
+		const url = exampleGenericHttpTrace.traceAttributes.http.url
+		const method = exampleGenericHttpTrace.traceAttributes.http.method
+
+		expect(getHttpSpanName(url, method, null)).toBe(
+			'GET /v2/inbox/task_count',
+		)
 	})
 })
