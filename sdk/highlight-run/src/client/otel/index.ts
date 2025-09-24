@@ -289,7 +289,7 @@ export const setupBrowserTracing = (
 						const spanName = getHttpSpanName(
 							browserXhr._url,
 							browserXhr._method,
-							xhr.responseText,
+							browserXhr._body,
 						)
 						span.updateName(spanName)
 
