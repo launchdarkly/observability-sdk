@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/launchdarkly/observability-sdk/compare/go/v0.2.1...go/v0.3.0) (2025-09-23)
+
+
+### Features
+
+* Support Go observability initialization independent of plugins. ([#230](https://github.com/launchdarkly/observability-sdk/issues/230)) ([ddd6d4b](https://github.com/launchdarkly/observability-sdk/commit/ddd6d4b1ca6d647f37bf62fc7ec31f58043a89d2))
+
 ## [0.2.1](https://github.com/launchdarkly/observability-sdk/compare/go/v0.2.0...go/v0.2.1) (2025-08-22)
 
 
