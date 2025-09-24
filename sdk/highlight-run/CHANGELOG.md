@@ -1,5 +1,12 @@
 # highlight.run
 
+## [9.21.1](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-9.21.0...highlight.run-9.21.1) (2025-09-24)
+
+
+### Bug Fixes
+
+* Updating sdk values to reduce frequency of network requests ([#235](https://github.com/launchdarkly/observability-sdk/issues/235)) ([9dfa5be](https://github.com/launchdarkly/observability-sdk/commit/9dfa5be38fda5291f69a28ce6076bb9a88ecd12d))
+
 ## [9.21.0](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-9.20.0...highlight.run-9.21.0) (2025-09-09)
 
 ### Bug Fixes
