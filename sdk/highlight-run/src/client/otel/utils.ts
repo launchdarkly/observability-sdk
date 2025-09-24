@@ -35,7 +35,7 @@ export const getNoopSpan = () => {
 	return noopSpan
 }
 
-export const getSpanName = (
+export const getHttpSpanName = (
 	url: string,
 	method: string,
 	body: Request['body'] | BrowserXHR['_body'],

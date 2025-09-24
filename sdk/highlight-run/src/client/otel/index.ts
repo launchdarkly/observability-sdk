@@ -58,7 +58,7 @@ import version from '../../version'
 import { ExportSampler } from './sampling/ExportSampler'
 import { getPersistentSessionSecureID } from '../utils/sessionStorage/highlightSession'
 import type { EventName } from '@opentelemetry/instrumentation-user-interaction'
-import { getSpanName } from './utils'
+import { getHttpSpanName } from './utils'
 export type Callback = (span?: Span) => any
 
 export type BrowserTracingConfig = {
@@ -233,7 +233,9 @@ export const setupBrowserTracing = (
 							'http.url'
 						] as string
 						const method = request.method ?? 'GET'
-						span.updateName(getSpanName(url, method, request.body))
+						span.updateName(
+							getHttpSpanName(url, method, request.body),
+						)
 
 						if (!(response instanceof Response)) {
 							span.setAttributes({
@@ -284,7 +286,7 @@ export const setupBrowserTracing = (
 							return
 						}
 
-						const spanName = getSpanName(
+						const spanName = getHttpSpanName(
 							browserXhr._url,
 							browserXhr._method,
 							xhr.responseText,
