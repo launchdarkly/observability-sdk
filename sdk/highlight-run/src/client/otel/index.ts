@@ -133,10 +133,10 @@ export const setupBrowserTracing = (
 
 	// https://opentelemetry.io/docs/specs/otel/logs/sdk/
 	const spanProcessor = new CustomBatchSpanProcessor(exporter, {
-		maxExportBatchSize: 1024, // Default value is 512
-		maxQueueSize: 2048, // Default value is 2048
-		exportTimeoutMillis: exporterOptions.timeoutMillis, // Default value is 30_000
-		scheduledDelayMillis: 5000, // Default value is 1000
+		maxExportBatchSize: 1024, // Default value from SDK is 512
+		maxQueueSize: 2048, // Default value from SDK is 2048
+		exportTimeoutMillis: exporterOptions.timeoutMillis, // Default value from SDK is 30_000
+		scheduledDelayMillis: exporterOptions.timeoutMillis, // Default value from SDK is 1000
 	})
 
 	const resource = new Resource({
@@ -168,7 +168,7 @@ export const setupBrowserTracing = (
 	})
 	const reader = new PeriodicExportingMetricReader({
 		exporter: meterExporter,
-		exportIntervalMillis: 5000,
+		exportIntervalMillis: exporterOptions.timeoutMillis,
 		exportTimeoutMillis: exporterOptions.timeoutMillis,
 	})
 
