@@ -53,17 +53,17 @@ export const getHttpSpanName = (
 			// If operation name is provided in the body, use it
 			if (parsedBody.operationName) {
 				operationName = parsedBody.operationName
-			}
+			} else {
+				// Try to parse the query to extract operation name and type
+				const query = parse(parsedBody.query)
+				const operation = query.definitions[0]
 
-			// Try to parse the query to extract operation name and type
-			const query = parse(parsedBody.query)
-			const operation = query.definitions[0]
-
-			if (
-				operation?.kind === 'OperationDefinition' &&
-				operation.name?.value
-			) {
-				operationName = operation.name?.value
+				if (
+					operation?.kind === 'OperationDefinition' &&
+					operation.name?.value
+				) {
+					operationName = operation.name?.value
+				}
 			}
 
 			// Fallback for cases where parsing fails
