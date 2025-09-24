@@ -15,4 +15,4 @@ jobs:
         runs-on: ubuntu-22.04-8core-32gb
         steps:
             - name: Pull new module version
-              uses: andrewslotin/go-proxy-pull-action@master
+              uses: andrewslotin/go-proxy-pull-action@0ef95ea50ab6c03f2f095a5102bbdecad8fd7602
