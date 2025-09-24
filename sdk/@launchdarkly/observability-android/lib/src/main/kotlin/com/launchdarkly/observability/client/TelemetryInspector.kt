@@ -10,6 +10,6 @@ import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter
  * @param logExporter The in-memory log exporter to read from
  */
 class TelemetryInspector(
-    val spanExporter: InMemorySpanExporter,
-    val logExporter: InMemoryLogRecordExporter
+    val spanExporter: InMemorySpanExporter?,
+    val logExporter: InMemoryLogRecordExporter?
 )
