@@ -103,7 +103,7 @@ export function getCorsUrlsPattern(
 export const getHttpSpanName = (
 	url: string,
 	method: string,
-	body: Request['body'] | string,
+	body: Request['body'] | RequestInit['body'],
 ) => {
 	const urlObject = new URL(url)
 	const pathname = urlObject.pathname
