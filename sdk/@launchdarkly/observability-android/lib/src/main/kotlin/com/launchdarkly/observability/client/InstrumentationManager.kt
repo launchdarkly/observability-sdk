@@ -34,6 +34,7 @@ import io.opentelemetry.sdk.metrics.export.MetricExporter
 import io.opentelemetry.sdk.metrics.export.PeriodicMetricReader
 import io.opentelemetry.sdk.resources.Resource
 import io.opentelemetry.sdk.testing.exporter.InMemoryLogRecordExporter
+import io.opentelemetry.sdk.testing.exporter.InMemoryMetricExporter
 import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter
 import io.opentelemetry.sdk.trace.SdkTracerProviderBuilder
 import io.opentelemetry.sdk.trace.export.BatchSpanProcessor
@@ -84,6 +85,7 @@ class InstrumentationManager(
     private val samplingApiService = SamplingApiService(graphqlClient)
     private var inMemorySpanExporter: InMemorySpanExporter? = null
     private var inMemoryLogExporter: InMemoryLogRecordExporter? = null
+    private var inMemoryMetricExporter: InMemoryMetricExporter? = null
     private var telemetryInspector: TelemetryInspector? = null
 
     private var spanProcessor: BatchSpanProcessor? = null
@@ -164,8 +166,10 @@ class InstrumentationManager(
     }
 
     private fun configureMeterProvider(sdkMeterProviderBuilder: SdkMeterProviderBuilder): SdkMeterProviderBuilder {
-        val metricExporter = createOtlpMetricExporter()
-        val metricReader = createPeriodicMetricReader(metricExporter)
+        val primaryMetricExporter = createOtlpMetricExporter()
+
+        val finalExporter = createMetricExporter(primaryMetricExporter)
+        val metricReader = createPeriodicMetricReader(finalExporter)
 
         metricsReader = metricReader
         return sdkMeterProviderBuilder
@@ -218,6 +222,17 @@ class InstrumentationManager(
         }
     }
 
+    private fun createMetricExporter(primaryExporter: MetricExporter): MetricExporter {
+        return if (options.debug) {
+            val exporters = mutableListOf(primaryExporter, DebugMetricExporter(logger))
+            inMemoryMetricExporter = InMemoryMetricExporter.create().also { exporters.add(it) }
+
+            CompositeMetricExporter(exporters)
+        } else {
+            primaryExporter
+        }
+    }
+
     private fun createPeriodicMetricReader(metricExporter: MetricExporter): PeriodicMetricReader {
         // Configure a periodic reader that pushes metrics every 10 seconds.
         return PeriodicMetricReader.builder(metricExporter)
@@ -227,7 +242,7 @@ class InstrumentationManager(
 
     private fun initializeTelemetryInspector() {
         if (options.debug) {
-            telemetryInspector = TelemetryInspector(inMemorySpanExporter, inMemoryLogExporter)
+            telemetryInspector = TelemetryInspector(inMemorySpanExporter, inMemoryLogExporter, inMemoryMetricExporter)
         }
     }
 
@@ -296,16 +311,18 @@ class InstrumentationManager(
     }
 
     fun recordError(error: Error, attributes: Attributes) {
-        val span = otelTracer
-            .spanBuilder("highlight.error")
-            .setParent(Context.current().with(Span.current()))
-            .startSpan()
+        if(!options.disableErrorTracking){
+            val span = otelTracer
+                .spanBuilder("highlight.error")
+                .setParent(Context.current().with(Span.current()))
+                .startSpan()
 
-        val attrBuilder = Attributes.builder()
-        attrBuilder.putAll(attributes)
+            val attrBuilder = Attributes.builder()
+            attrBuilder.putAll(attributes)
 
-        span.recordException(error, attrBuilder.build())
-        span.end()
+            span.recordException(error, attrBuilder.build())
+            span.end()
+        }
     }
 
     fun startSpan(name: String, attributes: Attributes): Span {
