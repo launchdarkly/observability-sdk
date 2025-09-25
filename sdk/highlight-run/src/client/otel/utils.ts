@@ -40,13 +40,12 @@ export const getHttpSpanName = (
 	method: string,
 	body: Request['body'] | BrowserXHR['_body'],
 ) => {
-	let parsedBody
 	const urlObject = new URL(url)
 	const pathname = urlObject.pathname
 
 	// Extract meaningful operation name from GraphQL requests
 	try {
-		parsedBody = typeof body === 'string' ? JSON.parse(body) : body
+		const parsedBody = typeof body === 'string' ? JSON.parse(body) : body
 
 		if (parsedBody && parsedBody.query) {
 			let operationName = 'unknown'
