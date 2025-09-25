@@ -100,92 +100,68 @@ export function getCorsUrlsPattern(
 	return /^$/ // Match nothing if tracingOrigins is false or undefined
 }
 
-export const getSpanName = (
+export const getHttpSpanName = (
 	url: string,
 	method: string,
-	body?:
-		| Request['body']
-		| RequestInit['body']
-		| XMLHttpRequest['responseText'],
+	body: Request['body'] | string,
 ) => {
 	const urlObject = new URL(url)
 	const pathname = urlObject.pathname
-	const host = urlObject.host
 
 	// Extract meaningful operation name from GraphQL requests
-	if (body) {
-		try {
-			const parsedBody =
-				typeof body === 'string' ? JSON.parse(body) : body
+	try {
+		const parsedBody = typeof body === 'string' ? JSON.parse(body) : body
 
-			if (parsedBody && parsedBody.query) {
-				// If operation name is provided in the body, use it
-				if (parsedBody.operationName) {
-					return `${parsedBody.operationName} (GraphQL: ${host}${pathname})`
-				}
-
+		if (parsedBody && parsedBody.query) {
+			let operationName = 'unknown'
+			// If operation name is provided in the body, use it
+			if (parsedBody.operationName) {
+				operationName = parsedBody.operationName
+			} else {
 				// Try to parse the query to extract operation name and type
 				const query = parse(parsedBody.query)
 				const operation = query.definitions[0]
 
-				if (operation?.kind === 'OperationDefinition') {
-					const operationType = operation.operation // 'query', 'mutation', 'subscription'
-					const operationName = operation.name?.value
-
-					if (operationName) {
-						return `${operationName} (GraphQL ${operationType}: ${host}${pathname})`
-					} else {
-						// Anonymous operation but we know the type
-						return `anonymous (GraphQL ${operationType}: ${host}${pathname})`
-					}
+				if (
+					operation?.kind === 'OperationDefinition' &&
+					operation.name?.value
+				) {
+					operationName = operation.name?.value
 				}
-
-				// Fallback for cases where parsing fails
-				return `GraphQL (${host}${pathname})`
 			}
-		} catch {
-			// Ignore errors from JSON parsing
+
+			// Fallback for cases where parsing fails
+			return `${method.toUpperCase()} ${pathname} (${operationName})`
 		}
+	} catch {
+		// Ignore errors from JSON parsing
 	}
 
 	// Improve REST API naming
 	const pathSegments = pathname.split('/').filter(Boolean)
-	let spanName = `${method.toUpperCase()} ${pathname}`
 
 	if (pathSegments.length > 0) {
-		// Try to create a more meaningful name for REST APIs
-		const lastSegment = pathSegments[pathSegments.length - 1]
-
-		// Check if the last segment looks like an ID (number, UUID, etc.)
-		if (
-			/^\d+$/.test(lastSegment) || // Pure numbers
-			/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-				lastSegment,
-			) || // UUIDs
-			/^[0-9a-f]{8,}$/i.test(lastSegment) // Long hex strings
-		) {
-			// Replace ID with a placeholder but keep it for context
-			const resourcePath = pathSegments.slice(0, -1).join('/')
-			const resourceName =
-				pathSegments[pathSegments.length - 2] || 'resource'
-			spanName = `${method.toUpperCase()} /${resourcePath}/:${resourceName}Id (${host})`
-		} else {
-			// Use the actual path with host
-			spanName = `${method.toUpperCase()} ${pathname} (${host})`
-		}
-
-		// Add query params if they might be meaningful
-		if (urlObject.search && urlObject.search.length > 1) {
-			const params = urlObject.searchParams
-			const paramCount = Array.from(params.keys()).length
-			if (paramCount > 0) {
-				spanName += ` [${paramCount} param${paramCount > 1 ? 's' : ''}]`
+		// Process each segment and replace IDs with parameter placeholders
+		const processedSegments = pathSegments.map((segment, index) => {
+			// Check if the segment looks like an ID (number, UUID, etc.)
+			if (
+				/^\d+$/.test(segment) || // Pure numbers
+				/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+					segment,
+				) || // UUIDs
+				/^[0-9a-f]{8,}$/i.test(segment) // Long hex strings
+			) {
+				// Get the previous segment to create a meaningful parameter name
+				const previousSegment =
+					index > 0 ? pathSegments[index - 1] : 'resource'
+				return `:${previousSegment}Id`
 			}
-		}
+			return segment
+		})
+
+		return `${method.toUpperCase()} /${processedSegments.join('/')}`
 	} else {
 		// Root path
-		spanName = `${method.toUpperCase()} / (${host})`
+		return `${method.toUpperCase()} /`
 	}
-
-	return spanName
 }

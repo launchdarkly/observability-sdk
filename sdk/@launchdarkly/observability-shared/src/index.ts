@@ -1,7 +1,10 @@
 export { RECORD_ATTRIBUTE } from './instrumentation/constants'
 export { CustomTraceContextPropagator } from './instrumentation/propagator'
 export type { TracingOrigins } from './instrumentation/types'
-export { getCorsUrlsPattern, getSpanName } from './instrumentation/utils'
+export {
+	getCorsUrlsPattern,
+	getHttpSpanName as getSpanName,
+} from './instrumentation/utils'
 export { CustomSampler } from './sampling/CustomSampler'
 export type { ExportSampler } from './sampling/ExportSampler'
 export type { SamplingResult } from './sampling/ExportSampler'
