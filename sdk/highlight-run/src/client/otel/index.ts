@@ -24,6 +24,7 @@ import {
 	WebTracerProvider,
 } from '@opentelemetry/sdk-trace-web'
 import * as SemanticAttributes from '@opentelemetry/semantic-conventions'
+import { parse } from 'graphql'
 import { getResponseBody } from '../listeners/network-listener/utils/fetch-listener'
 import {
 	DEFAULT_URL_BLOCKLIST,
@@ -58,7 +59,6 @@ import version from '../../version'
 import { ExportSampler } from './sampling/ExportSampler'
 import { getPersistentSessionSecureID } from '../utils/sessionStorage/highlightSession'
 import type { EventName } from '@opentelemetry/instrumentation-user-interaction'
-import { getHttpSpanName } from './utils'
 export type Callback = (span?: Span) => any
 
 export type BrowserTracingConfig = {
@@ -229,14 +229,6 @@ export const setupBrowserTracing = (
 							return
 						}
 
-						const url = readableSpan.attributes[
-							'http.url'
-						] as string
-						const method = request.method ?? 'GET'
-						span.updateName(
-							getHttpSpanName(url, method, request.body),
-						)
-
 						if (!(response instanceof Response)) {
 							span.setAttributes({
 								'http.response.error': response.message,
@@ -285,13 +277,6 @@ export const setupBrowserTracing = (
 						) {
 							return
 						}
-
-						const spanName = getHttpSpanName(
-							browserXhr._url,
-							browserXhr._method,
-							browserXhr._body,
-						)
-						span.updateName(spanName)
 
 						enhanceSpanWithHttpRequestAttributes(
 							span,
