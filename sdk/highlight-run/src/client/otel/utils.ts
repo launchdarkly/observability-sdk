@@ -6,8 +6,6 @@ import {
 	SpanStatus,
 	TimeInput,
 } from '@opentelemetry/api'
-import { parse } from 'graphql'
-import { BrowserXHR } from '../listeners/network-listener/utils/xhr-listener'
 
 export const getNoopSpan = () => {
 	const noopSpan: Span = {
