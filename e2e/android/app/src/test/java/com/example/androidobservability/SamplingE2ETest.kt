@@ -2,14 +2,14 @@ package com.example.androidobservability
 
 import android.app.Application
 import androidx.test.core.app.ApplicationProvider
+import com.example.androidobservability.TestUtils.TelemetryType
+import com.example.androidobservability.TestUtils.waitForTelemetryData
 import com.launchdarkly.observability.client.TelemetryInspector
 import com.launchdarkly.observability.sdk.LDObserve
-import com.launchdarkly.sdk.android.LDClient
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Severity
 import junit.framework.TestCase.assertEquals
-import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -39,24 +39,20 @@ import org.robolectric.annotation.Config
 @Config(application = TestApplication::class)
 class SamplingE2ETest {
 
+    private val application = ApplicationProvider.getApplicationContext<Application>() as TestApplication
     private var telemetryInspector: TelemetryInspector? = null
 
     @Before
     fun setUp() {
-        val application = ApplicationProvider.getApplicationContext<Application>() as TestApplication
+        application.initForTest()
         telemetryInspector = application.telemetryInspector
-    }
-
-    @After
-    fun tearDown(){
-        LDClient.get().close()
     }
 
     @Test
     fun `should avoid exporting logs matching sampling configuration for logs`() {
         triggerLogs()
         telemetryInspector?.logExporter?.flush()
-        Thread.sleep(6000)
+        waitForTelemetryData(telemetryInspector = application.telemetryInspector, telemetryType = TelemetryType.LOGS)
 
         val logsExported = telemetryInspector?.logExporter?.finishedLogRecordItems?.map {
             it.bodyValue?.value.toString()
@@ -72,7 +68,7 @@ class SamplingE2ETest {
     fun `should avoid exporting spans matching sampling configuration for spans`() {
         triggerSpans()
         telemetryInspector?.spanExporter?.flush()
-        Thread.sleep(6000)
+        waitForTelemetryData(telemetryInspector = application.telemetryInspector, telemetryType = TelemetryType.SPANS)
 
         val spansExported = telemetryInspector?.spanExporter?.finishedSpanItems?.map {
             it.name
