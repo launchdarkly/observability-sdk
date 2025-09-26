@@ -30,7 +30,7 @@
 			"versioning": "default",
 			"include-v-in-tag": true,
 			"include-component-in-tag": true,
-			"extra-files": ["version.go"]
+			"extra-files": ["internal/metadata/metadata.go"]
 		},
 		"sdk/@launchdarkly/observability-dotnet": {
 			"bump-minor-pre-major": true,
