@@ -1,6 +1,7 @@
 package com.launchdarkly.observability.network
 
 import com.launchdarkly.observability.replay.SessionInitializationEntity
+import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
@@ -179,7 +180,8 @@ data class EventNode(
     val name: String? = null,
     val tagName: String? = null,
     val attributes: Map<String, String>? = null,
-    val childNodes: List<EventNode> = emptyList(),
+    // This EncodeDefault is needed as a workaround, rrweb replay is expecting childNodes to be present even when empty list
+    @EncodeDefault val childNodes: List<EventNode> = emptyList(),
     val rootId: Int? = null,
     val id: Int? = null
 )

@@ -81,13 +81,15 @@ class ScreenshotInstrumentation : AndroidInstrumentation {
     suspend fun uploadScreenshot(screenshot: Screenshot): Boolean = withContext(Dispatchers.IO) {
         try {
             val base64Image = encodeBitmapToBase64(screenshot.bitmap)
-            val events = mutableListOf<Event>()
+            val eventsBatch1 = mutableListOf<Event>()
+            val eventsBatch2 = mutableListOf<Event>()
+            val eventsBatch3 = mutableListOf<Event>()
 
             val timestamp = System.currentTimeMillis()
             val metaEvent = Event(
                 type = EventType.META,
                 timestamp = timestamp,
-                _sid = 1000,
+                _sid = 1,
                 data = EventDataUnion.StandardEventData(
                     EventData(
                         href = "www.bogus.com",
@@ -96,12 +98,12 @@ class ScreenshotInstrumentation : AndroidInstrumentation {
                     )
                 ),
             )
-            events.add(metaEvent)
+            eventsBatch1.add(metaEvent)
 
             val snapShotEvent = Event(
                 type = EventType.FULL_SNAPSHOT,
                 timestamp = timestamp,
-                _sid = 1001,
+                _sid = 2,
                 data = EventDataUnion.StandardEventData(
                     EventData(
                         node = EventNode(
@@ -139,7 +141,8 @@ class ScreenshotInstrumentation : AndroidInstrumentation {
                                                         "rr_dataURL" to "data:image/jpeg;base64,${base64Image}",
                                                         "width" to "1080",
                                                         "height" to "2274" // TODO: one day make this dynamic
-                                                    )
+                                                    ),
+                                                    childNodes = listOf(),
                                                 )
                                             )
                                         )
@@ -150,65 +153,92 @@ class ScreenshotInstrumentation : AndroidInstrumentation {
                     )
                 ),
             )
-            events.add(snapShotEvent)
+            eventsBatch1.add(snapShotEvent)
 
             val reloadEvent = Event(
                 type = EventType.CUSTOM,
                 timestamp = timestamp,
-                _sid = 1002,
+                _sid = 3,
                 data = EventDataUnion.CustomEventDataWrapper(
                     Json.parseToJsonElement("""{"tag":"Reload","payload":"Android Demo"}""")
                 )
             )
-            events.add(reloadEvent)
+            eventsBatch1.add(reloadEvent)
 
             val viewportEvent = Event(
                 type = EventType.CUSTOM,
                 timestamp = timestamp,
-                _sid = 1003,
+                _sid = 4,
                 data = EventDataUnion.CustomEventDataWrapper(
                     Json.parseToJsonElement("""{"tag":"Viewport","payload":{"width":1080,"height":2274,"availWidth":1080,"availHeight":2274,"colorDepth":30,"pixelDepth":30,"orientation":0}}""")
                 )
             )
-            events.add(viewportEvent)
+            eventsBatch1.add(viewportEvent)
+
+            replayApiService.pushPayload(sdkKey, sessionManager.getSessionId(), "1", eventsBatch1)
 
             // mouse interaction 1
-            events.add(
+            eventsBatch2.add(
                 Event(
                     type = EventType.INCREMENTAL_SNAPSHOT,
-                    timestamp = timestamp + 100,
-                    _sid = 1004,
+                    timestamp = timestamp + 2000,
+                    _sid = 5,
                     data = EventDataUnion.CustomEventDataWrapper(
-                        Json.parseToJsonElement("""{"source":2,"type":6,"id":6}""")
+                        Json.parseToJsonElement("""{"source":2,"type":2,"x":150, "y":150}""")
                     )
                 )
             )
 
             // mouse interaction 2
-            events.add(
+            eventsBatch2.add(
                 Event(
                     type = EventType.INCREMENTAL_SNAPSHOT,
-                    timestamp = timestamp + 500,
-                    _sid = 1005,
+                    timestamp = timestamp + 5000,
+                    _sid = 6,
                     data = EventDataUnion.CustomEventDataWrapper(
-                        Json.parseToJsonElement("""{"source":1,"positions":[{"x":343,"y":483,"id":6,"timeOffset":0}]}""")
+                        Json.parseToJsonElement("""{"source":2,"type":2,"x":200, "y":200}""")
+                    )
+                )
+            )
+//
+//            // mouse interaction 3
+//            eventsBatch2.add(
+//                Event(
+//                    type = EventType.INCREMENTAL_SNAPSHOT,
+//                    timestamp = timestamp + 8000,
+//                    _sid = 7,
+//                    data = EventDataUnion.CustomEventDataWrapper(
+//                        Json.parseToJsonElement("""{"source":1,"positions":[{"x":350,"y":482,"id":6,"timeOffset":-451},{"x":397,"y":454,"id":6,"timeOffset":-395},{"x":549,"y":325,"id":6,"timeOffset":-335}]}""")
+//                    )
+//                )
+//            )
+
+            replayApiService.pushPayload(sdkKey, sessionManager.getSessionId(), "2", eventsBatch2)
+
+            // mouse interaction 1
+            eventsBatch3.add(
+                Event(
+                    type = EventType.INCREMENTAL_SNAPSHOT,
+                    timestamp = timestamp + 6000,
+                    _sid = 5,
+                    data = EventDataUnion.CustomEventDataWrapper(
+                        Json.parseToJsonElement("""{"source":2,"type":2,"x":150, "y":150}""")
                     )
                 )
             )
 
-            // mouse interaction 3
-            events.add(
+            // mouse interaction 2
+            eventsBatch3.add(
                 Event(
                     type = EventType.INCREMENTAL_SNAPSHOT,
-                    timestamp = timestamp + 1500,
-                    _sid = 1006,
+                    timestamp = timestamp + 7000,
+                    _sid = 6,
                     data = EventDataUnion.CustomEventDataWrapper(
-                        Json.parseToJsonElement("""{"source":1,"positions":[{"x":350,"y":482,"id":6,"timeOffset":-451},{"x":397,"y":454,"id":6,"timeOffset":-395},{"x":549,"y":325,"id":6,"timeOffset":-335}]}""")
+                        Json.parseToJsonElement("""{"source":2,"type":2,"x":200, "y":200}""")
                     )
                 )
             )
-
-            replayApiService.pushPayload(sdkKey, sessionManager.getSessionId(), "0", events)
+            replayApiService.pushPayload(sdkKey, sessionManager.getSessionId(), "3", eventsBatch3)
             true
         } catch (e: Exception) {
             Log.e("ScreenshotInstrumentation", "Error uploading screenshot: ${e.message}", e)
