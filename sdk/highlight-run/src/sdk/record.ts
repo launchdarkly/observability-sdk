@@ -596,13 +596,17 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 			)
 
 			this._recordStop = record({
-				ignoreClass: 'highlight-ignore',
-				blockClass: 'highlight-block',
+				ignoreClass: this.options.ignoreClass ?? 'highlight-ignore',
+				ignoreSelector: this.options.ignoreSelector,
+				blockClass: this.options.blockClass ?? 'highlight-block',
+				blockSelector: this.options.blockSelector,
 				emit,
 				recordCrossOriginIframes: this.options.recordCrossOriginIframe,
 				privacySetting: this.privacySetting,
 				maskAllInputs,
 				maskInputOptions: maskInputOptions,
+				maskTextClass: this.options.maskTextClass,
+				maskTextSelector: this.options.maskTextSelector,
 				recordCanvas: this.enableCanvasRecording,
 				sampling: {
 					canvas: {

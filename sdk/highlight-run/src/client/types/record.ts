@@ -38,6 +38,40 @@ export type RecordOptions = CommonOptions & {
 	privacySetting?: PrivacySettingOption
 
 	/**
+	 * Customize which elements' text should be masked by specifying a CSS class name or RegExp.
+	 * Default class is 'highlight-mask'.
+	 */
+	maskTextClass?: string | RegExp
+
+	/**
+	 * Customize which elements' text should be masked via a CSS selector that will match the element
+	 * and its descendants.
+	 */
+	maskTextSelector?: string
+
+	/**
+	 * Customize which elements should be blocked (not serialized) by specifying a class name or RegExp.
+	 * Default is 'highlight-block'.
+	 */
+	blockClass?: string | RegExp
+
+	/**
+	 * Customize which elements should be blocked via a CSS selector.
+	 */
+	blockSelector?: string
+
+	/**
+	 * Customize which elements and their descendants should be ignored from DOM events by class.
+	 * Default is 'highlight-ignore'.
+	 */
+	ignoreClass?: string
+
+	/**
+	 * Customize which elements should be ignored from DOM events via a CSS selector.
+	 */
+	ignoreSelector?: string
+
+	/**
 	 * Specifies whether to record canvas elements or not.
 	 * @default false
 	 */
