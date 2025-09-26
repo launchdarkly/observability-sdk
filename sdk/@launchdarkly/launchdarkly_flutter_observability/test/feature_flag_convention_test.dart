@@ -2,13 +2,20 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:launchdarkly_flutter_client_sdk/launchdarkly_flutter_client_sdk.dart';
 
 import 'package:launchdarkly_flutter_observability/src/otel/feature_flag_convention.dart';
-import 'package:launchdarkly_flutter_observability/src/otel/stringable_attribute.dart';
+import 'package:launchdarkly_flutter_observability/src/api/attribute.dart';
 
 Matcher matchesAttribute(String key, dynamic value) {
-  return predicate<StringableAttribute>((attribute) => 
-    attribute.key == key && attribute.value == value, 
-    'has key "$key" and value "$value"'
-  );
+  return predicate<MapEntry<String, Attribute>>((entry) {
+    if (entry.key != key) return false;
+    final attr = entry.value;
+    return switch (attr) {
+      StringAttribute() => attr.value == value,
+      IntAttribute() => attr.value == value,
+      BooleanAttribute() => attr.value == value,
+      DoubleAttribute() => attr.value == value,
+      _ => false,
+    };
+  }, 'has key "$key" and value "$value"');
 }
 
 void main() {
@@ -27,11 +34,14 @@ void main() {
 
     expect(attributes.length, equals(3));
     // Required attributes
-    expect(attributes, containsAll([
-      matchesAttribute('feature_flag.provider.name', 'LaunchDarkly'),
-      matchesAttribute('feature_flag.key', 'test-flag'),
-      matchesAttribute('feature_flag.result.value', 'true'),
-    ]));
+    expect(
+      attributes.entries,
+      containsAll([
+        matchesAttribute('feature_flag.provider.name', 'LaunchDarkly'),
+        matchesAttribute('feature_flag.key', 'test-flag'),
+        matchesAttribute('feature_flag.result.value', 'true'),
+      ]),
+    );
   });
 
   test('includes context id when valid context provided', () {
@@ -49,9 +59,12 @@ void main() {
       context: context,
     );
 
-    expect(attributes, contains(
-      matchesAttribute('feature_flag.context.id', context.canonicalKey),
-    ));
+    expect(
+      attributes.entries,
+      contains(
+        matchesAttribute('feature_flag.context.id', context.canonicalKey),
+      ),
+    );
   });
 
   test('excludes context id when context is invalid', () {
@@ -69,7 +82,7 @@ void main() {
       context: invalidContext,
     );
 
-    expect(_findAttributeByName(attributes, 'feature_flag.context.id'), isNull);
+    expect(attributes['feature_flag.context.id'], isNull);
   });
 
   test('excludes context id when context is null', () {
@@ -86,7 +99,7 @@ void main() {
       context: null,
     );
 
-    expect(_findAttributeByName(attributes, 'feature_flag.context.id'), isNull);
+    expect(attributes['feature_flag.context.id'], isNull);
   });
 
   test('includes environment id when provided', () {
@@ -104,9 +117,10 @@ void main() {
       environmentId: environmentId,
     );
 
-    expect(attributes, contains(
-      matchesAttribute('feature_flag.set.id', environmentId),
-    ));
+    expect(
+      attributes.entries,
+      contains(matchesAttribute('feature_flag.set.id', environmentId)),
+    );
   });
 
   test('excludes environment id when null', () {
@@ -123,7 +137,7 @@ void main() {
       environmentId: null,
     );
 
-    expect(_findAttributeByName(attributes, 'feature_flag.set.id'), isNull);
+    expect(attributes['feature_flag.set.id'], isNull);
   });
 
   test('includes variation index when present', () {
@@ -140,9 +154,12 @@ void main() {
       detail: detail,
     );
 
-    expect(attributes, contains(
-      matchesAttribute('feature_flag.result.variationIndex', variationIndex),
-    ));
+    expect(
+      attributes.entries,
+      contains(
+        matchesAttribute('feature_flag.result.variationIndex', variationIndex),
+      ),
+    );
   });
 
   test('excludes variation index when null', () {
@@ -158,10 +175,7 @@ void main() {
       detail: detail,
     );
 
-    expect(
-      _findAttributeByName(attributes, 'feature_flag.result.variationIndex'),
-      isNull,
-    );
+    expect(attributes['feature_flag.result.variationIndex'], isNull);
   });
 
   test('includes inExperiment when reason indicates experiment', () {
@@ -178,9 +192,12 @@ void main() {
       detail: detail,
     );
 
-    expect(attributes, contains(
-      matchesAttribute('feature_flag.result.reason.inExperiment', true),
-    ));
+    expect(
+      attributes.entries,
+      contains(
+        matchesAttribute('feature_flag.result.reason.inExperiment', true),
+      ),
+    );
   });
 
   test('excludes inExperiment when reason is null', () {
@@ -192,13 +209,7 @@ void main() {
       detail: detail,
     );
 
-    expect(
-      _findAttributeByName(
-        attributes,
-        'feature_flag.result.reason.inExperiment',
-      ),
-      isNull,
-    );
+    expect(attributes['feature_flag.result.reason.inExperiment'], isNull);
   });
 
   test('excludes inExperiment when not in experiment', () {
@@ -215,13 +226,7 @@ void main() {
       detail: detail,
     );
 
-    expect(
-      _findAttributeByName(
-        attributes,
-        'feature_flag.result.reason.inExperiment',
-      ),
-      isNull,
-    );
+    expect(attributes['feature_flag.result.reason.inExperiment'], isNull);
   });
 
   group('value serialization', () {
@@ -238,9 +243,10 @@ void main() {
         detail: detail,
       );
 
-      expect(attributes, contains(
-        matchesAttribute('feature_flag.result.value', 'false'),
-      ));
+      expect(
+        attributes.entries,
+        contains(matchesAttribute('feature_flag.result.value', 'false')),
+      );
     });
 
     test('serializes string values', () {
@@ -257,9 +263,12 @@ void main() {
         detail: detail,
       );
 
-      expect(attributes, contains(
-        matchesAttribute('feature_flag.result.value', '"$stringValue"'),
-      ));
+      expect(
+        attributes.entries,
+        contains(
+          matchesAttribute('feature_flag.result.value', '"$stringValue"'),
+        ),
+      );
     });
 
     test('serializes numeric values', () {
@@ -276,9 +285,10 @@ void main() {
         detail: detail,
       );
 
-      expect(attributes, contains(
-        matchesAttribute('feature_flag.result.value', '42.5'),
-      ));
+      expect(
+        attributes.entries,
+        contains(matchesAttribute('feature_flag.result.value', '42.5')),
+      );
     });
 
     test('serializes null values', () {
@@ -294,9 +304,10 @@ void main() {
         detail: detail,
       );
 
-      expect(attributes, contains(
-        matchesAttribute('feature_flag.result.value', 'null'),
-      ));
+      expect(
+        attributes.entries,
+        contains(matchesAttribute('feature_flag.result.value', 'null')),
+      );
     });
 
     test('serializes array values', () {
@@ -316,9 +327,12 @@ void main() {
         detail: detail,
       );
 
-      expect(attributes, contains(
-        matchesAttribute('feature_flag.result.value', '["item1","item2"]'),
-      ));
+      expect(
+        attributes.entries,
+        contains(
+          matchesAttribute('feature_flag.result.value', '["item1","item2"]'),
+        ),
+      );
     });
 
     test('serializes object values', () {
@@ -338,9 +352,9 @@ void main() {
         detail: detail,
       );
 
-      final value =
-          _findAttributeValue(attributes, 'feature_flag.result.value')
-              as String;
+      final attribute =
+          attributes['feature_flag.result.value'] as StringAttribute;
+      final value = attribute.value;
       expect(value, contains('"key1":"value1"'));
       expect(value, contains('"key2":123'));
     });
@@ -361,10 +375,13 @@ void main() {
       );
 
       // Should still have other attributes even if value serialization fails
-      expect(attributes, containsAll([
-        matchesAttribute('feature_flag.key', flagKey),
-        matchesAttribute('feature_flag.provider.name', 'LaunchDarkly'),
-      ]));
+      expect(
+        attributes.entries,
+        containsAll([
+          matchesAttribute('feature_flag.key', flagKey),
+          matchesAttribute('feature_flag.provider.name', 'LaunchDarkly'),
+        ]),
+      );
     });
   });
 
@@ -387,30 +404,19 @@ void main() {
       environmentId: environmentId,
     );
 
-    expect(attributes, containsAll([
-      // Required attributes
-      matchesAttribute('feature_flag.key', flagKey),
-      matchesAttribute('feature_flag.provider.name', 'LaunchDarkly'),
-      // Optional attributes
-      matchesAttribute('feature_flag.context.id', context.canonicalKey),
-      matchesAttribute('feature_flag.set.id', environmentId),
-      matchesAttribute('feature_flag.result.value', '"experiment-value"'),
-      matchesAttribute('feature_flag.result.variationIndex', variationIndex),
-      matchesAttribute('feature_flag.result.reason.inExperiment', true),
-    ]));
+    expect(
+      attributes.entries,
+      containsAll([
+        // Required attributes
+        matchesAttribute('feature_flag.key', flagKey),
+        matchesAttribute('feature_flag.provider.name', 'LaunchDarkly'),
+        // Optional attributes
+        matchesAttribute('feature_flag.context.id', context.canonicalKey),
+        matchesAttribute('feature_flag.set.id', environmentId),
+        matchesAttribute('feature_flag.result.value', '"experiment-value"'),
+        matchesAttribute('feature_flag.result.variationIndex', variationIndex),
+        matchesAttribute('feature_flag.result.reason.inExperiment', true),
+      ]),
+    );
   });
-}
-
-// Helper functions for testing attributes
-StringableAttribute? _findAttributeByName(List<StringableAttribute> attributes, String name) {
-  try {
-    return attributes.firstWhere((attr) => attr.key == name);
-  } catch (e) {
-    return null;
-  }
-}
-
-Object? _findAttributeValue(List<StringableAttribute> attributes, String name) {
-  final attribute = _findAttributeByName(attributes, name);
-  return attribute?.value;
 }
