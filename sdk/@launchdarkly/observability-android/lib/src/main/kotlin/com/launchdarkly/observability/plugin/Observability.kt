@@ -95,7 +95,7 @@ class Observability(
 
     override fun getHooks(metadata: EnvironmentMetadata?): MutableList<Hook> {
         return Collections.singletonList(
-            TracingHook(true, true)
+            TracingHook(withSpans = true, withValue = true) { observabilityClient?.getTracer() }
         )
     }
 

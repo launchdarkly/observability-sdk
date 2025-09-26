@@ -16,7 +16,6 @@ import com.launchdarkly.observability.utils.notNull
 import io.opentelemetry.android.OpenTelemetryRum
 import io.opentelemetry.android.config.OtelRumConfig
 import io.opentelemetry.android.session.SessionConfig
-import io.opentelemetry.api.GlobalOpenTelemetry
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Logger
 import io.opentelemetry.api.logs.Severity
@@ -202,8 +201,6 @@ class InstrumentationManager(
         otelLogger = otelRUM.openTelemetry.logsBridge.get(INSTRUMENTATION_SCOPE_NAME)
         otelTracer = otelRUM.openTelemetry.tracerProvider.get(INSTRUMENTATION_SCOPE_NAME)
 
-        GlobalOpenTelemetry.set(otelRUM.openTelemetry)
-
         scope.launch {
             val samplingConfig = getSamplingConfig()
             if (samplingConfig != null) logger.info("Sampling configuration was successfully loaded")
@@ -292,6 +289,13 @@ class InstrumentationManager(
      * @return TelemetryInspector instance or null
      */
     fun getTelemetryInspector(): TelemetryInspector? = telemetryInspector
+
+    /**
+     * Returns the tracer instance for creating spans.
+     *
+     * @return Tracer instance
+     */
+    fun getTracer(): Tracer = otelTracer
 
     /**
      * Flushes all pending telemetry data (traces, logs, metrics).

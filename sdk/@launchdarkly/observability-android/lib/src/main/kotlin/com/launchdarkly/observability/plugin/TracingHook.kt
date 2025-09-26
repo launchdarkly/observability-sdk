@@ -11,6 +11,7 @@ import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.trace.Span
 import io.opentelemetry.api.trace.Tracer
 import io.opentelemetry.context.Context
+import io.opentelemetry.context.Scope
 
 /**
  * This class is a hook implementation for recording flag evaluation and identify events
@@ -23,15 +24,21 @@ class TracingHook
  *
  * @param withSpans will include child spans for the various hook series when they happen
  * @param withValue will include the value of the feature flag in the recorded evaluation events
+ * @param tracerProvider optional tracer provider function, if not provided will use GlobalOpenTelemetry
  */
-internal constructor(private val withSpans: Boolean, private val withValue: Boolean) : Hook(HOOK_NAME) {
+internal constructor(
+    private val withSpans: Boolean, 
+    private val withValue: Boolean,
+    private val tracerProvider: (() -> Tracer?)
+) : Hook(HOOK_NAME) {
 
     override fun beforeEvaluation(
         seriesContext: EvaluationSeriesContext,
         seriesData: Map<String, Any>
     ): Map<String, Any> {
+        val tracer = tracerProvider.invoke() ?: GlobalOpenTelemetry.get().getTracer(INSTRUMENTATION_NAME)
         return beforeEvaluationInternal(
-            GlobalOpenTelemetry.get().getTracer(INSTRUMENTATION_NAME),
+            tracer,
             seriesContext,
             seriesData
         )
@@ -96,8 +103,9 @@ internal constructor(private val withSpans: Boolean, private val withValue: Bool
         seriesContext: IdentifySeriesContext,
         seriesData: Map<String, Any>
     ): Map<String, Any> {
+        val tracer = tracerProvider.invoke() ?: GlobalOpenTelemetry.get().getTracer(INSTRUMENTATION_NAME)
         return beforeIdentifyInternal(
-            GlobalOpenTelemetry.get().getTracer(INSTRUMENTATION_NAME),
+            tracer,
             seriesContext,
             seriesData
         )
@@ -126,6 +134,7 @@ internal constructor(private val withSpans: Boolean, private val withValue: Bool
 
         return HashMap(seriesData).apply {
             this[DATA_KEY_IDENTIFY_SPAN] = span
+            this[DATA_KEY_IDENTIFY_SCOPE] = span.makeCurrent()
         }
     }
 
@@ -135,6 +144,7 @@ internal constructor(private val withSpans: Boolean, private val withValue: Bool
         result: IdentifySeriesResult
     ): Map<String, Any> {
         val span = seriesData[DATA_KEY_IDENTIFY_SPAN] as? Span
+        val scope = seriesData[DATA_KEY_IDENTIFY_SCOPE] as? Scope
 
         span?.let {
             val attrBuilder = Attributes.builder()
@@ -143,6 +153,9 @@ internal constructor(private val withSpans: Boolean, private val withValue: Bool
             it.addEvent(IDENTIFY_EVENT_FINISH, attrBuilder.build())
             it.end()
         }
+
+        // Closes the current span scope and restores the previous span context
+        scope?.close()
 
         return seriesData
     }
