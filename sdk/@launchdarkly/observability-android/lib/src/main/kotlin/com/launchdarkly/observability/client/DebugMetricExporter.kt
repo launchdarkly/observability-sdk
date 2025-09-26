@@ -18,5 +18,5 @@ class DebugMetricExporter(private val logger: LDLogger): MetricExporter {
 
     override fun flush(): CompletableResultCode = CompletableResultCode.ofSuccess()
     override fun shutdown(): CompletableResultCode = CompletableResultCode.ofSuccess()
-    override fun getAggregationTemporality(instrumentType: InstrumentType): AggregationTemporality? = getAggregationTemporality(instrumentType)
+    override fun getAggregationTemporality(instrumentType: InstrumentType): AggregationTemporality? = AggregationTemporality.CUMULATIVE
 }
