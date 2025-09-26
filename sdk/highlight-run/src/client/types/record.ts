@@ -50,7 +50,7 @@ export type RecordOptions = CommonOptions & {
 	maskTextSelector?: string
 
 	/**
-	 * Customize which elements should be blocked (not serialized) by specifying a class name or RegExp.
+	 * Customize which elements should be blocked (not recorded) by specifying a class name or RegExp.
 	 * Default is 'highlight-block'.
 	 */
 	blockClass?: string | RegExp
@@ -64,7 +64,7 @@ export type RecordOptions = CommonOptions & {
 	 * Customize which elements and their descendants should be ignored from DOM events by class.
 	 * Default is 'highlight-ignore'.
 	 */
-	ignoreClass?: string
+	ignoreClass?: string | RegExp
 
 	/**
 	 * Customize which elements should be ignored from DOM events via a CSS selector.
