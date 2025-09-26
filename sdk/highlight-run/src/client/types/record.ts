@@ -64,7 +64,7 @@ export type RecordOptions = CommonOptions & {
 	 * Customize which elements and their descendants should be ignored from DOM events by class.
 	 * Default is 'highlight-ignore'.
 	 */
-	ignoreClass?: string | RegExp
+	ignoreClass?: string
 
 	/**
 	 * Customize which elements should be ignored from DOM events via a CSS selector.

@@ -1,17 +1,20 @@
 import { useEffect } from 'react'
 import { initialize as init } from 'launchdarkly-js-client-sdk'
 import SessionReplay from '@launchdarkly/session-replay'
-import { sessionReplaySettings } from '../ldclient'
 
 export default function PrivacyDemo() {
 	useEffect(() => {
-		const client = init(
+		init(
 			'548f6741c1efad40031b18ae',
 			{ key: 'unknown' },
 			{
 				plugins: [
 					new SessionReplay({
-						...sessionReplaySettings,
+						privacySetting: 'none',
+						serviceName: 'privacy-test',
+						backendUrl: 'http://localhost:8082/public',
+						debug: { clientInteractions: true, domRecording: true },
+
 						maskTextClass: 'ld-mask-text',
 						maskTextSelector: '[data-masking="true"]',
 						ignoreClass: 'ld-ignore',
@@ -22,10 +25,6 @@ export default function PrivacyDemo() {
 				],
 			},
 		)
-
-		client.on('ready', () => {
-			console.log('client ready')
-		})
 	}, [])
 
 	return (
@@ -84,12 +83,12 @@ export default function PrivacyDemo() {
 			</section>
 
 			<section>
-				<h3>Blocked subtree</h3>
+				<h3>Blocked subtree by class</h3>
 				<div
 					className="ld-block"
 					style={{ border: '1px solid #ccc', padding: 8 }}
 				>
-					<p>Contents should be blocked (not serialized)</p>
+					<p>Contents should be blocked (not recorded)</p>
 					<img src="/vite.svg" alt="example" width={48} height={48} />
 				</div>
 			</section>
@@ -100,9 +99,9 @@ export default function PrivacyDemo() {
 					data-block="true"
 					style={{ border: '1px solid #ccc', padding: 8 }}
 				>
-					<p>Contents should be blocked (not serialized)</p>
+					<p>Contents should be blocked (not recorded)</p>
+					<img src="/vite.svg" alt="example" width={48} height={48} />
 				</div>
-				<img src="/vite.svg" alt="example" width={48} height={48} />
 			</section>
 		</div>
 	)
