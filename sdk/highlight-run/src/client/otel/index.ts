@@ -24,7 +24,6 @@ import {
 	WebTracerProvider,
 } from '@opentelemetry/sdk-trace-web'
 import * as SemanticAttributes from '@opentelemetry/semantic-conventions'
-import { parse } from 'graphql'
 import { getResponseBody } from '../listeners/network-listener/utils/fetch-listener'
 import {
 	DEFAULT_URL_BLOCKLIST,
