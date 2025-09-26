@@ -67,7 +67,12 @@ namespace LaunchDarkly.Observability
                         options.WithCommonLaunchDarklyLoggingExport(config);
                     });
                 config.ExtendedLoggerConfiguration?.Invoke(logging);
-            }).WithMetrics(metrics =>
+            }, options =>
+            {
+                options.IncludeFormattedMessage = true;
+                config.ExtendedLoggerOptionsConfiguration?.Invoke(options);
+            })
+            .WithMetrics(metrics =>
             {
                 metrics
                     .WithCommonLaunchDarklyConfig(config, resourceBuilder)
