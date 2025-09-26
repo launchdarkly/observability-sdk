@@ -11,7 +11,8 @@ class TestApplication : BaseApplication() {
     var mockWebServer: MockWebServer? = null
 
     override fun onCreate() {
-        setupMockServer()
+        // The Application class won't be initialized unless initForTest() is executed. This helps us to set up
+        // everything we need in a test before calling super.onCreate().
     }
 
     private fun setupMockServer() {
