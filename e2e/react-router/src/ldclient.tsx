@@ -16,9 +16,7 @@ const observabilitySettings: ConstructorParameters<typeof Observability>[0] = {
 		otlpEndpoint: 'http://localhost:4318',
 	},
 }
-export const sessionReplaySettings: ConstructorParameters<
-	typeof SessionReplay
->[0] = {
+const sessionReplaySettings: ConstructorParameters<typeof SessionReplay>[0] = {
 	debug: { clientInteractions: true, domRecording: true },
 	privacySetting: 'none',
 	serviceName: 'ryan-test',
