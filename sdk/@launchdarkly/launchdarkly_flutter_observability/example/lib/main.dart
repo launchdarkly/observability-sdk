@@ -95,11 +95,6 @@ class _MyHomePageState extends State<MyHomePage> {
   int _counter = 0;
 
   void _incrementCounter() {
-    final tracer = globalTracerProvider.getTracer(
-      'example-app',
-      schemaUrl: 'https://opentelemetry.io/schemas/1.6.1',
-    );
-
     final span = Observe.startSpan('increment-counter-1');
     final span2 = Observe.startSpan('increment-counter-2');
 
