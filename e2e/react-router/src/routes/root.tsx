@@ -39,6 +39,10 @@ export default function Root() {
 	return (
 		<div id="sidebar">
 			<h1>Hello, world</h1>
+			<nav style={{ display: 'flex', gap: 12 }}>
+				<a href="/welcome">Welcome</a>
+				<a href="/privacy">Privacy Demo</a>
+			</nav>
 			<p>{flags}</p>
 			<a href={session} target={'_blank'}>
 				{session}
