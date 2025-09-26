@@ -291,6 +291,13 @@ class InstrumentationManager(
     fun getTelemetryInspector(): TelemetryInspector? = telemetryInspector
 
     /**
+     * Returns the tracer instance for creating spans.
+     *
+     * @return Tracer instance
+     */
+    fun getTracer(): Tracer = otelTracer
+
+    /**
      * Flushes all pending telemetry data (traces, logs, metrics).
      * @return true if all flush operations succeeded, false otherwise
      */
