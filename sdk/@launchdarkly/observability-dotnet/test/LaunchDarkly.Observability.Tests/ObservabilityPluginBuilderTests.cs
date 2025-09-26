@@ -1,6 +1,9 @@
 using NUnit.Framework;
 using System;
 using Microsoft.Extensions.DependencyInjection;
+#if !NETFRAMEWORK
+using OpenTelemetry.Logs;
+#endif
 
 namespace LaunchDarkly.Observability.Test
 {
@@ -115,5 +118,75 @@ namespace LaunchDarkly.Observability.Test
                 Environment.SetEnvironmentVariable(EnvironmentVariables.OtelServiceName, originalValue);
             }
         }
+
+#if !NETFRAMEWORK
+        [Test]
+        public void WithExtendedLoggerConfiguration_WithBothParameters_SetsConfigurationCorrectly()
+        {
+            Action<LoggerProviderBuilder> loggerConfig = _ => { };
+            Action<OpenTelemetryLoggerOptions> loggerOptions = _ => { };
+
+            var pluginBuilder = ObservabilityPlugin.Builder(_services)
+                .WithExtendedLoggerConfiguration(loggerConfig, loggerOptions);
+
+            var plugin = pluginBuilder.Build();
+
+            Assert.That(plugin, Is.Not.Null);
+            Assert.That(plugin, Is.InstanceOf<ObservabilityPlugin>());
+        }
+
+        [Test]
+        public void WithExtendedLoggerConfiguration_WithNullLoggerConfiguration_AcceptsNullValue()
+        {
+            Action<OpenTelemetryLoggerOptions> loggerOptions = _ => { };
+
+            var pluginBuilder = ObservabilityPlugin.Builder(_services)
+                .WithExtendedLoggerConfiguration(null, loggerOptions);
+
+            var plugin = pluginBuilder.Build();
+
+            Assert.That(plugin, Is.Not.Null);
+            Assert.That(plugin, Is.InstanceOf<ObservabilityPlugin>());
+        }
+
+        [Test]
+        public void WithExtendedLoggerConfiguration_WithNullLoggerOptions_AcceptsNullValue()
+        {
+            Action<LoggerProviderBuilder> loggerConfig = _ => { };
+
+            var pluginBuilder = ObservabilityPlugin.Builder(_services)
+                .WithExtendedLoggerConfiguration(loggerConfig, null);
+
+            var plugin = pluginBuilder.Build();
+
+            Assert.That(plugin, Is.Not.Null);
+            Assert.That(plugin, Is.InstanceOf<ObservabilityPlugin>());
+        }
+
+        [Test]
+        public void WithExtendedLoggerConfiguration_WithBothParametersNull_AcceptsNullValues()
+        {
+            var pluginBuilder = ObservabilityPlugin.Builder(_services)
+                .WithExtendedLoggerConfiguration(null, null);
+
+            var plugin = pluginBuilder.Build();
+
+            Assert.That(plugin, Is.Not.Null);
+            Assert.That(plugin, Is.InstanceOf<ObservabilityPlugin>());
+        }
+
+        [Test]
+        public void WithExtendedLoggerConfiguration_ReturnsBuilderInstance()
+        {
+            Action<LoggerProviderBuilder> loggerConfig = _ => { };
+            Action<OpenTelemetryLoggerOptions> loggerOptions = _ => { };
+
+            var result = ObservabilityPlugin.Builder(_services)
+                .WithExtendedLoggerConfiguration(loggerConfig, loggerOptions);
+
+            Assert.That(result, Is.Not.Null);
+            Assert.That(result, Is.InstanceOf<ObservabilityPlugin.ObservabilityPluginBuilder>());
+        }
+#endif
     }
 }

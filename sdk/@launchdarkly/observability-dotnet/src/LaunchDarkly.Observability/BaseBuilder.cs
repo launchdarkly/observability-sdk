@@ -31,6 +31,9 @@ namespace LaunchDarkly.Observability
         private Action<TracerProviderBuilder> _extendedTracerConfiguration;
         private Action<LoggerBuilderType> _extendedLoggerConfiguration;
         private Action<MeterProviderBuilder> _extendedMeterConfiguration;
+#if !NETFRAMEWORK
+        protected Action<OpenTelemetryLoggerOptions> ConfigureLoggerOptions;
+#endif
 
         protected BaseBuilder()
         {
@@ -265,7 +268,11 @@ namespace LaunchDarkly.Observability
                 sdkKey,
                 _extendedTracerConfiguration,
                 _extendedLoggerConfiguration,
-                _extendedMeterConfiguration);
+                _extendedMeterConfiguration
+#if !NETFRAMEWORK
+                , ConfigureLoggerOptions
+#endif
+            );
         }
     }
 }
