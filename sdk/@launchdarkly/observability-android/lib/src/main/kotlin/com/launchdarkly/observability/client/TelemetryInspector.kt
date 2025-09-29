@@ -1,6 +1,7 @@
 package com.launchdarkly.observability.client
 
 import io.opentelemetry.sdk.testing.exporter.InMemoryLogRecordExporter
+import io.opentelemetry.sdk.testing.exporter.InMemoryMetricExporter
 import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter
 
 /**
@@ -8,8 +9,10 @@ import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter
  *
  * @param spanExporter The in-memory span exporter to read from
  * @param logExporter The in-memory log exporter to read from
+ * @param metricExporter The in-memory metric exporter to read from
  */
 class TelemetryInspector(
-    val spanExporter: InMemorySpanExporter,
-    val logExporter: InMemoryLogRecordExporter
+    val spanExporter: InMemorySpanExporter?,
+    val logExporter: InMemoryLogRecordExporter?,
+    val metricExporter: InMemoryMetricExporter?
 )
