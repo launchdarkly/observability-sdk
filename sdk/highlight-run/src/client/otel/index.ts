@@ -147,23 +147,6 @@ export const setupBrowserTracing = (
 		'browser.language': navigator.language,
 		'telemetry.distro.name': '@highlight-run/observability',
 		'telemetry.distro.version': version,
-		[SemanticAttributes.ATTR_URL_SCHEME]: window.location.protocol.replace(
-			':',
-			'',
-		),
-		'url.domain': window.location.hostname,
-		[SemanticAttributes.ATTR_URL_PATH]: window.location.pathname,
-		...(window.location.search && {
-			[SemanticAttributes.ATTR_URL_QUERY]: window.location.search.replace(
-				'?',
-				'',
-			),
-		}),
-		[SemanticAttributes.ATTR_URL_FULL]: window.location.href,
-		'http.route': window.location.pathname,
-		...(window.location.port && {
-			'url.port': parseInt(window.location.port),
-		}),
 	})
 
 	providers.tracerProvider = new WebTracerProvider({
