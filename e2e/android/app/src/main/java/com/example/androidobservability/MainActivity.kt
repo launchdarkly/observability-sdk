@@ -38,6 +38,7 @@ class MainActivity : ComponentActivity() {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     var customLogText by remember { mutableStateOf("") }
                     var customSpanText by remember { mutableStateOf("") }
+                    var customContextKey by remember { mutableStateOf("") }
 
                     Column(
                         modifier = Modifier
@@ -45,7 +46,6 @@ class MainActivity : ComponentActivity() {
                             .padding(16.dp)
                             .verticalScroll(rememberScrollState())
                     ) {
-
                         Text(
                             text = "Hello Telemetry",
                             modifier = Modifier.padding(bottom = 16.dp)
@@ -136,6 +136,23 @@ class MainActivity : ComponentActivity() {
                             modifier = Modifier.padding(8.dp)
                         ) {
                             Text("Send custom span")
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        OutlinedTextField(
+                            value = customContextKey,
+                            onValueChange = { customContextKey = it },
+                            label = { Text("LD context key") },
+                            modifier = Modifier.padding(8.dp)
+                        )
+                        Button(
+                            onClick = {
+                                viewModel.identifyLDContext(customContextKey)
+                            },
+                            modifier = Modifier.padding(8.dp)
+                        ) {
+                            Text("Identify LD Context")
                         }
                     }
                 }

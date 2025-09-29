@@ -87,6 +87,13 @@ class ObservabilityClient : Observe {
         return instrumentationManager.getTelemetryInspector()
     }
 
+    /**
+     * Returns the tracer instance for creating spans.
+     *
+     * @return Tracer instance
+     */
+    fun getTracer() = instrumentationManager.getTracer()
+
     override fun flush(): Boolean {
         return instrumentationManager.flush()
     }

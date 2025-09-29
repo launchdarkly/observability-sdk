@@ -4,6 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.observability.sdk.LDObserve
+import com.launchdarkly.sdk.ContextKind
+import com.launchdarkly.sdk.LDContext
+import com.launchdarkly.sdk.android.LDClient
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Severity
@@ -92,6 +95,14 @@ class ViewModel : ViewModel() {
             sendOkHttpRequest()
             sendURLRequest()
         }
+    }
+
+    fun identifyLDContext(contextKey: String = "test-context-key") {
+        val context = LDContext.builder(ContextKind.DEFAULT, contextKey)
+            .name("test-context-name")
+            .build()
+
+        LDClient.get().identify(context)
     }
 
     private fun sendOkHttpRequest() {

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.7.0...launchdarkly-observability-android-0.8.0) (2025-09-26)
+
+
+### Features
+
+* O11Y-374 - Add identify span in TracingHook  ([#232](https://github.com/launchdarkly/observability-sdk/issues/232)) ([a895c97](https://github.com/launchdarkly/observability-sdk/commit/a895c9743ceb61fd045d0e561aa3b2c7b999067f))
+
 ## [0.7.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.6.0...launchdarkly-observability-android-0.7.0) (2025-09-23)
 
 
