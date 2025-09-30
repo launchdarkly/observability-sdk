@@ -22,7 +22,10 @@
 	},
 	"scripts": {
 		"typegen": "tsc",
-		"build": "vite build"
+		"build": "yarn build:minimal && yarn build:full",
+		"build:minimal": "vite build --config vite.config.minimal.ts",
+		"build:full": "vite build",
+		"size": "size-limit"
 	},
 	"dependencies": {
 		"highlight.run": "workspace:*"
@@ -34,19 +37,34 @@
 		"vitest": "^3.1.2"
 	},
 	"type": "module",
-	"main": "./dist/session-replay.js",
-	"module": "./dist/session-replay.js",
-	"types": "./dist/index.d.ts",
+	"main": "./dist/index-minimal.js",
+	"module": "./dist/index-minimal.js",
+	"types": "./dist/index-minimal.d.ts",
+	"exports": {
+		".": {
+			"import": "./dist/index-minimal.js",
+			"require": "./dist/index-minimal.cjs",
+			"types": "./dist/index-minimal.d.ts"
+		},
+		"./full": {
+			"import": "./dist/session-replay.js",
+			"types": "./dist/index.d.ts"
+		}
+	},
 	"files": [
 		"dist"
 	],
 	"size-limit": [
 		{
-			"path": [
-				"dist/*.js",
-				"!dist/*.umd.js"
-			],
-			"limit": "256 kB",
+			"name": "Minimal Build",
+			"path": "dist/index-minimal.js",
+			"limit": "5 kB",
+			"brotli": true
+		},
+		{
+			"name": "Full Build",
+			"path": "dist/session-replay.js",
+			"limit": "100 kB",
 			"brotli": true
 		}
 	]
