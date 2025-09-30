@@ -38,6 +38,24 @@ const client = init3(
 
 ```
 
+## API Reference
+
+### Adding Session Properties
+
+Use `LDRecord.addSessionProperties()` to add custom session-level properties. These properties are attached to the current session and are searchable in LaunchDarkly, but unlike `track()` events, they do not create timeline Track events.
+
+```typescript
+import { LDRecord } from '@launchdarkly/session-replay'
+
+LDRecord.addSessionProperties({
+  plan: 'pro',
+  userId: 'user-123',
+  organizationId: 'org-456'
+})
+```
+
+Session properties are useful for attaching metadata to sessions that you want to search or filter by later, without cluttering the timeline with track events.
+
 ## Getting started
 
 Refer to the [SDK documentation](https://docs.launchdarkly.com/sdk/client-side/javascript#getting-started) for instructions on getting started with using the SDK.
