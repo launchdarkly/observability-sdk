@@ -34,10 +34,18 @@ void main() {
 
       LDSingleton.client!.start();
 
+      // Report any errors handled by flutter.
+      FlutterError.onError = (FlutterErrorDetails details) {
+        Observe.recordException(details.exception, stackTrace: details.stack);
+      };
+
       runApp(MyApp());
     },
     (err, stack) {
-      // TODO: Record errors.
+      // Report any errors reported from the guarded zone.
+      Observe.recordException(err, stackTrace: stack);
+
+      // Any additional default error handling.
     },
   );
 }
@@ -148,6 +156,12 @@ class _MyHomePageState extends State<MyHomePage> {
           // wireframe for each widget.
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
+            ElevatedButton(
+              onPressed: () {
+                throw Exception('This is an error!');
+              },
+              child: const Text('Trigger unhandled error'),
+            ),
             const Text('You have pushed the button this many times:'),
             Text(
               '$_counter',
