@@ -143,6 +143,12 @@ export type HighlightClassOptions = {
 	reportConsoleErrors?: boolean
 	consoleMethodsToRecord?: ConsoleMethods[]
 	privacySetting?: PrivacySettingOption
+	maskTextClass?: string | RegExp
+	maskTextSelector?: string
+	blockClass?: string | RegExp
+	blockSelector?: string
+	ignoreClass?: string
+	ignoreSelector?: string
 	enableSegmentIntegration?: boolean
 	enableCanvasRecording?: boolean
 	enablePerformanceRecording?: boolean
@@ -823,13 +829,17 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 			)
 
 			this._recordStop = record({
-				ignoreClass: 'highlight-ignore',
-				blockClass: 'highlight-block',
+				ignoreClass: this.options.ignoreClass ?? 'highlight-ignore',
+				ignoreSelector: this.options.ignoreSelector,
+				blockClass: this.options.blockClass ?? 'highlight-block',
+				blockSelector: this.options.blockSelector,
 				emit,
 				recordCrossOriginIframes: this.options.recordCrossOriginIframe,
 				privacySetting: this.privacySetting,
 				maskAllInputs,
 				maskInputOptions: maskInputOptions,
+				maskTextClass: this.options.maskTextClass,
+				maskTextSelector: this.options.maskTextSelector,
 				recordCanvas: this.enableCanvasRecording,
 				sampling: {
 					canvas: {
