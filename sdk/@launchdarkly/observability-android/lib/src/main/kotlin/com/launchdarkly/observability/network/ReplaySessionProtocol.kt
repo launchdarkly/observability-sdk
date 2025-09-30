@@ -235,15 +235,6 @@ data class EventData(
 )
 
 /**
- * Custom event data structure for replay events
- */
-@Serializable
-data class CustomEventData(
-    val tag: String? = null,
-    val payload: JsonElement? = null
-)
-
-/**
  * Custom serializer for EventDataUnion that flattens the data structure
  */
 object EventDataUnionSerializer : KSerializer<EventDataUnion> {

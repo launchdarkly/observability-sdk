@@ -32,10 +32,16 @@ class ScreenshotInstrumentation : AndroidInstrumentation {
     private lateinit var backendUrl: String
     private lateinit var sdkKey: String
     private lateinit var sessionManager: SessionManager
+    private var sidCounter = 0;
+    private var payloadIdCounter = 0;
+    private var lastSentHeight = 0;
+    private var lastSentWidth = 0;
 
     init {
-        sdkKey = "640b692558eaef13a77c66b8" // TODO: at the moment this is hardcoded to the client side ID for the environment, need to figure this out
-        graphqlClient = GraphQLClient("https://pub.observability.app.launchdarkly.com")
+        sdkKey = "mob-a4328fa9-51e7-4a3d-bb0e-d5ce47464fc6" // TODO: at the moment this is hardcoded to the client side ID for the environment, need to figure this out
+//        graphqlClient = GraphQLClient("https://pub.observability.app.launchdarkly.com")
+        graphqlClient = GraphQLClient("https://pub.observability.ld-stg.launchdarkly.com")
+
 
     }
 
@@ -44,7 +50,7 @@ class ScreenshotInstrumentation : AndroidInstrumentation {
     override fun install(ctx: InstallationContext) {
         sessionManager = ctx.sessionManager
         _screenshotter = ComposeScreenshotter(sessionManager)
-        graphqlClient = GraphQLClient("https://pub.observability.app.launchdarkly.com")
+        graphqlClient = GraphQLClient("https://pub.observability.ld-stg.launchdarkly.com")
         replayApiService = SessionReplayApiService(graphqlClient)
 
         // Initialize replay session in background IO coroutine
@@ -54,19 +60,33 @@ class ScreenshotInstrumentation : AndroidInstrumentation {
             replayApiService.identifyReplaySession(sessionId)
 
             // TODO: this is hacky for development
-            _screenshotter.captureScreenshotNow()
+            while (true) {
+                _screenshotter.captureScreenshotNow()
+                delay(1000)
+            }
         }
 
         // Hook up screenshot flow to upload routine
         GlobalScope.launch(Dispatchers.IO) {
+            var firstScreenshotSent = false;
             _screenshotter.screenshotFlow.collect { screenshot ->
-                delay(10000)
                 try {
-                    val success = uploadScreenshot(screenshot)
-                    if (success) {
-                        Log.d("ScreenshotInstrumentation", "Successfully uploaded screenshot for session: ${screenshot.session}")
+                    if (!firstScreenshotSent || screenshot.bitmap.width != lastSentWidth || screenshot.bitmap.height != lastSentHeight) {
+                        val success = sendFullSnapshot(screenshot)
+                        if (success) {
+                            firstScreenshotSent = true;
+                            Log.d("ScreenshotInstrumentation", "Successfully uploaded first screenshot for session: ${screenshot.session}")
+                        } else {
+                            Log.w("ScreenshotInstrumentation", "Failed to upload first screenshot for session: ${screenshot.session}")
+                        }
                     } else {
-                        Log.w("ScreenshotInstrumentation", "Failed to upload screenshot for session: ${screenshot.session}")
+                        val success = sendScreenshot(screenshot)
+                        if (success) {
+                            firstScreenshotSent = true;
+                            Log.d("ScreenshotInstrumentation", "Successfully uploaded screenshot for session: ${screenshot.session}")
+                        } else {
+                            Log.w("ScreenshotInstrumentation", "Failed to upload screenshot for session: ${screenshot.session}")
+                        }
                     }
                 } catch (e: Exception) {
                     Log.e("ScreenshotInstrumentation", "Error processing screenshot upload: ${e.message}", e)
@@ -78,7 +98,41 @@ class ScreenshotInstrumentation : AndroidInstrumentation {
         
     }
 
-    suspend fun uploadScreenshot(screenshot: Screenshot): Boolean = withContext(Dispatchers.IO) {
+    fun nextSid() : Int {
+        sidCounter++;
+        return sidCounter
+    }
+
+    fun nextPayloadId() : Int {
+        payloadIdCounter++;
+        return payloadIdCounter
+    }
+
+    suspend fun sendScreenshot(screenshot: Screenshot): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val base64Image = encodeBitmapToBase64(screenshot.bitmap)
+            val eventsBatch1 = mutableListOf<Event>()
+            val timestamp = System.currentTimeMillis()
+
+            val incrementalEvent = Event(
+                type = EventType.INCREMENTAL_SNAPSHOT,
+                timestamp = timestamp,
+                _sid = nextSid(),
+                data = EventDataUnion.CustomEventDataWrapper(
+                    Json.parseToJsonElement("""{"source":9,"id":6,"type":0,"commands":[{"property":"clearRect","args":[0,0,${screenshot.bitmap.width},${screenshot.bitmap.height}]},{"property":"drawImage","args":[{"rr_type":"ImageBitmap","args":[{"rr_type":"Blob","data":[{"rr_type":"ArrayBuffer","base64":"$base64Image"}],"type":"image/jpeg"}]},0,0,${screenshot.bitmap.width},${screenshot.bitmap.height}]}]}""")
+                )
+            )
+            eventsBatch1.add(incrementalEvent)
+
+            replayApiService.pushPayload(sdkKey, sessionManager.getSessionId(), "${nextPayloadId()}", listOf(incrementalEvent))
+            true
+        } catch (e: Exception) {
+            Log.e("ScreenshotInstrumentation", "Error uploading initing session with screenshot: ${e.message}", e)
+            false
+        }
+    }
+
+    suspend fun sendFullSnapshot(screenshot: Screenshot): Boolean = withContext(Dispatchers.IO) {
         try {
             val base64Image = encodeBitmapToBase64(screenshot.bitmap)
             val eventsBatch1 = mutableListOf<Event>()
@@ -89,12 +143,12 @@ class ScreenshotInstrumentation : AndroidInstrumentation {
             val metaEvent = Event(
                 type = EventType.META,
                 timestamp = timestamp,
-                _sid = 1,
+                _sid = nextSid(),
                 data = EventDataUnion.StandardEventData(
                     EventData(
                         href = "www.bogus.com",
-                        width = 1080,
-                        height = 2274
+                        width = screenshot.bitmap.width,
+                        height = screenshot.bitmap.height,
                     )
                 ),
             )
@@ -103,7 +157,7 @@ class ScreenshotInstrumentation : AndroidInstrumentation {
             val snapShotEvent = Event(
                 type = EventType.FULL_SNAPSHOT,
                 timestamp = timestamp,
-                _sid = 2,
+                _sid = nextSid(),
                 data = EventDataUnion.StandardEventData(
                     EventData(
                         node = EventNode(
@@ -139,8 +193,8 @@ class ScreenshotInstrumentation : AndroidInstrumentation {
                                                     tagName = "canvas",
                                                     attributes = mapOf(
                                                         "rr_dataURL" to "data:image/jpeg;base64,${base64Image}",
-                                                        "width" to "1080",
-                                                        "height" to "2274" // TODO: one day make this dynamic
+                                                        "width" to "${screenshot.bitmap.width}",
+                                                        "height" to "${screenshot.bitmap.height}"
                                                     ),
                                                     childNodes = listOf(),
                                                 )
@@ -155,34 +209,24 @@ class ScreenshotInstrumentation : AndroidInstrumentation {
             )
             eventsBatch1.add(snapShotEvent)
 
-            val reloadEvent = Event(
-                type = EventType.CUSTOM,
-                timestamp = timestamp,
-                _sid = 3,
-                data = EventDataUnion.CustomEventDataWrapper(
-                    Json.parseToJsonElement("""{"tag":"Reload","payload":"Android Demo"}""")
-                )
-            )
-            eventsBatch1.add(reloadEvent)
-
             val viewportEvent = Event(
                 type = EventType.CUSTOM,
                 timestamp = timestamp,
-                _sid = 4,
+                _sid = nextSid(),
                 data = EventDataUnion.CustomEventDataWrapper(
-                    Json.parseToJsonElement("""{"tag":"Viewport","payload":{"width":1080,"height":2274,"availWidth":1080,"availHeight":2274,"colorDepth":30,"pixelDepth":30,"orientation":0}}""")
+                    Json.parseToJsonElement("""{"tag":"Viewport","payload":{"width":${screenshot.bitmap.width},"height":${screenshot.bitmap.height},"availWidth":${screenshot.bitmap.width},"availHeight":${screenshot.bitmap.height},"colorDepth":30,"pixelDepth":30,"orientation":0}}""")
                 )
             )
             eventsBatch1.add(viewportEvent)
 
-            replayApiService.pushPayload(sdkKey, sessionManager.getSessionId(), "1", eventsBatch1)
+            replayApiService.pushPayload(sdkKey, sessionManager.getSessionId(), "${nextPayloadId()}", eventsBatch1)
 
             // mouse interaction 1
             eventsBatch2.add(
                 Event(
                     type = EventType.INCREMENTAL_SNAPSHOT,
                     timestamp = timestamp + 2000,
-                    _sid = 5,
+                    _sid = nextSid(),
                     data = EventDataUnion.CustomEventDataWrapper(
                         Json.parseToJsonElement("""{"source":2,"type":2,"x":150, "y":150}""")
                     )
@@ -194,33 +238,21 @@ class ScreenshotInstrumentation : AndroidInstrumentation {
                 Event(
                     type = EventType.INCREMENTAL_SNAPSHOT,
                     timestamp = timestamp + 5000,
-                    _sid = 6,
+                    _sid = nextSid(),
                     data = EventDataUnion.CustomEventDataWrapper(
                         Json.parseToJsonElement("""{"source":2,"type":2,"x":200, "y":200}""")
                     )
                 )
             )
-//
-//            // mouse interaction 3
-//            eventsBatch2.add(
-//                Event(
-//                    type = EventType.INCREMENTAL_SNAPSHOT,
-//                    timestamp = timestamp + 8000,
-//                    _sid = 7,
-//                    data = EventDataUnion.CustomEventDataWrapper(
-//                        Json.parseToJsonElement("""{"source":1,"positions":[{"x":350,"y":482,"id":6,"timeOffset":-451},{"x":397,"y":454,"id":6,"timeOffset":-395},{"x":549,"y":325,"id":6,"timeOffset":-335}]}""")
-//                    )
-//                )
-//            )
 
-            replayApiService.pushPayload(sdkKey, sessionManager.getSessionId(), "2", eventsBatch2)
+            replayApiService.pushPayload(sdkKey, sessionManager.getSessionId(), "${nextPayloadId()}", eventsBatch2)
 
             // mouse interaction 1
             eventsBatch3.add(
                 Event(
                     type = EventType.INCREMENTAL_SNAPSHOT,
                     timestamp = timestamp + 6000,
-                    _sid = 5,
+                    _sid = nextSid(),
                     data = EventDataUnion.CustomEventDataWrapper(
                         Json.parseToJsonElement("""{"source":2,"type":2,"x":150, "y":150}""")
                     )
@@ -232,16 +264,21 @@ class ScreenshotInstrumentation : AndroidInstrumentation {
                 Event(
                     type = EventType.INCREMENTAL_SNAPSHOT,
                     timestamp = timestamp + 7000,
-                    _sid = 6,
+                    _sid = nextSid(),
                     data = EventDataUnion.CustomEventDataWrapper(
                         Json.parseToJsonElement("""{"source":2,"type":2,"x":200, "y":200}""")
                     )
                 )
             )
-            replayApiService.pushPayload(sdkKey, sessionManager.getSessionId(), "3", eventsBatch3)
+            // Due to a bug backend side, we have to send 3 payloads
+            replayApiService.pushPayload(sdkKey, sessionManager.getSessionId(), "${nextPayloadId()}", eventsBatch3)
+
+            lastSentWidth = screenshot.bitmap.width
+            lastSentHeight = screenshot.bitmap.height
+
             true
         } catch (e: Exception) {
-            Log.e("ScreenshotInstrumentation", "Error uploading screenshot: ${e.message}", e)
+            Log.e("ScreenshotInstrumentation", "Error uploading initing session with screenshot: ${e.message}", e)
             false
         }
     }
