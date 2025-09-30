@@ -133,7 +133,7 @@ class InstrumentationManager(
 
     private fun createOtelRumConfig(): OtelRumConfig {
         val config = OtelRumConfig()
-            .setDiskBufferingConfig(DiskBufferingConfig.create(enabled = true))
+            .setDiskBufferingConfig(DiskBufferingConfig.create(enabled = isAnySignalEnabled(options), debugEnabled = options.debug))
             .setSessionConfig(SessionConfig(backgroundInactivityTimeout = options.sessionBackgroundTimeout))
 
         if (options.disableErrorTracking) {
@@ -143,6 +143,10 @@ class InstrumentationManager(
         }
 
         return config
+    }
+
+    private fun isAnySignalEnabled(options: Options): Boolean {
+        return !options.disableLogs || !options.disableTraces || !options.disableMetrics || !options.disableErrorTracking
     }
 
     private fun configureLoggerProvider(sdkLoggerProviderBuilder: SdkLoggerProviderBuilder): SdkLoggerProviderBuilder {
