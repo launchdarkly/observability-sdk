@@ -1,9 +1,9 @@
 import 'dart:async';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:launchdarkly_flutter_client_sdk/launchdarkly_flutter_client_sdk.dart';
 import 'package:launchdarkly_flutter_observability/launchdarkly_flutter_observability.dart';
-import 'package:opentelemetry/api.dart';
 
 class LDSingleton {
   static LDClient? client;
@@ -161,6 +161,31 @@ class _MyHomePageState extends State<MyHomePage> {
                 throw Exception('This is an error!');
               },
               child: const Text('Trigger unhandled error'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Observe.recordLog(
+                  'This is a warning log!',
+                  severity: 'warn',
+                  attributes: <String, Attribute>{
+                    'attribute-in-log': StringAttribute('value-in-log'),
+                  },
+                );
+              },
+              child: const Text('Record warning log'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Observe.recordLog(
+                  'This is an error log!',
+                  severity: 'error',
+                  stackTrace: StackTrace.current,
+                  attributes: <String, Attribute>{
+                    'attribute-in-log': StringAttribute('value-in-log'),
+                  },
+                );
+              },
+              child: const Text('Record error log with stack trace'),
             ),
             const Text('You have pushed the button this many times:'),
             Text(
