@@ -1,53 +1,54 @@
 # The receivers specify how the collector receives data.
 # In this example, it receives data using the OpenTelemetry Protocol (OTLP) over gRPC and HTTP.
 receivers:
-  otlp:
-    protocols:
-      grpc:
-        endpoint: '0.0.0.0:4317'
-        include_metadata: true
-        max_recv_msg_size_mib: 1000
-      http:
-        endpoint: '0.0.0.0:4318'
-        max_request_body_size: 1073741824
-        include_metadata: true
+    otlp:
+        protocols:
+            grpc:
+                endpoint: '0.0.0.0:4317'
+                include_metadata: true
+                max_recv_msg_size_mib: 1000
+            http:
+                endpoint: '0.0.0.0:4318'
+                max_request_body_size: 1073741824
+                include_metadata: true
 
 exporters:
-  otlp:
-    endpoint: https://otel.observability.app.launchdarkly.com:4317
+    otlp:
+        endpoint: https://otel.observability.app.launchdarkly.com:4317
 
 processors:
-  attributes/environment:
-    actions:
-      - key: feature_flag.set.id
-        from_attribute: feature_flag.set_id
-        action: insert
-#      OR use the following to set the value from collector-defined value
-#      - key: feature_flag.set.id
-#        value: <LD ENV ID>
-#        action: upsert
+    attributes/environment:
+        actions:
+            - key: feature_flag.set.id
+              from_attribute: feature_flag.set_id
+              action: insert
+    #      OR use the following to set the value from collector-defined value
+    #      - key: feature_flag.set.id
+    #        value: <LD ENV ID>
+    #        action: upsert
 
-  # This filter removes all spans that do not have an HTTP route or any span events
-  # remaining after the previous filter has been applied
-  filter/launchdarkly-spans:
-    error_mode: ignore
-    traces:
-      span:
-        - 'not (attributes["http.route"] != nil or Len(events) > 0)'
+    # This filter removes all spans that do not have an HTTP route or any span events
+    # remaining after the previous filter has been applied
+    filter/launchdarkly-spans:
+        error_mode: ignore
+        traces:
+            span:
+                - 'not (attributes["http.route"] != nil or Len(events) > 0)'
 
-  batch:
+    batch:
 
 service:
-  pipelines:
-    traces:
-      receivers: [otlp]
-      processors: [filter/launchdarkly-spans, attributes/environment, batch]
-      exporters: [otlp]
-    metrics:
-      receivers: [otlp]
-      processors: [attributes/environment]
-      exporters: [otlp]
-    logs:
-      receivers: [otlp]
-      processors: [attributes/environment]
-      exporters: [otlp]
+    pipelines:
+        traces:
+            receivers: [otlp]
+            processors:
+                [filter/launchdarkly-spans, attributes/environment, batch]
+            exporters: [otlp]
+        metrics:
+            receivers: [otlp]
+            processors: [attributes/environment]
+            exporters: [otlp]
+        logs:
+            receivers: [otlp]
+            processors: [attributes/environment]
+            exporters: [otlp]
