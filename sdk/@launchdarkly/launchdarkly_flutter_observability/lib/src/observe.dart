@@ -1,4 +1,5 @@
 import 'package:launchdarkly_flutter_observability/src/api/attribute.dart';
+import 'package:launchdarkly_flutter_observability/src/otel/log_convention.dart';
 import 'package:opentelemetry/api.dart' as otel;
 import 'api/span.dart';
 import 'api/span_kind.dart';
@@ -6,6 +7,7 @@ import 'otel/conversions.dart';
 
 const _launchDarklyTracerName = 'launchdarkly-observability';
 const _launchDarklyErrorSpanName = 'launchdarkly.error';
+const _defaultLogLevel = 'info';
 
 /// Singleton used to access observability features.
 final class Observe {
@@ -59,6 +61,31 @@ final class Observe {
       attributes: attributes,
       stackTrace: stackTrace ?? StackTrace.empty,
     );
+    span.end();
+  }
+
+  /// Record a log with optional attributes.
+  ///
+  /// If [severity] is not provided, then it will default to 'info'.
+  /// An optional [stackTrace] can be provided.
+  ///
+  /// The `StackTrace.current` property can be used to capture a stack trace.
+  static void recordLog(
+    String message, {
+    String severity = _defaultLogLevel,
+    StackTrace? stackTrace,
+    Map<String, Attribute>? attributes,
+  }) {
+    final combinedAttributes = LogConvention.getEventAttributes(
+      message,
+      severity,
+      stackTrace,
+    );
+    if (attributes != null) {
+      combinedAttributes.addAll(attributes);
+    }
+    final span = startSpan(LogConvention.spanName);
+    span.addEvent(LogConvention.eventName, attributes: combinedAttributes);
     span.end();
   }
 }
