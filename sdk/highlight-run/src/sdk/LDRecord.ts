@@ -20,6 +20,10 @@ class _LDRecord extends BufferedClass<Record> implements Record {
 		return this._sdk.stop()
 	}
 
+	addSessionProperties(properties: { [key: string]: any }) {
+		return this._bufferCall('addSessionProperties', [properties])
+	}
+
 	getRecordingState() {
 		return this._isLoaded
 			? this._bufferCall('getRecordingState', [])

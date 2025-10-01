@@ -39,6 +39,10 @@ export default function Root() {
 	return (
 		<div id="sidebar">
 			<h1>Hello, world</h1>
+			<nav style={{ display: 'flex', gap: 12 }}>
+				<a href="/welcome">Welcome</a>
+				<a href="/privacy">Privacy Demo</a>
+			</nav>
 			<p>{flags}</p>
 			<a href={session} target={'_blank'}>
 				{session}
@@ -371,6 +375,43 @@ export default function Root() {
 						}}
 					>
 						Trigger POST Request
+          </button>
+        </div>
+      </div>
+
+			<div
+				style={{
+					marginTop: 8,
+					padding: 12,
+					border: '1px solid #ddd',
+					borderRadius: 6,
+					maxWidth: 720,
+				}}
+			>
+				<h3>Session Properties</h3>
+				<p>
+					Add custom session-level attributes via{' '}
+					<code>LDRecord.addSessionProperties</code>.
+				</p>
+				<textarea
+					style={{
+						width: '100%',
+						minHeight: 120,
+						fontFamily: 'monospace',
+					}}
+					defaultValue='{"plan":"pro","favoriteColor":"seafoam"}'
+					placeholder='{"key":"value"}'
+				/>
+				<div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+					<button
+						onClick={() => {
+							const value =
+								document.querySelector('textarea')?.value ?? ''
+
+							LDRecord.addSessionProperties(JSON.parse(value))
+						}}
+					>
+						Apply session properties
 					</button>
 				</div>
 			</div>

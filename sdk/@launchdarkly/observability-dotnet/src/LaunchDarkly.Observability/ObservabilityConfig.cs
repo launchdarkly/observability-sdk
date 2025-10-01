@@ -7,6 +7,7 @@ namespace LaunchDarkly.Observability
 {
 #if NETFRAMEWORK
     using LoggerBuilderType = OpenTelemetryLoggerOptions;
+
 #else
     using LoggerBuilderType = LoggerProviderBuilder;
 #endif
@@ -60,6 +61,13 @@ namespace LaunchDarkly.Observability
         /// </summary>
         public Action<LoggerBuilderType> ExtendedLoggerConfiguration { get; }
 
+#if !NETFRAMEWORK
+        /// <summary>
+        /// Function which extends the options of the logger provider.
+        /// </summary>
+        public Action<OpenTelemetryLoggerOptions> ExtendedLoggerOptionsConfiguration { get; }
+#endif
+
         /// <summary>
         /// Function which extends the configuration of the meter provider.
         /// </summary>
@@ -75,6 +83,9 @@ namespace LaunchDarkly.Observability
             Action<TracerProviderBuilder> extendedTracerConfiguration,
             Action<LoggerBuilderType> extendedLoggerConfiguration,
             Action<MeterProviderBuilder> extendedMeterConfiguration
+#if !NETFRAMEWORK
+            , Action<OpenTelemetryLoggerOptions> extendedLoggerOptionConfiguration
+#endif
         )
         {
             OtlpEndpoint = otlpEndpoint;
@@ -86,6 +97,9 @@ namespace LaunchDarkly.Observability
             ExtendedTracerConfiguration = extendedTracerConfiguration;
             ExtendedLoggerConfiguration = extendedLoggerConfiguration;
             ExtendedMeterConfiguration = extendedMeterConfiguration;
+#if !NETFRAMEWORK
+            ExtendedLoggerOptionsConfiguration = extendedLoggerOptionConfiguration;
+#endif
         }
 
         /// <summary>

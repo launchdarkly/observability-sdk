@@ -23,23 +23,21 @@ open class BaseApplication : Application() {
         const val LAUNCHDARKLY_MOBILE_KEY = "MOBILE_KEY_GOES_HERE"
     }
 
+    var pluginOptions = Options(
+        resourceAttributes = Attributes.of(
+            AttributeKey.stringKey("example"), "value"
+        ),
+        debug = true,
+        logAdapter = LDAndroidLogging.adapter(),
+    )
+
     var telemetryInspector: TelemetryInspector? = null
+    var testUrl: String? = null
 
-    override fun onCreate() {
-        super.onCreate()
-
-        val testUrl = System.getProperty("e2e_test_base_url")
-        val pluginOptions = Options(
-            resourceAttributes = Attributes.of(
-                AttributeKey.stringKey("example"), "value"
-            ),
-            debug = true,
-            logAdapter = LDAndroidLogging.adapter(),
-        )
-
+    open fun realInit() {
         val observabilityPlugin = Observability(
             application = this@BaseApplication,
-            options = if (testUrl != null) pluginOptions.copy(backendUrl = testUrl) else pluginOptions
+            options = testUrl?.let { pluginOptions.copy(backendUrl = it, otlpEndpoint = it) } ?: pluginOptions
         )
 
         // Set LAUNCHDARKLY_MOBILE_KEY to your LaunchDarkly mobile key found on the LaunchDarkly
@@ -62,7 +60,11 @@ open class BaseApplication : Application() {
             .build()
 
         LDClient.init(this@BaseApplication, ldConfig, context)
-
         telemetryInspector = observabilityPlugin.getTelemetryInspector()
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        realInit()
     }
 }

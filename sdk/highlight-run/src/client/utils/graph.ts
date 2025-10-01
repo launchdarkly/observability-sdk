@@ -1,7 +1,7 @@
 import { ClientError } from 'graphql-request'
 import { PublicGraphError } from '../graph/generated/schemas'
 
-export const MAX_PUBLIC_GRAPH_RETRY_ATTEMPTS = 10
+export const MAX_PUBLIC_GRAPH_RETRY_ATTEMPTS = 3
 
 // Initial backoff for retrying graphql requests.
 export const BASE_DELAY_MS = 1000

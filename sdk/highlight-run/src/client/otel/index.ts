@@ -114,7 +114,7 @@ export const setupBrowserTracing = (
 
 	const exporterOptions: TraceExporterConfig = {
 		url: config.otlpEndpoint + '/v1/traces',
-		concurrencyLimit: 100,
+		concurrencyLimit: 10,
 		timeoutMillis: 30_000,
 		// Using any because we were getting an error importing CompressionAlgorithm
 		// from @opentelemetry/otlp-exporter-base.
@@ -130,11 +130,12 @@ export const setupBrowserTracing = (
 		sampler,
 	)
 
+	// https://opentelemetry.io/docs/specs/otel/logs/sdk/
 	const spanProcessor = new CustomBatchSpanProcessor(exporter, {
-		maxExportBatchSize: 100,
-		maxQueueSize: 1_000,
-		exportTimeoutMillis: exporterOptions.timeoutMillis,
-		scheduledDelayMillis: exporterOptions.timeoutMillis,
+		maxExportBatchSize: 1024, // Default value from SDK is 512
+		maxQueueSize: 2048, // Default value from SDK is 2048
+		exportTimeoutMillis: exporterOptions.timeoutMillis, // Default value from SDK is 30_000
+		scheduledDelayMillis: exporterOptions.timeoutMillis, // Default value from SDK is 1000
 	})
 
 	const resource = new Resource({
