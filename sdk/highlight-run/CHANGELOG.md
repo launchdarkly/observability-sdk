@@ -1,5 +1,13 @@
 # highlight.run
 
+## [9.22.0](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-9.21.1...highlight.run-9.22.0) (2025-10-01)
+
+
+### Features
+
+* add addSessionProperties to RecordSDK ([#247](https://github.com/launchdarkly/observability-sdk/issues/247)) ([1969e1a](https://github.com/launchdarkly/observability-sdk/commit/1969e1a04c2380fa30a068af2c6e0d05780e0495))
+* config options to customize privacy classes and selectors ([#241](https://github.com/launchdarkly/observability-sdk/issues/241)) ([97c72db](https://github.com/launchdarkly/observability-sdk/commit/97c72dbfcb15cd7afe4dab78dcc1b9435c61ffc5))
+
 ## [9.21.1](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-9.21.0...highlight.run-9.21.1) (2025-09-24)
 
 

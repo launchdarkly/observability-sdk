@@ -403,6 +403,14 @@ export class RecordSDK implements Record {
 		})
 	}
 
+	/**
+	 * Add custom session-level properties. These are attached to the current session
+	 * and are searchable, but do not create timeline Track events.
+	 */
+	addSessionProperties(properties: { [key: string]: any }) {
+		this.addProperties(properties, { type: 'session' })
+	}
+
 	async start(options?: StartOptions) {
 		if (
 			navigator?.userAgent?.includes('Googlebot') ||

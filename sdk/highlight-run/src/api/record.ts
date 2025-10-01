@@ -15,6 +15,11 @@ export interface Record {
 	 */
 	stop: () => void
 	/**
+	 * Add custom session-level properties. These are attached to the current session
+	 * and are searchable, but do not create timeline Track events.
+	 */
+	addSessionProperties: (properties: { [key: string]: any }) => void
+	/**
 	 * Snapshot an HTML <canvas> element in WebGL manual snapshotting mode.
 	 * See {@link https://www.highlight.io/docs/getting-started/browser/replay-configuration/canvas#manual-snapshotting}
 	 * for more information.
