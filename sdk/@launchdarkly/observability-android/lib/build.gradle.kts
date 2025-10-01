@@ -10,6 +10,9 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.serialization)
 
+    // Apply Compose compiler plugin
+    id("org.jetbrains.kotlin.plugin.compose") version "2.0.21"
+
     // Apply Dokka plugin for documentation generation
     id("org.jetbrains.dokka") version "2.0.0"
 }
@@ -61,6 +64,13 @@ dependencies {
     // OkHttp for HTTP requests
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
+    // Compose BOM
+    implementation(platform("androidx.compose:compose-bom:2024.12.01"))
+    
+    // Core Compose dependencies
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.foundation:foundation")
+
     // Use JUnit Jupiter for testing.
     testImplementation(platform("org.junit:junit-bom:5.13.4"))
     testImplementation("org.junit.jupiter:junit-jupiter")
@@ -82,6 +92,7 @@ android {
 
     buildFeatures {
         buildConfig = true
+        compose = true
     }
 
     defaultConfig {
