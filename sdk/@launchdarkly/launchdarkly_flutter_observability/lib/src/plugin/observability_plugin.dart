@@ -2,6 +2,8 @@ import 'dart:collection';
 
 import 'package:launchdarkly_flutter_client_sdk/launchdarkly_flutter_client_sdk.dart';
 import 'package:launchdarkly_flutter_observability/src/api/span_status_code.dart';
+import 'package:launchdarkly_flutter_observability/src/instrumentation/instrumentation.dart';
+import 'package:launchdarkly_flutter_observability/src/instrumentation/lifecycle/lifecycle_instrumentation.dart';
 import 'package:launchdarkly_flutter_observability/src/otel/feature_flag_convention.dart';
 import 'package:launchdarkly_flutter_observability/src/otel/setup.dart';
 
@@ -66,9 +68,14 @@ final class _ObservabilityHook extends Hook {
 
 /// LaunchDarkly Observability plugin.
 final class ObservabilityPlugin extends Plugin {
+  final List<Instrumentation> _instrumentations = [];
   final PluginMetadata _metadata = const PluginMetadata(
     name: _launchDarklyObservabilityPluginName,
   );
+
+  ObservabilityPlugin() {
+    _instrumentations.add(LifecycleInstrumentation());
+  }
 
   @override
   void register(
