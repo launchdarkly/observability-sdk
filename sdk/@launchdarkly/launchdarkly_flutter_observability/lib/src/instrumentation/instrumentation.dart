@@ -1,2 +1,4 @@
 /// Interfaces which instrumentations should implement.
-interface class Instrumentation {}
+abstract interface class Instrumentation {
+  void dispose();
+}

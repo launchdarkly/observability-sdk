@@ -11,6 +11,7 @@ import 'platform/stub_lifecycle_listener.dart'
 
 final class LifecycleInstrumentation implements Instrumentation {
   late final LDAppLifecycleListener _lifecycleListener;
+  bool disposed = false;
 
   LifecycleInstrumentation() {
     final initialState = SchedulerBinding.instance.lifecycleState;
@@ -52,7 +53,10 @@ final class LifecycleInstrumentation implements Instrumentation {
       ..end();
   }
 
+  @override
   void dispose() {
-    _lifecycleListener.close();
+    if (!disposed) {
+      _lifecycleListener.close();
+    }
   }
 }
