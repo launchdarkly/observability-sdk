@@ -305,6 +305,42 @@ export default function Root() {
 			>
 				LDObserve.stop()
 			</button>
+			<div
+				style={{
+					marginTop: 8,
+					padding: 12,
+					border: '1px solid #ddd',
+					borderRadius: 6,
+					maxWidth: 720,
+				}}
+			>
+				<h3>Session Properties</h3>
+				<p>
+					Add custom session-level attributes via{' '}
+					<code>LDRecord.addSessionProperties</code>.
+				</p>
+				<textarea
+					style={{
+						width: '100%',
+						minHeight: 120,
+						fontFamily: 'monospace',
+					}}
+					defaultValue='{"plan":"pro","favoriteColor":"seafoam"}'
+					placeholder='{"key":"value"}'
+				/>
+				<div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+					<button
+						onClick={() => {
+							const value =
+								document.querySelector('textarea')?.value ?? ''
+
+							LDRecord.addSessionProperties(JSON.parse(value))
+						}}
+					>
+						Apply session properties
+					</button>
+				</div>
+			</div>
 		</div>
 	)
 }
