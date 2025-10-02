@@ -9,26 +9,42 @@ import 'package:opentelemetry/sdk.dart'
 const _highlightProjectIdAttr = 'highlight.project_id';
 const _tracesSuffix = '/v1/traces';
 
-void setup(String sdkKey, ObservabilityConfig config) {
-  final resourceAttributes = <Attribute>[
-    Attribute.fromString(_highlightProjectIdAttr, sdkKey),
-  ];
-  resourceAttributes.addAll(
-    convertAttributes(
-      ServiceConvention.getAttributes(
-        serviceName: config.applicationName,
-        serviceVersion: config.applicationVersion,
-      ),
-    ),
-  );
-  final tracerProvider = TracerProviderBase(
-    processors: [
-      BatchSpanProcessor(
-        CollectorExporter(Uri.parse('${config.otlpEndpoint}$_tracesSuffix')),
-      ),
-    ],
-    resource: Resource(resourceAttributes),
-  );
+class Otel {
+  static final List<TracerProviderBase> _tracerProviders = [];
 
-  registerGlobalTracerProvider(tracerProvider);
+  static void setup(String sdkKey, ObservabilityConfig config) {
+    // TODO: Log when otel is setup multiple times. It will work, but the
+    // behavior may be confusing.
+
+    final resourceAttributes = <Attribute>[
+      Attribute.fromString(_highlightProjectIdAttr, sdkKey),
+    ];
+    resourceAttributes.addAll(
+      convertAttributes(
+        ServiceConvention.getAttributes(
+          serviceName: config.applicationName,
+          serviceVersion: config.applicationVersion,
+        ),
+      ),
+    );
+    final tracerProvider = TracerProviderBase(
+      processors: [
+        BatchSpanProcessor(
+          CollectorExporter(Uri.parse('${config.otlpEndpoint}$_tracesSuffix')),
+        ),
+      ],
+      resource: Resource(resourceAttributes),
+    );
+
+    _tracerProviders.add(tracerProvider);
+
+    registerGlobalTracerProvider(tracerProvider);
+  }
+
+  static void shutdown() {
+    for (final tracerProvider in _tracerProviders) {
+      tracerProvider.shutdown();
+    }
+    _tracerProviders.clear();
+  }
 }

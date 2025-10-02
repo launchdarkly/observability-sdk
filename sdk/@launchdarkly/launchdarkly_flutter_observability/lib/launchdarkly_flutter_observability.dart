@@ -1,4 +1,6 @@
 export 'src/plugin/observability_plugin.dart' show ObservabilityPlugin;
+export 'src/plugin/observability_config.dart'
+    show InstrumentationConfig, DebugPrintSetting;
 export 'src/observe.dart' show Observe;
 export 'src/api/attribute.dart'
     show

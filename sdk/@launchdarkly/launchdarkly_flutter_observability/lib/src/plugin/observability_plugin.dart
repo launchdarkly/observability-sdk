@@ -2,10 +2,10 @@ import 'dart:collection';
 
 import 'package:launchdarkly_flutter_client_sdk/launchdarkly_flutter_client_sdk.dart';
 import 'package:launchdarkly_flutter_observability/src/api/span_status_code.dart';
+import 'package:launchdarkly_flutter_observability/src/instrumentation/debug_print.dart';
 import 'package:launchdarkly_flutter_observability/src/instrumentation/instrumentation.dart';
 import 'package:launchdarkly_flutter_observability/src/instrumentation/lifecycle/lifecycle_instrumentation.dart';
 import 'package:launchdarkly_flutter_observability/src/otel/feature_flag_convention.dart';
-import 'package:launchdarkly_flutter_observability/src/otel/setup.dart';
 import 'package:launchdarkly_flutter_observability/src/plugin/observability_config.dart';
 
 import '../api/span.dart';
@@ -105,14 +105,19 @@ final class ObservabilityPlugin extends Plugin {
     String? otlpEndpoint,
     String? backendUrl,
     String? Function(LDContext context)? contextFriendlyName,
+    InstrumentationConfig? instrumentation,
   }) : _config = configWithDefaults(
          applicationName: applicationName,
          applicationVersion: applicationVersion,
          otlpEndpoint: otlpEndpoint,
          backendUrl: backendUrl,
          contextFriendlyName: contextFriendlyName,
+         instrumentationConfig: instrumentation,
        ) {
     _instrumentations.add(LifecycleInstrumentation());
+    _instrumentations.add(
+      DebugPrintInstrumentation(_config.instrumentationConfig),
+    );
   }
 
   @override
@@ -120,7 +125,7 @@ final class ObservabilityPlugin extends Plugin {
     LDClient client,
     PluginEnvironmentMetadata environmentMetadata,
   ) {
-    setup(environmentMetadata.credential.value, _config);
+    registerPlugin(this, environmentMetadata.credential.value, _config);
     super.register(client, environmentMetadata);
   }
 
@@ -129,4 +134,12 @@ final class ObservabilityPlugin extends Plugin {
 
   @override
   PluginMetadata get metadata => _metadata;
+
+  /// Unregister any event handlers used by the plugin and cleanup any
+  /// resources requiring manual cleanup.
+  void dispose() {
+    for (final instrumentation in _instrumentations) {
+      instrumentation.dispose();
+    }
+  }
 }

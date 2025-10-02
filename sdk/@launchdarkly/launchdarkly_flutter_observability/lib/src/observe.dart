@@ -1,9 +1,15 @@
-import 'package:launchdarkly_flutter_observability/src/api/attribute.dart';
-import 'package:launchdarkly_flutter_observability/src/otel/log_convention.dart';
+import 'dart:async';
+
 import 'package:opentelemetry/api.dart' as otel;
+
+import 'api/attribute.dart';
 import 'api/span.dart';
 import 'api/span_kind.dart';
 import 'otel/conversions.dart';
+import 'otel/log_convention.dart';
+import 'otel/setup.dart';
+import 'plugin/observability_plugin.dart';
+import 'plugin/observability_config.dart';
 
 const _launchDarklyTracerName = 'launchdarkly-observability';
 const _launchDarklyErrorSpanName = 'launchdarkly.error';
@@ -11,6 +17,9 @@ const _defaultLogLevel = 'info';
 
 /// Singleton used to access observability features.
 final class Observe {
+  static bool _shutdown = false;
+  static final List<ObservabilityPlugin> _pluginInstances = [];
+
   /// Start a span with the given name and optional attributes.
   static Span startSpan(
     String name, {
@@ -88,4 +97,36 @@ final class Observe {
     span.addEvent(LogConvention.eventName, attributes: combinedAttributes);
     span.end();
   }
+
+  /// Shutdown observability. Once shutdown observability cannot be restarted.
+  static void shutdown() {
+    if (!_shutdown) {
+      Otel.shutdown();
+      for (final plugin in _pluginInstances) {
+        plugin.dispose();
+      }
+      _shutdown = true;
+    }
+  }
+
+  /// Get a zone specification which intercepts print statements.
+  static ZoneSpecification zoneSpecification() {
+    return ZoneSpecification(
+      print: (Zone self, ZoneDelegate parent, Zone zone, String line) {
+        parent.print(zone, line);
+        Observe.recordLog(line);
+      },
+    );
+  }
+}
+
+/// Not for export.
+/// Registers a plugin with the singleton and sets up otel.
+registerPlugin(
+  ObservabilityPlugin plugin,
+  String credential,
+  ObservabilityConfig config,
+) {
+  Otel.setup(credential, config);
+  Observe._pluginInstances.add(plugin);
 }
