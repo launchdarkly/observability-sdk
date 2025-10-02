@@ -34,7 +34,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.androidobservability.ui.theme.AndroidObservabilityTheme
 import com.launchdarkly.observability.replay.LDSensitiveMask
-import com.launchdarkly.observability.replay.sensitive
 
 class SecondaryActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -135,13 +134,13 @@ fun UserInfoForm(modifier: Modifier = Modifier) {
                         value = city,
                         onValueChange = { city = it },
                         label = { Text("City") },
-                        modifier = Modifier.weight(1f).sensitive()
+                        modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = state,
                         onValueChange = { state = it },
                         label = { Text("State") },
-                        modifier = Modifier.weight(1f).sensitive()
+                        modifier = Modifier.weight(1f)
                     )
                 }
                 OutlinedTextField(

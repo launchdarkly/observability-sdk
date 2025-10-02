@@ -3,42 +3,28 @@ package com.launchdarkly.observability.replay
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.graphics.Color
-
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 
 /**
- * A simple composable wrapper view used for masking sensitive content in replay sessions.
- * This view always draws a rectangle on top of the content to mask it.
+ * A simple composable wrapper view used for tagging sensitive content in replay sessions.
+ * This view serves as a marker to identify areas that should be masked or hidden during replay.
  *
- * @param content The content to be wrapped and masked as sensitive
+ * @param content The content to be wrapped and tagged as sensitive
  */
 @Composable
 fun LDSensitiveMask(
     content: @Composable () -> Unit
 ) {
-    // Always apply masking by drawing a rectangle on top of content
+    // Render the content with sensitive mask tagging
     Box(
-        modifier = Modifier.applyRedact(Color.Black)
+        modifier = Modifier
+            .testTag("ld-sensitive-mask")
+            .semantics {
+                contentDescription = "sensitive"
+            }
     ) {
         content()
     }
 }
-
-/**
- * Modifier that applies masking by drawing a solid color rectangle over the content
- */
-fun Modifier.applyRedact(color: Color = Color.Black) =
-    drawWithContent {
-        drawContent() // Draw the content of the Composable
-        drawRect(color) // Draw a solid color rectangle over it
-    }
-
-/**
- * Modifier that applies masking by drawing a solid color rectangle over the content
- */
-fun Modifier.sensitive(color: Color = Color.Black) =
-    drawWithContent {
-        drawContent() // Draw the content of the Composable
-        drawRect(color) // Draw a solid color rectangle over it
-    }

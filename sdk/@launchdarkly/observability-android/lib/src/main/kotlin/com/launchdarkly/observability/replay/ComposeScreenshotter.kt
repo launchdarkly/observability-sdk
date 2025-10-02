@@ -5,22 +5,21 @@ import android.app.Application
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.HardwareRenderer
 import android.graphics.Paint
 import android.graphics.Rect
-import android.graphics.RenderNode
-import android.graphics.SurfaceTexture
-import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.ComposeView
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.PixelCopy
-import android.view.Surface
 import android.view.View
 import android.view.ViewGroup
-import androidx.annotation.RequiresApi
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.geometry.Rect as ComposeRect
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.semantics.SemanticsNode
+import androidx.compose.ui.semantics.SemanticsOwner
+import androidx.compose.ui.semantics.getOrNull
 import io.opentelemetry.android.session.SessionManager
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -97,22 +96,35 @@ class ComposeScreenshotter(private val sessionManager: SessionManager): Applicat
 
         try {
             val window = activity.window
-            val view = window.decorView
+            val decorView = window.decorView
+            val width = decorView.width
+            val height = decorView.height
 
-            // Get the window dimensions
-            val rect = Rect()
-            view.getWindowVisibleDisplayFrame(rect)
-            val width = rect.width()
-            val height = rect.height()
+            val rect = Rect(0, 0, width, height)
 
-            // Try hardware-accelerated rendering first (API 29+)
-            // This approach doesn't need global redaction state
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                return@withContext captureWithHardwareRenderer(view, width, height)
+            // Create a bitmap with the window dimensions
+            val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+
+            // Use PixelCopy to capture the window content
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                suspendCancellableCoroutine { continuation ->
+                    PixelCopy.request(
+                        window,
+                        rect, // Use the whole window rect
+                        bitmap,
+                        { copyResult ->
+                            if (copyResult == PixelCopy.SUCCESS) {
+                                val maskedBitmap = maskSensitiveAreas(bitmap, activity)
+                                continuation.resume(maskedBitmap)
+                            } else {
+                                continuation.resumeWithException(Exception("PixelCopy failed with result: $copyResult"))
+                            }
+                        },
+                        Handler(Looper.getMainLooper()) // Handler for main thread
+                    )
+                }
             } else {
-                // Fallback to software rendering for older APIs
-                // Only the fallback needs global redaction state
-                return@withContext captureWithSoftwareRendererWithRedaction(view, width, height)
+                throw NotImplementedError("Need to handle unsupported SDK versions")
             }
         } catch (e: Exception) {
             // fail loudly during development
@@ -120,86 +132,159 @@ class ComposeScreenshotter(private val sessionManager: SessionManager): Applicat
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.Q)
-    private suspend fun captureWithHardwareRenderer(view: View, width: Int, height: Int): Bitmap? {
-        return suspendCancellableCoroutine { continuation ->
-            try {
-                // Create a bitmap to receive the rendered content
-                val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+    private fun maskSensitiveAreas(bitmap: Bitmap, activity: Activity): Bitmap {
+        val maskedBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true)
+        val canvas = Canvas(maskedBitmap)
+        val paint = Paint().apply {
+            color = Color.BLACK
+            style = Paint.Style.FILL
+        }
 
-                // Create a SurfaceTexture and Surface for hardware rendering
-                val surfaceTexture = SurfaceTexture(0)
-                surfaceTexture.setDefaultBufferSize(width, height)
-                val surface = Surface(surfaceTexture)
+        // Find sensitive areas using Compose semantics
+        val sensitiveComposeRects = findSensitiveComposeAreasFromActivity(activity)
 
-                // Create and configure the hardware renderer
-                val renderer = HardwareRenderer()
-                val renderNode = RenderNode("screenshotNode")
+        // Mask sensitive Compose areas found via semantics
+        sensitiveComposeRects.forEach { composeRect ->
+            val rect = Rect(
+                composeRect.left.toInt(),
+                composeRect.top.toInt(),
+                composeRect.right.toInt(),
+                composeRect.bottom.toInt()
+            )
+            canvas.drawRect(rect, paint)
+        }
 
-                // Set up the render node with the view's content
-                renderNode.setPosition(0, 0, width, height)
-                val recordingCanvas = renderNode.beginRecording(width, height)
+        return maskedBitmap
+    }
 
-                // Force a layout pass to ensure all views are properly laid out
-                view.measure(
-                    View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
-                    View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY)
-                )
-                view.layout(0, 0, width, height)
-
-                // Draw the view with selective masking applied in the isolated render context
-                drawViewWithSelectiveMasking(view, recordingCanvas)
-                renderNode.endRecording()
-
-                // Set up the renderer
-                renderer.setContentRoot(renderNode)
-                renderer.setSurface(surface)
-
-                // Render the frame synchronously
-                renderer.createRenderRequest()
-                    .setVsyncTime(System.nanoTime())
-                    .syncAndDraw()
-
-                // Use PixelCopy to copy the surface content to our bitmap
-                PixelCopy.request(
-                    surface,
-                    bitmap,
-                    { result ->
-                        // Clean up resources
-                        renderer.destroy()
-                        surface.release()
-                        surfaceTexture.release()
-
-                        if (result == PixelCopy.SUCCESS) {
-                            continuation.resume(bitmap)
-                        } else {
-                            continuation.resumeWithException(RuntimeException("PixelCopy failed with result: $result"))
-                        }
-                    },
-                    Handler(Looper.getMainLooper())
-                )
-
-            } catch (e: Exception) {
-                continuation.resumeWithException(e)
+    /**
+     * Find sensitive Compose areas from all ComposeViews in the activity.
+     */
+    private fun findSensitiveComposeAreasFromActivity(activity: Activity): List<ComposeRect> {
+        val allSensitiveRects = mutableListOf<ComposeRect>()
+        
+        try {
+            // Find all ComposeViews in the activity
+            val composeViews = findComposeViews(activity.window.decorView)
+            
+            // Process each ComposeView to find sensitive areas
+            composeViews.forEach { composeView ->
+                val semanticsOwner = getSemanticsOwner(composeView)
+                val rootSemanticsNode = semanticsOwner?.rootSemanticsNode
+                if (rootSemanticsNode != null) {
+                    val sensitiveRects = findSensitiveComposeAreas(rootSemanticsNode, composeView)
+                    allSensitiveRects.addAll(sensitiveRects)
+                }
             }
+        } catch (e: Exception) {
+            // Handle cases where ComposeView access fails
+        }
+        
+        return allSensitiveRects
+    }
+
+    /**
+     * Recursively find all ComposeViews in the view hierarchy.
+     */
+    private fun findComposeViews(view: View): List<ComposeView> {
+        val composeViews = mutableListOf<ComposeView>()
+        
+        if (view is ComposeView) {
+            composeViews.add(view)
+        }
+        
+        if (view is ViewGroup) {
+            for (i in 0 until view.childCount) {
+                val child = view.getChildAt(i)
+                composeViews.addAll(findComposeViews(child))
+            }
+        }
+        
+        return composeViews
+    }
+
+    /**
+     * Get the SemanticsOwner from a ComposeView using reflection.
+     * This is necessary because AndroidComposeView and semanticsOwner are not publicly exposed.
+     */
+    private fun getSemanticsOwner(composeView: ComposeView): SemanticsOwner? {
+        return try {
+            // ComposeView contains an AndroidComposeView which has the semanticsOwner
+            if (composeView.childCount > 0) {
+                val androidComposeView = composeView.getChildAt(0)
+                
+                // Use reflection to check if this is an AndroidComposeView
+                val androidComposeViewClass = Class.forName("androidx.compose.ui.platform.AndroidComposeView")
+                if (androidComposeViewClass.isInstance(androidComposeView)) {
+                    // Use reflection to access the semanticsOwner field
+                    val field = androidComposeViewClass.getDeclaredField("semanticsOwner")
+                    field.isAccessible = true
+                    field.get(androidComposeView) as? SemanticsOwner
+                } else null
+            } else null
+        } catch (e: Exception) {
+            null
         }
     }
 
-    private fun captureWithSoftwareRenderer(view: View, width: Int, height: Int): Bitmap {
-        // Create a bitmap with the window dimensions
-        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
+    /**
+     * Find sensitive Compose areas by traversing the semantic node tree.
+     * Takes the root semantic node from the root view and recursively searches for sensitive content.
+     */
+    private fun findSensitiveComposeAreas(rootSemanticsNode: SemanticsNode, composeView: ComposeView): List<ComposeRect> {
+        val sensitiveRects = mutableListOf<ComposeRect>()
+        
+        try {
+            // Recursively traverse the semantic node tree to find sensitive areas
+            traverseSemanticNode(rootSemanticsNode, sensitiveRects, composeView)
+            
+        } catch (e: Exception) {
+            // Handle cases where semantic node traversal fails
+            // This could happen if the semantic tree is not available or corrupted
+        }
+        
+        return sensitiveRects
+    }
 
-        // Force a layout pass to ensure all views are properly laid out
-        view.measure(
-            View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
-            View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY)
-        )
-        view.layout(0, 0, width, height)
+    /**
+     * Recursively traverse a semantic node and its children to find sensitive areas.
+     */
+    private fun traverseSemanticNode(node: SemanticsNode, sensitiveRects: MutableList<ComposeRect>, composeView: ComposeView) {
+        // Check if this node is marked as sensitive
+        if (isSensitiveNode(node)) {
+            // Convert bounds to absolute screen coordinates
+            val boundsInWindow = node.boundsInWindow
+            val absoluteRect = ComposeRect(
+                left = boundsInWindow.left,
+                top = boundsInWindow.top,
+                right = boundsInWindow.right,
+                bottom = boundsInWindow.bottom
+            )
+            sensitiveRects.add(absoluteRect)
+        }
+        
+        // Recursively traverse all children
+        node.children.forEach { child ->
+            traverseSemanticNode(child, sensitiveRects, composeView)
+        }
+    }
 
-        // Draw the root view to the canvas
-        view.draw(canvas)
-
-        return bitmap
+    /**
+     * Check if a semantic node contains sensitive content based on test tags or content descriptions.
+     */
+    private fun isSensitiveNode(node: SemanticsNode): Boolean {
+        // Check for test tag "ld-sensitive-mask"
+        val testTag = node.config.getOrNull(SemanticsProperties.TestTag)
+        if (testTag == "ld-sensitive-mask") {
+            return true
+        }
+        
+        // Check for content description containing "sensitive"
+        val contentDescriptions = node.config.getOrNull(SemanticsProperties.ContentDescription)
+        if (contentDescriptions?.any { it.contains("sensitive", ignoreCase = true) } == true) {
+            return true
+        }
+        
+        return false
     }
 }

@@ -70,6 +70,12 @@ dependencies {
     // Core Compose dependencies
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.foundation:foundation")
+    implementation("androidx.compose.ui:ui-test-manifest")
+    implementation("androidx.compose.ui:ui-tooling")
+    
+    // Compose UI testing dependencies for semantics access
+    implementation("androidx.compose.ui:ui-test-junit4")
+    implementation("androidx.compose.ui:ui-test")
 
     // Use JUnit Jupiter for testing.
     testImplementation(platform("org.junit:junit-bom:5.13.4"))
