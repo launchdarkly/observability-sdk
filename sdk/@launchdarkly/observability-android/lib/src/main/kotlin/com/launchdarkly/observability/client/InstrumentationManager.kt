@@ -47,6 +47,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
 /**
@@ -94,10 +95,10 @@ class InstrumentationManager(
     private var spanProcessor: BatchSpanProcessor? = null
     private var logProcessor: BatchLogRecordProcessor? = null
     private var metricsReader: PeriodicMetricReader? = null
-    private val gaugeCache = mutableMapOf<String, DoubleGauge>()
-    private val counterCache = mutableMapOf<String, LongCounter>()
-    private val histogramCache = mutableMapOf<String, DoubleHistogram>()
-    private val upDownCounterCache = mutableMapOf<String, LongUpDownCounter>()
+    private val gaugeCache = ConcurrentHashMap<String, DoubleGauge>()
+    private val counterCache = ConcurrentHashMap<String, LongCounter>()
+    private val histogramCache = ConcurrentHashMap<String, DoubleHistogram>()
+    private val upDownCounterCache = ConcurrentHashMap<String, LongUpDownCounter>()
 
     //TODO: Evaluate if this class should have a close/shutdown method to close this scope
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
