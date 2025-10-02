@@ -18,6 +18,10 @@ import io.opentelemetry.android.session.SessionConfig
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Logger
 import io.opentelemetry.api.logs.Severity
+import io.opentelemetry.api.metrics.DoubleGauge
+import io.opentelemetry.api.metrics.DoubleHistogram
+import io.opentelemetry.api.metrics.LongCounter
+import io.opentelemetry.api.metrics.LongUpDownCounter
 import io.opentelemetry.api.metrics.Meter
 import io.opentelemetry.api.trace.Span
 import io.opentelemetry.api.trace.Tracer
@@ -87,10 +91,13 @@ class InstrumentationManager(
     private var inMemoryLogExporter: InMemoryLogRecordExporter? = null
     private var inMemoryMetricExporter: InMemoryMetricExporter? = null
     private var telemetryInspector: TelemetryInspector? = null
-
     private var spanProcessor: BatchSpanProcessor? = null
     private var logProcessor: BatchLogRecordProcessor? = null
     private var metricsReader: PeriodicMetricReader? = null
+    private val gaugeCache = mutableMapOf<String, DoubleGauge>()
+    private val counterCache = mutableMapOf<String, LongCounter>()
+    private val histogramCache = mutableMapOf<String, DoubleHistogram>()
+    private val upDownCounterCache = mutableMapOf<String, LongUpDownCounter>()
 
     //TODO: Evaluate if this class should have a close/shutdown method to close this scope
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -275,29 +282,39 @@ class InstrumentationManager(
     }
 
     fun recordMetric(metric: Metric) {
-        otelMeter.gaugeBuilder(metric.name).build()
-            .set(metric.value, metric.attributes)
+        val gauge = gaugeCache.getOrPut(metric.name) {
+            otelMeter.gaugeBuilder(metric.name).build()
+        }
+        gauge.set(metric.value, metric.attributes)
     }
 
     fun recordCount(metric: Metric) {
         // TODO: handle double casting to long better
-        otelMeter.counterBuilder(metric.name).build()
-            .add(metric.value.toLong(), metric.attributes)
+        val counter = counterCache.getOrPut(metric.name) {
+            otelMeter.counterBuilder(metric.name).build()
+        }
+        counter.add(metric.value.toLong(), metric.attributes)
     }
 
     fun recordIncr(metric: Metric) {
-        otelMeter.counterBuilder(metric.name).build()
-            .add(1, metric.attributes)
+        val counter = counterCache.getOrPut(metric.name) {
+            otelMeter.counterBuilder(metric.name).build()
+        }
+        counter.add(1, metric.attributes)
     }
 
     fun recordHistogram(metric: Metric) {
-        otelMeter.histogramBuilder(metric.name).build()
-            .record(metric.value, metric.attributes)
+        val histogram = histogramCache.getOrPut(metric.name) {
+            otelMeter.histogramBuilder(metric.name).build()
+        }
+        histogram.record(metric.value, metric.attributes)
     }
 
     fun recordUpDownCounter(metric: Metric) {
-        otelMeter.upDownCounterBuilder(metric.name).build()
-            .add(metric.value.toLong(), metric.attributes)
+        val upDownCounter = upDownCounterCache.getOrPut(metric.name) {
+            otelMeter.upDownCounterBuilder(metric.name).build()
+        }
+        upDownCounter.add(metric.value.toLong(), metric.attributes)
     }
 
     fun recordLog(message: String, severity: Severity, attributes: Attributes) {
