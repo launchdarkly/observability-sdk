@@ -66,8 +66,7 @@ class InstrumentationManager(
         private const val LOGS_PATH = "/v1/logs"
         private const val TRACES_PATH = "/v1/traces"
         private const val INSTRUMENTATION_SCOPE_NAME = "com.launchdarkly.observability"
-
-        // Batch processor configuration constants
+        const val ERROR_SPAN_NAME = "highlight.error"
         private const val BATCH_MAX_QUEUE_SIZE = 100
         private const val BATCH_SCHEDULE_DELAY_MS = 1000L
         private const val BATCH_EXPORTER_TIMEOUT_MS = 5000L
@@ -100,14 +99,14 @@ class InstrumentationManager(
 
         otelRUM = OpenTelemetryRum.builder(application, otelRumConfig)
             .addLoggerProviderCustomizer { sdkLoggerProviderBuilder, _ ->
-                return@addLoggerProviderCustomizer if (options.disableLogs) {
+                return@addLoggerProviderCustomizer if (options.disableLogs && options.disableErrorTracking) {
                     sdkLoggerProviderBuilder
                 } else {
                     configureLoggerProvider(sdkLoggerProviderBuilder)
                 }
             }
             .addTracerProviderCustomizer { sdkTracerProviderBuilder, _ ->
-                return@addTracerProviderCustomizer if (options.disableTraces) {
+                return@addTracerProviderCustomizer if (options.disableTraces && options.disableErrorTracking) {
                     sdkTracerProviderBuilder
                 } else {
                     configureTracerProvider(sdkTracerProviderBuilder)
@@ -199,26 +198,48 @@ class InstrumentationManager(
     }
 
     private fun createLogExporter(primaryExporter: LogRecordExporter): LogRecordExporter {
+        val conditionalExporter = ConditionalLogRecordExporter(
+            delegate = primaryExporter,
+            allowNormalLogs = !options.disableLogs,
+            allowCrashes = !options.disableErrorTracking
+        )
+        
         return if (options.debug) {
-            val exporters = mutableListOf(primaryExporter, DebugLogExporter(logger))
+            val debugExporter = ConditionalLogRecordExporter(
+                delegate = DebugLogExporter(logger),
+                allowNormalLogs = !options.disableLogs,
+                allowCrashes = !options.disableErrorTracking
+            )
+            val exporters = mutableListOf<LogRecordExporter>(conditionalExporter, debugExporter)
             inMemoryLogExporter = InMemoryLogRecordExporter.create().also { exporters.add(it) }
 
             val compositeExporter = CompositeLogExporter(exporters)
             SamplingLogExporter(compositeExporter, customSampler)
         } else {
-            SamplingLogExporter(primaryExporter, customSampler)
+            SamplingLogExporter(conditionalExporter, customSampler)
         }
     }
 
     private fun createSpanExporter(primaryExporter: SpanExporter): SpanExporter {
+        val conditionalExporter = ConditionalSpanExporter(
+            delegate = primaryExporter,
+            allowNormalSpans = !options.disableTraces,
+            allowErrorSpans = !options.disableErrorTracking
+        )
+        
         return if (options.debug) {
-            val exporters = mutableListOf(primaryExporter, DebugSpanExporter(logger))
+            val debugExporter = ConditionalSpanExporter(
+                delegate = DebugSpanExporter(logger),
+                allowNormalSpans = !options.disableTraces,
+                allowErrorSpans = !options.disableErrorTracking
+            )
+            val exporters = mutableListOf<SpanExporter>(conditionalExporter, debugExporter)
             inMemorySpanExporter = InMemorySpanExporter.create().also { exporters.add(it) }
 
             val compositeExporter = CompositeSpanExporter(exporters)
             SamplingTraceExporter(compositeExporter, customSampler)
         } else {
-            SamplingTraceExporter(primaryExporter, customSampler)
+            SamplingTraceExporter(conditionalExporter, customSampler)
         }
     }
 
@@ -313,7 +334,7 @@ class InstrumentationManager(
     fun recordError(error: Error, attributes: Attributes) {
         if(!options.disableErrorTracking){
             val span = otelTracer
-                .spanBuilder("highlight.error")
+                .spanBuilder(ERROR_SPAN_NAME)
                 .setParent(Context.current().with(Span.current()))
                 .startSpan()
 
