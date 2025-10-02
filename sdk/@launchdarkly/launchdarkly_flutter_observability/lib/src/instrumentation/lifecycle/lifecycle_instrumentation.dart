@@ -1,9 +1,10 @@
 import 'package:flutter/scheduler.dart';
-import 'package:launchdarkly_flutter_observability/launchdarkly_flutter_observability.dart';
-import 'package:launchdarkly_flutter_observability/src/instrumentation/instrumentation.dart';
-import 'package:launchdarkly_flutter_observability/src/instrumentation/lifecycle/lifecycle_conventions.dart';
 
+import '../../api/span_status_code.dart';
 import '../../observe.dart';
+import '../instrumentation.dart';
+import './lifecycle_conventions.dart';
+
 import 'platform/stub_lifecycle_listener.dart'
     if (dart.library.io) 'platform/io_lifecycle_listener.dart'
     if (dart.library.js_interop) 'platform/js_lifecycle_listener.dart';
