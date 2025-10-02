@@ -4,9 +4,9 @@ import (
 	"context"
 	"strings"
 
-	"github.com/highlight/highlight/sdk/highlight-go"
+	highlight "github.com/highlight/highlight/sdk/highlight-go"
 	"github.com/highlight/highlight/sdk/highlight-go/middleware"
-	"github.com/labstack/echo/v4"
+	echo "github.com/labstack/echo/v4"
 	"go.opentelemetry.io/otel/attribute"
 )
 
