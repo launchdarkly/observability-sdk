@@ -5,15 +5,22 @@ import android.app.Application
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.HardwareRenderer
 import android.graphics.Paint
 import android.graphics.Rect
+import android.graphics.RenderNode
+import android.graphics.SurfaceTexture
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.ComposeView
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.PixelCopy
+import android.view.Surface
 import android.view.View
 import android.view.ViewGroup
+import androidx.annotation.RequiresApi
 import io.opentelemetry.android.session.SessionManager
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -98,29 +105,14 @@ class ComposeScreenshotter(private val sessionManager: SessionManager): Applicat
             val width = rect.width()
             val height = rect.height()
 
-            // Create a bitmap with the window dimensions
-            val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-
-            // Use PixelCopy to capture the window content
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                suspendCancellableCoroutine { continuation ->
-                    PixelCopy.request(
-                        window,
-                        rect, // Use the whole window rect
-                        bitmap,
-                        { copyResult ->
-                            if (copyResult == PixelCopy.SUCCESS) {
-                                val maskedBitmap = maskSensitiveAreas(bitmap, activity)
-                                continuation.resume(maskedBitmap)
-                            } else {
-                                continuation.resumeWithException(Exception("PixelCopy failed with result: $copyResult"))
-                            }
-                        },
-                        Handler(Looper.getMainLooper()) // Handler for main thread
-                    )
-                }
+            // Try hardware-accelerated rendering first (API 29+)
+            // This approach doesn't need global redaction state
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                return@withContext captureWithHardwareRenderer(view, width, height)
             } else {
-                throw NotImplementedError("Need to handle unsupported SDK versions")
+                // Fallback to software rendering for older APIs
+                // Only the fallback needs global redaction state
+                return@withContext captureWithSoftwareRendererWithRedaction(view, width, height)
             }
         } catch (e: Exception) {
             // fail loudly during development
@@ -128,98 +120,86 @@ class ComposeScreenshotter(private val sessionManager: SessionManager): Applicat
         }
     }
 
-    private fun maskSensitiveAreas(bitmap: Bitmap, activity: Activity): Bitmap {
-        val maskedBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true)
-        val canvas = Canvas(maskedBitmap)
-        val paint = Paint().apply {
-            color = Color.BLACK
-            style = Paint.Style.FILL
+    @RequiresApi(Build.VERSION_CODES.Q)
+    private suspend fun captureWithHardwareRenderer(view: View, width: Int, height: Int): Bitmap? {
+        return suspendCancellableCoroutine { continuation ->
+            try {
+                // Create a bitmap to receive the rendered content
+                val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+
+                // Create a SurfaceTexture and Surface for hardware rendering
+                val surfaceTexture = SurfaceTexture(0)
+                surfaceTexture.setDefaultBufferSize(width, height)
+                val surface = Surface(surfaceTexture)
+
+                // Create and configure the hardware renderer
+                val renderer = HardwareRenderer()
+                val renderNode = RenderNode("screenshotNode")
+
+                // Set up the render node with the view's content
+                renderNode.setPosition(0, 0, width, height)
+                val recordingCanvas = renderNode.beginRecording(width, height)
+
+                // Force a layout pass to ensure all views are properly laid out
+                view.measure(
+                    View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
+                    View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY)
+                )
+                view.layout(0, 0, width, height)
+
+                // Draw the view with selective masking applied in the isolated render context
+                drawViewWithSelectiveMasking(view, recordingCanvas)
+                renderNode.endRecording()
+
+                // Set up the renderer
+                renderer.setContentRoot(renderNode)
+                renderer.setSurface(surface)
+
+                // Render the frame synchronously
+                renderer.createRenderRequest()
+                    .setVsyncTime(System.nanoTime())
+                    .syncAndDraw()
+
+                // Use PixelCopy to copy the surface content to our bitmap
+                PixelCopy.request(
+                    surface,
+                    bitmap,
+                    { result ->
+                        // Clean up resources
+                        renderer.destroy()
+                        surface.release()
+                        surfaceTexture.release()
+
+                        if (result == PixelCopy.SUCCESS) {
+                            continuation.resume(bitmap)
+                        } else {
+                            continuation.resumeWithException(RuntimeException("PixelCopy failed with result: $result"))
+                        }
+                    },
+                    Handler(Looper.getMainLooper())
+                )
+
+            } catch (e: Exception) {
+                continuation.resumeWithException(e)
+            }
         }
-
-        // Find sensitive view locations and mask them
-        val sensitiveViews = findSensitiveComposeViews(activity)
-        sensitiveViews.forEach { view ->
-            val location = IntArray(2)
-            view.getLocationOnScreen(location)
-
-            // Convert screen coordinates to bitmap coordinates
-            val rect = Rect(
-                location[0],
-                location[1],
-                location[0] + view.width,
-                location[1] + view.height
-            )
-
-            canvas.drawRect(rect, paint)
-        }
-
-        return maskedBitmap
     }
 
-    private fun findSensitiveComposeViews(activity: Activity): List<View> {
-        val sensitiveViews = mutableListOf<View>()
-        val rootView = activity.findViewById<ViewGroup>(android.R.id.content)
+    private fun captureWithSoftwareRenderer(view: View, width: Int, height: Int): Bitmap {
+        // Create a bitmap with the window dimensions
+        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
 
-        findSensitiveViewsRecursive(rootView, sensitiveViews)
-        return sensitiveViews
-    }
+        // Force a layout pass to ensure all views are properly laid out
+        view.measure(
+            View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
+            View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY)
+        )
+        view.layout(0, 0, width, height)
 
-    private fun findSensitiveViewsRecursive(viewGroup: ViewGroup, sensitiveViews: MutableList<View>) {
-        for (i in 0 until viewGroup.childCount) {
-            val child = viewGroup.getChildAt(i)
+        // Draw the root view to the canvas
+        view.draw(canvas)
 
-            // Check for custom sensitive markers
-            if (child.tag == "sensitive" ||
-                child.contentDescription?.contains("password", ignoreCase = true) == true ||
-                child.contentDescription?.contains("sensitive", ignoreCase = true) == true ||
-                child.tag == "ld-sensitive-mask") {
-                sensitiveViews.add(child)
-            }
-            
-            // Check for Compose views that might contain sensitive content
-            // Compose views are typically wrapped in ComposeView or similar containers
-            if (child.javaClass.simpleName.contains("ComposeView") || 
-                child.javaClass.simpleName.contains("AndroidComposeView")) {
-                // For Compose views, we need to check if they contain sensitive content
-                // Since we can't access Compose semantics directly, we'll use a different approach
-                // We'll check if the view has any children that might be sensitive
-                checkComposeViewForSensitiveContent(child, sensitiveViews)
-            }
-            
-            // Recursively check children
-            if (child is ViewGroup) {
-                findSensitiveViewsRecursive(child, sensitiveViews)
-            }
-        }
-    }
-    
-    private fun checkComposeViewForSensitiveContent(view: View, sensitiveViews: MutableList<View>) {
-        // For Compose views, we can't directly access the semantics, but we can
-        // check if the view itself has been marked as sensitive through other means
-        // or if it contains traditional Android views that are sensitive
-        
-        // Check if the Compose view itself has been marked as sensitive
-        if (view.tag == "ld-sensitive-mask" || 
-            view.contentDescription?.contains("sensitive", ignoreCase = true) == true) {
-            sensitiveViews.add(view)
-        }
-        
-        // If it's a ViewGroup, check its children for traditional Android views
-        if (view is ViewGroup) {
-            for (i in 0 until view.childCount) {
-                val child = view.getChildAt(i)
-                if (child.tag == "sensitive" ||
-                    child.contentDescription?.contains("password", ignoreCase = true) == true ||
-                    child.contentDescription?.contains("sensitive", ignoreCase = true) == true ||
-                    child.tag == "ld-sensitive-mask") {
-                    sensitiveViews.add(child)
-                }
-                
-                // Recursively check children
-                if (child is ViewGroup) {
-                    checkComposeViewForSensitiveContent(child, sensitiveViews)
-                }
-            }
-        }
+        return bitmap
     }
 }

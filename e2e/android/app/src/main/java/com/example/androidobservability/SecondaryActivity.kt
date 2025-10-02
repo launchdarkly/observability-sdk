@@ -34,6 +34,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.androidobservability.ui.theme.AndroidObservabilityTheme
 import com.launchdarkly.observability.replay.LDSensitiveMask
+import com.launchdarkly.observability.replay.sensitive
 
 class SecondaryActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -41,29 +42,13 @@ class SecondaryActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             AndroidObservabilityTheme {
-                var password by remember { mutableStateOf("") }
-
-                Scaffold(
-                    modifier = Modifier.fillMaxSize()
-                ) { paddingValues ->
-                    Column(
+                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+                    UserInfoForm(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(paddingValues)
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        LDSensitiveMask{
-                            OutlinedTextField(
-                                value = password,
-                                onValueChange = { password = it },
-                                label = { Text("Password") },
-                                visualTransformation = PasswordVisualTransformation(),
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
-                    }
+                            .padding(innerPadding)
+                            .padding(16.dp)
+                    )
                 }
             }
         }
@@ -134,12 +119,14 @@ fun UserInfoForm(modifier: Modifier = Modifier) {
                     text = "Address Information",
                     style = MaterialTheme.typography.titleMedium
                 )
-                OutlinedTextField(
-                    value = streetAddress,
-                    onValueChange = { streetAddress = it },
-                    label = { Text("Street Address") },
-                    modifier = Modifier.fillMaxWidth()
-                )
+                LDSensitiveMask {
+                    OutlinedTextField(
+                        value = streetAddress,
+                        onValueChange = { streetAddress = it },
+                        label = { Text("Street Address") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -148,13 +135,13 @@ fun UserInfoForm(modifier: Modifier = Modifier) {
                         value = city,
                         onValueChange = { city = it },
                         label = { Text("City") },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f).sensitive()
                     )
                     OutlinedTextField(
                         value = state,
                         onValueChange = { state = it },
                         label = { Text("State") },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f).sensitive()
                     )
                 }
                 OutlinedTextField(
