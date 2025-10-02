@@ -57,6 +57,7 @@ final class LifecycleInstrumentation implements Instrumentation {
   void dispose() {
     if (!disposed) {
       _lifecycleListener.close();
+      disposed = true;
     }
   }
 }
