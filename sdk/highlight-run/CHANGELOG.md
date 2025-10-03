@@ -1,5 +1,13 @@
 # highlight.run
 
+## [9.22.1](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-9.22.0...highlight.run-9.22.1) (2025-10-03)
+
+
+### Bug Fixes
+
+* Add classname to user interaction ([#258](https://github.com/launchdarkly/observability-sdk/issues/258)) ([8ed78e1](https://github.com/launchdarkly/observability-sdk/commit/8ed78e10eeeb7f50777771a5f92a1db2bf8b43fe))
+* support recordError with falsy Error ([#253](https://github.com/launchdarkly/observability-sdk/issues/253)) ([8070c89](https://github.com/launchdarkly/observability-sdk/commit/8070c89fc902da64aff9a3373c071d2e837bd42d))
+
 ## [9.22.0](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-9.21.1...highlight.run-9.22.0) (2025-10-01)
 
 
