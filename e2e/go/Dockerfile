@@ -15,6 +15,7 @@ RUN go mod download github.com/highlight/highlight/sdk/highlight-go
 RUN go mod download
 
 COPY . .
+RUN go mod tidy
 
 ARG TARGETARCH
 ARG TARGETOS
