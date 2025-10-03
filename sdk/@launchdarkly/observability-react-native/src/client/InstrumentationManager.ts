@@ -45,7 +45,6 @@ import {
 	CustomSampler,
 	CustomTraceContextPropagator,
 	getCorsUrlsPattern,
-	getSpanName,
 	getSamplingConfig,
 } from '@launchdarkly/observability-shared'
 import { CustomBatchSpanProcessor } from '../otel/CustomBatchSpanProcessor'
@@ -166,46 +165,9 @@ export class InstrumentationManager {
 		registerInstrumentations({
 			instrumentations: [
 				new FetchInstrumentation({
-					applyCustomAttributesOnSpan: (span, request) => {
-						if (!(span as any).attributes) {
-							return
-						}
-						const readableSpan = span as unknown as ReadableSpan
-
-						const url = readableSpan.attributes[
-							'http.url'
-						] as string
-						const method = request.method ?? 'GET'
-
-						span.updateName(getSpanName(url, method, request.body))
-					},
 					propagateTraceHeaderCorsUrls: corsPattern,
 				}),
 				new XMLHttpRequestInstrumentation({
-					applyCustomAttributesOnSpan: (span, xhr) => {
-						if (!(span as any).attributes) {
-							return
-						}
-						const readableSpan = span as unknown as ReadableSpan
-
-						try {
-							const url = readableSpan.attributes[
-								'http.url'
-							] as string
-							const method = readableSpan.attributes[
-								'http.method'
-							] as string
-							let responseText: string | undefined
-							if (['', 'text'].includes(xhr.responseType)) {
-								responseText = xhr.responseText
-							}
-							span.updateName(
-								getSpanName(url, method, responseText),
-							)
-						} catch (e) {
-							console.error('Failed to update span name:', e)
-						}
-					},
 					propagateTraceHeaderCorsUrls: corsPattern,
 				}),
 			],

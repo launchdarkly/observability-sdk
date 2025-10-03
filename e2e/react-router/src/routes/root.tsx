@@ -305,6 +305,80 @@ export default function Root() {
 			>
 				LDObserve.stop()
 			</button>
+
+			<div style={{ padding: '2rem' }}>
+				<h3>HTTP Requests</h3>
+				<div
+					style={{
+						display: 'flex',
+						flexDirection: 'row',
+						gap: '10px',
+						flexWrap: 'wrap',
+					}}
+				>
+					<button
+						onClick={async () => {
+							await fetch(
+								'https://jsonplaceholder.typicode.com/posts/1',
+							)
+						}}
+					>
+						Trigger HTTP Request
+					</button>
+					<button
+						onClick={async () => {
+							await fetch('https://api.github.com/graphql', {
+								method: 'POST',
+								headers: {
+									'Content-Type': 'application/json',
+								},
+								body: JSON.stringify({
+									query: 'query { viewer { login } }',
+								}),
+							})
+						}}
+					>
+						Trigger Anonymous GraphQL Request
+					</button>
+					<button
+						onClick={async () => {
+							await fetch('https://api.github.com/graphql', {
+								method: 'POST',
+								headers: {
+									'Content-Type': 'application/json',
+								},
+								body: JSON.stringify({
+									operationName: 'GetViewer',
+									query: 'query GetViewer { viewer { login name } }',
+								}),
+							})
+						}}
+					>
+						Trigger Named GraphQL Request
+					</button>
+					<button
+						onClick={async () => {
+							await fetch(
+								'https://jsonplaceholder.typicode.com/posts',
+								{
+									method: 'POST',
+									headers: {
+										'Content-Type': 'application/json',
+									},
+									body: JSON.stringify({
+										title: 'Test Post',
+										body: 'This is a test post',
+										userId: 1,
+									}),
+								},
+							)
+						}}
+					>
+						Trigger POST Request
+					</button>
+				</div>
+			</div>
+
 			<div
 				style={{
 					marginTop: 8,

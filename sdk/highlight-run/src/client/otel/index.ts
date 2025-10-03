@@ -24,7 +24,6 @@ import {
 	WebTracerProvider,
 } from '@opentelemetry/sdk-trace-web'
 import * as SemanticAttributes from '@opentelemetry/semantic-conventions'
-import { parse } from 'graphql'
 import { getResponseBody } from '../listeners/network-listener/utils/fetch-listener'
 import {
 	DEFAULT_URL_BLOCKLIST,
@@ -230,12 +229,6 @@ export const setupBrowserTracing = (
 							return
 						}
 
-						const url = readableSpan.attributes[
-							'http.url'
-						] as string
-						const method = request.method ?? 'GET'
-						span.updateName(getSpanName(url, method, request.body))
-
 						if (!(response instanceof Response)) {
 							span.setAttributes({
 								'http.response.error': response.message,
@@ -284,13 +277,6 @@ export const setupBrowserTracing = (
 						) {
 							return
 						}
-
-						const spanName = getSpanName(
-							browserXhr._url,
-							browserXhr._method,
-							xhr.responseText,
-						)
-						span.updateName(spanName)
 
 						enhanceSpanWithHttpRequestAttributes(
 							span,
@@ -443,39 +429,6 @@ export const shutdown = async () => {
 	} else {
 		console.warn('OTEL shutdown called without initialized meterProvider.')
 	}
-}
-
-const getSpanName = (
-	url: string,
-	method: string,
-	body: Request['body'] | BrowserXHR['_body'],
-) => {
-	let parsedBody
-	const urlObject = new URL(url)
-	const pathname = urlObject.pathname
-	let spanName = `${method.toUpperCase()} - ${pathname}`
-
-	try {
-		parsedBody = typeof body === 'string' ? JSON.parse(body) : body
-
-		if (parsedBody && parsedBody.query) {
-			const query = parse(parsedBody.query)
-			const queryName =
-				query.definitions[0]?.kind === 'OperationDefinition'
-					? query.definitions[0]?.name?.value
-					: undefined
-
-			if (queryName) {
-				spanName = `${queryName} (GraphQL: ${
-					urlObject.host + urlObject.pathname
-				})`
-			}
-		}
-	} catch {
-		// Ignore errors from JSON parsing
-	}
-
-	return spanName
 }
 
 const enhanceSpanWithHttpRequestAttributes = (

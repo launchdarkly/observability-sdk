@@ -14,6 +14,7 @@
 	],
 	"scripts": {
 		"build": "yarn turbo run build --filter '!@rrweb/web-extension' --filter '!nextjs'",
+		"build:sdk": "yarn turbo run build --filter '@launchdarkly/*' --filter 'highlight.run'",
 		"docs": "yarn turbo run docs",
 		"e2e:cloudflare": "yarn turbo run dev --filter cloudflare-worker...",
 		"e2e:express": "yarn turbo run dev --filter express...",
