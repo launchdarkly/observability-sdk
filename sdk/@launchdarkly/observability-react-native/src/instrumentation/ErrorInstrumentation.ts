@@ -92,123 +92,26 @@ export class ErrorInstrumentation {
 	}
 
 	private patchPromiseRejection(): void {
-		// Store original Promise methods
-		const originalThen = Promise.prototype.then
-		const originalCatch = Promise.prototype.catch
-
-		// Store instance reference for use in the patched function
-		const instance = this
-
-		// Install global unhandled rejection listener
-		if (global.process && typeof global.process.on === 'function') {
-			// Node.js style
-			global.process.on('unhandledRejection', (reason, promise) => {
-				const event = {
-					promise,
-					reason,
-					preventDefault: () => {},
-				}
-				instance.handleUnhandledRejection(event)
-			})
-		} else if (typeof global.addEventListener === 'function') {
-			// Browser style
-			global.addEventListener('unhandledrejection', (event) => {
-				instance.handleUnhandledRejection(event)
-			})
+		const rejectionTrackingConfig = {
+			allRejections: true,
+			onUnhandled: this.handleUnhandledRejection.bind(this),
+			onHandled: () => {},
 		}
 
-		// Add an error handler for setTimeout/setInterval
-		const originalSetTimeout = global.setTimeout
+		// @ts-expect-error to allow for checking if HermesInternal exists on `global` since it isn't part of its type
+		const hermesInternal = global?.HermesInternal
 
-		// Wrap setTimeout to catch errors in callbacks but preserve the original types
-		const wrappedSetTimeout = function (
-			callback: Parameters<typeof originalSetTimeout>[0],
-			delay?: Parameters<typeof originalSetTimeout>[1],
-			...args: any[]
-		): ReturnType<typeof originalSetTimeout> {
-			let wrappedCallback = callback
-			if (typeof callback === 'function') {
-				wrappedCallback = function (this: any) {
-					try {
-						return (callback as Function).apply(
-							this,
-							arguments as unknown as any[],
-						)
-					} catch (error) {
-						instance.handleUnhandledException(error, false)
-						throw error // Re-throw to maintain original behavior
-					}
-				}
-			}
-			return originalSetTimeout(wrappedCallback as any, delay, ...args)
-		}
-
-		// Preserve all properties of setTimeout
-		Object.defineProperties(
-			wrappedSetTimeout,
-			Object.getOwnPropertyDescriptors(originalSetTimeout),
-		)
-
-		// Apply the wrapped function
-		global.setTimeout = wrappedSetTimeout as typeof global.setTimeout
-
-		// Patch Promise.prototype.then to catch unhandled rejections
-		Promise.prototype.then = function <TResult1 = any, TResult2 = never>(
-			onFulfilled?:
-				| ((value: any) => TResult1 | PromiseLike<TResult1>)
-				| null
-				| undefined,
-			onRejected?:
-				| ((reason: any) => TResult2 | PromiseLike<TResult2>)
-				| null
-				| undefined,
-		): Promise<TResult1 | TResult2> {
-			let rej = onRejected
-			// if uninitialized (destroyed), preserve original Promise behavior
-			if (instance.isInitialized) {
-				rej =
-					rej ||
-					((reason: any): TResult2 | PromiseLike<TResult2> => {
-						// If no rejection handler is provided, treat as unhandled
-						setTimeout(() => {
-							const promiseThis = this
-							if (promiseThis instanceof Promise) {
-								const event = {
-									promise: promiseThis,
-									reason,
-									preventDefault: () => {},
-								}
-								instance.handleUnhandledRejection(event)
-							}
-						}, 0)
-						throw reason
-					})
-			}
-			return originalThen.call(this, onFulfilled, rej) as Promise<
-				TResult1 | TResult2
-			>
-		}
-
-		// Also patch Promise.catch to ensure we catch unhandled rejections
-		Promise.prototype.catch = function <T = never>(
-			onRejected?:
-				| ((reason: any) => T | PromiseLike<T>)
-				| null
-				| undefined,
-		): Promise<any> {
-			return originalCatch.call(
-				this,
-				onRejected ||
-					((reason: any): T | PromiseLike<T> => {
-						setTimeout(() => {
-							instance.handleUnhandledRejection({
-								promise: this,
-								reason,
-								preventDefault: () => {},
-							})
-						}, 0)
-						throw reason
-					}),
+		// Do the same checking as react-native to make sure we add tracking to the right Promise implementation
+		// https://github.com/facebook/react-native/blob/v0.77.0/packages/react-native/Libraries/Core/polyfillPromise.js#L25
+		if (hermesInternal?.hasPromise?.()) {
+			hermesInternal?.enablePromiseRejectionTracker?.(
+				rejectionTrackingConfig,
+			)
+		} else {
+			// [Unhandled Rejections](https://github.com/then/promise/blob/master/Readme.md#unhandled-rejections)
+			// [promise/setimmediate/rejection-tracking](https://github.com/then/promise/blob/master/src/rejection-tracking.js)
+			require('promise/setimmediate/rejection-tracking').enable(
+				rejectionTrackingConfig,
 			)
 		}
 	}
