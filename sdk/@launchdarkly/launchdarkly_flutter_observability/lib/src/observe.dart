@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:flutter/cupertino.dart';
+import 'package:launchdarkly_flutter_observability/src/observers/tracking_navigator_observer.dart';
 import 'package:opentelemetry/api.dart' as otel;
 
 import 'api/attribute.dart';
@@ -117,6 +119,10 @@ final class Observe {
         Observe.recordLog(line);
       },
     );
+  }
+
+  static NavigatorObserver navigatorObserver() {
+    return TrackingNavigatorObserver();
   }
 }
 
