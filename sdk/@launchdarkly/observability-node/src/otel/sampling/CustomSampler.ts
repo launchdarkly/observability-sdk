@@ -232,20 +232,14 @@ export class CustomSampler implements ExportSampler {
 	): boolean {
 		if (config.severityText) {
 			const severityText = record.severityText
-			if (
-				typeof severityText === 'string' &&
-				!this.matchesValue(config.severityText, severityText)
-			) {
+			if (!this.matchesValue(config.severityText, severityText)) {
 				return false
 			}
 		}
 
 		if (config.message) {
 			const message = record.body
-			if (
-				typeof message === 'string' &&
-				!this.matchesValue(config.message, message)
-			) {
+			if (!this.matchesValue(config.message, message)) {
 				return false
 			}
 		}

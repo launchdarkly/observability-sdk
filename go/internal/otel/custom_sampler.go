@@ -625,10 +625,12 @@ func (cs *CustomSampler) matchesLogConfig(
 
 	// Check message if defined
 	if messageConfig := config.GetMessage(); !isMatchConfigEmpty(&messageConfig) {
-		if record.Body().Kind() == log.KindString {
-			if !matchesValue(cs, &messageConfig, record.Body().AsString()) {
-				return false
-			}
+		// We only support string message bodies for now.
+		if record.Body().Kind() != log.KindString {
+			return false
+		}
+		if !matchesValue(cs, &messageConfig, record.Body().AsString()) {
+			return false
 		}
 	}
 
