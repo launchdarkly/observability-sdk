@@ -2,7 +2,7 @@ package hmetric
 
 import (
 	"context"
-	"github.com/highlight/highlight/sdk/highlight-go"
+	highlight "github.com/highlight/highlight/sdk/highlight-go"
 	"go.opentelemetry.io/otel/attribute"
 	"math/rand"
 )

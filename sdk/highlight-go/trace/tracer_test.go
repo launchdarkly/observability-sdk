@@ -24,7 +24,7 @@ func TestTracer(t *testing.T) {
 			Field: &ast.Field{Name: "test-field"},
 		},
 	})
-	tr := NewGraphqlTracer("test")
+	tr := NewGraphqlTracer("test").(Tracer)
 	t.Run("test basic intercept", func(t *testing.T) {
 		highlight.Start()
 		if res := tr.InterceptResponse(ctx, func(ctx context.Context) *graphql.Response {

@@ -1,48 +1,40 @@
 {
-    "metadata": [
-      {
-        "src": [
-          {
-            "src": "./src",
-            "files": [
-              "**/*.csproj",
-              "**/bin/**/**LaunchDarkly.Observability**.dll"
-            ]
-          }
-        ],
-        "dest": "./api",
-        "properties": {
-          "Configuration": "Debug"
-        }
-      }
-    ],
-    "build": {
-      "content": [
-        {
-          "files": [
-            "**/*.{md,yml}"
-          ],
-          "exclude": [
-            "docs/**"
-          ]
-        }
-      ],
-      "resource": [
-        {
-          "files": [
-            "images/**"
-          ]
-        }
-      ],
-      "output": "docs",
-      "template": [
-        "default"
-      ],
-      "globalMetadata": {
-        "_appName": "LaunchDarkly Observability plugin for the Server-Side SDK for .NET",
-        "_appTitle": "LaunchDarkly Observability plugin for the Server-Side SDK for .NET",
-        "_enableSearch": true,
-        "pdf": false
-      }
-    }
-  }
+	"metadata": [
+		{
+			"src": [
+				{
+					"src": "./src",
+					"files": [
+						"**/*.csproj",
+						"**/bin/**/**LaunchDarkly.Observability**.dll"
+					]
+				}
+			],
+			"dest": "./api",
+			"properties": {
+				"Configuration": "Debug"
+			}
+		}
+	],
+	"build": {
+		"content": [
+			{
+				"files": ["**/*.{md,yml}"],
+				"exclude": ["docs/**"]
+			}
+		],
+		"resource": [
+			{
+				"files": ["images/**"]
+			}
+		],
+		"output": "docs",
+		"template": ["default"],
+		"globalMetadata": {
+			"_appName": "LaunchDarkly Observability plugin for the Server-Side SDK for .NET",
+			"_appTitle": "LaunchDarkly Observability plugin for the Server-Side SDK for .NET",
+			"_enableSearch": true,
+			"pdf": false
+		}
+	}
+}
