@@ -27,7 +27,7 @@ function defaultShouldPreventSpanCreation() {
  * the Highlight SDK.
  */
 export class UserInteractionInstrumentation extends InstrumentationBase {
-	static readonly version = '0.1.0'
+	static readonly version = '0.1.1'
 	static readonly moduleName: string = 'user-interaction'
 	private _spansData = new WeakMap<api.Span, SpanData>()
 	private _zonePatched?: boolean
@@ -123,6 +123,7 @@ export class UserInteractionInstrumentation extends InstrumentationBase {
 						['event.type']: eventName,
 						['event.tag']: element.tagName,
 						['event.xpath']: xpath,
+						['event.classname']: element.className,
 						['event.id']: element.id,
 						['event.text']: element.textContent ?? '',
 						['event.url']: window.location.href,
