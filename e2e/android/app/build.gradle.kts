@@ -65,6 +65,9 @@ dependencies {
     implementation("io.opentelemetry.android.instrumentation:httpurlconnection-library:0.11.0-alpha")
     byteBuddy("io.opentelemetry.android.instrumentation:httpurlconnection-agent:0.11.0-alpha")
 
+    // Used for accessing the SignalFromDiskExporter class in TestApplication
+    implementation("io.opentelemetry.android:core:0.11.0-alpha")
+
     // OkHTTP instrumentation
     implementation("io.opentelemetry.android.instrumentation:okhttp3-library:0.11.0-alpha")
     byteBuddy("io.opentelemetry.android.instrumentation:okhttp3-agent:0.11.0-alpha")
