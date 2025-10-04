@@ -1,6 +1,7 @@
 package com.example.androidobservability
 
 import com.launchdarkly.sdk.android.LDClient
+import io.opentelemetry.android.features.diskbuffering.SignalFromDiskExporter
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import java.net.InetAddress
@@ -48,6 +49,7 @@ class TestApplication : BaseApplication() {
             mockWebServer = null
         }
         LDClient.get().close()
+        SignalFromDiskExporter.resetForTesting()
         super.onTerminate()
     }
 }
