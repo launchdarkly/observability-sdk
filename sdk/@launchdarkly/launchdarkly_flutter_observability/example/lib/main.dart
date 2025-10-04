@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:launchdarkly_flutter_client_sdk/launchdarkly_flutter_client_sdk.dart';
@@ -27,7 +26,18 @@ void main() {
           // If using android studio the `additional run args` option can include the correct --dart-define.
           CredentialSource.fromEnvironment(),
           AutoEnvAttributes.enabled,
-          plugins: [ObservabilityPlugin()],
+          plugins: [
+            ObservabilityPlugin(
+              applicationName: 'test-application',
+              // This could be a semantic version or a git commit hash.
+              // This demonstrates how to use an environment variable to set the hash.
+              // flutter build --dart-define GIT_SHA=$(git rev-parse HEAD) --dart-define LAUNCHDARKLY_MOBILE_KEY=<my-mobile-key>
+              applicationVersion: const String.fromEnvironment(
+                'GIT_SHA',
+                defaultValue: 'no-version',
+              ),
+            ),
+          ],
         ),
         LDContextBuilder().kind('user', 'bob').build(),
       );

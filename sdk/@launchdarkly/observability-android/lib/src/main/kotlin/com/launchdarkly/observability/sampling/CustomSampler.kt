@@ -151,14 +151,14 @@ class CustomSampler(
     ): Boolean {
         if (config.severityText != null) {
             val severityText = record.severity?.name
-            if (severityText != null && !matchesValue(config.severityText, severityText)) {
+            if (!matchesValue(config.severityText, severityText)) {
                 return false
             }
         }
 
         if (config.message != null) {
             val message = record.bodyValue?.asString()
-            if (message != null && !matchesValue(config.message, message)) {
+            if (!matchesValue(config.message, message)) {
                 return false
             }
         }
