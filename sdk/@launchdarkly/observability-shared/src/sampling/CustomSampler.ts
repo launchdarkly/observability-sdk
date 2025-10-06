@@ -237,7 +237,7 @@ export class CustomSampler implements ExportSampler {
 		}
 
 		if (config.message) {
-			if(typeof record.body !== 'string') {
+			if (typeof record.body !== 'string') {
 				// We only support string message bodies for now.
 				return false
 			}
