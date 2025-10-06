@@ -254,6 +254,7 @@ export class ObserveSDK implements Observe {
 		source?: string,
 		type?: ErrorMessageType,
 	) {
+		error = error || new Error('Unknown error')
 		if (error instanceof Error && error.cause) {
 			payload = {
 				...payload,
