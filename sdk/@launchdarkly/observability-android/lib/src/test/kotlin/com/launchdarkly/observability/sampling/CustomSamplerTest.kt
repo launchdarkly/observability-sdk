@@ -25,7 +25,6 @@ class CustomSamplerTest {
     private lateinit var customSampler: CustomSampler
     private val mockSamplerFunction: (Int) -> Boolean = mockk()
 
-
     @BeforeEach
     fun setup() {
         customSampler = CustomSampler(mockSamplerFunction)
@@ -303,7 +302,7 @@ class CustomSamplerTest {
         }
 
         @Test
-        fun `should not match when event attributes do not match`() {
+        fun `should not match span when event attributes do not match`() {
             val config = SamplingConfig(
                 spans = listOf(
                     SpanSamplingConfig(
@@ -400,7 +399,36 @@ class CustomSamplerTest {
         }
 
         @Test
-        fun `should not match log when severity does not match`() {
+        fun `should not match log when message does not match or is null`() {
+            every { mockSamplerFunction.invoke(any()) } returns false
+
+            val config = SamplingConfig(
+                logs = listOf(
+                    LogSamplingConfig(
+                        message = MatchConfig.Value("test-log"),
+                        samplingRatio = 42
+                    )
+                )
+            )
+            customSampler.setConfig(config)
+
+            val logDifferentMessage = createMockLog("other-log")
+            val logNullMessage = createMockLog()
+
+            customSampler.sampleLog(logDifferentMessage).also {
+                assertTrue(it.sample)
+                assertNull(it.attributes)
+            }
+            customSampler.sampleLog(logNullMessage).also {
+                assertTrue(it.sample)
+                assertNull(it.attributes)
+            }
+        }
+
+        @Test
+        fun `should not match log when severity does not match or is null`() {
+            every { mockSamplerFunction.invoke(any()) } returns false
+
             val config = SamplingConfig(
                 logs = listOf(
                     LogSamplingConfig(
@@ -411,12 +439,17 @@ class CustomSamplerTest {
             )
             customSampler.setConfig(config)
 
-            val log = createMockLog(severityText = "INFO")
+            val logDifferentSeverity = createMockLog(severityText = "INFO")
+            val logNullSeverity = createMockLog(severityText = null)
 
-            val result = customSampler.sampleLog(log)
-
-            assertTrue(result.sample)
-            assertNull(result.attributes)
+            customSampler.sampleLog(logDifferentSeverity).also {
+                assertTrue(it.sample)
+                assertNull(it.attributes)
+            }
+            customSampler.sampleLog(logNullSeverity).also {
+                assertTrue(it.sample)
+                assertNull(it.attributes)
+            }
         }
 
         @Test

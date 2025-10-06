@@ -1,11 +1,11 @@
 {
-	"go": "0.3.0",
-	"sdk/@launchdarkly/observability": "0.4.3",
-	"sdk/@launchdarkly/observability-android": "0.9.0",
+	"go": "0.3.1",
+	"sdk/@launchdarkly/observability": "0.4.5",
+	"sdk/@launchdarkly/observability-android": "0.10.0",
 	"sdk/@launchdarkly/observability-dotnet": "0.3.0",
-	"sdk/@launchdarkly/observability-node": "0.3.0",
+	"sdk/@launchdarkly/observability-node": "0.3.1",
 	"sdk/@launchdarkly/observability-python": "0.1.1",
 	"sdk/@launchdarkly/observability-react-native": "0.6.0",
-	"sdk/@launchdarkly/session-replay": "0.4.3",
-	"sdk/highlight-run": "9.22.0"
+	"sdk/@launchdarkly/session-replay": "0.4.5",
+	"sdk/highlight-run": "9.22.2"
 }

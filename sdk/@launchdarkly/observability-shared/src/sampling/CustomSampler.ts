@@ -231,21 +231,17 @@ export class CustomSampler implements ExportSampler {
 		record: ReadableLogRecord,
 	): boolean {
 		if (config.severityText) {
-			const severityText = record.severityText
-			if (
-				typeof severityText === 'string' &&
-				!this.matchesValue(config.severityText, severityText)
-			) {
+			if (!this.matchesValue(config.severityText, record.severityText)) {
 				return false
 			}
 		}
 
 		if (config.message) {
-			const message = record.body
-			if (
-				typeof message === 'string' &&
-				!this.matchesValue(config.message, message)
-			) {
+			if (typeof record.body !== 'string') {
+				// We only support string message bodies for now.
+				return false
+			}
+			if (!this.matchesValue(config.message, record.body)) {
 				return false
 			}
 		}
