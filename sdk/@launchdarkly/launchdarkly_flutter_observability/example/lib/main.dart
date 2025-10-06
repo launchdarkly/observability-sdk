@@ -28,6 +28,9 @@ void main() {
           AutoEnvAttributes.enabled,
           plugins: [
             ObservabilityPlugin(
+              instrumentation: InstrumentationConfig(
+                debugPrint: DebugPrintSetting.always(),
+              ),
               applicationName: 'test-application',
               // This could be a semantic version or a git commit hash.
               // This demonstrates how to use an environment variable to set the hash.
@@ -57,6 +60,9 @@ void main() {
 
       // Any additional default error handling.
     },
+    // Used to intercept print statements. Generally print statements in
+    // production are treated as a warning and this is not required.
+    zoneSpecification: Observe.zoneSpecification(),
   );
 }
 
@@ -196,6 +202,19 @@ class _MyHomePageState extends State<MyHomePage> {
                 );
               },
               child: const Text('Record error log with stack trace'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                debugPrint("This is a message from debug print");
+              },
+              child: const Text('Call debugPrint'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                // ignore: avoid_print
+                print('This is a message from print');
+              },
+              child: const Text('Call print'),
             ),
             const Text('You have pushed the button this many times:'),
             Text(
