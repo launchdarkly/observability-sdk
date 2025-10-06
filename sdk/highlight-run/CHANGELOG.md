@@ -1,5 +1,12 @@
 # highlight.run
 
+## [9.22.2](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-9.22.1...highlight.run-9.22.2) (2025-10-06)
+
+
+### Bug Fixes
+
+* Fix an issue where logging configuration could over-match for log records without a message or severity. ([#261](https://github.com/launchdarkly/observability-sdk/issues/261)) ([500a6bf](https://github.com/launchdarkly/observability-sdk/commit/500a6bf2e7801c8076405257a31ba4a629311e0b))
+
 ## [9.22.1](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-9.22.0...highlight.run-9.22.1) (2025-10-03)
 
 
