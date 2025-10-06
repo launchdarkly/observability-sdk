@@ -3,7 +3,6 @@ import type { ObservabilityClient } from '../client/ObservabilityClient'
 import {
 	extractReactErrorInfo,
 	formatError,
-	isNetworkError,
 	parseConsoleArgs,
 } from './errorUtils'
 
@@ -121,11 +120,6 @@ export class ErrorInstrumentation {
 			const errorObj =
 				error instanceof Error ? error : new Error(String(error))
 
-			// Skip network errors as they're handled by network instrumentation
-			if (isNetworkError(errorObj)) {
-				return
-			}
-
 			const reactInfo = extractReactErrorInfo(error)
 			const formattedError = formatError(
 				errorObj,
@@ -161,11 +155,6 @@ export class ErrorInstrumentation {
 			const reason = event.reason || event
 			const errorObj =
 				reason instanceof Error ? reason : new Error(String(reason))
-
-			// Skip network errors
-			if (isNetworkError(errorObj)) {
-				return
-			}
 
 			const formattedError = formatError(
 				errorObj,
