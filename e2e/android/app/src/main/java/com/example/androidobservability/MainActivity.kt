@@ -7,32 +7,58 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import com.example.androidobservability.ui.theme.AndroidObservabilityTheme
 
 class MainActivity : ComponentActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         val viewModel: ViewModel by viewModels()
+
         enableEdgeToEdge()
         setContent {
             AndroidObservabilityTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Column {
+                    var customLogText by remember { mutableStateOf("") }
+                    var customSpanText by remember { mutableStateOf("") }
+                    var customContextKey by remember { mutableStateOf("") }
+
+                    Column(
+                        modifier = Modifier
+                            .padding(innerPadding)
+                            .padding(16.dp)
+                            .verticalScroll(rememberScrollState())
+                    ) {
                         Text(
                             text = "Hello Telemetry",
-                            modifier = Modifier.padding(innerPadding)
+                            modifier = Modifier.padding(bottom = 16.dp)
                         )
+
                         Button(
                             onClick = {
-                                this@MainActivity.startActivity(Intent(this@MainActivity, SecondaryActivity::class.java))
+                                this@MainActivity.startActivity(
+                                    Intent(
+                                        this@MainActivity,
+                                        SecondaryActivity::class.java
+                                    )
+                                )
                             }
                         ) {
                             Text("Go to Secondary Activity")
@@ -79,25 +105,58 @@ class MainActivity : ComponentActivity() {
                         ) {
                             Text("Trigger Crash")
                         }
+
+                        OutlinedTextField(
+                            value = customLogText,
+                            onValueChange = { customLogText = it },
+                            label = { Text("Log Message") },
+                            modifier = Modifier.padding(8.dp)
+                        )
+                        Button(
+                            onClick = {
+                                viewModel.triggerCustomLog(customLogText)
+                            },
+                            modifier = Modifier.padding(8.dp)
+                        ) {
+                            Text("Send custom log")
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        OutlinedTextField(
+                            value = customSpanText,
+                            onValueChange = { customSpanText = it },
+                            label = { Text("Span Name") },
+                            modifier = Modifier.padding(8.dp)
+                        )
+                        Button(
+                            onClick = {
+                                viewModel.triggerCustomSpan(customSpanText)
+                            },
+                            modifier = Modifier.padding(8.dp)
+                        ) {
+                            Text("Send custom span")
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        OutlinedTextField(
+                            value = customContextKey,
+                            onValueChange = { customContextKey = it },
+                            label = { Text("LD context key") },
+                            modifier = Modifier.padding(8.dp)
+                        )
+                        Button(
+                            onClick = {
+                                viewModel.identifyLDContext(customContextKey)
+                            },
+                            modifier = Modifier.padding(8.dp)
+                        ) {
+                            Text("Identify LD Context")
+                        }
                     }
                 }
             }
         }
-    }
-}
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    AndroidObservabilityTheme {
-        Greeting("Android")
     }
 }

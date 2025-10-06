@@ -1,0 +1,23 @@
+name: launchdarkly_flutter_observability
+description: 'The LaunchDarkly Observability plugin for Flutter. Get started using LaunchDarkly today!'
+version: 0.0.0
+homepage: https://github.com/launchdarkly/observability-sdk
+repository: https://github.com/launchdarkly/observability-sdk/tree/main/sdk/@launchdarkly/launchdarkly_flutter_observability
+
+environment:
+    sdk: ^3.9.0
+    flutter: '>=1.17.0'
+
+dependencies:
+    flutter:
+        sdk: flutter
+
+    opentelemetry: 0.18.10
+
+    launchdarkly_flutter_client_sdk: ^4.12.0
+    web: ^1.1.1
+
+dev_dependencies:
+    flutter_test:
+        sdk: flutter
+    flutter_lints: ^5.0.0

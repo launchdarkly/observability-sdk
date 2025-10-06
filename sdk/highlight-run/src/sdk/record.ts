@@ -403,6 +403,14 @@ export class RecordSDK implements Record {
 		})
 	}
 
+	/**
+	 * Add custom session-level properties. These are attached to the current session
+	 * and are searchable, but do not create timeline Track events.
+	 */
+	addSessionProperties(properties: { [key: string]: any }) {
+		this.addProperties(properties, { type: 'session' })
+	}
+
 	async start(options?: StartOptions) {
 		if (
 			navigator?.userAgent?.includes('Googlebot') ||
@@ -596,13 +604,17 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 			)
 
 			this._recordStop = record({
-				ignoreClass: 'highlight-ignore',
-				blockClass: 'highlight-block',
+				ignoreClass: this.options.ignoreClass ?? 'highlight-ignore',
+				ignoreSelector: this.options.ignoreSelector,
+				blockClass: this.options.blockClass ?? 'highlight-block',
+				blockSelector: this.options.blockSelector,
 				emit,
 				recordCrossOriginIframes: this.options.recordCrossOriginIframe,
 				privacySetting: this.privacySetting,
 				maskAllInputs,
 				maskInputOptions: maskInputOptions,
+				maskTextClass: this.options.maskTextClass,
+				maskTextSelector: this.options.maskTextSelector,
 				recordCanvas: this.enableCanvasRecording,
 				sampling: {
 					canvas: {

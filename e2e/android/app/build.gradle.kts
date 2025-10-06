@@ -37,6 +37,15 @@ android {
     buildFeatures {
         compose = true
     }
+    packaging {
+        resources {
+            excludes += "/META-INF/LICENSE.md"
+            excludes += "/META-INF/LICENSE-notice.md"
+        }
+    }
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+    }
 }
 
 dependencies {
@@ -56,6 +65,9 @@ dependencies {
     implementation("io.opentelemetry.android.instrumentation:httpurlconnection-library:0.11.0-alpha")
     byteBuddy("io.opentelemetry.android.instrumentation:httpurlconnection-agent:0.11.0-alpha")
 
+    // Used for accessing the SignalFromDiskExporter class in TestApplication
+    implementation("io.opentelemetry.android:core:0.11.0-alpha")
+
     // OkHTTP instrumentation
     implementation("io.opentelemetry.android.instrumentation:okhttp3-library:0.11.0-alpha")
     byteBuddy("io.opentelemetry.android.instrumentation:okhttp3-agent:0.11.0-alpha")
@@ -70,11 +82,19 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+
     testImplementation(libs.junit)
+    testImplementation(libs.androidx.ui.test.junit4)
+    testImplementation(libs.core.ktx)
+    testImplementation(libs.robolectric)
+    testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
+    testImplementation("io.opentelemetry:opentelemetry-sdk-testing:1.51.0")
+
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4)
+
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 }

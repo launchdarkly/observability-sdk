@@ -4,6 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.observability.sdk.LDObserve
+import com.launchdarkly.sdk.ContextKind
+import com.launchdarkly.sdk.LDContext
+import com.launchdarkly.sdk.android.LDClient
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Severity
@@ -36,6 +39,34 @@ class ViewModel : ViewModel() {
         )
     }
 
+    fun triggerCustomLog(
+        message: String,
+        severity: Severity = Severity.INFO,
+        attributes: Attributes = Attributes.empty()
+    ) {
+        if (message.isNotEmpty()) {
+            LDObserve.recordLog(
+                message = message,
+                severity = severity,
+                attributes = attributes
+            )
+        }
+    }
+
+    fun triggerCustomSpan(spanName: String) {
+        if (spanName.isNotEmpty()) {
+            viewModelScope.launch(Dispatchers.IO) {
+                val customSpan = LDObserve.startSpan(
+                    name = spanName,
+                    attributes = Attributes.of(
+                        AttributeKey.stringKey("custom_span"), "true"
+                    )
+                )
+                customSpan.end()
+            }
+        }
+    }
+
     fun triggerNestedSpans() {
         viewModelScope.launch(Dispatchers.IO) {
             val newSpan0 = LDObserve.startSpan("FakeSpan", Attributes.empty())
@@ -64,6 +95,14 @@ class ViewModel : ViewModel() {
             sendOkHttpRequest()
             sendURLRequest()
         }
+    }
+
+    fun identifyLDContext(contextKey: String = "test-context-key") {
+        val context = LDContext.builder(ContextKind.DEFAULT, contextKey)
+            .name("test-context-name")
+            .build()
+
+        LDClient.get().identify(context)
     }
 
     private fun sendOkHttpRequest() {

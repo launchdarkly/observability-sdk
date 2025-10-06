@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.9.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.8.0...launchdarkly-observability-android-0.9.0) (2025-10-01)
+
+
+### Features
+
+* O11Y-398 - Disable config options implemented ([#239](https://github.com/launchdarkly/observability-sdk/issues/239)) ([3548b42](https://github.com/launchdarkly/observability-sdk/commit/3548b42c6f4dbf3c710b508cb817b78cfc47448c))
+
+## [0.8.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.7.0...launchdarkly-observability-android-0.8.0) (2025-09-26)
+
+
+### Features
+
+* O11Y-374 - Add identify span in TracingHook  ([#232](https://github.com/launchdarkly/observability-sdk/issues/232)) ([a895c97](https://github.com/launchdarkly/observability-sdk/commit/a895c9743ceb61fd045d0e561aa3b2c7b999067f))
+
+## [0.7.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.6.0...launchdarkly-observability-android-0.7.0) (2025-09-23)
+
+
+### Features
+
+* Implement flush mechanism for observability data ([#229](https://github.com/launchdarkly/observability-sdk/issues/229)) ([4f266a6](https://github.com/launchdarkly/observability-sdk/commit/4f266a6eda9a8fa84780e2959d94bd4a937aa3d1))
+* O11Y-413 - Add sampling config via web request ([#212](https://github.com/launchdarkly/observability-sdk/issues/212)) ([0a82cbf](https://github.com/launchdarkly/observability-sdk/commit/0a82cbf769f10292d3a9ccbc570d46e6d0558297))
+
 ## [0.6.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.5.0...launchdarkly-observability-android-0.6.0) (2025-08-28)
 
 
