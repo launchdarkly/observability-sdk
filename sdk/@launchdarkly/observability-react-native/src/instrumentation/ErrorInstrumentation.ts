@@ -95,16 +95,11 @@ export class ErrorInstrumentation {
 	}
 
 	private patchPromiseRejection(): void {
-		// Custom promise rejection tracking implementation
-		// We patch Promise.prototype.then to track rejections and detect when they're handled
-
-		// Store the original Promise.prototype.then
 		this.originalPromiseThen = Promise.prototype.then
 
 		const self = this
 		const originalThen = this.originalPromiseThen
 
-		// Patch Promise.prototype.then to track rejection handlers
 		Promise.prototype.then = function <TResult1 = any, TResult2 = never>(
 			this: Promise<any>,
 			onFulfilled?:
@@ -195,19 +190,14 @@ export class ErrorInstrumentation {
 				reject: (reason?: any) => void,
 			) => void,
 		) {
+			let rejectedReason: any = undefined
+			let wasRejected = false
+
 			const promise = new OriginalPromise((resolve, reject) => {
 				const wrappedReject = (reason?: any) => {
-					// Mark as potentially unhandled
-					self.unhandledRejections.add(promise)
-
-					// Check after a microtask if it's still unhandled
-					setTimeout(() => {
-						if (self.unhandledRejections.has(promise)) {
-							self.unhandledRejections.delete(promise)
-							self.handleUnhandledRejection({ reason })
-						}
-					}, 0)
-
+					// Store rejection info for later processing
+					wasRejected = true
+					rejectedReason = reason
 					reject(reason)
 				}
 
@@ -217,6 +207,21 @@ export class ErrorInstrumentation {
 					wrappedReject(error)
 				}
 			})
+
+			// Now that promise is initialized, we can safely track it
+			if (wasRejected) {
+				self.unhandledRejections.add(promise)
+
+				// Check after a microtask if it's still unhandled
+				setTimeout(() => {
+					if (self.unhandledRejections.has(promise)) {
+						self.unhandledRejections.delete(promise)
+						self.handleUnhandledRejection({
+							reason: rejectedReason,
+						})
+					}
+				}, 0)
+			}
 
 			return promise
 		}
@@ -268,7 +273,6 @@ export class ErrorInstrumentation {
 		try {
 			const reason = event.reason || event
 
-			console.log('::: event:', event)
 			const { error: errorObj, attributes: rejectionAttributes } =
 				extractRejectionDetails(reason)
 

@@ -470,8 +470,12 @@ export default function HomeScreen() {
 	}
 
 	const handleAxios404 = async () => {
-		await axios.get('https://jsonplaceholder.typicode.com/posts/99999')
-		Alert.alert('Axios 404', `Request completed`)
+		try {
+			await axios.get('https://jsonplaceholder.typicode.com/posts/99999')
+		} catch (error) {
+			Alert.alert('Axios 404', `Request completed`)
+			throw error
+		}
 	}
 
 	return (
