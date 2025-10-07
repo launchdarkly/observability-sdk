@@ -21,7 +21,23 @@ import java.net.URL
 class ViewModel : ViewModel() {
 
     fun triggerMetric() {
-        LDObserve.recordMetric(Metric("test", 50.0))
+        LDObserve.recordMetric(Metric("test-gauge", 50.0))
+    }
+
+    fun triggerHistogramMetric() {
+        LDObserve.recordHistogram(Metric("test-histogram", 15.0))
+    }
+
+    fun triggerCountMetric() {
+        LDObserve.recordCount(Metric("test-counter", 10.0))
+    }
+
+    fun triggerIncrementalMetric() {
+        LDObserve.recordIncr(Metric("test-incremental-counter", 12.0))
+    }
+
+    fun triggerUpDownCounterMetric() {
+        LDObserve.recordUpDownCounter(Metric("test-up-down-counter", 25.0))
     }
 
     fun triggerError() {

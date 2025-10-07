@@ -35,6 +35,7 @@ import io.opentelemetry.sdk.logs.SdkLoggerProviderBuilder
 import io.opentelemetry.sdk.logs.export.BatchLogRecordProcessor
 import io.opentelemetry.sdk.logs.export.LogRecordExporter
 import io.opentelemetry.sdk.metrics.SdkMeterProviderBuilder
+import io.opentelemetry.sdk.metrics.export.AggregationTemporalitySelector
 import io.opentelemetry.sdk.metrics.export.MetricExporter
 import io.opentelemetry.sdk.metrics.export.PeriodicMetricReader
 import io.opentelemetry.sdk.resources.Resource
@@ -209,6 +210,7 @@ class InstrumentationManager(
         return OtlpHttpMetricExporter.builder()
             .setEndpoint(options.otlpEndpoint + METRICS_PATH)
             .setHeaders { options.customHeaders }
+            .setAggregationTemporalitySelector(AggregationTemporalitySelector.deltaPreferred())
             .build()
     }
 
@@ -307,6 +309,7 @@ class InstrumentationManager(
         val counter = counterCache.getOrPut(metric.name) {
             otelMeter.counterBuilder(metric.name).build()
         }
+        // It increments the value until the metric is exported, then it’s reset.
         counter.add(1, metric.attributes)
     }
 
