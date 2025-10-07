@@ -478,6 +478,15 @@ export default function HomeScreen() {
 		}
 	}
 
+	const handleAxios500 = async () => {
+		try {
+			await axios.get('https://httpstatuses.maor.io/500')
+		} catch (error) {
+			Alert.alert('Axios 500', `Request completed`)
+			throw error
+		}
+	}
+
 	return (
 		<ParallaxScrollView
 			headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
@@ -562,6 +571,15 @@ export default function HomeScreen() {
 				>
 					<ThemedText style={styles.buttonText}>
 						Axios: 404 Request
+					</ThemedText>
+				</Pressable>
+
+				<Pressable
+					style={[styles.button, styles.errorButton]}
+					onPress={handleAxios500}
+				>
+					<ThemedText style={styles.buttonText}>
+						Axios: 500 Request
 					</ThemedText>
 				</Pressable>
 

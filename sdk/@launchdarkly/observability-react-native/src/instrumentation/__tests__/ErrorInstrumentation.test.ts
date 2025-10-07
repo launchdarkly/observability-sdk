@@ -296,7 +296,7 @@ describe('ErrorInstrumentation', () => {
 			)
 			errorInstrumentation.initialize()
 
-			const rejectedPromise = Promise.reject(undefined)
+			Promise.reject(undefined)
 
 			await new Promise((resolve) => setTimeout(resolve, 20))
 
