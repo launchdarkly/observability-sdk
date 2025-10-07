@@ -169,7 +169,7 @@ export class ErrorInstrumentation {
 
 			const attributes: Attributes = {
 				...formattedError.attributes,
-				...rejectionAttributes, // Add extracted rejection details
+				...rejectionAttributes,
 				'error.unhandled': true,
 				'error.caught_by': 'unhandledrejection',
 				'promise.handled': false,
