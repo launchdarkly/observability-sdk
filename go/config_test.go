@@ -30,12 +30,12 @@ func TestDefaultConfig(t *testing.T) {
 		t.Errorf("Expected default spanMaxQueueSize to be %d, got %d", sdktrace.DefaultMaxQueueSize, config.spanMaxQueueSize)
 	}
 
-	if config.logMaxExportBatchSize != 2048 {
-		t.Errorf("Expected default logMaxExportBatchSize to be %d, got %d", defaultLogMaxQueueSize, config.logMaxExportBatchSize)
+	if config.logMaxExportBatchSize != 512 {
+		t.Errorf("Expected default logMaxExportBatchSize to be %d, got %d", defaultLogMaxExportBatchSize, config.logMaxExportBatchSize)
 	}
 
-	if config.logMaxQueueSize != 512 {
-		t.Errorf("Expected default logMaxQueueSize to be %d, got %d", defaultLogMaxExportBatchSize, config.logMaxQueueSize)
+	if config.logMaxQueueSize != 2048 {
+		t.Errorf("Expected default logMaxQueueSize to be %d, got %d", defaultLogMaxQueueSize, config.logMaxQueueSize)
 	}
 
 	// Test that optional fields are zero values

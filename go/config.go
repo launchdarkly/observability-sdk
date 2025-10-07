@@ -43,8 +43,8 @@ func defaultConfig() observabilityConfig {
 		otlpEndpoint:           defaults.DefaultOTLPEndpoint,
 		spanMaxExportBatchSize: sdktrace.DefaultMaxExportBatchSize,
 		spanMaxQueueSize:       sdktrace.DefaultMaxQueueSize,
-		logMaxExportBatchSize:  defaultLogMaxQueueSize,
-		logMaxQueueSize:        defaultLogMaxExportBatchSize,
+		logMaxExportBatchSize:  defaultLogMaxExportBatchSize,
+		logMaxQueueSize:        defaultLogMaxQueueSize,
 	}
 }
 
