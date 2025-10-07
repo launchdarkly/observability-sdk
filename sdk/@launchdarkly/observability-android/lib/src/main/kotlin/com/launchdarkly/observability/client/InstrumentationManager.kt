@@ -6,8 +6,6 @@ import com.launchdarkly.observability.api.Options
 import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.observability.network.GraphQLClient
 import com.launchdarkly.observability.network.SamplingApiService
-import com.launchdarkly.observability.sampling.CompositeLogExporter
-import com.launchdarkly.observability.sampling.CompositeSpanExporter
 import com.launchdarkly.observability.sampling.CustomSampler
 import com.launchdarkly.observability.sampling.SamplingConfig
 import com.launchdarkly.observability.sampling.SamplingLogExporter
@@ -140,7 +138,12 @@ class InstrumentationManager(
 
     private fun createOtelRumConfig(): OtelRumConfig {
         val config = OtelRumConfig()
-            .setDiskBufferingConfig(DiskBufferingConfig.create(enabled = isAnySignalEnabled(options), debugEnabled = options.debug))
+            .setDiskBufferingConfig(
+                DiskBufferingConfig.create(
+                    enabled = isAnySignalEnabled(options),
+                    debugEnabled = options.debug
+                )
+            )
             .setSessionConfig(SessionConfig(backgroundInactivityTimeout = options.sessionBackgroundTimeout))
 
         if (options.disableErrorTracking) {
@@ -212,57 +215,58 @@ class InstrumentationManager(
     }
 
     private fun createLogExporter(primaryExporter: LogRecordExporter): LogRecordExporter {
+        val baseExporter = if (options.debug) {
+            LogRecordExporter.composite(
+                buildList {
+                    add(primaryExporter)
+                    add(DebugLogExporter(logger))
+                    add(InMemoryLogRecordExporter.create().also { inMemoryLogExporter = it })
+                }
+            )
+        } else {
+            primaryExporter
+        }
+
         val conditionalExporter = ConditionalLogRecordExporter(
-            delegate = primaryExporter,
+            delegate = baseExporter,
             allowNormalLogs = !options.disableLogs,
             allowCrashes = !options.disableErrorTracking
         )
-        
-        return if (options.debug) {
-            val debugExporter = ConditionalLogRecordExporter(
-                delegate = DebugLogExporter(logger),
-                allowNormalLogs = !options.disableLogs,
-                allowCrashes = !options.disableErrorTracking
-            )
-            val exporters = mutableListOf<LogRecordExporter>(conditionalExporter, debugExporter)
-            inMemoryLogExporter = InMemoryLogRecordExporter.create().also { exporters.add(it) }
 
-            val compositeExporter = CompositeLogExporter(exporters)
-            SamplingLogExporter(compositeExporter, customSampler)
-        } else {
-            SamplingLogExporter(conditionalExporter, customSampler)
-        }
+        return SamplingLogExporter(conditionalExporter, customSampler)
     }
 
     private fun createSpanExporter(primaryExporter: SpanExporter): SpanExporter {
+        val baseExporter = if (options.debug) {
+            SpanExporter.composite(
+                buildList {
+                    add(primaryExporter)
+                    add(DebugSpanExporter(logger))
+                    add(InMemorySpanExporter.create().also { inMemorySpanExporter = it })
+                }
+            )
+        } else {
+            primaryExporter
+        }
+
         val conditionalExporter = ConditionalSpanExporter(
-            delegate = primaryExporter,
+            delegate = baseExporter,
             allowNormalSpans = !options.disableTraces,
             allowErrorSpans = !options.disableErrorTracking
         )
-        
-        return if (options.debug) {
-            val debugExporter = ConditionalSpanExporter(
-                delegate = DebugSpanExporter(logger),
-                allowNormalSpans = !options.disableTraces,
-                allowErrorSpans = !options.disableErrorTracking
-            )
-            val exporters = mutableListOf<SpanExporter>(conditionalExporter, debugExporter)
-            inMemorySpanExporter = InMemorySpanExporter.create().also { exporters.add(it) }
 
-            val compositeExporter = CompositeSpanExporter(exporters)
-            SamplingTraceExporter(compositeExporter, customSampler)
-        } else {
-            SamplingTraceExporter(conditionalExporter, customSampler)
-        }
+        return SamplingTraceExporter(conditionalExporter, customSampler)
     }
 
     private fun createMetricExporter(primaryExporter: MetricExporter): MetricExporter {
         return if (options.debug) {
-            val exporters = mutableListOf(primaryExporter, DebugMetricExporter(logger))
-            inMemoryMetricExporter = InMemoryMetricExporter.create().also { exporters.add(it) }
-
-            CompositeMetricExporter(exporters)
+            CompositeMetricExporter(
+                buildList {
+                    add(primaryExporter)
+                    add(DebugMetricExporter(logger))
+                    add(InMemoryMetricExporter.create().also { inMemoryMetricExporter = it })
+                }
+            )
         } else {
             primaryExporter
         }
