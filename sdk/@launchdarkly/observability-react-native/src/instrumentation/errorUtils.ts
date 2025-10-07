@@ -223,22 +223,6 @@ export function extractRejectionDetails(reason: any): {
 	return { error, attributes }
 }
 
-export function isNetworkError(error: Error): boolean {
-	const networkErrorPatterns = [
-		/network/i,
-		/fetch/i,
-		/XMLHttpRequest/i,
-		/CORS/i,
-		/ERR_NETWORK/i,
-		/ERR_INTERNET_DISCONNECTED/i,
-		/ERR_NAME_NOT_RESOLVED/i,
-	]
-
-	return networkErrorPatterns.some(
-		(pattern) => pattern.test(error.message) || pattern.test(error.name),
-	)
-}
-
 export function shouldSampleError(sampleRate: number): boolean {
 	return Math.random() < sampleRate
 }

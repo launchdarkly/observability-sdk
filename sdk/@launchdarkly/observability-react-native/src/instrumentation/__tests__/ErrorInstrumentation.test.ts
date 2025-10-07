@@ -30,6 +30,19 @@ const mockErrorUtils = {
 
 ;(globalThis as any).ErrorUtils = mockErrorUtils
 
+// Mock HermesInternal for promise rejection tracking
+let hermesOnUnhandled: ((id: number, error: any) => void) | null = null
+let hermesOnHandled: ((id: number) => void) | null = null
+
+const mockHermesInternal = {
+	enablePromiseRejectionTracker: vi.fn((options: any) => {
+		hermesOnUnhandled = options.onUnhandled
+		hermesOnHandled = options.onHandled
+	}),
+}
+
+;(globalThis as any).HermesInternal = mockHermesInternal
+
 // Mock console methods
 const originalConsoleError = console.error
 const originalConsoleWarn = console.warn
@@ -56,6 +69,11 @@ describe('ErrorInstrumentation', () => {
 		vi.clearAllMocks()
 		mockErrorUtils.setGlobalHandler.mockClear()
 		mockErrorUtils.getGlobalHandler.mockClear()
+
+		// Reset Hermes mocks
+		hermesOnUnhandled = null
+		hermesOnHandled = null
+		mockHermesInternal.enablePromiseRejectionTracker.mockClear()
 	})
 
 	afterEach(() => {
@@ -119,13 +137,14 @@ describe('ErrorInstrumentation', () => {
 			)
 			errorInstrumentation.initialize()
 
+			expect(
+				mockHermesInternal.enablePromiseRejectionTracker,
+			).toHaveBeenCalled()
+
 			const testError = new Error('Test promise rejection')
 
-			// Create an unhandled promise rejection
-			Promise.reject(testError)
-
-			// Wait for the setTimeout in the instrumentation to fire
-			await new Promise((resolve) => setTimeout(resolve, 20))
+			// Simulate Hermes detecting an unhandled rejection
+			hermesOnUnhandled?.(1, testError)
 
 			expect(mockClient.consumeCustomError).toHaveBeenCalledWith(
 				testError,
@@ -137,17 +156,14 @@ describe('ErrorInstrumentation', () => {
 			)
 		})
 
-		it('should capture unhandled promise rejections with primitives', async () => {
+		it('should capture unhandled promise rejections with primitives', () => {
 			errorInstrumentation = new ErrorInstrumentation(
 				mockClient as ObservabilityClient,
 			)
 			errorInstrumentation.initialize()
 
-			// Create an unhandled promise rejection with a string
-			Promise.reject('String rejection reason')
-
-			// Wait for the setTimeout in the instrumentation to fire
-			await new Promise((resolve) => setTimeout(resolve, 20))
+			// Simulate Hermes detecting an unhandled rejection with a string
+			hermesOnUnhandled?.(2, 'String rejection reason')
 
 			expect(mockClient.consumeCustomError).toHaveBeenCalledWith(
 				expect.objectContaining({
@@ -164,19 +180,17 @@ describe('ErrorInstrumentation', () => {
 			)
 		})
 
-		it('should capture unhandled promise rejections with objects', async () => {
+		it('should capture unhandled promise rejections with objects', () => {
 			errorInstrumentation = new ErrorInstrumentation(
 				mockClient as ObservabilityClient,
 			)
 			errorInstrumentation.initialize()
 
-			// Create an unhandled promise rejection with an object
-			Promise.reject({
+			// Simulate Hermes detecting an unhandled rejection with an object
+			hermesOnUnhandled?.(3, {
 				message: 'Custom error object',
 				code: 'ERR_CUSTOM',
 			})
-
-			await new Promise((resolve) => setTimeout(resolve, 20))
 
 			expect(mockClient.consumeCustomError).toHaveBeenCalledWith(
 				expect.objectContaining({
@@ -192,7 +206,7 @@ describe('ErrorInstrumentation', () => {
 			)
 		})
 
-		it('should capture unhandled promise rejections from Promise constructor', async () => {
+		it('should capture unhandled promise rejections from Promise constructor', () => {
 			errorInstrumentation = new ErrorInstrumentation(
 				mockClient as ObservabilityClient,
 			)
@@ -200,12 +214,8 @@ describe('ErrorInstrumentation', () => {
 
 			const testError = new Error('Constructor rejection')
 
-			// Create an unhandled promise rejection using constructor
-			new Promise((_resolve, reject) => {
-				reject(testError)
-			})
-
-			await new Promise((resolve) => setTimeout(resolve, 20))
+			// Simulate Hermes detecting an unhandled rejection
+			hermesOnUnhandled?.(4, testError)
 
 			expect(mockClient.consumeCustomError).toHaveBeenCalledWith(
 				testError,
@@ -216,43 +226,7 @@ describe('ErrorInstrumentation', () => {
 			)
 		})
 
-		it('should NOT capture promise rejections that are handled with catch', async () => {
-			errorInstrumentation = new ErrorInstrumentation(
-				mockClient as ObservabilityClient,
-			)
-			errorInstrumentation.initialize()
-
-			const testError = new Error('Handled rejection')
-
-			// Create a promise rejection that is handled
-			Promise.reject(testError).catch(() => {
-				// Handle the error
-			})
-
-			await new Promise((resolve) => setTimeout(resolve, 10))
-
-			expect(mockClient.consumeCustomError).not.toHaveBeenCalled()
-		})
-
-		it('should NOT capture promise rejections that are handled with then', async () => {
-			errorInstrumentation = new ErrorInstrumentation(
-				mockClient as ObservabilityClient,
-			)
-			errorInstrumentation.initialize()
-
-			const testError = new Error('Handled rejection')
-
-			// Create a promise rejection that is handled with then's second argument
-			Promise.reject(testError).then(null, () => {
-				// Handle the error
-			})
-
-			await new Promise((resolve) => setTimeout(resolve, 10))
-
-			expect(mockClient.consumeCustomError).not.toHaveBeenCalled()
-		})
-
-		it('should capture axios-like errors with HTTP details', async () => {
+		it('should capture axios-like errors with HTTP details', () => {
 			errorInstrumentation = new ErrorInstrumentation(
 				mockClient as ObservabilityClient,
 			)
@@ -271,9 +245,8 @@ describe('ErrorInstrumentation', () => {
 			}
 			;(axiosError as any).code = 'ERR_BAD_REQUEST'
 
-			Promise.reject(axiosError)
-
-			await new Promise((resolve) => setTimeout(resolve, 20))
+			// Simulate Hermes detecting an unhandled rejection
+			hermesOnUnhandled?.(6, axiosError)
 
 			expect(mockClient.consumeCustomError).toHaveBeenCalledWith(
 				axiosError,
@@ -290,15 +263,14 @@ describe('ErrorInstrumentation', () => {
 			)
 		})
 
-		it('should capture rejections with null or undefined', async () => {
+		it('should capture rejections with null or undefined', () => {
 			errorInstrumentation = new ErrorInstrumentation(
 				mockClient as ObservabilityClient,
 			)
 			errorInstrumentation.initialize()
 
-			Promise.reject(undefined)
-
-			await new Promise((resolve) => setTimeout(resolve, 20))
+			// Simulate Hermes detecting an unhandled rejection with undefined
+			hermesOnUnhandled?.(7, undefined)
 
 			expect(mockClient.consumeCustomError).toHaveBeenCalled()
 			const call = (mockClient.consumeCustomError as any).mock.calls[0]

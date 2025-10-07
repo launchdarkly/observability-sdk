@@ -7,17 +7,24 @@ import {
 	parseConsoleArgs,
 } from './errorUtils'
 
+// Type for HermesInternal
+interface HermesInternal {
+	enablePromiseRejectionTracker: (options: {
+		allRejections: boolean
+		onUnhandled: (id: number, error: any) => void
+		onHandled: (id: number) => void
+	}) => void
+}
+
+declare const HermesInternal: HermesInternal | undefined
+
 export class ErrorInstrumentation {
 	private client: ObservabilityClient
 	private originalHandlers: {
 		globalHandler?: (error: any, isFatal?: boolean) => void
 		consoleError?: (...args: any[]) => void
-		consoleWarn?: (...args: any[]) => void
-		unhandledRejection?: (event: any) => void
 	} = {}
 	private isInitialized = false
-	private originalPromiseThen?: typeof Promise.prototype.then
-	private unhandledRejections: Set<Promise<any>> = new Set()
 
 	constructor(client: ObservabilityClient) {
 		this.client = client
@@ -47,7 +54,6 @@ export class ErrorInstrumentation {
 
 		try {
 			this.restoreUnhandledExceptionHandler()
-			this.restorePromiseRejectionHandler()
 			this.restoreConsoleHandlers()
 			this.isInitialized = false
 			this.client._log('ErrorInstrumentation destroyed')
@@ -72,19 +78,37 @@ export class ErrorInstrumentation {
 	}
 
 	private setupUnhandledRejectionHandler(): void {
-		// Try to set up unhandled rejection handler
-		try {
-			// React Native doesn't have native support for unhandledrejection events,
-			// but we can monkey-patch Promise to catch them
-			this.patchPromiseRejection()
-		} catch (error) {
-			console.warn('Could not setup unhandled rejection handler:', error)
+		// Use HermesInternal if available (Hermes engine in React Native)
+		if (
+			typeof HermesInternal !== 'undefined' &&
+			HermesInternal?.enablePromiseRejectionTracker
+		) {
+			try {
+				HermesInternal.enablePromiseRejectionTracker({
+					allRejections: true,
+					onUnhandled: (id: number, error: any) => {
+						this.client._log(
+							`Promise rejection unhandled: ${id}`,
+							error,
+						)
+
+						this.handleUnhandledRejection({ reason: error })
+					},
+					onHandled: (id: number) => {
+						this.client._log(`Promise rejection handled: ${id}`)
+					},
+				})
+			} catch (error) {
+				this.client._log(
+					'Could not setup HermesInternal rejection tracker:',
+					error,
+				)
+			}
 		}
 	}
 
 	private setupConsoleErrorHandler(): void {
 		this.originalHandlers.consoleError = console.error
-		this.originalHandlers.consoleWarn = console.warn
 
 		console.error = (...args: any[]) => {
 			this.handleConsoleError('error', args)
@@ -92,146 +116,6 @@ export class ErrorInstrumentation {
 				this.originalHandlers.consoleError.apply(console, args)
 			}
 		}
-	}
-
-	private patchPromiseRejection(): void {
-		this.originalPromiseThen = Promise.prototype.then
-
-		const self = this
-		const originalThen = this.originalPromiseThen
-
-		Promise.prototype.then = function <TResult1 = any, TResult2 = never>(
-			this: Promise<any>,
-			onFulfilled?:
-				| ((value: any) => TResult1 | PromiseLike<TResult1>)
-				| null
-				| undefined,
-			onRejected?:
-				| ((reason: any) => TResult2 | PromiseLike<TResult2>)
-				| null
-				| undefined,
-		): Promise<TResult1 | TResult2> {
-			const thisPromise = this
-
-			// If this promise has a rejection handler, remove it from unhandled set
-			if (onRejected) {
-				self.unhandledRejections.delete(thisPromise)
-			}
-
-			// Call the original then with a wrapped onRejected to track handling
-			const wrappedOnRejected = onRejected
-				? function (reason: any) {
-						// This rejection is being handled
-						self.unhandledRejections.delete(thisPromise)
-						return onRejected(reason)
-					}
-				: undefined
-
-			// Call original then
-			const resultPromise = originalThen.call(
-				thisPromise,
-				onFulfilled,
-				wrappedOnRejected,
-			) as Promise<TResult1 | TResult2>
-
-			// If the result promise rejects, we need to track it too
-			originalThen.call(resultPromise, undefined, function (reason: any) {
-				// Mark this promise as potentially unhandled
-				self.unhandledRejections.add(resultPromise)
-
-				// Check after a microtask if it's still unhandled
-				setTimeout(() => {
-					if (self.unhandledRejections.has(resultPromise)) {
-						self.unhandledRejections.delete(resultPromise)
-						self.handleUnhandledRejection({ reason })
-					}
-				}, 0)
-
-				// Re-throw to preserve rejection
-				throw reason
-			})
-
-			return resultPromise
-		} as any // Type assertion needed due to Promise patching
-
-		// Also need to track Promise.prototype.catch
-		const originalCatch = Promise.prototype.catch
-		Promise.prototype.catch = function (onRejected) {
-			// Remove from unhandled set when catch is added
-			self.unhandledRejections.delete(this)
-			return originalCatch.call(this, onRejected)
-		}
-
-		// Track rejections from Promise.reject
-		const originalReject = Promise.reject
-		Promise.reject = function <T = never>(reason?: any): Promise<T> {
-			const promise = originalReject.call(this, reason) as Promise<T>
-
-			// Mark as potentially unhandled
-			self.unhandledRejections.add(promise)
-
-			// Check after a microtask if it's still unhandled
-			setTimeout(() => {
-				if (self.unhandledRejections.has(promise)) {
-					self.unhandledRejections.delete(promise)
-					self.handleUnhandledRejection({ reason })
-				}
-			}, 0)
-
-			return promise
-		}
-
-		// Track rejections from new Promise((resolve, reject) => reject(...))
-		const OriginalPromise = Promise
-		const PromiseConstructor = function (
-			this: any,
-			executor: (
-				resolve: (value?: any) => void,
-				reject: (reason?: any) => void,
-			) => void,
-		) {
-			let rejectedReason: any = undefined
-			let wasRejected = false
-
-			const promise = new OriginalPromise((resolve, reject) => {
-				const wrappedReject = (reason?: any) => {
-					// Store rejection info for later processing
-					wasRejected = true
-					rejectedReason = reason
-					reject(reason)
-				}
-
-				try {
-					executor(resolve, wrappedReject)
-				} catch (error) {
-					wrappedReject(error)
-				}
-			})
-
-			// Now that promise is initialized, we can safely track it
-			if (wasRejected) {
-				self.unhandledRejections.add(promise)
-
-				// Check after a microtask if it's still unhandled
-				setTimeout(() => {
-					if (self.unhandledRejections.has(promise)) {
-						self.unhandledRejections.delete(promise)
-						self.handleUnhandledRejection({
-							reason: rejectedReason,
-						})
-					}
-				}, 0)
-			}
-
-			return promise
-		}
-
-		// Copy static methods
-		Object.setPrototypeOf(PromiseConstructor, OriginalPromise)
-		PromiseConstructor.prototype = OriginalPromise.prototype
-
-		// Replace global Promise (with type assertion to handle constructor replacement)
-		;(global as any).Promise = PromiseConstructor
 	}
 
 	private handleUnhandledException(error: any, isFatal: boolean): void {
@@ -300,7 +184,7 @@ export class ErrorInstrumentation {
 		}
 	}
 
-	private handleConsoleError(level: 'error' | 'warn', args: any[]): void {
+	private handleConsoleError(level: 'error', args: any[]): void {
 		try {
 			// Convert console arguments to error message
 			const message = parseConsoleArgs(args)
@@ -312,8 +196,7 @@ export class ErrorInstrumentation {
 
 			// Create error from console message
 			const errorObj = new Error(message)
-			errorObj.name =
-				level === 'error' ? 'ConsoleError' : 'ConsoleWarning'
+			errorObj.name = 'ConsoleError'
 
 			const formattedError = formatError(
 				errorObj,
@@ -325,15 +208,12 @@ export class ErrorInstrumentation {
 			const attributes: Attributes = {
 				...formattedError.attributes,
 				'error.unhandled': false,
-				'error.caught_by': `console.${level}`,
-				'console.level': level,
+				'error.caught_by': 'console.error',
+				'console.level': 'error',
 				'console.args_count': args.length,
 			}
 
-			// Only report console.error by default, console.warn is optional
-			if (level === 'error') {
-				this.client.consumeCustomError(errorObj, attributes)
-			}
+			this.client.consumeCustomError(errorObj, attributes)
 		} catch (instrumentationError) {
 			console.warn(
 				'Error in console error instrumentation:',
@@ -348,22 +228,9 @@ export class ErrorInstrumentation {
 		}
 	}
 
-	private restorePromiseRejectionHandler(): void {
-		// Restore original Promise.prototype.then if we patched it
-		if (this.originalPromiseThen) {
-			Promise.prototype.then = this.originalPromiseThen
-		}
-
-		// Clear any tracked unhandled rejections
-		this.unhandledRejections.clear()
-	}
-
 	private restoreConsoleHandlers(): void {
 		if (this.originalHandlers.consoleError) {
 			console.error = this.originalHandlers.consoleError
-		}
-		if (this.originalHandlers.consoleWarn) {
-			console.warn = this.originalHandlers.consoleWarn
 		}
 	}
 }
