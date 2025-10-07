@@ -1,6 +1,4 @@
 name: Dependency Scan
-permissions:
-    contents: read
 
 on:
     pull_request:
@@ -9,27 +7,9 @@ on:
             - main
 
 jobs:
-    generate-nodejs-sbom:
-        runs-on: ubuntu-latest
-        env:
-            NODE_OPTIONS: '--max-old-space-size=8192'
-        steps:
-            - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
-
-            - name: Generate SBOM
-              uses: launchdarkly/gh-actions/actions/dependency-scan/generate-sbom@main
-              with:
-                  types: 'nodejs'
-              timeout-minutes: 20
-
-    evaluate-policy:
-        runs-on: ubuntu-latest
-        needs:
-            - generate-nodejs-sbom
-        steps:
-            - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
-
-            - name: Evaluate SBOM Policy
-              uses: launchdarkly/gh-actions/actions/dependency-scan/evaluate-policy@main
-              with:
-                  artifacts-pattern: bom-*
+    dependency-scan:
+        uses: launchdarkly/gh-actions/.github/workflows/dependency-scan.yml@main
+        with:
+            types: 'nodejs'
+            runs-on: 'ubuntu-latest-8-cores'
+        secrets: inherit
