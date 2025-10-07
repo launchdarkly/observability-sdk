@@ -14,6 +14,7 @@ import com.launchdarkly.observability.sampling.SamplingLogExporter
 import com.launchdarkly.observability.sampling.SamplingTraceExporter
 import io.opentelemetry.android.OpenTelemetryRum
 import io.opentelemetry.android.config.OtelRumConfig
+import io.opentelemetry.android.features.diskbuffering.DiskBufferingConfig
 import io.opentelemetry.android.session.SessionConfig
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Logger
@@ -140,6 +141,7 @@ class InstrumentationManager(
 
     private fun createOtelRumConfig(): OtelRumConfig {
         val config = OtelRumConfig()
+            .setDiskBufferingConfig(DiskBufferingConfig.create(enabled = isAnySignalEnabled(options), debugEnabled = options.debug))
             .setSessionConfig(SessionConfig(backgroundInactivityTimeout = options.sessionBackgroundTimeout))
 
         if (options.disableErrorTracking) {
@@ -149,6 +151,10 @@ class InstrumentationManager(
         }
 
         return config
+    }
+
+    private fun isAnySignalEnabled(options: Options): Boolean {
+        return !options.disableLogs || !options.disableTraces || !options.disableMetrics || !options.disableErrorTracking
     }
 
     private fun configureLoggerProvider(sdkLoggerProviderBuilder: SdkLoggerProviderBuilder): SdkLoggerProviderBuilder {
@@ -329,7 +335,7 @@ class InstrumentationManager(
     }
 
     fun recordError(error: Error, attributes: Attributes) {
-        if(!options.disableErrorTracking){
+        if (!options.disableErrorTracking) {
             val span = otelTracer
                 .spanBuilder("highlight.error")
                 .setParent(Context.current().with(Span.current()))

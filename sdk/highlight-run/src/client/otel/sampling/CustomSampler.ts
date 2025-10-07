@@ -240,20 +240,14 @@ export class CustomSampler implements ExportSampler {
 	): boolean {
 		if (config.severityText) {
 			const severityText = attributes[ATTR_LOG_SEVERITY]
-			if (
-				typeof severityText === 'string' &&
-				!this.matchesValue(config.severityText, severityText)
-			) {
+			if (!this.matchesValue(config.severityText, severityText)) {
 				return false
 			}
 		}
 
 		if (config.message) {
 			const message = attributes[ATTR_LOG_MESSAGE]
-			if (
-				typeof message === 'string' &&
-				!this.matchesValue(config.message, message)
-			) {
+			if (!this.matchesValue(config.message, message)) {
 				return false
 			}
 		}

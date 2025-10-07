@@ -150,6 +150,14 @@ const runTestSpanScenarios = (scenarios: SpanTestScenario[]) => {
 	})
 }
 
+const toReadableLogRecord = (log: LogTestScenario['inputLog']) => {
+	return {
+		severityText: log.severityText,
+		body: log.message,
+		attributes: log.attributes,
+	} as ReadableLogRecord
+}
+
 const runTestLogScenarios = (scenarios: LogTestScenario[]) => {
 	scenarios.forEach((scenario) => {
 		scenario.samplerFunctionCases.forEach((samplerCase) => {
@@ -162,7 +170,7 @@ const runTestLogScenarios = (scenarios: LogTestScenario[]) => {
 				expect(sampler.isSamplingEnabled()).toBe(true)
 
 				const result = sampler.sampleLog(
-					scenario.inputLog as ReadableLogRecord,
+					toReadableLogRecord(scenario.inputLog),
 				)
 
 				expect(result.sample).toBe(samplerCase.expected_result.sample)

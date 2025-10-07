@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.10.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.9.0...launchdarkly-observability-android-0.10.0) (2025-10-06)
+
+
+### Features
+
+* Cache OpenTelemetry metric instruments ([#256](https://github.com/launchdarkly/observability-sdk/issues/256)) ([db67867](https://github.com/launchdarkly/observability-sdk/commit/db67867acf4a956d4f4cdca0b329db9494601616))
+
+## [0.9.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.8.0...launchdarkly-observability-android-0.9.0) (2025-10-01)
+
+
+### Features
+
+* O11Y-398 - Disable config options implemented ([#239](https://github.com/launchdarkly/observability-sdk/issues/239)) ([3548b42](https://github.com/launchdarkly/observability-sdk/commit/3548b42c6f4dbf3c710b508cb817b78cfc47448c))
+
 ## [0.8.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.7.0...launchdarkly-observability-android-0.8.0) (2025-09-26)
 
 

@@ -1,6 +1,18 @@
 export 'src/plugin/observability_plugin.dart' show ObservabilityPlugin;
+export 'src/plugin/observability_config.dart'
+    show InstrumentationConfig, DebugPrintSetting;
 export 'src/observe.dart' show Observe;
-export 'src/api/attribute.dart' show Attribute;
+export 'src/api/attribute.dart'
+    show
+        Attribute,
+        StringAttribute,
+        StringListAttribute,
+        BooleanAttribute,
+        BooleanListAttribute,
+        IntAttribute,
+        IntListAttribute,
+        DoubleAttribute,
+        DoubleListAttribute;
 export 'src/api/span.dart' show Span;
 export 'src/api/span_kind.dart' show SpanKind;
 export 'src/api/span_status_code.dart' show SpanStatusCode;
