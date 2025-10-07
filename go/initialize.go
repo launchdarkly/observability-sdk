@@ -53,9 +53,13 @@ func setupOtel(sdkKey string, config observabilityConfig) {
 		s = nil
 	}
 	otel.SetConfig(otel.Config{
-		OtlpEndpoint:       config.otlpEndpoint,
-		ResourceAttributes: attributes,
-		Sampler:            s,
+		OtlpEndpoint:           config.otlpEndpoint,
+		ResourceAttributes:     attributes,
+		Sampler:                s,
+		SpanMaxExportBatchSize: config.spanMaxExportBatchSize,
+		SpanMaxQueueSize:       config.spanMaxQueueSize,
+		LogMaxExportBatchSize:  config.logMaxExportBatchSize,
+		LogMaxQueueSize:        config.logMaxQueueSize,
 	})
 	if !config.manualStart {
 		err := otel.StartOTLP()

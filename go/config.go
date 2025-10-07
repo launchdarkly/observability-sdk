@@ -6,24 +6,45 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/launchdarkly/observability-sdk/go/internal/defaults"
+
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
+// The trace SDK exports defaults and we can directly use them, but the log SDK
+// does not.
+// These are copied from the logs SDK.
+
+// The maximum queue size for the log SDK. If more events than this are queued,
+// then events will be dropped until a flush.
+const defaultLogMaxQueueSize = 2048
+
+// The maximum number of logs in a single batch export.
+const defaultLogMaxExportBatchSize = 512
+
 type observabilityConfig struct {
-	serviceName     string
-	serviceVersion  string
-	environment     string
-	backendURL      string
-	otlpEndpoint    string
-	manualStart     bool
-	context         context.Context
-	debug           bool
-	samplingRateMap map[trace.SpanKind]float64
+	serviceName            string
+	serviceVersion         string
+	environment            string
+	backendURL             string
+	otlpEndpoint           string
+	manualStart            bool
+	context                context.Context
+	debug                  bool
+	samplingRateMap        map[trace.SpanKind]float64
+	spanMaxExportBatchSize int
+	spanMaxQueueSize       int
+	logMaxExportBatchSize  int
+	logMaxQueueSize        int
 }
 
 func defaultConfig() observabilityConfig {
 	return observabilityConfig{
-		backendURL:   defaults.DefaultBackendURL,
-		otlpEndpoint: defaults.DefaultOTLPEndpoint,
+		backendURL:             defaults.DefaultBackendURL,
+		otlpEndpoint:           defaults.DefaultOTLPEndpoint,
+		spanMaxExportBatchSize: sdktrace.DefaultMaxExportBatchSize,
+		spanMaxQueueSize:       sdktrace.DefaultMaxQueueSize,
+		logMaxExportBatchSize:  defaultLogMaxExportBatchSize,
+		logMaxQueueSize:        defaultLogMaxQueueSize,
 	}
 }
 
@@ -98,5 +119,35 @@ func WithDebug() Option {
 func WithSamplingRateMap(rates map[trace.SpanKind]float64) Option {
 	return Option(func(conf *observabilityConfig) {
 		conf.samplingRateMap = rates
+	})
+}
+
+// WithSpanMaxExportBatchSize sets the maximum number of spans that can be exported in a single batch.
+// This controls the batch size for span exports to the OTLP endpoint.
+func WithSpanMaxExportBatchSize(size int) Option {
+	return Option(func(conf *observabilityConfig) {
+		conf.spanMaxExportBatchSize = size
+	})
+}
+
+// WithSpanMaxQueueSize sets the maximum number of spans that can be queued for export.
+func WithSpanMaxQueueSize(size int) Option {
+	return Option(func(conf *observabilityConfig) {
+		conf.spanMaxQueueSize = size
+	})
+}
+
+// WithLogMaxExportBatchSize sets the maximum number of log records that can be exported in a single batch.
+// This controls the batch size for log exports to the OTLP endpoint.
+func WithLogMaxExportBatchSize(size int) Option {
+	return Option(func(conf *observabilityConfig) {
+		conf.logMaxExportBatchSize = size
+	})
+}
+
+// WithLogMaxQueueSize sets the maximum number of log records that can be queued for export.
+func WithLogMaxQueueSize(size int) Option {
+	return Option(func(conf *observabilityConfig) {
+		conf.logMaxQueueSize = size
 	})
 }
