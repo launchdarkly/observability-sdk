@@ -10,7 +10,7 @@ on:
 
 jobs:
     generate-nodejs-sbom:
-        runs-on: ubuntu-latest-8-cores
+        runs-on: ubuntu-latest
         env:
             NODE_OPTIONS: '--max-old-space-size=8192'
         steps:
