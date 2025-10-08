@@ -100,7 +100,7 @@ export class ErrorInstrumentation {
 				})
 			} catch (error) {
 				this.client._log(
-					'Could not setup HermesInternal rejection tracker:',
+					'Could not setup unhandled promise rejection handler:',
 					error,
 				)
 			}
