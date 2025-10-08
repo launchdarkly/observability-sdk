@@ -1,3 +1,5 @@
+import { vi } from 'vitest'
+
 export const Platform = {
 	OS: 'ios' as const,
 	select: (config: any) => config.ios || config.default,
@@ -27,4 +29,10 @@ export default {
 	NativeModules,
 	DeviceEventEmitter,
 	NativeEventEmitter,
+}
+
+// Mock global ErrorUtils (React Native global)
+;(globalThis as any).ErrorUtils = {
+	getGlobalHandler: vi.fn(() => undefined),
+	setGlobalHandler: vi.fn(),
 }
