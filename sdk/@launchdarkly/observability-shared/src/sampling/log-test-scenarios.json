@@ -388,5 +388,102 @@
 				}
 			}
 		]
+	},
+	{
+		"description": "Should not match an empty log when message and severity are defined",
+		"samplingConfig": {
+			"logs": [
+				{
+					"message": {
+						"regexValue": "Database connection .*"
+					},
+					"severityText": {
+						"matchValue": "error"
+					},
+					"samplingRatio": 90
+				}
+			]
+		},
+		"inputLog": {},
+		"samplerFunctionCases": [
+			{
+				"type": "always",
+				"expected_result": {
+					"sample": true
+				}
+			},
+			{
+				"type": "never",
+				"expected_result": {
+					"sample": true
+				}
+			}
+		]
+	},
+	{
+		"description": "Should not match a log with a message when message and severity are defined",
+		"samplingConfig": {
+			"logs": [
+				{
+					"message": {
+						"regexValue": "Database connection .*"
+					},
+					"severityText": {
+						"matchValue": "error"
+					},
+					"samplingRatio": 90
+				}
+			]
+		},
+		"inputLog": {
+			"message": "Database connection failed: timeout"
+		},
+		"samplerFunctionCases": [
+			{
+				"type": "always",
+				"expected_result": {
+					"sample": true
+				}
+			},
+			{
+				"type": "never",
+				"expected_result": {
+					"sample": true
+				}
+			}
+		]
+	},
+	{
+		"description": "Should not match a log with only severity when message and severity are defined",
+		"samplingConfig": {
+			"logs": [
+				{
+					"message": {
+						"regexValue": "Database connection .*"
+					},
+					"severityText": {
+						"matchValue": "error"
+					},
+					"samplingRatio": 90
+				}
+			]
+		},
+		"inputLog": {
+			"severityText": "error"
+		},
+		"samplerFunctionCases": [
+			{
+				"type": "always",
+				"expected_result": {
+					"sample": true
+				}
+			},
+			{
+				"type": "never",
+				"expected_result": {
+					"sample": true
+				}
+			}
+		]
 	}
 ]

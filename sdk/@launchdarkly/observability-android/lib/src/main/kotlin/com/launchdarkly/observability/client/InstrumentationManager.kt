@@ -6,18 +6,21 @@ import com.launchdarkly.observability.api.Options
 import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.observability.network.GraphQLClient
 import com.launchdarkly.observability.network.SamplingApiService
-import com.launchdarkly.observability.sampling.CompositeLogExporter
-import com.launchdarkly.observability.sampling.CompositeSpanExporter
 import com.launchdarkly.observability.sampling.CustomSampler
 import com.launchdarkly.observability.sampling.SamplingConfig
 import com.launchdarkly.observability.sampling.SamplingLogExporter
 import com.launchdarkly.observability.sampling.SamplingTraceExporter
 import io.opentelemetry.android.OpenTelemetryRum
 import io.opentelemetry.android.config.OtelRumConfig
+import io.opentelemetry.android.features.diskbuffering.DiskBufferingConfig
 import io.opentelemetry.android.session.SessionConfig
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Logger
 import io.opentelemetry.api.logs.Severity
+import io.opentelemetry.api.metrics.DoubleGauge
+import io.opentelemetry.api.metrics.DoubleHistogram
+import io.opentelemetry.api.metrics.LongCounter
+import io.opentelemetry.api.metrics.LongUpDownCounter
 import io.opentelemetry.api.metrics.Meter
 import io.opentelemetry.api.trace.Span
 import io.opentelemetry.api.trace.Tracer
@@ -43,6 +46,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
 /**
@@ -66,8 +70,7 @@ class InstrumentationManager(
         private const val LOGS_PATH = "/v1/logs"
         private const val TRACES_PATH = "/v1/traces"
         private const val INSTRUMENTATION_SCOPE_NAME = "com.launchdarkly.observability"
-
-        // Batch processor configuration constants
+        const val ERROR_SPAN_NAME = "highlight.error"
         private const val BATCH_MAX_QUEUE_SIZE = 100
         private const val BATCH_SCHEDULE_DELAY_MS = 1000L
         private const val BATCH_EXPORTER_TIMEOUT_MS = 5000L
@@ -87,10 +90,13 @@ class InstrumentationManager(
     private var inMemoryLogExporter: InMemoryLogRecordExporter? = null
     private var inMemoryMetricExporter: InMemoryMetricExporter? = null
     private var telemetryInspector: TelemetryInspector? = null
-
     private var spanProcessor: BatchSpanProcessor? = null
     private var logProcessor: BatchLogRecordProcessor? = null
     private var metricsReader: PeriodicMetricReader? = null
+    private val gaugeCache = ConcurrentHashMap<String, DoubleGauge>()
+    private val counterCache = ConcurrentHashMap<String, LongCounter>()
+    private val histogramCache = ConcurrentHashMap<String, DoubleHistogram>()
+    private val upDownCounterCache = ConcurrentHashMap<String, LongUpDownCounter>()
 
     //TODO: Evaluate if this class should have a close/shutdown method to close this scope
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -100,14 +106,14 @@ class InstrumentationManager(
 
         otelRUM = OpenTelemetryRum.builder(application, otelRumConfig)
             .addLoggerProviderCustomizer { sdkLoggerProviderBuilder, _ ->
-                return@addLoggerProviderCustomizer if (options.disableLogs) {
+                return@addLoggerProviderCustomizer if (options.disableLogs && options.disableErrorTracking) {
                     sdkLoggerProviderBuilder
                 } else {
                     configureLoggerProvider(sdkLoggerProviderBuilder)
                 }
             }
             .addTracerProviderCustomizer { sdkTracerProviderBuilder, _ ->
-                return@addTracerProviderCustomizer if (options.disableTraces) {
+                return@addTracerProviderCustomizer if (options.disableTraces && options.disableErrorTracking) {
                     sdkTracerProviderBuilder
                 } else {
                     configureTracerProvider(sdkTracerProviderBuilder)
@@ -132,6 +138,12 @@ class InstrumentationManager(
 
     private fun createOtelRumConfig(): OtelRumConfig {
         val config = OtelRumConfig()
+            .setDiskBufferingConfig(
+                DiskBufferingConfig.create(
+                    enabled = isAnySignalEnabled(options),
+                    debugEnabled = options.debug
+                )
+            )
             .setSessionConfig(SessionConfig(backgroundInactivityTimeout = options.sessionBackgroundTimeout))
 
         if (options.disableErrorTracking) {
@@ -141,6 +153,10 @@ class InstrumentationManager(
         }
 
         return config
+    }
+
+    private fun isAnySignalEnabled(options: Options): Boolean {
+        return !options.disableLogs || !options.disableTraces || !options.disableMetrics || !options.disableErrorTracking
     }
 
     private fun configureLoggerProvider(sdkLoggerProviderBuilder: SdkLoggerProviderBuilder): SdkLoggerProviderBuilder {
@@ -199,35 +215,58 @@ class InstrumentationManager(
     }
 
     private fun createLogExporter(primaryExporter: LogRecordExporter): LogRecordExporter {
-        return if (options.debug) {
-            val exporters = mutableListOf(primaryExporter, DebugLogExporter(logger))
-            inMemoryLogExporter = InMemoryLogRecordExporter.create().also { exporters.add(it) }
-
-            val compositeExporter = CompositeLogExporter(exporters)
-            SamplingLogExporter(compositeExporter, customSampler)
+        val baseExporter = if (options.debug) {
+            LogRecordExporter.composite(
+                buildList {
+                    add(primaryExporter)
+                    add(DebugLogExporter(logger))
+                    add(InMemoryLogRecordExporter.create().also { inMemoryLogExporter = it })
+                }
+            )
         } else {
-            SamplingLogExporter(primaryExporter, customSampler)
+            primaryExporter
         }
+
+        val conditionalExporter = ConditionalLogRecordExporter(
+            delegate = baseExporter,
+            allowNormalLogs = !options.disableLogs,
+            allowCrashes = !options.disableErrorTracking
+        )
+
+        return SamplingLogExporter(conditionalExporter, customSampler)
     }
 
     private fun createSpanExporter(primaryExporter: SpanExporter): SpanExporter {
-        return if (options.debug) {
-            val exporters = mutableListOf(primaryExporter, DebugSpanExporter(logger))
-            inMemorySpanExporter = InMemorySpanExporter.create().also { exporters.add(it) }
-
-            val compositeExporter = CompositeSpanExporter(exporters)
-            SamplingTraceExporter(compositeExporter, customSampler)
+        val baseExporter = if (options.debug) {
+            SpanExporter.composite(
+                buildList {
+                    add(primaryExporter)
+                    add(DebugSpanExporter(logger))
+                    add(InMemorySpanExporter.create().also { inMemorySpanExporter = it })
+                }
+            )
         } else {
-            SamplingTraceExporter(primaryExporter, customSampler)
+            primaryExporter
         }
+
+        val conditionalExporter = ConditionalSpanExporter(
+            delegate = baseExporter,
+            allowNormalSpans = !options.disableTraces,
+            allowErrorSpans = !options.disableErrorTracking
+        )
+
+        return SamplingTraceExporter(conditionalExporter, customSampler)
     }
 
     private fun createMetricExporter(primaryExporter: MetricExporter): MetricExporter {
         return if (options.debug) {
-            val exporters = mutableListOf(primaryExporter, DebugMetricExporter(logger))
-            inMemoryMetricExporter = InMemoryMetricExporter.create().also { exporters.add(it) }
-
-            CompositeMetricExporter(exporters)
+            CompositeMetricExporter(
+                buildList {
+                    add(primaryExporter)
+                    add(DebugMetricExporter(logger))
+                    add(InMemoryMetricExporter.create().also { inMemoryMetricExporter = it })
+                }
+            )
         } else {
             primaryExporter
         }
@@ -275,29 +314,39 @@ class InstrumentationManager(
     }
 
     fun recordMetric(metric: Metric) {
-        otelMeter.gaugeBuilder(metric.name).build()
-            .set(metric.value, metric.attributes)
+        val gauge = gaugeCache.getOrPut(metric.name) {
+            otelMeter.gaugeBuilder(metric.name).build()
+        }
+        gauge.set(metric.value, metric.attributes)
     }
 
     fun recordCount(metric: Metric) {
         // TODO: handle double casting to long better
-        otelMeter.counterBuilder(metric.name).build()
-            .add(metric.value.toLong(), metric.attributes)
+        val counter = counterCache.getOrPut(metric.name) {
+            otelMeter.counterBuilder(metric.name).build()
+        }
+        counter.add(metric.value.toLong(), metric.attributes)
     }
 
     fun recordIncr(metric: Metric) {
-        otelMeter.counterBuilder(metric.name).build()
-            .add(1, metric.attributes)
+        val counter = counterCache.getOrPut(metric.name) {
+            otelMeter.counterBuilder(metric.name).build()
+        }
+        counter.add(1, metric.attributes)
     }
 
     fun recordHistogram(metric: Metric) {
-        otelMeter.histogramBuilder(metric.name).build()
-            .record(metric.value, metric.attributes)
+        val histogram = histogramCache.getOrPut(metric.name) {
+            otelMeter.histogramBuilder(metric.name).build()
+        }
+        histogram.record(metric.value, metric.attributes)
     }
 
     fun recordUpDownCounter(metric: Metric) {
-        otelMeter.upDownCounterBuilder(metric.name).build()
-            .add(metric.value.toLong(), metric.attributes)
+        val upDownCounter = upDownCounterCache.getOrPut(metric.name) {
+            otelMeter.upDownCounterBuilder(metric.name).build()
+        }
+        upDownCounter.add(metric.value.toLong(), metric.attributes)
     }
 
     fun recordLog(message: String, severity: Severity, attributes: Attributes) {
@@ -311,9 +360,9 @@ class InstrumentationManager(
     }
 
     fun recordError(error: Error, attributes: Attributes) {
-        if(!options.disableErrorTracking){
+        if (!options.disableErrorTracking) {
             val span = otelTracer
-                .spanBuilder("highlight.error")
+                .spanBuilder(ERROR_SPAN_NAME)
                 .setParent(Context.current().with(Span.current()))
                 .startSpan()
 

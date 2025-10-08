@@ -9,6 +9,7 @@ import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Severity
 import com.example.androidobservability.TestUtils.TelemetryType
+import com.launchdarkly.observability.api.Options
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertFalse
 import junit.framework.TestCase.assertNotNull
@@ -27,22 +28,23 @@ class DisablingConfigOptionsE2ETest {
     private val application = ApplicationProvider.getApplicationContext<Application>() as TestApplication
 
     @Test
-    fun `Logs should not be exported when disableLogs is set to true`() {
-        application.pluginOptions = application.pluginOptions.copy(disableLogs = true)
+    fun `Logs should NOT be exported when disableLogs is set to true`() {
+        application.pluginOptions = getOptionsAllEnabled().copy(disableLogs = true)
         application.initForTest()
         val logsUrl = "http://localhost:${application.mockWebServer?.port}/v1/logs"
 
         triggerTestLog()
         LDObserve.flush()
         waitForTelemetryData(telemetryInspector = application.telemetryInspector, telemetryType = TelemetryType.LOGS)
+        val logsExported = application.telemetryInspector?.logExporter?.finishedLogRecordItems
 
-        assertNull(application.telemetryInspector?.logExporter)
+        assertTrue(logsExported?.isEmpty() == true)
         assertFalse(requestsContainsUrl(logsUrl))
     }
 
     @Test
     fun `Logs should be exported when disableLogs is set to false`() {
-        application.pluginOptions = application.pluginOptions.copy(disableLogs = false)
+        application.pluginOptions = getOptionsAllEnabled().copy(disableLogs = false)
         application.initForTest()
         val logsUrl = "http://localhost:${application.mockWebServer?.port}/v1/logs"
 
@@ -56,21 +58,23 @@ class DisablingConfigOptionsE2ETest {
 
     @Test
     fun `Spans should NOT be exported when disableTraces is set to true`() {
-        application.pluginOptions = application.pluginOptions.copy(disableTraces = true)
+        application.pluginOptions = getOptionsAllEnabled().copy(disableTraces = true)
         application.initForTest()
         val tracesUrl = "http://localhost:${application.mockWebServer?.port}/v1/traces"
 
         triggerTestSpan()
         LDObserve.flush()
-        waitForTelemetryData(telemetryInspector = application.telemetryInspector, telemetryType = TelemetryType.SPANS)
 
-        assertNull(application.telemetryInspector?.spanExporter)
+        waitForTelemetryData(telemetryInspector = application.telemetryInspector, telemetryType = TelemetryType.SPANS)
+        val spansExported = application.telemetryInspector?.spanExporter?.finishedSpanItems
+
+        assertTrue(spansExported?.isEmpty() == true)
         assertFalse(requestsContainsUrl(tracesUrl))
     }
 
     @Test
     fun `Spans should be exported when disableTraces is set to false`() {
-        application.pluginOptions = application.pluginOptions.copy(disableTraces = false)
+        application.pluginOptions = getOptionsAllEnabled().copy(disableTraces = false)
         application.initForTest()
         val tracesUrl = "http://localhost:${application.mockWebServer?.port}/v1/traces"
 
@@ -84,7 +88,7 @@ class DisablingConfigOptionsE2ETest {
 
     @Test
     fun `Metrics should NOT be exported when disableMetrics is set to true`() {
-        application.pluginOptions = application.pluginOptions.copy(disableMetrics = true)
+        application.pluginOptions = getOptionsAllEnabled().copy(disableMetrics = true)
         application.initForTest()
         val metricsUrl = "http://localhost:${application.mockWebServer?.port}/v1/metrics"
 
@@ -98,7 +102,7 @@ class DisablingConfigOptionsE2ETest {
 
     @Test
     fun `Metrics should be exported when disableMetrics is set to false`() {
-        application.pluginOptions = application.pluginOptions.copy(disableMetrics = false)
+        application.pluginOptions = getOptionsAllEnabled().copy(disableMetrics = false)
         application.initForTest()
         val metricsUrl = "http://localhost:${application.mockWebServer?.port}/v1/metrics"
 
@@ -112,7 +116,7 @@ class DisablingConfigOptionsE2ETest {
 
     @Test
     fun `Errors should NOT be exported when disableErrorTracking is set to true`() {
-        application.pluginOptions = application.pluginOptions.copy(disableErrorTracking = true)
+        application.pluginOptions = getOptionsAllEnabled().copy(disableErrorTracking = true)
         application.initForTest()
         val tracesUrl = "http://localhost:${application.mockWebServer?.port}/v1/traces"
 
@@ -127,8 +131,8 @@ class DisablingConfigOptionsE2ETest {
     }
 
     @Test
-    fun `Errors should be exported when disableErrorTracking is set to false`() {
-        application.pluginOptions = application.pluginOptions.copy(disableErrorTracking = false)
+    fun `Errors should be exported as spans when disableErrorTracking is set to false and disableTraces set to true`() {
+        application.pluginOptions = getOptionsAllEnabled().copy(disableTraces = true, disableErrorTracking = false)
         application.initForTest()
         val tracesUrl = "http://localhost:${application.mockWebServer?.port}/v1/traces"
 
@@ -143,6 +147,41 @@ class DisablingConfigOptionsE2ETest {
         assertEquals(
             "Test error",
             spansExported?.get(0)?.events?.get(0)?.attributes?.get(AttributeKey.stringKey("exception.message"))
+        )
+    }
+
+    @Test
+    fun `Crashes should NOT be exported when disableErrorTracking is set to true`() {
+        application.pluginOptions = getOptionsAllEnabled().copy(disableErrorTracking = true)
+        application.initForTest()
+        val logsUrl = "http://localhost:${application.mockWebServer?.port}/v1/logs"
+
+        Thread { throw RuntimeException("Exception for testing") }.start()
+
+        waitForTelemetryData(telemetryInspector = application.telemetryInspector, telemetryType = TelemetryType.LOGS)
+        val logsExported = application.telemetryInspector?.logExporter?.finishedLogRecordItems
+
+        assertFalse(requestsContainsUrl(logsUrl))
+        assertEquals(0, logsExported?.size)
+    }
+
+    @Test
+    fun `Crashes should be exported as logs when disableErrorTracking is set to false and disableLogs set to true`() {
+        application.pluginOptions = getOptionsAllEnabled().copy(disableLogs = true, disableErrorTracking = false)
+        application.initForTest()
+        val logsUrl = "http://localhost:${application.mockWebServer?.port}/v1/logs"
+        val exceptionMessage = "Exception for testing"
+
+        Thread { throw RuntimeException(exceptionMessage) }.start()
+
+        waitForTelemetryData(telemetryInspector = application.telemetryInspector, telemetryType = TelemetryType.LOGS)
+        val logsExported = application.telemetryInspector?.logExporter?.finishedLogRecordItems
+
+        assertTrue(requestsContainsUrl(logsUrl))
+        assertEquals(1, logsExported?.size)
+        assertEquals(
+            exceptionMessage,
+            logsExported?.get(0)?.attributes?.get(AttributeKey.stringKey("exception.message"))
         )
     }
 
@@ -179,5 +218,15 @@ class DisablingConfigOptionsE2ETest {
 
     private fun triggerTestMetric() {
         LDObserve.recordMetric(Metric("test", 50.0))
+    }
+
+    private fun getOptionsAllEnabled(): Options {
+        return Options(
+            debug = true,
+            disableTraces = false,
+            disableLogs = false,
+            disableMetrics = false,
+            disableErrorTracking = false
+        )
     }
 }
