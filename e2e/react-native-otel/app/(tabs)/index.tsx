@@ -466,25 +466,14 @@ export default function HomeScreen() {
 
 	const handleAxiosSuccess = async () => {
 		await axios.get('https://jsonplaceholder.typicode.com/posts/1')
-		Alert.alert('Axios Request', `Request completed`)
 	}
 
 	const handleAxios404 = async () => {
-		try {
-			await axios.get('https://jsonplaceholder.typicode.com/posts/99999')
-		} catch (error) {
-			Alert.alert('Axios 404', `Request completed`)
-			throw error
-		}
+		await axios.get('https://jsonplaceholder.typicode.com/posts/99999')
 	}
 
 	const handleAxios500 = async () => {
-		try {
-			await axios.get('https://httpstatuses.maor.io/500')
-		} catch (error) {
-			Alert.alert('Axios 500', `Request completed`)
-			throw error
-		}
+		await axios.get('https://httpstatuses.maor.io/500')
 	}
 
 	return (
