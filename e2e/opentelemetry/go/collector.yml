@@ -46,7 +46,7 @@ service:
     pipelines:
         traces:
             receivers: [otlp]
-            processors: [attributes/environment, batch]
+            processors: [tail_sampling/keep-errors-and-flags, attributes/environment, batch]
             exporters: [otlphttp]
         metrics:
             receivers: [otlp]
