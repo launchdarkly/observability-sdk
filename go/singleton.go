@@ -62,20 +62,21 @@ func recordSpanError(span trace.Span, err error, tags ...attribute.KeyValue) {
 
 	if stackErr, ok := err.(withStackTrace); ok {
 		stackTrace := fmt.Sprintf("%+v", stackErr.StackTrace())
-		attributes := []attribute.KeyValue{
+		exceptionAttributes := []attribute.KeyValue{
 			semconv.ExceptionTypeKey.String(reflect.TypeOf(err).String()),
 			semconv.ExceptionMessageKey.String(err.Error()),
 			semconv.ExceptionStacktraceKey.String(stackTrace),
 		}
-		attributes = append(attributes, tags...)
-		span.AddEvent(semconv.ExceptionEventName, trace.WithAttributes(attributes...))
+		exceptionAttributes = append(exceptionAttributes, tags...)
+		span.AddEvent(semconv.ExceptionEventName, trace.WithAttributes(exceptionAttributes...))
 	} else {
-		span.RecordError(err, trace.WithStackTrace(true))
+		span.RecordError(err, trace.WithStackTrace(true), trace.WithAttributes(tags...))
 	}
 }
 
 // RecordLog is used to record arbitrary logs in your golang backend.
 func RecordLog(ctx context.Context, record log.Record, tags ...log.KeyValue) error {
+	record.AddAttributes(tags...)
 	o.GetLogger().Emit(ctx, record)
 	return nil
 }
