@@ -7,5 +7,5 @@ services:
         volumes:
             - ./collector.yml:/etc/otelcol-contrib/config.yaml
         ports:
-            - '0.0.0.0:4317:4317'
-            - '0.0.0.0:4318:4318'
+            - '0.0.0.0:5317:4317'
+            - '0.0.0.0:5318:4318'

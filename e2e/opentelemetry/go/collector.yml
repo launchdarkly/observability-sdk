@@ -13,8 +13,10 @@ receivers:
                 include_metadata: true
 
 exporters:
-    otlp:
-        endpoint: https://otel.observability.app.launchdarkly.com:4317
+    otlphttp:
+      tls:
+        insecure_skip_verify: true
+      endpoint: http://host.docker.internal:4318
 
 processors:
     attributes/environment:
@@ -27,28 +29,30 @@ processors:
     #        value: <LD ENV ID>
     #        action: upsert
 
-    # This filter removes all spans that do not have an HTTP route or any span events
-    # remaining after the previous filter has been applied
-    filter/launchdarkly-spans:
-        error_mode: ignore
-        traces:
-            span:
-                - 'not (attributes["http.route"] != nil or Len(events) > 0)'
-
     batch:
+
+    tail_sampling/keep-errors-and-flags:
+        policies:
+            - name: keep_error_or_flag
+              type: ottl_condition
+              ottl_condition:
+                  error_mode: ignore
+                  spanevent:
+                      - 'name == "exception" or name == "feature_flag"'
+                      # or, if we want to only keep traces with a feature flag that is in a guarded rollout
+                      # - 'name == "exception" or (name == "feature_flag" and attributes["feature_flag.result.reason.inExperiment"] == true)'
 
 service:
     pipelines:
         traces:
             receivers: [otlp]
-            processors:
-                [filter/launchdarkly-spans, attributes/environment, batch]
-            exporters: [otlp]
+            processors: [attributes/environment, batch]
+            exporters: [otlphttp]
         metrics:
             receivers: [otlp]
             processors: [attributes/environment]
-            exporters: [otlp]
+            exporters: [otlphttp]
         logs:
             receivers: [otlp]
             processors: [attributes/environment]
-            exporters: [otlp]
+            exporters: [otlphttp]

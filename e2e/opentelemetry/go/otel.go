@@ -110,7 +110,7 @@ func newTracerProvider(ctx context.Context, res *resource.Resource) (*trace.Trac
 	// TODO: define the endpoints / https configuration as needed
 
 	traceExporter, err := otlptracehttp.New(ctx,
-		otlptracehttp.WithEndpoint("localhost:4318"),
+		otlptracehttp.WithEndpoint("localhost:5318"),
 		otlptracehttp.WithInsecure(),
 	)
 	if err != nil {
@@ -128,7 +128,7 @@ func newTracerProvider(ctx context.Context, res *resource.Resource) (*trace.Trac
 
 func newMeterProvider(ctx context.Context, res *resource.Resource) (*metric.MeterProvider, error) {
 	metricExporter, err := otlpmetrichttp.New(ctx,
-		otlpmetrichttp.WithEndpoint("localhost:4318"),
+		otlpmetrichttp.WithEndpoint("localhost:5318"),
 		otlpmetrichttp.WithInsecure(),
 	)
 	if err != nil {
@@ -146,7 +146,7 @@ func newMeterProvider(ctx context.Context, res *resource.Resource) (*metric.Mete
 
 func newLoggerProvider(ctx context.Context, res *resource.Resource) (*log.LoggerProvider, error) {
 	logExporter, err := otlploghttp.New(ctx,
-		otlploghttp.WithEndpoint("localhost:4318"),
+		otlploghttp.WithEndpoint("localhost:5318"),
 		otlploghttp.WithInsecure(),
 	)
 	if err != nil {

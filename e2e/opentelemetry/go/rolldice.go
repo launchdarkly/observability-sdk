@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -12,6 +13,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/trace"
 )
 
 const name = "go.opentelemetry.io/otel/example/dice"
@@ -46,6 +48,18 @@ func rolldice(w http.ResponseWriter, r *http.Request) {
 		msg = "Anonymous player is rolling the dice"
 	}
 	logger.InfoContext(ctx, msg, "result", roll)
+
+	if rand.Intn(100) > 90 {
+		span.RecordError(errors.New("example error"))
+	}
+	if rand.Intn(100) > 50 {
+		span.AddEvent(
+			"feature_flag",
+			trace.WithAttributes(
+				attribute.String("feature_flag.key", "foo"),
+				attribute.Bool("feature_flag.result.reason.inExperiment", rand.Intn(100) > 90),
+			))
+	}
 
 	rollValueAttr := attribute.Int("roll.value", roll)
 	span.SetAttributes(rollValueAttr)
