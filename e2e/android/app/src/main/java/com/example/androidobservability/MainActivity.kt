@@ -47,6 +47,7 @@ class MainActivity : ComponentActivity() {
                             .verticalScroll(rememberScrollState())
                     ) {
                         Text(
+
                             text = "Hello Telemetry",
                             modifier = Modifier.padding(bottom = 16.dp)
                         )

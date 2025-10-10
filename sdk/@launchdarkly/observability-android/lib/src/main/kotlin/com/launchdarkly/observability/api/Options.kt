@@ -37,7 +37,6 @@ data class Options(
     val customHeaders: Map<String, String> = emptyMap(),
     val sessionBackgroundTimeout: Duration = 15.minutes,
     val debug: Boolean = false,
-    // TODO O11Y-398: implement disable config options after all other instrumentations are implemented
     val disableErrorTracking: Boolean = false,
     val disableLogs: Boolean = false,
     val disableTraces: Boolean = false,
