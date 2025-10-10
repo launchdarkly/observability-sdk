@@ -3,11 +3,12 @@ package hlog
 import (
 	"context"
 	"fmt"
+	"strings"
+
 	"github.com/highlight/highlight/sdk/highlight-go"
 	"github.com/sirupsen/logrus"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
-	"strings"
 
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.25.0"
@@ -59,7 +60,7 @@ func (hook *Hook) Fire(entry *logrus.Entry) error {
 		ctx = context.TODO()
 	}
 
-	span, _ := highlight.StartTraceWithTimestamp(ctx, highlight.LogrusSpanName, entry.Time, []trace.SpanStartOption{trace.WithSpanKind(trace.SpanKindClient)})
+	span, _ := highlight.StartTraceWithTimestamp(ctx, highlight.LogrusSpanName, entry.Time, []trace.SpanStartOption{trace.WithSpanKind(trace.SpanKindProducer)})
 	defer highlight.EndTrace(span)
 
 	msg := entry.Message

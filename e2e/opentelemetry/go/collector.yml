@@ -1,0 +1,64 @@
+# The receivers specify how the collector receives data.
+# In this example, it receives data using the OpenTelemetry Protocol (OTLP) over gRPC and HTTP.
+receivers:
+    otlp:
+        protocols:
+            grpc:
+                endpoint: '0.0.0.0:4317'
+                include_metadata: true
+                max_recv_msg_size_mib: 1000
+            http:
+                endpoint: '0.0.0.0:4318'
+                max_request_body_size: 1073741824
+                include_metadata: true
+
+exporters:
+    otlphttp:
+        tls:
+            insecure_skip_verify: true
+        endpoint: http://host.docker.internal:4318
+        # endpoint: https://otel.observability.ld-stg.launchdarkly.com:4318
+
+processors:
+    attributes/environment:
+        actions:
+            - key: feature_flag.set.id
+              from_attribute: feature_flag.set_id
+              action: insert
+    #      OR use the following to set the value from collector-defined value
+    #      - key: feature_flag.set.id
+    #        value: <LD ENV ID>
+    #        action: upsert
+
+    batch:
+
+    tail_sampling/keep-errors-and-flags:
+        policies:
+            - name: keep_error_or_flag
+              type: ottl_condition
+              ottl_condition:
+                  error_mode: ignore
+                  spanevent:
+                      - 'name == "exception" or name == "feature_flag"'
+                      # or, if we want to only keep traces with a feature flag that is in a guarded rollout
+                      # - 'name == "exception" or (name == "feature_flag" and attributes["feature_flag.result.reason.inExperiment"] == true)'
+
+service:
+    pipelines:
+        traces:
+            receivers: [otlp]
+            processors:
+                [
+                    tail_sampling/keep-errors-and-flags,
+                    attributes/environment,
+                    batch,
+                ]
+            exporters: [otlphttp]
+        metrics:
+            receivers: [otlp]
+            processors: [attributes/environment]
+            exporters: [otlphttp]
+        logs:
+            receivers: [otlp]
+            processors: [attributes/environment]
+            exporters: [otlphttp]
