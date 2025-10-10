@@ -17,6 +17,7 @@ exporters:
       tls:
         insecure_skip_verify: true
       endpoint: http://host.docker.internal:4318
+      # endpoint: https://otel.observability.ld-stg.launchdarkly.com:4318
 
 processors:
     attributes/environment:

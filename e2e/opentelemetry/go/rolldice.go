@@ -57,6 +57,7 @@ func rolldice(w http.ResponseWriter, r *http.Request) {
 			"feature_flag",
 			trace.WithAttributes(
 				attribute.String("feature_flag.key", "foo"),
+				attribute.String("feature_flag.context.id", "user:foo"),
 				attribute.Bool("feature_flag.result.reason.inExperiment", rand.Intn(100) > 90),
 			))
 	}
