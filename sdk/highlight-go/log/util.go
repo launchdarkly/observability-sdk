@@ -108,7 +108,7 @@ func submitVercelLog(ctx context.Context, tracer trace.Tracer, projectID int, se
 	t := time.UnixMilli(log.Timestamp)
 	span, _ := highlight.StartTraceWithTracer(
 		ctx, tracer, highlight.LogSpanName, t,
-		[]trace.SpanStartOption{trace.WithSpanKind(trace.SpanKindClient)},
+		[]trace.SpanStartOption{trace.WithSpanKind(trace.SpanKindProducer)},
 		attribute.String(highlight.ProjectIDAttribute, strconv.Itoa(projectID)),
 		semconv.ServiceNameKey.String(serviceName),
 	)
@@ -224,7 +224,7 @@ func SubmitHTTPLog(ctx context.Context, tracer trace.Tracer, projectID int, lg L
 
 	span, _ := highlight.StartTraceWithTracer(
 		ctx, tracer, highlight.LogSpanName, t,
-		[]trace.SpanStartOption{trace.WithSpanKind(trace.SpanKindClient)},
+		[]trace.SpanStartOption{trace.WithSpanKind(trace.SpanKindProducer)},
 		attribute.String(highlight.ProjectIDAttribute, strconv.Itoa(projectID)),
 	)
 	defer highlight.EndTrace(span)

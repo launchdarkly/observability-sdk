@@ -44,9 +44,13 @@ type otelInstances struct {
 
 // Config contains the configuration for the OTLP provider.
 type Config struct {
-	OtlpEndpoint       string
-	ResourceAttributes []attribute.KeyValue
-	Sampler            sdktrace.Sampler
+	OtlpEndpoint           string
+	ResourceAttributes     []attribute.KeyValue
+	Sampler                sdktrace.Sampler
+	SpanMaxExportBatchSize int
+	SpanMaxQueueSize       int
+	LogMaxExportBatchSize  int
+	LogMaxQueueSize        int
 }
 
 func defaultInstancesValue() *atomic.Value {
@@ -214,8 +218,8 @@ func createTracerProvider(
 		sdktrace.WithBatcher(newTraceExporter(exporter, customSampler),
 			sdktrace.WithBatchTimeout(time.Second),
 			sdktrace.WithExportTimeout(30*time.Second),
-			sdktrace.WithMaxExportBatchSize(1024*1024),
-			sdktrace.WithMaxQueueSize(1024*1024),
+			sdktrace.WithMaxExportBatchSize(config.SpanMaxExportBatchSize),
+			sdktrace.WithMaxQueueSize(config.SpanMaxQueueSize),
 		),
 		sdktrace.WithResource(resources),
 	}, opts...)
@@ -240,8 +244,8 @@ func createLoggerProvider(
 	opts = append([]sdklog.LoggerProviderOption{
 		sdklog.WithProcessor(sdklog.NewBatchProcessor(newLogExporter(exporter, customSampler),
 			sdklog.WithExportTimeout(30*time.Second),
-			sdklog.WithExportMaxBatchSize(1024*1024),
-			sdklog.WithMaxQueueSize(1024*1024),
+			sdklog.WithExportMaxBatchSize(config.LogMaxExportBatchSize),
+			sdklog.WithMaxQueueSize(config.LogMaxQueueSize),
 		)),
 		sdklog.WithResource(resources),
 	}, opts...)
