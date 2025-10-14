@@ -3,6 +3,7 @@ package com.launchdarkly.observability.client
 import android.app.Application
 import com.launchdarkly.logging.LDLogger
 import com.launchdarkly.observability.api.Options
+import com.launchdarkly.observability.interfaces.LDExtendedInstrumentation
 import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.observability.network.GraphQLClient
 import com.launchdarkly.observability.network.SamplingApiService
@@ -29,6 +30,7 @@ import io.opentelemetry.exporter.otlp.http.logs.OtlpHttpLogRecordExporter
 import io.opentelemetry.exporter.otlp.http.metrics.OtlpHttpMetricExporter
 import io.opentelemetry.exporter.otlp.http.trace.OtlpHttpSpanExporter
 import io.opentelemetry.sdk.common.CompletableResultCode
+import io.opentelemetry.sdk.logs.LogRecordProcessor
 import io.opentelemetry.sdk.logs.SdkLoggerProviderBuilder
 import io.opentelemetry.sdk.logs.export.BatchLogRecordProcessor
 import io.opentelemetry.sdk.logs.export.LogRecordExporter
@@ -91,7 +93,7 @@ class InstrumentationManager(
     private var inMemoryMetricExporter: InMemoryMetricExporter? = null
     private var telemetryInspector: TelemetryInspector? = null
     private var spanProcessor: BatchSpanProcessor? = null
-    private var logProcessor: BatchLogRecordProcessor? = null
+    private var logProcessor: LogRecordProcessor? = null
     private var metricsReader: PeriodicMetricReader? = null
     private val gaugeCache = ConcurrentHashMap<String, DoubleGauge>()
     private val counterCache = ConcurrentHashMap<String, LongCounter>()
@@ -104,12 +106,13 @@ class InstrumentationManager(
     init {
         val otelRumConfig = createOtelRumConfig()
 
-        otelRUM = OpenTelemetryRum.builder(application, otelRumConfig)
+        val builder = OpenTelemetryRum.builder(application, otelRumConfig)
             .addLoggerProviderCustomizer { sdkLoggerProviderBuilder, _ ->
+                // TODO: need to refactor this so that the disableLogs option is specific to core logging functionality. when logs are disabled, session replay logs should not be blocked
                 return@addLoggerProviderCustomizer if (options.disableLogs && options.disableErrorTracking) {
                     sdkLoggerProviderBuilder
                 } else {
-                    configureLoggerProvider(sdkLoggerProviderBuilder)
+                    configureLoggerProvider(sdkLoggerProviderBuilder, options.instrumentations)
                 }
             }
             .addTracerProviderCustomizer { sdkTracerProviderBuilder, _ ->
@@ -126,7 +129,12 @@ class InstrumentationManager(
                     configureMeterProvider(sdkMeterProviderBuilder)
                 }
             }
-            .build()
+
+        for (instrumentation in options.instrumentations) {
+            builder.addInstrumentation(instrumentation)
+        }
+
+        otelRUM = builder.build()
 
         initializeTelemetryInspector()
         loadSamplingConfigAsync()
@@ -159,15 +167,32 @@ class InstrumentationManager(
         return !options.disableLogs || !options.disableTraces || !options.disableMetrics || !options.disableErrorTracking
     }
 
-    private fun configureLoggerProvider(sdkLoggerProviderBuilder: SdkLoggerProviderBuilder): SdkLoggerProviderBuilder {
+    private fun configureLoggerProvider(
+        sdkLoggerProviderBuilder: SdkLoggerProviderBuilder,
+        instrumentations: List<LDExtendedInstrumentation>
+    ): SdkLoggerProviderBuilder {
         val primaryLogExporter = createOtlpLogExporter()
         sdkLoggerProviderBuilder.setResource(resources)
 
         val finalExporter = createLogExporter(primaryLogExporter)
-        val processor = createBatchLogRecordProcessor(finalExporter)
+        val baseProcessor = createBatchLogRecordProcessor(finalExporter)
 
-        logProcessor = processor
-        return sdkLoggerProviderBuilder.addLogRecordProcessor(processor)
+        // Here we set up a routing log processor that will route logs with a matching scope name to the
+        // respective instrumentation's log record processor.  If the log's scope name does not match
+        // an instrumentation's scope name, it will fall through to the base processor.  This was
+        // originally added to route replay instrumentation logs through a separate log processing
+        // pipeline to provide instrumentation specific caching and export.
+        val routingLogRecordProcessor = RoutingLogRecordProcessor(fallthroughProcessor = baseProcessor)
+        for (i in instrumentations) {
+            i.getLogRecordProcessor(credential = sdkKey)?.let {
+                i.getLoggerScopeName().let { scopeName ->
+                    routingLogRecordProcessor.registerProcessor(scopeName, it)
+                }
+            }
+        }
+
+        logProcessor = routingLogRecordProcessor
+        return sdkLoggerProviderBuilder.addLogRecordProcessor(routingLogRecordProcessor)
     }
 
     private fun configureTracerProvider(sdkTracerProviderBuilder: SdkTracerProviderBuilder): SdkTracerProviderBuilder {

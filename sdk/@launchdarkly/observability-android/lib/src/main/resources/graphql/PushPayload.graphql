@@ -1,0 +1,25 @@
+mutation PushPayload(
+  $session_secure_id: String!
+  $payload_id: ID!
+  $events: ReplayEventsInput!
+  $messages: String!
+  $resources: String!
+  $web_socket_events: String!
+  $errors: [ErrorObjectInput]!
+  $is_beacon: Boolean
+  $has_session_unloaded: Boolean
+  $highlight_logs: String
+) {
+  pushPayload(
+      session_secure_id: $session_secure_id
+      payload_id: $payload_id
+      events: $events
+      messages: $messages
+      resources: $resources
+      web_socket_events: $web_socket_events
+      errors: $errors
+      is_beacon: $is_beacon
+      has_session_unloaded: $has_session_unloaded
+      highlight_logs: $highlight_logs
+  )
+}
