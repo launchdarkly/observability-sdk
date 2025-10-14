@@ -512,7 +512,7 @@ func RecordLog(ctx context.Context, record log.Record, tags ...log.KeyValue) err
 // Highlight session and trace are inferred from the context.
 // If no sessionID is set, then the error is associated with the project without a session context.
 func RecordError(ctx context.Context, err error, tags ...attribute.KeyValue) context.Context {
-	span, ctx := StartTraceWithTimestamp(ctx, ErrorSpanName, time.Now(), []trace.SpanStartOption{trace.WithSpanKind(trace.SpanKindClient)}, tags...)
+	span, ctx := StartTraceWithTimestamp(ctx, ErrorSpanName, time.Now(), []trace.SpanStartOption{trace.WithSpanKind(trace.SpanKindProducer)}, tags...)
 	defer EndTrace(span)
 	RecordSpanError(span, err)
 	return ctx

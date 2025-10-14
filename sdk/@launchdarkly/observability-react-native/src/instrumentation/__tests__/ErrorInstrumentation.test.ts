@@ -30,9 +30,26 @@ const mockErrorUtils = {
 
 ;(globalThis as any).ErrorUtils = mockErrorUtils
 
+// Mock HermesInternal for promise rejection tracking
+let hermesOnUnhandled: ((id: number, error: any) => void) | null = null
+let hermesOnHandled: ((id: number) => void) | null = null
+
+const mockHermesInternal = {
+	enablePromiseRejectionTracker: vi.fn((options: any) => {
+		hermesOnUnhandled = options.onUnhandled
+		hermesOnHandled = options.onHandled
+	}),
+}
+
+;(globalThis as any).HermesInternal = mockHermesInternal
+
 // Mock console methods
 const originalConsoleError = console.error
 const originalConsoleWarn = console.warn
+
+process.on('unhandledRejection', (_reason: any) => {
+	// Silently ignore - these are expected in our tests
+})
 
 describe('ErrorInstrumentation', () => {
 	let mockClient: Partial<ObservabilityClient>
@@ -52,6 +69,11 @@ describe('ErrorInstrumentation', () => {
 		vi.clearAllMocks()
 		mockErrorUtils.setGlobalHandler.mockClear()
 		mockErrorUtils.getGlobalHandler.mockClear()
+
+		// Reset Hermes mocks
+		hermesOnUnhandled = null
+		hermesOnHandled = null
+		mockHermesInternal.enablePromiseRejectionTracker.mockClear()
 	})
 
 	afterEach(() => {
@@ -108,6 +130,158 @@ describe('ErrorInstrumentation', () => {
 		})
 	})
 
+	describe('unhandled promise rejection handling', () => {
+		it('should capture unhandled promise rejections with Error objects', async () => {
+			errorInstrumentation = new ErrorInstrumentation(
+				mockClient as ObservabilityClient,
+			)
+			errorInstrumentation.initialize()
+
+			expect(
+				mockHermesInternal.enablePromiseRejectionTracker,
+			).toHaveBeenCalled()
+
+			const testError = new Error('Test promise rejection')
+
+			// Simulate Hermes detecting an unhandled rejection
+			hermesOnUnhandled?.(1, testError)
+
+			expect(mockClient.consumeCustomError).toHaveBeenCalledWith(
+				testError,
+				expect.objectContaining({
+					'error.unhandled': true,
+					'error.caught_by': 'unhandledrejection',
+					'promise.handled': false,
+				}),
+			)
+		})
+
+		it('should capture unhandled promise rejections with primitives', () => {
+			errorInstrumentation = new ErrorInstrumentation(
+				mockClient as ObservabilityClient,
+			)
+			errorInstrumentation.initialize()
+
+			// Simulate Hermes detecting an unhandled rejection with a string
+			hermesOnUnhandled?.(2, 'String rejection reason')
+
+			expect(mockClient.consumeCustomError).toHaveBeenCalledWith(
+				expect.objectContaining({
+					message:
+						'Promise rejected with string: String rejection reason',
+					name: 'UnhandledRejection',
+				}),
+				expect.objectContaining({
+					'error.unhandled': true,
+					'error.caught_by': 'unhandledrejection',
+					'rejection.type': 'string',
+					'rejection.value': 'String rejection reason',
+				}),
+			)
+		})
+
+		it('should capture unhandled promise rejections with objects', () => {
+			errorInstrumentation = new ErrorInstrumentation(
+				mockClient as ObservabilityClient,
+			)
+			errorInstrumentation.initialize()
+
+			// Simulate Hermes detecting an unhandled rejection with an object
+			hermesOnUnhandled?.(3, {
+				message: 'Custom error object',
+				code: 'ERR_CUSTOM',
+			})
+
+			expect(mockClient.consumeCustomError).toHaveBeenCalledWith(
+				expect.objectContaining({
+					message: 'Custom error object',
+					name: 'UnhandledRejection',
+				}),
+				expect.objectContaining({
+					'error.unhandled': true,
+					'error.caught_by': 'unhandledrejection',
+					'rejection.message': 'Custom error object',
+					'rejection.code': 'ERR_CUSTOM',
+				}),
+			)
+		})
+
+		it('should capture unhandled promise rejections from Promise constructor', () => {
+			errorInstrumentation = new ErrorInstrumentation(
+				mockClient as ObservabilityClient,
+			)
+			errorInstrumentation.initialize()
+
+			const testError = new Error('Constructor rejection')
+
+			// Simulate Hermes detecting an unhandled rejection
+			hermesOnUnhandled?.(4, testError)
+
+			expect(mockClient.consumeCustomError).toHaveBeenCalledWith(
+				testError,
+				expect.objectContaining({
+					'error.unhandled': true,
+					'error.caught_by': 'unhandledrejection',
+				}),
+			)
+		})
+
+		it('should capture axios-like errors with HTTP details', () => {
+			errorInstrumentation = new ErrorInstrumentation(
+				mockClient as ObservabilityClient,
+			)
+			errorInstrumentation.initialize()
+
+			const axiosError = new Error('Request failed with status code 404')
+			;(axiosError as any).isAxiosError = true
+			;(axiosError as any).response = {
+				status: 404,
+				statusText: 'Not Found',
+				data: { message: 'Resource not found' },
+			}
+			;(axiosError as any).config = {
+				method: 'get',
+				url: 'https://api.example.com/users/123',
+			}
+			;(axiosError as any).code = 'ERR_BAD_REQUEST'
+
+			// Simulate Hermes detecting an unhandled rejection
+			hermesOnUnhandled?.(6, axiosError)
+
+			expect(mockClient.consumeCustomError).toHaveBeenCalledWith(
+				axiosError,
+				expect.objectContaining({
+					'error.unhandled': true,
+					'error.caught_by': 'unhandledrejection',
+					'http.is_axios_error': true,
+					'http.status_code': 404,
+					'http.status_text': 'Not Found',
+					'http.method': 'GET',
+					'http.url': 'https://api.example.com/users/123',
+					'http.error_code': 'ERR_BAD_REQUEST',
+				}),
+			)
+		})
+
+		it('should capture rejections with null or undefined', () => {
+			errorInstrumentation = new ErrorInstrumentation(
+				mockClient as ObservabilityClient,
+			)
+			errorInstrumentation.initialize()
+
+			// Simulate Hermes detecting an unhandled rejection with undefined
+			hermesOnUnhandled?.(7, undefined)
+
+			expect(mockClient.consumeCustomError).toHaveBeenCalled()
+			const call = (mockClient.consumeCustomError as any).mock.calls[0]
+			expect(call[0].message).toContain('Promise rejected')
+			expect(call[1]).toMatchObject({
+				'error.unhandled': true,
+				'error.caught_by': 'unhandledrejection',
+			})
+		})
+	})
+
 	describe('console error handling', () => {
 		it('should capture console.error calls', () => {
 			errorInstrumentation = new ErrorInstrumentation(
@@ -144,10 +318,12 @@ describe('ErrorInstrumentation', () => {
 		})
 	})
 
-	describe('cleanup', () => {
+	describe('destroy', () => {
 		it('should restore original handlers on destroy', () => {
 			const originalHandler = vi.fn()
-			mockErrorUtils.getGlobalHandler.mockReturnValue(originalHandler)
+			mockErrorUtils.getGlobalHandler.mockReturnValue(
+				originalHandler as any,
+			)
 
 			errorInstrumentation = new ErrorInstrumentation(
 				mockClient as ObservabilityClient,
