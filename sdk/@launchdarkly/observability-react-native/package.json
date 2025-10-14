@@ -52,6 +52,7 @@
 	"devDependencies": {
 		"@launchdarkly/observability-shared": "workspace:*",
 		"@launchdarkly/react-native-client-sdk": "^10.0.0",
+		"axios": "^1.12.2",
 		"react-native": "^0.79.0",
 		"typedoc": "^0.28.4",
 		"typescript": "^5.0.4",
