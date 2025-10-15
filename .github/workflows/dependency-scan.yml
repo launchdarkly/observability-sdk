@@ -9,20 +9,15 @@ on:
             - main
 
 jobs:
-    generate-nodejs-sbom:
-        runs-on: ubuntu-latest
-        env:
-            NODE_OPTIONS: '--max-old-space-size=8192'
-        steps:
-            - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
-
-            - name: Generate SBOM
-              uses: launchdarkly/gh-actions/actions/dependency-scan/generate-sbom@main
-              with:
-                  types: 'nodejs'
-              timeout-minutes: 20
-
-            - name: Evaluate SBOM Policy
-              uses: launchdarkly/gh-actions/actions/dependency-scan/evaluate-policy@main
-              with:
-                  artifacts-pattern: bom-*
+    dependency-scan:
+      runs-on: ubuntu-latest
+      steps:
+        - name: Generate SBOM
+          uses: launchdarkly/gh-actions/actions/dependency-scan/generate-sbom@main
+          with:
+            types: 'nodejs'
+  
+        - name: Evaluate SBOM Policy
+          uses: launchdarkly/gh-actions/actions/dependency-scan/evaluate-policy@main
+          with:
+            bom-file: bom.nodejs.json
