@@ -115,7 +115,7 @@ function pruneSessionData(keepKey: string): void {
 				if (
 					sessionData.lastPushTime !== undefined &&
 					Date.now() - sessionData.lastPushTime >=
-					SESSION_PUSH_THRESHOLD
+						SESSION_PUSH_THRESHOLD
 				) {
 					internalLogOnce(
 						'highlightSession',
