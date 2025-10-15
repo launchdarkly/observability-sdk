@@ -43,7 +43,7 @@ import androidx.compose.ui.geometry.Rect as ComposeRect
 class CaptureSource(
     private val sessionManager: SessionManager,
     private val privacyProfile: PrivacyProfile,
-    // TODO: add captureQuality options
+    // TODO: O11Y-628 - add captureQuality options
 ) :
     Application.ActivityLifecycleCallbacks {
 
@@ -70,7 +70,7 @@ class CaptureSource(
      * Requests a [Capture] be taken now.
      */
     fun captureNow() {
-        // TODO: don't use global scope
+        // TODO: O11Y-621 - don't use global scope
         CoroutineScope(Dispatchers.Default).launch {
             val capture = doCapture()
             if (capture != null) {
@@ -121,16 +121,16 @@ class CaptureSource(
 
             val rect = Rect(0, 0, decorViewWidth, decorViewHeight)
 
-            // TODO: optimize memory allocations
-            // TODO: see if holding bitmap is more efficient than base64 encoding immediately after compression
-            // TODO: use captureQuality option for scaling and adjust this bitmap accordingly, may need to investigate power of 2 rounding for performance
+            // TODO: O11Y-625 - optimize memory allocations
+            // TODO: O11Y-625 - see if holding bitmap is more efficient than base64 encoding immediately after compression
+            // TODO: O11Y-628 - use captureQuality option for scaling and adjust this bitmap accordingly, may need to investigate power of 2 rounding for performance
             // Create a bitmap with the window dimensions
             val bitmap = Bitmap.createBitmap(decorViewWidth, decorViewHeight, Bitmap.Config.ARGB_8888)
 
             // Use PixelCopy to capture the window content
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 suspendCancellableCoroutine { continuation ->
-                    // TODO: read PixelCopy exception recommendations and adjust logic to account for such cases
+                    // TODO: O11Y-624 - read PixelCopy exception recommendations and adjust logic to account for such cases
                     PixelCopy.request(
                         window,
                         rect,
@@ -148,9 +148,9 @@ class CaptureSource(
                                     postMask = bitmap
                                 }
 
-                                // TODO: optimize memory allocations here, re-use byte arrays and such
+                                // TODO: O11Y-625 - optimize memory allocations here, re-use byte arrays and such
                                 val outputStream = ByteArrayOutputStream()
-                                // TODO: calculate quality using captureQuality options
+                                // TODO: O11Y-628 - calculate quality using captureQuality options
                                 postMask.compress(Bitmap.CompressFormat.WEBP, 30, outputStream)
                                 val byteArray = outputStream.toByteArray()
                                 val compressedImage = Base64.encodeToString(byteArray, Base64.NO_WRAP)
@@ -164,7 +164,7 @@ class CaptureSource(
                                 )
                                 continuation.resume(capture)
                             } else {
-                                // TODO: implement handling/shutdown for errors and unsupported API levels
+                                // TODO: O11Y-624 - implement handling/shutdown for errors and unsupported API levels
                                 continuation.resumeWithException(Exception("PixelCopy failed with result: $result"))
                             }
                         },
@@ -172,11 +172,11 @@ class CaptureSource(
                     )
                 }
             } else {
-                // TODO: implement handling/shutdown for errors and unsupported API levels
+                // TODO: O11Y-624 - implement handling/shutdown for errors and unsupported API levels
                 throw NotImplementedError("CaptureSource does not work on unsupported Android SDK version")
             }
         } catch (e: Exception) {
-            // TODO: implement handling/shutdown for errors and unsupported API levels
+            // TODO: O11Y-624 - implement handling/shutdown for errors and unsupported API levels
             throw RuntimeException(e);
         }
     }
@@ -189,7 +189,7 @@ class CaptureSource(
      * @param activity The activity that the bitmap was captured from.
      */
     private fun maskSensitiveAreas(bitmap: Bitmap, activity: Activity): Bitmap {
-        // TODO: remove this bitmap copy if possible for memory optimization purposes
+        // TODO: O11Y-625 - remove this bitmap copy if possible for memory optimization purposes
         val maskedBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true)
         val canvas = Canvas(maskedBitmap)
         val paint = Paint().apply {
@@ -274,7 +274,7 @@ class CaptureSource(
             if (composeView.childCount > 0) {
                 val androidComposeView = composeView.getChildAt(0)
 
-                // TODO: determine if there is a more robust long term way to achieve this, this reflection is fragile.
+                // TODO: O11Y-620 - determine if there is a more robust long term way to achieve this, this reflection is fragile.
                 // Use reflection to check if this is an AndroidComposeView
                 val androidComposeViewClass =
                     Class.forName("androidx.compose.ui.platform.AndroidComposeView")
@@ -342,7 +342,7 @@ class CaptureSource(
      * Check if a semantic node contains sensitive content based on test tags or content descriptions.
      */
     private fun isSensitiveNode(node: SemanticsNode): Boolean {
-        // TODO: refactor to utilize generic MaskMatchers
+        // TODO: O11Y-620 - refactor to utilize generic MaskMatchers
 
         // Check for content description containing "sensitive"
         val contentDescriptions = node.config.getOrNull(SemanticsProperties.ContentDescription)

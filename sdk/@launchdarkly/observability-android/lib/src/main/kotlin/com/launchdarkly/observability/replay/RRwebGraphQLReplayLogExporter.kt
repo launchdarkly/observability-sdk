@@ -31,7 +31,7 @@ class RRwebGraphQLReplayLogExporter(
     private var graphqlClient: GraphQLClient = GraphQLClient(backendUrl)
     private var replayApiService: SessionReplayApiService = SessionReplayApiService(graphqlClient)
 
-    // TODO: need to implement sid, payloadId reset when multiple sessions occur in one application process lifecycle.
+    // TODO: O11Y-624 - need to implement sid, payloadId reset when multiple sessions occur in one application process lifecycle.
     private var sidCounter = 0
     private var payloadIdCounter = 0
     private var lastSentHeight = 0
@@ -48,7 +48,7 @@ class RRwebGraphQLReplayLogExporter(
                 for (log in logs) {
                     val capture = extractCaptureFromLog(log)
                     if (capture != null) {
-                        // TODO: investigate if there is a size limit on the push that is imposed server side.
+                        // TODO: O11Y-624 - investigate if there is a size limit on the push that is imposed server side.
                         val success = if (!capture.session.equals(lastSessionId)) {
                             sendCaptureInitial(capture)
                         } else {
@@ -66,7 +66,7 @@ class RRwebGraphQLReplayLogExporter(
                     resultCode.fail()
                 }
             } catch (e: Exception) {
-                // TODO: pass in logger to implementation and use here
+                // TODO: O11Y-627 - pass in logger to implementation and use here
                 Log.e("RRwebGraphQLReplayLogExporter", "Error during export: ${e.message}", e)
                 resultCode.fail()
             }
@@ -76,10 +76,12 @@ class RRwebGraphQLReplayLogExporter(
     }
 
     override fun flush(): CompletableResultCode {
+        // TODO: O11Y-621 - Handle flush
         TODO("Not yet implemented")
     }
 
     override fun shutdown(): CompletableResultCode {
+        // TODO: O11Y-621 - Handle shutdown
         TODO("Not yet implemented")
     }
 
@@ -126,7 +128,7 @@ class RRwebGraphQLReplayLogExporter(
             val eventsBatch1 = mutableListOf<Event>()
             val timestamp = System.currentTimeMillis()
 
-            // TODO: optimize JSON usage for performance since this region of code is essentially static
+            // TODO: O11Y-625 - optimize JSON usage for performance since this region of code is essentially static
             val incrementalEvent = Event(
                 type = EventType.INCREMENTAL_SNAPSHOT,
                 timestamp = timestamp,
@@ -139,7 +141,7 @@ class RRwebGraphQLReplayLogExporter(
 
             // TODO: add ViewPort event if resolution changes
 
-            // TODO: remove this spoofed mouse interaction when proper user interaction is instrumented
+            // TODO: O11Y-629 - remove this spoofed mouse interaction when proper user interaction is instrumented
             // This spoofed mouse interaction is necessary to make the session look like it had activity
             eventsBatch1.add(
                 Event(
@@ -155,7 +157,7 @@ class RRwebGraphQLReplayLogExporter(
             replayApiService.pushPayload(capture.session, "${nextPayloadId()}", eventsBatch1)
             true
         } catch (e: Exception) {
-            // TODO: pass in logger to implementation and use here
+            // TODO: O11Y-627 - pass in logger to implementation and use here
             Log.e(REPLAY_EXPORTER_NAME, "Error sending incremental capture for session: ${e.message}", e)
             false
         }
@@ -173,7 +175,7 @@ class RRwebGraphQLReplayLogExporter(
 
             val eventBatch = mutableListOf<Event>()
 
-            // TODO: optimize JSON usage for performance since this region of code is essentially static
+            // TODO: O11Y-625 - optimize JSON usage for performance since this region of code is essentially static
 
             val timestamp = System.currentTimeMillis()
             val metaEvent = Event(
@@ -254,7 +256,7 @@ class RRwebGraphQLReplayLogExporter(
             )
             eventBatch.add(viewportEvent)
 
-            // TODO: double check error case handling, may need to add retries per api service request, should subsequent requests wait for previous requests to succeed?
+            // TODO: O11Y-624 - double check error case handling, may need to add retries per api service request, should subsequent requests wait for previous requests to succeed?
             lastSessionId = capture.session
             lastSentWidth = capture.origWidth
             lastSentHeight = capture.origHeight
@@ -263,7 +265,7 @@ class RRwebGraphQLReplayLogExporter(
 
             true
         } catch (e: Exception) {
-            // TODO: pass in logger to implementation and use here
+            // TODO: O11Y-627 - pass in logger to implementation and use here
             Log.e(REPLAY_EXPORTER_NAME, "Error sending initial capture for session: ${e.message}", e)
             false
         }

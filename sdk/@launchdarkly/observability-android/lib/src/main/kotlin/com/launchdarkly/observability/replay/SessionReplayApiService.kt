@@ -8,7 +8,7 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonPrimitive
 
-// TODO: Refactor logging handling in this class
+// TODO: O11Y-627 - Refactor logging handling in this class
 class SessionReplayApiService(
     private val graphqlClient: GraphQLClient
 ) {
@@ -54,7 +54,7 @@ class SessionReplayApiService(
                 dataSerializer = InitializeReplaySessionResponse.serializer()
             )
 
-            // TODO: check graphql requests can generate errors when necessary and add error handling
+            // TODO: O11Y-624 - check graphql requests can generate errors when necessary and add error handling
             if (response.errors?.isNotEmpty() == true) {
                 printErrors(response)
             }

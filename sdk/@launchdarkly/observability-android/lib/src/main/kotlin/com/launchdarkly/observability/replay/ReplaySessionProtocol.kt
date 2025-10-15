@@ -66,7 +66,7 @@ object EventTypeSerializer : KSerializer<EventType> {
     override fun deserialize(decoder: Decoder): EventType {
         val intValue = decoder.decodeInt()
 
-        // TODO: determine better error handling
+        // TODO: O11Y-624 - determine better error handling
         return EventType.values().find { it.value == intValue }
             ?: throw IllegalArgumentException("Unknown EventType value: $intValue")
     }
@@ -91,7 +91,7 @@ object NodeTypeSerializer : KSerializer<NodeType> {
 
     override fun deserialize(decoder: Decoder): NodeType {
         val intValue = decoder.decodeInt()
-        // TODO: determine better error handling
+        // TODO: O11Y-624 - determine better error handling
         return NodeType.values().find { it.value == intValue }
             ?: throw IllegalArgumentException("Unknown NodeType value: $intValue")
     }
@@ -127,7 +127,7 @@ object IncrementalSourceSerializer : KSerializer<IncrementalSource> {
 
     override fun deserialize(decoder: Decoder): IncrementalSource {
         val intValue = decoder.decodeInt()
-        // TODO: determine better error handling
+        // TODO: O11Y-624 - determine better error handling
         return IncrementalSource.values().find { it.value == intValue }
             ?: throw IllegalArgumentException("Unknown IncrementalSource value: $intValue")
     }
@@ -157,7 +157,7 @@ object MouseInteractionsSerializer : KSerializer<MouseInteractions> {
 
     override fun deserialize(decoder: Decoder): MouseInteractions {
         val intValue = decoder.decodeInt()
-        // TODO: determine better error handling
+        // TODO: O11Y-624 - determine better error handling
         return MouseInteractions.values().find { it.value == intValue }
             ?: throw IllegalArgumentException("Unknown MouseInteractions value: $intValue")
     }

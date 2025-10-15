@@ -18,7 +18,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 private const val INSTRUMENTATION_SCOPE_NAME = "com.launchdarkly.observability.replay"
 
-// TODO: determine where these should be defined ultimately and tune accordingly.  Perhaps
+// TODO: O11Y-625 - determine where these should be defined ultimately and tune accordingly.  Perhaps
 // we don't need a batching exporter in this layer.  Perhaps this layer shouldn't be the one
 // that decides the parameters of the batching exporter.  Perhaps the batching should be
 // controlled by the instrumentation manager.
@@ -82,8 +82,8 @@ class ReplayInstrumentation(
         _captureSource = CaptureSource(ctx.sessionManager, options.privacyProfile)
         _captureSource.attachToApplication(ctx.application)
 
-        // TODO: don't use global scope
-        // TODO: shutdown procedure and cleanup of dispatched jobs
+        // TODO: O11Y-621 - don't use global scope
+        // TODO: O11Y-621 - shutdown procedure and cleanup of dispatched jobs
         GlobalScope.launch(Dispatchers.Default) {
             _captureSource.captureFlow.collect { capture ->
                 _otelLogger.logRecordBuilder()
@@ -101,7 +101,7 @@ class ReplayInstrumentation(
         internalStartCapture()
     }
 
-    // TODO: implement mechanism for customer code to invoke this method
+    // TODO: O11Y-622 - implement mechanism for customer code to invoke this method
     suspend fun runCapture() {
         _captureMutex.withLock {
             // If already running (not paused), do nothing
@@ -115,7 +115,7 @@ class ReplayInstrumentation(
         }
     }
 
-    // TODO: implement mechanism for customer code to invoke this method
+    // TODO: O11Y-622 - implement mechanism for customer code to invoke this method
     suspend fun pauseCapture() {
         _captureMutex.withLock {
             // if already paused, do nothing
@@ -131,7 +131,7 @@ class ReplayInstrumentation(
     }
     
     private fun internalStartCapture() {
-        // TODO: don't use global scope
+        // TODO: O11Y-621 - don't use global scope
         _captureJob = GlobalScope.launch(Dispatchers.Default) {
             try {
                 while (true) {

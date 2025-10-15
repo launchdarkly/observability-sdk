@@ -108,7 +108,7 @@ class InstrumentationManager(
 
         val builder = OpenTelemetryRum.builder(application, otelRumConfig)
             .addLoggerProviderCustomizer { sdkLoggerProviderBuilder, _ ->
-                // TODO: need to refactor this so that the disableLogs option is specific to core logging functionality. when logs are disabled, session replay logs should not be blocked
+                // TODO: O11Y-627 - need to refactor this so that the disableLogs option is specific to core logging functionality. when logs are disabled, session replay logs should not be blocked
                 return@addLoggerProviderCustomizer if (options.disableLogs && options.disableErrorTracking) {
                     sdkLoggerProviderBuilder
                 } else {
