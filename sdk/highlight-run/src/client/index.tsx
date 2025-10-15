@@ -71,7 +71,7 @@ import {
 	NetworkPerformancePayload,
 } from './listeners/network-listener/performance-listener'
 import { Logger } from './logger'
-import { BROWSER_METER_NAME, getTracer, setupBrowserTracing } from './otel'
+import { BROWSER_METER_NAME, getTracer, setupBrowserTracing, shutdown } from './otel'
 import {
 	HighlightIframeMessage,
 	HighlightIframeReponse,
@@ -125,6 +125,8 @@ import { createLog, defaultLogOptions } from './listeners/console-listener'
 import { CustomSampler } from './otel/sampling/CustomSampler'
 import randomUuidV4 from './utils/randomUuidV4'
 import { LDContext } from '@launchdarkly/js-client-sdk'
+import type { WebTracerProvider } from '@opentelemetry/sdk-trace-web'
+import type { MeterProvider } from '@opentelemetry/sdk-metrics'
 
 export const HighlightWarning = (context: string, msg: any) => {
 	console.warn(`Highlight Warning: (${context}): `, { output: msg })
@@ -1367,6 +1369,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 		// stop all other event listeners, to be restarted on initialize()
 		this.listeners.forEach((stop) => stop())
 		this.listeners = []
+		void shutdown()
 	}
 
 	getCurrentSessionTimestamp() {
