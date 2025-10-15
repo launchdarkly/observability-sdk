@@ -51,6 +51,27 @@ export function HighlightButtons() {
 			>
 				Track
 			</Button>
+			<Button
+				onClick={() => {
+					H.recordMetric({name: 'my-metric', value: Math.random()})
+				}}
+			>
+				H.recordMetric
+			</Button>
+			<Button
+				onClick={() => {
+					H.start()
+				}}
+			>
+				Start
+			</Button>
+			<Button
+				onClick={() => {
+					H.stop()
+				}}
+			>
+				Stop
+			</Button>
 		</div>
 	)
 }
