@@ -8,8 +8,9 @@ import io.opentelemetry.api.common.Attributes
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
 
-private const val DEFAULT_OTLP_ENDPOINT = "https://otel.observability.app.launchdarkly.com:4318"
-private const val DEFAULT_BACKEND_URL = "https://pub.observability.app.launchdarkly.com"
+const val DEFAULT_SERVICE_NAME = "observability-android"
+const val DEFAULT_OTLP_ENDPOINT = "https://otel.observability.app.launchdarkly.com:4318"
+const val DEFAULT_BACKEND_URL = "https://pub.observability.app.launchdarkly.com"
 
 /**
  * Configuration options for the Observability plugin.
@@ -31,7 +32,7 @@ private const val DEFAULT_BACKEND_URL = "https://pub.observability.app.launchdar
  * @property instrumentations List of additional instrumentations to use
  */
 data class Options(
-    val serviceName: String = "observability-android",
+    val serviceName: String = DEFAULT_SERVICE_NAME,
     val serviceVersion: String = BuildConfig.OBSERVABILITY_SDK_VERSION,
     val otlpEndpoint: String = DEFAULT_OTLP_ENDPOINT,
     val backendUrl: String = DEFAULT_BACKEND_URL,

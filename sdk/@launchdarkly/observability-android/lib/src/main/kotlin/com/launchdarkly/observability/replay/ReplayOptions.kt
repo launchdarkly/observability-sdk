@@ -1,6 +1,7 @@
 package com.launchdarkly.observability.replay
 
-private const val DEFAULT_BACKEND_URL = "https://pub.observability.app.launchdarkly.com"
+import com.launchdarkly.observability.BuildConfig
+import com.launchdarkly.observability.api.DEFAULT_BACKEND_URL
 
 /**
  * Options for the [ReplayInstrumentation]
@@ -11,6 +12,8 @@ private const val DEFAULT_BACKEND_URL = "https://pub.observability.app.launchdar
  * @property capturePeriodMillis period between captures
  */
 data class ReplayOptions(
+    val serviceName: String = "observability-android",
+    val serviceVersion: String = BuildConfig.OBSERVABILITY_SDK_VERSION,
     val backendUrl: String = DEFAULT_BACKEND_URL,
     val debug: Boolean = false,
     val privacyProfile: PrivacyProfile = PrivacyProfile.STRICT,

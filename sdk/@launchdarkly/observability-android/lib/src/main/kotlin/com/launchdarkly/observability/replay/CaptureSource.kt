@@ -121,6 +121,11 @@ class CaptureSource(
 
             val rect = Rect(0, 0, decorViewWidth, decorViewHeight)
 
+            // protect against race condition where decor view has no size
+            if (decorViewWidth <= 0 || decorViewHeight <= 0) {
+                return@withContext null
+            }
+
             // TODO: O11Y-625 - optimize memory allocations
             // TODO: O11Y-625 - see if holding bitmap is more efficient than base64 encoding immediately after compression
             // TODO: O11Y-628 - use captureQuality option for scaling and adjust this bitmap accordingly, may need to investigate power of 2 rounding for performance

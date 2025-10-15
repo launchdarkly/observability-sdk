@@ -18,7 +18,6 @@ mutation initializeSession(
     $serviceName: String!
     $client_id: String!
     $network_recording_domains: [String!]
-    $disable_session_recording: Boolean
 ) {
     initializeSession(
         session_secure_id: $session_secure_id
@@ -34,7 +33,6 @@ mutation initializeSession(
         fingerprint: $id
         client_id: $client_id
         network_recording_domains: $network_recording_domains
-        disable_session_recording: $disable_session_recording
         privacy_setting: $privacy_setting
     ) {
         secure_id

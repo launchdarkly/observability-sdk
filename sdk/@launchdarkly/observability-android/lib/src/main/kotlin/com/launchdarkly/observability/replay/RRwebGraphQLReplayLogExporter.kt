@@ -24,12 +24,18 @@ private const val REPLAY_EXPORTER_NAME = "RRwebGraphQLReplayLogExporter"
  */
 class RRwebGraphQLReplayLogExporter(
     val organizationVerboseId: String,
-    val backendUrl: String
+    val backendUrl: String,
+    val serviceName: String,
+    val serviceVersion: String,
 ) : LogRecordExporter {
     private val coroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     private var graphqlClient: GraphQLClient = GraphQLClient(backendUrl)
-    private var replayApiService: SessionReplayApiService = SessionReplayApiService(graphqlClient)
+    private var replayApiService: SessionReplayApiService = SessionReplayApiService(
+        graphqlClient = graphqlClient,
+        serviceName = serviceName,
+        serviceVersion = serviceVersion,
+    )
 
     // TODO: O11Y-624 - need to implement sid, payloadId reset when multiple sessions occur in one application process lifecycle.
     private var sidCounter = 0
@@ -44,22 +50,24 @@ class RRwebGraphQLReplayLogExporter(
         coroutineScope.launch {
             try {
                 var allSuccessful = true
-                
+
                 for (log in logs) {
                     val capture = extractCaptureFromLog(log)
                     if (capture != null) {
                         // TODO: O11Y-624 - investigate if there is a size limit on the push that is imposed server side.
-                        val success = if (!capture.session.equals(lastSessionId)) {
-                            sendCaptureInitial(capture)
-                        } else {
-                            sendCaptureIncremental(capture)
-                        }
+                        val success =
+                            if (!capture.session.equals(lastSessionId) || lastSentWidth != capture.origWidth || lastSentHeight != capture.origHeight) {
+                                // we need to send a full capture if the session id changes or there is a resize/orientation change
+                                sendCaptureFull(capture)
+                            } else {
+                                sendCaptureIncremental(capture)
+                            }
                         if (!success) {
                             allSuccessful = false
                         }
                     }
                 }
-                
+
                 if (allSuccessful) {
                     resultCode.succeed()
                 } else {
@@ -71,7 +79,7 @@ class RRwebGraphQLReplayLogExporter(
                 resultCode.fail()
             }
         }
-        
+
         return resultCode
     }
 
@@ -85,25 +93,25 @@ class RRwebGraphQLReplayLogExporter(
         TODO("Not yet implemented")
     }
 
-    fun nextSid() : Int {
+    fun nextSid(): Int {
         sidCounter++;
         return sidCounter
     }
 
-    fun nextPayloadId() : Int {
+    fun nextPayloadId(): Int {
         payloadIdCounter++;
         return payloadIdCounter
     }
 
     // Returns null if unable to extract a valid capture from the log record
-    private fun extractCaptureFromLog(log: LogRecordData) : Capture? {
+    private fun extractCaptureFromLog(log: LogRecordData): Capture? {
         val attributes = log.attributes
         val eventDomain = attributes.get(AttributeKey.stringKey("event.domain"))
         val imageWidth = attributes.get(AttributeKey.longKey("image.width"))
         val imageHeight = attributes.get(AttributeKey.longKey("image.height"))
         val imageData = attributes.get(AttributeKey.stringKey("image.data"))
         val sessionId = attributes.get(AttributeKey.stringKey("session.id"))
-        
+
         // Return null if any required attribute is missing
         if (eventDomain != "media" || imageWidth == null || imageHeight == null || imageData == null || sessionId == null) {
             return null
@@ -119,13 +127,13 @@ class RRwebGraphQLReplayLogExporter(
     }
 
     /**
-     * Sends an incremental capture. Used after [sendCaptureInitial] has already been called for a previous capture in the same session.
+     * Sends an incremental capture. Used after [sendCaptureFull] has already been called for a previous capture in the same session.
      *
      * @param capture the capture to be sent
      */
     suspend fun sendCaptureIncremental(capture: Capture): Boolean = withContext(Dispatchers.IO) {
         try {
-            val eventsBatch1 = mutableListOf<Event>()
+            val eventsBatch = mutableListOf<Event>()
             val timestamp = System.currentTimeMillis()
 
             // TODO: O11Y-625 - optimize JSON usage for performance since this region of code is essentially static
@@ -137,13 +145,11 @@ class RRwebGraphQLReplayLogExporter(
                     Json.parseToJsonElement("""{"source":9,"id":6,"type":0,"commands":[{"property":"clearRect","args":[0,0,${capture.origWidth},${capture.origHeight}]},{"property":"drawImage","args":[{"rr_type":"ImageBitmap","args":[{"rr_type":"Blob","data":[{"rr_type":"ArrayBuffer","base64":"${capture.imageBase64}"}],"type":"image/jpeg"}]},0,0,${capture.origWidth},${capture.origHeight}]}]}""")
                 )
             )
-            eventsBatch1.add(incrementalEvent)
-
-            // TODO: add ViewPort event if resolution changes
+            eventsBatch.add(incrementalEvent)
 
             // TODO: O11Y-629 - remove this spoofed mouse interaction when proper user interaction is instrumented
             // This spoofed mouse interaction is necessary to make the session look like it had activity
-            eventsBatch1.add(
+            eventsBatch.add(
                 Event(
                     type = EventType.INCREMENTAL_SNAPSHOT,
                     timestamp = timestamp,
@@ -154,21 +160,31 @@ class RRwebGraphQLReplayLogExporter(
                 )
             )
 
-            replayApiService.pushPayload(capture.session, "${nextPayloadId()}", eventsBatch1)
+            // record last sent state
+            lastSessionId = capture.session
+            lastSentWidth = capture.origWidth
+            lastSentHeight = capture.origHeight
+
+            replayApiService.pushPayload(capture.session, "${nextPayloadId()}", eventsBatch)
             true
         } catch (e: Exception) {
             // TODO: O11Y-627 - pass in logger to implementation and use here
-            Log.e(REPLAY_EXPORTER_NAME, "Error sending incremental capture for session: ${e.message}", e)
+            Log.e(
+                REPLAY_EXPORTER_NAME,
+                "Error sending incremental capture for session: ${e.message}",
+                e
+            )
             false
         }
     }
 
     /**
-     * Sends an initial capture. Used after [sendCaptureInitial] has already been called for a previous capture in the same session.
+     * Sends a full capture. May be invoked multiple times for a single session if a substantial
+     * change occurs requiring a full capture to be sent.
      *
      * @param capture the capture to be sent
      */
-    suspend fun sendCaptureInitial(capture: Capture): Boolean = withContext(Dispatchers.IO) {
+    suspend fun sendCaptureFull(capture: Capture): Boolean = withContext(Dispatchers.IO) {
         try {
             replayApiService.initializeReplaySession(organizationVerboseId, capture.session)
             replayApiService.identifyReplaySession(capture.session)
@@ -256,17 +272,22 @@ class RRwebGraphQLReplayLogExporter(
             )
             eventBatch.add(viewportEvent)
 
-            // TODO: O11Y-624 - double check error case handling, may need to add retries per api service request, should subsequent requests wait for previous requests to succeed?
+            // record last sent state
             lastSessionId = capture.session
             lastSentWidth = capture.origWidth
             lastSentHeight = capture.origHeight
 
+            // TODO: O11Y-624 - double check error case handling, may need to add retries per api service request, should subsequent requests wait for previous requests to succeed?
             replayApiService.pushPayload(capture.session, "${nextPayloadId()}", eventBatch)
 
             true
         } catch (e: Exception) {
             // TODO: O11Y-627 - pass in logger to implementation and use here
-            Log.e(REPLAY_EXPORTER_NAME, "Error sending initial capture for session: ${e.message}", e)
+            Log.e(
+                REPLAY_EXPORTER_NAME,
+                "Error sending initial capture for session: ${e.message}",
+                e
+            )
             false
         }
     }

@@ -1,5 +1,7 @@
 package com.launchdarkly.observability.replay
 
+import android.util.Log
+import com.launchdarkly.observability.BuildConfig
 import com.launchdarkly.observability.network.GraphQLClient
 import com.launchdarkly.observability.network.GraphQLResponse
 import kotlinx.serialization.json.Json
@@ -10,7 +12,9 @@ import kotlinx.serialization.json.JsonPrimitive
 
 // TODO: O11Y-627 - Refactor logging handling in this class
 class SessionReplayApiService(
-    private val graphqlClient: GraphQLClient
+    private val graphqlClient: GraphQLClient,
+    val serviceName: String,
+    val serviceVersion: String,
 ) {
     private val json: Json = Json {
         isLenient = true
@@ -19,8 +23,8 @@ class SessionReplayApiService(
 
     companion object {
         private val INITIALIZE_REPLAY_SESSION_QUERY_FILE_PATH = "graphql/InitializeReplaySession.graphql"
-        private val PUSH_PAYLOAD_QUERY_FILE_PATH = "graphql/PushPayload.graphql"
         private val IDENTIFY_REPLAY_SESSION_QUERY_FILE_PATH = "graphql/IdentifyReplaySession.graphql"
+        private val PUSH_PAYLOAD_QUERY_FILE_PATH = "graphql/PushPayload.graphql"
     }
 
     /**
@@ -28,25 +32,23 @@ class SessionReplayApiService(
      * @param organizationVerboseId The organization verbose ID
      */
     suspend fun initializeReplaySession(organizationVerboseId: String, sessionSecureId: String) {
-        // TODO: need to come back and make these request arguments make sense
         try {
             val variables = mapOf(
                 "organization_verbose_id" to JsonPrimitive(organizationVerboseId),
                 "session_secure_id" to JsonPrimitive(sessionSecureId),
                 "enable_strict_privacy" to JsonPrimitive(false),
                 "enable_recording_network_contents" to JsonPrimitive(false),
-                "clientVersion" to JsonPrimitive("0.1.0"),
-                "firstloadVersion" to JsonPrimitive("0.1.0"),
-                "clientConfig" to JsonPrimitive("{\"debug\":{\"clientInteractions\":true,\"domRecording\":true},\"privacySetting\":\"none\",\"serviceName\":\"observability-android\",\"backendUrl\":\"https://pub.observability.app.launchdarkly.com\",\"manualStart\":true,\"organizationID\":\"${organizationVerboseId}\",\"environment\":\"production\",\"sessionSecureID\":\"${sessionSecureId}\"}"),
-                "environment" to JsonPrimitive("production"),
-                "appVersion" to JsonPrimitive("0.1.0"),
-                "serviceName" to JsonPrimitive("observability-android"),
-                "fingerprint" to JsonPrimitive("fingerprint"),
-                "client_id" to JsonPrimitive("observability-android"),
+                "clientVersion" to JsonPrimitive(BuildConfig.OBSERVABILITY_SDK_VERSION),
+                "firstloadVersion" to JsonPrimitive(BuildConfig.OBSERVABILITY_SDK_VERSION),
+                "clientConfig" to JsonPrimitive("{}"), // TODO: O11Y-631 - remove hardcoded params
+                "environment" to JsonPrimitive(""), // TODO: O11Y-631 - remove hardcoded params
+                "appVersion" to JsonPrimitive(serviceVersion),
+                "serviceName" to JsonPrimitive(serviceName),
+                "fingerprint" to JsonPrimitive(""), // TODO: O11Y-631 - remove hardcoded params
+                "client_id" to JsonPrimitive(""), // TODO: O11Y-631 - remove hardcoded params
                 "network_recording_domains" to JsonArray(emptyList()),
-                "disable_session_recording" to JsonPrimitive(false),
-                "privacy_setting" to JsonPrimitive("none"),
-                "id" to JsonPrimitive("bogusId")
+                "privacy_setting" to JsonPrimitive("none"), // TODO: O11Y-631 - remove hardcoded params
+                "id" to JsonPrimitive("") // TODO: O11Y-631 - remove hardcoded params
             )
             val response = graphqlClient.execute(
                 queryFileName = INITIALIZE_REPLAY_SESSION_QUERY_FILE_PATH,
@@ -59,7 +61,7 @@ class SessionReplayApiService(
                 printErrors(response)
             }
         } catch (e: Exception) {
-            println("Error fetching sampling config: ${e.message}")
+            Log.e("SessionReplayApiService", "Error initializing replay session: ${e.message}")
         }
     }
 
@@ -71,7 +73,7 @@ class SessionReplayApiService(
      */
     suspend fun identifyReplaySession(
         sessionSecureId: String,
-        userIdentifier: String = "unknown",
+        userIdentifier: String = "", // TODO: O11Y-631 - remove hardcoded params
         userObject: JsonElement = JsonNull
     ) {
         try {
@@ -91,7 +93,8 @@ class SessionReplayApiService(
                 printErrors(response)
             }
         } catch (e: Exception) {
-            println("Error identifying replay session: ${e.message}")
+            Log.e("SessionReplayApiService", "Error identifying replay session: ${e.message}")
+
         }
     }
 
@@ -111,9 +114,6 @@ class SessionReplayApiService(
                 "resources" to JsonPrimitive("{\"resources\":[]}"),
                 "web_socket_events" to JsonPrimitive("{\"webSocketEvents\":[]}"),
                 "errors" to JsonArray(emptyList()),
-                "is_beacon" to JsonPrimitive(false),
-                "has_session_unloaded" to JsonPrimitive(false),
-                "highlight_logs" to JsonPrimitive("")
             )
 
             val response = graphqlClient.execute(
@@ -126,15 +126,15 @@ class SessionReplayApiService(
                 printErrors(response)
             }
         } catch (e: Exception) {
-            println("Error pushing payload: ${e.message}")
+            Log.e("SessionReplayApiService", "Error pushing payload: ${e.message}")
         }
     }
 
     private fun <T> printErrors(response: GraphQLResponse<T>) {
         response.errors?.forEach { error ->
-            println("GraphQL Error: ${error.message}")
+            Log.e("SessionReplayApiService", "GraphQL Error: ${error.message}")
             error.locations?.forEach { location ->
-                println("  at line ${location.line}, column ${location.column}")
+                Log.e("SessionReplayApiService", "  at line ${location.line}, column ${location.column}")
             }
         }
     }

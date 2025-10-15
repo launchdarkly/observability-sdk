@@ -150,7 +150,9 @@ class ReplayInstrumentation(
     override fun getLogRecordProcessor(credential: String): LogRecordProcessor {
         val exporter = RRwebGraphQLReplayLogExporter(
             organizationVerboseId = credential, // the SDK credential is used as the organization ID intentionally
-            backendUrl = options.backendUrl
+            backendUrl = options.backendUrl,
+            serviceName = options.serviceName,
+            serviceVersion = options.serviceVersion,
         )
 
         return BatchLogRecordProcessor.builder(exporter)
