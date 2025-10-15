@@ -10,14 +10,14 @@ on:
 
 jobs:
     dependency-scan:
-      runs-on: ubuntu-latest
-      steps:
-        - name: Generate SBOM
-          uses: launchdarkly/gh-actions/actions/dependency-scan/generate-sbom@main
-          with:
-            types: 'nodejs'
-  
-        - name: Evaluate SBOM Policy
-          uses: launchdarkly/gh-actions/actions/dependency-scan/evaluate-policy@main
-          with:
-            bom-file: bom.nodejs.json
+        runs-on: ubuntu-latest
+        steps:
+            - name: Generate SBOM
+              uses: launchdarkly/gh-actions/actions/dependency-scan/generate-sbom@main
+              with:
+                  types: 'nodejs'
+
+            - name: Evaluate SBOM Policy
+              uses: launchdarkly/gh-actions/actions/dependency-scan/evaluate-policy@main
+              with:
+                  bom-file: bom.nodejs.json
