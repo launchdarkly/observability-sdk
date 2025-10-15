@@ -71,7 +71,12 @@ import {
 	NetworkPerformancePayload,
 } from './listeners/network-listener/performance-listener'
 import { Logger } from './logger'
-import { BROWSER_METER_NAME, getTracer, setupBrowserTracing, shutdown } from './otel'
+import {
+	BROWSER_METER_NAME,
+	getTracer,
+	setupBrowserTracing,
+	shutdown,
+} from './otel'
 import {
 	HighlightIframeMessage,
 	HighlightIframeReponse,
@@ -119,14 +124,11 @@ import {
 	UpDownCounter,
 } from '@opentelemetry/api'
 import { IntegrationClient } from '../integrations'
-import { LaunchDarklyIntegration } from '../integrations/launchdarkly'
-import { LDClient } from '../integrations/launchdarkly'
+import { LaunchDarklyIntegration, LDClient } from '../integrations/launchdarkly'
 import { createLog, defaultLogOptions } from './listeners/console-listener'
 import { CustomSampler } from './otel/sampling/CustomSampler'
 import randomUuidV4 from './utils/randomUuidV4'
 import { LDContext } from '@launchdarkly/js-client-sdk'
-import type { WebTracerProvider } from '@opentelemetry/sdk-trace-web'
-import type { MeterProvider } from '@opentelemetry/sdk-metrics'
 
 export const HighlightWarning = (context: string, msg: any) => {
 	console.warn(`Highlight Warning: (${context}): `, { output: msg })
