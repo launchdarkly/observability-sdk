@@ -420,12 +420,14 @@ export const shutdown = async () => {
 	if (providers.tracerProvider) {
 		await providers.tracerProvider.forceFlush()
 		await providers.tracerProvider.shutdown()
+		providers.tracerProvider = undefined
 	} else {
 		console.warn('OTEL shutdown called without initialized tracerProvider.')
 	}
 	if (providers.meterProvider) {
 		await providers.meterProvider.forceFlush()
 		await providers.meterProvider.shutdown()
+		providers.meterProvider = undefined
 	} else {
 		console.warn('OTEL shutdown called without initialized meterProvider.')
 	}
