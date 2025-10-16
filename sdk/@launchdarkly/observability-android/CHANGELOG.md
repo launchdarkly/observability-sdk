@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.11.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.10.0...launchdarkly-observability-android-0.11.0) (2025-10-10)
+
+
+### Features
+
+* **android:** Add conditional exporters for logs and traces ([#254](https://github.com/launchdarkly/observability-sdk/issues/254)) ([38f6c45](https://github.com/launchdarkly/observability-sdk/commit/38f6c45192a39d49aa629c2c5e24cd5310166003))
+
+## [0.10.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.9.0...launchdarkly-observability-android-0.10.0) (2025-10-06)
+
+
+### Features
+
+* Cache OpenTelemetry metric instruments ([#256](https://github.com/launchdarkly/observability-sdk/issues/256)) ([db67867](https://github.com/launchdarkly/observability-sdk/commit/db67867acf4a956d4f4cdca0b329db9494601616))
+
 ## [0.9.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.8.0...launchdarkly-observability-android-0.9.0) (2025-10-01)
 
 

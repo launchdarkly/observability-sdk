@@ -177,7 +177,7 @@ def run_span_scenarios():
             assert sampler.is_sampling_enabled() is True
             result = sampler.sample_span(span)
             assert result.sample == expected["sample"], desc
-            if expected["attributes"] is not None:
+            if "attributes" in expected and expected["attributes"] is not None:
                 assert result.attributes == expected["attributes"], desc
             else:
                 assert result.attributes is None or result.attributes == {}, desc
@@ -202,7 +202,7 @@ def run_log_scenarios():
             assert sampler.is_sampling_enabled() is True
             result = sampler.sample_log(log)
             assert result.sample == expected["sample"], desc
-            if expected["attributes"] is not None:
+            if "attributes" in expected and expected["attributes"] is not None:
                 assert result.attributes == expected["attributes"], desc
             else:
                 assert result.attributes is None or result.attributes == {}, desc

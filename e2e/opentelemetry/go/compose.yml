@@ -1,0 +1,11 @@
+services:
+    otel-collector:
+        extra_hosts:
+            - 'host.docker.internal:host-gateway'
+        container_name: otel-collector
+        image: otel/opentelemetry-collector-contrib:latest
+        volumes:
+            - ./collector.yml:/etc/otelcol-contrib/config.yaml
+        ports:
+            - '0.0.0.0:5317:4317'
+            - '0.0.0.0:5318:4318'
