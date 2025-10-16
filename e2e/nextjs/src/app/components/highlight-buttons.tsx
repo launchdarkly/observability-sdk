@@ -53,7 +53,7 @@ export function HighlightButtons() {
 			</Button>
 			<Button
 				onClick={() => {
-					H.recordMetric({name: 'my-metric', value: Math.random()})
+					H.recordMetric({ name: 'my-metric', value: Math.random() })
 				}}
 			>
 				H.recordMetric
