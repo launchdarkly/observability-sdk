@@ -21,17 +21,21 @@ private const val REPLAY_EXPORTER_NAME = "RRwebGraphQLReplayLogExporter"
  *
  * @param organizationVerboseId the organization verbose id for the LaunchDarkly customer
  * @param backendUrl The backend URL the GraphQL operations
+ * @param serviceName The service name
+ * @param serviceVersion The service version
+ * @param injectedReplayApiService Optional SessionReplayApiService for testing. If null, a default service will be created.
  */
 class RRwebGraphQLReplayLogExporter(
     val organizationVerboseId: String,
     val backendUrl: String,
     val serviceName: String,
     val serviceVersion: String,
+    private val injectedReplayApiService: SessionReplayApiService? = null
 ) : LogRecordExporter {
     private val coroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     private var graphqlClient: GraphQLClient = GraphQLClient(backendUrl)
-    private var replayApiService: SessionReplayApiService = SessionReplayApiService(
+    private val replayApiService: SessionReplayApiService = injectedReplayApiService ?: SessionReplayApiService(
         graphqlClient = graphqlClient,
         serviceName = serviceName,
         serviceVersion = serviceVersion,
@@ -49,8 +53,6 @@ class RRwebGraphQLReplayLogExporter(
 
         coroutineScope.launch {
             try {
-                var allSuccessful = true
-
                 for (log in logs) {
                     val capture = extractCaptureFromLog(log)
                     if (capture != null) {
@@ -63,19 +65,18 @@ class RRwebGraphQLReplayLogExporter(
                                 sendCaptureIncremental(capture)
                             }
                         if (!success) {
-                            allSuccessful = false
+                            // Stop processing immediately on first failure
+                            resultCode.fail()
+                            return@launch
                         }
                     }
                 }
 
-                if (allSuccessful) {
-                    resultCode.succeed()
-                } else {
-                    resultCode.fail()
-                }
+                // All captures processed successfully
+                resultCode.succeed()
             } catch (e: Exception) {
                 // TODO: O11Y-627 - pass in logger to implementation and use here
-                Log.e("RRwebGraphQLReplayLogExporter", "Error during export: ${e.message}", e)
+                // Log.e("RRwebGraphQLReplayLogExporter", "Error during export: ${e.message}", e)
                 resultCode.fail()
             }
         }
@@ -160,20 +161,21 @@ class RRwebGraphQLReplayLogExporter(
                 )
             )
 
-            // record last sent state
+            replayApiService.pushPayload(capture.session, "${nextPayloadId()}", eventsBatch)
+            
+            // record last sent state only after successful completion
             lastSessionId = capture.session
             lastSentWidth = capture.origWidth
             lastSentHeight = capture.origHeight
-
-            replayApiService.pushPayload(capture.session, "${nextPayloadId()}", eventsBatch)
+            
             true
         } catch (e: Exception) {
             // TODO: O11Y-627 - pass in logger to implementation and use here
-            Log.e(
-                REPLAY_EXPORTER_NAME,
-                "Error sending incremental capture for session: ${e.message}",
-                e
-            )
+//            Log.e(
+//                REPLAY_EXPORTER_NAME,
+//                "Error sending incremental capture for session: ${e.message}",
+//                e
+//            )
             false
         }
     }
@@ -272,22 +274,22 @@ class RRwebGraphQLReplayLogExporter(
             )
             eventBatch.add(viewportEvent)
 
-            // record last sent state
+            // TODO: O11Y-624 - double check error case handling, may need to add retries per api service request, should subsequent requests wait for previous requests to succeed?
+            replayApiService.pushPayload(capture.session, "${nextPayloadId()}", eventBatch)
+
+            // record last sent state only after successful completion
             lastSessionId = capture.session
             lastSentWidth = capture.origWidth
             lastSentHeight = capture.origHeight
 
-            // TODO: O11Y-624 - double check error case handling, may need to add retries per api service request, should subsequent requests wait for previous requests to succeed?
-            replayApiService.pushPayload(capture.session, "${nextPayloadId()}", eventBatch)
-
             true
         } catch (e: Exception) {
             // TODO: O11Y-627 - pass in logger to implementation and use here
-            Log.e(
-                REPLAY_EXPORTER_NAME,
-                "Error sending initial capture for session: ${e.message}",
-                e
-            )
+//            Log.e(
+//                REPLAY_EXPORTER_NAME,
+//                "Error sending initial capture for session: ${e.message}",
+//                e
+//            )
             false
         }
     }
