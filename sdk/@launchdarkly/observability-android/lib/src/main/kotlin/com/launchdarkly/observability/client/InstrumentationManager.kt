@@ -3,11 +3,11 @@ package com.launchdarkly.observability.client
 import android.app.Application
 import com.launchdarkly.logging.LDLogger
 import com.launchdarkly.observability.api.Options
-import com.launchdarkly.observability.interfaces.LDExtendedInstrumentation
 import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.observability.network.GraphQLClient
 import com.launchdarkly.observability.network.SamplingApiService
 import com.launchdarkly.observability.sampling.CustomSampler
+import com.launchdarkly.observability.sampling.ExportSampler
 import com.launchdarkly.observability.sampling.SamplingConfig
 import com.launchdarkly.observability.sampling.SamplingLogExporter
 import com.launchdarkly.observability.sampling.SamplingTraceExporter
@@ -67,20 +67,6 @@ class InstrumentationManager(
     private val logger: LDLogger,
     private val options: Options,
 ) {
-    companion object {
-        private const val METRICS_PATH = "/v1/metrics"
-        private const val LOGS_PATH = "/v1/logs"
-        private const val TRACES_PATH = "/v1/traces"
-        private const val INSTRUMENTATION_SCOPE_NAME = "com.launchdarkly.observability"
-        const val ERROR_SPAN_NAME = "highlight.error"
-        private const val BATCH_MAX_QUEUE_SIZE = 100
-        private const val BATCH_SCHEDULE_DELAY_MS = 1000L
-        private const val BATCH_EXPORTER_TIMEOUT_MS = 5000L
-        private const val BATCH_MAX_EXPORT_SIZE = 10
-        private const val METRICS_EXPORT_INTERVAL_SECONDS = 10L
-        private const val FLUSH_TIMEOUT_SECONDS = 5L
-    }
-
     private val otelRUM: OpenTelemetryRum
     private var otelMeter: Meter
     private var otelLogger: Logger
@@ -112,7 +98,9 @@ class InstrumentationManager(
                 return@addLoggerProviderCustomizer if (options.disableLogs && options.disableErrorTracking) {
                     sdkLoggerProviderBuilder
                 } else {
-                    configureLoggerProvider(sdkLoggerProviderBuilder, options.instrumentations)
+                    val processor = createLoggerProcessor(sdkLoggerProviderBuilder, customSampler, sdkKey, resources, logger, options)
+                    logProcessor = processor
+                    sdkLoggerProviderBuilder.addLogRecordProcessor(processor)
                 }
             }
             .addTracerProviderCustomizer { sdkTracerProviderBuilder, _ ->
@@ -167,34 +155,6 @@ class InstrumentationManager(
         return !options.disableLogs || !options.disableTraces || !options.disableMetrics || !options.disableErrorTracking
     }
 
-    private fun configureLoggerProvider(
-        sdkLoggerProviderBuilder: SdkLoggerProviderBuilder,
-        instrumentations: List<LDExtendedInstrumentation>
-    ): SdkLoggerProviderBuilder {
-        val primaryLogExporter = createOtlpLogExporter()
-        sdkLoggerProviderBuilder.setResource(resources)
-
-        val finalExporter = createLogExporter(primaryLogExporter)
-        val baseProcessor = createBatchLogRecordProcessor(finalExporter)
-
-        // Here we set up a routing log processor that will route logs with a matching scope name to the
-        // respective instrumentation's log record processor.  If the log's scope name does not match
-        // an instrumentation's scope name, it will fall through to the base processor.  This was
-        // originally added to route replay instrumentation logs through a separate log processing
-        // pipeline to provide instrumentation specific caching and export.
-        val routingLogRecordProcessor = RoutingLogRecordProcessor(fallthroughProcessor = baseProcessor)
-        for (i in instrumentations) {
-            i.getLogRecordProcessor(credential = sdkKey)?.let {
-                i.getLoggerScopeName().let { scopeName ->
-                    routingLogRecordProcessor.registerProcessor(scopeName, it)
-                }
-            }
-        }
-
-        logProcessor = routingLogRecordProcessor
-        return sdkLoggerProviderBuilder.addLogRecordProcessor(routingLogRecordProcessor)
-    }
-
     private fun configureTracerProvider(sdkTracerProviderBuilder: SdkTracerProviderBuilder): SdkTracerProviderBuilder {
         val primarySpanExporter = createOtlpSpanExporter()
         sdkTracerProviderBuilder.setResource(resources)
@@ -218,13 +178,6 @@ class InstrumentationManager(
             .registerMetricReader(metricReader)
     }
 
-    private fun createOtlpLogExporter(): LogRecordExporter {
-        return OtlpHttpLogRecordExporter.builder()
-            .setEndpoint(options.otlpEndpoint + LOGS_PATH)
-            .setHeaders { options.customHeaders }
-            .build()
-    }
-
     private fun createOtlpSpanExporter(): SpanExporter {
         return OtlpHttpSpanExporter.builder()
             .setEndpoint(options.otlpEndpoint + TRACES_PATH)
@@ -237,28 +190,6 @@ class InstrumentationManager(
             .setEndpoint(options.otlpEndpoint + METRICS_PATH)
             .setHeaders { options.customHeaders }
             .build()
-    }
-
-    private fun createLogExporter(primaryExporter: LogRecordExporter): LogRecordExporter {
-        val baseExporter = if (options.debug) {
-            LogRecordExporter.composite(
-                buildList {
-                    add(primaryExporter)
-                    add(DebugLogExporter(logger))
-                    add(InMemoryLogRecordExporter.create().also { inMemoryLogExporter = it })
-                }
-            )
-        } else {
-            primaryExporter
-        }
-
-        val conditionalExporter = ConditionalLogRecordExporter(
-            delegate = baseExporter,
-            allowNormalLogs = !options.disableLogs,
-            allowCrashes = !options.disableErrorTracking
-        )
-
-        return SamplingLogExporter(conditionalExporter, customSampler)
     }
 
     private fun createSpanExporter(primaryExporter: SpanExporter): SpanExporter {
@@ -318,15 +249,6 @@ class InstrumentationManager(
             }
             customSampler.setConfig(samplingConfig)
         }
-    }
-
-    private fun createBatchLogRecordProcessor(logRecordExporter: LogRecordExporter): BatchLogRecordProcessor {
-        return BatchLogRecordProcessor.builder(logRecordExporter)
-            .setMaxQueueSize(BATCH_MAX_QUEUE_SIZE)
-            .setScheduleDelay(BATCH_SCHEDULE_DELAY_MS, TimeUnit.MILLISECONDS)
-            .setExporterTimeout(BATCH_EXPORTER_TIMEOUT_MS, TimeUnit.MILLISECONDS)
-            .setMaxExportBatchSize(BATCH_MAX_EXPORT_SIZE)
-            .build()
     }
 
     private fun createBatchSpanProcessor(spanExporter: SpanExporter): BatchSpanProcessor {
@@ -446,6 +368,89 @@ class InstrumentationManager(
         } catch (err: Exception) {
             logger.warn("Failed to get sampling config: ${err.message}")
             null
+        }
+    }
+
+    companion object {
+        private const val METRICS_PATH = "/v1/metrics"
+        private const val LOGS_PATH = "/v1/logs"
+        private const val TRACES_PATH = "/v1/traces"
+        private const val INSTRUMENTATION_SCOPE_NAME = "com.launchdarkly.observability"
+        const val ERROR_SPAN_NAME = "highlight.error"
+        private const val BATCH_MAX_QUEUE_SIZE = 100
+        private const val BATCH_SCHEDULE_DELAY_MS = 1000L
+        private const val BATCH_EXPORTER_TIMEOUT_MS = 5000L
+        private const val BATCH_MAX_EXPORT_SIZE = 10
+        private const val METRICS_EXPORT_INTERVAL_SECONDS = 10L
+        private const val FLUSH_TIMEOUT_SECONDS = 5L
+
+        internal fun createLoggerProcessor(
+            sdkLoggerProviderBuilder: SdkLoggerProviderBuilder,
+            exportSampler: ExportSampler,
+            sdkKey: String,
+            resource: Resource,
+            logger: LDLogger,
+            options: Options,
+        ): LogRecordProcessor {
+            val primaryLogExporter = createOtlpLogExporter(options)
+            sdkLoggerProviderBuilder.setResource(resource)
+
+            val finalExporter = createLogExporter(primaryLogExporter, exportSampler, logger, options)
+            val baseProcessor = createBatchLogRecordProcessor(finalExporter)
+
+            // Here we set up a routing log processor that will route logs with a matching scope name to the
+            // respective instrumentation's log record processor.  If the log's scope name does not match
+            // an instrumentation's scope name, it will fall through to the base processor.  This was
+            // originally added to route replay instrumentation logs through a separate log processing
+            // pipeline to provide instrumentation specific caching and export.
+            val routingLogRecordProcessor = RoutingLogRecordProcessor(fallthroughProcessor = baseProcessor)
+            for (i in options.instrumentations) {
+                i.getLogRecordProcessor(credential = sdkKey)?.let {
+                    i.getLoggerScopeName().let { scopeName ->
+                        routingLogRecordProcessor.registerProcessor(scopeName, it)
+                    }
+                }
+            }
+
+            return routingLogRecordProcessor
+        }
+
+        private fun createOtlpLogExporter(options: Options): LogRecordExporter {
+            return OtlpHttpLogRecordExporter.builder()
+                .setEndpoint(options.otlpEndpoint + LOGS_PATH)
+                .setHeaders { options.customHeaders }
+                .build()
+        }
+
+        private fun createLogExporter(primaryExporter: LogRecordExporter, exportSampler: ExportSampler, logger: LDLogger, options: Options): LogRecordExporter {
+            val baseExporter = if (options.debug) {
+                LogRecordExporter.composite(
+                    buildList {
+                        add(primaryExporter)
+                        add(DebugLogExporter(logger))
+//                        add(InMemoryLogRecordExporter.create().also { inMemoryLogExporter = it }) // TODO: figure out how to factor this out so functions can be static
+                    }
+                )
+            } else {
+                primaryExporter
+            }
+
+            val conditionalExporter = ConditionalLogRecordExporter(
+                delegate = baseExporter,
+                allowNormalLogs = !options.disableLogs,
+                allowCrashes = !options.disableErrorTracking
+            )
+
+            return SamplingLogExporter(conditionalExporter, exportSampler)
+        }
+
+        fun createBatchLogRecordProcessor(logRecordExporter: LogRecordExporter): BatchLogRecordProcessor {
+            return BatchLogRecordProcessor.builder(logRecordExporter)
+                .setMaxQueueSize(BATCH_MAX_QUEUE_SIZE)
+                .setScheduleDelay(BATCH_SCHEDULE_DELAY_MS, TimeUnit.MILLISECONDS)
+                .setExporterTimeout(BATCH_EXPORTER_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                .setMaxExportBatchSize(BATCH_MAX_EXPORT_SIZE)
+                .build()
         }
     }
 }
