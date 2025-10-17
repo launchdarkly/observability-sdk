@@ -71,7 +71,12 @@ import {
 	NetworkPerformancePayload,
 } from './listeners/network-listener/performance-listener'
 import { Logger } from './logger'
-import { BROWSER_METER_NAME, getTracer, setupBrowserTracing } from './otel'
+import {
+	BROWSER_METER_NAME,
+	getTracer,
+	setupBrowserTracing,
+	shutdown,
+} from './otel'
 import {
 	HighlightIframeMessage,
 	HighlightIframeReponse,
@@ -119,8 +124,7 @@ import {
 	UpDownCounter,
 } from '@opentelemetry/api'
 import { IntegrationClient } from '../integrations'
-import { LaunchDarklyIntegration } from '../integrations/launchdarkly'
-import { LDClient } from '../integrations/launchdarkly'
+import { LaunchDarklyIntegration, LDClient } from '../integrations/launchdarkly'
 import { createLog, defaultLogOptions } from './listeners/console-listener'
 import { CustomSampler } from './otel/sampling/CustomSampler'
 import randomUuidV4 from './utils/randomUuidV4'
@@ -1367,6 +1371,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 		// stop all other event listeners, to be restarted on initialize()
 		this.listeners.forEach((stop) => stop())
 		this.listeners = []
+		void shutdown()
 	}
 
 	getCurrentSessionTimestamp() {
