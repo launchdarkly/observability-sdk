@@ -6,6 +6,7 @@ import io.mockk.unmockkAll
 import io.mockk.verify
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonPrimitive
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -70,7 +71,7 @@ class GraphQLClientTest {
 
         val result = graphQLClient.execute(
             queryFileName = "test-query.graphql",
-            variables = mapOf("test_variable" to "567"),
+            variables = mapOf("test_variable" to JsonPrimitive("567")),
             dataSerializer = TestData.serializer()
         )
 

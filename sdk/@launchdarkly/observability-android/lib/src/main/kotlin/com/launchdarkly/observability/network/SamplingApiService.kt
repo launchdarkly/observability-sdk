@@ -1,6 +1,7 @@
 package com.launchdarkly.observability.network
 
 import com.launchdarkly.observability.sampling.SamplingConfig
+import kotlinx.serialization.json.JsonPrimitive
 
 /**
  * Service for fetching sampling configuration
@@ -20,7 +21,7 @@ class SamplingApiService(
      */
     suspend fun getSamplingConfig(organizationVerboseId: String): SamplingConfig? {
         try {
-            val variables = mapOf("organization_verbose_id" to organizationVerboseId)
+            val variables = mapOf("organization_verbose_id" to JsonPrimitive(organizationVerboseId))
             val response = graphqlClient.execute(
                 queryFileName = GET_SAMPLING_CONFIG_QUERY_FILE_PATH,
                 variables = variables,
