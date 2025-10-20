@@ -23,6 +23,9 @@ dependencies {
     implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.9.0")
     implementation("com.jakewharton.timber:timber:5.0.1")
 
+    // Android
+    implementation("androidx.activity:activity:1.11.0")
+
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
@@ -69,7 +72,7 @@ tasks.withType<Test> {
 
 android {
     namespace = "com.launchdarkly.observability"
-    compileSdk = 35
+    compileSdk = 36
 
     buildFeatures {
         buildConfig = true

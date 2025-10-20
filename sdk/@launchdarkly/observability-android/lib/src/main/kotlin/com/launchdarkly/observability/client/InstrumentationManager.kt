@@ -76,7 +76,7 @@ class InstrumentationManager(
         private const val BATCH_SCHEDULE_DELAY_MS = 1000L
         private const val BATCH_EXPORTER_TIMEOUT_MS = 5000L
         private const val BATCH_MAX_EXPORT_SIZE = 10
-        private const val METRICS_EXPORT_INTERVAL_SECONDS = 10L
+        private const val METRICS_EXPORT_INTERVAL_MS = 10_000L
         private const val FLUSH_TIMEOUT_SECONDS = 5L
     }
 
@@ -135,6 +135,13 @@ class InstrumentationManager(
         otelMeter = otelRUM.openTelemetry.meterProvider.get(INSTRUMENTATION_SCOPE_NAME)
         otelLogger = otelRUM.openTelemetry.logsBridge.get(INSTRUMENTATION_SCOPE_NAME)
         otelTracer = otelRUM.openTelemetry.tracerProvider.get(INSTRUMENTATION_SCOPE_NAME)
+
+        if (!options.disableTraces) {
+            LaunchTimeInstrumentation(
+                application = application,
+                metricRecorder = this::recordHistogram
+            )
+        }
     }
 
     private fun createOtelRumConfig(): OtelRumConfig {
@@ -277,7 +284,7 @@ class InstrumentationManager(
     private fun createPeriodicMetricReader(metricExporter: MetricExporter): PeriodicMetricReader {
         // Configure a periodic reader that pushes metrics every 10 seconds.
         return PeriodicMetricReader.builder(metricExporter)
-            .setInterval(METRICS_EXPORT_INTERVAL_SECONDS, TimeUnit.SECONDS)
+            .setInterval(METRICS_EXPORT_INTERVAL_MS, TimeUnit.MILLISECONDS)
             .build()
     }
 
