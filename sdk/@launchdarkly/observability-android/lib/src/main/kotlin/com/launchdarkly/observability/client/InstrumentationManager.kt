@@ -38,9 +38,6 @@ import io.opentelemetry.sdk.metrics.SdkMeterProviderBuilder
 import io.opentelemetry.sdk.metrics.export.MetricExporter
 import io.opentelemetry.sdk.metrics.export.PeriodicMetricReader
 import io.opentelemetry.sdk.resources.Resource
-import io.opentelemetry.sdk.testing.exporter.InMemoryLogRecordExporter
-import io.opentelemetry.sdk.testing.exporter.InMemoryMetricExporter
-import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter
 import io.opentelemetry.sdk.trace.SdkTracerProviderBuilder
 import io.opentelemetry.sdk.trace.export.BatchSpanProcessor
 import io.opentelemetry.sdk.trace.export.SpanExporter
@@ -74,9 +71,6 @@ class InstrumentationManager(
     private var customSampler = CustomSampler()
     private val graphqlClient = GraphQLClient(options.backendUrl)
     private val samplingApiService = SamplingApiService(graphqlClient)
-    private var inMemorySpanExporter: InMemorySpanExporter? = null
-    private var inMemoryLogExporter: InMemoryLogRecordExporter? = null
-    private var inMemoryMetricExporter: InMemoryMetricExporter? = null
     private var telemetryInspector: TelemetryInspector? = null
     private var spanProcessor: BatchSpanProcessor? = null
     private var logProcessor: LogRecordProcessor? = null
@@ -90,6 +84,7 @@ class InstrumentationManager(
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     init {
+        initializeTelemetryInspector()
         val otelRumConfig = createOtelRumConfig()
 
         val builder = OpenTelemetryRum.builder(application, otelRumConfig)
@@ -98,7 +93,15 @@ class InstrumentationManager(
                 return@addLoggerProviderCustomizer if (options.disableLogs && options.disableErrorTracking) {
                     sdkLoggerProviderBuilder
                 } else {
-                    val processor = createLoggerProcessor(sdkLoggerProviderBuilder, customSampler, sdkKey, resources, logger, options)
+                    val processor = createLoggerProcessor(
+                        sdkLoggerProviderBuilder,
+                        customSampler,
+                        sdkKey,
+                        resources,
+                        logger,
+                        telemetryInspector,
+                        options
+                    )
                     logProcessor = processor
                     sdkLoggerProviderBuilder.addLogRecordProcessor(processor)
                 }
@@ -123,8 +126,6 @@ class InstrumentationManager(
         }
 
         otelRUM = builder.build()
-
-        initializeTelemetryInspector()
         loadSamplingConfigAsync()
 
         otelMeter = otelRUM.openTelemetry.meterProvider.get(INSTRUMENTATION_SCOPE_NAME)
@@ -198,7 +199,7 @@ class InstrumentationManager(
                 buildList {
                     add(primaryExporter)
                     add(DebugSpanExporter(logger))
-                    add(InMemorySpanExporter.create().also { inMemorySpanExporter = it })
+                    telemetryInspector?.let { add(it.spanExporter) }
                 }
             )
         } else {
@@ -220,7 +221,7 @@ class InstrumentationManager(
                 buildList {
                     add(primaryExporter)
                     add(DebugMetricExporter(logger))
-                    add(InMemoryMetricExporter.create().also { inMemoryMetricExporter = it })
+                    telemetryInspector?.let { add(it.metricExporter) }
                 }
             )
         } else {
@@ -237,7 +238,7 @@ class InstrumentationManager(
 
     private fun initializeTelemetryInspector() {
         if (options.debug) {
-            telemetryInspector = TelemetryInspector(inMemorySpanExporter, inMemoryLogExporter, inMemoryMetricExporter)
+            telemetryInspector = TelemetryInspector()
         }
     }
 
@@ -390,12 +391,19 @@ class InstrumentationManager(
             sdkKey: String,
             resource: Resource,
             logger: LDLogger,
+            telemetryInspector: TelemetryInspector?,
             options: Options,
         ): LogRecordProcessor {
             val primaryLogExporter = createOtlpLogExporter(options)
             sdkLoggerProviderBuilder.setResource(resource)
 
-            val finalExporter = createLogExporter(primaryLogExporter, exportSampler, logger, options)
+            val finalExporter = createLogExporter(
+                primaryLogExporter,
+                exportSampler,
+                logger,
+                telemetryInspector,
+                options
+            )
             val baseProcessor = createBatchLogRecordProcessor(finalExporter)
 
             // Here we set up a routing log processor that will route logs with a matching scope name to the
@@ -403,7 +411,8 @@ class InstrumentationManager(
             // an instrumentation's scope name, it will fall through to the base processor.  This was
             // originally added to route replay instrumentation logs through a separate log processing
             // pipeline to provide instrumentation specific caching and export.
-            val routingLogRecordProcessor = RoutingLogRecordProcessor(fallthroughProcessor = baseProcessor)
+            val routingLogRecordProcessor =
+                RoutingLogRecordProcessor(fallthroughProcessor = baseProcessor)
             for (i in options.instrumentations) {
                 i.getLogRecordProcessor(credential = sdkKey)?.let {
                     i.getLoggerScopeName().let { scopeName ->
@@ -422,13 +431,19 @@ class InstrumentationManager(
                 .build()
         }
 
-        private fun createLogExporter(primaryExporter: LogRecordExporter, exportSampler: ExportSampler, logger: LDLogger, options: Options): LogRecordExporter {
+        private fun createLogExporter(
+            primaryExporter: LogRecordExporter,
+            exportSampler: ExportSampler,
+            logger: LDLogger,
+            telemetryInspector: TelemetryInspector?,
+            options: Options
+        ): LogRecordExporter {
             val baseExporter = if (options.debug) {
                 LogRecordExporter.composite(
                     buildList {
                         add(primaryExporter)
                         add(DebugLogExporter(logger))
-//                        add(InMemoryLogRecordExporter.create().also { inMemoryLogExporter = it }) // TODO: figure out how to factor this out so functions can be static
+                        telemetryInspector?.let { add(it.logExporter) }
                     }
                 )
             } else {

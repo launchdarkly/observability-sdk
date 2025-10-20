@@ -63,6 +63,7 @@ class InstrumentationManagerTest {
             testSdkKey,
             testResource,
             mockLogger,
+            null,
             testOptions
         )
 
@@ -97,6 +98,7 @@ class InstrumentationManagerTest {
             testSdkKey,
             testResource,
             mockLogger,
+            null,
             testOptions
         )
 
@@ -124,6 +126,7 @@ class InstrumentationManagerTest {
             testSdkKey,
             testResource,
             mockLogger,
+            null,
             testOptions
         )
 
