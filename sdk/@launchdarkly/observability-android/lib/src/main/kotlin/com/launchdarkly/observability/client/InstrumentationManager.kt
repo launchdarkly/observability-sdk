@@ -94,6 +94,7 @@ class InstrumentationManager(
     private var spanProcessor: BatchSpanProcessor? = null
     private var logProcessor: BatchLogRecordProcessor? = null
     private var metricsReader: PeriodicMetricReader? = null
+    private var launchTimeInstrumentation: LaunchTimeInstrumentation? = null
     private val gaugeCache = ConcurrentHashMap<String, DoubleGauge>()
     private val counterCache = ConcurrentHashMap<String, LongCounter>()
     private val histogramCache = ConcurrentHashMap<String, DoubleHistogram>()
@@ -136,8 +137,8 @@ class InstrumentationManager(
         otelLogger = otelRUM.openTelemetry.logsBridge.get(INSTRUMENTATION_SCOPE_NAME)
         otelTracer = otelRUM.openTelemetry.tracerProvider.get(INSTRUMENTATION_SCOPE_NAME)
 
-        if (!options.disableTraces) {
-            LaunchTimeInstrumentation(
+        if (!options.disableMetrics) {
+            launchTimeInstrumentation = LaunchTimeInstrumentation(
                 application = application,
                 metricRecorder = this::recordHistogram
             )
