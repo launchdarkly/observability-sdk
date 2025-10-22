@@ -11,10 +11,14 @@ import android.view.View
 import android.view.ViewTreeObserver.OnDrawListener
 import androidx.activity.FullyDrawnReporterOwner
 import com.launchdarkly.observability.interfaces.Metric
+import io.opentelemetry.android.instrumentation.AndroidInstrumentation
+import io.opentelemetry.android.instrumentation.InstallationContext
 import io.opentelemetry.api.common.Attributes
 import java.lang.ref.WeakReference
 import java.util.WeakHashMap
 import java.util.concurrent.atomic.AtomicBoolean
+
+private const val INSTRUMENTATION_SCOPE_NAME = "com.launchdarkly.observability.launchtime"
 
 /**
  * Tracks launch performance metrics for Activities. It records both:
@@ -27,7 +31,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 internal class LaunchTimeInstrumentation(
     private val application: Application,
     private val metricRecorder: (Metric) -> Unit
-) : Application.ActivityLifecycleCallbacks {
+) : AndroidInstrumentation, Application.ActivityLifecycleCallbacks {
 
     private val createdActivities = HashSet<Activity>()
     private val activityCreationTimestampsNs = WeakHashMap<Activity, Long>()
@@ -37,7 +41,10 @@ internal class LaunchTimeInstrumentation(
     private var isColdStart = true
     private var currentSession: LaunchSession? = null
 
-    init {
+
+    override val name: String = INSTRUMENTATION_SCOPE_NAME
+
+    override fun install(ctx: InstallationContext) {
         application.registerActivityLifecycleCallbacks(this)
     }
 
@@ -80,7 +87,6 @@ internal class LaunchTimeInstrumentation(
 
         if (startedActivityCount == 0) {
             currentSession?.let { cancelSession(it) }
-            currentSession = null
         }
     }
 
@@ -90,7 +96,6 @@ internal class LaunchTimeInstrumentation(
 
         currentSession?.takeIf { it.activityReference.get() == activity }?.let {
             cancelSession(it)
-            currentSession = null
         }
     }
 

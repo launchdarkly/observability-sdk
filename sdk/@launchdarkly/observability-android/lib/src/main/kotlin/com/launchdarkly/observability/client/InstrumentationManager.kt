@@ -106,7 +106,7 @@ class InstrumentationManager(
     init {
         val otelRumConfig = createOtelRumConfig()
 
-        otelRUM = OpenTelemetryRum.builder(application, otelRumConfig)
+        val rumBuilder = OpenTelemetryRum.builder(application, otelRumConfig)
             .addLoggerProviderCustomizer { sdkLoggerProviderBuilder, _ ->
                 return@addLoggerProviderCustomizer if (options.disableLogs && options.disableErrorTracking) {
                     sdkLoggerProviderBuilder
@@ -128,7 +128,17 @@ class InstrumentationManager(
                     configureMeterProvider(sdkMeterProviderBuilder)
                 }
             }
-            .build()
+
+        if (!options.disableMetrics) {
+            launchTimeInstrumentation = LaunchTimeInstrumentation(
+                application = application,
+                metricRecorder = this::recordHistogram
+            ).also {
+                rumBuilder.addInstrumentation(it)
+            }
+        }
+
+        otelRUM = rumBuilder.build()
 
         initializeTelemetryInspector()
         loadSamplingConfigAsync()
@@ -136,13 +146,6 @@ class InstrumentationManager(
         otelMeter = otelRUM.openTelemetry.meterProvider.get(INSTRUMENTATION_SCOPE_NAME)
         otelLogger = otelRUM.openTelemetry.logsBridge.get(INSTRUMENTATION_SCOPE_NAME)
         otelTracer = otelRUM.openTelemetry.tracerProvider.get(INSTRUMENTATION_SCOPE_NAME)
-
-        if (!options.disableMetrics) {
-            launchTimeInstrumentation = LaunchTimeInstrumentation(
-                application = application,
-                metricRecorder = this::recordHistogram
-            )
-        }
     }
 
     private fun createOtelRumConfig(): OtelRumConfig {
