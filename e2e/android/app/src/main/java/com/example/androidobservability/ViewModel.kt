@@ -1,6 +1,9 @@
 package com.example.androidobservability
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import android.content.Intent
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.observability.sdk.LDObserve
@@ -18,7 +21,7 @@ import java.io.BufferedInputStream
 import java.net.HttpURLConnection
 import java.net.URL
 
-class ViewModel : ViewModel() {
+class ViewModel(application: Application) : AndroidViewModel(application) {
 
     fun triggerMetric() {
         LDObserve.recordMetric(Metric("test", 50.0))
@@ -103,6 +106,16 @@ class ViewModel : ViewModel() {
             .build()
 
         LDClient.get().identify(context)
+    }
+
+    fun startForegroundService() {
+        val intent = Intent(getApplication(), ObservabilityForegroundService::class.java)
+        ContextCompat.startForegroundService(getApplication(), intent)
+    }
+
+    fun startBackgroundService() {
+        val intent = Intent(getApplication(), ObservabilityBackgroundService::class.java)
+        getApplication<Application>().startService(intent)
     }
 
     private fun sendOkHttpRequest() {
