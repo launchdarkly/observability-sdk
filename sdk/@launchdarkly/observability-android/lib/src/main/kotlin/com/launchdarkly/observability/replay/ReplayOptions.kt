@@ -1,5 +1,6 @@
 package com.launchdarkly.observability.replay
 
+import PrivacyProfile
 import com.launchdarkly.observability.BuildConfig
 import com.launchdarkly.observability.api.DEFAULT_BACKEND_URL
 
@@ -16,7 +17,7 @@ data class ReplayOptions(
     val serviceVersion: String = BuildConfig.OBSERVABILITY_SDK_VERSION,
     val backendUrl: String = DEFAULT_BACKEND_URL,
     val debug: Boolean = false,
-    val privacyProfile: PrivacyProfile = PrivacyProfile.STRICT,
+    val privacyProfile: PrivacyProfile = PrivacyProfile.strict(),
     val capturePeriodMillis: Long = 1000, // defaults to ever 1 second
     // TODO O11Y-623 - Add storage options
 )

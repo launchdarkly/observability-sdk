@@ -12,6 +12,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Base64
+import android.util.Log
 import android.view.PixelCopy
 import android.view.View
 import android.view.ViewGroup
@@ -42,7 +43,7 @@ import androidx.compose.ui.geometry.Rect as ComposeRect
  */
 class CaptureSource(
     private val sessionManager: SessionManager,
-    private val privacyProfile: PrivacyProfile,
+    private val maskMatchers: List<MaskMatcher>,
     // TODO: O11Y-628 - add captureQuality options
 ) :
     Application.ActivityLifecycleCallbacks {
@@ -135,6 +136,14 @@ class CaptureSource(
             // Use PixelCopy to capture the window content
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 suspendCancellableCoroutine { continuation ->
+                    val viewSnapshots = decorView.flattenHierarchy().map { v ->
+                        ViewInfo(
+                            id = v.id,
+                            bounds = Rect(v.left, v.top, v.right, v.bottom),
+                            tag = v.tag
+                        )
+                    }
+
                     // TODO: O11Y-624 - read PixelCopy exception recommendations and adjust logic to account for such cases
                     PixelCopy.request(
                         window,
@@ -145,29 +154,34 @@ class CaptureSource(
                             val timestamp = System.currentTimeMillis()
                             val session = sessionManager.getSessionId()
 
+                            // TODO: is it necessary to capture location of all views at this stage and provide
+                            // that location data to the masking algorithm so that they are not moving while the
+                            // algorithm is running.
+
                             if (result == PixelCopy.SUCCESS) {
-                                val postMask: Bitmap
-                                if (privacyProfile == PrivacyProfile.STRICT) {
-                                    postMask = maskSensitiveAreas(bitmap, activity)
-                                } else {
-                                    postMask = bitmap
+                                // Offload heavy bitmap work to a background dispatcher
+                                CoroutineScope(Dispatchers.Default).launch {
+                                    try {
+                                        val postMask = maskSensitiveAreas(bitmap, activity, maskMatchers)
+
+                                        val outputStream = ByteArrayOutputStream()
+                                        postMask.compress(Bitmap.CompressFormat.WEBP, 30, outputStream)
+                                        val byteArray = outputStream.toByteArray()
+                                        val compressedImage = Base64.encodeToString(byteArray, Base64.NO_WRAP)
+
+                                        val capture = Capture(
+                                            imageBase64 = compressedImage,
+                                            origWidth = decorViewWidth,
+                                            origHeight = decorViewHeight,
+                                            timestamp = timestamp,
+                                            session = session,
+                                        )
+
+                                        continuation.resume(capture)
+                                    } catch (e: Exception) {
+                                        continuation.resumeWithException(e)
+                                    }
                                 }
-
-                                // TODO: O11Y-625 - optimize memory allocations here, re-use byte arrays and such
-                                val outputStream = ByteArrayOutputStream()
-                                // TODO: O11Y-628 - calculate quality using captureQuality options
-                                postMask.compress(Bitmap.CompressFormat.WEBP, 30, outputStream)
-                                val byteArray = outputStream.toByteArray()
-                                val compressedImage = Base64.encodeToString(byteArray, Base64.NO_WRAP)
-
-                                val capture = Capture(
-                                    imageBase64 = compressedImage,
-                                    origWidth = decorViewWidth,
-                                    origHeight = decorViewHeight,
-                                    timestamp = timestamp,
-                                    session = session,
-                                )
-                                continuation.resume(capture)
                             } else {
                                 // TODO: O11Y-624 - implement handling/shutdown for errors and unsupported API levels
                                 continuation.resumeWithException(Exception("PixelCopy failed with result: $result"))
@@ -193,7 +207,7 @@ class CaptureSource(
      * @param bitmap The bitmap to mask
      * @param activity The activity that the bitmap was captured from.
      */
-    private fun maskSensitiveAreas(bitmap: Bitmap, activity: Activity): Bitmap {
+    private fun maskSensitiveAreas(bitmap: Bitmap, activity: Activity, matchers: List<MaskMatcher>): Bitmap {
         // TODO: O11Y-625 - remove this bitmap copy if possible for memory optimization purposes
         val maskedBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true)
         val canvas = Canvas(maskedBitmap)
@@ -203,7 +217,10 @@ class CaptureSource(
         }
 
         // Find sensitive areas using Compose semantics
-        val sensitiveComposeRects = findSensitiveComposeAreasFromActivity(activity)
+        val start = System.nanoTime()
+        val sensitiveComposeRects = findSensitiveComposeAreasFromActivity(activity, maskMatchers)
+        val end = System.nanoTime()
+        Log.d("Todd benchmark", (end - start).toString())
 
         // Mask sensitive Compose areas found via semantics
         sensitiveComposeRects.forEach { composeRect ->
@@ -224,7 +241,7 @@ class CaptureSource(
      *
      * @return a list of rects that represent sensitive areas that need to be masked
      */
-    private fun findSensitiveComposeAreasFromActivity(activity: Activity): List<ComposeRect> {
+    private fun findSensitiveComposeAreasFromActivity(activity: Activity, matchers: List<MaskMatcher>): List<ComposeRect> {
         val allSensitiveRects = mutableListOf<ComposeRect>()
 
         try {
@@ -236,7 +253,7 @@ class CaptureSource(
                 val semanticsOwner = getSemanticsOwner(composeView)
                 val rootSemanticsNode = semanticsOwner?.rootSemanticsNode
                 if (rootSemanticsNode != null) {
-                    val sensitiveRects = findSensitiveComposeAreas(rootSemanticsNode, composeView)
+                    val sensitiveRects = findSensitiveComposeAreas(rootSemanticsNode, composeView, matchers)
                     allSensitiveRects.addAll(sensitiveRects)
                 }
             }
@@ -300,13 +317,14 @@ class CaptureSource(
      */
     private fun findSensitiveComposeAreas(
         rootSemanticsNode: SemanticsNode,
-        composeView: ComposeView
+        composeView: ComposeView,
+        matchers: List<MaskMatcher>
     ): List<ComposeRect> {
         val sensitiveRects = mutableListOf<ComposeRect>()
 
         try {
             // Recursively traverse the semantic node tree to find sensitive areas
-            traverseSemanticNode(rootSemanticsNode, sensitiveRects, composeView)
+            traverseSemanticNode(rootSemanticsNode, sensitiveRects, composeView, matchers)
 
         } catch (e: Exception) {
             // Handle cases where semantic node traversal fails
@@ -322,24 +340,27 @@ class CaptureSource(
     private fun traverseSemanticNode(
         node: SemanticsNode,
         sensitiveRects: MutableList<ComposeRect>,
-        composeView: ComposeView
+        composeView: ComposeView,
+        matchers: List<MaskMatcher>
     ) {
-        // Check if this node is marked as sensitive
-        if (isSensitiveNode(node)) {
-            // Convert bounds to absolute coordinates
-            val boundsInWindow = node.boundsInWindow
-            val absoluteRect = ComposeRect(
-                left = boundsInWindow.left,
-                top = boundsInWindow.top,
-                right = boundsInWindow.right,
-                bottom = boundsInWindow.bottom
-            )
-            sensitiveRects.add(absoluteRect)
+        for (matcher in matchers) {
+            if (matcher.isMatch(node)) {
+                // Convert bounds to absolute coordinates
+                val boundsInWindow = node.boundsInWindow
+                val absoluteRect = ComposeRect(
+                    left = boundsInWindow.left,
+                    top = boundsInWindow.top,
+                    right = boundsInWindow.right,
+                    bottom = boundsInWindow.bottom
+                )
+                sensitiveRects.add(absoluteRect)
+                break
+            }
         }
 
         // Recursively traverse all children
         node.children.forEach { child ->
-            traverseSemanticNode(child, sensitiveRects, composeView)
+            traverseSemanticNode(child, sensitiveRects, composeView, matchers)
         }
     }
 

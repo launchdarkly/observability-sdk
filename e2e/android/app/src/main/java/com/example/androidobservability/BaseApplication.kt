@@ -1,5 +1,7 @@
 package com.example.androidobservability
 
+import PrivacyProfile.Companion.textInputMatcher
+import PrivacyProfile.Companion.textMatcher
 import android.app.Application
 import com.launchdarkly.observability.api.Options
 import com.launchdarkly.observability.client.TelemetryInspector
@@ -10,6 +12,7 @@ import com.launchdarkly.sdk.android.LDClient
 import com.launchdarkly.sdk.android.LDConfig
 import com.launchdarkly.observability.plugin.Observability
 import com.launchdarkly.observability.replay.ReplayInstrumentation
+import com.launchdarkly.observability.replay.ReplayOptions
 import com.launchdarkly.sdk.android.LDAndroidLogging
 import com.launchdarkly.sdk.android.integrations.Plugin
 import io.opentelemetry.api.common.AttributeKey
@@ -21,7 +24,7 @@ open class BaseApplication : Application() {
     companion object {
         // TODO O11Y-376: Update this credential to be driven by env variable or gradle property
         // Set LAUNCHDARKLY_MOBILE_KEY to your LaunchDarkly SDK mobile key.
-        const val LAUNCHDARKLY_MOBILE_KEY = "MOBILE_KEY_GOES_HERE"
+        const val LAUNCHDARKLY_MOBILE_KEY = "mob-a4328fa9-51e7-4a3d-bb0e-d5ce47464fc6"
     }
 
     var pluginOptions = Options(
@@ -32,7 +35,11 @@ open class BaseApplication : Application() {
         logAdapter = LDAndroidLogging.adapter(),
         // TODO: consider these being factories so that the obs plugin can pass instantiation data, log adapter
         instrumentations = listOf(
-            ReplayInstrumentation()
+            ReplayInstrumentation(
+                options = ReplayOptions(
+                    privacyProfile = PrivacyProfile.optIn(listOf(textMatcher))
+                )
+            )
         ),
     )
 
