@@ -122,7 +122,7 @@ export type CommonOptions = {
 	 * Set to `true` to store session data in a cookie instead.
 	 * This can help with compliance for cookie-consent regulation.
 	 */
-	sessionCookie?: true
+	sessionCookie?: boolean
 	/**
 	 * Specifies if Highlight should not automatically initialize when the class is created.
 	 * This should be used with `.start()` and `.stop()` if you want to control when Highlight records.
@@ -166,12 +166,6 @@ export type HighlightOptions = CommonOptions & {
 	 * @example tracingOrigins: ['localhost', /^\//, 'backend.myapp.com']
 	 */
 	tracingOrigins?: boolean | (string | RegExp)[]
-	/**
-	 * Specifies if Highlight should not automatically start recording when the app starts.
-	 * This should be used with `H.start()` and `H.stop()` if you want to control when Highlight records.
-	 * @default false
-	 */
-	manualStart?: boolean
 	/**
 	 * This disables recording network requests.
 	 * The data includes the URLs, the size of the request, and how long the request took.
@@ -296,19 +290,6 @@ export type HighlightOptions = CommonOptions & {
 	 * @see {@link https://docs.highlight.run/session-shortcut} for more information.
 	 */
 	sessionShortcut?: SessionShortcutOptions
-	/**
-	 * Set to `sessionStorage` to bypass all `window.localStorage` usage.
-	 * This can help with compliance for cookie-consent regulation.
-	 * Using `sessionStorage` will cause app close+reopens to start a new highlight session,
-	 * as the session ID will not persist.
-	 */
-	storageMode?: 'sessionStorage' | 'localStorage'
-	/**
-	 * By default, session data is stored in the `sessionStorage` of the browser.
-	 * Set to `true` to store session data in a cookie instead.
-	 * This can help with compliance for cookie-consent regulation.
-	 */
-	sessionCookie?: true
 	/**
 	 * By default, data is serialized and send by the Web Worker. Set to `local` to force
 	 * sending from the main js thread. Only use `local` for custom environments where Web Workers
