@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -35,16 +36,21 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             AndroidObservabilityTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+                Scaffold(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .imePadding()
+                ) { innerPadding ->
                     var customLogText by remember { mutableStateOf("") }
                     var customSpanText by remember { mutableStateOf("") }
                     var customContextKey by remember { mutableStateOf("") }
 
                     Column(
                         modifier = Modifier
+                            .fillMaxSize()
                             .padding(innerPadding)
-                            .padding(16.dp)
                             .verticalScroll(rememberScrollState())
+                            .padding(16.dp)
                     ) {
                         Text(
                             text = "Hello Telemetry",
@@ -76,6 +82,34 @@ class MainActivity : ComponentActivity() {
                             }
                         ) {
                             Text("Trigger Metric")
+                        }
+                        Button(
+                            onClick = {
+                                viewModel.triggerHistogramMetric()
+                            }
+                        ) {
+                            Text("Trigger Histogram Metric")
+                        }
+                        Button(
+                            onClick = {
+                                viewModel.triggerCountMetric()
+                            }
+                        ) {
+                            Text("Trigger Count Metric")
+                        }
+                        Button(
+                            onClick = {
+                                viewModel.triggerIncrementalMetric()
+                            }
+                        ) {
+                            Text("Trigger Incremental Metric")
+                        }
+                        Button(
+                            onClick = {
+                                viewModel.triggerUpDownCounterMetric()
+                            }
+                        ) {
+                            Text("Trigger UpDownCounter Metric")
                         }
                         Button(
                             onClick = {
