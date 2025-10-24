@@ -33,6 +33,7 @@ import io.opentelemetry.sdk.logs.SdkLoggerProviderBuilder
 import io.opentelemetry.sdk.logs.export.BatchLogRecordProcessor
 import io.opentelemetry.sdk.logs.export.LogRecordExporter
 import io.opentelemetry.sdk.metrics.SdkMeterProviderBuilder
+import io.opentelemetry.sdk.metrics.export.AggregationTemporalitySelector
 import io.opentelemetry.sdk.metrics.export.MetricExporter
 import io.opentelemetry.sdk.metrics.export.PeriodicMetricReader
 import io.opentelemetry.sdk.resources.Resource
@@ -75,7 +76,7 @@ class InstrumentationManager(
         private const val BATCH_SCHEDULE_DELAY_MS = 1000L
         private const val BATCH_EXPORTER_TIMEOUT_MS = 5000L
         private const val BATCH_MAX_EXPORT_SIZE = 10
-        private const val METRICS_EXPORT_INTERVAL_SECONDS = 10L
+        private const val METRICS_EXPORT_INTERVAL_MS = 10_000L
         private const val FLUSH_TIMEOUT_SECONDS = 5L
     }
 
@@ -93,6 +94,7 @@ class InstrumentationManager(
     private var spanProcessor: BatchSpanProcessor? = null
     private var logProcessor: BatchLogRecordProcessor? = null
     private var metricsReader: PeriodicMetricReader? = null
+    private var launchTimeInstrumentation: LaunchTimeInstrumentation? = null
     private val gaugeCache = ConcurrentHashMap<String, DoubleGauge>()
     private val counterCache = ConcurrentHashMap<String, LongCounter>()
     private val histogramCache = ConcurrentHashMap<String, DoubleHistogram>()
@@ -104,7 +106,7 @@ class InstrumentationManager(
     init {
         val otelRumConfig = createOtelRumConfig()
 
-        otelRUM = OpenTelemetryRum.builder(application, otelRumConfig)
+        val rumBuilder = OpenTelemetryRum.builder(application, otelRumConfig)
             .addLoggerProviderCustomizer { sdkLoggerProviderBuilder, _ ->
                 return@addLoggerProviderCustomizer if (options.disableLogs && options.disableErrorTracking) {
                     sdkLoggerProviderBuilder
@@ -126,7 +128,17 @@ class InstrumentationManager(
                     configureMeterProvider(sdkMeterProviderBuilder)
                 }
             }
-            .build()
+
+        if (!options.disableMetrics) {
+            launchTimeInstrumentation = LaunchTimeInstrumentation(
+                application = application,
+                metricRecorder = this::recordHistogram
+            ).also {
+                rumBuilder.addInstrumentation(it)
+            }
+        }
+
+        otelRUM = rumBuilder.build()
 
         initializeTelemetryInspector()
         loadSamplingConfigAsync()
@@ -211,6 +223,7 @@ class InstrumentationManager(
         return OtlpHttpMetricExporter.builder()
             .setEndpoint(options.otlpEndpoint + METRICS_PATH)
             .setHeaders { options.customHeaders }
+            .setAggregationTemporalitySelector(AggregationTemporalitySelector.deltaPreferred())
             .build()
     }
 
@@ -275,7 +288,7 @@ class InstrumentationManager(
     private fun createPeriodicMetricReader(metricExporter: MetricExporter): PeriodicMetricReader {
         // Configure a periodic reader that pushes metrics every 10 seconds.
         return PeriodicMetricReader.builder(metricExporter)
-            .setInterval(METRICS_EXPORT_INTERVAL_SECONDS, TimeUnit.SECONDS)
+            .setInterval(METRICS_EXPORT_INTERVAL_MS, TimeUnit.MILLISECONDS)
             .build()
     }
 
@@ -332,6 +345,7 @@ class InstrumentationManager(
         val counter = counterCache.getOrPut(metric.name) {
             otelMeter.counterBuilder(metric.name).build()
         }
+        // It increments the value until the metric is exported, then it’s reset.
         counter.add(1, metric.attributes)
     }
 
