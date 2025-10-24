@@ -1,5 +1,6 @@
 import { Image, StyleSheet, Alert, Pressable } from 'react-native'
 import { useState, useEffect } from 'react'
+import axios from 'axios'
 
 import { HelloWave } from '@/components/HelloWave'
 import ParallaxScrollView from '@/components/ParallaxScrollView'
@@ -463,6 +464,18 @@ export default function HomeScreen() {
 		}, 0)
 	}
 
+	const handleAxiosSuccess = async () => {
+		await axios.get('https://jsonplaceholder.typicode.com/posts/1')
+	}
+
+	const handleAxios404 = async () => {
+		await axios.get('https://jsonplaceholder.typicode.com/posts/99999')
+	}
+
+	const handleAxios500 = async () => {
+		await axios.get('https://httpstatuses.maor.io/500')
+	}
+
 	return (
 		<ParallaxScrollView
 			headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
@@ -525,6 +538,37 @@ export default function HomeScreen() {
 				>
 					<ThemedText style={styles.buttonText}>
 						Test Span Hierarchy
+					</ThemedText>
+				</Pressable>
+
+				<ThemedText type="subtitle" style={{ marginTop: 16 }}>
+					Axios Network Requests
+				</ThemedText>
+
+				<Pressable
+					style={[styles.button, styles.successButton]}
+					onPress={handleAxiosSuccess}
+				>
+					<ThemedText style={styles.buttonText}>
+						Axios: Successful Request
+					</ThemedText>
+				</Pressable>
+
+				<Pressable
+					style={[styles.button, styles.warningButton]}
+					onPress={handleAxios404}
+				>
+					<ThemedText style={styles.buttonText}>
+						Axios: 404 Request
+					</ThemedText>
+				</Pressable>
+
+				<Pressable
+					style={[styles.button, styles.errorButton]}
+					onPress={handleAxios500}
+				>
+					<ThemedText style={styles.buttonText}>
+						Axios: 500 Request
 					</ThemedText>
 				</Pressable>
 
@@ -638,6 +682,12 @@ const styles = StyleSheet.create({
 		borderRadius: 8,
 		marginVertical: 4,
 		alignItems: 'center',
+	},
+	successButton: {
+		backgroundColor: '#34C759', // Green color for success buttons
+	},
+	warningButton: {
+		backgroundColor: '#FF9500', // Orange color for warning/404 buttons
 	},
 	errorButton: {
 		backgroundColor: '#FF3B30', // Red color for error buttons
