@@ -1,5 +1,13 @@
 # highlight.run
 
+## [9.22.3](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-9.22.2...highlight.run-9.22.3) (2025-10-24)
+
+
+### Bug Fixes
+
+* avoid noisy error log on starting new sessions ([#269](https://github.com/launchdarkly/observability-sdk/issues/269)) ([e76004c](https://github.com/launchdarkly/observability-sdk/commit/e76004cb7c4ebd4296bce4d0f5448adb2dcf7c89))
+* make sessionCookie session a boolean type ([#272](https://github.com/launchdarkly/observability-sdk/issues/272)) ([9fb304d](https://github.com/launchdarkly/observability-sdk/commit/9fb304d646cee1149c6f31ff6ec52a88a40c2251))
+
 ## [9.22.2](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-9.22.1...highlight.run-9.22.2) (2025-10-06)
 
 
