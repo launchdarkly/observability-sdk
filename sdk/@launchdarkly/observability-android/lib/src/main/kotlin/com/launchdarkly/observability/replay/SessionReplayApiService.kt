@@ -22,9 +22,9 @@ class SessionReplayApiService(
     }
 
     companion object {
-        private val INITIALIZE_REPLAY_SESSION_QUERY_FILE_PATH = "graphql/InitializeReplaySession.graphql"
-        private val IDENTIFY_REPLAY_SESSION_QUERY_FILE_PATH = "graphql/IdentifyReplaySession.graphql"
-        private val PUSH_PAYLOAD_QUERY_FILE_PATH = "graphql/PushPayload.graphql"
+        private const val INITIALIZE_REPLAY_SESSION_QUERY_FILE_PATH = "graphql/InitializeReplaySession.graphql"
+        private const val IDENTIFY_REPLAY_SESSION_QUERY_FILE_PATH = "graphql/IdentifyReplaySession.graphql"
+        private const val PUSH_PAYLOAD_QUERY_FILE_PATH = "graphql/PushPayload.graphql"
     }
 
     /**

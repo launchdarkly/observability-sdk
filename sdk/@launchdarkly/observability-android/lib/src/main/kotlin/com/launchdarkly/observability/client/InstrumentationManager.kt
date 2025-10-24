@@ -413,10 +413,10 @@ class InstrumentationManager(
             // pipeline to provide instrumentation specific caching and export.
             val routingLogRecordProcessor =
                 RoutingLogRecordProcessor(fallthroughProcessor = baseProcessor)
-            for (i in options.instrumentations) {
-                i.getLogRecordProcessor(credential = sdkKey)?.let {
-                    i.getLoggerScopeName().let { scopeName ->
-                        routingLogRecordProcessor.registerProcessor(scopeName, it)
+            options.instrumentations.forEach { instrumentation ->
+                instrumentation.getLogRecordProcessor(credential = sdkKey)?.let { processor ->
+                    instrumentation.getLoggerScopeName().let { scopeName ->
+                        routingLogRecordProcessor.addProcessor(scopeName, processor)
                     }
                 }
             }

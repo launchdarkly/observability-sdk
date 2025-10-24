@@ -44,8 +44,7 @@ class CaptureSource(
     private val sessionManager: SessionManager,
     private val privacyProfile: PrivacyProfile,
     // TODO: O11Y-628 - add captureQuality options
-) :
-    Application.ActivityLifecycleCallbacks {
+) : Application.ActivityLifecycleCallbacks {
 
     private var _activity: Activity? = null
 
@@ -69,13 +68,10 @@ class CaptureSource(
     /**
      * Requests a [Capture] be taken now.
      */
-    fun captureNow() {
-        // TODO: O11Y-621 - don't use global scope
-        CoroutineScope(Dispatchers.Default).launch {
-            val capture = doCapture()
-            if (capture != null) {
-                _captureFlow.emit(capture)
-            }
+    suspend fun captureNow() {
+        val capture = doCapture()
+        if (capture != null) {
+            _captureFlow.emit(capture)
         }
     }
 
@@ -92,7 +88,7 @@ class CaptureSource(
     }
 
     override fun onActivityPaused(activity: Activity) {
-        _activity = null;
+        _activity = null
     }
 
     override fun onActivityStopped(activity: Activity) {
@@ -111,7 +107,7 @@ class CaptureSource(
      * Internal capture routine.
      */
     private suspend fun doCapture(): Capture? = withContext(Dispatchers.Main) {
-        val activity = _activity ?: return@withContext null;
+        val activity = _activity ?: return@withContext null
 
         try {
             val window = activity.window
@@ -146,28 +142,38 @@ class CaptureSource(
                             val session = sessionManager.getSessionId()
 
                             if (result == PixelCopy.SUCCESS) {
-                                val postMask: Bitmap
-                                if (privacyProfile == PrivacyProfile.STRICT) {
-                                    postMask = maskSensitiveAreas(bitmap, activity)
-                                } else {
-                                    postMask = bitmap
+                                // Offload heavy bitmap work to a background dispatcher
+                                CoroutineScope(Dispatchers.Default).launch {
+                                    try {
+                                        val postMask = bitmap;
+                                        // TODO: O11Y-620 - masking
+//                                        val postMask: Bitmap =
+//                                            if (privacyProfile == PrivacyProfile.STRICT) {
+//                                                maskSensitiveAreas(bitmap, activity)
+//                                            } else {
+//                                                bitmap
+//                                            }
+
+                                        // TODO: O11Y-625 - optimize memory allocations here, re-use byte arrays and such
+                                        val outputStream = ByteArrayOutputStream()
+                                        // TODO: O11Y-628 - calculate quality using captureQuality options
+                                        postMask.compress(Bitmap.CompressFormat.WEBP, 30, outputStream)
+                                        val byteArray = outputStream.toByteArray()
+                                        val compressedImage =
+                                            Base64.encodeToString(byteArray, Base64.NO_WRAP)
+
+                                        val capture = Capture(
+                                            imageBase64 = compressedImage,
+                                            origWidth = decorViewWidth,
+                                            origHeight = decorViewHeight,
+                                            timestamp = timestamp,
+                                            session = session,
+                                        )
+                                        continuation.resume(capture)
+                                    } catch (e: Exception) {
+                                        continuation.resumeWithException(e)
+                                    }
                                 }
-
-                                // TODO: O11Y-625 - optimize memory allocations here, re-use byte arrays and such
-                                val outputStream = ByteArrayOutputStream()
-                                // TODO: O11Y-628 - calculate quality using captureQuality options
-                                postMask.compress(Bitmap.CompressFormat.WEBP, 30, outputStream)
-                                val byteArray = outputStream.toByteArray()
-                                val compressedImage = Base64.encodeToString(byteArray, Base64.NO_WRAP)
-
-                                val capture = Capture(
-                                    imageBase64 = compressedImage,
-                                    origWidth = decorViewWidth,
-                                    origHeight = decorViewHeight,
-                                    timestamp = timestamp,
-                                    session = session,
-                                )
-                                continuation.resume(capture)
                             } else {
                                 // TODO: O11Y-624 - implement handling/shutdown for errors and unsupported API levels
                                 continuation.resumeWithException(Exception("PixelCopy failed with result: $result"))
@@ -182,7 +188,7 @@ class CaptureSource(
             }
         } catch (e: Exception) {
             // TODO: O11Y-624 - implement handling/shutdown for errors and unsupported API levels
-            throw RuntimeException(e);
+            throw RuntimeException(e)
         }
     }
 
@@ -351,10 +357,6 @@ class CaptureSource(
 
         // Check for content description containing "sensitive"
         val contentDescriptions = node.config.getOrNull(SemanticsProperties.ContentDescription)
-        if (contentDescriptions?.any { it.contains("sensitive", ignoreCase = true) } == true) {
-            return true
-        }
-
-        return false
+        return contentDescriptions?.any { it.contains("sensitive", ignoreCase = true) } == true
     }
 }

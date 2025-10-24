@@ -4,6 +4,7 @@ import com.launchdarkly.observability.network.SamplingConfigResponse
 import com.launchdarkly.observability.sampling.SamplingConfig
 import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.KSerializer
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.descriptors.PrimitiveKind
 import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
@@ -13,6 +14,7 @@ import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
+import kotlin.reflect.KClass
 
 @Serializable
 data class InitializeReplaySessionResponse(
@@ -32,14 +34,16 @@ data class SessionInitializationEntity(
 
 @Serializable
 data class InitializeSessionResponse(
-    val secure_id: String? = null,
-    val project_id: String? = null,
+    @SerialName("secure_id")
+    val secureId: String? = null,
+    @SerialName("project_id")
+    val projectId: String? = null,
     val sampling: SamplingConfigResponse? = null
 ) {
     fun mapToEntity(): SessionInitializationEntity? {
         return SessionInitializationEntity(
-            secureId = secure_id,
-            projectId = project_id,
+            secureId = secureId,
+            projectId = projectId,
             sampling = sampling?.mapToEntity()
         )
     }
@@ -56,21 +60,7 @@ enum class EventType(val value: Int) {
     PLUGIN(6)
 }
 
-object EventTypeSerializer : KSerializer<EventType> {
-    override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("EventType", PrimitiveKind.INT)
-
-    override fun serialize(encoder: Encoder, value: EventType) {
-        encoder.encodeInt(value.value)
-    }
-
-    override fun deserialize(decoder: Decoder): EventType {
-        val intValue = decoder.decodeInt()
-
-        // TODO: O11Y-624 - determine better error handling
-        return EventType.values().find { it.value == intValue }
-            ?: throw IllegalArgumentException("Unknown EventType value: $intValue")
-    }
-}
+object EventTypeSerializer : IntEnumSerializer<EventType>(EventType::class, "EventType", EventType::value)
 
 @Serializable(with = NodeTypeSerializer::class)
 enum class NodeType(val value: Int) {
@@ -82,20 +72,7 @@ enum class NodeType(val value: Int) {
     COMMENT(5)
 }
 
-object NodeTypeSerializer : KSerializer<NodeType> {
-    override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("NodeType", PrimitiveKind.INT)
-
-    override fun serialize(encoder: Encoder, value: NodeType) {
-        encoder.encodeInt(value.value)
-    }
-
-    override fun deserialize(decoder: Decoder): NodeType {
-        val intValue = decoder.decodeInt()
-        // TODO: O11Y-624 - determine better error handling
-        return NodeType.values().find { it.value == intValue }
-            ?: throw IllegalArgumentException("Unknown NodeType value: $intValue")
-    }
-}
+object NodeTypeSerializer : IntEnumSerializer<NodeType>(NodeType::class, "NodeType", NodeType::value)
 
 @Serializable(with = IncrementalSourceSerializer::class)
 enum class IncrementalSource(val value: Int) {
@@ -118,20 +95,7 @@ enum class IncrementalSource(val value: Int) {
     CUSTOM_ELEMENT(16)
 }
 
-object IncrementalSourceSerializer : KSerializer<IncrementalSource> {
-    override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("IncrementalSource", PrimitiveKind.INT)
-
-    override fun serialize(encoder: Encoder, value: IncrementalSource) {
-        encoder.encodeInt(value.value)
-    }
-
-    override fun deserialize(decoder: Decoder): IncrementalSource {
-        val intValue = decoder.decodeInt()
-        // TODO: O11Y-624 - determine better error handling
-        return IncrementalSource.values().find { it.value == intValue }
-            ?: throw IllegalArgumentException("Unknown IncrementalSource value: $intValue")
-    }
-}
+object IncrementalSourceSerializer : IntEnumSerializer<IncrementalSource>(IncrementalSource::class, "IncrementalSource", IncrementalSource::value)
 
 @Serializable(with = MouseInteractionsSerializer::class)
 enum class MouseInteractions(val value: Int) {
@@ -148,18 +112,27 @@ enum class MouseInteractions(val value: Int) {
     TOUCH_CANCEL(10)
 }
 
-object MouseInteractionsSerializer : KSerializer<MouseInteractions> {
-    override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("MouseInteractions", PrimitiveKind.INT)
+object MouseInteractionsSerializer : IntEnumSerializer<MouseInteractions>(MouseInteractions::class, "MouseInteractions", MouseInteractions::value)
 
-    override fun serialize(encoder: Encoder, value: MouseInteractions) {
-        encoder.encodeInt(value.value)
+open class IntEnumSerializer<T : Enum<T>>(
+    enumClass: KClass<T>,
+    private val serialName: String,
+    private val valueSelector: (T) -> Int
+) : KSerializer<T> {
+    private val entries: List<T> = enumClass.java.enumConstants?.toList() ?: emptyList()
+    private val lookup: Map<Int, T> = entries.associateBy(valueSelector)
+
+    override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor(serialName, PrimitiveKind.INT)
+
+    override fun serialize(encoder: Encoder, value: T) {
+        encoder.encodeInt(valueSelector(value))
     }
 
-    override fun deserialize(decoder: Decoder): MouseInteractions {
+    override fun deserialize(decoder: Decoder): T {
         val intValue = decoder.decodeInt()
         // TODO: O11Y-624 - determine better error handling
-        return MouseInteractions.values().find { it.value == intValue }
-            ?: throw IllegalArgumentException("Unknown MouseInteractions value: $intValue")
+        return lookup[intValue]
+            ?: throw IllegalArgumentException("Unknown $serialName value: $intValue")
     }
 }
 
@@ -256,7 +229,8 @@ data class Event(
     val type: EventType,
     val data: EventDataUnion,
     val timestamp: Long? = null,
-    val _sid: Int
+    @SerialName("_sid")
+    val sid: Int
 )
 
 @Serializable

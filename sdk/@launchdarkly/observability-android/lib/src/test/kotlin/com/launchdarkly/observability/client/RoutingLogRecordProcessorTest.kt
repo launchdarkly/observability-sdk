@@ -37,7 +37,7 @@ class RoutingLogRecordProcessorTest {
         every { mockInstrumentationScopeInfo.name } returns testScopeName
 
         // Register the processor for the test scope
-        routingProcessor.registerProcessor(testScopeName, mockLogRecordProcessor)
+        routingProcessor.addProcessor(testScopeName, mockLogRecordProcessor)
 
         // Act
         routingProcessor.onEmit(mockContext, mockLogRecord)
@@ -62,7 +62,7 @@ class RoutingLogRecordProcessorTest {
         every { mockInstrumentationScopeInfo.name } returns nonMatchingScopeName
 
         // Register the processor for a different scope
-        routingProcessor.registerProcessor(testScopeName, mockLogRecordProcessor)
+        routingProcessor.addProcessor(testScopeName, mockLogRecordProcessor)
 
         // Act
         routingProcessor.onEmit(mockContext, mockLogRecord)
@@ -95,8 +95,8 @@ class RoutingLogRecordProcessorTest {
         every { mockScopeInfo2.name } returns scopeName2
 
         // Register both processors
-        routingProcessor.registerProcessor(scopeName1, mockProcessor1)
-        routingProcessor.registerProcessor(scopeName2, mockProcessor2)
+        routingProcessor.addProcessor(scopeName1, mockProcessor1)
+        routingProcessor.addProcessor(scopeName2, mockProcessor2)
 
         // Act & Assert - Test first processor
         routingProcessor.onEmit(mockContext, mockLogRecord1)
@@ -144,7 +144,7 @@ class RoutingLogRecordProcessorTest {
         every { mockInstrumentationScopeInfo.name } returns emptyScopeName
 
         // Register processor for a different scope
-        routingProcessor.registerProcessor(testScopeName, mockLogRecordProcessor)
+        routingProcessor.addProcessor(testScopeName, mockLogRecordProcessor)
 
         // Act
         routingProcessor.onEmit(mockContext, mockLogRecord)
