@@ -23,6 +23,9 @@ dependencies {
     implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.9.0")
     implementation("com.jakewharton.timber:timber:5.0.1")
 
+    // Android
+    implementation("androidx.activity:activity:1.11.0")
+
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
@@ -52,6 +55,11 @@ dependencies {
     // Android crash instrumentation
     implementation("io.opentelemetry.android.instrumentation:crash:0.11.0-alpha")
 
+    // TODO: O11Y-626 - move replay instrumentation and associated compose dependencies into dedicated package
+    // Compose dependencies for capture functionality
+    implementation("androidx.compose.ui:ui:1.7.5")
+    implementation("androidx.compose.ui:ui-tooling:1.7.5")
+
     // Use JUnit Jupiter for testing.
     testImplementation(platform("org.junit:junit-bom:5.13.4"))
     testImplementation("org.junit.jupiter:junit-jupiter")
@@ -69,7 +77,7 @@ tasks.withType<Test> {
 
 android {
     namespace = "com.launchdarkly.observability"
-    compileSdk = 35
+    compileSdk = 36
 
     buildFeatures {
         buildConfig = true
