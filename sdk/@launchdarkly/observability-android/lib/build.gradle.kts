@@ -55,6 +55,11 @@ dependencies {
     // Android crash instrumentation
     implementation("io.opentelemetry.android.instrumentation:crash:0.11.0-alpha")
 
+    // TODO: O11Y-626 - move replay instrumentation and associated compose dependencies into dedicated package
+    // Compose dependencies for capture functionality
+    implementation("androidx.compose.ui:ui:1.7.5")
+    implementation("androidx.compose.ui:ui-tooling:1.7.5")
+
     // Use JUnit Jupiter for testing.
     testImplementation(platform("org.junit:junit-bom:5.13.4"))
     testImplementation("org.junit.jupiter:junit-jupiter")

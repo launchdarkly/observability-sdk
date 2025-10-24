@@ -12,7 +12,8 @@ import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter
  * @param metricExporter The in-memory metric exporter to read from
  */
 class TelemetryInspector(
-    val spanExporter: InMemorySpanExporter?,
-    val logExporter: InMemoryLogRecordExporter?,
-    val metricExporter: InMemoryMetricExporter?
-)
+) {
+    val spanExporter: InMemorySpanExporter by lazy { InMemorySpanExporter.create() }
+    val logExporter:InMemoryLogRecordExporter by lazy { InMemoryLogRecordExporter.create() }
+    val metricExporter: InMemoryMetricExporter by lazy { InMemoryMetricExporter.create() }
+}

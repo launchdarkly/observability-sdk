@@ -5,6 +5,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonElement
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
@@ -12,7 +13,7 @@ import java.net.URL
 @Serializable
 data class GraphQLRequest(
     val query: String,
-    val variables: Map<String, String> = emptyMap()
+    val variables: Map<String, JsonElement> = emptyMap()
 )
 
 @Serializable
@@ -69,7 +70,7 @@ class GraphQLClient(
      */
     suspend fun <T> execute(
         queryFileName: String,
-        variables: Map<String, String> = emptyMap(),
+        variables: Map<String, JsonElement> = emptyMap(),
         dataSerializer: KSerializer<T>
     ): GraphQLResponse<T> = withContext(Dispatchers.IO) {
         try {

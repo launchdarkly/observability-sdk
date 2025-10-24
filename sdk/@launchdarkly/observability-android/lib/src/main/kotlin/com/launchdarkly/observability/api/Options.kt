@@ -2,13 +2,15 @@ package com.launchdarkly.observability.api
 
 import com.launchdarkly.logging.LDLogAdapter
 import com.launchdarkly.observability.BuildConfig
+import com.launchdarkly.observability.interfaces.LDExtendedInstrumentation
 import com.launchdarkly.sdk.android.LDTimberLogging
 import io.opentelemetry.api.common.Attributes
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
 
-private const val DEFAULT_OTLP_ENDPOINT = "https://otel.observability.app.launchdarkly.com:4318"
-private const val DEFAULT_BACKEND_URL = "https://pub.observability.app.launchdarkly.com"
+const val DEFAULT_SERVICE_NAME = "observability-android"
+const val DEFAULT_OTLP_ENDPOINT = "https://otel.observability.app.launchdarkly.com:4318"
+const val DEFAULT_BACKEND_URL = "https://pub.observability.app.launchdarkly.com"
 
 /**
  * Configuration options for the Observability plugin.
@@ -27,9 +29,10 @@ private const val DEFAULT_BACKEND_URL = "https://pub.observability.app.launchdar
  * @property disableMetrics Disables metrics if true. Defaults to false.
  * @property logAdapter The log adapter to use. Defaults to using the LaunchDarkly SDK's LDTimberLogging.adapter(). Use LDAndroidLogging.adapter() to use the Android logging adapter.
  * @property loggerName The name of the logger to use. Defaults to "LaunchDarklyObservabilityPlugin".
+ * @property instrumentations List of additional instrumentations to use
  */
 data class Options(
-    val serviceName: String = "observability-android",
+    val serviceName: String = DEFAULT_SERVICE_NAME,
     val serviceVersion: String = BuildConfig.OBSERVABILITY_SDK_VERSION,
     val otlpEndpoint: String = DEFAULT_OTLP_ENDPOINT,
     val backendUrl: String = DEFAULT_BACKEND_URL,
@@ -37,11 +40,12 @@ data class Options(
     val customHeaders: Map<String, String> = emptyMap(),
     val sessionBackgroundTimeout: Duration = 15.minutes,
     val debug: Boolean = false,
-    // TODO O11Y-398: implement disable config options after all other instrumentations are implemented
     val disableErrorTracking: Boolean = false,
     val disableLogs: Boolean = false,
     val disableTraces: Boolean = false,
     val disableMetrics: Boolean = false,
     val logAdapter: LDLogAdapter = LDTimberLogging.adapter(), // this follows the LaunchDarkly SDK's default log adapter
-    val loggerName: String = "LaunchDarklyObservabilityPlugin"
+    val loggerName: String = "LaunchDarklyObservabilityPlugin",
+    // TODO: update this to provide a list of factories instead of instances
+    val instrumentations: List<LDExtendedInstrumentation> = emptyList()
 )
