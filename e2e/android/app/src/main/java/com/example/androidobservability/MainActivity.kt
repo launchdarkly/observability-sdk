@@ -25,6 +25,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.androidobservability.ui.theme.AndroidObservabilityTheme
+import com.launchdarkly.observability.replay.maskSensitive
 
 class MainActivity : ComponentActivity() {
 
@@ -58,6 +59,7 @@ class MainActivity : ComponentActivity() {
                         )
 
                         Button(
+                            modifier = Modifier.maskSensitive(),
                             onClick = {
                                 this@MainActivity.startActivity(
                                     Intent(

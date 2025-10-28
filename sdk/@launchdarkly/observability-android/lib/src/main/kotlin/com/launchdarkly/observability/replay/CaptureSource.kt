@@ -13,13 +13,6 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Base64
 import android.view.PixelCopy
-import android.view.View
-import android.view.ViewGroup
-import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.semantics.SemanticsNode
-import androidx.compose.ui.semantics.SemanticsOwner
-import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.semantics.getOrNull
 import io.opentelemetry.android.session.SessionManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -47,6 +40,7 @@ class CaptureSource(
 ) : Application.ActivityLifecycleCallbacks {
 
     private var _activity: Activity? = null
+    private val maskRegistry = PrivacyMaskRegistry()
 
     private val _captureFlow = MutableSharedFlow<Capture>()
     val captureFlow: SharedFlow<Capture> = _captureFlow.asSharedFlow()
@@ -55,6 +49,7 @@ class CaptureSource(
      * Attaches the [CaptureSource] to the [Application] whose [Activity]s will be captured.
      */
     fun attachToApplication(application: Application) {
+        PrivacyMasking.register(maskRegistry)
         application.registerActivityLifecycleCallbacks(this)
     }
 
@@ -62,6 +57,7 @@ class CaptureSource(
      * Detaches the [CaptureSource] from the [Application].
      */
     fun detachFromApplication(application: Application) {
+        PrivacyMasking.unregister(maskRegistry)
         application.unregisterActivityLifecycleCallbacks(this)
     }
 
@@ -145,14 +141,14 @@ class CaptureSource(
                                 // Offload heavy bitmap work to a background dispatcher
                                 CoroutineScope(Dispatchers.Default).launch {
                                     try {
-                                        val postMask = bitmap;
                                         // TODO: O11Y-620 - masking
-//                                        val postMask: Bitmap =
-//                                            if (privacyProfile == PrivacyProfile.STRICT) {
-//                                                maskSensitiveAreas(bitmap, activity)
-//                                            } else {
-//                                                bitmap
-//                                            }
+                                        val postMask: Bitmap =
+                                            if (privacyProfile == PrivacyProfile.STRICT) {
+                                                val maskRects = maskRegistry.snapshot()
+                                                maskSensitiveAreas(bitmap, maskRects)
+                                            } else {
+                                                bitmap
+                                            }
 
                                         // TODO: O11Y-625 - optimize memory allocations here, re-use byte arrays and such
                                         val outputStream = ByteArrayOutputStream()
@@ -193,13 +189,18 @@ class CaptureSource(
     }
 
     /**
-     * Applies masking rectangles to the provided [bitmap] by inspecting the provided [activity] for
-     * content that needs to be masked.
+     * Applies masking rectangles to the provided [bitmap].
      *
-     * @param bitmap The bitmap to mask
-     * @param activity The activity that the bitmap was captured from.
+     * @param bitmap The bitmap to mask.
+     * @param maskRects Rectangles (window coordinates) that should be painted over.
      */
-    private fun maskSensitiveAreas(bitmap: Bitmap, activity: Activity): Bitmap {
+    private fun maskSensitiveAreas(
+        bitmap: Bitmap,
+        maskRects: List<ComposeRect>
+    ): Bitmap {
+        if (maskRects.isEmpty()) {
+            return bitmap
+        }
         // TODO: O11Y-625 - remove this bitmap copy if possible for memory optimization purposes
         val maskedBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true)
         val canvas = Canvas(maskedBitmap)
@@ -208,155 +209,16 @@ class CaptureSource(
             style = Paint.Style.FILL
         }
 
-        // Find sensitive areas using Compose semantics
-        val sensitiveComposeRects = findSensitiveComposeAreasFromActivity(activity)
-
-        // Mask sensitive Compose areas found via semantics
-        sensitiveComposeRects.forEach { composeRect ->
-            val rect = Rect(
-                composeRect.left.toInt(),
-                composeRect.top.toInt(),
-                composeRect.right.toInt(),
-                composeRect.bottom.toInt()
+        maskRects.forEach { composeRect ->
+            canvas.drawRect(
+                composeRect.left,
+                composeRect.top,
+                composeRect.right,
+                composeRect.bottom,
+                paint
             )
-            canvas.drawRect(rect, paint)
         }
 
         return maskedBitmap
-    }
-
-    /**
-     * Find sensitive Compose areas from all ComposeViews in the activity.
-     *
-     * @return a list of rects that represent sensitive areas that need to be masked
-     */
-    private fun findSensitiveComposeAreasFromActivity(activity: Activity): List<ComposeRect> {
-        val allSensitiveRects = mutableListOf<ComposeRect>()
-
-        try {
-            // Find all ComposeViews in the activity
-            val composeViews = findComposeViews(activity.window.decorView)
-
-            // Process each ComposeView to find sensitive areas
-            composeViews.forEach { composeView ->
-                val semanticsOwner = getSemanticsOwner(composeView)
-                val rootSemanticsNode = semanticsOwner?.rootSemanticsNode
-                if (rootSemanticsNode != null) {
-                    val sensitiveRects = findSensitiveComposeAreas(rootSemanticsNode, composeView)
-                    allSensitiveRects.addAll(sensitiveRects)
-                }
-            }
-        } catch (e: Exception) {
-            // Handle cases where ComposeView access fails
-        }
-
-        return allSensitiveRects
-    }
-
-    /**
-     * Recursively find all ComposeViews in the view hierarchy.
-     *
-     * @return list of compose views
-     */
-    private fun findComposeViews(view: View): List<ComposeView> {
-        val composeViews = mutableListOf<ComposeView>()
-
-        if (view is ComposeView) {
-            composeViews.add(view)
-        }
-
-        if (view is ViewGroup) {
-            for (i in 0 until view.childCount) {
-                val child = view.getChildAt(i)
-                composeViews.addAll(findComposeViews(child))
-            }
-        }
-
-        return composeViews
-    }
-
-    /**
-     * Gets the SemanticsOwner from a ComposeView using reflection. This is necessary because
-     * AndroidComposeView and semanticsOwner are not publicly exposed.
-     */
-    private fun getSemanticsOwner(composeView: ComposeView): SemanticsOwner? {
-        return try {
-            // ComposeView contains an AndroidComposeView which has the semanticsOwner
-            if (composeView.childCount > 0) {
-                val androidComposeView = composeView.getChildAt(0)
-
-                // TODO: O11Y-620 - determine if there is a more robust long term way to achieve this, this reflection is fragile.
-                // Use reflection to check if this is an AndroidComposeView
-                val androidComposeViewClass =
-                    Class.forName("androidx.compose.ui.platform.AndroidComposeView")
-                if (androidComposeViewClass.isInstance(androidComposeView)) {
-                    // Use reflection to access the semanticsOwner field
-                    val field = androidComposeViewClass.getDeclaredField("semanticsOwner")
-                    field.isAccessible = true
-                    field.get(androidComposeView) as? SemanticsOwner
-                } else null
-            } else null
-        } catch (e: Exception) {
-            null
-        }
-    }
-
-    /**
-     * Find sensitive Compose areas by traversing the semantic node tree.
-     */
-    private fun findSensitiveComposeAreas(
-        rootSemanticsNode: SemanticsNode,
-        composeView: ComposeView
-    ): List<ComposeRect> {
-        val sensitiveRects = mutableListOf<ComposeRect>()
-
-        try {
-            // Recursively traverse the semantic node tree to find sensitive areas
-            traverseSemanticNode(rootSemanticsNode, sensitiveRects, composeView)
-
-        } catch (e: Exception) {
-            // Handle cases where semantic node traversal fails
-            // This could happen if the semantic tree is not available or corrupted
-        }
-
-        return sensitiveRects
-    }
-
-    /**
-     * Recursively traverse a semantic node and its children to find sensitive areas.
-     */
-    private fun traverseSemanticNode(
-        node: SemanticsNode,
-        sensitiveRects: MutableList<ComposeRect>,
-        composeView: ComposeView
-    ) {
-        // Check if this node is marked as sensitive
-        if (isSensitiveNode(node)) {
-            // Convert bounds to absolute coordinates
-            val boundsInWindow = node.boundsInWindow
-            val absoluteRect = ComposeRect(
-                left = boundsInWindow.left,
-                top = boundsInWindow.top,
-                right = boundsInWindow.right,
-                bottom = boundsInWindow.bottom
-            )
-            sensitiveRects.add(absoluteRect)
-        }
-
-        // Recursively traverse all children
-        node.children.forEach { child ->
-            traverseSemanticNode(child, sensitiveRects, composeView)
-        }
-    }
-
-    /**
-     * Check if a semantic node contains sensitive content based on test tags or content descriptions.
-     */
-    private fun isSensitiveNode(node: SemanticsNode): Boolean {
-        // TODO: O11Y-620 - refactor to utilize generic MaskMatchers
-
-        // Check for content description containing "sensitive"
-        val contentDescriptions = node.config.getOrNull(SemanticsProperties.ContentDescription)
-        return contentDescriptions?.any { it.contains("sensitive", ignoreCase = true) } == true
     }
 }

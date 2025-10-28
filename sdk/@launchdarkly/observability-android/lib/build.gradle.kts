@@ -7,6 +7,7 @@ plugins {
     // Apply the Kotlin Android plugin for Android-compatible Kotlin support.
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.kotlin.compose)
 
     // Apply Dokka plugin for documentation generation
     id("org.jetbrains.dokka") version "2.0.0"
@@ -81,6 +82,7 @@ android {
 
     buildFeatures {
         buildConfig = true
+        compose = true
     }
 
     defaultConfig {
@@ -101,6 +103,9 @@ android {
     }
     kotlinOptions {
         jvmTarget = "1.8"
+    }
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.15"
     }
 
     publishing {
