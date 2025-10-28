@@ -44,9 +44,14 @@ class RRwebGraphQLReplayLogExporter(
     // TODO: O11Y-624 - need to implement sid, payloadId reset when multiple sessions occur in one application process lifecycle.
     private var sidCounter = 0
     private var payloadIdCounter = 0
-    private var lastSentHeight = 0
-    private var lastSentWidth = 0
-    private var lastSessionId: String? = null
+
+    private data class LastSentState(
+        val sessionId: String?,
+        val height: Int,
+        val width: Int,
+    )
+
+    private var lastSentState = LastSentState(sessionId = null, height = 0, width = 0)
 
     override fun export(logs: MutableCollection<LogRecordData>): CompletableResultCode {
         val resultCode = CompletableResultCode()
@@ -58,7 +63,7 @@ class RRwebGraphQLReplayLogExporter(
                     if (capture != null) {
                         // TODO: O11Y-624 - investigate if there is a size limit on the push that is imposed server side.
                         val success =
-                            if (!capture.session.equals(lastSessionId) || lastSentWidth != capture.origWidth || lastSentHeight != capture.origHeight) {
+                            if (capture.session != lastSentState.sessionId || capture.origHeight != lastSentState.height || capture.origWidth != lastSentState.width) {
                                 // we need to send a full capture if the session id changes or there is a resize/orientation change
                                 sendCaptureFull(capture)
                             } else {
@@ -86,21 +91,21 @@ class RRwebGraphQLReplayLogExporter(
 
     override fun flush(): CompletableResultCode {
         // TODO: O11Y-621 - Handle flush
-        TODO("Not yet implemented")
+        return CompletableResultCode.ofSuccess()
     }
 
     override fun shutdown(): CompletableResultCode {
         // TODO: O11Y-621 - Handle shutdown
-        TODO("Not yet implemented")
+        return CompletableResultCode.ofSuccess()
     }
 
     fun nextSid(): Int {
-        sidCounter++;
+        sidCounter++
         return sidCounter
     }
 
     fun nextPayloadId(): Int {
-        payloadIdCounter++;
+        payloadIdCounter++
         return payloadIdCounter
     }
 
@@ -141,7 +146,7 @@ class RRwebGraphQLReplayLogExporter(
             val incrementalEvent = Event(
                 type = EventType.INCREMENTAL_SNAPSHOT,
                 timestamp = timestamp,
-                _sid = nextSid(),
+                sid = nextSid(),
                 data = EventDataUnion.CustomEventDataWrapper(
                     Json.parseToJsonElement("""{"source":9,"id":6,"type":0,"commands":[{"property":"clearRect","args":[0,0,${capture.origWidth},${capture.origHeight}]},{"property":"drawImage","args":[{"rr_type":"ImageBitmap","args":[{"rr_type":"Blob","data":[{"rr_type":"ArrayBuffer","base64":"${capture.imageBase64}"}],"type":"image/jpeg"}]},0,0,${capture.origWidth},${capture.origHeight}]}]}""")
                 )
@@ -154,7 +159,7 @@ class RRwebGraphQLReplayLogExporter(
                 Event(
                     type = EventType.INCREMENTAL_SNAPSHOT,
                     timestamp = timestamp,
-                    _sid = nextSid(),
+                    sid = nextSid(),
                     data = EventDataUnion.CustomEventDataWrapper(
                         Json.parseToJsonElement("""{"source":2,"type":2,"x":1, "y":1}""")
                     )
@@ -164,10 +169,7 @@ class RRwebGraphQLReplayLogExporter(
             replayApiService.pushPayload(capture.session, "${nextPayloadId()}", eventsBatch)
             
             // record last sent state only after successful completion
-            lastSessionId = capture.session
-            lastSentWidth = capture.origWidth
-            lastSentHeight = capture.origHeight
-            
+            lastSentState = LastSentState(sessionId = capture.session, height = capture.origHeight, width = capture.origWidth)
             true
         } catch (e: Exception) {
             // TODO: O11Y-627 - pass in logger to implementation and use here
@@ -199,7 +201,7 @@ class RRwebGraphQLReplayLogExporter(
             val metaEvent = Event(
                 type = EventType.META,
                 timestamp = timestamp,
-                _sid = nextSid(),
+                sid = nextSid(),
                 data = EventDataUnion.StandardEventData(
                     EventData(
                         width = capture.origWidth,
@@ -212,7 +214,7 @@ class RRwebGraphQLReplayLogExporter(
             val snapShotEvent = Event(
                 type = EventType.FULL_SNAPSHOT,
                 timestamp = timestamp,
-                _sid = nextSid(),
+                sid = nextSid(),
                 data = EventDataUnion.StandardEventData(
                     EventData(
                         node = EventNode(
@@ -267,7 +269,7 @@ class RRwebGraphQLReplayLogExporter(
             val viewportEvent = Event(
                 type = EventType.CUSTOM,
                 timestamp = timestamp,
-                _sid = nextSid(),
+                sid = nextSid(),
                 data = EventDataUnion.CustomEventDataWrapper(
                     Json.parseToJsonElement("""{"tag":"Viewport","payload":{"width":${capture.origWidth},"height":${capture.origHeight},"availWidth":${capture.origWidth},"availHeight":${capture.origHeight},"colorDepth":30,"pixelDepth":30,"orientation":0}}""")
                 )
@@ -278,9 +280,7 @@ class RRwebGraphQLReplayLogExporter(
             replayApiService.pushPayload(capture.session, "${nextPayloadId()}", eventBatch)
 
             // record last sent state only after successful completion
-            lastSessionId = capture.session
-            lastSentWidth = capture.origWidth
-            lastSentHeight = capture.origHeight
+            lastSentState = LastSentState(sessionId = capture.session, height = capture.origHeight, width = capture.origWidth)
 
             true
         } catch (e: Exception) {

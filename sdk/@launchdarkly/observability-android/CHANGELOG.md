@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.12.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.11.0...launchdarkly-observability-android-0.12.0) (2025-10-24)
+
+
+### Features
+
+* Android observability plugin session replay support ([#268](https://github.com/launchdarkly/observability-sdk/issues/268)) ([4ba5124](https://github.com/launchdarkly/observability-sdk/commit/4ba5124e59ebd5b46a55b124a749eeec715cff55))
+* O11Y-601 - Add Android launch time instrumentation ([#274](https://github.com/launchdarkly/observability-sdk/issues/274)) ([38b4a84](https://github.com/launchdarkly/observability-sdk/commit/38b4a8475b51bd8686f5e1cc0e6c3d47e3ebc2e2))
+
+## [0.11.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.10.0...launchdarkly-observability-android-0.11.0) (2025-10-10)
+
+
+### Features
+
+* **android:** Add conditional exporters for logs and traces ([#254](https://github.com/launchdarkly/observability-sdk/issues/254)) ([38f6c45](https://github.com/launchdarkly/observability-sdk/commit/38f6c45192a39d49aa629c2c5e24cd5310166003))
+
 ## [0.10.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.9.0...launchdarkly-observability-android-0.10.0) (2025-10-06)
 
 

@@ -11,11 +11,11 @@ import java.util.concurrent.ConcurrentHashMap
  * scope name, the [fallthroughProcessor] is called to handle the log.
  */
 class RoutingLogRecordProcessor(
-    private val fallthroughProcessor: LogRecordProcessor = NoopLogRecordProcessor.instance
+    private val fallthroughProcessor: LogRecordProcessor = NoopLogRecordProcessor
 ) : LogRecordProcessor {
     private val processors = ConcurrentHashMap<String, LogRecordProcessor>()
 
-    fun registerProcessor(scopeName: String, processor: LogRecordProcessor) {
+    fun addProcessor(scopeName: String, processor: LogRecordProcessor) {
         processors[scopeName] = processor
     }
 

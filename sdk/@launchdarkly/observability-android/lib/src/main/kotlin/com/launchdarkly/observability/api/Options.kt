@@ -9,8 +9,8 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
 
 const val DEFAULT_SERVICE_NAME = "observability-android"
-const val DEFAULT_OTLP_ENDPOINT = "https://otel.observability.ld-stg.launchdarkly.com:4318"
-const val DEFAULT_BACKEND_URL = "https://pub.observability.ld-stg.launchdarkly.com"
+const val DEFAULT_OTLP_ENDPOINT = "https://otel.observability.app.launchdarkly.com:4318"
+const val DEFAULT_BACKEND_URL = "https://pub.observability.app.launchdarkly.com"
 
 /**
  * Configuration options for the Observability plugin.

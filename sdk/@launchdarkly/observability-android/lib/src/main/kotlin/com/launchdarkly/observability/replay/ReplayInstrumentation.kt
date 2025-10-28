@@ -65,13 +65,13 @@ private const val BATCH_MAX_EXPORT_SIZE = 10
  */
 class ReplayInstrumentation(
     private val options: ReplayOptions = ReplayOptions(),
-) : AndroidInstrumentation, LDExtendedInstrumentation {
+) : LDExtendedInstrumentation {
 
     private lateinit var _otelLogger: Logger
     private lateinit var _captureSource: CaptureSource
     
     private var _captureJob: Job? = null
-    private val _isPaused = AtomicBoolean(false)
+    private var _isPaused: Boolean = false
     private val _captureMutex = Mutex()
 
     override val name: String = INSTRUMENTATION_SCOPE_NAME
@@ -104,12 +104,12 @@ class ReplayInstrumentation(
     suspend fun runCapture() {
         _captureMutex.withLock {
             // If already running (not paused), do nothing
-            if (!_isPaused.get()) {
+            if (!_isPaused) {
                 return
             }
             
             // Clear paused flag and start/resume periodic capture
-            _isPaused.set(false)
+            _isPaused = false
             internalStartCapture()
         }
     }
@@ -118,12 +118,12 @@ class ReplayInstrumentation(
     suspend fun pauseCapture() {
         _captureMutex.withLock {
             // if already paused, do nothing
-            if (_isPaused.get()) {
+            if (_isPaused) {
                 return
             }
             
             // pause the periodic capture by terminating the job
-            _isPaused.set(true)
+            _isPaused = true
             _captureJob?.cancel()
             _captureJob = null
         }

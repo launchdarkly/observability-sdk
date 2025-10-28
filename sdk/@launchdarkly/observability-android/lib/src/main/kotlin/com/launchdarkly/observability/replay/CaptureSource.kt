@@ -70,13 +70,10 @@ class CaptureSource(
     /**
      * Requests a [Capture] be taken now.
      */
-    fun captureNow() {
-        // TODO: O11Y-621 - don't use global scope
-        CoroutineScope(Dispatchers.Default).launch {
-            val capture = doCapture()
-            if (capture != null) {
-                _captureFlow.emit(capture)
-            }
+    suspend fun captureNow() {
+        val capture = doCapture()
+        if (capture != null) {
+            _captureFlow.emit(capture)
         }
     }
 
@@ -93,7 +90,7 @@ class CaptureSource(
     }
 
     override fun onActivityPaused(activity: Activity) {
-        _activity = null;
+        _activity = null
     }
 
     override fun onActivityStopped(activity: Activity) {
@@ -112,7 +109,7 @@ class CaptureSource(
      * Internal capture routine.
      */
     private suspend fun doCapture(): Capture? = withContext(Dispatchers.Main) {
-        val activity = _activity ?: return@withContext null;
+        val activity = _activity ?: return@withContext null
 
         try {
             val window = activity.window
@@ -136,13 +133,6 @@ class CaptureSource(
             // Use PixelCopy to capture the window content
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 suspendCancellableCoroutine { continuation ->
-                    val viewSnapshots = decorView.flattenHierarchy().map { v ->
-                        ViewInfo(
-                            id = v.id,
-                            bounds = Rect(v.left, v.top, v.right, v.bottom),
-                            tag = v.tag
-                        )
-                    }
 
                     // TODO: O11Y-624 - read PixelCopy exception recommendations and adjust logic to account for such cases
                     PixelCopy.request(
@@ -162,12 +152,22 @@ class CaptureSource(
                                 // Offload heavy bitmap work to a background dispatcher
                                 CoroutineScope(Dispatchers.Default).launch {
                                     try {
-                                        val postMask = maskSensitiveAreas(bitmap, activity, maskMatchers)
+                                        val postMask = bitmap;
+                                        // TODO: O11Y-620 - masking
+//                                        val postMask: Bitmap =
+//                                            if (privacyProfile == PrivacyProfile.STRICT) {
+//                                                maskSensitiveAreas(bitmap, activity, maskMatchers)
+//                                            } else {
+//                                                bitmap
+//                                            }
 
+                                        // TODO: O11Y-625 - optimize memory allocations here, re-use byte arrays and such
                                         val outputStream = ByteArrayOutputStream()
+                                        // TODO: O11Y-628 - calculate quality using captureQuality options
                                         postMask.compress(Bitmap.CompressFormat.WEBP, 30, outputStream)
                                         val byteArray = outputStream.toByteArray()
-                                        val compressedImage = Base64.encodeToString(byteArray, Base64.NO_WRAP)
+                                        val compressedImage =
+                                            Base64.encodeToString(byteArray, Base64.NO_WRAP)
 
                                         val capture = Capture(
                                             imageBase64 = compressedImage,
@@ -196,7 +196,7 @@ class CaptureSource(
             }
         } catch (e: Exception) {
             // TODO: O11Y-624 - implement handling/shutdown for errors and unsupported API levels
-            throw RuntimeException(e);
+            throw RuntimeException(e)
         }
     }
 
@@ -362,20 +362,5 @@ class CaptureSource(
         node.children.forEach { child ->
             traverseSemanticNode(child, sensitiveRects, composeView, matchers)
         }
-    }
-
-    /**
-     * Check if a semantic node contains sensitive content based on test tags or content descriptions.
-     */
-    private fun isSensitiveNode(node: SemanticsNode): Boolean {
-        // TODO: O11Y-620 - refactor to utilize generic MaskMatchers
-
-        // Check for content description containing "sensitive"
-        val contentDescriptions = node.config.getOrNull(SemanticsProperties.ContentDescription)
-        if (contentDescriptions?.any { it.contains("sensitive", ignoreCase = true) } == true) {
-            return true
-        }
-
-        return false
     }
 }

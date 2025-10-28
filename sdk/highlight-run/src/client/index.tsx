@@ -166,7 +166,7 @@ export type HighlightClassOptions = {
 	sessionShortcut?: SessionShortcutOptions
 	sessionSecureID: string // Introduced in firstLoad 3.0.1
 	storageMode?: 'sessionStorage' | 'localStorage'
-	sessionCookie?: true
+	sessionCookie?: boolean
 	sendMode?: 'webworker' | 'local'
 	otlpEndpoint?: HighlightOptions['otlpEndpoint']
 	otel?: HighlightOptions['otel']
