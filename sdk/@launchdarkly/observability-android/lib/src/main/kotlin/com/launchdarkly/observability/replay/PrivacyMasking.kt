@@ -1,12 +1,9 @@
 package com.launchdarkly.observability.replay
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.geometry.Rect
@@ -18,7 +15,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import java.util.UUID
 
-class PrivacyMaskRegistry {
+internal class PrivacyMaskRegistry {
     private val _maskRects = MutableStateFlow<Map<String, Rect>>(emptyMap())
     val maskRects: StateFlow<Map<String, Rect>> = _maskRects.asStateFlow()
 
@@ -48,22 +45,8 @@ internal object PrivacyMasking {
     }
 }
 
-internal val LocalPrivacyMaskRegistry = staticCompositionLocalOf<PrivacyMaskRegistry?> { null }
-
-@Composable
-fun ProvidePrivacyMaskRegistry(
-    registry: PrivacyMaskRegistry,
-    content: @Composable () -> Unit
-) {
-    CompositionLocalProvider(LocalPrivacyMaskRegistry provides registry) {
-        content()
-    }
-}
-
 fun Modifier.maskSensitive(): Modifier = composed {
-    val localRegistry = LocalPrivacyMaskRegistry.current
-    val globalRegistry by PrivacyMasking.registry.collectAsState(initial = null)
-    val activeRegistry = localRegistry ?: globalRegistry
+    val activeRegistry by PrivacyMasking.registry.collectAsState(initial = null)
 
     if (activeRegistry == null) {
         return@composed this
@@ -72,12 +55,12 @@ fun Modifier.maskSensitive(): Modifier = composed {
     val maskId = remember { UUID.randomUUID().toString() }
 
     DisposableEffect(activeRegistry, maskId) {
-        onDispose { activeRegistry.remove(maskId) }
+        onDispose { activeRegistry?.remove(maskId) }
     }
 
     this.then(
         Modifier.onGloballyPositioned { coords ->
-            activeRegistry.upsert(maskId, coords.boundsInWindow())
+            activeRegistry?.upsert(maskId, coords.boundsInWindow())
         }
     )
 }
