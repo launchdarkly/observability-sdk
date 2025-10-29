@@ -95,7 +95,10 @@ export const setupBrowserTracing = (
 	config: BrowserTracingConfig,
 	sampler: ExportSampler,
 ) => {
-	if (providers.tracerProvider !== undefined) {
+	if (
+		providers.tracerProvider !== undefined &&
+		providers.meterProvider !== undefined
+	) {
 		console.warn('OTEL already initialized. Skipping...')
 		return
 	}
