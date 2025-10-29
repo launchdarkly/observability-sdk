@@ -136,6 +136,7 @@ class CaptureSource(
                         val sensitiveComposeRects =
                             findSensitiveComposeAreasFromActivity(activity, maskMatchers)
 
+                        // TODO: O11Y-624 - read PixelCopy exception recommendations and adjust logic to account for such cases
                         PixelCopy.request(
                             window,
                             rect,
@@ -153,7 +154,9 @@ class CaptureSource(
                                                 bitmap
                                             }
 
+                                            // TODO: O11Y-625 - optimize memory allocations here, re-use byte arrays and such
                                             val outputStream = ByteArrayOutputStream()
+                                            // TODO: O11Y-628 - calculate quality using captureQuality options
                                             postMask.compress(Bitmap.CompressFormat.WEBP, 30, outputStream)
                                             val byteArray = outputStream.toByteArray()
                                             val compressedImage = Base64.encodeToString(byteArray, Base64.NO_WRAP)
@@ -171,6 +174,7 @@ class CaptureSource(
                                         }
                                     }
                                 } else {
+                                    // TODO: O11Y-624 - implement handling/shutdown for errors and unsupported API levels
                                     continuation.resumeWithException(
                                         Exception("PixelCopy failed with result: $result")
                                     )
@@ -181,9 +185,11 @@ class CaptureSource(
                     }
                 }
             } else {
+                // TODO: O11Y-624 - implement handling/shutdown for errors and unsupported API levels
                 throw NotImplementedError("CaptureSource does not work on unsupported Android SDK version")
             }
         } catch (e: Exception) {
+            // TODO: O11Y-624 - implement handling/shutdown for errors and unsupported API levels
             throw RuntimeException(e)
         }
     }

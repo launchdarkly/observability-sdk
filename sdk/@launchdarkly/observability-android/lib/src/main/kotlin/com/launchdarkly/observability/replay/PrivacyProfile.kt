@@ -4,11 +4,22 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import com.launchdarkly.observability.replay.MaskMatcher
 
+/**
+ * The [PrivacyProfile] class encapsulates options and functionality related to privacy of session
+ * replay functionality.
+ *
+ * By default, session replay will apply an opaque mask to elemetns that match the [builtInMatchers].
+ * To customize this behavior, use one of [strict], [optIn], [optOut]
+ **/
 data class PrivacyProfile private constructor(
     internal val maskMatchers: List<MaskMatcher>,
 ) {
     companion object {
 
+        /**
+         * This matcher will match most text inputs, but there may be special cases where it will
+         * miss as we can't account for all possible future semantic properties.
+         */
         val textInputMatcher: MaskMatcher = object : MaskMatcher {
             override fun isMatch(node: SemanticsNode): Boolean {
                 val config = node.config;
@@ -19,12 +30,20 @@ data class PrivacyProfile private constructor(
             }
         }
 
+        /**
+         * This matcher will match most text, but there may be special cases where it will
+         * miss as we can't account for all possible future semantic properties.
+         */
         val textMatcher: MaskMatcher = object : MaskMatcher {
             override fun isMatch(node: SemanticsNode): Boolean {
                 return node.config.contains(SemanticsProperties.Text)
             }
         }
 
+        /**
+         * This matcher will match all items having the semantic property [SemanticsProperties.Password]
+         * and all text or context descriptions that have substring matches with any of the [sensitiveKeywords]
+         */
         val sensitiveMatcher: MaskMatcher = object : MaskMatcher {
             override fun isMatch(node: SemanticsNode): Boolean {/**/
                 if (node.config.contains(SemanticsProperties.Password)) {
@@ -62,29 +81,90 @@ data class PrivacyProfile private constructor(
             }
         }
 
-        // cheaper matchers first to short circuit earlier in the process
+        /**
+         * The list of built in matchers.
+         */
         val builtInMatchers = listOf(textInputMatcher, textMatcher, sensitiveMatcher)
 
+        /**
+         * A [PrivacyProfile] that will perform no masking.
+         *
+         * @sample
+         * ```kotlin
+         * ReplayInstrumentation(
+         *     options = ReplayOptions(
+         *         privacyProfile = PrivacyProfile.noMasking()
+         *     )
+         * )
+         * ```
+         */
         fun noMasking() = PrivacyProfile(
             maskMatchers = emptyList(),
         )
 
-        fun strict(additionalMaskMatchers: List<MaskMatcher> = emptyList()) = PrivacyProfile(
+        /**
+         * A [PrivacyProfile] that uses [builtInMatchers] plus any additional [MaskMatcher]s provided.
+         *
+         * Matchers should not do heavy work, should execute synchronously, and not dispatch to other
+         * threads for performance reasons.  If you add a matcher and notice jitter, this may be
+         * the cause.
+         *
+         * @sample
+         * ```kotlin
+         * ReplayInstrumentation(
+         *     options = ReplayOptions(
+         *         privacyProfile = PrivacyProfile.optIn(listOf(PrivacyProfile.sensitiveMatcher))
+         *     )
+         * )
+         * ```
+         *
+         * @param additionalMatchers additional matchers that will also run after built in matchers
+         */
+        fun strict(additionalMatchers: List<MaskMatcher> = emptyList()) = PrivacyProfile(
             maskMatchers = buildList {
                 addAll(builtInMatchers)
-                addAll(additionalMaskMatchers)
+                addAll(additionalMatchers)
             },
         )
 
-        fun optIn(maskMatchers: List<MaskMatcher>) = PrivacyProfile(
-            maskMatchers = maskMatchers,
+        /**
+         * A [PrivacyProfile] that uses only the provided [MaskMatcher]s
+         *
+         * @sample
+         * ```kotlin
+         * ReplayInstrumentation(
+         *     options = ReplayOptions(
+         *         privacyProfile = PrivacyProfile.optIn(listOf(PrivacyProfile.sensitiveMatcher))
+         *     )
+         * )
+         * ```
+         *
+         * @param matchers the matchers to use
+         */
+        fun optIn(matchers: List<MaskMatcher>) = PrivacyProfile(
+            maskMatchers = matchers,
         )
 
-        fun optOut(unmaskMatchers: List<MaskMatcher>) = PrivacyProfile(
-            maskMatchers = builtInMatchers.filter { it !in unmaskMatchers },
+        /**
+         * A [PrivacyProfile] that uses all [builtInMatchers] except those provided.
+         *
+         * @sample
+         * ```kotlin
+         * ReplayInstrumentation(
+         *     options = ReplayOptions(
+         *         privacyProfile = PrivacyProfile.optOut(listOf(PrivacyProfile.textMatcher))
+         *     )
+         * )
+         * ```
+         *
+         * @param matchers the matchers to NOT use
+         */
+        fun optOut(matchers: List<MaskMatcher>) = PrivacyProfile(
+            maskMatchers = builtInMatchers.filter { it !in matchers },
         )
 
-        val sensitiveKeywords = listOf(
+        // this list of sensitive keywords is used to detect sensitive content descriptions
+        private val sensitiveKeywords = listOf(
             "sensitive",
             "private",
             "name",
@@ -96,7 +176,7 @@ data class PrivacyProfile private constructor(
             "address",
             "street",
             "dob",
-            "birthdate",
+            "birth",
             "password",
             "account",
             "ssn",

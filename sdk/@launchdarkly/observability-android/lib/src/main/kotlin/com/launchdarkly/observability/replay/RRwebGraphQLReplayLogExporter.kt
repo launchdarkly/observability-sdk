@@ -1,6 +1,5 @@
 package com.launchdarkly.observability.replay
 
-import android.util.Log
 import com.launchdarkly.observability.network.GraphQLClient
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.sdk.common.CompletableResultCode
@@ -170,6 +169,7 @@ class RRwebGraphQLReplayLogExporter(
             
             // record last sent state only after successful completion
             lastSentState = LastSentState(sessionId = capture.session, height = capture.origHeight, width = capture.origWidth)
+
             true
         } catch (e: Exception) {
             // TODO: O11Y-627 - pass in logger to implementation and use here

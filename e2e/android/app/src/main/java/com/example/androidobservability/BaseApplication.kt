@@ -1,6 +1,6 @@
 package com.example.androidobservability
 
-import PrivacyProfile.Companion.textInputMatcher
+import PrivacyProfile
 import android.app.Application
 import com.launchdarkly.observability.api.Options
 import com.launchdarkly.observability.client.TelemetryInspector
@@ -23,7 +23,7 @@ open class BaseApplication : Application() {
     companion object {
         // TODO O11Y-376: Update this credential to be driven by env variable or gradle property
         // Set LAUNCHDARKLY_MOBILE_KEY to your LaunchDarkly SDK mobile key.
-        const val LAUNCHDARKLY_MOBILE_KEY = "mob-a4328fa9-51e7-4a3d-bb0e-d5ce47464fc6"
+        const val LAUNCHDARKLY_MOBILE_KEY = "MOBILE_KEY_GOES_HERE"
     }
 
     var pluginOptions = Options(
@@ -36,7 +36,7 @@ open class BaseApplication : Application() {
         instrumentations = listOf(
             ReplayInstrumentation(
                 options = ReplayOptions(
-                    privacyProfile = PrivacyProfile.strict()
+                    privacyProfile = PrivacyProfile.optIn(listOf(PrivacyProfile.sensitiveMatcher))
                 )
             )
         ),
