@@ -69,6 +69,7 @@ export type BrowserTracingConfig = {
 	environment?: string
 	networkRecordingOptions?: NetworkRecordingOptions
 	serviceName?: string
+	serviceVersion?: string
 	tracingOrigins?: boolean | (string | RegExp)[]
 	urlBlocklist?: string[]
 	eventNames?: EventName[]
@@ -142,6 +143,7 @@ export const setupBrowserTracing = (
 	const resource = new Resource({
 		[SemanticAttributes.ATTR_SERVICE_NAME]:
 			config.serviceName ?? 'highlight-browser',
+		[SemanticAttributes.ATTR_SERVICE_VERSION]: config.serviceVersion,
 		'deployment.environment.name': environment,
 		'highlight.project_id': config.projectId,
 		[SemanticAttributes.ATTR_USER_AGENT_ORIGINAL]: navigator.userAgent,

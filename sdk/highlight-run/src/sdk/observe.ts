@@ -136,6 +136,7 @@ export class ObserveSDK implements Observe {
 							: undefined,
 					tracingOrigins: this._options?.tracingOrigins,
 					serviceName: this._options?.serviceName ?? 'browser',
+					serviceVersion: this._options?.version ?? 'browser',
 					instrumentations: this._options?.otel?.instrumentations,
 					eventNames: this._options?.otel?.eventNames,
 				},
