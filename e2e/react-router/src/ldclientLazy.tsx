@@ -8,6 +8,7 @@ const observabilitySettings: ConstructorParameters<typeof Observability>[0] = {
 		recordHeadersAndBody: true,
 	},
 	serviceName: 'ryan-test',
+	version: 'my-version',
 	backendUrl: 'http://localhost:8082/public',
 	otel: {
 		otlpEndpoint: 'http://localhost:4318',
