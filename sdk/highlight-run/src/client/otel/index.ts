@@ -95,10 +95,7 @@ export const setupBrowserTracing = (
 	config: BrowserTracingConfig,
 	sampler: ExportSampler,
 ) => {
-	if (
-		providers.tracerProvider !== undefined &&
-		providers.meterProvider !== undefined
-	) {
+	if (providers.tracerProvider || providers.meterProvider) {
 		console.warn('OTEL already initialized. Skipping...')
 		return
 	}
@@ -424,7 +421,6 @@ export const shutdown = async () => {
 	await Promise.allSettled([
 		(async () => {
 			if (providers.tracerProvider) {
-				await providers.tracerProvider.forceFlush()
 				await providers.tracerProvider.shutdown()
 				providers.tracerProvider = undefined
 			} else {
@@ -435,7 +431,6 @@ export const shutdown = async () => {
 		})(),
 		(async () => {
 			if (providers.meterProvider) {
-				await providers.meterProvider.forceFlush()
 				await providers.meterProvider.shutdown()
 				providers.meterProvider = undefined
 			} else {
