@@ -1,7 +1,6 @@
 package com.example.androidobservability
 
 import PrivacyProfile.Companion.textInputMatcher
-import PrivacyProfile.Companion.textMatcher
 import android.app.Application
 import com.launchdarkly.observability.api.Options
 import com.launchdarkly.observability.client.TelemetryInspector
@@ -37,7 +36,7 @@ open class BaseApplication : Application() {
         instrumentations = listOf(
             ReplayInstrumentation(
                 options = ReplayOptions(
-                    privacyProfile = PrivacyProfile.optIn(listOf(textMatcher))
+                    privacyProfile = PrivacyProfile.strict()
                 )
             )
         ),

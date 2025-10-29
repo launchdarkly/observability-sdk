@@ -19,8 +19,6 @@ import android.view.ViewGroup
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsOwner
-import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.semantics.getOrNull
 import io.opentelemetry.android.session.SessionManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -152,14 +150,13 @@ class CaptureSource(
                                 // Offload heavy bitmap work to a background dispatcher
                                 CoroutineScope(Dispatchers.Default).launch {
                                     try {
-                                        val postMask = bitmap;
                                         // TODO: O11Y-620 - masking
-//                                        val postMask: Bitmap =
-//                                            if (privacyProfile == PrivacyProfile.STRICT) {
-//                                                maskSensitiveAreas(bitmap, activity, maskMatchers)
-//                                            } else {
-//                                                bitmap
-//                                            }
+                                        val postMask: Bitmap =
+                                            if (maskMatchers.isNotEmpty()) {
+                                                maskSensitiveAreas(bitmap, activity, maskMatchers)
+                                            } else {
+                                                bitmap
+                                            }
 
                                         // TODO: O11Y-625 - optimize memory allocations here, re-use byte arrays and such
                                         val outputStream = ByteArrayOutputStream()
@@ -212,7 +209,7 @@ class CaptureSource(
         val maskedBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true)
         val canvas = Canvas(maskedBitmap)
         val paint = Paint().apply {
-            color = Color.BLACK
+            color = Color.GRAY
             style = Paint.Style.FILL
         }
 
@@ -220,7 +217,7 @@ class CaptureSource(
         val start = System.nanoTime()
         val sensitiveComposeRects = findSensitiveComposeAreasFromActivity(activity, maskMatchers)
         val end = System.nanoTime()
-        Log.d("Todd benchmark", (end - start).toString())
+        Log.d("benchmark", (end - start).toString())
 
         // Mask sensitive Compose areas found via semantics
         sensitiveComposeRects.forEach { composeRect ->
@@ -251,7 +248,7 @@ class CaptureSource(
             // Process each ComposeView to find sensitive areas
             composeViews.forEach { composeView ->
                 val semanticsOwner = getSemanticsOwner(composeView)
-                val rootSemanticsNode = semanticsOwner?.rootSemanticsNode
+                val rootSemanticsNode = semanticsOwner?.unmergedRootSemanticsNode
                 if (rootSemanticsNode != null) {
                     val sensitiveRects = findSensitiveComposeAreas(rootSemanticsNode, composeView, matchers)
                     allSensitiveRects.addAll(sensitiveRects)
@@ -346,6 +343,8 @@ class CaptureSource(
         for (matcher in matchers) {
             if (matcher.isMatch(node)) {
                 // Convert bounds to absolute coordinates
+
+//                bounds in window is slow
                 val boundsInWindow = node.boundsInWindow
                 val absoluteRect = ComposeRect(
                     left = boundsInWindow.left,
@@ -359,6 +358,7 @@ class CaptureSource(
         }
 
         // Recursively traverse all children
+//        children call is slow
         node.children.forEach { child ->
             traverseSemanticNode(child, sensitiveRects, composeView, matchers)
         }

@@ -11,10 +11,11 @@ data class PrivacyProfile private constructor(
 
         val textInputMatcher: MaskMatcher = object : MaskMatcher {
             override fun isMatch(node: SemanticsNode): Boolean {
-                return node.config.contains(SemanticsProperties.EditableText) ||
-                        node.config.contains(SemanticsActions.SetText) ||
-                        node.config.contains(SemanticsActions.PasteText) ||
-                        node.config.contains(SemanticsActions.InsertTextAtCursor)
+                val config = node.config;
+                return config.contains(SemanticsProperties.EditableText) ||
+                        config.contains(SemanticsActions.SetText) ||
+                        config.contains(SemanticsActions.PasteText) ||
+                        config.contains(SemanticsActions.InsertTextAtCursor)
             }
         }
 
@@ -61,7 +62,7 @@ data class PrivacyProfile private constructor(
             }
         }
 
-        // TODO: make sensitiveMatcher last as it is the most expensive and cheaper options short circuiting early is better
+        // cheaper matchers first to short circuit earlier in the process
         val builtInMatchers = listOf(textInputMatcher, textMatcher, sensitiveMatcher)
 
         fun noMasking() = PrivacyProfile(
