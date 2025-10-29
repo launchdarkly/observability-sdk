@@ -58,6 +58,7 @@ import version from '../../version'
 import { ExportSampler } from './sampling/ExportSampler'
 import { getPersistentSessionSecureID } from '../utils/sessionStorage/highlightSession'
 import type { EventName } from '@opentelemetry/instrumentation-user-interaction'
+
 export type Callback = (span?: Span) => any
 
 export type BrowserTracingConfig = {
@@ -94,7 +95,7 @@ export const setupBrowserTracing = (
 	config: BrowserTracingConfig,
 	sampler: ExportSampler,
 ) => {
-	if (providers.tracerProvider !== undefined) {
+	if (providers.tracerProvider || providers.meterProvider) {
 		console.warn('OTEL already initialized. Skipping...')
 		return
 	}
@@ -417,18 +418,28 @@ export const getActiveSpanContext = () => {
 }
 
 export const shutdown = async () => {
-	if (providers.tracerProvider) {
-		await providers.tracerProvider.forceFlush()
-		await providers.tracerProvider.shutdown()
-	} else {
-		console.warn('OTEL shutdown called without initialized tracerProvider.')
-	}
-	if (providers.meterProvider) {
-		await providers.meterProvider.forceFlush()
-		await providers.meterProvider.shutdown()
-	} else {
-		console.warn('OTEL shutdown called without initialized meterProvider.')
-	}
+	await Promise.allSettled([
+		(async () => {
+			if (providers.tracerProvider) {
+				await providers.tracerProvider.shutdown()
+				providers.tracerProvider = undefined
+			} else {
+				console.warn(
+					'OTEL shutdown called without initialized tracerProvider.',
+				)
+			}
+		})(),
+		(async () => {
+			if (providers.meterProvider) {
+				await providers.meterProvider.shutdown()
+				providers.meterProvider = undefined
+			} else {
+				console.warn(
+					'OTEL shutdown called without initialized meterProvider.',
+				)
+			}
+		})(),
+	])
 }
 
 const enhanceSpanWithHttpRequestAttributes = (
