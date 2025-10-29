@@ -21,6 +21,7 @@ const sessionReplaySettings: ConstructorParameters<typeof SessionReplay>[0] = {
 	inlineStylesheet: true,
 	privacySetting: 'none',
 	serviceName: 'ryan-test',
+	version: 'my-version',
 	backendUrl: 'http://localhost:8082/public',
 	manualStart: true,
 	enableCanvasRecording: true,
