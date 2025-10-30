@@ -1,5 +1,13 @@
 # highlight.run
 
+## [9.22.4](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-9.22.3...highlight.run-9.22.4) (2025-10-30)
+
+
+### Bug Fixes
+
+* correctly report version on webjs otel data ([#278](https://github.com/launchdarkly/observability-sdk/issues/278)) ([f1a2c74](https://github.com/launchdarkly/observability-sdk/commit/f1a2c74697744a7da5034ce2d375648bc32deb69))
+* H.stop should stop otel exporters ([#273](https://github.com/launchdarkly/observability-sdk/issues/273)) ([2e5e96b](https://github.com/launchdarkly/observability-sdk/commit/2e5e96b028ef8e87dafbce8d8a52d7126c567578))
+
 ## [9.22.3](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-9.22.2...highlight.run-9.22.3) (2025-10-24)
 
 
