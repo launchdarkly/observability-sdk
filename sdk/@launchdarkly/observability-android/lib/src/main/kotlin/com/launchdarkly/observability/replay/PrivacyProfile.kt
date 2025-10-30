@@ -113,7 +113,7 @@ data class PrivacyProfile private constructor(
          * ```kotlin
          * ReplayInstrumentation(
          *     options = ReplayOptions(
-         *         privacyProfile = PrivacyProfile.optIn(listOf(PrivacyProfile.sensitiveMatcher))
+         *         privacyProfile = PrivacyProfile.strict()
          *     )
          * )
          * ```
