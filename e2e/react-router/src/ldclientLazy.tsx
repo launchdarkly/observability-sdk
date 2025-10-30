@@ -8,6 +8,7 @@ const observabilitySettings: ConstructorParameters<typeof Observability>[0] = {
 		recordHeadersAndBody: true,
 	},
 	serviceName: 'ryan-test',
+	version: 'my-version',
 	backendUrl: 'http://localhost:8082/public',
 	otel: {
 		otlpEndpoint: 'http://localhost:4318',
@@ -21,6 +22,7 @@ const sessionReplaySettings: ConstructorParameters<typeof SessionReplay>[0] = {
 	inlineStylesheet: true,
 	privacySetting: 'none',
 	serviceName: 'ryan-test',
+	version: 'my-version',
 	backendUrl: 'http://localhost:8082/public',
 	manualStart: true,
 	enableCanvasRecording: true,
