@@ -127,6 +127,20 @@ class MainActivity : ComponentActivity() {
                         }
                         Button(
                             onClick = {
+                                viewModel.startForegroundService()
+                            }
+                        ) {
+                            Text("Start Foreground Service")
+                        }
+                        Button(
+                            onClick = {
+                                viewModel.startBackgroundService()
+                            }
+                        ) {
+                            Text("Start Background Service")
+                        }
+                        Button(
+                            onClick = {
                                 viewModel.triggerNestedSpans()
                             }
                         ) {
