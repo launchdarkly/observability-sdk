@@ -277,7 +277,7 @@ class InstrumentationManager(
         val gauge = gaugeCache.getOrPut(metric.name) {
             otelMeter.gaugeBuilder(metric.name).build()
         }
-        gauge.set(metric.value, metric.attributes)
+        gauge.set(metric.value, metric.attributes.addSessionId())
     }
 
     fun recordCount(metric: Metric) {
@@ -285,7 +285,7 @@ class InstrumentationManager(
         val counter = counterCache.getOrPut(metric.name) {
             otelMeter.counterBuilder(metric.name).build()
         }
-        counter.add(metric.value.toLong(), metric.attributes)
+        counter.add(metric.value.toLong(), metric.attributes.addSessionId())
     }
 
     fun recordIncr(metric: Metric) {
@@ -293,21 +293,21 @@ class InstrumentationManager(
             otelMeter.counterBuilder(metric.name).build()
         }
         // It increments the value until the metric is exported, then it’s reset.
-        counter.add(1, metric.attributes)
+        counter.add(1, metric.attributes.addSessionId())
     }
 
     fun recordHistogram(metric: Metric) {
         val histogram = histogramCache.getOrPut(metric.name) {
             otelMeter.histogramBuilder(metric.name).build()
         }
-        histogram.record(metric.value, metric.attributes)
+        histogram.record(metric.value, metric.attributes.addSessionId())
     }
 
     fun recordUpDownCounter(metric: Metric) {
         val upDownCounter = upDownCounterCache.getOrPut(metric.name) {
             otelMeter.upDownCounterBuilder(metric.name).build()
         }
-        upDownCounter.add(metric.value.toLong(), metric.attributes)
+        upDownCounter.add(metric.value.toLong(), metric.attributes.addSessionId())
     }
 
     fun recordLog(message: String, severity: Severity, attributes: Attributes) {
@@ -385,12 +385,15 @@ class InstrumentationManager(
         }
     }
 
+    private fun Attributes.addSessionId() = this.toBuilder().put(SESSION_ID_ATTRIBUTE, otelRUM.rumSessionId).build()
+
     companion object {
         private const val METRICS_PATH = "/v1/metrics"
         private const val LOGS_PATH = "/v1/logs"
         private const val TRACES_PATH = "/v1/traces"
         private const val INSTRUMENTATION_SCOPE_NAME = "com.launchdarkly.observability"
         const val ERROR_SPAN_NAME = "highlight.error"
+        const val SESSION_ID_ATTRIBUTE = "session.id"
         private const val BATCH_MAX_QUEUE_SIZE = 100
         private const val BATCH_SCHEDULE_DELAY_MS = 1000L
         private const val BATCH_EXPORTER_TIMEOUT_MS = 5000L
