@@ -9,7 +9,9 @@ import com.launchdarkly.sdk.android.Components
 import com.launchdarkly.sdk.android.LDClient
 import com.launchdarkly.sdk.android.LDConfig
 import com.launchdarkly.observability.plugin.Observability
+import com.launchdarkly.observability.replay.PrivacyProfile
 import com.launchdarkly.observability.replay.ReplayInstrumentation
+import com.launchdarkly.observability.replay.ReplayOptions
 import com.launchdarkly.sdk.android.LDAndroidLogging
 import com.launchdarkly.sdk.android.integrations.Plugin
 import io.opentelemetry.api.common.AttributeKey
@@ -32,7 +34,11 @@ open class BaseApplication : Application() {
         logAdapter = LDAndroidLogging.adapter(),
         // TODO: consider these being factories so that the obs plugin can pass instantiation data, log adapter
         instrumentations = listOf(
-            ReplayInstrumentation()
+            ReplayInstrumentation(
+                options = ReplayOptions(
+                    privacyProfile = PrivacyProfile(maskText = false)
+                )
+            )
         ),
     )
 

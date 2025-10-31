@@ -12,14 +12,13 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Base64
+import android.view.Choreographer
 import android.view.PixelCopy
 import android.view.View
 import android.view.ViewGroup
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsOwner
-import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.semantics.getOrNull
 import io.opentelemetry.android.session.SessionManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -42,9 +41,10 @@ import androidx.compose.ui.geometry.Rect as ComposeRect
  */
 class CaptureSource(
     private val sessionManager: SessionManager,
-    private val privacyProfile: PrivacyProfile,
+    private val maskMatchers: List<MaskMatcher>,
     // TODO: O11Y-628 - add captureQuality options
-) : Application.ActivityLifecycleCallbacks {
+) :
+    Application.ActivityLifecycleCallbacks {
 
     private var _activity: Activity? = null
 
@@ -110,77 +110,79 @@ class CaptureSource(
         val activity = _activity ?: return@withContext null
 
         try {
-            val window = activity.window
-            val decorView = window.decorView
-            val decorViewWidth = decorView.width
-            val decorViewHeight = decorView.height
-
-            val rect = Rect(0, 0, decorViewWidth, decorViewHeight)
-
-            // protect against race condition where decor view has no size
-            if (decorViewWidth <= 0 || decorViewHeight <= 0) {
-                return@withContext null
-            }
-
-            // TODO: O11Y-625 - optimize memory allocations
-            // TODO: O11Y-625 - see if holding bitmap is more efficient than base64 encoding immediately after compression
-            // TODO: O11Y-628 - use captureQuality option for scaling and adjust this bitmap accordingly, may need to investigate power of 2 rounding for performance
-            // Create a bitmap with the window dimensions
-            val bitmap = Bitmap.createBitmap(decorViewWidth, decorViewHeight, Bitmap.Config.ARGB_8888)
-
-            // Use PixelCopy to capture the window content
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val window = activity.window
+                val decorView = window.decorView
+                val decorViewWidth = decorView.width
+                val decorViewHeight = decorView.height
+
+                val rect = Rect(0, 0, decorViewWidth, decorViewHeight)
+
+                // protect against race condition where decor view has no size
+                if (decorViewWidth <= 0 || decorViewHeight <= 0) {
+                    return@withContext null
+                }
+
+                // TODO: O11Y-625 - optimize memory allocations
+                // TODO: O11Y-625 - see if holding bitmap is more efficient than base64 encoding immediately after compression
+                // TODO: O11Y-628 - use captureQuality option for scaling and adjust this bitmap accordingly, may need to investigate power of 2 rounding for performance
+                // Create a bitmap with the window dimensions
+                val bitmap = Bitmap.createBitmap(decorViewWidth, decorViewHeight, Bitmap.Config.ARGB_8888)
+
                 suspendCancellableCoroutine { continuation ->
-                    // TODO: O11Y-624 - read PixelCopy exception recommendations and adjust logic to account for such cases
-                    PixelCopy.request(
-                        window,
-                        rect,
-                        bitmap,
-                        { result ->
-                            // record attributes immediately to provide accurate stamping
-                            val timestamp = System.currentTimeMillis()
-                            val session = sessionManager.getSessionId()
 
-                            if (result == PixelCopy.SUCCESS) {
-                                // Offload heavy bitmap work to a background dispatcher
-                                CoroutineScope(Dispatchers.Default).launch {
-                                    try {
-                                        val postMask = bitmap;
-                                        // TODO: O11Y-620 - masking
-//                                        val postMask: Bitmap =
-//                                            if (privacyProfile == PrivacyProfile.STRICT) {
-//                                                maskSensitiveAreas(bitmap, activity)
-//                                            } else {
-//                                                bitmap
-//                                            }
+                    // Synchronize with UI rendering frame
+                    Choreographer.getInstance().postFrameCallback {
+                        val sensitiveComposeRects =
+                            findSensitiveComposeAreasFromActivity(activity, maskMatchers)
 
-                                        // TODO: O11Y-625 - optimize memory allocations here, re-use byte arrays and such
-                                        val outputStream = ByteArrayOutputStream()
-                                        // TODO: O11Y-628 - calculate quality using captureQuality options
-                                        postMask.compress(Bitmap.CompressFormat.WEBP, 30, outputStream)
-                                        val byteArray = outputStream.toByteArray()
-                                        val compressedImage =
-                                            Base64.encodeToString(byteArray, Base64.NO_WRAP)
+                        // TODO: O11Y-624 - read PixelCopy exception recommendations and adjust logic to account for such cases
+                        PixelCopy.request(
+                            window,
+                            rect,
+                            bitmap,
+                            { result ->
+                                val timestamp = System.currentTimeMillis()
+                                val session = sessionManager.getSessionId()
 
-                                        val capture = Capture(
-                                            imageBase64 = compressedImage,
-                                            origWidth = decorViewWidth,
-                                            origHeight = decorViewHeight,
-                                            timestamp = timestamp,
-                                            session = session,
-                                        )
-                                        continuation.resume(capture)
-                                    } catch (e: Exception) {
-                                        continuation.resumeWithException(e)
+                                if (result == PixelCopy.SUCCESS) {
+                                    CoroutineScope(Dispatchers.Default).launch {
+                                        try {
+                                            val postMask = if (maskMatchers.isNotEmpty()) {
+                                                maskSensitiveRects(bitmap, sensitiveComposeRects)
+                                            } else {
+                                                bitmap
+                                            }
+
+                                            // TODO: O11Y-625 - optimize memory allocations here, re-use byte arrays and such
+                                            val outputStream = ByteArrayOutputStream()
+                                            // TODO: O11Y-628 - calculate quality using captureQuality options
+                                            postMask.compress(Bitmap.CompressFormat.WEBP, 30, outputStream)
+                                            val byteArray = outputStream.toByteArray()
+                                            val compressedImage = Base64.encodeToString(byteArray, Base64.NO_WRAP)
+
+                                            val capture = Capture(
+                                                imageBase64 = compressedImage,
+                                                origWidth = decorViewWidth,
+                                                origHeight = decorViewHeight,
+                                                timestamp = timestamp,
+                                                session = session
+                                            )
+                                            continuation.resume(capture)
+                                        } catch (e: Exception) {
+                                            continuation.resumeWithException(e)
+                                        }
                                     }
+                                } else {
+                                    // TODO: O11Y-624 - implement handling/shutdown for errors and unsupported API levels
+                                    continuation.resumeWithException(
+                                        Exception("PixelCopy failed with result: $result")
+                                    )
                                 }
-                            } else {
-                                // TODO: O11Y-624 - implement handling/shutdown for errors and unsupported API levels
-                                continuation.resumeWithException(Exception("PixelCopy failed with result: $result"))
-                            }
-                        },
-                        Handler(Looper.getMainLooper()) // Handler for main thread
-                    )
+                            },
+                            Handler(Looper.getMainLooper())
+                        )
+                    }
                 }
             } else {
                 // TODO: O11Y-624 - implement handling/shutdown for errors and unsupported API levels
@@ -193,26 +195,25 @@ class CaptureSource(
     }
 
     /**
-     * Applies masking rectangles to the provided [bitmap] by inspecting the provided [activity] for
-     * content that needs to be masked.
+     * Applies masking rectangles to the provided [bitmap] using the provided [sensitiveRects].
      *
      * @param bitmap The bitmap to mask
-     * @param activity The activity that the bitmap was captured from.
+     * @param sensitiveRects rects that will be masked
      */
-    private fun maskSensitiveAreas(bitmap: Bitmap, activity: Activity): Bitmap {
+    private fun maskSensitiveRects(bitmap: Bitmap, sensitiveRects: List<ComposeRect>): Bitmap {
+        if (sensitiveRects.isEmpty()) {
+            return bitmap
+        }
+
         // TODO: O11Y-625 - remove this bitmap copy if possible for memory optimization purposes
         val maskedBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true)
         val canvas = Canvas(maskedBitmap)
         val paint = Paint().apply {
-            color = Color.BLACK
+            color = Color.GRAY
             style = Paint.Style.FILL
         }
 
-        // Find sensitive areas using Compose semantics
-        val sensitiveComposeRects = findSensitiveComposeAreasFromActivity(activity)
-
-        // Mask sensitive Compose areas found via semantics
-        sensitiveComposeRects.forEach { composeRect ->
+        sensitiveRects.forEach { composeRect ->
             val rect = Rect(
                 composeRect.left.toInt(),
                 composeRect.top.toInt(),
@@ -230,7 +231,7 @@ class CaptureSource(
      *
      * @return a list of rects that represent sensitive areas that need to be masked
      */
-    private fun findSensitiveComposeAreasFromActivity(activity: Activity): List<ComposeRect> {
+    private fun findSensitiveComposeAreasFromActivity(activity: Activity, matchers: List<MaskMatcher>): List<ComposeRect> {
         val allSensitiveRects = mutableListOf<ComposeRect>()
 
         try {
@@ -240,9 +241,9 @@ class CaptureSource(
             // Process each ComposeView to find sensitive areas
             composeViews.forEach { composeView ->
                 val semanticsOwner = getSemanticsOwner(composeView)
-                val rootSemanticsNode = semanticsOwner?.rootSemanticsNode
+                val rootSemanticsNode = semanticsOwner?.unmergedRootSemanticsNode
                 if (rootSemanticsNode != null) {
-                    val sensitiveRects = findSensitiveComposeAreas(rootSemanticsNode, composeView)
+                    val sensitiveRects = findSensitiveComposeAreas(rootSemanticsNode, composeView, matchers)
                     allSensitiveRects.addAll(sensitiveRects)
                 }
             }
@@ -306,16 +307,16 @@ class CaptureSource(
      */
     private fun findSensitiveComposeAreas(
         rootSemanticsNode: SemanticsNode,
-        composeView: ComposeView
+        composeView: ComposeView,
+        matchers: List<MaskMatcher>
     ): List<ComposeRect> {
         val sensitiveRects = mutableListOf<ComposeRect>()
 
         try {
             // Recursively traverse the semantic node tree to find sensitive areas
-            traverseSemanticNode(rootSemanticsNode, sensitiveRects, composeView)
+            traverseSemanticNode(rootSemanticsNode, sensitiveRects, composeView, matchers)
 
         } catch (e: Exception) {
-            // Handle cases where semantic node traversal fails
             // This could happen if the semantic tree is not available or corrupted
         }
 
@@ -328,35 +329,26 @@ class CaptureSource(
     private fun traverseSemanticNode(
         node: SemanticsNode,
         sensitiveRects: MutableList<ComposeRect>,
-        composeView: ComposeView
+        composeView: ComposeView,
+        matchers: List<MaskMatcher>
     ) {
-        // Check if this node is marked as sensitive
-        if (isSensitiveNode(node)) {
-            // Convert bounds to absolute coordinates
-            val boundsInWindow = node.boundsInWindow
-            val absoluteRect = ComposeRect(
-                left = boundsInWindow.left,
-                top = boundsInWindow.top,
-                right = boundsInWindow.right,
-                bottom = boundsInWindow.bottom
-            )
-            sensitiveRects.add(absoluteRect)
+        for (matcher in matchers) {
+            if (matcher.isMatch(node)) {
+                val boundsInWindow = node.boundsInWindow
+                val absoluteRect = ComposeRect(
+                    left = boundsInWindow.left,
+                    top = boundsInWindow.top,
+                    right = boundsInWindow.right,
+                    bottom = boundsInWindow.bottom
+                )
+                sensitiveRects.add(absoluteRect)
+                break
+            }
         }
 
         // Recursively traverse all children
         node.children.forEach { child ->
-            traverseSemanticNode(child, sensitiveRects, composeView)
+            traverseSemanticNode(child, sensitiveRects, composeView, matchers)
         }
-    }
-
-    /**
-     * Check if a semantic node contains sensitive content based on test tags or content descriptions.
-     */
-    private fun isSensitiveNode(node: SemanticsNode): Boolean {
-        // TODO: O11Y-620 - refactor to utilize generic MaskMatchers
-
-        // Check for content description containing "sensitive"
-        val contentDescriptions = node.config.getOrNull(SemanticsProperties.ContentDescription)
-        return contentDescriptions?.any { it.contains("sensitive", ignoreCase = true) } == true
     }
 }

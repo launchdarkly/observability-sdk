@@ -78,8 +78,7 @@ class ReplayInstrumentation(
 
     override fun install(ctx: InstallationContext) {
         _otelLogger = ctx.openTelemetry.logsBridge.get(INSTRUMENTATION_SCOPE_NAME)
-
-        _captureSource = CaptureSource(ctx.sessionManager, options.privacyProfile)
+        _captureSource = CaptureSource(ctx.sessionManager, options.privacyProfile.asMatchersList())
         _captureSource.attachToApplication(ctx.application)
 
         // TODO: O11Y-621 - don't use global scope

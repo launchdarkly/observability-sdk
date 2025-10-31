@@ -16,7 +16,7 @@ data class ReplayOptions(
     val serviceVersion: String = BuildConfig.OBSERVABILITY_SDK_VERSION,
     val backendUrl: String = DEFAULT_BACKEND_URL,
     val debug: Boolean = false,
-    val privacyProfile: PrivacyProfile = PrivacyProfile.STRICT,
+    val privacyProfile: PrivacyProfile = PrivacyProfile(),
     val capturePeriodMillis: Long = 1000, // defaults to ever 1 second
     // TODO O11Y-623 - Add storage options
 )
