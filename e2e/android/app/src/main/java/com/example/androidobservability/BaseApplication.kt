@@ -36,7 +36,7 @@ open class BaseApplication : Application() {
         instrumentations = listOf(
             ReplayInstrumentation(
                 options = ReplayOptions(
-                    privacyProfile = PrivacyProfile.optIn(listOf(PrivacyProfile.sensitiveMatcher))
+                    privacyProfile = PrivacyProfile(maskText = false)
                 )
             )
         ),
