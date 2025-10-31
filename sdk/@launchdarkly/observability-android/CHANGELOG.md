@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.13.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.12.0...launchdarkly-observability-android-0.13.0) (2025-10-31)
+
+
+### Features
+
+* Android observability session replay masking support ([#276](https://github.com/launchdarkly/observability-sdk/issues/276)) ([c34670b](https://github.com/launchdarkly/observability-sdk/commit/c34670b856a89176fc0e9b6eae0c32d349f2887d))
+* O11Y-677 - Add session.id to all metrics ([#279](https://github.com/launchdarkly/observability-sdk/issues/279)) ([1927107](https://github.com/launchdarkly/observability-sdk/commit/19271077576523c470e11ad6f39c22d506f65768))
+
 ## [0.12.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.11.0...launchdarkly-observability-android-0.12.0) (2025-10-24)
 
 
