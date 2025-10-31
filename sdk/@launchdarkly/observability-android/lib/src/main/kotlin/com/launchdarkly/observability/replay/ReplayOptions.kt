@@ -1,6 +1,5 @@
 package com.launchdarkly.observability.replay
 
-import PrivacyProfile
 import com.launchdarkly.observability.BuildConfig
 import com.launchdarkly.observability.api.DEFAULT_BACKEND_URL
 

@@ -110,25 +110,25 @@ class CaptureSource(
         val activity = _activity ?: return@withContext null
 
         try {
-            val window = activity.window
-            val decorView = window.decorView
-            val decorViewWidth = decorView.width
-            val decorViewHeight = decorView.height
-
-            val rect = Rect(0, 0, decorViewWidth, decorViewHeight)
-
-            // protect against race condition where decor view has no size
-            if (decorViewWidth <= 0 || decorViewHeight <= 0) {
-                return@withContext null
-            }
-
-            // TODO: O11Y-625 - optimize memory allocations
-            // TODO: O11Y-625 - see if holding bitmap is more efficient than base64 encoding immediately after compression
-            // TODO: O11Y-628 - use captureQuality option for scaling and adjust this bitmap accordingly, may need to investigate power of 2 rounding for performance
-            // Create a bitmap with the window dimensions
-            val bitmap = Bitmap.createBitmap(decorViewWidth, decorViewHeight, Bitmap.Config.ARGB_8888)
-
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val window = activity.window
+                val decorView = window.decorView
+                val decorViewWidth = decorView.width
+                val decorViewHeight = decorView.height
+
+                val rect = Rect(0, 0, decorViewWidth, decorViewHeight)
+
+                // protect against race condition where decor view has no size
+                if (decorViewWidth <= 0 || decorViewHeight <= 0) {
+                    return@withContext null
+                }
+
+                // TODO: O11Y-625 - optimize memory allocations
+                // TODO: O11Y-625 - see if holding bitmap is more efficient than base64 encoding immediately after compression
+                // TODO: O11Y-628 - use captureQuality option for scaling and adjust this bitmap accordingly, may need to investigate power of 2 rounding for performance
+                // Create a bitmap with the window dimensions
+                val bitmap = Bitmap.createBitmap(decorViewWidth, decorViewHeight, Bitmap.Config.ARGB_8888)
+
                 suspendCancellableCoroutine { continuation ->
 
                     // Synchronize with UI rendering frame
@@ -149,7 +149,7 @@ class CaptureSource(
                                     CoroutineScope(Dispatchers.Default).launch {
                                         try {
                                             val postMask = if (maskMatchers.isNotEmpty()) {
-                                                maskSensitiveAreas(bitmap, sensitiveComposeRects)
+                                                maskSensitiveRects(bitmap, sensitiveComposeRects)
                                             } else {
                                                 bitmap
                                             }
@@ -195,13 +195,16 @@ class CaptureSource(
     }
 
     /**
-     * Applies masking rectangles to the provided [bitmap] by inspecting the provided [activity] for
-     * content that needs to be masked.
+     * Applies masking rectangles to the provided [bitmap] using the provided [sensitiveRects].
      *
      * @param bitmap The bitmap to mask
-     * @param activity The activity that the bitmap was captured from.
+     * @param sensitiveRects rects that will be masked
      */
-    private fun maskSensitiveAreas(bitmap: Bitmap, sensitiveRects: List<ComposeRect>): Bitmap {
+    private fun maskSensitiveRects(bitmap: Bitmap, sensitiveRects: List<ComposeRect>): Bitmap {
+        if (sensitiveRects.isEmpty()) {
+            return bitmap
+        }
+
         // TODO: O11Y-625 - remove this bitmap copy if possible for memory optimization purposes
         val maskedBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true)
         val canvas = Canvas(maskedBitmap)
@@ -210,7 +213,6 @@ class CaptureSource(
             style = Paint.Style.FILL
         }
 
-        // Mask sensitive Compose areas found via semantics
         sensitiveRects.forEach { composeRect ->
             val rect = Rect(
                 composeRect.left.toInt(),

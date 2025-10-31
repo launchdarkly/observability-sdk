@@ -1,6 +1,5 @@
 package com.example.androidobservability
 
-import PrivacyProfile
 import android.app.Application
 import com.launchdarkly.observability.api.Options
 import com.launchdarkly.observability.client.TelemetryInspector
@@ -10,6 +9,7 @@ import com.launchdarkly.sdk.android.Components
 import com.launchdarkly.sdk.android.LDClient
 import com.launchdarkly.sdk.android.LDConfig
 import com.launchdarkly.observability.plugin.Observability
+import com.launchdarkly.observability.replay.PrivacyProfile
 import com.launchdarkly.observability.replay.ReplayInstrumentation
 import com.launchdarkly.observability.replay.ReplayOptions
 import com.launchdarkly.sdk.android.LDAndroidLogging

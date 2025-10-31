@@ -1,8 +1,9 @@
+package com.launchdarkly.observability.replay
+
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
-import com.launchdarkly.observability.replay.MaskMatcher
 
 /**
  * [PrivacyProfile] encapsulates options and functionality related to privacy of session
@@ -40,7 +41,7 @@ data class PrivacyProfile(
          */
         val textInputMatcher: MaskMatcher = object : MaskMatcher {
             override fun isMatch(node: SemanticsNode): Boolean {
-                val config = node.config;
+                val config = node.config
                 return config.contains(SemanticsProperties.EditableText) ||
                         config.contains(SemanticsActions.SetText) ||
                         config.contains(SemanticsActions.PasteText) ||
