@@ -48,6 +48,7 @@ open class BaseApplication : Application() {
     open fun realInit() {
         val observabilityPlugin = Observability(
             application = this@BaseApplication,
+            mobileKey = LAUNCHDARKLY_MOBILE_KEY,
             options = testUrl?.let { pluginOptions.copy(backendUrl = it, otlpEndpoint = it) } ?: pluginOptions
         )
 
