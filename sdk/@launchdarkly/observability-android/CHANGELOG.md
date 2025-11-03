@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.1](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.13.0...launchdarkly-observability-android-0.13.1) (2025-11-03)
+
+
+### Bug Fixes
+
+* O11Y-725 - Bug fix to avoid creating multiple OpenTelemetryRum instances when secondaryMobileKeys are set ([#281](https://github.com/launchdarkly/observability-sdk/issues/281)) ([09b2390](https://github.com/launchdarkly/observability-sdk/commit/09b2390c007bcf309e87a3366754878f63424a85))
+
 ## [0.13.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.12.0...launchdarkly-observability-android-0.13.0) (2025-10-31)
 
 
