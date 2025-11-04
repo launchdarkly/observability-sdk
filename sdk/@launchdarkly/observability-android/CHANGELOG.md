@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.2](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.13.1...launchdarkly-observability-android-0.13.2) (2025-11-04)
+
+
+### Bug Fixes
+
+* O11Y-725 - Return no-op span when not initialized ([#283](https://github.com/launchdarkly/observability-sdk/issues/283)) ([78ee2ec](https://github.com/launchdarkly/observability-sdk/commit/78ee2ec0db87d5326e703b6d5fbbeaaeee011ffe))
+
 ## [0.13.1](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.13.0...launchdarkly-observability-android-0.13.1) (2025-11-03)
 
 
