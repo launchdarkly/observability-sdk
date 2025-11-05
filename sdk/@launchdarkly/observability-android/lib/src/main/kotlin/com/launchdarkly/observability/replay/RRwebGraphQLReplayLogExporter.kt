@@ -58,20 +58,38 @@ class RRwebGraphQLReplayLogExporter(
         coroutineScope.launch {
             try {
                 for (log in logs) {
-                    val capture = extractCaptureFromLog(log)
-                    if (capture != null) {
-                        // TODO: O11Y-624 - investigate if there is a size limit on the push that is imposed server side.
-                        val success =
-                            if (capture.session != lastSentState.sessionId || capture.origHeight != lastSentState.height || capture.origWidth != lastSentState.width) {
-                                // we need to send a full capture if the session id changes or there is a resize/orientation change
-                                sendCaptureFull(capture)
-                            } else {
-                                sendCaptureIncremental(capture)
+                    when (log.attributes.get(AttributeKey.stringKey("event.domain"))) {
+                        "media" -> {
+                            val capture = extractCaptureFromLog(log)
+                            if (capture != null) {
+                                // TODO: O11Y-624 - investigate if there is a size limit on the push that is imposed server side.
+                                val success =
+                                    if (capture.session != lastSentState.sessionId || capture.origHeight != lastSentState.height || capture.origWidth != lastSentState.width) {
+                                        // we need to send a full capture if the session id changes or there is a resize/orientation change
+                                        sendCaptureFull(capture)
+                                    } else {
+                                        sendCaptureIncremental(capture)
+                                    }
+                                if (!success) {
+                                    // Stop processing immediately on first failure
+                                    resultCode.fail()
+                                    return@launch
+                                }
                             }
-                        if (!success) {
-                            // Stop processing immediately on first failure
-                            resultCode.fail()
-                            return@launch
+                        }
+                        "interaction" -> {
+                            val interaction = extractInteractionFromLog(log)
+                            if (interaction != null) {
+                                val success = sendInteraction(interaction)
+                                if (!success) {
+                                    // Stop processing immediately on first failure
+                                    resultCode.fail()
+                                    return@launch
+                                }
+                            }
+                        }
+                        else -> {
+                            // Noop
                         }
                     }
                 }
@@ -109,20 +127,19 @@ class RRwebGraphQLReplayLogExporter(
     }
 
     // Returns null if unable to extract a valid capture from the log record
-    private fun extractCaptureFromLog(log: LogRecordData): Capture? {
+    private fun extractCaptureFromLog(log: LogRecordData): CaptureEvent? {
         val attributes = log.attributes
-        val eventDomain = attributes.get(AttributeKey.stringKey("event.domain"))
         val imageWidth = attributes.get(AttributeKey.longKey("image.width"))
         val imageHeight = attributes.get(AttributeKey.longKey("image.height"))
         val imageData = attributes.get(AttributeKey.stringKey("image.data"))
         val sessionId = attributes.get(AttributeKey.stringKey("session.id"))
 
         // Return null if any required attribute is missing
-        if (eventDomain != "media" || imageWidth == null || imageHeight == null || imageData == null || sessionId == null) {
+        if (imageWidth == null || imageHeight == null || imageData == null || sessionId == null) {
             return null
         }
 
-        return Capture(
+        return CaptureEvent(
             imageBase64 = imageData,
             origHeight = imageHeight.toInt(),
             origWidth = imageWidth.toInt(),
@@ -131,12 +148,36 @@ class RRwebGraphQLReplayLogExporter(
         )
     }
 
+    // Returns null if unable to extract a valid interaction from the log record
+    private fun extractInteractionFromLog(log: LogRecordData): InteractionEvent? {
+        val attributes = log.attributes
+        val x = attributes.get(AttributeKey.longKey("screen.coordinate.x"))
+        val y = attributes.get(AttributeKey.longKey("screen.coordinate.y"))
+        val maxX = attributes.get(AttributeKey.longKey("screen.width"))
+        val maxY = attributes.get(AttributeKey.longKey("screen.height"))
+        val sessionId = attributes.get(AttributeKey.stringKey("session.id"))
+
+        // Return null if any required attribute is missing
+        if (x == null || y == null || maxX == null || maxY == null || sessionId == null) {
+            return null
+        }
+
+        return InteractionEvent(
+            x = x.toInt(),
+            y = y.toInt(),
+            maxX = maxX.toInt(),
+            maxY = maxY.toInt(),
+            timestamp = log.observedTimestampEpochNanos / 1_000_000, // Convert nanoseconds to milliseconds
+            session = sessionId
+        )
+    }
+
     /**
      * Sends an incremental capture. Used after [sendCaptureFull] has already been called for a previous capture in the same session.
      *
-     * @param capture the capture to be sent
+     * @param captureEvent the capture to be sent
      */
-    suspend fun sendCaptureIncremental(capture: Capture): Boolean = withContext(Dispatchers.IO) {
+    suspend fun sendCaptureIncremental(captureEvent: CaptureEvent): Boolean = withContext(Dispatchers.IO) {
         try {
             val eventsBatch = mutableListOf<Event>()
             val timestamp = System.currentTimeMillis()
@@ -144,10 +185,10 @@ class RRwebGraphQLReplayLogExporter(
             // TODO: O11Y-625 - optimize JSON usage for performance since this region of code is essentially static
             val incrementalEvent = Event(
                 type = EventType.INCREMENTAL_SNAPSHOT,
-                timestamp = timestamp,
+                timestamp = captureEvent.timestamp,
                 sid = nextSid(),
                 data = EventDataUnion.CustomEventDataWrapper(
-                    Json.parseToJsonElement("""{"source":9,"id":6,"type":0,"commands":[{"property":"clearRect","args":[0,0,${capture.origWidth},${capture.origHeight}]},{"property":"drawImage","args":[{"rr_type":"ImageBitmap","args":[{"rr_type":"Blob","data":[{"rr_type":"ArrayBuffer","base64":"${capture.imageBase64}"}],"type":"image/jpeg"}]},0,0,${capture.origWidth},${capture.origHeight}]}]}""")
+                    Json.parseToJsonElement("""{"source":9,"id":6,"type":0,"commands":[{"property":"clearRect","args":[0,0,${captureEvent.origWidth},${captureEvent.origHeight}]},{"property":"drawImage","args":[{"rr_type":"ImageBitmap","args":[{"rr_type":"Blob","data":[{"rr_type":"ArrayBuffer","base64":"${captureEvent.imageBase64}"}],"type":"image/jpeg"}]},0,0,${captureEvent.origWidth},${captureEvent.origHeight}]}]}""")
                 )
             )
             eventsBatch.add(incrementalEvent)
@@ -165,10 +206,10 @@ class RRwebGraphQLReplayLogExporter(
                 )
             )
 
-            replayApiService.pushPayload(capture.session, "${nextPayloadId()}", eventsBatch)
+            replayApiService.pushPayload(captureEvent.session, "${nextPayloadId()}", eventsBatch)
             
             // record last sent state only after successful completion
-            lastSentState = LastSentState(sessionId = capture.session, height = capture.origHeight, width = capture.origWidth)
+            lastSentState = LastSentState(sessionId = captureEvent.session, height = captureEvent.origHeight, width = captureEvent.origWidth)
 
             true
         } catch (e: Exception) {
@@ -186,26 +227,25 @@ class RRwebGraphQLReplayLogExporter(
      * Sends a full capture. May be invoked multiple times for a single session if a substantial
      * change occurs requiring a full capture to be sent.
      *
-     * @param capture the capture to be sent
+     * @param captureEvent the capture to be sent
      */
-    suspend fun sendCaptureFull(capture: Capture): Boolean = withContext(Dispatchers.IO) {
+    suspend fun sendCaptureFull(captureEvent: CaptureEvent): Boolean = withContext(Dispatchers.IO) {
         try {
-            replayApiService.initializeReplaySession(organizationVerboseId, capture.session)
-            replayApiService.identifyReplaySession(capture.session)
+            replayApiService.initializeReplaySession(organizationVerboseId, captureEvent.session)
+            replayApiService.identifyReplaySession(captureEvent.session)
 
             val eventBatch = mutableListOf<Event>()
 
             // TODO: O11Y-625 - optimize JSON usage for performance since this region of code is essentially static
 
-            val timestamp = System.currentTimeMillis()
             val metaEvent = Event(
                 type = EventType.META,
-                timestamp = timestamp,
+                timestamp = captureEvent.timestamp,
                 sid = nextSid(),
                 data = EventDataUnion.StandardEventData(
                     EventData(
-                        width = capture.origWidth,
-                        height = capture.origHeight,
+                        width = captureEvent.origWidth,
+                        height = captureEvent.origHeight,
                     )
                 ),
             )
@@ -213,7 +253,7 @@ class RRwebGraphQLReplayLogExporter(
 
             val snapShotEvent = Event(
                 type = EventType.FULL_SNAPSHOT,
-                timestamp = timestamp,
+                timestamp = captureEvent.timestamp,
                 sid = nextSid(),
                 data = EventDataUnion.StandardEventData(
                     EventData(
@@ -249,9 +289,9 @@ class RRwebGraphQLReplayLogExporter(
                                                     type = NodeType.ELEMENT,
                                                     tagName = "canvas",
                                                     attributes = mapOf(
-                                                        "rr_dataURL" to "data:image/jpeg;base64,${capture.imageBase64}",
-                                                        "width" to "${capture.origWidth}",
-                                                        "height" to "${capture.origHeight}"
+                                                        "rr_dataURL" to "data:image/jpeg;base64,${captureEvent.imageBase64}",
+                                                        "width" to "${captureEvent.origWidth}",
+                                                        "height" to "${captureEvent.origHeight}"
                                                     ),
                                                     childNodes = listOf(),
                                                 )
@@ -268,19 +308,23 @@ class RRwebGraphQLReplayLogExporter(
 
             val viewportEvent = Event(
                 type = EventType.CUSTOM,
-                timestamp = timestamp,
+                timestamp = captureEvent.timestamp,
                 sid = nextSid(),
                 data = EventDataUnion.CustomEventDataWrapper(
-                    Json.parseToJsonElement("""{"tag":"Viewport","payload":{"width":${capture.origWidth},"height":${capture.origHeight},"availWidth":${capture.origWidth},"availHeight":${capture.origHeight},"colorDepth":30,"pixelDepth":30,"orientation":0}}""")
+                    Json.parseToJsonElement("""{"tag":"Viewport","payload":{"width":${captureEvent.origWidth},"height":${captureEvent.origHeight},"availWidth":${captureEvent.origWidth},"availHeight":${captureEvent.origHeight},"colorDepth":30,"pixelDepth":30,"orientation":0}}""")
                 )
             )
             eventBatch.add(viewportEvent)
 
             // TODO: O11Y-624 - double check error case handling, may need to add retries per api service request, should subsequent requests wait for previous requests to succeed?
-            replayApiService.pushPayload(capture.session, "${nextPayloadId()}", eventBatch)
+            replayApiService.pushPayload(captureEvent.session, "${nextPayloadId()}", eventBatch)
 
             // record last sent state only after successful completion
-            lastSentState = LastSentState(sessionId = capture.session, height = capture.origHeight, width = capture.origWidth)
+            lastSentState = LastSentState(
+                sessionId = captureEvent.session,
+                height = captureEvent.origHeight,
+                width = captureEvent.origWidth
+            )
 
             true
         } catch (e: Exception) {
@@ -288,6 +332,28 @@ class RRwebGraphQLReplayLogExporter(
 //            Log.e(
 //                REPLAY_EXPORTER_NAME,
 //                "Error sending initial capture for session: ${e.message}",
+//                e
+//            )
+            false
+        }
+    }
+
+    suspend fun sendInteraction(interactionEvent: InteractionEvent): Boolean = withContext(Dispatchers.IO) {
+        try {
+            replayApiService.pushPayload(interactionEvent.session, "${nextPayloadId()}", listOf(Event(
+                type = EventType.INCREMENTAL_SNAPSHOT,
+                timestamp = interactionEvent.timestamp,
+                sid = nextSid(),
+                data = EventDataUnion.CustomEventDataWrapper(Json.parseToJsonElement("""{"source":2,"type":2,"x":${interactionEvent.x}, "y":${interactionEvent.y}}"""))
+            )))
+            
+            true
+        }
+        catch (e: Exception) {
+            // TODO: O11Y-627 - pass in logger to implementation and use here
+//            Log.e(
+//                REPLAY_EXPORTER_NAME,
+//                "Error sending interaction for session: ${e.message}",
 //                e
 //            )
             false

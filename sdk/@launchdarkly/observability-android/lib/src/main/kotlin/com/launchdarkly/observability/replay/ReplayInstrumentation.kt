@@ -1,7 +1,6 @@
 package com.launchdarkly.observability.replay
 
 import com.launchdarkly.observability.interfaces.LDExtendedInstrumentation
-import io.opentelemetry.android.instrumentation.AndroidInstrumentation
 import io.opentelemetry.android.instrumentation.InstallationContext
 import io.opentelemetry.api.logs.Logger
 import io.opentelemetry.sdk.logs.LogRecordProcessor
@@ -14,7 +13,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicBoolean
 
 private const val INSTRUMENTATION_SCOPE_NAME = "com.launchdarkly.observability.replay"
 
@@ -69,6 +67,7 @@ class ReplayInstrumentation(
 
     private lateinit var _otelLogger: Logger
     private lateinit var _captureSource: CaptureSource
+    private lateinit var _interactionSource: InteractionSource
     
     private var _captureJob: Job? = null
     private var _isPaused: Boolean = false
@@ -79,7 +78,7 @@ class ReplayInstrumentation(
     override fun install(ctx: InstallationContext) {
         _otelLogger = ctx.openTelemetry.logsBridge.get(INSTRUMENTATION_SCOPE_NAME)
         _captureSource = CaptureSource(ctx.sessionManager, options.privacyProfile.asMatchersList())
-        _captureSource.attachToApplication(ctx.application)
+        _interactionSource = InteractionSource(ctx.sessionManager)
 
         // TODO: O11Y-621 - don't use global scope
         // TODO: O11Y-621 - shutdown procedure and cleanup of dispatched jobs
@@ -87,15 +86,32 @@ class ReplayInstrumentation(
             _captureSource.captureFlow.collect { capture ->
                 _otelLogger.logRecordBuilder()
                     .setAttribute("event.domain", "media")
-                    .setAttribute("image.width", capture.origWidth.toLong())
-                    .setAttribute("image.height", capture.origHeight.toLong())
+                    .setAttribute("image.width", capture.origWidth)
+                    .setAttribute("image.height", capture.origHeight)
                     .setAttribute("image.data", capture.imageBase64)
                     .setAttribute("session.id", capture.session)
                     .setTimestamp(capture.timestamp, TimeUnit.MILLISECONDS)
                     .emit()
             }
         }
-        
+
+        GlobalScope.launch(Dispatchers.Default) {
+            _interactionSource.captureFlow.collect{ interaction->
+                _otelLogger.logRecordBuilder()
+                    .setAttribute("event.domain", "interaction")
+                    .setAttribute("screen.coordinate.x", interaction.x)
+                    .setAttribute("screen.coordinate.y", interaction.y)
+                    .setAttribute("screen.width", interaction.maxX)
+                    .setAttribute("screen.height", interaction.maxY)
+                    .setAttribute("session.id", interaction.session)
+                    .setTimestamp(interaction.timestamp, TimeUnit.MILLISECONDS)
+                    .emit()
+            }
+        }
+
+        _captureSource.attachToApplication(ctx.application)
+        _interactionSource.attachToApplication(ctx.application)
+
         // Start periodic capture automatically
         internalStartCapture()
     }
