@@ -221,6 +221,14 @@ export class ObserveSDK implements Observe {
 		errorMsg: ErrorMessage,
 		payload?: { [key: string]: string },
 	) {
+		try {
+			if (errorMsg.payload) {
+				payload = {
+					...(payload ? payload : {}),
+					...JSON.parse(errorMsg.payload),
+				}
+			}
+		} catch (e) {}
 		this.startSpan('highlight.exception', (span) => {
 			// This is handled in the callsites, but this redundancy handles it from a pure
 			// type safety perspective.
@@ -238,7 +246,10 @@ export class ObserveSDK implements Observe {
 			})
 		})
 		for (const integration of this._integrations) {
-			integration.error(getPersistentSessionSecureID(), errorMsg)
+			integration.error(getPersistentSessionSecureID(), {
+				...errorMsg,
+				payload: JSON.stringify(payload),
+			})
 		}
 	}
 
@@ -266,7 +277,7 @@ export class ObserveSDK implements Observe {
 			event,
 			type: type ?? 'custom',
 			url: window.location.href,
-			source: source ?? '',
+			source: source ?? 'frontend',
 			lineNumber: res[0]?.lineNumber ? res[0]?.lineNumber : 0,
 			columnNumber: res[0]?.columnNumber ? res[0]?.columnNumber : 0,
 			stackTrace: res,
