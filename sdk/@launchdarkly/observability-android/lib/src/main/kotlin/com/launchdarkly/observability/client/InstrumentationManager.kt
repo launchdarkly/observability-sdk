@@ -10,6 +10,7 @@ import com.launchdarkly.observability.sampling.CustomSampler
 import com.launchdarkly.observability.sampling.ExportSampler
 import com.launchdarkly.observability.sampling.SamplingConfig
 import com.launchdarkly.observability.sampling.SamplingLogProcessor
+import com.launchdarkly.observability.sampling.SamplingTraceExporter
 import io.opentelemetry.android.OpenTelemetryRum
 import io.opentelemetry.android.config.OtelRumConfig
 import io.opentelemetry.android.features.diskbuffering.DiskBufferingConfig

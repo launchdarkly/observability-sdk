@@ -5,7 +5,6 @@ import io.mockk.mockk
 import io.mockk.verify
 import io.opentelemetry.context.Context
 import io.opentelemetry.sdk.common.CompletableResultCode
-import io.opentelemetry.sdk.common.InstrumentationScopeInfo
 import io.opentelemetry.sdk.logs.LogRecordProcessor
 import io.opentelemetry.sdk.logs.ReadWriteLogRecord
 import org.junit.jupiter.api.Assertions.assertSame
