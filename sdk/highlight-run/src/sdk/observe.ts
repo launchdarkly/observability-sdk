@@ -224,8 +224,8 @@ export class ObserveSDK implements Observe {
 		try {
 			if (errorMsg.payload) {
 				payload = {
-					...(payload ? payload : {}),
 					...JSON.parse(errorMsg.payload),
+					...(payload ? payload : {}),
 				}
 			}
 		} catch (e) {}
