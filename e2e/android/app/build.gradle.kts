@@ -89,6 +89,7 @@ dependencies {
     testImplementation(libs.robolectric)
     testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
     testImplementation("io.opentelemetry:opentelemetry-sdk-testing:1.51.0")
+    testImplementation(testFixtures(project(":observability-android")))
 
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

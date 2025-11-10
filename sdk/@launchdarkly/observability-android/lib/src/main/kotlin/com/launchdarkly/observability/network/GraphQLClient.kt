@@ -1,5 +1,6 @@
 package com.launchdarkly.observability.network
 
+import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.KSerializer
@@ -72,7 +73,7 @@ class GraphQLClient(
         queryFileName: String,
         variables: Map<String, JsonElement> = emptyMap(),
         dataSerializer: KSerializer<T>
-    ): GraphQLResponse<T> = withContext(Dispatchers.IO) {
+    ): GraphQLResponse<T> = withContext(DispatcherProviderHolder.current.io) {
         try {
             val query = loadQuery(queryFileName)
             val request = GraphQLRequest(
