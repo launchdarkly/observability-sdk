@@ -1,5 +1,14 @@
 # @launchdarkly/observability
 
+## [0.4.8](https://github.com/launchdarkly/observability-sdk/compare/observability-0.4.7...observability-0.4.8) (2025-11-10)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * highlight.run bumped to 9.22.5
+
 ## [0.4.7](https://github.com/launchdarkly/observability-sdk/compare/observability-0.4.6...observability-0.4.7) (2025-10-30)
 
 
