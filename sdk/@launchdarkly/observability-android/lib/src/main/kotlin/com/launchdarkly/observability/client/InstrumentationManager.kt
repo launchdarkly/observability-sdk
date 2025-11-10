@@ -11,6 +11,7 @@ import com.launchdarkly.observability.sampling.ExportSampler
 import com.launchdarkly.observability.sampling.SamplingConfig
 import com.launchdarkly.observability.sampling.SamplingLogExporter
 import com.launchdarkly.observability.sampling.SamplingTraceExporter
+import com.launchdarkly.observability.sampling.SpansSampler
 import io.opentelemetry.android.OpenTelemetryRum
 import io.opentelemetry.android.config.OtelRumConfig
 import io.opentelemetry.android.features.diskbuffering.DiskBufferingConfig
@@ -40,6 +41,7 @@ import io.opentelemetry.sdk.metrics.export.MetricExporter
 import io.opentelemetry.sdk.metrics.export.PeriodicMetricReader
 import io.opentelemetry.sdk.resources.Resource
 import io.opentelemetry.sdk.trace.SdkTracerProviderBuilder
+import io.opentelemetry.sdk.trace.SpanProcessor
 import io.opentelemetry.sdk.trace.export.BatchSpanProcessor
 import io.opentelemetry.sdk.trace.export.SpanExporter
 import kotlinx.coroutines.CoroutineScope
@@ -73,7 +75,7 @@ class InstrumentationManager(
     private val graphqlClient = GraphQLClient(options.backendUrl)
     private val samplingApiService = SamplingApiService(graphqlClient)
     private var telemetryInspector: TelemetryInspector? = null
-    private var spanProcessor: BatchSpanProcessor? = null
+    private var spanProcessor: SpanProcessor? = null
     private var logProcessor: LogRecordProcessor? = null
     private var metricsReader: PeriodicMetricReader? = null
     private var launchTimeInstrumentation: LaunchTimeInstrumentation? = null
@@ -169,7 +171,14 @@ class InstrumentationManager(
 
     private fun configureTracerProvider(sdkTracerProviderBuilder: SdkTracerProviderBuilder): SdkTracerProviderBuilder {
         val primarySpanExporter = createOtlpSpanExporter()
-        sdkTracerProviderBuilder.setResource(resources)
+        sdkTracerProviderBuilder
+            .setResource(resources)
+            .setSampler(
+                SpansSampler(
+                    allowNormalSpans = !options.disableTraces,
+                    allowErrorSpans = !options.disableErrorTracking
+                )
+            )
 
         val finalExporter = createSpanExporter(primarySpanExporter)
         val processor = createBatchSpanProcessor(finalExporter)
@@ -218,13 +227,7 @@ class InstrumentationManager(
             primaryExporter
         }
 
-        val conditionalExporter = ConditionalSpanExporter(
-            delegate = baseExporter,
-            allowNormalSpans = !options.disableTraces,
-            allowErrorSpans = !options.disableErrorTracking
-        )
-
-        return SamplingTraceExporter(conditionalExporter, customSampler)
+        return SamplingTraceExporter(baseExporter, customSampler)
     }
 
     private fun createMetricExporter(primaryExporter: MetricExporter): MetricExporter {
