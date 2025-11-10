@@ -245,9 +245,10 @@ export class ObserveSDK implements Observe {
 				...payload,
 			})
 		})
+		const { payload: _, ...errorWithoutPayload } = errorMsg
 		for (const integration of this._integrations) {
 			integration.error(getPersistentSessionSecureID(), {
-				...errorMsg,
+				...errorWithoutPayload,
 				payload: JSON.stringify(payload),
 			})
 		}
