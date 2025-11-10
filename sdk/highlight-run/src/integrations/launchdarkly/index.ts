@@ -246,9 +246,17 @@ export class LaunchDarklyIntegrationSDK implements IntegrationClient {
 	}
 
 	error(sessionSecureID: string, error: ErrorMessage) {
+		let payload: { [key: string]: string } = {}
+		try {
+			if (error.payload) {
+				payload = JSON.parse(error.payload)
+			}
+		} catch (e) {}
+		const { payload: _, ...errorWithoutPayload } = error
 		this.client.track(LD_ERROR_EVENT, {
-			...error,
+			...errorWithoutPayload,
 			sessionID: sessionSecureID,
+			...payload,
 		})
 	}
 
