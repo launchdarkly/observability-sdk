@@ -9,7 +9,7 @@ import com.launchdarkly.observability.network.SamplingApiService
 import com.launchdarkly.observability.sampling.CustomSampler
 import com.launchdarkly.observability.sampling.ExportSampler
 import com.launchdarkly.observability.sampling.SamplingConfig
-import com.launchdarkly.observability.sampling.SamplingLogExporter
+import com.launchdarkly.observability.sampling.SamplingLogProcessor
 import com.launchdarkly.observability.sampling.SamplingTraceExporter
 import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
 import io.opentelemetry.android.OpenTelemetryRum
@@ -415,20 +415,30 @@ class InstrumentationManager(
 
             val finalExporter = createLogExporter(
                 primaryLogExporter,
-                exportSampler,
                 logger,
                 telemetryInspector,
                 options
             )
-            val baseProcessor = createBatchLogRecordProcessor(finalExporter)
 
-            // Here we set up a routing log processor that will route logs with a matching scope name to the
-            // respective instrumentation's log record processor.  If the log's scope name does not match
-            // an instrumentation's scope name, it will fall through to the base processor.  This was
-            // originally added to route replay instrumentation logs through a separate log processing
-            // pipeline to provide instrumentation specific caching and export.
-            val routingLogRecordProcessor =
-                RoutingLogRecordProcessor(fallthroughProcessor = baseProcessor)
+            val samplingProcessor = SamplingLogProcessor(
+                createBatchLogRecordProcessor(finalExporter),
+                exportSampler
+            )
+
+            val baseProcessor = ConditionalLogRecordProcessor(
+                delegate = samplingProcessor,
+                allowNormalLogs = !options.disableLogs,
+                allowCrashes = !options.disableErrorTracking
+            )
+
+            /*
+                Here we set up a routing log processor that will route logs with a matching scope name to the
+                respective instrumentation's log record processor. If the log's scope name does not match
+                an instrumentation's scope name, it will fall through to the base processor. This was
+                originally added to route replay instrumentation logs through a separate log processing
+                pipeline to provide instrumentation specific caching and export.
+            */
+            val routingLogRecordProcessor = RoutingLogRecordProcessor(fallthroughProcessor = baseProcessor)
             options.instrumentations.forEach { instrumentation ->
                 instrumentation.getLogRecordProcessor(credential = sdkKey)?.let { processor ->
                     instrumentation.getLoggerScopeName().let { scopeName ->
@@ -449,12 +459,11 @@ class InstrumentationManager(
 
         private fun createLogExporter(
             primaryExporter: LogRecordExporter,
-            exportSampler: ExportSampler,
             logger: LDLogger,
             telemetryInspector: TelemetryInspector?,
             options: Options
         ): LogRecordExporter {
-            val baseExporter = if (options.debug) {
+            return if (options.debug) {
                 LogRecordExporter.composite(
                     buildList {
                         add(primaryExporter)
@@ -465,14 +474,6 @@ class InstrumentationManager(
             } else {
                 primaryExporter
             }
-
-            val conditionalExporter = ConditionalLogRecordExporter(
-                delegate = baseExporter,
-                allowNormalLogs = !options.disableLogs,
-                allowCrashes = !options.disableErrorTracking
-            )
-
-            return SamplingLogExporter(conditionalExporter, exportSampler)
         }
 
         fun createBatchLogRecordProcessor(logRecordExporter: LogRecordExporter): BatchLogRecordProcessor {
