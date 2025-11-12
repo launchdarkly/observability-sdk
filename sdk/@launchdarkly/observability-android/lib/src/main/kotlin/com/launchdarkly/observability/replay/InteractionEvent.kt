@@ -1,10 +1,13 @@
 package com.launchdarkly.observability.replay
 
-data class InteractionEvent(
+data class Position(
     val x: Int,
     val y: Int,
-    val maxX: Int,
-    val maxY: Int,
     val timestamp: Long,
-    val session: String
+)
+
+data class InteractionEvent(
+    val action: Int,
+    val positions: List<Position>,
+    val session: String,
 )

@@ -97,14 +97,30 @@ class ReplayInstrumentation(
 
         GlobalScope.launch(Dispatchers.Default) {
             _interactionSource.captureFlow.collect{ interaction->
+                // Serialize positions list to JSON using StringBuilder for performance
+                val positionsJson = StringBuilder().apply {
+                    append('[')
+                    interaction.positions.forEachIndexed { index, position ->
+                        if (index > 0) append(',')
+                        append("{\"x\":")
+                        append(position.x)
+                        append(",\"y\":")
+                        append(position.y)
+                        append(",\"timestamp\":")
+                        append(position.timestamp)
+                        append('}')
+                    }
+                    append(']')
+                }.toString()
+
+                // Use the last position's timestamp for the log record timestamp
+                val logTimestamp = interaction.positions.last().timestamp
                 _otelLogger.logRecordBuilder()
                     .setAttribute("event.domain", "interaction")
-                    .setAttribute("screen.coordinate.x", interaction.x)
-                    .setAttribute("screen.coordinate.y", interaction.y)
-                    .setAttribute("screen.width", interaction.maxX)
-                    .setAttribute("screen.height", interaction.maxY)
+                    .setAttribute("android.action", interaction.action)
+                    .setAttribute("screen.coords", positionsJson)
                     .setAttribute("session.id", interaction.session)
-                    .setTimestamp(interaction.timestamp, TimeUnit.MILLISECONDS)
+                    .setTimestamp(logTimestamp, TimeUnit.MILLISECONDS)
                     .emit()
             }
         }

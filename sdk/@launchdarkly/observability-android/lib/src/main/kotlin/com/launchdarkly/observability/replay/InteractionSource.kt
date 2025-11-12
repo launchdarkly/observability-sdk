@@ -3,6 +3,7 @@ package com.launchdarkly.observability.replay
 import android.app.Activity
 import android.app.Application
 import android.os.Bundle
+import android.os.SystemClock
 import android.view.MotionEvent
 import android.view.Window
 import io.opentelemetry.android.session.SessionManager
@@ -11,12 +12,13 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 
+/**
+ * This class will report [InteractionEvent]s for the primary pointer of the most recently
+ * resumed window.
+ */
 class InteractionSource(
     private val sessionManager: SessionManager,
 ) : Application.ActivityLifecycleCallbacks {
-
-    private var _mostRecentWindow: Window? = null
-    private var _interceptedWindows: MutableList<Window> = mutableListOf()
 
     // Configure with buffer capacity to prevent blocking on emission
     // Using tryEmit() instead of emit() to avoid blocking the UI thread
@@ -24,7 +26,14 @@ class InteractionSource(
         extraBufferCapacity = 64, // Buffer up to 64 events before dropping
         onBufferOverflow = BufferOverflow.DROP_LATEST
     )
+
+    // Interactions from the most recent window will be reported periodically on this flow.
     val captureFlow: SharedFlow<InteractionEvent> = _captureEventFlow.asSharedFlow()
+
+    private var _mostRecentWindow: Window? = null
+    private var _interceptedWindows: MutableList<Window> = mutableListOf()
+    private var _watchedPointerId: Int = -1
+    private var _moveGrouper: InteractionMoveGrouper = InteractionMoveGrouper(sessionManager, _captureEventFlow)
 
     private class InteractionDetector(
         val window: Window,
@@ -38,22 +47,79 @@ class InteractionSource(
         }
     }
 
+    // This method will be invoked by any / all interceptors that receive interactions.  This is
+    // assumed to only be invoked from one thread, the main UI thread and has no multi-threading
+    // protections.
     private fun handleInteraction(window: Window, motionEvent: MotionEvent) {
+        // only handle touches on the most recent window and only motion events with pointers
+        if (_mostRecentWindow != window || motionEvent.pointerCount < 1) {
+            return
+        }
+
+        _watchedPointerId = _watchedPointerId
+            .takeIf { motionEvent.findPointerIndex(it) != -1 } //continue using watched pointer if it exists
+            ?: motionEvent.getPointerId(0) // otherwise use first pointer
+        val pointerIndex = motionEvent.findPointerIndex(_watchedPointerId)
+        val eventTimeReference = System.currentTimeMillis() - SystemClock.uptimeMillis()
+
         when (motionEvent.action) {
             MotionEvent.ACTION_DOWN -> {
-                // only handle touches on the most recent activity
-                if (_mostRecentWindow == window) {
-                    val interaction = InteractionEvent(
-                        x = motionEvent.x.toInt(), // TODO: look more into if float is preferred here
-                        y = motionEvent.y.toInt(), // TODO: look more into if float is preferred here
-                        maxX = window.decorView.width,
-                        maxY = window.decorView.height,
-                        timestamp = System.currentTimeMillis(), // TODO: figure out if there is a way to get absolute wall time from motion event's uptime value
-                        session = sessionManager.getSessionId(),
+                val interaction = InteractionEvent(
+                    action = motionEvent.action,
+                    positions = listOf(
+                        Position(
+                            x = motionEvent.getX(pointerIndex).toInt(),
+                            y = motionEvent.getY(pointerIndex).toInt(),
+                            timestamp = eventTimeReference + motionEvent.eventTime,
+                        ),
+                    ),
+                    session = sessionManager.getSessionId(),
+                )
+                // Use tryEmit() with buffering instead of emit() and coroutine dispatch for speed
+                _captureEventFlow.tryEmit(interaction) // tryEmit with buffering is more performant than dispatching to coroutine/suspend
+            }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+
+                val x = motionEvent.getX(pointerIndex).toInt()
+                val y = motionEvent.getY(pointerIndex).toInt()
+                val timestamp = eventTimeReference + motionEvent.eventTime
+
+                _moveGrouper.completeWithLastPosition(x, y, timestamp)
+
+                val interaction = InteractionEvent(
+                    action = MotionEvent.ACTION_UP, // for the purposes of replay, we can treat CANCEL as UP
+                    positions = listOf(
+                        Position(
+                            x = x,
+                            y = y,
+                            timestamp = timestamp,
+                        ),
+                    ),
+                    session = sessionManager.getSessionId(),
+                )
+                // Use tryEmit() with buffering instead of emit() for performance
+                _captureEventFlow.tryEmit(interaction)
+            }
+            MotionEvent.ACTION_MOVE -> {
+                // the move grouper provides rate limiting and grouping of positions by time and distance,
+                // ultimately to reduce bandwidth consumption.  the move grouper is responsible for
+                // calling tryEmit()
+
+                // handle non-current positions
+                for (h in 0 until motionEvent.historySize) {
+                    _moveGrouper.handleMove(
+                        x = motionEvent.getHistoricalX(pointerIndex, h).toInt(),
+                        y = motionEvent.getHistoricalY(pointerIndex, h).toInt(),
+                        timestamp = eventTimeReference + motionEvent.getHistoricalEventTime(h)
                     )
-                    // Use tryEmit() with buffering instead of emit() and coroutine dispatch for speed
-                    _captureEventFlow.tryEmit(interaction) // TODO: tryEmit is more performant than dispatching to coroutine/suspend
                 }
+
+                // handle current position
+                _moveGrouper.handleMove(
+                    x = motionEvent.getX(pointerIndex).toInt(),
+                    y = motionEvent.getY(pointerIndex).toInt(),
+                    timestamp = eventTimeReference + motionEvent.eventTime
+                )
             }
         }
     }
@@ -77,6 +143,7 @@ class InteractionSource(
     }
 
     override fun onActivityStarted(activity: Activity) {
+        // here we add an interception decorator if the window has never been seen before
         activity.window?.let { window ->
             // if window is not already intercepted
             if (!_interceptedWindows.contains(window)) {
@@ -95,6 +162,7 @@ class InteractionSource(
     }
 
     override fun onActivityResumed(activity: Activity) {
+        // here we update to follow the most recent window
         activity.window?.let { window ->
             _mostRecentWindow = window
         }
