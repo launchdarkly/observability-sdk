@@ -1,5 +1,6 @@
 package com.launchdarkly.observability.replay
 
+import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
 import com.launchdarkly.observability.network.GraphQLClient
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.sdk.common.CompletableResultCode
@@ -31,7 +32,7 @@ class RRwebGraphQLReplayLogExporter(
     val serviceVersion: String,
     private val injectedReplayApiService: SessionReplayApiService? = null
 ) : LogRecordExporter {
-    private val coroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val coroutineScope = CoroutineScope(DispatcherProviderHolder.current.io + SupervisorJob())
 
     private var graphqlClient: GraphQLClient = GraphQLClient(backendUrl)
     private val replayApiService: SessionReplayApiService = injectedReplayApiService ?: SessionReplayApiService(
@@ -136,7 +137,7 @@ class RRwebGraphQLReplayLogExporter(
      *
      * @param capture the capture to be sent
      */
-    suspend fun sendCaptureIncremental(capture: Capture): Boolean = withContext(Dispatchers.IO) {
+    suspend fun sendCaptureIncremental(capture: Capture): Boolean = withContext(DispatcherProviderHolder.current.io) {
         try {
             val eventsBatch = mutableListOf<Event>()
             val timestamp = System.currentTimeMillis()
@@ -188,7 +189,7 @@ class RRwebGraphQLReplayLogExporter(
      *
      * @param capture the capture to be sent
      */
-    suspend fun sendCaptureFull(capture: Capture): Boolean = withContext(Dispatchers.IO) {
+    suspend fun sendCaptureFull(capture: Capture): Boolean = withContext(DispatcherProviderHolder.current.io) {
         try {
             replayApiService.initializeReplaySession(organizationVerboseId, capture.session)
             replayApiService.identifyReplaySession(capture.session)
