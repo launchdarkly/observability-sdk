@@ -184,8 +184,7 @@ class DisablingConfigOptionsE2ETest {
 
     private fun requestsContainsUrl(url: String): Boolean {
         while (true) {
-            val request = application.mockWebServer?.takeRequest(100, TimeUnit.MILLISECONDS)
-            if (request == null) return false
+            val request = application.mockWebServer?.takeRequest(100, TimeUnit.MILLISECONDS) ?: return false
             if (request.requestUrl.toString() == url) return true
         }
     }

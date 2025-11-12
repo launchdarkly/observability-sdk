@@ -1,13 +1,13 @@
 package com.launchdarkly.observability.replay
 
 import android.view.MotionEvent
+import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
 import com.launchdarkly.observability.network.GraphQLClient
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.sdk.common.CompletableResultCode
 import io.opentelemetry.sdk.logs.data.LogRecordData
 import io.opentelemetry.sdk.logs.export.LogRecordExporter
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
@@ -34,7 +34,7 @@ class RRwebGraphQLReplayLogExporter(
     val serviceVersion: String,
     private val injectedReplayApiService: SessionReplayApiService? = null
 ) : LogRecordExporter {
-    private val coroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val coroutineScope = CoroutineScope(DispatcherProviderHolder.current.io + SupervisorJob())
 
     private var graphqlClient: GraphQLClient = GraphQLClient(backendUrl)
     private val replayApiService: SessionReplayApiService =

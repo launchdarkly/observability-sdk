@@ -9,8 +9,10 @@ import com.launchdarkly.observability.network.SamplingApiService
 import com.launchdarkly.observability.sampling.CustomSampler
 import com.launchdarkly.observability.sampling.ExportSampler
 import com.launchdarkly.observability.sampling.SamplingConfig
-import com.launchdarkly.observability.sampling.SamplingLogExporter
+import com.launchdarkly.observability.sampling.SamplingLogProcessor
 import com.launchdarkly.observability.sampling.SamplingTraceExporter
+import com.launchdarkly.observability.sampling.SpansSampler
+import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
 import io.opentelemetry.android.OpenTelemetryRum
 import io.opentelemetry.android.config.OtelRumConfig
 import io.opentelemetry.android.features.diskbuffering.DiskBufferingConfig
@@ -40,10 +42,10 @@ import io.opentelemetry.sdk.metrics.export.MetricExporter
 import io.opentelemetry.sdk.metrics.export.PeriodicMetricReader
 import io.opentelemetry.sdk.resources.Resource
 import io.opentelemetry.sdk.trace.SdkTracerProviderBuilder
+import io.opentelemetry.sdk.trace.SpanProcessor
 import io.opentelemetry.sdk.trace.export.BatchSpanProcessor
 import io.opentelemetry.sdk.trace.export.SpanExporter
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
@@ -73,7 +75,7 @@ class InstrumentationManager(
     private val graphqlClient = GraphQLClient(options.backendUrl)
     private val samplingApiService = SamplingApiService(graphqlClient)
     private var telemetryInspector: TelemetryInspector? = null
-    private var spanProcessor: BatchSpanProcessor? = null
+    private var spanProcessor: SpanProcessor? = null
     private var logProcessor: LogRecordProcessor? = null
     private var metricsReader: PeriodicMetricReader? = null
     private var launchTimeInstrumentation: LaunchTimeInstrumentation? = null
@@ -83,7 +85,7 @@ class InstrumentationManager(
     private val upDownCounterCache = ConcurrentHashMap<String, LongUpDownCounter>()
 
     //TODO: Evaluate if this class should have a close/shutdown method to close this scope
-    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val scope = CoroutineScope(DispatcherProviderHolder.current.io + SupervisorJob())
 
     init {
         initializeTelemetryInspector()
@@ -169,7 +171,14 @@ class InstrumentationManager(
 
     private fun configureTracerProvider(sdkTracerProviderBuilder: SdkTracerProviderBuilder): SdkTracerProviderBuilder {
         val primarySpanExporter = createOtlpSpanExporter()
-        sdkTracerProviderBuilder.setResource(resources)
+        sdkTracerProviderBuilder
+            .setResource(resources)
+            .setSampler(
+                SpansSampler(
+                    allowNormalSpans = !options.disableTraces,
+                    allowErrorSpans = !options.disableErrorTracking
+                )
+            )
 
         val finalExporter = createSpanExporter(primarySpanExporter)
         val processor = createBatchSpanProcessor(finalExporter)
@@ -218,13 +227,7 @@ class InstrumentationManager(
             primaryExporter
         }
 
-        val conditionalExporter = ConditionalSpanExporter(
-            delegate = baseExporter,
-            allowNormalSpans = !options.disableTraces,
-            allowErrorSpans = !options.disableErrorTracking
-        )
-
-        return SamplingTraceExporter(conditionalExporter, customSampler)
+        return SamplingTraceExporter(baseExporter, customSampler)
     }
 
     private fun createMetricExporter(primaryExporter: MetricExporter): MetricExporter {
@@ -415,20 +418,30 @@ class InstrumentationManager(
 
             val finalExporter = createLogExporter(
                 primaryLogExporter,
-                exportSampler,
                 logger,
                 telemetryInspector,
                 options
             )
-            val baseProcessor = createBatchLogRecordProcessor(finalExporter)
 
-            // Here we set up a routing log processor that will route logs with a matching scope name to the
-            // respective instrumentation's log record processor.  If the log's scope name does not match
-            // an instrumentation's scope name, it will fall through to the base processor.  This was
-            // originally added to route replay instrumentation logs through a separate log processing
-            // pipeline to provide instrumentation specific caching and export.
-            val routingLogRecordProcessor =
-                RoutingLogRecordProcessor(fallthroughProcessor = baseProcessor)
+            val samplingProcessor = SamplingLogProcessor(
+                createBatchLogRecordProcessor(finalExporter),
+                exportSampler
+            )
+
+            val baseProcessor = ConditionalLogRecordProcessor(
+                delegate = samplingProcessor,
+                allowNormalLogs = !options.disableLogs,
+                allowCrashes = !options.disableErrorTracking
+            )
+
+            /*
+                Here we set up a routing log processor that will route logs with a matching scope name to the
+                respective instrumentation's log record processor. If the log's scope name does not match
+                an instrumentation's scope name, it will fall through to the base processor. This was
+                originally added to route replay instrumentation logs through a separate log processing
+                pipeline to provide instrumentation specific caching and export.
+            */
+            val routingLogRecordProcessor = RoutingLogRecordProcessor(fallthroughProcessor = baseProcessor)
             options.instrumentations.forEach { instrumentation ->
                 instrumentation.getLogRecordProcessor(credential = sdkKey)?.let { processor ->
                     instrumentation.getLoggerScopeName().let { scopeName ->
@@ -449,12 +462,11 @@ class InstrumentationManager(
 
         private fun createLogExporter(
             primaryExporter: LogRecordExporter,
-            exportSampler: ExportSampler,
             logger: LDLogger,
             telemetryInspector: TelemetryInspector?,
             options: Options
         ): LogRecordExporter {
-            val baseExporter = if (options.debug) {
+            return if (options.debug) {
                 LogRecordExporter.composite(
                     buildList {
                         add(primaryExporter)
@@ -465,14 +477,6 @@ class InstrumentationManager(
             } else {
                 primaryExporter
             }
-
-            val conditionalExporter = ConditionalLogRecordExporter(
-                delegate = baseExporter,
-                allowNormalLogs = !options.disableLogs,
-                allowCrashes = !options.disableErrorTracking
-            )
-
-            return SamplingLogExporter(conditionalExporter, exportSampler)
         }
 
         fun createBatchLogRecordProcessor(logRecordExporter: LogRecordExporter): BatchLogRecordProcessor {
