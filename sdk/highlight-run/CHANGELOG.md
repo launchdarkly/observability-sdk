@@ -1,5 +1,12 @@
 # highlight.run
 
+## [9.23.0](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-9.22.5...highlight.run-9.23.0) (2025-11-12)
+
+
+### Features
+
+* disable client-side LD metric forwarding ([#286](https://github.com/launchdarkly/observability-sdk/issues/286)) ([648ad26](https://github.com/launchdarkly/observability-sdk/commit/648ad263d34442a9703102144455304bbb0be825))
+
 ## [9.22.5](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-9.22.4...highlight.run-9.22.5) (2025-11-10)
 
 
