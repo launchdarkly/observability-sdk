@@ -67,6 +67,8 @@ dependencies {
 
     testImplementation("io.mockk:mockk:1.14.5")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
+
+    testFixturesImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
 }
 
 val releaseVersion = version.toString()
@@ -108,6 +110,10 @@ android {
             withJavadocJar()
             withSourcesJar()
         }
+    }
+
+    testFixtures {
+        enable = true
     }
 }
 
