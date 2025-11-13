@@ -10,7 +10,7 @@ package com.launchdarkly.observability.replay
  * @property session The unique session identifier that this capture belongs to. This links
  *                   the capture to a specific user session.
  */
-data class Capture(
+data class CaptureEvent(
     val imageBase64: String,
     val origHeight: Int,
     val origWidth: Int,

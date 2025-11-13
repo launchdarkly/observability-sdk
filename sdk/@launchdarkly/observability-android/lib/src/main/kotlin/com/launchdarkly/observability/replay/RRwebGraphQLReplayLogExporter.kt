@@ -1,5 +1,6 @@
 package com.launchdarkly.observability.replay
 
+import android.view.MotionEvent
 import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
 import com.launchdarkly.observability.network.GraphQLClient
 import io.opentelemetry.api.common.AttributeKey
@@ -7,11 +8,12 @@ import io.opentelemetry.sdk.common.CompletableResultCode
 import io.opentelemetry.sdk.logs.data.LogRecordData
 import io.opentelemetry.sdk.logs.export.LogRecordExporter
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
 
 private const val REPLAY_EXPORTER_NAME = "RRwebGraphQLReplayLogExporter"
 
@@ -35,42 +37,97 @@ class RRwebGraphQLReplayLogExporter(
     private val coroutineScope = CoroutineScope(DispatcherProviderHolder.current.io + SupervisorJob())
 
     private var graphqlClient: GraphQLClient = GraphQLClient(backendUrl)
-    private val replayApiService: SessionReplayApiService = injectedReplayApiService ?: SessionReplayApiService(
-        graphqlClient = graphqlClient,
-        serviceName = serviceName,
-        serviceVersion = serviceVersion,
-    )
+    private val replayApiService: SessionReplayApiService =
+        injectedReplayApiService ?: SessionReplayApiService(
+            graphqlClient = graphqlClient,
+            serviceName = serviceName,
+            serviceVersion = serviceVersion,
+        )
 
     // TODO: O11Y-624 - need to implement sid, payloadId reset when multiple sessions occur in one application process lifecycle.
     private var sidCounter = 0
     private var payloadIdCounter = 0
 
-    private data class LastSentState(
+    private data class LastSeenState(
         val sessionId: String?,
         val height: Int,
         val width: Int,
     )
 
-    private var lastSentState = LastSentState(sessionId = null, height = 0, width = 0)
+    private var lastSeenState = LastSeenState(sessionId = null, height = 0, width = 0)
 
     override fun export(logs: MutableCollection<LogRecordData>): CompletableResultCode {
         val resultCode = CompletableResultCode()
 
         coroutineScope.launch {
             try {
-                for (log in logs) {
-                    val capture = extractCaptureFromLog(log)
-                    if (capture != null) {
-                        // TODO: O11Y-624 - investigate if there is a size limit on the push that is imposed server side.
-                        val success =
-                            if (capture.session != lastSentState.sessionId || capture.origHeight != lastSentState.height || capture.origWidth != lastSentState.width) {
-                                // we need to send a full capture if the session id changes or there is a resize/orientation change
-                                sendCaptureFull(capture)
-                            } else {
-                                sendCaptureIncremental(capture)
+                // Map to collect events by session ID
+                val eventsBySession = mutableMapOf<String, MutableList<Event>>()
+                // Set to track sessions that need initialization
+                val sessionsNeedingInit = mutableSetOf<String>()
+
+                // Don't assume logs are in chronological order, sorting helps avoid sending unnecessary full snapshots
+                val sortedLogs = logs.sortedBy { it.observedTimestampEpochNanos }
+                for (log in sortedLogs) {
+                    when (log.attributes.get(AttributeKey.stringKey("event.domain"))) {
+                        "media" -> {
+                            val capture = extractCaptureFromLog(log)
+                            if (capture != null) {
+                                if (capture.session != lastSeenState.sessionId) {
+                                    sessionsNeedingInit.add(capture.session)
+                                }
+
+                                val stateChanged = capture.session != lastSeenState.sessionId ||
+                                        capture.origHeight != lastSeenState.height ||
+                                        capture.origWidth != lastSeenState.width
+
+                                if (stateChanged) {
+                                    lastSeenState = LastSeenState(
+                                        sessionId = capture.session,
+                                        height = capture.origHeight,
+                                        width = capture.origWidth
+                                    )
+                                    // we need to send a full capture if the session id changes or there is a resize/orientation change
+                                    val events = generateCaptureFullEvents(capture)
+                                    eventsBySession.getOrPut(capture.session) { mutableListOf() }
+                                        .addAll(events)
+                                } else {
+                                    val events = generateCaptureIncrementalEvents(capture)
+                                    eventsBySession.getOrPut(capture.session) { mutableListOf() }
+                                        .addAll(events)
+                                }
                             }
-                        if (!success) {
-                            // Stop processing immediately on first failure
+                        }
+
+                        "interaction" -> {
+                            val interaction = extractInteractionFromLog(log)
+                            if (interaction != null) {
+                                val events = generateInteractionEvents(interaction)
+                                eventsBySession.getOrPut(interaction.session) { mutableListOf() }.addAll(events)
+                            }
+                        }
+
+                        else -> {
+                            // Noop
+                        }
+                    }
+                }
+
+                // Initialize sessions that need it
+                for (sessionId in sessionsNeedingInit) {
+                    replayApiService.initializeReplaySession(organizationVerboseId, sessionId)
+                    replayApiService.identifyReplaySession(sessionId)
+                    // TODO: O11Y-624 - handle request failures
+                }
+
+                // Send all events grouped by session
+                for ((sessionId, events) in eventsBySession) {
+                    if (events.isNotEmpty()) {
+                        try {
+                            replayApiService.pushPayload(sessionId, "${nextPayloadId()}", events)
+                        } catch (e: Exception) {
+                            // TODO: O11Y-627 - pass in logger to implementation and use here
+                            // Log.e(REPLAY_EXPORTER_NAME, "Error pushing payload for session $sessionId: ${e.message}", e)
                             resultCode.fail()
                             return@launch
                         }
@@ -110,20 +167,20 @@ class RRwebGraphQLReplayLogExporter(
     }
 
     // Returns null if unable to extract a valid capture from the log record
-    private fun extractCaptureFromLog(log: LogRecordData): Capture? {
+    private fun extractCaptureFromLog(log: LogRecordData): CaptureEvent? {
         val attributes = log.attributes
-        val eventDomain = attributes.get(AttributeKey.stringKey("event.domain"))
         val imageWidth = attributes.get(AttributeKey.longKey("image.width"))
         val imageHeight = attributes.get(AttributeKey.longKey("image.height"))
         val imageData = attributes.get(AttributeKey.stringKey("image.data"))
         val sessionId = attributes.get(AttributeKey.stringKey("session.id"))
 
-        // Return null if any required attribute is missing
-        if (eventDomain != "media" || imageWidth == null || imageHeight == null || imageData == null || sessionId == null) {
+        // Return null if any required attribute is missing. If this schema ever changes, consider that
+        //  there may be cached data on disk on end user devices that may get ignored by this conditional.
+        if (imageWidth == null || imageHeight == null || imageData == null || sessionId == null) {
             return null
         }
 
-        return Capture(
+        return CaptureEvent(
             imageBase64 = imageData,
             origHeight = imageHeight.toInt(),
             origWidth = imageWidth.toInt(),
@@ -132,166 +189,232 @@ class RRwebGraphQLReplayLogExporter(
         )
     }
 
-    /**
-     * Sends an incremental capture. Used after [sendCaptureFull] has already been called for a previous capture in the same session.
-     *
-     * @param capture the capture to be sent
-     */
-    suspend fun sendCaptureIncremental(capture: Capture): Boolean = withContext(DispatcherProviderHolder.current.io) {
-        try {
-            val eventsBatch = mutableListOf<Event>()
-            val timestamp = System.currentTimeMillis()
+    // Returns null if unable to extract a valid interaction from the log record
+    private fun extractInteractionFromLog(log: LogRecordData): InteractionEvent? {
+        val attributes = log.attributes
+        val action = attributes.get(AttributeKey.longKey("android.action"))
+        val coordsJson = attributes.get(AttributeKey.stringKey("screen.coords"))
+        val sessionId = attributes.get(AttributeKey.stringKey("session.id"))
 
-            // TODO: O11Y-625 - optimize JSON usage for performance since this region of code is essentially static
-            val incrementalEvent = Event(
-                type = EventType.INCREMENTAL_SNAPSHOT,
-                timestamp = timestamp,
-                sid = nextSid(),
-                data = EventDataUnion.CustomEventDataWrapper(
-                    Json.parseToJsonElement("""{"source":9,"id":6,"type":0,"commands":[{"property":"clearRect","args":[0,0,${capture.origWidth},${capture.origHeight}]},{"property":"drawImage","args":[{"rr_type":"ImageBitmap","args":[{"rr_type":"Blob","data":[{"rr_type":"ArrayBuffer","base64":"${capture.imageBase64}"}],"type":"image/jpeg"}]},0,0,${capture.origWidth},${capture.origHeight}]}]}""")
-                )
-            )
-            eventsBatch.add(incrementalEvent)
-
-            // TODO: O11Y-629 - remove this spoofed mouse interaction when proper user interaction is instrumented
-            // This spoofed mouse interaction is necessary to make the session look like it had activity
-            eventsBatch.add(
-                Event(
-                    type = EventType.INCREMENTAL_SNAPSHOT,
-                    timestamp = timestamp,
-                    sid = nextSid(),
-                    data = EventDataUnion.CustomEventDataWrapper(
-                        Json.parseToJsonElement("""{"source":2,"type":2,"x":1, "y":1}""")
-                    )
-                )
-            )
-
-            replayApiService.pushPayload(capture.session, "${nextPayloadId()}", eventsBatch)
-            
-            // record last sent state only after successful completion
-            lastSentState = LastSentState(sessionId = capture.session, height = capture.origHeight, width = capture.origWidth)
-
-            true
-        } catch (e: Exception) {
-            // TODO: O11Y-627 - pass in logger to implementation and use here
-//            Log.e(
-//                REPLAY_EXPORTER_NAME,
-//                "Error sending incremental capture for session: ${e.message}",
-//                e
-//            )
-            false
+        // Return null if any required attribute is missing. If this schema ever changes, consider that
+        // there may be disk cached data in production that may get ignored by this conditional.
+        if (action == null || coordsJson == null || sessionId == null) {
+            return null
         }
+
+        // Parse the JSON array of positions
+        val positions = try {
+            val jsonElement = Json.parseToJsonElement(coordsJson)
+            val jsonArray = jsonElement.jsonArray
+            jsonArray.mapNotNull { positionElement ->
+                val positionObj = positionElement.jsonObject
+                val xPrimitive = positionObj["x"] as? JsonPrimitive
+                val yPrimitive = positionObj["y"] as? JsonPrimitive
+                val timestampPrimitive = positionObj["timestamp"] as? JsonPrimitive
+                
+                val x = xPrimitive?.content?.toIntOrNull()
+                val y = yPrimitive?.content?.toIntOrNull()
+                val timestamp = timestampPrimitive?.content?.toLongOrNull()
+                
+                if (x != null && y != null && timestamp != null) {
+                    Position(x = x, y = y, timestamp = timestamp)
+                } else {
+                    null
+                }
+            }
+        } catch (e: Exception) {
+            // If JSON parsing fails, return null
+            return null
+        }
+
+        // Return null if no valid positions were parsed
+        if (positions.isEmpty()) {
+            return null
+        }
+
+        return InteractionEvent(
+            action = action.toInt(),
+            positions = positions,
+            session = sessionId
+        )
     }
 
     /**
-     * Sends a full capture. May be invoked multiple times for a single session if a substantial
+     * Generates events for an incremental capture. Used after [generateCaptureFullEvents] has already been called for a previous capture in the same session.
+     *
+     * @param captureEvent the capture to generate events for
+     * @return list of events for the incremental capture
+     */
+    fun generateCaptureIncrementalEvents(captureEvent: CaptureEvent): List<Event> {
+        val eventsBatch = mutableListOf<Event>()
+
+        // TODO: O11Y-625 - optimize JSON usage for performance since this region of code is essentially static
+
+        val incrementalEvent = Event(
+            type = EventType.INCREMENTAL_SNAPSHOT,
+            timestamp = captureEvent.timestamp,
+            sid = nextSid(),
+            data = EventDataUnion.CustomEventDataWrapper(
+                Json.parseToJsonElement("""{"source":9,"id":6,"type":0,"commands":[{"property":"clearRect","args":[0,0,${captureEvent.origWidth},${captureEvent.origHeight}]},{"property":"drawImage","args":[{"rr_type":"ImageBitmap","args":[{"rr_type":"Blob","data":[{"rr_type":"ArrayBuffer","base64":"${captureEvent.imageBase64}"}],"type":"image/jpeg"}]},0,0,${captureEvent.origWidth},${captureEvent.origHeight}]}]}""")
+            )
+        )
+        eventsBatch.add(incrementalEvent)
+
+        return eventsBatch
+    }
+
+    /**
+     * Generates events for a full capture. May be invoked multiple times for a single session if a substantial
      * change occurs requiring a full capture to be sent.
      *
-     * @param capture the capture to be sent
+     * @param captureEvent the capture to generate events for
+     * @return list of events for the full capture
      */
-    suspend fun sendCaptureFull(capture: Capture): Boolean = withContext(DispatcherProviderHolder.current.io) {
-        try {
-            replayApiService.initializeReplaySession(organizationVerboseId, capture.session)
-            replayApiService.identifyReplaySession(capture.session)
+    fun generateCaptureFullEvents(captureEvent: CaptureEvent): List<Event> {
+        val eventBatch = mutableListOf<Event>()
 
-            val eventBatch = mutableListOf<Event>()
+        // TODO: O11Y-625 - optimize JSON usage for performance since this region of code is essentially static
 
-            // TODO: O11Y-625 - optimize JSON usage for performance since this region of code is essentially static
+        val metaEvent = Event(
+            type = EventType.META,
+            timestamp = captureEvent.timestamp,
+            sid = nextSid(),
+            data = EventDataUnion.StandardEventData(
+                EventData(
+                    width = captureEvent.origWidth,
+                    height = captureEvent.origHeight,
+                )
+            ),
+        )
+        eventBatch.add(metaEvent)
 
-            val timestamp = System.currentTimeMillis()
-            val metaEvent = Event(
-                type = EventType.META,
-                timestamp = timestamp,
-                sid = nextSid(),
-                data = EventDataUnion.StandardEventData(
-                    EventData(
-                        width = capture.origWidth,
-                        height = capture.origHeight,
-                    )
-                ),
-            )
-            eventBatch.add(metaEvent)
-
-            val snapShotEvent = Event(
-                type = EventType.FULL_SNAPSHOT,
-                timestamp = timestamp,
-                sid = nextSid(),
-                data = EventDataUnion.StandardEventData(
-                    EventData(
-                        node = EventNode(
-                            id = 1,
-                            type = NodeType.DOCUMENT,
-                            childNodes = listOf(
-                                EventNode(
-                                    id = 2,
-                                    type = NodeType.DOCUMENT_TYPE,
-                                    name = "html",
-                                ),
-                                EventNode(
-                                    id = 3,
-                                    type = NodeType.ELEMENT,
-                                    tagName = "html",
-                                    attributes = mapOf("lang" to "en"),
-                                    childNodes = listOf(
-                                        EventNode(
-                                            id = 4,
-                                            type = NodeType.ELEMENT,
-                                            tagName = "head",
-                                            attributes = emptyMap(),
-                                        ),
-                                        EventNode(
-                                            id = 5,
-                                            type = NodeType.ELEMENT,
-                                            tagName = "body",
-                                            attributes = emptyMap(),
-                                            childNodes = listOf(
-                                                EventNode(
-                                                    id = 6,
-                                                    type = NodeType.ELEMENT,
-                                                    tagName = "canvas",
-                                                    attributes = mapOf(
-                                                        "rr_dataURL" to "data:image/jpeg;base64,${capture.imageBase64}",
-                                                        "width" to "${capture.origWidth}",
-                                                        "height" to "${capture.origHeight}"
-                                                    ),
-                                                    childNodes = listOf(),
-                                                )
+        val snapShotEvent = Event(
+            type = EventType.FULL_SNAPSHOT,
+            timestamp = captureEvent.timestamp,
+            sid = nextSid(),
+            data = EventDataUnion.StandardEventData(
+                EventData(
+                    node = EventNode(
+                        id = 1,
+                        type = NodeType.DOCUMENT,
+                        childNodes = listOf(
+                            EventNode(
+                                id = 2,
+                                type = NodeType.DOCUMENT_TYPE,
+                                name = "html",
+                            ),
+                            EventNode(
+                                id = 3,
+                                type = NodeType.ELEMENT,
+                                tagName = "html",
+                                attributes = mapOf("lang" to "en"),
+                                childNodes = listOf(
+                                    EventNode(
+                                        id = 4,
+                                        type = NodeType.ELEMENT,
+                                        tagName = "head",
+                                        attributes = emptyMap(),
+                                    ),
+                                    EventNode(
+                                        id = 5,
+                                        type = NodeType.ELEMENT,
+                                        tagName = "body",
+                                        attributes = emptyMap(),
+                                        childNodes = listOf(
+                                            EventNode(
+                                                id = 6,
+                                                type = NodeType.ELEMENT,
+                                                tagName = "canvas",
+                                                attributes = mapOf(
+                                                    "rr_dataURL" to "data:image/jpeg;base64,${captureEvent.imageBase64}",
+                                                    "width" to "${captureEvent.origWidth}",
+                                                    "height" to "${captureEvent.origHeight}"
+                                                ),
+                                                childNodes = listOf(),
                                             )
                                         )
                                     )
                                 )
-                            ),
+                            )
                         ),
-                    )
-                ),
-            )
-            eventBatch.add(snapShotEvent)
-
-            val viewportEvent = Event(
-                type = EventType.CUSTOM,
-                timestamp = timestamp,
-                sid = nextSid(),
-                data = EventDataUnion.CustomEventDataWrapper(
-                    Json.parseToJsonElement("""{"tag":"Viewport","payload":{"width":${capture.origWidth},"height":${capture.origHeight},"availWidth":${capture.origWidth},"availHeight":${capture.origHeight},"colorDepth":30,"pixelDepth":30,"orientation":0}}""")
+                    ),
                 )
+            ),
+        )
+        eventBatch.add(snapShotEvent)
+
+        val viewportEvent = Event(
+            type = EventType.CUSTOM,
+            timestamp = captureEvent.timestamp,
+            sid = nextSid(),
+            data = EventDataUnion.CustomEventDataWrapper(
+                Json.parseToJsonElement("""{"tag":"Viewport","payload":{"width":${captureEvent.origWidth},"height":${captureEvent.origHeight},"availWidth":${captureEvent.origWidth},"availHeight":${captureEvent.origHeight},"colorDepth":30,"pixelDepth":30,"orientation":0}}""")
             )
-            eventBatch.add(viewportEvent)
+        )
+        eventBatch.add(viewportEvent)
 
-            // TODO: O11Y-624 - double check error case handling, may need to add retries per api service request, should subsequent requests wait for previous requests to succeed?
-            replayApiService.pushPayload(capture.session, "${nextPayloadId()}", eventBatch)
+        return eventBatch
+    }
 
-            // record last sent state only after successful completion
-            lastSentState = LastSentState(sessionId = capture.session, height = capture.origHeight, width = capture.origWidth)
+    /**
+     * Generates events for a touch interaction.
+     *
+     * @param interactionEvent the interaction to generate events for
+     * @return list of events for the interaction
+     */
+    fun generateInteractionEvents(interactionEvent: InteractionEvent): List<Event> {
+        val events = mutableListOf<Event>()
 
-            true
-        } catch (e: Exception) {
-            // TODO: O11Y-627 - pass in logger to implementation and use here
-//            Log.e(
-//                REPLAY_EXPORTER_NAME,
-//                "Error sending initial capture for session: ${e.message}",
-//                e
-//            )
-            false
+        when (interactionEvent.action) {
+            MotionEvent.ACTION_DOWN -> {
+                val firstPosition = interactionEvent.positions.first()
+                events.add(
+                    Event(
+                        type = EventType.INCREMENTAL_SNAPSHOT,
+                        timestamp = firstPosition.timestamp,
+                        sid = nextSid(),
+                        data = EventDataUnion.CustomEventDataWrapper(Json.parseToJsonElement("""{"source":2,"texts": [],"type":7,"id":6,"x":${firstPosition.x}, "y":${firstPosition.y}}"""))
+                    )
+                )
+                events.add(
+                    Event(
+                        type = EventType.CUSTOM,
+                        timestamp = firstPosition.timestamp,
+                        sid = nextSid(),
+                        data = EventDataUnion.CustomEventDataWrapper(
+                            Json.parseToJsonElement("""{"tag":"Click","payload":{"clickTarget":"BogusName","clickTextContent":"","clickSelector":"view"}}""")
+                        )
+                    )
+                )
+            }
+
+            MotionEvent.ACTION_UP -> { // CANCEL is not here because UP and CANCEL are merged to UP in interaction source.
+                val lastPosition = interactionEvent.positions.last()
+                events.add(
+                    Event(
+                        type = EventType.INCREMENTAL_SNAPSHOT,
+                        timestamp = lastPosition.timestamp,
+                        sid = nextSid(),
+                        data = EventDataUnion.CustomEventDataWrapper(Json.parseToJsonElement("""{"source":2,"texts": [],"type":9,"id":6,"x":${lastPosition.x}, "y":${lastPosition.y}}"""))
+                    )
+                )
+            }
+
+            MotionEvent.ACTION_MOVE -> {
+                // Generate one event per position. Each positionsJson will only contain one position.
+                interactionEvent.positions.forEach { position ->
+                    events.add(
+                        Event(
+                            type = EventType.INCREMENTAL_SNAPSHOT,
+                            timestamp = position.timestamp,
+                            sid = nextSid(),
+                            data = EventDataUnion.CustomEventDataWrapper(Json.parseToJsonElement("""{"positions": [{"id":6,"timeOffset":0,"x":${position.x},"y":${position.y}}], "source": 6}"""))
+                        )
+                    )
+                }
+            }
         }
+
+        return events
     }
 }
