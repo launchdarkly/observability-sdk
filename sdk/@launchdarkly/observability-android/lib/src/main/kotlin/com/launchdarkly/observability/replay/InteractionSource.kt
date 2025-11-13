@@ -35,12 +35,13 @@ class InteractionSource(
     private var _watchedPointerId: Int = -1
     private var _moveGrouper: InteractionMoveGrouper = InteractionMoveGrouper(sessionManager, _captureEventFlow)
 
+    // Instances of this private class will be attached to windows as they are started and this
+    // gives this interaction source a hook into window touches.
     private class InteractionDetector(
         val window: Window,
         val originalCallback: Window.Callback,
         val onInteraction: (Window, MotionEvent) -> Unit
     ) : Window.Callback by originalCallback {
-
         override fun dispatchTouchEvent(event: MotionEvent): Boolean {
             onInteraction(window, event)
             return originalCallback.dispatchTouchEvent(event)

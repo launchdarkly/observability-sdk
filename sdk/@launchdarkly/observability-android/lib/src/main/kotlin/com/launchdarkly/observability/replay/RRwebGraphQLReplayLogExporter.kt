@@ -117,6 +117,7 @@ class RRwebGraphQLReplayLogExporter(
                 for (sessionId in sessionsNeedingInit) {
                     replayApiService.initializeReplaySession(organizationVerboseId, sessionId)
                     replayApiService.identifyReplaySession(sessionId)
+                    // TODO: O11Y-624 - handle request failures
                 }
 
                 // Send all events grouped by session

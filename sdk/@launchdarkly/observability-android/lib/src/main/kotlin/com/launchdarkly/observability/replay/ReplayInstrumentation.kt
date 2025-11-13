@@ -86,8 +86,8 @@ class ReplayInstrumentation(
             _captureSource.captureFlow.collect { capture ->
                 _otelLogger.logRecordBuilder()
                     .setAttribute("event.domain", "media")
-                    .setAttribute("image.width", capture.origWidth)
-                    .setAttribute("image.height", capture.origHeight)
+                    .setAttribute("image.width", capture.origWidth.toLong())
+                    .setAttribute("image.height", capture.origHeight.toLong())
                     .setAttribute("image.data", capture.imageBase64)
                     .setAttribute("session.id", capture.session)
                     .setTimestamp(capture.timestamp, TimeUnit.MILLISECONDS)

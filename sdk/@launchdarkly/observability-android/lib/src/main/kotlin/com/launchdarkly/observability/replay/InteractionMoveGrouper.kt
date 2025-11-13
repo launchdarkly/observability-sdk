@@ -89,6 +89,7 @@ class InteractionMoveGrouper(
         }
 
         // reset state so next move sequence is treated as an independent sequence
+        lastAccepted = null
         lastEmitTime = 0L
         acceptedPositions.clear()
     }
