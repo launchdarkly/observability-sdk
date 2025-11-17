@@ -19,9 +19,9 @@ import android.view.ViewGroup
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsOwner
+import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
 import io.opentelemetry.android.session.SessionManager
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -34,10 +34,10 @@ import kotlin.coroutines.resumeWithException
 import androidx.compose.ui.geometry.Rect as ComposeRect
 
 /**
- * A source of [Capture]s taken from the most recently resumed [Activity]s window. Captures
+ * A source of [CaptureEvent]s taken from the most recently resumed [Activity]s window. Captures
  * are emitted on the [captureFlow] property of this class.
  *
- * @param sessionManager Used to get current session for tagging [Capture] with session id
+ * @param sessionManager Used to get current session for tagging [CaptureEvent] with session id
  */
 class CaptureSource(
     private val sessionManager: SessionManager,
@@ -46,10 +46,10 @@ class CaptureSource(
 ) :
     Application.ActivityLifecycleCallbacks {
 
-    private var _activity: Activity? = null
+    private var _mostRecentActivity: Activity? = null
 
-    private val _captureFlow = MutableSharedFlow<Capture>()
-    val captureFlow: SharedFlow<Capture> = _captureFlow.asSharedFlow()
+    private val _captureEventFlow = MutableSharedFlow<CaptureEvent>()
+    val captureFlow: SharedFlow<CaptureEvent> = _captureEventFlow.asSharedFlow()
 
     /**
      * Attaches the [CaptureSource] to the [Application] whose [Activity]s will be captured.
@@ -66,12 +66,12 @@ class CaptureSource(
     }
 
     /**
-     * Requests a [Capture] be taken now.
+     * Requests a [CaptureEvent] be taken now.
      */
     suspend fun captureNow() {
         val capture = doCapture()
         if (capture != null) {
-            _captureFlow.emit(capture)
+            _captureEventFlow.emit(capture)
         }
     }
 
@@ -84,11 +84,14 @@ class CaptureSource(
     }
 
     override fun onActivityResumed(activity: Activity) {
-        _activity = activity
+        _mostRecentActivity = activity
     }
 
     override fun onActivityPaused(activity: Activity) {
-        _activity = null
+        // this if check prevents pausing of a different activity from interfering with tracking of most recent activity.
+        if (activity == _mostRecentActivity) {
+            _mostRecentActivity = null
+        }
     }
 
     override fun onActivityStopped(activity: Activity) {
@@ -106,12 +109,12 @@ class CaptureSource(
     /**
      * Internal capture routine.
      */
-    private suspend fun doCapture(): Capture? = withContext(Dispatchers.Main) {
-        val activity = _activity ?: return@withContext null
-
+    private suspend fun doCapture(): CaptureEvent? = withContext(DispatcherProviderHolder.current.main) {
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                val window = activity.window
+                val activity = _mostRecentActivity ?: return@withContext null // return if no activity
+                val window = activity.window ?: return@withContext null // return if activity has no window
+
                 val decorView = window.decorView
                 val decorViewWidth = decorView.width
                 val decorViewHeight = decorView.height
@@ -146,7 +149,7 @@ class CaptureSource(
                                 val session = sessionManager.getSessionId()
 
                                 if (result == PixelCopy.SUCCESS) {
-                                    CoroutineScope(Dispatchers.Default).launch {
+                                    CoroutineScope(DispatcherProviderHolder.current.default).launch {
                                         try {
                                             val postMask = if (maskMatchers.isNotEmpty()) {
                                                 maskSensitiveRects(bitmap, sensitiveComposeRects)
@@ -161,14 +164,14 @@ class CaptureSource(
                                             val byteArray = outputStream.toByteArray()
                                             val compressedImage = Base64.encodeToString(byteArray, Base64.NO_WRAP)
 
-                                            val capture = Capture(
+                                            val captureEvent = CaptureEvent(
                                                 imageBase64 = compressedImage,
                                                 origWidth = decorViewWidth,
                                                 origHeight = decorViewHeight,
                                                 timestamp = timestamp,
                                                 session = session
                                             )
-                                            continuation.resume(capture)
+                                            continuation.resume(captureEvent)
                                         } catch (e: Exception) {
                                             continuation.resumeWithException(e)
                                         }

@@ -62,18 +62,18 @@ class RRwebGraphQLReplayLogExporterTest {
     @Test
     fun `export should send full capture for first session and incremental for subsequent captures in same session`() = runTest {
         // Arrange: Create captures for two different sessions
-        val sessionACaptures = listOf(
-            Capture("base64data1", 800, 600, 1000L, "session-a"),
-            Capture("base64data2", 800, 600, 2000L, "session-a"),
-            Capture("base64data3", 800, 600, 3000L, "session-a")
+        val sessionACaptureEvents = listOf(
+            CaptureEvent("base64data1", 800, 600, 1000L, "session-a"),
+            CaptureEvent("base64data2", 800, 600, 2000L, "session-a"),
+            CaptureEvent("base64data3", 800, 600, 3000L, "session-a")
         )
         
-        val sessionBCaptures = listOf(
-            Capture("base64data4", 1024, 768, 4000L, "session-b"),
-            Capture("base64data5", 1024, 768, 5000L, "session-b")
+        val sessionBCaptureEvents = listOf(
+            CaptureEvent("base64data4", 1024, 768, 4000L, "session-b"),
+            CaptureEvent("base64data5", 1024, 768, 5000L, "session-b")
         )
         
-        val allCaptures = sessionACaptures + sessionBCaptures
+        val allCaptures = sessionACaptureEvents + sessionBCaptureEvents
         val logRecords = createLogRecordsFromCaptures(allCaptures)
         
         // Capture the events sent to pushPayload
@@ -127,14 +127,14 @@ class RRwebGraphQLReplayLogExporterTest {
     @Test
     fun `export should send full capture when dimensions change within same session`() = runTest {
         // Arrange: Create captures for same session but with dimension changes
-        val captures = listOf(
-            Capture("base64data1", 800, 600, 1000L, "session-a"),  // First capture - full
-            Capture("base64data2", 800, 600, 2000L, "session-a"),  // Same dimensions - incremental
-            Capture("base64data3", 1024, 768, 3000L, "session-a"), // Dimension change - full
-            Capture("base64data4", 1024, 768, 4000L, "session-a")  // Same dimensions - incremental
+        val captureEvents = listOf(
+            CaptureEvent("base64data1", 800, 600, 1000L, "session-a"),  // First capture - full
+            CaptureEvent("base64data2", 800, 600, 2000L, "session-a"),  // Same dimensions - incremental
+            CaptureEvent("base64data3", 1024, 768, 3000L, "session-a"), // Dimension change - full
+            CaptureEvent("base64data4", 1024, 768, 4000L, "session-a")  // Same dimensions - incremental
         )
         
-        val logRecords = createLogRecordsFromCaptures(captures)
+        val logRecords = createLogRecordsFromCaptures(captureEvents)
         
         // Capture the events sent to pushPayload
         val capturedEvents = mutableListOf<List<Event>>()
@@ -176,12 +176,12 @@ class RRwebGraphQLReplayLogExporterTest {
     @Test
     fun `export should handle mixed valid and invalid log records`() = runTest {
         // Arrange: Create mix of valid and invalid log records
-        val validCaptures = listOf(
-            Capture("base64data1", 800, 600, 1000L, "session-a"),
-            Capture("base64data2", 800, 600, 2000L, "session-a")
+        val validCaptureEvents = listOf(
+            CaptureEvent("base64data1", 800, 600, 1000L, "session-a"),
+            CaptureEvent("base64data2", 800, 600, 2000L, "session-a")
         )
         
-        val validLogRecords = createLogRecordsFromCaptures(validCaptures)
+        val validLogRecords = createLogRecordsFromCaptures(validCaptureEvents)
         val invalidLogRecords = listOf(
             createLogRecordWithAttributes(
                 eventDomain = "invalid-domain", // Wrong domain
@@ -241,10 +241,10 @@ class RRwebGraphQLReplayLogExporterTest {
     @Test
     fun `export should handle API service failures gracefully`() = runTest {
         // Arrange: Create a single capture to test basic failure handling
-        val captures = listOf(
-            Capture("base64data1", 800, 600, 1000L, "session-a")
+        val captureEvents = listOf(
+            CaptureEvent("base64data1", 800, 600, 1000L, "session-a")
         )
-        val logRecords = createLogRecordsFromCaptures(captures)
+        val logRecords = createLogRecordsFromCaptures(captureEvents)
         
         // Mock API service to throw exceptions
         coEvery { mockService.initializeReplaySession(any(), any()) } throws RuntimeException("Network error")
@@ -266,11 +266,11 @@ class RRwebGraphQLReplayLogExporterTest {
     @Test
     fun `export should handle multiple captures in same session with proper state tracking`() = runTest {
         // Arrange: Create two captures with same session and dimensions
-        val captures = listOf(
-            Capture("base64data1", 800, 600, 1000L, "session-a"),
-            Capture("base64data2", 800, 600, 2000L, "session-a")
+        val captureEvents = listOf(
+            CaptureEvent("base64data1", 800, 600, 1000L, "session-a"),
+            CaptureEvent("base64data2", 800, 600, 2000L, "session-a")
         )
-        val logRecords = createLogRecordsFromCaptures(captures)
+        val logRecords = createLogRecordsFromCaptures(captureEvents)
         
         // Mock API service methods
         coEvery { mockService.initializeReplaySession(any(), any()) } just Runs
@@ -292,11 +292,11 @@ class RRwebGraphQLReplayLogExporterTest {
     @Test
     fun `export should stop processing on first failure and not process remaining captures`() = runTest {
         // Arrange: Create captures for two different sessions
-        val captures = listOf(
-            Capture("base64data1", 800, 600, 1000L, "session-a"),
-            Capture("base64data2", 1024, 768, 2000L, "session-b")
+        val captureEvents = listOf(
+            CaptureEvent("base64data1", 800, 600, 1000L, "session-a"),
+            CaptureEvent("base64data2", 1024, 768, 2000L, "session-b")
         )
-        val logRecords = createLogRecordsFromCaptures(captures)
+        val logRecords = createLogRecordsFromCaptures(captureEvents)
         
         // Mock API service: first session succeeds, second session fails
         coEvery { mockService.initializeReplaySession("test-org", "session-a") } just Runs
@@ -327,10 +327,10 @@ class RRwebGraphQLReplayLogExporterTest {
     @Test
     fun `export should handle pushPayload failure after successful initialization`() = runTest {
         // Arrange: Create a single capture
-        val captures = listOf(
-            Capture("base64data1", 800, 600, 1000L, "session-a")
+        val captureEvents = listOf(
+            CaptureEvent("base64data1", 800, 600, 1000L, "session-a")
         )
-        val logRecords = createLogRecordsFromCaptures(captures)
+        val logRecords = createLogRecordsFromCaptures(captureEvents)
         
         // Mock API service: initialization succeeds but pushPayload fails
         coEvery { mockService.initializeReplaySession(any(), any()) } just Runs
@@ -352,11 +352,11 @@ class RRwebGraphQLReplayLogExporterTest {
     @Test
     fun `export should stop processing when first capture fails in same session`() = runTest {
         // Arrange: Create two captures with same session and dimensions
-        val captures = listOf(
-            Capture("base64data1", 800, 600, 1000L, "session-a"),
-            Capture("base64data2", 800, 600, 2000L, "session-a")
+        val captureEvents = listOf(
+            CaptureEvent("base64data1", 800, 600, 1000L, "session-a"),
+            CaptureEvent("base64data2", 800, 600, 2000L, "session-a")
         )
-        val logRecords = createLogRecordsFromCaptures(captures)
+        val logRecords = createLogRecordsFromCaptures(captureEvents)
         
         // Mock API service: first capture fails, second should not be processed
         coEvery { mockService.initializeReplaySession(any(), any()) } throws RuntimeException("Network error")
@@ -380,8 +380,8 @@ class RRwebGraphQLReplayLogExporterTest {
     /**
      * Creates a list of LogRecordData from a list of Capture objects
      */
-    private fun createLogRecordsFromCaptures(captures: List<Capture>): List<LogRecordData> {
-        return captures.map { capture ->
+    private fun createLogRecordsFromCaptures(captureEvents: List<CaptureEvent>): List<LogRecordData> {
+        return captureEvents.map { capture ->
             createLogRecordWithAttributes(
                 eventDomain = "media",
                 imageWidth = capture.origWidth.toLong(),

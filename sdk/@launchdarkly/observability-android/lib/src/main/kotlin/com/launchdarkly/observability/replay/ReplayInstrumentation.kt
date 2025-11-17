@@ -1,12 +1,11 @@
 package com.launchdarkly.observability.replay
 
+import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
 import com.launchdarkly.observability.interfaces.LDExtendedInstrumentation
-import io.opentelemetry.android.instrumentation.AndroidInstrumentation
 import io.opentelemetry.android.instrumentation.InstallationContext
 import io.opentelemetry.api.logs.Logger
 import io.opentelemetry.sdk.logs.LogRecordProcessor
 import io.opentelemetry.sdk.logs.export.BatchLogRecordProcessor
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -14,7 +13,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicBoolean
 
 private const val INSTRUMENTATION_SCOPE_NAME = "com.launchdarkly.observability.replay"
 
@@ -69,6 +67,7 @@ class ReplayInstrumentation(
 
     private lateinit var _otelLogger: Logger
     private lateinit var _captureSource: CaptureSource
+    private lateinit var _interactionSource: InteractionSource
     
     private var _captureJob: Job? = null
     private var _isPaused: Boolean = false
@@ -79,11 +78,11 @@ class ReplayInstrumentation(
     override fun install(ctx: InstallationContext) {
         _otelLogger = ctx.openTelemetry.logsBridge.get(INSTRUMENTATION_SCOPE_NAME)
         _captureSource = CaptureSource(ctx.sessionManager, options.privacyProfile.asMatchersList())
-        _captureSource.attachToApplication(ctx.application)
+        _interactionSource = InteractionSource(ctx.sessionManager)
 
         // TODO: O11Y-621 - don't use global scope
         // TODO: O11Y-621 - shutdown procedure and cleanup of dispatched jobs
-        GlobalScope.launch(Dispatchers.Default) {
+        GlobalScope.launch(DispatcherProviderHolder.current.default) {
             _captureSource.captureFlow.collect { capture ->
                 _otelLogger.logRecordBuilder()
                     .setAttribute("event.domain", "media")
@@ -95,7 +94,40 @@ class ReplayInstrumentation(
                     .emit()
             }
         }
-        
+
+        GlobalScope.launch(DispatcherProviderHolder.current.default) {
+            _interactionSource.captureFlow.collect{ interaction->
+                // Serialize positions list to JSON using StringBuilder for performance
+                val positionsJson = StringBuilder().apply {
+                    append('[')
+                    interaction.positions.forEachIndexed { index, position ->
+                        if (index > 0) append(',')
+                        append("{\"x\":")
+                        append(position.x)
+                        append(",\"y\":")
+                        append(position.y)
+                        append(",\"timestamp\":")
+                        append(position.timestamp)
+                        append('}')
+                    }
+                    append(']')
+                }.toString()
+
+                // Use the last position's timestamp for the log record timestamp
+                val logTimestamp = interaction.positions.last().timestamp
+                _otelLogger.logRecordBuilder()
+                    .setAttribute("event.domain", "interaction")
+                    .setAttribute("android.action", interaction.action)
+                    .setAttribute("screen.coords", positionsJson)
+                    .setAttribute("session.id", interaction.session)
+                    .setTimestamp(logTimestamp, TimeUnit.MILLISECONDS)
+                    .emit()
+            }
+        }
+
+        _captureSource.attachToApplication(ctx.application)
+        _interactionSource.attachToApplication(ctx.application)
+
         // Start periodic capture automatically
         internalStartCapture()
     }
@@ -131,7 +163,7 @@ class ReplayInstrumentation(
     
     private fun internalStartCapture() {
         // TODO: O11Y-621 - don't use global scope
-        _captureJob = GlobalScope.launch(Dispatchers.Default) {
+        _captureJob = GlobalScope.launch(DispatcherProviderHolder.current.default) {
             try {
                 while (true) {
                     // Perform capture
