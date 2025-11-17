@@ -1,11 +1,11 @@
 package com.launchdarkly.observability.replay
 
+import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
 import com.launchdarkly.observability.interfaces.LDExtendedInstrumentation
 import io.opentelemetry.android.instrumentation.InstallationContext
 import io.opentelemetry.api.logs.Logger
 import io.opentelemetry.sdk.logs.LogRecordProcessor
 import io.opentelemetry.sdk.logs.export.BatchLogRecordProcessor
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -82,7 +82,7 @@ class ReplayInstrumentation(
 
         // TODO: O11Y-621 - don't use global scope
         // TODO: O11Y-621 - shutdown procedure and cleanup of dispatched jobs
-        GlobalScope.launch(Dispatchers.Default) {
+        GlobalScope.launch(DispatcherProviderHolder.current.default) {
             _captureSource.captureFlow.collect { capture ->
                 _otelLogger.logRecordBuilder()
                     .setAttribute("event.domain", "media")
@@ -95,7 +95,7 @@ class ReplayInstrumentation(
             }
         }
 
-        GlobalScope.launch(Dispatchers.Default) {
+        GlobalScope.launch(DispatcherProviderHolder.current.default) {
             _interactionSource.captureFlow.collect{ interaction->
                 // Serialize positions list to JSON using StringBuilder for performance
                 val positionsJson = StringBuilder().apply {
@@ -163,7 +163,7 @@ class ReplayInstrumentation(
     
     private fun internalStartCapture() {
         // TODO: O11Y-621 - don't use global scope
-        _captureJob = GlobalScope.launch(Dispatchers.Default) {
+        _captureJob = GlobalScope.launch(DispatcherProviderHolder.current.default) {
             try {
                 while (true) {
                     // Perform capture

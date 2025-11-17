@@ -19,9 +19,9 @@ import android.view.ViewGroup
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsOwner
+import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
 import io.opentelemetry.android.session.SessionManager
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -109,7 +109,7 @@ class CaptureSource(
     /**
      * Internal capture routine.
      */
-    private suspend fun doCapture(): CaptureEvent? = withContext(Dispatchers.Main) {
+    private suspend fun doCapture(): CaptureEvent? = withContext(DispatcherProviderHolder.current.main) {
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 val activity = _mostRecentActivity ?: return@withContext null // return if no activity
@@ -149,7 +149,7 @@ class CaptureSource(
                                 val session = sessionManager.getSessionId()
 
                                 if (result == PixelCopy.SUCCESS) {
-                                    CoroutineScope(Dispatchers.Default).launch {
+                                    CoroutineScope(DispatcherProviderHolder.current.default).launch {
                                         try {
                                             val postMask = if (maskMatchers.isNotEmpty()) {
                                                 maskSensitiveRects(bitmap, sensitiveComposeRects)

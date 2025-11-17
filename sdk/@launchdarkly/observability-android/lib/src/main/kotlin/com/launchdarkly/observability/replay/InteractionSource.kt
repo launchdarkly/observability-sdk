@@ -24,7 +24,7 @@ class InteractionSource(
     // Using tryEmit() instead of emit() to avoid blocking the UI thread
     private val _captureEventFlow = MutableSharedFlow<InteractionEvent>(
         extraBufferCapacity = 64, // Buffer up to 64 events before dropping
-        onBufferOverflow = BufferOverflow.DROP_LATEST
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
 
     // Interactions from the most recent window will be reported periodically on this flow.
@@ -63,7 +63,7 @@ class InteractionSource(
         val pointerIndex = motionEvent.findPointerIndex(_watchedPointerId)
         val eventTimeReference = System.currentTimeMillis() - SystemClock.uptimeMillis()
 
-        when (motionEvent.action) {
+        when (motionEvent.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 val interaction = InteractionEvent(
                     action = motionEvent.action,
