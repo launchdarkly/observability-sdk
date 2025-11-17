@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.13.2...launchdarkly-observability-android-0.14.0) (2025-11-17)
+
+
+### Features
+
+* adds click and swipe interactions to session replay ([#292](https://github.com/launchdarkly/observability-sdk/issues/292)) ([4531005](https://github.com/launchdarkly/observability-sdk/commit/4531005fd1aea906754266cf350733d0b045233d))
+
 ## [0.13.2](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.13.1...launchdarkly-observability-android-0.13.2) (2025-11-04)
 
 
