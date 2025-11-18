@@ -4,6 +4,8 @@ import android.app.Activity
 import android.app.Application
 import android.os.Bundle
 import android.os.SystemClock
+import android.view.KeyboardShortcutGroup
+import android.view.Menu
 import android.view.MotionEvent
 import android.view.Window
 import io.opentelemetry.android.session.SessionManager
@@ -45,6 +47,18 @@ class InteractionSource(
         override fun dispatchTouchEvent(event: MotionEvent): Boolean {
             onInteraction(window, event)
             return originalCallback.dispatchTouchEvent(event)
+        }
+
+        override fun onProvideKeyboardShortcuts(
+            data: MutableList<KeyboardShortcutGroup>?,
+            menu: Menu?,
+            deviceId: Int
+        ) {
+            originalCallback.onProvideKeyboardShortcuts(data, menu, deviceId)
+        }
+
+        override fun onPointerCaptureChanged(hasCapture: Boolean) {
+            originalCallback.onPointerCaptureChanged(hasCapture)
         }
     }
 
