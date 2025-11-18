@@ -71,6 +71,18 @@ class MainActivity : ComponentActivity() {
                         }
                         Button(
                             onClick = {
+                                this@MainActivity.startActivity(
+                                    Intent(
+                                        this@MainActivity,
+                                        com.smoothie.SmoothieListActivity::class.java
+                                    )
+                                )
+                            }
+                        ) {
+                            Text("Open Fruta (XML)")
+                        }
+                        Button(
+                            onClick = {
                                 viewModel.triggerHttpRequests()
                             }
                         ) {
