@@ -107,26 +107,6 @@ class SensitiveAreasCollector {
         // TODO: O11Y-629 - add logic to check for sensitive areas in Compose views
         val sensitiveRects = mutableListOf<ComposeRect>()
 
-        // Check explicit ld_mask semantics first; if present and true, mark node as sensitive.
-//        val ldMask = rootSemanticsNode.config.getOrNull(LD_MASK_SEMANTICS_KEY) == true
-//        if (ldMask) {
-//            addNodeBoundsRect(rootSemanticsNode, sensitiveRects)
-//        } else
-//        {
-            // Otherwise, fall back to profile/matcher-based detection.
-//            if (isMatch(rootSemanticsNode)) {
-//                addNodeBoundsRect(rootSemanticsNode, sensitiveRects)
-//                return sensitiveRects
-//            }
-
-//            for (matcher in matchers) {
-//                if (matcher.isMatch(rootSemanticsNode)) {
-//                    addNodeBoundsRect(rootSemanticsNode, sensitiveRects)
-//                    break
-//                }
-//            }
-//       }
-
         try {
             traverseSemanticNode(rootSemanticsNode, sensitiveRects, view, matchers)
         } catch (ignored: Exception) {
