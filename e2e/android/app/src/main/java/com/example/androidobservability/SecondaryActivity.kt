@@ -37,6 +37,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.androidobservability.ui.theme.AndroidObservabilityTheme
+import com.launchdarkly.observability.api.ldMask
 
 class SecondaryActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -88,7 +89,8 @@ fun UserInfoForm(modifier: Modifier = Modifier) {
     ) {
         Text(
             text = "User Information Form",
-            style = MaterialTheme.typography.headlineMedium
+            style = MaterialTheme.typography.headlineMedium,
+            modifier = Modifier.ldMask()
         )
 
         // Password Section

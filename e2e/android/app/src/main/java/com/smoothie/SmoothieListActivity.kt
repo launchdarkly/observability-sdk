@@ -18,23 +18,8 @@ class SmoothieListActivity : Activity() {
         recyclerView.adapter = SmoothieAdapter(
             smoothies = buildSmoothies(),
             imageLoader = { fileName ->
-                // Try to load from assets/smoothie/images first; fallback to launcher icon
-                try {
-                    assets.open("smoothie/images/$fileName").use { input ->
-                        BitmapFactory.decodeStream(input)
-                    }
-                } catch (_: Exception) {
-                    // Try to load from classpath (e.g., src/main/java/com/smoothie/images)
-                    try {
-                        javaClass.classLoader
-                            ?.getResourceAsStream("com/smoothie/images/$fileName")
-                            ?.use { classpathStream ->
-                                BitmapFactory.decodeStream(classpathStream)
-                            }
-                            ?: BitmapFactory.decodeResource(resources, R.mipmap.ic_launcher)
-                    } catch (_: Exception) {
-                        BitmapFactory.decodeResource(resources, R.mipmap.ic_launcher)
-                    }
+                assets.open("smoothie/images/$fileName").use { input ->
+                    BitmapFactory.decodeStream(input)
                 }
             }
         )

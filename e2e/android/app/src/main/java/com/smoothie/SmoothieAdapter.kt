@@ -8,6 +8,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.example.androidobservability.R
+import com.launchdarkly.observability.api.ldMask
 
 data class SmoothieItem(
     val title: String,
@@ -21,6 +22,9 @@ class SmoothieAdapter(
 
     class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val imageView: ImageView = itemView.findViewById(R.id.smoothieImage)
+        init {
+            imageView.ldMask()
+        }
         val titleView: TextView = itemView.findViewById(R.id.smoothieTitle)
     }
 
