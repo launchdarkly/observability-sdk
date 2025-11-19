@@ -57,6 +57,7 @@ class InteractionSource(
             originalCallback.onProvideKeyboardShortcuts(data, menu, deviceId)
         }
 
+        @RequiresApi(Build.VERSION_CODES.O)
         override fun onPointerCaptureChanged(hasCapture: Boolean) {
             originalCallback.onPointerCaptureChanged(hasCapture)
         }
