@@ -6,14 +6,11 @@ import android.view.ViewGroup
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsOwner
-import androidx.compose.ui.semantics.SemanticsPropertyKey
-import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.getOrNull
 import com.launchdarkly.observability.R
 import com.launchdarkly.observability.api.LdMaskSemanticsKey
 import androidx.compose.ui.geometry.Rect as ComposeRect
+import androidx.core.view.isNotEmpty
 
 /**
  * Collects sensitive screen areas that should be masked in session replay.
@@ -38,11 +35,12 @@ class SensitiveAreasCollector {
                     val semanticsOwner = getSemanticsOwner(view)
                     val rootSemanticsNode = semanticsOwner?.unmergedRootSemanticsNode
                     if (rootSemanticsNode != null) {
-                        val sensitiveRects = findSensitiveAreas(rootSemanticsNode, view, matchers)
+                        val sensitiveRects = findComposeSensitiveAreas(rootSemanticsNode, view, matchers)
                         allSensitiveRects.addAll(sensitiveRects)
                     }
                 } else {
-                    checkNativeView(allSensitiveRects, view, matchers)
+                    val sensitiveRects = findNativeSensitiveRects(view, matchers)
+                    allSensitiveRects.addAll(sensitiveRects)
                 }
             }
         } catch (ignored: Exception) {
@@ -76,7 +74,7 @@ class SensitiveAreasCollector {
      */
     private fun getSemanticsOwner(composeView: ComposeView): SemanticsOwner? {
         return try {
-            if (composeView.childCount > 0) {
+            if (composeView.isNotEmpty()) {
                 val androidComposeView = composeView.getChildAt(0)
 
                 val androidComposeViewClass =
@@ -99,7 +97,7 @@ class SensitiveAreasCollector {
     /**
      * Find sensitive Compose areas by traversing the semantic node tree.
      */
-    private fun findSensitiveAreas(
+    private fun findComposeSensitiveAreas(
         rootSemanticsNode: SemanticsNode,
         view: ComposeView,
         matchers: List<MaskMatcher>
@@ -134,14 +132,7 @@ class SensitiveAreasCollector {
 
         for (matcher in matchers) {
             if (matcher.isMatch(node)) {
-                val boundsInWindow = node.boundsInWindow
-                val absoluteRect = ComposeRect(
-                    left = boundsInWindow.left,
-                    top = boundsInWindow.top,
-                    right = boundsInWindow.right,
-                    bottom = boundsInWindow.bottom
-                )
-                sensitiveRects.add(absoluteRect)
+                addNodeBoundsRect(node, sensitiveRects)
                 break
             }
         }
@@ -171,11 +162,11 @@ class SensitiveAreasCollector {
     /**
      * Check if a native view is sensitive and add its bounds to the list if it is.
      */
-    private fun checkNativeView(
-        sensitiveRects: MutableList<ComposeRect>,
+    private fun findNativeSensitiveRects(
         view: View,
         matchers: List<MaskMatcher>
-    ) {
+    ): List<ComposeRect> {
+        val sensitiveRects = mutableListOf<ComposeRect>()
         val tagValue = view.getTag(R.id.ld_mask_tag) as? Boolean ?: false
         if (view is android.widget.EditText || tagValue) {
             val location = IntArray(2)
@@ -193,5 +184,7 @@ class SensitiveAreasCollector {
             )
             sensitiveRects.add(absoluteRect)
         }
+
+        return sensitiveRects
     }
 }
