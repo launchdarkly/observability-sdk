@@ -74,6 +74,18 @@ class MainActivity : ComponentActivity() {
                                 this@MainActivity.startActivity(
                                     Intent(
                                         this@MainActivity,
+                                        CreditCardActivity::class.java
+                                    )
+                                )
+                            }
+                        ) {
+                            Text("Credit Card")
+                        }
+                        Button(
+                            onClick = {
+                                this@MainActivity.startActivity(
+                                    Intent(
+                                        this@MainActivity,
                                         com.smoothie.SmoothieListActivity::class.java
                                     )
                                 )

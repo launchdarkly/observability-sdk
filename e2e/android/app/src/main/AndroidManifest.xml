@@ -22,6 +22,10 @@
             android:label="@string/title_activity_secondary"
             android:theme="@style/Theme.AndroidObservability" />
         <activity
+            android:name=".CreditCardActivity"
+            android:exported="false"
+            android:theme="@style/Theme.AndroidObservability" />
+        <activity
             android:name="com.smoothie.SmoothieListActivity"
             android:exported="false"
             android:theme="@style/Theme.AndroidObservability" />
