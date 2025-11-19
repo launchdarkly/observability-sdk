@@ -168,7 +168,7 @@ class SensitiveAreasCollector {
     ): List<ComposeRect> {
         val sensitiveRects = mutableListOf<ComposeRect>()
         val tagValue = view.getTag(R.id.ld_mask_tag) as? Boolean ?: false
-        if (view is android.widget.EditText || tagValue) {
+        if (tagValue) {
             val location = IntArray(2)
             view.getLocationInWindow(location)
             val left = location[0].toFloat()
