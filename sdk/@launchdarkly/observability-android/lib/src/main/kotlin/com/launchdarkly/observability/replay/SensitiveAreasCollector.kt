@@ -116,14 +116,6 @@ class SensitiveAreasCollector {
         return sensitiveRects
     }
 
-    fun isMatch(node: SemanticsNode): Boolean {
-        val config = node.config
-        return config.contains(SemanticsProperties.EditableText) ||
-                config.contains(SemanticsActions.SetText) ||
-                config.contains(SemanticsActions.PasteText) ||
-                config.contains(SemanticsActions.InsertTextAtCursor)
-    }
-
     /**
      * Recursively traverse a semantic node and its children to find sensitive areas.
      */
@@ -133,6 +125,7 @@ class SensitiveAreasCollector {
         view: ComposeView,
         matchers: List<MaskMatcher>
     ) {
+        // check ldMask() modifier
         val ldMask = node.config.getOrNull(LdMaskSemanticsKey) == true
         if (ldMask) {
             addNodeBoundsRect(node, sensitiveRects)

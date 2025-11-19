@@ -79,7 +79,7 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
                         ) {
-                            Text("Credit Card")
+                            Text("Open Credit Card (XML)")
                         }
                         Button(
                             onClick = {
