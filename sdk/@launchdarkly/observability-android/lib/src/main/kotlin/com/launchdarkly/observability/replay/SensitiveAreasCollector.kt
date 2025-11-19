@@ -123,17 +123,16 @@ class SensitiveAreasCollector {
         view: ComposeView,
         matchers: List<MaskMatcher>
     ) {
-        // check ldMask() modifier
+        // check ldMask() modifier; do not return early so children are still traversed
         val ldMask = node.config.getOrNull(LdMaskSemanticsKey) == true
         if (ldMask) {
             addNodeBoundsRect(node, sensitiveRects)
-            return
-        }
-
-        for (matcher in matchers) {
-            if (matcher.isMatch(node)) {
-                addNodeBoundsRect(node, sensitiveRects)
-                break
+        } else {
+            for (matcher in matchers) {
+                if (matcher.isMatch(node)) {
+                    addNodeBoundsRect(node, sensitiveRects)
+                    break
+                }
             }
         }
 
