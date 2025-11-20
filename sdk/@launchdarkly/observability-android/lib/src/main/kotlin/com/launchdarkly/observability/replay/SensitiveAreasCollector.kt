@@ -128,9 +128,9 @@ class SensitiveAreasCollector {
         if (ldMask) {
             addNodeBoundsRect(node, sensitiveRects)
         } else {
-            val maskViewInfo = MaskViewInfo(view = view, config = node.config)
+            val maskTarget = MaskTarget(view = view, config = node.config)
             for (matcher in matchers) {
-                if (matcher.isMatch(maskViewInfo)) {
+                if (matcher.isMatch(maskTarget)) {
                     addNodeBoundsRect(node, sensitiveRects)
                     break
                 }
@@ -173,7 +173,7 @@ class SensitiveAreasCollector {
         if (!isSensitive) {
             // Allow matchers to determine sensitivity for native views as well
             for (matcher in matchers) {
-                if (matcher.isMatch(MaskViewInfo(view = view, config = null))) {
+                if (matcher.isMatch(MaskTarget(view = view, config = null))) {
                     isSensitive = true
                     break
                 }

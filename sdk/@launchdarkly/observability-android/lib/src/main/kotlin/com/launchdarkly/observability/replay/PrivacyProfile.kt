@@ -40,7 +40,7 @@ data class PrivacyProfile(
          * miss as we can't account for all possible future semantic properties.
          */
         val textInputMatcher: MaskMatcher = object : MaskMatcher {
-            override fun isMatch(target: MaskViewInfo): Boolean {
+            override fun isMatch(target: MaskTarget): Boolean {
                 val config = target.config
                 return if (config != null) {
                     config.contains(SemanticsProperties.EditableText) ||
@@ -59,7 +59,7 @@ data class PrivacyProfile(
          * miss as we can't account for all possible future semantic properties.
          */
         val textMatcher: MaskMatcher = object : MaskMatcher {
-            override fun isMatch(target: MaskViewInfo): Boolean {
+            override fun isMatch(target: MaskTarget): Boolean {
                 val config = target.config ?: return false
                 return config.contains(SemanticsProperties.Text)
             }
@@ -70,7 +70,7 @@ data class PrivacyProfile(
          * and all text or context descriptions that have substring matches with any of the [sensitiveKeywords]
          */
         val sensitiveMatcher: MaskMatcher = object : MaskMatcher {
-            override fun isMatch(target: MaskViewInfo): Boolean {/**/
+            override fun isMatch(target: MaskTarget): Boolean {/**/
                 val config = target.config ?: return false
                 if (config.contains(SemanticsProperties.Password)) {
                     return true

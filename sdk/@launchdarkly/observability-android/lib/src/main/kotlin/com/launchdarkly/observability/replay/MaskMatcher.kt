@@ -9,13 +9,13 @@ import androidx.compose.ui.semantics.SemanticsConfiguration
  * - [view]: the underlying Android [View] (Compose or native).
  * - [config]: the Compose [SemanticsConfiguration] when available (Compose), otherwise null (native).
  */
-data class MaskViewInfo(
+data class MaskTarget(
     val view: View,
     val config: SemanticsConfiguration?,
 )
 
 /**
- * A [MaskMatcher] can determine if a [MaskViewInfo] is a match and should be masked with an
+ * A [MaskMatcher] can determine if a [MaskTarget] is a match and should be masked with an
  * opaque mask in the session replay.
  *
  * Implement this interface and provide as part of a [PrivacyProfile] to customize masking behavior.
@@ -28,5 +28,5 @@ interface MaskMatcher {
     /**
      * @return true if the target is a match, false otherwise
      */
-    fun isMatch(target: MaskViewInfo): Boolean
+    fun isMatch(target: MaskTarget): Boolean
 }
