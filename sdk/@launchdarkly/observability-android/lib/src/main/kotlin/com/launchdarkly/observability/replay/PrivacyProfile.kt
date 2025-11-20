@@ -41,15 +41,18 @@ data class PrivacyProfile(
          */
         val textInputMatcher: MaskMatcher = object : MaskMatcher {
             override fun isMatch(target: MaskTarget): Boolean {
-                val config = target.config
-                return if (config != null) {
-                    config.contains(SemanticsProperties.EditableText) ||
-                            config.contains(SemanticsActions.SetText) ||
-                            config.contains(SemanticsActions.PasteText) ||
-                            config.contains(SemanticsActions.InsertTextAtCursor)
-                } else {
-                    // Native view case
-                    target.view is EditText
+                return when (target) {
+                    is ComposeMaskTarget -> {
+                        val config = target.config
+                        config.contains(SemanticsProperties.EditableText) ||
+                                config.contains(SemanticsActions.SetText) ||
+                                config.contains(SemanticsActions.PasteText) ||
+                                config.contains(SemanticsActions.InsertTextAtCursor)
+                    }
+                    is NativeMaskTarget -> {
+                        target.view is EditText
+                    }
+                    else -> false
                 }
             }
         }
@@ -60,8 +63,10 @@ data class PrivacyProfile(
          */
         val textMatcher: MaskMatcher = object : MaskMatcher {
             override fun isMatch(target: MaskTarget): Boolean {
-                val config = target.config ?: return false
-                return config.contains(SemanticsProperties.Text)
+                return when (target) {
+                    is ComposeMaskTarget -> target.config.contains(SemanticsProperties.Text)
+                    else -> false
+                }
             }
         }
 
@@ -71,7 +76,7 @@ data class PrivacyProfile(
          */
         val sensitiveMatcher: MaskMatcher = object : MaskMatcher {
             override fun isMatch(target: MaskTarget): Boolean {/**/
-                val config = target.config ?: return false
+                val config = (target as? ComposeMaskTarget)?.config ?: return false
                 if (config.contains(SemanticsProperties.Password)) {
                     return true
                 }

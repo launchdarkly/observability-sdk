@@ -4,15 +4,12 @@ import android.view.View
 import androidx.compose.ui.semantics.SemanticsConfiguration
 
 /**
- * Basic view information used by [MaskMatcher] to evaluate whether a view should be masked.
- *
- * - [view]: the underlying Android [View] (Compose or native).
- * - [config]: the Compose [SemanticsConfiguration] when available (Compose), otherwise null (native).
+ * Target to evaluate for masking. Sealed to restrict implementations to this module/package.
  */
-data class MaskTarget(
-    val view: View,
-    val config: SemanticsConfiguration?,
-)
+sealed interface MaskTarget {
+    val view: View
+}
+
 
 /**
  * A [MaskMatcher] can determine if a [MaskTarget] is a match and should be masked with an
