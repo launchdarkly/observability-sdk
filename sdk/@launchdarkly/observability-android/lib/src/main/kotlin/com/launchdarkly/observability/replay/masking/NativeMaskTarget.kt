@@ -1,7 +1,6 @@
-package com.launchdarkly.observability.replay
+package com.launchdarkly.observability.replay.masking
 
 import android.view.View
-import androidx.compose.ui.semantics.SemanticsConfiguration
 
 /**
  * Native view target; [config] is always null.

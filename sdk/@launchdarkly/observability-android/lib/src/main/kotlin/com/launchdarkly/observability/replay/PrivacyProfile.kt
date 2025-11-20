@@ -4,6 +4,10 @@ import android.widget.EditText
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
+import com.launchdarkly.observability.replay.masking.ComposeMaskTarget
+import com.launchdarkly.observability.replay.masking.MaskMatcher
+import com.launchdarkly.observability.replay.masking.MaskTarget
+import com.launchdarkly.observability.replay.masking.NativeMaskTarget
 
 /**
  * [PrivacyProfile] encapsulates options and functionality related to privacy of session
@@ -15,7 +19,7 @@ import androidx.compose.ui.semantics.getOrNull
  * @param maskTextInputs set to false to turn off masking text inputs
  * @param maskText set to false to turn off masking text
  * @param maskSensitive set to false to turn off masking sensitive views
- * @param maskAdditionalMatchers list of additional [MaskMatcher]s that will be masked when they match
+ * @param maskAdditionalMatchers list of additional [com.launchdarkly.observability.replay.masking.MaskMatcher]s that will be masked when they match
  **/
 data class PrivacyProfile(
     val maskTextInputs: Boolean = true,

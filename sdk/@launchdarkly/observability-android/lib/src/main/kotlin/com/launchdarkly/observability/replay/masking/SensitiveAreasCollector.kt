@@ -1,4 +1,4 @@
-package com.launchdarkly.observability.replay
+package com.launchdarkly.observability.replay.masking
 
 import android.app.Activity
 import android.view.View
@@ -172,8 +172,9 @@ class SensitiveAreasCollector {
 
         if (!isSensitive) {
             // Allow matchers to determine sensitivity for native views as well
+            val target= NativeMaskTarget(view = view)
             for (matcher in matchers) {
-                if (matcher.isMatch(NativeMaskTarget(view = view))) {
+                if (matcher.isMatch(target)) {
                     isSensitive = true
                     break
                 }

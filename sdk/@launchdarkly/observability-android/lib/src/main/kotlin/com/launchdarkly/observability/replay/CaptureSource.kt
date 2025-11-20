@@ -15,6 +15,8 @@ import android.util.Base64
 import android.view.Choreographer
 import android.view.PixelCopy
 import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
+import com.launchdarkly.observability.replay.masking.MaskMatcher
+import com.launchdarkly.observability.replay.masking.SensitiveAreasCollector
 import io.opentelemetry.android.session.SessionManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
