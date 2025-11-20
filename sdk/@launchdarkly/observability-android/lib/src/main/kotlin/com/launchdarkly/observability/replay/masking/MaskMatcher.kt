@@ -7,6 +7,9 @@ import android.view.View
  */
 sealed interface MaskTarget {
     val view: View
+    fun isTextInput(): Boolean
+    fun isText(): Boolean
+    fun isSensitive(sensitiveKeywords: List<String>): Boolean
 }
 
 

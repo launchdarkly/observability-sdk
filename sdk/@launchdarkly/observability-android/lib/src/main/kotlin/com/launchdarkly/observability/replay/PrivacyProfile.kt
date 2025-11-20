@@ -1,13 +1,7 @@
 package com.launchdarkly.observability.replay
 
-import android.widget.EditText
-import androidx.compose.ui.semantics.SemanticsActions
-import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.semantics.getOrNull
-import com.launchdarkly.observability.replay.masking.ComposeMaskTarget
 import com.launchdarkly.observability.replay.masking.MaskMatcher
 import com.launchdarkly.observability.replay.masking.MaskTarget
-import com.launchdarkly.observability.replay.masking.NativeMaskTarget
 
 /**
  * [PrivacyProfile] encapsulates options and functionality related to privacy of session
@@ -45,19 +39,7 @@ data class PrivacyProfile(
          */
         val textInputMatcher: MaskMatcher = object : MaskMatcher {
             override fun isMatch(target: MaskTarget): Boolean {
-                return when (target) {
-                    is ComposeMaskTarget -> {
-                        val config = target.config
-                        config.contains(SemanticsProperties.EditableText) ||
-                                config.contains(SemanticsActions.SetText) ||
-                                config.contains(SemanticsActions.PasteText) ||
-                                config.contains(SemanticsActions.InsertTextAtCursor)
-                    }
-                    is NativeMaskTarget -> {
-                        target.view is EditText
-                    }
-                    else -> false
-                }
+                return target.isTextInput()
             }
         }
 
@@ -67,10 +49,7 @@ data class PrivacyProfile(
          */
         val textMatcher: MaskMatcher = object : MaskMatcher {
             override fun isMatch(target: MaskTarget): Boolean {
-                return when (target) {
-                    is ComposeMaskTarget -> target.config.contains(SemanticsProperties.Text)
-                    else -> false
-                }
+                return target.isText()
             }
         }
 
@@ -79,40 +58,8 @@ data class PrivacyProfile(
          * and all text or context descriptions that have substring matches with any of the [sensitiveKeywords]
          */
         val sensitiveMatcher: MaskMatcher = object : MaskMatcher {
-            override fun isMatch(target: MaskTarget): Boolean {/**/
-                val config = (target as? ComposeMaskTarget)?.config ?: return false
-                if (config.contains(SemanticsProperties.Password)) {
-                    return true
-                }
-
-                // check text first for performance, more likely to get a match here than in description below
-                val textValues = config.getOrNull(SemanticsProperties.Text)
-                if (textValues != null) {
-                    if (textValues.any { annotated ->
-                            val lowerText = annotated.text.lowercase()
-                            sensitiveKeywords.any { keyword ->
-                                // could use ignoreCase = true here, but that is less
-                                // performant than lower casing desc once above
-                                lowerText.contains(keyword)
-                            }
-                        }) return true
-                }
-
-                // check content description
-                val contentDescriptions =
-                    config.getOrNull(SemanticsProperties.ContentDescription)
-                if (contentDescriptions != null) {
-                    if (contentDescriptions.any { desc ->
-                            val lowerDesc = desc.lowercase()
-                            sensitiveKeywords.any { keyword ->
-                                // could use ignoreCase = true here, but that is less
-                                // performant than lower casing desc once above
-                                lowerDesc.contains(keyword)
-                            }
-                        }) return true
-                }
-
-                return false
+            override fun isMatch(target: MaskTarget): Boolean {
+                return target.isSensitive(sensitiveKeywords)
             }
         }
 
