@@ -5,6 +5,7 @@ import androidx.compose.ui.semantics.SemanticsConfiguration
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.geometry.Rect as ComposeRect
 
 /**
  * Compose target with a non-null [SemanticsConfiguration].
@@ -12,6 +13,7 @@ import androidx.compose.ui.semantics.getOrNull
 data class ComposeMaskTarget(
     override val view: View,
     val config: SemanticsConfiguration,
+    val boundsInWindow: ComposeRect,
 ) : MaskTarget {
     override fun isTextInput(): Boolean {
         return config.contains(SemanticsProperties.EditableText) ||
@@ -40,6 +42,10 @@ data class ComposeMaskTarget(
             } == true
 
         return hasSensitiveDescription
+    }
+
+    override fun maskRect(): ComposeRect? {
+        return boundsInWindow
     }
 }
 

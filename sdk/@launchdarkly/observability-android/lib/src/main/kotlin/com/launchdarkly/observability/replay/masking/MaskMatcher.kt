@@ -1,6 +1,7 @@
 package com.launchdarkly.observability.replay.masking
 
 import android.view.View
+import androidx.compose.ui.geometry.Rect as ComposeRect
 
 /**
  * Target to evaluate for masking. Sealed to restrict implementations to this module/package.
@@ -10,6 +11,7 @@ sealed interface MaskTarget {
     fun isTextInput(): Boolean
     fun isText(): Boolean
     fun isSensitive(sensitiveKeywords: List<String>): Boolean
+    fun maskRect(): ComposeRect?
 }
 
 

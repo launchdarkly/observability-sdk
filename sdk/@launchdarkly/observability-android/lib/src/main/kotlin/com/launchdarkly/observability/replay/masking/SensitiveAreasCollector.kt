@@ -123,40 +123,20 @@ class SensitiveAreasCollector {
         view: ComposeView,
         matchers: List<MaskMatcher>
     ) {
+        val maskTarget = ComposeMaskTarget(
+            view = view,
+            config = node.config,
+            boundsInWindow = node.boundsInWindow
+        )
         // check ldMask() modifier; do not return early so children are still traversed
         val ldMask = node.config.getOrNull(LdMaskSemanticsKey) == true
-        if (ldMask) {
-            addNodeBoundsRect(node, sensitiveRects)
-        } else {
-            val maskTarget = ComposeMaskTarget(view = view, config = node.config)
-            for (matcher in matchers) {
-                if (matcher.isMatch(maskTarget)) {
-                    addNodeBoundsRect(node, sensitiveRects)
-                    break
-                }
-            }
+        if (ldMask || matchers.any { it.isMatch(maskTarget) }) {
+            maskTarget.maskRect()?.let { sensitiveRects.add(it) }
         }
 
         node.children.forEach { child ->
             traverseSemanticNode(child, sensitiveRects, view, matchers)
         }
-    }
-
-    /**
-     * Adds the node's bounds in window as a rectangle to [sensitiveRects].
-     */
-    private fun addNodeBoundsRect(
-        node: SemanticsNode,
-        sensitiveRects: MutableList<ComposeRect>
-    ) {
-        val boundsInWindow = node.boundsInWindow
-        val absoluteRect = ComposeRect(
-            left = boundsInWindow.left,
-            top = boundsInWindow.top,
-            right = boundsInWindow.right,
-            bottom = boundsInWindow.bottom
-        )
-        sensitiveRects.add(absoluteRect)
     }
 
     /**
@@ -169,33 +149,15 @@ class SensitiveAreasCollector {
         val sensitiveRects = mutableListOf<ComposeRect>()
         val tagValue = view.getTag(R.id.ld_mask_tag) as? Boolean ?: false
         var isSensitive = tagValue
+        val target = NativeMaskTarget(view = view)
 
         if (!isSensitive) {
             // Allow matchers to determine sensitivity for native views as well
-            val target= NativeMaskTarget(view = view)
-            for (matcher in matchers) {
-                if (matcher.isMatch(target)) {
-                    isSensitive = true
-                    break
-                }
-            }
+            isSensitive = matchers.any { matcher -> matcher.isMatch(target) }
         }
 
         if (isSensitive) {
-            val location = IntArray(2)
-            view.getLocationInWindow(location)
-            val left = location[0].toFloat()
-            val top = location[1].toFloat()
-            val right = left + view.width
-            val bottom = top + view.height
-
-            val absoluteRect = ComposeRect(
-                left = left,
-                top = top,
-                right = right,
-                bottom = bottom
-            )
-            sensitiveRects.add(absoluteRect)
+            target.maskRect()?.let { sensitiveRects.add(it) }
         }
 
         return sensitiveRects
