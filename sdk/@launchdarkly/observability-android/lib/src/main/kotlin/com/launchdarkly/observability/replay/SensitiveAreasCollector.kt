@@ -128,8 +128,9 @@ class SensitiveAreasCollector {
         if (ldMask) {
             addNodeBoundsRect(node, sensitiveRects)
         } else {
+            val maskViewInfo = MaskViewInfo(view = view, config = node.config)
             for (matcher in matchers) {
-                if (matcher.isMatch(node)) {
+                if (matcher.isMatch(maskViewInfo)) {
                     addNodeBoundsRect(node, sensitiveRects)
                     break
                 }
@@ -167,7 +168,19 @@ class SensitiveAreasCollector {
     ): List<ComposeRect> {
         val sensitiveRects = mutableListOf<ComposeRect>()
         val tagValue = view.getTag(R.id.ld_mask_tag) as? Boolean ?: false
-        if (tagValue) {
+        var isSensitive = tagValue
+
+        if (!isSensitive) {
+            // Allow matchers to determine sensitivity for native views as well
+            for (matcher in matchers) {
+                if (matcher.isMatch(MaskViewInfo(view = view, config = null))) {
+                    isSensitive = true
+                    break
+                }
+            }
+        }
+
+        if (isSensitive) {
             val location = IntArray(2)
             view.getLocationInWindow(location)
             val left = location[0].toFloat()

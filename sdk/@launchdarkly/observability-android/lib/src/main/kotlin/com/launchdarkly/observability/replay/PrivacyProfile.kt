@@ -1,7 +1,7 @@
 package com.launchdarkly.observability.replay
 
+import android.widget.EditText
 import androidx.compose.ui.semantics.SemanticsActions
-import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 
@@ -40,12 +40,17 @@ data class PrivacyProfile(
          * miss as we can't account for all possible future semantic properties.
          */
         val textInputMatcher: MaskMatcher = object : MaskMatcher {
-            override fun isMatch(node: SemanticsNode): Boolean {
-                val config = node.config
-                return config.contains(SemanticsProperties.EditableText) ||
-                        config.contains(SemanticsActions.SetText) ||
-                        config.contains(SemanticsActions.PasteText) ||
-                        config.contains(SemanticsActions.InsertTextAtCursor)
+            override fun isMatch(target: MaskViewInfo): Boolean {
+                val config = target.config
+                return if (config != null) {
+                    config.contains(SemanticsProperties.EditableText) ||
+                            config.contains(SemanticsActions.SetText) ||
+                            config.contains(SemanticsActions.PasteText) ||
+                            config.contains(SemanticsActions.InsertTextAtCursor)
+                } else {
+                    // Native view case
+                    target.view is EditText
+                }
             }
         }
 
@@ -54,8 +59,9 @@ data class PrivacyProfile(
          * miss as we can't account for all possible future semantic properties.
          */
         val textMatcher: MaskMatcher = object : MaskMatcher {
-            override fun isMatch(node: SemanticsNode): Boolean {
-                return node.config.contains(SemanticsProperties.Text)
+            override fun isMatch(target: MaskViewInfo): Boolean {
+                val config = target.config ?: return false
+                return config.contains(SemanticsProperties.Text)
             }
         }
 
@@ -64,13 +70,14 @@ data class PrivacyProfile(
          * and all text or context descriptions that have substring matches with any of the [sensitiveKeywords]
          */
         val sensitiveMatcher: MaskMatcher = object : MaskMatcher {
-            override fun isMatch(node: SemanticsNode): Boolean {/**/
-                if (node.config.contains(SemanticsProperties.Password)) {
+            override fun isMatch(target: MaskViewInfo): Boolean {/**/
+                val config = target.config ?: return false
+                if (config.contains(SemanticsProperties.Password)) {
                     return true
                 }
 
                 // check text first for performance, more likely to get a match here than in description below
-                val textValues = node.config.getOrNull(SemanticsProperties.Text)
+                val textValues = config.getOrNull(SemanticsProperties.Text)
                 if (textValues != null) {
                     if (textValues.any { annotated ->
                             val lowerText = annotated.text.lowercase()
@@ -84,7 +91,7 @@ data class PrivacyProfile(
 
                 // check content description
                 val contentDescriptions =
-                    node.config.getOrNull(SemanticsProperties.ContentDescription)
+                    config.getOrNull(SemanticsProperties.ContentDescription)
                 if (contentDescriptions != null) {
                     if (contentDescriptions.any { desc ->
                             val lowerDesc = desc.lowercase()
