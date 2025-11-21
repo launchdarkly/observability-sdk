@@ -14,11 +14,6 @@ import android.os.Looper
 import android.util.Base64
 import android.view.Choreographer
 import android.view.PixelCopy
-import android.view.View
-import android.view.ViewGroup
-import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.semantics.SemanticsNode
-import androidx.compose.ui.semantics.SemanticsOwner
 import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
 import io.opentelemetry.android.session.SessionManager
 import kotlinx.coroutines.CoroutineScope
@@ -50,6 +45,8 @@ class CaptureSource(
 
     private val _captureEventFlow = MutableSharedFlow<CaptureEvent>()
     val captureFlow: SharedFlow<CaptureEvent> = _captureEventFlow.asSharedFlow()
+
+    private val sensitiveAreasCollector = SensitiveAreasCollector()
 
     /**
      * Attaches the [CaptureSource] to the [Application] whose [Activity]s will be captured.
@@ -137,7 +134,7 @@ class CaptureSource(
                     // Synchronize with UI rendering frame
                     Choreographer.getInstance().postFrameCallback {
                         val sensitiveComposeRects =
-                            findSensitiveComposeAreasFromActivity(activity, maskMatchers)
+                            sensitiveAreasCollector.collectFromActivity(activity, maskMatchers)
 
                         // TODO: O11Y-624 - read PixelCopy exception recommendations and adjust logic to account for such cases
                         PixelCopy.request(
@@ -216,12 +213,12 @@ class CaptureSource(
             style = Paint.Style.FILL
         }
 
-        sensitiveRects.forEach { composeRect ->
+        sensitiveRects.forEach { rect ->
             val rect = Rect(
-                composeRect.left.toInt(),
-                composeRect.top.toInt(),
-                composeRect.right.toInt(),
-                composeRect.bottom.toInt()
+                rect.left.toInt(),
+                rect.top.toInt(),
+                rect.right.toInt(),
+                rect.bottom.toInt()
             )
             canvas.drawRect(rect, paint)
         }
@@ -229,129 +226,4 @@ class CaptureSource(
         return maskedBitmap
     }
 
-    /**
-     * Find sensitive Compose areas from all ComposeViews in the activity.
-     *
-     * @return a list of rects that represent sensitive areas that need to be masked
-     */
-    private fun findSensitiveComposeAreasFromActivity(activity: Activity, matchers: List<MaskMatcher>): List<ComposeRect> {
-        val allSensitiveRects = mutableListOf<ComposeRect>()
-
-        try {
-            // Find all ComposeViews in the activity
-            val composeViews = findComposeViews(activity.window.decorView)
-
-            // Process each ComposeView to find sensitive areas
-            composeViews.forEach { composeView ->
-                val semanticsOwner = getSemanticsOwner(composeView)
-                val rootSemanticsNode = semanticsOwner?.unmergedRootSemanticsNode
-                if (rootSemanticsNode != null) {
-                    val sensitiveRects = findSensitiveComposeAreas(rootSemanticsNode, composeView, matchers)
-                    allSensitiveRects.addAll(sensitiveRects)
-                }
-            }
-        } catch (e: Exception) {
-            // Handle cases where ComposeView access fails
-        }
-
-        return allSensitiveRects
-    }
-
-    /**
-     * Recursively find all ComposeViews in the view hierarchy.
-     *
-     * @return list of compose views
-     */
-    private fun findComposeViews(view: View): List<ComposeView> {
-        val composeViews = mutableListOf<ComposeView>()
-
-        if (view is ComposeView) {
-            composeViews.add(view)
-        }
-
-        if (view is ViewGroup) {
-            for (i in 0 until view.childCount) {
-                val child = view.getChildAt(i)
-                composeViews.addAll(findComposeViews(child))
-            }
-        }
-
-        return composeViews
-    }
-
-    /**
-     * Gets the SemanticsOwner from a ComposeView using reflection. This is necessary because
-     * AndroidComposeView and semanticsOwner are not publicly exposed.
-     */
-    private fun getSemanticsOwner(composeView: ComposeView): SemanticsOwner? {
-        return try {
-            // ComposeView contains an AndroidComposeView which has the semanticsOwner
-            if (composeView.childCount > 0) {
-                val androidComposeView = composeView.getChildAt(0)
-
-                // TODO: O11Y-620 - determine if there is a more robust long term way to achieve this, this reflection is fragile.
-                // Use reflection to check if this is an AndroidComposeView
-                val androidComposeViewClass =
-                    Class.forName("androidx.compose.ui.platform.AndroidComposeView")
-                if (androidComposeViewClass.isInstance(androidComposeView)) {
-                    // Use reflection to access the semanticsOwner field
-                    val field = androidComposeViewClass.getDeclaredField("semanticsOwner")
-                    field.isAccessible = true
-                    field.get(androidComposeView) as? SemanticsOwner
-                } else null
-            } else null
-        } catch (e: Exception) {
-            null
-        }
-    }
-
-    /**
-     * Find sensitive Compose areas by traversing the semantic node tree.
-     */
-    private fun findSensitiveComposeAreas(
-        rootSemanticsNode: SemanticsNode,
-        composeView: ComposeView,
-        matchers: List<MaskMatcher>
-    ): List<ComposeRect> {
-        val sensitiveRects = mutableListOf<ComposeRect>()
-
-        try {
-            // Recursively traverse the semantic node tree to find sensitive areas
-            traverseSemanticNode(rootSemanticsNode, sensitiveRects, composeView, matchers)
-
-        } catch (e: Exception) {
-            // This could happen if the semantic tree is not available or corrupted
-        }
-
-        return sensitiveRects
-    }
-
-    /**
-     * Recursively traverse a semantic node and its children to find sensitive areas.
-     */
-    private fun traverseSemanticNode(
-        node: SemanticsNode,
-        sensitiveRects: MutableList<ComposeRect>,
-        composeView: ComposeView,
-        matchers: List<MaskMatcher>
-    ) {
-        for (matcher in matchers) {
-            if (matcher.isMatch(node)) {
-                val boundsInWindow = node.boundsInWindow
-                val absoluteRect = ComposeRect(
-                    left = boundsInWindow.left,
-                    top = boundsInWindow.top,
-                    right = boundsInWindow.right,
-                    bottom = boundsInWindow.bottom
-                )
-                sensitiveRects.add(absoluteRect)
-                break
-            }
-        }
-
-        // Recursively traverse all children
-        node.children.forEach { child ->
-            traverseSemanticNode(child, sensitiveRects, composeView, matchers)
-        }
-    }
 }

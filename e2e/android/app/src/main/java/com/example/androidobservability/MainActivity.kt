@@ -71,6 +71,30 @@ class MainActivity : ComponentActivity() {
                         }
                         Button(
                             onClick = {
+                                this@MainActivity.startActivity(
+                                    Intent(
+                                        this@MainActivity,
+                                        CreditCardActivity::class.java
+                                    )
+                                )
+                            }
+                        ) {
+                            Text("Open Credit Card (XML)")
+                        }
+                        Button(
+                            onClick = {
+                                this@MainActivity.startActivity(
+                                    Intent(
+                                        this@MainActivity,
+                                        com.smoothie.SmoothieListActivity::class.java
+                                    )
+                                )
+                            }
+                        ) {
+                            Text("Open Fruta (XML)")
+                        }
+                        Button(
+                            onClick = {
                                 viewModel.triggerHttpRequests()
                             }
                         ) {

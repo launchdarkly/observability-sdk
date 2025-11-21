@@ -1,6 +1,11 @@
 package com.example.androidobservability
 
 import android.os.Bundle
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -26,11 +31,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.androidobservability.ui.theme.AndroidObservabilityTheme
+import com.launchdarkly.observability.api.ldMask
 
 class SecondaryActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -64,6 +71,15 @@ fun UserInfoForm(modifier: Modifier = Modifier) {
     var cardholderName by remember { mutableStateOf("") }
 
     val scrollState = rememberScrollState()
+    val addressRotationTransition = rememberInfiniteTransition(label = "addressRotationTransition")
+    val addressRotationDegrees by addressRotationTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 3000, easing = LinearEasing)
+        ),
+        label = "addressRotationDegrees"
+    )
 
     Column(
         modifier = modifier
@@ -73,7 +89,8 @@ fun UserInfoForm(modifier: Modifier = Modifier) {
     ) {
         Text(
             text = "User Information Form",
-            style = MaterialTheme.typography.headlineMedium
+            style = MaterialTheme.typography.headlineMedium,
+            modifier = Modifier.ldMask()
         )
 
         // Password Section
@@ -102,7 +119,9 @@ fun UserInfoForm(modifier: Modifier = Modifier) {
 
         // Address Section
         Card(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .rotate(addressRotationDegrees),
             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
         ) {
             Column(
