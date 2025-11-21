@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.15.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.14.1...launchdarkly-observability-android-0.15.0) (2025-11-21)
+
+
+### Features
+
+* Support ldMask() for Native and Compose views. ([#295](https://github.com/launchdarkly/observability-sdk/issues/295)) ([6233764](https://github.com/launchdarkly/observability-sdk/commit/6233764bbf5f9cb8385b37d1a25dd81d02a1cde9))
+
 ## [0.14.1](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.14.0...launchdarkly-observability-android-0.14.1) (2025-11-20)
 
 
