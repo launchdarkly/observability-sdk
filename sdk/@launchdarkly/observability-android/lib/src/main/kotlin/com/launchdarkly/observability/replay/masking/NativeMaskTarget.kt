@@ -3,9 +3,9 @@ package com.launchdarkly.observability.replay.masking
 import android.view.View
 import android.widget.EditText
 import android.widget.TextView
-import kotlin.text.lowercase
 import androidx.compose.ui.geometry.Rect as ComposeRect
-
+import kotlin.text.lowercase
+import com.launchdarkly.observability.R     
 /**
  *   Native view target
  */
@@ -34,13 +34,10 @@ data class NativeMaskTarget(
         val right = left + view.width
         val bottom = top + view.height
 
-        return ComposeRect(
-            left = left,
-            top = top,
-            right = right,
-            bottom = bottom
-        )
+        return ComposeRect(left, top, right, bottom)
+    }
+
+    override fun hasLDMask(): Boolean {
+        return view.getTag(R.id.ld_mask_tag) as? Boolean ?: false
     }
 }
-
-

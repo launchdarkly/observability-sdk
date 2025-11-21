@@ -35,11 +35,16 @@ class SensitiveAreasCollector {
                     val semanticsOwner = getSemanticsOwner(view)
                     val rootSemanticsNode = semanticsOwner?.unmergedRootSemanticsNode
                     if (rootSemanticsNode != null) {
-                        val sensitiveRects = findComposeSensitiveAreas(rootSemanticsNode, view, matchers)
+                        val rootTarget = ComposeMaskTarget.from(view)
+                        val sensitiveRects = if (rootTarget != null) {
+                            findComposeSensitiveAreas(rootTarget.rootNode, rootTarget, matchers)
+                        } else {
+                            emptyList()
+                        }
                         allSensitiveRects.addAll(sensitiveRects)
                     }
                 } else {
-                    val sensitiveRects = findNativeSensitiveRects(view, matchers)
+                    val sensitiveRects = findNativeSensitiveRects(NativeMaskTarget(view), matchers)
                     allSensitiveRects.addAll(sensitiveRects)
                 }
             }
@@ -99,14 +104,14 @@ class SensitiveAreasCollector {
      */
     private fun findComposeSensitiveAreas(
         rootSemanticsNode: SemanticsNode,
-        view: ComposeView,
+        maskTarget: ComposeMaskTarget,
         matchers: List<MaskMatcher>
     ): List<ComposeRect> {
         // TODO: O11Y-629 - add logic to check for sensitive areas in Compose views
         val sensitiveRects = mutableListOf<ComposeRect>()
 
         try {
-            traverseSemanticNode(rootSemanticsNode, sensitiveRects, view, matchers)
+            traverseSemanticNode(rootSemanticsNode, sensitiveRects, maskTarget, matchers)
         } catch (ignored: Exception) {
             // Ignore issues in semantics tree traversal
         }
@@ -120,22 +125,24 @@ class SensitiveAreasCollector {
     private fun traverseSemanticNode(
         node: SemanticsNode,
         sensitiveRects: MutableList<ComposeRect>,
-        view: ComposeView,
+        maskTarget: ComposeMaskTarget,
         matchers: List<MaskMatcher>
     ) {
-        val maskTarget = ComposeMaskTarget(
-            view = view,
-            config = node.config,
-            boundsInWindow = node.boundsInWindow
-        )
+        // current node target is provided as parameter
         // check ldMask() modifier; do not return early so children are still traversed
-        val ldMask = node.config.getOrNull(LdMaskSemanticsKey) == true
-        if (ldMask || matchers.any { it.isMatch(maskTarget) }) {
+        val hasLDMask = maskTarget.hasLDMask()
+        if (hasLDMask || matchers.any { it.isMatch(maskTarget) }) {
             maskTarget.maskRect()?.let { sensitiveRects.add(it) }
         }
 
         node.children.forEach { child ->
-            traverseSemanticNode(child, sensitiveRects, view, matchers)
+            val childTarget = ComposeMaskTarget(
+                view = maskTarget.view,
+                rootNode = maskTarget.rootNode,
+                config = child.config,
+                boundsInWindow = child.boundsInWindow
+            )
+            traverseSemanticNode(child, sensitiveRects, childTarget, matchers)
         }
     }
 
@@ -143,13 +150,11 @@ class SensitiveAreasCollector {
      * Check if a native view is sensitive and add its bounds to the list if it is.
      */
     private fun findNativeSensitiveRects(
-        view: View,
+        target: NativeMaskTarget,
         matchers: List<MaskMatcher>
     ): List<ComposeRect> {
         val sensitiveRects = mutableListOf<ComposeRect>()
-        val tagValue = view.getTag(R.id.ld_mask_tag) as? Boolean ?: false
-        var isSensitive = tagValue
-        val target = NativeMaskTarget(view = view)
+        var isSensitive = target.hasLDMask()
 
         if (!isSensitive) {
             // Allow matchers to determine sensitivity for native views as well

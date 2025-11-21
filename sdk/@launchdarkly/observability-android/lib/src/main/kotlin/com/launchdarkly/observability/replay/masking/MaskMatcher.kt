@@ -12,6 +12,7 @@ sealed interface MaskTarget {
     fun isText(): Boolean
     fun isSensitive(sensitiveKeywords: List<String>): Boolean
     fun maskRect(): ComposeRect?
+    fun hasLDMask(): Boolean
 }
 
 
