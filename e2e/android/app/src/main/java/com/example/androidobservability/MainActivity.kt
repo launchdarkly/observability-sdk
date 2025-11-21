@@ -24,6 +24,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.example.androidobservability.smoothie.SmoothieListActivity
 import com.example.androidobservability.ui.theme.AndroidObservabilityTheme
 
 class MainActivity : ComponentActivity() {
@@ -86,7 +87,7 @@ class MainActivity : ComponentActivity() {
                                 this@MainActivity.startActivity(
                                     Intent(
                                         this@MainActivity,
-                                        com.smoothie.SmoothieListActivity::class.java
+                                        SmoothieListActivity::class.java
                                     )
                                 )
                             }
