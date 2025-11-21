@@ -31,6 +31,11 @@ data class ComposeMaskTarget(
                 boundsInWindow = root.boundsInWindow
             )
         }
+
+        /**
+         * Gets the SemanticsOwner from a ComposeView using reflection. This is necessary because
+         * AndroidComposeView and semanticsOwner are not publicly exposed.
+         */
         private fun getRootSemanticsNode(composeView: ComposeView): SemanticsNode? {
             return try {
                 if (composeView.isNotEmpty()) {

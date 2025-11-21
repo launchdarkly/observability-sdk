@@ -31,21 +31,13 @@ class SensitiveAreasCollector {
             val views = findViews(activity.window.decorView)
 
             views.forEach { view ->
-                if (view is ComposeView) {
-                    val semanticsOwner = getSemanticsOwner(view)
-                    val rootSemanticsNode = semanticsOwner?.unmergedRootSemanticsNode
-                    if (rootSemanticsNode != null) {
-                        val rootTarget = ComposeMaskTarget.from(view)
-                        val sensitiveRects = if (rootTarget != null) {
-                            findComposeSensitiveAreas(rootTarget.rootNode, rootTarget, matchers)
-                        } else {
-                            emptyList()
+                when (view) {
+                    is ComposeView ->
+                        ComposeMaskTarget.from(view)?.let { target ->
+                            allSensitiveRects += findComposeSensitiveAreas(target, matchers)
                         }
-                        allSensitiveRects.addAll(sensitiveRects)
-                    }
-                } else {
-                    val sensitiveRects = findNativeSensitiveRects(NativeMaskTarget(view), matchers)
-                    allSensitiveRects.addAll(sensitiveRects)
+                    else ->
+                        allSensitiveRects += findNativeSensitiveRects(NativeMaskTarget(view), matchers)
                 }
             }
         } catch (ignored: Exception) {
@@ -74,36 +66,9 @@ class SensitiveAreasCollector {
     }
 
     /**
-     * Gets the SemanticsOwner from a ComposeView using reflection. This is necessary because
-     * AndroidComposeView and semanticsOwner are not publicly exposed.
-     */
-    private fun getSemanticsOwner(composeView: ComposeView): SemanticsOwner? {
-        return try {
-            if (composeView.isNotEmpty()) {
-                val androidComposeView = composeView.getChildAt(0)
-
-                val androidComposeViewClass =
-                    Class.forName("androidx.compose.ui.platform.AndroidComposeView")
-                if (androidComposeViewClass.isInstance(androidComposeView)) {
-                    val field = androidComposeViewClass.getDeclaredField("semanticsOwner")
-                    field.isAccessible = true
-                    field.get(androidComposeView) as? SemanticsOwner
-                } else {
-                    null
-                }
-            } else {
-                null
-            }
-        } catch (ignored: Exception) {
-            null
-        }
-    }
-
-    /**
      * Find sensitive Compose areas by traversing the semantic node tree.
      */
     private fun findComposeSensitiveAreas(
-        rootSemanticsNode: SemanticsNode,
         maskTarget: ComposeMaskTarget,
         matchers: List<MaskMatcher>
     ): List<ComposeRect> {
@@ -111,7 +76,7 @@ class SensitiveAreasCollector {
         val sensitiveRects = mutableListOf<ComposeRect>()
 
         try {
-            traverseSemanticNode(rootSemanticsNode, sensitiveRects, maskTarget, matchers)
+            traverseSemanticNode(maskTarget.rootNode, sensitiveRects, maskTarget, matchers)
         } catch (ignored: Exception) {
             // Ignore issues in semantics tree traversal
         }
