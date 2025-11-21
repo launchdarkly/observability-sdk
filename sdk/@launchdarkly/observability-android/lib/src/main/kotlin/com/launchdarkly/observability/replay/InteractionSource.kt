@@ -2,12 +2,14 @@ package com.launchdarkly.observability.replay
 
 import android.app.Activity
 import android.app.Application
+import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
 import android.view.KeyboardShortcutGroup
 import android.view.Menu
 import android.view.MotionEvent
 import android.view.Window
+import androidx.annotation.RequiresApi
 import io.opentelemetry.android.session.SessionManager
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
