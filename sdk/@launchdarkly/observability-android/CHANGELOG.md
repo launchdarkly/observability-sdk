@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.1](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.14.0...launchdarkly-observability-android-0.14.1) (2025-11-20)
+
+
+### Bug Fixes
+
+* tweaks Android InteractionDetector to delegate additional defaul… ([#294](https://github.com/launchdarkly/observability-sdk/issues/294)) ([aac1322](https://github.com/launchdarkly/observability-sdk/commit/aac13225d85a106070be66fbccbf72eaa6e24f98))
+
 ## [0.14.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.13.2...launchdarkly-observability-android-0.14.0) (2025-11-17)
 
 
