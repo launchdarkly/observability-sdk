@@ -11,14 +11,14 @@ import com.launchdarkly.observability.R
 import com.launchdarkly.observability.api.LdMaskSemanticsKey
 import androidx.compose.ui.geometry.Rect as ComposeRect
 import androidx.core.view.isNotEmpty
+import com.launchdarkly.logging.LDLogger
 
 /**
  * Collects sensitive screen areas that should be masked in session replay.
  *
  * This encapsulates both Jetpack Compose and native View detection logic.
  */
-class SensitiveAreasCollector {
-
+class SensitiveAreasCollector(private val logger: LDLogger) {
     /**
      * Find sensitive areas from all views in the provided [activity].
      *
@@ -33,7 +33,7 @@ class SensitiveAreasCollector {
             views.forEach { view ->
                 when (view) {
                     is ComposeView ->
-                        ComposeMaskTarget.from(view)?.let { target ->
+                        ComposeMaskTarget.from(view, logger)?.let { target ->
                             allSensitiveRects += findComposeSensitiveAreas(target, matchers)
                         }
                     else ->
