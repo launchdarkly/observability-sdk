@@ -36,7 +36,7 @@ open class BaseApplication : Application() {
         instrumentations = listOf(
             ReplayInstrumentation(
                 options = ReplayOptions(
-                    privacyProfile = PrivacyProfile(maskText = false, maskTextInputs = false)
+                    privacyProfile = PrivacyProfile(maskText = false)
                 )
             )
         ),
