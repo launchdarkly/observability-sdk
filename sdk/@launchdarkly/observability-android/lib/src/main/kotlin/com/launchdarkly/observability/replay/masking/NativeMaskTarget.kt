@@ -3,6 +3,7 @@ package com.launchdarkly.observability.replay.masking
 import android.view.View
 import android.widget.EditText
 import android.widget.TextView
+import android.text.method.PasswordTransformationMethod
 import androidx.compose.ui.geometry.Rect as ComposeRect
 import kotlin.text.lowercase
 import com.launchdarkly.observability.R     
@@ -22,8 +23,32 @@ data class NativeMaskTarget(
     }
 
     override fun isSensitive(sensitiveKeywords: List<String>): Boolean {
-        val lowerDesc = view.contentDescription?.toString()?.lowercase() ?: return false
-        return sensitiveKeywords.any { keyword -> lowerDesc.contains(keyword) }
+        if (view is TextView) {
+            // Treat password fields as sensitive (analogous to Compose SemanticsProperties.Password)
+            if (view.transformationMethod is PasswordTransformationMethod) {
+                return true
+            }
+
+            // Check actual displayed text
+            val lowerText = view.text?.toString()?.lowercase()
+            if (!lowerText.isNullOrEmpty() && sensitiveKeywords.any { keyword -> lowerText.contains(keyword) }) {
+                return true
+            }
+
+            // Check hint text, which often contains labels like "email", "password", etc.
+            val lowerHint = view.hint?.toString()?.lowercase()
+            if (!lowerHint.isNullOrEmpty() && sensitiveKeywords.any { keyword -> lowerHint.contains(keyword) }) {
+                return true
+            }
+        }
+
+        // Fallback to contentDescription check
+        val lowerDesc = view.contentDescription?.toString()?.lowercase()
+        if (!lowerDesc.isNullOrEmpty() && sensitiveKeywords.any { keyword -> lowerDesc.contains(keyword) }) {
+            return true
+        }
+
+        return false
     }
 
     override fun maskRect(): ComposeRect? {

@@ -77,7 +77,8 @@ class ReplayInstrumentation(
 
     override fun install(ctx: InstallationContext) {
         _otelLogger = ctx.openTelemetry.logsBridge.get(INSTRUMENTATION_SCOPE_NAME)
-        val logger = LDLogger()
+        // TODO: Use real LDClient logger after creating SR Plugin
+        val logger = LDLogger.none()
         _captureSource = CaptureSource(ctx.sessionManager, options.privacyProfile.asMatchersList(), logger)
         _interactionSource = InteractionSource(ctx.sessionManager)
 

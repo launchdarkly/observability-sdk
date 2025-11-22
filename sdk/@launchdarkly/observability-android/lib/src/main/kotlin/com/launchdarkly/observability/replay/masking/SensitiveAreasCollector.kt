@@ -42,6 +42,7 @@ class SensitiveAreasCollector(private val logger: LDLogger) {
             }
         } catch (ignored: Exception) {
             // Best-effort collection; ignore failures accessing Compose internals
+            logger.warn("Failure building sensitive rects ")
         }
 
         return allSensitiveRects

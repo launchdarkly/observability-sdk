@@ -55,7 +55,7 @@ data class ComposeMaskTarget(
                     null
                 }
             } catch (err: Exception) {
-                logger.warn("Failed to get Root Semantics Node: ${err.message}")
+                logger.error("Failed to get Root Semantics Node: ${err.message}")
                 null
             }
         }
