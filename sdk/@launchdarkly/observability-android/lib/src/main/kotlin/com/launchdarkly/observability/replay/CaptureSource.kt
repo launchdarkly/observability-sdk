@@ -14,7 +14,10 @@ import android.os.Looper
 import android.util.Base64
 import android.view.Choreographer
 import android.view.PixelCopy
+import com.launchdarkly.logging.LDLogger
 import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
+import com.launchdarkly.observability.replay.masking.MaskMatcher
+import com.launchdarkly.observability.replay.masking.SensitiveAreasCollector
 import io.opentelemetry.android.session.SessionManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -37,6 +40,7 @@ import androidx.compose.ui.geometry.Rect as ComposeRect
 class CaptureSource(
     private val sessionManager: SessionManager,
     private val maskMatchers: List<MaskMatcher>,
+    private val logger: LDLogger,
     // TODO: O11Y-628 - add captureQuality options
 ) :
     Application.ActivityLifecycleCallbacks {
@@ -46,7 +50,7 @@ class CaptureSource(
     private val _captureEventFlow = MutableSharedFlow<CaptureEvent>()
     val captureFlow: SharedFlow<CaptureEvent> = _captureEventFlow.asSharedFlow()
 
-    private val sensitiveAreasCollector = SensitiveAreasCollector()
+    private val sensitiveAreasCollector = SensitiveAreasCollector(logger)
 
     /**
      * Attaches the [CaptureSource] to the [Application] whose [Activity]s will be captured.

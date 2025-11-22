@@ -1,4 +1,4 @@
-package com.smoothie
+package com.example.androidobservability.smoothie
 
 import android.graphics.Bitmap
 import android.view.LayoutInflater
