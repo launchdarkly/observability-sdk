@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.16.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.15.0...launchdarkly-observability-android-0.16.0) (2025-11-22)
+
+
+### Features
+
+* XML Views Automasking options ([#299](https://github.com/launchdarkly/observability-sdk/issues/299)) ([c61a7be](https://github.com/launchdarkly/observability-sdk/commit/c61a7befc95ad7bef30c836b6464e17ca1f467a9))
+
+
+### Bug Fixes
+
+* missed imports ([#298](https://github.com/launchdarkly/observability-sdk/issues/298)) ([6e6c388](https://github.com/launchdarkly/observability-sdk/commit/6e6c3884af13c3677c4f9cbd629af8e99769dbe0))
+
 ## [0.15.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.14.1...launchdarkly-observability-android-0.15.0) (2025-11-21)
 
 
