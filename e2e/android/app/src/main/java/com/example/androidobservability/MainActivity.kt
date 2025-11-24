@@ -7,25 +7,39 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.material3.HorizontalDivider
 import com.example.androidobservability.masking.ComposeMaskingActivity
 import com.example.androidobservability.masking.ComposeUserFormActivity
+import com.example.androidobservability.masking.XMLUserFormActivity
+import com.example.androidobservability.masking.XMLMaskingActivity
 import com.example.androidobservability.smoothie.SmoothieListActivity
 import com.example.androidobservability.ui.theme.AndroidObservabilityTheme
 
@@ -56,100 +70,155 @@ class MainActivity : ComponentActivity() {
                             .padding(16.dp)
                     ) {
                         Text(
-                            text = "Hello Telemetry",
-                            modifier = Modifier.padding(bottom = 16.dp)
+                            text = "Masking",
+                            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                            modifier = Modifier.padding(bottom = 8.dp)
                         )
+                        HorizontalDivider(modifier = Modifier.padding(bottom = 16.dp))
 
-                        Button(
-                            onClick = {
-                                this@MainActivity.startActivity(
-                                    Intent(
-                                        this@MainActivity,
-                                        ComposeUserFormActivity::class.java
+                        // Three-column layout: Name | XML | Compose
+                        // User Form
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "User Form",
+                                modifier = Modifier.weight(1f)
+                            )
+                            Button(
+                                onClick = {
+                                    this@MainActivity.startActivity(
+                                        Intent(
+                                            this@MainActivity,
+                                            XMLUserFormActivity::class.java
+                                        )
                                     )
-                                )
+                                },
+                                modifier = Modifier.weight(1f),
+                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp)
+                            ) {
+                                Text("XML")
                             }
-                        ) {
-                            Text("Go to Secondary Activity")
-                        }
-                        Button(
-                            onClick = {
-                                this@MainActivity.startActivity(
-                                    Intent(
-                                        this@MainActivity,
-                                        CreditCardActivity::class.java
+                            Button(
+                                onClick = {
+                                    this@MainActivity.startActivity(
+                                        Intent(
+                                            this@MainActivity,
+                                            ComposeUserFormActivity::class.java
+                                        )
                                     )
-                                )
+                                },
+                                modifier = Modifier.weight(1f),
+                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp)
+                            ) {
+                                Text("Compose")
                             }
-                        ) {
-                            Text("Open Credit Card (XML)")
                         }
-                        Button(
-                            onClick = {
-                                this@MainActivity.startActivity(
-                                    Intent(
-                                        this@MainActivity,
-                                        SmoothieListActivity::class.java
+                        // Smoothies
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Smoothies",
+                                modifier = Modifier.weight(1f)
+                            )
+                            Button(
+                                onClick = {
+                                    this@MainActivity.startActivity(
+                                        Intent(
+                                            this@MainActivity,
+                                            SmoothieListActivity::class.java
+                                        )
                                     )
-                                )
+                                },
+                                modifier = Modifier.weight(1f),
+                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp)
+                            ) {
+                                Text("XML")
                             }
-                        ) {
-                            Text("Open Fruta (XML)")
+                            Button(
+                                onClick = { /* Compose Smoothies not implemented */ },
+                                enabled = false,
+                                modifier = Modifier.weight(1f),
+                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp)
+                            ) {
+                                Text("Compose")
+                            }
                         }
-                        Button(
-                            onClick = {
-                                this@MainActivity.startActivity(
-                                    Intent(
-                                        this@MainActivity,
-                                        ComposeMaskingActivity::class.java
+                        // Bench
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Bench",
+                                modifier = Modifier.weight(1f)
+                            )
+                            Button(
+                                onClick = {
+                                    this@MainActivity.startActivity(
+                                        Intent(
+                                            this@MainActivity,
+                                            XMLMaskingActivity::class.java
+                                        )
                                     )
-                                )
+                                },
+                                modifier = Modifier.weight(1f),
+                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp)
+                            ) {
+                                Text("XML")
                             }
-                        ) {
-                            Text("Compose Masking")
-                        }
-                        Button(
-                            onClick = {
-                                viewModel.triggerHttpRequests()
+                            Button(
+                                onClick = {
+                                    this@MainActivity.startActivity(
+                                        Intent(
+                                            this@MainActivity,
+                                            ComposeMaskingActivity::class.java
+                                        )
+                                    )
+                                },
+                                modifier = Modifier.weight(1f),
+                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp)
+                            ) {
+                                Text("Compose")
                             }
-                        ) {
-                            Text("Trigger HTTP Request")
                         }
-                        Button(
-                            onClick = {
-                                viewModel.triggerMetric()
-                            }
-                        ) {
-                            Text("Trigger Metric")
-                        }
-                        Button(
-                            onClick = {
-                                viewModel.triggerHistogramMetric()
-                            }
-                        ) {
-                            Text("Trigger Histogram Metric")
-                        }
-                        Button(
-                            onClick = {
-                                viewModel.triggerCountMetric()
-                            }
-                        ) {
-                            Text("Trigger Count Metric")
-                        }
-                        Button(
-                            onClick = {
-                                viewModel.triggerIncrementalMetric()
-                            }
-                        ) {
-                            Text("Trigger Incremental Metric")
-                        }
-                        Button(
-                            onClick = {
-                                viewModel.triggerUpDownCounterMetric()
-                            }
-                        ) {
-                            Text("Trigger UpDownCounter Metric")
-                        }
+
+                        Text(
+                            text = "Observability",
+                            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                        HorizontalDivider(modifier = Modifier.padding(bottom = 16.dp))
+                        Text(
+                            text = "Metric",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                        MetricButtons(viewModel = viewModel)
+                        Text(
+                            text = "Instrumentation",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            modifier = Modifier.padding(bottom = 8.dp, top = 8.dp)
+                        )
+                        InstrumentationButtons(viewModel = viewModel)
+
+                        Text(
+                            text = "Customer API",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            modifier = Modifier.padding(bottom = 8.dp, top = 8.dp)
+                        )
                         Button(
                             onClick = {
                                 viewModel.triggerError()
@@ -163,34 +232,6 @@ class MainActivity : ComponentActivity() {
                             }
                         ) {
                             Text("Trigger Log")
-                        }
-                        Button(
-                            onClick = {
-                                viewModel.startForegroundService()
-                            }
-                        ) {
-                            Text("Start Foreground Service")
-                        }
-                        Button(
-                            onClick = {
-                                viewModel.startBackgroundService()
-                            }
-                        ) {
-                            Text("Start Background Service")
-                        }
-                        Button(
-                            onClick = {
-                                viewModel.triggerNestedSpans()
-                            }
-                        ) {
-                            Text("Trigger Nested Spans")
-                        }
-                        Button(
-                            onClick = {
-                                viewModel.triggerCrash()
-                            }
-                        ) {
-                            Text("Trigger Crash")
                         }
 
                         OutlinedTextField(
@@ -210,6 +251,13 @@ class MainActivity : ComponentActivity() {
 
                         Spacer(modifier = Modifier.height(16.dp))
 
+                        Button(
+                            onClick = {
+                                viewModel.triggerNestedSpans()
+                            }
+                        ) {
+                            Text("Trigger Nested Spans")
+                        }
                         OutlinedTextField(
                             value = customSpanText,
                             onValueChange = { customSpanText = it },
@@ -244,6 +292,92 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun MetricButtons(viewModel: ViewModel) {
+    FlowRow(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(0.dp)
+    ) {
+        Button(
+            onClick = {
+                viewModel.triggerMetric()
+            }
+        ) {
+            Text("Metric")
+        }
+        Button(
+            onClick = {
+                viewModel.triggerHistogramMetric()
+            }
+        ) {
+            Text("Histogram")
+        }
+        Button(
+            onClick = {
+                viewModel.triggerCountMetric()
+            }
+        ) {
+            Text("Count")
+        }
+        Button(
+            onClick = {
+                viewModel.triggerIncrementalMetric()
+            }
+        ) {
+            Text("Incremental")
+        }
+        Button(
+            onClick = {
+                viewModel.triggerUpDownCounterMetric()
+            }
+        ) {
+            Text("UpDownCounter")
+        }
+    }
+}
+
+@Composable
+private fun InstrumentationButtons(viewModel: ViewModel) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 16.dp)
+    ) {
+        Button(
+            onClick = {
+                viewModel.triggerHttpRequests()
+            }
+        ) {
+            Text("Trigger HTTP Request")
+        }
+        Button(
+            onClick = {
+                viewModel.startForegroundService()
+            }
+        ) {
+            Text("Start Foreground Service")
+        }
+        Button(
+            onClick = {
+                viewModel.startBackgroundService()
+            }
+        ) {
+            Text("Start Background Service")
+        }
+        Button(
+            onClick = {
+                viewModel.triggerCrash()
+            }
+        ) {
+            Text("Trigger Crash")
         }
     }
 }

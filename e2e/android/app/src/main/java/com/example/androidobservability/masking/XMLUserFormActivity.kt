@@ -1,16 +1,17 @@
-package com.example.androidobservability
+package com.example.androidobservability.masking
 
 import android.os.Bundle
 import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import com.example.androidobservability.R
 
-class CreditCardActivity : ComponentActivity() {
+class XMLUserFormActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_credit_card)
+        setContentView(R.layout.activity_user_form)
 
         val inputCardholderName = findViewById<EditText>(R.id.input_cardholder_name)
         val inputCardNumber = findViewById<EditText>(R.id.input_card_number)

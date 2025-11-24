@@ -22,13 +22,18 @@
             android:label="@string/title_activity_secondary"
             android:theme="@style/Theme.AndroidObservability" />
         <activity
-            android:name=".CreditCardActivity"
+            android:name=".masking.XMLUserFormActivity"
             android:exported="false"
             android:theme="@style/Theme.AndroidObservability" />
         <activity
             android:name=".masking.ComposeMaskingActivity"
             android:exported="false"
             android:label="Compose Masking"
+            android:theme="@style/Theme.AndroidObservability" />
+        <activity
+            android:name=".masking.XMLMaskingActivity"
+            android:exported="false"
+            android:label="XML Masking"
             android:theme="@style/Theme.AndroidObservability" />
         <activity
             android:name=".smoothie.SmoothieListActivity"
