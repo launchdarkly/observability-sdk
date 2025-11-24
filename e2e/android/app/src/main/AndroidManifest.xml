@@ -17,13 +17,18 @@
         android:usesCleartextTraffic="true"
         tools:targetApi="31" >
         <activity
-            android:name=".SecondaryActivity"
+            android:name=".masking.ComposeUserFormActivity"
             android:exported="false"
             android:label="@string/title_activity_secondary"
             android:theme="@style/Theme.AndroidObservability" />
         <activity
             android:name=".CreditCardActivity"
             android:exported="false"
+            android:theme="@style/Theme.AndroidObservability" />
+        <activity
+            android:name=".masking.ComposeMaskingActivity"
+            android:exported="false"
+            android:label="Compose Masking"
             android:theme="@style/Theme.AndroidObservability" />
         <activity
             android:name=".smoothie.SmoothieListActivity"

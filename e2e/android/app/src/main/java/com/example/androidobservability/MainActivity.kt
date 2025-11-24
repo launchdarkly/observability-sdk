@@ -24,6 +24,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.example.androidobservability.masking.ComposeMaskingActivity
+import com.example.androidobservability.masking.ComposeUserFormActivity
 import com.example.androidobservability.smoothie.SmoothieListActivity
 import com.example.androidobservability.ui.theme.AndroidObservabilityTheme
 
@@ -63,7 +65,7 @@ class MainActivity : ComponentActivity() {
                                 this@MainActivity.startActivity(
                                     Intent(
                                         this@MainActivity,
-                                        SecondaryActivity::class.java
+                                        ComposeUserFormActivity::class.java
                                     )
                                 )
                             }
@@ -93,6 +95,18 @@ class MainActivity : ComponentActivity() {
                             }
                         ) {
                             Text("Open Fruta (XML)")
+                        }
+                        Button(
+                            onClick = {
+                                this@MainActivity.startActivity(
+                                    Intent(
+                                        this@MainActivity,
+                                        ComposeMaskingActivity::class.java
+                                    )
+                                )
+                            }
+                        ) {
+                            Text("Compose Masking")
                         }
                         Button(
                             onClick = {

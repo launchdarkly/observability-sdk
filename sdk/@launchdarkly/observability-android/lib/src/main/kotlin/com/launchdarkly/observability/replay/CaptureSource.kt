@@ -116,14 +116,13 @@ class CaptureSource(
                 val activity = _mostRecentActivity ?: return@withContext null // return if no activity
                 val window = activity.window ?: return@withContext null // return if activity has no window
 
-                val decorView = window.decorView
-                val decorViewWidth = decorView.width
-                val decorViewHeight = decorView.height
-
-                val rect = Rect(0, 0, decorViewWidth, decorViewHeight)
+                val view = window.decorView
+                val viewWidth = view.width
+                val viewHeight = view.height
+                val rect = Rect(0, 0, viewWidth, viewHeight)
 
                 // protect against race condition where decor view has no size
-                if (decorViewWidth <= 0 || decorViewHeight <= 0) {
+                if (viewWidth <= 0 || viewHeight <= 0) {
                     return@withContext null
                 }
 
@@ -131,7 +130,7 @@ class CaptureSource(
                 // TODO: O11Y-625 - see if holding bitmap is more efficient than base64 encoding immediately after compression
                 // TODO: O11Y-628 - use captureQuality option for scaling and adjust this bitmap accordingly, may need to investigate power of 2 rounding for performance
                 // Create a bitmap with the window dimensions
-                val bitmap = Bitmap.createBitmap(decorViewWidth, decorViewHeight, Bitmap.Config.ARGB_8888)
+                val bitmap = Bitmap.createBitmap(viewWidth, viewHeight, Bitmap.Config.ARGB_8888)
 
                 suspendCancellableCoroutine { continuation ->
 
@@ -167,8 +166,8 @@ class CaptureSource(
 
                                             val captureEvent = CaptureEvent(
                                                 imageBase64 = compressedImage,
-                                                origWidth = decorViewWidth,
-                                                origHeight = decorViewHeight,
+                                                origWidth = viewWidth,
+                                                origHeight = viewHeight,
                                                 timestamp = timestamp,
                                                 session = session
                                             )
