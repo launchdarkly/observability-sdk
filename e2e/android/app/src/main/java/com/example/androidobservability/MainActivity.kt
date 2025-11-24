@@ -36,6 +36,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.ui.platform.LocalContext
 import com.example.androidobservability.masking.ComposeMaskingActivity
 import com.example.androidobservability.masking.ComposeUserFormActivity
 import com.example.androidobservability.masking.XMLUserFormActivity
@@ -58,10 +59,6 @@ class MainActivity : ComponentActivity() {
                         .fillMaxSize()
                         .imePadding()
                 ) { innerPadding ->
-                    var customLogText by remember { mutableStateOf("") }
-                    var customSpanText by remember { mutableStateOf("") }
-                    var customContextKey by remember { mutableStateOf("") }
-
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
@@ -76,124 +73,7 @@ class MainActivity : ComponentActivity() {
                         )
                         HorizontalDivider(modifier = Modifier.padding(bottom = 16.dp))
 
-                        // Three-column layout: Name | XML | Compose
-                        // User Form
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(bottom = 8.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "User Form",
-                                modifier = Modifier.weight(1f)
-                            )
-                            Button(
-                                onClick = {
-                                    this@MainActivity.startActivity(
-                                        Intent(
-                                            this@MainActivity,
-                                            XMLUserFormActivity::class.java
-                                        )
-                                    )
-                                },
-                                modifier = Modifier.weight(1f),
-                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp)
-                            ) {
-                                Text("XML")
-                            }
-                            Button(
-                                onClick = {
-                                    this@MainActivity.startActivity(
-                                        Intent(
-                                            this@MainActivity,
-                                            ComposeUserFormActivity::class.java
-                                        )
-                                    )
-                                },
-                                modifier = Modifier.weight(1f),
-                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp)
-                            ) {
-                                Text("Compose")
-                            }
-                        }
-                        // Smoothies
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(bottom = 8.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Smoothies",
-                                modifier = Modifier.weight(1f)
-                            )
-                            Button(
-                                onClick = {
-                                    this@MainActivity.startActivity(
-                                        Intent(
-                                            this@MainActivity,
-                                            SmoothieListActivity::class.java
-                                        )
-                                    )
-                                },
-                                modifier = Modifier.weight(1f),
-                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp)
-                            ) {
-                                Text("XML")
-                            }
-                            Button(
-                                onClick = { /* Compose Smoothies not implemented */ },
-                                enabled = false,
-                                modifier = Modifier.weight(1f),
-                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp)
-                            ) {
-                                Text("Compose")
-                            }
-                        }
-                        // Bench
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(bottom = 16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Bench",
-                                modifier = Modifier.weight(1f)
-                            )
-                            Button(
-                                onClick = {
-                                    this@MainActivity.startActivity(
-                                        Intent(
-                                            this@MainActivity,
-                                            XMLMaskingActivity::class.java
-                                        )
-                                    )
-                                },
-                                modifier = Modifier.weight(1f),
-                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp)
-                            ) {
-                                Text("XML")
-                            }
-                            Button(
-                                onClick = {
-                                    this@MainActivity.startActivity(
-                                        Intent(
-                                            this@MainActivity,
-                                            ComposeMaskingActivity::class.java
-                                        )
-                                    )
-                                },
-                                modifier = Modifier.weight(1f),
-                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp)
-                            ) {
-                                Text("Compose")
-                            }
-                        }
+                        MaskingButtons()
 
                         Text(
                             text = "Observability",
@@ -201,94 +81,12 @@ class MainActivity : ComponentActivity() {
                             modifier = Modifier.padding(bottom = 8.dp)
                         )
                         HorizontalDivider(modifier = Modifier.padding(bottom = 16.dp))
-                        Text(
-                            text = "Metric",
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
-                        MetricButtons(viewModel = viewModel)
-                        Text(
-                            text = "Instrumentation",
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                            modifier = Modifier.padding(bottom = 8.dp, top = 8.dp)
-                        )
+
                         InstrumentationButtons(viewModel = viewModel)
 
-                        Text(
-                            text = "Customer API",
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                            modifier = Modifier.padding(bottom = 8.dp, top = 8.dp)
-                        )
-                        Button(
-                            onClick = {
-                                viewModel.triggerError()
-                            }
-                        ) {
-                            Text("Trigger Error")
-                        }
-                        Button(
-                            onClick = {
-                                viewModel.triggerLog()
-                            }
-                        ) {
-                            Text("Trigger Log")
-                        }
+                        MetricButtons(viewModel = viewModel)
 
-                        OutlinedTextField(
-                            value = customLogText,
-                            onValueChange = { customLogText = it },
-                            label = { Text("Log Message") },
-                            modifier = Modifier.padding(8.dp)
-                        )
-                        Button(
-                            onClick = {
-                                viewModel.triggerCustomLog(customLogText)
-                            },
-                            modifier = Modifier.padding(8.dp)
-                        ) {
-                            Text("Send custom log")
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Button(
-                            onClick = {
-                                viewModel.triggerNestedSpans()
-                            }
-                        ) {
-                            Text("Trigger Nested Spans")
-                        }
-                        OutlinedTextField(
-                            value = customSpanText,
-                            onValueChange = { customSpanText = it },
-                            label = { Text("Span Name") },
-                            modifier = Modifier.padding(8.dp)
-                        )
-                        Button(
-                            onClick = {
-                                viewModel.triggerCustomSpan(customSpanText)
-                            },
-                            modifier = Modifier.padding(8.dp)
-                        ) {
-                            Text("Send custom span")
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        OutlinedTextField(
-                            value = customContextKey,
-                            onValueChange = { customContextKey = it },
-                            label = { Text("LD context key") },
-                            modifier = Modifier.padding(8.dp)
-                        )
-                        Button(
-                            onClick = {
-                                viewModel.identifyLDContext(customContextKey)
-                            },
-                            modifier = Modifier.padding(8.dp)
-                        ) {
-                            Text("Identify LD Context")
-                        }
+                        CustomerApiButtons(viewModel = viewModel)
                     }
                 }
             }
@@ -299,6 +97,12 @@ class MainActivity : ComponentActivity() {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun MetricButtons(viewModel: ViewModel) {
+    Text(
+        text = "Metric",
+        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+        modifier = Modifier.padding(bottom = 8.dp)
+    )
+
     FlowRow(
         modifier = Modifier
             .fillMaxWidth()
@@ -346,6 +150,12 @@ private fun MetricButtons(viewModel: ViewModel) {
 
 @Composable
 private fun InstrumentationButtons(viewModel: ViewModel) {
+    Text(
+        text = "Instrumentation",
+        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+        modifier = Modifier.padding(bottom = 8.dp, top = 8.dp)
+    )
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -379,5 +189,215 @@ private fun InstrumentationButtons(viewModel: ViewModel) {
         ) {
             Text("Trigger Crash")
         }
+    }
+}
+
+@Composable
+private fun MaskingButtons() {
+    val context = LocalContext.current
+
+
+
+    // Three-column layout: Name | XML | Compose
+    // User Form
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "User Form",
+            modifier = Modifier.weight(1f)
+        )
+        Button(
+            onClick = {
+                context.startActivity(
+                    Intent(
+                        context,
+                        XMLUserFormActivity::class.java
+                    )
+                )
+            },
+            modifier = Modifier.weight(1f),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp)
+        ) {
+            Text("XML")
+        }
+        Button(
+            onClick = {
+                context.startActivity(
+                    Intent(
+                        context,
+                        ComposeUserFormActivity::class.java
+                    )
+                )
+            },
+            modifier = Modifier.weight(1f),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp)
+        ) {
+            Text("Compose")
+        }
+    }
+    // Smoothies
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "Smoothies",
+            modifier = Modifier.weight(1f)
+        )
+        Button(
+            onClick = {
+                context.startActivity(
+                    Intent(
+                        context,
+                        SmoothieListActivity::class.java
+                    )
+                )
+            },
+            modifier = Modifier.weight(1f),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp)
+        ) {
+            Text("XML")
+        }
+        Button(
+            onClick = { /* Compose Smoothies not implemented */ },
+            enabled = false,
+            modifier = Modifier.weight(1f),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp)
+        ) {
+            Text("Compose")
+        }
+    }
+    // Check
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "Check",
+            modifier = Modifier.weight(1f)
+        )
+        Button(
+            onClick = {
+                context.startActivity(
+                    Intent(
+                        context,
+                        XMLMaskingActivity::class.java
+                    )
+                )
+            },
+            modifier = Modifier.weight(1f),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp)
+        ) {
+            Text("XML")
+        }
+        Button(
+            onClick = {
+                context.startActivity(
+                    Intent(
+                        context,
+                        ComposeMaskingActivity::class.java
+                    )
+                )
+            },
+            modifier = Modifier.weight(1f),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp)
+        ) {
+            Text("Compose")
+        }
+    }
+}
+
+@Composable
+private fun CustomerApiButtons(viewModel: ViewModel) {
+    var customLogText by remember { mutableStateOf("") }
+    var customSpanText by remember { mutableStateOf("") }
+    var customContextKey by remember { mutableStateOf("") }
+
+    Text(
+        text = "Customer API",
+        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+        modifier = Modifier.padding(bottom = 8.dp, top = 8.dp)
+    )
+
+    Button(
+        onClick = {
+            viewModel.triggerError()
+        }
+    ) {
+        Text("Trigger Error")
+    }
+    Button(
+        onClick = {
+            viewModel.triggerLog()
+        }
+    ) {
+        Text("Trigger Log")
+    }
+
+    OutlinedTextField(
+        value = customLogText,
+        onValueChange = { customLogText = it },
+        label = { Text("Log Message") },
+        modifier = Modifier.padding(8.dp)
+    )
+    Button(
+        onClick = {
+            viewModel.triggerCustomLog(customLogText)
+        },
+        modifier = Modifier.padding(8.dp)
+    ) {
+        Text("Send custom log")
+    }
+
+    Spacer(modifier = Modifier.height(16.dp))
+
+    Button(
+        onClick = {
+            viewModel.triggerNestedSpans()
+        }
+    ) {
+        Text("Trigger Nested Spans")
+    }
+    OutlinedTextField(
+        value = customSpanText,
+        onValueChange = { customSpanText = it },
+        label = { Text("Span Name") },
+        modifier = Modifier.padding(8.dp)
+    )
+    Button(
+        onClick = {
+            viewModel.triggerCustomSpan(customSpanText)
+        },
+        modifier = Modifier.padding(8.dp)
+    ) {
+        Text("Send custom span")
+    }
+
+    Spacer(modifier = Modifier.height(16.dp))
+
+    OutlinedTextField(
+        value = customContextKey,
+        onValueChange = { customContextKey = it },
+        label = { Text("LD context key") },
+        modifier = Modifier.padding(8.dp)
+    )
+    Button(
+        onClick = {
+            viewModel.identifyLDContext(customContextKey)
+        },
+        modifier = Modifier.padding(8.dp)
+    ) {
+        Text("Identify LD Context")
     }
 }
