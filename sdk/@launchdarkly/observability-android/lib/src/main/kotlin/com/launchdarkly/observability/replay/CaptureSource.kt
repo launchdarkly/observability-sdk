@@ -115,7 +115,6 @@ class CaptureSource(
     private suspend fun doCapture(): CaptureEvent? =
         withContext(DispatcherProviderHolder.current.main) {
             try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     // val activity = _mostRecentActivity ?: return@withContext null // return if no activity
                     //  val window = activity.window ?: return@withContext null // return if activity has no window
                     val windowsEntries = windowInspector.appWindows()
@@ -143,10 +142,7 @@ class CaptureSource(
                     val window: Window = baseWindowEntry.window
 
                     launchCapture(baseView, window, rect, bitmap)
-                } else {
-                    // TODO: O11Y-624 - implement handling/shutdown for errors and unsupported API levels
-                    throw NotImplementedError("CaptureSource does not work on unsupported Android SDK version")
-                }
+
             } catch (e: Exception) {
                 // TODO: O11Y-624 - implement handling/shutdown for errors and unsupported API levels
                 throw RuntimeException(e)
@@ -165,6 +161,10 @@ class CaptureSource(
 
 
             val sensitiveComposeRects = sensitiveAreasCollector.collectFromActivity(baseView, maskMatchers)
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+                // TODO: O11Y-624 - implement handling/shutdown for errors and unsupported API levels
+                throw NotImplementedError("CaptureSource does not work on unsupported Android SDK version")
+            }
 
             // TODO: O11Y-624 - read PixelCopy exception recommendations and adjust logic to account for such cases
             try {
