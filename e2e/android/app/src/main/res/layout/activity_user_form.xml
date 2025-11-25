@@ -12,7 +12,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Credit Card Editor"
+            android:text="User Information Form"
             android:textColor="@android:color/white"
             android:textStyle="bold"
             android:textSize="20sp"
@@ -30,6 +30,72 @@
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:padding="16dp">
+
+            <!-- Password Section -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Password"
+                android:textStyle="bold"
+                android:paddingBottom="8dp" />
+
+            <EditText
+                android:id="@+id/input_password"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Password"
+                android:inputType="textPassword"
+                android:paddingBottom="16dp" />
+
+            <!-- Address Section -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Address Information"
+                android:textStyle="bold"
+                android:paddingBottom="8dp" />
+
+            <EditText
+                android:id="@+id/input_street_address"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Street Address"
+                android:inputType="textPostalAddress"
+                android:paddingBottom="8dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:weightSum="2"
+                android:paddingBottom="8dp">
+
+                <EditText
+                    android:id="@+id/input_city"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:hint="City"
+                    android:inputType="textCapWords"
+                    android:paddingRight="8dp" />
+
+                <EditText
+                    android:id="@+id/input_state"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:hint="State"
+                    android:inputType="textCapCharacters"
+                    android:paddingLeft="8dp" />
+            </LinearLayout>
+
+            <!-- Credit Card Section -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Credit Card Information"
+                android:textStyle="bold"
+                android:paddingBottom="8dp" />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -124,9 +190,10 @@
                 android:id="@+id/button_save_card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Save" />
+                android:text="Submit Information" />
         </LinearLayout>
     </ScrollView>
 </LinearLayout>
+
 
 

@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent">
+
+	<LinearLayout
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:orientation="vertical"
+		android:padding="16dp">
+
+		<!-- Top app bar (shown only for full screen dialog variant) -->
+		<LinearLayout
+			android:id="@+id/top_bar"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:orientation="horizontal"
+			android:gravity="center_vertical"
+			android:paddingBottom="8dp"
+			android:visibility="gone">
+
+			<ImageButton
+				android:id="@+id/button_close"
+				android:layout_width="40dp"
+				android:layout_height="40dp"
+				android:background="?android:attr/selectableItemBackgroundBorderless"
+				android:contentDescription="Close"
+				android:src="@drawable/ic_arrow_back" />
+
+			<TextView
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:layout_marginStart="8dp"
+				android:text="Masking"
+				android:textAppearance="?attr/textAppearanceTitleLarge" />
+		</LinearLayout>
+
+		<TextView
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:text="Windows"
+			android:textAppearance="?attr/textAppearanceTitleMedium" />
+
+		<LinearLayout
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:orientation="horizontal"
+			android:layout_marginTop="8dp">
+
+			<Button
+				android:id="@+id/button_full_screen"
+				android:layout_width="0dp"
+				android:layout_height="wrap_content"
+				android:layout_weight="1"
+				android:text="Full Screen" />
+
+			<Space
+				android:layout_width="12dp"
+				android:layout_height="1dp" />
+
+			<Button
+				android:id="@+id/button_confirmation"
+				android:layout_width="0dp"
+				android:layout_height="wrap_content"
+				android:layout_weight="1"
+				android:text="Confirmation" />
+		</LinearLayout>
+
+		<LinearLayout
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:orientation="horizontal"
+			android:layout_marginTop="8dp">
+
+			<Button
+				android:id="@+id/button_alert"
+				android:layout_width="0dp"
+				android:layout_height="wrap_content"
+				android:layout_weight="1"
+				android:text="Alert" />
+
+			<Space
+				android:layout_width="12dp"
+				android:layout_height="1dp" />
+
+			<Button
+				android:id="@+id/button_toast"
+				android:layout_width="0dp"
+				android:layout_height="wrap_content"
+				android:layout_weight="1"
+				android:text="Toast" />
+		</LinearLayout>
+
+		<TextView
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:layout_marginTop="16dp"
+			android:text="maskInputText=true"
+			android:textAppearance="?attr/textAppearanceTitleMedium" />
+
+		<LinearLayout
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:orientation="horizontal"
+			android:layout_marginTop="8dp">
+
+			<LinearLayout
+				android:layout_width="0dp"
+				android:layout_height="wrap_content"
+				android:layout_weight="1"
+				android:orientation="vertical">
+
+				<TextView
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:text="First Field" />
+
+				<EditText
+					android:id="@+id/input_first"
+					android:layout_width="match_parent"
+					android:layout_height="wrap_content"
+					android:inputType="text" />
+			</LinearLayout>
+
+			<Space
+				android:layout_width="12dp"
+				android:layout_height="1dp" />
+
+			<LinearLayout
+				android:layout_width="0dp"
+				android:layout_height="wrap_content"
+				android:layout_weight="1"
+				android:orientation="vertical">
+
+				<TextView
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:text="Second Field" />
+
+				<EditText
+					android:id="@+id/input_second"
+					android:layout_width="match_parent"
+					android:layout_height="wrap_content"
+					android:inputType="text" />
+			</LinearLayout>
+		</LinearLayout>
+	</LinearLayout>
+</ScrollView>
+
+
