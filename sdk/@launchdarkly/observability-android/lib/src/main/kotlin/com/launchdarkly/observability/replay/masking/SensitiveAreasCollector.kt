@@ -24,11 +24,11 @@ class SensitiveAreasCollector(private val logger: LDLogger) {
      *
      * @return a list of rects that represent sensitive areas that need to be masked
      */
-    fun collectFromActivity(activity: Activity, matchers: List<MaskMatcher>): List<ComposeRect> {
+    fun collectFromActivity(view: View, matchers: List<MaskMatcher>): List<ComposeRect> {
         val allSensitiveRects = mutableListOf<ComposeRect>()
 
         try {
-            val views = findViews(activity.window.decorView)
+            val views = findViews(view)
 
             views.forEach { view ->
                 when (view) {
