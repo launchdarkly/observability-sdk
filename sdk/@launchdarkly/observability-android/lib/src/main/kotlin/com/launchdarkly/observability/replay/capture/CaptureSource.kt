@@ -1,14 +1,13 @@
 package com.launchdarkly.observability.replay.capture
 
+import android.annotation.SuppressLint
 import android.app.Activity
-import android.app.Application
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Rect
 import android.os.Build
-import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Base64
@@ -23,12 +22,10 @@ import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
 import com.launchdarkly.observability.replay.masking.MaskMatcher
 import com.launchdarkly.observability.replay.masking.SensitiveAreasCollector
 import io.opentelemetry.android.session.SessionManager
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
@@ -118,36 +115,26 @@ class CaptureSource(
                 }
             }
 
-            if (pairs.isNotEmpty() || baseResult.masks.isNotEmpty()) {
-                suspendCancellableCoroutine { continuation ->
-                    CoroutineScope(DispatcherProviderHolder.current.default).launch {
-                        val canvas = Canvas(baseResult.bitmap)
-                        drawMasks(canvas, baseResult.masks)
+            return@withContext withContext(DispatcherProviderHolder.current.default) {
+                // off the main thread to avoid blocking the UI thread
+                if (pairs.isNotEmpty() || baseResult.masks.isNotEmpty()) {
+                    val canvas = Canvas(baseResult.bitmap)
+                    drawMasks(canvas, baseResult.masks)
 
-                        for (res in pairs) {
-                            val entry = res.windowEntry
-                            val dx = (entry.screenLeft - baseWindowEntry.screenLeft).toFloat()
-                            val dy = (entry.screenTop - baseWindowEntry.screenTop).toFloat()
+                    for (res in pairs) {
+                        val entry = res.windowEntry
+                        val dx = (entry.screenLeft - baseWindowEntry.screenLeft).toFloat()
+                        val dy = (entry.screenTop - baseWindowEntry.screenTop).toFloat()
 
-                            canvas.withTranslation(dx, dy) {
-                                drawBitmap(res.bitmap, 0f, 0f, null)
-                                drawMasks(canvas, res.masks)
-                            }
+                        canvas.withTranslation(dx, dy) {
+                            drawBitmap(res.bitmap, 0f, 0f, null)
+                            drawMasks(canvas, res.masks)
                         }
-
-                        continuation.resume(
-                            createCaptureEvent(
-                                baseResult.bitmap,
-                                rect,
-                                timestamp,
-                                session
-                            )
-                        )
                     }
                 }
-            }
 
-            return@withContext createCaptureEvent(baseResult.bitmap, rect, timestamp, session)
+                createCaptureEvent(baseResult.bitmap, rect, timestamp, session)
+            }
         }
 
     private fun pickBaseWindow(windowsEntries: List<WindowEntry>): WindowEntry? {
@@ -186,6 +173,7 @@ class CaptureSource(
         }
     }
 
+    @SuppressLint("NewApi")
     private suspend fun pixelCopy(
         window: Window,
         view: View,
@@ -199,19 +187,24 @@ class CaptureSource(
 
         return suspendCancellableCoroutine { continuation ->
             val handler = Handler(Looper.getMainLooper())
-            PixelCopy.request(
-                window,
-                rect,
-                bitmap,
-                { result ->
-                    if (!continuation.isActive) return@request
-                    if (result == PixelCopy.SUCCESS) {
-                        continuation.resume(bitmap)
-                    } else {
-                        continuation.resume(null)
-                    }
-                }, handler
-            )
+            try {
+                PixelCopy.request(
+                    window,
+                    rect,
+                    bitmap,
+                    { result ->
+                        if (!continuation.isActive) return@request
+                        if (result == PixelCopy.SUCCESS) {
+                            continuation.resume(bitmap)
+                        } else {
+                            continuation.resume(null)
+                        }
+                    }, handler
+                )
+            } catch (exp: Exception) {
+                // It could normally happen when view is being closed during screenshot
+                logger.info("Failed to capture window", exp)
+            }
         }
     }
 
