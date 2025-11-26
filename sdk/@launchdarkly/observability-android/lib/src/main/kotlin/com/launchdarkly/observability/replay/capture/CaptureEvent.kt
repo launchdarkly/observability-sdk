@@ -1,4 +1,4 @@
-package com.launchdarkly.observability.replay
+package com.launchdarkly.observability.replay.capture
 
 /**
  * Represents a capture for the replay instrumentation

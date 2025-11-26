@@ -3,6 +3,7 @@ package com.launchdarkly.observability.replay
 import android.view.MotionEvent
 import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
 import com.launchdarkly.observability.network.GraphQLClient
+import com.launchdarkly.observability.replay.capture.CaptureEvent
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.sdk.common.CompletableResultCode
 import io.opentelemetry.sdk.logs.data.LogRecordData

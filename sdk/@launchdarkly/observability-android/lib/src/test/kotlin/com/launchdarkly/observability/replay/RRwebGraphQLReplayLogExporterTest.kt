@@ -1,5 +1,6 @@
 package com.launchdarkly.observability.replay
 
+import com.launchdarkly.observability.replay.capture.CaptureEvent
 import io.mockk.*
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
@@ -131,7 +132,13 @@ class RRwebGraphQLReplayLogExporterTest {
             CaptureEvent("base64data1", 800, 600, 1000L, "session-a"),  // First capture - full
             CaptureEvent("base64data2", 800, 600, 2000L, "session-a"),  // Same dimensions - incremental
             CaptureEvent("base64data3", 1024, 768, 3000L, "session-a"), // Dimension change - full
-            CaptureEvent("base64data4", 1024, 768, 4000L, "session-a")  // Same dimensions - incremental
+            CaptureEvent(
+                "base64data4",
+                1024,
+                768,
+                4000L,
+                "session-a"
+            )  // Same dimensions - incremental
         )
         
         val logRecords = createLogRecordsFromCaptures(captureEvents)

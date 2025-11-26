@@ -1,16 +1,10 @@
 package com.launchdarkly.observability.replay.masking
 
-import android.app.Activity
 import android.view.View
 import android.view.ViewGroup
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.semantics.SemanticsNode
-import androidx.compose.ui.semantics.SemanticsOwner
-import androidx.compose.ui.semantics.getOrNull
-import com.launchdarkly.observability.R
-import com.launchdarkly.observability.api.LdMaskSemanticsKey
 import androidx.compose.ui.geometry.Rect as ComposeRect
-import androidx.core.view.isNotEmpty
 import com.launchdarkly.logging.LDLogger
 
 /**
@@ -24,11 +18,11 @@ class SensitiveAreasCollector(private val logger: LDLogger) {
      *
      * @return a list of rects that represent sensitive areas that need to be masked
      */
-    fun collectFromActivity(activity: Activity, matchers: List<MaskMatcher>): List<ComposeRect> {
+    fun collectFromActivity(view: View, matchers: List<MaskMatcher>): List<ComposeRect> {
         val allSensitiveRects = mutableListOf<ComposeRect>()
 
         try {
-            val views = findViews(activity.window.decorView)
+            val views = findViews(view)
 
             views.forEach { view ->
                 when (view) {

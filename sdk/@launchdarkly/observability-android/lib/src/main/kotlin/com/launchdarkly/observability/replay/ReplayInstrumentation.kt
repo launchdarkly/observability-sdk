@@ -3,6 +3,7 @@ package com.launchdarkly.observability.replay
 import com.launchdarkly.logging.LDLogger
 import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
 import com.launchdarkly.observability.interfaces.LDExtendedInstrumentation
+import com.launchdarkly.observability.replay.capture.CaptureSource
 import io.opentelemetry.android.instrumentation.InstallationContext
 import io.opentelemetry.api.logs.Logger
 import io.opentelemetry.sdk.logs.LogRecordProcessor
@@ -79,7 +80,8 @@ class ReplayInstrumentation(
         _otelLogger = ctx.openTelemetry.logsBridge.get(INSTRUMENTATION_SCOPE_NAME)
         // TODO: Use real LDClient logger after creating SR Plugin
         val logger = LDLogger.none()
-        _captureSource = CaptureSource(ctx.sessionManager, options.privacyProfile.asMatchersList(), logger)
+        _captureSource =
+            CaptureSource(ctx.sessionManager, options.privacyProfile.asMatchersList(), logger)
         _interactionSource = InteractionSource(ctx.sessionManager)
 
         // TODO: O11Y-621 - don't use global scope
@@ -127,7 +129,6 @@ class ReplayInstrumentation(
             }
         }
 
-        _captureSource.attachToApplication(ctx.application)
         _interactionSource.attachToApplication(ctx.application)
 
         // Start periodic capture automatically
