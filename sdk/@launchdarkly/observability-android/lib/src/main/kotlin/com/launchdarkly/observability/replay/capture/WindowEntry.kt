@@ -7,7 +7,6 @@ import android.view.View
 enum class WindowType {
     ACTIVITY,
     DIALOG,
-    POPUP,
     OTHER
 }
 

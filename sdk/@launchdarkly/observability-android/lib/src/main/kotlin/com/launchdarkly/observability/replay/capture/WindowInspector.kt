@@ -44,53 +44,6 @@ class WindowInspector(private val logger: LDLogger) {
     }
 
     /**
-     * Attempts to discover the owning Dialog or Activity for the given root view.
-     * Returns Pair<Dialog?, Activity?>; either (or both) values may be null.
-     */
-    fun findOwners(rootView: View): Pair<Dialog?, Activity?> {
-        var dialog: Dialog? = null
-        var activity: Activity? = null
-
-        // Try reflection to get Window callback (Activity or Dialog)
-        try {
-            val window: Any? = runCatching {
-                val field = rootView.javaClass.getDeclaredField("mWindow")
-                field.isAccessible = true
-                field.get(rootView)
-            }.getOrNull()
-
-            val callback: Any? = runCatching {
-                (window as? Window)?.callback ?: window?.javaClass?.getMethod("getCallback")?.invoke(window)
-            }.getOrNull()
-
-            when (callback) {
-                is Activity -> activity = callback
-                is Dialog -> dialog = callback
-            }
-        } catch (t: Throwable) {
-            logger.debug("findOwners reflection failed: ${t.message}")
-        }
-
-        // Fallback: unwrap the Context to find an Activity
-        if (activity == null) {
-            try {
-                var ctx: Context? = rootView.context
-                while (ctx is ContextWrapper) {
-                    if (ctx is Activity) {
-                        activity = ctx
-                        break
-                    }
-                    ctx = ctx.baseContext
-                }
-            } catch (t: Throwable) {
-                logger.debug("findOwners context unwrap failed: ${t.message}")
-            }
-        }
-
-        return Pair(dialog, activity)
-    }
-
-    /**
      * Attempts to retrieve the [Window] instance backing the provided [rootView].
      *
      * Strategy:
@@ -195,10 +148,6 @@ class WindowInspector(private val logger: LDLogger) {
             WindowManager.LayoutParams.TYPE_APPLICATION_STARTING -> WindowType.ACTIVITY
 
             WindowManager.LayoutParams.TYPE_APPLICATION_ATTACHED_DIALOG -> WindowType.DIALOG
-
-            WindowManager.LayoutParams.TYPE_APPLICATION_PANEL,
-            WindowManager.LayoutParams.TYPE_APPLICATION_SUB_PANEL,
-            /*WindowManager.LayoutParams.TYPE_TOAST*/ -> WindowType.POPUP
 
             else -> WindowType.OTHER
         }
