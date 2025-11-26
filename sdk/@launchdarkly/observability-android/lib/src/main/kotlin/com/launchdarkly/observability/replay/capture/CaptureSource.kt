@@ -12,6 +12,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Base64
+import android.view.Choreographer
 import android.view.PixelCopy
 import android.view.View
 import android.view.Window
@@ -73,8 +74,15 @@ class CaptureSource(
      */
     private suspend fun doCapture(): CaptureEvent? =
         withContext(DispatcherProviderHolder.current.main) {
-            // val activity = _mostRecentActivity ?: return@withContext null // return if no activity
-            //  val window = activity.window ?: return@withContext null // return if activity has no window
+            // Synchronize with UI rendering frame
+            suspendCancellableCoroutine<Unit> { continuation ->
+                Choreographer.getInstance().postFrameCallback {
+                    if (continuation.isActive) {
+                        continuation.resume(Unit)
+                    }
+                }
+            }
+            
             val windowsEntries = windowInspector.appWindows()
             if (windowsEntries.isEmpty()) {
                 return@withContext null
