@@ -15,6 +15,8 @@ import android.util.Base64
 import android.view.PixelCopy
 import android.view.View
 import android.view.Window
+import android.view.WindowManager.LayoutParams.TYPE_APPLICATION
+import android.view.WindowManager.LayoutParams.TYPE_BASE_APPLICATION
 import com.launchdarkly.logging.LDLogger
 import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
 import com.launchdarkly.observability.replay.masking.MaskMatcher
@@ -31,6 +33,7 @@ import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import kotlin.coroutines.resume
 import androidx.compose.ui.geometry.Rect as ComposeRect
+import androidx.core.graphics.withTranslation
 
 /**
  * A source of [CaptureEvent]s taken from the most recently resumed [Activity]s window. Captures
@@ -122,7 +125,7 @@ class CaptureSource(
 
             val baseWindowEntry = pickBaseWindow(windowsEntries) ?: return@withContext null
             val baseView = baseWindowEntry.rootView
-            val rect = Rect(0, 0, baseView.width, baseView.height)
+            val rect = baseWindowEntry.rect()
 
             // protect against race condition where decor view has no size
             if (rect.right <= 0 || rect.bottom <= 0) {
@@ -136,7 +139,34 @@ class CaptureSource(
             val timestamp = System.currentTimeMillis()
             val session = sessionManager.getSessionId()
 
-            val baseBitmap = captureViewBitmap(baseView, rect) ?: return@withContext null
+            val baseBitmap = captureViewBitmap(baseWindowEntry) ?: return@withContext null
+
+            // capture rest of views on top of base
+            val pairs = mutableListOf<Pair<WindowEntry, Bitmap>>()
+            var afterBase = false
+            for (windowEntry in windowsEntries) {
+                if (afterBase) {
+                    captureViewBitmap(windowEntry)?.let { bitmap ->
+                        pairs.add(Pair(windowEntry, bitmap))
+                    }
+                } else if (windowEntry === baseWindowEntry) {
+                    afterBase = true
+                }
+            }
+            if (pairs.isEmpty()) {
+                // No on top windows and we return baseBitmap
+                return@withContext createCaptureEvent(baseBitmap, rect, timestamp, session)
+            }
+
+            val canvas = Canvas(baseBitmap)
+            for ((entry, bitmap) in pairs) {
+                val dx = (entry.screenLeft - baseWindowEntry.screenLeft).toFloat()
+                val dy = (entry.screenTop - baseWindowEntry.screenTop).toFloat()
+
+                canvas.withTranslation(dx, dy) {
+                    drawBitmap(bitmap, 0f, 0f, null)
+                }
+            }
 
             return@withContext createCaptureEvent(baseBitmap, rect, timestamp, session)
 
@@ -148,30 +178,24 @@ class CaptureSource(
         }
 
     private fun pickBaseWindow(windowsEntries: List<WindowEntry>): WindowEntry? {
-        return windowsEntries.lastOrNull()
-//        // Prefer activity windows of TYPE_APPLICATION/TYPE_BASE_APPLICATION
-//        windowsEntries.firstOrNull {
-//            (it.wmType == TYPE_APPLICATION || it.wmType == TYPE_BASE_APPLICATION)
-//        }?.let { return it }
-//
-//        // Next prefer any ACTIVITY window
-//        windowsEntries.firstOrNull { it.type == WindowInspector.WindowType.ACTIVITY }?.let { return it }
-//
-//        // Then prefer DIALOG window
-//        windowsEntries.firstOrNull { it.type == WindowInspector.WindowType.DIALOG }?.let { return it }
-//
-//        // Fallback to the first available
-//        return windowsEntries.firstOrNull()
+        windowsEntries.firstOrNull {
+            (it.wmType == TYPE_APPLICATION || it.wmType == TYPE_BASE_APPLICATION)
+        }?.let { return it }
+
+        windowsEntries.firstOrNull { it.type == WindowType.ACTIVITY }?.let { return it }
+
+        windowsEntries.firstOrNull { it.type == WindowType.DIALOG }?.let { return it }
+
+        // Fallback to the first available
+        return windowsEntries.firstOrNull()
     }
 
-    private suspend fun captureViewBitmap(
-        view: View,
-        rect: Rect,
-    ): Bitmap? {
+    private suspend fun captureViewBitmap(windowEntry: WindowEntry): Bitmap? {
+        val view = windowEntry.rootView
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val window = windowInspector.findWindow(view)
             if (window != null) {
-                pixelCopy(window, view, rect)?.let { return it }
+                pixelCopy(window, view, windowEntry.rect())?.let { return it }
             }
         }
 
@@ -179,7 +203,7 @@ class CaptureSource(
         return withContext(Dispatchers.Main.immediate) {
             if (!view.isAttachedToWindow || !view.isShown) return@withContext null
 
-            return@withContext canvasDraw(view, rect)
+            return@withContext canvasDraw(view, windowEntry.rect())
         }
     }
 

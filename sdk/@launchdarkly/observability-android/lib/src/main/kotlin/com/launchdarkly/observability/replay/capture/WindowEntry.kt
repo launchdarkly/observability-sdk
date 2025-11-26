@@ -1,5 +1,6 @@
 package com.launchdarkly.observability.replay.capture
 
+import android.graphics.Rect
 import android.view.View
 
 
@@ -16,6 +17,12 @@ data class WindowEntry(
     val wmType: Int,
     val width: Int,
     val height: Int,
-)
+    val screenLeft: Int,
+    val screenTop: Int
+) {
+    fun rect(): Rect {
+        return Rect(0, 0, width, height)
+    }
+}
 
 

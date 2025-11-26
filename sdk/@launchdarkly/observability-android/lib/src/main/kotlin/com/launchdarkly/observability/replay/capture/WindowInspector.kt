@@ -23,16 +23,22 @@ class WindowInspector(private val logger: LDLogger) {
             val visibleRect = Rect()
             if (!view.getGlobalVisibleRect(visibleRect)) return@mapNotNull null
             if (visibleRect.width() == 0 || visibleRect.height() == 0) return@mapNotNull null
-            
+
+            val loc = IntArray(2)
+            view.getLocationOnScreen(loc)
+
             val layoutParams = view.layoutParams as? WindowManager.LayoutParams
             val wmType = layoutParams?.type ?: 0
+
 
             WindowEntry(
                 rootView = view,
                 type = determineWindowType(wmType),
                 wmType = wmType,
                 width = view.width,
-                height = view.height
+                height = view.height,
+                screenLeft = loc[0],
+                screenTop = loc[1]
             )
         }
     }
