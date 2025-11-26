@@ -46,29 +46,17 @@ class CaptureSource(
     private val maskMatchers: List<MaskMatcher>,
     private val logger: LDLogger,
     // TODO: O11Y-628 - add captureQuality options
-) :
-    Application.ActivityLifecycleCallbacks {
-
-    private var _mostRecentActivity: Activity? = null
+) {
+    data class CaptureResult(
+        val windowEntry: WindowEntry,
+        val bitmap: Bitmap,
+        val masks: List<ComposeRect>
+    )
 
     private val _captureEventFlow = MutableSharedFlow<CaptureEvent>()
     val captureFlow: SharedFlow<CaptureEvent> = _captureEventFlow.asSharedFlow()
     private val windowInspector = WindowInspector(logger)
     private val sensitiveAreasCollector = SensitiveAreasCollector(logger)
-
-    /**
-     * Attaches the [CaptureSource] to the [Application] whose [Activity]s will be captured.
-     */
-    fun attachToApplication(application: Application) {
-        application.registerActivityLifecycleCallbacks(this)
-    }
-
-    /**
-     * Detaches the [CaptureSource] from the [Application].
-     */
-    fun detachFromApplication(application: Application) {
-        application.unregisterActivityLifecycleCallbacks(this)
-    }
 
     /**
      * Requests a [CaptureEvent] be taken now.
@@ -78,37 +66,6 @@ class CaptureSource(
         if (capture != null) {
             _captureEventFlow.emit(capture)
         }
-    }
-
-    override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
-        // Noop
-    }
-
-    override fun onActivityStarted(activity: Activity) {
-        // Noop
-    }
-
-    override fun onActivityResumed(activity: Activity) {
-        _mostRecentActivity = activity
-    }
-
-    override fun onActivityPaused(activity: Activity) {
-        // this if check prevents pausing of a different activity from interfering with tracking of most recent activity.
-        if (activity == _mostRecentActivity) {
-            _mostRecentActivity = null
-        }
-    }
-
-    override fun onActivityStopped(activity: Activity) {
-        // Noop
-    }
-
-    override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {
-        // Noop
-    }
-
-    override fun onActivityDestroyed(activity: Activity) {
-        // Noop
     }
 
     /**
@@ -138,43 +95,51 @@ class CaptureSource(
             // Create a bitmap with the window dimensions
             val timestamp = System.currentTimeMillis()
             val session = sessionManager.getSessionId()
-
-            val baseBitmap = captureViewBitmap(baseWindowEntry) ?: return@withContext null
+            val baseResult = captureViewResult(baseWindowEntry) ?: return@withContext null
 
             // capture rest of views on top of base
-            val pairs = mutableListOf<Pair<WindowEntry, Bitmap>>()
+            val pairs = mutableListOf<CaptureResult>()
             var afterBase = false
             for (windowEntry in windowsEntries) {
                 if (afterBase) {
-                    captureViewBitmap(windowEntry)?.let { bitmap ->
-                        pairs.add(Pair(windowEntry, bitmap))
+                    captureViewResult(windowEntry)?.let { result ->
+                        pairs.add(result)
                     }
                 } else if (windowEntry === baseWindowEntry) {
                     afterBase = true
                 }
             }
-            if (pairs.isEmpty()) {
-                // No on top windows and we return baseBitmap
-                return@withContext createCaptureEvent(baseBitmap, rect, timestamp, session)
-            }
 
-            val canvas = Canvas(baseBitmap)
-            for ((entry, bitmap) in pairs) {
-                val dx = (entry.screenLeft - baseWindowEntry.screenLeft).toFloat()
-                val dy = (entry.screenTop - baseWindowEntry.screenTop).toFloat()
+            if (pairs.isNotEmpty() || baseResult.masks.isNotEmpty()) {
+                suspendCancellableCoroutine { continuation ->
+                    CoroutineScope(DispatcherProviderHolder.current.default).launch {
+                        val canvas = Canvas(baseResult.bitmap)
+                        drawMasks(canvas, baseResult.masks)
 
-                canvas.withTranslation(dx, dy) {
-                    drawBitmap(bitmap, 0f, 0f, null)
+                        for (res in pairs) {
+                            val entry = res.windowEntry
+                            val dx = (entry.screenLeft - baseWindowEntry.screenLeft).toFloat()
+                            val dy = (entry.screenTop - baseWindowEntry.screenTop).toFloat()
+
+                            canvas.withTranslation(dx, dy) {
+                                drawBitmap(res.bitmap, 0f, 0f, null)
+                                drawMasks(canvas, res.masks)
+                            }
+                        }
+
+                        continuation.resume(
+                            createCaptureEvent(
+                                baseResult.bitmap,
+                                rect,
+                                timestamp,
+                                session
+                            )
+                        )
+                    }
                 }
             }
 
-            return@withContext createCaptureEvent(baseBitmap, rect, timestamp, session)
-
-
-//            } catch (e: Exception) {
-//                // TODO: O11Y-624 - implement handling/shutdown for errors and unsupported API levels
-//                throw RuntimeException(e)
-//            }
+            return@withContext createCaptureEvent(baseResult.bitmap, rect, timestamp, session)
         }
 
     private fun pickBaseWindow(windowsEntries: List<WindowEntry>): WindowEntry? {
@@ -188,6 +153,12 @@ class CaptureSource(
 
         // Fallback to the first available
         return windowsEntries.firstOrNull()
+    }
+
+    private suspend fun captureViewResult(windowEntry: WindowEntry): CaptureResult? {
+        val bitmap = captureViewBitmap(windowEntry) ?: return null
+        val sensitiveComposeRects = sensitiveAreasCollector.collectFromActivity(windowEntry.rootView, maskMatchers)
+        return CaptureResult(windowEntry, bitmap, sensitiveComposeRects)
     }
 
     private suspend fun captureViewBitmap(windowEntry: WindowEntry): Bitmap? {
@@ -251,64 +222,6 @@ class CaptureSource(
         return bitmap
     }
 
-    private suspend fun pixelCopyOld(
-        window: Window,
-        view: View,
-        rect: Rect,
-        bitmap: Bitmap
-    ): CaptureEvent? {
-        val sensitiveComposeRects =
-            sensitiveAreasCollector.collectFromActivity(view, maskMatchers)
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
-            // TODO: O11Y-624 - implement handling/shutdown for errors and unsupported API levels
-            throw NotImplementedError("CaptureSource does not work on unsupported Android SDK version")
-        }
-
-        // TODO: O11Y-624 - read PixelCopy exception recommendations and adjust logic to account for such cases
-        try {
-            PixelCopy.request(
-                window,
-                rect,
-                bitmap,
-                { result ->
-                    val timestamp = System.currentTimeMillis()
-                    val session = sessionManager.getSessionId()
-
-                    if (result == PixelCopy.SUCCESS) {
-                        CoroutineScope(DispatcherProviderHolder.current.default).launch {
-                            try {
-                                val postMask = if (sensitiveComposeRects.isNotEmpty()) {
-                                    maskSensitiveRects(
-                                        bitmap,
-                                        sensitiveComposeRects
-                                    )
-                                } else {
-                                    bitmap
-                                }
-
-                                createCaptureEvent(postMask, rect, timestamp, session)
-                                //continuation.resume(captureEvent)
-                            } catch (e: Exception) {
-                                //continuation.resumeWithException(e)
-                            }
-                        }
-                    } else {
-                        // TODO: O11Y-624 - implement handling/shutdown for errors and unsupported API levels
-//                        continuation.resumeWithException(
-//                            Exception("PixelCopy failed with result: $result")
-//                        )
-                    }
-                },
-                Handler(Looper.getMainLooper())
-            )
-        } catch (e: Exception) {
-
-        }
-        //}
-
-        return null
-    }
-
     private fun createCaptureEvent(
         postMask: Bitmap,
         rect: Rect,
@@ -341,25 +254,18 @@ class CaptureSource(
     }
 
     /**
-     * Applies masking rectangles to the provided [bitmap] using the provided [sensitiveRects].
+     * Applies masking rectangles to the provided [canvas] using the provided [masks].
      *
-     * @param bitmap The bitmap to mask
-     * @param sensitiveRects rects that will be masked
+     * @param canvas The canvas to mask
+     * @param masks rects that will be masked
      */
-    private fun maskSensitiveRects(bitmap: Bitmap, sensitiveRects: List<ComposeRect>): Bitmap {
-        if (sensitiveRects.isEmpty()) {
-            return bitmap
-        }
-
-        // TODO: O11Y-625 - remove this bitmap copy if possible for memory optimization purposes
-        val maskedBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true)
-        val canvas = Canvas(maskedBitmap)
+    private fun drawMasks(canvas: Canvas, masks: List<ComposeRect>) {
         val paint = Paint().apply {
             color = Color.GRAY
             style = Paint.Style.FILL
         }
 
-        sensitiveRects.forEach { rect ->
+        masks.forEach { rect ->
             val rect = Rect(
                 rect.left.toInt(),
                 rect.top.toInt(),
@@ -368,7 +274,5 @@ class CaptureSource(
             )
             canvas.drawRect(rect, paint)
         }
-
-        return maskedBitmap
     }
 }

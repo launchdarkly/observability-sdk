@@ -20,6 +20,7 @@ class WindowInspector(private val logger: LDLogger) {
             if (appUid != null && view.context.applicationInfo?.uid != appUid) return@mapNotNull null
             if (!view.isAttachedToWindow || !view.isShown) return@mapNotNull null
             if (view.width == 0 || view.height == 0) return@mapNotNull null
+
             val visibleRect = Rect()
             if (!view.getGlobalVisibleRect(visibleRect)) return@mapNotNull null
             if (visibleRect.width() == 0 || visibleRect.height() == 0) return@mapNotNull null
@@ -29,7 +30,6 @@ class WindowInspector(private val logger: LDLogger) {
 
             val layoutParams = view.layoutParams as? WindowManager.LayoutParams
             val wmType = layoutParams?.type ?: 0
-
 
             WindowEntry(
                 rootView = view,
@@ -198,7 +198,7 @@ class WindowInspector(private val logger: LDLogger) {
 
             WindowManager.LayoutParams.TYPE_APPLICATION_PANEL,
             WindowManager.LayoutParams.TYPE_APPLICATION_SUB_PANEL,
-            WindowManager.LayoutParams.TYPE_TOAST -> WindowType.POPUP
+            /*WindowManager.LayoutParams.TYPE_TOAST*/ -> WindowType.POPUP
 
             else -> WindowType.OTHER
         }

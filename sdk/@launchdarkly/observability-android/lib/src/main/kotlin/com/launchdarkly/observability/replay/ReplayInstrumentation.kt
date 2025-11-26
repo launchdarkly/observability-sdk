@@ -129,7 +129,6 @@ class ReplayInstrumentation(
             }
         }
 
-        _captureSource.attachToApplication(ctx.application)
         _interactionSource.attachToApplication(ctx.application)
 
         // Start periodic capture automatically
