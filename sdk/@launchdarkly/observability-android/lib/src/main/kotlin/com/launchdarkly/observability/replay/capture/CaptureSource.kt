@@ -1,7 +1,6 @@
 package com.launchdarkly.observability.replay.capture
 
 import android.annotation.SuppressLint
-import android.app.Activity
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
@@ -55,6 +54,10 @@ class CaptureSource(
     val captureFlow: SharedFlow<CaptureEvent> = _captureEventFlow.asSharedFlow()
     private val windowInspector = WindowInspector(logger)
     private val sensitiveAreasCollector = SensitiveAreasCollector(logger)
+    private val maskPaint = Paint().apply {
+        color = Color.GRAY
+        style = Paint.Style.FILL
+    }
 
     /**
      * Requests a [CaptureEvent] be taken now.
@@ -86,7 +89,6 @@ class CaptureSource(
             }
 
             val baseWindowEntry = pickBaseWindow(windowsEntries) ?: return@withContext null
-            val baseView = baseWindowEntry.rootView
             val rect = baseWindowEntry.rect()
 
             // protect against race condition where decor view has no size
@@ -130,6 +132,7 @@ class CaptureSource(
                             drawBitmap(res.bitmap, 0f, 0f, null)
                             drawMasks(canvas, res.masks)
                         }
+                        res.bitmap.recycle()
                     }
                 }
 
@@ -204,6 +207,7 @@ class CaptureSource(
             } catch (exp: Exception) {
                 // It could normally happen when view is being closed during screenshot
                 logger.info("Failed to capture window", exp)
+                continuation.resume(null)
             }
         }
     }
@@ -231,27 +235,37 @@ class CaptureSource(
     ): CaptureEvent {
         // TODO: O11Y-625 - optimize memory allocations here, re-use byte arrays and such
         val outputStream = ByteArrayOutputStream()
-        // TODO: O11Y-628 - calculate quality using captureQuality options
-        postMask.compress(
-            Bitmap.CompressFormat.WEBP,
-            30,
-            outputStream
-        )
-        val byteArray = outputStream.toByteArray()
-        val compressedImage =
-            Base64.encodeToString(
-                byteArray,
-                Base64.NO_WRAP
+        return try {
+            // TODO: O11Y-628 - calculate quality using captureQuality options
+            postMask.compress(
+                Bitmap.CompressFormat.WEBP,
+                30,
+                outputStream
             )
+            val byteArray = outputStream.toByteArray()
+            val compressedImage =
+                Base64.encodeToString(
+                    byteArray,
+                    Base64.NO_WRAP
+                )
 
-        val captureEvent = CaptureEvent(
-            imageBase64 = compressedImage,
-            origWidth = rect.right,
-            origHeight = rect.bottom,
-            timestamp = timestamp,
-            session = session
-        )
-        return captureEvent
+            CaptureEvent(
+                imageBase64 = compressedImage,
+                origWidth = rect.width(),
+                origHeight = rect.height(),
+                timestamp = timestamp,
+                session = session
+            )
+        } finally {
+            try {
+                outputStream.close()
+            } catch (_: Throwable) {
+            }
+            try {
+                postMask.recycle()
+            } catch (_: Throwable) {
+            }
+        }
     }
 
     /**
@@ -261,19 +275,14 @@ class CaptureSource(
      * @param masks rects that will be masked
      */
     private fun drawMasks(canvas: Canvas, masks: List<ComposeRect>) {
-        val paint = Paint().apply {
-            color = Color.GRAY
-            style = Paint.Style.FILL
-        }
-
-        masks.forEach { rect ->
-            val rect = Rect(
-                rect.left.toInt(),
-                rect.top.toInt(),
-                rect.right.toInt(),
-                rect.bottom.toInt()
+        masks.forEach { mask ->
+            val androidRect = Rect(
+                mask.left.toInt(),
+                mask.top.toInt(),
+                mask.right.toInt(),
+                mask.bottom.toInt()
             )
-            canvas.drawRect(rect, paint)
+            canvas.drawRect(androidRect, maskPaint)
         }
     }
 }
