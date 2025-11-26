@@ -1,48 +1,38 @@
-package com.launchdarkly.observability.replay
+package com.launchdarkly.observability.replay.capture
 
 import android.app.Activity
 import android.app.Dialog
 import android.content.Context
 import android.content.ContextWrapper
+import android.graphics.Rect
 import android.view.View
 import android.view.Window
 import android.view.WindowManager
 import com.launchdarkly.logging.LDLogger
-
+import kotlin.jvm.javaClass
 
 class WindowInspector(private val logger: LDLogger) {
-    data class WindowEntry(
-        val rootView: View,
-        var type: WindowType,
-        val wmType: Int,
-        val window: Window,
-        //val dialog: Dialog?,
-        //val activity: Activity?,
-    )
-
-    enum class WindowType {
-        ACTIVITY,
-        DIALOG,
-        POPUP,
-        OTHER
-    }
 
     fun appWindows(appContext: Context? = null): List<WindowEntry> {
-        val windows = getRootViews() ?: return emptyList()
-        return windows.mapNotNull { rootView ->
-            val layoutParams = rootView.layoutParams as? WindowManager.LayoutParams
-            val wmType = layoutParams?.type ?: 0
+        val appUid = appContext?.applicationInfo?.uid
+        val views = getRootViews() ?: return emptyList()
+        return views.mapNotNull { view ->
+            if (appUid != null && view.context.applicationInfo?.uid != appUid) return@mapNotNull null
+            if (!view.isAttachedToWindow || !view.isShown) return@mapNotNull null
+            if (view.width == 0 || view.height == 0) return@mapNotNull null
+            val visibleRect = Rect()
+            if (!view.getGlobalVisibleRect(visibleRect)) return@mapNotNull null
+            if (visibleRect.width() == 0 || visibleRect.height() == 0) return@mapNotNull null
             
-            //val (dialog, activity) = findOwners(rootView)
-            val window: Window = findWindow(rootView) ?: run {
-                logger.debug("appWindows: skipping root without Window: ${rootView.javaClass.name}")
-                return@mapNotNull null
-            }
+            val layoutParams = view.layoutParams as? WindowManager.LayoutParams
+            val wmType = layoutParams?.type ?: 0
+
             WindowEntry(
-                rootView = rootView,
+                rootView = view,
                 type = determineWindowType(wmType),
-                wmType = wmType,   
-                window = window,
+                wmType = wmType,
+                width = view.width,
+                height = view.height
             )
         }
     }
@@ -194,16 +184,16 @@ class WindowInspector(private val logger: LDLogger) {
 
     private fun determineWindowType(wmType: Int): WindowType {
         return when (wmType) {
-            WindowManager.LayoutParams.TYPE_APPLICATION, 
+            WindowManager.LayoutParams.TYPE_APPLICATION,
             WindowManager.LayoutParams.TYPE_BASE_APPLICATION,
             WindowManager.LayoutParams.TYPE_APPLICATION_STARTING -> WindowType.ACTIVITY
 
             WindowManager.LayoutParams.TYPE_APPLICATION_ATTACHED_DIALOG -> WindowType.DIALOG
 
-            WindowManager.LayoutParams.TYPE_APPLICATION_PANEL, 
+            WindowManager.LayoutParams.TYPE_APPLICATION_PANEL,
             WindowManager.LayoutParams.TYPE_APPLICATION_SUB_PANEL,
             WindowManager.LayoutParams.TYPE_TOAST -> WindowType.POPUP
-                       
+
             else -> WindowType.OTHER
         }
     }
