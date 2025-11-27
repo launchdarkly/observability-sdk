@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.17.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.16.0...launchdarkly-observability-android-0.17.0) (2025-11-26)
+
+
+### Features
+
+* Android Dialog Capture ([#302](https://github.com/launchdarkly/observability-sdk/issues/302)) ([11b642f](https://github.com/launchdarkly/observability-sdk/commit/11b642fbfae70fd39d57efadfbdc285e88b73477))
+
 ## [0.16.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.15.0...launchdarkly-observability-android-0.16.0) (2025-11-22)
 
 
