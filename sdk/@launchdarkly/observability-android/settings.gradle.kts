@@ -11,7 +11,7 @@ pluginManagement {
     // Define plugin versions used across the project
     plugins {
         // Android Gradle Plugin
-        id("com.android.library") version "8.4.1"
+        id("com.android.library") version "8.13.1"
     }
 }
 

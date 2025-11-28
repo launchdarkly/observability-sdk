@@ -1,3 +1,5 @@
+import com.kezong.fataar.FatAarExtension
+
 plugins {
     // Apply the Android library plugin
     id("com.android.library")
@@ -9,7 +11,8 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 
     // Apply Dokka plugin for documentation generation
-    id("org.jetbrains.dokka") version "2.0.0"
+    id("org.jetbrains.dokka") version "2.1.0"
+    id("com.kezong.fat-aar")
 }
 
 allprojects {
@@ -19,46 +22,49 @@ allprojects {
     }
 }
 
+fun DependencyHandler.embed(dependencyNotation: Any) {
+    add("embed", dependencyNotation)
+}
 dependencies {
-    implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.9.0")
-    implementation("com.jakewharton.timber:timber:5.0.1")
+    embed("com.launchdarkly:launchdarkly-android-client-sdk:5.9.0")
+    embed("com.jakewharton.timber:timber:5.0.1")
 
     // Android
-    implementation("androidx.activity:activity:1.11.0")
+    embed("androidx.activity:activity:1.11.0")
+    embed("androidx.core:core-ktx:1.16.0")
 
     // Coroutines
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
+    embed("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
 
     // Kotlinx serialization for JSON parsing
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
+    embed("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
 
     // TODO: revise these versions to be as old as usable for compatibility
-    implementation("io.opentelemetry:opentelemetry-api:1.51.0")
-    implementation("io.opentelemetry:opentelemetry-sdk:1.51.0")
-    implementation("io.opentelemetry:opentelemetry-exporter-otlp:1.51.0")
-    implementation("io.opentelemetry:opentelemetry-exporter-logging-otlp:1.51.0")
-    implementation("io.opentelemetry:opentelemetry-sdk-metrics:1.51.0")
-    implementation("io.opentelemetry:opentelemetry-sdk-logs:1.51.0")
+    embed("io.opentelemetry:opentelemetry-api:1.51.0")
+    embed("io.opentelemetry:opentelemetry-sdk:1.51.0")
+    embed("io.opentelemetry:opentelemetry-exporter-otlp:1.51.0")
+    embed("io.opentelemetry:opentelemetry-exporter-logging-otlp:1.51.0")
+    embed("io.opentelemetry:opentelemetry-sdk-metrics:1.51.0")
+    embed("io.opentelemetry:opentelemetry-sdk-logs:1.51.0")
 
     // TODO: Evaluate risks associated with incubator APIs
-    implementation("io.opentelemetry:opentelemetry-api-incubator:1.51.0-alpha")
-    
+    embed("io.opentelemetry:opentelemetry-api-incubator:1.51.0-alpha")
+
     // Testing exporters for telemetry inspection
-    implementation("io.opentelemetry:opentelemetry-sdk-testing:1.51.0")
+    embed("io.opentelemetry:opentelemetry-sdk-testing:1.51.0")
 
     // Android instrumentation
-    implementation("io.opentelemetry.android:core:0.11.0-alpha")
-    implementation("io.opentelemetry.android.instrumentation:activity:0.11.0-alpha")
-    implementation("io.opentelemetry.android:session:0.11.0-alpha")
+    embed("io.opentelemetry.android:core:0.11.0-alpha")
+    embed("io.opentelemetry.android.instrumentation:activity:0.11.0-alpha")
+    embed("io.opentelemetry.android:session:0.11.0-alpha")
 
     // Android crash instrumentation
-    implementation("io.opentelemetry.android.instrumentation:crash:0.11.0-alpha")
+    embed("io.opentelemetry.android.instrumentation:crash:0.11.0-alpha")
 
     // TODO: O11Y-626 - move replay instrumentation and associated compose dependencies into dedicated package
     // Compose dependencies for capture functionality
-    implementation("androidx.compose.ui:ui:1.7.5")
-    implementation("androidx.compose.ui:ui-tooling:1.7.5")
+    embed("androidx.compose.ui:ui:1.7.5")
+    embed("androidx.compose.ui:ui-tooling:1.7.5")
 
     // Use JUnit Jupiter for testing.
     testImplementation(platform("org.junit:junit-bom:5.13.4"))
@@ -71,7 +77,14 @@ dependencies {
     testFixturesImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
 }
 
+configure<FatAarExtension> {
+    transitive = true
+}
+
 val releaseVersion = version.toString()
+val enableFatAar by lazy {
+    providers.gradleProperty("fatAar").map { it.toBoolean() }.getOrElse(false)
+}
 
 tasks.withType<Test> {
     useJUnitPlatform()
@@ -114,6 +127,14 @@ android {
 
     testFixtures {
         enable = true
+    }
+}
+
+androidComponents {
+    beforeVariants(selector().withBuildType("debug")) { variant ->
+        if (enableFatAar) {
+            variant.enable = false
+        }
     }
 }
 
