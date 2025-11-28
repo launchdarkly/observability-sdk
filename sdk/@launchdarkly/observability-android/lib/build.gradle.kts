@@ -1,5 +1,3 @@
-import com.kezong.fataar.FatAarExtension
-
 plugins {
     // Apply the Android library plugin
     id("com.android.library")
@@ -77,14 +75,11 @@ dependencies {
     testFixturesImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
 }
 
-configure<FatAarExtension> {
+fataar {
     transitive = true
 }
 
 val releaseVersion = version.toString()
-val enableFatAar by lazy {
-    providers.gradleProperty("fatAar").map { it.toBoolean() }.getOrElse(false)
-}
 
 tasks.withType<Test> {
     useJUnitPlatform()
@@ -127,14 +122,6 @@ android {
 
     testFixtures {
         enable = true
-    }
-}
-
-androidComponents {
-    beforeVariants(selector().withBuildType("debug")) { variant ->
-        if (enableFatAar) {
-            variant.enable = false
-        }
     }
 }
 
