@@ -7,6 +7,13 @@ import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.Toast
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
+import android.view.Gravity
+import android.view.View
+import android.view.ViewGroup
+import android.widget.PopupWindow
+import android.widget.TextView
 import androidx.activity.ComponentActivity
 import android.app.AlertDialog
 import com.example.androidobservability.R
@@ -58,6 +65,29 @@ class XMLMaskingActivity : ComponentActivity() {
 		}
 		findViewById<Button>(R.id.button_toast).setOnClickListener {
 			Toast.makeText(this, "This is an example toast.", Toast.LENGTH_SHORT).show()
+		}
+		findViewById<Button>(R.id.button_floating_popup).setOnClickListener {
+			val messageView = TextView(this).apply {
+				text = "This is a floating popup."
+				setTextColor(Color.BLACK)
+				setPadding(48, 32, 48, 32)
+			}
+			val container = LinearLayout(this).apply {
+				setBackgroundColor(Color.WHITE)
+				elevation = 8f
+				addView(messageView)
+			}
+			val popup = PopupWindow(
+				container,
+				ViewGroup.LayoutParams.WRAP_CONTENT,
+				ViewGroup.LayoutParams.WRAP_CONTENT,
+				true
+			).apply {
+				isOutsideTouchable = true
+				setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+			}
+			val root = findViewById<View>(android.R.id.content)
+			popup.showAtLocation(root, Gravity.CENTER, 0, 0)
 		}
 
 		val firstField = findViewById<EditText>(R.id.input_first)
