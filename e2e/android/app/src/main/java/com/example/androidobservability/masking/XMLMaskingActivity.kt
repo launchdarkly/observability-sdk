@@ -1,5 +1,6 @@
 package com.example.androidobservability.masking
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Button
@@ -70,68 +71,6 @@ class XMLMaskingActivity : ComponentActivity() {
 		findViewById<Button>(R.id.button_floating_popup).setOnClickListener {
 			val windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
 
-			// Fullscreen overlay that captures outside taps
-			val overlay = FrameLayout(this).apply {
-				setBackgroundColor(Color.parseColor("#80000000"))
-				isClickable = true
-				isFocusable = true
-			}
-
-			// Centered popup content
-			val content = LinearLayout(this).apply {
-				orientation = LinearLayout.HORIZONTAL
-				setBackgroundColor(Color.WHITE)
-				elevation = 12f
-				setPadding(48, 32, 32, 32)
-			}
-
-			val label = TextView(this).apply {
-				text = "UserName"
-				setTextColor(Color.BLACK)
-			}
-
-			val sendButton = ImageButton(this).apply {
-				setImageResource(android.R.drawable.ic_menu_send)
-				contentDescription = "Send"
-				background = null
-			}
-
-			content.addView(label)
-			content.addView(
-				sendButton,
-				LinearLayout.LayoutParams(
-					ViewGroup.LayoutParams.WRAP_CONTENT,
-					ViewGroup.LayoutParams.WRAP_CONTENT
-				).apply { leftMargin = 24 }
-			)
-
-			overlay.addView(
-				content,
-				FrameLayout.LayoutParams(
-					ViewGroup.LayoutParams.WRAP_CONTENT,
-					ViewGroup.LayoutParams.WRAP_CONTENT,
-					Gravity.CENTER
-				)
-			)
-
-			// Dismiss on outside tap
-			overlay.setOnClickListener {
-				try {
-					windowManager.removeView(overlay)
-				} catch (_: Exception) {
-				}
-			}
-			// Consume clicks inside content so they don't dismiss
-			content.setOnClickListener { }
-
-			sendButton.setOnClickListener {
-				Toast.makeText(this, "Send clicked", Toast.LENGTH_SHORT).show()
-				try {
-					windowManager.removeView(overlay)
-				} catch (_: Exception) {
-				}
-			}
-
 			val params = WindowManager.LayoutParams().apply {
 				width = WindowManager.LayoutParams.MATCH_PARENT
 				height = WindowManager.LayoutParams.MATCH_PARENT
@@ -142,7 +81,19 @@ class XMLMaskingActivity : ComponentActivity() {
 				gravity = Gravity.CENTER
 			}
 
-			windowManager.addView(overlay, params)
+			val popupView = FloatingPopupView(this).apply {
+				onSendClicked = {
+					Toast.makeText(this@XMLMaskingActivity, "Send clicked", Toast.LENGTH_SHORT).show()
+				}
+				onDismissRequested = {
+					try {
+						windowManager.removeView(this)
+					} catch (_: Exception) {
+					}
+				}
+			}
+
+			windowManager.addView(popupView, params)
 		}
 
 		val firstField = findViewById<EditText>(R.id.input_first)
@@ -153,6 +104,63 @@ class XMLMaskingActivity : ComponentActivity() {
 	companion object {
 		const val EXTRA_LAUNCH_AS_DIALOG = "xml_masking_launch_as_dialog"
 		const val EXTRA_LAUNCH_AS_CONFIRMATION = "xml_masking_launch_as_confirmation"
+	}
+}
+
+class FloatingPopupView(context: Context) : FrameLayout(context) {
+
+	var onSendClicked: (() -> Unit)? = null
+	var onDismissRequested: (() -> Unit)? = null
+
+	init {
+		setBackgroundColor(Color.parseColor("#80000000"))
+		isClickable = true
+		isFocusable = true
+
+		val content = LinearLayout(context).apply {
+			orientation = LinearLayout.HORIZONTAL
+			setBackgroundColor(Color.WHITE)
+			elevation = 12f
+			setPadding(48, 32, 32, 32)
+		}
+
+		val label = TextView(context).apply {
+			text = "UserName"
+			setTextColor(Color.BLACK)
+		}
+
+		val sendButton = ImageButton(context).apply {
+			setImageResource(android.R.drawable.ic_menu_send)
+			contentDescription = "Send"
+			background = null
+		}
+
+		content.addView(label)
+		content.addView(
+			sendButton,
+			LinearLayout.LayoutParams(
+				ViewGroup.LayoutParams.WRAP_CONTENT,
+				ViewGroup.LayoutParams.WRAP_CONTENT
+			).apply { leftMargin = 24 }
+		)
+
+		addView(
+			content,
+			FrameLayout.LayoutParams(
+				ViewGroup.LayoutParams.WRAP_CONTENT,
+				ViewGroup.LayoutParams.WRAP_CONTENT,
+				Gravity.CENTER
+			)
+		)
+
+		// Outside tap dismiss
+		setOnClickListener { onDismissRequested?.invoke() }
+		// Consume inner content clicks
+		content.setOnClickListener { }
+		sendButton.setOnClickListener {
+			onSendClicked?.invoke()
+			onDismissRequested?.invoke()
+		}
 	}
 }
 
