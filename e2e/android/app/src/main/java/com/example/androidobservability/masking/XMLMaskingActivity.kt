@@ -8,11 +8,12 @@ import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.Toast
 import android.graphics.Color
-import android.graphics.drawable.ColorDrawable
+import android.graphics.PixelFormat
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
-import android.widget.PopupWindow
+import android.view.WindowManager
+import android.widget.FrameLayout
 import android.widget.TextView
 import androidx.activity.ComponentActivity
 import android.app.AlertDialog
@@ -67,27 +68,81 @@ class XMLMaskingActivity : ComponentActivity() {
 			Toast.makeText(this, "This is an example toast.", Toast.LENGTH_SHORT).show()
 		}
 		findViewById<Button>(R.id.button_floating_popup).setOnClickListener {
-			val messageView = TextView(this).apply {
-				text = "This is a floating popup."
-				setTextColor(Color.BLACK)
-				setPadding(48, 32, 48, 32)
+			val windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
+
+			// Fullscreen overlay that captures outside taps
+			val overlay = FrameLayout(this).apply {
+				setBackgroundColor(Color.parseColor("#80000000"))
+				isClickable = true
+				isFocusable = true
 			}
-			val container = LinearLayout(this).apply {
+
+			// Centered popup content
+			val content = LinearLayout(this).apply {
+				orientation = LinearLayout.HORIZONTAL
 				setBackgroundColor(Color.WHITE)
-				elevation = 8f
-				addView(messageView)
+				elevation = 12f
+				setPadding(48, 32, 32, 32)
 			}
-			val popup = PopupWindow(
-				container,
-				ViewGroup.LayoutParams.WRAP_CONTENT,
-				ViewGroup.LayoutParams.WRAP_CONTENT,
-				true
-			).apply {
-				isOutsideTouchable = true
-				setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+
+			val label = TextView(this).apply {
+				text = "UserName"
+				setTextColor(Color.BLACK)
 			}
-			val root = findViewById<View>(android.R.id.content)
-			popup.showAtLocation(root, Gravity.CENTER, 0, 0)
+
+			val sendButton = ImageButton(this).apply {
+				setImageResource(android.R.drawable.ic_menu_send)
+				contentDescription = "Send"
+				background = null
+			}
+
+			content.addView(label)
+			content.addView(
+				sendButton,
+				LinearLayout.LayoutParams(
+					ViewGroup.LayoutParams.WRAP_CONTENT,
+					ViewGroup.LayoutParams.WRAP_CONTENT
+				).apply { leftMargin = 24 }
+			)
+
+			overlay.addView(
+				content,
+				FrameLayout.LayoutParams(
+					ViewGroup.LayoutParams.WRAP_CONTENT,
+					ViewGroup.LayoutParams.WRAP_CONTENT,
+					Gravity.CENTER
+				)
+			)
+
+			// Dismiss on outside tap
+			overlay.setOnClickListener {
+				try {
+					windowManager.removeView(overlay)
+				} catch (_: Exception) {
+				}
+			}
+			// Consume clicks inside content so they don't dismiss
+			content.setOnClickListener { }
+
+			sendButton.setOnClickListener {
+				Toast.makeText(this, "Send clicked", Toast.LENGTH_SHORT).show()
+				try {
+					windowManager.removeView(overlay)
+				} catch (_: Exception) {
+				}
+			}
+
+			val params = WindowManager.LayoutParams().apply {
+				width = WindowManager.LayoutParams.MATCH_PARENT
+				height = WindowManager.LayoutParams.MATCH_PARENT
+				format = PixelFormat.TRANSLUCENT
+				flags = WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+				type = WindowManager.LayoutParams.TYPE_APPLICATION_PANEL
+				token = window.decorView.applicationWindowToken
+				gravity = Gravity.CENTER
+			}
+
+			windowManager.addView(overlay, params)
 		}
 
 		val firstField = findViewById<EditText>(R.id.input_first)
