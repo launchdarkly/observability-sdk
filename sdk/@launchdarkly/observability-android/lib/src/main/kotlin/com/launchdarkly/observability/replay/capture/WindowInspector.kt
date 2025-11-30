@@ -33,7 +33,7 @@ class WindowInspector(private val logger: LDLogger) {
             WindowEntry(
                 rootView = view,
                 type = determineWindowType(wmType),
-                wmType = wmType,
+                layoutParams = layoutParams,
                 width = view.width,
                 height = view.height,
                 screenLeft = loc[0],
@@ -145,7 +145,6 @@ class WindowInspector(private val logger: LDLogger) {
             WindowManager.LayoutParams.TYPE_APPLICATION,
             WindowManager.LayoutParams.TYPE_BASE_APPLICATION,
             WindowManager.LayoutParams.TYPE_APPLICATION_STARTING -> WindowType.ACTIVITY
-
             WindowManager.LayoutParams.TYPE_APPLICATION_ATTACHED_DIALOG -> WindowType.DIALOG
 
             else -> WindowType.OTHER
