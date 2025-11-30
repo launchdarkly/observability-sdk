@@ -81,7 +81,36 @@ class XMLMaskingActivity : ComponentActivity() {
 				gravity = Gravity.CENTER
 			}
 
-			val popupView = FloatingPopupView(this).apply {
+			val popupView = FloatingPopupView(this, "Floating Popup").apply {
+				onSendClicked = {
+					Toast.makeText(this@XMLMaskingActivity, "Send clicked", Toast.LENGTH_SHORT).show()
+				}
+				onDismissRequested = {
+					try {
+						windowManager.removeView(this)
+					} catch (_: Exception) {
+					}
+				}
+			}
+
+			windowManager.addView(popupView, params)
+		}
+
+		findViewById<Button>(R.id.button_attached_dialog).setOnClickListener {
+			val windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
+
+			val params = WindowManager.LayoutParams().apply {
+				width = WindowManager.LayoutParams.MATCH_PARENT
+				height = WindowManager.LayoutParams.MATCH_PARENT
+				format = PixelFormat.TRANSLUCENT
+				flags = WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+				type = WindowManager.LayoutParams.TYPE_APPLICATION_ATTACHED_DIALOG
+				// Attach to this window so it behaves like an attached dialog
+				token = window.decorView.windowToken
+				gravity = Gravity.CENTER
+			}
+
+			val popupView = FloatingPopupView(this, "Attached Dialog").apply {
 				onSendClicked = {
 					Toast.makeText(this@XMLMaskingActivity, "Send clicked", Toast.LENGTH_SHORT).show()
 				}
@@ -107,7 +136,7 @@ class XMLMaskingActivity : ComponentActivity() {
 	}
 }
 
-class FloatingPopupView(context: Context) : FrameLayout(context) {
+class FloatingPopupView(context: Context, private val headerTitle: String) : FrameLayout(context) {
 
 	var onSendClicked: (() -> Unit)? = null
 	var onDismissRequested: (() -> Unit)? = null
@@ -117,11 +146,22 @@ class FloatingPopupView(context: Context) : FrameLayout(context) {
 		isClickable = true
 		isFocusable = true
 
-		val content = LinearLayout(context).apply {
-			orientation = LinearLayout.HORIZONTAL
+		// White card container with vertical layout to host header and row
+		val contentContainer = LinearLayout(context).apply {
+			orientation = LinearLayout.VERTICAL
 			setBackgroundColor(Color.WHITE)
 			elevation = 12f
 			setPadding(48, 32, 32, 32)
+		}
+
+		val header = TextView(context).apply {
+			text = headerTitle
+			setTextColor(Color.BLACK)
+			textSize = 16f
+		}
+
+		val row = LinearLayout(context).apply {
+			orientation = LinearLayout.HORIZONTAL
 		}
 
 		val label = TextView(context).apply {
@@ -135,8 +175,8 @@ class FloatingPopupView(context: Context) : FrameLayout(context) {
 			background = null
 		}
 
-		content.addView(label)
-		content.addView(
+		row.addView(label)
+		row.addView(
 			sendButton,
 			LinearLayout.LayoutParams(
 				ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -144,8 +184,11 @@ class FloatingPopupView(context: Context) : FrameLayout(context) {
 			).apply { leftMargin = 24 }
 		)
 
+		contentContainer.addView(header)
+		contentContainer.addView(row)
+
 		addView(
-			content,
+			contentContainer,
 			FrameLayout.LayoutParams(
 				ViewGroup.LayoutParams.WRAP_CONTENT,
 				ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -156,7 +199,7 @@ class FloatingPopupView(context: Context) : FrameLayout(context) {
 		// Outside tap dismiss
 		setOnClickListener { onDismissRequested?.invoke() }
 		// Consume inner content clicks
-		content.setOnClickListener { }
+		contentContainer.setOnClickListener { }
 		sendButton.setOnClickListener {
 			onSendClicked?.invoke()
 			onDismissRequested?.invoke()
