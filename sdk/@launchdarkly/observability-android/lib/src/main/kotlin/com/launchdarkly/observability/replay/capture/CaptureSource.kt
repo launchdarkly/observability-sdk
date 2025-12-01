@@ -141,6 +141,7 @@ class CaptureSource(
 
                 val newSignature = tiledSignatureManager.compute(baseResult.bitmap, 64)
                 if (newSignature != null && newSignature == tiledSignature) {
+                    baseResult.bitmap.recycle()
                     return@withContext null
                 }
                 tiledSignature = newSignature
