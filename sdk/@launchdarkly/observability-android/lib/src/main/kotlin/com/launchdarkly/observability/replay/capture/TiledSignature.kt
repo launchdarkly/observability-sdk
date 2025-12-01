@@ -25,7 +25,6 @@ data class TiledSignature(
 
 class TiledSignatureManager {
     private var pixelBuffer: IntArray = IntArray(0)
-    private var tileHashesBuffer: LongArray = LongArray(0)
 
     fun compute(
         bitmap: Bitmap,
@@ -48,12 +47,7 @@ class TiledSignatureManager {
         val tilesX = (width + tileSize - 1) / tileSize
         val tilesY = (height + tileSize - 1) / tileSize
         val tileCount = tilesX * tilesY
-
-        if (tileHashesBuffer.size < tileCount) {
-            tileHashesBuffer = LongArray(tileCount)
-        }
-
-        val tileHashes = tileHashesBuffer
+        val tileHashes = LongArray(tileCount)
 
         var tileIndex = 0
         for(ty in 0 until tilesY) {
@@ -76,7 +70,7 @@ class TiledSignatureManager {
         }
 
         //TODO: optimize memory allocations here to have 2 arrays instead of 1
-        return TiledSignature(tileHashes.copyOf())
+        return TiledSignature(tileHashes)
     }
 
     private fun hashTile(
