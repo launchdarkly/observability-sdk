@@ -2,6 +2,7 @@ package com.example.androidobservability
 
 import android.app.Application
 import android.content.Intent
+import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -122,6 +123,15 @@ class ViewModel(application: Application) : AndroidViewModel(application) {
             .build()
 
         LDClient.get().identify(context)
+    }
+
+    fun evaluateBooleanFlag(flagKey: String) {
+        if (flagKey.isNotEmpty()) {
+            val result = LDClient.get().boolVariation(flagKey, false)
+            Toast.makeText(getApplication(), "Flag $flagKey: $result", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(getApplication(), "Flag key cannot be empty", Toast.LENGTH_SHORT).show()
+        }
     }
 
     fun startForegroundService() {

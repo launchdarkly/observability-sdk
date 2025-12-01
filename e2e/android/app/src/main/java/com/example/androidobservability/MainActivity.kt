@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -197,7 +196,6 @@ private fun MaskingButtons() {
     val context = LocalContext.current
 
 
-
     // Three-column layout: Name | XML | Compose
     // User Form
     Row(
@@ -322,6 +320,7 @@ private fun MaskingButtons() {
 private fun CustomerApiButtons(viewModel: ViewModel) {
     var customLogText by remember { mutableStateOf("") }
     var customSpanText by remember { mutableStateOf("") }
+    var flagKey by remember { mutableStateOf("") }
     var customContextKey by remember { mutableStateOf("") }
 
     Text(
@@ -382,6 +381,23 @@ private fun CustomerApiButtons(viewModel: ViewModel) {
         modifier = Modifier.padding(8.dp)
     ) {
         Text("Send custom span")
+    }
+
+    Spacer(modifier = Modifier.height(16.dp))
+
+    OutlinedTextField(
+        value = flagKey,
+        onValueChange = { flagKey = it },
+        label = { Text("Flag key") },
+        modifier = Modifier.padding(8.dp)
+    )
+    Button(
+        onClick = {
+            viewModel.evaluateBooleanFlag(flagKey)
+        },
+        modifier = Modifier.padding(8.dp)
+    ) {
+        Text("Evaluate boolean flag")
     }
 
     Spacer(modifier = Modifier.height(16.dp))
