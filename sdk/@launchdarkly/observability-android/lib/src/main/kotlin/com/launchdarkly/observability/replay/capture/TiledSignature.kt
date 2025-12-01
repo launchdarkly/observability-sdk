@@ -21,6 +21,7 @@ data class TiledSignature(
  * synchronization.
  */
 class TiledSignatureManager {
+    @Volatile
     private var pixelBuffer: IntArray = IntArray(0)
 
 /**
