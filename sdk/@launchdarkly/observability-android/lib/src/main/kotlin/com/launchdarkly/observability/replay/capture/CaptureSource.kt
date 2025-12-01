@@ -59,6 +59,9 @@ class CaptureSource(
         style = Paint.Style.FILL
     }
 
+    private val tiledSignatureManager = TiledSignatureManager()
+    @Volatile
+    private var tiledSignature: TiledSignature? = null
     /**
      * Requests a [CaptureEvent] be taken now.
      */
@@ -135,6 +138,14 @@ class CaptureSource(
                         res.bitmap.recycle()
                     }
                 }
+
+                val newSignature = tiledSignatureManager.compute(baseResult.bitmap, 64)
+                if (newSignature != null && newSignature == tiledSignature) {
+                    baseResult.bitmap.recycle()
+                    // the similar bitmap not send
+                    return@withContext null
+                }
+                tiledSignature = newSignature
 
                 createCaptureEvent(baseResult.bitmap, rect, timestamp, session)
             }
