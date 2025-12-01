@@ -5,27 +5,31 @@ import android.graphics.Bitmap
 data class TiledSignature(
     val tileHashes: LongArray
 ) {
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
-
-        other as TiledSignature
-
-        if (!tileHashes.contentEquals(other.tileHashes)) {
-            return false
-        }
-
-        return true
-    }
-
-    override fun hashCode(): Int {
-        return tileHashes.contentHashCode()
-    }
+    override fun equals(other: Any?): Boolean = 
+        other is TiledSignature && tileHashes.contentEquals(other.tileHashes)
+    
+        override fun hashCode(): Int = tileHashes.contentHashCode()
 }
 
+/**
+ * Computes tiled signatures for bitmaps.
+ *
+ * This class is intentionally not thread-safe in order to reuse a single internal
+ * pixel buffer allocation and minimize memory churn and GC pressure. Do not invoke
+ * methods on the same instance from multiple threads concurrently. If cross-thread
+ * use is required, create one instance per thread or guard access with external
+ * synchronization.
+ */
 class TiledSignatureManager {
     private var pixelBuffer: IntArray = IntArray(0)
 
+/**
+ * Computes a tiled signature for the given bitmap. Not thread-safe.
+ *
+ * @param bitmap The bitmap to compute a signature for.
+ * @param tileSize The size of the tiles to use for the signature.
+ * @return The tiled signature.
+ */
     fun compute(
         bitmap: Bitmap,
         tileSize: Int
@@ -81,8 +85,8 @@ class TiledSignatureManager {
         endX: Int,
         endY: Int
     ): Long {
-        var hash: Long = 5163949831757626579
-        val prime: Long = 1238197591667094937 // from https://bigprimes.org
+        var hash = 5163949831757626579L
+        val prime = 1238197591667094937L // from https://bigprimes.org
         for(y in startY until endY) {
             val rowOffset = y * width
             for(x in startX until endX) {
@@ -96,5 +100,3 @@ class TiledSignatureManager {
         return hash
     }
 }
-
-
