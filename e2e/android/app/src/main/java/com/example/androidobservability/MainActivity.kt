@@ -322,6 +322,7 @@ private fun MaskingButtons() {
 private fun CustomerApiButtons(viewModel: ViewModel) {
     var customLogText by remember { mutableStateOf("") }
     var customSpanText by remember { mutableStateOf("") }
+    var flagKey by remember { mutableStateOf("") }
     var customContextKey by remember { mutableStateOf("") }
 
     Text(
@@ -382,6 +383,23 @@ private fun CustomerApiButtons(viewModel: ViewModel) {
         modifier = Modifier.padding(8.dp)
     ) {
         Text("Send custom span")
+    }
+
+    Spacer(modifier = Modifier.height(16.dp))
+
+    OutlinedTextField(
+        value = flagKey,
+        onValueChange = { flagKey = it },
+        label = { Text("Flag key") },
+        modifier = Modifier.padding(8.dp)
+    )
+    Button(
+        onClick = {
+            viewModel.evaluateBooleanFlag(flagKey)
+        },
+        modifier = Modifier.padding(8.dp)
+    ) {
+        Text("Evaluate boolean flag")
     }
 
     Spacer(modifier = Modifier.height(16.dp))
