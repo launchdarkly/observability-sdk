@@ -6,7 +6,6 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Rect
-import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.util.Base64
@@ -19,7 +18,7 @@ import android.view.WindowManager.LayoutParams.TYPE_BASE_APPLICATION
 import com.launchdarkly.logging.LDLogger
 import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
 import com.launchdarkly.observability.replay.masking.MaskMatcher
-import com.launchdarkly.observability.replay.masking.SensitiveAreasCollector
+import com.launchdarkly.observability.replay.masking.MaskCollector
 import io.opentelemetry.android.session.SessionManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -53,7 +52,7 @@ class CaptureSource(
     private val _captureEventFlow = MutableSharedFlow<CaptureEvent>()
     val captureFlow: SharedFlow<CaptureEvent> = _captureEventFlow.asSharedFlow()
     private val windowInspector = WindowInspector(logger)
-    private val sensitiveAreasCollector = SensitiveAreasCollector(logger)
+    private val maskCollector = MaskCollector(logger)
     private val maskPaint = Paint().apply {
         color = Color.GRAY
         style = Paint.Style.FILL
@@ -167,7 +166,7 @@ class CaptureSource(
 
     private suspend fun captureViewResult(windowEntry: WindowEntry): CaptureResult? {
         val bitmap = captureViewBitmap(windowEntry) ?: return null
-        val sensitiveComposeRects = sensitiveAreasCollector.collectFromActivity(windowEntry.rootView, maskMatchers)
+        val sensitiveComposeRects = maskCollector.collectMasks(windowEntry.rootView, maskMatchers)
         return CaptureResult(windowEntry, bitmap, sensitiveComposeRects)
     }
 

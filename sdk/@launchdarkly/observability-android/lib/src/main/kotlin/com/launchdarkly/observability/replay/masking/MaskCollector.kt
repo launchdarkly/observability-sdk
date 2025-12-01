@@ -12,13 +12,13 @@ import com.launchdarkly.logging.LDLogger
  *
  * This encapsulates both Jetpack Compose and native View detection logic.
  */
-class SensitiveAreasCollector(private val logger: LDLogger) {
+class MaskCollector(private val logger: LDLogger) {
     /**
      * Find sensitive areas from all views in the provided [activity].
      *
      * @return a list of rects that represent sensitive areas that need to be masked
      */
-    fun collectFromActivity(view: View, matchers: List<MaskMatcher>): List<ComposeRect> {
+    fun collectMasks(view: View, matchers: List<MaskMatcher>): List<ComposeRect> {
         val allSensitiveRects = mutableListOf<ComposeRect>()
 
         try {
