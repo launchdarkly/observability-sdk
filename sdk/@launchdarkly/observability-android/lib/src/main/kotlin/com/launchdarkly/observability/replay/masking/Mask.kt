@@ -5,6 +5,6 @@ import androidx.compose.ui.graphics.Matrix
 data class Mask(
     val rect: RectF,
     val viewId: Int,
-    val matrix: Matrix
+    val matrix: Matrix? = null
 )
 

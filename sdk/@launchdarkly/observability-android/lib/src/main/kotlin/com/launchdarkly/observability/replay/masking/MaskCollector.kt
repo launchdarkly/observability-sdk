@@ -2,10 +2,10 @@ package com.launchdarkly.observability.replay.masking
 
 import android.view.View
 import android.view.ViewGroup
+import androidx.compose.ui.platform.AbstractComposeView
 import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.semantics.SemanticsNode
-import androidx.compose.ui.geometry.Rect as ComposeRect
 import com.launchdarkly.logging.LDLogger
+import kotlin.collections.plusAssign
 
 /**
  * Collects sensitive screen areas that should be masked in session replay.
@@ -14,117 +14,80 @@ import com.launchdarkly.logging.LDLogger
  */
 class MaskCollector(private val logger: LDLogger) {
     /**
-     * Find sensitive areas from all views in the provided [activity].
+     * Find sensitive areas from all views in the provided [view].
      *
      * @return a list of rects that represent sensitive areas that need to be masked
      */
-    fun collectMasks(view: View, matchers: List<MaskMatcher>): List<ComposeRect> {
-        val allSensitiveRects = mutableListOf<ComposeRect>()
-
-        try {
-            val views = findViews(view)
-
-            views.forEach { view ->
-                when (view) {
-                    is ComposeView ->
-                        ComposeMaskTarget.from(view, logger)?.let { target ->
-                            allSensitiveRects += findComposeSensitiveAreas(target, matchers)
-                        }
-                    else ->
-                        allSensitiveRects += findNativeSensitiveRects(NativeMaskTarget(view), matchers)
-                }
-            }
-        } catch (ignored: Exception) {
-            // Best-effort collection; ignore failures accessing Compose internals
-            logger.warn("Failure building sensitive rects ")
-        }
-
-        return allSensitiveRects
+    fun collectMasks(root: View, matchers: List<MaskMatcher>): List<Mask> {
+        val resultMasks = mutableListOf<Mask>()
+        traverse(root, matchers, resultMasks)
+        return resultMasks
     }
 
-    /**
-     * Recursively find all views in the hierarchy.
-     */
-    private fun findViews(view: View): List<View> {
-        val views = mutableListOf<View>()
-
-        views.add(view)
-
-        if (view is ViewGroup) {
-            for (i in 0 until view.childCount) {
-                val child = view.getChildAt(i)
-                views.addAll(findViews(child))
-            }
+    fun traverseCompose(view: ComposeView, matchers: List<MaskMatcher>, masks: MutableList<Mask>) {
+        val target = ComposeMaskTarget.from(view, logger)
+        if (target != null) {
+            traverseComposeNodes(target, matchers, masks)
         }
 
-        return views
+        for (i in 0 until view.childCount) {
+            val child = view.getChildAt(i)
+            traverse(child, matchers, masks)
+        }
     }
 
-    /**
-     * Find sensitive Compose areas by traversing the semantic node tree.
-     */
-    private fun findComposeSensitiveAreas(
-        maskTarget: ComposeMaskTarget,
-        matchers: List<MaskMatcher>
-    ): List<ComposeRect> {
-        // TODO: O11Y-629 - add logic to check for sensitive areas in Compose views
-        val sensitiveRects = mutableListOf<ComposeRect>()
-
-        try {
-            traverseSemanticNode(maskTarget.rootNode, sensitiveRects, maskTarget, matchers)
-        } catch (ignored: Exception) {
-            // Ignore issues in semantics tree traversal
+    fun traverseNative(view: View, matchers: List<MaskMatcher>, masks: MutableList<Mask>) {
+        val target = NativeMaskTarget(view)
+        if (shouldMask(target, matchers)) {
+            target.mask()?.let { masks += it }
         }
 
-        return sensitiveRects
+        if (view !is ViewGroup) return
+
+        for (i in 0 until view.childCount) {
+            val child = view.getChildAt(i)
+            traverse(child, matchers, masks)
+        }
     }
 
-    /**
-     * Recursively traverse a semantic node and its children to find sensitive areas.
-     */
-    private fun traverseSemanticNode(
-        node: SemanticsNode,
-        sensitiveRects: MutableList<ComposeRect>,
-        maskTarget: ComposeMaskTarget,
-        matchers: List<MaskMatcher>
-    ) {
-        // current node target is provided as parameter
-        // check ldMask() modifier; do not return early so children are still traversed
-        val hasLDMask = maskTarget.hasLDMask()
-        if (hasLDMask || matchers.any { it.isMatch(maskTarget) }) {
-            maskTarget.maskRect()?.let { sensitiveRects.add(it) }
-        }
+    fun traverse(view: View, matchers: List<MaskMatcher>, masks: MutableList<Mask>) {
+        if (!view.isShown) return
 
-        node.children.forEach { child ->
-            val childTarget = ComposeMaskTarget(
-                view = maskTarget.view,
-                rootNode = maskTarget.rootNode,
-                config = child.config,
-                boundsInWindow = child.boundsInWindow
-            )
-            traverseSemanticNode(child, sensitiveRects, childTarget, matchers)
+        if (view is AbstractComposeView) {
+            traverseCompose(view, matchers, masks)
+        } else if (!view::class.java.name.contains("AndroidComposeView")) {
+            traverseNative(view, matchers, masks)
         }
     }
 
     /**
      * Check if a native view is sensitive and add its bounds to the list if it is.
      */
-    private fun findNativeSensitiveRects(
-        target: NativeMaskTarget,
+    private fun traverseComposeNodes(
+        target: ComposeMaskTarget,
+        matchers: List<MaskMatcher>,
+        masks: MutableList<Mask>
+    ) {
+        if (shouldMask(target, matchers)) {
+            target.mask()?.let { masks += it }
+        }
+
+        for (child in target.rootNode.children) {
+            val childTarget = ComposeMaskTarget(
+                view = target.view,
+                rootNode = child,
+                config = child.config,
+                boundsInWindow = child.boundsInWindow
+            )
+            traverseComposeNodes(childTarget, matchers, masks)
+        }
+    }
+
+    private fun shouldMask(
+        target: MaskTarget,
         matchers: List<MaskMatcher>
-    ): List<ComposeRect> {
-        val sensitiveRects = mutableListOf<ComposeRect>()
-        var isSensitive = target.hasLDMask()
-
-        if (!isSensitive) {
-            // Allow matchers to determine sensitivity for native views as well
-            isSensitive = matchers.any { matcher -> matcher.isMatch(target) }
-        }
-
-        if (isSensitive) {
-            target.maskRect()?.let { sensitiveRects.add(it) }
-        }
-
-        return sensitiveRects
+    ): Boolean {
+        return target.hasLDMask()
+            || matchers.any { matcher -> matcher.isMatch(target) }
     }
 }

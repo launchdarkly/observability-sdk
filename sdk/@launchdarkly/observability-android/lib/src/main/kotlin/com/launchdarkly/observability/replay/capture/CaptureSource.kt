@@ -28,8 +28,8 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import kotlin.coroutines.resume
-import androidx.compose.ui.geometry.Rect as ComposeRect
 import androidx.core.graphics.withTranslation
+import com.launchdarkly.observability.replay.masking.Mask
 
 /**
  * A source of [CaptureEvent]s taken from the most recently resumed [Activity]s window. Captures
@@ -46,7 +46,7 @@ class CaptureSource(
     data class CaptureResult(
         val windowEntry: WindowEntry,
         val bitmap: Bitmap,
-        val masks: List<ComposeRect>
+        val masks: List<Mask>
     )
 
     private val _captureEventFlow = MutableSharedFlow<CaptureEvent>()
@@ -166,8 +166,8 @@ class CaptureSource(
 
     private suspend fun captureViewResult(windowEntry: WindowEntry): CaptureResult? {
         val bitmap = captureViewBitmap(windowEntry) ?: return null
-        val sensitiveComposeRects = maskCollector.collectMasks(windowEntry.rootView, maskMatchers)
-        return CaptureResult(windowEntry, bitmap, sensitiveComposeRects)
+        val masks = maskCollector.collectMasks(windowEntry.rootView, maskMatchers)
+        return CaptureResult(windowEntry, bitmap, masks)
     }
 
     private suspend fun captureViewBitmap(windowEntry: WindowEntry): Bitmap? {
@@ -288,15 +288,15 @@ class CaptureSource(
      * @param canvas The canvas to mask
      * @param masks rects that will be masked
      */
-    private fun drawMasks(canvas: Canvas, masks: List<ComposeRect>) {
+    private fun drawMasks(canvas: Canvas, masks: List<Mask>) {
         masks.forEach { mask ->
-            val androidRect = Rect(
-                mask.left.toInt(),
-                mask.top.toInt(),
-                mask.right.toInt(),
-                mask.bottom.toInt()
+            val integerRect = Rect(
+                mask.rect.left.toInt(),
+                mask.rect.top.toInt(),
+                mask.rect.right.toInt(),
+                mask.rect.bottom.toInt()
             )
-            canvas.drawRect(androidRect, maskPaint)
+            canvas.drawRect(integerRect, maskPaint)
         }
     }
 }

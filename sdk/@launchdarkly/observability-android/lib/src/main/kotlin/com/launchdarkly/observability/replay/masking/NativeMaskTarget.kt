@@ -6,7 +6,9 @@ import android.widget.TextView
 import android.text.method.PasswordTransformationMethod
 import androidx.compose.ui.geometry.Rect as ComposeRect
 import kotlin.text.lowercase
-import com.launchdarkly.observability.R     
+import com.launchdarkly.observability.R
+import android.graphics.RectF
+
 /**
  *   Native view target
  */
@@ -51,18 +53,18 @@ data class NativeMaskTarget(
         return false
     }
 
-    override fun maskRect(): ComposeRect? {
+    override fun mask(): Mask? {
         val location = IntArray(2)
         view.getLocationInWindow(location)
         val left = location[0].toFloat()
         val top = location[1].toFloat()
-        val right = left + view.width
-        val bottom = top + view.height
-
-        return ComposeRect(left, top, right, bottom)
+        val rect = RectF(left, top, left + view.width, top + view.height)
+        return Mask(rect, view.id, matrix = null)
     }
 
     override fun hasLDMask(): Boolean {
         return view.getTag(R.id.ld_mask_tag) as? Boolean ?: false
     }
+
+
 }
