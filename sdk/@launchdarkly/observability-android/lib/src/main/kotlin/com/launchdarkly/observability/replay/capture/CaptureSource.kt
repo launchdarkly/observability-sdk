@@ -153,7 +153,8 @@ class CaptureSource(
 
     private fun pickBaseWindow(windowsEntries: List<WindowEntry>): WindowEntry? {
         windowsEntries.firstOrNull {
-            (it.wmType == TYPE_APPLICATION || it.wmType == TYPE_BASE_APPLICATION)
+            val wmType = it.layoutParams?.type ?: 0
+            (wmType == TYPE_APPLICATION || wmType == TYPE_BASE_APPLICATION)
         }?.let { return it }
 
         windowsEntries.firstOrNull { it.type == WindowType.ACTIVITY }?.let { return it }
@@ -172,10 +173,13 @@ class CaptureSource(
 
     private suspend fun captureViewBitmap(windowEntry: WindowEntry): Bitmap? {
         val view = windowEntry.rootView
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && windowEntry.isPixelCopyCandidate()) {
             val window = windowInspector.findWindow(view)
             if (window != null) {
-                pixelCopy(window, view, windowEntry.rect())?.let { return it }
+                pixelCopy(window, view, windowEntry.rect())?.let {
+                    return it
+                }
             }
         }
 

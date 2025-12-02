@@ -33,7 +33,7 @@ class WindowInspector(private val logger: LDLogger) {
             WindowEntry(
                 rootView = view,
                 type = determineWindowType(wmType),
-                wmType = wmType,
+                layoutParams = layoutParams,
                 width = view.width,
                 height = view.height,
                 screenLeft = loc[0],
