@@ -2,9 +2,11 @@ package com.launchdarkly.observability.replay.masking
 
 import android.view.View
 import android.view.ViewGroup
+import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.platform.AbstractComposeView
 import androidx.compose.ui.platform.ComposeView
 import com.launchdarkly.logging.LDLogger
+import com.launchdarkly.observability.replay.utils.locationOnScreen
 import kotlin.collections.plusAssign
 
 /**
@@ -20,6 +22,10 @@ class MaskCollector(private val logger: LDLogger) {
      */
     fun collectMasks(root: View, matchers: List<MaskMatcher>): List<Mask> {
         val resultMasks = mutableListOf<Mask>()
+        val matrix = Matrix()
+
+        val (rootX, rootY) = root.locationOnScreen()
+
         traverse(root, matchers, resultMasks)
         return resultMasks
     }
