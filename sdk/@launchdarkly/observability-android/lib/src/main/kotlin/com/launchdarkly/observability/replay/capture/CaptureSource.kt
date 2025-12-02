@@ -174,7 +174,7 @@ class CaptureSource(
     private suspend fun captureViewBitmap(windowEntry: WindowEntry): Bitmap? {
         val view = windowEntry.rootView
 
-        if (windowEntry.isPixelCopyCandidate()) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && windowEntry.isPixelCopyCandidate()) {
             val window = windowInspector.findWindow(view)
             if (window != null) {
                 pixelCopy(window, view, windowEntry.rect())?.let {

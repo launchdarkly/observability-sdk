@@ -11,13 +11,13 @@ import android.widget.Toast
 import android.graphics.Color
 import android.graphics.PixelFormat
 import android.view.Gravity
-import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.FrameLayout
 import android.widget.TextView
 import androidx.activity.ComponentActivity
 import android.app.AlertDialog
+import androidx.core.graphics.toColorInt
 import com.example.androidobservability.R
 
 class XMLMaskingActivity : ComponentActivity() {
@@ -142,7 +142,7 @@ class FloatingPopupView(context: Context, private val headerTitle: String) : Fra
 	var onDismissRequested: (() -> Unit)? = null
 
 	init {
-		setBackgroundColor(Color.parseColor("#80000000"))
+        setBackgroundColor("#80000000".toColorInt())
 		isClickable = true
 		isFocusable = true
 
@@ -179,8 +179,8 @@ class FloatingPopupView(context: Context, private val headerTitle: String) : Fra
 		row.addView(
 			sendButton,
 			LinearLayout.LayoutParams(
-				ViewGroup.LayoutParams.WRAP_CONTENT,
-				ViewGroup.LayoutParams.WRAP_CONTENT
+				LayoutParams.WRAP_CONTENT,
+				LayoutParams.WRAP_CONTENT
 			).apply { leftMargin = 24 }
 		)
 
@@ -189,9 +189,9 @@ class FloatingPopupView(context: Context, private val headerTitle: String) : Fra
 
 		addView(
 			contentContainer,
-			FrameLayout.LayoutParams(
-				ViewGroup.LayoutParams.WRAP_CONTENT,
-				ViewGroup.LayoutParams.WRAP_CONTENT,
+			LayoutParams(
+				LayoutParams.WRAP_CONTENT,
+				LayoutParams.WRAP_CONTENT,
 				Gravity.CENTER
 			)
 		)

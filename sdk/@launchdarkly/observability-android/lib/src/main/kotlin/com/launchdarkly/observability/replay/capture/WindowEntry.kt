@@ -2,7 +2,6 @@ package com.launchdarkly.observability.replay.capture
 
 import android.graphics.Rect
 import android.os.Build
-import android.text.Layout
 import android.view.View
 import android.view.WindowManager
 import android.view.WindowManager.LayoutParams.TYPE_APPLICATION_STARTING
@@ -28,9 +27,6 @@ data class WindowEntry(
     }
 
     fun isPixelCopyCandidate(): Boolean {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
-            return false
-        }
         if (type != WindowType.ACTIVITY) {
             return false
         }
