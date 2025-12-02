@@ -11,7 +11,7 @@ sealed interface MaskTarget {
     fun isTextInput(): Boolean
     fun isText(): Boolean
     fun isSensitive(sensitiveKeywords: List<String>): Boolean
-    fun mask(): Mask?
+    fun mask(): Mask
     fun hasLDMask(): Boolean
 }
 

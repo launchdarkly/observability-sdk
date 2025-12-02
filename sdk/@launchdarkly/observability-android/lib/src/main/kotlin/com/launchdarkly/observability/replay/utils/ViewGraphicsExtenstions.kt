@@ -10,4 +10,3 @@ fun View.locationOnScreen(): Pair<Float, Float> {
     getLocationOnScreen(loc)
     return loc[0].toFloat() to loc[1].toFloat()
 }
-

@@ -1,5 +1,6 @@
 package com.launchdarkly.observability.replay.capture
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
@@ -15,7 +16,7 @@ class WindowInspector(private val logger: LDLogger) {
 
     fun appWindows(appContext: Context? = null): List<WindowEntry> {
         val appUid = appContext?.applicationInfo?.uid
-        val views = getRootViews() ?: return emptyList()
+        val views = getRootViews()
         return views.mapNotNull { view ->
             if (appUid != null && view.context.applicationInfo?.uid != appUid) return@mapNotNull null
             if (!view.isAttachedToWindow || !view.isShown) return@mapNotNull null
@@ -50,6 +51,7 @@ class WindowInspector(private val logger: LDLogger) {
      * 2) Reflection to call getWindow() if present
      * 3) Context unwrap to Activity and return activity.window (best-effort fallback)
      */
+    @SuppressLint("PrivateApi")
     fun findWindow(rootView: View): Window? {
         // 1) Try to read a private field "mWindow" (present on DecorView/PopupDecorView)
         try {
@@ -100,6 +102,7 @@ class WindowInspector(private val logger: LDLogger) {
         return null
     }
 
+    @SuppressLint("PrivateApi")
     fun getRootViews(): List<View> {
         return try {
             val wmgClass = Class.forName("android.view.WindowManagerGlobal")
@@ -111,8 +114,7 @@ class WindowInspector(private val logger: LDLogger) {
             }.getOrNull()
 
             if (getRootViewsMethod != null) {
-                val result = getRootViewsMethod.invoke(instance)
-                return when (result) {
+                return when (val result = getRootViewsMethod.invoke(instance)) {
                     is Array<*> -> result.filterIsInstance<View>()
                     is List<*> -> result.filterIsInstance<View>()
                     else -> emptyList()
@@ -125,8 +127,7 @@ class WindowInspector(private val logger: LDLogger) {
             }.getOrNull()
 
             if (mViewsField != null) {
-                val result = mViewsField.get(instance)
-                return when (result) {
+                return when (val result = mViewsField.get(instance)) {
                     is Array<*> -> result.filterIsInstance<View>()
                     is List<*> -> result.filterIsInstance<View>()
                     else -> emptyList()

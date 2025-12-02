@@ -4,7 +4,6 @@ import android.view.View
 import android.widget.EditText
 import android.widget.TextView
 import android.text.method.PasswordTransformationMethod
-import androidx.compose.ui.geometry.Rect as ComposeRect
 import kotlin.text.lowercase
 import com.launchdarkly.observability.R
 import android.graphics.RectF
@@ -46,14 +45,10 @@ data class NativeMaskTarget(
 
         // Fallback to contentDescription check
         val lowerDesc = view.contentDescription?.toString()?.lowercase()
-        if (!lowerDesc.isNullOrEmpty() && sensitiveKeywords.any { keyword -> lowerDesc.contains(keyword) }) {
-            return true
-        }
-
-        return false
+        return !lowerDesc.isNullOrEmpty() && sensitiveKeywords.any { keyword -> lowerDesc.contains(keyword) }
     }
 
-    override fun mask(): Mask? {
+    override fun mask(): Mask {
         val location = IntArray(2)
         view.getLocationInWindow(location)
         val left = location[0].toFloat()

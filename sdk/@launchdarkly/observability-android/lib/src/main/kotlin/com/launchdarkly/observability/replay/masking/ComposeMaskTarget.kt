@@ -3,7 +3,6 @@ package com.launchdarkly.observability.replay.masking
 import android.view.View
 import androidx.compose.ui.graphics.toAndroidRectF
 import androidx.compose.ui.platform.AbstractComposeView
-import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsOwner
 import androidx.compose.ui.semantics.SemanticsConfiguration
@@ -74,7 +73,7 @@ data class ComposeMaskTarget(
         return config.contains(SemanticsProperties.Text)
     }
 
-    override fun mask(): Mask? {
+    override fun mask(): Mask {
         return Mask(boundsInWindow.toAndroidRectF(), view.id)
     }
 

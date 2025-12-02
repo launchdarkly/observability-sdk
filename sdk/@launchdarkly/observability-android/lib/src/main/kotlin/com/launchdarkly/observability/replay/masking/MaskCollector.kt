@@ -2,11 +2,8 @@ package com.launchdarkly.observability.replay.masking
 
 import android.view.View
 import android.view.ViewGroup
-import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.platform.AbstractComposeView
-import androidx.compose.ui.platform.ComposeView
 import com.launchdarkly.logging.LDLogger
-import com.launchdarkly.observability.replay.utils.locationOnScreen
 import kotlin.collections.plusAssign
 
 /**
@@ -16,15 +13,15 @@ import kotlin.collections.plusAssign
  */
 class MaskCollector(private val logger: LDLogger) {
     /**
-     * Find sensitive areas from all views in the provided [view].
+     * Find sensitive areas from all views in the provided [root] view.
      *
-     * @return a list of rects that represent sensitive areas that need to be masked
+     * @return a list of masks that represent sensitive areas that need to be masked
      */
     fun collectMasks(root: View, matchers: List<MaskMatcher>): List<Mask> {
         val resultMasks = mutableListOf<Mask>()
-        val matrix = Matrix()
-
-        val (rootX, rootY) = root.locationOnScreen()
+//      TODO: use matrix to calculate final coordinates the will be close to truth in animations
+//        val matrix = Matrix()
+//        val (rootX, rootY) = root.locationOnScreen()
 
         traverse(root, matchers, resultMasks)
         return resultMasks
@@ -45,7 +42,7 @@ class MaskCollector(private val logger: LDLogger) {
     fun traverseNative(view: View, matchers: List<MaskMatcher>, masks: MutableList<Mask>) {
         val target = NativeMaskTarget(view)
         if (shouldMask(target, matchers)) {
-            target.mask()?.let { masks += it }
+            masks += target.mask()
         }
 
         if (view !is ViewGroup) return
@@ -75,7 +72,7 @@ class MaskCollector(private val logger: LDLogger) {
         masks: MutableList<Mask>
     ) {
         if (shouldMask(target, matchers)) {
-            target.mask()?.let { masks += it }
+            masks += target.mask()
         }
 
         for (child in target.rootNode.children) {
