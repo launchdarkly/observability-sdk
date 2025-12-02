@@ -1,10 +1,12 @@
 package com.launchdarkly.observability.replay.masking
 
+import android.graphics.Matrix
 import android.view.View
 import android.view.ViewGroup
 import androidx.compose.ui.platform.AbstractComposeView
 import com.launchdarkly.logging.LDLogger
 import kotlin.collections.plusAssign
+import com.launchdarkly.observability.replay.utils.locationOnScreen
 
 /**
  * Collects sensitive screen areas that should be masked in session replay.
@@ -19,9 +21,9 @@ class MaskCollector(private val logger: LDLogger) {
      */
     fun collectMasks(root: View, matchers: List<MaskMatcher>): List<Mask> {
         val resultMasks = mutableListOf<Mask>()
-//      TODO: use matrix to calculate final coordinates the will be close to truth in animations
-//        val matrix = Matrix()
-//        val (rootX, rootY) = root.locationOnScreen()
+
+        val matrix = Matrix()
+        val (rootX, rootY) = root.locationOnScreen()
 
         traverse(root, matchers, resultMasks)
         return resultMasks
