@@ -16,6 +16,7 @@ import android.view.Window
 import android.view.WindowManager.LayoutParams.TYPE_APPLICATION
 import android.view.WindowManager.LayoutParams.TYPE_BASE_APPLICATION
 import androidx.annotation.RequiresApi
+import android.graphics.Path
 import com.launchdarkly.logging.LDLogger
 import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
 import com.launchdarkly.observability.replay.masking.MaskMatcher
@@ -32,6 +33,7 @@ import kotlin.coroutines.resume
 import androidx.core.graphics.withTranslation
 import com.launchdarkly.observability.replay.masking.Mask
 import androidx.core.graphics.createBitmap
+import com.launchdarkly.observability.replay.masking.draw
 
 /**
  * A source of [CaptureEvent]s taken from the lowest visible window. Captures
@@ -281,14 +283,9 @@ class CaptureSource(
      * @param masks areas that will be masked
      */
     private fun drawMasks(canvas: Canvas, masks: List<Mask>) {
+        val path = Path()
         masks.forEach { mask ->
-            val integerRect = Rect(
-                mask.rect.left.toInt(),
-                mask.rect.top.toInt(),
-                mask.rect.right.toInt(),
-                mask.rect.bottom.toInt()
-            )
-            canvas.drawRect(integerRect, maskPaint)
+            mask.draw(path, canvas, maskPaint)
         }
     }
 }

@@ -57,17 +57,18 @@ data class NativeMaskTarget(
         return !lowerDesc.isNullOrEmpty() && sensitiveKeywords.any { keyword -> lowerDesc.contains(keyword) }
     }
 
-    override fun mask(): Mask? {
+    override fun mask(context: MaskContext): Mask? {
         if (view.width <= 0 || view.height <= 0) {
             return null
         }
 
+        val points = context.points(view)
         val location = IntArray(2)
         view.getLocationInWindow(location)
         val left = location[0].toFloat()
         val top = location[1].toFloat()
         val rect = RectF(left, top, left + view.width, top + view.height)
-        return Mask(rect, view.id, matrix = null)
+        return Mask(rect, view.id, points)
     }
 
     override fun hasLDMask(): Boolean {

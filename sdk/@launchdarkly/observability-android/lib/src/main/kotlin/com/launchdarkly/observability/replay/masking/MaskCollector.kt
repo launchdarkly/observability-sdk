@@ -5,9 +5,16 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.compose.ui.platform.AbstractComposeView
 import com.launchdarkly.logging.LDLogger
+import com.launchdarkly.observability.replay.masking.MaskMatcher
 import kotlin.collections.plusAssign
 import com.launchdarkly.observability.replay.utils.locationOnScreen
 
+data class MaskContext(
+    val matrix: Matrix,
+    val rootX: Float,
+    val rootY: Float,
+    val matchers: List<MaskMatcher>
+)
 /**
  * Collects sensitive screen areas that should be masked in session replay.
  *
@@ -22,26 +29,31 @@ class MaskCollector(private val logger: LDLogger) {
     fun collectMasks(root: View, matchers: List<MaskMatcher>): List<Mask> {
         val resultMasks = mutableListOf<Mask>()
 
-        val matrix = Matrix()
         val (rootX, rootY) = root.locationOnScreen()
+        val context = MaskContext(
+            matrix = Matrix(),
+            rootX = rootX,
+            rootY = rootY,
+            matchers = matchers
+        )
 
-        traverse(root, matchers, resultMasks)
+        traverse(root, context, resultMasks)
         return resultMasks
     }
 
-    fun traverseCompose(view: AbstractComposeView, matchers: List<MaskMatcher>, masks: MutableList<Mask>) {
+    fun traverseCompose(view: AbstractComposeView, context: MaskContext, masks: MutableList<Mask>) {
         val target = ComposeMaskTarget.from(view, logger)
         if (target != null) {
-            traverseComposeNodes(target, matchers, masks)
+            traverseComposeNodes(target, context, masks)
         }
 
         for (i in 0 until view.childCount) {
             val child = view.getChildAt(i)
-            traverse(child, matchers, masks)
+            traverse(child, context, masks)
         }
     }
 
-    fun traverseNative(view: View, matchers: List<MaskMatcher>, masks: MutableList<Mask>) {
+    fun traverseNative(view: View, context: MaskContext, masks: MutableList<Mask>) {
         val target = NativeMaskTarget(view)
         if (shouldMask(target, matchers)) {
             target.mask()?.let {  masks += it }
@@ -51,17 +63,17 @@ class MaskCollector(private val logger: LDLogger) {
 
         for (i in 0 until view.childCount) {
             val child = view.getChildAt(i)
-            traverse(child, matchers, masks)
+            traverse(child, context, masks)
         }
     }
 
-    fun traverse(view: View, matchers: List<MaskMatcher>, masks: MutableList<Mask>) {
+    fun traverse(view: View, context: MaskContext, masks: MutableList<Mask>) {
         if (!view.isShown) return
 
         if (view is AbstractComposeView) {
-            traverseCompose(view, matchers, masks)
+            traverseCompose(view, context, masks)
         } else if (!view::class.java.name.contains("AndroidComposeView")) {
-            traverseNative(view, matchers, masks)
+            traverseNative(view, context, masks)
         }
     }
 
@@ -70,7 +82,7 @@ class MaskCollector(private val logger: LDLogger) {
      */
     private fun traverseComposeNodes(
         target: ComposeMaskTarget,
-        matchers: List<MaskMatcher>,
+        context: MaskContext,
         masks: MutableList<Mask>
     ) {
         if (shouldMask(target, matchers)) {
@@ -84,7 +96,7 @@ class MaskCollector(private val logger: LDLogger) {
                 config = child.config,
                 boundsInWindow = child.boundsInWindow
             )
-            traverseComposeNodes(childTarget, matchers, masks)
+            traverseComposeNodes(childTarget, context, masks)
         }
     }
 
@@ -95,4 +107,26 @@ class MaskCollector(private val logger: LDLogger) {
         return target.hasLDMask()
             || matchers.any { matcher -> matcher.isMatch(target) }
     }
+}
+
+
+// return 4 points of polygon under transformations
+fun MaskContext.points(view: View): FloatArray {
+    matrix.reset()
+    val width = view.width.toFloat()
+    val height = view.height.toFloat()
+    view.transformMatrixToGlobal(matrix)
+    val pts = floatArrayOf(
+        0f, 0f,
+        width, 0f,
+        width, height,
+        0f, height
+    )
+    matrix.mapPoints(pts)
+    for (i in pts.indices step 2) {
+        pts[i] -= rootX
+        pts[i + 1] -= rootY
+    }
+
+    return pts
 }
