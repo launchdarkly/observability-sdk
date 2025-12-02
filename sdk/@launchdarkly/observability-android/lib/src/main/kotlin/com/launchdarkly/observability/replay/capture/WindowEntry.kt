@@ -1,6 +1,7 @@
 package com.launchdarkly.observability.replay.capture
 
 import android.graphics.Rect
+import android.os.Build
 import android.view.View
 import android.view.WindowManager
 import android.view.WindowManager.LayoutParams.TYPE_APPLICATION_STARTING
