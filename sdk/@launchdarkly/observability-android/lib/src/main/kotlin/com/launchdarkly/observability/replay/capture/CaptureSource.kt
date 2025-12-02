@@ -6,6 +6,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Rect
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.util.Base64
@@ -173,7 +174,7 @@ class CaptureSource(
     private suspend fun captureViewBitmap(windowEntry: WindowEntry): Bitmap? {
         val view = windowEntry.rootView
 
-        if (windowEntry.isPixelCopyCandidate()) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && windowEntry.isPixelCopyCandidate()) {
             val window = windowInspector.findWindow(view)
             if (window != null) {
                 pixelCopy(window, view, windowEntry.rect())?.let {

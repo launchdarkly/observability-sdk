@@ -2,6 +2,7 @@ package com.launchdarkly.observability.replay.capture
 
 import com.launchdarkly.observability.testutil.mockBitmap
 import com.launchdarkly.observability.testutil.withOverlayRect
+import java.util.Arrays
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -15,12 +16,12 @@ class TiledSignatureManagerTest {
     private val WHITE = 0xFFFFFFFF.toInt()
     private fun solidPixels(width: Int, height: Int, color: Int): IntArray {
         val pixels = IntArray(width * height)
-        java.util.Arrays.fill(pixels, color)
+        Arrays.fill(pixels, color)
         return pixels
     }
 
     @Test
-    fun compute_returnsNull_whenTileSizeNonPositive() {
+    fun `compute returns null when tile size is non positive`() {
         val manager = TiledSignatureManager()
         val bitmap = mockBitmap(2, 2, RED)
 
@@ -29,7 +30,7 @@ class TiledSignatureManagerTest {
     }
 
     @Test
-    fun compute_returnsSignature_whenValidInputs() {
+    fun `compute returns signature when inputs are valid`() {
         val manager = TiledSignatureManager()
         val bitmap = mockBitmap(4, 4, BLUE)
 
@@ -40,7 +41,7 @@ class TiledSignatureManagerTest {
     }
 
     @Test
-    fun signatures_equal_forIdenticalContent() {
+    fun `signatures are equal for identical content`() {
         val manager = TiledSignatureManager()
         val a = mockBitmap(8, 8, BLUE)
         val b = mockBitmap(8, 8, BLUE)
@@ -54,7 +55,7 @@ class TiledSignatureManagerTest {
     }
 
     @Test
-    fun signatures_differ_forDifferentContent() {
+    fun `signatures differ for different content`() {
         val manager = TiledSignatureManager()
         val a = mockBitmap(8, 8, RED)
         val b = mockBitmap(8, 8, WHITE)
@@ -68,7 +69,7 @@ class TiledSignatureManagerTest {
     }
 
     @Test
-    fun tileCount_matchesExpectedCeilDivision() {
+    fun `tile count matches expected ceil division`() {
         val manager = TiledSignatureManager()
         val bmp = mockBitmap(10, 10, RED)
 
@@ -84,7 +85,7 @@ class TiledSignatureManagerTest {
     }
 
     @Test
-    fun smallOverlay_changesOnlyAffectedTiles_hashes() {
+    fun `small overlay changes only affected tiles hashes`() {
         val manager = TiledSignatureManager()
         val width = 12
         val height = 12
@@ -116,7 +117,7 @@ class TiledSignatureManagerTest {
                 diffCount++
             }
         }
-        org.junit.jupiter.api.Assertions.assertNotEquals(0, diffCount)
+        assertNotEquals(0, diffCount)
     }
 }
 

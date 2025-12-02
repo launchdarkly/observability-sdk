@@ -2,6 +2,7 @@ package com.launchdarkly.observability.replay.masking
 
 import android.view.View
 import androidx.compose.ui.graphics.toAndroidRectF
+import androidx.compose.ui.platform.AbstractComposeView
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsOwner
@@ -24,7 +25,7 @@ data class ComposeMaskTarget(
     val boundsInWindow: MaskRect,
 ) : MaskTarget {
     companion object {
-        fun from(composeView: ComposeView, logger: LDLogger): ComposeMaskTarget? {
+        fun from(composeView: AbstractComposeView, logger: LDLogger): ComposeMaskTarget? {
             val root = getRootSemanticsNode(composeView, logger) ?: return null
             return ComposeMaskTarget(
                 view = composeView,
@@ -38,7 +39,7 @@ data class ComposeMaskTarget(
          * Gets the SemanticsOwner from a ComposeView using reflection. This is necessary because
          * AndroidComposeView and semanticsOwner are not publicly exposed.
          */
-        private fun getRootSemanticsNode(composeView: ComposeView, logger: LDLogger): SemanticsNode? {
+        private fun getRootSemanticsNode(composeView: AbstractComposeView, logger: LDLogger): SemanticsNode? {
             return try {
                 if (composeView.isNotEmpty()) {
                     val androidComposeView = composeView.getChildAt(0)

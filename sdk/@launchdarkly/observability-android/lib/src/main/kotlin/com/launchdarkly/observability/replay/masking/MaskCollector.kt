@@ -30,7 +30,7 @@ class MaskCollector(private val logger: LDLogger) {
         return resultMasks
     }
 
-    fun traverseCompose(view: ComposeView, matchers: List<MaskMatcher>, masks: MutableList<Mask>) {
+    fun traverseCompose(view: AbstractComposeView, matchers: List<MaskMatcher>, masks: MutableList<Mask>) {
         val target = ComposeMaskTarget.from(view, logger)
         if (target != null) {
             traverseComposeNodes(target, matchers, masks)

@@ -5,7 +5,7 @@ import androidx.compose.ui.graphics.Matrix
 data class Mask(
     val rect: RectF,
     val viewId: Int,
-    val points: FloatArray,
+    val points: FloatArray? = null,
     val matrix: Matrix? = null
 ){
     // Implemented to suppress warning
