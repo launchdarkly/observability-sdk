@@ -8,6 +8,7 @@ import android.view.View
 import android.view.Window
 import android.view.WindowManager
 import com.launchdarkly.logging.LDLogger
+import com.launchdarkly.observability.replay.utils.locationOnScreen
 import kotlin.jvm.javaClass
 
 class WindowInspector(private val logger: LDLogger) {
@@ -24,8 +25,7 @@ class WindowInspector(private val logger: LDLogger) {
             if (!view.getGlobalVisibleRect(visibleRect)) return@mapNotNull null
             if (visibleRect.width() == 0 || visibleRect.height() == 0) return@mapNotNull null
 
-            val loc = IntArray(2)
-            view.getLocationOnScreen(loc)
+            val (screenX, screenY) = view.locationOnScreen()
 
             val layoutParams = view.layoutParams as? WindowManager.LayoutParams
             val wmType = layoutParams?.type ?: 0
@@ -36,8 +36,8 @@ class WindowInspector(private val logger: LDLogger) {
                 layoutParams = layoutParams,
                 width = view.width,
                 height = view.height,
-                screenLeft = loc[0],
-                screenTop = loc[1]
+                screenLeft = screenX.toInt(),
+                screenTop = screenY.toInt()
             )
         }
     }
