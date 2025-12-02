@@ -33,7 +33,7 @@ import androidx.core.graphics.withTranslation
 import com.launchdarkly.observability.replay.masking.Mask
 
 /**
- * A source of [CaptureEvent]s taken from the most recently resumed [Activity]s window. Captures
+ * A source of [CaptureEvent]s taken from the lowest visible window. Captures
  * are emitted on the [captureFlow] property of this class.
  *
  * @param sessionManager Used to get current session for tagging [CaptureEvent] with session id
@@ -78,7 +78,7 @@ class CaptureSource(
     private suspend fun doCapture(): CaptureEvent? =
         withContext(DispatcherProviderHolder.current.main) {
             // Synchronize with UI rendering frame
-            suspendCancellableCoroutine<Unit> { continuation ->
+            suspendCancellableCoroutine { continuation ->
                 Choreographer.getInstance().postFrameCallback {
                     if (continuation.isActive) {
                         continuation.resume(Unit)
@@ -187,11 +187,11 @@ class CaptureSource(
         return withContext(Dispatchers.Main.immediate) {
             if (!view.isAttachedToWindow || !view.isShown) return@withContext null
 
-            return@withContext canvasDraw(view, windowEntry.rect())
+            return@withContext canvasDraw(view)
         }
     }
 
-    @SuppressLint("NewApi")
+    @SuppressLint("NewApi", "UseKtx")
     private suspend fun pixelCopy(
         window: Window,
         view: View,
@@ -227,10 +227,10 @@ class CaptureSource(
         }
     }
 
+    @SuppressLint("UseKtx")
     private fun canvasDraw(
-        view: View,
-        rect: Rect,
-    ): Bitmap? {
+        view: View
+    ): Bitmap {
         val bitmap = Bitmap.createBitmap(
             view.width,
             view.height,
@@ -287,7 +287,7 @@ class CaptureSource(
      * Applies masking rectangles to the provided [canvas] using the provided [masks].
      *
      * @param canvas The canvas to mask
-     * @param masks rects that will be masked
+     * @param masks areas that will be masked
      */
     private fun drawMasks(canvas: Canvas, masks: List<Mask>) {
         masks.forEach { mask ->
