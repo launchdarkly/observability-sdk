@@ -4,7 +4,6 @@ import android.view.View
 import android.widget.EditText
 import android.widget.TextView
 import android.text.method.PasswordTransformationMethod
-import android.text.InputType
 import kotlin.text.lowercase
 import com.launchdarkly.observability.R
 import android.graphics.RectF
