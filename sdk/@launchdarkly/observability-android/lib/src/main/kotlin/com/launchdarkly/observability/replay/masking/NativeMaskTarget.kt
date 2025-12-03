@@ -7,6 +7,7 @@ import android.text.method.PasswordTransformationMethod
 import kotlin.text.lowercase
 import com.launchdarkly.observability.R
 import android.graphics.RectF
+import android.os.Build
 
 /**
  *   Native view target
@@ -49,7 +50,7 @@ data class NativeMaskTarget(
     }
 
     override fun mask(context: MaskContext): Mask {
-        val points = context.points(view)
+        val points = points(context)
 
         val location = IntArray(2)
         view.getLocationInWindow(location)
@@ -62,4 +63,34 @@ data class NativeMaskTarget(
     override fun hasLDMask(): Boolean {
         return view.getTag(R.id.ld_mask_tag) as? Boolean ?: false
     }
+
+    // return 4 points of polygon under transformations
+    fun points(context: MaskContext): FloatArray? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            return null
+        }
+
+        val width = view.width.toFloat()
+        val height = view.height.toFloat()
+        if (width <= 0 || height <= 0) { return null }
+
+        val matrix = context.matrix
+        matrix.reset()
+        view.transformMatrixToGlobal(matrix)
+
+        val pts = floatArrayOf(
+            0f, 0f,
+            width, 0f,
+            width, height,
+            0f, height
+        )
+        matrix.mapPoints(pts)
+        for (i in pts.indices step 2) {
+            pts[i] -= context.rootX
+            pts[i + 1] -= context.rootY
+        }
+
+        return pts
+    }
+
 }

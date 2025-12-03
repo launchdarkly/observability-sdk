@@ -5,7 +5,6 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.compose.ui.platform.AbstractComposeView
 import com.launchdarkly.logging.LDLogger
-import com.launchdarkly.observability.replay.masking.MaskMatcher
 import kotlin.collections.plusAssign
 import com.launchdarkly.observability.replay.utils.locationOnScreen
 
@@ -107,26 +106,4 @@ class MaskCollector(private val logger: LDLogger) {
         return target.hasLDMask()
             || matchers.any { matcher -> matcher.isMatch(target) }
     }
-}
-
-
-// return 4 points of polygon under transformations
-fun MaskContext.points(view: View): FloatArray {
-    matrix.reset()
-    val width = view.width.toFloat()
-    val height = view.height.toFloat()
-    view.transformMatrixToGlobal(matrix)
-    val pts = floatArrayOf(
-        0f, 0f,
-        width, 0f,
-        width, height,
-        0f, height
-    )
-    matrix.mapPoints(pts)
-    for (i in pts.indices step 2) {
-        pts[i] -= rootX
-        pts[i + 1] -= rootY
-    }
-
-    return pts
 }
