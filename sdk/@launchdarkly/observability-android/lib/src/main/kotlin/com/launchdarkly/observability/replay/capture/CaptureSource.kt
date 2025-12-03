@@ -80,9 +80,6 @@ class CaptureSource(
      */
     private suspend fun doCapture(): CaptureEvent? =
         withContext(DispatcherProviderHolder.current.main) {
-            val timestamp = System.currentTimeMillis()
-            val session = sessionManager.getSessionId()
-
             // Synchronize with UI rendering frame
             suspendCancellableCoroutine { continuation ->
                 Choreographer.getInstance().postFrameCallback {
@@ -91,7 +88,10 @@ class CaptureSource(
                     }
                 }
             }
-            
+
+            val timestamp = System.currentTimeMillis()
+            val session = sessionManager.getSessionId()
+
             val windowsEntries = windowInspector.appWindows()
             if (windowsEntries.isEmpty()) {
                 return@withContext null
