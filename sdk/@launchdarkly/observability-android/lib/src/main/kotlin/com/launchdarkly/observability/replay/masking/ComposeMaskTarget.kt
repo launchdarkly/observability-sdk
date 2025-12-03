@@ -75,13 +75,12 @@ data class ComposeMaskTarget(
         return config.contains(SemanticsProperties.Text)
     }
 
-    override fun mask(): Mask? {
+    override fun mask(context: MaskContext): Mask? {
         val rect = boundsInWindow.toAndroidRectF()
         if (rect.width() <= 0f || rect.height() <= 0f) {
             return null
         }
-        return Mask(boundsInWindow.toAndroidRectF(), view.id)
-    override fun mask(context: MaskContext): Mask {
+
         val points: FloatArray? = points(context)
         return Mask(boundsInWindow.toAndroidRectF(), view.id, points)
     }

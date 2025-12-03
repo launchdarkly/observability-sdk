@@ -32,14 +32,6 @@ data class NativeMaskTarget(
                 return true
             }
 
-            // Check common password inputType variations seen in EditText/TextView
-            val inputType = view.inputType
-            when (inputType and InputType.TYPE_MASK_VARIATION) {
-                InputType.TYPE_TEXT_VARIATION_PASSWORD,
-                InputType.TYPE_NUMBER_VARIATION_PASSWORD,
-                InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD -> return true
-            }
-
             // Check actual displayed text
             val lowerText = view.text?.toString()?.lowercase()
             if (!lowerText.isNullOrEmpty() && sensitiveKeywords.any { keyword -> lowerText.contains(keyword) }) {
@@ -62,14 +54,13 @@ data class NativeMaskTarget(
         if (view.width <= 0 || view.height <= 0) {
             return null
         }
-    override fun mask(context: MaskContext): Mask {
-        val points = points(context)
 
-        val points = context.points(view)
+        val points = points(context)
         val location = IntArray(2)
         view.getLocationInWindow(location)
         val left = location[0].toFloat()
         val top = location[1].toFloat()
+
         val rect = RectF(left, top, left + view.width, top + view.height)
         return Mask(rect, view.id, points)
     }
@@ -106,5 +97,4 @@ data class NativeMaskTarget(
 
         return pts
     }
-
 }
