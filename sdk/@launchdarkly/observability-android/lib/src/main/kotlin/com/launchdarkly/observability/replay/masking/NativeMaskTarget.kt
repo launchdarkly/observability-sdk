@@ -4,9 +4,11 @@ import android.view.View
 import android.widget.EditText
 import android.widget.TextView
 import android.text.method.PasswordTransformationMethod
-import androidx.compose.ui.geometry.Rect as ComposeRect
+import android.text.InputType
 import kotlin.text.lowercase
-import com.launchdarkly.observability.R     
+import com.launchdarkly.observability.R
+import android.graphics.RectF
+
 /**
  *   Native view target
  */
@@ -29,6 +31,14 @@ data class NativeMaskTarget(
                 return true
             }
 
+            // Check common password inputType variations seen in EditText/TextView
+            val inputType = view.inputType
+            when (inputType and InputType.TYPE_MASK_VARIATION) {
+                InputType.TYPE_TEXT_VARIATION_PASSWORD,
+                InputType.TYPE_NUMBER_VARIATION_PASSWORD,
+                InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD -> return true
+            }
+
             // Check actual displayed text
             val lowerText = view.text?.toString()?.lowercase()
             if (!lowerText.isNullOrEmpty() && sensitiveKeywords.any { keyword -> lowerText.contains(keyword) }) {
@@ -44,22 +54,20 @@ data class NativeMaskTarget(
 
         // Fallback to contentDescription check
         val lowerDesc = view.contentDescription?.toString()?.lowercase()
-        if (!lowerDesc.isNullOrEmpty() && sensitiveKeywords.any { keyword -> lowerDesc.contains(keyword) }) {
-            return true
-        }
-
-        return false
+        return !lowerDesc.isNullOrEmpty() && sensitiveKeywords.any { keyword -> lowerDesc.contains(keyword) }
     }
 
-    override fun maskRect(): ComposeRect? {
+    override fun mask(): Mask? {
+        if (view.width <= 0 || view.height <= 0) {
+            return null
+        }
+
         val location = IntArray(2)
         view.getLocationInWindow(location)
         val left = location[0].toFloat()
         val top = location[1].toFloat()
-        val right = left + view.width
-        val bottom = top + view.height
-
-        return ComposeRect(left, top, right, bottom)
+        val rect = RectF(left, top, left + view.width, top + view.height)
+        return Mask(rect, view.id, matrix = null)
     }
 
     override fun hasLDMask(): Boolean {

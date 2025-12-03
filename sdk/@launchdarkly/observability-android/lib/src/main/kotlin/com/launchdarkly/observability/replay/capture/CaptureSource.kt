@@ -1,6 +1,5 @@
 package com.launchdarkly.observability.replay.capture
 
-import android.annotation.SuppressLint
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
@@ -16,10 +15,11 @@ import android.view.View
 import android.view.Window
 import android.view.WindowManager.LayoutParams.TYPE_APPLICATION
 import android.view.WindowManager.LayoutParams.TYPE_BASE_APPLICATION
+import androidx.annotation.RequiresApi
 import com.launchdarkly.logging.LDLogger
 import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
 import com.launchdarkly.observability.replay.masking.MaskMatcher
-import com.launchdarkly.observability.replay.masking.SensitiveAreasCollector
+import com.launchdarkly.observability.replay.masking.MaskCollector
 import io.opentelemetry.android.session.SessionManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -29,11 +29,12 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import kotlin.coroutines.resume
-import androidx.compose.ui.geometry.Rect as ComposeRect
 import androidx.core.graphics.withTranslation
+import com.launchdarkly.observability.replay.masking.Mask
+import androidx.core.graphics.createBitmap
 
 /**
- * A source of [CaptureEvent]s taken from the most recently resumed [Activity]s window. Captures
+ * A source of [CaptureEvent]s taken from the lowest visible window. Captures
  * are emitted on the [captureFlow] property of this class.
  *
  * @param sessionManager Used to get current session for tagging [CaptureEvent] with session id
@@ -47,13 +48,13 @@ class CaptureSource(
     data class CaptureResult(
         val windowEntry: WindowEntry,
         val bitmap: Bitmap,
-        val masks: List<ComposeRect>
+        val masks: List<Mask>
     )
 
     private val _captureEventFlow = MutableSharedFlow<CaptureEvent>()
     val captureFlow: SharedFlow<CaptureEvent> = _captureEventFlow.asSharedFlow()
     private val windowInspector = WindowInspector(logger)
-    private val sensitiveAreasCollector = SensitiveAreasCollector(logger)
+    private val maskCollector = MaskCollector(logger)
     private val maskPaint = Paint().apply {
         color = Color.GRAY
         style = Paint.Style.FILL
@@ -78,7 +79,7 @@ class CaptureSource(
     private suspend fun doCapture(): CaptureEvent? =
         withContext(DispatcherProviderHolder.current.main) {
             // Synchronize with UI rendering frame
-            suspendCancellableCoroutine<Unit> { continuation ->
+            suspendCancellableCoroutine { continuation ->
                 Choreographer.getInstance().postFrameCallback {
                     if (continuation.isActive) {
                         continuation.resume(Unit)
@@ -167,8 +168,8 @@ class CaptureSource(
 
     private suspend fun captureViewResult(windowEntry: WindowEntry): CaptureResult? {
         val bitmap = captureViewBitmap(windowEntry) ?: return null
-        val sensitiveComposeRects = sensitiveAreasCollector.collectFromActivity(windowEntry.rootView, maskMatchers)
-        return CaptureResult(windowEntry, bitmap, sensitiveComposeRects)
+        val masks = maskCollector.collectMasks(windowEntry.rootView, maskMatchers)
+        return CaptureResult(windowEntry, bitmap, masks)
     }
 
     private suspend fun captureViewBitmap(windowEntry: WindowEntry): Bitmap? {
@@ -187,21 +188,16 @@ class CaptureSource(
         return withContext(Dispatchers.Main.immediate) {
             if (!view.isAttachedToWindow || !view.isShown) return@withContext null
 
-            return@withContext canvasDraw(view, windowEntry.rect())
+            return@withContext canvasDraw(view)
         }
     }
-
-    @SuppressLint("NewApi")
+    @RequiresApi(Build.VERSION_CODES.O)
     private suspend fun pixelCopy(
         window: Window,
         view: View,
         rect: Rect,
     ): Bitmap? {
-        val bitmap = Bitmap.createBitmap(
-            view.width,
-            view.height,
-            Bitmap.Config.ARGB_8888
-        )
+        val bitmap = createBitmap(view.width, view.height)
 
         return suspendCancellableCoroutine { continuation ->
             val handler = Handler(Looper.getMainLooper())
@@ -228,14 +224,9 @@ class CaptureSource(
     }
 
     private fun canvasDraw(
-        view: View,
-        rect: Rect,
-    ): Bitmap? {
-        val bitmap = Bitmap.createBitmap(
-            view.width,
-            view.height,
-            Bitmap.Config.ARGB_8888
-        )
+        view: View
+    ): Bitmap {
+        val bitmap = createBitmap(view.width, view.height)
 
         val canvas = Canvas(bitmap)
         view.draw(canvas)
@@ -287,17 +278,17 @@ class CaptureSource(
      * Applies masking rectangles to the provided [canvas] using the provided [masks].
      *
      * @param canvas The canvas to mask
-     * @param masks rects that will be masked
+     * @param masks areas that will be masked
      */
-    private fun drawMasks(canvas: Canvas, masks: List<ComposeRect>) {
+    private fun drawMasks(canvas: Canvas, masks: List<Mask>) {
         masks.forEach { mask ->
-            val androidRect = Rect(
-                mask.left.toInt(),
-                mask.top.toInt(),
-                mask.right.toInt(),
-                mask.bottom.toInt()
+            val integerRect = Rect(
+                mask.rect.left.toInt(),
+                mask.rect.top.toInt(),
+                mask.rect.right.toInt(),
+                mask.rect.bottom.toInt()
             )
-            canvas.drawRect(androidRect, maskPaint)
+            canvas.drawRect(integerRect, maskPaint)
         }
     }
 }
