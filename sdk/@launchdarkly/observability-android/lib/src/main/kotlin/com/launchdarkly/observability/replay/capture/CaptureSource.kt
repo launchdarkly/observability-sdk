@@ -50,7 +50,8 @@ class CaptureSource(
     data class CaptureResult(
         val windowEntry: WindowEntry,
         val bitmap: Bitmap,
-        val masks: List<Mask>
+        val beforeMasks: List<Mask>,
+        val afterMasks: List<Mask>
     )
 
     private val _captureEventFlow = MutableSharedFlow<CaptureEvent>()
@@ -112,25 +113,35 @@ class CaptureSource(
             val baseResult = captureViewResult(baseWindowEntry) ?: return@withContext null
 
             // capture rest of views on top of base
-            val pairs = mutableListOf<CaptureResult>()
+            val captureResults = mutableListOf<CaptureResult>()
             var afterBase = false
             for (windowEntry in windowsEntries) {
                 if (afterBase) {
                     captureViewResult(windowEntry)?.let { result ->
-                        pairs.add(result)
+                        captureResults.add(result)
                     }
                 } else if (windowEntry === baseWindowEntry) {
                     afterBase = true
                 }
             }
 
+            // off the main thread to avoid blocking the UI thread
             return@withContext withContext(DispatcherProviderHolder.current.default) {
-                // off the main thread to avoid blocking the UI thread
-                if (pairs.isNotEmpty() || baseResult.masks.isNotEmpty()) {
+                if (!baseResult.isGood()) {
+                    return@withContext null
+                }
+                for (result in captureResults) {
+                    if (!result.isGood()) {
+                        return@withContext null
+                    }
+                }
+
+                // if need to draw something on base bitmap additionally
+                if (captureResults.isNotEmpty() || baseResult.afterMasks.isNotEmpty()) {
                     val canvas = Canvas(baseResult.bitmap)
                     drawMasks(canvas, baseResult.masks)
 
-                    for (res in pairs) {
+                    for (res in captureResults) {
                         val entry = res.windowEntry
                         val dx = (entry.screenLeft - baseWindowEntry.screenLeft).toFloat()
                         val dy = (entry.screenTop - baseWindowEntry.screenTop).toFloat()
@@ -290,4 +301,17 @@ class CaptureSource(
             mask.draw(path, canvas, maskPaint)
         }
     }
+
+    fun CaptureResult.isGood(): Boolean {
+        if (beforeMasks.count() != afterMasks.count()) {
+            return false
+        }
+
+        if (afterMasks.count() == 0) {
+            return true
+        }
+
+        return true
+    }
 }
+
