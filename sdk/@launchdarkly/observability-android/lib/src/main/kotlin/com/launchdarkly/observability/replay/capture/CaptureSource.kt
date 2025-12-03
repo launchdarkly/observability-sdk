@@ -58,7 +58,11 @@ class CaptureSource(
     val captureFlow: SharedFlow<CaptureEvent> = _captureEventFlow.asSharedFlow()
     private val windowInspector = WindowInspector(logger)
     private val maskCollector = MaskCollector(logger)
-    private val maskPaint = Paint().apply {
+    private val beforeMasksPaint = Paint().apply {
+        color = Color.RED
+        style = Paint.Style.FILL
+    }
+    private val afterMaskPaint = Paint().apply {
         color = Color.GRAY
         style = Paint.Style.FILL
     }
@@ -127,11 +131,11 @@ class CaptureSource(
 
             // off the main thread to avoid blocking the UI thread
             return@withContext withContext(DispatcherProviderHolder.current.default) {
-                if (!baseResult.isGood()) {
+                if (!baseResult.areMasksStable()) {
                     return@withContext null
                 }
                 for (result in captureResults) {
-                    if (!result.isGood()) {
+                    if (!result.areMasksStable()) {
                         return@withContext null
                     }
                 }
@@ -139,7 +143,7 @@ class CaptureSource(
                 // if need to draw something on base bitmap additionally
                 if (captureResults.isNotEmpty() || baseResult.afterMasks.isNotEmpty()) {
                     val canvas = Canvas(baseResult.bitmap)
-                    drawMasks(canvas, baseResult.masks)
+                    drawMasks(canvas, baseResult)
 
                     for (res in captureResults) {
                         val entry = res.windowEntry
@@ -148,7 +152,7 @@ class CaptureSource(
 
                         canvas.withTranslation(dx, dy) {
                             drawBitmap(res.bitmap, 0f, 0f, null)
-                            drawMasks(canvas, res.masks)
+                            drawMasks(canvas, res)
                         }
                         res.bitmap.recycle()
                     }
@@ -181,10 +185,11 @@ class CaptureSource(
     }
 
     private suspend fun captureViewResult(windowEntry: WindowEntry): CaptureResult? {
+        val beforeMasks = maskCollector.collectMasks(windowEntry.rootView, maskMatchers)
         val bitmap = captureViewBitmap(windowEntry) ?: return null
-        val masks = maskCollector.collectMasks(windowEntry.rootView, maskMatchers)
+        val afterMasks = maskCollector.collectMasks(windowEntry.rootView, maskMatchers)
 
-        return CaptureResult(windowEntry, bitmap, masks)
+        return CaptureResult(windowEntry, bitmap, beforeMasks, afterMasks)
     }
 
     private suspend fun captureViewBitmap(windowEntry: WindowEntry): Bitmap? {
@@ -295,14 +300,17 @@ class CaptureSource(
      * @param canvas The canvas to mask
      * @param masks areas that will be masked
      */
-    private fun drawMasks(canvas: Canvas, masks: List<Mask>) {
+    private fun drawMasks(canvas: Canvas, captureResult: CaptureResult) {
         val path = Path()
-        masks.forEach { mask ->
-            mask.draw(path, canvas, maskPaint)
+        captureResult.beforeMasks.forEach { mask ->
+            mask.draw(path, canvas, beforeMasksPaint)
+        }
+        captureResult.afterMasks.forEach { mask ->
+            mask.draw(path, canvas, afterMaskPaint)
         }
     }
 
-    fun CaptureResult.isGood(): Boolean {
+    fun CaptureResult.areMasksStable(): Boolean {
         if (beforeMasks.count() != afterMasks.count()) {
             return false
         }
