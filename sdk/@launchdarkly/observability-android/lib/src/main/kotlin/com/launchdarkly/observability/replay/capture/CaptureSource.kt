@@ -80,6 +80,9 @@ class CaptureSource(
      */
     private suspend fun doCapture(): CaptureEvent? =
         withContext(DispatcherProviderHolder.current.main) {
+            val timestamp = System.currentTimeMillis()
+            val session = sessionManager.getSessionId()
+
             // Synchronize with UI rendering frame
             suspendCancellableCoroutine { continuation ->
                 Choreographer.getInstance().postFrameCallback {
@@ -106,8 +109,6 @@ class CaptureSource(
             // TODO: O11Y-625 - see if holding bitmap is more efficient than base64 encoding immediately after compression
             // TODO: O11Y-628 - use captureQuality option for scaling and adjust this bitmap accordingly, may need to investigate power of 2 rounding for performance
             // Create a bitmap with the window dimensions
-            val timestamp = System.currentTimeMillis()
-            val session = sessionManager.getSessionId()
             val baseResult = captureViewResult(baseWindowEntry) ?: return@withContext null
 
             // capture rest of views on top of base
@@ -171,6 +172,7 @@ class CaptureSource(
     private suspend fun captureViewResult(windowEntry: WindowEntry): CaptureResult? {
         val bitmap = captureViewBitmap(windowEntry) ?: return null
         val masks = maskCollector.collectMasks(windowEntry.rootView, maskMatchers)
+
         return CaptureResult(windowEntry, bitmap, masks)
     }
 
