@@ -1,6 +1,5 @@
 package com.launchdarkly.observability.replay.capture
 
-import android.annotation.SuppressLint
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
@@ -16,6 +15,7 @@ import android.view.View
 import android.view.Window
 import android.view.WindowManager.LayoutParams.TYPE_APPLICATION
 import android.view.WindowManager.LayoutParams.TYPE_BASE_APPLICATION
+import androidx.annotation.RequiresApi
 import com.launchdarkly.logging.LDLogger
 import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
 import com.launchdarkly.observability.replay.masking.MaskMatcher
@@ -31,6 +31,7 @@ import java.io.ByteArrayOutputStream
 import kotlin.coroutines.resume
 import androidx.core.graphics.withTranslation
 import com.launchdarkly.observability.replay.masking.Mask
+import androidx.core.graphics.createBitmap
 
 /**
  * A source of [CaptureEvent]s taken from the lowest visible window. Captures
@@ -190,18 +191,13 @@ class CaptureSource(
             return@withContext canvasDraw(view)
         }
     }
-
-    @SuppressLint("NewApi", "UseKtx")
+    @RequiresApi(Build.VERSION_CODES.O)
     private suspend fun pixelCopy(
         window: Window,
         view: View,
         rect: Rect,
     ): Bitmap? {
-        val bitmap = Bitmap.createBitmap(
-            view.width,
-            view.height,
-            Bitmap.Config.ARGB_8888
-        )
+        val bitmap = createBitmap(view.width, view.height)
 
         return suspendCancellableCoroutine { continuation ->
             val handler = Handler(Looper.getMainLooper())
@@ -227,15 +223,10 @@ class CaptureSource(
         }
     }
 
-    @SuppressLint("UseKtx")
     private fun canvasDraw(
         view: View
     ): Bitmap {
-        val bitmap = Bitmap.createBitmap(
-            view.width,
-            view.height,
-            Bitmap.Config.ARGB_8888
-        )
+        val bitmap = createBitmap(view.width, view.height)
 
         val canvas = Canvas(bitmap)
         view.draw(canvas)

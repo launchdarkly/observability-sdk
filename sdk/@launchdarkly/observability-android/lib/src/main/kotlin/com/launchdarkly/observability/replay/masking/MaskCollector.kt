@@ -42,7 +42,7 @@ class MaskCollector(private val logger: LDLogger) {
     fun traverseNative(view: View, matchers: List<MaskMatcher>, masks: MutableList<Mask>) {
         val target = NativeMaskTarget(view)
         if (shouldMask(target, matchers)) {
-            masks += target.mask()
+            target.mask()?.let {  masks += it }
         }
 
         if (view !is ViewGroup) return
@@ -72,7 +72,7 @@ class MaskCollector(private val logger: LDLogger) {
         masks: MutableList<Mask>
     ) {
         if (shouldMask(target, matchers)) {
-            masks += target.mask()
+            target.mask()?.let {  masks += it }
         }
 
         for (child in target.rootNode.children) {

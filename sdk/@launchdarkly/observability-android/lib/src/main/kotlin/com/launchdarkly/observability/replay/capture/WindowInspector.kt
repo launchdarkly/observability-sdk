@@ -5,6 +5,7 @@ import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
 import android.graphics.Rect
+import android.os.Build
 import android.view.View
 import android.view.Window
 import android.view.WindowManager
@@ -16,7 +17,11 @@ class WindowInspector(private val logger: LDLogger) {
 
     fun appWindows(appContext: Context? = null): List<WindowEntry> {
         val appUid = appContext?.applicationInfo?.uid
-        val views = getRootViews()
+        val views: List<View> = if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q){
+            android.view.inspector.WindowInspector.getGlobalWindowViews().map { it.rootView }
+        } else {
+            getRootViews()
+        }
         return views.mapNotNull { view ->
             if (appUid != null && view.context.applicationInfo?.uid != appUid) return@mapNotNull null
             if (!view.isAttachedToWindow || !view.isShown) return@mapNotNull null
