@@ -17,6 +17,7 @@ import android.view.WindowManager.LayoutParams.TYPE_APPLICATION
 import android.view.WindowManager.LayoutParams.TYPE_BASE_APPLICATION
 import androidx.annotation.RequiresApi
 import android.graphics.Path
+import android.util.Log
 import com.launchdarkly.logging.LDLogger
 import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
 import com.launchdarkly.observability.replay.masking.MaskMatcher
@@ -34,6 +35,10 @@ import androidx.core.graphics.withTranslation
 import com.launchdarkly.observability.replay.masking.Mask
 import androidx.core.graphics.createBitmap
 import com.launchdarkly.observability.replay.masking.draw
+import java.util.Dictionary
+import kotlin.collections.mutableMapOf
+import kotlin.math.abs
+import kotlin.math.max
 
 /**
  * A source of [CaptureEvent]s taken from the lowest visible window. Captures
@@ -50,8 +55,8 @@ class CaptureSource(
     data class CaptureResult(
         val windowEntry: WindowEntry,
         val bitmap: Bitmap,
-        val beforeMasks: List<Mask>,
-        val afterMasks: List<Mask>
+        val beforeMasks: List<Mask>? = null,
+        val afterMasks: List<Mask>? = null
     )
 
     private val _captureEventFlow = MutableSharedFlow<CaptureEvent>()
@@ -68,8 +73,10 @@ class CaptureSource(
     }
 
     private val tiledSignatureManager = TiledSignatureManager()
+
     @Volatile
     private var tiledSignature: TiledSignature? = null
+
     /**
      * Requests a [CaptureEvent] be taken now.
      */
@@ -102,7 +109,8 @@ class CaptureSource(
                 return@withContext null
             }
 
-            val baseWindowEntry = pickBaseWindow(windowsEntries) ?: return@withContext null
+            val baseIndex = pickBaseWindow(windowsEntries) ?: return@withContext null
+            val baseWindowEntry = windowsEntries[baseIndex]
             val rect = baseWindowEntry.rect()
 
             // protect against race condition where decor view has no size
@@ -114,38 +122,53 @@ class CaptureSource(
             // TODO: O11Y-625 - see if holding bitmap is more efficient than base64 encoding immediately after compression
             // TODO: O11Y-628 - use captureQuality option for scaling and adjust this bitmap accordingly, may need to investigate power of 2 rounding for performance
             // Create a bitmap with the window dimensions
-            val baseResult = captureViewResult(baseWindowEntry) ?: return@withContext null
 
-            // capture rest of views on top of base
-            val captureResults = mutableListOf<CaptureResult>()
-            var afterBase = false
-            for (windowEntry in windowsEntries) {
-                if (afterBase) {
-                    captureViewResult(windowEntry)?.let { result ->
-                        captureResults.add(result)
-                    }
-                } else if (windowEntry === baseWindowEntry) {
-                    afterBase = true
-                }
+            val capturingWindowEntries = windowsEntries.subList(baseIndex, windowsEntries.size)
+            val beforeMasks = mutableMapOf<Int, List<Mask>>()
+            for (i in capturingWindowEntries.indices) {
+                beforeMasks[i] =
+                    maskCollector.collectMasks(capturingWindowEntries[i].rootView, maskMatchers)
             }
+
+            val captureResults = mutableListOf<CaptureResult?>()
+            for (i in capturingWindowEntries.indices) {
+                val windowEntry = capturingWindowEntries[i]
+                val captureResult = captureViewResult(windowEntry)
+                if (captureResult == null) {
+                    if (i == 0) {
+                        return@withContext null
+                    }
+                    beforeMasks.remove(i)
+                }
+
+                captureResults.add(captureResult)
+            }
+            if (captureResults.isEmpty()) {
+                return@withContext null
+            }
+
+            val afterMasks = mutableMapOf<Int, List<Mask>>()
+            for (i in capturingWindowEntries.indices) {
+                afterMasks[i] =
+                    maskCollector.collectMasks(capturingWindowEntries[i].rootView, maskMatchers)
+            }
+
 
             // off the main thread to avoid blocking the UI thread
             return@withContext withContext(DispatcherProviderHolder.current.default) {
-                if (!baseResult.areMasksStable()) {
+                if (!areMasksMapsStable(beforeMasks, afterMasks)) {
                     return@withContext null
                 }
-                for (result in captureResults) {
-                    if (!result.areMasksStable()) {
-                        return@withContext null
-                    }
-                }
+
+                val baseResult = captureResults[0] ?: return@withContext null
 
                 // if need to draw something on base bitmap additionally
-                if (captureResults.isNotEmpty() || baseResult.afterMasks.isNotEmpty()) {
+                if (captureResults.size > 1 || beforeMasks.isNotEmpty()) {
                     val canvas = Canvas(baseResult.bitmap)
-                    drawMasks(canvas, baseResult)
+                        // drawMasks(canvas, captureResults[0])
 
-                    for (res in captureResults) {
+                    for (res in captureResults.subList(1, captureResults.size)) {
+                        if (res == null) { continue }
                         val entry = res.windowEntry
                         val dx = (entry.screenLeft - baseWindowEntry.screenLeft).toFloat()
                         val dy = (entry.screenTop - baseWindowEntry.screenTop).toFloat()
@@ -170,26 +193,26 @@ class CaptureSource(
             }
         }
 
-    private fun pickBaseWindow(windowsEntries: List<WindowEntry>): WindowEntry? {
-        windowsEntries.firstOrNull {
+    private fun pickBaseWindow(windowsEntries: List<WindowEntry>): Int? {
+        val appIdx = windowsEntries.indexOfFirst {
             val wmType = it.layoutParams?.type ?: 0
-            (wmType == TYPE_APPLICATION || wmType == TYPE_BASE_APPLICATION)
-        }?.let { return it }
+            wmType == TYPE_APPLICATION || wmType == TYPE_BASE_APPLICATION
+        }
+        if (appIdx >= 0) return appIdx
 
-        windowsEntries.firstOrNull { it.type == WindowType.ACTIVITY }?.let { return it }
+        val activityIdx = windowsEntries.indexOfFirst { it.type == WindowType.ACTIVITY }
+        if (activityIdx >= 0) return activityIdx
 
-        windowsEntries.firstOrNull { it.type == WindowType.DIALOG }?.let { return it }
+        val dialogIdx = windowsEntries.indexOfFirst { it.type == WindowType.DIALOG }
+        if (dialogIdx >= 0) return dialogIdx
 
         // Fallback to the first available
-        return windowsEntries.firstOrNull()
+        return if (windowsEntries.isNotEmpty()) 0 else null
     }
 
     private suspend fun captureViewResult(windowEntry: WindowEntry): CaptureResult? {
-        val beforeMasks = maskCollector.collectMasks(windowEntry.rootView, maskMatchers)
         val bitmap = captureViewBitmap(windowEntry) ?: return null
-        val afterMasks = maskCollector.collectMasks(windowEntry.rootView, maskMatchers)
-
-        return CaptureResult(windowEntry, bitmap, beforeMasks, afterMasks)
+        return CaptureResult(windowEntry, bitmap)
     }
 
     private suspend fun captureViewBitmap(windowEntry: WindowEntry): Bitmap? {
@@ -211,6 +234,7 @@ class CaptureSource(
             return@withContext canvasDraw(view)
         }
     }
+
     @RequiresApi(Build.VERSION_CODES.O)
     private suspend fun pixelCopy(
         window: Window,
@@ -301,17 +325,42 @@ class CaptureSource(
      * @param masks areas that will be masked
      */
     private fun drawMasks(canvas: Canvas, captureResult: CaptureResult) {
-        val path = Path()
-        captureResult.beforeMasks.forEach { mask ->
-            mask.draw(path, canvas, beforeMasksPaint)
-        }
-        captureResult.afterMasks.forEach { mask ->
-            mask.draw(path, canvas, afterMaskPaint)
-        }
+//        val path = Path()
+//        captureResult.beforeMasks.forEach { mask ->
+//            mask.draw(path, canvas, beforeMasksPaint)
+//        }
+//        captureResult.afterMasks.forEach { mask ->
+//            mask.draw(path, canvas, afterMaskPaint)
+//        }
     }
 
-    fun CaptureResult.areMasksStable(): Boolean {
-        if (beforeMasks.count() != afterMasks.count()) {
+    fun areMasksMapsStable(
+        beforeMasksMap: Map<Int, List<Mask>>,
+        afterMasksMap: Map<Int, List<Mask>>
+    ): Boolean {
+        if (afterMasksMap.count() != beforeMasksMap.count()) {
+            return false
+        }
+
+        if (afterMasksMap.count() == 0) {
+            return true
+        }
+
+        for ((i, before) in beforeMasksMap) {
+            val after = afterMasksMap[i] ?: return false
+            if (!areMasksStable(before, after)) {
+                return false
+            }
+        }
+
+        return true
+    }
+
+    fun areMasksStable(
+        beforeMasks: List<Mask>,
+        afterMasks: List<Mask>
+    ): Boolean {
+        if (afterMasks.count() != beforeMasks.count()) {
             return false
         }
 
@@ -319,7 +368,30 @@ class CaptureSource(
             return true
         }
 
+        val oneMaskTolerance = 4f
+        val stabilityTolerance = 8f
+        var maxDiff = 0f
+        for ((before, after) in beforeMasks.zip(afterMasks)) {
+            if (before.viewId != after.viewId) {
+                return false
+            }
+            val bPoints = before.points
+            if (bPoints != null) {
+                val aPoints = after.points ?: return false
+                for (i in bPoints.indices) {
+                    val diff = abs(aPoints[i] - bPoints[i])
+                    if (diff > stabilityTolerance) {
+                        return false
+                    }
+                    maxDiff = max(maxDiff, diff)
+                }
+            } else {
+
+            }
+        }
+        if (maxDiff > 0) {
+            Log.i("CaptureSource", "maxDiff = " + maxDiff)
+        }
         return true
     }
 }
-
