@@ -1,6 +1,10 @@
 package com.example.androidobservability.masking
 
+import android.animation.ObjectAnimator
+import android.animation.ValueAnimator
 import android.os.Bundle
+import android.view.View
+import android.view.animation.LinearInterpolator
 import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
@@ -12,6 +16,13 @@ class XMLUserFormActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_user_form)
+
+        val creditCardSection = findViewById<View>(R.id.credit_card_section)
+        ObjectAnimator.ofFloat(creditCardSection, "rotationY", 0f, 360f).apply {
+            duration = 2000
+            repeatCount = ValueAnimator.INFINITE
+            interpolator = LinearInterpolator()
+        }.start()
 
         val inputCardholderName = findViewById<EditText>(R.id.input_cardholder_name)
         val inputCardNumber = findViewById<EditText>(R.id.input_card_number)
