@@ -16,6 +16,7 @@ import android.view.Window
 import android.view.WindowManager.LayoutParams.TYPE_APPLICATION
 import android.view.WindowManager.LayoutParams.TYPE_BASE_APPLICATION
 import androidx.annotation.RequiresApi
+import android.graphics.Path
 import com.launchdarkly.logging.LDLogger
 import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
 import com.launchdarkly.observability.replay.masking.MaskMatcher
@@ -86,7 +87,10 @@ class CaptureSource(
                     }
                 }
             }
-            
+
+            val timestamp = System.currentTimeMillis()
+            val session = sessionManager.getSessionId()
+
             val windowsEntries = windowInspector.appWindows()
             if (windowsEntries.isEmpty()) {
                 return@withContext null
@@ -104,8 +108,6 @@ class CaptureSource(
             // TODO: O11Y-625 - see if holding bitmap is more efficient than base64 encoding immediately after compression
             // TODO: O11Y-628 - use captureQuality option for scaling and adjust this bitmap accordingly, may need to investigate power of 2 rounding for performance
             // Create a bitmap with the window dimensions
-            val timestamp = System.currentTimeMillis()
-            val session = sessionManager.getSessionId()
             val baseResult = captureViewResult(baseWindowEntry) ?: return@withContext null
 
             // capture rest of views on top of base
@@ -169,6 +171,7 @@ class CaptureSource(
     private suspend fun captureViewResult(windowEntry: WindowEntry): CaptureResult? {
         val bitmap = captureViewBitmap(windowEntry) ?: return null
         val masks = maskCollector.collectMasks(windowEntry.rootView, maskMatchers)
+
         return CaptureResult(windowEntry, bitmap, masks)
     }
 
@@ -281,14 +284,31 @@ class CaptureSource(
      * @param masks areas that will be masked
      */
     private fun drawMasks(canvas: Canvas, masks: List<Mask>) {
+        val path = Path()
         masks.forEach { mask ->
-            val integerRect = Rect(
-                mask.rect.left.toInt(),
-                mask.rect.top.toInt(),
-                mask.rect.right.toInt(),
-                mask.rect.bottom.toInt()
-            )
-            canvas.drawRect(integerRect, maskPaint)
+            drawMask(mask, path, canvas, maskPaint)
+        }
+    }
+
+    private val maskIntRect = Rect()
+    private fun drawMask(mask: Mask, path: Path, canvas: Canvas, paint: Paint) {
+        if (mask.points != null) {
+            val pts = mask.points
+
+            path.reset()
+            path.moveTo(pts[0], pts[1])
+            path.lineTo(pts[2], pts[3])
+            path.lineTo(pts[4], pts[5])
+            path.lineTo(pts[6], pts[7])
+            path.close()
+
+            canvas.drawPath(path, paint)
+        } else {
+            maskIntRect.left = mask.rect.left.toInt()
+            maskIntRect.top = mask.rect.top.toInt()
+            maskIntRect.right = mask.rect.right.toInt()
+            maskIntRect.bottom =  mask.rect.bottom.toInt()
+            canvas.drawRect(maskIntRect, paint)
         }
     }
 }

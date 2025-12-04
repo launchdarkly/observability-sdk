@@ -1,11 +1,19 @@
 package com.launchdarkly.observability.replay.masking
 
+import android.graphics.Matrix
 import android.view.View
 import android.view.ViewGroup
 import androidx.compose.ui.platform.AbstractComposeView
 import com.launchdarkly.logging.LDLogger
 import kotlin.collections.plusAssign
+import com.launchdarkly.observability.replay.utils.locationOnScreen
 
+data class MaskContext(
+    val matrix: Matrix,
+    val rootX: Float,
+    val rootY: Float,
+    val matchers: List<MaskMatcher>
+)
 /**
  * Collects sensitive screen areas that should be masked in session replay.
  *
@@ -19,47 +27,52 @@ class MaskCollector(private val logger: LDLogger) {
      */
     fun collectMasks(root: View, matchers: List<MaskMatcher>): List<Mask> {
         val resultMasks = mutableListOf<Mask>()
-//      TODO: use matrix to calculate final coordinates the will be close to truth in animations
-//        val matrix = Matrix()
-//        val (rootX, rootY) = root.locationOnScreen()
 
-        traverse(root, matchers, resultMasks)
+        val (rootX, rootY) = root.locationOnScreen()
+        val context = MaskContext(
+            matrix = Matrix(),
+            rootX = rootX,
+            rootY = rootY,
+            matchers = matchers
+        )
+
+        traverse(root, context, resultMasks)
         return resultMasks
     }
 
-    fun traverseCompose(view: AbstractComposeView, matchers: List<MaskMatcher>, masks: MutableList<Mask>) {
+    fun traverseCompose(view: AbstractComposeView, context: MaskContext, masks: MutableList<Mask>) {
         val target = ComposeMaskTarget.from(view, logger)
         if (target != null) {
-            traverseComposeNodes(target, matchers, masks)
+            traverseComposeNodes(target, context, masks)
         }
 
         for (i in 0 until view.childCount) {
             val child = view.getChildAt(i)
-            traverse(child, matchers, masks)
+            traverse(child, context, masks)
         }
     }
 
-    fun traverseNative(view: View, matchers: List<MaskMatcher>, masks: MutableList<Mask>) {
+    fun traverseNative(view: View, context: MaskContext, masks: MutableList<Mask>) {
         val target = NativeMaskTarget(view)
-        if (shouldMask(target, matchers)) {
-            target.mask()?.let {  masks += it }
+        if (shouldMask(target, context.matchers)) {
+            target.mask(context)?.let {  masks += it }
         }
 
         if (view !is ViewGroup) return
 
         for (i in 0 until view.childCount) {
             val child = view.getChildAt(i)
-            traverse(child, matchers, masks)
+            traverse(child, context, masks)
         }
     }
 
-    fun traverse(view: View, matchers: List<MaskMatcher>, masks: MutableList<Mask>) {
+    fun traverse(view: View, context: MaskContext, masks: MutableList<Mask>) {
         if (!view.isShown) return
 
         if (view is AbstractComposeView) {
-            traverseCompose(view, matchers, masks)
+            traverseCompose(view, context, masks)
         } else if (!view::class.java.name.contains("AndroidComposeView")) {
-            traverseNative(view, matchers, masks)
+            traverseNative(view, context, masks)
         }
     }
 
@@ -68,11 +81,11 @@ class MaskCollector(private val logger: LDLogger) {
      */
     private fun traverseComposeNodes(
         target: ComposeMaskTarget,
-        matchers: List<MaskMatcher>,
+        context: MaskContext,
         masks: MutableList<Mask>
     ) {
-        if (shouldMask(target, matchers)) {
-            target.mask()?.let {  masks += it }
+        if (shouldMask(target, context.matchers)) {
+            target.mask(context)?.let {  masks += it }
         }
 
         for (child in target.rootNode.children) {
@@ -82,7 +95,7 @@ class MaskCollector(private val logger: LDLogger) {
                 config = child.config,
                 boundsInWindow = child.boundsInWindow
             )
-            traverseComposeNodes(childTarget, matchers, masks)
+            traverseComposeNodes(childTarget, context, masks)
         }
     }
 

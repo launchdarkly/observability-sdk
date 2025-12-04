@@ -1,6 +1,8 @@
 package com.launchdarkly.observability.replay.masking
 
+import android.os.Build
 import android.view.View
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.toAndroidRectF
 import androidx.compose.ui.platform.AbstractComposeView
 import androidx.compose.ui.semantics.SemanticsNode
@@ -73,12 +75,14 @@ data class ComposeMaskTarget(
         return config.contains(SemanticsProperties.Text)
     }
 
-    override fun mask(): Mask? {
+    override fun mask(context: MaskContext): Mask? {
         val rect = boundsInWindow.toAndroidRectF()
         if (rect.width() <= 0f || rect.height() <= 0f) {
             return null
         }
-        return Mask(boundsInWindow.toAndroidRectF(), view.id)
+
+        val points: FloatArray? = points(context)
+        return Mask(boundsInWindow.toAndroidRectF(), view.id, points)
     }
 
     override fun hasLDMask(): Boolean {
@@ -103,6 +107,41 @@ data class ComposeMaskTarget(
         return hasSensitiveDescription
     }
 
+    // return 4 points of polygon under transformations
+    private fun points(context: MaskContext): FloatArray? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            return null
+        }
+
+        val coordinates = rootNode.layoutInfo.coordinates
+        if (!coordinates.isAttached) {
+            return null
+        }
+
+        val size = coordinates.size
+        if (size.width <= 0 || size.height <= 0) {
+            return null
+        }
+
+        val t1 = coordinates.localToScreen(Offset(0f, 0f))
+        val t2 = coordinates.localToScreen(Offset(size.width.toFloat(), 0f))
+        val t3 = coordinates.localToScreen(Offset(size.width.toFloat(), size.height.toFloat()))
+        val t4 = coordinates.localToScreen(Offset(0f, size.height.toFloat()))
+
+        val pts = floatArrayOf(
+            t1.x, t1.y,
+            t2.x, t2.y,
+            t3.x, t3.y,
+            t4.x, t4.y
+        )
+
+        for (i in pts.indices step 2) {
+            pts[i] -= context.rootX
+            pts[i + 1] -= context.rootY
+        }
+
+        return pts
+    }
 }
 
 

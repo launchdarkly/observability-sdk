@@ -4,10 +4,10 @@ import android.view.View
 import android.widget.EditText
 import android.widget.TextView
 import android.text.method.PasswordTransformationMethod
-import android.text.InputType
 import kotlin.text.lowercase
 import com.launchdarkly.observability.R
 import android.graphics.RectF
+import android.os.Build
 
 /**
  *   Native view target
@@ -31,14 +31,6 @@ data class NativeMaskTarget(
                 return true
             }
 
-            // Check common password inputType variations seen in EditText/TextView
-            val inputType = view.inputType
-            when (inputType and InputType.TYPE_MASK_VARIATION) {
-                InputType.TYPE_TEXT_VARIATION_PASSWORD,
-                InputType.TYPE_NUMBER_VARIATION_PASSWORD,
-                InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD -> return true
-            }
-
             // Check actual displayed text
             val lowerText = view.text?.toString()?.lowercase()
             if (!lowerText.isNullOrEmpty() && sensitiveKeywords.any { keyword -> lowerText.contains(keyword) }) {
@@ -57,20 +49,51 @@ data class NativeMaskTarget(
         return !lowerDesc.isNullOrEmpty() && sensitiveKeywords.any { keyword -> lowerDesc.contains(keyword) }
     }
 
-    override fun mask(): Mask? {
+    override fun mask(context: MaskContext): Mask? {
         if (view.width <= 0 || view.height <= 0) {
             return null
         }
 
+        val points = points(context)
         val location = IntArray(2)
         view.getLocationInWindow(location)
         val left = location[0].toFloat()
         val top = location[1].toFloat()
+
         val rect = RectF(left, top, left + view.width, top + view.height)
-        return Mask(rect, view.id, matrix = null)
+        return Mask(rect, view.id, points)
     }
 
     override fun hasLDMask(): Boolean {
         return view.getTag(R.id.ld_mask_tag) as? Boolean ?: false
+    }
+
+    // return 4 points of polygon under transformations
+    private fun points(context: MaskContext): FloatArray? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            return null
+        }
+
+        val width = view.width.toFloat()
+        val height = view.height.toFloat()
+        if (width <= 0 || height <= 0) { return null }
+
+        val matrix = context.matrix
+        matrix.reset()
+        view.transformMatrixToGlobal(matrix)
+
+        val pts = floatArrayOf(
+            0f, 0f,
+            width, 0f,
+            width, height,
+            0f, height
+        )
+        matrix.mapPoints(pts)
+        for (i in pts.indices step 2) {
+            pts[i] -= context.rootX
+            pts[i + 1] -= context.rootY
+        }
+
+        return pts
     }
 }
