@@ -63,7 +63,7 @@ class CaptureSource(
     val captureFlow: SharedFlow<CaptureEvent> = _captureEventFlow.asSharedFlow()
     private val windowInspector = WindowInspector(logger)
     private val maskCollector = MaskCollector(logger)
-    private val beforeMasksPaint = Paint().apply {
+    private val beforeMaskPaint = Paint().apply {
         color = Color.RED
         style = Paint.Style.FILL
     }
@@ -156,26 +156,23 @@ class CaptureSource(
 
             // off the main thread to avoid blocking the UI thread
             return@withContext withContext(DispatcherProviderHolder.current.default) {
-                if (!areMasksMapsStable(beforeMasks, afterMasks)) {
-                    return@withContext null
-                }
-
                 val baseResult = captureResults[0] ?: return@withContext null
+                val beforeMasks = areMasksMapsStable(beforeMasks, afterMasks) ?: return@withContext null
 
                 // if need to draw something on base bitmap additionally
-                if (captureResults.size > 1 || beforeMasks.isNotEmpty()) {
+                if (captureResults.size > 1 || afterMasks.isNotEmpty()) {
                     val canvas = Canvas(baseResult.bitmap)
-                        // drawMasks(canvas, captureResults[0])
+                    drawMasks(canvas, beforeMasks[0], afterMasks[0])
 
-                    for (res in captureResults.subList(1, captureResults.size)) {
-                        if (res == null) { continue }
+                    for (i in 1 until  captureResults.size) {
+                        val res = captureResults[i] ?: continue
                         val entry = res.windowEntry
                         val dx = (entry.screenLeft - baseWindowEntry.screenLeft).toFloat()
                         val dy = (entry.screenTop - baseWindowEntry.screenTop).toFloat()
 
                         canvas.withTranslation(dx, dy) {
                             drawBitmap(res.bitmap, 0f, 0f, null)
-                            drawMasks(canvas, res)
+                            drawMasks(canvas, beforeMasks[i], afterMasks[i])
                         }
                         res.bitmap.recycle()
                     }
@@ -319,69 +316,86 @@ class CaptureSource(
     }
 
     /**
-     * Applies masking rectangles to the provided [canvas] using the provided [masks].
+     * Applies masking rectangles to the provided [canvas] using the provided [afterMasks].
      *
      * @param canvas The canvas to mask
-     * @param masks areas that will be masked
+     * @param afterMasks areas that will be masked
      */
-    private fun drawMasks(canvas: Canvas, captureResult: CaptureResult) {
-//        val path = Path()
-//        captureResult.beforeMasks.forEach { mask ->
-//            mask.draw(path, canvas, beforeMasksPaint)
-//        }
-//        captureResult.afterMasks.forEach { mask ->
-//            mask.draw(path, canvas, afterMaskPaint)
-//        }
+//    private fun drawMasks(canvas: Canvas, captureResult: CaptureResult) {
+////        val path = Path()
+////        captureResult.beforeMasks.forEach { mask ->
+////            mask.draw(path, canvas, beforeMasksPaint)
+////        }
+////        captureResult.afterMasks.forEach { mask ->
+////            mask.draw(path, canvas, afterMaskPaint)
+////        }
+//    }
+
+    private fun drawMasks(canvas: Canvas, beforeMasks: List<Mask>?, afterMasks: List<Mask>?) {
+        if (afterMasks == null && beforeMasks == null) return
+
+        val path = Path()
+        beforeMasks?.forEach { mask ->
+            mask.draw(path, canvas, beforeMaskPaint)
+        }
+        afterMasks?.forEach { mask ->
+            mask.draw(path, canvas, afterMaskPaint)
+        }
     }
 
     fun areMasksMapsStable(
+
         beforeMasksMap: Map<Int, List<Mask>>,
         afterMasksMap: Map<Int, List<Mask>>
-    ): Boolean {
+    ): Map<Int, List<Mask>>? {
         if (afterMasksMap.count() != beforeMasksMap.count()) {
-            return false
+            return null
         }
 
         if (afterMasksMap.count() == 0) {
-            return true
+            return null
         }
 
+        val result = mutableMapOf<Int, List<Mask>>()
         for ((i, before) in beforeMasksMap) {
-            val after = afterMasksMap[i] ?: return false
-            if (!areMasksStable(before, after)) {
-                return false
-            }
+            val after = afterMasksMap[i] ?: return null
+            val merged = areMasksStable(before, after) ?: return null
+            result[i] = merged
         }
 
-        return true
+        return result
     }
 
     fun areMasksStable(
         beforeMasks: List<Mask>,
         afterMasks: List<Mask>
-    ): Boolean {
+    ): List<Mask>? {
         if (afterMasks.count() != beforeMasks.count()) {
-            return false
+            return null
         }
 
         if (afterMasks.count() == 0) {
-            return true
+            return listOf()
         }
 
-        val oneMaskTolerance = 4f
-        val stabilityTolerance = 8f
+        val oneMaskTolerance = 1f
+        val stabilityTolerance = 40f
         var maxDiff = 0f
+        var resultMasks = mutableListOf<Mask>()
         for ((before, after) in beforeMasks.zip(afterMasks)) {
             if (before.viewId != after.viewId) {
-                return false
+                return null
             }
             val bPoints = before.points
             if (bPoints != null) {
-                val aPoints = after.points ?: return false
+                val aPoints = after.points ?: return null
                 for (i in bPoints.indices) {
                     val diff = abs(aPoints[i] - bPoints[i])
                     if (diff > stabilityTolerance) {
-                        return false
+                        return null
+                    }
+                    if (diff > oneMaskTolerance) {
+                        resultMasks += before
                     }
                     maxDiff = max(maxDiff, diff)
                 }
@@ -392,6 +406,6 @@ class CaptureSource(
         if (maxDiff > 0) {
             Log.i("CaptureSource", "maxDiff = " + maxDiff)
         }
-        return true
+        return resultMasks
     }
 }
