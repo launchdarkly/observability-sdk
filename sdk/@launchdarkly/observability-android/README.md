@@ -167,7 +167,82 @@ span.makeCurrent().use {
 span.end()
 ```
 
+### Session Replay
 
+#### Masking sensitive UI
+
+Use `ldMask()` to mark views that should be masked in session replay. There are helpers for both XML-based Views and Jetpack Compose.
+
+##### XML Views
+
+Import the masking API and call `ldMask()` on any `View` (for example, after inflating the layout in an `Activity` or `Fragment`).
+
+```kotlin
+import android.os.Bundle
+import android.widget.EditText
+import androidx.appcompat.app.AppCompatActivity
+import com.launchdarkly.observability.api.ldMask
+
+class LoginActivity : AppCompatActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_login)
+
+        val password = findViewById<EditText>(R.id.password)
+        password.ldMask() // mask this field in session replay
+    }
+}
+```
+
+With View Binding or Data Binding:
+
+```kotlin
+import android.os.Bundle
+import android.view.View
+import androidx.fragment.app.Fragment
+import com.launchdarkly.observability.api.ldMask
+
+class CheckoutFragment : Fragment(R.layout.fragment_checkout) {
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        val binding = FragmentCheckoutBinding.bind(view)
+        binding.creditCardNumber.ldMask()
+        binding.cvv.ldMask()
+    }
+}
+```
+
+Optional: use `ldUnmask()` to explicitly clear masking on a view you previously masked.
+
+##### Jetpack Compose
+
+Add the masking `Modifier` to any composable you want masked in session replay.
+
+```kotlin
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.TextField
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import com.launchdarkly.observability.api.ldMask
+
+@Composable
+fun CreditCardField() {
+    var number by remember { mutableStateOf("") }
+    TextField(
+        value = number,
+        onValueChange = { number = it },
+        modifier = Modifier
+            .fillMaxWidth()
+            .ldMask() // mask this composable in session replay
+    )
+}
+```
+
+Optional: use `Modifier.ldUnmask()` to explicitly clear masking on a composable you previously masked.
+
+Notes:
+- Masking marks elements so their contents are obscured in recorded sessions.
+- You can apply masking to any `View` or composable where sensitive data may appear.
 
 ## Contributing
 

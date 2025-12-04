@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/launchdarkly/observability-sdk/compare/observability-react-native-0.6.0...observability-react-native-0.7.0) (2025-10-15)
+
+
+### Features
+
+* update unhandled promise rejection handling ([#260](https://github.com/launchdarkly/observability-sdk/issues/260)) ([bd0321c](https://github.com/launchdarkly/observability-sdk/commit/bd0321cd2b0edf9e0556dd914ff97430890b0564))
+
 ## [0.6.0](https://github.com/launchdarkly/observability-sdk/compare/observability-react-native-0.5.0...observability-react-native-0.6.0) (2025-09-02)
 
 

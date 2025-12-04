@@ -14,6 +14,7 @@
 	],
 	"scripts": {
 		"build": "yarn turbo run build --filter '!@rrweb/web-extension' --filter '!nextjs'",
+		"build:sdk": "yarn turbo run build --filter '@launchdarkly/*' --filter 'highlight.run'",
 		"docs": "yarn turbo run docs",
 		"e2e:cloudflare": "yarn turbo run dev --filter cloudflare-worker...",
 		"e2e:express": "yarn turbo run dev --filter express...",
@@ -39,7 +40,8 @@
 		"typescript": "^5.8.3"
 	},
 	"resolutions": {
-		"ansi-color@^0.2.1": "patch:ansi-color@npm%3A0.2.1#./.yarn/patches/ansi-color-npm-0.2.1-f7243d10a4.patch"
+		"ansi-color@^0.2.1": "patch:ansi-color@npm%3A0.2.1#./.yarn/patches/ansi-color-npm-0.2.1-f7243d10a4.patch",
+		"react-server-dom-webpack": "19.0.1"
 	},
 	"packageManager": "yarn@4.9.1"
 }

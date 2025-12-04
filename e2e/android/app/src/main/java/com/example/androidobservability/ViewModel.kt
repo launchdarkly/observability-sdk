@@ -1,9 +1,16 @@
 package com.example.androidobservability
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import android.content.Intent
+import android.widget.Toast
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.observability.sdk.LDObserve
+import com.launchdarkly.sdk.ContextKind
+import com.launchdarkly.sdk.LDContext
+import com.launchdarkly.sdk.android.LDClient
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Severity
@@ -15,10 +22,26 @@ import java.io.BufferedInputStream
 import java.net.HttpURLConnection
 import java.net.URL
 
-class ViewModel : ViewModel() {
+class ViewModel(application: Application) : AndroidViewModel(application) {
 
     fun triggerMetric() {
-        LDObserve.recordMetric(Metric("test", 50.0))
+        LDObserve.recordMetric(Metric("test-gauge", 50.0))
+    }
+
+    fun triggerHistogramMetric() {
+        LDObserve.recordHistogram(Metric("test-histogram", 15.0))
+    }
+
+    fun triggerCountMetric() {
+        LDObserve.recordCount(Metric("test-counter", 10.0))
+    }
+
+    fun triggerIncrementalMetric() {
+        LDObserve.recordIncr(Metric("test-incremental-counter", 12.0))
+    }
+
+    fun triggerUpDownCounterMetric() {
+        LDObserve.recordUpDownCounter(Metric("test-up-down-counter", 25.0))
     }
 
     fun triggerError() {
@@ -34,6 +57,34 @@ class ViewModel : ViewModel() {
             Severity.DEBUG,
             Attributes.of(AttributeKey.stringKey("FakeAttribute"), "FakeVal")
         )
+    }
+
+    fun triggerCustomLog(
+        message: String,
+        severity: Severity = Severity.INFO,
+        attributes: Attributes = Attributes.empty()
+    ) {
+        if (message.isNotEmpty()) {
+            LDObserve.recordLog(
+                message = message,
+                severity = severity,
+                attributes = attributes
+            )
+        }
+    }
+
+    fun triggerCustomSpan(spanName: String) {
+        if (spanName.isNotEmpty()) {
+            viewModelScope.launch(Dispatchers.IO) {
+                val customSpan = LDObserve.startSpan(
+                    name = spanName,
+                    attributes = Attributes.of(
+                        AttributeKey.stringKey("custom_span"), "true"
+                    )
+                )
+                customSpan.end()
+            }
+        }
     }
 
     fun triggerNestedSpans() {
@@ -64,6 +115,33 @@ class ViewModel : ViewModel() {
             sendOkHttpRequest()
             sendURLRequest()
         }
+    }
+
+    fun identifyLDContext(contextKey: String = "test-context-key") {
+        val context = LDContext.builder(ContextKind.DEFAULT, contextKey)
+            .name("test-context-name")
+            .build()
+
+        LDClient.get().identify(context)
+    }
+
+    fun evaluateBooleanFlag(flagKey: String) {
+        if (flagKey.isNotEmpty()) {
+            val result = LDClient.get().boolVariation(flagKey, false)
+            Toast.makeText(getApplication(), "Flag $flagKey: $result", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(getApplication(), "Flag key cannot be empty", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun startForegroundService() {
+        val intent = Intent(getApplication(), ObservabilityForegroundService::class.java)
+        ContextCompat.startForegroundService(getApplication(), intent)
+    }
+
+    fun startBackgroundService() {
+        val intent = Intent(getApplication(), ObservabilityBackgroundService::class.java)
+        getApplication<Application>().startService(intent)
     }
 
     private fun sendOkHttpRequest() {

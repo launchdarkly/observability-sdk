@@ -241,8 +241,10 @@ namespace LaunchDarkly.Observability.Test
                 case null:
                     return LogLevel.Information;
                 default:
-                    // Unsupported in this test suite.
-                    throw new ArgumentOutOfRangeException(nameof(severityText), severityText, null);
+                    // Log records cannot be made without a level, but in some languages they can, so we
+                    // use "Information" for a missing level in the test suite.
+                    // We cannot use "None" because the open telemetry logger is hard-coded to discard "None".
+                    return LogLevel.Information;
             }
         }
 

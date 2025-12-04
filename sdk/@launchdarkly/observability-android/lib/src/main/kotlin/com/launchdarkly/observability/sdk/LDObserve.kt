@@ -8,15 +8,15 @@ import io.opentelemetry.api.logs.Severity
 import io.opentelemetry.api.trace.Span
 
 /**
- * LDObserve is the singleton entry point for recording observability data such as 
- * metrics, logs, errors, and traces. It is recommended to use the [Observability] plugin
- * with the LaunchDarkly Android Client SDK, as that will automatically initialize the
- * [LDObserve] singleton instance.
+ * LDObserve is the singleton entry point for recording observability data such as
+ * metrics, logs, errors, and traces. It is recommended to use the [com.launchdarkly.observability.plugin.Observability] plugin
+ * with the LaunchDarkly Android Client SDK, as that will automatically initialize the [LDObserve] singleton instance.
  *
- * @constructor Creates an LDObserve instance with the provided [ObservabilityClient].
- * @param client The [ObservabilityClient] to which observability data will be forwarded.
+ * @constructor Creates an LDObserve instance with the provided [Observe].
+ * @param client The [Observe] to which observability data will be forwarded.
  */
-class LDObserve(private val client: ObservabilityClient) : Observe {
+class LDObserve(private val client: Observe) : Observe {
+
     override fun recordMetric(metric: Metric) {
         client.recordMetric(metric)
     }
@@ -49,7 +49,11 @@ class LDObserve(private val client: ObservabilityClient) : Observe {
         return client.startSpan(name, attributes)
     }
 
-    companion object : Observe{
+    override fun flush(): Boolean {
+        return client.flush()
+    }
+
+    companion object : Observe {
         // initially a no-op delegate
         // volatile annotation guarantees multiple threads see the same value after init and none continue using the no-op implementation
         @Volatile
@@ -62,8 +66,10 @@ class LDObserve(private val client: ObservabilityClient) : Observe {
             override fun recordError(error: Error, attributes: Attributes) {}
             override fun recordLog(message: String, severity: Severity, attributes: Attributes) {}
             override fun startSpan(name: String, attributes: Attributes): Span {
-                // TODO: figure out if a no-op span implementation exists in the otel library
-                throw IllegalStateException("Observability plugin was not initialized before being used.")
+                return Span.getInvalid() // Observability plugin was not initialized before being used.
+            }
+            override fun flush(): Boolean {
+                return false // No-op, return false to indicate flush was not successful
             }
         }
 
@@ -79,5 +85,6 @@ class LDObserve(private val client: ObservabilityClient) : Observe {
         override fun recordError(error: Error, attributes: Attributes) = delegate.recordError(error, attributes)
         override fun recordLog(message: String, severity: Severity, attributes: Attributes) = delegate.recordLog(message, severity, attributes)
         override fun startSpan(name: String, attributes: Attributes): Span = delegate.startSpan(name, attributes)
+        override fun flush(): Boolean = delegate.flush()
     }
 }

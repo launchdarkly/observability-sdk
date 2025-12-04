@@ -13,17 +13,17 @@ import io.opentelemetry.sdk.resources.Resource
 /**
  * The [ObservabilityClient] can be used for recording observability data such as
  * metrics, logs, errors, and traces.
- * 
- * It is recommended to use the [Observability] plugin with the LaunchDarkly Android 
+ *
+ * It is recommended to use the [Observability] plugin with the LaunchDarkly Android
  * Client SDK, as that will automatically initialize the [LDObserve] singleton instance.
- * 
+ *
  * @param application The application instance.
  * @param sdkKey The SDK key.
  * @param resource The resource.
  * @param logger The logger.
  * @param options Additional options for the client.
  */
-class ObservabilityClient: Observe {
+class ObservabilityClient : Observe {
     private val instrumentationManager: InstrumentationManager
 
     constructor(
@@ -34,6 +34,12 @@ class ObservabilityClient: Observe {
         options: Options
     ) {
         this.instrumentationManager = InstrumentationManager(application, sdkKey, resource, logger, options)
+    }
+
+    internal constructor(
+        instrumentationManager: InstrumentationManager
+    ) {
+        this.instrumentationManager = instrumentationManager
     }
 
     override fun recordMetric(metric: Metric) {
@@ -66,5 +72,29 @@ class ObservabilityClient: Observe {
 
     override fun startSpan(name: String, attributes: Attributes): Span {
         return instrumentationManager.startSpan(name, attributes)
+    }
+
+    /**
+     * Returns the telemetry inspector for accessing intercepted telemetry data.
+     *
+     * This method provides access to spans and logs that have been exported by the SDK
+     * for debugging, testing, or other purposes. The inspector is only available
+     * if debug was enabled via "Options.debug".
+     *
+     * @return TelemetryInspector instance if debug is enabled, null otherwise
+     */
+    fun getTelemetryInspector(): TelemetryInspector? {
+        return instrumentationManager.getTelemetryInspector()
+    }
+
+    /**
+     * Returns the tracer instance for creating spans.
+     *
+     * @return Tracer instance
+     */
+    fun getTracer() = instrumentationManager.getTracer()
+
+    override fun flush(): Boolean {
+        return instrumentationManager.flush()
     }
 }

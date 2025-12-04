@@ -2,19 +2,23 @@ package com.example.androidobservability
 
 import android.app.Application
 import com.launchdarkly.observability.api.Options
+import com.launchdarkly.observability.client.TelemetryInspector
 import com.launchdarkly.sdk.ContextKind
 import com.launchdarkly.sdk.LDContext
 import com.launchdarkly.sdk.android.Components
 import com.launchdarkly.sdk.android.LDClient
 import com.launchdarkly.sdk.android.LDConfig
 import com.launchdarkly.observability.plugin.Observability
+import com.launchdarkly.observability.replay.PrivacyProfile
+import com.launchdarkly.observability.replay.ReplayInstrumentation
+import com.launchdarkly.observability.replay.ReplayOptions
 import com.launchdarkly.sdk.android.LDAndroidLogging
 import com.launchdarkly.sdk.android.integrations.Plugin
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
 import java.util.Collections
 
-class BaseApplication : Application() {
+open class BaseApplication : Application() {
 
     companion object {
         // TODO O11Y-376: Update this credential to be driven by env variable or gradle property
@@ -22,8 +26,31 @@ class BaseApplication : Application() {
         const val LAUNCHDARKLY_MOBILE_KEY = "MOBILE_KEY_GOES_HERE"
     }
 
-    override fun onCreate() {
-        super.onCreate()
+    var pluginOptions = Options(
+        resourceAttributes = Attributes.of(
+            AttributeKey.stringKey("example"), "value"
+        ),
+        debug = true,
+        logAdapter = LDAndroidLogging.adapter(),
+        // TODO: consider these being factories so that the obs plugin can pass instantiation data, log adapter
+        instrumentations = listOf(
+            ReplayInstrumentation(
+                options = ReplayOptions(
+                    privacyProfile = PrivacyProfile(maskText = false)
+                )
+            )
+        ),
+    )
+
+    var telemetryInspector: TelemetryInspector? = null
+    var testUrl: String? = null
+
+    open fun realInit() {
+        val observabilityPlugin = Observability(
+            application = this@BaseApplication,
+            mobileKey = LAUNCHDARKLY_MOBILE_KEY,
+            options = testUrl?.let { pluginOptions.copy(backendUrl = it, otlpEndpoint = it) } ?: pluginOptions
+        )
 
         // Set LAUNCHDARKLY_MOBILE_KEY to your LaunchDarkly mobile key found on the LaunchDarkly
         // dashboard in the start guide.
@@ -33,18 +60,7 @@ class BaseApplication : Application() {
             .mobileKey(LAUNCHDARKLY_MOBILE_KEY)
             .plugins(
                 Components.plugins().setPlugins(
-                    Collections.singletonList<Plugin>(
-                        Observability(
-                            this@BaseApplication,
-                            Options(
-                                resourceAttributes = Attributes.of(
-                                    AttributeKey.stringKey("example"), "value"
-                                ),
-                                debug = true,
-                                logAdapter = LDAndroidLogging.adapter(),
-                            )
-                        )
-                    )
+                    Collections.singletonList<Plugin>(observabilityPlugin)
                 )
             )
             .build()
@@ -56,5 +72,11 @@ class BaseApplication : Application() {
             .build()
 
         LDClient.init(this@BaseApplication, ldConfig, context)
+        telemetryInspector = observabilityPlugin.getTelemetryInspector()
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        realInit()
     }
 }

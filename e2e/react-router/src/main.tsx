@@ -10,6 +10,7 @@ import {
 } from 'react-router-dom'
 import Root from './routes/root'
 import Welcome from './routes/welcome'
+import PrivacyDemo from './routes/privacy-demo'
 
 function rootAction() {
 	const contact = { name: 'hello' }
@@ -43,6 +44,7 @@ const router = createBrowserRouter(
 				</Route>
 			</Route>
 			<Route path={'/welcome'} element={<Welcome />} />
+			<Route path={'/privacy'} element={<PrivacyDemo />} />
 		</>,
 	),
 )

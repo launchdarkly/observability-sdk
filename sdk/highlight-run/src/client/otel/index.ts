@@ -24,7 +24,6 @@ import {
 	WebTracerProvider,
 } from '@opentelemetry/sdk-trace-web'
 import * as SemanticAttributes from '@opentelemetry/semantic-conventions'
-import { parse } from 'graphql'
 import { getResponseBody } from '../listeners/network-listener/utils/fetch-listener'
 import {
 	DEFAULT_URL_BLOCKLIST,
@@ -59,6 +58,7 @@ import version from '../../version'
 import { ExportSampler } from './sampling/ExportSampler'
 import { getPersistentSessionSecureID } from '../utils/sessionStorage/highlightSession'
 import type { EventName } from '@opentelemetry/instrumentation-user-interaction'
+
 export type Callback = (span?: Span) => any
 
 export type BrowserTracingConfig = {
@@ -69,6 +69,7 @@ export type BrowserTracingConfig = {
 	environment?: string
 	networkRecordingOptions?: NetworkRecordingOptions
 	serviceName?: string
+	serviceVersion?: string
 	tracingOrigins?: boolean | (string | RegExp)[]
 	urlBlocklist?: string[]
 	eventNames?: EventName[]
@@ -95,7 +96,7 @@ export const setupBrowserTracing = (
 	config: BrowserTracingConfig,
 	sampler: ExportSampler,
 ) => {
-	if (providers.tracerProvider !== undefined) {
+	if (providers.tracerProvider || providers.meterProvider) {
 		console.warn('OTEL already initialized. Skipping...')
 		return
 	}
@@ -115,7 +116,7 @@ export const setupBrowserTracing = (
 
 	const exporterOptions: TraceExporterConfig = {
 		url: config.otlpEndpoint + '/v1/traces',
-		concurrencyLimit: 100,
+		concurrencyLimit: 10,
 		timeoutMillis: 30_000,
 		// Using any because we were getting an error importing CompressionAlgorithm
 		// from @opentelemetry/otlp-exporter-base.
@@ -131,16 +132,18 @@ export const setupBrowserTracing = (
 		sampler,
 	)
 
+	// https://opentelemetry.io/docs/specs/otel/logs/sdk/
 	const spanProcessor = new CustomBatchSpanProcessor(exporter, {
-		maxExportBatchSize: 100,
-		maxQueueSize: 1_000,
-		exportTimeoutMillis: exporterOptions.timeoutMillis,
-		scheduledDelayMillis: exporterOptions.timeoutMillis,
+		maxExportBatchSize: 1024, // Default value from SDK is 512
+		maxQueueSize: 2048, // Default value from SDK is 2048
+		exportTimeoutMillis: exporterOptions.timeoutMillis, // Default value from SDK is 30_000
+		scheduledDelayMillis: exporterOptions.timeoutMillis, // Default value from SDK is 1000
 	})
 
 	const resource = new Resource({
 		[SemanticAttributes.ATTR_SERVICE_NAME]:
 			config.serviceName ?? 'highlight-browser',
+		[SemanticAttributes.ATTR_SERVICE_VERSION]: config.serviceVersion,
 		'deployment.environment.name': environment,
 		'highlight.project_id': config.projectId,
 		[SemanticAttributes.ATTR_USER_AGENT_ORIGINAL]: navigator.userAgent,
@@ -229,12 +232,6 @@ export const setupBrowserTracing = (
 							return
 						}
 
-						const url = readableSpan.attributes[
-							'http.url'
-						] as string
-						const method = request.method ?? 'GET'
-						span.updateName(getSpanName(url, method, request.body))
-
 						if (!(response instanceof Response)) {
 							span.setAttributes({
 								'http.response.error': response.message,
@@ -283,13 +280,6 @@ export const setupBrowserTracing = (
 						) {
 							return
 						}
-
-						const spanName = getSpanName(
-							browserXhr._url,
-							browserXhr._method,
-							xhr.responseText,
-						)
-						span.updateName(spanName)
 
 						enhanceSpanWithHttpRequestAttributes(
 							span,
@@ -430,51 +420,28 @@ export const getActiveSpanContext = () => {
 }
 
 export const shutdown = async () => {
-	if (providers.tracerProvider) {
-		await providers.tracerProvider.forceFlush()
-		await providers.tracerProvider.shutdown()
-	} else {
-		console.warn('OTEL shutdown called without initialized tracerProvider.')
-	}
-	if (providers.meterProvider) {
-		await providers.meterProvider.forceFlush()
-		await providers.meterProvider.shutdown()
-	} else {
-		console.warn('OTEL shutdown called without initialized meterProvider.')
-	}
-}
-
-const getSpanName = (
-	url: string,
-	method: string,
-	body: Request['body'] | BrowserXHR['_body'],
-) => {
-	let parsedBody
-	const urlObject = new URL(url)
-	const pathname = urlObject.pathname
-	let spanName = `${method.toUpperCase()} - ${pathname}`
-
-	try {
-		parsedBody = typeof body === 'string' ? JSON.parse(body) : body
-
-		if (parsedBody && parsedBody.query) {
-			const query = parse(parsedBody.query)
-			const queryName =
-				query.definitions[0]?.kind === 'OperationDefinition'
-					? query.definitions[0]?.name?.value
-					: undefined
-
-			if (queryName) {
-				spanName = `${queryName} (GraphQL: ${
-					urlObject.host + urlObject.pathname
-				})`
+	await Promise.allSettled([
+		(async () => {
+			if (providers.tracerProvider) {
+				await providers.tracerProvider.shutdown()
+				providers.tracerProvider = undefined
+			} else {
+				console.warn(
+					'OTEL shutdown called without initialized tracerProvider.',
+				)
 			}
-		}
-	} catch {
-		// Ignore errors from JSON parsing
-	}
-
-	return spanName
+		})(),
+		(async () => {
+			if (providers.meterProvider) {
+				await providers.meterProvider.shutdown()
+				providers.meterProvider = undefined
+			} else {
+				console.warn(
+					'OTEL shutdown called without initialized meterProvider.',
+				)
+			}
+		})(),
+	])
 }
 
 const enhanceSpanWithHttpRequestAttributes = (

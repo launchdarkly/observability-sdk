@@ -48,6 +48,10 @@ export default function Root() {
 	return (
 		<div id="sidebar">
 			<h1>Replays</h1>
+			<nav style={{ display: 'flex', gap: 12 }}>
+				<a href="/welcome">Welcome</a>
+				<a href="/privacy">Privacy Demo</a>
+			</nav>
 			<p>{flags}</p>
 			<a href={session} target={'_blank'}>
 				{session}
@@ -338,6 +342,116 @@ export default function Root() {
 			>
 				LDObserve.stop()
 			</button>
+
+			<div style={{ padding: '2rem' }}>
+				<h3>HTTP Requests</h3>
+				<div
+					style={{
+						display: 'flex',
+						flexDirection: 'row',
+						gap: '10px',
+						flexWrap: 'wrap',
+					}}
+				>
+					<button
+						onClick={async () => {
+							await fetch(
+								'https://jsonplaceholder.typicode.com/posts/1',
+							)
+						}}
+					>
+						Trigger HTTP Request
+					</button>
+					<button
+						onClick={async () => {
+							await fetch('https://api.github.com/graphql', {
+								method: 'POST',
+								headers: {
+									'Content-Type': 'application/json',
+								},
+								body: JSON.stringify({
+									query: 'query { viewer { login } }',
+								}),
+							})
+						}}
+					>
+						Trigger Anonymous GraphQL Request
+					</button>
+					<button
+						onClick={async () => {
+							await fetch('https://api.github.com/graphql', {
+								method: 'POST',
+								headers: {
+									'Content-Type': 'application/json',
+								},
+								body: JSON.stringify({
+									operationName: 'GetViewer',
+									query: 'query GetViewer { viewer { login name } }',
+								}),
+							})
+						}}
+					>
+						Trigger Named GraphQL Request
+					</button>
+					<button
+						onClick={async () => {
+							await fetch(
+								'https://jsonplaceholder.typicode.com/posts',
+								{
+									method: 'POST',
+									headers: {
+										'Content-Type': 'application/json',
+									},
+									body: JSON.stringify({
+										title: 'Test Post',
+										body: 'This is a test post',
+										userId: 1,
+									}),
+								},
+							)
+						}}
+					>
+						Trigger POST Request
+					</button>
+				</div>
+			</div>
+
+			<div
+				style={{
+					marginTop: 8,
+					padding: 12,
+					border: '1px solid #ddd',
+					borderRadius: 6,
+					maxWidth: 720,
+				}}
+			>
+				<h3>Session Properties</h3>
+				<p>
+					Add custom session-level attributes via{' '}
+					<code>LDRecord.addSessionProperties</code>.
+				</p>
+				<textarea
+					style={{
+						width: '100%',
+						minHeight: 120,
+						fontFamily: 'monospace',
+					}}
+					defaultValue='{"plan":"pro","favoriteColor":"seafoam"}'
+					placeholder='{"key":"value"}'
+				/>
+				<div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+					<button
+						onClick={() => {
+							const value =
+								document.querySelector('textarea')?.value ?? ''
+
+							LDRecord.addSessionProperties(JSON.parse(value))
+						}}
+					>
+						Apply session properties
+					</button>
+				</div>
+			</div>
 		</div>
 	)
 }

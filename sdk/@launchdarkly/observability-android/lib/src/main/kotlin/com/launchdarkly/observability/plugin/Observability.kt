@@ -6,6 +6,7 @@ import com.launchdarkly.logging.LDLogger
 import com.launchdarkly.logging.Logs
 import com.launchdarkly.observability.api.Options
 import com.launchdarkly.observability.client.ObservabilityClient
+import com.launchdarkly.observability.client.TelemetryInspector
 import com.launchdarkly.observability.sdk.LDObserve
 import com.launchdarkly.sdk.android.LDClient
 import com.launchdarkly.sdk.android.integrations.EnvironmentMetadata
@@ -31,9 +32,9 @@ import java.util.Collections
  *     )
  *     .build()
  * ```
- * 
+ *
  * Later after initialization you can use [LDObserve] to record observability data.
- * 
+ *
  * ```
  * LDObserve.recordMetric(metric)
  * LDObserve.recordLog(message, severity, attributes)
@@ -43,12 +44,15 @@ import java.util.Collections
  *
  * @param application The application instance.
  * @param options The options for the plugin.
+ * @param mobileKey The primary mobile key used in LDConfig.
  */
 class Observability(
     private val application: Application,
+    private val mobileKey: String,
     private val options: Options = Options() // new instance has reasonable defaults
 ) : Plugin() {
     private val logger: LDLogger
+    private var observabilityClient: ObservabilityClient? = null
 
     init {
         val actualLogAdapter = Logs.level(options.logAdapter, if (options.debug) LDLogLevel.DEBUG else DEFAULT_LOG_LEVEL)
@@ -67,34 +71,40 @@ class Observability(
     override fun register(client: LDClient, metadata: EnvironmentMetadata?) {
         val sdkKey = metadata?.credential ?: ""
 
-        val resourceBuilder = Resource.getDefault().toBuilder()
-        resourceBuilder.put("service.name", options.serviceName)
-        resourceBuilder.put("service.version", options.serviceVersion)
-        resourceBuilder.put("highlight.project_id", sdkKey)
-        resourceBuilder.putAll(options.resourceAttributes)
+        if (mobileKey == sdkKey) {
+            val resourceBuilder = Resource.getDefault().toBuilder()
+            resourceBuilder.put("service.name", options.serviceName)
+            resourceBuilder.put("service.version", options.serviceVersion)
+            resourceBuilder.put("highlight.project_id", sdkKey)
+            resourceBuilder.putAll(options.resourceAttributes)
 
-        metadata?.applicationInfo?.applicationId?.let {
-            resourceBuilder.put("launchdarkly.application.id", it)
-        }
-
-        metadata?.applicationInfo?.applicationVersion?.let {
-            resourceBuilder.put("launchdarkly.application.version", it)
-        }
-
-        metadata?.sdkMetadata?.name?.let { sdkName ->
-            metadata.sdkMetadata?.version?.let { sdkVersion ->
-                resourceBuilder.put("launchdarkly.sdk.version", "$sdkName/$sdkVersion")
+            metadata?.applicationInfo?.applicationId?.let {
+                resourceBuilder.put("launchdarkly.application.id", it)
             }
-        }
 
-        val observabilityClient = ObservabilityClient(application, sdkKey, resourceBuilder.build(), logger, options)
-        LDObserve.init(observabilityClient)
+            metadata?.applicationInfo?.applicationVersion?.let {
+                resourceBuilder.put("launchdarkly.application.version", it)
+            }
+
+            metadata?.sdkMetadata?.name?.let { sdkName ->
+                metadata.sdkMetadata?.version?.let { sdkVersion ->
+                    resourceBuilder.put("launchdarkly.sdk.version", "$sdkName/$sdkVersion")
+                }
+            }
+
+            observabilityClient = ObservabilityClient(application, sdkKey, resourceBuilder.build(), logger, options)
+            observabilityClient?.let { LDObserve.init(it) }
+        }
     }
 
     override fun getHooks(metadata: EnvironmentMetadata?): MutableList<Hook> {
         return Collections.singletonList(
-            EvalTracingHook(true, true)
+            TracingHook(withSpans = true, withValue = true) { observabilityClient?.getTracer() }
         )
+    }
+
+    fun getTelemetryInspector(): TelemetryInspector? {
+        return observabilityClient?.getTelemetryInspector()
     }
 
     companion object {

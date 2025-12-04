@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-dotnet-0.2.0...launchdarkly-observability-dotnet-0.3.0) (2025-09-26)
+
+
+### Features
+
+* Extend logging configuration. Format logs by default. ([#242](https://github.com/launchdarkly/observability-sdk/issues/242)) ([2003517](https://github.com/launchdarkly/observability-sdk/commit/2003517fbbec5ccdf0da496de7abb97bad960faf))
+
 ## [0.2.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-dotnet-0.1.0...launchdarkly-observability-dotnet-0.2.0) (2025-09-04)
 
 

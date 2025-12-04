@@ -71,7 +71,7 @@ import {
 	NetworkPerformancePayload,
 } from './listeners/network-listener/performance-listener'
 import { Logger } from './logger'
-import { BROWSER_METER_NAME, getTracer, setupBrowserTracing } from './otel'
+import { getMeter, getTracer, setupBrowserTracing, shutdown } from './otel'
 import {
 	HighlightIframeMessage,
 	HighlightIframeReponse,
@@ -115,12 +115,10 @@ import {
 	Counter,
 	Gauge,
 	Histogram,
-	metrics,
 	UpDownCounter,
 } from '@opentelemetry/api'
 import { IntegrationClient } from '../integrations'
-import { LaunchDarklyIntegration } from '../integrations/launchdarkly'
-import { LDClient } from '../integrations/launchdarkly'
+import { LaunchDarklyIntegration, LDClient } from '../integrations/launchdarkly'
 import { createLog, defaultLogOptions } from './listeners/console-listener'
 import { CustomSampler } from './otel/sampling/CustomSampler'
 import randomUuidV4 from './utils/randomUuidV4'
@@ -143,6 +141,12 @@ export type HighlightClassOptions = {
 	reportConsoleErrors?: boolean
 	consoleMethodsToRecord?: ConsoleMethods[]
 	privacySetting?: PrivacySettingOption
+	maskTextClass?: string | RegExp
+	maskTextSelector?: string
+	blockClass?: string | RegExp
+	blockSelector?: string
+	ignoreClass?: string
+	ignoreSelector?: string
 	enableSegmentIntegration?: boolean
 	enableCanvasRecording?: boolean
 	enablePerformanceRecording?: boolean
@@ -160,7 +164,7 @@ export type HighlightClassOptions = {
 	sessionShortcut?: SessionShortcutOptions
 	sessionSecureID: string // Introduced in firstLoad 3.0.1
 	storageMode?: 'sessionStorage' | 'localStorage'
-	sessionCookie?: true
+	sessionCookie?: boolean
 	sendMode?: 'webworker' | 'local'
 	otlpEndpoint?: HighlightOptions['otlpEndpoint']
 	otel?: HighlightOptions['otel']
@@ -629,6 +633,11 @@ export class Highlight {
 				},
 				sampler,
 			)
+			// reset metrics to connect them to the new meter
+			this._gauges.clear()
+			this._counters.clear()
+			this._histograms.clear()
+			this._up_down_counters.clear()
 
 			this.logger.log(
 				`Initializing...`,
@@ -823,13 +832,17 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 			)
 
 			this._recordStop = record({
-				ignoreClass: 'highlight-ignore',
-				blockClass: 'highlight-block',
+				ignoreClass: this.options.ignoreClass ?? 'highlight-ignore',
+				ignoreSelector: this.options.ignoreSelector,
+				blockClass: this.options.blockClass ?? 'highlight-block',
+				blockSelector: this.options.blockSelector,
 				emit,
 				recordCrossOriginIframes: this.options.recordCrossOriginIframe,
 				privacySetting: this.privacySetting,
 				maskAllInputs,
 				maskInputOptions: maskInputOptions,
+				maskTextClass: this.options.maskTextClass,
+				maskTextSelector: this.options.maskTextSelector,
 				recordCanvas: this.enableCanvasRecording,
 				sampling: {
 					canvas: {
@@ -1270,10 +1283,10 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 	}
 
 	recordGauge(metric: RecordMetric) {
-		const meter = metrics.getMeter(BROWSER_METER_NAME)
 		let gauge = this._gauges.get(metric.name)
 		if (!gauge) {
-			gauge = meter.createGauge(metric.name)
+			gauge = getMeter()?.createGauge(metric.name)
+			if (!gauge) return
 			this._gauges.set(metric.name, gauge)
 		}
 		gauge.record(metric.value, {
@@ -1288,10 +1301,10 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 	}
 
 	recordCount(metric: RecordMetric) {
-		const meter = metrics.getMeter(BROWSER_METER_NAME)
 		let counter = this._counters.get(metric.name)
 		if (!counter) {
-			counter = meter.createCounter(metric.name)
+			counter = getMeter()?.createCounter(metric.name)
+			if (!counter) return
 			this._counters.set(metric.name, counter)
 		}
 		counter.add(metric.value, {
@@ -1307,10 +1320,10 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 	}
 
 	recordHistogram(metric: RecordMetric) {
-		const meter = metrics.getMeter(BROWSER_METER_NAME)
 		let histogram = this._histograms.get(metric.name)
 		if (!histogram) {
-			histogram = meter.createHistogram(metric.name)
+			histogram = getMeter()?.createHistogram(metric.name)
+			if (!histogram) return
 			this._histograms.set(metric.name, histogram)
 		}
 		histogram.record(metric.value, {
@@ -1322,10 +1335,10 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 	}
 
 	recordUpDownCounter(metric: RecordMetric) {
-		const meter = metrics.getMeter(BROWSER_METER_NAME)
 		let up_down_counter = this._up_down_counters.get(metric.name)
 		if (!up_down_counter) {
-			up_down_counter = meter.createUpDownCounter(metric.name)
+			up_down_counter = getMeter()?.createUpDownCounter(metric.name)
+			if (!up_down_counter) return
 			this._up_down_counters.set(metric.name, up_down_counter)
 		}
 		up_down_counter.add(metric.value, {
@@ -1357,6 +1370,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 		// stop all other event listeners, to be restarted on initialize()
 		this.listeners.forEach((stop) => stop())
 		this.listeners = []
+		void shutdown()
 	}
 
 	getCurrentSessionTimestamp() {

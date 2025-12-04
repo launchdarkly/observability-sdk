@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.4.0](https://github.com/launchdarkly/observability-sdk/compare/go/v0.3.1...go/v0.4.0) (2025-10-07)
+
+
+### Features
+
+* Add configuration to allow adjusting the batch and queue sizes for logs and spans. ([abecbb6](https://github.com/launchdarkly/observability-sdk/commit/abecbb64d070f97e16f281065a6a2350668e711c))
+* Adjust the default export and queue batch sizes for logs and spans to match the otel defaults. ([abecbb6](https://github.com/launchdarkly/observability-sdk/commit/abecbb64d070f97e16f281065a6a2350668e711c))
+
+## [0.3.1](https://github.com/launchdarkly/observability-sdk/compare/go/v0.3.0...go/v0.3.1) (2025-10-06)
+
+
+### Bug Fixes
+
+* Fix an issue where logging configuration could over-match for log records without a message or severity. ([#261](https://github.com/launchdarkly/observability-sdk/issues/261)) ([500a6bf](https://github.com/launchdarkly/observability-sdk/commit/500a6bf2e7801c8076405257a31ba4a629311e0b))
+
+## [0.3.0](https://github.com/launchdarkly/observability-sdk/compare/go/v0.2.1...go/v0.3.0) (2025-09-23)
+
+
+### Features
+
+* Support Go observability initialization independent of plugins. ([#230](https://github.com/launchdarkly/observability-sdk/issues/230)) ([ddd6d4b](https://github.com/launchdarkly/observability-sdk/commit/ddd6d4b1ca6d647f37bf62fc7ec31f58043a89d2))
+
 ## [0.2.1](https://github.com/launchdarkly/observability-sdk/compare/go/v0.2.0...go/v0.2.1) (2025-08-22)
 
 

@@ -2,18 +2,27 @@ import { Attributes } from '@opentelemetry/api'
 import type { ObservabilityClient } from '../client/ObservabilityClient'
 import {
 	extractReactErrorInfo,
+	extractRejectionDetails,
 	formatError,
-	isNetworkError,
 	parseConsoleArgs,
 } from './errorUtils'
+
+// Type for HermesInternal
+interface HermesInternal {
+	enablePromiseRejectionTracker: (options: {
+		allRejections: boolean
+		onUnhandled: (id: number, error: any) => void
+		onHandled: (id: number) => void
+	}) => void
+}
+
+declare const HermesInternal: HermesInternal | undefined
 
 export class ErrorInstrumentation {
 	private client: ObservabilityClient
 	private originalHandlers: {
 		globalHandler?: (error: any, isFatal?: boolean) => void
 		consoleError?: (...args: any[]) => void
-		consoleWarn?: (...args: any[]) => void
-		unhandledRejection?: (event: any) => void
 	} = {}
 	private isInitialized = false
 
@@ -69,19 +78,37 @@ export class ErrorInstrumentation {
 	}
 
 	private setupUnhandledRejectionHandler(): void {
-		// Try to set up unhandled rejection handler
-		try {
-			// React Native doesn't have native support for unhandledrejection events,
-			// but we can monkey-patch Promise to catch them
-			this.patchPromiseRejection()
-		} catch (error) {
-			console.warn('Could not setup unhandled rejection handler:', error)
+		// Use HermesInternal if available (Hermes engine in React Native)
+		if (
+			typeof HermesInternal !== 'undefined' &&
+			HermesInternal?.enablePromiseRejectionTracker
+		) {
+			try {
+				HermesInternal.enablePromiseRejectionTracker({
+					allRejections: true,
+					onUnhandled: (id: number, error: any) => {
+						this.client._log(
+							`Promise rejection unhandled: ${id}`,
+							error,
+						)
+
+						this.handleUnhandledRejection({ reason: error })
+					},
+					onHandled: (id: number) => {
+						this.client._log(`Promise rejection handled: ${id}`)
+					},
+				})
+			} catch (error) {
+				this.client._log(
+					'Could not setup unhandled promise rejection handler:',
+					error,
+				)
+			}
 		}
 	}
 
 	private setupConsoleErrorHandler(): void {
 		this.originalHandlers.consoleError = console.error
-		this.originalHandlers.consoleWarn = console.warn
 
 		console.error = (...args: any[]) => {
 			this.handleConsoleError('error', args)
@@ -91,137 +118,10 @@ export class ErrorInstrumentation {
 		}
 	}
 
-	private patchPromiseRejection(): void {
-		// Store original Promise methods
-		const originalThen = Promise.prototype.then
-		const originalCatch = Promise.prototype.catch
-
-		// Store instance reference for use in the patched function
-		const instance = this
-
-		// Install global unhandled rejection listener
-		if (global.process && typeof global.process.on === 'function') {
-			// Node.js style
-			global.process.on('unhandledRejection', (reason, promise) => {
-				const event = {
-					promise,
-					reason,
-					preventDefault: () => {},
-				}
-				instance.handleUnhandledRejection(event)
-			})
-		} else if (typeof global.addEventListener === 'function') {
-			// Browser style
-			global.addEventListener('unhandledrejection', (event) => {
-				instance.handleUnhandledRejection(event)
-			})
-		}
-
-		// Add an error handler for setTimeout/setInterval
-		const originalSetTimeout = global.setTimeout
-
-		// Wrap setTimeout to catch errors in callbacks but preserve the original types
-		const wrappedSetTimeout = function (
-			callback: Parameters<typeof originalSetTimeout>[0],
-			delay?: Parameters<typeof originalSetTimeout>[1],
-			...args: any[]
-		): ReturnType<typeof originalSetTimeout> {
-			let wrappedCallback = callback
-			if (typeof callback === 'function') {
-				wrappedCallback = function (this: any) {
-					try {
-						return (callback as Function).apply(
-							this,
-							arguments as unknown as any[],
-						)
-					} catch (error) {
-						instance.handleUnhandledException(error, false)
-						throw error // Re-throw to maintain original behavior
-					}
-				}
-			}
-			return originalSetTimeout(wrappedCallback as any, delay, ...args)
-		}
-
-		// Preserve all properties of setTimeout
-		Object.defineProperties(
-			wrappedSetTimeout,
-			Object.getOwnPropertyDescriptors(originalSetTimeout),
-		)
-
-		// Apply the wrapped function
-		global.setTimeout = wrappedSetTimeout as typeof global.setTimeout
-
-		// Patch Promise.prototype.then to catch unhandled rejections
-		Promise.prototype.then = function <TResult1 = any, TResult2 = never>(
-			onFulfilled?:
-				| ((value: any) => TResult1 | PromiseLike<TResult1>)
-				| null
-				| undefined,
-			onRejected?:
-				| ((reason: any) => TResult2 | PromiseLike<TResult2>)
-				| null
-				| undefined,
-		): Promise<TResult1 | TResult2> {
-			let rej = onRejected
-			// if uninitialized (destroyed), preserve original Promise behavior
-			if (instance.isInitialized) {
-				rej =
-					rej ||
-					((reason: any): TResult2 | PromiseLike<TResult2> => {
-						// If no rejection handler is provided, treat as unhandled
-						setTimeout(() => {
-							const promiseThis = this
-							if (promiseThis instanceof Promise) {
-								const event = {
-									promise: promiseThis,
-									reason,
-									preventDefault: () => {},
-								}
-								instance.handleUnhandledRejection(event)
-							}
-						}, 0)
-						throw reason
-					})
-			}
-			return originalThen.call(this, onFulfilled, rej) as Promise<
-				TResult1 | TResult2
-			>
-		}
-
-		// Also patch Promise.catch to ensure we catch unhandled rejections
-		Promise.prototype.catch = function <T = never>(
-			onRejected?:
-				| ((reason: any) => T | PromiseLike<T>)
-				| null
-				| undefined,
-		): Promise<any> {
-			return originalCatch.call(
-				this,
-				onRejected ||
-					((reason: any): T | PromiseLike<T> => {
-						setTimeout(() => {
-							instance.handleUnhandledRejection({
-								promise: this,
-								reason,
-								preventDefault: () => {},
-							})
-						}, 0)
-						throw reason
-					}),
-			)
-		}
-	}
-
 	private handleUnhandledException(error: any, isFatal: boolean): void {
 		try {
 			const errorObj =
 				error instanceof Error ? error : new Error(String(error))
-
-			// Skip network errors as they're handled by network instrumentation
-			if (isNetworkError(errorObj)) {
-				return
-			}
 
 			const reactInfo = extractReactErrorInfo(error)
 			const formattedError = formatError(
@@ -256,13 +156,9 @@ export class ErrorInstrumentation {
 	private handleUnhandledRejection(event: any): void {
 		try {
 			const reason = event.reason || event
-			const errorObj =
-				reason instanceof Error ? reason : new Error(String(reason))
 
-			// Skip network errors
-			if (isNetworkError(errorObj)) {
-				return
-			}
+			const { error: errorObj, attributes: rejectionAttributes } =
+				extractRejectionDetails(reason)
 
 			const formattedError = formatError(
 				errorObj,
@@ -273,6 +169,7 @@ export class ErrorInstrumentation {
 
 			const attributes: Attributes = {
 				...formattedError.attributes,
+				...rejectionAttributes,
 				'error.unhandled': true,
 				'error.caught_by': 'unhandledrejection',
 				'promise.handled': false,
@@ -287,7 +184,7 @@ export class ErrorInstrumentation {
 		}
 	}
 
-	private handleConsoleError(level: 'error' | 'warn', args: any[]): void {
+	private handleConsoleError(level: 'error', args: any[]): void {
 		try {
 			// Convert console arguments to error message
 			const message = parseConsoleArgs(args)
@@ -299,8 +196,7 @@ export class ErrorInstrumentation {
 
 			// Create error from console message
 			const errorObj = new Error(message)
-			errorObj.name =
-				level === 'error' ? 'ConsoleError' : 'ConsoleWarning'
+			errorObj.name = 'ConsoleError'
 
 			const formattedError = formatError(
 				errorObj,
@@ -312,15 +208,12 @@ export class ErrorInstrumentation {
 			const attributes: Attributes = {
 				...formattedError.attributes,
 				'error.unhandled': false,
-				'error.caught_by': `console.${level}`,
-				'console.level': level,
+				'error.caught_by': 'console.error',
+				'console.level': 'error',
 				'console.args_count': args.length,
 			}
 
-			// Only report console.error by default, console.warn is optional
-			if (level === 'error') {
-				this.client.consumeCustomError(errorObj, attributes)
-			}
+			this.client.consumeCustomError(errorObj, attributes)
 		} catch (instrumentationError) {
 			console.warn(
 				'Error in console error instrumentation:',
@@ -338,9 +231,6 @@ export class ErrorInstrumentation {
 	private restoreConsoleHandlers(): void {
 		if (this.originalHandlers.consoleError) {
 			console.error = this.originalHandlers.consoleError
-		}
-		if (this.originalHandlers.consoleWarn) {
-			console.warn = this.originalHandlers.consoleWarn
 		}
 	}
 }

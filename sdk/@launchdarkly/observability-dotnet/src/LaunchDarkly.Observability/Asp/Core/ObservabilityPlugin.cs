@@ -101,6 +101,13 @@ namespace LaunchDarkly.Observability
                     "Service collection cannot be null when creating an ObservabilityPlugin builder.");
             }
 
+            public ObservabilityPluginBuilder WithExtendedLoggerConfiguration(Action<LoggerProviderBuilder> extendedLoggerConfiguration, Action<OpenTelemetryLoggerOptions> configureLoggerOptions)
+            {
+                WithExtendedLoggerConfiguration(extendedLoggerConfiguration);
+                ConfigureLoggerOptions = configureLoggerOptions;
+                return this;
+            }
+
             /// <summary>
             /// Build an <see cref="ObservabilityPlugin"/> instance with the configured settings.
             /// </summary>

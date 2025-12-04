@@ -34,7 +34,6 @@ namespace LaunchDarkly.Observability
                 options.SetResourceBuilder(CommonOtelOptions.GetResourceBuilder(config))
                     .AddProcessor(new SamplingLogProcessor(CommonOtelOptions.GetSampler(config)))
                     .AddOtlpExporter(exportOptions => { exportOptions.WithCommonLaunchDarklyLoggingExport(config); });
-
                 config.ExtendedLoggerConfiguration?.Invoke(options);
             });
         }
