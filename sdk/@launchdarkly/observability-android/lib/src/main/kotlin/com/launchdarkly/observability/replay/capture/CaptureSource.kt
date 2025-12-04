@@ -34,8 +34,6 @@ import kotlin.coroutines.resume
 import androidx.core.graphics.withTranslation
 import com.launchdarkly.observability.replay.masking.Mask
 import androidx.core.graphics.createBitmap
-import com.launchdarkly.observability.replay.masking.draw
-import java.util.Dictionary
 import kotlin.collections.mutableMapOf
 import kotlin.math.abs
 import kotlin.math.max
@@ -321,30 +319,42 @@ class CaptureSource(
      * @param canvas The canvas to mask
      * @param afterMasks areas that will be masked
      */
-//    private fun drawMasks(canvas: Canvas, captureResult: CaptureResult) {
-////        val path = Path()
-////        captureResult.beforeMasks.forEach { mask ->
-////            mask.draw(path, canvas, beforeMasksPaint)
-////        }
-////        captureResult.afterMasks.forEach { mask ->
-////            mask.draw(path, canvas, afterMaskPaint)
-////        }
-//    }
 
     private fun drawMasks(canvas: Canvas, beforeMasks: List<Mask>?, afterMasks: List<Mask>?) {
         if (afterMasks == null && beforeMasks == null) return
 
         val path = Path()
         beforeMasks?.forEach { mask ->
-            mask.draw(path, canvas, beforeMaskPaint)
+            drawMask(mask, path, canvas, beforeMaskPaint)
         }
         afterMasks?.forEach { mask ->
-            mask.draw(path, canvas, afterMaskPaint)
+            drawMask(mask, path, canvas, afterMaskPaint)
+        }
+    }
+
+    private val maskIntRect = Rect()
+    private fun drawMask(mask: Mask, path: Path, canvas: Canvas, paint: Paint) {
+        if (mask.points != null) {
+            val pts = mask.points
+
+            path.reset()
+            path.moveTo(pts[0], pts[1])
+            path.lineTo(pts[2], pts[3])
+            path.lineTo(pts[4], pts[5])
+            path.lineTo(pts[6], pts[7])
+            path.close()
+
+            canvas.drawPath(path, paint)
+        } else {
+            maskIntRect.left = mask.rect.left.toInt()
+            maskIntRect.top = mask.rect.top.toInt()
+            maskIntRect.right = mask.rect.right.toInt()
+            maskIntRect.bottom =  mask.rect.bottom.toInt()
+            canvas.drawRect(maskIntRect, paint)
         }
     }
 
     fun areMasksMapsStable(
-
         beforeMasksMap: Map<Int, List<Mask>>,
         afterMasksMap: Map<Int, List<Mask>>
     ): Map<Int, List<Mask>>? {
