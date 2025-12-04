@@ -69,7 +69,7 @@ data class NativeMaskTarget(
     }
 
     // return 4 points of polygon under transformations
-    fun points(context: MaskContext): FloatArray? {
+    private fun points(context: MaskContext): FloatArray? {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
             return null
         }

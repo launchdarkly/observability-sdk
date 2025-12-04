@@ -8,7 +8,8 @@ import android.graphics.Paint
 data class Mask(
     val rect: RectF,
     val viewId: Int,
-    val points: FloatArray? = null) {
+    val points: FloatArray? = null
+) {
     // Implemented to suppress warning
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

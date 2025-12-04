@@ -290,4 +290,26 @@ class CaptureSource(
             mask.draw(path, canvas, maskPaint)
         }
     }
+
+    val maskIntRect = Rect()
+    fun drawMask(mask: Mask, path: Path, canvas: Canvas, paint: Paint) {
+        if (mask.points != null) {
+            val pts = mask.points
+
+            path.reset()
+            path.moveTo(pts[0], pts[1])
+            path.lineTo(pts[2], pts[3])
+            path.lineTo(pts[4], pts[5])
+            path.lineTo(pts[6], pts[7])
+            path.close()
+
+            canvas.drawPath(path, paint)
+        } else {
+            maskIntRect.left = mask.rect.left.toInt()
+            maskIntRect.top = mask.rect.top.toInt()
+            maskIntRect.right = mask.rect.right.toInt()
+            maskIntRect.bottom =  mask.rect.bottom.toInt()
+            canvas.drawRect(maskIntRect, paint)
+        }
+    }
 }
