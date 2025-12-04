@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.18.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.17.0...launchdarkly-observability-android-0.18.0) (2025-12-04)
+
+
+### Features
+
+* Android SR Do not send duplicate screens ([#304](https://github.com/launchdarkly/observability-sdk/issues/304)) ([f3369bc](https://github.com/launchdarkly/observability-sdk/commit/f3369bc87f7e1293c8bdabf592693b8365600312))
+* recursive mask collection ([#308](https://github.com/launchdarkly/observability-sdk/issues/308)) ([ee9f061](https://github.com/launchdarkly/observability-sdk/commit/ee9f0610d199378b368cd5a91aa259254b27511a))
+* support non-standard windows added by WindowManager ([#306](https://github.com/launchdarkly/observability-sdk/issues/306)) ([199374a](https://github.com/launchdarkly/observability-sdk/commit/199374a30c67da7d8151cbb65c8eb1a50545006c))
+
 ## [0.17.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.16.0...launchdarkly-observability-android-0.17.0) (2025-11-26)
 
 
