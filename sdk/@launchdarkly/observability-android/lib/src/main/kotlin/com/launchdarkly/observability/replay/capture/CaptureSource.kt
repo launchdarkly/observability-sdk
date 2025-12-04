@@ -33,7 +33,6 @@ import kotlin.coroutines.resume
 import androidx.core.graphics.withTranslation
 import com.launchdarkly.observability.replay.masking.Mask
 import androidx.core.graphics.createBitmap
-import com.launchdarkly.observability.replay.masking.draw
 
 /**
  * A source of [CaptureEvent]s taken from the lowest visible window. Captures
@@ -287,12 +286,12 @@ class CaptureSource(
     private fun drawMasks(canvas: Canvas, masks: List<Mask>) {
         val path = Path()
         masks.forEach { mask ->
-            mask.draw(path, canvas, maskPaint)
+            drawMask(mask, path, canvas, maskPaint)
         }
     }
 
-    val maskIntRect = Rect()
-    fun drawMask(mask: Mask, path: Path, canvas: Canvas, paint: Paint) {
+    private val maskIntRect = Rect()
+    private fun drawMask(mask: Mask, path: Path, canvas: Canvas, paint: Paint) {
         if (mask.points != null) {
             val pts = mask.points
 
