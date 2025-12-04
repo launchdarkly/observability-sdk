@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.19.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.18.0...launchdarkly-observability-android-0.19.0) (2025-12-04)
+
+
+### Features
+
+* take transformed coordinates, which are more precise in animation  ([#309](https://github.com/launchdarkly/observability-sdk/issues/309)) ([5d669d4](https://github.com/launchdarkly/observability-sdk/commit/5d669d49a7d412b4edce8e5f5bdc7728243bd2c3))
+
 ## [0.18.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.17.0...launchdarkly-observability-android-0.18.0) (2025-12-04)
 
 
