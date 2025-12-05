@@ -2,7 +2,7 @@ package com.launchdarkly.observability.replay
 
 import android.util.Log
 import com.launchdarkly.observability.BuildConfig
-import com.launchdarkly.observability.client.PluginManager
+import com.launchdarkly.observability.plugin.PluginManager
 import com.launchdarkly.observability.interfaces.LDExtendedInstrumentation
 import com.launchdarkly.observability.plugin.InstrumentationContributor
 import com.launchdarkly.sdk.android.LDClient

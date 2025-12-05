@@ -7,7 +7,7 @@ import com.launchdarkly.logging.Logs
 import com.launchdarkly.observability.BuildConfig
 import com.launchdarkly.observability.api.Options
 import com.launchdarkly.observability.client.ObservabilityClient
-import com.launchdarkly.observability.client.PluginManager
+import com.launchdarkly.observability.plugin.PluginManager
 import com.launchdarkly.observability.client.TelemetryInspector
 import com.launchdarkly.observability.sdk.LDObserve
 import com.launchdarkly.sdk.android.LDClient

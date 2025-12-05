@@ -1,16 +1,14 @@
-package com.launchdarkly.observability.client
+package com.launchdarkly.observability.plugin
 
-import com.launchdarkly.observability.plugin.InstrumentationContributor
-import com.launchdarkly.observability.plugin.Observability
 import com.launchdarkly.sdk.android.LDClient
 import com.launchdarkly.sdk.android.integrations.Plugin
 import java.util.WeakHashMap
 
 /**
- * Manages a collection of plugins associated with an [LDClient] instance.
+ * Manages a collection of plugins associated with an [com.launchdarkly.sdk.android.LDClient] instance.
  *
  * This object provides a central place to register and retrieve plugins for a given LDClient.
- * It uses a [WeakHashMap] to store plugins, which allows the [LDClient] instances and
+ * It uses a [java.util.WeakHashMap] to store plugins, which allows the [com.launchdarkly.sdk.android.LDClient] instances and
  * associated plugins to be garbage collected when they are no longer in use.
  */
 internal object PluginManager {
