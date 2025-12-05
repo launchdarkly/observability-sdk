@@ -13,6 +13,7 @@ import com.launchdarkly.observability.sampling.SamplingLogProcessor
 import com.launchdarkly.observability.sampling.SamplingTraceExporter
 import com.launchdarkly.observability.sampling.SpansSampler
 import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
+import com.launchdarkly.observability.interfaces.LDExtendedInstrumentation
 import io.opentelemetry.android.OpenTelemetryRum
 import io.opentelemetry.android.config.OtelRumConfig
 import io.opentelemetry.android.features.diskbuffering.DiskBufferingConfig
@@ -54,11 +55,17 @@ import java.util.concurrent.TimeUnit
 /**
  * Manages instrumentation for LaunchDarkly Observability.
  *
+ * This class is responsible for setting up and managing the OpenTelemetry RUM (Real User Monitoring)
+ * instrumentation. It configures the providers for logs, traces, and metrics based on the
+ * provided options. It also handles dynamic sampling configuration and provides methods to
+ * record various telemetry signals like metrics, logs, and traces.
+ *
  * @param application The application instance.
- * @param sdkKey The SDK key.
+ * @param sdkKey The SDK key for authentication.
  * @param resources The OpenTelemetry resource describing this service.
- * @param logger The logger.
- * @param options Additional options.
+ * @param logger The logger for internal logging.
+ * @param options Additional configuration options for the SDK.
+ * @param instrumentations A list of custom instrumentations to be added.
  */
 class InstrumentationManager(
     private val application: Application,
@@ -66,6 +73,7 @@ class InstrumentationManager(
     private val resources: Resource,
     private val logger: LDLogger,
     private val options: Options,
+    private val instrumentations: List<LDExtendedInstrumentation>,
 ) {
     private val otelRUM: OpenTelemetryRum
     private var otelMeter: Meter
@@ -104,7 +112,8 @@ class InstrumentationManager(
                         resources,
                         logger,
                         telemetryInspector,
-                        options
+                        options,
+                        instrumentations
                     )
                     logProcessor = processor
                     sdkLoggerProviderBuilder.addLogRecordProcessor(processor)
@@ -125,7 +134,7 @@ class InstrumentationManager(
                 }
             }
 
-        for (instrumentation in options.instrumentations) {
+        for (instrumentation in instrumentations) {
             rumBuilder.addInstrumentation(instrumentation)
         }
 
@@ -412,6 +421,7 @@ class InstrumentationManager(
             logger: LDLogger,
             telemetryInspector: TelemetryInspector?,
             options: Options,
+            instrumentations: List<LDExtendedInstrumentation>,
         ): LogRecordProcessor {
             val primaryLogExporter = createOtlpLogExporter(options)
             sdkLoggerProviderBuilder.setResource(resource)
@@ -442,7 +452,7 @@ class InstrumentationManager(
                 pipeline to provide instrumentation specific caching and export.
             */
             val routingLogRecordProcessor = RoutingLogRecordProcessor(fallthroughProcessor = baseProcessor)
-            options.instrumentations.forEach { instrumentation ->
+            instrumentations.forEach { instrumentation ->
                 instrumentation.getLogRecordProcessor(credential = sdkKey)?.let { processor ->
                     instrumentation.getLoggerScopeName().let { scopeName ->
                         routingLogRecordProcessor.addProcessor(scopeName, processor)

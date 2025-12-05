@@ -169,6 +169,31 @@ span.end()
 
 ### Session Replay
 
+#### Enable Session Replay
+
+Add the Session Replay plugin **after** Observability when configuring the LaunchDarkly SDK:
+
+```kotlin
+import com.launchdarkly.observability.plugin.Observability
+import com.launchdarkly.observability.replay.SessionReplay
+
+val ldConfig = LDConfig.Builder(LDConfig.Builder.AutoEnvAttributes.Enabled)
+    .mobileKey("your-mobile-key")
+    .plugins(
+        Components.plugins().setPlugins(
+            listOf(
+                Observability(this@MyApplication, "your-mobile-key"),
+                SessionReplay() // depends on Observability being present first
+            )
+        )
+    )
+    .build()
+```
+
+Notes:
+- SessionReplay depends on Observability. If Observability is missing or listed after SessionReplay, the plugin logs an error and stays inactive.
+- Observability runs fine without SessionReplay; adding SessionReplay extends the Observability pipeline to include session recording.
+
 #### Masking sensitive UI
 
 Use `ldMask()` to mark views that should be masked in session replay. There are helpers for both XML-based Views and Jetpack Compose.
