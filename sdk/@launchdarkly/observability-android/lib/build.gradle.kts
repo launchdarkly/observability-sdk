@@ -20,7 +20,7 @@ allprojects {
 }
 
 dependencies {
-    implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.9.0")
+    implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.9.2")
     implementation("com.jakewharton.timber:timber:5.0.1")
 
     // Android

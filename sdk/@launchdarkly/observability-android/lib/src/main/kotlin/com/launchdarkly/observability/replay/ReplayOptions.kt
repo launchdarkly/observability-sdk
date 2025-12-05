@@ -4,7 +4,7 @@ import com.launchdarkly.observability.BuildConfig
 import com.launchdarkly.observability.api.DEFAULT_BACKEND_URL
 
 /**
- * Options for the [ReplayInstrumentation]
+ * Options for Session Replay plugin.
  *
  * @property backendUrl The backend URL for sending replay data. Defaults to LaunchDarkly url.
  * @property debug enables verbose logging if true as well as other debug functionality. Defaults to false.
