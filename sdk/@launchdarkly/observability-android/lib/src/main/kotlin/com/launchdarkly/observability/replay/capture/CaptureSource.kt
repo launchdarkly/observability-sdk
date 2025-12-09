@@ -90,14 +90,7 @@ class CaptureSource(
      */
     private suspend fun doCapture(): CaptureEvent? =
         withContext(DispatcherProviderHolder.current.main) {
-            // Synchronize with UI rendering frame
-            suspendCancellableCoroutine { continuation ->
-                Choreographer.getInstance().postFrameCallback {
-                    if (continuation.isActive) {
-                        continuation.resume(Unit)
-                    }
-                }
-            }
+
 
             val timestamp = System.currentTimeMillis()
             val session = sessionManager.getSessionId()
@@ -128,6 +121,15 @@ class CaptureSource(
                     maskCollector.collectMasks(capturingWindowEntries[i].rootView, maskMatchers)
             }
 
+            // Synchronize with UI rendering frame
+//            suspendCancellableCoroutine { continuation ->
+//                Choreographer.getInstance().postFrameCallback {
+//                    if (continuation.isActive) {
+//                        continuation.resume(Unit)
+//                    }
+//                }
+//            }
+
             val captureResults = mutableListOf<CaptureResult?>()
             for (i in capturingWindowEntries.indices) {
                 val windowEntry = capturingWindowEntries[i]
@@ -145,12 +147,20 @@ class CaptureSource(
                 return@withContext null
             }
 
+            // Synchronize with UI rendering frame
+            suspendCancellableCoroutine { continuation ->
+                Choreographer.getInstance().postFrameCallback {
+                    if (continuation.isActive) {
+                        continuation.resume(Unit)
+                    }
+                }
+            }
+
             val afterMasks = mutableMapOf<Int, List<Mask>>()
             for (i in capturingWindowEntries.indices) {
                 afterMasks[i] =
                     maskCollector.collectMasks(capturingWindowEntries[i].rootView, maskMatchers)
             }
-
 
             // off the main thread to avoid blocking the UI thread
             return@withContext withContext(DispatcherProviderHolder.current.default) {
@@ -345,13 +355,13 @@ class CaptureSource(
             path.close()
 
             canvas.drawPath(path, paint)
-        } else {
+        } //else {
             maskIntRect.left = mask.rect.left.toInt()
             maskIntRect.top = mask.rect.top.toInt()
             maskIntRect.right = mask.rect.right.toInt()
             maskIntRect.bottom =  mask.rect.bottom.toInt()
             canvas.drawRect(maskIntRect, paint)
-        }
+        //}
     }
 
     fun areMasksMapsStable(
@@ -376,6 +386,7 @@ class CaptureSource(
         return result
     }
 
+    // Check if masks are stable and returns null if not
     fun areMasksStable(
         beforeMasks: List<Mask>,
         afterMasks: List<Mask>
@@ -390,28 +401,32 @@ class CaptureSource(
 
         val oneMaskTolerance = 1f
         val stabilityTolerance = 40f
-        var maxDiff = 0f
-        var resultMasks = mutableListOf<Mask>()
+        val maxDiff = 0f
+        val resultMasks = mutableListOf<Mask>()
         for ((before, after) in beforeMasks.zip(afterMasks)) {
             if (before.viewId != after.viewId) {
                 return null
             }
             val bPoints = before.points
-            if (bPoints != null) {
-                val aPoints = after.points ?: return null
-                for (i in bPoints.indices) {
-                    val diff = abs(aPoints[i] - bPoints[i])
-                    if (diff > stabilityTolerance) {
-                        return null
-                    }
-                    if (diff > oneMaskTolerance) {
-                        resultMasks += before
-                    }
-                    maxDiff = max(maxDiff, diff)
+            //if (bPoints != null) {
+//                val aPoints = after.points ?: return null
+//                for (i in bPoints.indices) {
+//                    val diff = abs(aPoints[i] - bPoints[i])
+//                    if (diff > stabilityTolerance) {
+//                        return null
+//                    }
+//                    //if (diff > oneMaskTolerance) {
+//                        resultMasks += before
+//                    //}
+//                    maxDiff = max(maxDiff, diff)
+//                }
+            //} else {
+                val diff = abs(after.rect.top - before.rect.top)
+                if (diff > stabilityTolerance) {
+                    return null
                 }
-            } else {
-
-            }
+                resultMasks += before
+            //}
         }
         if (maxDiff > 0) {
             Log.i("CaptureSource", "maxDiff = " + maxDiff)

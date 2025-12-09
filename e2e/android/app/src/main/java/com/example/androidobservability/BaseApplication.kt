@@ -23,7 +23,7 @@ open class BaseApplication : Application() {
     companion object {
         // TODO O11Y-376: Update this credential to be driven by env variable or gradle property
         // Set LAUNCHDARKLY_MOBILE_KEY to your LaunchDarkly SDK mobile key.
-        const val LAUNCHDARKLY_MOBILE_KEY = "MOBILE_KEY_GOES_HERE"
+        const val LAUNCHDARKLY_MOBILE_KEY = "mob-f2aca03d-4a84-4b9d-bc35-db20cbb4ca0a"
     }
 
     var pluginOptions = Options(
