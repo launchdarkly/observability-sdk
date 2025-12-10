@@ -115,11 +115,6 @@ class CaptureSource(
             // Create a bitmap with the window dimensions
 
             val capturingWindowEntries = windowsEntries.subList(baseIndex, windowsEntries.size)
-            val beforeMasks = mutableMapOf<Int, List<Mask>>()
-            for (i in capturingWindowEntries.indices) {
-                beforeMasks[i] =
-                    maskCollector.collectMasks(capturingWindowEntries[i].rootView, maskMatchers)
-            }
 
             // Synchronize with UI rendering frame
 //            suspendCancellableCoroutine { continuation ->
@@ -129,6 +124,23 @@ class CaptureSource(
 //                    }
 //                }
 //            }
+
+
+
+            // Synchronize with UI rendering frame
+            suspendCancellableCoroutine { continuation ->
+                Choreographer.getInstance().postFrameCallback {
+                    if (continuation.isActive) {
+                        continuation.resume(Unit)
+                    }
+                }
+            }
+
+            val beforeMasks = mutableMapOf<Int, List<Mask>>()
+            for (i in capturingWindowEntries.indices) {
+                beforeMasks[i] =
+                    maskCollector.collectMasks(capturingWindowEntries[i].rootView, maskMatchers)
+            }
 
             val captureResults = mutableListOf<CaptureResult?>()
             for (i in capturingWindowEntries.indices) {
