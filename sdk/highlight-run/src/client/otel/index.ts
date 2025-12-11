@@ -28,6 +28,7 @@ import { getResponseBody } from '../listeners/network-listener/utils/fetch-liste
 import {
 	DEFAULT_URL_BLOCKLIST,
 	sanitizeHeaders,
+	sanitizeUrl,
 } from '../listeners/network-listener/utils/network-sanitizer'
 import {
 	shouldNetworkRequestBeRecorded,
@@ -232,7 +233,8 @@ export const setupBrowserTracing = (
 						if (!(response instanceof Response)) {
 							span.setAttributes({
 								'http.response.error': response.message,
-								'http.response.status': response.status,
+								[SemanticAttributes.ATTR_HTTP_RESPONSE_STATUS_CODE]:
+									response.status,
 							})
 							return
 						}
@@ -244,13 +246,28 @@ export const setupBrowserTracing = (
 							config.networkRecordingOptions,
 						)
 
-						const body = await getResponseBody(
-							response,
-							config.networkRecordingOptions?.bodyKeysToRecord,
-							config.networkRecordingOptions
-								?.networkBodyKeysToRedact,
-						)
-						span.setAttribute('http.response.body', body)
+						// Only process response body/headers if recording is enabled
+						if (
+							config.networkRecordingOptions?.recordHeadersAndBody
+						) {
+							const responseBody = await getResponseBody(
+								response,
+								config.networkRecordingOptions
+									?.bodyKeysToRecord,
+								config.networkRecordingOptions
+									?.networkBodyKeysToRedact,
+							)
+							const responseHeaders = Object.fromEntries(
+								response.headers.entries(),
+							)
+
+							enhanceSpanWithHttpResponseAttributes(
+								span,
+								responseHeaders,
+								responseBody,
+								config.networkRecordingOptions,
+							)
+						}
 					},
 				}),
 			)
@@ -285,14 +302,36 @@ export const setupBrowserTracing = (
 							config.networkRecordingOptions,
 						)
 
-						const recordedBody = getBodyThatShouldBeRecorded(
-							browserXhr._body,
-							config.networkRecordingOptions
-								?.networkBodyKeysToRedact,
-							config.networkRecordingOptions?.bodyKeysToRecord,
-							browserXhr._requestHeaders as Headers,
-						)
-						span.setAttribute('http.request.body', recordedBody)
+						// Only process response body/headers if recording is enabled
+						if (
+							config.networkRecordingOptions?.recordHeadersAndBody
+						) {
+							let responseBody = ''
+							if (
+								xhr.responseType === '' ||
+								xhr.responseType === 'text'
+							) {
+								responseBody = getBodyThatShouldBeRecorded(
+									xhr.responseText,
+									config.networkRecordingOptions
+										?.networkBodyKeysToRedact,
+									config.networkRecordingOptions
+										?.bodyKeysToRecord,
+									undefined,
+								)
+							}
+
+							const responseHeaders = parseXhrResponseHeaders(
+								xhr.getAllResponseHeaders(),
+							)
+
+							enhanceSpanWithHttpResponseAttributes(
+								span,
+								responseHeaders,
+								responseBody,
+								config.networkRecordingOptions,
+							)
+						}
 					},
 				}),
 			)
@@ -440,51 +479,142 @@ const enhanceSpanWithHttpRequestAttributes = (
 		| ReturnType<XMLHttpRequest['getAllResponseHeaders']>,
 	networkRecordingOptions?: NetworkRecordingOptions,
 ) => {
-	const stringBody = typeof body === 'string' ? body : String(body)
 	if (!(span as any).attributes) {
 		return
 	}
 	const readableSpan = span as unknown as ReadableSpan
 	const url = readableSpan.attributes['http.url'] as string
-	const urlObject = new URL(url)
+	const sanitizedUrl = sanitizeUrl(url)
+	const sanitizedUrlObject = new URL(sanitizedUrl)
 
-	let parsedBody
+	// Extract GraphQL operation name if present (useful metadata even without body recording)
+	const stringBody = typeof body === 'string' ? body : String(body)
 	try {
-		parsedBody = body ? JSON.parse(stringBody) : undefined
-
-		if (parsedBody.operationName) {
+		const parsedBody = body ? JSON.parse(stringBody) : undefined
+		if (parsedBody?.operationName) {
 			span.setAttribute(
 				'graphql.operation.name',
 				parsedBody.operationName,
 			)
 		}
 	} catch {
-		// Ignore
+		// Ignore parsing errors
 	}
 
-	const sanitizedHeaders = sanitizeHeaders(
-		networkRecordingOptions?.networkHeadersToRedact ?? [],
-		headers as Headers,
-		networkRecordingOptions?.headerKeysToRecord,
-	)
-
+	// Set basic URL attributes (always recorded)
 	span.setAttributes({
 		'highlight.type': 'http.request',
-		'http.request.headers': JSON.stringify(sanitizedHeaders),
-		'http.request.body': stringBody,
-		[SemanticAttributes.ATTR_URL_FULL]: url,
-		[SemanticAttributes.ATTR_URL_PATH]: urlObject.pathname,
-		[SemanticAttributes.ATTR_URL_QUERY]: urlObject.search,
+		[SemanticAttributes.ATTR_URL_FULL]: sanitizedUrl,
+		[SemanticAttributes.ATTR_URL_PATH]: sanitizedUrlObject.pathname,
+		[SemanticAttributes.ATTR_URL_QUERY]: sanitizedUrlObject.search,
 	})
 
-	if (urlObject.searchParams.size > 0) {
-		span.setAttributes({
-			// Custom attribute that displays query string params as an object.
-			['url.query_params']: JSON.stringify(
-				Object.fromEntries(urlObject.searchParams),
-			),
-		})
+	// Set sanitized query params as JSON object for easier querying
+	if (sanitizedUrlObject.searchParams.size > 0) {
+		span.setAttribute(
+			'url.query_params',
+			JSON.stringify(Object.fromEntries(sanitizedUrlObject.searchParams)),
+		)
 	}
+
+	// Only record body and headers if explicitly enabled
+	if (networkRecordingOptions?.recordHeadersAndBody) {
+		const requestBody = getBodyThatShouldBeRecorded(
+			body,
+			networkRecordingOptions.networkBodyKeysToRedact,
+			networkRecordingOptions.bodyKeysToRecord,
+			headers as Headers,
+		)
+		span.setAttribute('http.request.body', requestBody)
+
+		const sanitizedHeaders = sanitizeHeaders(
+			networkRecordingOptions.networkHeadersToRedact ?? [],
+			headers as Headers,
+			networkRecordingOptions.headerKeysToRecord,
+		)
+
+		const headerAttributes = convertHeadersToOtelAttributes(
+			sanitizedHeaders,
+			'http.request.header',
+		)
+		span.setAttributes(headerAttributes)
+	}
+}
+
+export const parseXhrResponseHeaders = (
+	headerString: string,
+): { [key: string]: string } => {
+	const headers: { [key: string]: string } = {}
+	if (headerString) {
+		headerString
+			.trim()
+			.split(/[\r\n]+/)
+			.forEach((line) => {
+				const parts = line.split(': ')
+				const header = parts.shift()
+				if (header) {
+					headers[header] = parts.join(': ')
+				}
+			})
+	}
+	return headers
+}
+
+/**
+ * Converts headers object to OpenTelemetry semantic convention format.
+ * Headers are set as individual attributes with the pattern:
+ * - http.request.header.<lowercase-name>: [value]
+ * - http.response.header.<lowercase-name>: [value]
+ *
+ * @param headers - Object with header key-value pairs
+ * @param prefix - Either 'http.request.header' or 'http.response.header'
+ * @returns Object with OTel semantic convention attribute names
+ */
+const convertHeadersToOtelAttributes = (
+	headers: { [key: string]: string },
+	prefix: 'http.request.header' | 'http.response.header',
+): { [key: string]: string[] } => {
+	const attributes: { [key: string]: string[] } = {}
+
+	Object.entries(headers).forEach(([key, value]) => {
+		// Normalize header name: lowercase and replace underscores with dashes
+		const normalizedKey = key.toLowerCase().replace(/_/g, '-')
+		const attributeName = `${prefix}.${normalizedKey}`
+
+		// OTel spec requires header values to be arrays
+		attributes[attributeName] = [value]
+	})
+
+	return attributes
+}
+
+const enhanceSpanWithHttpResponseAttributes = (
+	span: api.Span,
+	responseHeaders: { [key: string]: string },
+	responseBody: string,
+	networkRecordingOptions: NetworkRecordingOptions,
+) => {
+	span.setAttribute('http.response.body', responseBody)
+
+	const sanitizedResponseHeaders = sanitizeHeaders(
+		networkRecordingOptions.networkHeadersToRedact ?? [],
+		responseHeaders,
+		networkRecordingOptions.headerKeysToRecord,
+	)
+
+	// Always preserve content-type unless explicitly excluded via headerKeysToRecord
+	const contentType =
+		responseHeaders['content-type'] ?? responseHeaders['Content-Type']
+	if (contentType && !networkRecordingOptions.headerKeysToRecord) {
+		sanitizedResponseHeaders['content-type'] = contentType
+	}
+
+	// Set response headers following OTel semantic conventions
+	const headerAttributes = convertHeadersToOtelAttributes(
+		sanitizedResponseHeaders,
+		'http.response.header',
+	)
+	span.setAttributes(headerAttributes)
 }
 
 const shouldRecordRequest = (
