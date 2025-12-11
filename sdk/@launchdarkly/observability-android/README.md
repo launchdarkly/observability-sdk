@@ -167,7 +167,79 @@ span.makeCurrent().use {
 span.end()
 ```
 
+### Session Replay
 
+#### Masking sensitive UI
+
+Use `ldMask()` to mark views that should be masked in session replay. There are helpers for both XML-based Views and Jetpack Compose.
+
+##### XML Views
+
+Import the masking API and call `ldMask()` on any `View` (for example, after inflating the layout in an `Activity` or `Fragment`).
+
+```kotlin
+import com.launchdarkly.observability.api.ldMask
+
+class LoginActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_login)
+
+        val password = findViewById<EditText>(R.id.password)
+        password.ldMask() // mask this field in session replay
+    }
+}
+```
+
+With View Binding or Data Binding:
+
+```kotlin
+import com.launchdarkly.observability.api.ldMask
+
+override fun onCreateView(
+    inflater: LayoutInflater,
+    container: ViewGroup?,
+    savedInstanceState: Bundle?,
+): View {
+    _binding = SettingsPageBinding.inflate(inflater, container, false)
+    binding.nestedScrollView.systemBarsPadding()
+    viewModel.toggleBackgroundAccess(requireContext().isIgnoreBatteryEnabled())
+    val toolbar = binding.toolbar
+    toolbar.ldMask()
+}
+```
+
+Optional: use `ldUnmask()` to explicitly clear masking on a view you previously masked.
+
+##### Jetpack Compose
+
+Add the masking `Modifier` to any composable you want masked in session replay.
+
+```kotlin
+import com.launchdarkly.observability.api.ldMask
+
+@Composable
+fun CreditCardField() {
+    ...
+   	var zipCode by remember { mutableStateOf("") }
+
+    OutlinedTextField(
+        value = zipCode,
+        onValueChange = { zipCode = it },
+        label = { Text("ZIP Code") },
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        modifier = Modifier
+            .fillMaxWidth()
+            .ldMask()
+    )
+}
+```
+
+Optional: use `Modifier.ldUnmask()` to explicitly clear masking on a composable you previously masked.
+
+Notes:
+- Masking marks elements so their contents are obscured in recorded sessions.
+- You can apply masking to any `View` or composable where sensitive data may appear.
 
 ## Contributing
 

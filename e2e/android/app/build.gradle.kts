@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.example.androidobservability"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.androidobservability"
@@ -74,6 +74,7 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
     implementation("com.google.android.material:material:1.12.0")
+    implementation("androidx.recyclerview:recyclerview:1.3.2")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -89,6 +90,7 @@ dependencies {
     testImplementation(libs.robolectric)
     testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
     testImplementation("io.opentelemetry:opentelemetry-sdk-testing:1.51.0")
+    testImplementation(testFixtures(project(":observability-android")))
 
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

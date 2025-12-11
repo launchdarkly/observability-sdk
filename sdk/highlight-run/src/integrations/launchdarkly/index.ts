@@ -1,4 +1,4 @@
-import { type HighlightPublicInterface, MetricCategory } from '../../client'
+import { type HighlightPublicInterface } from '../../client'
 import type { ErrorMessage, Source } from '../../client/types/shared-types'
 import type { IntegrationClient } from '../index'
 import type { LDClientMin as LDClient } from './types/LDClient'
@@ -46,9 +46,7 @@ export const FEATURE_FLAG_APP_ID_ATTR = `${LD_SCOPE}.application.id`
 export const FEATURE_FLAG_APP_VERSION_ATTR = `${LD_SCOPE}.application.version`
 
 export const LD_INITIALIZE_EVENT = '$ld:telemetry:session:init'
-export const LD_ERROR_EVENT = '$ld:telemetry:error'
 export const LD_TRACK_EVENT = '$ld:telemetry:track'
-export const LD_METRIC_EVENT = '$ld:telemetry:metric'
 
 export const LD_METRIC_NAME_DOCUMENT_LOAD = 'document_load'
 
@@ -211,29 +209,7 @@ export class LaunchDarklyIntegrationSDK implements IntegrationClient {
 	}
 
 	recordGauge(sessionSecureID: string, metric: RecordMetric) {
-		// only record web vitals
-		if (
-			metric.category !== MetricCategory.WebVital &&
-			metric.name !== LD_METRIC_NAME_DOCUMENT_LOAD
-		) {
-			return
-		}
-		// ignore Jank metric, sent on interaction
-		if (metric.name === 'Jank') {
-			return
-		}
-		this.client.track(
-			`${LD_METRIC_EVENT}:${metric.name.toLowerCase()}`,
-			{
-				...metric.tags
-					?.map((t) => ({ [t.name]: t.value }))
-					.reduce((a, b) => ({ ...a, ...b }), {}),
-				category: metric.category,
-				group: metric.group,
-				sessionID: sessionSecureID,
-			},
-			metric.value,
-		)
+		// noop - metric forwarding is handled upon data ingest
 	}
 
 	identify(
@@ -246,10 +222,7 @@ export class LaunchDarklyIntegrationSDK implements IntegrationClient {
 	}
 
 	error(sessionSecureID: string, error: ErrorMessage) {
-		this.client.track(LD_ERROR_EVENT, {
-			...error,
-			sessionID: sessionSecureID,
-		})
+		// noop - metric forwarding is handled upon data ingest
 	}
 
 	track(sessionSecureID: string, metadata: object) {

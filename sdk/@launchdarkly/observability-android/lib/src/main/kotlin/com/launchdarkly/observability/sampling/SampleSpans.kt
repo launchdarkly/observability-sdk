@@ -20,19 +20,19 @@ fun sampleSpans(
     // The first pass we sample items which are directly impacted by a sampling decision.
     // We also build a map of children spans by parent span id, which allows us to quickly traverse the span tree.
     for (item in items) {
-        item.parentSpanContext?.spanId?.let { parentSpanId ->
+        item.parentSpanId?.let { parentSpanId ->
             childrenByParentId.getOrPut(parentSpanId) { mutableListOf() }
-                .add(item.spanContext.spanId)
+                .add(item.spanId)
         }
         val sampleResult = sampler.sampleSpan(item)
         if (sampleResult.sample) {
             if (sampleResult.attributes != null) {
-                spanById[item.spanContext.spanId] = cloneSpanDataWithAttributes(item, sampleResult.attributes)
+                spanById[item.spanId] = cloneSpanDataWithAttributes(item, sampleResult.attributes)
             } else {
-                spanById[item.spanContext.spanId] = item
+                spanById[item.spanId] = item
             }
         } else {
-            omittedSpansIds.addLast(item.spanContext.spanId)
+            omittedSpansIds.addLast(item.spanId)
         }
     }
 

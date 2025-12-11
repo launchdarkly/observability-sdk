@@ -1,5 +1,35 @@
 # highlight.run
 
+## [9.23.0](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-9.22.5...highlight.run-9.23.0) (2025-11-12)
+
+
+### Features
+
+* disable client-side LD metric forwarding ([#286](https://github.com/launchdarkly/observability-sdk/issues/286)) ([648ad26](https://github.com/launchdarkly/observability-sdk/commit/648ad263d34442a9703102144455304bbb0be825))
+
+## [9.22.5](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-9.22.4...highlight.run-9.22.5) (2025-11-10)
+
+
+### Bug Fixes
+
+* correctly forward error payload to launchdarkly ([#285](https://github.com/launchdarkly/observability-sdk/issues/285)) ([86fc7aa](https://github.com/launchdarkly/observability-sdk/commit/86fc7aa03768f5cba566c2208cc16dd558d3d17b))
+
+## [9.22.4](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-9.22.3...highlight.run-9.22.4) (2025-10-30)
+
+
+### Bug Fixes
+
+* correctly report version on webjs otel data ([#278](https://github.com/launchdarkly/observability-sdk/issues/278)) ([f1a2c74](https://github.com/launchdarkly/observability-sdk/commit/f1a2c74697744a7da5034ce2d375648bc32deb69))
+* H.stop should stop otel exporters ([#273](https://github.com/launchdarkly/observability-sdk/issues/273)) ([2e5e96b](https://github.com/launchdarkly/observability-sdk/commit/2e5e96b028ef8e87dafbce8d8a52d7126c567578))
+
+## [9.22.3](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-9.22.2...highlight.run-9.22.3) (2025-10-24)
+
+
+### Bug Fixes
+
+* avoid noisy error log on starting new sessions ([#269](https://github.com/launchdarkly/observability-sdk/issues/269)) ([e76004c](https://github.com/launchdarkly/observability-sdk/commit/e76004cb7c4ebd4296bce4d0f5448adb2dcf7c89))
+* make sessionCookie session a boolean type ([#272](https://github.com/launchdarkly/observability-sdk/issues/272)) ([9fb304d](https://github.com/launchdarkly/observability-sdk/commit/9fb304d646cee1149c6f31ff6ec52a88a40c2251))
+
 ## [9.22.2](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-9.22.1...highlight.run-9.22.2) (2025-10-06)
 
 
