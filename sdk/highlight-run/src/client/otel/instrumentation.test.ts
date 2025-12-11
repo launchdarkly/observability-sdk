@@ -12,11 +12,23 @@ import { parseXhrResponseHeaders } from './index'
 const convertHeadersToOtelFormat = (
 	headers: { [key: string]: string },
 	prefix: 'http.request.header' | 'http.response.header',
-): { [key: string]: string[] } => {
-	const attributes: { [key: string]: string[] } = {}
+): { [key: string]: string | string[] } => {
+	const attributes: { [key: string]: string | string[] } = {}
 	Object.entries(headers).forEach(([key, value]) => {
 		const normalizedKey = key.toLowerCase().replace(/_/g, '-')
-		attributes[`${prefix}.${normalizedKey}`] = [value]
+		const attributeName = `${prefix}.${normalizedKey}`
+
+		// Only use arrays if there are multiple values for the same header
+		if (attributes[attributeName]) {
+			// Convert to array if not already, then add new value
+			const existing = attributes[attributeName]
+			attributes[attributeName] = Array.isArray(existing)
+				? [...existing, value]
+				: [existing, value]
+		} else {
+			// Single value - store as string
+			attributes[attributeName] = value
+		}
 	})
 	return attributes
 }
@@ -36,9 +48,9 @@ describe('Network Instrumentation Custom Attributes', () => {
 			)
 
 			expect(result).toEqual({
-				'http.request.header.content-type': ['application/json'],
-				'http.request.header.x-request-id': ['abc-123'],
-				'http.request.header.cache-control': ['no-cache'],
+				'http.request.header.content-type': 'application/json',
+				'http.request.header.x-request-id': 'abc-123',
+				'http.request.header.cache-control': 'no-cache',
 			})
 		})
 
@@ -54,8 +66,8 @@ describe('Network Instrumentation Custom Attributes', () => {
 			)
 
 			expect(result).toEqual({
-				'http.response.header.content-type': ['text/html'],
-				'http.response.header.x-custom-header': ['value'],
+				'http.response.header.content-type': 'text/html',
+				'http.response.header.x-custom-header': 'value',
 			})
 		})
 
@@ -71,12 +83,12 @@ describe('Network Instrumentation Custom Attributes', () => {
 			)
 
 			expect(result).toEqual({
-				'http.request.header.x-custom-header': ['value'],
-				'http.request.header.another-header': ['test'],
+				'http.request.header.x-custom-header': 'value',
+				'http.request.header.another-header': 'test',
 			})
 		})
 
-		it('should wrap values in arrays per OTel spec', () => {
+		it('should store single values as strings, not arrays', () => {
 			const headers = {
 				'content-type': 'application/json',
 			}
@@ -86,11 +98,41 @@ describe('Network Instrumentation Custom Attributes', () => {
 				'http.request.header',
 			)
 
-			expect(result['http.request.header.content-type']).toBeInstanceOf(
-				Array,
-			)
-			expect(result['http.request.header.content-type']).toEqual([
+			expect(result['http.request.header.content-type']).toBe(
 				'application/json',
+			)
+			expect(
+				result['http.request.header.content-type'],
+			).not.toBeInstanceOf(Array)
+		})
+
+		it('should use arrays only when multiple values exist for the same header', () => {
+			// Simulate duplicate headers by calling with same header key twice
+			const headers = {
+				'set-cookie': 'session=abc123',
+			}
+
+			const result = convertHeadersToOtelFormat(
+				headers,
+				'http.response.header',
+			)
+
+			// First, it should be a string
+			expect(result['http.response.header.set-cookie']).toBe(
+				'session=abc123',
+			)
+
+			// Now simulate adding a second value
+			const attributeName = 'http.response.header.set-cookie'
+			const existing = result[attributeName]
+			result[attributeName] = Array.isArray(existing)
+				? [...existing, 'token=xyz789']
+				: [existing, 'token=xyz789']
+
+			// Now it should be an array
+			expect(result['http.response.header.set-cookie']).toEqual([
+				'session=abc123',
+				'token=xyz789',
 			])
 		})
 

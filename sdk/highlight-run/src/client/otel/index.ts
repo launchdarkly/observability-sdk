@@ -249,7 +249,6 @@ export const setupBrowserTracing = (
 							config.networkRecordingOptions,
 						)
 
-						// Only process response body/headers if recording is enabled
 						if (
 							config.networkRecordingOptions?.recordHeadersAndBody
 						) {
@@ -305,7 +304,6 @@ export const setupBrowserTracing = (
 							config.networkRecordingOptions,
 						)
 
-						// Only process response body/headers if recording is enabled
 						if (
 							config.networkRecordingOptions?.recordHeadersAndBody
 						) {
@@ -500,7 +498,6 @@ const enhanceSpanWithHttpRequestAttributes = (
 	const sanitizedUrl = sanitizeUrl(url)
 	const sanitizedUrlObject = new URL(sanitizedUrl)
 
-	// Extract GraphQL operation name if present (useful metadata even without body recording)
 	const stringBody = typeof body === 'string' ? body : String(body)
 	try {
 		const parsedBody = body ? JSON.parse(stringBody) : undefined
@@ -514,7 +511,6 @@ const enhanceSpanWithHttpRequestAttributes = (
 		// Ignore parsing errors
 	}
 
-	// Set basic URL attributes (always recorded)
 	span.setAttributes({
 		'highlight.type': 'http.request',
 		[SemanticAttributes.ATTR_URL_FULL]: sanitizedUrl,
@@ -530,7 +526,6 @@ const enhanceSpanWithHttpRequestAttributes = (
 		)
 	}
 
-	// Only record body and headers if explicitly enabled
 	if (networkRecordingOptions?.recordHeadersAndBody) {
 		const requestBody = getBodyThatShouldBeRecorded(
 			body,
@@ -576,26 +571,34 @@ export const parseXhrResponseHeaders = (
 /**
  * Converts headers object to OpenTelemetry semantic convention format.
  * Headers are set as individual attributes with the pattern:
- * - http.request.header.<lowercase-name>: [value]
- * - http.response.header.<lowercase-name>: [value]
+ * - http.request.header.<lowercase-name>: value (or [value1, value2] if multiple)
+ * - http.response.header.<lowercase-name>: value (or [value1, value2] if multiple)
  *
  * @param headers - Object with header key-value pairs
  * @param prefix - Either 'http.request.header' or 'http.response.header'
- * @returns Object with OTel semantic convention attribute names
+ * @returns Object with OTel semantic convention attribute names (arrays only for duplicate headers)
  */
 const convertHeadersToOtelAttributes = (
 	headers: { [key: string]: string },
 	prefix: 'http.request.header' | 'http.response.header',
-): { [key: string]: string[] } => {
-	const attributes: { [key: string]: string[] } = {}
+): { [key: string]: string | string[] } => {
+	const attributes: { [key: string]: string | string[] } = {}
 
 	Object.entries(headers).forEach(([key, value]) => {
-		// Normalize header name: lowercase and replace underscores with dashes
 		const normalizedKey = key.toLowerCase().replace(/_/g, '-')
 		const attributeName = `${prefix}.${normalizedKey}`
 
-		// OTel spec requires header values to be arrays
-		attributes[attributeName] = [value]
+		// OTel spec says header values should be arrays. However, this clutters the
+		// UI and makes queryiing more complex, so we are using strings when possible.
+		// Only use arrays if there are multiple values for the same header
+		if (attributes[attributeName]) {
+			const existing = attributes[attributeName]
+			attributes[attributeName] = Array.isArray(existing)
+				? [...existing, value]
+				: [existing, value]
+		} else {
+			attributes[attributeName] = value
+		}
 	})
 
 	return attributes
