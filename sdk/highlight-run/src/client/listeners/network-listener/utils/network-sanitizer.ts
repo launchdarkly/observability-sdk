@@ -102,10 +102,8 @@ export const sanitizeUrl = (url: string): string => {
 			urlObject.password = 'REDACTED'
 		}
 
-		// Redact sensitive query parameters
 		const searchParams = urlObject.searchParams
 		SENSITIVE_QUERY_PARAMS.forEach((sensitiveParam) => {
-			// Check all query params case-insensitively
 			for (const key of Array.from(searchParams.keys())) {
 				if (key.toLowerCase() === sensitiveParam) {
 					searchParams.set(key, 'REDACTED')
