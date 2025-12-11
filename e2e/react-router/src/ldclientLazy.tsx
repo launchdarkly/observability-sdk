@@ -8,6 +8,7 @@ const observabilitySettings: ConstructorParameters<typeof Observability>[0] = {
 		recordHeadersAndBody: true,
 	},
 	serviceName: 'ryan-test',
+	version: 'my-version',
 	backendUrl: 'http://localhost:8082/public',
 	otel: {
 		otlpEndpoint: 'http://localhost:4318',
@@ -16,10 +17,19 @@ const observabilitySettings: ConstructorParameters<typeof Observability>[0] = {
 }
 const sessionReplaySettings: ConstructorParameters<typeof SessionReplay>[0] = {
 	debug: { clientInteractions: true, domRecording: true },
+	environment: 'production',
+	inlineImages: true,
+	inlineStylesheet: true,
 	privacySetting: 'none',
 	serviceName: 'ryan-test',
+	version: 'my-version',
 	backendUrl: 'http://localhost:8082/public',
 	manualStart: true,
+	enableCanvasRecording: true,
+	samplingStrategy: {
+		canvas: 2, // 2 fps
+		canvasMaxSnapshotDimension: 720, // 720p quality
+	},
 }
 
 export const client = init(

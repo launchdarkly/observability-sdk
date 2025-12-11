@@ -4,21 +4,21 @@ import {
 	Counter,
 	Gauge,
 	Histogram,
-	metrics,
 	Span,
 	SpanOptions,
 	SpanStatusCode,
 	UpDownCounter,
 } from '@opentelemetry/api'
 import {
-	BROWSER_METER_NAME,
-	Callback,
-	getTracer,
+	ATTR_EXCEPTION_ID,
 	ATTR_LOG_MESSAGE,
 	ATTR_LOG_SEVERITY,
+	Callback,
+	getMeter,
+	getTracer,
 	LOG_SPAN_NAME,
 	setupBrowserTracing,
-	ATTR_EXCEPTION_ID,
+	shutdown,
 } from '../client/otel'
 import type { Observe } from '../api/observe'
 import { getNoopSpan } from '../client/otel/utils'
@@ -77,8 +77,6 @@ import {
 import randomUuidV4 from '../client/utils/randomUuidV4'
 import { recordException } from '../client/otel/recordException'
 import { ObserveOptions } from '../client/types/observe'
-import { WebTracerProvider } from '@opentelemetry/sdk-trace-web'
-import { MeterProvider } from '@opentelemetry/sdk-metrics'
 import { isMetricSafeNumber } from '../client/utils/utils'
 import * as SemanticAttributes from '@opentelemetry/semantic-conventions'
 import { sanitizeUrl } from '../client/listeners/network-listener/utils/network-sanitizer'
@@ -106,12 +104,6 @@ export class ObserveSDK implements Observe {
 	>()
 	private readonly sampler: ExportSampler = new CustomSampler()
 	private _started = false
-	private providers!:
-		| {
-				tracerProvider?: WebTracerProvider
-				meterProvider?: MeterProvider
-		  }
-		| undefined
 	private graphqlSDK!: Sdk
 	constructor(
 		options: ObserveOptions & {
@@ -128,7 +120,7 @@ export class ObserveSDK implements Observe {
 			return
 		}
 		this._started = true
-		this.providers = setupBrowserTracing(
+		setupBrowserTracing(
 			{
 				...{
 					backendUrl:
@@ -146,6 +138,7 @@ export class ObserveSDK implements Observe {
 							: undefined,
 					tracingOrigins: this._options?.tracingOrigins,
 					serviceName: this._options?.serviceName ?? 'browser',
+					serviceVersion: this._options?.version,
 					instrumentations: this._options?.otel?.instrumentations,
 					eventNames: this._options?.otel?.eventNames,
 				},
@@ -153,6 +146,11 @@ export class ObserveSDK implements Observe {
 			},
 			this.sampler,
 		)
+		// reset metrics to connect them to the new meter
+		this._gauges.clear()
+		this._counters.clear()
+		this._histograms.clear()
+		this._up_down_counters.clear()
 		const client = new GraphQLClient(
 			this._options.backendUrl ??
 				'https://pub.observability.app.launchdarkly.com',
@@ -170,10 +168,7 @@ export class ObserveSDK implements Observe {
 			return
 		}
 		this._started = false
-		await Promise.all([
-			this.providers?.tracerProvider?.shutdown(),
-			this.providers?.meterProvider?.shutdown(),
-		])
+		await shutdown()
 	}
 
 	private async configureSampling() {
@@ -228,6 +223,14 @@ export class ObserveSDK implements Observe {
 		errorMsg: ErrorMessage,
 		payload?: { [key: string]: string },
 	) {
+		try {
+			if (errorMsg.payload) {
+				payload = {
+					...JSON.parse(errorMsg.payload),
+					...(payload ? payload : {}),
+				}
+			}
+		} catch (e) {}
 		this.startSpan('highlight.exception', (span) => {
 			// This is handled in the callsites, but this redundancy handles it from a pure
 			// type safety perspective.
@@ -244,8 +247,12 @@ export class ObserveSDK implements Observe {
 				...payload,
 			})
 		})
+		const { payload: _, ...errorWithoutPayload } = errorMsg
 		for (const integration of this._integrations) {
-			integration.error(getPersistentSessionSecureID(), errorMsg)
+			integration.error(getPersistentSessionSecureID(), {
+				...errorWithoutPayload,
+				payload: JSON.stringify(payload),
+			})
 		}
 	}
 
@@ -273,7 +280,7 @@ export class ObserveSDK implements Observe {
 			event,
 			type: type ?? 'custom',
 			url: window.location.href,
-			source: source ?? '',
+			source: source ?? 'frontend',
 			lineNumber: res[0]?.lineNumber ? res[0]?.lineNumber : 0,
 			columnNumber: res[0]?.columnNumber ? res[0]?.columnNumber : 0,
 			stackTrace: res,
@@ -284,10 +291,10 @@ export class ObserveSDK implements Observe {
 	}
 
 	recordCount(metric: Metric) {
-		const meter = metrics.getMeter(BROWSER_METER_NAME)
 		let counter = this._counters.get(metric.name)
 		if (!counter) {
-			counter = meter.createCounter(metric.name)
+			counter = getMeter()?.createCounter(metric.name)
+			if (!counter) return
 			this._counters.set(metric.name, counter)
 		}
 		counter.add(metric.value, {
@@ -297,10 +304,10 @@ export class ObserveSDK implements Observe {
 	}
 
 	recordGauge(metric: Metric) {
-		const meter = metrics.getMeter(BROWSER_METER_NAME)
 		let gauge = this._gauges.get(metric.name)
 		if (!gauge) {
-			gauge = meter.createGauge(metric.name)
+			gauge = getMeter()?.createGauge(metric.name)
+			if (!gauge) return
 			this._gauges.set(metric.name, gauge)
 		}
 		gauge.record(metric.value, {
@@ -332,10 +339,10 @@ export class ObserveSDK implements Observe {
 	}
 
 	recordHistogram(metric: Metric) {
-		const meter = metrics.getMeter(BROWSER_METER_NAME)
 		let histogram = this._histograms.get(metric.name)
 		if (!histogram) {
-			histogram = meter.createHistogram(metric.name)
+			histogram = getMeter()?.createHistogram(metric.name)
+			if (!histogram) return
 			this._histograms.set(metric.name, histogram)
 		}
 		histogram.record(metric.value, {
@@ -345,10 +352,10 @@ export class ObserveSDK implements Observe {
 	}
 
 	recordUpDownCounter(metric: Metric) {
-		const meter = metrics.getMeter(BROWSER_METER_NAME)
 		let up_down_counter = this._up_down_counters.get(metric.name)
 		if (!up_down_counter) {
-			up_down_counter = meter.createUpDownCounter(metric.name)
+			up_down_counter = getMeter()?.createUpDownCounter(metric.name)
+			if (!up_down_counter) return
 			this._up_down_counters.set(metric.name, up_down_counter)
 		}
 		up_down_counter.add(metric.value, {

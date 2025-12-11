@@ -10,7 +10,9 @@ import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Severity
 import junit.framework.TestCase.assertEquals
+import kotlinx.coroutines.test.runTest
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -39,6 +41,9 @@ import org.robolectric.annotation.Config
 @Config(application = TestApplication::class)
 class SamplingE2ETest {
 
+    @get:Rule
+    val testCoroutineRule = TestCoroutineRule()
+
     private val application = ApplicationProvider.getApplicationContext<Application>() as TestApplication
     private var telemetryInspector: TelemetryInspector? = null
 
@@ -49,7 +54,7 @@ class SamplingE2ETest {
     }
 
     @Test
-    fun `should avoid exporting logs matching sampling configuration for logs`() {
+    fun `should avoid exporting logs matching sampling configuration for logs`() = runTest {
         triggerLogs()
         telemetryInspector?.logExporter?.flush()
         waitForTelemetryData(telemetryInspector = application.telemetryInspector, telemetryType = TelemetryType.LOGS)
@@ -65,7 +70,7 @@ class SamplingE2ETest {
     }
 
     @Test
-    fun `should avoid exporting spans matching sampling configuration for spans`() {
+    fun `should avoid exporting spans matching sampling configuration for spans`() = runTest {
         triggerSpans()
         telemetryInspector?.spanExporter?.flush()
         waitForTelemetryData(telemetryInspector = application.telemetryInspector, telemetryType = TelemetryType.SPANS)

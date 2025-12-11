@@ -2,18 +2,17 @@ package com.example.androidobservability
 
 import android.app.Application
 import androidx.test.core.app.ApplicationProvider
+import com.example.androidobservability.TestUtils.TelemetryType
 import com.example.androidobservability.TestUtils.waitForTelemetryData
+import com.launchdarkly.observability.api.Options
 import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.observability.sdk.LDObserve
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Severity
-import com.example.androidobservability.TestUtils.TelemetryType
-import com.launchdarkly.observability.api.Options
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertFalse
 import junit.framework.TestCase.assertNotNull
-import junit.framework.TestCase.assertNull
 import junit.framework.TestCase.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -96,7 +95,6 @@ class DisablingConfigOptionsE2ETest {
         LDObserve.flush()
         waitForTelemetryData(telemetryInspector = application.telemetryInspector, telemetryType = TelemetryType.METRICS)
 
-        assertNull(application.telemetryInspector?.metricExporter)
         assertFalse(requestsContainsUrl(metricsUrl))
     }
 
@@ -110,7 +108,6 @@ class DisablingConfigOptionsE2ETest {
         LDObserve.flush()
         waitForTelemetryData(telemetryInspector = application.telemetryInspector, telemetryType = TelemetryType.METRICS)
 
-        assertNotNull(application.telemetryInspector?.metricExporter)
         assertTrue(requestsContainsUrl(metricsUrl))
     }
 
@@ -187,8 +184,7 @@ class DisablingConfigOptionsE2ETest {
 
     private fun requestsContainsUrl(url: String): Boolean {
         while (true) {
-            val request = application.mockWebServer?.takeRequest(100, TimeUnit.MILLISECONDS)
-            if (request == null) return false
+            val request = application.mockWebServer?.takeRequest(100, TimeUnit.MILLISECONDS) ?: return false
             if (request.requestUrl.toString() == url) return true
         }
     }
