@@ -390,6 +390,134 @@ export default function HttpTest() {
 			</TestSection>
 
 			<TestSection
+				title="Header Attributes Tests"
+				description="Test that headers are properly recorded as span attributes (arrays vs strings)."
+			>
+				<TestButton
+					title="Single-Value Headers"
+					description="Headers with single values (strings)"
+					onClick={async () => {
+						const response = await fetch(
+							'https://jsonplaceholder.typicode.com/posts/60?test=single-value-headers',
+							{
+								headers: {
+									'Content-Type': 'application/json',
+									'X-Request-ID': 'req-12345',
+									'X-Api-Version': 'v1',
+									'User-Agent': 'TestApp/1.0',
+								},
+							},
+						)
+						const data = await response.json()
+						console.log('Single-value headers response:', data)
+					}}
+				/>
+
+				<TestButton
+					title="Multi-Value Headers (Accept)"
+					description="Accept header with multiple values"
+					onClick={async () => {
+						const response = await fetch(
+							'https://jsonplaceholder.typicode.com/posts/61?test=multi-value-accept',
+							{
+								headers: {
+									Accept: 'application/json, text/plain, */*',
+								},
+							},
+						)
+						const data = await response.json()
+						console.log('Multi-value Accept response:', data)
+					}}
+				/>
+
+				<TestButton
+					title="Multi-Value Cache-Control"
+					description="Cache-Control with multiple directives"
+					onClick={async () => {
+						const response = await fetch(
+							'https://jsonplaceholder.typicode.com/posts/62?test=multi-value-cache',
+							{
+								headers: {
+									'Cache-Control':
+										'no-cache, no-store, must-revalidate',
+								},
+							},
+						)
+						const data = await response.json()
+						console.log('Multi-value Cache-Control response:', data)
+					}}
+				/>
+
+				<TestButton
+					title="Multiple Custom Headers"
+					description="Mix of single and multi-value headers"
+					onClick={async () => {
+						const response = await fetch(
+							'https://jsonplaceholder.typicode.com/posts/63?test=mixed-header-values',
+							{
+								headers: {
+									'Content-Type': 'application/json',
+									Accept: 'application/json, application/xml, text/html',
+									'X-Custom-Single': 'single-value',
+									'X-Custom-Multi': 'value1, value2, value3',
+									'Accept-Language':
+										'en-US, en;q=0.9, es;q=0.8',
+								},
+							},
+						)
+						const data = await response.json()
+						console.log('Mixed header values response:', data)
+					}}
+				/>
+
+				<TestButton
+					title="Response Headers Check"
+					description="Verify response headers are captured"
+					onClick={async () => {
+						const response = await fetch(
+							'https://jsonplaceholder.typicode.com/posts/64?test=response-headers-check',
+						)
+						console.log('Response headers:')
+						response.headers.forEach((value, key) => {
+							console.log(`  ${key}: ${value}`)
+						})
+						const data = await response.json()
+						console.log('Response data:', data)
+					}}
+				/>
+
+				<TestButton
+					title="POST with Request/Response Headers"
+					description="Both request and response headers"
+					onClick={async () => {
+						const response = await fetch(
+							'https://jsonplaceholder.typicode.com/posts?test=post-with-headers',
+							{
+								method: 'POST',
+								headers: {
+									'Content-Type': 'application/json',
+									Accept: 'application/json, text/plain',
+									'X-Request-ID': 'post-req-789',
+									'X-Client-Version': '2.0.0',
+								},
+								body: JSON.stringify({
+									title: 'Header Test Post',
+									body: 'Testing header attributes',
+									userId: 1,
+								}),
+							},
+						)
+						console.log('POST response headers:')
+						response.headers.forEach((value, key) => {
+							console.log(`  ${key}: ${value}`)
+						})
+						const data = await response.json()
+						console.log('POST response data:', data)
+					}}
+				/>
+			</TestSection>
+
+			<TestSection
 				title="Response Tests"
 				description="Test different response types and status codes."
 			>
