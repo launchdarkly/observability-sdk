@@ -233,6 +233,13 @@ export const setupBrowserTracing = (
 							return
 						}
 
+						enhanceSpanWithHttpRequestAttributes(
+							span,
+							request.body,
+							request.headers,
+							config.networkRecordingOptions,
+						)
+
 						if (!(response instanceof Response)) {
 							span.setAttributes({
 								'http.response.error': response.message,
@@ -241,13 +248,6 @@ export const setupBrowserTracing = (
 							})
 							return
 						}
-
-						enhanceSpanWithHttpRequestAttributes(
-							span,
-							request.body,
-							request.headers,
-							config.networkRecordingOptions,
-						)
 
 						if (
 							config.networkRecordingOptions?.recordHeadersAndBody
@@ -412,7 +412,7 @@ class CustomTraceContextPropagator extends W3CTraceContextPropagator {
 			return
 		}
 
-		const url = (span as unknown as ReadableSpan).attributes['http.url']
+		const url = getUrlFromSpan(span as unknown as ReadableSpan)
 		if (typeof url === 'string') {
 			const shouldRecord = shouldRecordRequest(
 				url,
@@ -494,7 +494,7 @@ const enhanceSpanWithHttpRequestAttributes = (
 		return
 	}
 	const readableSpan = span as unknown as ReadableSpan
-	const url = readableSpan.attributes['http.url'] as string
+	const url = getUrlFromSpan(readableSpan)
 	const sanitizedUrl = sanitizeUrl(url)
 	const sanitizedUrlObject = new URL(sanitizedUrl)
 
@@ -513,6 +513,7 @@ const enhanceSpanWithHttpRequestAttributes = (
 
 	span.setAttributes({
 		'highlight.type': 'http.request',
+		[SemanticAttributes.SEMATTRS_HTTP_URL]: sanitizedUrl, // overwrite with sanitized version
 		[SemanticAttributes.ATTR_URL_FULL]: sanitizedUrl,
 		[SemanticAttributes.ATTR_URL_PATH]: sanitizedUrlObject.pathname,
 		[SemanticAttributes.ATTR_URL_QUERY]: sanitizedUrlObject.search,
@@ -574,9 +575,12 @@ export const parseXhrResponseHeaders = (
  * - http.request.header.<lowercase-name>: value (or [value1, value2] if multiple)
  * - http.response.header.<lowercase-name>: value (or [value1, value2] if multiple)
  *
+ * According to OTel spec, header values should be arrays when they contain
+ * comma-separated values. Single values remain as strings for simpler querying.
+ *
  * @param headers - Object with header key-value pairs
  * @param prefix - Either 'http.request.header' or 'http.response.header'
- * @returns Object with OTel semantic convention attribute names (arrays only for duplicate headers)
+ * @returns Object with OTel semantic convention attribute names
  */
 const convertHeadersToOtelAttributes = (
 	headers: { [key: string]: string },
@@ -587,21 +591,38 @@ const convertHeadersToOtelAttributes = (
 	Object.entries(headers).forEach(([key, value]) => {
 		const normalizedKey = key.toLowerCase().replace(/_/g, '-')
 		const attributeName = `${prefix}.${normalizedKey}`
+		const values = splitHeaderValue(value)
 
-		// OTel spec says header values should be arrays. However, this clutters the
-		// UI and makes queryiing more complex, so we are using strings when possible.
-		// Only use arrays if there are multiple values for the same header
+		// Handle duplicate header keys (same header appearing multiple times)
 		if (attributes[attributeName]) {
 			const existing = attributes[attributeName]
-			attributes[attributeName] = Array.isArray(existing)
-				? [...existing, value]
-				: [existing, value]
+
+			if (Array.isArray(existing)) {
+				attributes[attributeName] = [...existing, ...values]
+			} else {
+				attributes[attributeName] = [existing, ...values]
+			}
 		} else {
-			attributes[attributeName] = value
+			attributes[attributeName] = values.length === 1 ? values[0] : values
 		}
 	})
 
 	return attributes
+}
+
+/**
+ * Splits a header value by commas, trimming whitespace from each value.
+ * Handles edge cases like quality values (e.g., "en-US, en;q=0.9") properly.
+ *
+ * @param value - The header value string
+ * @returns Array of trimmed values
+ */
+const splitHeaderValue = (value: string): string[] => {
+	// Split by comma and trim whitespace from each value
+	return value
+		.split(',')
+		.map((v) => v.trim())
+		.filter((v) => v.length > 0)
 }
 
 const enhanceSpanWithHttpResponseAttributes = (
@@ -618,14 +639,13 @@ const enhanceSpanWithHttpResponseAttributes = (
 		networkRecordingOptions.headerKeysToRecord,
 	)
 
-	// Always preserve content-type unless explicitly excluded via headerKeysToRecord
+	// Always preserve content-type unless explicitly excluded
 	const contentType =
 		responseHeaders['content-type'] ?? responseHeaders['Content-Type']
 	if (contentType && !networkRecordingOptions.headerKeysToRecord) {
 		sanitizedResponseHeaders['content-type'] = contentType
 	}
 
-	// Set response headers following OTel semantic conventions
 	const headerAttributes = convertHeadersToOtelAttributes(
 		sanitizedResponseHeaders,
 		'http.response.header',
@@ -792,4 +812,12 @@ export const getCorsUrlsPattern = (
 	}
 
 	return /^$/ // Match nothing if tracingOrigins is false or undefined
+}
+
+const getUrlFromSpan = (span: ReadableSpan) => {
+	if (span.attributes[SemanticAttributes.ATTR_URL_FULL]) {
+		return span.attributes[SemanticAttributes.ATTR_URL_FULL] as string
+	}
+
+	return span.attributes[SemanticAttributes.SEMATTRS_HTTP_URL] as string
 }

@@ -6,6 +6,17 @@ import {
 import { parseXhrResponseHeaders } from './index'
 
 /**
+ * Helper to split a header value by commas for testing.
+ * This mirrors the logic in splitHeaderValue.
+ */
+const splitHeaderValue = (value: string): string[] => {
+	return value
+		.split(',')
+		.map((v) => v.trim())
+		.filter((v) => v.length > 0)
+}
+
+/**
  * Helper to convert headers to OTel semantic convention format for testing.
  * This mirrors the logic in convertHeadersToOtelAttributes.
  */
@@ -18,16 +29,20 @@ const convertHeadersToOtelFormat = (
 		const normalizedKey = key.toLowerCase().replace(/_/g, '-')
 		const attributeName = `${prefix}.${normalizedKey}`
 
-		// Only use arrays if there are multiple values for the same header
+		// Handle duplicate header keys (same header appearing multiple times)
 		if (attributes[attributeName]) {
-			// Convert to array if not already, then add new value
 			const existing = attributes[attributeName]
-			attributes[attributeName] = Array.isArray(existing)
-				? [...existing, value]
-				: [existing, value]
+			const newValues = splitHeaderValue(value)
+
+			if (Array.isArray(existing)) {
+				attributes[attributeName] = [...existing, ...newValues]
+			} else {
+				attributes[attributeName] = [existing, ...newValues]
+			}
 		} else {
-			// Single value - store as string
-			attributes[attributeName] = value
+			// Split comma-separated values into arrays per OTel spec
+			const values = splitHeaderValue(value)
+			attributes[attributeName] = values.length === 1 ? values[0] : values
 		}
 	})
 	return attributes
@@ -104,6 +119,105 @@ describe('Network Instrumentation Custom Attributes', () => {
 			expect(
 				result['http.request.header.content-type'],
 			).not.toBeInstanceOf(Array)
+		})
+
+		it('should split comma-separated header values into arrays', () => {
+			const headers = {
+				accept: 'application/json, text/plain, */*',
+			}
+
+			const result = convertHeadersToOtelFormat(
+				headers,
+				'http.request.header',
+			)
+
+			expect(result['http.request.header.accept']).toEqual([
+				'application/json',
+				'text/plain',
+				'*/*',
+			])
+		})
+
+		it('should split accept-language with quality values into arrays', () => {
+			const headers = {
+				'accept-language': 'en-US, en;q=0.9, es;q=0.8',
+			}
+
+			const result = convertHeadersToOtelFormat(
+				headers,
+				'http.request.header',
+			)
+
+			expect(result['http.request.header.accept-language']).toEqual([
+				'en-US',
+				'en;q=0.9',
+				'es;q=0.8',
+			])
+		})
+
+		it('should split cache-control directives into arrays', () => {
+			const headers = {
+				'cache-control': 'no-cache, no-store, must-revalidate',
+			}
+
+			const result = convertHeadersToOtelFormat(
+				headers,
+				'http.response.header',
+			)
+
+			expect(result['http.response.header.cache-control']).toEqual([
+				'no-cache',
+				'no-store',
+				'must-revalidate',
+			])
+		})
+
+		it('should handle mixed single and multi-value headers', () => {
+			const headers = {
+				'content-type': 'application/json',
+				accept: 'application/json, application/xml, text/html',
+				'x-custom-single': 'single-value',
+				'x-custom-multi': 'value1, value2, value3',
+			}
+
+			const result = convertHeadersToOtelFormat(
+				headers,
+				'http.request.header',
+			)
+
+			expect(result['http.request.header.content-type']).toBe(
+				'application/json',
+			)
+			expect(result['http.request.header.accept']).toEqual([
+				'application/json',
+				'application/xml',
+				'text/html',
+			])
+			expect(result['http.request.header.x-custom-single']).toBe(
+				'single-value',
+			)
+			expect(result['http.request.header.x-custom-multi']).toEqual([
+				'value1',
+				'value2',
+				'value3',
+			])
+		})
+
+		it('should trim whitespace from split values', () => {
+			const headers = {
+				accept: 'application/json,  text/plain  ,   */*',
+			}
+
+			const result = convertHeadersToOtelFormat(
+				headers,
+				'http.request.header',
+			)
+
+			expect(result['http.request.header.accept']).toEqual([
+				'application/json',
+				'text/plain',
+				'*/*',
+			])
 		})
 
 		it('should use arrays only when multiple values exist for the same header', () => {
