@@ -582,7 +582,7 @@ export const parseXhrResponseHeaders = (
  * @param prefix - Either 'http.request.header' or 'http.response.header'
  * @returns Object with OTel semantic convention attribute names
  */
-const convertHeadersToOtelAttributes = (
+export const convertHeadersToOtelAttributes = (
 	headers: { [key: string]: string },
 	prefix: 'http.request.header' | 'http.response.header',
 ): { [key: string]: string | string[] } => {
@@ -591,7 +591,7 @@ const convertHeadersToOtelAttributes = (
 	Object.entries(headers).forEach(([key, value]) => {
 		const normalizedKey = key.toLowerCase().replace(/_/g, '-')
 		const attributeName = `${prefix}.${normalizedKey}`
-		const values = splitHeaderValue(value)
+		const values = splitHeaderValue(normalizedKey, value)
 
 		// Handle duplicate header keys (same header appearing multiple times)
 		if (attributes[attributeName]) {
@@ -611,13 +611,63 @@ const convertHeadersToOtelAttributes = (
 }
 
 /**
- * Splits a header value by commas, trimming whitespace from each value.
- * Handles edge cases like quality values (e.g., "en-US, en;q=0.9") properly.
+ * HTTP headers that are explicitly defined as comma-separated lists
+ * per RFC 7231 and related specifications. Only these headers should
+ * be split by comma. Other headers (especially date headers like
+ * Date, Last-Modified, Expires) contain commas as part of their value
+ * and should NOT be split.
  *
- * @param value - The header value string
- * @returns Array of trimmed values
+ * @see https://www.rfc-editor.org/rfc/rfc7231
+ * @see https://www.rfc-editor.org/rfc/rfc7230#section-3.2.6
  */
-const splitHeaderValue = (value: string): string[] => {
+const COMMA_SEPARATED_HEADERS = new Set([
+	'accept',
+	'accept-charset',
+	'accept-encoding',
+	'accept-language',
+	'accept-ranges',
+	'allow',
+	'cache-control',
+	'connection',
+	'content-encoding',
+	'content-language',
+	'expect',
+	'if-match',
+	'if-none-match',
+	'pragma',
+	'proxy-authenticate',
+	'te',
+	'trailer',
+	'transfer-encoding',
+	'upgrade',
+	'vary',
+	'via',
+	'warning',
+	'www-authenticate',
+	'access-control-allow-headers',
+	'access-control-allow-methods',
+	'access-control-expose-headers',
+	'access-control-request-headers',
+])
+
+/**
+ * Splits a header value by commas if the header is defined as comma-separated.
+ * Headers like Date, Last-Modified, Expires contain commas in RFC 7231 date
+ * format (e.g., "Mon, 01 Jan 2024 12:00:00 GMT") and should NOT be split.
+ *
+ * @param headerName - The lowercase header name
+ * @param value - The header value string
+ * @returns Array of values (single element for non-comma-separated headers)
+ */
+export const splitHeaderValue = (
+	headerName: string,
+	value: string,
+): string[] => {
+	// Only split headers that are explicitly defined as comma-separated lists
+	if (!COMMA_SEPARATED_HEADERS.has(headerName)) {
+		return [value]
+	}
+
 	// Split by comma and trim whitespace from each value
 	return value
 		.split(',')

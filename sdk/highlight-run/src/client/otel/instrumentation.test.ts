@@ -3,53 +3,96 @@ import {
 	sanitizeHeaders,
 	sanitizeUrl,
 } from '../listeners/network-listener/utils/network-sanitizer'
-import { parseXhrResponseHeaders } from './index'
-
-/**
- * Helper to split a header value by commas for testing.
- * This mirrors the logic in splitHeaderValue.
- */
-const splitHeaderValue = (value: string): string[] => {
-	return value
-		.split(',')
-		.map((v) => v.trim())
-		.filter((v) => v.length > 0)
-}
-
-/**
- * Helper to convert headers to OTel semantic convention format for testing.
- * This mirrors the logic in convertHeadersToOtelAttributes.
- */
-const convertHeadersToOtelFormat = (
-	headers: { [key: string]: string },
-	prefix: 'http.request.header' | 'http.response.header',
-): { [key: string]: string | string[] } => {
-	const attributes: { [key: string]: string | string[] } = {}
-	Object.entries(headers).forEach(([key, value]) => {
-		const normalizedKey = key.toLowerCase().replace(/_/g, '-')
-		const attributeName = `${prefix}.${normalizedKey}`
-
-		// Handle duplicate header keys (same header appearing multiple times)
-		if (attributes[attributeName]) {
-			const existing = attributes[attributeName]
-			const newValues = splitHeaderValue(value)
-
-			if (Array.isArray(existing)) {
-				attributes[attributeName] = [...existing, ...newValues]
-			} else {
-				attributes[attributeName] = [existing, ...newValues]
-			}
-		} else {
-			// Split comma-separated values into arrays per OTel spec
-			const values = splitHeaderValue(value)
-			attributes[attributeName] = values.length === 1 ? values[0] : values
-		}
-	})
-	return attributes
-}
+import {
+	parseXhrResponseHeaders,
+	splitHeaderValue,
+	convertHeadersToOtelAttributes,
+} from './index'
 
 describe('Network Instrumentation Custom Attributes', () => {
-	describe('convertHeadersToOtelFormat', () => {
+	describe('splitHeaderValue', () => {
+		it('should split comma-separated headers like accept', () => {
+			const result = splitHeaderValue(
+				'accept',
+				'application/json, text/plain, */*',
+			)
+			expect(result).toEqual(['application/json', 'text/plain', '*/*'])
+		})
+
+		it('should split cache-control directives', () => {
+			const result = splitHeaderValue(
+				'cache-control',
+				'no-cache, no-store, must-revalidate',
+			)
+			expect(result).toEqual(['no-cache', 'no-store', 'must-revalidate'])
+		})
+
+		it('should NOT split date headers (RFC 7231 date format)', () => {
+			const result = splitHeaderValue(
+				'date',
+				'Mon, 01 Jan 2024 12:00:00 GMT',
+			)
+			expect(result).toEqual(['Mon, 01 Jan 2024 12:00:00 GMT'])
+		})
+
+		it('should NOT split last-modified headers', () => {
+			const result = splitHeaderValue(
+				'last-modified',
+				'Sun, 31 Dec 2023 23:59:59 GMT',
+			)
+			expect(result).toEqual(['Sun, 31 Dec 2023 23:59:59 GMT'])
+		})
+
+		it('should NOT split expires headers', () => {
+			const result = splitHeaderValue(
+				'expires',
+				'Tue, 02 Jan 2024 12:00:00 GMT',
+			)
+			expect(result).toEqual(['Tue, 02 Jan 2024 12:00:00 GMT'])
+		})
+
+		it('should NOT split content-type headers', () => {
+			const result = splitHeaderValue(
+				'content-type',
+				'text/html; charset=utf-8',
+			)
+			expect(result).toEqual(['text/html; charset=utf-8'])
+		})
+
+		it('should NOT split custom headers with commas', () => {
+			const result = splitHeaderValue(
+				'x-custom-header',
+				'value1, value2, value3',
+			)
+			expect(result).toEqual(['value1, value2, value3'])
+		})
+
+		it('should split vary header', () => {
+			const result = splitHeaderValue(
+				'vary',
+				'Accept-Encoding, User-Agent',
+			)
+			expect(result).toEqual(['Accept-Encoding', 'User-Agent'])
+		})
+
+		it('should split accept-language with quality values', () => {
+			const result = splitHeaderValue(
+				'accept-language',
+				'en-US, en;q=0.9, es;q=0.8',
+			)
+			expect(result).toEqual(['en-US', 'en;q=0.9', 'es;q=0.8'])
+		})
+
+		it('should trim whitespace from split values', () => {
+			const result = splitHeaderValue(
+				'accept',
+				'  application/json  ,  text/plain  ',
+			)
+			expect(result).toEqual(['application/json', 'text/plain'])
+		})
+	})
+
+	describe('convertHeadersToOtelAttributes', () => {
 		it('should convert headers to OTel semantic convention format', () => {
 			const headers = {
 				'content-type': 'application/json',
@@ -57,7 +100,7 @@ describe('Network Instrumentation Custom Attributes', () => {
 				'Cache-Control': 'no-cache',
 			}
 
-			const result = convertHeadersToOtelFormat(
+			const result = convertHeadersToOtelAttributes(
 				headers,
 				'http.request.header',
 			)
@@ -75,7 +118,7 @@ describe('Network Instrumentation Custom Attributes', () => {
 				'X-Custom-Header': 'value',
 			}
 
-			const result = convertHeadersToOtelFormat(
+			const result = convertHeadersToOtelAttributes(
 				headers,
 				'http.response.header',
 			)
@@ -92,7 +135,7 @@ describe('Network Instrumentation Custom Attributes', () => {
 				another_header: 'test',
 			}
 
-			const result = convertHeadersToOtelFormat(
+			const result = convertHeadersToOtelAttributes(
 				headers,
 				'http.request.header',
 			)
@@ -108,7 +151,7 @@ describe('Network Instrumentation Custom Attributes', () => {
 				'content-type': 'application/json',
 			}
 
-			const result = convertHeadersToOtelFormat(
+			const result = convertHeadersToOtelAttributes(
 				headers,
 				'http.request.header',
 			)
@@ -126,7 +169,7 @@ describe('Network Instrumentation Custom Attributes', () => {
 				accept: 'application/json, text/plain, */*',
 			}
 
-			const result = convertHeadersToOtelFormat(
+			const result = convertHeadersToOtelAttributes(
 				headers,
 				'http.request.header',
 			)
@@ -143,7 +186,7 @@ describe('Network Instrumentation Custom Attributes', () => {
 				'accept-language': 'en-US, en;q=0.9, es;q=0.8',
 			}
 
-			const result = convertHeadersToOtelFormat(
+			const result = convertHeadersToOtelAttributes(
 				headers,
 				'http.request.header',
 			)
@@ -160,7 +203,7 @@ describe('Network Instrumentation Custom Attributes', () => {
 				'cache-control': 'no-cache, no-store, must-revalidate',
 			}
 
-			const result = convertHeadersToOtelFormat(
+			const result = convertHeadersToOtelAttributes(
 				headers,
 				'http.response.header',
 			)
@@ -177,10 +220,10 @@ describe('Network Instrumentation Custom Attributes', () => {
 				'content-type': 'application/json',
 				accept: 'application/json, application/xml, text/html',
 				'x-custom-single': 'single-value',
-				'x-custom-multi': 'value1, value2, value3',
+				'cache-control': 'no-cache, no-store, max-age=0',
 			}
 
-			const result = convertHeadersToOtelFormat(
+			const result = convertHeadersToOtelAttributes(
 				headers,
 				'http.request.header',
 			)
@@ -196,11 +239,93 @@ describe('Network Instrumentation Custom Attributes', () => {
 			expect(result['http.request.header.x-custom-single']).toBe(
 				'single-value',
 			)
-			expect(result['http.request.header.x-custom-multi']).toEqual([
-				'value1',
-				'value2',
-				'value3',
+			// cache-control is defined as a comma-separated header
+			expect(result['http.request.header.cache-control']).toEqual([
+				'no-cache',
+				'no-store',
+				'max-age=0',
 			])
+		})
+
+		it('should NOT split date headers containing commas (RFC 7231 date format)', () => {
+			const headers = {
+				date: 'Mon, 01 Jan 2024 12:00:00 GMT',
+				'last-modified': 'Sun, 31 Dec 2023 23:59:59 GMT',
+				expires: 'Tue, 02 Jan 2024 12:00:00 GMT',
+			}
+
+			const result = convertHeadersToOtelAttributes(
+				headers,
+				'http.response.header',
+			)
+
+			// Date headers should be preserved as strings, NOT split into arrays
+			expect(result['http.response.header.date']).toBe(
+				'Mon, 01 Jan 2024 12:00:00 GMT',
+			)
+			expect(result['http.response.header.last-modified']).toBe(
+				'Sun, 31 Dec 2023 23:59:59 GMT',
+			)
+			expect(result['http.response.header.expires']).toBe(
+				'Tue, 02 Jan 2024 12:00:00 GMT',
+			)
+		})
+
+		it('should NOT split custom headers with commas', () => {
+			const headers = {
+				'x-custom-header': 'value1, value2, value3',
+				'x-timestamp': 'Mon, 01 Jan 2024 12:00:00 GMT',
+			}
+
+			const result = convertHeadersToOtelAttributes(
+				headers,
+				'http.request.header',
+			)
+
+			// Custom headers should NOT be split
+			expect(result['http.request.header.x-custom-header']).toBe(
+				'value1, value2, value3',
+			)
+			expect(result['http.request.header.x-timestamp']).toBe(
+				'Mon, 01 Jan 2024 12:00:00 GMT',
+			)
+		})
+
+		it('should split known comma-separated headers but not others', () => {
+			const headers = {
+				accept: 'text/html, application/json',
+				'accept-language': 'en-US, en;q=0.9',
+				vary: 'Accept-Encoding, User-Agent',
+				date: 'Mon, 01 Jan 2024 12:00:00 GMT',
+				'content-type': 'text/html; charset=utf-8',
+			}
+
+			const result = convertHeadersToOtelAttributes(
+				headers,
+				'http.response.header',
+			)
+
+			// These should be split (comma-separated by spec)
+			expect(result['http.response.header.accept']).toEqual([
+				'text/html',
+				'application/json',
+			])
+			expect(result['http.response.header.accept-language']).toEqual([
+				'en-US',
+				'en;q=0.9',
+			])
+			expect(result['http.response.header.vary']).toEqual([
+				'Accept-Encoding',
+				'User-Agent',
+			])
+
+			// These should NOT be split
+			expect(result['http.response.header.date']).toBe(
+				'Mon, 01 Jan 2024 12:00:00 GMT',
+			)
+			expect(result['http.response.header.content-type']).toBe(
+				'text/html; charset=utf-8',
+			)
 		})
 
 		it('should trim whitespace from split values', () => {
@@ -208,7 +333,7 @@ describe('Network Instrumentation Custom Attributes', () => {
 				accept: 'application/json,  text/plain  ,   */*',
 			}
 
-			const result = convertHeadersToOtelFormat(
+			const result = convertHeadersToOtelAttributes(
 				headers,
 				'http.request.header',
 			)
@@ -226,7 +351,7 @@ describe('Network Instrumentation Custom Attributes', () => {
 				'set-cookie': 'session=abc123',
 			}
 
-			const result = convertHeadersToOtelFormat(
+			const result = convertHeadersToOtelAttributes(
 				headers,
 				'http.response.header',
 			)
@@ -251,7 +376,10 @@ describe('Network Instrumentation Custom Attributes', () => {
 		})
 
 		it('should handle empty headers object', () => {
-			const result = convertHeadersToOtelFormat({}, 'http.request.header')
+			const result = convertHeadersToOtelAttributes(
+				{},
+				'http.request.header',
+			)
 			expect(result).toEqual({})
 		})
 	})
@@ -1123,6 +1251,103 @@ describe('Network Instrumentation Custom Attributes', () => {
 				const result = sanitizeUrl(url)
 				expect(result).toContain('name=John+Doe')
 				expect(result).toContain('sig=REDACTED')
+			})
+		})
+	})
+
+	describe('parseUrlComponents', () => {
+		describe('absolute URLs', () => {
+			it('should parse absolute URL with path and query', () => {
+				const result = parseUrlComponents(
+					'https://example.com/api/data?foo=bar&baz=qux',
+				)
+				expect(result.pathname).toBe('/api/data')
+				expect(result.search).toBe('?foo=bar&baz=qux')
+				expect(result.searchParams.get('foo')).toBe('bar')
+				expect(result.searchParams.get('baz')).toBe('qux')
+			})
+
+			it('should parse absolute URL with only path', () => {
+				const result = parseUrlComponents(
+					'https://example.com/api/data',
+				)
+				expect(result.pathname).toBe('/api/data')
+				expect(result.search).toBe('')
+				expect(Array.from(result.searchParams.keys()).length).toBe(0)
+			})
+
+			it('should parse absolute URL with root path', () => {
+				const result = parseUrlComponents('https://example.com/')
+				expect(result.pathname).toBe('/')
+				expect(result.search).toBe('')
+			})
+		})
+
+		describe('relative URLs', () => {
+			it('should parse relative URL with path only', () => {
+				const result = parseUrlComponents('/api/data')
+				expect(result.pathname).toBe('/api/data')
+				expect(result.search).toBe('')
+				expect(Array.from(result.searchParams.keys()).length).toBe(0)
+			})
+
+			it('should parse relative URL with path and query', () => {
+				const result = parseUrlComponents('/api/data?foo=bar&baz=qux')
+				expect(result.pathname).toBe('/api/data')
+				expect(result.search).toBe('?foo=bar&baz=qux')
+				expect(result.searchParams.get('foo')).toBe('bar')
+				expect(result.searchParams.get('baz')).toBe('qux')
+			})
+
+			it('should parse relative URL with only query params', () => {
+				const result = parseUrlComponents('?foo=bar')
+				expect(result.pathname).toBe('')
+				expect(result.search).toBe('?foo=bar')
+				expect(result.searchParams.get('foo')).toBe('bar')
+			})
+
+			it('should parse relative URL with nested path', () => {
+				const result = parseUrlComponents(
+					'/api/v1/users/123?include=profile',
+				)
+				expect(result.pathname).toBe('/api/v1/users/123')
+				expect(result.search).toBe('?include=profile')
+				expect(result.searchParams.get('include')).toBe('profile')
+			})
+
+			it('should handle relative URL without leading slash', () => {
+				const result = parseUrlComponents('api/data?key=value')
+				expect(result.pathname).toBe('api/data')
+				expect(result.search).toBe('?key=value')
+				expect(result.searchParams.get('key')).toBe('value')
+			})
+		})
+
+		describe('edge cases', () => {
+			it('should handle empty string', () => {
+				const result = parseUrlComponents('')
+				expect(result.pathname).toBe('')
+				expect(result.search).toBe('')
+				expect(Array.from(result.searchParams.keys()).length).toBe(0)
+			})
+
+			it('should handle URL with multiple query params of same key', () => {
+				const result = parseUrlComponents('/path?tag=a&tag=b&tag=c')
+				expect(result.pathname).toBe('/path')
+				expect(result.searchParams.getAll('tag')).toEqual([
+					'a',
+					'b',
+					'c',
+				])
+			})
+
+			it('should handle URL with encoded characters in query', () => {
+				const result = parseUrlComponents(
+					'/search?q=hello%20world&filter=a%26b',
+				)
+				expect(result.pathname).toBe('/search')
+				expect(result.searchParams.get('q')).toBe('hello world')
+				expect(result.searchParams.get('filter')).toBe('a&b')
 			})
 		})
 	})
