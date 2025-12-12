@@ -77,9 +77,26 @@ const SENSITIVE_QUERY_PARAMS = [
 ]
 
 /**
+ * Safely parses a URL, handling both absolute and relative URLs.
+ * For relative URLs, resolves against globalThis.location.origin (browser/worker)
+ * or a placeholder base (non-browser environments).
+ */
+export const safeParseUrl = (url: string): URL => {
+	try {
+		return new URL(url)
+	} catch {
+		// For relative URLs, we need a base to parse. The base doesn't affect
+		// the output since sanitizeUrl strips it for relative URLs.
+		// Use globalThis for broader environment support (window, workers, etc.)
+		return new URL(url, globalThis.location?.origin ?? 'http://example.com')
+	}
+}
+
+/**
  * Sanitizes a URL according to OpenTelemetry semantic conventions.
  * - Redacts credentials (username:password) in the URL
  * - Redacts sensitive query parameter values while preserving keys
+ * - Handles both absolute and relative URLs
  *
  * @param url - The URL string to sanitize
  * @returns Sanitized URL string
@@ -91,12 +108,15 @@ const SENSITIVE_QUERY_PARAMS = [
  * @example
  * sanitizeUrl('https://example.com/path?color=blue&sig=secret123')
  * // Returns: 'https://example.com/path?color=blue&sig=REDACTED'
+ *
+ * @example
+ * sanitizeUrl('/api?sig=secret123')
+ * // Returns: '/api?sig=REDACTED'
  */
 export const sanitizeUrl = (url: string): string => {
 	try {
-		const urlObject = new URL(url)
+		const urlObject = safeParseUrl(url)
 
-		// Redact credentials if present
 		if (urlObject.username || urlObject.password) {
 			urlObject.username = 'REDACTED'
 			urlObject.password = 'REDACTED'
@@ -111,10 +131,13 @@ export const sanitizeUrl = (url: string): string => {
 			}
 		})
 
+		// If the URL is relative, return only the pathname + search + hash
+		if (!url.includes('://')) {
+			return urlObject.pathname + urlObject.search + urlObject.hash
+		}
+
 		return urlObject.toString()
 	} catch {
-		// If URL parsing fails, return original URL
-		// This handles relative URLs or malformed URLs
 		return url
 	}
 }

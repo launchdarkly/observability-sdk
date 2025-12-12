@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
+	safeParseUrl,
 	sanitizeHeaders,
 	sanitizeUrl,
 } from '../listeners/network-listener/utils/network-sanitizer'
@@ -7,7 +8,6 @@ import {
 	parseXhrResponseHeaders,
 	splitHeaderValue,
 	convertHeadersToOtelAttributes,
-	safeParseUrl,
 } from './index'
 
 describe('Network Instrumentation Custom Attributes', () => {
@@ -1224,7 +1224,8 @@ describe('Network Instrumentation Custom Attributes', () => {
 			})
 
 			it('should return original URL if parsing fails', () => {
-				const invalidUrl = 'not-a-valid-url'
+				// Truly malformed URLs that fail even with a base URL fallback
+				const invalidUrl = 'http://[invalid-ipv6'
 				const result = sanitizeUrl(invalidUrl)
 				expect(result).toBe(invalidUrl)
 			})
@@ -1252,6 +1253,54 @@ describe('Network Instrumentation Custom Attributes', () => {
 				const result = sanitizeUrl(url)
 				expect(result).toContain('name=John+Doe')
 				expect(result).toContain('sig=REDACTED')
+			})
+		})
+
+		describe('relative URLs', () => {
+			it('should redact sensitive query params in relative URLs', () => {
+				const url = '/api?sig=secret'
+				const result = sanitizeUrl(url)
+				expect(result).toBe('/api?sig=REDACTED')
+			})
+
+			it('should redact AWSAccessKeyId in relative URLs', () => {
+				const url =
+					'/api?awsAccessKeyId=AKIAIOSFODNN7EXAMPLE&color=blue'
+				const result = sanitizeUrl(url)
+				expect(result).toBe('/api?awsAccessKeyId=REDACTED&color=blue')
+			})
+
+			it('should redact multiple sensitive params in relative URLs', () => {
+				const url =
+					'/path/to/resource?signature=abc123&x-goog-signature=xyz789'
+				const result = sanitizeUrl(url)
+				expect(result).toBe(
+					'/path/to/resource?signature=REDACTED&x-goog-signature=REDACTED',
+				)
+			})
+
+			it('should handle relative URLs without query params', () => {
+				const url = '/api/data'
+				const result = sanitizeUrl(url)
+				expect(result).toBe('/api/data')
+			})
+
+			it('should handle relative URLs with fragment', () => {
+				const url = '/api?sig=secret#section'
+				const result = sanitizeUrl(url)
+				expect(result).toBe('/api?sig=REDACTED#section')
+			})
+
+			it('should handle relative URLs with safe query params only', () => {
+				const url = '/users?id=123&filter=active'
+				const result = sanitizeUrl(url)
+				expect(result).toBe('/users?id=123&filter=active')
+			})
+
+			it('should handle root-relative URLs', () => {
+				const url = '/?sig=secret'
+				const result = sanitizeUrl(url)
+				expect(result).toBe('/?sig=REDACTED')
 			})
 		})
 	})

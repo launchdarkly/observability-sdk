@@ -27,6 +27,7 @@ import * as SemanticAttributes from '@opentelemetry/semantic-conventions'
 import { getResponseBody } from '../listeners/network-listener/utils/fetch-listener'
 import {
 	DEFAULT_URL_BLOCKLIST,
+	safeParseUrl,
 	sanitizeHeaders,
 	sanitizeUrl,
 } from '../listeners/network-listener/utils/network-sanitizer'
@@ -479,23 +480,6 @@ export const shutdown = async () => {
 			}
 		})(),
 	])
-}
-
-/**
- * Safely parses a URL, handling both absolute and relative URLs.
- * For relative URLs, resolves against window.location.origin (browser)
- * or a placeholder base (non-browser environments).
- */
-export const safeParseUrl = (url: string): URL => {
-	try {
-		return new URL(url)
-	} catch {
-		if (typeof window !== 'undefined') {
-			return new URL(url, window.location.origin)
-		}
-
-		return new URL(url, 'http://localhost')
-	}
 }
 
 const enhanceSpanWithHttpRequestAttributes = (
