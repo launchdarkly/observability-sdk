@@ -41,6 +41,10 @@
 	},
 	"resolutions": {
 		"ansi-color@^0.2.1": "patch:ansi-color@npm%3A0.2.1#./.yarn/patches/ansi-color-npm-0.2.1-f7243d10a4.patch",
+		"react@^19.0.0": "19.0.3",
+		"react@19.0.0": "19.0.3",
+		"react-dom@^19.0.0": "19.0.3",
+		"react-dom@19.0.0": "19.0.3",
 		"react-server-dom-webpack": "19.0.3"
 	},
 	"packageManager": "yarn@4.9.1"
