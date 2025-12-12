@@ -7,6 +7,7 @@ import {
 	parseXhrResponseHeaders,
 	splitHeaderValue,
 	convertHeadersToOtelAttributes,
+	safeParseUrl,
 } from './index'
 
 describe('Network Instrumentation Custom Attributes', () => {
@@ -1255,84 +1256,72 @@ describe('Network Instrumentation Custom Attributes', () => {
 		})
 	})
 
-	describe('parseUrlComponents', () => {
+	describe('safeParseUrl', () => {
 		describe('absolute URLs', () => {
 			it('should parse absolute URL with path and query', () => {
-				const result = parseUrlComponents(
-					'https://example.com/api/data?foo=bar&baz=qux',
+				const result = safeParseUrl(
+					'https://example.com/api/data?foo=bar',
 				)
 				expect(result.pathname).toBe('/api/data')
-				expect(result.search).toBe('?foo=bar&baz=qux')
+				expect(result.search).toBe('?foo=bar')
 				expect(result.searchParams.get('foo')).toBe('bar')
-				expect(result.searchParams.get('baz')).toBe('qux')
+				expect(result.origin).toBe('https://example.com')
 			})
 
 			it('should parse absolute URL with only path', () => {
-				const result = parseUrlComponents(
-					'https://example.com/api/data',
-				)
+				const result = safeParseUrl('https://example.com/api/data')
 				expect(result.pathname).toBe('/api/data')
 				expect(result.search).toBe('')
-				expect(Array.from(result.searchParams.keys()).length).toBe(0)
 			})
 
-			it('should parse absolute URL with root path', () => {
-				const result = parseUrlComponents('https://example.com/')
-				expect(result.pathname).toBe('/')
-				expect(result.search).toBe('')
+			it('should parse absolute URL with port', () => {
+				const result = safeParseUrl('http://localhost:3000/api')
+				expect(result.pathname).toBe('/api')
+				expect(result.port).toBe('3000')
+				expect(result.origin).toBe('http://localhost:3000')
 			})
 		})
 
 		describe('relative URLs', () => {
-			it('should parse relative URL with path only', () => {
-				const result = parseUrlComponents('/api/data')
+			it('should parse relative URL with leading slash', () => {
+				const result = safeParseUrl('/api/data')
 				expect(result.pathname).toBe('/api/data')
 				expect(result.search).toBe('')
-				expect(Array.from(result.searchParams.keys()).length).toBe(0)
 			})
 
 			it('should parse relative URL with path and query', () => {
-				const result = parseUrlComponents('/api/data?foo=bar&baz=qux')
+				const result = safeParseUrl('/api/data?foo=bar&baz=qux')
 				expect(result.pathname).toBe('/api/data')
 				expect(result.search).toBe('?foo=bar&baz=qux')
 				expect(result.searchParams.get('foo')).toBe('bar')
 				expect(result.searchParams.get('baz')).toBe('qux')
 			})
 
-			it('should parse relative URL with only query params', () => {
-				const result = parseUrlComponents('?foo=bar')
-				expect(result.pathname).toBe('')
-				expect(result.search).toBe('?foo=bar')
-				expect(result.searchParams.get('foo')).toBe('bar')
-			})
-
 			it('should parse relative URL with nested path', () => {
-				const result = parseUrlComponents(
-					'/api/v1/users/123?include=profile',
-				)
+				const result = safeParseUrl('/api/v1/users/123?include=profile')
 				expect(result.pathname).toBe('/api/v1/users/123')
-				expect(result.search).toBe('?include=profile')
 				expect(result.searchParams.get('include')).toBe('profile')
 			})
 
-			it('should handle relative URL without leading slash', () => {
-				const result = parseUrlComponents('api/data?key=value')
-				expect(result.pathname).toBe('api/data')
-				expect(result.search).toBe('?key=value')
-				expect(result.searchParams.get('key')).toBe('value')
+			it('should handle query-only relative URL', () => {
+				const result = safeParseUrl('?foo=bar')
+				expect(result.search).toBe('?foo=bar')
+				expect(result.searchParams.get('foo')).toBe('bar')
 			})
 		})
 
 		describe('edge cases', () => {
-			it('should handle empty string', () => {
-				const result = parseUrlComponents('')
-				expect(result.pathname).toBe('')
-				expect(result.search).toBe('')
-				expect(Array.from(result.searchParams.keys()).length).toBe(0)
+			it('should handle URL with encoded characters in query', () => {
+				const result = safeParseUrl(
+					'/search?q=hello%20world&filter=a%26b',
+				)
+				expect(result.pathname).toBe('/search')
+				expect(result.searchParams.get('q')).toBe('hello world')
+				expect(result.searchParams.get('filter')).toBe('a&b')
 			})
 
 			it('should handle URL with multiple query params of same key', () => {
-				const result = parseUrlComponents('/path?tag=a&tag=b&tag=c')
+				const result = safeParseUrl('/path?tag=a&tag=b&tag=c')
 				expect(result.pathname).toBe('/path')
 				expect(result.searchParams.getAll('tag')).toEqual([
 					'a',
@@ -1341,13 +1330,13 @@ describe('Network Instrumentation Custom Attributes', () => {
 				])
 			})
 
-			it('should handle URL with encoded characters in query', () => {
-				const result = parseUrlComponents(
-					'/search?q=hello%20world&filter=a%26b',
+			it('should handle URL with fragment', () => {
+				const result = safeParseUrl(
+					'https://example.com/page?q=test#section',
 				)
-				expect(result.pathname).toBe('/search')
-				expect(result.searchParams.get('q')).toBe('hello world')
-				expect(result.searchParams.get('filter')).toBe('a&b')
+				expect(result.pathname).toBe('/page')
+				expect(result.search).toBe('?q=test')
+				expect(result.hash).toBe('#section')
 			})
 		})
 	})

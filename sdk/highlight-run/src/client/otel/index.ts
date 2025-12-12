@@ -481,6 +481,23 @@ export const shutdown = async () => {
 	])
 }
 
+/**
+ * Safely parses a URL, handling both absolute and relative URLs.
+ * For relative URLs, resolves against window.location.origin (browser)
+ * or a placeholder base (non-browser environments).
+ */
+export const safeParseUrl = (url: string): URL => {
+	try {
+		return new URL(url)
+	} catch {
+		if (typeof window !== 'undefined') {
+			return new URL(url, window.location.origin)
+		}
+
+		return new URL(url, 'http://localhost')
+	}
+}
+
 const enhanceSpanWithHttpRequestAttributes = (
 	span: api.Span,
 	body: Request['body'] | RequestInit['body'] | BrowserXHR['_body'],
@@ -496,7 +513,7 @@ const enhanceSpanWithHttpRequestAttributes = (
 	const readableSpan = span as unknown as ReadableSpan
 	const url = getUrlFromSpan(readableSpan)
 	const sanitizedUrl = sanitizeUrl(url)
-	const sanitizedUrlObject = new URL(sanitizedUrl)
+	const sanitizedUrlObject = safeParseUrl(sanitizedUrl)
 
 	const stringBody = typeof body === 'string' ? body : String(body)
 	try {
@@ -520,10 +537,13 @@ const enhanceSpanWithHttpRequestAttributes = (
 	})
 
 	// Set sanitized query params as JSON object for easier querying
-	if (sanitizedUrlObject.searchParams.size > 0) {
+	const searchParamsEntries = Array.from(
+		sanitizedUrlObject.searchParams.entries(),
+	)
+	if (searchParamsEntries.length > 0) {
 		span.setAttribute(
 			'url.query_params',
-			JSON.stringify(Object.fromEntries(sanitizedUrlObject.searchParams)),
+			JSON.stringify(Object.fromEntries(searchParamsEntries)),
 		)
 	}
 
