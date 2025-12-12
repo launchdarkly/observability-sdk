@@ -3,21 +3,18 @@ package com.example.androidobservability
 import android.app.Application
 import com.launchdarkly.observability.api.Options
 import com.launchdarkly.observability.client.TelemetryInspector
+import com.launchdarkly.observability.plugin.Observability
+import com.launchdarkly.observability.replay.PrivacyProfile
+import com.launchdarkly.observability.replay.ReplayOptions
+import com.launchdarkly.observability.replay.SessionReplay
 import com.launchdarkly.sdk.ContextKind
 import com.launchdarkly.sdk.LDContext
 import com.launchdarkly.sdk.android.Components
+import com.launchdarkly.sdk.android.LDAndroidLogging
 import com.launchdarkly.sdk.android.LDClient
 import com.launchdarkly.sdk.android.LDConfig
-import com.launchdarkly.observability.plugin.Observability
-import com.launchdarkly.observability.replay.PrivacyProfile
-import com.launchdarkly.observability.replay.ReplayInstrumentation
-import com.launchdarkly.observability.replay.ReplayOptions
-import com.launchdarkly.observability.replay.SessionReplay
-import com.launchdarkly.sdk.android.LDAndroidLogging
-import com.launchdarkly.sdk.android.integrations.Plugin
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
-import java.util.Collections
 
 open class BaseApplication : Application() {
 
@@ -45,7 +42,7 @@ open class BaseApplication : Application() {
             options = testUrl?.let { pluginOptions.copy(backendUrl = it, otlpEndpoint = it) } ?: pluginOptions
         )
 
-        val replayPlugin = SessionReplay(
+        val sessionReplayPlugin = SessionReplay(
             options = ReplayOptions(
                 privacyProfile = PrivacyProfile(maskText = false)
             )
@@ -61,7 +58,7 @@ open class BaseApplication : Application() {
                 Components.plugins().setPlugins(
                     listOf(
                         observabilityPlugin,
-                        replayPlugin
+                        sessionReplayPlugin
                     )
                 )
             )
