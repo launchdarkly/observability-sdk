@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.19.1](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.19.0...launchdarkly-observability-android-0.19.1) (2025-12-11)
+
+
+### Bug Fixes
+
+* Android - Remove Disk Buffering ([#315](https://github.com/launchdarkly/observability-sdk/issues/315)) ([38b1803](https://github.com/launchdarkly/observability-sdk/commit/38b18037842e0bf1cb8f89c424d63162ecd53bfe))
+
 ## [0.19.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.18.0...launchdarkly-observability-android-0.19.0) (2025-12-04)
 
 
