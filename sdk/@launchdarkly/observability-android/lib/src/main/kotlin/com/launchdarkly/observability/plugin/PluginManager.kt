@@ -34,10 +34,10 @@ internal object PluginManager {
      * The returned list is a snapshot and is safe to iterate over.
      *
      * @param client The [LDClient] to get the plugins for.
-     * @return A list of [Plugin]s, or null if no plugins are associated with the client.
+     * @return A list of [Plugin]s, or empty if no plugins are associated with the client.
      */
-    fun get(client: LDClient): List<Plugin>? = synchronized(plugins) {
-        plugins[client]?.toList()
+    fun get(client: LDClient): List<Plugin> = synchronized(plugins) {
+        plugins[client]?.toList().orEmpty()
     }
 
     /**
@@ -57,6 +57,13 @@ internal object PluginManager {
      * @return True if the observability plugin is initialized, false otherwise.
      */
     fun isObservabilityInitialized(client: LDClient): Boolean {
-        return get(client)?.any { it.metadata.name == Observability.PLUGIN_NAME } == true
+        return get(client).any { it.metadata.name == Observability.PLUGIN_NAME }
+    }
+
+    /**
+     * Clears all plugin registrations.
+     */
+    fun reset() = synchronized(plugins) {
+        plugins.clear()
     }
 }

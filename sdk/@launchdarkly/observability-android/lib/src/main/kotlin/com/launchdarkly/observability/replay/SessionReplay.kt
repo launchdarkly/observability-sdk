@@ -30,7 +30,7 @@ class SessionReplay(
         if (PluginManager.isObservabilityInitialized(client)) {
             PluginManager.add(client, this)
         } else {
-            Log.e("SessionReplay", "Observability plugin not initialized")
+            Log.e("SessionReplay", "Observability plugin is not initialized")
         }
     }
 
