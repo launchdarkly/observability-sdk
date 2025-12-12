@@ -79,6 +79,7 @@ import { recordException } from '../client/otel/recordException'
 import { ObserveOptions } from '../client/types/observe'
 import { isMetricSafeNumber } from '../client/utils/utils'
 import * as SemanticAttributes from '@opentelemetry/semantic-conventions'
+import { sanitizeUrl } from '../client/listeners/network-listener/utils/network-sanitizer'
 
 export class ObserveSDK implements Observe {
 	/** Verbose project ID that is exposed to users. Legacy users may still be using ints. */
@@ -591,7 +592,7 @@ export class ObserveSDK implements Observe {
 				attributes: {
 					group: window.location.pathname,
 					category: MetricCategory.WebVital,
-					[SemanticAttributes.ATTR_URL_FULL]: href,
+					[SemanticAttributes.ATTR_URL_FULL]: sanitizeUrl(href),
 					[SemanticAttributes.ATTR_URL_PATH]: pathname,
 					[SemanticAttributes.ATTR_SERVER_ADDRESS]: hostname,
 				},

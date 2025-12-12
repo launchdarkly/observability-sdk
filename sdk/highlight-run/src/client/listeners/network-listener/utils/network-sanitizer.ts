@@ -63,3 +63,81 @@ export const DEFAULT_URL_BLOCKLIST = [
 	'https://www.googleapis.com/identitytoolkit',
 	'https://securetoken.googleapis.com',
 ]
+
+/**
+ * Sensitive query parameter keys that should be redacted according to
+ * OpenTelemetry semantic conventions for HTTP spans.
+ * @see https://opentelemetry.io/docs/specs/semconv/http/http-spans/
+ */
+const SENSITIVE_QUERY_PARAMS = [
+	'awsaccesskeyid',
+	'signature',
+	'sig',
+	'x-goog-signature',
+]
+
+/**
+ * Safely parses a URL, handling both absolute and relative URLs.
+ * For relative URLs, resolves against globalThis.location.origin (browser/worker)
+ * or a placeholder base (non-browser environments).
+ */
+export const safeParseUrl = (url: string): URL => {
+	try {
+		return new URL(url)
+	} catch {
+		// For relative URLs, we need a base to parse. The base doesn't affect
+		// the output since sanitizeUrl strips it for relative URLs.
+		// Use globalThis for broader environment support (window, workers, etc.)
+		return new URL(url, globalThis.location?.origin ?? 'http://example.com')
+	}
+}
+
+/**
+ * Sanitizes a URL according to OpenTelemetry semantic conventions.
+ * - Redacts credentials (username:password) in the URL
+ * - Redacts sensitive query parameter values while preserving keys
+ * - Handles both absolute and relative URLs
+ *
+ * @param url - The URL string to sanitize
+ * @returns Sanitized URL string
+ *
+ * @example
+ * sanitizeUrl('https://user:pass@example.com/path')
+ * // Returns: 'https://REDACTED:REDACTED@example.com/path'
+ *
+ * @example
+ * sanitizeUrl('https://example.com/path?color=blue&sig=secret123')
+ * // Returns: 'https://example.com/path?color=blue&sig=REDACTED'
+ *
+ * @example
+ * sanitizeUrl('/api?sig=secret123')
+ * // Returns: '/api?sig=REDACTED'
+ */
+export const sanitizeUrl = (url: string): string => {
+	try {
+		const urlObject = safeParseUrl(url)
+
+		if (urlObject.username || urlObject.password) {
+			urlObject.username = 'REDACTED'
+			urlObject.password = 'REDACTED'
+		}
+
+		const searchParams = urlObject.searchParams
+		SENSITIVE_QUERY_PARAMS.forEach((sensitiveParam) => {
+			for (const key of Array.from(searchParams.keys())) {
+				if (key.toLowerCase() === sensitiveParam) {
+					searchParams.set(key, 'REDACTED')
+				}
+			}
+		})
+
+		// If the URL is relative, return only the pathname + search + hash
+		if (!url.includes('://')) {
+			return urlObject.pathname + urlObject.search + urlObject.hash
+		}
+
+		return urlObject.toString()
+	} catch {
+		return url
+	}
+}

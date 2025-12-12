@@ -42,6 +42,7 @@ export default function Root() {
 			<nav style={{ display: 'flex', gap: 12 }}>
 				<a href="/welcome">Welcome</a>
 				<a href="/privacy">Privacy Demo</a>
+				<a href="/http-test">HTTP Tests</a>
 			</nav>
 			<p>{flags}</p>
 			<a href={session} target={'_blank'}>
