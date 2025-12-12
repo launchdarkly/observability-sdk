@@ -7,15 +7,14 @@ import com.launchdarkly.logging.Logs
 import com.launchdarkly.observability.BuildConfig
 import com.launchdarkly.observability.api.Options
 import com.launchdarkly.observability.client.ObservabilityClient
-import com.launchdarkly.observability.plugin.PluginManager
 import com.launchdarkly.observability.client.TelemetryInspector
 import com.launchdarkly.observability.sdk.LDObserve
 import com.launchdarkly.sdk.android.LDClient
-import com.launchdarkly.sdk.android.RegistrationCompleteResult
 import com.launchdarkly.sdk.android.integrations.EnvironmentMetadata
 import com.launchdarkly.sdk.android.integrations.Hook
 import com.launchdarkly.sdk.android.integrations.Plugin
 import com.launchdarkly.sdk.android.integrations.PluginMetadata
+import com.launchdarkly.sdk.android.integrations.RegistrationCompleteResult
 import io.opentelemetry.sdk.resources.Resource
 import java.util.Collections
 
@@ -81,7 +80,7 @@ class Observability(
         )
     }
 
-    override fun registrationComplete(result: RegistrationCompleteResult?, metadata: EnvironmentMetadata?) {
+    override fun onPluginsReady(result: RegistrationCompleteResult?, metadata: EnvironmentMetadata?) {
         val sdkKey = metadata?.credential ?: ""
 
         client?.let { lDClient ->
