@@ -2,7 +2,6 @@ package com.launchdarkly.observability.api
 
 import com.launchdarkly.logging.LDLogAdapter
 import com.launchdarkly.observability.BuildConfig
-import com.launchdarkly.observability.interfaces.LDExtendedInstrumentation
 import com.launchdarkly.sdk.android.LDTimberLogging
 import io.opentelemetry.api.common.Attributes
 import kotlin.time.Duration
@@ -29,7 +28,6 @@ const val DEFAULT_BACKEND_URL = "https://pub.observability.app.launchdarkly.com"
  * @property disableMetrics Disables metrics if true. Defaults to false.
  * @property logAdapter The log adapter to use. Defaults to using the LaunchDarkly SDK's LDTimberLogging.adapter(). Use LDAndroidLogging.adapter() to use the Android logging adapter.
  * @property loggerName The name of the logger to use. Defaults to "LaunchDarklyObservabilityPlugin".
- * @property instrumentations List of additional instrumentations to use
  */
 data class Options(
     val serviceName: String = DEFAULT_SERVICE_NAME,
@@ -46,6 +44,4 @@ data class Options(
     val disableMetrics: Boolean = false,
     val logAdapter: LDLogAdapter = LDTimberLogging.adapter(), // this follows the LaunchDarkly SDK's default log adapter
     val loggerName: String = "LaunchDarklyObservabilityPlugin",
-    // TODO: update this to provide a list of factories instead of instances
-    val instrumentations: List<LDExtendedInstrumentation> = emptyList()
 )

@@ -10,9 +10,9 @@ import io.mockk.verify
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.sdk.logs.SdkLoggerProviderBuilder
 import io.opentelemetry.sdk.resources.Resource
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.Assertions.*
 
 /**
  * Test class focused on testing the createLoggerProcessor method logic.
@@ -45,34 +45,35 @@ class InstrumentationManagerTest {
         val mockInstrumentation2 = mockk<LDExtendedInstrumentation>(relaxed = true)
         val mockLogRecordProcessor1 = mockk<io.opentelemetry.sdk.logs.LogRecordProcessor>(relaxed = true)
         val mockLogRecordProcessor2 = mockk<io.opentelemetry.sdk.logs.LogRecordProcessor>(relaxed = true)
-        
+
         val scopeName1 = "com.test.instrumentation1"
         val scopeName2 = "com.test.instrumentation2"
-        
+
         every { mockInstrumentation1.getLoggerScopeName() } returns scopeName1
         every { mockInstrumentation1.getLogRecordProcessor(testSdkKey) } returns mockLogRecordProcessor1
         every { mockInstrumentation2.getLoggerScopeName() } returns scopeName2
         every { mockInstrumentation2.getLogRecordProcessor(testSdkKey) } returns mockLogRecordProcessor2
 
-        testOptions = Options(instrumentations = listOf(mockInstrumentation1, mockInstrumentation2))
+        testOptions = Options()
 
         // Act
         val logProcessor = InstrumentationManager.createLoggerProcessor(
-            mockSdkLoggerProviderBuilder,
-            mockExportSampler,
-            testSdkKey,
-            testResource,
-            mockLogger,
-            null,
-            testOptions
+            sdkLoggerProviderBuilder = mockSdkLoggerProviderBuilder,
+            exportSampler = mockExportSampler,
+            sdkKey = testSdkKey,
+            resource = testResource,
+            logger = mockLogger,
+            telemetryInspector = null,
+            options = testOptions,
+            instrumentations = listOf(mockInstrumentation1, mockInstrumentation2)
         )
 
         // Assert
         assertNotNull(logProcessor)
-        
+
         // Verify that the logger provider builder was configured with resource
         verify { mockSdkLoggerProviderBuilder.setResource(testResource) }
-        
+
         // Verify that instrumentation methods were called
         verify { mockInstrumentation1.getLoggerScopeName() }
         verify { mockInstrumentation1.getLogRecordProcessor(testSdkKey) }
@@ -85,29 +86,30 @@ class InstrumentationManagerTest {
         // Arrange
         val mockInstrumentation = mockk<LDExtendedInstrumentation>(relaxed = true)
         val scopeName = "com.test.instrumentation"
-        
+
         every { mockInstrumentation.getLoggerScopeName() } returns scopeName
         every { mockInstrumentation.getLogRecordProcessor(testSdkKey) } returns null
 
-        testOptions = Options(instrumentations = listOf(mockInstrumentation))
+        testOptions = Options()
 
         // Act
         val logProcessor = InstrumentationManager.createLoggerProcessor(
-            mockSdkLoggerProviderBuilder,
-            mockExportSampler,
-            testSdkKey,
-            testResource,
-            mockLogger,
-            null,
-            testOptions
+            sdkLoggerProviderBuilder = mockSdkLoggerProviderBuilder,
+            exportSampler = mockExportSampler,
+            sdkKey = testSdkKey,
+            resource = testResource,
+            logger = mockLogger,
+            telemetryInspector = null,
+            options = testOptions,
+            instrumentations = listOf(mockInstrumentation)
         )
 
         // Assert
         assertNotNull(logProcessor)
-        
+
         // Verify that the logger provider builder was configured
         verify { mockSdkLoggerProviderBuilder.setResource(testResource) }
-        
+
         // Verify that instrumentation methods were called
         verify { mockInstrumentation.getLogRecordProcessor(testSdkKey) }
         // Verify that getLoggerScopeName() is NOT called when getLogRecordProcessor returns null
@@ -117,22 +119,23 @@ class InstrumentationManagerTest {
     @Test
     fun `createLoggerProcessor should handle empty instrumentations list`() {
         // Arrange
-        testOptions = Options(instrumentations = emptyList())
+        testOptions = Options()
 
         // Act
         val logProcessor = InstrumentationManager.createLoggerProcessor(
-            mockSdkLoggerProviderBuilder,
-            mockExportSampler,
-            testSdkKey,
-            testResource,
-            mockLogger,
-            null,
-            testOptions
+            sdkLoggerProviderBuilder = mockSdkLoggerProviderBuilder,
+            exportSampler = mockExportSampler,
+            sdkKey = testSdkKey,
+            resource = testResource,
+            logger = mockLogger,
+            telemetryInspector = null,
+            options = testOptions,
+            instrumentations = listOf()
         )
 
         // Assert
         assertNotNull(logProcessor)
-        
+
         // Verify that the logger provider builder was configured
         verify { mockSdkLoggerProviderBuilder.setResource(testResource) }
     }
