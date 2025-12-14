@@ -7,6 +7,7 @@ import com.launchdarkly.logging.Logs
 import com.launchdarkly.observability.BuildConfig
 import com.launchdarkly.observability.api.Options
 import com.launchdarkly.observability.client.ObservabilityClient
+import com.launchdarkly.observability.client.ObservabilityContext
 import com.launchdarkly.observability.client.TelemetryInspector
 import com.launchdarkly.observability.sdk.LDObserve
 import com.launchdarkly.sdk.android.LDClient
@@ -71,7 +72,12 @@ class Observability(
 
     override fun register(client: LDClient, metadata: EnvironmentMetadata?) {
         this.client = client
-        PluginManager.add(client, this)
+        LDObserve.context = ObservabilityContext(
+            sdkKey = metadata?.credential ?: mobileKey,
+            options = options,
+            application = application,
+            logger = logger
+        )
     }
 
     override fun getHooks(metadata: EnvironmentMetadata?): MutableList<Hook> {
@@ -105,7 +111,7 @@ class Observability(
                     }
                 }
 
-                val instrumentations = PluginManager.getInstrumentations(lDClient)?.flatMap { it.provideInstrumentations() }.orEmpty()
+                val instrumentations = InstrumentationContributorManager.get(lDClient).flatMap { it.provideInstrumentations() }
                 observabilityClient = ObservabilityClient(
                     application, sdkKey, resourceBuilder.build(), logger, options, instrumentations
                 )
