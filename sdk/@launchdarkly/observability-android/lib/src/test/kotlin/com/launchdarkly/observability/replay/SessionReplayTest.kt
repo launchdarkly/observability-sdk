@@ -58,7 +58,7 @@ class SessionReplayTest {
     }
 
     @Test
-    fun `provideInstrumentations returns replay instrumentation`() {
+    fun `provideInstrumentations returns replay instrumentation if observability is initialized`() {
         LDObserve.context = ObservabilityContext(
             sdkKey = "test-sdk-key",
             options = Options(),
@@ -70,6 +70,12 @@ class SessionReplayTest {
         val instrumentations = sessionReplay.provideInstrumentations()
         assertEquals(1, instrumentations.size)
         assertTrue(instrumentations.first() is ReplayInstrumentation)
+    }
+
+    @Test
+    fun `provideInstrumentations returns null if observability is not initialized`() {
+        val sessionReplay = SessionReplay(ReplayOptions(debug = true))
+        assertTrue(sessionReplay.provideInstrumentations().isEmpty())
     }
 
 }
