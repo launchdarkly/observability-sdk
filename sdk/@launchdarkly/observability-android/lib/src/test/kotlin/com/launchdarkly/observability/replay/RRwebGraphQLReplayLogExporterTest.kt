@@ -185,7 +185,9 @@ class RRwebGraphQLReplayLogExporterTest {
     fun `test canvas buffer limit`() = runTest {
         // Arrange: Create captures for same session but with dimension changes
         val captureEvents = listOf(
+            // small canvas
             CaptureEvent("base64data1", 800, 600, 1000L, "session-a"),  // First capture - full
+            // large canvases to cause overlimit
             CaptureEvent("base64data2222222222222", 800, 600, 2000L, "session-a"),  // Same dimensions - incremental
             CaptureEvent("base64data3333333333333", 1024, 768, 3000L, "session-a"), // Dimension change - full
             CaptureEvent(
