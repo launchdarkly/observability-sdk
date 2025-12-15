@@ -176,9 +176,8 @@ class RRwebGraphQLReplayLogExporterTest {
         
         // Verify event types: First and third captures should be full, second and fourth should be incremental
         val capturedEvents: List<Event> = capturedEventsLists[0]
-        //assertEquals(4, capturedEvents.size)
-        verifyFullCaptureEvents(capturedEvents) // First capture - full
-        verifyIncrementalCaptureEvents(capturedEvents) // Second capture - incremental
+        verifyFullCaptureEvents(capturedEvents)
+        verifyIncrementalCaptureEvents(capturedEvents)
     }
 
     @Test
