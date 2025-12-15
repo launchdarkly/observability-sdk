@@ -96,7 +96,7 @@ export const safeParseUrl = (url: string): URL => {
  * Sanitizes a URL according to OpenTelemetry semantic conventions.
  * - Redacts credentials (username:password) in the URL
  * - Redacts sensitive query parameter values while preserving keys
- * - Handles both absolute and relative URLs
+ * - Handles absolute, relative, and protocol-relative URLs
  *
  * @param url - The URL string to sanitize
  * @returns Sanitized URL string
@@ -112,6 +112,10 @@ export const safeParseUrl = (url: string): URL => {
  * @example
  * sanitizeUrl('/api?sig=secret123')
  * // Returns: '/api?sig=REDACTED'
+ *
+ * @example
+ * sanitizeUrl('//example.com/path?sig=secret123')
+ * // Returns: '//example.com/path?sig=REDACTED'
  */
 export const sanitizeUrl = (url: string): string => {
 	try {
@@ -131,9 +135,24 @@ export const sanitizeUrl = (url: string): string => {
 			}
 		})
 
-		// If the URL is relative, return only the pathname + search + hash
-		if (!url.includes('://')) {
+		// If the URL is relative (but not protocol-relative), return only the pathname + search + hash
+		if (!url.includes('://') && !url.startsWith('//')) {
 			return urlObject.pathname + urlObject.search + urlObject.hash
+		}
+
+		// For protocol-relative URLs, preserve the //host format
+		if (url.startsWith('//')) {
+			let result = '//'
+			// Include credentials if present (they will be redacted)
+			if (urlObject.username || urlObject.password) {
+				result += urlObject.username + ':' + urlObject.password + '@'
+			}
+			result +=
+				urlObject.host +
+				urlObject.pathname +
+				urlObject.search +
+				urlObject.hash
+			return result
 		}
 
 		return urlObject.toString()

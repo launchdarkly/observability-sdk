@@ -1251,6 +1251,62 @@ describe('Network Instrumentation Custom Attributes', () => {
 				expect(result).toBe('/?sig=REDACTED')
 			})
 		})
+
+		describe('protocol-relative URLs', () => {
+			it('should redact sensitive query params while preserving host', () => {
+				const url = '//example.com/path?sig=secret123'
+				const result = sanitizeUrl(url)
+				expect(result).toBe('//example.com/path?sig=REDACTED')
+			})
+
+			it('should redact credentials in protocol-relative URLs', () => {
+				const url = '//user:pass@example.com/path'
+				const result = sanitizeUrl(url)
+				expect(result).toBe('//REDACTED:REDACTED@example.com/path')
+			})
+
+			it('should handle protocol-relative URLs with port', () => {
+				const url = '//example.com:8080/api?sig=secret'
+				const result = sanitizeUrl(url)
+				expect(result).toBe('//example.com:8080/api?sig=REDACTED')
+			})
+
+			it('should handle protocol-relative URLs with fragment', () => {
+				const url = '//example.com/path?sig=secret#section'
+				const result = sanitizeUrl(url)
+				expect(result).toBe('//example.com/path?sig=REDACTED#section')
+			})
+
+			it('should preserve safe query params in protocol-relative URLs', () => {
+				const url = '//example.com/api?user=123&filter=active'
+				const result = sanitizeUrl(url)
+				expect(result).toBe('//example.com/api?user=123&filter=active')
+			})
+
+			it('should handle protocol-relative URLs without query params', () => {
+				const url = '//example.com/path/to/resource'
+				const result = sanitizeUrl(url)
+				expect(result).toBe('//example.com/path/to/resource')
+			})
+
+			it('should redact multiple sensitive params in protocol-relative URLs', () => {
+				const url =
+					'//cdn.example.com/file?signature=abc&x-goog-signature=xyz'
+				const result = sanitizeUrl(url)
+				expect(result).toBe(
+					'//cdn.example.com/file?signature=REDACTED&x-goog-signature=REDACTED',
+				)
+			})
+
+			it('should handle complex protocol-relative URLs with credentials, port, and sensitive params', () => {
+				const url =
+					'//admin:secret@api.example.com:443/v1/data?AWSAccessKeyId=KEY&sig=SIG#hash'
+				const result = sanitizeUrl(url)
+				expect(result).toBe(
+					'//REDACTED:REDACTED@api.example.com:443/v1/data?AWSAccessKeyId=REDACTED&sig=REDACTED#hash',
+				)
+			})
+		})
 	})
 
 	describe('safeParseUrl', () => {
