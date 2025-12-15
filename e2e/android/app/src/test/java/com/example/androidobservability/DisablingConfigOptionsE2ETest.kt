@@ -14,7 +14,6 @@ import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertFalse
 import junit.framework.TestCase.assertNotNull
 import junit.framework.TestCase.assertTrue
-import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -88,6 +87,7 @@ class DisablingConfigOptionsE2ETest {
         assertFalse(requestsContainsUrl(tracesUrl))
     }
 
+    @Test
     fun `Spans should NOT be exported when TracesApi does not include spans`() {
         application.observabilityOptions = getOptionsAllEnabled().copy(
             tracesApi = ObservabilityOptions.TracesApi(includeSpans = false)
