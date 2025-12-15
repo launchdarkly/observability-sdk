@@ -1,7 +1,7 @@
 package com.launchdarkly.observability.client
 
 import com.launchdarkly.logging.LDLogger
-import com.launchdarkly.observability.api.Options
+import com.launchdarkly.observability.api.ObservabilityOptions
 import com.launchdarkly.observability.interfaces.LDExtendedInstrumentation
 import com.launchdarkly.observability.sampling.ExportSampler
 import io.mockk.every
@@ -26,7 +26,7 @@ class InstrumentationManagerTest {
     private lateinit var mockLogger: LDLogger
     private lateinit var testResource: Resource
     private lateinit var testSdkKey: String
-    private lateinit var testOptions: Options
+    private lateinit var testObservabilityOptions: ObservabilityOptions
 
     @BeforeEach
     fun setup() {
@@ -35,7 +35,7 @@ class InstrumentationManagerTest {
         mockLogger = mockk(relaxed = true)
         testResource = Resource.create(Attributes.empty())
         testSdkKey = "test-sdk-key"
-        testOptions = Options()
+        testObservabilityOptions = ObservabilityOptions()
     }
 
     @Test
@@ -54,7 +54,7 @@ class InstrumentationManagerTest {
         every { mockInstrumentation2.getLoggerScopeName() } returns scopeName2
         every { mockInstrumentation2.getLogRecordProcessor(testSdkKey) } returns mockLogRecordProcessor2
 
-        testOptions = Options()
+        testObservabilityOptions = ObservabilityOptions()
 
         // Act
         val logProcessor = InstrumentationManager.createLoggerProcessor(
@@ -64,7 +64,7 @@ class InstrumentationManagerTest {
             resource = testResource,
             logger = mockLogger,
             telemetryInspector = null,
-            options = testOptions,
+            observabilityOptions = testObservabilityOptions,
             instrumentations = listOf(mockInstrumentation1, mockInstrumentation2)
         )
 
@@ -90,7 +90,7 @@ class InstrumentationManagerTest {
         every { mockInstrumentation.getLoggerScopeName() } returns scopeName
         every { mockInstrumentation.getLogRecordProcessor(testSdkKey) } returns null
 
-        testOptions = Options()
+        testObservabilityOptions = ObservabilityOptions()
 
         // Act
         val logProcessor = InstrumentationManager.createLoggerProcessor(
@@ -100,7 +100,7 @@ class InstrumentationManagerTest {
             resource = testResource,
             logger = mockLogger,
             telemetryInspector = null,
-            options = testOptions,
+            observabilityOptions = testObservabilityOptions,
             instrumentations = listOf(mockInstrumentation)
         )
 
@@ -119,7 +119,7 @@ class InstrumentationManagerTest {
     @Test
     fun `createLoggerProcessor should handle empty instrumentations list`() {
         // Arrange
-        testOptions = Options()
+        testObservabilityOptions = ObservabilityOptions()
 
         // Act
         val logProcessor = InstrumentationManager.createLoggerProcessor(
@@ -129,7 +129,7 @@ class InstrumentationManagerTest {
             resource = testResource,
             logger = mockLogger,
             telemetryInspector = null,
-            options = testOptions,
+            observabilityOptions = testObservabilityOptions,
             instrumentations = listOf()
         )
 

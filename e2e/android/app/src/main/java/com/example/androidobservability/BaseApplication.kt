@@ -1,7 +1,7 @@
 package com.example.androidobservability
 
 import android.app.Application
-import com.launchdarkly.observability.api.Options
+import com.launchdarkly.observability.api.ObservabilityOptions
 import com.launchdarkly.observability.client.TelemetryInspector
 import com.launchdarkly.observability.plugin.Observability
 import com.launchdarkly.observability.replay.PrivacyProfile
@@ -24,11 +24,16 @@ open class BaseApplication : Application() {
         const val LAUNCHDARKLY_MOBILE_KEY = "MOBILE_KEY_GOES_HERE"
     }
 
-    var pluginOptions = Options(
+    var observabilityOptions = ObservabilityOptions(
         resourceAttributes = Attributes.of(
             AttributeKey.stringKey("example"), "value"
         ),
         debug = true,
+        tracesApi = ObservabilityOptions.TracesApi(includeErrors = false, includeSpans = false),
+        metricsApi = ObservabilityOptions.MetricsApi.disabled(),
+        instrumentations = ObservabilityOptions.Instrumentations(
+            crashReporting = true, launchTime = true, activityLifecycle = false
+        ),
         logAdapter = LDAndroidLogging.adapter(),
     )
 
@@ -39,7 +44,7 @@ open class BaseApplication : Application() {
         val observabilityPlugin = Observability(
             application = this@BaseApplication,
             mobileKey = LAUNCHDARKLY_MOBILE_KEY,
-            options = testUrl?.let { pluginOptions.copy(backendUrl = it, otlpEndpoint = it) } ?: pluginOptions
+            options = testUrl?.let { observabilityOptions.copy(backendUrl = it, otlpEndpoint = it) } ?: observabilityOptions
         )
 
         val sessionReplayPlugin = SessionReplay(
