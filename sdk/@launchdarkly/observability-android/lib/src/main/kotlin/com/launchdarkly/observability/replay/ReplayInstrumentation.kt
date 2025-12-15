@@ -1,6 +1,6 @@
 package com.launchdarkly.observability.replay
 
-import com.launchdarkly.logging.LDLogger
+import com.launchdarkly.observability.client.ObservabilityContext
 import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
 import com.launchdarkly.observability.interfaces.LDExtendedInstrumentation
 import com.launchdarkly.observability.replay.capture.CaptureSource
@@ -30,7 +30,7 @@ private const val BATCH_MAX_EXPORT_SIZE = 10
 /**
  * Provides session replay instrumentation. Session replays that are sampled will appear on the LaunchDarkly dashboard.
  *
- * @param options Configuration options for replay behavior including privacy settings, capture interval, and backend URL
+ * @param options Configuration options for replay behavior including privacy settings and capture interval
  *
  * @sample
  * ```kotlin
@@ -65,6 +65,7 @@ private const val BATCH_MAX_EXPORT_SIZE = 10
  */
 class ReplayInstrumentation(
     private val options: ReplayOptions = ReplayOptions(),
+    private val observabilityContext: ObservabilityContext
 ) : LDExtendedInstrumentation {
 
     private lateinit var _otelLogger: Logger
@@ -78,10 +79,11 @@ class ReplayInstrumentation(
 
     override fun install(ctx: InstallationContext) {
         _otelLogger = ctx.openTelemetry.logsBridge.get(INSTRUMENTATION_SCOPE_NAME)
-        // TODO: Use real LDClient logger after creating SR Plugin
-        val logger = LDLogger.none()
-        _captureSource =
-            CaptureSource(ctx.sessionManager, options.privacyProfile.asMatchersList(), logger)
+        _captureSource = CaptureSource(
+            sessionManager = ctx.sessionManager,
+            maskMatchers = options.privacyProfile.asMatchersList(),
+            logger = observabilityContext.logger
+        )
         _interactionSource = InteractionSource(ctx.sessionManager)
 
         // TODO: O11Y-621 - don't use global scope
@@ -100,7 +102,7 @@ class ReplayInstrumentation(
         }
 
         GlobalScope.launch(DispatcherProviderHolder.current.default) {
-            _interactionSource.captureFlow.collect{ interaction->
+            _interactionSource.captureFlow.collect { interaction ->
                 // Serialize positions list to JSON using StringBuilder for performance
                 val positionsJson = StringBuilder().apply {
                     append('[')
@@ -142,7 +144,7 @@ class ReplayInstrumentation(
             if (!_isPaused) {
                 return
             }
-            
+
             // Clear paused flag and start/resume periodic capture
             _isPaused = false
             internalStartCapture()
@@ -156,14 +158,14 @@ class ReplayInstrumentation(
             if (_isPaused) {
                 return
             }
-            
+
             // pause the periodic capture by terminating the job
             _isPaused = true
             _captureJob?.cancel()
             _captureJob = null
         }
     }
-    
+
     private fun internalStartCapture() {
         // TODO: O11Y-621 - don't use global scope
         _captureJob = GlobalScope.launch(DispatcherProviderHolder.current.default) {
@@ -184,9 +186,9 @@ class ReplayInstrumentation(
     override fun getLogRecordProcessor(credential: String): LogRecordProcessor {
         val exporter = RRwebGraphQLReplayLogExporter(
             organizationVerboseId = credential, // the SDK credential is used as the organization ID intentionally
-            backendUrl = options.backendUrl,
-            serviceName = options.serviceName,
-            serviceVersion = options.serviceVersion,
+            backendUrl = observabilityContext.options.backendUrl,
+            serviceName = observabilityContext.options.serviceName,
+            serviceVersion = observabilityContext.options.serviceVersion,
         )
 
         return BatchLogRecordProcessor.builder(exporter)
