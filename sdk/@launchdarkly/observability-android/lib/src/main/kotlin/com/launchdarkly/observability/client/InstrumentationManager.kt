@@ -2,7 +2,7 @@ package com.launchdarkly.observability.client
 
 import android.app.Application
 import com.launchdarkly.logging.LDLogger
-import com.launchdarkly.observability.api.Options
+import com.launchdarkly.observability.api.ObservabilityOptions
 import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
 import com.launchdarkly.observability.interfaces.LDExtendedInstrumentation
 import com.launchdarkly.observability.interfaces.Metric
@@ -13,8 +13,8 @@ import com.launchdarkly.observability.sampling.ExportSampler
 import com.launchdarkly.observability.sampling.SamplingConfig
 import com.launchdarkly.observability.sampling.SamplingLogProcessor
 import com.launchdarkly.observability.sampling.SamplingTraceExporter
-import com.launchdarkly.observability.sampling.SpansSampler
 import io.opentelemetry.android.OpenTelemetryRum
+import io.opentelemetry.android.OpenTelemetryRumBuilder
 import io.opentelemetry.android.config.OtelRumConfig
 import io.opentelemetry.android.session.SessionConfig
 import io.opentelemetry.api.common.Attributes
@@ -63,7 +63,7 @@ import java.util.concurrent.TimeUnit
  * @param sdkKey The SDK key for authentication.
  * @param resources The OpenTelemetry resource describing this service.
  * @param logger The logger for internal logging.
- * @param options Additional configuration options for the SDK.
+ * @param observabilityOptions Additional configuration options for the SDK.
  * @param instrumentations A list of custom instrumentations to be added.
  */
 class InstrumentationManager(
@@ -71,7 +71,7 @@ class InstrumentationManager(
     private val sdkKey: String,
     private val resources: Resource,
     private val logger: LDLogger,
-    private val options: Options,
+    private val observabilityOptions: ObservabilityOptions,
     private val instrumentations: List<LDExtendedInstrumentation>,
 ) {
     private val otelRUM: OpenTelemetryRum
@@ -79,13 +79,12 @@ class InstrumentationManager(
     private var otelLogger: Logger
     private var otelTracer: Tracer
     private var customSampler = CustomSampler()
-    private val graphqlClient = GraphQLClient(options.backendUrl)
+    private val graphqlClient = GraphQLClient(observabilityOptions.backendUrl)
     private val samplingApiService = SamplingApiService(graphqlClient)
     private var telemetryInspector: TelemetryInspector? = null
     private var spanProcessor: SpanProcessor? = null
     private var logProcessor: LogRecordProcessor? = null
     private var metricsReader: PeriodicMetricReader? = null
-    private var launchTimeInstrumentation: LaunchTimeInstrumentation? = null
     private val gaugeCache = ConcurrentHashMap<String, DoubleGauge>()
     private val counterCache = ConcurrentHashMap<String, LongCounter>()
     private val histogramCache = ConcurrentHashMap<String, DoubleHistogram>()
@@ -100,50 +99,32 @@ class InstrumentationManager(
 
         val rumBuilder = OpenTelemetryRum.builder(application, otelRumConfig)
             .addLoggerProviderCustomizer { sdkLoggerProviderBuilder, _ ->
-                // TODO: O11Y-627 - need to refactor this so that the disableLogs option is specific to core logging functionality. when logs are disabled, session replay logs should not be blocked
-                return@addLoggerProviderCustomizer if (options.disableLogs && options.disableErrorTracking) {
-                    sdkLoggerProviderBuilder
-                } else {
-                    val processor = createLoggerProcessor(
-                        sdkLoggerProviderBuilder,
-                        customSampler,
-                        sdkKey,
-                        resources,
-                        logger,
-                        telemetryInspector,
-                        options,
-                        instrumentations
-                    )
-                    logProcessor = processor
-                    sdkLoggerProviderBuilder.addLogRecordProcessor(processor)
-                }
+                val processor = createLoggerProcessor(
+                    sdkLoggerProviderBuilder,
+                    customSampler,
+                    sdkKey,
+                    resources,
+                    logger,
+                    telemetryInspector,
+                    observabilityOptions,
+                    instrumentations
+                )
+                logProcessor = processor
+                return@addLoggerProviderCustomizer sdkLoggerProviderBuilder.addLogRecordProcessor(processor)
             }
             .addTracerProviderCustomizer { sdkTracerProviderBuilder, _ ->
-                return@addTracerProviderCustomizer if (options.disableTraces && options.disableErrorTracking) {
-                    sdkTracerProviderBuilder
-                } else {
-                    configureTracerProvider(sdkTracerProviderBuilder)
-                }
+                return@addTracerProviderCustomizer configureTracerProvider(sdkTracerProviderBuilder)
             }
             .addMeterProviderCustomizer { sdkMeterProviderBuilder, _ ->
-                return@addMeterProviderCustomizer if (options.disableMetrics) {
-                    sdkMeterProviderBuilder
-                } else {
-                    configureMeterProvider(sdkMeterProviderBuilder)
-                }
+                return@addMeterProviderCustomizer configureMeterProvider(sdkMeterProviderBuilder)
             }
 
         for (instrumentation in instrumentations) {
             rumBuilder.addInstrumentation(instrumentation)
         }
 
-        if (!options.disableMetrics) {
-            launchTimeInstrumentation = LaunchTimeInstrumentation(
-                application = application,
-                metricRecorder = this::recordHistogram
-            ).also {
-                rumBuilder.addInstrumentation(it)
-            }
+        if (observabilityOptions.instrumentations.launchTime) {
+            addLaunchTimeInstrumentation(rumBuilder)
         }
 
         otelRUM = rumBuilder.build()
@@ -156,27 +137,37 @@ class InstrumentationManager(
 
     private fun createOtelRumConfig(): OtelRumConfig {
         val config = OtelRumConfig()
-            .setSessionConfig(SessionConfig(backgroundInactivityTimeout = options.sessionBackgroundTimeout))
+            .setSessionConfig(SessionConfig(backgroundInactivityTimeout = observabilityOptions.sessionBackgroundTimeout))
 
-        if (options.disableErrorTracking) {
-            // Disables Crash reporter
-            // "crash" is the instrumentation name defined in [io.opentelemetry.android.instrumentation.crash.CrashReporterInstrumentation.java]
+        if (!observabilityOptions.instrumentations.crashReporting) {
+            // Disables [io.opentelemetry.android.instrumentation.crash.CrashReporterInstrumentation.java]
             config.suppressInstrumentation("crash")
+        }
+
+        if(!observabilityOptions.instrumentations.activityLifecycle) {
+            // Disables [io.opentelemetry.android.instrumentation.activity.ActivityLifecycleInstrumentation.java]
+            config.suppressInstrumentation("activity")
         }
 
         return config
     }
 
+    private fun addLaunchTimeInstrumentation(rumBuilder: OpenTelemetryRumBuilder) {
+        val launchTimeInstrumentation = LaunchTimeInstrumentation(
+            application = application,
+            metricRecorder = { metric ->
+                val histogram = histogramCache.getOrPut(metric.name) {
+                    otelMeter.histogramBuilder(metric.name).build()
+                }
+                histogram.record(metric.value, metric.attributes.addSessionId())
+            }
+        )
+        rumBuilder.addInstrumentation(launchTimeInstrumentation)
+    }
+
     private fun configureTracerProvider(sdkTracerProviderBuilder: SdkTracerProviderBuilder): SdkTracerProviderBuilder {
         val primarySpanExporter = createOtlpSpanExporter()
-        sdkTracerProviderBuilder
-            .setResource(resources)
-            .setSampler(
-                SpansSampler(
-                    allowNormalSpans = !options.disableTraces,
-                    allowErrorSpans = !options.disableErrorTracking
-                )
-            )
+        sdkTracerProviderBuilder.setResource(resources)
 
         val finalExporter = createSpanExporter(primarySpanExporter)
         val processor = createBatchSpanProcessor(finalExporter)
@@ -199,21 +190,21 @@ class InstrumentationManager(
 
     private fun createOtlpSpanExporter(): SpanExporter {
         return OtlpHttpSpanExporter.builder()
-            .setEndpoint(options.otlpEndpoint + TRACES_PATH)
-            .setHeaders { options.customHeaders }
+            .setEndpoint(observabilityOptions.otlpEndpoint + TRACES_PATH)
+            .setHeaders { observabilityOptions.customHeaders }
             .build()
     }
 
     private fun createOtlpMetricExporter(): MetricExporter {
         return OtlpHttpMetricExporter.builder()
-            .setEndpoint(options.otlpEndpoint + METRICS_PATH)
-            .setHeaders { options.customHeaders }
+            .setEndpoint(observabilityOptions.otlpEndpoint + METRICS_PATH)
+            .setHeaders { observabilityOptions.customHeaders }
             .setAggregationTemporalitySelector(AggregationTemporalitySelector.deltaPreferred())
             .build()
     }
 
     private fun createSpanExporter(primaryExporter: SpanExporter): SpanExporter {
-        val baseExporter = if (options.debug) {
+        val baseExporter = if (observabilityOptions.debug) {
             SpanExporter.composite(
                 buildList {
                     add(primaryExporter)
@@ -229,7 +220,7 @@ class InstrumentationManager(
     }
 
     private fun createMetricExporter(primaryExporter: MetricExporter): MetricExporter {
-        return if (options.debug) {
+        return if (observabilityOptions.debug) {
             CompositeMetricExporter(
                 buildList {
                     add(primaryExporter)
@@ -250,7 +241,7 @@ class InstrumentationManager(
     }
 
     private fun initializeTelemetryInspector() {
-        if (options.debug) {
+        if (observabilityOptions.debug) {
             telemetryInspector = TelemetryInspector()
         }
     }
@@ -275,6 +266,8 @@ class InstrumentationManager(
     }
 
     fun recordMetric(metric: Metric) {
+        if (!observabilityOptions.metricsApi.enabled) return
+
         val gauge = gaugeCache.getOrPut(metric.name) {
             otelMeter.gaugeBuilder(metric.name).build()
         }
@@ -282,6 +275,8 @@ class InstrumentationManager(
     }
 
     fun recordCount(metric: Metric) {
+        if (!observabilityOptions.metricsApi.enabled) return
+
         // TODO: handle double casting to long better
         val counter = counterCache.getOrPut(metric.name) {
             otelMeter.counterBuilder(metric.name).build()
@@ -290,6 +285,8 @@ class InstrumentationManager(
     }
 
     fun recordIncr(metric: Metric) {
+        if (!observabilityOptions.metricsApi.enabled) return
+
         val counter = counterCache.getOrPut(metric.name) {
             otelMeter.counterBuilder(metric.name).build()
         }
@@ -298,6 +295,8 @@ class InstrumentationManager(
     }
 
     fun recordHistogram(metric: Metric) {
+        if (!observabilityOptions.metricsApi.enabled) return
+
         val histogram = histogramCache.getOrPut(metric.name) {
             otelMeter.histogramBuilder(metric.name).build()
         }
@@ -305,13 +304,21 @@ class InstrumentationManager(
     }
 
     fun recordUpDownCounter(metric: Metric) {
+        if (!observabilityOptions.metricsApi.enabled) return
+
         val upDownCounter = upDownCounterCache.getOrPut(metric.name) {
             otelMeter.upDownCounterBuilder(metric.name).build()
         }
         upDownCounter.add(metric.value.toLong(), metric.attributes.addSessionId())
     }
 
-    fun recordLog(message: String, severity: Severity, attributes: Attributes) {
+    fun recordLog(
+        message: String,
+        severity: Severity,
+        attributes: Attributes
+    ) {
+        if (observabilityOptions.logsApiLevel.level > severity.severityNumber) return
+
         otelLogger.logRecordBuilder()
             .setBody(message)
             .setTimestamp(System.currentTimeMillis(), TimeUnit.MILLISECONDS)
@@ -322,21 +329,23 @@ class InstrumentationManager(
     }
 
     fun recordError(error: Error, attributes: Attributes) {
-        if (!options.disableErrorTracking) {
-            val span = otelTracer
-                .spanBuilder(ERROR_SPAN_NAME)
-                .setParent(Context.current().with(Span.current()))
-                .startSpan()
+        if (!observabilityOptions.tracesApi.includeErrors) return
 
-            val attrBuilder = Attributes.builder()
-            attrBuilder.putAll(attributes)
+        val span = otelTracer
+            .spanBuilder(ERROR_SPAN_NAME)
+            .setParent(Context.current().with(Span.current()))
+            .startSpan()
 
-            span.recordException(error, attrBuilder.build())
-            span.end()
-        }
+        val attrBuilder = Attributes.builder()
+        attrBuilder.putAll(attributes)
+
+        span.recordException(error, attrBuilder.build())
+        span.end()
     }
 
     fun startSpan(name: String, attributes: Attributes): Span {
+        if (!observabilityOptions.tracesApi.includeSpans) return Span.getInvalid()
+
         return otelTracer.spanBuilder(name)
             .setAllAttributes(attributes)
             .startSpan()
@@ -409,28 +418,22 @@ class InstrumentationManager(
             resource: Resource,
             logger: LDLogger,
             telemetryInspector: TelemetryInspector?,
-            options: Options,
+            observabilityOptions: ObservabilityOptions,
             instrumentations: List<LDExtendedInstrumentation>,
         ): LogRecordProcessor {
-            val primaryLogExporter = createOtlpLogExporter(options)
+            val primaryLogExporter = createOtlpLogExporter(observabilityOptions)
             sdkLoggerProviderBuilder.setResource(resource)
 
             val finalExporter = createLogExporter(
-                primaryLogExporter,
-                logger,
-                telemetryInspector,
-                options
+                primaryExporter = primaryLogExporter,
+                logger = logger,
+                telemetryInspector = telemetryInspector,
+                observabilityOptions = observabilityOptions
             )
 
             val samplingProcessor = SamplingLogProcessor(
-                createBatchLogRecordProcessor(finalExporter),
-                exportSampler
-            )
-
-            val baseProcessor = ConditionalLogRecordProcessor(
-                delegate = samplingProcessor,
-                allowNormalLogs = !options.disableLogs,
-                allowCrashes = !options.disableErrorTracking
+                delegate = createBatchLogRecordProcessor(finalExporter),
+                sampler = exportSampler
             )
 
             /*
@@ -440,7 +443,7 @@ class InstrumentationManager(
                 originally added to route replay instrumentation logs through a separate log processing
                 pipeline to provide instrumentation specific caching and export.
             */
-            val routingLogRecordProcessor = RoutingLogRecordProcessor(fallthroughProcessor = baseProcessor)
+            val routingLogRecordProcessor = RoutingLogRecordProcessor(fallthroughProcessor = samplingProcessor)
             instrumentations.forEach { instrumentation ->
                 instrumentation.getLogRecordProcessor(credential = sdkKey)?.let { processor ->
                     instrumentation.getLoggerScopeName().let { scopeName ->
@@ -452,10 +455,10 @@ class InstrumentationManager(
             return routingLogRecordProcessor
         }
 
-        private fun createOtlpLogExporter(options: Options): LogRecordExporter {
+        private fun createOtlpLogExporter(observabilityOptions: ObservabilityOptions): LogRecordExporter {
             return OtlpHttpLogRecordExporter.builder()
-                .setEndpoint(options.otlpEndpoint + LOGS_PATH)
-                .setHeaders { options.customHeaders }
+                .setEndpoint(observabilityOptions.otlpEndpoint + LOGS_PATH)
+                .setHeaders { observabilityOptions.customHeaders }
                 .build()
         }
 
@@ -463,9 +466,9 @@ class InstrumentationManager(
             primaryExporter: LogRecordExporter,
             logger: LDLogger,
             telemetryInspector: TelemetryInspector?,
-            options: Options
+            observabilityOptions: ObservabilityOptions
         ): LogRecordExporter {
-            return if (options.debug) {
+            return if (observabilityOptions.debug) {
                 LogRecordExporter.composite(
                     buildList {
                         add(primaryExporter)

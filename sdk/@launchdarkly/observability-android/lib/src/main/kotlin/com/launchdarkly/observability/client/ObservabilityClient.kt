@@ -2,7 +2,7 @@ package com.launchdarkly.observability.client
 
 import android.app.Application
 import com.launchdarkly.logging.LDLogger
-import com.launchdarkly.observability.api.Options
+import com.launchdarkly.observability.api.ObservabilityOptions
 import com.launchdarkly.observability.interfaces.LDExtendedInstrumentation
 import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.observability.interfaces.Observe
@@ -37,7 +37,7 @@ class ObservabilityClient : Observe {
         sdkKey: String,
         resource: Resource,
         logger: LDLogger,
-        options: Options,
+        options: ObservabilityOptions,
         instrumentations: List<LDExtendedInstrumentation>
     ) {
         this.instrumentationManager = InstrumentationManager(

@@ -54,7 +54,7 @@ class ViewModel(application: Application) : AndroidViewModel(application) {
     fun triggerLog() {
         LDObserve.recordLog(
             "Test Log",
-            Severity.DEBUG,
+            Severity.INFO,
             Attributes.of(AttributeKey.stringKey("FakeAttribute"), "FakeVal")
         )
     }

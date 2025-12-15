@@ -5,7 +5,7 @@ import com.launchdarkly.logging.LDLogLevel
 import com.launchdarkly.logging.LDLogger
 import com.launchdarkly.logging.Logs
 import com.launchdarkly.observability.BuildConfig
-import com.launchdarkly.observability.api.Options
+import com.launchdarkly.observability.api.ObservabilityOptions
 import com.launchdarkly.observability.client.ObservabilityClient
 import com.launchdarkly.observability.client.ObservabilityContext
 import com.launchdarkly.observability.client.TelemetryInspector
@@ -52,7 +52,7 @@ import java.util.Collections
 class Observability(
     private val application: Application,
     private val mobileKey: String,
-    private val options: Options = Options() // new instance has reasonable defaults
+    private val options: ObservabilityOptions = ObservabilityOptions() // new instance has reasonable defaults
 ) : Plugin() {
     private val logger: LDLogger
     private var observabilityClient: ObservabilityClient? = null

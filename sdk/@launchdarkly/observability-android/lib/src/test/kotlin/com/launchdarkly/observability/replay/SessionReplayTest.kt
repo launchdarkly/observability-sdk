@@ -1,7 +1,7 @@
 package com.launchdarkly.observability.replay
 
 import com.launchdarkly.logging.LDLogger
-import com.launchdarkly.observability.api.Options
+import com.launchdarkly.observability.api.ObservabilityOptions
 import com.launchdarkly.observability.client.ObservabilityContext
 import com.launchdarkly.observability.plugin.InstrumentationContributorManager
 import com.launchdarkly.observability.sdk.LDObserve
@@ -36,7 +36,7 @@ class SessionReplayTest {
     fun `register adds session replay when observability is initialized`() {
         LDObserve.context = ObservabilityContext(
             sdkKey = "test-sdk-key",
-            options = Options(),
+            options = ObservabilityOptions(),
             application = mockk(),
             logger = mockk<LDLogger>(relaxed = true),
         )
@@ -61,7 +61,7 @@ class SessionReplayTest {
     fun `provideInstrumentations returns replay instrumentation if observability is initialized`() {
         LDObserve.context = ObservabilityContext(
             sdkKey = "test-sdk-key",
-            options = Options(),
+            options = ObservabilityOptions(),
             application = mockk(),
             logger = mockk<LDLogger>(relaxed = true),
         )
