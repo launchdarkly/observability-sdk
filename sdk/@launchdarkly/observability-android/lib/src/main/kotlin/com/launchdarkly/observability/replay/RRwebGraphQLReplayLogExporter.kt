@@ -89,7 +89,7 @@ class RRwebGraphQLReplayLogExporter(
                                 val stateChanged = capture.session != lastSeenState.sessionId ||
                                         capture.origHeight != lastSeenState.height ||
                                         capture.origWidth != lastSeenState.width ||
-                                        generatingCanvasSize >= RRWEB_CANVAS_BUFFER_LIMIT
+                                        generatingCanvasSize >= canvasBufferLimit
 
                                 if (stateChanged) {
                                     lastSeenState = LastSeenState(
