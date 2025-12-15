@@ -20,11 +20,7 @@ class SessionReplay(
     private val options: ReplayOptions = ReplayOptions(),
 ) : Plugin(), InstrumentationContributor {
 
-    private val instrumentations: List<LDExtendedInstrumentation> by lazy {
-        LDObserve.context?.let { context ->
-            listOf(ReplayInstrumentation(options, context))
-        }.orEmpty()
-    }
+    private var cachedInstrumentations: List<LDExtendedInstrumentation>? = null
 
     override fun getMetadata(): PluginMetadata {
         return object : PluginMetadata() {
@@ -41,7 +37,13 @@ class SessionReplay(
         }
     }
 
-    override fun provideInstrumentations(): List<LDExtendedInstrumentation> = instrumentations
+    override fun provideInstrumentations(): List<LDExtendedInstrumentation> {
+        return synchronized(this) {
+            cachedInstrumentations ?: LDObserve.context?.let { context ->
+                listOf(ReplayInstrumentation(options, context)).also { cachedInstrumentations = it }
+            }.orEmpty()
+        }
+    }
 
     companion object {
         const val PLUGIN_NAME = "@launchdarkly/session-replay-android"
