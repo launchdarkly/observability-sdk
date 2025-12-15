@@ -658,14 +658,6 @@ describe('Network Instrumentation Custom Attributes', () => {
 				networkRecordingOptions?.headerKeysToRecord,
 			)
 
-			// Always preserve content-type unless explicitly excluded via headerKeysToRecord
-			const contentType =
-				responseHeaders['content-type'] ??
-				responseHeaders['Content-Type']
-			if (contentType && !networkRecordingOptions?.headerKeysToRecord) {
-				sanitizedResponseHeaders['content-type'] = contentType
-			}
-
 			return {
 				headers: JSON.stringify(sanitizedResponseHeaders),
 				body: responseBody,
@@ -843,37 +835,7 @@ describe('Network Instrumentation Custom Attributes', () => {
 				})
 			})
 
-			it('should preserve content-type even when trying to redact it', () => {
-				const responseHeaders = {
-					'content-type': 'application/json',
-					'x-request-id': 'abc-123',
-				}
-
-				const result = captureResponseAttributes(responseHeaders, '', {
-					recordHeadersAndBody: true,
-					networkHeadersToRedact: ['content-type'],
-				})
-				const parsed = JSON.parse(result?.headers ?? '{}')
-
-				// content-type should be preserved despite being in redact list
-				expect(parsed['content-type']).toBe('application/json')
-			})
-
-			it('should handle Content-Type with different casing', () => {
-				const responseHeaders = {
-					'Content-Type': 'text/html',
-					'X-Request-ID': 'abc-123',
-				}
-
-				const result = captureResponseAttributes(responseHeaders, '', {
-					recordHeadersAndBody: true,
-				})
-				const parsed = JSON.parse(result?.headers ?? '{}')
-
-				expect(parsed['content-type']).toBe('text/html')
-			})
-
-			it('should NOT preserve content-type when headerKeysToRecord is set and excludes it', () => {
+			it('should redact content-type when headerKeysToRecord is set and excludes it', () => {
 				const responseHeaders = {
 					'content-type': 'application/json',
 					'x-request-id': 'abc-123',
@@ -892,7 +854,7 @@ describe('Network Instrumentation Custom Attributes', () => {
 				expect(parsed['x-trace-id']).toBe('trace-789')
 			})
 
-			it('should preserve content-type when headerKeysToRecord includes it', () => {
+			it('should keep content-type when headerKeysToRecord includes it', () => {
 				const responseHeaders = {
 					'content-type': 'application/json',
 					'x-request-id': 'abc-123',
@@ -925,20 +887,6 @@ describe('Network Instrumentation Custom Attributes', () => {
 				expect(parsed['content-type']).toBe('application/json')
 				expect(parsed['authorization']).toBe('[REDACTED]')
 				expect(parsed['x-request-id']).toBe('abc-123')
-			})
-
-			it('should preserve content-type in XHR responses', () => {
-				const headerString =
-					'content-type: text/html\r\nx-custom: value'
-
-				const responseHeaders = parseXhrResponseHeaders(headerString)
-				const result = captureResponseAttributes(responseHeaders, '', {
-					recordHeadersAndBody: true,
-					networkHeadersToRedact: ['content-type'],
-				})
-				const parsed = JSON.parse(result?.headers ?? '{}')
-
-				expect(parsed['content-type']).toBe('text/html')
 			})
 
 			it('should work with parseXhrResponseHeaders and recordHeadersAndBody', () => {

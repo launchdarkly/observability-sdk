@@ -693,13 +693,6 @@ const enhanceSpanWithHttpResponseAttributes = (
 		networkRecordingOptions.headerKeysToRecord,
 	)
 
-	// Always preserve content-type unless explicitly excluded
-	const contentType =
-		responseHeaders['content-type'] ?? responseHeaders['Content-Type']
-	if (contentType && !networkRecordingOptions.headerKeysToRecord) {
-		sanitizedResponseHeaders['content-type'] = contentType
-	}
-
 	const headerAttributes = convertHeadersToOtelAttributes(
 		sanitizedResponseHeaders,
 		'http.response.header',
