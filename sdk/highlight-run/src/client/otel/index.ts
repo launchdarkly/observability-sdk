@@ -27,7 +27,9 @@ import * as SemanticAttributes from '@opentelemetry/semantic-conventions'
 import { getResponseBody } from '../listeners/network-listener/utils/fetch-listener'
 import {
 	DEFAULT_URL_BLOCKLIST,
+	safeParseUrl,
 	sanitizeHeaders,
+	sanitizeUrl,
 } from '../listeners/network-listener/utils/network-sanitizer'
 import {
 	shouldNetworkRequestBeRecorded,
@@ -232,14 +234,6 @@ export const setupBrowserTracing = (
 							return
 						}
 
-						if (!(response instanceof Response)) {
-							span.setAttributes({
-								'http.response.error': response.message,
-								'http.response.status': response.status,
-							})
-							return
-						}
-
 						enhanceSpanWithHttpRequestAttributes(
 							span,
 							request.body,
@@ -247,13 +241,36 @@ export const setupBrowserTracing = (
 							config.networkRecordingOptions,
 						)
 
-						const body = await getResponseBody(
-							response,
-							config.networkRecordingOptions?.bodyKeysToRecord,
-							config.networkRecordingOptions
-								?.networkBodyKeysToRedact,
-						)
-						span.setAttribute('http.response.body', body)
+						if (!(response instanceof Response)) {
+							span.setAttributes({
+								'http.response.error': response.message,
+								[SemanticAttributes.ATTR_HTTP_RESPONSE_STATUS_CODE]:
+									response.status,
+							})
+							return
+						}
+
+						if (
+							config.networkRecordingOptions?.recordHeadersAndBody
+						) {
+							const responseBody = await getResponseBody(
+								response,
+								config.networkRecordingOptions
+									?.bodyKeysToRecord,
+								config.networkRecordingOptions
+									?.networkBodyKeysToRedact,
+							)
+							const responseHeaders = Object.fromEntries(
+								response.headers.entries(),
+							)
+
+							enhanceSpanWithHttpResponseAttributes(
+								span,
+								responseHeaders,
+								responseBody,
+								config.networkRecordingOptions,
+							)
+						}
 					},
 				}),
 			)
@@ -288,14 +305,35 @@ export const setupBrowserTracing = (
 							config.networkRecordingOptions,
 						)
 
-						const recordedBody = getBodyThatShouldBeRecorded(
-							browserXhr._body,
-							config.networkRecordingOptions
-								?.networkBodyKeysToRedact,
-							config.networkRecordingOptions?.bodyKeysToRecord,
-							browserXhr._requestHeaders as Headers,
-						)
-						span.setAttribute('http.request.body', recordedBody)
+						if (
+							config.networkRecordingOptions?.recordHeadersAndBody
+						) {
+							let responseBody = ''
+							if (
+								xhr.responseType === '' ||
+								xhr.responseType === 'text'
+							) {
+								responseBody = getBodyThatShouldBeRecorded(
+									xhr.responseText,
+									config.networkRecordingOptions
+										?.networkBodyKeysToRedact,
+									config.networkRecordingOptions
+										?.bodyKeysToRecord,
+									undefined,
+								)
+							}
+
+							const responseHeaders = parseXhrResponseHeaders(
+								xhr.getAllResponseHeaders(),
+							)
+
+							enhanceSpanWithHttpResponseAttributes(
+								span,
+								responseHeaders,
+								responseBody,
+								config.networkRecordingOptions,
+							)
+						}
 					},
 				}),
 			)
@@ -375,7 +413,7 @@ class CustomTraceContextPropagator extends W3CTraceContextPropagator {
 			return
 		}
 
-		const url = (span as unknown as ReadableSpan).attributes['http.url']
+		const url = getUrlFromSpan(span as unknown as ReadableSpan)
 		if (typeof url === 'string') {
 			const shouldRecord = shouldRecordRequest(
 				url,
@@ -453,51 +491,213 @@ const enhanceSpanWithHttpRequestAttributes = (
 		| ReturnType<XMLHttpRequest['getAllResponseHeaders']>,
 	networkRecordingOptions?: NetworkRecordingOptions,
 ) => {
-	const stringBody = typeof body === 'string' ? body : String(body)
 	if (!(span as any).attributes) {
 		return
 	}
 	const readableSpan = span as unknown as ReadableSpan
-	const url = readableSpan.attributes['http.url'] as string
-	const urlObject = new URL(url)
+	const url = getUrlFromSpan(readableSpan)
+	const sanitizedUrl = sanitizeUrl(url)
+	const sanitizedUrlObject = safeParseUrl(sanitizedUrl)
 
-	let parsedBody
+	const stringBody = typeof body === 'string' ? body : String(body)
 	try {
-		parsedBody = body ? JSON.parse(stringBody) : undefined
-
-		if (parsedBody.operationName) {
+		const parsedBody = body ? JSON.parse(stringBody) : undefined
+		if (parsedBody?.operationName) {
 			span.setAttribute(
 				'graphql.operation.name',
 				parsedBody.operationName,
 			)
 		}
 	} catch {
-		// Ignore
+		// Ignore parsing errors
 	}
-
-	const sanitizedHeaders = sanitizeHeaders(
-		networkRecordingOptions?.networkHeadersToRedact ?? [],
-		headers as Headers,
-		networkRecordingOptions?.headerKeysToRecord,
-	)
 
 	span.setAttributes({
 		'highlight.type': 'http.request',
-		'http.request.headers': JSON.stringify(sanitizedHeaders),
-		'http.request.body': stringBody,
-		[SemanticAttributes.ATTR_URL_FULL]: url,
-		[SemanticAttributes.ATTR_URL_PATH]: urlObject.pathname,
-		[SemanticAttributes.ATTR_URL_QUERY]: urlObject.search,
+		[SemanticAttributes.SEMATTRS_HTTP_URL]: sanitizedUrl, // overwrite with sanitized version
+		[SemanticAttributes.ATTR_URL_FULL]: sanitizedUrl,
+		[SemanticAttributes.ATTR_URL_PATH]: sanitizedUrlObject.pathname,
+		[SemanticAttributes.ATTR_URL_QUERY]: sanitizedUrlObject.search,
 	})
 
-	if (urlObject.searchParams.size > 0) {
-		span.setAttributes({
-			// Custom attribute that displays query string params as an object.
-			['url.query_params']: JSON.stringify(
-				Object.fromEntries(urlObject.searchParams),
-			),
-		})
+	// Set sanitized query params as JSON object for easier querying
+	const searchParamsEntries = Array.from(
+		sanitizedUrlObject.searchParams.entries(),
+	)
+	if (searchParamsEntries.length > 0) {
+		span.setAttribute(
+			'url.query_params',
+			JSON.stringify(Object.fromEntries(searchParamsEntries)),
+		)
 	}
+
+	if (networkRecordingOptions?.recordHeadersAndBody) {
+		const requestBody = getBodyThatShouldBeRecorded(
+			body,
+			networkRecordingOptions.networkBodyKeysToRedact,
+			networkRecordingOptions.bodyKeysToRecord,
+			headers as Headers,
+		)
+		span.setAttribute('http.request.body', requestBody)
+
+		const sanitizedHeaders = sanitizeHeaders(
+			networkRecordingOptions.networkHeadersToRedact ?? [],
+			headers as Headers,
+			networkRecordingOptions.headerKeysToRecord,
+		)
+
+		const headerAttributes = convertHeadersToOtelAttributes(
+			sanitizedHeaders,
+			'http.request.header',
+		)
+		span.setAttributes(headerAttributes)
+	}
+}
+
+export const parseXhrResponseHeaders = (
+	headerString: string,
+): { [key: string]: string } => {
+	const headers: { [key: string]: string } = {}
+	if (headerString) {
+		headerString
+			.trim()
+			.split(/[\r\n]+/)
+			.forEach((line) => {
+				const parts = line.split(': ')
+				const header = parts.shift()
+				if (header) {
+					headers[header] = parts.join(': ')
+				}
+			})
+	}
+	return headers
+}
+
+/**
+ * Converts headers object to OpenTelemetry semantic convention format.
+ * Headers are set as individual attributes with the pattern:
+ * - http.request.header.<lowercase-name>: value (or [value1, value2] if multiple)
+ * - http.response.header.<lowercase-name>: value (or [value1, value2] if multiple)
+ *
+ * According to OTel spec, header values should be arrays when they contain
+ * comma-separated values. Single values remain as strings for simpler querying.
+ *
+ * @param headers - Object with header key-value pairs
+ * @param prefix - Either 'http.request.header' or 'http.response.header'
+ * @returns Object with OTel semantic convention attribute names
+ */
+export const convertHeadersToOtelAttributes = (
+	headers: { [key: string]: string },
+	prefix: 'http.request.header' | 'http.response.header',
+): { [key: string]: string | string[] } => {
+	const attributes: { [key: string]: string | string[] } = {}
+
+	Object.entries(headers).forEach(([key, value]) => {
+		const normalizedKey = key.toLowerCase().replace(/_/g, '-')
+		const attributeName = `${prefix}.${normalizedKey}`
+		const values = splitHeaderValue(normalizedKey, value)
+
+		// Handle duplicate header keys (same header appearing multiple times)
+		if (attributes[attributeName]) {
+			const existing = attributes[attributeName]
+
+			if (Array.isArray(existing)) {
+				attributes[attributeName] = [...existing, ...values]
+			} else {
+				attributes[attributeName] = [existing, ...values]
+			}
+		} else {
+			attributes[attributeName] = values.length === 1 ? values[0] : values
+		}
+	})
+
+	return attributes
+}
+
+/**
+ * HTTP headers that are explicitly defined as comma-separated lists
+ * per RFC 7231 and related specifications. Only these headers should
+ * be split by comma. Other headers (especially date headers like
+ * Date, Last-Modified, Expires) contain commas as part of their value
+ * and should NOT be split.
+ *
+ * @see https://www.rfc-editor.org/rfc/rfc7231
+ * @see https://www.rfc-editor.org/rfc/rfc7230#section-3.2.6
+ */
+const COMMA_SEPARATED_HEADERS = new Set([
+	'accept',
+	'accept-charset',
+	'accept-encoding',
+	'accept-language',
+	'accept-ranges',
+	'allow',
+	'cache-control',
+	'connection',
+	'content-encoding',
+	'content-language',
+	'expect',
+	'if-match',
+	'if-none-match',
+	'pragma',
+	'proxy-authenticate',
+	'te',
+	'trailer',
+	'transfer-encoding',
+	'upgrade',
+	'vary',
+	'via',
+	'warning',
+	'www-authenticate',
+	'access-control-allow-headers',
+	'access-control-allow-methods',
+	'access-control-expose-headers',
+	'access-control-request-headers',
+])
+
+/**
+ * Splits a header value by commas if the header is defined as comma-separated.
+ * Headers like Date, Last-Modified, Expires contain commas in RFC 7231 date
+ * format (e.g., "Mon, 01 Jan 2024 12:00:00 GMT") and should NOT be split.
+ *
+ * @param headerName - The lowercase header name
+ * @param value - The header value string
+ * @returns Array of values (single element for non-comma-separated headers)
+ */
+export const splitHeaderValue = (
+	headerName: string,
+	value: string,
+): string[] => {
+	// Only split headers that are explicitly defined as comma-separated lists
+	if (!COMMA_SEPARATED_HEADERS.has(headerName)) {
+		return [value]
+	}
+
+	// Split by comma and trim whitespace from each value
+	return value
+		.split(',')
+		.map((v) => v.trim())
+		.filter((v) => v.length > 0)
+}
+
+const enhanceSpanWithHttpResponseAttributes = (
+	span: api.Span,
+	responseHeaders: { [key: string]: string },
+	responseBody: string,
+	networkRecordingOptions: NetworkRecordingOptions,
+) => {
+	span.setAttribute('http.response.body', responseBody)
+
+	const sanitizedResponseHeaders = sanitizeHeaders(
+		networkRecordingOptions.networkHeadersToRedact ?? [],
+		responseHeaders,
+		networkRecordingOptions.headerKeysToRecord,
+	)
+
+	const headerAttributes = convertHeadersToOtelAttributes(
+		sanitizedResponseHeaders,
+		'http.response.header',
+	)
+	span.setAttributes(headerAttributes)
 }
 
 const shouldRecordRequest = (
@@ -659,4 +859,12 @@ export const getCorsUrlsPattern = (
 	}
 
 	return /^$/ // Match nothing if tracingOrigins is false or undefined
+}
+
+const getUrlFromSpan = (span: ReadableSpan) => {
+	if (span.attributes[SemanticAttributes.ATTR_URL_FULL]) {
+		return span.attributes[SemanticAttributes.ATTR_URL_FULL] as string
+	}
+
+	return span.attributes[SemanticAttributes.SEMATTRS_HTTP_URL] as string
 }
