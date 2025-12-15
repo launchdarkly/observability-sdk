@@ -72,6 +72,18 @@ class Observability(
 
     override fun register(client: LDClient, metadata: EnvironmentMetadata?) {
         this.client = client
+        val sdkKey = metadata?.credential ?: ""
+
+        if (mobileKey == sdkKey) {
+            LDObserve.context = ObservabilityContext(
+                sdkKey = sdkKey,
+                options = options,
+                application = application,
+                logger = logger
+            )
+        } else {
+            logger.warn("ObservabilityContext could not be initialized for sdkKey: $sdkKey")
+        }
     }
 
     override fun getHooks(metadata: EnvironmentMetadata?): MutableList<Hook> {
@@ -110,12 +122,6 @@ class Observability(
                     application, sdkKey, resourceBuilder.build(), logger, options, instrumentations
                 )
                 observabilityClient?.let {
-                    LDObserve.context = ObservabilityContext(
-                        sdkKey = mobileKey,
-                        options = options,
-                        application = application,
-                        logger = logger
-                    )
                     LDObserve.init(it)
                 }
             } else {
