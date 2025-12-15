@@ -18,6 +18,9 @@ import kotlinx.serialization.json.jsonObject
 
 private const val REPLAY_EXPORTER_NAME = "RRwebGraphQLReplayLogExporter"
 
+// size limit of accumulated continues canvas operations on the RRWeb player
+private const val RRWEB_CANVAS_BUFFER_LIMIT =  10_000_000 // ~10mb
+
 /**
  * An [LogRecordExporter] that can send session replay capture logs to the backend using RRWeb syntax
  * and GraphQL pushes for transport.
@@ -56,12 +59,16 @@ class RRwebGraphQLReplayLogExporter(
     )
 
     private var lastSeenState = LastSeenState(sessionId = null, height = 0, width = 0)
+    private var generatingCanvasSize = 0
+    private var pushedCanvasSize = 0
 
     override fun export(logs: MutableCollection<LogRecordData>): CompletableResultCode {
         val resultCode = CompletableResultCode()
 
         coroutineScope.launch {
             try {
+                generatingCanvasSize = pushedCanvasSize
+
                 // Map to collect events by session ID
                 val eventsBySession = mutableMapOf<String, MutableList<Event>>()
                 // Set to track sessions that need initialization
@@ -80,7 +87,8 @@ class RRwebGraphQLReplayLogExporter(
 
                                 val stateChanged = capture.session != lastSeenState.sessionId ||
                                         capture.origHeight != lastSeenState.height ||
-                                        capture.origWidth != lastSeenState.width
+                                        capture.origWidth != lastSeenState.width ||
+                                        generatingCanvasSize >= RRWEB_CANVAS_BUFFER_LIMIT
 
                                 if (stateChanged) {
                                     lastSeenState = LastSeenState(
@@ -126,6 +134,9 @@ class RRwebGraphQLReplayLogExporter(
                     if (events.isNotEmpty()) {
                         try {
                             replayApiService.pushPayload(sessionId, "${nextPayloadId()}", events)
+
+                            // flushes generating canvas size into pushedCanvasSize
+                            pushedCanvasSize = generatingCanvasSize
                         } catch (e: Exception) {
                             // TODO: O11Y-627 - pass in logger to implementation and use here
                             // Log.e(REPLAY_EXPORTER_NAME, "Error pushing payload for session $sessionId: ${e.message}", e)
@@ -259,6 +270,7 @@ class RRwebGraphQLReplayLogExporter(
                 Json.parseToJsonElement("""{"source":9,"id":6,"type":0,"commands":[{"property":"clearRect","args":[0,0,${captureEvent.origWidth},${captureEvent.origHeight}]},{"property":"drawImage","args":[{"rr_type":"ImageBitmap","args":[{"rr_type":"Blob","data":[{"rr_type":"ArrayBuffer","base64":"${captureEvent.imageBase64}"}],"type":"image/jpeg"}]},0,0,${captureEvent.origWidth},${captureEvent.origHeight}]}]}""")
             )
         )
+        generatingCanvasSize += captureEvent.imageBase64.length
         eventsBatch.add(incrementalEvent)
 
         return eventsBatch
@@ -342,6 +354,9 @@ class RRwebGraphQLReplayLogExporter(
                 )
             ),
         )
+
+        // starting again canvas size
+        generatingCanvasSize = captureEvent.imageBase64.length
         eventBatch.add(snapShotEvent)
 
         val viewportEvent = Event(
