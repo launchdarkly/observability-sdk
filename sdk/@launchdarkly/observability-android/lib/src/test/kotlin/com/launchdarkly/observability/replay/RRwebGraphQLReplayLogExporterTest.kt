@@ -63,7 +63,7 @@ class RRwebGraphQLReplayLogExporterTest {
     }
 
     @Test
-    @Disabled // Feature if handling multiples session is not done
+    @Disabled // Feature of handling multiples session is not done
     fun `export should send full capture for first session and incremental for subsequent captures in same session`() = runTest {
         // Arrange: Create captures for two different sessions
         val sessionACaptureEvents = listOf(
