@@ -36,7 +36,8 @@ class RRwebGraphQLReplayLogExporter(
     val backendUrl: String,
     val serviceName: String,
     val serviceVersion: String,
-    private val injectedReplayApiService: SessionReplayApiService? = null
+    private val injectedReplayApiService: SessionReplayApiService? = null,
+    private val canvasBufferLimit: Int = RRWEB_CANVAS_BUFFER_LIMIT
 ) : LogRecordExporter {
     private val coroutineScope = CoroutineScope(DispatcherProviderHolder.current.io + SupervisorJob())
 
