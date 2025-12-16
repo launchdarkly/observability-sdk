@@ -87,7 +87,8 @@ class GraphQLClient(
 
             connectionLocal.apply {
                 requestMethod = "POST"
-                setRequestProperty("Content-Type", "application/json; charset=utf-8")
+                setRequestProperty("Content-Length", requestBytes.size.toString())
+                setRequestProperty("Content-Type", "application/json")
 
                 // Add custom headers
                 headers.forEach { (key, value) ->
