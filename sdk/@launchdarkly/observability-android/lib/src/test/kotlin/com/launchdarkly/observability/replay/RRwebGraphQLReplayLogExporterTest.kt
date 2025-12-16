@@ -26,7 +26,8 @@ class RRwebGraphQLReplayLogExporterTest {
             serviceName = "test-service",
             serviceVersion = "1.0.0",
             injectedReplayApiService = mockService,
-            canvasBufferLimit = 20
+            canvasBufferLimit = 20,
+            canvasDrawEntourage = 1
         )
     }
 

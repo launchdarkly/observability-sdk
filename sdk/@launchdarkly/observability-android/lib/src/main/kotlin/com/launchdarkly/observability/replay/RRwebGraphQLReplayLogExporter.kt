@@ -22,6 +22,7 @@ private const val REPLAY_EXPORTER_NAME = "RRwebGraphQLReplayLogExporter"
 
 // size limit of accumulated continues canvas operations on the RRWeb player
 private const val RRWEB_CANVAS_BUFFER_LIMIT =  10_000_000 // ~10mb
+private const val RRWEB_CANVAS_DRAW_ENTOURAGE = 300 // 300 bytes
 
 /**
  * An [LogRecordExporter] that can send session replay capture logs to the backend using RRWeb syntax
@@ -39,7 +40,8 @@ class RRwebGraphQLReplayLogExporter(
     val serviceName: String,
     val serviceVersion: String,
     private val injectedReplayApiService: SessionReplayApiService? = null,
-    private val canvasBufferLimit: Int = RRWEB_CANVAS_BUFFER_LIMIT
+    private val canvasBufferLimit: Int = RRWEB_CANVAS_BUFFER_LIMIT,
+    private val canvasDrawEntourage: Int = RRWEB_CANVAS_DRAW_ENTOURAGE
 ) : LogRecordExporter {
     private val coroutineScope = CoroutineScope(DispatcherProviderHolder.current.io + SupervisorJob())
     private val exportMutex = Mutex()
@@ -277,7 +279,7 @@ class RRwebGraphQLReplayLogExporter(
                 Json.parseToJsonElement("""{"source":9,"id":6,"type":0,"commands":[{"property":"clearRect","args":[0,0,${captureEvent.origWidth},${captureEvent.origHeight}]},{"property":"drawImage","args":[{"rr_type":"ImageBitmap","args":[{"rr_type":"Blob","data":[{"rr_type":"ArrayBuffer","base64":"${captureEvent.imageBase64}"}],"type":"image/jpeg"}]},0,0,${captureEvent.origWidth},${captureEvent.origHeight}]}]}""")
             )
         )
-        generatingCanvasSize += captureEvent.imageBase64.length
+        generatingCanvasSize += captureEvent.imageBase64.length + canvasDrawEntourage
         eventsBatch.add(incrementalEvent)
 
         return eventsBatch
@@ -363,7 +365,7 @@ class RRwebGraphQLReplayLogExporter(
         )
 
         // starting again canvas size
-        generatingCanvasSize = captureEvent.imageBase64.length
+        generatingCanvasSize = captureEvent.imageBase64.length + canvasDrawEntourage
         eventBatch.add(snapShotEvent)
 
         val viewportEvent = Event(
