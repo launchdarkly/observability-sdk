@@ -356,13 +356,13 @@ class CaptureSource(
             path.close()
 
             canvas.drawPath(path, paint)
-        } //else {
+        } else {
             maskIntRect.left = mask.rect.left.toInt()
             maskIntRect.top = mask.rect.top.toInt()
             maskIntRect.right = mask.rect.right.toInt()
             maskIntRect.bottom =  mask.rect.bottom.toInt()
             canvas.drawRect(maskIntRect, paint)
-        //}
+        }
     }
 
     fun areMasksMapsStable(
