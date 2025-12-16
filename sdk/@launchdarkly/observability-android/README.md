@@ -26,7 +26,7 @@ Add the dependency to your app's Gradle file:
 ```kotlin
 dependencies {
     implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.+")
-    implementation("com.launchdarkly:launchdarkly-observability-android:0.5.0")
+    implementation("com.launchdarkly:launchdarkly-observability-android:0.19.1")
 }
 ```
 
@@ -45,13 +45,15 @@ import com.launchdarkly.sdk.android.LDClient
 class MyApplication : Application() {
     override fun onCreate() {
         super.onCreate()
+
+        val mobileKey = "your-mobile-key"
         
         val ldConfig = LDConfig.Builder(LDConfig.Builder.AutoEnvAttributes.Enabled)
-            .mobileKey("your-mobile-key")
+            .mobileKey(mobileKey)
             .plugins(
                 Components.plugins().setPlugins(
                     listOf(
-                        Observability(this@MyApplication)
+                        Observability(this@MyApplication, mobileKey)
                     )
                 )
             )
@@ -93,14 +95,17 @@ dependencies {
 You can customize the observability plugin with various options:
 
 ```kotlin
-import com.launchdarkly.observability.api.Options
+import com.launchdarkly.observability.api.ObservabilityOptions
 import com.launchdarkly.sdk.android.LDAndroidLogging
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
 
+val mobileKey = "your-mobile-key"
+
 val observabilityPlugin = Observability(
     application = this@MyApplication,
-    options = Options(
+    mobileKey = mobileKey,
+    options = ObservabilityOptions(
         serviceName = "my-android-app",
         serviceVersion = "1.0.0",
         debug = true,
@@ -112,6 +117,28 @@ val observabilityPlugin = Observability(
         customHeaders = mapOf(
             "X-Custom-Header" to "custom-value"
         )
+    )
+)
+```
+
+Additional `ObservabilityOptions` settings:
+
+- `logsApiLevel`: Minimum log severity to export (defaults to `INFO`). Set to `ObservabilityOptions.LogLevel.NONE` to disable log exporting.
+- `tracesApi`: Controls trace recording (defaults to enabled). Use `ObservabilityOptions.TracesApi.disabled()` to disable all tracing, or set `includeErrors`/`includeSpans`.
+- `metricsApi`: Controls metric export (defaults to enabled). Use `ObservabilityOptions.MetricsApi.disabled()` to disable metrics.
+- `instrumentations`: Enables/disables specific automatic instrumentations like `crashReporting`, `activityLifecycle`, and `launchTime`.
+
+Example:
+
+```kotlin
+val options = ObservabilityOptions(
+    logsApiLevel = ObservabilityOptions.LogLevel.WARN,
+    tracesApi = ObservabilityOptions.TracesApi(includeErrors = true, includeSpans = false),
+    metricsApi = ObservabilityOptions.MetricsApi.disabled(),
+    instrumentations = ObservabilityOptions.Instrumentations(
+        crashReporting = false,
+        activityLifecycle = true,
+        launchTime = true
     )
 )
 ```
