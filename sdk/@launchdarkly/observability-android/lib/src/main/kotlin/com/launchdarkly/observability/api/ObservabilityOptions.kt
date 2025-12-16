@@ -77,6 +77,7 @@ data class ObservabilityOptions(
      * This class allows enabling or disabling specific automatic instrumentations.
      *
      * @property crashReporting If `true`, the plugin will automatically report any uncaught exceptions as errors.
+     * @property activityLifecycle If `true`, the plugin will automatically start spans for Android Activity lifecycle events.
      * @property launchTime If `true`, the plugin will automatically measure and report the application's startup time as metrics.
      */
     data class Instrumentations(
