@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.test.core.app.ApplicationProvider
 import com.example.androidobservability.TestUtils.TelemetryType
 import com.example.androidobservability.TestUtils.waitForTelemetryData
+import com.launchdarkly.observability.api.ObservabilityOptions
 import com.launchdarkly.observability.client.TelemetryInspector
 import com.launchdarkly.observability.sdk.LDObserve
 import io.opentelemetry.api.common.AttributeKey
@@ -49,6 +50,7 @@ class SamplingE2ETest {
 
     @Before
     fun setUp() {
+        application.observabilityOptions = getOptionsAllEnabled()
         application.initForTest()
         telemetryInspector = application.telemetryInspector
     }
@@ -202,5 +204,19 @@ class SamplingE2ETest {
             attributes = Attributes.empty()
         )
         span7.end()
+    }
+
+    private fun getOptionsAllEnabled(): ObservabilityOptions {
+        return ObservabilityOptions(
+            debug = true,
+            logsApiLevel = ObservabilityOptions.LogLevel.TRACE,
+            tracesApi = ObservabilityOptions.TracesApi.enabled(),
+            metricsApi = ObservabilityOptions.MetricsApi.enabled(),
+            instrumentations = ObservabilityOptions.Instrumentations(
+                crashReporting = true,
+                activityLifecycle = true,
+                launchTime = true
+            )
+        )
     }
 }

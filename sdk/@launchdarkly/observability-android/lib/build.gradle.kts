@@ -20,7 +20,7 @@ allprojects {
 }
 
 dependencies {
-    implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.9.0")
+    implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.10.0")
     implementation("com.jakewharton.timber:timber:5.0.1")
 
     // Android
@@ -47,13 +47,13 @@ dependencies {
     // Testing exporters for telemetry inspection
     implementation("io.opentelemetry:opentelemetry-sdk-testing:1.51.0")
 
-    // Android instrumentation
+    // OTEL Android
     implementation("io.opentelemetry.android:core:0.11.0-alpha")
-    implementation("io.opentelemetry.android.instrumentation:activity:0.11.0-alpha")
     implementation("io.opentelemetry.android:session:0.11.0-alpha")
 
-    // Android crash instrumentation
+    // OTEL Android Instrumentations
     implementation("io.opentelemetry.android.instrumentation:crash:0.11.0-alpha")
+    implementation("io.opentelemetry.android.instrumentation:activity:0.11.0-alpha")
 
     // TODO: O11Y-626 - move replay instrumentation and associated compose dependencies into dedicated package
     // Compose dependencies for capture functionality

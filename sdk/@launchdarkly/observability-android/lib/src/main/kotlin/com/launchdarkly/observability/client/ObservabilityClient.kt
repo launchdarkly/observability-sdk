@@ -2,7 +2,8 @@ package com.launchdarkly.observability.client
 
 import android.app.Application
 import com.launchdarkly.logging.LDLogger
-import com.launchdarkly.observability.api.Options
+import com.launchdarkly.observability.api.ObservabilityOptions
+import com.launchdarkly.observability.interfaces.LDExtendedInstrumentation
 import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.observability.interfaces.Observe
 import io.opentelemetry.api.common.Attributes
@@ -14,26 +15,34 @@ import io.opentelemetry.sdk.resources.Resource
  * The [ObservabilityClient] can be used for recording observability data such as
  * metrics, logs, errors, and traces.
  *
- * It is recommended to use the [Observability] plugin with the LaunchDarkly Android
- * Client SDK, as that will automatically initialize the [LDObserve] singleton instance.
+ * It is recommended to use the [com.launchdarkly.observability.plugin.Observability] plugin with the LaunchDarkly Android
+ * Client SDK, as that will automatically initialize the [com.launchdarkly.observability.sdk.LDObserve] singleton instance.
  *
- * @param application The application instance.
- * @param sdkKey The SDK key.
- * @param resource The resource.
- * @param logger The logger.
- * @param options Additional options for the client.
  */
 class ObservabilityClient : Observe {
     private val instrumentationManager: InstrumentationManager
 
+    /**
+     * Creates a new ObservabilityClient.
+     *
+     * @param application The application instance.
+     * @param sdkKey The SDK key for the environment.
+     * @param resource The resource.
+     * @param logger The logger.
+     * @param options Additional options for the client.
+     * @param instrumentations A list of extended instrumentation providers.
+     */
     constructor(
         application: Application,
         sdkKey: String,
         resource: Resource,
         logger: LDLogger,
-        options: Options
+        options: ObservabilityOptions,
+        instrumentations: List<LDExtendedInstrumentation>
     ) {
-        this.instrumentationManager = InstrumentationManager(application, sdkKey, resource, logger, options)
+        this.instrumentationManager = InstrumentationManager(
+            application, sdkKey, resource, logger, options, instrumentations
+        )
     }
 
     internal constructor(
