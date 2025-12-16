@@ -25,7 +25,9 @@ class RRwebGraphQLReplayLogExporterTest {
             backendUrl = "http://test.com",
             serviceName = "test-service",
             serviceVersion = "1.0.0",
-            injectedReplayApiService = mockService
+            injectedReplayApiService = mockService,
+            canvasBufferLimit = 20,
+            canvasDrawEntourage = 1
         )
     }
 
@@ -62,7 +64,7 @@ class RRwebGraphQLReplayLogExporterTest {
     }
 
     @Test
-    @Disabled // Feature if handling multiples session is not done
+    @Disabled // Feature of handling multiples session is not done
     fun `export should send full capture for first session and incremental for subsequent captures in same session`() = runTest {
         // Arrange: Create captures for two different sessions
         val sessionACaptureEvents = listOf(
@@ -176,8 +178,48 @@ class RRwebGraphQLReplayLogExporterTest {
         
         // Verify event types: First and third captures should be full, second and fourth should be incremental
         val capturedEvents: List<Event> = capturedEventsLists[0]
-        verifyFullCaptureEvents(capturedEvents)
-        verifyIncrementalCaptureEvents(capturedEvents)
+        verifyFullCaptureEvents(capturedEvents) // First capture - full
+        verifyIncrementalCaptureEvents(capturedEvents) // Second capture - incremental
+    }
+
+    @Test
+    fun `test canvas buffer limit`() = runTest {
+        // Arrange: Create captures for same session but with dimension changes
+        val captureEvents = listOf(
+            // small canvas
+            CaptureEvent("base64data1", 800, 600, 1000L, "session-a"),  // First capture - full
+            // large canvases to cause overlimit
+            CaptureEvent("base64data2222222222222", 800, 600, 2000L, "session-a"),  // Same dimensions - incremental
+            CaptureEvent("base64data3333333333333", 1024, 768, 3000L, "session-a"), // Dimension change - full
+            CaptureEvent(
+                "base64data444444444444",
+                1024,
+                768,
+                4000L,
+                "session-a"
+            )  // Same dimensions - incremental
+        )
+
+        val logRecords = createLogRecordsFromCaptures(captureEvents)
+
+        // Capture the events sent to pushPayload
+        val capturedEventsLists = mutableListOf<List<Event>>()
+
+        // Mock the API service methods
+        coEvery { mockService.initializeReplaySession(any(), any()) } just Runs
+        coEvery { mockService.identifyReplaySession(any()) } just Runs
+        coEvery { mockService.pushPayload(any(), any(), capture(capturedEventsLists)) } just Runs
+
+        // Act: Export all log records
+        val result = exporter.export(logRecords.toMutableList())
+
+        // Assert: Verify the result completes successfully
+        assertTrue(result.join(5, TimeUnit.SECONDS).isSuccess)
+
+        // Verify event types: First and third captures should be full, second and fourth should be incremental
+        val capturedEvents: List<Event> = capturedEventsLists[0]
+        verifyFullCaptureEvents(capturedEvents, count = 3) // First capture - full
+        verifyIncrementalCaptureEvents(capturedEvents, 1) // Second capture - incremental
     }
 
     @Test
@@ -429,15 +471,15 @@ class RRwebGraphQLReplayLogExporterTest {
     /**
      * Verifies that the events represent a full capture (META, FULL_SNAPSHOT, CUSTOM)
      */
-    private fun verifyFullCaptureEvents(events: List<Event>) {
+    private fun verifyFullCaptureEvents(events: List<Event>, count: Int = 2) {
         // Verify META event
         val metaEvent = events.find { it.type == EventType.META }
         assertNotNull(metaEvent, "Full capture should contain a META event")
         
         // Verify FULL_SNAPSHOT event
-        val fullSnapshotEvent = events.find { it.type == EventType.FULL_SNAPSHOT }
-        assertNotNull(fullSnapshotEvent, "Full capture should contain a FULL_SNAPSHOT event")
-        
+        val fullSnapshotEvents = events.filter { it.type == EventType.FULL_SNAPSHOT }
+        assertEquals(count, fullSnapshotEvents.size, "Full capture should contain $count FULL_SNAPSHOT events")
+
         // Verify CUSTOM event (viewport)
         val customEvent = events.find { it.type == EventType.CUSTOM }
         assertNotNull(customEvent, "Full capture should contain a CUSTOM event")
@@ -446,9 +488,9 @@ class RRwebGraphQLReplayLogExporterTest {
     /**
      * Verifies that the events represent an incremental capture (2 INCREMENTAL_SNAPSHOT events)
      */
-    private fun verifyIncrementalCaptureEvents(events: List<Event>) {
+    private fun verifyIncrementalCaptureEvents(events: List<Event>, count: Int = 2) {
         // Verify both events are INCREMENTAL_SNAPSHOT
         val incrementalEvents = events.filter { it.type == EventType.INCREMENTAL_SNAPSHOT }
-        assertEquals(2, incrementalEvents.size, "Incremental capture should contain 2 INCREMENTAL_SNAPSHOT events")
+        assertEquals(count, incrementalEvents.size, "Incremental capture should contain $count INCREMENTAL_SNAPSHOT events")
     }
 }
