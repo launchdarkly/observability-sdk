@@ -477,7 +477,7 @@ class RRwebGraphQLReplayLogExporterTest {
         
         // Verify FULL_SNAPSHOT event
         val fullSnapshotEvents = events.filter { it.type == EventType.FULL_SNAPSHOT }
-        assertEquals(count, fullSnapshotEvents.size, "Full capture should contain $(count) FULL_SNAPSHOT events")
+        assertEquals(count, fullSnapshotEvents.size, "Full capture should contain $count FULL_SNAPSHOT events")
 
         // Verify CUSTOM event (viewport)
         val customEvent = events.find { it.type == EventType.CUSTOM }
@@ -490,6 +490,6 @@ class RRwebGraphQLReplayLogExporterTest {
     private fun verifyIncrementalCaptureEvents(events: List<Event>, count: Int = 2) {
         // Verify both events are INCREMENTAL_SNAPSHOT
         val incrementalEvents = events.filter { it.type == EventType.INCREMENTAL_SNAPSHOT }
-        assertEquals(count, incrementalEvents.size, "Incremental capture should contain $(count) INCREMENTAL_SNAPSHOT events")
+        assertEquals(count, incrementalEvents.size, "Incremental capture should contain $count INCREMENTAL_SNAPSHOT events")
     }
 }
