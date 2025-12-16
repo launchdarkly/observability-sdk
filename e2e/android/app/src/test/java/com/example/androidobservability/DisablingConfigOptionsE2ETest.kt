@@ -4,7 +4,7 @@ import android.app.Application
 import androidx.test.core.app.ApplicationProvider
 import com.example.androidobservability.TestUtils.TelemetryType
 import com.example.androidobservability.TestUtils.waitForTelemetryData
-import com.launchdarkly.observability.api.Options
+import com.launchdarkly.observability.api.ObservabilityOptions
 import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.observability.sdk.LDObserve
 import io.opentelemetry.api.common.AttributeKey
@@ -27,12 +27,12 @@ class DisablingConfigOptionsE2ETest {
     private val application = ApplicationProvider.getApplicationContext<Application>() as TestApplication
 
     @Test
-    fun `Logs should NOT be exported when disableLogs is set to true`() {
-        application.pluginOptions = getOptionsAllEnabled().copy(disableLogs = true)
+    fun `Logs should NOT be exported when logsApiLevel is NONE`() {
+        application.observabilityOptions = getOptionsAllEnabled().copy(logsApiLevel = ObservabilityOptions.LogLevel.NONE)
         application.initForTest()
         val logsUrl = "http://localhost:${application.mockWebServer?.port}/v1/logs"
 
-        triggerTestLog()
+        triggerTestLog(severity = Severity.TRACE)
         LDObserve.flush()
         waitForTelemetryData(telemetryInspector = application.telemetryInspector, telemetryType = TelemetryType.LOGS)
         val logsExported = application.telemetryInspector?.logExporter?.finishedLogRecordItems
@@ -42,12 +42,27 @@ class DisablingConfigOptionsE2ETest {
     }
 
     @Test
-    fun `Logs should be exported when disableLogs is set to false`() {
-        application.pluginOptions = getOptionsAllEnabled().copy(disableLogs = false)
+    fun `Logs should NOT be exported when log severity is lower than logsApiLevel`() {
+        application.observabilityOptions = getOptionsAllEnabled().copy(logsApiLevel = ObservabilityOptions.LogLevel.INFO)
         application.initForTest()
         val logsUrl = "http://localhost:${application.mockWebServer?.port}/v1/logs"
 
-        triggerTestLog()
+        triggerTestLog(severity = Severity.TRACE)
+        LDObserve.flush()
+        waitForTelemetryData(telemetryInspector = application.telemetryInspector, telemetryType = TelemetryType.LOGS)
+        val logsExported = application.telemetryInspector?.logExporter?.finishedLogRecordItems
+
+        assertTrue(logsExported?.isEmpty() == true)
+        assertFalse(requestsContainsUrl(logsUrl))
+    }
+
+    @Test
+    fun `Logs should be exported when log severity is higher than logsApiLevel`() {
+        application.observabilityOptions = getOptionsAllEnabled().copy(logsApiLevel = ObservabilityOptions.LogLevel.INFO)
+        application.initForTest()
+        val logsUrl = "http://localhost:${application.mockWebServer?.port}/v1/logs"
+
+        triggerTestLog(severity = Severity.WARN)
         LDObserve.flush()
         waitForTelemetryData(telemetryInspector = application.telemetryInspector, telemetryType = TelemetryType.LOGS)
 
@@ -55,9 +70,10 @@ class DisablingConfigOptionsE2ETest {
         assertTrue(requestsContainsUrl(logsUrl))
     }
 
+
     @Test
-    fun `Spans should NOT be exported when disableTraces is set to true`() {
-        application.pluginOptions = getOptionsAllEnabled().copy(disableTraces = true)
+    fun `Spans should NOT be exported when TracesApi is disabled`() {
+        application.observabilityOptions = getOptionsAllEnabled().copy(tracesApi = ObservabilityOptions.TracesApi.disabled())
         application.initForTest()
         val tracesUrl = "http://localhost:${application.mockWebServer?.port}/v1/traces"
 
@@ -72,8 +88,26 @@ class DisablingConfigOptionsE2ETest {
     }
 
     @Test
-    fun `Spans should be exported when disableTraces is set to false`() {
-        application.pluginOptions = getOptionsAllEnabled().copy(disableTraces = false)
+    fun `Spans should NOT be exported when TracesApi does not include spans`() {
+        application.observabilityOptions = getOptionsAllEnabled().copy(
+            tracesApi = ObservabilityOptions.TracesApi(includeSpans = false)
+        )
+        application.initForTest()
+        val tracesUrl = "http://localhost:${application.mockWebServer?.port}/v1/traces"
+
+        triggerTestSpan()
+        LDObserve.flush()
+
+        waitForTelemetryData(telemetryInspector = application.telemetryInspector, telemetryType = TelemetryType.SPANS)
+        val spansExported = application.telemetryInspector?.spanExporter?.finishedSpanItems
+
+        assertTrue(spansExported?.isEmpty() == true)
+        assertFalse(requestsContainsUrl(tracesUrl))
+    }
+
+    @Test
+    fun `Spans should be exported when TracesApi is enabled`() {
+        application.observabilityOptions = getOptionsAllEnabled().copy(tracesApi = ObservabilityOptions.TracesApi.enabled())
         application.initForTest()
         val tracesUrl = "http://localhost:${application.mockWebServer?.port}/v1/traces"
 
@@ -86,8 +120,9 @@ class DisablingConfigOptionsE2ETest {
     }
 
     @Test
-    fun `Metrics should NOT be exported when disableMetrics is set to true`() {
-        application.pluginOptions = getOptionsAllEnabled().copy(disableMetrics = true)
+    fun `Metrics should NOT be exported when disabled`() {
+        application.observabilityOptions =
+            getOptionsAllEnabled().copy(metricsApi = ObservabilityOptions.MetricsApi.disabled())
         application.initForTest()
         val metricsUrl = "http://localhost:${application.mockWebServer?.port}/v1/metrics"
 
@@ -99,8 +134,9 @@ class DisablingConfigOptionsE2ETest {
     }
 
     @Test
-    fun `Metrics should be exported when disableMetrics is set to false`() {
-        application.pluginOptions = getOptionsAllEnabled().copy(disableMetrics = false)
+    fun `Metrics should be exported when enabled`() {
+        application.observabilityOptions =
+            getOptionsAllEnabled().copy(metricsApi = ObservabilityOptions.MetricsApi.enabled())
         application.initForTest()
         val metricsUrl = "http://localhost:${application.mockWebServer?.port}/v1/metrics"
 
@@ -112,8 +148,10 @@ class DisablingConfigOptionsE2ETest {
     }
 
     @Test
-    fun `Errors should NOT be exported when disableErrorTracking is set to true`() {
-        application.pluginOptions = getOptionsAllEnabled().copy(disableErrorTracking = true)
+    fun `Errors should NOT be exported when TracesApi does not include errors`() {
+        application.observabilityOptions = getOptionsAllEnabled().copy(
+            tracesApi = ObservabilityOptions.TracesApi(includeErrors = false)
+        )
         application.initForTest()
         val tracesUrl = "http://localhost:${application.mockWebServer?.port}/v1/traces"
 
@@ -128,8 +166,10 @@ class DisablingConfigOptionsE2ETest {
     }
 
     @Test
-    fun `Errors should be exported as spans when disableErrorTracking is set to false and disableTraces set to true`() {
-        application.pluginOptions = getOptionsAllEnabled().copy(disableTraces = true, disableErrorTracking = false)
+    fun `Errors should be exported as spans when TracesApi include errors but not spans`() {
+        application.observabilityOptions = getOptionsAllEnabled().copy(
+            tracesApi = ObservabilityOptions.TracesApi(includeErrors = true, includeSpans = false)
+        )
         application.initForTest()
         val tracesUrl = "http://localhost:${application.mockWebServer?.port}/v1/traces"
 
@@ -148,8 +188,10 @@ class DisablingConfigOptionsE2ETest {
     }
 
     @Test
-    fun `Crashes should NOT be exported when disableErrorTracking is set to true`() {
-        application.pluginOptions = getOptionsAllEnabled().copy(disableErrorTracking = true)
+    fun `Crashes should NOT be exported when crashReporting instrumentation is disabled`() {
+        application.observabilityOptions = getOptionsAllEnabled().copy(
+            instrumentations = ObservabilityOptions.Instrumentations(crashReporting = false)
+        )
         application.initForTest()
         val logsUrl = "http://localhost:${application.mockWebServer?.port}/v1/logs"
 
@@ -163,8 +205,11 @@ class DisablingConfigOptionsE2ETest {
     }
 
     @Test
-    fun `Crashes should be exported as logs when disableErrorTracking is set to false and disableLogs set to true`() {
-        application.pluginOptions = getOptionsAllEnabled().copy(disableLogs = true, disableErrorTracking = false)
+    fun `Crashes should be exported as logs when crashReporting instrumentation is enabled logsApiLevel is NONE`() {
+        application.observabilityOptions = getOptionsAllEnabled().copy(
+            logsApiLevel = ObservabilityOptions.LogLevel.NONE,
+            instrumentations = ObservabilityOptions.Instrumentations(crashReporting = true)
+        )
         application.initForTest()
         val logsUrl = "http://localhost:${application.mockWebServer?.port}/v1/logs"
         val exceptionMessage = "Exception for testing"
@@ -189,10 +234,10 @@ class DisablingConfigOptionsE2ETest {
         }
     }
 
-    private fun triggerTestLog() {
+    private fun triggerTestLog(severity: Severity = Severity.INFO) {
         LDObserve.recordLog(
             message = "test-log",
-            severity = Severity.INFO,
+            severity = severity,
             attributes = Attributes.empty()
         )
     }
@@ -216,13 +261,17 @@ class DisablingConfigOptionsE2ETest {
         LDObserve.recordMetric(Metric("test", 50.0))
     }
 
-    private fun getOptionsAllEnabled(): Options {
-        return Options(
+    private fun getOptionsAllEnabled(): ObservabilityOptions {
+        return ObservabilityOptions(
             debug = true,
-            disableTraces = false,
-            disableLogs = false,
-            disableMetrics = false,
-            disableErrorTracking = false
+            logsApiLevel = ObservabilityOptions.LogLevel.TRACE,
+            tracesApi = ObservabilityOptions.TracesApi.enabled(),
+            metricsApi = ObservabilityOptions.MetricsApi.enabled(),
+            instrumentations = ObservabilityOptions.Instrumentations(
+                crashReporting = true,
+                activityLifecycle = true,
+                launchTime = true
+            )
         )
     }
 }

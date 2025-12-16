@@ -169,6 +169,31 @@ span.end()
 
 ### Session Replay
 
+#### Enable Session Replay
+
+Add the Session Replay plugin **after** Observability when configuring the LaunchDarkly SDK:
+
+```kotlin
+import com.launchdarkly.observability.plugin.Observability
+import com.launchdarkly.observability.replay.SessionReplay
+
+val ldConfig = LDConfig.Builder(LDConfig.Builder.AutoEnvAttributes.Enabled)
+    .mobileKey("your-mobile-key")
+    .plugins(
+        Components.plugins().setPlugins(
+            listOf(
+                Observability(this@MyApplication, "your-mobile-key"),
+                SessionReplay() // depends on Observability being present first
+            )
+        )
+    )
+    .build()
+```
+
+Notes:
+- SessionReplay depends on Observability. If Observability is missing or listed after SessionReplay, the plugin logs an error and stays inactive.
+- Observability runs fine without SessionReplay; adding SessionReplay extends the Observability pipeline to include session recording.
+
 #### Masking sensitive UI
 
 Use `ldMask()` to mark views that should be masked in session replay. There are helpers for both XML-based Views and Jetpack Compose.
@@ -178,12 +203,9 @@ Use `ldMask()` to mark views that should be masked in session replay. There are 
 Import the masking API and call `ldMask()` on any `View` (for example, after inflating the layout in an `Activity` or `Fragment`).
 
 ```kotlin
-import android.os.Bundle
-import android.widget.EditText
-import androidx.appcompat.app.AppCompatActivity
 import com.launchdarkly.observability.api.ldMask
 
-class LoginActivity : AppCompatActivity() {
+class LoginActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_login)
@@ -197,18 +219,18 @@ class LoginActivity : AppCompatActivity() {
 With View Binding or Data Binding:
 
 ```kotlin
-import android.os.Bundle
-import android.view.View
-import androidx.fragment.app.Fragment
 import com.launchdarkly.observability.api.ldMask
 
-class CheckoutFragment : Fragment(R.layout.fragment_checkout) {
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        val binding = FragmentCheckoutBinding.bind(view)
-        binding.creditCardNumber.ldMask()
-        binding.cvv.ldMask()
-    }
+override fun onCreateView(
+    inflater: LayoutInflater,
+    container: ViewGroup?,
+    savedInstanceState: Bundle?,
+): View {
+    _binding = SettingsPageBinding.inflate(inflater, container, false)
+    binding.nestedScrollView.systemBarsPadding()
+    viewModel.toggleBackgroundAccess(requireContext().isIgnoreBatteryEnabled())
+    val toolbar = binding.toolbar
+    toolbar.ldMask()
 }
 ```
 
@@ -219,21 +241,21 @@ Optional: use `ldUnmask()` to explicitly clear masking on a view you previously 
 Add the masking `Modifier` to any composable you want masked in session replay.
 
 ```kotlin
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.TextField
-import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
 import com.launchdarkly.observability.api.ldMask
 
 @Composable
 fun CreditCardField() {
-    var number by remember { mutableStateOf("") }
-    TextField(
-        value = number,
-        onValueChange = { number = it },
+    ...
+   	var zipCode by remember { mutableStateOf("") }
+
+    OutlinedTextField(
+        value = zipCode,
+        onValueChange = { zipCode = it },
+        label = { Text("ZIP Code") },
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         modifier = Modifier
             .fillMaxWidth()
-            .ldMask() // mask this composable in session replay
+            .ldMask()
     )
 }
 ```

@@ -1,22 +1,20 @@
 package com.example.androidobservability
 
 import android.app.Application
-import com.launchdarkly.observability.api.Options
+import com.launchdarkly.observability.api.ObservabilityOptions
 import com.launchdarkly.observability.client.TelemetryInspector
+import com.launchdarkly.observability.plugin.Observability
+import com.launchdarkly.observability.replay.PrivacyProfile
+import com.launchdarkly.observability.replay.ReplayOptions
+import com.launchdarkly.observability.replay.SessionReplay
 import com.launchdarkly.sdk.ContextKind
 import com.launchdarkly.sdk.LDContext
 import com.launchdarkly.sdk.android.Components
+import com.launchdarkly.sdk.android.LDAndroidLogging
 import com.launchdarkly.sdk.android.LDClient
 import com.launchdarkly.sdk.android.LDConfig
-import com.launchdarkly.observability.plugin.Observability
-import com.launchdarkly.observability.replay.PrivacyProfile
-import com.launchdarkly.observability.replay.ReplayInstrumentation
-import com.launchdarkly.observability.replay.ReplayOptions
-import com.launchdarkly.sdk.android.LDAndroidLogging
-import com.launchdarkly.sdk.android.integrations.Plugin
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
-import java.util.Collections
 
 open class BaseApplication : Application() {
 
@@ -26,20 +24,17 @@ open class BaseApplication : Application() {
         const val LAUNCHDARKLY_MOBILE_KEY = "mob-f2aca03d-4a84-4b9d-bc35-db20cbb4ca0a"
     }
 
-    var pluginOptions = Options(
+    var observabilityOptions = ObservabilityOptions(
         resourceAttributes = Attributes.of(
             AttributeKey.stringKey("example"), "value"
         ),
         debug = true,
-        logAdapter = LDAndroidLogging.adapter(),
-        // TODO: consider these being factories so that the obs plugin can pass instantiation data, log adapter
-        instrumentations = listOf(
-            ReplayInstrumentation(
-                options = ReplayOptions(
-                    privacyProfile = PrivacyProfile(maskText = false)
-                )
-            )
+        tracesApi = ObservabilityOptions.TracesApi(includeErrors = false, includeSpans = false),
+        metricsApi = ObservabilityOptions.MetricsApi.disabled(),
+        instrumentations = ObservabilityOptions.Instrumentations(
+            crashReporting = true, launchTime = true, activityLifecycle = false
         ),
+        logAdapter = LDAndroidLogging.adapter(),
     )
 
     var telemetryInspector: TelemetryInspector? = null
@@ -49,7 +44,13 @@ open class BaseApplication : Application() {
         val observabilityPlugin = Observability(
             application = this@BaseApplication,
             mobileKey = LAUNCHDARKLY_MOBILE_KEY,
-            options = testUrl?.let { pluginOptions.copy(backendUrl = it, otlpEndpoint = it) } ?: pluginOptions
+            options = testUrl?.let { observabilityOptions.copy(backendUrl = it, otlpEndpoint = it) } ?: observabilityOptions
+        )
+
+        val sessionReplayPlugin = SessionReplay(
+            options = ReplayOptions(
+                privacyProfile = PrivacyProfile(maskText = false)
+            )
         )
 
         // Set LAUNCHDARKLY_MOBILE_KEY to your LaunchDarkly mobile key found on the LaunchDarkly
@@ -60,7 +61,10 @@ open class BaseApplication : Application() {
             .mobileKey(LAUNCHDARKLY_MOBILE_KEY)
             .plugins(
                 Components.plugins().setPlugins(
-                    Collections.singletonList<Plugin>(observabilityPlugin)
+                    listOf(
+                        observabilityPlugin,
+                        sessionReplayPlugin
+                    )
                 )
             )
             .build()
