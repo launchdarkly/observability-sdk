@@ -18,8 +18,6 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 
-private const val REPLAY_EXPORTER_NAME = "RRwebGraphQLReplayLogExporter"
-
 // size limit of accumulated continues canvas operations on the RRWeb player
 private const val RRWEB_CANVAS_BUFFER_LIMIT =  10_000_000 // ~10mb
 private const val RRWEB_CANVAS_DRAW_ENTOURAGE = 300 // 300 bytes
