@@ -9,7 +9,7 @@ import kotlin.math.abs
 
 class MaskApplier {
     private val beforeMaskPaint = Paint().apply {
-        color = Color.RED
+        color = Color.DKGRAY
         style = Paint.Style.FILL
     }
     private val afterMaskPaint = Paint().apply {
