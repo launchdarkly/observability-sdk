@@ -70,6 +70,7 @@ class RRwebGraphQLReplayLogExporter(
         val resultCode = CompletableResultCode()
 
         coroutineScope.launch {
+            // payloadIdCounter and pushedCanvasSize require to have a single reentrancy
             exportMutex.withLock {
             try {
                 generatingCanvasSize = pushedCanvasSize
