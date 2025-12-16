@@ -11,6 +11,8 @@ import io.opentelemetry.sdk.logs.export.LogRecordExporter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonArray
@@ -40,6 +42,7 @@ class RRwebGraphQLReplayLogExporter(
     private val canvasBufferLimit: Int = RRWEB_CANVAS_BUFFER_LIMIT
 ) : LogRecordExporter {
     private val coroutineScope = CoroutineScope(DispatcherProviderHolder.current.io + SupervisorJob())
+    private val exportMutex = Mutex()
 
     private var graphqlClient: GraphQLClient = GraphQLClient(backendUrl)
     private val replayApiService: SessionReplayApiService =
@@ -67,6 +70,7 @@ class RRwebGraphQLReplayLogExporter(
         val resultCode = CompletableResultCode()
 
         coroutineScope.launch {
+            exportMutex.withLock {
             try {
                 generatingCanvasSize = pushedCanvasSize
 
@@ -153,6 +157,7 @@ class RRwebGraphQLReplayLogExporter(
                 // TODO: O11Y-627 - pass in logger to implementation and use here
                 // Log.e("RRwebGraphQLReplayLogExporter", "Error during export: ${e.message}", e)
                 resultCode.fail()
+            }
             }
         }
 
