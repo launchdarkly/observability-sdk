@@ -2,8 +2,6 @@ package com.launchdarkly.observability.replay.capture
 
 import android.graphics.Bitmap
 import android.graphics.Canvas
-import android.graphics.Color
-import android.graphics.Paint
 import android.graphics.Rect
 import android.os.Build
 import android.os.Handler
@@ -16,8 +14,6 @@ import android.view.Window
 import android.view.WindowManager.LayoutParams.TYPE_APPLICATION
 import android.view.WindowManager.LayoutParams.TYPE_BASE_APPLICATION
 import androidx.annotation.RequiresApi
-import android.graphics.Path
-import android.util.Log
 import com.launchdarkly.logging.LDLogger
 import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
 import com.launchdarkly.observability.replay.masking.MaskMatcher
@@ -34,9 +30,8 @@ import kotlin.coroutines.resume
 import androidx.core.graphics.withTranslation
 import com.launchdarkly.observability.replay.masking.Mask
 import androidx.core.graphics.createBitmap
+import com.launchdarkly.observability.replay.masking.MaskApplier
 import kotlin.collections.mutableMapOf
-import kotlin.math.abs
-import kotlin.math.max
 
 /**
  * A source of [CaptureEvent]s taken from the lowest visible window. Captures
@@ -61,14 +56,7 @@ class CaptureSource(
     val captureFlow: SharedFlow<CaptureEvent> = _captureEventFlow.asSharedFlow()
     private val windowInspector = WindowInspector(logger)
     private val maskCollector = MaskCollector(logger)
-    private val beforeMaskPaint = Paint().apply {
-        color = Color.RED
-        style = Paint.Style.FILL
-    }
-    private val afterMaskPaint = Paint().apply {
-        color = Color.GRAY
-        style = Paint.Style.FILL
-    }
+    private val maskApplier = MaskApplier()
 
     private val tiledSignatureManager = TiledSignatureManager()
 
@@ -90,7 +78,14 @@ class CaptureSource(
      */
     private suspend fun doCapture(): CaptureEvent? =
         withContext(DispatcherProviderHolder.current.main) {
-
+            // Synchronize with UI rendering frame
+            suspendCancellableCoroutine { continuation ->
+                Choreographer.getInstance().postFrameCallback {
+                    if (continuation.isActive) {
+                        continuation.resume(Unit)
+                    }
+                }
+            }
 
             val timestamp = System.currentTimeMillis()
             val session = sessionManager.getSessionId()
@@ -115,15 +110,6 @@ class CaptureSource(
             // Create a bitmap with the window dimensions
 
             val capturingWindowEntries = windowsEntries.subList(baseIndex, windowsEntries.size)
-
-            // Synchronize with UI rendering frame
-            suspendCancellableCoroutine { continuation ->
-                Choreographer.getInstance().postFrameCallback {
-                    if (continuation.isActive) {
-                        continuation.resume(Unit)
-                    }
-                }
-            }
 
             val beforeMasks = mutableMapOf<Int, List<Mask>>()
             for (i in capturingWindowEntries.indices) {
@@ -166,12 +152,12 @@ class CaptureSource(
             // off the main thread to avoid blocking the UI thread
             return@withContext withContext(DispatcherProviderHolder.current.default) {
                 val baseResult = captureResults[0] ?: return@withContext null
-                val beforeMasks = areMasksMapsStable(beforeMasks, afterMasks) ?: return@withContext null
+                val beforeMasks = maskApplier.filteredBeforeMasksMap(beforeMasks, afterMasks) ?: return@withContext null
 
                 // if need to draw something on base bitmap additionally
                 if (captureResults.size > 1 || afterMasks.isNotEmpty()) {
                     val canvas = Canvas(baseResult.bitmap)
-                    drawMasks(canvas, beforeMasks[0], afterMasks[0])
+                    maskApplier.drawMasks(canvas, beforeMasks[0], afterMasks[0])
 
                     for (i in 1 until  captureResults.size) {
                         val res = captureResults[i] ?: continue
@@ -181,7 +167,7 @@ class CaptureSource(
 
                         canvas.withTranslation(dx, dy) {
                             drawBitmap(res.bitmap, 0f, 0f, null)
-                            drawMasks(canvas, beforeMasks[i], afterMasks[i])
+                            maskApplier.drawMasks(canvas, beforeMasks[i], afterMasks[i])
                         }
                         res.bitmap.recycle()
                     }
@@ -322,116 +308,5 @@ class CaptureSource(
             } catch (_: Throwable) {
             }
         }
-    }
-
-    /**
-     * Applies masking rectangles to the provided [canvas] using the provided [afterMasks].
-     *
-     * @param canvas The canvas to mask
-     * @param afterMasks areas that will be masked
-     */
-
-    private fun drawMasks(canvas: Canvas, beforeMasks: List<Mask>?, afterMasks: List<Mask>?) {
-        if (afterMasks == null && beforeMasks == null) return
-
-        val path = Path()
-        beforeMasks?.forEach { mask ->
-            drawMask(mask, path, canvas, beforeMaskPaint)
-        }
-        afterMasks?.forEach { mask ->
-            drawMask(mask, path, canvas, afterMaskPaint)
-        }
-    }
-
-    private val maskIntRect = Rect()
-    private fun drawMask(mask: Mask, path: Path, canvas: Canvas, paint: Paint) {
-        if (mask.points != null) {
-            val pts = mask.points
-
-            path.reset()
-            path.moveTo(pts[0], pts[1])
-            path.lineTo(pts[2], pts[3])
-            path.lineTo(pts[4], pts[5])
-            path.lineTo(pts[6], pts[7])
-            path.close()
-
-            canvas.drawPath(path, paint)
-        } else {
-            maskIntRect.left = mask.rect.left.toInt()
-            maskIntRect.top = mask.rect.top.toInt()
-            maskIntRect.right = mask.rect.right.toInt()
-            maskIntRect.bottom =  mask.rect.bottom.toInt()
-            canvas.drawRect(maskIntRect, paint)
-        }
-    }
-
-    fun areMasksMapsStable(
-        beforeMasksMap: Map<Int, List<Mask>>,
-        afterMasksMap: Map<Int, List<Mask>>
-    ): Map<Int, List<Mask>>? {
-        if (afterMasksMap.count() != beforeMasksMap.count()) {
-            return null
-        }
-
-        if (afterMasksMap.count() == 0) {
-            return null
-        }
-
-        val result = mutableMapOf<Int, List<Mask>>()
-        for ((i, before) in beforeMasksMap) {
-            val after = afterMasksMap[i] ?: return null
-            val merged = areMasksStable(before, after) ?: return null
-            result[i] = merged
-        }
-
-        return result
-    }
-
-    // Check if masks are stable and returns null if not
-    fun areMasksStable(
-        beforeMasks: List<Mask>,
-        afterMasks: List<Mask>
-    ): List<Mask>? {
-        if (afterMasks.count() != beforeMasks.count()) {
-            return null
-        }
-
-        if (afterMasks.count() == 0) {
-            return listOf()
-        }
-
-        val oneMaskTolerance = 1f
-        val stabilityTolerance = 40f
-        val maxDiff = 0f
-        val resultMasks = mutableListOf<Mask>()
-        for ((before, after) in beforeMasks.zip(afterMasks)) {
-            if (before.viewId != after.viewId) {
-                return null
-            }
-            val bPoints = before.points
-            //if (bPoints != null) {
-//                val aPoints = after.points ?: return null
-//                for (i in bPoints.indices) {
-//                    val diff = abs(aPoints[i] - bPoints[i])
-//                    if (diff > stabilityTolerance) {
-//                        return null
-//                    }
-//                    //if (diff > oneMaskTolerance) {
-//                        resultMasks += before
-//                    //}
-//                    maxDiff = max(maxDiff, diff)
-//                }
-            //} else {
-                val diff = abs(after.rect.top - before.rect.top)
-                if (diff > stabilityTolerance) {
-                    return null
-                }
-                resultMasks += before
-            //}
-        }
-        if (maxDiff > 0) {
-            Log.i("CaptureSource", "maxDiff = " + maxDiff)
-        }
-        return resultMasks
     }
 }
