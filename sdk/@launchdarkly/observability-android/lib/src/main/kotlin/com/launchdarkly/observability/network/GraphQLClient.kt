@@ -1,8 +1,6 @@
 package com.launchdarkly.observability.network
 
-import android.util.Log
 import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.Json
@@ -86,8 +84,6 @@ class GraphQLClient(
             val requestJson = json.encodeToString(request)
             val requestBytes = requestJson.toByteArray(Charsets.UTF_8)
             val connectionLocal = connectionProvider.openConnection(endpoint).also { connection = it }
-
-            Log.i("SessionReplayApiService","PayloadSize= ${requestBytes.size}")
 
             connectionLocal.apply {
                 requestMethod = "POST"
