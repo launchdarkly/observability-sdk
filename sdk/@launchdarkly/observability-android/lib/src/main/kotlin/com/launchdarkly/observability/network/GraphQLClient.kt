@@ -1,7 +1,6 @@
 package com.launchdarkly.observability.network
 
 import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.Json
@@ -74,6 +73,7 @@ class GraphQLClient(
         variables: Map<String, JsonElement> = emptyMap(),
         dataSerializer: KSerializer<T>
     ): GraphQLResponse<T> = withContext(DispatcherProviderHolder.current.io) {
+        var connection: HttpURLConnection? = null
         try {
             val query = loadQuery(queryFileName)
             val request = GraphQLRequest(
@@ -82,12 +82,13 @@ class GraphQLClient(
             )
 
             val requestJson = json.encodeToString(request)
-            val connection = connectionProvider.openConnection(endpoint)
+            val requestBytes = requestJson.toByteArray(Charsets.UTF_8)
+            val connectionLocal = connectionProvider.openConnection(endpoint).also { connection = it }
 
-            connection.apply {
+            connectionLocal.apply {
                 requestMethod = "POST"
+                setRequestProperty("Content-Length", requestBytes.size.toString())
                 setRequestProperty("Content-Type", "application/json")
-                setRequestProperty("Content-Length", requestJson.toByteArray().size.toString())
 
                 // Add custom headers
                 headers.forEach { (key, value) ->
@@ -97,20 +98,20 @@ class GraphQLClient(
                 doOutput = true
                 connectTimeout = CONNECT_TIMEOUT
                 readTimeout = READ_TIMEOUT
+                setFixedLengthStreamingMode(requestBytes.size)
             }
 
             // Send request
-            connection.outputStream.use { outputStream ->
-                outputStream.write(requestJson.toByteArray())
-                outputStream.flush()
+            connectionLocal.outputStream.use { outputStream ->
+                outputStream.write(requestBytes)
             }
 
             // Read response
-            val responseCode = connection.responseCode
+            val responseCode = connectionLocal.responseCode
             val responseJson = if (responseCode == HttpURLConnection.HTTP_OK) {
-                connection.inputStream.bufferedReader().use { it.readText() }
+                connectionLocal.inputStream.bufferedReader().use { it.readText() }
             } else {
-                val errorText = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "No error body"
+                val errorText = connectionLocal.errorStream?.bufferedReader()?.use { it.readText() } ?: "No error body"
                 throw IOException("HTTP Error $responseCode: $errorText")
             }
 
@@ -125,6 +126,8 @@ class GraphQLClient(
                     GraphQLError(message = e.message.toString())
                 )
             )
+        } finally {
+            connection?.disconnect()
         }
     }
 
