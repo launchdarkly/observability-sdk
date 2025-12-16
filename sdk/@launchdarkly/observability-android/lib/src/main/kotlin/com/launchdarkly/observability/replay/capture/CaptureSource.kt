@@ -117,17 +117,6 @@ class CaptureSource(
             val capturingWindowEntries = windowsEntries.subList(baseIndex, windowsEntries.size)
 
             // Synchronize with UI rendering frame
-//            suspendCancellableCoroutine { continuation ->
-//                Choreographer.getInstance().postFrameCallback {
-//                    if (continuation.isActive) {
-//                        continuation.resume(Unit)
-//                    }
-//                }
-//            }
-
-
-
-            // Synchronize with UI rendering frame
             suspendCancellableCoroutine { continuation ->
                 Choreographer.getInstance().postFrameCallback {
                     if (continuation.isActive) {
