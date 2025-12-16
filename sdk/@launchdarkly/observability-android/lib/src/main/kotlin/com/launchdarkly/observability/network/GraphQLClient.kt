@@ -7,8 +7,10 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 import java.io.IOException
+import java.io.ByteArrayOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
+import java.util.zip.GZIPOutputStream
 
 @Serializable
 data class GraphQLRequest(
@@ -71,7 +73,8 @@ class GraphQLClient(
     suspend fun <T> execute(
         queryFileName: String,
         variables: Map<String, JsonElement> = emptyMap(),
-        dataSerializer: KSerializer<T>
+        dataSerializer: KSerializer<T>,
+        compress: Boolean = true
     ): GraphQLResponse<T> = withContext(DispatcherProviderHolder.current.io) {
         var connection: HttpURLConnection? = null
         try {
@@ -83,12 +86,16 @@ class GraphQLClient(
 
             val requestJson = json.encodeToString(request)
             val requestBytes = requestJson.toByteArray(Charsets.UTF_8)
+            val payloadBytes = if (compress) gzip(requestBytes) else requestBytes
             val connectionLocal = connectionProvider.openConnection(endpoint).also { connection = it }
 
             connectionLocal.apply {
                 requestMethod = "POST"
-                setRequestProperty("Content-Length", requestBytes.size.toString())
+                setRequestProperty("Content-Length", payloadBytes.size.toString())
                 setRequestProperty("Content-Type", "application/json")
+                if (compress) {
+                    setRequestProperty("Content-Encoding", "gzip")
+                }
 
                 // Add custom headers
                 headers.forEach { (key, value) ->
@@ -98,12 +105,12 @@ class GraphQLClient(
                 doOutput = true
                 connectTimeout = CONNECT_TIMEOUT
                 readTimeout = READ_TIMEOUT
-                setFixedLengthStreamingMode(requestBytes.size)
+                setFixedLengthStreamingMode(payloadBytes.size)
             }
 
             // Send request
             connectionLocal.outputStream.use { outputStream ->
-                outputStream.write(requestBytes)
+                outputStream.write(payloadBytes)
             }
 
             // Read response
@@ -140,5 +147,13 @@ class GraphQLClient(
         return this::class.java.classLoader?.getResourceAsStream(queryFilepath)?.bufferedReader()?.use {
             it.readText()
         } ?: throw IllegalStateException("Could not load GraphQL query file: $queryFilepath")
+    }
+
+    private fun gzip(data: ByteArray): ByteArray {
+        val byteStream = ByteArrayOutputStream()
+        GZIPOutputStream(byteStream).use { gzipStream ->
+            gzipStream.write(data)
+        }
+        return byteStream.toByteArray()
     }
 }
