@@ -185,7 +185,7 @@ class SessionReplayExporter(
 
     suspend fun identifyEventAndUpdate(newIdentifyEvent: IdentifyItemPayload) {
         exportMutex.withLock {
-            val sessionId = lastSeenState.sessionId
+            val sessionId = newIdentifyEvent.sessionId
             if (sessionId != null) {
                 replayApiService.identifyReplaySession(sessionId, newIdentifyEvent)
                 identifyItemPayload = newIdentifyEvent
