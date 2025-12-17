@@ -127,7 +127,12 @@ class SessionReplayExporter(
                         }
 
                         EventDomain.IDENTIFY -> {
-                            // Noop for identify events at this layer
+                            val identifyItemPayload = extractEventFromLog(log)
+                            identifyItemPayload.sessionId?.let { sessionId ->
+                                eventGenerator.generateIdentifyEvent(identifyItemPayload)?.let { identifyEvent ->
+                                    eventsBySession.getOrPut(sessionId) { mutableListOf() }.add(identifyEvent)
+                                }
+                            }
                         }
 
                         else -> {
@@ -272,4 +277,24 @@ class SessionReplayExporter(
     }
 
     // Generation methods have been moved to SessionReplayEventGenerator
+
+    /**
+     * Extracts IdentifyItemPayload from a log record.
+     * The log is emitted with:
+     * - all resource attributes (setAllAttributes)
+     * - event.domain = "identify"
+     * - session.id
+     * - timestamp (ms) in observedTimestampEpochNanos
+     */
+    private fun extractEventFromLog(log: LogRecordData): IdentifyItemPayload {
+        val attributes = log.attributes
+        val sessionId = attributes.get(AttributeKey.stringKey("session.id"))
+        val timestampMs = log.observedTimestampEpochNanos / 1_000_000
+        return IdentifyItemPayload.from(
+            // No contextFriendlyName or LDContext available at this point
+            resourceAttributes = attributes,
+            timestamp = timestampMs,
+            sessionId = sessionId
+        )
+    }
 }

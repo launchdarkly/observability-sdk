@@ -22,8 +22,7 @@ class SessionReplayHook
 internal constructor(
     val plugin: SessionReplay
 ) : Hook(HOOK_NAME) {
-
-    private val coroutineScope = CoroutineScope(DispatcherProviderHolder.current.io + SupervisorJob())
+    private val coroutineScope = CoroutineScope(DispatcherProviderHolder.current.default)
 
     override fun beforeIdentify(
         seriesContext: IdentifySeriesContext,
