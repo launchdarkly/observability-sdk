@@ -34,6 +34,7 @@ data class ObservabilityOptions(
     val serviceVersion: String = BuildConfig.OBSERVABILITY_SDK_VERSION,
     val otlpEndpoint: String = DEFAULT_OTLP_ENDPOINT,
     val backendUrl: String = DEFAULT_BACKEND_URL,
+    val contextFriendlyName: String? = null,
     val resourceAttributes: Attributes = Attributes.empty(),
     val customHeaders: Map<String, String> = emptyMap(),
     val sessionBackgroundTimeout: Duration = 15.minutes,

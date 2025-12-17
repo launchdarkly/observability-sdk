@@ -125,6 +125,34 @@ class ViewModel(application: Application) : AndroidViewModel(application) {
         LDClient.get().identify(context)
     }
 
+    fun identifyUser() {
+        val userContext = LDContext.builder(ContextKind.DEFAULT, "single-userkey")
+            .name("Bob Bobberson")
+            .build()
+
+        LDClient.get().identify(userContext)
+    }
+
+    fun identifyAnonymous() {
+        val anonContext = LDContext.builder(ContextKind.DEFAULT, "anonymous-userkey")
+            .anonymous(true)
+            .build()
+
+        LDClient.get().identify(anonContext)
+    }
+
+    fun identifyMulti() {
+        val userContext = LDContext.builder(ContextKind.DEFAULT, "multi-username")
+            .name("multi-username")
+            .build()
+        val deviceContext = LDContext.builder(ContextKind.of("device"), "iphone")
+            .name("iphone")
+            .build()
+
+        val multiContext = LDContext.createMulti(userContext, deviceContext)
+        LDClient.get().identify(multiContext)
+    }
+
     fun evaluateBooleanFlag(flagKey: String) {
         if (flagKey.isNotEmpty()) {
             val result = LDClient.get().boolVariation(flagKey, false)

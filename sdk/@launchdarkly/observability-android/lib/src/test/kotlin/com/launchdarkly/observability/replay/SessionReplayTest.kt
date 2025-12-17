@@ -4,6 +4,7 @@ import com.launchdarkly.logging.LDLogger
 import com.launchdarkly.observability.api.ObservabilityOptions
 import com.launchdarkly.observability.client.ObservabilityContext
 import com.launchdarkly.observability.plugin.InstrumentationContributorManager
+import com.launchdarkly.observability.replay.plugin.SessionReplay
 import com.launchdarkly.observability.sdk.LDObserve
 import com.launchdarkly.sdk.android.LDClient
 import io.mockk.mockk
