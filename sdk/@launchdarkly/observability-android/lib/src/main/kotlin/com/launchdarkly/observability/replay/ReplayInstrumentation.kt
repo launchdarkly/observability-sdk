@@ -221,6 +221,11 @@ class ReplayInstrumentation(
         ldContext: LDContext,
         timestamp: Long = System.currentTimeMillis()
     ) {
+        if (!this::_sessionManager.isInitialized || !this::_otelLogger.isInitialized) {
+            observabilityContext.logger.warn("identifySession called before ReplayInstrumentation was installed; skipping.")
+            return
+        }
+
         val sessionId = _sessionManager.getSessionId()
         val event = IdentifyItemPayload.from(
             contextFriendlyName = observabilityContext.options.contextFriendlyName,
