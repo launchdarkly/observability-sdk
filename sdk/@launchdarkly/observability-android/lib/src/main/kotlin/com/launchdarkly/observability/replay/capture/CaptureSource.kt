@@ -48,8 +48,6 @@ class CaptureSource(
     data class CaptureResult(
         val windowEntry: WindowEntry,
         val bitmap: Bitmap,
-        val beforeMasks: List<Mask>? = null,
-        val afterMasks: List<Mask>? = null
     )
 
     private val _captureEventFlow = MutableSharedFlow<CaptureEvent>()
@@ -111,13 +109,10 @@ class CaptureSource(
 
             val capturingWindowEntries = windowsEntries.subList(baseIndex, windowsEntries.size)
 
-            val beforeMasks = mutableMapOf<Int, List<Mask>>()
-            for (i in capturingWindowEntries.indices) {
-                beforeMasks[i] =
-                    maskCollector.collectMasks(capturingWindowEntries[i].rootView, maskMatchers)
-            }
+            var beforeMasks = collectMasks(capturingWindowEntries)
 
-            val captureResults = mutableListOf<CaptureResult?>()
+            val captureResults: MutableList<CaptureResult?> = MutableList(capturingWindowEntries.size) { null }
+            var captured = 0
             for (i in capturingWindowEntries.indices) {
                 val windowEntry = capturingWindowEntries[i]
                 val captureResult = captureViewResult(windowEntry)
@@ -125,12 +120,13 @@ class CaptureSource(
                     if (i == 0) {
                         return@withContext null
                     }
-                    beforeMasks.remove(i)
+                    beforeMasks[i] = null
                 }
 
-                captureResults.add(captureResult)
+                captured++
+                captureResults[i] = captureResult
             }
-            if (captureResults.isEmpty()) {
+            if (captured == 0) {
                 return@withContext null
             }
 
@@ -143,16 +139,12 @@ class CaptureSource(
                 }
             }
 
-            val afterMasks = mutableMapOf<Int, List<Mask>>()
-            for (i in capturingWindowEntries.indices) {
-                afterMasks[i] =
-                    maskCollector.collectMasks(capturingWindowEntries[i].rootView, maskMatchers)
-            }
+            val afterMasks = collectMasksFromResults(captureResults)
 
             // off the main thread to avoid blocking the UI thread
             return@withContext withContext(DispatcherProviderHolder.current.default) {
                 val baseResult = captureResults[0] ?: return@withContext null
-                val beforeMasks = maskApplier.filteredBeforeMasksMap(beforeMasks, afterMasks) ?: return@withContext null
+                beforeMasks = maskApplier.filteredBeforeMasksMap(beforeMasks, afterMasks) ?: return@withContext null
 
                 // if need to draw something on base bitmap additionally
                 if (captureResults.size > 1 || afterMasks.isNotEmpty()) {
@@ -184,6 +176,18 @@ class CaptureSource(
                 createCaptureEvent(baseResult.bitmap, rect, timestamp, session)
             }
         }
+
+    private fun collectMasks(capturingWindowEntries: List<WindowEntry>): MutableList<List<Mask>?> {
+        return capturingWindowEntries.map {
+            maskCollector.collectMasks( it.rootView, maskMatchers)
+        }.toMutableList()
+    }
+
+    private fun collectMasksFromResults(captureResults: List<CaptureResult?>): MutableList<List<Mask>?> {
+        return captureResults.map { result ->
+            result?.windowEntry?.rootView?.let { rv -> maskCollector.collectMasks(rv, maskMatchers) }
+        }.toMutableList()
+    }
 
     private fun pickBaseWindow(windowsEntries: List<WindowEntry>): Int? {
         val appIdx = windowsEntries.indexOfFirst {

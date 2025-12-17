@@ -32,24 +32,18 @@ class MaskApplier {
     }
 
     private fun drawMask(mask: Mask, path: Path, canvas: Canvas, paint: Paint) {
-        var isRectangle = true
         if (mask.points != null) {
             val pts = mask.points
-            isRectangle = pts[0] == pts[6] && pts[1] == pts[3] && pts[2] == pts[4] && pts[5] == pts[7]
-            if (!isRectangle) {
 
-                path.reset()
-                path.moveTo(pts[0], pts[1])
-                path.lineTo(pts[2], pts[3])
-                path.lineTo(pts[4], pts[5])
-                path.lineTo(pts[6], pts[7])
-                path.close()
+            path.reset()
+            path.moveTo(pts[0], pts[1])
+            path.lineTo(pts[2], pts[3])
+            path.lineTo(pts[4], pts[5])
+            path.lineTo(pts[6], pts[7])
+            path.close()
 
-                canvas.drawPath(path, paint)
-            }
-        }
-
-        if (isRectangle) {
+            canvas.drawPath(path, paint)
+        } else {
             maskIntRect.left = mask.rect.left.toInt()
             maskIntRect.top = mask.rect.top.toInt()
             maskIntRect.right = mask.rect.right.toInt()
@@ -59,19 +53,16 @@ class MaskApplier {
     }
 
     fun filteredBeforeMasksMap(
-        beforeMasksMap: Map<Int, List<Mask>>,
-        afterMasksMap: Map<Int, List<Mask>>
-    ): Map<Int, List<Mask>>? {
-        if (afterMasksMap.count() != beforeMasksMap.count()) {
-            return null
-        }
-
+        beforeMasksMap: List<List<Mask>?>,
+        afterMasksMap: List<List<Mask>?>
+    ): MutableList<List<Mask>?>? {
         if (afterMasksMap.count() == 0) {
             return null
         }
 
-        val result = mutableMapOf<Int, List<Mask>>()
-        for ((i, before) in beforeMasksMap) {
+        val result: MutableList<List<Mask>?> = MutableList(beforeMasksMap.size) { null }
+        for (i in beforeMasksMap.indices) {
+            val before = beforeMasksMap[i] ?: continue
             val after = afterMasksMap[i] ?: return null
             val merged = filteredBeforeMasks(before, after) ?: return null
             result[i] = merged
