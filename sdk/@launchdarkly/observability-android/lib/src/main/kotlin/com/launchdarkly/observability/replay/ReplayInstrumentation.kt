@@ -75,7 +75,7 @@ class ReplayInstrumentation(
     private lateinit var interactionSource: InteractionSource
     private val instrumentationScope = CoroutineScope(DispatcherProviderHolder.current.default + SupervisorJob())
     private var captureJob: Job? = null
-    private var isPaused: Boolean = false
+    private var isPaused: Boolean = true
     private val captureMutex = Mutex()
     private var startedActivityCount: Int = 0
     private var configurationChangeInProgress: Boolean = false
@@ -85,6 +85,7 @@ class ReplayInstrumentation(
 
     override fun install(ctx: InstallationContext) {
         // If already installed, do nothing. This prevents duplicating collectors and lifecycle listeners.
+        // We should refactor this if we want to support multiple sessions and install the instrumentation more than once
         if (isInstalled) return
 
         otelLogger = ctx.openTelemetry.logsBridge.get(INSTRUMENTATION_SCOPE_NAME)
@@ -98,12 +99,10 @@ class ReplayInstrumentation(
         startCollectors()
 
         interactionSource.attachToApplication(ctx.application)
-
         ctx.application.registerActivityLifecycleCallbacks(this)
-        determineInitialForegroundState(ctx.application)
 
+        startCaptureIfInForeground(ctx.application)
         isInstalled = true
-        internalStartCapture()
     }
 
     private fun startCollectors() {
@@ -154,7 +153,19 @@ class ReplayInstrumentation(
         captureMutex.withLock {
             if (!isPaused) return
             isPaused = false
-            internalStartCapture()
+            captureJob?.cancelAndJoin()
+
+            captureJob = instrumentationScope.launch {
+                try {
+                    observabilityContext.logger.debug("Session replay capture running")
+                    while (isActive) {
+                        captureSource.captureNow()
+                        delay(options.capturePeriodMillis)
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                }
+            }
         }
     }
 
@@ -169,36 +180,20 @@ class ReplayInstrumentation(
         }
     }
 
-    private fun internalStartCapture() {
-        captureJob?.cancel()
-        captureJob = instrumentationScope.launch {
-            try {
-                observabilityContext.logger.debug("Session replay capture running")
-                while (isActive) {
-                    captureSource.captureNow()
-                    delay(options.capturePeriodMillis)
-                }
-            } catch (e: CancellationException) {
-                throw e
-            }
-        }
-    }
-
     /**
-     * Determines the initial foreground/background state.
+     * Starts replay capture if the app is already in the foreground.
      *
-     * This is necessary to handle scenarios where the SDK is initialized after the application
-     * has already started. Since the [android.app.Application.ActivityLifecycleCallbacks] would have
-     * missed the initial [onActivityStarted] events, this method manually checks for the presence
-     * of app windows to correctly set the internal state.
+     * This handles the scenario where the SDK is initialized after the application has already
+     * started. Since [android.app.Application.ActivityLifecycleCallbacks] would have missed the
+     * initial [onActivityStarted] events, this method manually checks for the presence of app
+     * windows to determine if the app is in the foreground.
      *
-     * This method checks if there are any activities running, and if so, it sets the
-     * `startedActivityCount` to 1. This ensures that the replay capture will start if the app
-     * is already in the foreground when the instrumentation is installed.
+     * If windows are found, this method sets `startedActivityCount` to 1 and calls [runCapture]
+     * to begin replay capture, ensuring consistent behavior with normal foreground transitions.
      *
      * @param application The application instance used to inspect existing windows.
      */
-    private fun determineInitialForegroundState(application: Application) {
+    private fun startCaptureIfInForeground(application: Application) {
         if (startedActivityCount > 0) return
 
         instrumentationScope.launch(DispatcherProviderHolder.current.main) {
@@ -207,15 +202,21 @@ class ReplayInstrumentation(
             runCatching {
                 if (WindowInspector(observabilityContext.logger).appWindows(application).isNotEmpty()) {
                     startedActivityCount = 1
+                    instrumentationScope.launch { runCapture() }
                 }
             }
         }
     }
 
     // TODO: O11Y-621 - This should be called somewhere (Probably inside InstrumentationManager.kt) to shutdown the instrumentation.
-    fun shutdown() {
-        instrumentationScope.cancel()
-        isInstalled = false
+    suspend fun shutdown() {
+        captureMutex.withLock {
+            instrumentationScope.cancel()
+            observabilityContext.application.unregisterActivityLifecycleCallbacks(this)
+            interactionSource.detachFromApplication(observabilityContext.application)
+            isPaused = true
+            isInstalled = false
+        }
     }
 
     override fun getLoggerScopeName(): String = INSTRUMENTATION_SCOPE_NAME
