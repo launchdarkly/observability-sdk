@@ -6,7 +6,7 @@ import com.launchdarkly.observability.client.TelemetryInspector
 import com.launchdarkly.observability.plugin.Observability
 import com.launchdarkly.observability.replay.PrivacyProfile
 import com.launchdarkly.observability.replay.ReplayOptions
-import com.launchdarkly.observability.replay.SessionReplay
+import com.launchdarkly.observability.replay.plugin.SessionReplay
 import com.launchdarkly.sdk.ContextKind
 import com.launchdarkly.sdk.LDContext
 import com.launchdarkly.sdk.android.Components
