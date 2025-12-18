@@ -200,7 +200,7 @@ class CaptureSource(
         view: View,
         rect: Rect,
     ): Bitmap? {
-        val bitmap = createBitmap(view.width, view.height)
+        val bitmap = createBitmapForView(view) ?: return null
 
         return suspendCancellableCoroutine { continuation ->
             val handler = Handler(Looper.getMainLooper())
@@ -229,7 +229,7 @@ class CaptureSource(
     private fun canvasDraw(
         view: View
     ): Bitmap? {
-        val bitmap = createBitmap(view.width, view.height)
+        val bitmap = createBitmapForView(view) ?: return null
 
         val canvas = Canvas(bitmap)
         try {
@@ -240,6 +240,16 @@ class CaptureSource(
             return null
         }
         return bitmap
+    }
+
+    private fun createBitmapForView(view: View): Bitmap? {
+        val width = view.width
+        val height = view.height
+        if (width <= 0 || height <= 0) {
+            logger.warn("Cannot draw view with zero dimensions: ${view.width}x${view.height}")
+            return null
+        }
+        return createBitmap(width, height)
     }
 
     private fun createCaptureEvent(
