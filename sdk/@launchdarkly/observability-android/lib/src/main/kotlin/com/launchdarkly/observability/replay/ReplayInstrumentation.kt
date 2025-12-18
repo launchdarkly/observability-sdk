@@ -84,7 +84,6 @@ class ReplayInstrumentation(
     private var captureJob: Job? = null
     private val shouldCapture = MutableStateFlow(false)
     private var startedActivityCount: Int = 0
-    private var configurationChangeInProgress: Boolean = false
     private var isInstalled: Boolean = false
     private var exporter: SessionReplayExporter? = null
 
@@ -303,10 +302,6 @@ class ReplayInstrumentation(
     override fun onActivityStarted(activity: Activity) {
         val enteringForeground = startedActivityCount == 0
 
-        if (configurationChangeInProgress) {
-            configurationChangeInProgress = false
-        }
-
         startedActivityCount++
 
         if (enteringForeground) {
@@ -324,7 +319,6 @@ class ReplayInstrumentation(
         }
 
         if (activity.isChangingConfigurations) {
-            configurationChangeInProgress = true
             return
         }
 
