@@ -70,8 +70,8 @@ class ReplayInstrumentation(
 ) : LDExtendedInstrumentation, Application.ActivityLifecycleCallbacks {
 
     private lateinit var otelLogger: Logger
-    private lateinit var captureSource: CaptureSource
-    private lateinit var interactionSource: InteractionSource
+    private var captureSource: CaptureSource? = null
+    private var interactionSource: InteractionSource? = null
     private val instrumentationScope = CoroutineScope(DispatcherProviderHolder.current.default + SupervisorJob())
     private var captureJob: Job? = null
     private val shouldCapture = MutableStateFlow(false)
@@ -97,7 +97,7 @@ class ReplayInstrumentation(
         startCollectors()
         startCaptureStateObserver()
 
-        interactionSource.attachToApplication(ctx.application)
+        interactionSource?.attachToApplication(ctx.application)
         ctx.application.registerActivityLifecycleCallbacks(this)
 
         startCaptureIfInForeground(ctx.application)
@@ -107,7 +107,7 @@ class ReplayInstrumentation(
     private fun startCollectors() {
         // Images collector
         instrumentationScope.launch {
-            captureSource.captureFlow.collect { capture ->
+            captureSource?.captureFlow?.collect { capture ->
                 otelLogger.logRecordBuilder()
                     .setAttribute("event.domain", "media")
                     .setAttribute("image.width", capture.origWidth.toLong())
@@ -121,7 +121,7 @@ class ReplayInstrumentation(
 
         // Interactions collector
         instrumentationScope.launch {
-            interactionSource.captureFlow.collect { interaction ->
+            interactionSource?.captureFlow?.collect { interaction ->
                 val positionsJson = StringBuilder().apply {
                     append('[')
                     interaction.positions.forEachIndexed { index, position ->
@@ -164,10 +164,10 @@ class ReplayInstrumentation(
     private suspend fun doRunCapture() {
         captureJob?.cancelAndJoin()
         captureJob = instrumentationScope.launch {
-            observabilityContext.logger.info("Session replay capture running")
+            observabilityContext.logger.debug("Session replay capture running")
             while (isActive) {
                 try {
-                    captureSource.captureNow()
+                    captureSource?.captureNow()
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: OutOfMemoryError) {
@@ -185,7 +185,7 @@ class ReplayInstrumentation(
     private suspend fun doPauseCapture() {
         captureJob?.cancelAndJoin()
         captureJob = null
-        observabilityContext.logger.info("Session replay capture paused")
+        observabilityContext.logger.debug("Session replay capture paused")
     }
 
     // TODO: O11Y-622 - implement mechanism for customer code to invoke this method
@@ -230,8 +230,8 @@ class ReplayInstrumentation(
     fun shutdown() {
         pauseCapture()
         instrumentationScope.cancel()
+        interactionSource?.detachFromApplication(observabilityContext.application)
         observabilityContext.application.unregisterActivityLifecycleCallbacks(this)
-        interactionSource.detachFromApplication(observabilityContext.application)
     }
 
     override fun getLoggerScopeName(): String = INSTRUMENTATION_SCOPE_NAME
