@@ -135,11 +135,6 @@ data class ComposeMaskTarget(
             t4.x, t4.y
         )
 
-        for (i in pts.indices step 2) {
-            pts[i] -= context.rootX
-            pts[i + 1] -= context.rootY
-        }
-
         return pts
     }
 }

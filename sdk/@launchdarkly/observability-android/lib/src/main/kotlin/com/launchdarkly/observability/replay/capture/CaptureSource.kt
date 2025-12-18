@@ -220,7 +220,7 @@ class CaptureSource(
                 )
             } catch (exp: Exception) {
                 // It could normally happen when view is being closed during screenshot
-                logger.info("Failed to capture window", exp)
+                logger.warn("Failed to capture window", exp)
                 continuation.resume(null)
             }
         }
@@ -228,11 +228,16 @@ class CaptureSource(
 
     private fun canvasDraw(
         view: View
-    ): Bitmap {
+    ): Bitmap? {
         val bitmap = createBitmap(view.width, view.height)
 
         val canvas = Canvas(bitmap)
-        view.draw(canvas)
+        try {
+            view.draw(canvas)
+        } catch (t: Throwable) {
+            logger.warn("Failed to draw Canvas. This view might be better processed by PixelCopy", view)
+            return null
+        }
         return bitmap
     }
 
