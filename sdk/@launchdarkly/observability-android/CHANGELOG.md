@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.21.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.20.0...launchdarkly-observability-android-0.21.0) (2025-12-18)
+
+
+### Features
+
+* Pause and resume replay capture on app background/foreground ([#329](https://github.com/launchdarkly/observability-sdk/issues/329)) ([771ce51](https://github.com/launchdarkly/observability-sdk/commit/771ce5121d6849705b9e88bc73dcb30b6879032e))
+
+
+### Bug Fixes
+
+* Fix compose coordinate offset.  ([#331](https://github.com/launchdarkly/observability-sdk/issues/331)) ([7fbdc4c](https://github.com/launchdarkly/observability-sdk/commit/7fbdc4c2096f4785b80333512d21d27b556317cd))
+
 ## [0.20.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.19.1...launchdarkly-observability-android-0.20.0) (2025-12-18)
 
 
