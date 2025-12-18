@@ -3,6 +3,7 @@ package com.launchdarkly.observability.replay
 import android.app.Activity
 import android.app.Application
 import android.os.Bundle
+import com.launchdarkly.logging.LDLogger
 import com.launchdarkly.observability.client.ObservabilityContext
 import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
 import com.launchdarkly.observability.interfaces.LDExtendedInstrumentation
@@ -76,6 +77,7 @@ class ReplayInstrumentation(
 
     private lateinit var otelLogger: Logger
     private lateinit var sessionManager: SessionManager
+    private val logger: LDLogger = observabilityContext.logger
     private var captureSource: CaptureSource? = null
     private var interactionSource: InteractionSource? = null
     private val instrumentationScope = CoroutineScope(DispatcherProviderHolder.current.default + SupervisorJob())
@@ -84,7 +86,7 @@ class ReplayInstrumentation(
     private var startedActivityCount: Int = 0
     private var configurationChangeInProgress: Boolean = false
     private var isInstalled: Boolean = false
-    private var _exporter: SessionReplayExporter? = null
+    private var exporter: SessionReplayExporter? = null
 
     override val name: String = INSTRUMENTATION_SCOPE_NAME
 
@@ -172,18 +174,18 @@ class ReplayInstrumentation(
     private suspend fun doRunCapture() {
         captureJob?.cancelAndJoin()
         captureJob = instrumentationScope.launch {
-            observabilityContext.logger.debug("Session replay capture running")
+            logger.debug("Session replay capture running")
             while (isActive) {
                 try {
                     captureSource?.captureNow()
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: OutOfMemoryError) {
-                    observabilityContext.logger.error("Capture paused due to OOM", e)
+                    logger.error("Capture paused due to OOM", e)
                     shouldCapture.value = false
                     return@launch
                 } catch (e: Exception) {
-                    observabilityContext.logger.error("Capture failed", e)
+                    logger.error("Capture failed", e)
                 }
                 delay(options.capturePeriodMillis)
             }
@@ -193,7 +195,7 @@ class ReplayInstrumentation(
     private suspend fun doPauseCapture() {
         captureJob?.cancelAndJoin()
         captureJob = null
-        observabilityContext.logger.debug("Session replay capture paused")
+        logger.debug("Session replay capture paused")
     }
 
     // TODO: O11Y-622 - implement mechanism for customer code to invoke this method
@@ -226,7 +228,7 @@ class ReplayInstrumentation(
             if (startedActivityCount > 0) return@launch
 
             runCatching {
-                if (WindowInspector(observabilityContext.logger).appWindows(application).isNotEmpty()) {
+                if (WindowInspector(logger).appWindows(application).isNotEmpty()) {
                     startedActivityCount = 1
                     runCapture()
                 }
@@ -247,7 +249,7 @@ class ReplayInstrumentation(
         timestamp: Long = System.currentTimeMillis()
     ) {
         if (!this::sessionManager.isInitialized || !this::otelLogger.isInitialized) {
-            observabilityContext.logger.warn("identifySession called before ReplayInstrumentation was installed; skipping.")
+            logger.warn("identifySession called before ReplayInstrumentation was installed; skipping.")
             return
         }
 
@@ -260,7 +262,7 @@ class ReplayInstrumentation(
             sessionId = sessionId
         )
 
-        _exporter?.identifyEventAndUpdate(event)
+        exporter?.identifyEventAndUpdate(event)
 
         otelLogger.logRecordBuilder()
             .setAllAttributes(observabilityContext.options.resourceAttributes)
@@ -286,7 +288,7 @@ class ReplayInstrumentation(
             serviceVersion = observabilityContext.options.serviceVersion,
             initialIdentifyItemPayload = initialIdentifyItemPayload
         )
-        _exporter = exporter
+        this@ReplayInstrumentation.exporter = exporter
 
         return BatchLogRecordProcessor.builder(exporter)
             .setMaxQueueSize(BATCH_MAX_QUEUE_SIZE)
