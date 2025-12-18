@@ -255,14 +255,17 @@ class ReplayInstrumentation(
     override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) = Unit
 
     override fun onActivityStarted(activity: Activity) {
-        val wasInBackground = startedActivityCount == 0 && !configurationChangeInProgress
+        val enteringForeground = startedActivityCount == 0
 
-        if (wasInBackground) {
-            runCapture()
-        } else if (configurationChangeInProgress) {
+        if (configurationChangeInProgress) {
             configurationChangeInProgress = false
         }
+
         startedActivityCount++
+
+        if (enteringForeground) {
+            runCapture()
+        }
     }
 
     override fun onActivityResumed(activity: Activity) = Unit
