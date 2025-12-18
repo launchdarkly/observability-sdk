@@ -17,10 +17,10 @@ import io.opentelemetry.context.Scope
  * This class is a hook implementation for recording flag evaluation and identify events
  * on spans.
  */
-class TracingHook
+class ObservabilityHook
 
 /**
- * Creates an [TracingHook]
+ * Creates an [ObservabilityHook]
  *
  * @param withSpans will include child spans for the various hook series when they happen
  * @param withValue will include the value of the feature flag in the recorded evaluation events
@@ -162,7 +162,7 @@ internal constructor(
 
     companion object {
         const val PROVIDER_NAME: String = "LaunchDarkly"
-        const val HOOK_NAME: String = "LaunchDarkly Evaluation Tracing Hook"
+        const val HOOK_NAME: String = "Observability Hook"
         const val INSTRUMENTATION_NAME: String = "com.launchdarkly.observability"
         const val DATA_KEY_FEATURE_FLAG_SPAN: String = "variationSpan"
         const val FEATURE_FLAG_EVENT_NAME: String = "feature_flag"

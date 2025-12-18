@@ -1,6 +1,9 @@
 package com.launchdarkly.observability.replay
 
 import com.launchdarkly.observability.replay.capture.CaptureEvent
+import com.launchdarkly.observability.replay.exporter.IdentifyItemPayload
+import com.launchdarkly.observability.replay.exporter.SessionReplayExporter
+import com.launchdarkly.observability.replay.exporter.SessionReplayApiService
 import io.mockk.*
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
@@ -12,22 +15,27 @@ import org.junit.jupiter.api.BeforeEach
 import java.util.concurrent.TimeUnit
 import org.junit.jupiter.api.Disabled
 
-class RRwebGraphQLReplayLogExporterTest {
+class SessionReplayExporterTest {
 
     private lateinit var mockService: SessionReplayApiService
-    private lateinit var exporter: RRwebGraphQLReplayLogExporter
+    private lateinit var exporter: SessionReplayExporter
+
+    private val identifyEvent = IdentifyItemPayload(
+        attributes = mapOf("key" to "user"),
+        timestamp = 0L)
 
     @BeforeEach
     fun setUp() {
         mockService = mockk<SessionReplayApiService>(relaxed = true)
-        exporter = RRwebGraphQLReplayLogExporter(
+        exporter = SessionReplayExporter(
             organizationVerboseId = "test-org",
             backendUrl = "http://test.com",
             serviceName = "test-service",
             serviceVersion = "1.0.0",
             injectedReplayApiService = mockService,
             canvasBufferLimit = 20,
-            canvasDrawEntourage = 1
+            canvasDrawEntourage = 1,
+            initialIdentifyItemPayload = identifyEvent
         )
     }
 
@@ -37,12 +45,13 @@ class RRwebGraphQLReplayLogExporterTest {
         val mockService = mockk<SessionReplayApiService>(relaxed = true)
         
         // Create the exporter with the mock service
-        val exporter = RRwebGraphQLReplayLogExporter(
+        val exporter = SessionReplayExporter(
             organizationVerboseId = "test-org",
             backendUrl = "http://test.com",
             serviceName = "test-service",
             serviceVersion = "1.0.0",
-            injectedReplayApiService = mockService
+            initialIdentifyItemPayload = identifyEvent,
+            injectedReplayApiService = mockService,
         )
         
         // Verify the exporter was created successfully
@@ -52,12 +61,13 @@ class RRwebGraphQLReplayLogExporterTest {
     @Test
     fun `constructor without mock service should create default service`() = runTest {
         // Create the exporter without injecting a service (should create default)
-        val exporter = RRwebGraphQLReplayLogExporter(
+        val exporter = SessionReplayExporter(
             organizationVerboseId = "test-org",
             backendUrl = "http://test.com",
             serviceName = "test-service",
-            serviceVersion = "1.0.0"
-        )
+            serviceVersion = "1.0.0",
+            initialIdentifyItemPayload = identifyEvent,
+            )
         
         // Verify the exporter was created successfully
         assertNotNull(exporter)
@@ -86,7 +96,7 @@ class RRwebGraphQLReplayLogExporterTest {
 
         // Mock the API service methods
         coEvery { mockService.initializeReplaySession(any(), any()) } just Runs
-        coEvery { mockService.identifyReplaySession(any()) } just Runs
+        coEvery { mockService.identifyReplaySession(any<String>(), any<IdentifyItemPayload>()) } just Runs
         coEvery { mockService.pushPayload(any(), any(), capture(capturedEvents)) } just Runs
 
         // Act: Export all log records
@@ -99,17 +109,13 @@ class RRwebGraphQLReplayLogExporterTest {
         coVerify(exactly = 1) {
             mockService.initializeReplaySession("test-org", "session-a")
         }
-        coVerify(exactly = 1) {
-            mockService.identifyReplaySession("session-a")
-        }
+        coVerify(exactly = 1) { mockService.identifyReplaySession(eq("session-a"), any<IdentifyItemPayload>()) }
 
         // Verify full capture calls for session B (first capture only)
         coVerify(exactly = 1) {
             mockService.initializeReplaySession("test-org", "session-b")
         }
-        coVerify(exactly = 1) {
-            mockService.identifyReplaySession("session-b")
-        }
+        coVerify(exactly = 1) { mockService.identifyReplaySession(eq("session-b"), any<IdentifyItemPayload>()) }
 
         // Verify pushPayload is called for all captures (3 for session A + 2 for session B = 5 total)
         coVerify(exactly = 5) {
@@ -152,7 +158,7 @@ class RRwebGraphQLReplayLogExporterTest {
         
         // Mock the API service methods
         coEvery { mockService.initializeReplaySession(any(), any()) } just Runs
-        coEvery { mockService.identifyReplaySession(any()) } just Runs
+        coEvery { mockService.identifyReplaySession(any<String>(), any<IdentifyItemPayload>()) } just Runs
         coEvery { mockService.pushPayload(any(), any(), capture(capturedEventsLists)) } just Runs
         
         // Act: Export all log records
@@ -167,9 +173,7 @@ class RRwebGraphQLReplayLogExporterTest {
         }
         
         // Verify identifyReplaySession is called twice (first capture + dimension change)
-        coVerify(exactly = 1) {
-            mockService.identifyReplaySession("session-a") 
-        }
+        coVerify(exactly = 1) { mockService.identifyReplaySession(eq("session-a"), any<IdentifyItemPayload>()) }
         
         // Verify pushPayload is called for all captures
         coVerify(exactly = 1) {
@@ -207,7 +211,7 @@ class RRwebGraphQLReplayLogExporterTest {
 
         // Mock the API service methods
         coEvery { mockService.initializeReplaySession(any(), any()) } just Runs
-        coEvery { mockService.identifyReplaySession(any()) } just Runs
+        coEvery { mockService.identifyReplaySession(any<String>(), any<IdentifyItemPayload>()) } just Runs
         coEvery { mockService.pushPayload(any(), any(), capture(capturedEventsLists)) } just Runs
 
         // Act: Export all log records
@@ -252,7 +256,7 @@ class RRwebGraphQLReplayLogExporterTest {
         
         // Mock the API service methods
         coEvery { mockService.initializeReplaySession(any(), any()) } just Runs
-        coEvery { mockService.identifyReplaySession(any()) } just Runs
+        coEvery { mockService.identifyReplaySession(any<String>(), any<IdentifyItemPayload>()) } just Runs
         coEvery { mockService.pushPayload(any(), any(), any()) } just Runs
         
         // Act: Export all log records
@@ -265,9 +269,7 @@ class RRwebGraphQLReplayLogExporterTest {
         coVerify(exactly = 1) { 
             mockService.initializeReplaySession("test-org", "session-a") 
         }
-        coVerify(exactly = 1) { 
-            mockService.identifyReplaySession("session-a") 
-        }
+        coVerify(exactly = 1) { mockService.identifyReplaySession(eq("session-a"), any<IdentifyItemPayload>()) }
         coVerify(exactly = 1) {
             mockService.pushPayload("session-a", any(), any()) 
         }
@@ -283,7 +285,7 @@ class RRwebGraphQLReplayLogExporterTest {
         
         // Verify no API calls are made
         coVerify(exactly = 0) { mockService.initializeReplaySession(any(), any()) }
-        coVerify(exactly = 0) { mockService.identifyReplaySession(any()) }
+        coVerify(exactly = 0) { mockService.identifyReplaySession(any<String>(), any<IdentifyItemPayload>()) }
         coVerify(exactly = 0) { mockService.pushPayload(any(), any(), any()) }
     }
 
@@ -297,7 +299,7 @@ class RRwebGraphQLReplayLogExporterTest {
         
         // Mock API service to throw exceptions
         coEvery { mockService.initializeReplaySession(any(), any()) } throws RuntimeException("Network error")
-        coEvery { mockService.identifyReplaySession(any()) } throws RuntimeException("Authentication failed")
+        coEvery { mockService.identifyReplaySession(any<String>(), any<IdentifyItemPayload>()) } throws RuntimeException("Authentication failed")
         coEvery { mockService.pushPayload(any(), any(), any()) } throws RuntimeException("Server error")
         
         // Act: Export log records
@@ -308,7 +310,7 @@ class RRwebGraphQLReplayLogExporterTest {
         
         // Verify API methods were called despite failures
         coVerify(exactly = 1) { mockService.initializeReplaySession("test-org", "session-a") }
-        coVerify(exactly = 0) { mockService.identifyReplaySession("session-a") }
+        coVerify(exactly = 0) { mockService.identifyReplaySession(eq("session-a"), any<IdentifyItemPayload>()) }
         coVerify(exactly = 0) { mockService.pushPayload("session-a", any(), any()) }
     }
 
@@ -323,7 +325,7 @@ class RRwebGraphQLReplayLogExporterTest {
         
         // Mock API service methods
         coEvery { mockService.initializeReplaySession(any(), any()) } just Runs
-        coEvery { mockService.identifyReplaySession(any()) } just Runs
+        coEvery { mockService.identifyReplaySession(any<String>(), any<IdentifyItemPayload>()) } just Runs
         coEvery { mockService.pushPayload(any(), any(), any()) } just Runs
         
         // Act: Export log records
@@ -334,7 +336,7 @@ class RRwebGraphQLReplayLogExporterTest {
         
         // Verify API calls: First capture should be full, second should be incremental
         coVerify(exactly = 1) { mockService.initializeReplaySession("test-org", "session-a") }
-        coVerify(exactly = 1) { mockService.identifyReplaySession("session-a") }
+        coVerify(exactly = 1) { mockService.identifyReplaySession(eq("session-a"), any<IdentifyItemPayload>()) }
         coVerify(exactly = 1) { mockService.pushPayload("session-a", any(), any()) }
     }
 
@@ -350,11 +352,11 @@ class RRwebGraphQLReplayLogExporterTest {
 
         // Mock API service: first session succeeds, second session fails
         coEvery { mockService.initializeReplaySession("test-org", "session-a") } just Runs
-        coEvery { mockService.identifyReplaySession("session-a") } just Runs
+        coEvery { mockService.identifyReplaySession(eq("session-a"), any<IdentifyItemPayload>()) } just Runs
         coEvery { mockService.pushPayload("session-a", any(), any()) } just Runs
 
         coEvery { mockService.initializeReplaySession("test-org", "session-b") } throws RuntimeException("Network timeout")
-        coEvery { mockService.identifyReplaySession("session-b") } throws RuntimeException("Network timeout")
+        coEvery { mockService.identifyReplaySession(eq("session-b"), any<IdentifyItemPayload>()) } throws RuntimeException("Network timeout")
         coEvery { mockService.pushPayload("session-b", any(), any()) } throws RuntimeException("Network timeout")
 
         // Act: Export log records
@@ -365,12 +367,12 @@ class RRwebGraphQLReplayLogExporterTest {
 
         // Verify only first session was processed (second session should not be processed due to early termination)
         coVerify(exactly = 1) { mockService.initializeReplaySession("test-org", "session-a") }
-        coVerify(exactly = 1) { mockService.identifyReplaySession("session-a") }
+        coVerify(exactly = 1) { mockService.identifyReplaySession(eq("session-a"), any<IdentifyItemPayload>()) }
         coVerify(exactly = 1) { mockService.pushPayload("session-a", any(), any()) }
 
         // Verify second session was never processed
         coVerify(exactly = 1) { mockService.initializeReplaySession("test-org", "session-b") }
-        coVerify(exactly = 0) { mockService.identifyReplaySession("session-b") }
+        coVerify(exactly = 0) { mockService.identifyReplaySession(eq("session-b"), any<IdentifyItemPayload>()) }
         coVerify(exactly = 0) { mockService.pushPayload("session-b", any(), any()) }
     }
 
@@ -384,7 +386,7 @@ class RRwebGraphQLReplayLogExporterTest {
         
         // Mock API service: initialization succeeds but pushPayload fails
         coEvery { mockService.initializeReplaySession(any(), any()) } just Runs
-        coEvery { mockService.identifyReplaySession(any()) } just Runs
+        coEvery { mockService.identifyReplaySession(any<String>(), any<IdentifyItemPayload>()) } just Runs
         coEvery { mockService.pushPayload(any(), any(), any()) } throws RuntimeException("Payload too large")
         
         // Act: Export log records
@@ -395,7 +397,7 @@ class RRwebGraphQLReplayLogExporterTest {
         
         // Verify all API methods were called
         coVerify(exactly = 1) { mockService.initializeReplaySession("test-org", "session-a") }
-        coVerify(exactly = 1) { mockService.identifyReplaySession("session-a") }
+        coVerify(exactly = 1) { mockService.identifyReplaySession(eq("session-a"), any<IdentifyItemPayload>()) }
         coVerify(exactly = 1) { mockService.pushPayload("session-a", any(), any()) }
     }
 
@@ -410,7 +412,7 @@ class RRwebGraphQLReplayLogExporterTest {
         
         // Mock API service: first capture fails, second should not be processed
         coEvery { mockService.initializeReplaySession(any(), any()) } throws RuntimeException("Network error")
-        coEvery { mockService.identifyReplaySession(any()) } throws RuntimeException("Authentication failed")
+        coEvery { mockService.identifyReplaySession(any<String>(), any<IdentifyItemPayload>()) } throws RuntimeException("Authentication failed")
         coEvery { mockService.pushPayload(any(), any(), any()) } throws RuntimeException("Server error")
         
         // Act: Export log records
@@ -421,7 +423,7 @@ class RRwebGraphQLReplayLogExporterTest {
         
         // Verify only first capture was attempted (second should not be processed due to early termination)
         coVerify(exactly = 1) { mockService.initializeReplaySession("test-org", "session-a") }
-        coVerify(exactly = 0) { mockService.identifyReplaySession("session-a") } // Should not be called due to initializeReplaySession failure
+        coVerify(exactly = 0) { mockService.identifyReplaySession(eq("session-a"), any<IdentifyItemPayload>()) } // Should not be called due to initializeReplaySession failure
         coVerify(exactly = 0) { mockService.pushPayload("session-a", any(), any()) } // Should not be called due to initializeReplaySession failure
     }
 
