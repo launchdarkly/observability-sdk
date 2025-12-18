@@ -200,7 +200,7 @@ class CaptureSource(
         view: View,
         rect: Rect,
     ): Bitmap? {
-        val bitmap = createBitmap(view.width, view.height)
+        val bitmap = createBitmapForView(view) ?: return null
 
         return suspendCancellableCoroutine { continuation ->
             val handler = Handler(Looper.getMainLooper())
@@ -220,7 +220,7 @@ class CaptureSource(
                 )
             } catch (exp: Exception) {
                 // It could normally happen when view is being closed during screenshot
-                logger.info("Failed to capture window", exp)
+                logger.warn("Failed to capture window", exp)
                 continuation.resume(null)
             }
         }
@@ -228,12 +228,28 @@ class CaptureSource(
 
     private fun canvasDraw(
         view: View
-    ): Bitmap {
-        val bitmap = createBitmap(view.width, view.height)
+    ): Bitmap? {
+        val bitmap = createBitmapForView(view) ?: return null
 
         val canvas = Canvas(bitmap)
-        view.draw(canvas)
+        try {
+            view.draw(canvas)
+        } catch (t: Throwable) {
+            logger.warn("Failed to draw Canvas. This view might be better processed by PixelCopy", t)
+            bitmap.recycle()
+            return null
+        }
         return bitmap
+    }
+
+    private fun createBitmapForView(view: View): Bitmap? {
+        val width = view.width
+        val height = view.height
+        if (width <= 0 || height <= 0) {
+            logger.warn("Cannot draw view with zero dimensions: ${view.width}x${view.height}")
+            return null
+        }
+        return createBitmap(width, height)
     }
 
     private fun createCaptureEvent(
