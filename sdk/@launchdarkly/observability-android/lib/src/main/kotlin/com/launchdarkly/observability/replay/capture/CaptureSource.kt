@@ -236,6 +236,7 @@ class CaptureSource(
             view.draw(canvas)
         } catch (t: Throwable) {
             logger.warn("Failed to draw Canvas. This view might be better processed by PixelCopy", view)
+            bitmap.recycle()
             return null
         }
         return bitmap
