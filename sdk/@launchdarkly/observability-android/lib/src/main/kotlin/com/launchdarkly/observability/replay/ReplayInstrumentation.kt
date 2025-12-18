@@ -18,10 +18,9 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -75,8 +74,7 @@ class ReplayInstrumentation(
     private lateinit var interactionSource: InteractionSource
     private val instrumentationScope = CoroutineScope(DispatcherProviderHolder.current.default + SupervisorJob())
     private var captureJob: Job? = null
-    private var isPaused: Boolean = true
-    private val captureMutex = Mutex()
+    private val shouldCapture = MutableStateFlow(false)
     private var startedActivityCount: Int = 0
     private var configurationChangeInProgress: Boolean = false
     private var isInstalled: Boolean = false
@@ -97,6 +95,7 @@ class ReplayInstrumentation(
         interactionSource = InteractionSource(ctx.sessionManager)
 
         startCollectors()
+        startCaptureStateObserver()
 
         interactionSource.attachToApplication(ctx.application)
         ctx.application.registerActivityLifecycleCallbacks(this)
@@ -148,36 +147,55 @@ class ReplayInstrumentation(
         }
     }
 
-    // TODO: O11Y-622 - implement mechanism for customer code to invoke this method
-    suspend fun runCapture() {
-        captureMutex.withLock {
-            if (!isPaused) return
-            isPaused = false
-            captureJob?.cancelAndJoin()
-
-            captureJob = instrumentationScope.launch {
-                try {
-                    observabilityContext.logger.debug("Session replay capture running")
-                    while (isActive) {
-                        captureSource.captureNow()
-                        delay(options.capturePeriodMillis)
-                    }
-                } catch (e: CancellationException) {
-                    throw e
-                }
+    /**
+     * Observes [shouldCapture] state changes and synchronizes the capture loop state.
+     * Skips redundant operations if the desired state already matches the current state.
+     */
+    private fun startCaptureStateObserver() {
+        instrumentationScope.launch {
+            shouldCapture.collect { shouldRun ->
+                val running = captureJob?.isActive == true
+                if (shouldRun == running) return@collect
+                if (shouldRun) doRunCapture() else doPauseCapture()
             }
         }
     }
 
-    // TODO: O11Y-622 - implement mechanism for customer code to invoke this method
-    suspend fun pauseCapture() {
-        captureMutex.withLock {
-            if (isPaused) return
-            isPaused = true
-            captureJob?.cancelAndJoin()
-            captureJob = null
-            observabilityContext.logger.debug("Session replay capture paused")
+    private suspend fun doRunCapture() {
+        captureJob?.cancelAndJoin()
+        captureJob = instrumentationScope.launch {
+            observabilityContext.logger.info("Session replay capture running")
+            while (isActive) {
+                try {
+                    captureSource.captureNow()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: OutOfMemoryError) {
+                    observabilityContext.logger.error("Capture paused due to OOM", e)
+                    shouldCapture.value = false
+                    return@launch
+                } catch (e: Exception) {
+                    observabilityContext.logger.error("Capture failed", e)
+                }
+                delay(options.capturePeriodMillis)
+            }
         }
+    }
+
+    private suspend fun doPauseCapture() {
+        captureJob?.cancelAndJoin()
+        captureJob = null
+        observabilityContext.logger.info("Session replay capture paused")
+    }
+
+    // TODO: O11Y-622 - implement mechanism for customer code to invoke this method
+    fun runCapture() {
+        shouldCapture.value = true
+    }
+
+    // TODO: O11Y-622 - implement mechanism for customer code to invoke this method
+    fun pauseCapture() {
+        shouldCapture.value = false
     }
 
     /**
@@ -202,21 +220,18 @@ class ReplayInstrumentation(
             runCatching {
                 if (WindowInspector(observabilityContext.logger).appWindows(application).isNotEmpty()) {
                     startedActivityCount = 1
-                    instrumentationScope.launch { runCapture() }
+                    runCapture()
                 }
             }
         }
     }
 
     // TODO: O11Y-621 - This should be called somewhere (Probably inside InstrumentationManager.kt) to shutdown the instrumentation.
-    suspend fun shutdown() {
-        captureMutex.withLock {
-            instrumentationScope.cancel()
-            observabilityContext.application.unregisterActivityLifecycleCallbacks(this)
-            interactionSource.detachFromApplication(observabilityContext.application)
-            isPaused = true
-            isInstalled = false
-        }
+    fun shutdown() {
+        pauseCapture()
+        instrumentationScope.cancel()
+        observabilityContext.application.unregisterActivityLifecycleCallbacks(this)
+        interactionSource.detachFromApplication(observabilityContext.application)
     }
 
     override fun getLoggerScopeName(): String = INSTRUMENTATION_SCOPE_NAME
@@ -243,7 +258,7 @@ class ReplayInstrumentation(
         val wasInBackground = startedActivityCount == 0 && !configurationChangeInProgress
 
         if (wasInBackground) {
-            instrumentationScope.launch { runCapture() }
+            runCapture()
         } else if (configurationChangeInProgress) {
             configurationChangeInProgress = false
         }
@@ -265,7 +280,7 @@ class ReplayInstrumentation(
         }
 
         if (startedActivityCount == 0) {
-            instrumentationScope.launch { pauseCapture() }
+            pauseCapture()
         }
     }
 
