@@ -25,6 +25,7 @@ dependencies {
 
     // Android
     implementation("androidx.activity:activity:1.11.0")
+    implementation("androidx.lifecycle:lifecycle-process:2.6.2")
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")

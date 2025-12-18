@@ -1,14 +1,14 @@
 package com.launchdarkly.observability.replay
 
-import android.app.Activity
-import android.app.Application
-import android.os.Bundle
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.ProcessLifecycleOwner
 import com.launchdarkly.logging.LDLogger
 import com.launchdarkly.observability.client.ObservabilityContext
 import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
 import com.launchdarkly.observability.interfaces.LDExtendedInstrumentation
 import com.launchdarkly.observability.replay.capture.CaptureSource
-import com.launchdarkly.observability.replay.capture.WindowInspector
 import com.launchdarkly.observability.replay.exporter.EventDomain
 import com.launchdarkly.observability.replay.exporter.IdentifyItemPayload
 import com.launchdarkly.observability.replay.exporter.SessionReplayExporter
@@ -73,7 +73,7 @@ private const val BATCH_MAX_EXPORT_SIZE = 10
 class ReplayInstrumentation(
     private val options: ReplayOptions = ReplayOptions(),
     private val observabilityContext: ObservabilityContext
-) : LDExtendedInstrumentation, Application.ActivityLifecycleCallbacks {
+) : LDExtendedInstrumentation {
 
     private lateinit var otelLogger: Logger
     private lateinit var sessionManager: SessionManager
@@ -83,7 +83,7 @@ class ReplayInstrumentation(
     private val instrumentationScope = CoroutineScope(DispatcherProviderHolder.current.default + SupervisorJob())
     private var captureJob: Job? = null
     private val shouldCapture = MutableStateFlow(false)
-    private var startedActivityCount: Int = 0
+    private var processLifecycleObserver: DefaultLifecycleObserver? = null
     private var isInstalled: Boolean = false
     private var exporter: SessionReplayExporter? = null
 
@@ -105,11 +105,10 @@ class ReplayInstrumentation(
 
         startCollectors()
         startCaptureStateObserver()
+        startProcessLifecycleObserver()
 
         interactionSource?.attachToApplication(ctx.application)
-        ctx.application.registerActivityLifecycleCallbacks(this)
 
-        startCaptureIfInForeground(ctx.application)
         isInstalled = true
     }
 
@@ -173,7 +172,7 @@ class ReplayInstrumentation(
     private suspend fun doRunCapture() {
         captureJob?.cancelAndJoin()
         captureJob = instrumentationScope.launch {
-            logger.debug("Session replay capture running")
+            logger.info("Session replay capture running")
             while (isActive) {
                 try {
                     captureSource?.captureNow()
@@ -194,7 +193,7 @@ class ReplayInstrumentation(
     private suspend fun doPauseCapture() {
         captureJob?.cancelAndJoin()
         captureJob = null
-        logger.debug("Session replay capture paused")
+        logger.info("Session replay capture paused")
     }
 
     // TODO: O11Y-622 - implement mechanism for customer code to invoke this method
@@ -207,40 +206,41 @@ class ReplayInstrumentation(
         shouldCapture.value = false
     }
 
-    /**
-     * Starts replay capture if the app is already in the foreground.
-     *
-     * This handles the scenario where the SDK is initialized after the application has already
-     * started. Since [android.app.Application.ActivityLifecycleCallbacks] would have missed the
-     * initial [onActivityStarted] events, this method manually checks for the presence of app
-     * windows to determine if the app is in the foreground.
-     *
-     * If windows are found, this method sets `startedActivityCount` to 1 and calls [runCapture]
-     * to begin replay capture, ensuring consistent behavior with normal foreground transitions.
-     *
-     * @param application The application instance used to inspect existing windows.
-     */
-    private fun startCaptureIfInForeground(application: Application) {
-        if (startedActivityCount > 0) return
+    private fun startProcessLifecycleObserver() {
+        if (processLifecycleObserver != null) return
 
-        instrumentationScope.launch(DispatcherProviderHolder.current.main) {
-            if (startedActivityCount > 0) return@launch
-
-            runCatching {
-                if (WindowInspector(logger).appWindows(application).isNotEmpty()) {
-                    startedActivityCount = 1
-                    runCapture()
-                }
+        val observer = object : DefaultLifecycleObserver {
+            override fun onStart(owner: LifecycleOwner) {
+                runCapture()
             }
+
+            override fun onStop(owner: LifecycleOwner) {
+                pauseCapture()
+            }
+        }
+
+        processLifecycleObserver = observer
+        val lifecycle = ProcessLifecycleOwner.get().lifecycle
+        lifecycle.addObserver(observer)
+
+        // Ensure we don't miss the initial foreground state when installing late.
+        if (lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+            runCapture()
         }
     }
 
     // TODO: O11Y-621 - This should be called somewhere (Probably inside InstrumentationManager.kt) to shutdown the instrumentation.
     fun shutdown() {
         pauseCapture()
+        stopProcessLifecycleObserver()
         instrumentationScope.cancel()
         interactionSource?.detachFromApplication(observabilityContext.application)
-        observabilityContext.application.unregisterActivityLifecycleCallbacks(this)
+    }
+
+    private fun stopProcessLifecycleObserver() {
+        val observer = processLifecycleObserver ?: return
+        ProcessLifecycleOwner.get().lifecycle.removeObserver(observer)
+        processLifecycleObserver = null
     }
 
     suspend fun identifySession(
@@ -296,37 +296,4 @@ class ReplayInstrumentation(
             .setMaxExportBatchSize(BATCH_MAX_EXPORT_SIZE)
             .build()
     }
-
-    override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) = Unit
-
-    override fun onActivityStarted(activity: Activity) {
-        val enteringForeground = startedActivityCount == 0
-
-        startedActivityCount++
-
-        if (enteringForeground) {
-            runCapture()
-        }
-    }
-
-    override fun onActivityResumed(activity: Activity) = Unit
-
-    override fun onActivityPaused(activity: Activity) = Unit
-
-    override fun onActivityStopped(activity: Activity) {
-        if (startedActivityCount > 0) {
-            startedActivityCount--
-        }
-
-        if (activity.isChangingConfigurations) {
-            return
-        }
-
-        if (startedActivityCount == 0) {
-            pauseCapture()
-        }
-    }
-
-    override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) = Unit
-    override fun onActivityDestroyed(activity: Activity) = Unit
 }
