@@ -1,13 +1,19 @@
-package com.launchdarkly.observability.replay
+package com.launchdarkly.observability.replay.exporter
 
 import android.util.Log
 import com.launchdarkly.observability.BuildConfig
 import com.launchdarkly.observability.network.GraphQLClient
 import com.launchdarkly.observability.network.GraphQLResponse
+import com.launchdarkly.observability.replay.Event
+import com.launchdarkly.observability.replay.IdentifySessionResponse
+import com.launchdarkly.observability.replay.InitializeReplaySessionResponse
+import com.launchdarkly.observability.replay.PushPayloadResponse
+import com.launchdarkly.observability.replay.ReplayEventsInput
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
 // TODO: O11Y-627 - Refactor logging handling in this class
@@ -94,8 +100,23 @@ class SessionReplayApiService(
             }
         } catch (e: Exception) {
             Log.e("SessionReplayApiService", "Error identifying replay session: ${e.message}")
-
         }
+    }
+
+    /**
+     * Convenience overload to identify a session using an IdentifyItemPayload.
+     */
+    suspend fun identifyReplaySession(
+        sessionSecureId: String,
+        identifyEvent: IdentifyItemPayload
+    ) {
+        val userIdentifier = identifyEvent.attributes["key"] ?: "unknown"
+        val userObject = JsonObject(identifyEvent.attributes.mapValues { JsonPrimitive(it.value) })
+        identifyReplaySession(
+            sessionSecureId = sessionSecureId,
+            userIdentifier = userIdentifier,
+            userObject = userObject
+        )
     }
 
     /**
@@ -109,7 +130,10 @@ class SessionReplayApiService(
             val variables = mapOf(
                 "session_secure_id" to JsonPrimitive(sessionSecureId),
                 "payload_id" to JsonPrimitive(payloadId),
-                "events" to json.encodeToJsonElement(ReplayEventsInput.serializer(), ReplayEventsInput(events)),
+                "events" to json.encodeToJsonElement(
+                    ReplayEventsInput.serializer(),
+                    ReplayEventsInput(events)
+                ),
                 "messages" to JsonPrimitive("{\"messages\":[]}"),
                 "resources" to JsonPrimitive("{\"resources\":[]}"),
                 "web_socket_events" to JsonPrimitive("{\"webSocketEvents\":[]}"),

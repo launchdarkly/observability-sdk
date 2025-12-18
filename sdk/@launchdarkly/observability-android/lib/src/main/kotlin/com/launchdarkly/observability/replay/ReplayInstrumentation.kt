@@ -8,7 +8,12 @@ import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
 import com.launchdarkly.observability.interfaces.LDExtendedInstrumentation
 import com.launchdarkly.observability.replay.capture.CaptureSource
 import com.launchdarkly.observability.replay.capture.WindowInspector
+import com.launchdarkly.observability.replay.exporter.EventDomain
+import com.launchdarkly.observability.replay.exporter.IdentifyItemPayload
+import com.launchdarkly.observability.replay.exporter.SessionReplayExporter
+import com.launchdarkly.sdk.LDContext
 import io.opentelemetry.android.instrumentation.InstallationContext
+import io.opentelemetry.android.session.SessionManager
 import io.opentelemetry.api.logs.Logger
 import io.opentelemetry.sdk.logs.LogRecordProcessor
 import io.opentelemetry.sdk.logs.export.BatchLogRecordProcessor
@@ -70,6 +75,7 @@ class ReplayInstrumentation(
 ) : LDExtendedInstrumentation, Application.ActivityLifecycleCallbacks {
 
     private lateinit var otelLogger: Logger
+    private lateinit var sessionManager: SessionManager
     private var captureSource: CaptureSource? = null
     private var interactionSource: InteractionSource? = null
     private val instrumentationScope = CoroutineScope(DispatcherProviderHolder.current.default + SupervisorJob())
@@ -78,6 +84,7 @@ class ReplayInstrumentation(
     private var startedActivityCount: Int = 0
     private var configurationChangeInProgress: Boolean = false
     private var isInstalled: Boolean = false
+    private var _exporter: SessionReplayExporter? = null
 
     override val name: String = INSTRUMENTATION_SCOPE_NAME
 
@@ -86,6 +93,7 @@ class ReplayInstrumentation(
         // We should refactor this if we want to support multiple sessions and install the instrumentation more than once
         if (isInstalled) return
 
+        sessionManager = ctx.sessionManager
         otelLogger = ctx.openTelemetry.logsBridge.get(INSTRUMENTATION_SCOPE_NAME)
         captureSource = CaptureSource(
             sessionManager = ctx.sessionManager,
@@ -109,7 +117,7 @@ class ReplayInstrumentation(
         instrumentationScope.launch {
             captureSource?.captureFlow?.collect { capture ->
                 otelLogger.logRecordBuilder()
-                    .setAttribute("event.domain", "media")
+                    .setAttribute("event.domain", EventDomain.MEDIA.wireValue)
                     .setAttribute("image.width", capture.origWidth.toLong())
                     .setAttribute("image.height", capture.origHeight.toLong())
                     .setAttribute("image.data", capture.imageBase64)
@@ -134,10 +142,10 @@ class ReplayInstrumentation(
                     append(']')
                 }.toString()
 
-                val logTimestamp = interaction.positions.lastOrNull()?.timestamp ?: System.currentTimeMillis()
-
+                // Use the last position's timestamp for the log record timestamp
+                val logTimestamp = interaction.positions.last().timestamp
                 otelLogger.logRecordBuilder()
-                    .setAttribute("event.domain", "interaction")
+                    .setAttribute("event.domain", EventDomain.INTERACTION.wireValue)
                     .setAttribute("android.action", interaction.action)
                     .setAttribute("screen.coords", positionsJson)
                     .setAttribute("session.id", interaction.session)
@@ -234,15 +242,51 @@ class ReplayInstrumentation(
         observabilityContext.application.unregisterActivityLifecycleCallbacks(this)
     }
 
+    suspend fun identifySession(
+        ldContext: LDContext,
+        timestamp: Long = System.currentTimeMillis()
+    ) {
+        if (!this::sessionManager.isInitialized || !this::otelLogger.isInitialized) {
+            observabilityContext.logger.warn("identifySession called before ReplayInstrumentation was installed; skipping.")
+            return
+        }
+
+        val sessionId = sessionManager.getSessionId()
+        val event = IdentifyItemPayload.from(
+            contextFriendlyName = observabilityContext.options.contextFriendlyName,
+            resourceAttributes = observabilityContext.options.resourceAttributes,
+            ldContext = ldContext,
+            timestamp = timestamp,
+            sessionId = sessionId
+        )
+
+        _exporter?.identifyEventAndUpdate(event)
+
+        otelLogger.logRecordBuilder()
+            .setAllAttributes(observabilityContext.options.resourceAttributes)
+            .setAttribute("event.domain", EventDomain.IDENTIFY.wireValue)
+            .setAttribute("session.id", sessionId)
+            .setTimestamp(timestamp, TimeUnit.MILLISECONDS)
+            .emit()
+    }
+
     override fun getLoggerScopeName(): String = INSTRUMENTATION_SCOPE_NAME
 
     override fun getLogRecordProcessor(credential: String): LogRecordProcessor {
-        val exporter = RRwebGraphQLReplayLogExporter(
-            organizationVerboseId = credential, // The SDK credential is used as the organization ID intentionally
+        val initialIdentifyItemPayload = IdentifyItemPayload.from(
+            contextFriendlyName = observabilityContext.options.contextFriendlyName,
+            resourceAttributes = observabilityContext.options.resourceAttributes,
+            sessionId = null //initial payload is not part SR RRWeb event
+        )
+
+        val exporter = SessionReplayExporter(
+            organizationVerboseId = credential, // the SDK credential is used as the organization ID intentionally
             backendUrl = observabilityContext.options.backendUrl,
             serviceName = observabilityContext.options.serviceName,
             serviceVersion = observabilityContext.options.serviceVersion,
+            initialIdentifyItemPayload = initialIdentifyItemPayload
         )
+        _exporter = exporter
 
         return BatchLogRecordProcessor.builder(exporter)
             .setMaxQueueSize(BATCH_MAX_QUEUE_SIZE)
