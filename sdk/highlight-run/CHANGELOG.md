@@ -1,5 +1,12 @@
 # highlight.run
 
+## [9.25.0](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-9.24.0...highlight.run-9.25.0) (2025-12-18)
+
+
+### Features
+
+* sanitize URLs + semantic conventions for header attributes ([#317](https://github.com/launchdarkly/observability-sdk/issues/317)) ([417b4b8](https://github.com/launchdarkly/observability-sdk/commit/417b4b83f686b48a07acc84b3f41c74bfd16dd57))
+
 ## [9.24.0](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-9.23.0...highlight.run-9.24.0) (2025-12-12)
 
 
