@@ -8,7 +8,7 @@ export default defineConfig(({}) => {
 		build: {
 			target: 'esnext',
 			lib: {
-				name: 'LDRecord',
+				name: 'SessionReplay',
 				formats: ['umd', 'es'],
 				entry: resolvePath(__dirname, 'src/index.ts'),
 				fileName: (format, entryName) =>
