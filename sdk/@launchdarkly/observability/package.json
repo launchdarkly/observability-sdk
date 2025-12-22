@@ -37,8 +37,10 @@
 		"vitest": "^3.1.2"
 	},
 	"type": "module",
-	"main": "./dist/observability.js",
-	"module": "./dist/observability.js",
+	"main": "./dist/index.js",
+	"module": "./dist/index.js",
+	"unpkg": "./dist/index.umd.js",
+	"jsdelivr": "./dist/index.umd.js",
 	"types": "./dist/index.d.ts",
 	"files": [
 		"dist"

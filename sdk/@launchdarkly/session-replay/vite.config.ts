@@ -8,8 +8,13 @@ export default defineConfig(({}) => {
 		build: {
 			target: 'esnext',
 			lib: {
-				formats: ['es'],
+				name: 'LDRecord',
+				formats: ['umd', 'es'],
 				entry: resolvePath(__dirname, 'src/index.ts'),
+				fileName: (format, entryName) =>
+					format === 'es'
+						? `${entryName}.js`
+						: `${entryName}.${format}.js`,
 			},
 			minify: true,
 			sourcemap: true,
