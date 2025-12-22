@@ -8,7 +8,7 @@ export default defineConfig(({}) => {
 		build: {
 			target: 'esnext',
 			lib: {
-				name: 'LDRecord',
+				name: 'Record',
 				formats: ['umd', 'es'],
 				entry: resolvePath(__dirname, 'src/index.ts'),
 				fileName: (format, entryName) =>
@@ -23,7 +23,7 @@ export default defineConfig(({}) => {
 				treeshake: 'smallest',
 				output: [
 					{ format: 'es', exports: 'named' },
-					{ format: 'umd', name: 'LDRecord', exports: 'default' },
+					{ format: 'umd', name: 'Record', exports: 'default' },
 				],
 				cache: false,
 			},

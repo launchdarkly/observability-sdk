@@ -8,7 +8,7 @@ export default defineConfig(({}) => {
 		build: {
 			target: 'esnext',
 			lib: {
-				name: 'LDObserve',
+				name: 'Observe',
 				formats: ['umd', 'es'],
 				entry: resolvePath(__dirname, 'src/index.ts'),
 				fileName: (format, entryName) =>
@@ -23,7 +23,7 @@ export default defineConfig(({}) => {
 				treeshake: 'smallest',
 				output: [
 					{ format: 'es', exports: 'named' },
-					{ format: 'umd', name: 'LDObserve', exports: 'default' },
+					{ format: 'umd', name: 'Observe', exports: 'default' },
 				],
 				cache: false,
 			},
