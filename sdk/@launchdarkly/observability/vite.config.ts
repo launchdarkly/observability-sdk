@@ -21,9 +21,10 @@ export default defineConfig(({}) => {
 			emptyOutDir: false,
 			rollupOptions: {
 				treeshake: 'smallest',
-				output: {
-					exports: 'named',
-				},
+				output: [
+					{ format: 'es', exports: 'named' },
+					{ format: 'umd', name: 'LDObserve', exports: 'default' },
+				],
 				cache: false,
 			},
 		},
