@@ -23,8 +23,11 @@ export default defineConfig(({}) => {
 				treeshake: 'smallest',
 				output: [
 					{ format: 'es', exports: 'named' },
-					{ format: 'umd', name: 'Observability', exports: 'default' },
-					{ format: 'umd', name: 'LDObserve', exports: 'LDObserve' },
+					{
+						format: 'umd',
+						name: 'Observability',
+						exports: 'named',
+					},
 				],
 				cache: false,
 			},

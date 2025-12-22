@@ -23,8 +23,11 @@ export default defineConfig(({}) => {
 				treeshake: 'smallest',
 				output: [
 					{ format: 'es', exports: 'named' },
-					{ format: 'umd', name: 'SessionReplay', exports: 'default' },
-					{ format: 'umd', name: 'LDRecord', exports: 'LDRecord' },
+					{
+						format: 'umd',
+						name: 'SessionReplay',
+						exports: 'named',
+					},
 				],
 				cache: false,
 			},
