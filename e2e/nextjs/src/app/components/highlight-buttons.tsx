@@ -7,11 +7,18 @@ import { CONSTANTS } from '@/constants'
 
 export function HighlightButtons() {
 	const ldClientPromise = useMemo(async () => {
-		const { initialize } = await import('@launchdarkly/js-client-sdk')
-		const ldClient = initialize(
+		const { createClient } = await import('@launchdarkly/js-client-sdk')
+		const ldClient = createClient(
 			CONSTANTS.NEXT_PUBLIC_LAUNCHDARKLY_SDK_KEY ?? '',
+			{
+				kind: 'multi',
+				user: { key: 'vadim' },
+				org: { key: 'tester' },
+			},
 		)
 		H.registerLD(ldClient)
+		await ldClient.start()
+
 		return ldClient
 	}, [])
 	return (
