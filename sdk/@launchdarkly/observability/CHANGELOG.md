@@ -1,5 +1,12 @@
 # @launchdarkly/observability
 
+## [0.5.0](https://github.com/launchdarkly/observability-sdk/compare/observability-0.4.11...observability-0.5.0) (2025-12-23)
+
+
+### Features
+
+* publish umd for broser environments ([#334](https://github.com/launchdarkly/observability-sdk/issues/334)) ([3e90673](https://github.com/launchdarkly/observability-sdk/commit/3e90673e42335aeeef78cc807a07dfa21da19291))
+
 ## [0.4.11](https://github.com/launchdarkly/observability-sdk/compare/observability-0.4.10...observability-0.4.11) (2025-12-18)
 
 
