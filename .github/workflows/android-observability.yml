@@ -5,12 +5,15 @@ on:
         branches: ['main']
         paths:
             - 'sdk/@launchdarkly/observability-android/**'
-            - '.github/workflows/android-plugin.yml'
+            - '.github/workflows/android-observability.yml'
     pull_request:
         types: [opened, synchronize]
         paths:
             - 'sdk/@launchdarkly/observability-android/**'
-            - '.github/workflows/android-plugin.yml'
+            - '.github/workflows/android-observability.yml'
+
+permissions:
+    contents: read
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 jobs:
@@ -32,7 +35,7 @@ jobs:
                   java-version: 17
 
             - name: Set up Android SDK
-              uses: android-actions/setup-android@v3
+              uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3.2.2 commit SHA - https://github.com/android-actions/setup-android/releases/tag/v3.2.2
 
             - name: Run unit tests
               run: ./gradlew :lib:testDebugUnitTest

@@ -1,4 +1,4 @@
-name: Android E2E App Tests
+name: 'Android E2E App Tests'
 
 on:
     push:
@@ -14,10 +14,13 @@ on:
             - 'sdk/@launchdarkly/observability-android/**'
             - '.github/workflows/android-e2e.yml'
 
+permissions:
+    contents: read
+
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 jobs:
     test:
-        name: Unit Tests
+        name: E2E Tests
         runs-on: ubuntu-22.04-8core-32gb
         defaults:
             run:
@@ -34,7 +37,7 @@ jobs:
                   java-version: 17
 
             - name: Set up Android SDK
-              uses: android-actions/setup-android@v3
+              uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3.2.2 commit SHA - https://github.com/android-actions/setup-android/releases/tag/v3.2.2
 
             - name: Run unit tests
               run: ./gradlew :app:testDebugUnitTest
