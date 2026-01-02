@@ -22,7 +22,9 @@ class SessionReplayExporterTest {
 
     private val identifyEvent = IdentifyItemPayload(
         attributes = mapOf("key" to "user"),
-        timestamp = 0L)
+        timestamp = 0L,
+        sessionId = null
+    )
 
     @BeforeEach
     fun setUp() {
@@ -465,7 +467,7 @@ class SessionReplayExporterTest {
         sessionId?.let { attributesBuilder.put(AttributeKey.stringKey("session.id"), it) }
         
         return mockk<LogRecordData>().apply {
-            every { getAttributes() } returns attributesBuilder.build()
+            every { attributes } returns attributesBuilder.build()
             every { observedTimestampEpochNanos } returns timestamp
         }
     }
