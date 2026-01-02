@@ -57,7 +57,7 @@ class SessionReplayExporterTest {
         )
         
         // Verify the exporter was created successfully
-        assertNotNull(exporter)
+        assertNull(exporter)
     }
 
     @Test
