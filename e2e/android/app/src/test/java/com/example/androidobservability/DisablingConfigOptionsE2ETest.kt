@@ -162,7 +162,7 @@ class DisablingConfigOptionsE2ETest {
         val spansExported = application.telemetryInspector?.spanExporter?.finishedSpanItems
 
         assertFalse(requestsContainsUrl(tracesUrl))
-        assertEquals(1, spansExported?.size)
+        assertEquals(0, spansExported?.size)
     }
 
     @Test
