@@ -107,7 +107,7 @@ import {
 import { getDefaultDataURLOptions, isMetricSafeNumber } from './utils/utils'
 import { type HighlightClientRequestWorker } from './workers/highlight-client-worker'
 import { payloadToBase64 } from './utils/payload'
-import HighlightClientWorker from './workers/highlight-client-worker?worker&inline'
+import HighlightClientWorkerURL from './workers/highlight-client-worker?worker&url'
 import { MessageType, PropertyType } from './workers/types'
 import { parseError } from './utils/errors'
 import {
@@ -263,8 +263,11 @@ export class Highlight {
 		}
 		setCookieWriteEnabled(!!options?.sessionCookie)
 
-		this._worker =
-			new HighlightClientWorker() as HighlightClientRequestWorker
+		this._worker = new Worker(HighlightClientWorkerURL, {
+			type: 'module',
+			name: 'highlight.run',
+		}) as HighlightClientRequestWorker
+
 		this._worker.onmessage = (e) => {
 			if (e.data.response?.type === MessageType.AsyncEvents) {
 				this._eventBytesSinceSnapshot += e.data.response.eventsSize
