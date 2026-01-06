@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.21.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.20.0...launchdarkly-observability-android-0.21.0) (2025-12-18)
+
+
+### Features
+
+* Pause and resume replay capture on app background/foreground ([#329](https://github.com/launchdarkly/observability-sdk/issues/329)) ([771ce51](https://github.com/launchdarkly/observability-sdk/commit/771ce5121d6849705b9e88bc73dcb30b6879032e))
+
+
+### Bug Fixes
+
+* Fix compose coordinate offset.  ([#331](https://github.com/launchdarkly/observability-sdk/issues/331)) ([7fbdc4c](https://github.com/launchdarkly/observability-sdk/commit/7fbdc4c2096f4785b80333512d21d27b556317cd))
+
+## [0.20.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.19.1...launchdarkly-observability-android-0.20.0) (2025-12-18)
+
+
+### Features
+
+* Android SR Identify support  ([#330](https://github.com/launchdarkly/observability-sdk/issues/330)) ([a421812](https://github.com/launchdarkly/observability-sdk/commit/a4218120ceb3b423e56118fcde0e72beffec2b5c))
+* Graphql client memory optimization ([#325](https://github.com/launchdarkly/observability-sdk/issues/325)) ([f199e2d](https://github.com/launchdarkly/observability-sdk/commit/f199e2d2b60261f0d905baa3b3e79f3b3d08e8ca))
+* Gzip compression for Graphql request body ([#328](https://github.com/launchdarkly/observability-sdk/issues/328)) ([d862a15](https://github.com/launchdarkly/observability-sdk/commit/d862a15d8c5611f3a9d836f444d55ed69eee2bb4))
+* Limit accumulating canvas buffer ([#322](https://github.com/launchdarkly/observability-sdk/issues/322)) ([72f2592](https://github.com/launchdarkly/observability-sdk/commit/72f2592df37a9160e54c775d5be72cfb6312bd21))
+
 ## [0.19.1](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.19.0...launchdarkly-observability-android-0.19.1) (2025-12-11)
 
 

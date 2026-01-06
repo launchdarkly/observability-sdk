@@ -8,17 +8,27 @@ export default defineConfig(({}) => {
 		build: {
 			target: 'esnext',
 			lib: {
-				formats: ['es'],
+				name: 'SessionReplay',
+				formats: ['umd', 'es'],
 				entry: resolvePath(__dirname, 'src/index.ts'),
+				fileName: (format, entryName) =>
+					format === 'es'
+						? `${entryName}.js`
+						: `${entryName}.${format}.js`,
 			},
 			minify: true,
 			sourcemap: true,
 			emptyOutDir: false,
 			rollupOptions: {
 				treeshake: 'smallest',
-				output: {
-					exports: 'named',
-				},
+				output: [
+					{ format: 'es', exports: 'named' },
+					{
+						format: 'umd',
+						name: 'SessionReplay',
+						exports: 'named',
+					},
+				],
 				cache: false,
 			},
 		},
