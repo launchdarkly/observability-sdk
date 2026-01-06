@@ -75,7 +75,7 @@ import {
 import { getDefaultDataURLOptions } from '../client/utils/utils'
 import { type HighlightClientRequestWorker } from '../client/workers/highlight-client-worker'
 import { payloadToBase64 } from '../client/utils/payload'
-import HighlightClientWorker from '../client/workers/highlight-client-worker?worker&inline'
+import HighlightClientWorker from '../client/workers/highlight-client-worker?worker'
 import { MessageType, PropertyType } from '../client/workers/types'
 import { IntegrationClient } from '../integrations'
 import { Record } from '../api/record'

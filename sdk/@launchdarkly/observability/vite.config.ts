@@ -9,7 +9,6 @@ export default defineConfig(({}) => {
 			target: 'esnext',
 			lib: {
 				name: 'Observability',
-				formats: ['umd', 'es'],
 				entry: resolvePath(__dirname, 'src/index.ts'),
 				fileName: (format, entryName) =>
 					format === 'es'

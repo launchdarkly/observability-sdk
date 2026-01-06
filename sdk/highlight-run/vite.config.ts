@@ -31,6 +31,10 @@ export default defineConfig({
 					? resolvePath(__dirname, 'src/index.tsx')
 					: {
 							index: resolvePath(__dirname, 'src/index.tsx'),
+							'highlight-worker': resolvePath(
+								__dirname,
+								'src/client/workers/highlight-client-worker.ts',
+							),
 							record: resolvePath(
 								__dirname,
 								'src/plugins/record.ts',
