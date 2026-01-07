@@ -39,16 +39,18 @@ class PrivacyProfileTest {
     }
 
     @Test
-    fun `maskXMLViewIds normalizes @+id prefix and adds xmlViewIdsMatcher to matchers list`() {
-        val profile = PrivacyProfile(maskXMLViewIds = listOf("@+id/foo", "bar"))
+    fun `maskXMLViewIds normalizes @+id and @id prefixes and adds xmlViewIdsMatcher to matchers list`() {
+        val profile = PrivacyProfile(maskXMLViewIds = listOf("@+id/foo", "@id/baz", "bar"))
 
         val matchers = profile.asMatchersList()
         assertTrue(matchers.contains(profile.xmlViewIdsMatcher))
 
         val idSet = profile.getPrivateSet("maskXMLViewIdSet")
         assertTrue(idSet.contains("foo"))
+        assertTrue(idSet.contains("baz"))
         assertTrue(idSet.contains("bar"))
         assertFalse(idSet.contains("@+id/foo"))
+        assertFalse(idSet.contains("@id/baz"))
     }
 
     @Test

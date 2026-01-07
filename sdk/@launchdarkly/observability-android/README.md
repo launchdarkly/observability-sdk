@@ -252,7 +252,7 @@ val sessionReplay = SessionReplay(
             ),
             maskXMLViewIds = listOf(
                 // Masks by resource entry name (from resources.getResourceEntryName(view.id)).
-                // Accepts either "@+id/foo" or "foo".
+                // Accepts "@+id/foo", "@id/foo", or "foo".
                 "@+id/password",
                 "credit_card_number",
             ),
