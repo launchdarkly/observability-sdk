@@ -238,6 +238,11 @@ import com.launchdarkly.observability.replay.plugin.SessionReplay
 val sessionReplay = SessionReplay(
     ReplayOptions(
         privacyProfile = PrivacyProfile(
+            // Toggle built-in masking:
+            // - maskTextInputs: masks text input fields (e.g. EditText / Compose text fields)
+            maskTextInputs = true,
+            // - maskText: masks non-input text targets
+            maskText = false,
             // New settings:
             maskViews = listOf(
                 // Masks targets by *exact* Android View class (does not match subclasses).

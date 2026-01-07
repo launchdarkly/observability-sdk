@@ -14,23 +14,22 @@ import com.launchdarkly.observability.replay.masking.MaskTarget
  *
  * @param maskTextInputs Set to false to disable masking text input targets.
  * @param maskText Set to false to disable masking text targets.
- * @param maskSensitive Set to false to disable masking "sensitive" targets (password + keyword heuristics).
  * @param maskImageViews Set to true to mask [ImageView] targets by exact class match.
  * @param maskViews Additional Views to mask by exact class match (see [viewsMatcher]).
  * @param maskXMLViewIds Additional Views to mask by resource entry name (see [xmlViewIdsMatcher]).
+ * @param maskBySemanticsKeywords Set to true to enable masking of "sensitive" targets detected by
+ * semantic keywords (password + keyword heuristics).
  * Accepts either `"@+id/foo"` or `"foo"`.
- * @param maskAdditionalMatchers Additional custom matchers to apply.
  **/
 data class PrivacyProfile(
     val maskTextInputs: Boolean = true,
-    val maskText: Boolean = true,
-    val maskSensitive: Boolean = true,
-    // only for XML ImageViews
-    val maskImageViews: Boolean = false,
+    val maskText: Boolean = false,
     val maskViews: List<MaskViewRef> = emptyList(),
     val maskXMLViewIds: List<String> = emptyList(),
-    val maskAdditionalMatchers: List<MaskMatcher> = emptyList(),
-) {
+    // only for XML ImageViews
+    val maskImageViews: Boolean = false,
+    val maskBySemanticsKeywords: Boolean = false,
+    ) {
     private val viewClassSet = buildSet {
         addAll(maskViews.map { it.clazz })
         if (maskImageViews) add(ImageView::class.java)
@@ -53,8 +52,7 @@ data class PrivacyProfile(
         if (maskText) add(textMatcher)
         if (viewClassSet.isNotEmpty()) add(viewsMatcher)
         if (maskXMLViewIdSet.isNotEmpty()) add(xmlViewIdsMatcher)
-        if (maskSensitive) add(sensitiveMatcher)
-        addAll(maskAdditionalMatchers)
+        if (maskBySemanticsKeywords) add(sensitiveMatcher)
     }
 
     /**
