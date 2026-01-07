@@ -22,9 +22,9 @@ class SmoothieAdapter(
 
     class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val imageView: ImageView = itemView.findViewById(R.id.smoothieImage)
-        init {
-            imageView.ldMask()
-        }
+//        init {
+//            imageView.ldMask()
+//        }
         val titleView: TextView = itemView.findViewById(R.id.smoothieTitle)
     }
 

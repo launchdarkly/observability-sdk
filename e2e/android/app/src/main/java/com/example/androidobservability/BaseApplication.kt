@@ -1,12 +1,14 @@
 package com.example.androidobservability
 
 import android.app.Application
+import android.widget.ImageView
 import com.launchdarkly.observability.api.ObservabilityOptions
 import com.launchdarkly.observability.client.TelemetryInspector
 import com.launchdarkly.observability.plugin.Observability
 import com.launchdarkly.observability.replay.PrivacyProfile
 import com.launchdarkly.observability.replay.ReplayOptions
 import com.launchdarkly.observability.replay.plugin.SessionReplay
+import com.launchdarkly.observability.replay.view
 import com.launchdarkly.sdk.ContextKind
 import com.launchdarkly.sdk.LDContext
 import com.launchdarkly.sdk.android.Components
@@ -49,7 +51,10 @@ open class BaseApplication : Application() {
 
         val sessionReplayPlugin = SessionReplay(
             options = ReplayOptions(
-                privacyProfile = PrivacyProfile(maskText = false)
+                privacyProfile = PrivacyProfile(
+                    maskText = false,
+                    maskViews = listOf(view(ImageView::class.java)),
+                    maskXMLViewIds = listOf("@+id/smoothieTitle"))
             )
         )
 
