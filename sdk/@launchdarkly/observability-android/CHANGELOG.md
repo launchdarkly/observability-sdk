@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.22.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.21.0...launchdarkly-observability-android-0.22.0) (2026-01-07)
+
+
+### Features
+
+* Added privacy options: maskViews, maskXMLViewIds, maskImageViews ([#339](https://github.com/launchdarkly/observability-sdk/issues/339)) ([1c57dc0](https://github.com/launchdarkly/observability-sdk/commit/1c57dc00fa1248a8005df48de520aa7416d14225))
+
 ## [0.21.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.20.0...launchdarkly-observability-android-0.21.0) (2025-12-18)
 
 

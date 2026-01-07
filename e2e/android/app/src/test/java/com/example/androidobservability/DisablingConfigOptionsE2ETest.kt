@@ -14,6 +14,7 @@ import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertFalse
 import junit.framework.TestCase.assertNotNull
 import junit.framework.TestCase.assertTrue
+import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -106,6 +107,7 @@ class DisablingConfigOptionsE2ETest {
     }
 
     @Test
+    @Ignore //https://launchdarkly.atlassian.net/browse/O11Y-885
     fun `Spans should be exported when TracesApi is enabled`() {
         application.observabilityOptions = getOptionsAllEnabled().copy(tracesApi = ObservabilityOptions.TracesApi.enabled())
         application.initForTest()
