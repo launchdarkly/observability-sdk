@@ -2,6 +2,7 @@ package com.launchdarkly.observability.replay
 
 import android.widget.ImageView
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
@@ -70,6 +71,19 @@ class PrivacyProfileTest {
 
         val viewClassSet = profile.getPrivateSet("viewClassSet")
         assertFalse(viewClassSet.contains(ImageView::class.java))
+    }
+
+    @Test
+    fun `invalid string-based maskViews class name throws targeted error`() {
+        val fqcn = "com.example.this.does.not.ExistView"
+        val ex = assertThrows(IllegalArgumentException::class.java) {
+            PrivacyProfile(maskViews = listOf(view(fqcn)))
+        }
+
+        val message = ex.message ?: ""
+        assertTrue(message.contains("PrivacyProfile.maskViews"))
+        assertTrue(message.contains(fqcn))
+        assertTrue(ex.cause is ClassNotFoundException)
     }
 
     private fun PrivacyProfile.getPrivateSet(fieldName: String): Set<Any?> {

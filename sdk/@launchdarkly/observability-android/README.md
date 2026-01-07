@@ -243,7 +243,7 @@ val sessionReplay = SessionReplay(
                 // Masks targets by *exact* Android View class (does not match subclasses).
                 view(android.widget.ImageView::class),
                 // You can also provide the class name as a string (FQCN).
-                view("android.widget.TextEdit"),
+                view("android.widget.EditText"),
             ),
             maskXMLViewIds = listOf(
                 // Masks by resource entry name (from resources.getResourceEntryName(view.id)).

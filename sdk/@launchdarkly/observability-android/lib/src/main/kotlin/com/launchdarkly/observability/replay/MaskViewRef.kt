@@ -18,7 +18,16 @@ sealed interface MaskViewRef {
     data class FromName(
         val fullClassName: String
     ) : MaskViewRef {
-        override val clazz: Class<*> = Class.forName(fullClassName)
+        override val clazz: Class<*> =
+            try {
+                Class.forName(fullClassName)
+            } catch (e: ClassNotFoundException) {
+                throw IllegalArgumentException(
+                    "PrivacyProfile.maskViews contains an invalid class name: '$fullClassName'. " +
+                        "Provide a fully-qualified Android View class name (e.g. 'android.widget.TextView').",
+                    e
+                )
+            }
     }
 }
 
