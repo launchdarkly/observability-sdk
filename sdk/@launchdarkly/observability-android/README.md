@@ -202,7 +202,7 @@ Add the Session Replay plugin **after** Observability when configuring the Launc
 
 ```kotlin
 import com.launchdarkly.observability.plugin.Observability
-import com.launchdarkly.observability.replay.SessionReplay
+import com.launchdarkly.observability.replay.plugin.SessionReplay
 
 val ldConfig = LDConfig.Builder(LDConfig.Builder.AutoEnvAttributes.Enabled)
     .mobileKey("your-mobile-key")
@@ -224,6 +224,39 @@ Notes:
 #### Masking sensitive UI
 
 Use `ldMask()` to mark views that should be masked in session replay. There are helpers for both XML-based Views and Jetpack Compose.
+
+##### Configure masking via `PrivacyProfile`
+
+If you want to configure masking globally (instead of calling `ldMask()` on each element), pass a `PrivacyProfile` to `ReplayOptions`:
+
+```kotlin
+import com.launchdarkly.observability.replay.PrivacyProfile
+import com.launchdarkly.observability.replay.ReplayOptions
+import com.launchdarkly.observability.replay.view
+import com.launchdarkly.observability.replay.plugin.SessionReplay
+
+val sessionReplay = SessionReplay(
+    ReplayOptions(
+        privacyProfile = PrivacyProfile(
+            // New settings:
+            maskViews = listOf(
+                // Masks targets by *exact* Android View class (does not match subclasses).
+                view(android.widget.ImageView::class),
+            ),
+            maskXMLViewIds = listOf(
+                // Masks by resource entry name (from resources.getResourceEntryName(view.id)).
+                // Accepts either "@+id/foo" or "foo".
+                "@+id/password",
+                "credit_card_number",
+            ),
+        )
+    )
+)
+```
+
+Notes:
+- `maskViews` matches on `target.view.javaClass` equality (exact class only).
+- `maskXMLViewIds` applies only to Views with a non-`View.NO_ID` id that resolves to a resource entry name.
 
 ##### XML Views
 

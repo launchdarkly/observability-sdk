@@ -54,7 +54,7 @@ open class BaseApplication : Application() {
                 privacyProfile = PrivacyProfile(
                     maskText = false,
                     maskViews = listOf(view(ImageView::class.java)),
-                    maskXMLViewIds = listOf("@+id/smoothieTitle"))
+                    maskXMLViewIds = listOf("smoothieTitle"))
             )
         )
 
