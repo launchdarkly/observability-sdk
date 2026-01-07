@@ -16,9 +16,9 @@ sealed interface MaskViewRef {
     }
 
     data class FromName(
-        val fqcn: String
+        val fullClassName: String
     ) : MaskViewRef {
-        override val clazz: Class<*> = Class.forName(fqcn)
+        override val clazz: Class<*> = Class.forName(fullClassName)
     }
 }
 

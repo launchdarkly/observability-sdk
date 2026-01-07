@@ -23,12 +23,16 @@ data class PrivacyProfile(
     val maskTextInputs: Boolean = true,
     val maskText: Boolean = true,
     val maskSensitive: Boolean = true,
+    val maskImages: Boolean = false,
     val maskViews: List<MaskViewRef> = emptyList(),
     val maskXMLViewIds: List<String> = emptyList(),
     val maskAdditionalMatchers: List<MaskMatcher> = emptyList(),
 ) {
-    private val viewClassSet = mutableSetOf<Class<*>>()
-    private val maskXMLViewIdSet = mutableSetOf<String>()
+    private val viewClassSet = maskViews.map { it.clazz }.toSet()
+    private val maskXMLViewIdSet = maskXMLViewIds.map {
+        if (it.startsWith("@+id/")) return@map it.substring(5)
+        return@map it
+    }.toSet()
 
     /**
      * Converts this [PrivacyProfile] into its equivalent [MaskMatcher] list.
@@ -37,13 +41,6 @@ data class PrivacyProfile(
      * (earlier matchers can short-circuit later ones).
      */
     internal fun asMatchersList(): List<MaskMatcher> = buildList {
-        viewClassSet.addAll(maskViews.map { it.clazz })
-        maskXMLViewIdSet.addAll(maskXMLViewIds.map {
-            if (it.startsWith("@+id/")) return@map it.substring(5)
-
-            return@map it
-        })
-
         // Prefer cheaper checks first; heavier checks should be later.
         if (maskTextInputs) add(textInputMatcher)
         if (maskText) add(textMatcher)
