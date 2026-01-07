@@ -48,7 +48,7 @@ data class PrivacyProfile(
         if (maskTextInputs) add(textInputMatcher)
         if (maskText) add(textMatcher)
         if (viewClassSet.isNotEmpty()) add(viewsMatcher)
-        if (maskXMLViewIds.isNotEmpty()) add(xmlViewIdsMatcher)
+        if (maskXMLViewIdSet.isNotEmpty()) add(xmlViewIdsMatcher)
         if (maskSensitive) add(sensitiveMatcher)
         addAll(maskAdditionalMatchers)
     }
