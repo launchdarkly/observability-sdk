@@ -1,6 +1,7 @@
 package com.launchdarkly.observability.replay
 
 import android.view.View
+import android.widget.ImageView
 import com.launchdarkly.observability.replay.masking.MaskMatcher
 import com.launchdarkly.observability.replay.masking.MaskTarget
 
@@ -14,6 +15,7 @@ import com.launchdarkly.observability.replay.masking.MaskTarget
  * @param maskTextInputs Set to false to disable masking text input targets.
  * @param maskText Set to false to disable masking text targets.
  * @param maskSensitive Set to false to disable masking "sensitive" targets (password + keyword heuristics).
+ * @param maskImageViews Set to true to mask [ImageView] targets by exact class match.
  * @param maskViews Additional Views to mask by exact class match (see [viewsMatcher]).
  * @param maskXMLViewIds Additional Views to mask by resource entry name (see [xmlViewIdsMatcher]).
  * Accepts either `"@+id/foo"` or `"foo"`.
@@ -23,12 +25,17 @@ data class PrivacyProfile(
     val maskTextInputs: Boolean = true,
     val maskText: Boolean = true,
     val maskSensitive: Boolean = true,
-    val maskImages: Boolean = false,
+    // only for XML ImageViews
+    val maskImageViews: Boolean = false,
     val maskViews: List<MaskViewRef> = emptyList(),
     val maskXMLViewIds: List<String> = emptyList(),
     val maskAdditionalMatchers: List<MaskMatcher> = emptyList(),
 ) {
-    private val viewClassSet = maskViews.map { it.clazz }.toSet()
+    private val viewClassSet = buildSet {
+        addAll(maskViews.map { it.clazz })
+        if (maskImageViews) add(ImageView::class.java)
+    }
+
     private val maskXMLViewIdSet = maskXMLViewIds.map {
         if (it.startsWith("@+id/")) return@map it.substring(5)
         return@map it
