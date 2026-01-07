@@ -18,7 +18,7 @@ import com.launchdarkly.observability.replay.masking.MaskTarget
  * @param maskImageViews Set to true to mask [ImageView] targets by exact class match.
  * @param maskViews Additional Views to mask by exact class match (see [viewsMatcher]).
  * @param maskXMLViewIds Additional Views to mask by resource entry name (see [xmlViewIdsMatcher]).
- * Accepts either `"@+id/foo"` or `"foo"`.
+ * Accepts `"@+id/foo"`, `"@id/foo"`, or `"foo"`.
  * @param maskAdditionalMatchers Additional custom matchers to apply.
  **/
 data class PrivacyProfile(
@@ -37,8 +37,11 @@ data class PrivacyProfile(
     }
 
     private val maskXMLViewIdSet = maskXMLViewIds.map {
-        if (it.startsWith("@+id/")) return@map it.substring(5)
-        return@map it
+        when {
+            it.startsWith("@+id/") -> it.substring(5)
+            it.startsWith("@id/") -> it.substring(4)
+            else -> it
+        }
     }.toSet()
 
     /**
