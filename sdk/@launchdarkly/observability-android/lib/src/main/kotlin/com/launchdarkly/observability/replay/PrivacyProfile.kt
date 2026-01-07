@@ -63,7 +63,7 @@ data class PrivacyProfile(
      *
      * Note: this uses `target.view.javaClass` equality; it does not match subclasses.
      */
-    private val viewsMatcher: MaskMatcher = object : MaskMatcher {
+    internal val viewsMatcher: MaskMatcher = object : MaskMatcher {
         override fun isMatch(target: MaskTarget): Boolean {
             return viewClassSet.contains(target.view.javaClass)
         }
@@ -76,7 +76,7 @@ data class PrivacyProfile(
      * IDs are compared using `resources.getResourceEntryName(view.id)`, so this only applies to
      * Views with a non-[View.NO_ID] id that resolves to a resource entry.
      */
-    private val xmlViewIdsMatcher: MaskMatcher = object : MaskMatcher {
+    internal val xmlViewIdsMatcher: MaskMatcher = object : MaskMatcher {
         fun View.idNameOrNull(): String? =
             if (id == View.NO_ID) null
             else runCatching { resources.getResourceEntryName(id) }.getOrNull()
@@ -92,7 +92,7 @@ data class PrivacyProfile(
      * This matcher will match most text inputs, but there may be special cases where it will
      * miss as we can't account for all possible future semantic properties.
      */
-    private val textInputMatcher: MaskMatcher = object : MaskMatcher {
+    internal val textInputMatcher: MaskMatcher = object : MaskMatcher {
         override fun isMatch(target: MaskTarget): Boolean {
             return target.isTextInput()
         }
@@ -102,7 +102,7 @@ data class PrivacyProfile(
      * This matcher will match most text, but there may be special cases where it will
      * miss as we can't account for all possible future semantic properties.
      */
-    private val textMatcher: MaskMatcher = object : MaskMatcher {
+    internal val textMatcher: MaskMatcher = object : MaskMatcher {
         override fun isMatch(target: MaskTarget): Boolean {
             return target.isText()
         }
@@ -112,7 +112,7 @@ data class PrivacyProfile(
      * This matcher will match all items having the semantic property
      * and all text or context descriptions that have substring matches with any of the [sensitiveKeywords]
      */
-    private val sensitiveMatcher: MaskMatcher = object : MaskMatcher {
+    internal val sensitiveMatcher: MaskMatcher = object : MaskMatcher {
         override fun isMatch(target: MaskTarget): Boolean {
             return target.isSensitive(sensitiveKeywords)
         }
