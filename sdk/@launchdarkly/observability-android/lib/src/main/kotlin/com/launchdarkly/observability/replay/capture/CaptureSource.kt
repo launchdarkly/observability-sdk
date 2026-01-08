@@ -105,7 +105,6 @@ class CaptureSource(
             // TODO: O11Y-625 - optimize memory allocations
             // TODO: O11Y-625 - see if holding bitmap is more efficient than base64 encoding immediately after compression
             // TODO: O11Y-628 - use captureQuality option for scaling and adjust this bitmap accordingly, may need to investigate power of 2 rounding for performance
-            // Create a bitmap with the window dimensions
 
             val capturingWindowEntries = windowsEntries.subList(baseIndex, windowsEntries.size)
 
