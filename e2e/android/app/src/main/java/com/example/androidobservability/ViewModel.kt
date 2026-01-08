@@ -2,6 +2,7 @@ package com.example.androidobservability
 
 import android.app.Application
 import android.content.Intent
+import android.util.Log
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
@@ -122,7 +123,9 @@ class ViewModel(application: Application) : AndroidViewModel(application) {
             .name("test-context-name")
             .build()
 
-        LDClient.get().identify(context)
+        LDClient.get().identify(context).also {
+            Log.i("context", context.fullyQualifiedKey)
+        }
     }
 
     fun identifyUser() {
@@ -130,7 +133,10 @@ class ViewModel(application: Application) : AndroidViewModel(application) {
             .name("Bob Bobberson")
             .build()
 
-        LDClient.get().identify(userContext)
+        LDClient.get().identify(userContext).also {
+            val fullyQualifiedKey = userContext.fullyQualifiedKey
+            Log.i("fullyQualifiedKey:", fullyQualifiedKey)
+        }
     }
 
     fun identifyAnonymous() {
@@ -150,7 +156,10 @@ class ViewModel(application: Application) : AndroidViewModel(application) {
             .build()
 
         val multiContext = LDContext.createMulti(userContext, deviceContext)
-        LDClient.get().identify(multiContext)
+        LDClient.get().identify(multiContext).also {
+            val fullyQualifiedKey = multiContext.fullyQualifiedKey
+            Log.i("fullyQualifiedKey:", fullyQualifiedKey)
+        }
     }
 
     fun evaluateBooleanFlag(flagKey: String) {
