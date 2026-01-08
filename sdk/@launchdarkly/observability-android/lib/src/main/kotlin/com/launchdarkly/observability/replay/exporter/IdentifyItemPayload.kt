@@ -1,14 +1,25 @@
 package com.launchdarkly.observability.replay.exporter
 
+import com.launchdarkly.observability.replay.transport.EventExporting
+import com.launchdarkly.observability.replay.transport.EventQueueItemPayload
 import com.launchdarkly.sdk.LDContext
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
 
 data class IdentifyItemPayload(
     val attributes: Map<String, String>,
-    val timestamp: Long,
+    override val timestamp: Long,
     val sessionId: String?
-) {
+) : EventQueueItemPayload {
+
+    override val exporterClass: Class<out EventExporting>
+        get() = SessionReplayExporter::class.java
+
+    /**
+     * Queue cost heuristic: each attribute adds a fixed 100 cost units.
+     */
+    override fun cost(): Int = attributes.size * 100
+
     companion object {
         fun from(
             contextFriendlyName: String? = null,

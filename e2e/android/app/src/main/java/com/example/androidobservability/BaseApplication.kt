@@ -1,6 +1,7 @@
 package com.example.androidobservability
 
 import android.app.Application
+import com.launchdarkly.observability.BuildConfig
 import com.launchdarkly.observability.api.ObservabilityOptions
 import com.launchdarkly.observability.client.TelemetryInspector
 import com.launchdarkly.observability.plugin.Observability
@@ -29,10 +30,10 @@ open class BaseApplication : Application() {
             AttributeKey.stringKey("example"), "value"
         ),
         debug = true,
-        tracesApi = ObservabilityOptions.TracesApi(includeErrors = false, includeSpans = false),
-        metricsApi = ObservabilityOptions.MetricsApi.disabled(),
+        tracesApi = ObservabilityOptions.TracesApi.enabled(),
+        metricsApi = ObservabilityOptions.MetricsApi.enabled(),
         instrumentations = ObservabilityOptions.Instrumentations(
-            crashReporting = true, launchTime = true, activityLifecycle = false
+            crashReporting = true, launchTime = true, activityLifecycle = true
         ),
         logAdapter = LDAndroidLogging.adapter(),
     )
