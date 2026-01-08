@@ -1,11 +1,13 @@
 package com.launchdarkly.observability.replay.transport
 
+import android.os.SystemClock
 import com.launchdarkly.logging.LDLogger
 import com.launchdarkly.observability.coroutines.DispatcherProvider
 import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.math.pow
 import kotlin.math.min
 import kotlin.random.Random
@@ -31,30 +33,36 @@ internal class BatchWorker(
     }
 
     fun start() {
-        logger.info("$LOG_TAG start")
-        if (flushableWorker == null) {
-            flushableWorker = FlushableWorker(
-                intervalMillis = INTERVAL_MS,
-                scope = scope,
-                work = ::sendQueueItems,
-            )
+        synchronized(lock) {
+            logger.info("$LOG_TAG start")
+            if (flushableWorker == null) {
+                flushableWorker = FlushableWorker(
+                    intervalMillis = INTERVAL_MS,
+                    scope = scope,
+                    work = ::sendQueueItems,
+                )
+            }
+            flushableWorker?.start()
         }
-        flushableWorker?.start()
     }
 
     fun stop() {
-        logger.info("$LOG_TAG stop")
-        flushableWorker?.stop()
+        synchronized(lock) {
+            logger.info("$LOG_TAG stop")
+            flushableWorker?.stop()
+        }
     }
 
     fun flush() {
-        logger.info("$LOG_TAG flush")
-        flushableWorker?.flush()
+        synchronized(lock) {
+            logger.info("$LOG_TAG flush")
+            flushableWorker?.flush()
+        }
     }
 
     private suspend fun sendQueueItems(isFlushing: Boolean) {
         while (true) {
-            val (budget, remainingSlots, except, inFlight) = snapshotState()
+            val (budget, remainingSlots, except, inFlight) = exportState()
 
             if (remainingSlots <= 0 && !isFlushing) break
             if (inFlight != 0 && budget <= 0 && !isFlushing) break
@@ -75,10 +83,13 @@ internal class BatchWorker(
             if (tryReserve(earliest.exporterClass, earliest.cost)) {
                 scope.launch(ioDispatcher) {
                     logger.debug("$LOG_TAG export start: exporter=${earliest.exporterClass.name} items=${earliest.items.size} cost=${earliest.cost} flush=$isFlushing")
+
                     try {
                         exporter.export(earliest.items)
                         finishExport(earliest.exporterClass, earliest.items.size, earliest.cost, null)
-                    } catch (e: Exception) {
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Throwable) {
                         finishExport(earliest.exporterClass, earliest.items.size, earliest.cost, e)
                     }
                 }
@@ -86,8 +97,8 @@ internal class BatchWorker(
         }
     }
 
-    private fun snapshotState(): Snapshot {
-        val now = System.currentTimeMillis()
+    private fun exportState(): ExportState {
+        val now = SystemClock.elapsedRealtime()
         synchronized(lock) {
             val remainingSlots = MAX_CONCURRENT_EXPORTERS - exportersInFlight.size
             val budget = MAX_CONCURRENT_COST - costInFlight
@@ -97,7 +108,7 @@ internal class BatchWorker(
                     except.add(exporterClass)
                 }
             }
-            return Snapshot(
+            return ExportState(
                 budget = budget,
                 remainingSlots = remainingSlots,
                 except = except,
@@ -121,7 +132,7 @@ internal class BatchWorker(
         exporterClass: Class<out EventExporting>,
         itemsCount: Int,
         cost: Int,
-        error: Exception?,
+        error: Throwable?,
     ) {
         if (error == null) {
             eventQueue.removeFirst(exporterClass, itemsCount)
@@ -139,7 +150,7 @@ internal class BatchWorker(
                 )
                 val jitter = backoff * BACKOFF_JITTER
                 val jittered = (backoff + Random.nextDouble(-jitter, jitter)).coerceAtLeast(0.0)
-                val until = System.currentTimeMillis() + (jittered * 1000).toLong()
+                val until = SystemClock.elapsedRealtime() + (jittered * 1000).toLong()
                 exporterBackoff[exporterClass] = BackoffInfo(untilMillis = until, attempts = attempts)
             } else {
                 exporterBackoff.remove(exporterClass)
@@ -150,7 +161,7 @@ internal class BatchWorker(
         }
     }
 
-    private data class Snapshot(
+    private data class ExportState(
         val budget: Int,
         val remainingSlots: Int,
         val except: Set<Class<out EventExporting>>,

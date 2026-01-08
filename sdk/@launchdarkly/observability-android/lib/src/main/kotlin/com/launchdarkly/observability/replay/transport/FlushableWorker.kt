@@ -21,37 +21,37 @@ internal class FlushableWorker(
     private var pending: Trigger? = null
     private var channel: Channel<Trigger>? = null
     private var job: Job? = null
-    private var tickJob: Job? = null
 
     fun start() {
-        if (job != null) return
+        synchronized(lock) {
+            if (job != null) return
 
-        val stream = Channel<Trigger>(Channel.CONFLATED)
-        channel = stream
+            val stream = Channel<Trigger>(Channel.CONFLATED).also { channel = it }
 
-        job = scope.launch {
-            tickJob = scope.launch {
-                while (isActive) {
-                    delay(intervalMillis)
-                    doTrigger(Trigger.TICK)
+            job = scope.launch {
+                launch {
+                    while (isActive) {
+                        delay(intervalMillis)
+                        doTrigger(Trigger.TICK)
+                    }
                 }
-            }
 
-            for (trigger in stream) {
-                work(trigger == Trigger.FLUSH)
-                clearPending()
+                for (trigger in stream) {
+                    work(trigger == Trigger.FLUSH)
+                    clearPending()
+                }
             }
         }
     }
 
     fun stop() {
-        tickJob?.cancel()
-        tickJob = null
-        job?.cancel()
-        job = null
-        channel?.close()
-        channel = null
-        clearPending()
+        synchronized(lock) {
+            job?.cancel()
+            job = null
+            channel?.close()
+            channel = null
+            clearPending()
+        }
     }
 
     fun flush() {
@@ -59,8 +59,8 @@ internal class FlushableWorker(
     }
 
     private fun doTrigger(next: Trigger) {
-        val stream = channel ?: return
         synchronized(lock) {
+            val stream = channel ?: return
             if (pending == Trigger.FLUSH) {
                 return
             }
