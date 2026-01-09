@@ -110,80 +110,80 @@ class CaptureSource(
             val beforeMasks = collectMasks(capturingWindowEntries)
 
             val captureResults: MutableList<CaptureResult?> = MutableList(capturingWindowEntries.size) { null }
-            var captured = 0
-            for (i in capturingWindowEntries.indices) {
-                val windowEntry = capturingWindowEntries[i]
-                val captureResult = captureViewResult(windowEntry)
-                if (captureResult == null) {
-                    if (i == 0) {
+            try {
+                var captured = 0
+                for (i in capturingWindowEntries.indices) {
+                    val windowEntry = capturingWindowEntries[i]
+                    val captureResult = captureViewResult(windowEntry)
+                    if (captureResult == null) {
+                        if (i == 0) {
+                            return@withContext null
+                        }
+                        beforeMasks[i] = null
+                        continue
+                    }
+
+                    captured++
+                    captureResults[i] = captureResult
+                }
+                if (captured == 0) {
+                    return@withContext null
+                }
+
+                // Synchronize with UI rendering frame
+                suspendCancellableCoroutine { continuation ->
+                    Choreographer.getInstance().postFrameCallback {
+                        if (continuation.isActive) {
+                            continuation.resume(Unit)
+                        }
+                    }
+                }
+
+                val afterMasks = collectMasksFromResults(captureResults)
+
+                // off the main thread to avoid blocking the UI thread
+                return@withContext withContext(DispatcherProviderHolder.current.default) {
+                    val baseResult = captureResults[0] ?: return@withContext null
+
+                    val mergedMasks = maskApplier.mergeMasksMap(beforeMasks, afterMasks)
+                        ?: run {
+                            // Mask instability is expected during animations/scrolling; ensure we always
+                            // recycle already-captured bitmaps before bailing out to avoid native OOM.
+                            return@withContext null
+                        }
+
+                    // if need to draw something on base bitmap additionally
+                    if (captureResults.size > 1 || (mergedMasks.isNotEmpty() && mergedMasks[0] != null)) {
+                        val canvas = Canvas(baseResult.bitmap)
+                        mergedMasks[0]?.let { maskApplier.drawMasks(canvas, it) }
+
+                        for (i in 1 until captureResults.size) {
+                            val res = captureResults[i] ?: continue
+                            val entry = res.windowEntry
+                            val dx = (entry.screenLeft - baseWindowEntry.screenLeft).toFloat()
+                            val dy = (entry.screenTop - baseWindowEntry.screenTop).toFloat()
+
+                            canvas.withTranslation(dx, dy) {
+                                drawBitmap(res.bitmap, 0f, 0f, null)
+                                mergedMasks[i]?.let { maskApplier.drawMasks(canvas, it) }
+                            }
+                            if (!res.bitmap.isRecycled) {
+                                res.bitmap.recycle()
+                            }
+                        }
+                    }
+
+                    val newSignature = tiledSignatureManager.compute(baseResult.bitmap, 64)
+                    if (newSignature != null && newSignature == tiledSignature) {
+                        // the similar bitmap not send
                         return@withContext null
                     }
-                    beforeMasks[i] = null
-                    continue
+                    tiledSignature = newSignature
+
+                    createCaptureEvent(baseResult.bitmap, rect, timestamp, session)
                 }
-
-                captured++
-                captureResults[i] = captureResult
-            }
-            if (captured == 0) {
-                return@withContext null
-            }
-
-            // Synchronize with UI rendering frame
-            suspendCancellableCoroutine { continuation ->
-                Choreographer.getInstance().postFrameCallback {
-                    if (continuation.isActive) {
-                        continuation.resume(Unit)
-                    }
-                }
-            }
-
-            val afterMasks = collectMasksFromResults(captureResults)
-
-            // off the main thread to avoid blocking the UI thread
-            return@withContext withContext(DispatcherProviderHolder.current.default) {
-                val baseResult = captureResults[0] ?: run {
-                    recycleCaptureResults(captureResults)
-                    return@withContext null
-                }
-
-                val mergedMasks = maskApplier.mergeMasksMap(beforeMasks, afterMasks) ?: run {
-                    // Mask instability is expected during animations/scrolling; ensure we always
-                    // recycle already-captured bitmaps before bailing out to avoid native OOM.
-                    recycleCaptureResults(captureResults)
-                    return@withContext null
-                }
-
-                // if need to draw something on base bitmap additionally
-                if (captureResults.size > 1 || (mergedMasks.isNotEmpty() && mergedMasks[0] != null)) {
-                    val canvas = Canvas(baseResult.bitmap)
-                    mergedMasks[0]?.let { maskApplier.drawMasks(canvas, it) }
-
-                    for (i in 1 until  captureResults.size) {
-                        val res = captureResults[i] ?: continue
-                        val entry = res.windowEntry
-                        val dx = (entry.screenLeft - baseWindowEntry.screenLeft).toFloat()
-                        val dy = (entry.screenTop - baseWindowEntry.screenTop).toFloat()
-
-                        canvas.withTranslation(dx, dy) {
-                            drawBitmap(res.bitmap, 0f, 0f, null)
-                            mergedMasks[i]?.let { maskApplier.drawMasks(canvas, it) }
-                        }
-                        if (!res.bitmap.isRecycled) {
-                            res.bitmap.recycle()
-                        }
-                    }
-                }
-
-                val newSignature = tiledSignatureManager.compute(baseResult.bitmap, 64)
-                if (newSignature != null && newSignature == tiledSignature) {
-                    recycleCaptureResults(captureResults)
-                    // the similar bitmap not send
-                    return@withContext null
-                }
-                tiledSignature = newSignature
-
-                createCaptureEvent(baseResult.bitmap, rect, timestamp, session)
+            } finally {
+                recycleCaptureResults(captureResults)
             }
         }
 
@@ -258,7 +258,10 @@ class CaptureSource(
     ): Bitmap? {
         val bitmap = createBitmapForView(view) ?: return null
 
-        return suspendCancellableCoroutine { continuation ->
+        val result = suspendCancellableCoroutine { continuation ->
+            continuation.invokeOnCancellation {
+                bitmap.recycle()
+            }
             val handler = Handler(Looper.getMainLooper())
             try {
                 PixelCopy.request(
@@ -280,6 +283,11 @@ class CaptureSource(
                 continuation.resume(null)
             }
         }
+
+        if (result == null && !bitmap.isRecycled) {
+            bitmap.recycle()
+        }
+        return result
     }
 
     private fun canvasDraw(
