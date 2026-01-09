@@ -52,27 +52,33 @@ class MaskApplier {
         }
     }
 
-    fun filteredBeforeMasksMap(
+    fun mergeMasksMap(
         beforeMasksMap: List<List<Mask>?>,
         afterMasksMap: List<List<Mask>?>
     ): MutableList<List<Mask>?>? {
-        if (afterMasksMap.count() == 0) {
+        if (afterMasksMap.count() != beforeMasksMap.count()) {
             return null
         }
 
         val result: MutableList<List<Mask>?> = MutableList(beforeMasksMap.size) { null }
         for (i in beforeMasksMap.indices) {
-            val before = beforeMasksMap[i] ?: continue
-            val after = afterMasksMap[i] ?: return null
-            val merged = filteredBeforeMasks(before, after) ?: return null
-            result[i] = merged
+            val before = beforeMasksMap[i]
+            val after = afterMasksMap[i]
+            if (before == null) {
+                if (after == null) continue
+                else return null
+            }
+            if (after != null) {
+                val merged = mergeMasks(before, after) ?: return null
+                result[i] = merged
+            }
         }
 
         return result
     }
 
     // Check if masks are stable and returns null if not
-    private fun filteredBeforeMasks(
+    private fun mergeMasks(
         beforeMasks: List<Mask>,
         afterMasks: List<Mask>
     ): List<Mask>? {

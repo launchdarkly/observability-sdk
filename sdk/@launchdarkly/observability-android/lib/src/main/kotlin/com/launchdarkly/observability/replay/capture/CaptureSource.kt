@@ -147,7 +147,7 @@ class CaptureSource(
                     return@withContext null
                 }
 
-                beforeMasks = maskApplier.filteredBeforeMasksMap(beforeMasks, afterMasks) ?: run {
+                beforeMasks = maskApplier.mergeMasksMap(beforeMasks, afterMasks) ?: run {
                     // Mask instability is expected during animations/scrolling; ensure we always
                     // recycle already-captured bitmaps before bailing out to avoid native OOM.
                     recycleCaptureResults(captureResults)
