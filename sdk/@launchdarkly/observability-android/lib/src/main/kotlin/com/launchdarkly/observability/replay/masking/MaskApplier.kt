@@ -18,11 +18,11 @@ class MaskApplier {
     }
 
     private val maskIntRect = Rect()
-    private val path = Path()
 
     fun drawMasks(canvas: Canvas, maskPairsList: List<Pair<Mask, Mask?>>) {
         if (maskPairsList.count() == 0) return
 
+        val path = Path()
         maskPairsList.forEach { pairOfMasks ->
             drawMask(pairOfMasks, path, canvas)
         }
@@ -32,7 +32,7 @@ class MaskApplier {
         val (before, after) = pairOfMasks
         drawMask(before, path, canvas, beforeMaskPaint)
         if (after != null) {
-            drawMask(before, path, canvas, afterMaskPaint)
+            drawMask(after, path, canvas, afterMaskPaint)
         }
     }
 
@@ -65,7 +65,7 @@ class MaskApplier {
             return null
         }
 
-        val result = buildList<List<Pair<Mask, Mask?>>>(beforeMasksMap.size) {
+        val result = buildList(beforeMasksMap.size) {
             for (i in beforeMasksMap.indices) {
                 val before = beforeMasksMap[i]
                 val after = afterMasksMap[i]
@@ -102,8 +102,9 @@ class MaskApplier {
             if (before.viewId != after.viewId) {
                 return null
             }
-            val diff = abs(after.rect.top - before.rect.top)
-            if (diff > stabilityTolerance) {
+            val dy = abs(after.rect.top - before.rect.top)
+            val dx = abs(after.rect.left - before.rect.left)
+            if (dy > stabilityTolerance || dx > stabilityTolerance) {
                 return null
             }
             resultMasks += Pair(before, after)
