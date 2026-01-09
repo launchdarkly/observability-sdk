@@ -31,7 +31,6 @@ import androidx.core.graphics.withTranslation
 import com.launchdarkly.observability.replay.masking.Mask
 import androidx.core.graphics.createBitmap
 import com.launchdarkly.observability.replay.masking.MaskApplier
-import kotlin.collections.mutableMapOf
 
 /**
  * A source of [CaptureEvent]s taken from the lowest visible window. Captures
@@ -120,6 +119,7 @@ class CaptureSource(
                         return@withContext null
                     }
                     beforeMasks[i] = null
+                    continue
                 }
 
                 captured++
@@ -142,8 +142,17 @@ class CaptureSource(
 
             // off the main thread to avoid blocking the UI thread
             return@withContext withContext(DispatcherProviderHolder.current.default) {
-                val baseResult = captureResults[0] ?: return@withContext null
-                beforeMasks = maskApplier.filteredBeforeMasksMap(beforeMasks, afterMasks) ?: return@withContext null
+                val baseResult = captureResults[0] ?: run {
+                    recycleCaptureResults(captureResults)
+                    return@withContext null
+                }
+
+                beforeMasks = maskApplier.filteredBeforeMasksMap(beforeMasks, afterMasks) ?: run {
+                    // Mask instability is expected during animations/scrolling; ensure we always
+                    // recycle already-captured bitmaps before bailing out to avoid native OOM.
+                    recycleCaptureResults(captureResults)
+                    return@withContext null
+                }
 
                 // if need to draw something on base bitmap additionally
                 if (captureResults.size > 1 || afterMasks.isNotEmpty()) {
@@ -160,13 +169,17 @@ class CaptureSource(
                             drawBitmap(res.bitmap, 0f, 0f, null)
                             maskApplier.drawMasks(canvas, beforeMasks[i], afterMasks[i])
                         }
-                        res.bitmap.recycle()
+                        if (!res.bitmap.isRecycled) {
+                            res.bitmap.recycle()
+                        }
                     }
                 }
 
                 val newSignature = tiledSignatureManager.compute(baseResult.bitmap, 64)
                 if (newSignature != null && newSignature == tiledSignature) {
-                    baseResult.bitmap.recycle()
+                    if (!baseResult.bitmap.isRecycled) {
+                        baseResult.bitmap.recycle()
+                    }
                     // the similar bitmap not send
                     return@withContext null
                 }
@@ -175,6 +188,15 @@ class CaptureSource(
                 createCaptureEvent(baseResult.bitmap, rect, timestamp, session)
             }
         }
+
+    private fun recycleCaptureResults(captureResults: List<CaptureResult?>) {
+        for (res in captureResults) {
+            val bitmap = res?.bitmap ?: continue
+            if (!bitmap.isRecycled) {
+                bitmap.recycle()
+            }
+        }
+    }
 
     private fun collectMasks(capturingWindowEntries: List<WindowEntry>): MutableList<List<Mask>?> {
         return capturingWindowEntries.map {
