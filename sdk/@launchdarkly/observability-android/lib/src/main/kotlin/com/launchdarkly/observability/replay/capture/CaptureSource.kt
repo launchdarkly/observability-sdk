@@ -107,7 +107,7 @@ class CaptureSource(
 
             val capturingWindowEntries = windowsEntries.subList(baseIndex, windowsEntries.size)
 
-            var beforeMasks = collectMasks(capturingWindowEntries)
+            val beforeMasks = collectMasks(capturingWindowEntries)
 
             val captureResults: MutableList<CaptureResult?> = MutableList(capturingWindowEntries.size) { null }
             var captured = 0
@@ -274,9 +274,9 @@ class CaptureSource(
                         }
                     }, handler
                 )
-            } catch (exp: Exception) {
+            } catch (t: Throwable) {
                 // It could normally happen when view is being closed during screenshot
-                logger.warn("Failed to capture window", exp)
+                logger.warn("Failed to capture window", t)
                 continuation.resume(null)
             }
         }
