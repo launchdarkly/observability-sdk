@@ -147,7 +147,7 @@ class CaptureSource(
                     return@withContext null
                 }
 
-                beforeMasks = maskApplier.mergeMasksMap(beforeMasks, afterMasks) ?: run {
+                val mergedMasks = maskApplier.mergeMasksMap(beforeMasks, afterMasks) ?: run {
                     // Mask instability is expected during animations/scrolling; ensure we always
                     // recycle already-captured bitmaps before bailing out to avoid native OOM.
                     recycleCaptureResults(captureResults)
@@ -155,9 +155,9 @@ class CaptureSource(
                 }
 
                 // if need to draw something on base bitmap additionally
-                if (captureResults.size > 1 || afterMasks.isNotEmpty()) {
+                if (captureResults.size > 1 || mergedMasks.isNotEmpty()) {
                     val canvas = Canvas(baseResult.bitmap)
-                    maskApplier.drawMasks(canvas, beforeMasks[0], afterMasks[0])
+                    maskApplier.drawMasks(canvas, mergedMasks[0])
 
                     for (i in 1 until  captureResults.size) {
                         val res = captureResults[i] ?: continue
@@ -167,7 +167,7 @@ class CaptureSource(
 
                         canvas.withTranslation(dx, dy) {
                             drawBitmap(res.bitmap, 0f, 0f, null)
-                            maskApplier.drawMasks(canvas, beforeMasks[i], afterMasks[i])
+                            maskApplier.drawMasks(canvas, mergedMasks[i])
                         }
                         if (!res.bitmap.isRecycled) {
                             res.bitmap.recycle()
@@ -177,9 +177,7 @@ class CaptureSource(
 
                 val newSignature = tiledSignatureManager.compute(baseResult.bitmap, 64)
                 if (newSignature != null && newSignature == tiledSignature) {
-                    if (!baseResult.bitmap.isRecycled) {
-                        baseResult.bitmap.recycle()
-                    }
+                    recycleCaptureResults(captureResults)
                     // the similar bitmap not send
                     return@withContext null
                 }

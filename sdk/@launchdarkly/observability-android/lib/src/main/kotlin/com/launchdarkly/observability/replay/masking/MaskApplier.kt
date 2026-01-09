@@ -20,14 +20,19 @@ class MaskApplier {
     private val maskIntRect = Rect()
     private val path = Path()
 
-    fun drawMasks(canvas: Canvas, beforeMasks: List<Mask>?, afterMasks: List<Mask>?) {
-        if (afterMasks == null && beforeMasks == null) return
+    fun drawMasks(canvas: Canvas, maskPairsList: List<Pair<Mask, Mask?>>) {
+        if (maskPairsList.count() == 0) return
 
-        beforeMasks?.forEach { mask ->
-            drawMask(mask, path, canvas, beforeMaskPaint)
+        maskPairsList.forEach { pairOfMasks ->
+            drawMask(pairOfMasks, path, canvas)
         }
-        afterMasks?.forEach { mask ->
-            drawMask(mask, path, canvas, afterMaskPaint)
+    }
+
+    private fun drawMask(pairOfMasks: Pair<Mask, Mask?>, path: Path, canvas: Canvas) {
+        val (before, after) = pairOfMasks
+        drawMask(before, path, canvas, beforeMaskPaint)
+        if (after != null) {
+            drawMask(before, path, canvas, afterMaskPaint)
         }
     }
 
@@ -55,22 +60,23 @@ class MaskApplier {
     fun mergeMasksMap(
         beforeMasksMap: List<List<Mask>?>,
         afterMasksMap: List<List<Mask>?>
-    ): MutableList<List<Mask>?>? {
+    ): List<List<Pair<Mask, Mask?>>>? {
         if (afterMasksMap.count() != beforeMasksMap.count()) {
             return null
         }
 
-        val result: MutableList<List<Mask>?> = MutableList(beforeMasksMap.size) { null }
-        for (i in beforeMasksMap.indices) {
-            val before = beforeMasksMap[i]
-            val after = afterMasksMap[i]
-            if (before == null) {
-                if (after == null) continue
-                else return null
-            }
-            if (after != null) {
-                val merged = mergeMasks(before, after) ?: return null
-                result[i] = merged
+        val result = buildList<List<Pair<Mask, Mask?>>>(beforeMasksMap.size) {
+            for (i in beforeMasksMap.indices) {
+                val before = beforeMasksMap[i]
+                val after = afterMasksMap[i]
+                if (before == null) {
+                    if (after == null) continue
+                    else return null
+                }
+                if (after != null) {
+                    val merged = mergeMasks(before, after) ?: return null
+                    add(merged)
+                }
             }
         }
 
@@ -81,7 +87,7 @@ class MaskApplier {
     private fun mergeMasks(
         beforeMasks: List<Mask>,
         afterMasks: List<Mask>
-    ): List<Mask>? {
+    ): List<Pair<Mask, Mask?>>? {
         if (afterMasks.count() != beforeMasks.count()) {
             return null
         }
@@ -91,7 +97,7 @@ class MaskApplier {
         }
 
         val stabilityTolerance = 40f
-        val resultMasks = mutableListOf<Mask>()
+        val resultMasks = mutableListOf<Pair<Mask, Mask?>>()
         for ((before, after) in beforeMasks.zip(afterMasks)) {
             if (before.viewId != after.viewId) {
                 return null
@@ -100,7 +106,7 @@ class MaskApplier {
             if (diff > stabilityTolerance) {
                 return null
             }
-            resultMasks += before
+            resultMasks += Pair(before, after)
         }
 
         return resultMasks
