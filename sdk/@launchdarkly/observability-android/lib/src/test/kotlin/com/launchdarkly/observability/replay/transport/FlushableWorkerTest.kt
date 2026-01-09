@@ -87,7 +87,7 @@ class FlushableWorkerTest {
     }
 
     @Test
-    fun `multiple flush calls while work in progress are merged`() = runTest {
+    fun `sequential flush calls while work in progress are merged`() = runTest {
         val calls = mutableListOf<Boolean>()
         val started = CompletableDeferred<Unit>()
         val gate = CompletableDeferred<Unit>()
