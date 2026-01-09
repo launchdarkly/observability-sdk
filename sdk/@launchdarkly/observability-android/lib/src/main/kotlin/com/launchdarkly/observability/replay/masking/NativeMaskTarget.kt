@@ -79,7 +79,7 @@ data class NativeMaskTarget(
         if (width <= 0 || height <= 0) { return null }
 
         val matrix = context.matrix
-        matrix.reset()
+        matrix.reset() // reusing matrix for performance
         view.transformMatrixToGlobal(matrix)
 
         val pts = floatArrayOf(
