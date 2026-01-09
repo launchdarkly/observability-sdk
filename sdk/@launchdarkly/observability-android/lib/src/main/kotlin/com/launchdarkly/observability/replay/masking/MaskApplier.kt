@@ -20,7 +20,7 @@ class MaskApplier {
     private val maskIntRect = Rect()
 
     fun drawMasks(canvas: Canvas, maskPairsList: List<Pair<Mask, Mask?>>) {
-        if (maskPairsList.count() == 0) return
+        if (maskPairsList.isEmpty()) return
 
         val path = Path()
         maskPairsList.forEach { pairOfMasks ->
