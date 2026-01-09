@@ -259,18 +259,18 @@ class CaptureSource(
         val bitmap = createBitmapForView(view) ?: return null
 
         val result = suspendCancellableCoroutine { continuation ->
-            continuation.invokeOnCancellation {
-                bitmap.recycle()
-            }
             val handler = Handler(Looper.getMainLooper())
             try {
                 PixelCopy.request(
                     window,
                     rect,
                     bitmap,
-                    { result ->
-                        if (!continuation.isActive) return@request
-                        if (result == PixelCopy.SUCCESS) {
+                    { copyResult ->
+                        if (!continuation.isActive) {
+                            bitmap.recycle()
+                            return@request
+                        }
+                        if (copyResult == PixelCopy.SUCCESS) {
                             continuation.resume(bitmap)
                         } else {
                             continuation.resume(null)
