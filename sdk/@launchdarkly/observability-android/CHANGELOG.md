@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.23.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.22.0...launchdarkly-observability-android-0.23.0) (2026-01-09)
+
+
+### Features
+
+* Android double masking with frame drop ([#342](https://github.com/launchdarkly/observability-sdk/issues/342)) ([803fb83](https://github.com/launchdarkly/observability-sdk/commit/803fb83a906d0b5d2e0d7f26d7746d25adb1b37f))
+
 ## [0.22.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.21.0...launchdarkly-observability-android-0.22.0) (2026-01-07)
 
 
