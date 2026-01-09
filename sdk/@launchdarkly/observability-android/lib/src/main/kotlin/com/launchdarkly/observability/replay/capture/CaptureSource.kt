@@ -155,9 +155,9 @@ class CaptureSource(
                 }
 
                 // if need to draw something on base bitmap additionally
-                if (captureResults.size > 1 || mergedMasks.isNotEmpty()) {
+                if (captureResults.size > 1 || (mergedMasks.isNotEmpty() && mergedMasks[0] != null)) {
                     val canvas = Canvas(baseResult.bitmap)
-                    maskApplier.drawMasks(canvas, mergedMasks[0])
+                    mergedMasks[0]?.let { maskApplier.drawMasks(canvas, it) }
 
                     for (i in 1 until  captureResults.size) {
                         val res = captureResults[i] ?: continue
@@ -167,7 +167,7 @@ class CaptureSource(
 
                         canvas.withTranslation(dx, dy) {
                             drawBitmap(res.bitmap, 0f, 0f, null)
-                            maskApplier.drawMasks(canvas, mergedMasks[i])
+                            mergedMasks[i]?.let { maskApplier.drawMasks(canvas, it) }
                         }
                         if (!res.bitmap.isRecycled) {
                             res.bitmap.recycle()

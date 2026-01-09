@@ -60,7 +60,7 @@ class MaskApplier {
     fun mergeMasksMap(
         beforeMasksMap: List<List<Mask>?>,
         afterMasksMap: List<List<Mask>?>
-    ): List<List<Pair<Mask, Mask?>>>? {
+    ): List<List<Pair<Mask, Mask?>>?>? {
         if (afterMasksMap.count() != beforeMasksMap.count()) {
             return null
         }
@@ -70,12 +70,16 @@ class MaskApplier {
                 val before = beforeMasksMap[i]
                 val after = afterMasksMap[i]
                 if (before == null) {
-                    if (after == null) continue
-                    else return null
+                    if (after == null) {
+                        add(null)
+                        continue
+                    } else return null
                 }
                 if (after != null) {
                     val merged = mergeMasks(before, after) ?: return null
                     add(merged)
+                } else {
+                    return null
                 }
             }
         }
