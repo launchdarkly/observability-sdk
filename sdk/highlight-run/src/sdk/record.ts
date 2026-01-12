@@ -30,6 +30,7 @@ import {
 	LAUNCHDARKLY_PATH_PREFIX,
 	LAUNCHDARKLY_URL,
 	MAX_SESSION_LENGTH,
+	UNCOMPRESSED_PAYLOAD_SIZE_THRESHOLD,
 	SEND_FREQUENCY,
 	SNAPSHOT_SETTINGS,
 	VISIBILITY_DEBOUNCE_MS,
@@ -86,6 +87,7 @@ import type { Hook, LDClient } from '../integrations/launchdarkly'
 import { LaunchDarklyIntegration } from '../integrations/launchdarkly'
 import { LDPluginEnvironmentMetadata } from '../plugins/plugin'
 import { RecordOptions } from '../client/types/record'
+import { strToU8 } from 'fflate'
 
 interface HighlightWindow extends Window {
 	Highlight: Highlight
@@ -142,6 +144,8 @@ export class RecordSDK implements Record {
 	hasSessionUnloaded!: boolean
 	hasPushedData!: boolean
 	reloaded!: boolean
+	saving!: boolean
+	_estimatedEventsByteSize!: number
 	_hasPreviouslyInitialized!: boolean
 	_recordStop!: listenerHandler | undefined
 	_integrations: IntegrationClient[] = []
@@ -336,6 +340,8 @@ export class RecordSDK implements Record {
 		this.events = []
 		this.hasSessionUnloaded = false
 		this.hasPushedData = false
+		this.saving = false
+		this._estimatedEventsByteSize = 0
 
 		if (window.Intercom) {
 			window.Intercom('onShow', () => {
@@ -589,6 +595,12 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 					this.logger.log('received isCheckout emit', { event })
 				}
 				this.events.push(event)
+
+				// Check if we should send payload early based on size
+				if (!this.saving && this._checkForImmediateSave(event)) {
+					this.logger.log('Triggering save due to large payload size')
+					this._save()
+				}
 			}
 			emit.bind(this)
 
@@ -716,6 +728,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 			this.addCustomEvent('TabHidden', false)
 		} else {
 			this.addCustomEvent('TabHidden', true)
+			this._saveOnUnload()
 			if (this.options.disableBackgroundRecording) {
 				this.stop()
 			}
@@ -923,7 +936,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 			}
 			window.addEventListener('pagehide', unloadListener)
 			this.listeners.push(() =>
-				window.removeEventListener('beforeunload', unloadListener),
+				window.removeEventListener('pagehide', unloadListener),
 			)
 		}
 	}
@@ -999,6 +1012,11 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 
 	// Reset the events array and push to a backend.
 	async _save() {
+		if (this.saving) {
+			return
+		}
+		this.saving = true
+
 		try {
 			if (
 				this.state === 'Recording' &&
@@ -1013,6 +1031,9 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 				})
 				await this._reset({})
 			}
+
+			const eventsToSend = this._captureAndResetEventsState()
+
 			let sendFn = undefined
 			if (this.options?.sendMode === 'local') {
 				sendFn = async (payload: any) => {
@@ -1034,7 +1055,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 					return 0
 				}
 			}
-			await this._sendPayload({ sendFn })
+			await this._sendPayload({ sendFn, events: eventsToSend })
 			this.hasPushedData = true
 			this.sessionData.lastPushTime = Date.now()
 			setSessionData(this.sessionData)
@@ -1047,9 +1068,12 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 				this.pushPayloadTimerId = undefined
 			}
 			this.pushPayloadTimerId = setTimeout(() => {
+				this.logger.log(`Triggering save due to timeout`)
 				this._save()
 			}, SEND_FREQUENCY)
 		}
+
+		this.saving = false
 	}
 
 	/**
@@ -1078,13 +1102,13 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 
 	async _sendPayload({
 		sendFn,
+		events,
 	}: {
 		sendFn?: (
 			payload: PushSessionEventsMutationVariables,
 		) => Promise<number>
+		events: eventWithTime[]
 	}) {
-		const events = [...this.events]
-
 		// if it is time to take a full snapshot,
 		// ensure the snapshot is at the beginning of the next payload
 		// After snapshot thresholds have been met,
@@ -1120,7 +1144,9 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 				highlight_logs: highlightLogs || undefined,
 			}
 
-			const { compressedBase64 } = await payloadToBase64(sessionPayload)
+			const { compressedBase64, compressedSize } =
+				await payloadToBase64(sessionPayload)
+			this.logger.log(`Compressed payload size: ${compressedSize} bytes`)
 			await sendFn({
 				session_secure_id: this.sessionData.sessionSecureID,
 				payload_id: payloadId.toString(),
@@ -1145,15 +1171,6 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 		}
 		setSessionData(this.sessionData)
 
-		// We are creating a weak copy of the events. rrweb could have pushed more events to this.events while we send the request with the events as a payload.
-		// Originally, we would clear this.events but this could lead to a race condition.
-		// Example Scenario:
-		// 1. Create the events payload from this.events (with N events)
-		// 2. rrweb pushes to this.events (with M events)
-		// 3. Network request made to push payload (Only includes N events)
-		// 4. this.events is cleared (we lose M events)
-		this.events = this.events.slice(events.length)
-
 		clearHighlightLogs(highlightLogs)
 	}
 
@@ -1169,6 +1186,69 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 		record.takeFullSnapshot()
 		this._eventBytesSinceSnapshot = 0
 		this._lastSnapshotTime = new Date().getTime()
+	}
+
+	// Flush data if size threshold is exceeded
+	private _checkForImmediateSave(newEvent: eventWithTime): boolean {
+		if (this.state !== 'Recording' || !this.pushPayloadTimerId) {
+			return false
+		}
+
+		const newEventByteSize = strToU8(JSON.stringify(newEvent)).length
+		this._estimatedEventsByteSize += newEventByteSize
+		return (
+			this._estimatedEventsByteSize >= UNCOMPRESSED_PAYLOAD_SIZE_THRESHOLD
+		)
+	}
+
+	private _saveWithBeacon(
+		backendUrl: string,
+		payload: PushSessionEventsMutationVariables,
+	): Promise<number> {
+		let blob = new Blob(
+			[
+				JSON.stringify({
+					query: print(PushSessionEventsDocument),
+					variables: payload,
+				}),
+			],
+			{
+				type: 'application/json',
+			},
+		)
+		window.fetch(`${backendUrl}`, {
+			method: 'POST',
+			body: blob,
+			keepalive: true,
+		})
+		return Promise.resolve(0)
+	}
+
+	private _saveOnUnload(): void {
+		console.log('saving on unload', this.events.length)
+		if (this.events.length === 0) {
+			return
+		}
+
+		try {
+			const eventsToSend = this._captureAndResetEventsState()
+
+			this._sendPayload({
+				sendFn: (payload) =>
+					this._saveWithBeacon(this._backendUrl, payload),
+				events: eventsToSend,
+			})
+		} catch (error) {
+			this.logger.log('Failed to save session data on unload:', error)
+		}
+	}
+
+	// Atomic capture and reset events state synchronously to avoid race conditions
+	private _captureAndResetEventsState(): eventWithTime[] {
+		const eventsToSend = [...this.events]
+		this.events = []
+		this._estimatedEventsByteSize = 0
+		return eventsToSend
 	}
 
 	register(client: LDClient, metadata: LDPluginEnvironmentMetadata) {
