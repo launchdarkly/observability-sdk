@@ -30,7 +30,7 @@ class SessionReplayExporter(
     val initialIdentifyItemPayload: IdentifyItemPayload,
     private val injectedReplayApiService: SessionReplayApiService? = null,
     private val canvasBufferLimit: Int = RRWEB_CANVAS_BUFFER_LIMIT,
-    private val canvasDrawEntourage: Int = RRWEB_CANVAS_DRAW_ENTOURAGE
+    canvasDrawEntourage: Int = RRWEB_CANVAS_DRAW_ENTOURAGE
 ) : EventExporting {
     private val exportMutex = Mutex()
 
