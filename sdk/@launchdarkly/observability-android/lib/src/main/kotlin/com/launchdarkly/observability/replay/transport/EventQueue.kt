@@ -121,7 +121,7 @@ internal class EventQueue(
         if (currentCost != 0 && currentCost + item.cost > totalCostLimit) return
 
         val state = currentExporterCosts.getOrPut(item.exporterClass) { ExporterState() }
-        if (state.cost + item.cost > exporterCostLimit) return
+        if (state.cost != 0 && state.cost + item.cost > exporterCostLimit) return
 
         storage.getOrPut(item.exporterClass) { ArrayDeque() }.addLast(item)
         currentCost += item.cost
