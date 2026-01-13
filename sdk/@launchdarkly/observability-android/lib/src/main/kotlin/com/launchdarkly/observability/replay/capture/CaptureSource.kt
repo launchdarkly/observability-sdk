@@ -2,8 +2,6 @@ package com.launchdarkly.observability.replay.capture
 
 import android.graphics.Bitmap
 import android.graphics.Canvas
-import android.graphics.Color
-import android.graphics.Paint
 import android.graphics.Rect
 import android.os.Build
 import android.os.Handler
@@ -16,7 +14,6 @@ import android.view.Window
 import android.view.WindowManager.LayoutParams.TYPE_APPLICATION
 import android.view.WindowManager.LayoutParams.TYPE_BASE_APPLICATION
 import androidx.annotation.RequiresApi
-import android.graphics.Path
 import com.launchdarkly.logging.LDLogger
 import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
 import com.launchdarkly.observability.replay.masking.MaskMatcher
@@ -33,6 +30,7 @@ import kotlin.coroutines.resume
 import androidx.core.graphics.withTranslation
 import com.launchdarkly.observability.replay.masking.Mask
 import androidx.core.graphics.createBitmap
+import com.launchdarkly.observability.replay.masking.MaskApplier
 
 /**
  * A source of [CaptureEvent]s taken from the lowest visible window. Captures
@@ -49,21 +47,19 @@ class CaptureSource(
     data class CaptureResult(
         val windowEntry: WindowEntry,
         val bitmap: Bitmap,
-        val masks: List<Mask>
     )
 
     private val _captureEventFlow = MutableSharedFlow<CaptureEvent>()
     val captureFlow: SharedFlow<CaptureEvent> = _captureEventFlow.asSharedFlow()
     private val windowInspector = WindowInspector(logger)
     private val maskCollector = MaskCollector(logger)
-    private val maskPaint = Paint().apply {
-        color = Color.GRAY
-        style = Paint.Style.FILL
-    }
+    private val maskApplier = MaskApplier()
 
     private val tiledSignatureManager = TiledSignatureManager()
+
     @Volatile
     private var tiledSignature: TiledSignature? = null
+
     /**
      * Requests a [CaptureEvent] be taken now.
      */
@@ -96,7 +92,8 @@ class CaptureSource(
                 return@withContext null
             }
 
-            val baseWindowEntry = pickBaseWindow(windowsEntries) ?: return@withContext null
+            val baseIndex = pickBaseWindow(windowsEntries) ?: return@withContext null
+            val baseWindowEntry = windowsEntries[baseIndex]
             val rect = baseWindowEntry.rect()
 
             // protect against race condition where decor view has no size
@@ -107,72 +104,130 @@ class CaptureSource(
             // TODO: O11Y-625 - optimize memory allocations
             // TODO: O11Y-625 - see if holding bitmap is more efficient than base64 encoding immediately after compression
             // TODO: O11Y-628 - use captureQuality option for scaling and adjust this bitmap accordingly, may need to investigate power of 2 rounding for performance
-            // Create a bitmap with the window dimensions
-            val baseResult = captureViewResult(baseWindowEntry) ?: return@withContext null
 
-            // capture rest of views on top of base
-            val pairs = mutableListOf<CaptureResult>()
-            var afterBase = false
-            for (windowEntry in windowsEntries) {
-                if (afterBase) {
-                    captureViewResult(windowEntry)?.let { result ->
-                        pairs.add(result)
-                    }
-                } else if (windowEntry === baseWindowEntry) {
-                    afterBase = true
-                }
-            }
+            val capturingWindowEntries = windowsEntries.subList(baseIndex, windowsEntries.size)
 
-            return@withContext withContext(DispatcherProviderHolder.current.default) {
-                // off the main thread to avoid blocking the UI thread
-                if (pairs.isNotEmpty() || baseResult.masks.isNotEmpty()) {
-                    val canvas = Canvas(baseResult.bitmap)
-                    drawMasks(canvas, baseResult.masks)
+            val beforeMasks = collectMasks(capturingWindowEntries)
 
-                    for (res in pairs) {
-                        val entry = res.windowEntry
-                        val dx = (entry.screenLeft - baseWindowEntry.screenLeft).toFloat()
-                        val dy = (entry.screenTop - baseWindowEntry.screenTop).toFloat()
-
-                        canvas.withTranslation(dx, dy) {
-                            drawBitmap(res.bitmap, 0f, 0f, null)
-                            drawMasks(canvas, res.masks)
+            val captureResults: MutableList<CaptureResult?> = MutableList(capturingWindowEntries.size) { null }
+            try {
+                var captured = 0
+                for (i in capturingWindowEntries.indices) {
+                    val windowEntry = capturingWindowEntries[i]
+                    val captureResult = captureViewResult(windowEntry)
+                    if (captureResult == null) {
+                        if (i == 0) {
+                            return@withContext null
                         }
-                        res.bitmap.recycle()
+                        beforeMasks[i] = null
+                        continue
                     }
-                }
 
-                val newSignature = tiledSignatureManager.compute(baseResult.bitmap, 64)
-                if (newSignature != null && newSignature == tiledSignature) {
-                    baseResult.bitmap.recycle()
-                    // the similar bitmap not send
+                    captured++
+                    captureResults[i] = captureResult
+                }
+                if (captured == 0) {
                     return@withContext null
                 }
-                tiledSignature = newSignature
 
-                createCaptureEvent(baseResult.bitmap, rect, timestamp, session)
+                // Synchronize with UI rendering frame
+                suspendCancellableCoroutine { continuation ->
+                    Choreographer.getInstance().postFrameCallback {
+                        if (continuation.isActive) {
+                            continuation.resume(Unit)
+                        }
+                    }
+                }
+
+                val afterMasks = collectMasksFromResults(captureResults)
+
+                // off the main thread to avoid blocking the UI thread
+                return@withContext withContext(DispatcherProviderHolder.current.default) {
+                    val baseResult = captureResults[0] ?: return@withContext null
+
+                    val mergedMasks = maskApplier.mergeMasksMap(beforeMasks, afterMasks)
+                        ?: run {
+                            // Mask instability is expected during animations/scrolling; ensure we always
+                            // recycle already-captured bitmaps before bailing out to avoid native OOM.
+                            return@withContext null
+                        }
+
+                    // if need to draw something on base bitmap additionally
+                    if (captureResults.size > 1 || (mergedMasks.isNotEmpty() && mergedMasks[0] != null)) {
+                        val canvas = Canvas(baseResult.bitmap)
+                        mergedMasks[0]?.let { maskApplier.drawMasks(canvas, it) }
+
+                        for (i in 1 until captureResults.size) {
+                            val res = captureResults[i] ?: continue
+                            val entry = res.windowEntry
+                            val dx = (entry.screenLeft - baseWindowEntry.screenLeft).toFloat()
+                            val dy = (entry.screenTop - baseWindowEntry.screenTop).toFloat()
+
+                            canvas.withTranslation(dx, dy) {
+                                drawBitmap(res.bitmap, 0f, 0f, null)
+                                mergedMasks[i]?.let { maskApplier.drawMasks(canvas, it) }
+                            }
+                            if (!res.bitmap.isRecycled) {
+                                res.bitmap.recycle()
+                            }
+                        }
+                    }
+
+                    val newSignature = tiledSignatureManager.compute(baseResult.bitmap, 64)
+                    if (newSignature != null && newSignature == tiledSignature) {
+                        // the similar bitmap not send
+                        return@withContext null
+                    }
+                    tiledSignature = newSignature
+
+                    createCaptureEvent(baseResult.bitmap, rect, timestamp, session)
+                }
+            } finally {
+                recycleCaptureResults(captureResults)
             }
         }
 
-    private fun pickBaseWindow(windowsEntries: List<WindowEntry>): WindowEntry? {
-        windowsEntries.firstOrNull {
+    private fun recycleCaptureResults(captureResults: List<CaptureResult?>) {
+        for (res in captureResults) {
+            val bitmap = res?.bitmap ?: continue
+            if (!bitmap.isRecycled) {
+                bitmap.recycle()
+            }
+        }
+    }
+
+    private fun collectMasks(capturingWindowEntries: List<WindowEntry>): MutableList<List<Mask>?> {
+        return capturingWindowEntries.map {
+            maskCollector.collectMasks( it.rootView, maskMatchers)
+        }.toMutableList()
+    }
+
+    private fun collectMasksFromResults(captureResults: List<CaptureResult?>): MutableList<List<Mask>?> {
+        return captureResults.map { result ->
+            result?.windowEntry?.rootView?.let { rv -> maskCollector.collectMasks(rv, maskMatchers) }
+        }.toMutableList()
+    }
+
+    private fun pickBaseWindow(windowsEntries: List<WindowEntry>): Int? {
+        val appIdx = windowsEntries.indexOfFirst {
             val wmType = it.layoutParams?.type ?: 0
-            (wmType == TYPE_APPLICATION || wmType == TYPE_BASE_APPLICATION)
-        }?.let { return it }
+            wmType == TYPE_APPLICATION || wmType == TYPE_BASE_APPLICATION
+        }
+        if (appIdx >= 0) return appIdx
 
-        windowsEntries.firstOrNull { it.type == WindowType.ACTIVITY }?.let { return it }
+        val activityIdx = windowsEntries.indexOfFirst { it.type == WindowType.ACTIVITY }
+        if (activityIdx >= 0) return activityIdx
 
-        windowsEntries.firstOrNull { it.type == WindowType.DIALOG }?.let { return it }
+        val dialogIdx = windowsEntries.indexOfFirst { it.type == WindowType.DIALOG }
+        if (dialogIdx >= 0) return dialogIdx
 
         // Fallback to the first available
-        return windowsEntries.firstOrNull()
+        return if (windowsEntries.isNotEmpty()) 0 else null
     }
 
     private suspend fun captureViewResult(windowEntry: WindowEntry): CaptureResult? {
         val bitmap = captureViewBitmap(windowEntry) ?: return null
-        val masks = maskCollector.collectMasks(windowEntry.rootView, maskMatchers)
-
-        return CaptureResult(windowEntry, bitmap, masks)
+        return CaptureResult(windowEntry, bitmap)
     }
 
     private suspend fun captureViewBitmap(windowEntry: WindowEntry): Bitmap? {
@@ -194,6 +249,7 @@ class CaptureSource(
             return@withContext canvasDraw(view)
         }
     }
+
     @RequiresApi(Build.VERSION_CODES.O)
     private suspend fun pixelCopy(
         window: Window,
@@ -202,28 +258,36 @@ class CaptureSource(
     ): Bitmap? {
         val bitmap = createBitmapForView(view) ?: return null
 
-        return suspendCancellableCoroutine { continuation ->
+        val result = suspendCancellableCoroutine { continuation ->
             val handler = Handler(Looper.getMainLooper())
             try {
                 PixelCopy.request(
                     window,
                     rect,
                     bitmap,
-                    { result ->
-                        if (!continuation.isActive) return@request
-                        if (result == PixelCopy.SUCCESS) {
+                    { copyResult ->
+                        if (!continuation.isActive) {
+                            bitmap.recycle()
+                            return@request
+                        }
+                        if (copyResult == PixelCopy.SUCCESS) {
                             continuation.resume(bitmap)
                         } else {
                             continuation.resume(null)
                         }
                     }, handler
                 )
-            } catch (exp: Exception) {
+            } catch (t: Throwable) {
                 // It could normally happen when view is being closed during screenshot
-                logger.warn("Failed to capture window", exp)
+                logger.warn("Failed to capture window", t)
                 continuation.resume(null)
             }
         }
+
+        if (result == null && !bitmap.isRecycled) {
+            bitmap.recycle()
+        }
+        return result
     }
 
     private fun canvasDraw(
@@ -290,41 +354,6 @@ class CaptureSource(
                 postMask.recycle()
             } catch (_: Throwable) {
             }
-        }
-    }
-
-    /**
-     * Applies masking rectangles to the provided [canvas] using the provided [masks].
-     *
-     * @param canvas The canvas to mask
-     * @param masks areas that will be masked
-     */
-    private fun drawMasks(canvas: Canvas, masks: List<Mask>) {
-        val path = Path()
-        masks.forEach { mask ->
-            drawMask(mask, path, canvas, maskPaint)
-        }
-    }
-
-    private val maskIntRect = Rect()
-    private fun drawMask(mask: Mask, path: Path, canvas: Canvas, paint: Paint) {
-        if (mask.points != null) {
-            val pts = mask.points
-
-            path.reset()
-            path.moveTo(pts[0], pts[1])
-            path.lineTo(pts[2], pts[3])
-            path.lineTo(pts[4], pts[5])
-            path.lineTo(pts[6], pts[7])
-            path.close()
-
-            canvas.drawPath(path, paint)
-        } else {
-            maskIntRect.left = mask.rect.left.toInt()
-            maskIntRect.top = mask.rect.top.toInt()
-            maskIntRect.right = mask.rect.right.toInt()
-            maskIntRect.bottom =  mask.rect.bottom.toInt()
-            canvas.drawRect(maskIntRect, paint)
         }
     }
 }

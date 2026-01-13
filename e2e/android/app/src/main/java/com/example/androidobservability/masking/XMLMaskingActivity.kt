@@ -11,7 +11,6 @@ import android.widget.Toast
 import android.graphics.Color
 import android.graphics.PixelFormat
 import android.view.Gravity
-import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.FrameLayout
 import android.widget.TextView

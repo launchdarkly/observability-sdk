@@ -89,8 +89,7 @@ fun UserInfoForm(modifier: Modifier = Modifier) {
 	) {
 		Text(
 			text = "User Information Form",
-			style = MaterialTheme.typography.headlineMedium,
-			modifier = Modifier.ldMask()
+			style = MaterialTheme.typography.headlineMedium
 		)
 
 		// Password Section
@@ -112,7 +111,8 @@ fun UserInfoForm(modifier: Modifier = Modifier) {
 					label = { Text("Password") },
 					visualTransformation = PasswordVisualTransformation(),
 					keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-					modifier = Modifier.fillMaxWidth()
+					modifier = Modifier
+                        .fillMaxWidth()
 				)
 			}
 		}
@@ -160,7 +160,9 @@ fun UserInfoForm(modifier: Modifier = Modifier) {
 					onValueChange = { zipCode = it },
 					label = { Text("ZIP Code") },
 					keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-					modifier = Modifier.fillMaxWidth()
+					modifier = Modifier
+                        .fillMaxWidth()
+                        .ldMask()
 				)
 			}
 		}
@@ -208,8 +210,10 @@ fun UserInfoForm(modifier: Modifier = Modifier) {
 						label = { Text("CVV") },
 						keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
 						visualTransformation = PasswordVisualTransformation(),
-						modifier = Modifier.weight(1f)
-					)
+						modifier = Modifier
+                            .weight(1f)
+                            .ldMask()
+                    )
 				}
 			}
 		}
