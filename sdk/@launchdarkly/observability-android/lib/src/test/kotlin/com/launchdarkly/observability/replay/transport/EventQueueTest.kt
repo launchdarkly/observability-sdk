@@ -49,7 +49,7 @@ class EventQueueTest {
         val result = queue.earliest(costBudget = 10, limit = 10, except = emptySet())
         assertEquals(ExporterB::class.java, result?.exporterClass)
 
-        val resultExcept = queue.earliest(costBudget = 10, limit = 10, except = setOf(ExporterB::class.java),)
+        val resultExcept = queue.earliest(costBudget = 10, limit = 10, except = setOf(ExporterB::class.java))
         assertEquals(ExporterA::class.java, resultExcept?.exporterClass)
     }
 
