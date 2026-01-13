@@ -1,14 +1,14 @@
 package com.launchdarkly.observability.plugin
 
-import com.launchdarkly.observability.plugin.TracingHook.Companion.DATA_KEY_IDENTIFY_SCOPE
-import com.launchdarkly.observability.plugin.TracingHook.Companion.DATA_KEY_IDENTIFY_SPAN
-import com.launchdarkly.observability.plugin.TracingHook.Companion.IDENTIFY_EVENT_FINISH
-import com.launchdarkly.observability.plugin.TracingHook.Companion.IDENTIFY_EVENT_START
-import com.launchdarkly.observability.plugin.TracingHook.Companion.INSTRUMENTATION_NAME
-import com.launchdarkly.observability.plugin.TracingHook.Companion.SEMCONV_IDENTIFY_CONTEXT_ID
-import com.launchdarkly.observability.plugin.TracingHook.Companion.SEMCONV_IDENTIFY_EVENT_RESULT_VALUE
-import com.launchdarkly.observability.plugin.TracingHook.Companion.SEMCONV_IDENTIFY_SPAN_NAME
-import com.launchdarkly.observability.plugin.TracingHook.Companion.SEMCONV_IDENTIFY_TIMEOUT
+import com.launchdarkly.observability.plugin.ObservabilityHook.Companion.DATA_KEY_IDENTIFY_SCOPE
+import com.launchdarkly.observability.plugin.ObservabilityHook.Companion.DATA_KEY_IDENTIFY_SPAN
+import com.launchdarkly.observability.plugin.ObservabilityHook.Companion.IDENTIFY_EVENT_FINISH
+import com.launchdarkly.observability.plugin.ObservabilityHook.Companion.IDENTIFY_EVENT_START
+import com.launchdarkly.observability.plugin.ObservabilityHook.Companion.INSTRUMENTATION_NAME
+import com.launchdarkly.observability.plugin.ObservabilityHook.Companion.SEMCONV_IDENTIFY_CONTEXT_ID
+import com.launchdarkly.observability.plugin.ObservabilityHook.Companion.SEMCONV_IDENTIFY_EVENT_RESULT_VALUE
+import com.launchdarkly.observability.plugin.ObservabilityHook.Companion.SEMCONV_IDENTIFY_SPAN_NAME
+import com.launchdarkly.observability.plugin.ObservabilityHook.Companion.SEMCONV_IDENTIFY_TIMEOUT
 import com.launchdarkly.sdk.LDContext
 import com.launchdarkly.sdk.android.integrations.IdentifySeriesContext
 import com.launchdarkly.sdk.android.integrations.IdentifySeriesResult
@@ -31,7 +31,7 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 
-class TracingHookTest {
+class ObservabilityHookTest {
 
     private lateinit var mockTracer: Tracer
     private lateinit var mockContext: LDContext
@@ -57,7 +57,7 @@ class TracingHookTest {
         fun `should not create spans when withSpans is disabled`() {
             val seriesContext = IdentifySeriesContext(mockContext, 5)
             val seriesData = mapOf("test" to "empty_data")
-            val hook = TracingHook(withSpans = false, withValue = false, tracerProvider = { mockTracer })
+            val hook = ObservabilityHook(withSpans = false, withValue = false, tracerProvider = { mockTracer })
 
             val result = hook.beforeIdentify(seriesContext, seriesData)
 
@@ -82,7 +82,7 @@ class TracingHookTest {
 
             val seriesContext = IdentifySeriesContext(mockContext, 5)
             val seriesData = mapOf("test" to "empty_data")
-            val hook = TracingHook(withSpans = true, withValue = false, tracerProvider = { mockTracer })
+            val hook = ObservabilityHook(withSpans = true, withValue = false, tracerProvider = { mockTracer })
 
             val result = hook.beforeIdentify(seriesContext, seriesData)
 
@@ -108,7 +108,7 @@ class TracingHookTest {
 
             val seriesContext = IdentifySeriesContext(mockContext, 5)
             val seriesData = mapOf("test" to "empty_data")
-            val hook = TracingHook(withSpans = true, withValue = false, tracerProvider = { null })
+            val hook = ObservabilityHook(withSpans = true, withValue = false, tracerProvider = { null })
 
             hook.beforeIdentify(seriesContext, seriesData)
 
@@ -139,7 +139,7 @@ class TracingHookTest {
                 DATA_KEY_IDENTIFY_SCOPE to spanScope
             )
             val identifyResult = IdentifySeriesResult(IdentifySeriesResult.IdentifySeriesStatus.COMPLETED)
-            val hook = TracingHook(withSpans = false, withValue = false, tracerProvider = { mockTracer })
+            val hook = ObservabilityHook(withSpans = false, withValue = false, tracerProvider = { mockTracer })
 
             val result = hook.afterIdentify(seriesContext, seriesData, identifyResult)
 

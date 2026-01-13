@@ -123,10 +123,10 @@ data class ComposeMaskTarget(
             return null
         }
 
-        val t1 = coordinates.localToScreen(Offset(0f, 0f))
-        val t2 = coordinates.localToScreen(Offset(size.width.toFloat(), 0f))
-        val t3 = coordinates.localToScreen(Offset(size.width.toFloat(), size.height.toFloat()))
-        val t4 = coordinates.localToScreen(Offset(0f, size.height.toFloat()))
+        val t1 = coordinates.localToWindow(Offset(0f, 0f))
+        val t2 = coordinates.localToWindow(Offset(size.width.toFloat(), 0f))
+        val t3 = coordinates.localToWindow(Offset(size.width.toFloat(), size.height.toFloat()))
+        val t4 = coordinates.localToWindow(Offset(0f, size.height.toFloat()))
 
         val pts = floatArrayOf(
             t1.x, t1.y,
@@ -134,11 +134,6 @@ data class ComposeMaskTarget(
             t3.x, t3.y,
             t4.x, t4.y
         )
-
-        for (i in pts.indices step 2) {
-            pts[i] -= context.rootX
-            pts[i + 1] -= context.rootY
-        }
 
         return pts
     }

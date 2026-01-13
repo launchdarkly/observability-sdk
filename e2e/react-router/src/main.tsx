@@ -11,6 +11,7 @@ import {
 import Root from './routes/root'
 import Welcome from './routes/welcome'
 import PrivacyDemo from './routes/privacy-demo'
+import HttpTest from './routes/http-test'
 
 function rootAction() {
 	const contact = { name: 'hello' }
@@ -45,6 +46,7 @@ const router = createBrowserRouter(
 			</Route>
 			<Route path={'/welcome'} element={<Welcome />} />
 			<Route path={'/privacy'} element={<PrivacyDemo />} />
+			<Route path={'/http-test'} element={<HttpTest />} />
 		</>,
 	),
 )

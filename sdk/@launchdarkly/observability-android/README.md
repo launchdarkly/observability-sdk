@@ -26,7 +26,7 @@ Add the dependency to your app's Gradle file:
 ```kotlin
 dependencies {
     implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.+")
-    implementation("com.launchdarkly:launchdarkly-observability-android:0.5.0")
+    implementation("com.launchdarkly:launchdarkly-observability-android:0.19.1")
 }
 ```
 
@@ -45,13 +45,15 @@ import com.launchdarkly.sdk.android.LDClient
 class MyApplication : Application() {
     override fun onCreate() {
         super.onCreate()
+
+        val mobileKey = "your-mobile-key"
         
         val ldConfig = LDConfig.Builder(LDConfig.Builder.AutoEnvAttributes.Enabled)
-            .mobileKey("your-mobile-key")
+            .mobileKey(mobileKey)
             .plugins(
                 Components.plugins().setPlugins(
                     listOf(
-                        Observability(this@MyApplication)
+                        Observability(this@MyApplication, mobileKey)
                     )
                 )
             )
@@ -93,14 +95,17 @@ dependencies {
 You can customize the observability plugin with various options:
 
 ```kotlin
-import com.launchdarkly.observability.api.Options
+import com.launchdarkly.observability.api.ObservabilityOptions
 import com.launchdarkly.sdk.android.LDAndroidLogging
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
 
+val mobileKey = "your-mobile-key"
+
 val observabilityPlugin = Observability(
     application = this@MyApplication,
-    options = Options(
+    mobileKey = mobileKey,
+    options = ObservabilityOptions(
         serviceName = "my-android-app",
         serviceVersion = "1.0.0",
         debug = true,
@@ -112,6 +117,28 @@ val observabilityPlugin = Observability(
         customHeaders = mapOf(
             "X-Custom-Header" to "custom-value"
         )
+    )
+)
+```
+
+Additional `ObservabilityOptions` settings:
+
+- `logsApiLevel`: Minimum log severity to export (defaults to `INFO`). Set to `ObservabilityOptions.LogLevel.NONE` to disable log exporting.
+- `tracesApi`: Controls trace recording (defaults to enabled). Use `ObservabilityOptions.TracesApi.disabled()` to disable all tracing, or set `includeErrors`/`includeSpans`.
+- `metricsApi`: Controls metric export (defaults to enabled). Use `ObservabilityOptions.MetricsApi.disabled()` to disable metrics.
+- `instrumentations`: Enables/disables specific automatic instrumentations like `crashReporting`, `activityLifecycle`, and `launchTime`.
+
+Example:
+
+```kotlin
+val options = ObservabilityOptions(
+    logsApiLevel = ObservabilityOptions.LogLevel.WARN,
+    tracesApi = ObservabilityOptions.TracesApi(includeErrors = true, includeSpans = false),
+    metricsApi = ObservabilityOptions.MetricsApi.disabled(),
+    instrumentations = ObservabilityOptions.Instrumentations(
+        crashReporting = false,
+        activityLifecycle = true,
+        launchTime = true
     )
 )
 ```
@@ -169,21 +196,83 @@ span.end()
 
 ### Session Replay
 
+#### Enable Session Replay
+
+Add the Session Replay plugin **after** Observability when configuring the LaunchDarkly SDK:
+
+```kotlin
+import com.launchdarkly.observability.plugin.Observability
+import com.launchdarkly.observability.replay.plugin.SessionReplay
+
+val ldConfig = LDConfig.Builder(LDConfig.Builder.AutoEnvAttributes.Enabled)
+    .mobileKey("your-mobile-key")
+    .plugins(
+        Components.plugins().setPlugins(
+            listOf(
+                Observability(this@MyApplication, "your-mobile-key"),
+                SessionReplay() // depends on Observability being present first
+            )
+        )
+    )
+    .build()
+```
+
+Notes:
+- SessionReplay depends on Observability. If Observability is missing or listed after SessionReplay, the plugin logs an error and stays inactive.
+- Observability runs fine without SessionReplay; adding SessionReplay extends the Observability pipeline to include session recording.
+
 #### Masking sensitive UI
 
 Use `ldMask()` to mark views that should be masked in session replay. There are helpers for both XML-based Views and Jetpack Compose.
+
+##### Configure masking via `PrivacyProfile`
+
+If you want to configure masking globally (instead of calling `ldMask()` on each element), pass a `PrivacyProfile` to `ReplayOptions`:
+
+```kotlin
+import com.launchdarkly.observability.replay.PrivacyProfile
+import com.launchdarkly.observability.replay.ReplayOptions
+import com.launchdarkly.observability.replay.view
+import com.launchdarkly.observability.replay.plugin.SessionReplay
+
+val sessionReplay = SessionReplay(
+    ReplayOptions(
+        privacyProfile = PrivacyProfile(
+            // Toggle built-in masking:
+            // - maskTextInputs: masks text input fields (e.g. EditText / Compose text fields)
+            maskTextInputs = true,
+            // - maskText: masks non-input text targets
+            maskText = false,
+            // New settings:
+            maskViews = listOf(
+                // Masks targets by *exact* Android View class (does not match subclasses).
+                view(android.widget.ImageView::class),
+                // You can also provide the class name as a string (FQCN).
+                view("android.widget.EditText"),
+            ),
+            maskXMLViewIds = listOf(
+                // Masks by resource entry name (from resources.getResourceEntryName(view.id)).
+                // Accepts "@+id/foo", "@id/foo", or "foo".
+                "@+id/password",
+                "credit_card_number",
+            ),
+        )
+    )
+)
+```
+
+Notes:
+- `maskViews` matches on `target.view.javaClass` equality (exact class only).
+- `maskXMLViewIds` applies only to Views with a non-`View.NO_ID` id that resolves to a resource entry name.
 
 ##### XML Views
 
 Import the masking API and call `ldMask()` on any `View` (for example, after inflating the layout in an `Activity` or `Fragment`).
 
 ```kotlin
-import android.os.Bundle
-import android.widget.EditText
-import androidx.appcompat.app.AppCompatActivity
 import com.launchdarkly.observability.api.ldMask
 
-class LoginActivity : AppCompatActivity() {
+class LoginActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_login)
@@ -197,18 +286,18 @@ class LoginActivity : AppCompatActivity() {
 With View Binding or Data Binding:
 
 ```kotlin
-import android.os.Bundle
-import android.view.View
-import androidx.fragment.app.Fragment
 import com.launchdarkly.observability.api.ldMask
 
-class CheckoutFragment : Fragment(R.layout.fragment_checkout) {
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        val binding = FragmentCheckoutBinding.bind(view)
-        binding.creditCardNumber.ldMask()
-        binding.cvv.ldMask()
-    }
+override fun onCreateView(
+    inflater: LayoutInflater,
+    container: ViewGroup?,
+    savedInstanceState: Bundle?,
+): View {
+    _binding = SettingsPageBinding.inflate(inflater, container, false)
+    binding.nestedScrollView.systemBarsPadding()
+    viewModel.toggleBackgroundAccess(requireContext().isIgnoreBatteryEnabled())
+    val toolbar = binding.toolbar
+    toolbar.ldMask()
 }
 ```
 
@@ -219,21 +308,21 @@ Optional: use `ldUnmask()` to explicitly clear masking on a view you previously 
 Add the masking `Modifier` to any composable you want masked in session replay.
 
 ```kotlin
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.TextField
-import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
 import com.launchdarkly.observability.api.ldMask
 
 @Composable
 fun CreditCardField() {
-    var number by remember { mutableStateOf("") }
-    TextField(
-        value = number,
-        onValueChange = { number = it },
+    ...
+   	var zipCode by remember { mutableStateOf("") }
+
+    OutlinedTextField(
+        value = zipCode,
+        onValueChange = { zipCode = it },
+        label = { Text("ZIP Code") },
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         modifier = Modifier
             .fillMaxWidth()
-            .ldMask() // mask this composable in session replay
+            .ldMask()
     )
 }
 ```

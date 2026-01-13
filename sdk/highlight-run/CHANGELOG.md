@@ -1,5 +1,19 @@
 # highlight.run
 
+## [9.25.0](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-9.24.0...highlight.run-9.25.0) (2025-12-18)
+
+
+### Features
+
+* sanitize URLs + semantic conventions for header attributes ([#317](https://github.com/launchdarkly/observability-sdk/issues/317)) ([417b4b8](https://github.com/launchdarkly/observability-sdk/commit/417b4b83f686b48a07acc84b3f41c74bfd16dd57))
+
+## [9.24.0](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-9.23.0...highlight.run-9.24.0) (2025-12-12)
+
+
+### Features
+
+* enhance Web Vitals telemetry with semantic attributes ([#316](https://github.com/launchdarkly/observability-sdk/issues/316)) ([2f47edf](https://github.com/launchdarkly/observability-sdk/commit/2f47edf240d0e5d9625498de7e236fc3beadebbb))
+
 ## [9.23.0](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-9.22.5...highlight.run-9.23.0) (2025-11-12)
 
 

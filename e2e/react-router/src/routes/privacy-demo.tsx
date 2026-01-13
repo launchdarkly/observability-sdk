@@ -42,6 +42,10 @@ export default function PrivacyDemo() {
 				<p className="ld-mask-text">
 					<span>Secret text</span>
 				</p>
+				<div className="ld-mask-text">
+					Test a string with shorter words like in and with extra
+					{'    '}spaces.
+				</div>
 			</section>
 
 			<section>

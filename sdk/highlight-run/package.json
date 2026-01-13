@@ -1,6 +1,6 @@
 {
 	"name": "highlight.run",
-	"version": "9.23.0",
+	"version": "9.25.0",
 	"description": "Open source, fullstack monitoring. Capture frontend errors, record server side logs, and visualize what broke with session replay.",
 	"keywords": [
 		"highlight",
@@ -81,7 +81,7 @@
 		"dist"
 	],
 	"dependencies": {
-		"@launchdarkly/js-client-sdk": "^0.6.0",
+		"@launchdarkly/js-client-sdk": "^0.11.0",
 		"imurmurhash": "^0.1.4"
 	},
 	"devDependencies": {

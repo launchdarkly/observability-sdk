@@ -1,6 +1,7 @@
 package com.launchdarkly.observability.sdk
 
 import com.launchdarkly.observability.client.ObservabilityClient
+import com.launchdarkly.observability.client.ObservabilityContext
 import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.observability.interfaces.Observe
 import io.opentelemetry.api.common.Attributes
@@ -72,6 +73,13 @@ class LDObserve(private val client: Observe) : Observe {
                 return false // No-op, return false to indicate flush was not successful
             }
         }
+
+        /**
+         * Shared context for other plugins (e.g. Session Replay) to access Observability configuration and dependencies.
+         */
+        @Volatile
+        var context: ObservabilityContext? = null
+            internal set
 
         fun init(client: ObservabilityClient) {
             delegate = LDObserve(client)
