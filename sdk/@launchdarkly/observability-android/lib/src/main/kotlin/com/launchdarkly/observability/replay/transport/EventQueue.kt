@@ -1,8 +1,8 @@
 package com.launchdarkly.observability.replay.transport
 
 internal class EventQueue(
-    private val limitSize: Int = DEFAULT_LIMIT_SIZE,
-    private val exporterLimitSize: Int = DEFAULT_EXPORTER_LIMIT_SIZE,
+    private val totalCostLimit: Int = DEFAULT_TOTAL_COST_LIMIT,
+    private val exporterCostLimit: Int = DEFAULT_EXPORTER_COST_LIMIT,
 ) {
     data class EarliestItemsResult(
         val exporterClass: Class<out EventExporting>,
@@ -11,26 +11,44 @@ internal class EventQueue(
     )
 
     private data class ExporterState(
-        var size: Int = 0,
+        var cost: Int = 0,
     )
 
     private val lock = Any()
     private val storage = mutableMapOf<Class<out EventExporting>, ArrayDeque<EventQueueItem>>()
-    private val currentSizes = mutableMapOf<Class<out EventExporting>, ExporterState>()
-    private var currentSize = 0
+    private val currentExporterCosts = mutableMapOf<Class<out EventExporting>, ExporterState>()
+    private var currentCost = 0
 
     fun isFull(): Boolean = synchronized(lock) {
-        currentSize >= limitSize
+        currentCost >= totalCostLimit
     }
 
     fun send(payload: EventQueueItemPayload) {
-        send(EventQueueItem(payload))
+        synchronized(lock) {
+            sendLocked(EventQueueItem(payload))
+        }
     }
 
     fun send(payloads: List<EventQueueItemPayload>) {
-        payloads.forEach { send(it) }
+        synchronized(lock) {
+            payloads.forEach { sendLocked(EventQueueItem(it)) }
+        }
     }
 
+    /**
+     * Retrieves the earliest batch of items from the event queue.
+     *
+     * This function identifies the sub-queue (grouped by exporter class) that contains the oldest event.
+     * From that sub-queue, it takes a batch of items that fits within the specified `costBudget` and `limit`.
+     *
+     * @param costBudget The maximum total cost of items to be returned. The batch size will be constrained by this value.
+     * @param limit The maximum number of items to return.
+     * @param except A set of exporter classes to exclude from the search. This is used to prevent retrying a batch for an exporter that is
+     *   currently being processed or has recently failed.
+     *
+     * @return An [EarliestItemsResult] containing the exporter class, the list of items, and their
+     *   total cost, or `null` if the queue is empty or no suitable items are found.
+     */
     fun earliest(
         costBudget: Int,
         limit: Int,
@@ -59,6 +77,17 @@ internal class EventQueue(
         )
     }
 
+    /**
+     * Removes the first [count] items from the queue for a given [exporterClass].
+     *
+     * This method is thread-safe. It will remove up to `count` items from the beginning of the
+     * deque associated with the specified exporter. It then updates the total cost of the queue
+     * and the cost specific to that exporter. If removing these items results in the exporter's
+     * queue becoming empty, the exporter is removed from the internal storage.
+     *
+     * @param exporterClass The class of the exporter whose items should be removed.
+     * @param count The maximum number of items to remove from the front of the queue.
+     */
     fun removeFirst(exporterClass: Class<out EventExporting>, count: Int) {
         synchronized(lock) {
             val items = storage[exporterClass] ?: return
@@ -70,9 +99,9 @@ internal class EventQueue(
                 removedCost += items.removeFirst().cost
             }
 
-            currentSize = (currentSize - removedCost).coerceAtLeast(0)
-            val state = currentSizes.getOrPut(exporterClass) { ExporterState() }
-            state.size = (state.size - removedCost).coerceAtLeast(0)
+            currentCost = (currentCost - removedCost).coerceAtLeast(0)
+            val state = currentExporterCosts.getOrPut(exporterClass) { ExporterState() }
+            state.cost = (state.cost - removedCost).coerceAtLeast(0)
 
             if (items.isEmpty()) {
                 storage.remove(exporterClass)
@@ -80,21 +109,23 @@ internal class EventQueue(
         }
     }
 
-    private fun send(item: EventQueueItem) {
-        synchronized(lock) {
-            if (currentSize != 0 && currentSize + item.cost > limitSize) {
-                return
-            }
+    /**
+     * This method is not thread-safe and must be called within a `synchronized(lock)` block.
+     *
+     * We don't use a synchronized block inside this method to avoid the overhead of acquiring
+     * the lock multiple times when it is called from `send(payloads: List<EventQueueItemPayload>)`.
+     *
+     * @param item The event item to add to the queue.
+     */
+    private fun sendLocked(item: EventQueueItem) {
+        if (currentCost != 0 && currentCost + item.cost > totalCostLimit) return
 
-            val state = currentSizes.getOrPut(item.exporterClass) { ExporterState() }
-            if (state.size + item.cost > exporterLimitSize) {
-                return
-            }
+        val state = currentExporterCosts.getOrPut(item.exporterClass) { ExporterState() }
+        if (state.cost + item.cost > exporterCostLimit) return
 
-            storage.getOrPut(item.exporterClass) { ArrayDeque() }.addLast(item)
-            currentSize += item.cost
-            state.size += item.cost
-        }
+        storage.getOrPut(item.exporterClass) { ArrayDeque() }.addLast(item)
+        currentCost += item.cost
+        state.cost += item.cost
     }
 
     private fun takeFirstItems(
@@ -118,7 +149,7 @@ internal class EventQueue(
     }
 
     private companion object {
-        private const val DEFAULT_LIMIT_SIZE = 5_000_000
-        private const val DEFAULT_EXPORTER_LIMIT_SIZE = 2_500_000
+        private const val DEFAULT_TOTAL_COST_LIMIT = 5_000_000
+        private const val DEFAULT_EXPORTER_COST_LIMIT = 2_500_000
     }
 }
