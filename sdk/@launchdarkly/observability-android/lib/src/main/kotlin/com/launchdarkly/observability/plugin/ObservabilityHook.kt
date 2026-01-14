@@ -54,7 +54,6 @@ internal constructor(
         }
 
         val builder = tracer.spanBuilder(FEATURE_FLAG_SPAN_NAME)
-            .setParent(Context.current().with(Span.current()))
 
         val attrBuilder = Attributes.builder()
         attrBuilder.put(SEMCONV_FEATURE_FLAG_KEY, seriesContext.flagKey)
