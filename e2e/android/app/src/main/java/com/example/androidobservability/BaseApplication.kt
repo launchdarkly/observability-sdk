@@ -31,10 +31,10 @@ open class BaseApplication : Application() {
             AttributeKey.stringKey("example"), "value"
         ),
         debug = true,
-        tracesApi = ObservabilityOptions.TracesApi(includeErrors = false, includeSpans = false),
-        metricsApi = ObservabilityOptions.MetricsApi.disabled(),
+        tracesApi = ObservabilityOptions.TracesApi.enabled(),
+        metricsApi = ObservabilityOptions.MetricsApi.enabled(),
         instrumentations = ObservabilityOptions.Instrumentations(
-            crashReporting = true, launchTime = true, activityLifecycle = false
+            crashReporting = true, launchTime = true, activityLifecycle = true
         ),
         logAdapter = LDAndroidLogging.adapter(),
     )
