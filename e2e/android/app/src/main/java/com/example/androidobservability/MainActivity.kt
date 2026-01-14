@@ -377,7 +377,7 @@ private fun IdentifyButtons(viewModel: ViewModel) {
 private fun CustomerApiButtons(viewModel: ViewModel) {
     var customLogText by remember { mutableStateOf("") }
     var customSpanText by remember { mutableStateOf("") }
-    var flagKey by remember { mutableStateOf("") }
+    var flagKey by remember { mutableStateOf("my-feature") }
 
     Text(
         text = "Customer API",
