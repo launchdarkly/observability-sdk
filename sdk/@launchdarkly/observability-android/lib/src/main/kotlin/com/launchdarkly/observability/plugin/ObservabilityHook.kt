@@ -58,6 +58,7 @@ internal constructor(
         val attrBuilder = Attributes.builder()
         attrBuilder.put(SEMCONV_FEATURE_FLAG_KEY, seriesContext.flagKey)
         attrBuilder.put(SEMCONV_FEATURE_FLAG_PROVIDER_NAME, PROVIDER_NAME)
+        attrBuilder.put(SEMCONV_IDENTIFY_CONTEXT_ID, seriesContext.context.fullyQualifiedKey)
         builder.setAllAttributes(attrBuilder.build())
 
         val span = builder.startSpan()
@@ -76,6 +77,7 @@ internal constructor(
         val eventAttributes = Attributes.builder()
         eventAttributes.put(SEMCONV_FEATURE_FLAG_KEY, seriesContext.flagKey)
         eventAttributes.put(SEMCONV_FEATURE_FLAG_PROVIDER_NAME, PROVIDER_NAME)
+        eventAttributes.put(SEMCONV_IDENTIFY_CONTEXT_ID, seriesContext.context.fullyQualifiedKey)
 
         evaluationDetail.reason?.isInExperiment?.let {
             eventAttributes.put(CUSTOM_FEATURE_FLAG_RESULT_REASON_IN_EXPERIMENT, it)
