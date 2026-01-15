@@ -367,6 +367,21 @@ function stringifyProperties(
 		}
 	}
 
+	const drainPendingMessages = async () => {
+		while (pendingMessages.length > 0 && shouldSendRequest()) {
+			const msg = pendingMessages.shift()!
+			try {
+				await processMessage(msg)
+				numberOfFailedRequests = 0
+			} catch (e) {
+				if (debug) {
+					console.error(e)
+				}
+				numberOfFailedRequests += 1
+			}
+		}
+	}
+
 	worker.onmessage = async function (e) {
 		if (e.data.message.type === MessageType.Initialize) {
 			backend = e.data.message.backend
@@ -381,27 +396,29 @@ function stringifyProperties(
 				getGraphQLRequestWrapper(),
 			)
 
-			while (pendingMessages.length > 0) {
-				const msg = pendingMessages.shift()!
-				try {
-					await processMessage(msg)
-					numberOfFailedRequests = 0
-				} catch (e) {
-					if (debug) {
-						console.error(e)
-					}
-					numberOfFailedRequests += 1
-				}
-			}
+			await drainPendingMessages()
 			return
 		}
+
+		// Handle Reset before shouldSendRequest - always execute immediately
+		// This clears any pending data from a previous session on forceNew/sessionKey change
+		if (e.data.message.type === MessageType.Reset) {
+			pendingMessages.length = 0
+			metricsPayload.length = 0
+			numberOfFailedRequests = 0
+			numberOfFailedPushPayloads = 0
+			return
+		}
+
 		if (!shouldSendRequest()) {
 			pendingMessages.push(e.data.message)
 			return
 		}
+
 		try {
 			await processMessage(e.data.message)
 			numberOfFailedRequests = 0
+			await drainPendingMessages()
 		} catch (e) {
 			if (debug) {
 				console.error(e)

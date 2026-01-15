@@ -9,6 +9,7 @@ export type PropertyType = {
 
 export enum MessageType {
 	Initialize,
+	Reset,
 	AsyncEvents,
 	Identify,
 	Properties,
@@ -24,6 +25,10 @@ export type InitializeMessage = {
 	sessionSecureID: string
 	debug: boolean
 	recordingStartTime: number
+}
+
+export type ResetMessage = {
+	type: MessageType.Reset
 }
 
 export type AsyncEventsMessage = {
@@ -93,6 +98,7 @@ export type StopEventResponse = {
 export type HighlightClientWorkerParams = {
 	message:
 		| InitializeMessage
+		| ResetMessage
 		| AsyncEventsMessage
 		| IdentifyMessage
 		| PropertiesMessage
