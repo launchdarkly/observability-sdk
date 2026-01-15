@@ -381,7 +381,8 @@ function stringifyProperties(
 				getGraphQLRequestWrapper(),
 			)
 
-			for (const msg of pendingMessages) {
+			while (pendingMessages.length > 0) {
+				const msg = pendingMessages.shift()!
 				try {
 					await processMessage(msg)
 					numberOfFailedRequests = 0
@@ -392,7 +393,6 @@ function stringifyProperties(
 					numberOfFailedRequests += 1
 				}
 			}
-			pendingMessages.length = 0
 			return
 		}
 		if (!shouldSendRequest()) {
