@@ -22,12 +22,32 @@ import kotlinx.serialization.json.put
 class SessionReplayEventGenerator(
     private val canvasDrawEntourage: Int
 ) {
-    private var sidCounter = 0
-    var generatingCanvasSize: Int = 0
+    /**
+     * Sequence ID for the events being generated.
+     * Each event in a session needs a unique, monotonically increasing "sid".
+     * This is incremented by [nextSid] for each new event.
+     */
+    private var lastSid = 0
+    var accumulatedCanvasSize: Int = 0
+
+    data class State(
+        val lastSid: Int = 0,
+        val generatingCanvasSize: Int = 0,
+    )
 
     private fun nextSid(): Int {
-        sidCounter++
-        return sidCounter
+        lastSid++
+        return lastSid
+    }
+
+    fun getState(): State = State(
+        lastSid = lastSid,
+        generatingCanvasSize = accumulatedCanvasSize,
+    )
+
+    fun restoreState(state: State) {
+        lastSid = state.lastSid
+        accumulatedCanvasSize = state.generatingCanvasSize
     }
 
     /**
@@ -47,7 +67,7 @@ class SessionReplayEventGenerator(
                 )
             )
         )
-        generatingCanvasSize += captureEvent.imageBase64.length + canvasDrawEntourage
+        accumulatedCanvasSize += captureEvent.imageBase64.length + canvasDrawEntourage
         eventsBatch.add(incrementalEvent)
 
         return eventsBatch
@@ -73,7 +93,7 @@ class SessionReplayEventGenerator(
         )
         eventBatch.add(metaEvent)
 
-        val snapShotEvent = Event(
+        val snapshotEvent = Event(
             type = EventType.FULL_SNAPSHOT,
             timestamp = captureEvent.timestamp,
             sid = nextSid(),
@@ -128,8 +148,8 @@ class SessionReplayEventGenerator(
         )
 
         // starting again canvas size
-        generatingCanvasSize = captureEvent.imageBase64.length + canvasDrawEntourage
-        eventBatch.add(snapShotEvent)
+        accumulatedCanvasSize = captureEvent.imageBase64.length + canvasDrawEntourage
+        eventBatch.add(snapshotEvent)
 
         val viewportEvent = Event(
             type = EventType.CUSTOM,
@@ -238,8 +258,4 @@ class SessionReplayEventGenerator(
             data = EventDataUnion.CustomEventDataWrapper(customData)
         )
     }
-
-    
 }
-
-

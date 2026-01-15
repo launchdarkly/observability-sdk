@@ -47,21 +47,26 @@ class SessionReplayExporter(
     private var payloadIdCounter = 0
     private val eventGenerator = SessionReplayEventGenerator(canvasDrawEntourage)
 
-    private data class LastSeenState(
+    private data class LastCaptureState(
         val sessionId: String?,
         val height: Int,
         val width: Int,
     )
 
-    private var lastSeenState = LastSeenState(sessionId = null, height = 0, width = 0)
+    private var lastCaptureState = LastCaptureState(sessionId = null, height = 0, width = 0)
     private var pushedCanvasSize = 0
 
     override suspend fun export(items: List<EventQueueItem>) {
         if (items.isEmpty()) return
 
         exportMutex.withLock {
+            val lastCaptureSnapshot = lastCaptureState
+            val payloadIdSnapshot = payloadIdCounter
+            val pushedCanvasSnapshot = pushedCanvasSize
+            val generatorSnapshot = eventGenerator.getState()
+
             try {
-                eventGenerator.generatingCanvasSize = pushedCanvasSize
+                eventGenerator.accumulatedCanvasSize = pushedCanvasSize
 
                 // Map to collect events by session ID
                 val eventsBySession = mutableMapOf<String, MutableList<Event>>()
@@ -108,10 +113,15 @@ class SessionReplayExporter(
                     if (events.isNotEmpty()) {
                         replayApiService.pushPayload(sessionId, "${nextPayloadId()}", events)
                         // flushes generating canvas size into pushedCanvasSize
-                        pushedCanvasSize = eventGenerator.generatingCanvasSize
+                        pushedCanvasSize = eventGenerator.accumulatedCanvasSize
                     }
                 }
             } catch (e: Exception) {
+                // Roll back exporter state so retries regenerate identical events and payload ids.
+                lastCaptureState = lastCaptureSnapshot
+                payloadIdCounter = payloadIdSnapshot
+                pushedCanvasSize = pushedCanvasSnapshot
+                eventGenerator.restoreState(generatorSnapshot)
                 // TODO: O11Y-627 - pass in logger to implementation and use here
                 throw e
             }
@@ -122,8 +132,12 @@ class SessionReplayExporter(
         exportMutex.withLock {
             val sessionId = newIdentifyEvent.sessionId
             if (sessionId != null) {
-                replayApiService.identifyReplaySession(sessionId, newIdentifyEvent)
-                identifyItemPayload = newIdentifyEvent
+                try {
+                    replayApiService.identifyReplaySession(sessionId, newIdentifyEvent)
+                    identifyItemPayload = newIdentifyEvent
+                } catch (e: Exception) {
+                    // TODO: O11Y-627 - pass in logger to implementation and use here
+                }
             }
         }
     }
@@ -138,17 +152,17 @@ class SessionReplayExporter(
         eventsBySession: MutableMap<String, MutableList<Event>>,
         sessionsNeedingInit: MutableSet<String>,
     ) {
-        if (capture.session != lastSeenState.sessionId) {
+        if (capture.session != lastCaptureState.sessionId) {
             sessionsNeedingInit.add(capture.session)
         }
 
-        val stateChanged = capture.session != lastSeenState.sessionId ||
-            capture.origHeight != lastSeenState.height ||
-            capture.origWidth != lastSeenState.width ||
-            eventGenerator.generatingCanvasSize >= canvasBufferLimit
+        val stateChanged = capture.session != lastCaptureState.sessionId ||
+            capture.origHeight != lastCaptureState.height ||
+            capture.origWidth != lastCaptureState.width ||
+            eventGenerator.accumulatedCanvasSize >= canvasBufferLimit
 
         if (stateChanged) {
-            lastSeenState = LastSeenState(
+            lastCaptureState = LastCaptureState(
                 sessionId = capture.session,
                 height = capture.origHeight,
                 width = capture.origWidth,

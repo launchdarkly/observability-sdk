@@ -38,37 +38,29 @@ class SessionReplayApiService(
      * @param organizationVerboseId The organization verbose ID
      */
     suspend fun initializeReplaySession(organizationVerboseId: String, sessionSecureId: String) {
-        try {
-            val variables = mapOf(
-                "organization_verbose_id" to JsonPrimitive(organizationVerboseId),
-                "session_secure_id" to JsonPrimitive(sessionSecureId),
-                "enable_strict_privacy" to JsonPrimitive(false),
-                "enable_recording_network_contents" to JsonPrimitive(false),
-                "clientVersion" to JsonPrimitive(BuildConfig.OBSERVABILITY_SDK_VERSION),
-                "firstloadVersion" to JsonPrimitive(BuildConfig.OBSERVABILITY_SDK_VERSION),
-                "clientConfig" to JsonPrimitive("{}"), // TODO: O11Y-631 - remove hardcoded params
-                "environment" to JsonPrimitive(""), // TODO: O11Y-631 - remove hardcoded params
-                "appVersion" to JsonPrimitive(serviceVersion),
-                "serviceName" to JsonPrimitive(serviceName),
-                "fingerprint" to JsonPrimitive(""), // TODO: O11Y-631 - remove hardcoded params
-                "client_id" to JsonPrimitive(""), // TODO: O11Y-631 - remove hardcoded params
-                "network_recording_domains" to JsonArray(emptyList()),
-                "privacy_setting" to JsonPrimitive("none"), // TODO: O11Y-631 - remove hardcoded params
-                "id" to JsonPrimitive("") // TODO: O11Y-631 - remove hardcoded params
-            )
-            val response = graphqlClient.execute(
-                queryFileName = INITIALIZE_REPLAY_SESSION_QUERY_FILE_PATH,
-                variables = variables,
-                dataSerializer = InitializeReplaySessionResponse.serializer()
-            )
-
-            // TODO: O11Y-624 - check graphql requests can generate errors when necessary and add error handling
-            if (response.errors?.isNotEmpty() == true) {
-                printErrors(response)
-            }
-        } catch (e: Exception) {
-            Log.e("SessionReplayApiService", "Error initializing replay session: ${e.message}")
-        }
+        val variables = mapOf(
+            "organization_verbose_id" to JsonPrimitive(organizationVerboseId),
+            "session_secure_id" to JsonPrimitive(sessionSecureId),
+            "enable_strict_privacy" to JsonPrimitive(false),
+            "enable_recording_network_contents" to JsonPrimitive(false),
+            "clientVersion" to JsonPrimitive(BuildConfig.OBSERVABILITY_SDK_VERSION),
+            "firstloadVersion" to JsonPrimitive(BuildConfig.OBSERVABILITY_SDK_VERSION),
+            "clientConfig" to JsonPrimitive("{}"), // TODO: O11Y-631 - remove hardcoded params
+            "environment" to JsonPrimitive(""), // TODO: O11Y-631 - remove hardcoded params
+            "appVersion" to JsonPrimitive(serviceVersion),
+            "serviceName" to JsonPrimitive(serviceName),
+            "fingerprint" to JsonPrimitive(""), // TODO: O11Y-631 - remove hardcoded params
+            "client_id" to JsonPrimitive(""), // TODO: O11Y-631 - remove hardcoded params
+            "network_recording_domains" to JsonArray(emptyList()),
+            "privacy_setting" to JsonPrimitive("none"), // TODO: O11Y-631 - remove hardcoded params
+            "id" to JsonPrimitive("") // TODO: O11Y-631 - remove hardcoded params
+        )
+        val response = graphqlClient.execute(
+            queryFileName = INITIALIZE_REPLAY_SESSION_QUERY_FILE_PATH,
+            variables = variables,
+            dataSerializer = InitializeReplaySessionResponse.serializer()
+        )
+        throwOnErrors(response, "initializeReplaySession")
     }
 
     /**
@@ -82,25 +74,19 @@ class SessionReplayApiService(
         userIdentifier: String = "", // TODO: O11Y-631 - remove hardcoded params
         userObject: JsonElement = JsonNull
     ) {
-        try {
-            val variables = mapOf(
-                "session_secure_id" to JsonPrimitive(sessionSecureId),
-                "user_identifier" to JsonPrimitive(userIdentifier),
-                "user_object" to userObject
-            )
+        val variables = mapOf(
+            "session_secure_id" to JsonPrimitive(sessionSecureId),
+            "user_identifier" to JsonPrimitive(userIdentifier),
+            "user_object" to userObject
+        )
 
-            val response = graphqlClient.execute(
-                queryFileName = IDENTIFY_REPLAY_SESSION_QUERY_FILE_PATH,
-                variables = variables,
-                dataSerializer = IdentifySessionResponse.serializer()
-            )
+        val response = graphqlClient.execute(
+            queryFileName = IDENTIFY_REPLAY_SESSION_QUERY_FILE_PATH,
+            variables = variables,
+            dataSerializer = IdentifySessionResponse.serializer()
+        )
 
-            if (response.errors?.isNotEmpty() == true) {
-                printErrors(response)
-            }
-        } catch (e: Exception) {
-            Log.e("SessionReplayApiService", "Error identifying replay session: ${e.message}")
-        }
+        throwOnErrors(response, "identifyReplaySession")
     }
 
     /**
@@ -126,32 +112,26 @@ class SessionReplayApiService(
      * @param events The list of events to push
      */
     suspend fun pushPayload(sessionSecureId: String, payloadId: String, events: List<Event>) {
-        try {
-            val variables = mapOf(
-                "session_secure_id" to JsonPrimitive(sessionSecureId),
-                "payload_id" to JsonPrimitive(payloadId),
-                "events" to json.encodeToJsonElement(
-                    ReplayEventsInput.serializer(),
-                    ReplayEventsInput(events)
-                ),
-                "messages" to JsonPrimitive("{\"messages\":[]}"),
-                "resources" to JsonPrimitive("{\"resources\":[]}"),
-                "web_socket_events" to JsonPrimitive("{\"webSocketEvents\":[]}"),
-                "errors" to JsonArray(emptyList()),
-            )
+        val variables = mapOf(
+            "session_secure_id" to JsonPrimitive(sessionSecureId),
+            "payload_id" to JsonPrimitive(payloadId),
+            "events" to json.encodeToJsonElement(
+                ReplayEventsInput.serializer(),
+                ReplayEventsInput(events)
+            ),
+            "messages" to JsonPrimitive("{\"messages\":[]}"),
+            "resources" to JsonPrimitive("{\"resources\":[]}"),
+            "web_socket_events" to JsonPrimitive("{\"webSocketEvents\":[]}"),
+            "errors" to JsonArray(emptyList()),
+        )
 
-            val response = graphqlClient.execute(
-                queryFileName = PUSH_PAYLOAD_QUERY_FILE_PATH,
-                variables = variables,
-                dataSerializer = PushPayloadResponse.serializer()
-            )
+        val response = graphqlClient.execute(
+            queryFileName = PUSH_PAYLOAD_QUERY_FILE_PATH,
+            variables = variables,
+            dataSerializer = PushPayloadResponse.serializer()
+        )
 
-            if (response.errors?.isNotEmpty() == true) {
-                printErrors(response)
-            }
-        } catch (e: Exception) {
-            Log.e("SessionReplayApiService", "Error pushing payload: ${e.message}")
-        }
+        throwOnErrors(response, "pushPayload")
     }
 
     private fun <T> printErrors(response: GraphQLResponse<T>) {
@@ -162,4 +142,13 @@ class SessionReplayApiService(
             }
         }
     }
+
+    private fun <T> throwOnErrors(response: GraphQLResponse<T>, operation: String) {
+        val errors = response.errors?.takeIf { it.isNotEmpty() } ?: return
+        printErrors(response)
+        val message = errors.joinToString("; ") { it.message }
+        throw SessionReplayApiException("$operation failed: $message")
+    }
 }
+
+internal class SessionReplayApiException(message: String) : RuntimeException(message)
