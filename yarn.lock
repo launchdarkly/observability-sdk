@@ -8411,24 +8411,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@launchdarkly/js-client-sdk-common@npm:1.12.3":
-  version: 1.12.3
-  resolution: "@launchdarkly/js-client-sdk-common@npm:1.12.3"
-  dependencies:
-    "@launchdarkly/js-sdk-common": "npm:2.13.0"
-  checksum: 10/1a68b443c0d4f577cf9ad20dc5ed2a4d01b87a17a4621db8aaf9931bf506bcf92042202de4a1822921cd7cbdea759a8787af50b3dafe38275a3cbe8613871aea
-  languageName: node
-  linkType: hard
-
-"@launchdarkly/js-client-sdk-common@npm:1.13.0":
-  version: 1.13.0
-  resolution: "@launchdarkly/js-client-sdk-common@npm:1.13.0"
-  dependencies:
-    "@launchdarkly/js-sdk-common": "npm:2.17.0"
-  checksum: 10/754d0b873714adac5d63fa3b5c416fcc8e089d09bf9061aa30e038a171c647cf4cfe0aded0f33ace02545cd0ef02e011500241ccdcda412fb6e514492b51e730
-  languageName: node
-  linkType: hard
-
 "@launchdarkly/js-client-sdk-common@npm:1.15.0":
   version: 1.15.0
   resolution: "@launchdarkly/js-client-sdk-common@npm:1.15.0"
@@ -8438,35 +8420,21 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@launchdarkly/js-client-sdk@npm:^0.4.1":
-  version: 0.4.1
-  resolution: "@launchdarkly/js-client-sdk@npm:0.4.1"
+"@launchdarkly/js-client-sdk-common@npm:1.16.0":
+  version: 1.16.0
+  resolution: "@launchdarkly/js-client-sdk-common@npm:1.16.0"
   dependencies:
-    "@launchdarkly/js-client-sdk-common": "npm:1.12.3"
-  checksum: 10/b949ef137eb8ceeb90afd1ac61e6854f9ec3829fca15a4c1d10cdec0ef0f5baac96acaffaf6c71c1c27a9744cd027a79e5e3fdc79b833dccb53e903f9ba02b33
+    "@launchdarkly/js-sdk-common": "npm:2.20.0"
+  checksum: 10/afc9e39403fdeefc5de650fa7dae3fd2faa35e7015c2d58acd6e9f0ea0f79c13410c9cd4911ce559dca6b84cee02b782aa1a09901a0b7d191b3684d1e68339ca
   languageName: node
   linkType: hard
 
-"@launchdarkly/js-client-sdk@npm:^0.6.0":
-  version: 0.6.0
-  resolution: "@launchdarkly/js-client-sdk@npm:0.6.0"
+"@launchdarkly/js-client-sdk@npm:^0.11.0":
+  version: 0.11.0
+  resolution: "@launchdarkly/js-client-sdk@npm:0.11.0"
   dependencies:
-    "@launchdarkly/js-client-sdk-common": "npm:1.13.0"
-  checksum: 10/b95fb6178055c4c4df9a8f1ca4eadd3a77eb160ec655a6175fa55e4103e03b979caa8eb1a35b9c91109f6fbda086bb34ba91f0ba626635a4bf985258c55463b5
-  languageName: node
-  linkType: hard
-
-"@launchdarkly/js-sdk-common@npm:2.13.0":
-  version: 2.13.0
-  resolution: "@launchdarkly/js-sdk-common@npm:2.13.0"
-  checksum: 10/2c32ff5b5d77af8cfc228476a512ad6191868811af402d0b85586d871c1974cc3386e1a2efa9aece4529d37815b183575e74e7c01179d8183507b5dfd548290e
-  languageName: node
-  linkType: hard
-
-"@launchdarkly/js-sdk-common@npm:2.17.0":
-  version: 2.17.0
-  resolution: "@launchdarkly/js-sdk-common@npm:2.17.0"
-  checksum: 10/09ae02cbfd809b5b926c76aaaf771db11ffa8625c19ecbacc4176a7effc65bd0ec4fcd9fc539312d66910147c263b8143d773a34cc8f9ed3bb8e0a36ff36e29d
+    "@launchdarkly/js-client-sdk-common": "npm:1.16.0"
+  checksum: 10/56b6565c58663f50225964f393baba40794d57d99f7e0475985c8c1ec404286c406282a9a1f59ce5249a05e2845d8a459f708ab5fc594b81726c32ac59eea13e
   languageName: node
   linkType: hard
 
@@ -8474,6 +8442,13 @@ __metadata:
   version: 2.18.0
   resolution: "@launchdarkly/js-sdk-common@npm:2.18.0"
   checksum: 10/1dd45dce7b81d94c96af8d0c9fb834def91ef1c31c258f4c2d4e8e96a8ae32d1a152b2aa4dcf08ae72719c86bfdfa5351f616802fc4db4ac829b8757da2adfdb
+  languageName: node
+  linkType: hard
+
+"@launchdarkly/js-sdk-common@npm:2.20.0":
+  version: 2.20.0
+  resolution: "@launchdarkly/js-sdk-common@npm:2.20.0"
+  checksum: 10/9997bfb517aa9edaa689b6f44eb86a4847f45d798d8a32c8bd6614af42f5ab432acac989d755578137db2892aad43c32eb8ad61330ced24ecfbf001855349116
   languageName: node
   linkType: hard
 
@@ -28156,7 +28131,7 @@ __metadata:
     "@graphql-codegen/typescript": "npm:^4.0.1"
     "@graphql-codegen/typescript-graphql-request": "npm:^6.0.1"
     "@graphql-codegen/typescript-operations": "npm:^4.0.1"
-    "@launchdarkly/js-client-sdk": "npm:^0.6.0"
+    "@launchdarkly/js-client-sdk": "npm:^0.11.0"
     "@opentelemetry/api": "npm:^1.9.0"
     "@opentelemetry/exporter-metrics-otlp-http": "npm:>=0.57.1 < 0.200.0"
     "@opentelemetry/exporter-trace-otlp-http": "npm:>=0.57.1 < 0.200.0"
@@ -35311,7 +35286,7 @@ __metadata:
   dependencies:
     "@highlight-run/next": "workspace:*"
     "@highlight-run/pino": "workspace:*"
-    "@launchdarkly/js-client-sdk": "npm:^0.4.1"
+    "@launchdarkly/js-client-sdk": "npm:^0.11.0"
     "@next/env": "npm:^15.1.7"
     "@prisma/client": "npm:^6.4.1"
     "@prisma/instrumentation": "npm:^6.4.1"
@@ -38708,14 +38683,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-dom@npm:19.0.0, react-dom@npm:^19.0.0":
-  version: 19.0.0
-  resolution: "react-dom@npm:19.0.0"
+"react-dom@npm:19.0.3":
+  version: 19.0.3
+  resolution: "react-dom@npm:19.0.3"
   dependencies:
     scheduler: "npm:^0.25.0"
   peerDependencies:
-    react: ^19.0.0
-  checksum: 10/aa64a2f1991042f516260e8b0eca0ae777b6c8f1aa2b5ae096e80bbb6ac9b005aef2bca697969841d34f7e1819556263476bdfea36c35092e8d9aefde3de2d9a
+    react: ^19.0.3
+  checksum: 10/eafd4affbfdcabd94f8b6ea8fa097b46ff4303d001a7f76600bdb4a309517fc16dcc5de15400743643d63c6fc2e53271b6a0b33539dd3e129898d15431bcf0aa
   languageName: node
   linkType: hard
 
@@ -39267,7 +39242,7 @@ __metadata:
   resolution: "react-router@workspace:e2e/react-router"
   dependencies:
     "@highlight-run/react": "workspace:*"
-    "@launchdarkly/js-client-sdk": "npm:^0.6.0"
+    "@launchdarkly/js-client-sdk": "npm:^0.11.0"
     "@launchdarkly/observability": "workspace:*"
     "@launchdarkly/session-replay": "workspace:*"
     "@types/react": "npm:^19.0.4"
@@ -39290,18 +39265,18 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"react-server-dom-webpack@npm:19.0.1":
-  version: 19.0.1
-  resolution: "react-server-dom-webpack@npm:19.0.1"
+"react-server-dom-webpack@npm:19.0.3":
+  version: 19.0.3
+  resolution: "react-server-dom-webpack@npm:19.0.3"
   dependencies:
     acorn-loose: "npm:^8.3.0"
     neo-async: "npm:^2.6.1"
     webpack-sources: "npm:^3.2.0"
   peerDependencies:
-    react: ^19.0.1
-    react-dom: ^19.0.1
+    react: ^19.0.3
+    react-dom: ^19.0.3
     webpack: ^5.59.0
-  checksum: 10/bf457509c1201b2bd5080beee6ffa50a2dff70e0ff8130e95bb39d75e51a2bbfad4b72acd732ac4f8dd7f91ec202986b44f68f78a81d1acd266279e1ce63721c
+  checksum: 10/35aa69eb2531effa3e911690eb60cad081e0d13833636c2f2ede959929f065faa88f904a246c0eeae57e169584ae964596a68e3880c1b8be365423990bdb9baf
   languageName: node
   linkType: hard
 
@@ -39394,10 +39369,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react@npm:19.0.0, react@npm:^19.0.0":
-  version: 19.0.0
-  resolution: "react@npm:19.0.0"
-  checksum: 10/2490969c503f644703c88990d20e4011fa6119ddeca451e9de48f6d7ab058d670d2852a5fcd3aa3cd90a923ab2815d532637bd4a814add402ae5c0d4f129ee71
+"react@npm:19.0.3":
+  version: 19.0.3
+  resolution: "react@npm:19.0.3"
+  checksum: 10/b7a4236ca5f6730935167061bd7aa19247f94295af09c2ad7a009da995dbc5eb8adb372dde53c01c891a1e0c7171826cccd4f7fc12f974aff877c35402879c69
   languageName: node
   linkType: hard
 

@@ -17,10 +17,10 @@ import io.opentelemetry.context.Scope
  * This class is a hook implementation for recording flag evaluation and identify events
  * on spans.
  */
-class TracingHook
+class ObservabilityHook
 
 /**
- * Creates an [TracingHook]
+ * Creates an [ObservabilityHook]
  *
  * @param withSpans will include child spans for the various hook series when they happen
  * @param withValue will include the value of the feature flag in the recorded evaluation events
@@ -53,13 +53,14 @@ internal constructor(
             return seriesData
         }
 
-        val builder = tracer.spanBuilder(seriesContext.method)
-            .setParent(Context.current().with(Span.current()))
+        val builder = tracer.spanBuilder(FEATURE_FLAG_SPAN_NAME)
 
         val attrBuilder = Attributes.builder()
         attrBuilder.put(SEMCONV_FEATURE_FLAG_KEY, seriesContext.flagKey)
         attrBuilder.put(SEMCONV_FEATURE_FLAG_PROVIDER_NAME, PROVIDER_NAME)
+        attrBuilder.put(SEMCONV_FEATURE_FLAG_CONTEXT_ID, seriesContext.context.fullyQualifiedKey)
         builder.setAllAttributes(attrBuilder.build())
+
         val span = builder.startSpan()
         val retSeriesData: MutableMap<String, Any> = HashMap(seriesData)
         retSeriesData[DATA_KEY_FEATURE_FLAG_SPAN] = span
@@ -71,31 +72,31 @@ internal constructor(
         seriesData: Map<String, Any>,
         evaluationDetail: EvaluationDetail<LDValue>
     ): Map<String, Any> {
-        val value = seriesData[DATA_KEY_FEATURE_FLAG_SPAN]
-        if (value is Span) {
-            value.end()
-        }
+        val span = seriesData[DATA_KEY_FEATURE_FLAG_SPAN] as? Span ?: return seriesData
 
-        val attrBuilder = Attributes.builder()
-        attrBuilder.put(SEMCONV_FEATURE_FLAG_KEY, seriesContext.flagKey)
-        attrBuilder.put(SEMCONV_FEATURE_FLAG_PROVIDER_NAME, PROVIDER_NAME)
+        val eventAttributes = Attributes.builder()
+        eventAttributes.put(SEMCONV_FEATURE_FLAG_KEY, seriesContext.flagKey)
+        eventAttributes.put(SEMCONV_FEATURE_FLAG_PROVIDER_NAME, PROVIDER_NAME)
+        eventAttributes.put(SEMCONV_FEATURE_FLAG_CONTEXT_ID, seriesContext.context.fullyQualifiedKey)
 
         evaluationDetail.reason?.isInExperiment?.let {
-            attrBuilder.put(CUSTOM_FEATURE_FLAG_RESULT_REASON_IN_EXPERIMENT, it)
+            eventAttributes.put(CUSTOM_FEATURE_FLAG_RESULT_REASON_IN_EXPERIMENT, it)
         }
 
-        attrBuilder.put(SEMCONV_FEATURE_FLAG_CONTEXT_ID, seriesContext.context.fullyQualifiedKey)
+        eventAttributes.put(SEMCONV_FEATURE_FLAG_CONTEXT_ID, seriesContext.context.fullyQualifiedKey)
         if (withValue) {
-            attrBuilder.put(SEMCONV_FEATURE_FLAG_RESULT_VALUE, evaluationDetail.value.toJsonString())
+            eventAttributes.put(SEMCONV_FEATURE_FLAG_RESULT_VALUE, evaluationDetail.value.toJsonString())
         }
 
         if (evaluationDetail.variationIndex != EvaluationDetail.NO_VARIATION) {
-            attrBuilder.put(CUSTOM_FEATURE_FLAG_RESULT_VARIATION_INDEX, evaluationDetail.variationIndex.toLong())
+            eventAttributes.put(CUSTOM_FEATURE_FLAG_RESULT_VARIATION_INDEX, evaluationDetail.variationIndex.toLong())
         }
 
         // Here we make best effort the log the event and let the library handle the "no current span" case; which at the
         // time of writing this, it does handle.
-        Span.current().addEvent(FEATURE_FLAG_EVENT_NAME, attrBuilder.build())
+        span.addEvent(FEATURE_FLAG_EVENT_NAME, eventAttributes.build())
+
+        span.end()
         return seriesData
     }
 
@@ -162,10 +163,11 @@ internal constructor(
 
     companion object {
         const val PROVIDER_NAME: String = "LaunchDarkly"
-        const val HOOK_NAME: String = "LaunchDarkly Evaluation Tracing Hook"
+        const val HOOK_NAME: String = "Observability Hook"
         const val INSTRUMENTATION_NAME: String = "com.launchdarkly.observability"
         const val DATA_KEY_FEATURE_FLAG_SPAN: String = "variationSpan"
         const val FEATURE_FLAG_EVENT_NAME: String = "feature_flag"
+        const val FEATURE_FLAG_SPAN_NAME: String = "evaluation"
         const val SEMCONV_FEATURE_FLAG_CONTEXT_ID: String = "feature_flag.context.id"
         const val SEMCONV_FEATURE_FLAG_PROVIDER_NAME: String = "feature_flag.provider.name"
         const val SEMCONV_FEATURE_FLAG_KEY: String = "feature_flag.key"

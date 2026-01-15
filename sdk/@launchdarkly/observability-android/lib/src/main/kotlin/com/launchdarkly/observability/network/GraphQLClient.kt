@@ -1,15 +1,16 @@
 package com.launchdarkly.observability.network
 
 import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 import java.io.IOException
+import java.io.ByteArrayOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
+import java.util.zip.GZIPOutputStream
 
 @Serializable
 data class GraphQLRequest(
@@ -72,8 +73,10 @@ class GraphQLClient(
     suspend fun <T> execute(
         queryFileName: String,
         variables: Map<String, JsonElement> = emptyMap(),
-        dataSerializer: KSerializer<T>
+        dataSerializer: KSerializer<T>,
+        compress: Boolean = true
     ): GraphQLResponse<T> = withContext(DispatcherProviderHolder.current.io) {
+        var connection: HttpURLConnection? = null
         try {
             val query = loadQuery(queryFileName)
             val request = GraphQLRequest(
@@ -82,12 +85,17 @@ class GraphQLClient(
             )
 
             val requestJson = json.encodeToString(request)
-            val connection = connectionProvider.openConnection(endpoint)
+            val requestBytes = requestJson.toByteArray(Charsets.UTF_8)
+            val payloadBytes = if (compress) gzip(requestBytes) else requestBytes
+            val connectionLocal = connectionProvider.openConnection(endpoint).also { connection = it }
 
-            connection.apply {
+            connectionLocal.apply {
                 requestMethod = "POST"
+                setRequestProperty("Content-Length", payloadBytes.size.toString())
                 setRequestProperty("Content-Type", "application/json")
-                setRequestProperty("Content-Length", requestJson.toByteArray().size.toString())
+                if (compress) {
+                    setRequestProperty("Content-Encoding", "gzip")
+                }
 
                 // Add custom headers
                 headers.forEach { (key, value) ->
@@ -97,20 +105,20 @@ class GraphQLClient(
                 doOutput = true
                 connectTimeout = CONNECT_TIMEOUT
                 readTimeout = READ_TIMEOUT
+                setFixedLengthStreamingMode(payloadBytes.size)
             }
 
             // Send request
-            connection.outputStream.use { outputStream ->
-                outputStream.write(requestJson.toByteArray())
-                outputStream.flush()
+            connectionLocal.outputStream.use { outputStream ->
+                outputStream.write(payloadBytes)
             }
 
             // Read response
-            val responseCode = connection.responseCode
+            val responseCode = connectionLocal.responseCode
             val responseJson = if (responseCode == HttpURLConnection.HTTP_OK) {
-                connection.inputStream.bufferedReader().use { it.readText() }
+                connectionLocal.inputStream.bufferedReader().use { it.readText() }
             } else {
-                val errorText = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "No error body"
+                val errorText = connectionLocal.errorStream?.bufferedReader()?.use { it.readText() } ?: "No error body"
                 throw IOException("HTTP Error $responseCode: $errorText")
             }
 
@@ -125,6 +133,8 @@ class GraphQLClient(
                     GraphQLError(message = e.message.toString())
                 )
             )
+        } finally {
+            connection?.disconnect()
         }
     }
 
@@ -137,5 +147,13 @@ class GraphQLClient(
         return this::class.java.classLoader?.getResourceAsStream(queryFilepath)?.bufferedReader()?.use {
             it.readText()
         } ?: throw IllegalStateException("Could not load GraphQL query file: $queryFilepath")
+    }
+
+    private fun gzip(data: ByteArray): ByteArray {
+        val byteStream = ByteArrayOutputStream()
+        GZIPOutputStream(byteStream).use { gzipStream ->
+            gzipStream.write(data)
+        }
+        return byteStream.toByteArray()
     }
 }

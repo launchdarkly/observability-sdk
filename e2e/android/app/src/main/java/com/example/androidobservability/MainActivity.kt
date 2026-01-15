@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -36,12 +37,16 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.Color
 import com.example.androidobservability.masking.ComposeMaskingActivity
 import com.example.androidobservability.masking.ComposeUserFormActivity
 import com.example.androidobservability.masking.XMLUserFormActivity
 import com.example.androidobservability.masking.XMLMaskingActivity
 import com.example.androidobservability.smoothie.SmoothieListActivity
 import com.example.androidobservability.ui.theme.AndroidObservabilityTheme
+import com.example.androidobservability.ui.theme.DangerRed
+import com.example.androidobservability.ui.theme.IdentifyBgColor
+import com.example.androidobservability.ui.theme.IdentifyTextColor
 
 class MainActivity : ComponentActivity() {
 
@@ -80,6 +85,8 @@ class MainActivity : ComponentActivity() {
                             modifier = Modifier.padding(bottom = 8.dp)
                         )
                         HorizontalDivider(modifier = Modifier.padding(bottom = 16.dp))
+
+                        IdentifyButtons(viewModel = viewModel)
 
                         InstrumentationButtons(viewModel = viewModel)
 
@@ -184,7 +191,11 @@ private fun InstrumentationButtons(viewModel: ViewModel) {
         Button(
             onClick = {
                 viewModel.triggerCrash()
-            }
+            },
+            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                containerColor = DangerRed,
+                contentColor = Color.White
+            )
         ) {
             Text("Trigger Crash")
         }
@@ -317,11 +328,56 @@ private fun MaskingButtons() {
 }
 
 @Composable
+private fun IdentifyButtons(viewModel: ViewModel) {
+    Spacer(modifier = Modifier.height(16.dp))
+
+    Text(
+        text = "Identify:",
+        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+        modifier = Modifier.padding(bottom = 8.dp, top = 8.dp)
+    )
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 8.dp, bottom = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Button(
+            onClick = { viewModel.identifyUser() },
+            colors = ButtonDefaults.buttonColors(
+                containerColor = IdentifyBgColor,
+                contentColor = IdentifyTextColor
+            )
+        ) {
+            Text("User")
+        }
+        Button(
+            onClick = { viewModel.identifyMulti() },
+            colors = ButtonDefaults.buttonColors(
+                containerColor = IdentifyBgColor,
+                contentColor = IdentifyTextColor
+            )
+        ) {
+            Text("Multi")
+        }
+        Button(
+            onClick = { viewModel.identifyAnonymous() },
+            colors = ButtonDefaults.buttonColors(
+                containerColor = IdentifyBgColor,
+                contentColor = IdentifyTextColor
+            )
+        ) {
+            Text("Anon")
+        }
+    }
+}
+
+@Composable
 private fun CustomerApiButtons(viewModel: ViewModel) {
     var customLogText by remember { mutableStateOf("") }
     var customSpanText by remember { mutableStateOf("") }
-    var flagKey by remember { mutableStateOf("") }
-    var customContextKey by remember { mutableStateOf("") }
+    var flagKey by remember { mutableStateOf("my-feature") }
 
     Text(
         text = "Customer API",
@@ -332,7 +388,11 @@ private fun CustomerApiButtons(viewModel: ViewModel) {
     Button(
         onClick = {
             viewModel.triggerError()
-        }
+        },
+        colors = ButtonDefaults.buttonColors(
+            containerColor = DangerRed,
+            contentColor = Color.White
+        )
     ) {
         Text("Trigger Error")
     }
@@ -400,20 +460,5 @@ private fun CustomerApiButtons(viewModel: ViewModel) {
         Text("Evaluate boolean flag")
     }
 
-    Spacer(modifier = Modifier.height(16.dp))
 
-    OutlinedTextField(
-        value = customContextKey,
-        onValueChange = { customContextKey = it },
-        label = { Text("LD context key") },
-        modifier = Modifier.padding(8.dp)
-    )
-    Button(
-        onClick = {
-            viewModel.identifyLDContext(customContextKey)
-        },
-        modifier = Modifier.padding(8.dp)
-    ) {
-        Text("Identify LD Context")
-    }
 }

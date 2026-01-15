@@ -1,63 +1,59 @@
 package com.launchdarkly.observability.replay
 
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.ProcessLifecycleOwner
 import com.launchdarkly.logging.LDLogger
+import com.launchdarkly.observability.client.ObservabilityContext
 import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
 import com.launchdarkly.observability.interfaces.LDExtendedInstrumentation
 import com.launchdarkly.observability.replay.capture.CaptureSource
+import com.launchdarkly.observability.replay.exporter.IdentifyItemPayload
+import com.launchdarkly.observability.replay.exporter.ImageItemPayload
+import com.launchdarkly.observability.replay.exporter.InteractionItemPayload
+import com.launchdarkly.observability.replay.exporter.SessionReplayExporter
+import com.launchdarkly.observability.replay.transport.BatchWorker
+import com.launchdarkly.observability.replay.transport.EventQueue
+import com.launchdarkly.sdk.LDContext
 import io.opentelemetry.android.instrumentation.InstallationContext
-import io.opentelemetry.api.logs.Logger
-import io.opentelemetry.sdk.logs.LogRecordProcessor
-import io.opentelemetry.sdk.logs.export.BatchLogRecordProcessor
-import kotlinx.coroutines.GlobalScope
+import io.opentelemetry.android.session.SessionManager
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
-import java.util.concurrent.TimeUnit
+import kotlin.coroutines.cancellation.CancellationException
 
 private const val INSTRUMENTATION_SCOPE_NAME = "com.launchdarkly.observability.replay"
-
-// TODO: O11Y-625 - determine where these should be defined ultimately and tune accordingly.  Perhaps
-// we don't need a batching exporter in this layer.  Perhaps this layer shouldn't be the one
-// that decides the parameters of the batching exporter.  Perhaps the batching should be
-// controlled by the instrumentation manager.
-private const val BATCH_MAX_QUEUE_SIZE = 100
-private const val BATCH_SCHEDULE_DELAY_MS = 1000L
-private const val BATCH_EXPORTER_TIMEOUT_MS = 5000L
-private const val BATCH_MAX_EXPORT_SIZE = 10
 
 /**
  * Provides session replay instrumentation. Session replays that are sampled will appear on the LaunchDarkly dashboard.
  *
- * @param options Configuration options for replay behavior including privacy settings, capture interval, and backend URL
+ * @param options Configuration options for replay behavior including privacy settings and capture interval
+ * @param observabilityContext Shared context provided by the Observability plugin
  *
  * @sample
  * ```kotlin
- *    val ldConfig = LDConfig.Builder(LDConfig.Builder.AutoEnvAttributes.Enabled)
- *        .mobileKey("mobile-key-123abc")
- *        .plugins(
- *            Components.plugins().setPlugins(
- *                Collections.singletonList<Plugin>(
- *                    Observability(
- *                        this@BaseApplication,
- *                        Options(
- *                            resourceAttributes = Attributes.of(
- *                                AttributeKey.stringKey("serviceName"), "example-service"
- *                            ),
- *                            instrumentations = listOf(
- *                                ReplayInstrumentation(
- *                                    options = ReplayOptions(
- *                                        privacyProfile = PrivacyProfile.STRICT,
- *                                    )
- *                                )
- *                            )
- *                        )
- *                    )
- *                )
- *            )
- *        )
- *        .build();
+ * val ldConfig = LDConfig.Builder(LDConfig.Builder.AutoEnvAttributes.Enabled)
+ *     .mobileKey("your-mobile-key")
+ *     .plugins(
+ *         Components.plugins().setPlugins(
+ *             listOf(
+ *                 Observability(this@MyApplication, "your-mobile-key"),
+ *                 SessionReplay(
+ *                     ReplayOptions(
+ *                         privacyProfile = PrivacyProfile.STRICT,
+ *                     )
+ *                 )
+ *             )
+ *         )
+ *     )
+ *     .build()
  * ```
  *
  * @see ReplayOptions for configuration options
@@ -65,135 +61,189 @@ private const val BATCH_MAX_EXPORT_SIZE = 10
  */
 class ReplayInstrumentation(
     private val options: ReplayOptions = ReplayOptions(),
+    private val observabilityContext: ObservabilityContext
 ) : LDExtendedInstrumentation {
 
-    private lateinit var _otelLogger: Logger
-    private lateinit var _captureSource: CaptureSource
-    private lateinit var _interactionSource: InteractionSource
-    private var _captureJob: Job? = null
-    private var _isPaused: Boolean = false
-    private val _captureMutex = Mutex()
+    private lateinit var sessionManager: SessionManager
+    private val logger: LDLogger = observabilityContext.logger
+    private val eventQueue = EventQueue()
+    private val batchWorker = BatchWorker(eventQueue, logger)
+    private var captureSource: CaptureSource? = null
+    private var interactionSource: InteractionSource? = null
+    private val instrumentationScope = CoroutineScope(DispatcherProviderHolder.current.default + SupervisorJob())
+    private var captureJob: Job? = null
+    private val shouldCapture = MutableStateFlow(false)
+    private var processLifecycleObserver: DefaultLifecycleObserver? = null
+    private var isInstalled: Boolean = false
+    private var exporter: SessionReplayExporter? = null
 
     override val name: String = INSTRUMENTATION_SCOPE_NAME
 
     override fun install(ctx: InstallationContext) {
-        _otelLogger = ctx.openTelemetry.logsBridge.get(INSTRUMENTATION_SCOPE_NAME)
-        // TODO: Use real LDClient logger after creating SR Plugin
-        val logger = LDLogger.none()
-        _captureSource =
-            CaptureSource(ctx.sessionManager, options.privacyProfile.asMatchersList(), logger)
-        _interactionSource = InteractionSource(ctx.sessionManager)
+        // If already installed, do nothing. This prevents duplicating collectors and lifecycle listeners.
+        // We should refactor this if we want to support multiple sessions and install the instrumentation more than once
+        if (isInstalled) return
 
-        // TODO: O11Y-621 - don't use global scope
-        // TODO: O11Y-621 - shutdown procedure and cleanup of dispatched jobs
-        GlobalScope.launch(DispatcherProviderHolder.current.default) {
-            _captureSource.captureFlow.collect { capture ->
-                _otelLogger.logRecordBuilder()
-                    .setAttribute("event.domain", "media")
-                    .setAttribute("image.width", capture.origWidth.toLong())
-                    .setAttribute("image.height", capture.origHeight.toLong())
-                    .setAttribute("image.data", capture.imageBase64)
-                    .setAttribute("session.id", capture.session)
-                    .setTimestamp(capture.timestamp, TimeUnit.MILLISECONDS)
-                    .emit()
-            }
-        }
+        sessionManager = ctx.sessionManager
+        captureSource = CaptureSource(
+            sessionManager = ctx.sessionManager,
+            maskMatchers = options.privacyProfile.asMatchersList(),
+            logger = observabilityContext.logger
+        )
+        interactionSource = InteractionSource(ctx.sessionManager)
 
-        GlobalScope.launch(DispatcherProviderHolder.current.default) {
-            _interactionSource.captureFlow.collect{ interaction->
-                // Serialize positions list to JSON using StringBuilder for performance
-                val positionsJson = StringBuilder().apply {
-                    append('[')
-                    interaction.positions.forEachIndexed { index, position ->
-                        if (index > 0) append(',')
-                        append("{\"x\":")
-                        append(position.x)
-                        append(",\"y\":")
-                        append(position.y)
-                        append(",\"timestamp\":")
-                        append(position.timestamp)
-                        append('}')
-                    }
-                    append(']')
-                }.toString()
+        val initialIdentifyItemPayload = IdentifyItemPayload.from(
+            contextFriendlyName = observabilityContext.options.contextFriendlyName,
+            resourceAttributes = observabilityContext.options.resourceAttributes,
+            sessionId = null // initial payload is not part SR RRWeb event
+        )
+        val exporter = SessionReplayExporter(
+            organizationVerboseId = observabilityContext.sdkKey, // SDK key used as organization ID intentionally
+            backendUrl = observabilityContext.options.backendUrl,
+            serviceName = observabilityContext.options.serviceName,
+            serviceVersion = observabilityContext.options.serviceVersion,
+            initialIdentifyItemPayload = initialIdentifyItemPayload
+        )
+        this@ReplayInstrumentation.exporter = exporter
+        batchWorker.addExporter(exporter)
+        batchWorker.start()
 
-                // Use the last position's timestamp for the log record timestamp
-                val logTimestamp = interaction.positions.last().timestamp
-                _otelLogger.logRecordBuilder()
-                    .setAttribute("event.domain", "interaction")
-                    .setAttribute("android.action", interaction.action)
-                    .setAttribute("screen.coords", positionsJson)
-                    .setAttribute("session.id", interaction.session)
-                    .setTimestamp(logTimestamp, TimeUnit.MILLISECONDS)
-                    .emit()
-            }
-        }
+        startCollectors()
+        startCaptureStateObserver()
+        startProcessLifecycleObserver()
 
-        _interactionSource.attachToApplication(ctx.application)
+        interactionSource?.attachToApplication(ctx.application)
 
-        // Start periodic capture automatically
-        internalStartCapture()
+        isInstalled = true
     }
 
-    // TODO: O11Y-622 - implement mechanism for customer code to invoke this method
-    suspend fun runCapture() {
-        _captureMutex.withLock {
-            // If already running (not paused), do nothing
-            if (!_isPaused) {
-                return
+    private fun startCollectors() {
+        // Images collector
+        instrumentationScope.launch {
+            captureSource?.captureFlow?.collect { capture ->
+                eventQueue.send(ImageItemPayload(capture))
             }
-            
-            // Clear paused flag and start/resume periodic capture
-            _isPaused = false
-            internalStartCapture()
+        }
+
+        // Interactions collector
+        instrumentationScope.launch {
+            interactionSource?.captureFlow?.collect { interaction ->
+                eventQueue.send(InteractionItemPayload(interaction))
+            }
         }
     }
 
-    // TODO: O11Y-622 - implement mechanism for customer code to invoke this method
-    suspend fun pauseCapture() {
-        _captureMutex.withLock {
-            // if already paused, do nothing
-            if (_isPaused) {
-                return
+    /**
+     * Observes [shouldCapture] state changes and synchronizes the capture loop state.
+     * Skips redundant operations if the desired state already matches the current state.
+     */
+    private fun startCaptureStateObserver() {
+        instrumentationScope.launch {
+            shouldCapture.collect { shouldRun ->
+                val running = captureJob?.isActive == true
+                if (shouldRun == running) return@collect
+                if (shouldRun) doRunCapture() else doPauseCapture()
             }
-            
-            // pause the periodic capture by terminating the job
-            _isPaused = true
-            _captureJob?.cancel()
-            _captureJob = null
         }
     }
-    
-    private fun internalStartCapture() {
-        // TODO: O11Y-621 - don't use global scope
-        _captureJob = GlobalScope.launch(DispatcherProviderHolder.current.default) {
-            try {
-                while (true) {
-                    // Perform capture
-                    _captureSource.captureNow()
-                    delay(options.capturePeriodMillis)
+
+    private suspend fun doRunCapture() {
+        captureJob?.cancelAndJoin()
+        captureJob = instrumentationScope.launch {
+            logger.debug("Session replay capture running")
+            while (isActive) {
+                try {
+                    captureSource?.captureNow()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: OutOfMemoryError) {
+                    logger.error("Capture paused due to OOM", e)
+                    shouldCapture.value = false
+                    return@launch
+                } catch (e: Exception) {
+                    logger.error("Capture failed", e)
                 }
-            } finally {
-                // Job completed or was cancelled
+                delay(options.capturePeriodMillis)
             }
         }
+    }
+
+    private suspend fun doPauseCapture() {
+        captureJob?.cancelAndJoin()
+        captureJob = null
+        logger.debug("Session replay capture paused")
+    }
+
+    // TODO: O11Y-622 - implement mechanism for customer code to invoke this method
+    fun runCapture() {
+        shouldCapture.value = true
+    }
+
+    // TODO: O11Y-622 - implement mechanism for customer code to invoke this method
+    fun pauseCapture() {
+        shouldCapture.value = false
+    }
+
+    private fun startProcessLifecycleObserver() {
+        if (processLifecycleObserver != null) return
+
+        val observer = object : DefaultLifecycleObserver {
+            override fun onStart(owner: LifecycleOwner) {
+                runCapture()
+            }
+
+            override fun onStop(owner: LifecycleOwner) {
+                pauseCapture()
+                batchWorker.flush()
+            }
+        }
+
+        processLifecycleObserver = observer
+        val lifecycle = ProcessLifecycleOwner.get().lifecycle
+        lifecycle.addObserver(observer)
+
+        // Ensure we don't miss the initial foreground state when installing late.
+        if (lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+            runCapture()
+        }
+    }
+
+    // TODO: O11Y-621 - This should be called somewhere (Probably inside InstrumentationManager.kt) to shutdown the instrumentation.
+    fun shutdown() {
+        pauseCapture()
+        stopProcessLifecycleObserver()
+        batchWorker.stop()
+        instrumentationScope.cancel()
+        interactionSource?.detachFromApplication(observabilityContext.application)
+    }
+
+    private fun stopProcessLifecycleObserver() {
+        val observer = processLifecycleObserver ?: return
+        ProcessLifecycleOwner.get().lifecycle.removeObserver(observer)
+        processLifecycleObserver = null
+    }
+
+    suspend fun identifySession(
+        ldContext: LDContext,
+        timestamp: Long = System.currentTimeMillis()
+    ) {
+        if (!this::sessionManager.isInitialized || exporter == null) {
+            logger.warn("identifySession called before ReplayInstrumentation was installed; skipping.")
+            return
+        }
+
+        val sessionId = sessionManager.getSessionId()
+        val event = IdentifyItemPayload.from(
+            contextFriendlyName = observabilityContext.options.contextFriendlyName,
+            resourceAttributes = observabilityContext.options.resourceAttributes,
+            ldContext = ldContext,
+            timestamp = timestamp,
+            sessionId = sessionId
+        )
+
+        exporter?.identifyEventAndUpdate(event)
+        eventQueue.send(event)
     }
 
     override fun getLoggerScopeName(): String = INSTRUMENTATION_SCOPE_NAME
-
-    override fun getLogRecordProcessor(credential: String): LogRecordProcessor {
-        val exporter = RRwebGraphQLReplayLogExporter(
-            organizationVerboseId = credential, // the SDK credential is used as the organization ID intentionally
-            backendUrl = options.backendUrl,
-            serviceName = options.serviceName,
-            serviceVersion = options.serviceVersion,
-        )
-
-        return BatchLogRecordProcessor.builder(exporter)
-            .setMaxQueueSize(BATCH_MAX_QUEUE_SIZE)
-            .setScheduleDelay(BATCH_SCHEDULE_DELAY_MS, TimeUnit.MILLISECONDS)
-            .setExporterTimeout(BATCH_EXPORTER_TIMEOUT_MS, TimeUnit.MILLISECONDS)
-            .setMaxExportBatchSize(BATCH_MAX_EXPORT_SIZE)
-            .build()
-    }
 }
