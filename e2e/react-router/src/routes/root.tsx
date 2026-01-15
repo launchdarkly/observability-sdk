@@ -381,6 +381,58 @@ export default function Root() {
 
 			<div
 				style={{
+					padding: 12,
+					border: '1px solid #ddd',
+					borderRadius: 6,
+					maxWidth: 720,
+				}}
+			>
+				<h3 style={{ marginTop: 0 }}>Identify User</h3>
+				<p>
+					Identify the current user via <code>client.identify()</code>
+					.
+				</p>
+				<textarea
+					id="identify-textarea"
+					style={{
+						width: '100%',
+						minHeight: 120,
+						fontFamily: 'monospace',
+					}}
+					defaultValue={JSON.stringify(
+						{
+							kind: 'multi',
+							user: {
+								key: 'test-user@example.com',
+								name: 'Test User',
+							},
+							organization: {
+								key: 'org-123',
+								name: 'Test Org',
+							},
+						},
+						null,
+						2,
+					)}
+					placeholder='{"kind":"user","key":"user-key"}'
+				/>
+				<div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+					<button
+						onClick={() => {
+							const textarea = document.querySelector(
+								'#identify-textarea',
+							) as HTMLTextAreaElement
+							const value = textarea?.value ?? ''
+							client.identify(JSON.parse(value))
+						}}
+					>
+						Identify user
+					</button>
+				</div>
+			</div>
+
+			<div
+				style={{
 					marginTop: 8,
 					padding: 12,
 					border: '1px solid #ddd',
@@ -388,15 +440,16 @@ export default function Root() {
 					maxWidth: 720,
 				}}
 			>
-				<h3>Session Properties</h3>
+				<h3 style={{ marginTop: 0 }}>Session Properties</h3>
 				<p>
 					Add custom session-level attributes via{' '}
 					<code>LDRecord.addSessionProperties</code>.
 				</p>
 				<textarea
+					id="session-props-textarea"
 					style={{
 						width: '100%',
-						minHeight: 120,
+						minHeight: 40,
 						fontFamily: 'monospace',
 					}}
 					defaultValue='{"plan":"pro","favoriteColor":"seafoam"}'
@@ -405,212 +458,15 @@ export default function Root() {
 				<div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
 					<button
 						onClick={() => {
-							const value =
-								document.querySelector('textarea')?.value ?? ''
+							const textarea = document.querySelector(
+								'#session-props-textarea',
+							) as HTMLTextAreaElement
+							const value = textarea?.value ?? ''
 
 							LDRecord.addSessionProperties(JSON.parse(value))
 						}}
 					>
 						Apply session properties
-					</button>
-				</div>
-			</div>
-
-			<div
-				style={{
-					marginTop: 16,
-					padding: 16,
-					border: '2px solid #ff6b6b',
-					borderRadius: 8,
-					maxWidth: 720,
-					backgroundColor: '#fff5f5',
-				}}
-			>
-				<h3 style={{ color: '#c92a2a', margin: '0 0 8px 0' }}>
-					🐛 Customer Issue Tests (Session Replay Race Condition)
-				</h3>
-				<p
-					style={{
-						fontSize: '0.9em',
-						color: '#666',
-						marginBottom: 12,
-					}}
-				>
-					Tests for customer issue: Session names inconsistent after
-					identify() with manualStart:true.
-					<br />
-					<strong>Config:</strong> anonymous context,
-					manualStart:true, contextFriendlyName returns user.key for
-					multi-kind contexts.
-				</p>
-				<div
-					style={{
-						display: 'flex',
-						flexDirection: 'column',
-						gap: 8,
-					}}
-				>
-					<button
-						onClick={async () => {
-							console.log('=== CUSTOMER SCENARIO TEST ===')
-							console.log(
-								'Step 1: SDK initialized with anonymous context and manualStart:true',
-							)
-
-							// Step 2: Simulate login - call identify with multi-kind context (user.key = email)
-							console.log(
-								'Step 2: Calling identify with multi-kind context (user.key = email)',
-							)
-							await client.identify({
-								kind: 'multi',
-								user: {
-									key: 'customer-test@example.com',
-									name: 'Test Customer',
-								},
-								organization: {
-									key: 'org-12345',
-									name: 'Acme Corp',
-								},
-								plan: {
-									key: 'enterprise',
-									isTrialing: false,
-								},
-							})
-
-							// Step 3: Start recording AFTER identify (customer's flow)
-							console.log(
-								'Step 3: Starting recording AFTER identify',
-							)
-							await LDRecord.start()
-
-							// Step 4: Add session properties
-							console.log('Step 4: Adding session properties')
-							LDRecord.addSessionProperties({
-								accountId: 'org-12345',
-								accountName: 'Acme Corp',
-								planType: 'enterprise',
-							})
-
-							console.log('=== TEST COMPLETE ===')
-							console.log(
-								'Expected: Session should show "customer-test@example.com" as identifier',
-							)
-							alert(
-								'Test complete! Check Session Replay list for "customer-test@example.com"',
-							)
-						}}
-						style={{
-							backgroundColor: '#ff6b6b',
-							color: 'white',
-							fontWeight: 'bold',
-							padding: '12px 16px',
-							border: 'none',
-							borderRadius: 6,
-							cursor: 'pointer',
-						}}
-					>
-						🎯 Customer Scenario: Identify → Start → Add Properties
-					</button>
-
-					<button
-						onClick={async () => {
-							console.log('=== RACE CONDITION TEST ===')
-							console.log(
-								'Step 1: Starting recording (async, not awaited)',
-							)
-							const startPromise = LDRecord.start()
-
-							console.log(
-								'Step 2: Immediately calling identify (before start completes)',
-							)
-							await client.identify({
-								kind: 'multi',
-								user: {
-									key: 'race-test@example.com',
-									name: 'Race Test User',
-								},
-								organization: {
-									key: 'org-race-test',
-								},
-							})
-
-							console.log(
-								'Step 3: Adding session properties (before start completes)',
-							)
-							LDRecord.addSessionProperties({
-								testType: 'race-condition',
-								timestamp: Date.now(),
-							})
-
-							console.log('Step 4: Waiting for start to complete')
-							await startPromise
-
-							console.log('=== TEST COMPLETE ===')
-							console.log(
-								'Expected: Session should show "race-test@example.com"',
-							)
-							alert(
-								'Test complete! Check Session Replay list for "race-test@example.com"',
-							)
-						}}
-						style={{
-							backgroundColor: '#ffa502',
-							color: 'white',
-							fontWeight: 'bold',
-							padding: '12px 16px',
-							border: 'none',
-							borderRadius: 6,
-							cursor: 'pointer',
-						}}
-					>
-						⚡ Race Condition: Start + Identify + Properties
-						(simultaneous)
-					</button>
-
-					<button
-						onClick={async () => {
-							console.log('=== PROPERTIES BEFORE START TEST ===')
-
-							// Add session properties BEFORE starting
-							console.log(
-								'Step 1: Adding session properties BEFORE start',
-							)
-							LDRecord.addSessionProperties({
-								earlyProperty: 'set-before-start',
-								timestamp: Date.now(),
-							})
-
-							// Now start
-							console.log('Step 2: Starting recording')
-							await LDRecord.start()
-
-							// Add more properties after start
-							console.log(
-								'Step 3: Adding more properties AFTER start',
-							)
-							LDRecord.addSessionProperties({
-								lateProperty: 'set-after-start',
-							})
-
-							console.log('=== TEST COMPLETE ===')
-							console.log(
-								'Expected: Both earlyProperty and lateProperty should appear in session',
-							)
-							alert(
-								'Test complete! Check session properties for both early and late properties',
-							)
-						}}
-						style={{
-							backgroundColor: '#20c997',
-							color: 'white',
-							fontWeight: 'bold',
-							padding: '12px 16px',
-							border: 'none',
-							borderRadius: 6,
-							cursor: 'pointer',
-						}}
-					>
-						📦 Properties Before Start Test
 					</button>
 				</div>
 			</div>
