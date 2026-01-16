@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.23.1](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.23.0...launchdarkly-observability-android-0.23.1) (2026-01-16)
+
+
+### Bug Fixes
+
+* flag eval snap name ([#345](https://github.com/launchdarkly/observability-sdk/issues/345)) ([f10980e](https://github.com/launchdarkly/observability-sdk/commit/f10980eb73924935e8fb363c87a4a6c8e7956012))
+
 ## [0.23.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.22.0...launchdarkly-observability-android-0.23.0) (2026-01-09)
 
 
