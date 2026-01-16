@@ -1,5 +1,6 @@
 package com.launchdarkly.observability.network
 
+import com.launchdarkly.logging.LDLogger
 import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.KSerializer
@@ -47,6 +48,7 @@ interface UrlConnectionProvider {
 class GraphQLClient(
     val endpoint: String,
     val headers: Map<String, String> = emptyMap(),
+    private val logger: LDLogger,
     private val json: Json = Json {
         isLenient = true
         ignoreUnknownKeys = true
@@ -77,7 +79,7 @@ class GraphQLClient(
         compress: Boolean = true
     ): GraphQLResponse<T> = withContext(DispatcherProviderHolder.current.io) {
         var connection: HttpURLConnection? = null
-        try {
+        val response: GraphQLResponse<T> = try {
             val query = loadQuery(queryFileName)
             val request = GraphQLRequest(
                 query = query,
@@ -136,6 +138,9 @@ class GraphQLClient(
         } finally {
             connection?.disconnect()
         }
+
+        logErrors(response)
+        response
     }
 
     /**
@@ -155,5 +160,15 @@ class GraphQLClient(
             gzipStream.write(data)
         }
         return byteStream.toByteArray()
+    }
+
+    private fun logErrors(response: GraphQLResponse<*>) {
+        val errors = response.errors?.takeIf { it.isNotEmpty() } ?: return
+        errors.forEach { error ->
+            logger.error("GraphQLClient error: ${error.message}")
+            error.locations?.forEach { location ->
+                logger.error("  at line ${location.line}, column ${location.column}")
+            }
+        }
     }
 }

@@ -11,7 +11,7 @@ class SamplingApiService(
 ) {
 
     companion object {
-        private val GET_SAMPLING_CONFIG_QUERY_FILE_PATH = "graphql/GetSamplingConfigQuery.graphql"
+        private const val GET_SAMPLING_CONFIG_QUERY_FILE_PATH = "graphql/GetSamplingConfigQuery.graphql"
     }
 
     /**
@@ -29,7 +29,6 @@ class SamplingApiService(
             )
 
             if (response.errors?.isNotEmpty() == true) {
-                printErrors(response)
                 return null
             }
 
@@ -40,12 +39,4 @@ class SamplingApiService(
         }
     }
 
-    private fun printErrors(response: GraphQLResponse<SamplingResponse>) {
-        response.errors?.forEach { error ->
-            println("GraphQL Error: ${error.message}")
-            error.locations?.forEach { location ->
-                println("  at line ${location.line}, column ${location.column}")
-            }
-        }
-    }
 }

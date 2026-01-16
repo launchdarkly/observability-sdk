@@ -1,6 +1,5 @@
 package com.launchdarkly.observability.replay.exporter
 
-import android.util.Log
 import com.launchdarkly.observability.BuildConfig
 import com.launchdarkly.observability.network.GraphQLClient
 import com.launchdarkly.observability.network.GraphQLResponse
@@ -16,7 +15,6 @@ import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
-// TODO: O11Y-627 - Refactor logging handling in this class
 class SessionReplayApiService(
     private val graphqlClient: GraphQLClient,
     val serviceName: String,
@@ -134,18 +132,8 @@ class SessionReplayApiService(
         throwOnErrors(response, "pushPayload")
     }
 
-    private fun <T> printErrors(response: GraphQLResponse<T>) {
-        response.errors?.forEach { error ->
-            Log.e("SessionReplayApiService", "GraphQL Error: ${error.message}")
-            error.locations?.forEach { location ->
-                Log.e("SessionReplayApiService", "  at line ${location.line}, column ${location.column}")
-            }
-        }
-    }
-
     private fun <T> throwOnErrors(response: GraphQLResponse<T>, operation: String) {
         val errors = response.errors?.takeIf { it.isNotEmpty() } ?: return
-        printErrors(response)
         val message = errors.joinToString("; ") { it.message }
         throw SessionReplayApiException("$operation failed: $message")
     }

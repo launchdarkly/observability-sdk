@@ -40,7 +40,8 @@ class GraphQLClientTest {
                     openConnectionWasCalled = (true to url)
                     return mockConnection
                 }
-            }
+            },
+            logger = mockk(relaxed = true)
         )
     }
 

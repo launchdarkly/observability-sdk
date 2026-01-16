@@ -79,7 +79,10 @@ class InstrumentationManager(
     private var otelLogger: Logger
     private var otelTracer: Tracer
     private var customSampler = CustomSampler()
-    private val graphqlClient = GraphQLClient(observabilityOptions.backendUrl)
+    private val graphqlClient = GraphQLClient(
+        endpoint = observabilityOptions.backendUrl,
+        logger = logger
+    )
     private val samplingApiService = SamplingApiService(graphqlClient)
     private var telemetryInspector: TelemetryInspector? = null
     private var spanProcessor: SpanProcessor? = null

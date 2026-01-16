@@ -1,5 +1,6 @@
 package com.launchdarkly.observability.replay.exporter
 
+import com.launchdarkly.logging.LDLogger
 import com.launchdarkly.observability.network.GraphQLClient
 import com.launchdarkly.observability.replay.Event
 import com.launchdarkly.observability.replay.capture.CaptureEvent
@@ -7,6 +8,7 @@ import com.launchdarkly.observability.replay.transport.EventExporting
 import com.launchdarkly.observability.replay.transport.EventQueueItem
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlin.math.log
 
 // size limit of accumulated continues canvas operations on the RRWeb player
 private const val RRWEB_CANVAS_BUFFER_LIMIT =  10_000_000 // ~10mb
@@ -21,6 +23,7 @@ private const val RRWEB_CANVAS_DRAW_ENTOURAGE = 300 // 300 bytes
  * @param serviceName The service name
  * @param serviceVersion The service version
  * @param injectedReplayApiService Optional SessionReplayApiService for testing. If null, a default service will be created.
+ * @param logger The logger for internal logging.
  */
 class SessionReplayExporter(
     val organizationVerboseId: String,
@@ -29,12 +32,16 @@ class SessionReplayExporter(
     val serviceVersion: String,
     val initialIdentifyItemPayload: IdentifyItemPayload,
     private val injectedReplayApiService: SessionReplayApiService? = null,
+    private val logger: LDLogger,
     private val canvasBufferLimit: Int = RRWEB_CANVAS_BUFFER_LIMIT,
     canvasDrawEntourage: Int = RRWEB_CANVAS_DRAW_ENTOURAGE
 ) : EventExporting {
     private val exportMutex = Mutex()
 
-    private var graphqlClient: GraphQLClient = GraphQLClient(backendUrl)
+    private var graphqlClient: GraphQLClient = GraphQLClient(
+        endpoint = backendUrl,
+        logger = logger
+    )
     private val replayApiService: SessionReplayApiService =
         injectedReplayApiService ?: SessionReplayApiService(
             graphqlClient = graphqlClient,
@@ -122,7 +129,6 @@ class SessionReplayExporter(
                 payloadIdCounter = payloadIdSnapshot
                 pushedCanvasSize = pushedCanvasSnapshot
                 eventGenerator.restoreState(generatorSnapshot)
-                // TODO: O11Y-627 - pass in logger to implementation and use here
                 throw e
             }
         }
@@ -136,7 +142,7 @@ class SessionReplayExporter(
                     replayApiService.identifyReplaySession(sessionId, newIdentifyEvent)
                     identifyItemPayload = newIdentifyEvent
                 } catch (e: Exception) {
-                    // TODO: O11Y-627 - pass in logger to implementation and use here
+                    logger.error(e)
                 }
             }
         }
