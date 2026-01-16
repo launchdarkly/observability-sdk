@@ -17,6 +17,7 @@ export enum MessageType {
 	Feedback,
 	CustomEvent,
 	Stop,
+	GetStatus,
 }
 
 export type InitializeMessage = {
@@ -29,6 +30,16 @@ export type InitializeMessage = {
 
 export type ResetMessage = {
 	type: MessageType.Reset
+}
+
+export type GetStatusMessage = {
+	type: MessageType.GetStatus
+}
+
+export type StatusResponse = {
+	type: MessageType.GetStatus
+	pendingCount: number
+	initialized: boolean
 }
 
 export type AsyncEventsMessage = {
@@ -99,6 +110,7 @@ export type HighlightClientWorkerParams = {
 	message:
 		| InitializeMessage
 		| ResetMessage
+		| GetStatusMessage
 		| AsyncEventsMessage
 		| IdentifyMessage
 		| PropertiesMessage
@@ -107,5 +119,9 @@ export type HighlightClientWorkerParams = {
 }
 
 export type HighlightClientWorkerResponse = {
-	response?: AsyncEventsResponse | CustomEventResponse | StopEventResponse
+	response?:
+		| AsyncEventsResponse
+		| CustomEventResponse
+		| StopEventResponse
+		| StatusResponse
 }

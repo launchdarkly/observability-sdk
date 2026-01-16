@@ -410,6 +410,18 @@ function stringifyProperties(
 			return
 		}
 
+		// returns current worker state for testing/debugging
+		if (e.data.message.type === MessageType.GetStatus) {
+			worker.postMessage({
+				response: {
+					type: MessageType.GetStatus,
+					pendingCount: pendingMessages.length,
+					initialized: shouldSendRequest(),
+				},
+			})
+			return
+		}
+
 		if (!shouldSendRequest()) {
 			pendingMessages.push(e.data.message)
 			return
