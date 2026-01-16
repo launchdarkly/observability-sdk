@@ -382,6 +382,58 @@ export default function Root() {
 
 			<div
 				style={{
+					padding: 12,
+					border: '1px solid #ddd',
+					borderRadius: 6,
+					maxWidth: 720,
+				}}
+			>
+				<h3 style={{ marginTop: 0 }}>Identify User</h3>
+				<p>
+					Identify the current user via <code>client.identify()</code>
+					.
+				</p>
+				<textarea
+					id="identify-textarea"
+					style={{
+						width: '100%',
+						minHeight: 120,
+						fontFamily: 'monospace',
+					}}
+					defaultValue={JSON.stringify(
+						{
+							kind: 'multi',
+							user: {
+								key: 'test-user@example.com',
+								name: 'Test User',
+							},
+							organization: {
+								key: 'org-123',
+								name: 'Test Org',
+							},
+						},
+						null,
+						2,
+					)}
+					placeholder='{"kind":"user","key":"user-key"}'
+				/>
+				<div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+					<button
+						onClick={() => {
+							const textarea = document.querySelector(
+								'#identify-textarea',
+							) as HTMLTextAreaElement
+							const value = textarea?.value ?? ''
+							client.identify(JSON.parse(value))
+						}}
+					>
+						Identify user
+					</button>
+				</div>
+			</div>
+
+			<div
+				style={{
 					marginTop: 8,
 					padding: 12,
 					border: '1px solid #ddd',
@@ -389,15 +441,16 @@ export default function Root() {
 					maxWidth: 720,
 				}}
 			>
-				<h3>Session Properties</h3>
+				<h3 style={{ marginTop: 0 }}>Session Properties</h3>
 				<p>
 					Add custom session-level attributes via{' '}
 					<code>LDRecord.addSessionProperties</code>.
 				</p>
 				<textarea
+					id="session-props-textarea"
 					style={{
 						width: '100%',
-						minHeight: 120,
+						minHeight: 40,
 						fontFamily: 'monospace',
 					}}
 					defaultValue='{"plan":"pro","favoriteColor":"seafoam"}'
@@ -406,8 +459,10 @@ export default function Root() {
 				<div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
 					<button
 						onClick={() => {
-							const value =
-								document.querySelector('textarea')?.value ?? ''
+							const textarea = document.querySelector(
+								'#session-props-textarea',
+							) as HTMLTextAreaElement
+							const value = textarea?.value ?? ''
 
 							LDRecord.addSessionProperties(JSON.parse(value))
 						}}
