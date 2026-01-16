@@ -102,7 +102,8 @@ class ReplayInstrumentation(
             backendUrl = observabilityContext.options.backendUrl,
             serviceName = observabilityContext.options.serviceName,
             serviceVersion = observabilityContext.options.serviceVersion,
-            initialIdentifyItemPayload = initialIdentifyItemPayload
+            initialIdentifyItemPayload = initialIdentifyItemPayload,
+            logger = logger
         )
         this@ReplayInstrumentation.exporter = exporter
         batchWorker.addExporter(exporter)

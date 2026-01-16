@@ -37,7 +37,8 @@ class SessionReplayExporterTest {
             injectedReplayApiService = mockService,
             canvasBufferLimit = 20,
             canvasDrawEntourage = 1,
-            initialIdentifyItemPayload = identifyEvent
+            initialIdentifyItemPayload = identifyEvent,
+            logger = mockk()
         )
     }
 
@@ -45,7 +46,7 @@ class SessionReplayExporterTest {
     fun `constructor with mock service should use injected service`() = runTest {
         // Create a mock service
         val mockService = mockk<SessionReplayApiService>(relaxed = true)
-        
+
         // Create the exporter with the mock service
         val exporter = SessionReplayExporter(
             organizationVerboseId = "test-org",
@@ -54,8 +55,9 @@ class SessionReplayExporterTest {
             serviceVersion = "1.0.0",
             initialIdentifyItemPayload = identifyEvent,
             injectedReplayApiService = mockService,
+            logger = mockk()
         )
-        
+
         // Verify the exporter was created successfully
         assertNotNull(exporter)
     }
@@ -69,8 +71,9 @@ class SessionReplayExporterTest {
             serviceName = "test-service",
             serviceVersion = "1.0.0",
             initialIdentifyItemPayload = identifyEvent,
-            )
-        
+            logger = mockk()
+        )
+
         // Verify the exporter was created successfully
         assertNotNull(exporter)
     }
@@ -149,33 +152,33 @@ class SessionReplayExporterTest {
                 "session-a"
             )  // Same dimensions - incremental
         )
-        
+
         val items = createItemsFromCaptures(captureEvents)
-        
+
         // Capture the events sent to pushPayload
         val capturedEventsLists = mutableListOf<List<Event>>()
-        
+
         // Mock the API service methods
         coEvery { mockService.initializeReplaySession(any(), any()) } just Runs
         coEvery { mockService.identifyReplaySession(any<String>(), any<IdentifyItemPayload>()) } just Runs
         coEvery { mockService.pushPayload(any(), any(), capture(capturedEventsLists)) } just Runs
-        
+
         // Act: Export all items
         exporter.export(items)
-        
+
         // Verify initializeReplaySession is called twice (first capture + dimension change)
         coVerify(exactly = 1) {
-            mockService.initializeReplaySession("test-org", "session-a") 
+            mockService.initializeReplaySession("test-org", "session-a")
         }
-        
+
         // Verify identifyReplaySession is called twice (first capture + dimension change)
         coVerify(exactly = 1) { mockService.identifyReplaySession(eq("session-a"), any<IdentifyItemPayload>()) }
-        
+
         // Verify pushPayload is called for all captures
         coVerify(exactly = 1) {
-            mockService.pushPayload("session-a", any(), any()) 
+            mockService.pushPayload("session-a", any(), any())
         }
-        
+
         // Verify event types: First and third captures should be full, second and fourth should be incremental
         val capturedEvents: List<Event> = capturedEventsLists[0]
         verifyFullCaptureEvents(capturedEvents) // First capture - full
@@ -252,7 +255,7 @@ class SessionReplayExporterTest {
     fun `export should handle empty item collection`() = runTest {
         // Act: Export empty collection
         exporter.export(emptyList())
-        
+
         // Verify no API calls are made
         coVerify(exactly = 0) { mockService.initializeReplaySession(any(), any()) }
         coVerify(exactly = 0) { mockService.identifyReplaySession(any<String>(), any<IdentifyItemPayload>()) }
@@ -266,12 +269,12 @@ class SessionReplayExporterTest {
             CaptureEvent("base64data1", 800, 600, 1000L, "session-a")
         )
         val items = createItemsFromCaptures(captureEvents)
-        
+
         // Mock API service to throw exceptions
         coEvery { mockService.initializeReplaySession(any(), any()) } throws RuntimeException("Network error")
         coEvery { mockService.identifyReplaySession(any<String>(), any<IdentifyItemPayload>()) } throws RuntimeException("Authentication failed")
         coEvery { mockService.pushPayload(any(), any(), any()) } throws RuntimeException("Server error")
-        
+
         // Act: Export items
         var thrown: Throwable? = null
         try {
@@ -282,7 +285,7 @@ class SessionReplayExporterTest {
 
         // Assert: Verify the export fails due to API errors
         assertNotNull(thrown)
-        
+
         // Verify API methods were called despite failures
         coVerify(exactly = 1) { mockService.initializeReplaySession("test-org", "session-a") }
         coVerify(exactly = 0) { mockService.identifyReplaySession(eq("session-a"), any<IdentifyItemPayload>()) }
@@ -297,15 +300,15 @@ class SessionReplayExporterTest {
             CaptureEvent("base64data2", 800, 600, 2000L, "session-a")
         )
         val items = createItemsFromCaptures(captureEvents)
-        
+
         // Mock API service methods
         coEvery { mockService.initializeReplaySession(any(), any()) } just Runs
         coEvery { mockService.identifyReplaySession(any<String>(), any<IdentifyItemPayload>()) } just Runs
         coEvery { mockService.pushPayload(any(), any(), any()) } just Runs
-        
+
         // Act: Export items
         exporter.export(items)
-        
+
         // Verify API calls: First capture should be full, second should be incremental
         coVerify(exactly = 1) { mockService.initializeReplaySession("test-org", "session-a") }
         coVerify(exactly = 1) { mockService.identifyReplaySession(eq("session-a"), any<IdentifyItemPayload>()) }
@@ -360,12 +363,12 @@ class SessionReplayExporterTest {
             CaptureEvent("base64data1", 800, 600, 1000L, "session-a")
         )
         val items = createItemsFromCaptures(captureEvents)
-        
+
         // Mock API service: initialization succeeds but pushPayload fails
         coEvery { mockService.initializeReplaySession(any(), any()) } just Runs
         coEvery { mockService.identifyReplaySession(any<String>(), any<IdentifyItemPayload>()) } just Runs
         coEvery { mockService.pushPayload(any(), any(), any()) } throws RuntimeException("Payload too large")
-        
+
         // Act: Export items
         var thrown: Throwable? = null
         try {
@@ -376,7 +379,7 @@ class SessionReplayExporterTest {
 
         // Assert: Verify the export fails due to pushPayload failure
         assertNotNull(thrown)
-        
+
         // Verify all API methods were called
         coVerify(exactly = 1) { mockService.initializeReplaySession("test-org", "session-a") }
         coVerify(exactly = 1) { mockService.identifyReplaySession(eq("session-a"), any<IdentifyItemPayload>()) }
@@ -391,12 +394,12 @@ class SessionReplayExporterTest {
             CaptureEvent("base64data2", 800, 600, 2000L, "session-a")
         )
         val items = createItemsFromCaptures(captureEvents)
-        
+
         // Mock API service: first capture fails, second should not be processed
         coEvery { mockService.initializeReplaySession(any(), any()) } throws RuntimeException("Network error")
         coEvery { mockService.identifyReplaySession(any<String>(), any<IdentifyItemPayload>()) } throws RuntimeException("Authentication failed")
         coEvery { mockService.pushPayload(any(), any(), any()) } throws RuntimeException("Server error")
-        
+
         // Act: Export items
         var thrown: Throwable? = null
         try {
@@ -407,10 +410,15 @@ class SessionReplayExporterTest {
 
         // Assert: Verify the export fails due to first capture failure
         assertNotNull(thrown)
-        
+
         // Verify only first capture was attempted (second should not be processed due to early termination)
         coVerify(exactly = 1) { mockService.initializeReplaySession("test-org", "session-a") }
-        coVerify(exactly = 0) { mockService.identifyReplaySession(eq("session-a"), any<IdentifyItemPayload>()) } // Should not be called due to initializeReplaySession failure
+        coVerify(exactly = 0) {
+            mockService.identifyReplaySession(
+                eq("session-a"),
+                any<IdentifyItemPayload>()
+            )
+        } // Should not be called due to initializeReplaySession failure
         coVerify(exactly = 0) { mockService.pushPayload("session-a", any(), any()) } // Should not be called due to initializeReplaySession failure
     }
 
@@ -441,7 +449,7 @@ class SessionReplayExporterTest {
         // Verify META event
         val metaEvent = events.find { it.type == EventType.META }
         assertNotNull(metaEvent, "Full capture should contain a META event")
-        
+
         // Verify FULL_SNAPSHOT event
         val fullSnapshotEvents = events.filter { it.type == EventType.FULL_SNAPSHOT }
         assertEquals(count, fullSnapshotEvents.size, "Full capture should contain $count FULL_SNAPSHOT events")
