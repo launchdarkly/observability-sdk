@@ -14,8 +14,7 @@ This repository houses the JavaScript SDKs for LaunchDarkly Observability. This 
 [![NPM][o11y-sdk-dm-badge]][o11y-sdk-npm-link]
 [![NPM][o11y-sdk-dt-badge]][o11y-sdk-npm-link]
 
-> [!CAUTION]
-> This library is an alpha version and should not be considered ready for production use while this message is visible.
+**NB: APIs are subject to change until a 1.x version is released.**
 
 #### Install
 
@@ -57,8 +56,7 @@ const client = init3(
 [![NPM][session-replay-sdk-dm-badge]][session-replay-sdk-npm-link]
 [![NPM][session-replay-sdk-dt-badge]][session-replay-sdk-npm-link]
 
-> [!CAUTION]
-> This library is an alpha version and should not be considered ready for production use while this message is visible.
+**NB: APIs are subject to change until a 1.x version is released.**
 
 #### Install
 
