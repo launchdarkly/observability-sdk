@@ -407,6 +407,11 @@ function stringifyProperties(
 			metricsPayload.length = 0
 			numberOfFailedRequests = 0
 			numberOfFailedPushPayloads = 0
+			// Reset sessionSecureID and recordingStartTime so that messages arriving
+			// between Reset and new Initialize are queued rather than processed with
+			// the old session SecureID
+			sessionSecureID = ''
+			recordingStartTime = 0
 			return
 		}
 

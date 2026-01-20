@@ -315,6 +315,58 @@ describe('highlight-client-worker', () => {
 			)
 			expect(beforeResetEvent).toBeUndefined()
 		})
+
+		it('queues messages sent after Reset but before new Initialize', async () => {
+			const responses = createResponseCollector(worker)
+
+			// Initialize with first session
+			worker.postMessage(
+				createInitializeMessage({
+					sessionSecureID: 'old-session-id',
+				}),
+			)
+
+			// Verify worker is initialized
+			const statusInitial = await waitForStatus(worker, responses)
+			expect(statusInitial.initialized).toBe(true)
+
+			// Reset the worker (simulates forceNew/sessionKey change)
+			worker.postMessage(createResetMessage())
+
+			// Send a message BEFORE the new Initialize arrives
+			// This message should be QUEUED, not processed with old session ID
+			worker.postMessage(
+				createIdentifyMessage({
+					userIdentifier: 'message-between-reset-and-init',
+				}),
+			)
+
+			// Verify the message is queued (worker should NOT be initialized after Reset)
+			const statusAfterReset = await waitForStatus(worker, responses)
+			expect(statusAfterReset.initialized).toBe(false)
+			expect(statusAfterReset.pendingCount).toBe(1)
+
+			// Verify no CustomEvent was generated for this message yet
+			const eventBeforeInit = getCustomEventResponses(responses).find(
+				(e) => e.payload?.includes('message-between-reset-and-init'),
+			)
+			expect(eventBeforeInit).toBeUndefined()
+
+			// Now send the new Initialize
+			worker.postMessage(
+				createInitializeMessage({
+					sessionSecureID: 'new-session-id',
+				}),
+			)
+
+			// Wait for the queued message to be processed
+			await vi.waitFor(() => {
+				const event = getCustomEventResponses(responses).find((e) =>
+					e.payload?.includes('message-between-reset-and-init'),
+				)
+				expect(event).toBeDefined()
+			})
+		})
 	})
 
 	describe('Track properties behavior', () => {
