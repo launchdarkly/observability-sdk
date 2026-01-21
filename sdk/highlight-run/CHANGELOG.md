@@ -1,5 +1,12 @@
 # highlight.run
 
+## [9.25.1](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-9.25.0...highlight.run-9.25.1) (2026-01-21)
+
+
+### Bug Fixes
+
+* **highlight-run:** buffer worker messages instead of dropping them before initialization ([068ac7e](https://github.com/launchdarkly/observability-sdk/commit/068ac7ef09a13d1031e69addda09621a352b9ee0))
+
 ## [9.25.0](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-9.24.0...highlight.run-9.25.0) (2025-12-18)
 
 

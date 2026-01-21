@@ -1,5 +1,14 @@
 # @launchdarkly/session-replay
 
+## [0.5.1](https://github.com/launchdarkly/observability-sdk/compare/session-replay-0.5.0...session-replay-0.5.1) (2026-01-21)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * highlight.run bumped to 9.25.1
+
 ## [0.5.0](https://github.com/launchdarkly/observability-sdk/compare/session-replay-0.4.11...session-replay-0.5.0) (2025-12-23)
 
 
