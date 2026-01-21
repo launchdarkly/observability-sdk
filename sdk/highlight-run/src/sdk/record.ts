@@ -267,6 +267,7 @@ export class RecordSDK implements Record {
 		this.sessionData.sessionStartTime = Date.now()
 		this.options.sessionSecureID = this.sessionData.sessionSecureID
 		this.stop()
+		this._worker.postMessage({ message: { type: MessageType.Reset } })
 		await this.start()
 		if (user_identifier && user_object) {
 			this.identify(user_identifier, user_object)

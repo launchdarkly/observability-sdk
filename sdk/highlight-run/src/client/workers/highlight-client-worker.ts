@@ -112,6 +112,7 @@ function stringifyProperties(
 		timestamp: string
 		tags: { name: string; value: string }[]
 	}[] = []
+	const pendingMessages: HighlightClientWorkerParams['message'][] = []
 
 	const shouldSendRequest = (): boolean => {
 		return (
@@ -350,6 +351,37 @@ function stringifyProperties(
 		})
 	}
 
+	const processMessage = async (
+		msg: HighlightClientWorkerParams['message'],
+	) => {
+		if (msg.type === MessageType.AsyncEvents) {
+			await processAsyncEventsMessage(msg as AsyncEventsMessage)
+		} else if (msg.type === MessageType.Identify) {
+			await processIdentifyMessage(msg as IdentifyMessage)
+		} else if (msg.type === MessageType.Properties) {
+			await processPropertiesMessage(msg as PropertiesMessage)
+		} else if (msg.type === MessageType.Metrics) {
+			await processMetricsMessage(msg as MetricsMessage)
+		} else if (msg.type === MessageType.Feedback) {
+			await processFeedbackMessage(msg as FeedbackMessage)
+		}
+	}
+
+	const drainPendingMessages = async () => {
+		while (pendingMessages.length > 0 && shouldSendRequest()) {
+			const msg = pendingMessages.shift()!
+			try {
+				await processMessage(msg)
+				numberOfFailedRequests = 0
+			} catch (e) {
+				if (debug) {
+					console.error(e)
+				}
+				numberOfFailedRequests += 1
+			}
+		}
+	}
+
 	worker.onmessage = async function (e) {
 		if (e.data.message.type === MessageType.Initialize) {
 			backend = e.data.message.backend
@@ -363,28 +395,47 @@ function stringifyProperties(
 				}),
 				getGraphQLRequestWrapper(),
 			)
+
+			await drainPendingMessages()
 			return
 		}
-		if (!shouldSendRequest()) {
-			return
-		}
-		try {
-			if (e.data.message.type === MessageType.AsyncEvents) {
-				await processAsyncEventsMessage(
-					e.data.message as AsyncEventsMessage,
-				)
-			} else if (e.data.message.type === MessageType.Identify) {
-				await processIdentifyMessage(e.data.message as IdentifyMessage)
-			} else if (e.data.message.type === MessageType.Properties) {
-				await processPropertiesMessage(
-					e.data.message as PropertiesMessage,
-				)
-			} else if (e.data.message.type === MessageType.Metrics) {
-				await processMetricsMessage(e.data.message as MetricsMessage)
-			} else if (e.data.message.type === MessageType.Feedback) {
-				await processFeedbackMessage(e.data.message as FeedbackMessage)
-			}
+
+		// Handle Reset before shouldSendRequest - always execute immediately
+		// This clears any pending data from a previous session on forceNew/sessionKey change
+		if (e.data.message.type === MessageType.Reset) {
+			pendingMessages.length = 0
+			metricsPayload.length = 0
 			numberOfFailedRequests = 0
+			numberOfFailedPushPayloads = 0
+			// Reset sessionSecureID and recordingStartTime so that messages arriving
+			// between Reset and new Initialize are queued rather than processed with
+			// the old session SecureID
+			sessionSecureID = ''
+			recordingStartTime = 0
+			return
+		}
+
+		// returns current worker state for testing/debugging
+		if (e.data.message.type === MessageType.GetStatus) {
+			worker.postMessage({
+				response: {
+					type: MessageType.GetStatus,
+					pendingCount: pendingMessages.length,
+					initialized: shouldSendRequest(),
+				},
+			})
+			return
+		}
+
+		if (!shouldSendRequest()) {
+			pendingMessages.push(e.data.message)
+			return
+		}
+
+		try {
+			await processMessage(e.data.message)
+			numberOfFailedRequests = 0
+			await drainPendingMessages()
 		} catch (e) {
 			if (debug) {
 				console.error(e)
