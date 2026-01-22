@@ -168,6 +168,10 @@ data class PrivacyProfile(
         "pin",
     )
 
+    /**
+     * Returns true when [viewClass] matches any class name in [classNameSet] by walking
+     * its superclasses and implemented interfaces.
+     */
     private fun matchesClassHierarchy(
         viewClass: Class<*>,
         classNameSet: Set<String>
@@ -184,6 +188,10 @@ data class PrivacyProfile(
         return false
     }
 
+    /**
+     * Returns true when [clazz] (or any of its interfaces' parents) matches [classNameSet].
+     * Uses [seen] to avoid re-checking interfaces across the hierarchy walk.
+     */
     private fun hasMatchingInterface(
         clazz: Class<*>,
         seen: HashSet<Class<*>>,
