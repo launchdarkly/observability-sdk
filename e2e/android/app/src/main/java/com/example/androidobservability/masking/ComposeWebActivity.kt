@@ -62,7 +62,7 @@ class ComposeWebActivity : ComponentActivity() {
                                 .background(Color.Yellow)
                                 .align(Alignment.CenterHorizontally)
                         )
-                        WebContent(
+                        WebViewItem(
                             url = "https://www.google.com",
                             webView = webView,
                             modifier = Modifier
@@ -77,7 +77,7 @@ class ComposeWebActivity : ComponentActivity() {
                                 .background(Color.Yellow)
                                 .align(Alignment.CenterHorizontally)
                         )
-                        WebContent(
+                        WebViewItem(
                             url = "https://www.google.com",
                             webView = customWebView,
                             modifier = Modifier
@@ -93,7 +93,7 @@ class ComposeWebActivity : ComponentActivity() {
                                 .background(Color.Yellow)
                                 .padding(top = 8.dp)
                         )
-                        GeckoWebContent(
+                        GeckoViewItem(
                             url = "https://www.google.com",
                             geckoView = geckoView,
                             modifier = Modifier
@@ -109,7 +109,7 @@ class ComposeWebActivity : ComponentActivity() {
                                 .background(Color.Yellow)
                                 .padding(top = 8.dp)
                         )
-                        GeckoWebContent(
+                        GeckoViewItem(
                             url = "https://www.google.com",
                             geckoView = customGeckoView,
                             modifier = Modifier
@@ -125,7 +125,7 @@ class ComposeWebActivity : ComponentActivity() {
 
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
-fun WebContent(url: String, webView: WebView, modifier: Modifier = Modifier) {
+fun WebViewItem(url: String, webView: WebView, modifier: Modifier = Modifier) {
     val rememberedWebView = remember(webView) {
         webView.apply {
             settings.javaScriptEnabled = true
@@ -152,7 +152,7 @@ fun WebContent(url: String, webView: WebView, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun GeckoWebContent(url: String, geckoView: GeckoView, modifier: Modifier = Modifier) {
+fun GeckoViewItem(url: String, geckoView: GeckoView, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val runtime = remember {
         GeckoRuntime.getDefault(context.applicationContext)
