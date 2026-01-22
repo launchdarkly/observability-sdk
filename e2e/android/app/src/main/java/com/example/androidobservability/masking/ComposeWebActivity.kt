@@ -20,6 +20,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,17 +39,22 @@ class ComposeWebActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
         setContent {
             AndroidObservabilityTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+                    val context = LocalContext.current
+                    val webView = remember(context) { WebView(context) }
+                    val customWebView = remember(context) { CustomWebView(context) }
+                    val geckoView = remember(context) { GeckoView(context) }
+                    val customGeckoView = remember(context) { CustomGeckoView(context) }
+
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(innerPadding)
                             .verticalScroll(rememberScrollState())
                     ) {
-                        val context = LocalContext.current
-
                         Text(
                             text = "android.webkit.WebView",
                             fontSize = 16.sp,
@@ -58,7 +64,7 @@ class ComposeWebActivity : ComponentActivity() {
                         )
                         WebContent(
                             url = "https://www.google.com",
-                            webView = WebView(context),
+                            webView = webView,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(450.dp)
@@ -73,7 +79,7 @@ class ComposeWebActivity : ComponentActivity() {
                         )
                         WebContent(
                             url = "https://www.google.com",
-                            webView = CustomWebView(context),
+                            webView = customWebView,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(450.dp)
@@ -89,7 +95,7 @@ class ComposeWebActivity : ComponentActivity() {
                         )
                         GeckoWebContent(
                             url = "https://www.google.com",
-                            geckoView = GeckoView(context),
+                            geckoView = geckoView,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(450.dp)
@@ -105,7 +111,7 @@ class ComposeWebActivity : ComponentActivity() {
                         )
                         GeckoWebContent(
                             url = "https://www.google.com",
-                            geckoView = CustomGeckoView(context),
+                            geckoView = customGeckoView,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(450.dp)
@@ -120,7 +126,7 @@ class ComposeWebActivity : ComponentActivity() {
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun WebContent(url: String, webView: WebView, modifier: Modifier = Modifier) {
-    val webView = remember {
+    val rememberedWebView = remember(webView) {
         webView.apply {
             settings.javaScriptEnabled = true
             webViewClient = WebViewClient()
@@ -128,15 +134,15 @@ fun WebContent(url: String, webView: WebView, modifier: Modifier = Modifier) {
         }
     }
 
-    DisposableEffect(webView) {
+    DisposableEffect(rememberedWebView) {
         onDispose {
-            webView.destroy()
+            rememberedWebView.destroy()
         }
     }
 
     AndroidView(
         modifier = modifier,
-        factory = { webView },
+        factory = { rememberedWebView },
         update = { view ->
             if (view.url != url) {
                 view.loadUrl(url)
@@ -164,14 +170,16 @@ fun GeckoWebContent(url: String, geckoView: GeckoView, modifier: Modifier = Modi
         }
     }
 
-    AndroidView(
-        modifier = modifier,
-        factory = { _ ->
-            geckoView.apply {
-                setSession(session)
+    key(geckoView) {
+        AndroidView(
+            modifier = modifier,
+            factory = { _ ->
+                geckoView.apply {
+                    setSession(session)
+                }
             }
-        }
-    )
+        )
+    }
 
     LaunchedEffect(url) {
         session.loadUri(url)
