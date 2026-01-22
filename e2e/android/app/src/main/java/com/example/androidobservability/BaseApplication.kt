@@ -17,7 +17,6 @@ import com.launchdarkly.sdk.android.LDClient
 import com.launchdarkly.sdk.android.LDConfig
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
-import org.mozilla.geckoview.GeckoRuntime
 
 open class BaseApplication : Application() {
 
