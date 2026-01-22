@@ -1,5 +1,7 @@
 package com.example.androidobservability
 
+import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -40,8 +42,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Color
 import com.example.androidobservability.masking.ComposeMaskingActivity
 import com.example.androidobservability.masking.ComposeUserFormActivity
+import com.example.androidobservability.masking.ComposeWebActivity
 import com.example.androidobservability.masking.XMLUserFormActivity
 import com.example.androidobservability.masking.XMLMaskingActivity
+import com.example.androidobservability.masking.XMLWebActivity
 import com.example.androidobservability.smoothie.SmoothieListActivity
 import com.example.androidobservability.ui.theme.AndroidObservabilityTheme
 import com.example.androidobservability.ui.theme.DangerRed
@@ -192,7 +196,7 @@ private fun InstrumentationButtons(viewModel: ViewModel) {
             onClick = {
                 viewModel.triggerCrash()
             },
-            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+            colors = ButtonDefaults.buttonColors(
                 containerColor = DangerRed,
                 contentColor = Color.White
             )
@@ -206,85 +210,37 @@ private fun InstrumentationButtons(viewModel: ViewModel) {
 private fun MaskingButtons() {
     val context = LocalContext.current
 
+    MaskingRow(
+        name = "User Form",
+        ctx = context,
+        activity1 = XMLUserFormActivity::class.java,
+        activity2 = ComposeUserFormActivity::class.java
+    )
 
-    // Three-column layout: Name | XML | Compose
-    // User Form
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = "User Form",
-            modifier = Modifier.weight(1f)
-        )
-        Button(
-            onClick = {
-                context.startActivity(
-                    Intent(
-                        context,
-                        XMLUserFormActivity::class.java
-                    )
-                )
-            },
-            modifier = Modifier.weight(1f),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp)
-        ) {
-            Text("XML")
-        }
-        Button(
-            onClick = {
-                context.startActivity(
-                    Intent(
-                        context,
-                        ComposeUserFormActivity::class.java
-                    )
-                )
-            },
-            modifier = Modifier.weight(1f),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp)
-        ) {
-            Text("Compose")
-        }
-    }
-    // Smoothies
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = "Smoothies",
-            modifier = Modifier.weight(1f)
-        )
-        Button(
-            onClick = {
-                context.startActivity(
-                    Intent(
-                        context,
-                        SmoothieListActivity::class.java
-                    )
-                )
-            },
-            modifier = Modifier.weight(1f),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp)
-        ) {
-            Text("XML")
-        }
-        Button(
-            onClick = { /* Compose Smoothies not implemented */ },
-            enabled = false,
-            modifier = Modifier.weight(1f),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp)
-        ) {
-            Text("Compose")
-        }
-    }
-    // Check
+    MaskingRow(
+        name = "Smoothies",
+        ctx = context,
+        activity1 = SmoothieListActivity::class.java,
+        activity2 = null
+    )
+
+    MaskingRow(
+        name = "Check",
+        ctx = context,
+        activity1 = XMLMaskingActivity::class.java,
+        activity2 = ComposeMaskingActivity::class.java
+    )
+
+    MaskingRow(
+        name = "Webviews",
+        ctx = context,
+        activity1 = XMLWebActivity::class.java,
+        activity2 = ComposeWebActivity::class.java
+    )
+}
+
+@Composable
+private fun MaskingRow(name: String, ctx: Context, activity1: Class<out Activity>??, activity2: Class<out Activity>??) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -293,37 +249,33 @@ private fun MaskingButtons() {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = "Check",
+            text = name,
             modifier = Modifier.weight(1f)
         )
         Button(
-            onClick = {
-                context.startActivity(
-                    Intent(
-                        context,
-                        XMLMaskingActivity::class.java
-                    )
-                )
-            },
+            onClick = { goToActivity(ctx, activity1) },
+            enabled = activity1 != null,
             modifier = Modifier.weight(1f),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp)
         ) {
             Text("XML")
         }
         Button(
-            onClick = {
-                context.startActivity(
-                    Intent(
-                        context,
-                        ComposeMaskingActivity::class.java
-                    )
-                )
-            },
+            onClick = { goToActivity(ctx, activity2) },
+            enabled = activity2 != null,
             modifier = Modifier.weight(1f),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp)
         ) {
             Text("Compose")
         }
+    }
+}
+
+private fun goToActivity(ctx: Context, activity: Class<out Activity>??){
+    activity?.let {
+        ctx.startActivity(
+            Intent(ctx, it)
+        )
     }
 }
 
@@ -459,6 +411,5 @@ private fun CustomerApiButtons(viewModel: ViewModel) {
     ) {
         Text("Evaluate boolean flag")
     }
-
 
 }

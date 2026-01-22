@@ -39,6 +39,13 @@
             android:name=".smoothie.SmoothieListActivity"
             android:exported="false"
             android:theme="@style/Theme.AndroidObservability" />
+        <activity
+            android:name=".masking.ComposeWebActivity"
+            android:exported="false" />
+        <activity
+            android:name=".masking.XMLWebActivity"
+            android:exported="false" />
+
         <service
             android:name=".ObservabilityForegroundService"
             android:exported="false" />
