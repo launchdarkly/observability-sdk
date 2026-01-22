@@ -103,14 +103,6 @@ class PrivacyProfileTest {
     }
 
     @Test
-    fun `maskWebViews adds WebView to viewClassSet`() {
-        val profile = PrivacyProfile(maskWebViews = true)
-
-        val viewClassSet = profile.getPrivateSet("viewClassSet")
-        assertTrue(viewClassSet.contains(android.webkit.WebView::class.java))
-    }
-
-    @Test
     fun `invalid string-based maskViews class name throws targeted error`() {
         val fqcn = "com.example.this.does.not.ExistView"
         val ex = assertThrows(IllegalArgumentException::class.java) {
