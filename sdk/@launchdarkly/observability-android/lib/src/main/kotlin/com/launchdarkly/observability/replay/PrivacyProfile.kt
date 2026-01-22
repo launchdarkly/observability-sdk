@@ -37,7 +37,6 @@ data class PrivacyProfile(
     private val viewClassSet = buildSet {
         addAll(maskViews.map { it.clazz })
         if (maskImageViews) add(ImageView::class.java)
-        if (maskWebViews) add(WebView::class.java)
     }
 
     private val webViewClassNameSet = if (maskWebViews) webViewClassNames.toSet() else emptySet()
