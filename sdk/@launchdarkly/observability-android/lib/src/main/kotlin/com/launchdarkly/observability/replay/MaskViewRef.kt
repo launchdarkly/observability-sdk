@@ -10,9 +10,9 @@ sealed interface MaskViewRef {
     ) : MaskViewRef
 
     data class FromKClass(
-        val kclass: KClass<*>
+        val kClass: KClass<*>
     ) : MaskViewRef {
-        override val clazz: Class<*> = kclass.java
+        override val clazz: Class<*> = kClass.java
     }
 
     data class FromName(
@@ -32,5 +32,5 @@ sealed interface MaskViewRef {
 }
 
 fun view(clazz: Class<*>): MaskViewRef = MaskViewRef.FromClass(clazz)
-fun view(kclass: KClass<*>): MaskViewRef = MaskViewRef.FromKClass(kclass)
+fun view(kClass: KClass<*>): MaskViewRef = MaskViewRef.FromKClass(kClass)
 fun view(name: String): MaskViewRef = MaskViewRef.FromName(name)

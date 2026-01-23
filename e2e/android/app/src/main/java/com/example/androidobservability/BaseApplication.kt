@@ -53,11 +53,12 @@ open class BaseApplication : Application() {
             options = ReplayOptions(
                 privacyProfile = PrivacyProfile(
                     maskText = false,
+                    maskWebViews = true,
                     maskViews = listOf(
                         view(ImageView::class.java),
-                        view("android.widget.TextView")
-                        ),
-                    maskXMLViewIds = listOf("smoothieTitle"))
+                    ),
+                    maskXMLViewIds = listOf("smoothieTitle")
+                )
             )
         )
 

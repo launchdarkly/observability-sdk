@@ -27,6 +27,12 @@ class PrivacyProfileTest {
     }
 
     @Test
+    fun `maskWebViews defaults to false`() {
+        val profile = PrivacyProfile()
+        assertFalse(profile.maskWebViews)
+    }
+
+    @Test
     fun `maskViews populates viewClassSet and adds viewsMatcher to matchers list`() {
         val maskedClass = FakeMaskedView::class.java
         val profile = PrivacyProfile(maskViews = listOf(view(maskedClass)))
@@ -76,6 +82,27 @@ class PrivacyProfileTest {
     }
 
     @Test
+    fun `maskWebViews adds default WebView class names to class name matcher set`() {
+        val profile = PrivacyProfile(maskWebViews = true)
+
+        val matchers = profile.asMatchersList()
+        assertTrue(matchers.contains(profile.webViewClassHierarchyMatcher))
+
+        val classNameSet = profile.getPrivateSet("webViewClassNameSet")
+        assertTrue(
+            classNameSet.containsAll(
+                listOf(
+                    "android.webkit.WebView",
+                    "org.mozilla.geckoview.GeckoView",
+                    "org.xwalk.core.XWalkView",
+                    "com.tencent.smtt.sdk.WebView",
+                    "com.uc.webview.export.WebView",
+                )
+            )
+        )
+    }
+
+    @Test
     fun `invalid string-based maskViews class name throws targeted error`() {
         val fqcn = "com.example.this.does.not.ExistView"
         val ex = assertThrows(IllegalArgumentException::class.java) {
@@ -98,5 +125,3 @@ class PrivacyProfileTest {
 
     private class FakeMaskedView
 }
-
-

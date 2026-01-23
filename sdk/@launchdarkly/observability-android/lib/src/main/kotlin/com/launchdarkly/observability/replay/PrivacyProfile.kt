@@ -1,6 +1,7 @@
 package com.launchdarkly.observability.replay
 
 import android.view.View
+import android.webkit.WebView
 import android.widget.ImageView
 import com.launchdarkly.observability.replay.masking.MaskMatcher
 import com.launchdarkly.observability.replay.masking.MaskTarget
@@ -18,6 +19,8 @@ import com.launchdarkly.observability.replay.masking.MaskTarget
  * @param maskViews Additional Views to mask by exact class match (see [viewsMatcher]).
  * @param maskXMLViewIds Additional Views to mask by resource entry name (see [xmlViewIdsMatcher]).
  * accepts `"@+id/foo"`, `"@id/foo"`, or `"foo"`.
+ * @param maskWebViews Set to true to mask known WebView types and their subclasses
+ * (e.g., "android.webkit.WebView", "org.mozilla.geckoview.GeckoView", etc).
  * @param maskBySemanticsKeywords Set to true to enable masking of "sensitive" targets detected by
  * semantic keywords (password + keyword heuristics).
  **/
@@ -28,12 +31,15 @@ data class PrivacyProfile(
     val maskXMLViewIds: List<String> = emptyList(),
     // only for XML ImageViews
     val maskImageViews: Boolean = false,
+    val maskWebViews: Boolean = false,
     val maskBySemanticsKeywords: Boolean = false,
-    ) {
+) {
     private val viewClassSet = buildSet {
         addAll(maskViews.map { it.clazz })
         if (maskImageViews) add(ImageView::class.java)
     }
+
+    private val webViewClassNameSet = if (maskWebViews) webViewClassNames.toSet() else emptySet()
 
     private val maskXMLViewIdSet = maskXMLViewIds.map {
         when {
@@ -56,6 +62,7 @@ data class PrivacyProfile(
         if (viewClassSet.isNotEmpty()) add(viewsMatcher)
         if (maskXMLViewIdSet.isNotEmpty()) add(xmlViewIdsMatcher)
         if (maskBySemanticsKeywords) add(sensitiveMatcher)
+        if (webViewClassNameSet.isNotEmpty()) add(webViewClassHierarchyMatcher)
     }
 
     /**
@@ -66,6 +73,21 @@ data class PrivacyProfile(
     internal val viewsMatcher: MaskMatcher = object : MaskMatcher {
         override fun isMatch(target: MaskTarget): Boolean {
             return viewClassSet.contains(target.view.javaClass)
+        }
+    }
+
+    /**
+     * Matches targets whose underlying Android View is a subclass (or implements an interface)
+     * with a class name included in [webViewClassNames] when [maskWebViews] is enabled.
+     */
+    internal val webViewClassHierarchyMatcher: MaskMatcher = object : MaskMatcher {
+        private val cache = HashMap<Class<*>, Boolean>()
+
+        override fun isMatch(target: MaskTarget): Boolean {
+            val viewClass = target.view.javaClass
+            return cache.getOrPut(viewClass) {
+                matchesClassHierarchy(viewClass, webViewClassNameSet)
+            }
         }
     }
 
@@ -144,5 +166,54 @@ data class PrivacyProfile(
         "mm/yy",
         "pin",
     )
-}
 
+    /**
+     * Returns true when [viewClass] matches any class name in [classNameSet] by walking
+     * its superclasses and implemented interfaces.
+     */
+    private fun matchesClassHierarchy(
+        viewClass: Class<*>,
+        classNameSet: Set<String>
+    ): Boolean {
+        if (classNameSet.isEmpty()) return false
+
+        val seenInterfaces = HashSet<Class<*>>()
+        var current: Class<*>? = viewClass
+        while (current != null) {
+            if (classNameSet.contains(current.name)) return true
+            if (hasMatchingInterface(current, seenInterfaces, classNameSet)) return true
+            current = current.superclass
+        }
+        return false
+    }
+
+    /**
+     * Returns true when [clazz] (or any of its interfaces' parents) matches [classNameSet].
+     * Uses [seen] to avoid re-checking interfaces across the hierarchy walk.
+     */
+    private fun hasMatchingInterface(
+        clazz: Class<*>,
+        seen: HashSet<Class<*>>,
+        classNameSet: Set<String>
+    ): Boolean {
+        val queue = ArrayDeque<Class<*>>()
+        queue.addAll(clazz.interfaces)
+        while (queue.isNotEmpty()) {
+            val interfaceClass = queue.removeFirst()
+            if (!seen.add(interfaceClass)) continue
+            if (classNameSet.contains(interfaceClass.name)) return true
+            queue.addAll(interfaceClass.interfaces)
+        }
+        return false
+    }
+
+    companion object {
+        private val webViewClassNames = listOf(
+            WebView::class.java.name,
+            "org.mozilla.geckoview.GeckoView",
+            "org.xwalk.core.XWalkView",
+            "com.tencent.smtt.sdk.WebView",
+            "com.uc.webview.export.WebView",
+        )
+    }
+}

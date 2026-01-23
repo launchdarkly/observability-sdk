@@ -69,10 +69,10 @@ class MaskCollector(private val logger: LDLogger) {
     fun traverse(view: View, context: MaskContext, masks: MutableList<Mask>) {
         if (!view.isShown) return
 
-        if (view is AbstractComposeView) {
-            traverseCompose(view, context, masks)
-        } else if (!view::class.java.name.contains("AndroidComposeView")) {
-            traverseNative(view, context, masks)
+        when {
+            view is AbstractComposeView -> traverseCompose(view, context, masks)
+            isAndroidComposeView(view) -> traverseAndroidComposeView(view, context, masks)
+            else -> traverseNative(view, context, masks)
         }
     }
 
@@ -105,5 +105,22 @@ class MaskCollector(private val logger: LDLogger) {
     ): Boolean {
         return target.hasLDMask()
             || matchers.any { matcher -> matcher.isMatch(target) }
+    }
+
+    private fun isAndroidComposeView(view: View): Boolean {
+        return view::class.java.name.contains("AndroidComposeView")
+    }
+
+    private fun traverseAndroidComposeView(
+        view: View,
+        context: MaskContext,
+        masks: MutableList<Mask>
+    ) {
+        if (view !is ViewGroup) return
+
+        for (i in 0 until view.childCount) {
+            val child = view.getChildAt(i)
+            traverse(child, context, masks)
+        }
     }
 }

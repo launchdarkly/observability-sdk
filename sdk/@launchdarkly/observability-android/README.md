@@ -250,6 +250,7 @@ val sessionReplay = SessionReplay(
                 // You can also provide the class name as a string (FQCN).
                 view("android.widget.EditText"),
             ),
+            maskWebViews = true,
             maskXMLViewIds = listOf(
                 // Masks by resource entry name (from resources.getResourceEntryName(view.id)).
                 // Accepts "@+id/foo", "@id/foo", or "foo".
@@ -263,6 +264,7 @@ val sessionReplay = SessionReplay(
 
 Notes:
 - `maskViews` matches on `target.view.javaClass` equality (exact class only).
+- `maskWebViews` uses a default list of WebView class names for masking (and still allows subclasses), including AndroidView-hosted views inside Compose.
 - `maskXMLViewIds` applies only to Views with a non-`View.NO_ID` id that resolves to a resource entry name.
 
 ##### XML Views

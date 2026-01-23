@@ -92,6 +92,9 @@ dependencies {
     testImplementation("io.opentelemetry:opentelemetry-sdk-testing:1.51.0")
     testImplementation(testFixtures(project(":observability-android")))
 
+    // Used for testing webviews masking
+    implementation("org.mozilla.geckoview:geckoview:130.0.20240913135723")
+
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
