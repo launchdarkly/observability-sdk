@@ -141,6 +141,25 @@ export type HighlightClassOptions = {
 	reportConsoleErrors?: boolean
 	consoleMethodsToRecord?: ConsoleMethods[]
 	privacySetting?: PrivacySettingOption
+	maskAllInputs?: boolean
+	maskInputOptions?: Partial<{
+		color: boolean
+		date: boolean
+		'datetime-local': boolean
+		email: boolean
+		month: boolean
+		number: boolean
+		range: boolean
+		search: boolean
+		tel: boolean
+		text: boolean
+		time: boolean
+		url: boolean
+		week: boolean
+		textarea: boolean
+		select: boolean
+		password: boolean
+	}>
 	maskTextClass?: string | RegExp
 	maskTextSelector?: string
 	blockClass?: string | RegExp
@@ -829,6 +848,8 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 
 			const [maskAllInputs, maskInputOptions] = determineMaskInputOptions(
 				this.privacySetting,
+				this.options.maskAllInputs,
+				this.options.maskInputOptions,
 			)
 
 			this._recordStop = record({

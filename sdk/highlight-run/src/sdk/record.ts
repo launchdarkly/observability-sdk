@@ -602,6 +602,8 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 
 			const [maskAllInputs, maskInputOptions] = determineMaskInputOptions(
 				this.privacySetting,
+				this.options.maskAllInputs,
+				this.options.maskInputOptions,
 			)
 
 			this._recordStop = record({
@@ -613,7 +615,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 				recordCrossOriginIframes: this.options.recordCrossOriginIframe,
 				privacySetting: this.privacySetting,
 				maskAllInputs,
-				maskInputOptions: maskInputOptions,
+				maskInputOptions,
 				maskTextClass: this.options.maskTextClass,
 				maskTextSelector: this.options.maskTextSelector,
 				recordCanvas: this.enableCanvasRecording,
