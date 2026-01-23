@@ -221,6 +221,25 @@ Notes:
 - SessionReplay depends on Observability. If Observability is missing or listed after SessionReplay, the plugin logs an error and stays inactive.
 - Observability runs fine without SessionReplay; adding SessionReplay extends the Observability pipeline to include session recording.
 
+#### Delay Start
+
+If you need to begin recording after login or later in the app lifecycle, disable automatic capture and start it later:
+
+```kotlin
+import com.launchdarkly.observability.replay.ReplayOptions
+import com.launchdarkly.observability.replay.plugin.SessionReplay
+import com.launchdarkly.observability.sdk.LDReplay
+
+val sessionReplay = SessionReplay(
+    ReplayOptions(enabled = false)
+)
+
+// After login:
+LDReplay.start()
+```
+
+Call `LDReplay.stop()` to pause recording.
+
 #### Masking sensitive UI
 
 Use `ldMask()` to mark views that should be masked in session replay. There are helpers for both XML-based Views and Jetpack Compose.

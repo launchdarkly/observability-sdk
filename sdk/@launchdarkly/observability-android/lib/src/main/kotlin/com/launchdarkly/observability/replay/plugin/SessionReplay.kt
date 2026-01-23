@@ -1,13 +1,13 @@
 package com.launchdarkly.observability.replay.plugin
 
 import com.launchdarkly.observability.BuildConfig
-import com.launchdarkly.observability.client.ObservabilityClient
 import com.launchdarkly.observability.interfaces.LDExtendedInstrumentation
 import com.launchdarkly.observability.plugin.InstrumentationContributor
 import com.launchdarkly.observability.plugin.InstrumentationContributorManager
 import com.launchdarkly.observability.replay.ReplayInstrumentation
 import com.launchdarkly.observability.replay.ReplayOptions
 import com.launchdarkly.observability.sdk.LDObserve
+import com.launchdarkly.observability.sdk.LDReplay
 import com.launchdarkly.sdk.android.LDClient
 import com.launchdarkly.sdk.android.integrations.EnvironmentMetadata
 import com.launchdarkly.sdk.android.integrations.Hook
@@ -38,21 +38,21 @@ class SessionReplay(
     }
 
     override fun register(client: LDClient, metadata: EnvironmentMetadata?) {
-        LDObserve.Companion.context?.let {
+        LDObserve.context?.let {
             InstrumentationContributorManager.add(client, this)
         } ?: run {
-            Timber.Forest.tag(TAG).e("Observability plugin is not initialized")
+            Timber.tag(TAG).e("Observability plugin is not initialized")
         }
     }
 
-    override fun provideInstrumentations(): List<LDExtendedInstrumentation> {
-        return synchronized(this) {
-            cachedInstrumentations ?: LDObserve.Companion.context?.let { context ->
-                listOf(
-                    ReplayInstrumentation(options, context).also { replayInstrumentation = it }
-                ).also { cachedInstrumentations = it }
-            }.orEmpty()
-        }
+    override fun provideInstrumentations(): List<LDExtendedInstrumentation> = synchronized(this) {
+        val instrumentations = cachedInstrumentations ?: LDObserve.context?.let { context ->
+            val instrumentation = ReplayInstrumentation(options, context).also { replayInstrumentation = it }
+            listOf(instrumentation).also { cachedInstrumentations = it }
+        }.orEmpty()
+
+        replayInstrumentation?.let(LDReplay::init)
+        instrumentations
     }
 
     override fun getHooks(metadata: EnvironmentMetadata?): MutableList<Hook> {
@@ -60,6 +60,7 @@ class SessionReplay(
             SessionReplayHook(this)
         )
     }
+
     companion object {
         const val PLUGIN_NAME = "@launchdarkly/session-replay-android"
         private const val TAG = "SessionReplay"

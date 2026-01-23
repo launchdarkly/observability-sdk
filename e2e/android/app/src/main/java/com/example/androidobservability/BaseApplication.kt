@@ -51,6 +51,7 @@ open class BaseApplication : Application() {
 
         val sessionReplayPlugin = SessionReplay(
             options = ReplayOptions(
+                enabled = true,
                 privacyProfile = PrivacyProfile(
                     maskText = false,
                     maskWebViews = true,
