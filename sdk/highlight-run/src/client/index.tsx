@@ -123,6 +123,7 @@ import { createLog, defaultLogOptions } from './listeners/console-listener'
 import { CustomSampler } from './otel/sampling/CustomSampler'
 import randomUuidV4 from './utils/randomUuidV4'
 import { LDContext } from '@launchdarkly/js-client-sdk'
+import { MaskInputOptions } from './types/record'
 
 export const HighlightWarning = (context: string, msg: any) => {
 	console.warn(`Highlight Warning: (${context}): `, { output: msg })
@@ -142,24 +143,7 @@ export type HighlightClassOptions = {
 	consoleMethodsToRecord?: ConsoleMethods[]
 	privacySetting?: PrivacySettingOption
 	maskAllInputs?: boolean
-	maskInputOptions?: Partial<{
-		color: boolean
-		date: boolean
-		'datetime-local': boolean
-		email: boolean
-		month: boolean
-		number: boolean
-		range: boolean
-		search: boolean
-		tel: boolean
-		text: boolean
-		time: boolean
-		url: boolean
-		week: boolean
-		textarea: boolean
-		select: boolean
-		password: boolean
-	}>
+	maskInputOptions?: MaskInputOptions
 	maskTextClass?: string | RegExp
 	maskTextSelector?: string
 	blockClass?: string | RegExp

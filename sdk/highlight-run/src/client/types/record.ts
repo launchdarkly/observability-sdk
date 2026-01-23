@@ -5,6 +5,25 @@ import type {
 	SamplingStrategy,
 } from './types'
 
+export type MaskInputOptions = Partial<{
+	color: boolean
+	date: boolean
+	'datetime-local': boolean
+	email: boolean
+	month: boolean
+	number: boolean
+	range: boolean
+	search: boolean
+	tel: boolean
+	text: boolean
+	time: boolean
+	url: boolean
+	week: boolean
+	textarea: boolean
+	select: boolean
+	password: boolean
+}>
+
 export type RecordOptions = CommonOptions & {
 	/**
 	 * Specifies where the backend of the app lives. If specified, the SDK will attach the
@@ -45,24 +64,7 @@ export type RecordOptions = CommonOptions & {
 	/**
 	 * Customize the input element types that are masked. Only applies if privacySetting is `none`.
 	 */
-	maskInputOptions?: Partial<{
-		color: boolean
-		date: boolean
-		'datetime-local': boolean
-		email: boolean
-		month: boolean
-		number: boolean
-		range: boolean
-		search: boolean
-		tel: boolean
-		text: boolean
-		time: boolean
-		url: boolean
-		week: boolean
-		textarea: boolean
-		select: boolean
-		password: boolean
-	}>
+	maskInputOptions?: MaskInputOptions
 
 	/**
 	 * Customize which elements' text should be masked by specifying a CSS class name or RegExp.

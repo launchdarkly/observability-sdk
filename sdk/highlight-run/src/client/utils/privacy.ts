@@ -1,28 +1,11 @@
-import { MaskInputOptions } from 'rrweb-snapshot'
 import { PrivacySettingOption } from '../types/types'
+import { MaskInputOptions } from '../types/record'
 
 // returns (1) whether all inputs should be masked and (2) which inputs should be masked
 export const determineMaskInputOptions = (
 	privacyPolicy: PrivacySettingOption,
 	maskAllInputs?: boolean,
-	maskInputOptions?: Partial<{
-		color: boolean
-		date: boolean
-		'datetime-local': boolean
-		email: boolean
-		month: boolean
-		number: boolean
-		range: boolean
-		search: boolean
-		tel: boolean
-		text: boolean
-		time: boolean
-		url: boolean
-		week: boolean
-		textarea: boolean
-		select: boolean
-		password: boolean
-	}>,
+	maskInputOptions?: MaskInputOptions,
 ): [maskAllOptions: boolean, maskOptions?: MaskInputOptions] => {
 	switch (privacyPolicy) {
 		case 'strict':
