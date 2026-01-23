@@ -310,7 +310,7 @@ private fun MaskingRow(name: String, ctx: Context, activity1: Class<out Activity
     }
 }
 
-private fun goToActivity(ctx: Context, activity: Class<out Activity>??) {
+private fun goToActivity(ctx: Context, activity: Class<out Activity>?){
     activity?.let {
         ctx.startActivity(
             Intent(ctx, it)
