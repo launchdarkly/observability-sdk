@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.24.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.23.1...launchdarkly-observability-android-0.24.0) (2026-01-23)
+
+
+### Features
+
+* O11Y-920 - Add masking support for WebViews ([#352](https://github.com/launchdarkly/observability-sdk/issues/352)) ([b1b46d3](https://github.com/launchdarkly/observability-sdk/commit/b1b46d37017a551cf7f3f14d1b8b78eedf3d3d6b))
+
 ## [0.23.1](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.23.0...launchdarkly-observability-android-0.23.1) (2026-01-16)
 
 

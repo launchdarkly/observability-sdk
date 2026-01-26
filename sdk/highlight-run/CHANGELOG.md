@@ -1,5 +1,12 @@
 # highlight.run
 
+## [9.26.0](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-9.25.1...highlight.run-9.26.0) (2026-01-23)
+
+
+### Features
+
+* add SR support for maskAllInputs and maskInputOptions ([#354](https://github.com/launchdarkly/observability-sdk/issues/354)) ([dad61ef](https://github.com/launchdarkly/observability-sdk/commit/dad61eff7e1861b6d0825abafa1f4f05610b7bc3))
+
 ## [9.25.1](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-9.25.0...highlight.run-9.25.1) (2026-01-21)
 
 
