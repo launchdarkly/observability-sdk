@@ -10,6 +10,7 @@ object LDReplay {
     private var delegate: ReplayControl = object : ReplayControl {
         override fun start() {}
         override fun stop() {}
+        override fun flush() {}
     }
 
     /**
@@ -32,9 +33,17 @@ object LDReplay {
     fun stop() {
         delegate.stop()
     }
+
+    /**
+     * Flushes any queued replay events immediately.
+     */
+    fun flush() {
+        delegate.flush()
+    }
 }
 
 internal interface ReplayControl {
     fun start()
     fun stop()
+    fun flush()
 }

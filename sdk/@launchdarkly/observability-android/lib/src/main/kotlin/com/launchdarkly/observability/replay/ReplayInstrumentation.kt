@@ -79,6 +79,8 @@ class ReplayInstrumentation(
     private var processLifecycleObserver: DefaultLifecycleObserver? = null
     private var isInstalled: Boolean = false
     private var exporter: SessionReplayExporter? = null
+    private val pendingIdentifyLock = Any()
+    private var pendingIdentify: IdentifyItemPayload? = null
 
     override val name: String = INSTRUMENTATION_SCOPE_NAME
 
@@ -191,10 +193,15 @@ class ReplayInstrumentation(
 
     override fun start() {
         isEnabled.value = true
+        flushPendingIdentify()
     }
 
     override fun stop() {
         isEnabled.value = false
+    }
+
+    override fun flush() {
+        batchWorker.flush()
     }
 
     private fun startProcessLifecycleObserver() {
@@ -236,6 +243,27 @@ class ReplayInstrumentation(
         processLifecycleObserver = null
     }
 
+    /**
+     * Sends the most recent identify cached while replay was disabled.
+     *
+     * Clears the pending identify atomically to avoid races with concurrent identify calls,
+     * and updates its sessionId to the current session before sending.
+     */
+    private fun flushPendingIdentify() {
+        if (!this::sessionManager.isInitialized) return
+        val exporterSnapshot = exporter ?: return
+
+        val pending = synchronized(pendingIdentifyLock) {
+            pendingIdentify.also { pendingIdentify = null }
+        } ?: return
+
+        val pendingUpdated = pending.copy(sessionId = sessionManager.getSessionId())
+        instrumentationScope.launch {
+            exporterSnapshot.sendIdentifyAndCache(pendingUpdated)
+            eventQueue.send(pendingUpdated)
+        }
+    }
+
     suspend fun identifySession(
         ldContext: LDContext,
         timestamp: Long = System.currentTimeMillis()
@@ -256,10 +284,16 @@ class ReplayInstrumentation(
 
         // When replay is disabled, cache the identify payload for later session init without sending it now.
         if (!isEnabled.value) {
+            synchronized(pendingIdentifyLock) {
+                pendingIdentify = event
+            }
             exporter?.cacheIdentify(event)
             return
         }
 
+        synchronized(pendingIdentifyLock) {
+            pendingIdentify = null
+        }
         exporter?.sendIdentifyAndCache(event)
         eventQueue.send(event)
     }

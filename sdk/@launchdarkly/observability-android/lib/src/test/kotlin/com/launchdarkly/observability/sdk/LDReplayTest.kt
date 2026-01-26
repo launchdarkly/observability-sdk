@@ -8,6 +8,7 @@ class LDReplayTest {
     private class TestControl : ReplayControl {
         var startCalls = 0
         var stopCalls = 0
+        var flushCalls = 0
 
         override fun start() {
             startCalls++
@@ -15,6 +16,10 @@ class LDReplayTest {
 
         override fun stop() {
             stopCalls++
+        }
+
+        override fun flush() {
+            flushCalls++
         }
     }
 
@@ -36,5 +41,15 @@ class LDReplayTest {
         LDReplay.stop()
 
         assertEquals(1, control.stopCalls)
+    }
+
+    @Test
+    fun `flush delegates to replay control`() {
+        val control = TestControl()
+        LDReplay.init(control)
+
+        LDReplay.flush()
+
+        assertEquals(1, control.flushCalls)
     }
 }
