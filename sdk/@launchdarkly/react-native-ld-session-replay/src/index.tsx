@@ -28,23 +28,13 @@ class SessionReplayPluginAdapter implements LDPlugin {
 
   getMetadata(): LDPluginMetadata {
     return {
-      name: '@launchdarkly/observability-react-native',
+      name: 'session-replay-react-native',
     };
   }
 
   register(_client: LDClient, metadata: LDPluginEnvironmentMetadata): void {
     const sdkKey = metadata.sdkKey || metadata.mobileKey || '';
 
-<<<<<<< Updated upstream
-    try {
-      configureSessionReplay(sdkKey, this.options).then(() => {
-        startSessionReplay();
-      });
-    } catch (e) {
-      // Error handled silently - configuration failures should be handled by the native module
-    }
-  }
-=======
 		configureSessionReplay(sdkKey, this.options)
 			.then(() => {
 				return startSessionReplay();
@@ -52,8 +42,7 @@ class SessionReplayPluginAdapter implements LDPlugin {
 			.catch(() => {
 				// Error handled silently - configuration failures should be handled by the native module
 			});
-	}
->>>>>>> Stashed changes
+  }
 
   getHooks?(metadata: LDPluginEnvironmentMetadata): Hook[] {
     return [];
