@@ -35,6 +35,7 @@ class SessionReplayPluginAdapter implements LDPlugin {
   register(_client: LDClient, metadata: LDPluginEnvironmentMetadata): void {
     const sdkKey = metadata.sdkKey || metadata.mobileKey || '';
 
+<<<<<<< Updated upstream
     try {
       configureSessionReplay(sdkKey, this.options).then(() => {
         startSessionReplay();
@@ -43,6 +44,16 @@ class SessionReplayPluginAdapter implements LDPlugin {
       // Error handled silently - configuration failures should be handled by the native module
     }
   }
+=======
+		configureSessionReplay(sdkKey, this.options)
+			.then(() => {
+				return startSessionReplay();
+			})
+			.catch(() => {
+				// Error handled silently - configuration failures should be handled by the native module
+			});
+	}
+>>>>>>> Stashed changes
 
   getHooks?(metadata: LDPluginEnvironmentMetadata): Hook[] {
     return [];
