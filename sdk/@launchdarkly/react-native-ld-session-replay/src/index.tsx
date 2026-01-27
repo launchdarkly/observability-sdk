@@ -2,18 +2,17 @@ import SessionReplayReactNative from './NativeSessionReplayReactNative';
 import type { SessionReplayOptions } from './NativeSessionReplayReactNative';
 import type { LDPlugin } from '@launchdarkly/react-native-client-sdk';
 import type {
-	LDPluginEnvironmentMetadata,
-	LDPluginMetadata
+  LDPluginEnvironmentMetadata,
+  LDPluginMetadata,
 } from '@launchdarkly/js-sdk-common';
 import type { LDClient } from '@launchdarkly/react-native-client-sdk';
 import type { Hook } from '@launchdarkly/js-client-sdk-common';
-
 
 export function configureSessionReplay(
   mobileKey: string,
   options: SessionReplayOptions = {}
 ): Promise<void> {
-  	return SessionReplayReactNative.configure(mobileKey, options);
+  return SessionReplayReactNative.configure(mobileKey, options);
 }
 
 export function startSessionReplay(): Promise<void> {
@@ -21,41 +20,37 @@ export function startSessionReplay(): Promise<void> {
 }
 
 class SessionReplayPluginAdapter implements LDPlugin {
-	private options: SessionReplayOptions;
+  private options: SessionReplayOptions;
 
-	constructor(options: SessionReplayOptions = {}) {
-		this.options = options;
-	}
+  constructor(options: SessionReplayOptions = {}) {
+    this.options = options;
+  }
 
-	getMetadata(): LDPluginMetadata {
-		return {
-			name: '@launchdarkly/observability-react-native',
-		}
-	}
+  getMetadata(): LDPluginMetadata {
+    return {
+      name: '@launchdarkly/observability-react-native',
+    };
+  }
 
-	register(
-		_client: LDClient,
-		metadata: LDPluginEnvironmentMetadata,
-	): void {
-    const sdkKey = metadata.sdkKey || metadata.mobileKey || ''
+  register(_client: LDClient, metadata: LDPluginEnvironmentMetadata): void {
+    const sdkKey = metadata.sdkKey || metadata.mobileKey || '';
 
-		try {
-			configureSessionReplay(sdkKey, this.options)
-				.then(() => {
-					startSessionReplay();
-				});
-		} catch(e) {
-			// Error handled silently - configuration failures should be handled by the native module
-		}	
-	}
+    try {
+      configureSessionReplay(sdkKey, this.options).then(() => {
+        startSessionReplay();
+      });
+    } catch (e) {
+      // Error handled silently - configuration failures should be handled by the native module
+    }
+  }
 
-	getHooks?(metadata: LDPluginEnvironmentMetadata): Hook[] {
-		return []
-	}
+  getHooks?(metadata: LDPluginEnvironmentMetadata): Hook[] {
+    return [];
+  }
 }
 
 export function createSessionReplayPlugin(
-	options: SessionReplayOptions = {}
+  options: SessionReplayOptions = {}
 ): LDPlugin {
-	return new SessionReplayPluginAdapter(options);
+  return new SessionReplayPluginAdapter(options);
 }

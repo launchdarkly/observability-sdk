@@ -1,5 +1,9 @@
 import { Text, View, StyleSheet, TextInput } from 'react-native';
-import { ReactNativeLDClient, LDProvider, AutoEnvAttributes } from '@launchdarkly/react-native-client-sdk';
+import {
+  ReactNativeLDClient,
+  LDProvider,
+  AutoEnvAttributes,
+} from '@launchdarkly/react-native-client-sdk';
 
 import { useEffect, useState } from 'react';
 
@@ -16,17 +20,20 @@ const plugin = createSessionReplayPlugin({
 });
 
 const options = {
-  plugins: [plugin]
+  plugins: [plugin],
 };
 
-const client = new ReactNativeLDClient("mob-48fd3788-eab7-4b72-b607-e41712049dbd", AutoEnvAttributes.Enabled, options);
-const context = { kind: 'user', key: 'user-key-123abc' }
+const client = new ReactNativeLDClient(
+  'mob-48fd3788-eab7-4b72-b607-e41712049dbd',
+  AutoEnvAttributes.Enabled,
+  options
+);
+const context = { kind: 'user', key: 'user-key-123abc' };
 
 export default function App() {
   useEffect(() => {
     console.log('App started');
     client.identify(context).catch((e: any) => console.log(e));
-    
   }, []);
 
   const [text, setText] = useState<string>('');
@@ -35,27 +42,21 @@ export default function App() {
     <LDProvider client={client}>
       <View style={styles.container}>
         <Text>Hello World from react native</Text>
-        <Text 
-          testID="welcome_text">
-            Session Replay from native swift code
-        </Text>
-        <Text 
-          testID='good_bye'>
-            Good Bye
-        </Text>
-        
-        <TextInput          
+        <Text testID="welcome_text">Session Replay from native swift code</Text>
+        <Text testID="good_bye">Good Bye</Text>
+
+        <TextInput
           style={styles.input}
           placeholder="Type something..."
           value={text}
-        onChangeText={(value: string) => setText(value)}
-      />
-      <TextInput          
+          onChangeText={(value: string) => setText(value)}
+        />
+        <TextInput
           style={styles.input}
           placeholder="Type something..."
           value={text}
-        onChangeText={(value: string) => setText(value)}
-      />
+          onChangeText={(value: string) => setText(value)}
+        />
       </View>
     </LDProvider>
   );
