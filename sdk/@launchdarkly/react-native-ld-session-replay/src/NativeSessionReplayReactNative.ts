@@ -18,4 +18,6 @@ export interface Spec extends TurboModule {
   startSessionReplay(): Promise<void>;
 }
 
-export default TurboModuleRegistry.getEnforcing<Spec>('SessionReplayReactNative');
+export default TurboModuleRegistry.getEnforcing<Spec>(
+  'SessionReplayReactNative'
+);
