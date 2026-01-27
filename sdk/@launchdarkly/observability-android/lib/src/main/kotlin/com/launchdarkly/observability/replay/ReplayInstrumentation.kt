@@ -15,6 +15,7 @@ import com.launchdarkly.observability.replay.exporter.InteractionItemPayload
 import com.launchdarkly.observability.replay.exporter.SessionReplayExporter
 import com.launchdarkly.observability.replay.transport.BatchWorker
 import com.launchdarkly.observability.replay.transport.EventQueue
+import com.launchdarkly.observability.sdk.ReplayControl
 import com.launchdarkly.sdk.LDContext
 import io.opentelemetry.android.instrumentation.InstallationContext
 import io.opentelemetry.android.session.SessionManager
@@ -25,6 +26,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.coroutines.cancellation.CancellationException
@@ -62,7 +64,7 @@ private const val INSTRUMENTATION_SCOPE_NAME = "com.launchdarkly.observability.r
 class ReplayInstrumentation(
     private val options: ReplayOptions = ReplayOptions(),
     private val observabilityContext: ObservabilityContext
-) : LDExtendedInstrumentation {
+) : LDExtendedInstrumentation, ReplayControl {
 
     private lateinit var sessionManager: SessionManager
     private val logger: LDLogger = observabilityContext.logger
@@ -73,9 +75,12 @@ class ReplayInstrumentation(
     private val instrumentationScope = CoroutineScope(DispatcherProviderHolder.current.default + SupervisorJob())
     private var captureJob: Job? = null
     private val shouldCapture = MutableStateFlow(false)
+    private val isEnabled = MutableStateFlow(options.enabled)
     private var processLifecycleObserver: DefaultLifecycleObserver? = null
     private var isInstalled: Boolean = false
     private var exporter: SessionReplayExporter? = null
+    private val pendingIdentifyLock = Any()
+    private var pendingIdentify: IdentifyItemPayload? = null
 
     override val name: String = INSTRUMENTATION_SCOPE_NAME
 
@@ -122,6 +127,7 @@ class ReplayInstrumentation(
         // Images collector
         instrumentationScope.launch {
             captureSource?.captureFlow?.collect { capture ->
+                if (!isEnabled.value) return@collect
                 eventQueue.send(ImageItemPayload(capture))
             }
         }
@@ -129,6 +135,7 @@ class ReplayInstrumentation(
         // Interactions collector
         instrumentationScope.launch {
             interactionSource?.captureFlow?.collect { interaction ->
+                if (!isEnabled.value) return@collect
                 eventQueue.send(InteractionItemPayload(interaction))
             }
         }
@@ -140,11 +147,12 @@ class ReplayInstrumentation(
      */
     private fun startCaptureStateObserver() {
         instrumentationScope.launch {
-            shouldCapture.collect { shouldRun ->
-                val running = captureJob?.isActive == true
-                if (shouldRun == running) return@collect
-                if (shouldRun) doRunCapture() else doPauseCapture()
-            }
+            combine(shouldCapture, isEnabled) { shouldRun, enabled -> shouldRun && enabled }
+                .collect { shouldRun ->
+                    val running = captureJob?.isActive == true
+                    if (shouldRun == running) return@collect
+                    if (shouldRun) doRunCapture() else doPauseCapture()
+                }
         }
     }
 
@@ -175,14 +183,25 @@ class ReplayInstrumentation(
         logger.debug("Session replay capture paused")
     }
 
-    // TODO: O11Y-622 - implement mechanism for customer code to invoke this method
-    fun runCapture() {
+    private fun runCapture() {
         shouldCapture.value = true
     }
 
-    // TODO: O11Y-622 - implement mechanism for customer code to invoke this method
-    fun pauseCapture() {
+    private fun pauseCapture() {
         shouldCapture.value = false
+    }
+
+    override fun start() {
+        isEnabled.value = true
+        flushPendingIdentify()
+    }
+
+    override fun stop() {
+        isEnabled.value = false
+    }
+
+    override fun flush() {
+        batchWorker.flush()
     }
 
     private fun startProcessLifecycleObserver() {
@@ -224,6 +243,27 @@ class ReplayInstrumentation(
         processLifecycleObserver = null
     }
 
+    /**
+     * Sends the most recent identify cached while replay was disabled.
+     *
+     * Clears the pending identify atomically to avoid races with concurrent identify calls,
+     * and updates its sessionId to the current session before sending.
+     */
+    private fun flushPendingIdentify() {
+        if (!this::sessionManager.isInitialized) return
+        val exporterSnapshot = exporter ?: return
+
+        val pending = synchronized(pendingIdentifyLock) {
+            pendingIdentify.also { pendingIdentify = null }
+        } ?: return
+
+        val pendingUpdated = pending.copy(sessionId = sessionManager.getSessionId())
+        instrumentationScope.launch {
+            exporterSnapshot.sendIdentifyAndCache(pendingUpdated)
+            eventQueue.send(pendingUpdated)
+        }
+    }
+
     suspend fun identifySession(
         ldContext: LDContext,
         timestamp: Long = System.currentTimeMillis()
@@ -242,7 +282,19 @@ class ReplayInstrumentation(
             sessionId = sessionId
         )
 
-        exporter?.identifyEventAndUpdate(event)
+        // When replay is disabled, cache the identify payload for later session init without sending it now.
+        if (!isEnabled.value) {
+            synchronized(pendingIdentifyLock) {
+                pendingIdentify = event
+            }
+            exporter?.cacheIdentify(event)
+            return
+        }
+
+        synchronized(pendingIdentifyLock) {
+            pendingIdentify = null
+        }
+        exporter?.sendIdentifyAndCache(event)
         eventQueue.send(event)
     }
 

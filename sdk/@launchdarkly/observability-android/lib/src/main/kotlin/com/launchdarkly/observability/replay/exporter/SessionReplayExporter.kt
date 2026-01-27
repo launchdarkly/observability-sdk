@@ -8,7 +8,6 @@ import com.launchdarkly.observability.replay.transport.EventExporting
 import com.launchdarkly.observability.replay.transport.EventQueueItem
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlin.math.log
 
 // size limit of accumulated continues canvas operations on the RRWeb player
 private const val RRWEB_CANVAS_BUFFER_LIMIT =  10_000_000 // ~10mb
@@ -134,7 +133,7 @@ class SessionReplayExporter(
         }
     }
 
-    suspend fun identifyEventAndUpdate(newIdentifyEvent: IdentifyItemPayload) {
+    suspend fun sendIdentifyAndCache(newIdentifyEvent: IdentifyItemPayload) {
         exportMutex.withLock {
             val sessionId = newIdentifyEvent.sessionId
             if (sessionId != null) {
@@ -145,6 +144,12 @@ class SessionReplayExporter(
                     logger.error(e)
                 }
             }
+        }
+    }
+
+    internal suspend fun cacheIdentify(newIdentifyEvent: IdentifyItemPayload) {
+        exportMutex.withLock {
+            identifyItemPayload = newIdentifyEvent
         }
     }
 

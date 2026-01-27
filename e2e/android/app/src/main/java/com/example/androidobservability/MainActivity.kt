@@ -23,12 +23,14 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -51,6 +53,7 @@ import com.example.androidobservability.ui.theme.AndroidObservabilityTheme
 import com.example.androidobservability.ui.theme.DangerRed
 import com.example.androidobservability.ui.theme.IdentifyBgColor
 import com.example.androidobservability.ui.theme.IdentifyTextColor
+import com.launchdarkly.observability.sdk.LDReplay
 
 class MainActivity : ComponentActivity() {
 
@@ -67,40 +70,76 @@ class MainActivity : ComponentActivity() {
                         .fillMaxSize()
                         .imePadding()
                 ) { innerPadding ->
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(innerPadding)
-                            .verticalScroll(rememberScrollState())
-                            .padding(16.dp)
-                    ) {
-                        Text(
-                            text = "Masking",
-                            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
-                        HorizontalDivider(modifier = Modifier.padding(bottom = 16.dp))
-
-                        MaskingButtons()
-
-                        Text(
-                            text = "Observability",
-                            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
-                        HorizontalDivider(modifier = Modifier.padding(bottom = 16.dp))
-
-                        IdentifyButtons(viewModel = viewModel)
-
-                        InstrumentationButtons(viewModel = viewModel)
-
-                        MetricButtons(viewModel = viewModel)
-
-                        CustomerApiButtons(viewModel = viewModel)
-                    }
+                    MainScreen(viewModel, innerPadding)
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun MainScreen(viewModel: ViewModel, innerPadding: PaddingValues) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(innerPadding)
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp)
+    ) {
+        Text(
+            text = "Masking",
+            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+        HorizontalDivider(modifier = Modifier.padding(bottom = 16.dp))
+
+        MaskingButtons()
+
+        Text(
+            text = "Observability",
+            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+        HorizontalDivider(modifier = Modifier.padding(bottom = 16.dp))
+
+        SessionReplayToggle()
+
+        IdentifyButtons(viewModel = viewModel)
+
+        InstrumentationButtons(viewModel = viewModel)
+
+        MetricButtons(viewModel = viewModel)
+
+        CustomerApiButtons(viewModel = viewModel)
+    }
+}
+
+@Composable
+private fun SessionReplayToggle() {
+    var isSessionReplayEnabled by rememberSaveable { mutableStateOf(true) }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 16.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "Session Replay",
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+        )
+        Switch(
+            checked = isSessionReplayEnabled,
+            onCheckedChange = { enabled ->
+                isSessionReplayEnabled = enabled
+                if (enabled) {
+                    LDReplay.start()
+                } else {
+                    LDReplay.stop()
+                }
+            }
+        )
     }
 }
 
@@ -271,7 +310,7 @@ private fun MaskingRow(name: String, ctx: Context, activity1: Class<out Activity
     }
 }
 
-private fun goToActivity(ctx: Context, activity: Class<out Activity>??){
+private fun goToActivity(ctx: Context, activity: Class<out Activity>?){
     activity?.let {
         ctx.startActivity(
             Intent(ctx, it)

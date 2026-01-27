@@ -79,6 +79,46 @@ class SessionReplayExporterTest {
     }
 
     @Test
+    fun `sendIdentifyAndCache should call identifyReplaySession`() = runTest {
+        val updatedIdentify = IdentifyItemPayload(
+            attributes = mapOf("key" to "updated-user"),
+            timestamp = 1L,
+            sessionId = "session-a"
+        )
+
+        coEvery { mockService.identifyReplaySession(any<String>(), any<IdentifyItemPayload>()) } just Runs
+
+        exporter.sendIdentifyAndCache(updatedIdentify)
+
+        coVerify(exactly = 1) { mockService.identifyReplaySession("session-a", updatedIdentify) }
+    }
+
+    @Test
+    fun `export uses cached identify payload`() = runTest {
+        val cachedIdentify = IdentifyItemPayload(
+            attributes = mapOf("key" to "cached-user"),
+            timestamp = 2L,
+            sessionId = "session-a"
+        )
+        exporter.cacheIdentify(cachedIdentify)
+
+        val captureEvents = listOf(
+            CaptureEvent("base64data1", 800, 600, 1000L, "session-a")
+        )
+        val items = createItemsFromCaptures(captureEvents)
+
+        val payloadSlot = slot<IdentifyItemPayload>()
+        coEvery { mockService.initializeReplaySession(any(), any()) } just Runs
+        coEvery { mockService.identifyReplaySession(any<String>(), capture(payloadSlot)) } just Runs
+        coEvery { mockService.pushPayload(any(), any(), any()) } just Runs
+
+        exporter.export(items)
+
+        coVerify(exactly = 1) { mockService.identifyReplaySession("session-a", any<IdentifyItemPayload>()) }
+        assertEquals(cachedIdentify, payloadSlot.captured)
+    }
+
+    @Test
     @Disabled // Feature of handling multiples session is not done
     fun `export should send full capture for first session and incremental for subsequent captures in same session`() = runTest {
         // Arrange: Create captures for two different sessions
