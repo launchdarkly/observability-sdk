@@ -13,9 +13,6 @@ export function configureSessionReplay(
   mobileKey: string,
   options: SessionReplayOptions = {}
 ): Promise<void> {
-	console.log(`session replay options: ${options.maskAccessibilityIdentifiers}`)
-	console.log(`configure function: ${SessionReplayReactNative.configure}`);
-
   	return SessionReplayReactNative.configure(mobileKey, options);
 }
 
@@ -40,21 +37,15 @@ class SessionReplayPluginAdapter implements LDPlugin {
 		_client: LDClient,
 		metadata: LDPluginEnvironmentMetadata,
 	): void {
-		console.log("registering plugin")
     const sdkKey = metadata.sdkKey || metadata.mobileKey || ''
 
-    console.log(`registering plugin with sdk key: ${sdkKey}`)
-    console.log(`registering plugin with metadata: ${metadata}`)
 		try {
 			configureSessionReplay(sdkKey, this.options)
 				.then(() => {
-					startSessionReplay()
-						.then(() => {
-							console.log("Session replay started")
-						});
+					startSessionReplay();
 				});
 		} catch(e) {
-			console.log(`plugin created -----> ${e}`)
+			// Error handled silently - configuration failures should be handled by the native module
 		}	
 	}
 
