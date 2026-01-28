@@ -1,5 +1,13 @@
 # @launchdarkly/session-replay
 
+## [1.1.0](https://github.com/launchdarkly/observability-sdk/compare/session-replay-1.0.0...session-replay-1.1.0) (2026-01-28)
+
+
+### Features
+
+* publish umd for broser environments ([#334](https://github.com/launchdarkly/observability-sdk/issues/334)) ([3e90673](https://github.com/launchdarkly/observability-sdk/commit/3e90673e42335aeeef78cc807a07dfa21da19291))
+* Version Packages ([#136](https://github.com/launchdarkly/observability-sdk/issues/136)) ([c271dc8](https://github.com/launchdarkly/observability-sdk/commit/c271dc87e4aba78355ca54cc7af9200f63da26a8))
+
 ## [0.5.2](https://github.com/launchdarkly/observability-sdk/compare/session-replay-0.5.1...session-replay-0.5.2) (2026-01-23)
 
 
