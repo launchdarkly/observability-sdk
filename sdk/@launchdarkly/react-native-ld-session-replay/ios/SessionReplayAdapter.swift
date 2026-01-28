@@ -107,6 +107,10 @@ fileprivate class Client {
       ),
       SessionReplay(options: self?.options ?? .init())
     ]
+    /// Controls LDClient start behavior. When true, calling start causes LDClient to go online.
+    /// When false, calling start causes LDClient to remain offline. 
+    /// If offline at start, set the client online to receive flag updates. (Default: true)
+    config.startOnline = false
     return config
   }()
   
@@ -144,7 +148,7 @@ fileprivate class Client {
       context: context,
       startWaitSeconds: 5.0,
       completion: { [weak self] (timedOut: Bool) -> Void in
-        if timedOut {
+        if timedOut, self?.config.startOnline == true {
           let error = "Session replay initialization timed out after 5 seconds"
           NSLog("[SessionReplayAdapter] ⚠️ %@", error)
           completion(false, error)
