@@ -7,7 +7,6 @@ import LaunchDarklySessionReplay
 public class SessionReplayAdapter: NSObject {
   @objc public static let shared = SessionReplayAdapter()
   private var client: Client?
-  private var sessionReplayOptions: SessionReplayOptions = .init()
   
   private override init() {
     super.init()
