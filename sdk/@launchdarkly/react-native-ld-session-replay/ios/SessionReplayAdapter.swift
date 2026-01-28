@@ -13,6 +13,10 @@ public class SessionReplayAdapter: NSObject {
   }
   
   @objc public func setMobileKey(_ mobileKey: String, options: NSDictionary?) {
+    // Close the previous client's LDClient before replacing it to prevent resource leaks
+    if let previousClient = self.client {
+      previousClient.close()
+    }
     let options = sessionReplayOptionsFrom(dictionary: options)
     self.client = Client(mobileKey: mobileKey, options: options)
   }
@@ -82,6 +86,7 @@ public class SessionReplayAdapter: NSObject {
 fileprivate class Client {
   private let mobileKey: String
   private let options: SessionReplayOptions
+  private var isStarted: Bool = false
   
   init(mobileKey: String, options: SessionReplayOptions) {
     self.mobileKey = mobileKey
@@ -125,16 +130,26 @@ fileprivate class Client {
       completion(false, error)
       return
     }
+    
+    // Close any existing LDClient before starting a new one to prevent resource leaks
+    // This handles the case where start() is called multiple times or after reconfiguration
+    if isStarted, let existingClient = LDClient.get() {
+      existingClient.close()
+      isStarted = false
+      NSLog("[SessionReplayAdapter] Closed existing LDClient before starting new one")
+    }
+    
     LDClient.start(
       config: config,
       context: context,
       startWaitSeconds: 5.0,
-      completion: { (timedOut: Bool) -> Void in
+      completion: { [weak self] (timedOut: Bool) -> Void in
         if timedOut {
           let error = "Session replay initialization timed out after 5 seconds"
           NSLog("[SessionReplayAdapter] ⚠️ %@", error)
           completion(false, error)
         } else {
+          self?.isStarted = true
           NSLog("[SessionReplayAdapter] ✅ Session replay started successfully")
           completion(true, nil)
         }
@@ -148,6 +163,21 @@ fileprivate class Client {
     Task { @MainActor in
       LDReplay.shared.isEnabled = false
       NSLog("[SessionReplayAdapter] Session replay stopped")
+    }
+    // Close the LDClient to release network connections and background tasks
+    close()
+  }
+  
+  func close() {
+    // Only close if we actually started the client
+    guard isStarted else { return }
+    
+    // LDClient is a singleton, so we access it via LDClient.get()
+    // and call close() to properly shut down network connections and background tasks
+    if let ldClient = LDClient.get() {
+      ldClient.close()
+      isStarted = false
+      NSLog("[SessionReplayAdapter] LDClient closed and resources released")
     }
   }
 }
