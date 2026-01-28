@@ -8976,7 +8976,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@launchdarkly/observability-react-native@npm:^0.7.0, @launchdarkly/observability-react-native@workspace:*, @launchdarkly/observability-react-native@workspace:sdk/@launchdarkly/observability-react-native":
+"@launchdarkly/observability-react-native@workspace:*, @launchdarkly/observability-react-native@workspace:sdk/@launchdarkly/observability-react-native":
   version: 0.0.0-use.local
   resolution: "@launchdarkly/observability-react-native@workspace:sdk/@launchdarkly/observability-react-native"
   dependencies:
@@ -43378,7 +43378,7 @@ __metadata:
     "@eslint/eslintrc": "npm:^3.3.1"
     "@eslint/js": "npm:^9.35.0"
     "@launchdarkly/js-sdk-common": "npm:^2.20.0"
-    "@launchdarkly/observability-react-native": "npm:^0.7.0"
+    "@launchdarkly/observability-react-native": "workspace:*"
     "@launchdarkly/react-native-client-sdk": "npm:^10.12.5"
     "@react-native/babel-preset": "npm:0.83.0"
     "@react-native/eslint-config": "npm:0.83.0"
