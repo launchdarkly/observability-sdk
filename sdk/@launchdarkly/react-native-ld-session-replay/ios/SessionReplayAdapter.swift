@@ -15,7 +15,6 @@ public class SessionReplayAdapter: NSObject {
   @objc public func setMobileKey(_ mobileKey: String, options: NSDictionary) {
     let options = sessionReplayOptionsFrom(dictionary: options)
     self.client = Client(mobileKey: mobileKey, options: options)
-//    self.client = Client(mobileKey: mobileKey, options: .init())
   }
   
   private func sessionReplayOptionsFrom(dictionary: NSDictionary) -> SessionReplayOptions {    
@@ -81,17 +80,6 @@ fileprivate class Client {
         )
       ),
       SessionReplay(options: self?.options ?? .init())
-//      SessionReplay(
-//        options: .init(
-//          isEnabled: true,
-//          privacy: .init(
-//            maskTextInputs: true,
-//            maskWebViews: false,
-//            maskImages: false,
-//            maskAccessibilityIdentifiers: ["email-field", "password-field"]
-//          )
-//        )
-//      )
     ]
     return config
   }()
