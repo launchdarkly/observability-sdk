@@ -9,7 +9,6 @@
               reject:(RCTPromiseRejectBlock)reject
 {
     @try {
-      NSLog(@"Configure called with mobileKey: %@ options: %@", mobileKey, options);
       [[SessionReplayAdapter shared] setMobileKey:mobileKey options:options];
       resolve(nil);
     } @catch(NSException *exception) {
