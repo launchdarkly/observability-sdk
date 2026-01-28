@@ -53,6 +53,7 @@ public class SessionReplayAdapter: NSObject {
   
   @objc public func stop() {
     guard let client else { return }
+    client.stop()
   }
 }
 
@@ -123,5 +124,11 @@ fileprivate class Client {
         }
       }
     )
+  }
+  
+  func stop() {
+    // Stop session replay by disabling it via LDReplay.shared
+    LDReplay.shared.isEnabled = false
+    NSLog("[SessionReplayAdapter] Session replay stopped")
   }
 }
