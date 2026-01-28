@@ -1,6 +1,6 @@
 # Changelog
 
-## [1.1.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-dotnet-1.0.0...launchdarkly-observability-dotnet-1.1.0) (2026-01-28)
+## [1.0.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-dotnet-0.3.0...launchdarkly-observability-dotnet-1.0.0) (2026-01-28)
 
 
 ### Features

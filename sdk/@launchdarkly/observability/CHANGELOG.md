@@ -1,6 +1,6 @@
 # @launchdarkly/observability
 
-## [1.1.0](https://github.com/launchdarkly/observability-sdk/compare/observability-1.0.0...observability-1.1.0) (2026-01-28)
+## [1.0.0](https://github.com/launchdarkly/observability-sdk/compare/observability-0.5.2...observability-1.0.0) (2026-01-28)
 
 
 ### Features

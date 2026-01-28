@@ -1,6 +1,6 @@
 # Changelog
 
-## [1.1.0](https://github.com/launchdarkly/observability-sdk/compare/go/v1.0.0...go/v1.1.0) (2026-01-28)
+## [1.0.0](https://github.com/launchdarkly/observability-sdk/compare/go/v0.4.0...go/v1.0.0) (2026-01-28)
 
 
 ### Features

@@ -2,7 +2,7 @@
 
 All notable changes to the LaunchDarkly Python Observability will be documented in this file. This project adheres to Semantic Versioning.
 
-## [1.1.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-python-1.0.0...launchdarkly-observability-python-1.1.0) (2026-01-28)
+## [1.0.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-python-0.1.1...launchdarkly-observability-python-1.0.0) (2026-01-28)
 
 
 ### Features
