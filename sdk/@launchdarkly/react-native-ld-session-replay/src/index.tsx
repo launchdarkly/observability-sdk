@@ -19,6 +19,10 @@ export function startSessionReplay(): Promise<void> {
   return SessionReplayReactNative.startSessionReplay();
 }
 
+export function stopSessionReplay(): Promise<void> {
+  return SessionReplayReactNative.stopSessionReplay();
+}
+
 class SessionReplayPluginAdapter implements LDPlugin {
   private options: SessionReplayOptions;
 

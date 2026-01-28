@@ -32,6 +32,14 @@ class SessionReplayReactNativeModule(reactContext: ReactApplicationContext) :
     )
   }
 
+  override fun stopSessionReplay(promise: Promise) {
+    promise.reject(
+      "NOT_SUPPORTED",
+      "Session replay is not yet supported on Android. iOS support is available.",
+      null
+    )
+  }
+
   companion object {
     const val NAME = "SessionReplayReactNative"
   }
