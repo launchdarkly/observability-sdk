@@ -87,7 +87,10 @@ fileprivate class Client {
   private let mobileKey: String
   private let options: SessionReplayOptions
   private var isStarted: Bool = false
-  
+  private var isStarting: Bool = false
+  private var closePending: Bool = false
+  private let startLock = NSLock()
+
   init(mobileKey: String, options: SessionReplayOptions) {
     self.mobileKey = mobileKey
     self.options = options
@@ -134,27 +137,54 @@ fileprivate class Client {
       completion(false, error)
       return
     }
-    
+
+    startLock.lock()
+    if isStarting {
+      startLock.unlock()
+      let error = "Start already in progress"
+      NSLog("[SessionReplayAdapter] %@", error)
+      completion(false, error)
+      return
+    }
+    isStarting = true
     // Close any existing LDClient before starting a new one to prevent resource leaks
-    // This handles the case where start() is called multiple times or after reconfiguration
     if isStarted, let existingClient = LDClient.get() {
       existingClient.close()
       isStarted = false
       NSLog("[SessionReplayAdapter] Closed existing LDClient before starting new one")
     }
-    
+    startLock.unlock()
+
     LDClient.start(
       config: config,
       context: context,
       startWaitSeconds: 5.0,
       completion: { [weak self] (timedOut: Bool) -> Void in
-        if timedOut, self?.config.startOnline == true {
+        guard let self else { return }
+        self.startLock.lock()
+        self.isStarting = false
+        let shouldClosePending = self.closePending
+        if shouldClosePending { self.closePending = false }
+        if timedOut, self.config.startOnline == true {
           let error = "Session replay initialization timed out after 5 seconds"
           NSLog("[SessionReplayAdapter] ⚠️ %@", error)
+          self.startLock.unlock()
+          if shouldClosePending, let ldClient = LDClient.get() {
+            ldClient.close()
+            NSLog("[SessionReplayAdapter] LDClient closed (was pending, after timeout)")
+          }
           completion(false, error)
         } else {
-          self?.isStarted = true
+          self.isStarted = true
           NSLog("[SessionReplayAdapter] ✅ Session replay started successfully")
+          self.startLock.unlock()
+          if shouldClosePending, let ldClient = LDClient.get() {
+            ldClient.close()
+            self.startLock.lock()
+            self.isStarted = false
+            self.startLock.unlock()
+            NSLog("[SessionReplayAdapter] LDClient closed (was pending)")
+          }
           completion(true, nil)
         }
       }
@@ -173,14 +203,23 @@ fileprivate class Client {
   }
   
   func close() {
-    // Only close if we actually started the client
-    guard isStarted else { return }
-    
+    startLock.lock()
+    if isStarting {
+      closePending = true
+      startLock.unlock()
+      return
+    }
+    guard isStarted else {
+      startLock.unlock()
+      return
+    }
+    isStarted = false
+    startLock.unlock()
+
     // LDClient is a singleton, so we access it via LDClient.get()
     // and call close() to properly shut down network connections and background tasks
     if let ldClient = LDClient.get() {
       ldClient.close()
-      isStarted = false
       NSLog("[SessionReplayAdapter] LDClient closed and resources released")
     }
   }
