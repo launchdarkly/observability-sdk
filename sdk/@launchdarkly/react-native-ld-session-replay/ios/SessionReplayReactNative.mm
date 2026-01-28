@@ -35,6 +35,18 @@
     }
 }
 
+- (void)stopSessionReplay:(RCTPromiseResolveBlock)resolve
+                    reject:(RCTPromiseRejectBlock)reject
+{
+    @try {
+      [[SessionReplayAdapter shared] stop];
+      resolve(nil);
+    } @catch(NSException *exception) {
+      NSLog(@"⚠️ stopSessionReplay crash: %@", exception);
+      reject(@"stop_failed", exception.reason, nil);
+    }
+}
+
 - (std::shared_ptr<facebook::react::TurboModule>)getTurboModule:
     (const facebook::react::ObjCTurboModule::InitParams &)params
 {
