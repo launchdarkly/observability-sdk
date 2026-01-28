@@ -93,7 +93,7 @@ fileprivate class Client {
     return config
   }()
   
-  let context = { () -> LDContext in
+  let context: LDContext? = {
     var contextBuilder = LDContextBuilder(
       key: "12345"
     )
@@ -101,11 +101,16 @@ fileprivate class Client {
     do {
       return try contextBuilder.build().get()
     } catch {
-      abort()
+      NSLog("[SessionReplayAdapter] Failed to build LDContext: %@", error.localizedDescription)
+      return nil
     }
   }()
   
   func start() {
+    guard let context = context else {
+      NSLog("[SessionReplayAdapter] Cannot start session replay: context creation failed")
+      return
+    }
     LDClient.start(
       config: config,
       context: context,
