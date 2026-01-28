@@ -58,6 +58,14 @@
   "publishConfig": {
     "registry": "https://registry.npmjs.org/"
   },
+  "installConfig": {
+    "hoistingLimits": "dependencies"
+  },
+  "dependencies": {
+    "@launchdarkly/js-sdk-common": "^2.20.0",
+    "@launchdarkly/observability-react-native": "workspace:*",
+    "@launchdarkly/react-native-client-sdk": "^10.12.5"
+  },
   "devDependencies": {
     "@commitlint/config-conventional": "^19.8.1",
     "@eslint/compat": "^1.3.2",
@@ -165,10 +173,5 @@
       "release-it"
     ],
     "version": "0.56.1"
-  },
-  "dependencies": {
-    "@launchdarkly/js-sdk-common": "^2.20.0",
-    "@launchdarkly/observability-react-native": "^0.7.0",
-    "@launchdarkly/react-native-client-sdk": "^10.12.5"
   }
 }
