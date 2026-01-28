@@ -34,17 +34,22 @@ const OTLPDefaultEndpoint = "https://otel.highlight.io:4318"
 
 const ErrorURLAttribute = "URL"
 
-const ProjectIDHeader = "x-highlight-project"
 const LDProjectIDHeader = "x-launchdarkly-project"
-const DeprecatedProjectIDAttribute = "highlight_project_id"
-const DeprecatedSessionIDAttribute = "highlight_session_id"
-const DeprecatedRequestIDAttribute = "highlight_trace_id"
-const DeprecatedSourceAttribute = "Source"
-const ProjectIDAttribute = "highlight.project_id"
+const ProjectIDHeader = "x-highlight-project"
+
 const LDProjectIDAttribute = "launchdarkly.project_id"
+const ProjectIDAttribute = "highlight.project_id"
+const DeprecatedProjectIDAttribute = "highlight_project_id"
+
 const SessionIDAttribute = "highlight.session_id"
+const DeprecatedSessionIDAttribute = "highlight_session_id"
+
 const RequestIDAttribute = "highlight.trace_id"
+const DeprecatedRequestIDAttribute = "highlight_trace_id"
+
 const SourceAttribute = "highlight.source"
+const DeprecatedSourceAttribute = "Source"
+
 const TraceTypeAttribute = "highlight.type"
 const TraceKeyAttribute = "highlight.key"
 const EnvironmentAttribute = "environment"
