@@ -2,15 +2,7 @@
 
 ## [1.0.0](https://github.com/launchdarkly/observability-sdk/compare/observability-node-0.3.1...observability-node-1.0.0) (2026-01-28)
 
-
-### Features
-
-* Update instrumentation configuration for ease of use. ([#112](https://github.com/launchdarkly/observability-sdk/issues/112)) ([011032f](https://github.com/launchdarkly/observability-sdk/commit/011032f7c2cb941bcde5f8225705a129f6c2019c))
-
-
-### Bug Fixes
-
-* Fix an issue where logging configuration could over-match for log records without a message or severity. ([#261](https://github.com/launchdarkly/observability-sdk/issues/261)) ([500a6bf](https://github.com/launchdarkly/observability-sdk/commit/500a6bf2e7801c8076405257a31ba4a629311e0b))
+This release marks the 1.0.0 stable version of the LaunchDarkly Observability Node SDK.
 
 ## [0.3.1](https://github.com/launchdarkly/observability-sdk/compare/observability-node-0.3.0...observability-node-0.3.1) (2025-10-06)
 
