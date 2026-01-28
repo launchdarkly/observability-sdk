@@ -43,8 +43,11 @@ class SessionReplayPluginAdapter implements LDPlugin {
 			.then(() => {
 				return startSessionReplay();
 			})
-			.catch(() => {
-				// Error handled silently - configuration failures should be handled by the native module
+			.catch((error) => {
+				console.error(
+					'[SessionReplay] Failed to initialize session replay:',
+					error
+				);
 			});
   }
 
