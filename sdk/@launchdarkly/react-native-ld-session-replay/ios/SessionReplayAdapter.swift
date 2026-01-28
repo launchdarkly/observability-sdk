@@ -46,9 +46,12 @@ public class SessionReplayAdapter: NSObject {
     )
   }
   
-  @objc public func start() {
-    guard let client else { return }
-    client.start()
+  @objc public func start(completion: @escaping (Bool, String?) -> Void) {
+    guard let client else {
+      completion(false, "Client not initialized. Call configure first.")
+      return
+    }
+    client.start(completion: completion)
   }
   
   @objc public func stop() {
@@ -107,9 +110,11 @@ fileprivate class Client {
     }
   }()
   
-  func start() {
+  func start(completion: @escaping (Bool, String?) -> Void) {
     guard let context = context else {
-      NSLog("[SessionReplayAdapter] Cannot start session replay: context creation failed")
+      let error = "Cannot start session replay: context creation failed"
+      NSLog("[SessionReplayAdapter] %@", error)
+      completion(false, error)
       return
     }
     LDClient.start(
@@ -118,9 +123,12 @@ fileprivate class Client {
       startWaitSeconds: 5.0,
       completion: { (timedOut: Bool) -> Void in
         if timedOut {
-          // Client may not have the most recent flags for the configured context
+          let error = "Session replay initialization timed out after 5 seconds"
+          NSLog("[SessionReplayAdapter] ⚠️ %@", error)
+          completion(false, error)
         } else {
-          // Client has received flags for the configured context
+          NSLog("[SessionReplayAdapter] ✅ Session replay started successfully")
+          completion(true, nil)
         }
       }
     )
