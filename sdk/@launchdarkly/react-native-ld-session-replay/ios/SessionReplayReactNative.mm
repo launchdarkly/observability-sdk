@@ -21,8 +21,19 @@
 - (void)startSessionReplay:(RCTPromiseResolveBlock)resolve
                     reject:(RCTPromiseRejectBlock)reject
 {
-    [[SessionReplayAdapter shared] start];
-    resolve(nil);
+    @try {
+      [[SessionReplayAdapter shared] startWithCompletion:^(BOOL success, NSString * _Nullable errorMessage) {
+        if (success) {
+          resolve(nil);
+        } else {
+          NSString *error = errorMessage ?: @"Session replay failed to start";
+          reject(@"start_failed", error, nil);
+        }
+      }];
+    } @catch(NSException *exception) {
+      NSLog(@"⚠️ startSessionReplay crash: %@", exception);
+      reject(@"start_failed", exception.reason, nil);
+    }
 }
 
 - (std::shared_ptr<facebook::react::TurboModule>)getTurboModule:
