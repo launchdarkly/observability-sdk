@@ -4,6 +4,20 @@ This is a new [**React Native**](https://reactnative.dev) project, bootstrapped 
 
 > **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
 
+## Step 0: Configure LaunchDarkly Mobile Key
+
+Before running the app, you need to configure your LaunchDarkly mobile key. You can do this in one of two ways:
+
+1. **Using environment variables (recommended)**: Copy `.env.example` to `.env` and replace `YOUR_LAUNCHDARKLY_MOBILE_KEY_HERE` with your actual mobile key:
+   ```sh
+   cp .env.example .env
+   # Then edit .env and add your LaunchDarkly mobile key
+   ```
+
+2. **Direct replacement**: Edit `src/App.tsx` and replace `YOUR_LAUNCHDARKLY_MOBILE_KEY_HERE` with your actual mobile key.
+
+> **Note**: Never commit your actual API keys to version control. The `.env` file is already included in `.gitignore`.
+
 ## Step 1: Start Metro
 
 First, you will need to run **Metro**, the JavaScript build tool for React Native.
