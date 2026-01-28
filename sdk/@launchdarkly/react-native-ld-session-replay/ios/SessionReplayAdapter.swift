@@ -170,8 +170,7 @@ fileprivate class Client {
           NSLog("[SessionReplayAdapter] ⚠️ %@", error)
           self.startLock.unlock()
           if shouldClosePending, let ldClient = LDClient.get() {
-            ldClient.close()
-            NSLog("[SessionReplayAdapter] LDClient closed (was pending, after timeout)")
+            self.closePendingClient(ldClient: ldClient)
           }
           completion(false, error)
         } else {
@@ -179,13 +178,11 @@ fileprivate class Client {
           NSLog("[SessionReplayAdapter] ✅ Session replay started successfully")
           self.startLock.unlock()
           if shouldClosePending, let ldClient = LDClient.get() {
-            ldClient.close()
-            self.startLock.lock()
-            self.isStarted = false
-            self.startLock.unlock()
-            NSLog("[SessionReplayAdapter] LDClient closed (was pending)")
+            self.closePendingClient(ldClient: ldClient)
+            completion(false, "Session replay was stopped during initialization")
+          } else {
+            completion(true, nil)
           }
-          completion(true, nil)
         }
       }
     )
@@ -204,9 +201,12 @@ fileprivate class Client {
   
   func close() {
     startLock.lock()
+    // If start() is in progress, record that close was requested. The completion handler
+    // will close the client when LDClient.start() finishes, so we don't leave replay running.
     if isStarting {
       closePending = true
       startLock.unlock()
+      NSLog("[SessionReplayAdapter] Close requested while start in progress; will close when init completes")
       return
     }
     guard isStarted else {
@@ -222,5 +222,18 @@ fileprivate class Client {
       ldClient.close()
       NSLog("[SessionReplayAdapter] LDClient closed and resources released")
     }
+  }
+
+  /// Called from the start() completion when closePending was set. Ensures replay is disabled
+  /// and the client is closed, so a stop() during init is fully honored.
+  private func closePendingClient(ldClient: LDClient) {
+    Task { @MainActor in
+      LDReplay.shared.isEnabled = false
+    }
+    ldClient.close()
+    startLock.lock()
+    isStarted = false
+    startLock.unlock()
+    NSLog("[SessionReplayAdapter] LDClient closed (was pending close during init)")
   }
 }
