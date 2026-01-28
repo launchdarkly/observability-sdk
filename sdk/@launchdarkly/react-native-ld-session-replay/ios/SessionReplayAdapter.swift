@@ -128,7 +128,10 @@ fileprivate class Client {
   
   func stop() {
     // Stop session replay by disabling it via LDReplay.shared
-    LDReplay.shared.isEnabled = false
-    NSLog("[SessionReplayAdapter] Session replay stopped")
+    // LDReplay.shared.isEnabled is @MainActor isolated, so we need to mutate it on the main actor
+    Task { @MainActor in
+      LDReplay.shared.isEnabled = false
+      NSLog("[SessionReplayAdapter] Session replay stopped")
+    }
   }
 }
