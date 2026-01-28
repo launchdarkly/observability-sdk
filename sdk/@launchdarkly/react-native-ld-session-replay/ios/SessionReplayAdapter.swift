@@ -12,12 +12,33 @@ public class SessionReplayAdapter: NSObject {
     super.init()
   }
   
-  @objc public func setMobileKey(_ mobileKey: String, options: NSDictionary) {
+  @objc public func setMobileKey(_ mobileKey: String, options: NSDictionary?) {
     let options = sessionReplayOptionsFrom(dictionary: options)
     self.client = Client(mobileKey: mobileKey, options: options)
   }
   
-  private func sessionReplayOptionsFrom(dictionary: NSDictionary) -> SessionReplayOptions {    
+  private func sessionReplayOptionsFrom(dictionary: NSDictionary?) -> SessionReplayOptions {
+    // Handle nil dictionary by using all default values
+    guard let dictionary = dictionary else {
+      let privacy = SessionReplayOptions.PrivacyOptions(
+        maskTextInputs: true,
+        maskWebViews: false,
+        maskLabels: false,
+        maskImages: false,
+        maskUIViews: [],
+        unmaskUIViews: [],
+        ignoreUIViews: [],
+        maskAccessibilityIdentifiers: [],
+        unmaskAccessibilityIdentifiers: [],
+        ignoreAccessibilityIdentifiers: [],
+        minimumAlpha: 0.02
+      )
+      return .init(
+        isEnabled: true,
+        serviceName: "sessionreplay-react-native",
+        privacy: privacy
+      )
+    }
     
     let privacy = SessionReplayOptions.PrivacyOptions(
       maskTextInputs: dictionary["maskTextInputs"] as? Bool ?? true,
