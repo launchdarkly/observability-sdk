@@ -96,17 +96,6 @@ fileprivate class Client {
   private var closePending: Bool = false
   private let startLock = NSLock()
 
-  /// Cleans up the LDClient singleton (disable replay + close). Use when the Client
-  /// was deallocated during start() so the completion handler cannot call closePendingClient.
-  private static func closeOrphanedLDClient() {
-    guard let ldClient = LDClient.get() else { return }
-    Task { @MainActor in
-      LDReplay.shared.isEnabled = false
-    }
-    ldClient.close()
-    NSLog("[SessionReplayAdapter] LDClient closed (client was replaced during init)")
-  }
-
   init(mobileKey: String, options: SessionReplayOptions) {
     self.mobileKey = mobileKey
     self.options = options
@@ -178,9 +167,8 @@ fileprivate class Client {
       completion: { [weak self] (timedOut: Bool) -> Void in
         guard let self else {
           // Client was deallocated (e.g. setMobileKey replaced it while start was in progress).
-          // Perform the same cleanup closePendingClient would do so the LDClient singleton
-          // is not left in an inconsistent state.
-          Self.closeOrphanedLDClient()
+          // Do NOT close LDClient here: a new Client may have already called LDClient.start()
+          // and own the singleton. Closing it would tear down the new client's session replay.
           completion(false, "Client was replaced during initialization")
           return
         }
