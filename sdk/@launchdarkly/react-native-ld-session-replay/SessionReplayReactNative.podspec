@@ -18,11 +18,12 @@ Pod::Spec.new do |s|
 
   # --- Swift Package Manager Dependency ---
   # This helper adds the SPM package to the generated Pods project
-  spm_dependency(s, 
+  spm_dependency(
+    s, 
     url: 'https://github.com/launchdarkly/swift-launchdarkly-observability', 
     requirement: { 
-      kind: 'branch', 
-      branch: 'main' 
+      kind: 'upToNextMajorVersion', 
+      minimumVersion: '0.18.1'
     }, 
     products: ['LaunchDarklyObservability', 'LaunchDarklySessionReplay'] 
   )
