@@ -13,12 +13,17 @@ public class SessionReplayAdapter: NSObject {
   }
   
   @objc public func setMobileKey(_ mobileKey: String, options: NSDictionary?) {
+    let key = mobileKey.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !key.isEmpty else {
+      assertionFailure("[SessionReplayAdapter] setMobileKey called with empty key; session replay will not connect. Configure with a valid LaunchDarkly mobile key.")
+      return
+    }
     // Close the previous client's LDClient before replacing it to prevent resource leaks
     if let previousClient = self.client {
       previousClient.close()
     }
     let options = sessionReplayOptionsFrom(dictionary: options)
-    self.client = Client(mobileKey: mobileKey, options: options)
+    self.client = Client(mobileKey: key, options: options)
   }
   
   private func sessionReplayOptionsFrom(dictionary: NSDictionary?) -> SessionReplayOptions {

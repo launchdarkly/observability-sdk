@@ -8,11 +8,18 @@ import type {
 import type { LDClient } from '@launchdarkly/react-native-client-sdk';
 import type { Hook } from '@launchdarkly/js-client-sdk-common';
 
+const MOBILE_KEY_REQUIRED_MESSAGE =
+  'Session replay requires a non-empty mobile key. Provide metadata.sdkKey or metadata.mobileKey when initializing the LaunchDarkly client.';
+
 export function configureSessionReplay(
   mobileKey: string,
   options: SessionReplayOptions = {}
 ): Promise<void> {
-  return SessionReplayReactNative.configure(mobileKey, options);
+  const key = typeof mobileKey === 'string' ? mobileKey.trim() : '';
+  if (!key) {
+    return Promise.reject(new Error(MOBILE_KEY_REQUIRED_MESSAGE));
+  }
+  return SessionReplayReactNative.configure(key, options);
 }
 
 export function startSessionReplay(): Promise<void> {
@@ -37,18 +44,22 @@ class SessionReplayPluginAdapter implements LDPlugin {
   }
 
   register(_client: LDClient, metadata: LDPluginEnvironmentMetadata): void {
-    const sdkKey = metadata.sdkKey || metadata.mobileKey || '';
-
-		configureSessionReplay(sdkKey, this.options)
-			.then(() => {
-				return startSessionReplay();
-			})
-			.catch((error) => {
-				console.error(
-					'[SessionReplay] Failed to initialize session replay:',
-					error
-				);
-			});
+    const sdkKey = metadata.sdkKey ?? metadata.mobileKey ?? '';
+    const key = typeof sdkKey === 'string' ? sdkKey.trim() : '';
+    if (!key) {
+      console.error('[SessionReplay]', MOBILE_KEY_REQUIRED_MESSAGE);
+      return;
+    }
+    configureSessionReplay(key, this.options)
+      .then(() => {
+        return startSessionReplay();
+      })
+      .catch((error) => {
+        console.error(
+          '[SessionReplay] Failed to initialize session replay:',
+          error
+        );
+      });
   }
 
   getHooks?(metadata: LDPluginEnvironmentMetadata): Hook[] {
