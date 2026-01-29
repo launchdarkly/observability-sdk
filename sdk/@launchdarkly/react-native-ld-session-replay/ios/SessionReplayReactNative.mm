@@ -8,13 +8,18 @@
              resolve:(RCTPromiseResolveBlock)resolve
               reject:(RCTPromiseRejectBlock)reject
 {
+    NSString *trimmed = [mobileKey stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+    if (!trimmed || trimmed.length == 0) {
+      reject(@"invalid_mobile_key", @"Session replay requires a non-empty mobile key.", nil);
+      return;
+    }
     @try {
-      [[SessionReplayAdapter shared] setMobileKey:mobileKey options:options];
+      [[SessionReplayAdapter shared] setMobileKey:trimmed options:options];
       resolve(nil);
     } @catch(NSException *exception) {
       NSLog(@"⚠️ configure crash: %@", exception);
       reject(@"configure_failed", exception.reason, nil);
-    }    
+    }
 }
 
 - (void)startSessionReplay:(RCTPromiseResolveBlock)resolve
