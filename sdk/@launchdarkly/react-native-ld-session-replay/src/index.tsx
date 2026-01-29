@@ -6,7 +6,6 @@ import type {
   LDPluginMetadata,
 } from '@launchdarkly/js-sdk-common';
 import type { LDClient } from '@launchdarkly/react-native-client-sdk';
-import type { Hook } from '@launchdarkly/js-client-sdk-common';
 
 const MOBILE_KEY_REQUIRED_MESSAGE =
   'Session replay requires a non-empty mobile key. Provide metadata.sdkKey or metadata.mobileKey when initializing the LaunchDarkly client.';
@@ -62,9 +61,6 @@ class SessionReplayPluginAdapter implements LDPlugin {
       });
   }
 
-  getHooks?(metadata: LDPluginEnvironmentMetadata): Hook[] {
-    return [];
-  }
 }
 
 export function createSessionReplayPlugin(
