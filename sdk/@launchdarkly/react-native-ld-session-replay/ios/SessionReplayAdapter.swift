@@ -160,7 +160,19 @@ fileprivate class Client {
       context: context,
       startWaitSeconds: 5.0,
       completion: { [weak self] (timedOut: Bool) -> Void in
-        guard let self else { return }
+        guard let self else {
+          // Client was deallocated (e.g. setMobileKey replaced it while start was in progress).
+          // Clean up the LDClient singleton so we don't leave it running with no owner.
+          if let ldClient = LDClient.get() {
+            Task { @MainActor in
+              LDReplay.shared.isEnabled = false
+            }
+            ldClient.close()
+            NSLog("[SessionReplayAdapter] LDClient closed (client was replaced during init)")
+          }
+          completion(false, "Client was replaced during initialization")
+          return
+        }
         self.startLock.lock()
         self.isStarting = false
         let shouldClosePending = self.closePending
