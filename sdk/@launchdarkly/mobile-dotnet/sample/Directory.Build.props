@@ -1,0 +1,5 @@
+<Project>
+  <PropertyGroup>
+    <JavaSdkDirectory>/Library/Java/JavaVirtualMachines/microsoft-21.jdk/Contents/Home</JavaSdkDirectory>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:local="clr-namespace:MauiSample9"
+             x:Class="MauiSample9.MainPage"
+             Background="Black">
+             
+	<CollectionView SelectionMode="Single" SelectionChanged="OnMenuSelectionChanged">
+		<CollectionView.ItemsSource>
+			<x:Array Type="{x:Type x:String}">
+				<x:String>Credit Card</x:String>
+				<x:String>Number Pad</x:String>
+			</x:Array>
+		</CollectionView.ItemsSource>
+		<CollectionView.ItemTemplate>
+			<DataTemplate x:DataType="x:String">
+				<Grid Padding="20">
+					<Label Text="{Binding .}" FontSize="18" TextColor="{StaticResource White}" />
+				</Grid>
+			</DataTemplate>
+		</CollectionView.ItemTemplate>
+		<CollectionView.Footer>
+			<Grid Padding="20" ColumnSpacing="8">
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="*" />
+					<ColumnDefinition Width="*" />
+				</Grid.ColumnDefinitions>
+				<Button Grid.Column="0" Text="Log" Clicked="OnLogButtonClicked" />
+				<Button Grid.Column="1" Text="Metric(Counter)" Clicked="OnMetricCounterButtonClicked" />
+			</Grid>
+		</CollectionView.Footer>
+	</CollectionView>
+</ContentPage>
