@@ -5,8 +5,23 @@ import LaunchDarklySessionReplay
 @objc(SessionReplayAdapter)
 //@objcMembers
 public class SessionReplayAdapter: NSObject {
+  enum ClientState {
+    case notInitialized
+    case starting
+    case started
+  }
   @objc public static let shared = SessionReplayAdapter()
   private var client: Client?
+  private let clientStateQueue = DispatchQueue(label: "com.launchdarkly.sessionreplay.clientstate", attributes: .concurrent)
+  private var _clientState: ClientState = .notInitialized
+  private var clientState: ClientState {
+    get {
+      return clientStateQueue.sync { _clientState }
+    }
+    set {
+      clientStateQueue.async(flags: .barrier) { [weak self] in self?._clientState = newValue }
+    }
+  }
   
   private override init() {
     super.init()
@@ -19,7 +34,8 @@ public class SessionReplayAdapter: NSObject {
       return
     }
     // Close the previous client's LDClient before replacing it to prevent resource leaks
-    if let previousClient = self.client {
+    /// Only close the client if it is started, otherwise we will lose the session replay data
+    if let previousClient = self.client, clientState == .started {
       previousClient.close()
     }
     let options = sessionReplayOptionsFrom(dictionary: options)
@@ -77,9 +93,18 @@ public class SessionReplayAdapter: NSObject {
   @objc public func start(completion: @escaping (Bool, String?) -> Void) {
     guard let client else {
       completion(false, "Client not initialized. Call configure first.")
+      clientState = .notInitialized
       return
     }
-    client.start(completion: completion)
+    clientState = .starting
+    client.start(completion: { [weak self] (success: Bool, error: String?) in
+      if success {
+        self?.clientState = .started
+      } else {
+        self?.clientState = .notInitialized
+      }
+      completion(success, error)
+    })
   }
   
   @objc public func stop() {
