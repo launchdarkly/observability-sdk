@@ -129,9 +129,8 @@ describe('highlight-client-worker', () => {
 	beforeEach(async () => {
 		vi.resetModules()
 
-		const { default: HighlightClientWorker } = await import(
-			'./highlight-client-worker?worker&inline'
-		)
+		const { default: HighlightClientWorker } =
+			await import('./highlight-client-worker?worker&inline')
 		worker = new HighlightClientWorker() as unknown as TestWorker
 	})
 

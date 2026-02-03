@@ -60,7 +60,6 @@ class SessionReplayPluginAdapter implements LDPlugin {
         );
       });
   }
-
 }
 
 export function createSessionReplayPlugin(
