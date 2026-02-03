@@ -19,7 +19,7 @@ public class SessionReplayAdapter: NSObject {
       return clientStateQueue.sync { _clientState }
     }
     set {
-      clientStateQueue.async(flags: .barrier) { [weak self] in self?._clientState = newValue }
+      clientStateQueue.sync(flags: .barrier) { [weak self] in self?._clientState = newValue }
     }
   }
   
