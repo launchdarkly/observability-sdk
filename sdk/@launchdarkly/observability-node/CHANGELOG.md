@@ -1,5 +1,9 @@
 # @launchdarkly/observability-node
 
+## [1.0.0](https://github.com/launchdarkly/observability-sdk/compare/observability-node-0.3.1...observability-node-1.0.0) (2026-01-28)
+
+This release marks the 1.0.0 stable version of the LaunchDarkly Observability Node SDK.
+
 ## [0.3.1](https://github.com/launchdarkly/observability-sdk/compare/observability-node-0.3.0...observability-node-0.3.1) (2025-10-06)
 
 

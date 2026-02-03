@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.0.0](https://github.com/launchdarkly/observability-sdk/compare/go/v0.4.0...go/v1.0.0) (2026-01-28)
+
+This release marks the 1.0.0 stable version of the LaunchDarkly Observability Go SDK.
+
+
+### Bug Fixes
+
+* **go:** configure default logger provider ([#192](https://github.com/launchdarkly/observability-sdk/issues/192)) ([b97854d](https://github.com/launchdarkly/observability-sdk/commit/b97854d19305e00e5a2a35d5068b03305d7a8b62))
+
 ## [0.4.0](https://github.com/launchdarkly/observability-sdk/compare/go/v0.3.1...go/v0.4.0) (2025-10-07)
 
 

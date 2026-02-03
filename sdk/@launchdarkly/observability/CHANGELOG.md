@@ -1,5 +1,9 @@
 # @launchdarkly/observability
 
+## [1.0.0](https://github.com/launchdarkly/observability-sdk/compare/observability-0.5.2...observability-1.0.0) (2026-01-28)
+
+This release marks the 1.0.0 stable version of the LaunchDarkly Observability Browser SDK.
+
 ## [0.5.2](https://github.com/launchdarkly/observability-sdk/compare/observability-0.5.1...observability-0.5.2) (2026-01-23)
 
 

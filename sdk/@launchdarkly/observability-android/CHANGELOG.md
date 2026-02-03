@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.25.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.24.0...launchdarkly-observability-android-0.25.0) (2026-01-28)
+
+
+### Features
+
+* O11Y-969 - Add runtime control for Session Replay capture  ([#355](https://github.com/launchdarkly/observability-sdk/issues/355)) ([1d4398e](https://github.com/launchdarkly/observability-sdk/commit/1d4398edbf9016cecd910da144da383b83e53197))
+
 ## [0.24.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.23.1...launchdarkly-observability-android-0.24.0) (2026-01-23)
 
 

@@ -62,11 +62,12 @@ func recordSpanError(span trace.Span, err error, tags ...attribute.KeyValue) {
 
 	if stackErr, ok := err.(withStackTrace); ok {
 		stackTrace := fmt.Sprintf("%+v", stackErr.StackTrace())
-		attributes := []attribute.KeyValue{
+		attributes := make([]attribute.KeyValue, 0, 3+len(tags))
+		attributes = append(attributes,
 			semconv.ExceptionTypeKey.String(reflect.TypeOf(err).String()),
 			semconv.ExceptionMessageKey.String(err.Error()),
 			semconv.ExceptionStacktraceKey.String(stackTrace),
-		}
+		)
 		attributes = append(attributes, tags...)
 		span.AddEvent(semconv.ExceptionEventName, trace.WithAttributes(attributes...))
 	} else {
