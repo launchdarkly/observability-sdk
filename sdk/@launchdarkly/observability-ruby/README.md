@@ -168,6 +168,15 @@ You can configure via environment variables:
 
 ## Telemetry Details
 
+### Cross-SDK Compatibility
+
+This Ruby SDK is designed for compatibility with other LaunchDarkly observability SDKs (Android, Node.js, Python, Go, .NET). Key compatibility features:
+
+- **Span name**: `"evaluation"` (consistent across all SDKs)
+- **Event name**: `"feature_flag"` (matches Android and Node SDKs)
+- **Provider name**: `"LaunchDarkly"` (consistent across all SDKs)
+- **Attribute naming**: Follows OpenTelemetry semantic conventions
+
 ### Span Attributes
 
 Each flag evaluation creates a span with the following attributes, following [OpenTelemetry semantic conventions for feature flags](https://opentelemetry.io/docs/specs/semconv/feature-flags/feature-flags-events/):
@@ -201,6 +210,28 @@ These custom attributes provide additional LaunchDarkly-specific details:
 | `launchdarkly.reason.error_kind` | LaunchDarkly error kind (for ERROR) | `"FLAG_NOT_FOUND"` |
 | `launchdarkly.evaluation.duration_ms` | Evaluation time in milliseconds | `0.5` |
 | `launchdarkly.evaluation.method` | SDK method called | `"variation"`, `"variation_detail"` |
+
+### Feature Flag Event
+
+In addition to span attributes, each evaluation adds a `"feature_flag"` event to the span. This matches the pattern used by other LaunchDarkly observability SDKs (Android, Node.js) and follows OpenTelemetry semantic conventions for feature flag events.
+
+The event contains the core evaluation data:
+
+| Event Attribute | Description | Example |
+|-----------------|-------------|---------|
+| `feature_flag.key` | Flag key | `"my-feature"` |
+| `feature_flag.provider.name` | Provider name | `"LaunchDarkly"` |
+| `feature_flag.context.id` | Context identifier | `"user-123"` |
+| `feature_flag.result.value` | Evaluated value | `"true"` |
+| `feature_flag.result.variant` | Variation index | `"1"` |
+| `feature_flag.result.reason` | Evaluation reason | `"default"` |
+| `launchdarkly.reason.in_experiment` | In experiment flag (if applicable) | `true` |
+
+**Why both span attributes and events?**
+
+- **Span attributes** provide detailed context for the entire evaluation span, including timing, method, and LaunchDarkly-specific details
+- **Span events** represent a point-in-time record of the evaluation result, which is the standard OpenTelemetry pattern for feature flag evaluations
+- This dual approach matches other LaunchDarkly SDKs and maximizes compatibility with observability backends
 
 ### Error Tracking
 

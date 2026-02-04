@@ -3,13 +3,17 @@
 require 'launchdarkly-server-sdk'
 
 module LaunchDarklyObservability
-  # Evaluation hook that instruments LaunchDarkly flag evaluations with OpenTelemetry spans.
+  # Evaluation hook that instruments LaunchDarkly flag evaluations with OpenTelemetry spans and events.
   #
   # This hook creates spans for each flag evaluation, capturing:
   # - Flag key and evaluation method
   # - Context information (kind, key)
   # - Evaluation result (value, variation index, reason)
   # - Duration and any errors
+  #
+  # Additionally, a "feature_flag" event is added to the span with evaluation results,
+  # following the OpenTelemetry semantic conventions for feature flags and matching
+  # the pattern used by other LaunchDarkly observability SDKs (Android, Node).
   #
   # @example The hook is automatically registered when using the Plugin
   #   plugin = LaunchDarklyObservability::Plugin.new(project_id: 'my-project')
@@ -27,6 +31,9 @@ module LaunchDarklyObservability
 
     # Span name for feature flag evaluations
     SPAN_NAME = 'evaluation'
+
+    # Event name for feature flag evaluation results (matches Android/Node SDKs)
+    FEATURE_FLAG_EVENT_NAME = 'feature_flag'
 
     # Returns metadata about this hook
     #
@@ -62,6 +69,8 @@ module LaunchDarklyObservability
     # Called after flag evaluation
     #
     # Completes the span with evaluation results and timing information.
+    # Also adds a "feature_flag" event with evaluation results, matching
+    # the pattern used by Android and Node SDKs.
     #
     # @param series_context [LaunchDarkly::Interfaces::Hooks::EvaluationSeriesContext]
     # @param data [Hash] Data passed between hook stages
@@ -73,7 +82,7 @@ module LaunchDarklyObservability
 
       start_time = data[:__ld_observability_start_time]
 
-      # Add result attributes
+      # Add result attributes to span
       add_result_attributes(span, detail)
 
       # Add duration if we have a start time
@@ -84,6 +93,9 @@ module LaunchDarklyObservability
 
       # Handle errors
       handle_evaluation_error(span, detail)
+
+      # Add feature_flag event with evaluation results (matches Android/Node SDKs)
+      add_feature_flag_event(span, series_context, detail)
 
       span.finish
 
@@ -202,7 +214,48 @@ module LaunchDarklyObservability
         span.set_attribute(LD_REASON_IN_EXPERIMENT, reason.in_experiment)
       end
     end
-    
+
+    # Add a "feature_flag" event with evaluation results
+    # This matches the pattern used by Android and Node SDKs for cross-SDK consistency
+    # See: https://opentelemetry.io/docs/specs/semconv/feature-flags/feature-flags-events/
+    def add_feature_flag_event(span, series_context, detail)
+      event_attributes = {
+        FEATURE_FLAG_KEY => series_context.key,
+        FEATURE_FLAG_PROVIDER_NAME => 'LaunchDarkly',
+        FEATURE_FLAG_CONTEXT_ID => extract_context_key(series_context.context)
+      }
+
+      # Add variation index if available
+      if detail.variation_index
+        event_attributes[FEATURE_FLAG_RESULT_VARIANT] = detail.variation_index.to_s
+      end
+
+      # Add value (serialized to string for complex types)
+      value = detail.value
+      value_str = case value
+                  when String, Numeric, TrueClass, FalseClass, NilClass
+                    value.to_s
+                  when Hash, Array
+                    value.to_json
+                  else
+                    value.to_s
+                  end
+      event_attributes[FEATURE_FLAG_RESULT_VALUE] = value_str
+
+      # Add reason if available
+      reason = detail.reason
+      if reason&.respond_to?(:kind)
+        event_attributes[FEATURE_FLAG_RESULT_REASON] = map_reason_kind_to_semconv(reason.kind)
+
+        # Add in_experiment flag if present (matches Android SDK)
+        if reason.respond_to?(:in_experiment) && !reason.in_experiment.nil?
+          event_attributes[LD_REASON_IN_EXPERIMENT] = reason.in_experiment
+        end
+      end
+
+      span.add_event(FEATURE_FLAG_EVENT_NAME, attributes: event_attributes)
+    end
+
     # Map LaunchDarkly reason kinds to OpenTelemetry semantic convention values
     # See: https://opentelemetry.io/docs/specs/semconv/feature-flags/feature-flags-events/
     def map_reason_kind_to_semconv(kind)
