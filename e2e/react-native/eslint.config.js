@@ -47,5 +47,5 @@ module.exports = defineConfig([
 			'@typescript-eslint/no-unused-vars': 'off',
 		},
 	},
-	globalIgnores(['**/.eslintrc.js', '**/reset-project.js']),
+	globalIgnores(['**/.eslintrc.js', '**/reset-project.js', 'eslint.config.js']),
 ])
