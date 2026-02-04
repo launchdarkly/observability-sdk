@@ -3,11 +3,9 @@
 require 'launchdarkly-server-sdk'
 require 'launchdarkly_observability'
 
-# Create observability plugin
+# Create observability plugin (SDK key and environment automatically inferred)
 observability_plugin = LaunchDarklyObservability::Plugin.new(
-  project_id: ENV.fetch('LAUNCHDARKLY_PROJECT_ID', '1jdkoe52'),
-  otlp_endpoint: ENV.fetch('OTEL_EXPORTER_OTLP_ENDPOINT', 'http://localhost:4318'),
-  environment: Rails.env,
+  otlp_endpoint: ENV.fetch('OTEL_EXPORTER_OTLP_ENDPOINT', LaunchDarklyObservability::DEFAULT_ENDPOINT),
   service_name: 'launchdarkly-ruby-demo-backend',
   service_version: '1.0.0'
 )

@@ -52,11 +52,8 @@ For logs and metrics support (optional):
 require 'launchdarkly-server-sdk'
 require 'launchdarkly_observability'
 
-# Create observability plugin
-observability = LaunchDarklyObservability::Plugin.new(
-  project_id: 'your-launchdarkly-project-id',
-  environment: 'production'
-)
+# Create observability plugin (SDK key and environment automatically inferred)
+observability = LaunchDarklyObservability::Plugin.new
 
 # Initialize LaunchDarkly client with plugin
 config = LaunchDarkly::Config.new(plugins: [observability])
@@ -67,6 +64,8 @@ context = LaunchDarkly::LDContext.create({ key: 'user-123', kind: 'user' })
 value = client.variation('my-feature-flag', context, false)
 ```
 
+> **Note**: The plugin automatically extracts the SDK key from the LaunchDarkly client during initialization. The backend derives both the project and environment from the SDK key for telemetry routing, so you don't need to configure them explicitly.
+
 ### Rails Usage
 
 Create an initializer at `config/initializers/launchdarkly.rb`:
@@ -75,10 +74,8 @@ Create an initializer at `config/initializers/launchdarkly.rb`:
 require 'launchdarkly-server-sdk'
 require 'launchdarkly_observability'
 
-# Setup observability plugin
+# Setup observability plugin (SDK key and environment automatically inferred)
 observability = LaunchDarklyObservability::Plugin.new(
-  project_id: ENV['LAUNCHDARKLY_PROJECT_ID'],
-  environment: Rails.env,
   service_name: 'my-rails-app',
   service_version: '1.0.0'
 )
@@ -121,14 +118,14 @@ end
 
 ```ruby
 LaunchDarklyObservability::Plugin.new(
-  # Required: LaunchDarkly project ID for telemetry routing
-  project_id: 'your-project-id',
+  # All parameters are optional - SDK key and environment are automatically inferred
   
   # Optional: Custom OTLP endpoint (default: LaunchDarkly's endpoint)
   otlp_endpoint: 'https://otel.observability.app.launchdarkly.com:4318',
   
-  # Optional: Deployment environment name
-  environment: 'production',
+  # Optional: Environment override (default: inferred from SDK key)
+  # Only specify for advanced scenarios like deployment-specific suffixes
+  environment: 'production-canary',
   
   # Optional: Service identification
   service_name: 'my-service',
@@ -147,15 +144,19 @@ LaunchDarklyObservability::Plugin.new(
 )
 ```
 
+> **Advanced**: You can explicitly pass `sdk_key` or `project_id` for testing scenarios, but this is rarely needed since they're automatically extracted from the client.
+
 ### Environment Variables
 
-You can also configure via environment variables:
+You can configure via environment variables:
 
 | Variable | Description |
 |----------|-------------|
-| `LAUNCHDARKLY_PROJECT_ID` | LaunchDarkly project ID |
+| `LAUNCHDARKLY_SDK_KEY` | LaunchDarkly SDK key (automatically extracted from client during initialization) |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | Custom OTLP endpoint |
-| `OTEL_SERVICE_NAME` | Service name |
+| `OTEL_SERVICE_NAME` | Service name (if not specified in plugin options) |
+
+> **Note**: The environment associated with your SDK key is automatically determined by the backend, so you don't need to configure it separately.
 
 ## Telemetry Details
 
@@ -251,7 +252,6 @@ By default, the plugin enables OpenTelemetry auto-instrumentation for common Rub
 
 ```ruby
 LaunchDarklyObservability::Plugin.new(
-  project_id: 'my-project',
   instrumentations: {
     # Disable specific instrumentations
     'OpenTelemetry::Instrumentation::Redis' => { enabled: false },
@@ -366,7 +366,7 @@ end
 
 ```ruby
 # Initialize the plugin (alternative to creating Plugin directly)
-LaunchDarklyObservability.init(project_id: 'my-project', environment: 'prod')
+LaunchDarklyObservability.init
 
 # Check if initialized
 LaunchDarklyObservability.initialized?  # => true
@@ -381,11 +381,12 @@ LaunchDarklyObservability.shutdown
 ### Plugin Class
 
 ```ruby
-plugin = LaunchDarklyObservability::Plugin.new(project_id: 'my-project')
+# SDK key and environment are automatically inferred
+plugin = LaunchDarklyObservability::Plugin.new(service_name: 'my-service')
 
-plugin.project_id        # => 'my-project'
+plugin.project_id        # => nil (extracted from client during registration)
 plugin.otlp_endpoint     # => 'https://otel...'
-plugin.environment       # => ''
+plugin.environment       # => nil (inferred from SDK key by backend)
 plugin.registered?       # => false (true after client initialization)
 plugin.flush             # Flush pending data
 plugin.shutdown          # Stop the plugin

@@ -36,16 +36,17 @@ module LaunchDarklyObservability
 
     # Initialize the observability plugin
     #
-    # @param project_id [String] LaunchDarkly project ID (required)
+    # @param project_id [String, nil] LaunchDarkly project ID (optional - SDK key will be extracted from client if not provided)
+    # @param sdk_key [String, nil] LaunchDarkly SDK key (optional - will be extracted from client if not provided)
     # @param options [Hash] Additional configuration options
     # @option options [String] :otlp_endpoint Custom OTLP endpoint URL
-    # @option options [String] :environment Deployment environment name
+    # @option options [String] :environment Deployment environment (optional - inferred from SDK key by default)
     # @option options [String] :service_name Service name for traces
     # @option options [String] :service_version Service version
     # @option options [Hash] :instrumentations Configuration for auto-instrumentations
     # @return [Plugin] The initialized plugin
-    def init(project_id:, **options)
-      @instance = Plugin.new(project_id: project_id, **options)
+    def init(project_id: nil, sdk_key: nil, **options)
+      @instance = Plugin.new(project_id: project_id, sdk_key: sdk_key, **options)
     end
 
     # Check if the plugin has been initialized

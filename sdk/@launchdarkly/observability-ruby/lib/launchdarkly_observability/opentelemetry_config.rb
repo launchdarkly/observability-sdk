@@ -37,10 +37,10 @@ module LaunchDarklyObservability
     #
     # @param project_id [String] LaunchDarkly project ID
     # @param otlp_endpoint [String] OTLP collector endpoint
-    # @param environment [String] Deployment environment name
+    # @param environment [String, nil] Deployment environment name (optional - inferred from SDK key if not provided)
     # @param sdk_metadata [LaunchDarkly::Interfaces::Plugins::SdkMetadata, nil]
     # @param options [Hash] Additional options
-    def initialize(project_id:, otlp_endpoint:, environment:, sdk_metadata: nil, **options)
+    def initialize(project_id:, otlp_endpoint:, environment: nil, sdk_metadata: nil, **options)
       @project_id = project_id
       @otlp_endpoint = otlp_endpoint
       @environment = environment
@@ -178,9 +178,14 @@ module LaunchDarklyObservability
         SDK_VERSION_ATTRIBUTE => OpenTelemetry::SDK::VERSION,
         SDK_LANGUAGE_ATTRIBUTE => 'ruby',
         DISTRO_NAME_ATTRIBUTE => 'launchdarkly-observability-ruby',
-        DISTRO_VERSION_ATTRIBUTE => LaunchDarklyObservability::VERSION,
-        OpenTelemetry::SemanticConventions::Resource::DEPLOYMENT_ENVIRONMENT => @environment
+        DISTRO_VERSION_ATTRIBUTE => LaunchDarklyObservability::VERSION
       }
+      
+      # Only set deployment.environment if explicitly provided
+      # Otherwise, backend infers it from the SDK key
+      if @environment && !@environment.empty?
+        attrs[OpenTelemetry::SemanticConventions::Resource::DEPLOYMENT_ENVIRONMENT] = @environment
+      end
 
       # Add service name
       service_name = @options[:service_name] || infer_service_name

@@ -8,14 +8,10 @@ module LaunchDarklyObservability
   # This plugin integrates with the LaunchDarkly Ruby SDK to automatically
   # instrument flag evaluations with OpenTelemetry traces, logs, and metrics.
   #
-  # @example Basic usage
-  #   plugin = LaunchDarklyObservability::Plugin.new(
-  #     project_id: 'my-project-id',
-  #     environment: 'production'
-  #   )
-  #
+  # @example Basic usage (SDK key and environment automatically extracted)
+  #   plugin = LaunchDarklyObservability::Plugin.new
   #   config = LaunchDarkly::Config.new(plugins: [plugin])
-  #   client = LaunchDarkly::LDClient.new('sdk-key', config)
+  #   client = LaunchDarkly::LDClient.new(ENV['LAUNCHDARKLY_SDK_KEY'], config)
   #
   class Plugin
     include LaunchDarkly::Interfaces::Plugins::Plugin
@@ -34,9 +30,13 @@ module LaunchDarklyObservability
 
     # Initialize a new observability plugin
     #
-    # @param project_id [String] LaunchDarkly project ID (required for routing telemetry)
+    # @param project_id [String, nil] LaunchDarkly project ID for routing telemetry.
+    #   If not provided, the SDK key from the client will be used automatically.
+    # @param sdk_key [String, nil] LaunchDarkly SDK key (optional - will be extracted from client if not provided).
+    #   The backend will derive the project and environment from the SDK key.
     # @param otlp_endpoint [String] OTLP collector endpoint (default: LaunchDarkly's endpoint)
-    # @param environment [String] Deployment environment name (e.g., 'production', 'staging')
+    # @param environment [String, nil] Deployment environment name (optional - inferred from SDK key by default).
+    #   Only specify this for advanced scenarios like deployment-specific suffixes (e.g., 'production-canary').
     # @param options [Hash] Additional configuration options
     # @option options [String] :service_name Service name for resource attributes
     # @option options [String] :service_version Service version for resource attributes
@@ -44,10 +44,10 @@ module LaunchDarklyObservability
     # @option options [Boolean] :enable_traces Enable trace instrumentation (default: true)
     # @option options [Boolean] :enable_logs Enable log instrumentation (default: true)
     # @option options [Boolean] :enable_metrics Enable metrics instrumentation (default: true)
-    def initialize(project_id:, otlp_endpoint: DEFAULT_ENDPOINT, environment: '', **options)
-      @project_id = project_id
+    def initialize(project_id: nil, sdk_key: nil, otlp_endpoint: DEFAULT_ENDPOINT, environment: nil, **options)
+      @project_id = project_id || sdk_key
       @otlp_endpoint = otlp_endpoint
-      @environment = environment.to_s
+      @environment = environment # Keep nil if not provided - backend infers from SDK key
       @options = default_options.merge(options)
       @hook = Hook.new
       @otel_config = nil
@@ -79,8 +79,15 @@ module LaunchDarklyObservability
     def register(_client, environment_metadata)
       return if @registered
 
+      # Use provided project_id, or extract SDK key from the client
+      project_id = @project_id || environment_metadata&.sdk_key
+
+      if project_id.nil? || project_id.empty?
+        raise ArgumentError, 'Unable to determine project_id: no project_id or sdk_key provided, and client SDK key is unavailable'
+      end
+
       @otel_config = OpenTelemetryConfig.new(
-        project_id: @project_id,
+        project_id: project_id,
         otlp_endpoint: @otlp_endpoint,
         environment: @environment,
         sdk_metadata: environment_metadata&.sdk,
