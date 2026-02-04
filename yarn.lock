@@ -24799,7 +24799,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"eslint-plugin-react@npm:^7.32.2, eslint-plugin-react@npm:^7.33.2, eslint-plugin-react@npm:^7.37.0, eslint-plugin-react@npm:^7.37.2, eslint-plugin-react@npm:^7.37.3":
+"eslint-plugin-react@npm:^7.32.2, eslint-plugin-react@npm:^7.37.0, eslint-plugin-react@npm:^7.37.2, eslint-plugin-react@npm:^7.37.3, eslint-plugin-react@npm:^7.37.5":
   version: 7.37.5
   resolution: "eslint-plugin-react@npm:7.37.5"
   dependencies:
@@ -39320,6 +39320,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "react-three-vite@workspace:e2e/react-three-vite"
   dependencies:
+    "@eslint/js": "npm:^9.26.0"
     "@pmndrs/assets": "npm:1.6.0"
     "@pmndrs/branding": "npm:0.0.8"
     "@react-three/drei": "npm:9.102.3"
@@ -39330,9 +39331,10 @@ __metadata:
     "@types/three": "npm:0.165.0"
     "@vitejs/plugin-react": "npm:^4.3.0"
     eslint: "npm:^9.26.0"
-    eslint-plugin-react: "npm:^7.33.2"
+    eslint-plugin-react: "npm:^7.37.5"
     eslint-plugin-react-hooks: "npm:^5.2.0"
     eslint-plugin-react-refresh: "npm:^0.4.5"
+    globals: "npm:^16.0.0"
     highlight.run: "workspace:*"
     random-words: "npm:2.0.0"
     react: "npm:19.0.0"
