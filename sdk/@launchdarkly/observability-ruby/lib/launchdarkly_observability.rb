@@ -25,10 +25,32 @@ module LaunchDarklyObservability
   DISTRO_NAME_ATTRIBUTE = 'telemetry.distro.name'
   DISTRO_VERSION_ATTRIBUTE = 'telemetry.distro.version'
 
-  # Semantic convention attribute keys for feature flags
+  # OpenTelemetry semantic convention attribute keys for feature flags
+  # See: https://opentelemetry.io/docs/specs/semconv/feature-flags/feature-flags-events/
+  
+  # Standard semantic conventions (Release Candidate)
   FEATURE_FLAG_KEY = 'feature_flag.key'
-  FEATURE_FLAG_VARIANT = 'feature_flag.variant'
-  FEATURE_FLAG_PROVIDER = 'feature_flag.provider_name'
+  FEATURE_FLAG_PROVIDER_NAME = 'feature_flag.provider.name'
+  FEATURE_FLAG_CONTEXT_ID = 'feature_flag.context.id'
+  FEATURE_FLAG_RESULT_VALUE = 'feature_flag.result.value'
+  FEATURE_FLAG_RESULT_VARIANT = 'feature_flag.result.variant'
+  FEATURE_FLAG_RESULT_REASON = 'feature_flag.result.reason'
+  FEATURE_FLAG_SET_ID = 'feature_flag.set.id'
+  FEATURE_FLAG_VERSION = 'feature_flag.version'
+  ERROR_TYPE = 'error.type'
+  ERROR_MESSAGE = 'error.message'
+  
+  # LaunchDarkly-specific custom attributes (not in OTel spec)
+  LD_EVALUATION_METHOD = 'launchdarkly.evaluation.method'
+  LD_EVALUATION_DURATION_MS = 'launchdarkly.evaluation.duration_ms'
+  LD_CONTEXT_KIND = 'launchdarkly.context.kind'
+  LD_CONTEXT_KEY = 'launchdarkly.context.key'
+  LD_REASON_KIND = 'launchdarkly.reason.kind'
+  LD_REASON_RULE_INDEX = 'launchdarkly.reason.rule_index'
+  LD_REASON_RULE_ID = 'launchdarkly.reason.rule_id'
+  LD_REASON_PREREQUISITE_KEY = 'launchdarkly.reason.prerequisite_key'
+  LD_REASON_IN_EXPERIMENT = 'launchdarkly.reason.in_experiment'
+  LD_REASON_ERROR_KIND = 'launchdarkly.reason.error_kind'
 
   class << self
     # @return [Plugin, nil] The current plugin instance

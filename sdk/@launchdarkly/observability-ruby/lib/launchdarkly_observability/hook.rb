@@ -25,8 +25,8 @@ module LaunchDarklyObservability
     # Tracer name for OpenTelemetry spans
     TRACER_NAME = 'launchdarkly-ruby'
 
-    # Span name prefix
-    SPAN_PREFIX = 'launchdarkly'
+    # Span name for feature flag evaluations
+    SPAN_NAME = 'evaluation'
 
     # Returns metadata about this hook
     #
@@ -46,9 +46,8 @@ module LaunchDarklyObservability
       return data unless opentelemetry_available?
 
       tracer = OpenTelemetry.tracer_provider.tracer(TRACER_NAME, LaunchDarklyObservability::VERSION)
-      span_name = "#{SPAN_PREFIX}.#{series_context.method}"
 
-      span = tracer.start_span(span_name, attributes: build_before_attributes(series_context))
+      span = tracer.start_span(SPAN_NAME, attributes: build_before_attributes(series_context))
 
       data.merge(
         __ld_observability_span: span,
@@ -80,7 +79,7 @@ module LaunchDarklyObservability
       # Add duration if we have a start time
       if start_time
         duration_ms = ((monotonic_time - start_time) * 1000).round(3)
-        span.set_attribute('feature_flag.evaluation.duration_ms', duration_ms)
+        span.set_attribute(LD_EVALUATION_DURATION_MS, duration_ms)
       end
 
       # Handle errors
@@ -109,20 +108,19 @@ module LaunchDarklyObservability
     def build_before_attributes(series_context)
       attrs = {
         FEATURE_FLAG_KEY => series_context.key,
-        FEATURE_FLAG_PROVIDER => 'LaunchDarkly',
-        'feature_flag.evaluation.method' => series_context.method.to_s
+        FEATURE_FLAG_PROVIDER_NAME => 'LaunchDarkly',
+        LD_EVALUATION_METHOD => series_context.method.to_s
       }
 
       # Add context information safely
       context = series_context.context
       if context
-        attrs['feature_flag.context.kind'] = extract_context_kind(context)
-        attrs['feature_flag.context.key'] = extract_context_key(context)
+        # Use semantic convention for context.id (the primary identifier)
+        attrs[FEATURE_FLAG_CONTEXT_ID] = extract_context_key(context)
+        # Use LaunchDarkly-specific attributes for additional context details
+        attrs[LD_CONTEXT_KIND] = extract_context_kind(context)
+        attrs[LD_CONTEXT_KEY] = extract_context_key(context)
       end
-
-      # Add default value type
-      default_value = series_context.default_value
-      attrs['feature_flag.default_value.type'] = default_value.class.name unless default_value.nil?
 
       attrs
     end
@@ -149,10 +147,12 @@ module LaunchDarklyObservability
     end
 
     def add_result_attributes(span, detail)
-      # Variation index (if available)
-      span.set_attribute(FEATURE_FLAG_VARIANT, detail.variation_index.to_s) if detail.variation_index
+      # Use semantic convention for result.variant (variation index as string)
+      if detail.variation_index
+        span.set_attribute(FEATURE_FLAG_RESULT_VARIANT, detail.variation_index.to_s)
+      end
 
-      # Value - convert to string for safe attribute value
+      # Use semantic convention for result.value
       value = detail.value
       value_str = case value
                   when String, Numeric, TrueClass, FalseClass, NilClass
@@ -162,14 +162,20 @@ module LaunchDarklyObservability
                   else
                     value.to_s
                   end
-      span.set_attribute('feature_flag.value', value_str)
-      span.set_attribute('feature_flag.value.type', value.class.name)
+      span.set_attribute(FEATURE_FLAG_RESULT_VALUE, value_str)
 
-      # Evaluation reason
+      # Evaluation reason - use semantic convention
       reason = detail.reason
       return unless reason
 
-      span.set_attribute('feature_flag.reason.kind', reason.kind.to_s) if reason.respond_to?(:kind)
+      # Map LaunchDarkly reason.kind to semantic convention result.reason
+      if reason.respond_to?(:kind)
+        reason_value = map_reason_kind_to_semconv(reason.kind)
+        span.set_attribute(FEATURE_FLAG_RESULT_REASON, reason_value)
+        
+        # Also add LaunchDarkly-specific reason.kind for compatibility
+        span.set_attribute(LD_REASON_KIND, reason.kind.to_s)
+      end
 
       # Additional reason details based on kind
       add_reason_details(span, reason)
@@ -178,30 +184,74 @@ module LaunchDarklyObservability
     def add_reason_details(span, reason)
       return unless reason.respond_to?(:kind)
 
+      # LaunchDarkly-specific reason details (custom attributes)
       case reason.kind
       when :RULE_MATCH
-        span.set_attribute('feature_flag.reason.rule_index', reason.rule_index) if reason.respond_to?(:rule_index)
-        span.set_attribute('feature_flag.reason.rule_id', reason.rule_id) if reason.respond_to?(:rule_id)
+        span.set_attribute(LD_REASON_RULE_INDEX, reason.rule_index) if reason.respond_to?(:rule_index)
+        span.set_attribute(LD_REASON_RULE_ID, reason.rule_id) if reason.respond_to?(:rule_id)
       when :PREREQUISITE_FAILED
         if reason.respond_to?(:prerequisite_key)
-          span.set_attribute('feature_flag.reason.prerequisite_key',
-                             reason.prerequisite_key)
+          span.set_attribute(LD_REASON_PREREQUISITE_KEY, reason.prerequisite_key)
         end
       when :ERROR
-        span.set_attribute('feature_flag.reason.error_kind', reason.error_kind.to_s) if reason.respond_to?(:error_kind)
+        span.set_attribute(LD_REASON_ERROR_KIND, reason.error_kind.to_s) if reason.respond_to?(:error_kind)
       end
 
-      # In experiment flag
-      span.set_attribute('feature_flag.reason.in_experiment', reason.in_experiment) if reason.respond_to?(:in_experiment)
+      # In experiment flag (LaunchDarkly-specific)
+      if reason.respond_to?(:in_experiment) && !reason.in_experiment.nil?
+        span.set_attribute(LD_REASON_IN_EXPERIMENT, reason.in_experiment)
+      end
+    end
+    
+    # Map LaunchDarkly reason kinds to OpenTelemetry semantic convention values
+    # See: https://opentelemetry.io/docs/specs/semconv/feature-flags/feature-flags-events/
+    def map_reason_kind_to_semconv(kind)
+      case kind
+      when :OFF
+        'disabled'
+      when :FALLTHROUGH
+        'default'
+      when :TARGET_MATCH
+        'targeting_match'
+      when :RULE_MATCH
+        'targeting_match'
+      when :PREREQUISITE_FAILED
+        'default'
+      when :ERROR
+        'error'
+      else
+        'unknown'
+      end
     end
 
     def handle_evaluation_error(span, detail)
       reason = detail.reason
       return unless reason&.respond_to?(:kind) && reason.kind == :ERROR
 
-      error_kind = reason.respond_to?(:error_kind) ? reason.error_kind.to_s : 'UNKNOWN'
-      span.set_attribute('feature_flag.error', error_kind)
-      span.status = OpenTelemetry::Trace::Status.error("Flag evaluation error: #{error_kind}")
+      # Use semantic convention for error.type
+      error_kind = reason.respond_to?(:error_kind) ? reason.error_kind.to_s : 'general'
+      
+      # Map LaunchDarkly error kinds to semantic convention values
+      error_type = case error_kind.upcase
+                   when 'FLAG_NOT_FOUND'
+                     'flag_not_found'
+                   when 'MALFORMED_FLAG'
+                     'parse_error'
+                   when 'USER_NOT_SPECIFIED', 'CLIENT_NOT_READY'
+                     'provider_not_ready'
+                   when 'WRONG_TYPE'
+                     'type_mismatch'
+                   else
+                     'general'
+                   end
+      
+      span.set_attribute(ERROR_TYPE, error_type)
+      
+      # Add human-readable error message
+      error_message = "Flag evaluation error: #{error_kind}"
+      span.set_attribute(ERROR_MESSAGE, error_message)
+      
+      span.status = OpenTelemetry::Trace::Status.error(error_message)
     end
   end
 end

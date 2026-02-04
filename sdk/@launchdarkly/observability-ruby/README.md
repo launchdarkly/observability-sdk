@@ -170,31 +170,58 @@ You can configure via environment variables:
 
 ### Span Attributes
 
-Each flag evaluation creates a span with the following attributes:
+Each flag evaluation creates a span with the following attributes, following [OpenTelemetry semantic conventions for feature flags](https://opentelemetry.io/docs/specs/semconv/feature-flags/feature-flags-events/):
+
+### Standard Semantic Convention Attributes
+
+| Attribute | Status | Description | Example |
+|-----------|--------|-------------|---------|
+| `feature_flag.key` | Release Candidate | Flag key | `"my-feature"` |
+| `feature_flag.provider.name` | Release Candidate | Provider name | `"LaunchDarkly"` |
+| `feature_flag.result.value` | Release Candidate | Evaluated value | `"true"` |
+| `feature_flag.result.variant` | Release Candidate | Variation index | `"1"` |
+| `feature_flag.result.reason` | Release Candidate | Evaluation reason | `"default"`, `"targeting_match"`, `"error"` |
+| `feature_flag.context.id` | Release Candidate | Context identifier | `"user-123"` |
+| `error.type` | Stable | Error type (when applicable) | `"flag_not_found"` |
+| `error.message` | Development | Error message (when applicable) | `"Flag evaluation error: FLAG_NOT_FOUND"` |
+
+### LaunchDarkly-Specific Attributes
+
+These custom attributes provide additional LaunchDarkly-specific details:
 
 | Attribute | Description | Example |
 |-----------|-------------|---------|
-| `feature_flag.key` | Flag key | `"my-feature"` |
-| `feature_flag.provider_name` | Provider name | `"LaunchDarkly"` |
-| `feature_flag.value` | Evaluated value | `"true"` |
-| `feature_flag.value.type` | Value type | `"TrueClass"` |
-| `feature_flag.variant` | Variation index | `"1"` |
-| `feature_flag.context.kind` | Context kind | `"user"` |
-| `feature_flag.context.key` | Context key | `"user-123"` |
-| `feature_flag.reason.kind` | Evaluation reason | `"FALLTHROUGH"` |
-| `feature_flag.evaluation.duration_ms` | Evaluation time | `0.5` |
-| `feature_flag.evaluation.method` | SDK method called | `"variation"` |
+| `launchdarkly.context.kind` | Context kind | `"user"` |
+| `launchdarkly.context.key` | Context key | `"user-123"` |
+| `launchdarkly.reason.kind` | LaunchDarkly reason kind | `"FALLTHROUGH"`, `"RULE_MATCH"`, `"ERROR"` |
+| `launchdarkly.reason.rule_index` | Rule index (for RULE_MATCH) | `0` |
+| `launchdarkly.reason.rule_id` | Rule ID (for RULE_MATCH) | `"rule-key"` |
+| `launchdarkly.reason.prerequisite_key` | Prerequisite key (for PREREQUISITE_FAILED) | `"other-flag"` |
+| `launchdarkly.reason.in_experiment` | In experiment flag | `true` |
+| `launchdarkly.reason.error_kind` | LaunchDarkly error kind (for ERROR) | `"FLAG_NOT_FOUND"` |
+| `launchdarkly.evaluation.duration_ms` | Evaluation time in milliseconds | `0.5` |
+| `launchdarkly.evaluation.method` | SDK method called | `"variation"`, `"variation_detail"` |
 
 ### Error Tracking
 
-When evaluation errors occur, additional attributes are added:
+When evaluation errors occur, the plugin follows [OpenTelemetry error semantic conventions](https://opentelemetry.io/docs/specs/semconv/feature-flags/feature-flags-events/):
 
-| Attribute | Description | Example |
-|-----------|-------------|---------|
-| `feature_flag.error` | Error kind | `"FLAG_NOT_FOUND"` |
-| `feature_flag.reason.error_kind` | Detailed error | `"FLAG_NOT_FOUND"` |
+- **`error.type`**: Mapped from LaunchDarkly error kinds to standard values (`flag_not_found`, `type_mismatch`, `provider_not_ready`, `general`)
+- **`error.message`**: Human-readable error description
+- **`feature_flag.result.reason`**: Set to `"error"`
+- **`launchdarkly.reason.error_kind`**: Original LaunchDarkly error kind (`FLAG_NOT_FOUND`, `WRONG_TYPE`, etc.)
 
 The span status is also set to `ERROR` with a descriptive message.
+
+#### Error Type Mapping
+
+| LaunchDarkly Error | OpenTelemetry `error.type` |
+|-------------------|----------------------------|
+| `FLAG_NOT_FOUND` | `flag_not_found` |
+| `WRONG_TYPE` | `type_mismatch` |
+| `CLIENT_NOT_READY` | `provider_not_ready` |
+| `MALFORMED_FLAG` | `parse_error` |
+| Others | `general` |
 
 ### Rails Integration
 

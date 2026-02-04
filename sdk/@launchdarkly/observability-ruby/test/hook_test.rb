@@ -72,7 +72,7 @@ class HookTest < Minitest::Test
     assert_equal 1, spans.length
 
     span = spans.first
-    assert_equal 'launchdarkly.variation', span.name
+    assert_equal 'evaluation', span.name
   end
 
   def test_after_evaluation_adds_result_attributes
@@ -85,9 +85,13 @@ class HookTest < Minitest::Test
     spans = @exporter.finished_spans
     span = spans.first
 
-    assert_equal 'true', span.attributes['feature_flag.value']
-    assert_equal '1', span.attributes['feature_flag.variant']
-    assert_equal 'FALLTHROUGH', span.attributes['feature_flag.reason.kind']
+    # Semantic convention attributes
+    assert_equal 'true', span.attributes['feature_flag.result.value']
+    assert_equal '1', span.attributes['feature_flag.result.variant']
+    assert_equal 'default', span.attributes['feature_flag.result.reason']
+    
+    # LaunchDarkly-specific attributes
+    assert_equal 'FALLTHROUGH', span.attributes['launchdarkly.reason.kind']
   end
 
   def test_after_evaluation_handles_error_reason
@@ -100,8 +104,15 @@ class HookTest < Minitest::Test
     spans = @exporter.finished_spans
     span = spans.first
 
-    assert_equal 'ERROR', span.attributes['feature_flag.reason.kind']
-    assert_equal 'FLAG_NOT_FOUND', span.attributes['feature_flag.error']
+    # Semantic convention attributes
+    assert_equal 'error', span.attributes['feature_flag.result.reason']
+    assert_equal 'flag_not_found', span.attributes['error.type']
+    assert_includes span.attributes['error.message'], 'FLAG_NOT_FOUND'
+    
+    # LaunchDarkly-specific attributes
+    assert_equal 'ERROR', span.attributes['launchdarkly.reason.kind']
+    assert_equal 'FLAG_NOT_FOUND', span.attributes['launchdarkly.reason.error_kind']
+    
     assert_equal OpenTelemetry::Trace::Status::ERROR, span.status.code
   end
 
@@ -119,7 +130,7 @@ class HookTest < Minitest::Test
     spans = @exporter.finished_spans
     span = spans.first
 
-    duration = span.attributes['feature_flag.evaluation.duration_ms']
+    duration = span.attributes['launchdarkly.evaluation.duration_ms']
     assert duration.positive?, "Duration should be positive, got #{duration}"
   end
 
@@ -135,10 +146,14 @@ class HookTest < Minitest::Test
     spans = @exporter.finished_spans
     span = spans.first
 
+    # Semantic convention attributes
     assert_equal 'my-flag', span.attributes['feature_flag.key']
-    assert_equal 'user', span.attributes['feature_flag.context.kind']
-    assert_equal 'user-456', span.attributes['feature_flag.context.key']
-    assert_equal 'LaunchDarkly', span.attributes['feature_flag.provider_name']
+    assert_equal 'user-456', span.attributes['feature_flag.context.id']
+    assert_equal 'LaunchDarkly', span.attributes['feature_flag.provider.name']
+    
+    # LaunchDarkly-specific attributes
+    assert_equal 'user', span.attributes['launchdarkly.context.kind']
+    assert_equal 'user-456', span.attributes['launchdarkly.context.key']
   end
 
   def test_after_evaluation_handles_hash_value
@@ -152,8 +167,7 @@ class HookTest < Minitest::Test
     span = spans.first
 
     # Hash should be JSON serialized
-    assert_includes span.attributes['feature_flag.value'], 'foo'
-    assert_equal 'Hash', span.attributes['feature_flag.value.type']
+    assert_includes span.attributes['feature_flag.result.value'], 'foo'
   end
 
   def test_after_evaluation_handles_missing_span
@@ -166,7 +180,7 @@ class HookTest < Minitest::Test
     assert_equal data, result
   end
 
-  def test_span_name_includes_method
+  def test_span_name_is_evaluation
     series_context = LaunchDarkly::Interfaces::Hooks::EvaluationSeriesContext.new(
       'flag', create_ld_context, false, :variation_detail
     )
@@ -175,6 +189,6 @@ class HookTest < Minitest::Test
     @hook.after_evaluation(series_context, data, create_evaluation_detail)
 
     spans = @exporter.finished_spans
-    assert_equal 'launchdarkly.variation_detail', spans.first.name
+    assert_equal 'evaluation', spans.first.name
   end
 end
