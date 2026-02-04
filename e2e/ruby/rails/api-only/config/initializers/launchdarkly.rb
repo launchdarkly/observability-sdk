@@ -20,8 +20,8 @@ config = LaunchDarkly::Config.new(
   plugins: [observability_plugin]
 )
 
-$ld_client = LaunchDarkly::LDClient.new(sdk_key, config)
+Rails.configuration.ld_client = LaunchDarkly::LDClient.new(sdk_key, config)
 
-at_exit { $ld_client.close }
+at_exit { Rails.configuration.ld_client.close }
 
 Rails.logger.info '[LaunchDarkly] Client initialized with observability plugin'

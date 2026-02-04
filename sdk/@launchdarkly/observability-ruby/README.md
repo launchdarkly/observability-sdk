@@ -80,20 +80,28 @@ observability = LaunchDarklyObservability::Plugin.new(
   service_version: '1.0.0'
 )
 
-# Initialize LaunchDarkly client
-$ld_client = LaunchDarkly::LDClient.new(
+# Initialize LaunchDarkly client using Rails configuration
+config = LaunchDarkly::Config.new(plugins: [observability])
+Rails.configuration.ld_client = LaunchDarkly::LDClient.new(
   ENV['LAUNCHDARKLY_SDK_KEY'],
-  LaunchDarkly::Config.new(plugins: [observability])
+  config
 )
 
 # Ensure clean shutdown
-at_exit { $ld_client.close }
+at_exit { Rails.configuration.ld_client.close }
 ```
 
 Use in controllers:
 
 ```ruby
 class ApplicationController < ActionController::Base
+  private
+
+  # Helper method for accessing the LaunchDarkly client
+  def ld_client
+    Rails.configuration.ld_client
+  end
+
   def current_ld_context
     @current_ld_context ||= LaunchDarkly::LDContext.create({
       key: current_user&.id || 'anonymous',
@@ -107,7 +115,7 @@ end
 class HomeController < ApplicationController
   def index
     # This evaluation is automatically traced and correlated with the HTTP request
-    @show_new_feature = $ld_client.variation('new-feature', current_ld_context, false)
+    @show_new_feature = ld_client.variation('new-feature', current_ld_context, false)
   end
 end
 ```

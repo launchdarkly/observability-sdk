@@ -1,7 +1,7 @@
 class HealthController < ApplicationController
   def index
     context = LaunchDarkly::LDContext.create({ key: 'health-check', kind: 'service' })
-    state = $ld_client.all_flags_state(context)
+    state = ld_client.all_flags_state(context)
 
     render(json: {
       status: 'ok',
@@ -23,12 +23,12 @@ class HealthController < ApplicationController
     user_key = params[:user_key] || 'anonymous'
     context = LaunchDarkly::LDContext.create({ key: user_key, kind: 'user' })
 
-    state = $ld_client.all_flags_state(context)
+    state = ld_client.all_flags_state(context)
 
     # Get detailed evaluations for all flags
     evaluations = {}
     state.values_map.each_key do |flag_key|
-      detail = $ld_client.variation_detail(flag_key, context, nil)
+      detail = ld_client.variation_detail(flag_key, context, nil)
       evaluations[flag_key] = {
         value: detail.value,
         variation_index: detail.variation_index,
@@ -51,7 +51,7 @@ class HealthController < ApplicationController
     user_key = params[:user_key] || 'anonymous'
     context = LaunchDarkly::LDContext.create({ key: user_key, kind: 'user' })
 
-    detail = $ld_client.variation_detail(flag_key, context, nil)
+    detail = ld_client.variation_detail(flag_key, context, nil)
 
     render(json: {
       flag_key: flag_key,
