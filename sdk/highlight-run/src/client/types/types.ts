@@ -11,7 +11,7 @@ import type {
 import type { ErrorMessageType, Source } from './shared-types'
 import type { LDClient } from '../../integrations/launchdarkly'
 import type { LDPluginEnvironmentMetadata } from '../../plugins/plugin'
-import type { LDContext } from '@launchdarkly/js-sdk-common'
+import type { LDContext } from '@launchdarkly/js-client-sdk'
 
 export interface Metadata {
 	[key: string]: any

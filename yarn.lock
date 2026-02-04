@@ -8420,21 +8420,21 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@launchdarkly/js-client-sdk-common@npm:1.16.0":
-  version: 1.16.0
-  resolution: "@launchdarkly/js-client-sdk-common@npm:1.16.0"
+"@launchdarkly/js-client-sdk-common@npm:1.17.2":
+  version: 1.17.2
+  resolution: "@launchdarkly/js-client-sdk-common@npm:1.17.2"
   dependencies:
     "@launchdarkly/js-sdk-common": "npm:2.20.0"
-  checksum: 10/afc9e39403fdeefc5de650fa7dae3fd2faa35e7015c2d58acd6e9f0ea0f79c13410c9cd4911ce559dca6b84cee02b782aa1a09901a0b7d191b3684d1e68339ca
+  checksum: 10/871c0cb16ee498d5f734bb1ba23cf7959ec6a34f1f483fd0fcd30492cd0083ba6ff3370c7af03615b661219bd2a7dc561f3f6ff84634a5c3a04cd6196fdfd637
   languageName: node
   linkType: hard
 
-"@launchdarkly/js-client-sdk@npm:^0.11.0":
-  version: 0.11.0
-  resolution: "@launchdarkly/js-client-sdk@npm:0.11.0"
+"@launchdarkly/js-client-sdk@npm:^4.0.0":
+  version: 4.0.0
+  resolution: "@launchdarkly/js-client-sdk@npm:4.0.0"
   dependencies:
-    "@launchdarkly/js-client-sdk-common": "npm:1.16.0"
-  checksum: 10/56b6565c58663f50225964f393baba40794d57d99f7e0475985c8c1ec404286c406282a9a1f59ce5249a05e2845d8a459f708ab5fc594b81726c32ac59eea13e
+    "@launchdarkly/js-client-sdk-common": "npm:1.17.2"
+  checksum: 10/daf2b64932ca05782e3b024367bb305ab7bd88e4b4a2ee959562cc5e43534ebd355e0929e9d8d3ddd345ec201fce79130806cdd66f97450442858010abd65327
   languageName: node
   linkType: hard
 
@@ -28131,7 +28131,7 @@ __metadata:
     "@graphql-codegen/typescript": "npm:^4.0.1"
     "@graphql-codegen/typescript-graphql-request": "npm:^6.0.1"
     "@graphql-codegen/typescript-operations": "npm:^4.0.1"
-    "@launchdarkly/js-client-sdk": "npm:^0.11.0"
+    "@launchdarkly/js-client-sdk": "npm:^4.0.0"
     "@opentelemetry/api": "npm:^1.9.0"
     "@opentelemetry/exporter-metrics-otlp-http": "npm:>=0.57.1 < 0.200.0"
     "@opentelemetry/exporter-trace-otlp-http": "npm:>=0.57.1 < 0.200.0"
@@ -35286,7 +35286,7 @@ __metadata:
   dependencies:
     "@highlight-run/next": "workspace:*"
     "@highlight-run/pino": "workspace:*"
-    "@launchdarkly/js-client-sdk": "npm:^0.11.0"
+    "@launchdarkly/js-client-sdk": "npm:^4.0.0"
     "@next/env": "npm:^15.1.7"
     "@prisma/client": "npm:^6.4.1"
     "@prisma/instrumentation": "npm:^6.4.1"
@@ -39242,7 +39242,7 @@ __metadata:
   resolution: "react-router@workspace:e2e/react-router"
   dependencies:
     "@highlight-run/react": "workspace:*"
-    "@launchdarkly/js-client-sdk": "npm:^0.11.0"
+    "@launchdarkly/js-client-sdk": "npm:^4.0.0"
     "@launchdarkly/observability": "workspace:*"
     "@launchdarkly/session-replay": "workspace:*"
     "@types/react": "npm:^19.0.4"

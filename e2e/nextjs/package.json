@@ -15,7 +15,7 @@
 	"dependencies": {
 		"@highlight-run/next": "workspace:*",
 		"@highlight-run/pino": "workspace:*",
-		"@launchdarkly/js-client-sdk": "^0.11.0",
+		"@launchdarkly/js-client-sdk": "^4.0.0",
 		"@next/env": "^15.1.7",
 		"@prisma/client": "^6.4.1",
 		"@prisma/instrumentation": "^6.4.1",
