@@ -9,13 +9,13 @@ class FlagsController < ApplicationController
     context = build_context
 
     # Get all flags from LaunchDarkly
-    state = $ld_client.all_flags_state(context, details_only_for_tracked_flags: false)
+    state = Rails.configuration.ld_client.all_flags_state(context, details_only_for_tracked_flags: false)
     @all_flags_valid = state.valid?
 
     # Build evaluations from all available flags
     @evaluations = {}
     state.values_map.each_key do |flag_key|
-      @evaluations[flag_key] = $ld_client.variation_detail(flag_key, context, nil)
+      @evaluations[flag_key] = Rails.configuration.ld_client.variation_detail(flag_key, context, nil)
     end
 
     respond_to do |format|
@@ -30,7 +30,7 @@ class FlagsController < ApplicationController
     context = build_context
     flag_key = params[:id]
 
-    detail = $ld_client.variation_detail(flag_key, context, nil)
+    detail = Rails.configuration.ld_client.variation_detail(flag_key, context, nil)
 
     respond_to do |format|
       format.html { @flag_key = flag_key; @detail = detail }
@@ -50,7 +50,7 @@ class FlagsController < ApplicationController
       **context_data.except(:key, :kind).to_h.symbolize_keys
     })
 
-    detail = $ld_client.variation_detail(flag_key, context, params[:default])
+    detail = Rails.configuration.ld_client.variation_detail(flag_key, context, params[:default])
 
     render json: format_detail(flag_key, detail)
   end
@@ -66,7 +66,7 @@ class FlagsController < ApplicationController
     end
 
     results = flag_keys.each_with_object({}) do |key, hash|
-      hash[key] = $ld_client.variation(key, context, nil)
+      hash[key] = Rails.configuration.ld_client.variation(key, context, nil)
     end
 
     render json: { evaluations: results, context_key: context.key }
@@ -76,7 +76,7 @@ class FlagsController < ApplicationController
   # Get all flag states (demonstrates all_flags_state method)
   def all_flags
     context = build_context
-    state = $ld_client.all_flags_state(context)
+    state = Rails.configuration.ld_client.all_flags_state(context)
 
     render json: {
       valid: state.valid?,

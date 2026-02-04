@@ -56,6 +56,74 @@ module LaunchDarklyObservability
       !@instance.nil?
     end
 
+    # Create a custom span for manual instrumentation
+    #
+    # This method matches the OpenTelemetry API naming convention for consistency.
+    #
+    # @param name [String] The span name
+    # @param attributes [Hash] Optional span attributes
+    # @yield [span] Block to execute within the span context
+    # @return The result of the block
+    #
+    # @example Create a custom span
+    #   LaunchDarklyObservability.in_span('database-query') do |span|
+    #     span.set_attribute('db.table', 'users')
+    #     perform_query
+    #   end
+    def in_span(name, attributes: {})
+      unless defined?(OpenTelemetry) && OpenTelemetry.tracer_provider
+        return yield if block_given?
+        return
+      end
+
+      tracer = OpenTelemetry.tracer_provider.tracer(
+        'launchdarkly-observability',
+        LaunchDarklyObservability::VERSION
+      )
+
+      tracer.in_span(name, attributes: attributes) do |span|
+        yield(span) if block_given?
+      end
+    end
+
+    # Record an exception in the current span
+    #
+    # @param exception [Exception] The exception to record
+    # @param attributes [Hash] Additional attributes
+    #
+    # @example Record an exception
+    #   begin
+    #     risky_operation
+    #   rescue => e
+    #     LaunchDarklyObservability.record_exception(e, foo: 'bar')
+    #     raise
+    #   end
+    def record_exception(exception, attributes: {})
+      return unless defined?(OpenTelemetry)
+
+      span = OpenTelemetry::Trace.current_span
+      return unless span
+
+      span.record_exception(exception, attributes: attributes)
+      span.status = OpenTelemetry::Trace::Status.error(exception.message)
+    end
+
+    # Get the current trace ID
+    #
+    # @return [String, nil] The current trace ID in hex format
+    #
+    # @example Get trace ID for logging
+    #   trace_id = LaunchDarklyObservability.current_trace_id
+    #   logger.info "Processing request: #{trace_id}"
+    def current_trace_id
+      return nil unless defined?(OpenTelemetry)
+
+      span = OpenTelemetry::Trace.current_span
+      return nil unless span&.context&.valid?
+
+      span.context.hex_trace_id
+    end
+
     # Flush all pending telemetry data
     def flush
       @instance&.flush

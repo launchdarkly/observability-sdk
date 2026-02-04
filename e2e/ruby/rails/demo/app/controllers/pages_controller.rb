@@ -10,7 +10,7 @@ class PagesController < ApplicationController
     })
 
     # Get all available flags (automatically traced by the observability plugin)
-    state = $ld_client.all_flags_state(@context)
+    state = Rails.configuration.ld_client.all_flags_state(@context)
     @flags_valid = state.valid?
     @flag_count = state.values_map.size
 

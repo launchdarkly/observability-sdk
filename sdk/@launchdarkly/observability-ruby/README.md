@@ -119,23 +119,23 @@ end
 ```ruby
 LaunchDarklyObservability::Plugin.new(
   # All parameters are optional - SDK key and environment are automatically inferred
-  
+
   # Optional: Custom OTLP endpoint (default: LaunchDarkly's endpoint)
   otlp_endpoint: 'https://otel.observability.app.launchdarkly.com:4318',
-  
+
   # Optional: Environment override (default: inferred from SDK key)
   # Only specify for advanced scenarios like deployment-specific suffixes
   environment: 'production-canary',
-  
+
   # Optional: Service identification
   service_name: 'my-service',
   service_version: '1.0.0',
-  
+
   # Optional: Enable/disable signal types
   enable_traces: true,   # default: true
   enable_logs: true,     # default: true
   enable_metrics: true,  # default: true
-  
+
   # Optional: Custom instrumentation configuration
   instrumentations: {
     'OpenTelemetry::Instrumentation::Rails' => { enable_recognize_route: true },
@@ -204,14 +204,14 @@ class MyController < ApplicationController
     # Get current trace ID for logging
     trace_id = launchdarkly_trace_id
     Rails.logger.info "Processing request with trace: #{trace_id}"
-    
+
     # Create custom spans
     with_launchdarkly_span('custom-operation', attributes: { 'custom.key' => 'value' }) do |span|
       # Your code here
       span.set_attribute('result', 'success')
     end
   end
-  
+
   def create
     # Record exceptions
     begin
@@ -255,13 +255,13 @@ LaunchDarklyObservability::Plugin.new(
   instrumentations: {
     # Disable specific instrumentations
     'OpenTelemetry::Instrumentation::Redis' => { enabled: false },
-    
+
     # Configure instrumentations
     'OpenTelemetry::Instrumentation::ActiveRecord' => {
       db_statement: :obfuscate,  # Mask sensitive data
       obfuscation_limit: 2000
     },
-    
+
     # Skip certain endpoints
     'OpenTelemetry::Instrumentation::Rack' => {
       untraced_endpoints: ['/health', '/metrics']
@@ -274,17 +274,84 @@ LaunchDarklyObservability::Plugin.new(
 
 ### Creating Custom Spans
 
-```ruby
-tracer = OpenTelemetry.tracer_provider.tracer('my-component')
+The LaunchDarkly Observability plugin provides a clean API matching OpenTelemetry conventions for creating custom spans:
 
-tracer.in_span('custom-operation') do |span|
-  span.set_attribute('custom.attribute', 'value')
-  
+```ruby
+# Simple span creation
+LaunchDarklyObservability.in_span('database-query') do |span|
+  span.set_attribute('db.table', 'users')
+  span.set_attribute('db.operation', 'select')
+
   # Your code here
-  
-  if error_occurred
-    span.record_exception(error)
-    span.status = OpenTelemetry::Trace::Status.error('Operation failed')
+  results = execute_query
+end
+
+# With initial attributes
+LaunchDarklyObservability.in_span('api-call', attributes: { 'api.endpoint' => '/users' }) do |span|
+  response = make_api_call
+  span.set_attribute('api.status', response.code)
+end
+
+# Nested spans
+LaunchDarklyObservability.in_span('process-order') do |outer_span|
+  outer_span.set_attribute('order.id', order_id)
+
+  LaunchDarklyObservability.in_span('validate-payment') do |inner_span|
+    validate_payment(order)
+  end
+
+  LaunchDarklyObservability.in_span('update-inventory') do |inner_span|
+    update_inventory(order)
+  end
+end
+```
+
+### Recording Exceptions
+
+```ruby
+begin
+  risky_operation
+rescue StandardError => e
+  # Record the exception in the current span
+  LaunchDarklyObservability.record_exception(e, attributes: { 'retry_count' => 3 })
+  raise
+end
+```
+
+### Getting Current Trace ID
+
+```ruby
+# Get the current trace ID for logging or debugging
+trace_id = LaunchDarklyObservability.current_trace_id
+logger.info "Processing request: #{trace_id}"
+```
+
+### Rails Controller Helpers
+
+In Rails controllers, you can also use these helper methods:
+
+```ruby
+class MyController < ApplicationController
+  def index
+    # Get current trace ID
+    trace_id = launchdarkly_trace_id
+    Rails.logger.info "Processing request with trace: #{trace_id}"
+
+    # Create custom spans (Rails helper - equivalent to LaunchDarklyObservability.in_span)
+    with_launchdarkly_span('custom-operation', attributes: { 'custom.key' => 'value' }) do |span|
+      # Your code here
+      span.set_attribute('result', 'success')
+    end
+  end
+
+  def create
+    # Record exceptions (Rails helper - equivalent to LaunchDarklyObservability.record_exception)
+    begin
+      process_something
+    rescue => e
+      record_launchdarkly_exception(e)
+      raise
+    end
   end
 end
 ```
@@ -294,6 +361,25 @@ end
 ```ruby
 # Logs are automatically correlated with traces via the Logger instrumentation
 Rails.logger.info "Processing flag evaluation"  # Includes trace_id, span_id
+```
+
+### Using Raw OpenTelemetry API
+
+If you need more control, you can still use the OpenTelemetry API directly:
+
+```ruby
+tracer = OpenTelemetry.tracer_provider.tracer('my-component')
+
+tracer.in_span('custom-operation') do |span|
+  span.set_attribute('custom.attribute', 'value')
+
+  # Your code here
+
+  if error_occurred
+    span.record_exception(error)
+    span.status = OpenTelemetry::Trace::Status.error('Operation failed')
+  end
+end
 ```
 
 ## Troubleshooting
@@ -349,11 +435,11 @@ class ActiveSupport::TestCase
       )
     end
   end
-  
+
   teardown do
     @exporter.reset
   end
-  
+
   def finished_spans
     @exporter.finished_spans
   end
@@ -370,6 +456,28 @@ LaunchDarklyObservability.init
 
 # Check if initialized
 LaunchDarklyObservability.initialized?  # => true
+
+# Create a custom span for manual instrumentation (matches OpenTelemetry API)
+LaunchDarklyObservability.in_span('operation-name') do |span|
+  span.set_attribute('key', 'value')
+  # your code
+end
+
+# Create a span with initial attributes
+LaunchDarklyObservability.in_span('operation-name', attributes: { 'key' => 'value' }) do |span|
+  # your code
+end
+
+# Record an exception in the current span
+begin
+  risky_operation
+rescue => e
+  LaunchDarklyObservability.record_exception(e, attributes: { 'context' => 'value' })
+  raise
+end
+
+# Get the current trace ID
+trace_id = LaunchDarklyObservability.current_trace_id  # => "abc123..."
 
 # Flush pending telemetry
 LaunchDarklyObservability.flush
