@@ -1,6 +1,43 @@
-<h1>Highlight Ruby Demo</h1>
+<h1>LaunchDarkly Ruby Observability Demo</h1>
 
-<h2>Controller</h2>
+<h2>LaunchDarkly Feature Flags</h2>
+<p>
+  Connected to LaunchDarkly. Each flag evaluation creates an OpenTelemetry span.
+</p>
+
+<p>
+  <strong>Status:</strong> <%= @flags_valid ? '✓ Connected' : '✗ Not connected' %><br>
+  <strong>Total flags:</strong> <%= @flag_count %><br>
+  <strong>Context key:</strong> <code><%= @context.key %></code>
+</p>
+
+<% if @sample_evaluations.any? %>
+  <h3>Sample Flag Values</h3>
+  <table border="1" cellpadding="8" cellspacing="0">
+    <thead>
+      <tr>
+        <th>Flag Key</th>
+        <th>Value</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @sample_evaluations.each do |key, value| %>
+        <tr>
+          <td><code><%= key %></code></td>
+          <td><code><%= value.inspect %></code></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% else %>
+  <p><em>No flags available. Make sure LAUNCHDARKLY_SDK_KEY is set.</em></p>
+<% end %>
+
+<p>
+  <a href="/flags">View all flags &rarr;</a>
+</p>
+
+<h2>Controller HTTP Request</h2>
 <p>
   <%= @data %>
 </p>

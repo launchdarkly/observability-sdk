@@ -1,0 +1,72 @@
+<h1>LaunchDarkly Feature Flags</h1>
+
+<p>
+  This page demonstrates the LaunchDarkly Ruby SDK with the observability plugin.
+  Each flag evaluation is automatically traced via OpenTelemetry.
+</p>
+
+<p>
+  <strong>Connection Status:</strong> <%= @all_flags_valid ? '✓ Connected' : '✗ Not connected' %><br>
+  <strong>Total Flags:</strong> <%= @evaluations.size %>
+</p>
+
+<% if @evaluations.any? %>
+  <h2>All Flag Evaluations</h2>
+
+  <table border="1" cellpadding="10" cellspacing="0">
+    <thead>
+      <tr>
+        <th>Flag Key</th>
+        <th>Value</th>
+        <th>Variation Index</th>
+        <th>Reason</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @evaluations.each do |key, detail| %>
+        <tr>
+          <td><a href="/flags/<%= key %>"><code><%= key %></code></a></td>
+          <td><code><%= detail.value.inspect %></code></td>
+          <td><%= detail.variation_index %></td>
+          <td><code><%= detail.reason&.kind %></code></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% else %>
+  <p><em>No flags available. Make sure LAUNCHDARKLY_SDK_KEY is set correctly.</em></p>
+<% end %>
+
+<h2>Test Endpoints</h2>
+
+<ul>
+  <li><a href="/flags.json">GET /flags.json</a> - All flag evaluations as JSON</li>
+  <li><a href="/flags/all_flags">GET /flags/all_flags</a> - Raw flags state</li>
+  <li>GET /flags/:flag_key - Evaluate a specific flag</li>
+</ul>
+
+<h3>POST Endpoints</h3>
+
+<pre>
+# Evaluate a specific flag with custom context
+POST /flags/evaluate
+{
+  "flag_key": "your-flag-key",
+  "context": { "key": "user-123", "kind": "user" }
+}
+
+# Batch evaluate multiple flags
+POST /flags/batch
+{
+  "flag_keys": ["flag-1", "flag-2", "flag-3"]
+}
+</pre>
+
+<h2>Trace Information</h2>
+
+<p>
+  <strong>Current Trace ID:</strong>
+  <code><%= launchdarkly_trace_id || 'N/A' %></code>
+</p>
+
+<%= launchdarkly_traceparent_meta_tag %>
