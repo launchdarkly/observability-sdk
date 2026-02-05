@@ -87,7 +87,8 @@ describe('withHighlightConfig', () => {
 			() => Promise.resolve({ fallback: [testEntry] })
 
 		const expected = {
-			beforeFiles: undefined,
+			beforeFiles: [],
+			afterFiles: defaultRewrite,
 			fallback: [testEntry],
 		}
 		expect(
