@@ -73,7 +73,7 @@
 		"@opentelemetry/resources": "^1.30.1",
 		"@rollup/plugin-terser": "^0.4.4",
 		"@rollup/plugin-typescript": "^11.1.5",
-		"@trpc/server": "^9.27.4",
+		"@trpc/server": "^10.45.3",
 		"@types/js-cookie": "^3",
 		"@types/node": "^16.18.113",
 		"chokidar-cli": "^3.0.0",

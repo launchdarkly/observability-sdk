@@ -10,16 +10,16 @@
 	},
 	"dependencies": {
 		"@highlight-run/remix": "workspace:*",
-		"@remix-run/css-bundle": "^2.10.0",
-		"@remix-run/node": "^2.10.0",
-		"@remix-run/react": "^2.10.0",
-		"@remix-run/serve": "^2.10.0",
+		"@remix-run/css-bundle": "^2.17.3",
+		"@remix-run/node": "^2.17.2",
+		"@remix-run/react": "^2.17.3",
+		"@remix-run/serve": "^2.17.3",
 		"isbot": "^3.6.8",
 		"react": "^19.0.0",
 		"react-dom": "^19.0.0"
 	},
 	"devDependencies": {
-		"@remix-run/dev": "^2.13.1",
+		"@remix-run/dev": "^2.17.3",
 		"@remix-run/eslint-config": "^2.10.0",
 		"@types/react": "^19.0.4",
 		"@types/react-dom": "^19.0.2",

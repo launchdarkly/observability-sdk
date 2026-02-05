@@ -20,10 +20,10 @@
 		"@prisma/client": "^6.4.1",
 		"@prisma/instrumentation": "^6.4.1",
 		"@tanstack/react-query": "^4.36.1",
-		"@trpc/client": "^10.45.2",
-		"@trpc/next": "^10.45.2",
-		"@trpc/react-query": "^10.45.2",
-		"@trpc/server": "^10.45.2",
+		"@trpc/client": "^10.45.3",
+		"@trpc/next": "^10.45.3",
+		"@trpc/react-query": "^10.45.3",
+		"@trpc/server": "^10.45.3",
 		"@types/node": "^22.13.5",
 		"@types/pg": "^8.11.11",
 		"@types/react": "^19.0.10",
@@ -33,7 +33,7 @@
 		"eslint": "^9.17.0",
 		"eslint-config-next": "^15.5.10",
 		"ky": "^1.7.4",
-		"next": "^15.5.10",
+		"next": ">=13",
 		"next-build-id": "^3.0.0",
 		"pg": "^8.13.3",
 		"pino": "^9.6.0",
@@ -46,6 +46,6 @@
 	},
 	"devDependencies": {
 		"prisma": "^6.4.1",
-		"vercel": "^41.2.1"
+		"vercel": "^50.12.0"
 	}
 }
