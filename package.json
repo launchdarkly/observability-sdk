@@ -88,12 +88,18 @@
 		"brace-expansion@^2": "^2.0.2",
 		"ws": "^8.17.1",
 		"semver": "^7.5.2",
-		"path-to-regexp": "^6.3.0",
+		"path-to-regexp@^3": "^3.3.0",
+		"path-to-regexp@^6": "^6.3.0",
+		"path-to-regexp@6.1.0": "6.3.0",
+		"path-to-regexp@^8": "^8.2.0",
 		"glob": "^10.5.0",
 		"@sveltejs/kit": "^2.20.6",
 		"@nestjs/common": "^10.4.16",
 		"esbuild": "^0.25.0",
-		"vite": ">=5.4.21"
+		"vite@^5": "^5.4.21",
+		"vite@^6": "^6.4.1",
+		"vite@6.0.7": "^6.4.1",
+		"vite@^7": "^7.0.8"
 	},
 	"packageManager": "yarn@4.9.1"
 }
