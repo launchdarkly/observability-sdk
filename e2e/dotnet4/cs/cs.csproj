@@ -124,25 +124,25 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="OpenTelemetry, Version=1.0.0.0, Culture=neutral, PublicKeyToken=7bd6737fe5b67e3c, processorArchitecture=MSIL">
-      <HintPath>..\packages\OpenTelemetry.1.11.1\lib\net462\OpenTelemetry.dll</HintPath>
+      <HintPath>..\packages\OpenTelemetry.1.11.2\lib\net462\OpenTelemetry.dll</HintPath>
     </Reference>
     <Reference Include="OpenTelemetry.Api, Version=1.0.0.0, Culture=neutral, PublicKeyToken=7bd6737fe5b67e3c, processorArchitecture=MSIL">
-      <HintPath>..\packages\OpenTelemetry.Api.1.11.1\lib\net462\OpenTelemetry.Api.dll</HintPath>
+      <HintPath>..\packages\OpenTelemetry.Api.1.11.2\lib\net462\OpenTelemetry.Api.dll</HintPath>
     </Reference>
     <Reference Include="OpenTelemetry.Api.ProviderBuilderExtensions, Version=1.0.0.0, Culture=neutral, PublicKeyToken=7bd6737fe5b67e3c, processorArchitecture=MSIL">
-      <HintPath>..\packages\OpenTelemetry.Api.ProviderBuilderExtensions.1.11.1\lib\net462\OpenTelemetry.Api.ProviderBuilderExtensions.dll</HintPath>
+      <HintPath>..\packages\OpenTelemetry.Api.ProviderBuilderExtensions.1.11.2\lib\net462\OpenTelemetry.Api.ProviderBuilderExtensions.dll</HintPath>
     </Reference>
     <Reference Include="OpenTelemetry.Exporter.Console, Version=1.0.0.0, Culture=neutral, PublicKeyToken=7bd6737fe5b67e3c, processorArchitecture=MSIL">
       <HintPath>..\packages\OpenTelemetry.Exporter.Console.1.9.0\lib\net462\OpenTelemetry.Exporter.Console.dll</HintPath>
     </Reference>
     <Reference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol, Version=1.0.0.0, Culture=neutral, PublicKeyToken=7bd6737fe5b67e3c, processorArchitecture=MSIL">
-      <HintPath>..\packages\OpenTelemetry.Exporter.OpenTelemetryProtocol.1.11.1\lib\net462\OpenTelemetry.Exporter.OpenTelemetryProtocol.dll</HintPath>
+      <HintPath>..\packages\OpenTelemetry.Exporter.OpenTelemetryProtocol.1.11.2\lib\net462\OpenTelemetry.Exporter.OpenTelemetryProtocol.dll</HintPath>
     </Reference>
     <Reference Include="OpenTelemetry.Exporter.Zipkin, Version=1.0.0.0, Culture=neutral, PublicKeyToken=7bd6737fe5b67e3c, processorArchitecture=MSIL">
       <HintPath>..\packages\OpenTelemetry.Exporter.Zipkin.1.9.0\lib\net462\OpenTelemetry.Exporter.Zipkin.dll</HintPath>
     </Reference>
     <Reference Include="OpenTelemetry.Extensions.Hosting, Version=1.0.0.0, Culture=neutral, PublicKeyToken=7bd6737fe5b67e3c, processorArchitecture=MSIL">
-      <HintPath>..\packages\OpenTelemetry.Extensions.Hosting.1.11.1\lib\net462\OpenTelemetry.Extensions.Hosting.dll</HintPath>
+      <HintPath>..\packages\OpenTelemetry.Extensions.Hosting.1.11.2\lib\net462\OpenTelemetry.Extensions.Hosting.dll</HintPath>
     </Reference>
     <Reference Include="OpenTelemetry.Extensions.Propagators, Version=1.0.0.0, Culture=neutral, PublicKeyToken=7bd6737fe5b67e3c, processorArchitecture=MSIL">
       <HintPath>..\packages\OpenTelemetry.Extensions.Propagators.1.9.0\lib\net462\OpenTelemetry.Extensions.Propagators.dll</HintPath>
