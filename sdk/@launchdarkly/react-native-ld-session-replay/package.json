@@ -1,5 +1,5 @@
 {
-  "name": "session-replay-react-native",
+  "name": "@launchdarkly/session-replay-react-native",
   "version": "0.1.0",
   "description": "session replay for react native",
   "main": "./lib/module/index.js",
@@ -47,14 +47,14 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/launchdarkly/swift-launchdarkly-observability.git"
+    "url": "git+https://github.com/launchdarkly/observability-sdk.git"
   },
-  "author": "launchdarkly <dks@launchdarkly.com> (https://github.com/launchdarkly/swift-launchdarkly-observability)",
+  "author": "launchdarkly <dks@launchdarkly.com> (https://github.com/launchdarkly/observability-sdk)",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/launchdarkly/swift-launchdarkly-observability/issues"
+    "url": "https://github.com/launchdarkly/observability-sdk/issues"
   },
-  "homepage": "https://github.com/launchdarkly/swift-launchdarkly-observability#readme",
+  "homepage": "https://github.com/launchdarkly/observability-sdk#readme",
   "publishConfig": {
     "registry": "https://registry.npmjs.org/"
   },
