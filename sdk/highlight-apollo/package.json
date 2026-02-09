@@ -26,7 +26,7 @@
 		"access": "public"
 	},
 	"dependencies": {
-		"@apollo/server": "^4",
+		"@apollo/server": "^4.13.0",
 		"@highlight-run/node": "workspace:*",
 		"apollo-server-plugin-base": "^3"
 	},

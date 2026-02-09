@@ -30,8 +30,8 @@
 		"@highlight-run/node": "workspace:*"
 	},
 	"devDependencies": {
-		"@nestjs/common": "^10.3.7",
-		"@trpc/server": "^10.45.2",
+		"@nestjs/common": "^10.4.16",
+		"@trpc/server": "^10.45.3",
 		"@types/node": "^20.12.3",
 		"cache-manager": "^5.4.0",
 		"class-transformer": "^0.5.1",
