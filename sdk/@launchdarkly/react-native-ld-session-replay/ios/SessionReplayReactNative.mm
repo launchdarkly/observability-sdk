@@ -14,7 +14,7 @@
       return;
     }
     @try {
-      [[SessionReplayAdapter shared] setMobileKey:trimmed options:options];
+      [[SessionReplayClientAdapter shared] setMobileKey:trimmed options:options];
       resolve(nil);
     } @catch(NSException *exception) {
       NSLog(@"⚠️ configure crash: %@", exception);
@@ -26,7 +26,7 @@
                     reject:(RCTPromiseRejectBlock)reject
 {
     @try {
-      [[SessionReplayAdapter shared] startWithCompletion:^(BOOL success, NSString * _Nullable errorMessage) {
+      [[SessionReplayClientAdapter shared] startWithCompletion:^(BOOL success, NSString * _Nullable errorMessage) {
         if (success) {
           resolve(nil);
         } else {
@@ -44,7 +44,7 @@
                     reject:(RCTPromiseRejectBlock)reject
 {
     @try {
-      [[SessionReplayAdapter shared] stop];
+      [[SessionReplayClientAdapter shared] stop];
       resolve(nil);
     } @catch(NSException *exception) {
       NSLog(@"⚠️ stopSessionReplay crash: %@", exception);
