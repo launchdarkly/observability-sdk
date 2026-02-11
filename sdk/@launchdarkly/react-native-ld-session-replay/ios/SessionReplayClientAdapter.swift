@@ -104,13 +104,15 @@ public class SessionReplayClientAdapter: NSObject {
         context: context,
         startWaitSeconds: 5.0,
         completion: { [weak self] (timedOut: Bool) -> Void in
-          self?.isLDClientStarted = true
-          self?.ldReplayState = .starting
-          Task { @MainActor in
-            LDReplay.shared.isEnabled = true
-            self?.ldReplayState = .started
+          self?.clientQueue.sync {
+            self?.isLDClientStarted = true
+            self?.ldReplayState = .starting
+            Task { @MainActor in
+              LDReplay.shared.isEnabled = true
+              self?.ldReplayState = .started
+            }
+            completion(true, nil)
           }
-          completion(true, nil)
         }
       )
     }    
