@@ -1,5 +1,6 @@
 package com.launchdarkly.observability.network
 
+import android.util.Log
 import com.launchdarkly.logging.LDLogger
 import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
 import kotlinx.coroutines.withContext
@@ -59,7 +60,9 @@ class GraphQLClient(
         }
     }
 ) {
-
+    var totalSize = 0
+    var totalCount = 0
+    private val startTimeMs = System.currentTimeMillis()
     companion object {
         private const val CONNECT_TIMEOUT = 10000
         private const val READ_TIMEOUT = 10000
@@ -88,6 +91,13 @@ class GraphQLClient(
 
             val requestJson = json.encodeToString(request)
             val requestBytes = requestJson.toByteArray(Charsets.UTF_8)
+            totalSize += requestBytes.size
+            totalCount += 1
+            val elapsedSeconds = (System.currentTimeMillis() - startTimeMs) / 1000.0
+            val avgBytesPerSecond = if (elapsedSeconds > 0) totalSize / elapsedSeconds else 0.0
+            val avgCountPerSecond = if (elapsedSeconds > 0) totalCount / elapsedSeconds else 0.0
+            Log.i("stat", "payload bytes = ${requestBytes.size}")
+            Log.i("stat", "total bytes = ${totalSize}, avg per payload = ${totalSize / totalCount}, avg bytes/sec = ${"%.2f".format(avgBytesPerSecond)}, avg count/sec = ${"%.2f".format(avgCountPerSecond)}")
             val payloadBytes = if (compress) gzip(requestBytes) else requestBytes
             val connectionLocal = connectionProvider.openConnection(endpoint).also { connection = it }
 
