@@ -7,7 +7,7 @@ import {
 
 import { useEffect, useState } from 'react';
 
-import { createSessionReplayPlugin } from 'session-replay-react-native';
+import { createSessionReplayPlugin } from '@launchdarkly/session-replay-react-native';
 
 const plugin = createSessionReplayPlugin({
   isEnabled: true,

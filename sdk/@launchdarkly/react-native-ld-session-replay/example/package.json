@@ -10,6 +10,8 @@
     "build:ios": "react-native build-ios --mode Debug"
   },
   "dependencies": {
+    "@launchdarkly/react-native-client-sdk": "^10.12.5",
+    "@launchdarkly/session-replay-react-native": "workspace:*",
     "react": "19.2.0",
     "react-native": "0.83.0"
   },
