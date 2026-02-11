@@ -43,7 +43,7 @@ class SessionReplayPluginAdapter implements LDPlugin {
   }
 
   register(_client: LDClient, metadata: LDPluginEnvironmentMetadata): void {
-    const sdkKey = metadata.sdkKey ?? metadata.mobileKey ?? '';
+    const sdkKey = metadata.sdkKey || metadata.mobileKey || '';
     const key = typeof sdkKey === 'string' ? sdkKey.trim() : '';
     if (!key) {
       console.error('[SessionReplay]', MOBILE_KEY_REQUIRED_MESSAGE);
