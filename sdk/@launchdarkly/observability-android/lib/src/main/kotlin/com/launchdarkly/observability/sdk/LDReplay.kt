@@ -21,14 +21,14 @@ object LDReplay {
     }
 
     /**
-     * Starts session replay capture and event buffering if configured.
+     * Starts session replay capture
      */
     fun start() {
         delegate.start()
     }
 
     /**
-     * Stops session replay capture and event buffering until started again.
+     * Stops session replay capture
      */
     fun stop() {
         delegate.stop()

@@ -6,7 +6,7 @@ package com.launchdarkly.observability.replay
  * @property debug enables verbose logging if true as well as other debug functionality. Defaults to false.
  * @property privacyProfile privacy profile that controls masking behavior
  * @property capturePeriodMillis period between captures
- * @property enabled controls whether session replay starts capturing immediately
+ * @property enabled controls whether session replay starts capturing immediately on initialization
  */
 data class ReplayOptions(
     val enabled: Boolean = true,
