@@ -17,6 +17,7 @@ import com.launchdarkly.sdk.android.LDClient
 import com.launchdarkly.sdk.android.LDConfig
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
+import com.launchdarkly.observability.sdk.LDReplay
 
 open class BaseApplication : Application() {
 
@@ -51,7 +52,7 @@ open class BaseApplication : Application() {
 
         val sessionReplayPlugin = SessionReplay(
             options = ReplayOptions(
-                enabled = true,
+                enabled = false,
                 privacyProfile = PrivacyProfile(
                     maskText = false,
                     maskWebViews = true,
@@ -87,6 +88,8 @@ open class BaseApplication : Application() {
 
         LDClient.init(this@BaseApplication, ldConfig, context)
         telemetryInspector = observabilityPlugin.getTelemetryInspector()
+
+        LDReplay.start()
     }
 
     override fun onCreate() {
