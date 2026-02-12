@@ -51,11 +51,19 @@ public class SessionReplayClientAdapter: NSObject {
           Task { @MainActor in
             if !LDReplay.shared.isEnabled {
               LDReplay.shared.isEnabled = true
-              self.ldReplayState = .started
-            } else {
-              self.ldReplayState = .started
             }
-            completion(true, nil)
+            self.clientQueue.sync { [weak self] in
+              guard let self else { return }
+              if self.ldReplayState == .stopping {
+                self.ldReplayState = .stopped
+                Task { @MainActor in
+                  LDReplay.shared.isEnabled = false
+                }
+              } else {
+                self.ldReplayState = .started
+              }
+              completion(true, nil)
+            }
           }
           return
         case .starting, .started, .stopping:
@@ -109,9 +117,19 @@ public class SessionReplayClientAdapter: NSObject {
             self?.ldReplayState = .starting
             Task { @MainActor in
               LDReplay.shared.isEnabled = true
-              self?.ldReplayState = .started
+              self?.clientQueue.sync { [weak self] in
+                guard let self else { return }
+                if self.ldReplayState == .stopping {
+                  self.ldReplayState = .stopped
+                  Task { @MainActor in
+                    LDReplay.shared.isEnabled = false
+                  }
+                } else {
+                  self.ldReplayState = .started
+                }
+                completion(true, nil)
+              }
             }
-            completion(true, nil)
           }
         }
       )
@@ -126,13 +144,21 @@ public class SessionReplayClientAdapter: NSObject {
   /// Stop is intended to provide a stop like API, internally is disabling session replay until app start it with start method
   @objc public func stop() {
     clientQueue.sync { [weak self] in
-      guard self?.ldReplayState == .started else { return }
-      
-      /// Set the isLDReplayStarted to false to prevent the code to be executed again if stop is called several times
-      self?.ldReplayState = .stopping
-      Task { @MainActor in
-        LDReplay.shared.isEnabled = false
-        self?.ldReplayState = .stopped
+      guard let self else { return }
+      switch self.ldReplayState {
+      case .started:
+        self.ldReplayState = .stopping
+        Task { @MainActor in
+          LDReplay.shared.isEnabled = false
+          self.clientQueue.sync { [weak self] in
+            self?.ldReplayState = .stopped
+          }
+        }
+      case .starting:
+        /// stop() was called before the start Task set .started; the in-flight start Task will see .stopping and revert
+        self.ldReplayState = .stopping
+      case .idle, .stopped, .stopping:
+        break
       }
     }
   }
