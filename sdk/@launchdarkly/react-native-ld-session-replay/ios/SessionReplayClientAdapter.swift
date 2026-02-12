@@ -51,6 +51,7 @@ public class SessionReplayClientAdapter: NSObject {
     ]
     /// we set the LDClient offline to stop communication with the LaunchDarkly servers.
     /// The React Native LDClient will be in charge of communicating with the LaunchDarkly servers.
+    /// offline is considered a short circuited timed out case
     config.startOnline = false
     return config
   }
@@ -80,6 +81,7 @@ public class SessionReplayClientAdapter: NSObject {
   }
   
   /// completion: (timed out, error message)
+  /// offline is considered a short circuited timed out case
   private func start(mobileKey: String, options: SessionReplayOptions, completion: @escaping (Bool, String?) -> Void) {
     switch isLDClientState {
     case .idle:
@@ -94,19 +96,22 @@ public class SessionReplayClientAdapter: NSObject {
             self.clientQueue.sync { [weak self] in
               self?.isLDClientState = .started
               self?.setLDReplayEnabled(true) {
-                completion(false, nil)
+                /// offline is considered a short circuited timed out case
+                completion(true, nil)
               }
             }
           }
     case .starting:
       /// Client is starting, we must await until it finishes and state is started
       /// LDReplay will be started after LDClient finishes
-      completion(false, nil)
+      /// offline is considered a short circuited timed out case
+      completion(true, nil)
     case .started:
       /// Client is started, we can now focus on the session replay client
       /// Since this is the start method, we want to do so for LDReplay, set enabled to true
+      /// offline is considered a short circuited timed out case
       setLDReplayEnabled(true) {
-        completion(false, nil)
+        completion(true, nil)
       }
       break
     }
