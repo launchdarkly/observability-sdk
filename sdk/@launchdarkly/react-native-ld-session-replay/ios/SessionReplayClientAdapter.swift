@@ -79,6 +79,7 @@ public class SessionReplayClientAdapter: NSObject {
     }
   }
   
+  /// completion: (timed out, error message)
   private func start(mobileKey: String, options: SessionReplayOptions, completion: @escaping (Bool, String?) -> Void) {
     switch isLDClientState {
     case .idle:
@@ -93,19 +94,19 @@ public class SessionReplayClientAdapter: NSObject {
             self.clientQueue.sync { [weak self] in
               self?.isLDClientState = .started
               self?.setLDReplayEnabled(true) {
-                completion(true, nil)
+                completion(false, nil)
               }
             }
           }
     case .starting:
       /// Client is starting, we must await until it finishes and state is started
       /// LDReplay will be started after LDClient finishes
-      break
+      completion(false, nil)
     case .started:
       /// Client is started, we can now focus on the session replay client
       /// Since this is the start method, we want to do so for LDReplay, set enabled to true
       setLDReplayEnabled(true) {
-        completion(true, nil)
+        completion(false, nil)
       }
       break
     }
