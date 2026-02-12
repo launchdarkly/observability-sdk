@@ -1,7 +1,5 @@
 import SessionReplayReactNative from './NativeSessionReplayReactNative';
 import type { SessionReplayOptions } from './NativeSessionReplayReactNative';
-
-export type { SessionReplayOptions };
 import type { LDPlugin } from '@launchdarkly/react-native-client-sdk';
 import type {
   LDPluginEnvironmentMetadata,
@@ -69,3 +67,5 @@ export function createSessionReplayPlugin(
 ): LDPlugin {
   return new SessionReplayPluginAdapter(options);
 }
+
+export type { SessionReplayOptions };
