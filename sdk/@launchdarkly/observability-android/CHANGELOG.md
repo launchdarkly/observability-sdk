@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.25.1](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.25.0...launchdarkly-observability-android-0.25.1) (2026-02-12)
+
+
+### Bug Fixes
+
+* release package by trigger new build ([#364](https://github.com/launchdarkly/observability-sdk/issues/364)) ([7eaf5cd](https://github.com/launchdarkly/observability-sdk/commit/7eaf5cd576b9aa9003e6b4a4372c61bc3d390ff1))
+* Trigger release / Code comments change ([#363](https://github.com/launchdarkly/observability-sdk/issues/363)) ([06b34da](https://github.com/launchdarkly/observability-sdk/commit/06b34dae442a0f4a1c7b18a0bcda89d561f445db))
+
 ## [0.25.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.24.0...launchdarkly-observability-android-0.25.0) (2026-01-28)
 
 
