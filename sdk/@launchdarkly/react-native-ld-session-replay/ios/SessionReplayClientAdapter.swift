@@ -90,7 +90,7 @@ public class SessionReplayClientAdapter: NSObject {
         .start(
           config: config,
           context: context,
-          startWaitSeconds: 0) { timedOut in
+          startWaitSeconds: 5.0) { timedOut in
             self.clientQueue.sync { [weak self] in
               self?.isLDClientState = .started
               self?.setLDReplayEnabled(true) {
