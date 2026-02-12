@@ -40,7 +40,7 @@ class MaskCollector(private val logger: LDLogger) {
         return resultMasks
     }
 
-    fun traverseCompose(view: AbstractComposeView, context: MaskContext, masks: MutableList<Mask>) {
+    private fun traverseCompose(view: AbstractComposeView, context: MaskContext, masks: MutableList<Mask>) {
         val target = ComposeMaskTarget.from(view, logger)
         if (target != null) {
             traverseComposeNodes(target, context, masks)
@@ -52,7 +52,7 @@ class MaskCollector(private val logger: LDLogger) {
         }
     }
 
-    fun traverseNative(view: View, context: MaskContext, masks: MutableList<Mask>) {
+    private fun traverseNative(view: View, context: MaskContext, masks: MutableList<Mask>) {
         val target = NativeMaskTarget(view)
         if (shouldMask(target, context.matchers)) {
             target.mask(context)?.let {  masks += it }
@@ -66,7 +66,7 @@ class MaskCollector(private val logger: LDLogger) {
         }
     }
 
-    fun traverse(view: View, context: MaskContext, masks: MutableList<Mask>) {
+    private fun traverse(view: View, context: MaskContext, masks: MutableList<Mask>) {
         if (!view.isShown) return
 
         when {
