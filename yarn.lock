@@ -8876,7 +8876,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@launchdarkly/session-replay-react-native@workspace:sdk/@launchdarkly/react-native-ld-session-replay":
+"@launchdarkly/session-replay-react-native@workspace:*, @launchdarkly/session-replay-react-native@workspace:sdk/@launchdarkly/react-native-ld-session-replay":
   version: 0.0.0-use.local
   resolution: "@launchdarkly/session-replay-react-native@workspace:sdk/@launchdarkly/react-native-ld-session-replay"
   dependencies:
@@ -42909,6 +42909,8 @@ __metadata:
     "@babel/core": "npm:^7.25.2"
     "@babel/preset-env": "npm:^7.25.3"
     "@babel/runtime": "npm:^7.25.0"
+    "@launchdarkly/react-native-client-sdk": "npm:^10.12.5"
+    "@launchdarkly/session-replay-react-native": "workspace:*"
     "@react-native-community/cli": "npm:20.0.0"
     "@react-native-community/cli-platform-android": "npm:20.0.0"
     "@react-native-community/cli-platform-ios": "npm:20.0.0"
