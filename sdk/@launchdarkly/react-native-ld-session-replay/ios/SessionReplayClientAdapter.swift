@@ -106,7 +106,9 @@ public class SessionReplayClientAdapter: NSObject {
           return nil
         }
       }()
-            
+
+      /// Set .starting before LDClient.start() so stop() can detect in-flight start and set .stopping
+      self.ldReplayState = .starting
       LDClient.start(
         config: config,
         context: context,
@@ -114,7 +116,6 @@ public class SessionReplayClientAdapter: NSObject {
         completion: { [weak self] (timedOut: Bool) -> Void in
           self?.clientQueue.sync {
             self?.isLDClientStarted = true
-            self?.ldReplayState = .starting
             Task { @MainActor in
               LDReplay.shared.isEnabled = true
               self?.clientQueue.sync { [weak self] in
