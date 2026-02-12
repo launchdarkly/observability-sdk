@@ -44,8 +44,9 @@
                     reject:(RCTPromiseRejectBlock)reject
 {
     @try {
-      [[SessionReplayClientAdapter shared] stop];
-      resolve(nil);
+      [[SessionReplayClientAdapter shared] stopWithCompletion:^{
+        resolve(nil);
+      }];      
     } @catch(NSException *exception) {
       NSLog(@"⚠️ stopSessionReplay crash: %@", exception);
       reject(@"stop_failed", exception.reason, nil);
