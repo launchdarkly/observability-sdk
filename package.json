@@ -28,7 +28,7 @@
 		"prepare": "husky",
 		"preinstall": "git submodule update --init --recursive || true",
 		"publish": "yarn workspaces foreach -A --include '@launchdarkly/*' --exclude '@launchdarkly/observability-sdk' --exclude '@launchdarkly/observability-shared' npm publish --access public --tolerate-republish --provenance",
-		"publish:highlight": "yarn workspaces foreach -A --include '@highlight-run/*' --include 'highlight.run' npm publish --access public --tolerate-republish --provenance",
+		"publish:highlight": "yarn workspaces foreach -A --include '@highlight-run/*' --include 'highlight.run' --exclude '@highlight-run/rrweb*' --exclude '@highlight-run/rrdom*' --exclude '@highlight-run/rrvideo' npm publish --access public --tolerate-republish --provenance",
 		"test": "yarn turbo run test --filter=!nextjs --filter=!@highlight-run/rrweb --filter=!@highlight-run/rrvideo --filter=!@highlight-run/rrweb-rrweb-plugin-console-record --filter=!@highlight-run/rrweb-_monorepo --filter=!@highlight-run/rrweb-all --filter=!@highlight-run/rrweb-record --filter=!@highlight-run/rrweb-replay --filter=!@highlight-run/rrweb-types --filter=!@highlight-run/rrweb-packer --filter=!@highlight-run/rrweb-utils --filter=!@highlight-run/rrweb-web-extension --filter=!@highlight-run/rrweb-snapshot --filter=!@highlight-run/rrweb-player --filter=!@highlight-run/rrdom --filter=!@highlight-run/rrdom-nodejs"
 	},
 	"devDependencies": {
