@@ -55,7 +55,6 @@ const SENSITIVE_HEADERS = [
 	'authorization',
 	'cookie',
 	'proxy-authorization',
-	'set-cookie',
 	'token',
 ]
 
