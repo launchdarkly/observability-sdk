@@ -1,5 +1,12 @@
 # highlight.run
 
+## [9.26.1](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-9.26.0...highlight.run-9.26.1) (2026-02-13)
+
+
+### Bug Fixes
+
+* [SEC-7656] Add Set-Cookie to default redacted headers ([#368](https://github.com/launchdarkly/observability-sdk/issues/368)) ([163c8fc](https://github.com/launchdarkly/observability-sdk/commit/163c8fce77063f2e39a32d3d5fcd996a71d16cf6))
+
 ## [9.26.0](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-9.25.1...highlight.run-9.26.0) (2026-01-23)
 
 
