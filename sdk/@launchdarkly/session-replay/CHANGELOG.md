@@ -1,5 +1,14 @@
 # @launchdarkly/session-replay
 
+## [1.0.1](https://github.com/launchdarkly/observability-sdk/compare/session-replay-1.0.0...session-replay-1.0.1) (2026-02-13)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * highlight.run bumped to 9.26.1
+
 ## [1.0.0](https://github.com/launchdarkly/observability-sdk/compare/session-replay-0.5.2...session-replay-1.0.0) (2026-01-28)
 
 This release marks the 1.0.0 stable version of the LaunchDarkly Session Replay SDK.

@@ -1,5 +1,14 @@
 # @launchdarkly/observability
 
+## [1.0.1](https://github.com/launchdarkly/observability-sdk/compare/observability-1.0.0...observability-1.0.1) (2026-02-13)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * highlight.run bumped to 9.26.1
+
 ## [1.0.0](https://github.com/launchdarkly/observability-sdk/compare/observability-0.5.2...observability-1.0.0) (2026-01-28)
 
 This release marks the 1.0.0 stable version of the LaunchDarkly Observability Browser SDK.
