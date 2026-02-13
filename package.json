@@ -13,7 +13,7 @@
 		"sdk/@launchdarkly/*"
 	],
 	"scripts": {
-		"build": "yarn turbo run build --filter '!@rrweb/web-extension' --filter '!nextjs'",
+		"build": "yarn turbo run build --filter '!@highlight-run/rrweb-web-extension' --filter '!nextjs'",
 		"build:sdk": "yarn turbo run build --filter '@launchdarkly/*' --filter 'highlight.run'",
 		"docs": "yarn turbo run docs",
 		"e2e:cloudflare": "yarn turbo run dev --filter cloudflare-worker...",
@@ -24,12 +24,12 @@
 		"enforce-size": "yarn turbo run enforce-size --filter highlight.run...",
 		"format-check": "prettier --check --ignore-unknown .",
 		"format:all": "prettier --write --ignore-unknown .",
-		"lint": "yarn run turbo lint --filter=!rrweb --filter=!rrvideo --filter=!@rrweb/rrweb-plugin-console-record --filter=!@rrweb/_monorepo --filter=!@rrweb/all --filter=!@rrweb/record --filter=!@rrweb/replay --filter=!@rrweb/types --filter=!@rrweb/packer --filter=!@rrweb/utils --filter=!@rrweb/web-extension --filter=!rrweb-snapshot --filter=!rrweb-player --filter=!rrdom --filter=!rrdom-nodejs --filter=!e2e-react-native",
+		"lint": "yarn run turbo lint --filter=!@highlight-run/rrweb --filter=!@highlight-run/rrvideo --filter=!@highlight-run/rrweb-rrweb-plugin-console-record --filter=!@highlight-run/rrweb-_monorepo --filter=!@highlight-run/rrweb-all --filter=!@highlight-run/rrweb-record --filter=!@highlight-run/rrweb-replay --filter=!@highlight-run/rrweb-types --filter=!@highlight-run/rrweb-packer --filter=!@highlight-run/rrweb-utils --filter=!@highlight-run/rrweb-web-extension --filter=!@highlight-run/rrweb-snapshot --filter=!@highlight-run/rrweb-player --filter=!@highlight-run/rrdom --filter=!@highlight-run/rrdom-nodejs --filter=!e2e-react-native",
 		"prepare": "husky",
 		"preinstall": "git submodule update --init --recursive || true",
 		"publish": "yarn workspaces foreach -A --include '@launchdarkly/*' --exclude '@launchdarkly/observability-sdk' --exclude '@launchdarkly/observability-shared' npm publish --access public --tolerate-republish --provenance",
 		"publish:highlight": "yarn workspaces foreach -A --include '@highlight-run/*' --include 'highlight.run' npm publish --access public --tolerate-republish --provenance",
-		"test": "yarn turbo run test --filter=!nextjs --filter=!rrweb --filter=!rrvideo --filter=!@rrweb/rrweb-plugin-console-record --filter=!@rrweb/_monorepo --filter=!@rrweb/all --filter=!@rrweb/record --filter=!@rrweb/replay --filter=!@rrweb/types --filter=!@rrweb/packer --filter=!@rrweb/utils --filter=!@rrweb/web-extension --filter=!rrweb-snapshot --filter=!rrweb-player --filter=!rrdom --filter=!rrdom-nodejs"
+		"test": "yarn turbo run test --filter=!nextjs --filter=!@highlight-run/rrweb --filter=!@highlight-run/rrvideo --filter=!@highlight-run/rrweb-rrweb-plugin-console-record --filter=!@highlight-run/rrweb-_monorepo --filter=!@highlight-run/rrweb-all --filter=!@highlight-run/rrweb-record --filter=!@highlight-run/rrweb-replay --filter=!@highlight-run/rrweb-types --filter=!@highlight-run/rrweb-packer --filter=!@highlight-run/rrweb-utils --filter=!@highlight-run/rrweb-web-extension --filter=!@highlight-run/rrweb-snapshot --filter=!@highlight-run/rrweb-player --filter=!@highlight-run/rrdom --filter=!@highlight-run/rrdom-nodejs"
 	},
 	"devDependencies": {
 		"@types/node": "^22.14.0",
