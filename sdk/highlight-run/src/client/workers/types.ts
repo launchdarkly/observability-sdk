@@ -1,4 +1,4 @@
-import { eventWithTime } from '@rrweb/types'
+import { eventWithTime } from '@highlight-run/rrweb-types'
 import { MetricCategory } from '../types/client'
 import { ConsoleMessage, ErrorMessage, Source } from '../types/shared-types'
 

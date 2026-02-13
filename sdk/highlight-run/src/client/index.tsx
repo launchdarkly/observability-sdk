@@ -1,9 +1,12 @@
-import { getRecordSequentialIdPlugin } from '@rrweb/rrweb-plugin-sequential-id-record'
-import { eventWithTime, listenerHandler } from '@rrweb/types'
+import { getRecordSequentialIdPlugin } from '@highlight-run/rrweb-rrweb-plugin-sequential-id-record'
+import { eventWithTime, listenerHandler } from '@highlight-run/rrweb-types'
 import { print } from 'graphql'
 import { GraphQLClient } from 'graphql-request'
 import stringify from 'json-stringify-safe'
-import { addCustomEvent as rrwebAddCustomEvent, record } from 'rrweb'
+import {
+	addCustomEvent as rrwebAddCustomEvent,
+	record,
+} from '@highlight-run/rrweb'
 import {
 	getSdk,
 	PushPayloadMutationVariables,

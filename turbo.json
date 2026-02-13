@@ -3,9 +3,9 @@
 	"tasks": {
 		"highlight.run#typegen": {
 			"dependsOn": [
-				"rrweb#build",
-				"@rrweb/rrweb-plugin-sequential-id-record#build",
-				"@rrweb/types#build"
+				"@highlight-run/rrweb#build",
+				"@highlight-run/rrweb-rrweb-plugin-sequential-id-record#build",
+				"@highlight-run/rrweb-types#build"
 			],
 			"inputs": ["src/**/*.tsx", "src/**/*.ts", "tsconfig.json"],
 			"outputs": ["dist/**/*.d.ts"]
