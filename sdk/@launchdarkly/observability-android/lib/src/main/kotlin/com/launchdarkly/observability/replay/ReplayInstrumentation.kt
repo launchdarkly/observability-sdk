@@ -92,7 +92,7 @@ class ReplayInstrumentation(
         sessionManager = ctx.sessionManager
         captureSource = CaptureSource(
             sessionManager = ctx.sessionManager,
-            maskMatchers = options.privacyProfile.asMatchersList(),
+            options = options,
             logger = observabilityContext.logger
         )
         interactionSource = InteractionSource(ctx.sessionManager)

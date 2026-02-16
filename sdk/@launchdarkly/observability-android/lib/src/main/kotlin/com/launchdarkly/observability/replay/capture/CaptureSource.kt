@@ -30,7 +30,9 @@ import kotlin.coroutines.resume
 import androidx.core.graphics.withTranslation
 import com.launchdarkly.observability.replay.masking.Mask
 import androidx.core.graphics.createBitmap
+import com.launchdarkly.observability.replay.ReplayOptions
 import com.launchdarkly.observability.replay.masking.MaskApplier
+import kotlin.math.roundToInt
 
 /**
  * A source of [CaptureEvent]s taken from the lowest visible window. Captures
@@ -40,7 +42,7 @@ import com.launchdarkly.observability.replay.masking.MaskApplier
  */
 class CaptureSource(
     private val sessionManager: SessionManager,
-    private val maskMatchers: List<MaskMatcher>,
+    private val options: ReplayOptions,
     private val logger: LDLogger,
     // TODO: O11Y-628 - add captureQuality options
 ) {
@@ -54,7 +56,7 @@ class CaptureSource(
     private val windowInspector = WindowInspector(logger)
     private val maskCollector = MaskCollector(logger)
     private val maskApplier = MaskApplier()
-
+    private val maskMatchers = options.privacyProfile.asMatchersList()
     private val tiledSignatureManager = TiledSignatureManager()
 
     @Volatile
@@ -96,6 +98,10 @@ class CaptureSource(
             val baseWindowEntry = windowsEntries[baseIndex]
             val rect = baseWindowEntry.rect()
 
+            val displayMetrics = baseWindowEntry.rootView.resources.displayMetrics
+            logger.info("displayMetrics", displayMetrics)
+            val scaleFactor = options.scale / displayMetrics.density
+
             // protect against race condition where decor view has no size
             if (rect.right <= 0 || rect.bottom <= 0) {
                 return@withContext null
@@ -114,7 +120,10 @@ class CaptureSource(
                 var captured = 0
                 for (i in capturingWindowEntries.indices) {
                     val windowEntry = capturingWindowEntries[i]
-                    val captureResult = captureViewResult(windowEntry)
+                    val captureResult = captureViewResult(
+                        windowEntry,
+                        scaleFactor = scaleFactor
+                    )
                     if (captureResult == null) {
                         if (i == 0) {
                             return@withContext null
@@ -155,7 +164,7 @@ class CaptureSource(
                     // if need to draw something on base bitmap additionally
                     if (captureResults.size > 1 || (mergedMasks.isNotEmpty() && mergedMasks[0] != null)) {
                         val canvas = Canvas(baseResult.bitmap)
-                        mergedMasks[0]?.let { maskApplier.drawMasks(canvas, it) }
+                        mergedMasks[0]?.let { maskApplier.drawMasks(canvas, it, scaleFactor = scaleFactor) }
 
                         for (i in 1 until captureResults.size) {
                             val res = captureResults[i] ?: continue
@@ -165,7 +174,7 @@ class CaptureSource(
 
                             canvas.withTranslation(dx, dy) {
                                 drawBitmap(res.bitmap, 0f, 0f, null)
-                                mergedMasks[i]?.let { maskApplier.drawMasks(canvas, it) }
+                                mergedMasks[i]?.let { maskApplier.drawMasks(canvas, it, scaleFactor = scaleFactor) }
                             }
                             if (!res.bitmap.isRecycled) {
                                 res.bitmap.recycle()
@@ -225,18 +234,18 @@ class CaptureSource(
         return if (windowsEntries.isNotEmpty()) 0 else null
     }
 
-    private suspend fun captureViewResult(windowEntry: WindowEntry): CaptureResult? {
-        val bitmap = captureViewBitmap(windowEntry) ?: return null
+    private suspend fun captureViewResult(windowEntry: WindowEntry, scaleFactor: Float): CaptureResult? {
+        val bitmap = captureViewBitmap(windowEntry, scaleFactor) ?: return null
         return CaptureResult(windowEntry, bitmap)
     }
 
-    private suspend fun captureViewBitmap(windowEntry: WindowEntry): Bitmap? {
+    private suspend fun captureViewBitmap(windowEntry: WindowEntry, scaleFactor: Float): Bitmap? {
         val view = windowEntry.rootView
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && windowEntry.isPixelCopyCandidate()) {
             val window = windowInspector.findWindow(view)
             if (window != null) {
-                pixelCopy(window, view, windowEntry.rect())?.let {
+                pixelCopy(window, view, windowEntry.rect(), scaleFactor)?.let {
                     return it
                 }
             }
@@ -246,7 +255,7 @@ class CaptureSource(
         return withContext(Dispatchers.Main.immediate) {
             if (!view.isAttachedToWindow || !view.isShown) return@withContext null
 
-            return@withContext canvasDraw(view)
+            return@withContext canvasDrawBitmap(view, scaleFactor)
         }
     }
 
@@ -255,8 +264,9 @@ class CaptureSource(
         window: Window,
         view: View,
         rect: Rect,
+        scaleFactor: Float
     ): Bitmap? {
-        val bitmap = createBitmapForView(view) ?: return null
+        val bitmap = createBitmapForView(view, scaleFactor) ?: return null
 
         val result = suspendCancellableCoroutine { continuation ->
             val handler = Handler(Looper.getMainLooper())
@@ -290,12 +300,16 @@ class CaptureSource(
         return result
     }
 
-    private fun canvasDraw(
-        view: View
+    private fun canvasDrawBitmap(
+        view: View,
+        scaleFactor: Float
     ): Bitmap? {
-        val bitmap = createBitmapForView(view) ?: return null
+        val bitmap = createBitmapForView(view, scaleFactor) ?: return null
 
         val canvas = Canvas(bitmap)
+        canvas.save()
+        canvas.scale(scaleFactor, scaleFactor)
+
         try {
             view.draw(canvas)
         } catch (t: Throwable) {
@@ -303,12 +317,16 @@ class CaptureSource(
             bitmap.recycle()
             return null
         }
+        finally {
+            canvas.restore()
+        }
+
         return bitmap
     }
 
-    private fun createBitmapForView(view: View): Bitmap? {
-        val width = view.width
-        val height = view.height
+    private fun createBitmapForView(view: View, scaleFactor: Float): Bitmap? {
+        val width = (view.width * scaleFactor).roundToInt()
+        val height = (view.height * scaleFactor).roundToInt()
         if (width <= 0 || height <= 0) {
             logger.warn("Cannot draw view with zero dimensions: ${view.width}x${view.height}")
             return null

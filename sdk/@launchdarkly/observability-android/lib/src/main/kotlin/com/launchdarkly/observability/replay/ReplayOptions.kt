@@ -12,6 +12,7 @@ data class ReplayOptions(
     val enabled: Boolean = true,
     val debug: Boolean = false,
     val privacyProfile: PrivacyProfile = PrivacyProfile(),
-    val capturePeriodMillis: Long = 1000,
+    val capturePeriodMillis: Long = 1000, // defaults to ever 1 second
+    val scale: Float = 1.0f
     // TODO O11Y-623 - Add storage options
 )
