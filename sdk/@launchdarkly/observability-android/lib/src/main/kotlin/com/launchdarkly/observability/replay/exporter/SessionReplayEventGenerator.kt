@@ -22,6 +22,10 @@ import kotlinx.serialization.json.put
 class SessionReplayEventGenerator(
     private val canvasDrawEntourage: Int
 ) {
+    companion object {
+        private const val RRWEB_DOCUMENT_PADDING = 11
+    }
+
     /**
      * Sequence ID for the events being generated.
      * Each event in a session needs a unique, monotonically increasing "sid".
@@ -86,9 +90,9 @@ class SessionReplayEventGenerator(
             sid = nextSid(),
             data = EventDataUnion.StandardEventData(
                 EventData(
-                    width = captureEvent.origWidth,
-                    height = captureEvent.origHeight,
-                )
+                    width = captureEvent.origWidth + RRWEB_DOCUMENT_PADDING * 2,
+                    height = captureEvent.origHeight + RRWEB_DOCUMENT_PADDING * 2,
+                    )
             ),
         )
         eventBatch.add(metaEvent)
@@ -182,7 +186,7 @@ class SessionReplayEventGenerator(
                         timestamp = firstPosition.timestamp,
                         sid = nextSid(),
                         data = EventDataUnion.CustomEventDataWrapper(
-                            Json.parseToJsonElement("""{"source":2,"texts": [],"type":7,"id":6,"x":${firstPosition.x}, "y":${firstPosition.y}}""")
+                            Json.parseToJsonElement("""{"source":2,"texts": [],"type":7,"id":6,"x":${firstPosition.x + RRWEB_DOCUMENT_PADDING}, "y":${firstPosition.y + RRWEB_DOCUMENT_PADDING}}""")
                         )
                     )
                 )
@@ -206,7 +210,7 @@ class SessionReplayEventGenerator(
                         timestamp = lastPosition.timestamp,
                         sid = nextSid(),
                         data = EventDataUnion.CustomEventDataWrapper(
-                            Json.parseToJsonElement("""{"source":2,"texts": [],"type":9,"id":6,"x":${lastPosition.x}, "y":${lastPosition.y}}""")
+                            Json.parseToJsonElement("""{"source":2,"texts": [],"type":9,"id":6,"x":${lastPosition.x + RRWEB_DOCUMENT_PADDING}, "y":${lastPosition.y + RRWEB_DOCUMENT_PADDING}}""")
                         )
                     )
                 )
@@ -221,7 +225,7 @@ class SessionReplayEventGenerator(
                             timestamp = position.timestamp,
                             sid = nextSid(),
                             data = EventDataUnion.CustomEventDataWrapper(
-                                Json.parseToJsonElement("""{"positions": [{"id":6,"timeOffset":0,"x":${position.x},"y":${position.y}}], "source": 6}""")
+                                Json.parseToJsonElement("""{"positions": [{"id":6,"timeOffset":0,"x":${position.x + RRWEB_DOCUMENT_PADDING},"y":${position.y + RRWEB_DOCUMENT_PADDING}}], "source": 6}""")
                             )
                         )
                     )
