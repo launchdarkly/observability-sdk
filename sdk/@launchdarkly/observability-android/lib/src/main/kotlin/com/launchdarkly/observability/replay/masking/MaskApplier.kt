@@ -5,6 +5,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Rect
+import androidx.core.graphics.withScale
 import kotlin.math.abs
 
 class MaskApplier {
@@ -19,12 +20,14 @@ class MaskApplier {
 
     private val maskIntRect = Rect()
 
-    fun drawMasks(canvas: Canvas, maskPairsList: List<Pair<Mask, Mask?>>) {
+    fun drawMasks(canvas: Canvas, maskPairsList: List<Pair<Mask, Mask?>>, scaleFactor: Float) {
         if (maskPairsList.isEmpty()) return
 
-        val path = Path()
-        maskPairsList.forEach { pairOfMasks ->
-            drawMask(pairOfMasks, path, canvas)
+        canvas.withScale(scaleFactor, scaleFactor) {
+            val path = Path()
+            maskPairsList.forEach { pairOfMasks ->
+                drawMask(pairOfMasks, path, this)
+            }
         }
     }
 
