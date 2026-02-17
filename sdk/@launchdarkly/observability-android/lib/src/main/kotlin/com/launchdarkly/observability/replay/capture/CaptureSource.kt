@@ -16,7 +16,6 @@ import android.view.WindowManager.LayoutParams.TYPE_BASE_APPLICATION
 import androidx.annotation.RequiresApi
 import com.launchdarkly.logging.LDLogger
 import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
-import com.launchdarkly.observability.replay.masking.MaskMatcher
 import com.launchdarkly.observability.replay.masking.MaskCollector
 import io.opentelemetry.android.session.SessionManager
 import kotlinx.coroutines.Dispatchers
