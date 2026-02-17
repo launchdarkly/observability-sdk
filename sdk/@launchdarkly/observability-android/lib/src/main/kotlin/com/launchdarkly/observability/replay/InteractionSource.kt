@@ -22,7 +22,7 @@ import kotlinx.coroutines.flow.asSharedFlow
  */
 class InteractionSource(
     private val sessionManager: SessionManager,
-    private val scale: Float,
+    private val scale: Float?,
 ) : Application.ActivityLifecycleCallbacks {
 
     // Configure with buffer capacity to prevent blocking on emission
