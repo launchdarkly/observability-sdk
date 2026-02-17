@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.asSharedFlow
  */
 class InteractionSource(
     private val sessionManager: SessionManager,
+    private val scale: Float,
 ) : Application.ActivityLifecycleCallbacks {
 
     // Configure with buffer capacity to prevent blocking on emission
@@ -78,6 +79,9 @@ class InteractionSource(
             .takeIf { motionEvent.findPointerIndex(it) != -1 } //continue using watched pointer if it exists
             ?: motionEvent.getPointerId(0) // otherwise use first pointer
         val pointerIndex = motionEvent.findPointerIndex(_watchedPointerId)
+        if (pointerIndex < 0) return
+
+        val scaleFactor = calculateScaleFactor(scale, window.decorView)
         val eventTimeReference = System.currentTimeMillis() - SystemClock.uptimeMillis()
 
         when (motionEvent.actionMasked) {
@@ -86,8 +90,8 @@ class InteractionSource(
                     action = motionEvent.action,
                     positions = listOf(
                         Position(
-                            x = motionEvent.getX(pointerIndex).toInt(),
-                            y = motionEvent.getY(pointerIndex).toInt(),
+                            x = scaleCoordinate(motionEvent.getX(pointerIndex), scaleFactor),
+                            y = scaleCoordinate(motionEvent.getY(pointerIndex), scaleFactor),
                             timestamp = eventTimeReference + motionEvent.eventTime,
                         ),
                     ),
@@ -98,8 +102,8 @@ class InteractionSource(
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
 
-                val x = motionEvent.getX(pointerIndex).toInt()
-                val y = motionEvent.getY(pointerIndex).toInt()
+                val x = scaleCoordinate(motionEvent.getX(pointerIndex), scaleFactor)
+                val y = scaleCoordinate(motionEvent.getY(pointerIndex), scaleFactor)
                 val timestamp = eventTimeReference + motionEvent.eventTime
 
                 _moveGrouper.completeWithLastPosition(x, y, timestamp)
@@ -126,16 +130,16 @@ class InteractionSource(
                 // handle non-current positions
                 for (h in 0 until motionEvent.historySize) {
                     _moveGrouper.handleMove(
-                        x = motionEvent.getHistoricalX(pointerIndex, h).toInt(),
-                        y = motionEvent.getHistoricalY(pointerIndex, h).toInt(),
+                        x = scaleCoordinate(motionEvent.getHistoricalX(pointerIndex, h), scaleFactor),
+                        y = scaleCoordinate(motionEvent.getHistoricalY(pointerIndex, h), scaleFactor),
                         timestamp = eventTimeReference + motionEvent.getHistoricalEventTime(h)
                     )
                 }
 
                 // handle current position
                 _moveGrouper.handleMove(
-                    x = motionEvent.getX(pointerIndex).toInt(),
-                    y = motionEvent.getY(pointerIndex).toInt(),
+                    x = scaleCoordinate(motionEvent.getX(pointerIndex), scaleFactor),
+                    y = scaleCoordinate(motionEvent.getY(pointerIndex), scaleFactor),
                     timestamp = eventTimeReference + motionEvent.eventTime
                 )
             }

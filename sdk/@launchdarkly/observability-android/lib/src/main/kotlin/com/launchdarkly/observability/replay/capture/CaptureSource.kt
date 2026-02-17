@@ -30,8 +30,9 @@ import androidx.core.graphics.withTranslation
 import com.launchdarkly.observability.replay.masking.Mask
 import androidx.core.graphics.createBitmap
 import com.launchdarkly.observability.replay.ReplayOptions
+import com.launchdarkly.observability.replay.calculateScaleFactor
 import com.launchdarkly.observability.replay.masking.MaskApplier
-import kotlin.math.roundToInt
+import com.launchdarkly.observability.replay.scaleCoordinate
 
 /**
  * A source of [CaptureEvent]s taken from the lowest visible window. Captures
@@ -97,8 +98,7 @@ class CaptureSource(
             val baseWindowEntry = windowsEntries[baseIndex]
             val rect = baseWindowEntry.rect()
 
-            val displayMetrics = baseWindowEntry.rootView.resources.displayMetrics
-            val scaleFactor = options.scale / displayMetrics.density
+            val scaleFactor = calculateScaleFactor(options.scale, baseWindowEntry.rootView)
 
             // protect against race condition where decor view has no size
             if (rect.right <= 0 || rect.bottom <= 0) {
@@ -323,8 +323,8 @@ class CaptureSource(
     }
 
     private fun createBitmapForView(view: View, scaleFactor: Float): Bitmap? {
-        val width = (view.width * scaleFactor).roundToInt()
-        val height = (view.height * scaleFactor).roundToInt()
+        val width = scaleCoordinate(view.width.toFloat(), scaleFactor)
+        val height = scaleCoordinate(view.height.toFloat(), scaleFactor)
         if (width <= 0 || height <= 0) {
             logger.warn("Cannot draw view with zero dimensions: ${view.width}x${view.height}")
             return null
