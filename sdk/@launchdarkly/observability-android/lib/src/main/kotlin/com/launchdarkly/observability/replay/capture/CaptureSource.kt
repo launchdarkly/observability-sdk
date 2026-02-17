@@ -169,8 +169,8 @@ class CaptureSource(
                         for (i in 1 until captureResults.size) {
                             val res = captureResults[i] ?: continue
                             val entry = res.windowEntry
-                            val dx = (entry.screenLeft - baseWindowEntry.screenLeft).toFloat()
-                            val dy = (entry.screenTop - baseWindowEntry.screenTop).toFloat()
+                            val dx = (entry.screenLeft - baseWindowEntry.screenLeft).toFloat() * scaleFactor
+                            val dy = (entry.screenTop - baseWindowEntry.screenTop).toFloat() * scaleFactor
 
                             canvas.withTranslation(dx, dy) {
                                 drawBitmap(res.bitmap, 0f, 0f, null)
@@ -358,8 +358,8 @@ class CaptureSource(
 
             CaptureEvent(
                 imageBase64 = compressedImage,
-                origWidth = rect.width(),
-                origHeight = rect.height(),
+                origWidth = postMask.width,
+                origHeight = postMask.height,
                 timestamp = timestamp,
                 session = session
             )
