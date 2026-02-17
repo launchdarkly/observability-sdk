@@ -15,5 +15,6 @@ data class CaptureEvent(
     val origHeight: Int,
     val origWidth: Int,
     val timestamp: Long,
-    val session: String
+    val session: String,
+    val scaleFactor: Float
 )

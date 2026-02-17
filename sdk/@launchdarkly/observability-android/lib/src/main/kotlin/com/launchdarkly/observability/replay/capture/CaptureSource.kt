@@ -98,7 +98,6 @@ class CaptureSource(
             val rect = baseWindowEntry.rect()
 
             val displayMetrics = baseWindowEntry.rootView.resources.displayMetrics
-            logger.info("displayMetrics", displayMetrics)
             val scaleFactor = options.scale / displayMetrics.density
 
             // protect against race condition where decor view has no size
@@ -188,7 +187,7 @@ class CaptureSource(
                     }
                     tiledSignature = newSignature
 
-                    createCaptureEvent(baseResult.bitmap, rect, timestamp, session)
+                    createCaptureEvent(baseResult.bitmap, timestamp, session, scaleFactor)
                 }
             } finally {
                 recycleCaptureResults(captureResults)
@@ -335,9 +334,9 @@ class CaptureSource(
 
     private fun createCaptureEvent(
         postMask: Bitmap,
-        rect: Rect,
         timestamp: Long,
-        session: String
+        session: String,
+        scaleFactor: Float
     ): CaptureEvent {
         // TODO: O11Y-625 - optimize memory allocations here, re-use byte arrays and such
         val outputStream = ByteArrayOutputStream()
@@ -360,7 +359,8 @@ class CaptureSource(
                 origWidth = postMask.width,
                 origHeight = postMask.height,
                 timestamp = timestamp,
-                session = session
+                session = session,
+                scaleFactor = scaleFactor
             )
         } finally {
             try {
