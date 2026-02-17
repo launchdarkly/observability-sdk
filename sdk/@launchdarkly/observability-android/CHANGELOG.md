@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.26.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.25.2...launchdarkly-observability-android-0.26.0) (2026-02-17)
+
+
+### Features
+
+* Android pixel density settings. ([#373](https://github.com/launchdarkly/observability-sdk/issues/373)) ([58a3a7b](https://github.com/launchdarkly/observability-sdk/commit/58a3a7b2555a0d4b898c8d178801fc2988783765))
+
 ## [0.25.2](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.25.1...launchdarkly-observability-android-0.25.2) (2026-02-17)
 
 
