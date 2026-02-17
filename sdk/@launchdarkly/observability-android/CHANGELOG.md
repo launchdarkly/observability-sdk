@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.25.2](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.25.1...launchdarkly-observability-android-0.25.2) (2026-02-17)
+
+
+### Bug Fixes
+
+* Android SR, remove visible scrollbars ([#371](https://github.com/launchdarkly/observability-sdk/issues/371)) ([c21ecd4](https://github.com/launchdarkly/observability-sdk/commit/c21ecd44c1dcb94a11bd717688b8e76f1f4aff16))
+
 ## [0.25.1](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.25.0...launchdarkly-observability-android-0.25.1) (2026-02-12)
 
 
