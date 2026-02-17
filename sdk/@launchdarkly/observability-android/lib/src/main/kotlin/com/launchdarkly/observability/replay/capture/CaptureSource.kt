@@ -187,7 +187,7 @@ class CaptureSource(
                     }
                     tiledSignature = newSignature
 
-                    createCaptureEvent(baseResult.bitmap, timestamp, session, scaleFactor)
+                    createCaptureEvent(baseResult.bitmap, timestamp, session)
                 }
             } finally {
                 recycleCaptureResults(captureResults)
@@ -335,8 +335,7 @@ class CaptureSource(
     private fun createCaptureEvent(
         postMask: Bitmap,
         timestamp: Long,
-        session: String,
-        scaleFactor: Float
+        session: String
     ): CaptureEvent {
         // TODO: O11Y-625 - optimize memory allocations here, re-use byte arrays and such
         val outputStream = ByteArrayOutputStream()
@@ -359,8 +358,7 @@ class CaptureSource(
                 origWidth = postMask.width,
                 origHeight = postMask.height,
                 timestamp = timestamp,
-                session = session,
-                scaleFactor = scaleFactor
+                session = session
             )
         } finally {
             try {
