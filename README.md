@@ -53,12 +53,8 @@ We welcome PRs and issues on this repo. Please don't hesitate to file a ticket i
 [o11y-sdk-ci]: https://github.com/launchdarkly/observability-sdk/actions/workflows/turbo.yml
 [o11y-sdk-npm-badge]: https://img.shields.io/npm/v/@launchdarkly/observability.svg?style=flat-square
 [o11y-sdk-npm-link]: https://www.npmjs.com/package/@launchdarkly/observability
-[o11y-sdk-dm-badge]: https://img.shields.io/npm/dm/@launchdarkly/observability.svg?style=flat-square
-[o11y-sdk-dt-badge]: https://img.shields.io/npm/dt/@launchdarkly/observability.svg?style=flat-square
 [session-replay-sdk-npm-badge]: https://img.shields.io/npm/v/@launchdarkly/session-replay.svg?style=flat-square
 [session-replay-sdk-npm-link]: https://www.npmjs.com/package/@launchdarkly/session-replay
-[session-replay-sdk-dm-badge]: https://img.shields.io/npm/dm/@launchdarkly/session-replay.svg?style=flat-square
-[session-replay-sdk-dt-badge]: https://img.shields.io/npm/dt/@launchdarkly/session-replay.svg?style=flat-square
 [go-pkg-badge]: https://img.shields.io/badge/go-reference-00ADD8?style=flat-square&logo=go
 [go-pkg-link]: https://pkg.go.dev/github.com/launchdarkly/observability-sdk/go
 [o11y-node-npm-badge]: https://img.shields.io/npm/v/@launchdarkly/observability-node.svg?style=flat-square
