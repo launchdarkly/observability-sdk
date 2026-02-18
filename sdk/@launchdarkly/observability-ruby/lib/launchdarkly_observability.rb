@@ -27,7 +27,7 @@ module LaunchDarklyObservability
 
   # OpenTelemetry semantic convention attribute keys for feature flags
   # See: https://opentelemetry.io/docs/specs/semconv/feature-flags/feature-flags-events/
-  
+
   # Standard semantic conventions (Release Candidate)
   FEATURE_FLAG_KEY = 'feature_flag.key'
   FEATURE_FLAG_PROVIDER_NAME = 'feature_flag.provider.name'
@@ -39,7 +39,7 @@ module LaunchDarklyObservability
   FEATURE_FLAG_VERSION = 'feature_flag.version'
   ERROR_TYPE = 'error.type'
   ERROR_MESSAGE = 'error.message'
-  
+
   # LaunchDarkly-specific custom attributes (not in OTel spec)
   LD_EVALUATION_METHOD = 'launchdarkly.evaluation.method'
   LD_EVALUATION_DURATION_MS = 'launchdarkly.evaluation.duration_ms'

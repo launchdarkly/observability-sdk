@@ -180,7 +180,7 @@ module LaunchDarklyObservability
         DISTRO_NAME_ATTRIBUTE => 'launchdarkly-observability-ruby',
         DISTRO_VERSION_ATTRIBUTE => LaunchDarklyObservability::VERSION
       }
-      
+
       # Only set deployment.environment if explicitly provided
       # Otherwise, backend infers it from the SDK key
       if @environment && !@environment.empty?
