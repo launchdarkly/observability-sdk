@@ -214,66 +214,124 @@ export const setupBrowserTracing = (
 		const fetchInstrumentationConfig =
 			config.instrumentations?.['@opentelemetry/instrumentation-fetch']
 		if (fetchInstrumentationConfig !== false) {
-			instrumentations.push(
-				new FetchInstrumentation({
-					propagateTraceHeaderCorsUrls: getCorsUrlsPattern(
-						config.tracingOrigins,
-					),
-					applyCustomAttributesOnSpan: async (
-						span,
-						request,
-						response,
-					) => {
-						if (!(span as any).attributes) {
-							return
-						}
-						const readableSpan = span as unknown as ReadableSpan
-						if (
-							readableSpan.attributes[RECORD_ATTRIBUTE] === false
-						) {
-							return
-						}
+			const fetchInstrumentation = new FetchInstrumentation({
+				propagateTraceHeaderCorsUrls: getCorsUrlsPattern(
+					config.tracingOrigins,
+				),
+				applyCustomAttributesOnSpan: async (
+					span,
+					request,
+					response,
+				) => {
+					if (!(span as any).attributes) {
+						return
+					}
+					const readableSpan = span as unknown as ReadableSpan
+					if (
+						readableSpan.attributes[RECORD_ATTRIBUTE] === false
+					) {
+						return
+					}
 
-						enhanceSpanWithHttpRequestAttributes(
-							span,
-							request.body,
-							request.headers,
-							config.networkRecordingOptions,
+					enhanceSpanWithHttpRequestAttributes(
+						span,
+						request.body,
+						request.headers,
+						config.networkRecordingOptions,
+					)
+
+					if (!(response instanceof Response)) {
+						span.setAttributes({
+							'http.response.error': response.message,
+							[SemanticAttributes.ATTR_HTTP_RESPONSE_STATUS_CODE]:
+								response.status,
+						})
+						return
+					}
+
+					if (
+						config.networkRecordingOptions?.recordHeadersAndBody
+					) {
+						const responseBody = await getResponseBody(
+							response,
+							config.networkRecordingOptions
+								?.bodyKeysToRecord,
+							config.networkRecordingOptions
+								?.networkBodyKeysToRedact,
+						)
+						const responseHeaders = Object.fromEntries(
+							response.headers.entries(),
 						)
 
-						if (!(response instanceof Response)) {
-							span.setAttributes({
-								'http.response.error': response.message,
-								[SemanticAttributes.ATTR_HTTP_RESPONSE_STATUS_CODE]:
-									response.status,
-							})
-							return
-						}
+						enhanceSpanWithHttpResponseAttributes(
+							span,
+							responseHeaders,
+							responseBody,
+							config.networkRecordingOptions,
+						)
+					}
+				},
+			})
 
-						if (
-							config.networkRecordingOptions?.recordHeadersAndBody
-						) {
-							const responseBody = await getResponseBody(
-								response,
-								config.networkRecordingOptions
-									?.bodyKeysToRecord,
-								config.networkRecordingOptions
-									?.networkBodyKeysToRedact,
-							)
-							const responseHeaders = Object.fromEntries(
-								response.headers.entries(),
-							)
+			// The upstream FetchInstrumentation calls applyCustomAttributesOnSpan
+			// via safeExecuteInTheMiddle (sync), which does not await async callbacks.
+			// This means the span ends before the response body is read, silently
+			// dropping the http.response.body attribute. Patch _applyAttributesAfterFetch
+			// and _endSpan to properly await async callbacks before ending the span.
+			const pendingAttributes = new Map<api.Span, Promise<void>>()
+			const inst = fetchInstrumentation as any
+			const origEndSpan = inst.__proto__._endSpan
 
-							enhanceSpanWithHttpResponseAttributes(
+			inst._applyAttributesAfterFetch = function (
+				span: api.Span,
+				request: Request | RequestInit,
+				result: Response | Error,
+			) {
+				const applyCustomAttributesOnSpan =
+					this.getConfig().applyCustomAttributesOnSpan
+				if (applyCustomAttributesOnSpan) {
+					try {
+						const maybePromise =
+							applyCustomAttributesOnSpan(
 								span,
-								responseHeaders,
-								responseBody,
-								config.networkRecordingOptions,
+								request,
+								result,
+							)
+						if (
+							maybePromise &&
+							typeof (maybePromise as any).then ===
+								'function'
+						) {
+							pendingAttributes.set(
+								span,
+								(maybePromise as Promise<void>).catch(
+									() => {},
+								),
 							)
 						}
-					},
-				}),
-			)
+					} catch {
+						// match safeExecuteInTheMiddle behavior
+					}
+				}
+			}
+
+			inst._endSpan = function (
+				span: api.Span,
+				spanData: unknown,
+				response: unknown,
+			) {
+				const pending = pendingAttributes.get(span)
+				if (pending) {
+					pending.finally(() => {
+						pendingAttributes.delete(span)
+						origEndSpan.call(this, span, spanData, response)
+					})
+				} else {
+					origEndSpan.call(this, span, spanData, response)
+				}
+			}
+
+			instrumentations.push(fetchInstrumentation)
 		}
 
 		const xmlInstrumentationConfig =
