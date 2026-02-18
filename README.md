@@ -1,97 +1,28 @@
-# LaunchDarkly JavaScript Observability SDK
+# LaunchDarkly Observability SDK
 
 [![Actions Status][o11y-sdk-ci-badge]][o11y-sdk-ci]
 
 ## Overview
 
-This repository houses the JavaScript SDKs for LaunchDarkly Observability. This repo contains the code for our supported JavaScript environments, providing tools for session replay and observability.
+This repository houses the LaunchDarkly Observability and Session Replay SDKs across multiple languages and platforms.
 
-## Supported SDKs
+## Packages
 
-### LaunchDarkly JavaScript Observability SDK for Browsers (`@launchdarkly/observability`)
-
-[![NPM][o11y-sdk-npm-badge]][o11y-sdk-npm-link]
-[![NPM][o11y-sdk-dm-badge]][o11y-sdk-npm-link]
-[![NPM][o11y-sdk-dt-badge]][o11y-sdk-npm-link]
-
-**NB: APIs are subject to change until a 1.x version is released.**
-
-#### Install
-
-```shell
-# npm
-npm i @launchdarkly/observability
-
-# yarn
-yarn add @launchdarkly/observability
-```
-
-#### Usage
-
-Update your web app entrypoint:
-```tsx
-import { initialize } from 'launchdarkly-js-client-sdk'
-import Observability, { LDObserve } from '@launchdarkly/observability'
-
-const client = init3(
-        '<CLIENT_SIDE_ID>',
-        { key: 'authenticated-user@example.com' },
-        {
-          // Not including plugins at all would be equivalent to the current LaunchDarkly SDK.
-          plugins: [
-            new Observability({
-              networkRecording: {
-                enabled: true,
-                recordHeadersAndBody: true,
-              },
-            }),
-          ],
-        },
-)
-```
-
-### LaunchDarkly JavaScript Session Replay SDK for Browsers (`@launchdarkly/session-replay`)
-
-[![NPM][session-replay-sdk-npm-badge]][session-replay-sdk-npm-link]
-[![NPM][session-replay-sdk-dm-badge]][session-replay-sdk-npm-link]
-[![NPM][session-replay-sdk-dt-badge]][session-replay-sdk-npm-link]
-
-**NB: APIs are subject to change until a 1.x version is released.**
-
-#### Install
-
-```shell
-# npm
-npm i @launchdarkly/session-replay
-
-# yarn
-yarn add @launchdarkly/session-replay
-```
-
-#### Usage
-
-Update your web app entrypoint:
-```tsx
-import { initialize } from 'launchdarkly-js-client-sdk'
-import SessionReplay, { LDRecord } from '@launchdarkly/session-replay'
-
-const client = init3(
-        '<CLIENT_SIDE_ID>',
-        { key: 'authenticated-user@example.com' },
-        {
-          // Not including plugins at all would be equivalent to the current LaunchDarkly SDK.
-          plugins: [
-            new SessionReplay({
-              serviceName: 'example-svc',
-            }), // Could be omitted for customers who cannot use session replay.
-          ],
-        },
-)
-```
+| Package | Package manager | Docs | Tests |
+| ------- | ---------------- | ---- | ----- |
+| [Go SDK](go/README.md) | [![Go Reference][go-pkg-badge]][go-pkg-link] | [docs.launchdarkly.com](https://docs.launchdarkly.com/) | [![Actions Status][go-ci-badge]][go-ci] |
+| [@launchdarkly/observability](sdk/@launchdarkly/observability/README.md) (browser) | [![NPM][o11y-sdk-npm-badge]][o11y-sdk-npm-link] | [docs.launchdarkly.com](https://docs.launchdarkly.com/sdk/client-side/javascript#getting-started) | [![Actions Status][turbo-ci-badge]][turbo-ci] |
+| [@launchdarkly/observability-node](sdk/@launchdarkly/observability-node/README.md) | [![NPM][o11y-node-npm-badge]][o11y-node-npm-link] | [docs.launchdarkly.com](https://docs.launchdarkly.com/) | [![Actions Status][turbo-ci-badge]][turbo-ci] |
+| [@launchdarkly/observability-react-native](sdk/@launchdarkly/observability-react-native/README.md) | [![NPM][o11y-rn-npm-badge]][o11y-rn-npm-link] | [docs.launchdarkly.com](https://docs.launchdarkly.com/) | [![Actions Status][turbo-ci-badge]][turbo-ci] |
+| [@launchdarkly/session-replay](sdk/@launchdarkly/session-replay/README.md) | [![NPM][session-replay-sdk-npm-badge]][session-replay-sdk-npm-link] | [docs.launchdarkly.com](https://docs.launchdarkly.com/sdk/client-side/javascript#getting-started) | [![Actions Status][turbo-ci-badge]][turbo-ci] |
+| [launchdarkly-observability](sdk/@launchdarkly/observability-python/README.md) (Python) | [![PyPI][o11y-pypi-badge]][o11y-pypi-link] | [docs.launchdarkly.com](https://docs.launchdarkly.com/) | [![Actions Status][python-ci-badge]][python-ci] |
+| [LaunchDarkly.Observability](sdk/@launchdarkly/observability-dotnet/README.md) (.NET) | [![NuGet][o11y-nuget-badge]][o11y-nuget-link] | [docs.launchdarkly.com](https://docs.launchdarkly.com/sdk/server-side/dotnet) | [![Actions Status][dotnet-ci-badge]][dotnet-ci] |
+| [launchdarkly-observability-android](sdk/@launchdarkly/observability-android/README.md) | [Maven Central][o11y-android-link] | [docs.launchdarkly.com](https://docs.launchdarkly.com/) | [![Actions Status][android-ci-badge]][android-ci] |
+| [launchdarkly_flutter_observability](sdk/@launchdarkly/launchdarkly_flutter_observability/README.md) | [![pub package][o11y-flutter-badge]][o11y-flutter-link] | [docs.launchdarkly.com](https://docs.launchdarkly.com/) | — |
 
 ## Getting started
 
-Refer to the [SDK documentation](https://docs.launchdarkly.com/sdk/client-side/javascript#getting-started) for instructions on getting started with using the SDK.
+Pick a package from the table above and follow its README or the [Docs](https://docs.launchdarkly.com/) link for install and usage.
 
 ## Verifying SDK build provenance with the SLSA framework
 
@@ -128,3 +59,26 @@ We welcome PRs and issues on this repo. Please don't hesitate to file a ticket i
 [session-replay-sdk-npm-link]: https://www.npmjs.com/package/@launchdarkly/session-replay
 [session-replay-sdk-dm-badge]: https://img.shields.io/npm/dm/@launchdarkly/session-replay.svg?style=flat-square
 [session-replay-sdk-dt-badge]: https://img.shields.io/npm/dt/@launchdarkly/session-replay.svg?style=flat-square
+[go-pkg-badge]: https://img.shields.io/badge/go-reference-00ADD8?style=flat-square&logo=go
+[go-pkg-link]: https://pkg.go.dev/github.com/launchdarkly/observability-sdk/go
+[o11y-node-npm-badge]: https://img.shields.io/npm/v/@launchdarkly/observability-node.svg?style=flat-square
+[o11y-node-npm-link]: https://www.npmjs.com/package/@launchdarkly/observability-node
+[o11y-rn-npm-badge]: https://img.shields.io/npm/v/@launchdarkly/observability-react-native.svg?style=flat-square
+[o11y-rn-npm-link]: https://www.npmjs.com/package/@launchdarkly/observability-react-native
+[o11y-pypi-badge]: https://img.shields.io/pypi/v/launchdarkly-observability.svg?style=flat-square
+[o11y-pypi-link]: https://pypi.org/project/launchdarkly-observability/
+[o11y-nuget-badge]: https://img.shields.io/nuget/v/LaunchDarkly.Observability.svg?style=flat-square
+[o11y-nuget-link]: https://www.nuget.org/packages/LaunchDarkly.Observability
+[o11y-android-link]: https://central.sonatype.com/artifact/com.launchdarkly/launchdarkly-observability-android
+[o11y-flutter-badge]: https://img.shields.io/pub/v/launchdarkly_flutter_observability.svg?style=flat-square
+[o11y-flutter-link]: https://pub.dev/packages/launchdarkly_flutter_observability
+[go-ci-badge]: https://github.com/launchdarkly/observability-sdk/actions/workflows/go-plugin.yml/badge.svg
+[go-ci]: https://github.com/launchdarkly/observability-sdk/actions/workflows/go-plugin.yml
+[turbo-ci-badge]: https://github.com/launchdarkly/observability-sdk/actions/workflows/turbo.yml/badge.svg
+[turbo-ci]: https://github.com/launchdarkly/observability-sdk/actions/workflows/turbo.yml
+[python-ci-badge]: https://github.com/launchdarkly/observability-sdk/actions/workflows/python-plugin.yml/badge.svg
+[python-ci]: https://github.com/launchdarkly/observability-sdk/actions/workflows/python-plugin.yml
+[dotnet-ci-badge]: https://github.com/launchdarkly/observability-sdk/actions/workflows/dotnet-plugin.yml/badge.svg
+[dotnet-ci]: https://github.com/launchdarkly/observability-sdk/actions/workflows/dotnet-plugin.yml
+[android-ci-badge]: https://github.com/launchdarkly/observability-sdk/actions/workflows/android-observability.yml/badge.svg
+[android-ci]: https://github.com/launchdarkly/observability-sdk/actions/workflows/android-observability.yml
