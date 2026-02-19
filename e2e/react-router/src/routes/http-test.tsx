@@ -518,6 +518,106 @@ export default function HttpTest() {
 			</TestSection>
 
 			<TestSection
+				title="Response Body Capture Tests"
+				description="Test that http.response.body is captured on fetch spans. Previously, the async body read raced with span.end() causing the body attribute to be silently dropped."
+			>
+				<TestButton
+					title="GET Response Body"
+					description="http.response.body should contain JSON"
+					onClick={async () => {
+						try {
+							const response = await fetch(
+								'https://jsonplaceholder.typicode.com/posts/1?test=response-body-get',
+							)
+							const data = await response.json()
+							console.log(
+								'GET response body capture test:',
+								data,
+							)
+						} catch (e) {
+							console.error('Request error:', e)
+						}
+					}}
+				/>
+
+				<TestButton
+					title="Large Response Body"
+					description="Body capture with ~5KB response"
+					onClick={async () => {
+						try {
+							const response = await fetch(
+								'https://jsonplaceholder.typicode.com/posts?test=response-body-large&_limit=10',
+							)
+							const data = await response.json()
+							console.log(
+								'Large response body capture test:',
+								`${data.length} items, ~${JSON.stringify(data).length} bytes`,
+							)
+						} catch (e) {
+							console.error('Request error:', e)
+						}
+					}}
+				/>
+
+				<TestButton
+					title="POST Response Body"
+					description="Both request and response bodies captured"
+					onClick={async () => {
+						try {
+							const response = await fetch(
+								'https://jsonplaceholder.typicode.com/posts?test=response-body-post',
+								{
+									method: 'POST',
+									headers: {
+										'Content-Type': 'application/json',
+									},
+									body: JSON.stringify({
+										title: 'Test',
+										body: 'Verify both request and response bodies are on the span',
+										userId: 1,
+									}),
+								},
+							)
+							const data = await response.json()
+							console.log(
+								'POST response body capture test:',
+								data,
+							)
+						} catch (e) {
+							console.error('Request error:', e)
+						}
+					}}
+				/>
+
+				<TestButton
+					title="Concurrent Response Bodies"
+					description="5 parallel requests, all should have bodies"
+					onClick={async () => {
+						try {
+							const promises = []
+							for (let i = 1; i <= 5; i++) {
+								promises.push(
+									fetch(
+										`https://jsonplaceholder.typicode.com/posts/${i}?test=response-body-concurrent-${i}`,
+									),
+								)
+							}
+							const responses = await Promise.all(promises)
+							const data = await Promise.all(
+								responses.map((r) => r.json()),
+							)
+							console.log(
+								'Concurrent response body capture test:',
+								`${data.length} responses with bodies`,
+							)
+						} catch (e) {
+							console.error('Request error:', e)
+						}
+					}}
+				/>
+			</TestSection>
+
+			<TestSection
 				title="Response Tests"
 				description="Test different response types and status codes."
 			>
@@ -641,6 +741,12 @@ export default function HttpTest() {
 							<li>
 								Request/response bodies are recorded as
 								configured
+							</li>
+							<li>
+								Response Body Capture: each span has an{' '}
+								<code>http.response.body</code> attribute
+								with the full JSON response (not just{' '}
+								<code>http.response.body.size</code>)
 							</li>
 						</ul>
 					</li>
