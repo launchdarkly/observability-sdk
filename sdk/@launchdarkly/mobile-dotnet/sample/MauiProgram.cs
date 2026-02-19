@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using LaunchDarkly.SessionReplay;
 using System.Reflection;
@@ -6,6 +7,20 @@ namespace MauiSample9;
 
 public static class MauiProgram
 {
+	private static IConfiguration BuildConfiguration()
+	{
+		var assembly = Assembly.GetExecutingAssembly();
+		var configBuilder = new ConfigurationBuilder();
+
+		configBuilder.AddJsonStream(assembly.GetManifestResourceStream("MauiSample9.appsettings.json")!);
+
+		var localStream = assembly.GetManifestResourceStream("MauiSample9.appsettings.Local.json");
+		if (localStream is not null)
+			configBuilder.AddJsonStream(localStream);
+
+		return configBuilder.Build();
+	}
+
 	private static void LogMauiAssemblyInfo()
 	{
 		try
@@ -48,9 +63,14 @@ public static class MauiProgram
 		builder.Logging.AddDebug();
 #endif
 
+		var config = BuildConfiguration();
+
 		var app = builder.Build();
 
-		var mobileKey = "yourkey";
+		var mobileKey = config["LaunchDarkly:MobileKey"]
+			?? throw new InvalidOperationException(
+				"LaunchDarkly:MobileKey not found. " +
+				"Copy appsettings.json to appsettings.Local.json and set your key.");
 
 		var ldNative = LDNative.Start(
 			mobileKey: mobileKey,
