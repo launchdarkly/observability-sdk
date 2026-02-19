@@ -1,8 +1,17 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     id("net.bytebuddy.byte-buddy-gradle-plugin") version "1.17.6"
+}
+
+val localProperties = Properties().apply {
+    val localPropertiesFile = rootProject.file("local.properties")
+    if (localPropertiesFile.exists()) {
+        localPropertiesFile.inputStream().use { load(it) }
+    }
 }
 
 android {
@@ -16,6 +25,22 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField(
+            "String",
+            "LAUNCHDARKLY_MOBILE_KEY",
+            "\"${localProperties.getProperty("launchdarkly.mobileKey", "")}\""
+        )
+        buildConfigField(
+            "String",
+            "OTLP_ENDPOINT",
+            "\"${localProperties.getProperty("launchdarkly.otlpEndpoint", "").ifEmpty { "https://otel.observability.app.launchdarkly.com:4318" }}\""
+        )
+        buildConfigField(
+            "String",
+            "BACKEND_URL",
+            "\"${localProperties.getProperty("launchdarkly.backendUrl", "").ifEmpty { "https://pub.observability.app.launchdarkly.com" }}\""
+        )
     }
 
     buildTypes {
@@ -36,6 +61,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     packaging {
         resources {
