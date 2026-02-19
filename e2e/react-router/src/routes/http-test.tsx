@@ -530,10 +530,7 @@ export default function HttpTest() {
 								'https://jsonplaceholder.typicode.com/posts/1?test=response-body-get',
 							)
 							const data = await response.json()
-							console.log(
-								'GET response body capture test:',
-								data,
-							)
+							console.log('GET response body capture test:', data)
 						} catch (e) {
 							console.error('Request error:', e)
 						}
@@ -744,8 +741,8 @@ export default function HttpTest() {
 							</li>
 							<li>
 								Response Body Capture: each span has an{' '}
-								<code>http.response.body</code> attribute
-								with the full JSON response (not just{' '}
+								<code>http.response.body</code> attribute with
+								the full JSON response (not just{' '}
 								<code>http.response.body.size</code>)
 							</li>
 						</ul>
