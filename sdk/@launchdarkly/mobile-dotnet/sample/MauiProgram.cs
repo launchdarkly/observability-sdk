@@ -72,12 +72,15 @@ public static class MauiProgram
 				"LaunchDarkly:MobileKey not found. " +
 				"Copy appsettings.json to appsettings.Local.json and set your key.");
 
+		var otlpEndpoint = config["LaunchDarkly:OtlpEndpoint"];
+		var backendUrl = config["LaunchDarkly:BackendUrl"];
+
 		var ldNative = LDNative.Start(
 			mobileKey: mobileKey,
 			observability: new ObservabilityOptions(
 				serviceName: "maui-sample-app",
-				otlpEndpoint: "https://otel.observability.ld-stg.launchdarkly.com:4318",
-				backendUrl: "https://pub.observability.ld-stg.launchdarkly.com/"
+				otlpEndpoint: otlpEndpoint,
+				backendUrl: backendUrl
 			),
 			replay: new SessionReplayOptions(
 				isEnabled: true,
