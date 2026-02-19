@@ -1,0 +1,31 @@
+---
+description: Commit message rule
+alwaysApply: false
+---
+# Commit Message Guidelines
+
+Write commit messages as a single line, max 72 characters.
+
+## Format
+```
+<type>: <brief description>
+```
+
+## Types
+- `feat` - new feature
+- `fix` - bug fix
+- `refactor` - code restructuring
+- `docs` - documentation
+- `test` - tests
+- `chore` - maintenance
+
+## Examples
+- `feat: add session replay batching`
+- `fix: resolve memory leak in worker pool`
+- `refactor: simplify event queue logic`
+
+## Rules
+- Use imperative mood ("add" not "added")
+- No period at the end
+- Lowercase after the colon
+- Be specific but brief

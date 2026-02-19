@@ -11,5 +11,14 @@ Rails.application.routes.draw do
   end
   resources :errors, only: [:create]
 
+  # LaunchDarkly feature flag routes
+  resources :flags, only: %i[index show] do
+    collection do
+      post :evaluate
+      post :batch
+      get :all_flags
+    end
+  end
+
   root to: 'pages#home'
 end

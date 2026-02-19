@@ -2,21 +2,28 @@
 
 class TracesController < ApplicationController
   def create
-    Highlight.start_span('example-trace-outer') do
+    LaunchDarklyObservability.in_span('example-trace-outer') do |outer_span|
       sleep(0.1)
 
       trace = Trace.new(name: 'trace', kind: 'internal')
-      Highlight.start_span('example-trace-inner') do
+      
+      LaunchDarklyObservability.in_span('example-trace-inner', attributes: { 'trace.operation' => 'save' }) do |inner_span|
         sleep(0.2)
-
         trace.save!
       end
 
+      outer_span.set_attribute('trace.operation', 'update')
       trace.update!(name: 'trace-updated')
     end
+    
+    head :no_content
   end
 
   def custom_project_id
-    Highlight.start_span('example-trace-2', { Highlight::H::HIGHLIGHT_PROJECT_ATTRIBUTE => '56gl9g91' })
+    LaunchDarklyObservability.in_span('example-trace-2', attributes: { 'launchdarkly.project_id' => '56gl9g91' }) do |span|
+      sleep(0.1)
+    end
+    
+    head :no_content
   end
 end
