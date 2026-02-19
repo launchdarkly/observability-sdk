@@ -227,9 +227,7 @@ export const setupBrowserTracing = (
 						return
 					}
 					const readableSpan = span as unknown as ReadableSpan
-					if (
-						readableSpan.attributes[RECORD_ATTRIBUTE] === false
-					) {
+					if (readableSpan.attributes[RECORD_ATTRIBUTE] === false) {
 						return
 					}
 
@@ -249,13 +247,10 @@ export const setupBrowserTracing = (
 						return
 					}
 
-					if (
-						config.networkRecordingOptions?.recordHeadersAndBody
-					) {
+					if (config.networkRecordingOptions?.recordHeadersAndBody) {
 						const responseBody = await getResponseBody(
 							response,
-							config.networkRecordingOptions
-								?.bodyKeysToRecord,
+							config.networkRecordingOptions?.bodyKeysToRecord,
 							config.networkRecordingOptions
 								?.networkBodyKeysToRedact,
 						)
@@ -291,22 +286,18 @@ export const setupBrowserTracing = (
 					this.getConfig().applyCustomAttributesOnSpan
 				if (applyCustomAttributesOnSpan) {
 					try {
-						const maybePromise =
-							applyCustomAttributesOnSpan(
-								span,
-								request,
-								result,
-							)
+						const maybePromise = applyCustomAttributesOnSpan(
+							span,
+							request,
+							result,
+						)
 						if (
 							maybePromise &&
-							typeof (maybePromise as any).then ===
-								'function'
+							typeof (maybePromise as any).then === 'function'
 						) {
 							pendingAttributes.set(
 								span,
-								(maybePromise as Promise<void>).catch(
-									() => {},
-								),
+								(maybePromise as Promise<void>).catch(() => {}),
 							)
 						}
 					} catch {
