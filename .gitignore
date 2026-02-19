@@ -78,3 +78,4 @@ sdk/@launchdarkly/mobile-dotnet/**/.gradle/
 sdk/@launchdarkly/mobile-dotnet/**/*.Local.json
 sdk/@launchdarkly/mobile-dotnet/**/*.csproj.user
 sdk/@launchdarkly/mobile-dotnet/**/*.sln
+sdk/@launchdarkly/mobile-dotnet/**/nupkgs/
