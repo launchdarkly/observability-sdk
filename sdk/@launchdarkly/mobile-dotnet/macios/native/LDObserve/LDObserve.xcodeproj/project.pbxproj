@@ -118,7 +118,7 @@
 			);
 			mainGroup = 83E34F492C21CB2B008AA950;
 			packageReferences = (
-				50C0BF462F230B910064754D /* XCLocalSwiftPackageReference "../../../../swift-launchdarkly-observability" */,
+				50C0BF462F230B910064754D /* XCLocalSwiftPackageReference "../../../../../../../swift-launchdarkly-observability" */,
 			);
 			productRefGroup = 83E34F542C21CB2B008AA950 /* Products */;
 			projectDirPath = "";
@@ -380,9 +380,9 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		50C0BF462F230B910064754D /* XCLocalSwiftPackageReference "../../../../swift-launchdarkly-observability" */ = {
+		50C0BF462F230B910064754D /* XCLocalSwiftPackageReference "../../../../../../../swift-launchdarkly-observability" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = "../../../../swift-launchdarkly-observability";
+			relativePath = "../../../../../../../swift-launchdarkly-observability";
 		};
 /* End XCLocalSwiftPackageReference section */
 

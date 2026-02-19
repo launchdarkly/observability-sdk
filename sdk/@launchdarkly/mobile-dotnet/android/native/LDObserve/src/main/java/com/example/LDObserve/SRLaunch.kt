@@ -2,6 +2,7 @@ package com.launchdarky.LDNative
 
 import android.app.Application
 import android.util.Log
+import com.launchdarkly.observability.BuildConfig
 import com.launchdarkly.observability.api.ObservabilityOptions
 import com.launchdarkly.observability.client.TelemetryInspector
 import com.launchdarkly.observability.plugin.Observability
@@ -88,7 +89,7 @@ public class LDSessionReplayOptions {
 public class SRLaunch {
 
     public fun version(): String {
-        return "1.0s"
+        return BuildConfig.OBSERVABILITY_SDK_VERSION
     }
 
     public fun start(

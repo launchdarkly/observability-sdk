@@ -43,17 +43,11 @@ namespace LDObserveMaciOS
     [BaseType(typeof(NSObject))]
     interface SRClient
     {
-        [Static]
-        [Export("startExample")]
-        string startExample();
+        [Export("version")]
+        string Version();
 
-        [Static]
         [Export("startWithMobileKey:observability:replay:")]
         void Start(string mobileKey, ObjcObservabilityOptions observability, ObjcSessionReplayOptions replay);
-
-        [Static]
-        [Export("startWithMobileKey:observabilityDictionary:replayDictionary:")]
-        void Start(string mobileKey, NSDictionary observability, NSDictionary replay);
     }
 
     [BaseType(typeof(NSObject))]

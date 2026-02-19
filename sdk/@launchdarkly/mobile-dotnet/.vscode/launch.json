@@ -5,36 +5,6 @@
 			"name": "Universal .NET MAUI",
 			"type": "maui",
 			"request": "launch"
-		},
-		{
-			"name": "MAUI iOS (Simulator) - Sample",
-			"type": "coreclr",
-			"request": "launch",
-			"noDebug": false,
-			"program": "/bin/bash",
-			"args": [
-				"-lc",
-				"dotnet build ${workspaceFolder}/sample/MauiSample9.csproj -t:Run -f net9.0-ios -p:RuntimeIdentifier=iossimulator-arm64 -p:_DeviceName=:v2:udid=EC33E48C-8CEE-4EA7-BE06-71E4B3E80010"
-			],
-			"cwd": "${workspaceFolder}",
-			"console": "integratedTerminal",
-			"stopAtEntry": false
-		},
-		{
-			"name": "MAUI Android (Emulator/Device)",
-			"type": "coreclr",
-			"request": "launch",
-			"program": "dotnet",
-			"args": [
-				"build",
-				"${workspaceFolder}/sample/MauiSample9.csproj",
-				"-t:Run",
-				"-f",
-				"net9.0-android"
-			],
-			"cwd": "${workspaceFolder}",
-			"console": "integratedTerminal",
-			"stopAtEntry": false
 		}
 	]
 }

@@ -68,7 +68,7 @@ public static class MauiProgram
 			)
 		);
 		ldNative.Replay.IsEnabled = true;
-
+		Console.WriteLine($"ldNative.version={ldNative.NativeVersion}");
 		return app;
 	}
 }

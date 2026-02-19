@@ -4,9 +4,21 @@ using LDObserveMaciOS;
 
 namespace LaunchDarkly.SessionReplay;
 
-public static class SRClient
+public class SRClient
 {
-    public static void Start(string mobileKey, ObservabilityOptions observability, SessionReplayOptions replay)
+    private readonly LDObserveMaciOS.SRClient _native;
+
+    public SRClient()
+    {
+        _native = new LDObserveMaciOS.SRClient();
+    }
+
+    public string Version()
+    {
+        return _native.Version();
+    }
+
+    public void Start(string mobileKey, ObservabilityOptions observability, SessionReplayOptions replay)
     {
         var objcObs = new ObjcObservabilityOptions
         {
@@ -23,7 +35,7 @@ public static class SRClient
             MaskImages = replay.Privacy?.MaskImages ?? false
         };
 
-        LDObserveMaciOS.SRClient.Start(mobileKey, objcObs, objcReplay);
+        _native.Start(mobileKey, objcObs, objcReplay);
     }
 }
 #endif

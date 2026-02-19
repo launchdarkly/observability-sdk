@@ -37,8 +37,12 @@ public final class ObjcSessionReplayOptions: NSObject {
 
 @objc(SRClient)
 public final class ObjcSRClient: NSObject {
-    
-    @objc public static func start(mobileKey: String, observability: ObjcObservabilityOptions, replay: ObjcSessionReplayOptions) {
+
+    @objc public func version() -> String {
+        return sdkVersion
+    }
+
+    @objc public func start(mobileKey: String, observability: ObjcObservabilityOptions, replay: ObjcSessionReplayOptions) {
         let config = { () -> LDConfig in
             var config = LDConfig(
                 mobileKey: mobileKey,
@@ -76,14 +80,14 @@ public final class ObjcSRClient: NSObject {
             }
         }()
         
-        let start = Date().timeIntervalSince1970.milliseconds
+        let startTime = Date().timeIntervalSince1970.milliseconds
         LDClient.start(
             config: config,
             context: context,
             startWaitSeconds: 15.0,
             completion: { timeout in
                 let end = Date().timeIntervalSince1970.milliseconds
-                print("LDClient: started in \(end - start) ms")
+                print("LDClient: started in \(end - startTime) ms")
                 print("LDClient: started with timeout: \(timeout)")
             }
         )
