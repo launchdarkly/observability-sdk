@@ -8,17 +8,17 @@ This repository houses the LaunchDarkly Observability and Session Replay SDKs ac
 
 ## Packages
 
-| Package | Package manager | Docs | Tests |
-| ------- | ---------------- | ---- | ----- |
-| [Go SDK](go/README.md) | [![Go Reference][go-pkg-badge]][go-pkg-link] | [docs.launchdarkly.com](https://docs.launchdarkly.com/) | [![Actions Status][go-ci-badge]][go-ci] |
-| [@launchdarkly/observability](sdk/@launchdarkly/observability/README.md) (browser) | [![NPM][o11y-sdk-npm-badge]][o11y-sdk-npm-link] | [docs.launchdarkly.com](https://docs.launchdarkly.com/sdk/client-side/javascript#getting-started) | [![Actions Status][turbo-ci-badge]][turbo-ci] |
-| [@launchdarkly/observability-node](sdk/@launchdarkly/observability-node/README.md) | [![NPM][o11y-node-npm-badge]][o11y-node-npm-link] | [docs.launchdarkly.com](https://docs.launchdarkly.com/) | [![Actions Status][turbo-ci-badge]][turbo-ci] |
-| [@launchdarkly/observability-react-native](sdk/@launchdarkly/observability-react-native/README.md) | [![NPM][o11y-rn-npm-badge]][o11y-rn-npm-link] | [docs.launchdarkly.com](https://docs.launchdarkly.com/) | [![Actions Status][turbo-ci-badge]][turbo-ci] |
-| [@launchdarkly/session-replay](sdk/@launchdarkly/session-replay/README.md) | [![NPM][session-replay-sdk-npm-badge]][session-replay-sdk-npm-link] | [docs.launchdarkly.com](https://docs.launchdarkly.com/sdk/client-side/javascript#getting-started) | [![Actions Status][turbo-ci-badge]][turbo-ci] |
-| [launchdarkly-observability](sdk/@launchdarkly/observability-python/README.md) (Python) | [![PyPI][o11y-pypi-badge]][o11y-pypi-link] | [docs.launchdarkly.com](https://docs.launchdarkly.com/) | [![Actions Status][python-ci-badge]][python-ci] |
-| [LaunchDarkly.Observability](sdk/@launchdarkly/observability-dotnet/README.md) (.NET) | [![NuGet][o11y-nuget-badge]][o11y-nuget-link] | [docs.launchdarkly.com](https://docs.launchdarkly.com/sdk/server-side/dotnet) | [![Actions Status][dotnet-ci-badge]][dotnet-ci] |
-| [launchdarkly-observability-android](sdk/@launchdarkly/observability-android/README.md) | [Maven Central][o11y-android-link] | [docs.launchdarkly.com](https://docs.launchdarkly.com/) | [![Actions Status][android-ci-badge]][android-ci] |
-| [launchdarkly_flutter_observability](sdk/@launchdarkly/launchdarkly_flutter_observability/README.md) | [![pub package][o11y-flutter-badge]][o11y-flutter-link] | [docs.launchdarkly.com](https://docs.launchdarkly.com/) | — |
+| Package | Package manager | Tests |
+| ------- | ---------------- | ----- |
+| [Go SDK](go/README.md) | [![Go Reference][go-pkg-badge]][go-pkg-link] | [![Actions Status][go-ci-badge]][go-ci] |
+| [@launchdarkly/observability](sdk/@launchdarkly/observability/README.md) (browser) | [![NPM][o11y-sdk-npm-badge]][o11y-sdk-npm-link] | [![Actions Status][turbo-ci-badge]][turbo-ci] |
+| [@launchdarkly/observability-node](sdk/@launchdarkly/observability-node/README.md) | [![NPM][o11y-node-npm-badge]][o11y-node-npm-link] | [![Actions Status][turbo-ci-badge]][turbo-ci] |
+| [@launchdarkly/observability-react-native](sdk/@launchdarkly/observability-react-native/README.md) | [![NPM][o11y-rn-npm-badge]][o11y-rn-npm-link] | [![Actions Status][turbo-ci-badge]][turbo-ci] |
+| [@launchdarkly/session-replay](sdk/@launchdarkly/session-replay/README.md) | [![NPM][session-replay-sdk-npm-badge]][session-replay-sdk-npm-link] | [![Actions Status][turbo-ci-badge]][turbo-ci] |
+| [launchdarkly-observability](sdk/@launchdarkly/observability-python/README.md) (Python) | [![PyPI][o11y-pypi-badge]][o11y-pypi-link] | [![Actions Status][python-ci-badge]][python-ci] |
+| [LaunchDarkly.Observability](sdk/@launchdarkly/observability-dotnet/README.md) (.NET) | [![NuGet][o11y-nuget-badge]][o11y-nuget-link] | [![Actions Status][dotnet-ci-badge]][dotnet-ci] |
+| [launchdarkly-observability-android](sdk/@launchdarkly/observability-android/README.md) | [Maven Central][o11y-android-link] | [![Actions Status][android-ci-badge]][android-ci] |
+| [launchdarkly_flutter_observability](sdk/@launchdarkly/launchdarkly_flutter_observability/README.md) | [![pub package][o11y-flutter-badge]][o11y-flutter-link] | — |
 
 ## Getting started
 
