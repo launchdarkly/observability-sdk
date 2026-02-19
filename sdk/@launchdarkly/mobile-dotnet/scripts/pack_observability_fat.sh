@@ -1,7 +1,8 @@
 #!/bin/zsh
 set -euo pipefail
 
-ROOT_DIR="/Users/abelonogov/work/mobile-dotnet"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 OUT_DIR="$ROOT_DIR/nupkgs"
 
 ANDROID_BINDING="$ROOT_DIR/android/LDObserve.Android.Binding/LDObserve.Android.Binding.csproj"
