@@ -8,6 +8,8 @@ namespace MauiSample9;
 
 public static class MauiProgram
 {
+	public static LDNative? LdNative { get; private set; }
+
 	private static IConfiguration BuildConfiguration()
 	{
 		var assembly = Assembly.GetExecutingAssembly();
@@ -88,7 +90,7 @@ public static class MauiProgram
 			}
 		};
 
-		var ldNative = LDNative.Start(
+		LdNative = LDNative.Start(
 			mobileKey: mobileKey,
 			observability: new ObservabilityOptions(
 				serviceName: "maui-sample-app",
@@ -103,8 +105,8 @@ public static class MauiProgram
 				)
 			)
 		);
-		ldNative.Replay.IsEnabled = true;
-		Console.WriteLine($"ldNative.version={ldNative.NativeVersion}");
+		LdNative.Replay.IsEnabled = true;
+		Console.WriteLine($"ldNative.version={LdNative.NativeVersion}");
 		return app;
 	}
 }

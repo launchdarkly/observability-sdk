@@ -92,6 +92,34 @@ public class SRLaunch {
         return BuildConfig.OBSERVABILITY_SDK_VERSION
     }
 
+    public fun recordLog(message: String, severity: Int) {
+        // TODO: bridge to LDObserve.recordLog
+    }
+
+    public fun recordError(message: String, cause: String?) {
+        // TODO: bridge to LDObserve.recordError
+    }
+
+    public fun recordMetric(name: String, value: Double) {
+        // TODO: bridge to LDObserve.recordMetric
+    }
+
+    public fun recordCount(name: String, value: Double) {
+        // TODO: bridge to LDObserve.recordCount
+    }
+
+    public fun recordIncr(name: String, value: Double) {
+        // TODO: bridge to LDObserve.recordIncr
+    }
+
+    public fun recordHistogram(name: String, value: Double) {
+        // TODO: bridge to LDObserve.recordHistogram
+    }
+
+    public fun recordUpDownCounter(name: String, value: Double) {
+        // TODO: bridge to LDObserve.recordUpDownCounter
+    }
+
     public fun start(
         app: Application,
         mobileKey: String,

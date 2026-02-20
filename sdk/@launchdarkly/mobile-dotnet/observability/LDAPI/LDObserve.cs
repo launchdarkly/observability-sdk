@@ -5,15 +5,13 @@ using System.Linq;
 using UIKit;
 using Foundation;
 using LDObserveMaciOS;
-#elif ANDROID
-using LDObserveAndroid;
 #endif
 
 namespace LaunchDarkly.SessionReplay;
 
 /// <summary>
-/// Static facade over the native (iOS) LDObserve logging bridge.
-/// On non-iOS platforms methods are no-ops so you can call them safely anywhere.
+/// Static facade over the native observability bridge.
+/// On platforms without a native implementation, methods are no-ops.
 /// </summary>
 public static class LDObserve
 {
@@ -101,15 +99,13 @@ public static class LDObserve
     // -------- Public API --------
 
     /// <summary>
-    /// Record a log with integer severity (must match Swift Severity rawValue).
+    /// Record a log with integer severity.
     /// </summary>
     public static void RecordLog(string message, int severity, IDictionary<string, object?>? attributes = null)
     {
 #if IOS
         var dict = attributes is null ? new NSDictionary() : ToNSDictionary(attributes);
         LDObserveBridge.RecordLog(message, severity, dict);
-#else
-        _ = message; _ = severity; _ = attributes; // no-op
 #endif
     }
 
@@ -118,6 +114,48 @@ public static class LDObserve
     /// </summary>
     public static void RecordLog(string message, Severity severity, IDictionary<string, object?>? attributes = null)
         => RecordLog(message, (int)severity, attributes);
+
+    /// <summary>
+    /// Record an error.
+    /// </summary>
+    public static void RecordError(string message, string? cause = null)
+    {
+    }
+
+    /// <summary>
+    /// Record a gauge metric.
+    /// </summary>
+    public static void RecordMetric(string name, double value)
+    {
+    }
+
+    /// <summary>
+    /// Record a count metric.
+    /// </summary>
+    public static void RecordCount(string name, double value)
+    {
+    }
+
+    /// <summary>
+    /// Record an incremental counter metric.
+    /// </summary>
+    public static void RecordIncr(string name, double value)
+    {
+    }
+
+    /// <summary>
+    /// Record a histogram metric.
+    /// </summary>
+    public static void RecordHistogram(string name, double value)
+    {
+    }
+
+    /// <summary>
+    /// Record an up-down counter metric.
+    /// </summary>
+    public static void RecordUpDownCounter(string name, double value)
+    {
+    }
 
     // -------- Helpers (iOS only) --------
 #if IOS
