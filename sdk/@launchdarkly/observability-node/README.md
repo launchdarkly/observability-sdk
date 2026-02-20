@@ -22,17 +22,40 @@ yarn add @launchdarkly/observability-node
 Update your application to instantiate the observability plugin when you initialize the LaunchDarkly SDK.
 ```TypeScript
 import { init } from '@launchdarkly/node-server-sdk'
-import Observability, { LDObserve } from '@launchdarkly/observability'
+import { Observability } from '@launchdarkly/observability-node'
 
 const client = init(
-        'sdk-key',
-        {
-          plugins: [
-            new Observability(),
-          ],
-        },
+  'sdk-key',
+  {
+    plugins: [
+      new Observability(),
+    ],
+  },
 )
+```
 
+## Manual instrumentation with LDObserve
+
+The `Observability` plugin automatically captures flag evaluations, logs, and traces. Use the `LDObserve` singleton when you want to record custom metrics, logs, errors, or spans so they are correlated with your LaunchDarkly data.
+
+```TypeScript
+import { LDObserve } from '@launchdarkly/observability-node'
+
+// Record custom metrics (counters, gauges, histograms, etc.)
+LDObserve.recordCount({ name: 'api_calls', value: 1 })
+LDObserve.recordHistogram({ name: 'response_time_ms', value: 150 })
+
+// Record logs and errors
+LDObserve.recordLog('User performed action', 'info', undefined, undefined, { user_id: '12345' })
+LDObserve.recordError(new Error('Payment failed'), undefined, undefined, { component: 'checkout' })
+
+// Create spans tied to request context (e.g. in Express)
+app.get('/order', (req, res) => {
+  LDObserve.runWithHeaders('handle-order', req.headers, (span) => {
+    // Your handler logic; span is linked to the request trace
+    res.json({ orderId: '123' })
+  })
+})
 ```
 
 ## Getting started

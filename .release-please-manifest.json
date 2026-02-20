@@ -3,7 +3,7 @@
 	"sdk/@launchdarkly/observability": "1.0.1",
 	"sdk/@launchdarkly/observability-android": "0.26.0",
 	"sdk/@launchdarkly/observability-dotnet": "1.0.0",
-	"sdk/@launchdarkly/observability-node": "1.0.0",
+	"sdk/@launchdarkly/observability-node": "1.0.1",
 	"sdk/@launchdarkly/observability-python": "1.1.0",
 	"sdk/@launchdarkly/observability-react-native": "0.7.0",
 	"sdk/@launchdarkly/session-replay": "1.0.1",
