@@ -95,7 +95,7 @@ public class SessionReplayClientAdapter: NSObject {
           startWaitSeconds: 5.0) { timedOut in
             self.clientQueue.sync { [weak self] in
               self?.isLDClientState = .started
-              self?.setLDReplayEnabled(true) {
+              self?.setLDReplayEnabled(options.isEnabled) {
                 /// offline is considered a short circuited timed out case
                 completion(true, nil)
               }
@@ -108,9 +108,9 @@ public class SessionReplayClientAdapter: NSObject {
       completion(true, nil)
     case .started:
       /// Client is started, we can now focus on the session replay client
-      /// Since this is the start method, we want to do so for LDReplay, set enabled to true
+      /// Apply the configured isEnabled so that start() respects options.isEnabled
       /// offline is considered a short circuited timed out case
-      setLDReplayEnabled(true) {
+      setLDReplayEnabled(options.isEnabled) {
         completion(true, nil)
       }
       break
