@@ -7,5 +7,6 @@
 	"sdk/@launchdarkly/observability-python": "1.1.0",
 	"sdk/@launchdarkly/observability-react-native": "0.7.0",
 	"sdk/@launchdarkly/session-replay": "1.0.2",
+	"sdk/@launchdarkly/react-native-ld-session-replay": "0.1.0",
 	"sdk/highlight-run": "9.27.0"
 }
