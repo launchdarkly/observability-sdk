@@ -7,16 +7,10 @@ import java.io.ByteArrayOutputStream
 class ExportDiffManager(
     private val tileSignatureManager: TileSignatureManager = TileSignatureManager(),
 ) {
-    data class RawFrame(
-        val bitmap: Bitmap,
-        val timestamp: Long,
-        val orientation: Int,
-    )
-
     @Volatile
     private var tileSignature: TileSignature? = null
 
-    fun createCaptureEvent(rawFrame: RawFrame, session: String): ExportFrame? {
+    fun createCaptureEvent(rawFrame: ImageCaptureService.RawFrame, session: String): ExportFrame? {
         val newSignature = tileSignatureManager.compute(rawFrame.bitmap, 64)
         if (newSignature != null && newSignature == tileSignature) {
             // the similar bitmap not send
@@ -30,7 +24,7 @@ class ExportDiffManager(
         return createCaptureEventInternal(rawFrame, session)
     }
 
-    private fun createCaptureEventInternal(rawFrame: RawFrame, session: String): ExportFrame {
+    private fun createCaptureEventInternal(rawFrame: ImageCaptureService.RawFrame, session: String): ExportFrame {
         val postMask = rawFrame.bitmap
         // TODO: O11Y-625 - optimize memory allocations here, re-use byte arrays and such
         val outputStream = ByteArrayOutputStream()
