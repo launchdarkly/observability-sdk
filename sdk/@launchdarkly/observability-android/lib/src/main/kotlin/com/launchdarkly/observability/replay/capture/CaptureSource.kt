@@ -35,10 +35,10 @@ import com.launchdarkly.observability.replay.masking.MaskApplier
 import com.launchdarkly.observability.replay.scaleCoordinate
 
 /**
- * A source of [CaptureEvent]s taken from the lowest visible window. Captures
+ * A source of [ExportFrame]s taken from the lowest visible window. Captures
  * are emitted on the [captureFlow] property of this class.
  *
- * @param sessionManager Used to get current session for tagging [CaptureEvent] with session id
+ * @param sessionManager Used to get current session for tagging [ExportFrame] with session id
  */
 class CaptureSource(
     private val sessionManager: SessionManager,
@@ -51,19 +51,19 @@ class CaptureSource(
         val bitmap: Bitmap,
     )
 
-    private val _captureEventFlow = MutableSharedFlow<CaptureEvent>()
-    val captureFlow: SharedFlow<CaptureEvent> = _captureEventFlow.asSharedFlow()
+    private val _captureEventFlow = MutableSharedFlow<ExportFrame>()
+    val captureFlow: SharedFlow<ExportFrame> = _captureEventFlow.asSharedFlow()
     private val windowInspector = WindowInspector(logger)
     private val maskCollector = MaskCollector(logger)
     private val maskApplier = MaskApplier()
     private val maskMatchers = options.privacyProfile.asMatchersList()
-    private val tiledSignatureManager = TiledSignatureManager()
+    private val tileSignatureManager = TileSignatureManager()
 
     @Volatile
-    private var tiledSignature: TiledSignature? = null
+    private var tileSignature: TileSignature? = null
 
     /**
-     * Requests a [CaptureEvent] be taken now.
+     * Requests a [ExportFrame] be taken now.
      */
     suspend fun captureNow() {
         val capture = doCapture()
@@ -75,7 +75,7 @@ class CaptureSource(
     /**
      * Internal capture routine.
      */
-    private suspend fun doCapture(): CaptureEvent? =
+    private suspend fun doCapture(): ExportFrame? =
         withContext(DispatcherProviderHolder.current.main) {
             // Synchronize with UI rendering frame
             suspendCancellableCoroutine { continuation ->
@@ -180,12 +180,12 @@ class CaptureSource(
                         }
                     }
 
-                    val newSignature = tiledSignatureManager.compute(baseResult.bitmap, 64)
-                    if (newSignature != null && newSignature == tiledSignature) {
+                    val newSignature = tileSignatureManager.compute(baseResult.bitmap, 64)
+                    if (newSignature != null && newSignature == tileSignature) {
                         // the similar bitmap not send
                         return@withContext null
                     }
-                    tiledSignature = newSignature
+                    tileSignature = newSignature
 
                     createCaptureEvent(baseResult.bitmap, timestamp, session)
                 }
@@ -336,7 +336,7 @@ class CaptureSource(
         postMask: Bitmap,
         timestamp: Long,
         session: String
-    ): CaptureEvent {
+    ): ExportFrame {
         // TODO: O11Y-625 - optimize memory allocations here, re-use byte arrays and such
         val outputStream = ByteArrayOutputStream()
         return try {
@@ -353,11 +353,33 @@ class CaptureSource(
                     Base64.NO_WRAP
                 )
 
-            CaptureEvent(
-                imageBase64 = compressedImage,
-                origWidth = postMask.width,
-                origHeight = postMask.height,
+            val width = postMask.width
+            val height = postMask.height
+            ExportFrame(
+                keyFrameId = 0,
+                addImages = listOf(
+                    ExportFrame.AddImage(
+                        imageBase64 = compressedImage,
+                        rect = ExportFrame.FrameRect(
+                            left = 0,
+                            top = 0,
+                            width = width,
+                            height = height
+                        ),
+                        tileSignature = tileSignature
+                    )
+                ),
+                removeImages = null,
+                originalSize = ExportFrame.FrameSize(
+                    width = width,
+                    height = height
+                ),
+                scale = 1f,
+                format = ExportFrame.ExportFormat.Webp(quality = 30),
                 timestamp = timestamp,
+                orientation = 0,
+                isKeyframe = true,
+                imageSignature = null,
                 session = session
             )
         } finally {

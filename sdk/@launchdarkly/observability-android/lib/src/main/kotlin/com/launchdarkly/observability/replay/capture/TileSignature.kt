@@ -2,17 +2,17 @@ package com.launchdarkly.observability.replay.capture
 
 import android.graphics.Bitmap
 
-data class TiledSignature(
+data class TileSignature(
     val tileHashes: LongArray
 ) {
     override fun equals(other: Any?): Boolean = 
-        other is TiledSignature && tileHashes.contentEquals(other.tileHashes)
+        other is TileSignature && tileHashes.contentEquals(other.tileHashes)
     
         override fun hashCode(): Int = tileHashes.contentHashCode()
 }
 
 /**
- * Computes tiled signatures for bitmaps.
+ * Computes tile-based signatures for bitmaps.
  *
  * This class is intentionally not thread-safe in order to reuse a single internal
  * pixel buffer allocation and minimize memory churn and GC pressure. Do not invoke
@@ -20,21 +20,21 @@ data class TiledSignature(
  * use is required, create one instance per thread or guard access with external
  * synchronization.
  */
-class TiledSignatureManager {
+class TileSignatureManager {
     @Volatile
     private var pixelBuffer: IntArray = IntArray(0)
 
 /**
- * Computes a tiled signature for the given bitmap. Not thread-safe.
+ * Computes a tile-based signature for the given bitmap. Not thread-safe.
  *
  * @param bitmap The bitmap to compute a signature for.
  * @param tileSize The size of the tiles to use for the signature.
- * @return The tiled signature.
+ * @return The tile signature.
  */
     fun compute(
         bitmap: Bitmap,
         tileSize: Int
-    ): TiledSignature? {
+    ): TileSignature? {
         if (tileSize <= 0) return null
         val width = bitmap.width
         val height = bitmap.height
@@ -75,7 +75,7 @@ class TiledSignatureManager {
         }
 
         //TODO: optimize memory allocations here to have 2 arrays instead of 1
-        return TiledSignature(tileHashes)
+        return TileSignature(tileHashes)
     }
 
     private fun hashTile(

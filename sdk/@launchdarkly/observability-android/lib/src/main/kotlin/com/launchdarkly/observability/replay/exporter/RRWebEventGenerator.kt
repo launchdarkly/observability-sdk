@@ -14,7 +14,7 @@ import com.launchdarkly.observability.replay.Removal
 import com.launchdarkly.observability.replay.RRWebCustomDataTag
 import com.launchdarkly.observability.replay.RRWebIncrementalSource
 import com.launchdarkly.observability.replay.RRWebMouseInteraction
-import com.launchdarkly.observability.replay.capture.CaptureEvent
+import com.launchdarkly.observability.replay.capture.ExportFrame
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
@@ -46,6 +46,9 @@ class RRWebEventGenerator(
         private const val CLICK_TEXT_CONTENT_VALUE = ""
         private const val CLICK_SELECTOR_VALUE = "view"
     }
+
+    private fun primaryImage(captureEvent: ExportFrame): ExportFrame.AddImage? =
+        captureEvent.addImages.firstOrNull()
 
     /**
      * Sequence ID for the events being generated.
@@ -87,8 +90,9 @@ class RRWebEventGenerator(
      * Generates events for an incremental capture. Used after [generateCaptureFullEvents] has already been called
      * for a previous capture in the same session.
      */
-    fun generateCaptureIncrementalEvents(captureEvent: CaptureEvent): List<Event> {
-        val dataUrl = "data:$IMAGE_MIME_TYPE;base64,${captureEvent.imageBase64}"
+    fun generateCaptureIncrementalEvents(captureEvent: ExportFrame): List<Event> {
+        val addImage = primaryImage(captureEvent) ?: return emptyList()
+        val dataUrl = "data:$IMAGE_MIME_TYPE;base64,${addImage.imageBase64}"
         val previousImageNodeId = currentImageNodeId
         val newImageNodeId = nextDynamicNodeId++
 
@@ -98,8 +102,8 @@ class RRWebEventGenerator(
             tagName = "img",
             attributes = mapOf(
                 "src" to dataUrl,
-                "width" to "${captureEvent.origWidth}",
-                "height" to "${captureEvent.origHeight}",
+                "width" to "${captureEvent.originalSize.width}",
+                "height" to "${captureEvent.originalSize.height}",
                 "style" to "position:absolute;left:0px;top:0px;pointer-events:none;",
             ),
             childNodes = emptyList(),
@@ -138,7 +142,8 @@ class RRWebEventGenerator(
      * Generates events for a full capture. May be invoked multiple times for a single session if a substantial
      * change occurs requiring a full capture to be sent.
      */
-    fun generateCaptureFullEvents(captureEvent: CaptureEvent): List<Event> {
+    fun generateCaptureFullEvents(captureEvent: ExportFrame): List<Event> {
+        val addImage = primaryImage(captureEvent) ?: return emptyList()
         val eventBatch = mutableListOf<Event>()
 
         val metaEvent = Event(
@@ -147,8 +152,8 @@ class RRWebEventGenerator(
             sid = nextSid(),
             data = EventDataUnion.StandardEventData(
                 EventData(
-                    width = captureEvent.origWidth + RRWEB_DOCUMENT_PADDING * 2,
-                    height = captureEvent.origHeight + RRWEB_DOCUMENT_PADDING * 2,
+                    width = captureEvent.originalSize.width + RRWEB_DOCUMENT_PADDING * 2,
+                    height = captureEvent.originalSize.height + RRWEB_DOCUMENT_PADDING * 2,
                     )
             ),
         )
@@ -192,9 +197,9 @@ class RRWebEventGenerator(
                                                 type = NodeType.ELEMENT,
                                                 tagName = "img",
                                                 attributes = mapOf(
-                                                    "rr_dataURL" to "data:$IMAGE_MIME_TYPE;base64,${captureEvent.imageBase64}",
-                                                    "width" to "${captureEvent.origWidth}",
-                                                    "height" to "${captureEvent.origHeight}"
+                                                    "rr_dataURL" to "data:$IMAGE_MIME_TYPE;base64,${addImage.imageBase64}",
+                                                    "width" to "${captureEvent.originalSize.width}",
+                                                    "height" to "${captureEvent.originalSize.height}"
                                                 ),
                                                 childNodes = listOf(),
                                             )
@@ -209,7 +214,7 @@ class RRWebEventGenerator(
         )
 
         // starting again canvas size
-        accumulatedCanvasSize = captureEvent.imageBase64.length + canvasDrawEntourage
+        accumulatedCanvasSize = addImage.imageBase64.length + canvasDrawEntourage
         currentImageNodeId = RRWEB_INITIAL_IMAGE_NODE_ID
         nextDynamicNodeId = RRWEB_INITIAL_IMAGE_NODE_ID + 1
         eventBatch.add(snapshotEvent)
@@ -222,10 +227,10 @@ class RRWebEventGenerator(
                 buildJsonObject {
                     put("tag", RRWebCustomDataTag.VIEWPORT.wireValue)
                     putJsonObject("payload") {
-                        put("width", captureEvent.origWidth)
-                        put("height", captureEvent.origHeight)
-                        put("availWidth", captureEvent.origWidth)
-                        put("availHeight", captureEvent.origHeight)
+                        put("width", captureEvent.originalSize.width)
+                        put("height", captureEvent.originalSize.height)
+                        put("availWidth", captureEvent.originalSize.width)
+                        put("availHeight", captureEvent.originalSize.height)
                         put("colorDepth", 30)
                         put("pixelDepth", 30)
                         put("orientation", 0)
