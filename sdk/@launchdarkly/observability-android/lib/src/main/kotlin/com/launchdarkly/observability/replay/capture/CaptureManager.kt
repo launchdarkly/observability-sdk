@@ -22,7 +22,10 @@ class CaptureManager(
     private val _captureEventFlow = MutableSharedFlow<ExportFrame>()
     val captureFlow: SharedFlow<ExportFrame> = _captureEventFlow.asSharedFlow()
     private val imageCaptureService = ImageCaptureService(options, logger)
-    private val exportDiffManager = ExportDiffManager()
+    private val exportDiffManager = ExportDiffManager(
+        compression = options.compression,
+        scale = options.scale ?: 1f,
+    )
 
     /**
      * Requests a [ExportFrame] be taken now.

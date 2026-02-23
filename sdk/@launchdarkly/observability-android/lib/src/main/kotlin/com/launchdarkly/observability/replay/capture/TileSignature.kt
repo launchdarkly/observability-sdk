@@ -3,13 +3,16 @@ package com.launchdarkly.observability.replay.capture
 import android.graphics.Bitmap
 
 data class TileSignature(
-    val tileHashes: LongArray
-) {
-    override fun equals(other: Any?): Boolean = 
-        other is TileSignature && tileHashes.contentEquals(other.tileHashes)
-    
-        override fun hashCode(): Int = tileHashes.contentHashCode()
-}
+    val hash: Long
+)
+
+data class ImageSignature(
+    val rows: Int,
+    val columns: Int,
+    val tileWidth: Int,
+    val tileHeight: Int,
+    val tileSignatures: List<TileSignature>,
+)
 
 /**
  * Computes tile-based signatures for bitmaps.
@@ -28,21 +31,23 @@ class TileSignatureManager {
  * Computes a tile-based signature for the given bitmap. Not thread-safe.
  *
  * @param bitmap The bitmap to compute a signature for.
- * @param tileWidth The width of the tiles to use for the signature.
- * @param tileHeight The height of the tiles to use for the signature.
+ * @param preferredTileWidth Preferred tile width.
+ * @param preferredTileHeight Preferred tile height.
  * @return The tile signature.
  */
     fun compute(
         bitmap: Bitmap,
-        tileWidth: Int,
-        tileHeight: Int
-    ): TileSignature? {
-        if (tileWidth <= 0 || tileHeight <= 0) return null
+        preferredTileWidth: Int = 64,
+        preferredTileHeight: Int = 22
+    ): ImageSignature? {
+        if (preferredTileWidth <= 0 || preferredTileHeight <= 0) return null
         val width = bitmap.width
         val height = bitmap.height
         if (width <= 0 || height <= 0) {
             return null
         }
+        val tileWidth = nearestDivisor(width, preferredTileWidth, 60..79)
+        val tileHeight = nearestDivisor(height, preferredTileHeight, 22..44)
 
         val pixelsNeeded = width * height
         if (pixelBuffer.size < pixelsNeeded) {
@@ -54,30 +59,37 @@ class TileSignatureManager {
         val tilesX = (width + tileWidth - 1) / tileWidth
         val tilesY = (height + tileHeight - 1) / tileHeight
         val tileCount = tilesX * tilesY
-        val tileHashes = LongArray(tileCount)
+        val tileSignatures = ArrayList<TileSignature>(tileCount)
 
-        var tileIndex = 0
-        for(ty in 0 until tilesY) {
+        for (ty in 0 until tilesY) {
             val startY = ty * tileHeight
             val endY = minOf(startY + tileHeight, height)
 
-            for(tx in 0 until tilesX) {
+            for (tx in 0 until tilesX) {
                 val startX = tx * tileWidth
                 val endX = minOf(startX + tileWidth, width)
-                tileHashes[tileIndex] = hashTile(
-                    pixels = pixels,
-                    width = width,
-                    startX = startX,
-                    startY = startY,
-                    endX = endX,
-                    endY = endY
+                tileSignatures.add(
+                    TileSignature(
+                        hash = hashTile(
+                            pixels = pixels,
+                            width = width,
+                            startX = startX,
+                            startY = startY,
+                            endX = endX,
+                            endY = endY
+                        )
+                    )
                 )
-                tileIndex++
             }
         }
 
-        //TODO: optimize memory allocations here to have 2 arrays instead of 1
-        return TileSignature(tileHashes)
+        return ImageSignature(
+            rows = tilesY,
+            columns = tilesX,
+            tileWidth = tileWidth,
+            tileHeight = tileHeight,
+            tileSignatures = tileSignatures,
+        )
     }
 
     private fun hashTile(
@@ -90,9 +102,9 @@ class TileSignatureManager {
     ): Long {
         var hash = 5163949831757626579L
         val prime = 1238197591667094937L // from https://bigprimes.org
-        for(y in startY until endY) {
+        for (y in startY until endY) {
             val rowOffset = y * width
-            for(x in startX until endX) {
+            for (x in startX until endX) {
                 val argb = pixels[rowOffset + x]
                 hash = (hash xor (argb and 0xFF).toLong()) * prime
                 hash = (hash xor ((argb ushr 8) and 0xFF).toLong()) * prime
@@ -102,4 +114,67 @@ class TileSignatureManager {
         }
         return hash
     }
+
+    private fun nearestDivisor(value: Int, preferred: Int, range: IntRange): Int {
+        if (value <= 0) return preferred
+
+        fun isDivisor(candidate: Int): Boolean = candidate > 0 && value % candidate == 0
+
+        if (preferred in range && isDivisor(preferred)) return preferred
+
+        val maxDistance = maxOf(
+            kotlin.math.abs(range.first - preferred),
+            kotlin.math.abs(range.last - preferred)
+        )
+
+        for (offset in 1..maxDistance) {
+            val positive = preferred + offset
+            if (positive in range && isDivisor(positive)) return positive
+
+            val negative = preferred - offset
+            if (negative in range && isDivisor(negative)) return negative
+        }
+
+        return preferred
+    }
+}
+
+fun ImageSignature.diffRectangle(other: ImageSignature?): IntRect? {
+    if (other == null ||
+        rows != other.rows ||
+        columns != other.columns ||
+        tileWidth != other.tileWidth ||
+        tileHeight != other.tileHeight
+    ) {
+        return IntRect(
+            left = 0,
+            top = 0,
+            width = columns * tileWidth,
+            height = rows * tileHeight,
+        )
+    }
+
+    var minRow = Int.MAX_VALUE
+    var maxRow = Int.MIN_VALUE
+    var minColumn = Int.MAX_VALUE
+    var maxColumn = Int.MIN_VALUE
+
+    for (idx in tileSignatures.indices) {
+        if (tileSignatures[idx] == other.tileSignatures[idx]) continue
+        val row = idx / columns
+        val col = idx % columns
+        minRow = minOf(minRow, row)
+        maxRow = maxOf(maxRow, row)
+        minColumn = minOf(minColumn, col)
+        maxColumn = maxOf(maxColumn, col)
+    }
+
+    if (minRow == Int.MAX_VALUE) return null
+
+    return IntRect(
+        left = minColumn * tileWidth,
+        top = minRow * tileHeight,
+        width = (maxColumn - minColumn + 1) * tileWidth,
+        height = (maxRow - minRow + 1) * tileHeight,
+    )
 }

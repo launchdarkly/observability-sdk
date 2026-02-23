@@ -7,81 +7,139 @@ import java.io.ByteArrayOutputStream
 
 class ExportDiffManager(
     private val compression: ReplayOptions.CompressionMethod,
-    private val tileSignatureManager: TileSignatureManager = TileSignatureManager(),
+    private val scale: Float = 1f,
+    private val tileDiffManager: TileDiffManager = TileDiffManager(compression = compression, scale = scale),
 ) {
-    @Volatile
-    private var tileSignature: TileSignature? = null
+    private val currentImages = mutableListOf<ExportFrame.RemoveImage>()
+    private val currentImagesIndex = mutableMapOf<ImageSignature, Int>()
+    private val signatureLock = Any()
+    private val format = ExportFrame.ExportFormat.Webp(quality = 30)
+    private var keyFrameId = 0
 
     fun createCaptureEvent(rawFrame: ImageCaptureService.RawFrame, session: String): ExportFrame? {
-        val newSignature = tileSignatureManager.compute(rawFrame.bitmap, 64, 22)
-        if (newSignature != null && newSignature == tileSignature) {
-            // the similar bitmap not send
-            if (!rawFrame.bitmap.isRecycled) {
-                rawFrame.bitmap.recycle()
-            }
-            return null
+        synchronized(signatureLock) {
+            val tiledFrame = tileDiffManager.computeTiledFrame(rawFrame) ?: return null
+            return createCaptureEventInternal(tiledFrame, session)
         }
-        tileSignature = newSignature
-
-        return createCaptureEventInternal(rawFrame, session)
     }
 
-    private fun createCaptureEventInternal(rawFrame: ImageCaptureService.RawFrame, session: String): ExportFrame {
-        val postMask = rawFrame.bitmap
-        // TODO: O11Y-625 - optimize memory allocations here, re-use byte arrays and such
-        val outputStream = ByteArrayOutputStream()
-        return try {
-            // TODO: O11Y-628 - calculate quality using captureQuality options
-            postMask.compress(
-                Bitmap.CompressFormat.WEBP,
-                30,
-                outputStream
-            )
-            val byteArray = outputStream.toByteArray()
-            val compressedImage =
-                Base64.encodeToString(
-                    byteArray,
-                    Base64.NO_WRAP
-                )
+    private fun createCaptureEventInternal(tiledFrame: TiledFrame, session: String): ExportFrame? {
+        try {
+            val adds = mutableListOf<ExportFrame.AddImage>()
+            var removes = mutableListOf<ExportFrame.RemoveImage>()
 
-            val width = postMask.width
-            val height = postMask.height
-            ExportFrame(
-                keyFrameId = 0,
-                addImages = listOf(
-                    ExportFrame.AddImage(
-                        imageBase64 = compressedImage,
-                        rect = IntRect(
-                            left = 0,
-                            top = 0,
-                            width = width,
-                            height = height
-                        ),
-                        tileSignature = tileSignature
-                    )
-                ),
-                removeImages = null,
-                originalSize = IntSize(
-                    width = width,
-                    height = height
-                ),
-                scale = 1f,
-                format = ExportFrame.ExportFormat.Webp(quality = 30),
-                timestamp = rawFrame.timestamp,
-                orientation = rawFrame.orientation,
-                isKeyframe = true,
-                imageSignature = null,
-                session = session
+            if (tiledFrame.isKeyframe) {
+                removes = currentImages.toMutableList()
+                currentImages.clear()
+                currentImagesIndex.clear()
+                keyFrameId += 1
+            }
+
+            val signature = tiledFrame.imageSignature
+            val useBacktracking =
+                compression is ReplayOptions.CompressionMethod.OverlayTiles &&
+                    compression.backtracking
+
+            if (signature != null && useBacktracking) {
+                val lastKeyNodeIdx = currentImagesIndex[signature]
+                if (lastKeyNodeIdx != null && lastKeyNodeIdx < currentImages.size) {
+                    removes = currentImages.subList(lastKeyNodeIdx + 1, currentImages.size).toMutableList()
+                    currentImages.subList(lastKeyNodeIdx + 1, currentImages.size).clear()
+
+                    val filtered = currentImagesIndex.filterValues { value -> value > lastKeyNodeIdx }
+                    currentImagesIndex.clear()
+                    currentImagesIndex.putAll(filtered)
+                } else {
+                    for ((tileIdx, tile) in tiledFrame.tiles.withIndex()) {
+                        val tileSignature = signature.tileSignatures.getOrNull(tileIdx)
+                        val addImage =
+                            tile.bitmap.asExportedImage(format = format, rect = tile.rect, tileSignature = tileSignature)
+                                ?: return null
+                        adds.add(addImage)
+                        if (tileSignature != null) {
+                            currentImages.add(
+                                ExportFrame.RemoveImage(
+                                    keyFrameId = keyFrameId,
+                                    tileSignature = tileSignature,
+                                )
+                            )
+                        }
+                    }
+                    currentImagesIndex[signature] = currentImages.size - 1
+                }
+            } else {
+                for ((tileIdx, tile) in tiledFrame.tiles.withIndex()) {
+                    val tileSignature = signature?.tileSignatures?.getOrNull(tileIdx)
+                    val addImage = tile.bitmap.asExportedImage(format = format, rect = tile.rect, tileSignature = tileSignature)
+                        ?: return null
+                    adds.add(addImage)
+                    if (tileSignature != null) {
+                        currentImages.add(
+                            ExportFrame.RemoveImage(
+                                keyFrameId = keyFrameId,
+                                tileSignature = tileSignature,
+                            )
+                        )
+                    }
+                }
+                if (signature != null) {
+                    currentImagesIndex[signature] = currentImages.size - 1
+                }
+            }
+
+            if (adds.isEmpty() && removes.isEmpty()) {
+                return null
+            }
+
+            return ExportFrame(
+                keyFrameId = keyFrameId,
+                addImages = adds,
+                removeImages = removes,
+                originalSize = tiledFrame.originalSize,
+                scale = tiledFrame.scale,
+                format = format,
+                timestamp = tiledFrame.timestamp,
+                orientation = tiledFrame.orientation,
+                isKeyframe = tiledFrame.isKeyframe,
+                imageSignature = tiledFrame.imageSignature,
+                session = session,
             )
         } finally {
-            try {
-                outputStream.close()
-            } catch (_: Throwable) {
-            }
-            try {
-                postMask.recycle()
-            } catch (_: Throwable) {
-            }
+            tiledFrame.recycleBitmaps()
         }
+    }
+}
+
+private fun Bitmap.asExportedImage(
+    format: ExportFrame.ExportFormat,
+    rect: IntRect,
+    tileSignature: TileSignature?,
+): ExportFrame.AddImage? {
+    val outputStream = ByteArrayOutputStream()
+    return try {
+        val compressionOk = when (format) {
+            ExportFrame.ExportFormat.Png -> compress(Bitmap.CompressFormat.PNG, 100, outputStream)
+            is ExportFrame.ExportFormat.Jpeg -> compress(
+                Bitmap.CompressFormat.JPEG,
+                (format.quality * 100).toInt().coerceIn(0, 100),
+                outputStream
+            )
+            is ExportFrame.ExportFormat.Webp -> compress(
+                Bitmap.CompressFormat.WEBP,
+                format.quality.coerceIn(0, 100),
+                outputStream
+            )
+        }
+        if (!compressionOk) {
+            return null
+        }
+        val compressedImage = Base64.encodeToString(outputStream.toByteArray(), Base64.NO_WRAP)
+        ExportFrame.AddImage(
+            imageBase64 = compressedImage,
+            rect = rect,
+            tileSignature = tileSignature,
+        )
+    } finally {
+        outputStream.close()
     }
 }

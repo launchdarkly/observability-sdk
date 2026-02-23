@@ -15,6 +15,7 @@ import com.launchdarkly.observability.replay.RRWebCustomDataTag
 import com.launchdarkly.observability.replay.RRWebIncrementalSource
 import com.launchdarkly.observability.replay.RRWebMouseInteraction
 import com.launchdarkly.observability.replay.capture.ExportFrame
+import com.launchdarkly.observability.replay.capture.TileSignature
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
@@ -32,8 +33,7 @@ class RRWebEventGenerator(
 ) {
     companion object {
         private const val RRWEB_DOCUMENT_PADDING = 11
-        private const val RRWEB_INITIAL_IMAGE_NODE_ID = 6
-        private const val RRWEB_BODY_NODE_ID = 5
+        private const val RRWEB_INITIAL_NODE_ID = 16
         private const val DOM_HTML = "html"
         private const val DOM_HEAD = "head"
         private const val DOM_BODY = "body"
@@ -41,14 +41,10 @@ class RRWebEventGenerator(
         private const val DOM_LANG_EN = "en"
         private const val DOM_STYLE = "style"
         private const val DOM_BODY_STYLE = "position:relative;"
-        private const val IMAGE_MIME_TYPE = "image/webp"
         private const val CLICK_TARGET_VALUE = ""
         private const val CLICK_TEXT_CONTENT_VALUE = ""
         private const val CLICK_SELECTOR_VALUE = "view"
     }
-
-    private fun primaryImage(captureEvent: ExportFrame): ExportFrame.AddImage? =
-        captureEvent.addImages.firstOrNull()
 
     /**
      * Sequence ID for the events being generated.
@@ -57,14 +53,20 @@ class RRWebEventGenerator(
      */
     private var lastSid = 0
     var accumulatedCanvasSize: Int = 0
-    private var currentImageNodeId: Int = RRWEB_INITIAL_IMAGE_NODE_ID
-    private var nextDynamicNodeId: Int = RRWEB_INITIAL_IMAGE_NODE_ID + 1
+    private var lastNodeId: Int = RRWEB_INITIAL_NODE_ID
+    private var imageNodeId: Int? = null
+    private var bodyNodeId: Int? = null
+    private var knownKeyFrameId: Int? = null
+    private val nodeIds = mutableMapOf<TileSignature, Int>()
 
     data class State(
         val lastSid: Int = 0,
         val generatingCanvasSize: Int = 0,
-        val currentImageNodeId: Int = RRWEB_INITIAL_IMAGE_NODE_ID,
-        val nextDynamicNodeId: Int = RRWEB_INITIAL_IMAGE_NODE_ID + 1,
+        val lastNodeId: Int = RRWEB_INITIAL_NODE_ID,
+        val imageNodeId: Int? = null,
+        val bodyNodeId: Int? = null,
+        val knownKeyFrameId: Int? = null,
+        val nodeIds: Map<TileSignature, Int> = emptyMap(),
     )
 
     private fun nextSid(): Int {
@@ -72,138 +74,177 @@ class RRWebEventGenerator(
         return lastSid
     }
 
+    private fun nextNodeId(): Int {
+        lastNodeId++
+        return lastNodeId
+    }
+
+    private fun imageMimeType(format: ExportFrame.ExportFormat): String =
+        when (format) {
+            ExportFrame.ExportFormat.Png -> "image/png"
+            is ExportFrame.ExportFormat.Jpeg -> "image/jpeg"
+            is ExportFrame.ExportFormat.Webp -> "image/webp"
+        }
+
+    private fun tileNode(exportFrame: ExportFrame, image: ExportFrame.AddImage): Pair<EventNode, Int> {
+        val tileCanvasId = nextNodeId()
+        image.tileSignature?.let { nodeIds[it] = tileCanvasId }
+        val dataUrl = "data:${imageMimeType(exportFrame.format)};base64,${image.imageBase64}"
+        val node = EventNode(
+            id = tileCanvasId,
+            type = NodeType.ELEMENT,
+            tagName = "img",
+            attributes = mapOf(
+                "src" to dataUrl,
+                "width" to "${image.rect.width}",
+                "height" to "${image.rect.height}",
+                "style" to "position:absolute;left:${image.rect.left}px;top:${image.rect.top}px;pointer-events:none;",
+            ),
+            childNodes = emptyList(),
+        )
+        return node to dataUrl.length
+    }
+
+    private fun addCommandNodes(exportFrame: ExportFrame): List<Event> {
+        val bodyId = bodyNodeId ?: return emptyList()
+        if (exportFrame.isKeyframe) {
+            nodeIds.clear()
+        }
+        if (!exportFrame.isKeyframe && exportFrame.keyFrameId != knownKeyFrameId) {
+            // Drop frame, it cannot be reconstructed from currently known keyframe state.
+            return emptyList()
+        }
+
+        var totalCanvasSize = 0
+        val adds = exportFrame.addImages.map { image ->
+            val (node, canvasSize) = tileNode(exportFrame, image)
+            totalCanvasSize += canvasSize
+            Addition(parentId = bodyId, nextId = null, node = node)
+        }
+        val removes = exportFrame.removeImages?.mapNotNull { removal ->
+            nodeIds[removal.tileSignature]?.let { nodeId ->
+                Removal(parentId = bodyId, id = nodeId)
+            }
+        } ?: emptyList()
+
+        if (exportFrame.isKeyframe) {
+            adds.firstOrNull()?.node?.id?.let { firstId ->
+                if (firstId != imageNodeId) {
+                    imageNodeId = firstId
+                }
+            }
+        }
+
+        val mutationEvent = Event(
+            type = EventType.INCREMENTAL_SNAPSHOT,
+            timestamp = exportFrame.timestamp,
+            sid = nextSid(),
+            data = EventDataUnion.StandardEventData(
+                EventData(
+                    source = IncrementalSource.MUTATION,
+                    adds = adds,
+                    removes = removes,
+                )
+            ),
+        )
+        accumulatedCanvasSize += totalCanvasSize + canvasDrawEntourage
+        return listOf(mutationEvent)
+    }
+
     fun getState(): State = State(
         lastSid = lastSid,
         generatingCanvasSize = accumulatedCanvasSize,
-        currentImageNodeId = currentImageNodeId,
-        nextDynamicNodeId = nextDynamicNodeId,
+        lastNodeId = lastNodeId,
+        imageNodeId = imageNodeId,
+        bodyNodeId = bodyNodeId,
+        knownKeyFrameId = knownKeyFrameId,
+        nodeIds = nodeIds.toMap(),
     )
 
     fun restoreState(state: State) {
         lastSid = state.lastSid
         accumulatedCanvasSize = state.generatingCanvasSize
-        currentImageNodeId = state.currentImageNodeId
-        nextDynamicNodeId = state.nextDynamicNodeId
+        lastNodeId = state.lastNodeId
+        imageNodeId = state.imageNodeId
+        bodyNodeId = state.bodyNodeId
+        knownKeyFrameId = state.knownKeyFrameId
+        nodeIds.clear()
+        nodeIds.putAll(state.nodeIds)
     }
 
     /**
      * Generates events for an incremental capture. Used after [generateCaptureFullEvents] has already been called
      * for a previous capture in the same session.
      */
-    fun generateCaptureIncrementalEvents(captureEvent: ExportFrame): List<Event> {
-        val addImage = primaryImage(captureEvent) ?: return emptyList()
-        val dataUrl = "data:$IMAGE_MIME_TYPE;base64,${addImage.imageBase64}"
-        val previousImageNodeId = currentImageNodeId
-        val newImageNodeId = nextDynamicNodeId++
-
-        val imageNode = EventNode(
-            id = newImageNodeId,
-            type = NodeType.ELEMENT,
-            tagName = "img",
-            attributes = mapOf(
-                "src" to dataUrl,
-                "width" to "${captureEvent.originalSize.width}",
-                "height" to "${captureEvent.originalSize.height}",
-                "style" to "position:absolute;left:0px;top:0px;pointer-events:none;",
-            ),
-            childNodes = emptyList(),
-        )
-
-        val mutationEvent = Event(
-            type = EventType.INCREMENTAL_SNAPSHOT,
-            timestamp = captureEvent.timestamp,
-            sid = nextSid(),
-            data = EventDataUnion.StandardEventData(
-                EventData(
-                    source = IncrementalSource.MUTATION,
-                    adds = listOf(
-                        Addition(
-                            parentId = RRWEB_BODY_NODE_ID,
-                            nextId = null,
-                            node = imageNode,
-                        )
-                    ),
-                    removes = listOf(
-                        Removal(
-                            parentId = RRWEB_BODY_NODE_ID,
-                            id = previousImageNodeId,
-                        )
-                    ),
-                )
-            ),
-        )
-
-        currentImageNodeId = newImageNodeId
-        accumulatedCanvasSize += dataUrl.length + canvasDrawEntourage
-        return listOf(mutationEvent)
+    fun generateCaptureIncrementalEvents(exportFrame: ExportFrame): List<Event> {
+        if (exportFrame.isKeyframe) {
+            knownKeyFrameId = exportFrame.keyFrameId
+        }
+        return addCommandNodes(exportFrame)
     }
 
     /**
      * Generates events for a full capture. May be invoked multiple times for a single session if a substantial
      * change occurs requiring a full capture to be sent.
      */
-    fun generateCaptureFullEvents(captureEvent: ExportFrame): List<Event> {
-        val addImage = primaryImage(captureEvent) ?: return emptyList()
+    fun generateCaptureFullEvents(exportFrame: ExportFrame): List<Event> {
+        if (exportFrame.addImages.isEmpty()) return emptyList()
         val eventBatch = mutableListOf<Event>()
+        knownKeyFrameId = exportFrame.keyFrameId
 
         val metaEvent = Event(
             type = EventType.META,
-            timestamp = captureEvent.timestamp,
+            timestamp = exportFrame.timestamp,
             sid = nextSid(),
             data = EventDataUnion.StandardEventData(
                 EventData(
-                    width = captureEvent.originalSize.width + RRWEB_DOCUMENT_PADDING * 2,
-                    height = captureEvent.originalSize.height + RRWEB_DOCUMENT_PADDING * 2,
+                    width = exportFrame.originalSize.width + RRWEB_DOCUMENT_PADDING * 2,
+                    height = exportFrame.originalSize.height + RRWEB_DOCUMENT_PADDING * 2,
                     )
             ),
         )
         eventBatch.add(metaEvent)
 
+        lastNodeId = 0
+        var totalCanvasSize = 0
+        val documentNodeId = nextNodeId()
+        val headNodeId = nextNodeId()
+        val currentBodyNodeId = nextNodeId()
+        val tileNodes = exportFrame.addImages.map { image ->
+            val (node, canvasSize) = tileNode(exportFrame, image)
+            totalCanvasSize += canvasSize
+            node
+        }
+        val htmlNodeId = nextNodeId()
+
         val snapshotEvent = Event(
             type = EventType.FULL_SNAPSHOT,
-            timestamp = captureEvent.timestamp,
+            timestamp = exportFrame.timestamp,
             sid = nextSid(),
             data = EventDataUnion.StandardEventData(
                 EventData(
                     node = EventNode(
-                        id = 1,
+                        id = documentNodeId,
                         type = NodeType.DOCUMENT,
                         childNodes = listOf(
                             EventNode(
-                                id = 2,
-                                type = NodeType.DOCUMENT_TYPE,
-                                name = "html",
-                            ),
-                            EventNode(
-                                id = 3,
+                                id = htmlNodeId,
                                 type = NodeType.ELEMENT,
                                 tagName = DOM_HTML,
                                 attributes = mapOf(DOM_LANG to DOM_LANG_EN),
                                 childNodes = listOf(
                                     EventNode(
-                                        id = 4,
+                                        id = headNodeId,
                                         type = NodeType.ELEMENT,
                                         tagName = DOM_HEAD,
                                         attributes = emptyMap(),
                                     ),
                                     EventNode(
-                                        id = 5,
+                                        id = currentBodyNodeId,
                                         type = NodeType.ELEMENT,
                                         tagName = DOM_BODY,
                                         attributes = mapOf(DOM_STYLE to DOM_BODY_STYLE),
-                                        childNodes = listOf(
-                                            EventNode(
-                                                id = RRWEB_INITIAL_IMAGE_NODE_ID,
-                                                type = NodeType.ELEMENT,
-                                                tagName = "img",
-                                                attributes = mapOf(
-                                                    "rr_dataURL" to "data:$IMAGE_MIME_TYPE;base64,${addImage.imageBase64}",
-                                                    "width" to "${captureEvent.originalSize.width}",
-                                                    "height" to "${captureEvent.originalSize.height}"
-                                                ),
-                                                childNodes = listOf(),
-                                            )
-                                        )
+                                        childNodes = tileNodes
                                     )
                                 )
                             )
@@ -213,27 +254,26 @@ class RRWebEventGenerator(
             ),
         )
 
-        // starting again canvas size
-        accumulatedCanvasSize = addImage.imageBase64.length + canvasDrawEntourage
-        currentImageNodeId = RRWEB_INITIAL_IMAGE_NODE_ID
-        nextDynamicNodeId = RRWEB_INITIAL_IMAGE_NODE_ID + 1
+        imageNodeId = tileNodes.firstOrNull()?.id
+        bodyNodeId = currentBodyNodeId
+        accumulatedCanvasSize = totalCanvasSize + canvasDrawEntourage
         eventBatch.add(snapshotEvent)
 
         val viewportEvent = Event(
             type = EventType.CUSTOM,
-            timestamp = captureEvent.timestamp,
+            timestamp = exportFrame.timestamp,
             sid = nextSid(),
             data = EventDataUnion.CustomEventDataWrapper(
                 buildJsonObject {
                     put("tag", RRWebCustomDataTag.VIEWPORT.wireValue)
                     putJsonObject("payload") {
-                        put("width", captureEvent.originalSize.width)
-                        put("height", captureEvent.originalSize.height)
-                        put("availWidth", captureEvent.originalSize.width)
-                        put("availHeight", captureEvent.originalSize.height)
+                        put("width", exportFrame.originalSize.width)
+                        put("height", exportFrame.originalSize.height)
+                        put("availWidth", exportFrame.originalSize.width)
+                        put("availHeight", exportFrame.originalSize.height)
                         put("colorDepth", 30)
                         put("pixelDepth", 30)
-                        put("orientation", 0)
+                        put("orientation", exportFrame.orientation)
                     }
                 }
             )
@@ -263,7 +303,7 @@ class RRWebEventGenerator(
                                 put("source", RRWebIncrementalSource.MOUSE_INTERACTION.code)
                                 putJsonArray("texts") {}
                                 put("type", RRWebMouseInteraction.TOUCH_START.code)
-                                put("id", currentImageNodeId)
+                                imageNodeId?.let { put("id", it) }
                                 put("x", firstPosition.x + RRWEB_DOCUMENT_PADDING)
                                 put("y", firstPosition.y + RRWEB_DOCUMENT_PADDING)
                             }
@@ -301,7 +341,7 @@ class RRWebEventGenerator(
                                 put("source", RRWebIncrementalSource.MOUSE_INTERACTION.code)
                                 putJsonArray("texts") {}
                                 put("type", RRWebMouseInteraction.TOUCH_END.code)
-                                put("id", currentImageNodeId)
+                                imageNodeId?.let { put("id", it) }
                                 put("x", lastPosition.x + RRWEB_DOCUMENT_PADDING)
                                 put("y", lastPosition.y + RRWEB_DOCUMENT_PADDING)
                             }
@@ -324,7 +364,7 @@ class RRWebEventGenerator(
                                     put("positions", buildJsonArray {
                                         add(
                                             buildJsonObject {
-                                                put("id", currentImageNodeId)
+                                                imageNodeId?.let { put("id", it) }
                                                 put("timeOffset", 0)
                                                 put("x", position.x + RRWEB_DOCUMENT_PADDING)
                                                 put("y", position.y + RRWEB_DOCUMENT_PADDING)

@@ -7,7 +7,7 @@ data class ExportFrame(
     val keyFrameId: Int,
     val addImages: List<AddImage>,
     val removeImages: List<RemoveImage>?,
-    val originalSize: FrameSize,
+    val originalSize: IntSize,
     val scale: Float,
     val format: ExportFormat,
     val timestamp: Long,
@@ -27,12 +27,12 @@ data class ExportFrame(
         addImages = listOf(
             AddImage(
                 imageBase64 = imageBase64,
-                rect = FrameRect(left = 0, top = 0, width = origWidth, height = origHeight),
+                rect = IntRect(left = 0, top = 0, width = origWidth, height = origHeight),
                 tileSignature = null
             )
         ),
         removeImages = null,
-        originalSize = FrameSize(width = origWidth, height = origHeight),
+        originalSize = IntSize(width = origWidth, height = origHeight),
         scale = 1f,
         format = ExportFormat.Webp(quality = 30),
         timestamp = timestamp,
@@ -49,24 +49,8 @@ data class ExportFrame(
 
     data class AddImage(
         val imageBase64: String,
-        val rect: FrameRect,
+        val rect: IntRect,
         val tileSignature: TileSignature?,
-    )
-
-    data class FrameRect(
-        val left: Int,
-        val top: Int,
-        val width: Int,
-        val height: Int,
-    )
-
-    data class FrameSize(
-        val width: Int,
-        val height: Int,
-    )
-
-    data class ImageSignature(
-        val value: String,
     )
 
     sealed class ExportFormat {

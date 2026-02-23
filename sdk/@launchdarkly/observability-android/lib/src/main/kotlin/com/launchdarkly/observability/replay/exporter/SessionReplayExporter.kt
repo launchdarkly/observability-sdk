@@ -169,10 +169,12 @@ class SessionReplayExporter(
 
         val stateChanged = capture.session != lastCaptureState.sessionId ||
             capture.originalSize.height != lastCaptureState.height ||
-            capture.originalSize.width != lastCaptureState.width ||
-            eventGenerator.accumulatedCanvasSize >= canvasBufferLimit
+            capture.originalSize.width != lastCaptureState.width
 
-        if (stateChanged) {
+        val shouldForceFullByCanvasLimit =
+            eventGenerator.accumulatedCanvasSize >= canvasBufferLimit && capture.isKeyframe
+
+        if (stateChanged || shouldForceFullByCanvasLimit) {
             lastCaptureState = LastCaptureState(
                 sessionId = capture.session,
                 height = capture.originalSize.height,
