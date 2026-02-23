@@ -1,5 +1,12 @@
 # highlight.run
 
+## [9.27.0](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-9.26.1...highlight.run-9.27.0) (2026-02-23)
+
+
+### Features
+
+* add session replay support for react native ([#357](https://github.com/launchdarkly/observability-sdk/issues/357)) ([7f6ed30](https://github.com/launchdarkly/observability-sdk/commit/7f6ed3041ed641be47b1f5c2e0d30d4ef1727bd0))
+
 ## [9.26.1](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-9.26.0...highlight.run-9.26.1) (2026-02-13)
 
 
