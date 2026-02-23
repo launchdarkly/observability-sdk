@@ -41,6 +41,7 @@ class RRWebEventGenerator(
         private const val DOM_LANG_EN = "en"
         private const val DOM_STYLE = "style"
         private const val DOM_BODY_STYLE = "position:relative;"
+        private const val IMAGE_MIME_TYPE = "image/webp"
         private const val CLICK_TARGET_VALUE = ""
         private const val CLICK_TEXT_CONTENT_VALUE = ""
         private const val CLICK_SELECTOR_VALUE = "view"
@@ -87,7 +88,7 @@ class RRWebEventGenerator(
      * for a previous capture in the same session.
      */
     fun generateCaptureIncrementalEvents(captureEvent: CaptureEvent): List<Event> {
-        val dataUrl = "data:image/jpeg;base64,${captureEvent.imageBase64}"
+        val dataUrl = "data:$IMAGE_MIME_TYPE;base64,${captureEvent.imageBase64}"
         val previousImageNodeId = currentImageNodeId
         val newImageNodeId = nextDynamicNodeId++
 
@@ -191,7 +192,7 @@ class RRWebEventGenerator(
                                                 type = NodeType.ELEMENT,
                                                 tagName = "img",
                                                 attributes = mapOf(
-                                                    "rr_dataURL" to "data:image/jpeg;base64,${captureEvent.imageBase64}",
+                                                    "rr_dataURL" to "data:$IMAGE_MIME_TYPE;base64,${captureEvent.imageBase64}",
                                                     "width" to "${captureEvent.origWidth}",
                                                     "height" to "${captureEvent.origHeight}"
                                                 ),
