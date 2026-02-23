@@ -12,12 +12,12 @@ class ExportDiffManager(
 ) {
     private val currentImages = mutableListOf<ExportFrame.RemoveImage>()
     private val currentImagesIndex = mutableMapOf<ImageSignature, Int>()
-    private val signatureLock = Any()
+    private val lock = Any()
     private val format = ExportFrame.ExportFormat.Webp(quality = 30)
     private var keyFrameId = 0
 
     fun createCaptureEvent(rawFrame: ImageCaptureService.RawFrame, session: String): ExportFrame? {
-        synchronized(signatureLock) {
+        synchronized(lock) {
             val tiledFrame = tileDiffManager.computeTiledFrame(rawFrame) ?: return null
             return createCaptureEventInternal(tiledFrame, session)
         }
@@ -46,7 +46,8 @@ class ExportDiffManager(
                     removes = currentImages.subList(lastKeyNodeIdx + 1, currentImages.size).toMutableList()
                     currentImages.subList(lastKeyNodeIdx + 1, currentImages.size).clear()
 
-                    val filtered = currentImagesIndex.filterValues { value -> value > lastKeyNodeIdx }
+                    // Keep only signatures that still point into the retained prefix.
+                    val filtered = currentImagesIndex.filterValues { value -> value <= lastKeyNodeIdx }
                     currentImagesIndex.clear()
                     currentImagesIndex.putAll(filtered)
                 } else {
