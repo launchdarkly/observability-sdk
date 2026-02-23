@@ -2,16 +2,18 @@ package com.launchdarkly.observability.replay.capture
 
 import android.graphics.Bitmap
 import android.util.Base64
+import com.launchdarkly.observability.replay.ReplayOptions
 import java.io.ByteArrayOutputStream
 
 class ExportDiffManager(
+    private val compression: ReplayOptions.CompressionMethod,
     private val tileSignatureManager: TileSignatureManager = TileSignatureManager(),
 ) {
     @Volatile
     private var tileSignature: TileSignature? = null
 
     fun createCaptureEvent(rawFrame: ImageCaptureService.RawFrame, session: String): ExportFrame? {
-        val newSignature = tileSignatureManager.compute(rawFrame.bitmap, 64)
+        val newSignature = tileSignatureManager.compute(rawFrame.bitmap, 64, 22)
         if (newSignature != null && newSignature == tileSignature) {
             // the similar bitmap not send
             if (!rawFrame.bitmap.isRecycled) {

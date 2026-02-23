@@ -28,14 +28,16 @@ class TileSignatureManager {
  * Computes a tile-based signature for the given bitmap. Not thread-safe.
  *
  * @param bitmap The bitmap to compute a signature for.
- * @param tileSize The size of the tiles to use for the signature.
+ * @param tileWidth The width of the tiles to use for the signature.
+ * @param tileHeight The height of the tiles to use for the signature.
  * @return The tile signature.
  */
     fun compute(
         bitmap: Bitmap,
-        tileSize: Int
+        tileWidth: Int,
+        tileHeight: Int
     ): TileSignature? {
-        if (tileSize <= 0) return null
+        if (tileWidth <= 0 || tileHeight <= 0) return null
         val width = bitmap.width
         val height = bitmap.height
         if (width <= 0 || height <= 0) {
@@ -49,19 +51,19 @@ class TileSignatureManager {
         val pixels = pixelBuffer
         bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
 
-        val tilesX = (width + tileSize - 1) / tileSize
-        val tilesY = (height + tileSize - 1) / tileSize
+        val tilesX = (width + tileWidth - 1) / tileWidth
+        val tilesY = (height + tileHeight - 1) / tileHeight
         val tileCount = tilesX * tilesY
         val tileHashes = LongArray(tileCount)
 
         var tileIndex = 0
         for(ty in 0 until tilesY) {
-            val startY = ty * tileSize
-            val endY = minOf(startY + tileSize, height)
+            val startY = ty * tileHeight
+            val endY = minOf(startY + tileHeight, height)
 
             for(tx in 0 until tilesX) {
-                val startX = tx * tileSize
-                val endX = minOf(startX + tileSize, width)
+                val startX = tx * tileWidth
+                val endX = minOf(startX + tileWidth, width)
                 tileHashes[tileIndex] = hashTile(
                     pixels = pixels,
                     width = width,
