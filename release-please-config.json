@@ -70,6 +70,13 @@
 			"include-v-in-tag": false,
 			"include-component-in-tag": true
 		},
+		"sdk/@launchdarkly/react-native-ld-session-replay": {
+			"package-name": "@launchdarkly/session-replay-react-native",
+			"release-type": "node",
+			"versioning": "default",
+			"include-v-in-tag": false,
+			"include-component-in-tag": true
+		},
 		"sdk/highlight-run": {
 			"package-name": "highlight.run",
 			"release-type": "node",
