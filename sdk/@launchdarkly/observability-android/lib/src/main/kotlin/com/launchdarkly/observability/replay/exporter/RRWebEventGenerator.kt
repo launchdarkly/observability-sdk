@@ -8,11 +8,16 @@ import com.launchdarkly.observability.replay.EventNode
 import com.launchdarkly.observability.replay.EventType
 import com.launchdarkly.observability.replay.InteractionEvent
 import com.launchdarkly.observability.replay.NodeType
+import com.launchdarkly.observability.replay.RRWebCustomDataTag
+import com.launchdarkly.observability.replay.RRWebIncrementalSource
+import com.launchdarkly.observability.replay.RRWebMouseInteraction
 import com.launchdarkly.observability.replay.capture.CaptureEvent
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonArray
+import kotlinx.serialization.json.putJsonObject
 
 /**
  * Generates RRWeb-compatible events for session replay.
@@ -24,6 +29,10 @@ class RRWebEventGenerator(
 ) {
     companion object {
         private const val RRWEB_DOCUMENT_PADDING = 11
+        private const val RRWEB_CANVAS_NODE_ID = 6
+        private const val CLICK_TARGET_VALUE = ""
+        private const val CLICK_TEXT_CONTENT_VALUE = ""
+        private const val CLICK_SELECTOR_VALUE = "view"
     }
 
     /**
@@ -66,9 +75,56 @@ class RRWebEventGenerator(
             timestamp = captureEvent.timestamp,
             sid = nextSid(),
             data = EventDataUnion.CustomEventDataWrapper(
-                Json.parseToJsonElement(
-                    """{"source":9,"id":6,"type":0,"commands":[{"property":"clearRect","args":[0,0,${captureEvent.origWidth},${captureEvent.origHeight}]},{"property":"drawImage","args":[{"rr_type":"ImageBitmap","args":[{"rr_type":"Blob","data":[{"rr_type":"ArrayBuffer","base64":"${captureEvent.imageBase64}"}],"type":"image/jpeg"}]},0,0,${captureEvent.origWidth},${captureEvent.origHeight}]}]}"""
-                )
+                buildJsonObject {
+                    put("source", RRWebIncrementalSource.CANVAS_MUTATION.code)
+                    put("id", RRWEB_CANVAS_NODE_ID)
+                    put("type", 0)
+                    put("commands", buildJsonArray {
+                        add(
+                            buildJsonObject {
+                                put("property", "clearRect")
+                                put("args", buildJsonArray {
+                                    add(JsonPrimitive(0))
+                                    add(JsonPrimitive(0))
+                                    add(JsonPrimitive(captureEvent.origWidth))
+                                    add(JsonPrimitive(captureEvent.origHeight))
+                                })
+                            }
+                        )
+                        add(
+                            buildJsonObject {
+                                put("property", "drawImage")
+                                put("args", buildJsonArray {
+                                    add(
+                                        buildJsonObject {
+                                            put("rr_type", "ImageBitmap")
+                                            put("args", buildJsonArray {
+                                                add(
+                                                    buildJsonObject {
+                                                        put("rr_type", "Blob")
+                                                        put("data", buildJsonArray {
+                                                            add(
+                                                                buildJsonObject {
+                                                                    put("rr_type", "ArrayBuffer")
+                                                                    put("base64", captureEvent.imageBase64)
+                                                                }
+                                                            )
+                                                        })
+                                                        put("type", "image/jpeg")
+                                                    }
+                                                )
+                                            })
+                                        }
+                                    )
+                                    add(JsonPrimitive(0))
+                                    add(JsonPrimitive(0))
+                                    add(JsonPrimitive(captureEvent.origWidth))
+                                    add(JsonPrimitive(captureEvent.origHeight))
+                                })
+                            }
+                        )
+                    })
+                }
             )
         )
         accumulatedCanvasSize += captureEvent.imageBase64.length + canvasDrawEntourage
@@ -160,9 +216,18 @@ class RRWebEventGenerator(
             timestamp = captureEvent.timestamp,
             sid = nextSid(),
             data = EventDataUnion.CustomEventDataWrapper(
-                Json.parseToJsonElement(
-                    """{"tag":"Viewport","payload":{"width":${captureEvent.origWidth},"height":${captureEvent.origHeight},"availWidth":${captureEvent.origWidth},"availHeight":${captureEvent.origHeight},"colorDepth":30,"pixelDepth":30,"orientation":0}}"""
-                )
+                buildJsonObject {
+                    put("tag", RRWebCustomDataTag.VIEWPORT.wireValue)
+                    putJsonObject("payload") {
+                        put("width", captureEvent.origWidth)
+                        put("height", captureEvent.origHeight)
+                        put("availWidth", captureEvent.origWidth)
+                        put("availHeight", captureEvent.origHeight)
+                        put("colorDepth", 30)
+                        put("pixelDepth", 30)
+                        put("orientation", 0)
+                    }
+                }
             )
         )
         eventBatch.add(viewportEvent)
@@ -186,7 +251,14 @@ class RRWebEventGenerator(
                         timestamp = firstPosition.timestamp,
                         sid = nextSid(),
                         data = EventDataUnion.CustomEventDataWrapper(
-                            Json.parseToJsonElement("""{"source":2,"texts": [],"type":7,"id":6,"x":${firstPosition.x + RRWEB_DOCUMENT_PADDING}, "y":${firstPosition.y + RRWEB_DOCUMENT_PADDING}}""")
+                            buildJsonObject {
+                                put("source", RRWebIncrementalSource.MOUSE_INTERACTION.code)
+                                putJsonArray("texts") {}
+                                put("type", RRWebMouseInteraction.TOUCH_START.code)
+                                put("id", RRWEB_CANVAS_NODE_ID)
+                                put("x", firstPosition.x + RRWEB_DOCUMENT_PADDING)
+                                put("y", firstPosition.y + RRWEB_DOCUMENT_PADDING)
+                            }
                         )
                     )
                 )
@@ -196,7 +268,14 @@ class RRWebEventGenerator(
                         timestamp = firstPosition.timestamp,
                         sid = nextSid(),
                         data = EventDataUnion.CustomEventDataWrapper(
-                            Json.parseToJsonElement("""{"tag":"Click","payload":{"clickTarget":"BogusName","clickTextContent":"","clickSelector":"view"}}""")
+                            buildJsonObject {
+                                put("tag", RRWebCustomDataTag.CLICK.wireValue)
+                                putJsonObject("payload") {
+                                    put("clickTarget", CLICK_TARGET_VALUE)
+                                    put("clickTextContent", CLICK_TEXT_CONTENT_VALUE)
+                                    put("clickSelector", CLICK_SELECTOR_VALUE)
+                                }
+                            }
                         )
                     )
                 )
@@ -210,7 +289,14 @@ class RRWebEventGenerator(
                         timestamp = lastPosition.timestamp,
                         sid = nextSid(),
                         data = EventDataUnion.CustomEventDataWrapper(
-                            Json.parseToJsonElement("""{"source":2,"texts": [],"type":9,"id":6,"x":${lastPosition.x + RRWEB_DOCUMENT_PADDING}, "y":${lastPosition.y + RRWEB_DOCUMENT_PADDING}}""")
+                            buildJsonObject {
+                                put("source", RRWebIncrementalSource.MOUSE_INTERACTION.code)
+                                putJsonArray("texts") {}
+                                put("type", RRWebMouseInteraction.TOUCH_END.code)
+                                put("id", RRWEB_CANVAS_NODE_ID)
+                                put("x", lastPosition.x + RRWEB_DOCUMENT_PADDING)
+                                put("y", lastPosition.y + RRWEB_DOCUMENT_PADDING)
+                            }
                         )
                     )
                 )
@@ -225,7 +311,19 @@ class RRWebEventGenerator(
                             timestamp = position.timestamp,
                             sid = nextSid(),
                             data = EventDataUnion.CustomEventDataWrapper(
-                                Json.parseToJsonElement("""{"positions": [{"id":6,"timeOffset":0,"x":${position.x + RRWEB_DOCUMENT_PADDING},"y":${position.y + RRWEB_DOCUMENT_PADDING}}], "source": 6}""")
+                                buildJsonObject {
+                                    put("source", RRWebIncrementalSource.TOUCH_MOVE.code)
+                                    put("positions", buildJsonArray {
+                                        add(
+                                            buildJsonObject {
+                                                put("id", RRWEB_CANVAS_NODE_ID)
+                                                put("timeOffset", 0)
+                                                put("x", position.x + RRWEB_DOCUMENT_PADDING)
+                                                put("y", position.y + RRWEB_DOCUMENT_PADDING)
+                                            }
+                                        )
+                                    })
+                                }
                             )
                         )
                     )
@@ -250,7 +348,7 @@ class RRWebEventGenerator(
         }
 
         val customData = buildJsonObject {
-            put("tag", JsonPrimitive("Identify"))
+            put("tag", JsonPrimitive(RRWebCustomDataTag.IDENTIFY.wireValue))
             // Payload must be a JSON string per rrweb Custom event contract used by Swift
             put("payload", JsonPrimitive(userJSONString))
         }
