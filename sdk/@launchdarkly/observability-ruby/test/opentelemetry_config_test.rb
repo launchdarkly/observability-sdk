@@ -71,8 +71,8 @@ class OpenTelemetryConfigTest < Minitest::Test
 
     config.configure
 
-    resource = OpenTelemetry.tracer_provider.resource
-    assert_equal @project_id, resource.attributes['launchdarkly.project_id']
+    attrs = resource_attributes
+    assert_equal @project_id, attrs['launchdarkly.project_id']
   end
 
   def test_resource_includes_environment
@@ -86,8 +86,8 @@ class OpenTelemetryConfigTest < Minitest::Test
 
     config.configure
 
-    resource = OpenTelemetry.tracer_provider.resource
-    assert_equal 'production', resource.attributes['deployment.environment']
+    attrs = resource_attributes
+    assert_equal 'production', attrs['deployment.environment']
   end
 
   def test_resource_includes_sdk_info
@@ -101,11 +101,11 @@ class OpenTelemetryConfigTest < Minitest::Test
 
     config.configure
 
-    resource = OpenTelemetry.tracer_provider.resource
-    assert_equal 'opentelemetry', resource.attributes['telemetry.sdk.name']
-    assert_equal 'ruby', resource.attributes['telemetry.sdk.language']
-    assert_equal 'launchdarkly-observability-ruby', resource.attributes['telemetry.distro.name']
-    assert_equal LaunchDarklyObservability::VERSION, resource.attributes['telemetry.distro.version']
+    attrs = resource_attributes
+    assert_equal 'opentelemetry', attrs['telemetry.sdk.name']
+    assert_equal 'ruby', attrs['telemetry.sdk.language']
+    assert_equal 'launchdarkly-observability-ruby', attrs['telemetry.distro.name']
+    assert_equal LaunchDarklyObservability::VERSION, attrs['telemetry.distro.version']
   end
 
   def test_resource_includes_service_name_when_provided
@@ -120,8 +120,8 @@ class OpenTelemetryConfigTest < Minitest::Test
 
     config.configure
 
-    resource = OpenTelemetry.tracer_provider.resource
-    assert_equal 'my-awesome-service', resource.attributes['service.name']
+    attrs = resource_attributes
+    assert_equal 'my-awesome-service', attrs['service.name']
   end
 
   def test_resource_includes_service_version_when_provided
@@ -136,8 +136,8 @@ class OpenTelemetryConfigTest < Minitest::Test
 
     config.configure
 
-    resource = OpenTelemetry.tracer_provider.resource
-    assert_equal '2.0.0', resource.attributes['service.version']
+    attrs = resource_attributes
+    assert_equal '2.0.0', attrs['service.version']
   end
 
   def test_flush_does_not_raise
@@ -189,5 +189,12 @@ class OpenTelemetryConfigTest < Minitest::Test
     spans = exporter.finished_spans
     assert_equal 1, spans.length
     assert_equal 'test-span', spans.first.name
+  end
+
+  private
+
+  def resource_attributes
+    resource = OpenTelemetry.tracer_provider.resource
+    resource.send(:attributes)
   end
 end

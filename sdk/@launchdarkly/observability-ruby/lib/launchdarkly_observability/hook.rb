@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require 'json'
 require 'launchdarkly-server-sdk'
 
 module LaunchDarklyObservability
@@ -138,23 +139,33 @@ module LaunchDarklyObservability
     end
 
     def extract_context_kind(context)
-      if context.respond_to?(:kind)
-        context.kind.to_s
-      elsif context.respond_to?(:kinds)
+      if context.respond_to?(:multi_kind?) && context.multi_kind?
         context.kinds.join(',')
+      elsif context.respond_to?(:kind)
+        context.kind.to_s
       else
         'unknown'
       end
     end
 
     def extract_context_key(context)
-      if context.respond_to?(:key)
+      if context.respond_to?(:multi_kind?) && context.multi_kind?
+        context.kinds.map { |k| context.individual_context(k)&.key }.compact.join(',')
+      elsif context.respond_to?(:key)
         context.key.to_s
-      elsif context.respond_to?(:keys)
-        # For multi-context, join the keys
-        context.keys.values.join(',')
       else
         'unknown'
+      end
+    end
+
+    def serialize_value(value)
+      case value
+      when String, Numeric, TrueClass, FalseClass, NilClass
+        value.to_s
+      when Hash, Array
+        value.to_json
+      else
+        value.to_s
       end
     end
 
@@ -164,17 +175,7 @@ module LaunchDarklyObservability
         span.set_attribute(FEATURE_FLAG_RESULT_VARIANT, detail.variation_index.to_s)
       end
 
-      # Use semantic convention for result.value
-      value = detail.value
-      value_str = case value
-                  when String, Numeric, TrueClass, FalseClass, NilClass
-                    value.to_s
-                  when Hash, Array
-                    value.to_json
-                  else
-                    value.to_s
-                  end
-      span.set_attribute(FEATURE_FLAG_RESULT_VALUE, value_str)
+      span.set_attribute(FEATURE_FLAG_RESULT_VALUE, serialize_value(detail.value))
 
       # Evaluation reason - use semantic convention
       reason = detail.reason
@@ -184,7 +185,7 @@ module LaunchDarklyObservability
       if reason.respond_to?(:kind)
         reason_value = map_reason_kind_to_semconv(reason.kind)
         span.set_attribute(FEATURE_FLAG_RESULT_REASON, reason_value)
-        
+
         # Also add LaunchDarkly-specific reason.kind for compatibility
         span.set_attribute(LD_REASON_KIND, reason.kind.to_s)
       end
@@ -230,17 +231,7 @@ module LaunchDarklyObservability
         event_attributes[FEATURE_FLAG_RESULT_VARIANT] = detail.variation_index.to_s
       end
 
-      # Add value (serialized to string for complex types)
-      value = detail.value
-      value_str = case value
-                  when String, Numeric, TrueClass, FalseClass, NilClass
-                    value.to_s
-                  when Hash, Array
-                    value.to_json
-                  else
-                    value.to_s
-                  end
-      event_attributes[FEATURE_FLAG_RESULT_VALUE] = value_str
+      event_attributes[FEATURE_FLAG_RESULT_VALUE] = serialize_value(detail.value)
 
       # Add reason if available
       reason = detail.reason
@@ -283,7 +274,7 @@ module LaunchDarklyObservability
 
       # Use semantic convention for error.type
       error_kind = reason.respond_to?(:error_kind) ? reason.error_kind.to_s : 'general'
-      
+
       # Map LaunchDarkly error kinds to semantic convention values
       error_type = case error_kind.upcase
                    when 'FLAG_NOT_FOUND'
@@ -297,13 +288,13 @@ module LaunchDarklyObservability
                    else
                      'general'
                    end
-      
+
       span.set_attribute(ERROR_TYPE, error_type)
-      
+
       # Add human-readable error message
       error_message = "Flag evaluation error: #{error_kind}"
       span.set_attribute(ERROR_MESSAGE, error_message)
-      
+
       span.status = OpenTelemetry::Trace::Status.error(error_message)
     end
   end

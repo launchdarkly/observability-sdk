@@ -14,7 +14,7 @@ class PluginTest < Minitest::Test
 
     assert_equal @project_id, plugin.project_id
     assert_equal LaunchDarklyObservability::DEFAULT_ENDPOINT, plugin.otlp_endpoint
-    assert_equal '', plugin.environment
+    assert_nil plugin.environment
   end
 
   def test_initialize_with_all_params

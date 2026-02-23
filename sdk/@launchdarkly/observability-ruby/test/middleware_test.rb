@@ -3,6 +3,7 @@
 require 'test_helper'
 require 'rack'
 require 'rack/test'
+require_relative '../lib/launchdarkly_observability/rails'
 
 class MiddlewareTest < Minitest::Test
   include Rack::Test::Methods
@@ -54,7 +55,7 @@ class MiddlewareTest < Minitest::Test
     assert_equal 200, span.attributes['http.status_code']
   end
 
-  def test_middleware_extracts_highlight_context
+  def test_middleware_extracts_observability_context
     header 'X-Highlight-Request', 'session-123/request-456'
     get '/with-context'
 
@@ -65,7 +66,7 @@ class MiddlewareTest < Minitest::Test
     assert_equal 'request-456', span.attributes['launchdarkly.request_id']
   end
 
-  def test_middleware_handles_missing_highlight_header
+  def test_middleware_handles_missing_observability_header
     get '/no-context'
 
     spans = @exporter.finished_spans

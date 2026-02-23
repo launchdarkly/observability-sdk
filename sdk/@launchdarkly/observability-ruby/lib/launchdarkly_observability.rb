@@ -10,8 +10,8 @@ require_relative 'launchdarkly_observability/hook'
 require_relative 'launchdarkly_observability/opentelemetry_config'
 require_relative 'launchdarkly_observability/plugin'
 
-# Load Rails integration if Rails is available
-require_relative 'launchdarkly_observability/rails' if defined?(::Rails::Railtie)
+# Load Rack middleware (always available) and Rails integration (guarded internally)
+require_relative 'launchdarkly_observability/rails'
 
 module LaunchDarklyObservability
   # Default OTLP endpoint for LaunchDarkly Observability

@@ -481,7 +481,7 @@ ENV['OTEL_LOG_LEVEL'] = 'debug'
 Ensure the gem is loaded in your Gemfile and the initializer runs before controllers:
 ```ruby
 # Gemfile
-gem 'launchdarkly_observability', require: true
+gem 'launchdarkly-observability'
 ```
 
 ## Testing

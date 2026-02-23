@@ -47,7 +47,7 @@ module LaunchDarklyObservability
     def initialize(project_id: nil, sdk_key: nil, otlp_endpoint: DEFAULT_ENDPOINT, environment: nil, **options)
       @project_id = project_id || sdk_key
       @otlp_endpoint = otlp_endpoint
-      @environment = environment # Keep nil if not provided - backend infers from SDK key
+      @environment = environment&.to_s
       @options = default_options.merge(options)
       @hook = Hook.new
       @otel_config = nil
