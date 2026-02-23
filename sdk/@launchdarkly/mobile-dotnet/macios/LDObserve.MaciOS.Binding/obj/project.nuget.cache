@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "dgSpecHash": "vABtODK5DgY=",
+  "success": true,
+  "projectFilePath": "/Users/abelonogov/work/observability-sdk/sdk/@launchdarkly/mobile-dotnet/macios/LDObserve.MaciOS.Binding/LDObserve.MaciOS.Binding.csproj",
+  "expectedPackageFiles": [
+    "/Users/abelonogov/.nuget/packages/communitytoolkit.maui.nativelibraryinterop.buildtasks/0.0.1-pre1/communitytoolkit.maui.nativelibraryinterop.buildtasks.0.0.1-pre1.nupkg.sha512",
+    "/Users/abelonogov/.nuget/packages/microsoft.net.illink.tasks/9.0.10/microsoft.net.illink.tasks.9.0.10.nupkg.sha512",
+    "/Users/abelonogov/.nuget/packages/microsoft.netcore.app.ref/9.0.12/microsoft.netcore.app.ref.9.0.12.nupkg.sha512"
+  ],
+  "logs": []
+}

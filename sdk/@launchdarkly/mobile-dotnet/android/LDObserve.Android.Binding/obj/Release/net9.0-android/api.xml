@@ -1,0 +1,64 @@
+<api api-source="JavaTypeSystem">
+  <package name="com.launchdarky.LDNative" jni-name="com/launchdarky/LDNative">
+    <class abstract="false" deprecated="not deprecated" extends="java.lang.Object" extends-generic-aware="java.lang.Object" jni-extends="Ljava/lang/Object;" final="true" name="LDMasking" static="false" visibility="public" jni-signature="Lcom/launchdarky/LDNative/LDMasking;">
+      <method abstract="false" deprecated="not deprecated" final="true" name="mask" jni-signature="(Landroid/view/View;)V" bridge="false" native="false" return="void" jni-return="V" static="true" synchronized="false" synthetic="false" visibility="public">
+        <parameter name="view" type="android.view.View" jni-type="Landroid/view/View;" not-null="true" />
+      </method>
+      <method abstract="false" deprecated="not deprecated" final="true" name="unmask" jni-signature="(Landroid/view/View;)V" bridge="false" native="false" return="void" jni-return="V" static="true" synchronized="false" synthetic="false" visibility="public">
+        <parameter name="view" type="android.view.View" jni-type="Landroid/view/View;" not-null="true" />
+      </method>
+      <field deprecated="not deprecated" final="true" name="INSTANCE" jni-signature="Lcom/launchdarky/LDNative/LDMasking;" not-null="true" static="true" transient="false" type="com.launchdarky.LDNative.LDMasking" type-generic-aware="com.launchdarky.LDNative.LDMasking" visibility="public" volatile="false" />
+    </class>
+    <class abstract="false" deprecated="not deprecated" extends="java.lang.Object" extends-generic-aware="java.lang.Object" jni-extends="Ljava/lang/Object;" final="true" name="LDObservabilityOptions" static="false" visibility="public" jni-signature="Lcom/launchdarky/LDNative/LDObservabilityOptions;">
+      <constructor deprecated="not deprecated" final="false" name="LDObservabilityOptions" jni-signature="()V" bridge="false" static="false" type="com.launchdarky.LDNative.LDObservabilityOptions" synthetic="false" visibility="public" />
+      <constructor deprecated="not deprecated" final="false" name="LDObservabilityOptions" jni-signature="(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V" bridge="false" static="false" type="com.launchdarky.LDNative.LDObservabilityOptions" synthetic="false" visibility="public">
+        <parameter name="serviceName" type="java.lang.String" jni-type="Ljava/lang/String;" not-null="true" />
+        <parameter name="serviceVersion" type="java.lang.String" jni-type="Ljava/lang/String;" not-null="true" />
+        <parameter name="otlpEndpoint" type="java.lang.String" jni-type="Ljava/lang/String;" not-null="true" />
+        <parameter name="backendUrl" type="java.lang.String" jni-type="Ljava/lang/String;" not-null="true" />
+        <parameter name="contextFriendlyName" type="java.lang.String" jni-type="Ljava/lang/String;" />
+      </constructor>
+      <field deprecated="not deprecated" final="false" name="backendUrl" jni-signature="Ljava/lang/String;" not-null="true" static="false" transient="false" type="java.lang.String" type-generic-aware="java.lang.String" visibility="public" volatile="false" />
+      <field deprecated="not deprecated" final="false" name="contextFriendlyName" jni-signature="Ljava/lang/String;" static="false" transient="false" type="java.lang.String" type-generic-aware="java.lang.String" visibility="public" volatile="false" />
+      <field deprecated="not deprecated" final="false" name="otlpEndpoint" jni-signature="Ljava/lang/String;" not-null="true" static="false" transient="false" type="java.lang.String" type-generic-aware="java.lang.String" visibility="public" volatile="false" />
+      <field deprecated="not deprecated" final="false" name="serviceName" jni-signature="Ljava/lang/String;" not-null="true" static="false" transient="false" type="java.lang.String" type-generic-aware="java.lang.String" visibility="public" volatile="false" />
+      <field deprecated="not deprecated" final="false" name="serviceVersion" jni-signature="Ljava/lang/String;" not-null="true" static="false" transient="false" type="java.lang.String" type-generic-aware="java.lang.String" visibility="public" volatile="false" />
+    </class>
+    <class abstract="false" deprecated="not deprecated" extends="java.lang.Object" extends-generic-aware="java.lang.Object" jni-extends="Ljava/lang/Object;" final="true" name="LDPrivacyOptions" static="false" visibility="public" jni-signature="Lcom/launchdarky/LDNative/LDPrivacyOptions;">
+      <constructor deprecated="not deprecated" final="false" name="LDPrivacyOptions" jni-signature="()V" bridge="false" static="false" type="com.launchdarky.LDNative.LDPrivacyOptions" synthetic="false" visibility="public" />
+      <constructor deprecated="not deprecated" final="false" name="LDPrivacyOptions" jni-signature="(ZZZZD)V" bridge="false" static="false" type="com.launchdarky.LDNative.LDPrivacyOptions" synthetic="false" visibility="public">
+        <parameter name="maskTextInputs" type="boolean" jni-type="Z" />
+        <parameter name="maskWebViews" type="boolean" jni-type="Z" />
+        <parameter name="maskLabels" type="boolean" jni-type="Z" />
+        <parameter name="maskImages" type="boolean" jni-type="Z" />
+        <parameter name="minimumAlpha" type="double" jni-type="D" />
+      </constructor>
+      <field deprecated="not deprecated" final="false" name="maskImages" jni-signature="Z" static="false" transient="false" type="boolean" type-generic-aware="boolean" visibility="public" volatile="false" />
+      <field deprecated="not deprecated" final="false" name="maskLabels" jni-signature="Z" static="false" transient="false" type="boolean" type-generic-aware="boolean" visibility="public" volatile="false" />
+      <field deprecated="not deprecated" final="false" name="maskTextInputs" jni-signature="Z" static="false" transient="false" type="boolean" type-generic-aware="boolean" visibility="public" volatile="false" />
+      <field deprecated="not deprecated" final="false" name="maskWebViews" jni-signature="Z" static="false" transient="false" type="boolean" type-generic-aware="boolean" visibility="public" volatile="false" />
+      <field deprecated="not deprecated" final="false" name="minimumAlpha" jni-signature="D" static="false" transient="false" type="double" type-generic-aware="double" visibility="public" volatile="false" />
+    </class>
+    <class abstract="false" deprecated="not deprecated" extends="java.lang.Object" extends-generic-aware="java.lang.Object" jni-extends="Ljava/lang/Object;" final="true" name="LDSessionReplayOptions" static="false" visibility="public" jni-signature="Lcom/launchdarky/LDNative/LDSessionReplayOptions;">
+      <constructor deprecated="not deprecated" final="false" name="LDSessionReplayOptions" jni-signature="()V" bridge="false" static="false" type="com.launchdarky.LDNative.LDSessionReplayOptions" synthetic="false" visibility="public" />
+      <constructor deprecated="not deprecated" final="false" name="LDSessionReplayOptions" jni-signature="(ZLjava/lang/String;Lcom/launchdarky/LDNative/LDPrivacyOptions;)V" bridge="false" static="false" type="com.launchdarky.LDNative.LDSessionReplayOptions" synthetic="false" visibility="public">
+        <parameter name="isEnabled" type="boolean" jni-type="Z" />
+        <parameter name="serviceName" type="java.lang.String" jni-type="Ljava/lang/String;" not-null="true" />
+        <parameter name="privacy" type="com.launchdarky.LDNative.LDPrivacyOptions" jni-type="Lcom/launchdarky/LDNative/LDPrivacyOptions;" not-null="true" />
+      </constructor>
+      <field deprecated="not deprecated" final="false" name="isEnabled" jni-signature="Z" static="false" transient="false" type="boolean" type-generic-aware="boolean" visibility="public" volatile="false" />
+      <field deprecated="not deprecated" final="false" name="privacy" jni-signature="Lcom/launchdarky/LDNative/LDPrivacyOptions;" not-null="true" static="false" transient="false" type="com.launchdarky.LDNative.LDPrivacyOptions" type-generic-aware="com.launchdarky.LDNative.LDPrivacyOptions" visibility="public" volatile="false" />
+      <field deprecated="not deprecated" final="false" name="serviceName" jni-signature="Ljava/lang/String;" not-null="true" static="false" transient="false" type="java.lang.String" type-generic-aware="java.lang.String" visibility="public" volatile="false" />
+    </class>
+    <class abstract="false" deprecated="not deprecated" extends="java.lang.Object" extends-generic-aware="java.lang.Object" jni-extends="Ljava/lang/Object;" final="true" name="SRLaunch" static="false" visibility="public" jni-signature="Lcom/launchdarky/LDNative/SRLaunch;">
+      <constructor deprecated="not deprecated" final="false" name="SRLaunch" jni-signature="()V" bridge="false" static="false" type="com.launchdarky.LDNative.SRLaunch" synthetic="false" visibility="public" />
+      <method abstract="false" deprecated="not deprecated" final="true" name="start" jni-signature="(Landroid/app/Application;Ljava/lang/String;Lcom/launchdarky/LDNative/LDObservabilityOptions;Lcom/launchdarky/LDNative/LDSessionReplayOptions;)V" bridge="false" native="false" return="void" jni-return="V" static="false" synchronized="false" synthetic="false" visibility="public">
+        <parameter name="app" type="android.app.Application" jni-type="Landroid/app/Application;" not-null="true" />
+        <parameter name="mobileKey" type="java.lang.String" jni-type="Ljava/lang/String;" not-null="true" />
+        <parameter name="observability" type="com.launchdarky.LDNative.LDObservabilityOptions" jni-type="Lcom/launchdarky/LDNative/LDObservabilityOptions;" not-null="true" />
+        <parameter name="replay" type="com.launchdarky.LDNative.LDSessionReplayOptions" jni-type="Lcom/launchdarky/LDNative/LDSessionReplayOptions;" not-null="true" />
+      </method>
+      <method abstract="false" deprecated="not deprecated" final="true" name="version" jni-signature="()Ljava/lang/String;" bridge="false" native="false" return="java.lang.String" jni-return="Ljava/lang/String;" static="false" synchronized="false" synthetic="false" visibility="public" return-not-null="true" />
+    </class>
+  </package>
+</api>

@@ -1,0 +1,1 @@
+-v --force --timestamp=none --sign - /Users/abelonogov/work/observability-sdk/sdk/@launchdarkly/mobile-dotnet/sample/bin/Debug/net9.0-ios/iossimulator-arm64/MauiSample9.app/libmono-component-marshal-ilgen.dylib

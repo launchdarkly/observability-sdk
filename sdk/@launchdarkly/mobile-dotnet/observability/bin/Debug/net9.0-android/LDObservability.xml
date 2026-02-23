@@ -1,0 +1,141 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>LDObservability</name>
+    </assembly>
+    <members>
+        <member name="T:LaunchDarkly.SessionReplay.LDObserve">
+            <summary>
+            Static facade over the native observability bridge.
+            On platforms without a native implementation, methods are no-ops.
+            </summary>
+        </member>
+        <member name="T:LaunchDarkly.SessionReplay.LDObserve.Severity">
+            <summary>
+            Optional C# mirror of the Swift Severity raw values.
+            Make sure the numeric values match your Swift enum.
+            </summary>
+        </member>
+        <member name="F:LaunchDarkly.SessionReplay.LDObserve.Severity.Unspecified">
+            <summary>Unspecified severity (0).</summary>
+        </member>
+        <member name="F:LaunchDarkly.SessionReplay.LDObserve.Severity.Trace">
+            <summary>Trace severity (1).</summary>
+        </member>
+        <member name="F:LaunchDarkly.SessionReplay.LDObserve.Severity.Trace2">
+            <summary>Trace1 severity (2).</summary>
+        </member>
+        <member name="F:LaunchDarkly.SessionReplay.LDObserve.Severity.Trace3">
+            <summary>Trace3 severity (3).</summary>
+        </member>
+        <member name="F:LaunchDarkly.SessionReplay.LDObserve.Severity.Trace4">
+            <summary>Trace4 severity (4).</summary>
+        </member>
+        <member name="F:LaunchDarkly.SessionReplay.LDObserve.Severity.Debug">
+            <summary>Debug severity (5).</summary>
+        </member>
+        <member name="F:LaunchDarkly.SessionReplay.LDObserve.Severity.Debug2">
+            <summary>Debug2 severity (6).</summary>
+        </member>
+        <member name="F:LaunchDarkly.SessionReplay.LDObserve.Severity.Debug3">
+            <summary>Debug3 severity (7).</summary>
+        </member>
+        <member name="F:LaunchDarkly.SessionReplay.LDObserve.Severity.Debug4">
+            <summary>Debug4 severity (8).</summary>
+        </member>
+        <member name="F:LaunchDarkly.SessionReplay.LDObserve.Severity.Info">
+            <summary>Info severity (9).</summary>
+        </member>
+        <member name="F:LaunchDarkly.SessionReplay.LDObserve.Severity.Info2">
+            <summary>Info2 severity (10).</summary>
+        </member>
+        <member name="F:LaunchDarkly.SessionReplay.LDObserve.Severity.Info3">
+            <summary>Info3 severity (12).</summary>
+        </member>
+        <member name="F:LaunchDarkly.SessionReplay.LDObserve.Severity.Info4">
+            <summary>Info4 severity (12).</summary>
+        </member>
+        <member name="F:LaunchDarkly.SessionReplay.LDObserve.Severity.Warn">
+            <summary>Warn severity (13).</summary>
+        </member>
+        <member name="F:LaunchDarkly.SessionReplay.LDObserve.Severity.Warn2">
+            <summary>Warn2 severity (14).</summary>
+        </member>
+        <member name="F:LaunchDarkly.SessionReplay.LDObserve.Severity.Warn3">
+            <summary>Warn3 severity (15).</summary>
+        </member>
+        <member name="F:LaunchDarkly.SessionReplay.LDObserve.Severity.Warn4">
+            <summary>Warn4 severity (16).</summary>
+        </member>
+        <member name="F:LaunchDarkly.SessionReplay.LDObserve.Severity.Error">
+            <summary>Error severity (17).</summary>
+        </member>
+        <member name="F:LaunchDarkly.SessionReplay.LDObserve.Severity.Error2">
+            <summary>Error2 severity (18).</summary>
+        </member>
+        <member name="F:LaunchDarkly.SessionReplay.LDObserve.Severity.Error3">
+            <summary>Error3 severity (19).</summary>
+        </member>
+        <member name="F:LaunchDarkly.SessionReplay.LDObserve.Severity.Error4">
+            <summary>Error4 severity (20).</summary>
+        </member>
+        <member name="F:LaunchDarkly.SessionReplay.LDObserve.Severity.Fatal">
+            <summary>Fatal severity (21).</summary>
+        </member>
+        <member name="F:LaunchDarkly.SessionReplay.LDObserve.Severity.Fatal2">
+            <summary>Fatal2 severity (22).</summary>
+        </member>
+        <member name="F:LaunchDarkly.SessionReplay.LDObserve.Severity.Fatal3">
+            <summary>Fatal3 severity (23).</summary>
+        </member>
+        <member name="F:LaunchDarkly.SessionReplay.LDObserve.Severity.Fatal4">
+            <summary>Fatal4 severity (24).</summary>
+        </member>
+        <member name="M:LaunchDarkly.SessionReplay.LDObserve.RecordLog(System.String,System.Int32,System.Collections.Generic.IDictionary{System.String,System.Object})">
+            <summary>
+            Record a log with integer severity.
+            </summary>
+        </member>
+        <member name="M:LaunchDarkly.SessionReplay.LDObserve.RecordLog(System.String,LaunchDarkly.SessionReplay.LDObserve.Severity,System.Collections.Generic.IDictionary{System.String,System.Object})">
+            <summary>
+            Record a log with typed severity.
+            </summary>
+        </member>
+        <member name="M:LaunchDarkly.SessionReplay.LDObserve.RecordError(System.String,System.String)">
+            <summary>
+            Record an error.
+            </summary>
+        </member>
+        <member name="M:LaunchDarkly.SessionReplay.LDObserve.RecordMetric(System.String,System.Double)">
+            <summary>
+            Record a gauge metric.
+            </summary>
+        </member>
+        <member name="M:LaunchDarkly.SessionReplay.LDObserve.RecordCount(System.String,System.Double)">
+            <summary>
+            Record a count metric.
+            </summary>
+        </member>
+        <member name="M:LaunchDarkly.SessionReplay.LDObserve.RecordIncr(System.String,System.Double)">
+            <summary>
+            Record an incremental counter metric.
+            </summary>
+        </member>
+        <member name="M:LaunchDarkly.SessionReplay.LDObserve.RecordHistogram(System.String,System.Double)">
+            <summary>
+            Record a histogram metric.
+            </summary>
+        </member>
+        <member name="M:LaunchDarkly.SessionReplay.LDObserve.RecordUpDownCounter(System.String,System.Double)">
+            <summary>
+            Record an up-down counter metric.
+            </summary>
+        </member>
+        <member name="T:LDObservability.Fat.Resource">
+            <summary>
+            Android Resource Designer class.
+            Exposes the Android Resource designer assembly into the project Namespace.
+            </summary>
+        </member>
+    </members>
+</doc>

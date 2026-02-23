@@ -1,0 +1,6 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<Project ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ImportGroup Condition=" '$(TargetFramework)' == 'net9.0-ios' AND '$(ExcludeRestorePackageImports)' != 'true' ">
+    <Import Project="$(NuGetPackageRoot)communitytoolkit.maui.nativelibraryinterop.buildtasks/0.0.1-pre1/build/CommunityToolkit.Maui.NativeLibraryInterop.BuildTasks.targets" Condition="Exists('$(NuGetPackageRoot)communitytoolkit.maui.nativelibraryinterop.buildtasks/0.0.1-pre1/build/CommunityToolkit.Maui.NativeLibraryInterop.BuildTasks.targets')" />
+  </ImportGroup>
+</Project>

@@ -19,7 +19,7 @@ import kotlinx.serialization.json.put
  *
  * Encapsulates generation state like sid sequencing and canvas size accounting.
  */
-class SessionReplayEventGenerator(
+class RRWebEventGenerator(
     private val canvasDrawEntourage: Int
 ) {
     companion object {

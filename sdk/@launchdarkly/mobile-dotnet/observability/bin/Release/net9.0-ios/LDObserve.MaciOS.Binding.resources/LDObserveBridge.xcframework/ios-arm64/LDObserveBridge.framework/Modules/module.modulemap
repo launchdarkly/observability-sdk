@@ -1,0 +1,11 @@
+framework module LDObserveBridge {
+  umbrella header "LDObserveBridge.h"
+  export *
+
+  module * { export * }
+}
+
+module LDObserveBridge.Swift {
+  header "LDObserveBridge-Swift.h"
+  requires objc
+}

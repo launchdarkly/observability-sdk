@@ -1,0 +1,1195 @@
+{
+  "ABIRoot": {
+    "kind": "Root",
+    "name": "LDObserveBridge",
+    "printedName": "LDObserveBridge",
+    "children": [
+      {
+        "kind": "Import",
+        "name": "Foundation",
+        "printedName": "Foundation",
+        "declKind": "Import",
+        "moduleName": "LDObserveBridge",
+        "declAttributes": [
+          "RawDocComment"
+        ]
+      },
+      {
+        "kind": "Import",
+        "name": "LaunchDarkly",
+        "printedName": "LaunchDarkly",
+        "declKind": "Import",
+        "moduleName": "LDObserveBridge"
+      },
+      {
+        "kind": "Import",
+        "name": "Common",
+        "printedName": "Common",
+        "declKind": "Import",
+        "moduleName": "LDObserveBridge"
+      },
+      {
+        "kind": "Import",
+        "name": "LaunchDarklyObservability",
+        "printedName": "LaunchDarklyObservability",
+        "declKind": "Import",
+        "moduleName": "LDObserveBridge"
+      },
+      {
+        "kind": "Import",
+        "name": "LaunchDarklySessionReplay",
+        "printedName": "LaunchDarklySessionReplay",
+        "declKind": "Import",
+        "moduleName": "LDObserveBridge"
+      },
+      {
+        "kind": "TypeDecl",
+        "name": "ObjcObservabilityOptions",
+        "printedName": "ObjcObservabilityOptions",
+        "children": [
+          {
+            "kind": "Var",
+            "name": "serviceName",
+            "printedName": "serviceName",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "String",
+                "printedName": "Swift.String",
+                "usr": "s:SS"
+              }
+            ],
+            "declKind": "Var",
+            "usr": "c:@M@LDObserveBridge@objc(cs)ObjcObservabilityOptions(py)serviceName",
+            "mangledName": "$s15LDObserveBridge24ObjcObservabilityOptionsC11serviceNameSSvp",
+            "moduleName": "LDObserveBridge",
+            "declAttributes": [
+              "HasInitialValue",
+              "Final",
+              "HasStorage",
+              "AccessControl",
+              "ObjC"
+            ],
+            "hasStorage": true,
+            "accessors": [
+              {
+                "kind": "Accessor",
+                "name": "Get",
+                "printedName": "Get()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "String",
+                    "printedName": "Swift.String",
+                    "usr": "s:SS"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "c:@M@LDObserveBridge@objc(cs)ObjcObservabilityOptions(im)serviceName",
+                "mangledName": "$s15LDObserveBridge24ObjcObservabilityOptionsC11serviceNameSSvg",
+                "moduleName": "LDObserveBridge",
+                "implicit": true,
+                "declAttributes": [
+                  "Final",
+                  "ObjC"
+                ],
+                "accessorKind": "get"
+              },
+              {
+                "kind": "Accessor",
+                "name": "Set",
+                "printedName": "Set()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Void",
+                    "printedName": "()"
+                  },
+                  {
+                    "kind": "TypeNominal",
+                    "name": "String",
+                    "printedName": "Swift.String",
+                    "usr": "s:SS"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "c:@M@LDObserveBridge@objc(cs)ObjcObservabilityOptions(im)setServiceName:",
+                "mangledName": "$s15LDObserveBridge24ObjcObservabilityOptionsC11serviceNameSSvs",
+                "moduleName": "LDObserveBridge",
+                "implicit": true,
+                "declAttributes": [
+                  "Final",
+                  "ObjC"
+                ],
+                "accessorKind": "set"
+              },
+              {
+                "kind": "Accessor",
+                "name": "Modify",
+                "printedName": "Modify()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Void",
+                    "printedName": "()"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "s:15LDObserveBridge24ObjcObservabilityOptionsC11serviceNameSSvM",
+                "mangledName": "$s15LDObserveBridge24ObjcObservabilityOptionsC11serviceNameSSvM",
+                "moduleName": "LDObserveBridge",
+                "implicit": true,
+                "declAttributes": [
+                  "Final"
+                ],
+                "accessorKind": "_modify"
+              }
+            ]
+          },
+          {
+            "kind": "Var",
+            "name": "otlpEndpoint",
+            "printedName": "otlpEndpoint",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "String",
+                "printedName": "Swift.String",
+                "usr": "s:SS"
+              }
+            ],
+            "declKind": "Var",
+            "usr": "c:@M@LDObserveBridge@objc(cs)ObjcObservabilityOptions(py)otlpEndpoint",
+            "mangledName": "$s15LDObserveBridge24ObjcObservabilityOptionsC12otlpEndpointSSvp",
+            "moduleName": "LDObserveBridge",
+            "declAttributes": [
+              "HasInitialValue",
+              "Final",
+              "HasStorage",
+              "AccessControl",
+              "ObjC"
+            ],
+            "hasStorage": true,
+            "accessors": [
+              {
+                "kind": "Accessor",
+                "name": "Get",
+                "printedName": "Get()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "String",
+                    "printedName": "Swift.String",
+                    "usr": "s:SS"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "c:@M@LDObserveBridge@objc(cs)ObjcObservabilityOptions(im)otlpEndpoint",
+                "mangledName": "$s15LDObserveBridge24ObjcObservabilityOptionsC12otlpEndpointSSvg",
+                "moduleName": "LDObserveBridge",
+                "implicit": true,
+                "declAttributes": [
+                  "Final",
+                  "ObjC"
+                ],
+                "accessorKind": "get"
+              },
+              {
+                "kind": "Accessor",
+                "name": "Set",
+                "printedName": "Set()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Void",
+                    "printedName": "()"
+                  },
+                  {
+                    "kind": "TypeNominal",
+                    "name": "String",
+                    "printedName": "Swift.String",
+                    "usr": "s:SS"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "c:@M@LDObserveBridge@objc(cs)ObjcObservabilityOptions(im)setOtlpEndpoint:",
+                "mangledName": "$s15LDObserveBridge24ObjcObservabilityOptionsC12otlpEndpointSSvs",
+                "moduleName": "LDObserveBridge",
+                "implicit": true,
+                "declAttributes": [
+                  "Final",
+                  "ObjC"
+                ],
+                "accessorKind": "set"
+              },
+              {
+                "kind": "Accessor",
+                "name": "Modify",
+                "printedName": "Modify()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Void",
+                    "printedName": "()"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "s:15LDObserveBridge24ObjcObservabilityOptionsC12otlpEndpointSSvM",
+                "mangledName": "$s15LDObserveBridge24ObjcObservabilityOptionsC12otlpEndpointSSvM",
+                "moduleName": "LDObserveBridge",
+                "implicit": true,
+                "declAttributes": [
+                  "Final"
+                ],
+                "accessorKind": "_modify"
+              }
+            ]
+          },
+          {
+            "kind": "Var",
+            "name": "backendUrl",
+            "printedName": "backendUrl",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "String",
+                "printedName": "Swift.String",
+                "usr": "s:SS"
+              }
+            ],
+            "declKind": "Var",
+            "usr": "c:@M@LDObserveBridge@objc(cs)ObjcObservabilityOptions(py)backendUrl",
+            "mangledName": "$s15LDObserveBridge24ObjcObservabilityOptionsC10backendUrlSSvp",
+            "moduleName": "LDObserveBridge",
+            "declAttributes": [
+              "HasInitialValue",
+              "Final",
+              "HasStorage",
+              "AccessControl",
+              "ObjC"
+            ],
+            "hasStorage": true,
+            "accessors": [
+              {
+                "kind": "Accessor",
+                "name": "Get",
+                "printedName": "Get()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "String",
+                    "printedName": "Swift.String",
+                    "usr": "s:SS"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "c:@M@LDObserveBridge@objc(cs)ObjcObservabilityOptions(im)backendUrl",
+                "mangledName": "$s15LDObserveBridge24ObjcObservabilityOptionsC10backendUrlSSvg",
+                "moduleName": "LDObserveBridge",
+                "implicit": true,
+                "declAttributes": [
+                  "Final",
+                  "ObjC"
+                ],
+                "accessorKind": "get"
+              },
+              {
+                "kind": "Accessor",
+                "name": "Set",
+                "printedName": "Set()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Void",
+                    "printedName": "()"
+                  },
+                  {
+                    "kind": "TypeNominal",
+                    "name": "String",
+                    "printedName": "Swift.String",
+                    "usr": "s:SS"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "c:@M@LDObserveBridge@objc(cs)ObjcObservabilityOptions(im)setBackendUrl:",
+                "mangledName": "$s15LDObserveBridge24ObjcObservabilityOptionsC10backendUrlSSvs",
+                "moduleName": "LDObserveBridge",
+                "implicit": true,
+                "declAttributes": [
+                  "Final",
+                  "ObjC"
+                ],
+                "accessorKind": "set"
+              },
+              {
+                "kind": "Accessor",
+                "name": "Modify",
+                "printedName": "Modify()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Void",
+                    "printedName": "()"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "s:15LDObserveBridge24ObjcObservabilityOptionsC10backendUrlSSvM",
+                "mangledName": "$s15LDObserveBridge24ObjcObservabilityOptionsC10backendUrlSSvM",
+                "moduleName": "LDObserveBridge",
+                "implicit": true,
+                "declAttributes": [
+                  "Final"
+                ],
+                "accessorKind": "_modify"
+              }
+            ]
+          },
+          {
+            "kind": "Constructor",
+            "name": "init",
+            "printedName": "init()",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "ObjcObservabilityOptions",
+                "printedName": "LDObserveBridge.ObjcObservabilityOptions",
+                "usr": "c:@M@LDObserveBridge@objc(cs)ObjcObservabilityOptions"
+              }
+            ],
+            "declKind": "Constructor",
+            "usr": "c:@M@LDObserveBridge@objc(cs)ObjcObservabilityOptions(im)init",
+            "mangledName": "$s15LDObserveBridge24ObjcObservabilityOptionsCACycfc",
+            "moduleName": "LDObserveBridge",
+            "overriding": true,
+            "objc_name": "init",
+            "declAttributes": [
+              "Dynamic",
+              "ObjC",
+              "Override",
+              "AccessControl"
+            ],
+            "init_kind": "Designated"
+          }
+        ],
+        "declKind": "Class",
+        "usr": "c:@M@LDObserveBridge@objc(cs)ObjcObservabilityOptions",
+        "mangledName": "$s15LDObserveBridge24ObjcObservabilityOptionsC",
+        "moduleName": "LDObserveBridge",
+        "objc_name": "ObjcObservabilityOptions",
+        "declAttributes": [
+          "Final",
+          "AccessControl",
+          "ObjC"
+        ],
+        "superclassUsr": "c:objc(cs)NSObject",
+        "inheritsConvenienceInitializers": true,
+        "superclassNames": [
+          "ObjectiveC.NSObject"
+        ],
+        "conformances": [
+          {
+            "kind": "Conformance",
+            "name": "Copyable",
+            "printedName": "Copyable",
+            "usr": "s:s8CopyableP",
+            "mangledName": "$ss8CopyableP"
+          },
+          {
+            "kind": "Conformance",
+            "name": "Escapable",
+            "printedName": "Escapable",
+            "usr": "s:s9EscapableP",
+            "mangledName": "$ss9EscapableP"
+          },
+          {
+            "kind": "Conformance",
+            "name": "Equatable",
+            "printedName": "Equatable",
+            "usr": "s:SQ",
+            "mangledName": "$sSQ"
+          },
+          {
+            "kind": "Conformance",
+            "name": "Hashable",
+            "printedName": "Hashable",
+            "usr": "s:SH",
+            "mangledName": "$sSH"
+          },
+          {
+            "kind": "Conformance",
+            "name": "CVarArg",
+            "printedName": "CVarArg",
+            "usr": "s:s7CVarArgP",
+            "mangledName": "$ss7CVarArgP"
+          },
+          {
+            "kind": "Conformance",
+            "name": "_KeyValueCodingAndObservingPublishing",
+            "printedName": "_KeyValueCodingAndObservingPublishing",
+            "usr": "s:10Foundation37_KeyValueCodingAndObservingPublishingP",
+            "mangledName": "$s10Foundation37_KeyValueCodingAndObservingPublishingP"
+          },
+          {
+            "kind": "Conformance",
+            "name": "_KeyValueCodingAndObserving",
+            "printedName": "_KeyValueCodingAndObserving",
+            "usr": "s:10Foundation27_KeyValueCodingAndObservingP",
+            "mangledName": "$s10Foundation27_KeyValueCodingAndObservingP"
+          },
+          {
+            "kind": "Conformance",
+            "name": "CustomStringConvertible",
+            "printedName": "CustomStringConvertible",
+            "usr": "s:s23CustomStringConvertibleP",
+            "mangledName": "$ss23CustomStringConvertibleP"
+          },
+          {
+            "kind": "Conformance",
+            "name": "CustomDebugStringConvertible",
+            "printedName": "CustomDebugStringConvertible",
+            "usr": "s:s28CustomDebugStringConvertibleP",
+            "mangledName": "$ss28CustomDebugStringConvertibleP"
+          }
+        ]
+      },
+      {
+        "kind": "TypeDecl",
+        "name": "ObjcSessionReplayOptions",
+        "printedName": "ObjcSessionReplayOptions",
+        "children": [
+          {
+            "kind": "Var",
+            "name": "isEnabled",
+            "printedName": "isEnabled",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Bool",
+                "printedName": "Swift.Bool",
+                "usr": "s:Sb"
+              }
+            ],
+            "declKind": "Var",
+            "usr": "c:@M@LDObserveBridge@objc(cs)ObjcSessionReplayOptions(py)isEnabled",
+            "mangledName": "$s15LDObserveBridge24ObjcSessionReplayOptionsC9isEnabledSbvp",
+            "moduleName": "LDObserveBridge",
+            "declAttributes": [
+              "HasInitialValue",
+              "Final",
+              "HasStorage",
+              "AccessControl",
+              "ObjC"
+            ],
+            "hasStorage": true,
+            "accessors": [
+              {
+                "kind": "Accessor",
+                "name": "Get",
+                "printedName": "Get()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Bool",
+                    "printedName": "Swift.Bool",
+                    "usr": "s:Sb"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "c:@M@LDObserveBridge@objc(cs)ObjcSessionReplayOptions(im)isEnabled",
+                "mangledName": "$s15LDObserveBridge24ObjcSessionReplayOptionsC9isEnabledSbvg",
+                "moduleName": "LDObserveBridge",
+                "implicit": true,
+                "declAttributes": [
+                  "Final",
+                  "ObjC"
+                ],
+                "accessorKind": "get"
+              },
+              {
+                "kind": "Accessor",
+                "name": "Set",
+                "printedName": "Set()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Void",
+                    "printedName": "()"
+                  },
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Bool",
+                    "printedName": "Swift.Bool",
+                    "usr": "s:Sb"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "c:@M@LDObserveBridge@objc(cs)ObjcSessionReplayOptions(im)setIsEnabled:",
+                "mangledName": "$s15LDObserveBridge24ObjcSessionReplayOptionsC9isEnabledSbvs",
+                "moduleName": "LDObserveBridge",
+                "implicit": true,
+                "declAttributes": [
+                  "Final",
+                  "ObjC"
+                ],
+                "accessorKind": "set"
+              },
+              {
+                "kind": "Accessor",
+                "name": "Modify",
+                "printedName": "Modify()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Void",
+                    "printedName": "()"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "s:15LDObserveBridge24ObjcSessionReplayOptionsC9isEnabledSbvM",
+                "mangledName": "$s15LDObserveBridge24ObjcSessionReplayOptionsC9isEnabledSbvM",
+                "moduleName": "LDObserveBridge",
+                "implicit": true,
+                "declAttributes": [
+                  "Final"
+                ],
+                "accessorKind": "_modify"
+              }
+            ]
+          },
+          {
+            "kind": "Var",
+            "name": "maskTextInputs",
+            "printedName": "maskTextInputs",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Bool",
+                "printedName": "Swift.Bool",
+                "usr": "s:Sb"
+              }
+            ],
+            "declKind": "Var",
+            "usr": "c:@M@LDObserveBridge@objc(cs)ObjcSessionReplayOptions(py)maskTextInputs",
+            "mangledName": "$s15LDObserveBridge24ObjcSessionReplayOptionsC14maskTextInputsSbvp",
+            "moduleName": "LDObserveBridge",
+            "declAttributes": [
+              "HasInitialValue",
+              "Final",
+              "HasStorage",
+              "AccessControl",
+              "ObjC"
+            ],
+            "hasStorage": true,
+            "accessors": [
+              {
+                "kind": "Accessor",
+                "name": "Get",
+                "printedName": "Get()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Bool",
+                    "printedName": "Swift.Bool",
+                    "usr": "s:Sb"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "c:@M@LDObserveBridge@objc(cs)ObjcSessionReplayOptions(im)maskTextInputs",
+                "mangledName": "$s15LDObserveBridge24ObjcSessionReplayOptionsC14maskTextInputsSbvg",
+                "moduleName": "LDObserveBridge",
+                "implicit": true,
+                "declAttributes": [
+                  "Final",
+                  "ObjC"
+                ],
+                "accessorKind": "get"
+              },
+              {
+                "kind": "Accessor",
+                "name": "Set",
+                "printedName": "Set()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Void",
+                    "printedName": "()"
+                  },
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Bool",
+                    "printedName": "Swift.Bool",
+                    "usr": "s:Sb"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "c:@M@LDObserveBridge@objc(cs)ObjcSessionReplayOptions(im)setMaskTextInputs:",
+                "mangledName": "$s15LDObserveBridge24ObjcSessionReplayOptionsC14maskTextInputsSbvs",
+                "moduleName": "LDObserveBridge",
+                "implicit": true,
+                "declAttributes": [
+                  "Final",
+                  "ObjC"
+                ],
+                "accessorKind": "set"
+              },
+              {
+                "kind": "Accessor",
+                "name": "Modify",
+                "printedName": "Modify()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Void",
+                    "printedName": "()"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "s:15LDObserveBridge24ObjcSessionReplayOptionsC14maskTextInputsSbvM",
+                "mangledName": "$s15LDObserveBridge24ObjcSessionReplayOptionsC14maskTextInputsSbvM",
+                "moduleName": "LDObserveBridge",
+                "implicit": true,
+                "declAttributes": [
+                  "Final"
+                ],
+                "accessorKind": "_modify"
+              }
+            ]
+          },
+          {
+            "kind": "Var",
+            "name": "maskWebViews",
+            "printedName": "maskWebViews",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Bool",
+                "printedName": "Swift.Bool",
+                "usr": "s:Sb"
+              }
+            ],
+            "declKind": "Var",
+            "usr": "c:@M@LDObserveBridge@objc(cs)ObjcSessionReplayOptions(py)maskWebViews",
+            "mangledName": "$s15LDObserveBridge24ObjcSessionReplayOptionsC12maskWebViewsSbvp",
+            "moduleName": "LDObserveBridge",
+            "declAttributes": [
+              "HasInitialValue",
+              "Final",
+              "HasStorage",
+              "AccessControl",
+              "ObjC"
+            ],
+            "hasStorage": true,
+            "accessors": [
+              {
+                "kind": "Accessor",
+                "name": "Get",
+                "printedName": "Get()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Bool",
+                    "printedName": "Swift.Bool",
+                    "usr": "s:Sb"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "c:@M@LDObserveBridge@objc(cs)ObjcSessionReplayOptions(im)maskWebViews",
+                "mangledName": "$s15LDObserveBridge24ObjcSessionReplayOptionsC12maskWebViewsSbvg",
+                "moduleName": "LDObserveBridge",
+                "implicit": true,
+                "declAttributes": [
+                  "Final",
+                  "ObjC"
+                ],
+                "accessorKind": "get"
+              },
+              {
+                "kind": "Accessor",
+                "name": "Set",
+                "printedName": "Set()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Void",
+                    "printedName": "()"
+                  },
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Bool",
+                    "printedName": "Swift.Bool",
+                    "usr": "s:Sb"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "c:@M@LDObserveBridge@objc(cs)ObjcSessionReplayOptions(im)setMaskWebViews:",
+                "mangledName": "$s15LDObserveBridge24ObjcSessionReplayOptionsC12maskWebViewsSbvs",
+                "moduleName": "LDObserveBridge",
+                "implicit": true,
+                "declAttributes": [
+                  "Final",
+                  "ObjC"
+                ],
+                "accessorKind": "set"
+              },
+              {
+                "kind": "Accessor",
+                "name": "Modify",
+                "printedName": "Modify()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Void",
+                    "printedName": "()"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "s:15LDObserveBridge24ObjcSessionReplayOptionsC12maskWebViewsSbvM",
+                "mangledName": "$s15LDObserveBridge24ObjcSessionReplayOptionsC12maskWebViewsSbvM",
+                "moduleName": "LDObserveBridge",
+                "implicit": true,
+                "declAttributes": [
+                  "Final"
+                ],
+                "accessorKind": "_modify"
+              }
+            ]
+          },
+          {
+            "kind": "Var",
+            "name": "maskImages",
+            "printedName": "maskImages",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Bool",
+                "printedName": "Swift.Bool",
+                "usr": "s:Sb"
+              }
+            ],
+            "declKind": "Var",
+            "usr": "c:@M@LDObserveBridge@objc(cs)ObjcSessionReplayOptions(py)maskImages",
+            "mangledName": "$s15LDObserveBridge24ObjcSessionReplayOptionsC10maskImagesSbvp",
+            "moduleName": "LDObserveBridge",
+            "declAttributes": [
+              "HasInitialValue",
+              "Final",
+              "HasStorage",
+              "AccessControl",
+              "ObjC"
+            ],
+            "hasStorage": true,
+            "accessors": [
+              {
+                "kind": "Accessor",
+                "name": "Get",
+                "printedName": "Get()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Bool",
+                    "printedName": "Swift.Bool",
+                    "usr": "s:Sb"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "c:@M@LDObserveBridge@objc(cs)ObjcSessionReplayOptions(im)maskImages",
+                "mangledName": "$s15LDObserveBridge24ObjcSessionReplayOptionsC10maskImagesSbvg",
+                "moduleName": "LDObserveBridge",
+                "implicit": true,
+                "declAttributes": [
+                  "Final",
+                  "ObjC"
+                ],
+                "accessorKind": "get"
+              },
+              {
+                "kind": "Accessor",
+                "name": "Set",
+                "printedName": "Set()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Void",
+                    "printedName": "()"
+                  },
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Bool",
+                    "printedName": "Swift.Bool",
+                    "usr": "s:Sb"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "c:@M@LDObserveBridge@objc(cs)ObjcSessionReplayOptions(im)setMaskImages:",
+                "mangledName": "$s15LDObserveBridge24ObjcSessionReplayOptionsC10maskImagesSbvs",
+                "moduleName": "LDObserveBridge",
+                "implicit": true,
+                "declAttributes": [
+                  "Final",
+                  "ObjC"
+                ],
+                "accessorKind": "set"
+              },
+              {
+                "kind": "Accessor",
+                "name": "Modify",
+                "printedName": "Modify()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Void",
+                    "printedName": "()"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "s:15LDObserveBridge24ObjcSessionReplayOptionsC10maskImagesSbvM",
+                "mangledName": "$s15LDObserveBridge24ObjcSessionReplayOptionsC10maskImagesSbvM",
+                "moduleName": "LDObserveBridge",
+                "implicit": true,
+                "declAttributes": [
+                  "Final"
+                ],
+                "accessorKind": "_modify"
+              }
+            ]
+          },
+          {
+            "kind": "Constructor",
+            "name": "init",
+            "printedName": "init()",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "ObjcSessionReplayOptions",
+                "printedName": "LDObserveBridge.ObjcSessionReplayOptions",
+                "usr": "c:@M@LDObserveBridge@objc(cs)ObjcSessionReplayOptions"
+              }
+            ],
+            "declKind": "Constructor",
+            "usr": "c:@M@LDObserveBridge@objc(cs)ObjcSessionReplayOptions(im)init",
+            "mangledName": "$s15LDObserveBridge24ObjcSessionReplayOptionsCACycfc",
+            "moduleName": "LDObserveBridge",
+            "overriding": true,
+            "objc_name": "init",
+            "declAttributes": [
+              "Dynamic",
+              "ObjC",
+              "Override",
+              "AccessControl"
+            ],
+            "init_kind": "Designated"
+          }
+        ],
+        "declKind": "Class",
+        "usr": "c:@M@LDObserveBridge@objc(cs)ObjcSessionReplayOptions",
+        "mangledName": "$s15LDObserveBridge24ObjcSessionReplayOptionsC",
+        "moduleName": "LDObserveBridge",
+        "objc_name": "ObjcSessionReplayOptions",
+        "declAttributes": [
+          "Final",
+          "AccessControl",
+          "ObjC"
+        ],
+        "superclassUsr": "c:objc(cs)NSObject",
+        "inheritsConvenienceInitializers": true,
+        "superclassNames": [
+          "ObjectiveC.NSObject"
+        ],
+        "conformances": [
+          {
+            "kind": "Conformance",
+            "name": "Copyable",
+            "printedName": "Copyable",
+            "usr": "s:s8CopyableP",
+            "mangledName": "$ss8CopyableP"
+          },
+          {
+            "kind": "Conformance",
+            "name": "Escapable",
+            "printedName": "Escapable",
+            "usr": "s:s9EscapableP",
+            "mangledName": "$ss9EscapableP"
+          },
+          {
+            "kind": "Conformance",
+            "name": "Equatable",
+            "printedName": "Equatable",
+            "usr": "s:SQ",
+            "mangledName": "$sSQ"
+          },
+          {
+            "kind": "Conformance",
+            "name": "Hashable",
+            "printedName": "Hashable",
+            "usr": "s:SH",
+            "mangledName": "$sSH"
+          },
+          {
+            "kind": "Conformance",
+            "name": "CVarArg",
+            "printedName": "CVarArg",
+            "usr": "s:s7CVarArgP",
+            "mangledName": "$ss7CVarArgP"
+          },
+          {
+            "kind": "Conformance",
+            "name": "_KeyValueCodingAndObservingPublishing",
+            "printedName": "_KeyValueCodingAndObservingPublishing",
+            "usr": "s:10Foundation37_KeyValueCodingAndObservingPublishingP",
+            "mangledName": "$s10Foundation37_KeyValueCodingAndObservingPublishingP"
+          },
+          {
+            "kind": "Conformance",
+            "name": "_KeyValueCodingAndObserving",
+            "printedName": "_KeyValueCodingAndObserving",
+            "usr": "s:10Foundation27_KeyValueCodingAndObservingP",
+            "mangledName": "$s10Foundation27_KeyValueCodingAndObservingP"
+          },
+          {
+            "kind": "Conformance",
+            "name": "CustomStringConvertible",
+            "printedName": "CustomStringConvertible",
+            "usr": "s:s23CustomStringConvertibleP",
+            "mangledName": "$ss23CustomStringConvertibleP"
+          },
+          {
+            "kind": "Conformance",
+            "name": "CustomDebugStringConvertible",
+            "printedName": "CustomDebugStringConvertible",
+            "usr": "s:s28CustomDebugStringConvertibleP",
+            "mangledName": "$ss28CustomDebugStringConvertibleP"
+          }
+        ]
+      },
+      {
+        "kind": "TypeDecl",
+        "name": "ObjcSRClient",
+        "printedName": "ObjcSRClient",
+        "children": [
+          {
+            "kind": "Function",
+            "name": "version",
+            "printedName": "version()",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "String",
+                "printedName": "Swift.String",
+                "usr": "s:SS"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "c:@M@LDObserveBridge@objc(cs)SRClient(im)version",
+            "mangledName": "$s15LDObserveBridge12ObjcSRClientC7versionSSyF",
+            "moduleName": "LDObserveBridge",
+            "declAttributes": [
+              "Final",
+              "AccessControl",
+              "ObjC"
+            ],
+            "funcSelfKind": "NonMutating"
+          },
+          {
+            "kind": "Function",
+            "name": "start",
+            "printedName": "start(mobileKey:observability:replay:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Void",
+                "printedName": "()"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "String",
+                "printedName": "Swift.String",
+                "usr": "s:SS"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "ObjcObservabilityOptions",
+                "printedName": "LDObserveBridge.ObjcObservabilityOptions",
+                "usr": "c:@M@LDObserveBridge@objc(cs)ObjcObservabilityOptions"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "ObjcSessionReplayOptions",
+                "printedName": "LDObserveBridge.ObjcSessionReplayOptions",
+                "usr": "c:@M@LDObserveBridge@objc(cs)ObjcSessionReplayOptions"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "c:@M@LDObserveBridge@objc(cs)SRClient(im)startWithMobileKey:observability:replay:",
+            "mangledName": "$s15LDObserveBridge12ObjcSRClientC5start9mobileKey13observability6replayySS_AA0C20ObservabilityOptionsCAA0c13SessionReplayK0CtF",
+            "moduleName": "LDObserveBridge",
+            "objc_name": "startWithMobileKey:observability:replay:",
+            "declAttributes": [
+              "Final",
+              "AccessControl",
+              "ObjC"
+            ],
+            "funcSelfKind": "NonMutating"
+          },
+          {
+            "kind": "Constructor",
+            "name": "init",
+            "printedName": "init()",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "ObjcSRClient",
+                "printedName": "LDObserveBridge.ObjcSRClient",
+                "usr": "c:@M@LDObserveBridge@objc(cs)SRClient"
+              }
+            ],
+            "declKind": "Constructor",
+            "usr": "c:@M@LDObserveBridge@objc(cs)SRClient(im)init",
+            "mangledName": "$s15LDObserveBridge12ObjcSRClientCACycfc",
+            "moduleName": "LDObserveBridge",
+            "overriding": true,
+            "implicit": true,
+            "objc_name": "init",
+            "declAttributes": [
+              "Dynamic",
+              "ObjC",
+              "Override"
+            ],
+            "init_kind": "Designated"
+          }
+        ],
+        "declKind": "Class",
+        "usr": "c:@M@LDObserveBridge@objc(cs)SRClient",
+        "mangledName": "$s15LDObserveBridge12ObjcSRClientC",
+        "moduleName": "LDObserveBridge",
+        "objc_name": "SRClient",
+        "declAttributes": [
+          "Final",
+          "AccessControl",
+          "ObjC"
+        ],
+        "superclassUsr": "c:objc(cs)NSObject",
+        "inheritsConvenienceInitializers": true,
+        "superclassNames": [
+          "ObjectiveC.NSObject"
+        ],
+        "conformances": [
+          {
+            "kind": "Conformance",
+            "name": "Copyable",
+            "printedName": "Copyable",
+            "usr": "s:s8CopyableP",
+            "mangledName": "$ss8CopyableP"
+          },
+          {
+            "kind": "Conformance",
+            "name": "Escapable",
+            "printedName": "Escapable",
+            "usr": "s:s9EscapableP",
+            "mangledName": "$ss9EscapableP"
+          },
+          {
+            "kind": "Conformance",
+            "name": "Equatable",
+            "printedName": "Equatable",
+            "usr": "s:SQ",
+            "mangledName": "$sSQ"
+          },
+          {
+            "kind": "Conformance",
+            "name": "Hashable",
+            "printedName": "Hashable",
+            "usr": "s:SH",
+            "mangledName": "$sSH"
+          },
+          {
+            "kind": "Conformance",
+            "name": "CVarArg",
+            "printedName": "CVarArg",
+            "usr": "s:s7CVarArgP",
+            "mangledName": "$ss7CVarArgP"
+          },
+          {
+            "kind": "Conformance",
+            "name": "_KeyValueCodingAndObservingPublishing",
+            "printedName": "_KeyValueCodingAndObservingPublishing",
+            "usr": "s:10Foundation37_KeyValueCodingAndObservingPublishingP",
+            "mangledName": "$s10Foundation37_KeyValueCodingAndObservingPublishingP"
+          },
+          {
+            "kind": "Conformance",
+            "name": "_KeyValueCodingAndObserving",
+            "printedName": "_KeyValueCodingAndObserving",
+            "usr": "s:10Foundation27_KeyValueCodingAndObservingP",
+            "mangledName": "$s10Foundation27_KeyValueCodingAndObservingP"
+          },
+          {
+            "kind": "Conformance",
+            "name": "CustomStringConvertible",
+            "printedName": "CustomStringConvertible",
+            "usr": "s:s23CustomStringConvertibleP",
+            "mangledName": "$ss23CustomStringConvertibleP"
+          },
+          {
+            "kind": "Conformance",
+            "name": "CustomDebugStringConvertible",
+            "printedName": "CustomDebugStringConvertible",
+            "usr": "s:s28CustomDebugStringConvertibleP",
+            "mangledName": "$ss28CustomDebugStringConvertibleP"
+          }
+        ]
+      }
+    ],
+    "json_format_version": 8
+  },
+  "ConstValues": [
+    {
+      "filePath": "\/Users\/abelonogov\/work\/observability-sdk\/sdk\/@launchdarkly\/mobile-dotnet\/macios\/native\/LDObserve\/Sources\/ObjcSRClient.swift",
+      "kind": "StringLiteral",
+      "offset": 348,
+      "length": 2,
+      "value": "\"\""
+    },
+    {
+      "filePath": "\/Users\/abelonogov\/work\/observability-sdk\/sdk\/@launchdarkly\/mobile-dotnet\/macios\/native\/LDObserve\/Sources\/ObjcSRClient.swift",
+      "kind": "StringLiteral",
+      "offset": 395,
+      "length": 2,
+      "value": "\"\""
+    },
+    {
+      "filePath": "\/Users\/abelonogov\/work\/observability-sdk\/sdk\/@launchdarkly\/mobile-dotnet\/macios\/native\/LDObserve\/Sources\/ObjcSRClient.swift",
+      "kind": "StringLiteral",
+      "offset": 440,
+      "length": 2,
+      "value": "\"\""
+    },
+    {
+      "filePath": "\/Users\/abelonogov\/work\/observability-sdk\/sdk\/@launchdarkly\/mobile-dotnet\/macios\/native\/LDObserve\/Sources\/ObjcSRClient.swift",
+      "kind": "BooleanLiteral",
+      "offset": 636,
+      "length": 4,
+      "value": "true"
+    },
+    {
+      "filePath": "\/Users\/abelonogov\/work\/observability-sdk\/sdk\/@launchdarkly\/mobile-dotnet\/macios\/native\/LDObserve\/Sources\/ObjcSRClient.swift",
+      "kind": "BooleanLiteral",
+      "offset": 685,
+      "length": 4,
+      "value": "true"
+    },
+    {
+      "filePath": "\/Users\/abelonogov\/work\/observability-sdk\/sdk\/@launchdarkly\/mobile-dotnet\/macios\/native\/LDObserve\/Sources\/ObjcSRClient.swift",
+      "kind": "BooleanLiteral",
+      "offset": 732,
+      "length": 4,
+      "value": "true"
+    },
+    {
+      "filePath": "\/Users\/abelonogov\/work\/observability-sdk\/sdk\/@launchdarkly\/mobile-dotnet\/macios\/native\/LDObserve\/Sources\/ObjcSRClient.swift",
+      "kind": "BooleanLiteral",
+      "offset": 777,
+      "length": 4,
+      "value": "true"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    xmlns:tools="http://schemas.android.com/tools"
+4    package="com.launchdarky.LDNative" >
+5
+6    <uses-sdk android:minSdkVersion="24" />
+7
+8    <uses-permission android:name="android.permission.INTERNET" />
+8-->/Users/abelonogov/work/observability-sdk/sdk/@launchdarkly/mobile-dotnet/android/native/LDObserve/src/main/AndroidManifest.xml:4:5-67
+8-->/Users/abelonogov/work/observability-sdk/sdk/@launchdarkly/mobile-dotnet/android/native/LDObserve/src/main/AndroidManifest.xml:4:22-64
+9    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+9-->/Users/abelonogov/work/observability-sdk/sdk/@launchdarkly/mobile-dotnet/android/native/LDObserve/src/main/AndroidManifest.xml:5:5-79
+9-->/Users/abelonogov/work/observability-sdk/sdk/@launchdarkly/mobile-dotnet/android/native/LDObserve/src/main/AndroidManifest.xml:5:22-76
+10
+11</manifest>
