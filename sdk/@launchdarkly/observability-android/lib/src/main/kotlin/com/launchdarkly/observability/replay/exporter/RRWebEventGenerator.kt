@@ -2,12 +2,15 @@ package com.launchdarkly.observability.replay.exporter
 
 import android.view.MotionEvent
 import com.launchdarkly.observability.replay.Event
+import com.launchdarkly.observability.replay.Addition
 import com.launchdarkly.observability.replay.EventData
 import com.launchdarkly.observability.replay.EventDataUnion
 import com.launchdarkly.observability.replay.EventNode
 import com.launchdarkly.observability.replay.EventType
+import com.launchdarkly.observability.replay.IncrementalSource
 import com.launchdarkly.observability.replay.InteractionEvent
 import com.launchdarkly.observability.replay.NodeType
+import com.launchdarkly.observability.replay.Removal
 import com.launchdarkly.observability.replay.RRWebCustomDataTag
 import com.launchdarkly.observability.replay.RRWebIncrementalSource
 import com.launchdarkly.observability.replay.RRWebMouseInteraction
@@ -29,7 +32,15 @@ class RRWebEventGenerator(
 ) {
     companion object {
         private const val RRWEB_DOCUMENT_PADDING = 11
-        private const val RRWEB_CANVAS_NODE_ID = 6
+        private const val RRWEB_INITIAL_IMAGE_NODE_ID = 6
+        private const val RRWEB_BODY_NODE_ID = 5
+        private const val DOM_HTML = "html"
+        private const val DOM_HEAD = "head"
+        private const val DOM_BODY = "body"
+        private const val DOM_LANG = "lang"
+        private const val DOM_LANG_EN = "en"
+        private const val DOM_STYLE = "style"
+        private const val DOM_BODY_STYLE = "position:relative;"
         private const val CLICK_TARGET_VALUE = ""
         private const val CLICK_TEXT_CONTENT_VALUE = ""
         private const val CLICK_SELECTOR_VALUE = "view"
@@ -42,10 +53,14 @@ class RRWebEventGenerator(
      */
     private var lastSid = 0
     var accumulatedCanvasSize: Int = 0
+    private var currentImageNodeId: Int = RRWEB_INITIAL_IMAGE_NODE_ID
+    private var nextDynamicNodeId: Int = RRWEB_INITIAL_IMAGE_NODE_ID + 1
 
     data class State(
         val lastSid: Int = 0,
         val generatingCanvasSize: Int = 0,
+        val currentImageNodeId: Int = RRWEB_INITIAL_IMAGE_NODE_ID,
+        val nextDynamicNodeId: Int = RRWEB_INITIAL_IMAGE_NODE_ID + 1,
     )
 
     private fun nextSid(): Int {
@@ -56,11 +71,15 @@ class RRWebEventGenerator(
     fun getState(): State = State(
         lastSid = lastSid,
         generatingCanvasSize = accumulatedCanvasSize,
+        currentImageNodeId = currentImageNodeId,
+        nextDynamicNodeId = nextDynamicNodeId,
     )
 
     fun restoreState(state: State) {
         lastSid = state.lastSid
         accumulatedCanvasSize = state.generatingCanvasSize
+        currentImageNodeId = state.currentImageNodeId
+        nextDynamicNodeId = state.nextDynamicNodeId
     }
 
     /**
@@ -68,69 +87,50 @@ class RRWebEventGenerator(
      * for a previous capture in the same session.
      */
     fun generateCaptureIncrementalEvents(captureEvent: CaptureEvent): List<Event> {
-        val eventsBatch = mutableListOf<Event>()
+        val dataUrl = "data:image/jpeg;base64,${captureEvent.imageBase64}"
+        val previousImageNodeId = currentImageNodeId
+        val newImageNodeId = nextDynamicNodeId++
 
-        val incrementalEvent = Event(
+        val imageNode = EventNode(
+            id = newImageNodeId,
+            type = NodeType.ELEMENT,
+            tagName = "img",
+            attributes = mapOf(
+                "src" to dataUrl,
+                "width" to "${captureEvent.origWidth}",
+                "height" to "${captureEvent.origHeight}",
+                "style" to "position:absolute;left:0px;top:0px;pointer-events:none;",
+            ),
+            childNodes = emptyList(),
+        )
+
+        val mutationEvent = Event(
             type = EventType.INCREMENTAL_SNAPSHOT,
             timestamp = captureEvent.timestamp,
             sid = nextSid(),
-            data = EventDataUnion.CustomEventDataWrapper(
-                buildJsonObject {
-                    put("source", RRWebIncrementalSource.CANVAS_MUTATION.code)
-                    put("id", RRWEB_CANVAS_NODE_ID)
-                    put("type", 0)
-                    put("commands", buildJsonArray {
-                        add(
-                            buildJsonObject {
-                                put("property", "clearRect")
-                                put("args", buildJsonArray {
-                                    add(JsonPrimitive(0))
-                                    add(JsonPrimitive(0))
-                                    add(JsonPrimitive(captureEvent.origWidth))
-                                    add(JsonPrimitive(captureEvent.origHeight))
-                                })
-                            }
+            data = EventDataUnion.StandardEventData(
+                EventData(
+                    source = IncrementalSource.MUTATION,
+                    adds = listOf(
+                        Addition(
+                            parentId = RRWEB_BODY_NODE_ID,
+                            nextId = null,
+                            node = imageNode,
                         )
-                        add(
-                            buildJsonObject {
-                                put("property", "drawImage")
-                                put("args", buildJsonArray {
-                                    add(
-                                        buildJsonObject {
-                                            put("rr_type", "ImageBitmap")
-                                            put("args", buildJsonArray {
-                                                add(
-                                                    buildJsonObject {
-                                                        put("rr_type", "Blob")
-                                                        put("data", buildJsonArray {
-                                                            add(
-                                                                buildJsonObject {
-                                                                    put("rr_type", "ArrayBuffer")
-                                                                    put("base64", captureEvent.imageBase64)
-                                                                }
-                                                            )
-                                                        })
-                                                        put("type", "image/jpeg")
-                                                    }
-                                                )
-                                            })
-                                        }
-                                    )
-                                    add(JsonPrimitive(0))
-                                    add(JsonPrimitive(0))
-                                    add(JsonPrimitive(captureEvent.origWidth))
-                                    add(JsonPrimitive(captureEvent.origHeight))
-                                })
-                            }
+                    ),
+                    removes = listOf(
+                        Removal(
+                            parentId = RRWEB_BODY_NODE_ID,
+                            id = previousImageNodeId,
                         )
-                    })
-                }
-            )
+                    ),
+                )
+            ),
         )
-        accumulatedCanvasSize += captureEvent.imageBase64.length + canvasDrawEntourage
-        eventsBatch.add(incrementalEvent)
 
-        return eventsBatch
+        currentImageNodeId = newImageNodeId
+        accumulatedCanvasSize += dataUrl.length + canvasDrawEntourage
+        return listOf(mutationEvent)
     }
 
     /**
@@ -171,25 +171,25 @@ class RRWebEventGenerator(
                             EventNode(
                                 id = 3,
                                 type = NodeType.ELEMENT,
-                                tagName = "html",
-                                attributes = mapOf("lang" to "en"),
+                                tagName = DOM_HTML,
+                                attributes = mapOf(DOM_LANG to DOM_LANG_EN),
                                 childNodes = listOf(
                                     EventNode(
                                         id = 4,
                                         type = NodeType.ELEMENT,
-                                        tagName = "head",
+                                        tagName = DOM_HEAD,
                                         attributes = emptyMap(),
                                     ),
                                     EventNode(
                                         id = 5,
                                         type = NodeType.ELEMENT,
-                                        tagName = "body",
-                                        attributes = emptyMap(),
+                                        tagName = DOM_BODY,
+                                        attributes = mapOf(DOM_STYLE to DOM_BODY_STYLE),
                                         childNodes = listOf(
                                             EventNode(
-                                                id = 6,
+                                                id = RRWEB_INITIAL_IMAGE_NODE_ID,
                                                 type = NodeType.ELEMENT,
-                                                tagName = "canvas",
+                                                tagName = "img",
                                                 attributes = mapOf(
                                                     "rr_dataURL" to "data:image/jpeg;base64,${captureEvent.imageBase64}",
                                                     "width" to "${captureEvent.origWidth}",
@@ -209,6 +209,8 @@ class RRWebEventGenerator(
 
         // starting again canvas size
         accumulatedCanvasSize = captureEvent.imageBase64.length + canvasDrawEntourage
+        currentImageNodeId = RRWEB_INITIAL_IMAGE_NODE_ID
+        nextDynamicNodeId = RRWEB_INITIAL_IMAGE_NODE_ID + 1
         eventBatch.add(snapshotEvent)
 
         val viewportEvent = Event(
@@ -255,7 +257,7 @@ class RRWebEventGenerator(
                                 put("source", RRWebIncrementalSource.MOUSE_INTERACTION.code)
                                 putJsonArray("texts") {}
                                 put("type", RRWebMouseInteraction.TOUCH_START.code)
-                                put("id", RRWEB_CANVAS_NODE_ID)
+                                put("id", currentImageNodeId)
                                 put("x", firstPosition.x + RRWEB_DOCUMENT_PADDING)
                                 put("y", firstPosition.y + RRWEB_DOCUMENT_PADDING)
                             }
@@ -293,7 +295,7 @@ class RRWebEventGenerator(
                                 put("source", RRWebIncrementalSource.MOUSE_INTERACTION.code)
                                 putJsonArray("texts") {}
                                 put("type", RRWebMouseInteraction.TOUCH_END.code)
-                                put("id", RRWEB_CANVAS_NODE_ID)
+                                put("id", currentImageNodeId)
                                 put("x", lastPosition.x + RRWEB_DOCUMENT_PADDING)
                                 put("y", lastPosition.y + RRWEB_DOCUMENT_PADDING)
                             }
@@ -316,7 +318,7 @@ class RRWebEventGenerator(
                                     put("positions", buildJsonArray {
                                         add(
                                             buildJsonObject {
-                                                put("id", RRWEB_CANVAS_NODE_ID)
+                                                put("id", currentImageNodeId)
                                                 put("timeOffset", 0)
                                                 put("x", position.x + RRWEB_DOCUMENT_PADDING)
                                                 put("y", position.y + RRWEB_DOCUMENT_PADDING)
