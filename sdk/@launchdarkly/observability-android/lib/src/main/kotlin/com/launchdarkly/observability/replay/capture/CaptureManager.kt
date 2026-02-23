@@ -6,7 +6,6 @@ import android.graphics.Rect
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
-import android.util.Base64
 import android.view.Choreographer
 import android.view.PixelCopy
 import android.view.View
@@ -24,7 +23,6 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
-import java.io.ByteArrayOutputStream
 import kotlin.coroutines.resume
 import androidx.core.graphics.withTranslation
 import com.launchdarkly.observability.replay.masking.Mask
@@ -40,7 +38,7 @@ import com.launchdarkly.observability.replay.scaleCoordinate
  *
  * @param sessionManager Used to get current session for tagging [ExportFrame] with session id
  */
-class CaptureSource(
+class CaptureManager(
     private val sessionManager: SessionManager,
     private val options: ReplayOptions,
     private val logger: LDLogger,
@@ -57,25 +55,23 @@ class CaptureSource(
     private val maskCollector = MaskCollector(logger)
     private val maskApplier = MaskApplier()
     private val maskMatchers = options.privacyProfile.asMatchersList()
-    private val tileSignatureManager = TileSignatureManager()
-
-    @Volatile
-    private var tileSignature: TileSignature? = null
+    private val exportDiffManager = ExportDiffManager()
 
     /**
      * Requests a [ExportFrame] be taken now.
      */
     suspend fun captureNow() {
-        val capture = doCapture()
-        if (capture != null) {
-            _captureEventFlow.emit(capture)
-        }
+        val rawFrame = doCapture() ?: return
+
+        val session = sessionManager.getSessionId()
+        val exportFrame = exportDiffManager.createCaptureEvent(rawFrame, session) ?: return
+        _captureEventFlow.emit(exportFrame)
     }
 
     /**
      * Internal capture routine.
      */
-    private suspend fun doCapture(): ExportFrame? =
+    private suspend fun doCapture(): ExportDiffManager.RawFrame? =
         withContext(DispatcherProviderHolder.current.main) {
             // Synchronize with UI rendering frame
             suspendCancellableCoroutine { continuation ->
@@ -87,8 +83,6 @@ class CaptureSource(
             }
 
             val timestamp = System.currentTimeMillis()
-            val session = sessionManager.getSessionId()
-
             val windowsEntries = windowInspector.appWindows()
             if (windowsEntries.isEmpty()) {
                 return@withContext null
@@ -180,14 +174,13 @@ class CaptureSource(
                         }
                     }
 
-                    val newSignature = tileSignatureManager.compute(baseResult.bitmap, 64)
-                    if (newSignature != null && newSignature == tileSignature) {
-                        // the similar bitmap not send
-                        return@withContext null
-                    }
-                    tileSignature = newSignature
-
-                    createCaptureEvent(baseResult.bitmap, timestamp, session)
+                    // Keep base bitmap alive after leaving this scope; all others are recycled in finally.
+                    captureResults[0] = null
+                    ExportDiffManager.RawFrame(
+                        bitmap = baseResult.bitmap,
+                        timestamp = timestamp,
+                        orientation = 0
+                    )
                 }
             } finally {
                 recycleCaptureResults(captureResults)
@@ -332,65 +325,4 @@ class CaptureSource(
         return createBitmap(width, height)
     }
 
-    private fun createCaptureEvent(
-        postMask: Bitmap,
-        timestamp: Long,
-        session: String
-    ): ExportFrame {
-        // TODO: O11Y-625 - optimize memory allocations here, re-use byte arrays and such
-        val outputStream = ByteArrayOutputStream()
-        return try {
-            // TODO: O11Y-628 - calculate quality using captureQuality options
-            postMask.compress(
-                Bitmap.CompressFormat.WEBP,
-                30,
-                outputStream
-            )
-            val byteArray = outputStream.toByteArray()
-            val compressedImage =
-                Base64.encodeToString(
-                    byteArray,
-                    Base64.NO_WRAP
-                )
-
-            val width = postMask.width
-            val height = postMask.height
-            ExportFrame(
-                keyFrameId = 0,
-                addImages = listOf(
-                    ExportFrame.AddImage(
-                        imageBase64 = compressedImage,
-                        rect = ExportFrame.FrameRect(
-                            left = 0,
-                            top = 0,
-                            width = width,
-                            height = height
-                        ),
-                        tileSignature = tileSignature
-                    )
-                ),
-                removeImages = null,
-                originalSize = ExportFrame.FrameSize(
-                    width = width,
-                    height = height
-                ),
-                scale = 1f,
-                format = ExportFrame.ExportFormat.Webp(quality = 30),
-                timestamp = timestamp,
-                orientation = 0,
-                isKeyframe = true,
-                imageSignature = null,
-                session = session
-            )
-        } finally {
-            try {
-                outputStream.close()
-            } catch (_: Throwable) {
-            }
-            try {
-                postMask.recycle()
-            } catch (_: Throwable) {
-            }
-        }
-    }
 }
