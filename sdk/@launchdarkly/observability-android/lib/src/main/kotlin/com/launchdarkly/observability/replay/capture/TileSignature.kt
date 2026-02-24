@@ -3,8 +3,11 @@ package com.launchdarkly.observability.replay.capture
 import android.graphics.Bitmap
 
 data class TileSignature(
-    val hash: Long
-)
+    val hashLo: Long,
+    val hashHi: Long,
+) {
+    constructor(hash: Long) : this(hashLo = hash, hashHi = 0L)
+}
 
 data class ImageSignature(
     val rows: Int,
@@ -24,30 +27,52 @@ data class ImageSignature(
  * synchronization.
  */
 class TileSignatureManager {
+    companion object {
+        private const val DEFAULT_PREFERRED_TILE_WIDTH = 64
+        private const val DEFAULT_PREFERRED_TILE_HEIGHT = 22
+    }
+
     @Volatile
     private var pixelBuffer: IntArray = IntArray(0)
 
-/**
- * Computes a tile-based signature for the given bitmap. Not thread-safe.
- *
- * @param bitmap The bitmap to compute a signature for.
- * @param preferredTileWidth Preferred tile width.
- * @param preferredTileHeight Preferred tile height.
- * @return The tile signature.
- */
-    fun compute(
-        bitmap: Bitmap,
-        preferredTileWidth: Int = 64,
-        preferredTileHeight: Int = 22
-    ): ImageSignature? {
-        if (preferredTileWidth <= 0 || preferredTileHeight <= 0) return null
+    /**
+     * Computes a tile-based signature using preferred defaults that are adjusted to nearby divisors.
+     */
+    fun compute(bitmap: Bitmap): ImageSignature? {
         val width = bitmap.width
         val height = bitmap.height
         if (width <= 0 || height <= 0) {
             return null
         }
-        val tileWidth = nearestDivisor(width, preferredTileWidth, 60..79)
-        val tileHeight = nearestDivisor(height, preferredTileHeight, 22..44)
+        val tileWidth = nearestDivisor(width, DEFAULT_PREFERRED_TILE_WIDTH, 60..79)
+        val tileHeight = nearestDivisor(height, DEFAULT_PREFERRED_TILE_HEIGHT, 22..44)
+        return computeInternal(bitmap, tileWidth, tileHeight)
+    }
+
+    /**
+     * Computes a tile-based signature with explicitly provided tile dimensions.
+     * No nearest-divisor adjustment is applied.
+     */
+    fun compute(bitmap: Bitmap, tileWidth: Int, tileHeight: Int): ImageSignature? {
+        if (tileWidth <= 0 || tileHeight <= 0) return null
+        return computeInternal(bitmap, tileWidth, tileHeight)
+    }
+
+    /**
+     * Convenience overload for square tiles. No nearest-divisor adjustment is applied.
+     */
+    fun compute(bitmap: Bitmap, tileSize: Int): ImageSignature? = compute(bitmap, tileSize, tileSize)
+
+    private fun computeInternal(
+        bitmap: Bitmap,
+        tileWidth: Int,
+        tileHeight: Int
+    ): ImageSignature? {
+        val width = bitmap.width
+        val height = bitmap.height
+        if (width <= 0 || height <= 0) {
+            return null
+        }
 
         val pixelsNeeded = width * height
         if (pixelBuffer.size < pixelsNeeded) {
@@ -69,15 +94,13 @@ class TileSignatureManager {
                 val startX = tx * tileWidth
                 val endX = minOf(startX + tileWidth, width)
                 tileSignatures.add(
-                    TileSignature(
-                        hash = hashTile(
-                            pixels = pixels,
-                            width = width,
-                            startX = startX,
-                            startY = startY,
-                            endX = endX,
-                            endY = endY
-                        )
+                    hashTile(
+                        pixels = pixels,
+                        width = width,
+                        startX = startX,
+                        startY = startY,
+                        endX = endX,
+                        endY = endY
                     )
                 )
             }
@@ -99,20 +122,32 @@ class TileSignatureManager {
         startY: Int,
         endX: Int,
         endY: Int
-    ): Long {
-        var hash = 5163949831757626579L
-        val prime = 1238197591667094937L // from https://bigprimes.org
+    ): TileSignature {
+        // Two independent 64-bit lanes to reduce collision probability vs single-lane hashing.
+        var hashLo = 5163949831757626579L
+        var hashHi = 4657936482115123397L
+        val primeLo = 1238197591667094937L // from https://bigprimes.org
+        val primeHi = 1700294137212722571L // from https://bigprimes.org
         for (y in startY until endY) {
             val rowOffset = y * width
             for (x in startX until endX) {
                 val argb = pixels[rowOffset + x]
-                hash = (hash xor (argb and 0xFF).toLong()) * prime
-                hash = (hash xor ((argb ushr 8) and 0xFF).toLong()) * prime
-                hash = (hash xor ((argb ushr 16) and 0xFF).toLong()) * prime
-                hash = (hash xor ((argb ushr 24) and 0xFF).toLong()) * prime
+                val b0 = (argb and 0xFF).toLong()
+                val b1 = ((argb ushr 8) and 0xFF).toLong()
+                val b2 = ((argb ushr 16) and 0xFF).toLong()
+                val b3 = ((argb ushr 24) and 0xFF).toLong()
+                hashLo = (hashLo xor b0) * primeLo
+                hashLo = (hashLo xor b1) * primeLo
+                hashLo = (hashLo xor b2) * primeLo
+                hashLo = (hashLo xor b3) * primeLo
+
+                hashHi = (hashHi xor b3) * primeHi
+                hashHi = (hashHi xor b2) * primeHi
+                hashHi = (hashHi xor b1) * primeHi
+                hashHi = (hashHi xor b0) * primeHi
             }
         }
-        return hash
+        return TileSignature(hashLo = hashLo, hashHi = hashHi)
     }
 
     private fun nearestDivisor(value: Int, preferred: Int, range: IntRange): Int {
@@ -137,6 +172,7 @@ class TileSignatureManager {
 
         return preferred
     }
+
 }
 
 fun ImageSignature.diffRectangle(other: ImageSignature?): IntRect? {

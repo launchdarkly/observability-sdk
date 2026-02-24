@@ -37,7 +37,7 @@ class TileSignatureManagerTest {
         val signature = manager.compute(bitmap, 2)
         assertNotNull(signature)
         // 4x4 with tileSize 2 => 2x2 = 4 tiles
-        assertEquals(4, signature!!.tileHashes.size)
+        assertEquals(4, signature!!.tileSignatures.size)
     }
 
     @Test
@@ -76,12 +76,12 @@ class TileSignatureManagerTest {
         // tileSize 4 => ceil(10/4)=3 in each dimension => 9 tiles
         val sig4 = manager.compute(bmp, 4)
         assertNotNull(sig4)
-        assertEquals(9, sig4!!.tileHashes.size)
+        assertEquals(9, sig4!!.tileSignatures.size)
 
         // tileSize 6 => ceil(10/6)=2 in each dimension => 4 tiles
         val sig6 = manager.compute(bmp, 6)
         assertNotNull(sig6)
-        assertEquals(4, sig6!!.tileHashes.size)
+        assertEquals(4, sig6!!.tileSignatures.size)
     }
 
     @Test
@@ -108,12 +108,12 @@ class TileSignatureManagerTest {
         val sigOverlay = manager.compute(withOverlay, tileSize)!!
 
         // 12x12 with tile size 4 => 3x3 tiles
-        assertEquals(9, sigBase.tileHashes.size)
-        assertEquals(9, sigOverlay.tileHashes.size)
+        assertEquals(9, sigBase.tileSignatures.size)
+        assertEquals(9, sigOverlay.tileSignatures.size)
 
         var diffCount = 0
-        for (i in sigBase.tileHashes.indices) {
-            if (sigBase.tileHashes[i] != sigOverlay.tileHashes[i]) {
+        for (i in sigBase.tileSignatures.indices) {
+            if (sigBase.tileSignatures[i] != sigOverlay.tileSignatures[i]) {
                 diffCount++
             }
         }

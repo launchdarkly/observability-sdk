@@ -107,25 +107,26 @@ class RRWebEventGenerator(
 
     private fun addCommandNodes(exportFrame: ExportFrame): List<Event> {
         val bodyId = bodyNodeId ?: return emptyList()
-        if (exportFrame.isKeyframe) {
-            nodeIds.clear()
-        }
-        if (!exportFrame.isKeyframe && exportFrame.keyFrameId != knownKeyFrameId) {
-            // Drop frame, it cannot be reconstructed from currently known keyframe state.
-            return emptyList()
-        }
 
         var totalCanvasSize = 0
-        val adds = exportFrame.addImages.map { image ->
-            val (node, canvasSize) = tileNode(exportFrame, image)
-            totalCanvasSize += canvasSize
-            Addition(parentId = bodyId, nextId = null, node = node)
-        }
         val removes = exportFrame.removeImages?.mapNotNull { removal ->
             nodeIds[removal.tileSignature]?.let { nodeId ->
                 Removal(parentId = bodyId, id = nodeId)
             }
         } ?: emptyList()
+
+        if (exportFrame.isKeyframe) {
+            nodeIds.clear()
+        } else if (exportFrame.keyFrameId != knownKeyFrameId) {
+            // Drop frame, it cannot be reconstructed from currently known keyframe state.
+            return emptyList()
+        }
+
+        val adds = exportFrame.addImages.map { image ->
+            val (node, canvasSize) = tileNode(exportFrame, image)
+            totalCanvasSize += canvasSize
+            Addition(parentId = bodyId, nextId = null, node = node)
+        }
 
         if (exportFrame.isKeyframe) {
             adds.firstOrNull()?.node?.id?.let { firstId ->
