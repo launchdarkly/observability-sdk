@@ -87,6 +87,16 @@ let otelConfig: BrowserTracingConfig | undefined
 
 const RECORD_ATTRIBUTE = 'highlight.record'
 const SESSION_ID_ATTRIBUTE = 'highlight.session_id'
+
+// Shared map to coordinate async response body reads between the
+// FetchInstrumentation's applyCustomAttributesOnSpan callback and
+// CustomBatchSpanProcessor.onEnd(). The callback starts the async
+// work (cloning + reading the response body) and stores a promise
+// here; the span processor awaits it before exporting the span.
+const pendingResponseAttributes = new WeakMap<
+	object,
+	Promise<Record<string, string | string[]>>
+>()
 export const LOG_SPAN_NAME = 'launchdarkly.js.log'
 
 export const ATTR_EXCEPTION_ID = 'launchdarkly.exception.id'
@@ -218,11 +228,7 @@ export const setupBrowserTracing = (
 				propagateTraceHeaderCorsUrls: getCorsUrlsPattern(
 					config.tracingOrigins,
 				),
-				applyCustomAttributesOnSpan: async (
-					span,
-					request,
-					response,
-				) => {
+				applyCustomAttributesOnSpan: (span, request, response) => {
 					if (!(span as any).attributes) {
 						return
 					}
@@ -248,79 +254,42 @@ export const setupBrowserTracing = (
 					}
 
 					if (config.networkRecordingOptions?.recordHeadersAndBody) {
-						const responseBody = await getResponseBody(
-							response,
-							config.networkRecordingOptions?.bodyKeysToRecord,
-							config.networkRecordingOptions
-								?.networkBodyKeysToRedact,
-						)
-						const responseHeaders = Object.fromEntries(
-							response.headers.entries(),
-						)
-
-						enhanceSpanWithHttpResponseAttributes(
-							span,
-							responseHeaders,
-							responseBody,
-							config.networkRecordingOptions,
-						)
+						// Start async response body reading and store the
+						// promise. CustomBatchSpanProcessor.onEnd() will await
+						// it and assign the attributes before exporting.
+						const promise = (async () => {
+							const responseBody = await getResponseBody(
+								response,
+								config.networkRecordingOptions
+									?.bodyKeysToRecord,
+								config.networkRecordingOptions
+									?.networkBodyKeysToRedact,
+							)
+							const responseHeaders = Object.fromEntries(
+								response.headers.entries(),
+							)
+							const sanitizedResponseHeaders =
+								sanitizeHeaders(
+									config.networkRecordingOptions
+										?.networkHeadersToRedact ?? [],
+									responseHeaders,
+									config.networkRecordingOptions
+										?.headerKeysToRecord,
+								)
+							const headerAttributes =
+								convertHeadersToOtelAttributes(
+									sanitizedResponseHeaders,
+									'http.response.header',
+								)
+							return {
+								'http.response.body': responseBody,
+								...headerAttributes,
+							}
+						})()
+						pendingResponseAttributes.set(span, promise)
 					}
 				},
 			})
-
-			// The upstream FetchInstrumentation calls applyCustomAttributesOnSpan
-			// via safeExecuteInTheMiddle (sync), which does not await async callbacks.
-			// This means the span ends before the response body is read, silently
-			// dropping the http.response.body attribute. Patch _applyAttributesAfterFetch
-			// and _endSpan to properly await async callbacks before ending the span.
-			const pendingAttributes = new Map<api.Span, Promise<void>>()
-			const inst = fetchInstrumentation as any
-			const origEndSpan = inst.__proto__._endSpan
-
-			inst._applyAttributesAfterFetch = function (
-				span: api.Span,
-				request: Request | RequestInit,
-				result: Response | Error,
-			) {
-				const applyCustomAttributesOnSpan =
-					this.getConfig().applyCustomAttributesOnSpan
-				if (applyCustomAttributesOnSpan) {
-					try {
-						const maybePromise = applyCustomAttributesOnSpan(
-							span,
-							request,
-							result,
-						)
-						if (
-							maybePromise &&
-							typeof (maybePromise as any).then === 'function'
-						) {
-							pendingAttributes.set(
-								span,
-								(maybePromise as Promise<void>).catch(() => {}),
-							)
-						}
-					} catch {
-						// match safeExecuteInTheMiddle behavior
-					}
-				}
-			}
-
-			inst._endSpan = function (
-				span: api.Span,
-				spanData: unknown,
-				response: unknown,
-			) {
-				const pending = pendingAttributes.get(span)
-				if (pending) {
-					pending.finally(() => {
-						pendingAttributes.delete(span)
-						origEndSpan.call(this, span, spanData, response)
-					})
-				} else {
-					origEndSpan.call(this, span, spanData, response)
-				}
-			}
 
 			instrumentations.push(fetchInstrumentation)
 		}
@@ -421,6 +390,25 @@ class CustomBatchSpanProcessor extends BatchSpanProcessor {
 	onEnd(span: ReadableSpan): void {
 		if (span.attributes[RECORD_ATTRIBUTE] === false) {
 			return // don't record spans that are marked as not to be recorded
+		}
+
+		// If there is a pending async response body read for this span
+		// (started in applyCustomAttributesOnSpan), wait for it to
+		// resolve and assign the attributes before exporting.
+		const pending = pendingResponseAttributes.get(span as unknown as api.Span)
+		if (pending) {
+			pending
+				.then((attrs) => {
+					Object.assign(span.attributes, attrs)
+				})
+				.catch(() => {})
+				.finally(() => {
+					pendingResponseAttributes.delete(
+						span as unknown as api.Span,
+					)
+					super.onEnd(span)
+				})
+			return
 		}
 
 		super.onEnd(span)
