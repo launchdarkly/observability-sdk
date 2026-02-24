@@ -35,7 +35,7 @@ class SessionReplayExporterTest {
             serviceName = "test-service",
             serviceVersion = "1.0.0",
             injectedReplayApiService = mockService,
-            canvasBufferLimit = 20,
+            canvasBufferLimit = 45,
             canvasDrawEntourage = 1,
             initialIdentifyItemPayload = identifyEvent,
             logger = mockk()
