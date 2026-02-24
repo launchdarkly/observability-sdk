@@ -36,6 +36,9 @@ namespace LDObserveMaciOS
         [Export("maskWebViews")]
         bool MaskWebViews { get; set; }
 
+        [Export("maskLabels")]
+        bool MaskLabels { get; set; }
+
         [Export("maskImages")]
         bool MaskImages { get; set; }
     }

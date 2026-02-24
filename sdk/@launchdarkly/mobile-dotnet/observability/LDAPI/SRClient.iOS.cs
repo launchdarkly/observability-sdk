@@ -32,6 +32,7 @@ public class SRClient
             IsEnabled = replay.IsEnabled,
             MaskTextInputs = replay.Privacy?.MaskTextInputs ?? true,
             MaskWebViews = replay.Privacy?.MaskWebViews ?? false,
+            MaskLabels = replay.Privacy?.MaskLabels ?? false,
             MaskImages = replay.Privacy?.MaskImages ?? false
         };
 

@@ -28,6 +28,7 @@ public final class ObjcSessionReplayOptions: NSObject {
     @objc public var isEnabled: Bool = true
     @objc public var maskTextInputs: Bool = true
     @objc public var maskWebViews: Bool = true
+    @objc public var maskLabels: Bool = false
     @objc public var maskImages: Bool = true
 
     @objc public override init() {
@@ -60,6 +61,7 @@ public final class ObjcSRClient: NSObject {
                     privacy: .init(
                         maskTextInputs: replay.maskTextInputs,
                         maskWebViews: replay.maskWebViews,
+                        maskLabels: replay.maskLabels,
                         maskImages: replay.maskImages
                     )
                 ))
