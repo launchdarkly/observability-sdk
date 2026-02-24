@@ -3,7 +3,7 @@
 require 'test_helper'
 require 'rack'
 require 'rack/test'
-require_relative '../lib/launchdarkly_observability/rails'
+require_relative '../lib/launchdarkly_observability/middleware'
 
 class MiddlewareTest < Minitest::Test
   include Rack::Test::Methods
