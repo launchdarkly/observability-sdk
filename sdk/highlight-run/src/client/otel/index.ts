@@ -93,7 +93,7 @@ const SESSION_ID_ATTRIBUTE = 'highlight.session_id'
 // CustomBatchSpanProcessor.onEnd(). The callback starts the async
 // work (cloning + reading the response body) and stores a promise
 // here; the span processor awaits it before exporting the span.
-const pendingResponseAttributes = new WeakMap<
+const pendingResponseAttributes = new Map<
 	object,
 	Promise<Record<string, string | string[]>>
 >()
@@ -382,6 +382,8 @@ export const setupBrowserTracing = (
 }
 
 class CustomBatchSpanProcessor extends BatchSpanProcessor {
+	private _pendingSpans = new Set<Promise<void>>()
+
 	onStart(span: SDKSpan, parentContext: Context): void {
 		span.setAttribute(SESSION_ID_ATTRIBUTE, getPersistentSessionSecureID())
 		super.onStart(span, parentContext)
@@ -395,23 +397,42 @@ class CustomBatchSpanProcessor extends BatchSpanProcessor {
 		// If there is a pending async response body read for this span
 		// (started in applyCustomAttributesOnSpan), wait for it to
 		// resolve and assign the attributes before exporting.
-		const pending = pendingResponseAttributes.get(span as unknown as api.Span)
+		const pending = pendingResponseAttributes.get(
+			span as unknown as api.Span,
+		)
 		if (pending) {
-			pending
+			const completion = pending
 				.then((attrs) => {
 					Object.assign(span.attributes, attrs)
 				})
-				.catch(() => {})
+				.catch((e) => {
+					console.warn(
+						'[CustomBatchSpanProcessor] Failed to capture response body attributes',
+						e,
+					)
+				})
 				.finally(() => {
 					pendingResponseAttributes.delete(
 						span as unknown as api.Span,
 					)
+					this._pendingSpans.delete(completion)
 					super.onEnd(span)
 				})
+			this._pendingSpans.add(completion)
 			return
 		}
 
 		super.onEnd(span)
+	}
+
+	override async shutdown(): Promise<void> {
+		await Promise.allSettled(this._pendingSpans)
+		return super.shutdown()
+	}
+
+	override async forceFlush(): Promise<void> {
+		await Promise.allSettled(this._pendingSpans)
+		return super.forceFlush()
 	}
 }
 
