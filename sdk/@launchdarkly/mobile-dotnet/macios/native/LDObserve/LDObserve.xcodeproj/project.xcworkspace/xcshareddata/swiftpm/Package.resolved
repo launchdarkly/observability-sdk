@@ -1,13 +1,22 @@
 {
-  "originHash" : "b505972ac081395d99cf2368fb1793de72a951729ca0896ac3e25904955452ed",
+  "originHash" : "726fca91e63fda85d05c9db34511dddd0b0a9cc2ff82f5198bcd32b98d738c87",
   "pins" : [
+    {
+      "identity" : "datacompression",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/mw99/DataCompression",
+      "state" : {
+        "revision" : "5ab15951321b08b74511601cbd0497667649d70b",
+        "version" : "3.8.0"
+      }
+    },
     {
       "identity" : "ios-client-sdk",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/launchdarkly/ios-client-sdk.git",
       "state" : {
-        "revision" : "34d1a543471753c3a51339af79c12389ca0e6b46",
-        "version" : "11.1.0"
+        "revision" : "ae57f26fdb6a38cb65b8918ace75ca3a19a88043",
+        "version" : "10.0.0"
       }
     },
     {
