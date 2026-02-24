@@ -1,1 +1,0 @@
--v --force --timestamp=none --sign - --entitlements /Users/abelonogov/work/observability-sdk/sdk/@launchdarkly/mobile-dotnet/sample/obj/Debug/net9.0-ios/iossimulator-arm64/Entitlements.xcent /Users/abelonogov/work/observability-sdk/sdk/@launchdarkly/mobile-dotnet/sample/bin/Debug/net9.0-ios/iossimulator-arm64/MauiSample9.app
