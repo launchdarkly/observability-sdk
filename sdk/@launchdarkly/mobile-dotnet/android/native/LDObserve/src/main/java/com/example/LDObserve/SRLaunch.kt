@@ -1,4 +1,4 @@
-package com.launchdarky.LDNative
+package com.launchdarkly.LDNative
 
 import android.app.Application
 import android.util.Log

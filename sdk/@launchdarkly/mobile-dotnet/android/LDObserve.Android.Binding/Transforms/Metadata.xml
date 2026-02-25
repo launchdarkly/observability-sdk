@@ -1,4 +1,4 @@
-﻿<metadata>
+<metadata>
     <!-- Make sure the package id and name reflects the new binding name -->
-    <attr path="/api/package[@name='com.launchdarky.LDNative']" name="managedName">LDObserveAndroid</attr>
+    <attr path="/api/package[@name='com.launchdarkly.LDNative']" name="managedName">LDObserveAndroid</attr>
 </metadata>

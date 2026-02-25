@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.launchdarky.LDNative"
+    namespace = "com.launchdarkly.LDNative"
     compileSdk = 36
 
     defaultConfig {

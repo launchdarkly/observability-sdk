@@ -1,4 +1,4 @@
-package com.launchdarky.LDNative
+package com.launchdarkly.LDNative
 
 import android.view.View
 import com.launchdarkly.observability.api.ldMask
