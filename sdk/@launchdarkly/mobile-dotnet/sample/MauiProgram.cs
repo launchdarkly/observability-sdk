@@ -101,7 +101,8 @@ public static class MauiProgram
 				isEnabled: true,
 				privacy: new SessionReplayOptions.PrivacyOptions(
 					maskTextInputs: true,
-					maskWebViews: false
+					maskWebViews: false,
+					maskLabels: false
 				)
 			)
 		);

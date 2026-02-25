@@ -2,21 +2,12 @@
   "originHash" : "726fca91e63fda85d05c9db34511dddd0b0a9cc2ff82f5198bcd32b98d738c87",
   "pins" : [
     {
-      "identity" : "datacompression",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/mw99/DataCompression",
-      "state" : {
-        "revision" : "5ab15951321b08b74511601cbd0497667649d70b",
-        "version" : "3.8.0"
-      }
-    },
-    {
       "identity" : "ios-client-sdk",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/launchdarkly/ios-client-sdk.git",
       "state" : {
-        "revision" : "ae57f26fdb6a38cb65b8918ace75ca3a19a88043",
-        "version" : "10.0.0"
+        "revision" : "34d1a543471753c3a51339af79c12389ca0e6b46",
+        "version" : "11.1.0"
       }
     },
     {
@@ -53,15 +44,6 @@
       "state" : {
         "revision" : "57051701c58a93603ffa2051f8e9cf0c8cff7814",
         "version" : "3.3.0"
-      }
-    },
-    {
-      "identity" : "swift-log",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-log.git",
-      "state" : {
-        "revision" : "2778fd4e5a12a8aaa30a3ee8285f4ce54c5f3181",
-        "version" : "1.9.1"
       }
     },
     {
