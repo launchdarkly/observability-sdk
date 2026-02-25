@@ -83,26 +83,6 @@
       "problemMatcher": []
     },
     {
-      "label": "Build iOS Binding (ensure XCFramework)",
-      "type": "process",
-      "command": "dotnet",
-      "dependsOn": [
-        "Rebuild iOS XCFramework (Device+Simulator)"
-      ],
-      "dependsOrder": "sequence",
-      "args": [
-        "build",
-        "${workspaceFolder}/macios/LDObserve.MaciOS.Binding/LDObserve.MaciOS.Binding.csproj",
-        "-f",
-        "net9.0-ios"
-      ],
-      "options": {
-        "cwd": "${workspaceFolder}/"
-      },
-      "group": "build",
-      "problemMatcher": "$msCompile"
-    },
-    {
       "label": "Rebuild Android",
       "type": "shell",
       "command": "/bin/zsh",
