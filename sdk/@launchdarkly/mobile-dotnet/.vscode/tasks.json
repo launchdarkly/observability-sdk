@@ -26,7 +26,7 @@
       "type": "process",
       "args": [
         "build",
-        "${workspaceFolder}/sample/sample.sln",
+        "${workspaceFolder}/sample/MauiSample9.csproj",
         "/property:GenerateFullPaths=true",
         "/consoleloggerparameters:NoSummary;ForceNoAlign"
       ],
@@ -43,30 +43,6 @@
       "options": { "cwd": "${workspaceFolder}/" },
       "group": "build",
       "problemMatcher": []
-    },
-    {
-      "label": "publish",
-      "command": "dotnet",
-      "type": "process",
-      "args": [
-        "publish",
-        "${workspaceFolder}/sample/sample.sln",
-        "/property:GenerateFullPaths=true",
-        "/consoleloggerparameters:NoSummary;ForceNoAlign"
-      ],
-      "problemMatcher": "$msCompile"
-    },
-    {
-      "label": "watch",
-      "command": "dotnet",
-      "type": "process",
-      "args": [
-        "watch",
-        "run",
-        "--project",
-        "${workspaceFolder}/sample/sample.sln"
-      ],
-      "problemMatcher": "$msCompile"
     },
     {
       "label": "Rebuild iOS XCFramework",
