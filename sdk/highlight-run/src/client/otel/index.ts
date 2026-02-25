@@ -35,6 +35,7 @@ import {
 	shouldNetworkRequestBeRecorded,
 	shouldNetworkRequestBeTraced,
 } from '../listeners/network-listener/utils/utils'
+import type { RequestResponsePair } from '../listeners/network-listener/utils/models'
 import {
 	BrowserXHR,
 	getBodyThatShouldBeRecorded,
@@ -93,10 +94,7 @@ const SESSION_ID_ATTRIBUTE = 'highlight.session_id'
 // CustomBatchSpanProcessor.onEnd(). The callback starts the async
 // work (cloning + reading the response body) and stores a promise
 // here; the span processor awaits it before exporting the span.
-const pendingResponseAttributes = new Map<
-	object,
-	Promise<Record<string, string | string[]>>
->()
+const pendingResponseAttributes = new Map<object, Promise<void>>()
 export const LOG_SPAN_NAME = 'launchdarkly.js.log'
 
 export const ATTR_EXCEPTION_ID = 'launchdarkly.exception.id'
@@ -253,10 +251,24 @@ export const setupBrowserTracing = (
 						return
 					}
 
+					// Run sanitizer synchronously for request attributes
+					// before the async body read, so changes are visible
+					// even if span.end() fires before the promise resolves.
+					if (
+						config.networkRecordingOptions
+							?.requestResponseSanitizer
+					) {
+						applyRequestResponseSanitizer(
+							span,
+							config.networkRecordingOptions
+								.requestResponseSanitizer,
+						)
+					}
+
 					if (config.networkRecordingOptions?.recordHeadersAndBody) {
 						// Start async response body reading and store the
 						// promise. CustomBatchSpanProcessor.onEnd() will await
-						// it and assign the attributes before exporting.
+						// it before exporting the span.
 						const promise = (async () => {
 							const responseBody = await getResponseBody(
 								response,
@@ -280,9 +292,25 @@ export const setupBrowserTracing = (
 									sanitizedResponseHeaders,
 									'http.response.header',
 								)
-							return {
-								'http.response.body': responseBody,
-								...headerAttributes,
+							Object.assign(
+								(span as unknown as ReadableSpan).attributes,
+								{
+									'http.response.body': responseBody,
+									...headerAttributes,
+								},
+							)
+
+							// Re-run sanitizer now that response
+							// body/headers are on the span.
+							if (
+								config.networkRecordingOptions
+									?.requestResponseSanitizer
+							) {
+								applyRequestResponseSanitizer(
+									span,
+									config.networkRecordingOptions
+										.requestResponseSanitizer,
+								)
 							}
 						})()
 						pendingResponseAttributes.set(span, promise)
@@ -351,6 +379,17 @@ export const setupBrowserTracing = (
 								config.networkRecordingOptions,
 							)
 						}
+
+						if (
+							config.networkRecordingOptions
+								?.requestResponseSanitizer
+						) {
+							applyRequestResponseSanitizer(
+								span,
+								config.networkRecordingOptions
+									.requestResponseSanitizer,
+							)
+						}
 					},
 				}),
 			)
@@ -401,9 +440,6 @@ class CustomBatchSpanProcessor extends BatchSpanProcessor {
 		)
 		if (pending) {
 			const completion = pending
-				.then((attrs) => {
-					Object.assign(span.attributes, attrs)
-				})
 				.catch((e) => {
 					console.warn(
 						'[CustomBatchSpanProcessor] Failed to capture response body attributes',
@@ -415,7 +451,11 @@ class CustomBatchSpanProcessor extends BatchSpanProcessor {
 						span as unknown as api.Span,
 					)
 					this._pendingSpans.delete(completion)
-					super.onEnd(span)
+					// Re-check RECORD_ATTRIBUTE in case the sanitizer
+					// returned null and marked the span as not-to-record.
+					if (span.attributes[RECORD_ATTRIBUTE] !== false) {
+						super.onEnd(span)
+					}
 				})
 			this._pendingSpans.add(completion)
 			return
@@ -755,6 +795,103 @@ const enhanceSpanWithHttpResponseAttributes = (
 		'http.response.header',
 	)
 	span.setAttributes(headerAttributes)
+}
+
+/**
+ * Runs the user-provided requestResponseSanitizer on span attributes,
+ * matching the behavior of the session replay network listener path.
+ * If the sanitizer returns null, marks the span as not-to-record.
+ */
+const applyRequestResponseSanitizer = (
+	span: api.Span,
+	sanitizer: NonNullable<NetworkRecordingOptions['requestResponseSanitizer']>,
+) => {
+	const readableSpan = span as unknown as ReadableSpan
+	const attrs = readableSpan.attributes
+
+	// Reconstruct headers from otel span attributes
+	const requestHeaders: Record<string, string> = {}
+	const responseHeaders: Record<string, string> = {}
+	for (const [key, value] of Object.entries(attrs)) {
+		if (key.startsWith('http.request.header.')) {
+			requestHeaders[key.slice('http.request.header.'.length)] =
+				String(value)
+		}
+		if (key.startsWith('http.response.header.')) {
+			responseHeaders[key.slice('http.response.header.'.length)] =
+				String(value)
+		}
+	}
+
+	const url =
+		(attrs[SemanticAttributes.ATTR_URL_FULL] as string) ??
+		(attrs[SemanticAttributes.SEMATTRS_HTTP_URL] as string) ??
+		''
+
+	let pair: RequestResponsePair = {
+		request: {
+			sessionSecureID: '',
+			id: '',
+			url,
+			verb: (attrs['http.request.method'] as string) ?? 'GET',
+			headers: requestHeaders,
+			body: (attrs['http.request.body'] as string) ?? '',
+		},
+		response: {
+			status: Number(
+				attrs[
+					SemanticAttributes.ATTR_HTTP_RESPONSE_STATUS_CODE
+				] ?? 0,
+			),
+			headers: responseHeaders,
+			body: (attrs['http.response.body'] as string) ?? '',
+		},
+		urlBlocked: false,
+	}
+
+	// JSON.parse bodies so the user sees objects (matches session replay behavior)
+	let stringifyRequestBody = true
+	try {
+		pair.request.body = JSON.parse(pair.request.body)
+	} catch {
+		stringifyRequestBody = false
+	}
+	let stringifyResponseBody = true
+	try {
+		pair.response.body = JSON.parse(pair.response.body)
+	} catch {
+		stringifyResponseBody = false
+	}
+
+	let sanitized: RequestResponsePair | null
+	try {
+		sanitized = sanitizer(pair)
+	} catch {
+		return // sanitizer threw, keep original attributes
+	}
+
+	if (!sanitized) {
+		span.setAttribute(RECORD_ATTRIBUTE, false)
+		return
+	}
+
+	// Stringify back if we parsed earlier
+	if (stringifyRequestBody && sanitized.request?.body) {
+		sanitized.request.body = JSON.stringify(sanitized.request.body)
+	}
+	if (stringifyResponseBody && sanitized.response?.body) {
+		sanitized.response.body = JSON.stringify(sanitized.response.body)
+	}
+
+	// Write back sanitized values
+	span.setAttribute(
+		'http.request.body',
+		sanitized.request.body ?? '',
+	)
+	span.setAttribute(
+		'http.response.body',
+		sanitized.response.body ?? '',
+	)
 }
 
 const shouldRecordRequest = (
