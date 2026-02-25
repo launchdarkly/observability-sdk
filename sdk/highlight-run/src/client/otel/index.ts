@@ -255,8 +255,7 @@ export const setupBrowserTracing = (
 					// before the async body read, so changes are visible
 					// even if span.end() fires before the promise resolves.
 					if (
-						config.networkRecordingOptions
-							?.requestResponseSanitizer
+						config.networkRecordingOptions?.requestResponseSanitizer
 					) {
 						applyRequestResponseSanitizer(
 							span,
@@ -839,9 +838,7 @@ const applyRequestResponseSanitizer = (
 		},
 		response: {
 			status: Number(
-				attrs[
-					SemanticAttributes.ATTR_HTTP_RESPONSE_STATUS_CODE
-				] ?? 0,
+				attrs[SemanticAttributes.ATTR_HTTP_RESPONSE_STATUS_CODE] ?? 0,
 			),
 			headers: responseHeaders,
 			body: (attrs['http.response.body'] as string) ?? '',
@@ -884,14 +881,8 @@ const applyRequestResponseSanitizer = (
 	}
 
 	// Write back sanitized values
-	span.setAttribute(
-		'http.request.body',
-		sanitized.request.body ?? '',
-	)
-	span.setAttribute(
-		'http.response.body',
-		sanitized.response.body ?? '',
-	)
+	span.setAttribute('http.request.body', sanitized.request.body ?? '')
+	span.setAttribute('http.response.body', sanitized.response.body ?? '')
 }
 
 const shouldRecordRequest = (

@@ -622,8 +622,8 @@ export default function HttpTest() {
 					title="50 Concurrent Requests"
 					description="Flood pendingResponseAttributes map"
 					onClick={async () => {
-						const before =
-							(performance as any).memory?.usedJSHeapSize
+						const before = (performance as any).memory
+							?.usedJSHeapSize
 						try {
 							const promises = []
 							for (let i = 1; i <= 50; i++) {
@@ -634,11 +634,9 @@ export default function HttpTest() {
 								)
 							}
 							const responses = await Promise.all(promises)
-							await Promise.all(
-								responses.map((r) => r.json()),
-							)
-							const after =
-								(performance as any).memory?.usedJSHeapSize
+							await Promise.all(responses.map((r) => r.json()))
+							const after = (performance as any).memory
+								?.usedJSHeapSize
 							if (before && after) {
 								console.log(
 									`Memory: 50 concurrent requests — heap delta: ${((after - before) / 1024).toFixed(0)}KB (${(before / 1024 / 1024).toFixed(1)}MB → ${(after / 1024 / 1024).toFixed(1)}MB)`,
@@ -658,8 +656,8 @@ export default function HttpTest() {
 					title="Large Bodies x20"
 					description="20 concurrent requests with ~30KB bodies"
 					onClick={async () => {
-						const before =
-							(performance as any).memory?.usedJSHeapSize
+						const before = (performance as any).memory
+							?.usedJSHeapSize
 						try {
 							const promises = []
 							for (let i = 0; i < 20; i++) {
@@ -675,12 +673,11 @@ export default function HttpTest() {
 								responses.map((r) => r.json()),
 							)
 							const totalSize = bodies.reduce(
-								(sum, b) =>
-									sum + JSON.stringify(b).length,
+								(sum, b) => sum + JSON.stringify(b).length,
 								0,
 							)
-							const after =
-								(performance as any).memory?.usedJSHeapSize
+							const after = (performance as any).memory
+								?.usedJSHeapSize
 							if (before && after) {
 								console.log(
 									`Memory: 20 large responses (~${(totalSize / 1024).toFixed(0)}KB total) — heap delta: ${((after - before) / 1024).toFixed(0)}KB (${(before / 1024 / 1024).toFixed(1)}MB → ${(after / 1024 / 1024).toFixed(1)}MB)`,
@@ -700,14 +697,10 @@ export default function HttpTest() {
 					title="Sustained Rapid Fire"
 					description="10 batches of 10, back-to-back"
 					onClick={async () => {
-						const before =
-							(performance as any).memory?.usedJSHeapSize
+						const before = (performance as any).memory
+							?.usedJSHeapSize
 						try {
-							for (
-								let batch = 0;
-								batch < 10;
-								batch++
-							) {
+							for (let batch = 0; batch < 10; batch++) {
 								const promises = []
 								for (let i = 0; i < 10; i++) {
 									promises.push(
@@ -716,14 +709,13 @@ export default function HttpTest() {
 										),
 									)
 								}
-								const responses =
-									await Promise.all(promises)
+								const responses = await Promise.all(promises)
 								await Promise.all(
 									responses.map((r) => r.json()),
 								)
 							}
-							const after =
-								(performance as any).memory?.usedJSHeapSize
+							const after = (performance as any).memory
+								?.usedJSHeapSize
 							if (before && after) {
 								console.log(
 									`Memory: 10x10 sustained load — heap delta: ${((after - before) / 1024).toFixed(0)}KB (${(before / 1024 / 1024).toFixed(1)}MB → ${(after / 1024 / 1024).toFixed(1)}MB)`,
@@ -743,8 +735,8 @@ export default function HttpTest() {
 					title="Fire-and-Forget (no await body)"
 					description="50 requests where body is never read by app"
 					onClick={async () => {
-						const before =
-							(performance as any).memory?.usedJSHeapSize
+						const before = (performance as any).memory
+							?.usedJSHeapSize
 						try {
 							const promises = []
 							for (let i = 0; i < 50; i++) {
@@ -758,8 +750,8 @@ export default function HttpTest() {
 							// The SDK still clones + reads each body internally,
 							// so this tests whether un-consumed bodies leak.
 							await Promise.all(promises)
-							const after =
-								(performance as any).memory?.usedJSHeapSize
+							const after = (performance as any).memory
+								?.usedJSHeapSize
 							if (before && after) {
 								console.log(
 									`Memory: 50 fire-and-forget — heap delta: ${((after - before) / 1024).toFixed(0)}KB (${(before / 1024 / 1024).toFixed(1)}MB → ${(after / 1024 / 1024).toFixed(1)}MB)`,
