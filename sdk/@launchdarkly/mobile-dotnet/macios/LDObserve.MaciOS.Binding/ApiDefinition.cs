@@ -17,6 +17,9 @@ namespace LDObserveMaciOS
         [Export("serviceName")]
         string ServiceName { get; set; }
 
+        [Export("serviceVersion")]
+        string ServiceVersion { get; set; }
+
         [Export("otlpEndpoint")]
         string OtlpEndpoint { get; set; }
 

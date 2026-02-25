@@ -15,6 +15,7 @@ import LaunchDarklySessionReplay
 @objc(ObjcObservabilityOptions)
 public final class ObjcObservabilityOptions: NSObject {
     @objc public var serviceName: String = ""
+    @objc public var serviceVersion: String = ""
     @objc public var otlpEndpoint: String = ""
     @objc public var backendUrl: String = ""
 
@@ -53,6 +54,7 @@ public final class ObjcSRClient: NSObject {
             config.plugins = [
                 Observability(options: .init(
                     serviceName: observability.serviceName,
+                    serviceVersion: observability.serviceVersion,
                     otlpEndpoint: observability.otlpEndpoint,
                     backendUrl: observability.backendUrl
                 )),
