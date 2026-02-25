@@ -150,6 +150,7 @@ public class SRLaunch {
 
         val sessionReplayPlugin = SessionReplay(
             options = com.launchdarkly.observability.replay.ReplayOptions(
+                enabled = replay.isEnabled,
                 privacyProfile = com.launchdarkly.observability.replay.PrivacyProfile(
                     maskTextInputs = replay.privacy.maskTextInputs,
                     maskText = replay.privacy.maskLabels,
@@ -159,7 +160,7 @@ public class SRLaunch {
             )
         )
 
-        Log.i("SRLaunch", "sessionReplayPlugin.privacy.maskLabels =" + replay.privacy.maskLabels)
+        Log.i("SRLaunch", "Session replay enabled=${replay.isEnabled}, privacy.maskLabels=${replay.privacy.maskLabels}")
 
         val ldConfig = LDConfig.Builder(LDConfig.Builder.AutoEnvAttributes.Enabled)
             .mobileKey(mobileKey)
