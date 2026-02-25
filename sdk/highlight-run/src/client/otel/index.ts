@@ -268,14 +268,13 @@ export const setupBrowserTracing = (
 							const responseHeaders = Object.fromEntries(
 								response.headers.entries(),
 							)
-							const sanitizedResponseHeaders =
-								sanitizeHeaders(
-									config.networkRecordingOptions
-										?.networkHeadersToRedact ?? [],
-									responseHeaders,
-									config.networkRecordingOptions
-										?.headerKeysToRecord,
-								)
+							const sanitizedResponseHeaders = sanitizeHeaders(
+								config.networkRecordingOptions
+									?.networkHeadersToRedact ?? [],
+								responseHeaders,
+								config.networkRecordingOptions
+									?.headerKeysToRecord,
+							)
 							const headerAttributes =
 								convertHeadersToOtelAttributes(
 									sanitizedResponseHeaders,
