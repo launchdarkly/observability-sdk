@@ -46,8 +46,8 @@ dependencies {
     implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.10.0")
     "copyDependencies"("com.launchdarkly:launchdarkly-android-client-sdk:5.10.0")
 
-    implementation("com.launchdarkly:launchdarkly-observability-android:0.26.0")
-    "copyDependencies"("com.launchdarkly:launchdarkly-observability-android:0.26.0")
+    implementation("com.launchdarkly:launchdarkly-observability-android:0.26.1")
+    "copyDependencies"("com.launchdarkly:launchdarkly-observability-android:0.26.1")
 
     // TODO: revise these versions to be as old as usable for compatibility
     implementation("io.opentelemetry:opentelemetry-api:1.51.0")

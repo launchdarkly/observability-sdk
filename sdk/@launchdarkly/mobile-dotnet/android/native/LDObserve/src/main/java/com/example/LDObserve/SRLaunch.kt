@@ -131,7 +131,7 @@ public class SRLaunch {
                 .put(AttributeKey.stringKey("service.name"), observability.serviceName)
                 .put(AttributeKey.stringKey("service.version"), observability.serviceVersion)
                 .build(),
-            debug = true,
+            debug = false,
             otlpEndpoint = observability.otlpEndpoint,
             backendUrl = observability.backendUrl,
             tracesApi = com.launchdarkly.observability.api.ObservabilityOptions.TracesApi(includeErrors = false, includeSpans = false),
