@@ -1,0 +1,138 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<!-- Packaging-only project -->
+		<TargetFrameworks>net9.0-android;net9.0-ios</TargetFrameworks>
+		<NoBuild>true</NoBuild>
+		<IncludeBuildOutput>false</IncludeBuildOutput>
+		<IsPackable>true</IsPackable>
+		<PackageId>LaunchDarkly.SessionReplay</PackageId>
+		<Version>0.2.0</Version>
+		<Authors>LaunchDarkly</Authors>
+        <Owners>LaunchDarkly</Owners>
+        <Company>LaunchDarkly</Company>
+        <Copyright>Copyright 2026 Catamorphic, Co</Copyright>
+        <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+		<PackageDescription>LD Session Replay package for .NET MAUI</PackageDescription>
+		<PackageOutputPath>$(MSBuildProjectDirectory)\..\nupkgs</PackageOutputPath>
+		<PackageProjectUrl>https://github.com/launchdarkly/observability-sdk</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/launchdarkly/observability-sdk</RepositoryUrl>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<NoWarn>$(NoWarn);NU1012;NU1605;NU1608</NoWarn>
+	</PropertyGroup>
+
+	<!-- NuGet dependencies to satisfy common AndroidX and public libraries -->
+	<ItemGroup>
+		<PackageReference Include="Microsoft.Maui.Controls" Version="[8.0.3, 10.0.0)" />
+		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="[8.0.3, 10.0.0)" />
+	</ItemGroup>
+
+	<ItemGroup Condition="$(TargetFramework.Contains('android'))">
+		<PackageReference Include="Org.Jetbrains.Kotlinx.KotlinxSerializationJson" Version="1.9.0" />
+		<!-- Use 1.8.3.1+ because 1.8.3 pins older AndroidX (Lifecycle 2.9.1 / SavedState.Ktx 1.3.0) -->
+		<PackageReference Include="Xamarin.AndroidX.Compose.UI" Version="[1.8.3.1, 2.0.0)" />
+
+		<!-- Align AndroidX minimums with the modern Activity/Fragment stack to avoid NU1605 downgrades -->
+		<PackageReference Include="Xamarin.AndroidX.Lifecycle.Runtime" Version="[2.9.2.1, 3.0.0)" />
+		<PackageReference Include="Xamarin.AndroidX.Lifecycle.ViewModel" Version="[2.9.2.1, 3.0.0)" />
+		<PackageReference Include="Xamarin.AndroidX.Lifecycle.Common" Version="[2.9.2.1, 3.0.0)" />
+		<PackageReference Include="Xamarin.AndroidX.Lifecycle.LiveData.Core" Version="[2.9.2.1, 3.0.0)" />
+		<PackageReference Include="Xamarin.AndroidX.Lifecycle.LiveData" Version="[2.9.2.1, 3.0.0)" />
+		<PackageReference Include="Xamarin.AndroidX.Lifecycle.LiveData.Core.Ktx" Version="[2.9.2.1, 3.0.0)" />
+		<PackageReference Include="Xamarin.AndroidX.Lifecycle.ViewModelSavedState" Version="[2.9.2.1, 3.0.0)" />
+		<PackageReference Include="Xamarin.AndroidX.Lifecycle.Process" Version="[2.9.2.1, 3.0.0)" />
+		<PackageReference Include="Xamarin.AndroidX.Lifecycle.Runtime.Ktx" Version="[2.9.2.1, 3.0.0)" />
+		<PackageReference Include="Xamarin.AndroidX.Activity.Ktx" Version="[1.10.1.3, 2.0.0)" />
+		<PackageReference Include="Xamarin.AndroidX.Activity" Version="[1.10.1.3, 2.0.0)" />
+		<PackageReference Include="Xamarin.AndroidX.Fragment.Ktx" Version="[1.8.8.1, 2.0.0)" />
+		<PackageReference Include="Xamarin.AndroidX.Fragment" Version="[1.8.8.1, 2.0.0)" />
+		<PackageReference Include="Xamarin.AndroidX.Core" Version="[1.16.0.3, 2.0.0)" />
+		<PackageReference Include="Xamarin.AndroidX.AppCompat" Version="[1.7.1.1, 2.0.0)" />
+		<!-- MAUI requires AndroidX.SavedState.ISavedStateRegistryOwner to exist in Xamarin.AndroidX.SavedState.dll.
+		     Xamarin.AndroidX.SavedState 1.3.0 is missing that type in the main assembly, but 1.3.1.1 has it again. -->
+		<PackageReference Include="Xamarin.AndroidX.SavedState" Version="[1.3.1.1, 2.0.0)" />
+		<PackageReference Include="Xamarin.AndroidX.SavedState.SavedState.Ktx" Version="[1.3.1.1, 2.0.0)" />
+		<PackageReference Include="Xamarin.AndroidX.VectorDrawable" Version="[1.2.0.8, 2.0.0)" />
+		<PackageReference Include="Xamarin.AndroidX.ViewPager" Version="[1.1.0.4, 2.0.0)" />
+		<PackageReference Include="Xamarin.AndroidX.RecyclerView" Version="[1.4.0.3, 2.0.0)" />
+		<PackageReference Include="Xamarin.AndroidX.DrawerLayout" Version="[1.2.0.18, 2.0.0)" />
+		<PackageReference Include="Xamarin.AndroidX.CoordinatorLayout" Version="[1.3.0.1, 2.0.0)" />
+		<PackageReference Include="Xamarin.AndroidX.SwipeRefreshLayout" Version="[1.1.0.27, 2.0.0)" />
+		<PackageReference Include="Xamarin.AndroidX.Navigation.Fragment" Version="[2.8.0.1, 3.0.0)" />
+		<PackageReference Include="Xamarin.AndroidX.Navigation.Runtime" Version="[2.8.0.1, 3.0.0)" />
+		<PackageReference Include="Xamarin.AndroidX.Preference" Version="[1.2.1.15, 2.0.0)" />
+		<PackageReference Include="Xamarin.AndroidX.Tracing.Tracing" Version="[1.3.0.1, 2.0.0)" />
+		<PackageReference Include="Xamarin.AndroidX.ProfileInstaller.ProfileInstaller" Version="[1.4.1.5, 2.0.0)" />
+		<PackageReference Include="Xamarin.AndroidX.Startup.StartupRuntime" Version="[1.2.0.5, 2.0.0)" />
+		<PackageReference Include="Xamarin.AndroidX.Window" Version="[1.4.0.1, 2.0.0)" />
+		<PackageReference Include="Xamarin.AndroidX.Transition" Version="[1.6.0.1, 2.0.0)" />
+		<PackageReference Include="Xamarin.AndroidX.ConstraintLayout" Version="[2.2.0.1, 3.0.0)" />
+		<PackageReference Include="Xamarin.AndroidX.Collection.Jvm" Version="[1.5.0.3, 2.0.0)" />
+	</ItemGroup>
+
+	<!-- Include binding assemblies into lib for each platform -->
+	<ItemGroup>
+		<!-- net9.0 assemblies -->
+		<None Include="..\observability\bin\Release\net9.0-android\LDObservability.dll"
+			  Pack="true" PackagePath="lib/net9.0-android35.0/" />
+		<None Include="..\observability\bin\Release\net9.0-ios\LDObservability.dll"
+			  Pack="true" PackagePath="lib/net9.0-ios18.0/" />
+		<None Include="..\android\LDObserve.Android.Binding\bin\Release\net9.0-android\LDObserve.Android.Binding.dll"
+			  Pack="true" PackagePath="lib/net9.0-android35.0/" />
+		<None Include="..\macios\LDObserve.MaciOS.Binding\bin\Release\net9.0-ios\LDObserve.MaciOS.Binding.dll"
+			  Pack="true" PackagePath="lib/net9.0-ios18.0/" />
+	</ItemGroup>
+
+	<!-- Package native artifacts -->
+	<ItemGroup>
+		<!-- LD specific AARs -->
+		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\android-agent-*.aar" Pack="true" PackagePath="runtimes/android/native/" />
+		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\android-instrumentation-*.aar" Pack="true" PackagePath="runtimes/android/native/" />
+		<!-- Use more specific patterns to avoid duplicates -->
+		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\common-0*.aar" Pack="true" PackagePath="runtimes/android/native/" />
+		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\common-api-*.aar" Pack="true" PackagePath="runtimes/android/native/" />
+		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\core-*-alpha.aar" Pack="true" PackagePath="runtimes/android/native/" />
+		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\crash-*-alpha.aar" Pack="true" PackagePath="runtimes/android/native/" />
+		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\anr-*-alpha.aar" Pack="true" PackagePath="runtimes/android/native/" />
+		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\activity-*-alpha.aar" Pack="true" PackagePath="runtimes/android/native/" />
+		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\fragment-*-alpha.aar" Pack="true" PackagePath="runtimes/android/native/" />
+		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\network-*-alpha.aar" Pack="true" PackagePath="runtimes/android/native/" />
+		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\services-*-alpha.aar" Pack="true" PackagePath="runtimes/android/native/" />
+		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\session-*-alpha.aar" Pack="true" PackagePath="runtimes/android/native/" />
+		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\slowrendering-*-alpha.aar" Pack="true" PackagePath="runtimes/android/native/" />
+		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\startup-*-alpha.aar" Pack="true" PackagePath="runtimes/android/native/" />
+		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\launchdarkly-android-client-sdk-*.aar" Pack="true" PackagePath="runtimes/android/native/" />
+		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\launchdarkly-observability-android-*.aar" Pack="true" PackagePath="runtimes/android/native/" />
+		
+		<!-- Specific jars -->
+		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\opentelemetry-*.jar" Pack="true" PackagePath="runtimes/android/native/" />
+		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\jackson-*.jar" Pack="true" PackagePath="runtimes/android/native/" />
+		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\launchdarkly-*.jar" Pack="true" PackagePath="runtimes/android/native/" />
+		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\okhttp-*.jar" Pack="true" PackagePath="runtimes/android/native/" />
+		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\okio-*.jar" Pack="true" PackagePath="runtimes/android/native/" />
+		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\timber-*.aar" Pack="true" PackagePath="runtimes/android/native/" />
+
+		<!-- Android module AAR containing SRLaunch -->
+		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\aar\LDObserve-release.aar"
+			  Pack="true" PackagePath="runtimes/android/native/" />
+
+		<!-- iOS XCFramework -->
+		<!-- Exclude Swift module metadata (very long paths; not needed for .NET binding consumption) -->
+		<None Include="..\macios\native\LDObserve\build\outputs\LDObserveBridge.xcframework\**\*"
+			  Exclude="..\macios\native\LDObserve\build\outputs\LDObserveBridge.xcframework\**\Modules\**\*"
+			  Pack="true" PackagePath="runtimes/ios/native/LDObserveBridge.xcframework" />
+	</ItemGroup>
+
+	<!-- Add buildTransitive targets so consumers automatically wire packaged artifacts -->
+	<ItemGroup>
+		<None Include="buildTransitive\LDObservability.Fat.targets"
+			  Pack="true" PackagePath="buildTransitive\LDObservability.Fat.targets" />
+		<!-- NuGet expects buildTransitive/<PackageId>.targets for auto-import; keep a copy with that name. -->
+		<None Include="buildTransitive\LDObservability.Fat.targets"
+			  Pack="true" PackagePath="buildTransitive\LaunchDarkly.SessionReplay.targets" />
+	</ItemGroup>
+
+	<!-- Include solution README as NuGet package readme -->
+	<ItemGroup>
+		<None Include="..\README.md" Pack="true" PackagePath="README.md" />
+	</ItemGroup>
+</Project>

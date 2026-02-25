@@ -70,3 +70,12 @@ sdk/highlight-wordpress/highlight-io/highlight.js
 # Typedoc docs
 sdk/highlight-run/docs
 sdk/@launchdarkly/observability-react-native/docs
+
+# .NET mobile SDK build artifacts
+sdk/@launchdarkly/mobile-dotnet/**/bin/
+sdk/@launchdarkly/mobile-dotnet/**/obj/
+sdk/@launchdarkly/mobile-dotnet/**/.gradle/
+sdk/@launchdarkly/mobile-dotnet/**/*.Local.json
+sdk/@launchdarkly/mobile-dotnet/**/*.csproj.user
+sdk/@launchdarkly/mobile-dotnet/**/*.sln
+sdk/@launchdarkly/mobile-dotnet/**/nupkgs/
