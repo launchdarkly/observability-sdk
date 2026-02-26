@@ -262,6 +262,18 @@ export const setupBrowserTracing = (
 							config.networkRecordingOptions
 								.requestResponseSanitizer,
 						)
+						// If sanitizer returned null (RECORD_ATTRIBUTE=false),
+						// skip the async body read to avoid a memory leak.
+						if (
+							(
+								readableSpan.attributes as Record<
+									string,
+									unknown
+								>
+							)[RECORD_ATTRIBUTE] === false
+						) {
+							return
+						}
 					}
 
 					if (config.networkRecordingOptions?.recordHeadersAndBody) {
@@ -868,7 +880,11 @@ const applyRequestResponseSanitizer = (
 	}
 
 	if (!sanitized) {
-		span.setAttribute(RECORD_ATTRIBUTE, false)
+		// Use Object.assign because span.setAttribute is a no-op
+		// on ended spans (the async promise runs after span.end()).
+		Object.assign((span as unknown as ReadableSpan).attributes, {
+			[RECORD_ATTRIBUTE]: false,
+		})
 		return
 	}
 
@@ -880,9 +896,12 @@ const applyRequestResponseSanitizer = (
 		sanitized.response.body = JSON.stringify(sanitized.response.body)
 	}
 
-	// Write back sanitized values
-	span.setAttribute('http.request.body', sanitized.request.body ?? '')
-	span.setAttribute('http.response.body', sanitized.response.body ?? '')
+	// Write back sanitized values via Object.assign because
+	// span.setAttribute is a no-op on ended spans.
+	Object.assign((span as unknown as ReadableSpan).attributes, {
+		'http.request.body': sanitized.request.body ?? '',
+		'http.response.body': sanitized.response.body ?? '',
+	})
 }
 
 const shouldRecordRequest = (
