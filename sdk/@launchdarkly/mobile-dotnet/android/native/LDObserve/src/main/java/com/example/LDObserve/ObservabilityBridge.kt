@@ -164,6 +164,7 @@ public class ObservabilityBridge {
 
         val ldConfig = LDConfig.Builder(LDConfig.Builder.AutoEnvAttributes.Enabled)
             .mobileKey(mobileKey)
+            .offline(true)
             .plugins(
                 Components.plugins().setPlugins(
                     listOf(

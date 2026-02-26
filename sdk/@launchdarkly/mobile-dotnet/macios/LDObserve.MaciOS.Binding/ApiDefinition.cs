@@ -54,13 +54,30 @@ namespace LDObserveMaciOS
 
         [Export("startWithMobileKey:observability:replay:")]
         void Start(string mobileKey, ObjcObservabilityOptions observability, ObjcSessionReplayOptions replay);
+
+        [Export("getHookProxy")]
+        [NullAllowed]
+        ObservabilityHookProxy GetHookProxy();
     }
 
     [BaseType(typeof(NSObject))]
     interface LDObserveBridge
     {
-        // + (void)recordLogWithMessage:(NSString*)message severity:(NSInteger)severity attributes:(NSDictionary*)attributes;
         [Static, Export("recordLogWithMessage:severity:attributes:")]
         void RecordLog(string message, nint severity, NSDictionary attributes);
+    }
+
+    [BaseType(typeof(NSObject))]
+    interface ObservabilityHookProxy
+    {
+        [Export("beforeEvaluationWithId:flagKey:contextKey:")]
+        void BeforeEvaluation(string evaluationId, string flagKey, string contextKey);
+
+        [Export("afterEvaluationWithId:flagKey:contextKey:value:variationIndex:reason:")]
+        void AfterEvaluation(string evaluationId, string flagKey, string contextKey,
+            NSObject value, nint variationIndex, [NullAllowed] NSDictionary reason);
+
+        [Export("afterIdentifyWithContextKeys:canonicalKey:completed:")]
+        void AfterIdentify(NSDictionary contextKeys, string canonicalKey, bool completed);
     }
 }

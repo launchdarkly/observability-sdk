@@ -108,7 +108,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 83E34F4D2C21CB2B008AA950 /* Build configuration list for PBXProject "LDObserveBridge" */;
+			buildConfigurationList = 83E34F4D2C21CB2B008AA950 /* Build configuration list for PBXProject "LDObserve" */;
 			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -359,7 +359,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		83E34F4D2C21CB2B008AA950 /* Build configuration list for PBXProject "LDObserveBridge" */ = {
+		83E34F4D2C21CB2B008AA950 /* Build configuration list for PBXProject "LDObserve" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				83E34F582C21CB2B008AA950 /* Debug */,

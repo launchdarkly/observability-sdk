@@ -60,12 +60,10 @@ namespace LaunchDarkly.Observability
 
         internal IList<Hook> GetHooksObserve(EnvironmentMetadata metadata)
         {
-            if (Observe != null)
-            {
-                Observe.Metadata = metadata;
-                return new List<Hook> { new ObservabilityHook(Observe) };
-            }
-            return new List<Hook>();
+            if (Observe == null) return new List<Hook>();
+
+            Observe.Metadata = metadata;
+            return new List<Hook> { new ObservabilityHook(Observe) };
         }
 
         internal void CreateSessionReplay(SessionReplayOptions options)
