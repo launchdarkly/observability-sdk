@@ -91,7 +91,10 @@ open class BaseApplication : Application() {
         LDClient.init(this@BaseApplication, ldConfig, context)
         telemetryInspector = observabilityPlugin.getTelemetryInspector()
 
-        flagEvaluation()
+        if (testUrl == null) {
+            // intervenes in E2E tests by trigger spans
+            flagEvaluation()
+        }
 
         LDReplay.start()
     }

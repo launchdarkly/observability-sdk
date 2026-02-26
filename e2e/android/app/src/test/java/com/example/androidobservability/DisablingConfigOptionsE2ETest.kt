@@ -73,7 +73,6 @@ class DisablingConfigOptionsE2ETest {
 
 
     @Test
-    @Ignore
     fun `Spans should NOT be exported when TracesApi is disabled`() {
         application.observabilityOptions = getOptionsAllEnabled().copy(tracesApi = ObservabilityOptions.TracesApi.disabled())
         application.initForTest()
@@ -90,7 +89,6 @@ class DisablingConfigOptionsE2ETest {
     }
 
     @Test
-    @Ignore
     fun `Spans should NOT be exported when TracesApi does not include spans`() {
         application.observabilityOptions = getOptionsAllEnabled().copy(
             tracesApi = ObservabilityOptions.TracesApi(includeSpans = false)
@@ -152,7 +150,6 @@ class DisablingConfigOptionsE2ETest {
     }
 
     @Test
-    @Ignore
     fun `Errors should NOT be exported when TracesApi does not include errors`() {
         application.observabilityOptions = getOptionsAllEnabled().copy(
             tracesApi = ObservabilityOptions.TracesApi(includeErrors = false)
@@ -171,7 +168,6 @@ class DisablingConfigOptionsE2ETest {
     }
 
     @Test
-    @Ignore
     fun `Errors should be exported as spans when TracesApi include errors but not spans`() {
         application.observabilityOptions = getOptionsAllEnabled().copy(
             tracesApi = ObservabilityOptions.TracesApi(includeErrors = true, includeSpans = false)
