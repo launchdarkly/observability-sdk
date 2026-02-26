@@ -43,6 +43,11 @@
   		<LD_INCLUDE_NATIVE_DEPS>true</LD_INCLUDE_NATIVE_DEPS>
 	</PropertyGroup>
 
+	<ItemGroup>
+		<ProjectReference Include="..\..\..\..\..\dotnet-core\pkgs\sdk\client\src\LaunchDarkly.ClientSdk.csproj" SetTargetFramework="TargetFramework=netstandard2.0" GlobalPropertiesToRemove="RuntimeIdentifier" />
+	</ItemGroup>
+
+
 <ItemGroup Condition="$(TargetFramework.Contains('android'))">
   <AndroidLibrary Update="@(AndroidLibrary)">
     <Bind>false</Bind>

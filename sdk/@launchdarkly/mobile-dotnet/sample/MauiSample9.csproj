@@ -49,7 +49,8 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="LaunchDarkly.ClientSdk" Version="5.5.4" />
+		<PackageReference Include="Microsoft.Maui.Controls" Version="9.0.51" />
+		<ProjectReference Include="..\..\..\..\..\dotnet-core\pkgs\sdk\client\src\LaunchDarkly.ClientSdk.csproj" SetTargetFramework="TargetFramework=netstandard2.0" GlobalPropertiesToRemove="RuntimeIdentifier" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="8.0.0" />
 		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.0" />
 	</ItemGroup>

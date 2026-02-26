@@ -4,6 +4,8 @@ using LaunchDarkly.SessionReplay;
 using System.Reflection;
 using LaunchDarkly.Sdk.Client;
 using LaunchDarkly.Sdk.Client.Interfaces;
+using LaunchDarkly.Sdk.Client.Integrations;
+using LaunchDarkly.Observability;
 namespace MauiSample9;
 
 public static class MauiProgram
@@ -78,14 +80,24 @@ public static class MauiProgram
 		var otlpEndpoint = config["LaunchDarkly:OtlpEndpoint"];
 		var backendUrl = config["LaunchDarkly:BackendUrl"];
 
-		var ldConfig = Configuration.Builder(mobileKey, LaunchDarkly.Sdk.Client.ConfigurationBuilder.AutoEnvAttributes.Enabled).Build();
+		var ldConfig = Configuration.Builder(mobileKey, LaunchDarkly.Sdk.Client.ConfigurationBuilder.AutoEnvAttributes.Enabled)
+		.Plugins(new PluginConfigurationBuilder()
+			.Add(ObservabilityPlugin.Builder(new ObservabilityOptions(
+				serviceName: "maui-sample-app",
+				otlpEndpoint: otlpEndpoint,
+				backendUrl: backendUrl
+			)).Build())
+		).Build();
+
 		var context = LaunchDarkly.Sdk.Context.New("maui-user-key");
 		var client = LdClient.Init(ldConfig, context, TimeSpan.FromSeconds(10));
 		var feature1 = client.BoolVariation("feature1", false);
 		Console.WriteLine($"feature1 sync value ={feature1}");
 
-		client.FlagTracker.FlagValueChanged += (sender, eventArgs) => {
-			if (eventArgs.Key == "feature1") {
+		client.FlagTracker.FlagValueChanged += (sender, eventArgs) =>
+		{
+			if (eventArgs.Key == "feature1")
+			{
 				Console.WriteLine($"feature1 changed from {eventArgs.OldValue} to {eventArgs.NewValue}");
 			}
 		};
