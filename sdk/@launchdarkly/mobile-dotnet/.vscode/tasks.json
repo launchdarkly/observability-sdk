@@ -83,6 +83,18 @@
       "problemMatcher": "$msCompile"
     },
     {
+      "label": "Restore all projects",
+      "type": "shell",
+      "command": "/bin/zsh",
+      "args": [
+        "-lc",
+        "set -e; dotnet restore ${workspaceFolder}/sample/MauiSample9.csproj; dotnet restore ${workspaceFolder}/observability/LDObservability.csproj; dotnet restore ${workspaceFolder}/macios/LDObserve.MaciOS.Binding/LDObserve.MaciOS.Binding.csproj; dotnet restore ${workspaceFolder}/android/LDObserve.Android.Binding/LDObserve.Android.Binding.csproj"
+      ],
+      "options": { "cwd": "${workspaceFolder}/" },
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
       "label": "Clean build folders",
       "type": "shell",
       "command": "/bin/zsh",

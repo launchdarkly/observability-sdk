@@ -1,5 +1,5 @@
 //
-//  ObjcSRClient.swift
+//  ObservabilityBridge.swift
 //  LDObserveBridge
 //
 //  Created by Andrey Belonogov on 1/22/26.
@@ -37,8 +37,8 @@ public final class ObjcSessionReplayOptions: NSObject {
     }
 }
 
-@objc(SRClient)
-public final class ObjcSRClient: NSObject {
+@objc(ObservabilityBridge)
+public final class ObservabilityBridge: NSObject {
 
     @objc public func version() -> String {
         return sdkVersion

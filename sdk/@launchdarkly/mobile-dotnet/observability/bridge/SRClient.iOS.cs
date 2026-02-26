@@ -4,13 +4,13 @@ using LDObserveMaciOS;
 
 namespace LaunchDarkly.SessionReplay;
 
-public class SRClient
+public class ObservabilityBridgeClient
 {
-    private readonly LDObserveMaciOS.SRClient _native;
+    private readonly LDObserveMaciOS.ObservabilityBridge _native;
 
-    public SRClient()
+    public ObservabilityBridgeClient()
     {
-        _native = new LDObserveMaciOS.SRClient();
+        _native = new LDObserveMaciOS.ObservabilityBridge();
     }
 
     public string Version()

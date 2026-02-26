@@ -27,13 +27,13 @@ public class LDNative
         var ldNative = new LDNative(observability, replay);
 #if ANDROID
         var app = (Android.App.Application)global::Android.App.Application.Context;
-        var srLaunch = new SRLaunch();
-        ldNative.NativeVersion = srLaunch.Version();
-        srLaunch.Start(app, mobileKey, observability.ToNative(), replay.ToNative());
+        var bridge = new ObservabilityBridge();
+        ldNative.NativeVersion = bridge.Version();
+        bridge.Start(app, mobileKey, observability.ToNative(), replay.ToNative());
 #elif IOS
-        var srClient = new SRClient();
-        ldNative.NativeVersion = srClient.Version();
-        srClient.Start(mobileKey, observability, replay);
+        var bridge = new ObservabilityBridgeClient();
+        ldNative.NativeVersion = bridge.Version();
+        bridge.Start(mobileKey, observability, replay);
 #endif
 
         return ldNative;

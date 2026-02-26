@@ -9,6 +9,7 @@ public class ObservabilityOptions
     public const string DefaultOtlpEndpoint = "https://otel.observability.app.launchdarkly.com:4318";
     public const string DefaultBackendUrl = "https://pub.observability.app.launchdarkly.com";
 
+    public bool IsEnabled { get; set; } = true;
     public string ServiceName { get; set; } = DefaultServiceName;
     public string ServiceVersion { get; set; } = DefaultServiceVersion;
     public string OtlpEndpoint { get; set; } = DefaultOtlpEndpoint;
@@ -19,6 +20,7 @@ public class ObservabilityOptions
     public ObservabilityOptions() { }
 
     public ObservabilityOptions(
+        bool isEnabled = true,
         string serviceName = DefaultServiceName,
         string serviceVersion = DefaultServiceVersion,
         string? otlpEndpoint = null,
@@ -26,6 +28,7 @@ public class ObservabilityOptions
         string? contextFriendlyName = null,
         SessionReplayOptions? sessionReplay = null)
     {
+        IsEnabled = isEnabled;
         ServiceName = serviceName;
         ServiceVersion = serviceVersion;
         OtlpEndpoint = otlpEndpoint ?? DefaultOtlpEndpoint;

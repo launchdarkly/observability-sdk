@@ -86,7 +86,7 @@ public class LDSessionReplayOptions {
     }
 }
 
-public class SRLaunch {
+public class ObservabilityBridge {
 
     public fun version(): String {
         return BuildConfig.OBSERVABILITY_SDK_VERSION
@@ -160,7 +160,7 @@ public class SRLaunch {
             )
         )
 
-        Log.i("SRLaunch", "Session replay enabled=${replay.isEnabled}, privacy.maskLabels=${replay.privacy.maskLabels}")
+        Log.i("ObservabilityBridge", "Session replay enabled=${replay.isEnabled}, privacy.maskLabels=${replay.privacy.maskLabels}")
 
         val ldConfig = LDConfig.Builder(LDConfig.Builder.AutoEnvAttributes.Enabled)
             .mobileKey(mobileKey)

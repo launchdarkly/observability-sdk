@@ -47,7 +47,7 @@ namespace LDObserveMaciOS
     }
 
     [BaseType(typeof(NSObject))]
-    interface SRClient
+    interface ObservabilityBridge
     {
         [Export("version")]
         string Version();
