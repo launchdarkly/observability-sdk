@@ -25,6 +25,7 @@ namespace LaunchDarkly.Observability
 
         private void TryInitializeAll()
         {
+            // checks last register
             if (_registeredCount < _createdCount) return;
 
             var metadata = Observe?.Metadata ?? SessionReplay?.Metadata;
