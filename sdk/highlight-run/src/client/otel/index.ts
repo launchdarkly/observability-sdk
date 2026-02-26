@@ -94,7 +94,10 @@ const SESSION_ID_ATTRIBUTE = 'highlight.session_id'
 // CustomBatchSpanProcessor.onEnd(). The callback starts the async
 // work (cloning + reading the response body) and stores a promise
 // here; the span processor awaits it before exporting the span.
-const pendingResponseAttributes = new Map<object, Promise<void>>()
+const pendingResponseAttributes = new Map<string, Promise<void>>()
+const spanKey = (span: {
+	spanContext(): { traceId: string; spanId: string }
+}) => `${span.spanContext().traceId}:${span.spanContext().spanId}`
 export const LOG_SPAN_NAME = 'launchdarkly.js.log'
 
 export const ATTR_EXCEPTION_ID = 'launchdarkly.exception.id'
@@ -324,7 +327,7 @@ export const setupBrowserTracing = (
 								)
 							}
 						})()
-						pendingResponseAttributes.set(span, promise)
+						pendingResponseAttributes.set(spanKey(span), promise)
 					}
 				},
 			})
@@ -446,9 +449,8 @@ class CustomBatchSpanProcessor extends BatchSpanProcessor {
 		// If there is a pending async response body read for this span
 		// (started in applyCustomAttributesOnSpan), wait for it to
 		// resolve and assign the attributes before exporting.
-		const pending = pendingResponseAttributes.get(
-			span as unknown as api.Span,
-		)
+		const key = spanKey(span)
+		const pending = pendingResponseAttributes.get(key)
 		if (pending) {
 			const completion = pending
 				.catch((e) => {
@@ -458,9 +460,7 @@ class CustomBatchSpanProcessor extends BatchSpanProcessor {
 					)
 				})
 				.finally(() => {
-					pendingResponseAttributes.delete(
-						span as unknown as api.Span,
-					)
+					pendingResponseAttributes.delete(key)
 					this._pendingSpans.delete(completion)
 					// Re-check RECORD_ATTRIBUTE in case the sanitizer
 					// returned null and marked the span as not-to-record.
