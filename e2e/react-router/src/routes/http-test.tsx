@@ -622,7 +622,7 @@ export default function HttpTest() {
 					title="50 Concurrent Requests"
 					description="Flood pendingResponseAttributes map"
 					onClick={async () => {
-						const before = (performance as any).memory
+						const before = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory
 							?.usedJSHeapSize
 						try {
 							const promises = []
@@ -635,7 +635,7 @@ export default function HttpTest() {
 							}
 							const responses = await Promise.all(promises)
 							await Promise.all(responses.map((r) => r.json()))
-							const after = (performance as any).memory
+							const after = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory
 								?.usedJSHeapSize
 							if (before && after) {
 								console.log(
@@ -656,7 +656,7 @@ export default function HttpTest() {
 					title="Large Bodies x20"
 					description="20 concurrent requests with ~30KB bodies"
 					onClick={async () => {
-						const before = (performance as any).memory
+						const before = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory
 							?.usedJSHeapSize
 						try {
 							const promises = []
@@ -676,7 +676,7 @@ export default function HttpTest() {
 								(sum, b) => sum + JSON.stringify(b).length,
 								0,
 							)
-							const after = (performance as any).memory
+							const after = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory
 								?.usedJSHeapSize
 							if (before && after) {
 								console.log(
@@ -697,7 +697,7 @@ export default function HttpTest() {
 					title="Sustained Rapid Fire"
 					description="10 batches of 10, back-to-back"
 					onClick={async () => {
-						const before = (performance as any).memory
+						const before = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory
 							?.usedJSHeapSize
 						try {
 							for (let batch = 0; batch < 10; batch++) {
@@ -714,7 +714,7 @@ export default function HttpTest() {
 									responses.map((r) => r.json()),
 								)
 							}
-							const after = (performance as any).memory
+							const after = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory
 								?.usedJSHeapSize
 							if (before && after) {
 								console.log(
@@ -735,7 +735,7 @@ export default function HttpTest() {
 					title="Fire-and-Forget (no await body)"
 					description="50 requests where body is never read by app"
 					onClick={async () => {
-						const before = (performance as any).memory
+						const before = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory
 							?.usedJSHeapSize
 						try {
 							const promises = []
@@ -750,7 +750,7 @@ export default function HttpTest() {
 							// The SDK still clones + reads each body internally,
 							// so this tests whether un-consumed bodies leak.
 							await Promise.all(promises)
-							const after = (performance as any).memory
+							const after = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory
 								?.usedJSHeapSize
 							if (before && after) {
 								console.log(
