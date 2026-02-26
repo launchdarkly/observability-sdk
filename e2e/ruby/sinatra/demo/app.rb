@@ -9,7 +9,6 @@ use LaunchDarklyObservability::Middleware
 $logger = Logger.new($stdout)
 
 observability_plugin = LaunchDarklyObservability::Plugin.new(
-  otlp_endpoint: ENV.fetch('OTEL_EXPORTER_OTLP_ENDPOINT', LaunchDarklyObservability::DEFAULT_ENDPOINT),
   service_name: 'launchdarkly-sinatra-demo',
   service_version: '1.0.0'
 )
@@ -20,6 +19,38 @@ sdk_key = ENV.fetch('LAUNCHDARKLY_SDK_KEY') do
 end
 config = LaunchDarkly::Config.new(plugins: [observability_plugin])
 $ld_client = LaunchDarkly::LDClient.new(sdk_key, config)
+
+if ENV['DEBUG'] == 'true'
+  debug_exporter = Class.new do
+    def export(spans, timeout: nil)
+      spans.each do |span|
+        attrs = span.attributes&.map { |k, v| "#{k}=#{v.inspect}" }&.join(', ')
+        events = span.events&.map(&:name)&.join(', ')
+        duration_ms = ((span.end_timestamp - span.start_timestamp) / 1e6).round(2)
+        status = span.status.ok? ? 'OK' : (span.status.description || span.status.code.to_s)
+        parts = [
+          "[Span] #{span.name}",
+          "trace=#{span.hex_trace_id[0..15]}...",
+          "duration=#{duration_ms}ms",
+          "status=#{status}"
+        ]
+        parts << "attrs={#{attrs}}" if attrs && !attrs.empty?
+        parts << "events=[#{events}]" if events && !events.empty?
+        $stderr.puts parts.join(' | ')
+      end
+      OpenTelemetry::SDK::Trace::Export::SUCCESS
+    end
+
+    def force_flush(timeout: nil) = OpenTelemetry::SDK::Trace::Export::SUCCESS
+    def shutdown(timeout: nil) = OpenTelemetry::SDK::Trace::Export::SUCCESS
+  end
+
+  OpenTelemetry.tracer_provider.add_span_processor(
+    OpenTelemetry::SDK::Trace::Export::SimpleSpanProcessor.new(debug_exporter.new)
+  )
+  $logger.level = Logger::DEBUG
+  $logger.info '[Debug] Span console exporter enabled'
+end
 
 at_exit { $ld_client.close }
 

@@ -268,9 +268,15 @@ module LaunchDarklyObservability
       false
     end
 
-    # Setup graceful shutdown hook
+    # Setup graceful exit hook to flush pending telemetry data.
+    #
+    # Only flushes (not shuts down) because frameworks like Sinatra start
+    # their servers inside at_exit handlers. Since at_exit runs in LIFO
+    # order, a shutdown registered after the framework's handler would
+    # execute BEFORE the server starts, stopping the TracerProvider and
+    # causing all spans to be non-recording for the server's lifetime.
     def setup_shutdown_hook
-      at_exit { shutdown }
+      at_exit { flush }
     end
   end
 end

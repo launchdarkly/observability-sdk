@@ -23,16 +23,15 @@ bundle install
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `LAUNCHDARKLY_SDK_KEY` | Yes | — | Your LaunchDarkly SDK key |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | No | `https://otel.observability.app.launchdarkly.com:4318` | OTLP collector endpoint (override for local dev) |
+| `DEBUG` | No | — | Set to `true` to print finished OTel spans to the console |
 
 ## Running
 
 ```bash
-# Via rackup (uses config.ru)
-bundle exec rackup -p 4567
+LAUNCHDARKLY_SDK_KEY=your-key bundle exec ruby app.rb
 
-# Or directly
-bundle exec ruby app.rb
+# With span debug output
+DEBUG=true LAUNCHDARKLY_SDK_KEY=your-key bundle exec ruby app.rb
 ```
 
 The app listens on `http://localhost:4567` by default.
