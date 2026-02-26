@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using LaunchDarkly.Sdk;
 
 #if IOS
 using UIKit;
@@ -95,6 +96,18 @@ public static class LDObserve
     /// <summary>Fatal4 severity (24).</summary>
     Fatal4 = Fatal3 + 1,
 }
+
+    // -------- Flag Evaluation Tracking --------
+
+    /// <summary>
+    /// Tracks a flag evaluation result for observability tracing.
+    /// </summary>
+    public static void TrackEvaluation(string flagKey, LdValue value, int? variationIndex, EvaluationReason? reason)
+    {
+#if IOS
+        // TODO: forward to iOS observability bridge
+#endif
+    }
 
     // -------- Public API --------
 

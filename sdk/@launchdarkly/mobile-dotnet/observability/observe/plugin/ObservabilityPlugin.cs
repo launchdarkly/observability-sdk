@@ -22,6 +22,7 @@ namespace LaunchDarkly.Observability
         internal ObservabilityPlugin(ObservabilityOptions options) : base("LaunchDarkly.Observability")
         {
             _options = options ?? throw new ArgumentNullException(nameof(options));
+            NativePluginConnector.Instance.CreateObserve(options);
         }
 
         internal ObservabilityPlugin() : base("LaunchDarkly.Observability")
@@ -33,15 +34,13 @@ namespace LaunchDarkly.Observability
         public override void Register(ILdClient client, EnvironmentMetadata metadata)
         {
             if (_options == null) return;
-
-            // TODO: initialize native observability with _options and metadata.Credential
+            NativePluginConnector.Instance.RegisterObserve(client, metadata);
         }
 
         /// <inheritdoc />
         public override IList<Hook> GetHooks(EnvironmentMetadata metadata)
         {
-            // TODO: return tracing hooks once a client-side TracingHook is available
-            return new List<Hook>();
+            return NativePluginConnector.Instance.GetHooksObserve(metadata);
         }
 
         public sealed class ObservabilityPluginBuilder

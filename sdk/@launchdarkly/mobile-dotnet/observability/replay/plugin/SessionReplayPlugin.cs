@@ -22,6 +22,7 @@ namespace LaunchDarkly.Observability
         internal SessionReplayPlugin(SessionReplayOptions options) : base("LaunchDarkly.SessionReplay")
         {
             _options = options ?? throw new ArgumentNullException(nameof(options));
+            NativePluginConnector.Instance.CreateSessionReplay(options);
         }
 
         internal SessionReplayPlugin() : base("LaunchDarkly.SessionReplay")
@@ -33,14 +34,13 @@ namespace LaunchDarkly.Observability
         public override void Register(ILdClient client, EnvironmentMetadata metadata)
         {
             if (_options == null) return;
-
-            // TODO: initialize native session replay with _options and metadata.Credential
+            NativePluginConnector.Instance.RegisterSessionReplay(client, metadata);
         }
 
         /// <inheritdoc />
         public override IList<Hook> GetHooks(EnvironmentMetadata metadata)
         {
-            return new List<Hook>();
+            return NativePluginConnector.Instance.GetHooksSessionReplay(metadata);
         }
 
         public sealed class SessionReplayPluginBuilder

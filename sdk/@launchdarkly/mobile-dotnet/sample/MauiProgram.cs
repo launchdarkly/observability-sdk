@@ -111,24 +111,8 @@ public static class MauiProgram
 			}
 		};
 
-		LdNative = LDNative.Start(
-			mobileKey: mobileKey,
-			observability: new ObservabilityOptions(
-				serviceName: "maui-sample-app",
-				otlpEndpoint: otlpEndpoint,
-				backendUrl: backendUrl
-			),
-			replay: new SessionReplayOptions(
-				isEnabled: true,
-				privacy: new SessionReplayOptions.PrivacyOptions(
-					maskTextInputs: true,
-					maskWebViews: false,
-					maskLabels: false
-				)
-			)
-		);
-		LdNative.Replay.IsEnabled = true;
-		Console.WriteLine($"ldNative.version={LdNative.NativeVersion}");
+		// Native bridge is now started automatically by NativePluginConnector
+		// once all plugins have been registered.
 		return app;
 	}
 }
