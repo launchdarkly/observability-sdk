@@ -2,10 +2,12 @@ package com.example.androidobservability
 
 import android.app.Activity
 import android.content.Intent
+import android.graphics.Color
 import android.os.Bundle
 import android.widget.EditText
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import com.google.android.material.appbar.MaterialToolbar
 import com.example.androidobservability.masking.XMLMaskingActivity
 import com.example.androidobservability.masking.XMLUserFormActivity
 import com.example.androidobservability.masking.XMLWebActivity
@@ -22,12 +24,30 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        setupToolbarSubtitle()
         setupMaskingButtons()
         setupSessionReplayToggle()
         setupIdentifyButtons()
         setupInstrumentationButtons()
         setupMetricButtons()
         setupCustomerApiButtons()
+    }
+
+    private fun setupToolbarSubtitle() {
+        val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
+        val isComposeAvailable = try {
+            Class.forName("androidx.compose.ui.platform.AbstractComposeView")
+            true
+        } catch (_: ClassNotFoundException) {
+            false
+        }
+        if (isComposeAvailable) {
+            toolbar.subtitle = "Compose Detected"
+            toolbar.setSubtitleTextColor(Color.parseColor("#FFFFAB40"))
+        } else {
+            toolbar.subtitle = "XML Views"
+            toolbar.setSubtitleTextColor(Color.parseColor("#FF4CAF50"))
+        }
     }
 
     private fun setupMaskingButtons() {
