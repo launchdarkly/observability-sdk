@@ -3,7 +3,7 @@ package com.launchdarkly.observability.replay.exporter
 import com.launchdarkly.logging.LDLogger
 import com.launchdarkly.observability.network.GraphQLClient
 import com.launchdarkly.observability.replay.Event
-import com.launchdarkly.observability.replay.capture.CaptureEvent
+import com.launchdarkly.observability.replay.capture.ExportFrame
 import com.launchdarkly.observability.replay.transport.EventExporting
 import com.launchdarkly.observability.replay.transport.EventQueueItem
 import kotlinx.coroutines.sync.Mutex
@@ -51,7 +51,7 @@ class SessionReplayExporter(
     private var identifyItemPayload = initialIdentifyItemPayload
     // TODO: O11Y-624 - need to implement sid, payloadId reset when multiple sessions occur in one application process lifecycle.
     private var payloadIdCounter = 0
-    private val eventGenerator = SessionReplayEventGenerator(canvasDrawEntourage)
+    private val eventGenerator = RRWebEventGenerator(canvasDrawEntourage)
 
     private data class LastCaptureState(
         val sessionId: String?,
@@ -157,7 +157,7 @@ class SessionReplayExporter(
     }
 
     private fun handleCapture(
-        capture: CaptureEvent,
+        capture: ExportFrame,
         eventsBySession: MutableMap<String, MutableList<Event>>,
         sessionsNeedingInit: MutableSet<String>,
     ) {
@@ -166,15 +166,17 @@ class SessionReplayExporter(
         }
 
         val stateChanged = capture.session != lastCaptureState.sessionId ||
-            capture.origHeight != lastCaptureState.height ||
-            capture.origWidth != lastCaptureState.width ||
-            eventGenerator.accumulatedCanvasSize >= canvasBufferLimit
+            capture.originalSize.height != lastCaptureState.height ||
+            capture.originalSize.width != lastCaptureState.width
 
-        if (stateChanged) {
+        val shouldForceFullByCanvasLimit =
+            eventGenerator.accumulatedCanvasSize >= canvasBufferLimit && capture.isKeyframe
+
+        if (stateChanged || shouldForceFullByCanvasLimit) {
             lastCaptureState = LastCaptureState(
                 sessionId = capture.session,
-                height = capture.origHeight,
-                width = capture.origWidth,
+                height = capture.originalSize.height,
+                width = capture.originalSize.width,
             )
             // we need to send a full capture if the session id changes or there is a resize/orientation change
             val events = eventGenerator.generateCaptureFullEvents(capture)
