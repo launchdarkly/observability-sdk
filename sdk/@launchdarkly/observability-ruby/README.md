@@ -372,15 +372,49 @@ LaunchDarklyObservability.in_span('process-order') do |outer_span|
 end
 ```
 
+### Non-Rails Examples
+
+The module-level methods work in any Ruby application:
+
+```ruby
+# Sinatra example
+require 'sinatra'
+require 'launchdarkly_observability'
+
+get '/users/:id' do
+  LaunchDarklyObservability.in_span('fetch-user', attributes: { 'user.id' => params[:id] }) do |span|
+    user = User.find(params[:id])
+    span.set_attribute('user.name', user.name)
+    user.to_json
+  end
+end
+
+# Plain Ruby script
+LaunchDarklyObservability.in_span('data-processing') do |span|
+  files = Dir.glob('data/*.csv')
+  span.set_attribute('files.count', files.length)
+
+  files.each do |file|
+    LaunchDarklyObservability.in_span('process-file', attributes: { 'file.name' => file }) do |file_span|
+      process_csv(file)
+    end
+  end
+end
+```
+
 ### Recording Exceptions
 
 ```ruby
-begin
-  risky_operation
-rescue StandardError => e
-  # Record the exception in the current span
-  LaunchDarklyObservability.record_exception(e, attributes: { 'retry_count' => 3 })
-  raise
+LaunchDarklyObservability.in_span('risky-operation') do |span|
+  begin
+    perform_operation
+  rescue StandardError => e
+    LaunchDarklyObservability.record_exception(e, attributes: {
+      'retry_count' => 3,
+      'operation_id' => operation_id
+    })
+    raise
+  end
 end
 ```
 
@@ -392,36 +426,6 @@ trace_id = LaunchDarklyObservability.current_trace_id
 logger.info "Processing request: #{trace_id}"
 ```
 
-### Rails Controller Helpers
-
-In Rails controllers, you can also use these helper methods:
-
-```ruby
-class MyController < ApplicationController
-  def index
-    # Get current trace ID
-    trace_id = launchdarkly_trace_id
-    Rails.logger.info "Processing request with trace: #{trace_id}"
-
-    # Create custom spans (Rails helper - equivalent to LaunchDarklyObservability.in_span)
-    with_launchdarkly_span('custom-operation', attributes: { 'custom.key' => 'value' }) do |span|
-      # Your code here
-      span.set_attribute('result', 'success')
-    end
-  end
-
-  def create
-    # Record exceptions (Rails helper - equivalent to LaunchDarklyObservability.record_exception)
-    begin
-      process_something
-    rescue => e
-      record_launchdarkly_exception(e)
-      raise
-    end
-  end
-end
-```
-
 ### Logging with Trace Context
 
 ```ruby
@@ -429,24 +433,83 @@ end
 Rails.logger.info "Processing flag evaluation"  # Includes trace_id, span_id
 ```
 
-### Using Raw OpenTelemetry API
+### Comparison: Plugin API vs Raw OpenTelemetry
 
-If you need more control, you can still use the OpenTelemetry API directly:
+#### Using the Plugin API (Recommended)
+
+The plugin API matches OpenTelemetry's naming but eliminates boilerplate:
 
 ```ruby
-tracer = OpenTelemetry.tracer_provider.tracer('my-component')
-
-tracer.in_span('custom-operation') do |span|
-  span.set_attribute('custom.attribute', 'value')
-
-  # Your code here
-
-  if error_occurred
-    span.record_exception(error)
-    span.status = OpenTelemetry::Trace::Status.error('Operation failed')
-  end
+LaunchDarklyObservability.in_span('operation', attributes: { 'key' => 'value' }) do |span|
+  # Your code
 end
+
+LaunchDarklyObservability.record_exception(error)
+LaunchDarklyObservability.current_trace_id
 ```
+
+#### Using Raw OpenTelemetry API
+
+```ruby
+tracer = OpenTelemetry.tracer_provider.tracer('my-component', '1.0.0')
+
+tracer.in_span('operation', attributes: { 'key' => 'value' }) do |span|
+  # Your code
+end
+
+span = OpenTelemetry::Trace.current_span
+span.record_exception(error)
+span.status = OpenTelemetry::Trace::Status.error(error.message)
+
+span = OpenTelemetry::Trace.current_span
+span.context.hex_trace_id if span&.context&.valid?
+```
+
+The plugin API provides the same familiar `in_span` method name while eliminating boilerplate.
+
+### Best Practices
+
+1. **Use descriptive span names**: Use kebab-case names that describe the operation
+   ```ruby
+   LaunchDarklyObservability.in_span('validate-payment') # Good
+   LaunchDarklyObservability.in_span('do_stuff')        # Bad
+   ```
+
+2. **Add meaningful attributes**: Include relevant context as span attributes
+   ```ruby
+   LaunchDarklyObservability.in_span('database-query', attributes: {
+     'db.table' => 'users',
+     'db.operation' => 'select',
+     'db.rows_returned' => results.count
+   })
+   ```
+
+3. **Always re-raise exceptions**: After recording an exception, re-raise it unless you're handling it
+   ```ruby
+   rescue => e
+     LaunchDarklyObservability.record_exception(e)
+     raise # Important!
+   end
+   ```
+
+4. **Keep spans focused**: Create separate spans for distinct operations rather than one large span
+   ```ruby
+   # Good - separate spans
+   LaunchDarklyObservability.in_span('fetch-data') { fetch }
+   LaunchDarklyObservability.in_span('process-data') { process }
+
+   # Bad - one large span
+   LaunchDarklyObservability.in_span('fetch-and-process') do
+     fetch
+     process
+   end
+   ```
+
+5. **Include trace IDs in logs**: Use `current_trace_id` for log correlation
+   ```ruby
+   trace_id = LaunchDarklyObservability.current_trace_id
+   Rails.logger.info "Starting processing [trace: #{trace_id}]"
+   ```
 
 ## Troubleshooting
 
@@ -516,41 +579,47 @@ end
 
 ### LaunchDarklyObservability Module
 
-```ruby
-# Initialize the plugin (alternative to creating Plugin directly)
-LaunchDarklyObservability.init
+#### `LaunchDarklyObservability.init`
 
-# Check if initialized
-LaunchDarklyObservability.initialized?  # => true
+Initialize the plugin (alternative to creating `Plugin` directly).
 
-# Create a custom span for manual instrumentation (matches OpenTelemetry API)
-LaunchDarklyObservability.in_span('operation-name') do |span|
-  span.set_attribute('key', 'value')
-  # your code
-end
+#### `LaunchDarklyObservability.initialized?`
 
-# Create a span with initial attributes
-LaunchDarklyObservability.in_span('operation-name', attributes: { 'key' => 'value' }) do |span|
-  # your code
-end
+Returns `true` if the plugin has been initialized.
 
-# Record an exception in the current span
-begin
-  risky_operation
-rescue => e
-  LaunchDarklyObservability.record_exception(e, attributes: { 'context' => 'value' })
-  raise
-end
+#### `LaunchDarklyObservability.in_span(name, attributes: {})`
 
-# Get the current trace ID
-trace_id = LaunchDarklyObservability.current_trace_id  # => "abc123..."
+Creates a new span and executes the given block within its context. Matches the OpenTelemetry `tracer.in_span` API.
 
-# Flush pending telemetry
-LaunchDarklyObservability.flush
+**Parameters:**
+- `name` (String): The name of the span
+- `attributes` (Hash): Optional initial attributes for the span
 
-# Shutdown (flushes and stops)
-LaunchDarklyObservability.shutdown
-```
+**Yields:** `span` (OpenTelemetry::Trace::Span) -- the created span object
+
+**Returns:** The result of the block
+
+#### `LaunchDarklyObservability.record_exception(exception, attributes: {})`
+
+Records an exception in the current span and sets the span status to error.
+
+**Parameters:**
+- `exception` (Exception): The exception to record
+- `attributes` (Hash): Optional additional attributes
+
+#### `LaunchDarklyObservability.current_trace_id`
+
+Returns the current trace ID in hexadecimal format.
+
+**Returns:** String (32 hex characters) or `nil` if no active span
+
+#### `LaunchDarklyObservability.flush`
+
+Flushes all pending telemetry data to the configured exporter.
+
+#### `LaunchDarklyObservability.shutdown`
+
+Flushes pending data and stops the plugin.
 
 ### Plugin Class
 
