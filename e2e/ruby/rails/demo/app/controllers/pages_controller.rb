@@ -9,12 +9,9 @@ class PagesController < ApplicationController
       anonymous: session.id.blank?
     })
 
-    # Get all available flags (automatically traced by the observability plugin)
-    state = Rails.configuration.ld_client.all_flags_state(@context)
+    state = ld_client.all_flags_state(@context)
     @flags_valid = state.valid?
     @flag_count = state.values_map.size
-
-    # Sample a few flag evaluations to demonstrate tracing
     @sample_evaluations = state.values_map.first(5).to_h
 
     # Make an HTTP request (auto-instrumented by OpenTelemetry)
