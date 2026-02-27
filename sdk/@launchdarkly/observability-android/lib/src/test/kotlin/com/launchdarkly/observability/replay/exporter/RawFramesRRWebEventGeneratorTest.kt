@@ -220,6 +220,161 @@ class RawFramesRRWebEventGeneratorTest {
         }
     }
 
+    @Test
+    fun `keyframe resets backtracking when layer limit reached`() {
+        mockBase64Android()
+        try {
+            val method = ReplayOptions.CompressionMethod.OverlayTiles(layers = 3, backtracking = true)
+            val tileDiffManager = mockk<TileDiffManager>()
+            val exportDiffManager = ExportDiffManager(compression = method, scale = 1f, tileDiffManager = tileDiffManager)
+            val eventGenerator = RRWebEventGenerator(canvasDrawEntourage = 300)
+
+            val sigA = imageSignature(801)
+            val sigB = imageSignature(802)
+            val sigC = imageSignature(803)
+
+            val fullBlue = markerBitmapTile(marker = 0x41, width = screenWidth, height = screenHeight)
+            val topGreen = markerBitmapTile(marker = 0x42, width = screenWidth, height = 22, top = 0)
+            val bottomGreen = markerBitmapTile(marker = 0x43, width = screenWidth, height = 22, top = screenHeight - 22)
+
+            val frame1 = rawFrame(1L)
+            val frame2 = rawFrame(2L)
+            val frame3 = rawFrame(3L)
+            val frame4 = rawFrame(4L)
+            val frame5 = rawFrame(5L)
+
+            every { tileDiffManager.computeTiledFrame(frame1) } returns tiledFrame(
+                id = 1, timestamp = 1L, isKeyframe = true, signature = sigA, tiles = listOf(fullBlue)
+            )
+            every { tileDiffManager.computeTiledFrame(frame2) } returns tiledFrame(
+                id = 2, timestamp = 2L, isKeyframe = false, signature = sigB, tiles = listOf(topGreen)
+            )
+            every { tileDiffManager.computeTiledFrame(frame3) } returns tiledFrame(
+                id = 3, timestamp = 3L, isKeyframe = false, signature = sigC, tiles = listOf(bottomGreen)
+            )
+            // Layer-limit rollover: same visual as frame2 but forced keyframe.
+            every { tileDiffManager.computeTiledFrame(frame4) } returns tiledFrame(
+                id = 4, timestamp = 4L, isKeyframe = true, signature = sigB, tiles = listOf(topGreen)
+            )
+            // Frame 5 mirrors frame1 content.
+            every { tileDiffManager.computeTiledFrame(frame5) } returns tiledFrame(
+                id = 5, timestamp = 5L, isKeyframe = false, signature = sigA, tiles = listOf(fullBlue)
+            )
+
+            val export1 = exportDiffManager.createCaptureEvent(frame1, "s")!!
+            val export2 = exportDiffManager.createCaptureEvent(frame2, "s")!!
+            val export3 = exportDiffManager.createCaptureEvent(frame3, "s")!!
+            val export4 = exportDiffManager.createCaptureEvent(frame4, "s")!!
+            val export5 = exportDiffManager.createCaptureEvent(frame5, "s")!!
+
+            val events1 = eventGenerator.generateCaptureFullEvents(export1)
+            val events2 = eventGenerator.generateCaptureIncrementalEvents(export2)
+            val events3 = eventGenerator.generateCaptureIncrementalEvents(export3)
+            val events4 = eventGenerator.generateCaptureIncrementalEvents(export4)
+            val events5 = eventGenerator.generateCaptureIncrementalEvents(export5)
+
+            val trackedNodeIds = mutableSetOf<Int>()
+            trackedNodeIds += addedNodeIds(events1)
+            trackedNodeIds += addedNodeIds(events2)
+            trackedNodeIds += addedNodeIds(events3)
+            assertEquals(3, trackedNodeIds.size)
+            assertTrue(export4.isKeyframe)
+
+            val fourthMutation = firstMutationData(events4)
+            assertNotNull(fourthMutation)
+            assertEquals(1, fourthMutation!!.adds?.size ?: 0)
+            assertEquals(3, fourthMutation.removes?.size ?: 0)
+            val fourthRemovedIds = fourthMutation.removes!!.map { it.id }.toSet()
+            assertEquals(trackedNodeIds, fourthRemovedIds)
+
+            trackedNodeIds.removeAll(fourthRemovedIds)
+            trackedNodeIds += fourthMutation.adds!!.mapNotNull { it.node.id }
+            assertEquals(1, trackedNodeIds.size)
+
+            val fifthMutation = firstMutationData(events5)
+            assertNotNull(fifthMutation)
+            assertFalse(fifthMutation!!.adds.isNullOrEmpty())
+            assertTrue(fifthMutation.removes.isNullOrEmpty())
+
+            trackedNodeIds += fifthMutation.adds!!.mapNotNull { it.node.id }
+            assertEquals(2, trackedNodeIds.size)
+        } finally {
+            unmockkStatic(Base64::class)
+        }
+    }
+
+    @Test
+    fun `multi-tile keyframe removes resolve across ExportDiffManager and RRWebEventGenerator`() {
+        mockBase64Android()
+        try {
+            val method = ReplayOptions.CompressionMethod.OverlayTiles(layers = 3, backtracking = true)
+            val tileDiffManager = mockk<TileDiffManager>()
+            val exportDiffManager = ExportDiffManager(compression = method, scale = 1f, tileDiffManager = tileDiffManager)
+            val eventGenerator = RRWebEventGenerator(canvasDrawEntourage = 300)
+
+            val sigA = ImageSignature(
+                rows = 1, columns = 2, tileWidth = 60, tileHeight = 88,
+                tileSignatures = listOf(TileSignature(101), TileSignature(102)),
+            )
+            val sigB = ImageSignature(
+                rows = 1, columns = 1, tileWidth = 120, tileHeight = 22,
+                tileSignatures = listOf(TileSignature(201)),
+            )
+
+            val frame1 = rawFrame(1L)
+            val frame2 = rawFrame(2L)
+            val frame3 = rawFrame(3L)
+
+            every { tileDiffManager.computeTiledFrame(frame1) } returns tiledFrame(
+                id = 1, timestamp = 1L, isKeyframe = true, signature = sigA,
+                tiles = listOf(
+                    markerBitmapTile(marker = 0x01, width = 60, height = screenHeight),
+                    markerBitmapTile(marker = 0x02, width = 60, height = screenHeight),
+                ),
+            )
+            every { tileDiffManager.computeTiledFrame(frame2) } returns tiledFrame(
+                id = 2, timestamp = 2L, isKeyframe = false, signature = sigB,
+                tiles = listOf(markerBitmapTile(marker = 0x03, width = screenWidth, height = 22)),
+            )
+            every { tileDiffManager.computeTiledFrame(frame3) } returns tiledFrame(
+                id = 3, timestamp = 3L, isKeyframe = true, signature = sigA,
+                tiles = listOf(
+                    markerBitmapTile(marker = 0x04, width = 60, height = screenHeight),
+                    markerBitmapTile(marker = 0x05, width = 60, height = screenHeight),
+                ),
+            )
+
+            val export1 = exportDiffManager.createCaptureEvent(frame1, "s")!!
+            val export2 = exportDiffManager.createCaptureEvent(frame2, "s")!!
+            val export3 = exportDiffManager.createCaptureEvent(frame3, "s")!!
+
+            val events1 = eventGenerator.generateCaptureFullEvents(export1)
+            val events2 = eventGenerator.generateCaptureIncrementalEvents(export2)
+            val events3 = eventGenerator.generateCaptureIncrementalEvents(export3)
+
+            val idsAfterFrame1 = addedNodeIds(events1).toSet()
+            val idsAfterFrame2 = addedNodeIds(events2).toSet()
+            assertEquals(2, idsAfterFrame1.size, "Frame 1 has 2 tiles so 2 DOM nodes")
+            assertEquals(1, idsAfterFrame2.size, "Frame 2 has 1 tile so 1 DOM node")
+
+            val thirdMutation = firstMutationData(events3)
+            assertNotNull(thirdMutation)
+            assertFalse(
+                thirdMutation!!.removes.isNullOrEmpty(),
+                "Keyframe must produce removes for previous frames' nodes — " +
+                    "fails if AddImage/RemoveImage use per-tile signatures that don't match nodeIds keys",
+            )
+            val removedIds = thirdMutation.removes!!.map { it.id }.toSet()
+            val allPreviousIds = idsAfterFrame1 + idsAfterFrame2
+            assertTrue(
+                removedIds.all { it in allPreviousIds },
+                "Every removed node id must be one that was previously added",
+            )
+        } finally {
+            unmockkStatic(Base64::class)
+        }
+    }
+
     private fun mockBase64Android() {
         mockkStatic(Base64::class)
         every { Base64.encodeToString(any(), Base64.NO_WRAP) } answers {

@@ -15,7 +15,7 @@ import com.launchdarkly.observability.replay.RRWebCustomDataTag
 import com.launchdarkly.observability.replay.RRWebIncrementalSource
 import com.launchdarkly.observability.replay.RRWebMouseInteraction
 import com.launchdarkly.observability.replay.capture.ExportFrame
-import com.launchdarkly.observability.replay.capture.TileSignature
+import com.launchdarkly.observability.replay.capture.ImageSignature
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
@@ -57,7 +57,7 @@ class RRWebEventGenerator(
     private var imageNodeId: Int? = null
     private var bodyNodeId: Int? = null
     private var knownKeyFrameId: Int? = null
-    private val nodeIds = mutableMapOf<TileSignature, Int>()
+    private val nodeIds = mutableMapOf<ImageSignature, Int>()
 
     data class State(
         val lastSid: Int = 0,
@@ -66,7 +66,7 @@ class RRWebEventGenerator(
         val imageNodeId: Int? = null,
         val bodyNodeId: Int? = null,
         val knownKeyFrameId: Int? = null,
-        val nodeIds: Map<TileSignature, Int> = emptyMap(),
+        val nodeIds: Map<ImageSignature, Int> = emptyMap(),
     )
 
     private fun nextSid(): Int {
@@ -88,7 +88,7 @@ class RRWebEventGenerator(
 
     private fun tileNode(exportFrame: ExportFrame, image: ExportFrame.AddImage): Pair<EventNode, Int> {
         val tileCanvasId = nextNodeId()
-        image.tileSignature?.let { nodeIds[it] = tileCanvasId }
+        image.imageSignature?.let { nodeIds[it] = tileCanvasId }
         val dataUrl = "data:${imageMimeType(exportFrame.format)};base64,${image.imageBase64}"
         val node = EventNode(
             id = tileCanvasId,
@@ -110,7 +110,7 @@ class RRWebEventGenerator(
 
         var totalCanvasSize = 0
         val removes = exportFrame.removeImages?.mapNotNull { removal ->
-            nodeIds[removal.tileSignature]?.let { nodeId ->
+            nodeIds[removal.imageSignature]?.let { nodeId ->
                 Removal(parentId = bodyId, id = nodeId)
             }
         } ?: emptyList()

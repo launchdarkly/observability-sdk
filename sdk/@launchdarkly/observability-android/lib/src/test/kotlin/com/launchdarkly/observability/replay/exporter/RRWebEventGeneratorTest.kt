@@ -5,6 +5,7 @@ import com.launchdarkly.observability.replay.EventData
 import com.launchdarkly.observability.replay.EventDataUnion
 import com.launchdarkly.observability.replay.EventType
 import com.launchdarkly.observability.replay.capture.ExportFrame
+import com.launchdarkly.observability.replay.capture.ImageSignature
 import com.launchdarkly.observability.replay.capture.IntRect
 import com.launchdarkly.observability.replay.capture.IntSize
 import com.launchdarkly.observability.replay.capture.TileSignature
@@ -17,14 +18,14 @@ class RRWebEventGeneratorTest {
     @Test
     fun `keyframe incremental resolves removes before map reset`() {
         val generator = RRWebEventGenerator(canvasDrawEntourage = 1)
-        val tileA = TileSignature(101)
-        val tileB = TileSignature(202)
+        val sigA = ImageSignature(rows = 1, columns = 1, tileWidth = 64, tileHeight = 22, tileSignatures = listOf(TileSignature(101)))
+        val sigB = ImageSignature(rows = 1, columns = 1, tileWidth = 64, tileHeight = 22, tileSignatures = listOf(TileSignature(202)))
 
         generator.generateCaptureFullEvents(
             exportFrame(
                 keyFrameId = 1,
                 isKeyframe = true,
-                addImages = listOf(addImage(tileA, 0, 0, 120, 88)),
+                addImages = listOf(addImage(sigA, 0, 0, 120, 88)),
                 removeImages = null,
                 timestamp = 1L,
             )
@@ -34,7 +35,7 @@ class RRWebEventGeneratorTest {
             exportFrame(
                 keyFrameId = 1,
                 isKeyframe = false,
-                addImages = listOf(addImage(tileB, 0, 0, 120, 22)),
+                addImages = listOf(addImage(sigB, 0, 0, 120, 22)),
                 removeImages = null,
                 timestamp = 2L,
             )
@@ -45,8 +46,8 @@ class RRWebEventGeneratorTest {
             exportFrame(
                 keyFrameId = 2,
                 isKeyframe = true,
-                addImages = listOf(addImage(tileA, 0, 0, 120, 88)),
-                removeImages = listOf(ExportFrame.RemoveImage(keyFrameId = 1, tileSignature = tileB)),
+                addImages = listOf(addImage(sigA, 0, 0, 120, 88)),
+                removeImages = listOf(ExportFrame.RemoveImage(keyFrameId = 1, imageSignature = sigB)),
                 timestamp = 3L,
             )
         )
@@ -58,15 +59,15 @@ class RRWebEventGeneratorTest {
     @Test
     fun `backtracking supports two remove-only rollbacks`() {
         val generator = RRWebEventGenerator(canvasDrawEntourage = 1)
-        val tileA = TileSignature(101)
-        val tileB = TileSignature(202)
-        val tileC = TileSignature(303)
+        val sigA = ImageSignature(rows = 1, columns = 1, tileWidth = 64, tileHeight = 22, tileSignatures = listOf(TileSignature(101)))
+        val sigB = ImageSignature(rows = 1, columns = 1, tileWidth = 64, tileHeight = 22, tileSignatures = listOf(TileSignature(202)))
+        val sigC = ImageSignature(rows = 1, columns = 1, tileWidth = 64, tileHeight = 22, tileSignatures = listOf(TileSignature(303)))
 
         generator.generateCaptureFullEvents(
             exportFrame(
                 keyFrameId = 1,
                 isKeyframe = true,
-                addImages = listOf(addImage(tileA, 0, 0, 120, 88)),
+                addImages = listOf(addImage(sigA, 0, 0, 120, 88)),
                 removeImages = null,
                 timestamp = 1L,
             )
@@ -76,7 +77,7 @@ class RRWebEventGeneratorTest {
             exportFrame(
                 keyFrameId = 1,
                 isKeyframe = false,
-                addImages = listOf(addImage(tileB, 0, 0, 120, 22)),
+                addImages = listOf(addImage(sigB, 0, 0, 120, 22)),
                 removeImages = null,
                 timestamp = 2L,
             )
@@ -87,7 +88,7 @@ class RRWebEventGeneratorTest {
             exportFrame(
                 keyFrameId = 1,
                 isKeyframe = false,
-                addImages = listOf(addImage(tileC, 0, 66, 120, 22)),
+                addImages = listOf(addImage(sigC, 0, 66, 120, 22)),
                 removeImages = null,
                 timestamp = 3L,
             )
@@ -99,7 +100,7 @@ class RRWebEventGeneratorTest {
                 keyFrameId = 1,
                 isKeyframe = false,
                 addImages = emptyList(),
-                removeImages = listOf(ExportFrame.RemoveImage(keyFrameId = 1, tileSignature = tileC)),
+                removeImages = listOf(ExportFrame.RemoveImage(keyFrameId = 1, imageSignature = sigC)),
                 timestamp = 4L,
             )
         )
@@ -112,7 +113,7 @@ class RRWebEventGeneratorTest {
                 keyFrameId = 1,
                 isKeyframe = false,
                 addImages = emptyList(),
-                removeImages = listOf(ExportFrame.RemoveImage(keyFrameId = 1, tileSignature = tileB)),
+                removeImages = listOf(ExportFrame.RemoveImage(keyFrameId = 1, imageSignature = sigB)),
                 timestamp = 5L,
             )
         )
@@ -142,7 +143,7 @@ class RRWebEventGeneratorTest {
     )
 
     private fun addImage(
-        tileSignature: TileSignature,
+        imageSignature: ImageSignature,
         left: Int,
         top: Int,
         width: Int,
@@ -150,7 +151,7 @@ class RRWebEventGeneratorTest {
     ): ExportFrame.AddImage = ExportFrame.AddImage(
         imageBase64 = "AQ==",
         rect = IntRect(left = left, top = top, width = width, height = height),
-        tileSignature = tileSignature,
+        imageSignature = imageSignature,
     )
 
     private fun mutationData(events: List<Event>): EventData {
