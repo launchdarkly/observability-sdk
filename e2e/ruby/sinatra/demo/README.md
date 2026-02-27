@@ -23,6 +23,7 @@ bundle install
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `LAUNCHDARKLY_SDK_KEY` | Yes | — | Your LaunchDarkly SDK key |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | No | LaunchDarkly cloud | OTLP collector endpoint (e.g. `http://localhost:8082/otel` for local dev) |
 | `DEBUG` | No | — | Set to `true` to print finished OTel spans to the console |
 
 ## Running

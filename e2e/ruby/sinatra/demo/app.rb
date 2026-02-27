@@ -8,10 +8,13 @@ use LaunchDarklyObservability::Middleware
 
 $logger = Logger.new($stdout)
 
-observability_plugin = LaunchDarklyObservability::Plugin.new(
+plugin_opts = {
   service_name: 'launchdarkly-sinatra-demo',
   service_version: '1.0.0'
-)
+}
+plugin_opts[:otlp_endpoint] = ENV['OTEL_EXPORTER_OTLP_ENDPOINT'] if ENV['OTEL_EXPORTER_OTLP_ENDPOINT']
+
+observability_plugin = LaunchDarklyObservability::Plugin.new(**plugin_opts)
 
 sdk_key = ENV.fetch('LAUNCHDARKLY_SDK_KEY') do
   $logger.warn '[LaunchDarkly] LAUNCHDARKLY_SDK_KEY not set, client will not connect'
