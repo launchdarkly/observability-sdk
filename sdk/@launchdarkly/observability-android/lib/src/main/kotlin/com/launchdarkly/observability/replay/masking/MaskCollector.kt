@@ -8,6 +8,15 @@ import com.launchdarkly.logging.LDLogger
 import kotlin.collections.plusAssign
 import com.launchdarkly.observability.replay.utils.locationOnScreen
 
+private val isComposeAvailable: Boolean by lazy {
+    try {
+        Class.forName("androidx.compose.ui.platform.AbstractComposeView")
+        true
+    } catch (_: ClassNotFoundException) {
+        false
+    }
+}
+
 data class MaskContext(
     val matrix: Matrix,
     val rootX: Float,
@@ -70,7 +79,7 @@ class MaskCollector(private val logger: LDLogger) {
         if (!view.isShown) return
 
         when {
-            view is AbstractComposeView -> traverseCompose(view, context, masks)
+            isComposeAvailable && view is AbstractComposeView -> traverseCompose(view, context, masks)
             isAndroidComposeView(view) -> traverseAndroidComposeView(view, context, masks)
             else -> traverseNative(view, context, masks)
         }
