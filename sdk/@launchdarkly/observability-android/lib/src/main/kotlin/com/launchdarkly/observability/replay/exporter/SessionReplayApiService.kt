@@ -110,6 +110,7 @@ class SessionReplayApiService(
      * @param events The list of events to push
      */
     suspend fun pushPayload(sessionSecureId: String, payloadId: String, events: List<Event>) {
+        val events = events.sortedBy { it.timestamp }
         val variables = mapOf(
             "session_secure_id" to JsonPrimitive(sessionSecureId),
             "payload_id" to JsonPrimitive(payloadId),

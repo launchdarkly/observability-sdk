@@ -1,5 +1,12 @@
 # highlight.run
 
+## [9.27.1](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-9.27.0...highlight.run-9.27.1) (2026-02-26)
+
+
+### Bug Fixes
+
+* improve network response capture ([#379](https://github.com/launchdarkly/observability-sdk/issues/379)) ([43d2dc3](https://github.com/launchdarkly/observability-sdk/commit/43d2dc3ea6054b2fcdf7f8971bbbe492a9175804))
+
 ## [9.27.0](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-9.26.1...highlight.run-9.27.0) (2026-02-23)
 
 

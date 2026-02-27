@@ -79,9 +79,7 @@ class SessionReplayExporter(
                 // Set to track sessions that need initialization
                 val sessionsNeedingInit = mutableSetOf<String>()
 
-                // Don't assume items are in chronological order
-                val sortedItems = items.sortedBy { it.timestamp }
-                for (item in sortedItems) {
+                for (item in items) {
                     when (val payload = item.payload) {
                         is ImageItemPayload -> {
                             handleCapture(payload.capture, eventsBySession, sessionsNeedingInit)

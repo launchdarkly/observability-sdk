@@ -1,0 +1,97 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Run Maui iOS (Simulator)",
+			"type": "process",
+			"command": "dotnet",
+			"args": [
+				"build",
+				"${workspaceFolder}/sample/MauiSample9.csproj",
+				"-t:Run",
+				"-f",
+				"net9.0-ios",
+				"-p:RuntimeIdentifier=iossimulator-arm64",
+				"-p:_DeviceName=:v2:udid=EC33E48C-8CEE-4EA7-BE06-71E4B3E80010"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/"
+			},
+			"group": "build",
+			"problemMatcher": []
+		},
+		{
+			"label": "build",
+			"command": "dotnet",
+			"type": "process",
+			"args": [
+				"build",
+				"${workspaceFolder}/sample/MauiSample9.csproj",
+				"/property:GenerateFullPaths=true",
+				"/consoleloggerparameters:NoSummary;ForceNoAlign"
+			],
+			"problemMatcher": "$msCompile"
+		},
+		{
+			"label": "Run Maui Android (Emulator)",
+			"type": "shell",
+			"command": "/bin/zsh",
+			"args": [
+				"-lc",
+				"set -e; dotnet clean ${workspaceFolder}/sample/MauiSample9.csproj -c Debug -p:TargetFramework=net9.0-android; dotnet build ${workspaceFolder}/sample/MauiSample9.csproj -c Debug -t:Run -p:TargetFramework=net9.0-android -p:LD_INCLUDE_NATIVE_DEPS=true -p:AndroidUninstall=true -p:AndroidForceInstall=true -p:AndroidPackageFormat=apk"
+			],
+			"options": { "cwd": "${workspaceFolder}/" },
+			"group": "build",
+			"problemMatcher": []
+		},
+		{
+			"label": "Rebuild iOS XCFramework",
+			"type": "shell",
+			"command": "/bin/zsh",
+			"args": [
+				"-c",
+				"bash ${workspaceFolder}/scripts/build_xcframework.sh"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/"
+			},
+			"group": "build",
+			"problemMatcher": []
+		},
+		{
+			"label": "Rebuild Android",
+			"type": "shell",
+			"command": "/bin/zsh",
+			"args": [
+				"-lc",
+				"set -e; dotnet clean ${workspaceFolder}/sample/MauiSample9.csproj -c Debug -f net9.0-android; dotnet build ${workspaceFolder}/sample/MauiSample9.csproj -c Debug -f net9.0-android -p:LD_INCLUDE_NATIVE_DEPS=true"
+			],
+			"options": { "cwd": "${workspaceFolder}/" },
+			"group": "build",
+			"problemMatcher": "$msCompile"
+		},
+		{
+			"label": "Rebuild iOS",
+			"type": "shell",
+			"command": "/bin/zsh",
+			"args": [
+				"-lc",
+				"set -e; dotnet clean ${workspaceFolder}/sample/MauiSample9.csproj -c Debug -f net9.0-ios; dotnet build ${workspaceFolder}/sample/MauiSample9.csproj -c Debug -f net9.0-ios"
+			],
+			"options": { "cwd": "${workspaceFolder}/" },
+			"group": "build",
+			"problemMatcher": "$msCompile"
+		},
+		{
+			"label": "Clean build folders",
+			"type": "shell",
+			"command": "/bin/zsh",
+			"args": ["-c", "bash ${workspaceFolder}/scripts/clean_build.sh"],
+			"options": {
+				"cwd": "${workspaceFolder}/"
+			},
+			"group": "build",
+			"problemMatcher": []
+		}
+	]
+}

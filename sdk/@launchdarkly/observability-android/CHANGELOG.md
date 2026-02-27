@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.26.1](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.26.0...launchdarkly-observability-android-0.26.1) (2026-02-24)
+
+
+### Bug Fixes
+
+* Fix event sorting in session replay export ([#392](https://github.com/launchdarkly/observability-sdk/issues/392)) ([5e11cf7](https://github.com/launchdarkly/observability-sdk/commit/5e11cf71d60a7d7a6131a2d8fb5fb1f70c6916bc))
+* Touch move event buffering using wrong clock and mismatched constants ([#391](https://github.com/launchdarkly/observability-sdk/issues/391)) ([0a6582c](https://github.com/launchdarkly/observability-sdk/commit/0a6582c2ba445cd391a03d3aecfa723887f636da))
+
 ## [0.26.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.25.2...launchdarkly-observability-android-0.26.0) (2026-02-17)
 
 
