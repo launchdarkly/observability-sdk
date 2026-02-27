@@ -141,29 +141,3 @@ yarn test:local
 # Run everything
 yarn test
 ```
-
-**Projects:**
-- `live-debug` - Tests against live URLs. Captures SDK presence (`H`, `__HIGHLIGHT__`, `LDRecord` globals), postMessage flow, CSP headers, iframe sandbox attributes, and backend network traffic. Runs headed with slowMo.
-- `local-repro` - Tests against two local Express servers simulating cross-origin parent/iframe. Tests happy path, missing SDK, `recordCrossOriginIframe: false`, delayed iframe insertion, sandbox restrictions.
-
-**Key test files:**
-- `tests/lowes-debug.spec.ts` - Full diagnostic suite against live URLs
-- `tests/prove-stuck-iframe.spec.ts` - Proves root cause by sending a fake `"iframe parent ready"` postMessage and watching the iframe SDK wake up
-- `tests/cross-origin-iframe.spec.ts` - Controlled local reproduction tests
-
-**How cross-origin iframe recording works:**
-1. Parent page SDK (with `recordCrossOriginIframe: true`) polls all `<iframe>` elements every 1s, sending `postMessage({ highlight: "iframe parent ready", projectID, sessionSecureID })`
-2. Iframe SDK detects it's cross-origin (via `window.parent.document` throwing), waits for the parent message
-3. Iframe receives project ID + session secure ID from parent, replies `{ highlight: "iframe ok" }`, then starts recording
-4. **Both parent and iframe must have the SDK installed with `recordCrossOriginIframe: true`**
-
-**Common failure modes:** SDK missing on parent page, `recordCrossOriginIframe` not enabled, iframe `sandbox` attribute missing `allow-scripts` or `allow-same-origin`.
-
-**Helpers** (`helpers/diagnostics.ts`):
-- `injectPostMessageSpy(page)` - Captures all postMessage events via `addInitScript`
-- `checkSDKPresence(page|frame)` - Checks for SDK globals + extracts config, state, session ID
-- `interceptBackendRequests(page)` - Route-intercepts requests to `pub.observability.app.launchdarkly.com`
-- `getIframeAttributes(page)` - Returns sandbox, allow, src for all iframes
-- `captureSecurityHeaders(response)` - Extracts CSP, X-Frame-Options, etc.
-
-**Local server fixtures** (`fixtures/`): HTML pages with various SDK configurations (happy path, no SDK, disabled cross-origin, delayed iframe, sandboxed iframe).
