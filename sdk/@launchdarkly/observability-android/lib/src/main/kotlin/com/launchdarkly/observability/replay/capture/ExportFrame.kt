@@ -28,7 +28,7 @@ data class ExportFrame(
             AddImage(
                 imageBase64 = imageBase64,
                 rect = IntRect(left = 0, top = 0, width = origWidth, height = origHeight),
-                tileSignature = null
+                imageSignature = null
             )
         ),
         removeImages = null,
@@ -44,13 +44,13 @@ data class ExportFrame(
 
     data class RemoveImage(
         val keyFrameId: Int,
-        val tileSignature: TileSignature,
+        val imageSignature: ImageSignature,
     )
 
     data class AddImage(
         val imageBase64: String,
         val rect: IntRect,
-        val tileSignature: TileSignature?,
+        val imageSignature: ImageSignature?,
     )
 
     sealed class ExportFormat {

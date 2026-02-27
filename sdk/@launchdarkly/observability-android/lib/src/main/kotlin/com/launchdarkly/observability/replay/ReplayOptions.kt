@@ -23,7 +23,7 @@ data class ReplayOptions(
     sealed class CompressionMethod {
         data object ScreenImage : CompressionMethod()
         data class OverlayTiles(
-            val layers: Int = 10,
+            val layers: Int = 15,
             val backtracking: Boolean = true,
         ) : CompressionMethod()
     }

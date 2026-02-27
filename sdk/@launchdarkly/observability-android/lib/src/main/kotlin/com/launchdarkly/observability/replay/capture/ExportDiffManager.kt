@@ -46,39 +46,35 @@ class ExportDiffManager(
                     removes = currentImages.subList(lastKeyNodeIdx + 1, currentImages.size).toMutableList()
                     currentImages.subList(lastKeyNodeIdx + 1, currentImages.size).clear()
 
-                    // Keep only signatures that still point into the retained prefix.
                     val filtered = currentImagesIndex.filterValues { value -> value <= lastKeyNodeIdx }
                     currentImagesIndex.clear()
                     currentImagesIndex.putAll(filtered)
                 } else {
-                    for ((tileIdx, tile) in tiledFrame.tiles.withIndex()) {
-                        val tileSignature = signature.tileSignatures.getOrNull(tileIdx)
+                    for (tile in tiledFrame.tiles) {
                         val addImage =
-                            tile.bitmap.asExportedImage(format = format, rect = tile.rect, tileSignature = tileSignature)
+                            tile.bitmap.asExportedImage(format = format, rect = tile.rect, imageSignature = signature)
                                 ?: return null
                         adds.add(addImage)
-                        if (tileSignature != null) {
-                            currentImages.add(
-                                ExportFrame.RemoveImage(
-                                    keyFrameId = keyFrameId,
-                                    tileSignature = tileSignature,
-                                )
+                        currentImages.add(
+                            ExportFrame.RemoveImage(
+                                keyFrameId = keyFrameId,
+                                imageSignature = signature,
                             )
-                        }
+                        )
                     }
                     currentImagesIndex[signature] = currentImages.size - 1
                 }
             } else {
-                for ((tileIdx, tile) in tiledFrame.tiles.withIndex()) {
-                    val tileSignature = signature?.tileSignatures?.getOrNull(tileIdx)
-                    val addImage = tile.bitmap.asExportedImage(format = format, rect = tile.rect, tileSignature = tileSignature)
+                for (tile in tiledFrame.tiles) {
+                    val imageSignature = tiledFrame.imageSignature
+                    val addImage = tile.bitmap.asExportedImage(format = format, rect = tile.rect, imageSignature = imageSignature)
                         ?: return null
                     adds.add(addImage)
-                    if (tileSignature != null) {
+                    if (imageSignature != null) {
                         currentImages.add(
                             ExportFrame.RemoveImage(
                                 keyFrameId = keyFrameId,
-                                tileSignature = tileSignature,
+                                imageSignature = imageSignature,
                             )
                         )
                     }
@@ -114,7 +110,7 @@ class ExportDiffManager(
 private fun Bitmap.asExportedImage(
     format: ExportFrame.ExportFormat,
     rect: IntRect,
-    tileSignature: TileSignature?,
+    imageSignature: ImageSignature?,
 ): ExportFrame.AddImage? {
     val outputStream = ByteArrayOutputStream()
     return try {
@@ -138,7 +134,7 @@ private fun Bitmap.asExportedImage(
         ExportFrame.AddImage(
             imageBase64 = compressedImage,
             rect = rect,
-            tileSignature = tileSignature,
+            imageSignature = imageSignature,
         )
     } finally {
         outputStream.close()
