@@ -1,5 +1,35 @@
 # Changelog
 
+## [0.26.1](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.26.0...launchdarkly-observability-android-0.26.1) (2026-02-24)
+
+
+### Bug Fixes
+
+* Fix event sorting in session replay export ([#392](https://github.com/launchdarkly/observability-sdk/issues/392)) ([5e11cf7](https://github.com/launchdarkly/observability-sdk/commit/5e11cf71d60a7d7a6131a2d8fb5fb1f70c6916bc))
+* Touch move event buffering using wrong clock and mismatched constants ([#391](https://github.com/launchdarkly/observability-sdk/issues/391)) ([0a6582c](https://github.com/launchdarkly/observability-sdk/commit/0a6582c2ba445cd391a03d3aecfa723887f636da))
+
+## [0.26.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.25.2...launchdarkly-observability-android-0.26.0) (2026-02-17)
+
+
+### Features
+
+* Android pixel density settings. ([#373](https://github.com/launchdarkly/observability-sdk/issues/373)) ([58a3a7b](https://github.com/launchdarkly/observability-sdk/commit/58a3a7b2555a0d4b898c8d178801fc2988783765))
+
+## [0.25.2](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.25.1...launchdarkly-observability-android-0.25.2) (2026-02-17)
+
+
+### Bug Fixes
+
+* Android SR, remove visible scrollbars ([#371](https://github.com/launchdarkly/observability-sdk/issues/371)) ([c21ecd4](https://github.com/launchdarkly/observability-sdk/commit/c21ecd44c1dcb94a11bd717688b8e76f1f4aff16))
+
+## [0.25.1](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.25.0...launchdarkly-observability-android-0.25.1) (2026-02-12)
+
+
+### Bug Fixes
+
+* release package by trigger new build ([#364](https://github.com/launchdarkly/observability-sdk/issues/364)) ([7eaf5cd](https://github.com/launchdarkly/observability-sdk/commit/7eaf5cd576b9aa9003e6b4a4372c61bc3d390ff1))
+* Trigger release / Code comments change ([#363](https://github.com/launchdarkly/observability-sdk/issues/363)) ([06b34da](https://github.com/launchdarkly/observability-sdk/commit/06b34dae442a0f4a1c7b18a0bcda89d561f445db))
+
 ## [0.25.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.24.0...launchdarkly-observability-android-0.25.0) (2026-01-28)
 
 

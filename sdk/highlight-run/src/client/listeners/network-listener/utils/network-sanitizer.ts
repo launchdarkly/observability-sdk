@@ -50,11 +50,12 @@ export const sanitizeHeaders = (
 	return newHeaders
 }
 
-/** These are known headers that are secrets. */
+/** Known headers that contain secrets. Applies to both request and response headers. */
 const SENSITIVE_HEADERS = [
 	'authorization',
 	'cookie',
 	'proxy-authorization',
+	'set-cookie',
 	'token',
 ]
 

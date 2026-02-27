@@ -1,0 +1,9 @@
+<Project>
+	<ItemGroup Condition="$(TargetFramework.Contains('android'))">
+		<!-- Wire packaged Android libraries to the consuming project -->
+		<AndroidLibrary Include="$(MSBuildThisFileDirectory)../runtimes/android/native/*.aar" />
+		<AndroidLibrary Include="$(MSBuildThisFileDirectory)../runtimes/android/native/*.jar" />
+	</ItemGroup>
+</Project>
+
+

@@ -4,7 +4,7 @@ import { RecordSDK } from '../sdk/record'
 const recordSpy = vi.fn((...args: any[]) => {
 	return vi.fn()
 })
-vi.mock('rrweb', () => ({
+vi.mock('@highlight-run/rrweb', () => ({
 	addCustomEvent: vi.fn(),
 	record: (...args: any[]) => recordSpy(...args),
 }))

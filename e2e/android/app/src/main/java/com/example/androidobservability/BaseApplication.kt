@@ -1,6 +1,7 @@
 package com.example.androidobservability
 
 import android.app.Application
+import android.util.Log
 import android.widget.ImageView
 import com.launchdarkly.observability.api.ObservabilityOptions
 import com.launchdarkly.observability.client.TelemetryInspector
@@ -17,13 +18,13 @@ import com.launchdarkly.sdk.android.LDClient
 import com.launchdarkly.sdk.android.LDConfig
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
+import com.launchdarkly.observability.sdk.LDReplay
+import com.launchdarkly.sdk.android.FeatureFlagChangeListener
 
 open class BaseApplication : Application() {
 
     companion object {
-        // TODO O11Y-376: Update this credential to be driven by env variable or gradle property
-        // Set LAUNCHDARKLY_MOBILE_KEY to your LaunchDarkly SDK mobile key.
-        const val LAUNCHDARKLY_MOBILE_KEY = "MOBILE_KEY_GOES_HERE"
+        const val LAUNCHDARKLY_MOBILE_KEY = BuildConfig.LAUNCHDARKLY_MOBILE_KEY
     }
 
     var observabilityOptions = ObservabilityOptions(
@@ -31,6 +32,8 @@ open class BaseApplication : Application() {
             AttributeKey.stringKey("example"), "value"
         ),
         debug = true,
+        otlpEndpoint = BuildConfig.OTLP_ENDPOINT,
+        backendUrl = BuildConfig.BACKEND_URL,
         tracesApi = ObservabilityOptions.TracesApi.enabled(),
         metricsApi = ObservabilityOptions.MetricsApi.enabled(),
         instrumentations = ObservabilityOptions.Instrumentations(
@@ -51,7 +54,7 @@ open class BaseApplication : Application() {
 
         val sessionReplayPlugin = SessionReplay(
             options = ReplayOptions(
-                enabled = true,
+                enabled = false,
                 privacyProfile = PrivacyProfile(
                     maskText = false,
                     maskWebViews = true,
@@ -87,6 +90,24 @@ open class BaseApplication : Application() {
 
         LDClient.init(this@BaseApplication, ldConfig, context)
         telemetryInspector = observabilityPlugin.getTelemetryInspector()
+
+        if (testUrl == null) {
+            // intervenes in E2E tests by trigger spans
+            flagEvaluation()
+        }
+
+        LDReplay.start()
+    }
+
+    fun flagEvaluation() {
+        val flagKey = "feature1"
+        val value = LDClient.get().boolVariation(flagKey, false)
+        Log.i("flag", "sync ${flagKey} value= ${value}")
+        val listener = FeatureFlagChangeListener {
+            val newValue = LDClient.get().boolVariation(flagKey, false)
+            Log.i("flag", "listened ${flagKey} value= ${newValue}")
+        }
+        LDClient.get().registerFeatureFlagListener(flagKey, listener)
     }
 
     override fun onCreate() {

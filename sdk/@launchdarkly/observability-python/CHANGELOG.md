@@ -2,6 +2,13 @@
 
 All notable changes to the LaunchDarkly Python Observability will be documented in this file. This project adheres to Semantic Versioning.
 
+## [1.1.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-python-1.0.0...launchdarkly-observability-python-1.1.0) (2026-02-12)
+
+
+### Features
+
+* address dependabot issues ([#359](https://github.com/launchdarkly/observability-sdk/issues/359)) ([ca1130c](https://github.com/launchdarkly/observability-sdk/commit/ca1130ca8275e4bfefd22ec51b869b319fbc876e))
+
 ## [1.0.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-python-0.1.1...launchdarkly-observability-python-1.0.0) (2026-01-28)
 
 This release marks the 1.0.0 stable version of the LaunchDarkly Observability Python SDK.

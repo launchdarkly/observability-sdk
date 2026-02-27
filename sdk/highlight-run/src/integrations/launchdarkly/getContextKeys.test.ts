@@ -1,6 +1,9 @@
 import { expect, it } from 'vitest'
 import { getContextKeys } from './index'
-import type { LDContext, LDMultiKindContext } from '@launchdarkly/js-client-sdk'
+import type {
+	LDContextStrict,
+	LDMultiKindContext,
+} from '@launchdarkly/js-client-sdk'
 
 it.each([
 	// Legacy user (no kind property)
@@ -49,7 +52,7 @@ it.each([
 	],
 ])(
 	'should produce the correct context keys for a given context',
-	(context: LDContext, expectedKeys: Record<string, string>) => {
+	(context: LDContextStrict, expectedKeys: Record<string, string>) => {
 		const result = getContextKeys(context)
 		expect(result).toEqual(expectedKeys)
 	},

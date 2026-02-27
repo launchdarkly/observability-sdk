@@ -1,0 +1,117 @@
+<Project>
+	<ItemGroup Condition="$(TargetFramework.Contains('android'))">
+		<!-- Package proprietary LD AARs and specific jars (Bind=false to avoid generator conflicts) -->
+		
+		<!-- LD AARs -->
+		<AndroidLibrary Include="$(MSBuildThisFileDirectory)../runtimes/android/native/android-agent-*.aar">
+			<Bind>false</Bind>
+			<Visible>false</Visible>
+		</AndroidLibrary>
+		<AndroidLibrary Include="$(MSBuildThisFileDirectory)../runtimes/android/native/android-instrumentation-*.aar">
+			<Bind>false</Bind>
+			<Visible>false</Visible>
+		</AndroidLibrary>
+		<AndroidLibrary Include="$(MSBuildThisFileDirectory)../runtimes/android/native/common-*.aar">
+			<Bind>false</Bind>
+			<Visible>false</Visible>
+		</AndroidLibrary>
+		<AndroidLibrary Include="$(MSBuildThisFileDirectory)../runtimes/android/native/common-api-*.aar">
+			<Bind>false</Bind>
+			<Visible>false</Visible>
+		</AndroidLibrary>
+		<AndroidLibrary Include="$(MSBuildThisFileDirectory)../runtimes/android/native/core-*-alpha.aar">
+			<Bind>false</Bind>
+			<Visible>false</Visible>
+		</AndroidLibrary>
+		<AndroidLibrary Include="$(MSBuildThisFileDirectory)../runtimes/android/native/crash-*-alpha.aar">
+			<Bind>false</Bind>
+			<Visible>false</Visible>
+		</AndroidLibrary>
+		<AndroidLibrary Include="$(MSBuildThisFileDirectory)../runtimes/android/native/anr-*-alpha.aar">
+			<Bind>false</Bind>
+			<Visible>false</Visible>
+		</AndroidLibrary>
+		<AndroidLibrary Include="$(MSBuildThisFileDirectory)../runtimes/android/native/activity-*-alpha.aar">
+			<Bind>false</Bind>
+			<Visible>false</Visible>
+		</AndroidLibrary>
+		<AndroidLibrary Include="$(MSBuildThisFileDirectory)../runtimes/android/native/fragment-*-alpha.aar">
+			<Bind>false</Bind>
+			<Visible>false</Visible>
+		</AndroidLibrary>
+		<AndroidLibrary Include="$(MSBuildThisFileDirectory)../runtimes/android/native/network-*-alpha.aar">
+			<Bind>false</Bind>
+			<Visible>false</Visible>
+		</AndroidLibrary>
+		<AndroidLibrary Include="$(MSBuildThisFileDirectory)../runtimes/android/native/services-*-alpha.aar">
+			<Bind>false</Bind>
+			<Visible>false</Visible>
+		</AndroidLibrary>
+		<AndroidLibrary Include="$(MSBuildThisFileDirectory)../runtimes/android/native/session-*-alpha.aar">
+			<Bind>false</Bind>
+			<Visible>false</Visible>
+		</AndroidLibrary>
+		<AndroidLibrary Include="$(MSBuildThisFileDirectory)../runtimes/android/native/slowrendering-*-alpha.aar">
+			<Bind>false</Bind>
+			<Visible>false</Visible>
+		</AndroidLibrary>
+		<AndroidLibrary Include="$(MSBuildThisFileDirectory)../runtimes/android/native/startup-*-alpha.aar">
+			<Bind>false</Bind>
+			<Visible>false</Visible>
+		</AndroidLibrary>
+		<AndroidLibrary Include="$(MSBuildThisFileDirectory)../runtimes/android/native/launchdarkly-android-client-sdk-*.aar">
+			<Bind>false</Bind>
+			<Visible>false</Visible>
+		</AndroidLibrary>
+		<AndroidLibrary Include="$(MSBuildThisFileDirectory)../runtimes/android/native/launchdarkly-observability-android-*.aar">
+			<Bind>false</Bind>
+			<Visible>false</Visible>
+		</AndroidLibrary>
+		<AndroidLibrary Include="$(MSBuildThisFileDirectory)../runtimes/android/native/LDObserve-release.aar">
+			<Bind>false</Bind>
+			<Visible>false</Visible>
+		</AndroidLibrary>
+		<AndroidLibrary Include="$(MSBuildThisFileDirectory)../runtimes/android/native/timber-*.aar">
+			<Bind>false</Bind>
+			<Visible>false</Visible>
+		</AndroidLibrary>
+
+		<!-- Jars (Package only) -->
+		<AndroidJavaLibrary Include="$(MSBuildThisFileDirectory)../runtimes/android/native/opentelemetry-*.jar">
+			<Bind>false</Bind>
+			<Visible>false</Visible>
+		</AndroidJavaLibrary>
+		<AndroidJavaLibrary Include="$(MSBuildThisFileDirectory)../runtimes/android/native/jackson-*.jar">
+			<Bind>false</Bind>
+			<Visible>false</Visible>
+		</AndroidJavaLibrary>
+		<AndroidJavaLibrary Include="$(MSBuildThisFileDirectory)../runtimes/android/native/launchdarkly-*.jar">
+			<Bind>false</Bind>
+			<Visible>false</Visible>
+		</AndroidJavaLibrary>
+		<AndroidJavaLibrary Include="$(MSBuildThisFileDirectory)../runtimes/android/native/okhttp-*.jar">
+			<Bind>false</Bind>
+			<Visible>false</Visible>
+		</AndroidJavaLibrary>
+		<AndroidJavaLibrary Include="$(MSBuildThisFileDirectory)../runtimes/android/native/okio-*.jar">
+			<Bind>false</Bind>
+			<Visible>false</Visible>
+		</AndroidJavaLibrary>
+	</ItemGroup>
+
+	<ItemGroup Condition="$(TargetFramework.Contains('ios'))">
+		<NativeReference Include="$(MSBuildThisFileDirectory)../runtimes/ios/native/LDObserveBridge.xcframework">
+			<Kind>Framework</Kind>
+			<ForceLoad>true</ForceLoad>
+			<SmartLink>true</SmartLink>
+		</NativeReference>
+	</ItemGroup>
+
+	<!-- Disable binding generation for ALL AARs in the consuming project to avoid duplicate type conflicts -->
+	<ItemGroup Condition="$(TargetFramework.Contains('android'))">
+		<AndroidLibrary Update="@(AndroidLibrary)">
+			<Bind>false</Bind>
+			<Visible>false</Visible>
+		</AndroidLibrary>
+	</ItemGroup>
+</Project>

@@ -1,5 +1,26 @@
 # highlight.run
 
+## [9.27.1](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-9.27.0...highlight.run-9.27.1) (2026-02-26)
+
+
+### Bug Fixes
+
+* improve network response capture ([#379](https://github.com/launchdarkly/observability-sdk/issues/379)) ([43d2dc3](https://github.com/launchdarkly/observability-sdk/commit/43d2dc3ea6054b2fcdf7f8971bbbe492a9175804))
+
+## [9.27.0](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-9.26.1...highlight.run-9.27.0) (2026-02-23)
+
+
+### Features
+
+* add session replay support for react native ([#357](https://github.com/launchdarkly/observability-sdk/issues/357)) ([7f6ed30](https://github.com/launchdarkly/observability-sdk/commit/7f6ed3041ed641be47b1f5c2e0d30d4ef1727bd0))
+
+## [9.26.1](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-9.26.0...highlight.run-9.26.1) (2026-02-13)
+
+
+### Bug Fixes
+
+* [SEC-7656] Add Set-Cookie to default redacted headers ([#368](https://github.com/launchdarkly/observability-sdk/issues/368)) ([163c8fc](https://github.com/launchdarkly/observability-sdk/commit/163c8fce77063f2e39a32d3d5fcd996a71d16cf6))
+
 ## [9.26.0](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-9.25.1...highlight.run-9.26.0) (2026-01-23)
 
 

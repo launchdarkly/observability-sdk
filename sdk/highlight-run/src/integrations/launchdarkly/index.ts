@@ -11,7 +11,7 @@ import type {
 	IdentifySeriesContext,
 	IdentifySeriesData,
 	IdentifySeriesResult,
-	LDContext,
+	LDContextStrict,
 	LDContextCommon,
 	LDMultiKindContext,
 } from '@launchdarkly/js-client-sdk'
@@ -72,7 +72,7 @@ function isMultiContext(context: any): context is LDMultiKindContext {
  * @param context The context to get a canonical key for.
  * @returns The canonical context key.
  */
-export function getCanonicalKey(context: LDContext) {
+export function getCanonicalKey(context: LDContextStrict) {
 	if (isMultiContext(context)) {
 		return Object.keys(context)
 			.sort()
@@ -92,7 +92,7 @@ export function getCanonicalKey(context: LDContext) {
 	return `${context.kind}:${encodeKey(context.key)}`
 }
 
-export function getContextKeys(context: LDContext) {
+export function getContextKeys(context: LDContextStrict) {
 	if (isMultiContext(context)) {
 		return Object.keys(context)
 			.sort()
@@ -125,7 +125,7 @@ export function setupLaunchDarklyIntegration(
 	hClient: HighlightPublicInterface,
 	ldClient: LDClient,
 	options?: {
-		contextFriendlyName?: (context: LDContext) => string | undefined
+		contextFriendlyName?: (context: LDContextStrict) => string | undefined
 	},
 ) {
 	ldClient.addHook({
