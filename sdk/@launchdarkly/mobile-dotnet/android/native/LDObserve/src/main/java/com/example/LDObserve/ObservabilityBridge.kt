@@ -6,6 +6,7 @@ import com.launchdarkly.observability.BuildConfig
 import com.launchdarkly.observability.api.ObservabilityOptions
 import com.launchdarkly.observability.client.TelemetryInspector
 import com.launchdarkly.observability.plugin.Observability
+import com.launchdarkly.observability.sdk.LDObserve
 import com.launchdarkly.observability.replay.PrivacyProfile
 import com.launchdarkly.observability.replay.ReplayOptions
 import com.launchdarkly.observability.replay.plugin.SessionReplay
@@ -87,6 +88,11 @@ public class LDSessionReplayOptions {
 }
 
 public class ObservabilityBridge {
+
+    public fun getHookProxy(): ObservabilityHookProxy? {
+        val real = LDObserve.hookProxy ?: return null
+        return ObservabilityHookProxy(real)
+    }
 
     public fun version(): String {
         return BuildConfig.OBSERVABILITY_SDK_VERSION

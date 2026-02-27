@@ -6,6 +6,8 @@ using LaunchDarkly.SessionReplay;
 
 #if IOS
 using LDObserveMaciOS;
+#elif ANDROID
+using LDObserveAndroid;
 #endif
 
 namespace LaunchDarkly.Observability
@@ -30,8 +32,15 @@ namespace LaunchDarkly.Observability
         {
             var hooks = new List<Hook>();
 #if IOS
-            var bridge = new ObservabilityBridge();
+            var bridge = new LDObserveMaciOS.ObservabilityBridge();
             var proxy = bridge.GetHookProxy();
+            if (proxy != null)
+            {
+                hooks.Add(new NativeHookProxy(proxy));
+            }
+#elif ANDROID
+            var bridge = new LDObserveAndroid.ObservabilityBridge();
+            var proxy = bridge.HookProxy;
             if (proxy != null)
             {
                 hooks.Add(new NativeHookProxy(proxy));
