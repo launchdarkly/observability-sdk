@@ -130,17 +130,6 @@ poetry run python src/app_runner.py <example>
 poetry run pytest
 ```
 
-### Playwright Cross-Origin Iframe Debug (`e2e/playwright-iframe-debug/`)
-
-Playwright test suite for debugging cross-origin iframe session replay issues. Built to investigate why session replay data may not record when an app is embedded as a cross-origin iframe.
-
-**Setup:**
-```bash
-cd e2e/playwright-iframe-debug
-# Dependencies are installed via workspace root: yarn install
-npx playwright install chromium
-```
-
 **Run tests:**
 ```bash
 # Diagnose live customer URLs (headed browser, slow-mo for observation)
