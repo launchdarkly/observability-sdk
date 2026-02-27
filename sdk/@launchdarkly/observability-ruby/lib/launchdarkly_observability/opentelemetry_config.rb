@@ -98,21 +98,19 @@ module LaunchDarklyObservability
       end
     end
 
-    # Configure auto-instrumentations
+    # Configure auto-instrumentations with sensible defaults.
+    # User-provided instrumentation config is merged on top of defaults,
+    # so users only need to specify the instrumentations they want to override.
     def configure_instrumentations(config)
-      instrumentation_config = @options.fetch(:instrumentations, {})
+      defaults = {
+        'OpenTelemetry::Instrumentation::Rails' => { enable_recognize_route: true },
+        'OpenTelemetry::Instrumentation::ActiveRecord' => { db_statement: :include },
+        'OpenTelemetry::Instrumentation::Net::HTTP' => { untraced_hosts: [] },
+        'OpenTelemetry::Instrumentation::Rack' => { untraced_endpoints: ['/health', '/healthz', '/ready'] }
+      }
 
-      if instrumentation_config.empty?
-        # Use all available instrumentations with sensible defaults
-        config.use_all(
-          'OpenTelemetry::Instrumentation::Rails' => { enable_recognize_route: true },
-          'OpenTelemetry::Instrumentation::ActiveRecord' => { db_statement: :include },
-          'OpenTelemetry::Instrumentation::Net::HTTP' => { untraced_hosts: [] },
-          'OpenTelemetry::Instrumentation::Rack' => { untraced_endpoints: ['/health', '/healthz', '/ready'] }
-        )
-      else
-        config.use_all(instrumentation_config)
-      end
+      user_config = @options.fetch(:instrumentations, {})
+      config.use_all(defaults.merge(user_config))
     rescue StandardError => e
       warn "[LaunchDarklyObservability] Error configuring instrumentations: #{e.message}"
     end
