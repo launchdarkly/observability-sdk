@@ -72,6 +72,6 @@ group :test do
   gem 'selenium-webdriver'
 end
 
-gem 'highlight_io', path: '../../../../sdk/highlight-ruby/highlight'
-
-gem 'rubocop', '~> 1.65'
+# LaunchDarkly SDK and Observability Plugin
+gem 'launchdarkly-server-sdk', '~> 8.0'
+gem 'launchdarkly-observability', path: '../../../../sdk/@launchdarkly/observability-ruby'

@@ -46,4 +46,6 @@ group :development do
   # gem "spring"
 end
 
-gem 'highlight_io', path: '../../../../sdk/highlight-ruby/highlight'
+# LaunchDarkly SDK and Observability Plugin
+gem 'launchdarkly-server-sdk', '~> 8.0'
+gem 'launchdarkly-observability', path: '../../../../sdk/@launchdarkly/observability-ruby'

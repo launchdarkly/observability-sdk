@@ -1,0 +1,36 @@
+<div class="container mx-auto px-4 py-8">
+  <div class="max-w-2xl mx-auto">
+    <h1 class="text-3xl font-bold mb-6">Flag Evaluation</h1>
+    
+    <div class="bg-white shadow rounded-lg p-6 mb-6">
+      <div class="mb-4">
+        <h2 class="text-xl font-semibold text-gray-700 mb-2">Flag Key</h2>
+        <code class="bg-gray-100 px-3 py-2 rounded text-lg block"><%= @flag_key %></code>
+      </div>
+      
+      <div class="mb-4">
+        <h2 class="text-xl font-semibold text-gray-700 mb-2">Value</h2>
+        <div class="bg-blue-50 px-3 py-2 rounded">
+          <code class="text-lg"><%= @detail.value.inspect %></code>
+        </div>
+      </div>
+      
+      <div class="mb-4">
+        <h2 class="text-xl font-semibold text-gray-700 mb-2">Variation Index</h2>
+        <p class="text-lg"><%= @detail.variation_index || 'N/A' %></p>
+      </div>
+      
+      <% if @detail.reason %>
+        <div class="mb-4">
+          <h2 class="text-xl font-semibold text-gray-700 mb-2">Reason</h2>
+          <pre class="bg-gray-100 px-3 py-2 rounded overflow-x-auto"><%= JSON.pretty_generate(@detail.reason.to_json) %></pre>
+        </div>
+      <% end %>
+    </div>
+    
+    <div class="flex gap-4">
+      <%= link_to "← Back to All Flags", flags_path, class: "bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded" %>
+      <%= link_to "View JSON", flag_path(@flag_key, format: :json), class: "bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded", target: "_blank" %>
+    </div>
+  </div>
+</div>
