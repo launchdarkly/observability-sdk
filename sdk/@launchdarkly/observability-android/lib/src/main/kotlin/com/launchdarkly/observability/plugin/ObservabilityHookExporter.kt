@@ -1,13 +1,13 @@
 package com.launchdarkly.observability.plugin
 
 import com.launchdarkly.observability.sdk.LDObserve
+import com.launchdarkly.observability.utils.BoundedMap
 import io.opentelemetry.api.GlobalOpenTelemetry
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Severity
 import io.opentelemetry.api.trace.Span
 import io.opentelemetry.api.trace.Tracer
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Pure data-sending logic for observability hook tracing.
@@ -21,9 +21,10 @@ internal class ObservabilityHookExporter(
     private val withSpans: Boolean,
     private val withValue: Boolean,
     private val tracerProvider: (() -> Tracer?),
+    private val contextFriendlyName: String? = null,
     maxInFlightSpans: Int = 1024
 ) {
-    private val spans = ConcurrentHashMap<String, Span>(maxInFlightSpans)
+    private val spans = BoundedMap<String, Span>(maxInFlightSpans)
 
     private fun getTracer(): Tracer {
         return tracerProvider.invoke() ?: GlobalOpenTelemetry.get().getTracer(INSTRUMENTATION_NAME)
@@ -89,7 +90,7 @@ internal class ObservabilityHookExporter(
         for ((k, v) in contextKeys) {
             attrBuilder.put(AttributeKey.stringKey(k), v)
         }
-        attrBuilder.put(AttributeKey.stringKey("key"), canonicalKey)
+        attrBuilder.put(AttributeKey.stringKey("key"), contextFriendlyName ?: canonicalKey)
         attrBuilder.put(AttributeKey.stringKey("canonicalKey"), canonicalKey)
         attrBuilder.put(AttributeKey.stringKey(IDENTIFY_RESULT_STATUS), "completed")
 

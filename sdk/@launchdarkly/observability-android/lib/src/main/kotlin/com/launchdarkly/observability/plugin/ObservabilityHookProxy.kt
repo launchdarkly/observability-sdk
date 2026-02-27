@@ -1,5 +1,7 @@
 package com.launchdarkly.observability.plugin
 
+import org.json.JSONObject
+
 /**
  * JVM adapter for the C# / MAUI bridge.
  *
@@ -29,11 +31,21 @@ class ObservabilityHookProxy internal constructor(
             contextKey = contextKey,
             valueJson = valueJson,
             variationIndex = normalizedIndex,
-            inExperiment = null
+            inExperiment = parseInExperiment(reasonJson)
         )
     }
 
     fun afterIdentify(contextKeys: Map<String, String>, canonicalKey: String, completed: Boolean) {
         exporter.afterIdentify(contextKeys, canonicalKey, completed)
+    }
+
+    private fun parseInExperiment(reasonJson: String?): Boolean? {
+        if (reasonJson == null) return null
+        return try {
+            val json = JSONObject(reasonJson)
+            if (json.has("inExperiment")) json.getBoolean("inExperiment") else null
+        } catch (_: Exception) {
+            null
+        }
     }
 }

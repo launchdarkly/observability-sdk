@@ -90,7 +90,8 @@ class Observability(
         val exporter = ObservabilityHookExporter(
             withSpans = true,
             withValue = true,
-            tracerProvider = { observabilityClient?.getTracer() }
+            tracerProvider = { observabilityClient?.getTracer() },
+            contextFriendlyName = options.contextFriendlyName
         )
         LDObserve.hookProxy = ObservabilityHookProxy(exporter)
         return Collections.singletonList(ObservabilityHook(exporter))
