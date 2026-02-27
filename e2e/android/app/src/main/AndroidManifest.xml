@@ -17,18 +17,8 @@
         android:usesCleartextTraffic="true"
         tools:targetApi="31" >
         <activity
-            android:name=".masking.ComposeUserFormActivity"
-            android:exported="false"
-            android:label="@string/title_activity_secondary"
-            android:theme="@style/Theme.AndroidObservability" />
-        <activity
             android:name=".masking.XMLUserFormActivity"
             android:exported="false"
-            android:theme="@style/Theme.AndroidObservability" />
-        <activity
-            android:name=".masking.ComposeMaskingActivity"
-            android:exported="false"
-            android:label="Compose Masking"
             android:theme="@style/Theme.AndroidObservability" />
         <activity
             android:name=".masking.XMLMaskingActivity"
@@ -40,9 +30,6 @@
             android:exported="false"
             android:theme="@style/Theme.AndroidObservability" />
         <activity
-            android:name=".masking.ComposeWebActivity"
-            android:exported="false" />
-        <activity
             android:name=".masking.XMLWebActivity"
             android:exported="false" />
 
@@ -52,16 +39,6 @@
         <service
             android:name=".ObservabilityBackgroundService"
             android:exported="false" />
-        <activity
-            android:name=".MainActivity"
-            android:exported="true"
-            android:theme="@style/Theme.AndroidObservability" >
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
     </application>
 
 </manifest>
