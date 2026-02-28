@@ -111,7 +111,7 @@
 		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\okio-*.jar" Pack="true" PackagePath="runtimes/android/native/" />
 		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\timber-*.aar" Pack="true" PackagePath="runtimes/android/native/" />
 
-		<!-- Android module AAR containing SRLaunch -->
+		<!-- Android module AAR containing ObservabilityBridge -->
 		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\aar\LDObserve-release.aar"
 			  Pack="true" PackagePath="runtimes/android/native/" />
 

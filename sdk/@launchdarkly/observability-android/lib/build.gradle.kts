@@ -170,6 +170,7 @@ publishing {
 }
 
 signing {
+    isRequired = gradle.taskGraph.allTasks.any { it.name.contains("sonatype", ignoreCase = true) }
     sign(publishing.publications["release"])
 }
 

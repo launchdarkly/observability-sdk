@@ -4,6 +4,8 @@ using LaunchDarkly.SessionReplay;
 using System.Reflection;
 using LaunchDarkly.Sdk.Client;
 using LaunchDarkly.Sdk.Client.Interfaces;
+using LaunchDarkly.Sdk.Client.Integrations;
+using LaunchDarkly.Observability;
 namespace MauiSample9;
 
 public static class MauiProgram
@@ -78,36 +80,39 @@ public static class MauiProgram
 		var otlpEndpoint = config["LaunchDarkly:OtlpEndpoint"];
 		var backendUrl = config["LaunchDarkly:BackendUrl"];
 
-		var ldConfig = Configuration.Builder(mobileKey, LaunchDarkly.Sdk.Client.ConfigurationBuilder.AutoEnvAttributes.Enabled).Build();
-		var context = LaunchDarkly.Sdk.Context.New("maui-user-key");
-		var client = LdClient.Init(ldConfig, context, TimeSpan.FromSeconds(10));
-		var feature1 = client.BoolVariation("feature1", false);
-		Console.WriteLine($"feature1 sync value ={feature1}");
-
-		client.FlagTracker.FlagValueChanged += (sender, eventArgs) => {
-			if (eventArgs.Key == "feature1") {
-				Console.WriteLine($"feature1 changed from {eventArgs.OldValue} to {eventArgs.NewValue}");
-			}
-		};
-
-		LdNative = LDNative.Start(
-			mobileKey: mobileKey,
-			observability: new ObservabilityOptions(
+		var ldConfig = Configuration.Builder(mobileKey, LaunchDarkly.Sdk.Client.ConfigurationBuilder.AutoEnvAttributes.Enabled)
+		.Plugins(new PluginConfigurationBuilder()
+			.Add(ObservabilityPlugin.Builder(new ObservabilityOptions(
+				isEnabled: true,
 				serviceName: "maui-sample-app",
 				otlpEndpoint: otlpEndpoint,
 				backendUrl: backendUrl
-			),
-			replay: new SessionReplayOptions(
+			)).Build())
+			.Add(SessionReplayPlugin.Builder(new SessionReplayOptions(
 				isEnabled: true,
 				privacy: new SessionReplayOptions.PrivacyOptions(
 					maskTextInputs: true,
 					maskWebViews: false,
 					maskLabels: false
 				)
-			)
-		);
-		LdNative.Replay.IsEnabled = true;
-		Console.WriteLine($"ldNative.version={LdNative.NativeVersion}");
+			)).Build())
+		).Build();
+
+		var context = LaunchDarkly.Sdk.Context.New("maui-user-key");
+		var client = LdClient.Init(ldConfig, context, TimeSpan.FromSeconds(10));
+		var feature1 = client.BoolVariation("feature1", false);
+		Console.WriteLine($"feature1 sync value ={feature1}");
+
+		client.FlagTracker.FlagValueChanged += (sender, eventArgs) =>
+		{
+			if (eventArgs.Key == "feature1")
+			{
+				Console.WriteLine($"feature1 changed from {eventArgs.OldValue} to {eventArgs.NewValue}");
+			}
+		};
+
+		// Native bridge is now started automatically by NativePluginConnector
+		// once all plugins have been registered.
 		return app;
 	}
 }

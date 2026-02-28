@@ -10,7 +10,7 @@
     Shell.BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource Black}}">
 
     <ShellContent
-        Title="{OnPlatform iOS='iOS', Android='Android', WinUI='Windows'}"
+        Title="{OnPlatform iOS='MAUI iOS', Android='MAUI Android', WinUI='MAUI Windows'}"
         ContentTemplate="{DataTemplate local:MainPage}"
         Route="MainPage" />
 

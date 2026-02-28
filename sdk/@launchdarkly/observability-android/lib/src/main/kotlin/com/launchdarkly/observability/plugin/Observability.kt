@@ -87,9 +87,14 @@ class Observability(
     }
 
     override fun getHooks(metadata: EnvironmentMetadata?): MutableList<Hook> {
-        return Collections.singletonList(
-            ObservabilityHook(withSpans = true, withValue = true) { observabilityClient?.getTracer() }
+        val exporter = ObservabilityHookExporter(
+            withSpans = true,
+            withValue = true,
+            tracerProvider = { observabilityClient?.getTracer() },
+            contextFriendlyName = options.contextFriendlyName
         )
+        LDObserve.hookProxy = ObservabilityHookProxy(exporter)
+        return Collections.singletonList(ObservabilityHook(exporter))
     }
 
     override fun onPluginsReady(result: RegistrationCompleteResult?, metadata: EnvironmentMetadata?) {

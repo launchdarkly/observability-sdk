@@ -1,31 +1,16 @@
 package com.launchdarkly.observability.plugin
 
-import com.launchdarkly.observability.plugin.ObservabilityHook.Companion.DATA_KEY_IDENTIFY_SCOPE
-import com.launchdarkly.observability.plugin.ObservabilityHook.Companion.DATA_KEY_IDENTIFY_SPAN
-import com.launchdarkly.observability.plugin.ObservabilityHook.Companion.IDENTIFY_EVENT_FINISH
-import com.launchdarkly.observability.plugin.ObservabilityHook.Companion.IDENTIFY_EVENT_START
-import com.launchdarkly.observability.plugin.ObservabilityHook.Companion.INSTRUMENTATION_NAME
-import com.launchdarkly.observability.plugin.ObservabilityHook.Companion.SEMCONV_IDENTIFY_CONTEXT_ID
-import com.launchdarkly.observability.plugin.ObservabilityHook.Companion.SEMCONV_IDENTIFY_EVENT_RESULT_VALUE
-import com.launchdarkly.observability.plugin.ObservabilityHook.Companion.SEMCONV_IDENTIFY_SPAN_NAME
-import com.launchdarkly.observability.plugin.ObservabilityHook.Companion.SEMCONV_IDENTIFY_TIMEOUT
+import com.launchdarkly.sdk.ContextKind
 import com.launchdarkly.sdk.LDContext
 import com.launchdarkly.sdk.android.integrations.IdentifySeriesContext
 import com.launchdarkly.sdk.android.integrations.IdentifySeriesResult
-import io.mockk.called
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.mockkStatic
 import io.mockk.unmockkAll
 import io.mockk.verify
-import io.opentelemetry.api.GlobalOpenTelemetry
-import io.opentelemetry.api.common.Attributes
-import io.opentelemetry.api.trace.Span
-import io.opentelemetry.api.trace.SpanBuilder
-import io.opentelemetry.api.trace.Tracer
-import io.opentelemetry.context.Scope
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
@@ -33,15 +18,20 @@ import org.junit.jupiter.api.Test
 
 class ObservabilityHookTest {
 
-    private lateinit var mockTracer: Tracer
+    private lateinit var mockExporter: ObservabilityHookExporter
     private lateinit var mockContext: LDContext
+    private lateinit var hook: ObservabilityHook
 
     @BeforeEach
     fun setup() {
-        mockTracer = createMockTracer()
+        mockExporter = mockk(relaxed = true)
         mockContext = mockk {
             every { fullyQualifiedKey } returns "test-user-123"
+            every { isMultiple } returns false
+            every { kind } returns ContextKind.DEFAULT
+            every { key } returns "test-user-123"
         }
+        hook = ObservabilityHook(mockExporter)
     }
 
     @AfterEach
@@ -54,66 +44,13 @@ class ObservabilityHookTest {
     inner class BeforeIdentifyTests {
 
         @Test
-        fun `should not create spans when withSpans is disabled`() {
+        fun `should return seriesData unchanged`() {
             val seriesContext = IdentifySeriesContext(mockContext, 5)
-            val seriesData = mapOf("test" to "empty_data")
-            val hook = ObservabilityHook(withSpans = false, withValue = false, tracerProvider = { mockTracer })
+            val seriesData = mapOf<String, Any>("test" to "empty_data")
 
             val result = hook.beforeIdentify(seriesContext, seriesData)
 
-            assertEquals(1, result.size)
             assertEquals(seriesData, result)
-            verify { mockTracer wasNot called }
-        }
-
-        @Test
-        fun `should create and configure identify span when withSpans is enabled`() {
-            val spanScope = mockk<Scope>()
-            val span: Span = mockk {
-                every { makeCurrent() } returns spanScope
-                every { addEvent(any()) } returns this
-                every { setAllAttributes(any()) } returns this
-            }
-            val spanBuilder: SpanBuilder = mockk {
-                every { startSpan() } returns span
-                every { setParent(any()) } returns this
-            }
-            every { mockTracer.spanBuilder(any()) } returns spanBuilder
-
-            val seriesContext = IdentifySeriesContext(mockContext, 5)
-            val seriesData = mapOf("test" to "empty_data")
-            val hook = ObservabilityHook(withSpans = true, withValue = false, tracerProvider = { mockTracer })
-
-            val result = hook.beforeIdentify(seriesContext, seriesData)
-
-            val attributes = Attributes.builder().apply {
-                put(SEMCONV_IDENTIFY_CONTEXT_ID, mockContext.fullyQualifiedKey)
-                put(SEMCONV_IDENTIFY_TIMEOUT, 5L)
-            }
-
-            assertEquals("empty_data", result["test"])
-            assertEquals(span, result[DATA_KEY_IDENTIFY_SPAN])
-            assertEquals(spanScope, result[DATA_KEY_IDENTIFY_SCOPE])
-            verify(exactly = 1) { mockTracer.spanBuilder(SEMCONV_IDENTIFY_SPAN_NAME) }
-            verify(exactly = 1) { spanBuilder.startSpan() }
-            verify(exactly = 1) { span.addEvent(IDENTIFY_EVENT_START) }
-            verify(exactly = 1) { span.setAllAttributes(attributes.build()) }
-        }
-
-        @Test
-        fun `should use tracer from GlobalOpenTelemetry if tracer provider is null`() {
-            val mockGlobalTracer: Tracer = createMockTracer()
-            mockkStatic(GlobalOpenTelemetry::class)
-            every { GlobalOpenTelemetry.get().getTracer(INSTRUMENTATION_NAME) } returns mockGlobalTracer
-
-            val seriesContext = IdentifySeriesContext(mockContext, 5)
-            val seriesData = mapOf("test" to "empty_data")
-            val hook = ObservabilityHook(withSpans = true, withValue = false, tracerProvider = { null })
-
-            hook.beforeIdentify(seriesContext, seriesData)
-
-            verify(exactly = 1) { mockGlobalTracer.spanBuilder(SEMCONV_IDENTIFY_SPAN_NAME) }
-            verify { mockTracer wasNot called }
         }
     }
 
@@ -122,47 +59,102 @@ class ObservabilityHookTest {
     inner class AfterIdentifyTests {
 
         @Test
-        fun `should close scope, end span and add finish event after identify completion`() {
-            val spanScope = mockk<Scope> {
-                every { close() } returns Unit
-            }
-            val span: Span = mockk {
-                every { addEvent(any(), any<Attributes>()) } returns this
-                every { setAllAttributes(any()) } returns this
-                every { end() } returns Unit
-            }
-
+        fun `should call exporter afterIdentify with correct context keys on completion`() {
             val seriesContext = IdentifySeriesContext(mockContext, 5)
-            val seriesData = mapOf(
-                "test" to "empty_data",
-                DATA_KEY_IDENTIFY_SPAN to span,
-                DATA_KEY_IDENTIFY_SCOPE to spanScope
-            )
+            val seriesData = mapOf<String, Any>("test" to "empty_data")
             val identifyResult = IdentifySeriesResult(IdentifySeriesResult.IdentifySeriesStatus.COMPLETED)
-            val hook = ObservabilityHook(withSpans = false, withValue = false, tracerProvider = { mockTracer })
 
-            val result = hook.afterIdentify(seriesContext, seriesData, identifyResult)
+            hook.afterIdentify(seriesContext, seriesData, identifyResult)
 
-            val attributes = Attributes.builder().apply {
-                put(SEMCONV_IDENTIFY_EVENT_RESULT_VALUE, identifyResult.status.name)
+            verify(exactly = 1) {
+                mockExporter.afterIdentify(
+                    contextKeys = mapOf(ContextKind.DEFAULT.toString() to "test-user-123"),
+                    canonicalKey = "test-user-123",
+                    completed = true
+                )
+            }
+        }
+
+        @Test
+        fun `should pass completed false for non-completed result`() {
+            val seriesContext = IdentifySeriesContext(mockContext, 5)
+            val seriesData = mapOf<String, Any>("test" to "empty_data")
+            val identifyResult = IdentifySeriesResult(IdentifySeriesResult.IdentifySeriesStatus.ERROR)
+
+            hook.afterIdentify(seriesContext, seriesData, identifyResult)
+
+            verify(exactly = 1) {
+                mockExporter.afterIdentify(
+                    contextKeys = any(),
+                    canonicalKey = "test-user-123",
+                    completed = false
+                )
+            }
+        }
+
+        @Test
+        fun `should extract multi-kind context keys`() {
+            val userContext = mockk<LDContext> {
+                every { kind } returns ContextKind.DEFAULT
+                every { key } returns "user-key"
+            }
+            val orgContext = mockk<LDContext> {
+                every { kind } returns ContextKind.of("org")
+                every { key } returns "org-key"
+            }
+            val multiContext = mockk<LDContext> {
+                every { fullyQualifiedKey } returns "multi-key"
+                every { isMultiple } returns true
+                every { individualContextCount } returns 2
+                every { getIndividualContext(0) } returns userContext
+                every { getIndividualContext(1) } returns orgContext
             }
 
-            assertEquals(seriesData, result)
-            verify(exactly = 1) { span.end() }
-            verify(exactly = 1) { spanScope.close() }
-            verify(exactly = 1) { span.addEvent(IDENTIFY_EVENT_FINISH, attributes.build()) }
+            val seriesContext = IdentifySeriesContext(multiContext, 5)
+            val seriesData = mapOf<String, Any>("test" to "empty_data")
+            val identifyResult = IdentifySeriesResult(IdentifySeriesResult.IdentifySeriesStatus.COMPLETED)
+
+            val hookForMulti = ObservabilityHook(mockExporter)
+            hookForMulti.afterIdentify(seriesContext, seriesData, identifyResult)
+
+            verify(exactly = 1) {
+                mockExporter.afterIdentify(
+                    contextKeys = match { keys ->
+                        keys[ContextKind.DEFAULT.toString()] == "user-key" &&
+                        keys["org"] == "org-key" &&
+                        keys.size == 2
+                    },
+                    canonicalKey = "multi-key",
+                    completed = true
+                )
+            }
         }
     }
 
-    private fun createMockTracer(): Tracer {
-        return mockk<Tracer> {
-            every { spanBuilder(any()) } returns mockk {
-                every { startSpan() } returns mockk {
-                    every { makeCurrent() } returns mockk()
-                    every { addEvent(any()) } returns this
-                    every { setAllAttributes(any()) } returns this
-                }
-                every { setParent(any()) } returns this
+    @Nested
+    @DisplayName("Before Evaluation Tests")
+    inner class BeforeEvaluationTests {
+
+        @Test
+        fun `should call exporter beforeEvaluation and store evalId in seriesData`() {
+            val seriesContext = com.launchdarkly.sdk.android.integrations.EvaluationSeriesContext(
+                "evaluation",
+                "test-flag",
+                mockContext,
+                com.launchdarkly.sdk.LDValue.ofNull()
+            )
+            val seriesData = mapOf<String, Any>("existing" to "data")
+
+            val result = hook.beforeEvaluation(seriesContext, seriesData)
+
+            assertTrue(result.containsKey(ObservabilityHookExporter.DATA_KEY_EVAL_ID))
+            assertEquals("data", result["existing"])
+            verify(exactly = 1) {
+                mockExporter.beforeEvaluation(
+                    evaluationId = any(),
+                    flagKey = "test-flag",
+                    contextKey = "test-user-123"
+                )
             }
         }
     }
