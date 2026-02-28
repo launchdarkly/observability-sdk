@@ -3,17 +3,19 @@ package com.launchdarkly.observability.replay.masking
 import android.graphics.Matrix
 import android.view.View
 import android.view.ViewGroup
-import androidx.compose.ui.platform.AbstractComposeView
 import com.launchdarkly.logging.LDLogger
 import kotlin.collections.plusAssign
 import com.launchdarkly.observability.replay.utils.locationOnScreen
 
-private val isComposeAvailable: Boolean by lazy {
+/**
+ * Cached class reference for AbstractComposeView, resolved once via reflection.
+ * Null when Compose UI is not on the runtime classpath.
+ */
+private val abstractComposeViewClass: Class<*>? by lazy {
     try {
         Class.forName("androidx.compose.ui.platform.AbstractComposeView")
-        true
     } catch (_: ClassNotFoundException) {
-        false
+        null
     }
 }
 
@@ -49,14 +51,16 @@ class MaskCollector(private val logger: LDLogger) {
         return resultMasks
     }
 
-    private fun traverseCompose(view: AbstractComposeView, context: MaskContext, masks: MutableList<Mask>) {
-        val target = ComposeMaskTarget.from(view, logger)
+    @Suppress("UNCHECKED_CAST")
+    private fun traverseCompose(view: View, context: MaskContext, masks: MutableList<Mask>) {
+        val composeView = view as androidx.compose.ui.platform.AbstractComposeView
+        val target = ComposeMaskTarget.from(composeView, logger)
         if (target != null) {
             traverseComposeNodes(target, context, masks)
         }
 
-        for (i in 0 until view.childCount) {
-            val child = view.getChildAt(i)
+        for (i in 0 until composeView.childCount) {
+            val child = composeView.getChildAt(i)
             traverse(child, context, masks)
         }
     }
@@ -79,7 +83,7 @@ class MaskCollector(private val logger: LDLogger) {
         if (!view.isShown) return
 
         when {
-            isComposeAvailable && view is AbstractComposeView -> traverseCompose(view, context, masks)
+            abstractComposeViewClass?.isInstance(view) == true -> traverseCompose(view, context, masks)
             isAndroidComposeView(view) -> traverseAndroidComposeView(view, context, masks)
             else -> traverseNative(view, context, masks)
         }
