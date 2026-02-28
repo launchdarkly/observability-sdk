@@ -1,6 +1,6 @@
 {
   "name": "@launchdarkly/session-replay-react-native",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "session replay for react native",
   "main": "./lib/module/index.js",
   "types": "./lib/typescript/src/index.d.ts",
@@ -33,8 +33,9 @@
   ],
   "scripts": {
     "example": "yarn workspace session-replay-react-native-example",
+    "build": "bob build",
     "clean": "del-cli android/build example/android/build example/android/app/build example/ios/build lib",
-    "prepare": "bob build",
+    "prepack": "bob build",
     "typecheck": "tsc",
     "lint": "echo 'Linting temporarily disabled - TODO: fix ESLint config'",
     "test": "jest",

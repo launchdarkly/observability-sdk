@@ -6,7 +6,6 @@ import android.graphics.Rect
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
-import android.util.Base64
 import android.view.Choreographer
 import android.view.PixelCopy
 import android.view.View
@@ -14,68 +13,42 @@ import android.view.Window
 import android.view.WindowManager.LayoutParams.TYPE_APPLICATION
 import android.view.WindowManager.LayoutParams.TYPE_BASE_APPLICATION
 import androidx.annotation.RequiresApi
+import androidx.core.graphics.createBitmap
+import androidx.core.graphics.withTranslation
 import com.launchdarkly.logging.LDLogger
 import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
-import com.launchdarkly.observability.replay.masking.MaskCollector
-import io.opentelemetry.android.session.SessionManager
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.coroutines.withContext
-import java.io.ByteArrayOutputStream
-import kotlin.coroutines.resume
-import androidx.core.graphics.withTranslation
-import com.launchdarkly.observability.replay.masking.Mask
-import androidx.core.graphics.createBitmap
 import com.launchdarkly.observability.replay.ReplayOptions
 import com.launchdarkly.observability.replay.calculateScaleFactor
+import com.launchdarkly.observability.replay.masking.Mask
 import com.launchdarkly.observability.replay.masking.MaskApplier
+import com.launchdarkly.observability.replay.masking.MaskCollector
 import com.launchdarkly.observability.replay.scaleCoordinate
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
+import kotlin.coroutines.resume
 
-/**
- * A source of [CaptureEvent]s taken from the lowest visible window. Captures
- * are emitted on the [captureFlow] property of this class.
- *
- * @param sessionManager Used to get current session for tagging [CaptureEvent] with session id
- */
-class CaptureSource(
-    private val sessionManager: SessionManager,
+class ImageCaptureService(
     private val options: ReplayOptions,
     private val logger: LDLogger,
-    // TODO: O11Y-628 - add captureQuality options
 ) {
-    data class CaptureResult(
+    data class RawFrame(
+        val bitmap: Bitmap,
+        val timestamp: Long,
+        val orientation: Int,
+    )
+
+    private data class CaptureResult(
         val windowEntry: WindowEntry,
         val bitmap: Bitmap,
     )
 
-    private val _captureEventFlow = MutableSharedFlow<CaptureEvent>()
-    val captureFlow: SharedFlow<CaptureEvent> = _captureEventFlow.asSharedFlow()
     private val windowInspector = WindowInspector(logger)
     private val maskCollector = MaskCollector(logger)
     private val maskApplier = MaskApplier()
     private val maskMatchers = options.privacyProfile.asMatchersList()
-    private val tiledSignatureManager = TiledSignatureManager()
 
-    @Volatile
-    private var tiledSignature: TiledSignature? = null
-
-    /**
-     * Requests a [CaptureEvent] be taken now.
-     */
-    suspend fun captureNow() {
-        val capture = doCapture()
-        if (capture != null) {
-            _captureEventFlow.emit(capture)
-        }
-    }
-
-    /**
-     * Internal capture routine.
-     */
-    private suspend fun doCapture(): CaptureEvent? =
+    suspend fun captureRawFrame(): RawFrame? =
         withContext(DispatcherProviderHolder.current.main) {
             // Synchronize with UI rendering frame
             suspendCancellableCoroutine { continuation ->
@@ -87,8 +60,6 @@ class CaptureSource(
             }
 
             val timestamp = System.currentTimeMillis()
-            val session = sessionManager.getSessionId()
-
             val windowsEntries = windowInspector.appWindows()
             if (windowsEntries.isEmpty()) {
                 return@withContext null
@@ -180,14 +151,13 @@ class CaptureSource(
                         }
                     }
 
-                    val newSignature = tiledSignatureManager.compute(baseResult.bitmap, 64)
-                    if (newSignature != null && newSignature == tiledSignature) {
-                        // the similar bitmap not send
-                        return@withContext null
-                    }
-                    tiledSignature = newSignature
-
-                    createCaptureEvent(baseResult.bitmap, timestamp, session)
+                    // Keep base bitmap alive after leaving this scope; all others are recycled in finally.
+                    captureResults[0] = null
+                    RawFrame(
+                        bitmap = baseResult.bitmap,
+                        timestamp = timestamp,
+                        orientation = 0
+                    )
                 }
             } finally {
                 recycleCaptureResults(captureResults)
@@ -205,7 +175,7 @@ class CaptureSource(
 
     private fun collectMasks(capturingWindowEntries: List<WindowEntry>): MutableList<List<Mask>?> {
         return capturingWindowEntries.map {
-            maskCollector.collectMasks( it.rootView, maskMatchers)
+            maskCollector.collectMasks(it.rootView, maskMatchers)
         }.toMutableList()
     }
 
@@ -314,8 +284,7 @@ class CaptureSource(
             logger.warn("Failed to draw Canvas. This view might be better processed by PixelCopy", t)
             bitmap.recycle()
             return null
-        }
-        finally {
+        } finally {
             canvas.restore()
         }
 
@@ -330,45 +299,5 @@ class CaptureSource(
             return null
         }
         return createBitmap(width, height)
-    }
-
-    private fun createCaptureEvent(
-        postMask: Bitmap,
-        timestamp: Long,
-        session: String
-    ): CaptureEvent {
-        // TODO: O11Y-625 - optimize memory allocations here, re-use byte arrays and such
-        val outputStream = ByteArrayOutputStream()
-        return try {
-            // TODO: O11Y-628 - calculate quality using captureQuality options
-            postMask.compress(
-                Bitmap.CompressFormat.WEBP,
-                30,
-                outputStream
-            )
-            val byteArray = outputStream.toByteArray()
-            val compressedImage =
-                Base64.encodeToString(
-                    byteArray,
-                    Base64.NO_WRAP
-                )
-
-            CaptureEvent(
-                imageBase64 = compressedImage,
-                origWidth = postMask.width,
-                origHeight = postMask.height,
-                timestamp = timestamp,
-                session = session
-            )
-        } finally {
-            try {
-                outputStream.close()
-            } catch (_: Throwable) {
-            }
-            try {
-                postMask.recycle()
-            } catch (_: Throwable) {
-            }
-        }
     }
 }

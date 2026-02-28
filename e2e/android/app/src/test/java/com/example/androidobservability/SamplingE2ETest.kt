@@ -12,7 +12,6 @@ import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Severity
 import junit.framework.TestCase.assertEquals
 import kotlinx.coroutines.test.runTest
-import org.junit.Ignore
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -73,7 +72,6 @@ class SamplingE2ETest {
     }
 
     @Test
-    @Ignore
     fun `should avoid exporting spans matching sampling configuration for spans`() = runTest {
         triggerSpans()
         telemetryInspector?.spanExporter?.flush()

@@ -57,9 +57,10 @@ dependencies {
     implementation("io.opentelemetry.android.instrumentation:activity:0.11.0-alpha")
 
     // TODO: O11Y-626 - move replay instrumentation and associated compose dependencies into dedicated package
-    // Compose dependencies for capture functionality
-    implementation("androidx.compose.ui:ui:1.7.5")
-    implementation("androidx.compose.ui:ui-tooling:1.7.5")
+    // Compose dependencies are compileOnly so apps without Compose don't pull them in.
+    // Compose masking features activate automatically when Compose is on the runtime classpath.
+    compileOnly("androidx.compose.ui:ui:1.7.5")
+    compileOnly("androidx.compose.ui:ui-tooling:1.7.5")
 
     // Use JUnit Jupiter for testing.
     testImplementation(platform("org.junit:junit-bom:5.13.4"))
