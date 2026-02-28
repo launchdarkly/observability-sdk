@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application>
+        <activity
+            android:name=".masking.ComposeUserFormActivity"
+            android:exported="false"
+            android:label="@string/title_activity_secondary"
+            android:theme="@style/Theme.AndroidObservability" />
+        <activity
+            android:name=".masking.ComposeMaskingActivity"
+            android:exported="false"
+            android:label="Compose Masking"
+            android:theme="@style/Theme.AndroidObservability" />
+        <activity
+            android:name=".masking.ComposeWebActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:theme="@style/Theme.AndroidObservability" >
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>
