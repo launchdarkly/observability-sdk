@@ -51,7 +51,6 @@ class MaskCollector(private val logger: LDLogger) {
         return resultMasks
     }
 
-    @Suppress("UNCHECKED_CAST")
     private fun traverseCompose(view: View, context: MaskContext, masks: MutableList<Mask>) {
         val composeView = view as androidx.compose.ui.platform.AbstractComposeView
         val target = ComposeMaskTarget.from(composeView, logger)
