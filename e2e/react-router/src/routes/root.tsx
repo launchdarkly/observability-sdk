@@ -3,10 +3,12 @@ import { LDRecord } from '@launchdarkly/session-replay'
 import { useEffect, useRef, useState } from 'react'
 // import { client } from '../ldclient'
 import { client, recordSession, recordObservability } from '../ldclientLazy'
+import chickensVideo from '../assets/chickens.mp4'
 
 export default function Root() {
 	const fillColor = 'lightblue'
 	const canvasRef = useRef<HTMLCanvasElement>(null)
+	const videoRef = useRef<HTMLVideoElement>(null)
 	const [flags, setFlags] = useState<string>()
 	const [session, setSession] = useState<string>()
 	const [sessionKey, setSessionKey] = useState<string>('task129')
@@ -306,6 +308,43 @@ export default function Root() {
 			>
 				LDObserve.stop()
 			</button>
+
+			<div style={{ padding: '2rem' }}>
+				<h3>Video Playback</h3>
+				<video
+					ref={videoRef}
+					src={chickensVideo}
+					width={480}
+					style={{ display: 'block', marginBottom: 8 }}
+				/>
+				<button
+					onClick={() => {
+						videoRef.current?.play()
+					}}
+				>
+					Play Chicken Video
+				</button>
+
+				<h3>Embedded Video</h3>
+				<iframe
+					width="560"
+					height="315"
+					src="https://www.youtube.com/embed/2yJgwwDcgV8?si=r30gzmhJRkkdMgUW"
+					title="YouTube video player"
+					frameBorder="0"
+					allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+					referrerPolicy="strict-origin-when-cross-origin"
+					allowFullScreen
+				/>
+
+				<h3>Remote Video</h3>
+				<video
+					src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+					controls
+					width={560}
+					style={{ display: 'block', marginBottom: 8 }}
+				/>
+			</div>
 
 			<div style={{ padding: '2rem' }}>
 				<h3>HTTP Requests</h3>
