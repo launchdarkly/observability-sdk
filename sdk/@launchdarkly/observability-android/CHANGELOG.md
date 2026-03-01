@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.27.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.26.1...launchdarkly-observability-android-0.27.0) (2026-02-28)
+
+
+### Features
+
+* Android Incremental Image Diff compression ([#390](https://github.com/launchdarkly/observability-sdk/issues/390)) ([5ff93f6](https://github.com/launchdarkly/observability-sdk/commit/5ff93f61e078b27ca7d15a49e35ac98076d684cc))
+* Optional Jet Compose ([#402](https://github.com/launchdarkly/observability-sdk/issues/402)) ([8f3a671](https://github.com/launchdarkly/observability-sdk/commit/8f3a671a7853353b3e255882b66c6cb04506dcaa))
+
 ## [0.26.1](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.26.0...launchdarkly-observability-android-0.26.1) (2026-02-24)
 
 
