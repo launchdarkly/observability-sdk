@@ -44,7 +44,7 @@ dependencies {
 
 
     implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.11.0")
-    "copyDependencies"("com.launchdarkly:launchdarkly-android-client-sdk:5.10.0")
+    "copyDependencies"("com.launchdarkly:launchdarkly-android-client-sdk:5.11.0")
 
     implementation("com.launchdarkly:launchdarkly-observability-android:0.27.0")
 
