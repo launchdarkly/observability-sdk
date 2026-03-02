@@ -27,7 +27,7 @@ const options = {
 // You can set LAUNCHDARKLY_MOBILE_KEY as an environment variable
 // or replace this placeholder directly
 const MOBILE_KEY =
-  process.env.LAUNCHDARKLY_MOBILE_KEY || 'mob-48fd3788-eab7-4b72-b607-e41712049dbd';
+  process.env.LAUNCHDARKLY_MOBILE_KEY || 'YOUR_LAUNCHDARKLY_MOBILE_KEY_HERE';
 
 const client = new ReactNativeLDClient(
   MOBILE_KEY,
