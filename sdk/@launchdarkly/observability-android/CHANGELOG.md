@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.28.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.27.0...launchdarkly-observability-android-0.28.0) (2026-03-02)
+
+
+### Features
+
+* Make Android SDK35 compilable ([#405](https://github.com/launchdarkly/observability-sdk/issues/405)) ([278880d](https://github.com/launchdarkly/observability-sdk/commit/278880dae408afe304e35c00ebe989e466f509eb))
+
 ## [0.27.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.26.1...launchdarkly-observability-android-0.27.0) (2026-02-28)
 
 
