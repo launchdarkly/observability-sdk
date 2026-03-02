@@ -30,19 +30,7 @@ class TileSignatureManager {
     companion object {
         private const val DEFAULT_PREFERRED_TILE_WIDTH = 64
         private const val DEFAULT_PREFERRED_TILE_HEIGHT = 22
-
-        private val nativeAvailable: Boolean = try {
-            System.loadLibrary("tilehash")
-            true
-        } catch (_: UnsatisfiedLinkError) {
-            false
-        }
     }
-
-    private external fun nativeComputeAllTileHashes(
-        pixels: IntArray, width: Int, height: Int,
-        tileWidth: Int, tileHeight: Int
-    ): LongArray
 
     @Volatile
     private var pixelBuffer: IntArray = IntArray(0)
@@ -95,18 +83,16 @@ class TileSignatureManager {
 
         val tilesX = (width + tileWidth - 1) / tileWidth
         val tilesY = (height + tileHeight - 1) / tileHeight
-        val tileCount = tilesX * tilesY
+        val tileSignatures = ArrayList<TileSignature>(tilesX * tilesY)
 
-        val tileSignatures = if (nativeAvailable) {
-            val hashes = nativeComputeAllTileHashes(pixels, width, height, tileWidth, tileHeight)
-            ArrayList<TileSignature>(tileCount).apply {
-                for (i in 0 until tileCount) {
-                    val offset = i * 2
-                    add(TileSignature(hashLo = hashes[offset], hashHi = hashes[offset + 1]))
-                }
+        for (ty in 0 until tilesY) {
+            val startY = ty * tileHeight
+            val endY = minOf(startY + tileHeight, height)
+            for (tx in 0 until tilesX) {
+                val startX = tx * tileWidth
+                val endX = minOf(startX + tileWidth, width)
+                tileSignatures.add(tileHash(pixels, width, startX, startY, endX, endY))
             }
-        } else {
-            computeAllTileHashesKotlin(pixels, width, height, tileWidth, tileHeight, tilesX, tilesY)
         }
 
         return ImageSignature(
@@ -118,29 +104,7 @@ class TileSignatureManager {
         )
     }
 
-    private fun computeAllTileHashesKotlin(
-        pixels: IntArray,
-        width: Int,
-        height: Int,
-        tileWidth: Int,
-        tileHeight: Int,
-        tilesX: Int,
-        tilesY: Int,
-    ): ArrayList<TileSignature> {
-        val tileSignatures = ArrayList<TileSignature>(tilesX * tilesY)
-        for (ty in 0 until tilesY) {
-            val startY = ty * tileHeight
-            val endY = minOf(startY + tileHeight, height)
-            for (tx in 0 until tilesX) {
-                val startX = tx * tileWidth
-                val endX = minOf(startX + tileWidth, width)
-                tileSignatures.add(tileHashKotlin(pixels, width, startX, startY, endX, endY))
-            }
-        }
-        return tileSignatures
-    }
-
-    private fun tileHashKotlin(
+    private fun tileHash(
         pixels: IntArray,
         width: Int,
         startX: Int,
