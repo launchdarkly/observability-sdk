@@ -1,11 +1,10 @@
 import SessionReplayReactNative from './NativeSessionReplayReactNative';
 import type { SessionReplayOptions } from './NativeSessionReplayReactNative';
-import type { LDPlugin } from '@launchdarkly/react-native-client-sdk';
+import type { LDPlugin, LDClientMin } from '@launchdarkly/observability-react-native';
 import type {
   LDPluginEnvironmentMetadata,
   LDPluginMetadata,
 } from '@launchdarkly/js-sdk-common';
-import type { LDClient } from '@launchdarkly/react-native-client-sdk';
 
 const MOBILE_KEY_REQUIRED_MESSAGE =
   'Session replay requires a non-empty mobile key. Provide metadata.sdkKey or metadata.mobileKey when initializing the LaunchDarkly client.';
@@ -42,7 +41,7 @@ class SessionReplayPluginAdapter implements LDPlugin {
     };
   }
 
-  register(_client: LDClient, metadata: LDPluginEnvironmentMetadata): void {
+  register(_client: LDClientMin, metadata: LDPluginEnvironmentMetadata): void {
     const sdkKey = metadata.sdkKey || metadata.mobileKey || '';
     const key = typeof sdkKey === 'string' ? sdkKey.trim() : '';
     if (!key) {
