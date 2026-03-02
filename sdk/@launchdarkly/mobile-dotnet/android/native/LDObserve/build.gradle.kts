@@ -5,7 +5,7 @@ plugins {
 
 android {
     namespace = "com.launchdarkly.LDNative"
-    compileSdk = 36
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 24
@@ -36,18 +36,17 @@ configurations {
 
 dependencies {
 
-    implementation("androidx.core:core-ktx:1.17.0")
-    "copyDependencies"("androidx.core:core-ktx:1.17.0")
+    implementation("androidx.core:core-ktx:1.15.0")
+    "copyDependencies"("androidx.core:core-ktx:1.15.0")
 
     // Copy dependencies for binding library
     // Uncomment line below and replace dependency.name.goes.here with your dependency
 
 
-    implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.10.0")
+    implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.11.0")
     "copyDependencies"("com.launchdarkly:launchdarkly-android-client-sdk:5.10.0")
 
-    implementation("com.launchdarkly:launchdarkly-observability-android:0.26.1")
-    "copyDependencies"("com.launchdarkly:launchdarkly-observability-android:0.26.1")
+    implementation("com.launchdarkly:launchdarkly-observability-android:0.27.0")
 
     // TODO: revise these versions to be as old as usable for compatibility
     implementation("io.opentelemetry:opentelemetry-api:1.51.0")
@@ -103,8 +102,13 @@ dependencies {
 
 // Copy dependencies for binding library
 project.afterEvaluate {
+    val observabilityBuild = gradle.includedBuild("observability-android")
+    val observabilityAarDir = File(observabilityBuild.projectDir, "lib/build/outputs/aar")
+
     tasks.register<Copy>("copyDeps") {
         from(configurations["copyDependencies"])
+        dependsOn(observabilityBuild.task(":lib:assemble"))
+        from(fileTree(observabilityAarDir) { include("*.aar") })
         into("${buildDir}/outputs/deps")
     }
     tasks.named("preBuild") { finalizedBy("copyDeps") }
