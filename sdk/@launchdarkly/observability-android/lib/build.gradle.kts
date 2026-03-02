@@ -20,12 +20,15 @@ allprojects {
 }
 
 dependencies {
-    implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.10.0")
+    implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.11.0")
     implementation("com.jakewharton.timber:timber:5.0.1")
 
-    // Android
-    implementation("androidx.activity:activity:1.11.0")
-    implementation("androidx.lifecycle:lifecycle-process:2.6.2")
+    // AndroidX
+    // This only used by Session Replay.
+    implementation("androidx.activity:activity:1.7.0")
+    implementation("androidx.lifecycle:lifecycle-process:2.4.0")
+    compileOnly("androidx.compose.ui:ui:1.7.5")
+    compileOnly("androidx.compose.ui:ui-tooling:1.7.5")
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
@@ -56,12 +59,6 @@ dependencies {
     implementation("io.opentelemetry.android.instrumentation:crash:0.11.0-alpha")
     implementation("io.opentelemetry.android.instrumentation:activity:0.11.0-alpha")
 
-    // TODO: O11Y-626 - move replay instrumentation and associated compose dependencies into dedicated package
-    // Compose dependencies are compileOnly so apps without Compose don't pull them in.
-    // Compose masking features activate automatically when Compose is on the runtime classpath.
-    compileOnly("androidx.compose.ui:ui:1.7.5")
-    compileOnly("androidx.compose.ui:ui-tooling:1.7.5")
-
     // Use JUnit Jupiter for testing.
     testImplementation(platform("org.junit:junit-bom:5.13.4"))
     testImplementation("org.junit.jupiter:junit-jupiter")
@@ -81,14 +78,14 @@ tasks.withType<Test> {
 
 android {
     namespace = "com.launchdarkly.observability"
-    compileSdk = 36
+    compileSdk = 35
 
     buildFeatures {
         buildConfig = true
     }
 
     defaultConfig {
-        minSdk = 24
+        minSdk = 23
         version = releaseVersion
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "OBSERVABILITY_SDK_VERSION", "\"${project.version}\"")

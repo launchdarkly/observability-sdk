@@ -16,11 +16,11 @@ val localProperties = Properties().apply {
 
 android {
     namespace = "com.example.androidobservability"
-    compileSdk = 36
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.example.androidobservability"
-        minSdk = 24
+        minSdk = 23
         versionCode = 1
         versionName = "1.0"
 
