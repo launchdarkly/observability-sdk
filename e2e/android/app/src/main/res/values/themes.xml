@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <style name="Base.Theme.AndroidObservability" parent="Theme.Material3.DayNight.NoActionBar" />
     <style name="Theme.AndroidObservability" parent="Theme.Material3.DayNight.NoActionBar" />
     <style name="Theme.AndroidObservability.Dialog" parent="Theme.Material3.DayNight.NoActionBar" />
     <style name="Theme.AndroidObservability.ConfirmationDialog" parent="Theme.Material3.DayNight.Dialog" />

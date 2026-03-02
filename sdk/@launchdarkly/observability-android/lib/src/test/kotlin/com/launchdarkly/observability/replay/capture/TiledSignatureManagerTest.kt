@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 
-class TiledSignatureManagerTest {
+class TileSignatureManagerTest {
 
     private val RED = 0xFFFF0000.toInt()
     private val BLUE = 0xFF0000FF.toInt()
@@ -22,7 +22,7 @@ class TiledSignatureManagerTest {
 
     @Test
     fun `compute returns null when tile size is non positive`() {
-        val manager = TiledSignatureManager()
+        val manager = TileSignatureManager()
         val bitmap = mockBitmap(2, 2, RED)
 
         assertNull(manager.compute(bitmap, 0))
@@ -31,18 +31,18 @@ class TiledSignatureManagerTest {
 
     @Test
     fun `compute returns signature when inputs are valid`() {
-        val manager = TiledSignatureManager()
+        val manager = TileSignatureManager()
         val bitmap = mockBitmap(4, 4, BLUE)
 
         val signature = manager.compute(bitmap, 2)
         assertNotNull(signature)
         // 4x4 with tileSize 2 => 2x2 = 4 tiles
-        assertEquals(4, signature!!.tileHashes.size)
+        assertEquals(4, signature!!.tileSignatures.size)
     }
 
     @Test
     fun `signatures are equal for identical content`() {
-        val manager = TiledSignatureManager()
+        val manager = TileSignatureManager()
         val a = mockBitmap(8, 8, BLUE)
         val b = mockBitmap(8, 8, BLUE)
 
@@ -56,7 +56,7 @@ class TiledSignatureManagerTest {
 
     @Test
     fun `signatures differ for different content`() {
-        val manager = TiledSignatureManager()
+        val manager = TileSignatureManager()
         val a = mockBitmap(8, 8, RED)
         val b = mockBitmap(8, 8, WHITE)
 
@@ -70,23 +70,23 @@ class TiledSignatureManagerTest {
 
     @Test
     fun `tile count matches expected ceil division`() {
-        val manager = TiledSignatureManager()
+        val manager = TileSignatureManager()
         val bmp = mockBitmap(10, 10, RED)
 
         // tileSize 4 => ceil(10/4)=3 in each dimension => 9 tiles
         val sig4 = manager.compute(bmp, 4)
         assertNotNull(sig4)
-        assertEquals(9, sig4!!.tileHashes.size)
+        assertEquals(9, sig4!!.tileSignatures.size)
 
         // tileSize 6 => ceil(10/6)=2 in each dimension => 4 tiles
         val sig6 = manager.compute(bmp, 6)
         assertNotNull(sig6)
-        assertEquals(4, sig6!!.tileHashes.size)
+        assertEquals(4, sig6!!.tileSignatures.size)
     }
 
     @Test
     fun `small overlay changes only affected tiles hashes`() {
-        val manager = TiledSignatureManager()
+        val manager = TileSignatureManager()
         val width = 12
         val height = 12
         val basePixels = solidPixels(width, height, WHITE)
@@ -108,12 +108,12 @@ class TiledSignatureManagerTest {
         val sigOverlay = manager.compute(withOverlay, tileSize)!!
 
         // 12x12 with tile size 4 => 3x3 tiles
-        assertEquals(9, sigBase.tileHashes.size)
-        assertEquals(9, sigOverlay.tileHashes.size)
+        assertEquals(9, sigBase.tileSignatures.size)
+        assertEquals(9, sigOverlay.tileSignatures.size)
 
         var diffCount = 0
-        for (i in sigBase.tileHashes.indices) {
-            if (sigBase.tileHashes[i] != sigOverlay.tileHashes[i]) {
+        for (i in sigBase.tileSignatures.indices) {
+            if (sigBase.tileSignatures[i] != sigOverlay.tileSignatures[i]) {
                 diffCount++
             }
         }

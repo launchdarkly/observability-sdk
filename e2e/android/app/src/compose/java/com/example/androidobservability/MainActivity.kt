@@ -39,9 +39,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import com.example.androidobservability.masking.ComposeMaskingActivity
 import com.example.androidobservability.masking.ComposeUserFormActivity
 import com.example.androidobservability.masking.ComposeWebActivity
@@ -65,10 +70,33 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             AndroidObservabilityTheme {
+                @OptIn(ExperimentalMaterial3Api::class)
                 Scaffold(
                     modifier = Modifier
                         .fillMaxSize()
-                        .imePadding()
+                        .imePadding(),
+                    topBar = {
+                        TopAppBar(
+                            title = {
+                                Text(
+                                    "Android Observability",
+                                    modifier = Modifier.padding(start = 8.dp)
+                                )
+                            },
+                            navigationIcon = {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_launchdarkly_logo),
+                                    contentDescription = "LaunchDarkly",
+                                    modifier = Modifier.padding(start = 12.dp),
+                                    tint = Color.White
+                                )
+                            },
+                            colors = TopAppBarDefaults.topAppBarColors(
+                                containerColor = Color.Black,
+                                titleContentColor = Color.White
+                            )
+                        )
+                    }
                 ) { innerPadding ->
                     MainScreen(viewModel, innerPadding)
                 }

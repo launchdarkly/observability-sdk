@@ -8,7 +8,7 @@ import com.launchdarkly.logging.LDLogger
 import com.launchdarkly.observability.client.ObservabilityContext
 import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
 import com.launchdarkly.observability.interfaces.LDExtendedInstrumentation
-import com.launchdarkly.observability.replay.capture.CaptureSource
+import com.launchdarkly.observability.replay.capture.CaptureManager
 import com.launchdarkly.observability.replay.exporter.IdentifyItemPayload
 import com.launchdarkly.observability.replay.exporter.ImageItemPayload
 import com.launchdarkly.observability.replay.exporter.InteractionItemPayload
@@ -70,7 +70,7 @@ class ReplayInstrumentation(
     private val logger: LDLogger = observabilityContext.logger
     private val eventQueue = EventQueue()
     private val batchWorker = BatchWorker(eventQueue, logger)
-    private var captureSource: CaptureSource? = null
+    private var captureManager: CaptureManager? = null
     private var interactionSource: InteractionSource? = null
     private val instrumentationScope = CoroutineScope(DispatcherProviderHolder.current.default + SupervisorJob())
     private var captureJob: Job? = null
@@ -90,7 +90,7 @@ class ReplayInstrumentation(
         if (isInstalled) return
 
         sessionManager = ctx.sessionManager
-        captureSource = CaptureSource(
+        captureManager = CaptureManager(
             sessionManager = ctx.sessionManager,
             options = options,
             logger = observabilityContext.logger
@@ -126,7 +126,7 @@ class ReplayInstrumentation(
     private fun startCollectors() {
         // Images collector
         instrumentationScope.launch {
-            captureSource?.captureFlow?.collect { capture ->
+            captureManager?.captureFlow?.collect { capture ->
                 if (!isEnabled.value) return@collect
                 eventQueue.send(ImageItemPayload(capture))
             }
@@ -162,7 +162,7 @@ class ReplayInstrumentation(
             logger.debug("Session replay capture running")
             while (isActive) {
                 try {
-                    captureSource?.captureNow()
+                    captureManager?.captureNow()
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: OutOfMemoryError) {

@@ -16,11 +16,11 @@ val localProperties = Properties().apply {
 
 android {
     namespace = "com.example.androidobservability"
-    compileSdk = 36
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.example.androidobservability"
-        minSdk = 24
+        minSdk = 23
         versionCode = 1
         versionName = "1.0"
 
@@ -50,6 +50,16 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+    }
+    flavorDimensions += "uiFramework"
+    productFlavors {
+        create("compose") {
+            dimension = "uiFramework"
+        }
+        create("noCompose") {
+            dimension = "uiFramework"
+            applicationIdSuffix = ".nocompose"
         }
     }
     compileOptions {
@@ -103,19 +113,29 @@ dependencies {
     implementation("androidx.recyclerview:recyclerview:1.3.2")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation(libs.androidx.activity.compose)
+
+    // Compose runtime is needed by the Kotlin Compose compiler plugin (applied project-wide).
+    // It does NOT contain any UI classes like AbstractComposeView, so the SDK's
+    // isComposeAvailable runtime check still returns false in the noCompose variant.
     implementation(platform(libs.androidx.compose.bom))
-    implementation(libs.androidx.ui)
-    implementation(libs.androidx.ui.graphics)
-    implementation(libs.androidx.ui.tooling.preview)
-    implementation(libs.androidx.material3)
+    implementation("androidx.compose.runtime:runtime")
+
+    // Compose UI dependencies -- only for the compose flavor
+    "composeImplementation"(libs.androidx.activity.compose)
+    "composeImplementation"(libs.androidx.ui)
+    "composeImplementation"(libs.androidx.ui.graphics)
+    "composeImplementation"(libs.androidx.ui.tooling.preview)
+    "composeImplementation"(libs.androidx.material3)
+
+    // noCompose uses AppCompatActivity for proper Material Components theme resolution
+    "noComposeImplementation"("androidx.appcompat:appcompat:1.7.0")
 
     testImplementation(libs.junit)
-    testImplementation(libs.androidx.ui.test.junit4)
     testImplementation(libs.core.ktx)
     testImplementation(libs.robolectric)
     testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
     testImplementation("io.opentelemetry:opentelemetry-sdk-testing:1.51.0")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
     testImplementation(testFixtures(project(":observability-android")))
 
     // Used for testing webviews masking
@@ -123,9 +143,4 @@ dependencies {
 
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(platform(libs.androidx.compose.bom))
-    androidTestImplementation(libs.androidx.ui.test.junit4)
-
-    debugImplementation(libs.androidx.ui.tooling)
-    debugImplementation(libs.androidx.ui.test.manifest)
 }
