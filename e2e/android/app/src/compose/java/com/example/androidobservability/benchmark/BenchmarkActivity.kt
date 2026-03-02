@@ -17,11 +17,17 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -73,6 +79,7 @@ private fun BenchmarkScreen(framesDirectory: File, modifier: Modifier = Modifier
     var isRunning by remember { mutableStateOf(false) }
     var showResults by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var signatureResult by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
     Column(
@@ -97,7 +104,8 @@ private fun BenchmarkScreen(framesDirectory: File, modifier: Modifier = Modifier
                             BenchmarkResultRow(
                                 name = result.compression.displayName,
                                 bytes = result.bytes,
-                                executionTimeNanos = result.executionTimeNanos,
+                                captureTimeNanos = result.captureTimeNanos,
+                                totalTimeNanos = result.totalTimeNanos,
                                 percent = "%.0f%%".format(pct),
                             )
                         }
@@ -119,10 +127,39 @@ private fun BenchmarkScreen(framesDirectory: File, modifier: Modifier = Modifier
                 Text("Mastodon iOS 200 sec walk")
             }
         }
+
+        Button(
+            onClick = {
+                isRunning = true
+                signatureResult = null
+                scope.launch {
+                    try {
+                        val r = executor.signatureBenchmark(framesDirectory)
+                        val elapsedSec = r.elapsedNanos / 1_000_000_000.0
+                        val mb = r.totalBytes / (1024.0 * 1024.0)
+                        signatureResult = "%.3fs — %.1f MB (%d frames)".format(elapsedSec, mb, r.frameCount)
+                    } catch (e: Exception) {
+                        errorMessage = e.message ?: e.toString()
+                    }
+                    isRunning = false
+                }
+            },
+            enabled = !isRunning,
+        ) {
+            Text("Compute ImageSignature")
+        }
+
+        signatureResult?.let { result ->
+            Text(
+                result,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+        }
     }
 
     if (showResults) {
-        BenchmarkResultsDialog(
+        BenchmarkResultsSheet(
             results = results,
             onDismiss = { showResults = false },
         )
@@ -145,7 +182,8 @@ private fun BenchmarkScreen(framesDirectory: File, modifier: Modifier = Modifier
 private data class BenchmarkResultRow(
     val name: String,
     val bytes: Int,
-    val executionTimeNanos: Long,
+    val captureTimeNanos: Long,
+    val totalTimeNanos: Long,
     val percent: String,
 ) {
     val formattedBytes: String
@@ -155,62 +193,79 @@ private data class BenchmarkResultRow(
             else "%.1f KB".format(kb)
         }
 
-    val formattedExecutionTime: String
-        get() = "%.2fs".format(executionTimeNanos / 1_000_000_000.0)
+    val formattedCaptureTime: String
+        get() = "%.2fs".format(captureTimeNanos / 1_000_000_000.0)
+
+    val formattedTotalTime: String
+        get() = "%.2fs".format(totalTimeNanos / 1_000_000_000.0)
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun BenchmarkResultsDialog(
+private fun BenchmarkResultsSheet(
     results: List<BenchmarkResultRow>,
     onDismiss: () -> Unit,
 ) {
-    AlertDialog(
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = { Text("Results") },
-        text = {
-            Column {
-                results.forEach { row ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                    ) {
-                        Text(row.name, modifier = Modifier.weight(1f))
-                        Text(
-                            row.percent,
-                            textAlign = TextAlign.End,
-                            modifier = Modifier.width(48.dp),
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                fontWeight = FontWeight.Light
-                            ),
-                        )
-                        Text(
-                            row.formattedExecutionTime,
-                            textAlign = TextAlign.End,
-                            modifier = Modifier.width(56.dp),
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                fontWeight = FontWeight.Light
-                            ),
-                        )
-                        Text(
-                            row.formattedBytes,
-                            textAlign = TextAlign.End,
-                            modifier = Modifier.width(72.dp),
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                fontWeight = FontWeight.Light
-                            ),
-                        )
-                    }
+        sheetState = sheetState,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 32.dp),
+        ) {
+            Text(
+                "Results",
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(bottom = 12.dp),
+            )
+            results.forEachIndexed { index, row ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(row.name, modifier = Modifier.weight(1f))
+                    Text(
+                        row.percent,
+                        textAlign = TextAlign.End,
+                        modifier = Modifier.width(48.dp),
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontWeight = FontWeight.Light
+                        ),
+                    )
+                    Text(
+                        buildAnnotatedString {
+                            append(row.formattedCaptureTime)
+                            append(" / ")
+                            withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
+                                append(row.formattedTotalTime)
+                            }
+                        },
+                        textAlign = TextAlign.End,
+                        modifier = Modifier.width(120.dp),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Text(
+                        row.formattedBytes,
+                        textAlign = TextAlign.End,
+                        modifier = Modifier.width(72.dp),
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontWeight = FontWeight.Light
+                        ),
+                    )
+                }
+                if (index < results.lastIndex) {
+                    HorizontalDivider()
                 }
             }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Done")
-            }
-        },
-    )
+        }
+    }
 }
 
 private val ReplayOptions.CompressionMethod.displayName: String

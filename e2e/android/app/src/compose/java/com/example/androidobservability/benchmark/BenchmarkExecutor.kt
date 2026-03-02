@@ -5,6 +5,7 @@ import com.launchdarkly.observability.replay.Event
 import com.launchdarkly.observability.replay.ReplayOptions
 import com.launchdarkly.observability.replay.capture.ExportDiffManager
 import com.launchdarkly.observability.replay.capture.ImageCaptureService
+import com.launchdarkly.observability.replay.capture.TileSignatureManager
 import com.launchdarkly.observability.replay.exporter.RRWebEventGenerator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -16,7 +17,8 @@ class BenchmarkExecutor {
     data class CompressionResult(
         val compression: ReplayOptions.CompressionMethod,
         val bytes: Int,
-        val executionTimeNanos: Long,
+        val captureTimeNanos: Long,
+        val totalTimeNanos: Long,
     )
 
     private val compressionMethods = listOf(
@@ -34,19 +36,46 @@ class BenchmarkExecutor {
 
             for (method in compressionMethods) {
                 var bytes = 0
-                var executionTimeNanos = 0L
+                var captureTimeNanos = 0L
+                var totalTimeNanos = 0L
 
                 for (i in 0 until runCount) {
                     val runResult = runCompression(method, frames)
                     bytes = runResult.bytes
-                    executionTimeNanos += runResult.executionTimeNanos
+                    captureTimeNanos += runResult.captureTimeNanos
+                    totalTimeNanos += runResult.totalTimeNanos
                 }
 
-                results.add(CompressionResult(method, bytes, executionTimeNanos))
+                results.add(CompressionResult(method, bytes, captureTimeNanos, totalTimeNanos))
             }
 
             frames.forEach { if (!it.bitmap.isRecycled) it.bitmap.recycle() }
             results
+        }
+
+    data class SignatureResult(
+        val elapsedNanos: Long,
+        val totalBytes: Long,
+        val frameCount: Int,
+    )
+
+    suspend fun signatureBenchmark(framesDirectory: File): SignatureResult =
+        withContext(Dispatchers.Default) {
+            val frames = RawFrameReader(framesDirectory).toList()
+            val manager = TileSignatureManager()
+            var totalBytes = 0L
+
+            for (frame in frames) {
+                totalBytes += frame.bitmap.byteCount.toLong()
+            }
+
+            val start = System.nanoTime()
+            for (frame in frames) {
+                manager.compute(frame.bitmap)
+            }
+            val elapsed = System.nanoTime() - start
+
+            SignatureResult(elapsedNanos = elapsed, totalBytes = totalBytes, frameCount = frames.size)
         }
 
     private fun runCompression(
@@ -66,11 +95,16 @@ class BenchmarkExecutor {
         val json = Json
         var bytes = 0
         var isFirst = true
+        var captureTimeNanos = 0L
 
         val start = System.nanoTime()
 
         for (frame in copies) {
-            val exportFrame = exportDiffManager.createCaptureEvent(frame, "benchmark") ?: continue
+            val captureStart = System.nanoTime()
+            val exportFrame = exportDiffManager.createCaptureEvent(frame, "benchmark") {
+                captureTimeNanos += System.nanoTime() - captureStart
+            }
+            if (exportFrame == null) continue
 
             val events = if (isFirst) {
                 isFirst = false
@@ -86,11 +120,12 @@ class BenchmarkExecutor {
             }
         }
 
-        val elapsed = System.nanoTime() - start
+        val totalElapsed = System.nanoTime() - start
         return CompressionResult(
             compression = method,
             bytes = bytes,
-            executionTimeNanos = elapsed,
+            captureTimeNanos = captureTimeNanos,
+            totalTimeNanos = totalElapsed,
         )
     }
 }
