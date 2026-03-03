@@ -133,34 +133,34 @@ namespace LaunchDarkly.Observability
             return data;
         }
 
-        public override SeriesData BeforeIdentify(IdentifySeriesContext context, SeriesData data)
-        {
-            return data;
-        }
+        // public override SeriesData BeforeIdentify(IdentifySeriesContext context, SeriesData data)
+        // {
+        //     return data;
+        // }
 
-        public override SeriesData AfterIdentify(IdentifySeriesContext context, SeriesData data,
-            IdentifySeriesResult result)
-        {
-            var contextKeys = new System.Collections.Generic.Dictionary<string, string>();
-            if (context.Context.Multiple)
-            {
-                foreach (var individual in context.Context.MultiKindContexts)
-                {
-                    contextKeys[individual.Kind.Value] = individual.Key;
-                }
-            }
-            else
-            {
-                contextKeys[context.Context.Kind.Value] = context.Context.Key;
-            }
+        // public override SeriesData AfterIdentify(IdentifySeriesContext context, SeriesData data,
+        //     IdentifySeriesResult result)
+        // {
+        //     var contextKeys = new System.Collections.Generic.Dictionary<string, string>();
+        //     if (context.Context.Multiple)
+        //     {
+        //         foreach (var individual in context.Context.MultiKindContexts)
+        //         {
+        //             contextKeys[individual.Kind.Value] = individual.Key;
+        //         }
+        //     }
+        //     else
+        //     {
+        //         contextKeys[context.Context.Kind.Value] = context.Context.Key;
+        //     }
 
-            _proxy.AfterIdentify(
-                contextKeys,
-                context.Context.FullyQualifiedKey,
-                result.Status == IdentifySeriesResult.IdentifySeriesStatus.Completed
-            );
-            return data;
-        }
+        //     _proxy.AfterIdentify(
+        //         contextKeys,
+        //         context.Context.FullyQualifiedKey,
+        //         result.Status == IdentifySeriesResult.IdentifySeriesStatus.Completed
+        //     );
+        //     return data;
+        // }
     }
 }
 #endif

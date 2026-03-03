@@ -45,23 +45,23 @@ namespace LaunchDarkly.Observability
             return data;
         }
 
-        public override SeriesData BeforeIdentify(IdentifySeriesContext context, SeriesData data)
-        {
-            foreach (var hook in NativeHooks)
-            {
-                data = hook.BeforeIdentify(context, data);
-            }
-            return data;
-        }
+        // public override SeriesData BeforeIdentify(IdentifySeriesContext context, SeriesData data)
+        // {
+        //     foreach (var hook in NativeHooks)
+        //     {
+        //         data = hook.BeforeIdentify(context, data);
+        //     }
+        //     return data;
+        // }
 
-        public override SeriesData AfterIdentify(IdentifySeriesContext context, SeriesData data,
-            IdentifySeriesResult result)
-        {
-            foreach (var hook in NativeHooks)
-            {
-                data = hook.AfterIdentify(context, data, result);
-            }
-            return data;
-        }
+        // public override SeriesData AfterIdentify(IdentifySeriesContext context, SeriesData data,
+        //     IdentifySeriesResult result)
+        // {
+        //     foreach (var hook in NativeHooks)
+        //     {
+        //         data = hook.AfterIdentify(context, data, result);
+        //     }
+        //     return data;
+        // }
     }
 }
