@@ -10,13 +10,13 @@
 		<RootNamespace>LaunchDarkly</RootNamespace>
 		<AssemblyName>LDObservability</AssemblyName>
 
-		<SupportedOSPlatformVersion Condition="$(TargetFramework.Contains('android'))">24.0</SupportedOSPlatformVersion>
-		<SupportedOSPlatformVersion Condition="$(TargetFramework.Contains('ios'))">13.2</SupportedOSPlatformVersion>
+		<SupportedOSPlatformVersion Condition="$(TargetFramework.Contains('android'))">23.0</SupportedOSPlatformVersion>
+		<SupportedOSPlatformVersion Condition="$(TargetFramework.Contains('ios'))">15.0</SupportedOSPlatformVersion>
 
 		<!-- NuGet packaging -->
 		<IsPackable>true</IsPackable>
 		<PackageId>LDObservability</PackageId>
-		<Version>0.32.8-local</Version>
+		<Version>0.3.10</Version>
 		<Authors>LD</Authors>
 		<PackageDescription>LD Observability bindings aggregator for .NET (Android/iOS).</PackageDescription>
 		<RepositoryUrl>https://example.local/ldobservability</RepositoryUrl>

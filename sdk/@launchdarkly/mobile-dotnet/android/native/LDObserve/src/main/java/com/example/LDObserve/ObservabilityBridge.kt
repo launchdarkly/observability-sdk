@@ -139,13 +139,14 @@ public class ObservabilityBridge {
         app: Application,
         mobileKey: String,
         observability: LDObservabilityOptions,
-        replay: LDSessionReplayOptions
+        replay: LDSessionReplayOptions,
+        observabilityVersion: String
     ) {
        // System.out.println("LD:ObservabilityBridge start called 7")
 
         val resourceAttributes = try { Attributes.builder()
-                .put(AttributeKey.stringKey("service.name"), observability.serviceName)
-                .put(AttributeKey.stringKey("service.version"), observability.serviceVersion)
+                // .put(AttributeKey.stringKey("service.name"), observability.serviceName)
+                // .put(AttributeKey.stringKey("service.version"), observabilityVersion)
                 .build()
         } catch (t: Throwable) {
             printException("LD:resourceAttributes failed to build resourceAttributes", t)
@@ -157,6 +158,8 @@ public class ObservabilityBridge {
         val nativeObservabilityOptions = try {
             com.launchdarkly.observability.api.ObservabilityOptions(
                 enabled = observability.isEnabled,
+                serviceName = observability.serviceName,
+                serviceVersion = observabilityVersion,
                 resourceAttributes = resourceAttributes,
                 debug = false,
                 otlpEndpoint = observability.otlpEndpoint,

@@ -18,12 +18,12 @@ public class ObservabilityBridgeClient
         return _native.Version();
     }
 
-    public void Start(string mobileKey, ObservabilityOptions observability, SessionReplayOptions replay)
+    public void Start(string mobileKey, ObservabilityOptions observability, SessionReplayOptions replay, string observabilityVersion)
     {
         var objcObs = new ObjcObservabilityOptions
         {
             ServiceName = observability.ServiceName ?? "observability-maui",
-            ServiceVersion = observability.ServiceVersion ?? "0.1.0",
+            ServiceVersion = observabilityVersion,
             OtlpEndpoint = observability.OtlpEndpoint ?? "https://otel.observability.app.launchdarkly.com:4318",
             BackendUrl = observability.BackendUrl ?? "https://pub.observability.app.launchdarkly.com"
         };

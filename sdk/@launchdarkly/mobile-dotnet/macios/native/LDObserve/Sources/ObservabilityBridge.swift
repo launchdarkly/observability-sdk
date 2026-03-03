@@ -61,7 +61,9 @@ public final class ObservabilityBridge: NSObject {
         return LDObserve.shared.hookProxy
     }
 
-    @objc public func start(mobileKey: String, observability: ObjcObservabilityOptions, replay: ObjcSessionReplayOptions) {
+    @objc public func start(mobileKey: String, 
+                            observability: ObjcObservabilityOptions, 
+                            replay: ObjcSessionReplayOptions) {
         let config = { () -> LDConfig in
             var config = LDConfig(
                 mobileKey: mobileKey,

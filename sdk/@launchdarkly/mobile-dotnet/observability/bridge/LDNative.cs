@@ -1,4 +1,5 @@
 using System;
+using System.Reflection;
 
 #if ANDROID
 using Android.App;
@@ -25,17 +26,21 @@ public class LDNative
     public static LDNative Start(string mobileKey, ObservabilityOptions observability, SessionReplayOptions replay)
     {
         var ldNative = new LDNative(observability, replay);
+        var rawVersion = typeof(LDNative).Assembly
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+            ?.InformationalVersion ?? string.Empty;
+        var observabilityVersion = rawVersion.Split('+')[0];
 #if ANDROID
         var app = (Android.App.Application)global::Android.App.Application.Context;
         var bridge = new ObservabilityBridge();
         ldNative.NativeVersion = bridge.Version();
         var bridgeObservabilityOptions = observability.ToNative();
         var bridgeReplayOptions = replay.ToNative();
-        bridge.Start(app, mobileKey, bridgeObservabilityOptions, bridgeReplayOptions);
+        bridge.Start(app, mobileKey, bridgeObservabilityOptions, bridgeReplayOptions, observabilityVersion);
 #elif IOS
         var bridge = new ObservabilityBridgeClient();
         ldNative.NativeVersion = bridge.Version();
-        bridge.Start(mobileKey, observability, replay);
+        bridge.Start(mobileKey, observability, replay, observabilityVersion);
 #endif
 
         return ldNative;
