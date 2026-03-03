@@ -8,6 +8,7 @@ import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Severity
 import io.opentelemetry.api.trace.Span
 import io.opentelemetry.api.trace.Tracer
+import org.json.JSONObject
 
 /**
  * Pure data-sending logic for observability hook tracing.
@@ -79,6 +80,28 @@ internal class ObservabilityHookExporter(
 
         span.addEvent(FEATURE_FLAG_EVENT_NAME, attrBuilder.build())
         span.end()
+    }
+
+    fun afterEvaluation(
+        evaluationId: String,
+        flagKey: String,
+        contextKey: String,
+        valueJson: String,
+        variationIndex: Int,
+        reasonJson: String?
+    ) {
+        val normalizedIndex = if (variationIndex >= 0) variationIndex else null
+        afterEvaluation(evaluationId, flagKey, contextKey, valueJson, normalizedIndex, parseInExperiment(reasonJson))
+    }
+
+    private fun parseInExperiment(reasonJson: String?): Boolean? {
+        if (reasonJson == null) return null
+        return try {
+            val json = JSONObject(reasonJson)
+            if (json.has("inExperiment")) json.getBoolean("inExperiment") else null
+        } catch (_: Exception) {
+            null
+        }
     }
 
     // -- Identify --
