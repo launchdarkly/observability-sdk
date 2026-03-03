@@ -95,6 +95,20 @@
       "problemMatcher": []
     },
     {
+      "label": "Rebuild observability-android lib",
+      "type": "shell",
+      "command": "./gradlew",
+      "args": [
+        ":lib:clean",
+        ":lib:assemble"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/../observability-android"
+      },
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
       "label": "Clean build folders",
       "type": "shell",
       "command": "/bin/zsh",

@@ -62,8 +62,7 @@
 
 	<!-- Reference the Android binding dependencies (optional: only if built locally) -->
 	<ItemGroup Condition="$(TargetFramework.Contains('android')) and '$(LD_INCLUDE_NATIVE_DEPS)' == 'true' and '$(Configuration)' == 'Release' and Exists('..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps')">
-		<AndroidLibrary Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\*launchdarkly*.aar"
-		                Exclude="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\launchdarkly-observability-android-*.aar">
+		<AndroidLibrary Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\launchdarkly-android-client-sdk-*.aar">
 			<Bind>false</Bind>
 			<Visible>false</Visible>
 		</AndroidLibrary>
@@ -130,8 +129,7 @@
 		</AndroidLibrary>
 	</ItemGroup>
 	<ItemGroup Condition="$(TargetFramework.Contains('android')) and '$(LD_INCLUDE_NATIVE_DEPS)' == 'true' and '$(Configuration)' == 'Debug' and Exists('..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps')">
-		<AndroidLibrary Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\*launchdarkly*.aar"
-		                Exclude="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\launchdarkly-observability-android-*.aar">
+		<AndroidLibrary Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\launchdarkly-android-client-sdk-*.aar">
 			<Bind>false</Bind>
 			<Visible>false</Visible>
 		</AndroidLibrary>
