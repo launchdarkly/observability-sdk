@@ -80,39 +80,39 @@ public static class MauiProgram
         var otlpEndpoint = config["LaunchDarkly:OtlpEndpoint"];
         var backendUrl = config["LaunchDarkly:BackendUrl"];
 
-        // var ldConfig = Configuration.Builder(mobileKey, LaunchDarkly.Sdk.Client.ConfigurationBuilder.AutoEnvAttributes.Enabled)
-        // .Plugins(new PluginConfigurationBuilder()
-        // 	.Add(ObservabilityPlugin.Builder(new ObservabilityOptions(
-        // 		isEnabled: true,
-        // 		serviceName: "maui-sample-app",
-        // 		otlpEndpoint: otlpEndpoint,
-        // 		backendUrl: backendUrl
-        // 	)).Build())
-        // 	.Add(SessionReplayPlugin.Builder(new SessionReplayOptions(
-        // 		isEnabled: true,
-        // 		privacy: new SessionReplayOptions.PrivacyOptions(
-        // 			maskTextInputs: true,
-        // 			maskWebViews: false,
-        // 			maskLabels: false
-        // 		)
-        // 	)).Build())
-        // ).Build();
+        var ldConfig = Configuration.Builder(mobileKey, LaunchDarkly.Sdk.Client.ConfigurationBuilder.AutoEnvAttributes.Enabled)
+        .Plugins(new PluginConfigurationBuilder()
+        	.Add(ObservabilityPlugin.Builder(new ObservabilityOptions(
+        		isEnabled: true,
+        		serviceName: "maui-sample-app",
+        		otlpEndpoint: otlpEndpoint,
+        		backendUrl: backendUrl
+        	)).Build())
+        	.Add(SessionReplayPlugin.Builder(new SessionReplayOptions(
+        		isEnabled: true,
+        		privacy: new SessionReplayOptions.PrivacyOptions(
+        			maskTextInputs: true,
+        			maskWebViews: false,
+        			maskLabels: false
+        		)
+        	)).Build())
+        ).Build();
 
-        // var context = LaunchDarkly.Sdk.Context.New("maui-user-key");
-        // var client = LdClient.Init(ldConfig, context, TimeSpan.FromSeconds(10));
-        // var feature1 = client.BoolVariation("feature1", false);
-        // 	Console.WriteLine($"feature1 sync value ={feature1}");
+        var context = LaunchDarkly.Sdk.Context.New("maui-user-key");
+        var client = LdClient.Init(ldConfig, context, TimeSpan.FromSeconds(10));
+        var feature1 = client.BoolVariation("feature1", false);
+        	Console.WriteLine($"feature1 sync value ={feature1}");
 
-        // 	client.FlagTracker.FlagValueChanged += (sender, eventArgs) =>
-        // 	{
-        // 		if (eventArgs.Key == "feature1")
-        // 		{
-        // 			Console.WriteLine($"feature1 changed from {eventArgs.OldValue} to {eventArgs.NewValue}");
-        // 		}
-        // 	};
+        	client.FlagTracker.FlagValueChanged += (sender, eventArgs) =>
+        	{
+        		if (eventArgs.Key == "feature1")
+        		{
+        			Console.WriteLine($"feature1 changed from {eventArgs.OldValue} to {eventArgs.NewValue}");
+        		}
+        	};
 
 
-        directStart(mobileKey, otlpEndpoint, backendUrl);
+        //directStart(mobileKey, otlpEndpoint, backendUrl);
 
 
 
@@ -121,25 +121,25 @@ public static class MauiProgram
         return app;
     }
 
-    private static void directStart(string mobileKey, string? otlpEndpoint, string? backendUrl)
-    {
-        LdNative = LDNative.Start(
-            mobileKey: mobileKey,
-            observability: new ObservabilityOptions(
-                serviceName: "maui-sample-app",
-                otlpEndpoint: otlpEndpoint,
-                backendUrl: backendUrl
-            ),
-            replay: new SessionReplayOptions(
-                isEnabled: true,
-                privacy: new SessionReplayOptions.PrivacyOptions(
-                    maskTextInputs: true,
-                    maskWebViews: false,
-                    maskLabels: false
-                )
-            )
-        );
-        LdNative.Replay.IsEnabled = true;
-        Console.WriteLine($"ldNative.version={LdNative.NativeVersion}");
-    }
+    // private static void directStart(string mobileKey, string? otlpEndpoint, string? backendUrl)
+    // {
+    //     LdNative = LDNative.Start(
+    //         mobileKey: mobileKey,
+    //         observability: new ObservabilityOptions(
+    //             serviceName: "maui-sample-app",
+    //             otlpEndpoint: otlpEndpoint,
+    //             backendUrl: backendUrl
+    //         ),
+    //         replay: new SessionReplayOptions(
+    //             isEnabled: true,
+    //             privacy: new SessionReplayOptions.PrivacyOptions(
+    //                 maskTextInputs: true,
+    //                 maskWebViews: false,
+    //                 maskLabels: false
+    //             )
+    //         )
+    //     );
+    //     LdNative.Replay.IsEnabled = true;
+    //     Console.WriteLine($"ldNative.version={LdNative.NativeVersion}");
+    // }
 }

@@ -68,6 +68,7 @@
 		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\startup-*-alpha.aar" Pack="true" PackagePath="runtimes/android/native/" />
 		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\launchdarkly-android-client-sdk-*.aar" Pack="true" PackagePath="runtimes/android/native/" />
 		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\launchdarkly-observability-android-*.aar" Pack="true" PackagePath="runtimes/android/native/" />
+		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\lib-release.aar" Pack="true" PackagePath="runtimes/android/native/" />
 		
 		<!-- Specific jars -->
 		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\opentelemetry-*.jar" Pack="true" PackagePath="runtimes/android/native/" />

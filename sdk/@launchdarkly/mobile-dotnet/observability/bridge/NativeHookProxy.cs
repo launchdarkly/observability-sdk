@@ -92,9 +92,9 @@ namespace LaunchDarkly.Observability
     internal sealed class NativeHookProxy : Hook
     {
         private const string EvalIdKey = "__nativeEvalId";
-        private readonly ObservabilityHookProxy _proxy;
+        private readonly RealObservabilityHookProxy _proxy;
 
-        internal NativeHookProxy(ObservabilityHookProxy proxy) : base("Observability")
+        internal NativeHookProxy(RealObservabilityHookProxy proxy) : base("Observability")
         {
             _proxy = proxy;
         }

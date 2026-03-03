@@ -73,7 +73,7 @@ class Observability(
     override fun register(client: LDClient, metadata: EnvironmentMetadata?) {
         this.client = client
         val sdkKey = metadata?.credential ?: ""
-
+        System.out.println("LD:Observability:register sdkKey= ${sdkKey}, mobileKey=${mobileKey}")
         if (mobileKey == sdkKey) {
             LDObserve.context = ObservabilityContext(
                 sdkKey = sdkKey,

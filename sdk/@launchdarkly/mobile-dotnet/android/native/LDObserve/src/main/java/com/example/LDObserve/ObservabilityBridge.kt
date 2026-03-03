@@ -1,7 +1,6 @@
 package com.launchdarkly.LDNative
 
 import android.app.Application
-import android.util.Log
 import com.launchdarkly.observability.BuildConfig
 import com.launchdarkly.observability.api.ObservabilityOptions
 import com.launchdarkly.observability.client.TelemetryInspector
@@ -22,6 +21,7 @@ import io.opentelemetry.api.common.Attributes
 import java.util.Collections
 
 public class LDObservabilityOptions {
+    @JvmField var isEnabled: Boolean = true
     @JvmField var serviceName: String = ""
     @JvmField var serviceVersion: String = ""
     @JvmField var otlpEndpoint: String = ""
@@ -31,12 +31,14 @@ public class LDObservabilityOptions {
     constructor()
 
     constructor(
+        isEnabled: Boolean,
         serviceName: String,
         serviceVersion: String,
         otlpEndpoint: String,
         backendUrl: String,
         contextFriendlyName: String?
     ) {
+        this.isEnabled = isEnabled
         this.serviceName = serviceName
         this.serviceVersion = serviceVersion
         this.otlpEndpoint = otlpEndpoint
@@ -88,10 +90,145 @@ public class LDSessionReplayOptions {
 }
 
 public class ObservabilityBridge {
+    private fun createObservabilityOptionsCompat(
+        observability: LDObservabilityOptions,
+        resourceAttributes: Attributes
+    ): ObservabilityOptions {
+        val tracesApi = com.launchdarkly.observability.api.ObservabilityOptions.TracesApi(
+            includeErrors = false,
+            includeSpans = false
+        )
+        val metricsApi = com.launchdarkly.observability.api.ObservabilityOptions.MetricsApi.disabled()
+        val instrumentations = com.launchdarkly.observability.api.ObservabilityOptions.Instrumentations(
+            crashReporting = false,
+            activityLifecycle = false,
+            launchTime = false
+        )
+        val logLevel = com.launchdarkly.observability.api.ObservabilityOptions.LogLevel.INFO
+        val logAdapter = LDAndroidLogging.adapter()
+        val loggerName = "LaunchDarklyObservabilityPlugin"
+        val customHeaders = emptyMap<String, String>()
+        val sessionBackgroundTimeoutRaw = 0L
+        val debug = false
 
-    public fun getHookProxy(): ObservabilityHookProxy? {
+        val constructors = ObservabilityOptions::class.java.declaredConstructors
+            .sortedByDescending { it.parameterTypes.size }
+
+        for (ctor in constructors) {
+            val p = ctor.parameterTypes
+            val args: Array<Any?>? = when {
+                // Newer synthetic: (enabled, ..., loggerName, mask, marker)
+                p.size == 18 && p[0] == Boolean::class.javaPrimitiveType && p[16] == Int::class.javaPrimitiveType ->
+                    arrayOf(
+                        observability.isEnabled,
+                        observability.serviceName,
+                        observability.serviceVersion,
+                        observability.otlpEndpoint,
+                        observability.backendUrl,
+                        observability.contextFriendlyName,
+                        resourceAttributes,
+                        customHeaders,
+                        sessionBackgroundTimeoutRaw,
+                        debug,
+                        logLevel,
+                        tracesApi,
+                        metricsApi,
+                        instrumentations,
+                        logAdapter,
+                        loggerName,
+                        0,
+                        null
+                    )
+                // Newer marker-only ctor: (enabled, ..., loggerName, marker)
+                p.size == 17 && p[0] == Boolean::class.javaPrimitiveType ->
+                    arrayOf(
+                        observability.isEnabled,
+                        observability.serviceName,
+                        observability.serviceVersion,
+                        observability.otlpEndpoint,
+                        observability.backendUrl,
+                        observability.contextFriendlyName,
+                        resourceAttributes,
+                        customHeaders,
+                        sessionBackgroundTimeoutRaw,
+                        debug,
+                        logLevel,
+                        tracesApi,
+                        metricsApi,
+                        instrumentations,
+                        logAdapter,
+                        loggerName,
+                        null
+                    )
+                // Older synthetic: (serviceName, ..., loggerName, mask, marker)
+                p.size == 17 && p[0] == String::class.java && p[15] == Int::class.javaPrimitiveType ->
+                    arrayOf(
+                        observability.serviceName,
+                        observability.serviceVersion,
+                        observability.otlpEndpoint,
+                        observability.backendUrl,
+                        observability.contextFriendlyName,
+                        resourceAttributes,
+                        customHeaders,
+                        sessionBackgroundTimeoutRaw,
+                        debug,
+                        logLevel,
+                        tracesApi,
+                        metricsApi,
+                        instrumentations,
+                        logAdapter,
+                        loggerName,
+                        0,
+                        null
+                    )
+                // Older marker-only ctor: (serviceName, ..., loggerName, marker)
+                p.size == 16 && p[0] == String::class.java ->
+                    arrayOf(
+                        observability.serviceName,
+                        observability.serviceVersion,
+                        observability.otlpEndpoint,
+                        observability.backendUrl,
+                        observability.contextFriendlyName,
+                        resourceAttributes,
+                        customHeaders,
+                        sessionBackgroundTimeoutRaw,
+                        debug,
+                        logLevel,
+                        tracesApi,
+                        metricsApi,
+                        instrumentations,
+                        logAdapter,
+                        loggerName,
+                        null
+                    )
+                else -> null
+            }
+
+            if (args != null) {
+                try {
+                    ctor.isAccessible = true
+                    return ctor.newInstance(*args) as ObservabilityOptions
+                } catch (_: Throwable) {
+                    // Try next constructor shape.
+                }
+            }
+        }
+
+        throw NoSuchMethodError("No compatible ObservabilityOptions constructor found")
+    }
+
+    private fun printException(prefix: String, t: Throwable) {
+        System.out.println("$prefix ${t::class.java.name}: ${t.message}")
+        val writer = java.io.StringWriter()
+        val printWriter = java.io.PrintWriter(writer)
+        t.printStackTrace(printWriter)
+        printWriter.flush()
+        System.out.println(writer.toString())
+    }
+
+    public fun getHookProxy(): RealObservabilityHookProxy? {
         val real = LDObserve.hookProxy ?: return null
-        return ObservabilityHookProxy(real)
+        return RealObservabilityHookProxy(real)
     }
 
     public fun version(): String {
@@ -132,60 +269,99 @@ public class ObservabilityBridge {
         observability: LDObservabilityOptions,
         replay: LDSessionReplayOptions
     ) {
-        val nativeObservabilityOptions = com.launchdarkly.observability.api.ObservabilityOptions(
-            resourceAttributes = Attributes.builder()
+        System.out.println("LD:ObservabilityBridge start called 3")
+
+        val resourceAttributes = try { Attributes.builder()
                 .put(AttributeKey.stringKey("service.name"), observability.serviceName)
                 .put(AttributeKey.stringKey("service.version"), observability.serviceVersion)
-                .build(),
-            debug = false,
-            otlpEndpoint = observability.otlpEndpoint,
-            backendUrl = observability.backendUrl,
-            tracesApi = com.launchdarkly.observability.api.ObservabilityOptions.TracesApi(includeErrors = false, includeSpans = false),
-            metricsApi = com.launchdarkly.observability.api.ObservabilityOptions.MetricsApi.disabled(),
-            instrumentations = com.launchdarkly.observability.api.ObservabilityOptions.Instrumentations(
-                crashReporting = false, launchTime = false, activityLifecycle = false
-            ),
-            logAdapter = LDAndroidLogging.adapter(),
-        )
+                .build()
+        } catch (t: Throwable) {
+            printException("LD:resourceAttributes failed to build ObservabilityOptions", t)
+            throw t
+        }
 
-        val observabilityPlugin = Observability(
-            application = app,
-            mobileKey = mobileKey,
-            options = nativeObservabilityOptions
-        )
+        System.out.println("LD:ObservabilityBridge resourceAttributes called")
 
-        val sessionReplayPlugin = SessionReplay(
-            options = com.launchdarkly.observability.replay.ReplayOptions(
+        val nativeObservabilityOptions = try {
+            createObservabilityOptionsCompat(observability, resourceAttributes)
+        } catch (t: Throwable) {
+            printException("LD:ObservabilityBridge failed to build ObservabilityOptions", t)
+            throw t
+        }
+
+        val observabilityPlugin = try {
+            Observability(
+                application = app,
+                mobileKey = mobileKey,
+                options = nativeObservabilityOptions
+            )
+        } catch (t: Throwable) {
+            printException("LD:ObservabilityBridge failed to create Observability plugin", t)
+            throw t
+        }
+
+        val nativeSessionReplayOptions = try {
+            val privacy = replay.privacy
+            com.launchdarkly.observability.replay.ReplayOptions(
                 enabled = replay.isEnabled,
                 privacyProfile = com.launchdarkly.observability.replay.PrivacyProfile(
-                    maskTextInputs = replay.privacy.maskTextInputs,
-                    maskText = replay.privacy.maskLabels,
-                    maskImageViews = replay.privacy.maskImages,
-                    maskWebViews = replay.privacy.maskWebViews
+                    maskTextInputs = privacy.maskTextInputs,
+                    maskText = privacy.maskLabels,
+                    maskImageViews = privacy.maskImages,
+                    maskWebViews = privacy.maskWebViews
                 )
             )
+        } catch (t: Throwable) {
+            printException("LD:ObservabilityBridge failed to build ReplayOptions", t)
+            throw t
+        }
+
+        val sessionReplayPlugin = try {
+            SessionReplay(options = nativeSessionReplayOptions)
+        } catch (t: Throwable) {
+            printException("LD:ObservabilityBridge failed to create SessionReplay plugin", t)
+            throw t
+        }
+
+        System.out.println(
+            "LD:ObservabilityBridge Session replay enabled=${nativeSessionReplayOptions.enabled}, " +
+                "backendUrl=${nativeObservabilityOptions.backendUrl}"
         )
 
-        Log.i("ObservabilityBridge", "Session replay enabled=${replay.isEnabled}, privacy.maskLabels=${replay.privacy.maskLabels}")
-
-        val ldConfig = LDConfig.Builder(LDConfig.Builder.AutoEnvAttributes.Enabled)
-            .mobileKey(mobileKey)
-            .offline(true)
-            .plugins(
-                Components.plugins().setPlugins(
-                    listOf(
-                        observabilityPlugin,
-                        sessionReplayPlugin
+        val ldConfig = try {
+            LDConfig.Builder(LDConfig.Builder.AutoEnvAttributes.Enabled)
+                .mobileKey(mobileKey)
+                //.offline(true)
+                .plugins(
+                    Components.plugins().setPlugins(
+                        listOf(
+                            observabilityPlugin,
+                            sessionReplayPlugin
+                        )
                     )
                 )
-            )
-            .build()
+                .build()
+        } catch (t: Throwable) {
+            printException("LD:ObservabilityBridge failed to build LDConfig", t)
+            throw t
+        }
 
-        val context = LDContext.builder(ContextKind.DEFAULT, "maui-user-key")
-            .anonymous(true)
-            .build()
+        val context = try {
+            LDContext.builder(ContextKind.DEFAULT, "maui-user-key")
+                .anonymous(true)
+                .build()
+        } catch (t: Throwable) {
+            printException("LD:ObservabilityBridge failed to build LDContext", t)
+            throw t
+        }
 
-        LDClient.init(app, ldConfig, context)
+        try {
+            LDClient.init(app, ldConfig, context)
+            System.out.println("LD:ObservabilityBridge LDClient.init completed")
+        } catch (t: Throwable) {
+            printException("LD:ObservabilityBridge LDClient.init failed", t)
+            throw t
+        }
     }
 
    

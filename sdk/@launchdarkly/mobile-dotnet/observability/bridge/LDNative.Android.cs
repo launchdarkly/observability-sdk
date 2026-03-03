@@ -6,6 +6,7 @@ internal static class LDNativeAndroidMapping
     public static global::LDObserveAndroid.LDObservabilityOptions ToNative(this ObservabilityOptions options)
     {
         return new global::LDObserveAndroid.LDObservabilityOptions(
+            options.IsEnabled,
             options.ServiceName,
             options.ServiceVersion,
             options.OtlpEndpoint,

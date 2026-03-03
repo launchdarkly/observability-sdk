@@ -61,8 +61,13 @@
 	</ItemGroup>
 
 	<!-- Reference the Android binding dependencies (optional: only if built locally) -->
-	<ItemGroup Condition="$(TargetFramework.Contains('android')) and '$(LD_INCLUDE_NATIVE_DEPS)' == 'true' and Exists('..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps')">
-		<AndroidLibrary Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\*launchdarkly*.aar">
+	<ItemGroup Condition="$(TargetFramework.Contains('android')) and '$(LD_INCLUDE_NATIVE_DEPS)' == 'true' and '$(Configuration)' == 'Release' and Exists('..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps')">
+		<AndroidLibrary Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\*launchdarkly*.aar"
+		                Exclude="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\launchdarkly-observability-android-*.aar">
+			<Bind>false</Bind>
+			<Visible>false</Visible>
+		</AndroidLibrary>
+		<AndroidLibrary Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\lib-release.aar">
 			<Bind>false</Bind>
 			<Visible>false</Visible>
 		</AndroidLibrary>
@@ -124,77 +129,82 @@
 			<Visible>false</Visible>
 		</AndroidLibrary>
 	</ItemGroup>
-	<ItemGroup Condition="$(TargetFramework.Contains('android')) and '$(LD_INCLUDE_NATIVE_DEPS)' == 'true' and Exists('..\android\native\LDObserve\bin\Debug\net9.0-android\outputs\deps')">
-		<AndroidLibrary Include="..\android\native\LDObserve\bin\Debug\net9.0-android\outputs\deps\*launchdarkly*.aar">
+	<ItemGroup Condition="$(TargetFramework.Contains('android')) and '$(LD_INCLUDE_NATIVE_DEPS)' == 'true' and '$(Configuration)' == 'Debug' and Exists('..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps')">
+		<AndroidLibrary Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\*launchdarkly*.aar"
+		                Exclude="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\launchdarkly-observability-android-*.aar">
 			<Bind>false</Bind>
 			<Visible>false</Visible>
 		</AndroidLibrary>
-		<AndroidJavaLibrary Include="..\android\native\LDObserve\bin\Debug\net9.0-android\outputs\deps\*launchdarkly*.jar">
-			<Bind>false</Bind>
-			<Visible>false</Visible>
-		</AndroidJavaLibrary>
-		<AndroidJavaLibrary Include="..\android\native\LDObserve\bin\Debug\net9.0-android\outputs\deps\ok*.jar">
-			<Bind>false</Bind>
-			<Visible>false</Visible>
-		</AndroidJavaLibrary>
-		<AndroidLibrary Include="..\android\native\LDObserve\bin\Debug\net9.0-android\outputs\deps\*timber*.aar">
+		<AndroidLibrary Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\lib-release.aar">
 			<Bind>false</Bind>
 			<Visible>false</Visible>
 		</AndroidLibrary>
-		<AndroidJavaLibrary Include="..\android\native\LDObserve\bin\Debug\net9.0-android\outputs\deps\opentelemetry*.jar">
+		<AndroidJavaLibrary Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\*launchdarkly*.jar">
 			<Bind>false</Bind>
 			<Visible>false</Visible>
 		</AndroidJavaLibrary>
-		<AndroidJavaLibrary Include="..\android\native\LDObserve\bin\Debug\net9.0-android\outputs\deps\jackson*.jar">
+		<AndroidJavaLibrary Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\ok*.jar">
+			<Bind>false</Bind>
+			<Visible>false</Visible>
+		</AndroidJavaLibrary>
+		<AndroidLibrary Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\*timber*.aar">
+			<Bind>false</Bind>
+			<Visible>false</Visible>
+		</AndroidLibrary>
+		<AndroidJavaLibrary Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\opentelemetry*.jar">
+			<Bind>false</Bind>
+			<Visible>false</Visible>
+		</AndroidJavaLibrary>
+		<AndroidJavaLibrary Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\jackson*.jar">
 			<Bind>false</Bind>
 			<Visible>false</Visible>
 		</AndroidJavaLibrary>
 		<!-- Allowlist specific LD AARs to avoid pulling AndroidX -->
-		<AndroidLibrary Include="..\android\native\LDObserve\bin\Debug\net9.0-android\outputs\deps\android-agent-*.aar">
+		<AndroidLibrary Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\android-agent-*.aar">
 			<Bind>false</Bind>
 			<Visible>false</Visible>
 		</AndroidLibrary>
-		<AndroidLibrary Include="..\android\native\LDObserve\bin\Debug\net9.0-android\outputs\deps\common-*.aar">
+		<AndroidLibrary Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\common-*.aar">
 			<Bind>false</Bind>
 			<Visible>false</Visible>
 		</AndroidLibrary>
-		<AndroidLibrary Include="..\android\native\LDObserve\bin\Debug\net9.0-android\outputs\deps\core-0.11.0-alpha.aar">
+		<AndroidLibrary Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\core-0.11.0-alpha.aar">
 			<Bind>false</Bind>
 			<Visible>false</Visible>
 		</AndroidLibrary>
-		<AndroidLibrary Include="..\android\native\LDObserve\bin\Debug\net9.0-android\outputs\deps\crash-0.11.0-alpha.aar">
+		<AndroidLibrary Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\crash-0.11.0-alpha.aar">
 			<Bind>false</Bind>
 			<Visible>false</Visible>
 		</AndroidLibrary>
-		<AndroidLibrary Include="..\android\native\LDObserve\bin\Debug\net9.0-android\outputs\deps\anr-*.aar">
+		<AndroidLibrary Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\anr-*.aar">
 			<Bind>false</Bind>
 			<Visible>false</Visible>
 		</AndroidLibrary>
-		<AndroidLibrary Include="..\android\native\LDObserve\bin\Debug\net9.0-android\outputs\deps\activity-*-alpha.aar">
+		<AndroidLibrary Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\activity-*-alpha.aar">
 			<Bind>false</Bind>
 			<Visible>false</Visible>
 		</AndroidLibrary>
-		<AndroidLibrary Include="..\android\native\LDObserve\bin\Debug\net9.0-android\outputs\deps\android-instrumentation-*.aar">
+		<AndroidLibrary Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\android-instrumentation-*.aar">
 			<Bind>false</Bind>
 			<Visible>false</Visible>
 		</AndroidLibrary>
-		<AndroidLibrary Include="..\android\native\LDObserve\bin\Debug\net9.0-android\outputs\deps\session-0.11.0-alpha.aar">
+		<AndroidLibrary Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\session-0.11.0-alpha.aar">
 			<Bind>false</Bind>
 			<Visible>false</Visible>
 		</AndroidLibrary>
-		<AndroidLibrary Include="..\android\native\LDObserve\bin\Debug\net9.0-android\outputs\deps\services-0.11.0-alpha.aar">
+		<AndroidLibrary Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\services-0.11.0-alpha.aar">
 			<Bind>false</Bind>
 			<Visible>false</Visible>
 		</AndroidLibrary>
 	</ItemGroup>
 	<!-- Include the module AAR containing ObservabilityBridge (guard per path) -->
-	<ItemGroup Condition="$(TargetFramework.Contains('android')) and '$(LD_INCLUDE_NATIVE_DEPS)' == 'true' and Exists('..\android\native\LDObserve\bin\Release\net9.0-android\outputs\aar\LDObserve-release.aar')">
+	<ItemGroup Condition="$(TargetFramework.Contains('android')) and '$(LD_INCLUDE_NATIVE_DEPS)' == 'true' and '$(Configuration)' == 'Release' and Exists('..\android\native\LDObserve\bin\Release\net9.0-android\outputs\aar\LDObserve-release.aar')">
 		<AndroidLibrary Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\aar\LDObserve-release.aar">
 			<Bind>false</Bind>
 		</AndroidLibrary>
 	</ItemGroup>
-	<ItemGroup Condition="$(TargetFramework.Contains('android')) and '$(LD_INCLUDE_NATIVE_DEPS)' == 'true' and Exists('..\android\native\LDObserve\bin\Debug\net9.0-android\outputs\aar\LDObserve-release.aar')">
-		<AndroidLibrary Include="..\android\native\LDObserve\bin\Debug\net9.0-android\outputs\aar\LDObserve-release.aar">
+	<ItemGroup Condition="$(TargetFramework.Contains('android')) and '$(LD_INCLUDE_NATIVE_DEPS)' == 'true' and '$(Configuration)' == 'Debug' and Exists('..\android\native\LDObserve\bin\Release\net9.0-android\outputs\aar\LDObserve-release.aar')">
+		<AndroidLibrary Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\aar\LDObserve-release.aar">
 			<Bind>false</Bind>
 		</AndroidLibrary>
 	</ItemGroup>
