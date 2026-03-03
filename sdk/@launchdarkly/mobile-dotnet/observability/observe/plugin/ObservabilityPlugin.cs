@@ -45,6 +45,7 @@ namespace LaunchDarkly.Observability
 
         public sealed class ObservabilityPluginBuilder
         {
+            private bool _isEnabled = true;
             private string _serviceName = ObservabilityOptions.DefaultServiceName;
             private string _serviceVersion = ObservabilityOptions.DefaultServiceVersion;
             private string _otlpEndpoint = ObservabilityOptions.DefaultOtlpEndpoint;
@@ -57,10 +58,17 @@ namespace LaunchDarkly.Observability
             internal ObservabilityPluginBuilder(ObservabilityOptions options)
             {
                 if (options == null) throw new ArgumentNullException(nameof(options));
+                _isEnabled = options.IsEnabled;
                 _serviceName = options.ServiceName;
                 _serviceVersion = options.ServiceVersion;
                 _otlpEndpoint = options.OtlpEndpoint;
                 _backendUrl = options.BackendUrl;
+            }
+
+            public ObservabilityPluginBuilder WithIsEnabled(bool isEnabled)
+            {
+                _isEnabled = isEnabled;
+                return this;
             }
 
             public ObservabilityPluginBuilder WithServiceName(string serviceName)
@@ -90,6 +98,7 @@ namespace LaunchDarkly.Observability
             internal ObservabilityOptions BuildOptions()
             {
                 return new ObservabilityOptions(
+                    isEnabled: _isEnabled,
                     serviceName: _serviceName,
                     serviceVersion: _serviceVersion,
                     otlpEndpoint: _otlpEndpoint,

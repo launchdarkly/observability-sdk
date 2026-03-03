@@ -141,18 +141,18 @@ public class ObservabilityBridge {
         observability: LDObservabilityOptions,
         replay: LDSessionReplayOptions
     ) {
-        System.out.println("LD:ObservabilityBridge start called 7")
+       // System.out.println("LD:ObservabilityBridge start called 7")
 
         val resourceAttributes = try { Attributes.builder()
                 .put(AttributeKey.stringKey("service.name"), observability.serviceName)
                 .put(AttributeKey.stringKey("service.version"), observability.serviceVersion)
                 .build()
         } catch (t: Throwable) {
-            printException("LD:resourceAttributes failed to build ObservabilityOptions", t)
+            printException("LD:resourceAttributes failed to build resourceAttributes", t)
             throw t
         }
 
-        System.out.println("LD:ObservabilityBridge resourceAttributes called")
+        //System.out.println("LD:ObservabilityBridge resourceAttributes called")
 
         val nativeObservabilityOptions = try {
             com.launchdarkly.observability.api.ObservabilityOptions(
@@ -215,7 +215,7 @@ public class ObservabilityBridge {
         val ldConfig = try {
             LDConfig.Builder(LDConfig.Builder.AutoEnvAttributes.Enabled)
                 .mobileKey(mobileKey)
-                //.offline(true)
+                .offline(true)
                 .plugins(
                     Components.plugins().setPlugins(
                         listOf(
@@ -241,7 +241,7 @@ public class ObservabilityBridge {
 
         try {
             LDClient.init(app, ldConfig, context)
-            System.out.println("LD:ObservabilityBridge LDClient.init completed")
+            //System.out.println("LD:ObservabilityBridge LDClient.init completed")
         } catch (t: Throwable) {
             printException("LD:ObservabilityBridge LDClient.init failed", t)
             throw t
