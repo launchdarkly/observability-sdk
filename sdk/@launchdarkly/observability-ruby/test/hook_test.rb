@@ -89,7 +89,7 @@ class HookTest < Minitest::Test
     assert_equal 'true', span.attributes['feature_flag.result.value']
     assert_equal '1', span.attributes['feature_flag.result.variant']
     assert_equal 'default', span.attributes['feature_flag.result.reason']
-    
+
     # LaunchDarkly-specific attributes
     assert_equal 'FALLTHROUGH', span.attributes['launchdarkly.reason.kind']
   end
@@ -108,11 +108,11 @@ class HookTest < Minitest::Test
     assert_equal 'error', span.attributes['feature_flag.result.reason']
     assert_equal 'flag_not_found', span.attributes['error.type']
     assert_includes span.attributes['error.message'], 'FLAG_NOT_FOUND'
-    
+
     # LaunchDarkly-specific attributes
     assert_equal 'ERROR', span.attributes['launchdarkly.reason.kind']
     assert_equal 'FLAG_NOT_FOUND', span.attributes['launchdarkly.reason.error_kind']
-    
+
     assert_equal OpenTelemetry::Trace::Status::ERROR, span.status.code
   end
 
@@ -150,7 +150,7 @@ class HookTest < Minitest::Test
     assert_equal 'my-flag', span.attributes['feature_flag.key']
     assert_equal 'user-456', span.attributes['feature_flag.context.id']
     assert_equal 'LaunchDarkly', span.attributes['feature_flag.provider.name']
-    
+
     # LaunchDarkly-specific attributes
     assert_equal 'user', span.attributes['launchdarkly.context.kind']
     assert_equal 'user-456', span.attributes['launchdarkly.context.key']
@@ -190,5 +190,48 @@ class HookTest < Minitest::Test
 
     spans = @exporter.finished_spans
     assert_equal 'evaluation', spans.first.name
+  end
+
+  def test_context_id_uses_fully_qualified_key_for_user
+    context = LaunchDarkly::LDContext.create({ key: 'user-456', kind: 'user' })
+    series_context = LaunchDarkly::Interfaces::Hooks::EvaluationSeriesContext.new(
+      'my-flag', context, false, :variation
+    )
+
+    data = @hook.before_evaluation(series_context, {})
+    @hook.after_evaluation(series_context, data, create_evaluation_detail)
+
+    span = @exporter.finished_spans.first
+    assert_equal 'user-456', span.attributes['feature_flag.context.id']
+  end
+
+  def test_context_id_uses_fully_qualified_key_for_non_user_kind
+    context = LaunchDarkly::LDContext.create({ key: 'org-789', kind: 'org' })
+    series_context = LaunchDarkly::Interfaces::Hooks::EvaluationSeriesContext.new(
+      'my-flag', context, false, :variation
+    )
+
+    data = @hook.before_evaluation(series_context, {})
+    @hook.after_evaluation(series_context, data, create_evaluation_detail)
+
+    span = @exporter.finished_spans.first
+    assert_equal 'org:org-789', span.attributes['feature_flag.context.id']
+  end
+
+  def test_context_id_uses_fully_qualified_key_for_multi_kind
+    user_ctx = LaunchDarkly::LDContext.create({ key: 'user-1', kind: 'user' })
+    org_ctx = LaunchDarkly::LDContext.create({ key: 'org-1', kind: 'org' })
+    multi = LaunchDarkly::LDContext.create_multi([user_ctx, org_ctx])
+
+    series_context = LaunchDarkly::Interfaces::Hooks::EvaluationSeriesContext.new(
+      'my-flag', multi, false, :variation
+    )
+
+    data = @hook.before_evaluation(series_context, {})
+    @hook.after_evaluation(series_context, data, create_evaluation_detail)
+
+    span = @exporter.finished_spans.first
+    # Kinds sorted alphabetically, colon-separated (matches Node/Android/RN/Flutter)
+    assert_equal 'org:org-1:user:user-1', span.attributes['feature_flag.context.id']
   end
 end

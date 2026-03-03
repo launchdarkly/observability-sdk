@@ -125,14 +125,11 @@ module LaunchDarklyObservability
         LD_EVALUATION_METHOD => series_context.method.to_s
       }
 
-      # Add context information safely
       context = series_context.context
       if context
-        # Use semantic convention for context.id (the primary identifier)
-        attrs[FEATURE_FLAG_CONTEXT_ID] = extract_context_key(context)
-        # Use LaunchDarkly-specific attributes for additional context details
+        attrs[FEATURE_FLAG_CONTEXT_ID] = context.fully_qualified_key
         attrs[LD_CONTEXT_KIND] = extract_context_kind(context)
-        attrs[LD_CONTEXT_KEY] = extract_context_key(context)
+        attrs[LD_CONTEXT_KEY] = context.fully_qualified_key
       end
 
       attrs
@@ -143,16 +140,6 @@ module LaunchDarklyObservability
         context.kinds.join(',')
       elsif context.respond_to?(:kind)
         context.kind.to_s
-      else
-        'unknown'
-      end
-    end
-
-    def extract_context_key(context)
-      if context.respond_to?(:multi_kind?) && context.multi_kind?
-        context.kinds.map { |k| context.individual_context(k)&.key }.compact.join(',')
-      elsif context.respond_to?(:key)
-        context.key.to_s
       else
         'unknown'
       end
@@ -223,7 +210,7 @@ module LaunchDarklyObservability
       event_attributes = {
         FEATURE_FLAG_KEY => series_context.key,
         FEATURE_FLAG_PROVIDER_NAME => 'LaunchDarkly',
-        FEATURE_FLAG_CONTEXT_ID => extract_context_key(series_context.context)
+        FEATURE_FLAG_CONTEXT_ID => series_context.context.fully_qualified_key
       }
 
       # Add variation index if available

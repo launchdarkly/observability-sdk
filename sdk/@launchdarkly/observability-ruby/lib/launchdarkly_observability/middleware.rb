@@ -37,30 +37,32 @@ module LaunchDarklyObservability
       return @app.call(env) unless tracing_available?
 
       request = Rack::Request.new(env)
-
-      # Extract session/request IDs from headers (if present)
       session_id, request_id = extract_observability_context(env)
-
-      # Set baggage for downstream spans
       ctx = set_baggage_context(session_id, request_id)
+      app_error = nil
 
       OpenTelemetry::Context.with_current(ctx) do
         tracer.in_span(span_name(request), attributes: request_attributes(request)) do |span|
-          # Add session/request IDs as span attributes
           span.set_attribute(SESSION_BAGGAGE_KEY, session_id) if session_id
           span.set_attribute(REQUEST_BAGGAGE_KEY, request_id) if request_id
 
-          status, headers, body = @app.call(env)
+          begin
+            status, headers, body = @app.call(env)
+          rescue StandardError => e
+            app_error = e
+            span.record_exception(e)
+            span.status = OpenTelemetry::Trace::Status.error(e.message)
+            raise
+          end
 
-          # Add response attributes
           span.set_attribute('http.status_code', status)
           span.status = OpenTelemetry::Trace::Status.error("HTTP #{status}") if status >= 500
-
           [status, headers, body]
         end
       end
     rescue StandardError => e
-      # Don't let middleware errors break the request
+      raise if app_error
+
       warn "[LaunchDarklyObservability] Middleware error: #{e.message}"
       @app.call(env)
     end

@@ -58,7 +58,7 @@ class HealthController < ApplicationController
       context_key: user_key,
       value: detail.value,
       variation_index: detail.variation_index,
-      reason: detail.reason&.to_json
+      reason: detail.reason ? JSON.parse(detail.reason.to_json) : nil
     })
   end
 end

@@ -80,7 +80,7 @@ class FlagsController < ApplicationController
 
     render json: {
       valid: state.valid?,
-      flags: state.to_json
+      flags: JSON.parse(state.to_json)
     }
   end
 
@@ -120,7 +120,7 @@ class FlagsController < ApplicationController
     {
       value: detail.value,
       variation_index: detail.variation_index,
-      reason: detail.reason&.to_json
+      reason: detail.reason ? JSON.parse(detail.reason.to_json) : nil
     }
   end
 end

@@ -116,6 +116,22 @@ class MiddlewareTest < Minitest::Test
     end
   end
 
+  def test_middleware_does_not_double_execute_on_app_exception
+    call_count = 0
+    error_app = lambda do |_env|
+      call_count += 1
+      raise StandardError, 'Test error'
+    end
+
+    middleware = LaunchDarklyObservability::Middleware.new(error_app)
+
+    assert_raises(StandardError) do
+      middleware.call(Rack::MockRequest.env_for('/exception'))
+    end
+
+    assert_equal 1, call_count
+  end
+
   def test_middleware_continues_without_otel
     # Temporarily disable OpenTelemetry
     original_provider = OpenTelemetry.tracer_provider
