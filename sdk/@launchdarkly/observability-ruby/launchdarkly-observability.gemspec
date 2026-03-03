@@ -9,7 +9,7 @@ Gem::Specification.new do |spec|
   spec.email         = ['support@launchdarkly.com']
 
   spec.summary       = 'LaunchDarkly Observability Plugin for the Ruby SDK'
-  spec.description   = 'OpenTelemetry-based observability instrumentation for LaunchDarkly Ruby SDK with Rails support'
+  spec.description   = 'OpenTelemetry-based observability instrumentation for the LaunchDarkly Ruby SDK. Works with Rails, Sinatra, and any Rack-compatible framework.'
   spec.homepage      = 'https://launchdarkly.com'
   spec.license       = 'Apache-2.0'
   spec.required_ruby_version = Gem::Requirement.new('>= 3.0.0')
