@@ -234,4 +234,31 @@ class HookTest < Minitest::Test
     # Kinds sorted alphabetically, colon-separated (matches Node/Android/RN/Flutter)
     assert_equal 'org:org-1:user:user-1', span.attributes['feature_flag.context.id']
   end
+
+  def test_nil_context_does_not_raise_and_still_records_event
+    series_context = LaunchDarkly::Interfaces::Hooks::EvaluationSeriesContext.new(
+      'my-flag', nil, false, :variation
+    )
+    detail = create_evaluation_detail
+
+    data = @hook.before_evaluation(series_context, {})
+    result = @hook.after_evaluation(series_context, data, detail)
+
+    assert_equal data, result
+
+    spans = @exporter.finished_spans
+    assert_equal 1, spans.length
+
+    span = spans.first
+    assert_equal 'evaluation', span.name
+
+    # feature_flag event should still be recorded without context.id
+    events = span.events
+    refute_nil events
+    flag_event = events.find { |e| e.name == 'feature_flag' }
+    refute_nil flag_event, 'Expected a feature_flag event even with nil context'
+    assert_equal 'my-flag', flag_event.attributes['feature_flag.key']
+    assert_equal 'LaunchDarkly', flag_event.attributes['feature_flag.provider.name']
+    assert_nil flag_event.attributes['feature_flag.context.id']
+  end
 end

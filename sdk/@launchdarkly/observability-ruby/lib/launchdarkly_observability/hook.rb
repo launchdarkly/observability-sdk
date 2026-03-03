@@ -209,9 +209,13 @@ module LaunchDarklyObservability
     def add_feature_flag_event(span, series_context, detail)
       event_attributes = {
         FEATURE_FLAG_KEY => series_context.key,
-        FEATURE_FLAG_PROVIDER_NAME => 'LaunchDarkly',
-        FEATURE_FLAG_CONTEXT_ID => series_context.context.fully_qualified_key
+        FEATURE_FLAG_PROVIDER_NAME => 'LaunchDarkly'
       }
+
+      context = series_context.context
+      if context
+        event_attributes[FEATURE_FLAG_CONTEXT_ID] = context.fully_qualified_key
+      end
 
       # Add variation index if available
       if detail.variation_index
