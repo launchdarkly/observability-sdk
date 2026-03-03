@@ -29,7 +29,9 @@ public class LDNative
         var app = (Android.App.Application)global::Android.App.Application.Context;
         var bridge = new ObservabilityBridge();
         ldNative.NativeVersion = bridge.Version();
-        bridge.Start(app, mobileKey, observability.ToNative(), replay.ToNative());
+        var bridgeObservabilityOptions = observability.ToNative();
+        var bridgeReplayOptions = replay.ToNative();
+        bridge.Start(app, mobileKey, bridgeObservabilityOptions, bridgeReplayOptions);
 #elif IOS
         var bridge = new ObservabilityBridgeClient();
         ldNative.NativeVersion = bridge.Version();

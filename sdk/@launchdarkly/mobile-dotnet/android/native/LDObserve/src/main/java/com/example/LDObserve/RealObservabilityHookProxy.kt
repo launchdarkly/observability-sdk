@@ -1,18 +1,15 @@
 package com.launchdarkly.LDNative
 
-import com.launchdarkly.observability.plugin.ObservabilityHookProxy as RealProxy
+import com.launchdarkly.observability.plugin.ObservabilityHookProxy as PluginObservabilityHookProxy
 
 /**
- * Thin forwarding wrapper so the Xamarin.Android binding can see this class.
+ * Bindable wrapper around the real observability hook proxy.
  *
- * The real [RealProxy] lives in observability-android and shares
- * [com.launchdarkly.observability.plugin.ObservabilityHookExporter] with
- * [com.launchdarkly.observability.plugin.ObservabilityHook].
- * The binding generator only emits C# wrappers for classes in *this* module's
- * package, so we re-expose every method here.
+ * Keeping this class in the LDNative package ensures Xamarin binding generation
+ * emits a C# type without needing manual JNI glue code.
  */
-class ObservabilityHookProxy internal constructor(
-    private val delegate: RealProxy
+class RealObservabilityHookProxy internal constructor(
+    private val delegate: PluginObservabilityHookProxy
 ) {
     fun beforeEvaluation(evaluationId: String, flagKey: String, contextKey: String) {
         delegate.beforeEvaluation(evaluationId, flagKey, contextKey)
