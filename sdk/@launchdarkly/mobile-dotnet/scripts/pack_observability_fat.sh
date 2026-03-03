@@ -13,11 +13,11 @@ AGGREGATOR="$ROOT_DIR/observability/LDObservability.csproj"
 mkdir -p "$OUT_DIR"
 
 DOTNET_ARGS=()
-CLIENT_SDK_KEY="$ROOT_DIR/../../../../dotnet-core/LaunchDarkly.ClientSdk.snk"
-if [[ ! -f "$CLIENT_SDK_KEY" ]]; then
-  echo "Signing key not found at $CLIENT_SDK_KEY; building unsigned."
-  DOTNET_ARGS+=("-p:SignAssembly=false" "-p:PublicSign=false")
-fi
+# CLIENT_SDK_KEY="$ROOT_DIR/../../../../dotnet-core/LaunchDarkly.ClientSdk.snk"
+# if [[ ! -f "$CLIENT_SDK_KEY" ]]; then
+#   echo "Signing key not found at $CLIENT_SDK_KEY; building unsigned."
+#   DOTNET_ARGS+=("-p:SignAssembly=false" "-p:PublicSign=false")
+# fi
 
 echo "Building Android binding (Release)..."
 dotnet build "$ANDROID_BINDING" -c Release "${DOTNET_ARGS[@]}"
