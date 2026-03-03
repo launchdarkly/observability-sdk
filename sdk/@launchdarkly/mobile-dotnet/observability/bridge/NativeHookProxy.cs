@@ -48,33 +48,33 @@ namespace LaunchDarkly.Observability
             return data;
         }
 
-        public override SeriesData BeforeIdentify(IdentifySeriesContext context, SeriesData data)
-        {
-            return data;
-        }
+        // public override SeriesData BeforeIdentify(IdentifySeriesContext context, SeriesData data)
+        // {
+        //     return data;
+        // }
 
-        public override SeriesData AfterIdentify(IdentifySeriesContext context, SeriesData data,
-            IdentifySeriesResult result)
-        {
-            var contextKeys = new NSMutableDictionary();
-            if (context.Context.Multiple)
-            {
-                foreach (var individual in context.Context.MultiKindContexts)
-                {
-                    contextKeys.Add(new NSString(individual.Kind.Value), new NSString(individual.Key));
-                }
-            }
-            else
-            {
-                contextKeys.Add(new NSString(context.Context.Kind.Value), new NSString(context.Context.Key));
-            }
-            _proxy.AfterIdentify(
-                contextKeys,
-                context.Context.FullyQualifiedKey,
-                result.Status == IdentifySeriesResult.IdentifySeriesStatus.Completed
-            );
-            return data;
-        }
+        // public override SeriesData AfterIdentify(IdentifySeriesContext context, SeriesData data,
+        //     IdentifySeriesResult result)
+        // {
+        //     var contextKeys = new NSMutableDictionary();
+        //     if (context.Context.Multiple)
+        //     {
+        //         foreach (var individual in context.Context.MultiKindContexts)
+        //         {
+        //             contextKeys.Add(new NSString(individual.Kind.Value), new NSString(individual.Key));
+        //         }
+        //     }
+        //     else
+        //     {
+        //         contextKeys.Add(new NSString(context.Context.Kind.Value), new NSString(context.Context.Key));
+        //     }
+        //     _proxy.AfterIdentify(
+        //         contextKeys,
+        //         context.Context.FullyQualifiedKey,
+        //         result.Status == IdentifySeriesResult.IdentifySeriesStatus.Completed
+        //     );
+        //     return data;
+        //}
     }
 }
 #elif ANDROID

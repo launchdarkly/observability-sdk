@@ -6,8 +6,8 @@
 		<NoBuild>true</NoBuild>
 		<IncludeBuildOutput>false</IncludeBuildOutput>
 		<IsPackable>true</IsPackable>
-		<PackageId>LaunchDarkly.SessionReplay</PackageId>
-		<Version>0.3.4</Version>
+		<PackageId>LaunchDarkly.DemoObservability</PackageId>
+		<Version>0.43.0</Version>
 		<Authors>LaunchDarkly</Authors>
         <Owners>LaunchDarkly</Owners>
         <Company>LaunchDarkly</Company>
