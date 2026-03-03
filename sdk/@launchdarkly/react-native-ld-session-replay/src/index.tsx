@@ -1,6 +1,9 @@
 import SessionReplayReactNative from './NativeSessionReplayReactNative';
 import type { SessionReplayOptions } from './NativeSessionReplayReactNative';
-import type { LDPlugin, LDClientMin } from '@launchdarkly/observability-react-native';
+import type {
+  LDPlugin,
+  LDClientMin,
+} from '@launchdarkly/observability-react-native';
 import type {
   LDPluginEnvironmentMetadata,
   LDPluginMetadata,
