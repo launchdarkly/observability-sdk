@@ -20,12 +20,10 @@ class ExportDiffManager(
 
     fun createCaptureEvent(
         rawFrame: ImageCaptureService.RawFrame,
-        session: String,
-        onTiledFrameComputed: (() -> Unit)? = null,
+        session: String
     ): ExportFrame? {
         synchronized(lock) {
             val tiledFrame = tileDiffManager.computeTiledFrame(rawFrame) ?: return null
-            onTiledFrameComputed?.invoke()
             return createCaptureEventInternal(tiledFrame, session)
         }
     }

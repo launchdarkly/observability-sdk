@@ -101,9 +101,9 @@ class BenchmarkExecutor {
 
         for (frame in copies) {
             val captureStart = System.nanoTime()
-            val exportFrame = exportDiffManager.createCaptureEvent(frame, "benchmark") {
-                captureTimeNanos += System.nanoTime() - captureStart
-            }
+            val exportFrame = exportDiffManager.createCaptureEvent(frame, "benchmark")
+            captureTimeNanos += System.nanoTime() - captureStart
+
             if (exportFrame == null) continue
 
             val events = if (isFirst) {
