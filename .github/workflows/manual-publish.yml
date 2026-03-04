@@ -38,6 +38,14 @@ on:
                 description: 'The tag name for the dotnet package. Should be set when publishing a dotnet package.'
                 type: string
                 required: false
+            release_launchdarkly_ruby:
+                description: 'Should release @launchdarkly/observability-ruby package.'
+                type: boolean
+                required: true
+            ruby_tag_name:
+                description: 'The tag name for the ruby package. Should be set when publishing a ruby package.'
+                type: string
+                required: false
 
 permissions:
     id-token: write
@@ -185,3 +193,34 @@ jobs:
             base64-subjects: '${{ needs.publish-dotnet-sdk.outputs.package-hashes }}'
             upload-assets: true
             upload-tag-name: ${{ inputs.dotnet_tag_name }}
+
+    publish-ruby-sdk:
+        runs-on: ubuntu-latest
+        if: ${{ inputs.release_launchdarkly_ruby == true }}
+        permissions:
+            id-token: write
+        outputs:
+            package-hashes: ${{ steps.publish.outputs.package-hashes }}
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Publish Ruby SDK
+              id: publish
+              uses: ./.github/actions/publish-ruby-sdk
+              with:
+                  workspace-path: sdk/@launchdarkly/observability-ruby
+                  aws-role-arn: ${{ vars.AWS_ROLE_ARN }}
+
+    publish-ruby-sdk-provenance:
+        needs: ['publish-ruby-sdk']
+        if: ${{ inputs.release_launchdarkly_ruby == true && inputs.dry-run == false }}
+        permissions:
+            actions: read
+            id-token: write
+            contents: write
+        uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.0.0
+        with:
+            base64-subjects: '${{ needs.publish-ruby-sdk.outputs.package-hashes }}'
+            upload-assets: true
+            upload-tag-name: ${{ inputs.ruby_tag_name }}
