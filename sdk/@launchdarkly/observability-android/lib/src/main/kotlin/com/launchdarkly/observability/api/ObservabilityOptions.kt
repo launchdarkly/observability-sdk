@@ -30,6 +30,7 @@ const val DEFAULT_BACKEND_URL = "https://pub.observability.app.launchdarkly.com"
  * @property loggerName The name of the logger to use. Defaults to "LaunchDarklyObservabilityPlugin".
  */
 data class ObservabilityOptions(
+    val enabled: Boolean = true,
     val serviceName: String = DEFAULT_SERVICE_NAME,
     val serviceVersion: String = BuildConfig.OBSERVABILITY_SDK_VERSION,
     val otlpEndpoint: String = DEFAULT_OTLP_ENDPOINT,

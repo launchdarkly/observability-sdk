@@ -3,19 +3,20 @@
 		<TargetFrameworks>net9.0-android;net9.0-ios</TargetFrameworks>
 		<!-- Use MAUI workload references to avoid runtime version mismatches -->
 		<UseMaui>true</UseMaui>
+		<UseLocalClientSdk>false</UseLocalClientSdk>
 		<SkipValidateMauiImplicitPackageReferences>true</SkipValidateMauiImplicitPackageReferences>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<RootNamespace>LaunchDarkly</RootNamespace>
 		<AssemblyName>LDObservability</AssemblyName>
 
-		<SupportedOSPlatformVersion Condition="$(TargetFramework.Contains('android'))">24.0</SupportedOSPlatformVersion>
-		<SupportedOSPlatformVersion Condition="$(TargetFramework.Contains('ios'))">13.2</SupportedOSPlatformVersion>
+		<SupportedOSPlatformVersion Condition="$(TargetFramework.Contains('android'))">23.0</SupportedOSPlatformVersion>
+		<SupportedOSPlatformVersion Condition="$(TargetFramework.Contains('ios'))">15.0</SupportedOSPlatformVersion>
 
 		<!-- NuGet packaging -->
 		<IsPackable>true</IsPackable>
 		<PackageId>LDObservability</PackageId>
-		<Version>0.32.8-local</Version>
+		<Version>0.3.16</Version>
 		<Authors>LD</Authors>
 		<PackageDescription>LD Observability bindings aggregator for .NET (Android/iOS).</PackageDescription>
 		<RepositoryUrl>https://example.local/ldobservability</RepositoryUrl>
@@ -27,13 +28,20 @@
 	</PropertyGroup>
 	
 	<ItemGroup Condition="$(TargetFramework.Contains('android'))">
-		<!-- LD Android native deps rely on Jetpack Compose at runtime; declare it here so apps don't have to. -->
-		<!-- NOTE: Use 1.8.3.1+ because 1.8.3 pins older AndroidX (Lifecycle 2.9.1 / SavedState.Ktx 1.3.0)
-		     which can cause NU1605 downgrades in consumer apps. -->
-		<PackageReference Include="Xamarin.AndroidX.Compose.UI" Version="[1.8.3.1, 2.0.0)" />
 		<!-- MAUI requires AndroidX.SavedState.ISavedStateRegistryOwner to exist in Xamarin.AndroidX.SavedState.dll.
 		     Xamarin.AndroidX.SavedState 1.3.0 is missing that type in the main assembly, but 1.3.1.1 has it again.
 		     Use a minimum version to avoid forcing downstream apps to downgrade newer AndroidX stacks. -->
+		<!-- Pin Collection.Jvm to avoid NU1107 conflict between Navigation.Runtime and Navigation.Common paths. -->
+		<PackageReference Include="Xamarin.AndroidX.Collection.Jvm" Version="[1.5.0.3, 2.0.0)" />
+		<!-- Keep Collection.Ktx aligned with Collection.Jvm to avoid duplicate ArrayMapKt classes. -->
+		<PackageReference Include="Xamarin.AndroidX.Collection.Ktx" Version="[1.5.0.3, 2.0.0)" />
+		<!-- Keep Lifecycle Runtime/Ktx aligned to avoid duplicate FlowExtKt between runtime-android and runtime-ktx. -->
+		<PackageReference Include="Xamarin.AndroidX.Lifecycle.Runtime" Version="[2.9.2.1, 3.0.0)" />
+		<PackageReference Include="Xamarin.AndroidX.Lifecycle.Runtime.Ktx" Version="[2.9.2.1, 3.0.0)" />
+		<!-- Keep Common, LiveData.Core, and Process aligned with Runtime to avoid NU1608 in consumers. -->
+		<PackageReference Include="Xamarin.AndroidX.Lifecycle.Common" Version="[2.9.2.1, 3.0.0)" />
+		<PackageReference Include="Xamarin.AndroidX.Lifecycle.LiveData.Core" Version="[2.9.0, 3.0.0)" />
+		<PackageReference Include="Xamarin.AndroidX.Lifecycle.Process" Version="[2.9.2.1, 3.0.0)" />
 		<PackageReference Include="Xamarin.AndroidX.SavedState" Version="[1.3.1.1, 2.0.0)" />
 		<PackageReference Include="Xamarin.AndroidX.SavedState.SavedState.Ktx" Version="[1.3.1.1, 2.0.0)" />
 	</ItemGroup>
@@ -43,11 +51,21 @@
   		<LD_INCLUDE_NATIVE_DEPS>true</LD_INCLUDE_NATIVE_DEPS>
 	</PropertyGroup>
 
-<ItemGroup Condition="$(TargetFramework.Contains('android'))">
-  <AndroidLibrary Update="@(AndroidLibrary)">
-    <Bind>false</Bind>
-  </AndroidLibrary>
-</ItemGroup>
+	<ItemGroup Condition="'$(UseLocalClientSdk)' == 'true'">
+	<ProjectReference Include="..\..\..\..\..\dotnet-core\pkgs\sdk\client\src\LaunchDarkly.ClientSdk.csproj"
+						SetTargetFramework="TargetFramework=netstandard2.0"
+						GlobalPropertiesToRemove="RuntimeIdentifier" />
+	</ItemGroup>
+
+	<ItemGroup Condition="'$(UseLocalClientSdk)' != 'true'">
+		<PackageReference Include="LaunchDarkly.ClientSdk" Version="[5.6.0, 6.0.0)" />
+	</ItemGroup>
+
+	<ItemGroup Condition="$(TargetFramework.Contains('android'))">
+		<AndroidLibrary Update="@(AndroidLibrary)">
+			<Bind>false</Bind>
+		</AndroidLibrary>
+	</ItemGroup>
 
 	<!-- Reference to MaciOS Binding project -->
 	<ItemGroup Condition="$(TargetFramework.Contains('ios'))">
@@ -60,8 +78,12 @@
 	</ItemGroup>
 
 	<!-- Reference the Android binding dependencies (optional: only if built locally) -->
-	<ItemGroup Condition="$(TargetFramework.Contains('android')) and '$(LD_INCLUDE_NATIVE_DEPS)' == 'true' and Exists('..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps')">
-		<AndroidLibrary Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\*launchdarkly*.aar">
+	<ItemGroup Condition="$(TargetFramework.Contains('android')) and '$(LD_INCLUDE_NATIVE_DEPS)' == 'true' and '$(Configuration)' == 'Release' and Exists('..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps')">
+		<AndroidLibrary Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\launchdarkly-android-client-sdk-*.aar">
+			<Bind>false</Bind>
+			<Visible>false</Visible>
+		</AndroidLibrary>
+		<AndroidLibrary Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\lib-release.aar">
 			<Bind>false</Bind>
 			<Visible>false</Visible>
 		</AndroidLibrary>
@@ -123,77 +145,81 @@
 			<Visible>false</Visible>
 		</AndroidLibrary>
 	</ItemGroup>
-	<ItemGroup Condition="$(TargetFramework.Contains('android')) and '$(LD_INCLUDE_NATIVE_DEPS)' == 'true' and Exists('..\android\native\LDObserve\bin\Debug\net9.0-android\outputs\deps')">
-		<AndroidLibrary Include="..\android\native\LDObserve\bin\Debug\net9.0-android\outputs\deps\*launchdarkly*.aar">
+	<ItemGroup Condition="$(TargetFramework.Contains('android')) and '$(LD_INCLUDE_NATIVE_DEPS)' == 'true' and '$(Configuration)' == 'Debug' and Exists('..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps')">
+		<AndroidLibrary Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\launchdarkly-android-client-sdk-*.aar">
 			<Bind>false</Bind>
 			<Visible>false</Visible>
 		</AndroidLibrary>
-		<AndroidJavaLibrary Include="..\android\native\LDObserve\bin\Debug\net9.0-android\outputs\deps\*launchdarkly*.jar">
-			<Bind>false</Bind>
-			<Visible>false</Visible>
-		</AndroidJavaLibrary>
-		<AndroidJavaLibrary Include="..\android\native\LDObserve\bin\Debug\net9.0-android\outputs\deps\ok*.jar">
-			<Bind>false</Bind>
-			<Visible>false</Visible>
-		</AndroidJavaLibrary>
-		<AndroidLibrary Include="..\android\native\LDObserve\bin\Debug\net9.0-android\outputs\deps\*timber*.aar">
+		<AndroidLibrary Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\lib-release.aar">
 			<Bind>false</Bind>
 			<Visible>false</Visible>
 		</AndroidLibrary>
-		<AndroidJavaLibrary Include="..\android\native\LDObserve\bin\Debug\net9.0-android\outputs\deps\opentelemetry*.jar">
+		<AndroidJavaLibrary Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\*launchdarkly*.jar">
 			<Bind>false</Bind>
 			<Visible>false</Visible>
 		</AndroidJavaLibrary>
-		<AndroidJavaLibrary Include="..\android\native\LDObserve\bin\Debug\net9.0-android\outputs\deps\jackson*.jar">
+		<AndroidJavaLibrary Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\ok*.jar">
+			<Bind>false</Bind>
+			<Visible>false</Visible>
+		</AndroidJavaLibrary>
+		<AndroidLibrary Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\*timber*.aar">
+			<Bind>false</Bind>
+			<Visible>false</Visible>
+		</AndroidLibrary>
+		<AndroidJavaLibrary Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\opentelemetry*.jar">
+			<Bind>false</Bind>
+			<Visible>false</Visible>
+		</AndroidJavaLibrary>
+		<AndroidJavaLibrary Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\jackson*.jar">
 			<Bind>false</Bind>
 			<Visible>false</Visible>
 		</AndroidJavaLibrary>
 		<!-- Allowlist specific LD AARs to avoid pulling AndroidX -->
-		<AndroidLibrary Include="..\android\native\LDObserve\bin\Debug\net9.0-android\outputs\deps\android-agent-*.aar">
+		<AndroidLibrary Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\android-agent-*.aar">
 			<Bind>false</Bind>
 			<Visible>false</Visible>
 		</AndroidLibrary>
-		<AndroidLibrary Include="..\android\native\LDObserve\bin\Debug\net9.0-android\outputs\deps\common-*.aar">
+		<AndroidLibrary Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\common-*.aar">
 			<Bind>false</Bind>
 			<Visible>false</Visible>
 		</AndroidLibrary>
-		<AndroidLibrary Include="..\android\native\LDObserve\bin\Debug\net9.0-android\outputs\deps\core-0.11.0-alpha.aar">
+		<AndroidLibrary Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\core-0.11.0-alpha.aar">
 			<Bind>false</Bind>
 			<Visible>false</Visible>
 		</AndroidLibrary>
-		<AndroidLibrary Include="..\android\native\LDObserve\bin\Debug\net9.0-android\outputs\deps\crash-0.11.0-alpha.aar">
+		<AndroidLibrary Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\crash-0.11.0-alpha.aar">
 			<Bind>false</Bind>
 			<Visible>false</Visible>
 		</AndroidLibrary>
-		<AndroidLibrary Include="..\android\native\LDObserve\bin\Debug\net9.0-android\outputs\deps\anr-*.aar">
+		<AndroidLibrary Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\anr-*.aar">
 			<Bind>false</Bind>
 			<Visible>false</Visible>
 		</AndroidLibrary>
-		<AndroidLibrary Include="..\android\native\LDObserve\bin\Debug\net9.0-android\outputs\deps\activity-*-alpha.aar">
+		<AndroidLibrary Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\activity-*-alpha.aar">
 			<Bind>false</Bind>
 			<Visible>false</Visible>
 		</AndroidLibrary>
-		<AndroidLibrary Include="..\android\native\LDObserve\bin\Debug\net9.0-android\outputs\deps\android-instrumentation-*.aar">
+		<AndroidLibrary Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\android-instrumentation-*.aar">
 			<Bind>false</Bind>
 			<Visible>false</Visible>
 		</AndroidLibrary>
-		<AndroidLibrary Include="..\android\native\LDObserve\bin\Debug\net9.0-android\outputs\deps\session-0.11.0-alpha.aar">
+		<AndroidLibrary Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\session-0.11.0-alpha.aar">
 			<Bind>false</Bind>
 			<Visible>false</Visible>
 		</AndroidLibrary>
-		<AndroidLibrary Include="..\android\native\LDObserve\bin\Debug\net9.0-android\outputs\deps\services-0.11.0-alpha.aar">
+		<AndroidLibrary Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\services-0.11.0-alpha.aar">
 			<Bind>false</Bind>
 			<Visible>false</Visible>
 		</AndroidLibrary>
 	</ItemGroup>
-	<!-- Include the module AAR containing SRLaunch (guard per path) -->
-	<ItemGroup Condition="$(TargetFramework.Contains('android')) and '$(LD_INCLUDE_NATIVE_DEPS)' == 'true' and Exists('..\android\native\LDObserve\bin\Release\net9.0-android\outputs\aar\LDObserve-release.aar')">
+	<!-- Include the module AAR containing ObservabilityBridge (guard per path) -->
+	<ItemGroup Condition="$(TargetFramework.Contains('android')) and '$(LD_INCLUDE_NATIVE_DEPS)' == 'true' and '$(Configuration)' == 'Release' and Exists('..\android\native\LDObserve\bin\Release\net9.0-android\outputs\aar\LDObserve-release.aar')">
 		<AndroidLibrary Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\aar\LDObserve-release.aar">
 			<Bind>false</Bind>
 		</AndroidLibrary>
 	</ItemGroup>
-	<ItemGroup Condition="$(TargetFramework.Contains('android')) and '$(LD_INCLUDE_NATIVE_DEPS)' == 'true' and Exists('..\android\native\LDObserve\bin\Debug\net9.0-android\outputs\aar\LDObserve-release.aar')">
-		<AndroidLibrary Include="..\android\native\LDObserve\bin\Debug\net9.0-android\outputs\aar\LDObserve-release.aar">
+	<ItemGroup Condition="$(TargetFramework.Contains('android')) and '$(LD_INCLUDE_NATIVE_DEPS)' == 'true' and '$(Configuration)' == 'Debug' and Exists('..\android\native\LDObserve\bin\Release\net9.0-android\outputs\aar\LDObserve-release.aar')">
+		<AndroidLibrary Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\aar\LDObserve-release.aar">
 			<Bind>false</Bind>
 		</AndroidLibrary>
 	</ItemGroup>

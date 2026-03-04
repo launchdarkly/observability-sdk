@@ -4,13 +4,13 @@ using LDObserveMaciOS;
 
 namespace LaunchDarkly.SessionReplay;
 
-public class SRClient
+public class ObservabilityBridgeClient
 {
-    private readonly LDObserveMaciOS.SRClient _native;
+    private readonly LDObserveMaciOS.ObservabilityBridge _native;
 
-    public SRClient()
+    public ObservabilityBridgeClient()
     {
-        _native = new LDObserveMaciOS.SRClient();
+        _native = new LDObserveMaciOS.ObservabilityBridge();
     }
 
     public string Version()
@@ -18,12 +18,12 @@ public class SRClient
         return _native.Version();
     }
 
-    public void Start(string mobileKey, ObservabilityOptions observability, SessionReplayOptions replay)
+    public void Start(string mobileKey, ObservabilityOptions observability, SessionReplayOptions replay, string observabilityVersion)
     {
         var objcObs = new ObjcObservabilityOptions
         {
             ServiceName = observability.ServiceName ?? "observability-maui",
-            ServiceVersion = observability.ServiceVersion ?? "0.1.0",
+            ServiceVersion = observabilityVersion,
             OtlpEndpoint = observability.OtlpEndpoint ?? "https://otel.observability.app.launchdarkly.com:4318",
             BackendUrl = observability.BackendUrl ?? "https://pub.observability.app.launchdarkly.com"
         };

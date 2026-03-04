@@ -1,5 +1,5 @@
 //
-//  ObjcSRClient.swift
+//  ObservabilityBridge.swift
 //  LDObserveBridge
 //
 //  Created by Andrey Belonogov on 1/22/26.
@@ -37,26 +37,55 @@ public final class ObjcSessionReplayOptions: NSObject {
     }
 }
 
-@objc(SRClient)
-public final class ObjcSRClient: NSObject {
+@objc(ObjcEnvironmentMetadata)
+public final class ObjcEnvironmentMetadata: NSObject {
+    @objc public var credential: String = ""
+    @objc public var sdkName: String = ""
+    @objc public var sdkVersion: String = ""
+    @objc public var applicationId: String = ""
+    @objc public var applicationVersion: String = ""
+
+    @objc public override init() {
+        super.init()
+    }
+}
+
+@objc(ObservabilityBridge)
+public final class ObservabilityBridge: NSObject {
 
     @objc public func version() -> String {
         return sdkVersion
     }
 
-    @objc public func start(mobileKey: String, observability: ObjcObservabilityOptions, replay: ObjcSessionReplayOptions) {
+    @objc public func getHookProxy() -> ObservabilityHookProxy? {
+        return LDObserve.shared.hookProxy
+    }
+
+    @objc public func start(mobileKey: String, 
+                            observability: ObjcObservabilityOptions, 
+                            replay: ObjcSessionReplayOptions) {
         let config = { () -> LDConfig in
             var config = LDConfig(
                 mobileKey: mobileKey,
                 autoEnvAttributes: .enabled
             )
-            
+            config.startOnline = false
+
             config.plugins = [
                 Observability(options: .init(
                     serviceName: observability.serviceName,
                     serviceVersion: observability.serviceVersion,
                     otlpEndpoint: observability.otlpEndpoint,
-                    backendUrl: observability.backendUrl
+                    backendUrl: observability.backendUrl,
+                    crashReporting: .init(source: .none),
+                    instrumentation: .init(
+                        urlSession: .disabled,
+                        userTaps: .enabled,
+                        memory: .disabled,
+                        memoryWarnings: .disabled,
+                        cpu: .disabled,
+                        launchTimes: .enabled
+                    )
                 )),
                 SessionReplay(options: .init(
                     isEnabled: replay.isEnabled,
