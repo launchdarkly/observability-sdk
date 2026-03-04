@@ -1,0 +1,30 @@
+<h1>Flag Evaluation</h1>
+
+<div class="card">
+  <div class="detail-field">
+    <h2>Flag Key</h2>
+    <code class="code-block"><%= @flag_key %></code>
+  </div>
+
+  <div class="detail-field">
+    <h2>Value</h2>
+    <code class="value-block"><%= @detail.value.inspect %></code>
+  </div>
+
+  <div class="detail-field">
+    <h2>Variation Index</h2>
+    <p><%= @detail.variation_index || 'N/A' %></p>
+  </div>
+
+  <% if @detail.reason %>
+    <div class="detail-field">
+      <h2>Reason</h2>
+      <pre><code><%= JSON.pretty_generate(JSON.parse(@detail.reason.to_json)) %></code></pre>
+    </div>
+  <% end %>
+</div>
+
+<div class="link-row">
+  <%= link_to "&larr; Back to All Flags".html_safe, flags_path, class: "btn btn-secondary" %>
+  <%= link_to "View JSON", flag_path(@flag_key, format: :json), class: "btn btn-primary", target: "_blank" %>
+</div>
