@@ -7,7 +7,7 @@ module LaunchDarklyObservability
     CONTEXT_LINES = 4
     MAX_FRAMES = 20
     MAX_LINE_LENGTH = 1000
-    BACKTRACE_LINE_PATTERN = /^(.+):(\d+)(?::in `(.+?)')?$/
+    BACKTRACE_LINE_PATTERN = /^(.+):(\d+)(?::in [`'](.+?)')?$/
 
     @file_cache = {}
 

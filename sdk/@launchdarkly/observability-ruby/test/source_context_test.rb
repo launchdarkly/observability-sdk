@@ -46,9 +46,33 @@ class SourceContextTest < Minitest::Test
     assert_nil frames[0][:linesAfter]
   end
 
+  def test_build_structured_stacktrace_handles_ruby34_backtrace_format
+    error = StandardError.new('ruby 3.4 format')
+    error.set_backtrace(["/definitely/missing/file.rb:77:in 'explode'"])
+
+    frames = LaunchDarklyObservability::SourceContext.build_structured_stacktrace(error)
+
+    assert_equal 1, frames.length
+    assert_equal '/definitely/missing/file.rb', frames[0][:fileName]
+    assert_equal 77, frames[0][:lineNumber]
+    assert_equal 'explode', frames[0][:functionName]
+  end
+
   def test_build_structured_stacktrace_limits_frame_count
     error = StandardError.new('too many frames')
     backtrace = (1..25).map { |idx| "/tmp/f#{idx}.rb:#{idx}:in `frame#{idx}'" }
+    error.set_backtrace(backtrace)
+
+    frames = LaunchDarklyObservability::SourceContext.build_structured_stacktrace(error)
+
+    assert_equal 20, frames.length
+    assert_equal '/tmp/f1.rb', frames.first[:fileName]
+    assert_equal '/tmp/f20.rb', frames.last[:fileName]
+  end
+
+  def test_build_structured_stacktrace_limits_frame_count_ruby34_format
+    error = StandardError.new('too many frames')
+    backtrace = (1..25).map { |idx| "/tmp/f#{idx}.rb:#{idx}:in 'frame#{idx}'" }
     error.set_backtrace(backtrace)
 
     frames = LaunchDarklyObservability::SourceContext.build_structured_stacktrace(error)
