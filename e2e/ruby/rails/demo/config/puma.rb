@@ -41,5 +41,11 @@ pidfile ENV.fetch('PIDFILE', 'tmp/pids/server.pid')
 #
 # preload_app!
 
+# Reinitialize LaunchDarkly client after forking workers
+# This is required when using workers (clustered mode)
+# on_worker_boot do
+#   Rails.configuration.ld_client.postfork
+# end
+
 # Allow puma to be restarted by `bin/rails restart` command.
 plugin :tmp_restart

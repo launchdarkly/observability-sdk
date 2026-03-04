@@ -4,5 +4,7 @@ Rails.application.routes.draw do
   root to: 'health#index'
 
   get 'health', to: 'health#index'
+  get 'health/flags', to: 'health#flags'
+  get 'health/flags/:key', to: 'health#flag'
   get 'error', to: 'health#error'
 end
