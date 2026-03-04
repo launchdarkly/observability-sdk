@@ -164,10 +164,10 @@ public class ObservabilityBridge {
                 debug = false,
                 otlpEndpoint = observability.otlpEndpoint,
                 backendUrl = observability.backendUrl,
-                tracesApi = com.launchdarkly.observability.api.ObservabilityOptions.TracesApi(includeErrors = false, includeSpans = false),
+                tracesApi = com.launchdarkly.observability.api.ObservabilityOptions.TracesApi(includeErrors = true, includeSpans = true),
                 metricsApi = com.launchdarkly.observability.api.ObservabilityOptions.MetricsApi.disabled(),
                 instrumentations = com.launchdarkly.observability.api.ObservabilityOptions.Instrumentations(
-                    crashReporting = false, launchTime = false, activityLifecycle = false
+                    crashReporting = false, launchTime = true, activityLifecycle = true
                 ),
                 logAdapter = LDAndroidLogging.adapter(),
             )
