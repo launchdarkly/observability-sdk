@@ -83,15 +83,26 @@ class TileSignatureManager {
 
         val tilesX = (width + tileWidth - 1) / tileWidth
         val tilesY = (height + tileHeight - 1) / tileHeight
-        val tileSignatures = ArrayList<TileSignature>(tilesX * tilesY)
+        val tileCount = tilesX * tilesY
+        val tileSignatures = ArrayList<TileSignature>(tileCount)
 
         for (ty in 0 until tilesY) {
             val startY = ty * tileHeight
             val endY = minOf(startY + tileHeight, height)
+
             for (tx in 0 until tilesX) {
                 val startX = tx * tileWidth
                 val endX = minOf(startX + tileWidth, width)
-                tileSignatures.add(tileHash(pixels, width, startX, startY, endX, endY))
+                tileSignatures.add(
+                    hashTile(
+                        pixels = pixels,
+                        width = width,
+                        startX = startX,
+                        startY = startY,
+                        endX = endX,
+                        endY = endY
+                    )
+                )
             }
         }
 
@@ -104,7 +115,7 @@ class TileSignatureManager {
         )
     }
 
-    private fun tileHash(
+    private fun hashTile(
         pixels: IntArray,
         width: Int,
         startX: Int,
@@ -112,30 +123,28 @@ class TileSignatureManager {
         endX: Int,
         endY: Int
     ): TileSignature {
+        // Two independent 64-bit lanes to reduce collision probability vs single-lane hashing.
         var hashLo = 5163949831757626579L
         var hashHi = 4657936482115123397L
-        val primeLo = 1238197591667094937L
-        val primeHi = 1700294137212722571L
-
-        val pixelCount = endX - startX
-        val pairCount = pixelCount ushr 1
-        val hasTrailingPixel = pixelCount and 1 != 0
-
+        val primeLo = 1238197591667094937L // from https://bigprimes.org
+        val primeHi = 1700294137212722571L // from https://bigprimes.org
         for (y in startY until endY) {
-            var i = y * width + startX
+            val rowOffset = y * width
+            for (x in startX until endX) {
+                val argb = pixels[rowOffset + x]
+                val b0 = (argb and 0xFF).toLong()
+                val b1 = ((argb ushr 8) and 0xFF).toLong()
+                val b2 = ((argb ushr 16) and 0xFF).toLong()
+                val b3 = ((argb ushr 24) and 0xFF).toLong()
+                hashLo = (hashLo xor b0) * primeLo
+                hashLo = (hashLo xor b1) * primeLo
+                hashLo = (hashLo xor b2) * primeLo
+                hashLo = (hashLo xor b3) * primeLo
 
-            for (p in 0 until pairCount) {
-                val v = (pixels[i].toLong() and 0xFFFFFFFFL) or
-                        ((pixels[i + 1].toLong() and 0xFFFFFFFFL) shl 32)
-                hashLo = (hashLo xor v) * primeLo
-                hashHi = (hashHi xor v) * primeHi
-                i += 2
-            }
-
-            if (hasTrailingPixel) {
-                val v = pixels[i].toLong() and 0xFFFFFFFFL
-                hashLo = (hashLo xor v) * primeLo
-                hashHi = (hashHi xor v) * primeHi
+                hashHi = (hashHi xor b3) * primeHi
+                hashHi = (hashHi xor b2) * primeHi
+                hashHi = (hashHi xor b1) * primeHi
+                hashHi = (hashHi xor b0) * primeHi
             }
         }
         return TileSignature(hashLo = hashLo, hashHi = hashHi)
