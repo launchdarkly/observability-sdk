@@ -9,6 +9,9 @@ require 'minitest/pride'
 require 'opentelemetry/sdk'
 require 'opentelemetry/exporter/otlp'
 
+# Silence OpenTelemetry instrumentation logs during tests
+OpenTelemetry.logger = Logger.new(File::NULL)
+
 # Load our gem
 require 'launchdarkly_observability'
 

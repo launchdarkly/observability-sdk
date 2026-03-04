@@ -6,7 +6,7 @@ class TracesController < ApplicationController
       sleep(0.1)
 
       trace = Trace.new(name: 'trace', kind: 'internal')
-      
+
       LaunchDarklyObservability.in_span('example-trace-inner', attributes: { 'trace.operation' => 'save' }) do |inner_span|
         sleep(0.2)
         trace.save!
@@ -15,15 +15,16 @@ class TracesController < ApplicationController
       outer_span.set_attribute('trace.operation', 'update')
       trace.update!(name: 'trace-updated')
     end
-    
-    head :no_content
+
+    render_turbo_feedback('trace_feedback', 'Trace created')
   end
 
-  def custom_project_id
-    LaunchDarklyObservability.in_span('example-trace-2', attributes: { 'launchdarkly.project_id' => '56gl9g91' }) do |span|
+  # Uses the controller-level with_launchdarkly_span helper
+  def create_with_helper
+    with_launchdarkly_span('example-trace-controller-helper', attributes: { 'source' => 'controller_helper' }) do
       sleep(0.1)
     end
-    
-    head :no_content
+
+    render_turbo_feedback('trace_feedback', 'Trace created (controller helper)')
   end
 end

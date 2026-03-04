@@ -15,10 +15,10 @@ class PagesController < ApplicationController
     @sample_evaluations = state.values_map.first(5).to_h
 
     # Make an HTTP request (auto-instrumented by OpenTelemetry)
+    @http_url = 'http://www.example.com/?test=1'
     with_launchdarkly_span('pages-home-fetch', attributes: { 'custom.source' => 'demo' }) do
-      uri = URI.parse('http://www.example.com/?test=1')
-      response = Net::HTTP.get_response(uri)
-      @data = response.body
+      response = Net::HTTP.get_response(URI.parse(@http_url))
+      @http_status = "#{response.code} #{response.message}"
     end
 
     Rails.logger.info "[LaunchDarkly] Loaded #{@flag_count} flags, valid=#{@flags_valid}"

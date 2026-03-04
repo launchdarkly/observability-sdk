@@ -34,9 +34,7 @@ class HookTest < Minitest::Test
     result = @hook.before_evaluation(series_context, data)
 
     assert result.key?(:__ld_observability_span)
-    assert result.key?(:__ld_observability_start_time)
     refute_nil result[:__ld_observability_span]
-    assert_kind_of Numeric, result[:__ld_observability_start_time]
   end
 
   def test_before_evaluation_returns_data_when_otel_not_available
@@ -59,15 +57,11 @@ class HookTest < Minitest::Test
     series_context = create_series_context
     detail = create_evaluation_detail
 
-    # Run before to create span
     data = @hook.before_evaluation(series_context, {})
-
-    # Run after to finish span
     result = @hook.after_evaluation(series_context, data, detail)
 
     assert_equal data, result
 
-    # Check that span was exported
     spans = @exporter.finished_spans
     assert_equal 1, spans.length
 
@@ -82,16 +76,11 @@ class HookTest < Minitest::Test
     data = @hook.before_evaluation(series_context, {})
     @hook.after_evaluation(series_context, data, detail)
 
-    spans = @exporter.finished_spans
-    span = spans.first
+    span = @exporter.finished_spans.first
 
-    # Semantic convention attributes
     assert_equal 'true', span.attributes['feature_flag.result.value']
     assert_equal '1', span.attributes['feature_flag.result.variant']
-    assert_equal 'default', span.attributes['feature_flag.result.reason']
-
-    # LaunchDarkly-specific attributes
-    assert_equal 'FALLTHROUGH', span.attributes['launchdarkly.reason.kind']
+    assert_equal '1', span.attributes['feature_flag.result.variationIndex']
   end
 
   def test_after_evaluation_handles_error_reason
@@ -101,37 +90,15 @@ class HookTest < Minitest::Test
     data = @hook.before_evaluation(series_context, {})
     @hook.after_evaluation(series_context, data, detail)
 
-    spans = @exporter.finished_spans
-    span = spans.first
+    span = @exporter.finished_spans.first
 
-    # Semantic convention attributes
-    assert_equal 'error', span.attributes['feature_flag.result.reason']
     assert_equal 'flag_not_found', span.attributes['error.type']
     assert_includes span.attributes['error.message'], 'FLAG_NOT_FOUND'
-
-    # LaunchDarkly-specific attributes
-    assert_equal 'ERROR', span.attributes['launchdarkly.reason.kind']
-    assert_equal 'FLAG_NOT_FOUND', span.attributes['launchdarkly.reason.error_kind']
-
     assert_equal OpenTelemetry::Trace::Status::ERROR, span.status.code
-  end
 
-  def test_after_evaluation_records_duration
-    series_context = create_series_context
-    detail = create_evaluation_detail
-
-    data = @hook.before_evaluation(series_context, {})
-
-    # Small delay to ensure measurable duration
-    sleep(0.001)
-
-    @hook.after_evaluation(series_context, data, detail)
-
-    spans = @exporter.finished_spans
-    span = spans.first
-
-    duration = span.attributes['launchdarkly.evaluation.duration_ms']
-    assert duration.positive?, "Duration should be positive, got #{duration}"
+    event = span.events.first
+    assert_equal 'ERROR', event.attributes['feature_flag.result.reason.kind']
+    assert_equal 'FLAG_NOT_FOUND', event.attributes['feature_flag.result.reason.errorKind']
   end
 
   def test_before_evaluation_captures_context_info
@@ -143,17 +110,11 @@ class HookTest < Minitest::Test
     data = @hook.before_evaluation(series_context, {})
     @hook.after_evaluation(series_context, data, create_evaluation_detail)
 
-    spans = @exporter.finished_spans
-    span = spans.first
+    span = @exporter.finished_spans.first
 
-    # Semantic convention attributes
     assert_equal 'my-flag', span.attributes['feature_flag.key']
     assert_equal 'user-456', span.attributes['feature_flag.context.id']
     assert_equal 'LaunchDarkly', span.attributes['feature_flag.provider.name']
-
-    # LaunchDarkly-specific attributes
-    assert_equal 'user', span.attributes['launchdarkly.context.kind']
-    assert_equal 'user-456', span.attributes['launchdarkly.context.key']
   end
 
   def test_after_evaluation_handles_hash_value
@@ -163,19 +124,16 @@ class HookTest < Minitest::Test
     data = @hook.before_evaluation(series_context, {})
     @hook.after_evaluation(series_context, data, detail)
 
-    spans = @exporter.finished_spans
-    span = spans.first
+    span = @exporter.finished_spans.first
 
-    # Hash should be JSON serialized
     assert_includes span.attributes['feature_flag.result.value'], 'foo'
   end
 
   def test_after_evaluation_handles_missing_span
     series_context = create_series_context
     detail = create_evaluation_detail
-    data = {} # No span in data
+    data = {}
 
-    # Should not raise
     result = @hook.after_evaluation(series_context, data, detail)
     assert_equal data, result
   end
@@ -231,7 +189,6 @@ class HookTest < Minitest::Test
     @hook.after_evaluation(series_context, data, create_evaluation_detail)
 
     span = @exporter.finished_spans.first
-    # Kinds sorted alphabetically, colon-separated (matches Node/Android/RN/Flutter)
     assert_equal 'org:org-1:user:user-1', span.attributes['feature_flag.context.id']
   end
 
@@ -252,10 +209,7 @@ class HookTest < Minitest::Test
     span = spans.first
     assert_equal 'evaluation', span.name
 
-    # feature_flag event should still be recorded without context.id
-    events = span.events
-    refute_nil events
-    flag_event = events.find { |e| e.name == 'feature_flag' }
+    flag_event = span.events.find { |e| e.name == 'feature_flag' }
     refute_nil flag_event, 'Expected a feature_flag event even with nil context'
     assert_equal 'my-flag', flag_event.attributes['feature_flag.key']
     assert_equal 'LaunchDarkly', flag_event.attributes['feature_flag.provider.name']

@@ -57,16 +57,12 @@ class IntegrationTest < Minitest::Test
     span = spans.first
     assert_equal 'evaluation', span.name
 
-    # Semantic convention attributes
     assert_equal 'test-flag', span.attributes['feature_flag.key']
     assert_equal 'user-123', span.attributes['feature_flag.context.id']
     assert_equal 'true', span.attributes['feature_flag.result.value']
     assert_equal '1', span.attributes['feature_flag.result.variant']
+    assert_equal '1', span.attributes['feature_flag.result.variationIndex']
     assert_equal 'LaunchDarkly', span.attributes['feature_flag.provider.name']
-
-    # LaunchDarkly-specific attributes
-    assert_equal 'user', span.attributes['launchdarkly.context.kind']
-    assert_equal 'user-123', span.attributes['launchdarkly.context.key']
   end
 
   def test_variation_detail_creates_span_with_reason
@@ -92,8 +88,8 @@ class IntegrationTest < Minitest::Test
 
     assert_equal 'evaluation', span.name
 
-    assert_equal 'default', span.attributes['feature_flag.result.reason']
-    assert_equal 'FALLTHROUGH', span.attributes['launchdarkly.reason.kind']
+    event_attrs = span.events.first.attributes
+    assert_equal 'FALLTHROUGH', event_attrs['feature_flag.result.reason.kind']
   end
 
   def test_error_evaluation_creates_error_span
@@ -117,14 +113,12 @@ class IntegrationTest < Minitest::Test
     spans = @exporter.finished_spans
     span = spans.first
 
-    # Semantic convention attributes
     assert_equal 'flag_not_found', span.attributes['error.type']
     assert_includes span.attributes['error.message'], 'FLAG_NOT_FOUND'
-
-    # LaunchDarkly-specific attributes
-    assert_equal 'FLAG_NOT_FOUND', span.attributes['launchdarkly.reason.error_kind']
-
     assert_equal OpenTelemetry::Trace::Status::ERROR, span.status.code
+
+    event_attrs = span.events.first.attributes
+    assert_equal 'FLAG_NOT_FOUND', event_attrs['feature_flag.result.reason.errorKind']
   end
 
   def test_multiple_evaluations_create_multiple_spans
@@ -186,10 +180,10 @@ class IntegrationTest < Minitest::Test
     spans = @exporter.finished_spans
     span = spans.first
 
-    # Multi-context should have kinds joined (LaunchDarkly-specific)
-    context_kind = span.attributes['launchdarkly.context.kind']
-    assert_includes context_kind, 'user'
-    assert_includes context_kind, 'organization'
+    # Multi-context fully qualified key should contain both kinds
+    context_id = span.attributes['feature_flag.context.id']
+    assert_includes context_id, 'user'
+    assert_includes context_id, 'organization'
   end
 
   def test_json_flag_value_serialization

@@ -1,19 +1,29 @@
-<h1>LaunchDarkly Feature Flags</h1>
-
-<p>
-  This page demonstrates the LaunchDarkly Ruby SDK with the observability plugin.
+<h1>Feature Flags</h1>
+<p class="subtitle">
   Each flag evaluation is automatically traced via OpenTelemetry.
 </p>
 
-<p>
-  <strong>Connection Status:</strong> <%= @all_flags_valid ? '✓ Connected' : '✗ Not connected' %><br>
-  <strong>Total Flags:</strong> <%= @evaluations.size %>
-</p>
+<div class="card">
+  <ul class="status-list">
+    <li>
+      <span class="status-label">Connection</span>
+      <% if @all_flags_valid %>
+        <span class="badge badge-success">Connected</span>
+      <% else %>
+        <span class="badge badge-danger">Not connected</span>
+      <% end %>
+    </li>
+    <li>
+      <span class="status-label">Total flags</span>
+      <span><%= @evaluations.size %></span>
+    </li>
+  </ul>
+</div>
 
 <% if @evaluations.any? %>
   <h2>All Flag Evaluations</h2>
 
-  <table border="1" cellpadding="10" cellspacing="0">
+  <table>
     <thead>
       <tr>
         <th>Flag Key</th>
@@ -34,21 +44,23 @@
     </tbody>
   </table>
 <% else %>
-  <p><em>No flags available. Make sure LAUNCHDARKLY_SDK_KEY is set correctly.</em></p>
+  <div class="card">
+    <p><em>No flags available. Make sure LAUNCHDARKLY_SDK_KEY is set correctly.</em></p>
+  </div>
 <% end %>
 
 <h2>Test Endpoints</h2>
 
-<ul>
-  <li><a href="/flags.json">GET /flags.json</a> - All flag evaluations as JSON</li>
-  <li><a href="/flags/all_flags">GET /flags/all_flags</a> - Raw flags state</li>
-  <li>GET /flags/:flag_key - Evaluate a specific flag</li>
-</ul>
+<div class="card">
+  <h3>GET Endpoints</h3>
+  <ul class="endpoint-list">
+    <li><span class="endpoint-method">GET</span> <a href="/flags.json">/flags.json</a> &mdash; All flag evaluations as JSON</li>
+    <li><span class="endpoint-method">GET</span> <a href="/flags/all_flags">/flags/all_flags</a> &mdash; Raw flags state</li>
+    <li><span class="endpoint-method">GET</span> /flags/:flag_key &mdash; Evaluate a specific flag</li>
+  </ul>
 
-<h3>POST Endpoints</h3>
-
-<pre>
-# Evaluate a specific flag with custom context
+  <h3>POST Endpoints</h3>
+  <pre><code># Evaluate a specific flag with custom context
 POST /flags/evaluate
 {
   "flag_key": "your-flag-key",
@@ -59,14 +71,16 @@ POST /flags/evaluate
 POST /flags/batch
 {
   "flag_keys": ["flag-1", "flag-2", "flag-3"]
-}
-</pre>
+}</code></pre>
+</div>
 
 <h2>Trace Information</h2>
 
-<p>
-  <strong>Current Trace ID:</strong>
-  <code><%= launchdarkly_trace_id || 'N/A' %></code>
-</p>
-
-<%= launchdarkly_traceparent_meta_tag %>
+<div class="card">
+  <ul class="status-list">
+    <li>
+      <span class="status-label">Trace ID</span>
+      <code><%= launchdarkly_trace_id || 'N/A' %></code>
+    </li>
+  </ul>
+</div>

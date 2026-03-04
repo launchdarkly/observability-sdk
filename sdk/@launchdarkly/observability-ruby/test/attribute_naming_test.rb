@@ -2,9 +2,10 @@
 
 require 'test_helper'
 
-# Tests to verify attribute naming consistency with OpenTelemetry semantic conventions
-# and cross-SDK compatibility.
+# Tests to verify attribute naming consistency with OpenTelemetry semantic conventions,
+# cross-SDK compatibility, and ClickHouse column coverage.
 #
+# ClickHouse schema: ../observability/backend/clickhouse/feature_flag.go
 # OpenTelemetry Feature Flag Semantic Conventions:
 # https://opentelemetry.io/docs/specs/semconv/feature-flags/feature-flags-events/
 #
@@ -26,11 +27,9 @@ class AttributeNamingTest < Minitest::Test
     @exporter.reset
   end
 
-  # OpenTelemetry Semantic Convention Attribute Tests
-  # These attributes should match the OTel spec exactly
+  # --- Span Attribute Tests ---
 
   def test_feature_flag_key_follows_semconv
-    # OTel semconv: feature_flag.key
     series_context = create_series_context(key: 'test-flag')
     data = @hook.before_evaluation(series_context, {})
     @hook.after_evaluation(series_context, data, create_evaluation_detail)
@@ -41,7 +40,6 @@ class AttributeNamingTest < Minitest::Test
   end
 
   def test_feature_flag_provider_name_follows_semconv
-    # OTel semconv: feature_flag.provider.name
     series_context = create_series_context
     data = @hook.before_evaluation(series_context, {})
     @hook.after_evaluation(series_context, data, create_evaluation_detail)
@@ -52,7 +50,6 @@ class AttributeNamingTest < Minitest::Test
   end
 
   def test_feature_flag_context_id_follows_semconv
-    # OTel semconv: feature_flag.context.id
     context = LaunchDarkly::LDContext.create({ key: 'user-123', kind: 'user' })
     series_context = LaunchDarkly::Interfaces::Hooks::EvaluationSeriesContext.new(
       'flag', context, false, :variation
@@ -67,7 +64,6 @@ class AttributeNamingTest < Minitest::Test
   end
 
   def test_feature_flag_result_value_follows_semconv
-    # OTel semconv: feature_flag.result.value
     series_context = create_series_context
     data = @hook.before_evaluation(series_context, {})
     @hook.after_evaluation(series_context, data, create_evaluation_detail(value: 'test-value'))
@@ -78,7 +74,6 @@ class AttributeNamingTest < Minitest::Test
   end
 
   def test_feature_flag_result_variant_follows_semconv
-    # OTel semconv: feature_flag.result.variant
     series_context = create_series_context
     data = @hook.before_evaluation(series_context, {})
     @hook.after_evaluation(series_context, data, create_evaluation_detail(variation_index: 2))
@@ -88,21 +83,17 @@ class AttributeNamingTest < Minitest::Test
     assert_equal '2', span.attributes['feature_flag.result.variant']
   end
 
-  def test_feature_flag_result_reason_follows_semconv
-    # OTel semconv: feature_flag.result.reason
-    # Maps LaunchDarkly reason.kind to semconv values
+  def test_feature_flag_result_variation_index_matches_other_sdks
     series_context = create_series_context
     data = @hook.before_evaluation(series_context, {})
-    @hook.after_evaluation(series_context, data, create_evaluation_detail)
+    @hook.after_evaluation(series_context, data, create_evaluation_detail(variation_index: 2))
 
     span = @exporter.finished_spans.first
-    assert span.attributes.key?('feature_flag.result.reason'), 'Missing feature_flag.result.reason attribute'
-    # FALLTHROUGH maps to 'default' per semconv
-    assert_equal 'default', span.attributes['feature_flag.result.reason']
+    assert span.attributes.key?('feature_flag.result.variationIndex'), 'Missing feature_flag.result.variationIndex attribute'
+    assert_equal '2', span.attributes['feature_flag.result.variationIndex']
   end
 
   def test_error_type_follows_semconv
-    # OTel semconv: error.type
     series_context = create_series_context
     data = @hook.before_evaluation(series_context, {})
     @hook.after_evaluation(series_context, data, create_error_detail(error_kind: :FLAG_NOT_FOUND))
@@ -113,7 +104,6 @@ class AttributeNamingTest < Minitest::Test
   end
 
   def test_error_message_follows_semconv
-    # OTel semconv: error.message
     series_context = create_series_context
     data = @hook.before_evaluation(series_context, {})
     @hook.after_evaluation(series_context, data, create_error_detail(error_kind: :FLAG_NOT_FOUND))
@@ -123,124 +113,21 @@ class AttributeNamingTest < Minitest::Test
     assert_includes span.attributes['error.message'], 'FLAG_NOT_FOUND'
   end
 
-  # LaunchDarkly-specific Attribute Tests
-  # These should use the 'launchdarkly.*' namespace
-
-  def test_launchdarkly_namespace_for_custom_attributes
+  def test_no_launchdarkly_namespace_attributes_on_span
     context = LaunchDarkly::LDContext.create({ key: 'user-123', kind: 'user' })
     series_context = LaunchDarkly::Interfaces::Hooks::EvaluationSeriesContext.new(
       'flag', context, false, :variation
     )
 
     data = @hook.before_evaluation(series_context, {})
-    sleep(0.001) # Ensure measurable duration
     @hook.after_evaluation(series_context, data, create_evaluation_detail)
 
     span = @exporter.finished_spans.first
-
-    # All LaunchDarkly-specific attributes should use launchdarkly.* namespace
     ld_attributes = span.attributes.keys.select { |k| k.start_with?('launchdarkly.') }
-    
-    assert_includes ld_attributes, 'launchdarkly.evaluation.method'
-    assert_includes ld_attributes, 'launchdarkly.evaluation.duration_ms'
-    assert_includes ld_attributes, 'launchdarkly.context.kind'
-    assert_includes ld_attributes, 'launchdarkly.context.key'
-    assert_includes ld_attributes, 'launchdarkly.reason.kind'
+    assert_empty ld_attributes, "Unexpected launchdarkly.* attributes: #{ld_attributes.inspect}"
   end
 
-  def test_launchdarkly_reason_kind_attribute
-    series_context = create_series_context
-    data = @hook.before_evaluation(series_context, {})
-    @hook.after_evaluation(series_context, data, create_evaluation_detail)
-
-    span = @exporter.finished_spans.first
-    # LaunchDarkly-specific reason kind (raw value from SDK)
-    assert span.attributes.key?('launchdarkly.reason.kind'), 'Missing launchdarkly.reason.kind attribute'
-    assert_equal 'FALLTHROUGH', span.attributes['launchdarkly.reason.kind']
-  end
-
-  def test_launchdarkly_context_kind_attribute
-    context = LaunchDarkly::LDContext.create({ key: 'user-123', kind: 'user' })
-    series_context = LaunchDarkly::Interfaces::Hooks::EvaluationSeriesContext.new(
-      'flag', context, false, :variation
-    )
-
-    data = @hook.before_evaluation(series_context, {})
-    @hook.after_evaluation(series_context, data, create_evaluation_detail)
-
-    span = @exporter.finished_spans.first
-    assert span.attributes.key?('launchdarkly.context.kind'), 'Missing launchdarkly.context.kind attribute'
-    assert_equal 'user', span.attributes['launchdarkly.context.kind']
-  end
-
-  def test_launchdarkly_error_attributes
-    series_context = create_series_context
-    data = @hook.before_evaluation(series_context, {})
-    @hook.after_evaluation(series_context, data, create_error_detail(error_kind: :FLAG_NOT_FOUND))
-
-    span = @exporter.finished_spans.first
-    # LaunchDarkly-specific error kind
-    assert span.attributes.key?('launchdarkly.reason.error_kind'), 'Missing launchdarkly.reason.error_kind attribute'
-    assert_equal 'FLAG_NOT_FOUND', span.attributes['launchdarkly.reason.error_kind']
-  end
-
-  # Reason Mapping Tests
-  # Verify LaunchDarkly reason kinds map to correct semconv values
-
-  def test_reason_mapping_off_to_disabled
-    reason = LaunchDarkly::EvaluationReason.off
-    detail = LaunchDarkly::EvaluationDetail.new(false, 0, reason)
-
-    series_context = create_series_context
-    data = @hook.before_evaluation(series_context, {})
-    @hook.after_evaluation(series_context, data, detail)
-
-    span = @exporter.finished_spans.first
-    assert_equal 'disabled', span.attributes['feature_flag.result.reason']
-    assert_equal 'OFF', span.attributes['launchdarkly.reason.kind']
-  end
-
-  def test_reason_mapping_fallthrough_to_default
-    reason = LaunchDarkly::EvaluationReason.fallthrough
-    detail = LaunchDarkly::EvaluationDetail.new(true, 1, reason)
-
-    series_context = create_series_context
-    data = @hook.before_evaluation(series_context, {})
-    @hook.after_evaluation(series_context, data, detail)
-
-    span = @exporter.finished_spans.first
-    assert_equal 'default', span.attributes['feature_flag.result.reason']
-    assert_equal 'FALLTHROUGH', span.attributes['launchdarkly.reason.kind']
-  end
-
-  def test_reason_mapping_target_match_to_targeting_match
-    reason = LaunchDarkly::EvaluationReason.target_match
-    detail = LaunchDarkly::EvaluationDetail.new(true, 1, reason)
-
-    series_context = create_series_context
-    data = @hook.before_evaluation(series_context, {})
-    @hook.after_evaluation(series_context, data, detail)
-
-    span = @exporter.finished_spans.first
-    assert_equal 'targeting_match', span.attributes['feature_flag.result.reason']
-    assert_equal 'TARGET_MATCH', span.attributes['launchdarkly.reason.kind']
-  end
-
-  def test_reason_mapping_error_to_error
-    reason = LaunchDarkly::EvaluationReason.error(:FLAG_NOT_FOUND)
-    detail = LaunchDarkly::EvaluationDetail.new(nil, nil, reason)
-
-    series_context = create_series_context
-    data = @hook.before_evaluation(series_context, {})
-    @hook.after_evaluation(series_context, data, detail)
-
-    span = @exporter.finished_spans.first
-    assert_equal 'error', span.attributes['feature_flag.result.reason']
-    assert_equal 'ERROR', span.attributes['launchdarkly.reason.kind']
-  end
-
-  # Error Type Mapping Tests
-  # Verify LaunchDarkly error kinds map to correct semconv error types
+  # --- Error Type Mapping Tests ---
 
   def test_error_type_mapping_flag_not_found
     series_context = create_series_context
@@ -287,40 +174,28 @@ class AttributeNamingTest < Minitest::Test
     assert_equal 'type_mismatch', span.attributes['error.type']
   end
 
-  # Constants Verification Tests
-  # Verify constant definitions match expected values
+  # --- Constants Verification Tests ---
 
-  def test_module_constants_match_semconv_spec
-    # Standard OTel semconv attributes
+  def test_module_constants_match_expected_values
     assert_equal 'feature_flag.key', LaunchDarklyObservability::FEATURE_FLAG_KEY
     assert_equal 'feature_flag.provider.name', LaunchDarklyObservability::FEATURE_FLAG_PROVIDER_NAME
     assert_equal 'feature_flag.context.id', LaunchDarklyObservability::FEATURE_FLAG_CONTEXT_ID
+    assert_equal 'feature_flag.set.id', LaunchDarklyObservability::FEATURE_FLAG_SET_ID
     assert_equal 'feature_flag.result.value', LaunchDarklyObservability::FEATURE_FLAG_RESULT_VALUE
     assert_equal 'feature_flag.result.variant', LaunchDarklyObservability::FEATURE_FLAG_RESULT_VARIANT
-    assert_equal 'feature_flag.result.reason', LaunchDarklyObservability::FEATURE_FLAG_RESULT_REASON
+    assert_equal 'feature_flag.result.variationIndex', LaunchDarklyObservability::FEATURE_FLAG_RESULT_VARIATION_INDEX
+    assert_equal 'feature_flag.result.reason.kind', LaunchDarklyObservability::FEATURE_FLAG_RESULT_REASON_KIND
+    assert_equal 'feature_flag.result.reason.inExperiment', LaunchDarklyObservability::FEATURE_FLAG_RESULT_REASON_IN_EXPERIMENT
+    assert_equal 'feature_flag.result.reason.errorKind', LaunchDarklyObservability::FEATURE_FLAG_RESULT_REASON_ERROR_KIND
+    assert_equal 'feature_flag.result.reason.ruleId', LaunchDarklyObservability::FEATURE_FLAG_RESULT_REASON_RULE_ID
+    assert_equal 'feature_flag.result.reason.ruleIndex', LaunchDarklyObservability::FEATURE_FLAG_RESULT_REASON_RULE_INDEX
     assert_equal 'error.type', LaunchDarklyObservability::ERROR_TYPE
     assert_equal 'error.message', LaunchDarklyObservability::ERROR_MESSAGE
   end
 
-  def test_launchdarkly_constants_use_correct_namespace
-    # LaunchDarkly-specific attributes should use launchdarkly.* namespace
-    assert_match(/^launchdarkly\./, LaunchDarklyObservability::LD_EVALUATION_METHOD)
-    assert_match(/^launchdarkly\./, LaunchDarklyObservability::LD_EVALUATION_DURATION_MS)
-    assert_match(/^launchdarkly\./, LaunchDarklyObservability::LD_CONTEXT_KIND)
-    assert_match(/^launchdarkly\./, LaunchDarklyObservability::LD_CONTEXT_KEY)
-    assert_match(/^launchdarkly\./, LaunchDarklyObservability::LD_REASON_KIND)
-    assert_match(/^launchdarkly\./, LaunchDarklyObservability::LD_REASON_RULE_INDEX)
-    assert_match(/^launchdarkly\./, LaunchDarklyObservability::LD_REASON_RULE_ID)
-    assert_match(/^launchdarkly\./, LaunchDarklyObservability::LD_REASON_PREREQUISITE_KEY)
-    assert_match(/^launchdarkly\./, LaunchDarklyObservability::LD_REASON_IN_EXPERIMENT)
-    assert_match(/^launchdarkly\./, LaunchDarklyObservability::LD_REASON_ERROR_KIND)
-  end
-
-  # Cross-SDK Compatibility Tests
-  # Verify attribute names match other LaunchDarkly observability SDKs
+  # --- Cross-SDK Compatibility Tests ---
 
   def test_span_name_matches_other_sdks
-    # Android, Go, Node all use 'evaluation' as span name
     series_context = create_series_context
     data = @hook.before_evaluation(series_context, {})
     @hook.after_evaluation(series_context, data, create_evaluation_detail)
@@ -330,7 +205,6 @@ class AttributeNamingTest < Minitest::Test
   end
 
   def test_provider_name_matches_other_sdks
-    # All SDKs should report 'LaunchDarkly' as provider name
     series_context = create_series_context
     data = @hook.before_evaluation(series_context, {})
     @hook.after_evaluation(series_context, data, create_evaluation_detail)
@@ -339,8 +213,7 @@ class AttributeNamingTest < Minitest::Test
     assert_equal 'LaunchDarkly', span.attributes['feature_flag.provider.name']
   end
 
-  # Feature Flag Event Tests
-  # Verify the "feature_flag" event is added to spans (matching Android/Node SDKs)
+  # --- Feature Flag Event Tests ---
 
   def test_feature_flag_event_is_added_to_span
     series_context = create_series_context(key: 'test-flag')
@@ -349,7 +222,7 @@ class AttributeNamingTest < Minitest::Test
 
     span = @exporter.finished_spans.first
     events = span.events
-    
+
     assert_equal 1, events.length, 'Expected one feature_flag event'
     assert_equal 'feature_flag', events.first.name
   end
@@ -365,34 +238,66 @@ class AttributeNamingTest < Minitest::Test
     @hook.after_evaluation(series_context, data, detail)
 
     span = @exporter.finished_spans.first
-    event = span.events.first
-    event_attrs = event.attributes
+    event_attrs = span.events.first.attributes
 
-    # Required semantic convention attributes
     assert_equal 'my-flag', event_attrs['feature_flag.key']
     assert_equal 'LaunchDarkly', event_attrs['feature_flag.provider.name']
     assert_equal 'user-123', event_attrs['feature_flag.context.id']
     assert_equal 'true', event_attrs['feature_flag.result.value']
     assert_equal '1', event_attrs['feature_flag.result.variant']
-    assert_equal 'default', event_attrs['feature_flag.result.reason']
+    assert_equal '1', event_attrs['feature_flag.result.variationIndex']
+    assert_equal 'FALLTHROUGH', event_attrs['feature_flag.result.reason.kind']
   end
 
-  def test_feature_flag_event_includes_in_experiment_when_present
-    # Create a reason with in_experiment flag
-    reason = LaunchDarkly::EvaluationReason.fallthrough(true) # in_experiment = true
+  def test_feature_flag_event_reason_kind_is_raw
+    series_context = create_series_context
+    data = @hook.before_evaluation(series_context, {})
+
+    reason = LaunchDarkly::EvaluationReason.off
+    detail = LaunchDarkly::EvaluationDetail.new(false, 0, reason)
+    @hook.after_evaluation(series_context, data, detail)
+
+    event_attrs = @exporter.finished_spans.first.events.first.attributes
+    assert_equal 'OFF', event_attrs['feature_flag.result.reason.kind']
+  end
+
+  def test_feature_flag_event_reason_kind_for_target_match
+    series_context = create_series_context
+    data = @hook.before_evaluation(series_context, {})
+
+    reason = LaunchDarkly::EvaluationReason.target_match
+    detail = LaunchDarkly::EvaluationDetail.new(true, 1, reason)
+    @hook.after_evaluation(series_context, data, detail)
+
+    event_attrs = @exporter.finished_spans.first.events.first.attributes
+    assert_equal 'TARGET_MATCH', event_attrs['feature_flag.result.reason.kind']
+  end
+
+  def test_feature_flag_event_includes_in_experiment
+    reason = LaunchDarkly::EvaluationReason.fallthrough(true)
     detail = LaunchDarkly::EvaluationDetail.new(true, 1, reason)
 
     series_context = create_series_context
     data = @hook.before_evaluation(series_context, {})
     @hook.after_evaluation(series_context, data, detail)
 
-    span = @exporter.finished_spans.first
-    event = span.events.first
-    event_attrs = event.attributes
+    event_attrs = @exporter.finished_spans.first.events.first.attributes
+    assert event_attrs.key?('feature_flag.result.reason.inExperiment'),
+           'Event should include inExperiment attribute'
+    assert_equal true, event_attrs['feature_flag.result.reason.inExperiment']
+  end
 
-    assert event_attrs.key?('launchdarkly.reason.in_experiment'), 
-           'Event should include in_experiment attribute'
-    assert_equal true, event_attrs['launchdarkly.reason.in_experiment']
+  def test_feature_flag_event_includes_error_kind
+    reason = LaunchDarkly::EvaluationReason.error(:FLAG_NOT_FOUND)
+    detail = LaunchDarkly::EvaluationDetail.new(nil, nil, reason)
+
+    series_context = create_series_context
+    data = @hook.before_evaluation(series_context, {})
+    @hook.after_evaluation(series_context, data, detail)
+
+    event_attrs = @exporter.finished_spans.first.events.first.attributes
+    assert_equal 'ERROR', event_attrs['feature_flag.result.reason.kind']
+    assert_equal 'FLAG_NOT_FOUND', event_attrs['feature_flag.result.reason.errorKind']
   end
 
   def test_feature_flag_event_handles_complex_values
@@ -402,45 +307,67 @@ class AttributeNamingTest < Minitest::Test
     data = @hook.before_evaluation(series_context, {})
     @hook.after_evaluation(series_context, data, detail)
 
-    span = @exporter.finished_spans.first
-    event = span.events.first
-    event_attrs = event.attributes
-
-    # Complex value should be JSON serialized
+    event_attrs = @exporter.finished_spans.first.events.first.attributes
     assert_includes event_attrs['feature_flag.result.value'], 'nested'
     assert_includes event_attrs['feature_flag.result.value'], 'array'
   end
 
-  def test_feature_flag_event_matches_android_sdk_pattern
-    # Android SDK adds event named "feature_flag" with these attributes:
+  def test_feature_flag_event_matches_cross_sdk_pattern
+    # All SDKs add a "feature_flag" event with:
     # - feature_flag.key
     # - feature_flag.provider.name
     # - feature_flag.context.id
-    # - feature_flag.result.value (if includeValue)
+    # - feature_flag.result.value
     # - feature_flag.result.variationIndex
     # - feature_flag.result.reason.inExperiment (if present)
 
     context = LaunchDarkly::LDContext.create({ key: 'user-456', kind: 'user' })
     series_context = LaunchDarkly::Interfaces::Hooks::EvaluationSeriesContext.new(
-      'android-compat-flag', context, false, :variation
+      'compat-flag', context, false, :variation
     )
     detail = create_evaluation_detail(value: 'enabled', variation_index: 2)
 
     data = @hook.before_evaluation(series_context, {})
     @hook.after_evaluation(series_context, data, detail)
 
-    span = @exporter.finished_spans.first
-    event = span.events.first
-
-    # Event name matches Android
-    assert_equal 'feature_flag', event.name
-
-    # Required attributes match Android pattern
+    event = @exporter.finished_spans.first.events.first
     event_attrs = event.attributes
+
+    assert_equal 'feature_flag', event.name
     assert event_attrs.key?('feature_flag.key')
     assert event_attrs.key?('feature_flag.provider.name')
     assert event_attrs.key?('feature_flag.context.id')
     assert event_attrs.key?('feature_flag.result.value')
     assert event_attrs.key?('feature_flag.result.variant')
+    assert event_attrs.key?('feature_flag.result.variationIndex')
+    assert event_attrs.key?('feature_flag.result.reason.kind')
+  end
+
+  # --- ClickHouse Column Coverage Test ---
+  # Verifies that the feature_flag event emits all attribute keys that map
+  # to dedicated ClickHouse columns (per feature_flag.go in the backend).
+
+  def test_feature_flag_event_covers_clickhouse_columns
+    context = LaunchDarkly::LDContext.create({ key: 'user-789', kind: 'user' })
+    series_context = LaunchDarkly::Interfaces::Hooks::EvaluationSeriesContext.new(
+      'ch-flag', context, false, :variation
+    )
+    reason = LaunchDarkly::EvaluationReason.fallthrough(true)
+    detail = LaunchDarkly::EvaluationDetail.new('on', 1, reason)
+
+    data = @hook.before_evaluation(series_context, {})
+    @hook.after_evaluation(series_context, data, detail)
+
+    event_attrs = @exporter.finished_spans.first.events.first.attributes
+
+    # These map to dedicated ClickHouse columns (feature_flag.set.id is injected by backend)
+    assert event_attrs.key?('feature_flag.key'), 'Missing: FlagKey column'
+    assert event_attrs.key?('feature_flag.result.value'), 'Missing: ResultValue column'
+    assert event_attrs.key?('feature_flag.result.variant'), 'Missing: ResultVariant column'
+    assert event_attrs.key?('feature_flag.result.variationIndex'), 'Missing: ResultVariationIndex column'
+    assert event_attrs.key?('feature_flag.result.reason.kind'), 'Missing: ResultReasonKind column'
+    assert event_attrs.key?('feature_flag.result.reason.inExperiment'), 'Missing: ResultReasonInExperiment column'
+    assert event_attrs.key?('feature_flag.context.id'), 'Missing: ContextId column'
+    assert event_attrs.key?('feature_flag.provider.name'), 'Missing: ProviderName column'
   end
 end

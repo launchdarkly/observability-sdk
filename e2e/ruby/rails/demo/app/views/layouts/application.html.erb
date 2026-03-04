@@ -12,6 +12,24 @@
   </head>
 
   <body>
-    <%= yield %>
+    <header class="site-header">
+      <div class="site-logo">
+        <%= link_to root_path do %>
+          &#9670; LaunchDarkly Observability
+        <% end %>
+      </div>
+      <nav class="site-nav">
+        <%= link_to "Home", root_path %>
+        <%= link_to "Flags", flags_path %>
+      </nav>
+    </header>
+
+    <main class="container">
+      <%= yield %>
+    </main>
+
+    <footer class="site-footer">
+      LaunchDarkly Ruby SDK &middot; Observability Plugin Demo
+    </footer>
   </body>
 </html>

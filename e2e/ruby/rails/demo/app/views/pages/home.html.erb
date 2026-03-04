@@ -1,69 +1,114 @@
-<h1>LaunchDarkly Ruby Observability Demo</h1>
-
-<h2>LaunchDarkly Feature Flags</h2>
-<p>
+<h1>Ruby Observability Demo</h1>
+<p class="subtitle">
   Connected to LaunchDarkly. Each flag evaluation creates an OpenTelemetry span.
 </p>
 
-<p>
-  <strong>Status:</strong> <%= @flags_valid ? '✓ Connected' : '✗ Not connected' %><br>
-  <strong>Total flags:</strong> <%= @flag_count %><br>
-  <strong>Context key:</strong> <code><%= @context.key %></code>
-</p>
+<div class="card">
+  <h2>Feature Flags</h2>
 
-<% if @sample_evaluations.any? %>
-  <h3>Sample Flag Values</h3>
-  <table border="1" cellpadding="8" cellspacing="0">
-    <thead>
-      <tr>
-        <th>Flag Key</th>
-        <th>Value</th>
-      </tr>
-    </thead>
-    <tbody>
-      <% @sample_evaluations.each do |key, value| %>
-        <tr>
-          <td><code><%= key %></code></td>
-          <td><code><%= value.inspect %></code></td>
-        </tr>
+  <ul class="status-list">
+    <li>
+      <span class="status-label">Status</span>
+      <% if @flags_valid %>
+        <span class="badge badge-success">Connected</span>
+      <% else %>
+        <span class="badge badge-danger">Not connected</span>
       <% end %>
-    </tbody>
-  </table>
-<% else %>
-  <p><em>No flags available. Make sure LAUNCHDARKLY_SDK_KEY is set.</em></p>
-<% end %>
+    </li>
+    <li>
+      <span class="status-label">Total flags</span>
+      <span><%= @flag_count %></span>
+    </li>
+    <li>
+      <span class="status-label">Context key</span>
+      <code><%= @context.key %></code>
+    </li>
+  </ul>
 
-<p>
-  <a href="/flags">View all flags &rarr;</a>
+  <% if @sample_evaluations.any? %>
+    <h3>Sample Flag Values</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Flag Key</th>
+          <th>Value</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @sample_evaluations.each do |key, value| %>
+          <tr>
+            <td><code><%= key %></code></td>
+            <td><code><%= value.inspect %></code></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% else %>
+    <p><em>No flags available. Make sure LAUNCHDARKLY_SDK_KEY is set.</em></p>
+  <% end %>
+
+  <a href="/flags" class="btn btn-primary">View all flags &rarr;</a>
+</div>
+
+<h2>Observability Actions</h2>
+<p class="subtitle">
+  Trigger traces, logs, and errors to verify OpenTelemetry instrumentation.
 </p>
 
-<h2>Controller HTTP Request</h2>
-<p>
-  <%= @data %>
-</p>
+<div class="action-grid">
+  <div class="action-card">
+    <h3>Traces</h3>
+    <p>Create spans with nested operations and custom attributes.</p>
+    <div class="btn-group">
+      <%= button_to 'Create Trace', traces_path, method: :post, data: { turbo_frame: "trace_feedback" } %>
+      <%= button_to 'Create Trace (Controller)', create_with_helper_traces_path, method: :post, data: { turbo_frame: "trace_feedback" } %>
+    </div>
+    <%= turbo_frame_tag "trace_feedback" %>
+  </div>
 
-<h2>Traces</h2>
+  <div class="action-card">
+    <h3>Logs</h3>
+    <p>Emit log entries at different levels through Rails logger.</p>
+    <div class="btn-group">
+      <%= button_to 'Info', logs_path, method: :post, data: { turbo_frame: "log_feedback" } %>
+      <%= button_to 'Info (Hash)', create_with_hash_logs_path, method: :post, data: { turbo_frame: "log_feedback" } %>
+      <%= button_to 'Warn', create_warn_logs_path, method: :post, data: { turbo_frame: "log_feedback" } %>
+      <%= button_to 'Error', create_error_logs_path, method: :post, data: { turbo_frame: "log_feedback" } %>
+    </div>
+    <%= turbo_frame_tag "log_feedback" %>
+  </div>
 
-<%= turbo_frame_tag "trace_frame" do %>
-  <%= button_to 'Create Trace', traces_path, method: :post, data: { turbo_frame: "trace_frame" } %>
-<% end %>
+  <div class="action-card">
+    <h3>Errors</h3>
+    <p>Record exceptions via module and controller helpers.</p>
+    <div class="btn-group">
+      <%= button_to 'Record (Module)', errors_path, method: :post, data: { turbo_frame: "error_feedback" } %>
+      <%= button_to 'Record (Controller)', create_with_helper_errors_path, method: :post, data: { turbo_frame: "error_feedback" } %>
+    </div>
+    <%= turbo_frame_tag "error_feedback" %>
+  </div>
 
-<%# should update this to allow sending a custom project ID value from a form input %>
-<%= turbo_frame_tag "trace_frame_2" do %>
-  <%= button_to 'Create Trace for Project 2', custom_project_id_traces_path, method: :post, data: { turbo_frame: "trace_frame_2" } %>
-<% end %>
+  <div class="action-card">
+    <h3>Flush</h3>
+    <p>Force-flush all pending telemetry to the collector.</p>
+    <div class="btn-group">
+      <%= button_to 'Flush Telemetry', flush_telemetry_path, method: :post, data: { turbo_frame: "flush_feedback" } %>
+    </div>
+    <%= turbo_frame_tag "flush_feedback" %>
+  </div>
+</div>
 
-<h2>Logs</h2>
-
-<%# similar to above, create a button that sends a post reqest to /logs %>
-<%= turbo_frame_tag "log_frame" do %>
-  <%= button_to 'Create Log', logs_path, method: :post, data: { turbo_frame: "log_frame" } %>
-  <%= button_to 'Create Log with Hash', create_with_hash_logs_path, method: :post, data: { turbo_frame: "log_frame" } %>
-<% end %>
-
-<h2>Errors</h2>
-
-<%# similar to above, create a button that sends a post reqest to /errors %>
-<%= turbo_frame_tag "error_frame" do %>
-  <%= button_to 'Create Error', errors_path, method: :post, data: { turbo_frame: "error_frame" } %>
-<% end %>
+<h2>HTTP Request</h2>
+<div class="card">
+  <p class="subtitle" style="margin-bottom: 8px;">Auto-instrumented outbound HTTP call via Net::HTTP</p>
+  <ul class="status-list">
+    <li>
+      <span class="status-label">URL</span>
+      <code><%= @http_url %></code>
+    </li>
+    <li>
+      <span class="status-label">Response</span>
+      <span class="badge badge-success"><%= @http_status %></span>
+    </li>
+  </ul>
+</div>
