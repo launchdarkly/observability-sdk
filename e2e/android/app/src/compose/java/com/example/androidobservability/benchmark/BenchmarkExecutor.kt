@@ -41,12 +41,17 @@ class BenchmarkExecutor {
 
                 for (i in 0 until runCount) {
                     val runResult = runCompression(method, frames)
-                    bytes = runResult.bytes
+                    bytes += runResult.bytes
                     captureTimeNanos += runResult.captureTimeNanos
                     totalTimeNanos += runResult.totalTimeNanos
                 }
 
-                results.add(CompressionResult(method, bytes, captureTimeNanos, totalTimeNanos))
+                results.add(CompressionResult(
+                    method,
+                    bytes / runCount,
+                    captureTimeNanos / runCount,
+                    totalTimeNanos / runCount,
+                ))
             }
 
             frames.forEach { if (!it.bitmap.isRecycled) it.bitmap.recycle() }
