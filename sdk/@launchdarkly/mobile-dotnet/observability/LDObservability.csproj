@@ -16,7 +16,7 @@
 		<!-- NuGet packaging -->
 		<IsPackable>true</IsPackable>
 		<PackageId>LDObservability</PackageId>
-		<Version>0.3.10</Version>
+		<Version>0.3.13</Version>
 		<Authors>LD</Authors>
 		<PackageDescription>LD Observability bindings aggregator for .NET (Android/iOS).</PackageDescription>
 		<RepositoryUrl>https://example.local/ldobservability</RepositoryUrl>

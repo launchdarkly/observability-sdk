@@ -109,6 +109,20 @@
       "problemMatcher": []
     },
     {
+      "label": "Pack Observability Fat NuGet",
+      "type": "shell",
+      "command": "/bin/zsh",
+      "args": [
+        "-c",
+        "bash ${workspaceFolder}/scripts/pack_observability_fat.sh"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/"
+      },
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
       "label": "Clean build folders",
       "type": "shell",
       "command": "/bin/zsh",

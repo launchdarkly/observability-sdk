@@ -77,7 +77,15 @@ public final class ObservabilityBridge: NSObject {
                     serviceVersion: observability.serviceVersion,
                     otlpEndpoint: observability.otlpEndpoint,
                     backendUrl: observability.backendUrl,
-                    crashReporting: .init(source: .none)
+                    crashReporting: .init(source: .none),
+                    instrumentation: .init(
+                        urlSession: .disabled,
+                        userTaps: .enabled,
+                        memory: .disabled,
+                        memoryWarnings: .disabled,
+                        cpu: .disabled,
+                        launchTimes: .enabled
+                    )
                 )),
                 SessionReplay(options: .init(
                     isEnabled: replay.isEnabled,
