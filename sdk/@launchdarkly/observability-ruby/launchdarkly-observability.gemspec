@@ -34,9 +34,9 @@ Gem::Specification.new do |spec|
   spec.add_dependency 'opentelemetry-sdk', '~> 1.4'
   spec.add_dependency 'opentelemetry-semantic_conventions', '~> 1.10'
 
-  # Optional dependencies for logs/metrics (these may need to be required separately)
-  # spec.add_dependency 'opentelemetry-logs-sdk', '~> 0.1'
-  # spec.add_dependency 'opentelemetry-exporter-otlp-logs', '~> 0.1'
+  # Logs support (included by default for out-of-box DX; opt out via enable_logs: false)
+  spec.add_dependency 'opentelemetry-logs-sdk', '~> 0.1'
+  spec.add_dependency 'opentelemetry-exporter-otlp-logs', '~> 0.1'
 
   # Development dependencies
   spec.add_development_dependency 'minitest', '~> 5.0'

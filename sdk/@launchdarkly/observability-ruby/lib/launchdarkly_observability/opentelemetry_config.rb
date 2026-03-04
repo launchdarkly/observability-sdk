@@ -11,7 +11,7 @@ module LaunchDarklyObservability
   #
   # This class handles the setup of:
   # - Tracer provider with OTLP exporter and batch processing
-  # - Logger provider with OTLP log exporter (if available)
+  # - Logger provider with OTLP log exporter (included by default)
   # - Meter provider with OTLP metrics exporter (if available)
   # - Auto-instrumentation for Rails, ActiveRecord, Net::HTTP, etc.
   #
@@ -33,6 +33,9 @@ module LaunchDarklyObservability
     # @return [String] The deployment environment
     attr_reader :environment
 
+    # @return [OpenTelemetry::SDK::Logs::LoggerProvider, nil] The logger provider (nil if logs disabled or setup failed)
+    attr_reader :logger_provider
+
     # Initialize OpenTelemetry configuration
     #
     # @param project_id [String] LaunchDarkly project ID
@@ -53,8 +56,8 @@ module LaunchDarklyObservability
 
     # Configure OpenTelemetry SDK
     #
-    # Sets up tracer provider with OTLP exporter, and optionally
-    # logger and meter providers if the required gems are available.
+    # Sets up tracer provider with OTLP exporter, logger provider
+    # for OTLP log export, and optionally meter provider if available.
     def configure
       return if @configured
 
@@ -115,13 +118,12 @@ module LaunchDarklyObservability
       warn "[LaunchDarklyObservability] Error configuring instrumentations: #{e.message}"
     end
 
-    # Configure OpenTelemetry logs with OTLP exporter
+    # Configure OpenTelemetry logs with OTLP exporter.
+    # The log gems are runtime dependencies, so require should always succeed.
+    # If anything goes wrong, we warn once and leave traces unaffected.
     def configure_logs
-      # Check if logs SDK is available
-      return unless logs_sdk_available?
-
       require 'opentelemetry-logs-sdk'
-      require 'opentelemetry/exporter/otlp/logs'
+      require 'opentelemetry-exporter-otlp-logs'
 
       @logger_provider = OpenTelemetry::SDK::Logs::LoggerProvider.new(resource: create_resource)
 
@@ -132,11 +134,9 @@ module LaunchDarklyObservability
 
       @logger_provider.add_log_record_processor(logs_processor)
 
-      # Set global logger provider if the method exists
       OpenTelemetry.logger_provider = @logger_provider if OpenTelemetry.respond_to?(:logger_provider=)
-    rescue LoadError
-      # Logs SDK not available, skip log configuration
-      nil
+    rescue LoadError => e
+      warn "[LaunchDarklyObservability] Log gems not available, skipping log configuration: #{e.message}"
     rescue StandardError => e
       warn "[LaunchDarklyObservability] Error configuring logs: #{e.message}"
     end
@@ -248,14 +248,6 @@ module LaunchDarklyObservability
       else
         ENV.fetch('OTEL_SERVICE_NAME', nil)
       end
-    end
-
-    # Check if logs SDK gem is available
-    def logs_sdk_available?
-      Gem::Specification.find_by_name('opentelemetry-logs-sdk')
-      true
-    rescue Gem::MissingSpecError
-      false
     end
 
     # Check if metrics SDK gem is available

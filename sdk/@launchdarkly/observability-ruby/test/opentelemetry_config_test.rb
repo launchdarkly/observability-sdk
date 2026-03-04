@@ -171,8 +171,6 @@ class OpenTelemetryConfigTest < Minitest::Test
   end
 
   def test_batch_processor_configuration
-    # This test verifies the batch processor settings are applied
-    # by checking that spans are exported correctly
     exporter = create_test_exporter
 
     OpenTelemetry::SDK.configure do |c|
@@ -189,6 +187,49 @@ class OpenTelemetryConfigTest < Minitest::Test
     spans = exporter.finished_spans
     assert_equal 1, spans.length
     assert_equal 'test-span', spans.first.name
+  end
+
+  def test_configure_sets_up_logger_provider_by_default
+    config = LaunchDarklyObservability::OpenTelemetryConfig.new(
+      project_id: @project_id,
+      otlp_endpoint: @otlp_endpoint,
+      environment: @environment,
+      enable_metrics: false
+    )
+
+    config.configure
+
+    refute_nil config.logger_provider
+    assert_kind_of OpenTelemetry::SDK::Logs::LoggerProvider, config.logger_provider
+  end
+
+  def test_configure_skips_logger_provider_when_disabled
+    config = LaunchDarklyObservability::OpenTelemetryConfig.new(
+      project_id: @project_id,
+      otlp_endpoint: @otlp_endpoint,
+      environment: @environment,
+      enable_logs: false,
+      enable_metrics: false
+    )
+
+    config.configure
+
+    assert_nil config.logger_provider
+  end
+
+  def test_logger_provider_sets_global_provider
+    config = LaunchDarklyObservability::OpenTelemetryConfig.new(
+      project_id: @project_id,
+      otlp_endpoint: @otlp_endpoint,
+      environment: @environment,
+      enable_metrics: false
+    )
+
+    config.configure
+
+    if OpenTelemetry.respond_to?(:logger_provider)
+      assert_kind_of OpenTelemetry::SDK::Logs::LoggerProvider, OpenTelemetry.logger_provider
+    end
   end
 
   private

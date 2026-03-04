@@ -4,7 +4,7 @@ OpenTelemetry-based observability instrumentation for the LaunchDarkly Ruby SDK 
 
 ## Overview
 
-This plugin automatically instruments LaunchDarkly feature flag evaluations with OpenTelemetry traces, providing visibility into:
+This plugin automatically instruments LaunchDarkly feature flag evaluations with OpenTelemetry traces and logs, providing visibility into:
 
 - Flag evaluation timing and results
 - Evaluation reasons and rule matches
@@ -34,14 +34,15 @@ gem install launchdarkly-observability
 
 ### Dependencies
 
-The gem requires:
+The gem includes everything needed for traces and logs out of the box:
 - `launchdarkly-server-sdk` >= 8.0
 - `opentelemetry-sdk` ~> 1.4
 - `opentelemetry-exporter-otlp` ~> 0.28
 - `opentelemetry-instrumentation-all` ~> 0.62
-
-For logs and metrics support (optional):
 - `opentelemetry-logs-sdk` ~> 0.1
+- `opentelemetry-exporter-otlp-logs` ~> 0.1
+
+For metrics support (optional):
 - `opentelemetry-metrics-sdk` ~> 0.1
 
 ## Quick Start
@@ -428,9 +429,19 @@ logger.info "Processing request: #{trace_id}"
 
 ### Logging with Trace Context
 
+In Rails applications, `Rails.logger` is automatically bridged to the OpenTelemetry
+Logs pipeline. Every log entry is exported as an OTLP LogRecord with the active
+trace and span IDs attached for correlation.
+
 ```ruby
-# Logs are automatically correlated with traces via the Logger instrumentation
-Rails.logger.info "Processing flag evaluation"  # Includes trace_id, span_id
+Rails.logger.info "Processing flag evaluation"  # Automatically includes trace_id, span_id
+Rails.logger.warn "Slow query detected"         # Same correlation, different severity
+```
+
+To disable log export while keeping traces, pass `enable_logs: false`:
+
+```ruby
+plugin = LaunchDarklyObservability::Plugin.new(enable_logs: false)
 ```
 
 ### Comparison: Plugin API vs Raw OpenTelemetry

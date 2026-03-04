@@ -8,8 +8,8 @@ module LaunchDarklyObservability
     #
     # This Railtie automatically:
     # - Inserts the LaunchDarkly middleware into the Rails middleware stack
-    # - Configures Rails.logger to export to OpenTelemetry (if logger provider is available)
-    # - Provides helper methods for controllers
+    # - Bridges Rails.logger to the OpenTelemetry Logs pipeline (if logger provider is available)
+    # - Provides helper methods for controllers and views
     #
     # @example The Railtie is automatically loaded when Rails is detected
     #   # In config/initializers/launchdarkly.rb
@@ -27,6 +27,32 @@ module LaunchDarklyObservability
 
         if defined?(ActionController::API)
           ActionController::API.include(LaunchDarklyObservability::ControllerHelpers)
+        end
+
+        attach_otel_log_bridge
+      end
+
+      class << self
+        private
+
+        def attach_otel_log_bridge
+          return unless otel_logger_provider_available?
+
+          bridge = LaunchDarklyObservability::OtelLogBridge.new(OpenTelemetry.logger_provider)
+
+          if ::Rails.logger.respond_to?(:broadcast_to)
+            ::Rails.logger.broadcast_to(bridge)
+          elsif defined?(ActiveSupport::Logger) && ActiveSupport::Logger.respond_to?(:broadcast)
+            ::Rails.logger.extend(ActiveSupport::Logger.broadcast(bridge))
+          end
+        rescue StandardError => e
+          warn "[LaunchDarklyObservability] Could not attach log bridge to Rails.logger: #{e.message}"
+        end
+
+        def otel_logger_provider_available?
+          defined?(OpenTelemetry::SDK::Logs::LoggerProvider) &&
+            OpenTelemetry.respond_to?(:logger_provider) &&
+            OpenTelemetry.logger_provider.is_a?(OpenTelemetry::SDK::Logs::LoggerProvider)
         end
       end
     end

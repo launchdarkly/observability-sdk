@@ -12,6 +12,7 @@ require_relative 'launchdarkly_observability/plugin'
 require_relative 'launchdarkly_observability/source_context'
 
 require_relative 'launchdarkly_observability/middleware'
+require_relative 'launchdarkly_observability/otel_log_bridge'
 require_relative 'launchdarkly_observability/rails'
 
 module LaunchDarklyObservability
