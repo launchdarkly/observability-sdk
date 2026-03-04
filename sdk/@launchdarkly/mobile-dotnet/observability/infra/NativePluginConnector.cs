@@ -14,7 +14,6 @@ namespace LaunchDarkly.Observability
 
         internal static NativePluginConnector Instance => _instance.Value;
 
-        private readonly List<INativePlugin> _nativePlugins = new List<INativePlugin>();
         private int _createdCount;
         private int _registeredCount;
 
@@ -46,7 +45,6 @@ namespace LaunchDarkly.Observability
         {
             if (options == null) throw new ArgumentNullException(nameof(options));
             Observe = new NativeObserve(options);
-            _nativePlugins.Add(Observe);
             _createdCount++;
         }
 
@@ -71,7 +69,6 @@ namespace LaunchDarkly.Observability
         {
             if (options == null) throw new ArgumentNullException(nameof(options));
             SessionReplay = new NativeSessionReplay(options);
-            _nativePlugins.Add(SessionReplay);
             _createdCount++;
         }
 
