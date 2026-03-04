@@ -40,7 +40,9 @@
         "-lc",
         "set -e; dotnet clean ${workspaceFolder}/sample/MauiSample9.csproj -c Debug -p:TargetFramework=net9.0-android; dotnet build ${workspaceFolder}/sample/MauiSample9.csproj -c Debug -t:Run -p:TargetFramework=net9.0-android -p:LD_INCLUDE_NATIVE_DEPS=true -p:AndroidUninstall=true -p:AndroidForceInstall=true -p:AndroidPackageFormat=apk"
       ],
-      "options": { "cwd": "${workspaceFolder}/" },
+      "options": {
+        "cwd": "${workspaceFolder}/"
+      },
       "group": "build",
       "problemMatcher": []
     },
@@ -66,7 +68,9 @@
         "-lc",
         "set -e; dotnet clean ${workspaceFolder}/sample/MauiSample9.csproj -c Debug -f net9.0-android; dotnet build ${workspaceFolder}/sample/MauiSample9.csproj -c Debug -f net9.0-android -p:LD_INCLUDE_NATIVE_DEPS=true"
       ],
-      "options": { "cwd": "${workspaceFolder}/" },
+      "options": {
+        "cwd": "${workspaceFolder}/"
+      },
       "group": "build",
       "problemMatcher": "$msCompile"
     },
@@ -78,7 +82,9 @@
         "-lc",
         "set -e; dotnet clean ${workspaceFolder}/sample/MauiSample9.csproj -c Debug -f net9.0-ios; dotnet build ${workspaceFolder}/sample/MauiSample9.csproj -c Debug -f net9.0-ios"
       ],
-      "options": { "cwd": "${workspaceFolder}/" },
+      "options": {
+        "cwd": "${workspaceFolder}/"
+      },
       "group": "build",
       "problemMatcher": "$msCompile"
     },
@@ -90,7 +96,9 @@
         "-lc",
         "set -e; dotnet restore ${workspaceFolder}/sample/MauiSample9.csproj; dotnet restore ${workspaceFolder}/observability/LDObservability.csproj; dotnet restore ${workspaceFolder}/macios/LDObserve.MaciOS.Binding/LDObserve.MaciOS.Binding.csproj; dotnet restore ${workspaceFolder}/android/LDObserve.Android.Binding/LDObserve.Android.Binding.csproj"
       ],
-      "options": { "cwd": "${workspaceFolder}/" },
+      "options": {
+        "cwd": "${workspaceFolder}/"
+      },
       "group": "build",
       "problemMatcher": []
     },
