@@ -1,15 +1,458 @@
 /*
- * This is a manifest file that'll be compiled into application.css, which will include all the files
- * listed below.
- *
- * Any CSS (and SCSS, if configured) file within this directory, lib/assets/stylesheets, or any plugin's
- * vendor/assets/stylesheets directory can be referenced here using a relative path.
- *
- * You're free to add application-wide styles to this file and they'll appear at the bottom of the
- * compiled file so the styles you add here take precedence over styles defined in any other CSS
- * files in this directory. Styles in this file should be added after the last require_* statement.
- * It is generally better to create a new file per style scope.
- *
  *= require_tree .
  *= require_self
  */
+
+:root {
+  --color-brand: #405bff;
+  --color-brand-dark: #3148cc;
+  --color-header-bg: #282828;
+  --color-header-text: #ffffff;
+  --color-bg: #f5f6f8;
+  --color-surface: #ffffff;
+  --color-text: #282828;
+  --color-text-muted: #6b7280;
+  --color-border: #e0e2e6;
+  --color-success: #16a34a;
+  --color-success-bg: #f0fdf4;
+  --color-danger: #dc2626;
+  --color-danger-bg: #fef2f2;
+  --color-code-bg: #f1f3f5;
+  --radius: 8px;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --max-width: 960px;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--color-text);
+  background: var(--color-bg);
+}
+
+/* --- Header / Nav --- */
+
+.site-header {
+  background: var(--color-header-bg);
+  color: var(--color-header-text);
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 56px;
+}
+
+.site-header a {
+  color: var(--color-header-text);
+  text-decoration: none;
+}
+
+.site-logo {
+  font-weight: 700;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.site-nav {
+  display: flex;
+  gap: 24px;
+}
+
+.site-nav a {
+  font-size: 14px;
+  opacity: 0.8;
+  transition: opacity 0.15s;
+}
+
+.site-nav a:hover,
+.site-nav a.active {
+  opacity: 1;
+}
+
+/* --- Container --- */
+
+.container {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 32px 24px 64px;
+}
+
+/* --- Typography --- */
+
+h1 {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0 0 8px;
+}
+
+h2 {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 32px 0 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 24px 0 8px;
+}
+
+p {
+  margin: 0 0 16px;
+}
+
+a {
+  color: var(--color-brand);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+.subtitle {
+  color: var(--color-text-muted);
+  margin-bottom: 24px;
+}
+
+/* --- Cards --- */
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 20px 24px;
+  margin-bottom: 24px;
+}
+
+.card h2 {
+  margin-top: 0;
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+/* --- Status Badges --- */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.badge-success {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.badge-danger {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+
+/* --- Status Info --- */
+
+.status-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 16px;
+}
+
+.status-list li {
+  padding: 6px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-list li + li {
+  border-top: 1px solid var(--color-border);
+}
+
+.status-label {
+  font-weight: 600;
+  min-width: 120px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+/* --- Tables --- */
+
+table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 16px;
+  background: var(--color-surface);
+}
+
+thead th {
+  background: var(--color-bg);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  text-align: left;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+tbody td {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 14px;
+}
+
+tbody tr:last-child td {
+  border-bottom: none;
+}
+
+tbody tr:hover {
+  background: #f9fafb;
+}
+
+/* --- Code / Pre --- */
+
+code {
+  font-family: "SF Mono", "Fira Code", "Fira Mono", Menlo, Consolas, monospace;
+  font-size: 13px;
+  background: var(--color-code-bg);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+pre {
+  background: var(--color-code-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 16px;
+  overflow-x: auto;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+pre code {
+  background: none;
+  padding: 0;
+  border-radius: 0;
+}
+
+.code-block {
+  background: var(--color-code-bg);
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  display: block;
+  font-size: 14px;
+}
+
+.value-block {
+  background: #eff6ff;
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  display: block;
+}
+
+/* --- Buttons --- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background 0.15s, box-shadow 0.15s;
+  text-decoration: none;
+  line-height: 1.4;
+}
+
+.btn:hover {
+  text-decoration: none;
+}
+
+.btn-primary {
+  background: var(--color-brand);
+  color: #fff;
+  border-color: var(--color-brand);
+}
+
+.btn-primary:hover {
+  background: var(--color-brand-dark);
+}
+
+.btn-secondary {
+  background: var(--color-surface);
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+
+.btn-secondary:hover {
+  background: var(--color-bg);
+}
+
+.btn-danger {
+  background: var(--color-danger);
+  color: #fff;
+  border-color: var(--color-danger);
+}
+
+.btn-danger:hover {
+  background: #b91c1c;
+}
+
+.btn-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+/* Style button_to forms inside button groups */
+.btn-group form {
+  display: inline-block;
+}
+
+.btn-group form button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn-group form button:hover {
+  background: var(--color-bg);
+}
+
+/* --- Action Sections --- */
+
+.action-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.action-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+
+.action-card h3 {
+  margin: 0 0 4px;
+  border-bottom: none;
+  padding-bottom: 0;
+  font-size: 15px;
+}
+
+.action-card p {
+  color: var(--color-text-muted);
+  font-size: 13px;
+  margin: 0 0 12px;
+}
+
+/* --- Detail Fields --- */
+
+.detail-field {
+  margin-bottom: 20px;
+}
+
+.detail-field h2 {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  margin: 0 0 6px;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+/* --- Endpoint List --- */
+
+.endpoint-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.endpoint-list li {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 14px;
+}
+
+.endpoint-list li:last-child {
+  border-bottom: none;
+}
+
+.endpoint-method {
+  display: inline-block;
+  background: var(--color-code-bg);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: monospace;
+  margin-right: 6px;
+}
+
+/* --- Footer --- */
+
+.site-footer {
+  text-align: center;
+  padding: 24px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  border-top: 1px solid var(--color-border);
+  margin-top: 48px;
+}
+
+/* --- Feedback --- */
+
+.feedback {
+  display: inline-flex;
+  align-items: center;
+  font-size: 13px;
+  color: var(--color-success);
+  padding: 8px 0;
+}
+
+/* --- Links row --- */
+
+.link-row {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+}

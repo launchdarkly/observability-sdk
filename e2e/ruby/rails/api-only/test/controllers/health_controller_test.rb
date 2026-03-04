@@ -17,8 +17,8 @@ class HealthControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test 'should include highlight headers' do
-    get health_path, headers: { 'X-Highlight-Request' => 'test-session/test-request' }
+  test 'should handle custom headers' do
+    get health_path, headers: { 'X-Request-ID' => 'test-request-123' }
     assert_response :success
   end
 end
