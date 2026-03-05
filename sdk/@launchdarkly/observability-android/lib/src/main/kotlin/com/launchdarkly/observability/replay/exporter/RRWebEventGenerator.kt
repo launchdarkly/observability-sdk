@@ -190,6 +190,7 @@ class RRWebEventGenerator(
      */
     fun generateCaptureFullEvents(exportFrame: ExportFrame): List<Event> {
         if (exportFrame.addImages.isEmpty()) return emptyList()
+        nodeIds.clear()
         val eventBatch = mutableListOf<Event>()
         knownKeyFrameId = exportFrame.keyFrameId
 
