@@ -38,6 +38,7 @@ class SessionReplay(
     }
 
     override fun register(client: LDClient, metadata: EnvironmentMetadata?) {
+        System.out.println("LD:SessionReplay:register LDObserve.context= ${LDObserve.context}")
         LDObserve.context?.let {
             InstrumentationContributorManager.add(client, this)
         } ?: run {
