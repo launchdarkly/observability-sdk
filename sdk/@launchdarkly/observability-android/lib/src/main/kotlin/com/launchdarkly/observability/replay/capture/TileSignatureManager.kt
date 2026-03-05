@@ -15,7 +15,58 @@ data class ImageSignature(
     val tileWidth: Int,
     val tileHeight: Int,
     val tileSignatures: List<TileSignature>,
-)
+) {
+    private var _hashCode: Int = 0
+
+    override fun hashCode(): Int {
+        var h = _hashCode
+        if (h == 0) {
+            h = finalizeHash(rows, columns, tileWidth, tileHeight, accumulateHash(tileSignatures))
+            _hashCode = h
+        }
+        return h
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is ImageSignature) return false
+        val h = _hashCode
+        val oh = other._hashCode
+        if (h != 0 && oh != 0 && h != oh) return false
+        return rows == other.rows &&
+            columns == other.columns &&
+            tileWidth == other.tileWidth &&
+            tileHeight == other.tileHeight &&
+            tileSignatures == other.tileSignatures
+    }
+
+    companion object {
+        internal fun accumulateTile(acc: Int, sig: TileSignature): Int =
+            31 * acc + (sig.hashLo xor sig.hashHi).toInt()
+
+        private fun accumulateHash(tiles: List<TileSignature>): Int {
+            var acc = 0
+            for (sig in tiles) acc = accumulateTile(acc, sig)
+            return acc
+        }
+
+        private fun finalizeHash(rows: Int, columns: Int, tileWidth: Int, tileHeight: Int, tileAcc: Int): Int {
+            var h = rows
+            h = 31 * h + columns
+            h = 31 * h + tileWidth
+            h = 31 * h + tileHeight
+            h = 31 * h + tileAcc
+            return if (h == 0) 1 else h
+        }
+
+        internal fun createWithAccHash(
+            rows: Int, columns: Int, tileWidth: Int, tileHeight: Int,
+            tileSignatures: List<TileSignature>, tileAccHash: Int,
+        ): ImageSignature = ImageSignature(rows, columns, tileWidth, tileHeight, tileSignatures).also {
+            it._hashCode = finalizeHash(rows, columns, tileWidth, tileHeight, tileAccHash)
+        }
+    }
+}
 
 /**
  * Computes tile-based signatures for bitmaps.
@@ -85,22 +136,26 @@ class TileSignatureManager {
         val tilesY = (height + tileHeight - 1) / tileHeight
         val tileSignatures = ArrayList<TileSignature>(tilesX * tilesY)
 
+        var tileAccHash = 0
         for (ty in 0 until tilesY) {
             val startY = ty * tileHeight
             val endY = minOf(startY + tileHeight, height)
             for (tx in 0 until tilesX) {
                 val startX = tx * tileWidth
                 val endX = minOf(startX + tileWidth, width)
-                tileSignatures.add(tileHash(pixels, width, startX, startY, endX, endY))
+                val sig = tileHash(pixels, width, startX, startY, endX, endY)
+                tileSignatures.add(sig)
+                tileAccHash = ImageSignature.accumulateTile(tileAccHash, sig)
             }
         }
 
-        return ImageSignature(
+        return ImageSignature.createWithAccHash(
             rows = tilesY,
             columns = tilesX,
             tileWidth = tileWidth,
             tileHeight = tileHeight,
             tileSignatures = tileSignatures,
+            tileAccHash = tileAccHash,
         )
     }
 
