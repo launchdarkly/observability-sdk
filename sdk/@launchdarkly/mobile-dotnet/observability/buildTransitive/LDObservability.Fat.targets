@@ -67,6 +67,10 @@
 			<Bind>false</Bind>
 			<Visible>false</Visible>
 		</AndroidLibrary>
+		<AndroidLibrary Include="$(MSBuildThisFileDirectory)../runtimes/android/native/lib-release.aar">
+			<Bind>false</Bind>
+			<Visible>false</Visible>
+		</AndroidLibrary>
 		<AndroidLibrary Include="$(MSBuildThisFileDirectory)../runtimes/android/native/LDObserve-release.aar">
 			<Bind>false</Bind>
 			<Visible>false</Visible>
