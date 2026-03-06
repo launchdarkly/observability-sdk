@@ -79,25 +79,41 @@ data class ImageSignature(
  */
 class TileSignatureManager {
     companion object {
-        private const val DEFAULT_PREFERRED_TILE_WIDTH = 64
+        private const val TILE_W = 64
         private const val DEFAULT_PREFERRED_TILE_HEIGHT = 22
+
+        private const val SEED_H0 = 0x517cc1b727220a95L
+        private const val SEED_H1 = 0x6c62272e07bb0142L
+        private const val SEED_H2 = -0x61c88646805b83ebL  // 0x9e3779b97f4a7c15
+        private const val SEED_H3 = -0x40a7b892e31b1a47L  // 0xbf58476d1ce4e5b9
+        private const val MIX_C1 = -0x00ae502812aa7333L    // 0xff51afd7ed558ccd
+        private const val MIX_C2 = -0x3b314601e57a13adL    // 0xc4ceb9fe1a85ec53
+
+        private fun pack(lo: Int, hi: Int): Long =
+            (lo.toLong() and 0xFFFFFFFFL) or ((hi.toLong() and 0xFFFFFFFFL) shl 32)
+
+        private fun avalanche(h0: Long, h1: Long, h2: Long, h3: Long): TileSignature {
+            var a = h0 xor h2
+            var b = h1 xor h3
+            a = a xor (a ushr 33); a *= MIX_C1; a = a xor (a ushr 33)
+            b = b xor (b ushr 29); b *= MIX_C2; b = b xor (b ushr 29)
+            return TileSignature(hashLo = a, hashHi = b)
+        }
     }
 
     @Volatile
     private var pixelBuffer: IntArray = IntArray(0)
 
     /**
-     * Computes a tile-based signature using preferred defaults that are adjusted to nearby divisors.
+     * Computes a tile-based signature with fixed 64-pixel tile width and
+     * a height adjusted to a nearby divisor of the image height.
      */
     fun compute(bitmap: Bitmap): ImageSignature? {
         val width = bitmap.width
         val height = bitmap.height
-        if (width <= 0 || height <= 0) {
-            return null
-        }
-        val tileWidth = nearestDivisor(width, DEFAULT_PREFERRED_TILE_WIDTH, 60..79)
+        if (width <= 0 || height <= 0) return null
         val tileHeight = nearestDivisor(height, DEFAULT_PREFERRED_TILE_HEIGHT, 22..44)
-        return computeInternal(bitmap, tileWidth, tileHeight)
+        return computeFixed64(bitmap, tileHeight)
     }
 
     /**
@@ -106,7 +122,7 @@ class TileSignatureManager {
      */
     fun compute(bitmap: Bitmap, tileWidth: Int, tileHeight: Int): ImageSignature? {
         if (tileWidth <= 0 || tileHeight <= 0) return null
-        return computeInternal(bitmap, tileWidth, tileHeight)
+        return computeGeneric(bitmap, tileWidth, tileHeight)
     }
 
     /**
@@ -114,86 +130,157 @@ class TileSignatureManager {
      */
     fun compute(bitmap: Bitmap, tileSize: Int): ImageSignature? = compute(bitmap, tileSize, tileSize)
 
-    private fun computeInternal(
-        bitmap: Bitmap,
-        tileWidth: Int,
-        tileHeight: Int
-    ): ImageSignature? {
+    private fun loadPixels(bitmap: Bitmap): IntArray {
+        val w = bitmap.width
+        val h = bitmap.height
+        val needed = w * h
+        if (pixelBuffer.size < needed) {
+            pixelBuffer = IntArray(needed)
+        }
+        val buf = pixelBuffer
+        bitmap.getPixels(buf, 0, w, 0, 0, w, h)
+        return buf
+    }
+
+    private fun computeFixed64(bitmap: Bitmap, tileHeight: Int): ImageSignature? {
         val width = bitmap.width
         val height = bitmap.height
-        if (width <= 0 || height <= 0) {
-            return null
-        }
+        if (width <= 0 || height <= 0) return null
+        val pixels = loadPixels(bitmap)
 
-        val pixelsNeeded = width * height
-        if (pixelBuffer.size < pixelsNeeded) {
-            pixelBuffer = IntArray(pixelsNeeded)
-        }
-        val pixels = pixelBuffer
-        bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
-
-        val tilesX = (width + tileWidth - 1) / tileWidth
-        val tilesY = (height + tileHeight - 1) / tileHeight
-        val tileSignatures = ArrayList<TileSignature>(tilesX * tilesY)
+        val columns = (width + TILE_W - 1) / TILE_W
+        val rows = (height + tileHeight - 1) / tileHeight
+        val fullCols = width / TILE_W
+        val tileSignatures = ArrayList<TileSignature>(columns * rows)
 
         var tileAccHash = 0
-        for (ty in 0 until tilesY) {
-            val startY = ty * tileHeight
-            val endY = minOf(startY + tileHeight, height)
-            for (tx in 0 until tilesX) {
-                val startX = tx * tileWidth
-                val endX = minOf(startX + tileWidth, width)
-                val sig = tileHash(pixels, width, startX, startY, endX, endY)
+        for (row in 0 until rows) {
+            val startY = row * tileHeight
+            val tileRows = minOf(tileHeight, height - startY)
+
+            for (col in 0 until fullCols) {
+                val sig = tileHashW64(pixels, width, col * TILE_W, startY, tileRows)
+                tileSignatures.add(sig)
+                tileAccHash = ImageSignature.accumulateTile(tileAccHash, sig)
+            }
+
+            if (fullCols < columns) {
+                val startX = fullCols * TILE_W
+                val sig = tileHashGeneric(pixels, width, startX, startY, width, startY + tileRows)
                 tileSignatures.add(sig)
                 tileAccHash = ImageSignature.accumulateTile(tileAccHash, sig)
             }
         }
 
         return ImageSignature.createWithAccHash(
-            rows = tilesY,
-            columns = tilesX,
-            tileWidth = tileWidth,
-            tileHeight = tileHeight,
-            tileSignatures = tileSignatures,
-            tileAccHash = tileAccHash,
+            rows = rows, columns = columns,
+            tileWidth = TILE_W, tileHeight = tileHeight,
+            tileSignatures = tileSignatures, tileAccHash = tileAccHash,
         )
     }
 
-    private fun tileHash(
+    private fun computeGeneric(bitmap: Bitmap, tileWidth: Int, tileHeight: Int): ImageSignature? {
+        val width = bitmap.width
+        val height = bitmap.height
+        if (width <= 0 || height <= 0) return null
+        val pixels = loadPixels(bitmap)
+
+        val columns = (width + tileWidth - 1) / tileWidth
+        val rows = (height + tileHeight - 1) / tileHeight
+        val tileSignatures = ArrayList<TileSignature>(columns * rows)
+
+        var tileAccHash = 0
+        for (row in 0 until rows) {
+            val startY = row * tileHeight
+            val endY = minOf(startY + tileHeight, height)
+            for (col in 0 until columns) {
+                val startX = col * tileWidth
+                val endX = minOf(startX + tileWidth, width)
+                val sig = tileHashGeneric(pixels, width, startX, startY, endX, endY)
+                tileSignatures.add(sig)
+                tileAccHash = ImageSignature.accumulateTile(tileAccHash, sig)
+            }
+        }
+
+        return ImageSignature.createWithAccHash(
+            rows = rows, columns = columns,
+            tileWidth = tileWidth, tileHeight = tileHeight,
+            tileSignatures = tileSignatures, tileAccHash = tileAccHash,
+        )
+    }
+
+    /**
+     * Fast hash for full 64-pixel-wide tiles. The inner loop is fixed at 8 iterations
+     * (8 pixels each = 64 pixels) with 4 parallel accumulators for ILP.
+     */
+    private fun tileHashW64(
         pixels: IntArray,
-        width: Int,
+        imageWidth: Int,
+        startX: Int,
+        startY: Int,
+        tileRows: Int,
+    ): TileSignature {
+        var h0 = SEED_H0; var h1 = SEED_H1
+        var h2 = SEED_H2; var h3 = SEED_H3
+
+        for (y in 0 until tileRows) {
+            var idx = (startY + y) * imageWidth + startX
+            for (i in 0 until 8) {
+                h0 += pack(pixels[idx], pixels[idx + 1])
+                h1 += pack(pixels[idx + 2], pixels[idx + 3])
+                h2 += pack(pixels[idx + 4], pixels[idx + 5])
+                h3 += pack(pixels[idx + 6], pixels[idx + 7])
+                idx += 8
+            }
+            h0 = h0 xor h2; h1 = h1 xor h3
+            h2 += h0; h3 += h1
+        }
+
+        return avalanche(h0, h1, h2, h3)
+    }
+
+    /**
+     * Generic hash for tiles of any width. Uses the same 4-accumulator scheme
+     * with 8-pixel processing groups and remainder handling.
+     */
+    private fun tileHashGeneric(
+        pixels: IntArray,
+        imageWidth: Int,
         startX: Int,
         startY: Int,
         endX: Int,
-        endY: Int
+        endY: Int,
     ): TileSignature {
-        var hashLo = 5163949831757626579L
-        var hashHi = 4657936482115123397L
-        val primeLo = 1238197591667094937L
-        val primeHi = 1700294137212722571L
+        val pixelWidth = endX - startX
+        val quads = pixelWidth ushr 3
+        val remPixels = pixelWidth and 7
+        val remPairs = remPixels ushr 1
+        val hasTail = remPixels and 1 != 0
 
-        val pixelCount = endX - startX
-        val pairCount = pixelCount ushr 1
-        val hasTrailingPixel = pixelCount and 1 != 0
+        var h0 = SEED_H0; var h1 = SEED_H1
+        var h2 = SEED_H2; var h3 = SEED_H3
 
         for (y in startY until endY) {
-            var i = y * width + startX
+            var idx = y * imageWidth + startX
 
-            for (p in 0 until pairCount) {
-                val v = (pixels[i].toLong() and 0xFFFFFFFFL) or
-                        ((pixels[i + 1].toLong() and 0xFFFFFFFFL) shl 32)
-                hashLo = (hashLo xor v) * primeLo
-                hashHi = (hashHi xor v) * primeHi
-                i += 2
+            for (q in 0 until quads) {
+                h0 += pack(pixels[idx], pixels[idx + 1])
+                h1 += pack(pixels[idx + 2], pixels[idx + 3])
+                h2 += pack(pixels[idx + 4], pixels[idx + 5])
+                h3 += pack(pixels[idx + 6], pixels[idx + 7])
+                idx += 8
             }
 
-            if (hasTrailingPixel) {
-                val v = pixels[i].toLong() and 0xFFFFFFFFL
-                hashLo = (hashLo xor v) * primeLo
-                hashHi = (hashHi xor v) * primeHi
-            }
+            if (remPairs >= 1) h0 += pack(pixels[idx], pixels[idx + 1])
+            if (remPairs >= 2) h1 += pack(pixels[idx + 2], pixels[idx + 3])
+            if (remPairs >= 3) h2 += pack(pixels[idx + 4], pixels[idx + 5])
+            if (hasTail) h3 += pixels[idx + remPairs * 2].toLong() and 0xFFFFFFFFL
+
+            h0 = h0 xor h2; h1 = h1 xor h3
+            h2 += h0; h3 += h1
         }
-        return TileSignature(hashLo = hashLo, hashHi = hashHi)
+
+        return avalanche(h0, h1, h2, h3)
     }
 
     private fun nearestDivisor(value: Int, preferred: Int, range: IntRange): Int {
@@ -218,7 +305,6 @@ class TileSignatureManager {
 
         return preferred
     }
-
 }
 
 fun ImageSignature.diffRectangle(other: ImageSignature?): IntRect? {
