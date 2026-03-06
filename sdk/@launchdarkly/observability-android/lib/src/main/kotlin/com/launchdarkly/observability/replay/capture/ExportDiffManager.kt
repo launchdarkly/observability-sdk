@@ -13,7 +13,7 @@ class ExportDiffManager(
     private val currentImages = mutableListOf<ExportFrame.RemoveImage>()
     private val currentImagesIndex = mutableMapOf<ImageSignature, Int>()
     private val lock = Any()
-    private val format = ExportFrame.ExportFormat.Webp(quality = 30) //ExportFrame.ExportFormat.Jpeg(quality = 0.3f)
+    private val format = ExportFrame.ExportFormat.Jpeg(quality = 0.3f)
 
     private var keyFrameId = 0
 
