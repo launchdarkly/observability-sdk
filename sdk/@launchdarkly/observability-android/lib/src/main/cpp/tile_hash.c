@@ -1,6 +1,12 @@
 #include "tile_hash.h"
 
 #if defined(__ARM_NEON) && defined(__OPTIMIZE__)
+#define USE_NEON 1
+#else
+#define USE_NEON 0
+#endif
+
+#if USE_NEON
 #include <arm_neon.h>
 #endif
 
@@ -63,7 +69,7 @@ TileHashResult tile_hash_w64_scalar(const unsigned char *rowPtr,
     return result;
 }
 
-#if defined(__ARM_NEON)
+#if USE_NEON
 TileHashResult tile_hash_w64_neon(const unsigned char *rowPtr,
                                    int rows,
                                    int bytesPerRow) {
@@ -103,7 +109,7 @@ TileHashResult tile_hash_w64_neon(const unsigned char *rowPtr,
 static inline TileHashResult tile_hash_w64(const unsigned char *rowPtr,
                                             int rows,
                                             int bytesPerRow) {
-#if defined(__ARM_NEON) && defined(__OPTIMIZE__)
+#if USE_NEON
     return tile_hash_w64_neon(rowPtr, rows, bytesPerRow);
 #else
     return tile_hash_w64_scalar(rowPtr, rows, bytesPerRow);
