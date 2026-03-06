@@ -41,7 +41,7 @@
     "build": "bob build",
     "build:plugin": "tsc -p plugin/tsconfig.json",
     "build:xcframeworks": "bash scripts/build-xcframeworks.sh",
-    "clean": "del-cli android/build example/android/build example/android/app/build example/ios/build lib plugin/build",
+    "clean": "del-cli android/build example/android/build example/android/app/build example/ios/build lib plugin/build ios/Frameworks",
     "prepack": "bob build && tsc -p plugin/tsconfig.json && bash scripts/build-xcframeworks.sh",
     "typecheck": "tsc",
     "lint": "echo 'Linting temporarily disabled - TODO: fix ESLint config'",
