@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.22.1)
 project(tile_hash C)
 
 add_library(tile_hash SHARED
+    nearest_divisor.c
     tile_hash.c
     tile_hash_jni.c
 )
