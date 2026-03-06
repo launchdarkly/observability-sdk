@@ -8,7 +8,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        minSdk = 24
+        minSdk = 23
     }
 
     buildTypes {
@@ -46,7 +46,11 @@ dependencies {
     implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.11.0")
     "copyDependencies"("com.launchdarkly:launchdarkly-android-client-sdk:5.11.0")
 
-    implementation("com.launchdarkly:launchdarkly-observability-android:0.27.0")
+    // Intentionally use a non-existent version so this dependency MUST be
+    // satisfied by composite-build substitution (settings.gradle.kts).
+    // If substitution breaks, the build should fail instead of silently
+    // falling back to an older published AAR.
+    implementation("com.launchdarkly:launchdarkly-observability-android:0.0.0-local")
 
     // TODO: revise these versions to be as old as usable for compatibility
     implementation("io.opentelemetry:opentelemetry-api:1.51.0")

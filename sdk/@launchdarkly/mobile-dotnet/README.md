@@ -9,40 +9,46 @@ The LaunchDarkly Session Replay SDK for .NET MAUI allows you to capture user int
 
 ## Getting Started
 
-To enable Session Replay, you need to configure both the `ObservabilityOptions` and `SessionReplayOptions` when starting the SDK.
+To enable Session Replay, you need to configure both the `ObservabilityPlugin` and `SessionReplayPlugin` when initializing the LaunchDarkly client.
 
 ### Configure Session Replay
 
-In your `MauiProgram.cs` (or wherever you initialize your application), use the `LDNative.Start` method:
+In your `MauiProgram.cs` (or wherever you initialize your application), register the plugins via `LdClient`:
 
 ```csharp
 using LaunchDarkly.SessionReplay;
+using LaunchDarkly.Sdk.Client;
+using LaunchDarkly.Sdk.Client.Integrations;
+using LaunchDarkly.Observability;
 
 public static class MauiProgram
 {
     public static MauiApp CreateMauiApp()
     {
         var builder = MauiApp.CreateBuilder();
-        
+
         // ... other configuration ...
 
         var mobileKey = "your-mobile-key";
 
-        var ldNative = LDNative.Start(
-            mobileKey: mobileKey,
-            observability: new(
-                serviceName: "maui-sample-app"
-            ),
-            replay: new(
-                isEnabled: true,
-                privacy: new(
-                    maskTextInputs: true,
-                    maskWebViews: false,
-                    maskLabels: false,
-                    maskImages: false
-                )
-            )
-        );
+        var ldConfig = Configuration.Builder(mobileKey, ConfigurationBuilder.AutoEnvAttributes.Enabled)
+            .Plugins(new PluginConfigurationBuilder()
+                .Add(ObservabilityPlugin.Builder(new ObservabilityOptions(
+                    isEnabled: true,
+                    serviceName: "maui-sample-app"
+                )).Build())
+                .Add(SessionReplayPlugin.Builder(new SessionReplayOptions(
+                    isEnabled: true,
+                    privacy: new SessionReplayOptions.PrivacyOptions(
+                        maskTextInputs: true,
+                        maskWebViews: false,
+                        maskLabels: false
+                    )
+                )).Build())
+            ).Build();
+
+        var context = LaunchDarkly.Sdk.Context.New("maui-user-key");
+        var client = LdClient.Init(ldConfig, context, TimeSpan.FromSeconds(10));
 
         return builder.Build();
     }
