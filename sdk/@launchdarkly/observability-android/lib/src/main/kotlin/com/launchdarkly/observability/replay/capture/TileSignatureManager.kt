@@ -89,16 +89,6 @@ class TileSignatureManager {
         private const val MIX_C1 = -0x00ae502812aa7333L    // 0xff51afd7ed558ccd
         private const val MIX_C2 = -0x3b314601e57a13adL    // 0xc4ceb9fe1a85ec53
 
-        private fun pack(lo: Int, hi: Int): Long =
-            (lo.toLong() and 0xFFFFFFFFL) or ((hi.toLong() and 0xFFFFFFFFL) shl 32)
-
-        private fun avalanche(h0: Long, h1: Long, h2: Long, h3: Long): TileSignature {
-            var a = h0 xor h2
-            var b = h1 xor h3
-            a = a xor (a ushr 33); a *= MIX_C1; a = a xor (a ushr 33)
-            b = b xor (b ushr 29); b *= MIX_C2; b = b xor (b ushr 29)
-            return TileSignature(hashLo = a, hashHi = b)
-        }
     }
 
     @Volatile
@@ -107,11 +97,18 @@ class TileSignatureManager {
     /**
      * Computes a tile-based signature with fixed 64-pixel tile width and
      * a height adjusted to a nearby divisor of the image height.
+     * Uses native C implementation via JNI when available (NEON-accelerated on ARM),
+     * falls back to Kotlin otherwise.
      */
     fun compute(bitmap: Bitmap): ImageSignature? {
         val width = bitmap.width
         val height = bitmap.height
         if (width <= 0 || height <= 0) return null
+
+        if (TileHashNative.isAvailable) {
+            TileHashNative.compute(bitmap)?.let { return it }
+        }
+
         val tileHeight = nearestDivisor(height, DEFAULT_PREFERRED_TILE_HEIGHT, 22..44)
         return computeFixed64(bitmap, tileHeight)
     }
@@ -226,17 +223,20 @@ class TileSignatureManager {
         for (y in 0 until tileRows) {
             var idx = (startY + y) * imageWidth + startX
             for (i in 0 until 8) {
-                h0 += pack(pixels[idx], pixels[idx + 1])
-                h1 += pack(pixels[idx + 2], pixels[idx + 3])
-                h2 += pack(pixels[idx + 4], pixels[idx + 5])
-                h3 += pack(pixels[idx + 6], pixels[idx + 7])
+                h0 += (pixels[idx].toLong() and 0xFFFFFFFFL) or ((pixels[idx + 1].toLong() and 0xFFFFFFFFL) shl 32)
+                h1 += (pixels[idx + 2].toLong() and 0xFFFFFFFFL) or ((pixels[idx + 3].toLong() and 0xFFFFFFFFL) shl 32)
+                h2 += (pixels[idx + 4].toLong() and 0xFFFFFFFFL) or ((pixels[idx + 5].toLong() and 0xFFFFFFFFL) shl 32)
+                h3 += (pixels[idx + 6].toLong() and 0xFFFFFFFFL) or ((pixels[idx + 7].toLong() and 0xFFFFFFFFL) shl 32)
                 idx += 8
             }
             h0 = h0 xor h2; h1 = h1 xor h3
             h2 += h0; h3 += h1
         }
 
-        return avalanche(h0, h1, h2, h3)
+        h0 = h0 xor h2; h1 = h1 xor h3
+        h0 = h0 xor (h0 ushr 33); h0 *= MIX_C1; h0 = h0 xor (h0 ushr 33)
+        h1 = h1 xor (h1 ushr 29); h1 *= MIX_C2; h1 = h1 xor (h1 ushr 29)
+        return TileSignature(hashLo = h0, hashHi = h1)
     }
 
     /**
@@ -264,23 +264,26 @@ class TileSignatureManager {
             var idx = y * imageWidth + startX
 
             for (q in 0 until quads) {
-                h0 += pack(pixels[idx], pixels[idx + 1])
-                h1 += pack(pixels[idx + 2], pixels[idx + 3])
-                h2 += pack(pixels[idx + 4], pixels[idx + 5])
-                h3 += pack(pixels[idx + 6], pixels[idx + 7])
+                h0 += (pixels[idx].toLong() and 0xFFFFFFFFL) or ((pixels[idx + 1].toLong() and 0xFFFFFFFFL) shl 32)
+                h1 += (pixels[idx + 2].toLong() and 0xFFFFFFFFL) or ((pixels[idx + 3].toLong() and 0xFFFFFFFFL) shl 32)
+                h2 += (pixels[idx + 4].toLong() and 0xFFFFFFFFL) or ((pixels[idx + 5].toLong() and 0xFFFFFFFFL) shl 32)
+                h3 += (pixels[idx + 6].toLong() and 0xFFFFFFFFL) or ((pixels[idx + 7].toLong() and 0xFFFFFFFFL) shl 32)
                 idx += 8
             }
 
-            if (remPairs >= 1) h0 += pack(pixels[idx], pixels[idx + 1])
-            if (remPairs >= 2) h1 += pack(pixels[idx + 2], pixels[idx + 3])
-            if (remPairs >= 3) h2 += pack(pixels[idx + 4], pixels[idx + 5])
+            if (remPairs >= 1) h0 += (pixels[idx].toLong() and 0xFFFFFFFFL) or ((pixels[idx + 1].toLong() and 0xFFFFFFFFL) shl 32)
+            if (remPairs >= 2) h1 += (pixels[idx + 2].toLong() and 0xFFFFFFFFL) or ((pixels[idx + 3].toLong() and 0xFFFFFFFFL) shl 32)
+            if (remPairs >= 3) h2 += (pixels[idx + 4].toLong() and 0xFFFFFFFFL) or ((pixels[idx + 5].toLong() and 0xFFFFFFFFL) shl 32)
             if (hasTail) h3 += pixels[idx + remPairs * 2].toLong() and 0xFFFFFFFFL
 
             h0 = h0 xor h2; h1 = h1 xor h3
             h2 += h0; h3 += h1
         }
 
-        return avalanche(h0, h1, h2, h3)
+        h0 = h0 xor h2; h1 = h1 xor h3
+        h0 = h0 xor (h0 ushr 33); h0 *= MIX_C1; h0 = h0 xor (h0 ushr 33)
+        h1 = h1 xor (h1 ushr 29); h1 *= MIX_C2; h1 = h1 xor (h1 ushr 29)
+        return TileSignature(hashLo = h0, hashHi = h1)
     }
 
     private fun nearestDivisor(value: Int, preferred: Int, range: IntRange): Int {

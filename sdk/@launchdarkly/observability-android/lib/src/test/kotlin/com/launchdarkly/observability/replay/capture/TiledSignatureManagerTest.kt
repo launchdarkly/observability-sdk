@@ -20,6 +20,21 @@ class TileSignatureManagerTest {
         return pixels
     }
 
+    private fun expectedDefaultTileHeight(height: Int): Int {
+        val preferred = 22
+        val range = 22..44
+        if (height <= 0) return preferred
+        if (preferred in range && height % preferred == 0) return preferred
+        val maxDistance = maxOf(kotlin.math.abs(range.first - preferred), kotlin.math.abs(range.last - preferred))
+        for (offset in 1..maxDistance) {
+            val positive = preferred + offset
+            if (positive in range && positive > 0 && height % positive == 0) return positive
+            val negative = preferred - offset
+            if (negative in range && negative > 0 && height % negative == 0) return negative
+        }
+        return preferred
+    }
+
     @Test
     fun `compute returns null when tile size is non positive`() {
         val manager = TileSignatureManager()
@@ -118,6 +133,63 @@ class TileSignatureManagerTest {
             }
         }
         assertNotEquals(0, diffCount)
+    }
+
+    @Test
+    fun `default compute uses fixed 64 width and divisor-based height`() {
+        val manager = TileSignatureManager()
+        val bitmap = mockBitmap(130, 88, BLUE)
+
+        val signature = manager.compute(bitmap)
+        assertNotNull(signature)
+        assertEquals(64, signature!!.tileWidth)
+        assertEquals(22, signature.tileHeight)
+        assertEquals(3, signature.columns) // ceil(130/64)
+        assertEquals(4, signature.rows)    // ceil(88/22)
+    }
+
+    @Test
+    fun `default fixed64 path matches explicit generic path`() {
+        val manager = TileSignatureManager()
+        val width = 130
+        val height = 88
+        val pixels = IntArray(width * height) { i ->
+            // deterministic non-uniform pattern
+            (0xFF shl 24) or ((i * 17) and 0x00FFFFFF)
+        }
+        val bitmap = mockBitmap(width, height, pixels)
+
+        val defaultSig = manager.compute(bitmap)
+        val explicitSig = manager.compute(bitmap, 64, 22)
+
+        assertNotNull(defaultSig)
+        assertNotNull(explicitSig)
+        assertEquals(explicitSig, defaultSig)
+    }
+
+    @Test
+    fun `default fixed64 path matches explicit path across content patterns`() {
+        val manager = TileSignatureManager()
+        val cases = listOf(
+            Triple(64, 22, 0x000000),   // exact single tile
+            Triple(128, 44, 0xFFFFFF),  // exact multi-tile
+            Triple(191, 67, 0x123456),  // partial right-edge and bottom tile
+        )
+
+        for ((width, height, seed) in cases) {
+            val pixels = IntArray(width * height) { i ->
+                val v = (seed + i * 1315423911).toInt()
+                (0xFF shl 24) or (v and 0x00FFFFFF)
+            }
+            val bitmap = mockBitmap(width, height, pixels)
+            val tileHeight = expectedDefaultTileHeight(height)
+
+            val defaultSig = manager.compute(bitmap)
+            val explicitSig = manager.compute(bitmap, 64, tileHeight)
+            assertNotNull(defaultSig)
+            assertNotNull(explicitSig)
+            assertEquals(explicitSig, defaultSig)
+        }
     }
 }
 
