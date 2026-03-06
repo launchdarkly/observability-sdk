@@ -124,17 +124,59 @@ strip_imports() {
   done
 }
 
-# ── Build one XCFramework (runs xcodebuild for the named scheme) ───────────────
-# build_xcframework <scheme> [<extra_ios_objs...>]
+# ── Helper: package an XCFramework from already-populated DerivedData ─────────
+# package_xcframework <module> [<extra_dep_name...>]
 #
-# Extra .o files (space-separated names without .o) are merged into the binary.
-# This is used to fold implementation-only deps whose imports we strip.
-build_xcframework() {
-  local SCHEME="$1"; shift
+# Resolves the module's archive, optionally merges extra dep .o/.a files into
+# it, assembles iOS-device and Simulator .framework slices, then calls
+# xcodebuild -create-xcframework. DerivedData (IOS_DD / SIM_DD) must already
+# contain build products for <module> before this is called.
+package_xcframework() {
+  local MODULE="$1"; shift
   local EXTRA_DEPS=("$@")
-  local OUT="${DEST}/${SCHEME}.xcframework"
+  local OUT="${DEST}/${MODULE}.xcframework"
   local IOS_PRODS="${IOS_DD}/Build/Products/Release-iphoneos"
   local SIM_PRODS="${SIM_DD}/Build/Products/Release-iphonesimulator"
+
+  local IOS_A="${TMP}/${MODULE}-ios.a"
+  local SIM_A="${TMP}/${MODULE}-sim.a"
+  resolve_archive "${MODULE}" "${IOS_PRODS}" "${IOS_A}"
+  resolve_archive "${MODULE}" "${SIM_PRODS}" "${SIM_A}"
+
+  # Merge extra dep .o/.a files into the archive so consumers don't need them
+  if [[ ${#EXTRA_DEPS[@]} -gt 0 ]]; then
+    local IOS_EXTRA=() SIM_EXTRA=()
+    for DEP in "${EXTRA_DEPS[@]}"; do
+      [[ -f "${IOS_PRODS}/${DEP}.o" ]] && IOS_EXTRA+=("${IOS_PRODS}/${DEP}.o")
+      [[ -f "${IOS_PRODS}/${DEP}.a" ]] && IOS_EXTRA+=("${IOS_PRODS}/${DEP}.a")
+      [[ -f "${SIM_PRODS}/${DEP}.o" ]] && SIM_EXTRA+=("${SIM_PRODS}/${DEP}.o")
+      [[ -f "${SIM_PRODS}/${DEP}.a" ]] && SIM_EXTRA+=("${SIM_PRODS}/${DEP}.a")
+    done
+    [[ ${#IOS_EXTRA[@]} -gt 0 ]] && libtool -static -o "${IOS_A}" "${IOS_A}" "${IOS_EXTRA[@]}"
+    [[ ${#SIM_EXTRA[@]} -gt 0 ]] && libtool -static -o "${SIM_A}" "${SIM_A}" "${SIM_EXTRA[@]}"
+  fi
+
+  local IOS_FW="${TMP}/${MODULE}-iOS/${MODULE}.framework"
+  local SIM_FW="${TMP}/${MODULE}-Sim/${MODULE}.framework"
+  make_fw_slice "${MODULE}" "${IOS_FW}" "${IOS_A}" "${IOS_PRODS}"
+  make_fw_slice "${MODULE}" "${SIM_FW}" "${SIM_A}" "${SIM_PRODS}"
+
+  rm -rf "${OUT}"
+  xcodebuild -create-xcframework \
+    -framework "${IOS_FW}" \
+    -framework "${SIM_FW}" \
+    -output "${OUT}"
+
+  echo "  ✓ ${OUT}"
+}
+
+# ── Build one XCFramework (runs xcodebuild for the named scheme) ───────────────
+# build_xcframework <scheme> [<extra_dep_name...>]
+#
+# Compiles <scheme> for iOS device and Simulator, then delegates to
+# package_xcframework for artifact collection and xcframework assembly.
+build_xcframework() {
+  local SCHEME="$1"; shift
 
   echo ""
   echo "  → Building ${SCHEME} for iOS device..."
@@ -162,94 +204,19 @@ build_xcframework() {
     -quiet
 
   echo "  → Packaging ${SCHEME}.xcframework..."
-
-  local IOS_A="${TMP}/${SCHEME}-ios.a"
-  local SIM_A="${TMP}/${SCHEME}-sim.a"
-  resolve_archive "${SCHEME}" "${IOS_PRODS}" "${IOS_A}"
-  resolve_archive "${SCHEME}" "${SIM_PRODS}" "${SIM_A}"
-
-  # Merge extra dep .o files into the archive so consumers don't need them
-  if [[ ${#EXTRA_DEPS[@]} -gt 0 ]]; then
-    local IOS_EXTRA=()
-    local SIM_EXTRA=()
-    for DEP in "${EXTRA_DEPS[@]}"; do
-      [[ -f "${IOS_PRODS}/${DEP}.o" ]] && IOS_EXTRA+=("${IOS_PRODS}/${DEP}.o")
-      [[ -f "${IOS_PRODS}/${DEP}.a" ]] && IOS_EXTRA+=("${IOS_PRODS}/${DEP}.a")
-      [[ -f "${SIM_PRODS}/${DEP}.o" ]] && SIM_EXTRA+=("${SIM_PRODS}/${DEP}.o")
-      [[ -f "${SIM_PRODS}/${DEP}.a" ]] && SIM_EXTRA+=("${SIM_PRODS}/${DEP}.a")
-    done
-    if [[ ${#IOS_EXTRA[@]} -gt 0 ]]; then
-      libtool -static -o "${IOS_A}" "${IOS_A}" "${IOS_EXTRA[@]}"
-    fi
-    if [[ ${#SIM_EXTRA[@]} -gt 0 ]]; then
-      libtool -static -o "${SIM_A}" "${SIM_A}" "${SIM_EXTRA[@]}"
-    fi
-  fi
-
-  local IOS_FW="${TMP}/${SCHEME}-iOS/${SCHEME}.framework"
-  local SIM_FW="${TMP}/${SCHEME}-Sim/${SCHEME}.framework"
-  make_fw_slice "${SCHEME}" "${IOS_FW}" "${IOS_A}" "${IOS_PRODS}"
-  make_fw_slice "${SCHEME}" "${SIM_FW}" "${SIM_A}" "${SIM_PRODS}"
-
-  rm -rf "${OUT}"
-  xcodebuild -create-xcframework \
-    -framework "${IOS_FW}" \
-    -framework "${SIM_FW}" \
-    -output "${OUT}"
-
-  echo "  ✓ ${OUT}"
+  package_xcframework "${SCHEME}" "$@"
 }
 
 # ── Package a dep XCFramework from already-built DerivedData (no xcodebuild) ──
 # package_dep_xcframework <module> [<extra_dep_name...>]
 #
-# Assembles an xcframework for a module that was compiled as a transitive dep
-# when building LaunchDarklyObservability. DerivedData (IOS_DD / SIM_DD) must
-# already be populated.
+# Assembles an xcframework for a module compiled as a transitive dep of a
+# previously-built scheme. DerivedData (IOS_DD / SIM_DD) must already be
+# populated.
 package_dep_xcframework() {
   local MODULE="$1"; shift
-  local EXTRA_DEPS=("$@")
-  local OUT="${DEST}/${MODULE}.xcframework"
-  local IOS_PRODS="${IOS_DD}/Build/Products/Release-iphoneos"
-  local SIM_PRODS="${SIM_DD}/Build/Products/Release-iphonesimulator"
-
   echo "  → Packaging dep ${MODULE}.xcframework..."
-
-  local IOS_A="${TMP}/${MODULE}-ios.a"
-  local SIM_A="${TMP}/${MODULE}-sim.a"
-  resolve_archive "${MODULE}" "${IOS_PRODS}" "${IOS_A}"
-  resolve_archive "${MODULE}" "${SIM_PRODS}" "${SIM_A}"
-
-  # Merge extra deps
-  if [[ ${#EXTRA_DEPS[@]} -gt 0 ]]; then
-    local IOS_EXTRA=()
-    local SIM_EXTRA=()
-    for DEP in "${EXTRA_DEPS[@]}"; do
-      [[ -f "${IOS_PRODS}/${DEP}.o" ]] && IOS_EXTRA+=("${IOS_PRODS}/${DEP}.o")
-      [[ -f "${IOS_PRODS}/${DEP}.a" ]] && IOS_EXTRA+=("${IOS_PRODS}/${DEP}.a")
-      [[ -f "${SIM_PRODS}/${DEP}.o" ]] && SIM_EXTRA+=("${SIM_PRODS}/${DEP}.o")
-      [[ -f "${SIM_PRODS}/${DEP}.a" ]] && SIM_EXTRA+=("${SIM_PRODS}/${DEP}.a")
-    done
-    if [[ ${#IOS_EXTRA[@]} -gt 0 ]]; then
-      libtool -static -o "${IOS_A}" "${IOS_A}" "${IOS_EXTRA[@]}"
-    fi
-    if [[ ${#SIM_EXTRA[@]} -gt 0 ]]; then
-      libtool -static -o "${SIM_A}" "${SIM_A}" "${SIM_EXTRA[@]}"
-    fi
-  fi
-
-  local IOS_FW="${TMP}/${MODULE}-iOS/${MODULE}.framework"
-  local SIM_FW="${TMP}/${MODULE}-Sim/${MODULE}.framework"
-  make_fw_slice "${MODULE}" "${IOS_FW}" "${IOS_A}" "${IOS_PRODS}"
-  make_fw_slice "${MODULE}" "${SIM_FW}" "${SIM_A}" "${SIM_PRODS}"
-
-  rm -rf "${OUT}"
-  xcodebuild -create-xcframework \
-    -framework "${IOS_FW}" \
-    -framework "${SIM_FW}" \
-    -output "${OUT}"
-
-  echo "  ✓ ${OUT}"
+  package_xcframework "${MODULE}" "$@"
 }
 
 # ── Step 1: Build the two main frameworks ─────────────────────────────────────
