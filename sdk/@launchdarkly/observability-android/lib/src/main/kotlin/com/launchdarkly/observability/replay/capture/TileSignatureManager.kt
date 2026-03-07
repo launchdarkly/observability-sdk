@@ -157,10 +157,10 @@ class TileSignatureManager {
         for (y in 0 until tileRows) {
             var idx = (startY + y) * imageWidth + startX
             for (i in 0 until 8) {
-                h0 += (pixels[idx].toLong() and 0xFFFFFFFFL) or ((pixels[idx + 1].toLong() and 0xFFFFFFFFL) shl 32)
-                h1 += (pixels[idx + 2].toLong() and 0xFFFFFFFFL) or ((pixels[idx + 3].toLong() and 0xFFFFFFFFL) shl 32)
-                h2 += (pixels[idx + 4].toLong() and 0xFFFFFFFFL) or ((pixels[idx + 5].toLong() and 0xFFFFFFFFL) shl 32)
-                h3 += (pixels[idx + 6].toLong() and 0xFFFFFFFFL) or ((pixels[idx + 7].toLong() and 0xFFFFFFFFL) shl 32)
+                h0 += packNativePair(pixels[idx], pixels[idx + 1])
+                h1 += packNativePair(pixels[idx + 2], pixels[idx + 3])
+                h2 += packNativePair(pixels[idx + 4], pixels[idx + 5])
+                h3 += packNativePair(pixels[idx + 6], pixels[idx + 7])
                 idx += 8
             }
             h0 = h0 xor h2; h1 = h1 xor h3
@@ -198,17 +198,17 @@ class TileSignatureManager {
             var idx = y * imageWidth + startX
 
             for (q in 0 until quads) {
-                h0 += (pixels[idx].toLong() and 0xFFFFFFFFL) or ((pixels[idx + 1].toLong() and 0xFFFFFFFFL) shl 32)
-                h1 += (pixels[idx + 2].toLong() and 0xFFFFFFFFL) or ((pixels[idx + 3].toLong() and 0xFFFFFFFFL) shl 32)
-                h2 += (pixels[idx + 4].toLong() and 0xFFFFFFFFL) or ((pixels[idx + 5].toLong() and 0xFFFFFFFFL) shl 32)
-                h3 += (pixels[idx + 6].toLong() and 0xFFFFFFFFL) or ((pixels[idx + 7].toLong() and 0xFFFFFFFFL) shl 32)
+                h0 += packNativePair(pixels[idx], pixels[idx + 1])
+                h1 += packNativePair(pixels[idx + 2], pixels[idx + 3])
+                h2 += packNativePair(pixels[idx + 4], pixels[idx + 5])
+                h3 += packNativePair(pixels[idx + 6], pixels[idx + 7])
                 idx += 8
             }
 
-            if (remPairs >= 1) h0 += (pixels[idx].toLong() and 0xFFFFFFFFL) or ((pixels[idx + 1].toLong() and 0xFFFFFFFFL) shl 32)
-            if (remPairs >= 2) h1 += (pixels[idx + 2].toLong() and 0xFFFFFFFFL) or ((pixels[idx + 3].toLong() and 0xFFFFFFFFL) shl 32)
-            if (remPairs >= 3) h2 += (pixels[idx + 4].toLong() and 0xFFFFFFFFL) or ((pixels[idx + 5].toLong() and 0xFFFFFFFFL) shl 32)
-            if (hasTail) h3 += pixels[idx + remPairs * 2].toLong() and 0xFFFFFFFFL
+            if (remPairs >= 1) h0 += packNativePair(pixels[idx], pixels[idx + 1])
+            if (remPairs >= 2) h1 += packNativePair(pixels[idx + 2], pixels[idx + 3])
+            if (remPairs >= 3) h2 += packNativePair(pixels[idx + 4], pixels[idx + 5])
+            if (hasTail) h3 += toNativeWord(pixels[idx + remPairs * 2])
 
             h0 = h0 xor h2; h1 = h1 xor h3
             h2 += h0; h3 += h1
@@ -219,6 +219,21 @@ class TileSignatureManager {
         h1 = h1 xor (h1 ushr 29); h1 *= MIX_C2; h1 = h1 xor (h1 ushr 29)
         return TileSignature(hashLo = h0, hashHi = h1)
     }
+
+    /**
+     * Android's getPixels returns ARGB words (0xAARRGGBB), while native hashing reads
+     * RGBA_8888 bytes as little-endian 32-bit words (0xAABBGGRR). Normalize to native
+     * word layout so Kotlin and JNI paths produce identical hashes.
+     */
+    private fun toNativeWord(argb: Int): Long {
+        val native = (argb and 0xFF00FF00.toInt()) or
+            ((argb and 0x00FF0000) ushr 16) or
+            ((argb and 0x000000FF) shl 16)
+        return native.toLong() and 0xFFFFFFFFL
+    }
+
+    private fun packNativePair(firstArgb: Int, secondArgb: Int): Long =
+        toNativeWord(firstArgb) or (toNativeWord(secondArgb) shl 32)
 
     private fun nearestDivisor(value: Int, preferred: Int, range: IntRange): Int {
         if (value <= 0) return preferred

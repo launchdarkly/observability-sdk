@@ -14,10 +14,81 @@ class TileSignatureManagerTest {
     private val RED = 0xFFFF0000.toInt()
     private val BLUE = 0xFF0000FF.toInt()
     private val WHITE = 0xFFFFFFFF.toInt()
+
+    private val SEED_H0 = 0x517cc1b727220a95L
+    private val SEED_H1 = 0x6c62272e07bb0142L
+    private val SEED_H2 = -0x61c88646805b83ebL
+    private val SEED_H3 = -0x40a7b892e31b1a47L
+    private val MIX_C1 = -0x00ae502812aa7333L
+    private val MIX_C2 = -0x3b314601e57a13adL
+
     private fun solidPixels(width: Int, height: Int, color: Int): IntArray {
         val pixels = IntArray(width * height)
         Arrays.fill(pixels, color)
         return pixels
+    }
+
+    private fun nativeWordFromArgb(argb: Int): Long {
+        val nativeWord = (argb and 0xFF00FF00.toInt()) or
+            ((argb and 0x00FF0000) ushr 16) or
+            ((argb and 0x000000FF) shl 16)
+        return nativeWord.toLong() and 0xFFFFFFFFL
+    }
+
+    private fun packPair(firstArgb: Int, secondArgb: Int, normalizeForNativeLayout: Boolean): Long {
+        val first = if (normalizeForNativeLayout) nativeWordFromArgb(firstArgb) else firstArgb.toLong() and 0xFFFFFFFFL
+        val second = if (normalizeForNativeLayout) nativeWordFromArgb(secondArgb) else secondArgb.toLong() and 0xFFFFFFFFL
+        return first or (second shl 32)
+    }
+
+    private fun hashGenericTile(
+        pixels: IntArray,
+        imageWidth: Int,
+        startX: Int,
+        startY: Int,
+        endX: Int,
+        endY: Int,
+        normalizeForNativeLayout: Boolean,
+    ): TileSignature {
+        val pixelWidth = endX - startX
+        val quads = pixelWidth ushr 3
+        val remPixels = pixelWidth and 7
+        val remPairs = remPixels ushr 1
+        val hasTail = remPixels and 1 != 0
+
+        var h0 = SEED_H0; var h1 = SEED_H1
+        var h2 = SEED_H2; var h3 = SEED_H3
+
+        for (y in startY until endY) {
+            var idx = y * imageWidth + startX
+
+            for (q in 0 until quads) {
+                h0 += packPair(pixels[idx], pixels[idx + 1], normalizeForNativeLayout)
+                h1 += packPair(pixels[idx + 2], pixels[idx + 3], normalizeForNativeLayout)
+                h2 += packPair(pixels[idx + 4], pixels[idx + 5], normalizeForNativeLayout)
+                h3 += packPair(pixels[idx + 6], pixels[idx + 7], normalizeForNativeLayout)
+                idx += 8
+            }
+
+            if (remPairs >= 1) h0 += packPair(pixels[idx], pixels[idx + 1], normalizeForNativeLayout)
+            if (remPairs >= 2) h1 += packPair(pixels[idx + 2], pixels[idx + 3], normalizeForNativeLayout)
+            if (remPairs >= 3) h2 += packPair(pixels[idx + 4], pixels[idx + 5], normalizeForNativeLayout)
+            if (hasTail) {
+                h3 += if (normalizeForNativeLayout) {
+                    nativeWordFromArgb(pixels[idx + remPairs * 2])
+                } else {
+                    pixels[idx + remPairs * 2].toLong() and 0xFFFFFFFFL
+                }
+            }
+
+            h0 = h0 xor h2; h1 = h1 xor h3
+            h2 += h0; h3 += h1
+        }
+
+        h0 = h0 xor h2; h1 = h1 xor h3
+        h0 = h0 xor (h0 ushr 33); h0 *= MIX_C1; h0 = h0 xor (h0 ushr 33)
+        h1 = h1 xor (h1 ushr 29); h1 *= MIX_C2; h1 = h1 xor (h1 ushr 29)
+        return TileSignature(hashLo = h0, hashHi = h1)
     }
 
     private fun expectedDefaultTileHeight(height: Int): Int {
@@ -190,6 +261,44 @@ class TileSignatureManagerTest {
             assertNotNull(explicitSig)
             assertEquals(explicitSig, defaultSig)
         }
+    }
+
+    @Test
+    fun `kotlin hashing matches native byte order instead of raw ARGB words`() {
+        val manager = TileSignatureManager()
+        val width = 3
+        val height = 2
+        val pixels = intArrayOf(
+            0xFF112233.toInt(), 0xFF445566.toInt(), 0xFF778899.toInt(),
+            0xFF99AA00.toInt(), 0xFF00CC44.toInt(), 0xFF3300EE.toInt(),
+        )
+        val bitmap = mockBitmap(width, height, pixels)
+
+        val signature = manager.compute(bitmap, width, height)
+        assertNotNull(signature)
+        assertEquals(1, signature!!.tileSignatures.size)
+
+        val expectedNative = hashGenericTile(
+            pixels = pixels,
+            imageWidth = width,
+            startX = 0,
+            startY = 0,
+            endX = width,
+            endY = height,
+            normalizeForNativeLayout = true,
+        )
+        val legacyArgbDirect = hashGenericTile(
+            pixels = pixels,
+            imageWidth = width,
+            startX = 0,
+            startY = 0,
+            endX = width,
+            endY = height,
+            normalizeForNativeLayout = false,
+        )
+
+        assertNotEquals(legacyArgbDirect, expectedNative)
+        assertEquals(expectedNative, signature.tileSignatures.single())
     }
 }
 
