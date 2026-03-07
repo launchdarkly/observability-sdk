@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.30.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.29.0...launchdarkly-observability-android-0.30.0) (2026-03-07)
+
+
+### Features
+
+* Android SR use Jpeg 0.3 quality ([#417](https://github.com/launchdarkly/observability-sdk/issues/417)) ([ad6d0aa](https://github.com/launchdarkly/observability-sdk/commit/ad6d0aabbf35ac81e6ca36abe9fd831f92545236))
+
 ## [0.29.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.28.0...launchdarkly-observability-android-0.29.0) (2026-03-05)
 
 
