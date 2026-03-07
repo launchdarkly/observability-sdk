@@ -79,17 +79,17 @@ class RRWebEventGenerator(
         return lastNodeId
     }
 
-    private fun imageMimeType(format: ExportFrame.ExportFormat): String =
-        when (format) {
+    private fun imageMimeType(): String =
+        when (ExportFrame.DEFAULT_EXPORT_FORMAT) {
             ExportFrame.ExportFormat.Png -> "image/png"
             is ExportFrame.ExportFormat.Jpeg -> "image/jpeg"
             is ExportFrame.ExportFormat.Webp -> "image/webp"
         }
 
-    private fun tileNode(exportFrame: ExportFrame, image: ExportFrame.AddImage): Pair<EventNode, Int> {
+    private fun tileNode(image: ExportFrame.AddImage): Pair<EventNode, Int> {
         val tileCanvasId = nextNodeId()
         image.imageSignature?.let { nodeIds[it] = tileCanvasId }
-        val dataUrl = "data:${imageMimeType(exportFrame.format)};base64,${image.imageBase64}"
+        val dataUrl = "data:${imageMimeType()};base64,${image.imageBase64}"
         val node = EventNode(
             id = tileCanvasId,
             type = NodeType.ELEMENT,
@@ -123,7 +123,7 @@ class RRWebEventGenerator(
         }
 
         val adds = exportFrame.addImages.map { image ->
-            val (node, canvasSize) = tileNode(exportFrame, image)
+            val (node, canvasSize) = tileNode(image)
             totalCanvasSize += canvasSize
             Addition(parentId = bodyId, nextId = null, node = node)
         }
@@ -213,7 +213,7 @@ class RRWebEventGenerator(
         val headNodeId = nextNodeId()
         val currentBodyNodeId = nextNodeId()
         val tileNodes = exportFrame.addImages.map { image ->
-            val (node, canvasSize) = tileNode(exportFrame, image)
+            val (node, canvasSize) = tileNode(image)
             totalCanvasSize += canvasSize
             node
         }
