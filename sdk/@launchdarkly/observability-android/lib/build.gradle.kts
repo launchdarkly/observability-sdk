@@ -3,6 +3,7 @@ plugins {
     id("com.android.library")
     id("maven-publish")
     id("signing")
+    id("androidx.baselineprofile")
 
     // Apply the Kotlin Android plugin for Android-compatible Kotlin support.
     alias(libs.plugins.kotlin.android)
@@ -114,6 +115,11 @@ android {
     testFixtures {
         enable = true
     }
+}
+
+baselineProfile {
+    // Improves code/data locality for profiled methods in release artifacts.
+    dexLayoutOptimization = true
 }
 
 publishing {

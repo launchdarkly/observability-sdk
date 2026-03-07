@@ -1,0 +1,14 @@
+Lcom/launchdarkly/observability/plugin/Observability;
+Lcom/launchdarkly/observability/plugin/ObservabilityHook;
+Lcom/launchdarkly/observability/sdk/LDObserve;
+Lcom/launchdarkly/observability/client/ObservabilityClient;
+Lcom/launchdarkly/observability/client/InstrumentationManager;
+Lcom/launchdarkly/observability/replay/ReplayInstrumentation;
+Lcom/launchdarkly/observability/replay/plugin/SessionReplay;
+Lcom/launchdarkly/observability/replay/capture/CaptureManager;
+Lcom/launchdarkly/observability/replay/capture/ImageCaptureService;
+Lcom/launchdarkly/observability/replay/exporter/RRWebEventGenerator;
+Lcom/launchdarkly/observability/replay/exporter/SessionReplayExporter;
+Lcom/launchdarkly/observability/replay/exporter/SessionReplayApiService;
+Lcom/launchdarkly/observability/network/GraphQLClient;
+Lcom/launchdarkly/observability/network/SamplingApiService;

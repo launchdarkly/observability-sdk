@@ -1,0 +1,7 @@
+Lcom/launchdarkly/observability/plugin/Observability;
+Lcom/launchdarkly/observability/plugin/ObservabilityHook;
+Lcom/launchdarkly/observability/sdk/LDObserve;
+Lcom/launchdarkly/observability/client/ObservabilityClient;
+Lcom/launchdarkly/observability/client/InstrumentationManager;
+Lcom/launchdarkly/observability/replay/ReplayInstrumentation;
+Lcom/launchdarkly/observability/replay/plugin/SessionReplay;

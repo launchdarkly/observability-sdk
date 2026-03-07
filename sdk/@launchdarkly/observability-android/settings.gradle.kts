@@ -12,6 +12,9 @@ pluginManagement {
     plugins {
         // Android Gradle Plugin
         id("com.android.library") version "8.13.2"
+        id("com.android.test") version "8.13.2"
+        id("org.jetbrains.kotlin.android") version "2.2.0"
+        id("androidx.baselineprofile") version "1.3.4"
     }
 }
 
