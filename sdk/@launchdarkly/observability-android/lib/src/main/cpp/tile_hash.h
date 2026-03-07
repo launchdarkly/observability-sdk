@@ -27,7 +27,7 @@ TileHashResult tile_hash_w64_scalar(const unsigned char *rowPtr,
                                      int rows,
                                      int bytesPerRow);
 
-#if defined(__ARM_NEON)
+#if defined(__ARM_NEON) && defined(__OPTIMIZE__)
 /// Always-NEON variant of tile_hash_w64, for parity testing.
 TileHashResult tile_hash_w64_neon(const unsigned char *rowPtr,
                                    int rows,
