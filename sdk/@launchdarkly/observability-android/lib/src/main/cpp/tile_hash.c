@@ -12,7 +12,6 @@
 #endif
 
 #define TILE_W 64
-#define TILE_ROW_BYTES (TILE_W * 4)
 
 typedef uint64_t unaligned_u64 __attribute__((aligned(1)));
 typedef uint32_t unaligned_u32 __attribute__((aligned(1)));
