@@ -18,7 +18,7 @@ class TileSignatureManager {
 
         private const val SEED_H0 = 0x517cc1b727220a95L
         private const val SEED_H1 = 0x6c62272e07bb0142L
-        private const val SEED_H2 = -0x61c88646805b83ebL  // 0x9e3779b97f4a7c15
+        private const val SEED_H2 = -0x61c8864680b583ebL  // 0x9e3779b97f4a7c15
         private const val SEED_H3 = -0x40a7b892e31b1a47L  // 0xbf58476d1ce4e5b9
         private const val MIX_C1 = -0x00ae502812aa7333L    // 0xff51afd7ed558ccd
         private const val MIX_C2 = -0x3b314601e57a13adL    // 0xc4ceb9fe1a85ec53

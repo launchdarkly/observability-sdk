@@ -17,7 +17,7 @@ class TileSignatureManagerTest {
 
     private val SEED_H0 = 0x517cc1b727220a95L
     private val SEED_H1 = 0x6c62272e07bb0142L
-    private val SEED_H2 = -0x61c88646805b83ebL
+    private val SEED_H2 = -0x61c8864680b583ebL
     private val SEED_H3 = -0x40a7b892e31b1a47L
     private val MIX_C1 = -0x00ae502812aa7333L
     private val MIX_C2 = -0x3b314601e57a13adL

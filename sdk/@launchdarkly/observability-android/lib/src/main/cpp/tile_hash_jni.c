@@ -1,5 +1,6 @@
 #include <jni.h>
 #include <android/bitmap.h>
+#include <limits.h>
 #include <stdlib.h>
 #include "tile_hash.h"
 
@@ -31,9 +32,23 @@ Java_com_launchdarkly_observability_replay_capture_TileHashNative_nativeCompute(
         return NULL;
 
     TileLayout layout = tile_compute_layout((int)info.width, (int)info.height);
-    int totalTiles = layout.rows * layout.columns;
+    if (layout.rows <= 0 || layout.columns <= 0) {
+        AndroidBitmap_unlockPixels(env, bitmap);
+        return NULL;
+    }
 
-    TileHashResult *results = (TileHashResult *)malloc((size_t)totalTiles * sizeof(TileHashResult));
+    if ((size_t)layout.rows > SIZE_MAX / (size_t)layout.columns) {
+        AndroidBitmap_unlockPixels(env, bitmap);
+        return NULL;
+    }
+    size_t totalTiles = (size_t)layout.rows * (size_t)layout.columns;
+
+    if (totalTiles > SIZE_MAX / sizeof(TileHashResult)) {
+        AndroidBitmap_unlockPixels(env, bitmap);
+        return NULL;
+    }
+
+    TileHashResult *results = (TileHashResult *)malloc(totalTiles * sizeof(TileHashResult));
     if (!results) {
         AndroidBitmap_unlockPixels(env, bitmap);
         return NULL;
@@ -46,7 +61,17 @@ Java_com_launchdarkly_observability_replay_capture_TileHashNative_nativeCompute(
 
     AndroidBitmap_unlockPixels(env, bitmap);
 
-    const int arrayLen = 4 + totalTiles * 2;
+    if (totalTiles > (SIZE_MAX - 4U) / 2U) {
+        free(results);
+        return NULL;
+    }
+    size_t totalLongs = 4U + totalTiles * 2U;
+    if (totalLongs > (size_t)INT_MAX) {
+        free(results);
+        return NULL;
+    }
+
+    const jsize arrayLen = (jsize)totalLongs;
     jlongArray out = (*env)->NewLongArray(env, arrayLen);
     if (!out) {
         free(results);
@@ -62,7 +87,7 @@ Java_com_launchdarkly_observability_replay_capture_TileHashNative_nativeCompute(
     (*env)->SetLongArrayRegion(env, out, 0, 4, header);
 
     /* TileHashResult is {int64_t, int64_t} — same layout as jlong[2] */
-    (*env)->SetLongArrayRegion(env, out, 4, totalTiles * 2, (const jlong *)results);
+    (*env)->SetLongArrayRegion(env, out, 4, (jsize)(totalTiles * 2U), (const jlong *)results);
 
     free(results);
     return out;
