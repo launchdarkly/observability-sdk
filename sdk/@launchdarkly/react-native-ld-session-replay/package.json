@@ -1,6 +1,7 @@
 {
   "name": "@launchdarkly/session-replay-react-native",
   "version": "0.2.2",
+  "spmVersion": "0.18.1",
   "description": "session replay for react native",
   "main": "./lib/module/index.js",
   "types": "./lib/typescript/src/index.d.ts",
@@ -17,7 +18,11 @@
     "lib",
     "android",
     "ios",
+    "ios/Frameworks",
     "cpp",
+    "plugin",
+    "app.plugin.js",
+    "scripts/build-xcframeworks.sh",
     "*.podspec",
     "react-native.config.js",
     "!ios/build",
@@ -34,8 +39,10 @@
   "scripts": {
     "example": "yarn workspace session-replay-react-native-example",
     "build": "bob build",
-    "clean": "del-cli android/build example/android/build example/android/app/build example/ios/build lib",
-    "prepack": "bob build",
+    "build:plugin": "tsc -p plugin/tsconfig.json",
+    "build:xcframeworks": "bash scripts/build-xcframeworks.sh",
+    "clean": "del-cli android/build example/android/build example/android/app/build example/ios/build lib plugin/build ios/Frameworks",
+    "prepack": "bob build && tsc -p plugin/tsconfig.json && bash scripts/build-xcframeworks.sh",
     "typecheck": "tsc",
     "lint": "echo 'Linting temporarily disabled - TODO: fix ESLint config'",
     "test": "jest",
@@ -72,6 +79,7 @@
     "@eslint/compat": "^1.3.2",
     "@eslint/eslintrc": "^3.3.1",
     "@eslint/js": "^9.35.0",
+    "@expo/config-plugins": "^9.0.0",
     "@react-native/babel-preset": "0.83.0",
     "@react-native/eslint-config": "0.83.0",
     "@react-native/eslint-plugin": "0.83.0",
@@ -93,8 +101,14 @@
     "typescript": "^5.9.2"
   },
   "peerDependencies": {
+    "@expo/config-plugins": ">=7.0.0",
     "react": "*",
     "react-native": "*"
+  },
+  "peerDependenciesMeta": {
+    "@expo/config-plugins": {
+      "optional": true
+    }
   },
   "workspaces": [
     "example"
