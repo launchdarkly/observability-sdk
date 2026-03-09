@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.31.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.30.0...launchdarkly-observability-android-0.31.0) (2026-03-09)
+
+
+### Features
+
+* Use C and NEON for hashing (Optimization) 100x on Pixel 8 ([#415](https://github.com/launchdarkly/observability-sdk/issues/415)) ([e7c78ab](https://github.com/launchdarkly/observability-sdk/commit/e7c78abda3954a1a2d32b5a85f57eab531eecaae))
+
 ## [0.30.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.29.0...launchdarkly-observability-android-0.30.0) (2026-03-07)
 
 
