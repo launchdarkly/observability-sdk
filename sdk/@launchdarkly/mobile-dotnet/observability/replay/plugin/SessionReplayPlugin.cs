@@ -45,48 +45,37 @@ namespace LaunchDarkly.Observability
 
         public sealed class SessionReplayPluginBuilder
         {
-            private bool _isEnabled = true;
-            private string _serviceName = "sessionreplay-dotnet";
-            private SessionReplayOptions.PrivacyOptions _privacy = new SessionReplayOptions.PrivacyOptions();
+            private readonly SessionReplayOptions _options;
 
             internal SessionReplayPluginBuilder()
             {
+                _options = new SessionReplayOptions();
             }
 
             internal SessionReplayPluginBuilder(SessionReplayOptions options)
             {
-                if (options == null) throw new ArgumentNullException(nameof(options));
-                _isEnabled = options.IsEnabled;
-                _serviceName = options.ServiceName;
-                _privacy = options.Privacy;
+                _options = options ?? throw new ArgumentNullException(nameof(options));
             }
 
             public SessionReplayPluginBuilder WithIsEnabled(bool isEnabled)
             {
-                _isEnabled = isEnabled;
+                _options.IsEnabled = isEnabled;
                 return this;
             }
 
             public SessionReplayPluginBuilder WithServiceName(string serviceName)
             {
-                _serviceName = serviceName ?? throw new ArgumentNullException(nameof(serviceName));
+                _options.ServiceName = serviceName ?? throw new ArgumentNullException(nameof(serviceName));
                 return this;
             }
 
             public SessionReplayPluginBuilder WithPrivacy(SessionReplayOptions.PrivacyOptions privacy)
             {
-                _privacy = privacy ?? throw new ArgumentNullException(nameof(privacy));
+                _options.Privacy = privacy ?? throw new ArgumentNullException(nameof(privacy));
                 return this;
             }
 
-            internal SessionReplayOptions BuildOptions()
-            {
-                return new SessionReplayOptions(
-                    isEnabled: _isEnabled,
-                    serviceName: _serviceName,
-                    privacy: _privacy
-                );
-            }
+            internal SessionReplayOptions BuildOptions() => _options;
 
             public SessionReplayPlugin Build()
             {

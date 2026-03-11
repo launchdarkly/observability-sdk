@@ -16,11 +16,7 @@
 		<!-- NuGet packaging -->
 		<IsPackable>true</IsPackable>
 		<PackageId>LDObservability</PackageId>
-		<Version>0.3.16</Version>
-		<Authors>LD</Authors>
 		<PackageDescription>LD Observability bindings aggregator for .NET (Android/iOS).</PackageDescription>
-		<RepositoryUrl>https://example.local/ldobservability</RepositoryUrl>
-		<PackageOutputPath>$(MSBuildProjectDirectory)\..\nupkgs</PackageOutputPath>
 		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
 		<IncludeReferencedProjects>true</IncludeReferencedProjects>
 		<!-- This repo intentionally pins some AndroidX versions to match MAUI's expectations. -->
@@ -56,6 +52,7 @@
 						SetTargetFramework="TargetFramework=netstandard2.0;BUILDFRAMEWORKS=netstandard2.0"
 						SkipGetTargetFrameworkProperties="true"
 						PrivateAssets="all"
+						AdditionalProperties="SignAssembly=false"
 						GlobalPropertiesToRemove="RuntimeIdentifier;TargetPlatformIdentifier;SupportedOSPlatformVersion;UseMaui;SkipValidateMauiImplicitPackageReferences" />
 	</ItemGroup>
 
