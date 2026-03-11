@@ -15,7 +15,7 @@
 
 		<!-- NuGet packaging -->
 		<IsPackable>true</IsPackable>
-		<PackageId>LDObservability</PackageId>
+		<PackageId>LaunchDarkly.SessionReplay</PackageId>
 		<PackageDescription>LD Observability bindings aggregator for .NET (Android/iOS).</PackageDescription>
 		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
 		<IncludeReferencedProjects>true</IncludeReferencedProjects>

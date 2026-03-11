@@ -3,7 +3,7 @@
 		<!-- Packaging-only project -->
 		<TargetFrameworks>net9.0-android;net9.0-ios</TargetFrameworks>
 		<UseLocalClientSdk>true</UseLocalClientSdk>
-		<PackageId>LaunchDarkly.DemoObservability</PackageId>
+		<PackageId>LaunchDarkly.SessionReplay</PackageId>
 		<PackageDescription>LD Session Replay package for .NET MAUI</PackageDescription>
 		<NoBuild>true</NoBuild>
 		<IncludeBuildOutput>false</IncludeBuildOutput>
