@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.2.2](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.2.1...session-replay-react-native-0.2.2) (2026-03-05)
+
+
+### Bug Fixes
+
+* ldclient dependencies ([#407](https://github.com/launchdarkly/observability-sdk/issues/407)) ([65a5e6a](https://github.com/launchdarkly/observability-sdk/commit/65a5e6a1999c9e66c7f4011f512d17de256f919c))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @launchdarkly/observability-react-native bumped to 0.7.1
+
 ## [0.2.1](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.2.0...session-replay-react-native-0.2.1) (2026-02-27)
 
 

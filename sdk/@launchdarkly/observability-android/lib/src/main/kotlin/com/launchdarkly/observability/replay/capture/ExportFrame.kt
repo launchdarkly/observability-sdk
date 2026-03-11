@@ -9,13 +9,16 @@ data class ExportFrame(
     val removeImages: List<RemoveImage>?,
     val originalSize: IntSize,
     val scale: Float,
-    val format: ExportFormat,
     val timestamp: Long,
     val orientation: Int,
     val isKeyframe: Boolean,
     val imageSignature: ImageSignature?,
     val session: String
 ){
+    companion object {
+        val DEFAULT_EXPORT_FORMAT: ExportFormat = ExportFormat.Jpeg(quality = 0.3f)
+    }
+
     constructor(
         imageBase64: String,
         origHeight: Int,
@@ -34,7 +37,6 @@ data class ExportFrame(
         removeImages = null,
         originalSize = IntSize(width = origWidth, height = origHeight),
         scale = 1f,
-        format = ExportFormat.Webp(quality = 30),
         timestamp = timestamp,
         orientation = 0,
         isKeyframe = true,

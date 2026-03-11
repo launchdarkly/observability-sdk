@@ -1,0 +1,86 @@
+<h1>Feature Flags</h1>
+<p class="subtitle">
+  Each flag evaluation is automatically traced via OpenTelemetry.
+</p>
+
+<div class="card">
+  <ul class="status-list">
+    <li>
+      <span class="status-label">Connection</span>
+      <% if @all_flags_valid %>
+        <span class="badge badge-success">Connected</span>
+      <% else %>
+        <span class="badge badge-danger">Not connected</span>
+      <% end %>
+    </li>
+    <li>
+      <span class="status-label">Total flags</span>
+      <span><%= @evaluations.size %></span>
+    </li>
+  </ul>
+</div>
+
+<% if @evaluations.any? %>
+  <h2>All Flag Evaluations</h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Flag Key</th>
+        <th>Value</th>
+        <th>Variation Index</th>
+        <th>Reason</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @evaluations.each do |key, detail| %>
+        <tr>
+          <td><a href="/flags/<%= key %>"><code><%= key %></code></a></td>
+          <td><code><%= detail.value.inspect %></code></td>
+          <td><%= detail.variation_index %></td>
+          <td><code><%= detail.reason&.kind %></code></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% else %>
+  <div class="card">
+    <p><em>No flags available. Make sure LAUNCHDARKLY_SDK_KEY is set correctly.</em></p>
+  </div>
+<% end %>
+
+<h2>Test Endpoints</h2>
+
+<div class="card">
+  <h3>GET Endpoints</h3>
+  <ul class="endpoint-list">
+    <li><span class="endpoint-method">GET</span> <a href="/flags.json">/flags.json</a> &mdash; All flag evaluations as JSON</li>
+    <li><span class="endpoint-method">GET</span> <a href="/flags/all_flags">/flags/all_flags</a> &mdash; Raw flags state</li>
+    <li><span class="endpoint-method">GET</span> /flags/:flag_key &mdash; Evaluate a specific flag</li>
+  </ul>
+
+  <h3>POST Endpoints</h3>
+  <pre><code># Evaluate a specific flag with custom context
+POST /flags/evaluate
+{
+  "flag_key": "your-flag-key",
+  "context": { "key": "user-123", "kind": "user" }
+}
+
+# Batch evaluate multiple flags
+POST /flags/batch
+{
+  "flag_keys": ["flag-1", "flag-2", "flag-3"]
+}</code></pre>
+</div>
+
+<h2>Trace Information</h2>
+
+<div class="card">
+  <ul class="status-list">
+    <li>
+      <span class="status-label">Trace ID</span>
+      <code><%= launchdarkly_trace_id || 'N/A' %></code>
+    </li>
+  </ul>
+</div>

@@ -38,6 +38,7 @@ docker/enterprise-private.pem
 # Editor Artifacts
 **/.idea
 .vscode/*.log
+.cursor/rules/
 
 dump.rdb
 

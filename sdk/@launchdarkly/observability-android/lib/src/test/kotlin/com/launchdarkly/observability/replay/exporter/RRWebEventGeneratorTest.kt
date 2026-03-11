@@ -3,6 +3,7 @@ package com.launchdarkly.observability.replay.exporter
 import com.launchdarkly.observability.replay.Event
 import com.launchdarkly.observability.replay.EventData
 import com.launchdarkly.observability.replay.EventDataUnion
+import com.launchdarkly.observability.replay.EventNode
 import com.launchdarkly.observability.replay.EventType
 import com.launchdarkly.observability.replay.capture.ExportFrame
 import com.launchdarkly.observability.replay.capture.ImageSignature
@@ -14,6 +15,16 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class RRWebEventGeneratorTest {
+    @Test
+    fun `convenience export frame uses jpeg mime type`() {
+        val generator = RRWebEventGenerator(canvasDrawEntourage = 1)
+        val exportFrame = ExportFrame("AQ==", 88, 120, 1L, "session")
+
+        val events = generator.generateCaptureFullEvents(exportFrame)
+        val src = firstImageSrc(events)
+
+        assertTrue(src.startsWith("data:image/jpeg;base64,"))
+    }
 
     @Test
     fun `keyframe incremental resolves removes before map reset`() {
@@ -134,7 +145,6 @@ class RRWebEventGeneratorTest {
         removeImages = removeImages,
         originalSize = IntSize(width = 120, height = 88),
         scale = 1f,
-        format = ExportFrame.ExportFormat.Webp(quality = 30),
         timestamp = timestamp,
         orientation = 0,
         isKeyframe = isKeyframe,
@@ -158,5 +168,26 @@ class RRWebEventGeneratorTest {
         val event = events.first { it.type == EventType.INCREMENTAL_SNAPSHOT }
         val data = event.data as EventDataUnion.StandardEventData
         return data.data
+    }
+
+    private fun firstImageSrc(events: List<Event>): String {
+        val fullSnapshot = events.first { it.type == EventType.FULL_SNAPSHOT }
+        val data = (fullSnapshot.data as EventDataUnion.StandardEventData).data
+        val root = data.node ?: error("FULL_SNAPSHOT should include a root node")
+        val imageNode = firstNodeWithTag(root, "img") ?: error("FULL_SNAPSHOT should include an image node")
+        return imageNode.attributes?.get("src") ?: error("Image node should include src")
+    }
+
+    private fun firstNodeWithTag(node: EventNode, tagName: String): EventNode? {
+        if (node.tagName == tagName) {
+            return node
+        }
+        for (child in node.childNodes) {
+            val match = firstNodeWithTag(child, tagName)
+            if (match != null) {
+                return match
+            }
+        }
+        return null
     }
 }

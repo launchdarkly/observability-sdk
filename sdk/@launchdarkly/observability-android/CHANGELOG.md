@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.31.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.30.0...launchdarkly-observability-android-0.31.0) (2026-03-09)
+
+
+### Features
+
+* Use C and NEON for hashing (Optimization) 100x on Pixel 8 ([#415](https://github.com/launchdarkly/observability-sdk/issues/415)) ([e7c78ab](https://github.com/launchdarkly/observability-sdk/commit/e7c78abda3954a1a2d32b5a85f57eab531eecaae))
+
+## [0.30.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.29.0...launchdarkly-observability-android-0.30.0) (2026-03-07)
+
+
+### Features
+
+* Android SR use Jpeg 0.3 quality ([#417](https://github.com/launchdarkly/observability-sdk/issues/417)) ([ad6d0aa](https://github.com/launchdarkly/observability-sdk/commit/ad6d0aabbf35ac81e6ca36abe9fd831f92545236))
+
+## [0.29.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.28.0...launchdarkly-observability-android-0.29.0) (2026-03-05)
+
+
+### Features
+
+* Android Observability hook  proxy for MAUI ([#409](https://github.com/launchdarkly/observability-sdk/issues/409)) ([8d610bd](https://github.com/launchdarkly/observability-sdk/commit/8d610bdd700fd2878e58095e5fd8b98ef2765df6))
+
+
+### Bug Fixes
+
+* reset nodeIds during fullsnapshot ([#412](https://github.com/launchdarkly/observability-sdk/issues/412)) ([d1eb13d](https://github.com/launchdarkly/observability-sdk/commit/d1eb13db8907f17406f45a2a7e3b76aec3a7c1ec))
+
 ## [0.28.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.27.0...launchdarkly-observability-android-0.28.0) (2026-03-02)
 
 
