@@ -14,12 +14,7 @@ namespace LaunchDarkly.Observability
 
         public static SessionReplayPlugin ForExistingServices() => new SessionReplayPlugin();
 
-        public static SessionReplayPluginBuilder Builder() => new SessionReplayPluginBuilder();
-
-        public static SessionReplayPluginBuilder Builder(SessionReplayOptions options) =>
-            new SessionReplayPluginBuilder(options);
-
-        internal SessionReplayPlugin(SessionReplayOptions options) : base("LaunchDarkly.SessionReplay")
+        public SessionReplayPlugin(SessionReplayOptions options) : base("LaunchDarkly.SessionReplay")
         {
             _options = options ?? throw new ArgumentNullException(nameof(options));
             NativePluginConnector.Instance.CreateSessionReplay(options);
@@ -41,46 +36,6 @@ namespace LaunchDarkly.Observability
         public override IList<Hook> GetHooks(EnvironmentMetadata metadata)
         {
             return NativePluginConnector.Instance.GetHooksSessionReplay(metadata);
-        }
-
-        public sealed class SessionReplayPluginBuilder
-        {
-            private readonly SessionReplayOptions _options;
-
-            internal SessionReplayPluginBuilder()
-            {
-                _options = new SessionReplayOptions();
-            }
-
-            internal SessionReplayPluginBuilder(SessionReplayOptions options)
-            {
-                _options = options ?? throw new ArgumentNullException(nameof(options));
-            }
-
-            public SessionReplayPluginBuilder WithIsEnabled(bool isEnabled)
-            {
-                _options.IsEnabled = isEnabled;
-                return this;
-            }
-
-            public SessionReplayPluginBuilder WithServiceName(string serviceName)
-            {
-                _options.ServiceName = serviceName ?? throw new ArgumentNullException(nameof(serviceName));
-                return this;
-            }
-
-            public SessionReplayPluginBuilder WithPrivacy(SessionReplayOptions.PrivacyOptions privacy)
-            {
-                _options.Privacy = privacy ?? throw new ArgumentNullException(nameof(privacy));
-                return this;
-            }
-
-            internal SessionReplayOptions BuildOptions() => _options;
-
-            public SessionReplayPlugin Build()
-            {
-                return new SessionReplayPlugin(BuildOptions());
-            }
         }
     }
 }

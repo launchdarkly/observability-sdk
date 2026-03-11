@@ -14,12 +14,7 @@ namespace LaunchDarkly.Observability
 
         public static ObservabilityPlugin ForExistingServices() => new ObservabilityPlugin();
 
-        public static ObservabilityPluginBuilder Builder() => new ObservabilityPluginBuilder();
-
-        public static ObservabilityPluginBuilder Builder(ObservabilityOptions options) =>
-            new ObservabilityPluginBuilder(options);
-
-        internal ObservabilityPlugin(ObservabilityOptions options) : base("LaunchDarkly.Observability")
+        public ObservabilityPlugin(ObservabilityOptions options) : base("LaunchDarkly.Observability")
         {
             _options = options ?? throw new ArgumentNullException(nameof(options));
             NativePluginConnector.Instance.CreateObserve(options);
@@ -41,58 +36,6 @@ namespace LaunchDarkly.Observability
         public override IList<Hook> GetHooks(EnvironmentMetadata metadata)
         {
             return NativePluginConnector.Instance.GetHooksObserve(metadata);
-        }
-
-        public sealed class ObservabilityPluginBuilder
-        {
-            private readonly ObservabilityOptions _options;
-
-            internal ObservabilityPluginBuilder()
-            {
-                _options = new ObservabilityOptions();
-            }
-
-            internal ObservabilityPluginBuilder(ObservabilityOptions options)
-            {
-                _options = options ?? throw new ArgumentNullException(nameof(options));
-            }
-
-            public ObservabilityPluginBuilder WithIsEnabled(bool isEnabled)
-            {
-                _options.IsEnabled = isEnabled;
-                return this;
-            }
-
-            public ObservabilityPluginBuilder WithServiceName(string serviceName)
-            {
-                _options.ServiceName = serviceName ?? throw new ArgumentNullException(nameof(serviceName));
-                return this;
-            }
-
-            public ObservabilityPluginBuilder WithServiceVersion(string serviceVersion)
-            {
-                _options.ServiceVersion = serviceVersion ?? throw new ArgumentNullException(nameof(serviceVersion));
-                return this;
-            }
-
-            public ObservabilityPluginBuilder WithOtlpEndpoint(string otlpEndpoint)
-            {
-                _options.OtlpEndpoint = otlpEndpoint ?? throw new ArgumentNullException(nameof(otlpEndpoint));
-                return this;
-            }
-
-            public ObservabilityPluginBuilder WithBackendUrl(string backendUrl)
-            {
-                _options.BackendUrl = backendUrl ?? throw new ArgumentNullException(nameof(backendUrl));
-                return this;
-            }
-
-            internal ObservabilityOptions BuildOptions() => _options;
-
-            public ObservabilityPlugin Build()
-            {
-                return new ObservabilityPlugin(BuildOptions());
-            }
         }
     }
 }
