@@ -28,6 +28,7 @@ public class LDObservabilityOptions {
     @JvmField var otlpEndpoint: String = ""
     @JvmField var backendUrl: String = ""
     @JvmField var contextFriendlyName: String? = null
+    @JvmField var attributes: HashMap<String, Any?>? = null
 
     constructor()
 
@@ -37,7 +38,8 @@ public class LDObservabilityOptions {
         serviceVersion: String,
         otlpEndpoint: String,
         backendUrl: String,
-        contextFriendlyName: String?
+        contextFriendlyName: String?,
+        attributes: HashMap<String, Any?>? = null
     ) {
         this.isEnabled = isEnabled
         this.serviceName = serviceName
@@ -45,6 +47,7 @@ public class LDObservabilityOptions {
         this.otlpEndpoint = otlpEndpoint
         this.backendUrl = backendUrl
         this.contextFriendlyName = contextFriendlyName
+        this.attributes = attributes
     }
 }
 
@@ -88,6 +91,24 @@ public class LDSessionReplayOptions {
         this.serviceName = serviceName
         this.privacy = privacy
     }
+}
+
+internal fun buildResourceAttributes(source: HashMap<String, Any?>?): Attributes {
+    if (source.isNullOrEmpty()) return Attributes.empty()
+    val builder = Attributes.builder()
+    source.forEach { (key, value) ->
+        when (value) {
+            is String -> builder.put(AttributeKey.stringKey(key), value)
+            is Boolean -> builder.put(AttributeKey.booleanKey(key), value)
+            is Long -> builder.put(AttributeKey.longKey(key), value)
+            is Int -> builder.put(AttributeKey.longKey(key), value.toLong())
+            is Double -> builder.put(AttributeKey.doubleKey(key), value)
+            is Float -> builder.put(AttributeKey.doubleKey(key), value.toDouble())
+            null -> {}
+            else -> builder.put(AttributeKey.stringKey(key), value.toString())
+        }
+    }
+    return builder.build()
 }
 
 public class ObservabilityBridge(
@@ -141,10 +162,8 @@ public class ObservabilityBridge(
     ) {
        // logger.debug("LD:ObservabilityBridge start called 7")
 
-        val resourceAttributes = try { Attributes.builder()
-                // .put(AttributeKey.stringKey("service.name"), observability.serviceName)
-                // .put(AttributeKey.stringKey("service.version"), observabilityVersion)
-                .build()
+        val resourceAttributes = try {
+            buildResourceAttributes(observability.attributes)
         } catch (t: Throwable) {
             printException("LD:resourceAttributes failed to build resourceAttributes", t)
             throw t

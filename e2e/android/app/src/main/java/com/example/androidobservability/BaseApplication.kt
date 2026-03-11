@@ -29,7 +29,7 @@ open class BaseApplication : Application() {
 
     var observabilityOptions = ObservabilityOptions(
         resourceAttributes = Attributes.of(
-            AttributeKey.stringKey("example"), "value"
+            AttributeKey.stringKey("test-option-attribute"), "android-e2e-app"
         ),
         debug = true,
         otlpEndpoint = BuildConfig.OTLP_ENDPOINT,

@@ -45,66 +45,49 @@ namespace LaunchDarkly.Observability
 
         public sealed class ObservabilityPluginBuilder
         {
-            private bool _isEnabled = true;
-            private string _serviceName = ObservabilityOptions.DefaultServiceName;
-            private string _serviceVersion = ObservabilityOptions.DefaultServiceVersion;
-            private string _otlpEndpoint = ObservabilityOptions.DefaultOtlpEndpoint;
-            private string _backendUrl = ObservabilityOptions.DefaultBackendUrl;
+            private readonly ObservabilityOptions _options;
 
             internal ObservabilityPluginBuilder()
             {
+                _options = new ObservabilityOptions();
             }
 
             internal ObservabilityPluginBuilder(ObservabilityOptions options)
             {
-                if (options == null) throw new ArgumentNullException(nameof(options));
-                _isEnabled = options.IsEnabled;
-                _serviceName = options.ServiceName;
-                _serviceVersion = options.ServiceVersion;
-                _otlpEndpoint = options.OtlpEndpoint;
-                _backendUrl = options.BackendUrl;
+                _options = options ?? throw new ArgumentNullException(nameof(options));
             }
 
             public ObservabilityPluginBuilder WithIsEnabled(bool isEnabled)
             {
-                _isEnabled = isEnabled;
+                _options.IsEnabled = isEnabled;
                 return this;
             }
 
             public ObservabilityPluginBuilder WithServiceName(string serviceName)
             {
-                _serviceName = serviceName ?? throw new ArgumentNullException(nameof(serviceName));
+                _options.ServiceName = serviceName ?? throw new ArgumentNullException(nameof(serviceName));
                 return this;
             }
 
             public ObservabilityPluginBuilder WithServiceVersion(string serviceVersion)
             {
-                _serviceVersion = serviceVersion ?? throw new ArgumentNullException(nameof(serviceVersion));
+                _options.ServiceVersion = serviceVersion ?? throw new ArgumentNullException(nameof(serviceVersion));
                 return this;
             }
 
             public ObservabilityPluginBuilder WithOtlpEndpoint(string otlpEndpoint)
             {
-                _otlpEndpoint = otlpEndpoint ?? throw new ArgumentNullException(nameof(otlpEndpoint));
+                _options.OtlpEndpoint = otlpEndpoint ?? throw new ArgumentNullException(nameof(otlpEndpoint));
                 return this;
             }
 
             public ObservabilityPluginBuilder WithBackendUrl(string backendUrl)
             {
-                _backendUrl = backendUrl ?? throw new ArgumentNullException(nameof(backendUrl));
+                _options.BackendUrl = backendUrl ?? throw new ArgumentNullException(nameof(backendUrl));
                 return this;
             }
 
-            internal ObservabilityOptions BuildOptions()
-            {
-                return new ObservabilityOptions(
-                    isEnabled: _isEnabled,
-                    serviceName: _serviceName,
-                    serviceVersion: _serviceVersion,
-                    otlpEndpoint: _otlpEndpoint,
-                    backendUrl: _backendUrl
-                );
-            }
+            internal ObservabilityOptions BuildOptions() => _options;
 
             public ObservabilityPlugin Build()
             {

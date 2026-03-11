@@ -117,7 +117,7 @@ public static class LDObserve
     public static void RecordLog(string message, int severity, IDictionary<string, object?>? attributes = null)
     {
 #if IOS
-        var dict = attributes is null ? new NSDictionary() : ToNSDictionary(attributes);
+        var dict = DictionaryTypeConverters.ToNSDictionary(attributes) ?? new NSDictionary();
         LDObserveBridge.RecordLog(message, severity, dict);
 #endif
     }
@@ -170,56 +170,4 @@ public static class LDObserve
     {
     }
 
-    // -------- Helpers (iOS only) --------
-#if IOS
-    private static NSDictionary ToNSDictionary(IDictionary<string, object?> src)
-    {
-        var keys = new List<NSObject>(src.Count);
-        var vals = new List<NSObject>(src.Count);
-
-        foreach (var (k, v) in src)
-        {
-            keys.Add(new NSString(k));
-            vals.Add(ToNSObject(v));
-        }
-
-        return NSDictionary.FromObjectsAndKeys(vals.ToArray(), keys.ToArray());
-    }
-
-    private static NSObject ToNSObject(object? value)
-    {
-        if (value is null) return NSNull.Null;
-
-        return value switch
-        {
-            string s => new NSString(s),
-            bool b => NSNumber.FromBoolean(b),
-            int i => NSNumber.FromInt32(i),
-            long l => NSNumber.FromInt64(l),
-            double d => NSNumber.FromDouble(d),
-            float f => NSNumber.FromFloat(f),
-            decimal m => NSNumber.FromDouble((double)m),
-
-            // Arrays / Enumerables of primitives
-            IEnumerable<string> arr    => NSArray.FromNSObjects(arr.Select(s => (NSObject)new NSString(s)).ToArray()),
-            IEnumerable<bool> arr      => NSArray.FromNSObjects(arr.Select(b => (NSObject)NSNumber.FromBoolean(b)).ToArray()),
-            IEnumerable<int> arr       => NSArray.FromNSObjects(arr.Select(i => (NSObject)NSNumber.FromInt32(i)).ToArray()),
-            IEnumerable<long> arr      => NSArray.FromNSObjects(arr.Select(l => (NSObject)NSNumber.FromInt64(l)).ToArray()),
-            IEnumerable<double> arr    => NSArray.FromNSObjects(arr.Select(d => (NSObject)NSNumber.FromDouble(d)).ToArray()),
-            IEnumerable<float> arr     => NSArray.FromNSObjects(arr.Select(f => (NSObject)NSNumber.FromFloat(f)).ToArray()),
-            IEnumerable<decimal> arr   => NSArray.FromNSObjects(arr.Select(m => (NSObject)NSNumber.FromDouble((double)m)).ToArray()),
-
-            // Nested dictionaries
-            IDictionary<string, object?> dict => ToNSDictionary(dict),
-
-            // Already Foundation
-            NSDictionary nsDict => nsDict,
-            NSArray nsArray     => nsArray,
-            NSObject nsObj      => nsObj,
-
-            // Fallback: stringify
-            _ => new NSString(value.ToString() ?? string.Empty)
-        };
-    }
-#endif
 }

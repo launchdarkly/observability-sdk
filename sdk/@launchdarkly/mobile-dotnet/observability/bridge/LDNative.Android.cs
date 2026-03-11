@@ -11,7 +11,8 @@ internal static class LDNativeAndroidMapping
             options.ServiceVersion,
             options.OtlpEndpoint,
             options.BackendUrl,
-            options.ContextFriendlyName
+            options.ContextFriendlyName,
+            DictionaryTypeConverters.ToJavaHashMap(options.Attributes)
         );
     }
 
