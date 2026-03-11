@@ -3,7 +3,7 @@
 		<TargetFrameworks>net9.0-android;net9.0-ios</TargetFrameworks>
 		<!-- Use MAUI workload references to avoid runtime version mismatches -->
 		<UseMaui>true</UseMaui>
-		<UseLocalClientSdk>false</UseLocalClientSdk>
+		<UseLocalClientSdk>true</UseLocalClientSdk>
 		<SkipValidateMauiImplicitPackageReferences>true</SkipValidateMauiImplicitPackageReferences>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
@@ -15,12 +15,8 @@
 
 		<!-- NuGet packaging -->
 		<IsPackable>true</IsPackable>
-		<PackageId>LDObservability</PackageId>
-		<Version>0.3.16</Version>
-		<Authors>LD</Authors>
+		<PackageId>LaunchDarkly.SessionReplay</PackageId>
 		<PackageDescription>LD Observability bindings aggregator for .NET (Android/iOS).</PackageDescription>
-		<RepositoryUrl>https://example.local/ldobservability</RepositoryUrl>
-		<PackageOutputPath>$(MSBuildProjectDirectory)\..\nupkgs</PackageOutputPath>
 		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
 		<IncludeReferencedProjects>true</IncludeReferencedProjects>
 		<!-- This repo intentionally pins some AndroidX versions to match MAUI's expectations. -->
@@ -53,8 +49,11 @@
 
 	<ItemGroup Condition="'$(UseLocalClientSdk)' == 'true'">
 	<ProjectReference Include="..\..\..\..\..\dotnet-core\pkgs\sdk\client\src\LaunchDarkly.ClientSdk.csproj"
-						SetTargetFramework="TargetFramework=netstandard2.0"
-						GlobalPropertiesToRemove="RuntimeIdentifier" />
+						SetTargetFramework="TargetFramework=netstandard2.0;BUILDFRAMEWORKS=netstandard2.0"
+						SkipGetTargetFrameworkProperties="true"
+						PrivateAssets="all"
+						AdditionalProperties="SignAssembly=false"
+						GlobalPropertiesToRemove="RuntimeIdentifier;TargetPlatformIdentifier;SupportedOSPlatformVersion;UseMaui;SkipValidateMauiImplicitPackageReferences" />
 	</ItemGroup>
 
 	<ItemGroup Condition="'$(UseLocalClientSdk)' != 'true'">

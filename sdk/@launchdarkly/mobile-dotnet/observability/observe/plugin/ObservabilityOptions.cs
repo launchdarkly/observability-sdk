@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace LaunchDarkly.SessionReplay;
 
@@ -15,7 +16,7 @@ public class ObservabilityOptions
     public string OtlpEndpoint { get; set; } = DefaultOtlpEndpoint;
     public string BackendUrl { get; set; } = DefaultBackendUrl;
     public string? ContextFriendlyName { get; set; }
-    public SessionReplayOptions? SessionReplay { get; set; }
+    public IDictionary<string, object>? Attributes { get; set; }
 
     public ObservabilityOptions() { }
 
@@ -26,7 +27,7 @@ public class ObservabilityOptions
         string? otlpEndpoint = null,
         string? backendUrl = null,
         string? contextFriendlyName = null,
-        SessionReplayOptions? sessionReplay = null)
+        IDictionary<string, object>? attributes = null)
     {
         IsEnabled = isEnabled;
         ServiceName = serviceName;
@@ -34,6 +35,6 @@ public class ObservabilityOptions
         OtlpEndpoint = otlpEndpoint ?? DefaultOtlpEndpoint;
         BackendUrl = backendUrl ?? DefaultBackendUrl;
         ContextFriendlyName = contextFriendlyName;
-        SessionReplay = sessionReplay;
+        Attributes = attributes;
     }
 }

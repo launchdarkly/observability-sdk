@@ -1,6 +1,8 @@
 package com.launchdarkly.LDNative
 
 import android.app.Application
+import com.example.LDObserve.BridgeLogger
+import com.example.LDObserve.SystemOutBridgeLogger
 import com.launchdarkly.observability.BuildConfig
 import com.launchdarkly.observability.client.TelemetryInspector
 import com.launchdarkly.observability.plugin.Observability
@@ -26,6 +28,7 @@ public class LDObservabilityOptions {
     @JvmField var otlpEndpoint: String = ""
     @JvmField var backendUrl: String = ""
     @JvmField var contextFriendlyName: String? = null
+    @JvmField var attributes: HashMap<String, Any?>? = null
 
     constructor()
 
@@ -35,7 +38,8 @@ public class LDObservabilityOptions {
         serviceVersion: String,
         otlpEndpoint: String,
         backendUrl: String,
-        contextFriendlyName: String?
+        contextFriendlyName: String?,
+        attributes: HashMap<String, Any?>? = null
     ) {
         this.isEnabled = isEnabled
         this.serviceName = serviceName
@@ -43,6 +47,7 @@ public class LDObservabilityOptions {
         this.otlpEndpoint = otlpEndpoint
         this.backendUrl = backendUrl
         this.contextFriendlyName = contextFriendlyName
+        this.attributes = attributes
     }
 }
 
@@ -88,15 +93,28 @@ public class LDSessionReplayOptions {
     }
 }
 
-public class ObservabilityBridge {
-    private fun printException(prefix: String, t: Throwable) {
-        System.out.println("$prefix ${t::class.java.name}: ${t.message}")
-        val writer = java.io.StringWriter()
-        val printWriter = java.io.PrintWriter(writer)
-        t.printStackTrace(printWriter)
-        printWriter.flush()
-        System.out.println(writer.toString())
+internal fun buildResourceAttributes(source: HashMap<String, Any?>?): Attributes {
+    if (source.isNullOrEmpty()) return Attributes.empty()
+    val builder = Attributes.builder()
+    source.forEach { (key, value) ->
+        when (value) {
+            is String -> builder.put(AttributeKey.stringKey(key), value)
+            is Boolean -> builder.put(AttributeKey.booleanKey(key), value)
+            is Long -> builder.put(AttributeKey.longKey(key), value)
+            is Int -> builder.put(AttributeKey.longKey(key), value.toLong())
+            is Double -> builder.put(AttributeKey.doubleKey(key), value)
+            is Float -> builder.put(AttributeKey.doubleKey(key), value.toDouble())
+            null -> {}
+            else -> builder.put(AttributeKey.stringKey(key), value.toString())
+        }
     }
+    return builder.build()
+}
+
+public class ObservabilityBridge(
+    private val logger: BridgeLogger = SystemOutBridgeLogger()
+) {
+    var isDebug: Boolean = true
 
     public fun getHookProxy(): RealObservabilityHookProxy? {
         val real = LDObserve.hookProxy ?: return null
@@ -142,18 +160,16 @@ public class ObservabilityBridge {
         replay: LDSessionReplayOptions,
         observabilityVersion: String
     ) {
-       // System.out.println("LD:ObservabilityBridge start called 7")
+       // logger.debug("LD:ObservabilityBridge start called 7")
 
-        val resourceAttributes = try { Attributes.builder()
-                // .put(AttributeKey.stringKey("service.name"), observability.serviceName)
-                // .put(AttributeKey.stringKey("service.version"), observabilityVersion)
-                .build()
+        val resourceAttributes = try {
+            buildResourceAttributes(observability.attributes)
         } catch (t: Throwable) {
             printException("LD:resourceAttributes failed to build resourceAttributes", t)
             throw t
         }
 
-        //System.out.println("LD:ObservabilityBridge resourceAttributes called")
+        //logger.debug("LD:ObservabilityBridge resourceAttributes called")
 
         val nativeObservabilityOptions = try {
             com.launchdarkly.observability.api.ObservabilityOptions(
@@ -210,7 +226,7 @@ public class ObservabilityBridge {
             throw t
         }
 
-        System.out.println(
+        logger.info(
             "LD:ObservabilityBridge Session replay enabled=${nativeSessionReplayOptions.enabled}, " +
                 "backendUrl=${nativeObservabilityOptions.backendUrl}"
         )
@@ -244,12 +260,20 @@ public class ObservabilityBridge {
 
         try {
             LDClient.init(app, ldConfig, context)
-            //System.out.println("LD:ObservabilityBridge LDClient.init completed")
+            //logger.info("LD:ObservabilityBridge LDClient.init completed")
         } catch (t: Throwable) {
             printException("LD:ObservabilityBridge LDClient.init failed", t)
             throw t
         }
     }
 
-   
+    private fun printException(prefix: String, t: Throwable) {
+        logger.error("$prefix ${t::class.java.name}: ${t.message}")
+        val writer = java.io.StringWriter()
+        val printWriter = java.io.PrintWriter(writer)
+        t.printStackTrace(printWriter)
+        printWriter.flush()
+        logger.error(writer.toString())
+    }
 }
+

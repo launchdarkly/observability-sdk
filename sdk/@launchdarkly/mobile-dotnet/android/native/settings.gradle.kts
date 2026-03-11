@@ -8,6 +8,7 @@ pluginManagement {
         id("com.android.library") version "8.13.2"
     }
 }
+
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {

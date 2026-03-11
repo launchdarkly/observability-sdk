@@ -2,21 +2,13 @@
 	<PropertyGroup>
 		<!-- Packaging-only project -->
 		<TargetFrameworks>net9.0-android;net9.0-ios</TargetFrameworks>
-		<UseLocalClientSdk>false</UseLocalClientSdk>
+		<UseLocalClientSdk>true</UseLocalClientSdk>
+		<PackageId>LaunchDarkly.SessionReplay</PackageId>
+		<PackageDescription>LD Session Replay package for .NET MAUI</PackageDescription>
 		<NoBuild>true</NoBuild>
 		<IncludeBuildOutput>false</IncludeBuildOutput>
 		<IsPackable>true</IsPackable>
-		<PackageId>LaunchDarkly.SessionReplay</PackageId>
-		<Version>0.3.16</Version>
-		<Authors>LaunchDarkly</Authors>
-        <Owners>LaunchDarkly</Owners>
-        <Company>LaunchDarkly</Company>
-        <Copyright>Copyright 2026 Catamorphic, Co</Copyright>
-        <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
-		<PackageDescription>LD Session Replay package for .NET MAUI</PackageDescription>
-		<PackageOutputPath>$(MSBuildProjectDirectory)\..\nupkgs</PackageOutputPath>
-		<PackageProjectUrl>https://github.com/launchdarkly/observability-sdk</PackageProjectUrl>
-        <RepositoryUrl>https://github.com/launchdarkly/observability-sdk</RepositoryUrl>
+	
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<NoWarn>$(NoWarn);NU1012;NU1605;NU1608</NoWarn>
 	</PropertyGroup>

@@ -18,6 +18,7 @@ public final class ObjcObservabilityOptions: NSObject {
     @objc public var serviceVersion: String = ""
     @objc public var otlpEndpoint: String = ""
     @objc public var backendUrl: String = ""
+    @objc public var attributes: NSDictionary?
 
     @objc public override init() {
         super.init()
@@ -50,6 +51,21 @@ public final class ObjcEnvironmentMetadata: NSObject {
     }
 }
 
+internal func buildResourceAttributes(_ source: NSDictionary?) -> [String: AttributeValue] {
+    guard let source = source as? [String: Any], !source.isEmpty else {
+        return [:]
+    }
+    var result = [String: AttributeValue](minimumCapacity: source.count)
+    for (key, value) in source {
+        if let av = AttributeValue(value) {
+            result[key] = av
+        } else {
+            result[key] = .string(String(describing: value))
+        }
+    }
+    return result
+}
+
 @objc(ObservabilityBridge)
 public final class ObservabilityBridge: NSObject {
 
@@ -77,6 +93,7 @@ public final class ObservabilityBridge: NSObject {
                     serviceVersion: observability.serviceVersion,
                     otlpEndpoint: observability.otlpEndpoint,
                     backendUrl: observability.backendUrl,
+                    resourceAttributes: buildResourceAttributes(observability.attributes),
                     crashReporting: .init(source: .none),
                     instrumentation: .init(
                         urlSession: .disabled,

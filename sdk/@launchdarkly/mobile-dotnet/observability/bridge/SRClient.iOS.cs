@@ -25,7 +25,8 @@ public class ObservabilityBridgeClient
             ServiceName = observability.ServiceName ?? "observability-maui",
             ServiceVersion = observabilityVersion,
             OtlpEndpoint = observability.OtlpEndpoint ?? "https://otel.observability.app.launchdarkly.com:4318",
-            BackendUrl = observability.BackendUrl ?? "https://pub.observability.app.launchdarkly.com"
+            BackendUrl = observability.BackendUrl ?? "https://pub.observability.app.launchdarkly.com",
+            Attributes = DictionaryTypeConverters.ToNSDictionary(observability.Attributes)
         };
 
         var objcReplay = new ObjcSessionReplayOptions

@@ -25,6 +25,9 @@ namespace LDObserveMaciOS
 
         [Export("backendUrl")]
         string BackendUrl { get; set; }
+
+        [NullAllowed, Export("attributes")]
+        NSDictionary Attributes { get; set; }
     }
 
     [BaseType(typeof(NSObject))]
