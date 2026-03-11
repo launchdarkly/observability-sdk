@@ -33,18 +33,18 @@ public static class MauiProgram
 
         var ldConfig = Configuration.Builder(mobileKey, ConfigurationBuilder.AutoEnvAttributes.Enabled)
             .Plugins(new PluginConfigurationBuilder()
-                .Add(ObservabilityPlugin.Builder(new ObservabilityOptions(
+                .Add(new ObservabilityPlugin(new ObservabilityOptions(
                     isEnabled: true,
                     serviceName: "maui-sample-app"
-                )).Build())
-                .Add(SessionReplayPlugin.Builder(new SessionReplayOptions(
+                )))
+                .Add(new SessionReplayPlugin(new SessionReplayOptions(
                     isEnabled: true,
                     privacy: new SessionReplayOptions.PrivacyOptions(
                         maskTextInputs: true,
                         maskWebViews: false,
                         maskLabels: false
                     )
-                )).Build())
+                )))
             ).Build();
 
         var context = LaunchDarkly.Sdk.Context.New("maui-user-key");
