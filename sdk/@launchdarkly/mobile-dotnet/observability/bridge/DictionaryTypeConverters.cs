@@ -10,7 +10,7 @@ namespace LaunchDarkly.SessionReplay;
 internal static class DictionaryTypeConverters
 {
 #if IOS
-    internal static NSDictionary? ToNSDictionary(IDictionary<string, object>? src)
+    internal static NSDictionary? ToNSDictionary(IDictionary<string, object?>? src)
     {
         if (src is null) return null;
 
@@ -59,15 +59,15 @@ internal static class DictionaryTypeConverters
     }
 
 #elif ANDROID
-    internal static IDictionary<string, Java.Lang.Object>? ToJavaHashMap(IDictionary<string, object>? src)
+    internal static Java.Util.HashMap? ToJavaHashMap(IDictionary<string, object?>? src)
     {
         if (src is null) return null;
 
-        var map = new Dictionary<string, Java.Lang.Object>(src.Count);
+        var map = new Java.Util.HashMap();
         foreach (var (k, v) in src)
         {
             var jobj = ToJavaObject(v);
-            if (jobj != null) map[k] = jobj;
+            if (jobj != null) map.Put(k, jobj);
         }
         return map;
     }
