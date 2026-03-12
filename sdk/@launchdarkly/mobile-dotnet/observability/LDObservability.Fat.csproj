@@ -2,8 +2,6 @@
 	<PropertyGroup>
 		<!-- Packaging-only project -->
 		<TargetFrameworks>net9.0-android;net9.0-ios</TargetFrameworks>
-		<UseLocalClientSdk>true</UseLocalClientSdk>
-		<PackageId>LaunchDarkly.SessionReplay</PackageId>
 		<PackageDescription>LD Session Replay package for .NET MAUI</PackageDescription>
 		<NoBuild>true</NoBuild>
 		<IncludeBuildOutput>false</IncludeBuildOutput>
@@ -119,7 +117,7 @@
 			  Pack="true" PackagePath="buildTransitive\LDObservability.Fat.targets" />
 		<!-- NuGet expects buildTransitive/<PackageId>.targets for auto-import; keep a copy with that name. -->
 		<None Include="buildTransitive\LDObservability.Fat.targets"
-			  Pack="true" PackagePath="buildTransitive\LaunchDarkly.SessionReplay.targets" />
+			  Pack="true" PackagePath="buildTransitive\$(PackageId).targets" />
 	</ItemGroup>
 
 	<!-- Include solution README as NuGet package readme -->
