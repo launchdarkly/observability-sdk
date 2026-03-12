@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using LaunchDarkly.Sdk.Client.Hooks;
 using LaunchDarkly.Sdk.Client.Interfaces;
 using LaunchDarkly.Sdk.Integrations.Plugins;
@@ -38,7 +39,18 @@ namespace LaunchDarkly.Observability
             var replayOptions = SessionReplay?.Options
                 ?? new SessionReplayOptions(isEnabled: false);
 
-            LDNative.Start(mobileKey, observabilityOptions, replayOptions);
+            Task.Run(() =>
+            {
+                try
+                {
+                    LDNative.Start(mobileKey, observabilityOptions, replayOptions);
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine(
+                        $"[LaunchDarkly] Native init failed: {ex}");
+                }
+            });
         }
 
         internal void CreateObserve(ObservabilityOptions options)
