@@ -59,15 +59,15 @@ internal static class DictionaryTypeConverters
     }
 
 #elif ANDROID
-    internal static Java.Util.HashMap? ToJavaHashMap(IDictionary<string, object?>? src)
+    internal static IDictionary<string, Java.Lang.Object>? ToJavaHashMap(IDictionary<string, object>? src)
     {
         if (src is null) return null;
 
-        var map = new Java.Util.HashMap();
+        var map = new Dictionary<string, Java.Lang.Object>(src.Count);
         foreach (var (k, v) in src)
         {
             var jobj = ToJavaObject(v);
-            if (jobj != null) map.Put(k, jobj);
+            if (jobj != null) map[k] = jobj;
         }
         return map;
     }

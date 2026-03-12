@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-using LaunchDarkly.Sdk.Client.Hooks;
 using LaunchDarkly.Sdk.Client.Interfaces;
 using LaunchDarkly.Sdk.Integrations.Plugins;
 using LaunchDarkly.SessionReplay;
@@ -28,25 +26,24 @@ namespace LaunchDarkly.Observability
             // TODO: initialize native observability with Options, Client, and Metadata
         }
 
-        internal List<Hook> GetNativeHooks()
+        internal NativeHookExporter? GetNativeHookExporter()
         {
-            var hooks = new List<Hook>();
 #if IOS
             var bridge = new LDObserveMaciOS.ObservabilityBridge();
             var proxy = bridge.GetHookProxy();
             if (proxy != null)
             {
-                hooks.Add(new NativeHookProxy(proxy));
+                return new NativeHookExporter(proxy);
             }
 #elif ANDROID
             var bridge = new LDObserveAndroid.ObservabilityBridge();
             var proxy = bridge.HookProxy;
             if (proxy != null)
             {
-                hooks.Add(new NativeHookProxy(proxy));
+                return new NativeHookExporter(proxy);
             }
 #endif
-            return hooks;
+            return null;
         }
     }
 }

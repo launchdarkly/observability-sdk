@@ -16,12 +16,12 @@ namespace LaunchDarkly.Observability
     /// C# passes only primitives and Foundation types — no SDK-specific types
     /// (EvaluationSeriesContext, LDEvaluationDetail) need to be constructed natively.
     /// </summary>
-    internal sealed class NativeHookProxy : Hook
+    internal sealed class NativeHookExporter : Hook
     {
         private const string EvalIdKey = "__nativeEvalId";
         private readonly ObservabilityHookProxy _proxy;
 
-        internal NativeHookProxy(ObservabilityHookProxy proxy) : base("Observability")
+        internal NativeHookExporter(ObservabilityHookProxy proxy) : base("Observability")
         {
             _proxy = proxy;
         }
@@ -90,12 +90,12 @@ namespace LaunchDarkly.Observability
 {
     using SeriesData = ImmutableDictionary<string, object>;
 
-    internal sealed class NativeHookProxy : Hook
+    internal sealed class NativeHookExporter : Hook
     {
         private const string EvalIdKey = "__nativeEvalId";
         private readonly RealObservabilityHookProxy _proxy;
 
-        internal NativeHookProxy(RealObservabilityHookProxy proxy) : base("Observability")
+        internal NativeHookExporter(RealObservabilityHookProxy proxy) : base("Observability")
         {
             _proxy = proxy;
         }
