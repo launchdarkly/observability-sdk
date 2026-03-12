@@ -39,15 +39,15 @@ namespace LaunchDarkly.Observability
             return data;
         }
 
-        public override SeriesData BeforeIdentify(IdentifySeriesContext context, SeriesData data)
-        {
-            return data;
-        }
+        // public override SeriesData BeforeIdentify(IdentifySeriesContext context, SeriesData data)
+        // {
+        //     return data;
+        // }
 
-        public override SeriesData AfterIdentify(IdentifySeriesContext context, SeriesData data,
-            IdentifySeriesResult result)
-        {
-            return data;
-        }
+        // public override SeriesData AfterIdentify(IdentifySeriesContext context, SeriesData data,
+        //     IdentifySeriesResult result)
+        // {
+        //     return data;
+        // }
     }
 }

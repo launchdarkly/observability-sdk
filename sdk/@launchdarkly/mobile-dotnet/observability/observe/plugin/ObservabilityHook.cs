@@ -31,7 +31,8 @@ namespace LaunchDarkly.Observability
                 if (!_nativeHookExporterResolved)
                 {
                     _nativeHookExporter = _nativeObserve.GetNativeHookExporter();
-                    _nativeHookExporterResolved = true;
+                    if (_nativeHookExporter != null)
+                        _nativeHookExporterResolved = true;
                 }
                 return _nativeHookExporter;
             }
@@ -56,23 +57,23 @@ namespace LaunchDarkly.Observability
             return data;
         }
 
-        public override SeriesData BeforeIdentify(IdentifySeriesContext context, SeriesData data)
-        {
-            if (NativeHookExporter != null)
-            {
-                data = NativeHookExporter.BeforeIdentify(context, data);
-            }
-            return data;
-        }
+        // public override SeriesData BeforeIdentify(IdentifySeriesContext context, SeriesData data)
+        // {
+        //     if (NativeHookExporter != null)
+        //     {
+        //         data = NativeHookExporter.BeforeIdentify(context, data);
+        //     }
+        //     return data;
+        // }
 
-        public override SeriesData AfterIdentify(IdentifySeriesContext context, SeriesData data,
-            IdentifySeriesResult result)
-        {
-            if (NativeHookExporter != null)
-            {
-                data = NativeHookExporter.AfterIdentify(context, data, result);
-            }
-            return data;
-        }
+        // public override SeriesData AfterIdentify(IdentifySeriesContext context, SeriesData data,
+        //     IdentifySeriesResult result)
+        // {
+        //     if (NativeHookExporter != null)
+        //     {
+        //         data = NativeHookExporter.AfterIdentify(context, data, result);
+        //     }
+        //     return data;
+        // }
     }
 }
