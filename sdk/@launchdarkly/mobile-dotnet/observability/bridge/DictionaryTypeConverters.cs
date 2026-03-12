@@ -59,7 +59,7 @@ internal static class DictionaryTypeConverters
     }
 
 #elif ANDROID
-    internal static IDictionary<string, Java.Lang.Object>? ToJavaHashMap(IDictionary<string, object>? src)
+    internal static IDictionary<string, Java.Lang.Object>? ToJavaDictionary(IDictionary<string, object>? src)
     {
         if (src is null) return null;
 
