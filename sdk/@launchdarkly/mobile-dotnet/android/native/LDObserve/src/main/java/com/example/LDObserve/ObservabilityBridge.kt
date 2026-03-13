@@ -174,7 +174,7 @@ public class ObservabilityBridge(
                 otlpEndpoint = observability.otlpEndpoint,
                 backendUrl = observability.backendUrl,
                 tracesApi = com.launchdarkly.observability.api.ObservabilityOptions.TracesApi(includeErrors = true, includeSpans = true),
-                metricsApi = com.launchdarkly.observability.api.ObservabilityOptions.MetricsApi.disabled(),
+                metricsApi = com.launchdarkly.observability.api.ObservabilityOptions.MetricsApi.enabled(),
                 instrumentations = com.launchdarkly.observability.api.ObservabilityOptions.Instrumentations(
                     crashReporting = false, launchTime = true, activityLifecycle = true
                 ),

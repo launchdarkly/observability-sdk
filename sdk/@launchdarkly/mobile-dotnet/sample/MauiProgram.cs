@@ -85,7 +85,13 @@ public static class MauiProgram
         .Plugins(new PluginConfigurationBuilder()
         	.Add(new ObservabilityPlugin(new ObservabilityOptions(
         		isEnabled: true,
+#if IOS
+        		serviceName: "maui-ios-sample",
+#elif ANDROID
+        		serviceName: "maui-android-sample",
+#else
         		serviceName: "maui-sample-app",
+#endif
         		otlpEndpoint: otlpEndpoint,
         		backendUrl: backendUrl,
 				attributes: new Dictionary<string, object> { { "test-options-attribute", "maui-sample-value" } }

@@ -72,6 +72,24 @@ namespace LDObserveMaciOS
     {
         [Static, Export("recordLogWithMessage:severity:attributes:")]
         void RecordLog(string message, nint severity, NSDictionary attributes);
+
+        [Static, Export("recordErrorWithMessage:cause:")]
+        void RecordError(string message, [NullAllowed] string cause);
+
+        [Static, Export("recordMetricWithName:value:")]
+        void RecordMetric(string name, double value);
+
+        [Static, Export("recordCountWithName:value:")]
+        void RecordCount(string name, double value);
+
+        [Static, Export("recordIncrWithName:value:")]
+        void RecordIncr(string name, double value);
+
+        [Static, Export("recordHistogramWithName:value:")]
+        void RecordHistogram(string name, double value);
+
+        [Static, Export("recordUpDownCounterWithName:value:")]
+        void RecordUpDownCounter(string name, double value);
     }
 
     [BaseType(typeof(NSObject))]
