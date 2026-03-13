@@ -17,6 +17,7 @@
 					<x:Array Type="{x:Type x:String}">
 						<x:String>Credit Card</x:String>
 						<x:String>Number Pad</x:String>
+						<x:String>Dialogs</x:String>
 					</x:Array>
 				</CollectionView.ItemsSource>
 				<CollectionView.ItemTemplate>

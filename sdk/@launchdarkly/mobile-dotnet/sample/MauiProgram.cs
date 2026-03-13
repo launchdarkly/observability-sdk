@@ -7,6 +7,8 @@ using LaunchDarkly.Sdk.Client;
 using LaunchDarkly.Sdk.Client.Interfaces;
 using LaunchDarkly.Sdk.Client.Integrations;
 using LaunchDarkly.Observability;
+using CommunityToolkit.Maui;
+using Plugin.Maui.BottomSheet.Hosting;
 namespace MauiSample9;
 
 public static class MauiProgram
@@ -63,7 +65,9 @@ public static class MauiProgram
         LogMauiAssemblyInfo();
 
         builder
-            .UseMauiApp<App>();
+            .UseMauiApp<App>()
+            .UseMauiCommunityToolkit()
+            .UseBottomSheet();
 
 #if DEBUG
         builder.Logging.AddDebug();

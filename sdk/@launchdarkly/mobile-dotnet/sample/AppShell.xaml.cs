@@ -8,5 +8,6 @@ public partial class AppShell : Shell
 
 		Routing.RegisterRoute(nameof(CreditCardPage), typeof(CreditCardPage));
 		Routing.RegisterRoute(nameof(NumberPadPage), typeof(NumberPadPage));
+		Routing.RegisterRoute(nameof(DialogsPage), typeof(DialogsPage));
 	}
 }

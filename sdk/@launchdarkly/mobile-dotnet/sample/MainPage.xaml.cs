@@ -32,6 +32,9 @@ public partial class MainPage : ContentPage
 			case "Number Pad":
 				await Shell.Current.GoToAsync(nameof(NumberPadPage));
 				break;
+			case "Dialogs":
+				await Shell.Current.GoToAsync(nameof(DialogsPage));
+				break;
 		}
 
 		if (sender is CollectionView cv)
