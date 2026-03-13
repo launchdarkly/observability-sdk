@@ -137,6 +137,12 @@ public static class LDObserve
     /// </summary>
     public static void RecordError(string message, string? cause = null)
     {
+#if IOS
+        LDObserveBridge.RecordError(message, cause);
+#elif ANDROID
+        var bridge = new LDObserveAndroid.ObservabilityBridge();
+        bridge.RecordError(message, cause);
+#endif
     }
 
     /// <summary>
@@ -144,6 +150,12 @@ public static class LDObserve
     /// </summary>
     public static void RecordMetric(string name, double value)
     {
+#if IOS
+        LDObserveBridge.RecordMetric(name, value);
+#elif ANDROID
+        var bridge = new LDObserveAndroid.ObservabilityBridge();
+        bridge.RecordMetric(name, value);
+#endif
     }
 
     /// <summary>
@@ -151,6 +163,12 @@ public static class LDObserve
     /// </summary>
     public static void RecordCount(string name, double value)
     {
+#if IOS
+        LDObserveBridge.RecordCount(name, value);
+#elif ANDROID
+        var bridge = new LDObserveAndroid.ObservabilityBridge();
+        bridge.RecordCount(name, value);
+#endif
     }
 
     /// <summary>
@@ -158,6 +176,12 @@ public static class LDObserve
     /// </summary>
     public static void RecordIncr(string name, double value)
     {
+#if IOS
+        LDObserveBridge.RecordIncr(name, value);
+#elif ANDROID
+        var bridge = new LDObserveAndroid.ObservabilityBridge();
+        bridge.RecordIncr(name, value);
+#endif
     }
 
     /// <summary>
@@ -165,6 +189,12 @@ public static class LDObserve
     /// </summary>
     public static void RecordHistogram(string name, double value)
     {
+#if IOS
+        LDObserveBridge.RecordHistogram(name, value);
+#elif ANDROID
+        var bridge = new LDObserveAndroid.ObservabilityBridge();
+        bridge.RecordHistogram(name, value);
+#endif
     }
 
     /// <summary>
@@ -172,6 +202,12 @@ public static class LDObserve
     /// </summary>
     public static void RecordUpDownCounter(string name, double value)
     {
+#if IOS
+        LDObserveBridge.RecordUpDownCounter(name, value);
+#elif ANDROID
+        var bridge = new LDObserveAndroid.ObservabilityBridge();
+        bridge.RecordUpDownCounter(name, value);
+#endif
     }
 
 }
