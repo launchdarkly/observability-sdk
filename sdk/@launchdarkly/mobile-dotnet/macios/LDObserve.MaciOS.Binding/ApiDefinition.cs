@@ -58,9 +58,13 @@ namespace LDObserveMaciOS
         [Export("startWithMobileKey:observability:replay:")]
         void Start(string mobileKey, ObjcObservabilityOptions observability, ObjcSessionReplayOptions replay);
 
-        [Export("getHookProxy")]
+        [Export("getObservabilityHookProxy")]
         [NullAllowed]
-        ObservabilityHookProxy GetHookProxy();
+        ObservabilityHookProxy GetObservabilityHookProxy();
+
+        [Export("getSessionReplayHookProxy")]
+        [NullAllowed]
+        SessionReplayHookProxy GetSessionReplayHookProxy();
     }
 
     [BaseType(typeof(NSObject))]
@@ -80,6 +84,13 @@ namespace LDObserveMaciOS
         void AfterEvaluation(string evaluationId, string flagKey, string contextKey,
             NSObject value, nint variationIndex, [NullAllowed] NSDictionary reason);
 
+        [Export("afterIdentifyWithContextKeys:canonicalKey:completed:")]
+        void AfterIdentify(NSDictionary contextKeys, string canonicalKey, bool completed);
+    }
+
+    [BaseType(typeof(NSObject))]
+    interface SessionReplayHookProxy
+    {
         [Export("afterIdentifyWithContextKeys:canonicalKey:completed:")]
         void AfterIdentify(NSDictionary contextKeys, string canonicalKey, bool completed);
     }

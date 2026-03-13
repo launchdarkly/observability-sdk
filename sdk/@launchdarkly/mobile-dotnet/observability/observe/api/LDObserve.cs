@@ -119,6 +119,10 @@ public static class LDObserve
 #if IOS
         var dict = DictionaryTypeConverters.ToNSDictionary(attributes) ?? new NSDictionary();
         LDObserveBridge.RecordLog(message, severity, dict);
+#elif ANDROID
+        var bridge = new LDObserveAndroid.ObservabilityBridge();
+        var map = DictionaryTypeConverters.ToJavaDictionary(attributes);
+        bridge.RecordLog(message, severity, map);
 #endif
     }
 

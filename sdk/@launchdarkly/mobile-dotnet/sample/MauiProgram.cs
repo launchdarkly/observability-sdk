@@ -116,10 +116,6 @@ public static class MauiProgram
 
         //directStart(mobileKey, otlpEndpoint, backendUrl);
 
-
-
-        // Native bridge is now started automatically by NativePluginConnector
-        // once all plugins have been registered.
         return app;
     }
 

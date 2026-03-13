@@ -155,7 +155,11 @@ public partial class MainPage : ContentPage
 		LDObserve.RecordLog(
 			"Test Log",
 			LDObserve.Severity.Info,
-			new Dictionary<string, object?> { { "FakeAttribute", "FakeVal" } }
+			new Dictionary<string, object?>
+			{
+				{ "test-log", "maui" },
+				{ "nested", new Dictionary<string, object?> { { "array", new int[] { 1 } } } }
+			}
 		);
 		Console.WriteLine("Log triggered");
 	}

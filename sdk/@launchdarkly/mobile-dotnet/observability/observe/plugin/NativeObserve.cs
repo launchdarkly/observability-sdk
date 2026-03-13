@@ -26,21 +26,21 @@ namespace LaunchDarkly.Observability
             // TODO: initialize native observability with Options, Client, and Metadata
         }
 
-        internal NativeHookExporter? GetNativeHookExporter()
+        internal NativeObservabilityHookExporter? GetNativeHookExporter()
         {
 #if IOS
             var bridge = new LDObserveMaciOS.ObservabilityBridge();
-            var proxy = bridge.GetHookProxy();
+            var proxy = bridge.GetObservabilityHookProxy();
             if (proxy != null)
             {
-                return new NativeHookExporter(proxy);
+                return new NativeObservabilityHookExporter(proxy);
             }
 #elif ANDROID
             var bridge = new LDObserveAndroid.ObservabilityBridge();
-            var proxy = bridge.HookProxy;
+            var proxy = bridge.ObservabilityHookProxy;
             if (proxy != null)
             {
-                return new NativeHookExporter(proxy);
+                return new NativeObservabilityHookExporter(proxy);
             }
 #endif
             return null;

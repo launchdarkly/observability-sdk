@@ -1,11 +1,20 @@
 package com.launchdarkly.observability.sdk
 
+import com.launchdarkly.observability.replay.plugin.SessionReplayHookProxy
+
 /**
  * LDReplay is the singleton entry point for controlling Session Replay capture.
  *
  * If Session Replay is not configured, these methods are no-ops.
  */
 object LDReplay {
+    /**
+     * Hook proxy for the C# / MAUI bridge. Set by the SessionReplay plugin during getHooks().
+     */
+    @Volatile
+    var hookProxy: SessionReplayHookProxy? = null
+        internal set
+
     @Volatile
     private var delegate: ReplayControl = object : ReplayControl {
         override fun start() {}

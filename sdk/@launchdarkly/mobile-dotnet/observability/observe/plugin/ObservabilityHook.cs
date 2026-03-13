@@ -15,7 +15,7 @@ namespace LaunchDarkly.Observability
     internal sealed class ObservabilityHook : Hook
     {
         private readonly NativeObserve _nativeObserve;
-        private NativeHookExporter? _nativeHookExporter;
+        private NativeObservabilityHookExporter? _nativeHookExporter;
         private bool _nativeHookExporterResolved;
 
         internal ObservabilityHook(NativeObserve nativeObserve)
@@ -24,7 +24,7 @@ namespace LaunchDarkly.Observability
             _nativeObserve = nativeObserve;
         }
 
-        private NativeHookExporter? NativeHookExporter
+        private NativeObservabilityHookExporter? NativeHookExporter
         {
             get
             {
