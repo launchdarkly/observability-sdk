@@ -2,7 +2,7 @@
 	<PropertyGroup>
 		<PackageId>LaunchDarkly.DemoObservability</PackageId>
 		<Version>0.52.0</Version>
-		<UseLocalClientSdk>false</UseLocalClientSdk>
+		<UseLocalClientSdk>true</UseLocalClientSdk>
 		<Authors>LaunchDarkly</Authors>
 		<Owners>LaunchDarkly</Owners>
 		<Company>LaunchDarkly</Company>
