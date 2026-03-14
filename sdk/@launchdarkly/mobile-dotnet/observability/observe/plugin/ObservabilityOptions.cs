@@ -16,7 +16,7 @@ public class ObservabilityOptions
     public string OtlpEndpoint { get; set; } = DefaultOtlpEndpoint;
     public string BackendUrl { get; set; } = DefaultBackendUrl;
     public string? ContextFriendlyName { get; set; }
-    public IDictionary<string, object>? Attributes { get; set; }
+    public IDictionary<string, object?>? Attributes { get; set; }
 
     public ObservabilityOptions() { }
 
@@ -27,7 +27,7 @@ public class ObservabilityOptions
         string? otlpEndpoint = null,
         string? backendUrl = null,
         string? contextFriendlyName = null,
-        IDictionary<string, object>? attributes = null)
+        IDictionary<string, object?>? attributes = null)
     {
         IsEnabled = isEnabled;
         ServiceName = serviceName;

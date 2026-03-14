@@ -73,8 +73,12 @@ public final class ObservabilityBridge: NSObject {
         return sdkVersion
     }
 
-    @objc public func getHookProxy() -> ObservabilityHookProxy? {
+    @objc public func getObservabilityHookProxy() -> ObservabilityHookProxy? {
         return LDObserve.shared.hookProxy
+    }
+
+    @objc public func getSessionReplayHookProxy() -> SessionReplayHookProxy? {
+        return LDReplay.shared.hookProxy
     }
 
     @objc public func start(mobileKey: String, 
@@ -96,7 +100,7 @@ public final class ObservabilityBridge: NSObject {
                     resourceAttributes: buildResourceAttributes(observability.attributes),
                     crashReporting: .init(source: .none),
                     instrumentation: .init(
-                        urlSession: .disabled,
+                        urlSession: .enabled,
                         userTaps: .enabled,
                         memory: .disabled,
                         memoryWarnings: .disabled,

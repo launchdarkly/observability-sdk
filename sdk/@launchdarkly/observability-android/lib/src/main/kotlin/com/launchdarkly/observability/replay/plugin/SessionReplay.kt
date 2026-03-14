@@ -57,6 +57,7 @@ class SessionReplay(
     }
 
     override fun getHooks(metadata: EnvironmentMetadata?): MutableList<Hook> {
+        LDReplay.hookProxy = SessionReplayHookProxy(this)
         return Collections.singletonList(
             SessionReplayHook(this)
         )

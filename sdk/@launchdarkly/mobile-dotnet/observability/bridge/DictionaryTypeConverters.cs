@@ -48,7 +48,7 @@ internal static class DictionaryTypeConverters
             IEnumerable<float> arr     => NSArray.FromNSObjects(arr.Select(f => (NSObject)NSNumber.FromFloat(f)).ToArray()),
             IEnumerable<decimal> arr   => NSArray.FromNSObjects(arr.Select(m => (NSObject)NSNumber.FromDouble((double)m)).ToArray()),
 
-            IDictionary<string, object> dict => ToNSDictionary(dict) ?? new NSDictionary(),
+            IDictionary<string, object?> dict => ToNSDictionary(dict) ?? new NSDictionary(),
 
             NSDictionary nsDict => nsDict,
             NSArray nsArray     => nsArray,
@@ -59,15 +59,15 @@ internal static class DictionaryTypeConverters
     }
 
 #elif ANDROID
-    internal static Java.Util.HashMap? ToJavaHashMap(IDictionary<string, object?>? src)
+    internal static IDictionary<string, Java.Lang.Object>? ToJavaDictionary(IDictionary<string, object>? src)
     {
         if (src is null) return null;
 
-        var map = new Java.Util.HashMap();
+        var map = new Dictionary<string, Java.Lang.Object>(src.Count);
         foreach (var (k, v) in src)
         {
             var jobj = ToJavaObject(v);
-            if (jobj != null) map.Put(k, jobj);
+            if (jobj != null) map[k] = jobj;
         }
         return map;
     }
@@ -85,8 +85,37 @@ internal static class DictionaryTypeConverters
             double d  => new Java.Lang.Double(d),
             float f   => new Java.Lang.Float(f),
             decimal m => new Java.Lang.Double((double)m),
+
+            IDictionary<string, object?> dict => ToJavaHashMap(dict),
+
+            IEnumerable<string> arr  => ToJavaList(arr.Select(s => (Java.Lang.Object)new Java.Lang.String(s))),
+            IEnumerable<bool> arr    => ToJavaList(arr.Select(b => (Java.Lang.Object)new Java.Lang.Boolean(b))),
+            IEnumerable<int> arr     => ToJavaList(arr.Select(i => (Java.Lang.Object)new Java.Lang.Integer(i))),
+            IEnumerable<long> arr    => ToJavaList(arr.Select(l => (Java.Lang.Object)new Java.Lang.Long(l))),
+            IEnumerable<double> arr  => ToJavaList(arr.Select(d => (Java.Lang.Object)new Java.Lang.Double(d))),
+            IEnumerable<float> arr   => ToJavaList(arr.Select(f => (Java.Lang.Object)new Java.Lang.Float(f))),
+
             _ => new Java.Lang.String(value.ToString() ?? string.Empty)
         };
+    }
+
+    private static Java.Util.HashMap ToJavaHashMap<TValue>(IDictionary<string, TValue> dict)
+    {
+        var map = new Java.Util.HashMap();
+        foreach (var (k, v) in dict)
+        {
+            var jVal = ToJavaObject(v);
+            if (jVal != null) map.Put(new Java.Lang.String(k), jVal);
+        }
+        return map;
+    }
+
+    private static Java.Util.ArrayList ToJavaList(IEnumerable<Java.Lang.Object> items)
+    {
+        var list = new Java.Util.ArrayList();
+        foreach (var item in items)
+            list.Add(item);
+        return list;
     }
 #endif
 }

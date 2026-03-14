@@ -58,9 +58,13 @@ namespace LDObserveMaciOS
         [Export("startWithMobileKey:observability:replay:")]
         void Start(string mobileKey, ObjcObservabilityOptions observability, ObjcSessionReplayOptions replay);
 
-        [Export("getHookProxy")]
+        [Export("getObservabilityHookProxy")]
         [NullAllowed]
-        ObservabilityHookProxy GetHookProxy();
+        ObservabilityHookProxy GetObservabilityHookProxy();
+
+        [Export("getSessionReplayHookProxy")]
+        [NullAllowed]
+        SessionReplayHookProxy GetSessionReplayHookProxy();
     }
 
     [BaseType(typeof(NSObject))]
@@ -68,6 +72,24 @@ namespace LDObserveMaciOS
     {
         [Static, Export("recordLogWithMessage:severity:attributes:")]
         void RecordLog(string message, nint severity, NSDictionary attributes);
+
+        [Static, Export("recordErrorWithMessage:cause:")]
+        void RecordError(string message, [NullAllowed] string cause);
+
+        [Static, Export("recordMetricWithName:value:")]
+        void RecordMetric(string name, double value);
+
+        [Static, Export("recordCountWithName:value:")]
+        void RecordCount(string name, double value);
+
+        [Static, Export("recordIncrWithName:value:")]
+        void RecordIncr(string name, double value);
+
+        [Static, Export("recordHistogramWithName:value:")]
+        void RecordHistogram(string name, double value);
+
+        [Static, Export("recordUpDownCounterWithName:value:")]
+        void RecordUpDownCounter(string name, double value);
     }
 
     [BaseType(typeof(NSObject))]
@@ -80,6 +102,13 @@ namespace LDObserveMaciOS
         void AfterEvaluation(string evaluationId, string flagKey, string contextKey,
             NSObject value, nint variationIndex, [NullAllowed] NSDictionary reason);
 
+        [Export("afterIdentifyWithContextKeys:canonicalKey:completed:")]
+        void AfterIdentify(NSDictionary contextKeys, string canonicalKey, bool completed);
+    }
+
+    [BaseType(typeof(NSObject))]
+    interface SessionReplayHookProxy
+    {
         [Export("afterIdentifyWithContextKeys:canonicalKey:completed:")]
         void AfterIdentify(NSDictionary contextKeys, string canonicalKey, bool completed);
     }

@@ -7,6 +7,8 @@ using LaunchDarkly.Sdk.Client;
 using LaunchDarkly.Sdk.Client.Interfaces;
 using LaunchDarkly.Sdk.Client.Integrations;
 using LaunchDarkly.Observability;
+using CommunityToolkit.Maui;
+using Plugin.Maui.BottomSheet.Hosting;
 namespace MauiSample9;
 
 public static class MauiProgram
@@ -63,7 +65,9 @@ public static class MauiProgram
         LogMauiAssemblyInfo();
 
         builder
-            .UseMauiApp<App>();
+            .UseMauiApp<App>()
+            .UseMauiCommunityToolkit()
+            .UseBottomSheet();
 
 #if DEBUG
         builder.Logging.AddDebug();
@@ -85,7 +89,13 @@ public static class MauiProgram
         .Plugins(new PluginConfigurationBuilder()
         	.Add(new ObservabilityPlugin(new ObservabilityOptions(
         		isEnabled: true,
+#if IOS
+        		serviceName: "maui-ios-sample",
+#elif ANDROID
+        		serviceName: "maui-android-sample",
+#else
         		serviceName: "maui-sample-app",
+#endif
         		otlpEndpoint: otlpEndpoint,
         		backendUrl: backendUrl,
 				attributes: new Dictionary<string, object> { { "test-options-attribute", "maui-sample-value" } }
@@ -116,10 +126,6 @@ public static class MauiProgram
 
         //directStart(mobileKey, otlpEndpoint, backendUrl);
 
-
-
-        // Native bridge is now started automatically by NativePluginConnector
-        // once all plugins have been registered.
         return app;
     }
 
