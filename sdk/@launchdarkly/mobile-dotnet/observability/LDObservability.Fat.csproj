@@ -19,7 +19,7 @@
 
 	<!-- Use package dependency by default -->
 	<ItemGroup Condition="'$(UseLocalClientSdk)' != 'true'">
-		<PackageReference Include="LaunchDarkly.ClientSdk" Version="[5.6.0, 6.0.0)" />
+		<PackageReference Include="LaunchDarkly.ClientSdk" Version="[5.7.0, 6.0.0)" />
 	</ItemGroup>
 
 	<ItemGroup Condition="$(TargetFramework.Contains('android'))">
