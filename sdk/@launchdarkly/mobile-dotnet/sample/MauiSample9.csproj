@@ -68,10 +68,10 @@
 	<!-- Observability library aggregates platform bindings and Android dependencies -->
 	<ItemGroup>
 		<ProjectReference Include="..\observability\LDObservability.csproj" />
-		<!-- <ProjectReference Include="..\..\..\..\..\dotnet-core\pkgs\sdk\client\src\LaunchDarkly.ClientSdk.csproj"
+		<ProjectReference Include="..\..\..\..\..\dotnet-core\pkgs\sdk\client\src\LaunchDarkly.ClientSdk.csproj"
 						SetTargetFramework="TargetFramework=netstandard2.0;BUILDFRAMEWORKS=netstandard2.0"
 						SkipGetTargetFrameworkProperties="true"
-						GlobalPropertiesToRemove="RuntimeIdentifier;TargetPlatformIdentifier;SupportedOSPlatformVersion;UseMaui;SkipValidateMauiImplicitPackageReferences" /> -->
+						GlobalPropertiesToRemove="RuntimeIdentifier;TargetPlatformIdentifier;SupportedOSPlatformVersion;UseMaui;SkipValidateMauiImplicitPackageReferences" />
 	</ItemGroup>
 
 	
