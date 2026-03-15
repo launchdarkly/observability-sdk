@@ -124,14 +124,14 @@ private fun MainScreen(viewModel: ViewModel, innerPadding: PaddingValues) {
 
         MaskingButtons()
 
+        SessionReplayToggle()
+
         Text(
             text = "Observability",
             style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
             modifier = Modifier.padding(bottom = 8.dp)
         )
         HorizontalDivider(modifier = Modifier.padding(bottom = 16.dp))
-
-        SessionReplayToggle()
 
         IdentifyButtons(viewModel = viewModel)
 
