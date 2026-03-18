@@ -112,6 +112,7 @@ class SessionReplayExporter(
                     }
                 }
 
+
                 // Initialize sessions that need it
                 for (sessionId in sessionsNeedingInit) {
                     replayApiService.initializeReplaySession(organizationVerboseId, sessionId)
@@ -125,19 +126,20 @@ class SessionReplayExporter(
                         replayApiService.pushPayload(sessionId, "${nextPayloadId()}", events)
                         // flushes generating canvas size into pushedCanvasSize
                         pushedCanvasSize = eventGenerator.accumulatedCanvasSize
+
+//                        if (shouldWakeUpSession) {
+//                            val lastEventTimestamp = events.lastOrNull()?.timestamp ?: 0L
+//                            val wakeUpEvents = eventGenerator.generateWakeUpEvents(lastEventTimestamp)
+//                            if (wakeUpEvents.isNotEmpty()) {
+//                                // we need a separate payload to wake up player
+//                                replayApiService.pushPayload(sessionId, "${nextPayloadId()}", wakeUpEvents)
+//                                shouldWakeUpSession = false
+//                            }
+//                        }
                     }
                 }
 
-                if (shouldWakeUpSession) {
-                    eventsBySession.keys.lastOrNull()?.let { sessionId ->
-                        val wakeUpEvents = eventGenerator.generateWakeUpEvents(items)
-                        if (wakeUpEvents.isNotEmpty()) {
-                            // we need a separate payload to wake up player
-                            replayApiService.pushPayload(sessionId, "${nextPayloadId()}", wakeUpEvents)
-                            shouldWakeUpSession = false
-                        }
-                    }
-                }
+
             } catch (e: Exception) {
                 // Roll back exporter state so retries regenerate identical events and payload ids.
                 lastCaptureState = lastCaptureSnapshot

@@ -417,10 +417,8 @@ class RRWebEventGenerator(
      * Generates a "Reload" custom event and a sequence of "wake-up" interaction events.
      * Used by [SessionReplayExporter] to re-trigger player playback after session resumption.
      */
-    fun generateWakeUpEvents(items: List<com.launchdarkly.observability.replay.transport.EventQueueItem>): List<Event> {
+    fun generateWakeUpEvents(timestamp: Long): List<Event> {
         val imageId = imageNodeId ?: return emptyList()
-        val firstItem = items.firstOrNull() ?: return emptyList()
-        val timestamp = firstItem.timestamp
 
         return listOf(
             generateReloadEvent(timestamp),
