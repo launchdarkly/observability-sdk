@@ -90,7 +90,7 @@ dependencies {
     // Uncomment to use the publicly released version (note this may be behind branch/main)
     // implementation("com.launchdarkly:launchdarkly-observability-android:0.2.0")
 
-    implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.11.0")
+    implementation(project(":launchdarkly-android-client-sdk"))
 
     implementation("io.opentelemetry:opentelemetry-api:1.51.0")
     implementation("io.opentelemetry:opentelemetry-sdk:1.51.0")
