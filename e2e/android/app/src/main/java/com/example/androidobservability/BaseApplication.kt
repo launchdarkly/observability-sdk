@@ -93,7 +93,7 @@ open class BaseApplication : Application() {
             .anonymous(true)
             .build()
 
-        LDClient.get().identify(anonContext)
+        //LDClient.get().identify(anonContext)
 
         telemetryInspector = observabilityPlugin.getTelemetryInspector()
 

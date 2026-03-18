@@ -94,13 +94,13 @@ class SessionReplayExporter(
                         }
 
                         is IdentifyItemPayload -> {
-                            System.out.println("LD:OBS:SessionReplayExporter:IdentifyItemPayload, payload.sessionId = ${payload.sessionId}, lastCaptureSnapshot.sessionId = ${lastCaptureSnapshot.sessionId}\"")
+                            //System.out.println("LD:OBS:SessionReplayExporter:IdentifyItemPayload, payload.sessionId = ${payload.sessionId}, lastCaptureSnapshot.sessionId = ${lastCaptureSnapshot.sessionId}\"")
                             val sessionId = payload.sessionId ?: lastCaptureSnapshot.sessionId
-                            System.out.println("LD:OBS:SessionReplayExporter:IdentifyItemPayload, sessionId = ${sessionId}")
+                            //System.out.println("LD:OBS:SessionReplayExporter:IdentifyItemPayload, sessionId = ${sessionId}")
                             sessionId?.let { sessionId ->
-                                System.out.println("LD:OBS:SessionReplayExporter:sessionId")
+                                //System.out.println("LD:OBS:SessionReplayExporter:sessionId")
                                 eventGenerator.generateIdentifyEvent(payload)?.let { identifyEvent ->
-                                    System.out.println("LD:OBS:SessionReplayExporter:generateIdentifyEvent")
+                                    //System.out.println("LD:OBS:SessionReplayExporter:generateIdentifyEvent")
                                     eventsBySession.getOrPut(sessionId) { mutableListOf() }.add(identifyEvent)
                                 }
                             }
@@ -127,15 +127,7 @@ class SessionReplayExporter(
                         // flushes generating canvas size into pushedCanvasSize
                         pushedCanvasSize = eventGenerator.accumulatedCanvasSize
 
-//                        if (shouldWakeUpSession) {
-//                            val lastEventTimestamp = events.lastOrNull()?.timestamp ?: 0L
-//                            val wakeUpEvents = eventGenerator.generateWakeUpEvents(lastEventTimestamp)
-//                            if (wakeUpEvents.isNotEmpty()) {
-//                                // we need a separate payload to wake up player
-//                                replayApiService.pushPayload(sessionId, "${nextPayloadId()}", wakeUpEvents)
-//                                shouldWakeUpSession = false
-//                            }
-//                        }
+                        wakeUpEvents(events, sessionId)
                     }
                 }
 
@@ -148,6 +140,26 @@ class SessionReplayExporter(
                 eventGenerator.restoreState(generatorSnapshot)
                 throw e
             }
+        }
+    }
+
+    private suspend fun wakeUpEvents(
+        events: MutableList<Event>,
+        sessionId: String
+    ) {
+        try {
+            if (shouldWakeUpSession) {
+                val lastEventTimestamp = events.lastOrNull()?.timestamp ?: 0L
+                val wakeUpEvents = eventGenerator.generateWakeUpEvents(lastEventTimestamp)
+                if (wakeUpEvents.isNotEmpty()) {
+                    // we need a separate payload to wake up player
+                    replayApiService.pushPayload(sessionId, "${nextPayloadId()}", wakeUpEvents)
+                    shouldWakeUpSession = false
+                }
+            }
+        } catch (e: Exception) {
+            // put wake up in the try/catch do not break buffering logic
+            logger.error(e)
         }
     }
 

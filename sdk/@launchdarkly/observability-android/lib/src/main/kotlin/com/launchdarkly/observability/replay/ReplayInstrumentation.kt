@@ -292,7 +292,7 @@ class ReplayInstrumentation(
 
         // When replay is disabled, cache the identify payload for later session init without sending it now.
         if (!isEnabled.value) {
-            System.out.println("LD:OBS:ReplayInstrumentation:!isEnabled.value ${exporter}")
+            //System.out.println("LD:OBS:ReplayInstrumentation:!isEnabled.value ${exporter}")
 
             synchronized(pendingIdentifyLock) {
                 pendingIdentify = event
@@ -305,7 +305,7 @@ class ReplayInstrumentation(
             pendingIdentify = null
         }
 
-        System.out.println("LD:OBS:ReplayInstrumentation:to sendIdentifyAndCache ${exporter}")
+        //System.out.println("LD:OBS:ReplayInstrumentation:to sendIdentifyAndCache ${exporter}")
         exporter?.sendIdentifyAndCache(event)
         eventQueue.send(event)
     }
