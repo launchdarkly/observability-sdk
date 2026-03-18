@@ -4,7 +4,6 @@ using LaunchDarkly.Sdk.Client.Hooks;
 using LaunchDarkly.Sdk.Client.Interfaces;
 using LaunchDarkly.Sdk.Client.Plugins;
 using LaunchDarkly.Sdk.Integrations.Plugins;
-using LaunchDarkly.SessionReplay;
 
 namespace LaunchDarkly.Observability
 {

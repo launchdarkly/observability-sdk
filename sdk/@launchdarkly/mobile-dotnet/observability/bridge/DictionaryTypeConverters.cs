@@ -5,7 +5,7 @@ using System.Linq;
 using Foundation;
 #endif
 
-namespace LaunchDarkly.SessionReplay;
+namespace LaunchDarkly.Observability;
 
 internal static class DictionaryTypeConverters
 {

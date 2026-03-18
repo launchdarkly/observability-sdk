@@ -1,6 +1,5 @@
 using LaunchDarkly.Sdk.Client.Interfaces;
 using LaunchDarkly.Sdk.Integrations.Plugins;
-using LaunchDarkly.SessionReplay;
 
 #if IOS
 using LDObserveMaciOS;

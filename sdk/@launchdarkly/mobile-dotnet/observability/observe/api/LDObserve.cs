@@ -3,12 +3,11 @@ using System.Linq;
 using LaunchDarkly.Sdk;
 
 #if IOS
-using UIKit;
 using Foundation;
 using LDObserveMaciOS;
 #endif
 
-namespace LaunchDarkly.SessionReplay;
+namespace LaunchDarkly.Observability;
 
 /// <summary>
 /// Static facade over the native observability bridge.
@@ -97,24 +96,12 @@ public static class LDObserve
     Fatal4 = Fatal3 + 1,
 }
 
-    // -------- Flag Evaluation Tracking --------
-
-    /// <summary>
-    /// Tracks a flag evaluation result for observability tracing.
-    /// </summary>
-    public static void TrackEvaluation(string flagKey, LdValue value, int? variationIndex, EvaluationReason? reason)
-    {
-#if IOS
-        // TODO: forward to iOS observability bridge
-#endif
-    }
-
     // -------- Public API --------
 
     /// <summary>
     /// Record a log with integer severity.
     /// </summary>
-    public static void RecordLog(string message, int severity, IDictionary<string, object?>? attributes = null)
+    private static void RecordLog(string message, int severity, IDictionary<string, object?>? attributes = null)
     {
 #if IOS
         var dict = DictionaryTypeConverters.ToNSDictionary(attributes) ?? new NSDictionary();

@@ -1,4 +1,4 @@
-using LaunchDarkly.SessionReplay;
+using LaunchDarkly.Observability;
 using LaunchDarkly.Sdk;
 using LaunchDarkly.Sdk.Client;
 

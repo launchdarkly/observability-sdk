@@ -1,5 +1,7 @@
+using LaunchDarkly.SessionReplay;
+
 #if ANDROID
-namespace LaunchDarkly.SessionReplay;
+namespace LaunchDarkly.Observability;
 
 internal static class LDNativeAndroidMapping
 {

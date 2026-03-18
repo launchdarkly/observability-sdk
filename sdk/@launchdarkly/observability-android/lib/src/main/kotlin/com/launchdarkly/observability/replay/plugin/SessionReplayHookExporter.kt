@@ -19,12 +19,12 @@ internal class SessionReplayHookExporter(
     private val coroutineScope = CoroutineScope(DispatcherProviderHolder.current.default)
 
     fun afterIdentify(contextKeys: Map<String, String>, canonicalKey: String, completed: Boolean) {
-        System.out.println("LD:OBS:SessionReplay:afterIdentify contextKeys= $contextKeys, canonicalKey= $canonicalKey, completed= $completed")
+        //System.out.println("LD:OBS:SessionReplay:afterIdentify contextKeys= $contextKeys, canonicalKey= $canonicalKey, completed= $completed")
         if (!completed) return
 
         val ldContext = buildLDContext(contextKeys)
         coroutineScope.launch {
-            System.out.println("LD:OBS:SessionReplay:afterIdentify plugin.replayInstrumentation= ${plugin.replayInstrumentation}")
+            //System.out.println("LD:OBS:SessionReplay:afterIdentify plugin.replayInstrumentation= ${plugin.replayInstrumentation}")
             plugin.replayInstrumentation?.identifySession(ldContext)
         }
     }

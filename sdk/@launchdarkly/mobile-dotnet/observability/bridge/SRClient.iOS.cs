@@ -1,10 +1,10 @@
 #if IOS
 using Foundation;
 using LDObserveMaciOS;
+using LaunchDarkly.SessionReplay;
+namespace LaunchDarkly.Observability;
 
-namespace LaunchDarkly.SessionReplay;
-
-public class ObservabilityBridgeClient
+class ObservabilityBridgeClient
 {
     private readonly LDObserveMaciOS.ObservabilityBridge _native;
 

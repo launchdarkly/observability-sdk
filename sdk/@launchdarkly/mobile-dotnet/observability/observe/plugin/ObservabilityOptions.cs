@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace LaunchDarkly.SessionReplay;
+namespace LaunchDarkly.Observability;
 
 public class ObservabilityOptions
 {
