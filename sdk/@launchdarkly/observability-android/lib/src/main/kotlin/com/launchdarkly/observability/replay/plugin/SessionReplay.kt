@@ -38,7 +38,7 @@ class SessionReplay(
     }
 
     override fun register(client: LDClient, metadata: EnvironmentMetadata?) {
-        System.out.println("LD:SessionReplay:register LDObserve.context= ${LDObserve.context}")
+        System.out.println("LD:OBS:SessionReplay:register LDObserve.context= ${LDObserve.context}")
         LDObserve.context?.let {
             InstrumentationContributorManager.add(client, this)
         } ?: run {
@@ -47,8 +47,10 @@ class SessionReplay(
     }
 
     override fun provideInstrumentations(): List<LDExtendedInstrumentation> = synchronized(this) {
+        System.out.println("LD:OBS:SessionReplay:provideInstrumentations")
         val instrumentations = cachedInstrumentations ?: LDObserve.context?.let { context ->
             val instrumentation = ReplayInstrumentation(options, context).also { replayInstrumentation = it }
+            System.out.println("LD:OBS:SessionReplay:provideInstrumentations not cached ${replayInstrumentation}")
             listOf(instrumentation).also { cachedInstrumentations = it }
         }.orEmpty()
 
@@ -57,9 +59,10 @@ class SessionReplay(
     }
 
     override fun getHooks(metadata: EnvironmentMetadata?): MutableList<Hook> {
-        LDReplay.hookProxy = SessionReplayHookProxy(this)
+        val exporter = SessionReplayHookExporter(this)
+        LDReplay.hookProxy = SessionReplayHookProxy(exporter)
         return Collections.singletonList(
-            SessionReplayHook(this)
+            SessionReplayHook(exporter)
         )
     }
 

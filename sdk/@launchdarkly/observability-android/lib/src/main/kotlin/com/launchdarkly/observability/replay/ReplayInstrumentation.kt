@@ -102,12 +102,19 @@ class ReplayInstrumentation(
             resourceAttributes = observabilityContext.options.resourceAttributes,
             sessionId = null // initial payload is not part SR RRWeb event
         )
+        val application = ctx.application
+        val appName = try {
+            application.packageManager.getApplicationLabel(application.applicationInfo).toString()
+        } catch (_: Exception) {
+            "Android app"
+        }
         val exporter = SessionReplayExporter(
             organizationVerboseId = observabilityContext.sdkKey, // SDK key used as organization ID intentionally
             backendUrl = observabilityContext.options.backendUrl,
             serviceName = observabilityContext.options.serviceName,
             serviceVersion = observabilityContext.options.serviceVersion,
             initialIdentifyItemPayload = initialIdentifyItemPayload,
+            title = appName,
             logger = logger
         )
         this@ReplayInstrumentation.exporter = exporter
@@ -270,6 +277,7 @@ class ReplayInstrumentation(
     ) {
         if (!this::sessionManager.isInitialized || exporter == null) {
             logger.warn("identifySession called before ReplayInstrumentation was installed; skipping.")
+            System.err.println("LD:OBS:ReplayInstrumentation:!isInitialized")
             return
         }
 
@@ -284,6 +292,8 @@ class ReplayInstrumentation(
 
         // When replay is disabled, cache the identify payload for later session init without sending it now.
         if (!isEnabled.value) {
+            System.out.println("LD:OBS:ReplayInstrumentation:!isEnabled.value ${exporter}")
+
             synchronized(pendingIdentifyLock) {
                 pendingIdentify = event
             }
@@ -294,6 +304,8 @@ class ReplayInstrumentation(
         synchronized(pendingIdentifyLock) {
             pendingIdentify = null
         }
+
+        System.out.println("LD:OBS:ReplayInstrumentation:to sendIdentifyAndCache ${exporter}")
         exporter?.sendIdentifyAndCache(event)
         eventQueue.send(event)
     }

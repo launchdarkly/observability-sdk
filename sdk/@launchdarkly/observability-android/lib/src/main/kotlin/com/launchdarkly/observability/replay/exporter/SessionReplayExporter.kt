@@ -30,6 +30,7 @@ class SessionReplayExporter(
     val serviceName: String,
     val serviceVersion: String,
     val initialIdentifyItemPayload: IdentifyItemPayload,
+    val title: String,
     private val injectedReplayApiService: SessionReplayApiService? = null,
     private val logger: LDLogger,
     private val canvasBufferLimit: Int = RRWEB_CANVAS_BUFFER_LIMIT,
@@ -51,7 +52,8 @@ class SessionReplayExporter(
     private var identifyItemPayload = initialIdentifyItemPayload
     // TODO: O11Y-624 - need to implement sid, payloadId reset when multiple sessions occur in one application process lifecycle.
     private var payloadIdCounter = 0
-    private val eventGenerator = RRWebEventGenerator(canvasDrawEntourage)
+    private var shouldWakeUpSession = true
+    private val eventGenerator = RRWebEventGenerator(canvasDrawEntourage, title)
 
     private data class LastCaptureState(
         val sessionId: String?,
@@ -92,8 +94,13 @@ class SessionReplayExporter(
                         }
 
                         is IdentifyItemPayload -> {
-                            payload.sessionId?.let { sessionId ->
+                            System.out.println("LD:OBS:SessionReplayExporter:IdentifyItemPayload, payload.sessionId = ${payload.sessionId}, lastCaptureSnapshot.sessionId = ${lastCaptureSnapshot.sessionId}\"")
+                            val sessionId = payload.sessionId ?: lastCaptureSnapshot.sessionId
+                            System.out.println("LD:OBS:SessionReplayExporter:IdentifyItemPayload, sessionId = ${sessionId}")
+                            sessionId?.let { sessionId ->
+                                System.out.println("LD:OBS:SessionReplayExporter:sessionId")
                                 eventGenerator.generateIdentifyEvent(payload)?.let { identifyEvent ->
+                                    System.out.println("LD:OBS:SessionReplayExporter:generateIdentifyEvent")
                                     eventsBySession.getOrPut(sessionId) { mutableListOf() }.add(identifyEvent)
                                 }
                             }
@@ -118,6 +125,17 @@ class SessionReplayExporter(
                         replayApiService.pushPayload(sessionId, "${nextPayloadId()}", events)
                         // flushes generating canvas size into pushedCanvasSize
                         pushedCanvasSize = eventGenerator.accumulatedCanvasSize
+                    }
+                }
+
+                if (shouldWakeUpSession) {
+                    eventsBySession.keys.lastOrNull()?.let { sessionId ->
+                        val wakeUpEvents = eventGenerator.generateWakeUpEvents(items)
+                        if (wakeUpEvents.isNotEmpty()) {
+                            // we need a separate payload to wake up player
+                            replayApiService.pushPayload(sessionId, "${nextPayloadId()}", wakeUpEvents)
+                            shouldWakeUpSession = false
+                        }
                     }
                 }
             } catch (e: Exception) {

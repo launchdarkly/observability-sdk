@@ -26,9 +26,14 @@ public partial class DialogsPage : ContentPage
 		}
 	}
 
-	private async Task AutoClose(Func<Task> closeAction)
+	private async Task AutoClose(Func<Task> closeAction, double defaultSeconds = 0.0)
 	{
-		if (double.TryParse(DelayEntry.Text, out double seconds) && seconds > 0)
+		double.TryParse(DelayEntry.Text, out double seconds);
+		if (seconds <= 0.0)
+		{
+			seconds = defaultSeconds;
+		}
+		if (seconds > 0)
 		{
 			await Task.Delay(TimeSpan.FromSeconds(seconds));
 			await closeAction();
@@ -90,6 +95,11 @@ public partial class DialogsPage : ContentPage
 	{
 		await WaitForDelay();
 		
+	    if (!int.TryParse(DelayEntry.Text, out int seconds) || seconds <= 0)
+		{
+			seconds = 60; // Default if 0 or invalid
+		}
+
 		_timerCts?.Cancel();
 		_timerCts = new CancellationTokenSource();
 		var token = _timerCts.Token;
@@ -106,11 +116,6 @@ public partial class DialogsPage : ContentPage
 
 		_ = Task.Run(async () =>
 		{
-			if (!int.TryParse(DelayEntry.Text, out int seconds) || seconds <= 0)
-			{
-				seconds = 8; // Default if 0 or invalid
-			}
-
 			while (seconds >= 0 && !token.IsCancellationRequested)
 			{
 				MainThread.BeginInvokeOnMainThread(() =>
@@ -122,7 +127,7 @@ public partial class DialogsPage : ContentPage
 			}
 		}, token);
 
-		await AutoClose(DismissPopupCard);
+		await AutoClose(DismissPopupCard, seconds);
 	}
 
 	private async void OnPopupCardDimTapped(object? sender, TappedEventArgs e)

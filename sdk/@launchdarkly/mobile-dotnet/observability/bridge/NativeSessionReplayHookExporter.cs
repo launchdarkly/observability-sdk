@@ -33,12 +33,11 @@ namespace LaunchDarkly.Observability
             {
                 contextKeys.Add(new NSString(context.Context.Kind.Value), new NSString(context.Context.Key));
             }
-
-            _proxy.AfterIdentify(
-                contextKeys,
-                context.Context.FullyQualifiedKey,
-                result.Status == IdentifySeriesResult.IdentifySeriesStatus.Completed
-            );
+				_proxy.AfterIdentify(
+                    contextKeys,
+                    context.Context.FullyQualifiedKey,
+                    result.Status == IdentifySeriesResult.IdentifySeriesStatus.Completed);
+          
             return data;
         }
     }

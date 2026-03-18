@@ -1,28 +1,18 @@
 package com.launchdarkly.observability.replay.plugin
 
-import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
-import com.launchdarkly.observability.replay.ReplayInstrumentation
 import com.launchdarkly.sdk.android.integrations.Hook
 import com.launchdarkly.sdk.android.integrations.IdentifySeriesContext
 import com.launchdarkly.sdk.android.integrations.IdentifySeriesResult
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
 
 /**
- * This class is a hook implementation for recording flag evaluation and identify events
- * on spans.
+ * Hook protocol adapter for the native Android SDK.
+ * Extracts data from SDK types and delegates to [SessionReplayHookExporter].
  */
 class SessionReplayHook
 
-/**
- * Creates an [SessionReplayHook]
- *
- */
 internal constructor(
-    val plugin: SessionReplay
+    private val exporter: SessionReplayHookExporter
 ) : Hook(HOOK_NAME) {
-    private val coroutineScope = CoroutineScope(DispatcherProviderHolder.current.default)
 
     override fun beforeIdentify(
         seriesContext: IdentifySeriesContext,
@@ -36,13 +26,24 @@ internal constructor(
         seriesData: Map<String, Any>,
         result: IdentifySeriesResult
     ): Map<String, Any> {
-        if (result.status != IdentifySeriesResult.IdentifySeriesStatus.COMPLETED) {
-            return seriesData
+        val contextKeys = mutableMapOf<String, String>()
+        val context = seriesContext.context
+        if (context.isMultiple) {
+            for (i in 0 until context.individualContextCount) {
+                val individual = context.getIndividualContext(i)
+                if (individual != null) {
+                    contextKeys[individual.kind.toString()] = individual.key
+                }
+            }
+        } else {
+            contextKeys[context.kind.toString()] = context.key
         }
 
-        coroutineScope.launch {
-            plugin.replayInstrumentation?.identifySession(seriesContext.context)
-        }
+        exporter.afterIdentify(
+            contextKeys = contextKeys,
+            canonicalKey = context.fullyQualifiedKey,
+            completed = result.status == IdentifySeriesResult.IdentifySeriesStatus.COMPLETED
+        )
         return seriesData
     }
 

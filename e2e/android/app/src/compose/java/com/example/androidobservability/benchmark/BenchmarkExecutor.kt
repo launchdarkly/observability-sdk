@@ -96,7 +96,7 @@ class BenchmarkExecutor {
         }
 
         val exportDiffManager = ExportDiffManager(compression = method, scale = 1f)
-        val eventGenerator = RRWebEventGenerator(canvasDrawEntourage = 300)
+        val eventGenerator = RRWebEventGenerator(canvasDrawEntourage = 300, title = "benchmark")
         val json = Json
         var bytes = 0
         var isFirst = true

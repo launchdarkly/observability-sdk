@@ -87,6 +87,7 @@ class GraphQLClient(
             )
 
             val requestJson = json.encodeToString(request)
+            System.out.println("LD:OBS:GraphQLClient requestJson:${requestJson}")
             val requestBytes = requestJson.toByteArray(Charsets.UTF_8)
             val payloadBytes = if (compress) gzip(requestBytes) else requestBytes
             val connectionLocal = connectionProvider.openConnection(endpoint).also { connection = it }

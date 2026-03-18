@@ -34,10 +34,11 @@ class SessionReplayExporterTest {
             backendUrl = "http://test.com",
             serviceName = "test-service",
             serviceVersion = "1.0.0",
+            initialIdentifyItemPayload = identifyEvent,
+            title = "test-app",
             injectedReplayApiService = mockService,
             canvasBufferLimit = 45,
             canvasDrawEntourage = 1,
-            initialIdentifyItemPayload = identifyEvent,
             logger = mockk()
         )
     }
@@ -54,6 +55,7 @@ class SessionReplayExporterTest {
             serviceName = "test-service",
             serviceVersion = "1.0.0",
             initialIdentifyItemPayload = identifyEvent,
+            title = "test-app",
             injectedReplayApiService = mockService,
             logger = mockk()
         )
@@ -71,6 +73,7 @@ class SessionReplayExporterTest {
             serviceName = "test-service",
             serviceVersion = "1.0.0",
             initialIdentifyItemPayload = identifyEvent,
+            title = "test-app",
             logger = mockk()
         )
 

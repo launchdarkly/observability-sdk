@@ -162,8 +162,6 @@ public class ObservabilityBridge(
             throw t
         }
 
-        //logger.debug("LD:ObservabilityBridge resourceAttributes called")
-
         val nativeObservabilityOptions = try {
             com.launchdarkly.observability.api.ObservabilityOptions(
                 enabled = observability.isEnabled,
@@ -253,7 +251,6 @@ public class ObservabilityBridge(
 
         try {
             LDClient.init(app, ldConfig, context)
-            //logger.info("LD:ObservabilityBridge LDClient.init completed")
         } catch (t: Throwable) {
             printException("LD:ObservabilityBridge LDClient.init failed", t)
             throw t

@@ -115,16 +115,10 @@ private fun MainScreen(viewModel: ViewModel, innerPadding: PaddingValues) {
             .verticalScroll(rememberScrollState())
             .padding(16.dp)
     ) {
-        Text(
-            text = "Masking",
-            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
+        SessionReplayHeader()
         HorizontalDivider(modifier = Modifier.padding(bottom = 16.dp))
 
         MaskingButtons()
-
-        SessionReplayToggle()
 
         Text(
             text = "Observability",
@@ -146,19 +140,19 @@ private fun MainScreen(viewModel: ViewModel, innerPadding: PaddingValues) {
 }
 
 @Composable
-private fun SessionReplayToggle() {
+private fun SessionReplayHeader() {
     var isSessionReplayEnabled by rememberSaveable { mutableStateOf(true) }
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(bottom = 16.dp),
+            .padding(bottom = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = "Session Replay",
-            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
         )
         Switch(
             checked = isSessionReplayEnabled,
@@ -295,7 +289,7 @@ private fun MaskingButtons() {
     )
 
     MaskingRow(
-        name = "Check",
+        name = "Dialogs",
         ctx = context,
         activity1 = XMLMaskingActivity::class.java,
         activity2 = ComposeMaskingActivity::class.java
