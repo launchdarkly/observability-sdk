@@ -1,4 +1,4 @@
-using LaunchDarkly.SessionReplay;
+using LaunchDarkly.Observability;
 using LaunchDarkly.Sdk;
 using LaunchDarkly.Sdk.Client;
 
@@ -31,6 +31,9 @@ public partial class MainPage : ContentPage
 				break;
 			case "Number Pad":
 				await Shell.Current.GoToAsync(nameof(NumberPadPage));
+				break;
+			case "Dialogs":
+				await Shell.Current.GoToAsync(nameof(DialogsPage));
 				break;
 		}
 
@@ -155,7 +158,11 @@ public partial class MainPage : ContentPage
 		LDObserve.RecordLog(
 			"Test Log",
 			LDObserve.Severity.Info,
-			new Dictionary<string, object?> { { "FakeAttribute", "FakeVal" } }
+			new Dictionary<string, object?>
+			{
+				{ "test-log", "maui" },
+				{ "nested", new Dictionary<string, object?> { { "array", new int[] { 1 } } } }
+			}
 		);
 		Console.WriteLine("Log triggered");
 	}

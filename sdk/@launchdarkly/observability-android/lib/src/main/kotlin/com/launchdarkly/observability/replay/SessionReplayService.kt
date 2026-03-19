@@ -7,7 +7,6 @@ import androidx.lifecycle.ProcessLifecycleOwner
 import com.launchdarkly.logging.LDLogger
 import com.launchdarkly.observability.client.ObservabilityContext
 import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
-import com.launchdarkly.observability.interfaces.LDExtendedInstrumentation
 import com.launchdarkly.observability.replay.capture.CaptureManager
 import com.launchdarkly.observability.replay.exporter.IdentifyItemPayload
 import com.launchdarkly.observability.replay.exporter.ImageItemPayload
@@ -15,9 +14,9 @@ import com.launchdarkly.observability.replay.exporter.InteractionItemPayload
 import com.launchdarkly.observability.replay.exporter.SessionReplayExporter
 import com.launchdarkly.observability.replay.transport.BatchWorker
 import com.launchdarkly.observability.replay.transport.EventQueue
-import com.launchdarkly.observability.sdk.ReplayControl
+import com.launchdarkly.observability.sdk.SessionReplayServicing
+import com.launchdarkly.sdk.ContextKind
 import com.launchdarkly.sdk.LDContext
-import io.opentelemetry.android.instrumentation.InstallationContext
 import io.opentelemetry.android.session.SessionManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -30,8 +29,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.coroutines.cancellation.CancellationException
-
-private const val INSTRUMENTATION_SCOPE_NAME = "com.launchdarkly.observability.replay"
 
 /**
  * Provides session replay instrumentation. Session replays that are sampled will appear on the LaunchDarkly dashboard.
@@ -61,10 +58,10 @@ private const val INSTRUMENTATION_SCOPE_NAME = "com.launchdarkly.observability.r
  * @see ReplayOptions for configuration options
  * @see PrivacyProfile for privacy settings
  */
-class ReplayInstrumentation(
+class SessionReplayService(
     private val options: ReplayOptions = ReplayOptions(),
     private val observabilityContext: ObservabilityContext
-) : LDExtendedInstrumentation, ReplayControl {
+) : SessionReplayServicing {
 
     private lateinit var sessionManager: SessionManager
     private val logger: LDLogger = observabilityContext.logger
@@ -82,35 +79,43 @@ class ReplayInstrumentation(
     private val pendingIdentifyLock = Any()
     private var pendingIdentify: IdentifyItemPayload? = null
 
-    override val name: String = INSTRUMENTATION_SCOPE_NAME
-
-    override fun install(ctx: InstallationContext) {
-        // If already installed, do nothing. This prevents duplicating collectors and lifecycle listeners.
-        // We should refactor this if we want to support multiple sessions and install the instrumentation more than once
+    fun initialize() {
         if (isInstalled) return
 
-        sessionManager = ctx.sessionManager
+        val sm = observabilityContext.sessionManager ?: run {
+            logger.warn("SessionReplayService.initialize() called before sessionManager is available; skipping.")
+            return
+        }
+        sessionManager = sm
+
         captureManager = CaptureManager(
-            sessionManager = ctx.sessionManager,
+            sessionManager = sm,
             options = options,
             logger = observabilityContext.logger
         )
-        interactionSource = InteractionSource(ctx.sessionManager, options.scale)
+        interactionSource = InteractionSource(sm, options.scale)
 
         val initialIdentifyItemPayload = IdentifyItemPayload.from(
             contextFriendlyName = observabilityContext.options.contextFriendlyName,
             resourceAttributes = observabilityContext.options.resourceAttributes,
-            sessionId = null // initial payload is not part SR RRWeb event
+            sessionId = null
         )
+        val application = observabilityContext.application
+        val appName = try {
+            application.packageManager.getApplicationLabel(application.applicationInfo).toString()
+        } catch (_: Exception) {
+            "Android app"
+        }
         val exporter = SessionReplayExporter(
-            organizationVerboseId = observabilityContext.sdkKey, // SDK key used as organization ID intentionally
+            organizationVerboseId = observabilityContext.sdkKey,
             backendUrl = observabilityContext.options.backendUrl,
             serviceName = observabilityContext.options.serviceName,
             serviceVersion = observabilityContext.options.serviceVersion,
             initialIdentifyItemPayload = initialIdentifyItemPayload,
+            title = appName,
             logger = logger
         )
-        this@ReplayInstrumentation.exporter = exporter
+        this@SessionReplayService.exporter = exporter
         batchWorker.addExporter(exporter)
         batchWorker.start()
 
@@ -118,7 +123,7 @@ class ReplayInstrumentation(
         startCaptureStateObserver()
         startProcessLifecycleObserver()
 
-        interactionSource?.attachToApplication(ctx.application)
+        interactionSource?.attachToApplication(application)
 
         isInstalled = true
     }
@@ -269,7 +274,7 @@ class ReplayInstrumentation(
         timestamp: Long = System.currentTimeMillis()
     ) {
         if (!this::sessionManager.isInitialized || exporter == null) {
-            logger.warn("identifySession called before ReplayInstrumentation was installed; skipping.")
+            logger.warn("identifySession called before SessionReplayService was installed; skipping.")
             return
         }
 
@@ -294,9 +299,30 @@ class ReplayInstrumentation(
         synchronized(pendingIdentifyLock) {
             pendingIdentify = null
         }
+
         exporter?.sendIdentifyAndCache(event)
         eventQueue.send(event)
     }
 
-    override fun getLoggerScopeName(): String = INSTRUMENTATION_SCOPE_NAME
+    override fun afterIdentify(contextKeys: Map<String, String>, canonicalKey: String, completed: Boolean) {
+        if (!completed) return
+
+        val ldContext = buildLDContext(contextKeys)
+        instrumentationScope.launch {
+            identifySession(ldContext)
+        }
+    }
+
+    private fun buildLDContext(contextKeys: Map<String, String>): LDContext {
+        if (contextKeys.size == 1) {
+            val (kind, key) = contextKeys.entries.first()
+            return LDContext.create(ContextKind.of(kind), key)
+        }
+        val builder = LDContext.multiBuilder()
+        for ((kind, key) in contextKeys) {
+            builder.add(LDContext.create(ContextKind.of(kind), key))
+        }
+        return builder.build()
+    }
+
 }

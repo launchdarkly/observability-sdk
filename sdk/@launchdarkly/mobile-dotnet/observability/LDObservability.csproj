@@ -3,7 +3,6 @@
 		<TargetFrameworks>net9.0-android;net9.0-ios</TargetFrameworks>
 		<!-- Use MAUI workload references to avoid runtime version mismatches -->
 		<UseMaui>true</UseMaui>
-		<UseLocalClientSdk>true</UseLocalClientSdk>
 		<SkipValidateMauiImplicitPackageReferences>true</SkipValidateMauiImplicitPackageReferences>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
@@ -15,7 +14,6 @@
 
 		<!-- NuGet packaging -->
 		<IsPackable>true</IsPackable>
-		<PackageId>LaunchDarkly.SessionReplay</PackageId>
 		<PackageDescription>LD Observability bindings aggregator for .NET (Android/iOS).</PackageDescription>
 		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
 		<IncludeReferencedProjects>true</IncludeReferencedProjects>
@@ -57,7 +55,7 @@
 	</ItemGroup>
 
 	<ItemGroup Condition="'$(UseLocalClientSdk)' != 'true'">
-		<PackageReference Include="LaunchDarkly.ClientSdk" Version="[5.6.0, 6.0.0)" />
+		<PackageReference Include="LaunchDarkly.ClientSdk" Version="[5.7.0, 6.0.0)" />
 	</ItemGroup>
 
 	<ItemGroup Condition="$(TargetFramework.Contains('android'))">

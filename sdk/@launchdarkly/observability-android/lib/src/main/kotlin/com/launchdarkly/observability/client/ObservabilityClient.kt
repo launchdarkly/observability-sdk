@@ -3,7 +3,6 @@ package com.launchdarkly.observability.client
 import android.app.Application
 import com.launchdarkly.logging.LDLogger
 import com.launchdarkly.observability.api.ObservabilityOptions
-import com.launchdarkly.observability.interfaces.LDExtendedInstrumentation
 import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.observability.interfaces.Observe
 import io.opentelemetry.api.common.Attributes
@@ -30,7 +29,6 @@ class ObservabilityClient : Observe {
      * @param resource The resource.
      * @param logger The logger.
      * @param options Additional options for the client.
-     * @param instrumentations A list of extended instrumentation providers.
      */
     constructor(
         application: Application,
@@ -38,12 +36,13 @@ class ObservabilityClient : Observe {
         resource: Resource,
         logger: LDLogger,
         options: ObservabilityOptions,
-        instrumentations: List<LDExtendedInstrumentation>
     ) {
         this.instrumentationManager = InstrumentationManager(
-            application, sdkKey, resource, logger, options, instrumentations
+            application, sdkKey, resource, logger, options,
         )
     }
+
+    val sessionManager get() = instrumentationManager.sessionManager
 
     internal constructor(
         instrumentationManager: InstrumentationManager

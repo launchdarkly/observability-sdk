@@ -121,13 +121,12 @@ class Observability(
                     }
                 }
 
-                val instrumentations = InstrumentationContributorManager.get(lDClient).flatMap { it.provideInstrumentations() }
-                observabilityClient = ObservabilityClient(
-                    application, sdkKey, resourceBuilder.build(), logger, options, instrumentations
+                val client = ObservabilityClient(
+                    application, sdkKey, resourceBuilder.build(), logger, options,
                 )
-                observabilityClient?.let {
-                    LDObserve.init(it)
-                }
+                observabilityClient = client
+                LDObserve.context?.sessionManager = client.sessionManager
+                LDObserve.init(client)
             } else {
                 logger.warn("Observability could not be initialized for sdkKey: $sdkKey")
             }

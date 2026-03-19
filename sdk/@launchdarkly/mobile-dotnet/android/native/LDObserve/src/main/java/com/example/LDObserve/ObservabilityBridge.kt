@@ -6,9 +6,10 @@ import com.example.LDObserve.SystemOutBridgeLogger
 import com.launchdarkly.observability.BuildConfig
 import com.launchdarkly.observability.client.TelemetryInspector
 import com.launchdarkly.observability.plugin.Observability
+import com.launchdarkly.observability.interfaces.Metric
+import com.launchdarkly.observability.sdk.AttributeConverter
 import com.launchdarkly.observability.sdk.LDObserve
-import com.launchdarkly.observability.replay.PrivacyProfile
-import com.launchdarkly.observability.replay.ReplayOptions
+import com.launchdarkly.observability.sdk.LDReplay
 import com.launchdarkly.observability.replay.plugin.SessionReplay
 import com.launchdarkly.sdk.ContextKind
 import com.launchdarkly.sdk.LDContext
@@ -16,10 +17,8 @@ import com.launchdarkly.sdk.android.Components
 import com.launchdarkly.sdk.android.LDAndroidLogging
 import com.launchdarkly.sdk.android.LDClient
 import com.launchdarkly.sdk.android.LDConfig
-import com.launchdarkly.sdk.android.integrations.Plugin
-import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
-import java.util.Collections
+import io.opentelemetry.api.logs.Severity
 
 public class LDObservabilityOptions {
     @JvmField var isEnabled: Boolean = true
@@ -94,21 +93,7 @@ public class LDSessionReplayOptions {
 }
 
 internal fun buildResourceAttributes(source: HashMap<String, Any?>?): Attributes {
-    if (source.isNullOrEmpty()) return Attributes.empty()
-    val builder = Attributes.builder()
-    source.forEach { (key, value) ->
-        when (value) {
-            is String -> builder.put(AttributeKey.stringKey(key), value)
-            is Boolean -> builder.put(AttributeKey.booleanKey(key), value)
-            is Long -> builder.put(AttributeKey.longKey(key), value)
-            is Int -> builder.put(AttributeKey.longKey(key), value.toLong())
-            is Double -> builder.put(AttributeKey.doubleKey(key), value)
-            is Float -> builder.put(AttributeKey.doubleKey(key), value.toDouble())
-            null -> {}
-            else -> builder.put(AttributeKey.stringKey(key), value.toString())
-        }
-    }
-    return builder.build()
+    return AttributeConverter.convert(source)
 }
 
 public class ObservabilityBridge(
@@ -116,41 +101,49 @@ public class ObservabilityBridge(
 ) {
     var isDebug: Boolean = true
 
-    public fun getHookProxy(): RealObservabilityHookProxy? {
+    public fun getObservabilityHookProxy(): RealObservabilityHookProxy? {
         val real = LDObserve.hookProxy ?: return null
         return RealObservabilityHookProxy(real)
+    }
+
+    public fun getSessionReplayHookProxy(): RealSessionReplayHookProxy? {
+        val real = LDReplay.hookProxy ?: return null
+        return RealSessionReplayHookProxy(real)
     }
 
     public fun version(): String {
         return BuildConfig.OBSERVABILITY_SDK_VERSION
     }
 
-    public fun recordLog(message: String, severity: Int) {
-        // TODO: bridge to LDObserve.recordLog
+    public fun recordLog(message: String, severity: Int, attributes: HashMap<String, Any?>? = null) {
+        val sev = Severity.values().firstOrNull { it.severityNumber == severity } ?: Severity.INFO
+        val attrs = buildResourceAttributes(attributes)
+        LDObserve.recordLog(message, sev, attrs)
     }
 
     public fun recordError(message: String, cause: String?) {
-        // TODO: bridge to LDObserve.recordError
+        val error = Error(message, if (cause != null) Throwable(cause) else null)
+        LDObserve.recordError(error, Attributes.empty())
     }
 
     public fun recordMetric(name: String, value: Double) {
-        // TODO: bridge to LDObserve.recordMetric
+        LDObserve.recordMetric(Metric(name = name, value = value))
     }
 
     public fun recordCount(name: String, value: Double) {
-        // TODO: bridge to LDObserve.recordCount
+        LDObserve.recordCount(Metric(name = name, value = value))
     }
 
     public fun recordIncr(name: String, value: Double) {
-        // TODO: bridge to LDObserve.recordIncr
+        LDObserve.recordIncr(Metric(name = name, value = value))
     }
 
     public fun recordHistogram(name: String, value: Double) {
-        // TODO: bridge to LDObserve.recordHistogram
+        LDObserve.recordHistogram(Metric(name = name, value = value))
     }
 
     public fun recordUpDownCounter(name: String, value: Double) {
-        // TODO: bridge to LDObserve.recordUpDownCounter
+        LDObserve.recordUpDownCounter(Metric(name = name, value = value))
     }
 
     public fun start(
@@ -160,7 +153,7 @@ public class ObservabilityBridge(
         replay: LDSessionReplayOptions,
         observabilityVersion: String
     ) {
-       // logger.debug("LD:ObservabilityBridge start called 7")
+        logger.info("LD:ObservabilityBridge start called, ver" + observabilityVersion)
 
         val resourceAttributes = try {
             buildResourceAttributes(observability.attributes)
@@ -168,8 +161,6 @@ public class ObservabilityBridge(
             printException("LD:resourceAttributes failed to build resourceAttributes", t)
             throw t
         }
-
-        //logger.debug("LD:ObservabilityBridge resourceAttributes called")
 
         val nativeObservabilityOptions = try {
             com.launchdarkly.observability.api.ObservabilityOptions(
@@ -181,7 +172,7 @@ public class ObservabilityBridge(
                 otlpEndpoint = observability.otlpEndpoint,
                 backendUrl = observability.backendUrl,
                 tracesApi = com.launchdarkly.observability.api.ObservabilityOptions.TracesApi(includeErrors = true, includeSpans = true),
-                metricsApi = com.launchdarkly.observability.api.ObservabilityOptions.MetricsApi.disabled(),
+                metricsApi = com.launchdarkly.observability.api.ObservabilityOptions.MetricsApi.enabled(),
                 instrumentations = com.launchdarkly.observability.api.ObservabilityOptions.Instrumentations(
                     crashReporting = false, launchTime = true, activityLifecycle = true
                 ),
@@ -260,7 +251,6 @@ public class ObservabilityBridge(
 
         try {
             LDClient.init(app, ldConfig, context)
-            //logger.info("LD:ObservabilityBridge LDClient.init completed")
         } catch (t: Throwable) {
             printException("LD:ObservabilityBridge LDClient.init failed", t)
             throw t
