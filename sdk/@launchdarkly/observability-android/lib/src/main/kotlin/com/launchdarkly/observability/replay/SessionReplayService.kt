@@ -275,7 +275,6 @@ class SessionReplayService(
     ) {
         if (!this::sessionManager.isInitialized || exporter == null) {
             logger.warn("identifySession called before SessionReplayService was installed; skipping.")
-            System.err.println("LD:OBS:SessionReplayService:!isInitialized")
             return
         }
 
@@ -290,8 +289,6 @@ class SessionReplayService(
 
         // When replay is disabled, cache the identify payload for later session init without sending it now.
         if (!isEnabled.value) {
-            //System.out.println("LD:OBS:SessionReplayService:!isEnabled.value ${exporter}")
-
             synchronized(pendingIdentifyLock) {
                 pendingIdentify = event
             }
@@ -303,7 +300,6 @@ class SessionReplayService(
             pendingIdentify = null
         }
 
-        //System.out.println("LD:OBS:SessionReplayService:to sendIdentifyAndCache ${exporter}")
         exporter?.sendIdentifyAndCache(event)
         eventQueue.send(event)
     }

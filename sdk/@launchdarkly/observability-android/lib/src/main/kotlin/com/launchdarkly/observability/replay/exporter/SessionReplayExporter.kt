@@ -94,13 +94,9 @@ class SessionReplayExporter(
                         }
 
                         is IdentifyItemPayload -> {
-                            //System.out.println("LD:OBS:SessionReplayExporter:IdentifyItemPayload, payload.sessionId = ${payload.sessionId}, lastCaptureSnapshot.sessionId = ${lastCaptureSnapshot.sessionId}\"")
                             val sessionId = payload.sessionId ?: lastCaptureSnapshot.sessionId
-                            //System.out.println("LD:OBS:SessionReplayExporter:IdentifyItemPayload, sessionId = ${sessionId}")
                             sessionId?.let { sessionId ->
-                                //System.out.println("LD:OBS:SessionReplayExporter:sessionId")
                                 eventGenerator.generateIdentifyEvent(payload)?.let { identifyEvent ->
-                                    //System.out.println("LD:OBS:SessionReplayExporter:generateIdentifyEvent")
                                     eventsBySession.getOrPut(sessionId) { mutableListOf() }.add(identifyEvent)
                                 }
                             }
@@ -111,7 +107,6 @@ class SessionReplayExporter(
                         }
                     }
                 }
-
 
                 // Initialize sessions that need it
                 for (sessionId in sessionsNeedingInit) {
@@ -130,7 +125,6 @@ class SessionReplayExporter(
                         wakeUpEvents(events, sessionId)
                     }
                 }
-
 
             } catch (e: Exception) {
                 // Roll back exporter state so retries regenerate identical events and payload ids.
