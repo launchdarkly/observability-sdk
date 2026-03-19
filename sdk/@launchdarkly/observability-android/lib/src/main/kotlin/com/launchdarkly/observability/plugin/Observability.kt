@@ -101,7 +101,6 @@ class Observability(
 
         client?.let { lDClient ->
             if (mobileKey == sdkKey) {
-                //System.out.println("LD:OBS:Observability:onPluginsReady")
                 val resourceBuilder = Resource.getDefault().toBuilder()
                 resourceBuilder.put("service.name", options.serviceName)
                 resourceBuilder.put("service.version", options.serviceVersion)

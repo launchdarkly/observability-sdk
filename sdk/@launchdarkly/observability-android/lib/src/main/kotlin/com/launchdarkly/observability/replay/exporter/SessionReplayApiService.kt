@@ -77,7 +77,6 @@ class SessionReplayApiService(
             "user_identifier" to JsonPrimitive(userIdentifier),
             "user_object" to userObject
         )
-        //System.out.println("LD:OBS:SessionReplayAPIService:identifySession sessionSecureId: $sessionSecureId, userIdentifier: $userIdentifier, userObject= $userObject")
         val response = graphqlClient.execute(
             queryFileName = IDENTIFY_REPLAY_SESSION_QUERY_FILE_PATH,
             variables = variables,
@@ -110,14 +109,6 @@ class SessionReplayApiService(
      * @param events The list of events to push
      */
     suspend fun pushPayload(sessionSecureId: String, payloadId: String, events: List<Event>) {
-        //System.out.println("LD:OBS:SessionReplayAPIService.pushPayload payloadId: $payloadId")
-//        for (event in events) {
-//            //System.out.println("LD:OBS:SessionReplayAPIService.pushPayload event._sid:${event.sid} event.type:${event.type}")
-//            if (event.type == com.launchdarkly.observability.replay.EventType.CUSTOM) {
-//                val eventJSON = try { json.encodeToString(Event.serializer(), event) } catch (_: Exception) { "$event" }
-//                //System.out.println("LD:OBS:SessionReplayAPIService.pushPayload custom:$eventJSON")
-//            }
-//        }
         val events = events.sortedBy { it.timestamp }
         val variables = mapOf(
             "session_secure_id" to JsonPrimitive(sessionSecureId),
