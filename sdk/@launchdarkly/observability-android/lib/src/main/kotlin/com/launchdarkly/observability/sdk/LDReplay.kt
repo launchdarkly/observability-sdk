@@ -1,5 +1,7 @@
 package com.launchdarkly.observability.sdk
 
+import com.launchdarkly.observability.replay.plugin.SessionReplayHookProxy
+
 /**
  * LDReplay is the singleton entry point for controlling Session Replay capture.
  *
@@ -7,17 +9,28 @@ package com.launchdarkly.observability.sdk
  */
 object LDReplay {
     @Volatile
-    private var delegate: ReplayControl = object : ReplayControl {
+    internal var client: SessionReplayServicing? = null
+
+    /**
+     * Hook proxy for the C# / MAUI bridge.
+     */
+    val hookProxy: SessionReplayHookProxy?
+        get() = client?.let { SessionReplayHookProxy(it) }
+
+    @Volatile
+    private var delegate: SessionReplayServicing = object : SessionReplayServicing {
         override fun start() {}
         override fun stop() {}
         override fun flush() {}
+        override fun afterIdentify(contextKeys: Map<String, String>, canonicalKey: String, completed: Boolean) {}
     }
 
     /**
      * Wires LDReplay to the active Session Replay controller.
      */
-    internal fun init(controller: ReplayControl) {
+    internal fun init(controller: SessionReplayServicing) {
         delegate = controller
+        client = controller
     }
 
     /**
@@ -42,8 +55,9 @@ object LDReplay {
     }
 }
 
-internal interface ReplayControl {
+internal interface SessionReplayServicing {
     fun start()
     fun stop()
     fun flush()
+    fun afterIdentify(contextKeys: Map<String, String>, canonicalKey: String, completed: Boolean)
 }

@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test
 
 class LDReplayTest {
 
-    private class TestControl : ReplayControl {
+    private class TestControl : SessionReplayServicing {
         var startCalls = 0
         var stopCalls = 0
         var flushCalls = 0
@@ -21,6 +21,8 @@ class LDReplayTest {
         override fun flush() {
             flushCalls++
         }
+
+        override fun afterIdentify(contextKeys: Map<String, String>, canonicalKey: String, completed: Boolean) {}
     }
 
     @Test

@@ -48,7 +48,7 @@ class SessionReplayApiService(
             "appVersion" to JsonPrimitive(serviceVersion),
             "serviceName" to JsonPrimitive(serviceName),
             "fingerprint" to JsonPrimitive(""), // TODO: O11Y-631 - remove hardcoded params
-            "client_id" to JsonPrimitive(""), // TODO: O11Y-631 - remove hardcoded params
+            "client_id" to JsonPrimitive("observability-android"),
             "network_recording_domains" to JsonArray(emptyList()),
             "privacy_setting" to JsonPrimitive("none"), // TODO: O11Y-631 - remove hardcoded params
             "id" to JsonPrimitive("") // TODO: O11Y-631 - remove hardcoded params
@@ -77,7 +77,6 @@ class SessionReplayApiService(
             "user_identifier" to JsonPrimitive(userIdentifier),
             "user_object" to userObject
         )
-
         val response = graphqlClient.execute(
             queryFileName = IDENTIFY_REPLAY_SESSION_QUERY_FILE_PATH,
             variables = variables,
