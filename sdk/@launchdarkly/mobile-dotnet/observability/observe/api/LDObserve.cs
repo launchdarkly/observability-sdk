@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using LaunchDarkly.Sdk;
+using OpenTelemetry.Trace;
 
 #if IOS
 using Foundation;
@@ -197,4 +198,8 @@ public static class LDObserve
 #endif
     }
 
+    /// <summary>
+    /// Returns the OpenTelemetry <see cref="Tracer"/> from the <see cref="LDTracer"/> singleton.
+    /// </summary>
+    public static Tracer GetTracer() => LDTracer.Instance.Tracer;
 }
