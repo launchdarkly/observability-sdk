@@ -1,18 +1,18 @@
 package com.launchdarkly.observability.replay.plugin
 
+import com.launchdarkly.observability.sdk.SessionReplayServicing
 import com.launchdarkly.sdk.android.integrations.Hook
 import com.launchdarkly.sdk.android.integrations.IdentifySeriesContext
 import com.launchdarkly.sdk.android.integrations.IdentifySeriesResult
 
 /**
  * Hook protocol adapter for the native Android SDK.
- * Extracts data from SDK types and delegates to [SessionReplayHookExporter].
+ * Extracts data from SDK types and delegates to [SessionReplayServicing].
  */
-class SessionReplayHook
+class SessionReplayHook internal constructor() : Hook(HOOK_NAME) {
 
-internal constructor(
-    private val exporter: SessionReplayHookExporter
-) : Hook(HOOK_NAME) {
+    @Volatile
+    internal var delegate: SessionReplayServicing? = null
 
     override fun beforeIdentify(
         seriesContext: IdentifySeriesContext,
@@ -26,6 +26,8 @@ internal constructor(
         seriesData: Map<String, Any>,
         result: IdentifySeriesResult
     ): Map<String, Any> {
+        val delegate = delegate ?: return seriesData
+
         val contextKeys = mutableMapOf<String, String>()
         val context = seriesContext.context
         if (context.isMultiple) {
@@ -39,7 +41,7 @@ internal constructor(
             contextKeys[context.kind.toString()] = context.key
         }
 
-        exporter.afterIdentify(
+        delegate.afterIdentify(
             contextKeys = contextKeys,
             canonicalKey = context.fullyQualifiedKey,
             completed = result.status == IdentifySeriesResult.IdentifySeriesStatus.COMPLETED

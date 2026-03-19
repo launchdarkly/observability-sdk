@@ -4,7 +4,6 @@ import android.app.Application
 import com.launchdarkly.logging.LDLogger
 import com.launchdarkly.observability.api.ObservabilityOptions
 import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
-import com.launchdarkly.observability.interfaces.LDExtendedInstrumentation
 import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.observability.network.GraphQLClient
 import com.launchdarkly.observability.network.SamplingApiService
@@ -16,7 +15,10 @@ import com.launchdarkly.observability.sampling.SamplingTraceExporter
 import io.opentelemetry.android.OpenTelemetryRum
 import io.opentelemetry.android.OpenTelemetryRumBuilder
 import io.opentelemetry.android.config.OtelRumConfig
+import io.opentelemetry.android.instrumentation.AndroidInstrumentation
+import io.opentelemetry.android.instrumentation.InstallationContext
 import io.opentelemetry.android.session.SessionConfig
+import io.opentelemetry.android.session.SessionManager
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Logger
 import io.opentelemetry.api.logs.Severity
@@ -64,7 +66,6 @@ import java.util.concurrent.TimeUnit
  * @param resources The OpenTelemetry resource describing this service.
  * @param logger The logger for internal logging.
  * @param observabilityOptions Additional configuration options for the SDK.
- * @param instrumentations A list of custom instrumentations to be added.
  */
 class InstrumentationManager(
     private val application: Application,
@@ -72,9 +73,10 @@ class InstrumentationManager(
     private val resources: Resource,
     private val logger: LDLogger,
     private val observabilityOptions: ObservabilityOptions,
-    private val instrumentations: List<LDExtendedInstrumentation>,
 ) {
     private val otelRUM: OpenTelemetryRum
+    lateinit var sessionManager: SessionManager
+        private set
     private var otelMeter: Meter
     private var otelLogger: Logger
     private var otelTracer: Tracer
@@ -100,6 +102,8 @@ class InstrumentationManager(
         initializeTelemetryInspector()
         val otelRumConfig = createOtelRumConfig()
 
+        var capturedSessionManager: SessionManager? = null
+
         val rumBuilder = OpenTelemetryRum.builder(application, otelRumConfig)
             .addLoggerProviderCustomizer { sdkLoggerProviderBuilder, _ ->
                 val processor = createLoggerProcessor(
@@ -110,7 +114,6 @@ class InstrumentationManager(
                     logger,
                     telemetryInspector,
                     observabilityOptions,
-                    instrumentations
                 )
                 logProcessor = processor
                 return@addLoggerProviderCustomizer sdkLoggerProviderBuilder.addLogRecordProcessor(processor)
@@ -122,15 +125,19 @@ class InstrumentationManager(
                 return@addMeterProviderCustomizer configureMeterProvider(sdkMeterProviderBuilder)
             }
 
-        for (instrumentation in instrumentations) {
-            rumBuilder.addInstrumentation(instrumentation)
-        }
+        rumBuilder.addInstrumentation(object : AndroidInstrumentation {
+            override val name = "ld-session-manager-bridge"
+            override fun install(ctx: InstallationContext) {
+                capturedSessionManager = ctx.sessionManager
+            }
+        })
 
         if (observabilityOptions.instrumentations.launchTime) {
             addLaunchTimeInstrumentation(rumBuilder)
         }
 
         otelRUM = rumBuilder.build()
+        sessionManager = capturedSessionManager!!
         loadSamplingConfigAsync()
 
         otelMeter = otelRUM.openTelemetry.meterProvider.get(INSTRUMENTATION_SCOPE_NAME)
@@ -422,7 +429,6 @@ class InstrumentationManager(
             logger: LDLogger,
             telemetryInspector: TelemetryInspector?,
             observabilityOptions: ObservabilityOptions,
-            instrumentations: List<LDExtendedInstrumentation>,
         ): LogRecordProcessor {
             val primaryLogExporter = createOtlpLogExporter(observabilityOptions)
             sdkLoggerProviderBuilder.setResource(resource)
@@ -434,28 +440,10 @@ class InstrumentationManager(
                 observabilityOptions = observabilityOptions
             )
 
-            val samplingProcessor = SamplingLogProcessor(
+            return SamplingLogProcessor(
                 delegate = createBatchLogRecordProcessor(finalExporter),
                 sampler = exportSampler
             )
-
-            /*
-                Here we set up a routing log processor that will route logs with a matching scope name to the
-                respective instrumentation's log record processor. If the log's scope name does not match
-                an instrumentation's scope name, it will fall through to the base processor. This was
-                originally added to route replay instrumentation logs through a separate log processing
-                pipeline to provide instrumentation specific caching and export.
-            */
-            val routingLogRecordProcessor = RoutingLogRecordProcessor(fallthroughProcessor = samplingProcessor)
-            instrumentations.forEach { instrumentation ->
-                instrumentation.getLogRecordProcessor(credential = sdkKey)?.let { processor ->
-                    instrumentation.getLoggerScopeName().let { scopeName ->
-                        routingLogRecordProcessor.addProcessor(scopeName, processor)
-                    }
-                }
-            }
-
-            return routingLogRecordProcessor
         }
 
         private fun createOtlpLogExporter(observabilityOptions: ObservabilityOptions): LogRecordExporter {
