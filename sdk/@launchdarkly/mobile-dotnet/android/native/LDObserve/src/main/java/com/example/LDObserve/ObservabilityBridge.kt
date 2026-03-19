@@ -5,8 +5,8 @@ import com.example.LDObserve.BridgeLogger
 import com.example.LDObserve.SystemOutBridgeLogger
 import com.launchdarkly.observability.BuildConfig
 import com.launchdarkly.observability.client.TelemetryInspector
-import com.launchdarkly.observability.plugin.Observability
 import com.launchdarkly.observability.interfaces.Metric
+import com.launchdarkly.observability.plugin.Observability
 import com.launchdarkly.observability.sdk.AttributeConverter
 import com.launchdarkly.observability.sdk.LDObserve
 import com.launchdarkly.observability.sdk.LDReplay
@@ -17,8 +17,6 @@ import com.launchdarkly.sdk.android.Components
 import com.launchdarkly.sdk.android.LDAndroidLogging
 import com.launchdarkly.sdk.android.LDClient
 import com.launchdarkly.sdk.android.LDConfig
-import io.opentelemetry.api.common.Attributes
-import io.opentelemetry.api.logs.Severity
 
 public class LDObservabilityOptions {
     @JvmField var isEnabled: Boolean = true
@@ -92,9 +90,6 @@ public class LDSessionReplayOptions {
     }
 }
 
-internal fun buildResourceAttributes(source: HashMap<String, Any?>?): Attributes {
-    return AttributeConverter.convert(source)
-}
 
 public class ObservabilityBridge(
     private val logger: BridgeLogger = SystemOutBridgeLogger()
@@ -116,14 +111,11 @@ public class ObservabilityBridge(
     }
 
     public fun recordLog(message: String, severity: Int, attributes: HashMap<String, Any?>? = null) {
-        val sev = Severity.values().firstOrNull { it.severityNumber == severity } ?: Severity.INFO
-        val attrs = buildResourceAttributes(attributes)
-        LDObserve.recordLog(message, sev, attrs)
+        LDObserve.recordLog(message, severity, attributes)
     }
 
     public fun recordError(message: String, cause: String?) {
-        val error = Error(message, if (cause != null) Throwable(cause) else null)
-        LDObserve.recordError(error, Attributes.empty())
+        LDObserve.recordError(message, cause)
     }
 
     public fun recordMetric(name: String, value: Double) {
@@ -156,7 +148,7 @@ public class ObservabilityBridge(
         logger.info("LD:ObservabilityBridge start called, ver" + observabilityVersion)
 
         val resourceAttributes = try {
-            buildResourceAttributes(observability.attributes)
+            AttributeConverter.convert(observability.attributes)
         } catch (t: Throwable) {
             printException("LD:resourceAttributes failed to build resourceAttributes", t)
             throw t
