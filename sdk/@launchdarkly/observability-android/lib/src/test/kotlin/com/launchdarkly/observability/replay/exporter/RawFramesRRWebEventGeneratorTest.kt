@@ -41,7 +41,7 @@ class RawFramesRRWebEventGeneratorTest {
             val method = ReplayOptions.CompressionMethod.OverlayTiles(layers = 15, backtracking = false)
             val tileDiffManager = mockk<TileDiffManager>()
             val exportDiffManager = ExportDiffManager(compression = method, scale = 1f, tileDiffManager = tileDiffManager)
-            val eventGenerator = RRWebEventGenerator(canvasDrawEntourage = 300)
+            val eventGenerator = RRWebEventGenerator(canvasDrawEntourage = 300, title = "test")
 
             val sigRed = imageSignature(11)
             val sigGreen = imageSignature(22)
@@ -91,7 +91,7 @@ class RawFramesRRWebEventGeneratorTest {
             val method = ReplayOptions.CompressionMethod.OverlayTiles(layers = 15, backtracking = true)
             val tileDiffManager = mockk<TileDiffManager>()
             val exportDiffManager = ExportDiffManager(compression = method, scale = 1f, tileDiffManager = tileDiffManager)
-            val eventGenerator = RRWebEventGenerator(canvasDrawEntourage = 300)
+            val eventGenerator = RRWebEventGenerator(canvasDrawEntourage = 300, title = "test")
 
             val sigBase = imageSignature(101)
             val sigBar = imageSignature(202)
@@ -149,7 +149,7 @@ class RawFramesRRWebEventGeneratorTest {
             val method = ReplayOptions.CompressionMethod.OverlayTiles(layers = 15, backtracking = true)
             val tileDiffManager = mockk<TileDiffManager>()
             val exportDiffManager = ExportDiffManager(compression = method, scale = 1f, tileDiffManager = tileDiffManager)
-            val eventGenerator = RRWebEventGenerator(canvasDrawEntourage = 300)
+            val eventGenerator = RRWebEventGenerator(canvasDrawEntourage = 300, title = "test")
 
             val sigA = imageSignature(301)
             val sigB = imageSignature(302)
@@ -227,7 +227,7 @@ class RawFramesRRWebEventGeneratorTest {
             val method = ReplayOptions.CompressionMethod.OverlayTiles(layers = 3, backtracking = true)
             val tileDiffManager = mockk<TileDiffManager>()
             val exportDiffManager = ExportDiffManager(compression = method, scale = 1f, tileDiffManager = tileDiffManager)
-            val eventGenerator = RRWebEventGenerator(canvasDrawEntourage = 300)
+            val eventGenerator = RRWebEventGenerator(canvasDrawEntourage = 300, title = "test")
 
             val sigA = imageSignature(801)
             val sigB = imageSignature(802)
@@ -310,7 +310,7 @@ class RawFramesRRWebEventGeneratorTest {
             val method = ReplayOptions.CompressionMethod.OverlayTiles(layers = 3, backtracking = true)
             val tileDiffManager = mockk<TileDiffManager>()
             val exportDiffManager = ExportDiffManager(compression = method, scale = 1f, tileDiffManager = tileDiffManager)
-            val eventGenerator = RRWebEventGenerator(canvasDrawEntourage = 300)
+            val eventGenerator = RRWebEventGenerator(canvasDrawEntourage = 300, title = "test")
 
             val sigA = ImageSignature(
                 rows = 1, columns = 2, tileWidth = 60, tileHeight = 88,

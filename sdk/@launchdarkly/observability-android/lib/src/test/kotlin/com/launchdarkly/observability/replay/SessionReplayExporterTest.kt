@@ -34,10 +34,11 @@ class SessionReplayExporterTest {
             backendUrl = "http://test.com",
             serviceName = "test-service",
             serviceVersion = "1.0.0",
+            initialIdentifyItemPayload = identifyEvent,
+            title = "test-app",
             injectedReplayApiService = mockService,
             canvasBufferLimit = 45,
             canvasDrawEntourage = 1,
-            initialIdentifyItemPayload = identifyEvent,
             logger = mockk()
         )
     }
@@ -54,6 +55,7 @@ class SessionReplayExporterTest {
             serviceName = "test-service",
             serviceVersion = "1.0.0",
             initialIdentifyItemPayload = identifyEvent,
+            title = "test-app",
             injectedReplayApiService = mockService,
             logger = mockk()
         )
@@ -71,6 +73,7 @@ class SessionReplayExporterTest {
             serviceName = "test-service",
             serviceVersion = "1.0.0",
             initialIdentifyItemPayload = identifyEvent,
+            title = "test-app",
             logger = mockk()
         )
 
@@ -214,8 +217,8 @@ class SessionReplayExporterTest {
         // Verify identifyReplaySession is called twice (first capture + dimension change)
         coVerify(exactly = 1) { mockService.identifyReplaySession(eq("session-a"), any<IdentifyItemPayload>()) }
 
-        // Verify pushPayload is called for all captures
-        coVerify(exactly = 1) {
+        // Verify pushPayload is called for captures + wake-up events
+        coVerify(exactly = 2) {
             mockService.pushPayload("session-a", any(), any())
         }
 
@@ -286,7 +289,7 @@ class SessionReplayExporterTest {
             mockService.initializeReplaySession("test-org", "session-a")
         }
         coVerify(exactly = 1) { mockService.identifyReplaySession(eq("session-a"), any<IdentifyItemPayload>()) }
-        coVerify(exactly = 1) {
+        coVerify(exactly = 2) {
             mockService.pushPayload("session-a", any(), any())
         }
     }
@@ -352,7 +355,7 @@ class SessionReplayExporterTest {
         // Verify API calls: First capture should be full, second should be incremental
         coVerify(exactly = 1) { mockService.initializeReplaySession("test-org", "session-a") }
         coVerify(exactly = 1) { mockService.identifyReplaySession(eq("session-a"), any<IdentifyItemPayload>()) }
-        coVerify(exactly = 1) { mockService.pushPayload("session-a", any(), any()) }
+        coVerify(exactly = 2) { mockService.pushPayload("session-a", any(), any()) }
     }
 
     @Test
