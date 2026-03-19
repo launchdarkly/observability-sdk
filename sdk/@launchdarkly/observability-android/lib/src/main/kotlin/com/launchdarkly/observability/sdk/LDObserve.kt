@@ -102,5 +102,22 @@ class LDObserve(private val client: Observe) : Observe {
         override fun recordLog(message: String, severity: Severity, attributes: Attributes) = delegate.recordLog(message, severity, attributes)
         override fun startSpan(name: String, attributes: Attributes): Span = delegate.startSpan(name, attributes)
         override fun flush(): Boolean = delegate.flush()
+
+        /**
+         * Bridge-friendly overloads that avoid exposing OpenTelemetry types
+         * to callers such as the .NET MAUI native bridge.
+         */
+
+        fun recordError(message: String, cause: String? = null) {
+            val error = Error(message, if (cause != null) Throwable(cause) else null)
+            delegate.recordError(error, Attributes.empty())
+        }
+
+        fun recordLog(message: String, severityNumber: Int, attributes: Map<String, Any?>? = null) {
+            val severity = Severity.values().firstOrNull { it.severityNumber == severityNumber }
+                ?: Severity.INFO
+            val attrs = AttributeConverter.convert(attributes)
+            delegate.recordLog(message, severity, attrs)
+        }
     }
 }
