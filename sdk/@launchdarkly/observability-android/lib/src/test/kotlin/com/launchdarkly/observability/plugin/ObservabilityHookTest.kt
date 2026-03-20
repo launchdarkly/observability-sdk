@@ -31,7 +31,7 @@ class ObservabilityHookTest {
             every { kind } returns ContextKind.DEFAULT
             every { key } returns "test-user-123"
         }
-        hook = ObservabilityHook(mockExporter)
+        hook = ObservabilityHook().apply { delegate = mockExporter }
     }
 
     @AfterEach
@@ -114,7 +114,7 @@ class ObservabilityHookTest {
             val seriesData = mapOf<String, Any>("test" to "empty_data")
             val identifyResult = IdentifySeriesResult(IdentifySeriesResult.IdentifySeriesStatus.COMPLETED)
 
-            val hookForMulti = ObservabilityHook(mockExporter)
+            val hookForMulti = ObservabilityHook().apply { delegate = mockExporter }
             hookForMulti.afterIdentify(seriesContext, seriesData, identifyResult)
 
             verify(exactly = 1) {
