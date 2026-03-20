@@ -92,13 +92,54 @@ namespace LDObserveMaciOS
         [Static, Export("getObservabilityHookProxy")]
         [return: NullAllowed]
         ObservabilityHookProxy GetObservabilityHookProxy();
+
+        [Static, Export("getObjcTracer")]
+        [return: NullAllowed]
+        ObjcTracer GetObjcTracer();
     }
 
     [BaseType(typeof(NSObject))]
-    interface ObjcSpan
+    interface ObjcTracer
     {
-        [Export("initWithTraceId:spanId:name:statusCode:attributes:")]
-        NativeHandle Constructor(string traceId, string spanId, string name, nint statusCode, [NullAllowed] NSDictionary attributes);
+        [Export("spanBuilderWithName:startTime:traceId:parentSpanId:")]
+        ObjcSpanBuilder SpanBuilder(string name, double startTime, string traceId, string parentSpanId);
+    }
+
+    [BaseType(typeof(NSObject))]
+    interface ObjcSpanBuilder
+    {
+        [Export("traceId")]
+        string TraceId { get; }
+
+        [Export("spanId")]
+        string SpanId { get; }
+
+        [Export("spanKind")]
+        nint SpanKind { get; }
+
+        [Export("setAttributeWithKey:value:")]
+        void SetAttribute(string key, NSObject value);
+
+        [Export("setAttributes:")]
+        void SetAttributes(NSDictionary attributes);
+
+        [Export("addEventWithName:")]
+        void AddEvent(string name);
+
+        [Export("addEventWithName:attributes:")]
+        void AddEvent(string name, NSDictionary attributes);
+
+        [Export("recordExceptionWithMessage:type:")]
+        void RecordException(string message, string type);
+
+        [Export("recordExceptionWithMessage:type:attributes:")]
+        void RecordException(string message, string type, NSDictionary attributes);
+
+        [Export("setStatusCode:")]
+        void SetStatus(nint code);
+
+        [Export("endWithTime:")]
+        void End(double time);
     }
 
     [BaseType(typeof(NSObject))]
