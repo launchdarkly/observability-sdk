@@ -6,23 +6,35 @@ import com.launchdarkly.sdk.android.integrations.EvaluationSeriesContext
 import com.launchdarkly.sdk.android.integrations.Hook
 import com.launchdarkly.sdk.android.integrations.IdentifySeriesContext
 import com.launchdarkly.sdk.android.integrations.IdentifySeriesResult
-import io.opentelemetry.api.trace.Tracer
 import java.util.UUID
 
 /**
- * Hook protocol adapter for the native Android SDK.
- * Extracts data from SDK types and delegates to [ObservabilityHookExporter].
+ * Delegate interface for observability hook callbacks.
+ * [ObservabilityHookExporter] implements this so the hook
+ * stays decoupled from the tracing / logging implementation.
  */
-class ObservabilityHook internal constructor(
-    private val exporter: ObservabilityHookExporter
-) : Hook(HOOK_NAME) {
+interface ObservabilityHookExporting {
+    fun beforeEvaluation(evaluationId: String, flagKey: String, contextKey: String)
+    fun afterEvaluation(
+        evaluationId: String, flagKey: String, contextKey: String,
+        valueJson: String?, variationIndex: Int?, inExperiment: Boolean?
+    )
+    fun afterIdentify(contextKeys: Map<String, String>, canonicalKey: String, completed: Boolean)
+}
+
+/**
+ * Hook protocol adapter for the native Android SDK.
+ * Extracts data from SDK types and delegates to [ObservabilityHookExporting].
+ */
+class ObservabilityHook internal constructor() : Hook(HOOK_NAME) {
+    var delegate: ObservabilityHookExporting? = null
 
     override fun beforeEvaluation(
         seriesContext: EvaluationSeriesContext,
         seriesData: Map<String, Any>
     ): Map<String, Any> {
         val evalId = UUID.randomUUID().toString()
-        exporter.beforeEvaluation(
+        delegate?.beforeEvaluation(
             evaluationId = evalId,
             flagKey = seriesContext.flagKey,
             contextKey = seriesContext.context.fullyQualifiedKey
@@ -45,7 +57,7 @@ class ObservabilityHook internal constructor(
             evaluationDetail.variationIndex else null
         val inExperiment = evaluationDetail.reason?.isInExperiment
 
-        exporter.afterEvaluation(
+        delegate?.afterEvaluation(
             evaluationId = evalId,
             flagKey = seriesContext.flagKey,
             contextKey = seriesContext.context.fullyQualifiedKey,
@@ -81,7 +93,7 @@ class ObservabilityHook internal constructor(
             contextKeys[context.kind.toString()] = context.key
         }
 
-        exporter.afterIdentify(
+        delegate?.afterIdentify(
             contextKeys = contextKeys,
             canonicalKey = context.fullyQualifiedKey,
             completed = result.status == IdentifySeriesResult.IdentifySeriesStatus.COMPLETED

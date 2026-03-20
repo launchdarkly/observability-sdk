@@ -24,7 +24,7 @@ internal class ObservabilityHookExporter(
     private val tracerProvider: (() -> Tracer?),
     private val contextFriendlyName: String? = null,
     maxInFlightSpans: Int = 1024
-) {
+) : ObservabilityHookExporting {
     private val spans = BoundedMap<String, Span>(maxInFlightSpans)
 
     private fun getTracer(): Tracer {
@@ -33,7 +33,7 @@ internal class ObservabilityHookExporter(
 
     // -- Evaluation --
 
-    fun beforeEvaluation(evaluationId: String, flagKey: String, contextKey: String) {
+    override fun beforeEvaluation(evaluationId: String, flagKey: String, contextKey: String) {
         if (!withSpans) return
 
         val tracer = getTracer()
@@ -51,7 +51,7 @@ internal class ObservabilityHookExporter(
         evicted?.end()
     }
 
-    fun afterEvaluation(
+    override fun afterEvaluation(
         evaluationId: String,
         flagKey: String,
         contextKey: String,
@@ -106,7 +106,7 @@ internal class ObservabilityHookExporter(
 
     // -- Identify --
 
-    fun afterIdentify(contextKeys: Map<String, String>, canonicalKey: String, completed: Boolean) {
+    override fun afterIdentify(contextKeys: Map<String, String>, canonicalKey: String, completed: Boolean) {
         if (!completed) return
 
         val attrBuilder = Attributes.builder()
