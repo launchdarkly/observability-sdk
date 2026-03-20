@@ -19,6 +19,7 @@ public sealed class LDTraceExporter : BaseExporter<Activity>
             Console.WriteLine($"  StartTime:  {activity.StartTimeUtc:O}");
             Console.WriteLine($"  Duration:   {activity.Duration}");
             Console.WriteLine($"  Status:     {activity.Status}");
+            Console.WriteLine($"  Parent:     {activity.Parent}");
 
             if (activity.TagObjects is not null)
             {

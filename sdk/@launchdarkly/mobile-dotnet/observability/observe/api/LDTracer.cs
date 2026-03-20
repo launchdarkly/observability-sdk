@@ -3,6 +3,8 @@ using OpenTelemetry;
 using OpenTelemetry.Trace;
 using OpenTelemetry.Resources;
 
+using OTelSdk = OpenTelemetry.Sdk;
+
 namespace LaunchDarkly.Observability;
 
 /// <summary>
@@ -19,7 +21,7 @@ public sealed class LDTracer : IDisposable
 
     private LDTracer()
     {
-        _tracerProvider = Sdk.CreateTracerProviderBuilder()
+        _tracerProvider = OTelSdk.CreateTracerProviderBuilder()
             .AddSource(ServiceName)
             .SetResourceBuilder(
                 ResourceBuilder.CreateDefault()

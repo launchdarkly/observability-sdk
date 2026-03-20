@@ -57,7 +57,7 @@ public partial class MainPage : ContentPage
 	private void OnIdentifyUserClicked(object? sender, EventArgs e)
 	{
 		var userContext = Context.Builder("single-userkey")
-			.Name("Bob Bobberson")
+			.Name("Bob Smith")
 			.Build();
          _ = Task.Run(async () => await LdClient.Instance.IdentifyAsync(userContext));
 
@@ -177,10 +177,47 @@ public partial class MainPage : ContentPage
 		}
 	}
 
-	private void OnTriggerNestedSpansClicked(object? sender, EventArgs e)
+	private async void OnTriggerNestedSpansClicked(object? sender, EventArgs e)
 	{
-		// TODO: LDObserve.StartSpan when API is available
-		Console.WriteLine("Nested Spans triggered – API not yet available");
+		await Task.Run(async () =>
+		{
+			using var span0 = LDObserve.StartActiveSpan("FakeSpan");
+			using var span1 = LDObserve.StartActiveSpan("FakeSpan1");
+			using var span2 = LDObserve.StartActiveSpan("FakeSpan2");
+
+			try
+			{
+				await _httpClient.GetAsync("https://www.google.com");
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine($"HTTP Request failed: {ex.Message}");
+			}
+		});
+
+		Console.WriteLine("Nested Spans triggered");
+	}
+
+	private void OnTriggerSequentialSpansClicked(object? sender, EventArgs e)
+	{
+		var tracer = LDObserve.GetTracer();
+
+		using (var span1 = tracer.StartRootSpan("SequentialSpan1"))
+		{
+			span1.SetAttribute("sequence", "1");
+		}
+
+		using (var span2 = tracer.StartRootSpan("SequentialSpan2"))
+		{
+			span2.SetAttribute("sequence", "2");
+		}
+
+		using (var span3 = tracer.StartRootSpan("SequentialSpan3"))
+		{
+			span3.SetAttribute("sequence", "3");
+		}
+
+		Console.WriteLine("Sequential independent spans triggered");
 	}
 
 	private void OnSendCustomSpanClicked(object? sender, EventArgs e)
@@ -188,8 +225,9 @@ public partial class MainPage : ContentPage
 		var spanName = CustomSpanEntry.Text;
 		if (!string.IsNullOrEmpty(spanName))
 		{
-			// TODO: LDObserve.StartSpan when API is available
-			Console.WriteLine($"Custom span sent: {spanName} – API not yet available");
+			using var span = LDObserve.StartActiveSpan(spanName);
+			span.SetAttribute("custom_span", "true");
+			Console.WriteLine($"Custom span sent: {spanName}");
 		}
 	}
 

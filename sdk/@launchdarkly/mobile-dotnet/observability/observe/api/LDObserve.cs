@@ -202,4 +202,10 @@ public static class LDObserve
     /// Returns the OpenTelemetry <see cref="Tracer"/> from the <see cref="LDTracer"/> singleton.
     /// </summary>
     public static Tracer GetTracer() => LDTracer.Instance.Tracer;
+
+    /// <summary>
+    /// Starts a new active span with the given name using the singleton tracer.
+    /// The returned <see cref="TelemetrySpan"/> should be disposed when the operation completes.
+    /// </summary>
+    public static TelemetrySpan StartActiveSpan(string name) => GetTracer().StartActiveSpan(name);
 }

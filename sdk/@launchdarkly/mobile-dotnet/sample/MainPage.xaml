@@ -82,6 +82,7 @@
 			<Button Text="Send custom log" Clicked="OnSendCustomLogClicked" />
 
 			<Button Text="Trigger Nested Spans" Clicked="OnTriggerNestedSpansClicked" Margin="0,16,0,0" />
+			<Button Text="Trigger Sequential Spans" Clicked="OnTriggerSequentialSpansClicked" />
 
 			<Entry x:Name="CustomSpanEntry" Placeholder="Span Name" TextColor="White"
 			       PlaceholderColor="Gray" Margin="0,8" />
