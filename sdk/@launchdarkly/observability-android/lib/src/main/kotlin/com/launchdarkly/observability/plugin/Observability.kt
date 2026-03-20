@@ -123,7 +123,6 @@ class Observability(
                 LDObserve.init(client)
 
                 observabilityHook.delegate = client.hookExporter
-                LDObserve.hookProxy = ObservabilityHookProxy(client.hookExporter)
             } else {
                 logger.warn("Observability could not be initialized for sdkKey: $sdkKey")
             }

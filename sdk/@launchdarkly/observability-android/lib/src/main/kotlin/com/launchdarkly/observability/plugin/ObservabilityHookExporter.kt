@@ -15,7 +15,7 @@ import org.json.JSONObject
  *
  * Manages span lifecycle (start/end) and identify logging.
  * Takes only simple JVM types — no Hook interface, no SDK-specific types.
- * Both [ObservabilityHook] (native Android SDK) and [ObservabilityHookProxy] (C# bridge)
+ * Both [ObservabilityHook] (native Android SDK) and [com.launchdarkly.observability.bridge.ObservabilityHookProxy] (C# bridge)
  * delegate here so the tracing logic is written exactly once.
  */
 internal class ObservabilityHookExporter(
