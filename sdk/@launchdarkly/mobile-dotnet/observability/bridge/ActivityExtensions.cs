@@ -11,7 +11,7 @@ namespace LaunchDarkly.Observability;
 
 /// <summary>
 /// Extension methods on <see cref="Activity"/> to build platform-native
-/// OpenTelemetry span representations (<c>ObjcSpan</c> / <c>KotlinSpan</c>).
+/// OpenTelemetry span representations (<c>ObjcSpan</c> / <c>SpanData</c>).
 /// </summary>
 internal static class ActivityExtensions
 {
@@ -46,10 +46,10 @@ internal static class ActivityExtensions
 
 #elif ANDROID
     /// <summary>
-    /// Converts an <see cref="Activity"/> into a <see cref="KotlinSpan"/>
-    /// that implements <c>io.opentelemetry.api.trace.Span</c> on the Kotlin side.
+    /// Converts an <see cref="Activity"/> into a <see cref="SpanData"/>
+    /// that can be converted to an OpenTelemetry Span on the Kotlin side via <c>toSpan()</c>.
     /// </summary>
-    internal static KotlinSpan ToKotlinSpan(this Activity activity)
+    internal static SpanData ToSpanData(this Activity activity)
     {
         var statusCode = activity.Status switch
         {
@@ -58,10 +58,9 @@ internal static class ActivityExtensions
             _                        => 0,
         };
 
-        var attributes = new Java.Util.HashMap();
+        var attributes = new Dictionary<string, Java.Lang.Object>();
         foreach (var tag in activity.TagObjects)
         {
-            var jKey = new Java.Lang.String(tag.Key);
             Java.Lang.Object? jVal = tag.Value switch
             {
                 string s  => new Java.Lang.String(s),
@@ -74,10 +73,10 @@ internal static class ActivityExtensions
             };
 
             if (jVal != null)
-                attributes.Put(jKey, jVal);
+                attributes[tag.Key] = jVal;
         }
 
-        return new KotlinSpan(
+        return new SpanData(
             traceIdHex: activity.TraceId.ToString(),
             spanIdHex: activity.SpanId.ToString(),
             spanName: activity.DisplayName,

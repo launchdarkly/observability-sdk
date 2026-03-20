@@ -36,7 +36,7 @@ public final class ObjcSpan: NSObject {
         self._context = SpanContext.create(
             traceId: TraceId(fromHexString: traceId),
             spanId:  SpanId(fromHexString: spanId),
-            traceFlags: TraceFlags(fromByte: TraceFlags.sampled),
+            traceFlags: TraceFlags().settingIsSampled(true),
             traceState: TraceState()
         )
         self._name = name
@@ -91,6 +91,12 @@ extension ObjcSpan: Span {
         }
     }
 
+    public func setAttributes(_ attributes: [String: AttributeValue]) {
+        for (key, value) in attributes {
+            _attributes[key] = value
+        }
+    }
+
     public func addEvent(name: String) {
         _events.append((name: name, timestamp: Date(), attributes: [:]))
     }
@@ -105,6 +111,38 @@ extension ObjcSpan: Span {
 
     public func addEvent(name: String, attributes: [String: AttributeValue], timestamp: Date) {
         _events.append((name: name, timestamp: timestamp, attributes: attributes))
+    }
+
+    public func recordException(_ exception: SpanException) {
+        _events.append((name: "exception", timestamp: Date(), attributes: [
+            "exception.type": .string(exception.type),
+            "exception.message": .string(exception.message ?? "")
+        ]))
+    }
+
+    public func recordException(_ exception: SpanException, timestamp: Date) {
+        _events.append((name: "exception", timestamp: timestamp, attributes: [
+            "exception.type": .string(exception.type),
+            "exception.message": .string(exception.message ?? "")
+        ]))
+    }
+
+    public func recordException(_ exception: SpanException, attributes: [String: AttributeValue]) {
+        var attrs: [String: AttributeValue] = [
+            "exception.type": .string(exception.type),
+            "exception.message": .string(exception.message ?? "")
+        ]
+        for (k, v) in attributes { attrs[k] = v }
+        _events.append((name: "exception", timestamp: Date(), attributes: attrs))
+    }
+
+    public func recordException(_ exception: SpanException, attributes: [String: AttributeValue], timestamp: Date) {
+        var attrs: [String: AttributeValue] = [
+            "exception.type": .string(exception.type),
+            "exception.message": .string(exception.message ?? "")
+        ]
+        for (k, v) in attributes { attrs[k] = v }
+        _events.append((name: "exception", timestamp: timestamp, attributes: attrs))
     }
 
     public func end() { _isRecording = false }

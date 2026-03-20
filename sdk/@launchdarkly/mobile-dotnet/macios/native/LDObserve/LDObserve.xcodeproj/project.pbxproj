@@ -10,11 +10,13 @@
 		50C0BF482F230B910064754D /* LaunchDarklyObservability in Frameworks */ = {isa = PBXBuildFile; productRef = 50C0BF472F230B910064754D /* LaunchDarklyObservability */; };
 		50C0BF4A2F230B910064754D /* LaunchDarklySessionReplay in Frameworks */ = {isa = PBXBuildFile; productRef = 50C0BF492F230B910064754D /* LaunchDarklySessionReplay */; };
 		50C0BF4C2F2327FE0064754D /* ObservabilityBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50C0BF4B2F2327FE0064754D /* ObservabilityBridge.swift */; };
+		50C0BF4D2F2328000064754D /* ObjcSpan.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50C0BF4E2F2328000064754D /* ObjcSpan.swift */; };
 		83E34F572C21CB2B008AA950 /* LDObserveBridge.h in Headers */ = {isa = PBXBuildFile; fileRef = 83E34F562C21CB2B008AA950 /* LDObserveBridge.h */; settings = {ATTRIBUTES = (Public, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		50C0BF4B2F2327FE0064754D /* ObservabilityBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObservabilityBridge.swift; sourceTree = "<group>"; };
+		50C0BF4E2F2328000064754D /* ObjcSpan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObjcSpan.swift; sourceTree = "<group>"; };
 		83E34F532C21CB2B008AA950 /* LDObserveBridge.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = LDObserveBridge.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		83E34F562C21CB2B008AA950 /* LDObserveBridge.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LDObserveBridge.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -52,6 +54,7 @@
 			isa = PBXGroup;
 			children = (
 				50C0BF4B2F2327FE0064754D /* ObservabilityBridge.swift */,
+				50C0BF4E2F2328000064754D /* ObjcSpan.swift */,
 				83E34F562C21CB2B008AA950 /* LDObserveBridge.h */,
 			);
 			path = Sources;
@@ -145,6 +148,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				50C0BF4C2F2327FE0064754D /* ObservabilityBridge.swift in Sources */,
+				50C0BF4D2F2328000064754D /* ObjcSpan.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -73,10 +73,6 @@ public final class ObservabilityBridge: NSObject {
         return sdkVersion
     }
 
-    @objc public func getObservabilityHookProxy() -> ObservabilityHookProxy? {
-        return LDObserve.shared.hookProxy
-    }
-
     @objc public func getSessionReplayHookProxy() -> SessionReplayHookProxy? {
         return LDReplay.shared.hookProxy
     }

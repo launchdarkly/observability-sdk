@@ -157,7 +157,7 @@ public partial class MainPage : ContentPage
 	{
 		LDObserve.RecordLog(
 			"Test Log",
-			LDObserve.Severity.Info,
+			Severity.Info,
 			new Dictionary<string, object?>
 			{
 				{ "test-log", "maui" },
@@ -172,7 +172,7 @@ public partial class MainPage : ContentPage
 		var message = CustomLogEntry.Text;
 		if (!string.IsNullOrEmpty(message))
 		{
-			LDObserve.RecordLog(message, LDObserve.Severity.Info);
+			LDObserve.RecordLog(message, Severity.Info);
 			Console.WriteLine($"Custom log sent: {message}");
 		}
 	}

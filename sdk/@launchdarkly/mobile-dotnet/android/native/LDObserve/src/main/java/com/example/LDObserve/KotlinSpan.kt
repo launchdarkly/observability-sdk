@@ -9,6 +9,24 @@ import io.opentelemetry.api.trace.TraceFlags
 import io.opentelemetry.api.trace.TraceState
 import java.util.concurrent.TimeUnit
 
+/**
+ * Plain data holder constructed by C# from `System.Diagnostics.Activity` properties.
+ * Does NOT implement [Span] so the Xamarin binding generator can bind it.
+ * Use [toSpan] to obtain a real [Span] on the Kotlin side.
+ */
+class SpanData(
+    val traceIdHex: String,
+    val spanIdHex: String,
+    val spanName: String,
+    val statusCodeInt: Int,
+    val spanAttributes: HashMap<String, Any?>?
+)
+
+/**
+ * Converts [SpanData] into an OpenTelemetry [Span].
+ */
+fun SpanData.toSpan(): Span = KotlinSpan(this)
+
 private data class SpanEvent(
     val name: String,
     val attributes: Attributes,
@@ -16,34 +34,20 @@ private data class SpanEvent(
 )
 
 /**
- * Representation of a `System.Diagnostics.Activity` that implements the
- * OpenTelemetry [Span] interface.
- *
- * The constructor accepts only JVM primitives / collections so the C#
- * Xamarin binding can construct instances from `Activity` properties.
- *
- * @param traceIdHex   32-char hex trace identifier.
- * @param spanIdHex    16-char hex span identifier.
- * @param spanName     Display name / operation name.
- * @param statusCodeInt 0 = UNSET, 1 = OK, 2 = ERROR.
- * @param spanAttributes String-keyed attribute map (nullable).
+ * Internal [Span] implementation backed by [SpanData].
  */
-class KotlinSpan(
-    traceIdHex: String,
-    spanIdHex: String,
-    private var spanName: String,
-    statusCodeInt: Int,
-    spanAttributes: HashMap<String, Any?>?
-) : Span {
+internal class KotlinSpan(data: SpanData) : Span {
 
     private val _context: SpanContext = SpanContext.create(
-        traceIdHex,
-        spanIdHex,
+        data.traceIdHex,
+        data.spanIdHex,
         TraceFlags.getSampled(),
         TraceState.getDefault()
     )
 
-    private var _statusCode: StatusCode = when (statusCodeInt) {
+    private var _name: String = data.spanName
+
+    private var _statusCode: StatusCode = when (data.statusCodeInt) {
         1 -> StatusCode.OK
         2 -> StatusCode.ERROR
         else -> StatusCode.UNSET
@@ -52,23 +56,18 @@ class KotlinSpan(
     private var _isRecording: Boolean = true
     private val _events: MutableList<SpanEvent> = mutableListOf()
 
-    private val _attributesBuilder: Attributes.AttributesBuilder = run {
-        val builder = Attributes.builder()
-        spanAttributes?.forEach { (key, value) ->
-            when (value) {
-                is String  -> builder.put(AttributeKey.stringKey(key), value)
-                is Boolean -> builder.put(AttributeKey.booleanKey(key), value)
-                is Long    -> builder.put(AttributeKey.longKey(key), value)
-                is Int     -> builder.put(AttributeKey.longKey(key), value.toLong())
-                is Double  -> builder.put(AttributeKey.doubleKey(key), value)
-                is Float   -> builder.put(AttributeKey.doubleKey(key), value.toDouble())
-            }
+    private val _attributes: MutableMap<String, Any> = run {
+        val map = mutableMapOf<String, Any>()
+        data.spanAttributes?.forEach { (key, value) ->
+            if (value != null) map[key] = value
         }
-        builder
+        map
     }
 
-    override fun <T : Any?> setAttribute(key: AttributeKey<T>, value: T): Span {
-        _attributesBuilder.put(key, value)
+    override fun <T : Any> setAttribute(key: AttributeKey<T>, value: T?): Span {
+        if (value != null) {
+            _attributes[key.key] = value
+        }
         return this
     }
 
@@ -123,7 +122,7 @@ class KotlinSpan(
     }
 
     override fun updateName(name: String): Span {
-        spanName = name
+        _name = name
         return this
     }
 

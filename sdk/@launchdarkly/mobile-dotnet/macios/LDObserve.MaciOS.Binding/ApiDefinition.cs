@@ -1,4 +1,6 @@
+using System;
 using Foundation;
+using ObjCRuntime;
 using UIKit;
 
 namespace LDObserveMaciOS
@@ -58,10 +60,6 @@ namespace LDObserveMaciOS
         [Export("startWithMobileKey:observability:replay:")]
         void Start(string mobileKey, ObjcObservabilityOptions observability, ObjcSessionReplayOptions replay);
 
-        [Export("getObservabilityHookProxy")]
-        [NullAllowed]
-        ObservabilityHookProxy GetObservabilityHookProxy();
-
         [Export("getSessionReplayHookProxy")]
         [NullAllowed]
         SessionReplayHookProxy GetSessionReplayHookProxy();
@@ -90,6 +88,17 @@ namespace LDObserveMaciOS
 
         [Static, Export("recordUpDownCounterWithName:value:")]
         void RecordUpDownCounter(string name, double value);
+
+        [Static, Export("getObservabilityHookProxy")]
+        [return: NullAllowed]
+        ObservabilityHookProxy GetObservabilityHookProxy();
+    }
+
+    [BaseType(typeof(NSObject))]
+    interface ObjcSpan
+    {
+        [Export("initWithTraceId:spanId:name:statusCode:attributes:")]
+        NativeHandle Constructor(string traceId, string spanId, string name, nint statusCode, [NullAllowed] NSDictionary attributes);
     }
 
     [BaseType(typeof(NSObject))]
