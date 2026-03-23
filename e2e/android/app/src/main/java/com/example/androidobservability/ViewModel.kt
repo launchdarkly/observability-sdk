@@ -89,11 +89,11 @@ class ViewModel(application: Application) : AndroidViewModel(application) {
 
     fun triggerNestedSpans() {
         viewModelScope.launch(Dispatchers.IO) {
-            val newSpan0 = LDObserve.startSpan("FakeSpan", Attributes.empty())
+            val newSpan0 = LDObserve.startSpan("NestedSpan", Attributes.empty())
             newSpan0.makeCurrent().use {
-                val newSpan1 = LDObserve.startSpan("FakeSpan1", Attributes.empty())
+                val newSpan1 = LDObserve.startSpan("NestedSpan1", Attributes.empty())
                 newSpan1.makeCurrent().use {
-                    val newSpan2 = LDObserve.startSpan("FakeSpan2", Attributes.empty())
+                    val newSpan2 = LDObserve.startSpan("NestedSpan2", Attributes.empty())
                     newSpan2.makeCurrent().use {
                         sendOkHttpRequest()
                         sendURLRequest()
