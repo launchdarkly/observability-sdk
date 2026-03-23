@@ -3,9 +3,12 @@
 module LaunchDarklyObservability
   # A Logger that forwards messages to the OpenTelemetry Logs pipeline.
   #
-  # Designed to be broadcast-attached to Rails.logger so every Rails log
-  # entry is automatically emitted as an OTLP LogRecord with trace/span
-  # correlation from the current OpenTelemetry context.
+  # When used as a broadcast target (Rails), pass only the logger_provider.
+  # When used standalone (Sinatra, plain Ruby), pass `io:` to also write
+  # to a local destination such as $stdout.
+  #
+  # @example Standalone usage (non-Rails)
+  #   logger = LaunchDarklyObservability.logger          # writes to $stdout + OTel
   #
   # @example Manually attaching (the Railtie does this automatically)
   #   bridge = LaunchDarklyObservability::OtelLogBridge.new(logger_provider)
@@ -33,12 +36,27 @@ module LaunchDarklyObservability
     }.freeze
 
     # @param logger_provider [OpenTelemetry::SDK::Logs::LoggerProvider]
-    def initialize(logger_provider)
+    # @param io [IO, nil] Optional IO for local output (e.g. $stdout).
+    #   When nil the bridge only emits to OTel (suitable for broadcast).
+    def initialize(logger_provider, io: nil)
       super(File::NULL)
       @otel_logger = logger_provider.logger(
         name: 'launchdarkly-observability-ruby',
         version: LaunchDarklyObservability::VERSION
       )
+      @local_logger = io ? ::Logger.new(io) : nil
+    end
+
+    # Propagate level changes to the local logger so filtering stays in sync.
+    def level=(severity)
+      super
+      @local_logger&.level = severity
+    end
+
+    # Propagate formatter changes to the local logger.
+    def formatter=(formatter)
+      super
+      @local_logger&.formatter = formatter
     end
 
     # Core method that debug/info/warn/error/fatal all delegate to.
@@ -55,6 +73,8 @@ module LaunchDarklyObservability
       end
 
       return true if message.nil?
+
+      @local_logger&.add(severity, message, progname)
 
       attributes = {}
       if message.is_a?(Hash)

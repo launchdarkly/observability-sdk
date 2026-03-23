@@ -120,4 +120,59 @@ class OtelLogBridgeTest < Minitest::Test
 
     assert_equal 3, @log_exporter.emitted_log_records.length
   end
+
+  # --- dual-output (io:) tests ---
+
+  def test_io_param_writes_to_both_io_and_otel
+    io = StringIO.new
+    bridge = LaunchDarklyObservability::OtelLogBridge.new(@logger_provider, io: io)
+
+    bridge.info 'dual output'
+
+    assert_match(/dual output/, io.string)
+
+    records = @log_exporter.emitted_log_records
+    assert_equal 1, records.length
+    assert_equal 'dual output', records.first.body
+  end
+
+  def test_io_nil_preserves_otel_only_behavior
+    bridge = LaunchDarklyObservability::OtelLogBridge.new(@logger_provider, io: nil)
+
+    bridge.info 'otel only'
+
+    records = @log_exporter.emitted_log_records
+    assert_equal 1, records.length
+    assert_equal 'otel only', records.first.body
+  end
+
+  def test_level_propagates_to_local_logger
+    io = StringIO.new
+    bridge = LaunchDarklyObservability::OtelLogBridge.new(@logger_provider, io: io)
+
+    bridge.level = ::Logger::WARN
+    bridge.debug 'should be dropped'
+    bridge.info 'also dropped'
+    bridge.warn 'should appear'
+
+    assert_empty io.string.scan('should be dropped')
+    assert_empty io.string.scan('also dropped')
+    assert_match(/should appear/, io.string)
+
+    records = @log_exporter.emitted_log_records
+    assert_equal 1, records.length
+    assert_equal 'should appear', records.first.body
+  end
+
+  def test_hash_message_with_io_writes_to_both
+    io = StringIO.new
+    bridge = LaunchDarklyObservability::OtelLogBridge.new(@logger_provider, io: io)
+
+    bridge.info(action: 'test', status: 'ok')
+
+    refute_empty io.string
+
+    record = @log_exporter.emitted_log_records.first
+    assert_equal({ 'action' => 'test', 'status' => 'ok' }, record.attributes)
+  end
 end

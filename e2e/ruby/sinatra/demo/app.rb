@@ -6,8 +6,6 @@ require 'json'
 
 use LaunchDarklyObservability::Middleware
 
-$logger = Logger.new($stdout)
-
 plugin_opts = {
   service_name: 'launchdarkly-sinatra-demo',
   service_version: '1.0.0'
@@ -17,11 +15,13 @@ plugin_opts[:otlp_endpoint] = ENV['OTEL_EXPORTER_OTLP_ENDPOINT'] if ENV['OTEL_EX
 observability_plugin = LaunchDarklyObservability::Plugin.new(**plugin_opts)
 
 sdk_key = ENV.fetch('LAUNCHDARKLY_SDK_KEY') do
-  $logger.warn '[LaunchDarkly] LAUNCHDARKLY_SDK_KEY not set, client will not connect'
+  warn '[LaunchDarkly] LAUNCHDARKLY_SDK_KEY not set, client will not connect'
   nil
 end
 config = LaunchDarkly::Config.new(plugins: [observability_plugin])
 $ld_client = LaunchDarkly::LDClient.new(sdk_key, config)
+
+$logger = LaunchDarklyObservability.logger
 
 if ENV['DEBUG'] == 'true'
   debug_exporter = Class.new do
