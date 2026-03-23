@@ -181,9 +181,9 @@ public partial class MainPage : ContentPage
 	{
 		await Task.Run(async () =>
 		{
-			using var span0 = LDObserve.StartActiveSpan("FakeSpan");
-			using var span1 = LDObserve.StartActiveSpan("FakeSpan1");
-			using var span2 = LDObserve.StartActiveSpan("FakeSpan2");
+			using var span0 = LDObserve.StartActiveSpan("NestedSpan");
+			using var span1 = LDObserve.StartActiveSpan("NestedSpan1");
+			using var span2 = LDObserve.StartActiveSpan("NestedSpan2");
 
 			try
 			{

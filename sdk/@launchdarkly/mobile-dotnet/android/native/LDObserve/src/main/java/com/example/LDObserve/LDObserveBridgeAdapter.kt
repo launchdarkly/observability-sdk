@@ -9,5 +9,11 @@ class LDObserveBridgeAdapter {
             val proxy = SdkLDObserveBridge.getObservabilityHookProxy() ?: return null
             return RealObservabilityHookProxy(proxy)
         }
+
+        @JvmStatic
+        fun getTracer(): RealTracer? {
+            val tracer = SdkLDObserveBridge.getKotlinTracer() ?: return null
+            return RealTracer(tracer)
+        }
     }
 }

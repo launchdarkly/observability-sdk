@@ -3,6 +3,8 @@ using OpenTelemetry;
 
 #if IOS
 using LDObserveMaciOS;
+#elif ANDROID
+using LDObserveAndroid;
 #endif
 
 namespace LaunchDarkly.Observability;
@@ -14,19 +16,21 @@ namespace LaunchDarkly.Observability;
 /// </summary>
 public sealed class LDTraceExporter : BaseExporter<Activity>
 {
-#if IOS
     private readonly TraceBuilderAdapter? _adapter;
 
     public LDTraceExporter()
     {
+#if IOS
         var nativeTracer = LDObserveBridge.GetObjcTracer();
         _adapter = nativeTracer != null ? new TraceBuilderAdapter(nativeTracer) : null;
-    }
+#elif ANDROID
+        var nativeTracer = LDObserveBridgeAdapter.Tracer;
+        _adapter = nativeTracer != null ? new TraceBuilderAdapter(nativeTracer) : null;
 #endif
+    }
 
     public override ExportResult Export(in Batch<Activity> batch)
     {
-#if IOS
         if (_adapter == null)
             return ExportResult.Success;
 
@@ -34,7 +38,7 @@ public sealed class LDTraceExporter : BaseExporter<Activity>
         {
             _adapter.Export(activity);
         }
-#endif
+
         return ExportResult.Success;
     }
 }
