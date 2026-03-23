@@ -405,6 +405,3 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
-
-# Machine-specific build overrides
-Directory.Build.props

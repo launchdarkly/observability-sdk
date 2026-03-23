@@ -7,3 +7,4 @@ build
 .kotlin
 
 lib/bin
+lib/.cxx
