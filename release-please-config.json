@@ -90,7 +90,10 @@
 			"versioning": "default",
 			"include-v-in-tag": false,
 			"include-component-in-tag": true,
-			"extra-files": ["lib/launchdarkly_observability/version.rb"]
+			"extra-files": [
+				"lib/launchdarkly_observability/version.rb",
+				"PROVENANCE.md"
+			]
 		}
 	}
 }
