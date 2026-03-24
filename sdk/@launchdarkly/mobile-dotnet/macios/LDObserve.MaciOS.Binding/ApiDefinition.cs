@@ -101,8 +101,8 @@ namespace LDObserveMaciOS
     [BaseType(typeof(NSObject))]
     interface ObjcTracer
     {
-        [Export("spanBuilderWithName:startTime:traceId:parentSpanId:")]
-        ObjcSpanBuilder SpanBuilder(string name, double startTime, string traceId, string parentSpanId);
+        [Export("spanBuilderWithName:startTime:traceId:spanId:parentSpanId:")]
+        ObjcSpanBuilder SpanBuilder(string name, double startTime, string traceId, string spanId, string parentSpanId);
     }
 
     [BaseType(typeof(NSObject))]

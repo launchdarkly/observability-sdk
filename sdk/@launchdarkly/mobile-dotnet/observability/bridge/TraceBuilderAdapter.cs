@@ -34,6 +34,7 @@ internal sealed class TraceBuilderAdapter
             activity.DisplayName,
             startTime,
             activity.TraceId.ToString(),
+            activity.SpanId.ToString(),
             activity.ParentSpanId.ToString()
         );
 
@@ -91,6 +92,7 @@ internal sealed class TraceBuilderAdapter
             activity.DisplayName,
             startTime,
             activity.TraceId.ToString(),
+            activity.SpanId.ToString(),
             activity.ParentSpanId.ToString()
         );
 
