@@ -160,8 +160,13 @@ public partial class MainPage : ContentPage
 			Severity.Info,
 			new Dictionary<string, object?>
 			{
-				{ "test-log", "maui" },
-				{ "nested", new Dictionary<string, object?> { { "array", new int[] { 1 } } } }
+				{ "test-string", "maui" },
+				{ "test-true", true },
+				{ "test-false", false },
+				{ "test-integer", 42 },
+				{ "test-double", 3.14 },
+				{ "test-array", new double[] { 3.14 } },
+				{ "test-nested", new Dictionary<string, object?> { { "array", new int[] { 1 } } } }
 			}
 		);
 		Console.WriteLine("Log triggered");

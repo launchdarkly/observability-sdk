@@ -55,7 +55,15 @@ class ViewModel(application: Application) : AndroidViewModel(application) {
         LDObserve.recordLog(
             "Test Log",
             Severity.INFO,
-            Attributes.of(AttributeKey.stringKey("FakeAttribute"), "FakeVal")
+            Attributes.builder()
+                .put(AttributeKey.stringKey("test-string"), "maui")
+                .put(AttributeKey.booleanKey("test-true"), true)
+                .put(AttributeKey.booleanKey("test-false"), false)
+                .put(AttributeKey.longKey("test-integer"), 42L)
+                .put(AttributeKey.doubleKey("test-double"), 3.14)
+                .put(AttributeKey.doubleArrayKey("test-array"), listOf(3.14))
+                .put(AttributeKey.longArrayKey("test-nested.array"), listOf(1L))
+                .build()
         )
     }
 
