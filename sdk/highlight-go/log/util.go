@@ -255,6 +255,9 @@ func formatAttributes(k string, v interface{}, depth uint8) map[string]string {
 	if vInt, ok := v.(int64); ok {
 		return map[string]string{k: strconv.FormatInt(vInt, 10)}
 	}
+	if vBool, ok := v.(bool); ok {
+		return map[string]string{k: strconv.FormatBool(vBool)}
+	}
 	if vFlt, ok := v.(float64); ok {
 		return map[string]string{k: strconv.FormatFloat(vFlt, 'f', -1, 64)}
 	}
