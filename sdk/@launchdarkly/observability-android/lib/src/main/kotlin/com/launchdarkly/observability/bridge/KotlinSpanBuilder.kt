@@ -17,16 +17,8 @@ class KotlinSpanBuilder internal constructor(private val span: Span) {
     val spanKind: Int get() = 0 // not readable from Span interface after creation
 
     fun setAttribute(key: String, value: Any?) {
-        when (value) {
-            is String  -> span.setAttribute(key, value)
-            is Boolean -> span.setAttribute(key, value)
-            is Long    -> span.setAttribute(key, value)
-            is Int     -> span.setAttribute(key, value.toLong())
-            is Double  -> span.setAttribute(key, value)
-            is Float   -> span.setAttribute(key, value.toDouble())
-            null       -> {}
-            else       -> span.setAttribute(key, value.toString())
-        }
+        if (value == null) return
+        setAttributes(mapOf(key to value))
     }
 
     fun setAttributes(attributes: Map<String, Any?>) {
