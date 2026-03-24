@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/bin/bash
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -20,16 +20,16 @@ DOTNET_ARGS=()
 # fi
 
 echo "Building Android binding (Release)..."
-dotnet build "$ANDROID_BINDING" -c Release "${DOTNET_ARGS[@]}"
+dotnet build "$ANDROID_BINDING" -c Release ${DOTNET_ARGS[@]+"${DOTNET_ARGS[@]}"}
 
 echo "Building iOS binding (Release)..."
-dotnet build "$IOS_BINDING" -c Release "${DOTNET_ARGS[@]}"
+dotnet build "$IOS_BINDING" -c Release ${DOTNET_ARGS[@]+"${DOTNET_ARGS[@]}"}
 
 echo "Building aggregator (Release, include native deps)..."
-dotnet build "$AGGREGATOR" -c Release -p:LD_INCLUDE_NATIVE_DEPS=true "${DOTNET_ARGS[@]}"
+dotnet build "$AGGREGATOR" -c Release -p:LD_INCLUDE_NATIVE_DEPS=true ${DOTNET_ARGS[@]+"${DOTNET_ARGS[@]}"}
 
 echo "Packing fat package..."
-dotnet pack "$FAT_PROJECT" -c Release -o "$OUT_DIR" "${DOTNET_ARGS[@]}"
+dotnet pack "$FAT_PROJECT" -c Release -o "$OUT_DIR" ${DOTNET_ARGS[@]+"${DOTNET_ARGS[@]}"}
 
 echo "Fat package created at: $OUT_DIR"
 
