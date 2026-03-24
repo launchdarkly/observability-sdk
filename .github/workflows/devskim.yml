@@ -25,7 +25,7 @@ jobs:
                   token: ${{ secrets.GITHUB_TOKEN }}
 
             - name: Run DevSkim scanner
-              uses: microsoft/DevSkim-Action@v1
+              uses: microsoft/DevSkim-Action@4b5047945a44163b94642a1cecc0d93a3f428cc6 # v1
               with:
                   ignore-globs: '**/otel/samples/**'
 
