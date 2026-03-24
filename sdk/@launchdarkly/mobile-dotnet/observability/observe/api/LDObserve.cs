@@ -16,6 +16,9 @@ namespace LaunchDarkly.Observability;
 /// </summary>
 public static partial class LDObserve
 {
+#if ANDROID
+    private static readonly LDObserveAndroid.ObservabilityBridge _androidBridge = new();
+#endif
 
     // -------- Public API --------
 
@@ -28,9 +31,8 @@ public static partial class LDObserve
         var dict = DictionaryTypeConverters.ToNSDictionary(attributes) ?? new NSDictionary();
         LDObserveBridge.RecordLog(message, severity, dict);
 #elif ANDROID
-        var bridge = new LDObserveAndroid.ObservabilityBridge();
         var map = DictionaryTypeConverters.ToJavaDictionary(attributes);
-        bridge.RecordLog(message, severity, map);
+        _androidBridge.RecordLog(message, severity, map);
 #endif
     }
 
@@ -48,8 +50,7 @@ public static partial class LDObserve
 #if IOS
         LDObserveBridge.RecordError(message, cause);
 #elif ANDROID
-        var bridge = new LDObserveAndroid.ObservabilityBridge();
-        bridge.RecordError(message, cause);
+        _androidBridge.RecordError(message, cause);
 #endif
     }
 
@@ -61,8 +62,7 @@ public static partial class LDObserve
 #if IOS
         LDObserveBridge.RecordMetric(name, value);
 #elif ANDROID
-        var bridge = new LDObserveAndroid.ObservabilityBridge();
-        bridge.RecordMetric(name, value);
+        _androidBridge.RecordMetric(name, value);
 #endif
     }
 
@@ -74,8 +74,7 @@ public static partial class LDObserve
 #if IOS
         LDObserveBridge.RecordCount(name, value);
 #elif ANDROID
-        var bridge = new LDObserveAndroid.ObservabilityBridge();
-        bridge.RecordCount(name, value);
+        _androidBridge.RecordCount(name, value);
 #endif
     }
 
@@ -87,8 +86,7 @@ public static partial class LDObserve
 #if IOS
         LDObserveBridge.RecordIncr(name, value);
 #elif ANDROID
-        var bridge = new LDObserveAndroid.ObservabilityBridge();
-        bridge.RecordIncr(name, value);
+        _androidBridge.RecordIncr(name, value);
 #endif
     }
 
@@ -100,8 +98,7 @@ public static partial class LDObserve
 #if IOS
         LDObserveBridge.RecordHistogram(name, value);
 #elif ANDROID
-        var bridge = new LDObserveAndroid.ObservabilityBridge();
-        bridge.RecordHistogram(name, value);
+        _androidBridge.RecordHistogram(name, value);
 #endif
     }
 
@@ -113,8 +110,7 @@ public static partial class LDObserve
 #if IOS
         LDObserveBridge.RecordUpDownCounter(name, value);
 #elif ANDROID
-        var bridge = new LDObserveAndroid.ObservabilityBridge();
-        bridge.RecordUpDownCounter(name, value);
+        _androidBridge.RecordUpDownCounter(name, value);
 #endif
     }
 
