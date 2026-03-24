@@ -165,8 +165,15 @@ public partial class MainPage : ContentPage
 				{ "test-false", false },
 				{ "test-integer", 42 },
 				{ "test-double", 3.14 },
-				{ "test-array", new double[] { 3.14 } },
-				{ "test-nested", new Dictionary<string, object?> { { "array", new int[] { 1 } } } }
+				{ "test-array", new double[] { 3.14, 6.28 } },
+				{ "test-nested", new Dictionary<string, object?> { 
+					{ "nested-string", "maui2" },
+					{ "nested-true", true },
+					{ "nested-false", false },
+					{ "nested-integer", 420 },
+					{ "nested-double", 3.14159 },
+					{ "nested-array", new double[] { 3.14159, 6.28318 } }}
+				}
 			}
 		);
 		Console.WriteLine("Log triggered");
