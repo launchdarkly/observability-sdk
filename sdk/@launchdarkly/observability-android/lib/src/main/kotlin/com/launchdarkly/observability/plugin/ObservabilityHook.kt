@@ -27,6 +27,7 @@ interface ObservabilityHookExporting {
  * Extracts data from SDK types and delegates to [ObservabilityHookExporting].
  */
 class ObservabilityHook internal constructor() : Hook(HOOK_NAME) {
+    @Volatile
     var delegate: ObservabilityHookExporting? = null
 
     override fun beforeEvaluation(
