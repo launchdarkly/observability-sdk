@@ -128,6 +128,35 @@ Use `RecordError` to capture error events. The optional second parameter provide
 LDObserve.RecordError("Payment failed", "Timeout connecting to payment gateway.");
 ```
 
+#### Traces
+
+Use `LDObserve` to create spans for tracing operations in your application. Spans are backed by [OpenTelemetry](https://opentelemetry.io/) and should be disposed when the operation completes.
+
+Create spans to trace operations. The returned `TelemetrySpan` is disposable — wrap it in a `using` statement so it ends automatically:
+
+```csharp
+using var span = LDObserve.StartActiveSpan("api_request");
+span.SetAttribute("endpoint", "/api/users");
+span.SetAttribute("method", "GET");
+```
+
+##### Nested Spans
+
+`StartActiveSpan` automatically creates parent-child relationships. Each new active span becomes a child of the currently active span:
+
+```csharp
+using var parent = LDObserve.StartActiveSpan("ProcessOrder");
+using var child = LDObserve.StartActiveSpan("ValidatePayment");
+using var grandchild = LDObserve.StartActiveSpan("ChargeCard");
+
+await httpClient.PostAsync("https://api.example.com/charge", content);
+```
+
+| Method | Description |
+|---|---|
+| `LDObserve.StartActiveSpan(name)` | Start a new active span that automatically nests under the current parent. Returns a disposable `TelemetrySpan`. |
+| `span.SetAttribute(key, value)` | Set a key-value attribute on a span. |
+
 ### Identifying Users
 
 Use the LaunchDarkly client to identify or switch user contexts. This ties observability data to the correct user:
