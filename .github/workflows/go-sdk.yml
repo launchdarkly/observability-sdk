@@ -25,7 +25,7 @@ jobs:
                   go-version-file: './sdk/highlight-go/go.mod'
                   cache-dependency-path: './sdk/highlight-go/go.sum'
             - name: Format
-              uses: Jerome1337/gofmt-action@v1.0.5
+              uses: Jerome1337/gofmt-action@d5eabd189843f1d568286a54578159978b7c0fb1 # v1.0.5
               with:
                   gofmt-path: './sdk/highlight-go'
                   gofmt-flags: '-l -d'
@@ -44,7 +44,7 @@ jobs:
                   go-version-file: './sdk/highlight-go/go.mod'
                   cache-dependency-path: './sdk/highlight-go/go.sum'
             - name: Run linter
-              uses: golangci/golangci-lint-action@v6.4.1
+              uses: golangci/golangci-lint-action@818ec4d51a1feacefc42ff1b3ec25d4962690f39 # v6.4.1
               with:
                   args: -v --config ./.golangci.yaml
                   working-directory: sdk/highlight-go
