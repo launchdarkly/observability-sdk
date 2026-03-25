@@ -75,8 +75,6 @@ module LaunchDarklyObservability
 
       return true if message.nil?
 
-      @local_logger&.add(severity, message, progname)
-
       attributes = {}
       if message.is_a?(Hash)
         attributes = message.each_with_object({}) { |(k, v), h| h[k.to_s] = v.to_s }
@@ -93,6 +91,12 @@ module LaunchDarklyObservability
         context: OpenTelemetry::Context.current,
         attributes: attributes
       )
+
+      begin
+        @local_logger&.add(severity, message, progname)
+      rescue StandardError
+        # Local IO failures must not propagate — OTel export already succeeded.
+      end
 
       true
     rescue StandardError

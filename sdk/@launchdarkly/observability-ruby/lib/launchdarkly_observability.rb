@@ -118,13 +118,7 @@ module LaunchDarklyObservability
       span = OpenTelemetry::Trace.current_span
       return unless span
 
-      extra_attributes = {}
-      structured_stacktrace = SourceContext.build_structured_stacktrace(exception)
-      if structured_stacktrace
-        extra_attributes['exception.structured_stacktrace'] = structured_stacktrace.to_json
-      end
-
-      span.record_exception(exception, attributes: extra_attributes.merge(attributes))
+      span.record_exception(exception, attributes: SourceContext.exception_attributes(exception).merge(attributes))
       span.status = OpenTelemetry::Trace::Status.error(exception.message)
     end
 
