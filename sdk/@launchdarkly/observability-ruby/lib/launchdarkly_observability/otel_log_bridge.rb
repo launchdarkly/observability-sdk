@@ -69,6 +69,7 @@ module LaunchDarklyObservability
           message = yield
         else
           message = progname
+          progname = nil
         end
       end
 

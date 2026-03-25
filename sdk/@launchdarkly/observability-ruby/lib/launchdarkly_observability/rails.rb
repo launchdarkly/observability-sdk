@@ -50,9 +50,7 @@ module LaunchDarklyObservability
         end
 
         def otel_logger_provider_available?
-          defined?(OpenTelemetry::SDK::Logs::LoggerProvider) &&
-            OpenTelemetry.respond_to?(:logger_provider) &&
-            OpenTelemetry.logger_provider.is_a?(OpenTelemetry::SDK::Logs::LoggerProvider)
+          LaunchDarklyObservability.send(:otel_logger_provider_available?)
         end
       end
     end
