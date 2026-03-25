@@ -1,5 +1,5 @@
 import * as api from '@opentelemetry/api'
-import { Context, Span } from '@opentelemetry/api'
+import { Attributes, Context, Span } from '@opentelemetry/api'
 import {
 	CompositePropagator,
 	W3CBaggagePropagator,
@@ -59,7 +59,7 @@ import version from '../../version'
 
 import { ExportSampler } from './sampling/ExportSampler'
 import { getPersistentSessionSecureID } from '../utils/sessionStorage/highlightSession'
-import type { EventName } from '@opentelemetry/instrumentation-user-interaction'
+import { ProductAnalyticsEvents } from 'client/types/observe'
 
 export type Callback = (span?: Span) => any
 
@@ -74,9 +74,10 @@ export type BrowserTracingConfig = {
 	serviceVersion?: string
 	tracingOrigins?: boolean | (string | RegExp)[]
 	urlBlocklist?: string[]
-	eventNames?: EventName[]
 	instrumentations?: OtelInstrumentatonOptions
 	getIntegrations?: () => IntegrationClient[]
+	productAnalyticsEvents?: ProductAnalyticsEvents
+	getLDContextKeyAttributes?: () => Attributes | undefined
 }
 
 let providers: {
@@ -205,7 +206,8 @@ export const setupBrowserTracing = (
 	if (userInteractionConfig !== false) {
 		instrumentations.push(
 			new UserInteractionInstrumentation({
-				eventNames: config.eventNames,
+				productAnalyticsEvents: config.productAnalyticsEvents,
+				getLDContextKeyAttributes: config.getLDContextKeyAttributes,
 			}),
 		)
 	}

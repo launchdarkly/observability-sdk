@@ -4,7 +4,6 @@ import type {
 	OtelOptions,
 } from './client'
 import type { CommonOptions } from './types'
-import type { EventName } from '@opentelemetry/instrumentation-user-interaction'
 
 export type ObserveOptions = CommonOptions & {
 	/**
@@ -61,10 +60,30 @@ export type ObserveOptions = CommonOptions & {
 		 * OTLP HTTP endpoint for OpenTelemetry tracing.
 		 */
 		otlpEndpoint?: string
-		/**
-		 * User interaction instrumentation event names to record.
-		 * Defaults to 'click', 'input', 'submit' window events.
-		 */
-		eventNames?: EventName[]
 	}
+	/**
+	 * Specifies whether to record product analytics events.
+	 * @default true
+	 */
+	productAnalytics?: boolean | ProductAnalyticsEvents
+}
+
+export type ProductAnalyticsEvents = {
+	/**
+	 * Specifies whether to record product analytics for clicks.
+	 * Requires the use of the @opentelemetry/instrumentation-user-interaction instrumentation.
+	 * @default true
+	 */
+	clicks?: boolean
+	/**
+	 * Specifies whether to record product analytics for page views.
+	 * Requires the use of the @opentelemetry/instrumentation-document-load instrumentation.
+	 * @default true
+	 */
+	pageViews?: boolean
+	/**
+	 * Specifies whether to record product analytics for custom events.
+	 * @default true
+	 */
+	trackEvents?: boolean
 }
