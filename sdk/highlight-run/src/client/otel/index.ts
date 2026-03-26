@@ -49,6 +49,7 @@ import {
 	TraceExporterConfig,
 } from './exporter'
 import { UserInteractionInstrumentation } from './user-interaction'
+import { LocationChangeInstrumentation } from './location-change'
 import {
 	MeterProvider,
 	PeriodicExportingMetricReader,
@@ -207,6 +208,14 @@ export const setupBrowserTracing = (
 		instrumentations.push(
 			new UserInteractionInstrumentation({
 				productAnalyticsEvents: config.productAnalyticsEvents,
+				getLDContextKeyAttributes: config.getLDContextKeyAttributes,
+			}),
+		)
+	}
+
+	if (config.productAnalyticsEvents?.pageViews !== false) {
+		instrumentations.push(
+			new LocationChangeInstrumentation({
 				getLDContextKeyAttributes: config.getLDContextKeyAttributes,
 			}),
 		)
