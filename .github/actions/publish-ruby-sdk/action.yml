@@ -13,6 +13,10 @@ inputs:
     aws-role-arn:
         description: 'AWS role ARN for accessing secrets'
         required: true
+    dry-run:
+        description: 'Is this a dry run. If so no package will be published.'
+        type: boolean
+        required: true
     rubygems-token-parameter:
         description: 'SSM parameter path for RubyGems API key'
         required: false
@@ -55,6 +59,7 @@ runs:
               echo "package-hashes=$(sha256sum *.gem | base64 -w0)" >> "$GITHUB_OUTPUT"
 
         - name: Publish gem to RubyGems
+          if: ${{ inputs.dry-run == 'false' }}
           shell: bash
           working-directory: ${{ inputs.workspace-path }}
           run: |

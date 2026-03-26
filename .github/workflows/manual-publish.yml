@@ -211,6 +211,7 @@ jobs:
               with:
                   workspace-path: sdk/@launchdarkly/observability-ruby
                   aws-role-arn: ${{ vars.AWS_ROLE_ARN }}
+                  dry-run: ${{ inputs.dry-run }}
 
     publish-ruby-sdk-provenance:
         needs: ['publish-ruby-sdk']
