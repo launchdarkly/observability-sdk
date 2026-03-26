@@ -9,6 +9,9 @@ on:
             - 'sdk/@launchdarkly/observability-ruby/**'
             - '.github/workflows/ruby-plugin.yml'
 
+permissions:
+    contents: read
+
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 jobs:
     build:
