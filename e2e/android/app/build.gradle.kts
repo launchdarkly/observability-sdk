@@ -90,7 +90,7 @@ dependencies {
     // Uncomment to use the publicly released version (note this may be behind branch/main)
     // implementation("com.launchdarkly:launchdarkly-observability-android:0.2.0")
 
-    implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.10.0")
+    implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.11.0")
 
     implementation("io.opentelemetry:opentelemetry-api:1.51.0")
     implementation("io.opentelemetry:opentelemetry-sdk:1.51.0")
@@ -119,6 +119,9 @@ dependencies {
     // isComposeAvailable runtime check still returns false in the noCompose variant.
     implementation(platform(libs.androidx.compose.bom))
     implementation("androidx.compose.runtime:runtime")
+
+    // Serialization runtime (used by benchmark to encode replay events)
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
 
     // Compose UI dependencies -- only for the compose flavor
     "composeImplementation"(libs.androidx.activity.compose)

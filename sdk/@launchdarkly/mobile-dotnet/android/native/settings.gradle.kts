@@ -8,13 +8,14 @@ pluginManagement {
         id("com.android.library") version "8.13.2"
     }
 }
+
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
+        mavenLocal()
         google()
         mavenCentral()
 
-        // Add repository here, e.g.
         maven {
             url = uri("https://jitpack.io")
         }

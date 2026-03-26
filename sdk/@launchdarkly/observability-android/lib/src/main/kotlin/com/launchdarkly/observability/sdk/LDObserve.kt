@@ -4,6 +4,7 @@ import com.launchdarkly.observability.client.ObservabilityClient
 import com.launchdarkly.observability.client.ObservabilityContext
 import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.observability.interfaces.Observe
+import com.launchdarkly.observability.plugin.ObservabilityHookProxy
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Severity
 import io.opentelemetry.api.trace.Span
@@ -79,6 +80,13 @@ class LDObserve(private val client: Observe) : Observe {
          */
         @Volatile
         var context: ObservabilityContext? = null
+            internal set
+
+        /**
+         * Hook proxy for the C# / MAUI bridge. Set by the Observability plugin during getHooks().
+         */
+        @Volatile
+        var hookProxy: ObservabilityHookProxy? = null
             internal set
 
         fun init(client: ObservabilityClient) {

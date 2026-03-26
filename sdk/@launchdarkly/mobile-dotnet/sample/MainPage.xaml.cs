@@ -56,8 +56,9 @@ public partial class MainPage : ContentPage
 		var userContext = Context.Builder("single-userkey")
 			.Name("Bob Bobberson")
 			.Build();
+         _ = Task.Run(async () => await LdClient.Instance.IdentifyAsync(userContext));
 
-		LdClient.Instance.Identify(userContext, TimeSpan.FromSeconds(5));
+		//await LdClient.Instance.IdentifyAsync(userContext);
 		Console.WriteLine("Identified as User");
 	}
 

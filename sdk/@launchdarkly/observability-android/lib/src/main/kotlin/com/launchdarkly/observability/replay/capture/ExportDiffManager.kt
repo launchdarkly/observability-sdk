@@ -13,10 +13,14 @@ class ExportDiffManager(
     private val currentImages = mutableListOf<ExportFrame.RemoveImage>()
     private val currentImagesIndex = mutableMapOf<ImageSignature, Int>()
     private val lock = Any()
-    private val format = ExportFrame.ExportFormat.Webp(quality = 30)
+    private val format = ExportFrame.DEFAULT_EXPORT_FORMAT
+
     private var keyFrameId = 0
 
-    fun createCaptureEvent(rawFrame: ImageCaptureService.RawFrame, session: String): ExportFrame? {
+    fun createCaptureEvent(
+        rawFrame: ImageCaptureService.RawFrame,
+        session: String
+    ): ExportFrame? {
         synchronized(lock) {
             val tiledFrame = tileDiffManager.computeTiledFrame(rawFrame) ?: return null
             return createCaptureEventInternal(tiledFrame, session)
@@ -94,7 +98,6 @@ class ExportDiffManager(
                 removeImages = removes,
                 originalSize = tiledFrame.originalSize,
                 scale = tiledFrame.scale,
-                format = format,
                 timestamp = tiledFrame.timestamp,
                 orientation = tiledFrame.orientation,
                 isKeyframe = tiledFrame.isKeyframe,
