@@ -175,4 +175,28 @@ class OtelLogBridgeTest < Minitest::Test
     record = @log_exporter.emitted_log_records.first
     assert_equal({ 'action' => 'test', 'status' => 'ok' }, record.attributes)
   end
+
+  def test_otel_failure_does_not_suppress_local_io
+    io = StringIO.new
+    bridge = LaunchDarklyObservability::OtelLogBridge.new(@logger_provider, io: io)
+
+    bridge.instance_variable_get(:@otel_logger).stub(:on_emit, ->(*_) { raise 'boom' }) do
+      bridge.info 'must reach io'
+    end
+
+    assert_match(/must reach io/, io.string)
+  end
+
+  def test_local_io_failure_does_not_suppress_otel
+    io = StringIO.new
+    bridge = LaunchDarklyObservability::OtelLogBridge.new(@logger_provider, io: io)
+
+    bridge.instance_variable_get(:@local_logger).stub(:add, ->(*_) { raise 'disk full' }) do
+      bridge.info 'must reach otel'
+    end
+
+    records = @log_exporter.emitted_log_records
+    assert_equal 1, records.length
+    assert_equal 'must reach otel', records.first.body
+  end
 end

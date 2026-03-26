@@ -83,23 +83,25 @@ module LaunchDarklyObservability
         body = message.to_s
       end
 
-      @otel_logger.on_emit(
-        body: body,
-        severity_number: SEVERITY_NUMBER.fetch(severity, 0),
-        severity_text: SEVERITY_TEXT.fetch(severity, 'UNKNOWN'),
-        timestamp: Time.now,
-        context: OpenTelemetry::Context.current,
-        attributes: attributes
-      )
+      begin
+        @otel_logger.on_emit(
+          body: body,
+          severity_number: SEVERITY_NUMBER.fetch(severity, 0),
+          severity_text: SEVERITY_TEXT.fetch(severity, 'UNKNOWN'),
+          timestamp: Time.now,
+          context: OpenTelemetry::Context.current,
+          attributes: attributes
+        )
+      rescue StandardError
+        # OTel export failures must not suppress local IO output.
+      end
 
       begin
         @local_logger&.add(severity, message, progname)
       rescue StandardError
-        # Local IO failures must not propagate — OTel export already succeeded.
+        # Local IO failures must not propagate.
       end
 
-      true
-    rescue StandardError
       true
     end
   end
