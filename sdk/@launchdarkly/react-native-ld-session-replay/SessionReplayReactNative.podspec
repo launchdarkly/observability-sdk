@@ -16,17 +16,7 @@ Pod::Spec.new do |s|
   s.source_files = "ios/**/*.{h,m,mm,swift,cpp}"
   s.private_header_files = "ios/**/*.h"
 
-  # --- Swift Package Manager Dependency ---
-  # This helper adds the SPM package to the generated Pods project
-  spm_dependency(
-    s, 
-    url: 'https://github.com/launchdarkly/swift-launchdarkly-observability', 
-    requirement: { 
-      kind: 'upToNextMajorVersion', 
-      minimumVersion: '0.18.1'
-    }, 
-    products: ['LaunchDarklyObservability', 'LaunchDarklySessionReplay'] 
-  )
+  s.dependency 'LaunchDarklySessionReplay', '~> 0.26.2'
 
   install_modules_dependencies(s)
 end
