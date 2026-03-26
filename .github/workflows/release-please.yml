@@ -158,6 +158,7 @@ jobs:
               with:
                   workspace-path: sdk/@launchdarkly/observability-ruby
                   aws-role-arn: ${{ vars.AWS_ROLE_ARN }}
+                  dry-run: false
 
     release-ruby-provenance:
         needs: ['release-package', 'release-ruby-plugin']
