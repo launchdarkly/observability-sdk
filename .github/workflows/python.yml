@@ -40,7 +40,7 @@ jobs:
               run: poetry run pytest --cov=highlight_io --cov-branch --cov-report xml
             - name: Get Cover
               if: github.event_name == 'pull_request'
-              uses: orgoro/coverage@v3
+              uses: orgoro/coverage@d77626a5fa35d39123e86d6c62907fabe2491496 # v3
               with:
                   coverageFile: ./sdk/highlight-py/coverage.xml
                   token: ${{ secrets.GITHUB_TOKEN }}
@@ -53,7 +53,7 @@ jobs:
                   python -m piptools compile --upgrade pyproject.toml;
             - name: Publish
               if: github.ref == 'refs/heads/main'
-              uses: pypa/gh-action-pypi-publish@release/v1
+              uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # release/v1
               with:
                   packages-dir: ./sdk/highlight-py/dist/
                   skip-existing: true
