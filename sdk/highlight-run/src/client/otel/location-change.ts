@@ -5,8 +5,7 @@ import {
 } from '@opentelemetry/instrumentation'
 import { Attributes } from '@opentelemetry/api'
 import * as SemanticAttributes from '@opentelemetry/semantic-conventions'
-
-export const PAGE_VIEW_SPAN_NAME = 'page_view'
+import { LD_PAGE_VIEW_SPAN_NAME } from 'integrations/launchdarkly'
 
 export type LocationChangeConfig = InstrumentationConfig & {
 	getLDContextKeyAttributes?: () => Attributes | undefined
@@ -41,7 +40,7 @@ export class LocationChangeInstrumentation extends InstrumentationBase {
 
 	private _createPageViewSpan(previousUrl: string, currentUrl: string) {
 		try {
-			const span = this.tracer.startSpan(PAGE_VIEW_SPAN_NAME, {
+			const span = this.tracer.startSpan(LD_PAGE_VIEW_SPAN_NAME, {
 				attributes: {
 					[SemanticAttributes.ATTR_URL_FULL]: currentUrl,
 					'page_view.previous_url': previousUrl,

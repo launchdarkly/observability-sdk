@@ -51,6 +51,7 @@ export const PRODUCT_ANALYTICS_CONTEXT_ATTR = `${PRODUCT_ANALYTICS_SCOPE}.contex
 export const LD_INITIALIZE_EVENT = '$ld:telemetry:session:init'
 export const LD_TRACK_EVENT = '$ld:telemetry:track'
 export const LD_TRACK_SPAN_NAME = 'launchdarkly.track'
+export const LD_PAGE_VIEW_SPAN_NAME = 'page_view'
 
 export const LD_METRIC_NAME_DOCUMENT_LOAD = 'document_load'
 
