@@ -1,5 +1,12 @@
 # highlight.run
 
+## [9.28.0](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-9.27.1...highlight.run-9.28.0) (2026-03-26)
+
+
+### Features
+
+* **@launchdarkly/session-replay-react-native:** use cocoapods for native session replay ([#434](https://github.com/launchdarkly/observability-sdk/issues/434)) ([41988e1](https://github.com/launchdarkly/observability-sdk/commit/41988e196b02901964efdad0e25f892d5ba55fc4))
+
 ## [9.27.1](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-9.27.0...highlight.run-9.27.1) (2026-02-26)
 
 

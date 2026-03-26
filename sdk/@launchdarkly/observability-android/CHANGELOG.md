@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.32.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.31.0...launchdarkly-observability-android-0.32.0) (2026-03-26)
+
+
+### Features
+
+* **@launchdarkly/session-replay-react-native:** use cocoapods for native session replay ([#434](https://github.com/launchdarkly/observability-sdk/issues/434)) ([41988e1](https://github.com/launchdarkly/observability-sdk/commit/41988e196b02901964efdad0e25f892d5ba55fc4))
+* MAUI integration hooks and refactor for 0.4.1 nuget ([#425](https://github.com/launchdarkly/observability-sdk/issues/425)) ([33f6d6c](https://github.com/launchdarkly/observability-sdk/commit/33f6d6c29639520e6c8b303047f4659d1016dc3d))
+
 ## [0.31.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.30.0...launchdarkly-observability-android-0.31.0) (2026-03-09)
 
 

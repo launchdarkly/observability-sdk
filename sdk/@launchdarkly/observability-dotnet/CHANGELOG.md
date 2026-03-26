@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-dotnet-1.0.0...launchdarkly-observability-dotnet-1.1.0) (2026-03-26)
+
+
+### Features
+
+* **@launchdarkly/session-replay-react-native:** use cocoapods for native session replay ([#434](https://github.com/launchdarkly/observability-sdk/issues/434)) ([41988e1](https://github.com/launchdarkly/observability-sdk/commit/41988e196b02901964efdad0e25f892d5ba55fc4))
+
 ## [1.0.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-dotnet-0.3.0...launchdarkly-observability-dotnet-1.0.0) (2026-01-28)
 
 This release marks the 1.0.0 stable version of the LaunchDarkly Observability .NET SDK.
