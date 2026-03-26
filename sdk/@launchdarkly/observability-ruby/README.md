@@ -382,10 +382,18 @@ The module-level methods work in any Ruby application:
 require 'sinatra'
 require 'launchdarkly_observability'
 
+# Create a logger that writes to stdout AND exports via OTLP.
+# Must be called after LDClient.new so the OTel logger provider is ready.
+$logger = LaunchDarklyObservability.logger
+
+$logger.info 'App booted'                    # stdout + OTLP log record
+$logger.info(user: 'alice', action: 'login')  # hash keys become OTel attributes
+
 get '/users/:id' do
   LaunchDarklyObservability.in_span('fetch-user', attributes: { 'user.id' => params[:id] }) do |span|
     user = User.find(params[:id])
     span.set_attribute('user.name', user.name)
+    $logger.info "Fetched user #{user.name}"  # correlated with the active span
     user.to_json
   end
 end
@@ -429,13 +437,23 @@ logger.info "Processing request: #{trace_id}"
 
 ### Logging with Trace Context
 
-In Rails applications, `Rails.logger` is automatically bridged to the OpenTelemetry
+In **Rails** applications, `Rails.logger` is automatically bridged to the OpenTelemetry
 Logs pipeline. Every log entry is exported as an OTLP LogRecord with the active
 trace and span IDs attached for correlation.
 
 ```ruby
 Rails.logger.info "Processing flag evaluation"  # Automatically includes trace_id, span_id
 Rails.logger.warn "Slow query detected"         # Same correlation, different severity
+```
+
+In **non-Rails** applications (Sinatra, Grape, plain Ruby), call
+`LaunchDarklyObservability.logger` after the LaunchDarkly client is initialized.
+The returned logger writes to stdout (or any IO you pass) and exports every
+entry as an OTLP LogRecord with trace/span correlation.
+
+```ruby
+$logger = LaunchDarklyObservability.logger           # defaults to $stdout
+$logger = LaunchDarklyObservability.logger($stderr)   # or any IO
 ```
 
 To disable log export while keeping traces, pass `enable_logs: false`:

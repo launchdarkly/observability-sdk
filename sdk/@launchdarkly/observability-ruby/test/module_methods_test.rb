@@ -136,4 +136,46 @@ class ModuleMethodsTest < Minitest::Test
     spans = @exporter.finished_spans
     assert_equal 0, spans.length
   end
+
+  # --- .logger tests ---
+
+  def test_logger_returns_otel_bridge_when_provider_available
+    require 'opentelemetry-logs-sdk'
+
+    resource = OpenTelemetry::SDK::Resources::Resource.create({})
+    provider = OpenTelemetry::SDK::Logs::LoggerProvider.new(resource: resource)
+    OpenTelemetry.logger_provider = provider
+
+    logger = LaunchDarklyObservability.logger(StringIO.new)
+    assert_instance_of LaunchDarklyObservability::OtelLogBridge, logger
+  ensure
+    OpenTelemetry.logger_provider = nil if OpenTelemetry.respond_to?(:logger_provider=)
+  end
+
+  def test_logger_returns_plain_logger_when_provider_unavailable
+    original = OpenTelemetry.logger_provider if OpenTelemetry.respond_to?(:logger_provider)
+    OpenTelemetry.logger_provider = nil if OpenTelemetry.respond_to?(:logger_provider=)
+
+    logger = LaunchDarklyObservability.logger(StringIO.new)
+    assert_instance_of ::Logger, logger
+    refute_instance_of LaunchDarklyObservability::OtelLogBridge, logger
+  ensure
+    OpenTelemetry.logger_provider = original if OpenTelemetry.respond_to?(:logger_provider=)
+  end
+
+  def test_logger_writes_to_provided_io
+    require 'opentelemetry-logs-sdk'
+
+    resource = OpenTelemetry::SDK::Resources::Resource.create({})
+    provider = OpenTelemetry::SDK::Logs::LoggerProvider.new(resource: resource)
+    OpenTelemetry.logger_provider = provider
+
+    io = StringIO.new
+    logger = LaunchDarklyObservability.logger(io)
+    logger.info 'hello from test'
+
+    assert_match(/hello from test/, io.string)
+  ensure
+    OpenTelemetry.logger_provider = nil if OpenTelemetry.respond_to?(:logger_provider=)
+  end
 end

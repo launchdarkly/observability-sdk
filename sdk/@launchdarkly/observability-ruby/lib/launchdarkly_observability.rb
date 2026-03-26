@@ -118,14 +118,29 @@ module LaunchDarklyObservability
       span = OpenTelemetry::Trace.current_span
       return unless span
 
-      extra_attributes = {}
-      structured_stacktrace = SourceContext.build_structured_stacktrace(exception)
-      if structured_stacktrace
-        extra_attributes['exception.structured_stacktrace'] = structured_stacktrace.to_json
-      end
-
-      span.record_exception(exception, attributes: extra_attributes.merge(attributes))
+      span.record_exception(exception, attributes: SourceContext.exception_attributes(exception).merge(attributes))
       span.status = OpenTelemetry::Trace::Status.error(exception.message)
+    end
+
+    # Create a Logger that writes to both a local IO and the OTel Logs pipeline.
+    #
+    # Use this in non-Rails applications (Sinatra, Grape, plain Ruby) to get
+    # log export with trace correlation out of the box. Must be called after
+    # the Plugin has been registered (i.e. after LDClient.new).
+    #
+    # @param output [IO] Local IO destination (default: $stdout)
+    # @return [OtelLogBridge, Logger] An OTel-bridged logger, or a plain
+    #   Logger if the OTel logger provider is not yet available.
+    #
+    # @example Sinatra
+    #   $logger = LaunchDarklyObservability.logger
+    #   $logger.info 'This goes to stdout AND is exported as an OTLP log record'
+    def logger(output = $stdout)
+      if otel_logger_provider_available?
+        OtelLogBridge.new(OpenTelemetry.logger_provider, io: output)
+      else
+        ::Logger.new(output)
+      end
     end
 
     # Get the current trace ID
@@ -153,6 +168,14 @@ module LaunchDarklyObservability
     def shutdown
       @instance&.shutdown
       @instance = nil
+    end
+
+    private
+
+    def otel_logger_provider_available?
+      defined?(OpenTelemetry::SDK::Logs::LoggerProvider) &&
+        OpenTelemetry.respond_to?(:logger_provider) &&
+        OpenTelemetry.logger_provider.is_a?(OpenTelemetry::SDK::Logs::LoggerProvider)
     end
   end
 end

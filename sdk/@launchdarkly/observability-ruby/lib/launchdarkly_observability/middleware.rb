@@ -50,7 +50,7 @@ module LaunchDarklyObservability
             status, headers, body = @app.call(env)
           rescue StandardError => e
             app_error = e
-            span.record_exception(e)
+            span.record_exception(e, attributes: SourceContext.exception_attributes(e))
             span.status = OpenTelemetry::Trace::Status.error(e.message)
             raise
           end
