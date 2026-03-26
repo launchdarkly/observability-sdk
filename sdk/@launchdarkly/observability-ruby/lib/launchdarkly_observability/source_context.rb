@@ -33,6 +33,19 @@ module LaunchDarklyObservability
       nil
     end
 
+    # Build a Hash of span attributes for an exception's structured stacktrace.
+    # Returns an empty hash when no stacktrace can be built, so the result is
+    # safe to merge directly into an attributes hash.
+    #
+    # @param exception [Exception]
+    # @return [Hash]
+    def exception_attributes(exception)
+      stacktrace = build_structured_stacktrace(exception)
+      return {} unless stacktrace
+
+      { 'exception.structured_stacktrace' => stacktrace.to_json }
+    end
+
     def read_source_context(file_name, line_number)
       return nil unless file_name && line_number
       return nil unless File.exist?(file_name) && File.readable?(file_name)
