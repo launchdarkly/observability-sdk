@@ -11,6 +11,7 @@ import com.launchdarkly.observability.replay.IncrementalSource
 import com.launchdarkly.observability.replay.InteractionEvent
 import com.launchdarkly.observability.replay.NodeType
 import com.launchdarkly.observability.replay.Removal
+import com.launchdarkly.observability.replay.transport.EventQueueItem
 import com.launchdarkly.observability.replay.RRWebCustomDataTag
 import com.launchdarkly.observability.replay.RRWebIncrementalSource
 import com.launchdarkly.observability.replay.RRWebMouseInteraction
@@ -29,7 +30,8 @@ import kotlinx.serialization.json.putJsonObject
  * Encapsulates generation state like sid sequencing and canvas size accounting.
  */
 class RRWebEventGenerator(
-    private val canvasDrawEntourage: Int
+    private val canvasDrawEntourage: Int,
+    private val title: String
 ) {
     companion object {
         private const val RRWEB_DOCUMENT_PADDING = 11
@@ -406,6 +408,56 @@ class RRWebEventGenerator(
         return Event(
             type = EventType.CUSTOM,
             timestamp = identify.timestamp,
+            sid = nextSid(),
+            data = EventDataUnion.CustomEventDataWrapper(customData)
+        )
+    }
+
+    /**
+     * Generates a "Reload" custom event and a sequence of "wake-up" interaction events.
+     * Used by [SessionReplayExporter] to re-trigger player playback after session resumption.
+     */
+    fun generateWakeUpEvents(timestamp: Long): List<Event> {
+        val imageId = imageNodeId ?: return emptyList()
+
+        return listOf(
+            generateReloadEvent(timestamp),
+            // artificial mouse down/up to wake up player
+            generateMouseInteractionEvent(EventType.INCREMENTAL_SNAPSHOT, RRWebMouseInteraction.MOUSE_DOWN, imageId, timestamp),
+            generateMouseInteractionEvent(EventType.INCREMENTAL_SNAPSHOT, RRWebMouseInteraction.MOUSE_UP, imageId, timestamp)
+        )
+    }
+
+    private fun generateReloadEvent(timestamp: Long): Event {
+        val customData = buildJsonObject {
+            put("tag", JsonPrimitive(RRWebCustomDataTag.RELOAD.wireValue))
+            put("payload", JsonPrimitive(title))
+        }
+        return Event(
+            type = EventType.CUSTOM,
+            timestamp = timestamp,
+            sid = nextSid(),
+            data = EventDataUnion.CustomEventDataWrapper(customData)
+        )
+    }
+
+    private fun generateMouseInteractionEvent(
+        eventType: EventType,
+        interactionType: RRWebMouseInteraction,
+        id: Int,
+        timestamp: Long
+    ): Event {
+        val customData = buildJsonObject {
+            put("source", RRWebIncrementalSource.MOUSE_INTERACTION.code)
+            putJsonArray("texts") {}
+            put("type", interactionType.code)
+            put("id", id)
+            put("x", RRWEB_DOCUMENT_PADDING)
+            put("y", RRWEB_DOCUMENT_PADDING)
+        }
+        return Event(
+            type = eventType,
+            timestamp = timestamp,
             sid = nextSid(),
             data = EventDataUnion.CustomEventDataWrapper(customData)
         )
