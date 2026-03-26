@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.3.0](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.2.2...session-replay-react-native-0.3.0) (2026-03-26)
+
+
+### Features
+
+* **@launchdarkly/session-replay-react-native:** use cocoapods for native session replay ([#434](https://github.com/launchdarkly/observability-sdk/issues/434)) ([41988e1](https://github.com/launchdarkly/observability-sdk/commit/41988e196b02901964efdad0e25f892d5ba55fc4))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @launchdarkly/observability-react-native bumped to 0.8.0
+
 ## [0.2.2](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.2.1...session-replay-react-native-0.2.2) (2026-03-05)
 
 
