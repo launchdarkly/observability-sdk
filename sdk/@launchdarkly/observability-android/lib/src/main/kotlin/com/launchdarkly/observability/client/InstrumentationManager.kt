@@ -75,7 +75,7 @@ class InstrumentationManager(
     private val observabilityOptions: ObservabilityOptions,
 ) {
     private val otelRUM: OpenTelemetryRum
-    lateinit var sessionManager: SessionManager
+    var sessionManager: SessionManager? = null
         private set
     private var otelMeter: Meter
     private var otelLogger: Logger
@@ -137,7 +137,10 @@ class InstrumentationManager(
         }
 
         otelRUM = rumBuilder.build()
-        sessionManager = capturedSessionManager!!
+        sessionManager = capturedSessionManager
+        if (sessionManager == null) {
+            logger.warn("SessionManager was not captured during OpenTelemetryRum.build(); session-dependent features will be unavailable.")
+        }
         loadSamplingConfigAsync()
 
         otelMeter = otelRUM.openTelemetry.meterProvider.get(INSTRUMENTATION_SCOPE_NAME)

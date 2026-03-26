@@ -71,6 +71,7 @@ class SessionReplayExporter(
             val lastCaptureSnapshot = lastCaptureState
             val payloadIdSnapshot = payloadIdCounter
             val pushedCanvasSnapshot = pushedCanvasSize
+            val shouldWakeUpSnapshot = shouldWakeUpSession
             val generatorSnapshot = eventGenerator.getState()
 
             try {
@@ -131,6 +132,7 @@ class SessionReplayExporter(
                 lastCaptureState = lastCaptureSnapshot
                 payloadIdCounter = payloadIdSnapshot
                 pushedCanvasSize = pushedCanvasSnapshot
+                shouldWakeUpSession = shouldWakeUpSnapshot
                 eventGenerator.restoreState(generatorSnapshot)
                 throw e
             }

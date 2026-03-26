@@ -6,6 +6,7 @@ import com.launchdarkly.observability.api.ObservabilityOptions
 import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.observability.interfaces.Observe
 import com.launchdarkly.observability.plugin.ObservabilityHookExporter
+import io.opentelemetry.android.session.SessionManager
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Severity
 import io.opentelemetry.api.trace.Span
@@ -50,7 +51,7 @@ class ObservabilityClient : Observe {
         )
     }
 
-    val sessionManager get() = instrumentationManager.sessionManager
+    val sessionManager: SessionManager? get() = instrumentationManager.sessionManager
 
     internal constructor(
         instrumentationManager: InstrumentationManager
