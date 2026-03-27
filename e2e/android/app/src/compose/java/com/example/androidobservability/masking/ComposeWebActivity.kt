@@ -20,7 +20,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -48,42 +47,46 @@ class ComposeWebActivity : ComponentActivity() {
                     val customWebView = remember(context) { CustomWebView(context) }
                     val geckoView = remember(context) { GeckoView(context) }
                     val customGeckoView = remember(context) { CustomGeckoView(context) }
-
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(innerPadding)
-                            .verticalScroll(rememberScrollState())
                     ) {
-                        Text(
-                            text = "android.webkit.WebView",
-                            fontSize = 16.sp,
+                        Column(
                             modifier = Modifier
-                                .background(Color.Yellow)
-                                .align(Alignment.CenterHorizontally)
-                        )
-                        WebViewItem(
-                            url = "https://www.google.com",
-                            webView = webView,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(450.dp)
-                        )
+                                .weight(1f)
+                                .verticalScroll(rememberScrollState())
+                        ) {
+                            Text(
+                                text = "android.webkit.WebView",
+                                fontSize = 16.sp,
+                                modifier = Modifier
+                                    .background(Color.Yellow)
+                                    .align(Alignment.CenterHorizontally)
+                            )
+                            WebViewItem(
+                                url = "https://www.google.com",
+                                webView = webView,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(450.dp)
+                            )
 
-                        Text(
-                            text = "CustomWebView",
-                            fontSize = 16.sp,
-                            modifier = Modifier
-                                .background(Color.Yellow)
-                                .align(Alignment.CenterHorizontally)
-                        )
-                        WebViewItem(
-                            url = "https://www.google.com",
-                            webView = customWebView,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(450.dp)
-                        )
+                            Text(
+                                text = "CustomWebView",
+                                fontSize = 16.sp,
+                                modifier = Modifier
+                                    .background(Color.Yellow)
+                                    .align(Alignment.CenterHorizontally)
+                            )
+                            WebViewItem(
+                                url = "https://www.google.com",
+                                webView = customWebView,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(450.dp)
+                            )
+                        }
 
                         Text(
                             text = "org.mozilla.geckoview.GeckoView",
@@ -98,7 +101,7 @@ class ComposeWebActivity : ComponentActivity() {
                             geckoView = geckoView,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(450.dp)
+                                .height(200.dp)
                         )
 
                         Text(
@@ -114,7 +117,7 @@ class ComposeWebActivity : ComponentActivity() {
                             geckoView = customGeckoView,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(450.dp)
+                                .height(200.dp)
                         )
                     }
                 }
@@ -170,18 +173,17 @@ fun GeckoViewItem(url: String, geckoView: GeckoView, modifier: Modifier = Modifi
         }
     }
 
-    key(geckoView) {
-        AndroidView(
-            modifier = modifier,
-            factory = { _ ->
-                geckoView.apply {
-                    setSession(session)
-                }
+    AndroidView(
+        modifier = modifier,
+        factory = { _ ->
+            geckoView.apply {
+                setSession(session)
             }
-        )
-    }
+        }
+    )
 
     LaunchedEffect(url) {
         session.loadUri(url)
     }
 }
+
