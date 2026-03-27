@@ -140,7 +140,7 @@ module LaunchDarklyObservability
       event_attributes[FEATURE_FLAG_RESULT_VALUE] = serialize_value(detail.value)
 
       reason = detail.reason
-      if reason&.respond_to?(:kind)
+      if reason.respond_to?(:kind)
         event_attributes[FEATURE_FLAG_RESULT_REASON_KIND] = reason.kind.to_s
 
         add_reason_event_details(event_attributes, reason)
@@ -171,7 +171,7 @@ module LaunchDarklyObservability
 
     def handle_evaluation_error(span, detail)
       reason = detail.reason
-      return unless reason&.respond_to?(:kind) && reason.kind == :ERROR
+      return unless reason.respond_to?(:kind) && reason.kind == :ERROR
 
       error_kind = reason.respond_to?(:error_kind) ? reason.error_kind.to_s : 'general'
 

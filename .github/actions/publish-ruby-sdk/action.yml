@@ -1,0 +1,70 @@
+name: 'Publish Ruby SDK'
+description: 'Build and publish Ruby SDK gem to RubyGems'
+
+inputs:
+    workspace-path:
+        description: 'Path to the Ruby SDK workspace'
+        required: true
+        default: 'sdk/@launchdarkly/observability-ruby'
+    ruby-version:
+        description: 'Ruby version to use'
+        required: false
+        default: '3.3'
+    aws-role-arn:
+        description: 'AWS role ARN for accessing secrets'
+        required: true
+    dry-run:
+        description: 'Is this a dry run. If so no package will be published.'
+        type: boolean
+        required: true
+    rubygems-token-parameter:
+        description: 'SSM parameter path for RubyGems API key'
+        required: false
+        default: '/production/common/releasing/rubygems/api_key = GEM_HOST_API_KEY'
+
+outputs:
+    package-hashes:
+        description: 'Base64 encoded SHA256 hashes of published packages'
+        value: ${{ steps.package-hashes.outputs.package-hashes }}
+
+runs:
+    using: 'composite'
+    steps:
+        - name: Checkout
+          uses: actions/checkout@v4
+
+        - name: Install Ruby
+          uses: ruby/setup-ruby@v1
+          with:
+              ruby-version: ${{ inputs.ruby-version }}
+              bundler-cache: true
+              working-directory: ${{ inputs.workspace-path }}
+
+        - name: Get RubyGems API key
+          uses: launchdarkly/gh-actions/actions/release-secrets@release-secrets-v1.2.0
+          with:
+              aws_assume_role: ${{ inputs.aws-role-arn }}
+              ssm_parameter_pairs: ${{ inputs.rubygems-token-parameter }}
+
+        - name: Build gem
+          shell: bash
+          working-directory: ${{ inputs.workspace-path }}
+          run: gem build *.gemspec
+
+        - name: Hash build files for provenance
+          id: package-hashes
+          shell: bash
+          working-directory: ${{ inputs.workspace-path }}
+          run: |
+              echo "package-hashes=$(sha256sum *.gem | base64 -w0)" >> "$GITHUB_OUTPUT"
+
+        - name: Publish gem to RubyGems
+          if: ${{ inputs.dry-run == 'false' }}
+          shell: bash
+          working-directory: ${{ inputs.workspace-path }}
+          run: |
+              mkdir -p $HOME/.gem
+              touch $HOME/.gem/credentials
+              chmod 0600 $HOME/.gem/credentials
+              printf -- "---\n:rubygems_api_key: ${GEM_HOST_API_KEY}\n" > $HOME/.gem/credentials
+              gem push *.gem

@@ -83,6 +83,17 @@
 			"versioning": "default",
 			"include-v-in-tag": false,
 			"include-component-in-tag": true
+		},
+		"sdk/@launchdarkly/observability-ruby": {
+			"package-name": "launchdarkly-observability-ruby",
+			"release-type": "ruby",
+			"versioning": "default",
+			"include-v-in-tag": false,
+			"include-component-in-tag": true,
+			"extra-files": [
+				"lib/launchdarkly_observability/version.rb",
+				"PROVENANCE.md"
+			]
 		}
 	}
 }
