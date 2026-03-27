@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.34.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.33.0...launchdarkly-observability-android-0.34.0) (2026-03-27)
+
+
+### Features
+
+* o3 level optimization for image diffing ([#443](https://github.com/launchdarkly/observability-sdk/issues/443)) ([9045142](https://github.com/launchdarkly/observability-sdk/commit/9045142c7455b3f12574a1aacd21e582c89d8680))
+
+
+### Bug Fixes
+
+* Build warnings and compatibility issues across Android and MAUI (.NET) SDKs. ([#439](https://github.com/launchdarkly/observability-sdk/issues/439)) ([47c4640](https://github.com/launchdarkly/observability-sdk/commit/47c4640612bb0d769f6e1cde6c98e7c7683520d9))
+
 ## [0.33.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.32.0...launchdarkly-observability-android-0.33.0) (2026-03-27)
 
 
