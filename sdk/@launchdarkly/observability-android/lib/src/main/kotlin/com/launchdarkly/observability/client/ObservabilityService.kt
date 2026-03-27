@@ -92,7 +92,7 @@ class ObservabilityService(
         logger = logger
     )
     private val samplingApiService = SamplingApiService(graphqlClient)
-    private var telemetryInspector: TelemetryInspector? = null
+    private val telemetryInspector: TelemetryInspector? = observabilityOptions.telemetryInspector
     private var spanProcessor: SpanProcessor? = null
     private var logProcessor: LogRecordProcessor? = null
     private var metricsReader: PeriodicMetricReader? = null
@@ -106,7 +106,6 @@ class ObservabilityService(
     private val scope = CoroutineScope(DispatcherProviderHolder.current.io + SupervisorJob())
 
     init {
-        initializeTelemetryInspector()
         val otelRumConfig = createOtelRumConfig()
 
         var capturedSessionManager: SessionManager? = null
@@ -266,12 +265,6 @@ class ObservabilityService(
             .build()
     }
 
-    private fun initializeTelemetryInspector() {
-        if (observabilityOptions.debug) {
-            telemetryInspector = TelemetryInspector()
-        }
-    }
-
     private fun loadSamplingConfigAsync() {
         scope.launch {
             val samplingConfig = getSamplingConfig()
@@ -376,17 +369,6 @@ class ObservabilityService(
             .setAllAttributes(attributes)
             .startSpan()
     }
-
-    /**
-     * Returns the telemetry inspector for accessing intercepted telemetry data.
-     *
-     * This method provides access to spans and logs that have been exported by the SDK
-     * for debugging, testing, or other purposes. The inspector is only available
-     * if debug was enabled via "Options.debug".
-     *
-     * @return TelemetryInspector instance if debug is enabled, null otherwise
-     */
-    fun getTelemetryInspector(): TelemetryInspector? = telemetryInspector
 
     /**
      * Returns the tracer instance for creating spans.

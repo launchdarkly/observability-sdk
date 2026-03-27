@@ -130,7 +130,7 @@ class Observability(
     }
 
     fun getTelemetryInspector(): TelemetryInspector? {
-        return observabilityClient?.getTelemetryInspector()
+        return options.telemetryInspector
     }
 
     companion object {

@@ -1,5 +1,6 @@
 package com.example.androidobservability
 
+import com.launchdarkly.observability.testing.InMemoryTelemetryInspector
 import com.launchdarkly.sdk.android.LDClient
 import io.opentelemetry.android.features.diskbuffering.SignalFromDiskExporter
 import okhttp3.mockwebserver.MockResponse
@@ -10,6 +11,8 @@ class TestApplication : BaseApplication() {
 
     private val host = "127.0.0.1"
     var mockWebServer: MockWebServer? = null
+    var telemetryInspector: InMemoryTelemetryInspector? = null
+        private set
 
     override fun onCreate() {
         // The Application class won't be initialized unless initForTest() is executed. This helps us to set up
@@ -40,6 +43,9 @@ class TestApplication : BaseApplication() {
 
     fun initForTest() {
         setupMockServer()
+        val inspector = InMemoryTelemetryInspector()
+        telemetryInspector = inspector
+        observabilityOptions = observabilityOptions.copy(telemetryInspector = inspector)
         super.realInit()
     }
 
