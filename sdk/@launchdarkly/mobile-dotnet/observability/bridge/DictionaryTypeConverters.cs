@@ -63,7 +63,7 @@ internal static class DictionaryTypeConverters
     // The auto-generated Android binding marshals any IDictionary<K,V> into a
     // java.util.HashMap via JavaDictionary<K,V>.ToLocalJniHandle() at JNI call
     // time — changing this to Java.Util.HashMap causes double-marshaling bugs.
-    internal static IDictionary<string, Java.Lang.Object>? ToJavaDictionary(IDictionary<string, object>? src)
+    internal static IDictionary<string, Java.Lang.Object>? ToJavaDictionary(IDictionary<string, object?>? src)
     {
         if (src is null) return null;
 
@@ -83,21 +83,21 @@ internal static class DictionaryTypeConverters
         return value switch
         {
             string s  => new Java.Lang.String(s),
-            bool b    => new Java.Lang.Boolean(b),
-            int i     => new Java.Lang.Integer(i),
-            long l    => new Java.Lang.Long(l),
-            double d  => new Java.Lang.Double(d),
-            float f   => new Java.Lang.Float(f),
-            decimal m => new Java.Lang.Double((double)m),
+            bool b    => Java.Lang.Boolean.ValueOf(b),
+            int i     => Java.Lang.Integer.ValueOf(i),
+            long l    => Java.Lang.Long.ValueOf(l),
+            double d  => Java.Lang.Double.ValueOf(d),
+            float f   => Java.Lang.Float.ValueOf(f),
+            decimal m => Java.Lang.Double.ValueOf((double)m),
 
             IDictionary<string, object?> dict => ToJavaHashMap(dict),
 
             IEnumerable<string> arr  => ToJavaList(arr.Select(s => (Java.Lang.Object)new Java.Lang.String(s))),
-            IEnumerable<bool> arr    => ToJavaList(arr.Select(b => (Java.Lang.Object)new Java.Lang.Boolean(b))),
-            IEnumerable<int> arr     => ToJavaList(arr.Select(i => (Java.Lang.Object)new Java.Lang.Integer(i))),
-            IEnumerable<long> arr    => ToJavaList(arr.Select(l => (Java.Lang.Object)new Java.Lang.Long(l))),
-            IEnumerable<double> arr  => ToJavaList(arr.Select(d => (Java.Lang.Object)new Java.Lang.Double(d))),
-            IEnumerable<float> arr   => ToJavaList(arr.Select(f => (Java.Lang.Object)new Java.Lang.Float(f))),
+            IEnumerable<bool> arr    => ToJavaList(arr.Select(b => (Java.Lang.Object)Java.Lang.Boolean.ValueOf(b))),
+            IEnumerable<int> arr     => ToJavaList(arr.Select(i => (Java.Lang.Object)Java.Lang.Integer.ValueOf(i))),
+            IEnumerable<long> arr    => ToJavaList(arr.Select(l => (Java.Lang.Object)Java.Lang.Long.ValueOf(l))),
+            IEnumerable<double> arr  => ToJavaList(arr.Select(d => (Java.Lang.Object)Java.Lang.Double.ValueOf(d))),
+            IEnumerable<float> arr   => ToJavaList(arr.Select(f => (Java.Lang.Object)Java.Lang.Float.ValueOf(f))),
 
             _ => new Java.Lang.String(value.ToString() ?? string.Empty)
         };
