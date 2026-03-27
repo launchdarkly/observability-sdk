@@ -10,7 +10,7 @@
       To learn more, see: https://learn.microsoft.com/dotnet/core/deploying/trimming/prepare-libraries-for-trimming
     -->
     <IsTrimmable>true</IsTrimmable>
-    <NoWarn>$(NoWarn);NU1605;NU1608</NoWarn>
+    <NoWarn>$(NoWarn);NU1605;NU1608;BG8605;BG8606;BG8400</NoWarn>
     <!--
       NOTE: you can simply add .aar or .jar files in this directory to be included in the project.
       To learn more, see: https://learn.microsoft.com/dotnet/maui/migration/android-binding-projects

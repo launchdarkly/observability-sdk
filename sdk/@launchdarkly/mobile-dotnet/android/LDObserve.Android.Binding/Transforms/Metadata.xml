@@ -1,4 +1,7 @@
 <metadata>
     <!-- Make sure the package id and name reflects the new binding name -->
     <attr path="/api/package[@name='com.launchdarkly.LDNative']" name="managedName">LDObserveAndroid</attr>
+
+    <!-- BG8400: Remove Kotlin companion object field whose type can't be bound -->
+    <remove-node path="/api/package[@name='com.launchdarkly.LDNative']/class[@name='LDObserveBridgeAdapter']/field[@name='Companion']" />
 </metadata>

@@ -9,7 +9,8 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 
     // Apply Dokka plugin for documentation generation
-    id("org.jetbrains.dokka") version "2.0.0"
+    id("org.jetbrains.dokka") version "2.1.0"
+    id("org.jetbrains.dokka-javadoc") version "2.1.0"
 }
 
 allprojects {
@@ -106,8 +107,10 @@ android {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
     }
-    kotlinOptions {
-        jvmTarget = "1.8"
+    kotlin {
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_1_8)
+        }
     }
 
     publishing {
@@ -177,15 +180,15 @@ signing {
     sign(publishing.publications["release"])
 }
 
-// Dokka configuration for Android library documentation
-tasks.dokkaJavadoc.configure {
+dokka {
     moduleName.set("launchdarkly-observability-android")
     moduleVersion.set(project.version.toString())
-    outputDirectory.set(layout.projectDirectory.dir("docs"))
 
-    dokkaSourceSets {
-        configureEach {
-            includes.from("doc-module.md")
-        }
+    dokkaPublications.javadoc {
+        outputDirectory.set(layout.projectDirectory.dir("docs"))
+    }
+
+    dokkaSourceSets.configureEach {
+        includes.from("doc-module.md")
     }
 }

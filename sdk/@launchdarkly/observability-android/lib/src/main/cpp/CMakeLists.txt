@@ -7,7 +7,8 @@ add_library(tile_hash SHARED
     tile_hash_jni.c
 )
 
-target_compile_options(tile_hash PRIVATE -O2)
+target_compile_options(tile_hash PRIVATE -O3)
+target_link_options(tile_hash PRIVATE -Wl,-z,max-page-size=16384)
 
 find_library(jnigraphics-lib jnigraphics)
 
