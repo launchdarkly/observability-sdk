@@ -35,7 +35,7 @@
 		<!-- Keep Common, LiveData, LiveData.Core, Process, and ViewModelSavedState aligned with Runtime to avoid NU1608 in consumers. -->
 		<PackageReference Include="Xamarin.AndroidX.Lifecycle.Common" Version="[2.9.2.1, 3.0.0)" />
 		<PackageReference Include="Xamarin.AndroidX.Lifecycle.LiveData" Version="[2.9.2.1, 3.0.0)" />
-		<PackageReference Include="Xamarin.AndroidX.Lifecycle.LiveData.Core" Version="[2.9.0, 3.0.0)" />
+		<PackageReference Include="Xamarin.AndroidX.Lifecycle.LiveData.Core" Version="[2.9.2.1, 3.0.0)" />
 		<PackageReference Include="Xamarin.AndroidX.Lifecycle.Process" Version="[2.9.2.1, 3.0.0)" />
 		<PackageReference Include="Xamarin.AndroidX.Lifecycle.ViewModelSavedState" Version="[2.9.2.1, 3.0.0)" />
 		<PackageReference Include="Xamarin.AndroidX.SavedState" Version="[1.3.1.1, 2.0.0)" />
