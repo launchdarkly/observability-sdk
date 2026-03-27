@@ -89,12 +89,6 @@ open class BaseApplication : Application() {
             .build()
 
         LDClient.init(this@BaseApplication, ldConfig, context, 1)
-        val anonContext = LDContext.builder(ContextKind.DEFAULT, "anonymous-userkey")
-            .anonymous(true)
-            .build()
-
-        //LDClient.get().identify(anonContext)
-
         telemetryInspector = observabilityPlugin.getTelemetryInspector()
 
         if (testUrl == null) {

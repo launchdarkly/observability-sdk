@@ -5,6 +5,8 @@ import com.launchdarkly.logging.LDLogger
 import com.launchdarkly.observability.api.ObservabilityOptions
 import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.observability.interfaces.Observe
+import com.launchdarkly.observability.plugin.ObservabilityHookExporter
+import io.opentelemetry.android.session.SessionManager
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Severity
 import io.opentelemetry.api.trace.Span
@@ -20,6 +22,7 @@ import io.opentelemetry.sdk.resources.Resource
  */
 class ObservabilityClient : Observe {
     private val instrumentationManager: InstrumentationManager
+    internal val hookExporter: ObservabilityHookExporter
 
     /**
      * Creates a new ObservabilityClient.
@@ -40,14 +43,26 @@ class ObservabilityClient : Observe {
         this.instrumentationManager = InstrumentationManager(
             application, sdkKey, resource, logger, options,
         )
+        this.hookExporter = ObservabilityHookExporter(
+            withSpans = true,
+            withValue = true,
+            tracerProvider = { instrumentationManager.getTracer() },
+            contextFriendlyName = options.contextFriendlyName
+        )
     }
 
-    val sessionManager get() = instrumentationManager.sessionManager
+    val sessionManager: SessionManager? get() = instrumentationManager.sessionManager
 
     internal constructor(
         instrumentationManager: InstrumentationManager
     ) {
         this.instrumentationManager = instrumentationManager
+        this.hookExporter = ObservabilityHookExporter(
+            withSpans = true,
+            withValue = true,
+            tracerProvider = { instrumentationManager.getTracer() },
+            contextFriendlyName = null
+        )
     }
 
     override fun recordMetric(metric: Metric) {

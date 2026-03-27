@@ -1,5 +1,6 @@
 package com.launchdarkly.observability.sdk
 
+import com.launchdarkly.observability.bridge.AttributeConverter
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
 import org.junit.jupiter.api.Assertions.assertEquals

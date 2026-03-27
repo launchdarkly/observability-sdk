@@ -1,10 +1,12 @@
-package com.launchdarkly.observability.plugin
+package com.launchdarkly.observability.bridge
+
+import com.launchdarkly.observability.plugin.ObservabilityHookExporter
 
 /**
  * JVM adapter for the C# / MAUI bridge.
  *
  * Accepts simple JVM types (String, Int, HashMap) and delegates
- * to [ObservabilityHookExporter] so the tracing logic is written once.
+ * to [com.launchdarkly.observability.plugin.ObservabilityHookExporter] so the tracing logic is written once.
  * The C# NativeHookProxy delegates here via the Xamarin.Android binding.
  */
 class ObservabilityHookProxy internal constructor(

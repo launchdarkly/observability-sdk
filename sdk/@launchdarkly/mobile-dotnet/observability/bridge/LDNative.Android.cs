@@ -1,5 +1,7 @@
+using LaunchDarkly.SessionReplay;
+
 #if ANDROID
-namespace LaunchDarkly.SessionReplay;
+namespace LaunchDarkly.Observability;
 
 internal static class LDNativeAndroidMapping
 {
@@ -12,7 +14,7 @@ internal static class LDNativeAndroidMapping
             options.OtlpEndpoint,
             options.BackendUrl,
             options.ContextFriendlyName,
-            DictionaryTypeConverters.ToJavaHashMap(options.Attributes)
+            DictionaryTypeConverters.ToJavaDictionary(options.Attributes)
         );
     }
 

@@ -1,4 +1,4 @@
-package com.launchdarkly.observability.sdk
+package com.launchdarkly.observability.bridge
 
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
@@ -6,15 +6,15 @@ import io.opentelemetry.api.common.AttributesBuilder
 
 /**
  * Converts untyped `Map<String, Any?>` dictionaries (from bridge layers like .NET MAUI)
- * into OTel [Attributes].
+ * into OTel [io.opentelemetry.api.common.Attributes].
  *
- * OTel Java [Attributes] is a flat key-value structure, so nested maps are flattened
+ * OTel Java [io.opentelemetry.api.common.Attributes] is a flat key-value structure, so nested maps are flattened
  * with dot-separated keys (e.g. `"nested.child"` for `{"nested": {"child": ...}}`).
  */
 object AttributeConverter {
 
     /**
-     * Converts a `Map<String, Any?>` into OTel [Attributes].
+     * Converts a `Map<String, Any?>` into OTel [io.opentelemetry.api.common.Attributes].
      * Nested maps are flattened with dot-separated keys.
      */
     fun convert(source: Map<String, Any?>?): Attributes {

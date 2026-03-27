@@ -1,124 +1,38 @@
 using System.Collections.Generic;
 using System.Linq;
 using LaunchDarkly.Sdk;
+using OpenTelemetry.Trace;
 
 #if IOS
-using UIKit;
 using Foundation;
 using LDObserveMaciOS;
 #endif
 
-namespace LaunchDarkly.SessionReplay;
+namespace LaunchDarkly.Observability;
 
 /// <summary>
 /// Static facade over the native observability bridge.
 /// On platforms without a native implementation, methods are no-ops.
 /// </summary>
-public static class LDObserve
+public static partial class LDObserve
 {
-    /// <summary>
-    /// Optional C# mirror of the Swift Severity raw values.
-    /// Make sure the numeric values match your Swift enum.
-    /// </summary>
-  public enum Severity {
-    /// <summary>Unspecified severity (0).</summary>
-    Unspecified = 0,
-
-    /// <summary>Trace severity (1).</summary>
-    Trace = 1,
-
-    /// <summary>Trace1 severity (2).</summary>
-    Trace2 = Trace + 1,
-
-    /// <summary>Trace3 severity (3).</summary>
-    Trace3 = Trace2 + 1,
-
-    /// <summary>Trace4 severity (4).</summary>
-    Trace4 = Trace3 + 1,
-
-    /// <summary>Debug severity (5).</summary>
-    Debug = 5,
-
-    /// <summary>Debug2 severity (6).</summary>
-    Debug2 = Debug + 1,
-
-    /// <summary>Debug3 severity (7).</summary>
-    Debug3 = Debug2 + 1,
-
-    /// <summary>Debug4 severity (8).</summary>
-    Debug4 = Debug3 + 1,
-
-    /// <summary>Info severity (9).</summary>
-    Info = 9,
-
-    /// <summary>Info2 severity (10).</summary>
-    Info2 = Info + 1,
-
-    /// <summary>Info3 severity (12).</summary>
-    Info3 = Info2 + 1,
-
-    /// <summary>Info4 severity (12).</summary>
-    Info4 = Info3 + 1,
-
-    /// <summary>Warn severity (13).</summary>
-    Warn = 13,
-
-    /// <summary>Warn2 severity (14).</summary>
-    Warn2 = Warn + 1,
-
-    /// <summary>Warn3 severity (15).</summary>
-    Warn3 = Warn2 + 1,
-
-    /// <summary>Warn4 severity (16).</summary>
-    Warn4 = Warn3 + 1,
-
-    /// <summary>Error severity (17).</summary>
-    Error = 17,
-
-    /// <summary>Error2 severity (18).</summary>
-    Error2 = Error + 1,
-
-    /// <summary>Error3 severity (19).</summary>
-    Error3 = Error2 + 1,
-
-    /// <summary>Error4 severity (20).</summary>
-    Error4 = Error3 + 1,
-
-    /// <summary>Fatal severity (21).</summary>
-    Fatal = 21,
-
-    /// <summary>Fatal2 severity (22).</summary>
-    Fatal2 = Fatal + 1,
-
-    /// <summary>Fatal3 severity (23).</summary>
-    Fatal3 = Fatal2 + 1,
-
-    /// <summary>Fatal4 severity (24).</summary>
-    Fatal4 = Fatal3 + 1,
-}
-
-    // -------- Flag Evaluation Tracking --------
-
-    /// <summary>
-    /// Tracks a flag evaluation result for observability tracing.
-    /// </summary>
-    public static void TrackEvaluation(string flagKey, LdValue value, int? variationIndex, EvaluationReason? reason)
-    {
-#if IOS
-        // TODO: forward to iOS observability bridge
+#if ANDROID
+    private static readonly LDObserveAndroid.ObservabilityBridge _androidBridge = new();
 #endif
-    }
 
     // -------- Public API --------
 
     /// <summary>
     /// Record a log with integer severity.
     /// </summary>
-    public static void RecordLog(string message, int severity, IDictionary<string, object?>? attributes = null)
+    private static void RecordLog(string message, int severity, IDictionary<string, object?>? attributes = null)
     {
 #if IOS
         var dict = DictionaryTypeConverters.ToNSDictionary(attributes) ?? new NSDictionary();
         LDObserveBridge.RecordLog(message, severity, dict);
+#elif ANDROID
+        var map = DictionaryTypeConverters.ToJavaDictionary(attributes);
+        _androidBridge.RecordLog(message, severity, map);
 #endif
     }
 
@@ -133,6 +47,11 @@ public static class LDObserve
     /// </summary>
     public static void RecordError(string message, string? cause = null)
     {
+#if IOS
+        LDObserveBridge.RecordError(message, cause);
+#elif ANDROID
+        _androidBridge.RecordError(message, cause);
+#endif
     }
 
     /// <summary>
@@ -140,6 +59,11 @@ public static class LDObserve
     /// </summary>
     public static void RecordMetric(string name, double value)
     {
+#if IOS
+        LDObserveBridge.RecordMetric(name, value);
+#elif ANDROID
+        _androidBridge.RecordMetric(name, value);
+#endif
     }
 
     /// <summary>
@@ -147,6 +71,11 @@ public static class LDObserve
     /// </summary>
     public static void RecordCount(string name, double value)
     {
+#if IOS
+        LDObserveBridge.RecordCount(name, value);
+#elif ANDROID
+        _androidBridge.RecordCount(name, value);
+#endif
     }
 
     /// <summary>
@@ -154,6 +83,11 @@ public static class LDObserve
     /// </summary>
     public static void RecordIncr(string name, double value)
     {
+#if IOS
+        LDObserveBridge.RecordIncr(name, value);
+#elif ANDROID
+        _androidBridge.RecordIncr(name, value);
+#endif
     }
 
     /// <summary>
@@ -161,6 +95,11 @@ public static class LDObserve
     /// </summary>
     public static void RecordHistogram(string name, double value)
     {
+#if IOS
+        LDObserveBridge.RecordHistogram(name, value);
+#elif ANDROID
+        _androidBridge.RecordHistogram(name, value);
+#endif
     }
 
     /// <summary>
@@ -168,6 +107,21 @@ public static class LDObserve
     /// </summary>
     public static void RecordUpDownCounter(string name, double value)
     {
+#if IOS
+        LDObserveBridge.RecordUpDownCounter(name, value);
+#elif ANDROID
+        _androidBridge.RecordUpDownCounter(name, value);
+#endif
     }
 
+    /// <summary>
+    /// Returns the OpenTelemetry <see cref="Tracer"/> from the <see cref="LDTracer"/> singleton.
+    /// </summary>
+    public static Tracer GetTracer() => LDTracer.Instance.Tracer;
+
+    /// <summary>
+    /// Starts a new active span with the given name using the singleton tracer.
+    /// The returned <see cref="TelemetrySpan"/> should be disposed when the operation completes.
+    /// </summary>
+    public static TelemetrySpan StartActiveSpan(string name) => GetTracer().StartActiveSpan(name);
 }

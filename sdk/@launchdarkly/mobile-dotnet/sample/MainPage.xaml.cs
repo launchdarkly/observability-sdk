@@ -1,4 +1,4 @@
-using LaunchDarkly.SessionReplay;
+using LaunchDarkly.Observability;
 using LaunchDarkly.Sdk;
 using LaunchDarkly.Sdk.Client;
 
@@ -32,6 +32,9 @@ public partial class MainPage : ContentPage
 			case "Number Pad":
 				await Shell.Current.GoToAsync(nameof(NumberPadPage));
 				break;
+			case "Dialogs":
+				await Shell.Current.GoToAsync(nameof(DialogsPage));
+				break;
 		}
 
 		if (sender is CollectionView cv)
@@ -54,7 +57,7 @@ public partial class MainPage : ContentPage
 	private void OnIdentifyUserClicked(object? sender, EventArgs e)
 	{
 		var userContext = Context.Builder("single-userkey")
-			.Name("Bob Bobberson")
+			.Name("Bob Smith")
 			.Build();
          _ = Task.Run(async () => await LdClient.Instance.IdentifyAsync(userContext));
 
@@ -154,8 +157,24 @@ public partial class MainPage : ContentPage
 	{
 		LDObserve.RecordLog(
 			"Test Log",
-			LDObserve.Severity.Info,
-			new Dictionary<string, object?> { { "FakeAttribute", "FakeVal" } }
+			Severity.Info,
+			new Dictionary<string, object?>
+			{
+				{ "test-string", "maui" },
+				{ "test-true", true },
+				{ "test-false", false },
+				{ "test-integer", 42 },
+				{ "test-double", 3.14 },
+				{ "test-array", new double[] { 3.14, 6.28 } },
+				{ "test-nested", new Dictionary<string, object?> { 
+					{ "nested-string", "maui2" },
+					{ "nested-true", true },
+					{ "nested-false", false },
+					{ "nested-integer", 420 },
+					{ "nested-double", 3.14159 },
+					{ "nested-array", new double[] { 3.14159, 6.28318 } }}
+				}
+			}
 		);
 		Console.WriteLine("Log triggered");
 	}
@@ -165,15 +184,52 @@ public partial class MainPage : ContentPage
 		var message = CustomLogEntry.Text;
 		if (!string.IsNullOrEmpty(message))
 		{
-			LDObserve.RecordLog(message, LDObserve.Severity.Info);
+			LDObserve.RecordLog(message, Severity.Info);
 			Console.WriteLine($"Custom log sent: {message}");
 		}
 	}
 
-	private void OnTriggerNestedSpansClicked(object? sender, EventArgs e)
+	private async void OnTriggerNestedSpansClicked(object? sender, EventArgs e)
 	{
-		// TODO: LDObserve.StartSpan when API is available
-		Console.WriteLine("Nested Spans triggered – API not yet available");
+		await Task.Run(async () =>
+		{
+			using var span0 = LDObserve.StartActiveSpan("NestedSpan");
+			using var span1 = LDObserve.StartActiveSpan("NestedSpan1");
+			using var span2 = LDObserve.StartActiveSpan("NestedSpan2");
+
+			try
+			{
+				await _httpClient.GetAsync("https://www.google.com");
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine($"HTTP Request failed: {ex.Message}");
+			}
+		});
+
+		Console.WriteLine("Nested Spans triggered");
+	}
+
+	private void OnTriggerSequentialSpansClicked(object? sender, EventArgs e)
+	{
+		var tracer = LDObserve.GetTracer();
+
+		using (var span1 = tracer.StartRootSpan("SequentialSpan1"))
+		{
+			span1.SetAttribute("sequence", "1");
+		}
+
+		using (var span2 = tracer.StartRootSpan("SequentialSpan2"))
+		{
+			span2.SetAttribute("sequence", "2");
+		}
+
+		using (var span3 = tracer.StartRootSpan("SequentialSpan3"))
+		{
+			span3.SetAttribute("sequence", "3");
+		}
+
+		Console.WriteLine("Sequential independent spans triggered");
 	}
 
 	private void OnSendCustomSpanClicked(object? sender, EventArgs e)
@@ -181,8 +237,9 @@ public partial class MainPage : ContentPage
 		var spanName = CustomSpanEntry.Text;
 		if (!string.IsNullOrEmpty(spanName))
 		{
-			// TODO: LDObserve.StartSpan when API is available
-			Console.WriteLine($"Custom span sent: {spanName} – API not yet available");
+			using var span = LDObserve.StartActiveSpan(spanName);
+			span.SetAttribute("custom_span", "true");
+			Console.WriteLine($"Custom span sent: {spanName}");
 		}
 	}
 
