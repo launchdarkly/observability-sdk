@@ -45,30 +45,34 @@
     </ScrollView>
 
     <TextView
-        android:layout_width="wrap_content"
+        android:id="@+id/geckoLabel"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
         android:layout_marginTop="8dp"
         android:background="#FFFFFF00"
-        android:text="org.mozilla.geckoview.GeckoView"
+        android:gravity="center"
+        android:text="Tap to load GeckoView (device only)"
         android:textSize="16sp" />
 
-    <org.mozilla.geckoview.GeckoView
-        android:id="@+id/geckoview"
+    <FrameLayout
+        android:id="@+id/geckoContainer"
         android:layout_width="match_parent"
         android:layout_height="200dp" />
 
     <TextView
-        android:layout_width="wrap_content"
+        android:id="@+id/customGeckoLabel"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
         android:layout_marginTop="8dp"
         android:background="#FFFFFF00"
-        android:text="CustomGeckoView"
+        android:gravity="center"
+        android:text="Tap to load CustomGeckoView (device only)"
         android:textSize="16sp" />
 
-    <com.example.androidobservability.masking.CustomGeckoView
-        android:id="@+id/customGeckoView"
+    <FrameLayout
+        android:id="@+id/customGeckoContainer"
         android:layout_width="match_parent"
         android:layout_height="200dp" />
 

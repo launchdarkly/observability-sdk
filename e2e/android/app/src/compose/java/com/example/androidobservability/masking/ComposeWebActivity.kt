@@ -8,6 +8,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,7 +22,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -45,8 +50,6 @@ class ComposeWebActivity : ComponentActivity() {
                     val context = LocalContext.current
                     val webView = remember(context) { WebView(context) }
                     val customWebView = remember(context) { CustomWebView(context) }
-                    val geckoView = remember(context) { GeckoView(context) }
-                    val customGeckoView = remember(context) { CustomGeckoView(context) }
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
@@ -88,33 +91,19 @@ class ComposeWebActivity : ComponentActivity() {
                             )
                         }
 
-                        Text(
-                            text = "org.mozilla.geckoview.GeckoView",
-                            fontSize = 16.sp,
-                            modifier = Modifier
-                                .align(Alignment.CenterHorizontally)
-                                .background(Color.Yellow)
-                                .padding(top = 8.dp)
-                        )
-                        GeckoViewItem(
+                        LazyGeckoViewItem(
+                            label = "org.mozilla.geckoview.GeckoView (device)",
                             url = "https://www.google.com",
-                            geckoView = geckoView,
+                            geckoViewFactory = { GeckoView(it) },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(200.dp)
                         )
 
-                        Text(
-                            text = "CustomGeckoView",
-                            fontSize = 16.sp,
-                            modifier = Modifier
-                                .align(Alignment.CenterHorizontally)
-                                .background(Color.Yellow)
-                                .padding(top = 8.dp)
-                        )
-                        GeckoViewItem(
+                        LazyGeckoViewItem(
+                            label = "CustomGeckoView (device)",
                             url = "https://www.google.com",
-                            geckoView = customGeckoView,
+                            geckoViewFactory = { CustomGeckoView(it) },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(200.dp)
@@ -155,35 +144,52 @@ fun WebViewItem(url: String, webView: WebView, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun GeckoViewItem(url: String, geckoView: GeckoView, modifier: Modifier = Modifier) {
-    val context = LocalContext.current
-    val runtime = remember {
-        GeckoRuntime.getDefault(context.applicationContext)
-    }
-    val session = remember(runtime) {
-        GeckoSession().apply {
-            setContentDelegate(object : ContentDelegate {})
-            open(runtime)
-        }
-    }
+fun LazyGeckoViewItem(
+    label: String,
+    url: String,
+    geckoViewFactory: (android.content.Context) -> GeckoView,
+    modifier: Modifier = Modifier
+) {
+    var loaded by remember { mutableStateOf(false) }
 
-    DisposableEffect(session) {
-        onDispose {
-            session.close()
-        }
-    }
-
-    AndroidView(
-        modifier = modifier,
-        factory = { _ ->
-            geckoView.apply {
-                setSession(session)
-            }
-        }
+    Text(
+        text = if (loaded) label else "Tap to load $label",
+        fontSize = 16.sp,
+        modifier = Modifier
+            .background(Color.Yellow)
+            .padding(top = 8.dp)
+            .then(if (!loaded) Modifier.clickable { loaded = true } else Modifier)
     )
 
-    LaunchedEffect(url) {
-        session.loadUri(url)
+    if (loaded) {
+        val context = LocalContext.current
+        val geckoView = remember(context) { geckoViewFactory(context) }
+        val runtime = remember { GeckoRuntime.getDefault(context.applicationContext) }
+        val session = remember(runtime) {
+            GeckoSession().apply {
+                setContentDelegate(object : ContentDelegate {})
+                open(runtime)
+            }
+        }
+
+        DisposableEffect(session) {
+            onDispose { session.close() }
+        }
+
+        AndroidView(
+            modifier = modifier,
+            factory = { _ -> geckoView.apply { setSession(session) } }
+        )
+
+        LaunchedEffect(url) { session.loadUri(url) }
+    } else {
+        Box(
+            modifier = modifier
+                .background(Color.LightGray)
+                .clickable { loaded = true },
+            contentAlignment = Alignment.Center
+        ) {
+            Text("Tap to load", color = Color.DarkGray)
+        }
     }
 }
-
