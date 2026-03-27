@@ -30,5 +30,15 @@ fi
 
 for workspace in $WORKSPACES; do
   echo "Publishing $workspace..."
-  npm publish "./$workspace" --access public --provenance $TAG_ARGS || { echo "npm publish failed for $workspace" >&2; exit 1; }
+  # npm returns 403 when a version is already published. Tolerate this to allow
+  # partial retries (matching the old yarn --tolerate-republish behavior).
+  OUTPUT=$(npm publish "./$workspace" --access public --provenance $TAG_ARGS 2>&1) || {
+    if echo "$OUTPUT" | grep -q "You cannot publish over the previously published versions"; then
+      echo "Already published $workspace, skipping."
+    else
+      echo "$OUTPUT" >&2
+      echo "npm publish failed for $workspace" >&2
+      exit 1
+    fi
+  }
 done
