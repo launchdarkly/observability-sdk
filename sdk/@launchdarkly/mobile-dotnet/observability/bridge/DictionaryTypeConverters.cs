@@ -59,6 +59,10 @@ internal static class DictionaryTypeConverters
     }
 
 #elif ANDROID
+    // Returns a managed Dictionary (not Java.Util.HashMap) intentionally.
+    // The auto-generated Android binding marshals any IDictionary<K,V> into a
+    // java.util.HashMap via JavaDictionary<K,V>.ToLocalJniHandle() at JNI call
+    // time — changing this to Java.Util.HashMap causes double-marshaling bugs.
     internal static IDictionary<string, Java.Lang.Object>? ToJavaDictionary(IDictionary<string, object>? src)
     {
         if (src is null) return null;
