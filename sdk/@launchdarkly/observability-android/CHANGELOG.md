@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.33.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.32.0...launchdarkly-observability-android-0.33.0) (2026-03-27)
+
+
+### Features
+
+* Support Traces, Logs, Metrics in mobile dotnet 0.5.0 ([#428](https://github.com/launchdarkly/observability-sdk/issues/428)) ([8e9483a](https://github.com/launchdarkly/observability-sdk/commit/8e9483aadf13954e843b8ac8b8574a46456a4694))
+
 ## [0.32.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.31.0...launchdarkly-observability-android-0.32.0) (2026-03-26)
 
 
