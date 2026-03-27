@@ -104,5 +104,5 @@
 		"vite@6.0.7": "^6.4.1",
 		"vite@^7": "^7.0.8"
 	},
-	"packageManager": "yarn@4.9.1"
+	"packageManager": "yarn@4.13.0"
 }
