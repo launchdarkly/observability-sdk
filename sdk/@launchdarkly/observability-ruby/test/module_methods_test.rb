@@ -74,12 +74,10 @@ class ModuleMethodsTest < Minitest::Test
   def test_record_exception
     error = StandardError.new('Test error')
 
-    LaunchDarklyObservability.in_span('test-operation') do |span|
-      begin
-        raise error
-      rescue StandardError => e
-        LaunchDarklyObservability.record_exception(e, attributes: { 'error.context' => 'test' })
-      end
+    LaunchDarklyObservability.in_span('test-operation') do |_span|
+      raise error
+    rescue StandardError => e
+      LaunchDarklyObservability.record_exception(e, attributes: { 'error.context' => 'test' })
     end
 
     spans = @exporter.finished_spans
@@ -103,7 +101,7 @@ class ModuleMethodsTest < Minitest::Test
   def test_current_trace_id
     trace_id = nil
 
-    LaunchDarklyObservability.in_span('test-operation') do |span|
+    LaunchDarklyObservability.in_span('test-operation') do |_span|
       trace_id = LaunchDarklyObservability.current_trace_id
     end
 

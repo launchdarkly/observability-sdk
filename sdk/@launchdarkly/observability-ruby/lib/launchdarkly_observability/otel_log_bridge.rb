@@ -47,11 +47,11 @@ module LaunchDarklyObservability
       return true if severity < level
 
       if message.nil?
-        if block_given?
-          message = yield
-        else
-          message = progname
-        end
+        message = if block_given?
+                    yield
+                  else
+                    progname
+                  end
       end
 
       return true if message.nil?

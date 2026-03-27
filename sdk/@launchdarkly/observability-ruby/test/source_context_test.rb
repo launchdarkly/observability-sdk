@@ -84,11 +84,9 @@ class SourceContextTest < Minitest::Test
 
   def test_record_exception_adds_structured_stacktrace_attribute
     LaunchDarklyObservability.in_span('record-exception-test') do
-      begin
-        raise StandardError, 'recorded with structured context'
-      rescue StandardError => e
-        LaunchDarklyObservability.record_exception(e)
-      end
+      raise StandardError, 'recorded with structured context'
+    rescue StandardError => e
+      LaunchDarklyObservability.record_exception(e)
     end
 
     spans = @exporter.finished_spans
@@ -107,7 +105,7 @@ class SourceContextTest < Minitest::Test
 
   def capture_exception_with_context
     important_value = 42
-    another_value = important_value + 1
+    another_value = important_value + 1 # rubocop:disable Lint/UselessAssignment
     raise StandardError, 'context failure'
   rescue StandardError => e
     e

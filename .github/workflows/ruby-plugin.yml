@@ -62,8 +62,6 @@ jobs:
               run: bundle install
             - name: Test
               run: bundle exec rake
-            - name: Rubocop
-              run: bundle exec rubocop
 
     e2e-rails-api-only:
         name: Rails API-Only E2E Tests

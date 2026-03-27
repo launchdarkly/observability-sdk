@@ -83,7 +83,7 @@ module LaunchDarklyObservability
       # @param attributes [Hash] Span attributes
       # @yield [span] Block to execute within the span
       # @return The result of the block
-      def with_launchdarkly_span(name, attributes: {})
+      def with_launchdarkly_span(name, attributes: {}, &block)
         return yield unless defined?(OpenTelemetry) && OpenTelemetry.tracer_provider
 
         tracer = OpenTelemetry.tracer_provider.tracer(
@@ -91,9 +91,7 @@ module LaunchDarklyObservability
           LaunchDarklyObservability::VERSION
         )
 
-        tracer.in_span(name, attributes: attributes) do |span|
-          yield(span)
-        end
+        tracer.in_span(name, attributes: attributes, &block)
       end
 
       # @param exception [Exception] The exception to record
