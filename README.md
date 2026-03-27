@@ -16,6 +16,7 @@ This repository houses the LaunchDarkly Observability and Session Replay SDKs ac
 | [launchdarkly-observability](sdk/@launchdarkly/observability-python/README.md) (Python) | [![PyPI][o11y-pypi-badge]][o11y-pypi-link] | [![Actions Status][python-ci-badge]][python-ci] |
 | [LaunchDarkly.Observability](sdk/@launchdarkly/observability-dotnet/README.md) (.NET) | [![NuGet][o11y-nuget-badge]][o11y-nuget-link] | [![Actions Status][dotnet-ci-badge]][dotnet-ci] |
 | [launchdarkly-observability-android](sdk/@launchdarkly/observability-android/README.md) | [![Maven Central][o11y-android-badge]][o11y-android-link] | [![Actions Status][android-ci-badge]][android-ci] |
+| [launchdarkly-observability](sdk/@launchdarkly/observability-ruby/README.md) (Ruby) | [![Gem Version][o11y-ruby-badge]][o11y-ruby-link] | [![Actions Status][ruby-ci-badge]][ruby-ci] |
 | [launchdarkly_flutter_observability](sdk/@launchdarkly/launchdarkly_flutter_observability/README.md) | [![pub package][o11y-flutter-badge]][o11y-flutter-link] | — |
 
 ## Getting started
@@ -75,3 +76,7 @@ We welcome PRs and issues on this repo. Please don't hesitate to file a ticket i
 [dotnet-ci]: https://github.com/launchdarkly/observability-sdk/actions/workflows/dotnet-plugin.yml
 [android-ci-badge]: https://github.com/launchdarkly/observability-sdk/actions/workflows/android-observability.yml/badge.svg
 [android-ci]: https://github.com/launchdarkly/observability-sdk/actions/workflows/android-observability.yml
+[o11y-ruby-badge]: https://img.shields.io/gem/v/launchdarkly-observability.svg?style=flat-square
+[o11y-ruby-link]: https://rubygems.org/gems/launchdarkly-observability
+[ruby-ci-badge]: https://github.com/launchdarkly/observability-sdk/actions/workflows/ruby-plugin.yml/badge.svg
+[ruby-ci]: https://github.com/launchdarkly/observability-sdk/actions/workflows/ruby-plugin.yml

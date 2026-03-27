@@ -1,0 +1,85 @@
+name: Ruby Observability Plugin
+
+on:
+    push:
+        branches: ['main']
+    pull_request:
+        types: [opened, synchronize]
+        paths:
+            - 'sdk/@launchdarkly/observability-ruby/**'
+            - '.github/workflows/ruby-plugin.yml'
+
+permissions:
+    contents: read
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+jobs:
+    build:
+        name: Quality Check
+        runs-on: ubuntu-22.04-8core-32gb
+        strategy:
+            matrix:
+                ruby: ['3.1', '3.3']
+        defaults:
+            run:
+                working-directory: ./sdk/@launchdarkly/observability-ruby
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  token: ${{ secrets.GITHUB_TOKEN }}
+            - name: Install Ruby
+              uses: ruby/setup-ruby@v1
+              with:
+                  ruby-version: ${{ matrix.ruby }}
+                  bundler-cache: true
+                  working-directory: ./sdk/@launchdarkly/observability-ruby
+            - name: Install dependencies
+              run: bundle install
+            - name: Test
+              run: bundle exec rake test
+            - name: Rubocop
+              run: bundle exec rubocop
+            - name: Build gem
+              run: gem build *.gemspec
+
+    e2e-rails:
+        name: Rails E2E Tests
+        runs-on: ubuntu-22.04-8core-32gb
+        defaults:
+            run:
+                working-directory: ./e2e/ruby/rails/demo
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  token: ${{ secrets.GITHUB_TOKEN }}
+            - name: Install Ruby
+              uses: ruby/setup-ruby@v1
+              with:
+                  ruby-version: '3.3'
+                  bundler-cache: true
+                  working-directory: ./e2e/ruby/rails/demo
+            - name: Install dependencies
+              run: bundle install
+            - name: Test
+              run: bundle exec rake
+
+    e2e-rails-api-only:
+        name: Rails API-Only E2E Tests
+        runs-on: ubuntu-22.04-8core-32gb
+        defaults:
+            run:
+                working-directory: ./e2e/ruby/rails/api-only
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  token: ${{ secrets.GITHUB_TOKEN }}
+            - name: Install Ruby
+              uses: ruby/setup-ruby@v1
+              with:
+                  ruby-version: '3.3'
+                  bundler-cache: true
+                  working-directory: ./e2e/ruby/rails/api-only
+            - name: Install dependencies
+              run: bundle install
+            - name: Test
+              run: bundle exec rake

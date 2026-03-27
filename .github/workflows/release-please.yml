@@ -20,6 +20,8 @@ jobs:
             android-plugin-tag-name: ${{ steps.release.outputs['sdk/@launchdarkly/observability-android--tag_name'] }}
             dotnet-plugin-released: ${{ steps.release.outputs['sdk/@launchdarkly/observability-dotnet--release_created'] }}
             dotnet-plugin-tag-name: ${{ steps.release.outputs['sdk/@launchdarkly/observability-dotnet--tag_name'] }}
+            ruby-plugin-released: ${{ steps.release.outputs['sdk/@launchdarkly/observability-ruby--release_created'] }}
+            ruby-plugin-tag-name: ${{ steps.release.outputs['sdk/@launchdarkly/observability-ruby--tag_name'] }}
         steps:
             # Normally a workflow cannot trigger another workflow. For this workflow we need to run required checks.
             # Github determines that something is created by a workflow/bot based on the token.
@@ -137,3 +139,36 @@ jobs:
             base64-subjects: '${{ needs.release-dotnet-plugin.outputs.package-hashes }}'
             upload-assets: true
             upload-tag-name: ${{ needs.release-package.outputs.dotnet-plugin-tag-name }}
+
+    release-ruby-plugin:
+        runs-on: ubuntu-latest
+        permissions:
+            id-token: write
+        needs: ['release-package']
+        if: ${{ needs.release-package.outputs.ruby-plugin-released == 'true' }}
+        outputs:
+            package-hashes: ${{ steps.publish.outputs.package-hashes }}
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Publish Ruby SDK
+              id: publish
+              uses: ./.github/actions/publish-ruby-sdk
+              with:
+                  workspace-path: sdk/@launchdarkly/observability-ruby
+                  aws-role-arn: ${{ vars.AWS_ROLE_ARN }}
+                  dry-run: false
+
+    release-ruby-provenance:
+        needs: ['release-package', 'release-ruby-plugin']
+        if: ${{ needs.release-package.outputs.ruby-plugin-released == 'true' }}
+        permissions:
+            actions: read
+            id-token: write
+            contents: write
+        uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.0.0
+        with:
+            base64-subjects: '${{ needs.release-ruby-plugin.outputs.package-hashes }}'
+            upload-assets: true
+            upload-tag-name: ${{ needs.release-package.outputs.ruby-plugin-tag-name }}

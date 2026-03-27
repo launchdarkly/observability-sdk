@@ -227,9 +227,8 @@ class OpenTelemetryConfigTest < Minitest::Test
 
     config.configure
 
-    if OpenTelemetry.respond_to?(:logger_provider)
-      assert_kind_of OpenTelemetry::SDK::Logs::LoggerProvider, OpenTelemetry.logger_provider
-    end
+    return unless OpenTelemetry.respond_to?(:logger_provider)
+    assert_kind_of OpenTelemetry::SDK::Logs::LoggerProvider, OpenTelemetry.logger_provider
   end
 
   private
