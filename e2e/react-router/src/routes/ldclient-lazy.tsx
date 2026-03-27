@@ -19,7 +19,14 @@ export default function LDClientLazyPage() {
 				<a href="/">← Home</a>
 			</nav>
 
-			<div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 400 }}>
+			<div
+				style={{
+					display: 'flex',
+					flexDirection: 'column',
+					gap: 8,
+					maxWidth: 400,
+				}}
+			>
 				<button
 					onClick={async () => {
 						await recordObservability()
@@ -47,7 +54,10 @@ export default function LDClientLazyPage() {
 
 				<button
 					onClick={() => {
-						LDObserve.recordLog('hello from ldclient-lazy page', 'info')
+						LDObserve.recordLog(
+							'hello from ldclient-lazy page',
+							'info',
+						)
 					}}
 				>
 					LDObserve.recordLog
@@ -55,7 +65,9 @@ export default function LDClientLazyPage() {
 
 				<button
 					onClick={() => {
-						LDObserve.recordError(new Error('test error from ldclient-lazy page'))
+						LDObserve.recordError(
+							new Error('test error from ldclient-lazy page'),
+						)
 					}}
 				>
 					LDObserve.recordError
@@ -63,7 +75,10 @@ export default function LDClientLazyPage() {
 
 				<button
 					onClick={async () => {
-						await client.identify({ kind: 'user', key: 'ldclient-lazy-test-user' })
+						await client.identify({
+							kind: 'user',
+							key: 'ldclient-lazy-test-user',
+						})
 						setFlags(JSON.stringify(client.allFlags(), null, 2))
 					}}
 				>
@@ -72,7 +87,13 @@ export default function LDClientLazyPage() {
 
 				<button
 					onClick={() => {
-						setFlags(JSON.stringify(client.variation('enable-session-card-style'), null, 2))
+						setFlags(
+							JSON.stringify(
+								client.variation('enable-session-card-style'),
+								null,
+								2,
+							),
+						)
 					}}
 				>
 					client.variation
@@ -80,14 +101,22 @@ export default function LDClientLazyPage() {
 
 				<button
 					onClick={() => {
-						client.track('ldclient-lazy-page-custom-event', { random: Math.random() })
+						client.track('ldclient-lazy-page-custom-event', {
+							random: Math.random(),
+						})
 					}}
 				>
 					client.track
 				</button>
 
 				{flags && (
-					<pre style={{ background: '#f5f5f5', padding: 8, borderRadius: 4 }}>
+					<pre
+						style={{
+							background: '#f5f5f5',
+							padding: 8,
+							borderRadius: 4,
+						}}
+					>
 						{flags}
 					</pre>
 				)}
