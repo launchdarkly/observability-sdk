@@ -92,12 +92,6 @@ android {
         buildConfigField("String", "OBSERVABILITY_SDK_VERSION", "\"${project.version}\"")
     }
 
-    externalNativeBuild {
-        cmake {
-            path = file("src/main/cpp/CMakeLists.txt")
-        }
-    }
-
     buildTypes {
         release {
             isMinifyEnabled = false

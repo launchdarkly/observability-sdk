@@ -7,7 +7,7 @@ internal object TileHashNative {
 
     init {
         isAvailable = try {
-            System.loadLibrary("tile_hash")
+            System.loadLibrary("session_replay_c")
             true
         } catch (_: UnsatisfiedLinkError) {
             false
