@@ -17,7 +17,7 @@ import org.junit.jupiter.api.Test
 class RRWebEventGeneratorTest {
     @Test
     fun `convenience export frame uses jpeg mime type`() {
-        val generator = RRWebEventGenerator(canvasDrawEntourage = 1)
+        val generator = RRWebEventGenerator(canvasDrawEntourage = 1, title = "test")
         val exportFrame = ExportFrame("AQ==", 88, 120, 1L, "session")
 
         val events = generator.generateCaptureFullEvents(exportFrame)
@@ -28,7 +28,7 @@ class RRWebEventGeneratorTest {
 
     @Test
     fun `keyframe incremental resolves removes before map reset`() {
-        val generator = RRWebEventGenerator(canvasDrawEntourage = 1)
+        val generator = RRWebEventGenerator(canvasDrawEntourage = 1, title = "test")
         val sigA = ImageSignature(rows = 1, columns = 1, tileWidth = 64, tileHeight = 22, tileSignatures = listOf(TileSignature(101)))
         val sigB = ImageSignature(rows = 1, columns = 1, tileWidth = 64, tileHeight = 22, tileSignatures = listOf(TileSignature(202)))
 
@@ -69,7 +69,7 @@ class RRWebEventGeneratorTest {
 
     @Test
     fun `backtracking supports two remove-only rollbacks`() {
-        val generator = RRWebEventGenerator(canvasDrawEntourage = 1)
+        val generator = RRWebEventGenerator(canvasDrawEntourage = 1, title = "test")
         val sigA = ImageSignature(rows = 1, columns = 1, tileWidth = 64, tileHeight = 22, tileSignatures = listOf(TileSignature(101)))
         val sigB = ImageSignature(rows = 1, columns = 1, tileWidth = 64, tileHeight = 22, tileSignatures = listOf(TileSignature(202)))
         val sigC = ImageSignature(rows = 1, columns = 1, tileWidth = 64, tileHeight = 22, tileSignatures = listOf(TileSignature(303)))

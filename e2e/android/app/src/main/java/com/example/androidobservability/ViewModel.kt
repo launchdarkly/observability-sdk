@@ -55,7 +55,15 @@ class ViewModel(application: Application) : AndroidViewModel(application) {
         LDObserve.recordLog(
             "Test Log",
             Severity.INFO,
-            Attributes.of(AttributeKey.stringKey("FakeAttribute"), "FakeVal")
+            Attributes.builder()
+                .put(AttributeKey.stringKey("test-string"), "maui")
+                .put(AttributeKey.booleanKey("test-true"), true)
+                .put(AttributeKey.booleanKey("test-false"), false)
+                .put(AttributeKey.longKey("test-integer"), 42L)
+                .put(AttributeKey.doubleKey("test-double"), 3.14)
+                .put(AttributeKey.doubleArrayKey("test-array"), listOf(3.14))
+                .put(AttributeKey.longArrayKey("test-nested.array"), listOf(1L))
+                .build()
         )
     }
 
@@ -89,11 +97,11 @@ class ViewModel(application: Application) : AndroidViewModel(application) {
 
     fun triggerNestedSpans() {
         viewModelScope.launch(Dispatchers.IO) {
-            val newSpan0 = LDObserve.startSpan("FakeSpan", Attributes.empty())
+            val newSpan0 = LDObserve.startSpan("NestedSpan", Attributes.empty())
             newSpan0.makeCurrent().use {
-                val newSpan1 = LDObserve.startSpan("FakeSpan1", Attributes.empty())
+                val newSpan1 = LDObserve.startSpan("NestedSpan1", Attributes.empty())
                 newSpan1.makeCurrent().use {
-                    val newSpan2 = LDObserve.startSpan("FakeSpan2", Attributes.empty())
+                    val newSpan2 = LDObserve.startSpan("NestedSpan2", Attributes.empty())
                     newSpan2.makeCurrent().use {
                         sendOkHttpRequest()
                         sendURLRequest()

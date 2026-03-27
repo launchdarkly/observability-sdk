@@ -3,9 +3,10 @@ package com.launchdarkly.observability.client
 import android.app.Application
 import com.launchdarkly.logging.LDLogger
 import com.launchdarkly.observability.api.ObservabilityOptions
-import com.launchdarkly.observability.interfaces.LDExtendedInstrumentation
 import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.observability.interfaces.Observe
+import com.launchdarkly.observability.plugin.ObservabilityHookExporter
+import io.opentelemetry.android.session.SessionManager
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Severity
 import io.opentelemetry.api.trace.Span
@@ -21,6 +22,7 @@ import io.opentelemetry.sdk.resources.Resource
  */
 class ObservabilityClient : Observe {
     private val instrumentationManager: InstrumentationManager
+    internal val hookExporter: ObservabilityHookExporter
 
     /**
      * Creates a new ObservabilityClient.
@@ -30,7 +32,6 @@ class ObservabilityClient : Observe {
      * @param resource The resource.
      * @param logger The logger.
      * @param options Additional options for the client.
-     * @param instrumentations A list of extended instrumentation providers.
      */
     constructor(
         application: Application,
@@ -38,17 +39,30 @@ class ObservabilityClient : Observe {
         resource: Resource,
         logger: LDLogger,
         options: ObservabilityOptions,
-        instrumentations: List<LDExtendedInstrumentation>
     ) {
         this.instrumentationManager = InstrumentationManager(
-            application, sdkKey, resource, logger, options, instrumentations
+            application, sdkKey, resource, logger, options,
+        )
+        this.hookExporter = ObservabilityHookExporter(
+            withSpans = true,
+            withValue = true,
+            tracerProvider = { instrumentationManager.getTracer() },
+            contextFriendlyName = options.contextFriendlyName
         )
     }
+
+    val sessionManager: SessionManager? get() = instrumentationManager.sessionManager
 
     internal constructor(
         instrumentationManager: InstrumentationManager
     ) {
         this.instrumentationManager = instrumentationManager
+        this.hookExporter = ObservabilityHookExporter(
+            withSpans = true,
+            withValue = true,
+            tracerProvider = { instrumentationManager.getTracer() },
+            contextFriendlyName = null
+        )
     }
 
     override fun recordMetric(metric: Metric) {

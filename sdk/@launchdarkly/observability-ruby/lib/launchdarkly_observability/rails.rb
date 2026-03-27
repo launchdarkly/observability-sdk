@@ -50,9 +50,7 @@ module LaunchDarklyObservability
         end
 
         def otel_logger_provider_available?
-          defined?(OpenTelemetry::SDK::Logs::LoggerProvider) &&
-            OpenTelemetry.respond_to?(:logger_provider) &&
-            OpenTelemetry.logger_provider.is_a?(OpenTelemetry::SDK::Logs::LoggerProvider)
+          LaunchDarklyObservability.send(:otel_logger_provider_available?)
         end
       end
     end
@@ -102,7 +100,7 @@ module LaunchDarklyObservability
         span = OpenTelemetry::Trace.current_span
         return unless span
 
-        span.record_exception(exception, attributes: attributes)
+        span.record_exception(exception, attributes: SourceContext.exception_attributes(exception).merge(attributes))
         span.status = OpenTelemetry::Trace::Status.error(exception.message)
       end
     end

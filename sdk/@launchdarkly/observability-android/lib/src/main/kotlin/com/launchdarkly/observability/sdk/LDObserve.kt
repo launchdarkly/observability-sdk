@@ -1,10 +1,10 @@
 package com.launchdarkly.observability.sdk
 
+import com.launchdarkly.observability.bridge.AttributeConverter
 import com.launchdarkly.observability.client.ObservabilityClient
 import com.launchdarkly.observability.client.ObservabilityContext
 import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.observability.interfaces.Observe
-import com.launchdarkly.observability.plugin.ObservabilityHookProxy
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Severity
 import io.opentelemetry.api.trace.Span
@@ -82,14 +82,12 @@ class LDObserve(private val client: Observe) : Observe {
         var context: ObservabilityContext? = null
             internal set
 
-        /**
-         * Hook proxy for the C# / MAUI bridge. Set by the Observability plugin during getHooks().
-         */
         @Volatile
-        var hookProxy: ObservabilityHookProxy? = null
-            internal set
+        internal var observabilityClient: ObservabilityClient? = null
+            private set
 
         fun init(client: ObservabilityClient) {
+            observabilityClient = client
             delegate = LDObserve(client)
         }
 
@@ -102,5 +100,22 @@ class LDObserve(private val client: Observe) : Observe {
         override fun recordLog(message: String, severity: Severity, attributes: Attributes) = delegate.recordLog(message, severity, attributes)
         override fun startSpan(name: String, attributes: Attributes): Span = delegate.startSpan(name, attributes)
         override fun flush(): Boolean = delegate.flush()
+
+        /**
+         * Bridge-friendly overloads that avoid exposing OpenTelemetry types
+         * to callers such as the .NET MAUI native bridge.
+         */
+
+        fun recordError(message: String, cause: String? = null) {
+            val error = Error(message, if (cause != null) Throwable(cause) else null)
+            delegate.recordError(error, Attributes.empty())
+        }
+
+        fun recordLog(message: String, severityNumber: Int, attributes: Map<String, Any?>? = null) {
+            val severity = Severity.values().firstOrNull { it.severityNumber == severityNumber }
+                ?: Severity.INFO
+            val attrs = AttributeConverter.convert(attributes)
+            delegate.recordLog(message, severity, attrs)
+        }
     }
 }

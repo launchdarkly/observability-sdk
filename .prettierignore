@@ -25,3 +25,4 @@ sdk/highlightinc-highlight-datasource/grafana/data
 sdk/highlight-php
 sdk/@launchdarkly/observability-dotnet
 sdk/@launchdarkly/launchdarkly_flutter_observability
+sdk/@launchdarkly/mobile-dotnet

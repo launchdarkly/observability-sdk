@@ -1,6 +1,6 @@
 package com.launchdarkly.LDNative
 
-import com.launchdarkly.observability.plugin.ObservabilityHookProxy as PluginObservabilityHookProxy
+import com.launchdarkly.observability.bridge.ObservabilityHookProxy as PluginObservabilityHookProxy
 
 /**
  * Bindable wrapper around the real observability hook proxy.

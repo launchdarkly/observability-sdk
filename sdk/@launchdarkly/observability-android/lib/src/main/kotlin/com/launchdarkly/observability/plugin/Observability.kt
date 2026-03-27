@@ -55,6 +55,7 @@ class Observability(
     private val options: ObservabilityOptions = ObservabilityOptions() // new instance has reasonable defaults
 ) : Plugin() {
     private val logger: LDLogger
+    private val observabilityHook = ObservabilityHook()
     private var observabilityClient: ObservabilityClient? = null
     private var client: LDClient? = null
 
@@ -86,14 +87,7 @@ class Observability(
     }
 
     override fun getHooks(metadata: EnvironmentMetadata?): MutableList<Hook> {
-        val exporter = ObservabilityHookExporter(
-            withSpans = true,
-            withValue = true,
-            tracerProvider = { observabilityClient?.getTracer() },
-            contextFriendlyName = options.contextFriendlyName
-        )
-        LDObserve.hookProxy = ObservabilityHookProxy(exporter)
-        return Collections.singletonList(ObservabilityHook(exporter))
+        return Collections.singletonList(observabilityHook)
     }
 
     override fun onPluginsReady(result: RegistrationCompleteResult?, metadata: EnvironmentMetadata?) {
@@ -121,13 +115,14 @@ class Observability(
                     }
                 }
 
-                val instrumentations = InstrumentationContributorManager.get(lDClient).flatMap { it.provideInstrumentations() }
-                observabilityClient = ObservabilityClient(
-                    application, sdkKey, resourceBuilder.build(), logger, options, instrumentations
+                val client = ObservabilityClient(
+                    application, sdkKey, resourceBuilder.build(), logger, options,
                 )
-                observabilityClient?.let {
-                    LDObserve.init(it)
-                }
+                observabilityClient = client
+                LDObserve.context?.sessionManager = client.sessionManager
+                LDObserve.init(client)
+
+                observabilityHook.delegate = client.hookExporter
             } else {
                 logger.warn("Observability could not be initialized for sdkKey: $sdkKey")
             }

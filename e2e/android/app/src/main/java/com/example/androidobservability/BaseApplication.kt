@@ -88,7 +88,7 @@ open class BaseApplication : Application() {
             .anonymous(true)
             .build()
 
-        LDClient.init(this@BaseApplication, ldConfig, context)
+        LDClient.init(this@BaseApplication, ldConfig, context, 1)
         telemetryInspector = observabilityPlugin.getTelemetryInspector()
 
         if (testUrl == null) {
