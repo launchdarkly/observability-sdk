@@ -7,10 +7,10 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
-class ObservabilityClientTest {
+class ObservabilityServiceTest {
 
     private lateinit var mockInstrumentationManager: InstrumentationManager
-    private lateinit var observabilityClient: ObservabilityClient
+    private lateinit var observabilityClient: ObservabilityService
 
     @BeforeEach
     fun setup() {
@@ -18,7 +18,7 @@ class ObservabilityClientTest {
             every { flush() } returns true
         }
 
-        observabilityClient = ObservabilityClient(mockInstrumentationManager)
+        observabilityClient = ObservabilityService(mockInstrumentationManager)
     }
 
     @Test

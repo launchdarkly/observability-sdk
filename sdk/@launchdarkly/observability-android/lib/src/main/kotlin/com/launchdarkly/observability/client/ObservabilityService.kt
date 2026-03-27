@@ -13,19 +13,19 @@ import io.opentelemetry.api.trace.Span
 import io.opentelemetry.sdk.resources.Resource
 
 /**
- * The [ObservabilityClient] can be used for recording observability data such as
+ * The [ObservabilityService] can be used for recording observability data such as
  * metrics, logs, errors, and traces.
  *
  * It is recommended to use the [com.launchdarkly.observability.plugin.Observability] plugin with the LaunchDarkly Android
  * Client SDK, as that will automatically initialize the [com.launchdarkly.observability.sdk.LDObserve] singleton instance.
  *
  */
-class ObservabilityClient : Observe {
+class ObservabilityService : Observe {
     private val instrumentationManager: InstrumentationManager
     internal val hookExporter: ObservabilityHookExporter
 
     /**
-     * Creates a new ObservabilityClient.
+     * Creates a new ObservabilityService.
      *
      * @param application The application instance.
      * @param sdkKey The SDK key for the environment.
