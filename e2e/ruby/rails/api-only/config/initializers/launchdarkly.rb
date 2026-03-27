@@ -13,7 +13,7 @@ observability_plugin = LaunchDarklyObservability::Plugin.new(
 # Initialize LaunchDarkly client with real SDK key
 sdk_key = ENV.fetch('LAUNCHDARKLY_SDK_KEY') do
   Rails.logger.warn '[LaunchDarkly] LAUNCHDARKLY_SDK_KEY not set, client will not connect'
-  nil
+  ''
 end
 
 config = LaunchDarkly::Config.new(

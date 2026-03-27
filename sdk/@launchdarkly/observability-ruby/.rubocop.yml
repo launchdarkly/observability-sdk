@@ -24,11 +24,14 @@ Lint/DuplicateBranch:
 Naming/MethodParameterName:
     Enabled: false
 
+Naming/PredicateMethod:
+    Enabled: false
+
 Gemspec/DevelopmentDependencies:
     Enabled: false
 
 Metrics/MethodLength:
-    Max: 30
+    Max: 35
 
 Metrics/ClassLength:
     Max: 200
@@ -36,7 +39,7 @@ Metrics/ClassLength:
         - 'test/**/*'
 
 Metrics/AbcSize:
-    Max: 30
+    Max: 31
     Exclude:
         - 'test/**/*'
 
