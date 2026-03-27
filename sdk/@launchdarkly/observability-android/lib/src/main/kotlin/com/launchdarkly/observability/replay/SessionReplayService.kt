@@ -233,7 +233,7 @@ class SessionReplayService(
         }
     }
 
-    // TODO: O11Y-621 - This should be called somewhere (Probably inside InstrumentationManager.kt) to shutdown the instrumentation.
+    // TODO: O11Y-621 - This should be called somewhere (Probably inside ObservabilityService.kt) to shutdown the instrumentation.
     fun shutdown() {
         pauseCapture()
         stopProcessLifecycleObserver()
