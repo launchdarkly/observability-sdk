@@ -47,7 +47,7 @@ dependencies {
     implementation("io.opentelemetry:opentelemetry-sdk-logs:1.51.0")
 
     // TODO: Evaluate risks associated with incubator APIs
-   // implementation("io.opentelemetry:opentelemetry-api-incubator:1.51.0-alpha")
+    implementation("io.opentelemetry:opentelemetry-api-incubator:1.51.0-alpha")
 
     // OTEL Android
     implementation("io.opentelemetry.android:core:0.11.0-alpha")
