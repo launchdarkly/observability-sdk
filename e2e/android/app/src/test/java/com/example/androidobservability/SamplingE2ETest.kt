@@ -5,7 +5,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.example.androidobservability.TestUtils.TelemetryType
 import com.example.androidobservability.TestUtils.waitForTelemetryData
 import com.launchdarkly.observability.api.ObservabilityOptions
-import com.launchdarkly.observability.client.TelemetryInspector
+import com.launchdarkly.observability.testing.InMemoryTelemetryInspector
 import com.launchdarkly.observability.sdk.LDObserve
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
@@ -46,7 +46,7 @@ class SamplingE2ETest {
     val testCoroutineRule = TestCoroutineRule()
 
     private val application = ApplicationProvider.getApplicationContext<Application>() as TestApplication
-    private var telemetryInspector: TelemetryInspector? = null
+    private var telemetryInspector: InMemoryTelemetryInspector? = null
 
     @Before
     fun setUp() {

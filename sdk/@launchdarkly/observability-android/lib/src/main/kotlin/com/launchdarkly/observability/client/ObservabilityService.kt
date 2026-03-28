@@ -5,8 +5,10 @@ import com.launchdarkly.logging.LDLogger
 import com.launchdarkly.observability.api.ObservabilityOptions
 import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
 import com.launchdarkly.observability.interfaces.Metric
+import com.launchdarkly.observability.interfaces.Observe
 import com.launchdarkly.observability.network.GraphQLClient
 import com.launchdarkly.observability.network.SamplingApiService
+import com.launchdarkly.observability.plugin.ObservabilityHookExporter
 import com.launchdarkly.observability.sampling.CustomSampler
 import com.launchdarkly.observability.sampling.ExportSampler
 import com.launchdarkly.observability.sampling.SamplingConfig
@@ -54,12 +56,16 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
 /**
- * Manages instrumentation for LaunchDarkly Observability.
+ * The [ObservabilityService] can be used for recording observability data such as
+ * metrics, logs, errors, and traces.
  *
  * This class is responsible for setting up and managing the OpenTelemetry RUM (Real User Monitoring)
  * instrumentation. It configures the providers for logs, traces, and metrics based on the
  * provided options. It also handles dynamic sampling configuration and provides methods to
- * record various telemetry signals like metrics, logs, and traces.
+ * record various telemetry signals.
+ *
+ * It is recommended to use the [com.launchdarkly.observability.plugin.Observability] plugin with the LaunchDarkly Android
+ * Client SDK, as that will automatically initialize the [com.launchdarkly.observability.sdk.LDObserve] singleton instance.
  *
  * @param application The application instance.
  * @param sdkKey The SDK key for authentication.
@@ -67,13 +73,13 @@ import java.util.concurrent.TimeUnit
  * @param logger The logger for internal logging.
  * @param observabilityOptions Additional configuration options for the SDK.
  */
-class InstrumentationManager(
+class ObservabilityService(
     private val application: Application,
     private val sdkKey: String,
     private val resources: Resource,
     private val logger: LDLogger,
     private val observabilityOptions: ObservabilityOptions,
-) {
+) : Observe {
     private val otelRUM: OpenTelemetryRum
     var sessionManager: SessionManager? = null
         private set
@@ -86,7 +92,7 @@ class InstrumentationManager(
         logger = logger
     )
     private val samplingApiService = SamplingApiService(graphqlClient)
-    private var telemetryInspector: TelemetryInspector? = null
+    private val telemetryInspector: TelemetryInspector? = observabilityOptions.telemetryInspector
     private var spanProcessor: SpanProcessor? = null
     private var logProcessor: LogRecordProcessor? = null
     private var metricsReader: PeriodicMetricReader? = null
@@ -94,12 +100,12 @@ class InstrumentationManager(
     private val counterCache = ConcurrentHashMap<String, LongCounter>()
     private val histogramCache = ConcurrentHashMap<String, DoubleHistogram>()
     private val upDownCounterCache = ConcurrentHashMap<String, LongUpDownCounter>()
+    internal val hookExporter: ObservabilityHookExporter
 
     //TODO: Evaluate if this class should have a close/shutdown method to close this scope
     private val scope = CoroutineScope(DispatcherProviderHolder.current.io + SupervisorJob())
 
     init {
-        initializeTelemetryInspector()
         val otelRumConfig = createOtelRumConfig()
 
         var capturedSessionManager: SessionManager? = null
@@ -146,6 +152,13 @@ class InstrumentationManager(
         otelMeter = otelRUM.openTelemetry.meterProvider.get(INSTRUMENTATION_SCOPE_NAME)
         otelLogger = otelRUM.openTelemetry.logsBridge.get(INSTRUMENTATION_SCOPE_NAME)
         otelTracer = otelRUM.openTelemetry.tracerProvider.get(INSTRUMENTATION_SCOPE_NAME)
+
+        hookExporter = ObservabilityHookExporter(
+            withSpans = true,
+            withValue = true,
+            tracerProvider = { getTracer() },
+            contextFriendlyName = observabilityOptions.contextFriendlyName
+        )
     }
 
     private fun createOtelRumConfig(): OtelRumConfig {
@@ -247,16 +260,9 @@ class InstrumentationManager(
     }
 
     private fun createPeriodicMetricReader(metricExporter: MetricExporter): PeriodicMetricReader {
-        // Configure a periodic reader that pushes metrics every 10 seconds.
         return PeriodicMetricReader.builder(metricExporter)
             .setInterval(METRICS_EXPORT_INTERVAL_MS, TimeUnit.MILLISECONDS)
             .build()
-    }
-
-    private fun initializeTelemetryInspector() {
-        if (observabilityOptions.debug) {
-            telemetryInspector = TelemetryInspector()
-        }
     }
 
     private fun loadSamplingConfigAsync() {
@@ -278,7 +284,7 @@ class InstrumentationManager(
             .build()
     }
 
-    fun recordMetric(metric: Metric) {
+    override fun recordMetric(metric: Metric) {
         if (!observabilityOptions.metricsApi.enabled) return
 
         val gauge = gaugeCache.getOrPut(metric.name) {
@@ -287,7 +293,7 @@ class InstrumentationManager(
         gauge.set(metric.value, metric.attributes.addSessionId())
     }
 
-    fun recordCount(metric: Metric) {
+    override fun recordCount(metric: Metric) {
         if (!observabilityOptions.metricsApi.enabled) return
 
         // TODO: handle double casting to long better
@@ -297,17 +303,17 @@ class InstrumentationManager(
         counter.add(metric.value.toLong(), metric.attributes.addSessionId())
     }
 
-    fun recordIncr(metric: Metric) {
+    override fun recordIncr(metric: Metric) {
         if (!observabilityOptions.metricsApi.enabled) return
 
         val counter = counterCache.getOrPut(metric.name) {
             otelMeter.counterBuilder(metric.name).build()
         }
-        // It increments the value until the metric is exported, then it’s reset.
+        // It increments the value until the metric is exported, then it's reset.
         counter.add(1, metric.attributes.addSessionId())
     }
 
-    fun recordHistogram(metric: Metric) {
+    override fun recordHistogram(metric: Metric) {
         if (!observabilityOptions.metricsApi.enabled) return
 
         val histogram = histogramCache.getOrPut(metric.name) {
@@ -316,7 +322,7 @@ class InstrumentationManager(
         histogram.record(metric.value, metric.attributes.addSessionId())
     }
 
-    fun recordUpDownCounter(metric: Metric) {
+    override fun recordUpDownCounter(metric: Metric) {
         if (!observabilityOptions.metricsApi.enabled) return
 
         val upDownCounter = upDownCounterCache.getOrPut(metric.name) {
@@ -325,7 +331,7 @@ class InstrumentationManager(
         upDownCounter.add(metric.value.toLong(), metric.attributes.addSessionId())
     }
 
-    fun recordLog(
+    override fun recordLog(
         message: String,
         severity: Severity,
         attributes: Attributes
@@ -341,7 +347,7 @@ class InstrumentationManager(
             .emit()
     }
 
-    fun recordError(error: Error, attributes: Attributes) {
+    override fun recordError(error: Error, attributes: Attributes) {
         if (!observabilityOptions.tracesApi.includeErrors) return
 
         val span = otelTracer
@@ -356,20 +362,13 @@ class InstrumentationManager(
         span.end()
     }
 
-    fun startSpan(name: String, attributes: Attributes): Span {
+    override fun startSpan(name: String, attributes: Attributes): Span {
         if (!observabilityOptions.tracesApi.includeSpans) return Span.getInvalid()
 
         return otelTracer.spanBuilder(name)
             .setAllAttributes(attributes)
             .startSpan()
     }
-
-    /**
-     * Returns the telemetry inspector if debug option is enabled.
-     *
-     * @return TelemetryInspector instance or null
-     */
-    fun getTelemetryInspector(): TelemetryInspector? = telemetryInspector
 
     /**
      * Returns the tracer instance for creating spans.
@@ -382,14 +381,13 @@ class InstrumentationManager(
      * Flushes all pending telemetry data (traces, logs, metrics).
      * @return true if all flush operations succeeded, false otherwise
      */
-    fun flush(): Boolean {
+    override fun flush(): Boolean {
         val results = listOfNotNull(
             spanProcessor?.forceFlush(),
             logProcessor?.forceFlush(),
             metricsReader?.forceFlush()
         )
 
-        // Wait for all flush operations to complete with a single 5 second timeout
         return CompletableResultCode.ofAll(results)
             .join(FLUSH_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .isSuccess

@@ -4,7 +4,6 @@ import android.app.Application
 import android.util.Log
 import android.widget.ImageView
 import com.launchdarkly.observability.api.ObservabilityOptions
-import com.launchdarkly.observability.client.TelemetryInspector
 import com.launchdarkly.observability.plugin.Observability
 import com.launchdarkly.observability.replay.PrivacyProfile
 import com.launchdarkly.observability.replay.ReplayOptions
@@ -42,7 +41,6 @@ open class BaseApplication : Application() {
         logAdapter = LDAndroidLogging.adapter(),
     )
 
-    var telemetryInspector: TelemetryInspector? = null
     var testUrl: String? = null
 
     open fun realInit() {
@@ -89,7 +87,6 @@ open class BaseApplication : Application() {
             .build()
 
         LDClient.init(this@BaseApplication, ldConfig, context, 1)
-        telemetryInspector = observabilityPlugin.getTelemetryInspector()
 
         if (testUrl == null) {
             // intervenes in E2E tests by trigger spans

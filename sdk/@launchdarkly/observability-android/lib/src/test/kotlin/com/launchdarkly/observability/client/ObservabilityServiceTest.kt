@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
-class InstrumentationManagerTest {
+class ObservabilityServiceTest {
 
     private lateinit var mockSdkLoggerProviderBuilder: SdkLoggerProviderBuilder
     private lateinit var mockExportSampler: ExportSampler
@@ -33,7 +33,7 @@ class InstrumentationManagerTest {
 
     @Test
     fun `createLoggerProcessor returns a valid processor`() {
-        val logProcessor = InstrumentationManager.createLoggerProcessor(
+        val logProcessor = ObservabilityService.createLoggerProcessor(
             sdkLoggerProviderBuilder = mockSdkLoggerProviderBuilder,
             exportSampler = mockExportSampler,
             sdkKey = testSdkKey,

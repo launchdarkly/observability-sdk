@@ -46,11 +46,9 @@ dependencies {
     implementation("io.opentelemetry:opentelemetry-sdk-metrics:1.51.0")
     implementation("io.opentelemetry:opentelemetry-sdk-logs:1.51.0")
 
-    // TODO: Evaluate risks associated with incubator APIs
+    // Required at runtime by io.opentelemetry.android:core, which uses incubator APIs
+    // internally for the logs bridge. Can be removed once the OTel Android SDK drops this dependency.
     implementation("io.opentelemetry:opentelemetry-api-incubator:1.51.0-alpha")
-    
-    // Testing exporters for telemetry inspection
-    implementation("io.opentelemetry:opentelemetry-sdk-testing:1.51.0")
 
     // OTEL Android
     implementation("io.opentelemetry.android:core:0.11.0-alpha")
@@ -61,6 +59,8 @@ dependencies {
     implementation("io.opentelemetry.android.instrumentation:activity:0.11.0-alpha")
 
     // Use JUnit Jupiter for testing.
+    // Testing exporters for telemetry inspection
+    testImplementation("io.opentelemetry:opentelemetry-sdk-testing:1.51.0")
     testImplementation(platform("org.junit:junit-bom:5.13.4"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
@@ -68,6 +68,7 @@ dependencies {
     testImplementation("io.mockk:mockk:1.14.5")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
 
+    testFixturesApi("io.opentelemetry:opentelemetry-sdk-testing:1.51.0")
     testFixturesImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
 }
 

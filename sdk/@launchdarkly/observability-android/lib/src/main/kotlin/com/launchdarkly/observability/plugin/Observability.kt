@@ -6,7 +6,7 @@ import com.launchdarkly.logging.LDLogger
 import com.launchdarkly.logging.Logs
 import com.launchdarkly.observability.BuildConfig
 import com.launchdarkly.observability.api.ObservabilityOptions
-import com.launchdarkly.observability.client.ObservabilityClient
+import com.launchdarkly.observability.client.ObservabilityService
 import com.launchdarkly.observability.client.ObservabilityContext
 import com.launchdarkly.observability.client.TelemetryInspector
 import com.launchdarkly.observability.sdk.LDObserve
@@ -56,7 +56,7 @@ class Observability(
 ) : Plugin() {
     private val logger: LDLogger
     private val observabilityHook = ObservabilityHook()
-    private var observabilityClient: ObservabilityClient? = null
+    private var observabilityClient: ObservabilityService? = null
     private var client: LDClient? = null
 
     init {
@@ -115,7 +115,7 @@ class Observability(
                     }
                 }
 
-                val client = ObservabilityClient(
+                val client = ObservabilityService(
                     application, sdkKey, resourceBuilder.build(), logger, options,
                 )
                 observabilityClient = client
@@ -130,7 +130,7 @@ class Observability(
     }
 
     fun getTelemetryInspector(): TelemetryInspector? {
-        return observabilityClient?.getTelemetryInspector()
+        return options.telemetryInspector
     }
 
     companion object {

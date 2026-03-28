@@ -1,7 +1,7 @@
 package com.launchdarkly.observability.sdk
 
 import com.launchdarkly.observability.bridge.AttributeConverter
-import com.launchdarkly.observability.client.ObservabilityClient
+import com.launchdarkly.observability.client.ObservabilityService
 import com.launchdarkly.observability.client.ObservabilityContext
 import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.observability.interfaces.Observe
@@ -83,10 +83,10 @@ class LDObserve(private val client: Observe) : Observe {
             internal set
 
         @Volatile
-        internal var observabilityClient: ObservabilityClient? = null
+        internal var observabilityClient: ObservabilityService? = null
             private set
 
-        fun init(client: ObservabilityClient) {
+        fun init(client: ObservabilityService) {
             observabilityClient = client
             delegate = LDObserve(client)
         }

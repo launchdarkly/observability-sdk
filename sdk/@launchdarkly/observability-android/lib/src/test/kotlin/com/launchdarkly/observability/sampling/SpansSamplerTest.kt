@@ -1,6 +1,6 @@
 package com.launchdarkly.observability.sampling
 
-import com.launchdarkly.observability.client.InstrumentationManager
+import com.launchdarkly.observability.client.ObservabilityService
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.trace.SpanKind
 import io.opentelemetry.context.Context
@@ -32,7 +32,7 @@ class SpansSamplerTest {
     fun `should record error spans when error sampling enabled`() {
         val sampler = SpansSampler(allowNormalSpans = false, allowErrorSpans = true)
 
-        val result = sample(sampler, spanName = InstrumentationManager.ERROR_SPAN_NAME)
+        val result = sample(sampler, spanName = ObservabilityService.ERROR_SPAN_NAME)
 
         assertEquals(SamplingDecision.RECORD_AND_SAMPLE, result.decision)
     }
@@ -41,7 +41,7 @@ class SpansSamplerTest {
     fun `should drop error spans when error sampling disabled`() {
         val sampler = SpansSampler(allowNormalSpans = true, allowErrorSpans = false)
 
-        val result = sample(sampler, spanName = InstrumentationManager.ERROR_SPAN_NAME)
+        val result = sample(sampler, spanName = ObservabilityService.ERROR_SPAN_NAME)
 
         assertEquals(SamplingDecision.DROP, result.decision)
     }
