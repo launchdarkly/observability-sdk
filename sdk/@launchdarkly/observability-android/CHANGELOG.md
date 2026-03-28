@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.34.1](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.34.0...launchdarkly-observability-android-0.34.1) (2026-03-28)
+
+
+### Bug Fixes
+
+* move Otel testing library out production runtime ([#446](https://github.com/launchdarkly/observability-sdk/issues/446)) ([8a8ef34](https://github.com/launchdarkly/observability-sdk/commit/8a8ef344c15bedfa562d28dbb4904ceb0cdf34a3))
+
 ## [0.34.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.33.0...launchdarkly-observability-android-0.34.0) (2026-03-27)
 
 
