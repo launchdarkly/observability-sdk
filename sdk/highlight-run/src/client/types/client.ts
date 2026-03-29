@@ -1,5 +1,4 @@
 import { RequestResponsePair } from '../listeners/network-listener/utils/models'
-import type { EventName } from '@opentelemetry/instrumentation-user-interaction'
 
 export const ALL_CONSOLE_METHODS = [
 	'assert',
@@ -141,7 +140,6 @@ export type NetworkRecordingOptions = {
 
 export type OtelOptions = {
 	instrumentations?: OtelInstrumentatonOptions
-	eventNames?: EventName[]
 }
 
 export type OtelInstrumentatonOptions = {

@@ -11,21 +11,22 @@ const observabilitySettings: ConstructorParameters<typeof Observability>[0] = {
 		recordHeadersAndBody: true,
 	},
 	serviceName: 'ryan-test',
-	backendUrl: 'http://localhost:8082/public',
+	backendUrl: 'https://pub.observability.ld-stg.launchdarkly.com/',
 	otel: {
-		otlpEndpoint: 'http://localhost:4318',
+		otlpEndpoint: 'https://otel.observability.ld-stg.launchdarkly.com:4318',
 	},
+	productAnalytics: true,
 }
 const sessionReplaySettings: ConstructorParameters<typeof SessionReplay>[0] = {
 	debug: { clientInteractions: true, domRecording: true },
 	privacySetting: 'none',
 	serviceName: 'ryan-test',
-	backendUrl: 'http://localhost:8082/public',
+	backendUrl: 'https://pub.observability.ld-stg.launchdarkly.com/',
 }
 
 export const client = init(
 	'548f6741c1efad40031b18ae',
-	{ key: 'unknown' },
+	{ kind: 'user', anonymous: true },
 	{
 		// Not including plugins at all would be equivalent to the current LaunchDarkly SDK.
 		plugins: [
