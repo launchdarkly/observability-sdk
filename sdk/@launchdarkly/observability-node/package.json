@@ -36,7 +36,17 @@
 	},
 	"peerDependencies": {
 		"@launchdarkly/js-server-sdk-common": "^2.15.2",
-		"@launchdarkly/node-server-sdk": "^9.9.2"
+		"@launchdarkly/node-server-sdk": "^9.9.2",
+		"@traceloop/instrumentation-langchain": "^0.22.0",
+		"@traceloop/instrumentation-openai": "^0.22.0"
+	},
+	"peerDependenciesMeta": {
+		"@traceloop/instrumentation-langchain": {
+			"optional": true
+		},
+		"@traceloop/instrumentation-openai": {
+			"optional": true
+		}
 	},
 	"devDependencies": {
 		"@launchdarkly/js-server-sdk-common": "^2.15.2",
