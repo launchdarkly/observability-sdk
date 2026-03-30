@@ -198,6 +198,15 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 						hook.afterTrack?.(hookContext)
 					}
 
+					const trackEventsEnabled =
+						this.options?.productAnalytics !== false &&
+						(typeof this.options?.productAnalytics !== 'object' ||
+							this.options.productAnalytics.trackEvents !== false)
+
+					if (!trackEventsEnabled) {
+						return
+					}
+
 					const trackAttrs: Attributes = {
 						[ATTR_URL_FULL]: window.location.href,
 						...(this.observe?.getLDContextKeyAttributes() ?? {}),
@@ -209,20 +218,11 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 							: {}),
 					}
 
-					const trackEventsEnabled =
-						this.options?.productAnalytics !== false &&
-						(typeof this.options?.productAnalytics !== 'object' ||
-							this.options.productAnalytics.trackEvents !== false)
-
-					if (trackEventsEnabled) {
-						this.observe?.startSpan(LD_TRACK_SPAN_NAME, (s) => {
-							if (s) {
-								s.setAttributes(trackAttrs)
-							}
-						})
-					}
-
-					this.observe?.recordLog('LD.track', 'info', trackAttrs)
+					this.observe?.startSpan(LD_TRACK_SPAN_NAME, (s) => {
+						if (s) {
+							s.setAttributes(trackAttrs)
+						}
+					})
 				},
 			},
 		]
