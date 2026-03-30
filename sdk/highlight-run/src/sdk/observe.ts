@@ -32,6 +32,7 @@ import {
 	type Hook,
 	LaunchDarklyIntegration,
 	type LDClient,
+	CONTEXT_SCOPE_CONTEXT_KEYS_ATTR,
 } from '../integrations/launchdarkly'
 import type { IntegrationClient } from '../integrations'
 import type { OTelMetric as Metric, RecordMetric } from '../client/types/types'
@@ -76,7 +77,7 @@ import {
 } from '../client/listeners/network-listener/performance-listener'
 import randomUuidV4 from '../client/utils/randomUuidV4'
 import { recordException } from '../client/otel/recordException'
-import { ObserveOptions } from '../client/types/observe'
+import { ObserveOptions, ProductAnalyticsEvents } from '../client/types/observe'
 import { isMetricSafeNumber } from '../client/utils/utils'
 import * as SemanticAttributes from '@opentelemetry/semantic-conventions'
 import { sanitizeUrl } from '../client/listeners/network-listener/utils/network-sanitizer'
@@ -104,6 +105,7 @@ export class ObserveSDK implements Observe {
 	>()
 	private readonly sampler: ExportSampler = new CustomSampler()
 	private _started = false
+	private _ldContextKeys: Attributes | undefined
 	private graphqlSDK!: Sdk
 	constructor(
 		options: ObserveOptions & {
@@ -113,6 +115,45 @@ export class ObserveSDK implements Observe {
 	) {
 		this._options = options
 		this.organizationID = options.projectId
+	}
+
+	private _productAnalyticsEvents(): ProductAnalyticsEvents {
+		const pa = this._options?.productAnalytics
+		if (pa === false) {
+			return {}
+		}
+
+		const paEvents = {
+			clicks: true,
+			pageViews: true,
+			trackEvents: true,
+		}
+		if (pa === undefined || pa === true) {
+			return paEvents
+		}
+
+		for (const event of Object.keys(pa)) {
+			if (pa[event as keyof ProductAnalyticsEvents] === false) {
+				paEvents[event as keyof ProductAnalyticsEvents] = false
+			}
+		}
+		return paEvents
+	}
+
+	setLDContextKeyAttributes(contextKeys: Attributes): void {
+		if (!contextKeys) {
+			return
+		}
+		this._ldContextKeys = Object.fromEntries(
+			Object.entries(contextKeys).map(([k, v]) => [
+				`${CONTEXT_SCOPE_CONTEXT_KEYS_ATTR}.${k}`,
+				v,
+			]),
+		)
+	}
+
+	getLDContextKeyAttributes(): Attributes | undefined {
+		return this._ldContextKeys
 	}
 
 	public async start() {
@@ -140,7 +181,9 @@ export class ObserveSDK implements Observe {
 					serviceName: this._options?.serviceName ?? 'browser',
 					serviceVersion: this._options?.version,
 					instrumentations: this._options?.otel?.instrumentations,
-					eventNames: this._options?.otel?.eventNames,
+					productAnalyticsEvents: this._productAnalyticsEvents(),
+					getLDContextKeyAttributes: () =>
+						this.getLDContextKeyAttributes(),
 				},
 				getIntegrations: () => this._integrations,
 			},
