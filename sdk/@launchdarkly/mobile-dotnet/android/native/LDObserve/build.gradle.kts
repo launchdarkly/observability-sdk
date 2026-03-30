@@ -37,14 +37,11 @@ configurations {
 }
 
 dependencies {
-
     implementation("androidx.core:core-ktx:1.15.0")
     "copyDependencies"("androidx.core:core-ktx:1.15.0")
 
     // Copy dependencies for binding library
     // Uncomment line below and replace dependency.name.goes.here with your dependency
-
-
     implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.11.0")
     "copyDependencies"("com.launchdarkly:launchdarkly-android-client-sdk:5.11.0")
 
@@ -73,15 +70,9 @@ dependencies {
     implementation("io.opentelemetry:opentelemetry-sdk-logs:1.51.0")
     "copyDependencies"("io.opentelemetry:opentelemetry-sdk-logs:1.51.0")
 
-
     // TODO: Evaluate risks associated with incubator APIs
     implementation("io.opentelemetry:opentelemetry-api-incubator:1.51.0-alpha")
     "copyDependencies"("io.opentelemetry:opentelemetry-api-incubator:1.51.0-alpha")
-
-    // Testing exporters for telemetry inspection
-    implementation("io.opentelemetry:opentelemetry-sdk-testing:1.51.0")
-    "copyDependencies"("io.opentelemetry:opentelemetry-sdk-testing:1.51.0")
-
 
     // OTEL Android
     implementation("io.opentelemetry.android:core:0.11.0-alpha")
@@ -98,12 +89,8 @@ dependencies {
     implementation("io.opentelemetry.android.instrumentation:activity:0.11.0-alpha")
     "copyDependencies"("io.opentelemetry.android.instrumentation:activity:0.11.0-alpha")
 
-
     implementation("io.opentelemetry.android:android-agent:0.11.0-alpha")
     "copyDependencies"("io.opentelemetry.android:android-agent:0.11.0-alpha")
-
-//    implementation("io.opentelemetry.android:opentelemetry-android-bom:0.11.0-alpha")
-//    "copyDependencies"("io.opentelemetry.android:opentelemetry-android-bom:0.11.0-alpha")
 }
 
 // Copy dependencies for binding library

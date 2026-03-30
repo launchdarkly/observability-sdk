@@ -98,7 +98,9 @@
 		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\lib-release.aar" Pack="true" PackagePath="runtimes/android/native/" />
 		
 		<!-- Specific jars -->
-		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\opentelemetry-*.jar" Pack="true" PackagePath="runtimes/android/native/" />
+		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\opentelemetry-*.jar"
+			  Exclude="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\opentelemetry-sdk-extension-incubator-*.jar;..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\opentelemetry-sdk-extension-autoconfigure-1*.jar"
+			  Pack="true" PackagePath="runtimes/android/native/" />
 		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\jackson-*.jar" Pack="true" PackagePath="runtimes/android/native/" />
 		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\launchdarkly-*.jar" Pack="true" PackagePath="runtimes/android/native/" />
 		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\okhttp-*.jar" Pack="true" PackagePath="runtimes/android/native/" />
