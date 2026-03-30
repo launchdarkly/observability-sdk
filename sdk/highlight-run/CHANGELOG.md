@@ -1,5 +1,16 @@
 # highlight.run
 
+## [10.0.0](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-9.28.0...highlight.run-10.0.0) (2026-03-30)
+
+
+### ⚠ BREAKING CHANGES
+
+* Support clicks and custom event tracing ([#432](https://github.com/launchdarkly/observability-sdk/issues/432))
+
+### Features
+
+* Support clicks and custom event tracing ([#432](https://github.com/launchdarkly/observability-sdk/issues/432)) ([b6b10ea](https://github.com/launchdarkly/observability-sdk/commit/b6b10eaf24488ef9545ab58b745daf8b30680242))
+
 ## [9.28.0](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-9.27.1...highlight.run-9.28.0) (2026-03-26)
 
 
