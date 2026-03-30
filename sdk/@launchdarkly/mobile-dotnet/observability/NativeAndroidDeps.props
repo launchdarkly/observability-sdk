@@ -1,0 +1,57 @@
+<Project>
+	<!--
+		Single source of truth for native Android artifacts (AARs / JARs) that
+		must travel with the observability SDK.  Both LDObservability.csproj
+		(local dev builds) and LDObservability.Fat.csproj (NuGet packaging)
+		import this file and transform the items into the appropriate MSBuild
+		item types.
+
+		Callers may override _LDNativeDepsDir / _LDNativeAarDir before this
+		import to point at a different output location.
+
+		Items are split into _LDNativeAAR and _LDNativeJAR because MSBuild
+		does not allow %(Extension) metadata filtering in Include conditions.
+	-->
+	<PropertyGroup>
+		<_LDNativeDepsDir Condition="'$(_LDNativeDepsDir)' == ''">$(MSBuildThisFileDirectory)..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\</_LDNativeDepsDir>
+		<_LDNativeAarDir Condition="'$(_LDNativeAarDir)' == ''">$(MSBuildThisFileDirectory)..\android\native\LDObserve\bin\Release\net9.0-android\outputs\aar\</_LDNativeAarDir>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- OTel Android AARs -->
+		<_LDNativeAAR Include="$(_LDNativeDepsDir)android-agent-*.aar" />
+		<_LDNativeAAR Include="$(_LDNativeDepsDir)android-instrumentation-*.aar" />
+		<_LDNativeAAR Include="$(_LDNativeDepsDir)common-0*.aar" />
+		<_LDNativeAAR Include="$(_LDNativeDepsDir)common-api-*.aar" />
+		<_LDNativeAAR Include="$(_LDNativeDepsDir)core-*-alpha.aar" />
+		<_LDNativeAAR Include="$(_LDNativeDepsDir)crash-*-alpha.aar" />
+		<_LDNativeAAR Include="$(_LDNativeDepsDir)anr-*-alpha.aar" />
+		<_LDNativeAAR Include="$(_LDNativeDepsDir)activity-*-alpha.aar" />
+		<_LDNativeAAR Include="$(_LDNativeDepsDir)fragment-*-alpha.aar" />
+		<_LDNativeAAR Include="$(_LDNativeDepsDir)network-*-alpha.aar" />
+		<_LDNativeAAR Include="$(_LDNativeDepsDir)services-*-alpha.aar" />
+		<_LDNativeAAR Include="$(_LDNativeDepsDir)session-*-alpha.aar" />
+		<_LDNativeAAR Include="$(_LDNativeDepsDir)slowrendering-*-alpha.aar" />
+		<_LDNativeAAR Include="$(_LDNativeDepsDir)startup-*-alpha.aar" />
+
+		<!-- LD native SDK AAR -->
+		<_LDNativeAAR Include="$(_LDNativeDepsDir)launchdarkly-android-client-sdk-*.aar" />
+
+		<!-- Observability Android library AAR -->
+		<_LDNativeAAR Include="$(_LDNativeDepsDir)lib-release.aar" />
+
+		<!-- Third-party AARs -->
+		<_LDNativeAAR Include="$(_LDNativeDepsDir)timber-*.aar" />
+
+		<!-- Bridge module AAR -->
+		<_LDNativeAAR Include="$(_LDNativeAarDir)LDObserve-release.aar" />
+
+		<!-- JARs -->
+		<_LDNativeJAR Include="$(_LDNativeDepsDir)opentelemetry-*.jar"
+				Exclude="$(_LDNativeDepsDir)opentelemetry-sdk-extension-incubator-*.jar;$(_LDNativeDepsDir)opentelemetry-sdk-extension-autoconfigure-1*.jar;$(_LDNativeDepsDir)opentelemetry-sdk-testing-*.jar" />
+		<_LDNativeJAR Include="$(_LDNativeDepsDir)jackson-*.jar" />
+		<_LDNativeJAR Include="$(_LDNativeDepsDir)launchdarkly-*.jar" />
+		<_LDNativeJAR Include="$(_LDNativeDepsDir)okhttp-*.jar" />
+		<_LDNativeJAR Include="$(_LDNativeDepsDir)okio-*.jar" />
+	</ItemGroup>
+</Project>

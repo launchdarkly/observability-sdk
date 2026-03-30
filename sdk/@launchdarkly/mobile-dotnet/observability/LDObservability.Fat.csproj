@@ -76,43 +76,14 @@
 			  Pack="true" PackagePath="lib/net9.0-ios18.0/" />
 	</ItemGroup>
 
-	<!-- Package native artifacts -->
-	<ItemGroup>
-		<!-- LD specific AARs -->
-		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\android-agent-*.aar" Pack="true" PackagePath="runtimes/android/native/" />
-		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\android-instrumentation-*.aar" Pack="true" PackagePath="runtimes/android/native/" />
-		<!-- Use more specific patterns to avoid duplicates -->
-		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\common-0*.aar" Pack="true" PackagePath="runtimes/android/native/" />
-		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\common-api-*.aar" Pack="true" PackagePath="runtimes/android/native/" />
-		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\core-*-alpha.aar" Pack="true" PackagePath="runtimes/android/native/" />
-		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\crash-*-alpha.aar" Pack="true" PackagePath="runtimes/android/native/" />
-		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\anr-*-alpha.aar" Pack="true" PackagePath="runtimes/android/native/" />
-		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\activity-*-alpha.aar" Pack="true" PackagePath="runtimes/android/native/" />
-		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\fragment-*-alpha.aar" Pack="true" PackagePath="runtimes/android/native/" />
-		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\network-*-alpha.aar" Pack="true" PackagePath="runtimes/android/native/" />
-		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\services-*-alpha.aar" Pack="true" PackagePath="runtimes/android/native/" />
-		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\session-*-alpha.aar" Pack="true" PackagePath="runtimes/android/native/" />
-		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\slowrendering-*-alpha.aar" Pack="true" PackagePath="runtimes/android/native/" />
-		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\startup-*-alpha.aar" Pack="true" PackagePath="runtimes/android/native/" />
-		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\launchdarkly-android-client-sdk-*.aar" Pack="true" PackagePath="runtimes/android/native/" />
-		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\lib-release.aar" Pack="true" PackagePath="runtimes/android/native/" />
-		
-		<!-- Specific jars -->
-		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\opentelemetry-*.jar"
-			  Exclude="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\opentelemetry-sdk-extension-incubator-*.jar;..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\opentelemetry-sdk-extension-autoconfigure-1*.jar"
-			  Pack="true" PackagePath="runtimes/android/native/" />
-		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\jackson-*.jar" Pack="true" PackagePath="runtimes/android/native/" />
-		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\launchdarkly-*.jar" Pack="true" PackagePath="runtimes/android/native/" />
-		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\okhttp-*.jar" Pack="true" PackagePath="runtimes/android/native/" />
-		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\okio-*.jar" Pack="true" PackagePath="runtimes/android/native/" />
-		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\timber-*.aar" Pack="true" PackagePath="runtimes/android/native/" />
+	<!-- Package native Android artifacts (shared artifact list) -->
+	<Import Project="NativeAndroidDeps.props" />
 
-		<!-- Android module AAR containing ObservabilityBridge -->
-		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\aar\LDObserve-release.aar"
-			  Pack="true" PackagePath="runtimes/android/native/" />
+	<ItemGroup>
+		<None Include="@(_LDNativeAAR)" Pack="true" PackagePath="runtimes/android/native/" />
+		<None Include="@(_LDNativeJAR)" Pack="true" PackagePath="runtimes/android/native/" />
 
 		<!-- iOS XCFramework -->
-		<!-- Exclude Swift module metadata (very long paths; not needed for .NET binding consumption) -->
 		<None Include="..\macios\native\LDObserve\build\outputs\LDObserveBridge.xcframework\**\*"
 			  Exclude="..\macios\native\LDObserve\build\outputs\LDObserveBridge.xcframework\**\Modules\**\*"
 			  Pack="true" PackagePath="runtimes/ios/native/LDObserveBridge.xcframework" />
