@@ -1,0 +1,63 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net9.0-ios</TargetFrameworks>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>true</ImplicitUsings>
+    <IsBindingProject>true</IsBindingProject>
+
+    <!--
+      Enable trim analyzers for class libraries.
+      To learn more, see: https://learn.microsoft.com/dotnet/core/deploying/trimming/prepare-libraries-for-trimming
+    -->
+    <IsTrimmable>true</IsTrimmable>
+
+    <!-- NuGet packaging -->
+    <IsPackable>true</IsPackable>
+    <PackageId>LDObserve.MaciOS.Binding</PackageId>
+    <Version>0.1.0-local</Version>
+    <Authors>LD</Authors>
+    <PackageDescription>iOS binding for LDObserve native library.</PackageDescription>
+    <PackageOutputPath>$(MSBuildProjectDirectory)\..\..\nupkgs</PackageOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ObjcBindingApiDefinition Include="ApiDefinition.cs" />
+    <ObjcBindingApiDefinition Include="ApiMasking.cs" />
+    <ObjcBindingCoreSource Include="StructsAndEnums.cs" />
+  </ItemGroup>
+
+  <!-- Reference to Xcode project -->
+  <ItemGroup>
+    <NLIXcodeProjectReference Include="../native/LDObserve/LDObserve.xcodeproj">
+      <SchemeName>LDObserveBridge</SchemeName>
+      <SharpieNamespace>LDObserveMaciOS</SharpieNamespace>
+      <SharpieBind>true</SharpieBind>
+      <!-- Metadata applicable to @(NativeReference) will be used if set, otherwise the following defaults will be used:
+      <Kind>Framework</Kind>
+      <SmartLink>true</SmartLink>
+      -->
+    </NLIXcodeProjectReference>
+  </ItemGroup>
+
+  <!-- Directly reference the built XCFramework to ensure it is linked -->
+  <ItemGroup>
+    <NativeReference Include="../native/LDObserve/build/outputs/LDObserveBridge.xcframework">
+      <Kind>Framework</Kind>
+      <ForceLoad>true</ForceLoad>
+      <SmartLink>true</SmartLink>
+    </NativeReference>
+  </ItemGroup>
+
+  <!-- Reference to NuGet for building bindings -->
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Maui.NativeLibraryInterop.BuildTasks" Version="0.0.1-pre1" PrivateAssets="all" />
+  </ItemGroup>
+  
+  <!-- Ensure LDObserveBridge.xcframework exists before building (runs for Debug/Release) -->
+  <Target Name="EnsureXCFramework" BeforeTargets="PrepareForBuild" Condition="!Exists('$(MSBuildProjectDirectory)/../native/LDObserve/build/outputs/LDObserveBridge.xcframework') and '$(LD_SKIP_XCF_BUILD)' != 'true'">
+    <Message Text="LDObserveBridge.xcframework not found. Generating with xcodebuild..." Importance="high" />
+    <Exec Command="/bin/bash &quot;$(MSBuildProjectDirectory)/../../scripts/build_xcframework.sh&quot;" />
+  </Target>
+</Project>
+
+

@@ -518,6 +518,281 @@ export default function HttpTest() {
 			</TestSection>
 
 			<TestSection
+				title="Response Body Capture Tests"
+				description="Test that http.response.body is captured on fetch spans. Previously, the async body read raced with span.end() causing the body attribute to be silently dropped."
+			>
+				<TestButton
+					title="GET Response Body"
+					description="http.response.body should contain JSON"
+					onClick={async () => {
+						try {
+							const response = await fetch(
+								'https://jsonplaceholder.typicode.com/posts/1?test=response-body-get',
+							)
+							const data = await response.json()
+							console.log('GET response body capture test:', data)
+						} catch (e) {
+							console.error('Request error:', e)
+						}
+					}}
+				/>
+
+				<TestButton
+					title="Large Response Body"
+					description="Body capture with ~5KB response"
+					onClick={async () => {
+						try {
+							const response = await fetch(
+								'https://jsonplaceholder.typicode.com/posts?test=response-body-large&_limit=10',
+							)
+							const data = await response.json()
+							console.log(
+								'Large response body capture test:',
+								`${data.length} items, ~${JSON.stringify(data).length} bytes`,
+							)
+						} catch (e) {
+							console.error('Request error:', e)
+						}
+					}}
+				/>
+
+				<TestButton
+					title="POST Response Body"
+					description="Both request and response bodies captured"
+					onClick={async () => {
+						try {
+							const response = await fetch(
+								'https://jsonplaceholder.typicode.com/posts?test=response-body-post',
+								{
+									method: 'POST',
+									headers: {
+										'Content-Type': 'application/json',
+									},
+									body: JSON.stringify({
+										title: 'Test',
+										body: 'Verify both request and response bodies are on the span',
+										userId: 1,
+									}),
+								},
+							)
+							const data = await response.json()
+							console.log(
+								'POST response body capture test:',
+								data,
+							)
+						} catch (e) {
+							console.error('Request error:', e)
+						}
+					}}
+				/>
+
+				<TestButton
+					title="Concurrent Response Bodies"
+					description="5 parallel requests, all should have bodies"
+					onClick={async () => {
+						try {
+							const promises = []
+							for (let i = 1; i <= 5; i++) {
+								promises.push(
+									fetch(
+										`https://jsonplaceholder.typicode.com/posts/${i}?test=response-body-concurrent-${i}`,
+									),
+								)
+							}
+							const responses = await Promise.all(promises)
+							const data = await Promise.all(
+								responses.map((r) => r.json()),
+							)
+							console.log(
+								'Concurrent response body capture test:',
+								`${data.length} responses with bodies`,
+							)
+						} catch (e) {
+							console.error('Request error:', e)
+						}
+					}}
+				/>
+			</TestSection>
+
+			<TestSection
+				title="Memory Pressure Tests"
+				description="Stress test the pendingResponseAttributes map and response body cloning under high concurrency. Use browser DevTools Memory tab to observe heap impact."
+			>
+				<TestButton
+					title="50 Concurrent Requests"
+					description="Flood pendingResponseAttributes map"
+					onClick={async () => {
+						const before = (
+							performance as unknown as {
+								memory?: { usedJSHeapSize: number }
+							}
+						).memory?.usedJSHeapSize
+						try {
+							const promises = []
+							for (let i = 1; i <= 50; i++) {
+								promises.push(
+									fetch(
+										`https://jsonplaceholder.typicode.com/posts/${(i % 100) + 1}?test=memory-concurrent-${i}`,
+									),
+								)
+							}
+							const responses = await Promise.all(promises)
+							await Promise.all(responses.map((r) => r.json()))
+							const after = (
+								performance as unknown as {
+									memory?: { usedJSHeapSize: number }
+								}
+							).memory?.usedJSHeapSize
+							if (before && after) {
+								console.log(
+									`Memory: 50 concurrent requests — heap delta: ${((after - before) / 1024).toFixed(0)}KB (${(before / 1024 / 1024).toFixed(1)}MB → ${(after / 1024 / 1024).toFixed(1)}MB)`,
+								)
+							} else {
+								console.log(
+									'Memory: 50 concurrent requests completed (enable chrome://flags/#enable-precise-memory-info for heap stats)',
+								)
+							}
+						} catch (e) {
+							console.error('Memory test error:', e)
+						}
+					}}
+				/>
+
+				<TestButton
+					title="Large Bodies x20"
+					description="20 concurrent requests with ~30KB bodies"
+					onClick={async () => {
+						const before = (
+							performance as unknown as {
+								memory?: { usedJSHeapSize: number }
+							}
+						).memory?.usedJSHeapSize
+						try {
+							const promises = []
+							for (let i = 0; i < 20; i++) {
+								// /comments returns ~30KB
+								promises.push(
+									fetch(
+										`https://jsonplaceholder.typicode.com/comments?test=memory-large-${i}`,
+									),
+								)
+							}
+							const responses = await Promise.all(promises)
+							const bodies = await Promise.all(
+								responses.map((r) => r.json()),
+							)
+							const totalSize = bodies.reduce(
+								(sum, b) => sum + JSON.stringify(b).length,
+								0,
+							)
+							const after = (
+								performance as unknown as {
+									memory?: { usedJSHeapSize: number }
+								}
+							).memory?.usedJSHeapSize
+							if (before && after) {
+								console.log(
+									`Memory: 20 large responses (~${(totalSize / 1024).toFixed(0)}KB total) — heap delta: ${((after - before) / 1024).toFixed(0)}KB (${(before / 1024 / 1024).toFixed(1)}MB → ${(after / 1024 / 1024).toFixed(1)}MB)`,
+								)
+							} else {
+								console.log(
+									`Memory: 20 large responses (~${(totalSize / 1024).toFixed(0)}KB total) completed`,
+								)
+							}
+						} catch (e) {
+							console.error('Memory test error:', e)
+						}
+					}}
+				/>
+
+				<TestButton
+					title="Sustained Rapid Fire"
+					description="10 batches of 10, back-to-back"
+					onClick={async () => {
+						const before = (
+							performance as unknown as {
+								memory?: { usedJSHeapSize: number }
+							}
+						).memory?.usedJSHeapSize
+						try {
+							for (let batch = 0; batch < 10; batch++) {
+								const promises = []
+								for (let i = 0; i < 10; i++) {
+									promises.push(
+										fetch(
+											`https://jsonplaceholder.typicode.com/posts/${(i % 100) + 1}?test=memory-rapid-b${batch}-${i}`,
+										),
+									)
+								}
+								const responses = await Promise.all(promises)
+								await Promise.all(
+									responses.map((r) => r.json()),
+								)
+							}
+							const after = (
+								performance as unknown as {
+									memory?: { usedJSHeapSize: number }
+								}
+							).memory?.usedJSHeapSize
+							if (before && after) {
+								console.log(
+									`Memory: 10x10 sustained load — heap delta: ${((after - before) / 1024).toFixed(0)}KB (${(before / 1024 / 1024).toFixed(1)}MB → ${(after / 1024 / 1024).toFixed(1)}MB)`,
+								)
+							} else {
+								console.log(
+									'Memory: 10x10 sustained load completed',
+								)
+							}
+						} catch (e) {
+							console.error('Memory test error:', e)
+						}
+					}}
+				/>
+
+				<TestButton
+					title="Fire-and-Forget (no await body)"
+					description="50 requests where body is never read by app"
+					onClick={async () => {
+						const before = (
+							performance as unknown as {
+								memory?: { usedJSHeapSize: number }
+							}
+						).memory?.usedJSHeapSize
+						try {
+							const promises = []
+							for (let i = 0; i < 50; i++) {
+								promises.push(
+									fetch(
+										`https://jsonplaceholder.typicode.com/posts/${(i % 100) + 1}?test=memory-fire-forget-${i}`,
+									),
+								)
+							}
+							// Only wait for responses, don't read bodies.
+							// The SDK still clones + reads each body internally,
+							// so this tests whether un-consumed bodies leak.
+							await Promise.all(promises)
+							const after = (
+								performance as unknown as {
+									memory?: { usedJSHeapSize: number }
+								}
+							).memory?.usedJSHeapSize
+							if (before && after) {
+								console.log(
+									`Memory: 50 fire-and-forget — heap delta: ${((after - before) / 1024).toFixed(0)}KB (${(before / 1024 / 1024).toFixed(1)}MB → ${(after / 1024 / 1024).toFixed(1)}MB)`,
+								)
+							} else {
+								console.log(
+									'Memory: 50 fire-and-forget completed',
+								)
+							}
+						} catch (e) {
+							console.error('Memory test error:', e)
+						}
+					}}
+				/>
+			</TestSection>
+
+			<TestSection
 				title="Response Tests"
 				description="Test different response types and status codes."
 			>
@@ -641,6 +916,19 @@ export default function HttpTest() {
 							<li>
 								Request/response bodies are recorded as
 								configured
+							</li>
+							<li>
+								Response Body Capture: each span has an{' '}
+								<code>http.response.body</code> attribute with
+								the full JSON response (not just{' '}
+								<code>http.response.body.size</code>)
+							</li>
+							<li>
+								Memory Pressure: after running stress tests,
+								check console for heap delta logs and use
+								DevTools Memory tab to verify the{' '}
+								<code>pendingResponseAttributes</code> map
+								drains and heap does not grow unbounded
 							</li>
 						</ul>
 					</li>

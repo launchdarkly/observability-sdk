@@ -1,12 +1,12 @@
 package com.example.androidobservability
 
-import com.launchdarkly.observability.client.TelemetryInspector
+import com.launchdarkly.observability.testing.InMemoryTelemetryInspector
 
 object TestUtils {
 
     fun waitForTelemetryData(
         maxWaitMs: Long = 5000,
-        telemetryInspector: TelemetryInspector?,
+        telemetryInspector: InMemoryTelemetryInspector?,
         telemetryType: TelemetryType
     ): Boolean {
         val startTime = System.currentTimeMillis()

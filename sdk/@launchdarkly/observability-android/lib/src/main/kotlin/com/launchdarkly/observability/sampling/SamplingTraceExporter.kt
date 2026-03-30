@@ -1,8 +1,14 @@
 package com.launchdarkly.observability.sampling
 
+import com.launchdarkly.observability.bridge.BRIDGE_SPAN_ID_ATTRIBUTE_KEY
+import com.launchdarkly.observability.bridge.BRIDGE_TRACE_ID_ATTRIBUTE_KEY
+import io.opentelemetry.api.common.AttributeKey
+import io.opentelemetry.api.common.Attributes
+import io.opentelemetry.api.trace.SpanContext
 import io.opentelemetry.exporter.otlp.http.logs.OtlpHttpLogRecordExporter
 import io.opentelemetry.exporter.otlp.http.trace.OtlpHttpSpanExporter
 import io.opentelemetry.sdk.common.CompletableResultCode
+import io.opentelemetry.sdk.trace.data.DelegatingSpanData
 import io.opentelemetry.sdk.trace.data.SpanData
 import io.opentelemetry.sdk.trace.export.SpanExporter
 
@@ -34,7 +40,8 @@ class SamplingTraceExporter(
      * @return A [CompletableResultCode] indicating the success or failure of the export operation
      */
     override fun export(spans: Collection<SpanData>): CompletableResultCode {
-        val sampledItems = sampleSpans(spans.toList(), sampler)
+        val processed = spans.map { applyBridgeIdOverrides(it) }
+        val sampledItems = sampleSpans(processed, sampler)
         if (sampledItems.isEmpty()) {
             return CompletableResultCode.ofSuccess()
         }
@@ -57,5 +64,40 @@ class SamplingTraceExporter(
      */
     override fun shutdown(): CompletableResultCode {
         return delegate.shutdown()
+    }
+}
+
+private val bridgeTraceIdKey = AttributeKey.stringKey(BRIDGE_TRACE_ID_ATTRIBUTE_KEY)
+private val bridgeSpanIdKey = AttributeKey.stringKey(BRIDGE_SPAN_ID_ATTRIBUTE_KEY)
+
+/**
+ * If the span carries bridge-supplied IDs (set by [KotlinTracer]),
+ * replaces the auto-generated IDs with them and strips the internal attributes.
+ */
+private fun applyBridgeIdOverrides(data: SpanData): SpanData {
+    val overrideTraceId = data.attributes[bridgeTraceIdKey]
+    val overrideSpanId = data.attributes[bridgeSpanIdKey]
+    if (overrideTraceId == null && overrideSpanId == null) return data
+
+    val original = data.spanContext
+    val overriddenContext = SpanContext.create(
+        overrideTraceId ?: original.traceId,
+        overrideSpanId ?: original.spanId,
+        original.traceFlags,
+        original.traceState
+    )
+
+    val filteredAttributes = Attributes.builder().apply {
+        data.attributes.forEach { key, value ->
+            if (key != bridgeTraceIdKey && key != bridgeSpanIdKey) {
+                @Suppress("UNCHECKED_CAST")
+                put(key as AttributeKey<Any>, value)
+            }
+        }
+    }.build()
+
+    return object : DelegatingSpanData(data) {
+        override fun getSpanContext(): SpanContext = overriddenContext
+        override fun getAttributes(): Attributes = filteredAttributes
     }
 }

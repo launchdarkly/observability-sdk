@@ -9,7 +9,8 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 
     // Apply Dokka plugin for documentation generation
-    id("org.jetbrains.dokka") version "2.0.0"
+    id("org.jetbrains.dokka") version "2.1.0"
+    id("org.jetbrains.dokka-javadoc") version "2.1.0"
 }
 
 allprojects {
@@ -20,12 +21,15 @@ allprojects {
 }
 
 dependencies {
-    implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.10.0")
+    implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.11.0")
     implementation("com.jakewharton.timber:timber:5.0.1")
 
-    // Android
-    implementation("androidx.activity:activity:1.11.0")
-    implementation("androidx.lifecycle:lifecycle-process:2.6.2")
+    // AndroidX
+    // This only used by Session Replay.
+    implementation("androidx.activity:activity:1.7.0")
+    implementation("androidx.lifecycle:lifecycle-process:2.4.0")
+    compileOnly("androidx.compose.ui:ui:1.7.5")
+    compileOnly("androidx.compose.ui:ui-tooling:1.7.5")
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
@@ -42,11 +46,9 @@ dependencies {
     implementation("io.opentelemetry:opentelemetry-sdk-metrics:1.51.0")
     implementation("io.opentelemetry:opentelemetry-sdk-logs:1.51.0")
 
-    // TODO: Evaluate risks associated with incubator APIs
+    // Required at runtime by io.opentelemetry.android:core, which uses incubator APIs
+    // internally for the logs bridge. Can be removed once the OTel Android SDK drops this dependency.
     implementation("io.opentelemetry:opentelemetry-api-incubator:1.51.0-alpha")
-    
-    // Testing exporters for telemetry inspection
-    implementation("io.opentelemetry:opentelemetry-sdk-testing:1.51.0")
 
     // OTEL Android
     implementation("io.opentelemetry.android:core:0.11.0-alpha")
@@ -56,12 +58,9 @@ dependencies {
     implementation("io.opentelemetry.android.instrumentation:crash:0.11.0-alpha")
     implementation("io.opentelemetry.android.instrumentation:activity:0.11.0-alpha")
 
-    // TODO: O11Y-626 - move replay instrumentation and associated compose dependencies into dedicated package
-    // Compose dependencies for capture functionality
-    implementation("androidx.compose.ui:ui:1.7.5")
-    implementation("androidx.compose.ui:ui-tooling:1.7.5")
-
     // Use JUnit Jupiter for testing.
+    // Testing exporters for telemetry inspection
+    testImplementation("io.opentelemetry:opentelemetry-sdk-testing:1.51.0")
     testImplementation(platform("org.junit:junit-bom:5.13.4"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
@@ -69,6 +68,7 @@ dependencies {
     testImplementation("io.mockk:mockk:1.14.5")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
 
+    testFixturesApi("io.opentelemetry:opentelemetry-sdk-testing:1.51.0")
     testFixturesImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
 }
 
@@ -80,14 +80,14 @@ tasks.withType<Test> {
 
 android {
     namespace = "com.launchdarkly.observability"
-    compileSdk = 36
+    compileSdk = 35
 
     buildFeatures {
         buildConfig = true
     }
 
     defaultConfig {
-        minSdk = 24
+        minSdk = 23
         version = releaseVersion
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "OBSERVABILITY_SDK_VERSION", "\"${project.version}\"")
@@ -102,8 +102,10 @@ android {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
     }
-    kotlinOptions {
-        jvmTarget = "1.8"
+    kotlin {
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_1_8)
+        }
     }
 
     publishing {
@@ -169,18 +171,19 @@ publishing {
 }
 
 signing {
+    isRequired = gradle.taskGraph.allTasks.any { it.name.contains("sonatype", ignoreCase = true) }
     sign(publishing.publications["release"])
 }
 
-// Dokka configuration for Android library documentation
-tasks.dokkaJavadoc.configure {
+dokka {
     moduleName.set("launchdarkly-observability-android")
     moduleVersion.set(project.version.toString())
-    outputDirectory.set(layout.projectDirectory.dir("docs"))
 
-    dokkaSourceSets {
-        configureEach {
-            includes.from("doc-module.md")
-        }
+    dokkaPublications.javadoc {
+        outputDirectory.set(layout.projectDirectory.dir("docs"))
+    }
+
+    dokkaSourceSets.configureEach {
+        includes.from("doc-module.md")
     }
 }

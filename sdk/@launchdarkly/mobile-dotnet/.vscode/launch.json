@@ -1,0 +1,10 @@
+{
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"name": "Universal .NET MAUI",
+			"type": "maui",
+			"request": "launch"
+		}
+	]
+}

@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="MauiSample9.CreditCardPage"
+             Title="Credit Card">
+	<ScrollView>
+		<VerticalStackLayout Padding="20" Spacing="12">
+			<Label Text="Enter your card details" Style="{StaticResource SubHeadline}" />
+
+			<!-- Card brand / preview -->
+			<Grid ColumnDefinitions="*,Auto" Padding="0,8,0,0">
+				<Label x:Name="BrandLabel" Text="Card" VerticalOptions="Center" />
+				<Label x:Name="MaskedNumberLabel" Grid.Column="1" TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray400}}" VerticalOptions="Center" />
+			</Grid>
+
+			<!-- Cardholder Name -->
+			<VerticalStackLayout Spacing="4">
+				<Label Text="Cardholder name" />
+				<Entry x:Name="NameEntry"
+				       Placeholder="Full name as on card"
+				       TextChanged="OnNameTextChanged"
+				       ReturnType="Next" />
+				<Label x:Name="NameErrorLabel" TextColor="{StaticResource Magenta}" IsVisible="False" FontSize="12" />
+			</VerticalStackLayout>
+
+			<!-- Card Number -->
+			<VerticalStackLayout Spacing="4">
+				<Label Text="Card number" />
+				<Entry x:Name="NumberEntry"
+				       Keyboard="Numeric"
+				       Placeholder="1234 5678 9012 3456"
+				       TextChanged="OnNumberTextChanged"
+				       ReturnType="Next" />
+				<Label x:Name="NumberErrorLabel" TextColor="{StaticResource Magenta}" IsVisible="False" FontSize="12" />
+			</VerticalStackLayout>
+
+			<Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+				<!-- Expiry -->
+				<VerticalStackLayout Spacing="4">
+					<Label Text="Expiry (MM/YY)" />
+					<Entry x:Name="ExpiryEntry"
+					       Keyboard="Numeric"
+					       Placeholder="MM/YY"
+					       TextChanged="OnExpiryTextChanged"
+					       ReturnType="Next" />
+					<Label x:Name="ExpiryErrorLabel" TextColor="{StaticResource Magenta}" IsVisible="False" FontSize="12" />
+				</VerticalStackLayout>
+
+				<!-- CVC -->
+				<VerticalStackLayout Spacing="4" Grid.Column="1">
+					<Label Text="CVC" />
+					<Entry x:Name="CvcEntry"
+					       Keyboard="Numeric"
+					       Placeholder="123"
+					       TextChanged="OnCvcTextChanged"
+					       ReturnType="Done" />
+					<Label x:Name="CvcErrorLabel" TextColor="{StaticResource Magenta}" IsVisible="False" FontSize="12" />
+				</VerticalStackLayout>
+			</Grid>
+
+			<Button Text="Save card"
+			        Clicked="OnSaveClicked" />
+		</VerticalStackLayout>
+	</ScrollView>
+</ContentPage>
+

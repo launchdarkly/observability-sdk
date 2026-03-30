@@ -2,6 +2,7 @@ package com.launchdarkly.observability.api
 
 import com.launchdarkly.logging.LDLogAdapter
 import com.launchdarkly.observability.BuildConfig
+import com.launchdarkly.observability.client.TelemetryInspector
 import com.launchdarkly.sdk.android.LDTimberLogging
 import io.opentelemetry.api.common.Attributes
 import kotlin.time.Duration
@@ -28,8 +29,12 @@ const val DEFAULT_BACKEND_URL = "https://pub.observability.app.launchdarkly.com"
  * @property instrumentations Options for configuring automatic instrumentations. See [Instrumentations].
  * @property logAdapter The log adapter to use. Defaults to using the LaunchDarkly SDK's LDTimberLogging.adapter(). Use LDAndroidLogging.adapter() to use the Android logging adapter.
  * @property loggerName The name of the logger to use. Defaults to "LaunchDarklyObservabilityPlugin".
+ * @property telemetryInspector Optional [TelemetryInspector] for intercepting exported telemetry during testing.
+ *   When provided together with [debug] = true, the inspector's exporters are wired into composite
+ *   exporters so that test code can assert on the data that flows through the SDK.
  */
 data class ObservabilityOptions(
+    val enabled: Boolean = true,
     val serviceName: String = DEFAULT_SERVICE_NAME,
     val serviceVersion: String = BuildConfig.OBSERVABILITY_SDK_VERSION,
     val otlpEndpoint: String = DEFAULT_OTLP_ENDPOINT,
@@ -45,6 +50,7 @@ data class ObservabilityOptions(
     val instrumentations: Instrumentations = Instrumentations(),
     val logAdapter: LDLogAdapter = LDTimberLogging.adapter(), // This follows the LaunchDarkly SDK's default log adapter
     val loggerName: String = "LaunchDarklyObservabilityPlugin",
+    val telemetryInspector: TelemetryInspector? = null,
 ){
     /**
      * Options for configuring traces.

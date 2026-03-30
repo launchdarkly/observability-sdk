@@ -1,5 +1,88 @@
 # Changelog
 
+## [0.34.1](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.34.0...launchdarkly-observability-android-0.34.1) (2026-03-28)
+
+
+### Bug Fixes
+
+* move Otel testing library out production runtime ([#446](https://github.com/launchdarkly/observability-sdk/issues/446)) ([8a8ef34](https://github.com/launchdarkly/observability-sdk/commit/8a8ef344c15bedfa562d28dbb4904ceb0cdf34a3))
+
+## [0.34.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.33.0...launchdarkly-observability-android-0.34.0) (2026-03-27)
+
+
+### Features
+
+* o3 level optimization for image diffing ([#443](https://github.com/launchdarkly/observability-sdk/issues/443)) ([9045142](https://github.com/launchdarkly/observability-sdk/commit/9045142c7455b3f12574a1aacd21e582c89d8680))
+
+
+### Bug Fixes
+
+* Build warnings and compatibility issues across Android and MAUI (.NET) SDKs. ([#439](https://github.com/launchdarkly/observability-sdk/issues/439)) ([47c4640](https://github.com/launchdarkly/observability-sdk/commit/47c4640612bb0d769f6e1cde6c98e7c7683520d9))
+
+## [0.33.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.32.0...launchdarkly-observability-android-0.33.0) (2026-03-27)
+
+
+### Features
+
+* Support Traces, Logs, Metrics in mobile dotnet 0.5.0 ([#428](https://github.com/launchdarkly/observability-sdk/issues/428)) ([8e9483a](https://github.com/launchdarkly/observability-sdk/commit/8e9483aadf13954e843b8ac8b8574a46456a4694))
+
+## [0.32.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.31.0...launchdarkly-observability-android-0.32.0) (2026-03-26)
+
+
+### Features
+
+* **@launchdarkly/session-replay-react-native:** use cocoapods for native session replay ([#434](https://github.com/launchdarkly/observability-sdk/issues/434)) ([41988e1](https://github.com/launchdarkly/observability-sdk/commit/41988e196b02901964efdad0e25f892d5ba55fc4))
+* MAUI integration hooks and refactor for 0.4.1 nuget ([#425](https://github.com/launchdarkly/observability-sdk/issues/425)) ([33f6d6c](https://github.com/launchdarkly/observability-sdk/commit/33f6d6c29639520e6c8b303047f4659d1016dc3d))
+
+## [0.31.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.30.0...launchdarkly-observability-android-0.31.0) (2026-03-09)
+
+
+### Features
+
+* Use C and NEON for hashing (Optimization) 100x on Pixel 8 ([#415](https://github.com/launchdarkly/observability-sdk/issues/415)) ([e7c78ab](https://github.com/launchdarkly/observability-sdk/commit/e7c78abda3954a1a2d32b5a85f57eab531eecaae))
+
+## [0.30.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.29.0...launchdarkly-observability-android-0.30.0) (2026-03-07)
+
+
+### Features
+
+* Android SR use Jpeg 0.3 quality ([#417](https://github.com/launchdarkly/observability-sdk/issues/417)) ([ad6d0aa](https://github.com/launchdarkly/observability-sdk/commit/ad6d0aabbf35ac81e6ca36abe9fd831f92545236))
+
+## [0.29.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.28.0...launchdarkly-observability-android-0.29.0) (2026-03-05)
+
+
+### Features
+
+* Android Observability hook  proxy for MAUI ([#409](https://github.com/launchdarkly/observability-sdk/issues/409)) ([8d610bd](https://github.com/launchdarkly/observability-sdk/commit/8d610bdd700fd2878e58095e5fd8b98ef2765df6))
+
+
+### Bug Fixes
+
+* reset nodeIds during fullsnapshot ([#412](https://github.com/launchdarkly/observability-sdk/issues/412)) ([d1eb13d](https://github.com/launchdarkly/observability-sdk/commit/d1eb13db8907f17406f45a2a7e3b76aec3a7c1ec))
+
+## [0.28.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.27.0...launchdarkly-observability-android-0.28.0) (2026-03-02)
+
+
+### Features
+
+* Make Android SDK35 compilable ([#405](https://github.com/launchdarkly/observability-sdk/issues/405)) ([278880d](https://github.com/launchdarkly/observability-sdk/commit/278880dae408afe304e35c00ebe989e466f509eb))
+
+## [0.27.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.26.1...launchdarkly-observability-android-0.27.0) (2026-02-28)
+
+
+### Features
+
+* Android Incremental Image Diff compression ([#390](https://github.com/launchdarkly/observability-sdk/issues/390)) ([5ff93f6](https://github.com/launchdarkly/observability-sdk/commit/5ff93f61e078b27ca7d15a49e35ac98076d684cc))
+* Optional Jet Compose ([#402](https://github.com/launchdarkly/observability-sdk/issues/402)) ([8f3a671](https://github.com/launchdarkly/observability-sdk/commit/8f3a671a7853353b3e255882b66c6cb04506dcaa))
+
+## [0.26.1](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.26.0...launchdarkly-observability-android-0.26.1) (2026-02-24)
+
+
+### Bug Fixes
+
+* Fix event sorting in session replay export ([#392](https://github.com/launchdarkly/observability-sdk/issues/392)) ([5e11cf7](https://github.com/launchdarkly/observability-sdk/commit/5e11cf71d60a7d7a6131a2d8fb5fb1f70c6916bc))
+* Touch move event buffering using wrong clock and mismatched constants ([#391](https://github.com/launchdarkly/observability-sdk/issues/391)) ([0a6582c](https://github.com/launchdarkly/observability-sdk/commit/0a6582c2ba445cd391a03d3aecfa723887f636da))
+
 ## [0.26.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.25.2...launchdarkly-observability-android-0.26.0) (2026-02-17)
 
 

@@ -1,19 +1,18 @@
 package com.launchdarkly.observability.client
 
-import io.opentelemetry.sdk.testing.exporter.InMemoryLogRecordExporter
-import io.opentelemetry.sdk.testing.exporter.InMemoryMetricExporter
-import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter
+import io.opentelemetry.sdk.logs.export.LogRecordExporter
+import io.opentelemetry.sdk.metrics.export.MetricExporter
+import io.opentelemetry.sdk.trace.export.SpanExporter
 
 /**
- * This class wraps the OpenTelemetry testing exporters
+ * Provides access to telemetry exporters for inspecting exported data during testing.
  *
- * @param spanExporter The in-memory span exporter to read from
- * @param logExporter The in-memory log exporter to read from
- * @param metricExporter The in-memory metric exporter to read from
+ * Production code uses the base exporter types to wire into composite exporters.
+ * Test code should use [com.launchdarkly.observability.testing.InMemoryTelemetryInspector]
+ * which exposes the concrete in-memory exporter types for assertions.
  */
-class TelemetryInspector(
-) {
-    val spanExporter: InMemorySpanExporter by lazy { InMemorySpanExporter.create() }
-    val logExporter:InMemoryLogRecordExporter by lazy { InMemoryLogRecordExporter.create() }
-    val metricExporter: InMemoryMetricExporter by lazy { InMemoryMetricExporter.create() }
+interface TelemetryInspector {
+    val spanExporter: SpanExporter
+    val logExporter: LogRecordExporter
+    val metricExporter: MetricExporter
 }

@@ -11,7 +11,7 @@
  * # Quick Start
  * ```typescript
  * import { init } from '@launchdarkly/node-server-sdk'
- * import Observability, { LDObserve } from '@launchdarkly/observability'
+ * import { Observability } from '@launchdarkly/observability-node'
  *
  * const client = init(
  *   'sdk-key',

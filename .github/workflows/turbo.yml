@@ -1,3 +1,15 @@
+# This workflow handles CI (build/test) for all PRs and pushes to main,
+# as well as npm publishing for @launchdarkly and @highlight-run packages.
+#
+# AUTOMATED PUBLISHING (on push to main):
+#   - Publishes @highlight-run/* and highlight.run packages using NPM token
+#   - Publishes @launchdarkly/* packages using OIDC authentication
+#
+# MANUAL PUBLISHING (via workflow_dispatch):
+#   - Can be triggered manually from the Actions tab
+#   - Supports prerelease and dry-run modes for @launchdarkly/* packages
+#   - OIDC requires a single workflow per npm package, so manual publishing
+#     is consolidated here rather than in a separate workflow
 name: Monorepo
 
 on:
@@ -5,6 +17,16 @@ on:
         branches: ['main']
     pull_request:
         types: [opened, synchronize]
+    workflow_dispatch:
+        inputs:
+            dry-run:
+                description: 'Is this a dry run. If so no package will be published.'
+                type: boolean
+                required: true
+            prerelease:
+                description: 'Is this a prerelease. If so, then the latest tag will not be updated in npm.'
+                type: boolean
+                required: true
 
 permissions:
     id-token: write
@@ -62,23 +84,15 @@ jobs:
               if: github.ref == 'refs/heads/main'
               run: yarn publish:highlight
 
-            - uses: launchdarkly/gh-actions/actions/release-secrets@release-secrets-v1.2.0
-              if: github.ref == 'refs/heads/main'
-              name: 'Get NPM token'
-              with:
-                  aws_assume_role: ${{ vars.AWS_ROLE_ARN }}
-                  ssm_parameter_pairs: '/production/common/releasing/npm/token = NODE_AUTH_TOKEN'
+            # Publishing credentials for @launchdarkly/* NPM packages come from OIDC.
+            - name: Setup Node.js for OIDC publishing
+              if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+              uses: ./.github/actions/setup-release-node
 
-            - name: Configure yarn npm registry credentials for launchdarkly
-              if: github.ref == 'refs/heads/main'
-              run: |
-                  yarn config set npmRegistryServer "https://registry.npmjs.org"
-                  yarn config set npmAuthToken "${NODE_AUTH_TOKEN}"
-
-            - name: Publish
-              if: github.ref == 'refs/heads/main'
+            - name: Publish @launchdarkly npm packages
+              if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
               shell: bash
               run: ./scripts/publish-npm.sh
               env:
-                  LD_RELEASE_IS_PRERELEASE: false
-                  LD_RELEASE_IS_DRYRUN: false
+                  LD_RELEASE_IS_PRERELEASE: ${{ github.event_name == 'workflow_dispatch' && inputs.prerelease || false }}
+                  LD_RELEASE_IS_DRYRUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry-run || false }}

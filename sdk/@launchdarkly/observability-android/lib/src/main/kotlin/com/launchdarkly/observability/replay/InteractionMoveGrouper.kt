@@ -4,9 +4,9 @@ import android.view.MotionEvent
 import io.opentelemetry.android.session.SessionManager
 import kotlinx.coroutines.flow.MutableSharedFlow
 
-private const val FILTER_THRESHOLD_DISTANCE_SQUARED_PIXELS = 100
-private const val FILTER_THRESHOLD_TIME_MILLIS = 20
-private const val EMIT_PERIOD_MILLIS = 400
+private const val FILTER_THRESHOLD_DISTANCE_SQUARED_PIXELS = 144 // 12 X 12 pixels, matches iOS tapMaxDistanceSquared
+private const val FILTER_THRESHOLD_TIME_MILLIS = 40 // matches iOS touchMoveThrottle (0.04s)
+private const val EMIT_PERIOD_MILLIS = 240 // time to gather 4 positions into group on average (0.24s)
 
 /**
  * Class for filtering and grouping emissions of movement interactions to reduce data rates.
@@ -51,8 +51,7 @@ class InteractionMoveGrouper(
         }
 
         // if enough time has passed since last emission, tryEmit the group
-        val currentTime = System.currentTimeMillis()
-        if (acceptedPositions.isNotEmpty() && (currentTime - lastEmitTime > EMIT_PERIOD_MILLIS)) {
+        if (acceptedPositions.isNotEmpty() && (timestamp - lastEmitTime > EMIT_PERIOD_MILLIS)) {
             val interaction = InteractionEvent(
                 action = MotionEvent.ACTION_MOVE,
                 positions = acceptedPositions.toList(), // toList() makes a copy, which is required
@@ -60,7 +59,7 @@ class InteractionMoveGrouper(
             )
             _bufferedFlow.tryEmit(interaction)
 
-            lastEmitTime = currentTime
+            lastEmitTime = timestamp
             acceptedPositions.clear()
         }
     }

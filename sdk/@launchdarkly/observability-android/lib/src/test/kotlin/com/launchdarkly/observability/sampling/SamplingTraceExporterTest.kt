@@ -7,9 +7,14 @@ import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
 import io.mockk.verify
 import io.opentelemetry.api.trace.SpanContext
+import io.opentelemetry.api.trace.SpanKind
+import io.opentelemetry.api.trace.TraceFlags
+import io.opentelemetry.api.trace.TraceState
 import io.opentelemetry.exporter.otlp.http.trace.OtlpHttpSpanExporter
 import io.opentelemetry.sdk.common.CompletableResultCode
+import io.opentelemetry.sdk.testing.trace.TestSpanData
 import io.opentelemetry.sdk.trace.data.SpanData
+import io.opentelemetry.sdk.trace.data.StatusData
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -38,9 +43,9 @@ class SamplingTraceExporterTest {
         @Test
         fun `should return success when no spans are left to export after sampling`() {
             val spans = listOf(
-                createMockSpan("span1", "span1-id"),
-                createMockSpan("span2", "span2-id"),
-                createMockSpan("span3", "span3-id")
+                createSpanData("span1", SPAN_ID_1),
+                createSpanData("span2", SPAN_ID_2),
+                createSpanData("span3", SPAN_ID_3)
             )
 
             mockkStatic("com.launchdarkly.observability.sampling.SampleSpansKt")
@@ -53,7 +58,6 @@ class SamplingTraceExporterTest {
             assertEquals(expectedResult.isDone, result.isDone)
             assertTrue(result.isSuccess)
 
-            // Verify delegate export was never called
             verify(exactly = 0) { mockDelegate.export(any()) }
 
             unmockkStatic("com.launchdarkly.observability.sampling.SampleSpansKt")
@@ -62,14 +66,14 @@ class SamplingTraceExporterTest {
         @Test
         fun `should delegate to underlying exporter when spans are sampled`() {
             val originalSpans = listOf(
-                createMockSpan("span1", "span1-id"),
-                createMockSpan("span2", "span2-id"),
-                createMockSpan("span3", "span3-id")
+                createSpanData("span1", SPAN_ID_1),
+                createSpanData("span2", SPAN_ID_2),
+                createSpanData("span3", SPAN_ID_3)
             )
 
             val sampledSpans = listOf(
-                createMockSpan("span1", "span1-id"),
-                createMockSpan("span3", "span3-id")
+                createSpanData("span1", SPAN_ID_1),
+                createSpanData("span3", SPAN_ID_3)
             )
 
             mockkStatic("com.launchdarkly.observability.sampling.SampleSpansKt")
@@ -82,7 +86,6 @@ class SamplingTraceExporterTest {
 
             assertEquals(expectedResult, result)
 
-            // Verify delegate export was called with sampled spans
             verify(exactly = 1) { mockDelegate.export(sampledSpans) }
 
             unmockkStatic("com.launchdarkly.observability.sampling.SampleSpansKt")
@@ -105,8 +108,8 @@ class SamplingTraceExporterTest {
 
         @Test
         fun `should propagate delegate export failure`() {
-            val originalSpans = listOf(createMockSpan("span1", "span1-id"))
-            val sampledSpans = listOf(createMockSpan("span1", "span1-id"))
+            val originalSpans = listOf(createSpanData("span1", SPAN_ID_1))
+            val sampledSpans = listOf(createSpanData("span1", SPAN_ID_1))
 
             mockkStatic("com.launchdarkly.observability.sampling.SampleSpansKt")
             every { sampleSpans(originalSpans, sampler) } returns sampledSpans
@@ -155,25 +158,38 @@ class SamplingTraceExporterTest {
         }
     }
 
-    private fun createMockSpan(
+    companion object {
+        private const val TRACE_ID = "00000000000000000000000000000001"
+        private const val SPAN_ID_1 = "a000000000000001"
+        private const val SPAN_ID_2 = "a000000000000002"
+        private const val SPAN_ID_3 = "a000000000000003"
+    }
+
+    private fun createSpanData(
         name: String,
         spanId: String,
         parentSpanId: String? = null
     ): SpanData {
-        val spanContext = mockk<SpanContext>().apply {
-            every { getSpanId() } returns spanId
-        }
-
+        val spanContext = SpanContext.create(
+            TRACE_ID, spanId, TraceFlags.getSampled(), TraceState.getDefault()
+        )
         val parentSpanContext = if (parentSpanId != null) {
-            mockk<SpanContext>().apply {
-                every { getSpanId() } returns parentSpanId
-            }
-        } else null
-
-        return mockk<SpanData>().apply {
-            every { getName() } returns name
-            every { getSpanContext() } returns spanContext
-            every { getParentSpanContext() } returns parentSpanContext
+            SpanContext.create(
+                TRACE_ID, parentSpanId, TraceFlags.getSampled(), TraceState.getDefault()
+            )
+        } else {
+            SpanContext.getInvalid()
         }
+
+        return TestSpanData.builder()
+            .setName(name)
+            .setKind(SpanKind.INTERNAL)
+            .setSpanContext(spanContext)
+            .setParentSpanContext(parentSpanContext)
+            .setStatus(StatusData.ok())
+            .setStartEpochNanos(0)
+            .setEndEpochNanos(1)
+            .setHasEnded(true)
+            .build()
     }
 }

@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -5,17 +7,40 @@ plugins {
     id("net.bytebuddy.byte-buddy-gradle-plugin") version "1.17.6"
 }
 
+val localProperties = Properties().apply {
+    val localPropertiesFile = rootProject.file("local.properties")
+    if (localPropertiesFile.exists()) {
+        localPropertiesFile.inputStream().use { load(it) }
+    }
+}
+
 android {
     namespace = "com.example.androidobservability"
-    compileSdk = 36
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.example.androidobservability"
-        minSdk = 24
+        minSdk = 23
         versionCode = 1
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField(
+            "String",
+            "LAUNCHDARKLY_MOBILE_KEY",
+            "\"${localProperties.getProperty("launchdarkly.mobileKey", "")}\""
+        )
+        buildConfigField(
+            "String",
+            "OTLP_ENDPOINT",
+            "\"${localProperties.getProperty("launchdarkly.otlpEndpoint", "").ifEmpty { "https://otel.observability.app.launchdarkly.com:4318" }}\""
+        )
+        buildConfigField(
+            "String",
+            "BACKEND_URL",
+            "\"${localProperties.getProperty("launchdarkly.backendUrl", "").ifEmpty { "https://pub.observability.app.launchdarkly.com" }}\""
+        )
     }
 
     buildTypes {
@@ -27,6 +52,16 @@ android {
             )
         }
     }
+    flavorDimensions += "uiFramework"
+    productFlavors {
+        create("compose") {
+            dimension = "uiFramework"
+        }
+        create("noCompose") {
+            dimension = "uiFramework"
+            applicationIdSuffix = ".nocompose"
+        }
+    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -36,6 +71,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     packaging {
         resources {
@@ -54,7 +90,7 @@ dependencies {
     // Uncomment to use the publicly released version (note this may be behind branch/main)
     // implementation("com.launchdarkly:launchdarkly-observability-android:0.2.0")
 
-    implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.10.0")
+    implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.11.0")
 
     implementation("io.opentelemetry:opentelemetry-api:1.51.0")
     implementation("io.opentelemetry:opentelemetry-sdk:1.51.0")
@@ -77,19 +113,32 @@ dependencies {
     implementation("androidx.recyclerview:recyclerview:1.3.2")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation(libs.androidx.activity.compose)
+
+    // Compose runtime is needed by the Kotlin Compose compiler plugin (applied project-wide).
+    // It does NOT contain any UI classes like AbstractComposeView, so the SDK's
+    // isComposeAvailable runtime check still returns false in the noCompose variant.
     implementation(platform(libs.androidx.compose.bom))
-    implementation(libs.androidx.ui)
-    implementation(libs.androidx.ui.graphics)
-    implementation(libs.androidx.ui.tooling.preview)
-    implementation(libs.androidx.material3)
+    implementation("androidx.compose.runtime:runtime")
+
+    // Serialization runtime (used by benchmark to encode replay events)
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
+
+    // Compose UI dependencies -- only for the compose flavor
+    "composeImplementation"(libs.androidx.activity.compose)
+    "composeImplementation"(libs.androidx.ui)
+    "composeImplementation"(libs.androidx.ui.graphics)
+    "composeImplementation"(libs.androidx.ui.tooling.preview)
+    "composeImplementation"(libs.androidx.material3)
+
+    // noCompose uses AppCompatActivity for proper Material Components theme resolution
+    "noComposeImplementation"("androidx.appcompat:appcompat:1.7.0")
 
     testImplementation(libs.junit)
-    testImplementation(libs.androidx.ui.test.junit4)
     testImplementation(libs.core.ktx)
     testImplementation(libs.robolectric)
     testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
     testImplementation("io.opentelemetry:opentelemetry-sdk-testing:1.51.0")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
     testImplementation(testFixtures(project(":observability-android")))
 
     // Used for testing webviews masking
@@ -97,9 +146,4 @@ dependencies {
 
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(platform(libs.androidx.compose.bom))
-    androidTestImplementation(libs.androidx.ui.test.junit4)
-
-    debugImplementation(libs.androidx.ui.tooling)
-    debugImplementation(libs.androidx.ui.test.manifest)
 }

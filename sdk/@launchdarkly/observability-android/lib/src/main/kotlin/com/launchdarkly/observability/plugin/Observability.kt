@@ -6,7 +6,7 @@ import com.launchdarkly.logging.LDLogger
 import com.launchdarkly.logging.Logs
 import com.launchdarkly.observability.BuildConfig
 import com.launchdarkly.observability.api.ObservabilityOptions
-import com.launchdarkly.observability.client.ObservabilityClient
+import com.launchdarkly.observability.client.ObservabilityService
 import com.launchdarkly.observability.client.ObservabilityContext
 import com.launchdarkly.observability.client.TelemetryInspector
 import com.launchdarkly.observability.sdk.LDObserve
@@ -55,7 +55,8 @@ class Observability(
     private val options: ObservabilityOptions = ObservabilityOptions() // new instance has reasonable defaults
 ) : Plugin() {
     private val logger: LDLogger
-    private var observabilityClient: ObservabilityClient? = null
+    private val observabilityHook = ObservabilityHook()
+    private var observabilityClient: ObservabilityService? = null
     private var client: LDClient? = null
 
     init {
@@ -73,7 +74,6 @@ class Observability(
     override fun register(client: LDClient, metadata: EnvironmentMetadata?) {
         this.client = client
         val sdkKey = metadata?.credential ?: ""
-
         if (mobileKey == sdkKey) {
             LDObserve.context = ObservabilityContext(
                 sdkKey = sdkKey,
@@ -87,9 +87,7 @@ class Observability(
     }
 
     override fun getHooks(metadata: EnvironmentMetadata?): MutableList<Hook> {
-        return Collections.singletonList(
-            ObservabilityHook(withSpans = true, withValue = true) { observabilityClient?.getTracer() }
-        )
+        return Collections.singletonList(observabilityHook)
     }
 
     override fun onPluginsReady(result: RegistrationCompleteResult?, metadata: EnvironmentMetadata?) {
@@ -117,13 +115,14 @@ class Observability(
                     }
                 }
 
-                val instrumentations = InstrumentationContributorManager.get(lDClient).flatMap { it.provideInstrumentations() }
-                observabilityClient = ObservabilityClient(
-                    application, sdkKey, resourceBuilder.build(), logger, options, instrumentations
+                val client = ObservabilityService(
+                    application, sdkKey, resourceBuilder.build(), logger, options,
                 )
-                observabilityClient?.let {
-                    LDObserve.init(it)
-                }
+                observabilityClient = client
+                LDObserve.context?.sessionManager = client.sessionManager
+                LDObserve.init(client)
+
+                observabilityHook.delegate = client.hookExporter
             } else {
                 logger.warn("Observability could not be initialized for sdkKey: $sdkKey")
             }
@@ -131,7 +130,7 @@ class Observability(
     }
 
     fun getTelemetryInspector(): TelemetryInspector? {
-        return observabilityClient?.getTelemetryInspector()
+        return options.telemetryInspector
     }
 
     companion object {

@@ -228,7 +228,7 @@ sealed class EventDataUnion {
 data class Event(
     val type: EventType,
     val data: EventDataUnion,
-    val timestamp: Long? = null,
+    val timestamp: Long,
     @SerialName("_sid")
     val sid: Int
 )

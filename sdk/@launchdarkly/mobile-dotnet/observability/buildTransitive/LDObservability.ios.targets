@@ -1,0 +1,12 @@
+<Project>
+	<ItemGroup Condition="$(TargetFramework.Contains('ios'))">
+		<!-- Wire packaged XCFramework to the consuming project -->
+		<NativeReference Include="$(MSBuildThisFileDirectory)..\runtimes\ios\native\LDObserveBridge.xcframework">
+			<Kind>Framework</Kind>
+			<ForceLoad>true</ForceLoad>
+			<SmartLink>true</SmartLink>
+		</NativeReference>
+	</ItemGroup>
+</Project>
+
+

@@ -1,0 +1,50 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Android MAUI",
+            "type": "maui",
+            "request": "launch",
+            "preLaunchTask": "maui: Build",
+            "targetFramework": "net9.0-android"
+        },
+        {
+            "name": "Android MAUI Dotnet",
+            "type": "maui",
+            "request": "launch",
+            "preLaunchTask": "Run Maui Android (Emulator)",
+            "targetFramework": "net9.0-android"
+        },
+        {
+            "name": "MAUI iOS",
+            "type": "maui",
+            "request": "launch",
+            "preLaunchTask": "maui: Build",
+            "targetFramework": "net9.0-ios"
+        },
+        {
+			"name": "MAUI iOS (Simulator) - Sample",
+			"type": "coreclr",
+			"request": "launch",
+			"noDebug": true,
+			"program": "/bin/bash",
+			"args": [
+				"-lc",
+				"dotnet build ${workspaceFolder}/MauiSample9.csproj -t:Run -f net9.0-ios -p:RuntimeIdentifier=iossimulator-arm64 -p:_DeviceName=:v2:udid=EC33E48C-8CEE-4EA7-BE06-71E4B3E80010"
+			],
+			"cwd": "${workspaceFolder}",
+			"console": "integratedTerminal",
+			"stopAtEntry": false
+		},
+        {
+            "name": "R Android MAUI",
+            "type": "maui",
+            "request": "launch",
+            "preLaunchTask": "rebuild-child-android",
+            "targetFramework": "net9.0-android"
+        },
+    ]
+}

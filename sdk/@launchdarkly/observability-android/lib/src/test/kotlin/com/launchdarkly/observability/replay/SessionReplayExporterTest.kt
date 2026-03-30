@@ -1,6 +1,6 @@
 package com.launchdarkly.observability.replay
 
-import com.launchdarkly.observability.replay.capture.CaptureEvent
+import com.launchdarkly.observability.replay.capture.ExportFrame
 import com.launchdarkly.observability.replay.exporter.IdentifyItemPayload
 import com.launchdarkly.observability.replay.exporter.ImageItemPayload
 import com.launchdarkly.observability.replay.exporter.SessionReplayExporter
@@ -34,10 +34,11 @@ class SessionReplayExporterTest {
             backendUrl = "http://test.com",
             serviceName = "test-service",
             serviceVersion = "1.0.0",
-            injectedReplayApiService = mockService,
-            canvasBufferLimit = 20,
-            canvasDrawEntourage = 1,
             initialIdentifyItemPayload = identifyEvent,
+            title = "test-app",
+            injectedReplayApiService = mockService,
+            canvasBufferLimit = 45,
+            canvasDrawEntourage = 1,
             logger = mockk()
         )
     }
@@ -54,6 +55,7 @@ class SessionReplayExporterTest {
             serviceName = "test-service",
             serviceVersion = "1.0.0",
             initialIdentifyItemPayload = identifyEvent,
+            title = "test-app",
             injectedReplayApiService = mockService,
             logger = mockk()
         )
@@ -71,6 +73,7 @@ class SessionReplayExporterTest {
             serviceName = "test-service",
             serviceVersion = "1.0.0",
             initialIdentifyItemPayload = identifyEvent,
+            title = "test-app",
             logger = mockk()
         )
 
@@ -103,7 +106,7 @@ class SessionReplayExporterTest {
         exporter.cacheIdentify(cachedIdentify)
 
         val captureEvents = listOf(
-            CaptureEvent("base64data1", 800, 600, 1000L, "session-a")
+            ExportFrame("base64data1", 800, 600, 1000L, "session-a")
         )
         val items = createItemsFromCaptures(captureEvents)
 
@@ -123,14 +126,14 @@ class SessionReplayExporterTest {
     fun `export should send full capture for first session and incremental for subsequent captures in same session`() = runTest {
         // Arrange: Create captures for two different sessions
         val sessionACaptureEvents = listOf(
-            CaptureEvent("base64data1", 800, 600, 1000L, "session-a"),
-            CaptureEvent("base64data2", 800, 600, 2000L, "session-a"),
-            CaptureEvent("base64data3", 800, 600, 3000L, "session-a")
+            ExportFrame("base64data1", 800, 600, 1000L, "session-a"),
+            ExportFrame("base64data2", 800, 600, 2000L, "session-a"),
+            ExportFrame("base64data3", 800, 600, 3000L, "session-a")
         )
 
         val sessionBCaptureEvents = listOf(
-            CaptureEvent("base64data4", 1024, 768, 4000L, "session-b"),
-            CaptureEvent("base64data5", 1024, 768, 5000L, "session-b")
+            ExportFrame("base64data4", 1024, 768, 4000L, "session-b"),
+            ExportFrame("base64data5", 1024, 768, 5000L, "session-b")
         )
 
         val allCaptures = sessionACaptureEvents + sessionBCaptureEvents
@@ -181,10 +184,10 @@ class SessionReplayExporterTest {
     fun `export should send full capture when dimensions change within same session`() = runTest {
         // Arrange: Create captures for same session but with dimension changes
         val captureEvents = listOf(
-            CaptureEvent("base64data1", 800, 600, 1000L, "session-a"),  // First capture - full
-            CaptureEvent("base64data2", 800, 600, 2000L, "session-a"),  // Same dimensions - incremental
-            CaptureEvent("base64data3", 1024, 768, 3000L, "session-a"), // Dimension change - full
-            CaptureEvent(
+            ExportFrame("base64data1", 800, 600, 1000L, "session-a"),  // First capture - full
+            ExportFrame("base64data2", 800, 600, 2000L, "session-a"),  // Same dimensions - incremental
+            ExportFrame("base64data3", 1024, 768, 3000L, "session-a"), // Dimension change - full
+            ExportFrame(
                 "base64data4",
                 1024,
                 768,
@@ -214,8 +217,8 @@ class SessionReplayExporterTest {
         // Verify identifyReplaySession is called twice (first capture + dimension change)
         coVerify(exactly = 1) { mockService.identifyReplaySession(eq("session-a"), any<IdentifyItemPayload>()) }
 
-        // Verify pushPayload is called for all captures
-        coVerify(exactly = 1) {
+        // Verify pushPayload is called for captures + wake-up events
+        coVerify(exactly = 2) {
             mockService.pushPayload("session-a", any(), any())
         }
 
@@ -230,11 +233,11 @@ class SessionReplayExporterTest {
         // Arrange: Create captures for same session but with dimension changes
         val captureEvents = listOf(
             // small canvas
-            CaptureEvent("base64data1", 800, 600, 1000L, "session-a"),  // First capture - full
+            ExportFrame("base64data1", 800, 600, 1000L, "session-a"),  // First capture - full
             // large canvases to cause overlimit
-            CaptureEvent("base64data2222222222222", 800, 600, 2000L, "session-a"),  // Same dimensions - incremental
-            CaptureEvent("base64data3333333333333", 1024, 768, 3000L, "session-a"), // Dimension change - full
-            CaptureEvent(
+            ExportFrame("base64data2222222222222", 800, 600, 2000L, "session-a"),  // Same dimensions - incremental
+            ExportFrame("base64data3333333333333", 1024, 768, 3000L, "session-a"), // Dimension change - full
+            ExportFrame(
                 "base64data444444444444",
                 1024,
                 768,
@@ -266,8 +269,8 @@ class SessionReplayExporterTest {
     fun `export should ignore unsupported payloads`() = runTest {
         // Arrange: Create mix of valid and unsupported payloads
         val validCaptureEvents = listOf(
-            CaptureEvent("base64data1", 800, 600, 1000L, "session-a"),
-            CaptureEvent("base64data2", 800, 600, 2000L, "session-a")
+            ExportFrame("base64data1", 800, 600, 1000L, "session-a"),
+            ExportFrame("base64data2", 800, 600, 2000L, "session-a")
         )
 
         val validItems = createItemsFromCaptures(validCaptureEvents)
@@ -286,7 +289,7 @@ class SessionReplayExporterTest {
             mockService.initializeReplaySession("test-org", "session-a")
         }
         coVerify(exactly = 1) { mockService.identifyReplaySession(eq("session-a"), any<IdentifyItemPayload>()) }
-        coVerify(exactly = 1) {
+        coVerify(exactly = 2) {
             mockService.pushPayload("session-a", any(), any())
         }
     }
@@ -306,7 +309,7 @@ class SessionReplayExporterTest {
     fun `export should handle API service failures gracefully`() = runTest {
         // Arrange: Create a single capture to test basic failure handling
         val captureEvents = listOf(
-            CaptureEvent("base64data1", 800, 600, 1000L, "session-a")
+            ExportFrame("base64data1", 800, 600, 1000L, "session-a")
         )
         val items = createItemsFromCaptures(captureEvents)
 
@@ -336,8 +339,8 @@ class SessionReplayExporterTest {
     fun `export should handle multiple captures in same session with proper state tracking`() = runTest {
         // Arrange: Create two captures with same session and dimensions
         val captureEvents = listOf(
-            CaptureEvent("base64data1", 800, 600, 1000L, "session-a"),
-            CaptureEvent("base64data2", 800, 600, 2000L, "session-a")
+            ExportFrame("base64data1", 800, 600, 1000L, "session-a"),
+            ExportFrame("base64data2", 800, 600, 2000L, "session-a")
         )
         val items = createItemsFromCaptures(captureEvents)
 
@@ -352,7 +355,7 @@ class SessionReplayExporterTest {
         // Verify API calls: First capture should be full, second should be incremental
         coVerify(exactly = 1) { mockService.initializeReplaySession("test-org", "session-a") }
         coVerify(exactly = 1) { mockService.identifyReplaySession(eq("session-a"), any<IdentifyItemPayload>()) }
-        coVerify(exactly = 1) { mockService.pushPayload("session-a", any(), any()) }
+        coVerify(exactly = 2) { mockService.pushPayload("session-a", any(), any()) }
     }
 
     @Test
@@ -360,8 +363,8 @@ class SessionReplayExporterTest {
     fun `export should stop processing on first failure and not process remaining captures`() = runTest {
         // Arrange: Create captures for two different sessions
         val captureEvents = listOf(
-            CaptureEvent("base64data1", 800, 600, 1000L, "session-a"),
-            CaptureEvent("base64data2", 1024, 768, 2000L, "session-b")
+            ExportFrame("base64data1", 800, 600, 1000L, "session-a"),
+            ExportFrame("base64data2", 1024, 768, 2000L, "session-b")
         )
         val items = createItemsFromCaptures(captureEvents)
 
@@ -400,7 +403,7 @@ class SessionReplayExporterTest {
     fun `export should handle pushPayload failure after successful initialization`() = runTest {
         // Arrange: Create a single capture
         val captureEvents = listOf(
-            CaptureEvent("base64data1", 800, 600, 1000L, "session-a")
+            ExportFrame("base64data1", 800, 600, 1000L, "session-a")
         )
         val items = createItemsFromCaptures(captureEvents)
 
@@ -430,8 +433,8 @@ class SessionReplayExporterTest {
     fun `export should stop processing when first capture fails in same session`() = runTest {
         // Arrange: Create two captures with same session and dimensions
         val captureEvents = listOf(
-            CaptureEvent("base64data1", 800, 600, 1000L, "session-a"),
-            CaptureEvent("base64data2", 800, 600, 2000L, "session-a")
+            ExportFrame("base64data1", 800, 600, 1000L, "session-a"),
+            ExportFrame("base64data2", 800, 600, 2000L, "session-a")
         )
         val items = createItemsFromCaptures(captureEvents)
 
@@ -467,7 +470,7 @@ class SessionReplayExporterTest {
     /**
      * Creates a list of EventQueueItem from a list of Capture objects
      */
-    private fun createItemsFromCaptures(captureEvents: List<CaptureEvent>): List<EventQueueItem> {
+    private fun createItemsFromCaptures(captureEvents: List<ExportFrame>): List<EventQueueItem> {
         return captureEvents.map { capture ->
             EventQueueItem(ImageItemPayload(capture))
         }

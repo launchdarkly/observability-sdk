@@ -1,0 +1,15 @@
+<Project>
+	<PropertyGroup>
+		<PackageId>LaunchDarkly.SessionReplay</PackageId>
+		<Version>0.5.2</Version>
+		<UseLocalClientSdk>false</UseLocalClientSdk>
+		<Authors>LaunchDarkly</Authors>
+		<Owners>LaunchDarkly</Owners>
+		<Company>LaunchDarkly</Company>
+		<Copyright>Copyright 2026 Catamorphic, Co</Copyright>
+		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+		<PackageProjectUrl>https://github.com/launchdarkly/observability-sdk</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/launchdarkly/observability-sdk</RepositoryUrl>
+		<PackageOutputPath>$(MSBuildProjectDirectory)\..\nupkgs</PackageOutputPath>
+	</PropertyGroup>
+</Project>
