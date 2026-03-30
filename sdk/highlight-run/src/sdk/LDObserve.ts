@@ -85,8 +85,8 @@ class _LDObserve extends BufferedClass<Observe> implements Observe {
 		])
 	}
 
-	setLDContextKeys(contextKeys: Attributes) {
-		return this._bufferCall('setLDContextKeys', [contextKeys])
+	setLDContextKeyAttributes(contextKeys: Attributes) {
+		return this._bufferCall('setLDContextKeyAttributes', [contextKeys])
 	}
 
 	getLDContextKeyAttributes(): Attributes | undefined {

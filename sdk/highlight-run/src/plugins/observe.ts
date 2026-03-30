@@ -129,7 +129,7 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 					}
 
 					const ldContextKeys = getContextKeys(hookContext.context)
-					this.observe?.setLDContextKeys(ldContextKeys)
+					this.observe?.setLDContextKeyAttributes(ldContextKeys)
 
 					if (result.status === 'completed') {
 						const metadata = {

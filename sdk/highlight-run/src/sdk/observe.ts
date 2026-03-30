@@ -32,7 +32,7 @@ import {
 	type Hook,
 	LaunchDarklyIntegration,
 	type LDClient,
-	PRODUCT_ANALYTICS_CONTEXT_ATTR,
+	CONTEXT_SCOPE_CONTEXT_KEYS_ATTR,
 } from '../integrations/launchdarkly'
 import type { IntegrationClient } from '../integrations'
 import type { OTelMetric as Metric, RecordMetric } from '../client/types/types'
@@ -140,20 +140,20 @@ export class ObserveSDK implements Observe {
 		return paEvents
 	}
 
-	setLDContextKeys(contextKeys: Attributes): void {
-		this._ldContextKeys = contextKeys
-	}
-
-	getLDContextKeyAttributes(): Attributes | undefined {
-		if (!this._ldContextKeys) {
-			return undefined
+	setLDContextKeyAttributes(contextKeys: Attributes): void {
+		if (!contextKeys) {
+			return
 		}
-		return Object.fromEntries(
-			Object.entries(this._ldContextKeys).map(([k, v]) => [
-				`${PRODUCT_ANALYTICS_CONTEXT_ATTR}.${k}`,
+		this._ldContextKeys = Object.fromEntries(
+			Object.entries(contextKeys).map(([k, v]) => [
+				`${CONTEXT_SCOPE_CONTEXT_KEYS_ATTR}.${k}`,
 				v,
 			]),
 		)
+	}
+
+	getLDContextKeyAttributes(): Attributes | undefined {
+		return this._ldContextKeys
 	}
 
 	public async start() {

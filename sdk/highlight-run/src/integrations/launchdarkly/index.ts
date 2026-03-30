@@ -45,8 +45,8 @@ export const FEATURE_FLAG_VARIATION_INDEX_ATTR = `${FEATURE_FLAG_SCOPE}.result.v
 export const FEATURE_FLAG_APP_ID_ATTR = `${LD_SCOPE}.application.id`
 export const FEATURE_FLAG_APP_VERSION_ATTR = `${LD_SCOPE}.application.version`
 
-export const PRODUCT_ANALYTICS_SCOPE = 'product_analytics'
-export const PRODUCT_ANALYTICS_CONTEXT_ATTR = `${PRODUCT_ANALYTICS_SCOPE}.context_keys`
+export const CONTEXT_SCOPE = 'context'
+export const CONTEXT_SCOPE_CONTEXT_KEYS_ATTR = `${CONTEXT_SCOPE}.contextKeys`
 
 export const LD_INITIALIZE_EVENT = '$ld:telemetry:session:init'
 export const LD_TRACK_EVENT = '$ld:telemetry:track'
