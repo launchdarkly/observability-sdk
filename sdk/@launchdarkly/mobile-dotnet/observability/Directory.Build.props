@@ -1,7 +1,7 @@
 <Project>
 	<PropertyGroup>
 		<PackageId>LaunchDarkly.SessionReplay</PackageId>
-		<Version>0.5.3</Version>
+		<Version>0.5.5</Version>
 		<UseLocalClientSdk>false</UseLocalClientSdk>
 		<Authors>LaunchDarkly</Authors>
 		<Owners>LaunchDarkly</Owners>
