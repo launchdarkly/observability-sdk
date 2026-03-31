@@ -25,13 +25,18 @@ public class LDNative
         Replay = replay;
     }
 
-    public static LDNative Start(string mobileKey, ObservabilityOptions observability, SessionReplayOptions replay)
+    private static string GetObservabilityVersion()
     {
-        var ldNative = new LDNative(observability, replay);
         var rawVersion = typeof(LDNative).Assembly
             .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
             ?.InformationalVersion ?? string.Empty;
-        var observabilityVersion = rawVersion.Split('+')[0];
+        return rawVersion.Split('+')[0];
+    }
+
+    public static LDNative Start(string mobileKey, ObservabilityOptions observability, SessionReplayOptions replay)
+    {
+        var ldNative = new LDNative(observability, replay);
+        var observabilityVersion = GetObservabilityVersion();
         observability.Attributes ??= new Dictionary<string, object?>();
         observability.Attributes["maui-observability-version"] = observabilityVersion;
 
