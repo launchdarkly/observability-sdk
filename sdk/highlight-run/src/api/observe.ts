@@ -168,4 +168,6 @@ export interface Observe {
 		environmentMetadata: LDPluginEnvironmentMetadata,
 	): void
 	getHooks?(metadata: LDPluginEnvironmentMetadata): Hook[]
+	setLDContextKeyAttributes(contextKeys: Attributes): void
+	getLDContextKeyAttributes(): Attributes | undefined
 }

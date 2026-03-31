@@ -12,6 +12,12 @@ import Root from './routes/root'
 import Welcome from './routes/welcome'
 import PrivacyDemo from './routes/privacy-demo'
 import HttpTest from './routes/http-test'
+import LDClientPage, {
+	LDClientPageA,
+	LDClientPageB,
+	LDClientPageC,
+} from './routes/ldclient'
+import LDClientLazyPage from './routes/ldclient-lazy'
 
 function rootAction() {
 	const contact = { name: 'hello' }
@@ -59,6 +65,12 @@ const router = createBrowserRouter(
 			<Route path={'/welcome'} element={<Welcome />} />
 			<Route path={'/privacy'} element={<PrivacyDemo />} />
 			<Route path={'/http-test'} element={<HttpTest />} />
+			<Route path={'/ldclient'} element={<LDClientPage />}>
+				<Route path="page-a" element={<LDClientPageA />} />
+				<Route path="page-b" element={<LDClientPageB />} />
+				<Route path="page-c" element={<LDClientPageC />} />
+			</Route>
+			<Route path={'/ldclient-lazy'} element={<LDClientLazyPage />} />
 		</>,
 	),
 )

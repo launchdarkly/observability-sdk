@@ -127,6 +127,7 @@ import { CustomSampler } from './otel/sampling/CustomSampler'
 import randomUuidV4 from './utils/randomUuidV4'
 import { LDContext } from '@launchdarkly/js-client-sdk'
 import { MaskInputOptions } from './types/record'
+import { ProductAnalyticsEvents } from 'client/types/observe'
 
 export const HighlightWarning = (context: string, msg: any) => {
 	console.warn(`Highlight Warning: (${context}): `, { output: msg })
@@ -174,6 +175,7 @@ export type HighlightClassOptions = {
 	sendMode?: 'webworker' | 'local'
 	otlpEndpoint?: HighlightOptions['otlpEndpoint']
 	otel?: HighlightOptions['otel']
+	productAnalytics?: boolean | ProductAnalyticsEvents
 	contextFriendlyName?: (context: LDContext) => string | undefined
 }
 
@@ -634,8 +636,8 @@ export class Highlight {
 					serviceName:
 						this.options?.serviceName ?? 'highlight-browser',
 					instrumentations: this.options?.otel?.instrumentations,
-					eventNames: this.options?.otel?.eventNames,
 					getIntegrations: () => [...this._integrations],
+					productAnalyticsEvents: this._productAnalyticsEvents(),
 				},
 				sampler,
 			)
@@ -933,6 +935,29 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 				HighlightWarning('initializeSession', e)
 			}
 		}
+	}
+
+	private _productAnalyticsEvents(): ProductAnalyticsEvents {
+		const pa = this.options?.productAnalytics
+		if (pa === false) {
+			return {}
+		}
+
+		const paEvents = {
+			clicks: true,
+			pageViews: true,
+			trackEvents: true,
+		}
+		if (pa === undefined || pa === true) {
+			return paEvents
+		}
+
+		for (const event of Object.keys(pa)) {
+			if (pa[event as keyof ProductAnalyticsEvents] === false) {
+				paEvents[event as keyof ProductAnalyticsEvents] = false
+			}
+		}
+		return paEvents
 	}
 
 	async _visibilityHandler(hidden: boolean) {
