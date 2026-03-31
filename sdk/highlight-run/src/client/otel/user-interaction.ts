@@ -3,6 +3,7 @@
 import { InstrumentationBase, isWrapped } from '@opentelemetry/instrumentation'
 
 import * as api from '@opentelemetry/api'
+import { Attributes } from '@opentelemetry/api'
 import { hrTime } from '@opentelemetry/core'
 import {
 	EventName,
@@ -12,10 +13,15 @@ import {
 import { SpanData } from '@opentelemetry/instrumentation-user-interaction/build/src/internal-types'
 import { getElementXPath } from '@opentelemetry/sdk-trace-web'
 import { AsyncTask } from '@opentelemetry/instrumentation-user-interaction/build/esnext/internal-types'
-
+import { ProductAnalyticsEvents } from 'client/types/observe'
+import * as SemanticAttributes from '@opentelemetry/semantic-conventions'
 const ZONE_CONTEXT_KEY = 'OT_ZONE_CONTEXT'
 const EVENT_NAVIGATION_NAME = 'Navigation:'
-const DEFAULT_EVENT_NAMES = ['click', 'input', 'submit'] as const
+
+export type UserInteractionConfig = UserInteractionInstrumentationConfig & {
+	productAnalyticsEvents?: ProductAnalyticsEvents
+	getLDContextKeyAttributes?: () => Attributes | undefined
+}
 
 function defaultShouldPreventSpanCreation() {
 	return false
@@ -43,16 +49,23 @@ export class UserInteractionInstrumentation extends InstrumentationBase {
 	>()
 	private _eventNames: Set<EventName>
 	private _shouldPreventSpanCreation: ShouldPreventSpanCreation
+	private _getLDContextKeyAttributes:
+		| (() => Attributes | undefined)
+		| undefined
 
-	constructor(config: UserInteractionInstrumentationConfig = {}) {
+	constructor(config: UserInteractionConfig = {}) {
 		super(
 			UserInteractionInstrumentation.moduleName,
 			UserInteractionInstrumentation.version,
 			config,
 		)
-		this._eventNames = new Set(
-			(config?.eventNames ?? DEFAULT_EVENT_NAMES) as EventName[],
-		)
+
+		this._getLDContextKeyAttributes = config.getLDContextKeyAttributes
+		this._eventNames = new Set((config?.eventNames ?? []) as EventName[])
+		if (config.productAnalyticsEvents?.clicks !== false) {
+			this._eventNames.add('click')
+		}
+
 		this._shouldPreventSpanCreation =
 			typeof config?.shouldPreventSpanCreation === 'function'
 				? config.shouldPreventSpanCreation
@@ -120,6 +133,8 @@ export class UserInteractionInstrumentation extends InstrumentationBase {
 				eventName,
 				{
 					attributes: {
+						[SemanticAttributes.ATTR_URL_FULL]:
+							window.location.href,
 						['event.type']: eventName,
 						['event.tag']: element.tagName,
 						['event.xpath']: xpath,
@@ -153,6 +168,11 @@ export class UserInteractionInstrumentation extends InstrumentationBase {
 					span.setAttribute('event.scrollX', window.scrollX)
 					span.setAttribute('event.scrollY', window.scrollY)
 				}
+			}
+
+			const contextKeys = this._getLDContextKeyAttributes?.()
+			if (contextKeys) {
+				span.setAttributes(contextKeys)
 			}
 
 			if (

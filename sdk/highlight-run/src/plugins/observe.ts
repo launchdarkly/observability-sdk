@@ -16,6 +16,7 @@ import {
 	getContextKeys,
 	Hook,
 	LD_IDENTIFY_RESULT_STATUS,
+	LD_TRACK_SPAN_NAME,
 	LDClient,
 } from '../integrations/launchdarkly'
 import { Observe as ObserveAPI } from '../api/observe'
@@ -26,6 +27,7 @@ import { Plugin } from './common'
 import {
 	ATTR_TELEMETRY_SDK_NAME,
 	ATTR_TELEMETRY_SDK_VERSION,
+	ATTR_URL_FULL,
 } from '@opentelemetry/semantic-conventions'
 import { Attributes } from '@opentelemetry/api'
 import { internalLog } from '../sdk/util'
@@ -126,9 +128,12 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 						hook.afterIdentify?.(hookContext, data, result)
 					}
 
+					const ldContextKeys = getContextKeys(hookContext.context)
+					this.observe?.setLDContextKeyAttributes(ldContextKeys)
+
 					if (result.status === 'completed') {
 						const metadata = {
-							...getContextKeys(hookContext.context),
+							...ldContextKeys,
 							key:
 								this.options?.contextFriendlyName?.(
 									hookContext.context,
@@ -192,13 +197,31 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 						[]) {
 						hook.afterTrack?.(hookContext)
 					}
-					this.observe?.recordLog('LD.track', 'info', {
+
+					const trackEventsEnabled =
+						this.options?.productAnalytics !== false &&
+						(typeof this.options?.productAnalytics !== 'object' ||
+							this.options.productAnalytics.trackEvents !== false)
+
+					if (!trackEventsEnabled) {
+						return
+					}
+
+					const trackAttrs: Attributes = {
+						[ATTR_URL_FULL]: window.location.href,
+						...(this.observe?.getLDContextKeyAttributes() ?? {}),
 						...metaAttrs,
 						key: hookContext.key,
 						value: hookContext.metricValue,
 						...(typeof hookContext.data === 'object'
 							? hookContext.data
 							: {}),
+					}
+
+					this.observe?.startSpan(LD_TRACK_SPAN_NAME, (s) => {
+						if (s) {
+							s.setAttributes(trackAttrs)
+						}
 					})
 				},
 			},

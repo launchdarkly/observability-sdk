@@ -43,6 +43,8 @@ export default function Root() {
 				<a href="/welcome">Welcome</a>
 				<a href="/privacy">Privacy Demo</a>
 				<a href="/http-test">HTTP Tests</a>
+				<a href="/ldclient">LDClient</a>
+				<a href="/ldclient-lazy">LDClient Lazy</a>
 			</nav>
 			<p>{flags}</p>
 			<a href={session} target={'_blank'}>
@@ -291,6 +293,15 @@ export default function Root() {
 				}}
 			>
 				recordObservability
+			</button>
+			<button
+				onClick={() => {
+					client.track('spenny-test-custom-event', {
+						random: Math.random(),
+					})
+				}}
+			>
+				Send custom event
 			</button>
 			<button
 				onClick={async () => {
