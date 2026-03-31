@@ -46,9 +46,11 @@
 		<!-- Bridge module AAR -->
 		<_LDNativeAAR Include="$(_LDNativeAarDir)LDObserve-release.aar" />
 
-		<!-- JARs -->
+		<!-- JARs: exclude all opentelemetry-sdk-extension-autoconfigure-*.jar, then add *-spi-* back (main autoconfigure
+		     must not ship; SPI must). autoconfigure-1* only matched OTel 1.x filenames and failed silently on 2.x. -->
 		<_LDNativeJAR Include="$(_LDNativeDepsDir)opentelemetry-*.jar"
-				Exclude="$(_LDNativeDepsDir)opentelemetry-sdk-extension-incubator-*.jar;$(_LDNativeDepsDir)opentelemetry-sdk-extension-autoconfigure-1*.jar;$(_LDNativeDepsDir)opentelemetry-sdk-testing-*.jar" />
+				Exclude="$(_LDNativeDepsDir)opentelemetry-sdk-extension-incubator-*.jar;$(_LDNativeDepsDir)opentelemetry-sdk-extension-autoconfigure-*.jar;$(_LDNativeDepsDir)opentelemetry-sdk-testing-*.jar" />
+		<_LDNativeJAR Include="$(_LDNativeDepsDir)opentelemetry-sdk-extension-autoconfigure-spi-*.jar" />
 		<_LDNativeJAR Include="$(_LDNativeDepsDir)jackson-*.jar" />
 		<_LDNativeJAR Include="$(_LDNativeDepsDir)launchdarkly-*.jar" />
 		<_LDNativeJAR Include="$(_LDNativeDepsDir)okhttp-*.jar" />
