@@ -97,9 +97,13 @@
 		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\launchdarkly-android-client-sdk-*.aar" Pack="true" PackagePath="runtimes/android/native/" />
 		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\lib-release.aar" Pack="true" PackagePath="runtimes/android/native/" />
 		
-		<!-- Specific jars -->
+		<!-- Exclude all opentelemetry-sdk-extension-autoconfigure-*.jar, then re-include *-spi-* only: the main
+		     autoconfigure jar must not be packaged, but autoconfigure-spi must. A single exclude cannot use
+		     autoconfigure-* without dropping SPI; autoconfigure-1* was tied to OTel 1.x and broke after a 2.x bump. -->
 		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\opentelemetry-*.jar"
-			  Exclude="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\opentelemetry-sdk-extension-incubator-*.jar;..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\opentelemetry-sdk-extension-autoconfigure-1*.jar"
+			  Exclude="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\opentelemetry-sdk-extension-incubator-*.jar;..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\opentelemetry-sdk-extension-autoconfigure-*.jar"
+			  Pack="true" PackagePath="runtimes/android/native/" />
+		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\opentelemetry-sdk-extension-autoconfigure-spi-*.jar"
 			  Pack="true" PackagePath="runtimes/android/native/" />
 		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\jackson-*.jar" Pack="true" PackagePath="runtimes/android/native/" />
 		<None Include="..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\launchdarkly-*.jar" Pack="true" PackagePath="runtimes/android/native/" />

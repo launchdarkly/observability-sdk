@@ -52,6 +52,7 @@ dependencies {
     implementation("com.launchdarkly:launchdarkly-observability-android:0.0.0-local")
 
     // TODO: revise these versions to be as old as usable for compatibility
+    // OpenTelemetry JARs copied here are filtered for NuGet in observability/LDObservability.Fat.csproj (autoconfigure vs autoconfigure-spi).
     implementation("io.opentelemetry:opentelemetry-api:1.51.0")
     "copyDependencies"("io.opentelemetry:opentelemetry-api:1.51.0")
 
