@@ -103,6 +103,8 @@ class ViewModel(application: Application) : AndroidViewModel(application) {
                 newSpan1.makeCurrent().use {
                     val newSpan2 = LDObserve.startSpan("NestedSpan2", Attributes.empty())
                     newSpan2.makeCurrent().use {
+                        LDObserve.recordCount(Metric("test-counter", 10.0))
+                        LDObserve.recordLog("NestedLog", Severity.INFO, Attributes.empty())
                         sendOkHttpRequest()
                         sendURLRequest()
                         newSpan2.end()

@@ -28,7 +28,7 @@ open class BaseApplication : Application() {
 
     var observabilityOptions = ObservabilityOptions(
         resourceAttributes = Attributes.of(
-            AttributeKey.stringKey("example"), "value"
+            AttributeKey.stringKey("observabilityOptions.resourceAttributes"), "BaseApplication"
         ),
         debug = true,
         otlpEndpoint = BuildConfig.OTLP_ENDPOINT,

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Reflection;
 using LaunchDarkly.Observability;
 
@@ -31,6 +32,9 @@ public class LDNative
             .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
             ?.InformationalVersion ?? string.Empty;
         var observabilityVersion = rawVersion.Split('+')[0];
+        observability.Attributes ??= new Dictionary<string, object?>();
+        observability.Attributes["maui-observability-version"] = observabilityVersion;
+
 #if ANDROID
         var app = (Android.App.Application)global::Android.App.Application.Context;
         var bridge = new ObservabilityBridge();
