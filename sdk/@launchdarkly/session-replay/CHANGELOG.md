@@ -1,5 +1,12 @@
 # @launchdarkly/session-replay
 
+## [1.1.2](https://github.com/launchdarkly/observability-sdk/compare/session-replay-1.1.1...session-replay-1.1.2) (2026-04-01)
+
+
+### Bug Fixes
+
+* OIDC publishing with npm ([#454](https://github.com/launchdarkly/observability-sdk/issues/454)) ([ab4221b](https://github.com/launchdarkly/observability-sdk/commit/ab4221b4fa8559a59afd5f0913993ca992b84e41))
+
 ## [1.1.1](https://github.com/launchdarkly/observability-sdk/compare/session-replay-1.1.0...session-replay-1.1.1) (2026-03-30)
 
 
