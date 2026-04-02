@@ -54,6 +54,15 @@ android {
     targetCompatibility JavaVersion.VERSION_1_8
   }
 
+  testOptions {
+    unitTests {
+      returnDefaultValues = true
+      all {
+        useJUnitPlatform()
+      }
+    }
+  }
+
   sourceSets {
     main {
       java.srcDirs += [
@@ -74,4 +83,14 @@ def kotlin_version = getExtOrDefault("kotlinVersion")
 dependencies {
   implementation "com.facebook.react:react-android"
   implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+  implementation "com.launchdarkly:launchdarkly-observability-android:0.34.1"
+  implementation "com.launchdarkly:launchdarkly-android-client-sdk:5.11.0"
+  // compileOnly: OTel Attributes appears in ObservabilityOptions parameter types; provided at
+  // runtime transitively through launchdarkly-observability-android.
+  compileOnly "io.opentelemetry:opentelemetry-api:1.51.0"
+
+  testImplementation platform("org.junit:junit-bom:5.13.4")
+  testImplementation "org.junit.jupiter:junit-jupiter"
+  testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+  testImplementation "io.mockk:mockk:1.14.5"
 }
