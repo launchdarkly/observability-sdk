@@ -84,4 +84,8 @@
 		<LD_INCLUDE_NATIVE_DEPS>true</LD_INCLUDE_NATIVE_DEPS>
 	</PropertyGroup>
 
+	<PropertyGroup Condition="$(TargetFramework.Contains('android'))">
+   	    <EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
+    </PropertyGroup>
+
 </Project>
