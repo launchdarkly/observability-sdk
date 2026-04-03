@@ -62,13 +62,27 @@ app.get('/order', (req, res) => {
 
 Refer to the [SDK documentation](https://launchdarkly.com/docs/sdk/server-side/node-js#get-started) for instructions on getting started with using the SDK.
 
+## LLM observability
+
+The plugin can automatically register [OpenLLMetry](https://github.com/traceloop/openllmetry) instrumentations for LLM providers so that spans from OpenAI, LangChain, and other supported providers are sent to LaunchDarkly. This is optional and does not require any code changes: if the corresponding instrumentation package is installed, it is registered when the plugin initializes.
+
+To enable LLM spans, install one or more optional peer dependencies:
+
+```shell
+npm i @traceloop/instrumentation-openai @traceloop/instrumentation-langchain
+# or
+yarn add @traceloop/instrumentation-openai @traceloop/instrumentation-langchain
+```
+
+Initialize the LaunchDarkly SDK (with the Observability plugin) before importing or using your LLM provider so that instrumentation is registered first. If you do not install an instrumentation package, the plugin works as before and no LLM spans are captured for that provider.
+
 ## Verifying SDK build provenance with the SLSA framework
 
 LaunchDarkly uses the [SLSA framework](https://slsa.dev/spec/v1.0/about) (Supply-chain Levels for Software Artifacts) to help developers make their supply chain more secure by ensuring the authenticity and build integrity of our published SDK packages. To learn more, see the [provenance guide](PROVENANCE.md).
 
 ## About LaunchDarkly
 
-- LaunchDarkly Observability provies a way to collect and send errors, logs, traces to LaunchDarkly. Correlate latency or exceptions with your releases to safely ship code.
+- LaunchDarkly Observability provides a way to collect and send errors, logs, traces to LaunchDarkly. Correlate latency or exceptions with your releases to safely ship code.
 - LaunchDarkly is a continuous delivery platform that provides feature flags as a service and allows developers to iterate quickly and safely. We allow you to easily flag your features and manage them from the LaunchDarkly dashboard. With LaunchDarkly, you can:
     - Roll out a new feature to a subset of your users (like a group of users who opt-in to a beta tester group), gathering feedback and bug reports from real-world use cases.
     - Gradually roll out a feature to an increasing percentage of users, and track the effect that the feature has on key metrics (for instance, how likely is a user to complete a purchase if they have feature A versus feature B?).
