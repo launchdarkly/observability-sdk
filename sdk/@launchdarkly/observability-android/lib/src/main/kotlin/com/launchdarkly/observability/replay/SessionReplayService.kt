@@ -97,7 +97,7 @@ class SessionReplayService(
 
         val initialIdentifyItemPayload = IdentifyItemPayload.from(
             contextFriendlyName = observabilityContext.options.contextFriendlyName,
-            resourceAttributes = observabilityContext.options.resourceAttributes,
+            resourceAttributes = observabilityContext.resourceAttributes,
             sessionId = null
         )
         val application = observabilityContext.application
@@ -281,7 +281,7 @@ class SessionReplayService(
         val sessionId = sessionManager.getSessionId()
         val event = IdentifyItemPayload.from(
             contextFriendlyName = observabilityContext.options.contextFriendlyName,
-            resourceAttributes = observabilityContext.options.resourceAttributes,
+            resourceAttributes = observabilityContext.resourceAttributes,
             ldContext = ldContext,
             timestamp = timestamp,
             sessionId = sessionId
