@@ -153,7 +153,7 @@ public class ObservabilityBridge(
             com.launchdarkly.observability.api.ObservabilityOptions(
                 enabled = observability.isEnabled,
                 serviceName = observability.serviceName,
-                serviceVersion = observability.serviceVersion,
+                serviceVersion = observabilityVersion,
                 resourceAttributes = resourceAttributes,
                 debug = false,
                 otlpEndpoint = observability.otlpEndpoint,
