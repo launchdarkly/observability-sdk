@@ -38,7 +38,7 @@ class ObservabilityBridgeClient
             MaskImages = replay.Privacy?.MaskImages ?? false
         };
 
-        _native.Start(mobileKey, objcObs, objcReplay);
+        _native.Start(mobileKey, objcObs, objcReplay, observabilityVersion);
     }
 }
 #endif

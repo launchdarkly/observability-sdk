@@ -37,9 +37,7 @@ public class LDNative
     {
         var ldNative = new LDNative(observability, replay);
         var observabilityVersion = GetObservabilityVersion();
-        observability.Attributes ??= new Dictionary<string, object?>();
-        observability.Attributes["maui-observability-version"] = observabilityVersion;
-
+        
 #if ANDROID
         var app = (Android.App.Application)global::Android.App.Application.Context;
         var bridge = new ObservabilityBridge();

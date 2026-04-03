@@ -181,6 +181,11 @@ public class ObservabilityBridge(
             throw t
         }
 
+        observabilityPlugin.distroAttributes = mapOf(
+            "telemetry.distro.name" to "observability-maui-android",
+            "telemetry.distro.version" to observabilityVersion
+        )
+
         val nativeSessionReplayOptions = try {
             val privacy = replay.privacy
             com.launchdarkly.observability.replay.ReplayOptions(
