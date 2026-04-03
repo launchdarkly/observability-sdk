@@ -16,6 +16,8 @@ import com.launchdarkly.sdk.android.integrations.Hook
 import com.launchdarkly.sdk.android.integrations.Plugin
 import com.launchdarkly.sdk.android.integrations.PluginMetadata
 import com.launchdarkly.sdk.android.integrations.RegistrationCompleteResult
+import io.opentelemetry.api.common.AttributeKey
+import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.sdk.resources.Resource
 import java.util.Collections
 
@@ -54,6 +56,10 @@ class Observability(
     private val mobileKey: String,
     private val options: ObservabilityOptions = ObservabilityOptions() // new instance has reasonable defaults
 ) : Plugin() {
+    var distroAttributes: Map<String, String> = mapOf(
+        "telemetry.distro.name" to SDK_NAME,
+        "telemetry.distro.version" to BuildConfig.OBSERVABILITY_SDK_VERSION
+    )
     private val logger: LDLogger
     private val observabilityHook = ObservabilityHook()
     private var observabilityClient: ObservabilityService? = null
@@ -95,28 +101,38 @@ class Observability(
 
         client?.let { lDClient ->
             if (mobileKey == sdkKey) {
-                val resourceBuilder = Resource.getDefault().toBuilder()
-                resourceBuilder.put("service.name", options.serviceName)
-                resourceBuilder.put("service.version", options.serviceVersion)
-                resourceBuilder.put("highlight.project_id", sdkKey)
-                resourceBuilder.putAll(options.resourceAttributes)
+                val attributes = Attributes.builder()
+                Resource.getDefault().attributes.forEach { key, value ->
+                    if (key.key != "service.name") {
+                        @Suppress("UNCHECKED_CAST")
+                        attributes.put(key as AttributeKey<Any>, value)
+                    }
+                }
+                attributes.put("highlight.project_id", sdkKey)
+                distroAttributes.forEach { (key, value) ->
+                    attributes.put(AttributeKey.stringKey(key), value)
+                }
+                attributes.putAll(options.resourceAttributes)
 
                 metadata?.applicationInfo?.applicationId?.let {
-                    resourceBuilder.put("launchdarkly.application.id", it)
+                    attributes.put("launchdarkly.application.id", it)
                 }
 
                 metadata?.applicationInfo?.applicationVersion?.let {
-                    resourceBuilder.put("launchdarkly.application.version", it)
+                    attributes.put("launchdarkly.application.version", it)
                 }
 
                 metadata?.sdkMetadata?.name?.let { sdkName ->
                     metadata.sdkMetadata?.version?.let { sdkVersion ->
-                        resourceBuilder.put("launchdarkly.sdk.version", "$sdkName/$sdkVersion")
+                        attributes.put("launchdarkly.sdk.version", "$sdkName/$sdkVersion")
                     }
                 }
 
+                val builtResource = Resource.create(attributes.build())
+                LDObserve.context?.resourceAttributes = builtResource.attributes
+
                 val client = ObservabilityService(
-                    application, sdkKey, resourceBuilder.build(), logger, options,
+                    application, sdkKey, builtResource, logger, options,
                 )
                 observabilityClient = client
                 LDObserve.context?.sessionManager = client.sessionManager
@@ -136,5 +152,6 @@ class Observability(
     companion object {
         val DEFAULT_LOG_LEVEL: LDLogLevel = LDLogLevel.INFO
         const val PLUGIN_NAME = "@launchdarkly/observability-android"
+        const val SDK_NAME = "launchdarkly-observability-android"
     }
 }

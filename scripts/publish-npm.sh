@@ -30,15 +30,25 @@ fi
 
 for workspace in $WORKSPACES; do
   echo "Publishing $workspace..."
+
+  # Use `yarn pack` to create a tarball with workspace:* references resolved
+  # to real version numbers. Plain `npm publish <dir>` does not understand
+  # Yarn's workspace: protocol, so consumers would see unresolvable deps.
+  TARBALL="/tmp/ld-publish-package.tgz"
+  rm -f "$TARBALL"
+  yarn --cwd "./$workspace" pack -o "$TARBALL"
+
   # npm returns 403 when a version is already published. Tolerate this to allow
   # partial retries (matching the old yarn --tolerate-republish behavior).
-  OUTPUT=$(npm publish "./$workspace" --access public --provenance $TAG_ARGS 2>&1) || {
+  OUTPUT=$(npm publish "$TARBALL" --access public --provenance $TAG_ARGS 2>&1) || {
     if echo "$OUTPUT" | grep -q "You cannot publish over the previously published versions"; then
       echo "Already published $workspace, skipping."
     else
       echo "$OUTPUT" >&2
       echo "npm publish failed for $workspace" >&2
+      rm -f "$TARBALL"
       exit 1
     fi
   }
+  rm -f "$TARBALL"
 done
