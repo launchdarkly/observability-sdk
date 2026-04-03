@@ -21,6 +21,19 @@ data class IdentifyItemPayload(
     override fun cost(): Int = attributes.size * 100
 
     companion object {
+        private fun flattenAttributes(source: Attributes, into: MutableMap<String, String>) {
+            source.asMap().forEach { (key: AttributeKey<*>, value: Any) ->
+                when (value) {
+                    is String -> into[key.key] = value
+                    is Boolean, is Int, is Long, is Double, is Float -> into[key.key] = value.toString()
+                    is Iterable<*> -> { /* skip arrays/collections */ }
+                    is Array<*> -> { /* skip arrays */ }
+                    is BooleanArray, is IntArray, is LongArray, is DoubleArray, is FloatArray -> { /* skip primitive arrays */ }
+                    else -> { /* skip unknown types to mirror Swift compactMapValues behavior */ }
+                }
+            }
+        }
+
         fun from(
             contextFriendlyName: String? = null,
             resourceAttributes: Attributes,
@@ -30,17 +43,7 @@ data class IdentifyItemPayload(
         ): IdentifyItemPayload {
             val attributes: MutableMap<String, String> = mutableMapOf()
 
-            // Convert resource attributes to a flat string map, skipping array-like values
-            resourceAttributes.asMap().forEach { (key: AttributeKey<*>, value: Any) ->
-                when (value) {
-                    is String -> attributes[key.key] = value
-                    is Boolean, is Int, is Long, is Double, is Float -> attributes[key.key] = value.toString()
-                    is Iterable<*> -> { /* skip arrays/collections */ }
-                    is Array<*> -> { /* skip arrays */ }
-                    is BooleanArray, is IntArray, is LongArray, is DoubleArray, is FloatArray -> { /* skip primitive arrays */ }
-                    else -> { /* skip unknown types to mirror Swift compactMapValues behavior */ }
-                }
-            }
+            flattenAttributes(resourceAttributes, attributes)
 
             // Merge LDContext kind->key entries into attributes
             if (ldContext != null) {
