@@ -1,7 +1,7 @@
 {
 	"go": "1.1.0",
 	"sdk/@launchdarkly/observability": "1.1.2",
-	"sdk/@launchdarkly/observability-android": "0.34.1",
+	"sdk/@launchdarkly/observability-android": "0.35.0",
 	"sdk/@launchdarkly/observability-dotnet": "1.1.0",
 	"sdk/@launchdarkly/observability-node": "1.1.0",
 	"sdk/@launchdarkly/observability-python": "1.2.0",

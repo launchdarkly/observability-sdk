@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.35.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.34.1...launchdarkly-observability-android-0.35.0) (2026-04-03)
+
+
+### Features
+
+* Android Distro vs Sdk OpenTelemetry naming ([#458](https://github.com/launchdarkly/observability-sdk/issues/458)) ([edf968b](https://github.com/launchdarkly/observability-sdk/commit/edf968b52db17d40d9bca634810f5403e32b8830))
+
 ## [0.34.1](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.34.0...launchdarkly-observability-android-0.34.1) (2026-03-28)
 
 
