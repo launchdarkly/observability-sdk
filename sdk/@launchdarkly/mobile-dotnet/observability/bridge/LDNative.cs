@@ -1,5 +1,6 @@
 using System;
 using System.Reflection;
+using LaunchDarkly.Observability;
 
 #if ANDROID
 using Android.App;
