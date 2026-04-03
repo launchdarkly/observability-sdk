@@ -54,6 +54,10 @@ class Observability(
     private val mobileKey: String,
     private val options: ObservabilityOptions = ObservabilityOptions() // new instance has reasonable defaults
 ) : Plugin() {
+    var distroAttributes: Map<String, String> = mapOf(
+        "telemetry.distro.name" to SDK_NAME,
+        "telemetry.distro.version" to BuildConfig.OBSERVABILITY_SDK_VERSION
+    )
     private val logger: LDLogger
     private val observabilityHook = ObservabilityHook()
     private var observabilityClient: ObservabilityService? = null
@@ -99,6 +103,10 @@ class Observability(
                 resourceBuilder.put("service.name", options.serviceName)
                 resourceBuilder.put("service.version", options.serviceVersion)
                 resourceBuilder.put("highlight.project_id", sdkKey)
+                resourceBuilder.put("telemetry.sdk.name", SDK_NAME)
+                distroAttributes.forEach { (key, value) ->
+                    resourceBuilder.put(key, value)
+                }
                 resourceBuilder.putAll(options.resourceAttributes)
 
                 metadata?.applicationInfo?.applicationId?.let {
@@ -136,5 +144,6 @@ class Observability(
     companion object {
         val DEFAULT_LOG_LEVEL: LDLogLevel = LDLogLevel.INFO
         const val PLUGIN_NAME = "@launchdarkly/observability-android"
+        const val SDK_NAME = "launchdarkly-observability-android"
     }
 }

@@ -1,7 +1,5 @@
 using System;
-using System.Collections.Generic;
 using System.Reflection;
-using LaunchDarkly.Observability;
 
 #if ANDROID
 using Android.App;
@@ -25,21 +23,13 @@ public class LDNative
         Replay = replay;
     }
 
-    private static string GetObservabilityVersion()
-    {
-        var rawVersion = typeof(LDNative).Assembly
-            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
-            ?.InformationalVersion ?? string.Empty;
-        return rawVersion.Split('+')[0];
-    }
-
     public static LDNative Start(string mobileKey, ObservabilityOptions observability, SessionReplayOptions replay)
     {
         var ldNative = new LDNative(observability, replay);
-        var observabilityVersion = GetObservabilityVersion();
-        observability.Attributes ??= new Dictionary<string, object?>();
-        observability.Attributes["maui-observability-version"] = observabilityVersion;
-
+        var rawVersion = typeof(LDNative).Assembly
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+            ?.InformationalVersion ?? string.Empty;
+        var observabilityVersion = rawVersion.Split('+')[0];
 #if ANDROID
         var app = (Android.App.Application)global::Android.App.Application.Context;
         var bridge = new ObservabilityBridge();
