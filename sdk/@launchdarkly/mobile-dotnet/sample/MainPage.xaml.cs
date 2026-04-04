@@ -197,6 +197,9 @@ public partial class MainPage : ContentPage
 			using var span1 = LDObserve.StartActiveSpan("NestedSpan1");
 			using var span2 = LDObserve.StartActiveSpan("NestedSpan2");
 
+			LDObserve.RecordCount("test-counter", 10.0);
+			LDObserve.RecordLog("NestedLog", Severity.Info);
+
 			try
 			{
 				await _httpClient.GetAsync("https://www.google.com");

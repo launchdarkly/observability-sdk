@@ -57,8 +57,8 @@ namespace LDObserveMaciOS
         [Export("version")]
         string Version();
 
-        [Export("startWithMobileKey:observability:replay:")]
-        void Start(string mobileKey, ObjcObservabilityOptions observability, ObjcSessionReplayOptions replay);
+        [Export("startWithMobileKey:observability:replay:observabilityVersion:")]
+        void Start(string mobileKey, ObjcObservabilityOptions observability, ObjcSessionReplayOptions replay, string observabilityVersion);
 
         [Export("getSessionReplayHookProxy")]
         [NullAllowed]

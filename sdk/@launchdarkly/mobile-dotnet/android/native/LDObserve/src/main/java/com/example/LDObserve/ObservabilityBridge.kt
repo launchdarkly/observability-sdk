@@ -153,7 +153,7 @@ public class ObservabilityBridge(
             com.launchdarkly.observability.api.ObservabilityOptions(
                 enabled = observability.isEnabled,
                 serviceName = observability.serviceName,
-                serviceVersion = observabilityVersion,
+                serviceVersion = observability.serviceVersion,
                 resourceAttributes = resourceAttributes,
                 debug = false,
                 otlpEndpoint = observability.otlpEndpoint,
@@ -180,6 +180,11 @@ public class ObservabilityBridge(
             printException("LD:ObservabilityBridge failed to create Observability plugin", t)
             throw t
         }
+
+        observabilityPlugin.distroAttributes = mapOf(
+            "telemetry.distro.name" to "observability-maui-android",
+            "telemetry.distro.version" to observabilityVersion
+        )
 
         val nativeSessionReplayOptions = try {
             val privacy = replay.privacy
