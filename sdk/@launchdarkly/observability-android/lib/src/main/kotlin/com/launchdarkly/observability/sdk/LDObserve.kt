@@ -5,9 +5,11 @@ import com.launchdarkly.observability.client.ObservabilityService
 import com.launchdarkly.observability.client.ObservabilityContext
 import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.observability.interfaces.Observe
+import com.launchdarkly.observability.interfaces.recordLog
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Severity
 import io.opentelemetry.api.trace.Span
+import io.opentelemetry.api.trace.SpanContext
 
 /**
  * LDObserve is the singleton entry point for recording observability data such as
@@ -43,8 +45,8 @@ class LDObserve(private val client: Observe) : Observe {
         client.recordError(error, attributes)
     }
 
-    override fun recordLog(message: String, severity: Severity, attributes: Attributes) {
-        client.recordLog(message, severity, attributes)
+    override fun recordLog(message: String, severity: Severity, attributes: Attributes, spanContext: SpanContext?) {
+        client.recordLog(message, severity, attributes, spanContext)
     }
 
     override fun startSpan(name: String, attributes: Attributes): Span {
@@ -66,7 +68,7 @@ class LDObserve(private val client: Observe) : Observe {
             override fun recordHistogram(metric: Metric) {}
             override fun recordUpDownCounter(metric: Metric) {}
             override fun recordError(error: Error, attributes: Attributes) {}
-            override fun recordLog(message: String, severity: Severity, attributes: Attributes) {}
+            override fun recordLog(message: String, severity: Severity, attributes: Attributes, spanContext: SpanContext?) {}
             override fun startSpan(name: String, attributes: Attributes): Span {
                 return Span.getInvalid() // Observability plugin was not initialized before being used.
             }
@@ -97,7 +99,7 @@ class LDObserve(private val client: Observe) : Observe {
         override fun recordHistogram(metric: Metric) = delegate.recordHistogram(metric)
         override fun recordUpDownCounter(metric: Metric) = delegate.recordUpDownCounter(metric)
         override fun recordError(error: Error, attributes: Attributes) = delegate.recordError(error, attributes)
-        override fun recordLog(message: String, severity: Severity, attributes: Attributes) = delegate.recordLog(message, severity, attributes)
+        override fun recordLog(message: String, severity: Severity, attributes: Attributes, spanContext: SpanContext?) = delegate.recordLog(message, severity, attributes, spanContext)
         override fun startSpan(name: String, attributes: Attributes): Span = delegate.startSpan(name, attributes)
         override fun flush(): Boolean = delegate.flush()
 
