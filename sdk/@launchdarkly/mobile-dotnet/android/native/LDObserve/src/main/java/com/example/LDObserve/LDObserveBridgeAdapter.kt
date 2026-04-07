@@ -15,5 +15,11 @@ class LDObserveBridgeAdapter {
             val tracer = SdkLDObserveBridge.getKotlinTracer() ?: return null
             return RealTracer(tracer)
         }
+
+        @JvmStatic
+        fun getLogger(): RealLogger? {
+            val logger = SdkLDObserveBridge.getKotlinLogger() ?: return null
+            return RealLogger(logger)
+        }
     }
 }

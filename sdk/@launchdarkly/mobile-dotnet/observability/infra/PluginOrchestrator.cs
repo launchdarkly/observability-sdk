@@ -24,7 +24,6 @@ namespace LaunchDarkly.Observability
 
         private void TryInitializeAll()
         {
-            // checks last register
             if (_registeredCount < _createdCount) return;
 
             var metadata = Observe?.Metadata ?? SessionReplay?.Metadata;
@@ -38,6 +37,7 @@ namespace LaunchDarkly.Observability
             var replayOptions = SessionReplay?.Options
                 ?? new SessionReplayOptions(isEnabled: false);
 
+            LDObserve.InitTracer(observabilityOptions.ServiceName);
             LDNative.Start(mobileKey, observabilityOptions, replayOptions);
         }
 

@@ -1,7 +1,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using LaunchDarkly.Sdk;
+using OpenTelemetry;
 using OpenTelemetry.Trace;
+using System.Diagnostics;
+
+using OTelSdk = OpenTelemetry.Sdk;
 
 #if IOS
 using Foundation;
@@ -20,27 +24,39 @@ public static partial class LDObserve
     private static readonly LDObserveAndroid.ObservabilityBridge _androidBridge = new();
 #endif
 
+    private static readonly Tracer NoopTracer =
+        OTelSdk.CreateTracerProviderBuilder().Build()!.GetTracer("noop");
+
+    private static LDTracer? _tracer;
+
+    internal static void InitTracer(string serviceName)
+    {
+        _tracer?.Dispose();
+        _tracer = new LDTracer(serviceName);
+    }
+
     // -------- Public API --------
 
     /// <summary>
-    /// Record a log with integer severity.
-    /// </summary>
-    private static void RecordLog(string message, int severity, IDictionary<string, object?>? attributes = null)
-    {
-#if IOS
-        var dict = DictionaryTypeConverters.ToNSDictionary(attributes) ?? new NSDictionary();
-        LDObserveBridge.RecordLog(message, severity, dict);
-#elif ANDROID
-        var map = DictionaryTypeConverters.ToJavaDictionary(attributes);
-        _androidBridge.RecordLog(message, severity, map);
-#endif
-    }
-
-    /// <summary>
-    /// Record a log with typed severity.
+    /// Record a log with typed severity, routed through the native logger instance.
     /// </summary>
     public static void RecordLog(string message, Severity severity, IDictionary<string, object?>? attributes = null)
-        => RecordLog(message, (int)severity, attributes);
+    {
+        string? traceId = Activity.Current?.TraceId.ToString();
+        string? spanId = Activity.Current?.SpanId.ToString();
+
+#if IOS
+        var nativeLogger = LDObserveBridge.GetObjcLogger();
+        if (nativeLogger == null) return;
+        var dict = DictionaryTypeConverters.ToNSDictionary(attributes) ?? new NSDictionary();
+        nativeLogger.RecordLog(message, (nint)severity, traceId, spanId, false, dict);
+#elif ANDROID
+        var nativeLogger = LDObserveAndroid.LDObserveBridgeAdapter.Logger;
+        if (nativeLogger == null) return;
+        var map = DictionaryTypeConverters.ToJavaDictionary(attributes);
+        nativeLogger.RecordLog(message, (int)severity, traceId, spanId, false, map);
+#endif
+    }
 
     /// <summary>
     /// Record an error.
@@ -115,13 +131,13 @@ public static partial class LDObserve
     }
 
     /// <summary>
-    /// Returns the OpenTelemetry <see cref="Tracer"/> from the <see cref="LDTracer"/> singleton.
+    /// Returns the OpenTelemetry <see cref="Tracer"/> initialized during startup.
+    /// Falls back to a no-op tracer before initialization.
     /// </summary>
-    public static Tracer GetTracer() => LDTracer.Instance.Tracer;
+    public static Tracer GetTracer() => _tracer?.Tracer ?? NoopTracer;
 
     /// <summary>
-    /// Starts a new active span with the given name using the singleton tracer.
-    /// The returned <see cref="TelemetrySpan"/> should be disposed when the operation completes.
+    /// Starts a new active span with the given name.
     /// </summary>
     public static TelemetrySpan StartActiveSpan(string name) => GetTracer().StartActiveSpan(name);
 }

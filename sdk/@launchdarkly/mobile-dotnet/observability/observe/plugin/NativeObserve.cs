@@ -20,7 +20,7 @@ namespace LaunchDarkly.Observability
             Options = options;
         }
 
-        public void Initialize()
+        internal void Initialize()
         {
             // TODO: initialize native observability with Options, Client, and Metadata
         }

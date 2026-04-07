@@ -61,7 +61,6 @@ public partial class MainPage : ContentPage
 			.Build();
          _ = Task.Run(async () => await LdClient.Instance.IdentifyAsync(userContext));
 
-		//await LdClient.Instance.IdentifyAsync(userContext);
 		Console.WriteLine("Identified as User");
 	}
 
