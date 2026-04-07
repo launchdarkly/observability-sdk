@@ -1,6 +1,7 @@
 package com.example.androidobservability
 
 import android.util.Log
+import com.launchdarkly.observability.interfaces.recordLog
 import com.launchdarkly.observability.sdk.LDObserve
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
