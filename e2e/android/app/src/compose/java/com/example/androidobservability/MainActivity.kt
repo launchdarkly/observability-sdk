@@ -466,6 +466,14 @@ private fun CustomerApiButtons(viewModel: ViewModel) {
     ) {
         Text("Send custom log")
     }
+    Button(
+        onClick = {
+            viewModel.triggerLogWithContext(customLogText)
+        },
+        modifier = Modifier.padding(8.dp)
+    ) {
+        Text("Log with Context")
+    }
 
     Spacer(modifier = Modifier.height(16.dp))
 
