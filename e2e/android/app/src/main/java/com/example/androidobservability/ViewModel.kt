@@ -7,7 +7,6 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.launchdarkly.observability.interfaces.Metric
-import com.launchdarkly.observability.interfaces.recordLog
 import com.launchdarkly.observability.sdk.LDObserve
 import com.launchdarkly.sdk.ContextKind
 import com.launchdarkly.sdk.LDContext

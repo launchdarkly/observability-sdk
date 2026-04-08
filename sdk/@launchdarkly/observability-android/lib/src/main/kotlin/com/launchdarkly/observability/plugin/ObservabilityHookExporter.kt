@@ -1,6 +1,5 @@
 package com.launchdarkly.observability.plugin
 
-import com.launchdarkly.observability.interfaces.recordLog
 import com.launchdarkly.observability.sdk.LDObserve
 import com.launchdarkly.observability.utils.BoundedMap
 import io.opentelemetry.api.GlobalOpenTelemetry
