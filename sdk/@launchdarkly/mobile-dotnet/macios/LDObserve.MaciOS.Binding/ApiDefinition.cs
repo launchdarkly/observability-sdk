@@ -30,6 +30,12 @@ namespace LDObserveMaciOS
 
         [NullAllowed, Export("attributes")]
         NSDictionary Attributes { get; set; }
+
+        [Export("urlSession")]
+        bool UrlSession { get; set; }
+
+        [Export("launchTimes")]
+        bool LaunchTimes { get; set; }
     }
 
     [BaseType(typeof(NSObject))]

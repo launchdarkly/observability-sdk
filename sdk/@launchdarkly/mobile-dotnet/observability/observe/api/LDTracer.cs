@@ -20,6 +20,7 @@ public sealed class LDTracer : IDisposable
     {
         _tracerProvider = OTelSdk.CreateTracerProviderBuilder()
             .AddSource(serviceName)
+            .AddSource("System.Net.Http")
             .SetResourceBuilder(
                 ResourceBuilder.CreateDefault()
                     .AddService(serviceName: serviceName))

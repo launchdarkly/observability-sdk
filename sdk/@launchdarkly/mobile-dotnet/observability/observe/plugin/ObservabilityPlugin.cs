@@ -13,6 +13,10 @@ namespace LaunchDarkly.Observability
 
         public ObservabilityPlugin(ObservabilityOptions options) : base("LaunchDarkly.Observability")
         {
+#if ANDROID
+            if (options.Instrumentation.NetworkRequests)
+                AppContext.SetSwitch("System.Net.Http.EnableActivityPropagation", true);
+#endif
             ObservabilityService = new ObservabilityService(options);
             PluginOrchestrator.Instance.AddObservabilityService(ObservabilityService);
         }

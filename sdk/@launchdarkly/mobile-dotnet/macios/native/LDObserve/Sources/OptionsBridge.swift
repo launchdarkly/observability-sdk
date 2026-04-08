@@ -7,6 +7,8 @@ public final class ObjcObservabilityOptions: NSObject {
     @objc public var otlpEndpoint: String = ""
     @objc public var backendUrl: String = ""
     @objc public var attributes: NSDictionary?
+    @objc public var urlSession: Bool = true
+    @objc public var launchTimes: Bool = true
 
     @objc public override init() {
         super.init()

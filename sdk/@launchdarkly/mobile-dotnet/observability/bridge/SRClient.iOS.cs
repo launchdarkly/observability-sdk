@@ -26,7 +26,9 @@ class ObservabilityBridgeClient
             ServiceVersion = observability.ServiceVersion ?? "0.1.0",
             OtlpEndpoint = observability.OtlpEndpoint ?? "https://otel.observability.app.launchdarkly.com:4318",
             BackendUrl = observability.BackendUrl ?? "https://pub.observability.app.launchdarkly.com",
-            Attributes = DictionaryTypeConverters.ToNSDictionary(observability.Attributes)
+            Attributes = DictionaryTypeConverters.ToNSDictionary(observability.Attributes),
+            UrlSession = observability.Instrumentation.NetworkRequests,
+            LaunchTimes = observability.Instrumentation.LaunchTimes
         };
 
         var objcReplay = new ObjcSessionReplayOptions

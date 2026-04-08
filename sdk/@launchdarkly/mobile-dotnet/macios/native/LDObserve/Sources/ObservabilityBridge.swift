@@ -49,12 +49,12 @@ public final class ObservabilityBridge: NSObject {
                 resourceAttributes: buildResourceAttributes(observability.attributes),
                 crashReporting: .init(source: .none),
                 instrumentation: .init(
-                    urlSession: .enabled,
+                    urlSession: .disabled, // should be disabled because we use dotnet tracing for network requests
                     userTaps: .enabled,
                     memory: .disabled,
                     memoryWarnings: .disabled,
                     cpu: .disabled,
-                    launchTimes: .enabled
+                    launchTimes: observability.launchTimes ? .enabled : .disabled
                 )
             ))
             observabilityPlugin.distroAttributes = [
