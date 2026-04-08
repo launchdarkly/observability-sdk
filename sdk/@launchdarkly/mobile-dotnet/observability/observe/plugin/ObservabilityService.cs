@@ -3,6 +3,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using LaunchDarkly.Sdk.Client.Interfaces;
 using LaunchDarkly.Sdk.Integrations.Plugins;
+using OpenTelemetry;
+using OpenTelemetry.Trace;
+
+using OTelSdk = OpenTelemetry.Sdk;
 
 #if IOS
 using Foundation;
@@ -15,6 +19,9 @@ namespace LaunchDarkly.Observability
 {
     internal class ObservabilityService : INativePlugin
     {
+        private static readonly Tracer NoopTracer =
+            OTelSdk.CreateTracerProviderBuilder().Build()!.GetTracer("noop");
+
 #if ANDROID
         private readonly LDObserveAndroid.ObservabilityBridge _androidBridge = new();
 #endif
@@ -48,30 +55,26 @@ namespace LaunchDarkly.Observability
 #endif
         }
 
-        internal ActivitySource? GetActivitySource() => _tracer?.ActivitySource;
+        internal Tracer GetTracer() => _tracer?.Tracer ?? NoopTracer;
 
-        internal Activity? StartActiveSpan(string name) =>
-            _tracer?.ActivitySource.StartActivity(name, ActivityKind.Internal);
+        internal TelemetrySpan StartActiveSpan(string name) => GetTracer().StartActiveSpan(name);
 
-        internal Activity? StartRootSpan(string name) =>
-            _tracer?.ActivitySource.StartActivity(name, ActivityKind.Internal, parentContext: default);
+        internal TelemetrySpan StartRootSpan(string name) => GetTracer().StartRootSpan(name);
 
         internal void RecordLog(
             string message,
             Severity severity,
             IDictionary<string, object?>? attributes = null,
-            ActivityContext? spanContext = null)
+            SpanContext? spanContext = null)
         {
             if (_nativeLogger == null) return;
 
             string? traceId;
             string? spanId;
-            if (spanContext is { } ctx
-                && ctx.TraceId != default
-                && ctx.SpanId != default)
+            if (spanContext is { IsValid: true })
             {
-                traceId = ctx.TraceId.ToString();
-                spanId = ctx.SpanId.ToString();
+                traceId = spanContext.Value.TraceId.ToString();
+                spanId = spanContext.Value.SpanId.ToString();
             }
             else
             {
@@ -86,6 +89,13 @@ namespace LaunchDarkly.Observability
             var map = DictionaryTypeConverters.ToJavaDictionary(attributes);
             _nativeLogger.RecordLog(message, (int)severity, traceId, spanId, false, map);
 #endif
+        }
+
+        internal void RecordError(
+            Exception exception,
+            IDictionary<string, object?>? attributes = null)
+        {
+            RecordError(exception.Message, exception.ToString());
         }
 
         internal void RecordError(string message, string? cause = null)

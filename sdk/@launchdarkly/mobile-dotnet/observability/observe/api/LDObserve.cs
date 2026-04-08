@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using System.Diagnostics;
+using OpenTelemetry.Trace;
 
 namespace LaunchDarkly.Observability;
 
@@ -10,8 +10,6 @@ namespace LaunchDarkly.Observability;
 /// </summary>
 public static partial class LDObserve
 {
-    private static readonly ActivitySource NoopSource = new("noop");
-
     private static volatile ObservabilityService? _service;
 
     internal static void Initialize(ObservabilityService service)
@@ -25,17 +23,25 @@ public static partial class LDObserve
     /// <summary>
     /// Record a log with typed severity, routed through the native logger instance.
     /// When <paramref name="spanContext"/> is provided, its trace/span IDs are used
-    /// instead of the ambient <see cref="Activity.Current"/>.
+    /// instead of the ambient <see cref="System.Diagnostics.Activity.Current"/>.
     /// </summary>
     public static void RecordLog(
         string message,
         Severity severity,
         IDictionary<string, object?>? attributes = null,
-        ActivityContext? spanContext = null)
+        SpanContext? spanContext = null)
         => _service?.RecordLog(message, severity, attributes, spanContext);
 
     /// <summary>
-    /// Record an error.
+    /// Record an error from an <see cref="System.Exception"/>.
+    /// </summary>
+    public static void RecordError(
+        Exception exception,
+        IDictionary<string, object?>? attributes = null)
+        => _service?.RecordError(exception, attributes);
+
+    /// <summary>
+    /// Record an error from a message string.
     /// </summary>
     public static void RecordError(string message, string? cause = null)
         => _service?.RecordError(message, cause);
@@ -71,23 +77,21 @@ public static partial class LDObserve
         => _service?.RecordUpDownCounter(name, value);
 
     /// <summary>
-    /// Returns the <see cref="ActivitySource"/> initialized during startup.
-    /// Falls back to a no-op source before initialization.
+    /// Returns the OpenTelemetry <see cref="Tracer"/> initialized during startup.
+    /// Falls back to a no-op tracer before initialization.
     /// </summary>
-    public static ActivitySource GetActivitySource()
-        => _service?.GetActivitySource() ?? NoopSource;
+    public static Tracer GetTracer()
+        => _service?.GetTracer() ?? TracerProvider.Default.GetTracer("noop");
 
     /// <summary>
     /// Starts a new active span with the given name.
-    /// Returns <c>null</c> before initialization (no listener attached).
     /// </summary>
-    public static Activity? StartActiveSpan(string name)
-        => _service?.StartActiveSpan(name);
+    public static TelemetrySpan StartActiveSpan(string name)
+        => _service?.StartActiveSpan(name) ?? GetTracer().StartActiveSpan(name);
 
     /// <summary>
     /// Starts a new root span (no parent) with the given name.
-    /// Returns <c>null</c> before initialization.
     /// </summary>
-    public static Activity? StartRootSpan(string name)
-        => _service?.StartRootSpan(name);
+    public static TelemetrySpan StartRootSpan(string name)
+        => _service?.StartRootSpan(name) ?? GetTracer().StartRootSpan(name);
 }

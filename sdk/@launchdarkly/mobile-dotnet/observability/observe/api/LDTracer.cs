@@ -1,51 +1,38 @@
 using System;
-using System.Diagnostics;
+using OpenTelemetry;
+using OpenTelemetry.Trace;
+using OpenTelemetry.Resources;
 
-#if IOS
-using LDObserveMaciOS;
-#elif ANDROID
-using LDObserveAndroid;
-#endif
+using OTelSdk = OpenTelemetry.Sdk;
 
 namespace LaunchDarkly.Observability;
 
 /// <summary>
-/// Owns the <see cref="System.Diagnostics.ActivitySource"/> and an
-/// <see cref="ActivityListener"/> that forwards completed spans to the
-/// native SDK tracer via <see cref="TraceBuilderAdapter"/>.
+/// Owns the OpenTelemetry TracerProvider configured with <see cref="LDTraceExporter"/>.
+/// Created by <see cref="ObservabilityService"/> during initialization with the service name
+/// from <see cref="ObservabilityOptions"/>.
 /// </summary>
 public sealed class LDTracer : IDisposable
 {
-    private readonly ActivityListener _listener;
-    private readonly TraceBuilderAdapter? _adapter;
+    private readonly TracerProvider _tracerProvider;
 
     internal LDTracer(string serviceName)
     {
-        ActivitySource = new ActivitySource(serviceName);
+        _tracerProvider = OTelSdk.CreateTracerProviderBuilder()
+            .AddSource(serviceName)
+            .SetResourceBuilder(
+                ResourceBuilder.CreateDefault()
+                    .AddService(serviceName: serviceName))
+            .AddProcessor(new SimpleActivityExportProcessor(new LDTraceExporter()))
+            .Build()!;
 
-#if IOS
-        var nativeTracer = LDObserveBridge.GetObjcTracer();
-        _adapter = nativeTracer != null ? new TraceBuilderAdapter(nativeTracer) : null;
-#elif ANDROID
-        var nativeTracer = LDObserveBridgeAdapter.Tracer;
-        _adapter = nativeTracer != null ? new TraceBuilderAdapter(nativeTracer) : null;
-#endif
-
-        _listener = new ActivityListener
-        {
-            ShouldListenTo = source => source.Name == serviceName,
-            Sample = (ref ActivityCreationOptions<ActivityContext> _) =>
-                ActivitySamplingResult.AllDataAndRecorded,
-            ActivityStopped = activity => _adapter?.Export(activity)
-        };
-        System.Diagnostics.ActivitySource.AddActivityListener(_listener);
+        Tracer = _tracerProvider.GetTracer(serviceName);
     }
 
-    public ActivitySource ActivitySource { get; }
+    public Tracer Tracer { get; }
 
     public void Dispose()
     {
-        _listener.Dispose();
-        ActivitySource.Dispose();
+        _tracerProvider.Dispose();
     }
 }
