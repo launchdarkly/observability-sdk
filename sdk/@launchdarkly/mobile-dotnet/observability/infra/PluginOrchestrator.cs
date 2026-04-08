@@ -22,7 +22,7 @@ namespace LaunchDarkly.Observability
 
         private PluginOrchestrator() { }
 
-        private void TryInitializeAll()
+        private void InitializeAll()
         {
             if (_registeredCount < _createdCount) return;
 
@@ -38,7 +38,9 @@ namespace LaunchDarkly.Observability
                 ?? new SessionReplayOptions(isEnabled: false);
 
             LDNative.Start(mobileKey, observabilityOptions, replayOptions);
-            LDObserve.Initialize(observabilityOptions.ServiceName);
+
+            if (observabilityOptions.IsEnabled)
+                LDObserve.Initialize(observabilityOptions.ServiceName);
         }
 
         internal void AddObserve(NativeObserve observe)
@@ -50,7 +52,8 @@ namespace LaunchDarkly.Observability
         internal void Register()
         {
             _registeredCount++;
-            TryInitializeAll();
+            
+            InitializeAll();
         }
 
         internal void AddSessionReplay(NativeSessionReplay sessionReplay)

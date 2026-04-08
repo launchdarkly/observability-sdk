@@ -181,7 +181,7 @@ public partial class MainPage : ContentPage
 
 	private async void OnTriggerLogWithContextClicked(object? sender, EventArgs e)
 	{
-		using var span = LDObserve.StartActiveSpan("log-context-demo");
+		var span = LDObserve.StartActiveSpan("log-context-demo");
 		span.SetAttribute("demo", "log-with-context");
 		var capturedContext = span.Context;
 		span.Dispose();
