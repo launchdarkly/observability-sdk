@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.36.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.35.0...launchdarkly-observability-android-0.36.0) (2026-04-08)
+
+
+### Features
+
+* allow attach span context to logs ([#460](https://github.com/launchdarkly/observability-sdk/issues/460)) ([19ae071](https://github.com/launchdarkly/observability-sdk/commit/19ae071b6a89d9d47814ce4edea16b57f8cec3da))
+
 ## [0.35.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.34.1...launchdarkly-observability-android-0.35.0) (2026-04-03)
 
 
