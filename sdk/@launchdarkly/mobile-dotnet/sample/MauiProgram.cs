@@ -126,7 +126,7 @@ public static class MauiProgram
         LDObserve.RecordMetric("maui-app-start", 1.0);
 		LDObserve.RecordLog("maui-app-start", Severity.Info, new Dictionary<string, object?> { { "event", "app_start" } });
 		var span = LDObserve.StartActiveSpan("maui-app-start");
-		span.End();
+		span?.Stop();
 
         return app;
     }

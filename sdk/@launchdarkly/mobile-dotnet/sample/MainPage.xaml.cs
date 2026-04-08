@@ -1,7 +1,7 @@
+using System.Diagnostics;
 using LaunchDarkly.Observability;
 using LaunchDarkly.Sdk;
 using LaunchDarkly.Sdk.Client;
-using OpenTelemetry.Trace;
 
 namespace MauiSample9;
 
@@ -182,9 +182,9 @@ public partial class MainPage : ContentPage
 	private async void OnTriggerLogWithContextClicked(object? sender, EventArgs e)
 	{
 		var span = LDObserve.StartActiveSpan("log-context-demo");
-		span.SetAttribute("demo", "log-with-context");
-		var capturedContext = span.Context;
-		span.Dispose();
+		span?.SetTag("demo", "log-with-context");
+		var capturedContext = span?.Context ?? default;
+		span?.Dispose();
 
 		await Task.Run(() =>
 		{
@@ -234,21 +234,19 @@ public partial class MainPage : ContentPage
 
 	private void OnTriggerSequentialSpansClicked(object? sender, EventArgs e)
 	{
-		var tracer = LDObserve.GetTracer();
-
-		using (var span1 = tracer.StartRootSpan("SequentialSpan1"))
+		using (var span1 = LDObserve.StartRootSpan("SequentialSpan1"))
 		{
-			span1.SetAttribute("sequence", "1");
+			span1?.SetTag("sequence", "1");
 		}
 
-		using (var span2 = tracer.StartRootSpan("SequentialSpan2"))
+		using (var span2 = LDObserve.StartRootSpan("SequentialSpan2"))
 		{
-			span2.SetAttribute("sequence", "2");
+			span2?.SetTag("sequence", "2");
 		}
 
-		using (var span3 = tracer.StartRootSpan("SequentialSpan3"))
+		using (var span3 = LDObserve.StartRootSpan("SequentialSpan3"))
 		{
-			span3.SetAttribute("sequence", "3");
+			span3?.SetTag("sequence", "3");
 		}
 
 		Console.WriteLine("Sequential independent spans triggered");
@@ -260,7 +258,7 @@ public partial class MainPage : ContentPage
 		if (!string.IsNullOrEmpty(spanName))
 		{
 			using var span = LDObserve.StartActiveSpan(spanName);
-			span.SetAttribute("custom_span", "true");
+			span?.SetTag("custom_span", "true");
 			Console.WriteLine($"Custom span sent: {spanName}");
 		}
 	}

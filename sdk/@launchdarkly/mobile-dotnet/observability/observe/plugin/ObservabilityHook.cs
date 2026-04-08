@@ -14,14 +14,14 @@ namespace LaunchDarkly.Observability
     /// </summary>
     internal sealed class ObservabilityHook : Hook
     {
-        private readonly NativeObserve _nativeObserve;
+        private readonly ObservabilityService _observabilityService;
         private NativeObservabilityHookExporter? _nativeHookExporter;
         private bool _nativeHookExporterResolved;
 
-        internal ObservabilityHook(NativeObserve nativeObserve)
+        internal ObservabilityHook(ObservabilityService observabilityService)
             : base("LaunchDarkly.Observability")
         {
-            _nativeObserve = nativeObserve;
+            _observabilityService = observabilityService;
         }
 
         private NativeObservabilityHookExporter? NativeHookExporter
@@ -30,7 +30,7 @@ namespace LaunchDarkly.Observability
             {
                 if (!_nativeHookExporterResolved)
                 {
-                    _nativeHookExporter = _nativeObserve.GetNativeHookExporter();
+                    _nativeHookExporter = _observabilityService.GetNativeHookExporter();
                     _nativeHookExporterResolved = true;
                 }
                 return _nativeHookExporter;
