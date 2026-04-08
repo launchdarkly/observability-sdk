@@ -239,8 +239,7 @@ class DisablingConfigOptionsE2ETest {
     private fun triggerTestLog(severity: Severity = Severity.INFO) {
         LDObserve.recordLog(
             message = "test-log",
-            severity = severity,
-            attributes = Attributes.empty()
+            severity = severity
         )
     }
 

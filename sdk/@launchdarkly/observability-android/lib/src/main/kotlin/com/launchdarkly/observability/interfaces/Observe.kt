@@ -3,12 +3,9 @@ package com.launchdarkly.observability.interfaces
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Severity
 import io.opentelemetry.api.trace.Span
+import io.opentelemetry.api.trace.SpanContext
 
-/**
- * Interface for observability operations in the LaunchDarkly Android SDK.
- * Provides methods for recording various types of information.
- */
-interface Observe {
+interface MetricsApi {
     /**
      * Record a metric value.
      * @param metric The metric to record
@@ -38,7 +35,20 @@ interface Observe {
      * @param metric The up/down counter metric to record
      */
     fun recordUpDownCounter(metric: Metric)
+}
 
+interface LogsApi {
+    /**
+     * Record a log message with optional span context for trace-log correlation.
+     * @param message The log message to record
+     * @param severity The severity of the log message
+     * @param attributes The attributes to record with the log message
+     * @param spanContext Optional span context for trace-log correlation
+     */
+    fun recordLog(message: String, severity: Severity, attributes: Attributes = Attributes.empty(), spanContext: SpanContext? = null)
+}
+
+interface TracesApi {
     /**
      * Record an error.
      * @param error The error to record
@@ -47,20 +57,18 @@ interface Observe {
     fun recordError(error: Error, attributes: Attributes)
 
     /**
-     * Record a log message.
-     * @param message The log message to record
-     * @param severity The severity of the log message
-     * @param attributes The attributes to record with the log message
-     */
-    fun recordLog(message: String, severity: Severity, attributes: Attributes)
-
-    /**
      * Start a span.
      * @param name The name of the span
      * @param attributes The attributes to record with the span
      */
     fun startSpan(name: String, attributes: Attributes): Span
+}
 
+/**
+ * Interface for observability operations in the LaunchDarkly Android SDK.
+ * Provides methods for recording various types of information.
+ */
+interface Observe : MetricsApi, LogsApi, TracesApi {
     /**
      * Flushes all pending telemetry data (traces, logs, metrics).
      * @return true if all flush operations succeeded, false otherwise

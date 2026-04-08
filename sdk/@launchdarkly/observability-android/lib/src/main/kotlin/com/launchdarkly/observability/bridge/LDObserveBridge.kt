@@ -10,4 +10,10 @@ object LDObserveBridge {
     fun getKotlinTracer(): KotlinTracer? {
         return LDObserve.observabilityClient?.let { KotlinTracer(it.getTracer()) }
     }
+
+    fun getKotlinLogger(): KotlinLogger? {
+        return LDObserve.observabilityClient?.let {
+            KotlinLogger(internalLogger = it.getLogger(), customerLogger = it)
+        }
+    }
 }

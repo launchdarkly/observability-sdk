@@ -433,12 +433,23 @@ private fun CustomerApiButtons(viewModel: ViewModel) {
     ) {
         Text("Trigger Error")
     }
-    Button(
-        onClick = {
-            viewModel.triggerLog()
-        }
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Text("Trigger Log")
+        Button(
+            onClick = {
+                viewModel.triggerLog()
+            }
+        ) {
+            Text("Trigger Log")
+        }
+        Button(
+            onClick = {
+                viewModel.triggerLogWithContext(customLogText)
+            }
+        ) {
+            Text("Log with Context")
+        }
     }
 
     OutlinedTextField(

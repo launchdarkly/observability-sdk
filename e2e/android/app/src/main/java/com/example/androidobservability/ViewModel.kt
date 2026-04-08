@@ -81,6 +81,34 @@ class ViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun triggerLogWithContext(message: String) {
+        val text = message.ifEmpty { "Log with span context" }
+        viewModelScope.launch(Dispatchers.IO) {
+            val span = LDObserve.startSpan(
+                name = "log-context-demo",
+                attributes = Attributes.of(
+                    AttributeKey.stringKey("demo"), "log-with-context"
+                )
+            )
+            // Capture span context while still on the originating thread.
+            val capturedContext = span.makeCurrent().use { span.spanContext }
+            span.end()
+
+            // Simulate a detached thread where OTel context is lost automatically.
+            // Span.current() here returns INVALID, so we pass the captured context explicitly.
+            Thread {
+                LDObserve.recordLog(
+                    message = text,
+                    severity = Severity.WARN,
+                    attributes = Attributes.of(
+                        AttributeKey.stringKey("source"), "detached-thread-demo"
+                    ),
+                    spanContext = capturedContext
+                )
+            }.start()
+        }
+    }
+
     fun triggerCustomSpan(spanName: String) {
         if (spanName.isNotEmpty()) {
             viewModelScope.launch(Dispatchers.IO) {
