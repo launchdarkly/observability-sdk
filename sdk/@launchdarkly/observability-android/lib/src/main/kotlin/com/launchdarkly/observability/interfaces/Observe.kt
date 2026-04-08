@@ -45,11 +45,7 @@ interface LogsApi {
      * @param attributes The attributes to record with the log message
      * @param spanContext Optional span context for trace-log correlation
      */
-    fun recordLog(message: String, severity: Severity, attributes: Attributes, spanContext: SpanContext?)
-}
-
-fun LogsApi.recordLog(message: String, severity: Severity, attributes: Attributes) {
-    recordLog(message, severity, attributes, null)
+    fun recordLog(message: String, severity: Severity, attributes: Attributes = Attributes.empty(), spanContext: SpanContext? = null)
 }
 
 interface TracesApi {

@@ -6,7 +6,6 @@ import com.example.androidobservability.TestUtils.TelemetryType
 import com.example.androidobservability.TestUtils.waitForTelemetryData
 import com.launchdarkly.observability.api.ObservabilityOptions
 import com.launchdarkly.observability.interfaces.Metric
-import com.launchdarkly.observability.interfaces.recordLog
 import com.launchdarkly.observability.sdk.LDObserve
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
@@ -240,8 +239,7 @@ class DisablingConfigOptionsE2ETest {
     private fun triggerTestLog(severity: Severity = Severity.INFO) {
         LDObserve.recordLog(
             message = "test-log",
-            severity = severity,
-            attributes = Attributes.empty()
+            severity = severity
         )
     }
 
