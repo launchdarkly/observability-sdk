@@ -75,7 +75,10 @@
 
 			<Button Text="Trigger Error" Clicked="OnTriggerErrorClicked"
 			        BackgroundColor="#F2B8B5" TextColor="White" />
-			<Button Text="Trigger Log" Clicked="OnTriggerLogClicked" />
+			<FlexLayout Direction="Row" Wrap="Wrap" JustifyContent="Start" AlignItems="Center">
+				<Button Text="Trigger Log" Clicked="OnTriggerLogClicked" Margin="0,0,8,0" />
+				<Button Text="Log with Context" Clicked="OnTriggerLogWithContextClicked" />
+			</FlexLayout>
 
 			<Entry x:Name="CustomLogEntry" Placeholder="Log Message" TextColor="White"
 			       PlaceholderColor="Gray" Margin="0,8" />

@@ -27,34 +27,60 @@ public static partial class LDObserve
     private static readonly Tracer NoopTracer =
         OTelSdk.CreateTracerProviderBuilder().Build()!.GetTracer("noop");
 
-    private static LDTracer? _tracer;
+    private static volatile LDTracer? _tracer;
 
-    internal static void InitTracer(string serviceName)
+#if IOS
+    private static volatile ObjcLogger? _nativeLogger;
+#elif ANDROID
+    private static volatile LDObserveAndroid.RealLogger? _nativeLogger;
+#endif
+
+    internal static void Initialize(string serviceName)
     {
         _tracer?.Dispose();
         _tracer = new LDTracer(serviceName);
+
+#if IOS
+        _nativeLogger = LDObserveBridge.GetObjcLogger();
+#elif ANDROID
+        _nativeLogger = LDObserveAndroid.LDObserveBridgeAdapter.Logger;
+#endif
     }
 
     // -------- Public API --------
 
     /// <summary>
     /// Record a log with typed severity, routed through the native logger instance.
+    /// When <paramref name="spanContext"/> is provided, its trace/span IDs are used
+    /// instead of the ambient <see cref="Activity.Current"/>.
     /// </summary>
-    public static void RecordLog(string message, Severity severity, IDictionary<string, object?>? attributes = null)
+    public static void RecordLog(
+        string message,
+        Severity severity,
+        IDictionary<string, object?>? attributes = null,
+        SpanContext? spanContext = null)
     {
-        string? traceId = Activity.Current?.TraceId.ToString();
-        string? spanId = Activity.Current?.SpanId.ToString();
+        if (_nativeLogger == null) return;
+
+        string? traceId;
+        string? spanId;
+        if (spanContext is { IsValid: true })
+        {
+            traceId = spanContext.Value.TraceId.ToString();
+            spanId = spanContext.Value.SpanId.ToString();
+        }
+        else
+        {
+            traceId = Activity.Current?.TraceId.ToString();
+            spanId = Activity.Current?.SpanId.ToString();
+        }
 
 #if IOS
-        var nativeLogger = LDObserveBridge.GetObjcLogger();
-        if (nativeLogger == null) return;
         var dict = DictionaryTypeConverters.ToNSDictionary(attributes) ?? new NSDictionary();
-        nativeLogger.RecordLog(message, (nint)severity, traceId, spanId, false, dict);
+        _nativeLogger.RecordLog(message, (nint)severity, traceId, spanId, false, dict);
 #elif ANDROID
-        var nativeLogger = LDObserveAndroid.LDObserveBridgeAdapter.Logger;
-        if (nativeLogger == null) return;
         var map = DictionaryTypeConverters.ToJavaDictionary(attributes);
-        nativeLogger.RecordLog(message, (int)severity, traceId, spanId, false, map);
+        _nativeLogger.RecordLog(message, (int)severity, traceId, spanId, false, map);
 #endif
     }
 

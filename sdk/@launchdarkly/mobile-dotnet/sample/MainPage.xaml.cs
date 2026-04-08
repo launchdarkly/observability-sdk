@@ -1,6 +1,7 @@
 using LaunchDarkly.Observability;
 using LaunchDarkly.Sdk;
 using LaunchDarkly.Sdk.Client;
+using OpenTelemetry.Trace;
 
 namespace MauiSample9;
 
@@ -176,6 +177,25 @@ public partial class MainPage : ContentPage
 			}
 		);
 		Console.WriteLine("Log triggered");
+	}
+
+	private async void OnTriggerLogWithContextClicked(object? sender, EventArgs e)
+	{
+		using var span = LDObserve.StartActiveSpan("log-context-demo");
+		span.SetAttribute("demo", "log-with-context");
+		var capturedContext = span.Context;
+		span.Dispose();
+
+		await Task.Run(() =>
+		{
+			LDObserve.RecordLog(
+				"Log with span context",
+				Severity.Warn,
+				new Dictionary<string, object?> { { "source", "detached-task-demo" } },
+				spanContext: capturedContext);
+		});
+
+		Console.WriteLine("Log with Context triggered");
 	}
 
 	private void OnSendCustomLogClicked(object? sender, EventArgs e)

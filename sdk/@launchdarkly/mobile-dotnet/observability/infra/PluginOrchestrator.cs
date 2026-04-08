@@ -37,8 +37,8 @@ namespace LaunchDarkly.Observability
             var replayOptions = SessionReplay?.Options
                 ?? new SessionReplayOptions(isEnabled: false);
 
-            LDObserve.InitTracer(observabilityOptions.ServiceName);
             LDNative.Start(mobileKey, observabilityOptions, replayOptions);
+            LDObserve.Initialize(observabilityOptions.ServiceName);
         }
 
         internal void AddObserve(NativeObserve observe)
