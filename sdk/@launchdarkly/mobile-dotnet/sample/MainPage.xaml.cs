@@ -1,6 +1,7 @@
 using LaunchDarkly.Observability;
 using LaunchDarkly.Sdk;
 using LaunchDarkly.Sdk.Client;
+using OpenTelemetry.Trace;
 
 namespace MauiSample9;
 
@@ -61,7 +62,6 @@ public partial class MainPage : ContentPage
 			.Build();
          _ = Task.Run(async () => await LdClient.Instance.IdentifyAsync(userContext));
 
-		//await LdClient.Instance.IdentifyAsync(userContext);
 		Console.WriteLine("Identified as User");
 	}
 
@@ -149,7 +149,9 @@ public partial class MainPage : ContentPage
 
 	private void OnTriggerErrorClicked(object? sender, EventArgs e)
 	{
-		LDObserve.RecordError("Manual error womp womp", "The error that caused the other error.");
+		var innerException = new InvalidOperationException("The error that caused the other error.");
+		var exception = new Exception("Manual error womp womp", innerException);
+		LDObserve.RecordError(exception);
 		Console.WriteLine("Error triggered");
 	}
 
@@ -177,6 +179,25 @@ public partial class MainPage : ContentPage
 			}
 		);
 		Console.WriteLine("Log triggered");
+	}
+
+	private async void OnTriggerLogWithContextClicked(object? sender, EventArgs e)
+	{
+		var span = LDObserve.StartActiveSpan("log-context-demo");
+		span.SetAttribute("demo", "log-with-context");
+		var capturedContext = span.Context;
+		span.End();
+
+		await Task.Run(() =>
+		{
+			LDObserve.RecordLog(
+				"Log with span context",
+				Severity.Warn,
+				new Dictionary<string, object?> { { "source", "detached-task-demo" } },
+				spanContext: capturedContext);
+		});
+
+		Console.WriteLine("Log with Context triggered");
 	}
 
 	private void OnSendCustomLogClicked(object? sender, EventArgs e)
@@ -215,19 +236,17 @@ public partial class MainPage : ContentPage
 
 	private void OnTriggerSequentialSpansClicked(object? sender, EventArgs e)
 	{
-		var tracer = LDObserve.GetTracer();
-
-		using (var span1 = tracer.StartRootSpan("SequentialSpan1"))
+		using (var span1 = LDObserve.StartRootSpan("SequentialSpan1"))
 		{
 			span1.SetAttribute("sequence", "1");
 		}
 
-		using (var span2 = tracer.StartRootSpan("SequentialSpan2"))
+		using (var span2 = LDObserve.StartRootSpan("SequentialSpan2"))
 		{
 			span2.SetAttribute("sequence", "2");
 		}
 
-		using (var span3 = tracer.StartRootSpan("SequentialSpan3"))
+		using (var span3 = LDObserve.StartRootSpan("SequentialSpan3"))
 		{
 			span3.SetAttribute("sequence", "3");
 		}
@@ -242,6 +261,9 @@ public partial class MainPage : ContentPage
 		{
 			using var span = LDObserve.StartActiveSpan(spanName);
 			span.SetAttribute("custom_span", "true");
+			span.AddEvent("cache.miss");
+			span.AddEvent("retry.started");
+			span.AddEvent("download.completed");
 			Console.WriteLine($"Custom span sent: {spanName}");
 		}
 	}

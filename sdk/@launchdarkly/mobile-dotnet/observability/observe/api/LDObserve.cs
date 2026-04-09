@@ -1,127 +1,97 @@
 using System.Collections.Generic;
-using System.Linq;
-using LaunchDarkly.Sdk;
 using OpenTelemetry.Trace;
-
-#if IOS
-using Foundation;
-using LDObserveMaciOS;
-#endif
 
 namespace LaunchDarkly.Observability;
 
 /// <summary>
-/// Static facade over the native observability bridge.
-/// On platforms without a native implementation, methods are no-ops.
+/// Static facade over the <see cref="ObservabilityService"/>.
+/// All methods are safe to call before initialization — they are no-ops
+/// until <see cref="Initialize"/> is called.
 /// </summary>
 public static partial class LDObserve
 {
-#if ANDROID
-    private static readonly LDObserveAndroid.ObservabilityBridge _androidBridge = new();
-#endif
+    private static volatile ObservabilityService? _service;
+
+    internal static void Initialize(ObservabilityService service)
+    {
+        service.Initialize();
+        _service = service;
+    }
 
     // -------- Public API --------
 
     /// <summary>
-    /// Record a log with integer severity.
+    /// Record a log with typed severity, routed through the native logger instance.
+    /// When <paramref name="spanContext"/> is provided, its trace/span IDs are used
+    /// instead of the ambient <see cref="System.Diagnostics.Activity.Current"/>.
     /// </summary>
-    private static void RecordLog(string message, int severity, IDictionary<string, object?>? attributes = null)
-    {
-#if IOS
-        var dict = DictionaryTypeConverters.ToNSDictionary(attributes) ?? new NSDictionary();
-        LDObserveBridge.RecordLog(message, severity, dict);
-#elif ANDROID
-        var map = DictionaryTypeConverters.ToJavaDictionary(attributes);
-        _androidBridge.RecordLog(message, severity, map);
-#endif
-    }
+    public static void RecordLog(
+        string message,
+        Severity severity,
+        IDictionary<string, object?>? attributes = null,
+        SpanContext? spanContext = null)
+        => _service?.RecordLog(message, severity, attributes, spanContext);
 
     /// <summary>
-    /// Record a log with typed severity.
+    /// Record an error from an <see cref="System.Exception"/>.
     /// </summary>
-    public static void RecordLog(string message, Severity severity, IDictionary<string, object?>? attributes = null)
-        => RecordLog(message, (int)severity, attributes);
+    public static void RecordError(
+        Exception exception,
+        IDictionary<string, object?>? attributes = null)
+        => _service?.RecordError(exception, attributes);
 
     /// <summary>
-    /// Record an error.
+    /// Record an error from a message string.
     /// </summary>
     public static void RecordError(string message, string? cause = null)
-    {
-#if IOS
-        LDObserveBridge.RecordError(message, cause);
-#elif ANDROID
-        _androidBridge.RecordError(message, cause);
-#endif
-    }
+        => _service?.RecordError(message, cause);
 
     /// <summary>
     /// Record a gauge metric.
     /// </summary>
     public static void RecordMetric(string name, double value)
-    {
-#if IOS
-        LDObserveBridge.RecordMetric(name, value);
-#elif ANDROID
-        _androidBridge.RecordMetric(name, value);
-#endif
-    }
+        => _service?.RecordMetric(name, value);
 
     /// <summary>
     /// Record a count metric.
     /// </summary>
     public static void RecordCount(string name, double value)
-    {
-#if IOS
-        LDObserveBridge.RecordCount(name, value);
-#elif ANDROID
-        _androidBridge.RecordCount(name, value);
-#endif
-    }
+        => _service?.RecordCount(name, value);
 
     /// <summary>
     /// Record an incremental counter metric.
     /// </summary>
     public static void RecordIncr(string name, double value)
-    {
-#if IOS
-        LDObserveBridge.RecordIncr(name, value);
-#elif ANDROID
-        _androidBridge.RecordIncr(name, value);
-#endif
-    }
+        => _service?.RecordIncr(name, value);
 
     /// <summary>
     /// Record a histogram metric.
     /// </summary>
     public static void RecordHistogram(string name, double value)
-    {
-#if IOS
-        LDObserveBridge.RecordHistogram(name, value);
-#elif ANDROID
-        _androidBridge.RecordHistogram(name, value);
-#endif
-    }
+        => _service?.RecordHistogram(name, value);
 
     /// <summary>
     /// Record an up-down counter metric.
     /// </summary>
     public static void RecordUpDownCounter(string name, double value)
-    {
-#if IOS
-        LDObserveBridge.RecordUpDownCounter(name, value);
-#elif ANDROID
-        _androidBridge.RecordUpDownCounter(name, value);
-#endif
-    }
+        => _service?.RecordUpDownCounter(name, value);
 
     /// <summary>
-    /// Returns the OpenTelemetry <see cref="Tracer"/> from the <see cref="LDTracer"/> singleton.
+    /// Returns the OpenTelemetry <see cref="Tracer"/> initialized during startup.
+    /// Falls back to a no-op tracer before initialization.
     /// </summary>
-    public static Tracer GetTracer() => LDTracer.Instance.Tracer;
+    public static Tracer GetTracer()
+        => _service?.GetTracer() ?? TracerProvider.Default.GetTracer("noop");
 
     /// <summary>
-    /// Starts a new active span with the given name using the singleton tracer.
-    /// The returned <see cref="TelemetrySpan"/> should be disposed when the operation completes.
+    /// Starts a new active span with the given name.
     /// </summary>
-    public static TelemetrySpan StartActiveSpan(string name) => GetTracer().StartActiveSpan(name);
+    public static TelemetrySpan StartActiveSpan(string name)
+        => _service?.StartActiveSpan(name) ?? GetTracer().StartActiveSpan(name);
+
+    /// <summary>
+    /// Starts a new root span (no parent) with the given name.
+    /// </summary>
+    public static TelemetrySpan StartRootSpan(string name)
+        => _service?.StartRootSpan(name) ?? GetTracer().StartRootSpan(name);
 }

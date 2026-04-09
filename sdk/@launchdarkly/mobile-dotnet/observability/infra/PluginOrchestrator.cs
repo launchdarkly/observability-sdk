@@ -17,45 +17,48 @@ namespace LaunchDarkly.Observability
         private int _createdCount;
         private int _registeredCount;
 
-        internal NativeObserve? Observe { get; private set; }
-        internal NativeSessionReplay? SessionReplay { get; private set; }
+        internal ObservabilityService? ObservabilityService { get; private set; }
+        internal SessionReplayService? SessionReplayService { get; private set; }
 
         private PluginOrchestrator() { }
 
-        private void TryInitializeAll()
+        private void InitializeAll()
         {
-            // checks last register
             if (_registeredCount < _createdCount) return;
 
-            var metadata = Observe?.Metadata ?? SessionReplay?.Metadata;
+            var metadata = ObservabilityService?.Metadata ?? SessionReplayService?.Metadata;
             if (metadata == null) return;
 
             var mobileKey = metadata.Credential;
 
-            var observabilityOptions = Observe?.Options
+            var observabilityOptions = ObservabilityService?.Options
                 ?? new ObservabilityOptions(isEnabled: false);
 
-            var replayOptions = SessionReplay?.Options
+            var replayOptions = SessionReplayService?.Options
                 ?? new SessionReplayOptions(isEnabled: false);
 
             LDNative.Start(mobileKey, observabilityOptions, replayOptions);
+
+            if (observabilityOptions.IsEnabled && ObservabilityService != null)
+                LDObserve.Initialize(ObservabilityService);
         }
 
-        internal void AddObserve(NativeObserve observe)
+        internal void AddObservabilityService(ObservabilityService service)
         {
-            Observe = observe;
+            ObservabilityService = service;
             _createdCount++;
         }
 
         internal void Register()
         {
             _registeredCount++;
-            TryInitializeAll();
+            
+            InitializeAll();
         }
 
-        internal void AddSessionReplay(NativeSessionReplay sessionReplay)
+        internal void AddSessionReplayService(SessionReplayService service)
         {
-            SessionReplay = sessionReplay;
+            SessionReplayService = service;
             _createdCount++;
         }
     }
