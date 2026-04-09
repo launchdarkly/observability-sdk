@@ -96,6 +96,17 @@ namespace LaunchDarkly.Observability
             IDictionary<string, object?>? attributes = null)
         {
             RecordError(exception.Message, exception.ToString());
+
+            if (attributes is { Count: > 0 })
+            {
+                using var span = GetTracer().StartActiveSpan("highlight.error");
+                foreach (var attr in attributes)
+                {
+                    if (attr.Value != null)
+                        span.SetAttribute(attr.Key, attr.Value.ToString()!);
+                }
+                span.RecordException(exception);
+            }
         }
 
         internal void RecordError(string message, string? cause = null)
