@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Diagnostics;
 using OpenTelemetry.Trace;
 
 namespace LaunchDarkly.Observability;
@@ -10,6 +11,8 @@ namespace LaunchDarkly.Observability;
 /// </summary>
 public static partial class LDObserve
 {
+    private static readonly ActivitySource NoopActivitySource = new("noop");
+
     private static volatile ObservabilityService? _service;
 
     internal static void Initialize(ObservabilityService service)
@@ -90,8 +93,50 @@ public static partial class LDObserve
         => _service?.StartActiveSpan(name) ?? GetTracer().StartActiveSpan(name);
 
     /// <summary>
+    /// Starts a new active span with an explicit parent context and
+    /// <see cref="SpanKind.Internal"/> kind.
+    /// Use this when <see cref="Activity.Current"/> is not propagated
+    /// (e.g. <c>Task.Run</c>, timer callbacks, platform event handlers).
+    /// </summary>
+    public static TelemetrySpan StartActiveSpan(string name, SpanContext parentContext)
+        => StartActiveSpan(name, SpanKind.Internal, parentContext);
+
+    /// <summary>
+    /// Starts a new active span with an explicit parent context and span kind.
+    /// Use this when <see cref="Activity.Current"/> is not propagated
+    /// (e.g. <c>Task.Run</c>, timer callbacks, platform event handlers).
+    /// </summary>
+    public static TelemetrySpan StartActiveSpan(string name, SpanKind kind, SpanContext parentContext)
+        => _service?.StartActiveSpan(name, kind, parentContext)
+           ?? GetTracer().StartActiveSpan(name, kind, parentContext);
+
+    /// <summary>
     /// Starts a new root span (no parent) with the given name.
     /// </summary>
     public static TelemetrySpan StartRootSpan(string name)
         => _service?.StartRootSpan(name) ?? GetTracer().StartRootSpan(name);
+
+    // -------- Activity API --------
+
+    /// <summary>
+    /// Returns the <see cref="ActivitySource"/> initialized during startup.
+    /// Falls back to a no-op source before initialization.
+    /// </summary>
+    public static ActivitySource GetActivitySource()
+        => _service?.GetActivitySource() ?? NoopActivitySource;
+
+    /// <summary>
+    /// Starts a new <see cref="Activity"/> with the given name, parented to
+    /// <see cref="Activity.Current"/>.
+    /// Returns <c>null</c> when no listener is registered or the SDK is not yet initialized.
+    /// </summary>
+    public static Activity? StartActivity(string name)
+        => _service?.StartActivity(name);
+
+    /// <summary>
+    /// Starts a new root <see cref="Activity"/> (no parent) with the given name.
+    /// Returns <c>null</c> when no listener is registered or the SDK is not yet initialized.
+    /// </summary>
+    public static Activity? StartRootActivity(string name)
+        => _service?.StartRootActivity(name);
 }

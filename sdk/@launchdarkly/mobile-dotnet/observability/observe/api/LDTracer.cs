@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using OpenTelemetry;
 using OpenTelemetry.Trace;
 using OpenTelemetry.Resources;
@@ -18,6 +19,8 @@ public sealed class LDTracer : IDisposable
 
     internal LDTracer(string serviceName, bool networkRequests = true)
     {
+        ActivitySource = new ActivitySource(serviceName);
+
         var builder = OTelSdk.CreateTracerProviderBuilder()
             .AddSource(serviceName);
 
@@ -36,8 +39,11 @@ public sealed class LDTracer : IDisposable
 
     public Tracer Tracer { get; }
 
+    public ActivitySource ActivitySource { get; }
+
     public void Dispose()
     {
+        ActivitySource.Dispose();
         _tracerProvider.Dispose();
     }
 }

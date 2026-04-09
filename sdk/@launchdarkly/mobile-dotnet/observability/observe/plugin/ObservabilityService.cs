@@ -19,6 +19,8 @@ namespace LaunchDarkly.Observability
         private static readonly Tracer NoopTracer =
             TracerProvider.Default.GetTracer("noop");
 
+        private static readonly ActivitySource NoopActivitySource = new("noop");
+
 #if ANDROID
         private readonly LDObserveAndroid.ObservabilityBridge _androidBridge = new();
 #endif
@@ -56,7 +58,24 @@ namespace LaunchDarkly.Observability
 
         internal TelemetrySpan StartActiveSpan(string name) => GetTracer().StartActiveSpan(name);
 
+        internal TelemetrySpan StartActiveSpan(string name, SpanKind kind, SpanContext parentContext)
+            => GetTracer().StartActiveSpan(name, kind, parentContext);
+
         internal TelemetrySpan StartRootSpan(string name) => GetTracer().StartRootSpan(name);
+
+        internal ActivitySource GetActivitySource() => _tracer?.ActivitySource ?? NoopActivitySource;
+
+        internal Activity? StartActivity(string name) => GetActivitySource().StartActivity(name);
+
+        internal Activity? StartRootActivity(string name)
+        {
+            var previous = Activity.Current;
+            Activity.Current = null;
+            var activity = GetActivitySource().StartActivity(name);
+            if (activity == null)
+                Activity.Current = previous;
+            return activity;
+        }
 
         internal void RecordLog(
             string message,
