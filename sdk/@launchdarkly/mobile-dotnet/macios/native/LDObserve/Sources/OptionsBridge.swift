@@ -7,6 +7,7 @@ public final class ObjcObservabilityOptions: NSObject {
     @objc public var otlpEndpoint: String = ""
     @objc public var backendUrl: String = ""
     @objc public var attributes: NSDictionary?
+    // Not consumed yet — network tracing is handled on the .NET side. Kept for future iOS-native URL session instrumentation.
     @objc public var networkRequests: Bool = true
     @objc public var launchTimes: Bool = true
 
