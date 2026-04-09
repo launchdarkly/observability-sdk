@@ -17,6 +17,7 @@ public class ObservabilityOptions
     public string BackendUrl { get; set; } = DefaultBackendUrl;
     public string? ContextFriendlyName { get; set; }
     public IDictionary<string, object?>? Attributes { get; set; }
+    public InstrumentationOptions Instrumentation { get; set; } = new();
 
     public ObservabilityOptions() { }
 
@@ -27,7 +28,8 @@ public class ObservabilityOptions
         string? otlpEndpoint = null,
         string? backendUrl = null,
         string? contextFriendlyName = null,
-        IDictionary<string, object?>? attributes = null)
+        IDictionary<string, object?>? attributes = null,
+        InstrumentationOptions? instrumentation = null)
     {
         IsEnabled = isEnabled;
         ServiceName = serviceName;
@@ -36,5 +38,22 @@ public class ObservabilityOptions
         BackendUrl = backendUrl ?? DefaultBackendUrl;
         ContextFriendlyName = contextFriendlyName;
         Attributes = attributes;
+        Instrumentation = instrumentation ?? new InstrumentationOptions();
+    }
+}
+
+public class InstrumentationOptions
+{
+    public bool NetworkRequests { get; set; } = true;
+    public bool LaunchTimes { get; set; } = true;
+
+    public InstrumentationOptions() { }
+
+    public InstrumentationOptions(
+        bool networkRequests = true,
+        bool launchTimes = true)
+    {
+        NetworkRequests = networkRequests;
+        LaunchTimes = launchTimes;
     }
 }

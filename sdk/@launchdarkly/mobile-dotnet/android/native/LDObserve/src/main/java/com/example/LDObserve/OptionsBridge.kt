@@ -8,6 +8,7 @@ public class LDObservabilityOptions {
     @JvmField var backendUrl: String = ""
     @JvmField var contextFriendlyName: String? = null
     @JvmField var attributes: HashMap<String, Any?>? = null
+    @JvmField var launchTime: Boolean = true
 
     constructor()
 
@@ -18,7 +19,8 @@ public class LDObservabilityOptions {
         otlpEndpoint: String,
         backendUrl: String,
         contextFriendlyName: String?,
-        attributes: HashMap<String, Any?>? = null
+        attributes: HashMap<String, Any?>? = null,
+        launchTime: Boolean = true
     ) {
         this.isEnabled = isEnabled
         this.serviceName = serviceName
@@ -27,6 +29,7 @@ public class LDObservabilityOptions {
         this.backendUrl = backendUrl
         this.contextFriendlyName = contextFriendlyName
         this.attributes = attributes
+        this.launchTime = launchTime
     }
 }
 

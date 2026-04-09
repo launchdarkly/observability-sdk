@@ -16,6 +16,7 @@ namespace LaunchDarkly.Observability
 
         private int _createdCount;
         private int _registeredCount;
+        private bool _initialized;
 
         internal ObservabilityService? ObservabilityService { get; private set; }
         internal SessionReplayService? SessionReplayService { get; private set; }
@@ -24,7 +25,8 @@ namespace LaunchDarkly.Observability
 
         private void InitializeAll()
         {
-            if (_registeredCount < _createdCount) return;
+            if (_initialized || _registeredCount < _createdCount) return;
+            _initialized = true;
 
             var metadata = ObservabilityService?.Metadata ?? SessionReplayService?.Metadata;
             if (metadata == null) return;

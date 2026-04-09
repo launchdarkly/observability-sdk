@@ -16,10 +16,15 @@ public sealed class LDTracer : IDisposable
 {
     private readonly TracerProvider _tracerProvider;
 
-    internal LDTracer(string serviceName)
+    internal LDTracer(string serviceName, bool networkRequests = true)
     {
-        _tracerProvider = OTelSdk.CreateTracerProviderBuilder()
-            .AddSource(serviceName)
+        var builder = OTelSdk.CreateTracerProviderBuilder()
+            .AddSource(serviceName);
+
+        if (networkRequests)
+            builder.AddSource("System.Net.Http");
+
+        _tracerProvider = builder
             .SetResourceBuilder(
                 ResourceBuilder.CreateDefault()
                     .AddService(serviceName: serviceName))

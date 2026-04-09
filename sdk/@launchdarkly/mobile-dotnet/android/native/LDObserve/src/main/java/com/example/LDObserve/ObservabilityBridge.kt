@@ -84,7 +84,7 @@ public class ObservabilityBridge(
                 tracesApi = com.launchdarkly.observability.api.ObservabilityOptions.TracesApi(includeErrors = true, includeSpans = true),
                 metricsApi = com.launchdarkly.observability.api.ObservabilityOptions.MetricsApi.enabled(),
                 instrumentations = com.launchdarkly.observability.api.ObservabilityOptions.Instrumentations(
-                    crashReporting = false, launchTime = true, activityLifecycle = true
+                    crashReporting = false, launchTime = observability.launchTime, activityLifecycle = true
                 ),
                 logAdapter = LDAndroidLogging.adapter(),
             )
