@@ -77,7 +77,7 @@ namespace LaunchDarkly.Observability
             }
             finally
             {
-                Activity.Current = previous;
+                Activity.Current = previous?.IsStopped == true ? null : previous;
             }
         }
 
