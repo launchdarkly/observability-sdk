@@ -14,8 +14,8 @@ public static partial class LDObserve
 
     internal static void Initialize(ObservabilityService service)
     {
-        _service = service;
         service.Initialize();
+        _service = service;
     }
 
     // -------- Public API --------
