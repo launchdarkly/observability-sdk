@@ -14,6 +14,8 @@ import com.launchdarkly.sdk.android.LDClient
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Severity
+import io.opentelemetry.api.trace.Span
+import io.opentelemetry.context.Context
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
@@ -21,6 +23,7 @@ import okhttp3.Request
 import java.io.BufferedInputStream
 import java.net.HttpURLConnection
 import java.net.URL
+
 
 class ViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -83,6 +86,23 @@ class ViewModel(application: Application) : AndroidViewModel(application) {
 
     fun triggerLogWithContext(message: String) {
         val text = message.ifEmpty { "Log with span context" }
+
+        val parentSpan = LDObserve.startSpan("parentSpan")
+        parentSpan.makeCurrent().use {
+            val context = Context.current()
+
+            Thread {
+                context.makeCurrent().use {
+                    val childSpan = LDObserve.startSpan("childSpan")
+                    childSpan.makeCurrent().use {
+                        // do work
+                        childSpan.end()
+                    }
+                }
+            }.start()
+        }
+        parentSpan.end()
+
         viewModelScope.launch(Dispatchers.IO) {
             val span = LDObserve.startSpan(
                 name = "log-context-demo",
@@ -97,6 +117,10 @@ class ViewModel(application: Application) : AndroidViewModel(application) {
             // Simulate a detached thread where OTel context is lost automatically.
             // Span.current() here returns INVALID, so we pass the captured context explicitly.
             Thread {
+                Span.wrap(capturedContext).makeCurrent().use {
+                    val childSpan = LDObserve.startSpan("child of log-context-demo", Attributes.empty())
+                    childSpan.end()
+                }
                 LDObserve.recordLog(
                     message = text,
                     severity = Severity.WARN,

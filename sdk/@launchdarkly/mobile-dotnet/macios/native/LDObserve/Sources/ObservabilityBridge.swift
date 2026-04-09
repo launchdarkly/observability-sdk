@@ -49,7 +49,7 @@ public final class ObservabilityBridge: NSObject {
                 resourceAttributes: buildResourceAttributes(observability.attributes),
                 crashReporting: .init(source: .none),
                 instrumentation: .init(
-                    urlSession: .disabled, // should be disabled because we use dotnet tracing for network requests
+                    urlSession: .disabled, // Network tracing happens on the .NET side via System.Net.Http activities.
                     userTaps: .enabled,
                     memory: .disabled,
                     memoryWarnings: .disabled,

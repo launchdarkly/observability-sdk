@@ -27,7 +27,7 @@ class ObservabilityBridgeClient
             OtlpEndpoint = observability.OtlpEndpoint ?? "https://otel.observability.app.launchdarkly.com:4318",
             BackendUrl = observability.BackendUrl ?? "https://pub.observability.app.launchdarkly.com",
             Attributes = DictionaryTypeConverters.ToNSDictionary(observability.Attributes),
-            UrlSession = observability.Instrumentation.NetworkRequests,
+            NetworkRequests = observability.Instrumentation.NetworkRequests,
             LaunchTimes = observability.Instrumentation.LaunchTimes
         };
 

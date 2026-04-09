@@ -69,7 +69,7 @@ class LDObserve(private val client: Observe) : Observe {
             override fun recordError(error: Error, attributes: Attributes) {}
             override fun recordLog(message: String, severity: Severity, attributes: Attributes, spanContext: SpanContext?) {}
             override fun startSpan(name: String, attributes: Attributes): Span {
-                return Span.getInvalid() // Observability plugin was not initialized before being used.
+                return Span.getInvalid()
             }
             override fun flush(): Boolean {
                 return false // No-op, return false to indicate flush was not successful

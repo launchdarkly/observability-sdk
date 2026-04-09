@@ -98,7 +98,11 @@ public static class MauiProgram
 #endif
         		otlpEndpoint: otlpEndpoint,
         		backendUrl: backendUrl,
-				attributes: new Dictionary<string, object?> { { "test-options-attribute", "maui-sample-value" } }
+				attributes: new Dictionary<string, object?> { { "test-options-attribute", "maui-sample-value" } },
+				instrumentation: new InstrumentationOptions(
+					networkRequests: true,
+					launchTimes: true
+				)
         	)))
         	.Add(new SessionReplayPlugin(new SessionReplayOptions(
         		isEnabled: true,

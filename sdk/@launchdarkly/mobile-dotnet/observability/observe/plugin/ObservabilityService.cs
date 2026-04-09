@@ -43,7 +43,7 @@ namespace LaunchDarkly.Observability
         internal void Initialize()
         {
             _tracer?.Dispose();
-            _tracer = new LDTracer(Options.ServiceName);
+            _tracer = new LDTracer(Options.ServiceName, Options.Instrumentation.NetworkRequests);
 
 #if IOS
             _nativeLogger = LDObserveBridge.GetObjcLogger();
