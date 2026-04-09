@@ -13,7 +13,7 @@ namespace LaunchDarkly.Observability
 
         public ObservabilityPlugin(ObservabilityOptions options) : base("LaunchDarkly.Observability")
         {
-            if (options.Instrumentation.NetworkRequests)
+            if (options.IsEnabled && options.Instrumentation.NetworkRequests)
                 AppContext.SetSwitch("System.Net.Http.EnableActivityPropagation", true);
             ObservabilityService = new ObservabilityService(options);
             PluginOrchestrator.Instance.AddObservabilityService(ObservabilityService);
