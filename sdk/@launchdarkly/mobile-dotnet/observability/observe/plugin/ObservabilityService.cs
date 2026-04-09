@@ -72,8 +72,7 @@ namespace LaunchDarkly.Observability
             var previous = Activity.Current;
             Activity.Current = null;
             var activity = GetActivitySource().StartActivity(name);
-            if (activity == null)
-                Activity.Current = previous;
+            Activity.Current = previous;
             return activity;
         }
 
