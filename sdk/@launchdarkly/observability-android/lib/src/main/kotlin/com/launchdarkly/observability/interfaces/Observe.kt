@@ -61,7 +61,7 @@ interface TracesApi {
      * @param name The name of the span
      * @param attributes The attributes to record with the span
      */
-    fun startSpan(name: String, attributes: Attributes): Span
+    fun startSpan(name: String, attributes: Attributes = Attributes.empty()): Span
 }
 
 /**
