@@ -60,7 +60,7 @@ public partial class MainPage : ContentPage
 		var userContext = Context.Builder("single-userkey")
 			.Name("Bob Smith")
 			.Build();
-         _ = Task.Run(async () => await LdClient.Instance.IdentifyAsync(userContext));
+		_ = Task.Run(async () => await LdClient.Instance.IdentifyAsync(userContext));
 
 		Console.WriteLine("Identified as User");
 	}
@@ -168,7 +168,7 @@ public partial class MainPage : ContentPage
 				{ "test-integer", 42 },
 				{ "test-double", 3.14 },
 				{ "test-array", new double[] { 3.14, 6.28 } },
-				{ "test-nested", new Dictionary<string, object?> { 
+				{ "test-nested", new Dictionary<string, object?> {
 					{ "nested-string", "maui2" },
 					{ "nested-true", true },
 					{ "nested-false", false },
@@ -183,6 +183,7 @@ public partial class MainPage : ContentPage
 
 	private async void OnTriggerLogWithContextClicked(object? sender, EventArgs e)
 	{
+		// distributed tracing - capture the current span context and pass it along with the log so it can be correlated in the backend
 		var span = LDObserve.StartActiveSpan("log-context-demo");
 		span.SetAttribute("demo", "log-with-context");
 		var capturedContext = span.Context;
@@ -212,13 +213,13 @@ public partial class MainPage : ContentPage
 
 	private async void OnTriggerNestedSpansClicked(object? sender, EventArgs e)
 	{
+		// distributed tracing - create nested spans to demonstrate parent-child relationships and context propagation, including across async boundaries
 		await Task.Run(async () =>
 		{
 			using var span0 = LDObserve.StartActiveSpan("NestedSpan");
 			using var span1 = LDObserve.StartActiveSpan("NestedSpan1");
 			using var span2 = LDObserve.StartActiveSpan("NestedSpan2");
 
-			LDObserve.RecordCount("test-counter", 10.0);
 			LDObserve.RecordLog("NestedLog", Severity.Info);
 
 			try
@@ -280,5 +281,23 @@ public partial class MainPage : ContentPage
 		var result = LdClient.Instance.BoolVariation(flagKey, false);
 		DisplayAlert("Flag", $"{flagKey}: {result}", "OK");
 		Console.WriteLine($"Flag {flagKey}: {result}");
+	}
+
+	private void OnStartPollingClicked(object? sender, EventArgs e)
+	{
+		using var span = LDObserve.StartActiveSpan("StartPolling");
+		var parentContext = span.Context;
+
+		var timer = Application.Current!.Dispatcher.CreateTimer();
+		timer.Interval = TimeSpan.FromSeconds(30);
+		timer.Tick += (s, e) =>
+		{
+			// Timer callbacks run on the UI thread with no ambient span context
+			using var pollSpan = LDObserve.StartActiveSpan("PollTick", parentContext);
+			pollSpan.SetAttribute("tick.time", DateTime.UtcNow.ToString("O"));
+
+			// ... polling logic ...
+		};
+		timer.Start();
 	}
 }
