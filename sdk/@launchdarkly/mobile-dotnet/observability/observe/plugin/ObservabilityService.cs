@@ -3,10 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using LaunchDarkly.Sdk.Client.Interfaces;
 using LaunchDarkly.Sdk.Integrations.Plugins;
-using OpenTelemetry;
 using OpenTelemetry.Trace;
-
-using OTelSdk = OpenTelemetry.Sdk;
 
 #if IOS
 using Foundation;
@@ -20,7 +17,7 @@ namespace LaunchDarkly.Observability
     internal class ObservabilityService : INativePlugin
     {
         private static readonly Tracer NoopTracer =
-            OTelSdk.CreateTracerProviderBuilder().Build()!.GetTracer("noop");
+            TracerProvider.Default.GetTracer("noop");
 
 #if ANDROID
         private readonly LDObserveAndroid.ObservabilityBridge _androidBridge = new();
