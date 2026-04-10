@@ -55,4 +55,19 @@
 		<_LDNativeJAR Include="$(_LDNativeDepsDir)okhttp-*.jar" />
 		<_LDNativeJAR Include="$(_LDNativeDepsDir)okio-*.jar" />
 	</ItemGroup>
+
+	<!--
+		Explicit removes: Exclude globs on opentelemetry-*.jar are not always applied consistently
+		across MSBuild versions/OS during pack, which can leak autoconfigure / SPI / incubator /
+		testing JARs into the nupkg while the generated native-manifest does not list them.
+		Do not match opentelemetry-api-incubator (keep); only sdk-extension-* and sdk-testing.
+	-->
+	<ItemGroup>
+		<_LDNativeJAR Remove="@(_LDNativeJAR)"
+			Condition="$([System.String]::Copy('%(Identity)').Contains('opentelemetry-sdk-extension-autoconfigure'))" />
+		<_LDNativeJAR Remove="@(_LDNativeJAR)"
+			Condition="$([System.String]::Copy('%(Identity)').Contains('opentelemetry-sdk-extension-incubator'))" />
+		<_LDNativeJAR Remove="@(_LDNativeJAR)"
+			Condition="$([System.String]::Copy('%(Identity)').Contains('opentelemetry-sdk-testing'))" />
+	</ItemGroup>
 </Project>

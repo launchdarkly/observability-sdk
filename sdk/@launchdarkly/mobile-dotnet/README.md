@@ -25,6 +25,8 @@ The .NET MAUI observability plugin automatically instruments:
 
 A complete example application is available in the [sample](./sample) directory.
 
+To **profile Android build time** (binary log / task hotspots), see [docs/build-profiling.md](./docs/build-profiling.md) and [`scripts/profile_android_build.sh`](./scripts/profile_android_build.sh).
+
 ## Usage
 
 ### Basic Setup
@@ -345,6 +347,21 @@ mySensitiveView.LDMask();
 // Unmask a specific view
 myPublicView.LDUnmask();
 ```
+
+## Troubleshooting
+
+### Android CI builds (timeouts, low memory)
+
+The SDK adds many Android AAR/JAR libraries for OpenTelemetry and the bridge. That increases **DEX / R8 / Java** work during the app build. On small CI VMs you may see slow builds or the process being killed when memory is tight.
+
+**Mitigations:**
+
+- **Give the build more RAM** on the agent (Android + MAUI + R8 is memory-heavy).
+- **Raise the Java heap** used by the Android toolchain where your pipeline allows (for example `JavaMaximumHeapSize` in the app project, or Gradle `org.gradle.jvmargs` if you invoke Gradle directly).
+- **Reduce MSBuild parallelism** on constrained machines (for example `dotnet build -m:1` or fewer parallel projects) to lower peak memory at the cost of wall time.
+- **Measure before tuning:** capture a binary log and find the slow targets (see [docs/build-profiling.md](./docs/build-profiling.md)).
+
+For how natives and NuGet dependencies are structured, see [docs/native-android-dependencies.md](./docs/native-android-dependencies.md) and [docs/nuget-package-dependencies.md](./docs/nuget-package-dependencies.md).
 
 ## Contributing
 

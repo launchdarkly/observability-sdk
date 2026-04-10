@@ -1,0 +1,76 @@
+<Project>
+	<!--
+		Generates buildTransitive/LaunchDarkly.SessionReplay.targets and native-manifest.txt
+		from resolved _LDNativeAAR / _LDNativeJAR (NativeAndroidDeps.props globs).
+		Invoked before Pack and from pack_observability_fat.sh via -t:GenerateConsumerBuildTransitive
+	-->
+
+	<!--
+		Best-effort: strip excluded OTel JARs from @(None) and @(_PackageFiles) during pack.
+		NuGet's PackTask may still bypass these in some multi-TFM configurations.
+		The authoritative strip happens in pack_observability_fat.sh (zip -d on the nupkg).
+	-->
+	<Target Name="StripExcludedOtelJarsFromNone" BeforeTargets="_GetPackageFiles">
+		<ItemGroup>
+			<None Remove="@(None)"
+				Condition="'%(None.Pack)' != 'false'
+					and $([System.String]::Copy('%(Identity)').EndsWith('.jar'))
+					and (
+						$([System.String]::Copy('%(Identity)').Contains('opentelemetry-sdk-extension-autoconfigure'))
+						or $([System.String]::Copy('%(Identity)').Contains('opentelemetry-sdk-extension-incubator'))
+						or $([System.String]::Copy('%(Identity)').Contains('opentelemetry-sdk-testing'))
+					)" />
+		</ItemGroup>
+	</Target>
+
+	<Target Name="StripExcludedOtelJarsFromPackageFiles" BeforeTargets="GenerateNuspec">
+		<ItemGroup>
+			<_PackageFiles Remove="@(_PackageFiles)"
+				Condition="$([System.String]::Copy('%(Filename)').StartsWith('opentelemetry-sdk-extension-autoconfigure'))
+					or $([System.String]::Copy('%(Filename)').StartsWith('opentelemetry-sdk-extension-incubator'))
+					or $([System.String]::Copy('%(Filename)').StartsWith('opentelemetry-sdk-testing'))" />
+		</ItemGroup>
+	</Target>
+
+	<Target Name="GenerateConsumerBuildTransitive" BeforeTargets="_GetPackageFiles">
+		<MSBuild
+			Projects="$(MSBuildProjectFile)"
+			Targets="_GenerateConsumerBuildTransitiveCore"
+			Properties="TargetFramework=net9.0-android;Configuration=$(Configuration)" />
+	</Target>
+
+	<Target Name="_GenerateConsumerBuildTransitiveCore" Condition="'$(TargetFramework)' == 'net9.0-android'">
+		<PropertyGroup>
+			<_GenPy>$(MSBuildThisFileDirectory)..\scripts\generate_consumer_build_transitive_targets.py</_GenPy>
+			<_GenTargets>$(MSBuildThisFileDirectory)buildTransitive\LaunchDarkly.SessionReplay.targets</_GenTargets>
+			<_GenManifest>$(MSBuildThisFileDirectory)buildTransitive\native-manifest.txt</_GenManifest>
+			<_GenFatCopy>$(MSBuildThisFileDirectory)buildTransitive\LDObservability.Fat.targets</_GenFatCopy>
+		</PropertyGroup>
+
+		<ItemGroup>
+			<_ManifestLine Include="@(_LDNativeAAR->'%(Filename)%(Extension)')" />
+			<_ManifestLine Include="@(_LDNativeJAR->'%(Filename)%(Extension)')" />
+		</ItemGroup>
+
+		<Warning
+			Condition="'@(_LDNativeAAR)' == '' and '@(_LDNativeJAR)' == ''"
+			Text="No native Android AAR/JAR resolved under NativeAndroidDeps.props paths. Consumer targets will list no AndroidLibrary items. Build android native deps (see pack_observability_fat.sh) before shipping a package." />
+
+		<WriteLinesToFile
+			File="$(_GenManifest)"
+			Lines="@(_ManifestLine)"
+			Overwrite="true"
+			WriteOnlyWhenDifferent="false" />
+
+		<Exec
+			Condition="Exists('$(_GenPy)')"
+			Command="python3 &quot;$(_GenPy)&quot; &quot;$(_GenTargets)&quot; &quot;$(_GenManifest)&quot;"
+			WorkingDirectory="$(MSBuildThisFileDirectory).." />
+
+		<Copy
+			SourceFiles="$(_GenTargets)"
+			DestinationFiles="$(_GenFatCopy)"
+			SkipUnchangedFiles="false"
+			Condition="Exists('$(_GenTargets)')" />
+	</Target>
+</Project>
