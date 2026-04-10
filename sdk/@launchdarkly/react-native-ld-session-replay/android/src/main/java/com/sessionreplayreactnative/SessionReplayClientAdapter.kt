@@ -21,13 +21,12 @@ import kotlin.time.Duration.Companion.minutes
 
 internal class SessionReplayClientAdapter private constructor() {
 
-    private enum class State { IDLE, STARTING, STARTED }
-
     private val lock = Any()
     private var mobileKey: String? = null
     private var serviceName: String = DEFAULT_SERVICE_NAME
     private var replayOptions: ReplayOptions? = null
-    private var state = State.IDLE
+    // Only accessed from the main thread (all reads/writes are inside Handler(mainLooper).post blocks).
+    private var initialized = false
     private val logger = LDLogger.withAdapter(LDAndroidLogging.adapter(), TAG)
 
     fun setMobileKey(mobileKey: String, options: ReadableMap?) {
@@ -45,8 +44,8 @@ internal class SessionReplayClientAdapter private constructor() {
         val key: String
         val svcName: String
         val options: ReplayOptions
-        val currentState: State
 
+        // Capture configuration under the lock, then release it before posting to the main thread.
         synchronized(lock) {
             key = mobileKey ?: run {
                 val msg = "start: configure() was not called — mobile key is missing"
@@ -58,54 +57,37 @@ internal class SessionReplayClientAdapter private constructor() {
             // non-null whenever mobileKey is non-null (checked above).
             options = replayOptions!!
             svcName = serviceName
-            currentState = state
-            if (state == State.IDLE) state = State.STARTING
         }
 
-        when (currentState) {
-            State.IDLE -> {
-                // initLDClient() must run on the main thread because OpenTelemetryRum.build()
-                // calls lifecycle.addObserver() internally, which requires the main thread.
-                // Using timeout=0 so we don't block the UI — onPluginsReady() fires
-                // synchronously during LDClient.init() regardless of the flag-fetch timeout.
-                Handler(Looper.getMainLooper()).post {
-                    try {
-                        initLDClient(application, key, svcName, options)
-                    } catch (e: Exception) {
-                        logger.error("start: LDClient.init() threw {0}: {1}", e::class.simpleName, e.message)
-                        synchronized(lock) { state = State.IDLE }
-                        completion(false, "Session replay failed to initialize.")
-                        return@post
-                    }
-                    // onPluginsReady() fires synchronously during LDClient.init(), so
-                    // LDObserve.init() and sessionReplayService.initialize() have both been
-                    // called by the time initLDClient() returns.
-                    applyEnabled(options.enabled)
-                    synchronized(lock) { state = State.STARTED }
-                    completion(true, null)
+        // All work runs on the main thread so that:
+        //  1. initLDClient() satisfies the main-thread requirement of OpenTelemetryRum.build().
+        //  2. Consecutive start()/stop() calls are naturally serialized without locks — the
+        //     main thread queue acts as an implicit mutex.
+        Handler(Looper.getMainLooper()).post {
+            if (!initialized) {
+                try {
+                    initLDClient(application, key, svcName, options)
+                } catch (e: Exception) {
+                    logger.error("start: LDClient.init() threw {0}: {1}", e::class.simpleName, e.message)
+                    completion(false, "Session replay failed to initialize.")
+                    return@post
                 }
+                initialized = true
+            } else {
+                logger.debug("start: already initialized, re-applying isEnabled={0}", options.enabled)
             }
-            State.STARTING -> {
-                // A stop() called here will invoke LDReplay.stop() before LDClient.init()
-                // has completed on the main thread, making it a no-op. When init finishes,
-                // applyEnabled() will start replay regardless. This is an accepted race
-                // shared with the iOS implementation; fixing it would require queuing
-                // pending completions.
-                logger.warn("start: unexpected concurrent call while already starting")
-                completion(true, null)
-            }
-            State.STARTED -> {
-                logger.debug("start: already started, re-applying isEnabled={0}", options.enabled)
-                applyEnabled(options.enabled)
-                completion(true, null)
-            }
+            applyEnabled(options.enabled)
+            completion(true, null)
         }
     }
 
     fun stop(completion: () -> Unit) {
         logger.debug("stop")
-        LDReplay.stop()
-        completion()
+        // Post to the main thread so that stop() queues behind any in-progress start().
+        Handler(Looper.getMainLooper()).post {
+            LDReplay.stop()
+            completion()
+        }
     }
 
     private fun initLDClient(application: Application, mobileKey: String, serviceName: String, replayOptions: ReplayOptions) {
