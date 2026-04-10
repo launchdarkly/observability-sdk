@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.37.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.36.0...launchdarkly-observability-android-0.37.0) (2026-04-09)
+
+
+### Features
+
+* MAUI Network tracing 0.8.0 ([#463](https://github.com/launchdarkly/observability-sdk/issues/463)) ([0e2482b](https://github.com/launchdarkly/observability-sdk/commit/0e2482b61e59f4e935c053633974e95fef26fa85))
+
 ## [0.36.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.35.0...launchdarkly-observability-android-0.36.0) (2026-04-08)
 
 
