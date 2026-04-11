@@ -30,6 +30,12 @@ namespace LDObserveMaciOS
 
         [NullAllowed, Export("attributes")]
         NSDictionary Attributes { get; set; }
+
+        [Export("networkRequests")]
+        bool NetworkRequests { get; set; }
+
+        [Export("launchTimes")]
+        bool LaunchTimes { get; set; }
     }
 
     [BaseType(typeof(NSObject))]
@@ -57,8 +63,8 @@ namespace LDObserveMaciOS
         [Export("version")]
         string Version();
 
-        [Export("startWithMobileKey:observability:replay:")]
-        void Start(string mobileKey, ObjcObservabilityOptions observability, ObjcSessionReplayOptions replay);
+        [Export("startWithMobileKey:observability:replay:observabilityVersion:")]
+        void Start(string mobileKey, ObjcObservabilityOptions observability, ObjcSessionReplayOptions replay, string observabilityVersion);
 
         [Export("getSessionReplayHookProxy")]
         [NullAllowed]
@@ -68,9 +74,6 @@ namespace LDObserveMaciOS
     [BaseType(typeof(NSObject))]
     interface LDObserveBridge
     {
-        [Static, Export("recordLogWithMessage:severity:attributes:")]
-        void RecordLog(string message, nint severity, NSDictionary attributes);
-
         [Static, Export("recordErrorWithMessage:cause:")]
         void RecordError(string message, [NullAllowed] string cause);
 
@@ -96,6 +99,17 @@ namespace LDObserveMaciOS
         [Static, Export("getObjcTracer")]
         [return: NullAllowed]
         ObjcTracer GetObjcTracer();
+
+        [Static, Export("getObjcLogger")]
+        [return: NullAllowed]
+        ObjcLogger GetObjcLogger();
+    }
+
+    [BaseType(typeof(NSObject))]
+    interface ObjcLogger
+    {
+        [Export("recordLogWithMessage:severity:traceId:spanId:isInternal:attributes:")]
+        void RecordLog(string message, nint severity, [NullAllowed] string traceId, [NullAllowed] string spanId, bool isInternal, NSDictionary attributes);
     }
 
     [BaseType(typeof(NSObject))]

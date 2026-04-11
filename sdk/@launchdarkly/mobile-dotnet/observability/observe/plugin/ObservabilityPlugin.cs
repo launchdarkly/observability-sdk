@@ -9,27 +9,29 @@ namespace LaunchDarkly.Observability
 {
     public class ObservabilityPlugin : Plugin
     {
-        internal NativeObserve Observe { get; private set; }
+        internal ObservabilityService ObservabilityService { get; private set; }
 
         public ObservabilityPlugin(ObservabilityOptions options) : base("LaunchDarkly.Observability")
         {
-            Observe = new NativeObserve(options);
-            PluginOrchestrator.Instance.AddObserve(Observe);
+            if (options.IsEnabled && options.Instrumentation.NetworkRequests)
+                AppContext.SetSwitch("System.Net.Http.EnableActivityPropagation", true);
+            ObservabilityService = new ObservabilityService(options);
+            PluginOrchestrator.Instance.AddObservabilityService(ObservabilityService);
         }
 
         /// <inheritdoc />
         public override void Register(ILdClient client, EnvironmentMetadata metadata)
         {
-            Observe.Client = client;
-            Observe.Metadata = metadata;
+            ObservabilityService.Client = client;
+            ObservabilityService.Metadata = metadata;
             PluginOrchestrator.Instance.Register();
         }
 
         /// <inheritdoc />
         public override IList<Hook> GetHooks(EnvironmentMetadata metadata)
         {
-            Observe.Metadata = metadata;
-            return new List<Hook> { new ObservabilityHook(Observe) };
+            ObservabilityService.Metadata = metadata;
+            return new List<Hook> { new ObservabilityHook(ObservabilityService) };
         }
     }
 }

@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.37.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.36.0...launchdarkly-observability-android-0.37.0) (2026-04-09)
+
+
+### Features
+
+* MAUI Network tracing 0.8.0 ([#463](https://github.com/launchdarkly/observability-sdk/issues/463)) ([0e2482b](https://github.com/launchdarkly/observability-sdk/commit/0e2482b61e59f4e935c053633974e95fef26fa85))
+
+## [0.36.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.35.0...launchdarkly-observability-android-0.36.0) (2026-04-08)
+
+
+### Features
+
+* allow attach span context to logs ([#460](https://github.com/launchdarkly/observability-sdk/issues/460)) ([19ae071](https://github.com/launchdarkly/observability-sdk/commit/19ae071b6a89d9d47814ce4edea16b57f8cec3da))
+
+## [0.35.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.34.1...launchdarkly-observability-android-0.35.0) (2026-04-03)
+
+
+### Features
+
+* Android Distro vs Sdk OpenTelemetry naming ([#458](https://github.com/launchdarkly/observability-sdk/issues/458)) ([edf968b](https://github.com/launchdarkly/observability-sdk/commit/edf968b52db17d40d9bca634810f5403e32b8830))
+
 ## [0.34.1](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.34.0...launchdarkly-observability-android-0.34.1) (2026-03-28)
 
 

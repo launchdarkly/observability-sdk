@@ -3,6 +3,7 @@ package com.launchdarkly.observability.client
 import android.app.Application
 import com.launchdarkly.logging.LDLogger
 import com.launchdarkly.observability.api.ObservabilityOptions
+import com.launchdarkly.observability.bridge.emitLog
 import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
 import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.observability.interfaces.Observe
@@ -334,17 +335,11 @@ class ObservabilityService(
     override fun recordLog(
         message: String,
         severity: Severity,
-        attributes: Attributes
+        attributes: Attributes,
+        spanContext: io.opentelemetry.api.trace.SpanContext?
     ) {
         if (observabilityOptions.logsApiLevel.level > severity.severityNumber) return
-
-        otelLogger.logRecordBuilder()
-            .setBody(message)
-            .setTimestamp(System.currentTimeMillis(), TimeUnit.MILLISECONDS)
-            .setSeverity(severity)
-            .setSeverityText(severity.toString())
-            .setAllAttributes(attributes)
-            .emit()
+        otelLogger.emitLog(message, severity, attributes, spanContext)
     }
 
     override fun recordError(error: Error, attributes: Attributes) {
@@ -376,6 +371,13 @@ class ObservabilityService(
      * @return Tracer instance
      */
     fun getTracer(): Tracer = otelTracer
+
+    /**
+     * Returns the logger instance for recording log records.
+     *
+     * @return Logger instance
+     */
+    fun getLogger(): io.opentelemetry.api.logs.Logger = otelLogger
 
     /**
      * Flushes all pending telemetry data (traces, logs, metrics).

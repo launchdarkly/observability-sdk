@@ -14,6 +14,8 @@ import com.launchdarkly.sdk.android.LDClient
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Severity
+import io.opentelemetry.api.trace.Span
+import io.opentelemetry.context.Context
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
@@ -21,6 +23,7 @@ import okhttp3.Request
 import java.io.BufferedInputStream
 import java.net.HttpURLConnection
 import java.net.URL
+
 
 class ViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -81,6 +84,55 @@ class ViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun triggerLogWithContext(message: String) {
+        val text = message.ifEmpty { "Log with span context" }
+
+        val parentSpan = LDObserve.startSpan("parentSpan")
+        parentSpan.makeCurrent().use {
+            val context = Context.current()
+
+            Thread {
+                context.makeCurrent().use {
+                    val childSpan = LDObserve.startSpan("childSpan")
+                    childSpan.makeCurrent().use {
+                        // do work
+                        childSpan.end()
+                    }
+                }
+            }.start()
+        }
+        parentSpan.end()
+
+        viewModelScope.launch(Dispatchers.IO) {
+            val span = LDObserve.startSpan(
+                name = "log-context-demo",
+                attributes = Attributes.of(
+                    AttributeKey.stringKey("demo"), "log-with-context"
+                )
+            )
+            // Capture span context while still on the originating thread.
+            val capturedContext = span.makeCurrent().use { span.spanContext }
+            span.end()
+
+            // Simulate a detached thread where OTel context is lost automatically.
+            // Span.current() here returns INVALID, so we pass the captured context explicitly.
+            Thread {
+                Span.wrap(capturedContext).makeCurrent().use {
+                    val childSpan = LDObserve.startSpan("child of log-context-demo", Attributes.empty())
+                    childSpan.end()
+                }
+                LDObserve.recordLog(
+                    message = text,
+                    severity = Severity.WARN,
+                    attributes = Attributes.of(
+                        AttributeKey.stringKey("source"), "detached-thread-demo"
+                    ),
+                    spanContext = capturedContext
+                )
+            }.start()
+        }
+    }
+
     fun triggerCustomSpan(spanName: String) {
         if (spanName.isNotEmpty()) {
             viewModelScope.launch(Dispatchers.IO) {
@@ -103,6 +155,8 @@ class ViewModel(application: Application) : AndroidViewModel(application) {
                 newSpan1.makeCurrent().use {
                     val newSpan2 = LDObserve.startSpan("NestedSpan2", Attributes.empty())
                     newSpan2.makeCurrent().use {
+                        LDObserve.recordCount(Metric("test-counter", 10.0))
+                        LDObserve.recordLog("NestedLog", Severity.INFO, Attributes.empty())
                         sendOkHttpRequest()
                         sendURLRequest()
                         newSpan2.end()

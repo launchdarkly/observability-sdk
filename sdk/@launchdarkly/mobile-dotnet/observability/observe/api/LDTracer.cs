@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using OpenTelemetry;
 using OpenTelemetry.Trace;
 using OpenTelemetry.Resources;
@@ -8,42 +9,41 @@ using OTelSdk = OpenTelemetry.Sdk;
 namespace LaunchDarkly.Observability;
 
 /// <summary>
-/// Thread-safe singleton that owns the OpenTelemetry TracerProvider
-/// configured with <see cref="LDTraceExporter"/>.
+/// Owns the OpenTelemetry TracerProvider configured with <see cref="LDTraceExporter"/>.
+/// Created by <see cref="ObservabilityService"/> during initialization with the service name
+/// from <see cref="ObservabilityOptions"/>.
 /// </summary>
 public sealed class LDTracer : IDisposable
 {
-    private static readonly Lazy<LDTracer> LazyInstance = new(() => new LDTracer());
-
-    private const string ServiceName = "ld-observability";
-
     private readonly TracerProvider _tracerProvider;
 
-    private LDTracer()
+    internal LDTracer(string serviceName, bool networkRequests = true)
     {
-        _tracerProvider = OTelSdk.CreateTracerProviderBuilder()
-            .AddSource(ServiceName)
+        ActivitySource = new ActivitySource(serviceName);
+
+        var builder = OTelSdk.CreateTracerProviderBuilder()
+            .AddSource(serviceName);
+
+        if (networkRequests)
+            builder.AddSource("System.Net.Http");
+
+        _tracerProvider = builder
             .SetResourceBuilder(
                 ResourceBuilder.CreateDefault()
-                    .AddService(serviceName: ServiceName))
+                    .AddService(serviceName: serviceName))
             .AddProcessor(new SimpleActivityExportProcessor(new LDTraceExporter()))
             .Build()!;
 
-        Tracer = _tracerProvider.GetTracer(ServiceName);
+        Tracer = _tracerProvider.GetTracer(serviceName);
     }
 
-    /// <summary>
-    /// The global singleton instance.
-    /// </summary>
-    public static LDTracer Instance => LazyInstance.Value;
-
-    /// <summary>
-    /// The OpenTelemetry <see cref="OpenTelemetry.Trace.Tracer"/> backed by <see cref="LDTraceExporter"/>.
-    /// </summary>
     public Tracer Tracer { get; }
+
+    public ActivitySource ActivitySource { get; }
 
     public void Dispose()
     {
+        ActivitySource.Dispose();
         _tracerProvider.Dispose();
     }
 }

@@ -80,7 +80,7 @@ LDObserve.RecordUpDownCounter("active_connections", 1.0);
 // Record logs with severity and optional attributes
 LDObserve.RecordLog(
     "User performed action",
-    LDObserve.Severity.Info,
+    Severity.Info,
     new Dictionary<string, object?>
     {
         { "user_id", "12345" },
@@ -88,7 +88,11 @@ LDObserve.RecordLog(
     }
 );
 
-// Record errors with an optional cause
+// Record errors from an exception
+var exception = new Exception("Something went wrong", new InvalidOperationException("root cause"));
+LDObserve.RecordError(exception);
+
+// Or record errors from a message string
 LDObserve.RecordError("Something went wrong", "The underlying cause of the error.");
 ```
 
@@ -109,7 +113,7 @@ Use `RecordLog` to emit structured log records with a severity level and optiona
 ```csharp
 LDObserve.RecordLog(
     "Checkout completed",
-    LDObserve.Severity.Info,
+    Severity.Info,
     new Dictionary<string, object?>
     {
         { "order_id", "ORD-9876" },
@@ -120,15 +124,43 @@ LDObserve.RecordLog(
 
 Supported severity levels: `Trace`, `Debug`, `Info`, `Warn`, `Error`, `Fatal`.
 
-#### Errors
+##### Logs with Span Context
 
-Use `RecordError` to capture error events. The optional second parameter provides the underlying cause:
+You can correlate logs with a specific span for distributed tracing by capturing and passing a `SpanContext`:
 
 ```csharp
+var span = LDObserve.StartActiveSpan("checkout-flow");
+var capturedContext = span.Context;
+span.End();
+
+await Task.Run(() =>
+{
+    LDObserve.RecordLog(
+        "Checkout processed on background thread",
+        Severity.Warn,
+        new Dictionary<string, object?> { { "source", "background-task" } },
+        spanContext: capturedContext);
+});
+```
+
+This is useful when a log is emitted on a different thread or after the span has ended, but you still want it associated with the original trace.
+
+#### Errors
+
+Use `RecordError` to capture error events. You can pass an `Exception` object directly, or a message string with an optional cause:
+
+```csharp
+// From an exception (inner exceptions are captured automatically)
+var exception = new Exception("Payment failed", new TimeoutException("Connection timed out"));
+LDObserve.RecordError(exception);
+
+// From a message string with optional cause
 LDObserve.RecordError("Payment failed", "Timeout connecting to payment gateway.");
 ```
 
 #### Traces
+
+> For in-depth examples covering nested spans, error handling, manual context propagation, and more, see the [Distributed Tracing Guide](./docs/distributed-tracing.md).
 
 Use `LDObserve` to create spans for tracing operations in your application. Spans are backed by [OpenTelemetry](https://opentelemetry.io/) and should be disposed when the operation completes.
 
@@ -138,6 +170,7 @@ Create spans to trace operations. The returned `TelemetrySpan` is disposable —
 using var span = LDObserve.StartActiveSpan("api_request");
 span.SetAttribute("endpoint", "/api/users");
 span.SetAttribute("method", "GET");
+span.AddEvent("cache.miss");
 ```
 
 ##### Nested Spans
@@ -152,10 +185,64 @@ using var grandchild = LDObserve.StartActiveSpan("ChargeCard");
 await httpClient.PostAsync("https://api.example.com/charge", content);
 ```
 
+##### Independent Root Spans
+
+Use `StartRootSpan` to create spans that are independent of the current trace context. This is useful for sequential operations that should not be nested:
+
+```csharp
+using (var span1 = LDObserve.StartRootSpan("SequentialOperation1"))
+{
+    span1.SetAttribute("sequence", "1");
+}
+
+using (var span2 = LDObserve.StartRootSpan("SequentialOperation2"))
+{
+    span2.SetAttribute("sequence", "2");
+}
+```
+
+##### Manual Span Lifecycle
+
+You can also manage a span's lifecycle manually using `End()` and capture its `Context` for distributed tracing:
+
+```csharp
+var span = LDObserve.StartActiveSpan("my-operation");
+span.SetAttribute("key", "value");
+var capturedContext = span.Context;
+span.End();
+```
+
 | Method | Description |
 |---|---|
 | `LDObserve.StartActiveSpan(name)` | Start a new active span that automatically nests under the current parent. Returns a disposable `TelemetrySpan`. |
+| `LDObserve.StartActiveSpan(name, parentContext)` | Start a new active span with an explicit parent `SpanContext` (defaults to `SpanKind.Internal`). Use when `Activity.Current` is not propagated. |
+| `LDObserve.StartActiveSpan(name, kind, parentContext)` | Same as above but with an explicit `SpanKind`. |
+| `LDObserve.StartRootSpan(name)` | Start a new root span with no parent. Returns a disposable `TelemetrySpan`. |
 | `span.SetAttribute(key, value)` | Set a key-value attribute on a span. |
+| `span.AddEvent(name)` | Record a named event on a span. |
+| `span.Context` | Capture the span's context for correlating logs or other operations across async boundaries. |
+| `span.End()` | Manually end a span (alternatively, use a `using` statement). |
+
+##### Using `System.Diagnostics.Activity`
+
+If you prefer the native .NET `Activity` API over OpenTelemetry's `TelemetrySpan`, equivalent methods are available. Activities are nullable — `StartActivity` returns `null` before SDK initialization or when no listener is registered:
+
+```csharp
+using System.Diagnostics;
+
+using var activity = LDObserve.StartActivity("api_request");
+activity?.SetTag("endpoint", "/api/users");
+activity?.SetTag("method", "GET");
+activity?.AddEvent(new ActivityEvent("cache.miss"));
+
+// Root activity (no parent), equivalent to StartRootSpan
+using var root = LDObserve.StartRootActivity("independent-operation");
+root?.SetTag("sequence", "1");
+
+// Or get the ActivitySource directly for full control
+var source = LDObserve.GetActivitySource();
+using var custom = source.StartActivity("custom", ActivityKind.Client);
+```
 
 ### Identifying Users
 

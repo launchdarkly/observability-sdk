@@ -86,6 +86,9 @@
 
 	<PropertyGroup Condition="$(TargetFramework.Contains('android'))">
    	    <EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
+		<!-- Use SocketsHttpHandler so System.Net.Http emits Activity diagnostics
+		     for automatic HTTP tracing via LDObserve. -->
+		<UseNativeHttpHandler>false</UseNativeHttpHandler>
     </PropertyGroup>
 
 </Project>

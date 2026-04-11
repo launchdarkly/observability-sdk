@@ -1,6 +1,7 @@
 using LaunchDarkly.Observability;
 using LaunchDarkly.Sdk;
 using LaunchDarkly.Sdk.Client;
+using OpenTelemetry.Trace;
 
 namespace MauiSample9;
 
@@ -59,9 +60,8 @@ public partial class MainPage : ContentPage
 		var userContext = Context.Builder("single-userkey")
 			.Name("Bob Smith")
 			.Build();
-         _ = Task.Run(async () => await LdClient.Instance.IdentifyAsync(userContext));
+		_ = Task.Run(async () => await LdClient.Instance.IdentifyAsync(userContext));
 
-		//await LdClient.Instance.IdentifyAsync(userContext);
 		Console.WriteLine("Identified as User");
 	}
 
@@ -149,7 +149,9 @@ public partial class MainPage : ContentPage
 
 	private void OnTriggerErrorClicked(object? sender, EventArgs e)
 	{
-		LDObserve.RecordError("Manual error womp womp", "The error that caused the other error.");
+		var innerException = new InvalidOperationException("The error that caused the other error.");
+		var exception = new Exception("Manual error womp womp", innerException);
+		LDObserve.RecordError(exception);
 		Console.WriteLine("Error triggered");
 	}
 
@@ -166,7 +168,7 @@ public partial class MainPage : ContentPage
 				{ "test-integer", 42 },
 				{ "test-double", 3.14 },
 				{ "test-array", new double[] { 3.14, 6.28 } },
-				{ "test-nested", new Dictionary<string, object?> { 
+				{ "test-nested", new Dictionary<string, object?> {
 					{ "nested-string", "maui2" },
 					{ "nested-true", true },
 					{ "nested-false", false },
@@ -177,6 +179,26 @@ public partial class MainPage : ContentPage
 			}
 		);
 		Console.WriteLine("Log triggered");
+	}
+
+	private async void OnTriggerLogWithContextClicked(object? sender, EventArgs e)
+	{
+		// distributed tracing - capture the current span context and pass it along with the log so it can be correlated in the backend
+		var span = LDObserve.StartActiveSpan("log-context-demo");
+		span.SetAttribute("demo", "log-with-context");
+		var capturedContext = span.Context;
+		span.End();
+
+		await Task.Run(() =>
+		{
+			LDObserve.RecordLog(
+				"Log with span context",
+				Severity.Warn,
+				new Dictionary<string, object?> { { "source", "detached-task-demo" } },
+				spanContext: capturedContext);
+		});
+
+		Console.WriteLine("Log with Context triggered");
 	}
 
 	private void OnSendCustomLogClicked(object? sender, EventArgs e)
@@ -191,11 +213,14 @@ public partial class MainPage : ContentPage
 
 	private async void OnTriggerNestedSpansClicked(object? sender, EventArgs e)
 	{
+		// distributed tracing - create nested spans to demonstrate parent-child relationships and context propagation, including across async boundaries
 		await Task.Run(async () =>
 		{
 			using var span0 = LDObserve.StartActiveSpan("NestedSpan");
 			using var span1 = LDObserve.StartActiveSpan("NestedSpan1");
 			using var span2 = LDObserve.StartActiveSpan("NestedSpan2");
+
+			LDObserve.RecordLog("NestedLog", Severity.Info);
 
 			try
 			{
@@ -212,19 +237,17 @@ public partial class MainPage : ContentPage
 
 	private void OnTriggerSequentialSpansClicked(object? sender, EventArgs e)
 	{
-		var tracer = LDObserve.GetTracer();
-
-		using (var span1 = tracer.StartRootSpan("SequentialSpan1"))
+		using (var span1 = LDObserve.StartRootSpan("SequentialSpan1"))
 		{
 			span1.SetAttribute("sequence", "1");
 		}
 
-		using (var span2 = tracer.StartRootSpan("SequentialSpan2"))
+		using (var span2 = LDObserve.StartRootSpan("SequentialSpan2"))
 		{
 			span2.SetAttribute("sequence", "2");
 		}
 
-		using (var span3 = tracer.StartRootSpan("SequentialSpan3"))
+		using (var span3 = LDObserve.StartRootSpan("SequentialSpan3"))
 		{
 			span3.SetAttribute("sequence", "3");
 		}
@@ -239,6 +262,9 @@ public partial class MainPage : ContentPage
 		{
 			using var span = LDObserve.StartActiveSpan(spanName);
 			span.SetAttribute("custom_span", "true");
+			span.AddEvent("cache.miss");
+			span.AddEvent("retry.started");
+			span.AddEvent("download.completed");
 			Console.WriteLine($"Custom span sent: {spanName}");
 		}
 	}
@@ -255,5 +281,23 @@ public partial class MainPage : ContentPage
 		var result = LdClient.Instance.BoolVariation(flagKey, false);
 		DisplayAlert("Flag", $"{flagKey}: {result}", "OK");
 		Console.WriteLine($"Flag {flagKey}: {result}");
+	}
+
+	private void OnStartPollingClicked(object? sender, EventArgs e)
+	{
+		using var span = LDObserve.StartActiveSpan("StartPolling");
+		var parentContext = span.Context;
+
+		var timer = Application.Current!.Dispatcher.CreateTimer();
+		timer.Interval = TimeSpan.FromSeconds(30);
+		timer.Tick += (s, e) =>
+		{
+			// Timer callbacks run on the UI thread with no ambient span context
+			using var pollSpan = LDObserve.StartActiveSpan("PollTick", parentContext);
+			pollSpan.SetAttribute("tick.time", DateTime.UtcNow.ToString("O"));
+
+			// ... polling logic ...
+		};
+		timer.Start();
 	}
 }
