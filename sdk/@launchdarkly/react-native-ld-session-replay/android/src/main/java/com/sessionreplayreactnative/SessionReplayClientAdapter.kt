@@ -17,7 +17,6 @@ import com.launchdarkly.sdk.android.Components
 import com.launchdarkly.sdk.android.LDAndroidLogging
 import com.launchdarkly.sdk.android.LDClient
 import com.launchdarkly.sdk.android.LDConfig
-import kotlin.time.Duration.Companion.minutes
 
 internal class SessionReplayClientAdapter private constructor() {
 
@@ -62,8 +61,7 @@ internal class SessionReplayClientAdapter private constructor() {
 
         // All work runs on the main thread so that:
         //  1. initLDClient() satisfies the main-thread requirement of OpenTelemetryRum.build().
-        //  2. Consecutive start()/stop()/identify() calls are naturally serialized without locks
-        //     — the main thread queue acts as an implicit mutex.
+        //  2. Consecutive start()/stop()/identify() calls are naturally serialized without locks.
         Handler(Looper.getMainLooper()).post {
             if (!initialized) {
                 try {
@@ -94,8 +92,6 @@ internal class SessionReplayClientAdapter private constructor() {
     fun identify(map: ReadableMap, completion: () -> Unit) {
         val context = ldContextFrom(map)
         // Post to the main thread so that identify() is serialized with start()/stop() and
-        // ldClient is guaranteed to be set (start() always runs before identify() on the
-        // main thread queue).
         Handler(Looper.getMainLooper()).post {
             ldClient?.identify(context)
             completion()
@@ -110,12 +106,13 @@ internal class SessionReplayClientAdapter private constructor() {
             .plugins(
                 Components.plugins().setPlugins(
                     listOf(
+                        // TODO: Pass JS ObservabilityOptions such as backendUrl,
+                        //  resourceAttributes, and sessionBackgroundTimeout through to here.
                         Observability(
                             application = application,
                             mobileKey = mobileKey,
                             options = ObservabilityOptions(
                                 serviceName = serviceName,
-                                sessionBackgroundTimeout = 10.minutes,
                                 logAdapter = LDAndroidLogging.adapter(),
                             )
                         ),
@@ -125,16 +122,12 @@ internal class SessionReplayClientAdapter private constructor() {
             )
             .build()
 
-        // The context key is a placeholder. The LDClient is offline and never sends it to
-        // LaunchDarkly servers, but SessionReplay does use it locally to attribute sessions
-        // until the real context is provided via identify(). The real user context is relayed
-        // from the TypeScript afterIdentify hook, which fires whenever the React Native
-        // LDClient identifies.
+        // The context key starts as a placeholder. The LDClient is offline and never sends it to
+        // LaunchDarkly servers, but SessionReplay does use it locally to attribute sessions.
+        // until the real context is provided via identify().
         //
         // TODO: Pass the actual initial context here once the LaunchDarkly React Native SDK
-        // supports providing a context at initialization time. Currently, context is only
-        // available after an explicit client.identify() call — getContext() always returns
-        // undefined when register() runs during the LDClient constructor.
+        // supports providing a context at initialization time.
         val placeholderContext = LDContext.builder(ContextKind.DEFAULT, "placeholder").build()
         // timeout=0: return immediately without blocking the main thread waiting for flags.
         // onPluginsReady() fires synchronously during init() before it returns.
