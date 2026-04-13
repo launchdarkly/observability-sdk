@@ -16,12 +16,6 @@
             android:name=".masking.ComposeWebActivity"
             android:exported="false" />
         <activity
-            android:name=".benchmark.BenchmarkActivity"
-            android:exported="false"
-            android:label="Benchmark"
-            android:theme="@style/Theme.AndroidObservability" />
-
-        <activity
             android:name=".MainActivity"
             android:exported="true"
             android:theme="@style/Theme.AndroidObservability" >
