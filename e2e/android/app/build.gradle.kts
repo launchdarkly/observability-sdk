@@ -120,9 +120,6 @@ dependencies {
     implementation(platform(libs.androidx.compose.bom))
     implementation("androidx.compose.runtime:runtime")
 
-    // Serialization runtime (used by benchmark to encode replay events)
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
-
     // Compose UI dependencies -- only for the compose flavor
     "composeImplementation"(libs.androidx.activity.compose)
     "composeImplementation"(libs.androidx.ui)

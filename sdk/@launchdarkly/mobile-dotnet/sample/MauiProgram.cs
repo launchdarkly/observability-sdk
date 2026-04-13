@@ -98,7 +98,11 @@ public static class MauiProgram
 #endif
         		otlpEndpoint: otlpEndpoint,
         		backendUrl: backendUrl,
-				attributes: new Dictionary<string, object?> { { "test-options-attribute", "maui-sample-value" } }
+				attributes: new Dictionary<string, object?> { { "test-options-attribute", "maui-sample-value" } },
+				instrumentation: new InstrumentationOptions(
+					networkRequests: true,
+					launchTimes: true
+				)
         	)))
         	.Add(new SessionReplayPlugin(new SessionReplayOptions(
         		isEnabled: true,
@@ -126,7 +130,7 @@ public static class MauiProgram
         LDObserve.RecordMetric("maui-app-start", 1.0);
 		LDObserve.RecordLog("maui-app-start", Severity.Info, new Dictionary<string, object?> { { "event", "app_start" } });
 		var span = LDObserve.StartActiveSpan("maui-app-start");
-		span.End();
+		span?.End();
 
         return app;
     }

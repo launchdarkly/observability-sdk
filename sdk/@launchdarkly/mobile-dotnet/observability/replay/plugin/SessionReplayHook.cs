@@ -14,14 +14,14 @@ namespace LaunchDarkly.Observability
     /// </summary>
     internal sealed class SessionReplayHook : Hook
     {
-        private readonly NativeSessionReplay _nativeSessionReplay;
+        private readonly SessionReplayService _sessionReplayService;
         private NativeSessionReplayHookExporter? _nativeHookExporter;
         private bool _nativeHookExporterResolved;
 
-        internal SessionReplayHook(NativeSessionReplay nativeSessionReplay)
+        internal SessionReplayHook(SessionReplayService sessionReplayService)
             : base("LaunchDarkly.SessionReplay")
         {
-            _nativeSessionReplay = nativeSessionReplay;
+            _sessionReplayService = sessionReplayService;
         }
 
         private NativeSessionReplayHookExporter? NativeHookExporter
@@ -30,7 +30,7 @@ namespace LaunchDarkly.Observability
             {
                 if (!_nativeHookExporterResolved)
                 {
-                    _nativeHookExporter = _nativeSessionReplay.GetNativeSessionReplayHookExporter();
+                    _nativeHookExporter = _sessionReplayService.GetNativeSessionReplayHookExporter();
                     _nativeHookExporterResolved = true;
                 }
                 return _nativeHookExporter;

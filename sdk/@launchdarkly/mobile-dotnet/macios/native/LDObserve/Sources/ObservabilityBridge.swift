@@ -1,55 +1,8 @@
-//
-//  ObservabilityBridge.swift
-//  LDObserveBridge
-//
-//  Created by Andrey Belonogov on 1/22/26.
-//
-
-
 import Foundation
 import LaunchDarkly
 import Common
 import LaunchDarklyObservability
 import LaunchDarklySessionReplay
-
-@objc(ObjcObservabilityOptions)
-public final class ObjcObservabilityOptions: NSObject {
-    @objc public var serviceName: String = ""
-    @objc public var serviceVersion: String = ""
-    @objc public var otlpEndpoint: String = ""
-    @objc public var backendUrl: String = ""
-    @objc public var attributes: NSDictionary?
-
-    @objc public override init() {
-        super.init()
-    }
-}
-
-@objc(ObjcSessionReplayOptions)
-public final class ObjcSessionReplayOptions: NSObject {
-    @objc public var isEnabled: Bool = true
-    @objc public var maskTextInputs: Bool = true
-    @objc public var maskWebViews: Bool = false
-    @objc public var maskLabels: Bool = false
-    @objc public var maskImages: Bool = false
-
-    @objc public override init() {
-        super.init()
-    }
-}
-
-@objc(ObjcEnvironmentMetadata)
-public final class ObjcEnvironmentMetadata: NSObject {
-    @objc public var credential: String = ""
-    @objc public var sdkName: String = ""
-    @objc public var sdkVersion: String = ""
-    @objc public var applicationId: String = ""
-    @objc public var applicationVersion: String = ""
-
-    @objc public override init() {
-        super.init()
-    }
-}
 
 internal func buildResourceAttributes(_ source: NSDictionary?) -> [String: AttributeValue] {
     guard let source = source as? [String: Any], !source.isEmpty else {
@@ -79,7 +32,8 @@ public final class ObservabilityBridge: NSObject {
 
     @objc public func start(mobileKey: String, 
                             observability: ObjcObservabilityOptions, 
-                            replay: ObjcSessionReplayOptions) {
+                            replay: ObjcSessionReplayOptions,
+                            observabilityVersion: String) {
         let config = { () -> LDConfig in
             var config = LDConfig(
                 mobileKey: mobileKey,
@@ -87,23 +41,29 @@ public final class ObservabilityBridge: NSObject {
             )
             config.startOnline = false
 
+            let observabilityPlugin = Observability(options: .init(
+                serviceName: observability.serviceName,
+                serviceVersion: observability.serviceVersion,
+                otlpEndpoint: observability.otlpEndpoint,
+                backendUrl: observability.backendUrl,
+                resourceAttributes: buildResourceAttributes(observability.attributes),
+                crashReporting: .init(source: .none),
+                instrumentation: .init(
+                    urlSession: .disabled, // Network tracing happens on the .NET side via System.Net.Http activities.
+                    userTaps: .enabled,
+                    memory: .disabled,
+                    memoryWarnings: .disabled,
+                    cpu: .disabled,
+                    launchTimes: observability.launchTimes ? .enabled : .disabled
+                )
+            ))
+            observabilityPlugin.distroAttributes = [
+                "telemetry.distro.name": "observability-maui-ios",
+                "telemetry.distro.version": observabilityVersion
+            ]
+
             config.plugins = [
-                Observability(options: .init(
-                    serviceName: observability.serviceName,
-                    serviceVersion: observability.serviceVersion,
-                    otlpEndpoint: observability.otlpEndpoint,
-                    backendUrl: observability.backendUrl,
-                    resourceAttributes: buildResourceAttributes(observability.attributes),
-                    crashReporting: .init(source: .none),
-                    instrumentation: .init(
-                        urlSession: .enabled,
-                        userTaps: .enabled,
-                        memory: .disabled,
-                        memoryWarnings: .disabled,
-                        cpu: .disabled,
-                        launchTimes: .enabled
-                    )
-                )),
+                observabilityPlugin,
                 SessionReplay(options: .init(
                     isEnabled: replay.isEnabled,
                     privacy: .init(

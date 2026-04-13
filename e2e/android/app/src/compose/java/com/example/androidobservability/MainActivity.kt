@@ -47,7 +47,6 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
-import com.example.androidobservability.benchmark.BenchmarkActivity
 import com.example.androidobservability.masking.ComposeMaskingActivity
 import com.example.androidobservability.masking.ComposeUserFormActivity
 import com.example.androidobservability.masking.ComposeWebActivity
@@ -134,8 +133,6 @@ private fun MainScreen(viewModel: ViewModel, innerPadding: PaddingValues) {
         MetricButtons(viewModel = viewModel)
 
         CustomerApiButtons(viewModel = viewModel)
-
-        BenchmarkSection()
     }
 }
 
@@ -390,27 +387,6 @@ private fun IdentifyButtons(viewModel: ViewModel) {
 }
 
 @Composable
-private fun BenchmarkSection() {
-    Spacer(modifier = Modifier.height(16.dp))
-
-    Text(
-        text = "Benchmark",
-        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-        modifier = Modifier.padding(bottom = 8.dp)
-    )
-    HorizontalDivider(modifier = Modifier.padding(bottom = 16.dp))
-
-    val context = LocalContext.current
-    Button(
-        onClick = {
-            context.startActivity(Intent(context, BenchmarkActivity::class.java))
-        }
-    ) {
-        Text("Benchmark")
-    }
-}
-
-@Composable
 private fun CustomerApiButtons(viewModel: ViewModel) {
     var customLogText by remember { mutableStateOf("") }
     var customSpanText by remember { mutableStateOf("") }
@@ -433,12 +409,23 @@ private fun CustomerApiButtons(viewModel: ViewModel) {
     ) {
         Text("Trigger Error")
     }
-    Button(
-        onClick = {
-            viewModel.triggerLog()
-        }
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Text("Trigger Log")
+        Button(
+            onClick = {
+                viewModel.triggerLog()
+            }
+        ) {
+            Text("Trigger Log")
+        }
+        Button(
+            onClick = {
+                viewModel.triggerLogWithContext(customLogText)
+            }
+        ) {
+            Text("Log with Context")
+        }
     }
 
     OutlinedTextField(

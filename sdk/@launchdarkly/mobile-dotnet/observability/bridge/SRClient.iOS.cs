@@ -23,10 +23,12 @@ class ObservabilityBridgeClient
         var objcObs = new ObjcObservabilityOptions
         {
             ServiceName = observability.ServiceName ?? "observability-maui",
-            ServiceVersion = observabilityVersion,
+            ServiceVersion = observability.ServiceVersion ?? "0.1.0",
             OtlpEndpoint = observability.OtlpEndpoint ?? "https://otel.observability.app.launchdarkly.com:4318",
             BackendUrl = observability.BackendUrl ?? "https://pub.observability.app.launchdarkly.com",
-            Attributes = DictionaryTypeConverters.ToNSDictionary(observability.Attributes)
+            Attributes = DictionaryTypeConverters.ToNSDictionary(observability.Attributes),
+            NetworkRequests = observability.Instrumentation.NetworkRequests,
+            LaunchTimes = observability.Instrumentation.LaunchTimes
         };
 
         var objcReplay = new ObjcSessionReplayOptions
@@ -38,7 +40,7 @@ class ObservabilityBridgeClient
             MaskImages = replay.Privacy?.MaskImages ?? false
         };
 
-        _native.Start(mobileKey, objcObs, objcReplay);
+        _native.Start(mobileKey, objcObs, objcReplay, observabilityVersion);
     }
 }
 #endif

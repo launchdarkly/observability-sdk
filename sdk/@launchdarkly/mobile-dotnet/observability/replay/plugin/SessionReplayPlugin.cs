@@ -10,28 +10,27 @@ namespace LaunchDarkly.Observability
 {
     public class SessionReplayPlugin : Plugin
     {
-        internal NativeSessionReplay SessionReplay { get; private set; }
+        internal SessionReplayService SessionReplayService { get; private set; }
 
         public SessionReplayPlugin(SessionReplayOptions options) : base("LaunchDarkly.SessionReplay")
         {
-            SessionReplay = new NativeSessionReplay(options);
-
-            PluginOrchestrator.Instance.AddSessionReplay(SessionReplay);
+            SessionReplayService = new SessionReplayService(options);
+            PluginOrchestrator.Instance.AddSessionReplayService(SessionReplayService);
         }
 
         /// <inheritdoc />
         public override void Register(ILdClient client, EnvironmentMetadata metadata)
         {
-            SessionReplay.Client = client;
-            SessionReplay.Metadata = metadata;
+            SessionReplayService.Client = client;
+            SessionReplayService.Metadata = metadata;
             PluginOrchestrator.Instance.Register();
         }
-        
+
         /// <inheritdoc />
         public override IList<Hook> GetHooks(EnvironmentMetadata metadata)
         {
-            SessionReplay.Metadata = metadata;
-            return new List<Hook> { new SessionReplayHook(SessionReplay) };
+            SessionReplayService.Metadata = metadata;
+            return new List<Hook> { new SessionReplayHook(SessionReplayService) };
         }
     }
 }
