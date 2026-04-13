@@ -40,17 +40,17 @@ internal class SessionReplayClientAdapter private constructor() {
     }
 
     fun start(application: Application, completion: (Boolean, String?) -> Unit) {
-        val key: String?
-        val svcName: String
-        val options: ReplayOptions?
+        val localMobileKey: String?
+        val localServiceName: String
+        val localReplayOptions: ReplayOptions?
 
         // Capture configuration under the lock, then release it before posting to the main thread.
         synchronized(lock) {
-            key = mobileKey
-            options = replayOptions
-            svcName = serviceName
+            localMobileKey = mobileKey
+            localReplayOptions = replayOptions
+            localServiceName = serviceName
         }
-        if (key == null || options == null) {
+        if (localMobileKey == null || localReplayOptions == null) {
             val msg = "start: configure() was not called — mobile key or options are missing"
             logger.error(msg)
             completion(false, msg)
@@ -63,7 +63,7 @@ internal class SessionReplayClientAdapter private constructor() {
         Handler(Looper.getMainLooper()).post {
             if (!initialized) {
                 try {
-                    initLDClient(application, key, svcName, options)
+                    initLDClient(application, localMobileKey, localServiceName, localReplayOptions)
                 } catch (e: Exception) {
                     logger.error("start: LDClient.init() threw {0}: {1}", e::class.simpleName, e.message)
                     completion(false, "Session replay failed to initialize.")
@@ -71,9 +71,9 @@ internal class SessionReplayClientAdapter private constructor() {
                 }
                 initialized = true
             } else {
-                logger.debug("start: already initialized, re-applying isEnabled={0}", options.enabled)
+                logger.debug("start: already initialized, re-applying isEnabled={0}", localReplayOptions.enabled)
             }
-            applyEnabled(options.enabled)
+            applyEnabled(localReplayOptions.enabled)
             completion(true, null)
         }
     }
