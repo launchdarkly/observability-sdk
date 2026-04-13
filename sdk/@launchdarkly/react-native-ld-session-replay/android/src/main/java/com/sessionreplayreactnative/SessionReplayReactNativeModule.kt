@@ -55,6 +55,20 @@ class SessionReplayReactNativeModule(reactContext: ReactApplicationContext) :
     }
   }
 
+  override fun identify(context: ReadableMap?, promise: Promise) {
+    if (context == null) {
+      promise.reject("identify_failed", "Context must not be null.", null)
+      return
+    }
+    try {
+      SessionReplayClientAdapter.shared.identify(context) {
+        promise.resolve(null)
+      }
+    } catch (e: Exception) {
+      promise.reject("identify_failed", e.message, e)
+    }
+  }
+
   companion object {
     const val NAME = "SessionReplayReactNative"
   }

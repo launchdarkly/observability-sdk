@@ -27,6 +27,7 @@ internal class SessionReplayClientAdapter private constructor() {
     private var replayOptions: ReplayOptions? = null
     // Only accessed from the main thread (all reads/writes are inside Handler(mainLooper).post blocks).
     private var initialized = false
+    private var ldClient: LDClient? = null
     private val logger = LDLogger.withAdapter(LDAndroidLogging.adapter(), TAG)
 
     fun setMobileKey(mobileKey: String, options: ReadableMap?) {
@@ -61,8 +62,8 @@ internal class SessionReplayClientAdapter private constructor() {
 
         // All work runs on the main thread so that:
         //  1. initLDClient() satisfies the main-thread requirement of OpenTelemetryRum.build().
-        //  2. Consecutive start()/stop() calls are naturally serialized without locks — the
-        //     main thread queue acts as an implicit mutex.
+        //  2. Consecutive start()/stop()/identify() calls are naturally serialized without locks
+        //     — the main thread queue acts as an implicit mutex.
         Handler(Looper.getMainLooper()).post {
             if (!initialized) {
                 try {
@@ -90,6 +91,17 @@ internal class SessionReplayClientAdapter private constructor() {
         }
     }
 
+    fun identify(map: ReadableMap, completion: () -> Unit) {
+        val context = ldContextFrom(map)
+        // Post to the main thread so that identify() is serialized with start()/stop() and
+        // ldClient is guaranteed to be set (start() always runs before identify() on the
+        // main thread queue).
+        Handler(Looper.getMainLooper()).post {
+            ldClient?.identify(context)
+            completion()
+        }
+    }
+
     private fun initLDClient(application: Application, mobileKey: String, serviceName: String, replayOptions: ReplayOptions) {
         logger.debug("initLDClient: calling LDClient.init()")
         val config = LDConfig.Builder(LDConfig.Builder.AutoEnvAttributes.Enabled)
@@ -113,12 +125,20 @@ internal class SessionReplayClientAdapter private constructor() {
             )
             .build()
 
-        // The context key is a placeholder — the LDClient is offline and never sends it to
-        // LaunchDarkly servers. The React Native LDClient manages the real user context.
-        val context = LDContext.builder(ContextKind.DEFAULT, "12345").build()
+        // The context key is a placeholder. The LDClient is offline and never sends it to
+        // LaunchDarkly servers, but SessionReplay does use it locally to attribute sessions
+        // until the real context is provided via identify(). The real user context is relayed
+        // from the TypeScript afterIdentify hook, which fires whenever the React Native
+        // LDClient identifies.
+        //
+        // TODO: Pass the actual initial context here once the LaunchDarkly React Native SDK
+        // supports providing a context at initialization time. Currently, context is only
+        // available after an explicit client.identify() call — getContext() always returns
+        // undefined when register() runs during the LDClient constructor.
+        val placeholderContext = LDContext.builder(ContextKind.DEFAULT, "placeholder").build()
         // timeout=0: return immediately without blocking the main thread waiting for flags.
         // onPluginsReady() fires synchronously during init() before it returns.
-        LDClient.init(application, config, context, 0)
+        ldClient = LDClient.init(application, config, placeholderContext, 0)
     }
 
     private fun applyEnabled(enabled: Boolean) {
@@ -127,6 +147,26 @@ internal class SessionReplayClientAdapter private constructor() {
         } else {
             LDReplay.stop()
         }
+    }
+
+    // SessionReplay only needs kind and key to identify sessions — see SessionReplayHook.afterIdentify()
+    // in the observability-android SDK, which extracts only context.kind and context.key into a
+    // Map<String, String>. Name, email, and custom attributes are not forwarded.
+    internal fun ldContextFrom(map: ReadableMap): LDContext {
+        val kind = if (map.hasKey("kind")) map.getString("kind") else null
+        if (kind == "multi") {
+            val builder = LDContext.multiBuilder()
+            map.toHashMap().forEach { (k, v) ->
+                if (k == "kind") return@forEach
+                @Suppress("UNCHECKED_CAST")
+                val key = (v as? HashMap<String, Any>)?.get("key") as? String ?: return@forEach
+                builder.add(LDContext.create(ContextKind.of(k), key))
+            }
+            return builder.build()
+        }
+        val key = if (map.hasKey("key")) map.getString("key") ?: "unknown" else "unknown"
+        val ctxKind = if (kind != null && kind != "user") ContextKind.of(kind) else ContextKind.DEFAULT
+        return LDContext.builder(ctxKind, key).build()
     }
 
     internal fun replayOptionsFrom(map: ReadableMap?): ReplayOptions {

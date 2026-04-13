@@ -2,6 +2,7 @@ package com.sessionreplayreactnative
 
 import android.app.Application
 import com.facebook.react.bridge.ReadableMap
+import com.launchdarkly.sdk.ContextKind
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -44,6 +45,80 @@ class SessionReplayClientAdapterTest {
         val options = adapter.replayOptionsFrom(map)
 
         assertTrue(options.privacyProfile.maskText)
+    }
+
+    @Test
+    fun `ldContextFrom single-kind context`() {
+        val adapter = newAdapter()
+        val map = mockk<ReadableMap> {
+            every { hasKey("kind") } returns true
+            every { getString("kind") } returns "user"
+            every { hasKey("key") } returns true
+            every { getString("key") } returns "user-123"
+        }
+
+        val context = adapter.ldContextFrom(map)
+
+        assertFalse(context.isMultiple)
+        assertEquals(ContextKind.DEFAULT, context.kind)
+        assertEquals("user-123", context.key)
+    }
+
+    @Test
+    fun `ldContextFrom single-kind context with non-user kind`() {
+        val adapter = newAdapter()
+        val map = mockk<ReadableMap> {
+            every { hasKey("kind") } returns true
+            every { getString("kind") } returns "org"
+            every { hasKey("key") } returns true
+            every { getString("key") } returns "org-456"
+        }
+
+        val context = adapter.ldContextFrom(map)
+
+        assertFalse(context.isMultiple)
+        assertEquals(ContextKind.of("org"), context.kind)
+        assertEquals("org-456", context.key)
+    }
+
+    @Test
+    fun `ldContextFrom multi-kind context`() {
+        val adapter = newAdapter()
+        val map = mockk<ReadableMap> {
+            every { hasKey("kind") } returns true
+            every { getString("kind") } returns "multi"
+            every { toHashMap() } returns hashMapOf(
+                "kind" to "multi",
+                "user" to hashMapOf("key" to "user-123"),
+                "org" to hashMapOf("key" to "org-456"),
+            )
+        }
+
+        val context = adapter.ldContextFrom(map)
+
+        assertTrue(context.isMultiple)
+        assertEquals(2, context.individualContextCount)
+        val kinds = (0 until context.individualContextCount)
+            .mapNotNull { context.getIndividualContext(it) }
+            .associate { it.kind.toString() to it.key }
+        assertEquals("user-123", kinds["user"])
+        assertEquals("org-456", kinds["org"])
+    }
+
+    @Test
+    fun `ldContextFrom legacy context without kind defaults to user`() {
+        val adapter = newAdapter()
+        val map = mockk<ReadableMap> {
+            every { hasKey("kind") } returns false
+            every { hasKey("key") } returns true
+            every { getString("key") } returns "legacy-key"
+        }
+
+        val context = adapter.ldContextFrom(map)
+
+        assertFalse(context.isMultiple)
+        assertEquals(ContextKind.DEFAULT, context.kind)
+        assertEquals("legacy-key", context.key)
     }
 
     @Test

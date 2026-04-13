@@ -53,6 +53,14 @@
     }
 }
 
+- (void)identify:(NSDictionary *)context
+         resolve:(RCTPromiseResolveBlock)resolve
+          reject:(RCTPromiseRejectBlock)reject
+{
+    // TODO: implement context propagation for iOS (see ios/TODO.md).
+    resolve(nil);
+}
+
 - (std::shared_ptr<facebook::react::TurboModule>)getTurboModule:
     (const facebook::react::ObjCTurboModule::InitParams &)params
 {
