@@ -31,18 +31,19 @@ class TileDiffManager(
         }
         previousSignature = imageSignature
 
-        val needWholeScreen =
-            diffRect.width >= frameWidth && diffRect.height >= frameHeight
-
         val isKeyframe = when (val method = compression) {
             is ReplayOptions.CompressionMethod.OverlayTiles -> {
                 if (method.layers > 0) {
                     incrementalSnapshots = (incrementalSnapshots + 1) % method.layers
-                    val keyframe = needWholeScreen || incrementalSnapshots == 0
+                    if (incrementalSnapshots == 0) {
+                        true
+                    }
+                    val needWholeScreen =
+                        diffRect.width >= frameWidth && diffRect.height >= frameHeight
                     if (needWholeScreen) {
                         incrementalSnapshots = 0
                     }
-                    keyframe
+                    needWholeScreen
                 } else {
                     true
                 }
