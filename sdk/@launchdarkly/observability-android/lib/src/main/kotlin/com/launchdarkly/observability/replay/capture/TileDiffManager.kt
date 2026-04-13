@@ -33,19 +33,18 @@ class TileDiffManager(
 
         val isKeyframe = when (val method = compression) {
             is ReplayOptions.CompressionMethod.OverlayTiles -> {
-                if (method.layers > 0) {
+                if (method.layers <= 0) {
+                    true
+                } else {
                     incrementalSnapshots = (incrementalSnapshots + 1) % method.layers
                     if (incrementalSnapshots == 0) {
                         true
+                    } else {
+                        val needWholeScreen =
+                            diffRect.width >= frameWidth && diffRect.height >= frameHeight
+                        if (needWholeScreen) incrementalSnapshots = 0
+                        needWholeScreen
                     }
-                    val needWholeScreen =
-                        diffRect.width >= frameWidth && diffRect.height >= frameHeight
-                    if (needWholeScreen) {
-                        incrementalSnapshots = 0
-                    }
-                    needWholeScreen
-                } else {
-                    true
                 }
             }
 
