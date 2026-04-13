@@ -41,22 +41,21 @@ internal class SessionReplayClientAdapter private constructor() {
     }
 
     fun start(application: Application, completion: (Boolean, String?) -> Unit) {
-        val key: String
+        val key: String?
         val svcName: String
-        val options: ReplayOptions
+        val options: ReplayOptions?
 
         // Capture configuration under the lock, then release it before posting to the main thread.
         synchronized(lock) {
-            key = mobileKey ?: run {
-                val msg = "start: configure() was not called — mobile key is missing"
-                logger.error(msg)
-                completion(false, msg)
-                return
-            }
-            // replayOptions is always set alongside mobileKey in setMobileKey(), so it is
-            // non-null whenever mobileKey is non-null (checked above).
-            options = replayOptions!!
+            key = mobileKey
+            options = replayOptions
             svcName = serviceName
+        }
+        if (key == null || options == null) {
+            val msg = "start: configure() was not called — mobile key or options are missing"
+            logger.error(msg)
+            completion(false, msg)
+            return
         }
 
         // All work runs on the main thread so that:
