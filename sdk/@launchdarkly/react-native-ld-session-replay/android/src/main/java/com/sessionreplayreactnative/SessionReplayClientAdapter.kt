@@ -73,7 +73,13 @@ internal class SessionReplayClientAdapter private constructor() {
             } else {
                 logger.debug("start: already initialized, re-applying isEnabled={0}", localReplayOptions.enabled)
             }
-            applyEnabled(localReplayOptions.enabled)
+            try {
+                applyEnabled(localReplayOptions.enabled)
+            } catch (e: Exception) {
+                logger.error("start: applyEnabled threw {0}: {1}", e::class.simpleName, e.message)
+                completion(false, "Session replay failed to start.")
+                return@post
+            }
             completion(true, null)
         }
     }
@@ -82,7 +88,11 @@ internal class SessionReplayClientAdapter private constructor() {
         logger.debug("stop")
         // Post to the main thread so that stop() queues behind any in-progress start().
         Handler(Looper.getMainLooper()).post {
-            LDReplay.stop()
+            try {
+                LDReplay.stop()
+            } catch (e: Exception) {
+                logger.error("stop: threw {0}: {1}", e::class.simpleName, e.message)
+            }
             completion()
         }
     }
