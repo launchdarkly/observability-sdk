@@ -5,12 +5,6 @@ import type {
   LDClientMin,
 } from '@launchdarkly/observability-react-native';
 import type {
-  Hook,
-  IdentifySeriesContext,
-  IdentifySeriesData,
-  IdentifySeriesResult,
-} from '@launchdarkly/react-native-client-sdk';
-import type {
   LDPluginEnvironmentMetadata,
   LDPluginMetadata,
 } from '@launchdarkly/js-sdk-common';
@@ -48,28 +42,6 @@ class SessionReplayPluginAdapter implements LDPlugin {
     return {
       name: 'session-replay-react-native',
     };
-  }
-
-  getHooks(_metadata: LDPluginEnvironmentMetadata): Hook[] {
-    return [
-      {
-        getMetadata: () => ({ name: 'session-replay-react-native' }),
-        afterIdentify(
-          hookContext: IdentifySeriesContext,
-          data: IdentifySeriesData,
-          result: IdentifySeriesResult,
-        ): IdentifySeriesData {
-          if (result.status === 'completed') {
-            SessionReplayReactNative.identify(
-              hookContext.context as Object,
-            ).catch((error) => {
-              console.error('[SessionReplay] Failed to identify:', error);
-            });
-          }
-          return data;
-        },
-      },
-    ];
   }
 
   register(_client: LDClientMin, metadata: LDPluginEnvironmentMetadata): void {

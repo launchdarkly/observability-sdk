@@ -17,7 +17,6 @@ export interface Spec extends TurboModule {
   configure(mobileKey: string, options?: Object): Promise<void>;
   startSessionReplay(): Promise<void>;
   stopSessionReplay(): Promise<void>;
-  identify(context: Object): Promise<void>;
 }
 
 export default TurboModuleRegistry.getEnforcing<Spec>(
