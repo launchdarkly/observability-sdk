@@ -21,8 +21,11 @@ allprojects {
 }
 
 dependencies {
-    implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.11.1")
-    implementation("com.jakewharton.timber:timber:5.0.1")
+    compileOnly("com.launchdarkly:launchdarkly-android-client-sdk:5.11.1")
+    compileOnly("com.jakewharton.timber:timber:5.0.1")
+
+    testImplementation("com.launchdarkly:launchdarkly-android-client-sdk:5.11.1")
+    testImplementation("com.jakewharton.timber:timber:5.0.1")
 
     // AndroidX
     // This only used by Session Replay.

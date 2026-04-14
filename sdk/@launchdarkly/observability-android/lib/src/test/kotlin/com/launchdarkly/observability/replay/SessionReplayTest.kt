@@ -6,7 +6,6 @@ import com.launchdarkly.observability.client.ObservabilityContext
 import com.launchdarkly.observability.replay.plugin.SessionReplay
 import com.launchdarkly.observability.sdk.LDObserve
 import com.launchdarkly.observability.sdk.LDReplay
-import com.launchdarkly.sdk.android.LDClient
 import io.mockk.mockk
 import io.mockk.unmockkAll
 import org.junit.jupiter.api.AfterEach
@@ -18,11 +17,8 @@ import org.junit.jupiter.api.Test
 
 class SessionReplayTest {
 
-    private lateinit var client: LDClient
-
     @BeforeEach
     fun setUp() {
-        client = mockk(relaxed = true)
         LDObserve.context = null
         LDReplay.client = null
     }
@@ -44,7 +40,7 @@ class SessionReplayTest {
         )
         val sessionReplay = SessionReplay()
 
-        sessionReplay.register(client, null)
+        sessionReplay.register()
 
         assertNotNull(sessionReplay.sessionReplayService)
         assertNotNull(LDReplay.client)
@@ -54,7 +50,7 @@ class SessionReplayTest {
     @Test
     fun `register does nothing when observability is not initialized`() {
         val sessionReplay = SessionReplay()
-        sessionReplay.register(client, null)
+        sessionReplay.register()
 
         assertNull(sessionReplay.sessionReplayService)
         assertNull(LDReplay.client)

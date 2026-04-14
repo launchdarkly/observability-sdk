@@ -1,15 +1,14 @@
 package com.launchdarkly.observability.plugin
 
 import android.app.Application
-import com.launchdarkly.logging.LDLogLevel
 import com.launchdarkly.logging.LDLogger
-import com.launchdarkly.logging.Logs
 import com.launchdarkly.observability.BuildConfig
 import com.launchdarkly.observability.api.ObservabilityOptions
 import com.launchdarkly.observability.client.ObservabilityService
 import com.launchdarkly.observability.client.ObservabilityContext
 import com.launchdarkly.observability.client.TelemetryInspector
 import com.launchdarkly.observability.sdk.LDObserve
+import com.launchdarkly.observability.devlog.buildLDLogger
 import com.launchdarkly.sdk.android.LDClient
 import com.launchdarkly.sdk.android.integrations.EnvironmentMetadata
 import com.launchdarkly.sdk.android.integrations.Hook
@@ -66,8 +65,7 @@ class Observability(
     private var client: LDClient? = null
 
     init {
-        val actualLogAdapter = Logs.level(options.logAdapter, if (options.debug) LDLogLevel.DEBUG else DEFAULT_LOG_LEVEL)
-        logger = LDLogger.withAdapter(actualLogAdapter, options.loggerName)
+        logger = buildLDLogger(options.logAdapter, options.loggerName, options.debug)
     }
 
     override fun getMetadata(): PluginMetadata {
@@ -150,7 +148,6 @@ class Observability(
     }
 
     companion object {
-        val DEFAULT_LOG_LEVEL: LDLogLevel = LDLogLevel.INFO
         const val PLUGIN_NAME = "@launchdarkly/observability-android"
         const val SDK_NAME = "launchdarkly-observability-android"
     }

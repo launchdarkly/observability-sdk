@@ -14,9 +14,8 @@ import com.launchdarkly.observability.replay.exporter.InteractionItemPayload
 import com.launchdarkly.observability.replay.exporter.SessionReplayExporter
 import com.launchdarkly.observability.replay.transport.BatchWorker
 import com.launchdarkly.observability.replay.transport.EventQueue
+import com.launchdarkly.observability.devlog.LDObserveContext
 import com.launchdarkly.observability.sdk.SessionReplayServicing
-import com.launchdarkly.sdk.ContextKind
-import com.launchdarkly.sdk.LDContext
 import io.opentelemetry.android.session.SessionManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -270,7 +269,7 @@ class SessionReplayService(
     }
 
     suspend fun identifySession(
-        ldContext: LDContext,
+        ldContext: LDObserveContext,
         timestamp: Long = System.currentTimeMillis()
     ) {
         if (!this::sessionManager.isInitialized || exporter == null) {
@@ -307,22 +306,19 @@ class SessionReplayService(
     override fun afterIdentify(contextKeys: Map<String, String>, canonicalKey: String, completed: Boolean) {
         if (!completed) return
 
-        val ldContext = buildLDContext(contextKeys)
+        val observeContext = buildObserveContext(contextKeys)
         instrumentationScope.launch {
-            identifySession(ldContext)
+            identifySession(observeContext)
         }
     }
 
-    private fun buildLDContext(contextKeys: Map<String, String>): LDContext {
+    private fun buildObserveContext(contextKeys: Map<String, String>): LDObserveContext {
         if (contextKeys.size == 1) {
             val (kind, key) = contextKeys.entries.first()
-            return LDContext.create(ContextKind.of(kind), key)
+            return LDObserveContext.create(kind, key)
         }
-        val builder = LDContext.multiBuilder()
-        for ((kind, key) in contextKeys) {
-            builder.add(LDContext.create(ContextKind.of(kind), key))
-        }
-        return builder.build()
+        val subs = contextKeys.map { (kind, key) -> LDObserveContext.create(kind, key) }
+        return LDObserveContext.createMulti(*subs.toTypedArray())
     }
 
 }

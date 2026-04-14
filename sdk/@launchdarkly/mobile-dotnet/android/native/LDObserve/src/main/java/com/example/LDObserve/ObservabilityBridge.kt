@@ -8,9 +8,7 @@ import com.launchdarkly.observability.bridge.AttributeConverter
 import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.observability.sdk.LDObserve
 import com.launchdarkly.observability.sdk.LDReplay
-import com.launchdarkly.sdk.ContextKind
-import com.launchdarkly.sdk.LDContext
-import com.launchdarkly.sdk.android.LDAndroidLogging
+import com.launchdarkly.observability.devlog.LDObserveContext
 
 public class ObservabilityBridge(
     private val logger: BridgeLogger = SystemOutBridgeLogger()
@@ -80,7 +78,6 @@ public class ObservabilityBridge(
                 instrumentations = com.launchdarkly.observability.api.ObservabilityOptions.Instrumentations(
                     crashReporting = false, launchTime = observability.launchTime, activityLifecycle = true
                 ),
-                logAdapter = LDAndroidLogging.adapter(),
             )
         } catch (t: Throwable) {
             printException("LD:ObservabilityBridge failed to build ObservabilityOptions", t)
@@ -109,11 +106,11 @@ public class ObservabilityBridge(
         )
 
         val ldContext = try {
-            LDContext.builder(ContextKind.DEFAULT, "maui-user-key")
+            LDObserveContext.builder(LDObserveContext.DEFAULT_KIND, "maui-user-key")
                 .anonymous(true)
                 .build()
         } catch (t: Throwable) {
-            printException("LD:ObservabilityBridge failed to build LDContext", t)
+            printException("LD:ObservabilityBridge failed to build LDObserveContext", t)
             throw t
         }
 

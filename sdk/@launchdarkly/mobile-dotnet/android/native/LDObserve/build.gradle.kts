@@ -42,8 +42,8 @@ dependencies {
 
     // Copy dependencies for binding library
     // Uncomment line below and replace dependency.name.goes.here with your dependency
-    implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.11.0")
-    "copyDependencies"("com.launchdarkly:launchdarkly-android-client-sdk:5.11.0")
+   // implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.11.0")
+   // "copyDependencies"("com.launchdarkly:launchdarkly-android-client-sdk:5.11.0")
 
     // Intentionally use a non-existent version so this dependency MUST be
     // satisfied by composite-build substitution (settings.gradle.kts).

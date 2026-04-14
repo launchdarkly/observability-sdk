@@ -1,8 +1,8 @@
 package com.launchdarkly.observability.replay.exporter
 
+import com.launchdarkly.observability.devlog.LDObserveContext
 import com.launchdarkly.observability.replay.transport.EventExporting
 import com.launchdarkly.observability.replay.transport.EventQueueItemPayload
-import com.launchdarkly.sdk.LDContext
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
 
@@ -37,7 +37,7 @@ data class IdentifyItemPayload(
         fun from(
             contextFriendlyName: String? = null,
             resourceAttributes: Attributes,
-            ldContext: LDContext? = null,
+            ldContext: LDObserveContext? = null,
             timestamp: Long = System.currentTimeMillis(),
             sessionId: String?
         ): IdentifyItemPayload {
@@ -45,22 +45,21 @@ data class IdentifyItemPayload(
 
             flattenAttributes(resourceAttributes, attributes)
 
-            // Merge LDContext kind->key entries into attributes
             if (ldContext != null) {
                 if (ldContext.isMultiple) {
                     val count = ldContext.individualContextCount
                     for (i in 0 until count) {
                         val sub = ldContext.getIndividualContext(i)
-                        val kind = sub.kind.toString()
+                        val kind = sub.kind
                         val key = sub.key
-                        if (!key.isNullOrEmpty()) {
+                        if (key.isNotEmpty()) {
                             attributes[kind] = key
                         }
                     }
                 } else {
-                    val kind = ldContext.kind.toString()
+                    val kind = ldContext.kind
                     val key = ldContext.key
-                    if (!key.isNullOrEmpty()) {
+                    if (key.isNotEmpty()) {
                         attributes[kind] = key
                     }
                 }

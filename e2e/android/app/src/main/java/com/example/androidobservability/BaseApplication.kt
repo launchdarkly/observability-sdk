@@ -9,13 +9,13 @@ import com.launchdarkly.observability.replay.PrivacyProfile
 import com.launchdarkly.observability.replay.ReplayOptions
 import com.launchdarkly.observability.replay.plugin.SessionReplay
 import com.launchdarkly.observability.replay.view
+import com.launchdarkly.observability.devlog.LDObserveContext
 import com.launchdarkly.observability.sdk.LDObserve
 import com.launchdarkly.observability.sdk.LDReplay
 import com.launchdarkly.sdk.ContextKind
 import com.launchdarkly.sdk.LDContext
 import com.launchdarkly.sdk.android.Components
 import com.launchdarkly.sdk.android.FeatureFlagChangeListener
-import com.launchdarkly.sdk.android.LDAndroidLogging
 import com.launchdarkly.sdk.android.LDClient
 import com.launchdarkly.sdk.android.LDConfig
 import io.opentelemetry.api.common.AttributeKey
@@ -39,7 +39,6 @@ open class BaseApplication : Application() {
         instrumentations = ObservabilityOptions.Instrumentations(
             crashReporting = true, launchTime = true, activityLifecycle = true
         ),
-        logAdapter = LDAndroidLogging.adapter(),
     )
 
     val sessionReplayPlugin = SessionReplay(
@@ -63,7 +62,7 @@ open class BaseApplication : Application() {
             observabilityOptions.copy(backendUrl = it, otlpEndpoint = it)
         } ?: observabilityOptions
 
-        val context = LDContext.builder(ContextKind.DEFAULT, "example-user-key")
+        val context = LDObserveContext.builder(LDObserveContext.DEFAULT_KIND, "example-user-key")
             .anonymous(true)
             .build()
 

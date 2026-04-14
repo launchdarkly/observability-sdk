@@ -1,11 +1,10 @@
 package com.launchdarkly.observability.sdk
 
 import android.app.Application
-import com.launchdarkly.logging.LDLogLevel
-import com.launchdarkly.logging.LDLogger
-import com.launchdarkly.logging.Logs
 import com.launchdarkly.observability.BuildConfig
 import com.launchdarkly.observability.api.ObservabilityOptions
+import com.launchdarkly.observability.devlog.LDObserveContext
+import com.launchdarkly.observability.devlog.buildLDLogger
 import com.launchdarkly.observability.bridge.AttributeConverter
 import com.launchdarkly.observability.client.ObservabilityContext
 import com.launchdarkly.observability.client.ObservabilityService
@@ -13,7 +12,6 @@ import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.observability.interfaces.Observe
 import com.launchdarkly.observability.replay.ReplayOptions
 import com.launchdarkly.observability.replay.plugin.SessionReplay
-import com.launchdarkly.sdk.LDContext
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Severity
@@ -119,7 +117,7 @@ class LDObserve(private val client: Observe) : Observe {
          *
          * @param application The Android [Application] instance.
          * @param mobileKey   The LaunchDarkly mobile key used for authentication.
-         * @param ldContext    The [LDContext] identifying the current user/context.
+         * @param ldContext    The [LDObserveContext] identifying the current user/context.
          * @param options      Configuration for observability telemetry.
          * @param replayOptions Optional configuration for session replay. Pass `null` (the default)
          *                      to skip session replay initialization.
@@ -127,15 +125,11 @@ class LDObserve(private val client: Observe) : Observe {
         fun init(
             application: Application,
             mobileKey: String,
-            ldContext: LDContext,
+            ldContext: LDObserveContext,
             options: ObservabilityOptions = ObservabilityOptions(),
             replayOptions: ReplayOptions? = null
         ) {
-            val actualLogAdapter = Logs.level(
-                options.logAdapter,
-                if (options.debug) LDLogLevel.DEBUG else LDLogLevel.INFO
-            )
-            val logger = LDLogger.withAdapter(actualLogAdapter, options.loggerName)
+            val logger = buildLDLogger(options.logAdapter, options.loggerName, options.debug)
 
             val obsContext = ObservabilityContext(
                 sdkKey = mobileKey,

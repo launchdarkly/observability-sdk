@@ -1,9 +1,9 @@
 package com.launchdarkly.observability.api
 
-import com.launchdarkly.logging.LDLogAdapter
 import com.launchdarkly.observability.BuildConfig
 import com.launchdarkly.observability.client.TelemetryInspector
-import com.launchdarkly.sdk.android.LDTimberLogging
+import com.launchdarkly.observability.devlog.LDObserveLogging
+import com.launchdarkly.observability.devlog.ObserveLogAdapter
 import io.opentelemetry.api.common.Attributes
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
@@ -27,7 +27,7 @@ const val DEFAULT_BACKEND_URL = "https://pub.observability.app.launchdarkly.com"
  * @property tracesApi Options for configuring traces. See [TracesApi]. Tracing is enabled by default.
  * @property metricsApi Options for configuring metrics. See [MetricsApi]. Metrics are enabled by default.
  * @property instrumentations Options for configuring automatic instrumentations. See [Instrumentations].
- * @property logAdapter The log adapter to use. Defaults to using the LaunchDarkly SDK's LDTimberLogging.adapter(). Use LDAndroidLogging.adapter() to use the Android logging adapter.
+ * @property logAdapter The log adapter to use. Defaults to [LDObserveLogging.adapter] which writes to Android's native Log API.
  * @property loggerName The name of the logger to use. Defaults to "LaunchDarklyObservabilityPlugin".
  * @property telemetryInspector Optional [TelemetryInspector] for intercepting exported telemetry during testing.
  *   When provided together with [debug] = true, the inspector's exporters are wired into composite
@@ -48,7 +48,7 @@ data class ObservabilityOptions(
     val tracesApi: TracesApi = TracesApi.enabled(),
     val metricsApi: MetricsApi = MetricsApi.enabled(),
     val instrumentations: Instrumentations = Instrumentations(),
-    val logAdapter: LDLogAdapter = LDTimberLogging.adapter(), // This follows the LaunchDarkly SDK's default log adapter
+    val logAdapter: ObserveLogAdapter = LDObserveLogging.adapter(),
     val loggerName: String = "LaunchDarklyObservabilityPlugin",
     val telemetryInspector: TelemetryInspector? = null,
 ){
