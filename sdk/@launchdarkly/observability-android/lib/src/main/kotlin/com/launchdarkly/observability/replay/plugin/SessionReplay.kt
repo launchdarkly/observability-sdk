@@ -36,6 +36,10 @@ class SessionReplay(
     }
 
     override fun register(client: LDClient, metadata: EnvironmentMetadata?) {
+        register()
+    }
+
+    fun register() {
         val context = LDObserve.context ?: run {
             Timber.tag(TAG).e("Observability plugin is not initialized")
             return
@@ -50,7 +54,6 @@ class SessionReplay(
         LDReplay.init(service)
         sessionReplayService = service
         sessionReplayHook.delegate = service
-    
     }
 
     override fun getHooks(metadata: EnvironmentMetadata?): MutableList<Hook> {

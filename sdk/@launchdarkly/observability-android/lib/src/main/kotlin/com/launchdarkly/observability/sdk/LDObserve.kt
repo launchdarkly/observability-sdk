@@ -1,14 +1,29 @@
 package com.launchdarkly.observability.sdk
 
+import android.app.Application
+import com.launchdarkly.logging.LDLogLevel
+import com.launchdarkly.logging.LDLogger
+import com.launchdarkly.logging.Logs
+import com.launchdarkly.observability.BuildConfig
+import com.launchdarkly.observability.api.ObservabilityOptions
 import com.launchdarkly.observability.bridge.AttributeConverter
-import com.launchdarkly.observability.client.ObservabilityService
 import com.launchdarkly.observability.client.ObservabilityContext
+import com.launchdarkly.observability.client.ObservabilityService
 import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.observability.interfaces.Observe
+import com.launchdarkly.observability.replay.ReplayOptions
+import com.launchdarkly.observability.replay.plugin.SessionReplay
+import com.launchdarkly.sdk.LDContext
+import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Severity
 import io.opentelemetry.api.trace.Span
 import io.opentelemetry.api.trace.SpanContext
+import io.opentelemetry.sdk.resources.Resource
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 /**
  * LDObserve is the singleton entry point for recording observability data such as
@@ -91,6 +106,91 @@ class LDObserve(private val client: Observe) : Observe {
             observabilityClient = client
             delegate = LDObserve(client)
         }
+
+        @Volatile
+        private var sessionReplayPlugin: SessionReplay? = null
+
+        /**
+         * Standalone initialization that sets up observability (and optionally session replay)
+         * without requiring [com.launchdarkly.sdk.android.LDClient].
+         *
+         * Use this when you want observability and/or session replay to run independently of the
+         * LaunchDarkly feature-flag SDK.
+         *
+         * @param application The Android [Application] instance.
+         * @param mobileKey   The LaunchDarkly mobile key used for authentication.
+         * @param ldContext    The [LDContext] identifying the current user/context.
+         * @param options      Configuration for observability telemetry.
+         * @param replayOptions Optional configuration for session replay. Pass `null` (the default)
+         *                      to skip session replay initialization.
+         */
+        fun init(
+            application: Application,
+            mobileKey: String,
+            ldContext: LDContext,
+            options: ObservabilityOptions = ObservabilityOptions(),
+            replayOptions: ReplayOptions? = null
+        ) {
+            val actualLogAdapter = Logs.level(
+                options.logAdapter,
+                if (options.debug) LDLogLevel.DEBUG else LDLogLevel.INFO
+            )
+            val logger = LDLogger.withAdapter(actualLogAdapter, options.loggerName)
+
+            val obsContext = ObservabilityContext(
+                sdkKey = mobileKey,
+                options = options,
+                application = application,
+                logger = logger
+            )
+            context = obsContext
+
+            val resource = buildResource(mobileKey, options)
+            obsContext.resourceAttributes = resource.attributes
+
+            val service = ObservabilityService(
+                application, mobileKey, resource, logger, options,
+            )
+            obsContext.sessionManager = service.sessionManager
+            init(service)
+
+            if (replayOptions != null) {
+                val plugin = SessionReplay(replayOptions)
+                sessionReplayPlugin = plugin
+                plugin.register()
+                plugin.sessionReplayService?.initialize()
+                if (replayOptions.enabled && ldContext != null) {
+                    plugin.sessionReplayService?.let { replayService ->
+                        CoroutineScope(Dispatchers.Default + SupervisorJob()).launch {
+                            replayService.identifySession(ldContext)
+                        }
+                    }
+                }
+            }
+        }
+
+        private fun buildResource(sdkKey: String, options: ObservabilityOptions): Resource {
+            val attributes = Attributes.builder()
+            Resource.getDefault().attributes.forEach { key, value ->
+                if (key.key != "service.name") {
+                    @Suppress("UNCHECKED_CAST")
+                    attributes.put(key as AttributeKey<Any>, value)
+                }
+            }
+            attributes.put("highlight.project_id", sdkKey)
+            attributes.put(
+                AttributeKey.stringKey("telemetry.distro.name"),
+                SDK_NAME
+            )
+            attributes.put(
+                AttributeKey.stringKey("telemetry.distro.version"),
+                BuildConfig.OBSERVABILITY_SDK_VERSION
+            )
+            attributes.putAll(options.resourceAttributes)
+            return Resource.create(attributes.build())
+        }
+
+        private const val SDK_NAME = "launchdarkly-observability-android"
 
         override fun recordMetric(metric: Metric) = delegate.recordMetric(metric)
         override fun recordCount(metric: Metric) = delegate.recordCount(metric)

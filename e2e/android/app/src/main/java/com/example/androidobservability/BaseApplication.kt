@@ -9,16 +9,17 @@ import com.launchdarkly.observability.replay.PrivacyProfile
 import com.launchdarkly.observability.replay.ReplayOptions
 import com.launchdarkly.observability.replay.plugin.SessionReplay
 import com.launchdarkly.observability.replay.view
+import com.launchdarkly.observability.sdk.LDObserve
+import com.launchdarkly.observability.sdk.LDReplay
 import com.launchdarkly.sdk.ContextKind
 import com.launchdarkly.sdk.LDContext
 import com.launchdarkly.sdk.android.Components
+import com.launchdarkly.sdk.android.FeatureFlagChangeListener
 import com.launchdarkly.sdk.android.LDAndroidLogging
 import com.launchdarkly.sdk.android.LDClient
 import com.launchdarkly.sdk.android.LDConfig
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
-import com.launchdarkly.observability.sdk.LDReplay
-import com.launchdarkly.sdk.android.FeatureFlagChangeListener
 
 open class BaseApplication : Application() {
 
@@ -41,18 +42,38 @@ open class BaseApplication : Application() {
         logAdapter = LDAndroidLogging.adapter(),
     )
 
+    val sessionReplayPlugin = SessionReplay(
+        options = ReplayOptions(
+            enabled = false,
+            privacyProfile = PrivacyProfile(
+                maskText = false,
+                maskWebViews = true,
+                maskViews = listOf(
+                    view(ImageView::class.java),
+                ),
+                maskXMLViewIds = listOf("smoothieTitle")
+            )
+        )
+    )
+
     var testUrl: String? = null
 
     open fun realInit() {
-        val observabilityPlugin = Observability(
+        val effectiveOptions = testUrl?.let {
+            observabilityOptions.copy(backendUrl = it, otlpEndpoint = it)
+        } ?: observabilityOptions
+
+        val context = LDContext.builder(ContextKind.DEFAULT, "example-user-key")
+            .anonymous(true)
+            .build()
+
+        LDObserve.init(
             application = this@BaseApplication,
             mobileKey = LAUNCHDARKLY_MOBILE_KEY,
-            options = testUrl?.let { observabilityOptions.copy(backendUrl = it, otlpEndpoint = it) } ?: observabilityOptions
-        )
-
-        val sessionReplayPlugin = SessionReplay(
-            options = ReplayOptions(
-                enabled = false,
+            ldContext = context,
+            options = effectiveOptions,
+            replayOptions = ReplayOptions(
+                enabled = true,
                 privacyProfile = PrivacyProfile(
                     maskText = false,
                     maskWebViews = true,
@@ -63,6 +84,18 @@ open class BaseApplication : Application() {
                 )
             )
         )
+
+        //LDReplay.start()
+    }
+
+    open fun realFlagInit() {
+        val observabilityPlugin = Observability(
+            application = this@BaseApplication,
+            mobileKey = LAUNCHDARKLY_MOBILE_KEY,
+            options = testUrl?.let { observabilityOptions.copy(backendUrl = it, otlpEndpoint = it) } ?: observabilityOptions
+        )
+
+
 
         // Set LAUNCHDARKLY_MOBILE_KEY to your LaunchDarkly mobile key found on the LaunchDarkly
         // dashboard in the start guide.

@@ -21,7 +21,7 @@ allprojects {
 }
 
 dependencies {
-    implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.11.0")
+    implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.11.1")
     implementation("com.jakewharton.timber:timber:5.0.1")
 
     // AndroidX
