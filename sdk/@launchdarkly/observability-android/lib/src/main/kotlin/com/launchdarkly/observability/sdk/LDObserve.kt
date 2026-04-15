@@ -153,7 +153,7 @@ class LDObserve(private val client: Observe) : Observe {
                 sessionReplayPlugin = plugin
                 plugin.register()
                 plugin.sessionReplayService?.initialize()
-                if (replayOptions.enabled && ldContext != null) {
+                if (replayOptions.enabled) {
                     plugin.sessionReplayService?.let { replayService ->
                         CoroutineScope(Dispatchers.Default + SupervisorJob()).launch {
                             replayService.identifySession(ldContext)
