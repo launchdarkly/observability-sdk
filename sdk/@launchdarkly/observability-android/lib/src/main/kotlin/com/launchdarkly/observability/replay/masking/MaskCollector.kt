@@ -3,7 +3,7 @@ package com.launchdarkly.observability.replay.masking
 import android.graphics.Matrix
 import android.view.View
 import android.view.ViewGroup
-import com.launchdarkly.observability.devlog.ObserveLogger
+import com.launchdarkly.observability.context.ObserveLogger
 import kotlin.collections.plusAssign
 import com.launchdarkly.observability.replay.utils.locationOnScreen
 

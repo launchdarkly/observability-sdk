@@ -2,7 +2,7 @@ package com.launchdarkly.observability.client
 
 import android.app.Application
 import com.launchdarkly.observability.api.ObservabilityOptions
-import com.launchdarkly.observability.devlog.ObserveLogger
+import com.launchdarkly.observability.context.ObserveLogger
 import io.opentelemetry.android.session.SessionManager
 import io.opentelemetry.api.common.Attributes
 

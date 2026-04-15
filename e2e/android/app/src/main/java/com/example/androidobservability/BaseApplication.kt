@@ -9,7 +9,7 @@ import com.launchdarkly.observability.replay.PrivacyProfile
 import com.launchdarkly.observability.replay.ReplayOptions
 import com.launchdarkly.observability.replay.plugin.SessionReplay
 import com.launchdarkly.observability.replay.view
-import com.launchdarkly.observability.devlog.LDObserveContext
+import com.launchdarkly.observability.context.LDObserveContext
 import com.launchdarkly.observability.sdk.LDObserve
 import com.launchdarkly.observability.sdk.LDReplay
 import com.launchdarkly.sdk.ContextKind

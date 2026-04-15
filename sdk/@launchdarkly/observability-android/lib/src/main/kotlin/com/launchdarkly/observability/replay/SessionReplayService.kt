@@ -4,7 +4,7 @@ import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
-import com.launchdarkly.observability.devlog.ObserveLogger
+import com.launchdarkly.observability.context.ObserveLogger
 import com.launchdarkly.observability.client.ObservabilityContext
 import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
 import com.launchdarkly.observability.replay.capture.CaptureManager
@@ -14,7 +14,7 @@ import com.launchdarkly.observability.replay.exporter.InteractionItemPayload
 import com.launchdarkly.observability.replay.exporter.SessionReplayExporter
 import com.launchdarkly.observability.replay.transport.BatchWorker
 import com.launchdarkly.observability.replay.transport.EventQueue
-import com.launchdarkly.observability.devlog.LDObserveContext
+import com.launchdarkly.observability.context.LDObserveContext
 import com.launchdarkly.observability.sdk.SessionReplayServicing
 import io.opentelemetry.android.session.SessionManager
 import kotlinx.coroutines.CoroutineScope

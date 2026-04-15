@@ -3,8 +3,8 @@ package com.launchdarkly.observability.sdk
 import android.app.Application
 import com.launchdarkly.observability.BuildConfig
 import com.launchdarkly.observability.api.ObservabilityOptions
-import com.launchdarkly.observability.devlog.LDObserveContext
-import com.launchdarkly.observability.devlog.ObserveLogger
+import com.launchdarkly.observability.context.LDObserveContext
+import com.launchdarkly.observability.context.ObserveLogger
 import com.launchdarkly.observability.bridge.AttributeConverter
 import com.launchdarkly.observability.client.ObservabilityContext
 import com.launchdarkly.observability.client.ObservabilityService

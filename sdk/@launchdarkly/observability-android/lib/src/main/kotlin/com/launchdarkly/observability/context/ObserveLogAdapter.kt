@@ -1,4 +1,4 @@
-package com.launchdarkly.observability.devlog
+package com.launchdarkly.observability.context
 
 /**
  * Logging adapter interface for the Observability SDK.

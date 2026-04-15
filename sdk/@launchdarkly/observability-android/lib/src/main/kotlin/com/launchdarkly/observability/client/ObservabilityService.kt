@@ -1,7 +1,7 @@
 package com.launchdarkly.observability.client
 
 import android.app.Application
-import com.launchdarkly.observability.devlog.ObserveLogger
+import com.launchdarkly.observability.context.ObserveLogger
 import com.launchdarkly.observability.api.ObservabilityOptions
 import com.launchdarkly.observability.bridge.emitLog
 import com.launchdarkly.observability.coroutines.DispatcherProviderHolder

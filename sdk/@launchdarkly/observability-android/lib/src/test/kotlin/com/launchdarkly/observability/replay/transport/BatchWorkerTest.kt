@@ -1,7 +1,7 @@
 package com.launchdarkly.observability.replay.transport
 
 import android.os.SystemClock
-import com.launchdarkly.observability.devlog.ObserveLogger
+import com.launchdarkly.observability.context.ObserveLogger
 import com.launchdarkly.observability.coroutines.DispatcherProvider
 import io.mockk.every
 import io.mockk.mockk

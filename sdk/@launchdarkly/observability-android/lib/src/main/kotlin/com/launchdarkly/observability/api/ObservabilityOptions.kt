@@ -2,8 +2,8 @@ package com.launchdarkly.observability.api
 
 import com.launchdarkly.observability.BuildConfig
 import com.launchdarkly.observability.client.TelemetryInspector
-import com.launchdarkly.observability.devlog.LDObserveLogging
-import com.launchdarkly.observability.devlog.ObserveLogAdapter
+import com.launchdarkly.observability.context.LDObserveLogging
+import com.launchdarkly.observability.context.ObserveLogAdapter
 import io.opentelemetry.api.common.Attributes
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes

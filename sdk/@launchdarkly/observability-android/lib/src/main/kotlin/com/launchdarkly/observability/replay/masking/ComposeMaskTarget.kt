@@ -14,7 +14,7 @@ import androidx.compose.ui.semantics.getOrNull
 import com.launchdarkly.observability.api.LdMaskSemanticsKey
 import androidx.compose.ui.geometry.Rect as MaskRect
 import androidx.core.view.isNotEmpty
-import com.launchdarkly.observability.devlog.ObserveLogger
+import com.launchdarkly.observability.context.ObserveLogger
 
 /**
  * Compose target with a non-null [SemanticsConfiguration].

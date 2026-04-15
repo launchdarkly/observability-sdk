@@ -1,6 +1,6 @@
 package com.launchdarkly.observability.replay.capture
 
-import com.launchdarkly.observability.devlog.ObserveLogger
+import com.launchdarkly.observability.context.ObserveLogger
 import com.launchdarkly.observability.replay.ReplayOptions
 import io.opentelemetry.android.session.SessionManager
 import kotlinx.coroutines.flow.MutableSharedFlow

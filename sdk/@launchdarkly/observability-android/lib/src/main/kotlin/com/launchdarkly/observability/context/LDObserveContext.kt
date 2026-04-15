@@ -1,4 +1,4 @@
-package com.launchdarkly.observability.devlog
+package com.launchdarkly.observability.context
 
 /**
  * Lightweight context representation for the Observability SDK, independent of

@@ -1,4 +1,4 @@
-package com.launchdarkly.observability.devlog
+package com.launchdarkly.observability.context
 
 import android.util.Log
 

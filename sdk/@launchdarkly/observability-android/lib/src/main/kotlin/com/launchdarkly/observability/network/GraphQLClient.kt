@@ -1,6 +1,6 @@
 package com.launchdarkly.observability.network
 
-import com.launchdarkly.observability.devlog.ObserveLogger
+import com.launchdarkly.observability.context.ObserveLogger
 import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.KSerializer

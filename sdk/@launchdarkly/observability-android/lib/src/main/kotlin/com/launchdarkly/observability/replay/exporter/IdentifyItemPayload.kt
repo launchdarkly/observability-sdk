@@ -1,6 +1,6 @@
 package com.launchdarkly.observability.replay.exporter
 
-import com.launchdarkly.observability.devlog.LDObserveContext
+import com.launchdarkly.observability.context.LDObserveContext
 import com.launchdarkly.observability.replay.transport.EventExporting
 import com.launchdarkly.observability.replay.transport.EventQueueItemPayload
 import io.opentelemetry.api.common.AttributeKey

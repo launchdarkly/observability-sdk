@@ -8,7 +8,7 @@ import com.launchdarkly.observability.bridge.AttributeConverter
 import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.observability.sdk.LDObserve
 import com.launchdarkly.observability.sdk.LDReplay
-import com.launchdarkly.observability.devlog.LDObserveContext
+import com.launchdarkly.observability.context.LDObserveContext
 import io.opentelemetry.api.common.Attributes
 
 public class ObservabilityBridge(

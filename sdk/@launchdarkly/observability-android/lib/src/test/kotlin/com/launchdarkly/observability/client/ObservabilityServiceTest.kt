@@ -1,6 +1,6 @@
 package com.launchdarkly.observability.client
 
-import com.launchdarkly.observability.devlog.ObserveLogger
+import com.launchdarkly.observability.context.ObserveLogger
 import com.launchdarkly.observability.api.ObservabilityOptions
 import com.launchdarkly.observability.sampling.ExportSampler
 import io.mockk.mockk

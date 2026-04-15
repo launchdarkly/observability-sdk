@@ -1,6 +1,6 @@
 package com.launchdarkly.observability.replay.exporter
 
-import com.launchdarkly.observability.devlog.ObserveLogger
+import com.launchdarkly.observability.context.ObserveLogger
 import com.launchdarkly.observability.network.GraphQLClient
 import com.launchdarkly.observability.replay.Event
 import com.launchdarkly.observability.replay.capture.ExportFrame

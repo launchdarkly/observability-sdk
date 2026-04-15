@@ -9,7 +9,7 @@ import android.os.Build
 import android.view.View
 import android.view.Window
 import android.view.WindowManager
-import com.launchdarkly.observability.devlog.ObserveLogger
+import com.launchdarkly.observability.context.ObserveLogger
 import com.launchdarkly.observability.replay.utils.locationOnScreen
 import kotlin.jvm.javaClass
 
