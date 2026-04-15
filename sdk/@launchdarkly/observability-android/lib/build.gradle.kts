@@ -20,15 +20,13 @@ allprojects {
     }
 }
 
-val isIncludedBuild = gradle.parent != null
+val isIncludedByMaui = gradle.parent?.rootProject?.name == "LDObserve"
 
 dependencies {
-    if (isIncludedBuild) {
-        // MAUI / dotnet composite build — LDClient is not bundled at runtime
+    if (isIncludedByMaui) {
         compileOnly("com.launchdarkly:launchdarkly-android-client-sdk:5.11.1")
         testImplementation("com.launchdarkly:launchdarkly-android-client-sdk:5.11.1")
     } else {
-        // Standalone Android build — LDClient is a regular dependency
         implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.11.1")
     }
 
