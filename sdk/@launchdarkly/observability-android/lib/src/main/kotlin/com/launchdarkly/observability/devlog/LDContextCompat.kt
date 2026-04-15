@@ -15,5 +15,9 @@ fun LDContext.toLDObserveContext(): LDObserveContext {
         }
         return LDObserveContext.createMulti(*subs.toTypedArray())
     }
-    return LDObserveContext.create(kind.toString(), key)
+    val builder = LDObserveContext.builder(kind.toString(), key)
+        .anonymous(isAnonymous)
+    val n = getName()
+    if (n != null) builder.name(n)
+    return builder.build()
 }
