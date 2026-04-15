@@ -14,7 +14,7 @@ import androidx.compose.ui.semantics.getOrNull
 import com.launchdarkly.observability.api.LdMaskSemanticsKey
 import androidx.compose.ui.geometry.Rect as MaskRect
 import androidx.core.view.isNotEmpty
-import com.launchdarkly.logging.LDLogger
+import com.launchdarkly.observability.devlog.ObserveLogger
 
 /**
  * Compose target with a non-null [SemanticsConfiguration].
@@ -26,7 +26,7 @@ data class ComposeMaskTarget(
     val boundsInWindow: MaskRect,
 ) : MaskTarget {
     companion object {
-        fun from(composeView: AbstractComposeView, logger: LDLogger): ComposeMaskTarget? {
+        fun from(composeView: AbstractComposeView, logger: ObserveLogger): ComposeMaskTarget? {
             val root = getRootSemanticsNode(composeView, logger) ?: return null
             return ComposeMaskTarget(
                 view = composeView,
@@ -40,7 +40,7 @@ data class ComposeMaskTarget(
          * Gets the SemanticsOwner from a ComposeView using reflection. This is necessary because
          * AndroidComposeView and semanticsOwner are not publicly exposed.
          */
-        private fun getRootSemanticsNode(composeView: AbstractComposeView, logger: LDLogger): SemanticsNode? {
+        private fun getRootSemanticsNode(composeView: AbstractComposeView, logger: ObserveLogger): SemanticsNode? {
             return try {
                 if (composeView.isNotEmpty()) {
                     val androidComposeView = composeView.getChildAt(0)

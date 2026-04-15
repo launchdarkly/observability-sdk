@@ -1,6 +1,6 @@
 package com.launchdarkly.observability.network
 
-import com.launchdarkly.logging.LDLogger
+import com.launchdarkly.observability.devlog.ObserveLogger
 import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.KSerializer
@@ -48,7 +48,7 @@ interface UrlConnectionProvider {
 class GraphQLClient(
     val endpoint: String,
     val headers: Map<String, String> = emptyMap(),
-    private val logger: LDLogger,
+    private val logger: ObserveLogger,
     private val json: Json = Json {
         isLenient = true
         ignoreUnknownKeys = true

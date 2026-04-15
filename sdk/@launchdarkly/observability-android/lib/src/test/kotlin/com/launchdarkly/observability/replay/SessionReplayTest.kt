@@ -1,9 +1,9 @@
 package com.launchdarkly.observability.replay
 
-import com.launchdarkly.logging.LDLogger
+import com.launchdarkly.observability.devlog.ObserveLogger
 import com.launchdarkly.observability.api.ObservabilityOptions
 import com.launchdarkly.observability.client.ObservabilityContext
-import com.launchdarkly.observability.replay.plugin.SessionReplay
+import com.launchdarkly.observability.replay.plugin.SessionReplayImpl
 import com.launchdarkly.observability.sdk.LDObserve
 import com.launchdarkly.observability.sdk.LDReplay
 import io.mockk.mockk
@@ -36,9 +36,9 @@ class SessionReplayTest {
             sdkKey = "test-sdk-key",
             options = ObservabilityOptions(),
             application = mockk(),
-            logger = mockk<LDLogger>(relaxed = true),
+            logger = mockk<ObserveLogger>(relaxed = true),
         )
-        val sessionReplay = SessionReplay()
+        val sessionReplay = SessionReplayImpl()
 
         sessionReplay.register()
 
@@ -49,7 +49,7 @@ class SessionReplayTest {
 
     @Test
     fun `register does nothing when observability is not initialized`() {
-        val sessionReplay = SessionReplay()
+        val sessionReplay = SessionReplayImpl()
         sessionReplay.register()
 
         assertNull(sessionReplay.sessionReplayService)

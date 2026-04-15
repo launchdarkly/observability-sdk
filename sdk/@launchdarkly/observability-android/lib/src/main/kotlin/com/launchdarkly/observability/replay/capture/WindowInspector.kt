@@ -9,11 +9,11 @@ import android.os.Build
 import android.view.View
 import android.view.Window
 import android.view.WindowManager
-import com.launchdarkly.logging.LDLogger
+import com.launchdarkly.observability.devlog.ObserveLogger
 import com.launchdarkly.observability.replay.utils.locationOnScreen
 import kotlin.jvm.javaClass
 
-class WindowInspector(private val logger: LDLogger) {
+class WindowInspector(private val logger: ObserveLogger) {
 
     fun appWindows(appContext: Context? = null): List<WindowEntry> {
         val appUid = appContext?.applicationInfo?.uid

@@ -4,14 +4,14 @@ import android.app.Application
 import com.launchdarkly.observability.BuildConfig
 import com.launchdarkly.observability.api.ObservabilityOptions
 import com.launchdarkly.observability.devlog.LDObserveContext
-import com.launchdarkly.observability.devlog.buildLDLogger
+import com.launchdarkly.observability.devlog.ObserveLogger
 import com.launchdarkly.observability.bridge.AttributeConverter
 import com.launchdarkly.observability.client.ObservabilityContext
 import com.launchdarkly.observability.client.ObservabilityService
 import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.observability.interfaces.Observe
 import com.launchdarkly.observability.replay.ReplayOptions
-import com.launchdarkly.observability.replay.plugin.SessionReplay
+import com.launchdarkly.observability.replay.plugin.SessionReplayImpl
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Severity
@@ -106,7 +106,7 @@ class LDObserve(private val client: Observe) : Observe {
         }
 
         @Volatile
-        private var sessionReplayPlugin: SessionReplay? = null
+        private var sessionReplayPlugin: SessionReplayImpl? = null
 
         /**
          * Standalone initialization that sets up observability (and optionally session replay)
@@ -129,7 +129,7 @@ class LDObserve(private val client: Observe) : Observe {
             options: ObservabilityOptions = ObservabilityOptions(),
             replayOptions: ReplayOptions? = null
         ) {
-            val logger = buildLDLogger(options.logAdapter, options.loggerName, options.debug)
+            val logger = ObserveLogger.build(options.logAdapter, options.loggerName, options.debug)
 
             val obsContext = ObservabilityContext(
                 sdkKey = mobileKey,
@@ -149,7 +149,7 @@ class LDObserve(private val client: Observe) : Observe {
             init(service)
 
             if (replayOptions != null) {
-                val plugin = SessionReplay(replayOptions)
+                val plugin = SessionReplayImpl(replayOptions)
                 sessionReplayPlugin = plugin
                 plugin.register()
                 plugin.sessionReplayService?.initialize()

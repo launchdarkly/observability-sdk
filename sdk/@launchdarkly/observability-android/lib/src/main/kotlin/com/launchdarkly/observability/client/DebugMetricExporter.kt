@@ -1,6 +1,6 @@
 package com.launchdarkly.observability.client
 
-import com.launchdarkly.logging.LDLogger
+import com.launchdarkly.observability.devlog.ObserveLogger
 import io.opentelemetry.sdk.common.CompletableResultCode
 import io.opentelemetry.sdk.metrics.InstrumentType
 import io.opentelemetry.sdk.metrics.data.AggregationTemporality
@@ -8,7 +8,7 @@ import io.opentelemetry.sdk.metrics.data.MetricData
 import io.opentelemetry.sdk.metrics.export.AggregationTemporalitySelector
 import io.opentelemetry.sdk.metrics.export.MetricExporter
 
-class DebugMetricExporter(private val logger: LDLogger): MetricExporter {
+class DebugMetricExporter(private val logger: ObserveLogger): MetricExporter {
 
     override fun export(metrics: Collection<MetricData?>): CompletableResultCode? {
         for (metric in metrics) {

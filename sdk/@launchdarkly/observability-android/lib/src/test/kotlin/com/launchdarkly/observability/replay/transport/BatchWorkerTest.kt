@@ -1,7 +1,7 @@
 package com.launchdarkly.observability.replay.transport
 
 import android.os.SystemClock
-import com.launchdarkly.logging.LDLogger
+import com.launchdarkly.observability.devlog.ObserveLogger
 import com.launchdarkly.observability.coroutines.DispatcherProvider
 import io.mockk.every
 import io.mockk.mockk
@@ -27,7 +27,7 @@ class BatchWorkerTest {
 
         val dispatcher = StandardTestDispatcher(testScheduler)
         val dispatcherProvider = TestDispatcherProvider(dispatcher)
-        val logger = mockk<LDLogger>(relaxed = true)
+        val logger = mockk<ObserveLogger>(relaxed = true)
         val eventQueue = EventQueue()
 
         val worker = BatchWorker(eventQueue, logger, dispatcherProvider)
@@ -54,7 +54,7 @@ class BatchWorkerTest {
 
         val dispatcher = StandardTestDispatcher(testScheduler)
         val dispatcherProvider = TestDispatcherProvider(dispatcher)
-        val logger = mockk<LDLogger>(relaxed = true)
+        val logger = mockk<ObserveLogger>(relaxed = true)
         val eventQueue = EventQueue()
         val worker = BatchWorker(eventQueue, logger, dispatcherProvider)
 
@@ -85,7 +85,7 @@ class BatchWorkerTest {
 
         val dispatcher = StandardTestDispatcher(testScheduler)
         val dispatcherProvider = TestDispatcherProvider(dispatcher)
-        val logger = mockk<LDLogger>(relaxed = true)
+        val logger = mockk<ObserveLogger>(relaxed = true)
         val eventQueue = EventQueue()
         val worker = BatchWorker(eventQueue, logger, dispatcherProvider)
 

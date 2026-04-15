@@ -1,11 +1,11 @@
 package com.launchdarkly.observability.client
 
-import com.launchdarkly.logging.LDLogger
+import com.launchdarkly.observability.devlog.ObserveLogger
 import io.opentelemetry.sdk.common.CompletableResultCode
 import io.opentelemetry.sdk.trace.data.SpanData
 import io.opentelemetry.sdk.trace.export.SpanExporter
 
-class DebugSpanExporter(private val logger: LDLogger) : SpanExporter {
+class DebugSpanExporter(private val logger: ObserveLogger) : SpanExporter {
 
     override fun export(spans: Collection<SpanData>): CompletableResultCode {
         for (span in spans) {

@@ -1,14 +1,13 @@
 package com.launchdarkly.observability.plugin
 
 import android.app.Application
-import com.launchdarkly.logging.LDLogger
+import com.launchdarkly.observability.devlog.ObserveLogger
 import com.launchdarkly.observability.BuildConfig
 import com.launchdarkly.observability.api.ObservabilityOptions
 import com.launchdarkly.observability.client.ObservabilityService
 import com.launchdarkly.observability.client.ObservabilityContext
 import com.launchdarkly.observability.client.TelemetryInspector
 import com.launchdarkly.observability.sdk.LDObserve
-import com.launchdarkly.observability.devlog.buildLDLogger
 import com.launchdarkly.sdk.android.LDClient
 import com.launchdarkly.sdk.android.integrations.EnvironmentMetadata
 import com.launchdarkly.sdk.android.integrations.Hook
@@ -59,13 +58,13 @@ class Observability(
         "telemetry.distro.name" to SDK_NAME,
         "telemetry.distro.version" to BuildConfig.OBSERVABILITY_SDK_VERSION
     )
-    private val logger: LDLogger
+    private val logger: ObserveLogger
     private val observabilityHook = ObservabilityHook()
     private var observabilityClient: ObservabilityService? = null
     private var client: LDClient? = null
 
     init {
-        logger = buildLDLogger(options.logAdapter, options.loggerName, options.debug)
+        logger = ObserveLogger.build(options.logAdapter, options.loggerName, options.debug)
     }
 
     override fun getMetadata(): PluginMetadata {

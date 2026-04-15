@@ -4,7 +4,7 @@ import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
-import com.launchdarkly.logging.LDLogger
+import com.launchdarkly.observability.devlog.ObserveLogger
 import com.launchdarkly.observability.client.ObservabilityContext
 import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
 import com.launchdarkly.observability.replay.capture.CaptureManager
@@ -63,7 +63,7 @@ class SessionReplayService(
 ) : SessionReplayServicing {
 
     private lateinit var sessionManager: SessionManager
-    private val logger: LDLogger = observabilityContext.logger
+    private val logger: ObserveLogger = observabilityContext.logger
     private val eventQueue = EventQueue()
     private val batchWorker = BatchWorker(eventQueue, logger)
     private var captureManager: CaptureManager? = null
