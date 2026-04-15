@@ -9,6 +9,7 @@ import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.observability.sdk.LDObserve
 import com.launchdarkly.observability.sdk.LDReplay
 import com.launchdarkly.observability.devlog.LDObserveContext
+import io.opentelemetry.api.common.Attributes
 
 public class ObservabilityBridge(
     private val logger: BridgeLogger = SystemOutBridgeLogger()
@@ -58,7 +59,12 @@ public class ObservabilityBridge(
         logger.info("LD:ObservabilityBridge start called, ver$observabilityVersion")
 
         val resourceAttributes = try {
-            AttributeConverter.convert(observability.attributes)
+            val converted = AttributeConverter.convert(observability.attributes)
+            Attributes.builder()
+                .putAll(converted)
+                .put("telemetry.distro.name", MAUI_DISTRO_NAME)
+                .put("telemetry.distro.version", observabilityVersion)
+                .build()
         } catch (t: Throwable) {
             printException("LD:resourceAttributes failed to build resourceAttributes", t)
             throw t
@@ -126,6 +132,10 @@ public class ObservabilityBridge(
             printException("LD:ObservabilityBridge LDObserve.init failed", t)
             throw t
         }
+    }
+
+    companion object {
+        private const val MAUI_DISTRO_NAME = "observability-maui-android"
     }
 
     private fun printException(prefix: String, t: Throwable) {
