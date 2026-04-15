@@ -20,10 +20,17 @@ allprojects {
     }
 }
 
-dependencies {
-    compileOnly("com.launchdarkly:launchdarkly-android-client-sdk:5.11.1")
+val isIncludedBuild = gradle.parent != null
 
-    testImplementation("com.launchdarkly:launchdarkly-android-client-sdk:5.11.1")
+dependencies {
+    if (isIncludedBuild) {
+        // MAUI / dotnet composite build — LDClient is not bundled at runtime
+        compileOnly("com.launchdarkly:launchdarkly-android-client-sdk:5.11.1")
+        testImplementation("com.launchdarkly:launchdarkly-android-client-sdk:5.11.1")
+    } else {
+        // Standalone Android build — LDClient is a regular dependency
+        implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.11.1")
+    }
 
     // AndroidX
     // This only used by Session Replay.
