@@ -270,7 +270,8 @@ class SessionReplayService(
 
     suspend fun identifySession(
         ldContext: LDObserveContext,
-        timestamp: Long = System.currentTimeMillis()
+        timestamp: Long = System.currentTimeMillis(),
+        canonicalKeyOverride: String? = null
     ) {
         if (!this::sessionManager.isInitialized || exporter == null) {
             logger.warn("identifySession called before SessionReplayService was installed; skipping.")
@@ -283,7 +284,8 @@ class SessionReplayService(
             resourceAttributes = observabilityContext.resourceAttributes,
             ldContext = ldContext,
             timestamp = timestamp,
-            sessionId = sessionId
+            sessionId = sessionId,
+            canonicalKeyOverride = canonicalKeyOverride
         )
 
         // When replay is disabled, cache the identify payload for later session init without sending it now.
@@ -308,7 +310,7 @@ class SessionReplayService(
 
         val observeContext = buildObserveContext(contextKeys)
         instrumentationScope.launch {
-            identifySession(observeContext)
+            identifySession(observeContext, canonicalKeyOverride = canonicalKey)
         }
     }
 

@@ -36,14 +36,17 @@ class LDObserveContext private constructor(
         contexts?.get(index) ?: throw IndexOutOfBoundsException("Not a multi-kind context")
 
     /**
-     * Returns the fully qualified key. For a single context this is just [key];
-     * for a multi context it joins all sub-context keys in `kind:key` form.
+     * Returns the fully qualified key, matching `LDContext` semantics:
+     * - Single "user" context: just [key]
+     * - Single non-"user" context: `kind:key`
+     * - Multi context: sub-context keys sorted by kind, joined as `kind:key`
      */
     val fullyQualifiedKey: String
-        get() = if (isMultiple) {
-            contexts!!.joinToString(":") { "${it.kind}:${it.key}" }
-        } else {
-            key
+        get() = when {
+            isMultiple -> contexts!!.sortedBy { it.kind }
+                .joinToString(":") { "${it.kind}:${it.key}" }
+            kind == DEFAULT_KIND -> key
+            else -> "$kind:$key"
         }
 
     override fun toString(): String =

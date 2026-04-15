@@ -39,7 +39,8 @@ data class IdentifyItemPayload(
             resourceAttributes: Attributes,
             ldContext: LDObserveContext? = null,
             timestamp: Long = System.currentTimeMillis(),
-            sessionId: String?
+            sessionId: String?,
+            canonicalKeyOverride: String? = null
         ): IdentifyItemPayload {
             val attributes: MutableMap<String, String> = mutableMapOf()
 
@@ -65,7 +66,7 @@ data class IdentifyItemPayload(
                 }
             }
 
-            val canonicalKey = ldContext?.fullyQualifiedKey ?: "unknown"
+            val canonicalKey = canonicalKeyOverride ?: ldContext?.fullyQualifiedKey ?: "unknown"
             attributes["key"] = contextFriendlyName ?: canonicalKey
             attributes["canonicalKey"] = canonicalKey
 
