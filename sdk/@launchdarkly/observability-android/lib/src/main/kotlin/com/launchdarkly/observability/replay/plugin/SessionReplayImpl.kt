@@ -19,14 +19,12 @@ class SessionReplayImpl(
     var sessionReplayService: SessionReplayService? = null
 
     fun register() {
-        val context = LDObserve.context ?: run {
-            logger.warning("Observability is not initialized; skipping SessionReplay registration.")
-            return
+        val context = checkNotNull(LDObserve.context) {
+            "Observability is not initialized; cannot register SessionReplay."
         }
 
-        if (LDReplay.client != null) {
-            logger.warning("Session Replay instance already exists; skipping.")
-            return
+        check(LDReplay.client == null) {
+            "Session Replay instance already exists; cannot register again."
         }
 
         val service = SessionReplayService(options, context)
@@ -35,7 +33,10 @@ class SessionReplayImpl(
     }
 
     fun initialize() {
-        sessionReplayService?.initialize()
+        val service = checkNotNull(sessionReplayService) {
+            "SessionReplayService is not registered; call register() before initialize()."
+        }
+        service.initialize()
     }
 
     companion object {

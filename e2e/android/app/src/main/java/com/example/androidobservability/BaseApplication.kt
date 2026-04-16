@@ -58,43 +58,11 @@ open class BaseApplication : Application() {
     var testUrl: String? = null
 
     open fun realInit() {
-        val effectiveOptions = testUrl?.let {
-            observabilityOptions.copy(backendUrl = it, otlpEndpoint = it)
-        } ?: observabilityOptions
-
-        val context = LDObserveContext.builder(LDObserveContext.DEFAULT_KIND, "example-user-key")
-            .anonymous(true)
-            .build()
-
-        LDObserve.init(
-            application = this@BaseApplication,
-            mobileKey = LAUNCHDARKLY_MOBILE_KEY,
-            ldContext = context,
-            options = effectiveOptions,
-            replayOptions = ReplayOptions(
-                enabled = true,
-                privacyProfile = PrivacyProfile(
-                    maskText = false,
-                    maskWebViews = true,
-                    maskViews = listOf(
-                        view(ImageView::class.java),
-                    ),
-                    maskXMLViewIds = listOf("smoothieTitle")
-                )
-            )
-        )
-
-        //LDReplay.start()
-    }
-
-    open fun realFlagInit() {
         val observabilityPlugin = Observability(
             application = this@BaseApplication,
             mobileKey = LAUNCHDARKLY_MOBILE_KEY,
             options = testUrl?.let { observabilityOptions.copy(backendUrl = it, otlpEndpoint = it) } ?: observabilityOptions
         )
-
-
 
         // Set LAUNCHDARKLY_MOBILE_KEY to your LaunchDarkly mobile key found on the LaunchDarkly
         // dashboard in the start guide.
@@ -124,6 +92,36 @@ open class BaseApplication : Application() {
             // intervenes in E2E tests by trigger spans
             flagEvaluation()
         }
+
+        LDReplay.start()
+    }
+
+    open fun realIndependentInit() {
+        val effectiveOptions = testUrl?.let {
+            observabilityOptions.copy(backendUrl = it, otlpEndpoint = it)
+        } ?: observabilityOptions
+
+        val context = LDObserveContext.builder(LDObserveContext.DEFAULT_KIND, "example-user-key")
+            .anonymous(true)
+            .build()
+
+        LDObserve.init(
+            application = this@BaseApplication,
+            mobileKey = LAUNCHDARKLY_MOBILE_KEY,
+            ldContext = context,
+            options = effectiveOptions,
+            replayOptions = ReplayOptions(
+                enabled = false,
+                privacyProfile = PrivacyProfile(
+                    maskText = false,
+                    maskWebViews = true,
+                    maskViews = listOf(
+                        view(ImageView::class.java),
+                    ),
+                    maskXMLViewIds = listOf("smoothieTitle")
+                )
+            )
+        )
 
         LDReplay.start()
     }

@@ -40,11 +40,6 @@ dependencies {
     implementation("androidx.core:core-ktx:1.15.0")
     "copyDependencies"("androidx.core:core-ktx:1.15.0")
 
-    // Copy dependencies for binding library
-    // Uncomment line below and replace dependency.name.goes.here with your dependency
-   // implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.11.0")
-   // "copyDependencies"("com.launchdarkly:launchdarkly-android-client-sdk:5.11.0")
-
     // Intentionally use a non-existent version so this dependency MUST be
     // satisfied by composite-build substitution (settings.gradle.kts).
     // If substitution breaks, the build should fail instead of silently
