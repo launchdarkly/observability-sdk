@@ -38,15 +38,18 @@ class LDObserveContext private constructor(
     /**
      * Returns the fully qualified key, matching `LDContext` semantics:
      * - Single "user" context: just [key]
-     * - Single non-"user" context: `kind:key`
-     * - Multi context: sub-context keys sorted by kind, joined as `kind:key`
+     * - Single non-"user" context: `kind:escapedKey`
+     * - Multi context: sub-context keys sorted by kind, joined as `kind:escapedKey`
+     *
+     * Keys containing `:` or `%` are percent-escaped to avoid ambiguity in the
+     * composite key format, matching `LDContext.getFullyQualifiedKey()` in the Java SDK.
      */
     val fullyQualifiedKey: String
         get() = when {
             isMultiple -> contexts!!.sortedBy { it.kind }
-                .joinToString(":") { it.fullyQualifiedKey }
+                .joinToString(":") { "${it.kind}:${escapeKey(it.key)}" }
             kind == DEFAULT_KIND -> key
-            else -> "$kind:$key"
+            else -> "$kind:${escapeKey(key)}"
         }
 
     override fun toString(): String =
@@ -55,6 +58,9 @@ class LDObserveContext private constructor(
 
     companion object {
         const val DEFAULT_KIND = "user"
+
+        private fun escapeKey(key: String): String =
+            key.replace("%", "%25").replace(":", "%3A")
 
         fun create(kind: String, key: String): LDObserveContext =
             LDObserveContext(kind = kind, key = key)
