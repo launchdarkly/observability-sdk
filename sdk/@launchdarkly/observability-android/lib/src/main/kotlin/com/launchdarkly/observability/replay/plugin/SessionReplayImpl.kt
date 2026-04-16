@@ -4,6 +4,7 @@ import com.launchdarkly.observability.replay.ReplayOptions
 import com.launchdarkly.observability.replay.SessionReplayService
 import com.launchdarkly.observability.sdk.LDObserve
 import com.launchdarkly.observability.sdk.LDReplay
+import java.util.logging.Logger
 
 /**
  * Standalone Session Replay entry point.
@@ -18,12 +19,14 @@ class SessionReplayImpl(
     var sessionReplayService: SessionReplayService? = null
 
     fun register() {
-        val context = checkNotNull(LDObserve.context) {
-            "Observability is not initialized; cannot register SessionReplay."
+        val context = LDObserve.context ?: run {
+            logger.warning("Observability is not initialized; skipping SessionReplay registration.")
+            return
         }
 
-        check(LDReplay.client == null) {
-            "Session Replay instance already exists; cannot register again."
+        if (LDReplay.client != null) {
+            logger.warning("Session Replay instance already exists; skipping.")
+            return
         }
 
         val service = SessionReplayService(options, context)
@@ -40,5 +43,6 @@ class SessionReplayImpl(
 
     companion object {
         const val PLUGIN_NAME = "@launchdarkly/session-replay-android"
+        private val logger = Logger.getLogger("SessionReplay")
     }
 }

@@ -14,7 +14,6 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 
 class SessionReplayTest {
 
@@ -49,19 +48,16 @@ class SessionReplayTest {
     }
 
     @Test
-    fun `register throws when observability is not initialized`() {
+    fun `register does nothing when observability is not initialized`() {
         val sessionReplay = SessionReplayImpl()
-
-        assertThrows<IllegalStateException> {
-            sessionReplay.register()
-        }
+        sessionReplay.register()
 
         assertNull(sessionReplay.sessionReplayService)
         assertNull(LDReplay.client)
     }
 
     @Test
-    fun `register throws when session replay already exists`() {
+    fun `register does nothing when session replay already exists`() {
         LDObserve.context = ObservabilityContext(
             sdkKey = "test-sdk-key",
             options = ObservabilityOptions(),
@@ -71,9 +67,7 @@ class SessionReplayTest {
         LDReplay.client = mockk<SessionReplayService>(relaxed = true)
         val sessionReplay = SessionReplayImpl()
 
-        assertThrows<IllegalStateException> {
-            sessionReplay.register()
-        }
+        sessionReplay.register()
 
         assertNull(sessionReplay.sessionReplayService)
     }
