@@ -4,7 +4,6 @@ import com.launchdarkly.observability.replay.ReplayOptions
 import com.launchdarkly.observability.replay.SessionReplayService
 import com.launchdarkly.observability.sdk.LDObserve
 import com.launchdarkly.observability.sdk.LDReplay
-import java.util.logging.Logger
 
 /**
  * Standalone Session Replay entry point.
@@ -41,6 +40,5 @@ class SessionReplayImpl(
 
     companion object {
         const val PLUGIN_NAME = "@launchdarkly/session-replay-android"
-        private val logger = Logger.getLogger("SessionReplay")
     }
 }
