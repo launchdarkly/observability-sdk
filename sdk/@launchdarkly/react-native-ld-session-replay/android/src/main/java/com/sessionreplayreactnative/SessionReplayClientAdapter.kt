@@ -1,5 +1,6 @@
 package com.sessionreplayreactnative
 
+import android.app.Activity
 import android.app.Application
 import android.os.Handler
 import android.os.Looper
@@ -39,7 +40,7 @@ internal class SessionReplayClientAdapter private constructor() {
         }
     }
 
-    fun start(application: Application, completion: (Boolean, String?) -> Unit) {
+    fun start(application: Application, activity: Activity?, completion: (Boolean, String?) -> Unit) {
         val localMobileKey: String?
         val localServiceName: String
         val localReplayOptions: ReplayOptions?
@@ -70,6 +71,10 @@ internal class SessionReplayClientAdapter private constructor() {
                     return@post
                 }
                 initialized = true
+                // The activity may already be running when the SDK initializes (e.g. React
+                // Native, where JS runs after the activity starts). Hook it now so touch events
+                // are captured without waiting for the next activity lifecycle callback.
+                activity?.let { LDReplay.hookCurrentActivity(it) }
             } else {
                 logger.debug("start: already initialized, re-applying isEnabled={0}", localReplayOptions.enabled)
             }

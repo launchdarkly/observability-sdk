@@ -33,7 +33,7 @@ class SessionReplayReactNativeModule(reactContext: ReactApplicationContext) :
       return
     }
     try {
-      SessionReplayClientAdapter.shared.start(application) { success, errorMessage ->
+      SessionReplayClientAdapter.shared.start(application, currentActivity) { success, errorMessage ->
         if (success) {
           promise.resolve(null)
         } else {
