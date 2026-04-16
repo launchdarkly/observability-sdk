@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import {
   ActionSheetIOS,
   Alert,
@@ -105,6 +105,18 @@ export default function DialogsScreen() {
   // -- Tooltip --
   const tooltipOpacity = useRef(new Animated.Value(0)).current
   const [tooltipVisible, setTooltipVisible] = useState(false)
+
+  // ---------------------------------------------------------------------------
+  // Countdown timer helpers
+  // ---------------------------------------------------------------------------
+  const clearCountdownTimer = () => {
+    if (countdownTimer.current) {
+      clearInterval(countdownTimer.current)
+      countdownTimer.current = null
+    }
+  }
+
+  useEffect(() => () => clearCountdownTimer(), [])
 
   // ---------------------------------------------------------------------------
   // Delay helper
@@ -214,6 +226,7 @@ export default function DialogsScreen() {
   const showPopupCard = async () => {
     await waitForDelay()
     const secs = parseInt(delayText, 10) > 0 ? parseInt(delayText, 10) : 8
+    clearCountdownTimer()
     setCountdown(secs)
     cardScale.setValue(0.8)
     cardOpacity.setValue(0)
@@ -231,10 +244,7 @@ export default function DialogsScreen() {
   }
 
   const dismissPopupCard = () => {
-    if (countdownTimer.current) {
-      clearInterval(countdownTimer.current)
-      countdownTimer.current = null
-    }
+    clearCountdownTimer()
     Animated.parallel([
       Animated.timing(cardScale, { toValue: 0.8, duration: 200, useNativeDriver: true }),
       Animated.timing(cardOpacity, { toValue: 0, duration: 200, useNativeDriver: true }),
@@ -282,7 +292,8 @@ export default function DialogsScreen() {
       duration: 200,
       useNativeDriver: true,
     }).start()
-    const stay = parseFloat(delayText) > 0 ? parseFloat(delayText) * 1000 : 2000
+    const delaySecs = parseFloat(delayText)
+    const stay = delaySecs > 0 ? delaySecs * 1000 : 2000
     setTimeout(() => {
       Animated.timing(tooltipOpacity, {
         toValue: 0,
