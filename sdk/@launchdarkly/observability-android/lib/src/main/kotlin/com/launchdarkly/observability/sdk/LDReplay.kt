@@ -1,5 +1,7 @@
 package com.launchdarkly.observability.sdk
 
+import android.app.Activity
+import com.launchdarkly.observability.replay.SessionReplayService
 import com.launchdarkly.observability.replay.plugin.SessionReplayHookProxy
 
 /**
@@ -52,6 +54,14 @@ object LDReplay {
      */
     fun flush() {
         delegate.flush()
+    }
+
+    /**
+     * Immediately hooks [activity] for touch capture. Call this after SDK initialization when the
+     * activity is already running (e.g. React Native).
+     */
+    fun hookCurrentActivity(activity: Activity) {
+        (client as? SessionReplayService)?.hookCurrentActivity(activity)
     }
 }
 
