@@ -44,7 +44,7 @@ class LDObserveContext private constructor(
     val fullyQualifiedKey: String
         get() = when {
             isMultiple -> contexts!!.sortedBy { it.kind }
-                .joinToString(":") { "${it.kind}:${it.key}" }
+                .joinToString(":") { it.fullyQualifiedKey }
             kind == DEFAULT_KIND -> key
             else -> "$kind:$key"
         }
