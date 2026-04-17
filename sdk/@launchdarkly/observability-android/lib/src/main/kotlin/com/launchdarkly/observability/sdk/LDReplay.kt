@@ -1,7 +1,6 @@
 package com.launchdarkly.observability.sdk
 
 import android.app.Activity
-import com.launchdarkly.observability.replay.SessionReplayService
 import com.launchdarkly.observability.replay.plugin.SessionReplayHookProxy
 
 /**
@@ -64,7 +63,7 @@ object LDReplay {
      * is already running before the SDK initializes).
      */
     fun registerActivity(activity: Activity) {
-        (client as? SessionReplayService)?.registerActivity(activity)
+        delegate.registerActivity(activity)
     }
 }
 
@@ -73,4 +72,5 @@ internal interface SessionReplayServicing {
     fun stop()
     fun flush()
     fun afterIdentify(contextKeys: Map<String, String>, canonicalKey: String, completed: Boolean)
+    fun registerActivity(activity: Activity) {}
 }
