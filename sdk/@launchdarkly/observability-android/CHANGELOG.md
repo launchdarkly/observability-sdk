@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.39.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.38.0...launchdarkly-observability-android-0.39.0) (2026-04-17)
+
+
+### Features
+
+* [SDK-2197] Add `LDReplay. registerActivity()` method for React Native. ([#472](https://github.com/launchdarkly/observability-sdk/issues/472)) ([f99b566](https://github.com/launchdarkly/observability-sdk/commit/f99b5660f68ac8ec1edf94f27e9eb29dea7c4d93))
+
 ## [0.38.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.37.0...launchdarkly-observability-android-0.38.0) (2026-04-13)
 
 
