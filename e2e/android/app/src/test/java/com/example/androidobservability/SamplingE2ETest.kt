@@ -64,12 +64,16 @@ class SamplingE2ETest {
     @Test
     fun `should avoid exporting logs matching sampling configuration for logs`() = runTest {
         triggerLogs()
-        telemetryInspector?.logExporter?.flush()
+        // Force the BatchLogRecordProcessor to drain everything to the exporter so the
+        // assertion doesn't race with the batch scheduler.
+        LDObserve.flush()
         waitForTelemetryData(telemetryInspector = application.telemetryInspector, telemetryType = TelemetryType.LOGS)
 
-        val logsExported = telemetryInspector?.logExporter?.finishedLogRecordItems?.map {
-            it.bodyValue?.value.toString()
-        }
+        val logsExported = telemetryInspector?.logExporter?.finishedLogRecordItems
+            ?.map { it.bodyValue?.value.toString() }
+            // The SDK emits an unrelated "LD.identify" INFO log during init; filter it out so
+            // this test only observes the logs triggered by triggerLogs().
+            ?.filter { it != LD_IDENTIFY_LOG_BODY }
 
         // Only first and final logs should be exported
         assertEquals(2, logsExported?.size)
@@ -80,7 +84,7 @@ class SamplingE2ETest {
     @Test
     fun `should avoid exporting spans matching sampling configuration for spans`() = runTest {
         triggerSpans()
-        telemetryInspector?.spanExporter?.flush()
+        LDObserve.flush()
         waitForTelemetryData(telemetryInspector = application.telemetryInspector, telemetryType = TelemetryType.SPANS)
 
         val spansExported = telemetryInspector?.spanExporter?.finishedSpanItems?.map {
@@ -224,5 +228,9 @@ class SamplingE2ETest {
                 launchTime = true
             )
         )
+    }
+
+    companion object {
+        private const val LD_IDENTIFY_LOG_BODY = "LD.identify"
     }
 }
