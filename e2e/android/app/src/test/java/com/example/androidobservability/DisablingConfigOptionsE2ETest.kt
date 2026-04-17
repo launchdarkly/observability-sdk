@@ -14,6 +14,7 @@ import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertFalse
 import junit.framework.TestCase.assertNotNull
 import junit.framework.TestCase.assertTrue
+import org.junit.After
 import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -26,6 +27,11 @@ import java.util.concurrent.TimeUnit
 class DisablingConfigOptionsE2ETest {
 
     private val application = ApplicationProvider.getApplicationContext<Application>() as TestApplication
+
+    @After
+    fun tearDown() {
+        application.tearDownTest()
+    }
 
     @Test
     fun `Logs should NOT be exported when logsApiLevel is NONE`() {
@@ -46,15 +52,16 @@ class DisablingConfigOptionsE2ETest {
     fun `Logs should NOT be exported when log severity is lower than logsApiLevel`() {
         application.observabilityOptions = getOptionsAllEnabled().copy(logsApiLevel = ObservabilityOptions.LogLevel.INFO)
         application.initForTest()
-        val logsUrl = "http://localhost:${application.mockWebServer?.port}/v1/logs"
 
         triggerTestLog(severity = Severity.TRACE)
         LDObserve.flush()
+        // With logsApiLevel = INFO the SDK still emits its own INFO "LD.identify" log during init,
+        // so we can't assert on "no logs at all" or "no /v1/logs request". The intent is that the
+        // TRACE test-log specifically is filtered out.
         waitForTelemetryData(telemetryInspector = application.telemetryInspector, telemetryType = TelemetryType.LOGS)
         val logsExported = application.telemetryInspector?.logExporter?.finishedLogRecordItems
 
-        assertTrue(logsExported?.isEmpty() == true)
-        assertFalse(requestsContainsUrl(logsUrl))
+        assertFalse(logsExported.orEmpty().any { it.bodyValue?.value.toString() == TEST_LOG_MESSAGE })
     }
 
     @Test
@@ -195,15 +202,18 @@ class DisablingConfigOptionsE2ETest {
             instrumentations = ObservabilityOptions.Instrumentations(crashReporting = false)
         )
         application.initForTest()
-        val logsUrl = "http://localhost:${application.mockWebServer?.port}/v1/logs"
 
         Thread { throw RuntimeException("Exception for testing") }.start()
 
         waitForTelemetryData(telemetryInspector = application.telemetryInspector, telemetryType = TelemetryType.LOGS)
         val logsExported = application.telemetryInspector?.logExporter?.finishedLogRecordItems
 
-        assertFalse(requestsContainsUrl(logsUrl))
-        assertEquals(0, logsExported?.size)
+        // logsApiLevel is independent of crash reporting: unrelated SDK logs (e.g. LD.identify)
+        // may still be exported. We only assert that no crash log reached the exporter.
+        val crashLogs = logsExported.orEmpty().filter {
+            it.instrumentationScopeInfo.name == CRASH_INSTRUMENTATION_SCOPE
+        }
+        assertEquals(0, crashLogs.size)
     }
 
     @Test
@@ -238,7 +248,7 @@ class DisablingConfigOptionsE2ETest {
 
     private fun triggerTestLog(severity: Severity = Severity.INFO) {
         LDObserve.recordLog(
-            message = "test-log",
+            message = TEST_LOG_MESSAGE,
             severity = severity
         )
     }
@@ -274,5 +284,10 @@ class DisablingConfigOptionsE2ETest {
                 launchTime = true
             )
         )
+    }
+
+    companion object {
+        private const val TEST_LOG_MESSAGE = "test-log"
+        private const val CRASH_INSTRUMENTATION_SCOPE = "io.opentelemetry.crash"
     }
 }
