@@ -42,7 +42,7 @@ namespace LaunchDarkly.Observability
         /// var config = Configuration.Builder("your-sdk-key")
         ///     .Plugins(new PluginConfigurationBuilder()
         ///         .Add(ObservabilityPlugin.Builder(builder.Services)
-        ///             .WithServiceName("ryan-test-service")
+        ///             .WithServiceName("asp-core-test-service")
         ///             .WithServiceVersion("example-sha")
         ///             .Build())).Build();
         /// // Building the LdClient with the Observability plugin. This line will add services to the web application.
