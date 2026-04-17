@@ -235,11 +235,11 @@ class SessionReplayService(
     }
 
     /**
-     * Immediately hooks [activity] for touch capture. Call this after SDK initialization when the
+     * Registers [activity] for touch capture. Call this after SDK initialization when the
      * activity is already running (e.g. React Native, where init happens after the activity starts).
      */
-    fun hookCurrentActivity(activity: Activity) {
-        interactionSource?.hookActivity(activity)
+    fun registerActivity(activity: Activity) {
+        interactionSource?.registerActivity(activity)
     }
 
     // TODO: O11Y-621 - This should be called somewhere (Probably inside ObservabilityService.kt) to shutdown the instrumentation.
