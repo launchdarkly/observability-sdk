@@ -71,9 +71,8 @@ internal class SessionReplayClientAdapter private constructor() {
                     return@post
                 }
                 initialized = true
-                // The activity may already be running when the SDK initializes (e.g. React
-                // Native, where JS runs after the activity starts). Hook it now so touch events
-                // are captured without waiting for the next activity lifecycle callback.
+                // React Native is often initialized after the main activity has already been
+                // created, so we miss its lifecycle events. Manually register it, just in case.
                 activity?.let { LDReplay.registerActivity(it) }
             } else {
                 logger.debug("start: already initialized, re-applying isEnabled={0}", localReplayOptions.enabled)
