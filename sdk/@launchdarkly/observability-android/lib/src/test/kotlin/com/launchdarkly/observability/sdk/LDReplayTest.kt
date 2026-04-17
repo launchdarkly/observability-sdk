@@ -1,5 +1,7 @@
 package com.launchdarkly.observability.sdk
 
+import android.app.Activity
+import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
@@ -9,6 +11,7 @@ class LDReplayTest {
         var startCalls = 0
         var stopCalls = 0
         var flushCalls = 0
+        var registerActivityCalls = 0
 
         override fun start() {
             startCalls++
@@ -23,6 +26,10 @@ class LDReplayTest {
         }
 
         override fun afterIdentify(contextKeys: Map<String, String>, canonicalKey: String, completed: Boolean) {}
+
+        override fun registerActivity(activity: Activity) {
+            registerActivityCalls++
+        }
     }
 
     @Test
@@ -53,5 +60,15 @@ class LDReplayTest {
         LDReplay.flush()
 
         assertEquals(1, control.flushCalls)
+    }
+
+    @Test
+    fun `registerActivity delegates to replay control`() {
+        val control = TestControl()
+        LDReplay.init(control)
+
+        LDReplay.registerActivity(mockk<Activity>())
+
+        assertEquals(1, control.registerActivityCalls)
     }
 }
