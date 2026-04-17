@@ -57,11 +57,14 @@ object LDReplay {
     }
 
     /**
-     * Immediately hooks [activity] for touch capture. Call this after SDK initialization when the
-     * activity is already running (e.g. React Native).
+     * Registers [activity] for touch capture.
+     *
+     * You do not normally need to call this. It is only necessary when the SDK is initialized
+     * after the activity has already started (e.g. in React Native, where the host activity
+     * is already running before the SDK initializes).
      */
-    fun hookCurrentActivity(activity: Activity) {
-        (client as? SessionReplayService)?.hookCurrentActivity(activity)
+    fun registerActivity(activity: Activity) {
+        (client as? SessionReplayService)?.registerActivity(activity)
     }
 }
 

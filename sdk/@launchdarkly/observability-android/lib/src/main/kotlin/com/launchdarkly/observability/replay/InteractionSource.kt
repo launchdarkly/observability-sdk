@@ -154,11 +154,11 @@ class InteractionSource(
     }
 
     /**
-     * Immediately hooks the given activity's window for touch capture, as if [onActivityStarted]
+     * Registers the given activity for touch capture, as if [onActivityStarted]
      * and [onActivityResumed] had already fired for it. Call this when the SDK is initialized
      * after the activity is already running (e.g. React Native).
      */
-    fun hookActivity(activity: Activity) {
+    fun registerActivity(activity: Activity) {
         onActivityStarted(activity)
         onActivityResumed(activity)
     }
