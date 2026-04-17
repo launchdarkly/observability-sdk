@@ -4,7 +4,7 @@ import com.launchdarkly.observability.context.ObserveLogger
 import com.launchdarkly.observability.api.ObservabilityOptions
 import com.launchdarkly.observability.client.ObservabilityContext
 import com.launchdarkly.observability.replay.plugin.SessionReplayImpl
-import com.launchdarkly.observability.sdk.LDObserve
+import com.launchdarkly.observability.sdk.LDObserveInternal
 import com.launchdarkly.observability.sdk.LDReplay
 import io.mockk.mockk
 import io.mockk.unmockkAll
@@ -19,20 +19,20 @@ class SessionReplayTest {
 
     @BeforeEach
     fun setUp() {
-        LDObserve.context = null
+        LDObserveInternal.context = null
         LDReplay.client = null
     }
 
     @AfterEach
     fun tearDown() {
-        LDObserve.context = null
+        LDObserveInternal.context = null
         LDReplay.client = null
         unmockkAll()
     }
 
     @Test
     fun `register creates service and wires up when observability is initialized`() {
-        LDObserve.context = ObservabilityContext(
+        LDObserveInternal.context = ObservabilityContext(
             sdkKey = "test-sdk-key",
             options = ObservabilityOptions(),
             application = mockk(),
@@ -58,7 +58,7 @@ class SessionReplayTest {
 
     @Test
     fun `register does nothing when session replay already exists`() {
-        LDObserve.context = ObservabilityContext(
+        LDObserveInternal.context = ObservabilityContext(
             sdkKey = "test-sdk-key",
             options = ObservabilityOptions(),
             application = mockk(),

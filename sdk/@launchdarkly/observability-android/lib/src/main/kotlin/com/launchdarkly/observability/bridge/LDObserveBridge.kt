@@ -1,18 +1,18 @@
 package com.launchdarkly.observability.bridge
 
-import com.launchdarkly.observability.sdk.LDObserve
+import com.launchdarkly.observability.sdk.LDObserveInternal
 
 object LDObserveBridge {
     fun getObservabilityHookProxy(): ObservabilityHookProxy? {
-        return LDObserve.observabilityClient?.let { ObservabilityHookProxy(it.hookExporter) }
+        return LDObserveInternal.observabilityClient?.let { ObservabilityHookProxy(it.hookExporter) }
     }
 
     fun getKotlinTracer(): KotlinTracer? {
-        return LDObserve.observabilityClient?.let { KotlinTracer(it.getTracer()) }
+        return LDObserveInternal.observabilityClient?.let { KotlinTracer(it.getTracer()) }
     }
 
     fun getKotlinLogger(): KotlinLogger? {
-        return LDObserve.observabilityClient?.let {
+        return LDObserveInternal.observabilityClient?.let {
             KotlinLogger(internalLogger = it.getLogger(), customerLogger = it)
         }
     }

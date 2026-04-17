@@ -8,6 +8,7 @@ import com.launchdarkly.observability.client.ObservabilityService
 import com.launchdarkly.observability.client.ObservabilityContext
 import com.launchdarkly.observability.client.TelemetryInspector
 import com.launchdarkly.observability.sdk.LDObserve
+import com.launchdarkly.observability.sdk.LDObserveInternal
 import com.launchdarkly.sdk.android.LDClient
 import com.launchdarkly.sdk.android.integrations.EnvironmentMetadata
 import com.launchdarkly.sdk.android.integrations.Hook
@@ -78,7 +79,7 @@ class Observability(
         this.client = client
         val sdkKey = metadata?.credential ?: ""
         if (mobileKey == sdkKey) {
-            LDObserve.context = ObservabilityContext(
+            LDObserveInternal.context = ObservabilityContext(
                 sdkKey = sdkKey,
                 options = options,
                 application = application,
@@ -126,14 +127,14 @@ class Observability(
                 }
 
                 val builtResource = Resource.create(attributes.build())
-                LDObserve.context?.resourceAttributes = builtResource.attributes
+                LDObserveInternal.context?.resourceAttributes = builtResource.attributes
 
                 val client = ObservabilityService(
                     application, sdkKey, builtResource, logger, options,
                 )
                 observabilityClient = client
-                LDObserve.context?.sessionManager = client.sessionManager
-                LDObserve.init(client)
+                LDObserveInternal.context?.sessionManager = client.sessionManager
+                LDObserveInternal.init(client)
 
                 observabilityHook.delegate = client.hookExporter
             } else {

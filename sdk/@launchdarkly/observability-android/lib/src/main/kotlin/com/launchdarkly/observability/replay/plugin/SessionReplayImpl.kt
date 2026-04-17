@@ -3,6 +3,7 @@ package com.launchdarkly.observability.replay.plugin
 import com.launchdarkly.observability.replay.ReplayOptions
 import com.launchdarkly.observability.replay.SessionReplayService
 import com.launchdarkly.observability.sdk.LDObserve
+import com.launchdarkly.observability.sdk.LDObserveInternal
 import com.launchdarkly.observability.sdk.LDReplay
 import java.util.logging.Logger
 
@@ -19,7 +20,7 @@ class SessionReplayImpl(
     var sessionReplayService: SessionReplayService? = null
 
     fun register() {
-        val context = LDObserve.context ?: run {
+        val context = LDObserveInternal.context ?: run {
             logger.warning("Observability is not initialized; skipping SessionReplay registration.")
             return
         }
