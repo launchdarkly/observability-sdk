@@ -84,6 +84,13 @@ android {
     }
 }
 
+tasks.withType<Test>().configureEach {
+    systemProperty(
+        "java.util.logging.config.file",
+        project.file("src/test/resources/logging.properties").absolutePath
+    )
+}
+
 dependencies {
     // Uncomment to use the local project
     implementation(project(":observability-android"))
