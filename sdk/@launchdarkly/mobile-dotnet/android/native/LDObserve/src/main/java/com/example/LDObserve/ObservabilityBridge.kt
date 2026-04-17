@@ -7,7 +7,7 @@ import com.launchdarkly.observability.BuildConfig
 import com.launchdarkly.observability.bridge.AttributeConverter
 import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.observability.sdk.LDObserve
-import com.launchdarkly.observability.sdk.LDReplay
+import com.launchdarkly.observability.sdk.LDReplayInternal
 import com.launchdarkly.observability.context.LDObserveContext
 import io.opentelemetry.api.common.Attributes
 
@@ -17,7 +17,7 @@ public class ObservabilityBridge(
     var isDebug: Boolean = true
 
     public fun getSessionReplayHookProxy(): RealSessionReplayHookProxy? {
-        val real = LDReplay.hookProxy ?: return null
+        val real = LDReplayInternal.hookProxy ?: return null
         return RealSessionReplayHookProxy(real)
     }
 

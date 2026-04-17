@@ -5,7 +5,7 @@ import com.launchdarkly.observability.api.ObservabilityOptions
 import com.launchdarkly.observability.client.ObservabilityContext
 import com.launchdarkly.observability.replay.plugin.SessionReplayImpl
 import com.launchdarkly.observability.sdk.LDObserveInternal
-import com.launchdarkly.observability.sdk.LDReplay
+import com.launchdarkly.observability.sdk.LDReplayInternal
 import io.mockk.mockk
 import io.mockk.unmockkAll
 import org.junit.jupiter.api.AfterEach
@@ -20,13 +20,13 @@ class SessionReplayTest {
     @BeforeEach
     fun setUp() {
         LDObserveInternal.context = null
-        LDReplay.client = null
+        LDReplayInternal.client = null
     }
 
     @AfterEach
     fun tearDown() {
         LDObserveInternal.context = null
-        LDReplay.client = null
+        LDReplayInternal.client = null
         unmockkAll()
     }
 
@@ -43,8 +43,8 @@ class SessionReplayTest {
         sessionReplay.register()
 
         assertNotNull(sessionReplay.sessionReplayService)
-        assertNotNull(LDReplay.client)
-        assertTrue(LDReplay.client is SessionReplayService)
+        assertNotNull(LDReplayInternal.client)
+        assertTrue(LDReplayInternal.client is SessionReplayService)
     }
 
     @Test
@@ -53,7 +53,7 @@ class SessionReplayTest {
         sessionReplay.register()
 
         assertNull(sessionReplay.sessionReplayService)
-        assertNull(LDReplay.client)
+        assertNull(LDReplayInternal.client)
     }
 
     @Test
@@ -64,7 +64,7 @@ class SessionReplayTest {
             application = mockk(),
             logger = mockk<ObserveLogger>(relaxed = true),
         )
-        LDReplay.client = mockk<SessionReplayService>(relaxed = true)
+        LDReplayInternal.client = mockk<SessionReplayService>(relaxed = true)
         val sessionReplay = SessionReplayImpl()
 
         sessionReplay.register()

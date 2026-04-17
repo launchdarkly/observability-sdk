@@ -4,7 +4,7 @@ import com.launchdarkly.observability.replay.ReplayOptions
 import com.launchdarkly.observability.replay.SessionReplayService
 import com.launchdarkly.observability.sdk.LDObserve
 import com.launchdarkly.observability.sdk.LDObserveInternal
-import com.launchdarkly.observability.sdk.LDReplay
+import com.launchdarkly.observability.sdk.LDReplayInternal
 import java.util.logging.Logger
 
 /**
@@ -25,13 +25,13 @@ class SessionReplayImpl(
             return
         }
 
-        if (LDReplay.client != null) {
+        if (LDReplayInternal.client != null) {
             logger.warning("Session Replay instance already exists; skipping.")
             return
         }
 
         val service = SessionReplayService(options, context)
-        LDReplay.init(service)
+        LDReplayInternal.init(service)
         sessionReplayService = service
     }
 

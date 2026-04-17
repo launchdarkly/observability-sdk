@@ -35,7 +35,7 @@ class LDReplayTest {
     @Test
     fun `start delegates to replay control`() {
         val control = TestControl()
-        LDReplay.init(control)
+        LDReplayInternal.init(control)
 
         LDReplay.start()
 
@@ -45,7 +45,7 @@ class LDReplayTest {
     @Test
     fun `stop delegates to replay control`() {
         val control = TestControl()
-        LDReplay.init(control)
+        LDReplayInternal.init(control)
 
         LDReplay.stop()
 
@@ -55,7 +55,7 @@ class LDReplayTest {
     @Test
     fun `flush delegates to replay control`() {
         val control = TestControl()
-        LDReplay.init(control)
+        LDReplayInternal.init(control)
 
         LDReplay.flush()
 
@@ -65,9 +65,9 @@ class LDReplayTest {
     @Test
     fun `registerActivity delegates to replay control`() {
         val control = TestControl()
-        LDReplay.init(control)
+        LDReplayInternal.init(control)
 
-        LDReplay.registerActivity(mockk<Activity>())
+        LDReplayInternal.registerActivity(mockk<Activity>())
 
         assertEquals(1, control.registerActivityCalls)
     }
