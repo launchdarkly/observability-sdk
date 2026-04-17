@@ -12,6 +12,7 @@ import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Severity
 import junit.framework.TestCase.assertEquals
 import kotlinx.coroutines.test.runTest
+import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -53,6 +54,11 @@ class SamplingE2ETest {
         application.observabilityOptions = getOptionsAllEnabled()
         application.initForTest()
         telemetryInspector = application.telemetryInspector
+    }
+
+    @After
+    fun tearDown() {
+        application.tearDownTest()
     }
 
     @Test
