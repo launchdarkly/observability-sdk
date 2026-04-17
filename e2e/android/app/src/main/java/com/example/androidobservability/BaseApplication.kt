@@ -57,7 +57,7 @@ open class BaseApplication : Application() {
 
     var testUrl: String? = null
 
-    open fun realInit2() {
+    open fun realInit() {
         val observabilityPlugin = Observability(
             application = this@BaseApplication,
             mobileKey = LAUNCHDARKLY_MOBILE_KEY,
@@ -96,7 +96,7 @@ open class BaseApplication : Application() {
         LDReplay.start()
     }
 
-    open fun realInit() {
+    open fun realIndependentInit() {
         val effectiveOptions = testUrl?.let {
             observabilityOptions.copy(backendUrl = it, otlpEndpoint = it)
         } ?: observabilityOptions
