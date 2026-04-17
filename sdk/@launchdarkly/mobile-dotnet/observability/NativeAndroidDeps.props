@@ -24,7 +24,6 @@
 		<_LDNativeAAR Include="$(_LDNativeDepsDir)common-0*.aar" />
 		<_LDNativeAAR Include="$(_LDNativeDepsDir)common-api-*.aar" />
 		<_LDNativeAAR Include="$(_LDNativeDepsDir)core-*-alpha.aar" />
-		<!-- <_LDNativeAAR Include="$(_LDNativeDepsDir)crash-*-alpha.aar" /> -->
 		<_LDNativeAAR Include="$(_LDNativeDepsDir)anr-*-alpha.aar" />
 		<_LDNativeAAR Include="$(_LDNativeDepsDir)activity-*-alpha.aar" />
 		<_LDNativeAAR Include="$(_LDNativeDepsDir)fragment-*-alpha.aar" />
