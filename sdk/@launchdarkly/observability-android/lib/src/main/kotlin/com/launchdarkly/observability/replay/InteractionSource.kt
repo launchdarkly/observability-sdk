@@ -154,6 +154,16 @@ class InteractionSource(
     }
 
     /**
+     * Registers the given activity for touch capture, as if [onActivityStarted]
+     * and [onActivityResumed] had already fired for it. Call this when the SDK is initialized
+     * after the activity is already running (e.g. React Native).
+     */
+    fun registerActivity(activity: Activity) {
+        onActivityStarted(activity)
+        onActivityResumed(activity)
+    }
+
+    /**
      * Detaches the [InteractionSource] from the [Application].
      */
     fun detachFromApplication(application: Application) {
