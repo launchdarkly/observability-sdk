@@ -1,5 +1,6 @@
 package com.sessionreplayreactnative
 
+import android.app.Activity
 import android.app.Application
 import android.os.Handler
 import android.os.Looper
@@ -39,7 +40,7 @@ internal class SessionReplayClientAdapter private constructor() {
         }
     }
 
-    fun start(application: Application, completion: (Boolean, String?) -> Unit) {
+    fun start(application: Application, activity: Activity?, completion: (Boolean, String?) -> Unit) {
         val localMobileKey: String?
         val localServiceName: String
         val localReplayOptions: ReplayOptions?
@@ -70,6 +71,9 @@ internal class SessionReplayClientAdapter private constructor() {
                     return@post
                 }
                 initialized = true
+                // React Native is often initialized after the main activity has already been
+                // created, so we miss its lifecycle events. Manually register it, just in case.
+                activity?.let { LDReplay.registerActivity(it) }
             } else {
                 logger.debug("start: already initialized, re-applying isEnabled={0}", localReplayOptions.enabled)
             }

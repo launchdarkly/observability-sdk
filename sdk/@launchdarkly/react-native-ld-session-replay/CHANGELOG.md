@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.0](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.3.0...session-replay-react-native-0.4.0) (2026-04-17)
+
+
+### Features
+
+* [SDK-2121] implement session replay for react native android ([#456](https://github.com/launchdarkly/observability-sdk/issues/456)) ([a5af1d8](https://github.com/launchdarkly/observability-sdk/commit/a5af1d8368fc06ffbef9b486f4b40cbfd7390ef3))
+* [SDK-2190] add dialogs to the RN session replay example app ([#471](https://github.com/launchdarkly/observability-sdk/issues/471)) ([c677962](https://github.com/launchdarkly/observability-sdk/commit/c6779627f17bdb161b4fb79092dd6743ad54f9bf))
+
 ## [0.3.0](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.2.2...session-replay-react-native-0.3.0) (2026-03-26)
 
 

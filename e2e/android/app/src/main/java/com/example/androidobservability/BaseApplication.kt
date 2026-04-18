@@ -57,6 +57,7 @@ open class BaseApplication : Application() {
 
     var testUrl: String? = null
 
+    // example on creating OBS/SR with flagging sdk
     open fun realInit() {
         val observabilityPlugin = Observability(
             application = this@BaseApplication,
@@ -96,6 +97,7 @@ open class BaseApplication : Application() {
         LDReplay.start()
     }
 
+    // example on creating OBS/SR without flagging
     open fun realIndependentInit() {
         val effectiveOptions = testUrl?.let {
             observabilityOptions.copy(backendUrl = it, otlpEndpoint = it)
