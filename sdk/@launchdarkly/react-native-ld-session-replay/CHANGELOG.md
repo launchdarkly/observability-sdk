@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.4.0...session-replay-react-native-0.4.1) (2026-04-18)
+
+
+### Bug Fixes
+
+* [SDK-2197] manually register main Activity with session replay ([#475](https://github.com/launchdarkly/observability-sdk/issues/475)) ([75fd6e7](https://github.com/launchdarkly/observability-sdk/commit/75fd6e70e9809a027272bc1873765a5a1f201d8a))
+
 ## [0.4.0](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.3.0...session-replay-react-native-0.4.0) (2026-04-17)
 
 

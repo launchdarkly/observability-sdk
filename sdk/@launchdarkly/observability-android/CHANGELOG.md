@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.40.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.39.0...launchdarkly-observability-android-0.40.0) (2026-04-18)
+
+
+### Features
+
+* 50% decrease Nuget Android part in MAUI  ([#469](https://github.com/launchdarkly/observability-sdk/issues/469)) ([83d49af](https://github.com/launchdarkly/observability-sdk/commit/83d49afb536237a36b3e69e5de1641809b2a838b))
+
 ## [0.39.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.38.0...launchdarkly-observability-android-0.39.0) (2026-04-17)
 
 
