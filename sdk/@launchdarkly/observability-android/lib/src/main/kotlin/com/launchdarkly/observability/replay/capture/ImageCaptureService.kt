@@ -15,7 +15,7 @@ import android.view.WindowManager.LayoutParams.TYPE_BASE_APPLICATION
 import androidx.annotation.RequiresApi
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.withTranslation
-import com.launchdarkly.logging.LDLogger
+import com.launchdarkly.observability.context.ObserveLogger
 import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
 import com.launchdarkly.observability.replay.ReplayOptions
 import com.launchdarkly.observability.replay.calculateScaleFactor
@@ -30,7 +30,7 @@ import kotlin.coroutines.resume
 
 class ImageCaptureService(
     private val options: ReplayOptions,
-    private val logger: LDLogger,
+    private val logger: ObserveLogger,
 ) {
     data class RawFrame(
         val bitmap: Bitmap,

@@ -1,6 +1,6 @@
 package com.launchdarkly.observability.client
 
-import com.launchdarkly.logging.LDLogger
+import com.launchdarkly.observability.context.ObserveLogger
 import com.launchdarkly.observability.api.ObservabilityOptions
 import com.launchdarkly.observability.sampling.ExportSampler
 import io.mockk.mockk
@@ -16,7 +16,7 @@ class ObservabilityServiceTest {
 
     private lateinit var mockSdkLoggerProviderBuilder: SdkLoggerProviderBuilder
     private lateinit var mockExportSampler: ExportSampler
-    private lateinit var mockLogger: LDLogger
+    private lateinit var mockLogger: ObserveLogger
     private lateinit var testResource: Resource
     private lateinit var testSdkKey: String
     private lateinit var testObservabilityOptions: ObservabilityOptions

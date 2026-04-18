@@ -1,6 +1,6 @@
 package com.launchdarkly.observability.replay.exporter
 
-import com.launchdarkly.logging.LDLogger
+import com.launchdarkly.observability.context.ObserveLogger
 import com.launchdarkly.observability.network.GraphQLClient
 import com.launchdarkly.observability.replay.Event
 import com.launchdarkly.observability.replay.capture.ExportFrame
@@ -32,7 +32,7 @@ class SessionReplayExporter(
     val initialIdentifyItemPayload: IdentifyItemPayload,
     val title: String,
     private val injectedReplayApiService: SessionReplayApiService? = null,
-    private val logger: LDLogger,
+    private val logger: ObserveLogger,
     private val canvasBufferLimit: Int = RRWEB_CANVAS_BUFFER_LIMIT,
     canvasDrawEntourage: Int = RRWEB_CANVAS_DRAW_ENTOURAGE
 ) : EventExporting {

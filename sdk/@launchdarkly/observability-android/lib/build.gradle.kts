@@ -20,9 +20,15 @@ allprojects {
     }
 }
 
+val isIncludedByMaui = gradle.parent?.rootProject?.name == "LDObserve"
+
 dependencies {
-    implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.11.0")
-    implementation("com.jakewharton.timber:timber:5.0.1")
+    if (isIncludedByMaui) {
+        compileOnly("com.launchdarkly:launchdarkly-android-client-sdk:5.11.1")
+        testImplementation("com.launchdarkly:launchdarkly-android-client-sdk:5.11.1")
+    } else {
+        implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.11.1")
+    }
 
     // AndroidX
     // This only used by Session Replay.

@@ -49,13 +49,33 @@ class TestApplication : BaseApplication() {
         super.realInit()
     }
 
-    override fun onTerminate() {
+    /**
+     * Tears down per-test state so tests don't leak into each other.
+     *
+     * Robolectric isolates Android framework classes with a per-method sandbox classloader,
+     * but third-party JVM classes (including `com.launchdarkly.sdk.android.LDClient`) live
+     * in the shared system classloader. `LDClient.init()` silently returns the existing
+     * client if already initialized, which means a second test's `Observability` plugin is
+     * never registered and `LDObserve` keeps pointing at the previous test's
+     * `ObservabilityService` (with a now-dead mock server port). Closing `LDClient` resets
+     * its `instances` static so the next `init` fully reinitializes.
+     */
+    fun tearDownTest() {
+        try {
+            LDClient.get().close()
+        } catch (_: Throwable) {
+            // LDClient may not have been initialized successfully; ignore.
+        }
         mockWebServer?.let {
             it.shutdown()
             mockWebServer = null
         }
-        LDClient.get().close()
+        telemetryInspector = null
         SignalFromDiskExporter.resetForTesting()
+    }
+
+    override fun onTerminate() {
+        tearDownTest()
         super.onTerminate()
     }
 }

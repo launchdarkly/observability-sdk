@@ -5,7 +5,7 @@ import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
-import com.launchdarkly.logging.LDLogger
+import com.launchdarkly.observability.context.ObserveLogger
 import com.launchdarkly.observability.client.ObservabilityContext
 import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
 import com.launchdarkly.observability.replay.capture.CaptureManager
@@ -15,9 +15,8 @@ import com.launchdarkly.observability.replay.exporter.InteractionItemPayload
 import com.launchdarkly.observability.replay.exporter.SessionReplayExporter
 import com.launchdarkly.observability.replay.transport.BatchWorker
 import com.launchdarkly.observability.replay.transport.EventQueue
+import com.launchdarkly.observability.context.LDObserveContext
 import com.launchdarkly.observability.sdk.SessionReplayServicing
-import com.launchdarkly.sdk.ContextKind
-import com.launchdarkly.sdk.LDContext
 import io.opentelemetry.android.session.SessionManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -65,7 +64,7 @@ class SessionReplayService(
 ) : SessionReplayServicing {
 
     private lateinit var sessionManager: SessionManager
-    private val logger: LDLogger = observabilityContext.logger
+    private val logger: ObserveLogger = observabilityContext.logger
     private val eventQueue = EventQueue()
     private val batchWorker = BatchWorker(eventQueue, logger)
     private var captureManager: CaptureManager? = null
@@ -279,8 +278,9 @@ class SessionReplayService(
     }
 
     suspend fun identifySession(
-        ldContext: LDContext,
-        timestamp: Long = System.currentTimeMillis()
+        ldContext: LDObserveContext,
+        timestamp: Long = System.currentTimeMillis(),
+        canonicalKeyOverride: String? = null
     ) {
         if (!this::sessionManager.isInitialized || exporter == null) {
             logger.warn("identifySession called before SessionReplayService was installed; skipping.")
@@ -293,7 +293,8 @@ class SessionReplayService(
             resourceAttributes = observabilityContext.resourceAttributes,
             ldContext = ldContext,
             timestamp = timestamp,
-            sessionId = sessionId
+            sessionId = sessionId,
+            canonicalKeyOverride = canonicalKeyOverride
         )
 
         // When replay is disabled, cache the identify payload for later session init without sending it now.
@@ -316,22 +317,19 @@ class SessionReplayService(
     override fun afterIdentify(contextKeys: Map<String, String>, canonicalKey: String, completed: Boolean) {
         if (!completed) return
 
-        val ldContext = buildLDContext(contextKeys)
+        val observeContext = buildObserveContext(contextKeys)
         instrumentationScope.launch {
-            identifySession(ldContext)
+            identifySession(observeContext, canonicalKeyOverride = canonicalKey)
         }
     }
 
-    private fun buildLDContext(contextKeys: Map<String, String>): LDContext {
+    private fun buildObserveContext(contextKeys: Map<String, String>): LDObserveContext {
         if (contextKeys.size == 1) {
             val (kind, key) = contextKeys.entries.first()
-            return LDContext.create(ContextKind.of(kind), key)
+            return LDObserveContext.create(kind, key)
         }
-        val builder = LDContext.multiBuilder()
-        for ((kind, key) in contextKeys) {
-            builder.add(LDContext.create(ContextKind.of(kind), key))
-        }
-        return builder.build()
+        val subs = contextKeys.map { (kind, key) -> LDObserveContext.create(kind, key) }
+        return LDObserveContext.createMulti(*subs.toTypedArray())
     }
 
 }

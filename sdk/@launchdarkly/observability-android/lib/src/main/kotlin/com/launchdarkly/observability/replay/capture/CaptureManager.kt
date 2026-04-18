@@ -1,6 +1,6 @@
 package com.launchdarkly.observability.replay.capture
 
-import com.launchdarkly.logging.LDLogger
+import com.launchdarkly.observability.context.ObserveLogger
 import com.launchdarkly.observability.replay.ReplayOptions
 import io.opentelemetry.android.session.SessionManager
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -16,7 +16,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 class CaptureManager(
     private val sessionManager: SessionManager,
     private val options: ReplayOptions,
-    private val logger: LDLogger,
+    private val logger: ObserveLogger,
     // TODO: O11Y-628 - add captureQuality options
 ) {
     private val _captureEventFlow = MutableSharedFlow<ExportFrame>()

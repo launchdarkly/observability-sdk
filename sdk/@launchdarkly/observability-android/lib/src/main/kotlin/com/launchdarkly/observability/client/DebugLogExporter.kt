@@ -1,11 +1,11 @@
 package com.launchdarkly.observability.client
 
-import com.launchdarkly.logging.LDLogger
+import com.launchdarkly.observability.context.ObserveLogger
 import io.opentelemetry.sdk.common.CompletableResultCode
 import io.opentelemetry.sdk.logs.data.LogRecordData
 import io.opentelemetry.sdk.logs.export.LogRecordExporter
 
-class DebugLogExporter(private val logger: LDLogger) : LogRecordExporter {
+class DebugLogExporter(private val logger: ObserveLogger) : LogRecordExporter {
 
     override fun export(logRecords: Collection<LogRecordData>): CompletableResultCode {
         for (record in logRecords) {

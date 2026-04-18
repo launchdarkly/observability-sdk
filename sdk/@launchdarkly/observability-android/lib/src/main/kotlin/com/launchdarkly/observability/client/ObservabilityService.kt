@@ -1,7 +1,7 @@
 package com.launchdarkly.observability.client
 
 import android.app.Application
-import com.launchdarkly.logging.LDLogger
+import com.launchdarkly.observability.context.ObserveLogger
 import com.launchdarkly.observability.api.ObservabilityOptions
 import com.launchdarkly.observability.bridge.emitLog
 import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
@@ -78,7 +78,7 @@ class ObservabilityService(
     private val application: Application,
     private val sdkKey: String,
     private val resources: Resource,
-    private val logger: LDLogger,
+    private val logger: ObserveLogger,
     private val observabilityOptions: ObservabilityOptions,
 ) : Observe {
     private val otelRUM: OpenTelemetryRum
@@ -429,7 +429,7 @@ class ObservabilityService(
             exportSampler: ExportSampler,
             sdkKey: String,
             resource: Resource,
-            logger: LDLogger,
+            logger: ObserveLogger,
             telemetryInspector: TelemetryInspector?,
             observabilityOptions: ObservabilityOptions,
         ): LogRecordProcessor {
@@ -458,7 +458,7 @@ class ObservabilityService(
 
         private fun createLogExporter(
             primaryExporter: LogRecordExporter,
-            logger: LDLogger,
+            logger: ObserveLogger,
             telemetryInspector: TelemetryInspector?,
             observabilityOptions: ObservabilityOptions
         ): LogRecordExporter {

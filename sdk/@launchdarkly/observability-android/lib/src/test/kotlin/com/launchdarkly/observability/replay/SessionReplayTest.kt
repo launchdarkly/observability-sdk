@@ -1,12 +1,11 @@
 package com.launchdarkly.observability.replay
 
-import com.launchdarkly.logging.LDLogger
+import com.launchdarkly.observability.context.ObserveLogger
 import com.launchdarkly.observability.api.ObservabilityOptions
 import com.launchdarkly.observability.client.ObservabilityContext
-import com.launchdarkly.observability.replay.plugin.SessionReplay
+import com.launchdarkly.observability.replay.plugin.SessionReplayImpl
 import com.launchdarkly.observability.sdk.LDObserve
 import com.launchdarkly.observability.sdk.LDReplay
-import com.launchdarkly.sdk.android.LDClient
 import io.mockk.mockk
 import io.mockk.unmockkAll
 import org.junit.jupiter.api.AfterEach
@@ -18,11 +17,8 @@ import org.junit.jupiter.api.Test
 
 class SessionReplayTest {
 
-    private lateinit var client: LDClient
-
     @BeforeEach
     fun setUp() {
-        client = mockk(relaxed = true)
         LDObserve.context = null
         LDReplay.client = null
     }
@@ -40,11 +36,11 @@ class SessionReplayTest {
             sdkKey = "test-sdk-key",
             options = ObservabilityOptions(),
             application = mockk(),
-            logger = mockk<LDLogger>(relaxed = true),
+            logger = mockk<ObserveLogger>(relaxed = true),
         )
-        val sessionReplay = SessionReplay()
+        val sessionReplay = SessionReplayImpl()
 
-        sessionReplay.register(client, null)
+        sessionReplay.register()
 
         assertNotNull(sessionReplay.sessionReplayService)
         assertNotNull(LDReplay.client)
@@ -53,11 +49,27 @@ class SessionReplayTest {
 
     @Test
     fun `register does nothing when observability is not initialized`() {
-        val sessionReplay = SessionReplay()
-        sessionReplay.register(client, null)
+        val sessionReplay = SessionReplayImpl()
+        sessionReplay.register()
 
         assertNull(sessionReplay.sessionReplayService)
         assertNull(LDReplay.client)
+    }
+
+    @Test
+    fun `register does nothing when session replay already exists`() {
+        LDObserve.context = ObservabilityContext(
+            sdkKey = "test-sdk-key",
+            options = ObservabilityOptions(),
+            application = mockk(),
+            logger = mockk<ObserveLogger>(relaxed = true),
+        )
+        LDReplay.client = mockk<SessionReplayService>(relaxed = true)
+        val sessionReplay = SessionReplayImpl()
+
+        sessionReplay.register()
+
+        assertNull(sessionReplay.sessionReplayService)
     }
 
 }

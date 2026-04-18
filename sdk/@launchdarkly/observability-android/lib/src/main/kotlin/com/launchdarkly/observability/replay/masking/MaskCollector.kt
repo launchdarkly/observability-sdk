@@ -3,7 +3,7 @@ package com.launchdarkly.observability.replay.masking
 import android.graphics.Matrix
 import android.view.View
 import android.view.ViewGroup
-import com.launchdarkly.logging.LDLogger
+import com.launchdarkly.observability.context.ObserveLogger
 import kotlin.collections.plusAssign
 import com.launchdarkly.observability.replay.utils.locationOnScreen
 
@@ -30,7 +30,7 @@ data class MaskContext(
  *
  * This encapsulates both Jetpack Compose and native View detection logic.
  */
-class MaskCollector(private val logger: LDLogger) {
+class MaskCollector(private val logger: ObserveLogger) {
     /**
      * Find sensitive areas from all views in the provided [root] view.
      *

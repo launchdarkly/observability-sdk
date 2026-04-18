@@ -24,7 +24,6 @@
 		<_LDNativeAAR Include="$(_LDNativeDepsDir)common-0*.aar" />
 		<_LDNativeAAR Include="$(_LDNativeDepsDir)common-api-*.aar" />
 		<_LDNativeAAR Include="$(_LDNativeDepsDir)core-*-alpha.aar" />
-		<_LDNativeAAR Include="$(_LDNativeDepsDir)crash-*-alpha.aar" />
 		<_LDNativeAAR Include="$(_LDNativeDepsDir)anr-*-alpha.aar" />
 		<_LDNativeAAR Include="$(_LDNativeDepsDir)activity-*-alpha.aar" />
 		<_LDNativeAAR Include="$(_LDNativeDepsDir)fragment-*-alpha.aar" />
@@ -34,14 +33,8 @@
 		<_LDNativeAAR Include="$(_LDNativeDepsDir)slowrendering-*-alpha.aar" />
 		<_LDNativeAAR Include="$(_LDNativeDepsDir)startup-*-alpha.aar" />
 
-		<!-- LD native SDK AAR -->
-		<_LDNativeAAR Include="$(_LDNativeDepsDir)launchdarkly-android-client-sdk-*.aar" />
-
 		<!-- Observability Android library AAR -->
 		<_LDNativeAAR Include="$(_LDNativeDepsDir)lib-release.aar" />
-
-		<!-- Third-party AARs -->
-		<_LDNativeAAR Include="$(_LDNativeDepsDir)timber-*.aar" />
 
 		<!-- Bridge module AAR -->
 		<_LDNativeAAR Include="$(_LDNativeAarDir)LDObserve-release.aar" />
@@ -50,8 +43,6 @@
 		     _LDNativeJAR Include autoconfigure-spi-*.jar when needed. autoconfigure-1* was unsafe on OTel 2.x. -->
 		<_LDNativeJAR Include="$(_LDNativeDepsDir)opentelemetry-*.jar"
 				Exclude="$(_LDNativeDepsDir)opentelemetry-sdk-extension-incubator-*.jar;$(_LDNativeDepsDir)opentelemetry-sdk-extension-autoconfigure-*.jar;$(_LDNativeDepsDir)opentelemetry-sdk-testing-*.jar" />
-		<_LDNativeJAR Include="$(_LDNativeDepsDir)jackson-*.jar" />
-		<_LDNativeJAR Include="$(_LDNativeDepsDir)launchdarkly-*.jar" />
 		<_LDNativeJAR Include="$(_LDNativeDepsDir)okhttp-*.jar" />
 		<_LDNativeJAR Include="$(_LDNativeDepsDir)okio-*.jar" />
 	</ItemGroup>
