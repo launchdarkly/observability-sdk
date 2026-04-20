@@ -1,5 +1,12 @@
 # @launchdarkly/observability-node
 
+## [1.1.1](https://github.com/launchdarkly/observability-sdk/compare/observability-node-1.1.0...observability-node-1.1.1) (2026-04-20)
+
+
+### Bug Fixes
+
+* Upgrade to latest version of graphql-codegen cli ([#479](https://github.com/launchdarkly/observability-sdk/issues/479)) ([97061e6](https://github.com/launchdarkly/observability-sdk/commit/97061e6ce49d73c083f14b45424437074212f30e))
+
 ## [1.1.0](https://github.com/launchdarkly/observability-sdk/compare/observability-node-1.0.1...observability-node-1.1.0) (2026-03-26)
 
 
