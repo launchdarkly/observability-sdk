@@ -12,6 +12,7 @@ import Root from './routes/root'
 import Welcome from './routes/welcome'
 import PrivacyDemo from './routes/privacy-demo'
 import HttpTest from './routes/http-test'
+import FlushOnUnload from './routes/flush-on-unload'
 import LDClientPage, {
 	LDClientPageA,
 	LDClientPageB,
@@ -65,6 +66,7 @@ const router = createBrowserRouter(
 			<Route path={'/welcome'} element={<Welcome />} />
 			<Route path={'/privacy'} element={<PrivacyDemo />} />
 			<Route path={'/http-test'} element={<HttpTest />} />
+			<Route path={'/flush-on-unload'} element={<FlushOnUnload />} />
 			<Route path={'/ldclient'} element={<LDClientPage />}>
 				<Route path="page-a" element={<LDClientPageA />} />
 				<Route path="page-b" element={<LDClientPageB />} />
