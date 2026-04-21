@@ -442,10 +442,17 @@ export const setupBrowserTracing = (
 		}),
 	})
 
-	unloadListenerCleanup = registerFlushOnUnload(exporter, meterExporter)
+	unloadListenerCleanup = registerFlushOnUnload(
+		exporter,
+		meterExporter,
+		() => providers,
+	)
 
 	return providers
 }
+
+type FlushableExporter = { setUnloading: (unloading: boolean) => void }
+type FlushableProvider = { forceFlush: () => Promise<void> }
 
 // Flush pending spans/metrics when the page is about to be unloaded.
 // Uses visibilitychange and pagehide (not beforeunload) per web.dev guidance:
@@ -454,9 +461,13 @@ export const setupBrowserTracing = (
 // fetch-triggered redirects) and iOS Safari tab switches.
 // The exporter's unloading flag routes the flush through
 // `fetch({ keepalive: true })`, which survives the navigation; XHR does not.
-const registerFlushOnUnload = (
-	traceExporter: OTLPTraceExporterBrowserWithXhrRetry,
-	metricExporter: OTLPMetricExporterBrowser,
+export const registerFlushOnUnload = (
+	traceExporter: FlushableExporter,
+	metricExporter: FlushableExporter,
+	getProviders: () => {
+		tracerProvider?: FlushableProvider
+		meterProvider?: FlushableProvider
+	},
 ): (() => void) => {
 	if (typeof document === 'undefined' || typeof window === 'undefined') {
 		return () => {}
@@ -465,10 +476,11 @@ const registerFlushOnUnload = (
 	const flush = () => {
 		traceExporter.setUnloading(true)
 		metricExporter.setUnloading(true)
+		const current = getProviders()
 		// Fire and forget: the browser will not wait for these promises, but
 		// keepalive fetches remain in flight after the page unloads.
-		void providers.tracerProvider?.forceFlush().catch(() => {})
-		void providers.meterProvider?.forceFlush().catch(() => {})
+		void current.tracerProvider?.forceFlush().catch(() => {})
+		void current.meterProvider?.forceFlush().catch(() => {})
 	}
 
 	const onVisibilityChange = () => {
