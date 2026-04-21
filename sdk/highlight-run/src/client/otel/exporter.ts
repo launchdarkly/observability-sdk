@@ -1,12 +1,17 @@
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http'
 import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-http'
 import {
+	JsonMetricsSerializer,
+	JsonTraceSerializer,
+} from '@opentelemetry/otlp-transformer'
+import {
 	BACKOFF_DELAY_MS,
 	BASE_DELAY_MS,
 	MAX_PUBLIC_GRAPH_RETRY_ATTEMPTS,
 } from '../utils/graph'
 import { ExportResult, ExportResultCode } from '@opentelemetry/core'
 import { ReadableSpan } from '@opentelemetry/sdk-trace-base'
+import { ResourceMetrics } from '@opentelemetry/sdk-metrics'
 import { ExportSampler } from './sampling/ExportSampler'
 import { sampleSpans } from './sampling/sampleSpans'
 
@@ -34,7 +39,7 @@ export type MetricExporterConfig = ConstructorParameters<
 
 const keepaliveFetchExport = (
 	url: string,
-	body: Uint8Array | string,
+	body: Uint8Array,
 	contentType: string,
 	resultCallback: (result: ExportResult) => void,
 ) => {
@@ -116,13 +121,13 @@ export class OTLPTraceExporterBrowserWithXhrRetry extends OTLPTraceExporter {
 		}
 
 		if (this.unloading) {
-			const serializer = (this as any)._delegate?._serializer
-			const serialized = serializer?.serializeRequest(sampledItems)
+			const serialized =
+				JsonTraceSerializer.serializeRequest(sampledItems)
 			if (!serialized || !this.url) {
 				return resultCallback({
 					code: ExportResultCode.FAILED,
 					error: new Error(
-						'keepalive export failed: missing serializer or url',
+						'keepalive export failed: serializer returned empty or url missing',
 					),
 				})
 			}
@@ -180,15 +185,17 @@ export class OTLPMetricExporterBrowser extends OTLPMetricExporter {
 		this.unloading = unloading
 	}
 
-	export(items: any, resultCallback: (result: ExportResult) => void) {
+	export(
+		items: ResourceMetrics,
+		resultCallback: (result: ExportResult) => void,
+	) {
 		if (this.unloading) {
-			const serializer = (this as any)._delegate?._serializer
-			const serialized = serializer?.serializeRequest(items)
+			const serialized = JsonMetricsSerializer.serializeRequest(items)
 			if (!serialized || !this.url) {
 				return resultCallback({
 					code: ExportResultCode.FAILED,
 					error: new Error(
-						'keepalive export failed: missing serializer or url',
+						'keepalive export failed: serializer returned empty or url missing',
 					),
 				})
 			}

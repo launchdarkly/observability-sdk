@@ -4,6 +4,7 @@ import { registerFlushOnUnload } from './index'
 describe('registerFlushOnUnload', () => {
 	let traceExporter: { setUnloading: ReturnType<typeof vi.fn> }
 	let metricExporter: { setUnloading: ReturnType<typeof vi.fn> }
+	let spanProcessor: { setSkipPendingOnFlush: ReturnType<typeof vi.fn> }
 	let tracerProvider: {
 		forceFlush: ReturnType<typeof vi.fn<any, Promise<void>>>
 	}
@@ -15,6 +16,7 @@ describe('registerFlushOnUnload', () => {
 	beforeEach(() => {
 		traceExporter = { setUnloading: vi.fn() }
 		metricExporter = { setUnloading: vi.fn() }
+		spanProcessor = { setSkipPendingOnFlush: vi.fn() }
 		tracerProvider = {
 			forceFlush: vi
 				.fn<any, Promise<void>>()
@@ -25,10 +27,15 @@ describe('registerFlushOnUnload', () => {
 				.fn<any, Promise<void>>()
 				.mockResolvedValue(undefined),
 		}
-		cleanup = registerFlushOnUnload(traceExporter, metricExporter, () => ({
-			tracerProvider,
-			meterProvider,
-		}))
+		cleanup = registerFlushOnUnload(
+			traceExporter,
+			metricExporter,
+			spanProcessor,
+			() => ({
+				tracerProvider,
+				meterProvider,
+			}),
+		)
 		setVisibility('visible')
 	})
 
@@ -42,6 +49,7 @@ describe('registerFlushOnUnload', () => {
 
 		expect(traceExporter.setUnloading).toHaveBeenCalledWith(true)
 		expect(metricExporter.setUnloading).toHaveBeenCalledWith(true)
+		expect(spanProcessor.setSkipPendingOnFlush).toHaveBeenCalledWith(true)
 		expect(tracerProvider.forceFlush).toHaveBeenCalledTimes(1)
 		expect(meterProvider.forceFlush).toHaveBeenCalledTimes(1)
 	})
@@ -54,6 +62,9 @@ describe('registerFlushOnUnload', () => {
 
 		expect(traceExporter.setUnloading).toHaveBeenLastCalledWith(false)
 		expect(metricExporter.setUnloading).toHaveBeenLastCalledWith(false)
+		expect(spanProcessor.setSkipPendingOnFlush).toHaveBeenLastCalledWith(
+			false,
+		)
 	})
 
 	it('flushes on pagehide', () => {

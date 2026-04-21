@@ -445,6 +445,7 @@ export const setupBrowserTracing = (
 	unloadListenerCleanup = registerFlushOnUnload(
 		exporter,
 		meterExporter,
+		spanProcessor,
 		() => providers,
 	)
 
@@ -453,6 +454,9 @@ export const setupBrowserTracing = (
 
 type FlushableExporter = { setUnloading: (unloading: boolean) => void }
 type FlushableProvider = { forceFlush: () => Promise<void> }
+type FlushableSpanProcessor = {
+	setSkipPendingOnFlush: (skip: boolean) => void
+}
 
 // Flush pending spans/metrics when the page is about to be unloaded.
 // Uses visibilitychange and pagehide (not beforeunload) per web.dev guidance:
@@ -461,9 +465,13 @@ type FlushableProvider = { forceFlush: () => Promise<void> }
 // fetch-triggered redirects) and iOS Safari tab switches.
 // The exporter's unloading flag routes the flush through
 // `fetch({ keepalive: true })`, which survives the navigation; XHR does not.
+// Setting skipPendingOnFlush on the span processor prevents forceFlush from
+// awaiting in-flight response-body reads — those won't finish before the page
+// freezes, and spans without body attributes are still worth keeping.
 export const registerFlushOnUnload = (
 	traceExporter: FlushableExporter,
 	metricExporter: FlushableExporter,
+	spanProcessor: FlushableSpanProcessor,
 	getProviders: () => {
 		tracerProvider?: FlushableProvider
 		meterProvider?: FlushableProvider
@@ -476,6 +484,7 @@ export const registerFlushOnUnload = (
 	const flush = () => {
 		traceExporter.setUnloading(true)
 		metricExporter.setUnloading(true)
+		spanProcessor.setSkipPendingOnFlush(true)
 		const current = getProviders()
 		// Fire and forget: the browser will not wait for these promises, but
 		// keepalive fetches remain in flight after the page unloads.
@@ -491,6 +500,7 @@ export const registerFlushOnUnload = (
 			// exports so retries work against backpressure.
 			traceExporter.setUnloading(false)
 			metricExporter.setUnloading(false)
+			spanProcessor.setSkipPendingOnFlush(false)
 		}
 	}
 
@@ -507,6 +517,14 @@ export const registerFlushOnUnload = (
 
 class CustomBatchSpanProcessor extends BatchSpanProcessor {
 	private _pendingSpans = new Set<Promise<void>>()
+	// When set, forceFlush/shutdown return immediately without waiting for
+	// in-flight response-body reads. Used on page unload where waiting risks
+	// the browser freezing JS before we hand the spans to the transport.
+	private _skipPendingOnFlush = false
+
+	setSkipPendingOnFlush(skip: boolean) {
+		this._skipPendingOnFlush = skip
+	}
 
 	onStart(span: SDKSpan, parentContext: Context): void {
 		span.setAttribute(SESSION_ID_ATTRIBUTE, getPersistentSessionSecureID())
@@ -548,12 +566,16 @@ class CustomBatchSpanProcessor extends BatchSpanProcessor {
 	}
 
 	override async shutdown(): Promise<void> {
-		await Promise.allSettled(this._pendingSpans)
+		if (!this._skipPendingOnFlush) {
+			await Promise.allSettled(this._pendingSpans)
+		}
 		return super.shutdown()
 	}
 
 	override async forceFlush(): Promise<void> {
-		await Promise.allSettled(this._pendingSpans)
+		if (!this._skipPendingOnFlush) {
+			await Promise.allSettled(this._pendingSpans)
+		}
 		return super.forceFlush()
 	}
 }
