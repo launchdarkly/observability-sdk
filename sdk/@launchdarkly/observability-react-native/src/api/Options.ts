@@ -1,6 +1,46 @@
 import { Attributes } from '@opentelemetry/api'
 import type { LDContext } from '@launchdarkly/js-sdk-common'
 
+export type NetworkRecordingOptions = {
+	/**
+	 * This enables recording XMLHttpRequest and Fetch headers and bodies.
+	 * @default false
+	 */
+	recordHeadersAndBody?: boolean
+	/**
+	 * Request and response headers where the value is not recorded.
+	 * The header value is replaced with '[REDACTED]'.
+	 * These headers are case-insensitive.
+	 * `recordHeadersAndBody` needs to be enabled.
+	 * This option will be ignored if `headerKeysToRecord` is set.
+	 * @example
+	 * networkHeadersToRedact: ['Secret-Header', 'Plain-Text-Password']
+	 */
+	networkHeadersToRedact?: string[]
+	/**
+	 * Specifies the keys for request/response JSON body that should not be recorded.
+	 * The body value is replaced with '[REDACTED]'.
+	 * These keys are case-insensitive.
+	 * `recordHeadersAndBody` needs to be `true`. Otherwise this option will be ignored.
+	 * @example bodyKeysToRedact: ['secret-token', 'plain-text-password']
+	 */
+	networkBodyKeysToRedact?: string[]
+	/**
+	 * Specifies the keys for request/response headers to record.
+	 * This option will override `networkHeadersToRedact` if specified.
+	 * `recordHeadersAndBody` needs to be `true`. Otherwise this option will be ignored.
+	 * @example headerKeysToRecord: ['id', 'pageNumber']
+	 */
+	headerKeysToRecord?: string[]
+	/**
+	 * Specifies the keys for request/response JSON body to record.
+	 * This option will override `networkBodyKeysToRedact` if specified.
+	 * `recordHeadersAndBody` needs to be `true`. Otherwise this option will be ignored.
+	 * @example bodyKeysToRecord: ['id', 'pageNumber']
+	 */
+	bodyKeysToRecord?: string[]
+}
+
 export interface ReactNativeOptions {
 	/**
 	 * The service name for the application.
@@ -80,6 +120,12 @@ export interface ReactNativeOptions {
 	 * Whether metrics are disabled.
 	 */
 	disableMetrics?: boolean
+
+	/**
+	 * Options for recording network request and response headers and bodies,
+	 * with controls for redacting sensitive data.
+	 */
+	networkRecording?: NetworkRecordingOptions
 
 	/**
 	 * A function that returns a friendly name for a given context.

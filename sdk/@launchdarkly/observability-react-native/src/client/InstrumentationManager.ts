@@ -39,6 +39,10 @@ import {
 import { SpanStatusCode } from '@opentelemetry/api'
 import { W3CBaggagePropagator, CompositePropagator } from '@opentelemetry/core'
 import { ReactNativeOptions } from '../api/Options'
+import {
+	FetchHook,
+	XHRHook,
+} from '../listeners/network-listener/network-listener'
 import { Metric } from '../api/Metric'
 import { SessionManager } from './SessionManager'
 import {
@@ -161,14 +165,29 @@ export class InstrumentationManager {
 		trace.setGlobalTracerProvider(this.traceProvider)
 
 		const corsPattern = getCorsUrlsPattern(this.options.tracingOrigins)
+		const networkRecording = this.options.networkRecording
 
 		registerInstrumentations({
 			instrumentations: [
 				new FetchInstrumentation({
 					propagateTraceHeaderCorsUrls: corsPattern,
+					applyCustomAttributesOnSpan:
+						networkRecording.recordHeadersAndBody
+							? FetchHook(
+									networkRecording,
+									this.options.urlBlocklist,
+								)
+							: undefined,
 				}),
 				new XMLHttpRequestInstrumentation({
 					propagateTraceHeaderCorsUrls: corsPattern,
+					applyCustomAttributesOnSpan:
+						networkRecording.recordHeadersAndBody
+							? XHRHook(
+									networkRecording,
+									this.options.urlBlocklist,
+								)
+							: undefined,
 				}),
 			],
 		})
