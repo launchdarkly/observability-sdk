@@ -16,17 +16,13 @@ const applyNetworkAttributes = (
 ) => {
 	// Always overwrite OTel-set URL attributes with sanitized version to
 	// redact credentials and sensitive query params.
-	const sanitizedUrl = sanitizeUrl(url)
-	if (sanitizedUrl) {
-		span.setAttribute('http.url', sanitizedUrl)
-		span.setAttribute('url.full', sanitizedUrl)
+	if (url) {
+		url = sanitizeUrl(url)
+		span.setAttribute('http.url', url)
+		span.setAttribute('url.full', url)
 	}
 
-	if (
-		urlBlocklist.some((blocked) =>
-			sanitizedUrl.toLowerCase().includes(blocked),
-		)
-	) {
+	if (urlBlocklist.some((blocked) => url.toLowerCase().includes(blocked))) {
 		return
 	}
 
