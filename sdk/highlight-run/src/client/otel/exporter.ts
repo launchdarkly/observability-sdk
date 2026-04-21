@@ -37,12 +37,39 @@ export type MetricExporterConfig = ConstructorParameters<
 // navigation. Callers toggle this mode via `setUnloading(true)` before
 // invoking forceFlush().
 
+const trySendBeacon = (
+	url: string,
+	body: Uint8Array,
+	contentType: string,
+): boolean => {
+	if (typeof navigator === 'undefined' || !navigator.sendBeacon) {
+		return false
+	}
+	try {
+		const blob = new Blob([body as BlobPart], { type: contentType })
+		return navigator.sendBeacon(url, blob)
+	} catch {
+		return false
+	}
+}
+
 const keepaliveFetchExport = (
 	url: string,
 	body: Uint8Array,
 	contentType: string,
 	resultCallback: (result: ExportResult) => void,
 ) => {
+	const beaconFallback = (error: Error) => {
+		// Both keepalive fetch and sendBeacon share a ~64KiB body limit in
+		// most browsers, so sendBeacon rarely saves us from size overflow.
+		// It can still succeed where keepalive fetch fails on CORS preflight
+		// or when fetch is unavailable entirely, so try it as a last resort.
+		if (trySendBeacon(url, body, contentType)) {
+			return resultCallback({ code: ExportResultCode.SUCCESS })
+		}
+		resultCallback({ code: ExportResultCode.FAILED, error })
+	}
+
 	try {
 		const blob = new Blob([body as BlobPart], { type: contentType })
 		fetch(url, {
@@ -52,42 +79,28 @@ const keepaliveFetchExport = (
 			headers: { 'Content-Type': contentType },
 			credentials: 'omit',
 		}).then(
-			(response) =>
-				resultCallback({
-					code: response.ok
-						? ExportResultCode.SUCCESS
-						: ExportResultCode.FAILED,
-					error: response.ok
-						? undefined
-						: new Error(
-								`keepalive fetch export failed with status ${response.status}`,
-							),
-				}),
-			(error) =>
+			(response) => {
+				if (response.ok) {
+					return resultCallback({ code: ExportResultCode.SUCCESS })
+				}
+				// Transport succeeded but server rejected; don't retry via
+				// sendBeacon since the server would reject it the same way.
 				resultCallback({
 					code: ExportResultCode.FAILED,
-					error,
-				}),
+					error: new Error(
+						`keepalive fetch export failed with status ${response.status}`,
+					),
+				})
+			},
+			// Promise rejection path: keepalive body-size overflow, network
+			// error, CORS preflight failure, etc. This is where keepalive's
+			// ~64KiB overflow lands — per WHATWG Fetch §4.6 it's an async
+			// network error, not a synchronous throw.
+			(error: Error) => beaconFallback(error),
 		)
 	} catch (error) {
-		// fetch with keepalive has a per-request body size limit
-		// (browser-dependent, typically 64KB). Fall back to sendBeacon which
-		// has similar constraints but exists on older browsers.
-		if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
-			const blob = new Blob([body as BlobPart], { type: contentType })
-			const queued = navigator.sendBeacon(url, blob)
-			resultCallback({
-				code: queued
-					? ExportResultCode.SUCCESS
-					: ExportResultCode.FAILED,
-				error: queued ? undefined : (error as Error),
-			})
-			return
-		}
-		resultCallback({
-			code: ExportResultCode.FAILED,
-			error: error as Error,
-		})
+		// Synchronous path: fetch/Blob unavailable, malformed URL, etc.
+		beaconFallback(error as Error)
 	}
 }
 

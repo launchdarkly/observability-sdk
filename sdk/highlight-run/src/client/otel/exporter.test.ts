@@ -90,6 +90,59 @@ describe('OTLPTraceExporterBrowserWithXhrRetry', () => {
 		;(navigator as any).sendBeacon = originalSendBeacon
 	})
 
+	it('falls back to sendBeacon when the keepalive fetch rejects (e.g. keepalive body size overflow)', async () => {
+		// Per WHATWG Fetch §4.6, keepalive body size overflow is an async
+		// promise rejection — not a synchronous throw — so sendBeacon must
+		// be tried from the rejection handler, not from the sync catch.
+		fetchSpy.mockRejectedValueOnce(new TypeError('Failed to fetch'))
+		const beaconSpy = vi.fn().mockReturnValue(true)
+		const originalSendBeacon = navigator.sendBeacon
+		;(navigator as any).sendBeacon = beaconSpy
+
+		exporter.setUnloading(true)
+		const result = await new Promise<{ code: ExportResultCode }>(
+			(resolve) => exporter.export([fakeSpan()], resolve),
+		)
+
+		expect(result.code).toBe(ExportResultCode.SUCCESS)
+		expect(beaconSpy).toHaveBeenCalledTimes(1)
+		expect(beaconSpy.mock.calls[0][0]).toBe(TRACES_URL)
+		expect(beaconSpy.mock.calls[0][1]).toBeInstanceOf(Blob)
+		;(navigator as any).sendBeacon = originalSendBeacon
+	})
+
+	it('reports failure when sendBeacon returns false after the fetch rejects', async () => {
+		fetchSpy.mockRejectedValueOnce(new TypeError('Failed to fetch'))
+		const beaconSpy = vi.fn().mockReturnValue(false)
+		const originalSendBeacon = navigator.sendBeacon
+		;(navigator as any).sendBeacon = beaconSpy
+
+		exporter.setUnloading(true)
+		const result = await new Promise<{ code: ExportResultCode }>(
+			(resolve) => exporter.export([fakeSpan()], resolve),
+		)
+
+		expect(result.code).toBe(ExportResultCode.FAILED)
+		expect(beaconSpy).toHaveBeenCalledTimes(1)
+		;(navigator as any).sendBeacon = originalSendBeacon
+	})
+
+	it('does not fall back to sendBeacon when the server responds with an error status', async () => {
+		fetchSpy.mockResolvedValueOnce(new Response('bad', { status: 500 }))
+		const beaconSpy = vi.fn().mockReturnValue(true)
+		const originalSendBeacon = navigator.sendBeacon
+		;(navigator as any).sendBeacon = beaconSpy
+
+		exporter.setUnloading(true)
+		const result = await new Promise<{ code: ExportResultCode }>(
+			(resolve) => exporter.export([fakeSpan()], resolve),
+		)
+
+		expect(result.code).toBe(ExportResultCode.FAILED)
+		expect(beaconSpy).not.toHaveBeenCalled()
+		;(navigator as any).sendBeacon = originalSendBeacon
+	})
+
 	it('returns early with no fetch call when sampling drops all items', () => {
 		const e = new OTLPTraceExporterBrowserWithXhrRetry(
 			{ url: TRACES_URL },
