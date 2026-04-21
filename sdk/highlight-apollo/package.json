@@ -25,12 +25,15 @@
 	"publishConfig": {
 		"access": "public"
 	},
+	"peerDependencies": {
+		"@apollo/server": "^5.5.0"
+	},
 	"dependencies": {
-		"@apollo/server": "^4.13.0",
 		"@highlight-run/node": "workspace:*",
 		"apollo-server-plugin-base": "^3"
 	},
 	"devDependencies": {
+		"@apollo/server": "^5.5.0",
 		"apollo-server": "^3.13.0",
 		"tsup": "^8.3.6",
 		"typescript": "^5.0.4",

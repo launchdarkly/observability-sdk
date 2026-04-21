@@ -1,24 +1,20 @@
-# options for analysis running
+version: '2'
+
 run:
     timeout: 2m
 
-# output configuration options
 output:
-    # sorts results by: filepath, line and column
-    sort-results: true
+    sort-order:
+        - file
 
 linters:
-    # enable all linters
+    default: none
     enable:
         - errcheck
-        - gosimple
         - govet
         - ineffassign
         - staticcheck
-        - typecheck
         - unused
-
-# all available settings of specific linters
-linters-settings:
-    staticcheck:
-        checks: ['all']
+    settings:
+        staticcheck:
+            checks: ['all', '-ST1000', '-ST1003']

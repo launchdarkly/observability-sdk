@@ -225,7 +225,7 @@ export const withHighlightConfig = async (
 	highlightOpts?: HighlightConfigOptions,
 ): Promise<NextConfig> => {
 	if (typeof config === 'function') {
-		return async (
+		const phaseHandler = async (
 			phase: string,
 			{ defaultConfig }: { defaultConfig: any },
 		): Promise<NextConfig> => {
@@ -241,6 +241,7 @@ export const withHighlightConfig = async (
 				)
 			}
 		}
+		return phaseHandler as unknown as NextConfig
 	} else {
 		return await getHighlightConfig(config, highlightOpts)
 	}
