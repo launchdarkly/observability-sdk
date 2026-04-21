@@ -87,6 +87,7 @@ let providers: {
 	meterProvider?: MeterProvider
 } = {}
 let otelConfig: BrowserTracingConfig | undefined
+let unloadListenerCleanup: (() => void) | undefined
 
 const RECORD_ATTRIBUTE = 'highlight.record'
 const SESSION_ID_ATTRIBUTE = 'highlight.session_id'
@@ -152,7 +153,7 @@ export const setupBrowserTracing = (
 		maxExportBatchSize: 1024, // Default value from SDK is 512
 		maxQueueSize: 2048, // Default value from SDK is 2048
 		exportTimeoutMillis: exporterOptions.timeoutMillis, // Default value from SDK is 30_000
-		scheduledDelayMillis: exporterOptions.timeoutMillis, // Default value from SDK is 1000
+		scheduledDelayMillis: 5_000, // OTEL default; shorter window reduces data lost to page unload
 	})
 
 	const resource = new Resource({
@@ -441,7 +442,55 @@ export const setupBrowserTracing = (
 		}),
 	})
 
+	unloadListenerCleanup = registerFlushOnUnload(exporter, meterExporter)
+
 	return providers
+}
+
+// Flush pending spans/metrics when the page is about to be unloaded.
+// Uses visibilitychange and pagehide (not beforeunload) per web.dev guidance:
+// beforeunload is unreliable on mobile and blocks the bfcache, while
+// visibilitychange: hidden covers client-side navigations (including SPA
+// fetch-triggered redirects) and iOS Safari tab switches.
+// The exporter's unloading flag routes the flush through
+// `fetch({ keepalive: true })`, which survives the navigation; XHR does not.
+const registerFlushOnUnload = (
+	traceExporter: OTLPTraceExporterBrowserWithXhrRetry,
+	metricExporter: OTLPMetricExporterBrowser,
+): (() => void) => {
+	if (typeof document === 'undefined' || typeof window === 'undefined') {
+		return () => {}
+	}
+
+	const flush = () => {
+		traceExporter.setUnloading(true)
+		metricExporter.setUnloading(true)
+		// Fire and forget: the browser will not wait for these promises, but
+		// keepalive fetches remain in flight after the page unloads.
+		void providers.tracerProvider?.forceFlush().catch(() => {})
+		void providers.meterProvider?.forceFlush().catch(() => {})
+	}
+
+	const onVisibilityChange = () => {
+		if (document.visibilityState === 'hidden') {
+			flush()
+		} else if (document.visibilityState === 'visible') {
+			// Restored from bfcache (or tab refocused) — resume normal XHR
+			// exports so retries work against backpressure.
+			traceExporter.setUnloading(false)
+			metricExporter.setUnloading(false)
+		}
+	}
+
+	const onPageHide = () => flush()
+
+	document.addEventListener('visibilitychange', onVisibilityChange)
+	window.addEventListener('pagehide', onPageHide)
+
+	return () => {
+		document.removeEventListener('visibilitychange', onVisibilityChange)
+		window.removeEventListener('pagehide', onPageHide)
+	}
 }
 
 class CustomBatchSpanProcessor extends BatchSpanProcessor {
@@ -577,6 +626,10 @@ export const getActiveSpanContext = () => {
 }
 
 export const shutdown = async () => {
+	if (unloadListenerCleanup) {
+		unloadListenerCleanup()
+		unloadListenerCleanup = undefined
+	}
 	await Promise.allSettled([
 		(async () => {
 			if (providers.tracerProvider) {
