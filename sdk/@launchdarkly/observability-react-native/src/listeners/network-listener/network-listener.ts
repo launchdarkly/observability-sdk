@@ -1,7 +1,7 @@
 import { Span } from '@opentelemetry/api'
 import { FetchCustomAttributeFunction } from '@opentelemetry/instrumentation-fetch'
 import { NetworkRecordingOptions } from '../../api/Options'
-import { sanitizeHeaders } from './utils/network-sanitizer'
+import { sanitizeHeaders, sanitizeUrl } from './utils/network-sanitizer'
 import { getBodyThatShouldBeRecorded } from './utils/xhr-listener'
 
 export const FetchHook =
@@ -11,9 +11,21 @@ export const FetchHook =
 	): FetchCustomAttributeFunction =>
 	(span, request, result) => {
 		const url = request instanceof Request ? request.url : ''
+		// Overwrite OTel-set URL attributes with sanitized version to redact
+		// credentials and sensitive query params, regardless of blocklist.
+		const sanitizedUrl = sanitizeUrl(url)
+		span.setAttribute('http.url', sanitizedUrl)
+		span.setAttribute('url.full', sanitizedUrl)
+
 		if (
-			urlBlocklist.some((blocked) => url.toLowerCase().includes(blocked))
+			urlBlocklist.some((blocked) =>
+				sanitizedUrl.toLowerCase().includes(blocked),
+			)
 		) {
+			return
+		}
+
+		if (!recording.recordHeadersAndBody) {
 			return
 		}
 
@@ -88,9 +100,21 @@ export const XHRHook =
 	(recording: NetworkRecordingOptions, urlBlocklist: string[]) =>
 	(span: Span, xhr: XMLHttpRequest) => {
 		const url = (xhr as any)._url ?? ''
+		// Overwrite OTel-set URL attributes with sanitized version to redact
+		// credentials and sensitive query params, regardless of blocklist.
+		const sanitizedUrl = sanitizeUrl(url)
+		span.setAttribute('http.url', sanitizedUrl)
+		span.setAttribute('url.full', sanitizedUrl)
+
 		if (
-			urlBlocklist.some((blocked) => url.toLowerCase().includes(blocked))
+			urlBlocklist.some((blocked) =>
+				sanitizedUrl.toLowerCase().includes(blocked),
+			)
 		) {
+			return
+		}
+
+		if (!recording.recordHeadersAndBody) {
 			return
 		}
 

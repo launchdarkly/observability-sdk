@@ -171,23 +171,17 @@ export class InstrumentationManager {
 			instrumentations: [
 				new FetchInstrumentation({
 					propagateTraceHeaderCorsUrls: corsPattern,
-					applyCustomAttributesOnSpan:
-						networkRecording.recordHeadersAndBody
-							? FetchHook(
-									networkRecording,
-									this.options.urlBlocklist,
-								)
-							: undefined,
+					applyCustomAttributesOnSpan: FetchHook(
+						networkRecording,
+						this.options.urlBlocklist,
+					),
 				}),
 				new XMLHttpRequestInstrumentation({
 					propagateTraceHeaderCorsUrls: corsPattern,
-					applyCustomAttributesOnSpan:
-						networkRecording.recordHeadersAndBody
-							? XHRHook(
-									networkRecording,
-									this.options.urlBlocklist,
-								)
-							: undefined,
+					applyCustomAttributesOnSpan: XHRHook(
+						networkRecording,
+						this.options.urlBlocklist,
+					),
 				}),
 			],
 		})
