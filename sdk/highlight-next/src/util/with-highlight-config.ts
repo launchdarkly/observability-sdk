@@ -220,12 +220,20 @@ const getHighlightConfig = async (
 	}
 }
 
-export const withHighlightConfig = async (
+export async function withHighlightConfig(
+	config: NextConfigObject,
+	highlightOpts?: HighlightConfigOptions,
+): Promise<NextConfig>
+export async function withHighlightConfig(
+	config: NextConfigFunction | NextConfigAsyncFunction,
+	highlightOpts?: HighlightConfigOptions,
+): Promise<NextConfigAsyncFunction>
+export async function withHighlightConfig(
 	config: NextConfigInput,
 	highlightOpts?: HighlightConfigOptions,
-): Promise<NextConfig> => {
+): Promise<NextConfig | NextConfigAsyncFunction> {
 	if (typeof config === 'function') {
-		const phaseHandler = async (
+		const phaseHandler: NextConfigAsyncFunction = async (
 			phase: string,
 			{ defaultConfig }: { defaultConfig: any },
 		): Promise<NextConfig> => {
@@ -241,7 +249,7 @@ export const withHighlightConfig = async (
 				)
 			}
 		}
-		return phaseHandler as unknown as NextConfig
+		return phaseHandler
 	} else {
 		return await getHighlightConfig(config, highlightOpts)
 	}
