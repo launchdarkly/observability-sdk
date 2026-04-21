@@ -104,5 +104,10 @@
 		"vite@6.0.7": "^6.4.1",
 		"vite@^7": "^7.0.8"
 	},
+	"dependenciesMeta": {
+		"puppeteer@9.1.1": {
+			"built": false
+		}
+	},
 	"packageManager": "yarn@4.13.0"
 }
