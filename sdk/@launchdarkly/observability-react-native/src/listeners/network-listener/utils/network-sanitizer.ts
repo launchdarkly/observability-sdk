@@ -1,21 +1,4 @@
-import { Headers, Request, Response } from './models'
-
-export const sanitizeResource = <T extends Request | Response>(
-	resource: T,
-	headersToRedact: string[],
-	headersToRecord?: string[],
-): T => {
-	const newHeaders = sanitizeHeaders(
-		headersToRedact,
-		resource.headers,
-		headersToRecord,
-	)
-
-	return {
-		...resource,
-		headers: newHeaders,
-	}
-}
+import { Headers } from './models'
 
 export const sanitizeHeaders = (
 	headersToRedact: string[],
@@ -82,7 +65,7 @@ const SENSITIVE_QUERY_PARAMS = [
  * For relative URLs, resolves against globalThis.location.origin (browser/worker)
  * or a placeholder base (non-browser environments).
  */
-export const safeParseUrl = (url: string): URL => {
+const safeParseUrl = (url: string): URL => {
 	try {
 		return new URL(url)
 	} catch {
