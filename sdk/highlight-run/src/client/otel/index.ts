@@ -87,6 +87,7 @@ let providers: {
 	meterProvider?: MeterProvider
 } = {}
 let otelConfig: BrowserTracingConfig | undefined
+let unloadListenerCleanup: (() => void) | undefined
 
 const RECORD_ATTRIBUTE = 'highlight.record'
 const SESSION_ID_ATTRIBUTE = 'highlight.session_id'
@@ -152,7 +153,7 @@ export const setupBrowserTracing = (
 		maxExportBatchSize: 1024, // Default value from SDK is 512
 		maxQueueSize: 2048, // Default value from SDK is 2048
 		exportTimeoutMillis: exporterOptions.timeoutMillis, // Default value from SDK is 30_000
-		scheduledDelayMillis: exporterOptions.timeoutMillis, // Default value from SDK is 1000
+		scheduledDelayMillis: 5_000, // OTEL default; shorter window reduces data lost to page unload
 	})
 
 	const resource = new Resource({
@@ -441,11 +442,89 @@ export const setupBrowserTracing = (
 		}),
 	})
 
+	unloadListenerCleanup = registerFlushOnUnload(
+		exporter,
+		meterExporter,
+		spanProcessor,
+		() => providers,
+	)
+
 	return providers
+}
+
+type FlushableExporter = { setUnloading: (unloading: boolean) => void }
+type FlushableProvider = { forceFlush: () => Promise<void> }
+type FlushableSpanProcessor = {
+	setSkipPendingOnFlush: (skip: boolean) => void
+}
+
+// Flush pending spans/metrics when the page is about to be unloaded.
+// Uses visibilitychange and pagehide (not beforeunload) per web.dev guidance:
+// beforeunload is unreliable on mobile and blocks the bfcache, while
+// visibilitychange: hidden covers client-side navigations (including SPA
+// fetch-triggered redirects) and iOS Safari tab switches.
+// The exporter's unloading flag routes the flush through
+// `fetch({ keepalive: true })`, which survives the navigation; XHR does not.
+// Setting skipPendingOnFlush on the span processor prevents forceFlush from
+// awaiting in-flight response-body reads — those won't finish before the page
+// freezes, and spans without body attributes are still worth keeping.
+export const registerFlushOnUnload = (
+	traceExporter: FlushableExporter,
+	metricExporter: FlushableExporter,
+	spanProcessor: FlushableSpanProcessor,
+	getProviders: () => {
+		tracerProvider?: FlushableProvider
+		meterProvider?: FlushableProvider
+	},
+): (() => void) => {
+	if (typeof document === 'undefined' || typeof window === 'undefined') {
+		return () => {}
+	}
+
+	const flush = () => {
+		traceExporter.setUnloading(true)
+		metricExporter.setUnloading(true)
+		spanProcessor.setSkipPendingOnFlush(true)
+		const current = getProviders()
+		// Fire and forget: the browser will not wait for these promises, but
+		// keepalive fetches remain in flight after the page unloads.
+		void current.tracerProvider?.forceFlush().catch(() => {})
+		void current.meterProvider?.forceFlush().catch(() => {})
+	}
+
+	const onVisibilityChange = () => {
+		if (document.visibilityState === 'hidden') {
+			flush()
+		} else if (document.visibilityState === 'visible') {
+			// Restored from bfcache (or tab refocused) — resume normal XHR
+			// exports so retries work against backpressure.
+			traceExporter.setUnloading(false)
+			metricExporter.setUnloading(false)
+			spanProcessor.setSkipPendingOnFlush(false)
+		}
+	}
+
+	const onPageHide = () => flush()
+
+	document.addEventListener('visibilitychange', onVisibilityChange)
+	window.addEventListener('pagehide', onPageHide)
+
+	return () => {
+		document.removeEventListener('visibilitychange', onVisibilityChange)
+		window.removeEventListener('pagehide', onPageHide)
+	}
 }
 
 class CustomBatchSpanProcessor extends BatchSpanProcessor {
 	private _pendingSpans = new Set<Promise<void>>()
+	// When set, forceFlush/shutdown return immediately without waiting for
+	// in-flight response-body reads. Used on page unload where waiting risks
+	// the browser freezing JS before we hand the spans to the transport.
+	private _skipPendingOnFlush = false
+
+	setSkipPendingOnFlush(skip: boolean) {
+		this._skipPendingOnFlush = skip
+	}
 
 	onStart(span: SDKSpan, parentContext: Context): void {
 		span.setAttribute(SESSION_ID_ATTRIBUTE, getPersistentSessionSecureID())
@@ -487,12 +566,16 @@ class CustomBatchSpanProcessor extends BatchSpanProcessor {
 	}
 
 	override async shutdown(): Promise<void> {
-		await Promise.allSettled(this._pendingSpans)
+		if (!this._skipPendingOnFlush) {
+			await Promise.allSettled(this._pendingSpans)
+		}
 		return super.shutdown()
 	}
 
 	override async forceFlush(): Promise<void> {
-		await Promise.allSettled(this._pendingSpans)
+		if (!this._skipPendingOnFlush) {
+			await Promise.allSettled(this._pendingSpans)
+		}
 		return super.forceFlush()
 	}
 }
@@ -577,6 +660,10 @@ export const getActiveSpanContext = () => {
 }
 
 export const shutdown = async () => {
+	if (unloadListenerCleanup) {
+		unloadListenerCleanup()
+		unloadListenerCleanup = undefined
+	}
 	await Promise.allSettled([
 		(async () => {
 			if (providers.tracerProvider) {

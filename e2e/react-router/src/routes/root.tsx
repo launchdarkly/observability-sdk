@@ -43,6 +43,7 @@ export default function Root() {
 				<a href="/welcome">Welcome</a>
 				<a href="/privacy">Privacy Demo</a>
 				<a href="/http-test">HTTP Tests</a>
+				<a href="/flush-on-unload">Flush on Unload</a>
 				<a href="/ldclient">LDClient</a>
 				<a href="/ldclient-lazy">LDClient Lazy</a>
 			</nav>

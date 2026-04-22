@@ -9252,6 +9252,9 @@ __metadata:
     pretty-quick: "npm:^4.1.1"
     turbo: "npm:2.8.7"
     typescript: "npm:^5.8.3"
+  dependenciesMeta:
+    puppeteer@9.1.1:
+      built: false
   languageName: unknown
   linkType: soft
 
@@ -12445,7 +12448,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@opentelemetry/otlp-transformer@npm:0.57.2, @opentelemetry/otlp-transformer@npm:^0.57.1, @opentelemetry/otlp-transformer@npm:^0.57.2":
+"@opentelemetry/otlp-transformer@npm:0.57.2, @opentelemetry/otlp-transformer@npm:>=0.57.1 < 0.200.0, @opentelemetry/otlp-transformer@npm:^0.57.1, @opentelemetry/otlp-transformer@npm:^0.57.2":
   version: 0.57.2
   resolution: "@opentelemetry/otlp-transformer@npm:0.57.2"
   dependencies:
@@ -29830,6 +29833,7 @@ __metadata:
     "@opentelemetry/instrumentation-user-interaction": "npm:>=0.44.0"
     "@opentelemetry/instrumentation-xml-http-request": "npm:>=0.57.1 < 0.200.0"
     "@opentelemetry/otlp-exporter-base": "npm:>=0.57.1 < 0.200.0"
+    "@opentelemetry/otlp-transformer": "npm:>=0.57.1 < 0.200.0"
     "@opentelemetry/resources": "npm:^1.30.1"
     "@opentelemetry/sdk-metrics": "npm:^1.30.1"
     "@opentelemetry/sdk-trace-web": "npm:^1.30.1"
