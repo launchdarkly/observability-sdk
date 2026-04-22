@@ -165,14 +165,10 @@ export default function FlushOnUnload() {
 						document.dispatchEvent(new Event('visibilitychange'))
 						// Flip it back so the page remains usable.
 						setTimeout(() => {
-							Object.defineProperty(
-								document,
-								'visibilityState',
-								{
-									configurable: true,
-									get: () => 'visible',
-								},
-							)
+							Object.defineProperty(document, 'visibilityState', {
+								configurable: true,
+								get: () => 'visible',
+							})
 							document.dispatchEvent(
 								new Event('visibilitychange'),
 							)
@@ -185,7 +181,9 @@ export default function FlushOnUnload() {
 				<button
 					onClick={() => {
 						emitSpan('pagehide')
-						window.dispatchEvent(new PageTransitionEvent('pagehide'))
+						window.dispatchEvent(
+							new PageTransitionEvent('pagehide'),
+						)
 					}}
 				>
 					Span + dispatch pagehide (no nav)
