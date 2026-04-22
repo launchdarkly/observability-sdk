@@ -1,5 +1,12 @@
 # highlight.run
 
+## [10.1.0](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.0.1...highlight.run-10.1.0) (2026-04-22)
+
+
+### Features
+
+* add ReportingObserver and longtask listeners ([#491](https://github.com/launchdarkly/observability-sdk/issues/491)) ([fa2c607](https://github.com/launchdarkly/observability-sdk/commit/fa2c60799064993e14d11a0f9291bbce9800aa3f))
+
 ## [10.0.1](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.0.0...highlight.run-10.0.1) (2026-04-22)
 
 
