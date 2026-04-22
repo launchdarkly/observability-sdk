@@ -728,7 +728,7 @@ export class ObserveSDK implements Observe {
 					const err = new Error(report.message)
 					this.recordError(
 						err,
-						report.message,
+						undefined,
 						Object.fromEntries(
 							Object.entries(attributes).map(([k, v]) => [
 								k,

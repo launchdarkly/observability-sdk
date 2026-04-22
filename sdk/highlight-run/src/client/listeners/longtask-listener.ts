@@ -62,7 +62,7 @@ export const LongtaskListener = (
 				})
 			}
 		})
-		observer.observe({ entryTypes: ['longtask'], buffered: true })
+		observer.observe({ type: 'longtask', buffered: true })
 	} catch {
 		return () => {}
 	}
