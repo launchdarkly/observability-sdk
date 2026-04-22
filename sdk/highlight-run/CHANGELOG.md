@@ -1,5 +1,12 @@
 # highlight.run
 
+## [10.0.1](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.0.0...highlight.run-10.0.1) (2026-04-22)
+
+
+### Bug Fixes
+
+* flush OTEL spans on page unload via keepalive fetch ([#483](https://github.com/launchdarkly/observability-sdk/issues/483)) ([0eff054](https://github.com/launchdarkly/observability-sdk/commit/0eff0544482d57d685ae00ff72b0d5b4cf224e47))
+
 ## [10.0.0](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-9.28.0...highlight.run-10.0.0) (2026-03-30)
 
 

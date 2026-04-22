@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.1](https://github.com/launchdarkly/observability-sdk/compare/observability-react-native-0.8.0...observability-react-native-0.8.1) (2026-04-22)
+
+
+### Bug Fixes
+
+* **deps:** address dependabot security alerts across SDK manifests ([#478](https://github.com/launchdarkly/observability-sdk/issues/478)) ([02f6a7c](https://github.com/launchdarkly/observability-sdk/commit/02f6a7ce6c5d5dbb22f8cde81647c3e4deb05ab6))
+
 ## [0.8.0](https://github.com/launchdarkly/observability-sdk/compare/observability-react-native-0.7.1...observability-react-native-0.8.0) (2026-03-26)
 
 
