@@ -14,6 +14,7 @@ import {
 	ATTR_TELEMETRY_SDK_VERSION,
 } from '@opentelemetry/semantic-conventions'
 import { ReactNativeOptions } from '../api/Options'
+import { DEFAULT_URL_BLOCKLIST } from '../listeners/network-listener/utils/network-sanitizer'
 import { Metric } from '../api/Metric'
 import { RequestContext } from '../api/RequestContext'
 import { SessionManager } from '../client/SessionManager'
@@ -70,7 +71,11 @@ export class ObservabilityClient {
 			disableMetrics: options.disableMetrics ?? false,
 			disableTraces: options.disableTraces ?? false,
 			tracingOrigins: options.tracingOrigins ?? false,
-			urlBlocklist: options.urlBlocklist ?? [],
+			urlBlocklist: [
+				...(options.urlBlocklist ?? []),
+				...DEFAULT_URL_BLOCKLIST,
+			],
+			networkRecording: options.networkRecording ?? {},
 			contextFriendlyName:
 				options.contextFriendlyName ?? (() => undefined),
 		}
