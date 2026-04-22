@@ -41,6 +41,18 @@ export type ObserveOptions = CommonOptions & {
 	 */
 	enablePerformanceRecording?: boolean
 	/**
+	 * Specifies whether to record main-thread `longtask` entries (>50ms) as
+	 * `long_task.duration` histogram samples.
+	 * @default true
+	 */
+	enableLongtaskRecording?: boolean
+	/**
+	 * Specifies whether to subscribe to the browser Reporting API and emit
+	 * CSP/intervention reports as errors and deprecation reports as warn logs.
+	 * @default true
+	 */
+	enableReportingObserver?: boolean
+	/**
 	 * Specifies the environment your application is running in.
 	 * This is useful to distinguish whether your session was recorded on localhost or in production.
 	 * @default 'production'

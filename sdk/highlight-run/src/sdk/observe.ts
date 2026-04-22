@@ -75,6 +75,8 @@ import {
 	NetworkPerformanceListener,
 	NetworkPerformancePayload,
 } from '../client/listeners/network-listener/performance-listener'
+import { LongtaskListener } from '../client/listeners/longtask-listener'
+import { ReportingObserverListener } from '../client/listeners/reporting-observer-listener'
 import randomUuidV4 from '../client/utils/randomUuidV4'
 import { recordException } from '../client/otel/recordException'
 import { ObserveOptions, ProductAnalyticsEvents } from '../client/types/observe'
@@ -680,6 +682,63 @@ export class ObserveSDK implements Observe {
 					category: MetricCategory.Device,
 					group: window.location.href,
 				},
+			})
+		}
+		if (this._options.enableLongtaskRecording !== false) {
+			LongtaskListener((entry) => {
+				const attributes: Attributes = {
+					category: MetricCategory.Performance,
+					name: entry.name,
+					[SemanticAttributes.ATTR_URL_PATH]:
+						window.location.pathname,
+				}
+				if (entry.containerType) {
+					attributes['container_type'] = entry.containerType
+				}
+				if (entry.containerSrc) {
+					attributes['container_src'] = entry.containerSrc
+				}
+				if (entry.containerId) {
+					attributes['container_id'] = entry.containerId
+				}
+				if (entry.containerName) {
+					attributes['container_name'] = entry.containerName
+				}
+				this.recordHistogram({
+					name: 'long_task.duration',
+					value: entry.duration,
+					attributes,
+				})
+			})
+		}
+		if (this._options.enableReportingObserver !== false) {
+			ReportingObserverListener((report) => {
+				const attributes: Attributes = {
+					...report.attributes,
+					[SemanticAttributes.ATTR_URL_PATH]:
+						window.location.pathname,
+				}
+				if (report.kind === 'log') {
+					this._recordLog(
+						report.message,
+						report.level ?? 'warn',
+						attributes,
+					)
+				} else {
+					const err = new Error(report.message)
+					this.recordError(
+						err,
+						report.message,
+						Object.fromEntries(
+							Object.entries(attributes).map(([k, v]) => [
+								k,
+								v === undefined ? '' : String(v),
+							]),
+						),
+						'reporting-observer',
+						'custom',
+					)
+				}
 			})
 		}
 	}
