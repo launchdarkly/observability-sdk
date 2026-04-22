@@ -28,6 +28,8 @@
 		"pino-pretty": "^10.2.3"
 	},
 	"devDependencies": {
+		"@types/node-fetch": "^2.6.1",
+		"node-fetch": "^2.6.7",
 		"ts-node": "^10.9.2",
 		"typescript": "^5.3.2"
 	}
