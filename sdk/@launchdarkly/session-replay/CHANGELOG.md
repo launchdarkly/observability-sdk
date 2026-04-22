@@ -1,5 +1,19 @@
 # @launchdarkly/session-replay
 
+## [1.1.3](https://github.com/launchdarkly/observability-sdk/compare/session-replay-1.1.2...session-replay-1.1.3) (2026-04-22)
+
+
+### Bug Fixes
+
+* **deps:** address dependabot security alerts across SDK manifests ([#478](https://github.com/launchdarkly/observability-sdk/issues/478)) ([02f6a7c](https://github.com/launchdarkly/observability-sdk/commit/02f6a7ce6c5d5dbb22f8cde81647c3e4deb05ab6))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * highlight.run bumped to 10.0.1
+
 ## [1.1.2](https://github.com/launchdarkly/observability-sdk/compare/session-replay-1.1.1...session-replay-1.1.2) (2026-04-01)
 
 

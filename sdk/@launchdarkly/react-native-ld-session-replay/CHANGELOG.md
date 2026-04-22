@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.4.2](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.4.1...session-replay-react-native-0.4.2) (2026-04-22)
+
+
+### Bug Fixes
+
+* **deps:** address dependabot security alerts across SDK manifests ([#478](https://github.com/launchdarkly/observability-sdk/issues/478)) ([02f6a7c](https://github.com/launchdarkly/observability-sdk/commit/02f6a7ce6c5d5dbb22f8cde81647c3e4deb05ab6))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @launchdarkly/observability-react-native bumped to 0.8.1
+
 ## [0.4.1](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.4.0...session-replay-react-native-0.4.1) (2026-04-18)
 
 
