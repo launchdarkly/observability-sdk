@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.0](https://github.com/launchdarkly/observability-sdk/compare/observability-react-native-0.8.1...observability-react-native-0.9.0) (2026-04-22)
+
+
+### Features
+
+* **react-native:** Add `NetworkRecordingOptions` and network sanitizer ([#485](https://github.com/launchdarkly/observability-sdk/issues/485)) ([b717bcb](https://github.com/launchdarkly/observability-sdk/commit/b717bcbd7588045629e284d1ec9d8996edd4287d))
+
 ## [0.8.1](https://github.com/launchdarkly/observability-sdk/compare/observability-react-native-0.8.0...observability-react-native-0.8.1) (2026-04-22)
 
 
