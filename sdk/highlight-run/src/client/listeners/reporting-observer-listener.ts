@@ -95,41 +95,41 @@ export const ReportingObserverListener = (
 		}
 	).ReportingObserver
 
-	const observer = new ReportingObserverCtor(
-		(reports) => {
-			for (const report of reports) {
-				const type = report.type ?? 'unknown'
-				const body = (report.body ?? {}) as Record<string, unknown>
-				const attributes = {
-					'report.type': type,
-					'report.url': report.url,
-					...flattenBody(body),
-				}
-				const message = messageFromReport({ type, body })
-				if (type === 'deprecation') {
-					callback({
-						kind: 'log',
-						level: 'warn',
-						type,
-						message,
-						url: report.url,
-						attributes,
-					})
-				} else {
-					callback({
-						kind: 'error',
-						type,
-						message,
-						url: report.url,
-						attributes,
-					})
-				}
-			}
-		},
-		{ buffered: true, types },
-	)
-
+	let observer: { observe(): void; disconnect(): void }
 	try {
+		observer = new ReportingObserverCtor(
+			(reports) => {
+				for (const report of reports) {
+					const type = report.type ?? 'unknown'
+					const body = (report.body ?? {}) as Record<string, unknown>
+					const attributes = {
+						'report.type': type,
+						'report.url': report.url,
+						...flattenBody(body),
+					}
+					const message = messageFromReport({ type, body })
+					if (type === 'deprecation') {
+						callback({
+							kind: 'log',
+							level: 'warn',
+							type,
+							message,
+							url: report.url,
+							attributes,
+						})
+					} else {
+						callback({
+							kind: 'error',
+							type,
+							message,
+							url: report.url,
+							attributes,
+						})
+					}
+				}
+			},
+			{ buffered: true, types },
+		)
 		observer.observe()
 	} catch {
 		return () => {}
