@@ -5,12 +5,74 @@ import type {
   LDClientMin,
 } from '@launchdarkly/observability-react-native';
 import type {
+  LDContext,
   LDPluginEnvironmentMetadata,
   LDPluginMetadata,
 } from '@launchdarkly/js-sdk-common';
 
 const MOBILE_KEY_REQUIRED_MESSAGE =
   'Session replay requires a non-empty mobile key. Provide metadata.sdkKey or metadata.mobileKey when initializing the LaunchDarkly client.';
+
+// Mirrors escapeKey() in LDObserveContext.kt (observability-android)
+function escapeContextKey(key: string): string {
+  return key.replace(/%/g, '%25').replace(/:/g, '%3A');
+}
+
+// Mirrors SessionReplayHook.afterIdentify() in SessionReplayHook.kt (observability-android)
+function contextKeysFromContext(context: LDContext): Record<string, string> {
+  const keys: Record<string, string> = {};
+  if (!('kind' in context)) {
+    // Legacy LDUser — no 'kind' field, implicitly 'user'
+    keys['user'] = context.key;
+    return keys;
+  }
+  if (context.kind === 'multi') {
+    for (const [kindName, value] of Object.entries(context)) {
+      if (kindName !== 'kind' && typeof value === 'object' && value !== null) {
+        keys[kindName] = (value as { key: string }).key;
+      }
+    }
+    return keys;
+  }
+  keys[context.kind] = context.key;
+  return keys;
+}
+
+// Mirrors LDObserveContext.fullyQualifiedKey in LDObserveContext.kt (observability-android)
+function canonicalKeyFromContext(context: LDContext): string {
+  if (!('kind' in context)) {
+    // Legacy LDUser
+    return context.key;
+  }
+  if (context.kind === 'multi') {
+    const parts: string[] = [];
+    for (const [kindName, value] of Object.entries(context)) {
+      if (kindName !== 'kind' && typeof value === 'object' && value !== null) {
+        parts.push(
+          `${kindName}:${escapeContextKey((value as { key: string }).key)}`
+        );
+      }
+    }
+    return parts.sort().join(':');
+  }
+  if (context.kind === 'user') {
+    return context.key;
+  }
+  return `${context.kind}:${escapeContextKey(context.key)}`;
+}
+
+export function afterIdentify(
+  context: LDContext,
+  completed: boolean
+): Promise<void> {
+  const contextKeys = contextKeysFromContext(context);
+  const canonicalKey = canonicalKeyFromContext(context);
+  return SessionReplayReactNative.afterIdentify(
+    contextKeys,
+    canonicalKey,
+    completed
+  );
+}
 
 export function configureSessionReplay(
   mobileKey: string,

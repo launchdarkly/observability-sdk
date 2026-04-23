@@ -88,6 +88,16 @@ internal class SessionReplayClientAdapter private constructor() {
         }
     }
 
+    fun afterIdentify(contextKeys: ReadableMap, canonicalKey: String, completed: Boolean) {
+        val keys = mutableMapOf<String, String>()
+        val iterator = contextKeys.keySetIterator()
+        while (iterator.hasNextKey()) {
+            val kind = iterator.nextKey()
+            contextKeys.getString(kind)?.let { keys[kind] = it }
+        }
+        LDReplay.hookProxy?.afterIdentify(keys, canonicalKey, completed)
+    }
+
     fun stop(completion: () -> Unit) {
         logger.debug("stop")
         // Post to the main thread so that stop() queues behind any in-progress start().

@@ -1,10 +1,15 @@
 import NativeSessionReplayReactNative from '../NativeSessionReplayReactNative';
-import { configureSessionReplay, createSessionReplayPlugin } from '../index';
+import {
+  afterIdentify,
+  configureSessionReplay,
+  createSessionReplayPlugin,
+} from '../index';
 
 jest.mock('../NativeSessionReplayReactNative', () => ({
   configure: jest.fn().mockResolvedValue(undefined),
   startSessionReplay: jest.fn().mockResolvedValue(undefined),
   stopSessionReplay: jest.fn().mockResolvedValue(undefined),
+  afterIdentify: jest.fn().mockResolvedValue(undefined),
 }));
 
 describe('configureSessionReplay', () => {
@@ -14,6 +19,77 @@ describe('configureSessionReplay', () => {
 
   it('rejects if key is whitespace', async () => {
     await expect(configureSessionReplay('   ')).rejects.toThrow();
+  });
+});
+
+describe('afterIdentify', () => {
+  it('passes kind and key for a single-kind context', async () => {
+    await afterIdentify({ kind: 'user', key: 'abc' }, true);
+    expect(NativeSessionReplayReactNative.afterIdentify).toHaveBeenCalledWith(
+      { user: 'abc' },
+      'abc',
+      true
+    );
+  });
+
+  it('uses kind:key canonical key for non-user single-kind context', async () => {
+    await afterIdentify({ kind: 'org', key: 'acme' }, true);
+    expect(NativeSessionReplayReactNative.afterIdentify).toHaveBeenCalledWith(
+      { org: 'acme' },
+      'org:acme',
+      true
+    );
+  });
+
+  it('escapes colons and percent signs in keys', async () => {
+    await afterIdentify({ kind: 'org', key: 'a:b%c' }, true);
+    expect(NativeSessionReplayReactNative.afterIdentify).toHaveBeenCalledWith(
+      { org: 'a:b%c' },
+      'org:a%3Ab%25c',
+      true
+    );
+  });
+
+  it('passes all sub-context kind/key pairs for a multi-kind context', async () => {
+    await afterIdentify(
+      { kind: 'multi', org: { key: 'acme' }, user: { key: 'abc' } },
+      true
+    );
+    expect(NativeSessionReplayReactNative.afterIdentify).toHaveBeenCalledWith(
+      { org: 'acme', user: 'abc' },
+      'org:acme:user:abc',
+      true
+    );
+  });
+
+  it('sorts sub-contexts by kind for the canonical key', async () => {
+    await afterIdentify(
+      { kind: 'multi', user: { key: 'abc' }, org: { key: 'acme' } },
+      true
+    );
+    expect(NativeSessionReplayReactNative.afterIdentify).toHaveBeenCalledWith(
+      { user: 'abc', org: 'acme' },
+      'org:acme:user:abc',
+      true
+    );
+  });
+
+  it('handles legacy LDUser with implicit user kind', async () => {
+    await afterIdentify({ key: 'legacy-user' }, true);
+    expect(NativeSessionReplayReactNative.afterIdentify).toHaveBeenCalledWith(
+      { user: 'legacy-user' },
+      'legacy-user',
+      true
+    );
+  });
+
+  it('passes completed=false through', async () => {
+    await afterIdentify({ kind: 'user', key: 'abc' }, false);
+    expect(NativeSessionReplayReactNative.afterIdentify).toHaveBeenCalledWith(
+      { user: 'abc' },
+      'abc',
+      false
+    );
   });
 });
 
