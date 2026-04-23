@@ -13,7 +13,7 @@ object LDReplay {
     internal var client: SessionReplayServicing? = null
 
     /**
-     * Hook proxy for the C# / MAUI bridge.
+     * Hook proxy for cross-platform bridges (C# / MAUI, React Native, etc.).
      */
     val hookProxy: SessionReplayHookProxy?
         get() = client?.let { SessionReplayHookProxy(it) }
