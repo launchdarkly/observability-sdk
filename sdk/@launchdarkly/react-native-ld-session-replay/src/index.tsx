@@ -52,15 +52,15 @@ function canonicalKeyFromContext(context: LDContext): string {
     return context.key;
   }
   if (context.kind === 'multi') {
-    const parts: string[] = [];
+    const entries: Array<[string, string]> = [];
     for (const [kindName, value] of Object.entries(context)) {
       if (kindName !== 'kind' && typeof value === 'object' && value !== null) {
-        parts.push(
-          `${kindName}:${escapeContextKey((value as { key: string }).key)}`
-        );
+        entries.push([kindName, (value as { key: string }).key]);
       }
     }
-    return parts.sort().join(':');
+    // Sort by kind name only, matching LDObserveContext.fullyQualifiedKey in (observability-android)
+    entries.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+    return entries.map(([k, v]) => `${k}:${escapeContextKey(v)}`).join(':');
   }
   if (context.kind === 'user') {
     return context.key;

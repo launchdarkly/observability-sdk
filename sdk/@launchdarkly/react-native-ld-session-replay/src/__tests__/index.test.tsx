@@ -74,6 +74,20 @@ describe('afterIdentify', () => {
     );
   });
 
+  it('sorts by kind name, not by kind:key string', async () => {
+    // "org-team" sorts before "org" when sorting full "kind:key" strings because
+    // '-' (45) < ':' (58). Sorting by kind name only keeps "org" first.
+    await afterIdentify(
+      { 'kind': 'multi', 'org-team': { key: 'eng' }, 'org': { key: 'acme' } },
+      true
+    );
+    expect(NativeSessionReplayReactNative.afterIdentify).toHaveBeenCalledWith(
+      { 'org-team': 'eng', 'org': 'acme' },
+      'org:acme:org-team:eng',
+      true
+    );
+  });
+
   it('handles legacy LDUser with implicit user kind', async () => {
     await afterIdentify({ key: 'legacy-user' }, true);
     expect(NativeSessionReplayReactNative.afterIdentify).toHaveBeenCalledWith(
