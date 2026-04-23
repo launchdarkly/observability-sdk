@@ -2,10 +2,13 @@ package com.sessionreplayreactnative
 
 import android.app.Application
 import com.facebook.react.bridge.ReadableMap
+import com.launchdarkly.sdk.ContextKind
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
@@ -47,12 +50,45 @@ class SessionReplayClientAdapterTest {
     }
 
     @Test
+    fun `buildContextFromKeys returns null for null input`() {
+        val adapter = newAdapter()
+        assertNull(adapter.buildContextFromKeys(null))
+    }
+
+    @Test
+    fun `buildContextFromKeys returns null for empty map`() {
+        val adapter = newAdapter()
+        assertNull(adapter.buildContextFromKeys(emptyMap()))
+    }
+
+    @Test
+    fun `buildContextFromKeys returns single-kind context`() {
+        val adapter = newAdapter()
+        val context = adapter.buildContextFromKeys(mapOf("user" to "abc123"))
+        assertNotNull(context)
+        assertEquals("abc123", context!!.key)
+        assertEquals(ContextKind.of("user"), context.kind)
+    }
+
+    @Test
+    fun `buildContextFromKeys returns multi-kind context`() {
+        val adapter = newAdapter()
+        val context = adapter.buildContextFromKeys(mapOf("user" to "abc", "org" to "acme"))
+        assertNotNull(context)
+        assertTrue(context!!.isMultiple)
+        assertNotNull(context.getIndividualContext(ContextKind.of("user")))
+        assertEquals("abc", context.getIndividualContext(ContextKind.of("user"))!!.key)
+        assertNotNull(context.getIndividualContext(ContextKind.of("org")))
+        assertEquals("acme", context.getIndividualContext(ContextKind.of("org"))!!.key)
+    }
+
+    @Test
     fun `start before setMobileKey calls completion with failure`() {
         val adapter = newAdapter()
         var success: Boolean? = null
         var errorMessage: String? = null
 
-        adapter.start(mockk<Application>(relaxed = true)) { s, e ->
+        adapter.start(mockk<Application>(relaxed = true), null) { s, e ->
             success = s
             errorMessage = e
         }

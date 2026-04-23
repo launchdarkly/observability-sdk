@@ -53,6 +53,15 @@
     }
 }
 
+- (void)afterIdentify:(NSDictionary *)contextKeys
+         canonicalKey:(NSString *)canonicalKey
+            completed:(BOOL)completed
+              resolve:(RCTPromiseResolveBlock)resolve
+               reject:(RCTPromiseRejectBlock)reject
+{
+    resolve(nil);
+}
+
 - (std::shared_ptr<facebook::react::TurboModule>)getTurboModule:
     (const facebook::react::ObjCTurboModule::InitParams &)params
 {
