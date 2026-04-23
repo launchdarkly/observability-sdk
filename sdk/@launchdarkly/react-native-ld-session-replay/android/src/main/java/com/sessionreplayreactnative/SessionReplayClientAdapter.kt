@@ -27,6 +27,8 @@ internal class SessionReplayClientAdapter private constructor() {
     private var replayOptions: ReplayOptions? = null
     // Only accessed from the main thread (all reads/writes are inside Handler(mainLooper).post blocks).
     private var initialized = false
+    // The most recently identified context. Used on init if one arrived before LDClient.init() ran.
+    private var cachedContextKeys: Map<String, String>? = null
     private val logger = LDLogger.withAdapter(LDAndroidLogging.adapter(), TAG)
 
     fun setMobileKey(mobileKey: String, options: ReadableMap?) {
@@ -95,7 +97,14 @@ internal class SessionReplayClientAdapter private constructor() {
             val kind = iterator.nextKey()
             contextKeys.getString(kind)?.let { keys[kind] = it }
         }
-        LDReplay.hookProxy?.afterIdentify(keys, canonicalKey, completed)
+        Handler(Looper.getMainLooper()).post {
+            if (completed) {
+                cachedContextKeys = keys
+            }
+            if (initialized) {
+                LDReplay.hookProxy?.afterIdentify(keys, canonicalKey, completed)
+            }
+        }
     }
 
     fun stop(completion: () -> Unit) {
@@ -135,17 +144,14 @@ internal class SessionReplayClientAdapter private constructor() {
             )
             .build()
 
-        // The context key is a placeholder. The LDClient is offline and never sends it to
-        // LaunchDarkly servers, but SessionReplay does use it locally to attribute sessions.
-        //
-        // TODO: Pass the actual initial context here once the LaunchDarkly React Native SDK
-        // supports providing a context at initialization time. Currently, context is only
-        // available after an explicit client.identify() call — getContext() always returns
-        // undefined when register() runs during the LDClient constructor.
-        val placeholderContext = LDContext.builder(ContextKind.DEFAULT, "placeholder").build()
+        // Use a real context if one arrived via afterIdentify() before init; otherwise fall back
+        // to a placeholder. The LDClient is offline and never sends the context to LaunchDarkly
+        // servers, but SessionReplay uses it locally to attribute sessions.
+        val initialContext = buildContextFromKeys(cachedContextKeys)
+            ?: LDContext.builder(ContextKind.DEFAULT, "placeholder").build()
         // timeout=0: return immediately without blocking the main thread waiting for flags.
         // onPluginsReady() fires synchronously during init() before it returns.
-        LDClient.init(application, config, placeholderContext, 0)
+        LDClient.init(application, config, initialContext, 0)
     }
 
     private fun applyEnabled(enabled: Boolean) {
@@ -154,6 +160,20 @@ internal class SessionReplayClientAdapter private constructor() {
         } else {
             LDReplay.stop()
         }
+    }
+
+    // Analogous to buildObserveContext() in SessionReplayService.kt (observability-android),
+    // but builds an LDContext (for LDClient.init()) instead of an LDObserveContext.
+    internal fun buildContextFromKeys(contextKeys: Map<String, String>?): LDContext? {
+        if (contextKeys == null) return null
+        if (contextKeys.size == 1) {
+            val (kind, key) = contextKeys.entries.first()
+            return LDContext.builder(ContextKind.of(kind), key).build()
+        }
+        val contexts = contextKeys.map { (kind, key) ->
+            LDContext.builder(ContextKind.of(kind), key).build()
+        }
+        return LDContext.createMulti(*contexts.toTypedArray())
     }
 
     internal fun replayOptionsFrom(map: ReadableMap?): ReplayOptions {
