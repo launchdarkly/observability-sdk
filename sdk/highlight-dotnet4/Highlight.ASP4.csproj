@@ -84,7 +84,7 @@
       <Version>1.11.2</Version>
     </PackageReference>
     <PackageReference Include="OpenTelemetry.Api">
-      <Version>1.11.2</Version>
+      <Version>1.15.3</Version>
     </PackageReference>
     <PackageReference Include="OpenTelemetry.Api.ProviderBuilderExtensions">
       <Version>1.11.2</Version>
