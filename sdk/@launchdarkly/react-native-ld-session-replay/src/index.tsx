@@ -41,7 +41,7 @@ function contextKeysFromContext(context: LDContext): Record<string, string> {
     }
     return keys;
   }
-  keys[context.kind] = context.key;
+  keys[context.kind] = context.key as string;
   return keys;
 }
 
@@ -65,7 +65,7 @@ function canonicalKeyFromContext(context: LDContext): string {
   if (context.kind === 'user') {
     return context.key;
   }
-  return `${context.kind}:${escapeContextKey(context.key)}`;
+  return `${context.kind}:${escapeContextKey(context.key as string)}`;
 }
 
 export function afterIdentify(
