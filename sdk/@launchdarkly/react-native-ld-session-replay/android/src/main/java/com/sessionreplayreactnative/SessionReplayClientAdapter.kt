@@ -27,8 +27,9 @@ internal class SessionReplayClientAdapter private constructor() {
     private var replayOptions: ReplayOptions? = null
     // Only accessed from the main thread (all reads/writes are inside Handler(mainLooper).post blocks).
     private var initialized = false
-    // The most recently identified context. Used on init if one arrived before LDClient.init() ran.
-    private var cachedContextKeys: Map<String, String>? = null
+    // The most recently identified context. Defaults to anonymous; updated on each successful identify.
+    private var cachedContext: LDContext =
+        LDContext.builder(ContextKind.DEFAULT, "anonymous").anonymous(true).build()
     private val logger = LDLogger.withAdapter(LDAndroidLogging.adapter(), TAG)
 
     fun setMobileKey(mobileKey: String, options: ReadableMap?) {
@@ -99,7 +100,7 @@ internal class SessionReplayClientAdapter private constructor() {
         }
         Handler(Looper.getMainLooper()).post {
             if (completed) {
-                cachedContextKeys = keys
+                buildContextFromKeys(keys)?.let { cachedContext = it }
             }
             if (initialized) {
                 LDReplay.hookProxy?.afterIdentify(keys, canonicalKey, completed)
@@ -144,14 +145,9 @@ internal class SessionReplayClientAdapter private constructor() {
             )
             .build()
 
-        // Use a real context if one arrived via afterIdentify() before init; otherwise fall back
-        // to a placeholder. The LDClient is offline and never sends the context to LaunchDarkly
-        // servers, but SessionReplay uses it locally to attribute sessions.
-        val initialContext = buildContextFromKeys(cachedContextKeys)
-            ?: LDContext.builder(ContextKind.DEFAULT, "placeholder").build()
         // timeout=0: return immediately without blocking the main thread waiting for flags.
         // onPluginsReady() fires synchronously during init() before it returns.
-        LDClient.init(application, config, initialContext, 0)
+        LDClient.init(application, config, cachedContext, 0)
     }
 
     private fun applyEnabled(enabled: Boolean) {
