@@ -56,6 +56,12 @@ class SessionReplayClientAdapterTest {
     }
 
     @Test
+    fun `buildContextFromKeys returns null for empty map`() {
+        val adapter = newAdapter()
+        assertNull(adapter.buildContextFromKeys(emptyMap()))
+    }
+
+    @Test
     fun `buildContextFromKeys returns single-kind context`() {
         val adapter = newAdapter()
         val context = adapter.buildContextFromKeys(mapOf("user" to "abc123"))

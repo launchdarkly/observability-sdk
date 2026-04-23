@@ -99,11 +99,15 @@ internal class SessionReplayClientAdapter private constructor() {
             contextKeys.getString(kind)?.let { keys[kind] = it }
         }
         Handler(Looper.getMainLooper()).post {
-            if (completed) {
-                buildContextFromKeys(keys)?.let { cachedContext = it }
-            }
-            if (initialized) {
-                LDReplay.hookProxy?.afterIdentify(keys, canonicalKey, completed)
+            try {
+                if (completed) {
+                    buildContextFromKeys(keys)?.let { cachedContext = it }
+                }
+                if (initialized) {
+                    LDReplay.hookProxy?.afterIdentify(keys, canonicalKey, completed)
+                }
+            } catch (e: Exception) {
+                logger.error("afterIdentify: threw {0}: {1}", e::class.simpleName, e.message)
             }
         }
     }
@@ -161,7 +165,7 @@ internal class SessionReplayClientAdapter private constructor() {
     // Analogous to buildObserveContext() in SessionReplayService.kt (observability-android),
     // but builds an LDContext (for LDClient.init()) instead of an LDObserveContext.
     internal fun buildContextFromKeys(contextKeys: Map<String, String>?): LDContext? {
-        if (contextKeys == null) return null
+        if (contextKeys.isNullOrEmpty()) return null
         if (contextKeys.size == 1) {
             val (kind, key) = contextKeys.entries.first()
             return LDContext.builder(ContextKind.of(kind), key).build()
