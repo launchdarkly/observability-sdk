@@ -9,6 +9,13 @@ import type {
   LDPluginEnvironmentMetadata,
   LDPluginMetadata,
 } from '@launchdarkly/js-sdk-common';
+import type {
+  Hook,
+  HookMetadata,
+  IdentifySeriesContext,
+  IdentifySeriesData,
+  IdentifySeriesResult,
+} from '@launchdarkly/react-native-client-sdk';
 
 const MOBILE_KEY_REQUIRED_MESSAGE =
   'Session replay requires a non-empty mobile key. Provide metadata.sdkKey or metadata.mobileKey when initializing the LaunchDarkly client.';
@@ -93,6 +100,28 @@ export function stopSessionReplay(): Promise<void> {
   return SessionReplayReactNative.stopSessionReplay();
 }
 
+class SessionReplayHook implements Hook {
+  getMetadata(): HookMetadata {
+    return { name: 'session-replay-react-native' };
+  }
+
+  afterIdentify(
+    hookContext: IdentifySeriesContext,
+    data: IdentifySeriesData,
+    result: IdentifySeriesResult
+  ): IdentifySeriesData {
+    afterIdentify(hookContext.context, result.status === 'completed').catch(
+      (error) => {
+        console.error(
+          '[SessionReplay] Failed to forward identify context:',
+          error
+        );
+      }
+    );
+    return data;
+  }
+}
+
 class SessionReplayPluginAdapter implements LDPlugin {
   private options: SessionReplayOptions;
 
@@ -104,6 +133,10 @@ class SessionReplayPluginAdapter implements LDPlugin {
     return {
       name: 'session-replay-react-native',
     };
+  }
+
+  getHooks(_metadata: LDPluginEnvironmentMetadata): Hook[] {
+    return [new SessionReplayHook()];
   }
 
   register(_client: LDClientMin, metadata: LDPluginEnvironmentMetadata): void {

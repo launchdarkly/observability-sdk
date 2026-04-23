@@ -94,6 +94,54 @@ describe('afterIdentify', () => {
 });
 
 describe('SessionReplayPluginAdapter', () => {
+  it('returns a hook from getHooks', () => {
+    const plugin = createSessionReplayPlugin();
+    const hooks = plugin.getHooks!({
+      sdk: { name: 'test', version: '0.0.0' },
+      mobileKey: 'mob-key-123',
+    });
+    expect(hooks).toHaveLength(1);
+    expect(hooks[0]!.getMetadata().name).toBe('session-replay-react-native');
+  });
+
+  it('hook afterIdentify calls native afterIdentify with context', async () => {
+    const plugin = createSessionReplayPlugin();
+    const [hook] = plugin.getHooks!({
+      sdk: { name: 'test', version: '0.0.0' },
+      mobileKey: 'mob-key-123',
+    });
+    hook!.afterIdentify!(
+      { context: { kind: 'user', key: 'abc' } },
+      {},
+      { status: 'completed' }
+    );
+    await new Promise(process.nextTick);
+    expect(NativeSessionReplayReactNative.afterIdentify).toHaveBeenCalledWith(
+      { user: 'abc' },
+      'abc',
+      true
+    );
+  });
+
+  it('hook afterIdentify passes completed=false for shed status', async () => {
+    const plugin = createSessionReplayPlugin();
+    const [hook] = plugin.getHooks!({
+      sdk: { name: 'test', version: '0.0.0' },
+      mobileKey: 'mob-key-123',
+    });
+    hook!.afterIdentify!(
+      { context: { kind: 'user', key: 'abc' } },
+      {},
+      { status: 'shed' }
+    );
+    await new Promise(process.nextTick);
+    expect(NativeSessionReplayReactNative.afterIdentify).toHaveBeenCalledWith(
+      { user: 'abc' },
+      'abc',
+      false
+    );
+  });
+
   it('calls configure and startSessionReplay on register', async () => {
     const plugin = createSessionReplayPlugin();
     plugin.register(
