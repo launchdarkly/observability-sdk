@@ -241,7 +241,7 @@ export class ObserveSDK implements Observe {
 			const msg =
 				typeof message === 'string' ? message : stringify(message)
 			const stackTrace = trace
-				? stringify(trace.map((s) => s.toString()))
+				? trace.map((s) => s.toString()).join('\n')
 				: undefined
 			span?.addEvent('log', {
 				[ATTR_LOG_SEVERITY]: level,
@@ -250,16 +250,33 @@ export class ObserveSDK implements Observe {
 				...metadata,
 			})
 			if (this._options.reportConsoleErrors && level === 'error') {
-				span?.recordException(new Error(msg))
+				const err = new Error(msg)
+				span?.recordException(err)
 				span?.setStatus({
 					code: SpanStatusCode.ERROR,
 					message: msg,
 				})
-				const err = new Error(msg)
 				if (trace) {
-					err.stack = stackTrace
+					// Pass the pre-parsed trace through directly. The prior
+					// code stuffed a JSON-stringified array into err.stack and
+					// let recordError → parseError re-parse it, which triggers
+					// catastrophic backtracking in error-stack-parser's
+					// parseFFOrSafari regex.
+					this._recordErrorMessage({
+						error: err,
+						event: err.message,
+						type: 'custom',
+						url: window.location.href,
+						source: 'frontend',
+						lineNumber: trace[0]?.lineNumber ?? 0,
+						columnNumber: trace[0]?.columnNumber ?? 0,
+						stackTrace: trace,
+						timestamp: new Date().toISOString(),
+						id: randomUuidV4(),
+					})
+				} else {
+					this.recordError(err)
 				}
-				this.recordError(err)
 			}
 		})
 	}
