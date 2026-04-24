@@ -295,19 +295,43 @@ export const shouldNetworkRequestBeTraced = (
 	if (tracingOrigins === true) {
 		patterns = ['localhost', /^\//]
 		if (window?.location?.host) {
-			patterns.push(window.location.host)
+			// Anchor to the origin; an unanchored host regex also matches the
+			// host appearing as a query-parameter value in a third-party URL.
+			patterns.push(buildLocationHostPattern(window.location.host))
 		}
 	} else if (tracingOrigins instanceof Array) {
 		patterns = tracingOrigins
 	}
 
+	// Match against the URL's origin (or the raw string for relative paths)
+	// rather than the whole URL, so the configured host appearing as a query
+	// value in a third-party URL doesn't leak trace headers.
+	const matchTarget = getUrlMatchTarget(url)
+
 	let result = false
 	patterns.forEach((pattern) => {
-		if (url.match(pattern)) {
+		if (matchTarget.match(pattern)) {
 			result = true
 		}
 	})
 	return result
+}
+
+const escapeRegExp = (s: string): string =>
+	s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+const buildLocationHostPattern = (host: string): RegExp =>
+	new RegExp('^https?://([^/]+\\.)?' + escapeRegExp(host) + '([:/?#]|$)')
+
+const getUrlMatchTarget = (url: string): string => {
+	if (url.startsWith('/') && !url.startsWith('//')) {
+		return url
+	}
+	try {
+		return new URL(url).origin
+	} catch {
+		return url
+	}
 }
 
 function makeId(length: number) {

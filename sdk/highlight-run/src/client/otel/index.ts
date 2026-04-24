@@ -1153,7 +1153,11 @@ export const getCorsUrlsPattern = (
 	tracingOrigins: BrowserTracingConfig['tracingOrigins'],
 ): PropagateTraceHeaderCorsUrls => {
 	if (tracingOrigins === true) {
-		return [/localhost/, /^\//, new RegExp(window.location.host)]
+		return [
+			/localhost/,
+			/^\//,
+			buildLocationHostPattern(window.location.host),
+		]
 	} else if (Array.isArray(tracingOrigins)) {
 		return tracingOrigins.map((pattern) =>
 			typeof pattern === 'string' ? new RegExp(pattern) : pattern,
@@ -1162,6 +1166,15 @@ export const getCorsUrlsPattern = (
 
 	return /^$/ // Match nothing if tracingOrigins is false or undefined
 }
+
+const escapeRegExp = (s: string): string =>
+	s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+// Anchor the page host at the origin position of a URL. An unanchored
+// /example.com/ also matches third-party URLs that carry the host as a
+// query-parameter value (e.g. ...?store=example.com), leaking trace headers.
+const buildLocationHostPattern = (host: string): RegExp =>
+	new RegExp('^https?://([^/]+\\.)?' + escapeRegExp(host) + '([:/?#]|$)')
 
 const getUrlFromSpan = (span: ReadableSpan) => {
 	if (span.attributes[SemanticAttributes.ATTR_URL_FULL]) {
