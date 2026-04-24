@@ -32,6 +32,7 @@ import {
 	sanitizeUrl,
 } from '../listeners/network-listener/utils/network-sanitizer'
 import {
+	buildLocationHostPattern,
 	shouldNetworkRequestBeRecorded,
 	shouldNetworkRequestBeTraced,
 } from '../listeners/network-listener/utils/utils'
@@ -1166,15 +1167,6 @@ export const getCorsUrlsPattern = (
 
 	return /^$/ // Match nothing if tracingOrigins is false or undefined
 }
-
-const escapeRegExp = (s: string): string =>
-	s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-
-// Anchor the page host at the origin position of a URL. An unanchored
-// /example.com/ also matches third-party URLs that carry the host as a
-// query-parameter value (e.g. ...?store=example.com), leaking trace headers.
-const buildLocationHostPattern = (host: string): RegExp =>
-	new RegExp('^https?://([^/]+\\.)?' + escapeRegExp(host) + '([:/?#]|$)')
 
 const getUrlFromSpan = (span: ReadableSpan) => {
 	if (span.attributes[SemanticAttributes.ATTR_URL_FULL]) {

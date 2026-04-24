@@ -320,7 +320,10 @@ export const shouldNetworkRequestBeTraced = (
 const escapeRegExp = (s: string): string =>
 	s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
-const buildLocationHostPattern = (host: string): RegExp =>
+// Build a regex that matches the page host (and its subdomains) at the origin
+// position of a URL, not anywhere inside it. Anchoring matters: an unanchored
+// /example.com/ also matches https://third-party.io/?store=example.com.
+export const buildLocationHostPattern = (host: string): RegExp =>
 	new RegExp('^https?://([^/]+\\.)?' + escapeRegExp(host) + '([:/?#]|$)')
 
 const getUrlMatchTarget = (url: string): string => {
