@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.41.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.40.0...launchdarkly-observability-android-0.41.0) (2026-04-24)
+
+
+### Features
+
+* **react-native:** Propagate LDContext to Android session replay via afterIdentify hook ([#495](https://github.com/launchdarkly/observability-sdk/issues/495)) ([8179a8e](https://github.com/launchdarkly/observability-sdk/commit/8179a8e5f632fdad86cc52f2acdf19bd51acff2a))
+
 ## [0.40.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.39.0...launchdarkly-observability-android-0.40.0) (2026-04-18)
 
 

@@ -1,5 +1,12 @@
 # highlight.run
 
+## [10.1.1](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.1.0...highlight.run-10.1.1) (2026-04-24)
+
+
+### Bug Fixes
+
+* avoid ReDoS in error-stack-parser by not re-parsing console stacks ([#498](https://github.com/launchdarkly/observability-sdk/issues/498)) ([1ec2f20](https://github.com/launchdarkly/observability-sdk/commit/1ec2f2075db617e5744de6da767ea46536991ef1))
+
 ## [10.1.0](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.0.1...highlight.run-10.1.0) (2026-04-22)
 
 

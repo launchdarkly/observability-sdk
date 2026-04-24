@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.4.3...session-replay-react-native-0.5.0) (2026-04-24)
+
+
+### Features
+
+* **react-native:** Propagate LDContext to Android session replay via afterIdentify hook ([#495](https://github.com/launchdarkly/observability-sdk/issues/495)) ([8179a8e](https://github.com/launchdarkly/observability-sdk/commit/8179a8e5f632fdad86cc52f2acdf19bd51acff2a))
+
 ## [0.4.3](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.4.2...session-replay-react-native-0.4.3) (2026-04-22)
 
 
