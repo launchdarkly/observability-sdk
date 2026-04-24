@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.5.1](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.5.0...session-replay-react-native-0.5.1) (2026-04-24)
+
+
+### Bug Fixes
+
+* **react-native:** propagate afterIdentify propagation in iOS session replay ([#501](https://github.com/launchdarkly/observability-sdk/issues/501)) ([b6ec2b1](https://github.com/launchdarkly/observability-sdk/commit/b6ec2b1c0ae8bab76526bb988d39d8f20342fd30))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @launchdarkly/observability-react-native bumped to 0.9.1
+
 ## [0.5.0](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.4.3...session-replay-react-native-0.5.0) (2026-04-24)
 
 
