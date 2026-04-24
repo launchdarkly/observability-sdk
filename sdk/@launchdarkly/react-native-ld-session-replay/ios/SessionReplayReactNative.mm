@@ -60,7 +60,7 @@
                reject:(RCTPromiseRejectBlock)reject
 {
     @try {
-      [[SessionReplayClientAdapter shared] afterIdentify:contextKeys canonicalKey:canonicalKey completed:completed];
+      [[SessionReplayClientAdapter shared] afterIdentifyWithContextKeys:contextKeys canonicalKey:canonicalKey completed:completed];
       resolve(nil);
     } @catch(NSException *exception) {
       NSLog(@"⚠️ afterIdentify crash: %@", exception);
