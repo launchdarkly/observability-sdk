@@ -129,6 +129,8 @@ public class SessionReplayClientAdapter: NSObject {
       await prev.value
       guard let self else { return }
       if completed {
+        // If buildContextFromKeys returns nil, that's fine — LaunchDarkly will
+        // use a default anonymous context.
         self.cachedContext = self.buildContextFromKeys(keys)
       }
       if self.initialized {
