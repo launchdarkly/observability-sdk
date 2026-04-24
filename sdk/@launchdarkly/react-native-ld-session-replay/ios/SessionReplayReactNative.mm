@@ -59,7 +59,13 @@
               resolve:(RCTPromiseResolveBlock)resolve
                reject:(RCTPromiseRejectBlock)reject
 {
-    resolve(nil);
+    @try {
+      [[SessionReplayClientAdapter shared] afterIdentify:contextKeys canonicalKey:canonicalKey completed:completed];
+      resolve(nil);
+    } @catch(NSException *exception) {
+      NSLog(@"⚠️ afterIdentify crash: %@", exception);
+      reject(@"after_identify_failed", exception.reason, nil);
+    }
 }
 
 - (std::shared_ptr<facebook::react::TurboModule>)getTurboModule:
