@@ -122,7 +122,11 @@ public class SessionReplayClientAdapter: NSObject {
         keys[kind] = key
       }
     }
-    Task { @MainActor [weak self] in
+    lock.lock()
+    defer { lock.unlock() }
+    let prev = lastTask
+    lastTask = Task { @MainActor [weak self] in
+      await prev.value
       guard let self else { return }
       if completed {
         self.cachedContext = self.buildContextFromKeys(keys)
