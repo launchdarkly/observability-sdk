@@ -1,5 +1,12 @@
 # highlight.run
 
+## [10.1.2](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.1.1...highlight.run-10.1.2) (2026-04-24)
+
+
+### Bug Fixes
+
+* scope tracingOrigins matching to the URL origin ([#502](https://github.com/launchdarkly/observability-sdk/issues/502)) ([f12201c](https://github.com/launchdarkly/observability-sdk/commit/f12201caa4dcecd31cde439958c9c31adef7b36f))
+
 ## [10.1.1](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.1.0...highlight.run-10.1.1) (2026-04-24)
 
 
