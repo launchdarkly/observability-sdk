@@ -6,35 +6,31 @@ import LaunchDarklySessionReplay
 //@objcMembers
 public class SessionReplayClientAdapter: NSObject {
   @objc public static let shared = SessionReplayClientAdapter()
-  private let clientQueue = DispatchQueue(label: "com.launchdarkly.sessionreplay.client.queue")
+
+  // Guarded by lock.
+  private let lock = NSLock()
   private var mobileKey: String?
   private var sessionReplayOptions: SessionReplayOptions?
-  private var isLDClientState: LDClientState = .idle
-  enum LDClientState {
-    case idle, starting, started
-  }
-  
+  // Each start()/stop() appends a new Task that awaits the previous one, serializing all work.
+  private var lastTask: Task<Void, Never> = Task {}
+
+  @MainActor private var initialized = false
+
   private override init() {
     super.init()
   }
-  
+
   @objc public func setMobileKey(_ mobileKey: String, options: NSDictionary?) {
-    clientQueue.sync { [weak self] in
-      guard let self else {
-        return assertionFailure("[SessionReplayClientAdapter] setMobileKey called on deallocated object")
-      }
-      let key = mobileKey.trimmingCharacters(in: .whitespacesAndNewlines)
-      guard !key.isEmpty else {
-        return assertionFailure("[SessionReplayClientAdapter] setMobileKey called with empty key; session replay will not connect. Configure with a valid LaunchDarkly mobile key.")
-      }
-      
-      let options = self.sessionReplayOptionsFrom(dictionary: options)
-      
-      self.mobileKey = key
-      self.sessionReplayOptions = options
+    lock.lock()
+    defer { lock.unlock() }
+    let key = mobileKey.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !key.isEmpty else {
+      return assertionFailure("[SessionReplayClientAdapter] setMobileKey called with empty key; session replay will not connect. Configure with a valid LaunchDarkly mobile key.")
     }
+    self.mobileKey = key
+    self.sessionReplayOptions = sessionReplayOptionsFrom(dictionary: options)
   }
-  
+
   private func makeConfig(mobileKey: String, options: SessionReplayOptions) -> LDConfig {
     var config = LDConfig(
       mobileKey: mobileKey,
@@ -55,7 +51,7 @@ public class SessionReplayClientAdapter: NSObject {
     config.startOnline = false
     return config
   }
-  
+
   private func makeContext() -> LDContext? {
     var contextBuilder = LDContextBuilder(
       key: "12345"
@@ -68,73 +64,38 @@ public class SessionReplayClientAdapter: NSObject {
       return nil
     }
   }
-  
-  private func setLDReplayEnabled(_ enabled: Bool, completion: @escaping () -> Void) {
-    Task { @MainActor in
-      /// If LDReplay state is different, toggle it
-      guard LDReplay.shared.isEnabled != enabled else {
-        return completion()
-      }
-      LDReplay.shared.isEnabled = enabled
-      completion()
-    }
-  }
-  
-  /// completion: (timed out, error message)
-  /// offline is considered a short circuited timed out case
-  private func start(mobileKey: String, options: SessionReplayOptions, completion: @escaping (Bool, String?) -> Void) {
-    switch isLDClientState {
-    case .idle:
-      isLDClientState = .starting
-      let config = self.makeConfig(mobileKey: mobileKey, options: options)
-      let context = self.makeContext()
-      LDClient
-        .start(
-          config: config,
-          context: context,
-          startWaitSeconds: 5.0) { timedOut in
-            self.clientQueue.sync { [weak self] in
-              self?.isLDClientState = .started
-              self?.setLDReplayEnabled(options.isEnabled) {
-                /// offline is considered a short circuited timed out case
-                completion(true, nil)
-              }
-            }
-          }
-    case .starting:
-      /// Client is starting, we must await until it finishes and state is started
-      /// LDReplay will be started after LDClient finishes
-      /// offline is considered a short circuited timed out case
-      completion(true, nil)
-    case .started:
-      /// Client is started, we can now focus on the session replay client
-      /// Apply the configured isEnabled so that start() respects options.isEnabled
-      /// offline is considered a short circuited timed out case
-      setLDReplayEnabled(options.isEnabled) {
-        completion(true, nil)
-      }
-      break
-    }
-  }
-  
+
   @objc public func start(completion: @escaping (Bool, String?) -> Void) {
-    clientQueue.sync { [weak self] in
-      guard let self else {
-        return assertionFailure("[SessionReplayClientAdapter] setMobileKey called on deallocated object")
+    lock.lock()
+    defer { lock.unlock() }
+    guard let mobileKey = mobileKey, let sessionReplayOptions = sessionReplayOptions else {
+      completion(false, "Client not initialized. Call SetMobileKey first.")
+      return
+    }
+    let prev = lastTask
+    lastTask = Task { @MainActor [weak self] in
+      await prev.value
+      guard let self else { return }
+      if !self.initialized {
+        let config = self.makeConfig(mobileKey: mobileKey, options: sessionReplayOptions)
+        let context = self.makeContext()
+        await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
+          LDClient.start(config: config, context: context, startWaitSeconds: 0) { _ in
+            cont.resume()
+          }
+        }
+        self.initialized = true
+      } else {
+        NSLog(
+          "[SessionReplayClientAdapter] start: already initialized, re-applying isEnabled=%@",
+          sessionReplayOptions.isEnabled ? "true" : "false"
+        )
       }
-      guard let mobileKey = self.mobileKey, let options = self.sessionReplayOptions else {
-        completion(false, "Client not initialized. Call SetMobileKey first.")
-        return
-      }
-      self.start(mobileKey: mobileKey, options: options, completion: completion)
+      LDReplay.shared.isEnabled = sessionReplayOptions.isEnabled
+      completion(true, nil)
     }
   }
-  
-  /// LDClient should not be closed, will be offline all the times
-  private func _stop(_ completion: @escaping () -> Void) {
-    setLDReplayEnabled(false, completion: completion)
-  }
-  
+
   /// There is almost no reason to stop the LDClient. Normally, set the LDClient offline to stop communication with the LaunchDarkly servers. Stop the LDClient to stop recording events. There is no need to stop the LDClient prior to suspending, moving to the background, or terminating the app. The SDK will respond to these events as the system requires and as configured in LDConfig.
   ///
   /// So in order to not record anything from the Swift's LDClient, LDClient is configured to be offline in the start method
@@ -142,7 +103,14 @@ public class SessionReplayClientAdapter: NSObject {
   ///
   /// Stop is intended to provide a stop like API, internally is disabling session replay until app start it with start method
   @objc public func stop(completion: @escaping () -> Void) {
-    _stop(completion)
+    lock.lock()
+    defer { lock.unlock() }
+    let prev = lastTask
+    lastTask = Task { @MainActor in
+      await prev.value
+      LDReplay.shared.isEnabled = false
+      completion()
+    }
   }
 }
 
@@ -169,7 +137,7 @@ extension SessionReplayClientAdapter {
         privacy: privacy
       )
     }
-    
+
     let privacy = SessionReplayOptions.PrivacyOptions(
       maskTextInputs: dictionary["maskTextInputs"] as? Bool ?? true,
       maskWebViews: dictionary["maskWebViews"] as? Bool ?? false,
@@ -187,7 +155,7 @@ extension SessionReplayClientAdapter {
       minimumAlpha:
         CGFloat((dictionary["minimumAlpha"] as? NSNumber)?.doubleValue ?? 0.02)
     )
-    
+
     return .init(
       isEnabled: dictionary["isEnabled"] as? Bool ?? true,
       serviceName: dictionary["serviceName"] as? String ?? "sessionreplay-react-native",
