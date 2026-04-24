@@ -58,9 +58,9 @@ public class SessionReplayClientAdapter: NSObject {
   // Builds an LDContext from a [kind: key] map. Returns nil if the map is empty or a context
   // cannot be built. Mirrors buildContextFromKeys() in SessionReplayClientAdapter.kt.
   private func buildContextFromKeys(_ keys: [String: String]) -> LDContext? {
-    guard !keys.isEmpty else { return nil }
+    guard let first = keys.first else { return nil }
     if keys.count == 1 {
-      let (kind, key) = keys.first!
+      let (kind, key) = first
       var builder = LDContextBuilder(key: key)
       builder.kind(kind)
       guard case .success(let context) = builder.build() else {
