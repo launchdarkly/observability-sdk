@@ -32,6 +32,7 @@ import {
 	sanitizeUrl,
 } from '../listeners/network-listener/utils/network-sanitizer'
 import {
+	buildLocationHostPattern,
 	shouldNetworkRequestBeRecorded,
 	shouldNetworkRequestBeTraced,
 } from '../listeners/network-listener/utils/utils'
@@ -1153,7 +1154,11 @@ export const getCorsUrlsPattern = (
 	tracingOrigins: BrowserTracingConfig['tracingOrigins'],
 ): PropagateTraceHeaderCorsUrls => {
 	if (tracingOrigins === true) {
-		return [/localhost/, /^\//, new RegExp(window.location.host)]
+		return [
+			/localhost/,
+			/^\//,
+			buildLocationHostPattern(window.location.host),
+		]
 	} else if (Array.isArray(tracingOrigins)) {
 		return tracingOrigins.map((pattern) =>
 			typeof pattern === 'string' ? new RegExp(pattern) : pattern,

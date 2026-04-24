@@ -84,7 +84,10 @@ export interface ReactNativeOptions {
 	tracingOrigins?: boolean | (string | RegExp)[]
 
 	/**
-	 * A list of URLs to block from tracing.
+	 * URLs to not record headers and bodies for, and to not propagate trace
+	 * headers (e.g. `traceparent`) to. Each entry is matched as a
+	 * case-insensitive substring of the full request URL; a match suppresses
+	 * both recording and trace-header propagation for that request.
 	 * @example urlBlocklist: ['localhost', 'backend.myapp.com']
 	 */
 	urlBlocklist?: string[]

@@ -176,6 +176,48 @@ describe('shouldNetworkRequestBeTraced', () => {
 			),
 		).toBe(false)
 	})
+
+	// Regression: with tracingOrigins: true, an unanchored /<page host>/
+	// regex used to match third-party URLs that carried the page host as a
+	// query-parameter value, leaking trace headers to unrelated origins.
+	it('does not match the page host appearing as a query value on a third-party URL when tracingOrigins is true', () => {
+		window.location.host = 'example.com'
+		expect(
+			shouldNetworkRequestBeTraced(
+				'https://api.third-party.test/timeline?store=example.com',
+				true,
+				[],
+			),
+		).toBe(false)
+	})
+
+	it('does not match a user-supplied host pattern appearing as a query value on a third-party URL', () => {
+		expect(
+			shouldNetworkRequestBeTraced(
+				'https://api.third-party.test/timeline?store=example.com',
+				[/example\.com/],
+				[],
+			),
+		).toBe(false)
+		expect(
+			shouldNetworkRequestBeTraced(
+				'https://api.third-party.test/timeline?store=example.com',
+				['example.com'],
+				[],
+			),
+		).toBe(false)
+	})
+
+	it('matches subdomains of the page host when tracingOrigins is true', () => {
+		window.location.host = 'example.com'
+		expect(
+			shouldNetworkRequestBeTraced(
+				'https://api.example.com/api/foo',
+				true,
+				[],
+			),
+		).toBe(true)
+	})
 })
 
 describe('shouldNetworkRequestBeRecorded', () => {
