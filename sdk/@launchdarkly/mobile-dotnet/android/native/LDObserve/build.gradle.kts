@@ -1,3 +1,7 @@
+import java.util.zip.ZipEntry
+import java.util.zip.ZipFile
+import java.util.zip.ZipOutputStream
+
 plugins {
     id("com.android.library")
     id("org.jetbrains.kotlin.android")
@@ -92,16 +96,115 @@ dependencies {
     "copyDependencies"("io.opentelemetry.android:android-agent:0.11.0-alpha")
 }
 
-// Copy dependencies for binding library
+// Custom task: merges all transitive JARs (OTel + okhttp + okio + ...) into one
+// fat JAR with META-INF/services concatenated per service name.
+//
+// Why: .NET-for-Android 10 ships a new System.IO.Compression-based BuildArchive
+// task (dotnet/android#9623) that, when collecting Java resources from
+// `<AndroidJavaLibrary>` items, silently skips any JAR entry whose `ArchivePath`
+// already exists in the APK. With ~15 OTel JARs shipped individually, several
+// `META-INF/services/*` paths overlap (e.g. ComponentProvider exists in
+// opentelemetry-exporter-otlp, -exporter-logging, -exporter-logging-otlp), and
+// the unique HttpSenderProvider in opentelemetry-exporter-sender-okhttp gets
+// dropped along with them, breaking ServiceLoader at runtime with
+// "No HttpSenderProvider found on classpath".
+//
+// By collapsing every JAR into one, no two FilesToAddToArchive items share an
+// ArchivePath, and the merged services file is the single source of truth for
+// every SPI we ship. .NET 9 consumers behave identically (one JAR vs many).
+abstract class BundleOtelJarsTask : DefaultTask() {
+    @get:org.gradle.api.tasks.InputFiles
+    abstract val inputJars: org.gradle.api.file.ConfigurableFileCollection
+
+    @get:org.gradle.api.tasks.OutputFile
+    abstract val outputJar: org.gradle.api.file.RegularFileProperty
+
+    @org.gradle.api.tasks.TaskAction
+    fun bundle() {
+        val out = outputJar.get().asFile
+        out.parentFile.mkdirs()
+
+        val classOrResourceEntries = linkedMapOf<String, ByteArray>()
+        val serviceFiles = linkedMapOf<String, MutableList<String>>()
+
+        inputJars.files.sortedBy { it.name }.forEach { jar ->
+            ZipFile(jar).use { zip ->
+                val entries = zip.entries()
+                while (entries.hasMoreElements()) {
+                    val entry = entries.nextElement()
+                    if (entry.isDirectory) continue
+                    val name = entry.name
+                    if (name == "META-INF/MANIFEST.MF") continue
+                    if (name.startsWith("META-INF/") &&
+                        (name.endsWith(".SF") || name.endsWith(".DSA") || name.endsWith(".RSA"))) continue
+
+                    if (name.startsWith("META-INF/services/")) {
+                        zip.getInputStream(entry).use { input ->
+                            val content = input.bufferedReader().readText()
+                            serviceFiles.getOrPut(name) { mutableListOf() }.add(content)
+                        }
+                    } else if (!classOrResourceEntries.containsKey(name)) {
+                        zip.getInputStream(entry).use { input ->
+                            classOrResourceEntries[name] = input.readBytes()
+                        }
+                    }
+                }
+            }
+        }
+
+        ZipOutputStream(out.outputStream().buffered()).use { zout ->
+            zout.putNextEntry(ZipEntry("META-INF/MANIFEST.MF"))
+            zout.write("Manifest-Version: 1.0\nCreated-By: ldobserve-otel-bundle\n".toByteArray())
+            zout.closeEntry()
+
+            serviceFiles.forEach { (path, contents) ->
+                val merged = contents
+                    .flatMap { it.lineSequence() }
+                    .map { it.trim() }
+                    .filter { it.isNotEmpty() && !it.startsWith("#") }
+                    .distinct()
+                    .joinToString("\n")
+                zout.putNextEntry(ZipEntry(path))
+                zout.write((merged + "\n").toByteArray())
+                zout.closeEntry()
+            }
+
+            classOrResourceEntries.forEach { (name, data) ->
+                zout.putNextEntry(ZipEntry(name))
+                zout.write(data)
+                zout.closeEntry()
+            }
+        }
+
+        logger.lifecycle(
+            "ldobserve-otel-bundle: ${classOrResourceEntries.size} class/resource entries, " +
+                "${serviceFiles.size} merged service files, ${inputJars.files.size} input JARs"
+        )
+    }
+}
+
 project.afterEvaluate {
     val observabilityBuild = gradle.includedBuild("observability-android")
     val observabilityAarDir = File(observabilityBuild.projectDir, "lib/build/outputs/aar")
+    val depsDir = layout.buildDirectory.dir("outputs/deps").get().asFile
+    val bundleStaging = layout.buildDirectory.dir("tmp/ldobserve-otel-bundle").get().asFile
 
-    tasks.register<Copy>("copyDeps") {
-        from(configurations["copyDependencies"])
+    val bundleOtelJars = tasks.register<BundleOtelJarsTask>("bundleOtelJars") {
+        inputJars.from(configurations["copyDependencies"].filter { it.name.endsWith(".jar") })
+        outputJar.set(File(bundleStaging, "ldobserve-otel-bundle.jar"))
+    }
+
+    // Sync AARs from copyDependencies (and the locally-built observability AAR)
+    // plus the merged OTel bundle JAR into outputs/deps. Sync (not Copy) ensures
+    // stale individual JARs from older builds are removed; only the single
+    // ldobserve-otel-bundle.jar JAR remains alongside the AARs.
+    tasks.register<Sync>("copyDeps") {
         dependsOn(observabilityBuild.task(":lib:assemble"))
+        dependsOn(bundleOtelJars)
+        from(configurations["copyDependencies"].filter { it.name.endsWith(".aar") })
         from(fileTree(observabilityAarDir) { include("*.aar") })
-        into("${buildDir}/outputs/deps")
+        from(bundleStaging)
+        into(depsDir)
     }
     tasks.named("preBuild") { finalizedBy("copyDeps") }
 }
