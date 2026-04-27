@@ -47,6 +47,17 @@
   		<LD_INCLUDE_NATIVE_DEPS>true</LD_INCLUDE_NATIVE_DEPS>
 	</PropertyGroup>
 
+	<!--
+		.NET 10's new System.IO.Compression-based BuildArchive task drops
+		JAR-extracted META-INF/services entries when the APK already contains
+		an entry at that path. That breaks OTel ServiceLoader lookups
+		(e.g. HttpSenderProvider from opentelemetry-exporter-sender-okhttp).
+		Force the .NET 9-compatible LibZipSharp writer on net10.0-android.
+	-->
+	<PropertyGroup Condition="$(TargetFramework.StartsWith('net10.0-android')) or $(TargetFramework.StartsWith('net11.0-android'))">
+		<_AndroidUseLibZipSharp Condition="'$(_AndroidUseLibZipSharp)' == ''">true</_AndroidUseLibZipSharp>
+	</PropertyGroup>
+
 	<ItemGroup>
 		<PackageReference Include="OpenTelemetry" Version="1.15.3" />
 	</ItemGroup>

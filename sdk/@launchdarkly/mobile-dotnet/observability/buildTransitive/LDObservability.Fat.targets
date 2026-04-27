@@ -1,4 +1,21 @@
 <Project>
+	<!--
+		.NET 10 / .NET-for-Android switched APK creation from LibZipSharp to
+		System.IO.Compression.ZipArchive (dotnet/android#9623, default flipped in
+		#9840). The new BuildArchive code path silently drops JAR-extracted
+		entries whose path already exists in the APK, which causes the OTel
+		`META-INF/services/*` files we ship (notably
+		io.opentelemetry.exporter.internal.http.HttpSenderProvider from
+		opentelemetry-exporter-sender-okhttp) to be lost. ServiceLoader then
+		throws "No HttpSenderProvider found on classpath" at runtime.
+
+		Forcing LibZipSharp restores the .NET 9-compatible packaging behavior.
+		Scoped to net10.0-android so .NET 9 consumers are unaffected.
+	-->
+	<PropertyGroup Condition="$(TargetFramework.StartsWith('net10.0-android')) or $(TargetFramework.StartsWith('net11.0-android'))">
+		<_AndroidUseLibZipSharp Condition="'$(_AndroidUseLibZipSharp)' == ''">true</_AndroidUseLibZipSharp>
+	</PropertyGroup>
+
 	<ItemGroup Condition="$(TargetFramework.Contains('android'))">
 		<AndroidLibrary Include="$(MSBuildThisFileDirectory)../runtimes/android/native/*.aar">
 			<Bind>false</Bind>
