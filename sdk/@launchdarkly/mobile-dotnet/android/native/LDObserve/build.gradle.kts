@@ -57,6 +57,9 @@ dependencies {
     implementation("io.opentelemetry:opentelemetry-exporter-otlp:1.51.0")
     "copyDependencies"("io.opentelemetry:opentelemetry-exporter-otlp:1.51.0")
 
+    implementation("io.opentelemetry:opentelemetry-exporter-sender-okhttp:1.51.0")
+    "copyDependencies"("io.opentelemetry:opentelemetry-exporter-sender-okhttp:1.51.0")
+
     implementation("io.opentelemetry:opentelemetry-exporter-logging-otlp:1.51.0")
     "copyDependencies"("io.opentelemetry:opentelemetry-exporter-logging-otlp:1.51.0")
 

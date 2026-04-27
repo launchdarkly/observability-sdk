@@ -48,7 +48,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="OpenTelemetry" Version="1.11.2" />
+		<PackageReference Include="OpenTelemetry" Version="1.15.3" />
 	</ItemGroup>
 
 	<ItemGroup Condition="'$(UseLocalClientSdk)' == 'true'">
