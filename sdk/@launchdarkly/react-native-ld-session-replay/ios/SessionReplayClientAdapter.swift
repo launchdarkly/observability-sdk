@@ -43,7 +43,9 @@ public class SessionReplayClientAdapter: NSObject {
       Observability(
         options: .init(
           serviceName: options.serviceName,
-          sessionBackgroundTimeout: 10
+          sessionBackgroundTimeout: 10,
+          /// Disable the underlying KSCrash-based crash reporter that
+          crashReporting: .init(source: .none)
         )
       ),
       SessionReplay(options: options)

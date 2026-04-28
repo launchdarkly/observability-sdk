@@ -141,6 +141,10 @@ internal class SessionReplayClientAdapter private constructor() {
                             options = ObservabilityOptions(
                                 serviceName = serviceName,
                                 logAdapter = LDAndroidLogging.adapter(),
+                                // Disable the OpenTelemetry Android CrashReporterInstrumentation
+                                instrumentations = ObservabilityOptions.Instrumentations(
+                                    crashReporting = false,
+                                ),
                             )
                         ),
                         SessionReplay(options = replayOptions),
