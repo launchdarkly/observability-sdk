@@ -11,7 +11,7 @@
 	</ItemGroup>
 
 	<!--
-		Re-inject the OTel `META-INF/services/*` registrations into the APK.
+		Re-inject the OTel `META-INF/services/*` registrations into the APK / AAB.
 
 		.NET-for-Android's `CollectJarContentFilesForArchive` task calls
 		`PackagingUtils.CheckEntryForPackaging`, which hardcodes the entire
@@ -24,19 +24,33 @@
 		`No HttpSenderProvider found on classpath`.
 
 		`BuildArchive` itself does not filter on path — it just copies every
-		`@(FilesToAddToArchive)` item to its `ArchivePath`. By appending the
+		`@(FilesToAddToArchive)` item to its `ArchivePath`. We append the
 		standalone service files (shipped alongside the bundle JAR in
 		runtimes/android/native/META-INF/services/) to that item group before
-		`_BuildApkEmbed` runs, we sidestep the strip and land the files at
-		`META-INF/services/*` in the APK.
+		`_BuildApkEmbed` runs, sidestepping the strip.
+
+		Important: the destination prefix differs by `$(AndroidPackageFormat)`.
+		  - APK ('apk'): files go straight to `META-INF/services/*`.
+		  - AAB ('aab'): the same `BuildArchive` task writes the App Bundle
+		    base.zip, which bundletool then validates. Bundletool only allows
+		    files under the predefined module dirs (manifest, dex, res, assets,
+		    lib, root, apex); anything else fails with `XABAB0000 Module files
+		    can be only in pre-defined directories`. To survive validation we
+		    place the files at `root/META-INF/services/*`; bundletool relocates
+		    everything under `root/` back to the APK root at install time, so
+		    the runtime ServiceLoader still sees `META-INF/services/*`.
 	-->
 	<Target Name="_LDInjectMetaInfServices"
 	        BeforeTargets="_BuildApkEmbed;_BuildApkFastDev"
 	        Condition="$(TargetFramework.Contains('android'))">
+		<PropertyGroup>
+			<_LDArchiveMetaInfPrefix Condition="'$(AndroidPackageFormat)' == 'aab'">root/META-INF/services</_LDArchiveMetaInfPrefix>
+			<_LDArchiveMetaInfPrefix Condition="'$(AndroidPackageFormat)' != 'aab'">META-INF/services</_LDArchiveMetaInfPrefix>
+		</PropertyGroup>
 		<ItemGroup>
 			<_LDInjectedMetaInfService Include="$(MSBuildThisFileDirectory)../runtimes/android/native/META-INF/services/*" />
 			<FilesToAddToArchive Include="@(_LDInjectedMetaInfService)">
-				<ArchivePath>META-INF/services/%(Filename)%(Extension)</ArchivePath>
+				<ArchivePath>$(_LDArchiveMetaInfPrefix)/%(Filename)%(Extension)</ArchivePath>
 			</FilesToAddToArchive>
 		</ItemGroup>
 	</Target>
