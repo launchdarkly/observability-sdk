@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.5.1...session-replay-react-native-0.6.0) (2026-04-28)
+
+
+### Features
+
+* Disable CrashReporting for RN iOS and Android ([#504](https://github.com/launchdarkly/observability-sdk/issues/504)) ([a9907a7](https://github.com/launchdarkly/observability-sdk/commit/a9907a70c6678fa24e7e97834023fcc693a070d0))
+
 ## [0.5.1](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.5.0...session-replay-react-native-0.5.1) (2026-04-24)
 
 
