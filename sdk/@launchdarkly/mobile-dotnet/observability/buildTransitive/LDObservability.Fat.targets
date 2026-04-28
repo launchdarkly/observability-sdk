@@ -10,6 +10,37 @@
 		</AndroidJavaLibrary>
 	</ItemGroup>
 
+	<!--
+		Re-inject the OTel `META-INF/services/*` registrations into the APK.
+
+		.NET-for-Android's `CollectJarContentFilesForArchive` task calls
+		`PackagingUtils.CheckEntryForPackaging`, which hardcodes the entire
+		`META-INF/` folder as a stripped path when extracting JAR resources for
+		the APK (alongside `.svn`, `SCCS`, `picasa.ini`, etc.). As a result,
+		the merged service registrations inside `ldobserve-otel-bundle.jar`
+		never reach the final APK and `java.util.ServiceLoader` cannot find
+		`io.opentelemetry.exporter.sender.okhttp.internal.OkHttpHttpSenderProvider`,
+		causing `OtlpHttpSpanExporterBuilder.build()` to throw
+		`No HttpSenderProvider found on classpath`.
+
+		`BuildArchive` itself does not filter on path — it just copies every
+		`@(FilesToAddToArchive)` item to its `ArchivePath`. By appending the
+		standalone service files (shipped alongside the bundle JAR in
+		runtimes/android/native/META-INF/services/) to that item group before
+		`_BuildApkEmbed` runs, we sidestep the strip and land the files at
+		`META-INF/services/*` in the APK.
+	-->
+	<Target Name="_LDInjectMetaInfServices"
+	        BeforeTargets="_BuildApkEmbed;_BuildApkFastDev"
+	        Condition="$(TargetFramework.Contains('android'))">
+		<ItemGroup>
+			<_LDInjectedMetaInfService Include="$(MSBuildThisFileDirectory)../runtimes/android/native/META-INF/services/*" />
+			<FilesToAddToArchive Include="@(_LDInjectedMetaInfService)">
+				<ArchivePath>META-INF/services/%(Filename)%(Extension)</ArchivePath>
+			</FilesToAddToArchive>
+		</ItemGroup>
+	</Target>
+
 	<ItemGroup Condition="$(TargetFramework.Contains('ios'))">
 		<NativeReference Include="$(MSBuildThisFileDirectory)../runtimes/ios/native/LDObserveBridge.xcframework">
 			<Kind>Framework</Kind>

@@ -94,4 +94,26 @@
 			<Visible>false</Visible>
 		</AndroidJavaLibrary>
 	</ItemGroup>
+
+	<!--
+		Re-inject the OTel `META-INF/services/*` registrations into the APK.
+		.NET-for-Android strips every JAR entry under `META-INF/` via
+		`PackagingUtils.CheckEntryForPackaging`, so the merged service files
+		inside `ldobserve-otel-bundle.jar` never reach the APK and
+		`ServiceLoader` cannot find `OkHttpHttpSenderProvider` at runtime.
+		Appending the standalone service files (emitted by the Gradle
+		`bundleOtelJars` task next to the bundle JAR) to
+		`@(FilesToAddToArchive)` before `_BuildApkEmbed` runs lands them at
+		`META-INF/services/*` in the APK because `BuildArchive` does not
+		filter on path. Keep this in sync with `buildTransitive/LDObservability.Fat.targets`.
+	-->
+	<Target Name="_LDInjectMetaInfServicesLocal"
+	        BeforeTargets="_BuildApkEmbed;_BuildApkFastDev"
+	        Condition="$(TargetFramework.Contains('android')) and '$(LD_INCLUDE_NATIVE_DEPS)' == 'true' and '@(_LDNativeMetaInfService)' != ''">
+		<ItemGroup>
+			<FilesToAddToArchive Include="@(_LDNativeMetaInfService)">
+				<ArchivePath>META-INF/services/%(Filename)%(Extension)</ArchivePath>
+			</FilesToAddToArchive>
+		</ItemGroup>
+	</Target>
 </Project>

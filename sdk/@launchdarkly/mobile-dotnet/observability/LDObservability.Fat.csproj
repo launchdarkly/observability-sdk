@@ -82,6 +82,8 @@
 	<ItemGroup>
 		<None Include="@(_LDNativeAAR)" Pack="true" PackagePath="runtimes/android/native/" />
 		<None Include="@(_LDNativeJAR)" Pack="true" PackagePath="runtimes/android/native/" />
+		<!-- META-INF/services files extracted from the bundle JAR; see NativeAndroidDeps.props. -->
+		<None Include="@(_LDNativeMetaInfService)" Pack="true" PackagePath="runtimes/android/native/META-INF/services/" />
 
 		<!-- iOS XCFramework -->
 		<None Include="..\macios\native\LDObserve\build\outputs\LDObserveBridge.xcframework\**\*"

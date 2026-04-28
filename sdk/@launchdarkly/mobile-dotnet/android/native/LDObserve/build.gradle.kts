@@ -119,10 +119,26 @@ abstract class BundleOtelJarsTask : DefaultTask() {
     @get:org.gradle.api.tasks.OutputFile
     abstract val outputJar: org.gradle.api.file.RegularFileProperty
 
+    // Directory that mirrors META-INF/services/* from the bundle JAR as plain
+    // files on disk. The .NET-for-Android packaging task hardcodes "META-INF"
+    // as a stripped folder when collecting JAR resources for the APK
+    // (PackagingUtils.CheckEntryForPackaging), so the merged service files
+    // inside the JAR never reach the final APK and ServiceLoader fails at
+    // runtime. By emitting them as standalone files we can re-add them to
+    // @(FilesToAddToArchive) in MSBuild *after* the strip-aware
+    // CollectJarContentFilesForArchive task runs, so BuildArchive (which does
+    // not filter on path) places them at META-INF/services/* in the APK.
+    @get:org.gradle.api.tasks.OutputDirectory
+    abstract val outputServicesDir: org.gradle.api.file.DirectoryProperty
+
     @org.gradle.api.tasks.TaskAction
     fun bundle() {
         val out = outputJar.get().asFile
         out.parentFile.mkdirs()
+
+        val servicesDir = outputServicesDir.get().asFile
+        if (servicesDir.exists()) servicesDir.deleteRecursively()
+        servicesDir.mkdirs()
 
         val classOrResourceEntries = linkedMapOf<String, ByteArray>()
         val serviceFiles = linkedMapOf<String, MutableList<String>>()
@@ -163,10 +179,17 @@ abstract class BundleOtelJarsTask : DefaultTask() {
                     .map { it.trim() }
                     .filter { it.isNotEmpty() && !it.startsWith("#") }
                     .distinct()
-                    .joinToString("\n")
+                    .joinToString("\n") + "\n"
                 zout.putNextEntry(ZipEntry(path))
-                zout.write((merged + "\n").toByteArray())
+                zout.write(merged.toByteArray())
                 zout.closeEntry()
+
+                // Also write the merged service file as a standalone file so
+                // MSBuild can pick it up and inject it into the APK directly.
+                // Strip the "META-INF/services/" prefix; the consumer-side
+                // target re-applies it as ArchivePath.
+                val serviceName = path.removePrefix("META-INF/services/")
+                File(servicesDir, serviceName).writeText(merged)
             }
 
             classOrResourceEntries.forEach { (name, data) ->
@@ -189,21 +212,50 @@ project.afterEvaluate {
     val depsDir = layout.buildDirectory.dir("outputs/deps").get().asFile
     val bundleStaging = layout.buildDirectory.dir("tmp/ldobserve-otel-bundle").get().asFile
 
+    // Mirror the previous NativeAndroidDeps.props allowlist:
+    //   include: opentelemetry-*.jar, okhttp-*.jar, okio-*.jar
+    //   exclude: opentelemetry-sdk-extension-incubator-*.jar,
+    //            opentelemetry-sdk-extension-autoconfigure-*.jar  (main + SPI)
+    //            opentelemetry-sdk-testing-*.jar
+    // Other JARs in `copyDependencies` (jackson, snakeyaml, gson, launchdarkly,
+    // wire, kotlin-stdlib, AndroidX, etc.) are transitives we did not ship
+    // historically and bundling them would inflate the NuGet ~5 MB.
+    val bundleExcludePrefixes = listOf(
+        "opentelemetry-sdk-extension-incubator-",
+        "opentelemetry-sdk-extension-autoconfigure-",
+        "opentelemetry-sdk-testing-",
+    )
+    val servicesStaging = layout.buildDirectory.dir("tmp/ldobserve-otel-services").get().asFile
+
     val bundleOtelJars = tasks.register<BundleOtelJarsTask>("bundleOtelJars") {
-        inputJars.from(configurations["copyDependencies"].filter { it.name.endsWith(".jar") })
+        inputJars.from(configurations["copyDependencies"].filter { f ->
+            val n = f.name
+            if (!n.endsWith(".jar")) return@filter false
+            val included = n.startsWith("opentelemetry-") ||
+                n.startsWith("okhttp-") ||
+                n.startsWith("okio-")
+            included && bundleExcludePrefixes.none { n.startsWith(it) }
+        })
         outputJar.set(File(bundleStaging, "ldobserve-otel-bundle.jar"))
+        outputServicesDir.set(servicesStaging)
     }
 
-    // Sync AARs from copyDependencies (and the locally-built observability AAR)
-    // plus the merged OTel bundle JAR into outputs/deps. Sync (not Copy) ensures
-    // stale individual JARs from older builds are removed; only the single
-    // ldobserve-otel-bundle.jar JAR remains alongside the AARs.
+    // Sync AARs from copyDependencies (and the locally-built observability AAR),
+    // the merged OTel bundle JAR, and the standalone META-INF/services files
+    // into outputs/deps. Sync (not Copy) ensures stale individual JARs from
+    // older builds are removed; only the single ldobserve-otel-bundle.jar
+    // remains alongside the AARs and the META-INF/services/ tree.
     tasks.register<Sync>("copyDeps") {
         dependsOn(observabilityBuild.task(":lib:assemble"))
         dependsOn(bundleOtelJars)
         from(configurations["copyDependencies"].filter { it.name.endsWith(".aar") })
         from(fileTree(observabilityAarDir) { include("*.aar") })
         from(bundleStaging)
+        // META-INF/services/* — laid out under META-INF/services/ in the
+        // output so MSBuild can glob them by stable path.
+        from(servicesStaging) {
+            into("META-INF/services")
+        }
         into(depsDir)
     }
     tasks.named("preBuild") { finalizedBy("copyDeps") }
