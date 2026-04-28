@@ -10,6 +10,51 @@
 		</AndroidJavaLibrary>
 	</ItemGroup>
 
+	<!--
+		Re-inject the OTel `META-INF/services/*` registrations into the APK / AAB.
+
+		.NET-for-Android's `CollectJarContentFilesForArchive` task calls
+		`PackagingUtils.CheckEntryForPackaging`, which hardcodes the entire
+		`META-INF/` folder as a stripped path when extracting JAR resources for
+		the APK (alongside `.svn`, `SCCS`, `picasa.ini`, etc.). As a result,
+		the merged service registrations inside `ldobserve-otel-bundle.jar`
+		never reach the final APK and `java.util.ServiceLoader` cannot find
+		`io.opentelemetry.exporter.sender.okhttp.internal.OkHttpHttpSenderProvider`,
+		causing `OtlpHttpSpanExporterBuilder.build()` to throw
+		`No HttpSenderProvider found on classpath`.
+
+		`BuildArchive` itself does not filter on path — it just copies every
+		`@(FilesToAddToArchive)` item to its `ArchivePath`. We append the
+		standalone service files (shipped alongside the bundle JAR in
+		runtimes/android/native/META-INF/services/) to that item group before
+		`_BuildApkEmbed` runs, sidestepping the strip.
+
+		Important: the destination prefix differs by `$(AndroidPackageFormat)`.
+		  - APK ('apk'): files go straight to `META-INF/services/*`.
+		  - AAB ('aab'): the same `BuildArchive` task writes the App Bundle
+		    base.zip, which bundletool then validates. Bundletool only allows
+		    files under the predefined module dirs (manifest, dex, res, assets,
+		    lib, root, apex); anything else fails with `XABAB0000 Module files
+		    can be only in pre-defined directories`. To survive validation we
+		    place the files at `root/META-INF/services/*`; bundletool relocates
+		    everything under `root/` back to the APK root at install time, so
+		    the runtime ServiceLoader still sees `META-INF/services/*`.
+	-->
+	<Target Name="_LDInjectMetaInfServices"
+	        BeforeTargets="_BuildApkEmbed;_BuildApkFastDev"
+	        Condition="$(TargetFramework.Contains('android'))">
+		<PropertyGroup>
+			<_LDArchiveMetaInfPrefix Condition="'$(AndroidPackageFormat)' == 'aab'">root/META-INF/services</_LDArchiveMetaInfPrefix>
+			<_LDArchiveMetaInfPrefix Condition="'$(AndroidPackageFormat)' != 'aab'">META-INF/services</_LDArchiveMetaInfPrefix>
+		</PropertyGroup>
+		<ItemGroup>
+			<_LDInjectedMetaInfService Include="$(MSBuildThisFileDirectory)../runtimes/android/native/META-INF/services/*" />
+			<FilesToAddToArchive Include="@(_LDInjectedMetaInfService)">
+				<ArchivePath>$(_LDArchiveMetaInfPrefix)/%(Filename)%(Extension)</ArchivePath>
+			</FilesToAddToArchive>
+		</ItemGroup>
+	</Target>
+
 	<ItemGroup Condition="$(TargetFramework.Contains('ios'))">
 		<NativeReference Include="$(MSBuildThisFileDirectory)../runtimes/ios/native/LDObserveBridge.xcframework">
 			<Kind>Framework</Kind>

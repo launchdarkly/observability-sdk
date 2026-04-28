@@ -39,11 +39,36 @@
 		<!-- Bridge module AAR -->
 		<_LDNativeAAR Include="$(_LDNativeAarDir)LDObserve-release.aar" />
 
-		<!-- JARs: exclude opentelemetry-sdk-extension-autoconfigure-* (main + SPI). SPI not re-included (testing); add back
-		     _LDNativeJAR Include autoconfigure-spi-*.jar when needed. autoconfigure-1* was unsafe on OTel 2.x. -->
-		<_LDNativeJAR Include="$(_LDNativeDepsDir)opentelemetry-*.jar"
-				Exclude="$(_LDNativeDepsDir)opentelemetry-sdk-extension-incubator-*.jar;$(_LDNativeDepsDir)opentelemetry-sdk-extension-autoconfigure-*.jar;$(_LDNativeDepsDir)opentelemetry-sdk-testing-*.jar" />
-		<_LDNativeJAR Include="$(_LDNativeDepsDir)okhttp-*.jar" />
-		<_LDNativeJAR Include="$(_LDNativeDepsDir)okio-*.jar" />
+		<!--
+			Single fat JAR produced by the LDObserve native module's `bundleOtelJars`
+			Gradle task. It bundles every transitive OTel + okhttp + okio JAR with
+			META-INF/services entries merged per service name.
+
+			One JAR (instead of ~15 individual ones) avoids two .NET-for-Android 10
+			packaging hazards:
+			  1. `BuildArchive` drops jar-extracted entries whose `ArchivePath` is
+			     already present in the APK, so overlapping `META-INF/services/*`
+			     paths from sibling JARs would race and lose entries.
+			  2. `CollectJarContentFilesForArchive` calls
+			     `PackagingUtils.CheckEntryForPackaging`, which hardcodes the
+			     entire `META-INF/` folder as stripped — so even with a single
+			     bundle JAR, services files inside the JAR never reach the APK.
+			     We work around (2) below with `_LDNativeMetaInfService`.
+		-->
+		<_LDNativeJAR Include="$(_LDNativeDepsDir)ldobserve-otel-bundle.jar" />
+
+		<!--
+			Standalone copies of the merged `META-INF/services/*` files produced
+			by the same `bundleOtelJars` task. We can't rely on
+			`<AndroidJavaLibrary>` to surface these because
+			`PackagingUtils.CheckEntryForPackaging` strips every JAR entry whose
+			path begins with `META-INF/`. Instead, the consumer-side targets
+			inject these files directly into `@(FilesToAddToArchive)` after
+			`CollectJarContentFilesForArchive` runs, so `BuildArchive` (which
+			does not filter on path) places them at `META-INF/services/*` in
+			the APK and ServiceLoader can find e.g.
+			`io.opentelemetry.exporter.sender.okhttp.internal.OkHttpHttpSenderProvider`.
+		-->
+		<_LDNativeMetaInfService Include="$(_LDNativeDepsDir)META-INF\services\*" />
 	</ItemGroup>
 </Project>

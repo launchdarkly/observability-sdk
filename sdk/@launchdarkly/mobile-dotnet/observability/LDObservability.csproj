@@ -48,7 +48,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="OpenTelemetry" Version="1.11.2" />
+		<PackageReference Include="OpenTelemetry" Version="1.15.3" />
 	</ItemGroup>
 
 	<ItemGroup Condition="'$(UseLocalClientSdk)' == 'true'">
@@ -94,4 +94,38 @@
 			<Visible>false</Visible>
 		</AndroidJavaLibrary>
 	</ItemGroup>
+
+	<!--
+		Re-inject the OTel `META-INF/services/*` registrations into the APK / AAB.
+		.NET-for-Android strips every JAR entry under `META-INF/` via
+		`PackagingUtils.CheckEntryForPackaging`, so the merged service files
+		inside `ldobserve-otel-bundle.jar` never reach the APK and
+		`ServiceLoader` cannot find `OkHttpHttpSenderProvider` at runtime.
+		Appending the standalone service files (emitted by the Gradle
+		`bundleOtelJars` task next to the bundle JAR) to
+		`@(FilesToAddToArchive)` before `_BuildApkEmbed` runs lands them at
+		the right place because `BuildArchive` does not filter on path.
+
+		For AAB the same task writes the App Bundle base.zip, which bundletool
+		then validates; it only allows files under predefined module dirs
+		(manifest, dex, res, assets, lib, root, apex). Anything else fails
+		with `XABAB0000 Module files can be only in pre-defined directories`.
+		So for AAB we redirect the prefix to `root/META-INF/services/*`;
+		bundletool relocates everything under `root/` back to the APK root at
+		install time, so ServiceLoader still sees `META-INF/services/*`.
+		Keep this in sync with `buildTransitive/LDObservability.Fat.targets`.
+	-->
+	<Target Name="_LDInjectMetaInfServicesLocal"
+	        BeforeTargets="_BuildApkEmbed;_BuildApkFastDev"
+	        Condition="$(TargetFramework.Contains('android')) and '$(LD_INCLUDE_NATIVE_DEPS)' == 'true' and '@(_LDNativeMetaInfService)' != ''">
+		<PropertyGroup>
+			<_LDArchiveMetaInfPrefix Condition="'$(AndroidPackageFormat)' == 'aab'">root/META-INF/services</_LDArchiveMetaInfPrefix>
+			<_LDArchiveMetaInfPrefix Condition="'$(AndroidPackageFormat)' != 'aab'">META-INF/services</_LDArchiveMetaInfPrefix>
+		</PropertyGroup>
+		<ItemGroup>
+			<FilesToAddToArchive Include="@(_LDNativeMetaInfService)">
+				<ArchivePath>$(_LDArchiveMetaInfPrefix)/%(Filename)%(Extension)</ArchivePath>
+			</FilesToAddToArchive>
+		</ItemGroup>
+	</Target>
 </Project>

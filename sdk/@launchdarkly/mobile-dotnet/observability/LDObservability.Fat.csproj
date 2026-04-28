@@ -15,7 +15,7 @@
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Maui.Controls" Version="[8.0.3, 11.0.0)" />
 		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="[8.0.3, 11.0.0)" />
-		<PackageReference Include="OpenTelemetry" Version="1.11.2" />
+		<PackageReference Include="OpenTelemetry" Version="1.15.3" />
 	</ItemGroup>
 
 	<!-- Use package dependency by default -->
@@ -82,6 +82,8 @@
 	<ItemGroup>
 		<None Include="@(_LDNativeAAR)" Pack="true" PackagePath="runtimes/android/native/" />
 		<None Include="@(_LDNativeJAR)" Pack="true" PackagePath="runtimes/android/native/" />
+		<!-- META-INF/services files extracted from the bundle JAR; see NativeAndroidDeps.props. -->
+		<None Include="@(_LDNativeMetaInfService)" Pack="true" PackagePath="runtimes/android/native/META-INF/services/" />
 
 		<!-- iOS XCFramework -->
 		<None Include="..\macios\native\LDObserve\build\outputs\LDObserveBridge.xcframework\**\*"
