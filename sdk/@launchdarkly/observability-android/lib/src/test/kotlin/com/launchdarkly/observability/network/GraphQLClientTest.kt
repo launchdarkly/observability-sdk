@@ -9,7 +9,6 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonPrimitive
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertNotNull
@@ -22,6 +21,12 @@ class GraphQLClientTest {
 
     @Serializable
     data class TestData(val id: String, val name: String)
+
+    private val testQuery = """
+        query EmptyQuery {
+            fakeField
+        }
+    """.trimIndent()
 
     private lateinit var graphQLClient: GraphQLClient
     private lateinit var mockConnection: HttpURLConnection
@@ -52,26 +57,13 @@ class GraphQLClientTest {
     }
 
     @Test
-    fun `execute should handle missing GraphQL query file`() = runTest {
-        val result = graphQLClient.execute(
-            queryFileName = "nonexistent-query.graphql",
-            dataSerializer = TestData.serializer()
-        )
-
-        assertNull(result.data)
-        assertNotNull(result.errors)
-        assertEquals(1, result.errors.size)
-        assertTrue(result.errors.first().message.contains("Could not load GraphQL query file"))
-    }
-
-    @Test
     fun `execute should make successful GraphQL request and return a valid response`() = runTest {
         val responseJson = """{"data": {"id": "123", "name": "John Doe"}}"""
 
         every { mockConnection.inputStream } returns ByteArrayInputStream(responseJson.toByteArray())
 
         val result = graphQLClient.execute(
-            queryFileName = "test-query.graphql",
+            query = testQuery,
             variables = mapOf("test_variable" to JsonPrimitive("567")),
             dataSerializer = TestData.serializer()
         )
@@ -91,7 +83,7 @@ class GraphQLClientTest {
         every { mockConnection.inputStream } returns ByteArrayInputStream(responseJson.toByteArray())
 
         val result = graphQLClient.execute(
-            queryFileName = "test-query.graphql",
+            query = testQuery,
             dataSerializer = TestData.serializer()
         )
 
@@ -112,7 +104,7 @@ class GraphQLClientTest {
         every { mockConnection.errorStream } returns ByteArrayInputStream(errorResponse.toByteArray())
 
         val result = graphQLClient.execute(
-            queryFileName = "test-query.graphql",
+            query = testQuery,
             dataSerializer = TestData.serializer()
         )
 
@@ -127,7 +119,7 @@ class GraphQLClientTest {
         every { mockConnection.errorStream } returns null
 
         val result = graphQLClient.execute(
-            queryFileName = "test-query.graphql",
+            query = testQuery,
             dataSerializer = TestData.serializer()
         )
 
@@ -142,7 +134,7 @@ class GraphQLClientTest {
         every { mockConnection.outputStream } throws IOException("Connection failed")
 
         val result = graphQLClient.execute(
-            queryFileName = "test-query.graphql",
+            query = testQuery,
             dataSerializer = TestData.serializer()
         )
 
@@ -159,7 +151,7 @@ class GraphQLClientTest {
         every { mockConnection.inputStream } returns ByteArrayInputStream(responseJson.toByteArray())
 
         graphQLClient.execute(
-            queryFileName = "test-query.graphql",
+            query = testQuery,
             dataSerializer = TestData.serializer()
         )
 

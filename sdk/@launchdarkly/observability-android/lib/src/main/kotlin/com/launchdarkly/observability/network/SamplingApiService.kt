@@ -11,7 +11,61 @@ class SamplingApiService(
 ) {
 
     companion object {
-        private const val GET_SAMPLING_CONFIG_QUERY_FILE_PATH = "graphql/GetSamplingConfigQuery.graphql"
+        private val GET_SAMPLING_CONFIG_QUERY = """
+            fragment MatchParts on MatchConfig {
+                regexValue
+                matchValue
+            }
+
+            query GetSamplingConfig(${'$'}organization_verbose_id: String!) {
+                sampling(organization_verbose_id: ${'$'}organization_verbose_id) {
+                    spans {
+                        name {
+                            ...MatchParts
+                        }
+                        attributes {
+                            key {
+                                ...MatchParts
+                            }
+                            attribute {
+                                ...MatchParts
+                            }
+                        }
+                        events {
+                            name {
+                                ...MatchParts
+                            }
+                            attributes {
+                                key {
+                                    ...MatchParts
+                                }
+                                attribute {
+                                    ...MatchParts
+                                }
+                            }
+                        }
+                        samplingRatio
+                    }
+                    logs {
+                        message {
+                            ...MatchParts
+                        }
+                        severityText {
+                            ...MatchParts
+                        }
+                        attributes {
+                            key {
+                                ...MatchParts
+                            }
+                            attribute {
+                                ...MatchParts
+                            }
+                        }
+                        samplingRatio
+                    }
+                }
+            }
+        """.trimIndent()
     }
 
     /**
@@ -23,7 +77,7 @@ class SamplingApiService(
         try {
             val variables = mapOf("organization_verbose_id" to JsonPrimitive(organizationVerboseId))
             val response = graphqlClient.execute(
-                queryFileName = GET_SAMPLING_CONFIG_QUERY_FILE_PATH,
+                query = GET_SAMPLING_CONFIG_QUERY,
                 variables = variables,
                 dataSerializer = SamplingResponse.serializer()
             )
