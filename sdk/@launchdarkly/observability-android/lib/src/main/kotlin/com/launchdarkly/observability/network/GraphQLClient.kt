@@ -67,20 +67,19 @@ class GraphQLClient(
 
     /**
      * Executes a GraphQL query
-     * @param queryFileName The .graphql file name
+     * @param query The GraphQL query string
      * @param variables Query variables
      * @param dataSerializer Kotlinx serialization serializer for the expected response data type
      * @return GraphQLResponse containing either the deserialized data or error information
      */
     suspend fun <T> execute(
-        queryFileName: String,
+        query: String,
         variables: Map<String, JsonElement> = emptyMap(),
         dataSerializer: KSerializer<T>,
         compress: Boolean = true
     ): GraphQLResponse<T> = withContext(DispatcherProviderHolder.current.io) {
         var connection: HttpURLConnection? = null
         val response: GraphQLResponse<T> = try {
-            val query = loadQuery(queryFileName)
             val request = GraphQLRequest(
                 query = query,
                 variables = variables
@@ -141,17 +140,6 @@ class GraphQLClient(
 
         logErrors(response)
         response
-    }
-
-    /**
-     * Loads GraphQL query from resources
-     * @param queryFilepath The .graphql file path
-     * @return Query string
-     */
-    private fun loadQuery(queryFilepath: String): String {
-        return this::class.java.classLoader?.getResourceAsStream(queryFilepath)?.bufferedReader()?.use {
-            it.readText()
-        } ?: throw IllegalStateException("Could not load GraphQL query file: $queryFilepath")
     }
 
     private fun gzip(data: ByteArray): ByteArray {
