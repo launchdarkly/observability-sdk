@@ -26,9 +26,131 @@ class SessionReplayApiService(
     }
 
     companion object {
-        private const val INITIALIZE_REPLAY_SESSION_QUERY_FILE_PATH = "graphql/InitializeReplaySession.graphql"
-        private const val IDENTIFY_REPLAY_SESSION_QUERY_FILE_PATH = "graphql/IdentifyReplaySession.graphql"
-        private const val PUSH_PAYLOAD_QUERY_FILE_PATH = "graphql/PushPayload.graphql"
+        private val INITIALIZE_REPLAY_SESSION_QUERY = """
+            fragment MatchParts on MatchConfig {
+                regexValue
+                matchValue
+            }
+
+            mutation initializeSession(
+                ${'$'}session_secure_id: String!
+                ${'$'}organization_verbose_id: String!
+                ${'$'}enable_strict_privacy: Boolean!
+                ${'$'}privacy_setting: String!
+                ${'$'}enable_recording_network_contents: Boolean!
+                ${'$'}clientVersion: String!
+                ${'$'}firstloadVersion: String!
+                ${'$'}clientConfig: String!
+                ${'$'}environment: String!
+                ${'$'}id: String!
+                ${'$'}appVersion: String
+                ${'$'}serviceName: String!
+                ${'$'}client_id: String!
+                ${'$'}network_recording_domains: [String!]
+            ) {
+                initializeSession(
+                    session_secure_id: ${'$'}session_secure_id
+                    organization_verbose_id: ${'$'}organization_verbose_id
+                    enable_strict_privacy: ${'$'}enable_strict_privacy
+                    enable_recording_network_contents: ${'$'}enable_recording_network_contents
+                    clientVersion: ${'$'}clientVersion
+                    firstloadVersion: ${'$'}firstloadVersion
+                    clientConfig: ${'$'}clientConfig
+                    environment: ${'$'}environment
+                    appVersion: ${'$'}appVersion
+                    serviceName: ${'$'}serviceName
+                    fingerprint: ${'$'}id
+                    client_id: ${'$'}client_id
+                    network_recording_domains: ${'$'}network_recording_domains
+                    privacy_setting: ${'$'}privacy_setting
+                ) {
+                    secure_id
+                    project_id
+                    sampling {
+                        spans {
+                            name {
+                                ...MatchParts
+                            }
+                            attributes {
+                                key {
+                                    ...MatchParts
+                                }
+                                attribute {
+                                    ...MatchParts
+                                }
+                            }
+                            events {
+                                name {
+                                    ...MatchParts
+                                }
+                                attributes {
+                                    key {
+                                        ...MatchParts
+                                    }
+                                    attribute {
+                                        ...MatchParts
+                                    }
+                                }
+                            }
+                            samplingRatio
+                        }
+                        logs {
+                            message {
+                                ...MatchParts
+                            }
+                            severityText {
+                                ...MatchParts
+                            }
+                            attributes {
+                                key {
+                                    ...MatchParts
+                                }
+                                attribute {
+                                    ...MatchParts
+                                }
+                            }
+                            samplingRatio
+                        }
+                    }
+                }
+            }
+        """.trimIndent()
+
+        private val IDENTIFY_REPLAY_SESSION_QUERY = """
+            mutation identifySession(
+                ${'$'}session_secure_id: String!
+                ${'$'}user_identifier: String!
+                ${'$'}user_object: Any
+            ) {
+                identifySession(
+                    session_secure_id: ${'$'}session_secure_id
+                    user_identifier: ${'$'}user_identifier
+                    user_object: ${'$'}user_object
+                )
+            }
+        """.trimIndent()
+
+        private val PUSH_PAYLOAD_QUERY = """
+            mutation PushPayload(
+                ${'$'}session_secure_id: String!
+                ${'$'}payload_id: ID!
+                ${'$'}events: ReplayEventsInput!
+                ${'$'}messages: String!
+                ${'$'}resources: String!
+                ${'$'}web_socket_events: String!
+                ${'$'}errors: [ErrorObjectInput]!
+            ) {
+                pushPayload(
+                    session_secure_id: ${'$'}session_secure_id
+                    payload_id: ${'$'}payload_id
+                    events: ${'$'}events
+                    messages: ${'$'}messages
+                    resources: ${'$'}resources
+                    web_socket_events: ${'$'}web_socket_events
+                    errors: ${'$'}errors
+                )
+            }
+        """.trimIndent()
     }
 
     /**
@@ -54,7 +176,7 @@ class SessionReplayApiService(
             "id" to JsonPrimitive("") // TODO: O11Y-631 - remove hardcoded params
         )
         val response = graphqlClient.execute(
-            queryFileName = INITIALIZE_REPLAY_SESSION_QUERY_FILE_PATH,
+            query = INITIALIZE_REPLAY_SESSION_QUERY,
             variables = variables,
             dataSerializer = InitializeReplaySessionResponse.serializer()
         )
@@ -78,7 +200,7 @@ class SessionReplayApiService(
             "user_object" to userObject
         )
         val response = graphqlClient.execute(
-            queryFileName = IDENTIFY_REPLAY_SESSION_QUERY_FILE_PATH,
+            query = IDENTIFY_REPLAY_SESSION_QUERY,
             variables = variables,
             dataSerializer = IdentifySessionResponse.serializer()
         )
@@ -124,7 +246,7 @@ class SessionReplayApiService(
         )
 
         val response = graphqlClient.execute(
-            queryFileName = PUSH_PAYLOAD_QUERY_FILE_PATH,
+            query = PUSH_PAYLOAD_QUERY,
             variables = variables,
             dataSerializer = PushPayloadResponse.serializer()
         )
