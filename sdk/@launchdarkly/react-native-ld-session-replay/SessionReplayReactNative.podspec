@@ -16,7 +16,7 @@ Pod::Spec.new do |s|
   s.source_files = "ios/**/*.{h,m,mm,swift,cpp}"
   s.private_header_files = "ios/**/*.h"
 
-  s.dependency 'LaunchDarklySessionReplay', '~> 0.26.2'
+  s.dependency 'LaunchDarklySessionReplay', '~> 0.33.1'
 
   install_modules_dependencies(s)
 end
