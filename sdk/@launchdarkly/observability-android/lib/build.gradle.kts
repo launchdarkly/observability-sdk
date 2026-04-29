@@ -38,10 +38,10 @@ configurations.all {
 
 dependencies {
     if (isIncludedByMaui) {
-        compileOnly("com.launchdarkly:launchdarkly-android-client-sdk:5.11.1")
-        testImplementation("com.launchdarkly:launchdarkly-android-client-sdk:5.11.1")
+        compileOnly("com.launchdarkly:launchdarkly-android-client-sdk:5.12.0")
+        testImplementation("com.launchdarkly:launchdarkly-android-client-sdk:5.12.0")
     } else {
-        implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.11.1")
+        implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.12.0")
     }
 
     // AndroidX
