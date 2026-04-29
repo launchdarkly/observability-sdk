@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.6.0...session-replay-react-native-0.7.0) (2026-04-29)
+
+
+### Features
+
+* RN decrease Kotlin to 2.0.21 and increase JVM to 11 ([#511](https://github.com/launchdarkly/observability-sdk/issues/511)) ([1593510](https://github.com/launchdarkly/observability-sdk/commit/15935101de0163f2e47109ef35e1cf9369db9599))
+
 ## [0.6.0](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.5.1...session-replay-react-native-0.6.0) (2026-04-28)
 
 
