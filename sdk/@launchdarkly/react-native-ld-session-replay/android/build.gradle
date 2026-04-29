@@ -83,8 +83,8 @@ def kotlin_version = getExtOrDefault("kotlinVersion")
 dependencies {
   implementation "com.facebook.react:react-android"
   implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
-  implementation "com.launchdarkly:launchdarkly-observability-android:0.39.0"
-  implementation "com.launchdarkly:launchdarkly-android-client-sdk:5.11.0"
+  implementation "com.launchdarkly:launchdarkly-observability-android:0.42.0"
+  implementation "com.launchdarkly:launchdarkly-android-client-sdk:5.12.0"
   // compileOnly: OTel Attributes appears in ObservabilityOptions parameter types; provided at
   // runtime transitively through launchdarkly-observability-android.
   compileOnly "io.opentelemetry:opentelemetry-api:1.51.0"
