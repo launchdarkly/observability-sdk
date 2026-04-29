@@ -24,14 +24,16 @@ val isIncludedByMaui = gradle.parent?.rootProject?.name == "LDObserve"
 
 // Pin all Kotlin artifacts (stdlib, reflect, etc.) on this build's classpath to the same
 // version as the configured Kotlin compiler. Without this, transitive deps such as the
-// io.opentelemetry.android:*:0.11.0-alpha modules drag in a newer kotlin-stdlib whose
+// io.opentelemetry.android:*:0.11.0-alpha modules drag in newer Kotlin artifacts whose
 // metadata version this compiler cannot read, producing
 // "Module was compiled with an incompatible version of Kotlin" errors at compileDebugKotlin.
+// All org.jetbrains.kotlin:* artifacts ship in lock-step with the compiler, so aligning the
+// whole group is the right scope here (covers kotlin-stdlib*, kotlin-reflect, etc.).
 configurations.all {
     resolutionStrategy.eachDependency {
-        if (requested.group == "org.jetbrains.kotlin" && requested.name.startsWith("kotlin-stdlib")) {
+        if (requested.group == "org.jetbrains.kotlin") {
             useVersion("2.0.21")
-            because("Align kotlin-stdlib with the project's Kotlin compiler version (2.0.21).")
+            because("Align all org.jetbrains.kotlin:* artifacts with the project's Kotlin compiler version (2.0.21).")
         }
     }
 }
