@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.42.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.41.0...launchdarkly-observability-android-0.42.0) (2026-04-29)
+
+
+### Features
+
+* Android - downgrade Kotlin to 2.0.21, upgrade JVM to 11 ([#508](https://github.com/launchdarkly/observability-sdk/issues/508)) ([cc0fe6b](https://github.com/launchdarkly/observability-sdk/commit/cc0fe6bdce2088fc78683937efe70db976709b21))
+
 ## [0.41.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.40.0...launchdarkly-observability-android-0.41.0) (2026-04-24)
 
 
