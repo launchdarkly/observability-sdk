@@ -22,18 +22,26 @@ allprojects {
 
 val isIncludedByMaui = gradle.parent?.rootProject?.name == "LDObserve"
 
-// Pin all Kotlin artifacts (stdlib, reflect, etc.) on this build's classpath to the same
-// version as the configured Kotlin compiler. Without this, transitive deps such as the
-// io.opentelemetry.android:*:0.11.0-alpha modules drag in newer Kotlin artifacts whose
-// metadata version this compiler cannot read, producing
+// Pin Kotlin runtime artifacts on this build's classpath to match the configured Kotlin
+// compiler version (2.0.21). Without this, transitive deps such as the
+// io.opentelemetry.android:*:0.11.0-alpha modules drag in newer kotlin-stdlib / kotlin-reflect
+// whose metadata version the 2.0.21 compiler cannot read, producing
 // "Module was compiled with an incompatible version of Kotlin" errors at compileDebugKotlin.
-// All org.jetbrains.kotlin:* artifacts ship in lock-step with the compiler, so aligning the
-// whole group is the right scope here (covers kotlin-stdlib*, kotlin-reflect, etc.).
+//
+// Scope is intentionally limited to stdlib / reflect / test — the @Metadata-bearing artifacts
+// that end up on user-code compile/runtime classpaths. KGP-internal artifacts
+// (kotlin-build-tools-impl, kotlin-compiler-embeddable, kotlin-gradle-plugin-api, etc.) are
+// NOT pinned because they must match the active KGP version; downgrading them triggers KGP
+// 2.x's "Build Tools API Version Mismatch Detected" check during artifact transforms.
 configurations.all {
     resolutionStrategy.eachDependency {
-        if (requested.group == "org.jetbrains.kotlin") {
+        val name = requested.name
+        val isRuntimeArtifact = name.startsWith("kotlin-stdlib") ||
+                name == "kotlin-reflect" ||
+                name.startsWith("kotlin-test")
+        if (requested.group == "org.jetbrains.kotlin" && isRuntimeArtifact) {
             useVersion("2.0.21")
-            because("Align all org.jetbrains.kotlin:* artifacts with the project's Kotlin compiler version (2.0.21).")
+            because("Align Kotlin runtime artifacts with the project's Kotlin compiler version (2.0.21).")
         }
     }
 }
