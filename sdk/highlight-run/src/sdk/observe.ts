@@ -648,16 +648,64 @@ export class ObserveSDK implements Observe {
 		WebVitalsListener((data) => {
 			const { name, value } = data
 			const { hostname, pathname, href } = window.location
+			const attributes: Attributes = {
+				group: window.location.pathname,
+				category: MetricCategory.WebVital,
+				[SemanticAttributes.ATTR_URL_FULL]: sanitizeUrl(href),
+				[SemanticAttributes.ATTR_URL_PATH]: pathname,
+				[SemanticAttributes.ATTR_SERVER_ADDRESS]: hostname,
+			}
+			switch (data.name) {
+				case 'LCP': {
+					const a = data.attribution
+					if (a.element) attributes['web_vital.element'] = a.element
+					if (a.url)
+						attributes['web_vital.attribution.url'] = sanitizeUrl(
+							a.url,
+						)
+					break
+				}
+				case 'CLS': {
+					const a = data.attribution
+					if (a.largestShiftTarget)
+						attributes['web_vital.element'] = a.largestShiftTarget
+					if (a.loadState)
+						attributes['web_vital.load_state'] = a.loadState
+					break
+				}
+				case 'INP': {
+					const a = data.attribution
+					if (a.eventTarget)
+						attributes['web_vital.element'] = a.eventTarget
+					if (a.eventType)
+						attributes['web_vital.event_type'] = a.eventType
+					if (a.loadState)
+						attributes['web_vital.load_state'] = a.loadState
+					break
+				}
+				case 'FID': {
+					const a = data.attribution
+					if (a.eventTarget)
+						attributes['web_vital.element'] = a.eventTarget
+					if (a.eventType)
+						attributes['web_vital.event_type'] = a.eventType
+					break
+				}
+				case 'FCP': {
+					const a = data.attribution
+					if (a.loadState)
+						attributes['web_vital.load_state'] = a.loadState
+					break
+				}
+				case 'TTFB':
+					// No high-signal selector to attribute; timing breakdown
+					// is already captured by the metric value itself.
+					break
+			}
 			this.recordGauge({
 				name,
 				value,
-				attributes: {
-					group: window.location.pathname,
-					category: MetricCategory.WebVital,
-					[SemanticAttributes.ATTR_URL_FULL]: sanitizeUrl(href),
-					[SemanticAttributes.ATTR_URL_PATH]: pathname,
-					[SemanticAttributes.ATTR_SERVER_ADDRESS]: hostname,
-				},
+				attributes,
 			})
 		})
 		ViewportResizeListener((viewport: ViewportResizeListenerArgs) => {
