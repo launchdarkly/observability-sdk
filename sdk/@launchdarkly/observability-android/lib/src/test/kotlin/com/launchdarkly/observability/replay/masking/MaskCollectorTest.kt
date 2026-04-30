@@ -58,7 +58,7 @@ class MaskCollectorTest {
         val child = mockLeaf()
         val parent = mockGroup(child, ldMaskTag = true)
 
-        val masks = collector.collectMasks(parent, emptyList(), emptyList())
+        val masks = collector.collectMasks(parent, emptyList(), emptyList(), emptyList())
 
         // Parent emits a mask via its own hasLDMask; child emits one via inherited mask.
         assertEquals(2, masks.size)
@@ -69,7 +69,7 @@ class MaskCollectorTest {
         val child = mockLeaf(ldMaskTag = false)
         val parent = mockGroup(child, ldMaskTag = true)
 
-        val masks = collector.collectMasks(parent, emptyList(), emptyList())
+        val masks = collector.collectMasks(parent, emptyList(), emptyList(), emptyList())
 
         // Ancestor mask wins; child's ldUnmask tag is ignored when an ancestor is explicitly masked.
         assertEquals(2, masks.size)
@@ -80,7 +80,7 @@ class MaskCollectorTest {
         val child = mockLeaf()
         val parent = mockGroup(child, ldMaskTag = false)
 
-        val masks = collector.collectMasks(parent, emptyList(), listOf(matchAll))
+        val masks = collector.collectMasks(parent, emptyList(), emptyList(), listOf(matchAll))
 
         // Inherited unmask suppresses the global match on the descendant; the parent itself is
         // also not masked because its own ldUnmask vetoes the global matcher.
@@ -94,7 +94,7 @@ class MaskCollectorTest {
         // signal wins.
         val view = mockLeaf(ldMaskTag = false)
 
-        val masks = collector.collectMasks(view, listOf(matchAll), emptyList())
+        val masks = collector.collectMasks(view, listOf(matchAll), emptyList(), emptyList())
 
         assertEquals(1, masks.size)
     }
@@ -107,7 +107,7 @@ class MaskCollectorTest {
         val plainSubtree = mockGroup(plainChild)
         val root = mockGroup(unmaskedSubtree, plainSubtree)
 
-        val masks = collector.collectMasks(root, emptyList(), listOf(matchAll))
+        val masks = collector.collectMasks(root, emptyList(), emptyList(), listOf(matchAll))
 
         // root + plainSubtree + plainChild all match the global matcher (3 masks). The
         // unmaskedSubtree branch carries an explicit unmask that propagates down to its child,
@@ -119,7 +119,7 @@ class MaskCollectorTest {
     fun `view without explicit signal falls through to global matcher`() {
         val view = mockLeaf()
 
-        val masks = collector.collectMasks(view, emptyList(), listOf(matchAll))
+        val masks = collector.collectMasks(view, emptyList(), emptyList(), listOf(matchAll))
 
         assertEquals(1, masks.size)
     }

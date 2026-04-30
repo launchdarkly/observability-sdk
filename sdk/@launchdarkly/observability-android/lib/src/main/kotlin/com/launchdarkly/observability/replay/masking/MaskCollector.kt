@@ -28,6 +28,8 @@ private val abstractComposeViewClass: Class<*>? by lazy {
  * @param rootY y-coordinate of the root view in screen space.
  * @param explicitMaskMatchers matchers whose match counts as an explicit mask signal that
  *     propagates to descendants (e.g. `PrivacyProfile.explicitMaskMatchers`).
+ * @param explicitUnmaskMatchers matchers whose match counts as an explicit unmask signal that
+ *     propagates to descendants (e.g. `PrivacyProfile.explicitUnmaskMatchers`).
  * @param globalMaskMatchers matchers whose match applies only to the matched view itself; they do
  *     not propagate to descendants and do not override an explicit unmask.
  */
@@ -36,6 +38,7 @@ data class MaskContext(
     val rootX: Float,
     val rootY: Float,
     val explicitMaskMatchers: List<MaskMatcher>,
+    val explicitUnmaskMatchers: List<MaskMatcher>,
     val globalMaskMatchers: List<MaskMatcher>,
 )
 /**
@@ -52,7 +55,8 @@ data class MaskContext(
  *     explicitly masked (via [MaskTarget.hasLDMask] or matched by any
  *     [MaskContext.explicitMaskMatchers] entry)? If so, the target is masked.
  *  2. **Explicit Unmasking.** Is the target — or any of its ancestors — explicitly unmasked
- *     (via [MaskTarget.hasLDUnmask])? If so, the target is not masked.
+ *     (via [MaskTarget.hasLDUnmask] or matched by any [MaskContext.explicitUnmaskMatchers]
+ *     entry)? If so, the target is not masked.
  *  3. **Global configuration.** Does any [MaskContext.globalMaskMatchers] entry match the
  *     target? If so, the target is masked. Global matches do not propagate to descendants.
  *
@@ -68,11 +72,15 @@ class MaskCollector(private val logger: ObserveLogger) {
      * @param explicitMaskMatchers matchers whose match counts as an explicit mask signal that
      *     propagates to descendants. Pass an empty list when no identifier-based masking is
      *     configured.
+     * @param explicitUnmaskMatchers matchers whose match counts as an explicit unmask signal that
+     *     propagates to descendants. Pass an empty list when no identifier-based unmasking is
+     *     configured.
      * @param globalMaskMatchers matchers whose match applies only to the matched view itself.
      */
     fun collectMasks(
         root: View,
         explicitMaskMatchers: List<MaskMatcher>,
+        explicitUnmaskMatchers: List<MaskMatcher>,
         globalMaskMatchers: List<MaskMatcher>,
     ): List<Mask> {
         val resultMasks = mutableListOf<Mask>()
@@ -83,6 +91,7 @@ class MaskCollector(private val logger: ObserveLogger) {
             rootX = rootX,
             rootY = rootY,
             explicitMaskMatchers = explicitMaskMatchers,
+            explicitUnmaskMatchers = explicitUnmaskMatchers,
             globalMaskMatchers = globalMaskMatchers,
         )
 
@@ -217,17 +226,19 @@ class MaskCollector(private val logger: ObserveLogger) {
     /**
      * The target's *own* explicit signal, ignoring ancestors. Per-view markers
      * ([MaskTarget.hasLDMask] / [MaskTarget.hasLDUnmask]) and any
-     * [MaskContext.explicitMaskMatchers] entry that matches all count as explicit signals; mask
-     * wins over unmask if both are present on the same target.
+     * [MaskContext.explicitMaskMatchers] / [MaskContext.explicitUnmaskMatchers] entry that
+     * matches all count as explicit signals; mask wins over unmask if both are present on the
+     * same target.
      *
      * @param target the target to inspect.
-     * @param context provides [MaskContext.explicitMaskMatchers].
+     * @param context provides the explicit-mask and explicit-unmask matcher lists.
      * @return `true` for explicit mask, `false` for explicit unmask, `null` for no signal.
      */
     private fun explicitOf(target: MaskTarget, context: MaskContext): Boolean? = when {
         target.hasLDMask() -> true
         context.explicitMaskMatchers.any { it.isMatch(target) } -> true
         target.hasLDUnmask() -> false
+        context.explicitUnmaskMatchers.any { it.isMatch(target) } -> false
         else -> null
     }
 

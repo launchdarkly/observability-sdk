@@ -289,6 +289,12 @@ val sessionReplay = SessionReplay(
                 "@+id/password",
                 "credit_card_number",
             ),
+            unmaskXMLViewIds = listOf(
+                // Unmasks views matching these ids. Same id format as maskXMLViewIds. Takes
+                // precedence over global rules like `maskText`/`maskTextInputs`, but an explicit
+                // mask on the same view or any of its ancestors still wins.
+                "@+id/greeting",
+            ),
         )
     )
 )
