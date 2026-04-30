@@ -8,6 +8,7 @@ import {
 	parseXhrResponseHeaders,
 	splitHeaderValue,
 	convertHeadersToOtelAttributes,
+	convertSearchParamsToOtelAttributes,
 } from './index'
 
 describe('Network Instrumentation Custom Attributes', () => {
@@ -382,6 +383,93 @@ describe('Network Instrumentation Custom Attributes', () => {
 				'http.request.header',
 			)
 			expect(result).toEqual({})
+		})
+	})
+
+	describe('convertSearchParamsToOtelAttributes', () => {
+		it('should emit one dotted attribute per query param', () => {
+			const params = new URLSearchParams('foo=bar&baz=qux')
+
+			const result = convertSearchParamsToOtelAttributes(
+				params,
+				'url.query_params',
+			)
+
+			expect(result).toEqual({
+				'url.query_params.foo': 'bar',
+				'url.query_params.baz': 'qux',
+			})
+		})
+
+		it('should keep single-value params as strings', () => {
+			const params = new URLSearchParams('only=once')
+
+			const result = convertSearchParamsToOtelAttributes(
+				params,
+				'url.query_params',
+			)
+
+			expect(result['url.query_params.only']).toBe('once')
+			expect(result['url.query_params.only']).not.toBeInstanceOf(Array)
+		})
+
+		it('should collect repeated keys into an array preserving order', () => {
+			const params = new URLSearchParams('id=1&id=2&id=3')
+
+			const result = convertSearchParamsToOtelAttributes(
+				params,
+				'url.query_params',
+			)
+
+			expect(result['url.query_params.id']).toEqual(['1', '2', '3'])
+		})
+
+		it('should handle empty values', () => {
+			const params = new URLSearchParams('flag=&name=alice')
+
+			const result = convertSearchParamsToOtelAttributes(
+				params,
+				'url.query_params',
+			)
+
+			expect(result).toEqual({
+				'url.query_params.flag': '',
+				'url.query_params.name': 'alice',
+			})
+		})
+
+		it('should preserve URL-decoded values', () => {
+			const params = new URLSearchParams('q=hello%20world&filter=a%26b')
+
+			const result = convertSearchParamsToOtelAttributes(
+				params,
+				'url.query_params',
+			)
+
+			expect(result['url.query_params.q']).toBe('hello world')
+			expect(result['url.query_params.filter']).toBe('a&b')
+		})
+
+		it('should return an empty object when there are no params', () => {
+			const result = convertSearchParamsToOtelAttributes(
+				new URLSearchParams(),
+				'url.query_params',
+			)
+
+			expect(result).toEqual({})
+		})
+
+		it('should respect a custom prefix', () => {
+			const params = new URLSearchParams('utm_source=email')
+
+			const result = convertSearchParamsToOtelAttributes(
+				params,
+				'request.query',
+			)
+
+			expect(result).toEqual({
+				'request.query.utm_source': 'email',
+			})
 		})
 	})
 

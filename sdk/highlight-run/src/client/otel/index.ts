@@ -727,16 +727,14 @@ const enhanceSpanWithHttpRequestAttributes = (
 		[SemanticAttributes.ATTR_URL_QUERY]: sanitizedUrlObject.search,
 	})
 
-	// Set sanitized query params as JSON object for easier querying
-	const searchParamsEntries = Array.from(
-		sanitizedUrlObject.searchParams.entries(),
-	)
-	if (searchParamsEntries.length > 0) {
-		span.setAttribute(
+	// Emit each query param as its own dotted attribute so the backend's
+	// hlog.FormatAttributes handles them as a nested attribute map natively.
+	span.setAttributes(
+		convertSearchParamsToOtelAttributes(
+			sanitizedUrlObject.searchParams,
 			'url.query_params',
-			JSON.stringify(Object.fromEntries(searchParamsEntries)),
-		)
-	}
+		),
+	)
 
 	if (networkRecordingOptions?.recordHeadersAndBody) {
 		const requestBody = getBodyThatShouldBeRecorded(
@@ -817,6 +815,36 @@ export const convertHeadersToOtelAttributes = (
 			attributes[attributeName] = values.length === 1 ? values[0] : values
 		}
 	})
+
+	return attributes
+}
+
+/**
+ * Converts URL query params to OpenTelemetry attributes with dotted keys.
+ * Each param becomes its own attribute (`<prefix>.<name>`), so the backend's
+ * `hlog.FormatAttributes` flattens them natively into a nested attribute map
+ * without needing to JSON-parse a stringified blob.
+ *
+ * Repeated keys (`?foo=1&foo=2`) become array-valued attributes — single
+ * values stay as strings to keep simple equality queries working.
+ */
+export const convertSearchParamsToOtelAttributes = (
+	searchParams: URLSearchParams,
+	prefix: string,
+): { [key: string]: string | string[] } => {
+	const attributes: { [key: string]: string | string[] } = {}
+
+	for (const [key, value] of searchParams.entries()) {
+		const attributeName = `${prefix}.${key}`
+		const existing = attributes[attributeName]
+		if (existing === undefined) {
+			attributes[attributeName] = value
+		} else if (Array.isArray(existing)) {
+			existing.push(value)
+		} else {
+			attributes[attributeName] = [existing, value]
+		}
+	}
 
 	return attributes
 }
