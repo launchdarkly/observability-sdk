@@ -7,8 +7,16 @@ require Pod::Executable.execute_command('node', ['-p',
     {paths: [process.argv[1]]},
   )', __dir__]).strip
 
+# LaunchDarkly Session Replay React Native: Podfile helpers that wrap the
+# RN 0.83 + Xcode 26 + CocoaPods 1.16.x workarounds. In a real consumer app
+# this path would be:
+#   ../node_modules/@launchdarkly/session-replay-react-native/scripts/podfile_setup
+require_relative '../../scripts/podfile_setup'
+
 platform :ios, min_ios_version_supported
 prepare_react_native_project!
+
+launchdarkly_sr_pre_install
 
 linkage = ENV['USE_FRAMEWORKS']
 if linkage != nil
@@ -32,5 +40,7 @@ target 'SessionReplayReactNativeExample' do
       :mac_catalyst_enabled => false,
       # :ccache_enabled => true
     )
+
+    launchdarkly_sr_post_install(installer)
   end
 end

@@ -31,42 +31,42 @@ PODS:
   - KSCrash/Sinks (2.5.1):
     - KSCrash/Filters
     - KSCrash/Recording
-  - LaunchDarkly (11.1.1):
-    - LaunchDarkly/Core (= 11.1.1)
-  - LaunchDarkly/Core (11.1.1):
+  - LaunchDarkly (11.1.2):
+    - LaunchDarkly/Core (= 11.1.2)
+  - LaunchDarkly/Core (11.1.2):
     - LDSwiftEventSource (= 3.3.0)
-  - LaunchDarklyObservability (0.24.0):
-    - LaunchDarklyObservability/LaunchDarklyObservability (= 0.24.0)
-  - LaunchDarklyObservability/Common (0.24.0):
+  - LaunchDarklyObservability (0.33.1):
+    - LaunchDarklyObservability/LaunchDarklyObservability (= 0.33.1)
+  - LaunchDarklyObservability/Common (0.33.1):
     - LaunchDarkly (~> 11.1.0)
-  - LaunchDarklyObservability/LaunchDarklyObservability (0.24.0):
+  - LaunchDarklyObservability/LaunchDarklyObservability (0.33.1):
     - LaunchDarklyObservability/Common
     - LaunchDarklyObservability/Misc
     - LaunchDarklyObservability/OpenTelemetry
     - LaunchDarklyObservability/OpenTelemetryProtocolExporterCommon
     - LaunchDarklyObservability/SDKResourceExtension
     - LaunchDarklyObservability/URLSessionInstrumentation
-  - LaunchDarklyObservability/Misc (0.24.0):
+  - LaunchDarklyObservability/Misc (0.33.1):
     - KSCrash
-  - LaunchDarklyObservability/NetworkStatus (0.24.0):
+  - LaunchDarklyObservability/NetworkStatus (0.33.1):
     - OpenTelemetry-Swift-Api (~> 2.3.0)
-  - LaunchDarklyObservability/OpenTelemetry (0.24.0):
+  - LaunchDarklyObservability/OpenTelemetry (0.33.1):
     - OpenTelemetry-Swift-Api (~> 2.3.0)
     - OpenTelemetry-Swift-Sdk (~> 2.3.0)
-  - LaunchDarklyObservability/OpenTelemetryProtocolExporterCommon (0.24.0):
+  - LaunchDarklyObservability/OpenTelemetryProtocolExporterCommon (0.33.1):
     - OpenTelemetry-Swift-Sdk (~> 2.3.0)
     - SwiftProtobuf
-  - LaunchDarklyObservability/SDKResourceExtension (0.24.0):
+  - LaunchDarklyObservability/SDKResourceExtension (0.33.1):
     - LaunchDarklyObservability/OpenTelemetry
-  - LaunchDarklyObservability/URLSessionInstrumentation (0.24.0):
+  - LaunchDarklyObservability/URLSessionInstrumentation (0.33.1):
     - LaunchDarklyObservability/NetworkStatus
     - OpenTelemetry-Swift-Sdk (~> 2.3.0)
-  - LaunchDarklySessionReplay (0.26.2):
-    - LaunchDarklySessionReplay/LaunchDarklySessionReplay (= 0.26.2)
-  - LaunchDarklySessionReplay/LaunchDarklySessionReplay (0.26.2):
+  - LaunchDarklySessionReplay (0.33.1):
+    - LaunchDarklySessionReplay/LaunchDarklySessionReplay (= 0.33.1)
+  - LaunchDarklySessionReplay/LaunchDarklySessionReplay (0.33.1):
     - LaunchDarklyObservability
     - LaunchDarklySessionReplay/SessionReplayC
-  - LaunchDarklySessionReplay/SessionReplayC (0.26.2)
+  - LaunchDarklySessionReplay/SessionReplayC (0.33.1)
   - LDSwiftEventSource (3.3.0)
   - OpenTelemetry-Swift-Api (2.3.0)
   - OpenTelemetry-Swift-Sdk (2.3.0):
@@ -2512,14 +2512,14 @@ PODS:
     - React-perflogger (= 0.83.0)
     - React-utils (= 0.83.0)
     - SocketRocket
-  - SessionReplayReactNative (0.5.0):
+  - SessionReplayReactNative (0.7.0):
     - boost
     - DoubleConversion
     - fast_float
     - fmt
     - glog
     - hermes-engine
-    - LaunchDarklySessionReplay (~> 0.26.2)
+    - LaunchDarklySessionReplay (~> 0.33.1)
     - RCT-Folly
     - RCT-Folly/Fabric
     - RCTRequired
@@ -2542,7 +2542,7 @@ PODS:
     - SocketRocket
     - Yoga
   - SocketRocket (0.7.1)
-  - SwiftProtobuf (1.36.1)
+  - SwiftProtobuf (1.37.0)
   - Yoga (0.0.0)
 
 DEPENDENCIES:
@@ -2624,7 +2624,9 @@ DEPENDENCIES:
   - ReactCodegen (from `build/generated/ios/ReactCodegen`)
   - ReactCommon/turbomodule/core (from `../node_modules/react-native/ReactCommon`)
   - SessionReplayReactNative (from `../..`)
+  - SocketRocket
   - SocketRocket (~> 0.7.1)
+  - SwiftProtobuf
   - Yoga (from `../node_modules/react-native/ReactCommon/yoga`)
 
 SPEC REPOS:
@@ -2805,11 +2807,11 @@ SPEC CHECKSUMS:
   FBLazyVector: a293a88992c4c33f0aee184acab0b64a08ff9458
   fmt: a40bb5bd0294ea969aaaba240a927bd33d878cdd
   glog: 5683914934d5b6e4240e497e0f4a3b42d1854183
-  hermes-engine: 30639e02d0cb4542ae6f523e1bd4d7f7064f6c62
+  hermes-engine: 3ea7ae1b4632985618df9e675b6504501ff054dd
   KSCrash: 8c4464fd5da7de520f2ce4a00fdf63f169a80f18
-  LaunchDarkly: 489abfe0f131952adeac976077f953d188ee4731
-  LaunchDarklyObservability: 7806e37693d38674b2b1f78187af2e145b2173e5
-  LaunchDarklySessionReplay: a5b9d7698455dab185963a1644f5d794c662579f
+  LaunchDarkly: bd707b9e5b23da3c90a82cdf1ea99cb8254b13df
+  LaunchDarklyObservability: 214bb6991ff8ae7b52ebdc6578a9381d10d48063
+  LaunchDarklySessionReplay: 1e888a408b338b9c06373b254393edd7795c4365
   LDSwiftEventSource: b0826ca826ca890609a9833a05cae1f357fd3b99
   OpenTelemetry-Swift-Api: 3d77582ab6837a63b65bf7d2eacc57d8f2595edd
   OpenTelemetry-Swift-Sdk: 69d60f0242e830366e359481edd575d6776eb983
@@ -2882,11 +2884,11 @@ SPEC CHECKSUMS:
   ReactAppDependencyProvider: ebcf3a78dc1bcdf054c9e8d309244bade6b31568
   ReactCodegen: 11c08ff43a62009d48c71de000352e4515918801
   ReactCommon: 424cc34cf5055d69a3dcf02f3436481afb8b0f6f
-  SessionReplayReactNative: 60664a81e02ef6a64da725c84fe6e709c6f0cd5d
+  SessionReplayReactNative: 68aa6ef19e723d9b7e86df58590d70248808aeaa
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
-  SwiftProtobuf: 9e106a71456f4d3f6a3b0c8fd87ef0be085efc38
+  SwiftProtobuf: 3fafd1b2fb97e6d95ad9c8adb2215da9afec7c83
   Yoga: 6ca93c8c13f56baeec55eb608577619b17a4d64e
 
-PODFILE CHECKSUM: 53fee6f649d87604b0c5ad827154b6c454d1a29a
+PODFILE CHECKSUM: f356c586bf588ba9c858bbdc562a4d049b197cca
 
 COCOAPODS: 1.16.2
