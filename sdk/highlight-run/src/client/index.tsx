@@ -57,6 +57,7 @@ import {
 } from './listeners/jank-listener/jank-listener'
 import { HighlightFetchWindow } from './listeners/network-listener/utils/fetch-listener'
 import { RequestResponsePair } from './listeners/network-listener/utils/models'
+import { sanitizeUrl } from './listeners/network-listener/utils/network-sanitizer'
 import { PageVisibilityListener } from './listeners/page-visibility-listener'
 import {
 	PerformanceListener,
@@ -1124,13 +1125,16 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 					const { name, value } = data
 					const tags: { name: string; value: string }[] = []
 					const addTag = (n: string, v: string | undefined) => {
-						if (v !== undefined) tags.push({ name: n, value: v })
+						if (v) tags.push({ name: n, value: v })
 					}
 					switch (data.name) {
 						case 'LCP': {
 							const a = data.attribution
 							addTag('web_vital.element', a.element)
-							addTag('web_vital.attribution.url', a.url)
+							addTag(
+								'web_vital.attribution.url',
+								a.url ? sanitizeUrl(a.url) : undefined,
+							)
 							break
 						}
 						case 'CLS': {
