@@ -50,22 +50,6 @@ data class PrivacyProfile(
     }.toSet()
 
     /**
-     * Converts this [PrivacyProfile] into its equivalent [MaskMatcher] list.
-     *
-     * Note: matchers are evaluated with `any { ... }`, so ordering only affects performance
-     * (earlier matchers can short-circuit later ones).
-     */
-    internal fun asMatchersList(): List<MaskMatcher> = buildList {
-        // Prefer cheaper checks first; heavier checks should be later.
-        if (maskTextInputs) add(textInputMatcher)
-        if (maskText) add(textMatcher)
-        if (viewClassSet.isNotEmpty()) add(viewsMatcher)
-        if (maskXMLViewIdSet.isNotEmpty()) add(xmlViewIdsMatcher)
-        if (maskBySemanticsKeywords) add(sensitiveMatcher)
-        if (webViewClassNameSet.isNotEmpty()) add(webViewClassHierarchyMatcher)
-    }
-
-    /**
      * Matches targets whose underlying Android View has an exact class match with [maskViews].
      *
      * Note: this uses `target.view.javaClass` equality; it does not match subclasses.
@@ -138,6 +122,40 @@ data class PrivacyProfile(
         override fun isMatch(target: MaskTarget): Boolean {
             return target.isSensitive(sensitiveKeywords)
         }
+    }
+
+    /**
+     * Matchers whose match counts as an "explicit" masking signal — equivalent to a call to
+     * `View.ldMask()` on the matched view. An explicit-mask match propagates to descendants per
+     * the precedence rules in `MaskCollector`.
+     *
+     * Identifier-based matchers belong here (the developer named a specific view to mask).
+     * Type-based / heuristic matchers belong in [globalMaskMatchers].
+     *
+     * Matchers are evaluated with `any { ... }`, so ordering only affects performance (earlier
+     * matchers can short-circuit later ones).
+     */
+    internal val explicitMaskMatchers: List<MaskMatcher> = buildList {
+        if (maskXMLViewIdSet.isNotEmpty()) add(xmlViewIdsMatcher)
+    }
+
+    /**
+     * Matchers whose match applies only to the matched view itself: a global match does not
+     * propagate to descendants and does not override an explicit unmask.
+     *
+     * Type-based / heuristic matchers belong here (the developer asked to mask all views *of a
+     * kind*, not specific ones). Identifier-based matchers belong in [explicitMaskMatchers].
+     *
+     * Matchers are evaluated with `any { ... }`, so ordering only affects performance (earlier
+     * matchers can short-circuit later ones).
+     */
+    internal val globalMaskMatchers: List<MaskMatcher> = buildList {
+        // Prefer cheaper checks first; heavier checks should be later.
+        if (maskTextInputs) add(textInputMatcher)
+        if (maskText) add(textMatcher)
+        if (viewClassSet.isNotEmpty()) add(viewsMatcher)
+        if (maskBySemanticsKeywords) add(sensitiveMatcher)
+        if (webViewClassNameSet.isNotEmpty()) add(webViewClassHierarchyMatcher)
     }
 
     // this list of sensitive keywords is used to detect sensitive content descriptions

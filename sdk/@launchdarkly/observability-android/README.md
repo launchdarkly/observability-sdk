@@ -244,6 +244,19 @@ Call `LDReplay.stop()` to pause recording.
 
 Use `ldMask()` to mark views that should be masked in session replay. There are helpers for both XML-based Views and Jetpack Compose.
 
+##### How the SDK Determines What to Mask
+
+When deciding whether a specific view should be masked in a Session Replay, the SDK evaluates rules in a strict order of precedence. It checks these conditions from top to bottom and stops at the first one that applies:
+
+1. **Explicit Masking (Highest Priority)**: Is the view, or *any* of its parent views, explicitly masked (e.g., using `.ldMask()` or matching `maskXMLViewIds`)?
+   * **Yes**: The view is **masked**. This overrides all other rules.
+2. **Explicit Unmasking**: Is the view, or *any* of its parent views, explicitly unmasked (e.g., using `.ldUnmask()`)?
+   * **Yes**: The view is **unmasked**.
+3. **Global Configuration**: Does your global privacy configuration (like `maskTextInputs`, `maskImages`, etc.) apply to this view?
+   * **Yes**: The view follows the global configuration.
+
+*Note: If multiple rules conflict at the same level, masking wins over unmasking.*
+
 ##### Configure masking via `PrivacyProfile`
 
 If you want to configure masking globally (instead of calling `ldMask()` on each element), pass a `PrivacyProfile` to `ReplayOptions`:
@@ -322,7 +335,7 @@ override fun onCreateView(
 }
 ```
 
-Optional: use `ldUnmask()` to explicitly clear masking on a view you previously masked.
+Use `ldUnmask()` to explicitly opt a view out of masking. This overrides global masking rules (e.g. `maskText`) for the view and its descendants — but an explicit `ldMask()` on the view itself or any ancestor still wins.
 
 ##### Jetpack Compose
 
@@ -348,7 +361,7 @@ fun CreditCardField() {
 }
 ```
 
-Optional: use `Modifier.ldUnmask()` to explicitly clear masking on a composable you previously masked.
+Use `Modifier.ldUnmask()` to explicitly opt a composable out of masking. This overrides global masking rules (e.g. `maskText`) for the composable and its descendants — but an explicit `ldMask()` on the composable itself or any ancestor still wins.
 
 Notes:
 - Masking marks elements so their contents are obscured in recorded sessions.
