@@ -88,39 +88,37 @@ data class PrivacyProfile(
     }
 
     /**
+     * Builds a [MaskMatcher] that matches targets whose underlying Android View has a non-
+     * [View.NO_ID] id whose resource entry name (per `resources.getResourceEntryName(view.id)`)
+     * appears in [idSet].
+     *
+     * @param idSet set of normalized resource entry names to match against.
+     */
+    private fun xmlIdMatcher(idSet: Set<String>): MaskMatcher = object : MaskMatcher {
+        fun View.idNameOrNull(): String? =
+            if (id == View.NO_ID) null
+            else runCatching { resources.getResourceEntryName(id) }.getOrNull()
+
+        override fun isMatch(target: MaskTarget): Boolean {
+            val id = target.view.idNameOrNull() ?: return false
+            return idSet.contains(id)
+        }
+    }
+
+    /**
      * Matches targets whose underlying Android View's resource entry name is included in
      * [maskXMLViewIds].
      *
      * IDs are compared using `resources.getResourceEntryName(view.id)`, so this only applies to
      * Views with a non-[View.NO_ID] id that resolves to a resource entry.
      */
-    internal val xmlViewIdsMatcher: MaskMatcher = object : MaskMatcher {
-        fun View.idNameOrNull(): String? =
-            if (id == View.NO_ID) null
-            else runCatching { resources.getResourceEntryName(id) }.getOrNull()
-
-        override fun isMatch(target: MaskTarget): Boolean {
-            val id = target.view.idNameOrNull() ?: return false
-
-            return maskXMLViewIdSet.contains(id)
-        }
-    }
+    internal val xmlViewIdsMatcher: MaskMatcher = xmlIdMatcher(maskXMLViewIdSet)
 
     /**
      * Matches targets whose underlying Android View's resource entry name is included in
-     * [unmaskXMLViewIds]. Counterpart to [xmlViewIdsMatcher] — same lookup, different set.
+     * [unmaskXMLViewIds]. Same id resolution as [xmlViewIdsMatcher].
      */
-    internal val unmaskXMLViewIdsMatcher: MaskMatcher = object : MaskMatcher {
-        fun View.idNameOrNull(): String? =
-            if (id == View.NO_ID) null
-            else runCatching { resources.getResourceEntryName(id) }.getOrNull()
-
-        override fun isMatch(target: MaskTarget): Boolean {
-            val id = target.view.idNameOrNull() ?: return false
-
-            return unmaskXMLViewIdSet.contains(id)
-        }
-    }
+    internal val unmaskXMLViewIdsMatcher: MaskMatcher = xmlIdMatcher(unmaskXMLViewIdSet)
 
     /**
      * This matcher will match most text inputs, but there may be special cases where it will

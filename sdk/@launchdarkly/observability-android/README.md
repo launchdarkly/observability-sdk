@@ -250,7 +250,7 @@ When deciding whether a specific view should be masked in a Session Replay, the 
 
 1. **Explicit Masking (Highest Priority)**: Is the view, or *any* of its parent views, explicitly masked (e.g., using `.ldMask()` or matching `maskXMLViewIds`)?
    * **Yes**: The view is **masked**. This overrides all other rules.
-2. **Explicit Unmasking**: Is the view, or *any* of its parent views, explicitly unmasked (e.g., using `.ldUnmask()`)?
+2. **Explicit Unmasking**: Is the view, or *any* of its parent views, explicitly unmasked (e.g., using `.ldUnmask()` or matching `unmaskXMLViewIds`)?
    * **Yes**: The view is **unmasked**.
 3. **Global Configuration**: Does your global privacy configuration (like `maskTextInputs`, `maskImages`, etc.) apply to this view?
    * **Yes**: The view follows the global configuration.
