@@ -47,6 +47,7 @@ class ImageCaptureService(
     private val maskCollector = MaskCollector(logger)
     private val maskApplier = MaskApplier()
     private val explicitMaskMatchers = options.privacyProfile.explicitMaskMatchers
+    private val explicitUnmaskMatchers = options.privacyProfile.explicitUnmaskMatchers
     private val globalMaskMatchers = options.privacyProfile.globalMaskMatchers
 
     suspend fun captureRawFrame(): RawFrame? =
@@ -176,14 +177,24 @@ class ImageCaptureService(
 
     private fun collectMasks(capturingWindowEntries: List<WindowEntry>): MutableList<List<Mask>?> {
         return capturingWindowEntries.map {
-            maskCollector.collectMasks(it.rootView, explicitMaskMatchers, globalMaskMatchers)
+            maskCollector.collectMasks(
+                it.rootView,
+                explicitMaskMatchers,
+                explicitUnmaskMatchers,
+                globalMaskMatchers,
+            )
         }.toMutableList()
     }
 
     private fun collectMasksFromResults(captureResults: List<CaptureResult?>): MutableList<List<Mask>?> {
         return captureResults.map { result ->
             result?.windowEntry?.rootView?.let { rv ->
-                maskCollector.collectMasks(rv, explicitMaskMatchers, globalMaskMatchers)
+                maskCollector.collectMasks(
+                    rv,
+                    explicitMaskMatchers,
+                    explicitUnmaskMatchers,
+                    globalMaskMatchers,
+                )
             }
         }.toMutableList()
     }

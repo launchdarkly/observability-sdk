@@ -7,6 +7,19 @@ import com.launchdarkly.observability.replay.masking.MaskMatcher
 import com.launchdarkly.observability.replay.masking.MaskTarget
 
 /**
+ * Normalizes a list of Android XML view id strings into the form returned by
+ * `Resources.getResourceEntryName()`. Strips the `@+id/` and `@id/` prefixes; bare names
+ * (`"foo"`) are passed through unchanged. Returns the result as a Set for O(1) lookup.
+ */
+private fun List<String>.normalizeXmlIds(): Set<String> = map {
+    when {
+        it.startsWith("@+id/") -> it.substring(5)
+        it.startsWith("@id/") -> it.substring(4)
+        else -> it
+    }
+}.toSet()
+
+/**
  * [PrivacyProfile] controls what UI elements are masked in session replay.
  *
  * Masking is implemented as a list of [MaskMatcher]s that are evaluated against a [MaskTarget].
@@ -19,6 +32,9 @@ import com.launchdarkly.observability.replay.masking.MaskTarget
  * @param maskViews Additional Views to mask by exact class match (see [viewsMatcher]).
  * @param maskXMLViewIds Additional Views to mask by resource entry name (see [xmlViewIdsMatcher]).
  * accepts `"@+id/foo"`, `"@id/foo"`, or `"foo"`.
+ * @param unmaskXMLViewIds Views whose resource entry name appears in this list are explicitly
+ * *unmasked* (see [unmaskXMLViewIdsMatcher]). Same id format as [maskXMLViewIds]. Takes precedence
+ * over global masking rules — see `MaskCollector` for the full precedence rules.
  * @param maskWebViews Set to true to mask known WebView types and their subclasses
  * (e.g., "android.webkit.WebView", "org.mozilla.geckoview.GeckoView", etc).
  * @param maskBySemanticsKeywords Set to true to enable masking of "sensitive" targets detected by
@@ -29,6 +45,7 @@ data class PrivacyProfile(
     val maskText: Boolean = false,
     val maskViews: List<MaskViewRef> = emptyList(),
     val maskXMLViewIds: List<String> = emptyList(),
+    val unmaskXMLViewIds: List<String> = emptyList(),
     // only for XML ImageViews
     val maskImageViews: Boolean = false,
     val maskWebViews: Boolean = false,
@@ -41,13 +58,8 @@ data class PrivacyProfile(
 
     private val webViewClassNameSet = if (maskWebViews) webViewClassNames.toSet() else emptySet()
 
-    private val maskXMLViewIdSet = maskXMLViewIds.map {
-        when {
-            it.startsWith("@+id/") -> it.substring(5)
-            it.startsWith("@id/") -> it.substring(4)
-            else -> it
-        }
-    }.toSet()
+    private val maskXMLViewIdSet = maskXMLViewIds.normalizeXmlIds()
+    private val unmaskXMLViewIdSet = unmaskXMLViewIds.normalizeXmlIds()
 
     /**
      * Matches targets whose underlying Android View has an exact class match with [maskViews].
@@ -76,23 +88,37 @@ data class PrivacyProfile(
     }
 
     /**
-     * Matches targets whose underlying Android View's resource entry name is included in
-     * [maskXMLViewIds].
+     * Builds a [MaskMatcher] that matches targets whose underlying Android View has a non-
+     * [View.NO_ID] id whose resource entry name (per `resources.getResourceEntryName(view.id)`)
+     * appears in [idSet].
      *
-     * IDs are compared using `resources.getResourceEntryName(view.id)`, so this only applies to
-     * Views with a non-[View.NO_ID] id that resolves to a resource entry.
+     * @param idSet set of normalized resource entry names to match against.
      */
-    internal val xmlViewIdsMatcher: MaskMatcher = object : MaskMatcher {
+    private fun xmlIdMatcher(idSet: Set<String>): MaskMatcher = object : MaskMatcher {
         fun View.idNameOrNull(): String? =
             if (id == View.NO_ID) null
             else runCatching { resources.getResourceEntryName(id) }.getOrNull()
 
         override fun isMatch(target: MaskTarget): Boolean {
             val id = target.view.idNameOrNull() ?: return false
-
-            return maskXMLViewIdSet.contains(id)
+            return idSet.contains(id)
         }
     }
+
+    /**
+     * Matches targets whose underlying Android View's resource entry name is included in
+     * [maskXMLViewIds].
+     *
+     * IDs are compared using `resources.getResourceEntryName(view.id)`, so this only applies to
+     * Views with a non-[View.NO_ID] id that resolves to a resource entry.
+     */
+    internal val xmlViewIdsMatcher: MaskMatcher = xmlIdMatcher(maskXMLViewIdSet)
+
+    /**
+     * Matches targets whose underlying Android View's resource entry name is included in
+     * [unmaskXMLViewIds]. Same id resolution as [xmlViewIdsMatcher].
+     */
+    internal val unmaskXMLViewIdsMatcher: MaskMatcher = xmlIdMatcher(unmaskXMLViewIdSet)
 
     /**
      * This matcher will match most text inputs, but there may be special cases where it will
@@ -137,6 +163,19 @@ data class PrivacyProfile(
      */
     internal val explicitMaskMatchers: List<MaskMatcher> = buildList {
         if (maskXMLViewIdSet.isNotEmpty()) add(xmlViewIdsMatcher)
+    }
+
+    /**
+     * Matchers whose match counts as an "explicit" unmask signal — equivalent to a call to
+     * `View.ldUnmask()` on the matched view. An explicit-unmask match propagates to descendants
+     * per the precedence rules in `MaskCollector`. An ancestor's explicit mask still wins over
+     * an explicit unmask.
+     *
+     * Matchers are evaluated with `any { ... }`, so ordering only affects performance (earlier
+     * matchers can short-circuit later ones).
+     */
+    internal val explicitUnmaskMatchers: List<MaskMatcher> = buildList {
+        if (unmaskXMLViewIdSet.isNotEmpty()) add(unmaskXMLViewIdsMatcher)
     }
 
     /**
