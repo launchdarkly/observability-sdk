@@ -11,23 +11,23 @@
 	</ItemGroup>
 
 	<!--
-		Re-inject the OTel `META-INF/services/*` registrations into the APK / AAB.
+		Re-inject the OTel `META-INF/services/*` registrations into the APK / AAB
+		on .NET 10 builds. This is a no-op on .NET 9 (the older `BuildApk` task
+		does not consume `@(FilesToAddToArchive)`); .NET 9 instead relies on
+		the same merged registrations being embedded inside the bundle JAR,
+		which `BuildApk` extracts directly into the APK.
 
-		.NET-for-Android's `CollectJarContentFilesForArchive` task calls
-		`PackagingUtils.CheckEntryForPackaging`, which hardcodes the entire
-		`META-INF/` folder as a stripped path when extracting JAR resources for
-		the APK (alongside `.svn`, `SCCS`, `picasa.ini`, etc.). As a result,
-		the merged service registrations inside `ldobserve-otel-bundle.jar`
-		never reach the final APK and `java.util.ServiceLoader` cannot find
-		`io.opentelemetry.exporter.sender.okhttp.internal.OkHttpHttpSenderProvider`,
-		causing `OtlpHttpSpanExporterBuilder.build()` to throw
-		`No HttpSenderProvider found on classpath`.
-
-		`BuildArchive` itself does not filter on path — it just copies every
+		`BuildArchive` (.NET 10) does not filter on path — it just copies every
 		`@(FilesToAddToArchive)` item to its `ArchivePath`. We append the
 		standalone service files (shipped alongside the bundle JAR in
 		runtimes/android/native/META-INF/services/) to that item group before
-		`_BuildApkEmbed` runs, sidestepping the strip.
+		`_BuildApkEmbed` runs, so `ServiceLoader` can find
+		`io.opentelemetry.exporter.sender.okhttp.internal.OkHttpHttpSenderProvider`
+		at runtime and `OtlpHttpSpanExporterBuilder.build()` doesn't throw
+		`No HttpSenderProvider found on classpath` even when an older .NET 10
+		BuildArchive variant strips `META-INF/` from extracted JARs. When the
+		same paths are produced by both this injection and the JAR's own
+		entries, BuildArchive silently dedupes by ArchivePath.
 
 		Important: the destination prefix differs by `$(AndroidPackageFormat)`.
 		  - APK ('apk'): files go straight to `META-INF/services/*`.
@@ -39,13 +39,19 @@
 		    place the files at `root/META-INF/services/*`; bundletool relocates
 		    everything under `root/` back to the APK root at install time, so
 		    the runtime ServiceLoader still sees `META-INF/services/*`.
+
+		The `AndroidPackageFormat` comparison is normalized via
+		`ToLowerInvariant()` so the `root/` prefix is applied for AAB builds
+		regardless of how the property is cased (mirrors the
+		`StringComparison.InvariantCultureIgnoreCase` check used by
+		`CollectJarContentFilesForArchive`).
 	-->
 	<Target Name="_LDInjectMetaInfServices"
 	        BeforeTargets="_BuildApkEmbed;_BuildApkFastDev"
 	        Condition="$(TargetFramework.Contains('android'))">
 		<PropertyGroup>
-			<_LDArchiveMetaInfPrefix Condition="'$(AndroidPackageFormat)' == 'aab'">root/META-INF/services</_LDArchiveMetaInfPrefix>
-			<_LDArchiveMetaInfPrefix Condition="'$(AndroidPackageFormat)' != 'aab'">META-INF/services</_LDArchiveMetaInfPrefix>
+			<_LDArchiveMetaInfPrefix Condition="'$(AndroidPackageFormat.ToLowerInvariant())' == 'aab'">root/META-INF/services</_LDArchiveMetaInfPrefix>
+			<_LDArchiveMetaInfPrefix Condition="'$(AndroidPackageFormat.ToLowerInvariant())' != 'aab'">META-INF/services</_LDArchiveMetaInfPrefix>
 		</PropertyGroup>
 		<ItemGroup>
 			<_LDInjectedMetaInfService Include="$(MSBuildThisFileDirectory)../runtimes/android/native/META-INF/services/*" />
