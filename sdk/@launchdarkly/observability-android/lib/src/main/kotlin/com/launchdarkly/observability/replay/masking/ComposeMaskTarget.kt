@@ -89,6 +89,10 @@ data class ComposeMaskTarget(
         return config.getOrNull(LdMaskSemanticsKey) == true
     }
 
+    override fun hasLDUnmask(): Boolean {
+        return config.getOrNull(LdMaskSemanticsKey) == false
+    }
+
     override fun isSensitive(sensitiveKeywords: List<String>): Boolean {
         if (config.contains(SemanticsProperties.Password)) return true
 

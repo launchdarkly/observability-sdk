@@ -7,6 +7,7 @@ import android.os.Looper
 import com.facebook.react.bridge.ReadableMap
 import com.launchdarkly.logging.LDLogger
 import com.launchdarkly.observability.api.ObservabilityOptions
+import com.launchdarkly.observability.context.LDObserveLogging
 import com.launchdarkly.observability.plugin.Observability
 import com.launchdarkly.observability.replay.PrivacyProfile
 import com.launchdarkly.observability.replay.ReplayOptions
@@ -140,7 +141,7 @@ internal class SessionReplayClientAdapter private constructor() {
                             mobileKey = mobileKey,
                             options = ObservabilityOptions(
                                 serviceName = serviceName,
-                                logAdapter = LDAndroidLogging.adapter(),
+                                logAdapter = LDObserveLogging.adapter(),
                                 // Disable the OpenTelemetry Android CrashReporterInstrumentation
                                 instrumentations = ObservabilityOptions.Instrumentations(
                                     crashReporting = false,

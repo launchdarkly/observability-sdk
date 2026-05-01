@@ -33,23 +33,21 @@ class PrivacyProfileTest {
     }
 
     @Test
-    fun `maskViews populates viewClassSet and adds viewsMatcher to matchers list`() {
+    fun `maskViews populates viewClassSet and adds viewsMatcher to global matchers`() {
         val maskedClass = FakeMaskedView::class.java
         val profile = PrivacyProfile(maskViews = listOf(view(maskedClass)))
 
-        val matchers = profile.asMatchersList()
-        assertTrue(matchers.contains(profile.viewsMatcher))
+        assertTrue(profile.globalMaskMatchers.contains(profile.viewsMatcher))
 
         val viewClassSet = profile.getPrivateSet("viewClassSet")
         assertTrue(viewClassSet.contains(maskedClass))
     }
 
     @Test
-    fun `maskXMLViewIds normalizes @+id and @id prefixes and adds xmlViewIdsMatcher to matchers list`() {
+    fun `maskXMLViewIds normalizes @+id and @id prefixes and adds xmlViewIdsMatcher to explicit matchers`() {
         val profile = PrivacyProfile(maskXMLViewIds = listOf("@+id/foo", "@id/baz", "bar"))
 
-        val matchers = profile.asMatchersList()
-        assertTrue(matchers.contains(profile.xmlViewIdsMatcher))
+        assertTrue(profile.explicitMaskMatchers.contains(profile.xmlViewIdsMatcher))
 
         val idSet = profile.getPrivateSet("maskXMLViewIdSet")
         assertTrue(idSet.contains("foo"))
@@ -60,11 +58,36 @@ class PrivacyProfileTest {
     }
 
     @Test
+    fun `unmaskXMLViewIds defaults to empty list`() {
+        val profile = PrivacyProfile()
+        assertTrue(profile.unmaskXMLViewIds.isEmpty())
+    }
+
+    @Test
+    fun `unmaskXMLViewIds normalizes @+id and @id prefixes and adds unmaskXMLViewIdsMatcher to explicit unmask matchers`() {
+        val profile = PrivacyProfile(unmaskXMLViewIds = listOf("@+id/foo", "@id/baz", "bar"))
+
+        assertTrue(profile.explicitUnmaskMatchers.contains(profile.unmaskXMLViewIdsMatcher))
+
+        val idSet = profile.getPrivateSet("unmaskXMLViewIdSet")
+        assertTrue(idSet.contains("foo"))
+        assertTrue(idSet.contains("baz"))
+        assertTrue(idSet.contains("bar"))
+        assertFalse(idSet.contains("@+id/foo"))
+        assertFalse(idSet.contains("@id/baz"))
+    }
+
+    @Test
+    fun `unmaskXMLViewIds empty does not include unmaskXMLViewIdsMatcher in explicit unmask matchers`() {
+        val profile = PrivacyProfile(unmaskXMLViewIds = emptyList())
+        assertTrue(profile.explicitUnmaskMatchers.isEmpty())
+    }
+
+    @Test
     fun `maskImageViews adds ImageView to viewClassSet and includes viewsMatcher even when maskViews is empty`() {
         val profile = PrivacyProfile(maskImageViews = true, maskViews = emptyList())
 
-        val matchers = profile.asMatchersList()
-        assertTrue(matchers.contains(profile.viewsMatcher))
+        assertTrue(profile.globalMaskMatchers.contains(profile.viewsMatcher))
 
         val viewClassSet = profile.getPrivateSet("viewClassSet")
         assertTrue(viewClassSet.contains(ImageView::class.java))
@@ -74,8 +97,7 @@ class PrivacyProfileTest {
     fun `maskImageViews false does not add ImageView to viewClassSet and does not include viewsMatcher when maskViews is empty`() {
         val profile = PrivacyProfile(maskImageViews = false, maskViews = emptyList())
 
-        val matchers = profile.asMatchersList()
-        assertFalse(matchers.contains(profile.viewsMatcher))
+        assertFalse(profile.globalMaskMatchers.contains(profile.viewsMatcher))
 
         val viewClassSet = profile.getPrivateSet("viewClassSet")
         assertFalse(viewClassSet.contains(ImageView::class.java))
@@ -85,8 +107,7 @@ class PrivacyProfileTest {
     fun `maskWebViews adds default WebView class names to class name matcher set`() {
         val profile = PrivacyProfile(maskWebViews = true)
 
-        val matchers = profile.asMatchersList()
-        assertTrue(matchers.contains(profile.webViewClassHierarchyMatcher))
+        assertTrue(profile.globalMaskMatchers.contains(profile.webViewClassHierarchyMatcher))
 
         val classNameSet = profile.getPrivateSet("webViewClassNameSet")
         assertTrue(

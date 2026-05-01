@@ -16,14 +16,18 @@ val LdMaskSemanticsKey = SemanticsPropertyKey<Boolean>("ld_mask")
 var SemanticsPropertyReceiver.ldMask by LdMaskSemanticsKey
 
 /**
- * Marks this Compose element as sensitive; session replay should mask it.
+ * Marks this Compose element — and every descendant of it — as sensitive for masking in session
+ * replay.
  */
 fun Modifier.ldMask(): Modifier = this.semantics {
     ldMask = true
 }
 
 /**
- * Marks this Compose element as not sensitive; session replay should not mask it.
+ * Marks this Compose element — and every descendant of it — as explicitly *not* sensitive for
+ * masking in session replay. This overrides global masking rules such as `maskText` and
+ * `maskTextInputs` for the affected elements. If this element or one of its ancestors is also
+ * explicitly masked via [ldMask], the explicit mask wins.
  */
 fun Modifier.ldUnmask(): Modifier = this.semantics {
     ldMask = false
