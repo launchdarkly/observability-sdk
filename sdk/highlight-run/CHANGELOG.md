@@ -1,5 +1,18 @@
 # highlight.run
 
+## [10.2.0](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.1.2...highlight.run-10.2.0) (2026-05-01)
+
+
+### Features
+
+* emit element-selector attribution on web-vitals metrics ([#515](https://github.com/launchdarkly/observability-sdk/issues/515)) ([d8288b1](https://github.com/launchdarkly/observability-sdk/commit/d8288b173a7b36d7392d518c45b4a7ad33ecac93))
+* include LD context keys in metric event attributes ([#514](https://github.com/launchdarkly/observability-sdk/issues/514)) ([edefe2c](https://github.com/launchdarkly/observability-sdk/commit/edefe2c7ea39fb6fb852cd83aa086ec3df1bc83a))
+
+
+### Bug Fixes
+
+* emit url.query_params as nested otel attributes ([#517](https://github.com/launchdarkly/observability-sdk/issues/517)) ([69629e1](https://github.com/launchdarkly/observability-sdk/commit/69629e18ab4a7fe4317d219e31059dec83de72eb))
+
 ## [10.1.2](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.1.1...highlight.run-10.1.2) (2026-04-24)
 
 
