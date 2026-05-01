@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.7.0...session-replay-react-native-0.8.0) (2026-05-01)
+
+
+### Features
+
+* **android:** update session replay masking precedence rules ([#518](https://github.com/launchdarkly/observability-sdk/issues/518)) ([4299d1e](https://github.com/launchdarkly/observability-sdk/commit/4299d1e65bdf7d3056b92631ba7eb1e36e3e96f5))
+
 ## [0.7.0](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.6.0...session-replay-react-native-0.7.0) (2026-04-29)
 
 
