@@ -209,12 +209,9 @@ class MaskCollector(private val logger: ObserveLogger) {
      *     signal applies.
      */
     private fun resolveExplicit(target: MaskTarget, inherited: Boolean?, context: MaskContext): Boolean? {
+        if (inherited == true) return true
         val ownExplicit = explicitOf(target, context)
-        return when {
-            ownExplicit == true || inherited == true -> true
-            ownExplicit == false || inherited == false -> false
-            else -> null
-        }
+        return ownExplicit ?: inherited
     }
 
     /**
