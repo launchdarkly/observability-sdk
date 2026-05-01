@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.43.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.42.0...launchdarkly-observability-android-0.43.0) (2026-05-01)
+
+
+### Features
+
+* **android:** add unmaskXMLViewIds to PrivacyProfile ([#522](https://github.com/launchdarkly/observability-sdk/issues/522)) ([5831209](https://github.com/launchdarkly/observability-sdk/commit/583120995dd64d4b85925f3f2bcdb111b1bb1478))
+* **android:** update session replay masking precedence rules ([#518](https://github.com/launchdarkly/observability-sdk/issues/518)) ([4299d1e](https://github.com/launchdarkly/observability-sdk/commit/4299d1e65bdf7d3056b92631ba7eb1e36e3e96f5))
+
 ## [0.42.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.41.0...launchdarkly-observability-android-0.42.0) (2026-04-29)
 
 
