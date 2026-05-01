@@ -360,6 +360,7 @@ export class ObserveSDK implements Observe {
 			this._counters.set(metric.name, counter)
 		}
 		counter.add(metric.value, {
+			...(this._ldContextKeys ?? {}),
 			...metric.attributes,
 			'highlight.session_id': getPersistentSessionSecureID(),
 		})
@@ -372,21 +373,23 @@ export class ObserveSDK implements Observe {
 			if (!gauge) return
 			this._gauges.set(metric.name, gauge)
 		}
-		gauge.record(metric.value, {
+		const attributes: Attributes = {
+			...(this._ldContextKeys ?? {}),
 			...metric.attributes,
+		}
+		gauge.record(metric.value, {
+			...attributes,
 			'highlight.session_id': getPersistentSessionSecureID(),
 		})
 		const recordMetric: RecordMetric = {
 			name: metric.name,
 			value: metric.value,
-			category: metric.attributes?.['category'] as MetricCategory,
-			group: metric.attributes?.['group']?.toString(),
-			tags: metric.attributes
-				? Object.entries(metric.attributes).map(([key, value]) => ({
-						name: key ?? '',
-						value: value?.toString() ?? '',
-					}))
-				: [],
+			category: attributes['category'] as MetricCategory,
+			group: attributes['group']?.toString(),
+			tags: Object.entries(attributes).map(([key, value]) => ({
+				name: key ?? '',
+				value: value?.toString() ?? '',
+			})),
 		}
 		for (const integration of this._integrations) {
 			integration.recordGauge(
@@ -408,6 +411,7 @@ export class ObserveSDK implements Observe {
 			this._histograms.set(metric.name, histogram)
 		}
 		histogram.record(metric.value, {
+			...(this._ldContextKeys ?? {}),
 			...metric.attributes,
 			'highlight.session_id': getPersistentSessionSecureID(),
 		})
@@ -421,6 +425,7 @@ export class ObserveSDK implements Observe {
 			this._up_down_counters.set(metric.name, up_down_counter)
 		}
 		up_down_counter.add(metric.value, {
+			...(this._ldContextKeys ?? {}),
 			...metric.attributes,
 			'highlight.session_id': getPersistentSessionSecureID(),
 		})

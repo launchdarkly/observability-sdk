@@ -7,6 +7,7 @@ import { ObserveSDK } from '../sdk/observe'
 import { RecordSDK } from '../sdk/record'
 import { globalStorage } from '../client/utils/storage'
 import { Record } from '../plugins/record'
+import * as otel from '../client/otel'
 
 describe('SDK', () => {
 	let observe: typeof LDObserve
@@ -135,6 +136,75 @@ describe('SDK', () => {
 			})
 			expect(mockRecordHistogram).toHaveBeenCalledWith(metric)
 			expect(mockRecordUpDownCounter).toHaveBeenCalledWith(metric)
+		})
+
+		it('should include LD context keys in metric attributes', () => {
+			const gauge = { record: vi.fn() }
+			const counter = { add: vi.fn() }
+			const histogram = { record: vi.fn() }
+			const upDownCounter = { add: vi.fn() }
+			vi.spyOn(otel, 'getMeter').mockReturnValue({
+				createGauge: vi.fn().mockReturnValue(gauge),
+				createCounter: vi.fn().mockReturnValue(counter),
+				createHistogram: vi.fn().mockReturnValue(histogram),
+				createUpDownCounter: vi.fn().mockReturnValue(upDownCounter),
+			} as any)
+
+			observeImpl.setLDContextKeyAttributes({ user: 'alice' })
+
+			observeImpl.recordGauge({
+				name: 'gauge.test',
+				value: 1,
+				attributes: { foo: 'bar' },
+			})
+			observeImpl.recordCount({
+				name: 'count.test',
+				value: 2,
+				attributes: { foo: 'bar' },
+			})
+			observeImpl.recordHistogram({
+				name: 'hist.test',
+				value: 3,
+				attributes: { foo: 'bar' },
+			})
+			observeImpl.recordUpDownCounter({
+				name: 'updown.test',
+				value: 4,
+				attributes: { foo: 'bar' },
+			})
+
+			const expected = expect.objectContaining({
+				'context.contextKeys.user': 'alice',
+				foo: 'bar',
+			})
+			expect(gauge.record).toHaveBeenCalledWith(1, expected)
+			expect(counter.add).toHaveBeenCalledWith(2, expected)
+			expect(histogram.record).toHaveBeenCalledWith(3, expected)
+			expect(upDownCounter.add).toHaveBeenCalledWith(4, expected)
+		})
+
+		it('caller attributes win over LD context keys with the same name', () => {
+			const gauge = { record: vi.fn() }
+			vi.spyOn(otel, 'getMeter').mockReturnValue({
+				createGauge: vi.fn().mockReturnValue(gauge),
+				createCounter: vi.fn(),
+				createHistogram: vi.fn(),
+				createUpDownCounter: vi.fn(),
+			} as any)
+
+			observeImpl.setLDContextKeyAttributes({ user: 'alice' })
+			observeImpl.recordGauge({
+				name: 'gauge.override',
+				value: 1,
+				attributes: { 'context.contextKeys.user': 'bob' },
+			})
+
+			expect(gauge.record).toHaveBeenCalledWith(
+				1,
+				expect.objectContaining({
+					'context.contextKeys.user': 'bob',
+				}),
+			)
 		})
 
 		it('should handle error recording', async () => {
