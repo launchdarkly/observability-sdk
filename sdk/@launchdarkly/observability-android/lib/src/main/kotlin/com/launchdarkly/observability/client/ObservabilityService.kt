@@ -41,7 +41,6 @@ import io.opentelemetry.api.metrics.Meter
 import io.opentelemetry.api.trace.Span
 import io.opentelemetry.api.trace.Tracer
 import io.opentelemetry.context.Context
-import io.opentelemetry.sdk.common.CompletableResultCode
 import io.opentelemetry.sdk.logs.LogRecordProcessor
 import io.opentelemetry.sdk.logs.SdkLoggerProviderBuilder
 import io.opentelemetry.sdk.logs.export.SimpleLogRecordProcessor
@@ -51,8 +50,6 @@ import io.opentelemetry.sdk.metrics.export.MetricExporter
 import io.opentelemetry.sdk.metrics.export.PeriodicMetricReader
 import io.opentelemetry.sdk.resources.Resource
 import io.opentelemetry.sdk.trace.SdkTracerProviderBuilder
-import io.opentelemetry.sdk.trace.SpanProcessor
-import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
@@ -100,8 +97,6 @@ class ObservabilityService(
     private val otlpConfiguration = OtlpConfiguration(headers = observabilityOptions.customHeaders)
     private val eventQueue = EventQueue()
     private val batchWorker = BatchWorker(eventQueue = eventQueue, logger = logger)
-    private var spanProcessor: SpanProcessor? = null
-    private var logProcessor: LogRecordProcessor? = null
     private var metricsReader: PeriodicMetricReader? = null
     private val gaugeCache = ConcurrentHashMap<String, DoubleGauge>()
     private val counterCache = ConcurrentHashMap<String, LongCounter>()
@@ -232,7 +227,6 @@ class ObservabilityService(
             delegate = LogRecordProcessor.composite(delegates),
             sampler = customSampler,
         )
-        logProcessor = otlpProcessor
         sdkLoggerProviderBuilder.addLogRecordProcessor(otlpProcessor)
 
         return sdkLoggerProviderBuilder
@@ -261,7 +255,6 @@ class ObservabilityService(
             delegateExporter = delegateExporter,
             batchWorker = batchWorker,
         )
-        spanProcessor = otlpProcessor
         sdkTracerProviderBuilder.addSpanProcessor(otlpProcessor)
 
         return sdkTracerProviderBuilder
@@ -404,26 +397,22 @@ class ObservabilityService(
     fun getLogger(): io.opentelemetry.api.logs.Logger = otelLogger
 
     /**
-     * Flushes all pending telemetry data (traces, logs, metrics).
+     * Requests a flush of all pending telemetry data (traces, logs, metrics).
      *
-     * Kicks the metric reader and log/span processors (which are the feeders into the event
-     * queue) then forces the [BatchWorker] to drain the queue before returning.
+     * This is non-blocking: it triggers the [BatchWorker] to drain the queue asynchronously
+     * and returns immediately. Export happens on background dispatchers.
      *
-     * @return true if all flush operations succeeded, false otherwise
+     * Logs and spans are enqueued synchronously from their processors' `onEmit` / `onEnd`, so
+     * nothing is buffered inside the processors — no processor flush is required.
+     *
+     * Metrics are different: [PeriodicMetricReader] collects instrument values on an interval
+     * and only pushes them to the exporter (our [EventMetricExporter]) when the interval
+     * elapses or when `forceFlush()` is invoked. We therefore still call it here so pending
+     * metric samples are enqueued before we signal the batch worker.
      */
-    override fun flush(): Boolean {
-        val results = listOfNotNull(
-            spanProcessor?.forceFlush(),
-            logProcessor?.forceFlush(),
-            metricsReader?.forceFlush()
-        )
-
-        val resultCodeSuccess = CompletableResultCode.ofAll(results)
-            .join(FLUSH_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-            .isSuccess
-
+    override fun flush() {
+        metricsReader?.forceFlush()
         batchWorker.flush()
-        return resultCodeSuccess
     }
 
     /**
@@ -449,6 +438,5 @@ class ObservabilityService(
         const val ERROR_SPAN_NAME = "highlight.error"
         const val SESSION_ID_ATTRIBUTE = "session.id"
         private const val METRICS_EXPORT_INTERVAL_MS = 10_000L
-        private const val FLUSH_TIMEOUT_SECONDS = 5L
     }
 }

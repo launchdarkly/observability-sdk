@@ -65,8 +65,8 @@ class LDObserve(private val client: Observe) : Observe {
         return client.startSpan(name, attributes)
     }
 
-    override fun flush(): Boolean {
-        return client.flush()
+    override fun flush() {
+        client.flush()
     }
 
     companion object : Observe {
@@ -84,9 +84,7 @@ class LDObserve(private val client: Observe) : Observe {
             override fun startSpan(name: String, attributes: Attributes): Span {
                 return Span.getInvalid()
             }
-            override fun flush(): Boolean {
-                return false // No-op, return false to indicate flush was not successful
-            }
+            override fun flush() {}
         }
 
         /**
@@ -192,7 +190,7 @@ class LDObserve(private val client: Observe) : Observe {
         override fun recordError(error: Error, attributes: Attributes) = delegate.recordError(error, attributes)
         override fun recordLog(message: String, severity: Severity, attributes: Attributes, spanContext: SpanContext?) = delegate.recordLog(message, severity, attributes, spanContext)
         override fun startSpan(name: String, attributes: Attributes): Span = delegate.startSpan(name, attributes)
-        override fun flush(): Boolean = delegate.flush()
+        override fun flush() = delegate.flush()
 
         /**
          * Bridge-friendly overloads that avoid exposing OpenTelemetry types

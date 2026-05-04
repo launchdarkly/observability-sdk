@@ -70,8 +70,10 @@ interface TracesApi {
  */
 interface Observe : MetricsApi, LogsApi, TracesApi {
     /**
-     * Flushes all pending telemetry data (traces, logs, metrics).
-     * @return true if all flush operations succeeded, false otherwise
+     * Requests a flush of all pending telemetry data (traces, logs, metrics).
+     *
+     * This call is non-blocking: it signals the internal batch worker to drain the queue and
+     * returns immediately. Export happens asynchronously on background dispatchers.
      */
-    fun flush(): Boolean
+    fun flush()
 }
