@@ -30,7 +30,7 @@ jobs:
               with:
                   aws_assume_role: ${{ vars.AWS_ROLE_ARN }}
                   ssm_parameter_pairs: '/production/common/releasing/o11y_gh_pat = GITHUB_PAT'
-            - uses: googleapis/release-please-action@a02a34c4d625f9be7cb89156071d8567266a2445
+            - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
               id: release
               with:
                   token: ${{ env.GITHUB_PAT }}
