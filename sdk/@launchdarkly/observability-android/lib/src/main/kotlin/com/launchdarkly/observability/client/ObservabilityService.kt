@@ -7,14 +7,22 @@ import com.launchdarkly.observability.bridge.emitLog
 import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
 import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.observability.interfaces.Observe
+import com.launchdarkly.observability.logs.EventLogRecordProcessor
+import com.launchdarkly.observability.logs.OtlpLogExporter
+import com.launchdarkly.observability.metrics.EventMetricExporter
+import com.launchdarkly.observability.metrics.OtlpMetricExporter
 import com.launchdarkly.observability.network.GraphQLClient
 import com.launchdarkly.observability.network.SamplingApiService
+import com.launchdarkly.observability.otlp.OtlpConfiguration
+import com.launchdarkly.observability.otlp.OtlpHttpClient
 import com.launchdarkly.observability.plugin.ObservabilityHookExporter
+import com.launchdarkly.observability.replay.transport.BatchWorker
+import com.launchdarkly.observability.replay.transport.EventQueue
 import com.launchdarkly.observability.sampling.CustomSampler
-import com.launchdarkly.observability.sampling.ExportSampler
 import com.launchdarkly.observability.sampling.SamplingConfig
 import com.launchdarkly.observability.sampling.SamplingLogProcessor
-import com.launchdarkly.observability.sampling.SamplingTraceExporter
+import com.launchdarkly.observability.traces.EventSpanProcessor
+import com.launchdarkly.observability.traces.OtlpTraceExporter
 import io.opentelemetry.android.OpenTelemetryRum
 import io.opentelemetry.android.OpenTelemetryRumBuilder
 import io.opentelemetry.android.config.OtelRumConfig
@@ -33,14 +41,10 @@ import io.opentelemetry.api.metrics.Meter
 import io.opentelemetry.api.trace.Span
 import io.opentelemetry.api.trace.Tracer
 import io.opentelemetry.context.Context
-import io.opentelemetry.exporter.otlp.http.logs.OtlpHttpLogRecordExporter
-import io.opentelemetry.exporter.otlp.http.metrics.OtlpHttpMetricExporter
-import io.opentelemetry.exporter.otlp.http.trace.OtlpHttpSpanExporter
 import io.opentelemetry.sdk.common.CompletableResultCode
 import io.opentelemetry.sdk.logs.LogRecordProcessor
 import io.opentelemetry.sdk.logs.SdkLoggerProviderBuilder
-import io.opentelemetry.sdk.logs.export.BatchLogRecordProcessor
-import io.opentelemetry.sdk.logs.export.LogRecordExporter
+import io.opentelemetry.sdk.logs.export.SimpleLogRecordProcessor
 import io.opentelemetry.sdk.metrics.SdkMeterProviderBuilder
 import io.opentelemetry.sdk.metrics.export.AggregationTemporalitySelector
 import io.opentelemetry.sdk.metrics.export.MetricExporter
@@ -48,8 +52,7 @@ import io.opentelemetry.sdk.metrics.export.PeriodicMetricReader
 import io.opentelemetry.sdk.resources.Resource
 import io.opentelemetry.sdk.trace.SdkTracerProviderBuilder
 import io.opentelemetry.sdk.trace.SpanProcessor
-import io.opentelemetry.sdk.trace.export.BatchSpanProcessor
-import io.opentelemetry.sdk.trace.export.SpanExporter
+import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
@@ -94,6 +97,9 @@ class ObservabilityService(
     )
     private val samplingApiService = SamplingApiService(graphqlClient)
     private val telemetryInspector: TelemetryInspector? = observabilityOptions.telemetryInspector
+    private val otlpConfiguration = OtlpConfiguration(headers = observabilityOptions.customHeaders)
+    private val eventQueue = EventQueue()
+    private val batchWorker = BatchWorker(eventQueue = eventQueue, logger = logger)
     private var spanProcessor: SpanProcessor? = null
     private var logProcessor: LogRecordProcessor? = null
     private var metricsReader: PeriodicMetricReader? = null
@@ -107,23 +113,14 @@ class ObservabilityService(
     private val scope = CoroutineScope(DispatcherProviderHolder.current.io + SupervisorJob())
 
     init {
+        registerOtlpExporters()
         val otelRumConfig = createOtelRumConfig()
 
         var capturedSessionManager: SessionManager? = null
 
         val rumBuilder = OpenTelemetryRum.builder(application, otelRumConfig)
             .addLoggerProviderCustomizer { sdkLoggerProviderBuilder, _ ->
-                val processor = createLoggerProcessor(
-                    sdkLoggerProviderBuilder,
-                    customSampler,
-                    sdkKey,
-                    resources,
-                    logger,
-                    telemetryInspector,
-                    observabilityOptions,
-                )
-                logProcessor = processor
-                return@addLoggerProviderCustomizer sdkLoggerProviderBuilder.addLogRecordProcessor(processor)
+                return@addLoggerProviderCustomizer configureLoggerProvider(sdkLoggerProviderBuilder)
             }
             .addTracerProviderCustomizer { sdkTracerProviderBuilder, _ ->
                 return@addTracerProviderCustomizer configureTracerProvider(sdkTracerProviderBuilder)
@@ -160,6 +157,32 @@ class ObservabilityService(
             tracerProvider = { getTracer() },
             contextFriendlyName = observabilityOptions.contextFriendlyName
         )
+
+        batchWorker.start()
+    }
+
+    private fun registerOtlpExporters() {
+        val logExporter = OtlpLogExporter(
+            httpClient = OtlpHttpClient(
+                endpoint = observabilityOptions.otlpEndpoint + LOGS_PATH,
+                config = otlpConfiguration,
+            ),
+        )
+        val traceExporter = OtlpTraceExporter(
+            httpClient = OtlpHttpClient(
+                endpoint = observabilityOptions.otlpEndpoint + TRACES_PATH,
+                config = otlpConfiguration,
+            ),
+        )
+        val metricExporter = OtlpMetricExporter(
+            httpClient = OtlpHttpClient(
+                endpoint = observabilityOptions.otlpEndpoint + METRICS_PATH,
+                config = otlpConfiguration,
+            ),
+        )
+        batchWorker.addExporter(logExporter)
+        batchWorker.addExporter(traceExporter)
+        batchWorker.addExporter(metricExporter)
     }
 
     private fun createOtelRumConfig(): OtelRumConfig {
@@ -192,72 +215,71 @@ class ObservabilityService(
         rumBuilder.addInstrumentation(launchTimeInstrumentation)
     }
 
+    private fun configureLoggerProvider(sdkLoggerProviderBuilder: SdkLoggerProviderBuilder): SdkLoggerProviderBuilder {
+        sdkLoggerProviderBuilder.setResource(resources)
+
+        val otlpProcessor = SamplingLogProcessor(
+            delegate = EventLogRecordProcessor(eventQueue = eventQueue, batchWorker = batchWorker),
+            sampler = customSampler,
+        )
+        logProcessor = otlpProcessor
+        sdkLoggerProviderBuilder.addLogRecordProcessor(otlpProcessor)
+
+        if (observabilityOptions.debug) {
+            sdkLoggerProviderBuilder.addLogRecordProcessor(SimpleLogRecordProcessor.create(DebugLogExporter(logger)))
+        }
+        telemetryInspector?.let {
+            sdkLoggerProviderBuilder.addLogRecordProcessor(SimpleLogRecordProcessor.create(it.logExporter))
+        }
+
+        return sdkLoggerProviderBuilder
+    }
+
     private fun configureTracerProvider(sdkTracerProviderBuilder: SdkTracerProviderBuilder): SdkTracerProviderBuilder {
-        val primarySpanExporter = createOtlpSpanExporter()
         sdkTracerProviderBuilder.setResource(resources)
 
-        val finalExporter = createSpanExporter(primarySpanExporter)
-        val processor = createBatchSpanProcessor(finalExporter)
+        val otlpProcessor = EventSpanProcessor(
+            eventQueue = eventQueue,
+            sampler = customSampler,
+            batchWorker = batchWorker,
+        )
+        spanProcessor = otlpProcessor
+        sdkTracerProviderBuilder.addSpanProcessor(otlpProcessor)
 
-        spanProcessor = processor
-        return sdkTracerProviderBuilder.addSpanProcessor(processor)
+        if (observabilityOptions.debug) {
+            sdkTracerProviderBuilder.addSpanProcessor(SimpleSpanProcessor.create(DebugSpanExporter(logger)))
+        }
+        telemetryInspector?.let {
+            sdkTracerProviderBuilder.addSpanProcessor(SimpleSpanProcessor.create(it.spanExporter))
+        }
+
+        return sdkTracerProviderBuilder
     }
 
     private fun configureMeterProvider(sdkMeterProviderBuilder: SdkMeterProviderBuilder): SdkMeterProviderBuilder {
-        val primaryMetricExporter = createOtlpMetricExporter()
+        val eventExporter = EventMetricExporter(
+            eventQueue = eventQueue,
+            temporalitySelector = AggregationTemporalitySelector.deltaPreferred(),
+            batchWorker = batchWorker,
+        )
 
-        val finalExporter = createMetricExporter(primaryMetricExporter)
-        val metricReader = createPeriodicMetricReader(finalExporter)
-
-        metricsReader = metricReader
-        return sdkMeterProviderBuilder
-            .setResource(resources)
-            .registerMetricReader(metricReader)
-    }
-
-    private fun createOtlpSpanExporter(): SpanExporter {
-        return OtlpHttpSpanExporter.builder()
-            .setEndpoint(observabilityOptions.otlpEndpoint + TRACES_PATH)
-            .setHeaders { observabilityOptions.customHeaders }
-            .build()
-    }
-
-    private fun createOtlpMetricExporter(): MetricExporter {
-        return OtlpHttpMetricExporter.builder()
-            .setEndpoint(observabilityOptions.otlpEndpoint + METRICS_PATH)
-            .setHeaders { observabilityOptions.customHeaders }
-            .setAggregationTemporalitySelector(AggregationTemporalitySelector.deltaPreferred())
-            .build()
-    }
-
-    private fun createSpanExporter(primaryExporter: SpanExporter): SpanExporter {
-        val baseExporter = if (observabilityOptions.debug) {
-            SpanExporter.composite(
-                buildList {
-                    add(primaryExporter)
-                    add(DebugSpanExporter(logger))
-                    telemetryInspector?.let { add(it.spanExporter) }
-                }
-            )
-        } else {
-            primaryExporter
-        }
-
-        return SamplingTraceExporter(baseExporter, customSampler)
-    }
-
-    private fun createMetricExporter(primaryExporter: MetricExporter): MetricExporter {
-        return if (observabilityOptions.debug) {
+        val finalExporter: MetricExporter = if (observabilityOptions.debug || telemetryInspector != null) {
             CompositeMetricExporter(
                 buildList {
-                    add(primaryExporter)
-                    add(DebugMetricExporter(logger))
+                    add(eventExporter)
+                    if (observabilityOptions.debug) add(DebugMetricExporter(logger))
                     telemetryInspector?.let { add(it.metricExporter) }
                 }
             )
         } else {
-            primaryExporter
+            eventExporter
         }
+
+        val metricReader = createPeriodicMetricReader(finalExporter)
+        metricsReader = metricReader
+        return sdkMeterProviderBuilder
+            .setResource(resources)
+            .registerMetricReader(metricReader)
     }
 
     private fun createPeriodicMetricReader(metricExporter: MetricExporter): PeriodicMetricReader {
@@ -274,15 +296,6 @@ class ObservabilityService(
             }
             customSampler.setConfig(samplingConfig)
         }
-    }
-
-    private fun createBatchSpanProcessor(spanExporter: SpanExporter): BatchSpanProcessor {
-        return BatchSpanProcessor.builder(spanExporter)
-            .setMaxQueueSize(BATCH_MAX_QUEUE_SIZE)
-            .setScheduleDelay(BATCH_SCHEDULE_DELAY_MS, TimeUnit.MILLISECONDS)
-            .setExporterTimeout(BATCH_EXPORTER_TIMEOUT_MS, TimeUnit.MILLISECONDS)
-            .setMaxExportBatchSize(BATCH_MAX_EXPORT_SIZE)
-            .build()
     }
 
     override fun recordMetric(metric: Metric) {
@@ -381,6 +394,10 @@ class ObservabilityService(
 
     /**
      * Flushes all pending telemetry data (traces, logs, metrics).
+     *
+     * Kicks the metric reader and log/span processors (which are the feeders into the event
+     * queue) then forces the [BatchWorker] to drain the queue before returning.
+     *
      * @return true if all flush operations succeeded, false otherwise
      */
     override fun flush(): Boolean {
@@ -390,9 +407,12 @@ class ObservabilityService(
             metricsReader?.forceFlush()
         )
 
-        return CompletableResultCode.ofAll(results)
+        val resultCodeSuccess = CompletableResultCode.ofAll(results)
             .join(FLUSH_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .isSuccess
+
+        batchWorker.flush()
+        return resultCodeSuccess
     }
 
     /**
@@ -417,71 +437,7 @@ class ObservabilityService(
         private const val INSTRUMENTATION_SCOPE_NAME = "com.launchdarkly.observability"
         const val ERROR_SPAN_NAME = "highlight.error"
         const val SESSION_ID_ATTRIBUTE = "session.id"
-        private const val BATCH_MAX_QUEUE_SIZE = 100
-        private const val BATCH_SCHEDULE_DELAY_MS = 1000L
-        private const val BATCH_EXPORTER_TIMEOUT_MS = 5000L
-        private const val BATCH_MAX_EXPORT_SIZE = 10
         private const val METRICS_EXPORT_INTERVAL_MS = 10_000L
         private const val FLUSH_TIMEOUT_SECONDS = 5L
-
-        internal fun createLoggerProcessor(
-            sdkLoggerProviderBuilder: SdkLoggerProviderBuilder,
-            exportSampler: ExportSampler,
-            sdkKey: String,
-            resource: Resource,
-            logger: ObserveLogger,
-            telemetryInspector: TelemetryInspector?,
-            observabilityOptions: ObservabilityOptions,
-        ): LogRecordProcessor {
-            val primaryLogExporter = createOtlpLogExporter(observabilityOptions)
-            sdkLoggerProviderBuilder.setResource(resource)
-
-            val finalExporter = createLogExporter(
-                primaryExporter = primaryLogExporter,
-                logger = logger,
-                telemetryInspector = telemetryInspector,
-                observabilityOptions = observabilityOptions
-            )
-
-            return SamplingLogProcessor(
-                delegate = createBatchLogRecordProcessor(finalExporter),
-                sampler = exportSampler
-            )
-        }
-
-        private fun createOtlpLogExporter(observabilityOptions: ObservabilityOptions): LogRecordExporter {
-            return OtlpHttpLogRecordExporter.builder()
-                .setEndpoint(observabilityOptions.otlpEndpoint + LOGS_PATH)
-                .setHeaders { observabilityOptions.customHeaders }
-                .build()
-        }
-
-        private fun createLogExporter(
-            primaryExporter: LogRecordExporter,
-            logger: ObserveLogger,
-            telemetryInspector: TelemetryInspector?,
-            observabilityOptions: ObservabilityOptions
-        ): LogRecordExporter {
-            return if (observabilityOptions.debug) {
-                LogRecordExporter.composite(
-                    buildList {
-                        add(primaryExporter)
-                        add(DebugLogExporter(logger))
-                        telemetryInspector?.let { add(it.logExporter) }
-                    }
-                )
-            } else {
-                primaryExporter
-            }
-        }
-
-        fun createBatchLogRecordProcessor(logRecordExporter: LogRecordExporter): BatchLogRecordProcessor {
-            return BatchLogRecordProcessor.builder(logRecordExporter)
-                .setMaxQueueSize(BATCH_MAX_QUEUE_SIZE)
-                .setScheduleDelay(BATCH_SCHEDULE_DELAY_MS, TimeUnit.MILLISECONDS)
-                .setExporterTimeout(BATCH_EXPORTER_TIMEOUT_MS, TimeUnit.MILLISECONDS)
-                .setMaxExportBatchSize(BATCH_MAX_EXPORT_SIZE)
-                .build()
-        }
     }
 }
