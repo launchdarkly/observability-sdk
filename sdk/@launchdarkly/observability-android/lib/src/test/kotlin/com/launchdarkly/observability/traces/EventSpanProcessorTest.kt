@@ -7,6 +7,7 @@ import com.launchdarkly.observability.sampling.SamplingResult
 import com.launchdarkly.observability.sampling.utils.FakeExportSampler
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.trace.SpanContext
@@ -17,6 +18,7 @@ import io.opentelemetry.sdk.testing.trace.TestSpanData
 import io.opentelemetry.sdk.trace.ReadableSpan
 import io.opentelemetry.sdk.trace.data.SpanData
 import io.opentelemetry.sdk.trace.data.StatusData
+import io.opentelemetry.sdk.trace.export.SpanExporter
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -80,6 +82,20 @@ class EventSpanProcessorTest {
         assertEquals(OtlpTraceExporter::class.java, batch!!.exporterClass)
         val payload = batch.items[0].payload as SpanItemPayload
         assertEquals(data.name, payload.spanData.name)
+    }
+
+    @Test
+    fun `onEnd exports sampled spans to delegateExporter`() {
+        val queue = EventQueue()
+        val exporter = mockk<SpanExporter>(relaxed = true)
+        val processor = EventSpanProcessor(queue, sampler = FakeExportSampler(), delegateExporter = exporter)
+
+        val data = spanData(sampledCtx, Attributes.empty())
+        processor.onEnd(spanMock(data))
+
+        verify {
+            exporter.export(match { it.size == 1 && it[0].name == data.name })
+        }
     }
 
     @Test

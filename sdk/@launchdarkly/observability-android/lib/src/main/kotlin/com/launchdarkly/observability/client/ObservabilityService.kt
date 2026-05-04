@@ -218,19 +218,22 @@ class ObservabilityService(
     private fun configureLoggerProvider(sdkLoggerProviderBuilder: SdkLoggerProviderBuilder): SdkLoggerProviderBuilder {
         sdkLoggerProviderBuilder.setResource(resources)
 
+        val delegates = buildList<LogRecordProcessor> {
+            add(EventLogRecordProcessor(eventQueue = eventQueue, batchWorker = batchWorker))
+            if (observabilityOptions.debug) {
+                add(SimpleLogRecordProcessor.create(DebugLogExporter(logger)))
+            }
+            telemetryInspector?.let {
+                add(SimpleLogRecordProcessor.create(it.logExporter))
+            }
+        }
+
         val otlpProcessor = SamplingLogProcessor(
-            delegate = EventLogRecordProcessor(eventQueue = eventQueue, batchWorker = batchWorker),
+            delegate = LogRecordProcessor.composite(delegates),
             sampler = customSampler,
         )
         logProcessor = otlpProcessor
         sdkLoggerProviderBuilder.addLogRecordProcessor(otlpProcessor)
-
-        if (observabilityOptions.debug) {
-            sdkLoggerProviderBuilder.addLogRecordProcessor(SimpleLogRecordProcessor.create(DebugLogExporter(logger)))
-        }
-        telemetryInspector?.let {
-            sdkLoggerProviderBuilder.addLogRecordProcessor(SimpleLogRecordProcessor.create(it.logExporter))
-        }
 
         return sdkLoggerProviderBuilder
     }
@@ -238,20 +241,28 @@ class ObservabilityService(
     private fun configureTracerProvider(sdkTracerProviderBuilder: SdkTracerProviderBuilder): SdkTracerProviderBuilder {
         sdkTracerProviderBuilder.setResource(resources)
 
+        val debugExporters = buildList<io.opentelemetry.sdk.trace.export.SpanExporter> {
+            if (observabilityOptions.debug) {
+                add(DebugSpanExporter(logger))
+            }
+            telemetryInspector?.let {
+                add(it.spanExporter)
+            }
+        }
+        val delegateExporter = if (debugExporters.isNotEmpty()) {
+            io.opentelemetry.sdk.trace.export.SpanExporter.composite(debugExporters)
+        } else {
+            null
+        }
+
         val otlpProcessor = EventSpanProcessor(
             eventQueue = eventQueue,
             sampler = customSampler,
+            delegateExporter = delegateExporter,
             batchWorker = batchWorker,
         )
         spanProcessor = otlpProcessor
         sdkTracerProviderBuilder.addSpanProcessor(otlpProcessor)
-
-        if (observabilityOptions.debug) {
-            sdkTracerProviderBuilder.addSpanProcessor(SimpleSpanProcessor.create(DebugSpanExporter(logger)))
-        }
-        telemetryInspector?.let {
-            sdkTracerProviderBuilder.addSpanProcessor(SimpleSpanProcessor.create(it.spanExporter))
-        }
 
         return sdkTracerProviderBuilder
     }
