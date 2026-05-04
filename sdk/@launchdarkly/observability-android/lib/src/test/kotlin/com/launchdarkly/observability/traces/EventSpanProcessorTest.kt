@@ -94,7 +94,10 @@ class EventSpanProcessorTest {
         processor.onEnd(spanMock(data))
 
         verify {
-            exporter.export(match { it.size == 1 && it[0].name == data.name })
+            exporter.export(withArg {
+                assertEquals(1, it.size)
+                assertEquals(data.name, it.first().name)
+            })
         }
     }
 
