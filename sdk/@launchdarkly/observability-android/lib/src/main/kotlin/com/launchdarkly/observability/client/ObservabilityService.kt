@@ -399,19 +399,22 @@ class ObservabilityService(
     /**
      * Requests a flush of all pending telemetry data (traces, logs, metrics).
      *
-     * This is non-blocking: it triggers the [BatchWorker] to drain the queue asynchronously
-     * and returns immediately. Export happens on background dispatchers.
+     * Export to the network happens asynchronously via [BatchWorker] on background dispatchers;
+     * this call does not wait for the queue to drain.
      *
      * Logs and spans are enqueued synchronously from their processors' `onEmit` / `onEnd`, so
      * nothing is buffered inside the processors — no processor flush is required.
      *
      * Metrics are different: [PeriodicMetricReader] collects instrument values on an interval
      * and only pushes them to the exporter (our [EventMetricExporter]) when the interval
-     * elapses or when `forceFlush()` is invoked. We therefore still call it here so pending
-     * metric samples are enqueued before we signal the batch worker.
+     * elapses or when `forceFlush()` is invoked. That call is itself asynchronous — it schedules
+     * collection on the reader's executor and completes only once the samples have been handed
+     * to the exporter — so we join on its [CompletableResultCode] (with a small timeout) before
+     * signalling the batch worker. That guarantees metric samples are enqueued before the
+     * worker starts draining.
      */
     override fun flush() {
-        metricsReader?.forceFlush()
+        metricsReader?.forceFlush()?.join(FLUSH_TIMEOUT_SECONDS, TimeUnit.SECONDS)
         batchWorker.flush()
     }
 
@@ -438,5 +441,10 @@ class ObservabilityService(
         const val ERROR_SPAN_NAME = "highlight.error"
         const val SESSION_ID_ATTRIBUTE = "session.id"
         private const val METRICS_EXPORT_INTERVAL_MS = 10_000L
+
+        // Upper bound on how long [flush] waits for the metric reader to finish collecting
+        // pending instrument values and hand them to the exporter. Kept short so flush stays
+        // responsive even if the reader's executor is backed up.
+        private const val FLUSH_TIMEOUT_SECONDS = 5L
     }
 }
