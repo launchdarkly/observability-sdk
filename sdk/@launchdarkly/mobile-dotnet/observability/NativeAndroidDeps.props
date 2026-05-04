@@ -41,33 +41,47 @@
 
 		<!--
 			Single fat JAR produced by the LDObserve native module's `bundleOtelJars`
-			Gradle task. It bundles every transitive OTel + okhttp + okio JAR with
-			META-INF/services entries merged per service name.
+			Gradle task. It bundles every transitive OTel + okhttp + okio JAR's
+			class files and code resources, plus a deduplicated, merged copy of
+			`META-INF/services/*` SPI registrations. All other `META-INF/*`
+			entries (MANIFEST.MF, LICENSE, NOTICE, maven/*, signature files)
+			are stripped.
 
-			One JAR (instead of ~15 individual ones) avoids two .NET-for-Android 10
-			packaging hazards:
-			  1. `BuildArchive` drops jar-extracted entries whose `ArchivePath` is
-			     already present in the APK, so overlapping `META-INF/services/*`
-			     paths from sibling JARs would race and lose entries.
-			  2. `CollectJarContentFilesForArchive` calls
-			     `PackagingUtils.CheckEntryForPackaging`, which hardcodes the
-			     entire `META-INF/` folder as stripped — so even with a single
-			     bundle JAR, services files inside the JAR never reach the APK.
-			     We work around (2) below with `_LDNativeMetaInfService`.
+			One JAR (instead of ~15 individual ones) avoids the .NET-for-Android
+			10 hazard where `BuildArchive` drops jar-extracted entries whose
+			`ArchivePath` is already present in the APK: overlapping
+			`META-INF/services/*` paths across sibling JARs would race and lose
+			entries (including the unique HttpSenderProvider in
+			opentelemetry-exporter-sender-okhttp).
+
+			`META-INF/services/*` IS kept inside the JAR — once merged,
+			each path is unique within the bundle, so neither .NET 9's BuildApk
+			nor .NET 10's BuildArchive drops entries:
+			  - .NET 9: BuildApk extracts JAR contents directly into the APK
+			    (it does NOT consume `@(FilesToAddToArchive)`), so the JAR
+			    copy is the only way `ServiceLoader` can find the SPI
+			    registrations on this version.
+			  - .NET 10: `CollectJarContentFilesForArchive` extracts the JAR
+			    services into `@(FilesToAddToArchive)`, auto-prefixing with
+			    `root/` for AAB so bundletool's XABAB0000 module-dir check
+			    is satisfied. If the standalone-file injection (see
+			    `_LDNativeMetaInfService` below) produces the same path,
+			    BuildArchive silently dedupes.
 		-->
 		<_LDNativeJAR Include="$(_LDNativeDepsDir)ldobserve-otel-bundle.jar" />
 
 		<!--
 			Standalone copies of the merged `META-INF/services/*` files produced
-			by the same `bundleOtelJars` task. We can't rely on
-			`<AndroidJavaLibrary>` to surface these because
-			`PackagingUtils.CheckEntryForPackaging` strips every JAR entry whose
-			path begins with `META-INF/`. Instead, the consumer-side targets
-			inject these files directly into `@(FilesToAddToArchive)` after
-			`CollectJarContentFilesForArchive` runs, so `BuildArchive` (which
-			does not filter on path) places them at `META-INF/services/*` in
-			the APK and ServiceLoader can find e.g.
-			`io.opentelemetry.exporter.sender.okhttp.internal.OkHttpHttpSenderProvider`.
+			by the same `bundleOtelJars` task. Used by the consumer-side
+			`_LDInjectMetaInfServices` MSBuild target on .NET 10 builds to add
+			the registrations to `@(FilesToAddToArchive)` with the correct
+			`ArchivePath` (`META-INF/services/*` for APK,
+			`root/META-INF/services/*` for AAB). This injection is a no-op on
+			.NET 9 (the older `BuildApk` task ignores `@(FilesToAddToArchive)`)
+			and is redundant on current .NET 10 builds because the same
+			services are also embedded in the bundle JAR; it remains as a
+			defensive fallback for older .NET 10 SDKs whose BuildArchive
+			stripped `META-INF/` from extracted JARs.
 		-->
 		<_LDNativeMetaInfService Include="$(_LDNativeDepsDir)META-INF\services\*" />
 	</ItemGroup>
