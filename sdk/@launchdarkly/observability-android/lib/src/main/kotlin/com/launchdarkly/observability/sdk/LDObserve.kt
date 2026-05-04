@@ -203,7 +203,7 @@ class LDObserve(private val client: Observe) : Observe {
         }
 
         fun recordLog(message: String, severityNumber: Int, attributes: Map<String, Any?>? = null) {
-            val severity = Severity.values().firstOrNull { it.severityNumber == severityNumber }
+            val severity = Severity.entries.firstOrNull { it.severityNumber == severityNumber }
                 ?: Severity.INFO
             val attrs = AttributeConverter.convert(attributes)
             delegate.recordLog(message, severity, attrs)
