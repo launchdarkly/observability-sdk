@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.44.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.43.0...launchdarkly-observability-android-0.44.0) (2026-05-05)
+
+
+### Features
+
+* Android O11Y cost based buffering + JSON exporters ([#525](https://github.com/launchdarkly/observability-sdk/issues/525)) ([01e6b07](https://github.com/launchdarkly/observability-sdk/commit/01e6b074b8cd745735980471ce3971e87593ecbe))
+
 ## [0.43.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.42.0...launchdarkly-observability-android-0.43.0) (2026-05-01)
 
 
