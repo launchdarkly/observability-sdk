@@ -28,7 +28,7 @@ private fun List<String>.normalizeXmlIds(): Set<String> = map {
  *
  * @param maskTextInputs Set to false to disable masking text input targets.
  * @param maskText Set to false to disable masking text targets.
- * @param maskImageViews Set to true to mask [ImageView] targets by exact class match.
+ * @param maskImageViews Set to true to mask [ImageView] targets.
  * @param maskViews Additional Views to mask by exact class match (see [viewsMatcher]).
  * @param maskXMLViewIds Additional Views to mask by resource entry name (see [xmlViewIdsMatcher]).
  * accepts `"@+id/foo"`, `"@id/foo"`, or `"foo"`. When the React Native library is on the runtime
@@ -56,7 +56,6 @@ data class PrivacyProfile(
 ) {
     private val viewClassSet = buildSet {
         addAll(maskViews.map { it.clazz })
-        if (maskImageViews) add(ImageView::class.java)
     }
 
     private val webViewClassNameSet = if (maskWebViews) webViewClassNames.toSet() else emptySet()
@@ -72,6 +71,15 @@ data class PrivacyProfile(
     internal val viewsMatcher: MaskMatcher = object : MaskMatcher {
         override fun isMatch(target: MaskTarget): Boolean {
             return viewClassSet.contains(target.view.javaClass)
+        }
+    }
+
+    /**
+     * Matches targets whose underlying Android View is an [ImageView].
+     */
+    internal val imageViewMatcher: MaskMatcher = object : MaskMatcher {
+        override fun isMatch(target: MaskTarget): Boolean {
+            return target.view is ImageView
         }
     }
 
@@ -203,6 +211,7 @@ data class PrivacyProfile(
         // Prefer cheaper checks first; heavier checks should be later.
         if (maskTextInputs) add(textInputMatcher)
         if (maskText) add(textMatcher)
+        if (maskImageViews) add(imageViewMatcher)
         if (viewClassSet.isNotEmpty()) add(viewsMatcher)
         if (maskBySemanticsKeywords) add(sensitiveMatcher)
         if (webViewClassNameSet.isNotEmpty()) add(webViewClassHierarchyMatcher)
