@@ -303,7 +303,7 @@ val sessionReplay = SessionReplay(
 Notes:
 - `maskViews` matches on `target.view.javaClass` equality (exact class only).
 - `maskWebViews` uses a default list of WebView class names for masking (and still allows subclasses), including AndroidView-hosted views inside Compose.
-- `maskXMLViewIds` applies only to Views with a non-`View.NO_ID` id that resolves to a resource entry name.
+- `maskXMLViewIds` and `unmaskXMLViewIds` apply to Views with a non-`View.NO_ID` id that resolves to a resource entry name. When the React Native library is on the runtime classpath, they also match the value of the `react_test_id` tag — i.e. the JS `testID` prop on RN-rendered views.
 
 ##### XML Views
 
