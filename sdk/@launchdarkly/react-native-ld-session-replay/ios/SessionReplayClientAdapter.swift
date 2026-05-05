@@ -187,6 +187,15 @@ extension SessionReplayClientAdapter {
       )
     }
 
+    // testID-based mask/unmask accepts either the new `*TestIDs` keys or the deprecated
+    // `*AccessibilityIdentifiers` keys; if both are present, the lists are combined.
+    let maskTestIDs =
+      (dictionary["maskTestIDs"] as? [String] ?? [])
+      + (dictionary["maskAccessibilityIdentifiers"] as? [String] ?? [])
+    let unmaskTestIDs =
+      (dictionary["unmaskTestIDs"] as? [String] ?? [])
+      + (dictionary["unmaskAccessibilityIdentifiers"] as? [String] ?? [])
+
     let privacy = SessionReplayOptions.PrivacyOptions(
       maskTextInputs: dictionary["maskTextInputs"] as? Bool ?? true,
       maskWebViews: dictionary["maskWebViews"] as? Bool ?? false,
@@ -195,10 +204,8 @@ extension SessionReplayClientAdapter {
       maskUIViews: [], /// Not supported, since AnyClass has type erased and it is very likely is not serializable
       unmaskUIViews: [], /// Not supported, since AnyClass has type erased and it is very likely is not serializable
       ignoreUIViews: [], /// Not supported, since AnyClass has type erased and it is very likely is not serializable
-      maskAccessibilityIdentifiers:
-        dictionary["maskAccessibilityIdentifiers"] as? [String] ?? [],
-      unmaskAccessibilityIdentifiers:
-        dictionary["unmaskAccessibilityIdentifiers"] as? [String] ?? [],
+      maskAccessibilityIdentifiers: maskTestIDs,
+      unmaskAccessibilityIdentifiers: unmaskTestIDs,
       ignoreAccessibilityIdentifiers:
         dictionary["ignoreAccessibilityIdentifiers"] as? [String] ?? [],
       minimumAlpha:
