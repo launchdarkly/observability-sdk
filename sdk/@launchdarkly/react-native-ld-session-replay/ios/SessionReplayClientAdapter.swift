@@ -187,18 +187,33 @@ extension SessionReplayClientAdapter {
       )
     }
 
+    // testID-based mask/unmask accepts either the new `*TestIDs` keys or the deprecated
+    // `*AccessibilityIdentifiers` keys; if both are present, the lists are combined.
+    let maskTestIDs =
+      (dictionary["maskTestIDs"] as? [String] ?? [])
+      + (dictionary["maskAccessibilityIdentifiers"] as? [String] ?? [])
+    let unmaskTestIDs =
+      (dictionary["unmaskTestIDs"] as? [String] ?? [])
+      + (dictionary["unmaskAccessibilityIdentifiers"] as? [String] ?? [])
+
+    // RN's <Text> renders to RCTTextView (Paper) or RCTParagraphComponentView (Fabric), neither
+    // of which extends UILabel — so the iOS SDK's `maskLabels` (which matches UILabel) doesn't
+    // catch RN text on its own. Add the RN text classes to `maskUIViews` when `maskLabels` is on.
+    let maskLabels = dictionary["maskLabels"] as? Bool ?? false
+    let maskUIViews: [AnyClass] = maskLabels
+      ? ["RCTTextView", "RCTParagraphComponentView"].compactMap { NSClassFromString($0) }
+      : []
+
     let privacy = SessionReplayOptions.PrivacyOptions(
       maskTextInputs: dictionary["maskTextInputs"] as? Bool ?? true,
       maskWebViews: dictionary["maskWebViews"] as? Bool ?? false,
-      maskLabels: dictionary["maskLabels"] as? Bool ?? false,
+      maskLabels: maskLabels,
       maskImages: dictionary["maskImages"] as? Bool ?? false,
-      maskUIViews: [], /// Not supported, since AnyClass has type erased and it is very likely is not serializable
+      maskUIViews: maskUIViews,
       unmaskUIViews: [], /// Not supported, since AnyClass has type erased and it is very likely is not serializable
       ignoreUIViews: [], /// Not supported, since AnyClass has type erased and it is very likely is not serializable
-      maskAccessibilityIdentifiers:
-        dictionary["maskAccessibilityIdentifiers"] as? [String] ?? [],
-      unmaskAccessibilityIdentifiers:
-        dictionary["unmaskAccessibilityIdentifiers"] as? [String] ?? [],
+      maskAccessibilityIdentifiers: maskTestIDs,
+      unmaskAccessibilityIdentifiers: unmaskTestIDs,
       ignoreAccessibilityIdentifiers:
         dictionary["ignoreAccessibilityIdentifiers"] as? [String] ?? [],
       minimumAlpha:

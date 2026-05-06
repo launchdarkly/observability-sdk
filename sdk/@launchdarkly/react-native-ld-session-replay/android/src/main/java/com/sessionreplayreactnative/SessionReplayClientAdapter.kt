@@ -181,6 +181,12 @@ internal class SessionReplayClientAdapter private constructor() {
         return LDContext.createMulti(*contexts.toTypedArray())
     }
 
+    /**
+     * Builds a [ReplayOptions] from the React Native bridge's options map. Returns defaults if
+     * the map is null.
+     *
+     * @param map options dictionary as received from JS, or `null` when no options were provided.
+     */
     internal fun replayOptionsFrom(map: ReadableMap?): ReplayOptions {
         if (map == null) {
             return ReplayOptions(
@@ -195,6 +201,9 @@ internal class SessionReplayClientAdapter private constructor() {
         val maskText = if (map.hasKey("maskLabels")) map.getBoolean("maskLabels") else false
         val maskImages = if (map.hasKey("maskImages")) map.getBoolean("maskImages") else false
 
+        val maskTestIDs = stringListFromMap(map, "maskTestIDs")
+        val unmaskTestIDs = stringListFromMap(map, "unmaskTestIDs")
+
         return ReplayOptions(
             enabled = isEnabled,
             privacyProfile = PrivacyProfile(
@@ -202,8 +211,28 @@ internal class SessionReplayClientAdapter private constructor() {
                 maskWebViews = maskWebViews,
                 maskText = maskText,
                 maskImageViews = maskImages,
+                maskXMLViewIds = maskTestIDs,
+                unmaskXMLViewIds = unmaskTestIDs,
             )
         )
+    }
+
+    /**
+     * Reads the value at [key] from [map] as a list of strings. Returns an empty list when the
+     * key is absent, the array is null, or any element is non-string. Non-string elements are
+     * dropped silently.
+     *
+     * @param map source ReadableMap.
+     * @param key key whose value should be a `ReadableArray` of strings.
+     */
+    private fun stringListFromMap(map: ReadableMap, key: String): List<String> {
+        if (!map.hasKey(key)) return emptyList()
+        val array = map.getArray(key) ?: return emptyList()
+        val out = ArrayList<String>(array.size())
+        for (i in 0 until array.size()) {
+            array.getString(i)?.let { out.add(it) }
+        }
+        return out
     }
 
     companion object {
