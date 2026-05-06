@@ -1,5 +1,12 @@
 # highlight.run
 
+## [10.3.0](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.2.0...highlight.run-10.3.0) (2026-05-06)
+
+
+### Features
+
+* forward LD context keys to errors, logs, and custom spans ([#530](https://github.com/launchdarkly/observability-sdk/issues/530)) ([5a6d164](https://github.com/launchdarkly/observability-sdk/commit/5a6d164129c98518681dc22da1db082803ad9a04))
+
 ## [10.2.0](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.1.2...highlight.run-10.2.0) (2026-05-01)
 
 
