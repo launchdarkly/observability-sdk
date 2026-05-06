@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.0](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.8.0...session-replay-react-native-0.9.0) (2026-05-06)
+
+
+### Features
+
+* **react-native:** add maskTestIDs and unmaskTestIDs masking options ([#528](https://github.com/launchdarkly/observability-sdk/issues/528)) ([3d33328](https://github.com/launchdarkly/observability-sdk/commit/3d3332883e98874aca7894d0af096776a7698e43))
+
 ## [0.8.0](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.7.0...session-replay-react-native-0.8.0) (2026-05-01)
 
 
