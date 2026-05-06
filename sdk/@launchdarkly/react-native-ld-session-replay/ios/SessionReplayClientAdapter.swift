@@ -196,12 +196,20 @@ extension SessionReplayClientAdapter {
       (dictionary["unmaskTestIDs"] as? [String] ?? [])
       + (dictionary["unmaskAccessibilityIdentifiers"] as? [String] ?? [])
 
+    // RN's <Text> renders to RCTTextView (Paper) or RCTParagraphComponentView (Fabric), neither
+    // of which extends UILabel — so the iOS SDK's `maskLabels` (which matches UILabel) doesn't
+    // catch RN text on its own. Add the RN text classes to `maskUIViews` when `maskLabels` is on.
+    let maskLabels = dictionary["maskLabels"] as? Bool ?? false
+    let maskUIViews: [AnyClass] = maskLabels
+      ? ["RCTTextView", "RCTParagraphComponentView"].compactMap { NSClassFromString($0) }
+      : []
+
     let privacy = SessionReplayOptions.PrivacyOptions(
       maskTextInputs: dictionary["maskTextInputs"] as? Bool ?? true,
       maskWebViews: dictionary["maskWebViews"] as? Bool ?? false,
-      maskLabels: dictionary["maskLabels"] as? Bool ?? false,
+      maskLabels: maskLabels,
       maskImages: dictionary["maskImages"] as? Bool ?? false,
-      maskUIViews: [], /// Not supported, since AnyClass has type erased and it is very likely is not serializable
+      maskUIViews: maskUIViews,
       unmaskUIViews: [], /// Not supported, since AnyClass has type erased and it is very likely is not serializable
       ignoreUIViews: [], /// Not supported, since AnyClass has type erased and it is very likely is not serializable
       maskAccessibilityIdentifiers: maskTestIDs,
