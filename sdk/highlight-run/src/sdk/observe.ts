@@ -247,6 +247,7 @@ export class ObserveSDK implements Observe {
 				[ATTR_LOG_SEVERITY]: level,
 				[ATTR_LOG_MESSAGE]: msg,
 				'code.stacktrace': stackTrace,
+				...(this._ldContextKeys ?? {}),
 				...metadata,
 			})
 			if (this._options.reportConsoleErrors && level === 'error') {
@@ -299,6 +300,8 @@ export class ObserveSDK implements Observe {
 			recordException(span, errorMsg.error ?? new Error(errorMsg.event), {
 				[ATTR_EXCEPTION_ID]: errorMsg.id,
 			})
+			// LD context keys are applied to the span by the startSpan
+			// wrapper above; only the error-specific attributes are added here.
 			span?.setAttributes({
 				event: errorMsg.event,
 				type: errorMsg.type,
@@ -451,6 +454,11 @@ export class ObserveSDK implements Observe {
 		}
 
 		const wrapCallback = (span: Span, callback: (span: Span) => any) => {
+			// Apply LD context keys before invoking the caller so any
+			// span.setAttributes the caller makes wins on key collisions.
+			if (this._ldContextKeys) {
+				span.setAttributes(this._ldContextKeys)
+			}
 			const result = callback(span)
 			if (result instanceof Promise) {
 				return result.finally(() => span.end())
