@@ -223,5 +223,155 @@ describe('SDK', () => {
 				undefined,
 			)
 		})
+
+		describe('LD context keys propagation', () => {
+			const mockTracer = (span: any) => {
+				const tracer = {
+					startActiveSpan: vi.fn((_name: string, ...args: any[]) => {
+						const callback = args[args.length - 1]
+						return callback(span)
+					}),
+				}
+				vi.spyOn(otel, 'getTracer').mockReturnValue(tracer as any)
+				return tracer
+			}
+
+			const makeSpan = () => ({
+				setAttributes: vi.fn(),
+				setAttribute: vi.fn(),
+				addEvent: vi.fn(),
+				recordException: vi.fn(),
+				setStatus: vi.fn(),
+				end: vi.fn(),
+				spanContext: vi.fn(() => ({
+					traceId: 'trace',
+					spanId: 'span',
+					traceFlags: 1,
+				})),
+				updateName: vi.fn(),
+				isRecording: vi.fn(() => true),
+			})
+
+			it('attaches context keys to error span attributes', () => {
+				const span = makeSpan()
+				mockTracer(span)
+
+				observeImpl.setLDContextKeyAttributes({
+					pathTemplate: '/projects/:projectKey/flags',
+					owner: 'team-fm-foundations',
+				})
+
+				observeImpl.recordError(new Error('boom'), 'oops', {
+					errorCode: 'E123',
+				})
+
+				// First call: contextKeys injected by the startSpan wrapper.
+				expect(span.setAttributes).toHaveBeenNthCalledWith(1, {
+					'context.contextKeys.pathTemplate':
+						'/projects/:projectKey/flags',
+					'context.contextKeys.owner': 'team-fm-foundations',
+				})
+				// Second call: error-specific attributes from _recordErrorMessage.
+				expect(span.setAttributes).toHaveBeenNthCalledWith(
+					2,
+					expect.objectContaining({
+						event: expect.stringContaining('oops'),
+						errorCode: 'E123',
+					}),
+				)
+			})
+
+			it('caller payload wins over context keys with the same name', () => {
+				const span = makeSpan()
+				mockTracer(span)
+
+				observeImpl.setLDContextKeyAttributes({ owner: 'team-a' })
+
+				observeImpl.recordError(new Error('boom'), 'oops', {
+					'context.contextKeys.owner': 'team-override',
+				})
+
+				// Second setAttributes call wins on the wire because OTel
+				// merges with last-write-wins semantics for matching keys.
+				expect(span.setAttributes).toHaveBeenLastCalledWith(
+					expect.objectContaining({
+						'context.contextKeys.owner': 'team-override',
+					}),
+				)
+			})
+
+			it('attaches context keys to log addEvent attributes', () => {
+				const span = makeSpan()
+				mockTracer(span)
+
+				observeImpl.setLDContextKeyAttributes({
+					pathTemplate: '/login',
+				})
+
+				observeImpl.recordLog('hello world', 'info', {
+					traceId: 'tid',
+				})
+
+				expect(span.addEvent).toHaveBeenCalledWith(
+					'log',
+					expect.objectContaining({
+						'context.contextKeys.pathTemplate': '/login',
+						traceId: 'tid',
+					}),
+				)
+			})
+
+			it('caller metadata wins over context keys on logs', () => {
+				const span = makeSpan()
+				mockTracer(span)
+
+				observeImpl.setLDContextKeyAttributes({
+					pathTemplate: '/login',
+				})
+
+				observeImpl.recordLog('hello', 'info', {
+					'context.contextKeys.pathTemplate': '/override',
+				})
+
+				expect(span.addEvent).toHaveBeenCalledWith(
+					'log',
+					expect.objectContaining({
+						'context.contextKeys.pathTemplate': '/override',
+					}),
+				)
+			})
+
+			it('attaches context keys to user-created spans via startSpan', () => {
+				const span = makeSpan()
+				mockTracer(span)
+
+				observeImpl.setLDContextKeyAttributes({
+					pathTemplate: '/projects/:projectKey/flags',
+					accountId: 'acct-123',
+				})
+
+				observeImpl.startSpan('user.custom.span', (s) => {
+					s?.setAttribute('foo', 'bar')
+				})
+
+				expect(span.setAttributes).toHaveBeenCalledWith({
+					'context.contextKeys.pathTemplate':
+						'/projects/:projectKey/flags',
+					'context.contextKeys.accountId': 'acct-123',
+				})
+				// Caller's setAttribute call is also issued.
+				expect(span.setAttribute).toHaveBeenCalledWith('foo', 'bar')
+			})
+
+			it('does not call setAttributes when no context keys are set', () => {
+				const span = makeSpan()
+				mockTracer(span)
+
+				observeImpl.startSpan('user.custom.span', () => {})
+
+				// startSpan should not inject anything when contextKeys are unset.
+				expect(span.setAttributes).not.toHaveBeenCalled()
+			})
+		})
 	})
 })
