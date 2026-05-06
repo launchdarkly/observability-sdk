@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.45.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.44.0...launchdarkly-observability-android-0.45.0) (2026-05-05)
+
+
+### Features
+
+* **android:** add features needed for react native android session replay masking ([#527](https://github.com/launchdarkly/observability-sdk/issues/527)) ([9431a00](https://github.com/launchdarkly/observability-sdk/commit/9431a000d37da14d41e654759f5d3a96e998c8af))
+
 ## [0.44.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.43.0...launchdarkly-observability-android-0.44.0) (2026-05-05)
 
 
