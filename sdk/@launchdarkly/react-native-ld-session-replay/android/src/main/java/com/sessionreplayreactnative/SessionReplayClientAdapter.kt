@@ -201,17 +201,8 @@ internal class SessionReplayClientAdapter private constructor() {
         val maskText = if (map.hasKey("maskLabels")) map.getBoolean("maskLabels") else false
         val maskImages = if (map.hasKey("maskImages")) map.getBoolean("maskImages") else false
 
-        // Identifier-based masking accepts either the new `*TestIDs` keys or the deprecated
-        // `*AccessibilityIdentifiers` keys (the latter were previously a no-op on Android).
-        // Both feed into PrivacyProfile.maskXMLViewIds / unmaskXMLViewIds, whose matchers check
-        // each value against the view's XML resource entry name and (when RN is on the classpath)
-        // the `react_test_id` tag where RN stores the JS testID prop.
-        val maskTestIDs =
-            stringListFromMap(map, "maskTestIDs") +
-            stringListFromMap(map, "maskAccessibilityIdentifiers")
-        val unmaskTestIDs =
-            stringListFromMap(map, "unmaskTestIDs") +
-            stringListFromMap(map, "unmaskAccessibilityIdentifiers")
+        val maskTestIDs = stringListFromMap(map, "maskTestIDs")
+        val unmaskTestIDs = stringListFromMap(map, "unmaskTestIDs")
 
         return ReplayOptions(
             enabled = isEnabled,
