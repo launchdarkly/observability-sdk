@@ -8,10 +8,8 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 import java.io.IOException
-import java.io.ByteArrayOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
-import java.util.zip.GZIPOutputStream
 
 @Serializable
 data class GraphQLRequest(
@@ -87,7 +85,7 @@ class GraphQLClient(
 
             val requestJson = json.encodeToString(GraphQLRequest.serializer(), request)
             val requestBytes = requestJson.toByteArray(Charsets.UTF_8)
-            val payloadBytes = if (compress) gzip(requestBytes) else requestBytes
+            val payloadBytes = if (compress) GzipUtil.gzip(requestBytes) else requestBytes
             val connectionLocal = connectionProvider.openConnection(endpoint).also { connection = it }
 
             connectionLocal.apply {
@@ -140,14 +138,6 @@ class GraphQLClient(
 
         logErrors(response)
         response
-    }
-
-    private fun gzip(data: ByteArray): ByteArray {
-        val byteStream = ByteArrayOutputStream()
-        GZIPOutputStream(byteStream).use { gzipStream ->
-            gzipStream.write(data)
-        }
-        return byteStream.toByteArray()
     }
 
     private fun logErrors(response: GraphQLResponse<*>) {

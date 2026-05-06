@@ -42,6 +42,8 @@ class SessionReplayClientAdapterTest {
             every { hasKey("maskTextInputs") } returns false
             every { hasKey("maskWebViews") } returns false
             every { hasKey("maskImages") } returns false
+            every { hasKey("maskTestIDs") } returns false
+            every { hasKey("unmaskTestIDs") } returns false
         }
 
         val options = adapter.replayOptionsFrom(map)

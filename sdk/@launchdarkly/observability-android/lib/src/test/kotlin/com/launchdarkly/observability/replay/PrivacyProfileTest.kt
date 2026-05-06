@@ -1,6 +1,5 @@
 package com.launchdarkly.observability.replay
 
-import android.widget.ImageView
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -84,23 +83,17 @@ class PrivacyProfileTest {
     }
 
     @Test
-    fun `maskImageViews adds ImageView to viewClassSet and includes viewsMatcher even when maskViews is empty`() {
+    fun `maskImageViews true adds imageViewMatcher to global matchers`() {
         val profile = PrivacyProfile(maskImageViews = true, maskViews = emptyList())
 
-        assertTrue(profile.globalMaskMatchers.contains(profile.viewsMatcher))
-
-        val viewClassSet = profile.getPrivateSet("viewClassSet")
-        assertTrue(viewClassSet.contains(ImageView::class.java))
+        assertTrue(profile.globalMaskMatchers.contains(profile.imageViewMatcher))
     }
 
     @Test
-    fun `maskImageViews false does not add ImageView to viewClassSet and does not include viewsMatcher when maskViews is empty`() {
+    fun `maskImageViews false does not include imageViewMatcher in global matchers`() {
         val profile = PrivacyProfile(maskImageViews = false, maskViews = emptyList())
 
-        assertFalse(profile.globalMaskMatchers.contains(profile.viewsMatcher))
-
-        val viewClassSet = profile.getPrivateSet("viewClassSet")
-        assertFalse(viewClassSet.contains(ImageView::class.java))
+        assertFalse(profile.globalMaskMatchers.contains(profile.imageViewMatcher))
     }
 
     @Test

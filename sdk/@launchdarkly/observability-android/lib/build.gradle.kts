@@ -71,8 +71,6 @@ dependencies {
     // TODO: revise these versions to be as old as usable for compatibility
     implementation("io.opentelemetry:opentelemetry-api:1.51.0")
     implementation("io.opentelemetry:opentelemetry-sdk:1.51.0")
-    implementation("io.opentelemetry:opentelemetry-exporter-otlp:1.51.0")
-    implementation("io.opentelemetry:opentelemetry-exporter-logging-otlp:1.51.0")
     implementation("io.opentelemetry:opentelemetry-sdk-metrics:1.51.0")
     implementation("io.opentelemetry:opentelemetry-sdk-logs:1.51.0")
 
@@ -133,8 +131,16 @@ android {
         targetCompatibility = JavaVersion.VERSION_11
     }
     kotlin {
+        // Pin the Kotlin language/api version so the compiler emits bytecode compatible with
+        // Kotlin 2.0 runtime, even when a host project (e.g. e2e) forces a newer compiler
+        // (e.g. 2.2.0) onto this module via its version catalog. Without this, the newer
+        // compiler would emit references to classes like kotlin.coroutines.jvm.internal.SpillingKt
+        // that do not exist in the 2.0.21 stdlib we ship with.
+        coreLibrariesVersion = "2.0.21"
         compilerOptions {
             jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
+            languageVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_0)
+            apiVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_0)
         }
     }
 

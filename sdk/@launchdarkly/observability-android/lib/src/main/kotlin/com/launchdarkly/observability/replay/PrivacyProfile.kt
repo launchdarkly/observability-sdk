@@ -28,13 +28,16 @@ private fun List<String>.normalizeXmlIds(): Set<String> = map {
  *
  * @param maskTextInputs Set to false to disable masking text input targets.
  * @param maskText Set to false to disable masking text targets.
- * @param maskImageViews Set to true to mask [ImageView] targets by exact class match.
+ * @param maskImageViews Set to true to mask [ImageView] targets.
  * @param maskViews Additional Views to mask by exact class match (see [viewsMatcher]).
  * @param maskXMLViewIds Additional Views to mask by resource entry name (see [xmlViewIdsMatcher]).
- * accepts `"@+id/foo"`, `"@id/foo"`, or `"foo"`.
+ * accepts `"@+id/foo"`, `"@id/foo"`, or `"foo"`. When the React Native library is on the runtime
+ * classpath, this list is also matched against the React Native `testID` prop, which RN stores in
+ * `com.facebook.react.R.id.react_test_id` on each view.
  * @param unmaskXMLViewIds Views whose resource entry name appears in this list are explicitly
- * *unmasked* (see [unmaskXMLViewIdsMatcher]). Same id format as [maskXMLViewIds]. Takes precedence
- * over global masking rules — see `MaskCollector` for the full precedence rules.
+ * *unmasked* (see [unmaskXMLViewIdsMatcher]). Same id format and same React Native `testID`
+ * support as [maskXMLViewIds]. Takes precedence over global masking rules — see `MaskCollector`
+ * for the full precedence rules.
  * @param maskWebViews Set to true to mask known WebView types and their subclasses
  * (e.g., "android.webkit.WebView", "org.mozilla.geckoview.GeckoView", etc).
  * @param maskBySemanticsKeywords Set to true to enable masking of "sensitive" targets detected by
@@ -53,7 +56,6 @@ data class PrivacyProfile(
 ) {
     private val viewClassSet = buildSet {
         addAll(maskViews.map { it.clazz })
-        if (maskImageViews) add(ImageView::class.java)
     }
 
     private val webViewClassNameSet = if (maskWebViews) webViewClassNames.toSet() else emptySet()
@@ -73,6 +75,15 @@ data class PrivacyProfile(
     }
 
     /**
+     * Matches targets whose underlying Android View is an [ImageView].
+     */
+    internal val imageViewMatcher: MaskMatcher = object : MaskMatcher {
+        override fun isMatch(target: MaskTarget): Boolean {
+            return target.view is ImageView
+        }
+    }
+
+    /**
      * Matches targets whose underlying Android View is a subclass (or implements an interface)
      * with a class name included in [webViewClassNames] when [maskWebViews] is enabled.
      */
@@ -88,11 +99,28 @@ data class PrivacyProfile(
     }
 
     /**
-     * Builds a [MaskMatcher] that matches targets whose underlying Android View has a non-
-     * [View.NO_ID] id whose resource entry name (per `resources.getResourceEntryName(view.id)`)
-     * appears in [idSet].
+     * Matches targets whose underlying Android View has an id (or React Native `testID`) included
+     * in [maskXMLViewIds].
      *
-     * @param idSet set of normalized resource entry names to match against.
+     * Two lookups are performed against the same configured set:
+     *  - `resources.getResourceEntryName(view.id)` — applies to Views with a non-[View.NO_ID] id
+     *    that resolves to a resource entry.
+     *  - The value stored in `com.facebook.react.R.id.react_test_id` on the View, if React Native
+     *    is on the runtime classpath. RN's framework writes the JS `testID` prop into that tag.
+     */
+    internal val xmlViewIdsMatcher: MaskMatcher = xmlIdMatcher(maskXMLViewIdSet)
+
+    /**
+     * Matches targets whose underlying Android View has an id (or React Native `testID`) included
+     * in [unmaskXMLViewIds]. Counterpart to [xmlViewIdsMatcher] — same lookup, different set.
+     */
+    internal val unmaskXMLViewIdsMatcher: MaskMatcher = xmlIdMatcher(unmaskXMLViewIdSet)
+
+    /**
+     * Builds a [MaskMatcher] that checks whether a target view's XML resource entry name or
+     * React Native test id (when RN is on the runtime classpath) appears in [idSet].
+     *
+     * @param idSet the set of normalized identifiers to match against.
      */
     private fun xmlIdMatcher(idSet: Set<String>): MaskMatcher = object : MaskMatcher {
         fun View.idNameOrNull(): String? =
@@ -100,25 +128,16 @@ data class PrivacyProfile(
             else runCatching { resources.getResourceEntryName(id) }.getOrNull()
 
         override fun isMatch(target: MaskTarget): Boolean {
-            val id = target.view.idNameOrNull() ?: return false
-            return idSet.contains(id)
+            val view = target.view
+            view.idNameOrNull()?.let { if (idSet.contains(it)) return true }
+            reactTestIdResId?.let { resId ->
+                (view.getTag(resId) as? String)?.let { testId ->
+                    if (idSet.contains(testId)) return true
+                }
+            }
+            return false
         }
     }
-
-    /**
-     * Matches targets whose underlying Android View's resource entry name is included in
-     * [maskXMLViewIds].
-     *
-     * IDs are compared using `resources.getResourceEntryName(view.id)`, so this only applies to
-     * Views with a non-[View.NO_ID] id that resolves to a resource entry.
-     */
-    internal val xmlViewIdsMatcher: MaskMatcher = xmlIdMatcher(maskXMLViewIdSet)
-
-    /**
-     * Matches targets whose underlying Android View's resource entry name is included in
-     * [unmaskXMLViewIds]. Same id resolution as [xmlViewIdsMatcher].
-     */
-    internal val unmaskXMLViewIdsMatcher: MaskMatcher = xmlIdMatcher(unmaskXMLViewIdSet)
 
     /**
      * This matcher will match most text inputs, but there may be special cases where it will
@@ -192,6 +211,7 @@ data class PrivacyProfile(
         // Prefer cheaper checks first; heavier checks should be later.
         if (maskTextInputs) add(textInputMatcher)
         if (maskText) add(textMatcher)
+        if (maskImageViews) add(imageViewMatcher)
         if (viewClassSet.isNotEmpty()) add(viewsMatcher)
         if (maskBySemanticsKeywords) add(sensitiveMatcher)
         if (webViewClassNameSet.isNotEmpty()) add(webViewClassHierarchyMatcher)
@@ -272,5 +292,18 @@ data class PrivacyProfile(
             "com.tencent.smtt.sdk.WebView",
             "com.uc.webview.export.WebView",
         )
+
+        /**
+         * Resource id of the `react_test_id` tag, where React Native stores the JS `testID` prop on
+         * each view. Resolved reflectively to avoid a compile-time dependency on React Native;
+         * `null` when the RN library isn't on the classpath.
+         */
+        internal val reactTestIdResId: Int? by lazy {
+            runCatching {
+                Class.forName("com.facebook.react.R\$id")
+                    .getField("react_test_id")
+                    .getInt(null)
+            }.getOrNull()
+        }
     }
 }
