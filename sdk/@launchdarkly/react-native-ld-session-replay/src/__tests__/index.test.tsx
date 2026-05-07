@@ -22,12 +22,12 @@ describe('configureSessionReplay', () => {
   });
 
   it('prepends LDMask / LDUnmask sentinels to the user lists', async () => {
-    // act
+    // configure with user-supplied testID lists
     await configureSessionReplay('mob-key-123', {
       maskTestIDs: ['password'],
       unmaskTestIDs: ['safe'],
     });
-    // assert: sentinels come first; user-supplied entries are preserved in order
+    // sentinels are prepended; user entries follow in their original order
     expect(NativeSessionReplayReactNative.configure).toHaveBeenCalledWith(
       'mob-key-123',
       expect.objectContaining({
