@@ -5,7 +5,7 @@ go 1.25.0
 replace github.com/highlight/highlight/sdk/highlight-go => ../../sdk/highlight-go
 
 require (
-	github.com/gofiber/fiber/v2 v2.52.9
+	github.com/gofiber/fiber/v2 v2.52.13
 	github.com/highlight/highlight/sdk/highlight-go v0.10.2
 	github.com/labstack/echo/v4 v4.11.4
 	github.com/pkg/errors v0.9.1
@@ -51,6 +51,6 @@ require (
 	golang.org/x/time v0.12.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260401024825-9d38bb4040a9 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260401024825-9d38bb4040a9 // indirect
-	google.golang.org/grpc v1.80.0 // indirect
+	google.golang.org/grpc v1.81.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 )
