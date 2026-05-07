@@ -20,6 +20,22 @@ describe('configureSessionReplay', () => {
   it('rejects if key is whitespace', async () => {
     await expect(configureSessionReplay('   ')).rejects.toThrow();
   });
+
+  it('prepends LDMask / LDUnmask sentinels to the user lists', async () => {
+    // configure with user-supplied testID lists
+    await configureSessionReplay('mob-key-123', {
+      maskTestIDs: ['password'],
+      unmaskTestIDs: ['safe'],
+    });
+    // sentinels are prepended; user entries follow in their original order
+    expect(NativeSessionReplayReactNative.configure).toHaveBeenCalledWith(
+      'mob-key-123',
+      expect.objectContaining({
+        maskTestIDs: ['__LD_INTERNAL_MASK__', 'password'],
+        unmaskTestIDs: ['__LD_INTERNAL_UNMASK__', 'safe'],
+      })
+    );
+  });
 });
 
 describe('afterIdentify', () => {
@@ -165,9 +181,14 @@ describe('SessionReplayPluginAdapter', () => {
 
     await new Promise(process.nextTick);
 
+    // configure receives the user options plus the LDMask / LDUnmask sentinel testIDs
+    // that withInternalSentinels prepends.
     expect(NativeSessionReplayReactNative.configure).toHaveBeenCalledWith(
       'mob-key-123',
-      {}
+      {
+        maskTestIDs: ['__LD_INTERNAL_MASK__'],
+        unmaskTestIDs: ['__LD_INTERNAL_UNMASK__'],
+      }
     );
     expect(
       NativeSessionReplayReactNative.startSessionReplay

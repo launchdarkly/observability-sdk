@@ -1,11 +1,12 @@
 import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { LDMask, LDUnmask } from '@launchdarkly/session-replay-react-native';
 
 /**
- * Manual test screen for `maskTestIDs` / `unmaskTestIDs`. The plugin in `App.tsx` is configured
- * with `maskTestIDs: ['password', 'ssn']` and `unmaskTestIDs: ['safe']`. Each row's testID is
- * picked to exercise a specific case; the inline comment on each row explains the expected
- * behavior under whatever values of `maskLabels` / `maskImages` are currently set in the plugin
- * config.
+ * Manual test screen for `maskTestIDs` / `unmaskTestIDs` and the `<LDMask>` / `<LDUnmask>`
+ * wrappers. The plugin in `App.tsx` is configured with `maskTestIDs: ['password', 'ssn']` and
+ * `unmaskTestIDs: ['safe']`. Each row's testID (or wrapper) is picked to exercise a specific
+ * case; the inline comment on each row explains the expected behavior under whatever values of
+ * `maskLabels` / `maskImages` are currently set in the plugin config.
  *
  * Section headers use `testID="safe"` so they remain readable in the recording regardless of
  * `maskLabels`.
@@ -75,6 +76,31 @@ export default function MaskingScreen() {
           testID="other"
         </Text>
       </View>
+
+      <Text testID="safe" style={styles.sectionHeader}>
+        LDMask / LDUnmask
+      </Text>
+
+      {/* Always masked: <LDMask> applies explicit-mask to its subtree. */}
+      <LDMask>
+        <Text style={styles.row}>LDMask wrapping Text — always masked</Text>
+      </LDMask>
+
+      {/* Always unmasked: <LDUnmask> overrides maskLabels for its subtree. */}
+      <LDUnmask>
+        <Text style={styles.row}>
+          LDUnmask wrapping Text — always visible (overrides maskLabels)
+        </Text>
+      </LDUnmask>
+
+      {/* Masked: ancestor LDMask wins over descendant LDUnmask. */}
+      <LDMask>
+        <LDUnmask>
+          <Text style={styles.row}>
+            LDMask &gt; LDUnmask &gt; Text — masked (mask wins over unmask)
+          </Text>
+        </LDUnmask>
+      </LDMask>
     </ScrollView>
   );
 }
