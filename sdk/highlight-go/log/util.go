@@ -238,6 +238,16 @@ func SubmitHTTPLog(ctx context.Context, tracer trace.Tracer, projectID int, lg L
 // parenKeySyntax matches a parenthesis pattern, i.e. `cs(Referrer)`
 var parenKeySyntax = regexp.MustCompile(`(.+)\((.+)\)`)
 
+// jsonExpansionAllowlist names attribute keys whose string values are expected
+// to be JSON-encoded objects/arrays and should be parsed and flattened, so the
+// resulting map keys (e.g. `url.query_params.foo`) round-trip through
+// flat.Unflatten on the read side. Keep this list small — every distinct
+// child key becomes a permanent entry in the ClickHouse
+// Map(LowCardinality(String), String) dictionary.
+var jsonExpansionAllowlist = map[string]bool{
+	"url.query_params": true,
+}
+
 func formatAttributes(k string, v interface{}, depth uint8) map[string]string {
 	if depth >= MaxLogAttributesDepth {
 		return nil
@@ -247,6 +257,14 @@ func formatAttributes(k string, v interface{}, depth uint8) map[string]string {
 	}
 	k = strings.ReplaceAll(k, " ", "_")
 	if vStr, ok := v.(string); ok {
+		if len(vStr) <= LogAttributeValueLengthLimit && jsonExpansionAllowlist[k] && looksLikeJSONObjectOrArray(vStr) {
+			var parsed interface{}
+			if err := json.Unmarshal([]byte(vStr), &parsed); err == nil {
+				if expanded := formatAttributes(k, parsed, depth+1); len(expanded) > 0 {
+					return expanded
+				}
+			}
+		}
 		if len(vStr) > LogAttributeValueLengthLimit {
 			vStr = vStr[:LogAttributeValueLengthLimit] + "..."
 		}
@@ -285,4 +303,18 @@ func formatAttributes(k string, v interface{}, depth uint8) map[string]string {
 
 func FormatAttributes(k string, v interface{}) map[string]string {
 	return formatAttributes(k, v, 0)
+}
+
+func looksLikeJSONObjectOrArray(s string) bool {
+	for i := 0; i < len(s); i++ {
+		switch s[i] {
+		case ' ', '\t', '\n', '\r':
+			continue
+		case '{', '[':
+			return true
+		default:
+			return false
+		}
+	}
+	return false
 }
