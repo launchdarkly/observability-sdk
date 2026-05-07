@@ -1,3 +1,5 @@
+import { View, type StyleProp, type ViewStyle } from 'react-native';
+import type { ReactNode } from 'react';
 import SessionReplayReactNative from './NativeSessionReplayReactNative';
 import type { SessionReplayOptions } from './NativeSessionReplayReactNative';
 import type {
@@ -19,6 +21,24 @@ import type {
 
 const MOBILE_KEY_REQUIRED_MESSAGE =
   'Session replay requires a non-empty mobile key. Provide metadata.sdkKey or metadata.mobileKey when initializing the LaunchDarkly client.';
+
+// testIDs reserved for <LDMask> / <LDUnmask>. Prepended to maskTestIDs / unmaskTestIDs
+// in withInternalSentinels before options are forwarded to native.
+const LD_INTERNAL_MASK_TEST_ID = '__LD_INTERNAL_MASK__';
+const LD_INTERNAL_UNMASK_TEST_ID = '__LD_INTERNAL_UNMASK__';
+
+function withInternalSentinels(
+  options: SessionReplayOptions
+): SessionReplayOptions {
+  return {
+    ...options,
+    maskTestIDs: [LD_INTERNAL_MASK_TEST_ID, ...(options.maskTestIDs ?? [])],
+    unmaskTestIDs: [
+      LD_INTERNAL_UNMASK_TEST_ID,
+      ...(options.unmaskTestIDs ?? []),
+    ],
+  };
+}
 
 // Mirrors escapeKey() in LDObserveContext.kt (observability-android)
 function escapeContextKey(key: string): string {
@@ -89,7 +109,10 @@ export function configureSessionReplay(
   if (!key) {
     return Promise.reject(new Error(MOBILE_KEY_REQUIRED_MESSAGE));
   }
-  return SessionReplayReactNative.configure(key, options);
+  return SessionReplayReactNative.configure(
+    key,
+    withInternalSentinels(options)
+  );
 }
 
 export function startSessionReplay(): Promise<void> {
@@ -98,6 +121,38 @@ export function startSessionReplay(): Promise<void> {
 
 export function stopSessionReplay(): Promise<void> {
   return SessionReplayReactNative.stopSessionReplay();
+}
+
+export type LDMaskProps = {
+  children?: ReactNode;
+  style?: StyleProp<ViewStyle>;
+};
+
+/**
+ * Marks its children as sensitive in the session replay recording. Everything inside
+ * is rendered as a mask, regardless of `maskLabels`, `maskImages`, or other global
+ * rules. An ancestor `<LDMask>` overrides any `<LDUnmask>` further down the tree —
+ * once a subtree is masked, nothing inside it can opt back in.
+ */
+export function LDMask({ children, style }: LDMaskProps) {
+  return (
+    <View collapsable={false} testID={LD_INTERNAL_MASK_TEST_ID} style={style}>
+      {children}
+    </View>
+  );
+}
+
+/**
+ * Marks its children as explicitly *not* sensitive in the session replay recording.
+ * Overrides global rules like `maskLabels: true` for the wrapped subtree. An ancestor
+ * `<LDMask>` still wins.
+ */
+export function LDUnmask({ children, style }: LDMaskProps) {
+  return (
+    <View collapsable={false} testID={LD_INTERNAL_UNMASK_TEST_ID} style={style}>
+      {children}
+    </View>
+  );
 }
 
 class SessionReplayHook implements Hook {
