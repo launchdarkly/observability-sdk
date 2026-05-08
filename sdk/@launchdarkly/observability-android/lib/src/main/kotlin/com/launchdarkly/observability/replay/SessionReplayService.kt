@@ -17,6 +17,7 @@ import com.launchdarkly.observability.replay.transport.BatchWorker
 import com.launchdarkly.observability.replay.transport.EventQueue
 import com.launchdarkly.observability.context.LDObserveContext
 import com.launchdarkly.observability.sdk.SessionReplayServicing
+import com.launchdarkly.observability.util.requireMainThread
 import io.opentelemetry.android.session.SessionManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -72,19 +73,30 @@ class SessionReplayService(
     private val instrumentationScope = CoroutineScope(DispatcherProviderHolder.current.default + SupervisorJob())
     private var captureJob: Job? = null
     private val shouldCapture = MutableStateFlow(false)
-    private val isEnabled = MutableStateFlow(options.enabled)
+    private val _isEnabled = MutableStateFlow(options.enabled)
     private var processLifecycleObserver: DefaultLifecycleObserver? = null
     private var isInstalled: Boolean = false
     private var exporter: SessionReplayExporter? = null
     private val pendingIdentifyLock = Any()
     private var pendingIdentify: IdentifyItemPayload? = null
 
-    fun initialize() {
-        if (isInstalled) return
+    /**
+     * Installs replay instrumentation. Idempotent.
+     *
+     * Returns `true` if the service is now installed (by this call or a previous one).
+     * Callers must consult the return value before publishing this service as the live replay
+     * backend (e.g. via [com.launchdarkly.observability.sdk.LDReplay.init]); binding an
+     * uninstalled service permanently routes pre-init buffered calls into a non-functional
+     * instance.
+     */
+    fun initialize(): Boolean {
+        requireMainThread { "SessionReplayService must be initialized on the main thread" }
+
+        if (isInstalled) return true
 
         val sm = observabilityContext.sessionManager ?: run {
-            logger.warn("SessionReplayService.initialize() called before sessionManager is available; skipping.")
-            return
+            logger.error("SessionReplayService.initialize() called before sessionManager is available; skipping.")
+            return false
         }
         sessionManager = sm
 
@@ -126,13 +138,14 @@ class SessionReplayService(
         interactionSource?.attachToApplication(application)
 
         isInstalled = true
+        return true
     }
 
     private fun startCollectors() {
         // Images collector
         instrumentationScope.launch {
             captureManager?.captureFlow?.collect { capture ->
-                if (!isEnabled.value) return@collect
+                if (!_isEnabled.value) return@collect
                 eventQueue.send(ImageItemPayload(capture))
             }
         }
@@ -140,7 +153,7 @@ class SessionReplayService(
         // Interactions collector
         instrumentationScope.launch {
             interactionSource?.captureFlow?.collect { interaction ->
-                if (!isEnabled.value) return@collect
+                if (!_isEnabled.value) return@collect
                 eventQueue.send(InteractionItemPayload(interaction))
             }
         }
@@ -152,7 +165,7 @@ class SessionReplayService(
      */
     private fun startCaptureStateObserver() {
         instrumentationScope.launch {
-            combine(shouldCapture, isEnabled) { shouldRun, enabled -> shouldRun && enabled }
+            combine(shouldCapture, _isEnabled) { shouldRun, enabled -> shouldRun && enabled }
                 .collect { shouldRun ->
                     val running = captureJob?.isActive == true
                     if (shouldRun == running) return@collect
@@ -196,14 +209,17 @@ class SessionReplayService(
         shouldCapture.value = false
     }
 
-    override fun start() {
-        isEnabled.value = true
-        flushPendingIdentify()
-    }
-
-    override fun stop() {
-        isEnabled.value = false
-    }
+    /**
+     * Whether replay capture is enabled. Setting to `true` flushes any identify payload that
+     * was cached while disabled (mirroring the previous `start()` behaviour); setting to
+     * `false` simply pauses event production (mirroring `stop()`).
+     */
+    override var isEnabled: Boolean
+        get() = _isEnabled.value
+        set(value) {
+            _isEnabled.value = value
+            if (value) flushPendingIdentify()
+        }
 
     override fun flush() {
         batchWorker.flush()
@@ -298,7 +314,7 @@ class SessionReplayService(
         )
 
         // When replay is disabled, cache the identify payload for later session init without sending it now.
-        if (!isEnabled.value) {
+        if (!_isEnabled.value) {
             synchronized(pendingIdentifyLock) {
                 pendingIdentify = event
             }

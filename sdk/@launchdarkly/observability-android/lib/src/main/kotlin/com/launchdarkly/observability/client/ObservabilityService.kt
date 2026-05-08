@@ -23,6 +23,7 @@ import com.launchdarkly.observability.sampling.SamplingConfig
 import com.launchdarkly.observability.sampling.SamplingLogProcessor
 import com.launchdarkly.observability.traces.EventSpanProcessor
 import com.launchdarkly.observability.traces.OtlpTraceExporter
+import com.launchdarkly.observability.util.requireMainThread
 import io.opentelemetry.android.OpenTelemetryRum
 import io.opentelemetry.android.OpenTelemetryRumBuilder
 import io.opentelemetry.android.config.OtelRumConfig
@@ -108,6 +109,8 @@ class ObservabilityService(
     private val scope = CoroutineScope(DispatcherProviderHolder.current.io + SupervisorJob())
 
     init {
+        requireMainThread { "ObservabilityService must be initialized on the main thread" }
+
         registerOtlpExporters()
         val otelRumConfig = createOtelRumConfig()
 

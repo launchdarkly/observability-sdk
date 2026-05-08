@@ -87,7 +87,7 @@ open class BaseApplication : Application() {
             .anonymous(true)
             .build()
 
-        LDClient.init(this@BaseApplication, ldConfig, context, 1)
+        LDClient.init(this@BaseApplication, ldConfig, context, 0)
 
         if (testUrl == null) {
             // intervenes in E2E tests by trigger spans
@@ -98,7 +98,7 @@ open class BaseApplication : Application() {
     }
 
     // example on creating OBS/SR without flagging
-    open fun realIndependentInit() {
+    open fun realInitIndependent() {
         val effectiveOptions = testUrl?.let {
             observabilityOptions.copy(backendUrl = it, otlpEndpoint = it)
         } ?: observabilityOptions
@@ -107,25 +107,29 @@ open class BaseApplication : Application() {
             .anonymous(true)
             .build()
 
-        LDObserve.init(
-            application = this@BaseApplication,
-            mobileKey = LAUNCHDARKLY_MOBILE_KEY,
-            ldContext = context,
-            options = effectiveOptions,
-            replayOptions = ReplayOptions(
-                enabled = false,
-                privacyProfile = PrivacyProfile(
-                    maskText = false,
-                    maskWebViews = true,
-                    maskViews = listOf(
-                        view(ImageView::class.java),
-                    ),
-                    maskXMLViewIds = listOf("smoothieTitle")
+        Thread {
+            LDObserve.init(
+                application = this@BaseApplication,
+                mobileKey = LAUNCHDARKLY_MOBILE_KEY,
+                ldContext = context,
+                options = effectiveOptions,
+                replayOptions = ReplayOptions(
+                    enabled = false,
+                    privacyProfile = PrivacyProfile(
+                        maskText = false,
+                        maskWebViews = true,
+                        maskViews = listOf(
+                            view(ImageView::class.java),
+                        ),
+                        maskXMLViewIds = listOf("smoothieTitle")
+                    )
                 )
             )
-        )
 
-        LDReplay.start()
+            LDReplay.start()
+
+       }.start()
+
     }
 
     fun flagEvaluation() {
