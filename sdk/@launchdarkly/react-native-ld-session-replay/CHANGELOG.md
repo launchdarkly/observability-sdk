@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.10.0](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.9.0...session-replay-react-native-0.10.0) (2026-05-08)
+
+
+### Features
+
+* **react-native:** add &lt;LDMask&gt; and &lt;LDUnmask&gt; wrapper components ([#535](https://github.com/launchdarkly/observability-sdk/issues/535)) ([2b25a7e](https://github.com/launchdarkly/observability-sdk/commit/2b25a7ee0db223a6770a36f21eac576c5d3ade9f))
+* **react-native:** drop accessibilityIdentifiers options; mark minimumAlpha iOS-only ([#538](https://github.com/launchdarkly/observability-sdk/issues/538)) ([e3c1ba4](https://github.com/launchdarkly/observability-sdk/commit/e3c1ba4e793f3b88076a39e711410825b5b29e9b))
+
 ## [0.9.0](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.8.0...session-replay-react-native-0.9.0) (2026-05-06)
 
 
