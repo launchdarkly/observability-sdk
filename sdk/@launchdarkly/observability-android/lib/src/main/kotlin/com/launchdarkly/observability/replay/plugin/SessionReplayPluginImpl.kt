@@ -49,12 +49,18 @@ class SessionReplayPluginImpl(
      * Initializes the service produced by [register] and publishes it to [LDReplay], draining
      * any pre-init buffer.
      *
-     * No-ops if [register] was never called or bailed (see its KDoc). Callers in the LDClient
-     * plugin path invoke this from `onPluginsReady` unconditionally, so the silent skip is
-     * expected, not a bug.
+     * Logs a warning and returns if [register] was never called or bailed (see its KDoc). The
+     * LDClient plugin path invokes this from `onPluginsReady` unconditionally, so this no-op
+     * branch is reachable on a legitimate cause (e.g. another plugin instance already won the
+     * global registration race) — that's why we warn instead of throwing.
      */
     fun initialize() {
-        val service = sessionReplayService ?: return
+        val service = sessionReplayService ?: run {
+            logger.warning(
+                "Session Replay initialize() called before register() produced a service; skipping."
+            )
+            return
+        }
         service.initialize()
         LDReplay.init(service)
     }
