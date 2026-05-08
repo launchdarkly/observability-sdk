@@ -10,10 +10,72 @@ import java.util.concurrent.CountDownLatch
  * Several pieces of OpenTelemetry / Android instrumentation can only be installed on the UI thread
  * (e.g. lifecycle observers, view-tree listeners). These helpers centralise the looper check so we
  * don't repeat `Looper.myLooper() == Looper.getMainLooper()` everywhere.
+ *
+ * Production code uses [AndroidLooperMainThreadExecutor] (delegates to Android's main `Looper`).
+ * Plain JVM unit tests can override the executor via the test fixtures hook
+ * `com.launchdarkly.observability.testing.ObservabilityMainThreadTestHooks` so they don't have to
+ * mock `android.os.Looper`.
  */
 
+/** Strategy that backs [isMainThread], [runOnMainThread], and [postOnMainThread]. */
+internal interface MainThreadExecutor {
+    fun isMainThread(): Boolean
+    fun runOnMainThread(block: () -> Unit)
+    fun postOnMainThread(block: () -> Unit)
+}
+
+/** Production executor: delegates to Android's main [Looper]. */
+internal object AndroidLooperMainThreadExecutor : MainThreadExecutor {
+    override fun isMainThread(): Boolean =
+        Looper.myLooper() == Looper.getMainLooper()
+
+    override fun runOnMainThread(block: () -> Unit) {
+        if (isMainThread()) {
+            block()
+            return
+        }
+        val latch = CountDownLatch(1)
+        var thrown: Throwable? = null
+        Handler(Looper.getMainLooper()).post {
+            try {
+                block()
+            } catch (t: Throwable) {
+                thrown = t
+            } finally {
+                latch.countDown()
+            }
+        }
+        latch.await()
+        thrown?.let { throw it }
+    }
+
+    override fun postOnMainThread(block: () -> Unit) {
+        Handler(Looper.getMainLooper()).post(block)
+    }
+}
+
+/**
+ * Holds the active [MainThreadExecutor]. Mirrors [com.launchdarkly.observability.coroutines.DispatcherProviderHolder]
+ * so test fixtures can swap implementations without exposing the seam to SDK consumers.
+ */
+internal object MainThreadExecutorHolder {
+    @Volatile
+    private var executor: MainThreadExecutor = AndroidLooperMainThreadExecutor
+
+    val current: MainThreadExecutor
+        get() = executor
+
+    internal fun set(executor: MainThreadExecutor) {
+        this.executor = executor
+    }
+
+    internal fun reset() {
+        executor = AndroidLooperMainThreadExecutor
+    }
+}
+
 /** Returns `true` when the calling thread is the Android main (UI) looper thread. */
-internal fun isMainThread(): Boolean = Looper.myLooper() == Looper.getMainLooper()
+internal fun isMainThread(): Boolean = MainThreadExecutorHolder.current.isMainThread()
 
 /**
  * Throws [IllegalStateException] (via [check]) when invoked from a non-main thread.
@@ -46,25 +108,8 @@ internal inline fun requireMainThread(
  * (the typical case for "kick off main-thread initialization"), use [postOnMainThread] instead
  * to sidestep the deadlock hazard entirely.
  */
-internal fun runOnMainThread(block: () -> Unit) {
-    if (isMainThread()) {
-        block()
-        return
-    }
-    val latch = CountDownLatch(1)
-    var thrown: Throwable? = null
-    Handler(Looper.getMainLooper()).post {
-        try {
-            block()
-        } catch (t: Throwable) {
-            thrown = t
-        } finally {
-            latch.countDown()
-        }
-    }
-    latch.await()
-    thrown?.let { throw it }
-}
+internal fun runOnMainThread(block: () -> Unit) =
+    MainThreadExecutorHolder.current.runOnMainThread(block)
 
 /**
  * Schedules [block] to run on the Android main thread without blocking the caller.
@@ -79,6 +124,5 @@ internal fun runOnMainThread(block: () -> Unit) {
  * Exceptions thrown by [block] propagate on the main looper just like any other posted runnable
  * (i.e. they crash the process). Wrap [block] internally if you need to swallow or report them.
  */
-internal fun postOnMainThread(block: () -> Unit) {
-    Handler(Looper.getMainLooper()).post(block)
-}
+internal fun postOnMainThread(block: () -> Unit) =
+    MainThreadExecutorHolder.current.postOnMainThread(block)

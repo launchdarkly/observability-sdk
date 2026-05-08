@@ -1,6 +1,7 @@
 package com.launchdarkly.observability.sdk
 
 import android.app.Activity
+import com.launchdarkly.observability.testing.ObservabilityMainThreadTestHooks
 import io.mockk.mockk
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -47,11 +48,15 @@ class LDReplayTest {
     fun setUp() {
         // LDReplay is a global singleton; reset every piece of state between tests.
         LDReplay.resetForTest()
+        // Post-init writes through PreInitReplayBuffer dispatch via runOnMainThread, which would
+        // hit Android's main Looper. Swap to a synchronous executor for the duration of the test.
+        ObservabilityMainThreadTestHooks.overrideWithSynchronous()
     }
 
     @AfterEach
     fun tearDown() {
         LDReplay.resetForTest()
+        ObservabilityMainThreadTestHooks.reset()
     }
 
     @Test

@@ -5,6 +5,7 @@ import com.launchdarkly.observability.api.ObservabilityOptions
 import com.launchdarkly.observability.client.ObservabilityContext
 import com.launchdarkly.observability.replay.plugin.SessionReplayPluginImpl
 import com.launchdarkly.observability.sdk.LDReplay
+import com.launchdarkly.observability.testing.ObservabilityMainThreadTestHooks
 import io.mockk.mockk
 import io.mockk.unmockkAll
 import org.junit.jupiter.api.AfterEach
@@ -27,11 +28,15 @@ class SessionReplayTest {
     fun setUp() {
         // LDReplay is the global entry point this class wires up; reset it between tests.
         LDReplay.resetForTest()
+        // SessionReplayService.initialize() and PreInitReplayBuffer dispatches both go through
+        // the main-thread executor, which would otherwise hit Android's main Looper.
+        ObservabilityMainThreadTestHooks.overrideWithSynchronous()
     }
 
     @AfterEach
     fun tearDown() {
         LDReplay.resetForTest()
+        ObservabilityMainThreadTestHooks.reset()
         unmockkAll()
     }
 
