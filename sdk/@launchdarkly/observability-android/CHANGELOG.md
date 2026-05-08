@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.46.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.45.0...launchdarkly-observability-android-0.46.0) (2026-05-08)
+
+
+### Features
+
+* Android LDObserve / LDReplay thread-safe API ([#537](https://github.com/launchdarkly/observability-sdk/issues/537)) ([9381073](https://github.com/launchdarkly/observability-sdk/commit/9381073eced2933a4b2e7d04ad90cbdb15c0ff3f))
+
 ## [0.45.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.44.0...launchdarkly-observability-android-0.45.0) (2026-05-05)
 
 
