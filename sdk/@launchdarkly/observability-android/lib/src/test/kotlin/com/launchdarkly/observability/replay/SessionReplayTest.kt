@@ -36,12 +36,22 @@ class SessionReplayTest {
     }
 
     @Test
-    fun `register creates service and wires up LDReplay`() {
+    fun `register creates service but defers wiring LDReplay`() {
         val sessionReplay = SessionReplayPluginImpl()
 
         sessionReplay.register(newContext())
 
         assertNotNull(sessionReplay.sessionReplayService)
+        assertNull(LDReplay.client)
+    }
+
+    @Test
+    fun `initialize wires up LDReplay after service creation`() {
+        val sessionReplay = SessionReplayPluginImpl()
+
+        sessionReplay.register(newContext())
+        sessionReplay.initialize()
+
         assertNotNull(LDReplay.client)
         assertTrue(LDReplay.client is SessionReplayService)
     }

@@ -87,16 +87,14 @@ open class BaseApplication : Application() {
             .anonymous(true)
             .build()
 
-        Thread {
-            LDClient.init(this@BaseApplication, ldConfig, context, 0)
+        LDClient.init(this@BaseApplication, ldConfig, context, 0)
 
-            if (testUrl == null) {
-                // intervenes in E2E tests by trigger spans
-                flagEvaluation()
-            }
+        if (testUrl == null) {
+            // intervenes in E2E tests by trigger spans
+            flagEvaluation()
+        }
 
-            LDReplay.start()
-        }.start()
+        LDReplay.start()
     }
 
     // example on creating OBS/SR without flagging

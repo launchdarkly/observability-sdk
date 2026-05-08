@@ -30,21 +30,19 @@ class SessionReplayPluginImpl(
      * No-ops if Session Replay has already been registered globally on [LDReplay].
      */
     fun register(observabilityContext: ObservabilityContext) {
-        if (LDReplay.client != null) {
+        if (sessionReplayService != null || LDReplay.client != null) {
             logger.warning("Session Replay instance already exists; skipping.")
             return
         }
 
         val service = SessionReplayService(options, observabilityContext)
-        LDReplay.init(service)
         sessionReplayService = service
     }
 
     fun initialize() {
-        val service = checkNotNull(sessionReplayService) {
-            "SessionReplayService is not registered; call register() before initialize()."
-        }
+        val service = sessionReplayService ?: return
         service.initialize()
+        LDReplay.init(service)
     }
 
     companion object {

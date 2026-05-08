@@ -12,7 +12,7 @@ import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.observability.interfaces.Observe
 import com.launchdarkly.observability.replay.ReplayOptions
 import com.launchdarkly.observability.replay.plugin.SessionReplayPluginImpl
-import com.launchdarkly.observability.util.postOnMainThread
+import com.launchdarkly.observability.util.runOnMainThread
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Severity
@@ -136,38 +136,64 @@ class LDObserve(private val client: Observe) : Observe {
                 application = application,
                 logger = logger
             )
-            context = obsContext
 
             val resource = buildResource(mobileKey, options)
             obsContext.resourceAttributes = resource.attributes
 
-            // ObservabilityService and SessionReplayService both require main-thread initialization
-            // (they install OpenTelemetry instrumentations that touch UI/lifecycle state). Post
-            // the work fire-and-forget rather than waiting for it: blocking here can deadlock
-            // bridge callers (e.g. .NET MAUI startup) that hold the main thread waiting on the
-            // background thread that's currently executing this method, and even on main-thread
-            // callers it would freeze the UI for the duration of OTel RUM construction.
-            //
-            // Trade-off: SDK calls made on the same caller frame as [init] (e.g. a `recordError`
-            // immediately after) may hit the no-op delegate until the next looper tick. The
-            // delegate publication via `@Volatile` makes the swap visible as soon as it lands.
-            postOnMainThread {
-                val service = ObservabilityService(
-                    application, mobileKey, resource, logger, options,
-                )
-                obsContext.sessionManager = service.sessionManager
-                init(service)
-
+            // ObservabilityService and SessionReplayService install OpenTelemetry instrumentations
+            // that touch UI / lifecycle state, so their construction must run on the main thread.
+            // runOnMainThread blocks the caller until the work completes (via CountDownLatch), so
+            // the SDK is ready as soon as init returns regardless of which thread called it.
+            // NOTE: the calling thread must not hold any lock the main thread is waiting on, or
+            // this will deadlock — see runOnMainThread KDoc.
+            runOnMainThread {
+                installObservability(application, mobileKey, resource, logger, options, obsContext)
                 if (replayOptions != null) {
-                    val plugin = SessionReplayPluginImpl(replayOptions)
-                    sessionReplayPlugin = plugin
-                    plugin.register(obsContext)
-                    plugin.sessionReplayService?.initialize()
-                    plugin.sessionReplayService?.let { replayService ->
-                        CoroutineScope(Dispatchers.Default + SupervisorJob()).launch {
-                            replayService.identifySession(ldContext)
-                        }
-                    }
+                    installSessionReplay(replayOptions, obsContext, ldContext)
+                }
+            }
+        }
+
+        /**
+         * Constructs the [ObservabilityService], publishes it as the active [LDObserve] delegate,
+         * and finishes wiring [obsContext] (sessionManager + global publication).
+         *
+         * Must run on the main thread; called from inside the [runOnMainThread] block in [init].
+         */
+        private fun installObservability(
+            application: Application,
+            mobileKey: String,
+            resource: Resource,
+            logger: ObserveLogger,
+            options: ObservabilityOptions,
+            obsContext: ObservabilityContext,
+        ) {
+            val service = ObservabilityService(
+                application, mobileKey, resource, logger, options,
+            )
+            obsContext.sessionManager = service.sessionManager
+            context = obsContext
+            init(service)
+        }
+
+        /**
+         * Creates the Session Replay plugin, registers + initializes it (which drains any pre-init
+         * buffer in [LDReplay]), and kicks off the initial identify in the background.
+         *
+         * Must run on the main thread; called from inside the [runOnMainThread] block in [init].
+         */
+        private fun installSessionReplay(
+            replayOptions: ReplayOptions,
+            obsContext: ObservabilityContext,
+            ldContext: LDObserveContext,
+        ) {
+            val plugin = SessionReplayPluginImpl(replayOptions)
+            sessionReplayPlugin = plugin
+            plugin.register(obsContext)
+            plugin.initialize()
+            plugin.sessionReplayService?.let { replayService ->
+                CoroutineScope(Dispatchers.Default + SupervisorJob()).launch {
+                    replayService.identifySession(ldContext)
                 }
             }
         }

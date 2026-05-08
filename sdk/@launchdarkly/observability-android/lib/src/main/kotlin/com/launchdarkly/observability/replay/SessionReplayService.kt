@@ -86,7 +86,7 @@ class SessionReplayService(
         if (isInstalled) return
 
         val sm = observabilityContext.sessionManager ?: run {
-            logger.warn("SessionReplayService.initialize() called before sessionManager is available; skipping.")
+            logger.error("SessionReplayService.initialize() called before sessionManager is available; skipping.")
             return
         }
         sessionManager = sm
