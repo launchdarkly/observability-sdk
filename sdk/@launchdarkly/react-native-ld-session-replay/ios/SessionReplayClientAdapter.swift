@@ -187,14 +187,8 @@ extension SessionReplayClientAdapter {
       )
     }
 
-    // testID-based mask/unmask accepts either the new `*TestIDs` keys or the deprecated
-    // `*AccessibilityIdentifiers` keys; if both are present, the lists are combined.
-    let maskTestIDs =
-      (dictionary["maskTestIDs"] as? [String] ?? [])
-      + (dictionary["maskAccessibilityIdentifiers"] as? [String] ?? [])
-    let unmaskTestIDs =
-      (dictionary["unmaskTestIDs"] as? [String] ?? [])
-      + (dictionary["unmaskAccessibilityIdentifiers"] as? [String] ?? [])
+    let maskTestIDs = dictionary["maskTestIDs"] as? [String] ?? []
+    let unmaskTestIDs = dictionary["unmaskTestIDs"] as? [String] ?? []
 
     // RN's <Text> renders to RCTTextView (Paper) or RCTParagraphComponentView (Fabric), neither
     // of which extends UILabel — so the iOS SDK's `maskLabels` (which matches UILabel) doesn't
@@ -214,8 +208,7 @@ extension SessionReplayClientAdapter {
       ignoreUIViews: [], /// Not supported, since AnyClass has type erased and it is very likely is not serializable
       maskAccessibilityIdentifiers: maskTestIDs,
       unmaskAccessibilityIdentifiers: unmaskTestIDs,
-      ignoreAccessibilityIdentifiers:
-        dictionary["ignoreAccessibilityIdentifiers"] as? [String] ?? [],
+      ignoreAccessibilityIdentifiers: [],
       minimumAlpha:
         CGFloat((dictionary["minimumAlpha"] as? NSNumber)?.doubleValue ?? 0.02)
     )

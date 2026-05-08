@@ -20,16 +20,9 @@ export type SessionReplayOptions = {
   unmaskTestIDs?: string[];
 
   /**
-   * @deprecated Use `maskTestIDs` instead.
+   * iOS only. Mask views whose effective opacity is below this threshold (0.0–1.0).
+   * Defaults to `0.02`. Has no effect on Android.
    */
-  maskAccessibilityIdentifiers?: string[];
-
-  /**
-   * @deprecated Use `unmaskTestIDs` instead.
-   */
-  unmaskAccessibilityIdentifiers?: string[];
-
-  ignoreAccessibilityIdentifiers?: string[];
   minimumAlpha?: number;
 };
 
