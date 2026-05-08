@@ -80,14 +80,25 @@ class SessionReplayService(
     private val pendingIdentifyLock = Any()
     private var pendingIdentify: IdentifyItemPayload? = null
 
-    fun initialize() {
+    /**
+     * Installs replay instrumentation. Idempotent.
+     *
+     * Returns `true` if the service is now installed (either by this call or a previous one),
+     * `false` if installation could not proceed (currently: [observabilityContext]'s
+     * `sessionManager` is still null — typically because the [com.launchdarkly.observability.plugin.Observability]
+     * plugin hasn't registered yet on the LDClient plugin path). Callers must consult the
+     * return value before publishing this service as the live replay backend (e.g. via
+     * [com.launchdarkly.observability.sdk.LDReplay.init]); binding an uninstalled service
+     * permanently routes pre-init buffered calls into a non-functional instance.
+     */
+    fun initialize(): Boolean {
         requireMainThread { "SessionReplayService must be initialized on the main thread" }
 
-        if (isInstalled) return
+        if (isInstalled) return true
 
         val sm = observabilityContext.sessionManager ?: run {
             logger.error("SessionReplayService.initialize() called before sessionManager is available; skipping.")
-            return
+            return false
         }
         sessionManager = sm
 
@@ -129,6 +140,7 @@ class SessionReplayService(
         interactionSource?.attachToApplication(application)
 
         isInstalled = true
+        return true
     }
 
     private fun startCollectors() {

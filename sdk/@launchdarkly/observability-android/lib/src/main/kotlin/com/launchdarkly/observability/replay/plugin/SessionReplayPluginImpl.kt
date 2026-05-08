@@ -53,6 +53,13 @@ class SessionReplayPluginImpl(
      * LDClient plugin path invokes this from `onPluginsReady` unconditionally, so this no-op
      * branch is reachable on a legitimate cause (e.g. another plugin instance already won the
      * global registration race) — that's why we warn instead of throwing.
+     *
+     * If [SessionReplayService.initialize] reports that installation could not proceed (e.g.
+     * the Observability plugin hasn't populated `ObservabilityContext.sessionManager` yet on
+     * the LDClient plugin path), we deliberately skip [LDReplay.init]. Binding an
+     * uninstalled service would drain the pre-init buffer into an instance with no
+     * `sessionManager`, no exporter, and no lifecycle observers, leaving every subsequent
+     * `LDReplay` call permanently routed to a no-op with no recovery path.
      */
     fun initialize() {
         val service = sessionReplayService ?: run {
@@ -61,7 +68,13 @@ class SessionReplayPluginImpl(
             )
             return
         }
-        service.initialize()
+        if (!service.initialize()) {
+            logger.warning(
+                "Session Replay service did not install (likely because Observability " +
+                    "is not registered or its sessionManager is unavailable); skipping LDReplay wiring."
+            )
+            return
+        }
         LDReplay.init(service)
     }
 
