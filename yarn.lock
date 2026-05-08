@@ -41418,6 +41418,19 @@ __metadata:
   languageName: node
   linkType: hard
 
+"react-native-webview@npm:13.16.1":
+  version: 13.16.1
+  resolution: "react-native-webview@npm:13.16.1"
+  dependencies:
+    escape-string-regexp: "npm:^4.0.0"
+    invariant: "npm:2.2.4"
+  peerDependencies:
+    react: "*"
+    react-native: "*"
+  checksum: 10/3b97550ccc7ad3f205342a9bdea31c83b2d8b9ab011d76a30a8b8f7a2738a0579238b1502bd0101e6210b3af6037dca8cf38276ad1705687d72a8fd3ed0138dd
+  languageName: node
+  linkType: hard
+
 "react-native@npm:0.76.6":
   version: 0.76.6
   resolution: "react-native@npm:0.76.6"
@@ -43479,6 +43492,7 @@ __metadata:
     react-native-builder-bob: "npm:^0.40.17"
     react-native-dotenv: "npm:^3.4.11"
     react-native-monorepo-config: "npm:^0.3.1"
+    react-native-webview: "npm:13.16.1"
   languageName: unknown
   linkType: soft
 
