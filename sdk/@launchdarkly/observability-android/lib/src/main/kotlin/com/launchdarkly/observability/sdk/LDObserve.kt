@@ -1,19 +1,18 @@
 package com.launchdarkly.observability.sdk
 
 import android.app.Application
-import com.launchdarkly.observability.BuildConfig
 import com.launchdarkly.observability.api.ObservabilityOptions
 import com.launchdarkly.observability.context.LDObserveContext
 import com.launchdarkly.observability.context.ObserveLogger
 import com.launchdarkly.observability.bridge.AttributeConverter
 import com.launchdarkly.observability.client.ObservabilityContext
 import com.launchdarkly.observability.client.ObservabilityService
+import com.launchdarkly.observability.client.buildObservabilityResource
 import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.observability.interfaces.Observe
 import com.launchdarkly.observability.replay.ReplayOptions
 import com.launchdarkly.observability.replay.plugin.SessionReplayPluginImpl
 import com.launchdarkly.observability.util.runOnMainThread
-import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Severity
 import io.opentelemetry.api.trace.Span
@@ -137,7 +136,7 @@ class LDObserve(private val client: Observe) : Observe {
                 logger = logger
             )
 
-            val resource = buildResource(mobileKey, options)
+            val resource = buildObservabilityResource(sdkKey = mobileKey, options = options)
             obsContext.resourceAttributes = resource.attributes
 
             // ObservabilityService and SessionReplayService install OpenTelemetry instrumentations
@@ -197,29 +196,6 @@ class LDObserve(private val client: Observe) : Observe {
                 }
             }
         }
-
-        private fun buildResource(sdkKey: String, options: ObservabilityOptions): Resource {
-            val attributes = Attributes.builder()
-            Resource.getDefault().attributes.forEach { key, value ->
-                if (key.key != "service.name") {
-                    @Suppress("UNCHECKED_CAST")
-                    attributes.put(key as AttributeKey<Any>, value)
-                }
-            }
-            attributes.put("highlight.project_id", sdkKey)
-            attributes.put(
-                AttributeKey.stringKey("telemetry.distro.name"),
-                SDK_NAME
-            )
-            attributes.put(
-                AttributeKey.stringKey("telemetry.distro.version"),
-                BuildConfig.OBSERVABILITY_SDK_VERSION
-            )
-            attributes.putAll(options.resourceAttributes)
-            return Resource.create(attributes.build())
-        }
-
-        private const val SDK_NAME = "launchdarkly-observability-android"
 
         override fun recordMetric(metric: Metric) = delegate.recordMetric(metric)
         override fun recordCount(metric: Metric) = delegate.recordCount(metric)

@@ -20,7 +20,7 @@ object LDReplay {
      * Hook proxy for cross-platform bridges (C# / MAUI, React Native, etc.).
      */
     val hookProxy: SessionReplayHookProxy?
-        get() = state.client?.let { SessionReplayHookProxy(it) }
+        get() = state.liveReplayService?.let { SessionReplayHookProxy(it) }
 
     /**
      * Whether session replay capture is currently enabled.
@@ -39,12 +39,12 @@ object LDReplay {
             state.setEnabled(value)
         }
 
-    /** Convenience for `isEnabled = true`. Starts session replay capture. */
+    /** Starts session replay capture. */
     fun start() {
         isEnabled = true
     }
 
-    /** Convenience for `isEnabled = false`. Pauses session replay capture. */
+    /** Pauses session replay capture. */
     fun stop() {
         isEnabled = false
     }
@@ -87,12 +87,13 @@ object LDReplay {
     }
 
     /**
-     * Read-only access to the live replay service. Used by SDK-internal call sites such as
-     * [com.launchdarkly.observability.replay.plugin.SessionReplayPluginImpl] to detect duplicate
-     * registrations. Tests should use [init] / [resetForTest] rather than mutating this directly.
+     * Read-only snapshot of the live replay service (or `null` before [init] has run). Used by
+     * SDK-internal call sites such as [com.launchdarkly.observability.replay.plugin.SessionReplayPluginImpl]
+     * to detect duplicate registrations. Tests should use [init] / [resetForTest] rather than
+     * mutating this directly.
      */
-    internal val client: SessionReplayServicing?
-        get() = state.client
+    internal val liveReplayService: SessionReplayServicing?
+        get() = state.liveReplayService
 
     /**
      * Wires LDReplay to the active Session Replay service.

@@ -41,14 +41,14 @@ class SessionReplay(
     }
 
     override fun register(client: LDClient, metadata: EnvironmentMetadata?) {
-        val context = LDObserve.context ?: run {
+        val obsContext = LDObserve.context ?: run {
             logger.warning(
                 "Observability is not initialized; skipping SessionReplay registration. " +
                     "Ensure the Observability plugin is registered before SessionReplay."
             )
             return
         }
-        impl.register(context)
+        impl.register(obsContext)
         sessionReplayHook.delegate = impl.sessionReplayService
     }
 

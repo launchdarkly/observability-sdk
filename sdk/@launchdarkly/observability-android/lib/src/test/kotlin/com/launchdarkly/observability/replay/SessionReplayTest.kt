@@ -42,7 +42,7 @@ class SessionReplayTest {
         sessionReplay.register(newContext())
 
         assertNotNull(sessionReplay.sessionReplayService)
-        assertNull(LDReplay.client)
+        assertNull(LDReplay.liveReplayService)
     }
 
     @Test
@@ -52,8 +52,8 @@ class SessionReplayTest {
         sessionReplay.register(newContext())
         sessionReplay.initialize()
 
-        assertNotNull(LDReplay.client)
-        assertTrue(LDReplay.client is SessionReplayService)
+        assertNotNull(LDReplay.liveReplayService)
+        assertTrue(LDReplay.liveReplayService is SessionReplayService)
     }
 
     @Test

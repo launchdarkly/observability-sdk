@@ -73,7 +73,7 @@ class SessionReplayService(
     private val instrumentationScope = CoroutineScope(DispatcherProviderHolder.current.default + SupervisorJob())
     private var captureJob: Job? = null
     private val shouldCapture = MutableStateFlow(false)
-    private val enabledState = MutableStateFlow(options.enabled)
+    private val _isEnabled = MutableStateFlow(options.enabled)
     private var processLifecycleObserver: DefaultLifecycleObserver? = null
     private var isInstalled: Boolean = false
     private var exporter: SessionReplayExporter? = null
@@ -135,7 +135,7 @@ class SessionReplayService(
         // Images collector
         instrumentationScope.launch {
             captureManager?.captureFlow?.collect { capture ->
-                if (!enabledState.value) return@collect
+                if (!_isEnabled.value) return@collect
                 eventQueue.send(ImageItemPayload(capture))
             }
         }
@@ -143,7 +143,7 @@ class SessionReplayService(
         // Interactions collector
         instrumentationScope.launch {
             interactionSource?.captureFlow?.collect { interaction ->
-                if (!enabledState.value) return@collect
+                if (!_isEnabled.value) return@collect
                 eventQueue.send(InteractionItemPayload(interaction))
             }
         }
@@ -155,7 +155,7 @@ class SessionReplayService(
      */
     private fun startCaptureStateObserver() {
         instrumentationScope.launch {
-            combine(shouldCapture, enabledState) { shouldRun, enabled -> shouldRun && enabled }
+            combine(shouldCapture, _isEnabled) { shouldRun, enabled -> shouldRun && enabled }
                 .collect { shouldRun ->
                     val running = captureJob?.isActive == true
                     if (shouldRun == running) return@collect
@@ -205,9 +205,9 @@ class SessionReplayService(
      * `false` simply pauses event production (mirroring `stop()`).
      */
     override var isEnabled: Boolean
-        get() = enabledState.value
+        get() = _isEnabled.value
         set(value) {
-            enabledState.value = value
+            _isEnabled.value = value
             if (value) flushPendingIdentify()
         }
 
@@ -304,7 +304,7 @@ class SessionReplayService(
         )
 
         // When replay is disabled, cache the identify payload for later session init without sending it now.
-        if (!enabledState.value) {
+        if (!_isEnabled.value) {
             synchronized(pendingIdentifyLock) {
                 pendingIdentify = event
             }
