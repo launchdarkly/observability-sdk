@@ -58,7 +58,7 @@ open class BaseApplication : Application() {
     var testUrl: String? = null
 
     // example on creating OBS/SR with flagging sdk
-    open fun realInitLD() {
+    open fun realInit() {
         val observabilityPlugin = Observability(
             application = this@BaseApplication,
             mobileKey = LAUNCHDARKLY_MOBILE_KEY,
@@ -98,7 +98,7 @@ open class BaseApplication : Application() {
     }
 
     // example on creating OBS/SR without flagging
-    open fun realInit() {
+    open fun realInitIndependent() {
         val effectiveOptions = testUrl?.let {
             observabilityOptions.copy(backendUrl = it, otlpEndpoint = it)
         } ?: observabilityOptions
