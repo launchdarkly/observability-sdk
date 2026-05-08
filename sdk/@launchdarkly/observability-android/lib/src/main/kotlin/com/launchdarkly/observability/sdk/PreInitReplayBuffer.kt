@@ -18,12 +18,17 @@ import com.launchdarkly.observability.util.runOnMainThread
  *  - `pendingIdentify`: most recent pre-init [afterIdentify] only — older identifies are stale.
  *
  * Concurrency:
- *  - [isEnabled] reads are lock-free via `@Volatile`; everything else holds a private monitor
- *    so the setters' "check [liveReplayService], then write buffer" can't race [bind]'s
- *    publish + clear.
+ *  - [isEnabled] reads hold the private monitor so they observe a consistent snapshot of
+ *    ([liveReplayService], `pendingEnabled`). Reading the two `@Volatile` fields lock-free
+ *    is unsafe during [bind]: a reader can read `liveReplayService = null` (stale) and then
+ *    `pendingEnabled = null` (cleared by `bind`), reporting `false` even when the buffered
+ *    `true` was already applied to the live service. JMM happens-before flows forward from
+ *    the later volatile read, not backward to the earlier one.
+ *  - Setters and [bind] hold the same monitor so the setters' "check [liveReplayService],
+ *    then write buffer" can't race [bind]'s publish + clear.
  *  - [bind] writes in the order: apply buffers → publish [liveReplayService] → clear buffers,
- *    so any reader seeing a cleared buffer also sees the published service (JMM volatile
- *    ordering).
+ *    so single-field readers of [liveReplayService] (e.g. consumers of the public getter)
+ *    that observe the live service can rely on its state already being correct.
  *  - [runOnMainThread] dispatch happens outside the lock to avoid blocking on the main looper
  *    while the monitor is held.
  */
@@ -39,7 +44,16 @@ internal class PreInitReplayBuffer {
     private var pendingIdentify: PendingIdentify? = null
 
     val isEnabled: Boolean
-        get() = liveReplayService?.isEnabled ?: pendingEnabled ?: false
+        get() {
+            // Snapshot both fields under the same monitor [bind] uses, otherwise a reader can
+            // observe the dual-field tear documented in the class header and return `false`
+            // mid-bind. The live service's `isEnabled` itself is read outside the lock —
+            // the lock only needs to protect the (liveReplayService, pendingEnabled) pair.
+            val service = synchronized(this) {
+                liveReplayService ?: return pendingEnabled ?: false
+            }
+            return service.isEnabled
+        }
 
     fun setEnabled(value: Boolean) {
         val target: SessionReplayServicing? = synchronized(this) {
