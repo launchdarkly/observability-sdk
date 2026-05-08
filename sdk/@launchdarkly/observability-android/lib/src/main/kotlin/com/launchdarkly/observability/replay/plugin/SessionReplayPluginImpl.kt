@@ -49,33 +49,27 @@ class SessionReplayPluginImpl(
      * Initializes the service produced by [register] and publishes it to [LDReplay], draining
      * any pre-init buffer.
      *
-     * Logs a warning and returns if [register] was never called or bailed (see its KDoc). The
-     * LDClient plugin path invokes this from `onPluginsReady` unconditionally, so this no-op
-     * branch is reachable on a legitimate cause (e.g. another plugin instance already won the
-     * global registration race) — that's why we warn instead of throwing.
-     *
-     * If [SessionReplayService.initialize] reports that installation could not proceed (e.g.
-     * the Observability plugin hasn't populated `ObservabilityContext.sessionManager` yet on
-     * the LDClient plugin path), we deliberately skip [LDReplay.init]. Binding an
-     * uninstalled service would drain the pre-init buffer into an instance with no
-     * `sessionManager`, no exporter, and no lifecycle observers, leaving every subsequent
-     * `LDReplay` call permanently routed to a no-op with no recovery path.
+     * Returns `true` when the live service was published to [LDReplay] — i.e. post-init steps
+     * that depend on a fully installed service (most notably the initial `identifySession`
+     * kick-off in [com.launchdarkly.observability.sdk.LDObserve.init]) are safe to run.
+     * Callers without post-publish work can ignore the return value.
      */
-    fun initialize() {
+    fun initialize(): Boolean {
         val service = sessionReplayService ?: run {
             logger.warning(
                 "Session Replay initialize() called before register() produced a service; skipping."
             )
-            return
+            return false
         }
         if (!service.initialize()) {
             logger.warning(
                 "Session Replay service did not install (likely because Observability " +
                     "is not registered or its sessionManager is unavailable); skipping LDReplay wiring."
             )
-            return
+            return false
         }
         LDReplay.init(service)
+        return true
     }
 
     companion object {

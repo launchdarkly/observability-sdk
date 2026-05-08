@@ -177,7 +177,8 @@ class LDObserve(private val client: Observe) : Observe {
 
         /**
          * Creates the Session Replay plugin, registers + initializes it (which drains any pre-init
-         * buffer in [LDReplay]), and kicks off the initial identify in the background.
+         * buffer in [LDReplay]), and — only if the underlying service was actually installed and
+         * published — kicks off the initial identify in the background.
          *
          * Must run on the main thread; called from inside the [runOnMainThread] block in [init].
          */
@@ -189,11 +190,10 @@ class LDObserve(private val client: Observe) : Observe {
             val plugin = SessionReplayPluginImpl(replayOptions)
             sessionReplayPlugin = plugin
             plugin.register(obsContext)
-            plugin.initialize()
-            plugin.sessionReplayService?.let { replayService ->
-                CoroutineScope(Dispatchers.Default + SupervisorJob()).launch {
-                    replayService.identifySession(ldContext)
-                }
+            if (!plugin.initialize()) return
+            val replayService = plugin.sessionReplayService ?: return
+            CoroutineScope(Dispatchers.Default + SupervisorJob()).launch {
+                replayService.identifySession(ldContext)
             }
         }
 

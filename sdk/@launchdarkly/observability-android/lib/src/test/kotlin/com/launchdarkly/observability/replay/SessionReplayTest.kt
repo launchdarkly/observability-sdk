@@ -11,9 +11,11 @@ import io.mockk.mockk
 import io.mockk.unmockkAll
 import io.mockk.verify
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertSame
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
@@ -64,17 +66,16 @@ class SessionReplayTest {
             sessionReplayService = service
         }
 
-        sessionReplay.initialize()
+        val published = sessionReplay.initialize()
 
+        assertTrue(published)
         assertSame(service, LDReplay.liveReplayService)
     }
 
     @Test
     fun `initialize skips LDReplay wiring when service install fails`() {
-        // Reproduces the bug where SessionReplayService.initialize() bails out (e.g. because
-        // ObservabilityContext.sessionManager is still null on the LDClient plugin path):
-        // the plugin must NOT publish a non-functional service to LDReplay, otherwise every
-        // subsequent LDReplay call routes to a dead instance with no recovery path.
+        // sessionReplayService is set by register() regardless of install outcome, so the
+        // boolean return is the only signal callers can rely on to gate post-publish work.
         val service = mockk<SessionReplayService>(relaxed = true)
         every { service.initialize() } returns false
         val sessionReplay = SessionReplayPluginImpl().apply {
@@ -82,10 +83,21 @@ class SessionReplayTest {
             sessionReplayService = service
         }
 
-        sessionReplay.initialize()
+        val published = sessionReplay.initialize()
 
+        assertFalse(published)
         assertNull(LDReplay.liveReplayService)
         verify(exactly = 1) { service.initialize() }
+    }
+
+    @Test
+    fun `initialize returns false when register was never called`() {
+        val sessionReplay = SessionReplayPluginImpl()
+
+        val published = sessionReplay.initialize()
+
+        assertFalse(published)
+        assertNull(LDReplay.liveReplayService)
     }
 
     @Test
