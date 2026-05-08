@@ -3,6 +3,7 @@ package com.launchdarkly.observability.replay
 import com.launchdarkly.observability.network.SamplingConfigResponse
 import com.launchdarkly.observability.sampling.SamplingConfig
 import kotlinx.serialization.EncodeDefault
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -136,6 +137,7 @@ open class IntEnumSerializer<T : Enum<T>>(
     }
 }
 
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable
 data class EventNode(
     val type: NodeType,

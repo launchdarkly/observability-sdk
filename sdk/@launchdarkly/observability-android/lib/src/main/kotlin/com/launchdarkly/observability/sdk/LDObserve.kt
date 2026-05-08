@@ -1,18 +1,18 @@
 package com.launchdarkly.observability.sdk
 
 import android.app.Application
-import com.launchdarkly.observability.BuildConfig
 import com.launchdarkly.observability.api.ObservabilityOptions
 import com.launchdarkly.observability.context.LDObserveContext
 import com.launchdarkly.observability.context.ObserveLogger
 import com.launchdarkly.observability.bridge.AttributeConverter
 import com.launchdarkly.observability.client.ObservabilityContext
 import com.launchdarkly.observability.client.ObservabilityService
+import com.launchdarkly.observability.client.buildObservabilityResource
 import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.observability.interfaces.Observe
 import com.launchdarkly.observability.replay.ReplayOptions
-import com.launchdarkly.observability.replay.plugin.SessionReplayImpl
-import io.opentelemetry.api.common.AttributeKey
+import com.launchdarkly.observability.replay.plugin.SessionReplayPluginImpl
+import com.launchdarkly.observability.util.runOnMainThread
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Severity
 import io.opentelemetry.api.trace.Span
@@ -104,7 +104,7 @@ class LDObserve(private val client: Observe) : Observe {
         }
 
         @Volatile
-        private var sessionReplayPlugin: SessionReplayImpl? = null
+        private var sessionReplayPlugin: SessionReplayPluginImpl? = null
 
         /**
          * Standalone initialization that sets up observability (and optionally session replay)
@@ -135,52 +135,67 @@ class LDObserve(private val client: Observe) : Observe {
                 application = application,
                 logger = logger
             )
-            context = obsContext
 
-            val resource = buildResource(mobileKey, options)
+            val resource = buildObservabilityResource(sdkKey = mobileKey, options = options)
             obsContext.resourceAttributes = resource.attributes
 
+            // ObservabilityService and SessionReplayService install OpenTelemetry instrumentations
+            // that touch UI / lifecycle state, so their construction must run on the main thread.
+            // runOnMainThread blocks the caller until the work completes (via CountDownLatch), so
+            // the SDK is ready as soon as init returns regardless of which thread called it.
+            // NOTE: the calling thread must not hold any lock the main thread is waiting on, or
+            // this will deadlock — see runOnMainThread KDoc.
+            runOnMainThread {
+                installObservability(application, mobileKey, resource, logger, options, obsContext)
+                if (replayOptions != null) {
+                    installSessionReplay(replayOptions, obsContext, ldContext)
+                }
+            }
+        }
+
+        /**
+         * Constructs the [ObservabilityService], publishes it as the active [LDObserve] delegate,
+         * and finishes wiring [obsContext] (sessionManager + global publication).
+         *
+         * Must run on the main thread; called from inside the [runOnMainThread] block in [init].
+         */
+        private fun installObservability(
+            application: Application,
+            mobileKey: String,
+            resource: Resource,
+            logger: ObserveLogger,
+            options: ObservabilityOptions,
+            obsContext: ObservabilityContext,
+        ) {
             val service = ObservabilityService(
                 application, mobileKey, resource, logger, options,
             )
             obsContext.sessionManager = service.sessionManager
+            context = obsContext
             init(service)
-
-            if (replayOptions != null) {
-                val plugin = SessionReplayImpl(replayOptions)
-                sessionReplayPlugin = plugin
-                plugin.register()
-                plugin.sessionReplayService?.initialize()
-                plugin.sessionReplayService?.let { replayService ->
-                    CoroutineScope(Dispatchers.Default + SupervisorJob()).launch {
-                        replayService.identifySession(ldContext)
-                    }
-                }
-            }
         }
 
-        private fun buildResource(sdkKey: String, options: ObservabilityOptions): Resource {
-            val attributes = Attributes.builder()
-            Resource.getDefault().attributes.forEach { key, value ->
-                if (key.key != "service.name") {
-                    @Suppress("UNCHECKED_CAST")
-                    attributes.put(key as AttributeKey<Any>, value)
-                }
+        /**
+         * Creates the Session Replay plugin, registers + initializes it (which drains any pre-init
+         * buffer in [LDReplay]), and — only if the underlying service was actually installed and
+         * published — kicks off the initial identify in the background.
+         *
+         * Must run on the main thread; called from inside the [runOnMainThread] block in [init].
+         */
+        private fun installSessionReplay(
+            replayOptions: ReplayOptions,
+            obsContext: ObservabilityContext,
+            ldContext: LDObserveContext,
+        ) {
+            val plugin = SessionReplayPluginImpl(replayOptions)
+            sessionReplayPlugin = plugin
+            plugin.register(obsContext)
+            if (!plugin.initialize()) return
+            val replayService = plugin.sessionReplayService ?: return
+            CoroutineScope(Dispatchers.Default + SupervisorJob()).launch {
+                replayService.identifySession(ldContext)
             }
-            attributes.put("highlight.project_id", sdkKey)
-            attributes.put(
-                AttributeKey.stringKey("telemetry.distro.name"),
-                SDK_NAME
-            )
-            attributes.put(
-                AttributeKey.stringKey("telemetry.distro.version"),
-                BuildConfig.OBSERVABILITY_SDK_VERSION
-            )
-            attributes.putAll(options.resourceAttributes)
-            return Resource.create(attributes.build())
         }
-
-        private const val SDK_NAME = "launchdarkly-observability-android"
 
         override fun recordMetric(metric: Metric) = delegate.recordMetric(metric)
         override fun recordCount(metric: Metric) = delegate.recordCount(metric)

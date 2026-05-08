@@ -3,73 +3,111 @@ package com.launchdarkly.observability.replay
 import com.launchdarkly.observability.context.ObserveLogger
 import com.launchdarkly.observability.api.ObservabilityOptions
 import com.launchdarkly.observability.client.ObservabilityContext
-import com.launchdarkly.observability.replay.plugin.SessionReplayImpl
-import com.launchdarkly.observability.sdk.LDObserve
+import com.launchdarkly.observability.replay.plugin.SessionReplayPluginImpl
 import com.launchdarkly.observability.sdk.LDReplay
+import com.launchdarkly.observability.testing.ObservabilityMainThreadTestHooks
+import io.mockk.every
 import io.mockk.mockk
 import io.mockk.unmockkAll
+import io.mockk.verify
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 class SessionReplayTest {
 
+    private fun newContext(): ObservabilityContext = ObservabilityContext(
+        sdkKey = "test-sdk-key",
+        options = ObservabilityOptions(),
+        application = mockk(),
+        logger = mockk<ObserveLogger>(relaxed = true),
+    )
+
     @BeforeEach
     fun setUp() {
-        LDObserve.context = null
-        LDReplay.client = null
+        // LDReplay is the global entry point this class wires up; reset it between tests.
+        LDReplay.resetForTest()
+        // SessionReplayService.initialize() and PreInitReplayBuffer dispatches both go through
+        // the main-thread executor, which would otherwise hit Android's main Looper.
+        ObservabilityMainThreadTestHooks.overrideWithSynchronous()
     }
 
     @AfterEach
     fun tearDown() {
-        LDObserve.context = null
-        LDReplay.client = null
+        LDReplay.resetForTest()
+        ObservabilityMainThreadTestHooks.reset()
         unmockkAll()
     }
 
     @Test
-    fun `register creates service and wires up when observability is initialized`() {
-        LDObserve.context = ObservabilityContext(
-            sdkKey = "test-sdk-key",
-            options = ObservabilityOptions(),
-            application = mockk(),
-            logger = mockk<ObserveLogger>(relaxed = true),
-        )
-        val sessionReplay = SessionReplayImpl()
+    fun `register creates service but defers wiring LDReplay`() {
+        val sessionReplay = SessionReplayPluginImpl()
 
-        sessionReplay.register()
+        sessionReplay.register(newContext())
 
         assertNotNull(sessionReplay.sessionReplayService)
-        assertNotNull(LDReplay.client)
-        assertTrue(LDReplay.client is SessionReplayService)
+        assertNull(LDReplay.liveReplayService)
     }
 
     @Test
-    fun `register does nothing when observability is not initialized`() {
-        val sessionReplay = SessionReplayImpl()
-        sessionReplay.register()
+    fun `initialize wires up LDReplay when service install succeeds`() {
+        // Substitute a stub service for the one register() created so we can decide the
+        // SessionReplayService.initialize() outcome without standing up a real SessionManager,
+        // ProcessLifecycleOwner, etc. — none of which are available in plain JVM tests.
+        val service = mockk<SessionReplayService>(relaxed = true)
+        every { service.initialize() } returns true
+        val sessionReplay = SessionReplayPluginImpl().apply {
+            register(newContext())
+            sessionReplayService = service
+        }
 
-        assertNull(sessionReplay.sessionReplayService)
-        assertNull(LDReplay.client)
+        val published = sessionReplay.initialize()
+
+        assertTrue(published)
+        assertSame(service, LDReplay.liveReplayService)
     }
 
     @Test
-    fun `register does nothing when session replay already exists`() {
-        LDObserve.context = ObservabilityContext(
-            sdkKey = "test-sdk-key",
-            options = ObservabilityOptions(),
-            application = mockk(),
-            logger = mockk<ObserveLogger>(relaxed = true),
-        )
-        LDReplay.client = mockk<SessionReplayService>(relaxed = true)
-        val sessionReplay = SessionReplayImpl()
+    fun `initialize skips LDReplay wiring when service install fails`() {
+        // sessionReplayService is set by register() regardless of install outcome, so the
+        // boolean return is the only signal callers can rely on to gate post-publish work.
+        val service = mockk<SessionReplayService>(relaxed = true)
+        every { service.initialize() } returns false
+        val sessionReplay = SessionReplayPluginImpl().apply {
+            register(newContext())
+            sessionReplayService = service
+        }
 
-        sessionReplay.register()
+        val published = sessionReplay.initialize()
+
+        assertFalse(published)
+        assertNull(LDReplay.liveReplayService)
+        verify(exactly = 1) { service.initialize() }
+    }
+
+    @Test
+    fun `initialize returns false when register was never called`() {
+        val sessionReplay = SessionReplayPluginImpl()
+
+        val published = sessionReplay.initialize()
+
+        assertFalse(published)
+        assertNull(LDReplay.liveReplayService)
+    }
+
+    @Test
+    fun `register no-ops when LDReplay already has a client`() {
+        // Use the real wiring API to install a client; tests no longer poke fields directly.
+        LDReplay.init(mockk<SessionReplayService>(relaxed = true))
+        val sessionReplay = SessionReplayPluginImpl()
+
+        sessionReplay.register(newContext())
 
         assertNull(sessionReplay.sessionReplayService)
     }
-
 }
