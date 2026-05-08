@@ -4,7 +4,7 @@ import com.launchdarkly.observability.util.MainThreadExecutor
 import com.launchdarkly.observability.util.MainThreadExecutorHolder
 
 /**
- * Allows test modules to override the SDK's main-thread executor.
+ * Allows in-module unit tests to override the SDK's main-thread executor.
  *
  * The production executor delegates to Android's main `Looper`, which is unavailable in plain
  * JVM unit tests (calls to `Looper.myLooper()` throw "Method not mocked"). This hook installs
@@ -12,8 +12,11 @@ import com.launchdarkly.observability.util.MainThreadExecutorHolder
  * code paths guarded by `requireMainThread` / `runOnMainThread` without setting up Robolectric
  * or `unitTests.returnDefaultValues = true`.
  *
- * Mirrors [ObservabilityDispatcherTestHooks] in spirit: visible only via the test fixtures
- * artifact, never reachable by SDK consumers.
+ * Lives in `src/test/kotlin/` rather than `src/testFixtures/kotlin/` because Kotlin Gradle
+ * Plugin 2.0.21 does not generate a `compileDebugTestFixturesKotlin` task for AGP test fixtures
+ * variants, which would silently leave Kotlin sources under `src/testFixtures/kotlin/` out of
+ * the published jar. If/when consumer modules need this hook, either upgrade KGP (which adds
+ * Kotlin testFixtures support) or republish this file as Java/`src/testFixtures/java/`.
  *
  * Typical usage:
  *

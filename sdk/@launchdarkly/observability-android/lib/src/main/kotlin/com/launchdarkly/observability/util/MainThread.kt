@@ -12,9 +12,9 @@ import java.util.concurrent.CountDownLatch
  * don't repeat `Looper.myLooper() == Looper.getMainLooper()` everywhere.
  *
  * Production code uses [AndroidLooperMainThreadExecutor] (delegates to Android's main `Looper`).
- * Plain JVM unit tests can override the executor via the test fixtures hook
- * `com.launchdarkly.observability.testing.ObservabilityMainThreadTestHooks` so they don't have to
- * mock `android.os.Looper`.
+ * Plain JVM unit tests can override the executor via
+ * `com.launchdarkly.observability.testing.ObservabilityMainThreadTestHooks` (lives in this
+ * module's `src/test/kotlin/`) so they don't have to mock `android.os.Looper`.
  */
 
 /** Strategy that backs [isMainThread], [runOnMainThread], and [postOnMainThread]. */
