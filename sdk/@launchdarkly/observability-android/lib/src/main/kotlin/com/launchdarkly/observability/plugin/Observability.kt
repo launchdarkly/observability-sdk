@@ -139,6 +139,5 @@ class Observability(
 
     companion object {
         const val PLUGIN_NAME = "@launchdarkly/observability-android"
-        const val SDK_NAME = "launchdarkly-observability-android"
     }
 }
