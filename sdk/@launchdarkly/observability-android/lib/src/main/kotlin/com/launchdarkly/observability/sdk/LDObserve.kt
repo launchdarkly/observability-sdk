@@ -11,7 +11,8 @@ import com.launchdarkly.observability.client.ObservabilityService
 import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.observability.interfaces.Observe
 import com.launchdarkly.observability.replay.ReplayOptions
-import com.launchdarkly.observability.replay.plugin.SessionReplayImpl
+import com.launchdarkly.observability.replay.plugin.SessionReplayPluginImpl
+import com.launchdarkly.observability.util.postOnMainThread
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Severity
@@ -104,7 +105,7 @@ class LDObserve(private val client: Observe) : Observe {
         }
 
         @Volatile
-        private var sessionReplayPlugin: SessionReplayImpl? = null
+        private var sessionReplayPlugin: SessionReplayPluginImpl? = null
 
         /**
          * Standalone initialization that sets up observability (and optionally session replay)
@@ -140,20 +141,32 @@ class LDObserve(private val client: Observe) : Observe {
             val resource = buildResource(mobileKey, options)
             obsContext.resourceAttributes = resource.attributes
 
-            val service = ObservabilityService(
-                application, mobileKey, resource, logger, options,
-            )
-            obsContext.sessionManager = service.sessionManager
-            init(service)
+            // ObservabilityService and SessionReplayService both require main-thread initialization
+            // (they install OpenTelemetry instrumentations that touch UI/lifecycle state). Post
+            // the work fire-and-forget rather than waiting for it: blocking here can deadlock
+            // bridge callers (e.g. .NET MAUI startup) that hold the main thread waiting on the
+            // background thread that's currently executing this method, and even on main-thread
+            // callers it would freeze the UI for the duration of OTel RUM construction.
+            //
+            // Trade-off: SDK calls made on the same caller frame as [init] (e.g. a `recordError`
+            // immediately after) may hit the no-op delegate until the next looper tick. The
+            // delegate publication via `@Volatile` makes the swap visible as soon as it lands.
+            postOnMainThread {
+                val service = ObservabilityService(
+                    application, mobileKey, resource, logger, options,
+                )
+                obsContext.sessionManager = service.sessionManager
+                init(service)
 
-            if (replayOptions != null) {
-                val plugin = SessionReplayImpl(replayOptions)
-                sessionReplayPlugin = plugin
-                plugin.register()
-                plugin.sessionReplayService?.initialize()
-                plugin.sessionReplayService?.let { replayService ->
-                    CoroutineScope(Dispatchers.Default + SupervisorJob()).launch {
-                        replayService.identifySession(ldContext)
+                if (replayOptions != null) {
+                    val plugin = SessionReplayPluginImpl(replayOptions)
+                    sessionReplayPlugin = plugin
+                    plugin.register(obsContext)
+                    plugin.sessionReplayService?.initialize()
+                    plugin.sessionReplayService?.let { replayService ->
+                        CoroutineScope(Dispatchers.Default + SupervisorJob()).launch {
+                            replayService.identifySession(ldContext)
+                        }
                     }
                 }
             }

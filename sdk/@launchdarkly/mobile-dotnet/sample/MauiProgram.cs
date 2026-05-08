@@ -115,7 +115,9 @@ public static class MauiProgram
         ).Build();
 
         var context = LaunchDarkly.Sdk.Context.New("maui-user-key");
-        var client = LdClient.Init(ldConfig, context, TimeSpan.FromSeconds(0));
+        var client = Task.Run(() => LdClient.InitAsync(ldConfig, context)).GetAwaiter().GetResult();
+
+        //var client = LdClient.Init(ldConfig, context, TimeSpan.FromSeconds(0));
         var feature1 = client.BoolVariation("feature1", false);
         	Console.WriteLine($"feature1 sync value ={feature1}");
 

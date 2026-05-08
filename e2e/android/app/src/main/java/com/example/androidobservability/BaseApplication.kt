@@ -58,7 +58,7 @@ open class BaseApplication : Application() {
     var testUrl: String? = null
 
     // example on creating OBS/SR with flagging sdk
-    open fun realInit() {
+    open fun realInitLD() {
         val observabilityPlugin = Observability(
             application = this@BaseApplication,
             mobileKey = LAUNCHDARKLY_MOBILE_KEY,
@@ -87,18 +87,20 @@ open class BaseApplication : Application() {
             .anonymous(true)
             .build()
 
-        LDClient.init(this@BaseApplication, ldConfig, context, 1)
+        Thread {
+            LDClient.init(this@BaseApplication, ldConfig, context, 0)
 
-        if (testUrl == null) {
-            // intervenes in E2E tests by trigger spans
-            flagEvaluation()
-        }
+            if (testUrl == null) {
+                // intervenes in E2E tests by trigger spans
+                flagEvaluation()
+            }
 
-        LDReplay.start()
+            LDReplay.start()
+        }.start()
     }
 
     // example on creating OBS/SR without flagging
-    open fun realIndependentInit() {
+    open fun realInit() {
         val effectiveOptions = testUrl?.let {
             observabilityOptions.copy(backendUrl = it, otlpEndpoint = it)
         } ?: observabilityOptions
@@ -107,25 +109,29 @@ open class BaseApplication : Application() {
             .anonymous(true)
             .build()
 
-        LDObserve.init(
-            application = this@BaseApplication,
-            mobileKey = LAUNCHDARKLY_MOBILE_KEY,
-            ldContext = context,
-            options = effectiveOptions,
-            replayOptions = ReplayOptions(
-                enabled = false,
-                privacyProfile = PrivacyProfile(
-                    maskText = false,
-                    maskWebViews = true,
-                    maskViews = listOf(
-                        view(ImageView::class.java),
-                    ),
-                    maskXMLViewIds = listOf("smoothieTitle")
+        Thread {
+            LDObserve.init(
+                application = this@BaseApplication,
+                mobileKey = LAUNCHDARKLY_MOBILE_KEY,
+                ldContext = context,
+                options = effectiveOptions,
+                replayOptions = ReplayOptions(
+                    enabled = false,
+                    privacyProfile = PrivacyProfile(
+                        maskText = false,
+                        maskWebViews = true,
+                        maskViews = listOf(
+                            view(ImageView::class.java),
+                        ),
+                        maskXMLViewIds = listOf("smoothieTitle")
+                    )
                 )
             )
-        )
 
-        LDReplay.start()
+            LDReplay.start()
+
+       }.start()
+
     }
 
     fun flagEvaluation() {

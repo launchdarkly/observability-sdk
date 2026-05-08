@@ -3,8 +3,7 @@ package com.launchdarkly.observability.replay
 import com.launchdarkly.observability.context.ObserveLogger
 import com.launchdarkly.observability.api.ObservabilityOptions
 import com.launchdarkly.observability.client.ObservabilityContext
-import com.launchdarkly.observability.replay.plugin.SessionReplayImpl
-import com.launchdarkly.observability.sdk.LDObserve
+import com.launchdarkly.observability.replay.plugin.SessionReplayPluginImpl
 import com.launchdarkly.observability.sdk.LDReplay
 import io.mockk.mockk
 import io.mockk.unmockkAll
@@ -17,30 +16,30 @@ import org.junit.jupiter.api.Test
 
 class SessionReplayTest {
 
+    private fun newContext(): ObservabilityContext = ObservabilityContext(
+        sdkKey = "test-sdk-key",
+        options = ObservabilityOptions(),
+        application = mockk(),
+        logger = mockk<ObserveLogger>(relaxed = true),
+    )
+
     @BeforeEach
     fun setUp() {
-        LDObserve.context = null
-        LDReplay.client = null
+        // LDReplay is the global entry point this class wires up; reset it between tests.
+        LDReplay.resetForTest()
     }
 
     @AfterEach
     fun tearDown() {
-        LDObserve.context = null
-        LDReplay.client = null
+        LDReplay.resetForTest()
         unmockkAll()
     }
 
     @Test
-    fun `register creates service and wires up when observability is initialized`() {
-        LDObserve.context = ObservabilityContext(
-            sdkKey = "test-sdk-key",
-            options = ObservabilityOptions(),
-            application = mockk(),
-            logger = mockk<ObserveLogger>(relaxed = true),
-        )
-        val sessionReplay = SessionReplayImpl()
+    fun `register creates service and wires up LDReplay`() {
+        val sessionReplay = SessionReplayPluginImpl()
 
-        sessionReplay.register()
+        sessionReplay.register(newContext())
 
         assertNotNull(sessionReplay.sessionReplayService)
         assertNotNull(LDReplay.client)
@@ -48,28 +47,13 @@ class SessionReplayTest {
     }
 
     @Test
-    fun `register does nothing when observability is not initialized`() {
-        val sessionReplay = SessionReplayImpl()
-        sessionReplay.register()
+    fun `register no-ops when LDReplay already has a client`() {
+        // Use the real wiring API to install a client; tests no longer poke fields directly.
+        LDReplay.init(mockk<SessionReplayService>(relaxed = true))
+        val sessionReplay = SessionReplayPluginImpl()
 
-        assertNull(sessionReplay.sessionReplayService)
-        assertNull(LDReplay.client)
-    }
-
-    @Test
-    fun `register does nothing when session replay already exists`() {
-        LDObserve.context = ObservabilityContext(
-            sdkKey = "test-sdk-key",
-            options = ObservabilityOptions(),
-            application = mockk(),
-            logger = mockk<ObserveLogger>(relaxed = true),
-        )
-        LDReplay.client = mockk<SessionReplayService>(relaxed = true)
-        val sessionReplay = SessionReplayImpl()
-
-        sessionReplay.register()
+        sessionReplay.register(newContext())
 
         assertNull(sessionReplay.sessionReplayService)
     }
-
 }

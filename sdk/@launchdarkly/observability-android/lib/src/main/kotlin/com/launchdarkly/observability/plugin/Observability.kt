@@ -77,16 +77,16 @@ class Observability(
     override fun register(client: LDClient, metadata: EnvironmentMetadata?) {
         this.client = client
         val sdkKey = metadata?.credential ?: ""
-        if (mobileKey == sdkKey) {
-            LDObserve.context = ObservabilityContext(
-                sdkKey = sdkKey,
-                options = options,
-                application = application,
-                logger = logger
-            )
-        } else {
+        if (mobileKey != sdkKey) {
             logger.warn("ObservabilityContext could not be initialized for sdkKey: $sdkKey")
+            return
         }
+        LDObserve.context = ObservabilityContext(
+            sdkKey = sdkKey,
+            options = options,
+            application = application,
+            logger = logger
+        )
     }
 
     override fun getHooks(metadata: EnvironmentMetadata?): MutableList<Hook> {
@@ -96,50 +96,53 @@ class Observability(
     override fun onPluginsReady(result: RegistrationCompleteResult?, metadata: EnvironmentMetadata?) {
         val sdkKey = metadata?.credential ?: ""
 
-        client?.let { lDClient ->
-            if (mobileKey == sdkKey) {
-                val attributes = Attributes.builder()
-                Resource.getDefault().attributes.forEach { key, value ->
-                    if (key.key != "service.name") {
-                        @Suppress("UNCHECKED_CAST")
-                        attributes.put(key as AttributeKey<Any>, value)
-                    }
-                }
-                attributes.put("highlight.project_id", sdkKey)
-                distroAttributes.forEach { (key, value) ->
-                    attributes.put(AttributeKey.stringKey(key), value)
-                }
-                attributes.putAll(options.resourceAttributes)
+        if (client == null) {
+            logger.error("Observability could not be initialized: LDClient is null in onPluginsReady")
+            return
+        }
+        if (mobileKey != sdkKey) {
+            logger.warn("Observability could not be initialized for sdkKey: $sdkKey")
+            return
+        }
 
-                metadata?.applicationInfo?.applicationId?.let {
-                    attributes.put("launchdarkly.application.id", it)
-                }
-
-                metadata?.applicationInfo?.applicationVersion?.let {
-                    attributes.put("launchdarkly.application.version", it)
-                }
-
-                metadata?.sdkMetadata?.name?.let { sdkName ->
-                    metadata.sdkMetadata?.version?.let { sdkVersion ->
-                        attributes.put("launchdarkly.sdk.version", "$sdkName/$sdkVersion")
-                    }
-                }
-
-                val builtResource = Resource.create(attributes.build())
-                LDObserve.context?.resourceAttributes = builtResource.attributes
-
-                val client = ObservabilityService(
-                    application, sdkKey, builtResource, logger, options,
-                )
-                observabilityClient = client
-                LDObserve.context?.sessionManager = client.sessionManager
-                LDObserve.init(client)
-
-                observabilityHook.delegate = client.hookExporter
-            } else {
-                logger.warn("Observability could not be initialized for sdkKey: $sdkKey")
+        val attributes = Attributes.builder()
+        Resource.getDefault().attributes.forEach { key, value ->
+            if (key.key != "service.name") {
+                @Suppress("UNCHECKED_CAST")
+                attributes.put(key as AttributeKey<Any>, value)
             }
         }
+        attributes.put("highlight.project_id", sdkKey)
+        distroAttributes.forEach { (key, value) ->
+            attributes.put(AttributeKey.stringKey(key), value)
+        }
+        attributes.putAll(options.resourceAttributes)
+
+        metadata?.applicationInfo?.applicationId?.let {
+            attributes.put("launchdarkly.application.id", it)
+        }
+
+        metadata?.applicationInfo?.applicationVersion?.let {
+            attributes.put("launchdarkly.application.version", it)
+        }
+
+        metadata?.sdkMetadata?.name?.let { sdkName ->
+            metadata.sdkMetadata?.version?.let { sdkVersion ->
+                attributes.put("launchdarkly.sdk.version", "$sdkName/$sdkVersion")
+            }
+        }
+
+        val builtResource = Resource.create(attributes.build())
+        LDObserve.context?.resourceAttributes = builtResource.attributes
+
+        val client = ObservabilityService(
+            application, sdkKey, builtResource, logger, options,
+        )
+        observabilityClient = client
+        LDObserve.context?.sessionManager = client.sessionManager
+        LDObserve.init(client)
+
+        observabilityHook.delegate = client.hookExporter
     }
 
     fun getTelemetryInspector(): TelemetryInspector? {

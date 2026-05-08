@@ -1,5 +1,6 @@
 package com.launchdarkly.observability.replay.plugin
 
+import com.launchdarkly.observability.client.ObservabilityContext
 import com.launchdarkly.observability.replay.ReplayOptions
 import com.launchdarkly.observability.replay.SessionReplayService
 import com.launchdarkly.observability.sdk.LDObserve
@@ -7,29 +8,34 @@ import com.launchdarkly.observability.sdk.LDReplay
 import java.util.logging.Logger
 
 /**
- * Standalone Session Replay entry point.
+ * Shared Session Replay registration logic used by both initialization paths.
  *
  * Use this directly via [LDObserve.init] for the standalone path (no LDClient).
- * For the LDClient plugin path, use [SessionReplay] instead.
+ * For the LDClient plugin path, use [SessionReplay] (which delegates to this class) instead.
  */
-class SessionReplayImpl(
+class SessionReplayPluginImpl(
     private val options: ReplayOptions = ReplayOptions(),
 ) {
     @Volatile
     var sessionReplayService: SessionReplayService? = null
 
-    fun register() {
-        val context = LDObserve.context ?: run {
-            logger.warning("Observability is not initialized; skipping SessionReplay registration.")
-            return
-        }
-
+    /**
+     * Registers a [SessionReplayService] backed by [observabilityContext] and wires it into
+     * [LDReplay] as the active replay service.
+     *
+     * Dependencies are passed in explicitly rather than resolved from `LDObserve.context` so
+     * this class has no hidden coupling to global state — callers are responsible for ensuring
+     * observability has been initialized and providing its context.
+     *
+     * No-ops if Session Replay has already been registered globally on [LDReplay].
+     */
+    fun register(observabilityContext: ObservabilityContext) {
         if (LDReplay.client != null) {
             logger.warning("Session Replay instance already exists; skipping.")
             return
         }
 
-        val service = SessionReplayService(options, context)
+        val service = SessionReplayService(options, observabilityContext)
         LDReplay.init(service)
         sessionReplayService = service
     }
