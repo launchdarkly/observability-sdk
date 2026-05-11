@@ -104,4 +104,13 @@
 	<ItemGroup>
 		<None Include="..\README.md" Pack="true" PackagePath="README.md" />
 	</ItemGroup>
+
+	<!--
+		This is a packaging-only project (NoBuild=true). The .NET SDK's default
+		`Build` target asserts NETSDK1085 when invoked with NoBuild=true, which
+		breaks `dotnet build` at the solution level. Override `Build` as a no-op
+		in that case so solution builds succeed; `dotnet pack` still works
+		because it invokes the `Pack` target directly.
+	-->
+	<Target Name="Build" Condition="'$(NoBuild)' == 'true'" />
 </Project>

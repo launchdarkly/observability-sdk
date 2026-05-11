@@ -1,8 +1,11 @@
 <Project>
+	<!-- Inherit shared properties (e.g. UseLocalClientSdk) from the parent
+	     mobile-dotnet/Directory.Build.props. Without this Import, MSBuild stops at
+	     this file and never sees the parent. -->
+	<Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
 	<PropertyGroup>
 		<PackageId>LaunchDarkly.SessionReplay</PackageId>
-		<Version>0.10.1</Version>
-		<UseLocalClientSdk>false</UseLocalClientSdk>
+		<Version>0.10.2</Version>
 		<Authors>LaunchDarkly</Authors>
 		<Owners>LaunchDarkly</Owners>
 		<Company>LaunchDarkly</Company>

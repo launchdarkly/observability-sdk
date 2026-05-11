@@ -115,24 +115,37 @@ public static class MauiProgram
         ).Build();
 
         var context = LaunchDarkly.Sdk.Context.New("maui-user-key");
-        var client = Task.Run(() => LdClient.InitAsync(ldConfig, context)).GetAwaiter().GetResult();
+        
+		//async variant:
+		_ = Task.Run(async () =>
+        {
+            try
+            {
+                var client = await LdClient.InitAsync(ldConfig, context, TimeSpan.FromSeconds(5));
+                var feature1 = client.BoolVariation("feature1", false);
+                Console.WriteLine($"feature1 sync value ={feature1}");
 
-        //var client = LdClient.Init(ldConfig, context, TimeSpan.FromSeconds(0));
-        var feature1 = client.BoolVariation("feature1", false);
-        	Console.WriteLine($"feature1 sync value ={feature1}");
+                client.FlagTracker.FlagValueChanged += (sender, eventArgs) =>
+                {
+                    if (eventArgs.Key == "feature1")
+                    {
+                        Console.WriteLine($"feature1 changed from {eventArgs.OldValue} to {eventArgs.NewValue}");
+                    }
+                };
 
-        	client.FlagTracker.FlagValueChanged += (sender, eventArgs) =>
-        	{
-        		if (eventArgs.Key == "feature1")
-        		{
-        			Console.WriteLine($"feature1 changed from {eventArgs.OldValue} to {eventArgs.NewValue}");
-        		}
-        	};
+                LDObserve.RecordMetric("maui-app-start", 1.0);
+                LDObserve.RecordLog("maui-app-start", Severity.Info, new Dictionary<string, object?> { { "event", "app_start" } });
+                var span = LDObserve.StartActiveSpan("maui-app-start");
+                span?.End();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"LD init/startup failed: {ex}");
+            }
+        });
 
-        LDObserve.RecordMetric("maui-app-start", 1.0);
-		LDObserve.RecordLog("maui-app-start", Severity.Info, new Dictionary<string, object?> { { "event", "app_start" } });
-		var span = LDObserve.StartActiveSpan("maui-app-start");
-		span?.End();
+        //sync variant: var client = LdClient.Init(ldConfig, context, TimeSpan.FromSeconds(0));
+
 
         return app;
     }
