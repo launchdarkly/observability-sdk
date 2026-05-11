@@ -3,6 +3,6 @@
 		<!-- Single source of truth for whether subprojects (observability, sample,
 		     bindings) consume the LaunchDarkly.ClientSdk from local source or from
 		     NuGet. Flip this in one place to switch the whole tree. -->
-		<UseLocalClientSdk>true</UseLocalClientSdk>
+		<UseLocalClientSdk>false</UseLocalClientSdk>
 	</PropertyGroup>
 </Project>
