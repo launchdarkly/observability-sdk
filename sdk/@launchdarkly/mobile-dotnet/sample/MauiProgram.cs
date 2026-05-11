@@ -122,7 +122,6 @@ public static class MauiProgram
             try
             {
                 var client = await LdClient.InitAsync(ldConfig, context, TimeSpan.FromSeconds(5));
-
                 var feature1 = client.BoolVariation("feature1", false);
                 Console.WriteLine($"feature1 sync value ={feature1}");
 
