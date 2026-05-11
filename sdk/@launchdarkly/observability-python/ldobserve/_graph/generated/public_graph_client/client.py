@@ -26,8 +26,7 @@ class Client(AsyncBaseClient):
     async def get_sampling_config(
         self, organization_verbose_id: str, **kwargs: Any
     ) -> GetSamplingConfig:
-        query = gql(
-            """
+        query = gql("""
             query GetSamplingConfig($organization_verbose_id: String!) {
               sampling(organization_verbose_id: $organization_verbose_id) {
                 spans {
@@ -81,8 +80,7 @@ class Client(AsyncBaseClient):
               regexValue
               matchValue
             }
-            """
-        )
+            """)
         variables: Dict[str, object] = {
             "organization_verbose_id": organization_verbose_id
         }
