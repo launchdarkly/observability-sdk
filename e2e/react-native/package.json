@@ -54,5 +54,17 @@
 		"jest-expo": "~52.0.2",
 		"react-test-renderer": "18.3.1",
 		"typescript": "^5.3.3"
+	},
+	"overrides": {
+		"tar": "^7.5.11",
+		"minimatch": "^3.1.5",
+		"serialize-javascript": "^7.0.5",
+		"undici": "^6.24.0",
+		"picomatch": "^4.0.4",
+		"node-forge": "^1.4.0",
+		"@xmldom/xmldom": "^0.8.13",
+		"fast-uri": "^3.1.2",
+		"lodash": "^4.18.1",
+		"@babel/plugin-transform-modules-systemjs": "^7.29.4"
 	}
 }
