@@ -13,7 +13,8 @@
     "@launchdarkly/react-native-client-sdk": "^10.12.5",
     "@launchdarkly/session-replay-react-native": "workspace:*",
     "react": "19.2.0",
-    "react-native": "0.83.0"
+    "react-native": "0.83.0",
+    "react-native-webview": "13.16.1"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

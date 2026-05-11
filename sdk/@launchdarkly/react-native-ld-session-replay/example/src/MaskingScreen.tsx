@@ -1,4 +1,12 @@
-import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+import WebView from 'react-native-webview';
 import { LDMask, LDUnmask } from '@launchdarkly/session-replay-react-native';
 
 /**
@@ -6,7 +14,8 @@ import { LDMask, LDUnmask } from '@launchdarkly/session-replay-react-native';
  * wrappers. The plugin in `App.tsx` is configured with `maskTestIDs: ['password', 'ssn']` and
  * `unmaskTestIDs: ['safe']`. Each row's testID (or wrapper) is picked to exercise a specific
  * case; the inline comment on each row explains the expected behavior under whatever values of
- * `maskLabels` / `maskImages` are currently set in the plugin config.
+ * `maskLabels`, `maskImages`, `maskTextInputs`, and `maskWebViews` are currently set in the
+ * plugin config.
  *
  * Section headers use `testID="safe"` so they remain readable in the recording regardless of
  * `maskLabels`.
@@ -78,6 +87,28 @@ export default function MaskingScreen() {
       </View>
 
       <Text testID="safe" style={styles.sectionHeader}>
+        Text input
+      </Text>
+
+      {/* Masked iff maskTextInputs is on. */}
+      <TextInput
+        testID="other"
+        style={styles.textInput}
+        defaultValue="text input contents"
+      />
+
+      <Text testID="safe" style={styles.sectionHeader}>
+        WebView
+      </Text>
+
+      {/* Masked iff maskWebViews is on. */}
+      <WebView
+        testID="other"
+        style={styles.webView}
+        source={{ html: WEBVIEW_HTML }}
+      />
+
+      <Text testID="safe" style={styles.sectionHeader}>
         LDMask / LDUnmask
       </Text>
 
@@ -106,6 +137,17 @@ export default function MaskingScreen() {
 }
 
 const LOGO = { uri: 'https://reactnative.dev/img/tiny_logo.png' };
+
+const WEBVIEW_HTML = `<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+  </head>
+  <body style="font-size: 32px; padding: 16px;">
+    webview contents
+  </body>
+</html>`;
 
 const styles = StyleSheet.create({
   scroll: {
@@ -140,5 +182,18 @@ const styles = StyleSheet.create({
   imageLabel: {
     color: '#fff',
     fontSize: 16,
+  },
+  textInput: {
+    color: '#fff',
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: '#666',
+    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+  },
+  webView: {
+    height: 120,
+    backgroundColor: '#fff',
   },
 });
