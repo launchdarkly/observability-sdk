@@ -2,6 +2,13 @@
 
 All notable changes to the LaunchDarkly Python Observability will be documented in this file. This project adheres to Semantic Versioning.
 
+## [1.2.2](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-python-1.2.1...launchdarkly-observability-python-1.2.2) (2026-05-12)
+
+
+### Bug Fixes
+
+* **deps:** bulk bump high-severity Dependabot deps across all ecosystems ([#548](https://github.com/launchdarkly/observability-sdk/issues/548)) ([a53ed6c](https://github.com/launchdarkly/observability-sdk/commit/a53ed6c7ac26893f547e8175a6f56cf3537bf7c4))
+
 ## [1.2.1](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-python-1.2.0...launchdarkly-observability-python-1.2.1) (2026-04-22)
 
 
