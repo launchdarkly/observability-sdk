@@ -117,4 +117,56 @@ describe('withHighlightConfig', () => {
 			).rewrites!(),
 		).toMatchObject(defaultRewrite)
 	})
+
+	it('adds OpenTelemetry packages to serverExternalPackages', async () => {
+		const result = await withHighlightConfig({})
+		expect(result.serverExternalPackages).toEqual(
+			expect.arrayContaining([
+				'@highlight-run/node',
+				'@opentelemetry/instrumentation',
+				'@prisma/instrumentation',
+				'require-in-the-middle',
+				'import-in-the-middle',
+			]),
+		)
+	})
+
+	it('preserves user-provided serverExternalPackages and deduplicates', async () => {
+		const result = await withHighlightConfig({
+			serverExternalPackages: ['pino', '@opentelemetry/instrumentation'],
+		})
+		expect(result.serverExternalPackages).toEqual(
+			expect.arrayContaining([
+				'pino',
+				'@opentelemetry/instrumentation',
+				'@highlight-run/node',
+			]),
+		)
+		expect(
+			(result.serverExternalPackages ?? []).filter(
+				(p) => p === '@opentelemetry/instrumentation',
+			),
+		).toHaveLength(1)
+	})
+
+	it('adds ignoreWarnings for OpenTelemetry on the server build', async () => {
+		const result = await withHighlightConfig({})
+		const webpack = result.webpack as (cfg: any, opts: any) => any
+		const cfg = webpack({ plugins: [] }, { isServer: true } as any)
+		expect(cfg.ignoreWarnings).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					message: expect.any(RegExp),
+					module: expect.any(RegExp),
+				}),
+			]),
+		)
+	})
+
+	it('does not add ignoreWarnings on the client build', async () => {
+		const result = await withHighlightConfig({})
+		const webpack = result.webpack as (cfg: any, opts: any) => any
+		const cfg = webpack({ plugins: [] }, { isServer: false } as any)
+		expect(cfg.ignoreWarnings).toBeUndefined()
+	})
 })

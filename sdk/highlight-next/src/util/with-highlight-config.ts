@@ -3,6 +3,21 @@ import { Rewrite } from 'next/dist/lib/load-custom-routes'
 import { WebpackConfigContext } from 'next/dist/server/config-shared'
 import HighlightWebpackPlugin from './highlight-webpack-plugin.js'
 
+// Packages that use require-in-the-middle / import-in-the-middle, which
+// webpack cannot statically analyze. Marking them external tells Next to load
+// them via Node's runtime require instead of bundling them, which silences the
+// "Critical dependency" warnings during `next build`.
+const OTEL_SERVER_EXTERNAL_PACKAGES = [
+	'@highlight-run/node',
+	'@opentelemetry/api',
+	'@opentelemetry/auto-instrumentations-node',
+	'@opentelemetry/instrumentation',
+	'@opentelemetry/sdk-node',
+	'@prisma/instrumentation',
+	'import-in-the-middle',
+	'require-in-the-middle',
+]
+
 interface HighlightConfigOptionsDefault {
 	uploadSourceMaps: boolean
 	configureHighlightProxy: boolean
@@ -180,17 +195,39 @@ const getHighlightConfig = async (
 		}
 	}
 
-	let newWebpack = config.webpack
-	if (defaultOpts.uploadSourceMaps) {
-		newWebpack = (webpackConfig: any, opts: WebpackConfigContext) => {
-			let originalConfig = webpackConfig
-			if (config.webpack) {
-				originalConfig = config.webpack(webpackConfig, opts)
-			}
-			if (opts.isServer) {
+	const newWebpack = (webpackConfig: any, opts: WebpackConfigContext) => {
+		let originalConfig = webpackConfig
+		if (config.webpack) {
+			originalConfig = config.webpack(webpackConfig, opts)
+		}
+
+		if (opts.isServer) {
+			if (defaultOpts.uploadSourceMaps) {
 				originalConfig.devtool = 'source-map'
 			}
 
+			// Defense-in-depth: even with serverExternalPackages set, some
+			// builds (custom resolvers, monorepo hoisting) can still pull
+			// these modules through webpack. Silence the known-noisy
+			// warnings rather than letting them spam the customer build.
+			const criticalDepMessage =
+				/Critical dependency: the request of a dependency is an expression/
+			originalConfig.ignoreWarnings = [
+				...(originalConfig.ignoreWarnings ?? []),
+				{
+					module: /node_modules\/(@opentelemetry\/instrumentation|require-in-the-middle|import-in-the-middle|@highlight-run\/node|@prisma\/instrumentation)/,
+					message: criticalDepMessage,
+				},
+				{
+					// Workspace / hoisted builds where @highlight-run/node
+					// is symlinked outside node_modules.
+					module: /highlight-node\/dist/,
+					message: criticalDepMessage,
+				},
+			]
+		}
+
+		if (defaultOpts.uploadSourceMaps) {
 			originalConfig.plugins.push(
 				new HighlightWebpackPlugin(
 					defaultOpts.apiKey,
@@ -200,10 +237,17 @@ const getHighlightConfig = async (
 					defaultOpts.sourceMapsBackendUrl,
 				),
 			)
-
-			return originalConfig
 		}
+
+		return originalConfig
 	}
+
+	const existingServerExternal = Array.isArray(config.serverExternalPackages)
+		? config.serverExternalPackages
+		: []
+	const serverExternalPackages = Array.from(
+		new Set([...existingServerExternal, ...OTEL_SERVER_EXTERNAL_PACKAGES]),
+	)
 
 	return {
 		...config,
@@ -217,6 +261,7 @@ const getHighlightConfig = async (
 			defaultOpts.uploadSourceMaps || config.productionBrowserSourceMaps,
 		rewrites: newRewrites,
 		webpack: newWebpack,
+		serverExternalPackages,
 	}
 }
 
