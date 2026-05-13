@@ -2,6 +2,13 @@
 
 All notable changes to the LaunchDarkly Python Observability will be documented in this file. This project adheres to Semantic Versioning.
 
+## [1.2.3](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-python-1.2.2...launchdarkly-observability-python-1.2.3) (2026-05-13)
+
+
+### Bug Fixes
+
+* **deps:** patch critical/high Dependabot alerts across ecosystems ([#551](https://github.com/launchdarkly/observability-sdk/issues/551)) ([a4e0be2](https://github.com/launchdarkly/observability-sdk/commit/a4e0be28d2b6ee86d7166a12ba08734e356334c9))
+
 ## [1.2.2](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-python-1.2.1...launchdarkly-observability-python-1.2.2) (2026-05-12)
 
 
