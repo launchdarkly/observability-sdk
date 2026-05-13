@@ -54,6 +54,10 @@ export class CookieStorage {
 		}
 		Cookies.remove(key)
 	}
+
+	public keys(): string[] {
+		return Object.keys(Cookies.get() ?? {})
+	}
 }
 
 export const globalStorage = new Storage()

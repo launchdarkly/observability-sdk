@@ -103,37 +103,49 @@ export const loadCookieSessionData = function () {
 
 function pruneSessionData(keepKey: string): void {
 	const prefix = `${SESSION_STORAGE_KEYS.SESSION_DATA}_`
+	const candidates = new Set<string>()
 
-	// Walk backwards so index order isn’t upset by removals.
-	for (let i = getPersistentStorage().length - 1; i >= 0; i--) {
-		const key = getPersistentStorage().key(i)
+	const storage = getPersistentStorage()
+	for (let i = storage.length - 1; i >= 0; i--) {
+		const key = storage.key(i)
 		if (key && key.startsWith(prefix) && key !== keepKey) {
-			try {
-				const sessionData = JSON.parse(
-					getItem(key) || '{}',
-				) as SessionData
-				if (
-					sessionData.lastPushTime !== undefined &&
-					Date.now() - sessionData.lastPushTime >=
-						SESSION_PUSH_THRESHOLD
-				) {
-					internalLogOnce(
-						'highlightSession',
-						'pruneSessionData',
-						'debug',
-						`removing session data for stale key ${key}`,
-					)
-					removeItem(key)
-				}
-			} catch (e) {
-				internalLogOnce(
-					'highlightSession',
-					'pruneSessionData',
-					'error',
-					`failed to parse session data for key ${key}`,
-					e,
-				)
-			}
+			candidates.add(key)
+		}
+	}
+
+	// Cookies are written alongside localStorage but persist independently
+	// (they survive localStorage being cleared, and outlive many sessions
+	// via the SESSION_PUSH_THRESHOLD expiry). Without enumerating them here,
+	// sessionData_* cookies pile up over time and bloat the Cookie header
+	// enough to break unrelated API calls.
+	for (const key of cookieStorage.keys()) {
+		if (key.startsWith(prefix) && key !== keepKey) {
+			candidates.add(key)
+		}
+	}
+
+	for (const key of candidates) {
+		let stale = true
+		try {
+			const sessionData = JSON.parse(getItem(key) || '{}') as SessionData
+			// Fall back to sessionStartTime so entries from sessions that
+			// ended before the first push still age out. Entries with no
+			// usable timestamp (foreign / corrupt / truncated) are stale.
+			const ts = sessionData.lastPushTime ?? sessionData.sessionStartTime
+			stale =
+				ts === undefined || Date.now() - ts >= SESSION_PUSH_THRESHOLD
+		} catch {
+			// Truncated past the 4KB cookie limit or otherwise corrupt —
+			// drop silently rather than logging on every page load.
+		}
+		if (stale) {
+			internalLogOnce(
+				'highlightSession',
+				'pruneSessionData',
+				'debug',
+				`removing session data for stale key ${key}`,
+			)
+			removeItem(key)
 		}
 	}
 }
