@@ -101,6 +101,25 @@ describe('pruneSessionData', () => {
 		)
 	})
 
+	it('keeps a fresh cookie-only entry with no matching localStorage value', () => {
+		// Parallel tab on a different subdomain (or after localStorage was
+		// cleared) leaves only the cookie behind. The freshness check has to
+		// fall back to the cookie value or it will unconditionally prune it.
+		const recent = makeSessionData('cookie-only', {
+			lastPushTime: Date.now() - 1000,
+		})
+		cookieStorage.setItem(
+			sessionDataKey('cookie-only'),
+			JSON.stringify(recent),
+		)
+
+		setSessionData(makeSessionData('new-session'))
+
+		expect(cookieStorage.getItem(sessionDataKey('cookie-only'))).not.toBe(
+			'',
+		)
+	})
+
 	it('falls back to sessionStartTime when lastPushTime is missing', () => {
 		const stale = {
 			sessionSecureID: 'started-never-pushed',

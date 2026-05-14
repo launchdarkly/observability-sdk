@@ -127,7 +127,13 @@ function pruneSessionData(keepKey: string): void {
 	for (const key of candidates) {
 		let stale = true
 		try {
-			const sessionData = JSON.parse(getItem(key) || '{}') as SessionData
+			// Cookie-only entries (e.g. from a parallel tab that hasn't
+			// hydrated localStorage in this context) won't be found by
+			// getItem, which only reads persistent storage. Fall back to
+			// the cookie value so we don't unconditionally prune fresh
+			// data belonging to active sessions.
+			const raw = getItem(key) || cookieStorage.getItem(key) || '{}'
+			const sessionData = JSON.parse(raw) as SessionData
 			// Fall back to sessionStartTime so entries from sessions that
 			// ended before the first push still age out. Entries with no
 			// usable timestamp (foreign / corrupt / truncated) are stale.
