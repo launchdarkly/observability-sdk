@@ -1,5 +1,12 @@
 # highlight.run
 
+## [10.3.1](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.3.0...highlight.run-10.3.1) (2026-05-15)
+
+
+### Bug Fixes
+
+* prune stale sessionData_* cookies and stop noisy parse log ([#554](https://github.com/launchdarkly/observability-sdk/issues/554)) ([3523733](https://github.com/launchdarkly/observability-sdk/commit/35237339870deca3010075cddde46f3b24550334))
+
 ## [10.3.0](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.2.0...highlight.run-10.3.0) (2026-05-06)
 
 
