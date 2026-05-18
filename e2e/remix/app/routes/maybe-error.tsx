@@ -1,7 +1,7 @@
 import type { LoaderArgs } from '@remix-run/node'
 import { json } from '@remix-run/node'
 import { useLoaderData } from '@remix-run/react'
-import { initHighlight } from '~/utils/init-highlight'
+import { initHighlight } from '~/utils/init-highlight.server'
 
 export async function loader({ request }: LoaderArgs) {
 	initHighlight()
