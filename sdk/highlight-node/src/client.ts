@@ -34,7 +34,10 @@ import {
 	registerInstrumentations,
 } from '@opentelemetry/instrumentation'
 import { CompressionAlgorithm } from '@opentelemetry/otlp-exporter-base'
-import { processDetectorSync, Resource } from '@opentelemetry/resources'
+import {
+	processDetector,
+	resourceFromAttributes,
+} from '@opentelemetry/resources'
 import { NodeSDK } from '@opentelemetry/sdk-node'
 import {
 	AlwaysOnSampler,
@@ -205,7 +208,7 @@ export class Highlight {
 				attributes[otelAttr] = options[option]
 			}
 		}
-		const resource = new Resource(attributes)
+		const resource = resourceFromAttributes(attributes)
 
 		const exporter = new OTLPTraceExporter({
 			...config,
@@ -213,15 +216,15 @@ export class Highlight {
 		})
 		this.processor = new BatchSpanProcessor(exporter, opts)
 
-		this.loggerProvider = new LoggerProvider({
-			resource,
-		})
 		const logsExporter = new OTLPLogExporter({
 			...config,
 			url: `${config.url}/v1/logs`,
 		})
 		const logsProcessor = new BatchLogRecordProcessor(logsExporter, opts)
-		this.loggerProvider.addLogRecordProcessor(logsProcessor)
+		this.loggerProvider = new LoggerProvider({
+			resource,
+			processors: [logsProcessor],
+		})
 
 		const metricsExporter = new OTLPMetricExporter({
 			...config,
@@ -235,7 +238,7 @@ export class Highlight {
 
 		this.otel = new NodeSDK({
 			autoDetectResources: true,
-			resourceDetectors: [processDetectorSync],
+			resourceDetectors: [processDetector],
 			resource,
 			spanProcessors: [this.processor],
 			logRecordProcessors: [logsProcessor],
