@@ -1,0 +1,5 @@
+{
+  "_comment": "Set ONLY ONE of LAUNCHDARKLY_MOBILE_KEY or LAUNCHDARKLY_CLIENT_SIDE_ID. The SDK rejects builds that have both. Use the mobile key for iOS/Android/macOS/Windows/Linux, and the client-side ID only for web (Chrome).",
+  "LAUNCHDARKLY_MOBILE_KEY": "mob-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+  "GIT_SHA": "local-dev"
+}
