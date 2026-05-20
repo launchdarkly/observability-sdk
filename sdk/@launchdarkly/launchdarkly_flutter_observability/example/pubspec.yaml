@@ -40,6 +40,8 @@ dependencies:
   launchdarkly_flutter_observability:
     path: ../
 
+  http: ^1.2.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
