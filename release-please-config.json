@@ -22,6 +22,14 @@
 			"include-component-in-tag": true,
 			"extra-files": ["gradle.properties"]
 		},
+		"sdk/@launchdarkly/observability-java": {
+			"package-name": "launchdarkly-observability-java",
+			"release-type": "simple",
+			"versioning": "default",
+			"include-v-in-tag": false,
+			"include-component-in-tag": true,
+			"extra-files": ["gradle.properties"]
+		},
 		"go": {
 			"release-type": "go",
 			"package-name": "go",
