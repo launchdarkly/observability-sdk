@@ -17,7 +17,7 @@ This repository houses the LaunchDarkly Observability and Session Replay SDKs ac
 | [LaunchDarkly.Observability](sdk/@launchdarkly/observability-dotnet/README.md) (.NET) | [![NuGet][o11y-nuget-badge]][o11y-nuget-link] | [![Actions Status][dotnet-ci-badge]][dotnet-ci] |
 | [launchdarkly-observability-android](sdk/@launchdarkly/observability-android/README.md) | [![Maven Central][o11y-android-badge]][o11y-android-link] | [![Actions Status][android-ci-badge]][android-ci] |
 | [launchdarkly-observability](sdk/@launchdarkly/observability-ruby/README.md) (Ruby) | [![Gem Version][o11y-ruby-badge]][o11y-ruby-link] | [![Actions Status][ruby-ci-badge]][ruby-ci] |
-| [launchdarkly_flutter_observability](sdk/@launchdarkly/launchdarkly_flutter_observability/README.md) | [![pub package][o11y-flutter-badge]][o11y-flutter-link] | — |
+| [launchdarkly_flutter_observability](sdk/@launchdarkly/flutter/packages/observability/README.md) | [![pub package][o11y-flutter-badge]][o11y-flutter-link] | — |
 
 ## Getting started
 

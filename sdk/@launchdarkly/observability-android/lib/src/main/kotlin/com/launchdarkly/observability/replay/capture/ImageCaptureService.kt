@@ -8,7 +8,9 @@ import android.os.Handler
 import android.os.Looper
 import android.view.Choreographer
 import android.view.PixelCopy
+import android.view.SurfaceView
 import android.view.View
+import android.view.ViewGroup
 import android.view.Window
 import android.view.WindowManager.LayoutParams.TYPE_APPLICATION
 import android.view.WindowManager.LayoutParams.TYPE_BASE_APPLICATION
@@ -276,10 +278,124 @@ class ImageCaptureService(
             }
         }
 
-        if (result == null && !bitmap.isRecycled) {
-            bitmap.recycle()
+        if (result == null) {
+            if (!bitmap.isRecycled) {
+                bitmap.recycle()
+            }
+            return null
         }
+
+        // Window-level PixelCopy excludes SurfaceView surfaces (they are composited
+        // by SurfaceFlinger, not the View drawing pipeline), so any SurfaceView in
+        // the tree appears as a black "punch hole" in the captured bitmap. This
+        // matters for hosts that render their entire UI into a SurfaceView — for
+        // example, Flutter on Android renders into a FlutterSurfaceView by default.
+        // Re-capture each SurfaceView via PixelCopy and composite it into the
+        // captured bitmap so the punch holes are filled in.
+        compositeSurfaceViews(view, result, scaleFactor)
         return result
+    }
+
+    /**
+     * Walks [rootView]'s tree, runs `PixelCopy` against every visible [SurfaceView],
+     * and composites each captured surface on top of [target] at its position
+     * within the window. No-op when there are no SurfaceViews in the tree.
+     *
+     * `PixelCopy.request(SurfaceView, ...)` is API 24+, so this is a no-op on older
+     * devices (where the regular `view.draw(canvas)` fallback already runs without
+     * any SurfaceView contents).
+     */
+    @RequiresApi(Build.VERSION_CODES.N)
+    private suspend fun compositeSurfaceViews(
+        rootView: View,
+        target: Bitmap,
+        scaleFactor: Float
+    ) {
+        val surfaceViews = mutableListOf<SurfaceView>()
+        collectSurfaceViews(rootView, surfaceViews)
+        if (surfaceViews.isEmpty()) {
+            return
+        }
+
+        val canvas = Canvas(target)
+        val location = IntArray(2)
+
+        for (surfaceView in surfaceViews) {
+            if (!surfaceView.isAttachedToWindow || !surfaceView.isShown) continue
+            val width = scaleCoordinate(surfaceView.width.toFloat(), scaleFactor)
+            val height = scaleCoordinate(surfaceView.height.toFloat(), scaleFactor)
+            if (width <= 0 || height <= 0) continue
+
+            val surfaceBitmap = createBitmap(width, height)
+            val captured = pixelCopySurfaceView(surfaceView, surfaceBitmap)
+            if (captured == null) {
+                if (!surfaceBitmap.isRecycled) {
+                    surfaceBitmap.recycle()
+                }
+                continue
+            }
+
+            // SurfaceView coordinates are computed in window-local space because the
+            // window-level PixelCopy source rect uses the same space (see WindowEntry.rect()
+            // which is `Rect(0, 0, width, height)` in window coords).
+            surfaceView.getLocationInWindow(location)
+            val dx = location[0].toFloat() * scaleFactor
+            val dy = location[1].toFloat() * scaleFactor
+
+            try {
+                canvas.drawBitmap(captured, dx, dy, null)
+            } finally {
+                if (!captured.isRecycled) {
+                    captured.recycle()
+                }
+            }
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.N)
+    private suspend fun pixelCopySurfaceView(
+        surfaceView: SurfaceView,
+        bitmap: Bitmap
+    ): Bitmap? = suspendCancellableCoroutine { continuation ->
+        val handler = Handler(Looper.getMainLooper())
+        try {
+            PixelCopy.request(
+                surfaceView,
+                bitmap,
+                { copyResult ->
+                    if (!continuation.isActive) {
+                        if (!bitmap.isRecycled) bitmap.recycle()
+                        return@request
+                    }
+                    if (copyResult == PixelCopy.SUCCESS) {
+                        continuation.resume(bitmap)
+                    } else {
+                        continuation.resume(null)
+                    }
+                },
+                handler
+            )
+        } catch (t: Throwable) {
+            // E.g. SurfaceView's surface is not yet valid, or it is FLAG_SECURE.
+            logger.debug("Failed to capture SurfaceView: ${t.message}")
+            continuation.resume(null)
+        }
+    }
+
+    private fun collectSurfaceViews(view: View, out: MutableList<SurfaceView>) {
+        when (view) {
+            is SurfaceView -> {
+                // SurfaceView's own children draw on top of its surface in the View
+                // hierarchy; those are already captured by the window-level PixelCopy
+                // that ran before this. Don't recurse.
+                out.add(view)
+            }
+            is ViewGroup -> {
+                for (i in 0 until view.childCount) {
+                    collectSurfaceViews(view.getChildAt(i), out)
+                }
+            }
+        }
     }
 
     private fun canvasDrawBitmap(

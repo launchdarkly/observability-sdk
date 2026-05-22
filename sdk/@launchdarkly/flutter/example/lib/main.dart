@@ -3,11 +3,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:launchdarkly_flutter_client_sdk/launchdarkly_flutter_client_sdk.dart';
 import 'package:launchdarkly_flutter_observability/launchdarkly_flutter_observability.dart';
+import 'package:launchdarkly_flutter_session_replay/launchdarkly_flutter_session_replay.dart';
 
 import 'my_app.dart';
 
 class LDSingleton {
   static LDClient? client;
+  static SessionReplay? sessionReplay;
 }
 
 void main() {
@@ -48,6 +50,7 @@ void main() {
       );
 
       LDSingleton.client!.start();
+      LDSingleton.sessionReplay = SessionReplay();
 
       // Report any errors handled by flutter.
       FlutterError.onError = (FlutterErrorDetails details) {

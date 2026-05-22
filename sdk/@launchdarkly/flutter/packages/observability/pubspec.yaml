@@ -2,7 +2,7 @@ name: launchdarkly_flutter_observability
 description: 'The LaunchDarkly Observability plugin for Flutter. Get started using LaunchDarkly today!'
 version: 0.0.0
 homepage: https://github.com/launchdarkly/observability-sdk
-repository: https://github.com/launchdarkly/observability-sdk/tree/main/sdk/@launchdarkly/launchdarkly_flutter_observability
+repository: https://github.com/launchdarkly/observability-sdk/tree/main/sdk/@launchdarkly/flutter/packages/observability
 
 environment:
     sdk: ^3.9.0
