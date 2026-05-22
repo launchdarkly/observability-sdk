@@ -1,0 +1,21 @@
+name: launchdarkly_flutter_session_replay
+description: 'The LaunchDarkly Session Replay plugin for Flutter. Get started using LaunchDarkly today!'
+version: 0.0.0
+homepage: https://github.com/launchdarkly/observability-sdk
+repository: https://github.com/launchdarkly/observability-sdk/tree/main/sdk/@launchdarkly/flutter/packages/session_replay
+
+environment:
+    sdk: ^3.9.0
+    flutter: '>=1.17.0'
+
+dependencies:
+    flutter:
+        sdk: flutter
+
+    launchdarkly_flutter_observability:
+        path: ../observability
+
+dev_dependencies:
+    flutter_test:
+        sdk: flutter
+    flutter_lints: ^5.0.0
