@@ -9,7 +9,7 @@ import 'my_app.dart';
 
 class LDSingleton {
   static LDClient? client;
-  static SessionReplay? sessionReplay;
+  static LDNative? ldNative;
 }
 
 void main() {
@@ -50,14 +50,26 @@ void main() {
       );
 
       LDSingleton.client!.start();
-      LDSingleton.sessionReplay = SessionReplay();
+
+      // Mirrors `LDNative.Start(...)` in
+      // sdk/@launchdarkly/mobile-dotnet/sample/MauiProgram.cs (lines 155-170).
+      // Boots the native LaunchDarkly observability + session replay stack via
+      // the Flutter session_replay plugin, independently of the LDClient above.
+      const mobileKey = String.fromEnvironment('LAUNCHDARKLY_MOBILE_KEY');
+      if (mobileKey.isNotEmpty) {
+        unawaited(_startLDNative(mobileKey));
+      } else {
+        debugPrint(
+          'LAUNCHDARKLY_MOBILE_KEY is not set; skipping LDNative.start.',
+        );
+      }
 
       // Report any errors handled by flutter.
       FlutterError.onError = (FlutterErrorDetails details) {
         Observe.recordException(details.exception, stackTrace: details.stack);
       };
 
-      runApp(MyApp());
+      runApp(const MyApp());
     },
     (err, stack) {
       // Report any errors reported from the guarded zone.
@@ -69,4 +81,28 @@ void main() {
     // production are treated as a warning and this is not required.
     zoneSpecification: Observe.zoneSpecification(),
   );
+}
+
+Future<void> _startLDNative(String mobileKey) async {
+  try {
+    LDSingleton.ldNative = await LDNative.start(
+      mobileKey: mobileKey,
+      observability: const ObservabilityOptions(
+        serviceName: 'flutter-sample-app',
+      ),
+      replay: const SessionReplayOptions(
+        isEnabled: true,
+        privacy: PrivacyOptions(
+          maskTextInputs: true,
+          maskWebViews: false,
+          maskLabels: false,
+        ),
+      ),
+    );
+    debugPrint(
+      'LDNative started; native version=${LDSingleton.ldNative!.nativeVersion}',
+    );
+  } catch (e, stack) {
+    debugPrint('LDNative.start failed: $e\n$stack');
+  }
 }
