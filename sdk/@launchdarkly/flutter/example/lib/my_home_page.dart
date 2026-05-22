@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:launchdarkly_flutter_client_sdk/launchdarkly_flutter_client_sdk.dart';
 import 'package:launchdarkly_flutter_observability/launchdarkly_flutter_observability.dart';
 
+import 'credit_card_page.dart';
 import 'main.dart';
 
 // NOTE: The MAUI sample also has a "Metric" subsection (gauge, histogram,
@@ -325,12 +326,19 @@ class _MyHomePageState extends State<MyHomePage> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
             const _SectionHeader('Session Replay'),
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8),
-              child: Text(
-                'Coming soon.',
-                style: TextStyle(fontStyle: FontStyle.italic),
-              ),
+            // Mirrors the "Masking" subsection of the MAUI sample's MainPage,
+            // which exposes Credit Card / Number Pad / Dialogs entries that
+            // each demonstrate session replay masking. Only the Credit Card
+            // page is ported so far.
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const CreditCardPage(),
+                  ),
+                );
+              },
+              child: const Text('Credit Card'),
             ),
 
             const _SectionHeader('Observability'),
