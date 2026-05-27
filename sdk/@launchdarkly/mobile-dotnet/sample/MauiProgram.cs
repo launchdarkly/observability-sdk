@@ -84,10 +84,7 @@ public static class MauiProgram
 
         var otlpEndpoint = config["LaunchDarkly:OtlpEndpoint"];
         var backendUrl = config["LaunchDarkly:BackendUrl"];
-
-        var ldConfig = Configuration.Builder(mobileKey, LaunchDarkly.Sdk.Client.ConfigurationBuilder.AutoEnvAttributes.Enabled)
-        .Plugins(new PluginConfigurationBuilder()
-        	.Add(new ObservabilityPlugin(new ObservabilityOptions(
+        var observabilityPlugin = new ObservabilityPlugin(new ObservabilityOptions(
         		isEnabled: true,
 #if IOS
         		serviceName: "maui-ios-sample",
@@ -103,25 +100,32 @@ public static class MauiProgram
 					networkRequests: true,
 					launchTimes: true
 				)
-        	)))
-        	.Add(new SessionReplayPlugin(new SessionReplayOptions(
+        	));
+
+        var sessionReplayPlugin = new SessionReplayPlugin(new SessionReplayOptions(
         		isEnabled: true,
         		privacy: new SessionReplayOptions.PrivacyOptions(
         			maskTextInputs: true,
         			maskWebViews: false,
         			maskLabels: false
         		)
-        	)))
-        ).Build();
+        	));
+
+        var ldConfig = Configuration.Builder(mobileKey, LaunchDarkly.Sdk.Client.ConfigurationBuilder.AutoEnvAttributes.Enabled)
+        // .Plugins(new PluginConfigurationBuilder()
+        // 	.Add(observabilityPlugin)
+        // 	.Add(sessionReplayPlugin)
+        .Build();
 
         var context = LaunchDarkly.Sdk.Context.New("maui-user-key");
-        
 		//async variant:
 		_ = Task.Run(async () =>
         {
             try
             {
                 var client = await LdClient.InitAsync(ldConfig, context, TimeSpan.FromSeconds(5));
+                client.RegisterPlugin(observabilityPlugin);
+                client.RegisterPlugin(sessionReplayPlugin);
                 var feature1 = client.BoolVariation("feature1", false);
                 Console.WriteLine($"feature1 sync value ={feature1}");
 

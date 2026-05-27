@@ -112,8 +112,8 @@ open class BaseApplication : Application() {
                 application = this@BaseApplication,
                 mobileKey = LAUNCHDARKLY_MOBILE_KEY,
                 ldContext = context,
-                options = effectiveOptions,
-                replayOptions = ReplayOptions(
+                observability = effectiveOptions,
+                replay = ReplayOptions(
                     enabled = false,
                     privacyProfile = PrivacyProfile(
                         maskText = false,

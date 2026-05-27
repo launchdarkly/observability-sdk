@@ -107,8 +107,8 @@ internal class LDNativeApiImpl(
             application = application,
             mobileKey = mobileKey,
             ldContext = ldContext,
-            options = nativeObservabilityOptions,
-            replayOptions = nativeReplayOptions,
+            observability = nativeObservabilityOptions,
+            replay = nativeReplayOptions,
             imageCaptureService = FlutterImageCaptureService(
                 channel = captureChannel,
                 maskTextInputs = maskTextInputs,
