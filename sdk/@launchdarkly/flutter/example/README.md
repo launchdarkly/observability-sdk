@@ -84,6 +84,12 @@ For iOS with CocoaPods, also install pod dependencies (the first `flutter run` d
 cd ios && pod install && cd ..
 ```
 
+If CocoaPods cannot find a LaunchDarkly pod version, refresh your local specs:
+
+```bash
+cd ios && pod install --repo-update && cd ..
+```
+
 To exercise Flutter's Swift Package Manager integration instead, enable it once with:
 
 ```bash
