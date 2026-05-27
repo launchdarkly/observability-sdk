@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.47.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.46.0...launchdarkly-observability-android-0.47.0) (2026-05-27)
+
+
+### Features
+
+* Android - support SurfaceView ([#563](https://github.com/launchdarkly/observability-sdk/issues/563)) ([f142c1e](https://github.com/launchdarkly/observability-sdk/commit/f142c1e857880713aa6312e23ee7e4aea545700a))
+* session replay control with sampling and state management ([#566](https://github.com/launchdarkly/observability-sdk/issues/566)) ([72e0701](https://github.com/launchdarkly/observability-sdk/commit/72e0701bf65374467bbcdc3f8210908b26b398a1))
+
 ## [0.46.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.45.0...launchdarkly-observability-android-0.46.0) (2026-05-08)
 
 
