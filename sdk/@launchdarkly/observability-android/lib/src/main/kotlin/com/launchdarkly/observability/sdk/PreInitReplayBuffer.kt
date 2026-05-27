@@ -14,6 +14,7 @@ import com.launchdarkly.observability.util.runOnMainThread
  *    "pre-init" flag.
  *  - `pendingEnabled`: latest pre-init `isEnabled` write. `null` means "no buffered value",
  *    so [bind] won't clobber the replay service's `ReplayOptions.enabled` default.
+ *  - `pendingStartIgnoresSampling`: whether a buffered start should bypass sampling.
  *  - `pendingActivities`: every pre-init [registerActivity], in submission order.
  *  - `pendingIdentify`: most recent pre-init [afterIdentify] only — older identifies are stale.
  *
@@ -39,6 +40,7 @@ internal class PreInitReplayBuffer {
 
     @Volatile
     private var pendingEnabled: Boolean? = null
+    private var pendingStartIgnoresSampling: Boolean = false
 
     private val pendingActivities = mutableListOf<Activity>()
     private var pendingIdentify: PendingIdentify? = null
@@ -55,17 +57,42 @@ internal class PreInitReplayBuffer {
             return service.isEnabled
         }
 
+    val isRunning: Boolean
+        get() = liveReplayService?.isRunning ?: false
+
     fun setEnabled(value: Boolean) {
         val target: SessionReplayServicing? = synchronized(this) {
             val current = liveReplayService
             if (current == null) {
                 pendingEnabled = value
+                pendingStartIgnoresSampling = false
                 null
             } else {
                 current
             }
         }
         target?.let { runOnMainThread { it.isEnabled = value } }
+    }
+
+    fun start(ignoreSampling: Boolean): SessionReplayStartResult {
+        val target: SessionReplayServicing? = synchronized(this) {
+            val current = liveReplayService
+            if (current == null) {
+                pendingEnabled = true
+                pendingStartIgnoresSampling = ignoreSampling
+                null
+            } else {
+                current
+            }
+        }
+
+        var result = SessionReplayStartResult.UNAVAILABLE
+        target?.let {
+            runOnMainThread {
+                result = it.start(ignoreSampling)
+            }
+        }
+        return result
     }
 
     fun registerActivity(activity: Activity) {
@@ -107,7 +134,13 @@ internal class PreInitReplayBuffer {
             // Drain buffered state into the live replay service in a deterministic order:
             // enable first (so subsequent operations see the right gate), then activities,
             // then the latest identify.
-            pendingEnabled?.let { replayService.isEnabled = it }
+            pendingEnabled?.let {
+                if (it && pendingStartIgnoresSampling) {
+                    replayService.start(ignoreSampling = true)
+                } else {
+                    replayService.isEnabled = it
+                }
+            }
             pendingActivities.forEach { replayService.registerActivity(it) }
             pendingIdentify?.let { replayService.afterIdentify(it.contextKeys, it.canonicalKey, it.completed) }
 
@@ -116,6 +149,7 @@ internal class PreInitReplayBuffer {
             // ordering).
             liveReplayService = replayService
             pendingEnabled = null
+            pendingStartIgnoresSampling = false
             pendingActivities.clear()
             pendingIdentify = null
         }
@@ -125,6 +159,7 @@ internal class PreInitReplayBuffer {
         synchronized(this) {
             liveReplayService = null
             pendingEnabled = null
+            pendingStartIgnoresSampling = false
             pendingActivities.clear()
             pendingIdentify = null
         }

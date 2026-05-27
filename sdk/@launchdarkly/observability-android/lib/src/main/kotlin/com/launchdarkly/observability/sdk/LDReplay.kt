@@ -39,9 +39,20 @@ object LDReplay {
             state.setEnabled(value)
         }
 
-    /** Starts session replay capture. */
-    fun start() {
-        isEnabled = true
+    /**
+     * Whether session replay capture is currently running after sampling.
+     */
+    val isRunning: Boolean
+        get() = state.isRunning
+
+    /**
+     * Starts session replay capture.
+     *
+     * @param ignoreSampling set to true to force start for debugging
+     */
+    @JvmOverloads
+    fun start(ignoreSampling: Boolean = false): SessionReplayStartResult {
+        return state.start(ignoreSampling)
     }
 
     /** Pauses session replay capture. */
@@ -119,6 +130,9 @@ internal interface SessionReplayServicing {
      * forward it to a live replay service during initialization.
      */
     var isEnabled: Boolean
+    val isRunning: Boolean
+
+    fun start(ignoreSampling: Boolean = false): SessionReplayStartResult
 
     fun flush()
     fun afterIdentify(contextKeys: Map<String, String>, canonicalKey: String, completed: Boolean)
