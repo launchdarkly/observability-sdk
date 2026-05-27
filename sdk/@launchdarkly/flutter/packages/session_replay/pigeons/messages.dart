@@ -17,7 +17,8 @@ import 'package:pigeon/pigeon.dart';
     kotlinOptions: KotlinOptions(
       package: 'com.launchdarkly.launchdarkly_flutter_session_replay',
     ),
-    swiftOut: 'ios/Classes/Messages.g.swift',
+    swiftOut:
+        'ios/launchdarkly_flutter_session_replay/Sources/launchdarkly_flutter_session_replay/Messages.g.swift',
     swiftOptions: SwiftOptions(),
     dartPackageName: 'launchdarkly_flutter_session_replay',
   ),
