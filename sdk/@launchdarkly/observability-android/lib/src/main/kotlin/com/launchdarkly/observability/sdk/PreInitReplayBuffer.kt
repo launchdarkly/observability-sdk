@@ -134,11 +134,16 @@ internal class PreInitReplayBuffer {
             // Drain buffered state into the live replay service in a deterministic order:
             // enable first (so subsequent operations see the right gate), then activities,
             // then the latest identify.
-            pendingEnabled?.let {
-                if (it && pendingStartIgnoresSampling) {
-                    replayService.start(ignoreSampling = true)
-                } else {
-                    replayService.isEnabled = it
+            pendingEnabled?.let { desired ->
+                when {
+                    desired && pendingStartIgnoresSampling -> {
+                        replayService.start(ignoreSampling = true)
+                    }
+                    replayService.isEnabled == desired -> {
+                        // Options-based initialize() may have already applied this intent
+                        // (including a sampled-out start). Do not call start() again.
+                    }
+                    else -> replayService.isEnabled = desired
                 }
             }
             pendingActivities.forEach { replayService.registerActivity(it) }

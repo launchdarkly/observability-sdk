@@ -78,6 +78,8 @@ class SessionReplayService(
     private val _isRunning = MutableStateFlow(false)
     private var processLifecycleObserver: DefaultLifecycleObserver? = null
     private var isInstalled: Boolean = false
+    /** Whether [start] has already applied sampling for this enable cycle (until [stop]). */
+    private var samplingDecisionMade = false
     private var exporter: SessionReplayExporter? = null
     private val pendingIdentifyLock = Any()
     private var pendingIdentify: IdentifyItemPayload? = null
@@ -237,9 +239,15 @@ class SessionReplayService(
         _isEnabled.value = true
         if (_isRunning.value) return SessionReplayStartResult.ALREADY_STARTED
 
-        if (!ignoreSampling && !SessionReplaySampling.shouldSample(options.sampleRate)) {
-            logger.info("LaunchDarkly Session Replay skipped by sampling.")
-            return SessionReplayStartResult.SAMPLED_OUT
+        if (!ignoreSampling) {
+            if (samplingDecisionMade) {
+                return SessionReplayStartResult.SAMPLED_OUT
+            }
+            samplingDecisionMade = true
+            if (!SessionReplaySampling.shouldSample(options.sampleRate)) {
+                logger.info("LaunchDarkly Session Replay skipped by sampling.")
+                return SessionReplayStartResult.SAMPLED_OUT
+            }
         }
 
         _isRunning.value = true
@@ -250,6 +258,7 @@ class SessionReplayService(
     private fun stop() {
         _isEnabled.value = false
         _isRunning.value = false
+        samplingDecisionMade = false
     }
 
     override fun flush() {
