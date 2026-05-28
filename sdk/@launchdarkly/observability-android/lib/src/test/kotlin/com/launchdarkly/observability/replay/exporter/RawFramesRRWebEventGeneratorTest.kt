@@ -9,10 +9,10 @@ import com.launchdarkly.observability.replay.EventNode
 import com.launchdarkly.observability.replay.EventType
 import com.launchdarkly.observability.replay.ReplayOptions
 import com.launchdarkly.observability.replay.capture.ExportDiffManager
-import com.launchdarkly.observability.replay.capture.ImageCaptureService
 import com.launchdarkly.observability.replay.capture.ImageSignature
 import com.launchdarkly.observability.replay.capture.IntRect
 import com.launchdarkly.observability.replay.capture.IntSize
+import com.launchdarkly.observability.replay.capture.RawFrame
 import com.launchdarkly.observability.replay.capture.TileDiffManager
 import com.launchdarkly.observability.replay.capture.TileSignature
 import com.launchdarkly.observability.replay.capture.TiledFrame
@@ -382,11 +382,11 @@ class RawFramesRRWebEventGeneratorTest {
         }
     }
 
-    private fun rawFrame(timestamp: Long): ImageCaptureService.RawFrame {
+    private fun rawFrame(timestamp: Long): RawFrame {
         val bitmap = mockk<Bitmap>()
         every { bitmap.isRecycled } returns false
         every { bitmap.recycle() } just runs
-        return ImageCaptureService.RawFrame(bitmap = bitmap, timestamp = timestamp, orientation = 0)
+        return RawFrame(bitmap = bitmap, timestamp = timestamp, orientation = 0)
     }
 
     private fun imageSignature(seed: Long): ImageSignature = ImageSignature(

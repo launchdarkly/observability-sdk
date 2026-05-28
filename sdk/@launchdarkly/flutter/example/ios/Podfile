@@ -26,8 +26,25 @@ require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelpe
 
 flutter_ios_podfile_setup
 
+def truthy?(value)
+  %w[true 1 yes].include?(value.to_s.downcase)
+end
+
+def local_swift_observability_path
+  ENV.fetch(
+    'LD_SWIFT_OBSERVABILITY_PATH',
+    File.expand_path('../../../../../../swift-launchdarkly-observability', __dir__)
+  )
+end
+
 target 'Runner' do
   use_frameworks!
+
+  if truthy?(ENV['LD_USE_LOCAL_NATIVE'])
+    swift_observability_path = local_swift_observability_path
+    pod 'LaunchDarklyObservability', :path => swift_observability_path
+    pod 'LaunchDarklySessionReplay', :path => swift_observability_path
+  end
 
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
   target 'RunnerTests' do

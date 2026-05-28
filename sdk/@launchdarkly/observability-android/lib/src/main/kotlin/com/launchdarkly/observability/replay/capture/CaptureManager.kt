@@ -17,11 +17,11 @@ class CaptureManager(
     private val sessionManager: SessionManager,
     private val options: ReplayOptions,
     private val logger: ObserveLogger,
+    private val imageCaptureService: ImageCaptureServicing = ImageCaptureService(options, logger),
     // TODO: O11Y-628 - add captureQuality options
 ) {
     private val _captureEventFlow = MutableSharedFlow<ExportFrame>()
     val captureFlow: SharedFlow<ExportFrame> = _captureEventFlow.asSharedFlow()
-    private val imageCaptureService = ImageCaptureService(options, logger)
     private val exportDiffManager = ExportDiffManager(
         compression = options.compression,
         scale = options.scale ?: 1f,

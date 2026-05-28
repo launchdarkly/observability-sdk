@@ -12,7 +12,7 @@ class TileDiffManager(
     private var incrementalSnapshots = 0
     private var frameId = 0
 
-    fun computeTiledFrame(frame: ImageCaptureService.RawFrame): TiledFrame? {
+    fun computeTiledFrame(frame: RawFrame): TiledFrame? {
         val frameWidth = frame.bitmap.width
         val frameHeight = frame.bitmap.height
         val imageSignature = tileSignatureManager.compute(frame.bitmap) ?: run {

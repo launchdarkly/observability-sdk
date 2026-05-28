@@ -28,20 +28,29 @@ plugins {
 
 include(":app")
 
-// Build the in-monorepo `observability-android` library and substitute it for
-// the published Maven artifact that `launchdarkly_flutter_session_replay`'s
-// `android/build.gradle` declares. The substitution applies to every project
-// in this composite build (including Flutter plugin projects loaded by
-// `dev.flutter.flutter-plugin-loader`), so both the plugin and the example app
-// resolve the same in-tree AAR.
-//
-// This mirrors the .NET MAUI sample's setup at
-// `sdk/@launchdarkly/mobile-dotnet/android/native/settings.gradle.kts`, and
-// matches the Dart-side behavior where the example uses `path:` deps for the
-// `observability` and `session_replay` packages.
-includeBuild("../../../observability-android") {
-    dependencySubstitution {
-        substitute(module("com.launchdarkly:launchdarkly-observability-android"))
-            .using(project(":lib"))
+fun String?.isTruthy(): Boolean =
+    this.equals("true", ignoreCase = true) ||
+        this == "1" ||
+        this.equals("yes", ignoreCase = true)
+
+val useLocalNativeSdk = providers.gradleProperty("ldUseLocalNative")
+    .orElse(providers.environmentVariable("LD_USE_LOCAL_NATIVE"))
+    .orNull
+    .isTruthy()
+
+if (useLocalNativeSdk) {
+    val observabilityAndroidPath = providers.gradleProperty("ldObservabilityAndroidPath")
+        .orElse(providers.environmentVariable("LD_OBSERVABILITY_ANDROID_PATH"))
+        .orElse("../../../observability-android")
+        .get()
+
+    // Build the local `observability-android` library and substitute it for
+    // the published Maven artifact declared by the Flutter session replay
+    // plugin. This applies to all projects in the Flutter composite build.
+    includeBuild(observabilityAndroidPath) {
+        dependencySubstitution {
+            substitute(module("com.launchdarkly:launchdarkly-observability-android"))
+                .using(project(":lib"))
+        }
     }
 }

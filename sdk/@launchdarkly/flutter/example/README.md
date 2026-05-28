@@ -90,6 +90,56 @@ If CocoaPods cannot find a LaunchDarkly pod version, refresh your local specs:
 cd ios && pod install --repo-update && cd ..
 ```
 
+### Use local native SDK checkouts
+
+By default, the example uses the published native dependencies declared by
+`packages/session_replay`. To test local native changes, use one of the
+`*, local native` launch configs in the root or example `.vscode/launch.json`
+files (they set `LD_USE_LOCAL_NATIVE` via `env`), or set the variable in your
+shell before running Flutter:
+
+```bash
+LD_USE_LOCAL_NATIVE=true flutter run -d <device-id> --dart-define-from-file=dart_defines.json
+```
+
+The default local paths assume this workspace layout:
+
+```text
+flutter/
+  observability-sdk/
+    sdk/@launchdarkly/observability-android/
+    sdk/@launchdarkly/flutter/
+  swift-launchdarkly-observability/
+```
+
+Override those paths when needed:
+
+```bash
+export LD_OBSERVABILITY_ANDROID_PATH=/path/to/observability-android
+export LD_SWIFT_OBSERVABILITY_PATH=/path/to/swift-launchdarkly-observability
+LD_USE_LOCAL_NATIVE=true flutter run -d <device-id> --dart-define-from-file=dart_defines.json
+```
+
+For iOS CocoaPods, reinstall pods after changing the switch:
+
+```bash
+cd ios
+LD_USE_LOCAL_NATIVE=true pod install
+# or switch back to published pods:
+pod install
+cd ..
+```
+
+For Android Gradle commands, you can also use Gradle properties instead of
+environment variables:
+
+```bash
+cd android
+./gradlew assembleDebug \
+  -PldUseLocalNative=true \
+  -PldObservabilityAndroidPath=/path/to/observability-android
+```
+
 To exercise Flutter's Swift Package Manager integration instead, enable it once with:
 
 ```bash
@@ -117,6 +167,9 @@ If you have the larger `flutter/` workspace open, the root `/.vscode/launch.json
 - `ld-observability example (debug)`
 - `ld-observability example (profile)`
 - `ld-observability example (release)`
+- `ld-observability example (debug, local native)` — sets `LD_USE_LOCAL_NATIVE=true` via launch `env`
+- `ld-observability example (profile, local native)`
+- `ld-observability example (release, local native)`
 
 ### Then, in either case
 
