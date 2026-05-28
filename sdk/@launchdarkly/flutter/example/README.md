@@ -94,9 +94,9 @@ cd ios && pod install --repo-update && cd ..
 
 By default, the example uses the published native dependencies declared by
 `packages/session_replay`. To test local native changes, use one of the
-`ld-observability example (*, local native)` launch configs in the root or
-`observability-sdk` `.vscode/launch.json` files (they set `LD_USE_LOCAL_NATIVE`
-via `env`), or set the variable in your shell before running Flutter:
+`*, local native` launch configs in the root or example `.vscode/launch.json`
+files (they set `LD_USE_LOCAL_NATIVE` via `env`), or set the variable in your
+shell before running Flutter:
 
 ```bash
 LD_USE_LOCAL_NATIVE=true flutter run -d <device-id> --dart-define-from-file=dart_defines.json
@@ -160,9 +160,9 @@ This folder ships with `.vscode/launch.json` ([file](.vscode/launch.json)) that 
 - `example (profile)`
 - `example (release)`
 
-### Option B — Open the parent `flutter/` or `observability-sdk/` workspace
+### Option B — Open the parent `flutter/` workspace
 
-If you have the larger `flutter/` workspace open, the root `/.vscode/launch.json` exposes the same configs. If you open `observability-sdk/` as the workspace root, use `observability-sdk/.vscode/launch.json` instead. Both include:
+If you have the larger `flutter/` workspace open, the root `/.vscode/launch.json` exposes the same configs under different names:
 
 - `ld-observability example (debug)`
 - `ld-observability example (profile)`
