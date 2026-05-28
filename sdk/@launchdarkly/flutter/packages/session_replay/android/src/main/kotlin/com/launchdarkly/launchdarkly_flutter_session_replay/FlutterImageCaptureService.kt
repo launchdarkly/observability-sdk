@@ -15,9 +15,12 @@ internal class FlutterImageCaptureService(
     private val maskTextInputs: Boolean,
 ) : ImageCaptureServicing {
 
-    override suspend fun captureRawFrame(): ImageCaptureService.RawFrame? =
-        withContext(Dispatchers.Main.immediate) {
-            val payload = requestCapture() ?: return@withContext null
+    override suspend fun captureRawFrame(): ImageCaptureService.RawFrame? {
+        val payload = withContext(Dispatchers.Main.immediate) {
+            requestCapture()
+        } ?: return null
+
+        return withContext(Dispatchers.Default) {
             val bytes = payload["bytes"] as? ByteArray ?: return@withContext null
             val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: return@withContext null
             val timestamp = (payload["timestamp"] as? Number)?.toLong() ?: System.currentTimeMillis()
@@ -29,6 +32,7 @@ internal class FlutterImageCaptureService(
                 orientation = orientation,
             )
         }
+    }
 
     private suspend fun requestCapture(): Map<*, *>? =
         suspendCancellableCoroutine { continuation ->
