@@ -33,7 +33,7 @@ import kotlin.coroutines.resume
 class ImageCaptureService(
     private val options: ReplayOptions,
     private val logger: ObserveLogger,
-) {
+) : ImageCaptureServicing {
     data class RawFrame(
         val bitmap: Bitmap,
         val timestamp: Long,
@@ -52,7 +52,7 @@ class ImageCaptureService(
     private val explicitUnmaskMatchers = options.privacyProfile.explicitUnmaskMatchers
     private val globalMaskMatchers = options.privacyProfile.globalMaskMatchers
 
-    suspend fun captureRawFrame(): RawFrame? =
+    override suspend fun captureRawFrame(): RawFrame? =
         withContext(DispatcherProviderHolder.current.main) {
             // Synchronize with UI rendering frame
             suspendCancellableCoroutine { continuation ->

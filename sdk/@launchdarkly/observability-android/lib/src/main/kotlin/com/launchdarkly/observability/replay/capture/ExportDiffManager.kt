@@ -18,7 +18,7 @@ class ExportDiffManager(
     private var keyFrameId = 0
 
     fun createCaptureEvent(
-        rawFrame: ImageCaptureService.RawFrame,
+        rawFrame: RawFrame,
         session: String
     ): ExportFrame? {
         synchronized(lock) {

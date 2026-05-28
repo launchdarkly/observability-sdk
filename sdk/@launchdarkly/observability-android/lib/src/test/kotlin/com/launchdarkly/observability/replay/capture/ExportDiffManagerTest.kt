@@ -37,9 +37,9 @@ class ExportDiffManagerTest {
             val bitmap2 = mockCompressibleBitmap(0x02)
             val bitmap3 = mockCompressibleBitmap(0x03)
 
-            val frame1 = ImageCaptureService.RawFrame(bitmap = bitmap1, timestamp = 1L, orientation = 0)
-            val frame2 = ImageCaptureService.RawFrame(bitmap = bitmap2, timestamp = 2L, orientation = 0)
-            val frame3 = ImageCaptureService.RawFrame(bitmap = bitmap3, timestamp = 3L, orientation = 0)
+            val frame1 = RawFrame(bitmap = bitmap1, timestamp = 1L, orientation = 0)
+            val frame2 = RawFrame(bitmap = bitmap2, timestamp = 2L, orientation = 0)
+            val frame3 = RawFrame(bitmap = bitmap3, timestamp = 3L, orientation = 0)
 
             every { tileDiffManager.computeTiledFrame(frame1) } returns TiledFrame(
                 id = 1,
@@ -233,11 +233,11 @@ class ExportDiffManagerTest {
         }
     }
 
-    private fun rawFrame(timestamp: Long): ImageCaptureService.RawFrame {
+    private fun rawFrame(timestamp: Long): RawFrame {
         val bitmap = mockk<Bitmap>()
         every { bitmap.isRecycled } returns false
         every { bitmap.recycle() } just runs
-        return ImageCaptureService.RawFrame(bitmap = bitmap, timestamp = timestamp, orientation = 0)
+        return RawFrame(bitmap = bitmap, timestamp = timestamp, orientation = 0)
     }
 
     private fun mockCompressibleBitmap(firstByte: Int): Bitmap {
