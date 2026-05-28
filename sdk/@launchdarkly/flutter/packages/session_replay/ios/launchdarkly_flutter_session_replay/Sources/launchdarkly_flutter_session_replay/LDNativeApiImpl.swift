@@ -1,3 +1,4 @@
+import Flutter
 import Foundation
 import LaunchDarkly
 import LaunchDarklyObservability
@@ -9,6 +10,12 @@ import LaunchDarklySessionReplay
 /// with the Pigeon-generated wire DTOs taking the place of the .NET-side
 /// `ObjcObservabilityOptions` / `ObjcSessionReplayOptions` types.
 final class LDNativeApiImpl: NSObject, LDNativeApi {
+    private let captureChannel: FlutterMethodChannel
+
+    init(captureChannel: FlutterMethodChannel) {
+        self.captureChannel = captureChannel
+        super.init()
+    }
 
     func start(
         mobileKey: String,
@@ -73,21 +80,38 @@ final class LDNativeApiImpl: NSObject, LDNativeApi {
             "telemetry.distro.version": observabilityVersion,
         ]
 
+        let sessionReplayOptions = makeSessionReplayOptions(replay: replay)
         let privacy = replay.privacy
+        let maskTextInputs = privacy?.maskTextInputs ?? true
+        let flutterCaptureService = FlutterImageCaptureService(
+            channel: captureChannel,
+            maskTextInputs: maskTextInputs
+        )
         config.plugins = [
             observabilityPlugin,
-            SessionReplay(options: .init(
-                isEnabled: replay.isEnabled ?? true,
-                privacy: .init(
-                    maskTextInputs: privacy?.maskTextInputs ?? true,
-                    maskWebViews: privacy?.maskWebViews ?? false,
-                    maskLabels: privacy?.maskLabels ?? false,
-                    maskImages: privacy?.maskImages ?? false
-                )
-            )),
+            SessionReplay(
+                options: sessionReplayOptions,
+                imageCaptureService: flutterCaptureService
+            ),
         ]
 
         return config
+    }
+
+    private func makeSessionReplayOptions(
+        replay: LDSessionReplayOptions
+    ) -> LaunchDarklySessionReplay.SessionReplayOptions {
+        let privacy = replay.privacy
+
+        return LaunchDarklySessionReplay.SessionReplayOptions(
+            isEnabled: replay.isEnabled ?? true,
+            privacy: .init(
+                maskTextInputs: privacy?.maskTextInputs ?? true,
+                maskWebViews: privacy?.maskWebViews ?? false,
+                maskLabels: privacy?.maskLabels ?? false,
+                maskImages: privacy?.maskImages ?? false
+            )
+        )
     }
 
     private func makeAnonymousContext() throws -> LDContext {

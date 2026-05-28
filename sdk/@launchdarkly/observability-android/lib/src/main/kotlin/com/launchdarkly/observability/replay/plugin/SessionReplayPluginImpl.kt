@@ -3,6 +3,7 @@ package com.launchdarkly.observability.replay.plugin
 import com.launchdarkly.observability.client.ObservabilityContext
 import com.launchdarkly.observability.replay.ReplayOptions
 import com.launchdarkly.observability.replay.SessionReplayService
+import com.launchdarkly.observability.replay.capture.ImageCaptureServicing
 import com.launchdarkly.observability.sdk.LDObserve
 import com.launchdarkly.observability.sdk.LDReplay
 import java.util.logging.Logger
@@ -15,6 +16,7 @@ import java.util.logging.Logger
  */
 class SessionReplayPluginImpl(
     private val options: ReplayOptions = ReplayOptions(),
+    private val imageCaptureService: ImageCaptureServicing? = null,
 ) {
     @Volatile
     var sessionReplayService: SessionReplayService? = null
@@ -42,7 +44,11 @@ class SessionReplayPluginImpl(
             return
         }
 
-        sessionReplayService = SessionReplayService(options, observabilityContext)
+        sessionReplayService = SessionReplayService(
+            options = options,
+            observabilityContext = observabilityContext,
+            imageCaptureService = imageCaptureService,
+        )
     }
 
     /**

@@ -7,7 +7,11 @@ import Flutter
 /// `sdk/@launchdarkly/mobile-dotnet`.
 public class LaunchdarklyFlutterSessionReplayPlugin: NSObject, FlutterPlugin {
     public static func register(with registrar: FlutterPluginRegistrar) {
-        let api = LDNativeApiImpl()
+        let captureChannel = FlutterMethodChannel(
+            name: "launchdarkly_flutter_session_replay/capture",
+            binaryMessenger: registrar.messenger()
+        )
+        let api = LDNativeApiImpl(captureChannel: captureChannel)
         LDNativeApiSetup.setUp(binaryMessenger: registrar.messenger(), api: api)
     }
 }
