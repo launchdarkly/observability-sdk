@@ -12,25 +12,14 @@ import org.junit.jupiter.api.Test
 
 class LDReplayTest {
 
-    private class TestReplayService(
-        initialIsEnabled: Boolean = false,
-        private val startResult: SessionReplayStartResult = SessionReplayStartResult.STARTED,
-    ) : SessionReplayServicing {
+    private class TestReplayService(initialIsEnabled: Boolean = false) : SessionReplayServicing {
         override var isEnabled: Boolean = initialIsEnabled
-        override var isRunning: Boolean = false
-            private set
         var flushCalls = 0
         val registeredActivities = mutableListOf<Activity>()
         val identifyCalls = mutableListOf<IdentifyCall>()
 
         val registerActivityCalls: Int get() = registeredActivities.size
         val afterIdentifyCalls: Int get() = identifyCalls.size
-
-        override fun start(ignoreSampling: Boolean): SessionReplayStartResult {
-            isEnabled = true
-            isRunning = startResult.isRunning
-            return startResult
-        }
 
         override fun flush() {
             flushCalls++
@@ -81,40 +70,13 @@ class LDReplayTest {
     }
 
     @Test
-    fun `start returns result from active replay service`() {
+    fun `start sets isEnabled to true on active replay service`() {
         val replayService = TestReplayService()
         LDReplay.init(replayService)
 
-        val result = LDReplay.start()
+        LDReplay.start()
 
-        assertEquals(SessionReplayStartResult.STARTED, result)
         assertTrue(replayService.isEnabled)
-        assertTrue(replayService.isRunning)
-        assertTrue(LDReplay.isRunning)
-    }
-
-    @Test
-    fun `start before init buffers enabled intent and returns unavailable`() {
-        val result = LDReplay.start()
-        val replayService = TestReplayService()
-
-        LDReplay.init(replayService)
-
-        assertEquals(SessionReplayStartResult.UNAVAILABLE, result)
-        assertTrue(replayService.isEnabled)
-        assertTrue(LDReplay.isEnabled)
-    }
-
-    @Test
-    fun `start can enable replay without running when sampled out`() {
-        val replayService = TestReplayService(startResult = SessionReplayStartResult.SAMPLED_OUT)
-        LDReplay.init(replayService)
-
-        val result = LDReplay.start()
-
-        assertEquals(SessionReplayStartResult.SAMPLED_OUT, result)
-        assertTrue(LDReplay.isEnabled)
-        assertFalse(LDReplay.isRunning)
     }
 
     @Test
@@ -125,11 +87,6 @@ class LDReplayTest {
         LDReplay.stop()
 
         assertFalse(replayService.isEnabled)
-    }
-
-    @Test
-    fun `isRunning getter defaults to false before init`() {
-        assertFalse(LDReplay.isRunning)
     }
 
     @Test

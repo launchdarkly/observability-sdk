@@ -8,12 +8,10 @@ package com.launchdarkly.observability.replay
  * @property capturePeriodMillis period between captures
  * @property scale optional replay scale override. When null, no additional scaling is applied. Usually from 1-4. 1 = 160DPI
  * @property enabled controls whether session replay starts capturing immediately on initialization
- * @property sampleRate probability from 0.0 to 1.0 that session replay starts when enabled
  * @property compression compression strategy for frame export
  */
 data class ReplayOptions(
     val enabled: Boolean = true,
-    val sampleRate: Double = 1.0,
     val debug: Boolean = false,
     val privacyProfile: PrivacyProfile = PrivacyProfile(),
     val capturePeriodMillis: Long = 1000, // defaults to ever 1 second

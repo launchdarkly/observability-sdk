@@ -202,7 +202,6 @@ Add the Session Replay plugin **after** Observability when configuring the Launc
 
 ```kotlin
 import com.launchdarkly.observability.plugin.Observability
-import com.launchdarkly.observability.replay.ReplayOptions
 import com.launchdarkly.observability.replay.plugin.SessionReplay
 
 val ldConfig = LDConfig.Builder(LDConfig.Builder.AutoEnvAttributes.Enabled)
@@ -211,12 +210,7 @@ val ldConfig = LDConfig.Builder(LDConfig.Builder.AutoEnvAttributes.Enabled)
         Components.plugins().setPlugins(
             listOf(
                 Observability(this@MyApplication, "your-mobile-key"),
-                SessionReplay(
-                    ReplayOptions(
-                        enabled = true,
-                        sampleRate = 1.0,
-                    )
-                ) // depends on Observability being present first
+                SessionReplay() // depends on Observability being present first
             )
         )
     )
@@ -229,24 +223,12 @@ Notes:
 
 #### Delay Start
 
-By default, Session Replay attempts to start recording during initialization if `ReplayOptions.enabled` is `true`. The `sampleRate` option controls whether that attempt actually starts recording. Use a value from `0.0` to `1.0`, where `0.0` never records and `1.0` always records.
-
-```kotlin
-val sessionReplay = SessionReplay(
-    ReplayOptions(
-        enabled = true,
-        sampleRate = 0.25,
-    )
-)
-```
-
 If you need to begin recording after login or later in the app lifecycle, disable automatic capture and start it later:
 
 ```kotlin
 import com.launchdarkly.observability.replay.ReplayOptions
 import com.launchdarkly.observability.replay.plugin.SessionReplay
 import com.launchdarkly.observability.sdk.LDReplay
-import com.launchdarkly.observability.sdk.SessionReplayStartResult
 
 val sessionReplay = SessionReplay(
     ReplayOptions(enabled = false)
@@ -254,33 +236,6 @@ val sessionReplay = SessionReplay(
 
 // After login:
 LDReplay.start()
-```
-
-Setting `LDReplay.isEnabled = true` or calling `LDReplay.start()` still applies sampling. Use `LDReplay.isRunning` to check whether Session Replay is actually recording, or inspect the result returned by `start()`:
-
-```kotlin
-val result = LDReplay.start()
-
-when (result) {
-    SessionReplayStartResult.STARTED,
-    SessionReplayStartResult.ALREADY_STARTED -> {
-        // Session Replay is running.
-    }
-    SessionReplayStartResult.SAMPLED_OUT -> {
-        // Session Replay is enabled, but this session was not selected by sampleRate.
-    }
-    SessionReplayStartResult.UNAVAILABLE -> {
-        // Session Replay has not been registered.
-    }
-}
-
-val isRecording = LDReplay.isRunning
-```
-
-For debugging, you can bypass sampling for a manual start:
-
-```kotlin
-LDReplay.start(ignoreSampling = true)
 ```
 
 Call `LDReplay.stop()` to pause recording.

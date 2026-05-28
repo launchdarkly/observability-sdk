@@ -14,7 +14,7 @@ The button on the home screen lets you trigger an unhandled error, record warn/e
   flutter doctor
   ```
   All checkmarks in `flutter doctor` should be green for the platforms you want to target.
-- **iOS**: Xcode (with iOS Platform Support installed via Xcode → Settings → Platforms), CocoaPods (`brew install cocoapods`), and a booted iOS Simulator (`open -a Simulator`) or a physical iPhone with signing set up.
+- **iOS**: Xcode (with iOS Platform Support installed via Xcode → Settings → Platforms), CocoaPods (`brew install cocoapods`) or Flutter Swift Package Manager support, and a booted iOS Simulator (`open -a Simulator`) or a physical iPhone with signing set up.
 - **Android**: Android Studio with an SDK and at least one AVD/emulator (start one from **Android Studio → Device Manager**) or a USB‑connected device with USB debugging enabled.
 - Cursor (or VS Code) with the official **Dart** and **Flutter** extensions installed.
 
@@ -78,10 +78,22 @@ Notes:
 flutter pub get
 ```
 
-For iOS, also install CocoaPods dependencies (the first `flutter run` does this automatically, but running it manually surfaces errors more clearly):
+For iOS with CocoaPods, also install pod dependencies (the first `flutter run` does this automatically, but running it manually surfaces errors more clearly):
 
 ```bash
 cd ios && pod install && cd ..
+```
+
+If CocoaPods cannot find a LaunchDarkly pod version, refresh your local specs:
+
+```bash
+cd ios && pod install --repo-update && cd ..
+```
+
+To exercise Flutter's Swift Package Manager integration instead, enable it once with:
+
+```bash
+flutter config --enable-swift-package-manager
 ```
 
 ---

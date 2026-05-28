@@ -17,7 +17,6 @@ import com.launchdarkly.observability.replay.transport.BatchWorker
 import com.launchdarkly.observability.replay.transport.EventQueue
 import com.launchdarkly.observability.context.LDObserveContext
 import com.launchdarkly.observability.sdk.SessionReplayServicing
-import com.launchdarkly.observability.sdk.SessionReplayStartResult
 import com.launchdarkly.observability.util.requireMainThread
 import io.opentelemetry.android.session.SessionManager
 import kotlinx.coroutines.CoroutineScope
@@ -75,11 +74,8 @@ class SessionReplayService(
     private var captureJob: Job? = null
     private val shouldCapture = MutableStateFlow(false)
     private val _isEnabled = MutableStateFlow(options.enabled)
-    private val _isRunning = MutableStateFlow(false)
     private var processLifecycleObserver: DefaultLifecycleObserver? = null
     private var isInstalled: Boolean = false
-    /** Whether [start] has already applied sampling for this enable cycle (until [stop]). */
-    private var samplingDecisionMade = false
     private var exporter: SessionReplayExporter? = null
     private val pendingIdentifyLock = Any()
     private var pendingIdentify: IdentifyItemPayload? = null
@@ -142,9 +138,6 @@ class SessionReplayService(
         interactionSource?.attachToApplication(application)
 
         isInstalled = true
-        if (options.enabled) {
-            start()
-        }
         return true
     }
 
@@ -152,7 +145,7 @@ class SessionReplayService(
         // Images collector
         instrumentationScope.launch {
             captureManager?.captureFlow?.collect { capture ->
-                if (!_isRunning.value) return@collect
+                if (!_isEnabled.value) return@collect
                 eventQueue.send(ImageItemPayload(capture))
             }
         }
@@ -160,7 +153,7 @@ class SessionReplayService(
         // Interactions collector
         instrumentationScope.launch {
             interactionSource?.captureFlow?.collect { interaction ->
-                if (!_isRunning.value) return@collect
+                if (!_isEnabled.value) return@collect
                 eventQueue.send(InteractionItemPayload(interaction))
             }
         }
@@ -172,7 +165,7 @@ class SessionReplayService(
      */
     private fun startCaptureStateObserver() {
         instrumentationScope.launch {
-            combine(shouldCapture, _isRunning) { shouldRun, running -> shouldRun && running }
+            combine(shouldCapture, _isEnabled) { shouldRun, enabled -> shouldRun && enabled }
                 .collect { shouldRun ->
                     val running = captureJob?.isActive == true
                     if (shouldRun == running) return@collect
@@ -225,41 +218,8 @@ class SessionReplayService(
         get() = _isEnabled.value
         set(value) {
             _isEnabled.value = value
-            if (value) {
-                start()
-            } else {
-                stop()
-            }
+            if (value) flushPendingIdentify()
         }
-
-    override val isRunning: Boolean
-        get() = _isRunning.value
-
-    override fun start(ignoreSampling: Boolean): SessionReplayStartResult {
-        _isEnabled.value = true
-        if (_isRunning.value) return SessionReplayStartResult.ALREADY_STARTED
-
-        if (!ignoreSampling) {
-            if (samplingDecisionMade) {
-                return SessionReplayStartResult.SAMPLED_OUT
-            }
-            samplingDecisionMade = true
-            if (!SessionReplaySampling.shouldSample(options.sampleRate)) {
-                logger.info("LaunchDarkly Session Replay skipped by sampling.")
-                return SessionReplayStartResult.SAMPLED_OUT
-            }
-        }
-
-        _isRunning.value = true
-        flushPendingIdentify()
-        return SessionReplayStartResult.STARTED
-    }
-
-    private fun stop() {
-        _isEnabled.value = false
-        _isRunning.value = false
-        samplingDecisionMade = false
-    }
 
     override fun flush() {
         batchWorker.flush()
@@ -354,7 +314,7 @@ class SessionReplayService(
         )
 
         // When replay is disabled, cache the identify payload for later session init without sending it now.
-        if (!_isRunning.value) {
+        if (!_isEnabled.value) {
             synchronized(pendingIdentifyLock) {
                 pendingIdentify = event
             }
