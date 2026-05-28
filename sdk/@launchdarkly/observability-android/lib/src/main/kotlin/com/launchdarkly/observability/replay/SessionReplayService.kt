@@ -9,6 +9,8 @@ import com.launchdarkly.observability.context.ObserveLogger
 import com.launchdarkly.observability.client.ObservabilityContext
 import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
 import com.launchdarkly.observability.replay.capture.CaptureManager
+import com.launchdarkly.observability.replay.capture.ImageCaptureService
+import com.launchdarkly.observability.replay.capture.ImageCaptureServicing
 import com.launchdarkly.observability.replay.exporter.IdentifyItemPayload
 import com.launchdarkly.observability.replay.exporter.ImageItemPayload
 import com.launchdarkly.observability.replay.exporter.InteractionItemPayload
@@ -36,6 +38,7 @@ import kotlin.coroutines.cancellation.CancellationException
  *
  * @param options Configuration options for replay behavior including privacy settings and capture interval
  * @param observabilityContext Shared context provided by the Observability plugin
+ * @param imageCaptureService Optional capture implementation. Defaults to [ImageCaptureService].
  *
  * @sample
  * ```kotlin
@@ -61,7 +64,8 @@ import kotlin.coroutines.cancellation.CancellationException
  */
 class SessionReplayService(
     private val options: ReplayOptions = ReplayOptions(),
-    private val observabilityContext: ObservabilityContext
+    private val observabilityContext: ObservabilityContext,
+    private val imageCaptureService: ImageCaptureServicing? = null,
 ) : SessionReplayServicing {
 
     private lateinit var sessionManager: SessionManager
@@ -103,7 +107,9 @@ class SessionReplayService(
         captureManager = CaptureManager(
             sessionManager = sm,
             options = options,
-            logger = observabilityContext.logger
+            logger = observabilityContext.logger,
+            imageCaptureService = imageCaptureService
+                ?: ImageCaptureService(options, logger),
         )
         interactionSource = InteractionSource(sm, options.scale)
 

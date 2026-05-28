@@ -69,7 +69,7 @@ void main() {
         Observe.recordException(details.exception, stackTrace: details.stack);
       };
 
-      runApp(const MyApp());
+      runApp(const SessionReplayCapture(child: MyApp()));
     },
     (err, stack) {
       // Report any errors reported from the guarded zone.

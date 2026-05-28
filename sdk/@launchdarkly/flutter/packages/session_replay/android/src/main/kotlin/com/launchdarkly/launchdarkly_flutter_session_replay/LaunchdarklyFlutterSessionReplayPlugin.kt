@@ -4,6 +4,7 @@ import android.app.Application
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
+import io.flutter.plugin.common.MethodChannel
 
 /**
  * Flutter plugin entry point for `launchdarkly_flutter_session_replay`. Wires
@@ -23,7 +24,8 @@ class LaunchdarklyFlutterSessionReplayPlugin : FlutterPlugin, ActivityAware {
 
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         val application = binding.applicationContext.applicationContext as Application
-        val newImpl = LDNativeApiImpl(application)
+        val channel = MethodChannel(binding.binaryMessenger, CAPTURE_CHANNEL_NAME)
+        val newImpl = LDNativeApiImpl(application, channel)
         LDNativeApi.setUp(binding.binaryMessenger, newImpl)
         impl = newImpl
     }
@@ -47,5 +49,9 @@ class LaunchdarklyFlutterSessionReplayPlugin : FlutterPlugin, ActivityAware {
 
     override fun onDetachedFromActivity() {
         impl?.activity = null
+    }
+
+    private companion object {
+        const val CAPTURE_CHANNEL_NAME = "launchdarkly_flutter_session_replay/capture"
     }
 }

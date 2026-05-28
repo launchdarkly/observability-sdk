@@ -10,6 +10,7 @@ import com.launchdarkly.observability.replay.PrivacyProfile
 import com.launchdarkly.observability.replay.ReplayOptions
 import com.launchdarkly.observability.sdk.LDObserve
 import com.launchdarkly.observability.sdk.LDReplay
+import io.flutter.plugin.common.MethodChannel
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
 
@@ -29,6 +30,7 @@ import io.opentelemetry.api.common.Attributes
  */
 internal class LDNativeApiImpl(
     private val application: Application,
+    private val captureChannel: MethodChannel,
 ) : LDNativeApi {
 
     @Volatile
@@ -86,10 +88,11 @@ internal class LDNativeApiImpl(
         )
 
         val privacy = replay.privacy
+        val maskTextInputs = privacy?.maskTextInputs ?: true
         val nativeReplayOptions = ReplayOptions(
             enabled = replay.isEnabled ?: true,
             privacyProfile = PrivacyProfile(
-                maskTextInputs = privacy?.maskTextInputs ?: true,
+                maskTextInputs = maskTextInputs,
                 maskText = privacy?.maskLabels ?: false,
                 maskImageViews = privacy?.maskImages ?: false,
                 maskWebViews = privacy?.maskWebViews ?: false,
@@ -106,6 +109,10 @@ internal class LDNativeApiImpl(
             ldContext = ldContext,
             options = nativeObservabilityOptions,
             replayOptions = nativeReplayOptions,
+            imageCaptureService = FlutterImageCaptureService(
+                channel = captureChannel,
+                maskTextInputs = maskTextInputs,
+            ),
         )
 
         // The Flutter plugin attaches after the host Activity is already created,

@@ -11,6 +11,7 @@ import com.launchdarkly.observability.client.buildObservabilityResource
 import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.observability.interfaces.Observe
 import com.launchdarkly.observability.replay.ReplayOptions
+import com.launchdarkly.observability.replay.capture.ImageCaptureServicing
 import com.launchdarkly.observability.replay.plugin.SessionReplayPluginImpl
 import com.launchdarkly.observability.util.runOnMainThread
 import io.opentelemetry.api.common.Attributes
@@ -119,13 +120,15 @@ class LDObserve(private val client: Observe) : Observe {
          * @param options      Configuration for observability telemetry.
          * @param replayOptions Optional configuration for session replay. Pass `null` (the default)
          *                      to skip session replay initialization.
+         * @param imageCaptureService Optional capture implementation for session replay.
          */
         fun init(
             application: Application,
             mobileKey: String,
             ldContext: LDObserveContext,
             options: ObservabilityOptions = ObservabilityOptions(),
-            replayOptions: ReplayOptions? = null
+            replayOptions: ReplayOptions? = null,
+            imageCaptureService: ImageCaptureServicing? = null,
         ) {
             val logger = ObserveLogger.build(options.logAdapter, options.loggerName, options.debug)
 
@@ -148,7 +151,12 @@ class LDObserve(private val client: Observe) : Observe {
             runOnMainThread {
                 installObservability(application, mobileKey, resource, logger, options, obsContext)
                 if (replayOptions != null) {
-                    installSessionReplay(replayOptions, obsContext, ldContext)
+                    installSessionReplay(
+                        replayOptions,
+                        obsContext,
+                        ldContext,
+                        imageCaptureService,
+                    )
                 }
             }
         }
@@ -186,8 +194,9 @@ class LDObserve(private val client: Observe) : Observe {
             replayOptions: ReplayOptions,
             obsContext: ObservabilityContext,
             ldContext: LDObserveContext,
+            imageCaptureService: ImageCaptureServicing? = null,
         ) {
-            val plugin = SessionReplayPluginImpl(replayOptions)
+            val plugin = SessionReplayPluginImpl(replayOptions, imageCaptureService)
             sessionReplayPlugin = plugin
             plugin.register(obsContext)
             if (!plugin.initialize()) return

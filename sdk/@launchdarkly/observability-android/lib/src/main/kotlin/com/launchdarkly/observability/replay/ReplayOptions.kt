@@ -17,7 +17,7 @@ data class ReplayOptions(
     val capturePeriodMillis: Long = 1000, // defaults to ever 1 second
     /** Optional replay scale. Null disables scaling override. */
     val scale: Float? = 1.0f,
-    val compression: CompressionMethod = CompressionMethod.OverlayTiles()
+    val compression: CompressionMethod = CompressionMethod.OverlayTiles(),
     // TODO O11Y-623 - Add storage options
 ) {
     sealed class CompressionMethod {
