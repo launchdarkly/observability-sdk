@@ -26,6 +26,11 @@ class CaptureManager(
         compression = options.compression,
         scale = options.scale ?: 1f,
     )
+    val captureDelayMillis: Long = if (options.frameRate > 0) {
+        (1000.0 / options.frameRate).toLong().coerceAtLeast(1L)
+    } else {
+        Long.MAX_VALUE
+    }
 
     /**
      * Requests a [ExportFrame] be taken now.

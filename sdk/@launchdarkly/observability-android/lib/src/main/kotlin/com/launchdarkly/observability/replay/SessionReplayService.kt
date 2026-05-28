@@ -196,7 +196,7 @@ class SessionReplayService(
                 } catch (e: Exception) {
                     logger.error("Capture failed", e)
                 }
-                delay(options.capturePeriodMillis)
+                delay(captureManager?.captureDelayMillis ?: Long.MAX_VALUE)
             }
         }
     }
