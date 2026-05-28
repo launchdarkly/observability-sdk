@@ -1,0 +1,78 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "ld-observability example (debug)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "cwd": "${workspaceFolder}/sdk/@launchdarkly/flutter/example",
+      "toolArgs": [
+        "--dart-define-from-file=dart_defines.json"
+      ]
+    },
+    {
+      "name": "ld-observability example (profile)",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "profile",
+      "program": "lib/main.dart",
+      "cwd": "${workspaceFolder}/sdk/@launchdarkly/flutter/example",
+      "toolArgs": [
+        "--dart-define-from-file=dart_defines.json"
+      ]
+    },
+    {
+      "name": "ld-observability example (release)",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "release",
+      "program": "lib/main.dart",
+      "cwd": "${workspaceFolder}/sdk/@launchdarkly/flutter/example",
+      "toolArgs": [
+        "--dart-define-from-file=dart_defines.json"
+      ]
+    },
+    {
+      "name": "ld-observability example (debug, local native)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "cwd": "${workspaceFolder}/sdk/@launchdarkly/flutter/example",
+      "toolArgs": [
+        "--dart-define-from-file=dart_defines.json"
+      ],
+      "env": {
+        "LD_USE_LOCAL_NATIVE": "true"
+      }
+    },
+    {
+      "name": "ld-observability example (profile, local native)",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "profile",
+      "program": "lib/main.dart",
+      "cwd": "${workspaceFolder}/sdk/@launchdarkly/flutter/example",
+      "toolArgs": [
+        "--dart-define-from-file=dart_defines.json"
+      ],
+      "env": {
+        "LD_USE_LOCAL_NATIVE": "true"
+      }
+    },
+    {
+      "name": "ld-observability example (release, local native)",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "release",
+      "program": "lib/main.dart",
+      "cwd": "${workspaceFolder}/sdk/@launchdarkly/flutter/example",
+      "toolArgs": [
+        "--dart-define-from-file=dart_defines.json"
+      ],
+      "env": {
+        "LD_USE_LOCAL_NATIVE": "true"
+      }
+    }
+  ]
+}
