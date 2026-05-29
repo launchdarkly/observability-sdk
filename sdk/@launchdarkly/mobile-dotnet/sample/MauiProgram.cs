@@ -118,17 +118,20 @@ public static class MauiProgram
 		        maskLabels: false
 	        )
         );
-        //async variant:
-		_ = Task.Run(async () =>
+
+        _ = Task.Run(async () =>
         {
             try
             {
-	            // standalone variant (no LaunchDarkly client):
-	            // LDObserve.Init(mobileKey, observabilityOptions, replayOptions);
-
 	            var client = LdClient.Init(ldConfig, context, TimeSpan.FromSeconds(0));
+	          
 	            LDObserve.Init(client, observabilityOptions, replayOptions);
-             //    var feature1 = client.BoolVariation("feature1", false);
+	         
+	            // standalone variant (no LaunchDarkly client):
+	            //LDObserve.Init(mobileKey, observabilityOptions, replayOptions);
+	            
+	            
+            //    var feature1 = client.BoolVariation("feature1", false);
              //    Console.WriteLine($"feature1 sync value ={feature1}");
              //
              //    client.FlagTracker.FlagValueChanged += (sender, eventArgs) =>
