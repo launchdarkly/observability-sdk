@@ -74,12 +74,19 @@ class RailsRailtieTest < Minitest::Test
     @added_rails_logger = true
   end
 
+  # A bare class whose `.include` is a no-op, standing in for ActionController::Base etc.
+  # Built via a helper so the no-op `include` is defined only once (avoids a false-positive
+  # Lint/DuplicateMethods when the same block is inlined for multiple constants).
+  def noop_includable_class
+    Class.new { def self.include(_mod); end }
+  end
+
   def stub_action_controller
     return if defined?(::ActionController)
 
     action_controller = Module.new
-    action_controller.const_set(:Base, Class.new { def self.include(_mod); end })
-    action_controller.const_set(:API, Class.new { def self.include(_mod); end })
+    action_controller.const_set(:Base, noop_includable_class)
+    action_controller.const_set(:API, noop_includable_class)
     Object.const_set(:ActionController, action_controller)
     @added_consts << [Object, :ActionController]
   end
@@ -88,7 +95,7 @@ class RailsRailtieTest < Minitest::Test
     return if defined?(::ActionView)
 
     action_view = Module.new
-    action_view.const_set(:Base, Class.new { def self.include(_mod); end })
+    action_view.const_set(:Base, noop_includable_class)
     Object.const_set(:ActionView, action_view)
     @added_consts << [Object, :ActionView]
   end
