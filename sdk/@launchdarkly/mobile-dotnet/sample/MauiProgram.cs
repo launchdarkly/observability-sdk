@@ -84,11 +84,7 @@ public static class MauiProgram
 
         var otlpEndpoint = config["LaunchDarkly:OtlpEndpoint"];
         var backendUrl = config["LaunchDarkly:BackendUrl"];
-        var ldConfig = Configuration.Builder(mobileKey, LaunchDarkly.Sdk.Client.ConfigurationBuilder.AutoEnvAttributes.Enabled)
-        // .Plugins(new PluginConfigurationBuilder()
-        // 	.Add(observabilityPlugin)
-        // 	.Add(sessionReplayPlugin)
-        .Build();
+        var ldConfig = Configuration.Builder(mobileKey, LaunchDarkly.Sdk.Client.ConfigurationBuilder.AutoEnvAttributes.Enabled).Build();
 
         var context = LaunchDarkly.Sdk.Context.New("maui-user-key");
 	
@@ -130,17 +126,16 @@ public static class MauiProgram
 	            // standalone variant (no LaunchDarkly client):
 	            //LDObserve.Init(mobileKey, observabilityOptions, replayOptions);
 	            
-	            
-            //    var feature1 = client.BoolVariation("feature1", false);
-             //    Console.WriteLine($"feature1 sync value ={feature1}");
-             //
-             //    client.FlagTracker.FlagValueChanged += (sender, eventArgs) =>
-             //    {
-             //        if (eventArgs.Key == "feature1")
-             //        {
-             //            Console.WriteLine($"feature1 changed from {eventArgs.OldValue} to {eventArgs.NewValue}");
-             //        }
-             //    };
+                var feature1 = client.BoolVariation("feature1", false);
+                Console.WriteLine($"feature1 sync value ={feature1}");
+             
+                client.FlagTracker.FlagValueChanged += (sender, eventArgs) =>
+                {
+                    if (eventArgs.Key == "feature1")
+                    {
+                        Console.WriteLine($"feature1 changed from {eventArgs.OldValue} to {eventArgs.NewValue}");
+                    }
+                };
 
                 LDObserve.RecordMetric("maui-app-start", 1.0);
                 LDObserve.RecordLog("maui-app-start", Severity.Info, new Dictionary<string, object?> { { "event", "app_start" } });
