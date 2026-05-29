@@ -51,7 +51,8 @@ open class BaseApplication : Application() {
                     view(ImageView::class.java),
                 ),
                 maskXMLViewIds = listOf("smoothieTitle")
-            )
+            ),
+            frameRate = 1.0
         )
     )
 
