@@ -147,23 +147,23 @@ class SessionReplayService(
         return true
     }
 
-    private fun startCollectors() {
-        // Images collector
-        instrumentationScope.launch {
-            captureManager?.captureFlow?.collect { capture ->
-                if (!_isEnabled.value) return@collect
-                eventQueue.send(ImageItemPayload(capture))
-            }
-        }
+   private fun startCollectors() {
+       // Images collector
+       instrumentationScope.launch {
+           captureManager?.captureFlow?.collect { capture ->
+               if (!_isEnabled.value) return@collect
+               eventQueue.send(ImageItemPayload(capture))
+           }
+       }
 
-        // Interactions collector
-        instrumentationScope.launch {
-            interactionSource?.captureFlow?.collect { interaction ->
-                if (!_isEnabled.value) return@collect
-                eventQueue.send(InteractionItemPayload(interaction))
-            }
-        }
-    }
+       // Interactions collector
+       instrumentationScope.launch {
+           interactionSource?.captureFlow?.collect { interaction ->
+               if (!_isEnabled.value) return@collect
+               eventQueue.send(InteractionItemPayload(interaction))
+           }
+       }
+   }
 
     /**
      * Observes [shouldCapture] state changes and synchronizes the capture loop state.

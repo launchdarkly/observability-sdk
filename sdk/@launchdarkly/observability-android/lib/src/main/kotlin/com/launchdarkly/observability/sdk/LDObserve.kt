@@ -149,7 +149,7 @@ class LDObserve(private val client: Observe) : Observe {
             // NOTE: the calling thread must not hold any lock the main thread is waiting on, or
             // this will deadlock — see runOnMainThread KDoc.
             runOnMainThread {
-                installObservability(application, mobileKey, resource, logger, options, obsContext)
+                installObservability(application, mobileKey, resource, logger, observability, obsContext)
                 if (replay != null) {
                     installSessionReplay(
                         replay,

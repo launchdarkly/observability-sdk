@@ -29,13 +29,16 @@ A complete example application is available in the [sample](./sample) directory.
 
 ### Basic Setup
 
-In your `MauiProgram.cs` (or wherever you initialize your application), register the `ObservabilityPlugin` via `LdClient`:
+Initialize observability with `LDObserve.Init`. There are two variants depending on whether you use a LaunchDarkly client.
+
+#### With a LaunchDarkly client
+
+Pass your initialized `LdClient` to `LDObserve.Init`. This registers the `ObservabilityPlugin` on the client so feature flag evaluations are correlated with your telemetry:
 
 ```csharp
 using LaunchDarkly.Observability;
 using LaunchDarkly.Sdk;
 using LaunchDarkly.Sdk.Client;
-using LaunchDarkly.Sdk.Client.Integrations;
 
 public static class MauiProgram
 {
@@ -47,16 +50,53 @@ public static class MauiProgram
 
         var mobileKey = "your-mobile-key";
 
-        var ldConfig = Configuration.Builder(mobileKey, ConfigurationBuilder.AutoEnvAttributes.Enabled)
-            .Plugins(new PluginConfigurationBuilder()
-                .Add(new ObservabilityPlugin(new ObservabilityOptions(
-                    isEnabled: true,
-                    serviceName: "maui-sample-app"
-                )))
-            ).Build();
-
+        var ldConfig = Configuration.Builder(mobileKey, ConfigurationBuilder.AutoEnvAttributes.Enabled).Build();
         var context = Context.New("maui-user-key");
         var client = LdClient.Init(ldConfig, context, TimeSpan.FromSeconds(10));
+
+        LDObserve.Init(client, new ObservabilityOptions(
+            isEnabled: true,
+            serviceName: "maui-sample-app"
+        ));
+
+        return builder.Build();
+    }
+}
+```
+
+#### Standalone (without a LaunchDarkly client)
+
+If you are not using the LaunchDarkly client, pass your mobile key directly. This boots the native observability stack without registering a plugin:
+
+```csharp
+using LaunchDarkly.Observability;
+using LaunchDarkly.SessionReplay;
+
+public static class MauiProgram
+{
+    public static MauiApp CreateMauiApp()
+    {
+        var builder = MauiApp.CreateBuilder();
+
+        // ... other configuration ...
+
+        var mobileKey = "your-mobile-key";
+
+        LDObserve.Init(
+            mobileKey,
+            new ObservabilityOptions(
+                isEnabled: true,
+                serviceName: "maui-sample-app"
+            ),
+            new SessionReplayOptions(
+                isEnabled: true,
+                privacy: new(
+                    maskTextInputs: true,
+                    maskWebViews: false,
+                    maskLabels: false
+                )
+            )
+        );
 
         return builder.Build();
     }
@@ -280,14 +320,13 @@ LdClient.Instance.Identify(anonContext, TimeSpan.FromSeconds(5));
 
 ## Session Replay
 
-Session Replay captures user interactions and screen recordings to help you understand how users interact with your application. To enable Session Replay, add the `SessionReplayPlugin` alongside the `ObservabilityPlugin`:
+Session Replay captures user interactions and screen recordings to help you understand how users interact with your application. To enable Session Replay, pass `SessionReplayOptions` as the third argument to `LDObserve.Init`:
 
 ```csharp
 using LaunchDarkly.SessionReplay;
 using LaunchDarkly.Observability;
 using LaunchDarkly.Sdk;
 using LaunchDarkly.Sdk.Client;
-using LaunchDarkly.Sdk.Client.Integrations;
 
 public static class MauiProgram
 {
@@ -299,29 +338,36 @@ public static class MauiProgram
 
         var mobileKey = "your-mobile-key";
 
-        var ldConfig = Configuration.Builder(mobileKey, ConfigurationBuilder.AutoEnvAttributes.Enabled)
-            .Plugins(new PluginConfigurationBuilder()
-                .Add(new ObservabilityPlugin(new ObservabilityOptions(
-                    isEnabled: true,
-                    serviceName: "maui-sample-app"
-                )))
-                .Add(new SessionReplayPlugin(new SessionReplayOptions(
-                    isEnabled: true,
-                    privacy: new SessionReplayOptions.PrivacyOptions(
-                        maskTextInputs: true,
-                        maskWebViews: false,
-                        maskLabels: false
-                    )
-                )))
-            ).Build();
-
+        var ldConfig = Configuration.Builder(mobileKey, ConfigurationBuilder.AutoEnvAttributes.Enabled).Build();
         var context = Context.New("maui-user-key");
         var client = LdClient.Init(ldConfig, context, TimeSpan.FromSeconds(10));
+
+        LDObserve.Init(
+            client,
+            new ObservabilityOptions(
+                isEnabled: true,
+                serviceName: "maui-sample-app",
+                instrumentation: new(
+                    networkRequests: true,
+                    launchTimes: true
+                )
+            ),
+            new SessionReplayOptions(
+                isEnabled: true,
+                privacy: new(
+                    maskTextInputs: true,
+                    maskWebViews: false,
+                    maskLabels: false
+                )
+            )
+        );
 
         return builder.Build();
     }
 }
 ```
+
+The same third argument works with the standalone variant: `LDObserve.Init(mobileKey, observabilityOptions, sessionReplayOptions)`.
 
 ### Privacy Options
 

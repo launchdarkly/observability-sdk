@@ -13,8 +13,10 @@ using LDObserveMaciOS;
 
 namespace LaunchDarkly.SessionReplay;
 
-public class LDNative
+internal class LDNative
 {
+    internal static LDNative? Current { get; private set; }
+
     public ObservabilityOptions Observability { get; set; }
     public SessionReplayOptions Replay { get; set; }
     public String NativeVersion { get; set; } = string.Empty;
@@ -33,9 +35,10 @@ public class LDNative
         return rawVersion.Split('+')[0];
     }
 
-    public static LDNative Start(string mobileKey, ObservabilityOptions observability, SessionReplayOptions replay)
+    internal static LDNative Start(string mobileKey, ObservabilityOptions observability, SessionReplayOptions replay)
     {
         var ldNative = new LDNative(observability, replay);
+        Current = ldNative;
         var observabilityVersion = GetObservabilityVersion();
         
 #if ANDROID

@@ -1,20 +1,20 @@
+using System;
 using System.Collections.Generic;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using LaunchDarkly.SessionReplay;
 using System.Reflection;
+using System.Threading.Tasks;
 using LaunchDarkly.Sdk.Client;
-using LaunchDarkly.Sdk.Client.Interfaces;
-using LaunchDarkly.Sdk.Client.Integrations;
 using LaunchDarkly.Observability;
 using CommunityToolkit.Maui;
+using Microsoft.Maui.Controls.Hosting;
+using Microsoft.Maui.Hosting;
 using Plugin.Maui.BottomSheet.Hosting;
 namespace MauiSample9;
 
 public static class MauiProgram
 {
-	public static LDNative? LdNative { get; private set; }
-
 	private static IConfiguration BuildConfiguration()
 	{
 		var assembly = Assembly.GetExecutingAssembly();
@@ -84,33 +84,6 @@ public static class MauiProgram
 
         var otlpEndpoint = config["LaunchDarkly:OtlpEndpoint"];
         var backendUrl = config["LaunchDarkly:BackendUrl"];
-        var observabilityPlugin = new ObservabilityPlugin(new ObservabilityOptions(
-        		isEnabled: true,
-#if IOS
-        		serviceName: "maui-ios-sample",
-#elif ANDROID
-        		serviceName: "maui-android-sample",
-#else
-        		serviceName: "maui-sample-app",
-#endif
-        		otlpEndpoint: otlpEndpoint,
-        		backendUrl: backendUrl,
-				attributes: new Dictionary<string, object?> { { "test-options-attribute", "maui-sample-value" } },
-				instrumentation: new InstrumentationOptions(
-					networkRequests: true,
-					launchTimes: true
-				)
-        	));
-
-        var sessionReplayPlugin = new SessionReplayPlugin(new SessionReplayOptions(
-        		isEnabled: true,
-        		privacy: new SessionReplayOptions.PrivacyOptions(
-        			maskTextInputs: true,
-        			maskWebViews: false,
-        			maskLabels: false
-        		)
-        	));
-
         var ldConfig = Configuration.Builder(mobileKey, LaunchDarkly.Sdk.Client.ConfigurationBuilder.AutoEnvAttributes.Enabled)
         // .Plugins(new PluginConfigurationBuilder()
         // 	.Add(observabilityPlugin)
@@ -118,24 +91,53 @@ public static class MauiProgram
         .Build();
 
         var context = LaunchDarkly.Sdk.Context.New("maui-user-key");
-		//async variant:
+	
+        var observabilityOptions = new ObservabilityOptions(
+	        isEnabled: true,
+#if IOS
+	        serviceName: "maui-ios-sample",
+#elif ANDROID
+            serviceName: "maui-android-sample",
+#else
+            serviceName: "maui-sample-app",
+#endif
+	        otlpEndpoint: otlpEndpoint,
+	        backendUrl: backendUrl,
+	        attributes: new Dictionary<string, object?> { { "test-options-attribute", "maui-sample-value" } },
+	        instrumentation: new (
+		        networkRequests: true,
+		        launchTimes: true
+	        )
+        );
+
+        var replayOptions = new SessionReplayOptions(
+	        isEnabled: true,
+	        privacy: new (
+		        maskTextInputs: true,
+		        maskWebViews: false,
+		        maskLabels: false
+	        )
+        );
+        //async variant:
 		_ = Task.Run(async () =>
         {
             try
             {
-                var client = await LdClient.InitAsync(ldConfig, context, TimeSpan.FromSeconds(5));
-                client.RegisterPlugin(observabilityPlugin);
-                client.RegisterPlugin(sessionReplayPlugin);
-                var feature1 = client.BoolVariation("feature1", false);
-                Console.WriteLine($"feature1 sync value ={feature1}");
+	            // standalone variant (no LaunchDarkly client):
+	            // LDObserve.Init(mobileKey, observabilityOptions, replayOptions);
 
-                client.FlagTracker.FlagValueChanged += (sender, eventArgs) =>
-                {
-                    if (eventArgs.Key == "feature1")
-                    {
-                        Console.WriteLine($"feature1 changed from {eventArgs.OldValue} to {eventArgs.NewValue}");
-                    }
-                };
+	            var client = LdClient.Init(ldConfig, context, TimeSpan.FromSeconds(0));
+	            LDObserve.Init(client, observabilityOptions, replayOptions);
+             //    var feature1 = client.BoolVariation("feature1", false);
+             //    Console.WriteLine($"feature1 sync value ={feature1}");
+             //
+             //    client.FlagTracker.FlagValueChanged += (sender, eventArgs) =>
+             //    {
+             //        if (eventArgs.Key == "feature1")
+             //        {
+             //            Console.WriteLine($"feature1 changed from {eventArgs.OldValue} to {eventArgs.NewValue}");
+             //        }
+             //    };
 
                 LDObserve.RecordMetric("maui-app-start", 1.0);
                 LDObserve.RecordLog("maui-app-start", Severity.Info, new Dictionary<string, object?> { { "event", "app_start" } });
@@ -149,30 +151,7 @@ public static class MauiProgram
         });
 
         //sync variant: var client = LdClient.Init(ldConfig, context, TimeSpan.FromSeconds(0));
-
-
+        
         return app;
     }
-
-    // private static void directStart(string mobileKey, string? otlpEndpoint, string? backendUrl)
-    // {
-    //     LdNative = LDNative.Start(
-    //         mobileKey: mobileKey,
-    //         observability: new ObservabilityOptions(
-    //             serviceName: "maui-sample-app",
-    //             otlpEndpoint: otlpEndpoint,
-    //             backendUrl: backendUrl
-    //         ),
-    //         replay: new SessionReplayOptions(
-    //             isEnabled: true,
-    //             privacy: new SessionReplayOptions.PrivacyOptions(
-    //                 maskTextInputs: true,
-    //                 maskWebViews: false,
-    //                 maskLabels: false
-    //             )
-    //         )
-    //     );
-    //     LdNative.Replay.IsEnabled = true;
-    //     Console.WriteLine($"ldNative.version={LdNative.NativeVersion}");
-    // }
 }
