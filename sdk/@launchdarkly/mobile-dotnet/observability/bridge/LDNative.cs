@@ -60,6 +60,7 @@ internal class LDNative
         bridge.Start(mobileKey, observability, replay, observabilityVersion);
 #endif
 
+        LDReplay.OnNativeStarted(ldNative.Replay);
         return ldNative;
     }
 }

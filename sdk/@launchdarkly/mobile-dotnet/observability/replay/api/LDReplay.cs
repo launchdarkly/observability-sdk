@@ -4,20 +4,20 @@ namespace LaunchDarkly.SessionReplay;
 
 public static class LDReplay
 {
+    private static readonly PreInitReplayBuffer State = new();
+
     /// <summary>
     /// Controls whether session replay capture is currently enabled.
-    /// Has no effect until the native stack has been started via
-    /// <see cref="LaunchDarkly.Observability.LDObserve.Init"/>.
+    /// Writes made before <see cref="LaunchDarkly.Observability.LDObserve.Init"/> completes
+    /// are buffered and applied when the native stack is wired up.
     /// </summary>
     public static bool IsEnabled
     {
-        get => LDNative.Current?.Replay.IsEnabled ?? false;
-        set
-        {
-            if (LDNative.Current is { } native)
-                native.Replay.IsEnabled = value;
-        }
+        get => State.IsEnabled;
+        set => State.SetEnabled(value);
     }
+
+    internal static void OnNativeStarted(SessionReplayOptions replay) => State.Bind(replay);
 
     /// <summary>
     /// Tracks a flag evaluation result for session replay annotation.
