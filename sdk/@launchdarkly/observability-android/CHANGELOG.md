@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.48.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.47.0...launchdarkly-observability-android-0.48.0) (2026-05-28)
+
+
+### Features
+
+* Flutter basic masking ([#570](https://github.com/launchdarkly/observability-sdk/issues/570)) ([eaa6c51](https://github.com/launchdarkly/observability-sdk/commit/eaa6c51cc039a75fab461b11f251a600fe03cf1a))
+* Flutter dual support of Cocoapods and SPM ([#567](https://github.com/launchdarkly/observability-sdk/issues/567)) ([6b42a1f](https://github.com/launchdarkly/observability-sdk/commit/6b42a1f2849b2c2427d7de52838a772d0f7f6772))
+
 ## [0.47.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.46.0...launchdarkly-observability-android-0.47.0) (2026-05-27)
 
 
