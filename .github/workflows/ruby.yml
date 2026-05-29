@@ -3,10 +3,15 @@ name: Ruby SDK
 on:
     push:
         branches: ['main']
+        paths:
+            - 'sdk/highlight-ruby/**'
+            - 'e2e/ruby/**'
+            - '.github/workflows/ruby.yml'
     pull_request:
         types: [opened, synchronize]
         paths:
             - 'sdk/highlight-ruby/**'
+            - 'e2e/ruby/**'
             - '.github/workflows/ruby.yml'
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
