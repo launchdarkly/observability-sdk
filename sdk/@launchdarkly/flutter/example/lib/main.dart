@@ -9,7 +9,6 @@ import 'my_app.dart';
 
 class LDSingleton {
   static LDClient? client;
-  static LDNative? ldNative;
 }
 
 void main() {
@@ -51,18 +50,10 @@ void main() {
 
       LDSingleton.client!.start();
 
-      // Mirrors `LDNative.Start(...)` in
-      // sdk/@launchdarkly/mobile-dotnet/sample/MauiProgram.cs (lines 155-170).
-      // Boots the native LaunchDarkly observability + session replay stack via
-      // the Flutter session_replay plugin, independently of the LDClient above.
-      const mobileKey = String.fromEnvironment('LAUNCHDARKLY_MOBILE_KEY');
-      if (mobileKey.isNotEmpty) {
-        unawaited(_startLDNative(mobileKey));
-      } else {
-        debugPrint(
-          'LAUNCHDARKLY_MOBILE_KEY is not set; skipping LDNative.start.',
-        );
-      }
+      // Boots the native LaunchDarkly observability + session replay stack.
+      // Mirrors the two `LDObserve.Init(...)` variants in
+      // sdk/@launchdarkly/mobile-dotnet/sample/MauiProgram.cs.
+      _startObservability();
 
       // Report any errors handled by flutter.
       FlutterError.onError = (FlutterErrorDetails details) {
@@ -83,26 +74,44 @@ void main() {
   );
 }
 
-Future<void> _startLDNative(String mobileKey) async {
-  try {
-    LDSingleton.ldNative = await LDNative.start(
-      mobileKey: mobileKey,
-      observability: const ObservabilityOptions(
-        serviceName: 'flutter-sample-app',
-      ),
-      replay: const SessionReplayOptions(
-        isEnabled: true,
-        privacy: PrivacyOptions(
-          maskTextInputs: true,
-          maskWebViews: false,
-          maskLabels: false,
-        ),
-      ),
-    );
-    debugPrint(
-      'LDNative started; native version=${LDSingleton.ldNative!.nativeVersion}',
-    );
-  } catch (e, stack) {
-    debugPrint('LDNative.start failed: $e\n$stack');
-  }
+/// Boots LaunchDarkly observability + session replay.
+///
+/// Mirrors the two `LDObserve.Init(...)` overloads from the MAUI sample
+/// (`sdk/@launchdarkly/mobile-dotnet/sample/MauiProgram.cs`). Only the
+/// LaunchDarkly client backed variant is active; the standalone variant is
+/// shown below for reference.
+void _startObservability() {
+  const observability = ObservabilityOptions(
+    serviceName: 'flutter-sample-app',
+    instrumentation: InstrumentationOptions(
+      networkRequests: true,
+      launchTimes: true,
+    ),
+  );
+  const replay = SessionReplayOptions(
+    isEnabled: true,
+    privacy: PrivacyOptions(
+      maskTextInputs: true,
+      maskWebViews: false,
+      maskLabels: false,
+    ),
+  );
+
+  // Client-backed variant (active): registers the observability plugin on the
+  // LaunchDarkly client, mirroring `LDObserve.Init(client, ...)`.
+  LDObserve.init(
+    LDSingleton.client!,
+    observability: observability,
+    replay: replay,
+  );
+
+  // Standalone variant (no LaunchDarkly client), mirroring
+  // `LDObserve.Init(mobileKey, ...)`:
+  //
+  // const mobileKey = String.fromEnvironment('LAUNCHDARKLY_MOBILE_KEY');
+  // unawaited(LDObserve.initStandalone(
+  //   mobileKey,
+  //   observability: observability,
+  //   replay: replay,
+  // ));
 }

@@ -12,8 +12,10 @@ dependencies:
     flutter:
         sdk: flutter
 
-    launchdarkly_flutter_observability:
-        path: ../observability
+    launchdarkly_flutter_client_sdk: ^4.17.0-beta.1
+
+    # launchdarkly_flutter_observability:
+    #     path: ../observability
 
 dev_dependencies:
     flutter_test:

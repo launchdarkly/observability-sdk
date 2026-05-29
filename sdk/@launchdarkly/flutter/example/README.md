@@ -1,49 +1,350 @@
-# LaunchDarkly Flutter Observability — Example App
+# LaunchDarkly Observability SDK for Flutter — Example App
 
-A minimal Flutter app that demonstrates the `launchdarkly_flutter_observability` plugin: initializing the LaunchDarkly client with the `ObservabilityPlugin`, recording spans, logs, and exceptions, and routing them through OpenTelemetry.
+This example demonstrates the LaunchDarkly Observability SDK for Flutter: automatic and manual instrumentation for your application — including spans, logs, error reporting, feature flag correlation, and session replay.
 
-The button on the home screen lets you trigger an unhandled error, record warn/error logs, and call `debugPrint`/`print` so you can see how each gets reported.
+A complete, runnable app lives in this directory. The home screen lets you trigger errors, logs, spans, HTTP requests, identify calls, flag evaluations, and a session replay masking demo so you can see how each one is reported.
 
----
+## Early Access Preview
 
-## 1. Prerequisites
+**NB: APIs are subject to change until a 1.x version is released.**
 
-- Flutter SDK matching the constraint in `pubspec.yaml` (`sdk: ^3.10.0-162.1.beta`). Verify with:
+## Features
+
+### Automatic Instrumentation
+
+The Flutter observability SDK automatically instruments:
+
+- **HTTP Requests**: Outgoing HTTP requests (when `InstrumentationOptions.networkRequests` is enabled).
+- **Crash / Error Reporting**: Uncaught errors captured through `runZonedGuarded` and `FlutterError.onError`.
+- **Feature Flag Evaluations**: Evaluation events are added to your spans via the bundled hook.
+- **App Lifecycle / Launch Times**: Session and launch-time tracking.
+- **`debugPrint` / `print` Capture**: Console output forwarded as logs via the print-intercepting zone.
+
+### Two Layers
+
+The Flutter SDK is split across two packages with complementary responsibilities:
+
+- `launchdarkly_flutter_session_replay` exposes **`LDObserve`**, which boots the **native** observability + session replay stack. This mirrors `LDObserve.Init(...)` in the MAUI SDK.
+- `launchdarkly_flutter_observability` exposes **`Observe`** and the **`ObservabilityPlugin`**, which provide the **Dart-side** OpenTelemetry surface (spans, logs, errors) and feature-flag-evaluation hooks.
+
+## Prerequisites
+
+- Flutter SDK matching the constraint in `pubspec.yaml`. Verify with:
   ```bash
   flutter --version
   flutter doctor
   ```
-  All checkmarks in `flutter doctor` should be green for the platforms you want to target.
-- **iOS**: Xcode (with iOS Platform Support installed via Xcode → Settings → Platforms), CocoaPods (`brew install cocoapods`) or Flutter Swift Package Manager support, and a booted iOS Simulator (`open -a Simulator`) or a physical iPhone with signing set up.
-- **Android**: Android Studio with an SDK and at least one AVD/emulator (start one from **Android Studio → Device Manager**) or a USB‑connected device with USB debugging enabled.
-- Cursor (or VS Code) with the official **Dart** and **Flutter** extensions installed.
+- **iOS**: Xcode with iOS platform support, CocoaPods (`brew install cocoapods`) or Swift Package Manager, and a booted Simulator or signed physical device.
+- **Android**: Android Studio with an SDK and an emulator/AVD, or a USB device with USB debugging enabled.
+- Cursor (or VS Code) with the official **Dart** and **Flutter** extensions.
 
----
+## Usage
 
-## 2. Get your LaunchDarkly credentials
+### Basic Setup
 
-In the [LaunchDarkly dashboard](https://app.launchdarkly.com/):
+Initialize observability with `LDObserve`. There are two variants depending on whether you use a LaunchDarkly client. Both take an `ObservabilityOptions` and an optional `SessionReplayOptions`.
 
-1. Pick the **Project** and **Environment** you want to use.
-2. Open the environment's settings and copy:
-   - **Mobile key** — for iOS, Android, macOS, Windows, Linux.
-   - **Client‑side ID** — for Chrome/Web builds.
+#### With a LaunchDarkly client
 
-You don't need both; only the one(s) for the platforms you intend to run.
+Pass your constructed `LDClient` to `LDObserve.init`. This registers the observability plugin on the client so feature flag evaluations are correlated with your telemetry. The Dart-side `ObservabilityPlugin` (registered through `LDConfig.plugins`) wires up OpenTelemetry and the evaluation hooks:
 
----
+```dart
+import 'package:launchdarkly_flutter_client_sdk/launchdarkly_flutter_client_sdk.dart';
+import 'package:launchdarkly_flutter_observability/launchdarkly_flutter_observability.dart';
+import 'package:launchdarkly_flutter_session_replay/launchdarkly_flutter_session_replay.dart';
 
-## 3. Configure `dart_defines.json`
+final client = LDClient(
+  LDConfig(
+    CredentialSource.fromEnvironment(),
+    AutoEnvAttributes.enabled,
+    plugins: [
+      ObservabilityPlugin(
+        applicationName: 'flutter-sample-app',
+        applicationVersion: const String.fromEnvironment('GIT_SHA',
+            defaultValue: 'no-version'),
+        instrumentation: InstrumentationConfig(
+          debugPrint: DebugPrintSetting.always(),
+        ),
+      ),
+    ],
+  ),
+  LDContextBuilder().kind('user', 'bob').build(),
+);
 
-The example calls `CredentialSource.fromEnvironment()`, which reads compile‑time constants (`LAUNCHDARKLY_MOBILE_KEY`, `LAUNCHDARKLY_CLIENT_SIDE_ID`) injected via `--dart-define`. To keep the secrets out of source control we load them from a JSON file via `--dart-define-from-file`.
+client.start();
 
-From this directory:
+// Boots the native observability + session replay stack and registers the
+// native plugin on the client.
+LDObserve.init(
+  client,
+  observability: const ObservabilityOptions(
+    serviceName: 'flutter-sample-app',
+    instrumentation: InstrumentationOptions(
+      networkRequests: true,
+      launchTimes: true,
+    ),
+  ),
+  replay: const SessionReplayOptions(isEnabled: true),
+);
+```
+
+#### Standalone (without a LaunchDarkly client)
+
+If you are not using the LaunchDarkly client, pass your mobile key directly. This boots the native stack without registering a plugin:
+
+```dart
+import 'package:launchdarkly_flutter_session_replay/launchdarkly_flutter_session_replay.dart';
+
+const mobileKey = String.fromEnvironment('LAUNCHDARKLY_MOBILE_KEY');
+
+await LDObserve.initStandalone(
+  mobileKey,
+  observability: const ObservabilityOptions(
+    serviceName: 'flutter-sample-app',
+  ),
+  replay: const SessionReplayOptions(
+    isEnabled: true,
+    privacy: PrivacyOptions(
+      maskTextInputs: true,
+      maskWebViews: false,
+      maskLabels: false,
+    ),
+  ),
+);
+```
+
+> When `replay` is omitted, session replay is not started.
+
+### Recording Observability Data
+
+Use `Observe` (from `launchdarkly_flutter_observability`) to record spans, logs, and errors from your Dart code.
+
+#### Logs
+
+Use `Observe.recordLog` to emit a structured log record with a severity level and optional typed attributes. An optional `stackTrace` can be attached:
+
+```dart
+Observe.recordLog(
+  'Checkout completed',
+  severity: 'info',
+  attributes: <String, Attribute>{
+    'order_id': StringAttribute('ORD-9876'),
+    'total': DoubleAttribute(42.99),
+  },
+);
+
+Observe.recordLog(
+  'This is an error log!',
+  severity: 'error',
+  stackTrace: StackTrace.current,
+);
+```
+
+`severity` is a string; common levels are `trace`, `debug`, `info`, `warn`, `error`, and `fatal`. It defaults to `info`.
+
+A log recorded while a span is active is automatically associated with that span through the OpenTelemetry context:
+
+```dart
+final span = Observe.startSpan('checkout-flow');
+Observe.recordLog(
+  'Processing on the same trace',
+  severity: 'warn',
+  attributes: <String, Attribute>{'source': StringAttribute('checkout')},
+);
+span.end();
+```
+
+#### Errors
+
+Use `Observe.recordException` to capture an error. In Dart the stack trace is independent of the exception, so capture both together:
+
+```dart
+try {
+  // something that throws
+} catch (e, stack) {
+  Observe.recordException(e, stackTrace: stack);
+}
+```
+
+The example app also installs global handlers so uncaught errors are reported automatically:
+
+```dart
+runZonedGuarded(
+  () {
+    WidgetsFlutterBinding.ensureInitialized();
+
+    FlutterError.onError = (details) {
+      Observe.recordException(details.exception, stackTrace: details.stack);
+    };
+
+    runApp(const SessionReplayCapture(child: MyApp()));
+  },
+  (err, stack) => Observe.recordException(err, stackTrace: stack),
+  zoneSpecification: Observe.zoneSpecification(),
+);
+```
+
+#### Traces
+
+Use `Observe.startSpan` to create spans for tracing operations. Spans are backed by [OpenTelemetry](https://opentelemetry.io/) and must be ended when the operation completes.
+
+```dart
+final span = Observe.startSpan('api_request');
+span.setAttribute('endpoint', StringAttribute('/api/users'));
+span.setAttribute('method', StringAttribute('GET'));
+span.addEvent('cache.miss');
+span.setStatus(SpanStatusCode.ok);
+span.end();
+```
+
+##### Nested Spans
+
+`startSpan` automatically creates parent-child relationships — each new span becomes a child of the currently active span:
+
+```dart
+final parent = Observe.startSpan('ProcessOrder');
+final child = Observe.startSpan('ValidatePayment');
+final grandchild = Observe.startSpan('ChargeCard');
+
+await httpClient.post(Uri.parse('https://api.example.com/charge'));
+
+grandchild.end();
+child.end();
+parent.end();
+```
+
+##### Sequential Spans
+
+End each span before starting the next so they are recorded independently rather than nested:
+
+```dart
+final span1 = Observe.startSpan('SequentialOperation1');
+span1.setAttribute('sequence', StringAttribute('1'));
+span1.end();
+
+final span2 = Observe.startSpan('SequentialOperation2');
+span2.setAttribute('sequence', StringAttribute('2'));
+span2.end();
+```
+
+| Method | Description |
+|---|---|
+| `Observe.startSpan(name, {kind, attributes})` | Start a span that nests under the current active span. Returns a `Span`. |
+| `Observe.recordLog(message, {severity, stackTrace, attributes})` | Record a structured log. |
+| `Observe.recordException(exception, {stackTrace, attributes})` | Record an error/exception. |
+| `Observe.shutdown()` | Shut down observability. It cannot be restarted afterward. |
+| `Observe.zoneSpecification()` | A zone spec that forwards `print`/`debugPrint` output as logs. |
+| `span.setAttribute(name, attribute)` | Set a single typed attribute on a span. |
+| `span.setAttributes(map)` | Set multiple attributes on a span. |
+| `span.addEvent(name, {attributes})` | Record a named event on a span. |
+| `span.setStatus(SpanStatusCode)` | Set the span status (`ok`, `error`, `unset`). |
+| `span.recordException(exception, {stackTrace, attributes})` | Record an exception on the span. |
+| `span.end()` | End the span. |
+
+`SpanKind` supports `internal` (default), `client`, `server`, `producer`, and `consumer`.
+
+#### Attributes
+
+Attribute values are strongly typed. Use the type-safe constructors, or `Attribute.fromDynamic` when the value's type is not known ahead of time:
+
+```dart
+span.setAttribute('count', IntAttribute(42));
+span.setAttribute('name', StringAttribute('flutter'));
+span.setAttribute('ratio', DoubleAttribute(3.14));
+span.setAttribute('enabled', BooleanAttribute(true));
+span.setAttribute('samples', DoubleListAttribute([3.14, 6.28]));
+span.setAttribute('dynamic', Attribute.fromDynamic(someValue));
+```
+
+Available types: `StringAttribute`, `IntAttribute`, `DoubleAttribute`, `BooleanAttribute`, and their list variants (`StringListAttribute`, `IntListAttribute`, `DoubleListAttribute`, `BooleanListAttribute`).
+
+### Identifying Users
+
+Use the LaunchDarkly client to identify or switch user contexts. This ties observability data to the correct user:
+
+```dart
+// Single context
+final userContext = LDContextBuilder()
+    .kind('user', 'user-key')
+    .name('Bob Smith')
+    .build();
+await client.identify(userContext);
+
+// Multi-context
+final multiContext = LDContextBuilder()
+    .kind('user', 'user-key')
+    .name('Bob Smith')
+    .kind('device', 'iphone')
+    .name('iphone')
+    .build();
+await client.identify(multiContext);
+
+// Anonymous context
+final anonContext = LDContextBuilder()
+    .kind('user', 'anonymous-key')
+    .anonymous(true)
+    .build();
+await client.identify(anonContext);
+```
+
+## Session Replay
+
+Session Replay captures screen recordings to help you understand how users interact with your application. Enable it by passing `SessionReplayOptions` to `LDObserve.init` / `LDObserve.initStandalone`, and wrap the part of your app you want recorded in a `SessionReplayCapture` widget:
+
+```dart
+runApp(const SessionReplayCapture(child: MyApp()));
+```
+
+`SessionReplayCapture` provides Flutter-rendered screenshots to the native session replay SDK over a method channel; without it, the native SDK has no Flutter frames to record.
+
+### Privacy Options
+
+Control what is captured during a session with `PrivacyOptions`:
+
+- `maskTextInputs`: (Default: `true`) Masks all text input fields.
+- `maskWebViews`: (Default: `false`) Masks all web view content.
+- `maskLabels`: (Default: `false`) Masks all text labels.
+- `maskImages`: (Default: `false`) Masks all images.
+- `minimumAlpha`: (Default: `0.02`) Minimum opacity threshold for capture.
+
+```dart
+const SessionReplayOptions(
+  isEnabled: true,
+  privacy: PrivacyOptions(
+    maskTextInputs: true,
+    maskWebViews: false,
+    maskLabels: false,
+    maskImages: false,
+  ),
+);
+```
+
+### Masking demo
+
+The **Credit Card** screen (reachable from the home screen) is a form of sensitive fields. With `maskTextInputs: true`, every text field on the page is masked automatically in the recorded session.
+
+> A per-widget masking API (the equivalent of MAUI's `view.LDMask()` / `view.LDUnmask()`) is not yet available in the Flutter SDK; today, masking is configured screen-wide through `PrivacyOptions`.
+
+## Running the Example
+
+### 1. Get your LaunchDarkly credentials
+
+In the [LaunchDarkly dashboard](https://app.launchdarkly.com/), open your project/environment settings and copy either:
+
+- **Mobile key** — for iOS, Android, macOS, Windows, Linux.
+- **Client-side ID** — for Chrome/Web builds.
+
+You only need the one(s) for the platforms you intend to run.
+
+### 2. Configure `dart_defines.json`
+
+The example calls `CredentialSource.fromEnvironment()`, which reads compile-time constants injected via `--dart-define`. To keep secrets out of source control, load them from a JSON file:
 
 ```bash
 cp dart_defines.example.json dart_defines.json
 ```
 
-Then open `dart_defines.json` and replace the placeholder with your real value. For iOS / Android / macOS / Windows / Linux:
+Then set your real key. For iOS / Android / macOS / Windows / Linux:
 
 ```json
 {
@@ -52,7 +353,7 @@ Then open `dart_defines.json` and replace the placeholder with your real value. 
 }
 ```
 
-For Chrome / Web, use the client‑side ID instead:
+For Chrome / Web, use the client-side ID instead:
 
 ```json
 {
@@ -61,209 +362,80 @@ For Chrome / Web, use the client‑side ID instead:
 }
 ```
 
-> **Important**: set **only one** of `LAUNCHDARKLY_MOBILE_KEY` or `LAUNCHDARKLY_CLIENT_SIDE_ID`. The SDK throws `"When building an application using the SDK you should include either a client-side ID, or a mobile key, but not both"` if both keys are present as non‑empty strings — even placeholder values like `"xxxxxxxxxxxxxxxxxxxxxxxx"` count as non‑empty and will trip the check. Delete (don't just placeholder) the one you aren't using.
+> **Important**: set **only one** of `LAUNCHDARKLY_MOBILE_KEY` or `LAUNCHDARKLY_CLIENT_SIDE_ID`. The SDK throws if both are present as non-empty strings — even placeholder values like `"xxxx..."` count. Delete (don't just placeholder) the one you aren't using.
 
 Notes:
 
-- `GIT_SHA` is read by `main.dart` and passed to `ObservabilityPlugin.applicationVersion`; any string works (commit SHA, semver, etc.).
-- `dart_defines.json` is **gitignored** — never commit it. The committed `dart_defines.example.json` is the template for other contributors.
-- For CI/automation, you can replace the file with `--dart-define LAUNCHDARKLY_MOBILE_KEY=...` flags instead.
-- `--dart-define-from-file` values are **compile‑time constants**. After editing `dart_defines.json` you must fully stop and re‑launch the app — hot reload and hot restart will not pick up new values.
+- `GIT_SHA` is passed to `ObservabilityPlugin.applicationVersion`; any string works.
+- `dart_defines.json` is **gitignored** — never commit it. The committed `dart_defines.example.json` is the template.
+- `--dart-define-from-file` values are **compile-time constants**. After editing the file you must fully stop and re-launch — hot reload/restart will not pick up new values.
 
----
-
-## 4. Install dependencies
+### 3. Install dependencies
 
 ```bash
 flutter pub get
 ```
 
-For iOS with CocoaPods, also install pod dependencies (the first `flutter run` does this automatically, but running it manually surfaces errors more clearly):
+For iOS with CocoaPods:
 
 ```bash
 cd ios && pod install && cd ..
 ```
 
-If CocoaPods cannot find a LaunchDarkly pod version, refresh your local specs:
+### 4. Run
+
+From the Cursor/VS Code Run & Debug panel, the bundled `.vscode/launch.json` wires `--dart-define-from-file=dart_defines.json` into the debugger — pick a device and a `example` config and press **F5**.
+
+Or from the command line:
 
 ```bash
-cd ios && pod install --repo-update && cd ..
+# List devices to find the exact name/UDID
+flutter devices
+
+# iOS Simulator
+flutter run -d "iPhone 16e" --dart-define-from-file=dart_defines.json
+
+# Android emulator
+flutter run -d emulator-5554 --dart-define-from-file=dart_defines.json
 ```
 
 ### Use local native SDK checkouts
 
-By default, the example uses the published native dependencies declared by
-`packages/session_replay`. To test local native changes, use one of the
-`*, local native` launch configs in the root or example `.vscode/launch.json`
-files (they set `LD_USE_LOCAL_NATIVE` via `env`), or set the variable in your
-shell before running Flutter:
+By default, the example uses the published native dependencies declared by `packages/session_replay`. To test local native changes, set `LD_USE_LOCAL_NATIVE` (the `*, local native` launch configs do this for you):
 
 ```bash
 LD_USE_LOCAL_NATIVE=true flutter run -d <device-id> --dart-define-from-file=dart_defines.json
 ```
 
-The default local paths assume this workspace layout:
-
-```text
-flutter/
-  observability-sdk/
-    sdk/@launchdarkly/observability-android/
-    sdk/@launchdarkly/flutter/
-  swift-launchdarkly-observability/
-```
-
-Override those paths when needed:
+For iOS CocoaPods, reinstall pods after toggling the switch:
 
 ```bash
-export LD_OBSERVABILITY_ANDROID_PATH=/path/to/observability-android
-export LD_SWIFT_OBSERVABILITY_PATH=/path/to/swift-launchdarkly-observability
-LD_USE_LOCAL_NATIVE=true flutter run -d <device-id> --dart-define-from-file=dart_defines.json
+cd ios && LD_USE_LOCAL_NATIVE=true pod install && cd ..
 ```
 
-For iOS CocoaPods, reinstall pods after changing the switch:
+### Verify it's working
 
-```bash
-cd ios
-LD_USE_LOCAL_NATIVE=true pod install
-# or switch back to published pods:
-pod install
-cd ..
-```
+In the running app:
 
-For Android Gradle commands, you can also use Gradle properties instead of
-environment variables:
+- **Trigger Error** / **Trigger Crash** → reported through `Observe.recordException`.
+- **Trigger Log** / **Log with Context** / **Record error log with stack trace** → flow through `Observe.recordLog`.
+- **Nested Spans** / **Trigger Sequential Spans** / **Send custom span** → spans recorded via `Observe.startSpan`.
+- **Trigger HTTP Request** → an outgoing request that is traced when network instrumentation is enabled.
+- **Identify** (User / Multi / Anon) → switches the active LaunchDarkly context.
+- **Credit Card** → a masked form for the session replay masking demo.
 
-```bash
-cd android
-./gradlew assembleDebug \
-  -PldUseLocalNative=true \
-  -PldObservabilityAndroidPath=/path/to/observability-android
-```
-
-To exercise Flutter's Swift Package Manager integration instead, enable it once with:
-
-```bash
-flutter config --enable-swift-package-manager
-```
-
----
-
-## 5. Run from the Cursor UI (recommended)
-
-This folder ships with `.vscode/launch.json` ([file](.vscode/launch.json)) that wires `--dart-define-from-file=dart_defines.json` into the Dart/Flutter debugger. You can use it in two ways:
-
-### Option A — Open the `example/` folder directly
-
-`File → Open Folder…` → select this `example/` directory. The Run & Debug panel (⇧⌘D / Ctrl+Shift+D) will show three configs:
-
-- `example (debug)`
-- `example (profile)`
-- `example (release)`
-
-### Option B — Open the parent `flutter/` workspace
-
-If you have the larger `flutter/` workspace open, the root `/.vscode/launch.json` exposes the same configs under different names:
-
-- `ld-observability example (debug)`
-- `ld-observability example (profile)`
-- `ld-observability example (release)`
-- `ld-observability example (debug, local native)` — sets `LD_USE_LOCAL_NATIVE=true` via launch `env`
-- `ld-observability example (profile, local native)`
-- `ld-observability example (release, local native)`
-
-### Then, in either case
-
-1. Pick a device in the **device selector** at the bottom right of the Cursor window (e.g. `iPhone 16e`, `Pixel 7 API 34`, `Chrome`, `macOS`).
-2. Select the matching config in the Run & Debug dropdown.
-3. Hit **F5** (or click the green ▶ button).
-
-Hot reload is **⌘\\** (macOS) / **Ctrl+\\**; hot restart is **⇧⌘F5** / **Ctrl+Shift+F5**.
-
----
-
-## 6. Run from the command line
-
-If you'd rather not use the debugger UI:
-
-### iOS Simulator
-
-```bash
-# Make sure a simulator is booted
-open -a Simulator
-
-# List devices to find the exact name/UDID
-flutter devices
-
-# Run (replace device name with what flutter devices shows)
-flutter run -d "iPhone 16e" --dart-define-from-file=dart_defines.json
-```
-
-You can also target by UDID for stability across simulator swaps:
-
-```bash
-flutter run -d <UDID-from-flutter-devices> --dart-define-from-file=dart_defines.json
-```
-
-### Physical iPhone
-
-1. Open `ios/Runner.xcworkspace` in Xcode.
-2. Select the **Runner** target → **Signing & Capabilities** → check **Automatically manage signing** → pick your **Team** (sign in with your Apple ID in Xcode → Settings → Accounts if no team is listed).
-3. Change the **Bundle Identifier** to something unique (e.g. `com.<yourname>.ldobservability.example`); the default `com.example.example` cannot be signed by a personal team.
-4. Plug in the iPhone, trust the Mac on the device, then:
-   ```bash
-   flutter run -d <your-iphone-name> --dart-define-from-file=dart_defines.json
-   ```
-
-### Android Emulator
-
-```bash
-# Start an emulator (or use Android Studio's Device Manager)
-flutter emulators
-flutter emulators --launch <emulator-id>
-
-flutter devices
-flutter run -d emulator-5554 --dart-define-from-file=dart_defines.json
-```
-
-### Physical Android device
-
-1. Enable **Developer options** and **USB debugging** on the device (Settings → About phone → tap *Build number* 7 times, then Settings → Developer options → USB debugging).
-2. Plug it in, accept the "Allow USB debugging" prompt.
-3. ```bash
-   flutter devices
-   flutter run -d <device-id> --dart-define-from-file=dart_defines.json
-   ```
-
----
-
-## 7. Verify it's working
-
-After launching, in the running app:
-
-- Tap **Trigger unhandled error** → an exception is thrown and reported through `Observe.recordException` (via `runZonedGuarded`).
-- Tap **Record warning log** / **Record error log with stack trace** → logs flow through `Observe.recordLog`.
-- Tap the **+** floating action button → two nested spans (`increment-counter-1`, `increment-counter-2`) are recorded around a `stringVariation` call.
-
-Then check the **Observability** section of your LaunchDarkly project for traces, logs, and errors tagged with `applicationName: test-application`.
-
----
+Then check the **Observability** section of your LaunchDarkly project for traces, logs, and errors tagged with your `serviceName` / `applicationName`.
 
 ## Troubleshooting
 
-- **`No supported devices found with name or id matching '<name>'`** — run `flutter devices` to get the exact name/UDID. Don't use `-d ios` (not a valid flag); either use the device name/UDID or `-d apple_ios` for any iOS device.
+- **`No supported devices found ...`** — run `flutter devices` for the exact name/UDID. Don't use `-d ios`; use the device name/UDID or `-d apple_ios`.
 - **`pod: command not found`** — `brew install cocoapods`, then `cd ios && pod install`.
-- **`Automatically assigning platform iOS with version 13.0`** — already fixed in `ios/Podfile` by setting `platform :ios, '13.0'` explicitly.
-- **`CocoaPods did not set the base configuration ... Pods-Runner.profile.xcconfig`** — harmless warning. Only matters if you run `flutter run --profile`. Fix by creating `ios/Flutter/Profile.xcconfig` (mirror of `Release.xcconfig` but pointing to `Pods-Runner.profile.xcconfig`) and switching the **Profile** build configuration of the `Runner` target to it in Xcode.
-- **Cursor prompts to "enable iOS development"** — you're launching the wrong config. Make sure you've selected one of the `example` / `ld-observability example` configs, not a config that points at a different project. See section 5 above.
-- **`The mobile key was not specified, but must be for this build type`** — `--dart-define-from-file=dart_defines.json` didn't reach the build. Confirm `dart_defines.json` exists in this directory, you're using one of the launch configs above (not a default Dart/Flutter config), and that you fully stopped & re‑launched the app after editing the file (hot reload/restart won't pick up new defines).
-- **`When building an application using the SDK you should include either a client-side ID, or a mobile key, but not both`** — both `LAUNCHDARKLY_MOBILE_KEY` and `LAUNCHDARKLY_CLIENT_SIDE_ID` are set as non‑empty strings in `dart_defines.json`. Delete the one for the platform you're not targeting (placeholder strings like `"xxxx..."` still count as set).
-
----
+- **`The mobile key was not specified ...`** — `--dart-define-from-file=dart_defines.json` didn't reach the build. Confirm the file exists here, you used a launch config (not a default Dart/Flutter config), and you fully stopped & re-launched after editing it.
+- **`... include either a client-side ID, or a mobile key, but not both`** — both keys are set as non-empty strings in `dart_defines.json`. Delete the one you aren't targeting (placeholders still count as set).
 
 ## Resources
 
 - [Flutter installation](https://docs.flutter.dev/get-started/install)
-- [Flutter cookbook](https://docs.flutter.dev/cookbook)
 - [LaunchDarkly Flutter SDK docs](https://docs.launchdarkly.com/sdk/client-side/flutter)
 - [LaunchDarkly observability docs](https://docs.launchdarkly.com/home/observability)
 - [Dart `--dart-define-from-file` reference](https://dart.dev/tools/dart-define-from-file)
