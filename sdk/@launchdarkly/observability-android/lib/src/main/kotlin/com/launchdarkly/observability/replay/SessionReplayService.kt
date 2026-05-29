@@ -196,7 +196,7 @@ class SessionReplayService(
                 } catch (e: Exception) {
                     logger.error("Capture failed", e)
                 }
-                delay(options.capturePeriodMillis)
+                delay(captureManager?.captureDelayMillis ?: Long.MAX_VALUE)
             }
         }
     }
@@ -223,6 +223,7 @@ class SessionReplayService(
     override var isEnabled: Boolean
         get() = _isEnabled.value
         set(value) {
+            if (_isEnabled.value == value) return
             _isEnabled.value = value
             if (value) flushPendingIdentify()
         }
