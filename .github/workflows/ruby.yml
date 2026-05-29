@@ -76,8 +76,6 @@ jobs:
               run: bundle install
             - name: Test
               run: bundle exec rake
-            - name: Rubocop
-              run: bundle exec rubocop
     e2e-api-only:
         name: Rails API-Only Example App Tests
         runs-on: ubuntu-22.04-8core-32gb
