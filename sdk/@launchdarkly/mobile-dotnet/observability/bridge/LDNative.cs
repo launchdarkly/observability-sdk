@@ -15,7 +15,13 @@ namespace LaunchDarkly.SessionReplay;
 
 internal class LDNative
 {
-    internal static LDNative? Current { get; private set; }
+    private static volatile LDNative? _current;
+
+    internal static LDNative? Current
+    {
+        get => _current;
+        private set => _current = value;
+    }
 
     public ObservabilityOptions Observability { get; set; }
     public SessionReplayOptions Replay { get; set; }

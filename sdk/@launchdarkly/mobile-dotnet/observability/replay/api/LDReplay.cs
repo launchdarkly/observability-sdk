@@ -7,7 +7,7 @@ public static class LDReplay
     /// <summary>
     /// Controls whether session replay capture is currently enabled.
     /// Has no effect until the native stack has been started via
-    /// <see cref="LaunchDarkly.Observability.LDObserve.init"/>.
+    /// <see cref="LaunchDarkly.Observability.LDObserve.Init"/>.
     /// </summary>
     public static bool IsEnabled
     {
