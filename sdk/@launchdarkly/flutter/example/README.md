@@ -401,7 +401,7 @@ flutter run -d emulator-5554 --dart-define-from-file=dart_defines.json
 
 ### Use local native SDK checkouts
 
-By default, the example uses the published native dependencies declared by `packages/session_replay`. To test local native changes, set `LD_USE_LOCAL_NATIVE` (the `*, local native` launch configs do this for you):
+By default, the example uses the published native dependencies declared by `packages/observability`. To test local native changes, set `LD_USE_LOCAL_NATIVE` (the `*, local native` launch configs do this for you):
 
 ```bash
 LD_USE_LOCAL_NATIVE=true flutter run -d <device-id> --dart-define-from-file=dart_defines.json

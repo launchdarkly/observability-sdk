@@ -211,14 +211,14 @@ packages:
   launchdarkly_flutter_observability:
     dependency: "direct main"
     description:
-      path: "../packages/observability"
+      path: "../packages/core"
       relative: true
     source: path
     version: "0.0.0"
   launchdarkly_flutter_session_replay:
     dependency: "direct main"
     description:
-      path: "../packages/session_replay"
+      path: "../packages/observability"
       relative: true
     source: path
     version: "0.0.0"

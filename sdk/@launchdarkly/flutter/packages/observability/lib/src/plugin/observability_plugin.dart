@@ -1,145 +1,61 @@
-import 'dart:collection';
+// Ported from
+// sdk/@launchdarkly/mobile-dotnet/observability/observe/plugin/ObservabilityPlugin.cs.
+
+import 'dart:async';
 
 import 'package:launchdarkly_flutter_client_sdk/launchdarkly_flutter_client_sdk.dart';
-import 'package:launchdarkly_flutter_observability/src/api/span_status_code.dart';
-import 'package:launchdarkly_flutter_observability/src/instrumentation/debug_print.dart';
-import 'package:launchdarkly_flutter_observability/src/instrumentation/instrumentation.dart';
-import 'package:launchdarkly_flutter_observability/src/instrumentation/lifecycle/lifecycle_instrumentation.dart';
-import 'package:launchdarkly_flutter_observability/src/otel/feature_flag_convention.dart';
-import 'package:launchdarkly_flutter_observability/src/plugin/observability_config.dart';
 
-import '../api/span.dart';
-import '../observe.dart';
+import '../ld_native.dart';
+import '../observability_options.dart';
+import '../session_replay_options.dart';
+import 'observability_hook.dart';
 
-const _launchDarklyObservabilityName = 'launchdarkly-observability';
-const _launchDarklyObservabilityPluginName =
-    '$_launchDarklyObservabilityName-plugin';
-
-final class _ObservabilityHook extends Hook {
-  static const _evalSpanDataName = 'eval-span';
-  static const _launchDarklyObservabilityHookName =
-      '$_launchDarklyClientPrefix-hook';
-  static const _launchDarklyClientPrefix = 'LDClient';
-
-  final HookMetadata _metadata = const HookMetadata(
-    name: _launchDarklyObservabilityHookName,
-  );
-
-  @override
-  HookMetadata get metadata => _metadata;
-
-  @override
-  UnmodifiableMapView<String, dynamic> beforeEvaluation(
-    EvaluationSeriesContext hookContext,
-    UnmodifiableMapView<String, dynamic> data,
-  ) {
-    final span = Observe.startSpan(
-      '$_launchDarklyClientPrefix.${hookContext.method}',
-    );
-
-    var updated = Map<String, dynamic>.from(data);
-    updated[_evalSpanDataName] = span;
-    return UnmodifiableMapView(updated);
-  }
-
-  @override
-  UnmodifiableMapView<String, dynamic> afterEvaluation(
-    EvaluationSeriesContext hookContext,
-    UnmodifiableMapView<String, dynamic> data,
-    LDEvaluationDetail<LDValue> detail,
-  ) {
-    final span = data[_evalSpanDataName] as Span?;
-
-    if (span != null) {
-      span.addEvent(
-        FeatureFlagConvention.eventName,
-        attributes: FeatureFlagConvention.getEventAttributes(
-          key: hookContext.flagKey,
-          detail: detail,
-          environmentId: hookContext.environmentId,
-          context: hookContext.context,
-        ),
-      );
-      span.setStatus(SpanStatusCode.ok);
-      span.end();
-    }
-    return data;
-  }
-}
-
-/// LaunchDarkly Observability plugin.
+/// Single LaunchDarkly plugin that wires up both observability and session
+/// replay. When registered on an [LDClient] it boots the native stack once and
+/// installs the relevant hooks.
+///
+/// Mirrors the C# `LaunchDarkly.Observability.ObservabilityPlugin`. It is not
+/// exported from the package's public library to avoid colliding with the
+/// Dart-side `ObservabilityPlugin` in `launchdarkly_flutter_observability`;
+/// application code reaches it through [LDObserve.init].
 final class ObservabilityPlugin extends Plugin {
-  final List<Instrumentation> _instrumentations = [];
-  final PluginMetadata _metadata = const PluginMetadata(
-    name: _launchDarklyObservabilityPluginName,
-  );
+  static const String _name = 'LaunchDarkly.Observability';
 
-  final ObservabilityConfig _config;
+  final ObservabilityOptions observability;
+  final SessionReplayOptions? replay;
 
-  /// Construct an observability plugin with the given configuration.
-  ///
-  /// [applicationName] The name of the application.
-  /// [applicationVersion] The version of the application. This is commonly a
-  /// git SHA or semantic version.
-  /// [otlpEndpoint] The OTLP endpoint for reporting OpenTelemetry data. This
-  /// setting does not need to be used in most configurations.
-  /// [backendUrl] The back-end URL. This setting does not need to be used in
-  /// most configurations.
-  /// [contextFriendlyName] A function that returns a friendly name for a given
-  /// context. This name will be used to identify the session in the
-  /// observability UI.
-  /// ```dart
-  /// ObservabilityPlugin(contextFriendlyName: (LDContext context) {
-  ///   // If there is a user context with an email, then use that email.
-  ///   final email = context.get('user', AttributeReference('email'));
-  ///   if(email.stringValue().isNotEmpty) {
-  ///     return email.stringValue();
-  ///   }
-  ///   // If there is no email, then use the default name.
-  ///   return null;
-  /// })
-  /// ```
-  ObservabilityPlugin({
-    String? applicationName,
-    String? applicationVersion,
-    String? otlpEndpoint,
-    String? backendUrl,
-    String? Function(LDContext context)? contextFriendlyName,
-    InstrumentationConfig? instrumentation,
-  }) : _config = configWithDefaults(
-         applicationName: applicationName,
-         applicationVersion: applicationVersion,
-         otlpEndpoint: otlpEndpoint,
-         backendUrl: backendUrl,
-         contextFriendlyName: contextFriendlyName,
-         instrumentationConfig: instrumentation,
-       ) {
-    _instrumentations.add(LifecycleInstrumentation());
-    _instrumentations.add(
-      DebugPrintInstrumentation(_config.instrumentationConfig),
-    );
-  }
+  final PluginMetadata _metadata = const PluginMetadata(name: _name);
 
+  ObservabilityPlugin(this.observability, {this.replay});
+
+  @override
+  PluginMetadata get metadata => _metadata;
+
+  /// Boots the native stack with the credential the SDK was initialized with,
+  /// mirroring `ObservabilityPlugin.Register` in the .NET bridge.
   @override
   void register(
     LDClient client,
     PluginEnvironmentMetadata environmentMetadata,
   ) {
-    registerPlugin(this, environmentMetadata.credential.value, _config);
-    super.register(client, environmentMetadata);
+    final replayOptions =
+        replay ?? const SessionReplayOptions(isEnabled: false);
+
+    // LDNative.start is asynchronous over the pigeon channel, whereas the
+    // .NET LDNative.Start is synchronous. Fire-and-forget here so plugin
+    // registration stays non-blocking.
+    unawaited(
+      LDNative.start(
+        mobileKey: environmentMetadata.credential.value,
+        observability: observability,
+        replay: replayOptions,
+      ),
+    );
   }
 
   @override
-  List<Hook> get hooks => [_ObservabilityHook()];
-
-  @override
-  PluginMetadata get metadata => _metadata;
-
-  /// Unregister any event handlers used by the plugin and cleanup any
-  /// resources requiring manual cleanup.
-  void dispose() {
-    for (final instrumentation in _instrumentations) {
-      instrumentation.dispose();
-    }
-  }
+  List<Hook> get hooks => [
+    ObservabilityHook(),
+    if (replay != null) SessionReplayHook(),
+  ];
 }
