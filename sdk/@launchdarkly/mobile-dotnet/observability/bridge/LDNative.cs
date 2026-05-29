@@ -15,14 +15,6 @@ namespace LaunchDarkly.SessionReplay;
 
 internal class LDNative
 {
-    private static volatile LDNative? _current;
-
-    internal static LDNative? Current
-    {
-        get => _current;
-        private set => _current = value;
-    }
-
     public ObservabilityOptions Observability { get; set; }
     public SessionReplayOptions Replay { get; set; }
     public String NativeVersion { get; set; } = string.Empty;
@@ -44,7 +36,6 @@ internal class LDNative
     internal static LDNative Start(string mobileKey, ObservabilityOptions observability, SessionReplayOptions replay)
     {
         var ldNative = new LDNative(observability, replay);
-        Current = ldNative;
         var observabilityVersion = GetObservabilityVersion();
         
 #if ANDROID
