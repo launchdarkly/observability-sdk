@@ -15,52 +15,85 @@ require_relative 'test_helper'
 #
 # This test simulates that "already booted" condition and asserts rails.rb loads clean.
 class RailsRailtieTest < Minitest::Test
+  # Minimal stubs of the Rails surface rails.rb touches. The key behavior is that
+  # `config.after_initialize` invokes its block immediately, mimicking a post-boot
+  # lazy require where the :after_initialize hook has already run.
+  #
+  # Everything we introduce is tracked so teardown can undo ALL of it — some transitive
+  # dependency may already define a partial `::Rails` (without Railtie), and anything we
+  # leak (especially a bogus `Rails.logger`) pollutes other tests: the LD SDK's
+  # Config.default_logger returns `Rails.logger` whenever `Rails.respond_to?(:logger)`.
   def setup
-    # Minimal stubs of the Rails surface rails.rb touches. The key behavior is that
-    # `config.after_initialize` invokes its block immediately, mimicking a post-boot
-    # lazy require where the :after_initialize hook has already run.
-    #
-    # Track exactly what we introduce so teardown only removes our additions — some
-    # transitive dependency may already define a partial `::Rails` (without Railtie).
-    @added = []
+    @added_consts = [] # [owner, const_name] pairs to remove
+    @added_rails_logger = false
 
-    Object.const_set(:Rails, Module.new) unless defined?(::Rails)
-
-    unless defined?(::Rails::Railtie)
-      railtie_config = Class.new do
-        def after_initialize(&block)
-          block.call # already-booted: run synchronously
-        end
-      end
-      railtie = Class.new do
-        def self.initializer(*); end
-      end
-      railtie.const_set(:RAILTIE_CONFIG, railtie_config)
-      railtie.define_singleton_method(:config) { @config ||= self::RAILTIE_CONFIG.new }
-      ::Rails.const_set(:Railtie, railtie)
-      @added << [::Rails, :Railtie]
-    end
-
-    ::Rails.define_singleton_method(:logger) { @logger ||= Object.new } unless ::Rails.respond_to?(:logger)
-
-    unless defined?(::ActionController)
-      action_controller = Module.new
-      action_controller.const_set(:Base, Class.new { def self.include(_mod); end })
-      action_controller.const_set(:API, Class.new { def self.include(_mod); end })
-      Object.const_set(:ActionController, action_controller)
-      @added << [Object, :ActionController]
-    end
-
-    return if defined?(::ActionView)
-    action_view = Module.new
-    action_view.const_set(:Base, Class.new { def self.include(_mod); end })
-    Object.const_set(:ActionView, action_view)
-    @added << [Object, :ActionView]
+    stub_rails
+    stub_rails_logger
+    stub_action_controller
+    stub_action_view
   end
 
   def teardown
-    @added.reverse_each { |mod, const| mod.send(:remove_const, const) if mod.const_defined?(const, false) }
+    # Remove the logger singleton method first (only relevant when we didn't create ::Rails
+    # ourselves; if we did, removing the constant below drops it along with everything else).
+    if @added_rails_logger && defined?(::Rails) && ::Rails.singleton_class.method_defined?(:logger)
+      ::Rails.singleton_class.send(:remove_method, :logger)
+    end
+    @added_consts.reverse_each { |owner, const| owner.send(:remove_const, const) if owner.const_defined?(const, false) }
   end
+
+  private
+
+  def stub_rails
+    unless defined?(::Rails)
+      Object.const_set(:Rails, Module.new)
+      @added_consts << [Object, :Rails]
+    end
+
+    return if defined?(::Rails::Railtie)
+
+    railtie_config = Class.new do
+      def after_initialize(&block)
+        block.call # already-booted: run synchronously
+      end
+    end
+    railtie = Class.new { def self.initializer(*); end }
+    railtie.const_set(:RAILTIE_CONFIG, railtie_config)
+    railtie.define_singleton_method(:config) { @config ||= self::RAILTIE_CONFIG.new }
+    ::Rails.const_set(:Railtie, railtie)
+    @added_consts << [::Rails, :Railtie]
+  end
+
+  # Provide a real (null) logger if Rails doesn't already have one, so attach_otel_log_bridge
+  # works if exercised. Defined only when missing, and removed in teardown to avoid leaking.
+  def stub_rails_logger
+    return if ::Rails.respond_to?(:logger)
+
+    null_logger = ::Logger.new(File::NULL)
+    ::Rails.define_singleton_method(:logger) { null_logger }
+    @added_rails_logger = true
+  end
+
+  def stub_action_controller
+    return if defined?(::ActionController)
+
+    action_controller = Module.new
+    action_controller.const_set(:Base, Class.new { def self.include(_mod); end })
+    action_controller.const_set(:API, Class.new { def self.include(_mod); end })
+    Object.const_set(:ActionController, action_controller)
+    @added_consts << [Object, :ActionController]
+  end
+
+  def stub_action_view
+    return if defined?(::ActionView)
+
+    action_view = Module.new
+    action_view.const_set(:Base, Class.new { def self.include(_mod); end })
+    Object.const_set(:ActionView, action_view)
+    @added_consts << [Object, :ActionView]
+  end
+
+  public
 
   def test_rails_file_loads_when_after_initialize_runs_immediately
     rails_rb = File.expand_path('../lib/launchdarkly_observability/rails.rb', __dir__)
