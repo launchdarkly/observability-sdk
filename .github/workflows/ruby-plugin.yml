@@ -3,10 +3,15 @@ name: Ruby Observability Plugin
 on:
     push:
         branches: ['main']
+        paths:
+            - 'sdk/@launchdarkly/observability-ruby/**'
+            - 'e2e/ruby/**'
+            - '.github/workflows/ruby-plugin.yml'
     pull_request:
         types: [opened, synchronize]
         paths:
             - 'sdk/@launchdarkly/observability-ruby/**'
+            - 'e2e/ruby/**'
             - '.github/workflows/ruby-plugin.yml'
 
 permissions:
