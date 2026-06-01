@@ -85,6 +85,27 @@ final class InstrumentationConfig {
   InstrumentationConfig({this.debugPrint = const DebugPrintReleaseOnly()});
 }
 
+/// Configuration for product analytics behaviors.
+///
+/// Currently this controls whether the observability plugin emits a
+/// `launchdarkly.track` span for each `ldClient.track(...)` call. When
+/// disabled, both the `afterTrack` hook and any direct calls to
+/// [Observe.track] become no-ops.
+final class ProductAnalyticsConfig {
+  /// Whether `launchdarkly.track` spans should be emitted for track events.
+  ///
+  /// Defaults to `true`.
+  final bool trackEvents;
+
+  /// Construct a product analytics configuration.
+  ///
+  /// [trackEvents] When `true` (the default) the observability plugin emits
+  /// a `launchdarkly.track` span for every track event seen via the LD
+  /// client's `afterTrack` hook and for every direct call to
+  /// `Observe.track`. When `false`, both code paths are no-ops.
+  const ProductAnalyticsConfig({this.trackEvents = true});
+}
+
 final class ObservabilityConfig {
   /// The configured OTLP endpoint.
   final String otlpEndpoint;
@@ -107,12 +128,16 @@ final class ObservabilityConfig {
   /// Configuration of instrumentations.
   final InstrumentationConfig instrumentationConfig;
 
+  /// Configuration of product analytics behaviors.
+  final ProductAnalyticsConfig productAnalyticsConfig;
+
   ObservabilityConfig({
     this.applicationName,
     this.applicationVersion,
     required this.otlpEndpoint,
     required this.backendUrl,
     required this.instrumentationConfig,
+    required this.productAnalyticsConfig,
     this.contextFriendlyName,
   });
 }
@@ -124,6 +149,7 @@ ObservabilityConfig configWithDefaults({
   String? backendUrl,
   String? Function(LDContext context)? contextFriendlyName,
   InstrumentationConfig? instrumentationConfig,
+  ProductAnalyticsConfig? productAnalyticsConfig,
 }) {
   return ObservabilityConfig(
     applicationName: applicationName,
@@ -132,5 +158,7 @@ ObservabilityConfig configWithDefaults({
     backendUrl: backendUrl ?? _defaultBackendUrl,
     contextFriendlyName: contextFriendlyName,
     instrumentationConfig: instrumentationConfig ?? InstrumentationConfig(),
+    productAnalyticsConfig:
+        productAnalyticsConfig ?? const ProductAnalyticsConfig(),
   );
 }
