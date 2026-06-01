@@ -23,6 +23,7 @@ import {
 	InstrumentationManagerOptions,
 } from '../client/InstrumentationManager'
 import { ErrorInstrumentation } from '../instrumentation/ErrorInstrumentation'
+import { LD_TRACK_SPAN_NAME } from '../constants/featureFlags'
 
 export class ObservabilityClient {
 	private sessionManager: SessionManager
@@ -30,6 +31,8 @@ export class ObservabilityClient {
 	private errorInstrumentation?: ErrorInstrumentation
 	private options: InstrumentationManagerOptions
 	private isInitialized = false
+	private _ldContextKeyAttributes: Attributes = {}
+	private _metaAttributes: Attributes = {}
 
 	constructor(
 		private readonly sdkKey: string,
@@ -76,8 +79,55 @@ export class ObservabilityClient {
 				...DEFAULT_URL_BLOCKLIST,
 			],
 			networkRecording: options.networkRecording ?? {},
+			productAnalytics: options.productAnalytics ?? true,
 			contextFriendlyName:
 				options.contextFriendlyName ?? (() => undefined),
+		}
+	}
+
+	private isTrackEventsEnabled(): boolean {
+		const pa = this.options.productAnalytics
+		if (pa === false) return false
+		if (typeof pa === 'object' && pa !== null) {
+			return pa.trackEvents !== false
+		}
+		return true
+	}
+
+	public _setLDContextKeyAttributes(contextKeys: Attributes): void {
+		if (!contextKeys) return
+		this._ldContextKeyAttributes = { ...contextKeys }
+	}
+
+	public _setMetaAttributes(attrs: Attributes): void {
+		if (!attrs) return
+		this._metaAttributes = { ...attrs }
+	}
+
+	public track(key: string, data?: unknown, metricValue?: number): void {
+		try {
+			if (!this.isTrackEventsEnabled()) return
+
+			const attributes: Attributes = {
+				...this._ldContextKeyAttributes,
+				...this._metaAttributes,
+				key,
+				...(metricValue !== undefined && metricValue !== null
+					? { value: metricValue }
+					: {}),
+				...(typeof data === 'object' && data !== null
+					? (data as Attributes)
+					: {}),
+			}
+
+			// Use non-active startSpan so synchronous OTel instrumentation
+			// inside any caller does not accidentally pick up this span as
+			// the active parent. Matches the JS SDK reference.
+			const span = this.startSpan(LD_TRACK_SPAN_NAME)
+			span.setAttributes(attributes)
+			span.end()
+		} catch (e) {
+			this._log('Failed to record launchdarkly.track span:', e)
 		}
 	}
 

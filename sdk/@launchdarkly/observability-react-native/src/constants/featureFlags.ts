@@ -17,6 +17,9 @@ export const FEATURE_FLAG_PROVIDER_ATTR = `${FEATURE_FLAG_SCOPE}.provider.name`
 export const FEATURE_FLAG_CONTEXT_ATTR = `${FEATURE_FLAG_SCOPE}.context`
 export const FEATURE_FLAG_CONTEXT_ID_ATTR = `${FEATURE_FLAG_SCOPE}.context.id`
 export const FEATURE_FLAG_ENV_ATTR = `${FEATURE_FLAG_SCOPE}.environment.id`
+export const FEATURE_FLAG_SET_ID_ATTR = `${FEATURE_FLAG_SCOPE}.set.id`
+
+export const LD_TRACK_SPAN_NAME = 'launchdarkly.track'
 
 export const LD_SCOPE = 'launchdarkly'
 export const FEATURE_FLAG_APP_ID_ATTR = `${LD_SCOPE}.application.id`

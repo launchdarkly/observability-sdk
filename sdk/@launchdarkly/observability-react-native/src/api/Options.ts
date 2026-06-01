@@ -131,6 +131,19 @@ export interface ReactNativeOptions {
 	networkRecording?: NetworkRecordingOptions
 
 	/**
+	 * Product-analytics related toggles. When `false`, all product-analytics
+	 * features (currently: `launchdarkly.track` spans emitted in response to
+	 * `ldClient.track(...)` and direct calls to `_LDObserve.track(...)`) are
+	 * disabled. When an object is provided, individual features can be toggled.
+	 *
+	 * Defaults to enabled.
+	 *
+	 * @example productAnalytics: false
+	 * @example productAnalytics: { trackEvents: false }
+	 */
+	productAnalytics?: boolean | { trackEvents?: boolean }
+
+	/**
 	 * A function that returns a friendly name for a given context.
 	 * This name will be used to identify the session in the observability UI.
 	 * ```ts

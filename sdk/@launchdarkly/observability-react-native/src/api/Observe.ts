@@ -136,4 +136,47 @@ export interface Observe {
 	 * Check if the observability client is initialized.
 	 */
 	isInitialized(): boolean
+
+	/**
+	 * Emit a `launchdarkly.track` span describing a custom track event.
+	 *
+	 * This is invoked automatically by the observability plugin's
+	 * `afterTrack` hook whenever `ldClient.track(...)` is called, and may also
+	 * be called directly to ship a track event to the LaunchDarkly
+	 * observability backend without going through the LD client.
+	 *
+	 * Gated by the `productAnalytics` option (defaults to enabled). When the
+	 * option is disabled, this method is a no-op. Internal failures are
+	 * caught and logged, so this method does not throw.
+	 *
+	 * @param key The track event key.
+	 * @param data Optional data payload. When an object, its properties are
+	 *   spread onto the span as individual attributes.
+	 * @param metricValue Optional numeric value, surfaced as the `value`
+	 *   attribute on the span.
+	 */
+	track(key: string, data?: unknown, metricValue?: number): void
+
+	/**
+	 * Cache the bare LD context-key attributes (e.g. `{ user: 'alice' }`)
+	 * for inclusion in subsequent `launchdarkly.track` spans. Populated by
+	 * the observability plugin's `afterIdentify` hook.
+	 *
+	 * Package-private (underscore-prefixed) — not part of the public API.
+	 *
+	 * @internal
+	 */
+	_setLDContextKeyAttributes(contextKeys: Attributes): void
+
+	/**
+	 * Cache the SDK / LaunchDarkly meta-attributes (telemetry SDK name,
+	 * version, feature_flag.set.id, etc.) for inclusion in subsequent
+	 * `launchdarkly.track` spans. Populated by the observability plugin's
+	 * `getHooks` at registration time.
+	 *
+	 * Package-private (underscore-prefixed) — not part of the public API.
+	 *
+	 * @internal
+	 */
+	_setMetaAttributes(attrs: Attributes): void
 }

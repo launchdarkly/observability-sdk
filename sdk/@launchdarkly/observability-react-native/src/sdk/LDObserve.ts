@@ -147,6 +147,18 @@ class LDObserveClass
 		return this._isLoaded ? response : false
 	}
 
+	track(key: string, data?: unknown, metricValue?: number): void {
+		return this._bufferCall('track', [key, data, metricValue])
+	}
+
+	_setLDContextKeyAttributes(contextKeys: Attributes): void {
+		return this._bufferCall('_setLDContextKeyAttributes', [contextKeys])
+	}
+
+	_setMetaAttributes(attrs: Attributes): void {
+		return this._bufferCall('_setMetaAttributes', [attrs])
+	}
+
 	_init(client: ObservabilityClient): void {
 		const checkInitialized = () => {
 			if (client.getIsInitialized()) {

@@ -19,7 +19,9 @@ import {
 	FEATURE_FLAG_PROVIDER_ATTR,
 	FEATURE_FLAG_CONTEXT_ATTR,
 	FEATURE_FLAG_CONTEXT_ID_ATTR,
-	FEATURE_FLAG_ENV_ATTR,
+	FEATURE_FLAG_SET_ID_ATTR,
+	FEATURE_FLAG_APP_ID_ATTR,
+	FEATURE_FLAG_APP_VERSION_ATTR,
 	FEATURE_FLAG_REASON_ATTRS,
 	FEATURE_FLAG_SPAN_NAME,
 	FEATURE_FLAG_SCOPE,
@@ -35,6 +37,7 @@ import {
 	IdentifySeriesContext,
 	EvaluationSeriesContext,
 	EvaluationSeriesData,
+	TrackSeriesContext,
 } from '@launchdarkly/react-native-client-sdk'
 
 class TracingHook implements Hook {
@@ -48,9 +51,23 @@ class TracingHook implements Hook {
 			[ATTR_TELEMETRY_SDK_NAME]:
 				'@launchdarkly/observability-react-native',
 			[ATTR_TELEMETRY_SDK_VERSION]: metadata.sdk?.version || 'unknown',
-			[FEATURE_FLAG_ENV_ATTR]: metadata.mobileKey || 'unknown',
+			...(metadata.mobileKey
+				? { [FEATURE_FLAG_SET_ID_ATTR]: metadata.mobileKey }
+				: {}),
 			[FEATURE_FLAG_PROVIDER_ATTR]: 'LaunchDarkly',
+			...(metadata.application?.id
+				? { [FEATURE_FLAG_APP_ID_ATTR]: metadata.application.id }
+				: {}),
+			...(metadata.application?.version
+				? {
+						[FEATURE_FLAG_APP_VERSION_ATTR]:
+							metadata.application.version,
+					}
+				: {}),
 		}
+		// Seed the LDObserve impl with these meta attributes so direct calls
+		// to `_LDObserve.track(...)` can include them on the emitted span.
+		_LDObserve._setMetaAttributes(this.metaAttributes)
 	}
 
 	getMetadata(): LDPluginMetadata {
@@ -64,10 +81,13 @@ class TracingHook implements Hook {
 		data: IdentifySeriesData,
 		result: IdentifySeriesResult,
 	): IdentifySeriesData {
+		const ldContextKeys = getContextKeys(hookContext.context)
+		_LDObserve._setLDContextKeyAttributes(ldContextKeys)
+
 		if (result.status === 'completed') {
 			_LDObserve.recordLog(`LD.identify`, 'info', {
 				...this.metaAttributes,
-				...getContextKeys(hookContext.context),
+				...ldContextKeys,
 				key:
 					this._options?.contextFriendlyName?.(hookContext.context) ??
 					getCanonicalKey(hookContext.context),
@@ -77,6 +97,22 @@ class TracingHook implements Hook {
 			})
 		}
 		return data
+	}
+
+	afterTrack(hookContext: TrackSeriesContext): void {
+		// Gating + exception handling live in `_LDObserve.track`, so the hook
+		// itself is a thin pass-through. The defensive try/catch here is a
+		// belt-and-suspenders guarantee that the LD client's `track()` call
+		// always returns normally even if something unexpected throws.
+		try {
+			_LDObserve.track(
+				hookContext.key,
+				hookContext.data,
+				hookContext.metricValue,
+			)
+		} catch {
+			// Swallow — `track()` already logs internal failures.
+		}
 	}
 
 	afterEvaluation(
