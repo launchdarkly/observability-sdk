@@ -1,11 +1,13 @@
 package com.launchdarkly.observability.plugin
 
+import com.launchdarkly.observability.sdk.LDObserve
 import com.launchdarkly.sdk.EvaluationDetail
 import com.launchdarkly.sdk.LDValue
 import com.launchdarkly.sdk.android.integrations.EvaluationSeriesContext
 import com.launchdarkly.sdk.android.integrations.Hook
 import com.launchdarkly.sdk.android.integrations.IdentifySeriesContext
 import com.launchdarkly.sdk.android.integrations.IdentifySeriesResult
+import com.launchdarkly.sdk.android.integrations.TrackSeriesContext
 import java.util.UUID
 
 /**
@@ -74,6 +76,31 @@ class ObservabilityHook internal constructor() : Hook(HOOK_NAME) {
         seriesData: Map<String, Any>
     ): Map<String, Any> {
         return seriesData
+    }
+
+    /**
+     * Thin pass-through to [LDObserve.track]: the LD client just enqueued a track event, so we
+     * ship the same payload as a `launchdarkly.track` span to the o11y backend. All of the real
+     * work (productAnalytics gate, attribute spread, error swallow) lives inside
+     * [LDObserve.track] → [com.launchdarkly.observability.client.ObservabilityService.track] →
+     * [ObservabilityHookExporter.track] so both this hook path and direct
+     * [LDObserve.track] calls share exactly one implementation and cannot diverge.
+     *
+     * Per the hook safety contract this method MUST NOT throw. [LDObserve.track] already
+     * swallows every internal failure; we additionally wrap the call site as belt-and-suspenders
+     * (mirrors the RN hook pattern) so that any future change to that method — or a failure
+     * reading `seriesContext` itself — still cannot bubble out into the LD client's hook chain.
+     */
+    override fun afterTrack(seriesContext: TrackSeriesContext) {
+        try {
+            LDObserve.track(
+                key = seriesContext.key,
+                data = seriesContext.data,
+                metricValue = seriesContext.metricValue,
+            )
+        } catch (_: Throwable) {
+            // Swallow: hook safety contract. See KDoc above.
+        }
     }
 
     override fun afterIdentify(

@@ -24,6 +24,7 @@ import com.launchdarkly.observability.sampling.SamplingLogProcessor
 import com.launchdarkly.observability.traces.EventSpanProcessor
 import com.launchdarkly.observability.traces.OtlpTraceExporter
 import com.launchdarkly.observability.util.requireMainThread
+import com.launchdarkly.sdk.LDValue
 import io.opentelemetry.android.OpenTelemetryRum
 import io.opentelemetry.android.OpenTelemetryRumBuilder
 import io.opentelemetry.android.config.OtelRumConfig
@@ -153,7 +154,8 @@ class ObservabilityService(
             withSpans = true,
             withValue = true,
             tracerProvider = { getTracer() },
-            contextFriendlyName = observabilityOptions.contextFriendlyName
+            contextFriendlyName = observabilityOptions.contextFriendlyName,
+            logger = logger,
         )
 
         batchWorker.start()
@@ -383,6 +385,25 @@ class ObservabilityService(
         return otelTracer.spanBuilder(name)
             .setAllAttributes(attributes)
             .startSpan()
+    }
+
+    /**
+     * Emits a `launchdarkly.track` span — the shared code path for both the LD client
+     * `afterTrack` hook (i.e. when the application calls `LDClient.track(...)`) and direct
+     * [com.launchdarkly.observability.sdk.LDObserve.track] calls.
+     *
+     * The actual span emission, attribute spread, and error swallow live on [hookExporter];
+     * this method owns the `productAnalyticsApi.trackEvents` feature gate so the exporter
+     * stays decoupled from the options struct.
+     */
+    fun track(key: String, data: LDValue?, metricValue: Double?) {
+        if (!observabilityOptions.productAnalyticsApi.trackEvents) return
+
+        hookExporter.track(
+            key = key,
+            data = data,
+            metricValue = metricValue,
+        )
     }
 
     /**

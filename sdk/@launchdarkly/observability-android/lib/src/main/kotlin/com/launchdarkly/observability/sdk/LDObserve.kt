@@ -14,6 +14,7 @@ import com.launchdarkly.observability.replay.ReplayOptions
 import com.launchdarkly.observability.replay.capture.ImageCaptureServicing
 import com.launchdarkly.observability.replay.plugin.SessionReplayPluginImpl
 import com.launchdarkly.observability.util.runOnMainThread
+import com.launchdarkly.sdk.LDValue
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Severity
 import io.opentelemetry.api.trace.Span
@@ -215,6 +216,49 @@ class LDObserve(private val client: Observe) : Observe {
         override fun recordLog(message: String, severity: Severity, attributes: Attributes, spanContext: SpanContext?) = delegate.recordLog(message, severity, attributes, spanContext)
         override fun startSpan(name: String, attributes: Attributes): Span = delegate.startSpan(name, attributes)
         override fun flush() = delegate.flush()
+
+        /**
+         * Emits a `launchdarkly.track` span to the o11y backend.
+         *
+         * The same span is emitted automatically when application code calls `LDClient.track(...)`
+         * (via the SDK's `afterTrack` hook). This direct entry point lets callers ship a track
+         * event without going through the LD client — useful for ad-hoc telemetry, sample apps,
+         * or tests.
+         *
+         * Behavior:
+         *  - When [ObservabilityOptions.productAnalyticsApi]'s `trackEvents` is `false`, this
+         *    call is a no-op (matches the `afterTrack` hook).
+         *  - When called before `LDObserve.init(...)` runs, this is a silent no-op (the
+         *    underlying [ObservabilityService] is not yet wired).
+         *  - All internal exceptions are caught and logged at debug, never surfaced to the
+         *    caller — track-event emission is best-effort and must never break the host app.
+         *
+         * @param key         the track event key, written as the `key` attribute on the span
+         * @param data        optional structured payload; properties are spread as span
+         *                    attributes when this is an [com.launchdarkly.sdk.LDValueType.OBJECT].
+         *                    Non-object / null payloads are skipped (no spread, no throw).
+         * @param metricValue optional numeric value, written as the `value` attribute on the span.
+         */
+        @JvmStatic
+        @JvmOverloads
+        fun track(key: String, data: LDValue? = null, metricValue: Double? = null) {
+            // Belt-and-suspenders: the downstream [ObservabilityHookExporter.track] already
+            // wraps its body in try/catch, but we mirror the RN hook pattern here so a failure
+            // in *any* layer above the exporter (pre-init guard expansion, future service
+            // changes, etc.) still honors this method's KDoc contract: "All internal exceptions
+            // are caught and logged at debug, never surfaced to the caller."
+            try {
+                // Pre-init guard: if no service is installed yet (developer called track before
+                // Observability.onPluginsReady / standalone LDObserve.init), there's no tracer to
+                // emit on. Silently no-op rather than crashing or buffering.
+                val service = observabilityClient ?: return
+                service.track(key, data, metricValue)
+            } catch (_: Throwable) {
+                // Swallow: track-event emission is best-effort and must never break the host app.
+                // The exporter already logs the underlying cause when reachable; this outer
+                // catch is for the (rare) case where a failure precedes the exporter call.
+            }
+        }
 
         /**
          * Bridge-friendly overloads that avoid exposing OpenTelemetry types

@@ -26,6 +26,9 @@ const val DEFAULT_BACKEND_URL = "https://pub.observability.app.launchdarkly.com"
  * @property logsApiLevel Level for logs to be exported. Defaults to INFO. Set to NONE to disable log exporting.
  * @property tracesApi Options for configuring traces. See [TracesApi]. Tracing is enabled by default.
  * @property metricsApi Options for configuring metrics. See [MetricsApi]. Metrics are enabled by default.
+ * @property productAnalyticsApi Options for product-analytics emission (i.e. the `launchdarkly.track`
+ *   span emitted on every `LDClient.track(...)` call and on every direct `LDObserve.track(...)` call).
+ *   See [ProductAnalyticsApi]. Enabled by default.
  * @property instrumentations Options for configuring automatic instrumentations. See [Instrumentations].
  * @property logAdapter The log adapter to use. Defaults to [LDObserveLogging.adapter] which writes to Android's native Log API.
  * @property loggerName The name of the logger to use. Defaults to "LaunchDarklyObservabilityPlugin".
@@ -47,6 +50,7 @@ data class ObservabilityOptions(
     val logsApiLevel: LogLevel = LogLevel.INFO,
     val tracesApi: TracesApi = TracesApi.enabled(),
     val metricsApi: MetricsApi = MetricsApi.enabled(),
+    val productAnalyticsApi: ProductAnalyticsApi = ProductAnalyticsApi.enabled(),
     val instrumentations: Instrumentations = Instrumentations(),
     val logAdapter: ObserveLogAdapter = LDObserveLogging.adapter(),
     val loggerName: String = "LaunchDarklyObservabilityPlugin",
@@ -77,6 +81,23 @@ data class ObservabilityOptions(
         companion object {
             fun enabled() = MetricsApi(true)
             fun disabled() = MetricsApi(false)
+        }
+    }
+
+    /**
+     * Options for product-analytics emission — i.e. the `launchdarkly.track` span
+     * that this SDK ships to o11y on every `LDClient.track(...)` call (via the SDK's
+     * `afterTrack` hook) and on every direct call to
+     * [com.launchdarkly.observability.sdk.LDObserve.track].
+     *
+     * @property trackEvents Whether to emit the `launchdarkly.track` span for track events.
+     *   When `false`, both the `afterTrack` hook and direct `LDObserve.track(...)` calls
+     *   are no-ops. Defaults to `true`.
+     */
+    data class ProductAnalyticsApi(val trackEvents: Boolean = true) {
+        companion object {
+            fun enabled() = ProductAnalyticsApi(trackEvents = true)
+            fun disabled() = ProductAnalyticsApi(trackEvents = false)
         }
     }
 

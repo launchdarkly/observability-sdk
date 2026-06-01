@@ -89,6 +89,12 @@ dependencies {
     // Use JUnit Jupiter for testing.
     // Testing exporters for telemetry inspection
     testImplementation("io.opentelemetry:opentelemetry-sdk-testing:1.51.0")
+    // OTLP common marshaler — used by the E2E test
+    // (ObservabilityHookExporterE2ETest, via OtlpProtoHelper) to serialize captured
+    // SpanData into OTLP/HTTP+protobuf bytes that we POST directly to the devbox
+    // observability backend via HttpURLConnection (the bundled OtlpHttpSpanExporter
+    // ships with an OkHttp sender that's unreliable in this test JVM on macOS).
+    testImplementation("io.opentelemetry:opentelemetry-exporter-otlp-common:1.51.0")
     testImplementation(platform("org.junit:junit-bom:5.13.4"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
@@ -153,6 +159,16 @@ android {
 
     testFixtures {
         enable = true
+    }
+
+    testOptions {
+        // Required for the E2E test (`ObservabilityHookExporterE2ETest`): the JVM
+        // unit-test classpath ships with Android stub jars where most java.net APIs
+        // throw `RuntimeException("Stub!")`. The E2E path uses HttpURLConnection to POST
+        // OTLP protobuf to the devbox backend and query ClickHouse, so we flip
+        // `isReturnDefaultValues` to silence the stubs and let the real JDK classes on
+        // the application classpath service the calls.
+        unitTests.isReturnDefaultValues = true
     }
 }
 

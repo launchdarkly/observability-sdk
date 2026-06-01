@@ -1,11 +1,15 @@
 package com.launchdarkly.observability.plugin
 
+import com.launchdarkly.observability.sdk.LDObserve
 import com.launchdarkly.sdk.ContextKind
 import com.launchdarkly.sdk.LDContext
+import com.launchdarkly.sdk.LDValue
 import com.launchdarkly.sdk.android.integrations.IdentifySeriesContext
 import com.launchdarkly.sdk.android.integrations.IdentifySeriesResult
+import com.launchdarkly.sdk.android.integrations.TrackSeriesContext
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkObject
 import io.mockk.unmockkAll
 import io.mockk.verify
 import org.junit.jupiter.api.AfterEach
@@ -127,6 +131,57 @@ class ObservabilityHookTest {
                     canonicalKey = "multi-key",
                     completed = true
                 )
+            }
+        }
+    }
+
+    @Nested
+    @DisplayName("After Track Tests")
+    inner class AfterTrackTests {
+
+        @Test
+        fun `afterTrack forwards key, data, and metricValue to LDObserve_track`() {
+            // The hook's afterTrack is a thin pass-through to the static LDObserve.track
+            // facade — the productAnalytics gate, attribute spread, and error swallow all
+            // live downstream. Verifying the call shape here is enough to lock the contract.
+            mockkObject(LDObserve.Companion)
+            try {
+                val data = LDValue.buildObject().put("foo", LDValue.of("bar")).build()
+                val seriesContext = TrackSeriesContext("checkout", mockContext, data, 19.99)
+
+                hook.afterTrack(seriesContext)
+
+                verify(exactly = 1) {
+                    LDObserve.track(
+                        key = "checkout",
+                        data = data,
+                        metricValue = 19.99,
+                    )
+                }
+            } finally {
+                unmockkAll()
+            }
+        }
+
+        @Test
+        fun `afterTrack forwards null data and null metricValue unchanged`() {
+            // Both fields are nullable on TrackSeriesContext (data: LDValue?, metricValue: Double?).
+            // The hook must pass them through unchanged — LDObserve.track owns the null handling.
+            mockkObject(LDObserve.Companion)
+            try {
+                val seriesContext = TrackSeriesContext("click", mockContext, null, null)
+
+                hook.afterTrack(seriesContext)
+
+                verify(exactly = 1) {
+                    LDObserve.track(
+                        key = "click",
+                        data = null,
+                        metricValue = null,
+                    )
+                }
+            } finally {
+                unmockkAll()
             }
         }
     }

@@ -16,6 +16,8 @@ import com.launchdarkly.sdk.android.integrations.Hook
 import com.launchdarkly.sdk.android.integrations.Plugin
 import com.launchdarkly.sdk.android.integrations.PluginMetadata
 import com.launchdarkly.sdk.android.integrations.RegistrationCompleteResult
+import io.opentelemetry.api.common.AttributeKey
+import io.opentelemetry.api.common.Attributes
 import java.util.Collections
 
 /**
@@ -116,9 +118,57 @@ class Observability(
         )
         observabilityClient = observabilityService
         LDObserve.context?.sessionManager = observabilityService.sessionManager
-        LDObserve.init(observabilityService)
 
         observabilityHook.delegate = observabilityService.hookExporter
+
+        // Publish the SDK metadata that should be spread on every `launchdarkly.track` span.
+        // Mirrors the JS reference `metaAttrs` (see
+        // `sdk/highlight-run/src/plugins/observe.ts:99-113`). We populate this here — once
+        // the LDClient `EnvironmentMetadata` is available — rather than at exporter construction
+        // because `sdk.name/version`, `clientSideId`, and the application identifiers all live
+        // on `metadata` and are not stable until `onPluginsReady`.
+        //
+        // IMPORTANT: this MUST run BEFORE `LDObserve.init(observabilityService)`. Once `init` is
+        // called, the service is published to the [LDObserve] companion and any thread can
+        // observe it via `LDObserve.track(...)`. If we reversed the order, that early track call
+        // could land in `hookExporter.track(...)` with an empty `metaAttributes`, producing a
+        // `launchdarkly.track` span missing `telemetry.sdk.*` / `feature_flag.set.id` /
+        // `launchdarkly.application.*`. Mutating the (not-yet-published) exporter here is safe —
+        // we still hold the only reference via `observabilityService`.
+        observabilityService.hookExporter.setMetaAttributes(buildMetaAttributes(metadata, sdkKey))
+
+        LDObserve.init(observabilityService)
+    }
+
+    /**
+     * Builds the SDK-metadata `Attributes` spread on every `launchdarkly.track` span.
+     *
+     * Attribute keys mirror the JS reference (see
+     * `sdk/highlight-run/src/integrations/launchdarkly/index.ts`):
+     * `telemetry.sdk.{name,version}`, `feature_flag.set.id`, `feature_flag.provider.name`,
+     * `launchdarkly.application.{id,version}`. Missing pieces (e.g. `application` not set
+     * on the LDConfig) are simply omitted — same JS behavior.
+     */
+    private fun buildMetaAttributes(
+        metadata: EnvironmentMetadata?,
+        sdkKey: String,
+    ): Attributes {
+        val builder = Attributes.builder()
+        metadata?.sdkMetadata?.let { sdk ->
+            sdk.name?.let { builder.put(AttributeKey.stringKey(ObservabilityHookExporter.ATTR_TELEMETRY_SDK_NAME), it) }
+            sdk.version?.let { builder.put(AttributeKey.stringKey(ObservabilityHookExporter.ATTR_TELEMETRY_SDK_VERSION), it) }
+        }
+        // The mobile-key/client-side-id used to identify the LD environment.
+        // Matches the JS reference's use of `metadata.clientSideId`.
+        builder.put(AttributeKey.stringKey(ObservabilityHookExporter.ATTR_FEATURE_FLAG_SET_ID), sdkKey)
+        builder.put(AttributeKey.stringKey(ObservabilityHookExporter.ATTR_FEATURE_FLAG_PROVIDER_NAME), ObservabilityHookExporter.PROVIDER_NAME)
+        metadata?.applicationInfo?.applicationId?.let {
+            builder.put(AttributeKey.stringKey(ObservabilityHookExporter.ATTR_LD_APPLICATION_ID), it)
+        }
+        metadata?.applicationInfo?.applicationVersion?.let {
+            builder.put(AttributeKey.stringKey(ObservabilityHookExporter.ATTR_LD_APPLICATION_VERSION), it)
+        }
+        return builder.build()
     }
 
     /**
