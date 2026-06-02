@@ -216,6 +216,20 @@ private fun MetricButtons(viewModel: ViewModel) {
         ) {
             Text("UpDownCounter")
         }
+        Button(
+            onClick = {
+                viewModel.trackViaLdClient()
+            }
+        ) {
+            Text("Track (LDClient)")
+        }
+        Button(
+            onClick = {
+                viewModel.trackViaLdObserve()
+            }
+        ) {
+            Text("Track (LDObserve)")
+        }
     }
 }
 

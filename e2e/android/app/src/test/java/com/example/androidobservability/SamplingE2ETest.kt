@@ -224,9 +224,9 @@ class SamplingE2ETest {
             metricsApi = ObservabilityOptions.MetricsApi.enabled(),
             instrumentations = ObservabilityOptions.Instrumentations(
                 crashReporting = true,
-                activityLifecycle = true,
                 launchTime = true
-            )
+            ),
+            productAnalytics = ObservabilityOptions.ProductAnalytics(pageViews = true)
         )
     }
 

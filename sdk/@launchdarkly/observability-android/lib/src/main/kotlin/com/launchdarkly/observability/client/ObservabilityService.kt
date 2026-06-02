@@ -16,6 +16,7 @@ import com.launchdarkly.observability.network.SamplingApiService
 import com.launchdarkly.observability.otlp.OtlpConfiguration
 import com.launchdarkly.observability.otlp.OtlpHttpClient
 import com.launchdarkly.observability.plugin.ObservabilityHookExporter
+import com.launchdarkly.observability.plugin.TrackEmitting
 import com.launchdarkly.observability.replay.transport.BatchWorker
 import com.launchdarkly.observability.replay.transport.EventQueue
 import com.launchdarkly.observability.sampling.CustomSampler
@@ -31,6 +32,7 @@ import io.opentelemetry.android.instrumentation.AndroidInstrumentation
 import io.opentelemetry.android.instrumentation.InstallationContext
 import io.opentelemetry.android.session.SessionConfig
 import io.opentelemetry.android.session.SessionManager
+import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Logger
 import io.opentelemetry.api.logs.Severity
@@ -81,7 +83,7 @@ class ObservabilityService(
     private val resources: Resource,
     private val logger: ObserveLogger,
     private val observabilityOptions: ObservabilityOptions,
-) : Observe {
+) : Observe, TrackEmitting {
     private val otelRUM: OpenTelemetryRum
     var sessionManager: SessionManager? = null
         private set
@@ -104,6 +106,11 @@ class ObservabilityService(
     private val histogramCache = ConcurrentHashMap<String, DoubleHistogram>()
     private val upDownCounterCache = ConcurrentHashMap<String, LongUpDownCounter>()
     internal val hookExporter: ObservabilityHookExporter
+
+    @Volatile
+    private var cachedContextKeyAttributes: Attributes = Attributes.empty()
+
+    private var tapInstrumentation: TapInstrumentation? = null
 
     //TODO: Evaluate if this class should have a close/shutdown method to close this scope
     private val scope = CoroutineScope(DispatcherProviderHolder.current.io + SupervisorJob())
@@ -155,6 +162,25 @@ class ObservabilityService(
             tracerProvider = { getTracer() },
             contextFriendlyName = observabilityOptions.contextFriendlyName
         )
+        // Route the afterTrack hook and identify context keys back into this service,
+        // so it remains the single emitter of launchdarkly.track spans.
+        hookExporter.trackEmitter = this
+
+        if (observabilityOptions.productAnalytics.taps) {
+            tapInstrumentation = TapInstrumentation { screenName, x, y, startEpochNanos, endEpochNanos ->
+                if (!observabilityOptions.tracesApi.includeSpans) return@TapInstrumentation
+                val attrs = Attributes.builder()
+                    .put(AttributeKey.stringKey("screen.name"), screenName)
+                    .put(AttributeKey.stringKey("position.x"), x.toString())
+                    .put(AttributeKey.stringKey("position.y"), y.toString())
+                    .build()
+                otelTracer.spanBuilder(TapInstrumentation.TAP_SPAN_NAME)
+                    .setAllAttributes(attrs)
+                    .setStartTimestamp(startEpochNanos, TimeUnit.NANOSECONDS)
+                    .startSpan()
+                    .end(endEpochNanos, TimeUnit.NANOSECONDS)
+            }.also { it.attachToApplication(application) }
+        }
 
         batchWorker.start()
     }
@@ -192,7 +218,7 @@ class ObservabilityService(
             config.suppressInstrumentation("crash")
         }
 
-        if(!observabilityOptions.instrumentations.activityLifecycle) {
+        if(!observabilityOptions.productAnalytics.pageViews) {
             // Disables [io.opentelemetry.android.instrumentation.activity.ActivityLifecycleInstrumentation.java]
             config.suppressInstrumentation("activity")
         }
@@ -385,6 +411,43 @@ class ObservabilityService(
             .startSpan()
     }
 
+    override fun track(name: String, value: Double?, attributes: Attributes) {
+        track(name, value, attributes, contextKeyAttributes = null)
+    }
+
+    /**
+     * Single emitter for `launchdarkly.track` spans. Both the LD `afterTrack` hook and the
+     * manual [com.launchdarkly.observability.sdk.LDObserve.track] path funnel through here.
+     */
+    override fun track(
+        name: String,
+        value: Double?,
+        attributes: Attributes,
+        contextKeyAttributes: Attributes?
+    ) {
+        if (!observabilityOptions.productAnalytics.trackEvents) return
+
+        val attrBuilder = Attributes.builder()
+        attrBuilder.put(AttributeKey.stringKey("key"), name)
+        value?.let { attrBuilder.put(AttributeKey.doubleKey("value"), it) }
+        // Fresh context keys from the hook take precedence; otherwise use the cached identify keys.
+        attrBuilder.putAll(contextKeyAttributes ?: cachedContextKeyAttributes)
+        attrBuilder.putAll(attributes)
+
+        otelTracer.spanBuilder(TRACK_SPAN_NAME)
+            .setAllAttributes(attrBuilder.build())
+            .startSpan()
+            .end()
+    }
+
+    override fun updateCachedContextKeys(contextKeys: Map<String, String>) {
+        val builder = Attributes.builder()
+        for ((k, v) in contextKeys) {
+            builder.put(AttributeKey.stringKey(k), v)
+        }
+        cachedContextKeyAttributes = builder.build()
+    }
+
     /**
      * Returns the tracer instance for creating spans.
      *
@@ -442,6 +505,7 @@ class ObservabilityService(
         private const val TRACES_PATH = "/v1/traces"
         private const val INSTRUMENTATION_SCOPE_NAME = "com.launchdarkly.observability"
         const val ERROR_SPAN_NAME = "highlight.error"
+        const val TRACK_SPAN_NAME = "launchdarkly.track"
         const val SESSION_ID_ATTRIBUTE = "session.id"
         private const val METRICS_EXPORT_INTERVAL_MS = 10_000L
 

@@ -37,7 +37,10 @@ open class BaseApplication : Application() {
         tracesApi = ObservabilityOptions.TracesApi.enabled(),
         metricsApi = ObservabilityOptions.MetricsApi.enabled(),
         instrumentations = ObservabilityOptions.Instrumentations(
-            crashReporting = true, launchTime = true, activityLifecycle = true
+            crashReporting = true, launchTime = true
+        ),
+        productAnalytics = ObservabilityOptions.ProductAnalytics(
+            taps = true, pageViews = true, trackEvents = true
         ),
     )
 
