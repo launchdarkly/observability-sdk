@@ -146,6 +146,20 @@ module LaunchDarklyObservability
         app.middleware.insert_before(0, LaunchDarklyObservability::Middleware)
       end
 
+      # Install OpenTelemetry auto-instrumentation during boot so the Rails-family
+      # instrumentations attach even when the LaunchDarkly client is created
+      # lazily (after boot) rather than in an initializer.
+      #
+      # Runs `after: :load_config_initializers` on purpose: if the client was
+      # created in a config/initializer during boot, it has already configured
+      # OpenTelemetry (with the user's options), so `install_rails_instrumentation`
+      # detects the existing provider and no-ops. Otherwise it installs the
+      # default instrumentation now — still during boot, before eager loading and
+      # the ActiveSupport.on_load hooks that the instrumentations depend on.
+      initializer 'launchdarkly_observability.install_instrumentation', after: :load_config_initializers do
+        LaunchDarklyObservability.install_rails_instrumentation
+      end
+
       config.after_initialize do
         if defined?(ActionController::Base)
           ActionController::Base.include(LaunchDarklyObservability::ControllerHelpers)

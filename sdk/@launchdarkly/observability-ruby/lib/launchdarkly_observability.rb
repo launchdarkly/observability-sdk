@@ -176,6 +176,60 @@ module LaunchDarklyObservability
       @instance = nil
     end
 
+    # @return [Boolean] whether auto-instrumentation was installed during Rails
+    #   boot by {.install_rails_instrumentation}. When true, the plugin attaches
+    #   exporters to the existing tracer provider at register time instead of
+    #   reconfiguring it.
+    def instrumentation_installed_at_boot?
+      @instrumentation_installed_at_boot == true
+    end
+
+    # Install OpenTelemetry auto-instrumentation during Rails boot.
+    #
+    # The OTel Rails-family instrumentations (ActionPack, ActiveRecord, ...) patch
+    # via ActiveSupport.on_load hooks that fire while Rails is booting. If the
+    # LaunchDarkly client is created lazily (e.g. from a model on first request),
+    # the plugin's #register runs after those hooks have fired and the
+    # instrumentations report "failed to install". The Rails Railtie calls this
+    # during boot so instrumentation attaches regardless of when the client is
+    # created. Exporters are still configured later, when the client registers
+    # the plugin.
+    #
+    # The project_id needed for the resource is resolved from the
+    # LAUNCHDARKLY_SDK_KEY environment variable, which is present at boot in the
+    # common case even when the client object is created lazily. If it cannot be
+    # resolved, instrumentation is left to #register (which warns if it then runs
+    # after boot).
+    #
+    # @param project_id [String, nil] explicit project id; falls back to ENV
+    # @param otlp_endpoint [String] OTLP endpoint (only relevant for exporters)
+    # @param options [Hash] additional OpenTelemetryConfig options
+    # @return [Boolean] whether instrumentation was installed
+    def install_rails_instrumentation(project_id: nil, otlp_endpoint: DEFAULT_ENDPOINT, **options)
+      return false if @instrumentation_installed_at_boot
+
+      project_id ||= ENV.fetch('LAUNCHDARKLY_SDK_KEY', nil)
+      return false if project_id.nil? || project_id.empty?
+
+      # If something already configured an SDK tracer provider (e.g. the client
+      # was created in a config/initializer during boot), don't reconfigure —
+      # that would replace the provider and drop its exporters.
+      return false if OpenTelemetry.tracer_provider.is_a?(OpenTelemetry::SDK::Trace::TracerProvider)
+
+      OpenTelemetryConfig.new(project_id: project_id, otlp_endpoint: otlp_endpoint, **options)
+                         .install_instrumentation_only
+      @instrumentation_installed_at_boot = true
+    rescue StandardError => e
+      warn "[LaunchDarklyObservability] Could not install Rails auto-instrumentation at boot: #{e.message}"
+      false
+    end
+
+    # Reset boot-instrumentation state. Intended for tests only.
+    # @api private
+    def reset_instrumentation_state!
+      @instrumentation_installed_at_boot = false
+    end
+
     private
 
     def otel_logger_provider_available?
