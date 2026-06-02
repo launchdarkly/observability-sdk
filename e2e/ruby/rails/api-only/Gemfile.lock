@@ -2,7 +2,7 @@ PATH
   remote: ../../../../sdk/@launchdarkly/observability-ruby
   specs:
     launchdarkly-observability (0.2.0)
-      launchdarkly-server-sdk (>= 8.0)
+      launchdarkly-server-sdk (>= 8.11.0)
       opentelemetry-exporter-otlp (~> 0.28)
       opentelemetry-exporter-otlp-logs (~> 0.1)
       opentelemetry-instrumentation-all (~> 0.62)
