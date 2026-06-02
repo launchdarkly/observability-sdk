@@ -13,7 +13,13 @@ require_relative 'launchdarkly_observability/source_context'
 
 require_relative 'launchdarkly_observability/middleware'
 require_relative 'launchdarkly_observability/otel_log_bridge'
-require_relative 'launchdarkly_observability/rails'
+
+# NOTE: rails.rb is required at the *bottom* of this file, after the
+# LaunchDarklyObservability module body has been fully defined. Its Railtie
+# registers a `config.after_initialize` hook that runs synchronously when the
+# gem is required lazily after Rails has booted. That hook references module
+# constants and `class << self` methods, so they must already exist when the
+# require runs. See the require at the end of this file.
 
 module LaunchDarklyObservability
   # Default OTLP endpoint for LaunchDarkly Observability
@@ -179,3 +185,9 @@ module LaunchDarklyObservability
     end
   end
 end
+
+# Required last, on purpose: the Rails Railtie's `config.after_initialize` hook
+# can run synchronously during this require (lazy require after Rails has
+# booted), and it depends on the fully-defined LaunchDarklyObservability module
+# above. See the note next to the other require_relative calls at the top.
+require_relative 'launchdarkly_observability/rails'

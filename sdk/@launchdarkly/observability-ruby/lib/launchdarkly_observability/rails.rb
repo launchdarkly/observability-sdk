@@ -127,8 +127,18 @@ module LaunchDarklyObservability
           warn "[LaunchDarklyObservability] Could not attach log bridge to Rails.logger: #{e.message}"
         end
 
+        # The availability check is inlined here rather than delegating to
+        # LaunchDarklyObservability.otel_logger_provider_available? on purpose.
+        # rails.rb is required from launchdarkly_observability.rb *before* that
+        # file's `class << self` block (which defines the module method) has run.
+        # When the gem is lazily required after Rails has booted, the
+        # `config.after_initialize` hook above executes synchronously while this
+        # file is still loading, so the module method does not exist yet and the
+        # delegation raised "undefined method `otel_logger_provider_available?'".
         def otel_logger_provider_available?
-          LaunchDarklyObservability.send(:otel_logger_provider_available?)
+          defined?(OpenTelemetry::SDK::Logs::LoggerProvider) &&
+            OpenTelemetry.respond_to?(:logger_provider) &&
+            OpenTelemetry.logger_provider.is_a?(OpenTelemetry::SDK::Logs::LoggerProvider)
         end
       end
 
