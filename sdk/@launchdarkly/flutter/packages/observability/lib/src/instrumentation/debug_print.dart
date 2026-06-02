@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:launchdarkly_flutter_observability/src/instrumentation/instrumentation.dart';
 
 import '../plugin/observability_config.dart';
-import '../observe.dart';
+import '../observe_otel.dart';
 
 class DebugPrintInstrumentation implements Instrumentation {
   DebugPrintCallback? _originalCallback;
@@ -26,7 +26,7 @@ class DebugPrintInstrumentation implements Instrumentation {
 
     debugPrint = (String? message, {int? wrapWidth}) {
       if (message != null) {
-        Observe.recordLog(message, severity: 'debug');
+        ObserveOtel.recordLog(message, severity: 'debug');
       }
     };
   }

@@ -1,7 +1,7 @@
 import 'package:flutter/scheduler.dart';
 
 import '../../api/span_status_code.dart';
-import '../../observe.dart';
+import '../../observe_otel.dart';
 import '../instrumentation.dart';
 import './lifecycle_conventions.dart';
 
@@ -45,7 +45,7 @@ final class LifecycleInstrumentation implements Instrumentation {
   /// so it will always hide before being paused. On desktop/web platforms
   /// hidden may happen when the app is covered.
   void _handleApplicationLifecycle(AppLifecycleState state) {
-    Observe.startSpan(
+    ObserveOtel.startSpan(
         LifecycleConventions.spanName,
         attributes: LifecycleConventions.getAttributes(state: state),
       )

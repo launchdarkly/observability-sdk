@@ -1,7 +1,11 @@
-export 'src/plugin/observability_plugin.dart' show ObservabilityPlugin;
-export 'src/plugin/observability_config.dart'
-    show InstrumentationConfig, DebugPrintSetting;
-export 'src/observe.dart' show Observe;
+export 'src/ld_observe.dart' show LDObserve;
+export 'src/session_replay_capture.dart' show SessionReplayCapture;
+export 'src/masking.dart' show LDMask, LDUnmask;
+export 'src/options/observability_options.dart'
+    show ObservabilityOptions, InstrumentationOptions;
+export 'src/options/session_replay_options.dart'
+    show SessionReplayOptions, PrivacyOptions;
+export 'src/plugin/observability_config.dart' show DebugPrintSetting;
 export 'src/api/attribute.dart'
     show
         Attribute,

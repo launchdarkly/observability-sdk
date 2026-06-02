@@ -22,6 +22,8 @@ jobs:
             dotnet-plugin-tag-name: ${{ steps.release.outputs['sdk/@launchdarkly/observability-dotnet--tag_name'] }}
             ruby-plugin-released: ${{ steps.release.outputs['sdk/@launchdarkly/observability-ruby--release_created'] }}
             ruby-plugin-tag-name: ${{ steps.release.outputs['sdk/@launchdarkly/observability-ruby--tag_name'] }}
+            flutter-plugin-released: ${{ steps.release.outputs['sdk/@launchdarkly/flutter/packages/observability--release_created'] }}
+            flutter-plugin-tag-name: ${{ steps.release.outputs['sdk/@launchdarkly/flutter/packages/observability--tag_name'] }}
         steps:
             # Normally a workflow cannot trigger another workflow. For this workflow we need to run required checks.
             # Github determines that something is created by a workflow/bot based on the token.
@@ -172,3 +174,29 @@ jobs:
             base64-subjects: '${{ needs.release-ruby-plugin.outputs.package-hashes }}'
             upload-assets: true
             upload-tag-name: ${{ needs.release-package.outputs.ruby-plugin-tag-name }}
+
+    release-flutter-plugin:
+        runs-on: ubuntu-latest
+        permissions:
+            id-token: write # Required for OIDC authentication to pub.dev.
+            contents: read
+        needs: ['release-package']
+        if: ${{ needs.release-package.outputs.flutter-plugin-released == 'true' }}
+        defaults:
+            run:
+                working-directory: ./sdk/@launchdarkly/flutter/packages/observability
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Install Flutter
+              uses: subosito/flutter-action@0ca7a949e71ae44c8e688a51c5e7e93b2c87e295 # v2
+              with:
+                  channel: 'stable'
+                  cache: true
+
+            - name: Install dependencies
+              run: flutter pub get
+
+            - name: Publish to pub.dev
+              run: flutter pub publish --force

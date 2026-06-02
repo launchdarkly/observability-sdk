@@ -1,3 +1,10 @@
 include: package:flutter_lints/flutter.yaml
 # Additional information about this file can be found at
 # https://dart.dev/guides/language/analysis-options
+
+analyzer:
+  errors:
+    # The OpenTelemetry Dart SDK marks its Context attach/detach API as
+    # experimental. We depend on it intentionally; don't fail analysis on it.
+    experimental_member_use: ignore
+
