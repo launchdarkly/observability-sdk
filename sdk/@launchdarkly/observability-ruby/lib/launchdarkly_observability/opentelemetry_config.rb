@@ -105,9 +105,16 @@ module LaunchDarklyObservability
     # User-provided instrumentation config is merged on top of defaults,
     # so users only need to specify the instrumentations they want to override.
     def configure_instrumentations(config)
+      # Only pass options that the instrumentations actually accept. Unknown
+      # options are not fatal but emit a warning on every boot ("ignored the
+      # following unknown configuration options [...]"):
+      # - `enable_recognize_route` is not an option on the Rails, Rack, or
+      #   ActionPack instrumentations; route-based span naming (http.route) is
+      #   handled automatically by the ActionPack instrumentation.
+      # - ActiveRecord has no `db_statement` option; SQL capture comes from the
+      #   database adapter instrumentations (Mysql2, PG, ...) which default to
+      #   obfuscating statements.
       defaults = {
-        'OpenTelemetry::Instrumentation::Rails' => { enable_recognize_route: true },
-        'OpenTelemetry::Instrumentation::ActiveRecord' => { db_statement: :include },
         'OpenTelemetry::Instrumentation::Net::HTTP' => { untraced_hosts: [] },
         'OpenTelemetry::Instrumentation::Rack' => { untraced_endpoints: ['/health', '/healthz', '/ready'] }
       }
