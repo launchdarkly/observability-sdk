@@ -114,5 +114,30 @@ class RailsRailtieTest < Minitest::Test
            'ViewHelpers should be defined after loading rails.rb'
     assert defined?(LaunchDarklyObservability::Railtie),
            'Railtie should be defined after loading rails.rb'
+
+    # Regression: the Railtie's `attach_otel_log_bridge` runs from the synchronous
+    # `config.after_initialize` block *during* the require of launchdarkly_observability.rb,
+    # before that file's `class << self` block (which defines the module-level
+    # `otel_logger_provider_available?`) has executed. The Railtie used to delegate to
+    # that not-yet-defined method, so the bridge attach failed with:
+    #
+    #   Could not attach log bridge to Rails.logger: undefined method
+    #   `otel_logger_provider_available?' for module LaunchDarklyObservability
+    #
+    # The Railtie's check must be self-contained. Simulate the load-order state by
+    # removing the module method, then assert the Railtie check still works.
+    sc = LaunchDarklyObservability.singleton_class
+    saved = sc.instance_method(:otel_logger_provider_available?)
+    sc.send(:remove_method, :otel_logger_provider_available?)
+    begin
+      result = nil
+      assert_silent do
+        result = LaunchDarklyObservability::Railtie.send(:otel_logger_provider_available?)
+      end
+      assert_includes [true, false], result
+    ensure
+      sc.send(:define_method, :otel_logger_provider_available?, saved)
+      sc.send(:private, :otel_logger_provider_available?)
+    end
   end
 end
