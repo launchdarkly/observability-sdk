@@ -175,28 +175,7 @@ jobs:
             upload-assets: true
             upload-tag-name: ${{ needs.release-package.outputs.ruby-plugin-tag-name }}
 
-    release-flutter-plugin:
-        runs-on: ubuntu-latest
-        permissions:
-            id-token: write # Required for OIDC authentication to pub.dev.
-            contents: read
-        needs: ['release-package']
-        if: ${{ needs.release-package.outputs.flutter-plugin-released == 'true' }}
-        defaults:
-            run:
-                working-directory: ./sdk/@launchdarkly/flutter/packages/observability
-        steps:
-            - name: Checkout
-              uses: actions/checkout@v4
-
-            - name: Install Flutter
-              uses: subosito/flutter-action@0ca7a949e71ae44c8e688a51c5e7e93b2c87e295 # v2
-              with:
-                  channel: 'stable'
-                  cache: true
-
-            - name: Install dependencies
-              run: flutter pub get
-
-            - name: Publish to pub.dev
-              run: flutter pub publish --force
+    # NOTE: Flutter publishing is handled by .github/workflows/flutter-observability-publish.yml,
+    # which is triggered by the git tag that release-please creates. This mirrors the
+    # launchdarkly/flutter-client-sdk setup: pub.dev OIDC publishing is only permitted from a
+    # tag-triggered workflow, not from this branch-triggered (push: main) run.
