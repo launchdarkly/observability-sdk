@@ -27,6 +27,10 @@ internal class ObservabilityHookExporter(
 ) : ObservabilityHookExporting {
     private val spans = BoundedMap<String, Span>(maxInFlightSpans)
 
+    /** The single track-span emitter. Set by `ObservabilityService` after construction. */
+    @Volatile
+    var trackEmitter: TrackEmitting? = null
+
     private fun getTracer(): Tracer {
         return tracerProvider.invoke() ?: GlobalOpenTelemetry.get().getTracer(INSTRUMENTATION_NAME)
     }
@@ -109,6 +113,9 @@ internal class ObservabilityHookExporter(
     override fun afterIdentify(contextKeys: Map<String, String>, canonicalKey: String, completed: Boolean) {
         if (!completed) return
 
+        // Cache context keys so the manual track path can attribute events.
+        trackEmitter?.updateCachedContextKeys(contextKeys)
+
         val attrBuilder = Attributes.builder()
         for ((k, v) in contextKeys) {
             attrBuilder.put(AttributeKey.stringKey(k), v)
@@ -118,6 +125,20 @@ internal class ObservabilityHookExporter(
         attrBuilder.put(AttributeKey.stringKey(IDENTIFY_RESULT_STATUS), "completed")
 
         LDObserve.recordLog("LD.identify", Severity.INFO, attrBuilder.build())
+    }
+
+    override fun afterTrack(
+        eventKey: String,
+        metricValue: Double?,
+        attributes: Attributes,
+        contextKeys: Map<String, String>
+    ) {
+        val contextKeyBuilder = Attributes.builder()
+        for ((k, v) in contextKeys) {
+            contextKeyBuilder.put(AttributeKey.stringKey(k), v)
+        }
+        // Route through the single emitter so gating/caching stay in one place.
+        trackEmitter?.track(eventKey, metricValue, attributes, contextKeyBuilder.build())
     }
 
     companion object {

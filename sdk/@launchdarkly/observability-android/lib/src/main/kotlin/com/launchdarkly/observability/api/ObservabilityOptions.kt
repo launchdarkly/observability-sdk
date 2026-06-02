@@ -26,6 +26,7 @@ const val DEFAULT_BACKEND_URL = "https://pub.observability.app.launchdarkly.com"
  * @property logsApiLevel Level for logs to be exported. Defaults to INFO. Set to NONE to disable log exporting.
  * @property tracesApi Options for configuring traces. See [TracesApi]. Tracing is enabled by default.
  * @property metricsApi Options for configuring metrics. See [MetricsApi]. Metrics are enabled by default.
+ * @property productAnalytics Options for configuring product-analytics telemetry. See [ProductAnalytics].
  * @property instrumentations Options for configuring automatic instrumentations. See [Instrumentations].
  * @property logAdapter The log adapter to use. Defaults to [LDObserveLogging.adapter] which writes to Android's native Log API.
  * @property loggerName The name of the logger to use. Defaults to "LaunchDarklyObservabilityPlugin".
@@ -47,6 +48,7 @@ data class ObservabilityOptions(
     val logsApiLevel: LogLevel = LogLevel.INFO,
     val tracesApi: TracesApi = TracesApi.enabled(),
     val metricsApi: MetricsApi = MetricsApi.enabled(),
+    val productAnalytics: ProductAnalytics = ProductAnalytics(),
     val instrumentations: Instrumentations = Instrumentations(),
     val logAdapter: ObserveLogAdapter = LDObserveLogging.adapter(),
     val loggerName: String = "LaunchDarklyObservabilityPlugin",
@@ -81,15 +83,30 @@ data class ObservabilityOptions(
     }
 
     /**
+     * Options for configuring product-analytics telemetry. These signals are emitted as
+     * OpenTelemetry spans.
+     *
+     * @property taps If `true`, the plugin emits a `click` span for each tap. Defaults to `false`.
+     * @property pageViews If `true`, the plugin starts spans for Android Activity lifecycle events
+     *   (screen/page views). Defaults to `true`.
+     * @property trackEvents If `true`, the plugin emits a `launchdarkly.track` span when a custom
+     *   event is tracked (via the LD `afterTrack` hook or [com.launchdarkly.observability.sdk.LDObserve.track]).
+     *   Defaults to `true`.
+     */
+    data class ProductAnalytics(
+        val taps: Boolean = false,
+        val pageViews: Boolean = true,
+        val trackEvents: Boolean = true,
+    )
+
+    /**
      * This class allows enabling or disabling specific automatic instrumentations.
      *
      * @property crashReporting If `true`, the plugin will automatically report any uncaught exceptions as errors.
-     * @property activityLifecycle If `true`, the plugin will automatically start spans for Android Activity lifecycle events.
      * @property launchTime If `true`, the plugin will automatically measure and report the application's startup time as metrics.
      */
     data class Instrumentations(
         val crashReporting: Boolean = true,
-        val activityLifecycle: Boolean = true,
         val launchTime: Boolean = false,
     )
 

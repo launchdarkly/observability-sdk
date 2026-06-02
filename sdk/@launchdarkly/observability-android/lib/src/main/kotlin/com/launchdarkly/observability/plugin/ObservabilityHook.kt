@@ -2,10 +2,14 @@ package com.launchdarkly.observability.plugin
 
 import com.launchdarkly.sdk.EvaluationDetail
 import com.launchdarkly.sdk.LDValue
+import com.launchdarkly.sdk.LDValueType
 import com.launchdarkly.sdk.android.integrations.EvaluationSeriesContext
 import com.launchdarkly.sdk.android.integrations.Hook
 import com.launchdarkly.sdk.android.integrations.IdentifySeriesContext
 import com.launchdarkly.sdk.android.integrations.IdentifySeriesResult
+import com.launchdarkly.sdk.android.integrations.TrackSeriesContext
+import io.opentelemetry.api.common.AttributeKey
+import io.opentelemetry.api.common.Attributes
 import java.util.UUID
 
 /**
@@ -20,6 +24,20 @@ interface ObservabilityHookExporting {
         valueJson: String?, variationIndex: Int?, inExperiment: Boolean?
     )
     fun afterIdentify(contextKeys: Map<String, String>, canonicalKey: String, completed: Boolean)
+    fun afterTrack(
+        eventKey: String, metricValue: Double?,
+        attributes: Attributes, contextKeys: Map<String, String>
+    )
+}
+
+/**
+ * Receives track events and identify context keys so the single span emitter
+ * ([com.launchdarkly.observability.client.ObservabilityService]) can produce
+ * `launchdarkly.track` spans and cache context keys.
+ */
+interface TrackEmitting {
+    fun track(name: String, value: Double?, attributes: Attributes, contextKeyAttributes: Attributes?)
+    fun updateCachedContextKeys(contextKeys: Map<String, String>)
 }
 
 /**
@@ -81,25 +99,51 @@ class ObservabilityHook internal constructor() : Hook(HOOK_NAME) {
         seriesData: Map<String, Any>,
         result: IdentifySeriesResult
     ): Map<String, Any> {
-        val contextKeys = mutableMapOf<String, String>()
         val context = seriesContext.context
+        delegate?.afterIdentify(
+            contextKeys = buildContextKeys(context),
+            canonicalKey = context.fullyQualifiedKey,
+            completed = result.status == IdentifySeriesResult.IdentifySeriesStatus.COMPLETED
+        )
+        return seriesData
+    }
+
+    override fun afterTrack(seriesContext: TrackSeriesContext) {
+        val attrBuilder = Attributes.builder()
+        val data = seriesContext.data
+        if (data != null && data.type == LDValueType.OBJECT) {
+            for (key in data.keys()) {
+                val value = data.get(key)
+                when (value.type) {
+                    LDValueType.BOOLEAN -> attrBuilder.put(AttributeKey.booleanKey(key), value.booleanValue())
+                    LDValueType.NUMBER -> attrBuilder.put(AttributeKey.doubleKey(key), value.doubleValue())
+                    LDValueType.STRING -> attrBuilder.put(AttributeKey.stringKey(key), value.stringValue())
+                    else -> {} // skip null/array/object
+                }
+            }
+        }
+
+        val contextKeys = buildContextKeys(seriesContext.context)
+        delegate?.afterTrack(
+            eventKey = seriesContext.key,
+            metricValue = seriesContext.metricValue,
+            attributes = attrBuilder.build(),
+            contextKeys = contextKeys
+        )
+    }
+
+    private fun buildContextKeys(context: com.launchdarkly.sdk.LDContext): Map<String, String> {
+        val contextKeys = mutableMapOf<String, String>()
         if (context.isMultiple) {
             for (i in 0 until context.individualContextCount) {
-                val individual = context.getIndividualContext(i)
-                if (individual != null) {
+                context.getIndividualContext(i)?.let { individual ->
                     contextKeys[individual.kind.toString()] = individual.key
                 }
             }
         } else {
             contextKeys[context.kind.toString()] = context.key
         }
-
-        delegate?.afterIdentify(
-            contextKeys = contextKeys,
-            canonicalKey = context.fullyQualifiedKey,
-            completed = result.status == IdentifySeriesResult.IdentifySeriesStatus.COMPLETED
-        )
-        return seriesData
+        return contextKeys
     }
 
     companion object {
