@@ -377,7 +377,7 @@ class LDNativeApiSetup {
   /// Sets up an instance of `LDNativeApi` to handle messages through the `binaryMessenger`.
   static func setUp(binaryMessenger: FlutterBinaryMessenger, api: LDNativeApi?, messageChannelSuffix: String = "") {
     let channelSuffix = messageChannelSuffix.count > 0 ? ".\(messageChannelSuffix)" : ""
-    let startChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.launchdarkly_flutter_session_replay.LDNativeApi.start\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    let startChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.launchdarkly_flutter_observability.LDNativeApi.start\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
     if let api = api {
       startChannel.setMessageHandler { message, reply in
         let args = message as! [Any?]

@@ -360,7 +360,7 @@ class LDNativeApi {
     String observabilityVersion,
   ) async {
     final String pigeonVar_channelName =
-        'dev.flutter.pigeon.launchdarkly_flutter_session_replay.LDNativeApi.start$pigeonVar_messageChannelSuffix';
+        'dev.flutter.pigeon.launchdarkly_flutter_observability.LDNativeApi.start$pigeonVar_messageChannelSuffix';
     final BasicMessageChannel<Object?> pigeonVar_channel =
         BasicMessageChannel<Object?>(
           pigeonVar_channelName,

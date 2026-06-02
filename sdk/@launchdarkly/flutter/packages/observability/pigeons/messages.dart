@@ -20,7 +20,7 @@ import 'package:pigeon/pigeon.dart';
     swiftOut:
         'ios/launchdarkly_flutter_observability/Sources/launchdarkly_flutter_observability/Messages.g.swift',
     swiftOptions: SwiftOptions(),
-    dartPackageName: 'launchdarkly_flutter_session_replay',
+    dartPackageName: 'launchdarkly_flutter_observability',
   ),
 )
 class LDInstrumentationOptions {

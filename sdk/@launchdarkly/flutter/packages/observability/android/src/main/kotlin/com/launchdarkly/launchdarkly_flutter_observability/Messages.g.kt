@@ -332,7 +332,7 @@ interface LDNativeApi {
     fun setUp(binaryMessenger: BinaryMessenger, api: LDNativeApi?, messageChannelSuffix: String = "") {
       val separatedMessageChannelSuffix = if (messageChannelSuffix.isNotEmpty()) ".$messageChannelSuffix" else ""
       run {
-        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.launchdarkly_flutter_session_replay.LDNativeApi.start$separatedMessageChannelSuffix", codec)
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.launchdarkly_flutter_observability.LDNativeApi.start$separatedMessageChannelSuffix", codec)
         if (api != null) {
           channel.setMessageHandler { message, reply ->
             val args = message as List<Any?>
