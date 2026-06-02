@@ -70,6 +70,10 @@ class LDObserve(private val client: Observe) : Observe {
         client.flush()
     }
 
+    override fun track(name: String, value: Double?, attributes: Attributes) {
+        client.track(name, value, attributes)
+    }
+
     companion object : Observe {
         // initially a no-op delegate
         // volatile annotation guarantees multiple threads see the same value after init and none continue using the no-op implementation
@@ -86,6 +90,7 @@ class LDObserve(private val client: Observe) : Observe {
                 return Span.getInvalid()
             }
             override fun flush() {}
+            override fun track(name: String, value: Double?, attributes: Attributes) {}
         }
 
         /**
@@ -179,6 +184,7 @@ class LDObserve(private val client: Observe) : Observe {
                 application, mobileKey, resource, logger, options,
             )
             obsContext.sessionManager = service.sessionManager
+            obsContext.userInteractionManager = service.userInteractionManager
             context = obsContext
             init(service)
         }
@@ -215,6 +221,7 @@ class LDObserve(private val client: Observe) : Observe {
         override fun recordLog(message: String, severity: Severity, attributes: Attributes, spanContext: SpanContext?) = delegate.recordLog(message, severity, attributes, spanContext)
         override fun startSpan(name: String, attributes: Attributes): Span = delegate.startSpan(name, attributes)
         override fun flush() = delegate.flush()
+        override fun track(name: String, value: Double?, attributes: Attributes) = delegate.track(name, value, attributes)
 
         /**
          * Bridge-friendly overloads that avoid exposing OpenTelemetry types

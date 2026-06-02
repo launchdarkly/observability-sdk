@@ -111,7 +111,8 @@ class SessionReplayService(
             imageCaptureService = imageCaptureService
                 ?: ImageCaptureService(options, logger),
         )
-        interactionSource = InteractionSource(sm, options.scale)
+        val density = observabilityContext.application.resources.displayMetrics.density
+        interactionSource = InteractionSource(sm, options.scale, density)
 
         val initialIdentifyItemPayload = IdentifyItemPayload.from(
             contextFriendlyName = observabilityContext.options.contextFriendlyName,
@@ -141,8 +142,6 @@ class SessionReplayService(
         startCaptureStateObserver()
         startProcessLifecycleObserver()
 
-        interactionSource?.attachToApplication(application)
-
         isInstalled = true
         return true
     }
@@ -153,6 +152,13 @@ class SessionReplayService(
             captureManager?.captureFlow?.collect { capture ->
                 if (!_isEnabled.value) return@collect
                 eventQueue.send(ImageItemPayload(capture))
+            }
+        }
+
+        // Feed raw touches from the shared Observability hook into the (scaling + grouping) source.
+        instrumentationScope.launch {
+            observabilityContext.userInteractionManager?.touchFlow?.collect { sample ->
+                interactionSource?.process(sample)
             }
         }
 
@@ -261,7 +267,8 @@ class SessionReplayService(
      * activity is already running (e.g. React Native, where init happens after the activity starts).
      */
     override fun registerActivity(activity: Activity) {
-        interactionSource?.registerActivity(activity)
+        // Touch capture is owned by Observability's shared hook.
+        observabilityContext.userInteractionManager?.registerActivity(activity)
     }
 
     // TODO: O11Y-621 - This should be called somewhere (Probably inside ObservabilityService.kt) to shutdown the instrumentation.
@@ -270,7 +277,7 @@ class SessionReplayService(
         stopProcessLifecycleObserver()
         batchWorker.stop()
         instrumentationScope.cancel()
-        interactionSource?.detachFromApplication(observabilityContext.application)
+        // The touch hook is owned by Observability; do not detach it here.
     }
 
     private fun stopProcessLifecycleObserver() {

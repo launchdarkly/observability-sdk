@@ -1,6 +1,8 @@
 package com.launchdarkly.observability.client
 
 import android.app.Application
+import android.view.MotionEvent
+import android.view.ViewConfiguration
 import com.launchdarkly.observability.context.ObserveLogger
 import com.launchdarkly.observability.api.ObservabilityOptions
 import com.launchdarkly.observability.bridge.emitLog
@@ -16,6 +18,7 @@ import com.launchdarkly.observability.network.SamplingApiService
 import com.launchdarkly.observability.otlp.OtlpConfiguration
 import com.launchdarkly.observability.otlp.OtlpHttpClient
 import com.launchdarkly.observability.plugin.ObservabilityHookExporter
+import com.launchdarkly.observability.plugin.TrackEmitting
 import com.launchdarkly.observability.replay.transport.BatchWorker
 import com.launchdarkly.observability.replay.transport.EventQueue
 import com.launchdarkly.observability.sampling.CustomSampler
@@ -31,6 +34,7 @@ import io.opentelemetry.android.instrumentation.AndroidInstrumentation
 import io.opentelemetry.android.instrumentation.InstallationContext
 import io.opentelemetry.android.session.SessionConfig
 import io.opentelemetry.android.session.SessionManager
+import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Logger
 import io.opentelemetry.api.logs.Severity
@@ -81,7 +85,7 @@ class ObservabilityService(
     private val resources: Resource,
     private val logger: ObserveLogger,
     private val observabilityOptions: ObservabilityOptions,
-) : Observe {
+) : Observe, TrackEmitting {
     private val otelRUM: OpenTelemetryRum
     var sessionManager: SessionManager? = null
         private set
@@ -104,6 +108,16 @@ class ObservabilityService(
     private val histogramCache = ConcurrentHashMap<String, DoubleHistogram>()
     private val upDownCounterCache = ConcurrentHashMap<String, LongUpDownCounter>()
     internal val hookExporter: ObservabilityHookExporter
+
+    @Volatile
+    private var cachedContextKeyAttributes: Attributes = Attributes.empty()
+
+    /**
+     * The single touch-capture hook. Owned by Observability and shared with Session Replay via
+     * [ObservabilityContext]. Capture runs unconditionally (so Session Replay always works); only
+     * `click` span emission is gated by [ObservabilityOptions.ProductAnalytics.taps].
+     */
+    val userInteractionManager = UserInteractionManager()
 
     //TODO: Evaluate if this class should have a close/shutdown method to close this scope
     private val scope = CoroutineScope(DispatcherProviderHolder.current.io + SupervisorJob())
@@ -155,8 +169,57 @@ class ObservabilityService(
             tracerProvider = { getTracer() },
             contextFriendlyName = observabilityOptions.contextFriendlyName
         )
+        // Route the afterTrack hook and identify context keys back into this service,
+        // so it remains the single emitter of launchdarkly.track spans.
+        hookExporter.trackEmitter = this
+
+        // Capture runs unconditionally so Session Replay can consume the shared touch stream.
+        userInteractionManager.attachToApplication(application)
+        if (observabilityOptions.productAnalytics.taps) {
+            startTapInstrumentation()
+        }
 
         batchWorker.start()
+    }
+
+    /**
+     * Detects taps from the shared [UserInteractionManager.touchFlow] and emits a `click` span for
+     * each. A tap is an ACTION_DOWN followed by an ACTION_UP on the watched pointer within the
+     * long-press timeout and touch slop.
+     */
+    private fun startTapInstrumentation() {
+        scope.launch {
+            var downX = 0f
+            var downY = 0f
+            var downTimeMs = 0L
+            userInteractionManager.touchFlow.collect { sample ->
+                when (sample.action) {
+                    MotionEvent.ACTION_DOWN -> {
+                        downX = sample.x
+                        downY = sample.y
+                        downTimeMs = sample.timestamp
+                    }
+                    MotionEvent.ACTION_UP -> {
+                        if (!observabilityOptions.tracesApi.includeSpans) return@collect
+                        val dx = sample.x - downX
+                        val dy = sample.y - downY
+                        val movedTooFar = dx * dx + dy * dy > TAP_SLOP_SQUARED_PX
+                        val duration = sample.timestamp - downTimeMs
+                        if (movedTooFar || duration > TAP_TIMEOUT_MS) return@collect
+
+                        val attrs = Attributes.builder()
+                            .put(AttributeKey.stringKey("position.x"), sample.x.toString())
+                            .put(AttributeKey.stringKey("position.y"), sample.y.toString())
+                            .build()
+                        otelTracer.spanBuilder(UserInteractionManager.CLICK_SPAN_NAME)
+                            .setAllAttributes(attrs)
+                            .setStartTimestamp(downTimeMs, TimeUnit.MILLISECONDS)
+                            .startSpan()
+                            .end(sample.timestamp, TimeUnit.MILLISECONDS)
+                    }
+                }
+            }
+        }
     }
 
     private fun registerOtlpExporters() {
@@ -192,7 +255,7 @@ class ObservabilityService(
             config.suppressInstrumentation("crash")
         }
 
-        if(!observabilityOptions.instrumentations.activityLifecycle) {
+        if(!observabilityOptions.productAnalytics.pageViews) {
             // Disables [io.opentelemetry.android.instrumentation.activity.ActivityLifecycleInstrumentation.java]
             config.suppressInstrumentation("activity")
         }
@@ -385,6 +448,46 @@ class ObservabilityService(
             .startSpan()
     }
 
+    override fun track(name: String, value: Double?, attributes: Attributes) {
+        track(name, value, attributes, contextKeyAttributes = null)
+    }
+
+    /**
+     * Single emitter for `launchdarkly.track` spans. Both the LD `afterTrack` hook and the
+     * manual [com.launchdarkly.observability.sdk.LDObserve.track] path funnel through here.
+     */
+    override fun track(
+        name: String,
+        value: Double?,
+        attributes: Attributes,
+        contextKeyAttributes: Attributes?
+    ) {
+        if (!observabilityOptions.productAnalytics.trackEvents) return
+        if (!observabilityOptions.tracesApi.includeSpans) return
+
+        val attrBuilder = Attributes.builder()
+        // Apply in increasing precedence so event identity can never be clobbered: user-supplied
+        // track data first, then context keys, then the reserved key/value attributes last.
+        attrBuilder.putAll(attributes)
+        // Fresh context keys from the hook take precedence; otherwise use the cached identify keys.
+        attrBuilder.putAll(contextKeyAttributes ?: cachedContextKeyAttributes)
+        attrBuilder.put(AttributeKey.stringKey("key"), name)
+        value?.let { attrBuilder.put(AttributeKey.doubleKey("value"), it) }
+
+        otelTracer.spanBuilder(TRACK_SPAN_NAME)
+            .setAllAttributes(attrBuilder.build())
+            .startSpan()
+            .end()
+    }
+
+    override fun updateCachedContextKeys(contextKeys: Map<String, String>) {
+        val builder = Attributes.builder()
+        for ((k, v) in contextKeys) {
+            builder.put(AttributeKey.stringKey(k), v)
+        }
+        cachedContextKeyAttributes = builder.build()
+    }
+
     /**
      * Returns the tracer instance for creating spans.
      *
@@ -442,7 +545,13 @@ class ObservabilityService(
         private const val TRACES_PATH = "/v1/traces"
         private const val INSTRUMENTATION_SCOPE_NAME = "com.launchdarkly.observability"
         const val ERROR_SPAN_NAME = "highlight.error"
+        const val TRACK_SPAN_NAME = "launchdarkly.track"
         const val SESSION_ID_ATTRIBUTE = "session.id"
+
+        // Tap detection thresholds. Long-press timeout separates taps from long presses; the slop
+        // (12px, matching the Session Replay move filter) separates taps from drags.
+        private val TAP_TIMEOUT_MS = ViewConfiguration.getLongPressTimeout().toLong()
+        private const val TAP_SLOP_SQUARED_PX = 144 // 12 x 12 px
         private const val METRICS_EXPORT_INTERVAL_MS = 10_000L
 
         // Upper bound on how long [flush] waits for the metric reader to finish collecting
