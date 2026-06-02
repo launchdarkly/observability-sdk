@@ -29,12 +29,18 @@ public static partial class LDObserve
     /// </summary>
     public static void Init(string mobileKey, ObservabilityOptions observability, SessionReplayOptions? replay = null)
     {
+        // Construct the service before LDNative.Start so the HTTP Activity propagation
+        // switch (set in the ObservabilityService constructor) is applied before the
+        // native stack boots and issues outbound HTTP during startup. Mirrors how
+        // ObservabilityPlugin constructs its service ahead of Register/LDNative.Start.
+        var service = observability.IsEnabled ? new ObservabilityService(observability) : null;
+
         LDNative.Start(mobileKey, observability, replay ?? new SessionReplayOptions(isEnabled: false));
 
         // Wire up the static facade so LDObserve.RecordLog/StartActiveSpan/etc. work,
         // mirroring what ObservabilityPlugin.Register does in the client variant.
-        if (observability.IsEnabled)
-            Initialize(new ObservabilityService(observability));
+        if (service != null)
+            Initialize(service);
     }
 
     /// <summary>
