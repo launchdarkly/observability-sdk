@@ -465,11 +465,13 @@ class ObservabilityService(
         if (!observabilityOptions.productAnalytics.trackEvents) return
 
         val attrBuilder = Attributes.builder()
-        attrBuilder.put(AttributeKey.stringKey("key"), name)
-        value?.let { attrBuilder.put(AttributeKey.doubleKey("value"), it) }
+        // Apply in increasing precedence so event identity can never be clobbered: user-supplied
+        // track data first, then context keys, then the reserved key/value attributes last.
+        attrBuilder.putAll(attributes)
         // Fresh context keys from the hook take precedence; otherwise use the cached identify keys.
         attrBuilder.putAll(contextKeyAttributes ?: cachedContextKeyAttributes)
-        attrBuilder.putAll(attributes)
+        attrBuilder.put(AttributeKey.stringKey("key"), name)
+        value?.let { attrBuilder.put(AttributeKey.doubleKey("value"), it) }
 
         otelTracer.spanBuilder(TRACK_SPAN_NAME)
             .setAllAttributes(attrBuilder.build())
