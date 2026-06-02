@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:launchdarkly_flutter_observability/launchdarkly_flutter_observability.dart';
 
 /// Flutter port of `sdk/@launchdarkly/mobile-dotnet/sample/CreditCardPage.xaml`
 /// + `CreditCardPage.xaml.cs`. Demonstrates form behavior intended for the
@@ -42,12 +43,13 @@ class _CreditCardPageState extends State<CreditCardPage> {
     _expiryController.addListener(_onExpiryChanged);
     _cvcController.addListener(_onCvcChanged);
 
-    // TODO: When `launchdarkly_flutter_session_replay` exposes a per-widget
-    // mask API (the equivalent of MAUI's `BrandLabel.LDMask()` on the C#
-    // side), wrap the brand label below with that wrapper so its text is
-    // redacted in recorded sessions. Today, the page already benefits from
-    // the screen-wide `PrivacyOptions(maskTextInputs: true)` configured in
-    // `main.dart`, which masks every text field on this page by default.
+    // Masking demo. The screen-wide `PrivacyOptions(maskTextInputs: true)` from
+    // `main.dart` masks every text field on this page by default. On top of
+    // that:
+    //  - the brand label is wrapped in `LDMask` (MAUI's `BrandLabel.LDMask()`)
+    //    to redact it even though global label masking is off; and
+    //  - the cardholder-name field is wrapped in `LDUnmask` to reveal just that
+    //    one field, overriding the global `maskTextInputs` policy.
   }
 
   @override
@@ -383,9 +385,10 @@ class _CreditCardPageState extends State<CreditCardPage> {
 
             Row(
               children: [
-                // Brand label — the MAUI sample masks this via
-                // `BrandLabel.LDMask()` in OnPageLoaded.
-                Expanded(child: Text(_brandText)),
+                // Mirrors the MAUI sample's `BrandLabel.LDMask()`: explicitly
+                // redact this label (global label masking is off, so without
+                // LDMask it would be visible in the recording).
+                Expanded(child: LDMask(child: Text(_brandText))),
                 Text(
                   _maskedNumberText,
                   style: TextStyle(color: hintColor),
@@ -396,14 +399,19 @@ class _CreditCardPageState extends State<CreditCardPage> {
 
             const Text('Cardholder name'),
             const SizedBox(height: 4),
-            TextField(
-              controller: _nameController,
-              decoration: const InputDecoration(
-                hintText: 'Full name as on card',
-                border: OutlineInputBorder(),
+            // LDUnmask reveals this field in session replay, overriding the
+            // screen-wide maskTextInputs policy. (Demo only — choose carefully
+            // which fields are safe to reveal.)
+            LDUnmask(
+              child: TextField(
+                controller: _nameController,
+                decoration: const InputDecoration(
+                  hintText: 'Full name as on card',
+                  border: OutlineInputBorder(),
+                ),
+                textInputAction: TextInputAction.next,
+                autofillHints: const [AutofillHints.creditCardName],
               ),
-              textInputAction: TextInputAction.next,
-              autofillHints: const [AutofillHints.creditCardName],
             ),
             if (_nameError != null) _ErrorText(_nameError!),
             const SizedBox(height: 12),

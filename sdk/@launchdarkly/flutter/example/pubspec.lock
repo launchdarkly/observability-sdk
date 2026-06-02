@@ -180,48 +180,41 @@ packages:
     dependency: transitive
     description:
       name: launchdarkly_common_client
-      sha256: "3981c9c5bf6ab72e188065d25ff605043b38b1a47c12d7c83568f8c94f77df36"
+      sha256: aeefe7bc4b7bf995fa23a5165846a7320aa1eaa48089f19d150a0144fbf5bfad
       url: "https://pub.dev"
     source: hosted
-    version: "1.7.0"
+    version: "1.10.0"
   launchdarkly_dart_common:
     dependency: transitive
     description:
       name: launchdarkly_dart_common
-      sha256: a5275ba48635364690181d7172d679889fffca501a7dbec74992c4057357ac6f
+      sha256: e36fb8d943ea7a5b99e7ecdc361174ca95e05533904dd92175816ae5c9723eee
       url: "https://pub.dev"
     source: hosted
-    version: "1.6.1"
+    version: "1.8.1"
   launchdarkly_event_source_client:
     dependency: transitive
     description:
       name: launchdarkly_event_source_client
-      sha256: "51c90efe9765bf6908772abd59ea16c193798c1a9f9381475c56299cb553e3b2"
+      sha256: c248a81bc353d44f7f18803ff625d784d640265bf8bbc32c63f1d2d91911b88f
       url: "https://pub.dev"
     source: hosted
-    version: "2.0.1"
+    version: "2.1.0"
   launchdarkly_flutter_client_sdk:
     dependency: "direct main"
     description:
       name: launchdarkly_flutter_client_sdk
-      sha256: e50ba0e33ab182fb35a21e099b7fd242b095a22387f7856a744bd55a9058f775
+      sha256: "1c33e7c184f7027adb6a89c1c36e2e31110da9cb92e53cab9c8060ac152fc9c4"
       url: "https://pub.dev"
     source: hosted
-    version: "4.12.0"
+    version: "4.17.0-beta.1"
   launchdarkly_flutter_observability:
     dependency: "direct main"
     description:
       path: "../packages/observability"
       relative: true
     source: path
-    version: "0.0.0"
-  launchdarkly_flutter_session_replay:
-    dependency: "direct main"
-    description:
-      path: "../packages/session_replay"
-      relative: true
-    source: path
-    version: "0.0.0"
+    version: "0.1.0"
   leak_tracker:
     dependency: transitive
     description:
@@ -298,10 +291,10 @@ packages:
     dependency: transitive
     description:
       name: opentelemetry
-      sha256: a942fe0e7fbf4f7370b92f1226354158779fd404197e1ff8153c1612b3e24c58
+      sha256: "92d63a2e0731d34a7548add82420b8f3819ccda569f9bdfdcc4b25e00fe88da4"
       url: "https://pub.dev"
     source: hosted
-    version: "0.18.10"
+    version: "0.18.11"
   package_info_plus:
     dependency: transitive
     description:
@@ -378,10 +371,10 @@ packages:
     dependency: transitive
     description:
       name: protobuf
-      sha256: "68645b24e0716782e58948f8467fd42a880f255096a821f9e7d0ec625b00c84d"
+      sha256: "75ec242d22e950bdcc79ee38dd520ce4ee0bc491d7fadc4ea47694604d22bf06"
       url: "https://pub.dev"
     source: hosted
-    version: "3.1.0"
+    version: "6.0.0"
   quiver:
     dependency: transitive
     description:

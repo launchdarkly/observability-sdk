@@ -29,3 +29,15 @@ migrate_working_dir/
 .flutter-plugins-dependencies
 /build/
 /coverage/
+
+# iOS / macOS native plugin artifacts (CocoaPods, Swift Package Manager, Xcode)
+**/Pods/
+**/.symlinks/
+**/.build/
+**/.swiftpm/
+**/DerivedData/
+**/xcuserdata/
+*.xcuserstate
+*.moved-aside
+*.pbxuser
+!default.pbxuser

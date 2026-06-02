@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:launchdarkly_flutter_client_sdk/launchdarkly_flutter_client_sdk.dart';
 
+import '../options/observability_options.dart';
+
 const _defaultOtlpEndpoint =
     'https://otel.observability.app.launchdarkly.com:4318';
 
@@ -132,5 +134,21 @@ ObservabilityConfig configWithDefaults({
     backendUrl: backendUrl ?? _defaultBackendUrl,
     contextFriendlyName: contextFriendlyName,
     instrumentationConfig: instrumentationConfig ?? InstrumentationConfig(),
+  );
+}
+
+/// Maps the public, platform-agnostic [ObservabilityOptions] onto the internal
+/// [ObservabilityConfig] consumed by the Dart OpenTelemetry pipeline.
+ObservabilityConfig configFromOptions(ObservabilityOptions options) {
+  final friendlyName = options.contextFriendlyName;
+  return ObservabilityConfig(
+    applicationName: options.serviceName,
+    applicationVersion: options.serviceVersion,
+    otlpEndpoint: options.otlpEndpoint,
+    backendUrl: options.backendUrl,
+    contextFriendlyName: friendlyName == null ? null : (_) => friendlyName,
+    instrumentationConfig: InstrumentationConfig(
+      debugPrint: options.instrumentation.debugPrint,
+    ),
   );
 }

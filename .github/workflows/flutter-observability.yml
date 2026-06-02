@@ -1,0 +1,54 @@
+name: 'Flutter Observability'
+
+on:
+    push:
+        branches: ['main']
+        paths:
+            - 'sdk/@launchdarkly/flutter/packages/observability/**'
+            - '.github/workflows/flutter-observability.yml'
+    pull_request:
+        types: [opened, synchronize]
+        paths:
+            - 'sdk/@launchdarkly/flutter/packages/observability/**'
+            - '.github/workflows/flutter-observability.yml'
+
+permissions:
+    contents: read
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+jobs:
+    test:
+        name: Analyze & Unit Tests
+        runs-on: ubuntu-latest
+        defaults:
+            run:
+                working-directory: ./sdk/@launchdarkly/flutter/packages/observability
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Install Flutter
+              uses: subosito/flutter-action@0ca7a949e71ae44c8e688a51c5e7e93b2c87e295 # v2
+              with:
+                  channel: 'stable'
+                  cache: true
+
+            - name: Install dependencies
+              run: flutter pub get
+
+            - name: Analyze
+              run: flutter analyze
+
+            - name: Verify formatting
+              run: dart format --output=none --set-exit-if-changed .
+
+            - name: Run unit tests
+              run: flutter test --reporter expanded
+
+            - name: Upload test reports
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: flutter-observability-test-results
+                  path: sdk/@launchdarkly/flutter/packages/observability/test-results/**
+                  retention-days: 7

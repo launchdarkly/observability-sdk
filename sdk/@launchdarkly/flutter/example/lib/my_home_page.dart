@@ -11,7 +11,7 @@ import 'main.dart';
 
 // NOTE: The MAUI sample also has a "Metric" subsection (gauge, histogram,
 // count, incremental, up-down counter) under Observability. The Flutter
-// observability SDK does not currently expose a metric API on `Observe`,
+// observability SDK does not currently expose a metric API on `LDObserve`,
 // so that subsection is intentionally omitted. Add it here once the SDK
 // surface for metrics lands.
 
@@ -132,12 +132,12 @@ class _MyHomePageState extends State<MyHomePage> {
   void _onTriggerError() {
     final inner = StateError('The error that caused the other error.');
     final exception = Exception('Manual error womp womp: $inner');
-    Observe.recordException(exception, stackTrace: StackTrace.current);
+    LDObserve.recordException(exception, stackTrace: StackTrace.current);
     debugPrint('Error triggered');
   }
 
   void _onTriggerLog() {
-    Observe.recordLog(
+    LDObserve.recordLog(
       'Test Log',
       severity: 'info',
       attributes: <String, Attribute>{
@@ -153,13 +153,13 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   // The MAUI sample captures the span context inside a span and passes it to
-  // a log on a detached task. The Flutter Observe API does not expose a span
+  // a log on a detached task. The Flutter LDObserve API does not expose a span
   // context type, but a log recorded while a span is active is automatically
   // associated with that span via the OTel context.
   Future<void> _onTriggerLogWithContext() async {
-    final span = Observe.startSpan('log-context-demo');
+    final span = LDObserve.startSpan('log-context-demo');
     span.setAttribute('demo', StringAttribute('log-with-context'));
-    Observe.recordLog(
+    LDObserve.recordLog(
       'Log with span context',
       severity: 'warn',
       attributes: <String, Attribute>{
@@ -171,7 +171,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void _onTriggerErrorLogWithStack() {
-    Observe.recordLog(
+    LDObserve.recordLog(
       'This is an error log!',
       severity: 'error',
       stackTrace: StackTrace.current,
@@ -185,16 +185,16 @@ class _MyHomePageState extends State<MyHomePage> {
   void _onSendCustomLog() {
     final message = _customLogController.text;
     if (message.isEmpty) return;
-    Observe.recordLog(message, severity: 'info');
+    LDObserve.recordLog(message, severity: 'info');
     debugPrint('Custom log sent: $message');
   }
 
   Future<void> _onTriggerNestedSpans() async {
-    final span0 = Observe.startSpan('NestedSpan');
-    final span1 = Observe.startSpan('NestedSpan1');
-    final span2 = Observe.startSpan('NestedSpan2');
+    final span0 = LDObserve.startSpan('NestedSpan');
+    final span1 = LDObserve.startSpan('NestedSpan1');
+    final span2 = LDObserve.startSpan('NestedSpan2');
 
-    Observe.recordLog('NestedLog', severity: 'info');
+    LDObserve.recordLog('NestedLog', severity: 'info');
 
     try {
       await _httpClient.get(Uri.parse('https://www.google.com'));
@@ -209,15 +209,15 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void _onTriggerSequentialSpans() {
-    final span1 = Observe.startSpan('SequentialSpan1');
+    final span1 = LDObserve.startSpan('SequentialSpan1');
     span1.setAttribute('sequence', StringAttribute('1'));
     span1.end();
 
-    final span2 = Observe.startSpan('SequentialSpan2');
+    final span2 = LDObserve.startSpan('SequentialSpan2');
     span2.setAttribute('sequence', StringAttribute('2'));
     span2.end();
 
-    final span3 = Observe.startSpan('SequentialSpan3');
+    final span3 = LDObserve.startSpan('SequentialSpan3');
     span3.setAttribute('sequence', StringAttribute('3'));
     span3.end();
 
@@ -227,7 +227,7 @@ class _MyHomePageState extends State<MyHomePage> {
   void _onSendCustomSpan() {
     final spanName = _customSpanController.text;
     if (spanName.isEmpty) return;
-    final span = Observe.startSpan(spanName);
+    final span = LDObserve.startSpan(spanName);
     span.setAttribute('custom_span', BooleanAttribute(true));
     span.addEvent('cache.miss');
     span.addEvent('retry.started');
@@ -237,10 +237,10 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void _onStartPolling() {
-    final root = Observe.startSpan('StartPolling');
+    final root = LDObserve.startSpan('StartPolling');
     setState(() {
       _pollingTimer = Timer.periodic(const Duration(seconds: 30), (_) {
-        final pollSpan = Observe.startSpan('PollTick');
+        final pollSpan = LDObserve.startSpan('PollTick');
         pollSpan.setAttribute(
           'tick.time',
           StringAttribute(DateTime.now().toUtc().toIso8601String()),
@@ -290,8 +290,8 @@ class _MyHomePageState extends State<MyHomePage> {
   // --- Counter (kept from previous example) ---
 
   void _incrementCounter() {
-    final span = Observe.startSpan('increment-counter-1');
-    final span2 = Observe.startSpan('increment-counter-2');
+    final span = LDObserve.startSpan('increment-counter-1');
+    final span2 = LDObserve.startSpan('increment-counter-2');
 
     LDSingleton.client?.stringVariation('textFlag', 'default');
     setState(() {

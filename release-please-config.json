@@ -22,6 +22,14 @@
 			"include-component-in-tag": true,
 			"extra-files": ["gradle.properties"]
 		},
+		"sdk/@launchdarkly/flutter/packages/observability": {
+			"package-name": "launchdarkly_flutter_observability",
+			"release-type": "dart",
+			"versioning": "default",
+			"include-v-in-tag": false,
+			"include-component-in-tag": true,
+			"extra-files": ["lib/src/platform/io/ld_observability_bridge.dart"]
+		},
 		"go": {
 			"release-type": "go",
 			"package-name": "go",
