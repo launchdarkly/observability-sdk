@@ -70,6 +70,20 @@ module LaunchDarklyObservability
       @configured = true
     end
 
+    # Install the SDK tracer provider and auto-instrumentation WITHOUT exporters.
+    #
+    # Called from the Rails Railtie during boot so the Rails-family
+    # instrumentations (which patch via ActiveSupport.on_load hooks that fire
+    # during boot) attach even when the LaunchDarkly client — and therefore
+    # #register / #configure — is created lazily afterward. Exporters are added
+    # later by #configure_traces when the client registers the plugin.
+    def install_instrumentation_only
+      OpenTelemetry::SDK.configure do |c|
+        c.resource = create_resource
+        configure_instrumentations(c)
+      end
+    end
+
     # Flush all pending telemetry data
     def flush
       OpenTelemetry.tracer_provider&.force_flush
@@ -90,8 +104,20 @@ module LaunchDarklyObservability
 
     private
 
-    # Configure OpenTelemetry traces with OTLP exporter
+    # Configure OpenTelemetry traces with OTLP exporter.
+    #
+    # If auto-instrumentation was already installed during Rails boot (see
+    # LaunchDarklyObservability.install_rails_instrumentation), the SDK tracer
+    # provider already exists with instrumentation attached — so we only add the
+    # OTLP span exporter. Re-running OpenTelemetry::SDK.configure here would
+    # replace that provider and, in the lazy-init case, drop the Rails-family
+    # instrumentation that can only attach during boot.
     def configure_traces
+      if LaunchDarklyObservability.instrumentation_installed_at_boot?
+        OpenTelemetry.tracer_provider.add_span_processor(create_batch_span_processor)
+        return
+      end
+
       OpenTelemetry::SDK.configure do |c|
         c.resource = create_resource
         c.add_span_processor(create_batch_span_processor)
@@ -99,6 +125,23 @@ module LaunchDarklyObservability
         # Enable auto-instrumentation
         configure_instrumentations(c)
       end
+
+      warn_if_rails_instrumentation_missed
+    end
+
+    # Emit a single actionable warning when the plugin is registered after Rails
+    # has finished booting and boot-time instrumentation install did not run
+    # (e.g. LAUNCHDARKLY_SDK_KEY was not set in the environment at boot). In that
+    # case the OTel Rails-family instrumentations log a flurry of
+    # "failed to install" warnings because their load hooks have already fired.
+    def warn_if_rails_instrumentation_missed
+      return unless defined?(::Rails) && ::Rails.respond_to?(:application)
+      return unless ::Rails.application.respond_to?(:initialized?) && ::Rails.application.initialized?
+
+      warn '[LaunchDarklyObservability] The LaunchDarkly client was created after Rails finished ' \
+           'booting, so the Rails auto-instrumentation (ActionPack, ActiveRecord, ...) could not be ' \
+           'installed. To enable it, set LAUNCHDARKLY_SDK_KEY in the environment before Rails boots, ' \
+           'or create the LaunchDarkly client from a config/initializer.'
     end
 
     # Configure auto-instrumentations with sensible defaults.
