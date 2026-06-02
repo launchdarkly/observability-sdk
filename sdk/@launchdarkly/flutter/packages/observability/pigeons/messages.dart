@@ -26,6 +26,18 @@ import 'package:pigeon/pigeon.dart';
 class LDInstrumentationOptions {
   bool? networkRequests;
   bool? launchTimes;
+  bool? crashReporting;
+}
+
+class LDTracesOptions {
+  bool? includeErrors;
+  bool? includeSpans;
+}
+
+class LDProductAnalyticsOptions {
+  bool? taps;
+  bool? pageViews;
+  bool? trackEvents;
 }
 
 class LDObservabilityOptions {
@@ -36,6 +48,12 @@ class LDObservabilityOptions {
   String? backendUrl;
   String? contextFriendlyName;
   Map<String, Object?>? attributes;
+  Map<String, String>? customHeaders;
+  int? sessionBackgroundTimeoutMillis;
+  int? logsApiLevel;
+  LDTracesOptions? traces;
+  bool? metricsEnabled;
+  LDProductAnalyticsOptions? productAnalytics;
   LDInstrumentationOptions? instrumentation;
 }
 
@@ -50,6 +68,7 @@ class LDPrivacyOptions {
 class LDSessionReplayOptions {
   bool? isEnabled;
   String? serviceName;
+  double? frameRate;
   LDPrivacyOptions? privacy;
 }
 

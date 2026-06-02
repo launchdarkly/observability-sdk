@@ -9,11 +9,17 @@
 class SessionReplayOptions {
   final bool isEnabled;
   final String serviceName;
+
+  /// Target capture rate in frames per second. Mirrors Android/iOS
+  /// `frameRate`. Native-only. Defaults to `1.0`.
+  final double frameRate;
+
   final PrivacyOptions privacy;
 
   const SessionReplayOptions({
     this.isEnabled = true,
     this.serviceName = 'sessionreplay-flutter',
+    this.frameRate = 1.0,
     this.privacy = const PrivacyOptions(),
   });
 }
