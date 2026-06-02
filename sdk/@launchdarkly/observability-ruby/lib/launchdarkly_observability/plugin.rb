@@ -2,6 +2,15 @@
 
 require 'launchdarkly-server-sdk'
 
+# Plugin support (LaunchDarkly::Interfaces::Plugins) was added in launchdarkly-server-sdk 8.11.0.
+# Surface an actionable error instead of a bare "uninitialized constant" if an older SDK is loaded.
+unless defined?(LaunchDarkly::Interfaces::Plugins::Plugin)
+  raise LoadError, 'launchdarkly-observability requires launchdarkly-server-sdk >= 8.11.0 ' \
+                   '(plugin support was added in 8.11.0). Your installed launchdarkly-server-sdk ' \
+                   "version is #{defined?(LaunchDarkly::VERSION) ? LaunchDarkly::VERSION : 'unknown'}. " \
+                   'Please upgrade: bundle update launchdarkly-server-sdk'
+end
+
 module LaunchDarklyObservability
   # LaunchDarkly SDK Plugin that provides observability instrumentation.
   #

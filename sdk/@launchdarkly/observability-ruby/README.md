@@ -35,7 +35,7 @@ gem install launchdarkly-observability
 ### Dependencies
 
 The gem includes everything needed for traces and logs out of the box:
-- `launchdarkly-server-sdk` >= 8.0
+- `launchdarkly-server-sdk` >= 8.11.0 (plugin support was added in 8.11.0)
 - `opentelemetry-sdk` ~> 1.4
 - `opentelemetry-exporter-otlp` ~> 0.28
 - `opentelemetry-instrumentation-all` ~> 0.62
