@@ -92,6 +92,15 @@ Rails.configuration.ld_client = LaunchDarkly::LDClient.new(
 at_exit { Rails.configuration.ld_client.close }
 ```
 
+> **Lazy client initialization:** Creating the LaunchDarkly client during boot
+> (as above) is recommended. If your app instead creates the client lazily —
+> e.g. from a model on first request, after Rails has finished booting — the gem
+> still installs the Rails auto-instrumentation during boot via its Railtie, as
+> long as `LAUNCHDARKLY_SDK_KEY` is set in the environment before Rails boots. If
+> it isn't, the OpenTelemetry Rails instrumentations can't attach (their load
+> hooks have already fired) and the plugin logs a single warning explaining how
+> to fix it.
+
 Use in controllers:
 
 ```ruby
@@ -145,10 +154,12 @@ LaunchDarklyObservability::Plugin.new(
   enable_logs: true,     # default: true
   enable_metrics: true,  # default: true
 
-  # Optional: Custom instrumentation configuration
+  # Optional: Custom instrumentation configuration. Keys are instrumentation
+  # class names; values are that instrumentation's own options (only pass
+  # options the installed instrumentation version supports).
   instrumentations: {
-    'OpenTelemetry::Instrumentation::Rails' => { enable_recognize_route: true },
-    'OpenTelemetry::Instrumentation::ActiveRecord' => { db_statement: :include }
+    'OpenTelemetry::Instrumentation::Rack' => { untraced_endpoints: ['/health'] },
+    'OpenTelemetry::Instrumentation::Net::HTTP' => { untraced_hosts: ['internal.example.com'] }
   }
 )
 ```
