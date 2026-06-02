@@ -463,6 +463,7 @@ class ObservabilityService(
         contextKeyAttributes: Attributes?
     ) {
         if (!observabilityOptions.productAnalytics.trackEvents) return
+        if (!observabilityOptions.tracesApi.includeSpans) return
 
         val attrBuilder = Attributes.builder()
         // Apply in increasing precedence so event identity can never be clobbered: user-supplied

@@ -184,6 +184,7 @@ class LDObserve(private val client: Observe) : Observe {
                 application, mobileKey, resource, logger, options,
             )
             obsContext.sessionManager = service.sessionManager
+            obsContext.userInteractionManager = service.userInteractionManager
             context = obsContext
             init(service)
         }
