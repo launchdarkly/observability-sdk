@@ -37,7 +37,13 @@ internal class LDNative
     {
         var ldNative = new LDNative(observability, replay);
         var observabilityVersion = GetObservabilityVersion();
-        
+
+        // Apply any buffered pre-init writes (e.g. LDReplay.IsEnabled) to the replay
+        // options before the native bridge consumes them. Otherwise pending values set
+        // during the init race would never reach native (Android converts via ToNative()
+        // and iOS reads initial values during Start).
+        LDReplay.OnNativeStarted(ldNative.Replay);
+
 #if ANDROID
         var app = (Android.App.Application)global::Android.App.Application.Context;
         var bridge = new ObservabilityBridge();
@@ -51,7 +57,6 @@ internal class LDNative
         bridge.Start(mobileKey, observability, replay, observabilityVersion);
 #endif
 
-        LDReplay.OnNativeStarted(ldNative.Replay);
         return ldNative;
     }
 }
