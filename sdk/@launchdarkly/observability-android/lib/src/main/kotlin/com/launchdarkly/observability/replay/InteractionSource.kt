@@ -1,15 +1,7 @@
 package com.launchdarkly.observability.replay
 
-import android.app.Activity
-import android.app.Application
-import android.os.Build
-import android.os.Bundle
-import android.os.SystemClock
-import android.view.KeyboardShortcutGroup
-import android.view.Menu
 import android.view.MotionEvent
-import android.view.Window
-import androidx.annotation.RequiresApi
+import com.launchdarkly.observability.client.TouchSample
 import io.opentelemetry.android.session.SessionManager
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -17,202 +9,73 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 
 /**
- * This class will report [InteractionEvent]s for the primary pointer of the most recently
- * resumed window.
+ * Converts raw [TouchSample]s from the shared `UserInteractionManager` into scaled, grouped
+ * [InteractionEvent]s for Session Replay.
+ *
+ * Window interception is no longer performed here; the Observability plugin owns the single touch
+ * hook and this class is a pure consumer. Scaling (to match the scaled screenshots) and move
+ * grouping (to reduce bandwidth) remain Session Replay concerns and live here.
+ *
+ * [process] is expected to be called from a single thread (the collector coroutine).
+ *
+ * @param sessionManager used to tag emitted events with the current session id.
+ * @param scale the replay scale factor, or `null` for no scaling.
+ * @param density the display density used to derive the pixel scale factor.
  */
 class InteractionSource(
     private val sessionManager: SessionManager,
     private val scale: Float?,
-) : Application.ActivityLifecycleCallbacks {
-
-    // Configure with buffer capacity to prevent blocking on emission
-    // Using tryEmit() instead of emit() to avoid blocking the UI thread
+    private val density: Float,
+) {
     private val _captureEventFlow = MutableSharedFlow<InteractionEvent>(
-        extraBufferCapacity = 64, // Buffer up to 64 events before dropping
+        extraBufferCapacity = 64,
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
 
-    // Interactions from the most recent window will be reported periodically on this flow.
     val captureFlow: SharedFlow<InteractionEvent> = _captureEventFlow.asSharedFlow()
 
-    private var _mostRecentWindow: Window? = null
-    private var _interceptedWindows: MutableList<Window> = mutableListOf()
-    private var _watchedPointerId: Int = -1
-    private var _moveGrouper: InteractionMoveGrouper = InteractionMoveGrouper(sessionManager, _captureEventFlow)
+    private val _moveGrouper: InteractionMoveGrouper = InteractionMoveGrouper(sessionManager, _captureEventFlow)
 
-    // Instances of this private class will be attached to windows as they are started and this
-    // gives this interaction source a hook into window touches.
-    private class InteractionDetector(
-        val window: Window,
-        val originalCallback: Window.Callback,
-        val onInteraction: (Window, MotionEvent) -> Unit
-    ) : Window.Callback by originalCallback {
-        override fun dispatchTouchEvent(event: MotionEvent): Boolean {
-            onInteraction(window, event)
-            return originalCallback.dispatchTouchEvent(event)
-        }
-
-        override fun onProvideKeyboardShortcuts(
-            data: MutableList<KeyboardShortcutGroup>?,
-            menu: Menu?,
-            deviceId: Int
-        ) {
-            originalCallback.onProvideKeyboardShortcuts(data, menu, deviceId)
-        }
-
-        @RequiresApi(Build.VERSION_CODES.O)
-        override fun onPointerCaptureChanged(hasCapture: Boolean) {
-            originalCallback.onPointerCaptureChanged(hasCapture)
-        }
+    private val scaleFactor: Float = when {
+        scale == null -> 1f
+        density > 0f -> scale / density
+        else -> 1f
     }
 
-    // This method will be invoked by any / all interceptors that receive interactions.  This is
-    // assumed to only be invoked from one thread, the main UI thread and has no multi-threading
-    // protections.
-    private fun handleInteraction(window: Window, motionEvent: MotionEvent) {
-        // only handle touches on the most recent window and only motion events with pointers
-        if (_mostRecentWindow != window || motionEvent.pointerCount < 1) {
-            return
-        }
+    /**
+     * Processes a single raw touch sample. Must be invoked from a single thread; there are no
+     * multi-threading protections (the move grouper is stateful).
+     */
+    fun process(sample: TouchSample) {
+        val x = scaleCoordinate(sample.x, scaleFactor)
+        val y = scaleCoordinate(sample.y, scaleFactor)
 
-        _watchedPointerId = _watchedPointerId
-            .takeIf { motionEvent.findPointerIndex(it) != -1 } //continue using watched pointer if it exists
-            ?: motionEvent.getPointerId(0) // otherwise use first pointer
-        val pointerIndex = motionEvent.findPointerIndex(_watchedPointerId)
-        if (pointerIndex < 0) return
-
-        val scaleFactor = calculateScaleFactor(scale, window.decorView)
-        val eventTimeReference = System.currentTimeMillis() - SystemClock.uptimeMillis()
-
-        when (motionEvent.actionMasked) {
+        when (sample.action) {
             MotionEvent.ACTION_DOWN -> {
-                val interaction = InteractionEvent(
-                    action = motionEvent.action,
-                    positions = listOf(
-                        Position(
-                            x = scaleCoordinate(motionEvent.getX(pointerIndex), scaleFactor),
-                            y = scaleCoordinate(motionEvent.getY(pointerIndex), scaleFactor),
-                            timestamp = eventTimeReference + motionEvent.eventTime,
-                        ),
-                    ),
-                    session = sessionManager.getSessionId(),
+                _captureEventFlow.tryEmit(
+                    InteractionEvent(
+                        action = MotionEvent.ACTION_DOWN,
+                        positions = listOf(Position(x, y, sample.timestamp)),
+                        session = sessionManager.getSessionId(),
+                    )
                 )
-                // Use tryEmit() with buffering instead of emit() and coroutine dispatch for speed
-                _captureEventFlow.tryEmit(interaction) // tryEmit with buffering is more performant than dispatching to coroutine/suspend
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-
-                val x = scaleCoordinate(motionEvent.getX(pointerIndex), scaleFactor)
-                val y = scaleCoordinate(motionEvent.getY(pointerIndex), scaleFactor)
-                val timestamp = eventTimeReference + motionEvent.eventTime
-
-                _moveGrouper.completeWithLastPosition(x, y, timestamp)
-
-                val interaction = InteractionEvent(
-                    action = MotionEvent.ACTION_UP, // for the purposes of replay, we can treat CANCEL as UP
-                    positions = listOf(
-                        Position(
-                            x = x,
-                            y = y,
-                            timestamp = timestamp,
-                        ),
-                    ),
-                    session = sessionManager.getSessionId(),
+                _moveGrouper.completeWithLastPosition(x, y, sample.timestamp)
+                _captureEventFlow.tryEmit(
+                    InteractionEvent(
+                        // For the purposes of replay, CANCEL is treated as UP.
+                        action = MotionEvent.ACTION_UP,
+                        positions = listOf(Position(x, y, sample.timestamp)),
+                        session = sessionManager.getSessionId(),
+                    )
                 )
-                // Use tryEmit() with buffering instead of emit() for performance
-                _captureEventFlow.tryEmit(interaction)
             }
             MotionEvent.ACTION_MOVE -> {
-                // the move grouper provides rate limiting and grouping of positions by time and distance,
-                // ultimately to reduce bandwidth consumption.  the move grouper is responsible for
-                // calling tryEmit()
-
-                // handle non-current positions
-                for (h in 0 until motionEvent.historySize) {
-                    _moveGrouper.handleMove(
-                        x = scaleCoordinate(motionEvent.getHistoricalX(pointerIndex, h), scaleFactor),
-                        y = scaleCoordinate(motionEvent.getHistoricalY(pointerIndex, h), scaleFactor),
-                        timestamp = eventTimeReference + motionEvent.getHistoricalEventTime(h)
-                    )
-                }
-
-                // handle current position
-                _moveGrouper.handleMove(
-                    x = scaleCoordinate(motionEvent.getX(pointerIndex), scaleFactor),
-                    y = scaleCoordinate(motionEvent.getY(pointerIndex), scaleFactor),
-                    timestamp = eventTimeReference + motionEvent.eventTime
-                )
+                // The move grouper provides rate limiting and grouping by time and distance to
+                // reduce bandwidth; it is responsible for calling tryEmit.
+                _moveGrouper.handleMove(x, y, sample.timestamp)
             }
         }
-    }
-
-    /**
-     * Attaches the [InteractionSource] to the [Application] whose [Activity]s will be captured.
-     */
-    fun attachToApplication(application: Application) {
-        application.registerActivityLifecycleCallbacks(this)
-    }
-
-    /**
-     * Registers the given activity for touch capture, as if [onActivityStarted]
-     * and [onActivityResumed] had already fired for it. Call this when the SDK is initialized
-     * after the activity is already running (e.g. React Native).
-     */
-    fun registerActivity(activity: Activity) {
-        onActivityStarted(activity)
-        onActivityResumed(activity)
-    }
-
-    /**
-     * Detaches the [InteractionSource] from the [Application].
-     */
-    fun detachFromApplication(application: Application) {
-        application.unregisterActivityLifecycleCallbacks(this)
-    }
-
-    override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
-        // Noop
-    }
-
-    override fun onActivityStarted(activity: Activity) {
-        // here we add an interception decorator if the window has never been seen before
-        activity.window?.let { window ->
-            // if window is not already intercepted
-            if (!_interceptedWindows.contains(window)) {
-                // create interceptor
-                val interceptor = InteractionDetector(
-                    window,
-                    window.callback,
-                    this@InteractionSource::handleInteraction
-                )
-                // apply interceptor to window
-                window.callback = interceptor
-                // track that this activity is intercepted so we don't intercept again in the future
-                _interceptedWindows.add(window)
-            }
-        }
-    }
-
-    override fun onActivityResumed(activity: Activity) {
-        // here we update to follow the most recent window
-        activity.window?.let { window ->
-            _mostRecentWindow = window
-        }
-    }
-
-    override fun onActivityPaused(activity: Activity) {
-        // Noop
-    }
-
-    override fun onActivityStopped(activity: Activity) {
-        // Noop
-    }
-
-    override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {
-        // Noop
-    }
-
-    override fun onActivityDestroyed(activity: Activity) {
-        // Noop
     }
 }

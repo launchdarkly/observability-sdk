@@ -16,4 +16,9 @@ data class ObservabilityContext(
     val logger: ObserveLogger,
     var sessionManager: SessionManager? = null,
     var resourceAttributes: Attributes = Attributes.empty(),
+    /**
+     * The single touch-capture hook owned by Observability. Session Replay consumes its
+     * [UserInteractionManager.touchFlow] instead of intercepting windows itself.
+     */
+    var userInteractionManager: UserInteractionManager? = null,
 )

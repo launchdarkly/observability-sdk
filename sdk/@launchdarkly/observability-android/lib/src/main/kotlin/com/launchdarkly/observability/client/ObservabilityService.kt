@@ -1,6 +1,8 @@
 package com.launchdarkly.observability.client
 
 import android.app.Application
+import android.view.MotionEvent
+import android.view.ViewConfiguration
 import com.launchdarkly.observability.context.ObserveLogger
 import com.launchdarkly.observability.api.ObservabilityOptions
 import com.launchdarkly.observability.bridge.emitLog
@@ -110,7 +112,12 @@ class ObservabilityService(
     @Volatile
     private var cachedContextKeyAttributes: Attributes = Attributes.empty()
 
-    private var tapInstrumentation: TapInstrumentation? = null
+    /**
+     * The single touch-capture hook. Owned by Observability and shared with Session Replay via
+     * [ObservabilityContext]. Capture runs unconditionally (so Session Replay always works); only
+     * `click` span emission is gated by [ObservabilityOptions.ProductAnalytics.taps].
+     */
+    val userInteractionManager = UserInteractionManager()
 
     //TODO: Evaluate if this class should have a close/shutdown method to close this scope
     private val scope = CoroutineScope(DispatcherProviderHolder.current.io + SupervisorJob())
@@ -166,23 +173,53 @@ class ObservabilityService(
         // so it remains the single emitter of launchdarkly.track spans.
         hookExporter.trackEmitter = this
 
+        // Capture runs unconditionally so Session Replay can consume the shared touch stream.
+        userInteractionManager.attachToApplication(application)
         if (observabilityOptions.productAnalytics.taps) {
-            tapInstrumentation = TapInstrumentation { screenName, x, y, startEpochNanos, endEpochNanos ->
-                if (!observabilityOptions.tracesApi.includeSpans) return@TapInstrumentation
-                val attrs = Attributes.builder()
-                    .put(AttributeKey.stringKey("screen.name"), screenName)
-                    .put(AttributeKey.stringKey("position.x"), x.toString())
-                    .put(AttributeKey.stringKey("position.y"), y.toString())
-                    .build()
-                otelTracer.spanBuilder(TapInstrumentation.TAP_SPAN_NAME)
-                    .setAllAttributes(attrs)
-                    .setStartTimestamp(startEpochNanos, TimeUnit.NANOSECONDS)
-                    .startSpan()
-                    .end(endEpochNanos, TimeUnit.NANOSECONDS)
-            }.also { it.attachToApplication(application) }
+            startTapInstrumentation()
         }
 
         batchWorker.start()
+    }
+
+    /**
+     * Detects taps from the shared [UserInteractionManager.touchFlow] and emits a `click` span for
+     * each. A tap is an ACTION_DOWN followed by an ACTION_UP on the watched pointer within the
+     * long-press timeout and touch slop.
+     */
+    private fun startTapInstrumentation() {
+        scope.launch {
+            var downX = 0f
+            var downY = 0f
+            var downTimeMs = 0L
+            userInteractionManager.touchFlow.collect { sample ->
+                when (sample.action) {
+                    MotionEvent.ACTION_DOWN -> {
+                        downX = sample.x
+                        downY = sample.y
+                        downTimeMs = sample.timestamp
+                    }
+                    MotionEvent.ACTION_UP -> {
+                        if (!observabilityOptions.tracesApi.includeSpans) return@collect
+                        val dx = sample.x - downX
+                        val dy = sample.y - downY
+                        val movedTooFar = dx * dx + dy * dy > TAP_SLOP_SQUARED_PX
+                        val duration = sample.timestamp - downTimeMs
+                        if (movedTooFar || duration > TAP_TIMEOUT_MS) return@collect
+
+                        val attrs = Attributes.builder()
+                            .put(AttributeKey.stringKey("position.x"), sample.x.toString())
+                            .put(AttributeKey.stringKey("position.y"), sample.y.toString())
+                            .build()
+                        otelTracer.spanBuilder(UserInteractionManager.CLICK_SPAN_NAME)
+                            .setAllAttributes(attrs)
+                            .setStartTimestamp(downTimeMs, TimeUnit.MILLISECONDS)
+                            .startSpan()
+                            .end(sample.timestamp, TimeUnit.MILLISECONDS)
+                    }
+                }
+            }
+        }
     }
 
     private fun registerOtlpExporters() {
@@ -507,6 +544,11 @@ class ObservabilityService(
         const val ERROR_SPAN_NAME = "highlight.error"
         const val TRACK_SPAN_NAME = "launchdarkly.track"
         const val SESSION_ID_ATTRIBUTE = "session.id"
+
+        // Tap detection thresholds. Long-press timeout separates taps from long presses; the slop
+        // (12px, matching the Session Replay move filter) separates taps from drags.
+        private val TAP_TIMEOUT_MS = ViewConfiguration.getLongPressTimeout().toLong()
+        private const val TAP_SLOP_SQUARED_PX = 144 // 12 x 12 px
         private const val METRICS_EXPORT_INTERVAL_MS = 10_000L
 
         // Upper bound on how long [flush] waits for the metric reader to finish collecting

@@ -116,6 +116,7 @@ class Observability(
         )
         observabilityClient = observabilityService
         LDObserve.context?.sessionManager = observabilityService.sessionManager
+        LDObserve.context?.userInteractionManager = observabilityService.userInteractionManager
         LDObserve.init(observabilityService)
 
         observabilityHook.delegate = observabilityService.hookExporter
