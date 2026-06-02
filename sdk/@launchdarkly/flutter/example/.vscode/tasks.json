@@ -1,0 +1,17 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "example: clean flutter",
+      "type": "shell",
+      "detail": "flutter clean + remove iOS (Pods/.symlinks) and Android (.gradle/build) artifacts",
+      "command": "flutter clean && rm -rf ios/Pods ios/Podfile.lock ios/.symlinks ios/Flutter/Flutter.framework ios/Flutter/Flutter.podspec ios/.dart_tool android/.gradle android/build android/app/build android/.kotlin .dart_tool",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      }
+    }
+  ]
+}
