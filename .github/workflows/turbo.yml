@@ -54,7 +54,10 @@ jobs:
             - name: Setup Node.js environment
               uses: actions/setup-node@v4
               with:
-                  node-version: lts/*
+                  # Pinned: lts/* floated to Node 24.16.0, which hangs the rrvideo
+                  # Playwright browser download during `yarn install` until the job
+                  # times out. 24.15.0 is the last known-good. See PR #575.
+                  node-version: 24.15.0
                   cache: 'yarn'
 
             - name: Install js dependencies

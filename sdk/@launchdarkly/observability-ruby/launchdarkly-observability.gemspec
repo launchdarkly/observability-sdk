@@ -28,7 +28,9 @@ Gem::Specification.new do |spec|
   spec.require_paths = ['lib']
 
   # Runtime dependencies
-  spec.add_dependency 'launchdarkly-server-sdk', '>= 8.0'
+  # Plugin support (LaunchDarkly::Interfaces::Plugins) was added in 8.11.0; earlier
+  # versions raise "uninitialized constant LaunchDarkly::Interfaces::Plugins" on require.
+  spec.add_dependency 'launchdarkly-server-sdk', '>= 8.11.0'
   spec.add_dependency 'opentelemetry-exporter-otlp', '~> 0.28'
   spec.add_dependency 'opentelemetry-instrumentation-all', '~> 0.62'
   spec.add_dependency 'opentelemetry-sdk', '~> 1.4'
