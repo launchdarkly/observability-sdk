@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.49.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.48.0...launchdarkly-observability-android-0.49.0) (2026-06-02)
+
+
+### Features
+
+* Android SR options frameRate to match with iOS ([#572](https://github.com/launchdarkly/observability-sdk/issues/572)) ([4afd17b](https://github.com/launchdarkly/observability-sdk/commit/4afd17baef64b60534f9833e79a12c58687f34b7))
+
 ## [0.48.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.47.0...launchdarkly-observability-android-0.48.0) (2026-05-28)
 
 

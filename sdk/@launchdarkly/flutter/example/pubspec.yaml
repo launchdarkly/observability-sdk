@@ -35,13 +35,10 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
 
-  launchdarkly_flutter_client_sdk: ^4.0.0
+  launchdarkly_flutter_client_sdk: ^4.17.0-beta.1
 
   launchdarkly_flutter_observability:
     path: ../packages/observability
-
-  launchdarkly_flutter_session_replay:
-    path: ../packages/session_replay
 
   http: ^1.2.0
 

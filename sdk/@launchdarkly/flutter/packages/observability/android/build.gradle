@@ -1,0 +1,58 @@
+group 'com.launchdarkly.launchdarkly_flutter_observability'
+version '0.0.0'
+
+buildscript {
+    ext.kotlin_version = '2.0.21'
+    repositories {
+        google()
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.7.2'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+
+android {
+    namespace 'com.launchdarkly.launchdarkly_flutter_observability'
+    compileSdk 35
+
+    defaultConfig {
+        minSdk 24
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    kotlinOptions {
+        jvmTarget = '1.8'
+    }
+
+    sourceSets {
+        main.java.srcDirs += 'src/main/kotlin'
+    }
+}
+
+dependencies {
+    // Native dependencies mirrored from the LaunchDarkly mobile SDKs (the same
+    // stack used by sdk/@launchdarkly/react-native-ld-session-replay and the
+    // .NET MAUI bridge in sdk/@launchdarkly/mobile-dotnet).
+    implementation "com.launchdarkly:launchdarkly-observability-android:0.46.0"
+    implementation "com.launchdarkly:launchdarkly-android-client-sdk:5.12.0"
+    // OTel Attributes appears in ObservabilityOptions parameter types; provided
+    // at runtime transitively through launchdarkly-observability-android.
+    implementation "io.opentelemetry:opentelemetry-api:1.62.0"
+}

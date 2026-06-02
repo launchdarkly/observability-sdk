@@ -31,7 +31,7 @@ PODS:
     - LaunchDarkly/Core (= 11.1.3)
   - LaunchDarkly/Core (11.1.3):
     - LDSwiftEventSource (= 3.3.0)
-  - launchdarkly_flutter_session_replay (0.0.0):
+  - launchdarkly_flutter_observability (0.0.0):
     - Flutter
     - LaunchDarklyObservability (~> 0.36.0)
     - LaunchDarklySessionReplay (~> 0.36.0)
@@ -81,7 +81,7 @@ DEPENDENCIES:
   - connectivity_plus (from `.symlinks/plugins/connectivity_plus/ios`)
   - device_info_plus (from `.symlinks/plugins/device_info_plus/ios`)
   - Flutter (from `Flutter`)
-  - launchdarkly_flutter_session_replay (from `.symlinks/plugins/launchdarkly_flutter_session_replay/ios`)
+  - launchdarkly_flutter_observability (from `.symlinks/plugins/launchdarkly_flutter_observability/ios`)
   - LaunchDarklyObservability (from `/Users/abelonogov/flutter/swift-launchdarkly-observability`)
   - LaunchDarklySessionReplay (from `/Users/abelonogov/flutter/swift-launchdarkly-observability`)
   - package_info_plus (from `.symlinks/plugins/package_info_plus/ios`)
@@ -102,8 +102,8 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/device_info_plus/ios"
   Flutter:
     :path: Flutter
-  launchdarkly_flutter_session_replay:
-    :path: ".symlinks/plugins/launchdarkly_flutter_session_replay/ios"
+  launchdarkly_flutter_observability:
+    :path: ".symlinks/plugins/launchdarkly_flutter_observability/ios"
   LaunchDarklyObservability:
     :path: "/Users/abelonogov/flutter/swift-launchdarkly-observability"
   LaunchDarklySessionReplay:
@@ -119,7 +119,7 @@ SPEC CHECKSUMS:
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
   KSCrash: 8c4464fd5da7de520f2ce4a00fdf63f169a80f18
   LaunchDarkly: 0561c84a797529963a1797a7425d9718e952531c
-  launchdarkly_flutter_session_replay: 41a192dbec463eab613a8e3ec4458587bf1bb4e7
+  launchdarkly_flutter_observability: d6c5051e726eeb75019f83a3b6d1281acb8f696e
   LaunchDarklyObservability: c61d9f1b928df2fd8265ad57ea059e9517fc65cd
   LaunchDarklySessionReplay: e56512df97551791d7ec89b83b62f1a2c9b076d7
   LDSwiftEventSource: b0826ca826ca890609a9833a05cae1f357fd3b99
