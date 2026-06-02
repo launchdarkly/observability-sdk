@@ -38,9 +38,6 @@ dependencies:
   launchdarkly_flutter_client_sdk: ^4.17.0-beta.1
 
   launchdarkly_flutter_observability:
-    path: ../packages/core
-
-  launchdarkly_flutter_session_replay:
     path: ../packages/observability
 
   http: ^1.2.0

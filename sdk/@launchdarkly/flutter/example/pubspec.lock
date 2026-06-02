@@ -211,17 +211,10 @@ packages:
   launchdarkly_flutter_observability:
     dependency: "direct main"
     description:
-      path: "../packages/core"
-      relative: true
-    source: path
-    version: "0.0.0"
-  launchdarkly_flutter_session_replay:
-    dependency: "direct main"
-    description:
       path: "../packages/observability"
       relative: true
     source: path
-    version: "0.0.0"
+    version: "0.1.0"
   leak_tracker:
     dependency: transitive
     description:
@@ -298,10 +291,10 @@ packages:
     dependency: transitive
     description:
       name: opentelemetry
-      sha256: a942fe0e7fbf4f7370b92f1226354158779fd404197e1ff8153c1612b3e24c58
+      sha256: "92d63a2e0731d34a7548add82420b8f3819ccda569f9bdfdcc4b25e00fe88da4"
       url: "https://pub.dev"
     source: hosted
-    version: "0.18.10"
+    version: "0.18.11"
   package_info_plus:
     dependency: transitive
     description:
@@ -378,10 +371,10 @@ packages:
     dependency: transitive
     description:
       name: protobuf
-      sha256: "68645b24e0716782e58948f8467fd42a880f255096a821f9e7d0ec625b00c84d"
+      sha256: "75ec242d22e950bdcc79ee38dd520ce4ee0bc491d7fadc4ea47694604d22bf06"
       url: "https://pub.dev"
     source: hosted
-    version: "3.1.0"
+    version: "6.0.0"
   quiver:
     dependency: transitive
     description:

@@ -10,15 +10,15 @@ import 'package:pigeon/pigeon.dart';
 
 @ConfigurePigeon(
   PigeonOptions(
-    dartOut: 'lib/src/messages.g.dart',
+    dartOut: 'lib/src/platform/io/messages.g.dart',
     dartOptions: DartOptions(),
     kotlinOut:
-        'android/src/main/kotlin/com/launchdarkly/launchdarkly_flutter_session_replay/Messages.g.kt',
+        'android/src/main/kotlin/com/launchdarkly/launchdarkly_flutter_observability/Messages.g.kt',
     kotlinOptions: KotlinOptions(
-      package: 'com.launchdarkly.launchdarkly_flutter_session_replay',
+      package: 'com.launchdarkly.launchdarkly_flutter_observability',
     ),
     swiftOut:
-        'ios/launchdarkly_flutter_session_replay/Sources/launchdarkly_flutter_session_replay/Messages.g.swift',
+        'ios/launchdarkly_flutter_observability/Sources/launchdarkly_flutter_observability/Messages.g.swift',
     swiftOptions: SwiftOptions(),
     dartPackageName: 'launchdarkly_flutter_session_replay',
   ),
