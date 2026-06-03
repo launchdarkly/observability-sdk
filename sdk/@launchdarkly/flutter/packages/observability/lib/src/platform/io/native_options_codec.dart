@@ -20,7 +20,7 @@ extension ObservabilityOptionsWire on ObservabilityOptions {
     logsApiLevel: logsApiLevel.severity,
     traces: traces.toWire(),
     metricsEnabled: metricsEnabled,
-    productAnalytics: productAnalytics.toWire(),
+    analytics: analytics.toWire(),
     instrumentation: instrumentation.toWire(),
   );
 }
@@ -32,8 +32,8 @@ extension TracesOptionsWire on TracesOptions {
   );
 }
 
-extension ProductAnalyticsOptionsWire on ProductAnalyticsOptions {
-  wire.LDProductAnalyticsOptions toWire() => wire.LDProductAnalyticsOptions(
+extension AnalyticsOptionsWire on AnalyticsOptions {
+  wire.LDAnalyticsOptions toWire() => wire.LDAnalyticsOptions(
     taps: taps,
     pageViews: pageViews,
     trackEvents: trackEvents,

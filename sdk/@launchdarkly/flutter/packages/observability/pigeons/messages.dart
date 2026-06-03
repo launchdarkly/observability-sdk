@@ -34,7 +34,7 @@ class LDTracesOptions {
   bool? includeSpans;
 }
 
-class LDProductAnalyticsOptions {
+class LDAnalyticsOptions {
   bool? taps;
   bool? pageViews;
   bool? trackEvents;
@@ -53,7 +53,7 @@ class LDObservabilityOptions {
   int? logsApiLevel;
   LDTracesOptions? traces;
   bool? metricsEnabled;
-  LDProductAnalyticsOptions? productAnalytics;
+  LDAnalyticsOptions? analytics;
   LDInstrumentationOptions? instrumentation;
 }
 

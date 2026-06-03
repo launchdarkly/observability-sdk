@@ -144,18 +144,18 @@ data class LDTracesOptions (
 }
 
 /** Generated class from Pigeon that represents data sent in messages. */
-data class LDProductAnalyticsOptions (
+data class LDAnalyticsOptions (
   val taps: Boolean? = null,
   val pageViews: Boolean? = null,
   val trackEvents: Boolean? = null
 )
  {
   companion object {
-    fun fromList(pigeonVar_list: List<Any?>): LDProductAnalyticsOptions {
+    fun fromList(pigeonVar_list: List<Any?>): LDAnalyticsOptions {
       val taps = pigeonVar_list[0] as Boolean?
       val pageViews = pigeonVar_list[1] as Boolean?
       val trackEvents = pigeonVar_list[2] as Boolean?
-      return LDProductAnalyticsOptions(taps, pageViews, trackEvents)
+      return LDAnalyticsOptions(taps, pageViews, trackEvents)
     }
   }
   fun toList(): List<Any?> {
@@ -166,7 +166,7 @@ data class LDProductAnalyticsOptions (
     )
   }
   override fun equals(other: Any?): Boolean {
-    if (other !is LDProductAnalyticsOptions) {
+    if (other !is LDAnalyticsOptions) {
       return false
     }
     if (this === other) {
@@ -191,7 +191,7 @@ data class LDObservabilityOptions (
   val logsApiLevel: Long? = null,
   val traces: LDTracesOptions? = null,
   val metricsEnabled: Boolean? = null,
-  val productAnalytics: LDProductAnalyticsOptions? = null,
+  val analytics: LDAnalyticsOptions? = null,
   val instrumentation: LDInstrumentationOptions? = null
 )
  {
@@ -209,9 +209,9 @@ data class LDObservabilityOptions (
       val logsApiLevel = pigeonVar_list[9] as Long?
       val traces = pigeonVar_list[10] as LDTracesOptions?
       val metricsEnabled = pigeonVar_list[11] as Boolean?
-      val productAnalytics = pigeonVar_list[12] as LDProductAnalyticsOptions?
+      val analytics = pigeonVar_list[12] as LDAnalyticsOptions?
       val instrumentation = pigeonVar_list[13] as LDInstrumentationOptions?
-      return LDObservabilityOptions(isEnabled, serviceName, serviceVersion, otlpEndpoint, backendUrl, contextFriendlyName, attributes, customHeaders, sessionBackgroundTimeoutMillis, logsApiLevel, traces, metricsEnabled, productAnalytics, instrumentation)
+      return LDObservabilityOptions(isEnabled, serviceName, serviceVersion, otlpEndpoint, backendUrl, contextFriendlyName, attributes, customHeaders, sessionBackgroundTimeoutMillis, logsApiLevel, traces, metricsEnabled, analytics, instrumentation)
     }
   }
   fun toList(): List<Any?> {
@@ -228,7 +228,7 @@ data class LDObservabilityOptions (
       logsApiLevel,
       traces,
       metricsEnabled,
-      productAnalytics,
+      analytics,
       instrumentation,
     )
   }
@@ -363,7 +363,7 @@ private open class MessagesPigeonCodec : StandardMessageCodec() {
       }
       131.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
-          LDProductAnalyticsOptions.fromList(it)
+          LDAnalyticsOptions.fromList(it)
         }
       }
       132.toByte() -> {
@@ -399,7 +399,7 @@ private open class MessagesPigeonCodec : StandardMessageCodec() {
         stream.write(130)
         writeValue(stream, value.toList())
       }
-      is LDProductAnalyticsOptions -> {
+      is LDAnalyticsOptions -> {
         stream.write(131)
         writeValue(stream, value.toList())
       }

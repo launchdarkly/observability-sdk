@@ -149,7 +149,7 @@ On `ObservabilityOptions`:
 - `logsApiLevel` (`ObservabilityLogLevel`): minimum severity of logs forwarded to the logs pipeline. Use `ObservabilityLogLevel.none` to disable logs. Defaults to `ObservabilityLogLevel.info`.
 - `traces` (`TracesOptions`): toggles `includeErrors` and `includeSpans` for automatic trace generation. Both default to `true`.
 - `metricsEnabled` (`bool`): whether metrics are exported. Defaults to `true`.
-- `productAnalytics` (`ProductAnalyticsOptions`): product-analytics telemetry. Mirrors Android's `ProductAnalytics`:
+- `analytics` (`AnalyticsOptions`): analytics telemetry. Mirrors Android's `Analytics`:
   - `taps` (`bool`): emit a span for each user tap. Supported on Android and iOS. Defaults to `false`.
   - `pageViews` (`bool`): emit spans for screen/page view lifecycle events. **Android-only** (no-op on iOS/web). Defaults to `true`.
   - `trackEvents` (`bool`): emit a span when a custom event is tracked. **Android-only** (no-op on iOS/web). Defaults to `true`.
@@ -168,7 +168,7 @@ LDObserve.init(
     logsApiLevel: ObservabilityLogLevel.warn,
     traces: TracesOptions(includeErrors: true, includeSpans: true),
     metricsEnabled: true,
-    productAnalytics: ProductAnalyticsOptions(
+    analytics: AnalyticsOptions(
       taps: true,
       pageViews: true,
       trackEvents: true,

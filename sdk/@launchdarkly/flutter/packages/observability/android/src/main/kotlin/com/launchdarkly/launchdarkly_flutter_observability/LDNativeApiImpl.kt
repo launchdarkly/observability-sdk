@@ -90,10 +90,10 @@ internal class LDNativeApiImpl(
             } else {
                 ObservabilityOptions.MetricsApi.disabled()
             },
-            productAnalytics = ObservabilityOptions.ProductAnalytics(
-                taps = observability.productAnalytics?.taps ?: false,
-                pageViews = observability.productAnalytics?.pageViews ?: true,
-                trackEvents = observability.productAnalytics?.trackEvents ?: true,
+            analytics = ObservabilityOptions.Analytics(
+                taps = observability.analytics?.taps ?: false,
+                pageViews = observability.analytics?.pageViews ?: true,
+                trackEvents = observability.analytics?.trackEvents ?: true,
             ),
             instrumentations = ObservabilityOptions.Instrumentations(
                 crashReporting = observability.instrumentation?.crashReporting ?: true,

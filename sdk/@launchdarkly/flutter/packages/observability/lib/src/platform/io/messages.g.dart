@@ -121,8 +121,8 @@ class LDTracesOptions {
   int get hashCode => Object.hashAll(_toList());
 }
 
-class LDProductAnalyticsOptions {
-  LDProductAnalyticsOptions({this.taps, this.pageViews, this.trackEvents});
+class LDAnalyticsOptions {
+  LDAnalyticsOptions({this.taps, this.pageViews, this.trackEvents});
 
   bool? taps;
 
@@ -138,9 +138,9 @@ class LDProductAnalyticsOptions {
     return _toList();
   }
 
-  static LDProductAnalyticsOptions decode(Object result) {
+  static LDAnalyticsOptions decode(Object result) {
     result as List<Object?>;
-    return LDProductAnalyticsOptions(
+    return LDAnalyticsOptions(
       taps: result[0] as bool?,
       pageViews: result[1] as bool?,
       trackEvents: result[2] as bool?,
@@ -150,7 +150,7 @@ class LDProductAnalyticsOptions {
   @override
   // ignore: avoid_equals_and_hash_code_on_mutable_classes
   bool operator ==(Object other) {
-    if (other is! LDProductAnalyticsOptions ||
+    if (other is! LDAnalyticsOptions ||
         other.runtimeType != runtimeType) {
       return false;
     }
@@ -179,7 +179,7 @@ class LDObservabilityOptions {
     this.logsApiLevel,
     this.traces,
     this.metricsEnabled,
-    this.productAnalytics,
+    this.analytics,
     this.instrumentation,
   });
 
@@ -207,7 +207,7 @@ class LDObservabilityOptions {
 
   bool? metricsEnabled;
 
-  LDProductAnalyticsOptions? productAnalytics;
+  LDAnalyticsOptions? analytics;
 
   LDInstrumentationOptions? instrumentation;
 
@@ -225,7 +225,7 @@ class LDObservabilityOptions {
       logsApiLevel,
       traces,
       metricsEnabled,
-      productAnalytics,
+      analytics,
       instrumentation,
     ];
   }
@@ -251,7 +251,7 @@ class LDObservabilityOptions {
       logsApiLevel: result[9] as int?,
       traces: result[10] as LDTracesOptions?,
       metricsEnabled: result[11] as bool?,
-      productAnalytics: result[12] as LDProductAnalyticsOptions?,
+      analytics: result[12] as LDAnalyticsOptions?,
       instrumentation: result[13] as LDInstrumentationOptions?,
     );
   }
@@ -433,7 +433,7 @@ class _PigeonCodec extends StandardMessageCodec {
     } else if (value is LDTracesOptions) {
       buffer.putUint8(130);
       writeValue(buffer, value.encode());
-    } else if (value is LDProductAnalyticsOptions) {
+    } else if (value is LDAnalyticsOptions) {
       buffer.putUint8(131);
       writeValue(buffer, value.encode());
     } else if (value is LDObservabilityOptions) {
@@ -461,7 +461,7 @@ class _PigeonCodec extends StandardMessageCodec {
       case 130:
         return LDTracesOptions.decode(readValue(buffer)!);
       case 131:
-        return LDProductAnalyticsOptions.decode(readValue(buffer)!);
+        return LDAnalyticsOptions.decode(readValue(buffer)!);
       case 132:
         return LDObservabilityOptions.decode(readValue(buffer)!);
       case 133:

@@ -191,19 +191,19 @@ struct LDTracesOptions: Hashable {
 }
 
 /// Generated class from Pigeon that represents data sent in messages.
-struct LDProductAnalyticsOptions: Hashable {
+struct LDAnalyticsOptions: Hashable {
   var taps: Bool? = nil
   var pageViews: Bool? = nil
   var trackEvents: Bool? = nil
 
 
   // swift-format-ignore: AlwaysUseLowerCamelCase
-  static func fromList(_ pigeonVar_list: [Any?]) -> LDProductAnalyticsOptions? {
+  static func fromList(_ pigeonVar_list: [Any?]) -> LDAnalyticsOptions? {
     let taps: Bool? = nilOrValue(pigeonVar_list[0])
     let pageViews: Bool? = nilOrValue(pigeonVar_list[1])
     let trackEvents: Bool? = nilOrValue(pigeonVar_list[2])
 
-    return LDProductAnalyticsOptions(
+    return LDAnalyticsOptions(
       taps: taps,
       pageViews: pageViews,
       trackEvents: trackEvents
@@ -216,7 +216,7 @@ struct LDProductAnalyticsOptions: Hashable {
       trackEvents,
     ]
   }
-  static func == (lhs: LDProductAnalyticsOptions, rhs: LDProductAnalyticsOptions) -> Bool {
+  static func == (lhs: LDAnalyticsOptions, rhs: LDAnalyticsOptions) -> Bool {
     return deepEqualsMessages(lhs.toList(), rhs.toList())  }
   func hash(into hasher: inout Hasher) {
     deepHashMessages(value: toList(), hasher: &hasher)
@@ -237,7 +237,7 @@ struct LDObservabilityOptions: Hashable {
   var logsApiLevel: Int64? = nil
   var traces: LDTracesOptions? = nil
   var metricsEnabled: Bool? = nil
-  var productAnalytics: LDProductAnalyticsOptions? = nil
+  var analytics: LDAnalyticsOptions? = nil
   var instrumentation: LDInstrumentationOptions? = nil
 
 
@@ -255,7 +255,7 @@ struct LDObservabilityOptions: Hashable {
     let logsApiLevel: Int64? = nilOrValue(pigeonVar_list[9])
     let traces: LDTracesOptions? = nilOrValue(pigeonVar_list[10])
     let metricsEnabled: Bool? = nilOrValue(pigeonVar_list[11])
-    let productAnalytics: LDProductAnalyticsOptions? = nilOrValue(pigeonVar_list[12])
+    let analytics: LDAnalyticsOptions? = nilOrValue(pigeonVar_list[12])
     let instrumentation: LDInstrumentationOptions? = nilOrValue(pigeonVar_list[13])
 
     return LDObservabilityOptions(
@@ -271,7 +271,7 @@ struct LDObservabilityOptions: Hashable {
       logsApiLevel: logsApiLevel,
       traces: traces,
       metricsEnabled: metricsEnabled,
-      productAnalytics: productAnalytics,
+      analytics: analytics,
       instrumentation: instrumentation
     )
   }
@@ -289,7 +289,7 @@ struct LDObservabilityOptions: Hashable {
       logsApiLevel,
       traces,
       metricsEnabled,
-      productAnalytics,
+      analytics,
       instrumentation,
     ]
   }
@@ -411,7 +411,7 @@ private class MessagesPigeonCodecReader: FlutterStandardReader {
     case 130:
       return LDTracesOptions.fromList(self.readValue() as! [Any?])
     case 131:
-      return LDProductAnalyticsOptions.fromList(self.readValue() as! [Any?])
+      return LDAnalyticsOptions.fromList(self.readValue() as! [Any?])
     case 132:
       return LDObservabilityOptions.fromList(self.readValue() as! [Any?])
     case 133:
@@ -434,7 +434,7 @@ private class MessagesPigeonCodecWriter: FlutterStandardWriter {
     } else if let value = value as? LDTracesOptions {
       super.writeByte(130)
       super.writeValue(value.toList())
-    } else if let value = value as? LDProductAnalyticsOptions {
+    } else if let value = value as? LDAnalyticsOptions {
       super.writeByte(131)
       super.writeValue(value.toList())
     } else if let value = value as? LDObservabilityOptions {
