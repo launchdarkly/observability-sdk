@@ -89,7 +89,7 @@ data class ObservabilityOptions(
      * @property taps If `true`, the plugin emits a `click` span for each tap. Defaults to `false`.
      * @property pageViews If `true`, the plugin starts spans for Android Activity lifecycle events
      *   (screen/page views). Defaults to `true`.
-     * @property trackEvents If `true`, the plugin emits a `launchdarkly.track` span when a custom
+     * @property trackEvents If `true`, the plugin emits a `track` span when a custom
      *   event is tracked (via the LD `afterTrack` hook or [com.launchdarkly.observability.sdk.LDObserve.track]).
      *   Defaults to `true`.
      */

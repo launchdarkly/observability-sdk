@@ -130,7 +130,7 @@ Additional `ObservabilityOptions` settings:
 - `productAnalytics`: Enables/disables product-analytics telemetry, emitted as OpenTelemetry spans:
   - `taps` (default `false`): emit a `click` span for each tap.
   - `pageViews` (default `true`): emit spans for Android Activity lifecycle events (screen/page views).
-  - `trackEvents` (default `true`): emit a `launchdarkly.track` span when a custom event is tracked, either automatically via the LaunchDarkly `afterTrack` hook (`LDClient.track(...)`) or manually via `LDObserve.track(...)`.
+  - `trackEvents` (default `true`): emit a `track` span when a custom event is tracked, either automatically via the LaunchDarkly `afterTrack` hook (`LDClient.track(...)`) or manually via `LDObserve.track(...)`.
 
 Example:
 
@@ -201,7 +201,7 @@ span.makeCurrent().use {
 }
 span.end()
 
-// Record a custom track event as a `launchdarkly.track` span.
+// Record a custom track event as a `track` span.
 // (Calling LDClient.track(...) records the same span automatically via the afterTrack hook.)
 LDObserve.track(
     "checkout_completed",

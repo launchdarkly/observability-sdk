@@ -33,7 +33,7 @@ interface ObservabilityHookExporting {
 /**
  * Receives track events and identify context keys so the single span emitter
  * ([com.launchdarkly.observability.client.ObservabilityService]) can produce
- * `launchdarkly.track` spans and cache context keys.
+ * `track` spans and cache context keys.
  */
 interface TrackEmitting {
     fun track(name: String, value: Double?, attributes: Attributes, contextKeyAttributes: Attributes?)
