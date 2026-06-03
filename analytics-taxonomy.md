@@ -173,6 +173,14 @@ Click (web) or tap (mobile) on an interactive element. One event for all element
 
 #### `Checkout Started`
 
+| `event.*` field | Type | Description |
+| --- | --- | --- |
+| `event.name` | string | `Checkout Started`. |
+| `event.order_id` | string | Order/transaction id. |
+| `event.value` | number | Total value of the checkout. |
+| `event.currency` | string | ISO-4217 currency. |
+| `event.products` | array | Line items (`product_id`, `quantity`, `price`). |
+
 ```json
 {
   "span_name": "track",
@@ -377,6 +385,17 @@ First launch after a fresh install / after a version change.
 | `event.version` | string | ✅ | Current app version. |
 | `event.build` | string | ⛔ | Current build number. |
 | `event.previous_version` | string | ✅ for `app_update` | Version before the update. |
+
+```json
+{
+  "span_name": "app_install",
+  "event": {
+    "version": "4.12.0",
+    "build": "4120"
+  },
+  "context": { "contextKeys": { "accountId": "64dd…", "userId": "65b8…" } }
+}
+```
 
 ```json
 {
