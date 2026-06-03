@@ -282,7 +282,7 @@ class DisablingConfigOptionsE2ETest {
                 crashReporting = true,
                 launchTime = true
             ),
-            productAnalytics = ObservabilityOptions.ProductAnalytics(pageViews = true)
+            analytics = ObservabilityOptions.Analytics(pageViews = true)
         )
     }
 
