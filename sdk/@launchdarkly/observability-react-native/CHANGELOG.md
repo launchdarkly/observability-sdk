@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.2](https://github.com/launchdarkly/observability-sdk/compare/observability-react-native-0.9.1...observability-react-native-0.9.2) (2026-06-03)
+
+
+### Bug Fixes
+
+* update vite and vitest to resolve security vulnerabilities ([#589](https://github.com/launchdarkly/observability-sdk/issues/589)) ([4538396](https://github.com/launchdarkly/observability-sdk/commit/45383961bdd2d07caa7804034dda79cf42a8a8f4))
+
 ## [0.9.1](https://github.com/launchdarkly/observability-sdk/compare/observability-react-native-0.9.0...observability-react-native-0.9.1) (2026-04-24)
 
 

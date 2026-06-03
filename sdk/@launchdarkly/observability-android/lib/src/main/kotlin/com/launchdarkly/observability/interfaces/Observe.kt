@@ -78,7 +78,7 @@ interface Observe : MetricsApi, LogsApi, TracesApi {
     fun flush()
 
     /**
-     * Record a custom track event as a `launchdarkly.track` span.
+     * Record a custom track event as a `track` span.
      * @param name The event key/name.
      * @param value An optional metric value associated with the event.
      * @param attributes Additional attributes to record with the event.
