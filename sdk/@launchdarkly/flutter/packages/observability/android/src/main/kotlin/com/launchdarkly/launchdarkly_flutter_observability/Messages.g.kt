@@ -81,24 +81,92 @@ class FlutterError (
 /** Generated class from Pigeon that represents data sent in messages. */
 data class LDInstrumentationOptions (
   val networkRequests: Boolean? = null,
-  val launchTimes: Boolean? = null
+  val launchTimes: Boolean? = null,
+  val crashReporting: Boolean? = null
 )
  {
   companion object {
     fun fromList(pigeonVar_list: List<Any?>): LDInstrumentationOptions {
       val networkRequests = pigeonVar_list[0] as Boolean?
       val launchTimes = pigeonVar_list[1] as Boolean?
-      return LDInstrumentationOptions(networkRequests, launchTimes)
+      val crashReporting = pigeonVar_list[2] as Boolean?
+      return LDInstrumentationOptions(networkRequests, launchTimes, crashReporting)
     }
   }
   fun toList(): List<Any?> {
     return listOf(
       networkRequests,
       launchTimes,
+      crashReporting,
     )
   }
   override fun equals(other: Any?): Boolean {
     if (other !is LDInstrumentationOptions) {
+      return false
+    }
+    if (this === other) {
+      return true
+    }
+    return MessagesPigeonUtils.deepEquals(toList(), other.toList())  }
+
+  override fun hashCode(): Int = toList().hashCode()
+}
+
+/** Generated class from Pigeon that represents data sent in messages. */
+data class LDTracesOptions (
+  val includeErrors: Boolean? = null,
+  val includeSpans: Boolean? = null
+)
+ {
+  companion object {
+    fun fromList(pigeonVar_list: List<Any?>): LDTracesOptions {
+      val includeErrors = pigeonVar_list[0] as Boolean?
+      val includeSpans = pigeonVar_list[1] as Boolean?
+      return LDTracesOptions(includeErrors, includeSpans)
+    }
+  }
+  fun toList(): List<Any?> {
+    return listOf(
+      includeErrors,
+      includeSpans,
+    )
+  }
+  override fun equals(other: Any?): Boolean {
+    if (other !is LDTracesOptions) {
+      return false
+    }
+    if (this === other) {
+      return true
+    }
+    return MessagesPigeonUtils.deepEquals(toList(), other.toList())  }
+
+  override fun hashCode(): Int = toList().hashCode()
+}
+
+/** Generated class from Pigeon that represents data sent in messages. */
+data class LDProductAnalyticsOptions (
+  val taps: Boolean? = null,
+  val pageViews: Boolean? = null,
+  val trackEvents: Boolean? = null
+)
+ {
+  companion object {
+    fun fromList(pigeonVar_list: List<Any?>): LDProductAnalyticsOptions {
+      val taps = pigeonVar_list[0] as Boolean?
+      val pageViews = pigeonVar_list[1] as Boolean?
+      val trackEvents = pigeonVar_list[2] as Boolean?
+      return LDProductAnalyticsOptions(taps, pageViews, trackEvents)
+    }
+  }
+  fun toList(): List<Any?> {
+    return listOf(
+      taps,
+      pageViews,
+      trackEvents,
+    )
+  }
+  override fun equals(other: Any?): Boolean {
+    if (other !is LDProductAnalyticsOptions) {
       return false
     }
     if (this === other) {
@@ -118,6 +186,12 @@ data class LDObservabilityOptions (
   val backendUrl: String? = null,
   val contextFriendlyName: String? = null,
   val attributes: Map<String, Any?>? = null,
+  val customHeaders: Map<String, String>? = null,
+  val sessionBackgroundTimeoutMillis: Long? = null,
+  val logsApiLevel: Long? = null,
+  val traces: LDTracesOptions? = null,
+  val metricsEnabled: Boolean? = null,
+  val productAnalytics: LDProductAnalyticsOptions? = null,
   val instrumentation: LDInstrumentationOptions? = null
 )
  {
@@ -130,8 +204,14 @@ data class LDObservabilityOptions (
       val backendUrl = pigeonVar_list[4] as String?
       val contextFriendlyName = pigeonVar_list[5] as String?
       val attributes = pigeonVar_list[6] as Map<String, Any?>?
-      val instrumentation = pigeonVar_list[7] as LDInstrumentationOptions?
-      return LDObservabilityOptions(isEnabled, serviceName, serviceVersion, otlpEndpoint, backendUrl, contextFriendlyName, attributes, instrumentation)
+      val customHeaders = pigeonVar_list[7] as Map<String, String>?
+      val sessionBackgroundTimeoutMillis = pigeonVar_list[8] as Long?
+      val logsApiLevel = pigeonVar_list[9] as Long?
+      val traces = pigeonVar_list[10] as LDTracesOptions?
+      val metricsEnabled = pigeonVar_list[11] as Boolean?
+      val productAnalytics = pigeonVar_list[12] as LDProductAnalyticsOptions?
+      val instrumentation = pigeonVar_list[13] as LDInstrumentationOptions?
+      return LDObservabilityOptions(isEnabled, serviceName, serviceVersion, otlpEndpoint, backendUrl, contextFriendlyName, attributes, customHeaders, sessionBackgroundTimeoutMillis, logsApiLevel, traces, metricsEnabled, productAnalytics, instrumentation)
     }
   }
   fun toList(): List<Any?> {
@@ -143,6 +223,12 @@ data class LDObservabilityOptions (
       backendUrl,
       contextFriendlyName,
       attributes,
+      customHeaders,
+      sessionBackgroundTimeoutMillis,
+      logsApiLevel,
+      traces,
+      metricsEnabled,
+      productAnalytics,
       instrumentation,
     )
   }
@@ -202,6 +288,7 @@ data class LDPrivacyOptions (
 data class LDSessionReplayOptions (
   val isEnabled: Boolean? = null,
   val serviceName: String? = null,
+  val frameRate: Double? = null,
   val privacy: LDPrivacyOptions? = null
 )
  {
@@ -209,14 +296,16 @@ data class LDSessionReplayOptions (
     fun fromList(pigeonVar_list: List<Any?>): LDSessionReplayOptions {
       val isEnabled = pigeonVar_list[0] as Boolean?
       val serviceName = pigeonVar_list[1] as String?
-      val privacy = pigeonVar_list[2] as LDPrivacyOptions?
-      return LDSessionReplayOptions(isEnabled, serviceName, privacy)
+      val frameRate = pigeonVar_list[2] as Double?
+      val privacy = pigeonVar_list[3] as LDPrivacyOptions?
+      return LDSessionReplayOptions(isEnabled, serviceName, frameRate, privacy)
     }
   }
   fun toList(): List<Any?> {
     return listOf(
       isEnabled,
       serviceName,
+      frameRate,
       privacy,
     )
   }
@@ -269,20 +358,30 @@ private open class MessagesPigeonCodec : StandardMessageCodec() {
       }
       130.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
-          LDObservabilityOptions.fromList(it)
+          LDTracesOptions.fromList(it)
         }
       }
       131.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
-          LDPrivacyOptions.fromList(it)
+          LDProductAnalyticsOptions.fromList(it)
         }
       }
       132.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
-          LDSessionReplayOptions.fromList(it)
+          LDObservabilityOptions.fromList(it)
         }
       }
       133.toByte() -> {
+        return (readValue(buffer) as? List<Any?>)?.let {
+          LDPrivacyOptions.fromList(it)
+        }
+      }
+      134.toByte() -> {
+        return (readValue(buffer) as? List<Any?>)?.let {
+          LDSessionReplayOptions.fromList(it)
+        }
+      }
+      135.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
           LDStartResult.fromList(it)
         }
@@ -296,20 +395,28 @@ private open class MessagesPigeonCodec : StandardMessageCodec() {
         stream.write(129)
         writeValue(stream, value.toList())
       }
-      is LDObservabilityOptions -> {
+      is LDTracesOptions -> {
         stream.write(130)
         writeValue(stream, value.toList())
       }
-      is LDPrivacyOptions -> {
+      is LDProductAnalyticsOptions -> {
         stream.write(131)
         writeValue(stream, value.toList())
       }
-      is LDSessionReplayOptions -> {
+      is LDObservabilityOptions -> {
         stream.write(132)
         writeValue(stream, value.toList())
       }
-      is LDStartResult -> {
+      is LDPrivacyOptions -> {
         stream.write(133)
+        writeValue(stream, value.toList())
+      }
+      is LDSessionReplayOptions -> {
+        stream.write(134)
+        writeValue(stream, value.toList())
+      }
+      is LDStartResult -> {
+        stream.write(135)
         writeValue(stream, value.toList())
       }
       else -> super.writeValue(stream, value)

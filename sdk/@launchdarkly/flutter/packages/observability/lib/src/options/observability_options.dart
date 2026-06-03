@@ -3,6 +3,61 @@
 
 import '../plugin/observability_config.dart';
 
+/// Severity threshold for exported logs. Mirrors the `LogLevel` enums in the
+/// Android (`ObservabilityOptions.LogLevel`) and iOS (`ObservabilityOptions.LogLevel`)
+/// SDKs. The [severity] values match the OpenTelemetry log severity numbers so
+/// they can be forwarded across the native bridge unchanged.
+///
+/// Native-only: the web/Dart pipeline currently ignores this value.
+enum ObservabilityLogLevel {
+  trace(1),
+  trace2(2),
+  trace3(3),
+  trace4(4),
+  debug(5),
+  debug2(6),
+  debug3(7),
+  debug4(8),
+  info(9),
+  info2(10),
+  info3(11),
+  info4(12),
+  warn(13),
+  warn2(14),
+  warn3(15),
+  warn4(16),
+  error(17),
+  error2(18),
+  error3(19),
+  error4(20),
+  fatal(21),
+  fatal2(22),
+  fatal3(23),
+  fatal4(24),
+
+  /// Disables log exporting entirely.
+  none(0x7fffffff);
+
+  /// The OpenTelemetry log severity number for this level.
+  final int severity;
+
+  const ObservabilityLogLevel(this.severity);
+}
+
+/// Controls automatic trace generation. Mirrors `TracesApi` (Android) and
+/// `AppTracing` (iOS).
+///
+/// Native-only: the web/Dart pipeline currently ignores these values.
+class TracesOptions {
+  /// Whether to automatically record errors and exceptions as spans.
+  final bool includeErrors;
+
+  /// Whether to automatically record UI performance and other events as spans.
+  final bool includeSpans;
+
+  const TracesOptions({this.includeErrors = true, this.includeSpans = true});
+}
+
 /// Toggles for SDK-side instrumentation. Mirrors `InstrumentationOptions` in
 /// the .NET MAUI bridge, extended with the Dart-only [debugPrint] control.
 class InstrumentationOptions {
@@ -12,6 +67,12 @@ class InstrumentationOptions {
   /// Whether to instrument launch times (native bridge only).
   final bool launchTimes;
 
+  /// Whether to automatically report uncaught exceptions as errors. Mirrors
+  /// Android `Instrumentations.crashReporting` and iOS `CrashReporting`.
+  ///
+  /// Native-only. Defaults to `true` to match the native SDK defaults.
+  final bool crashReporting;
+
   /// Controls instrumentation of `debugPrint` in the Dart OpenTelemetry
   /// pipeline. Defaults to [DebugPrintSetting.releaseOnly].
   final DebugPrintSetting debugPrint;
@@ -19,7 +80,33 @@ class InstrumentationOptions {
   const InstrumentationOptions({
     this.networkRequests = true,
     this.launchTimes = true,
+    this.crashReporting = true,
     this.debugPrint = const DebugPrintReleaseOnly(),
+  });
+}
+
+/// Product-analytics telemetry emitted as OpenTelemetry spans. Mirrors Android
+/// `ObservabilityOptions.ProductAnalytics`, which is currently ahead of iOS.
+///
+/// Native-only. On iOS only [taps] is supported (mapped to
+/// `Instrumentation.userTaps`); [pageViews] and [trackEvents] are Android-only
+/// and are no-ops elsewhere.
+class ProductAnalyticsOptions {
+  /// Whether to emit a `click` span for each tap. Defaults to `false`.
+  final bool taps;
+
+  /// Whether to start spans for screen/page view lifecycle events. Android-only.
+  /// Defaults to `true`.
+  final bool pageViews;
+
+  /// Whether to emit a `launchdarkly.track` span when a custom event is tracked.
+  /// Android-only. Defaults to `true`.
+  final bool trackEvents;
+
+  const ProductAnalyticsOptions({
+    this.taps = false,
+    this.pageViews = true,
+    this.trackEvents = true,
   });
 }
 
@@ -45,6 +132,33 @@ class ObservabilityOptions {
   final String backendUrl;
   final String? contextFriendlyName;
   final Map<String, Object?>? attributes;
+
+  /// Extra HTTP headers added to OTLP exports (e.g. for proxies or auth).
+  /// Mirrors Android/iOS `customHeaders`. Native-only.
+  final Map<String, String> customHeaders;
+
+  /// How long the app may stay in the background before the current session is
+  /// ended. Mirrors Android/iOS `sessionBackgroundTimeout`. Native-only.
+  /// Defaults to 15 minutes.
+  final Duration sessionBackgroundTimeout;
+
+  /// Minimum severity of logs forwarded to the OpenTelemetry logs pipeline.
+  /// Use [ObservabilityLogLevel.none] to disable logs. Mirrors Android/iOS
+  /// `logsApiLevel`. Native-only. Defaults to [ObservabilityLogLevel.info].
+  final ObservabilityLogLevel logsApiLevel;
+
+  /// Controls automatic trace generation. Mirrors Android `tracesApi` and iOS
+  /// `tracesApi`. Native-only.
+  final TracesOptions traces;
+
+  /// Whether to export metrics. Mirrors Android `metricsApi` and iOS
+  /// `metricsApi`. Native-only. Defaults to `true`.
+  final bool metricsEnabled;
+
+  /// Product-analytics telemetry configuration. Mirrors Android
+  /// `ObservabilityOptions.productAnalytics`. Native-only.
+  final ProductAnalyticsOptions productAnalytics;
+
   final InstrumentationOptions instrumentation;
 
   const ObservabilityOptions({
@@ -55,6 +169,12 @@ class ObservabilityOptions {
     String? backendUrl,
     this.contextFriendlyName,
     this.attributes,
+    this.customHeaders = const {},
+    this.sessionBackgroundTimeout = const Duration(minutes: 15),
+    this.logsApiLevel = ObservabilityLogLevel.info,
+    this.traces = const TracesOptions(),
+    this.metricsEnabled = true,
+    this.productAnalytics = const ProductAnalyticsOptions(),
     this.instrumentation = const InstrumentationOptions(),
   }) : otlpEndpoint = otlpEndpoint ?? defaultOtlpEndpoint,
        backendUrl = backendUrl ?? defaultBackendUrl;
