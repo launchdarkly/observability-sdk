@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<!--[if IE]><![endif]-->
+<html>
+
+  <head>
+    <meta charset="utf-8">
+      <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+      <title>Class BaseBuilder&lt;TBuilder&gt; | LaunchDarkly Observability plugin for the Server-Side SDK for .NET </title>
+      <meta name="viewport" content="width=device-width">
+      <meta name="title" content="Class BaseBuilder&lt;TBuilder&gt; | LaunchDarkly Observability plugin for the Server-Side SDK for .NET ">
+    
+    <meta name="description" content="Base builder which allows for methods to be shared between building a config directly and building a plugin.  This uses the CRTP pattern to allow the individual builder methods to return instances of the derived builder type.">
+      <link rel="shortcut icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../styles/docfx.vendor.min.css">
+      <link rel="stylesheet" href="../styles/docfx.css">
+      <link rel="stylesheet" href="../styles/main.css">
+      <meta property="docfx:navrel" content="">
+      <meta property="docfx:tocrel" content="toc.html">
+    
+    <meta property="docfx:rel" content="../">
+    
+  </head>
+  <body data-spy="scroll" data-target="#affix" data-offset="120">
+    <div id="wrapper">
+      <header>
+
+        <nav id="autocollapse" class="navbar navbar-inverse ng-scope" role="navigation">
+          <div class="container">
+            <div class="navbar-header">
+              <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+              </button>
+
+              <a class="navbar-brand" href="../index.html">
+                <img id="logo" class="svg" src="../logo.svg" alt="LaunchDarkly Observability plugin for the Server-Side SDK for .NET">
+              </a>
+            </div>
+            <div class="collapse navbar-collapse" id="navbar">
+              <form class="navbar-form navbar-right" role="search" id="search">
+                <div class="form-group">
+                  <input type="text" class="form-control" id="search-query" placeholder="Search" autocomplete="off">
+                </div>
+              </form>
+            </div>
+          </div>
+        </nav>
+
+        <div class="subnav navbar navbar-default">
+          <div class="container hide-when-search" id="breadcrumb">
+            <ul class="breadcrumb">
+              <li></li>
+            </ul>
+          </div>
+        </div>
+      </header>
+      <div class="container body-content">
+
+        <div id="search-results">
+          <div class="search-list">Search Results for <span></span></div>
+          <div class="sr-items">
+            <p><i class="glyphicon glyphicon-refresh index-loading"></i></p>
+          </div>
+          <ul id="pagination" data-first=First data-prev=Previous data-next=Next data-last=Last></ul>
+        </div>
+      </div>
+      <div role="main" class="container body-content hide-when-search">
+
+        <div class="sidenav hide-when-search">
+          <a class="btn toc-toggle collapse" data-toggle="collapse" href="#sidetoggle" aria-expanded="false" aria-controls="sidetoggle">Show / Hide Table of Contents</a>
+          <div class="sidetoggle collapse" id="sidetoggle">
+            <div id="sidetoc"></div>
+          </div>
+        </div>
+        <div class="article row grid-right">
+          <div class="col-md-10">
+            <article class="content wrap" id="_content" data-uid="LaunchDarkly.Observability.BaseBuilder`1">
+
+
+
+  <h1 id="LaunchDarkly_Observability_BaseBuilder_1" data-uid="LaunchDarkly.Observability.BaseBuilder`1" class="text-break">Class BaseBuilder&lt;TBuilder&gt;</h1>
+  <div class="markdown level0 summary"><p>Base builder which allows for methods to be shared between building a config directly and building a plugin.
+<remarks>
+This uses the CRTP pattern to allow the individual builder methods to return instances of the derived builder
+type.
+</remarks></p>
+</div>
+  <div class="markdown level0 conceptual"></div>
+  <div class="inheritance">
+    <h5>Inheritance</h5>
+    <div class="level0"><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object">object</a></div>
+    <div class="level1"><span class="xref">BaseBuilder&lt;TBuilder&gt;</span></div>
+      <div class="level2"><a class="xref" href="LaunchDarkly.Observability.ObservabilityConfig.ObservabilityConfigBuilder.html">ObservabilityConfig.ObservabilityConfigBuilder</a></div>
+      <div class="level2"><a class="xref" href="LaunchDarkly.Observability.ObservabilityPlugin.ObservabilityPluginBuilder.html">ObservabilityPlugin.ObservabilityPluginBuilder</a></div>
+  </div>
+  <div class="inheritedMembers">
+    <h5>Inherited Members</h5>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object)">object.Equals(object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)">object.Equals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gethashcode">object.GetHashCode()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gettype">object.GetType()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.memberwiseclone">object.MemberwiseClone()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.referenceequals">object.ReferenceEquals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.tostring">object.ToString()</a>
+    </div>
+  </div>
+  <h6><strong>Namespace</strong>: <a class="xref" href="LaunchDarkly.html">LaunchDarkly</a>.<a class="xref" href="LaunchDarkly.Observability.html">Observability</a></h6>
+  <h6><strong>Assembly</strong>: LaunchDarkly.Observability.dll</h6>
+  <h5 id="LaunchDarkly_Observability_BaseBuilder_1_syntax">Syntax</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public class BaseBuilder&lt;TBuilder&gt; where TBuilder : BaseBuilder&lt;TBuilder&gt;</code></pre>
+  </div>
+  <h5 class="typeParameters">Type Parameters</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="parametername">TBuilder</span></td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+  <h3 id="constructors">Constructors
+</h3>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/launchdarkly/observability-sdk/new/main/apiSpec/new?filename=LaunchDarkly_Observability_BaseBuilder_1__ctor.md&amp;value=---%0Auid%3A%20LaunchDarkly.Observability.BaseBuilder%601.%23ctor%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/launchdarkly/observability-sdk/blob/main/sdk/@launchdarkly/observability-dotnet/src/LaunchDarkly.Observability/BaseBuilder.cs/#L38">View Source</a>
+  </span>
+  <a id="LaunchDarkly_Observability_BaseBuilder_1__ctor_" data-uid="LaunchDarkly.Observability.BaseBuilder`1.#ctor*"></a>
+  <h4 id="LaunchDarkly_Observability_BaseBuilder_1__ctor" data-uid="LaunchDarkly.Observability.BaseBuilder`1.#ctor">BaseBuilder()</h4>
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="declaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">protected BaseBuilder()</code></pre>
+  </div>
+  <h3 id="fields">Fields
+</h3>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/launchdarkly/observability-sdk/new/main/apiSpec/new?filename=LaunchDarkly_Observability_BaseBuilder_1_ConfigureLoggerOptions.md&amp;value=---%0Auid%3A%20LaunchDarkly.Observability.BaseBuilder%601.ConfigureLoggerOptions%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/launchdarkly/observability-sdk/blob/main/sdk/@launchdarkly/observability-dotnet/src/LaunchDarkly.Observability/BaseBuilder.cs/#L35">View Source</a>
+  </span>
+  <h4 id="LaunchDarkly_Observability_BaseBuilder_1_ConfigureLoggerOptions" data-uid="LaunchDarkly.Observability.BaseBuilder`1.ConfigureLoggerOptions">ConfigureLoggerOptions</h4>
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="declaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">protected Action&lt;OpenTelemetryLoggerOptions&gt; ConfigureLoggerOptions</code></pre>
+  </div>
+  <h5 class="fieldValue">Field Value</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.action-1">Action</a>&lt;<span class="xref">OpenTelemetryLoggerOptions</span>&gt;</td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+  <h3 id="methods">Methods
+</h3>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/launchdarkly/observability-sdk/new/main/apiSpec/new?filename=LaunchDarkly_Observability_BaseBuilder_1_WithBackendUrl_System_String_.md&amp;value=---%0Auid%3A%20LaunchDarkly.Observability.BaseBuilder%601.WithBackendUrl(System.String)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/launchdarkly/observability-sdk/blob/main/sdk/@launchdarkly/observability-dotnet/src/LaunchDarkly.Observability/BaseBuilder.cs/#L75">View Source</a>
+  </span>
+  <a id="LaunchDarkly_Observability_BaseBuilder_1_WithBackendUrl_" data-uid="LaunchDarkly.Observability.BaseBuilder`1.WithBackendUrl*"></a>
+  <h4 id="LaunchDarkly_Observability_BaseBuilder_1_WithBackendUrl_System_String_" data-uid="LaunchDarkly.Observability.BaseBuilder`1.WithBackendUrl(System.String)">WithBackendUrl(string)</h4>
+  <div class="markdown level1 summary"><p>Set the back-end URL for non-telemetry operations.</p>
+<p>
+For most configurations, the backend url will not need to be set.
+</p>
+<p>
+Setting the url to null will reset the builder value to the default.
+</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="declaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public TBuilder WithBackendUrl(string backendUrl)</code></pre>
+  </div>
+  <h5 class="parameters">Parameters</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Name</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></td>
+        <td><span class="parametername">backendUrl</span></td>
+        <td><p>The back-end URL used for non-telemetry operations.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 class="returns">Returns</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="xref">TBuilder</span></td>
+        <td><p>A reference to this builder.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/launchdarkly/observability-sdk/new/main/apiSpec/new?filename=LaunchDarkly_Observability_BaseBuilder_1_WithEnvironment_System_String_.md&amp;value=---%0Auid%3A%20LaunchDarkly.Observability.BaseBuilder%601.WithEnvironment(System.String)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/launchdarkly/observability-sdk/blob/main/sdk/@launchdarkly/observability-dotnet/src/LaunchDarkly.Observability/BaseBuilder.cs/#L115">View Source</a>
+  </span>
+  <a id="LaunchDarkly_Observability_BaseBuilder_1_WithEnvironment_" data-uid="LaunchDarkly.Observability.BaseBuilder`1.WithEnvironment*"></a>
+  <h4 id="LaunchDarkly_Observability_BaseBuilder_1_WithEnvironment_System_String_" data-uid="LaunchDarkly.Observability.BaseBuilder`1.WithEnvironment(System.String)">WithEnvironment(string)</h4>
+  <div class="markdown level1 summary"><p>Set the environment name.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="declaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public TBuilder WithEnvironment(string environment)</code></pre>
+  </div>
+  <h5 class="parameters">Parameters</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Name</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></td>
+        <td><span class="parametername">environment</span></td>
+        <td><p>The environment name (for example, &quot;prod&quot; or &quot;staging&quot;).</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 class="returns">Returns</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="xref">TBuilder</span></td>
+        <td><p>A reference to this builder.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/launchdarkly/observability-sdk/new/main/apiSpec/new?filename=LaunchDarkly_Observability_BaseBuilder_1_WithExtendedLoggerConfiguration_System_Action_OpenTelemetry_Logs_LoggerProviderBuilder__.md&amp;value=---%0Auid%3A%20LaunchDarkly.Observability.BaseBuilder%601.WithExtendedLoggerConfiguration(System.Action%7BOpenTelemetry.Logs.LoggerProviderBuilder%7D)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/launchdarkly/observability-sdk/blob/main/sdk/@launchdarkly/observability-dotnet/src/LaunchDarkly.Observability/BaseBuilder.cs/#L193">View Source</a>
+  </span>
+  <a id="LaunchDarkly_Observability_BaseBuilder_1_WithExtendedLoggerConfiguration_" data-uid="LaunchDarkly.Observability.BaseBuilder`1.WithExtendedLoggerConfiguration*"></a>
+  <h4 id="LaunchDarkly_Observability_BaseBuilder_1_WithExtendedLoggerConfiguration_System_Action_OpenTelemetry_Logs_LoggerProviderBuilder__" data-uid="LaunchDarkly.Observability.BaseBuilder`1.WithExtendedLoggerConfiguration(System.Action{OpenTelemetry.Logs.LoggerProviderBuilder})">WithExtendedLoggerConfiguration(Action&lt;LoggerProviderBuilder&gt;)</h4>
+  <div class="markdown level1 summary"><p>Method which extends the configuration of the logger provider.</p>
+<p>
+The basic logger options will already be configured by the LaunchDarkly Observability plugin. This method
+should be used to extend that configuration with additional instrumentation.
+</p>
+<p>
+Configuring exporters or processors may interfere with the operation of the plugin and is not recommended.
+</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="declaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public TBuilder WithExtendedLoggerConfiguration(Action&lt;LoggerProviderBuilder&gt; extendedLoggerConfiguration)</code></pre>
+  </div>
+  <h5 class="parameters">Parameters</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Name</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.action-1">Action</a>&lt;<span class="xref">LoggerProviderBuilder</span>&gt;</td>
+        <td><span class="parametername">extendedLoggerConfiguration</span></td>
+        <td><p>A function used to extend the logging configuration.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 class="returns">Returns</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="xref">TBuilder</span></td>
+        <td><p>A reference to this builder.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 id="LaunchDarkly_Observability_BaseBuilder_1_WithExtendedLoggerConfiguration_System_Action_OpenTelemetry_Logs_LoggerProviderBuilder___examples">Examples</h5>
+  <p>Adding custom instrumentation:</p>
+<pre><code class="lang-csharp">ObservabilityConfig.Builder()
+    .WithExtendedLoggerConfiguration(builder =&gt;
+    {
+        builder.AddMyInstrumentation();
+    });</code></pre>
+
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/launchdarkly/observability-sdk/new/main/apiSpec/new?filename=LaunchDarkly_Observability_BaseBuilder_1_WithExtendedMeterConfiguration_System_Action_OpenTelemetry_Metrics_MeterProviderBuilder__.md&amp;value=---%0Auid%3A%20LaunchDarkly.Observability.BaseBuilder%601.WithExtendedMeterConfiguration(System.Action%7BOpenTelemetry.Metrics.MeterProviderBuilder%7D)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/launchdarkly/observability-sdk/blob/main/sdk/@launchdarkly/observability-dotnet/src/LaunchDarkly.Observability/BaseBuilder.cs/#L232">View Source</a>
+  </span>
+  <a id="LaunchDarkly_Observability_BaseBuilder_1_WithExtendedMeterConfiguration_" data-uid="LaunchDarkly.Observability.BaseBuilder`1.WithExtendedMeterConfiguration*"></a>
+  <h4 id="LaunchDarkly_Observability_BaseBuilder_1_WithExtendedMeterConfiguration_System_Action_OpenTelemetry_Metrics_MeterProviderBuilder__" data-uid="LaunchDarkly.Observability.BaseBuilder`1.WithExtendedMeterConfiguration(System.Action{OpenTelemetry.Metrics.MeterProviderBuilder})">WithExtendedMeterConfiguration(Action&lt;MeterProviderBuilder&gt;)</h4>
+  <div class="markdown level1 summary"><p>Method which extends the configuration of the meter provider.</p>
+<p>
+The basic meter options will already be configured by the LaunchDarkly Observability plugin. This method
+should be used to extend that configuration with additional meters, views, or custom instrumentation.
+</p>
+<p>
+By default, metrics will be configured with the following instrumentation:
+<ul><li>Runtime Instrumentation (GC, thread pool, JIT statistics)</li><li>Process Instrumentation (CPU, memory, handle counts)</li><li>HTTP Client Instrumentation (request counts, durations)</li><li>AspNetCore Instrumentation (request rates, response times)</li><li>SQL Client Instrumentation (query execution times, connection pool metrics)</li></ul>
+
+<p>
+Configuring exporters or processors may interfere with the operation of the plugin and is not recommended.
+</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="declaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public TBuilder WithExtendedMeterConfiguration(Action&lt;MeterProviderBuilder&gt; extendedMeterConfiguration)</code></pre>
+  </div>
+  <h5 class="parameters">Parameters</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Name</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.action-1">Action</a>&lt;<span class="xref">MeterProviderBuilder</span>&gt;</td>
+        <td><span class="parametername">extendedMeterConfiguration</span></td>
+        <td><p>A function used to extend the metrics configuration.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 class="returns">Returns</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="xref">TBuilder</span></td>
+        <td><p>A reference to this builder.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 id="LaunchDarkly_Observability_BaseBuilder_1_WithExtendedMeterConfiguration_System_Action_OpenTelemetry_Metrics_MeterProviderBuilder___examples">Examples</h5>
+  <p>Adding custom instrumentation:</p>
+<pre><code class="lang-csharp">ObservabilityConfig.Builder()
+    .WithExtendedMeterConfiguration(builder =&gt;
+    {
+        // Add meters from your custom instrumentation
+        builder.AddMyInstrumentation();
+    });</code></pre>
+
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/launchdarkly/observability-sdk/new/main/apiSpec/new?filename=LaunchDarkly_Observability_BaseBuilder_1_WithExtendedTracingConfig_System_Action_OpenTelemetry_Trace_TracerProviderBuilder__.md&amp;value=---%0Auid%3A%20LaunchDarkly.Observability.BaseBuilder%601.WithExtendedTracingConfig(System.Action%7BOpenTelemetry.Trace.TracerProviderBuilder%7D)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/launchdarkly/observability-sdk/blob/main/sdk/@launchdarkly/observability-dotnet/src/LaunchDarkly.Observability/BaseBuilder.cs/#L165">View Source</a>
+  </span>
+  <a id="LaunchDarkly_Observability_BaseBuilder_1_WithExtendedTracingConfig_" data-uid="LaunchDarkly.Observability.BaseBuilder`1.WithExtendedTracingConfig*"></a>
+  <h4 id="LaunchDarkly_Observability_BaseBuilder_1_WithExtendedTracingConfig_System_Action_OpenTelemetry_Trace_TracerProviderBuilder__" data-uid="LaunchDarkly.Observability.BaseBuilder`1.WithExtendedTracingConfig(System.Action{OpenTelemetry.Trace.TracerProviderBuilder})">WithExtendedTracingConfig(Action&lt;TracerProviderBuilder&gt;)</h4>
+  <div class="markdown level1 summary"><p>Method which extends the configuration of the tracer provider.</p>
+<p>
+The basic tracer options will already be configured by the LaunchDarkly Observability plugin. This method
+should be used to extend that configuration with additional instrumentation or additional activity sources.
+</p>
+<p>
+By default tracing will be configured with the following instrumentation:
+<ul><li>HTTP Client Instrumentation</li><li>GRPC Client Instrumentation</li><li>WCF Instrumentation</li><li>Quart Instrumentation</li><li>AspNetCore Instrumentation</li><li>SQL Client Instrumentation</li></ul>
+
+<p>
+Configuring exporters or processors may interfere with the operation of the plugin and is not recommended.
+</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="declaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public TBuilder WithExtendedTracingConfig(Action&lt;TracerProviderBuilder&gt; extendedTracerConfiguration)</code></pre>
+  </div>
+  <h5 class="parameters">Parameters</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Name</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.action-1">Action</a>&lt;<span class="xref">TracerProviderBuilder</span>&gt;</td>
+        <td><span class="parametername">extendedTracerConfiguration</span></td>
+        <td><p>A function used to extend the tracing configuration.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 class="returns">Returns</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="xref">TBuilder</span></td>
+        <td><p>A reference to this builder.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 id="LaunchDarkly_Observability_BaseBuilder_1_WithExtendedTracingConfig_System_Action_OpenTelemetry_Trace_TracerProviderBuilder___examples">Examples</h5>
+  <p>Add additional activity sources:</p>
+<pre><code class="lang-csharp">ObservabilityConfig.Builder()
+    .WithExtendedTracingConfig(builder =&gt;
+    {
+        // Activities started by this activity source will be in exported spans.
+        builder.AddSource("my-custom-activity-source");
+    });</code></pre>
+
+  <p>Add additional instrumentation.</p>
+<pre><code class="lang-csharp">ObservabilityConfig.Builder()
+    .WithExtendedTracingConfig(builder =&gt;
+    {
+        builder.AddMyInstrumentation()
+    });</code></pre>
+
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/launchdarkly/observability-sdk/new/main/apiSpec/new?filename=LaunchDarkly_Observability_BaseBuilder_1_WithOtlpEndpoint_System_String_.md&amp;value=---%0Auid%3A%20LaunchDarkly.Observability.BaseBuilder%601.WithOtlpEndpoint(System.String)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/launchdarkly/observability-sdk/blob/main/sdk/@launchdarkly/observability-dotnet/src/LaunchDarkly.Observability/BaseBuilder.cs/#L58">View Source</a>
+  </span>
+  <a id="LaunchDarkly_Observability_BaseBuilder_1_WithOtlpEndpoint_" data-uid="LaunchDarkly.Observability.BaseBuilder`1.WithOtlpEndpoint*"></a>
+  <h4 id="LaunchDarkly_Observability_BaseBuilder_1_WithOtlpEndpoint_System_String_" data-uid="LaunchDarkly.Observability.BaseBuilder`1.WithOtlpEndpoint(System.String)">WithOtlpEndpoint(string)</h4>
+  <div class="markdown level1 summary"><p>Set the OTLP endpoint.</p>
+<p>
+For most configurations, the OTLP endpoint will not need to be set.
+</p>
+<p>
+If not explicitly set, set to null, or set to whitespace/empty string, the OTLP endpoint will be read from
+the OTEL_EXPORTER_OTLP_ENDPOINT environment variable. Values set with this method take precedence over the
+environment variable.
+</p>
+<p>
+Setting the endpoint to null will reset the builder value to the default.
+</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="declaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public TBuilder WithOtlpEndpoint(string otlpEndpoint)</code></pre>
+  </div>
+  <h5 class="parameters">Parameters</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Name</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></td>
+        <td><span class="parametername">otlpEndpoint</span></td>
+        <td><p>The OTLP exporter endpoint URL.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 class="returns">Returns</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="xref">TBuilder</span></td>
+        <td><p>A reference to this builder.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/launchdarkly/observability-sdk/new/main/apiSpec/new?filename=LaunchDarkly_Observability_BaseBuilder_1_WithServiceName_System_String_.md&amp;value=---%0Auid%3A%20LaunchDarkly.Observability.BaseBuilder%601.WithServiceName(System.String)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/launchdarkly/observability-sdk/blob/main/sdk/@launchdarkly/observability-dotnet/src/LaunchDarkly.Observability/BaseBuilder.cs/#L91">View Source</a>
+  </span>
+  <a id="LaunchDarkly_Observability_BaseBuilder_1_WithServiceName_" data-uid="LaunchDarkly.Observability.BaseBuilder`1.WithServiceName*"></a>
+  <h4 id="LaunchDarkly_Observability_BaseBuilder_1_WithServiceName_System_String_" data-uid="LaunchDarkly.Observability.BaseBuilder`1.WithServiceName(System.String)">WithServiceName(string)</h4>
+  <div class="markdown level1 summary"><p>Set the service name.</p>
+<p>
+If not explicitly set, set to null, or set to whitespace/empty string, the service name will be read from
+the OTEL_SERVICE_NAME environment variable. Values set with this method take precedence over the environment
+variable.
+</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="declaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public TBuilder WithServiceName(string serviceName)</code></pre>
+  </div>
+  <h5 class="parameters">Parameters</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Name</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></td>
+        <td><span class="parametername">serviceName</span></td>
+        <td><p>The logical service name used in telemetry resource attributes.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 class="returns">Returns</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="xref">TBuilder</span></td>
+        <td><p>A reference to this builder.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/launchdarkly/observability-sdk/new/main/apiSpec/new?filename=LaunchDarkly_Observability_BaseBuilder_1_WithServiceVersion_System_String_.md&amp;value=---%0Auid%3A%20LaunchDarkly.Observability.BaseBuilder%601.WithServiceVersion(System.String)%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Edit this page</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/launchdarkly/observability-sdk/blob/main/sdk/@launchdarkly/observability-dotnet/src/LaunchDarkly.Observability/BaseBuilder.cs/#L104">View Source</a>
+  </span>
+  <a id="LaunchDarkly_Observability_BaseBuilder_1_WithServiceVersion_" data-uid="LaunchDarkly.Observability.BaseBuilder`1.WithServiceVersion*"></a>
+  <h4 id="LaunchDarkly_Observability_BaseBuilder_1_WithServiceVersion_System_String_" data-uid="LaunchDarkly.Observability.BaseBuilder`1.WithServiceVersion(System.String)">WithServiceVersion(string)</h4>
+  <div class="markdown level1 summary"><p>Set the service version.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="declaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public TBuilder WithServiceVersion(string serviceVersion)</code></pre>
+  </div>
+  <h5 class="parameters">Parameters</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Name</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></td>
+        <td><span class="parametername">serviceVersion</span></td>
+        <td><p>The version of the service that will be added to resource attributes when a service name is provided.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 class="returns">Returns</h5>
+  <table class="table table-bordered table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="xref">TBuilder</span></td>
+        <td><p>A reference to this builder.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+
+</article>
+          </div>
+
+          <div class="hidden-sm col-md-2" role="complementary">
+            <div class="sideaffix">
+              <div class="contribution">
+                <ul class="nav">
+                  <li>
+                    <a href="https://github.com/launchdarkly/observability-sdk/new/main/apiSpec/new?filename=LaunchDarkly_Observability_BaseBuilder_1.md&amp;value=---%0Auid%3A%20LaunchDarkly.Observability.BaseBuilder%601%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A" class="contribution-link">Edit this page</a>
+                  </li>
+                  <li>
+                    <a href="https://github.com/launchdarkly/observability-sdk/blob/main/sdk/@launchdarkly/observability-dotnet/src/LaunchDarkly.Observability/BaseBuilder.cs/#L22" class="contribution-link">View Source</a>
+                  </li>
+                </ul>
+              </div>
+              <nav class="bs-docs-sidebar hidden-print hidden-xs hidden-sm affix" id="affix">
+                <h5>In this article</h5>
+                <div></div>
+              </nav>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <footer>
+        <div class="grad-bottom"></div>
+        <div class="footer">
+          <div class="container">
+            <span class="pull-right">
+              <a href="#top">Back to top</a>
+            </span>
+      
+      <span>Generated by <strong>DocFX</strong></span>
+          </div>
+        </div>
+      </footer>
+    </div>
+
+    <script type="text/javascript" src="../styles/docfx.vendor.min.js"></script>
+    <script type="text/javascript" src="../styles/docfx.js"></script>
+    <script type="text/javascript" src="../styles/main.js"></script>
+  </body>
+</html>
