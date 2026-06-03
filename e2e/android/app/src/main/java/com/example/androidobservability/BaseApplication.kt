@@ -39,7 +39,7 @@ open class BaseApplication : Application() {
         instrumentations = ObservabilityOptions.Instrumentations(
             crashReporting = true, launchTime = true
         ),
-        productAnalytics = ObservabilityOptions.ProductAnalytics(
+        analytics = ObservabilityOptions.Analytics(
             taps = true, pageViews = true, trackEvents = true
         ),
     )

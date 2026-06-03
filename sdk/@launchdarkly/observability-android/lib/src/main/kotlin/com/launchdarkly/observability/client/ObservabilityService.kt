@@ -115,7 +115,7 @@ class ObservabilityService(
     /**
      * The single touch-capture hook. Owned by Observability and shared with Session Replay via
      * [ObservabilityContext]. Capture runs unconditionally (so Session Replay always works); only
-     * `click` span emission is gated by [ObservabilityOptions.ProductAnalytics.taps].
+     * `click` span emission is gated by [ObservabilityOptions.Analytics.taps].
      */
     val userInteractionManager = UserInteractionManager()
 
@@ -175,7 +175,7 @@ class ObservabilityService(
 
         // Capture runs unconditionally so Session Replay can consume the shared touch stream.
         userInteractionManager.attachToApplication(application)
-        if (observabilityOptions.productAnalytics.taps) {
+        if (observabilityOptions.analytics.taps) {
             startTapInstrumentation()
         }
 
@@ -255,7 +255,7 @@ class ObservabilityService(
             config.suppressInstrumentation("crash")
         }
 
-        if(!observabilityOptions.productAnalytics.pageViews) {
+        if(!observabilityOptions.analytics.pageViews) {
             // Disables [io.opentelemetry.android.instrumentation.activity.ActivityLifecycleInstrumentation.java]
             config.suppressInstrumentation("activity")
         }
@@ -462,7 +462,7 @@ class ObservabilityService(
         attributes: Attributes,
         contextKeyAttributes: Attributes?
     ) {
-        if (!observabilityOptions.productAnalytics.trackEvents) return
+        if (!observabilityOptions.analytics.trackEvents) return
         if (!observabilityOptions.tracesApi.includeSpans) return
 
         val attrBuilder = Attributes.builder()
