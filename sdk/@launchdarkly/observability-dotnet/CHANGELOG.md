@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-dotnet-1.1.0...launchdarkly-observability-dotnet-1.2.0) (2026-06-03)
+
+
+### Features
+
+* **dotnet:** support .NET Framework 4.6.2 (lower floor from net471) ([#587](https://github.com/launchdarkly/observability-sdk/issues/587)) ([3426a17](https://github.com/launchdarkly/observability-sdk/commit/3426a17accd6d7d1b887e34a9e3b7a4925c6b792))
+
 ## [1.1.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-dotnet-1.0.0...launchdarkly-observability-dotnet-1.1.0) (2026-03-26)
 
 
