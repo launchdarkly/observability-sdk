@@ -1,5 +1,12 @@
 # @launchdarkly/session-replay
 
+## [1.1.10](https://github.com/launchdarkly/observability-sdk/compare/session-replay-1.1.9...session-replay-1.1.10) (2026-06-03)
+
+
+### Bug Fixes
+
+* update vite and vitest to resolve security vulnerabilities ([#589](https://github.com/launchdarkly/observability-sdk/issues/589)) ([4538396](https://github.com/launchdarkly/observability-sdk/commit/45383961bdd2d07caa7804034dda79cf42a8a8f4))
+
 ## [1.1.9](https://github.com/launchdarkly/observability-sdk/compare/session-replay-1.1.8...session-replay-1.1.9) (2026-05-15)
 
 
