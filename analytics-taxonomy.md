@@ -60,8 +60,6 @@ Everything else around it (`context.*`, `url.*`, `user_agent.*`, `viewport.*`, `
 
 For each event below, only the **`event.*` fields** are part of this taxonomy. The JSON samples show the realistic emitted shape; the `event` object is what this doc governs — the rest (`context`, `url`, `user_agent`, `viewport`, `telemetry`, `trace_id`, …) is **auto-populated by the SDK** and shown only for realism.
 
-Order: the most-used events come first (`click`, `track`, `page_view`, `screen_view`), then everything else, with `scroll` last.
-
 ---
 
 ### 4.1 `click` (existing)
