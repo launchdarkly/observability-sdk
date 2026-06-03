@@ -34,14 +34,20 @@ bool _deepEquals(Object? a, Object? b) {
 }
 
 class LDInstrumentationOptions {
-  LDInstrumentationOptions({this.networkRequests, this.launchTimes});
+  LDInstrumentationOptions({
+    this.networkRequests,
+    this.launchTimes,
+    this.crashReporting,
+  });
 
   bool? networkRequests;
 
   bool? launchTimes;
 
+  bool? crashReporting;
+
   List<Object?> _toList() {
-    return <Object?>[networkRequests, launchTimes];
+    return <Object?>[networkRequests, launchTimes, crashReporting];
   }
 
   Object encode() {
@@ -53,6 +59,7 @@ class LDInstrumentationOptions {
     return LDInstrumentationOptions(
       networkRequests: result[0] as bool?,
       launchTimes: result[1] as bool?,
+      crashReporting: result[2] as bool?,
     );
   }
 
@@ -60,6 +67,90 @@ class LDInstrumentationOptions {
   // ignore: avoid_equals_and_hash_code_on_mutable_classes
   bool operator ==(Object other) {
     if (other is! LDInstrumentationOptions ||
+        other.runtimeType != runtimeType) {
+      return false;
+    }
+    if (identical(this, other)) {
+      return true;
+    }
+    return _deepEquals(encode(), other.encode());
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  int get hashCode => Object.hashAll(_toList());
+}
+
+class LDTracesOptions {
+  LDTracesOptions({this.includeErrors, this.includeSpans});
+
+  bool? includeErrors;
+
+  bool? includeSpans;
+
+  List<Object?> _toList() {
+    return <Object?>[includeErrors, includeSpans];
+  }
+
+  Object encode() {
+    return _toList();
+  }
+
+  static LDTracesOptions decode(Object result) {
+    result as List<Object?>;
+    return LDTracesOptions(
+      includeErrors: result[0] as bool?,
+      includeSpans: result[1] as bool?,
+    );
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  bool operator ==(Object other) {
+    if (other is! LDTracesOptions || other.runtimeType != runtimeType) {
+      return false;
+    }
+    if (identical(this, other)) {
+      return true;
+    }
+    return _deepEquals(encode(), other.encode());
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  int get hashCode => Object.hashAll(_toList());
+}
+
+class LDProductAnalyticsOptions {
+  LDProductAnalyticsOptions({this.taps, this.pageViews, this.trackEvents});
+
+  bool? taps;
+
+  bool? pageViews;
+
+  bool? trackEvents;
+
+  List<Object?> _toList() {
+    return <Object?>[taps, pageViews, trackEvents];
+  }
+
+  Object encode() {
+    return _toList();
+  }
+
+  static LDProductAnalyticsOptions decode(Object result) {
+    result as List<Object?>;
+    return LDProductAnalyticsOptions(
+      taps: result[0] as bool?,
+      pageViews: result[1] as bool?,
+      trackEvents: result[2] as bool?,
+    );
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  bool operator ==(Object other) {
+    if (other is! LDProductAnalyticsOptions ||
         other.runtimeType != runtimeType) {
       return false;
     }
@@ -83,6 +174,12 @@ class LDObservabilityOptions {
     this.backendUrl,
     this.contextFriendlyName,
     this.attributes,
+    this.customHeaders,
+    this.sessionBackgroundTimeoutMillis,
+    this.logsApiLevel,
+    this.traces,
+    this.metricsEnabled,
+    this.productAnalytics,
     this.instrumentation,
   });
 
@@ -100,6 +197,18 @@ class LDObservabilityOptions {
 
   Map<String, Object?>? attributes;
 
+  Map<String, String>? customHeaders;
+
+  int? sessionBackgroundTimeoutMillis;
+
+  int? logsApiLevel;
+
+  LDTracesOptions? traces;
+
+  bool? metricsEnabled;
+
+  LDProductAnalyticsOptions? productAnalytics;
+
   LDInstrumentationOptions? instrumentation;
 
   List<Object?> _toList() {
@@ -111,6 +220,12 @@ class LDObservabilityOptions {
       backendUrl,
       contextFriendlyName,
       attributes,
+      customHeaders,
+      sessionBackgroundTimeoutMillis,
+      logsApiLevel,
+      traces,
+      metricsEnabled,
+      productAnalytics,
       instrumentation,
     ];
   }
@@ -130,7 +245,14 @@ class LDObservabilityOptions {
       contextFriendlyName: result[5] as String?,
       attributes: (result[6] as Map<Object?, Object?>?)
           ?.cast<String, Object?>(),
-      instrumentation: result[7] as LDInstrumentationOptions?,
+      customHeaders: (result[7] as Map<Object?, Object?>?)
+          ?.cast<String, String>(),
+      sessionBackgroundTimeoutMillis: result[8] as int?,
+      logsApiLevel: result[9] as int?,
+      traces: result[10] as LDTracesOptions?,
+      metricsEnabled: result[11] as bool?,
+      productAnalytics: result[12] as LDProductAnalyticsOptions?,
+      instrumentation: result[13] as LDInstrumentationOptions?,
     );
   }
 
@@ -213,16 +335,23 @@ class LDPrivacyOptions {
 }
 
 class LDSessionReplayOptions {
-  LDSessionReplayOptions({this.isEnabled, this.serviceName, this.privacy});
+  LDSessionReplayOptions({
+    this.isEnabled,
+    this.serviceName,
+    this.frameRate,
+    this.privacy,
+  });
 
   bool? isEnabled;
 
   String? serviceName;
 
+  double? frameRate;
+
   LDPrivacyOptions? privacy;
 
   List<Object?> _toList() {
-    return <Object?>[isEnabled, serviceName, privacy];
+    return <Object?>[isEnabled, serviceName, frameRate, privacy];
   }
 
   Object encode() {
@@ -234,7 +363,8 @@ class LDSessionReplayOptions {
     return LDSessionReplayOptions(
       isEnabled: result[0] as bool?,
       serviceName: result[1] as String?,
-      privacy: result[2] as LDPrivacyOptions?,
+      frameRate: result[2] as double?,
+      privacy: result[3] as LDPrivacyOptions?,
     );
   }
 
@@ -300,17 +430,23 @@ class _PigeonCodec extends StandardMessageCodec {
     } else if (value is LDInstrumentationOptions) {
       buffer.putUint8(129);
       writeValue(buffer, value.encode());
-    } else if (value is LDObservabilityOptions) {
+    } else if (value is LDTracesOptions) {
       buffer.putUint8(130);
       writeValue(buffer, value.encode());
-    } else if (value is LDPrivacyOptions) {
+    } else if (value is LDProductAnalyticsOptions) {
       buffer.putUint8(131);
       writeValue(buffer, value.encode());
-    } else if (value is LDSessionReplayOptions) {
+    } else if (value is LDObservabilityOptions) {
       buffer.putUint8(132);
       writeValue(buffer, value.encode());
-    } else if (value is LDStartResult) {
+    } else if (value is LDPrivacyOptions) {
       buffer.putUint8(133);
+      writeValue(buffer, value.encode());
+    } else if (value is LDSessionReplayOptions) {
+      buffer.putUint8(134);
+      writeValue(buffer, value.encode());
+    } else if (value is LDStartResult) {
+      buffer.putUint8(135);
       writeValue(buffer, value.encode());
     } else {
       super.writeValue(buffer, value);
@@ -323,12 +459,16 @@ class _PigeonCodec extends StandardMessageCodec {
       case 129:
         return LDInstrumentationOptions.decode(readValue(buffer)!);
       case 130:
-        return LDObservabilityOptions.decode(readValue(buffer)!);
+        return LDTracesOptions.decode(readValue(buffer)!);
       case 131:
-        return LDPrivacyOptions.decode(readValue(buffer)!);
+        return LDProductAnalyticsOptions.decode(readValue(buffer)!);
       case 132:
-        return LDSessionReplayOptions.decode(readValue(buffer)!);
+        return LDObservabilityOptions.decode(readValue(buffer)!);
       case 133:
+        return LDPrivacyOptions.decode(readValue(buffer)!);
+      case 134:
+        return LDSessionReplayOptions.decode(readValue(buffer)!);
+      case 135:
         return LDStartResult.decode(readValue(buffer)!);
       default:
         return super.readValueOfType(type, buffer);

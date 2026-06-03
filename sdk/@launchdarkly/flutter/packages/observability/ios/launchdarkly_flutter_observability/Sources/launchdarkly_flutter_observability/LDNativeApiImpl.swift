@@ -59,16 +59,29 @@ final class LDNativeApiImpl: NSObject, LDNativeApi {
         )
         config.startOnline = false
 
+        let crashReportingEnabled = observability.instrumentation?.crashReporting ?? true
+        // iOS currently only supports taps from ProductAnalytics; pageViews and
+        // trackEvents are Android-only and ignored here.
+        let tapsEnabled = observability.productAnalytics?.taps ?? false
         let observabilityPlugin = Observability(options: .init(
             serviceName: observability.serviceName ?? Defaults.serviceName,
             serviceVersion: observability.serviceVersion ?? Defaults.serviceVersion,
             otlpEndpoint: observability.otlpEndpoint ?? Defaults.otlpEndpoint,
             backendUrl: observability.backendUrl ?? Defaults.backendUrl,
             resourceAttributes: buildResourceAttributes(observability.attributes),
-            crashReporting: .init(source: .none),
+            customHeaders: observability.customHeaders ?? [:],
+            sessionBackgroundTimeout: observability.sessionBackgroundTimeoutMillis
+                .map { TimeInterval($0) / 1000.0 } ?? 15 * 60,
+            logsApiLevel: mapLogLevel(observability.logsApiLevel),
+            tracesApi: .init(
+                includeErrors: observability.traces?.includeErrors ?? true,
+                includeSpans: observability.traces?.includeSpans ?? true
+            ),
+            metricsApi: (observability.metricsEnabled ?? true) ? .enabled : .disabled,
+            crashReporting: .init(source: crashReportingEnabled ? .KSCrash : .none),
             instrumentation: .init(
                 urlSession: .disabled,
-                userTaps: .enabled,
+                userTaps: tapsEnabled ? .enabled : .disabled,
                 memory: .disabled,
                 memoryWarnings: .disabled,
                 cpu: .disabled,
@@ -110,8 +123,19 @@ final class LDNativeApiImpl: NSObject, LDNativeApi {
                 maskWebViews: privacy?.maskWebViews ?? false,
                 maskLabels: privacy?.maskLabels ?? false,
                 maskImages: privacy?.maskImages ?? false
-            )
+            ),
+            frameRate: replay.frameRate ?? 1.0
         )
+    }
+
+    /// Maps the OpenTelemetry log-severity number sent across the bridge onto the
+    /// native `ObservabilityOptions.LogLevel`. The `none` sentinel
+    /// (`Int.max` / `0x7fffffff`) maps to `.none`; otherwise the severity number
+    /// is the matching raw value. Defaults to `.info` when nil or unrecognized.
+    private func mapLogLevel(_ severity: Int64?) -> ObservabilityOptions.LogLevel {
+        guard let severity = severity else { return .info }
+        if severity >= Int64(Int32.max) { return .none }
+        return ObservabilityOptions.LogLevel(rawValue: Int(severity)) ?? .info
     }
 
     private func makeAnonymousContext() throws -> LDContext {

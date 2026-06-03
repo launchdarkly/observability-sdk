@@ -138,6 +138,49 @@ runZonedGuarded(
 );
 ```
 
+## Native-only options
+
+The following options are forwarded to the native Android and iOS SDKs. They are **no-ops on web**, where the Dart OpenTelemetry pipeline is used instead.
+
+On `ObservabilityOptions`:
+
+- `customHeaders` (`Map<String, String>`): extra HTTP headers added to OTLP exports (e.g. for proxies or auth). Defaults to `{}`.
+- `sessionBackgroundTimeout` (`Duration`): how long the app may stay backgrounded before the session ends. Defaults to 15 minutes.
+- `logsApiLevel` (`ObservabilityLogLevel`): minimum severity of logs forwarded to the logs pipeline. Use `ObservabilityLogLevel.none` to disable logs. Defaults to `ObservabilityLogLevel.info`.
+- `traces` (`TracesOptions`): toggles `includeErrors` and `includeSpans` for automatic trace generation. Both default to `true`.
+- `metricsEnabled` (`bool`): whether metrics are exported. Defaults to `true`.
+- `productAnalytics` (`ProductAnalyticsOptions`): product-analytics telemetry. Mirrors Android's `ProductAnalytics`:
+  - `taps` (`bool`): emit a span for each user tap. Supported on Android and iOS. Defaults to `false`.
+  - `pageViews` (`bool`): emit spans for screen/page view lifecycle events. **Android-only** (no-op on iOS/web). Defaults to `true`.
+  - `trackEvents` (`bool`): emit a span when a custom event is tracked. **Android-only** (no-op on iOS/web). Defaults to `true`.
+- `instrumentation.crashReporting` (`bool`): report uncaught exceptions as errors. Defaults to `true`.
+
+On `SessionReplayOptions`:
+
+- `frameRate` (`double`): target capture rate in frames per second. Defaults to `1.0`.
+
+```dart
+LDObserve.init(
+  client,
+  observability: const ObservabilityOptions(
+    customHeaders: {'x-proxy-token': 'secret'},
+    sessionBackgroundTimeout: Duration(minutes: 5),
+    logsApiLevel: ObservabilityLogLevel.warn,
+    traces: TracesOptions(includeErrors: true, includeSpans: true),
+    metricsEnabled: true,
+    productAnalytics: ProductAnalyticsOptions(
+      taps: true,
+      pageViews: true,
+      trackEvents: true,
+    ),
+    instrumentation: InstrumentationOptions(
+      crashReporting: true,
+    ),
+  ),
+  replay: const SessionReplayOptions(isEnabled: true, frameRate: 2.0),
+);
+```
+
 ## Recording observability data
 
 Use `LDObserve` to record spans, logs, and errors from your Dart code.

@@ -15,7 +15,28 @@ extension ObservabilityOptionsWire on ObservabilityOptions {
     backendUrl: backendUrl,
     contextFriendlyName: contextFriendlyName,
     attributes: attributes,
+    customHeaders: customHeaders,
+    sessionBackgroundTimeoutMillis: sessionBackgroundTimeout.inMilliseconds,
+    logsApiLevel: logsApiLevel.severity,
+    traces: traces.toWire(),
+    metricsEnabled: metricsEnabled,
+    productAnalytics: productAnalytics.toWire(),
     instrumentation: instrumentation.toWire(),
+  );
+}
+
+extension TracesOptionsWire on TracesOptions {
+  wire.LDTracesOptions toWire() => wire.LDTracesOptions(
+    includeErrors: includeErrors,
+    includeSpans: includeSpans,
+  );
+}
+
+extension ProductAnalyticsOptionsWire on ProductAnalyticsOptions {
+  wire.LDProductAnalyticsOptions toWire() => wire.LDProductAnalyticsOptions(
+    taps: taps,
+    pageViews: pageViews,
+    trackEvents: trackEvents,
   );
 }
 
@@ -23,6 +44,7 @@ extension InstrumentationOptionsWire on InstrumentationOptions {
   wire.LDInstrumentationOptions toWire() => wire.LDInstrumentationOptions(
     networkRequests: networkRequests,
     launchTimes: launchTimes,
+    crashReporting: crashReporting,
   );
 }
 
@@ -30,6 +52,7 @@ extension SessionReplayOptionsWire on SessionReplayOptions {
   wire.LDSessionReplayOptions toWire() => wire.LDSessionReplayOptions(
     isEnabled: isEnabled,
     serviceName: serviceName,
+    frameRate: frameRate,
     privacy: privacy.toWire(),
   );
 }

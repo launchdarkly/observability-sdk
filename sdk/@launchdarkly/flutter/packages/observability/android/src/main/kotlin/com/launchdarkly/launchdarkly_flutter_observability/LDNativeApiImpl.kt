@@ -13,6 +13,8 @@ import com.launchdarkly.observability.sdk.LDReplay
 import io.flutter.plugin.common.MethodChannel
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.minutes
 
 /**
  * Pigeon [LDNativeApi] implementation. Ported (line-for-line where it makes
@@ -72,16 +74,29 @@ internal class LDNativeApiImpl(
             serviceName = observability.serviceName ?: DEFAULT_SERVICE_NAME,
             serviceVersion = observability.serviceVersion ?: DEFAULT_SERVICE_VERSION,
             resourceAttributes = resourceAttributes,
+            customHeaders = observability.customHeaders ?: emptyMap(),
+            sessionBackgroundTimeout = observability.sessionBackgroundTimeoutMillis
+                ?.milliseconds ?: 15.minutes,
             debug = false,
             otlpEndpoint = observability.otlpEndpoint ?: DEFAULT_OTLP_ENDPOINT,
             backendUrl = observability.backendUrl ?: DEFAULT_BACKEND_URL,
+            logsApiLevel = mapLogLevel(observability.logsApiLevel),
             tracesApi = ObservabilityOptions.TracesApi(
-                includeErrors = true,
-                includeSpans = true,
+                includeErrors = observability.traces?.includeErrors ?: true,
+                includeSpans = observability.traces?.includeSpans ?: true,
             ),
-            metricsApi = ObservabilityOptions.MetricsApi.enabled(),
+            metricsApi = if (observability.metricsEnabled ?: true) {
+                ObservabilityOptions.MetricsApi.enabled()
+            } else {
+                ObservabilityOptions.MetricsApi.disabled()
+            },
+            productAnalytics = ObservabilityOptions.ProductAnalytics(
+                taps = observability.productAnalytics?.taps ?: false,
+                pageViews = observability.productAnalytics?.pageViews ?: true,
+                trackEvents = observability.productAnalytics?.trackEvents ?: true,
+            ),
             instrumentations = ObservabilityOptions.Instrumentations(
-                crashReporting = false,
+                crashReporting = observability.instrumentation?.crashReporting ?: true,
                 launchTime = observability.instrumentation?.launchTimes ?: true,
                 activityLifecycle = true,
             ),
@@ -91,6 +106,7 @@ internal class LDNativeApiImpl(
         val maskTextInputs = privacy?.maskTextInputs ?: true
         val nativeReplayOptions = ReplayOptions(
             enabled = replay.isEnabled ?: true,
+            frameRate = replay.frameRate ?: 1.0,
             privacyProfile = PrivacyProfile(
                 maskTextInputs = maskTextInputs,
                 maskText = privacy?.maskLabels ?: false,
@@ -120,6 +136,17 @@ internal class LDNativeApiImpl(
         // register it so the view tree starts being captured — without this, the
         // session replay shows a black screen.
         activity?.let { LDReplay.registerActivity(it) }
+    }
+
+    /**
+     * Maps the OpenTelemetry log-severity number sent across the bridge onto the
+     * native [ObservabilityOptions.LogLevel]. Defaults to [ObservabilityOptions.LogLevel.INFO]
+     * when null or unrecognized.
+     */
+    private fun mapLogLevel(severity: Int?): ObservabilityOptions.LogLevel {
+        if (severity == null) return ObservabilityOptions.LogLevel.INFO
+        return ObservabilityOptions.LogLevel.entries.firstOrNull { it.level == severity }
+            ?: ObservabilityOptions.LogLevel.INFO
     }
 
     private fun buildResourceAttributes(

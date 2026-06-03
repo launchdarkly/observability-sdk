@@ -132,25 +132,91 @@ func deepHashMessages(value: Any?, hasher: inout Hasher) {
 struct LDInstrumentationOptions: Hashable {
   var networkRequests: Bool? = nil
   var launchTimes: Bool? = nil
+  var crashReporting: Bool? = nil
 
 
   // swift-format-ignore: AlwaysUseLowerCamelCase
   static func fromList(_ pigeonVar_list: [Any?]) -> LDInstrumentationOptions? {
     let networkRequests: Bool? = nilOrValue(pigeonVar_list[0])
     let launchTimes: Bool? = nilOrValue(pigeonVar_list[1])
+    let crashReporting: Bool? = nilOrValue(pigeonVar_list[2])
 
     return LDInstrumentationOptions(
       networkRequests: networkRequests,
-      launchTimes: launchTimes
+      launchTimes: launchTimes,
+      crashReporting: crashReporting
     )
   }
   func toList() -> [Any?] {
     return [
       networkRequests,
       launchTimes,
+      crashReporting,
     ]
   }
   static func == (lhs: LDInstrumentationOptions, rhs: LDInstrumentationOptions) -> Bool {
+    return deepEqualsMessages(lhs.toList(), rhs.toList())  }
+  func hash(into hasher: inout Hasher) {
+    deepHashMessages(value: toList(), hasher: &hasher)
+  }
+}
+
+/// Generated class from Pigeon that represents data sent in messages.
+struct LDTracesOptions: Hashable {
+  var includeErrors: Bool? = nil
+  var includeSpans: Bool? = nil
+
+
+  // swift-format-ignore: AlwaysUseLowerCamelCase
+  static func fromList(_ pigeonVar_list: [Any?]) -> LDTracesOptions? {
+    let includeErrors: Bool? = nilOrValue(pigeonVar_list[0])
+    let includeSpans: Bool? = nilOrValue(pigeonVar_list[1])
+
+    return LDTracesOptions(
+      includeErrors: includeErrors,
+      includeSpans: includeSpans
+    )
+  }
+  func toList() -> [Any?] {
+    return [
+      includeErrors,
+      includeSpans,
+    ]
+  }
+  static func == (lhs: LDTracesOptions, rhs: LDTracesOptions) -> Bool {
+    return deepEqualsMessages(lhs.toList(), rhs.toList())  }
+  func hash(into hasher: inout Hasher) {
+    deepHashMessages(value: toList(), hasher: &hasher)
+  }
+}
+
+/// Generated class from Pigeon that represents data sent in messages.
+struct LDProductAnalyticsOptions: Hashable {
+  var taps: Bool? = nil
+  var pageViews: Bool? = nil
+  var trackEvents: Bool? = nil
+
+
+  // swift-format-ignore: AlwaysUseLowerCamelCase
+  static func fromList(_ pigeonVar_list: [Any?]) -> LDProductAnalyticsOptions? {
+    let taps: Bool? = nilOrValue(pigeonVar_list[0])
+    let pageViews: Bool? = nilOrValue(pigeonVar_list[1])
+    let trackEvents: Bool? = nilOrValue(pigeonVar_list[2])
+
+    return LDProductAnalyticsOptions(
+      taps: taps,
+      pageViews: pageViews,
+      trackEvents: trackEvents
+    )
+  }
+  func toList() -> [Any?] {
+    return [
+      taps,
+      pageViews,
+      trackEvents,
+    ]
+  }
+  static func == (lhs: LDProductAnalyticsOptions, rhs: LDProductAnalyticsOptions) -> Bool {
     return deepEqualsMessages(lhs.toList(), rhs.toList())  }
   func hash(into hasher: inout Hasher) {
     deepHashMessages(value: toList(), hasher: &hasher)
@@ -166,6 +232,12 @@ struct LDObservabilityOptions: Hashable {
   var backendUrl: String? = nil
   var contextFriendlyName: String? = nil
   var attributes: [String: Any?]? = nil
+  var customHeaders: [String: String]? = nil
+  var sessionBackgroundTimeoutMillis: Int64? = nil
+  var logsApiLevel: Int64? = nil
+  var traces: LDTracesOptions? = nil
+  var metricsEnabled: Bool? = nil
+  var productAnalytics: LDProductAnalyticsOptions? = nil
   var instrumentation: LDInstrumentationOptions? = nil
 
 
@@ -178,7 +250,13 @@ struct LDObservabilityOptions: Hashable {
     let backendUrl: String? = nilOrValue(pigeonVar_list[4])
     let contextFriendlyName: String? = nilOrValue(pigeonVar_list[5])
     let attributes: [String: Any?]? = nilOrValue(pigeonVar_list[6])
-    let instrumentation: LDInstrumentationOptions? = nilOrValue(pigeonVar_list[7])
+    let customHeaders: [String: String]? = nilOrValue(pigeonVar_list[7])
+    let sessionBackgroundTimeoutMillis: Int64? = nilOrValue(pigeonVar_list[8])
+    let logsApiLevel: Int64? = nilOrValue(pigeonVar_list[9])
+    let traces: LDTracesOptions? = nilOrValue(pigeonVar_list[10])
+    let metricsEnabled: Bool? = nilOrValue(pigeonVar_list[11])
+    let productAnalytics: LDProductAnalyticsOptions? = nilOrValue(pigeonVar_list[12])
+    let instrumentation: LDInstrumentationOptions? = nilOrValue(pigeonVar_list[13])
 
     return LDObservabilityOptions(
       isEnabled: isEnabled,
@@ -188,6 +266,12 @@ struct LDObservabilityOptions: Hashable {
       backendUrl: backendUrl,
       contextFriendlyName: contextFriendlyName,
       attributes: attributes,
+      customHeaders: customHeaders,
+      sessionBackgroundTimeoutMillis: sessionBackgroundTimeoutMillis,
+      logsApiLevel: logsApiLevel,
+      traces: traces,
+      metricsEnabled: metricsEnabled,
+      productAnalytics: productAnalytics,
       instrumentation: instrumentation
     )
   }
@@ -200,6 +284,12 @@ struct LDObservabilityOptions: Hashable {
       backendUrl,
       contextFriendlyName,
       attributes,
+      customHeaders,
+      sessionBackgroundTimeoutMillis,
+      logsApiLevel,
+      traces,
+      metricsEnabled,
+      productAnalytics,
       instrumentation,
     ]
   }
@@ -255,6 +345,7 @@ struct LDPrivacyOptions: Hashable {
 struct LDSessionReplayOptions: Hashable {
   var isEnabled: Bool? = nil
   var serviceName: String? = nil
+  var frameRate: Double? = nil
   var privacy: LDPrivacyOptions? = nil
 
 
@@ -262,11 +353,13 @@ struct LDSessionReplayOptions: Hashable {
   static func fromList(_ pigeonVar_list: [Any?]) -> LDSessionReplayOptions? {
     let isEnabled: Bool? = nilOrValue(pigeonVar_list[0])
     let serviceName: String? = nilOrValue(pigeonVar_list[1])
-    let privacy: LDPrivacyOptions? = nilOrValue(pigeonVar_list[2])
+    let frameRate: Double? = nilOrValue(pigeonVar_list[2])
+    let privacy: LDPrivacyOptions? = nilOrValue(pigeonVar_list[3])
 
     return LDSessionReplayOptions(
       isEnabled: isEnabled,
       serviceName: serviceName,
+      frameRate: frameRate,
       privacy: privacy
     )
   }
@@ -274,6 +367,7 @@ struct LDSessionReplayOptions: Hashable {
     return [
       isEnabled,
       serviceName,
+      frameRate,
       privacy,
     ]
   }
@@ -315,12 +409,16 @@ private class MessagesPigeonCodecReader: FlutterStandardReader {
     case 129:
       return LDInstrumentationOptions.fromList(self.readValue() as! [Any?])
     case 130:
-      return LDObservabilityOptions.fromList(self.readValue() as! [Any?])
+      return LDTracesOptions.fromList(self.readValue() as! [Any?])
     case 131:
-      return LDPrivacyOptions.fromList(self.readValue() as! [Any?])
+      return LDProductAnalyticsOptions.fromList(self.readValue() as! [Any?])
     case 132:
-      return LDSessionReplayOptions.fromList(self.readValue() as! [Any?])
+      return LDObservabilityOptions.fromList(self.readValue() as! [Any?])
     case 133:
+      return LDPrivacyOptions.fromList(self.readValue() as! [Any?])
+    case 134:
+      return LDSessionReplayOptions.fromList(self.readValue() as! [Any?])
+    case 135:
       return LDStartResult.fromList(self.readValue() as! [Any?])
     default:
       return super.readValue(ofType: type)
@@ -333,17 +431,23 @@ private class MessagesPigeonCodecWriter: FlutterStandardWriter {
     if let value = value as? LDInstrumentationOptions {
       super.writeByte(129)
       super.writeValue(value.toList())
-    } else if let value = value as? LDObservabilityOptions {
+    } else if let value = value as? LDTracesOptions {
       super.writeByte(130)
       super.writeValue(value.toList())
-    } else if let value = value as? LDPrivacyOptions {
+    } else if let value = value as? LDProductAnalyticsOptions {
       super.writeByte(131)
       super.writeValue(value.toList())
-    } else if let value = value as? LDSessionReplayOptions {
+    } else if let value = value as? LDObservabilityOptions {
       super.writeByte(132)
       super.writeValue(value.toList())
-    } else if let value = value as? LDStartResult {
+    } else if let value = value as? LDPrivacyOptions {
       super.writeByte(133)
+      super.writeValue(value.toList())
+    } else if let value = value as? LDSessionReplayOptions {
+      super.writeByte(134)
+      super.writeValue(value.toList())
+    } else if let value = value as? LDStartResult {
+      super.writeByte(135)
       super.writeValue(value.toList())
     } else {
       super.writeValue(value)
