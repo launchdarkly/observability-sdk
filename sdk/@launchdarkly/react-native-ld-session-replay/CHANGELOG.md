@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.11.0](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.10.0...session-replay-react-native-0.11.0) (2026-06-03)
+
+
+### Features
+
+* Android - Rename track span event  ([#586](https://github.com/launchdarkly/observability-sdk/issues/586)) ([2f5b066](https://github.com/launchdarkly/observability-sdk/commit/2f5b0667385b59181d3e1970234fc7bcae08aa19))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @launchdarkly/observability-react-native bumped to 0.9.2
+
 ## [0.10.0](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.9.0...session-replay-react-native-0.10.0) (2026-05-08)
 
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.51.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.50.0...launchdarkly-observability-android-0.51.0) (2026-06-03)
+
+
+### Features
+
+* Android - Rename track span event  ([#586](https://github.com/launchdarkly/observability-sdk/issues/586)) ([2f5b066](https://github.com/launchdarkly/observability-sdk/commit/2f5b0667385b59181d3e1970234fc7bcae08aa19))
+
 ## [0.50.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.49.0...launchdarkly-observability-android-0.50.0) (2026-06-02)
 
 
