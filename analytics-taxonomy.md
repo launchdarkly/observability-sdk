@@ -34,25 +34,25 @@ Everything else around it (`context.*`, `url.*`, `user_agent.*`, `viewport.*`, `
 
 ## 3. Event catalog (overview)
 
-| # | Event name | Type | Platforms | Purpose | Closest standard |
-| --- | --- | --- | --- | --- | --- |
-| 1 | `click` | span | web, ios, android | Click / tap on an element. | OTel `app.widget.click` |
-| 2 | `track` | span | web, ios, android | Generic custom/domain event (see §4.2). | Segment `track` |
-| 3 | `page_view` | span | web | A web page / route was viewed. | GA4 `page_view` |
-| 4 | `screen_view` | span | ios, android | A screen / view controller / activity was viewed. | GA4 `screen_view` |
-| — | `identify` | log | web, ios, android | Identity resolution. **Existing — do not change** (see §4.5). | Segment `identify` |
-| 5 | `app_open` | span | ios, android | App launched or resumed into use. | GA4 `app_open` |
-| 6 | `app_foreground` | span | ios, android | App entered foreground. | OTel lifecycle (`foreground`/`active`) |
-| 7 | `app_background` | span | ios, android | App entered background. | OTel lifecycle (`background`) |
-| 8 | `app_install` | span | ios, android | First launch after install. | Segment `Application Installed` |
-| 9 | `app_update` | span | ios, android | First launch after version change. | Segment `Application Updated` |
-| 10 | `error` | span | web, ios, android | A user-facing error/message was displayed. | OTel `exception.*` |
-| 11 | `permission_prompt` | span | web, ios, android | An OS/app permission prompt was shown. | — |
-| 12 | `permission_response` | span | web, ios, android | User responded to a permission prompt. | — |
-| 13 | `notification_open` | span | ios, android | User opened a push/local notification. | GA4 `notification_open` |
-| 14 | `deep_link_open` | span | ios, android | App opened via deep/universal link. | Segment `Deep Link Opened` |
-| 15 | `form_submit` | span | web, ios, android | A form was submitted. | GA4 `form_submit` |
-| 16 | `scroll` | span | web | Scroll interaction. | GA4 `scroll` |
+| # | Event name | Type | Platforms | Purpose |
+| --- | --- | --- | --- | --- |
+| 1 | `click` | span | web, ios, android | Click / tap on an element. |
+| 2 | `track` | span | web, ios, android | Generic custom/domain event (see §4.2). |
+| 3 | `page_view` | span | web | A web page / route was viewed. |
+| 4 | `screen_view` | span | ios, android | A screen / view controller / activity was viewed. |
+| 5 | `identify` | log | web, ios, android | Identity resolution. **Existing — do not change** (see §4.5). |
+| 6 | `app_open` | span | ios, android | App launched or resumed into use. |
+| 7 | `app_foreground` | span | ios, android | App entered foreground. |
+| 8 | `app_background` | span | ios, android | App entered background. |
+| 9 | `app_install` | span | ios, android | First launch after install. |
+| 10 | `app_update` | span | ios, android | First launch after version change. |
+| 11 | `error` | span | web, ios, android | A user-facing error/message was displayed. |
+| 12 | `permission_prompt` | span | web, ios, android | An OS/app permission prompt was shown. |
+| 13 | `permission_response` | span | web, ios, android | User responded to a permission prompt. |
+| 14 | `notification_open` | span | ios, android | User opened a push/local notification. |
+| 15 | `deep_link_open` | span | ios, android | App opened via deep/universal link. |
+| 16 | `form_submit` | span | web, ios, android | A form was submitted. |
+| 17 | `scroll` | span | web | Scroll interaction. |
 
 ---
 
