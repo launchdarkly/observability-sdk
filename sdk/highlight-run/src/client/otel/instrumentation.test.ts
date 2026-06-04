@@ -1432,6 +1432,22 @@ describe('Network Instrumentation Custom Attributes', () => {
 					'https://example.com/page#tab=settings&view=detail',
 				)
 			})
+
+			it('should strip hash-router OAuth callbacks with query params', () => {
+				const url =
+					'https://example.com/#/callback?access_token=eyJhbGciOiJS&token_type=bearer'
+				const result = sanitizeUrl(url)
+				expect(result).toBe('https://example.com/')
+			})
+
+			it('should preserve hash-router routes with non-sensitive query params', () => {
+				const url =
+					'https://example.com/#/users?page=2&sort=name'
+				const result = sanitizeUrl(url)
+				expect(result).toBe(
+					'https://example.com/#/users?page=2&sort=name',
+				)
+			})
 		})
 	})
 

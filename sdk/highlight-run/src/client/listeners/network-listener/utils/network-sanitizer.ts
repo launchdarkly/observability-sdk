@@ -119,8 +119,12 @@ const sanitizeFragment = (hash: string): string => {
 	// If the fragment doesn't contain '=', it's likely a route or anchor (e.g. #/dashboard, #section)
 	if (!fragment.includes('=')) return hash
 
-	// Parse the fragment as key=value pairs and check for sensitive params
-	const params = new URLSearchParams(fragment)
+	// Handle hash-router callbacks (e.g. #/callback?access_token=...)
+	// Split on '?' to parse the query portion separately
+	const queryIndex = fragment.indexOf('?')
+	const paramString = queryIndex >= 0 ? fragment.slice(queryIndex + 1) : fragment
+
+	const params = new URLSearchParams(paramString)
 	for (const key of params.keys()) {
 		if (SENSITIVE_FRAGMENT_PARAMS.includes(key.toLowerCase())) {
 			return ''
