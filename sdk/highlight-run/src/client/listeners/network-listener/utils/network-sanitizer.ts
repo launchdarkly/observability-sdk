@@ -97,6 +97,7 @@ export const safeParseUrl = (url: string): URL => {
  * Sanitizes a URL according to OpenTelemetry semantic conventions.
  * - Redacts credentials (username:password) in the URL
  * - Redacts sensitive query parameter values while preserving keys
+ * - Strips URL fragments (hash) to prevent leaking tokens from OAuth implicit flows
  * - Handles absolute, relative, and protocol-relative URLs
  *
  * @param url - The URL string to sanitize
@@ -136,9 +137,12 @@ export const sanitizeUrl = (url: string): string => {
 			}
 		})
 
-		// If the URL is relative (but not protocol-relative), return only the pathname + search + hash
+		// Strip the fragment (hash) to prevent leaking tokens from OAuth implicit flows
+		urlObject.hash = ''
+
+		// If the URL is relative (but not protocol-relative), return only the pathname + search
 		if (!url.includes('://') && !url.startsWith('//')) {
-			return urlObject.pathname + urlObject.search + urlObject.hash
+			return urlObject.pathname + urlObject.search
 		}
 
 		// For protocol-relative URLs, preserve the //host format
@@ -148,11 +152,7 @@ export const sanitizeUrl = (url: string): string => {
 			if (urlObject.username || urlObject.password) {
 				result += urlObject.username + ':' + urlObject.password + '@'
 			}
-			result +=
-				urlObject.host +
-				urlObject.pathname +
-				urlObject.search +
-				urlObject.hash
+			result += urlObject.host + urlObject.pathname + urlObject.search
 			return result
 		}
 
