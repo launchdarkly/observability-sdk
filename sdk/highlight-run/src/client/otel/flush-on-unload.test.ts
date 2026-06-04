@@ -1,15 +1,23 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+	afterEach,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	type Mock,
+	vi,
+} from 'vitest'
 import { registerFlushOnUnload } from './index'
 
 describe('registerFlushOnUnload', () => {
-	let traceExporter: { setUnloading: ReturnType<typeof vi.fn> }
-	let metricExporter: { setUnloading: ReturnType<typeof vi.fn> }
-	let spanProcessor: { setSkipPendingOnFlush: ReturnType<typeof vi.fn> }
+	let traceExporter: { setUnloading: Mock }
+	let metricExporter: { setUnloading: Mock }
+	let spanProcessor: { setSkipPendingOnFlush: Mock }
 	let tracerProvider: {
-		forceFlush: ReturnType<typeof vi.fn<any, Promise<void>>>
+		forceFlush: Mock<() => Promise<void>>
 	}
 	let meterProvider: {
-		forceFlush: ReturnType<typeof vi.fn<any, Promise<void>>>
+		forceFlush: Mock<() => Promise<void>>
 	}
 	let cleanup: () => void
 
@@ -19,12 +27,12 @@ describe('registerFlushOnUnload', () => {
 		spanProcessor = { setSkipPendingOnFlush: vi.fn() }
 		tracerProvider = {
 			forceFlush: vi
-				.fn<any, Promise<void>>()
+				.fn<() => Promise<void>>()
 				.mockResolvedValue(undefined),
 		}
 		meterProvider = {
 			forceFlush: vi
-				.fn<any, Promise<void>>()
+				.fn<() => Promise<void>>()
 				.mockResolvedValue(undefined),
 		}
 		cleanup = registerFlushOnUnload(
