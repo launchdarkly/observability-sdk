@@ -1441,8 +1441,7 @@ describe('Network Instrumentation Custom Attributes', () => {
 			})
 
 			it('should preserve hash-router routes with non-sensitive query params', () => {
-				const url =
-					'https://example.com/#/users?page=2&sort=name'
+				const url = 'https://example.com/#/users?page=2&sort=name'
 				const result = sanitizeUrl(url)
 				expect(result).toBe(
 					'https://example.com/#/users?page=2&sort=name',

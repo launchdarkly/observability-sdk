@@ -105,7 +105,8 @@ const sanitizeFragment = (hash: string): string => {
 	// Handle hash-router callbacks (e.g. #/callback?access_token=...)
 	// Split on '?' to parse the query portion separately
 	const queryIndex = fragment.indexOf('?')
-	const paramString = queryIndex >= 0 ? fragment.slice(queryIndex + 1) : fragment
+	const paramString =
+		queryIndex >= 0 ? fragment.slice(queryIndex + 1) : fragment
 
 	const params = new URLSearchParams(paramString)
 	for (const key of params.keys()) {
