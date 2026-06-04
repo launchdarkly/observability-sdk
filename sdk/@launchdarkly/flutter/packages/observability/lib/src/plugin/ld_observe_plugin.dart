@@ -23,9 +23,7 @@ const _launchDarklyObservabilityPluginName =
 /// evaluation as an event. Cross-platform (Dart OpenTelemetry).
 final class _ObservabilityHook extends Hook {
   static const _evalSpanDataName = 'eval-span';
-  static const _launchDarklyClientPrefix = 'LDClient';
-  static const _launchDarklyObservabilityHookName =
-      '$_launchDarklyClientPrefix-hook';
+  static const _launchDarklyObservabilityHookName = 'LDClient-hook';
 
   final HookMetadata _metadata = const HookMetadata(
     name: _launchDarklyObservabilityHookName,
@@ -39,8 +37,15 @@ final class _ObservabilityHook extends Hook {
     EvaluationSeriesContext hookContext,
     UnmodifiableMapView<String, dynamic> data,
   ) {
+    // Match the native iOS/Android exporters: a span named "evaluation" with
+    // the feature flag key/provider/context set up front so the backend
+    // recognizes it as a flag evaluation.
     final span = ObserveOtel.startSpan(
-      '$_launchDarklyClientPrefix.${hookContext.method}',
+      FeatureFlagConvention.spanName,
+      attributes: FeatureFlagConvention.getSpanAttributes(
+        key: hookContext.flagKey,
+        context: hookContext.context,
+      ),
     );
 
     var updated = Map<String, dynamic>.from(data);

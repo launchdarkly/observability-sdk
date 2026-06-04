@@ -60,6 +60,28 @@ Map<String, Attribute> _getValueAttributes(LDEvaluationDetail<LDValue> detail) {
 /// Class representing the feature flagging semantic convention with
 /// LaunchDarkly additions.
 class FeatureFlagConvention {
+  /// Attributes set on the evaluation span when it is started, before the
+  /// result is known. Mirrors the native iOS/Android `ObservabilityHookExporter`
+  /// `beforeEvaluation` (`feature_flag.key`, `feature_flag.provider.name`,
+  /// `feature_flag.context.id`) so the backend recognizes the span as a flag
+  /// evaluation.
+  static Map<String, Attribute> getSpanAttributes({
+    required String key,
+    LDContext? context,
+  }) {
+    final attributes = <String, Attribute>{
+      _featureFlagProviderNameAttr: _providerNameAttributeValue,
+      _featureFlagKeyAttr: StringAttribute(key),
+    };
+
+    if (context != null && context.valid) {
+      attributes[_featureFlagContextIdAttr] = StringAttribute(
+        context.canonicalKey,
+      );
+    }
+    return attributes;
+  }
+
   /// Get feature_flag event attributes.
   static Map<String, Attribute> getEventAttributes({
     required String key,
@@ -87,4 +109,9 @@ class FeatureFlagConvention {
 
   /// The name to use for the event.
   static const eventName = _featureFlagEventName;
+
+  /// The name to use for the evaluation span. Matches the native iOS/Android
+  /// exporters (`FEATURE_FLAG_SPAN_NAME = "evaluation"`) so flag evaluations
+  /// surface consistently across platforms.
+  static const spanName = 'evaluation';
 }

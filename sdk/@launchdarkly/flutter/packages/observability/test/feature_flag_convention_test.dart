@@ -385,6 +385,62 @@ void main() {
     });
   });
 
+  group('getSpanAttributes', () {
+    test('uses the native "evaluation" span name', () {
+      expect(FeatureFlagConvention.spanName, equals('evaluation'));
+    });
+
+    test('returns key and provider for the start of the span', () {
+      final attributes = FeatureFlagConvention.getSpanAttributes(
+        key: 'test-flag',
+      );
+
+      expect(attributes.length, equals(2));
+      expect(
+        attributes.entries,
+        containsAll([
+          matchesAttribute('feature_flag.provider.name', 'LaunchDarkly'),
+          matchesAttribute('feature_flag.key', 'test-flag'),
+        ]),
+      );
+    });
+
+    test('includes context id when a valid context is provided', () {
+      final context = LDContextBuilder().kind('user', 'user-key').build();
+
+      final attributes = FeatureFlagConvention.getSpanAttributes(
+        key: 'test-flag',
+        context: context,
+      );
+
+      expect(
+        attributes.entries,
+        contains(
+          matchesAttribute('feature_flag.context.id', context.canonicalKey),
+        ),
+      );
+    });
+
+    test('excludes context id when context is invalid', () {
+      final invalidContext = LDContextBuilder().kind('user', '').build();
+
+      final attributes = FeatureFlagConvention.getSpanAttributes(
+        key: 'test-flag',
+        context: invalidContext,
+      );
+
+      expect(attributes['feature_flag.context.id'], isNull);
+    });
+
+    test('excludes context id when context is null', () {
+      final attributes = FeatureFlagConvention.getSpanAttributes(
+        key: 'test-flag',
+      );
+
+      expect(attributes['feature_flag.context.id'], isNull);
+    });
+  });
+
   test('returns all attributes when all optional parameters provided', () {
     const flagKey = 'comprehensive-flag';
     const environmentId = 'env-456';
