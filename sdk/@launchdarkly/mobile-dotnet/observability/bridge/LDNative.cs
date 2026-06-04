@@ -13,7 +13,7 @@ using LDObserveMaciOS;
 
 namespace LaunchDarkly.SessionReplay;
 
-public class LDNative
+internal class LDNative
 {
     public ObservabilityOptions Observability { get; set; }
     public SessionReplayOptions Replay { get; set; }
@@ -33,11 +33,17 @@ public class LDNative
         return rawVersion.Split('+')[0];
     }
 
-    public static LDNative Start(string mobileKey, ObservabilityOptions observability, SessionReplayOptions replay)
+    internal static LDNative Start(string mobileKey, ObservabilityOptions observability, SessionReplayOptions replay)
     {
         var ldNative = new LDNative(observability, replay);
         var observabilityVersion = GetObservabilityVersion();
-        
+
+        // Apply any buffered pre-init writes (e.g. LDReplay.IsEnabled) to the replay
+        // options before the native bridge consumes them. Otherwise pending values set
+        // during the init race would never reach native (Android converts via ToNative()
+        // and iOS reads initial values during Start).
+        LDReplay.OnNativeStarted(ldNative.Replay);
+
 #if ANDROID
         var app = (Android.App.Application)global::Android.App.Application.Context;
         var bridge = new ObservabilityBridge();

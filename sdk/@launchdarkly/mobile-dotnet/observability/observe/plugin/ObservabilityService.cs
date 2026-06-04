@@ -14,7 +14,7 @@ using LDObserveAndroid;
 
 namespace LaunchDarkly.Observability
 {
-    internal class ObservabilityService : INativePlugin
+    internal class ObservabilityService
     {
         private static readonly Tracer NoopTracer =
             TracerProvider.Default.GetTracer("noop");
@@ -40,6 +40,12 @@ namespace LaunchDarkly.Observability
         internal ObservabilityService(ObservabilityOptions options)
         {
             Options = options;
+
+            // Enable HTTP Activity propagation so outgoing requests are traced.
+            // Centralized here so every entry point (plugin and standalone Init)
+            // gets it without duplicating the switch.
+            if (options.IsEnabled && options.Instrumentation.NetworkRequests)
+                AppContext.SetSwitch("System.Net.Http.EnableActivityPropagation", true);
         }
 
         internal void Initialize()
