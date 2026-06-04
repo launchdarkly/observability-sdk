@@ -1,22 +1,27 @@
-using System;
 using System.Collections.Generic;
 using LaunchDarkly.Sdk.Client.Hooks;
 using LaunchDarkly.Sdk.Client.Interfaces;
 using LaunchDarkly.Sdk.Client.Plugins;
 using LaunchDarkly.Sdk.Integrations.Plugins;
+using LaunchDarkly.SessionReplay;
 
 namespace LaunchDarkly.Observability
 {
+    /// <summary>
+    /// Single LaunchDarkly plugin that wires up both observability and session
+    /// replay. When registered on an <see cref="LaunchDarkly.Sdk.Client.ILdClient"/>
+    /// it boots the native stack once and installs the relevant hooks.
+    /// </summary>
     public class ObservabilityPlugin : Plugin
     {
-        internal ObservabilityService ObservabilityService { get; private set; }
+        internal ObservabilityService ObservabilityService { get; }
+        internal SessionReplayService? SessionReplayService { get; }
 
-        public ObservabilityPlugin(ObservabilityOptions options) : base("LaunchDarkly.Observability")
+        public ObservabilityPlugin(ObservabilityOptions observability, SessionReplayOptions? replay = null)
+            : base("LaunchDarkly.Observability")
         {
-            if (options.IsEnabled && options.Instrumentation.NetworkRequests)
-                AppContext.SetSwitch("System.Net.Http.EnableActivityPropagation", true);
-            ObservabilityService = new ObservabilityService(options);
-            PluginOrchestrator.Instance.AddObservabilityService(ObservabilityService);
+            ObservabilityService = new ObservabilityService(observability);
+            SessionReplayService = replay != null ? new SessionReplayService(replay) : null;
         }
 
         /// <inheritdoc />
@@ -24,14 +29,33 @@ namespace LaunchDarkly.Observability
         {
             ObservabilityService.Client = client;
             ObservabilityService.Metadata = metadata;
-            PluginOrchestrator.Instance.Register();
+
+            if (SessionReplayService != null)
+            {
+                SessionReplayService.Client = client;
+                SessionReplayService.Metadata = metadata;
+            }
+
+            var replayOptions = SessionReplayService?.Options ?? new SessionReplayOptions(isEnabled: false);
+            LDNative.Start(metadata.Credential, ObservabilityService.Options, replayOptions);
+
+            if (ObservabilityService.Options.IsEnabled)
+                LDObserve.Initialize(ObservabilityService);
         }
 
         /// <inheritdoc />
         public override IList<Hook> GetHooks(EnvironmentMetadata metadata)
         {
             ObservabilityService.Metadata = metadata;
-            return new List<Hook> { new ObservabilityHook(ObservabilityService) };
+            var hooks = new List<Hook> { new ObservabilityHook(ObservabilityService) };
+
+            if (SessionReplayService != null)
+            {
+                SessionReplayService.Metadata = metadata;
+                hooks.Add(new SessionReplayHook(SessionReplayService));
+            }
+
+            return hooks;
         }
     }
 }

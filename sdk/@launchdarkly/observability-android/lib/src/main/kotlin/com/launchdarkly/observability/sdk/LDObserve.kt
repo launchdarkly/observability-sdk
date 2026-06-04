@@ -122,8 +122,8 @@ class LDObserve(private val client: Observe) : Observe {
          * @param application The Android [Application] instance.
          * @param mobileKey   The LaunchDarkly mobile key used for authentication.
          * @param ldContext    The [LDObserveContext] identifying the current user/context.
-         * @param options      Configuration for observability telemetry.
-         * @param replayOptions Optional configuration for session replay. Pass `null` (the default)
+         * @param observability      Configuration for observability telemetry.
+         * @param replay Optional configuration for session replay. Pass `null` (the default)
          *                      to skip session replay initialization.
          * @param imageCaptureService Optional capture implementation for session replay.
          */
@@ -131,20 +131,20 @@ class LDObserve(private val client: Observe) : Observe {
             application: Application,
             mobileKey: String,
             ldContext: LDObserveContext,
-            options: ObservabilityOptions = ObservabilityOptions(),
-            replayOptions: ReplayOptions? = null,
+            observability: ObservabilityOptions = ObservabilityOptions(),
+            replay: ReplayOptions? = null,
             imageCaptureService: ImageCaptureServicing? = null,
         ) {
-            val logger = ObserveLogger.build(options.logAdapter, options.loggerName, options.debug)
+            val logger = ObserveLogger.build(observability.logAdapter, observability.loggerName, observability.debug)
 
             val obsContext = ObservabilityContext(
                 sdkKey = mobileKey,
-                options = options,
+                options = observability,
                 application = application,
                 logger = logger
             )
 
-            val resource = buildObservabilityResource(sdkKey = mobileKey, options = options)
+            val resource = buildObservabilityResource(sdkKey = mobileKey, options = observability)
             obsContext.resourceAttributes = resource.attributes
 
             // ObservabilityService and SessionReplayService install OpenTelemetry instrumentations
@@ -154,10 +154,10 @@ class LDObserve(private val client: Observe) : Observe {
             // NOTE: the calling thread must not hold any lock the main thread is waiting on, or
             // this will deadlock — see runOnMainThread KDoc.
             runOnMainThread {
-                installObservability(application, mobileKey, resource, logger, options, obsContext)
-                if (replayOptions != null) {
+                installObservability(application, mobileKey, resource, logger, observability, obsContext)
+                if (replay != null) {
                     installSessionReplay(
-                        replayOptions,
+                        replay,
                         obsContext,
                         ldContext,
                         imageCaptureService,

@@ -2,6 +2,20 @@
 
 All notable changes to the LaunchDarkly Observability SDK for Flutter will be documented in this file. This project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.5.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.4.0...launchdarkly_flutter_observability-0.5.0) (2026-06-04)
+
+
+### Features
+
+* MAUI  API revamp ([#573](https://github.com/launchdarkly/observability-sdk/issues/573)) ([c2dfa64](https://github.com/launchdarkly/observability-sdk/commit/c2dfa64a55aad59af02002401a3b004852e15b20))
+
+## [0.4.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.3.0...launchdarkly_flutter_observability-0.4.0) (2026-06-03)
+
+
+### Features
+
+* Android - Rename track span event  ([#586](https://github.com/launchdarkly/observability-sdk/issues/586)) ([2f5b066](https://github.com/launchdarkly/observability-sdk/commit/2f5b0667385b59181d3e1970234fc7bcae08aa19))
+
 ## [0.3.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.2.0...launchdarkly_flutter_observability-0.3.0) (2026-06-03)
 
 

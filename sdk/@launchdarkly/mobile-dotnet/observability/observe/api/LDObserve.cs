@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
+using LaunchDarkly.Sdk.Client;
+using LaunchDarkly.SessionReplay;
 using OpenTelemetry.Trace;
 
 namespace LaunchDarkly.Observability;
@@ -20,6 +22,33 @@ public static partial class LDObserve
         service.Initialize();
         _service = service;
     }
+
+    /// <summary>
+    /// Boots the native LaunchDarkly observability (and optional session replay)
+    /// stack on the current platform, standalone (without a LaunchDarkly client).
+    /// </summary>
+    public static void Init(string mobileKey, ObservabilityOptions observability, SessionReplayOptions? replay = null)
+    {
+        // Construct the service before LDNative.Start so the HTTP Activity propagation
+        // switch (set in the ObservabilityService constructor) is applied before the
+        // native stack boots and issues outbound HTTP during startup. Mirrors how
+        // ObservabilityPlugin constructs its service ahead of Register/LDNative.Start.
+        var service = observability.IsEnabled ? new ObservabilityService(observability) : null;
+
+        LDNative.Start(mobileKey, observability, replay ?? new SessionReplayOptions(isEnabled: false));
+
+        // Wire up the static facade so LDObserve.RecordLog/StartActiveSpan/etc. work,
+        // mirroring what ObservabilityPlugin.Register does in the client variant.
+        if (service != null)
+            Initialize(service);
+    }
+
+    /// <summary>
+    /// Boots LaunchDarkly observability (and optional session replay) by registering
+    /// the <see cref="ObservabilityPlugin"/> on an already-initialized <see cref="LdClient"/>.
+    /// </summary>
+    public static void Init(LdClient client, ObservabilityOptions observability, SessionReplayOptions? replay = null)
+        => client.RegisterPlugin(new ObservabilityPlugin(observability, replay));
 
     // -------- Public API --------
 
