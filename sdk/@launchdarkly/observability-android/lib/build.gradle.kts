@@ -20,7 +20,15 @@ allprojects {
     }
 }
 
-val isIncludedByMaui = gradle.parent?.rootProject?.name == "LDObserve"
+// Hosts that already provide com.launchdarkly:launchdarkly-android-client-sdk on the app
+// classpath (e.g. the MAUI bridge, and Flutter via launchdarkly_flutter_client_sdk) opt in by
+// setting `ldClientSdkProvided=true`. It is read as a system property because that is the only
+// channel that reliably crosses the composite-build boundary into this included build; a Gradle
+// property fallback supports passing it directly when building this library standalone.
+val isClientSdkProvidedByHost =
+    (providers.gradleProperty("ldClientSdkProvided").orNull
+        ?: providers.systemProperty("ldClientSdkProvided").orNull)
+        ?.toBoolean() == true
 
 // Pin Kotlin runtime artifacts on this build's classpath to match the configured Kotlin
 // compiler version (2.0.21). Without this, transitive deps such as the
@@ -47,7 +55,7 @@ configurations.all {
 }
 
 dependencies {
-    if (isIncludedByMaui) {
+    if (isClientSdkProvidedByHost) {
         compileOnly("com.launchdarkly:launchdarkly-android-client-sdk:5.12.2")
         testImplementation("com.launchdarkly:launchdarkly-android-client-sdk:5.12.2")
     } else {
