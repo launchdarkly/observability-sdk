@@ -41,6 +41,7 @@ dependencies:
     path: ../packages/observability
 
   http: ^1.2.0
+  webview_flutter: ^4.13.1
 
 dev_dependencies:
   flutter_test:

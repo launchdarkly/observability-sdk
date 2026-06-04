@@ -91,10 +91,14 @@ class _NativeSessionReplayCaptureState
     }
 
     final pixelRatio = View.of(context).devicePixelRatio;
-    final maskTextInputs =
-        arguments is Map && arguments['maskTextInputs'] == true;
+    final args = arguments is Map ? arguments : const <Object?, Object?>{};
     final collector = MaskCollector(
-      MaskingPolicy(maskTextInputs: maskTextInputs),
+      MaskingPolicy(
+        maskTextInputs: args['maskTextInputs'] == true,
+        maskLabels: args['maskLabels'] == true,
+        maskImages: args['maskImages'] == true,
+        maskWebViews: args['maskWebViews'] == true,
+      ),
     );
 
     // "Before" pass: mask geometry and the screenshot are sampled in the same

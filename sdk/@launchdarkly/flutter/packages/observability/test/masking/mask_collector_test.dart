@@ -11,6 +11,9 @@ void main() {
     WidgetTester tester,
     Widget subtree, {
     required bool maskTextInputs,
+    bool maskLabels = false,
+    bool maskImages = false,
+    bool maskWebViews = false,
   }) async {
     final boundaryKey = GlobalKey();
     await tester.pumpWidget(
@@ -24,7 +27,12 @@ void main() {
     final context = boundaryKey.currentContext!;
     final boundary = context.findRenderObject()! as RenderRepaintBoundary;
     final collector = MaskCollector(
-      MaskingPolicy(maskTextInputs: maskTextInputs),
+      MaskingPolicy(
+        maskTextInputs: maskTextInputs,
+        maskLabels: maskLabels,
+        maskImages: maskImages,
+        maskWebViews: maskWebViews,
+      ),
     );
     return collector.collect(context, boundary);
   }
@@ -126,6 +134,47 @@ void main() {
         maskTextInputs: true,
       );
       expect(ops, hasLength(1));
+    });
+
+    testWidgets('maskLabels masks a Text label', (tester) async {
+      final ops = await collect(
+        tester,
+        const Text('account balance'),
+        maskTextInputs: false,
+        maskLabels: true,
+      );
+      expect(ops, hasLength(1));
+    });
+
+    testWidgets('disabling maskLabels leaves text labels unmasked',
+        (tester) async {
+      final ops = await collect(
+        tester,
+        const Text('account balance'),
+        maskTextInputs: false,
+        maskLabels: false,
+      );
+      expect(ops, isEmpty);
+    });
+
+    testWidgets('maskImages masks a raster image', (tester) async {
+      final ops = await collect(
+        tester,
+        const SizedBox(width: 64, height: 64, child: RawImage()),
+        maskTextInputs: false,
+        maskImages: true,
+      );
+      expect(ops, hasLength(1));
+    });
+
+    testWidgets('LDUnmask reveals a globally-masked label', (tester) async {
+      final ops = await collect(
+        tester,
+        const LDUnmask(child: Text('public')),
+        maskTextInputs: false,
+        maskLabels: true,
+      );
+      expect(ops, isEmpty);
     });
 
     testWidgets('an opaque widget painted on top drops the covered mask',

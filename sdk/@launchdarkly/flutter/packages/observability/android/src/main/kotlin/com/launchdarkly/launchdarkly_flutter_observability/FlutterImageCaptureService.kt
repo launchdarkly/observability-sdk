@@ -14,6 +14,9 @@ import kotlin.coroutines.resume
 internal class FlutterImageCaptureService(
     private val channel: MethodChannel,
     private val maskTextInputs: Boolean,
+    private val maskLabels: Boolean,
+    private val maskImages: Boolean,
+    private val maskWebViews: Boolean,
 ) : ImageCaptureServicing {
 
     override suspend fun captureRawFrame(): ImageCaptureService.RawFrame? {
@@ -55,7 +58,12 @@ internal class FlutterImageCaptureService(
         suspendCancellableCoroutine { continuation ->
             channel.invokeMethod(
                 METHOD_CAPTURE_FRAME,
-                mapOf(ARG_MASK_TEXT_INPUTS to maskTextInputs),
+                mapOf(
+                    ARG_MASK_TEXT_INPUTS to maskTextInputs,
+                    ARG_MASK_LABELS to maskLabels,
+                    ARG_MASK_IMAGES to maskImages,
+                    ARG_MASK_WEB_VIEWS to maskWebViews,
+                ),
                 object : MethodChannel.Result {
                     override fun success(result: Any?) {
                         if (continuation.isActive) {
@@ -85,6 +93,9 @@ internal class FlutterImageCaptureService(
     private companion object {
         const val METHOD_CAPTURE_FRAME = "captureFrame"
         const val ARG_MASK_TEXT_INPUTS = "maskTextInputs"
+        const val ARG_MASK_LABELS = "maskLabels"
+        const val ARG_MASK_IMAGES = "maskImages"
+        const val ARG_MASK_WEB_VIEWS = "maskWebViews"
         private val logger = Logger.getLogger("FlutterImageCaptureService")
     }
 }

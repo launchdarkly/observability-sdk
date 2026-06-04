@@ -7,8 +7,10 @@ import 'package:launchdarkly_flutter_client_sdk/launchdarkly_flutter_client_sdk.
 import 'package:launchdarkly_flutter_observability/launchdarkly_flutter_observability.dart';
 
 import 'credit_card_page.dart';
+import 'dialogs_page.dart';
 import 'main.dart';
 import 'smoothie_list_page.dart';
+import 'web_view_page.dart';
 
 // NOTE: The MAUI sample also has a "Metric" subsection (gauge, histogram,
 // count, incremental, up-down counter) under Observability. The Flutter
@@ -333,8 +335,8 @@ class _MyHomePageState extends State<MyHomePage> {
             const _SectionHeader('Session Replay'),
             // Mirrors the "Masking" subsection of the MAUI sample's MainPage,
             // which exposes Credit Card / Number Pad / Dialogs entries that
-            // each demonstrate session replay masking. Only the Credit Card
-            // page is ported so far.
+            // each demonstrate session replay masking. Credit Card and Dialogs
+            // are ported so far.
             ElevatedButton(
               onPressed: () {
                 Navigator.of(context).push(
@@ -357,6 +359,23 @@ class _MyHomePageState extends State<MyHomePage> {
                 );
               },
               child: const Text('Smoothie List'),
+            ),
+            const SizedBox(height: 4),
+            // Opens a dialog hosting an embedded web view (a Flutter platform
+            // view), used to exercise the `maskWebViews` Session Replay option.
+            ElevatedButton(
+              onPressed: () => showWebViewDialog(context),
+              child: const Text('Web View'),
+            ),
+            const SizedBox(height: 4),
+            // Catalog of Flutter dialog/overlay types (alerts, sheets, menus,
+            // overlays, notifications, pickers), mirroring MAUI's DialogsPage.
+            // Used to exercise Session Replay against transient and modal UI.
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const DialogsPage()),
+              ),
+              child: const Text('Dialogs'),
             ),
 
             const _SectionHeader('Observability'),

@@ -128,6 +128,9 @@ internal class LDNativeApiImpl(
             imageCaptureService = FlutterImageCaptureService(
                 channel = captureChannel,
                 maskTextInputs = maskTextInputs,
+                maskLabels = privacy?.maskLabels ?: false,
+                maskImages = privacy?.maskImages ?: false,
+                maskWebViews = privacy?.maskWebViews ?: false,
             ),
         )
 

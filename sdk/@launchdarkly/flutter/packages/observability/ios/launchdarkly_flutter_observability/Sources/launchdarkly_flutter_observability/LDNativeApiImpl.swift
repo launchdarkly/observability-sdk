@@ -182,10 +182,12 @@ final class LDNativeApiImpl: NSObject, LDNativeApi {
 
         let sessionReplayOptions = makeSessionReplayOptions(replay: replay)
         let privacy = replay.privacy
-        let maskTextInputs = privacy?.maskTextInputs ?? true
         let flutterCaptureService = FlutterImageCaptureService(
             channel: captureChannel,
-            maskTextInputs: maskTextInputs
+            maskTextInputs: privacy?.maskTextInputs ?? true,
+            maskLabels: privacy?.maskLabels ?? false,
+            maskImages: privacy?.maskImages ?? false,
+            maskWebViews: privacy?.maskWebViews ?? false
         )
         config.plugins = [
             observabilityPlugin,

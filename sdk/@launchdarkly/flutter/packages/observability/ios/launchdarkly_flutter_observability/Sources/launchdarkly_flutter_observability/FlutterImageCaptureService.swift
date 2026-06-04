@@ -6,12 +6,24 @@ import UIKit
 final class FlutterImageCaptureService: ImageCaptureServicing {
     private let channel: FlutterMethodChannel
     private let maskTextInputs: Bool
+    private let maskLabels: Bool
+    private let maskImages: Bool
+    private let maskWebViews: Bool
     @MainActor
     private var shouldCapture = false
 
-    init(channel: FlutterMethodChannel, maskTextInputs: Bool) {
+    init(
+        channel: FlutterMethodChannel,
+        maskTextInputs: Bool,
+        maskLabels: Bool,
+        maskImages: Bool,
+        maskWebViews: Bool
+    ) {
         self.channel = channel
         self.maskTextInputs = maskTextInputs
+        self.maskLabels = maskLabels
+        self.maskImages = maskImages
+        self.maskWebViews = maskWebViews
     }
 
     @MainActor
@@ -19,7 +31,12 @@ final class FlutterImageCaptureService: ImageCaptureServicing {
         shouldCapture = true
         channel.invokeMethod(
             "captureFrame",
-            arguments: ["maskTextInputs": maskTextInputs]
+            arguments: [
+                "maskTextInputs": maskTextInputs,
+                "maskLabels": maskLabels,
+                "maskImages": maskImages,
+                "maskWebViews": maskWebViews,
+            ]
         ) { [weak self] result in
             Task { @MainActor in
                 guard let self, self.shouldCapture else {
