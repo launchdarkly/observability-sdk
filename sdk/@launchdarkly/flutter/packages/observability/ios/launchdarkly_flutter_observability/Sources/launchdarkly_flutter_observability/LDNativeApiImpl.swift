@@ -60,9 +60,10 @@ final class LDNativeApiImpl: NSObject, LDNativeApi {
         config.startOnline = false
 
         let crashReportingEnabled: Bool = observability.instrumentation?.crashReporting ?? true
-        // iOS currently only supports taps from Analytics; pageViews and
-        // trackEvents are Android-only and ignored here.
-        let tapsEnabled: Bool = observability.analytics?.taps ?? false
+        // `analytics.taps` is the publish gate for tap `click` spans; tap detection itself is
+        // driven by the native `instrumentation.userTaps` default. pageViews and trackEvents are
+        // Android-only and ignored here.
+        let tapsEnabled: Bool = observability.analytics?.taps ?? true
         let launchTimesEnabled: Bool = observability.instrumentation?.launchTimes ?? true
         let metricsEnabled: Bool = observability.metricsEnabled ?? true
 

@@ -126,9 +126,9 @@ Additional `ObservabilityOptions` settings:
 - `logsApiLevel`: Minimum log severity to export (defaults to `INFO`). Set to `ObservabilityOptions.LogLevel.NONE` to disable log exporting.
 - `tracesApi`: Controls trace recording (defaults to enabled). Use `ObservabilityOptions.TracesApi.disabled()` to disable all tracing, or set `includeErrors`/`includeSpans`.
 - `metricsApi`: Controls metric export (defaults to enabled). Use `ObservabilityOptions.MetricsApi.disabled()` to disable metrics.
-- `instrumentations`: Enables/disables specific automatic instrumentations like `crashReporting` and `launchTime`.
+- `instrumentations`: Enables/disables specific automatic instrumentations like `crashReporting`, `launchTime`, and `userTaps` (default `true`), which runs the tap-detection machinery. Disabling `userTaps` stops tap detection entirely, so no `click` spans are emitted regardless of `analytics.taps`.
 - `analytics`: Enables/disables analytics telemetry, emitted as OpenTelemetry spans:
-  - `taps` (default `false`): emit a `click` span for each tap.
+  - `taps` (default `true`): publish a `click` span for each detected tap. Tap detection is governed by `instrumentations.userTaps`; this flag only controls publishing the span.
   - `pageViews` (default `true`): emit spans for Android Activity lifecycle events (screen/page views).
   - `trackEvents` (default `true`): emit a `track` span when a custom event is tracked, either automatically via the LaunchDarkly `afterTrack` hook (`LDClient.track(...)`) or manually via `LDObserve.track(...)`.
 

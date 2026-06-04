@@ -14,7 +14,7 @@ void main() {
       expect(wire.traces?.includeErrors, isTrue);
       expect(wire.traces?.includeSpans, isTrue);
       expect(wire.metricsEnabled, isTrue);
-      expect(wire.analytics?.taps, isFalse);
+      expect(wire.analytics?.taps, isTrue);
       expect(wire.analytics?.pageViews, isTrue);
       expect(wire.analytics?.trackEvents, isTrue);
       expect(wire.instrumentation?.crashReporting, isTrue);

@@ -8,6 +8,7 @@ import 'package:launchdarkly_flutter_observability/launchdarkly_flutter_observab
 
 import 'credit_card_page.dart';
 import 'main.dart';
+import 'smoothie_list_page.dart';
 
 // NOTE: The MAUI sample also has a "Metric" subsection (gauge, histogram,
 // count, incremental, up-down counter) under Observability. The Flutter
@@ -339,6 +340,19 @@ class _MyHomePageState extends State<MyHomePage> {
                 );
               },
               child: const Text('Credit Card'),
+            ),
+            const SizedBox(height: 4),
+            // Mirrors the Android sample's SmoothieListActivity: an image-heavy
+            // list used to exercise Session Replay against bundled assets.
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const SmoothieListPage(),
+                  ),
+                );
+              },
+              child: const Text('Smoothie List'),
             ),
 
             const _SectionHeader('Observability'),

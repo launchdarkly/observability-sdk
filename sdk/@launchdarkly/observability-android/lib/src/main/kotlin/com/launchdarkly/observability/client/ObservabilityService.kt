@@ -114,8 +114,10 @@ class ObservabilityService(
 
     /**
      * The single touch-capture hook. Owned by Observability and shared with Session Replay via
-     * [ObservabilityContext]. Capture runs unconditionally (so Session Replay always works); only
-     * `click` span emission is gated by [ObservabilityOptions.Analytics.taps].
+     * [ObservabilityContext]. Capture runs unconditionally (so Session Replay always works). The
+     * tap-detection machinery is started only when [ObservabilityOptions.Instrumentations.userTaps]
+     * is enabled, and `click` span emission is additionally gated by
+     * [ObservabilityOptions.Analytics.taps].
      */
     val userInteractionManager = UserInteractionManager()
 
@@ -175,7 +177,9 @@ class ObservabilityService(
 
         // Capture runs unconditionally so Session Replay can consume the shared touch stream.
         userInteractionManager.attachToApplication(application)
-        if (observabilityOptions.analytics.taps) {
+        // `instrumentations.userTaps` starts the tap-detection machinery; whether a detected
+        // tap is published as a `click` span is governed by `analytics.taps` (checked below).
+        if (observabilityOptions.instrumentations.userTaps) {
             startTapInstrumentation()
         }
 
@@ -183,9 +187,9 @@ class ObservabilityService(
     }
 
     /**
-     * Detects taps from the shared [UserInteractionManager.touchFlow] and emits a `click` span for
-     * each. A tap is an ACTION_DOWN followed by an ACTION_UP on the watched pointer within the
-     * long-press timeout and touch slop.
+     * Detects taps from the shared [UserInteractionManager.touchFlow] and publishes a `click` span
+     * for each when [ObservabilityOptions.Analytics.taps] is enabled. A tap is an ACTION_DOWN
+     * followed by an ACTION_UP on the watched pointer within the long-press timeout and touch slop.
      */
     private fun startTapInstrumentation() {
         scope.launch {
@@ -200,6 +204,7 @@ class ObservabilityService(
                         downTimeMs = sample.timestamp
                     }
                     MotionEvent.ACTION_UP -> {
+                        if (!observabilityOptions.analytics.taps) return@collect
                         if (!observabilityOptions.tracesApi.includeSpans) return@collect
                         val dx = sample.x - downX
                         val dy = sample.y - downY

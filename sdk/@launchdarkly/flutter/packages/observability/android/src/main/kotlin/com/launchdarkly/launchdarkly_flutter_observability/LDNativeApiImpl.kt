@@ -91,7 +91,7 @@ internal class LDNativeApiImpl(
                 ObservabilityOptions.MetricsApi.disabled()
             },
             analytics = ObservabilityOptions.Analytics(
-                taps = observability.analytics?.taps ?: false,
+                taps = observability.analytics?.taps ?: true,
                 pageViews = observability.analytics?.pageViews ?: true,
                 trackEvents = observability.analytics?.trackEvents ?: true,
             ),

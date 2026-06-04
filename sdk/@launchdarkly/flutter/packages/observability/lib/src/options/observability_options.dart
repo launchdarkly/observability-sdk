@@ -86,13 +86,15 @@ class InstrumentationOptions {
 }
 
 /// Analytics telemetry emitted as OpenTelemetry spans. Mirrors Android
-/// `ObservabilityOptions.Analytics`, which is currently ahead of iOS.
+/// `ObservabilityOptions.Analytics`.
 ///
-/// Native-only. On iOS only [taps] is supported (mapped to
-/// `Instrumentation.userTaps`); [pageViews] and [trackEvents] are Android-only
-/// and are no-ops elsewhere.
+/// Native-only. [taps] maps to the native `analytics.taps` publish gate on both
+/// iOS and Android; [pageViews] and [trackEvents] are Android-only and are
+/// no-ops elsewhere.
 class AnalyticsOptions {
-  /// Whether to emit a `click` span for each tap. Defaults to `false`.
+  /// Whether to publish a `click` span for each detected tap. Tap detection is
+  /// always enabled on the native side (`instrumentation.userTaps`); this flag
+  /// only controls publishing the OpenTelemetry span. Defaults to `true`.
   final bool taps;
 
   /// Whether to start spans for screen/page view lifecycle events. Android-only.
@@ -104,7 +106,7 @@ class AnalyticsOptions {
   final bool trackEvents;
 
   const AnalyticsOptions({
-    this.taps = false,
+    this.taps = true,
     this.pageViews = true,
     this.trackEvents = true,
   });
