@@ -115,7 +115,7 @@ class ObservabilityService(
     /**
      * The single touch-capture hook. Owned by Observability and shared with Session Replay via
      * [ObservabilityContext]. Capture runs unconditionally (so Session Replay always works); only
-     * `click` span emission is gated by [ObservabilityOptions.ProductAnalytics.taps].
+     * `click` span emission is gated by [ObservabilityOptions.Analytics.taps].
      */
     val userInteractionManager = UserInteractionManager()
 
@@ -170,12 +170,12 @@ class ObservabilityService(
             contextFriendlyName = observabilityOptions.contextFriendlyName
         )
         // Route the afterTrack hook and identify context keys back into this service,
-        // so it remains the single emitter of launchdarkly.track spans.
+        // so it remains the single emitter of track spans.
         hookExporter.trackEmitter = this
 
         // Capture runs unconditionally so Session Replay can consume the shared touch stream.
         userInteractionManager.attachToApplication(application)
-        if (observabilityOptions.productAnalytics.taps) {
+        if (observabilityOptions.analytics.taps) {
             startTapInstrumentation()
         }
 
@@ -255,7 +255,7 @@ class ObservabilityService(
             config.suppressInstrumentation("crash")
         }
 
-        if(!observabilityOptions.productAnalytics.pageViews) {
+        if(!observabilityOptions.analytics.pageViews) {
             // Disables [io.opentelemetry.android.instrumentation.activity.ActivityLifecycleInstrumentation.java]
             config.suppressInstrumentation("activity")
         }
@@ -453,7 +453,7 @@ class ObservabilityService(
     }
 
     /**
-     * Single emitter for `launchdarkly.track` spans. Both the LD `afterTrack` hook and the
+     * Single emitter for `track` spans. Both the LD `afterTrack` hook and the
      * manual [com.launchdarkly.observability.sdk.LDObserve.track] path funnel through here.
      */
     override fun track(
@@ -462,7 +462,7 @@ class ObservabilityService(
         attributes: Attributes,
         contextKeyAttributes: Attributes?
     ) {
-        if (!observabilityOptions.productAnalytics.trackEvents) return
+        if (!observabilityOptions.analytics.trackEvents) return
         if (!observabilityOptions.tracesApi.includeSpans) return
 
         val attrBuilder = Attributes.builder()
@@ -545,7 +545,7 @@ class ObservabilityService(
         private const val TRACES_PATH = "/v1/traces"
         private const val INSTRUMENTATION_SCOPE_NAME = "com.launchdarkly.observability"
         const val ERROR_SPAN_NAME = "highlight.error"
-        const val TRACK_SPAN_NAME = "launchdarkly.track"
+        const val TRACK_SPAN_NAME = "track"
         const val SESSION_ID_ATTRIBUTE = "session.id"
 
         // Tap detection thresholds. Long-press timeout separates taps from long presses; the slop

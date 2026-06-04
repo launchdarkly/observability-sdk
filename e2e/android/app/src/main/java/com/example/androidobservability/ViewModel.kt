@@ -169,12 +169,12 @@ class ViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun trackViaLdClient() {
-        // Records a `launchdarkly.track` span automatically via the Observability afterTrack hook.
+        // Records a `track` span automatically via the Observability afterTrack hook.
         LDClient.get().track("track-via-ld-client")
     }
 
     fun trackViaLdObserve() {
-        // Records a `launchdarkly.track` span directly through the Observability API.
+        // Records a `track` span directly through the Observability API.
         LDObserve.track(
             "track-via-ld-observe",
             value = 7.0,
