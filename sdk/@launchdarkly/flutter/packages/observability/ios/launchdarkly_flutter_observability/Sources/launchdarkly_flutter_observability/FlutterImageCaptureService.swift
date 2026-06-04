@@ -40,7 +40,9 @@ final class FlutterImageCaptureService: ImageCaptureServicing {
         guard
             let payload = result as? [String: Any],
             let data = payload["bytes"] as? FlutterStandardTypedData,
-            let image = UIImage(data: data.data)
+            let width = (payload["width"] as? NSNumber)?.intValue,
+            let height = (payload["height"] as? NSNumber)?.intValue,
+            let image = Self.image(fromRGBA: data.data, width: width, height: height)
         else {
             return nil
         }
@@ -56,5 +58,36 @@ final class FlutterImageCaptureService: ImageCaptureServicing {
             orientation: orientation,
             areas: []
         )
+    }
+
+    /// Wraps Flutter's raw RGBA bytes (8 bits/channel, premultiplied alpha,
+    /// row-major) into a `UIImage` at scale 1, matching the device-pixel
+    /// resolution the Dart side rendered at. Avoids decoding a PNG on the wire.
+    private static func image(fromRGBA data: Data, width: Int, height: Int) -> UIImage? {
+        guard width > 0, height > 0 else { return nil }
+
+        let bytesPerRow = width * 4
+        guard data.count >= bytesPerRow * height else { return nil }
+
+        guard let provider = CGDataProvider(data: data as CFData) else { return nil }
+        let bitmapInfo = CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue)
+
+        guard let cgImage = CGImage(
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bitsPerPixel: 32,
+            bytesPerRow: bytesPerRow,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: bitmapInfo,
+            provider: provider,
+            decode: nil,
+            shouldInterpolate: false,
+            intent: .defaultIntent
+        ) else {
+            return nil
+        }
+
+        return UIImage(cgImage: cgImage, scale: 1.0, orientation: .up)
     }
 }

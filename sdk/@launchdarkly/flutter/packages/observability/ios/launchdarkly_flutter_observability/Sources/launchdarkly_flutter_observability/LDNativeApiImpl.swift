@@ -47,6 +47,66 @@ final class LDNativeApiImpl: NSObject, LDNativeApi {
         }
     }
 
+    // Re-creates each Dart span on the native tracer so the native pipeline
+    // stamps `session.id` (and applies sampling/batching). Mirrors MAUI's
+    // `TraceBuilderAdapter`.
+    func exportSpans(spans: [LDSpanData]) throws {
+        guard let tracer = ObjcLDObserveBridge.getObjcTracer() else { return }
+        for span in spans {
+            let builder = tracer.spanBuilder(
+                name: span.name ?? "",
+                startTime: span.startTimeSeconds ?? 0,
+                traceId: span.traceId ?? "",
+                spanId: span.spanId ?? "",
+                parentSpanId: span.parentSpanId ?? ""
+            )
+
+            builder.setAttributes(cleanAttributes(span.attributes) as NSDictionary)
+
+            for case let event? in span.events ?? [] {
+                let name = event.name ?? ""
+                let eventAttrs = cleanAttributes(event.attributes)
+                if eventAttrs.isEmpty {
+                    builder.addEvent(name: name)
+                } else {
+                    builder.addEvent(name: name, attributes: eventAttrs as NSDictionary)
+                }
+            }
+
+            if let status = span.statusCode, status != 0 {
+                builder.setStatus(code: Int(status))
+            }
+
+            builder.end(time: span.endTimeSeconds ?? span.startTimeSeconds ?? 0)
+        }
+    }
+
+    // Forwards the log to the native customer logger so it is emitted as a real
+    // `LogRecord` with `session.id` and trace/span correlation.
+    func recordLog(log: LDLogRecord) throws {
+        guard let logger = ObjcLDObserveBridge.getObjcLogger() else { return }
+        logger.recordLog(
+            message: log.message ?? "",
+            severity: Int(log.severityNumber ?? 9),
+            traceId: log.traceId,
+            spanId: log.spanId,
+            isInternal: false,
+            attributes: cleanAttributes(log.attributes)
+        )
+    }
+
+    /// Drops `nil` values so the native bridge receives a `[String: Any]`.
+    private func cleanAttributes(_ attributes: [String: Any?]?) -> [String: Any] {
+        guard let attributes = attributes else { return [:] }
+        var result = [String: Any](minimumCapacity: attributes.count)
+        for (key, value) in attributes {
+            if let value = value {
+                result[key] = value
+            }
+        }
+        return result
+    }
+
     private func makeConfig(
         mobileKey: String,
         observability: LDObservabilityOptions,

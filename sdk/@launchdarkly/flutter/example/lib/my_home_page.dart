@@ -63,8 +63,12 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   final http.Client _httpClient = http.Client();
-  final TextEditingController _customLogController = TextEditingController();
-  final TextEditingController _customSpanController = TextEditingController();
+  final TextEditingController _customLogController = TextEditingController(
+    text: 'Log Message',
+  );
+  final TextEditingController _customSpanController = TextEditingController(
+    text: 'Span Name',
+  );
   final TextEditingController _flagKeyController = TextEditingController(
     text: 'my-feature',
   );
@@ -128,7 +132,7 @@ class _MyHomePageState extends State<MyHomePage> {
     throw StateError('Failed to connect to bogus server.');
   }
 
-  // --- Customer API ---
+  // --- Error / Logs / Traces ---
 
   void _onTriggerError() {
     final inner = StateError('The error that caused the other error.');
@@ -391,15 +395,14 @@ class _MyHomePageState extends State<MyHomePage> {
               child: const Text('Trigger Crash'),
             ),
 
-            const _SubsectionHeader('Customer API'),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: ElevatedButton(
-                onPressed: _onTriggerError,
-                style: dangerStyle,
-                child: const Text('Trigger Error'),
-              ),
+            const _SubsectionHeader('Error'),
+            ElevatedButton(
+              onPressed: _onTriggerError,
+              style: dangerStyle,
+              child: const Text('Trigger Error'),
             ),
+
+            const _SubsectionHeader('Logs'),
             Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -432,7 +435,7 @@ class _MyHomePageState extends State<MyHomePage> {
               child: const Text('Send custom log'),
             ),
 
-            const SizedBox(height: 16),
+            const _SubsectionHeader('Traces'),
             Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -469,7 +472,6 @@ class _MyHomePageState extends State<MyHomePage> {
               onPressed: _onSendCustomSpan,
               child: const Text('Send custom span'),
             ),
-
             const SizedBox(height: 16),
             TextField(
               controller: _flagKeyController,

@@ -5,6 +5,7 @@ import android.app.Application
 import android.os.Handler
 import android.os.Looper
 import com.launchdarkly.observability.api.ObservabilityOptions
+import com.launchdarkly.observability.bridge.LDObserveBridge
 import com.launchdarkly.observability.context.LDObserveContext
 import com.launchdarkly.observability.replay.PrivacyProfile
 import com.launchdarkly.observability.replay.ReplayOptions
@@ -135,6 +136,56 @@ internal class LDNativeApiImpl(
         // register it so the view tree starts being captured — without this, the
         // session replay shows a black screen.
         activity?.let { LDReplay.registerActivity(it) }
+    }
+
+    // Re-creates each Dart span on the native tracer so the native pipeline
+    // stamps `session.id` (and applies sampling/batching). Mirrors MAUI's
+    // `TraceBuilderAdapter`.
+    override fun exportSpans(spans: List<LDSpanData>) {
+        val tracer = LDObserveBridge.getKotlinTracer() ?: return
+        for (span in spans) {
+            val builder = tracer.spanBuilder(
+                span.name ?: "",
+                span.startTimeSeconds ?: 0.0,
+                span.traceId ?: "",
+                span.spanId ?: "",
+                span.parentSpanId ?: "",
+            )
+
+            span.attributes?.let { builder.setAttributes(it) }
+
+            span.events?.forEach { event ->
+                if (event == null) return@forEach
+                val name = event.name ?: ""
+                val attrs = event.attributes
+                if (attrs.isNullOrEmpty()) {
+                    builder.addEvent(name)
+                } else {
+                    builder.addEvent(name, attrs)
+                }
+            }
+
+            val status = span.statusCode?.toInt() ?: 0
+            if (status != 0) {
+                builder.setStatus(status)
+            }
+
+            builder.end(span.endTimeSeconds ?: span.startTimeSeconds ?: 0.0)
+        }
+    }
+
+    // Forwards the log to the native customer logger so it is emitted as a real
+    // `LogRecord` with `session.id` and trace/span correlation.
+    override fun recordLog(log: LDLogRecord) {
+        val logger = LDObserveBridge.getKotlinLogger() ?: return
+        logger.recordLog(
+            log.message ?: "",
+            log.severityNumber?.toInt() ?: 9,
+            log.traceId,
+            log.spanId,
+            false,
+            log.attributes,
+        )
     }
 
     /**

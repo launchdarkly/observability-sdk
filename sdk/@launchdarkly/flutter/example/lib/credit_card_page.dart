@@ -15,11 +15,19 @@ class CreditCardPage extends StatefulWidget {
 
 enum _CardBrand { unknown, visa, mastercard, amex, discover }
 
-class _CreditCardPageState extends State<CreditCardPage> {
+class _CreditCardPageState extends State<CreditCardPage>
+    with SingleTickerProviderStateMixin {
   final _nameController = TextEditingController();
   final _numberController = TextEditingController();
   final _expiryController = TextEditingController();
   final _cvcController = TextEditingController();
+
+  // Continuous 360° rotation of the form, mirroring the native samples'
+  // Session Replay masking demo (iOS SwiftUI's `rotationEffect` repeating
+  // forever and Android Compose's `rememberInfiniteTransition`). The constant
+  // motion makes it obvious in a recording that masked regions track the
+  // moving widgets.
+  late final AnimationController _rotationController;
 
   String _brandText = 'Card';
   String _maskedNumberText = '';
@@ -43,6 +51,12 @@ class _CreditCardPageState extends State<CreditCardPage> {
     _expiryController.addListener(_onExpiryChanged);
     _cvcController.addListener(_onCvcChanged);
 
+    // 4s linear loop matches iOS (`.linear(duration: 4).repeatForever`).
+    _rotationController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 4),
+    )..repeat();
+
     // Masking demo. The screen-wide `PrivacyOptions(maskTextInputs: true)` from
     // `main.dart` masks every text field on this page by default. On top of
     // that:
@@ -54,6 +68,7 @@ class _CreditCardPageState extends State<CreditCardPage> {
 
   @override
   void dispose() {
+    _rotationController.dispose();
     _nameController.dispose();
     _numberController.dispose();
     _expiryController.dispose();
@@ -150,9 +165,7 @@ class _CreditCardPageState extends State<CreditCardPage> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Saved'),
-        content: Text(
-          '${_brandToDisplayName(result.brand)} $masked saved.',
-        ),
+        content: Text('${_brandToDisplayName(result.brand)} $masked saved.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
@@ -204,11 +217,7 @@ class _CreditCardPageState extends State<CreditCardPage> {
       _cvcError = cvcErr;
     });
 
-    return _ValidationResult(
-      isValid: isValid,
-      brand: brand,
-      digits: digits,
-    );
+    return _ValidationResult(isValid: isValid, brand: brand, digits: digits);
   }
 
   void _adjustCvcForBrand(_CardBrand brand) {
@@ -374,114 +383,114 @@ class _CreditCardPageState extends State<CreditCardPage> {
       appBar: AppBar(title: const Text('Credit Card')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text(
-              'Enter your card details',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 12),
+        child: RotationTransition(
+          turns: _rotationController,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                'Enter your card details',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 12),
 
-            Row(
-              children: [
-                // Mirrors the MAUI sample's `BrandLabel.LDMask()`: explicitly
-                // redact this label (global label masking is off, so without
-                // LDMask it would be visible in the recording).
-                Expanded(child: LDMask(child: Text(_brandText))),
-                Text(
-                  _maskedNumberText,
-                  style: TextStyle(color: hintColor),
+              Row(
+                children: [
+                  // Mirrors the MAUI sample's `BrandLabel.LDMask()`: explicitly
+                  // redact this label (global label masking is off, so without
+                  // LDMask it would be visible in the recording).
+                  Expanded(child: LDMask(child: Text(_brandText))),
+                  Text(_maskedNumberText, style: TextStyle(color: hintColor)),
+                ],
+              ),
+              const SizedBox(height: 12),
+
+              const Text('Cardholder name'),
+              const SizedBox(height: 4),
+              // LDUnmask reveals this field in session replay, overriding the
+              // screen-wide maskTextInputs policy. (Demo only — choose carefully
+              // which fields are safe to reveal.)
+              LDUnmask(
+                child: TextField(
+                  controller: _nameController,
+                  decoration: const InputDecoration(
+                    hintText: 'Full name as on card',
+                    border: OutlineInputBorder(),
+                  ),
+                  textInputAction: TextInputAction.next,
+                  autofillHints: const [AutofillHints.creditCardName],
                 ),
-              ],
-            ),
-            const SizedBox(height: 12),
+              ),
+              if (_nameError != null) _ErrorText(_nameError!),
+              const SizedBox(height: 12),
 
-            const Text('Cardholder name'),
-            const SizedBox(height: 4),
-            // LDUnmask reveals this field in session replay, overriding the
-            // screen-wide maskTextInputs policy. (Demo only — choose carefully
-            // which fields are safe to reveal.)
-            LDUnmask(
-              child: TextField(
-                controller: _nameController,
+              const Text('Card number'),
+              const SizedBox(height: 4),
+              TextField(
+                controller: _numberController,
+                keyboardType: TextInputType.number,
                 decoration: const InputDecoration(
-                  hintText: 'Full name as on card',
+                  hintText: '1234 5678 9012 3456',
                   border: OutlineInputBorder(),
                 ),
                 textInputAction: TextInputAction.next,
-                autofillHints: const [AutofillHints.creditCardName],
+                autofillHints: const [AutofillHints.creditCardNumber],
               ),
-            ),
-            if (_nameError != null) _ErrorText(_nameError!),
-            const SizedBox(height: 12),
+              if (_numberError != null) _ErrorText(_numberError!),
+              const SizedBox(height: 12),
 
-            const Text('Card number'),
-            const SizedBox(height: 4),
-            TextField(
-              controller: _numberController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                hintText: '1234 5678 9012 3456',
-                border: OutlineInputBorder(),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const Text('Expiry (MM/YY)'),
+                        const SizedBox(height: 4),
+                        TextField(
+                          controller: _expiryController,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            hintText: 'MM/YY',
+                            border: OutlineInputBorder(),
+                          ),
+                          textInputAction: TextInputAction.next,
+                        ),
+                        if (_expiryError != null) _ErrorText(_expiryError!),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const Text('CVC'),
+                        const SizedBox(height: 4),
+                        TextField(
+                          controller: _cvcController,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            hintText: '123',
+                            border: OutlineInputBorder(),
+                          ),
+                          textInputAction: TextInputAction.done,
+                        ),
+                        if (_cvcError != null) _ErrorText(_cvcError!),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              textInputAction: TextInputAction.next,
-              autofillHints: const [AutofillHints.creditCardNumber],
-            ),
-            if (_numberError != null) _ErrorText(_numberError!),
-            const SizedBox(height: 12),
+              const SizedBox(height: 16),
 
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const Text('Expiry (MM/YY)'),
-                      const SizedBox(height: 4),
-                      TextField(
-                        controller: _expiryController,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          hintText: 'MM/YY',
-                          border: OutlineInputBorder(),
-                        ),
-                        textInputAction: TextInputAction.next,
-                      ),
-                      if (_expiryError != null) _ErrorText(_expiryError!),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const Text('CVC'),
-                      const SizedBox(height: 4),
-                      TextField(
-                        controller: _cvcController,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          hintText: '123',
-                          border: OutlineInputBorder(),
-                        ),
-                        textInputAction: TextInputAction.done,
-                      ),
-                      if (_cvcError != null) _ErrorText(_cvcError!),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            ElevatedButton(
-              onPressed: _onSavePressed,
-              child: const Text('Save card'),
-            ),
-          ],
+              ElevatedButton(
+                onPressed: _onSavePressed,
+                child: const Text('Save card'),
+              ),
+            ],
+          ),
         ),
       ),
     );

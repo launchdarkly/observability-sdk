@@ -1,9 +1,10 @@
 package com.launchdarkly.launchdarkly_flutter_observability
 
-import android.graphics.BitmapFactory
+import android.graphics.Bitmap
 import com.launchdarkly.observability.replay.capture.ImageCaptureService
 import com.launchdarkly.observability.replay.capture.ImageCaptureServicing
 import io.flutter.plugin.common.MethodChannel
+import java.nio.ByteBuffer
 import java.util.logging.Logger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -22,7 +23,9 @@ internal class FlutterImageCaptureService(
 
         return withContext(Dispatchers.Default) {
             val bytes = payload["bytes"] as? ByteArray ?: return@withContext null
-            val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: return@withContext null
+            val width = (payload["width"] as? Number)?.toInt() ?: return@withContext null
+            val height = (payload["height"] as? Number)?.toInt() ?: return@withContext null
+            val bitmap = bitmapFromRGBA(bytes, width, height) ?: return@withContext null
             val timestamp = (payload["timestamp"] as? Number)?.toLong() ?: System.currentTimeMillis()
             val orientation = (payload["orientation"] as? Number)?.toInt() ?: 0
 
@@ -32,6 +35,20 @@ internal class FlutterImageCaptureService(
                 orientation = orientation,
             )
         }
+    }
+
+    /**
+     * Wraps Flutter's raw RGBA bytes (8 bits/channel, premultiplied alpha,
+     * row-major) into an [ARGB_8888][Bitmap.Config.ARGB_8888] bitmap, whose
+     * in-memory byte layout is also RGBA. Avoids decoding a PNG on the wire.
+     */
+    private fun bitmapFromRGBA(bytes: ByteArray, width: Int, height: Int): Bitmap? {
+        if (width <= 0 || height <= 0 || bytes.size < width * height * 4) {
+            return null
+        }
+        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        bitmap.copyPixelsFromBuffer(ByteBuffer.wrap(bytes))
+        return bitmap
     }
 
     private suspend fun requestCapture(): Map<*, *>? =
