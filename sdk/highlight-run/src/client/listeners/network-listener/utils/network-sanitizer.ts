@@ -78,6 +78,19 @@ const SENSITIVE_QUERY_PARAMS = [
 ]
 
 /**
+ * Sensitive fragment parameter keys commonly used in OAuth implicit/hybrid flows
+ * and SPA callback patterns that may contain tokens.
+ */
+const SENSITIVE_FRAGMENT_PARAMS = [
+	'access_token',
+	'id_token',
+	'token',
+	'code',
+	'refresh_token',
+	'session_state',
+]
+
+/**
  * Safely parses a URL, handling both absolute and relative URLs.
  * For relative URLs, resolves against globalThis.location.origin (browser/worker)
  * or a placeholder base (non-browser environments).
@@ -94,10 +107,35 @@ export const safeParseUrl = (url: string): URL => {
 }
 
 /**
+ * Sanitizes a URL fragment by stripping it if it contains sensitive parameters
+ * (e.g. OAuth tokens), or preserving it if it's a harmless route/anchor.
+ */
+const sanitizeFragment = (hash: string): string => {
+	if (!hash || hash === '#') return ''
+
+	// Remove the leading '#' for parsing
+	const fragment = hash.slice(1)
+
+	// If the fragment doesn't contain '=', it's likely a route or anchor (e.g. #/dashboard, #section)
+	if (!fragment.includes('=')) return hash
+
+	// Parse the fragment as key=value pairs and check for sensitive params
+	const params = new URLSearchParams(fragment)
+	for (const key of params.keys()) {
+		if (SENSITIVE_FRAGMENT_PARAMS.includes(key.toLowerCase())) {
+			return ''
+		}
+	}
+
+	return hash
+}
+
+/**
  * Sanitizes a URL according to OpenTelemetry semantic conventions.
  * - Redacts credentials (username:password) in the URL
  * - Redacts sensitive query parameter values while preserving keys
- * - Strips URL fragments (hash) to prevent leaking tokens from OAuth implicit flows
+ * - Strips URL fragments containing sensitive tokens (e.g. OAuth implicit flow)
+ * - Preserves harmless fragments like route hashes (#/dashboard) and anchors (#section)
  * - Handles absolute, relative, and protocol-relative URLs
  *
  * @param url - The URL string to sanitize
@@ -137,12 +175,13 @@ export const sanitizeUrl = (url: string): string => {
 			}
 		})
 
-		// Strip the fragment (hash) to prevent leaking tokens from OAuth implicit flows
-		urlObject.hash = ''
+		// Sanitize the fragment — strip if it contains sensitive tokens, preserve otherwise
+		const sanitizedHash = sanitizeFragment(urlObject.hash)
+		urlObject.hash = sanitizedHash
 
-		// If the URL is relative (but not protocol-relative), return only the pathname + search
+		// If the URL is relative (but not protocol-relative), return only the pathname + search + hash
 		if (!url.includes('://') && !url.startsWith('//')) {
-			return urlObject.pathname + urlObject.search
+			return urlObject.pathname + urlObject.search + sanitizedHash
 		}
 
 		// For protocol-relative URLs, preserve the //host format
@@ -152,7 +191,11 @@ export const sanitizeUrl = (url: string): string => {
 			if (urlObject.username || urlObject.password) {
 				result += urlObject.username + ':' + urlObject.password + '@'
 			}
-			result += urlObject.host + urlObject.pathname + urlObject.search
+			result +=
+				urlObject.host +
+				urlObject.pathname +
+				urlObject.search +
+				sanitizedHash
 			return result
 		}
 
