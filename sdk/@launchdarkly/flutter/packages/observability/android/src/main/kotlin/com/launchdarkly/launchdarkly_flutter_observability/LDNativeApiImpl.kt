@@ -80,7 +80,7 @@ internal class LDNativeApiImpl(
             debug = false,
             otlpEndpoint = observability.otlpEndpoint ?: DEFAULT_OTLP_ENDPOINT,
             backendUrl = observability.backendUrl ?: DEFAULT_BACKEND_URL,
-            logsApiLevel = mapLogLevel(observability.logsApiLevel),
+            logsApiLevel = mapLogLevel(observability.logsApiLevel?.toInt()),
             tracesApi = ObservabilityOptions.TracesApi(
                 includeErrors = observability.traces?.includeErrors ?: true,
                 includeSpans = observability.traces?.includeSpans ?: true,
@@ -98,7 +98,6 @@ internal class LDNativeApiImpl(
             instrumentations = ObservabilityOptions.Instrumentations(
                 crashReporting = observability.instrumentation?.crashReporting ?: true,
                 launchTime = observability.instrumentation?.launchTimes ?: true,
-                activityLifecycle = true,
             ),
         )
 
