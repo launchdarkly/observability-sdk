@@ -50,7 +50,8 @@ export const DEFAULT_URL_BLOCKLIST = [
 
 /**
  * Sensitive query parameter keys that should be redacted according to
- * OpenTelemetry semantic conventions for HTTP spans.
+ * OpenTelemetry semantic conventions for HTTP spans, plus common OAuth
+ * parameters that may appear in authorization code or token exchange flows.
  * @see https://opentelemetry.io/docs/specs/semconv/http/http-spans/
  */
 const SENSITIVE_QUERY_PARAMS = [
@@ -58,6 +59,12 @@ const SENSITIVE_QUERY_PARAMS = [
 	'signature',
 	'sig',
 	'x-goog-signature',
+	'access_token',
+	'id_token',
+	'token',
+	'code',
+	'refresh_token',
+	'session_state',
 ]
 
 /**

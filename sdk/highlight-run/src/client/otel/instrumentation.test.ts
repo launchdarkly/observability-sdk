@@ -1190,6 +1190,33 @@ describe('Network Instrumentation Custom Attributes', () => {
 				const result = sanitizeUrl(url)
 				expect(result).toBe('https://example.com/path?foo=bar&baz=qux')
 			})
+
+			it('should redact OAuth access_token in query params', () => {
+				const url =
+					'https://example.com/callback?access_token=eyJhbGciOiJS&token_type=bearer'
+				const result = sanitizeUrl(url)
+				expect(result).toBe(
+					'https://example.com/callback?access_token=REDACTED&token_type=bearer',
+				)
+			})
+
+			it('should redact OAuth code in query params (authorization code flow)', () => {
+				const url =
+					'https://example.com/callback?code=auth_code_123&state=xyz'
+				const result = sanitizeUrl(url)
+				expect(result).toBe(
+					'https://example.com/callback?code=REDACTED&state=xyz',
+				)
+			})
+
+			it('should redact multiple OAuth params in query string', () => {
+				const url =
+					'https://example.com/token?refresh_token=rt_abc&id_token=eyJ&session_state=sess123'
+				const result = sanitizeUrl(url)
+				expect(result).toBe(
+					'https://example.com/token?refresh_token=REDACTED&id_token=REDACTED&session_state=REDACTED',
+				)
+			})
 		})
 
 		describe('combined scenarios', () => {
