@@ -125,8 +125,8 @@ public class ObservabilityBridge(
                 application = app,
                 mobileKey = mobileKey,
                 ldContext = ldContext,
-                options = nativeObservabilityOptions,
-                replayOptions = nativeReplayOptions
+                observability = nativeObservabilityOptions,
+                replay = nativeReplayOptions
             )
         } catch (t: Throwable) {
             printException("LD:ObservabilityBridge LDObserve.init failed", t)

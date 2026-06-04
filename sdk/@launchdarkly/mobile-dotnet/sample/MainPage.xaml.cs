@@ -1,6 +1,7 @@
 using LaunchDarkly.Observability;
 using LaunchDarkly.Sdk;
 using LaunchDarkly.Sdk.Client;
+using LaunchDarkly.SessionReplay;
 using OpenTelemetry.Trace;
 
 namespace MauiSample9;
@@ -46,9 +47,7 @@ public partial class MainPage : ContentPage
 
 	private void OnSessionReplayToggled(object? sender, ToggledEventArgs e)
 	{
-		var ldNative = MauiProgram.LdNative;
-		if (ldNative is not null)
-			ldNative.Replay.IsEnabled = e.Value;
+		LDReplay.IsEnabled = e.Value;
 
 		Console.WriteLine($"Session Replay toggled: {e.Value}");
 	}

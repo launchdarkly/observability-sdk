@@ -10,7 +10,7 @@ using LDObserveAndroid;
 
 namespace LaunchDarkly.Observability
 {
-    internal class SessionReplayService : INativePlugin
+    internal class SessionReplayService
     {
         internal SessionReplayOptions Options { get; }
         internal ILdClient? Client { get; set; }
