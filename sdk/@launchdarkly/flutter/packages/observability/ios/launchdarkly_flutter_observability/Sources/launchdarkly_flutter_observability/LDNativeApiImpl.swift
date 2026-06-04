@@ -59,35 +59,61 @@ final class LDNativeApiImpl: NSObject, LDNativeApi {
         )
         config.startOnline = false
 
-        let crashReportingEnabled = observability.instrumentation?.crashReporting ?? true
+        let crashReportingEnabled: Bool = observability.instrumentation?.crashReporting ?? true
         // iOS currently only supports taps from Analytics; pageViews and
         // trackEvents are Android-only and ignored here.
-        let tapsEnabled = observability.analytics?.taps ?? false
-        let observabilityPlugin = Observability(options: .init(
-            serviceName: observability.serviceName ?? Defaults.serviceName,
-            serviceVersion: observability.serviceVersion ?? Defaults.serviceVersion,
-            otlpEndpoint: observability.otlpEndpoint ?? Defaults.otlpEndpoint,
-            backendUrl: observability.backendUrl ?? Defaults.backendUrl,
-            resourceAttributes: buildResourceAttributes(observability.attributes),
-            customHeaders: observability.customHeaders ?? [:],
-            sessionBackgroundTimeout: observability.sessionBackgroundTimeoutMillis
-                .map { TimeInterval($0) / 1000.0 } ?? 15 * 60,
-            logsApiLevel: mapLogLevel(observability.logsApiLevel),
-            tracesApi: .init(
-                includeErrors: observability.traces?.includeErrors ?? true,
-                includeSpans: observability.traces?.includeSpans ?? true
-            ),
-            metricsApi: (observability.metricsEnabled ?? true) ? .enabled : .disabled,
-            crashReporting: .init(source: crashReportingEnabled ? .KSCrash : .none),
-            instrumentation: .init(
-                urlSession: .disabled,
-                userTaps: tapsEnabled ? .enabled : .disabled,
-                memory: .disabled,
-                memoryWarnings: .disabled,
-                cpu: .disabled,
-                launchTimes: (observability.instrumentation?.launchTimes ?? true) ? .enabled : .disabled
-            )
-        ))
+        let tapsEnabled: Bool = observability.analytics?.taps ?? false
+        let launchTimesEnabled: Bool = observability.instrumentation?.launchTimes ?? true
+        let metricsEnabled: Bool = observability.metricsEnabled ?? true
+
+        let serviceName: String = observability.serviceName ?? Defaults.serviceName
+        let serviceVersion: String = observability.serviceVersion ?? Defaults.serviceVersion
+        let otlpEndpoint: String = observability.otlpEndpoint ?? Defaults.otlpEndpoint
+        let backendUrl: String = observability.backendUrl ?? Defaults.backendUrl
+        let resourceAttributes: [String: AttributeValue] =
+            buildResourceAttributes(observability.attributes)
+        let customHeaders: [String: String] = observability.customHeaders ?? [:]
+        let sessionBackgroundTimeout: TimeInterval = observability.sessionBackgroundTimeoutMillis
+            .map { TimeInterval($0) / 1000.0 } ?? 15 * 60
+        let logsApiLevel: ObservabilityOptions.LogLevel = mapLogLevel(observability.logsApiLevel)
+
+        let tracesApi = ObservabilityOptions.AppTracing(
+            includeErrors: observability.traces?.includeErrors ?? true,
+            includeSpans: observability.traces?.includeSpans ?? true
+        )
+        let metricsApi: ObservabilityOptions.AppMetrics = metricsEnabled ? .enabled : .disabled
+        let crashReporting = ObservabilityOptions.CrashReporting(
+            source: crashReportingEnabled ? .KSCrash : .none
+        )
+        let instrumentation = ObservabilityOptions.Instrumentation(
+            urlSession: .disabled,
+            memory: .disabled,
+            memoryWarnings: .disabled,
+            cpu: .disabled,
+            launchTimes: launchTimesEnabled ? .enabled : .disabled
+        )
+        // iOS exposes taps via Analytics; track events are Android-only.
+        let analytics = ObservabilityOptions.Analytics(
+            taps: tapsEnabled ? .enabled : .disabled,
+            trackEvents: .disabled
+        )
+
+        let observabilityOptions = ObservabilityOptions(
+            serviceName: serviceName,
+            serviceVersion: serviceVersion,
+            otlpEndpoint: otlpEndpoint,
+            backendUrl: backendUrl,
+            resourceAttributes: resourceAttributes,
+            customHeaders: customHeaders,
+            sessionBackgroundTimeout: sessionBackgroundTimeout,
+            logsApiLevel: logsApiLevel,
+            tracesApi: tracesApi,
+            metricsApi: metricsApi,
+            crashReporting: crashReporting,
+            instrumentation: instrumentation,
+            analytics: analytics
+        )
+        let observabilityPlugin = Observability(options: observabilityOptions)
         observabilityPlugin.distroAttributes = [
             "telemetry.distro.name": "observability-flutter-ios",
             "telemetry.distro.version": observabilityVersion,
