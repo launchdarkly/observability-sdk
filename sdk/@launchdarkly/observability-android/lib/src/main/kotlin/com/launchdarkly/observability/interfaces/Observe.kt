@@ -1,5 +1,6 @@
 package com.launchdarkly.observability.interfaces
 
+import com.launchdarkly.sdk.LDValue
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Severity
 import io.opentelemetry.api.trace.Span
@@ -79,9 +80,14 @@ interface Observe : MetricsApi, LogsApi, TracesApi {
 
     /**
      * Record a custom track event as a `track` span.
-     * @param name The event key/name.
-     * @param value An optional metric value associated with the event.
-     * @param attributes Additional attributes to record with the event.
+     *
+     * Mirrors `LDClient.track(key, data, metricValue)` so the same call shape works
+     * whether the event is recorded through the LaunchDarkly client (via the
+     * `afterTrack` hook) or directly through this API.
+     * @param key The key for the event.
+     * @param data The data associated with the event, if any.
+     * @param metricValue A numeric value used by LaunchDarkly experimentation for
+     *   numeric custom metrics, if any.
      */
-    fun track(name: String, value: Double? = null, attributes: Attributes = Attributes.empty())
+    fun track(key: String, data: LDValue? = null, metricValue: Double? = null)
 }

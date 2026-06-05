@@ -414,6 +414,37 @@ class RRWebEventGenerator(
     }
 
     /**
+     * Generates a "Track" custom event. Mirrors the web SDK, where the payload is a JSON string
+     * of `{ event, value, data }` (`value` omitted when null).
+     */
+    fun generateTrackEvent(track: TrackItemPayload): Event? {
+        val payloadJSONString = try {
+            buildJsonObject {
+                put("event", track.name)
+                track.metricValue?.let { put("value", it) }
+                putJsonObject("data") {
+                    track.attributes.forEach { (k, v) -> put(k, v) }
+                }
+            }.toString()
+        } catch (_: Exception) {
+            return null
+        }
+
+        val customData = buildJsonObject {
+            put("tag", JsonPrimitive(RRWebCustomDataTag.TRACK.wireValue))
+            // Payload must be a JSON string per rrweb Custom event contract used by web / Swift.
+            put("payload", JsonPrimitive(payloadJSONString))
+        }
+
+        return Event(
+            type = EventType.CUSTOM,
+            timestamp = track.timestamp,
+            sid = nextSid(),
+            data = EventDataUnion.CustomEventDataWrapper(customData)
+        )
+    }
+
+    /**
      * Generates a "Reload" custom event and a sequence of "wake-up" interaction events.
      * Used by [SessionReplayExporter] to re-trigger player playback after session resumption.
      */

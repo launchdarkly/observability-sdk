@@ -2,6 +2,7 @@ package com.launchdarkly.observability.sdk
 
 import android.app.Activity
 import com.launchdarkly.observability.replay.plugin.SessionReplayHookProxy
+import io.opentelemetry.api.common.Attributes
 
 /**
  * LDReplay is the singleton entry point for controlling Session Replay capture.
@@ -122,5 +123,6 @@ internal interface SessionReplayServicing {
 
     fun flush()
     fun afterIdentify(contextKeys: Map<String, String>, canonicalKey: String, completed: Boolean)
+    fun afterTrack(name: String, metricValue: Double?, attributes: Attributes)
     fun registerActivity(activity: Activity) {}
 }
