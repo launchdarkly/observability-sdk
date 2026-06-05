@@ -57,6 +57,35 @@ class ScreenStackTest {
     }
 
     @Test
+    fun `same name with distinct ids are separate screens`() {
+        val stack = ScreenStack()
+        assertNull(previousOf(stack.record("Detail", id = "item-1")))
+        // Same display name but a different id is a real navigation, not a re-appearance.
+        assertEquals("Detail", previousOf(stack.record("Detail", id = "item-2")))
+    }
+
+    @Test
+    fun `re-appearance keyed by id is unchanged`() {
+        val stack = ScreenStack()
+        stack.record("Home", id = "home")
+        assertEquals("Home", previousOf(stack.record("Detail", id = "item-1")))
+        // The same id re-appears (e.g. activity resumed again); no navigation occurred.
+        assertEquals(ScreenChange.Unchanged, stack.record("Detail", id = "item-1"))
+    }
+
+    @Test
+    fun `pop-back matches by id`() {
+        val stack = ScreenStack()
+        stack.record("Detail", id = "item-1")
+        stack.record("Detail", id = "item-2")
+        stack.record("Detail", id = "item-3")
+        // Returning to item-1 trims everything above it; previous is null (item-1 is the root).
+        assertNull(previousOf(stack.record("Detail", id = "item-1")))
+        // Going forward again reports item-1's name as previous.
+        assertEquals("Detail", previousOf(stack.record("Detail", id = "item-4")))
+    }
+
+    @Test
     fun `reset clears history`() {
         val stack = ScreenStack()
         stack.record("Home")

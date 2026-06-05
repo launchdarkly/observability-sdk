@@ -569,8 +569,10 @@ class ObservabilityService(
      */
     fun emitScreenView(screen: ScreenView) {
         // Resolve previous_screen against the shared stack before recording this one. A
-        // re-appearance of the current screen is not a navigation, so emit nothing.
-        val change = screenStack.record(screen.name)
+        // re-appearance of the current screen is not a navigation, so emit nothing. Identity is
+        // keyed on screenId (when present) so distinct screens sharing a display name aren't
+        // collapsed into a re-appearance of one another.
+        val change = screenStack.record(screen.name, screen.screenId)
         if (change !is ScreenChange.Changed) return
         val previous = change.previous
 
