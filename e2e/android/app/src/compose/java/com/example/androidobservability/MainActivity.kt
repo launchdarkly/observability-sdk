@@ -132,7 +132,11 @@ private fun MainScreen(viewModel: ViewModel, innerPadding: PaddingValues) {
 
         MetricButtons(viewModel = viewModel)
 
-        CustomerApiButtons(viewModel = viewModel)
+        ErrorButtons(viewModel = viewModel)
+
+        LogsButtons(viewModel = viewModel)
+
+        TracesButtons(viewModel = viewModel)
     }
 }
 
@@ -408,13 +412,9 @@ private fun IdentifyButtons(viewModel: ViewModel) {
 }
 
 @Composable
-private fun CustomerApiButtons(viewModel: ViewModel) {
-    var customLogText by remember { mutableStateOf("") }
-    var customSpanText by remember { mutableStateOf("") }
-    var flagKey by remember { mutableStateOf("my-feature") }
-
+private fun ErrorButtons(viewModel: ViewModel) {
     Text(
-        text = "Customer API",
+        text = "Error",
         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
         modifier = Modifier.padding(bottom = 8.dp, top = 8.dp)
     )
@@ -430,6 +430,18 @@ private fun CustomerApiButtons(viewModel: ViewModel) {
     ) {
         Text("Trigger Error")
     }
+}
+
+@Composable
+private fun LogsButtons(viewModel: ViewModel) {
+    var customLogText by remember { mutableStateOf("Log Message") }
+
+    Text(
+        text = "Logs",
+        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+        modifier = Modifier.padding(bottom = 8.dp, top = 8.dp)
+    )
+
     Row(
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
@@ -463,8 +475,18 @@ private fun CustomerApiButtons(viewModel: ViewModel) {
     ) {
         Text("Send custom log")
     }
+}
 
-    Spacer(modifier = Modifier.height(16.dp))
+@Composable
+private fun TracesButtons(viewModel: ViewModel) {
+    var customSpanText by remember { mutableStateOf("Span Name") }
+    var flagKey by remember { mutableStateOf("my-feature") }
+
+    Text(
+        text = "Traces",
+        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+        modifier = Modifier.padding(bottom = 8.dp, top = 8.dp)
+    )
 
     Button(
         onClick = {
@@ -504,5 +526,4 @@ private fun CustomerApiButtons(viewModel: ViewModel) {
     ) {
         Text("Evaluate boolean flag")
     }
-
 }

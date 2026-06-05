@@ -131,9 +131,10 @@ Additional `ObservabilityOptions` settings:
 - `instrumentations`: Enables/disables specific automatic instrumentations:
   - `crashReporting` (default `true`): report uncaught exceptions as errors.
   - `launchTime` (default `false`): record application startup time as metrics.
+  - `userTaps` (default `true`): run the tap-detection machinery. Disabling `userTaps` stops tap detection entirely, so no `click` spans are emitted regardless of `analytics.taps`.
   - `screens` (default `true`): automatically detect screen changes from Android `Activity` lifecycle callbacks. This drives the `screen_view` span (gated separately by `analytics.screenViews`) and Session Replay `Navigate` events.
 - `analytics`: Enables/disables analytics telemetry, emitted as OpenTelemetry spans:
-  - `taps` (default `false`): emit a `click` span for each tap (with `event.type`/`event.x`/`event.y`).
+  - `taps` (default `true`): publish a `click` span for each detected tap. Tap detection is governed by `instrumentations.userTaps`; this flag only controls publishing the span.
   - `pageViews` (default `true`): emit spans for Android Activity lifecycle events (screen/page views).
   - `trackEvents` (default `true`): emit a `track` span when a custom event is tracked, either automatically via the LaunchDarkly `afterTrack` hook (`LDClient.track(...)`) or manually via `LDObserve.track(...)`.
   - `screenViews` (default `true`): emit a `screen_view` span when a screen is shown. This only gates the span; screen *detection* (and Session Replay `Navigate` events) is controlled by `instrumentations.screens`.

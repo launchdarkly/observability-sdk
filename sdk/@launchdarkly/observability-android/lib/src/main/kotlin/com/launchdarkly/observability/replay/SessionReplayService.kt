@@ -218,6 +218,14 @@ class SessionReplayService(
         captureJob = instrumentationScope.launch {
             logger.debug("Session replay capture running")
             while (isActive) {
+                // Backpressure: when the event queue is saturated a captured frame
+                // would just be dropped at send time, so skip the expensive capture
+                // work entirely and re-check after the normal cadence. Mirrors iOS's
+                // `isEventQueueAvailable` gate on `queueSnapshot`.
+                if (eventQueue.isFull()) {
+                    delay(captureManager?.captureDelayMillis ?: Long.MAX_VALUE)
+                    continue
+                }
                 try {
                     captureManager?.captureNow()
                 } catch (e: CancellationException) {
@@ -269,12 +277,23 @@ class SessionReplayService(
         if (processLifecycleObserver != null) return
 
         val observer = object : DefaultLifecycleObserver {
-            override fun onStart(owner: LifecycleOwner) {
+            // Pause/resume on the process *resumed* (active) state rather than the
+            // *started* (visible) state, so capture stops as soon as the app goes
+            // inactive — a transient interruption such as the notification shade,
+            // the app switcher, or an incoming call — matching iOS's
+            // willResignActive/didBecomeActive gating. ProcessLifecycleOwner
+            // debounces ON_PAUSE/ON_RESUME at the process level, so brief in-app
+            // activity transitions and configuration changes don't flicker capture.
+            override fun onResume(owner: LifecycleOwner) {
                 runCapture()
             }
 
-            override fun onStop(owner: LifecycleOwner) {
+            override fun onPause(owner: LifecycleOwner) {
                 pauseCapture()
+            }
+
+            // Flush buffered events once fully backgrounded (no longer visible).
+            override fun onStop(owner: LifecycleOwner) {
                 batchWorker.flush()
             }
         }
@@ -283,8 +302,8 @@ class SessionReplayService(
         val lifecycle = ProcessLifecycleOwner.get().lifecycle
         lifecycle.addObserver(observer)
 
-        // Ensure we don't miss the initial foreground state when installing late.
-        if (lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+        // Ensure we don't miss the initial active state when installing late.
+        if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
             runCapture()
         }
     }

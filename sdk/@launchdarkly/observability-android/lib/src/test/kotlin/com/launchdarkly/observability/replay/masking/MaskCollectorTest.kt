@@ -38,6 +38,9 @@ class MaskCollectorTest {
      */
     private fun mockLeaf(ldMaskTag: Boolean? = null): View = mockk<View>(relaxed = true).also {
         every { it.isShown } returns true
+        // Real Views default to alpha 1f; relaxed mocks return 0f, which the
+        // collector's fully-transparent prune would otherwise treat as invisible.
+        every { it.alpha } returns 1f
         every { it.getTag(any()) } returns ldMaskTag
         every { it.width } returns 10
         every { it.height } returns 10
@@ -54,6 +57,7 @@ class MaskCollectorTest {
     private fun mockGroup(vararg children: View, ldMaskTag: Boolean? = null): ViewGroup =
         mockk<ViewGroup>(relaxed = true).also {
             every { it.isShown } returns true
+            every { it.alpha } returns 1f
             every { it.getTag(any()) } returns ldMaskTag
             every { it.width } returns 10
             every { it.height } returns 10
@@ -122,6 +126,18 @@ class MaskCollectorTest {
         // unmaskedSubtree branch carries an explicit unmask that propagates down to its child,
         // suppressing both (0 masks). Total: 3.
         assertEquals(3, masks.size)
+    }
+
+    @Test
+    fun `fully transparent view is pruned`() {
+        val view = mockLeaf()
+        every { view.alpha } returns 0f
+
+        // Even though the global matcher would match, an alpha-0 view draws
+        // nothing into the frame, so it (and its subtree) is skipped.
+        val masks = collector.collectMasks(view, emptyList(), emptyList(), listOf(matchAll))
+
+        assertEquals(0, masks.size)
     }
 
     @Test
