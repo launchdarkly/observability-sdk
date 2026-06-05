@@ -1,5 +1,13 @@
 # highlight.run
 
+## [10.3.2](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.3.1...highlight.run-10.3.2) (2026-06-05)
+
+
+### Bug Fixes
+
+* strip URL fragments from sanitizeUrl to prevent OAuth token leaks ([#595](https://github.com/launchdarkly/observability-sdk/issues/595)) ([4925031](https://github.com/launchdarkly/observability-sdk/commit/49250315ec48aef5322a0cd9f5363e6cdd476c37))
+* upgrade vulnerable dependencies flagged by Dependabot ([#596](https://github.com/launchdarkly/observability-sdk/issues/596)) ([c15b3d9](https://github.com/launchdarkly/observability-sdk/commit/c15b3d9547946f6dfe334f0a5b43002f5f8781a2))
+
 ## [10.3.1](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.3.0...highlight.run-10.3.1) (2026-05-15)
 
 
