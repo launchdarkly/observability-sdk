@@ -112,6 +112,7 @@ internal class LDNativeApiImpl(
                 maskText = privacy?.maskLabels ?: false,
                 maskImageViews = privacy?.maskImages ?: false,
                 maskWebViews = privacy?.maskWebViews ?: false,
+                minimumAlpha = (privacy?.minimumAlpha ?: 0.02).toFloat(),
             ),
         )
 
@@ -131,6 +132,7 @@ internal class LDNativeApiImpl(
                 maskLabels = privacy?.maskLabels ?: false,
                 maskImages = privacy?.maskImages ?: false,
                 maskWebViews = privacy?.maskWebViews ?: false,
+                minimumAlpha = privacy?.minimumAlpha ?: 0.02,
             ),
         )
 

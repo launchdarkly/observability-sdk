@@ -9,6 +9,7 @@ import 'masking/mask_applier.dart';
 import 'masking/mask_collector.dart';
 import 'masking/mask_stabilizer.dart';
 import 'masking/masking_policy.dart';
+import 'masking/widget_masking_config.dart';
 
 /// Provides Flutter-rendered screenshots to the native session replay SDK.
 ///
@@ -92,12 +93,17 @@ class _NativeSessionReplayCaptureState
 
     final pixelRatio = View.of(context).devicePixelRatio;
     final args = arguments is Map ? arguments : const <Object?, Object?>{};
+    final minimumAlphaArg = args['minimumAlpha'];
     final collector = MaskCollector(
       MaskingPolicy(
         maskTextInputs: args['maskTextInputs'] == true,
         maskLabels: args['maskLabels'] == true,
         maskImages: args['maskImages'] == true,
         maskWebViews: args['maskWebViews'] == true,
+        minimumAlpha: minimumAlphaArg is num
+            ? minimumAlphaArg.toDouble()
+            : 0.02,
+        widgetConfig: activeWidgetMaskingConfig,
       ),
     );
 

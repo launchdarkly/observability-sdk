@@ -187,7 +187,8 @@ final class LDNativeApiImpl: NSObject, LDNativeApi {
             maskTextInputs: privacy?.maskTextInputs ?? true,
             maskLabels: privacy?.maskLabels ?? false,
             maskImages: privacy?.maskImages ?? false,
-            maskWebViews: privacy?.maskWebViews ?? false
+            maskWebViews: privacy?.maskWebViews ?? false,
+            minimumAlpha: privacy?.minimumAlpha ?? 0.02
         )
         config.plugins = [
             observabilityPlugin,

@@ -51,6 +51,7 @@ class ImageCaptureService(
     private val explicitMaskMatchers = options.privacyProfile.explicitMaskMatchers
     private val explicitUnmaskMatchers = options.privacyProfile.explicitUnmaskMatchers
     private val globalMaskMatchers = options.privacyProfile.globalMaskMatchers
+    private val minimumAlpha = options.privacyProfile.minimumAlpha
 
     override suspend fun captureRawFrame(): RawFrame? =
         withContext(DispatcherProviderHolder.current.main) {
@@ -189,6 +190,7 @@ class ImageCaptureService(
                 explicitMaskMatchers,
                 explicitUnmaskMatchers,
                 globalMaskMatchers,
+                minimumAlpha,
             )
         }.toMutableList()
     }
@@ -201,6 +203,7 @@ class ImageCaptureService(
                     explicitMaskMatchers,
                     explicitUnmaskMatchers,
                     globalMaskMatchers,
+                    minimumAlpha,
                 )
             }
         }.toMutableList()

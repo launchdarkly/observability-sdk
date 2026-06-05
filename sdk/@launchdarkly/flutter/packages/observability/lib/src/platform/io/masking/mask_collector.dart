@@ -73,7 +73,7 @@ class MaskCollector {
     void visit(Element element, bool underUnmask) {
       final widget = element.widget;
 
-      if (_isNotPainted(widget)) {
+      if (_isNotPainted(widget, policy.minimumAlpha)) {
         // This subtree isn't painted into the frame (offstage, fully
         // transparent, or hidden), so none of it appears in the captured image.
         // Skip it entirely: there's nothing to redact, and not descending prunes
@@ -125,13 +125,16 @@ class MaskCollector {
   }
 
   /// `true` when [widget] paints nothing into the frame, so its whole subtree
-  /// can be skipped: an [Offstage] widget, a fully-transparent [Opacity], or an
-  /// invisible [Visibility]. Conservative — only well-known "renders nothing"
-  /// widgets qualify, so a mask is never dropped for content that is actually
-  /// visible (a partially-transparent `Opacity` still paints, so it is kept).
-  static bool _isNotPainted(Widget widget) {
+  /// can be skipped: an [Offstage] widget, a near-transparent [Opacity] (at or
+  /// below [minimumAlpha]), or an invisible [Visibility]. Conservative — only
+  /// well-known "renders nothing" widgets qualify, so a mask is never dropped
+  /// for content that is actually visible. The [Opacity] threshold mirrors the
+  /// native `minimumAlpha` prune (iOS skips layers with `opacity < minimumAlpha`).
+  static bool _isNotPainted(Widget widget, double minimumAlpha) {
     if (widget is Offstage) return widget.offstage;
-    if (widget is Opacity) return widget.opacity == 0.0;
+    if (widget is Opacity) {
+      return widget.opacity <= 0.0 || widget.opacity < minimumAlpha;
+    }
     if (widget is Visibility) return !widget.visible;
     return false;
   }

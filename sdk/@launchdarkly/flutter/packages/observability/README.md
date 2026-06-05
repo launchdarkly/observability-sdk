@@ -353,6 +353,14 @@ LDMask(
 )
 ```
 
+Use `LDIgnore` to exclude a subtree from session replay entirely. In Flutter it behaves like `LDMask` (the region is painted over in every frame), so its content never appears in a recording:
+
+```dart
+LDIgnore(
+  child: VideoPlayer(controller),
+)
+```
+
 Use `LDUnmask` to exempt a subtree from **global** masking — the screen-wide `PrivacyOptions` rules such as `maskTextInputs`. For example, to reveal one non-sensitive field on a page where every input is masked:
 
 ```dart
@@ -362,9 +370,22 @@ LDUnmask(
 )
 ```
 
-Precedence: `LDUnmask` only overrides global masking — it does **not** override an explicit `LDMask`. An `LDUnmask` nested inside an `LDMask` stays masked, because an explicit per-widget mask always wins.
+Precedence: `LDUnmask` only overrides global masking — it does **not** override an explicit `LDMask` or `LDIgnore`. An `LDUnmask` nested inside one stays masked, because an explicit per-widget mask always wins.
 
-`LDMask` / `LDUnmask` are active on iOS and Android. On web they render their child unchanged for now, since web session replay is not yet available.
+`LDMask` / `LDIgnore` / `LDUnmask` are active on iOS and Android. On web they render their child unchanged for now, since web session replay is not yet available.
+
+#### Masking by widget key or type
+
+When wrapping widgets isn't convenient, name them once in `PrivacyOptions` by their `Key` or `runtimeType`. These rules are resolved entirely on the Flutter side and follow the same precedence as the wrapper widgets (a mask/ignore match wins over an unmask match):
+
+```dart
+PrivacyOptions(
+  maskWidgetTypes: {CreditCardField},
+  maskWidgetKeys: {const ValueKey('ssn-field')},
+  unmaskWidgetTypes: {SearchBox},
+  ignoreWidgetTypes: {LiveCameraPreview},
+)
+```
 
 ## Identifying users
 

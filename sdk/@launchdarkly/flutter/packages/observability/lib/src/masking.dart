@@ -31,6 +31,34 @@ class LDMask extends StatelessWidget {
   Widget build(BuildContext context) => child;
 }
 
+/// Excludes its [child] subtree from session replay so it never appears in a
+/// recording.
+///
+/// This is the Flutter equivalent of the native `view.LDIgnore()` API. On the
+/// native SDKs an ignored view is dropped from the screenshot entirely; Flutter
+/// captures the whole window as a single raster, so it cannot omit individual
+/// pixels — instead the region is **painted over** in every frame, exactly like
+/// [LDMask]. The privacy outcome is the same (the content is never visible in a
+/// recording); only the mechanism differs.
+///
+/// ```dart
+/// LDIgnore(
+///   child: VideoPlayer(controller),
+/// )
+/// ```
+///
+/// Like [LDMask], an explicit ignore covers its whole subtree and always wins
+/// over global masking and over a nested [LDUnmask].
+class LDIgnore extends StatelessWidget {
+  /// The subtree to exclude from session replay.
+  final Widget child;
+
+  const LDIgnore({super.key, required this.child});
+
+  @override
+  Widget build(BuildContext context) => child;
+}
+
 /// Exempts its [child] subtree from *global*, screen-wide session-replay
 /// masking (the `PrivacyOptions` rules such as `maskTextInputs`), revealing it
 /// in the recording.

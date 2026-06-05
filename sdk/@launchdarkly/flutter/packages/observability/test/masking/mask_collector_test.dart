@@ -5,6 +5,7 @@ import 'package:launchdarkly_flutter_observability/launchdarkly_flutter_observab
 import 'package:launchdarkly_flutter_observability/src/platform/io/masking/mask_collector.dart';
 import 'package:launchdarkly_flutter_observability/src/platform/io/masking/mask_operation.dart';
 import 'package:launchdarkly_flutter_observability/src/platform/io/masking/masking_policy.dart';
+import 'package:launchdarkly_flutter_observability/src/platform/io/masking/widget_masking_config.dart';
 
 void main() {
   Future<List<MaskOperation>> collect(
@@ -14,6 +15,8 @@ void main() {
     bool maskLabels = false,
     bool maskImages = false,
     bool maskWebViews = false,
+    double minimumAlpha = 0.02,
+    WidgetMaskingConfig widgetConfig = WidgetMaskingConfig.empty,
   }) async {
     final boundaryKey = GlobalKey();
     await tester.pumpWidget(
@@ -32,6 +35,8 @@ void main() {
         maskLabels: maskLabels,
         maskImages: maskImages,
         maskWebViews: maskWebViews,
+        minimumAlpha: minimumAlpha,
+        widgetConfig: widgetConfig,
       ),
     );
     return collector.collect(context, boundary);
@@ -88,6 +93,90 @@ void main() {
         maskTextInputs: true,
       );
       // The walk stops at LDMask, so the two inner fields don't add ops.
+      expect(ops, hasLength(1));
+    });
+
+    testWidgets('LDIgnore covers its subtree like LDMask', (tester) async {
+      final ops = await collect(
+        tester,
+        const LDIgnore(child: Text('secret')),
+        maskTextInputs: false,
+      );
+      expect(ops, hasLength(1));
+    });
+
+    testWidgets('LDIgnore collapses its subtree into a single op',
+        (tester) async {
+      final ops = await collect(
+        tester,
+        const LDIgnore(
+          child: Column(
+            children: [TextField(), TextField()],
+          ),
+        ),
+        maskTextInputs: true,
+      );
+      expect(ops, hasLength(1));
+    });
+
+    testWidgets('config maskWidgetTypes masks a matching widget',
+        (tester) async {
+      final ops = await collect(
+        tester,
+        const Text('secret'),
+        maskTextInputs: false,
+        widgetConfig: const WidgetMaskingConfig(maskTypes: {Text}),
+      );
+      expect(ops, hasLength(1));
+    });
+
+    testWidgets('config maskWidgetKeys masks a keyed widget', (tester) async {
+      const key = ValueKey('mask-me');
+      final ops = await collect(
+        tester,
+        const Text('secret', key: key),
+        maskTextInputs: false,
+        widgetConfig: WidgetMaskingConfig(maskKeys: {key}),
+      );
+      expect(ops, hasLength(1));
+    });
+
+    testWidgets('config ignoreWidgetTypes covers a matching widget',
+        (tester) async {
+      final ops = await collect(
+        tester,
+        const Text('secret'),
+        maskTextInputs: false,
+        widgetConfig: const WidgetMaskingConfig(ignoreTypes: {Text}),
+      );
+      expect(ops, hasLength(1));
+    });
+
+    testWidgets('config unmaskWidgetKeys reveals a globally-masked input',
+        (tester) async {
+      const key = ValueKey('reveal-me');
+      final ops = await collect(
+        tester,
+        const TextField(key: key),
+        maskTextInputs: true,
+        widgetConfig: WidgetMaskingConfig(unmaskKeys: {key}),
+      );
+      expect(ops, isEmpty);
+    });
+
+    testWidgets('config mask wins over config unmask on the same widget',
+        (tester) async {
+      const key = ValueKey('conflict');
+      final ops = await collect(
+        tester,
+        const TextField(key: key),
+        maskTextInputs: false,
+        widgetConfig: WidgetMaskingConfig(
+          maskKeys: {key},
+          unmaskKeys: {key},
+        ),
+      );
+      // Explicit mask is evaluated before unmask, so it wins.
       expect(ops, hasLength(1));
     });
 
@@ -277,6 +366,34 @@ void main() {
         maskTextInputs: true,
       );
       expect(ops, isEmpty);
+    });
+
+    testWidgets('an Opacity below minimumAlpha is pruned (not masked)',
+        (tester) async {
+      final ops = await collect(
+        tester,
+        const Opacity(
+          opacity: 0.01,
+          child: TextField(),
+        ),
+        maskTextInputs: true,
+        minimumAlpha: 0.02,
+      );
+      expect(ops, isEmpty);
+    });
+
+    testWidgets('an Opacity at or above minimumAlpha is still masked',
+        (tester) async {
+      final ops = await collect(
+        tester,
+        const Opacity(
+          opacity: 0.5,
+          child: TextField(),
+        ),
+        maskTextInputs: true,
+        minimumAlpha: 0.02,
+      );
+      expect(ops, hasLength(1));
     });
 
     testWidgets('an invisible Visibility subtree is pruned (not masked)',

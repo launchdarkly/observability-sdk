@@ -1,6 +1,9 @@
 package com.launchdarkly.observability.replay.masking
 
+import android.graphics.Color
 import android.graphics.Matrix
+import android.graphics.RectF
+import android.graphics.drawable.ColorDrawable
 import android.view.View
 import android.view.ViewGroup
 import com.launchdarkly.observability.context.ObserveLogger
@@ -32,6 +35,7 @@ private val abstractComposeViewClass: Class<*>? by lazy {
  *     propagates to descendants (e.g. `PrivacyProfile.explicitUnmaskMatchers`).
  * @param globalMaskMatchers matchers whose match applies only to the matched view itself; they do
  *     not propagate to descendants and do not override an explicit unmask.
+ * @param minimumAlpha opacity threshold below which a view (and its subtree) is pruned as invisible.
  */
 data class MaskContext(
     val matrix: Matrix,
@@ -40,6 +44,7 @@ data class MaskContext(
     val explicitMaskMatchers: List<MaskMatcher>,
     val explicitUnmaskMatchers: List<MaskMatcher>,
     val globalMaskMatchers: List<MaskMatcher>,
+    val minimumAlpha: Float = 0.02f,
 )
 /**
  * Collects sensitive screen areas that should be masked in session replay.
@@ -82,6 +87,7 @@ class MaskCollector(private val logger: ObserveLogger) {
         explicitMaskMatchers: List<MaskMatcher>,
         explicitUnmaskMatchers: List<MaskMatcher>,
         globalMaskMatchers: List<MaskMatcher>,
+        minimumAlpha: Float = 0.02f,
     ): List<Mask> {
         val resultMasks = mutableListOf<Mask>()
 
@@ -93,6 +99,7 @@ class MaskCollector(private val logger: ObserveLogger) {
             explicitMaskMatchers = explicitMaskMatchers,
             explicitUnmaskMatchers = explicitUnmaskMatchers,
             globalMaskMatchers = globalMaskMatchers,
+            minimumAlpha = minimumAlpha,
         )
 
         traverse(root, inherited = null, context, resultMasks)
@@ -112,11 +119,21 @@ class MaskCollector(private val logger: ObserveLogger) {
      */
     private fun traverse(view: View, inherited: Boolean?, context: MaskContext, masks: MutableList<Mask>) {
         if (!view.isShown) return
-        // A fully transparent view (and its whole subtree) draws nothing into the
-        // captured frame, so there's nothing to redact and no reason to descend.
-        // `isShown` only covers VISIBLE/GONE + attachment, not alpha, so this is a
-        // complementary prune mirroring iOS's `opacity >= minimumAlpha` skip.
-        if (view.alpha <= 0f) return
+        // A near-transparent view (and its whole subtree) draws (almost) nothing
+        // into the captured frame, so there's nothing to redact and no reason to
+        // descend. `isShown` only covers VISIBLE/GONE + attachment, not alpha, so
+        // this is a complementary prune mirroring iOS's `opacity < minimumAlpha`
+        // skip. The `<= 0f` keeps fully-transparent views pruned even if the
+        // configured threshold is 0.
+        if (view.alpha <= 0f || view.alpha < context.minimumAlpha) return
+
+        // Occlusion culling: if this view paints a solid, fully-opaque rectangle,
+        // drop any already-collected masks it fully covers — that content isn't
+        // visible in the captured frame, so masking it is redundant. Runs before
+        // descending so the view's own children (painted on top of its fill) are
+        // unaffected. Mirrors the iOS/Flutter "opaque container absorbs covered
+        // masks" pass.
+        cullCoveredMasks(view, masks)
 
         when {
             abstractComposeViewClass?.isInstance(view) == true -> traverseCompose(view, inherited, context, masks)
@@ -292,4 +309,47 @@ class MaskCollector(private val logger: ObserveLogger) {
             traverse(child, inherited, context, masks)
         }
     }
+
+    /**
+     * Removes already-collected masks fully covered by [view] when it paints a
+     * solid, fully-opaque rectangle over its bounds. Only axis-aligned masks
+     * (`points == null`) are culled, since their [Mask.rect] is in the same
+     * window coordinate space as the cover; transformed masks are kept to avoid a
+     * coordinate-space mismatch. Conservative: a mask is dropped only when we are
+     * certain the covering view is fully opaque and fully contains it.
+     *
+     * @param view the candidate occluder being visited.
+     * @param masks output list collected so far (entries painted beneath [view]).
+     */
+    private fun cullCoveredMasks(view: View, masks: MutableList<Mask>) {
+        if (masks.isEmpty()) return
+        val cover = opaqueCoverRect(view) ?: return
+        masks.removeAll { it.points == null && covers(cover, it.rect) }
+    }
+
+    /**
+     * The window-space rectangle [view] paints fully opaque, or `null` when it
+     * isn't a solid opaque fill. Requires a fully-opaque [ColorDrawable] background
+     * and a fully-opaque view alpha, mirroring the iOS/Flutter opacity heuristic.
+     */
+    private fun opaqueCoverRect(view: View): RectF? {
+        if (view.alpha < 1f) return null
+        if (view.width <= 0 || view.height <= 0) return null
+        val background = view.background as? ColorDrawable ?: return null
+        if (background.alpha != 255) return null
+        if (Color.alpha(background.color) != 255) return null
+
+        val location = IntArray(2)
+        view.getLocationInWindow(location)
+        val left = location[0].toFloat()
+        val top = location[1].toFloat()
+        return RectF(left, top, left + view.width, top + view.height)
+    }
+
+    /** `true` when [cover] fully contains [inner] (strict, no slack). */
+    private fun covers(cover: RectF, inner: RectF): Boolean =
+        inner.left >= cover.left &&
+            inner.top >= cover.top &&
+            inner.right <= cover.right &&
+            inner.bottom <= cover.bottom
 }

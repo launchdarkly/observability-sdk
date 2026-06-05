@@ -9,6 +9,7 @@ final class FlutterImageCaptureService: ImageCaptureServicing {
     private let maskLabels: Bool
     private let maskImages: Bool
     private let maskWebViews: Bool
+    private let minimumAlpha: Double
     @MainActor
     private var shouldCapture = false
 
@@ -17,13 +18,15 @@ final class FlutterImageCaptureService: ImageCaptureServicing {
         maskTextInputs: Bool,
         maskLabels: Bool,
         maskImages: Bool,
-        maskWebViews: Bool
+        maskWebViews: Bool,
+        minimumAlpha: Double
     ) {
         self.channel = channel
         self.maskTextInputs = maskTextInputs
         self.maskLabels = maskLabels
         self.maskImages = maskImages
         self.maskWebViews = maskWebViews
+        self.minimumAlpha = minimumAlpha
     }
 
     @MainActor
@@ -36,6 +39,7 @@ final class FlutterImageCaptureService: ImageCaptureServicing {
                 "maskLabels": maskLabels,
                 "maskImages": maskImages,
                 "maskWebViews": maskWebViews,
+                "minimumAlpha": minimumAlpha,
             ]
         ) { [weak self] result in
             Task { @MainActor in
