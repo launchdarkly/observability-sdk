@@ -210,7 +210,7 @@
 		"@opentelemetry/sdk-node@^0.203.0": "^0.217.0",
 		"turbo-stream": "^3.0.0",
 		"@remix-run/server-runtime": "^2.17.5",
-		"vitest@^1.4.0": "3.2.6"
+		"vitest@^1.4.0": "4.1.0"
 	},
 	"dependenciesMeta": {
 		"puppeteer@9.1.1": {
