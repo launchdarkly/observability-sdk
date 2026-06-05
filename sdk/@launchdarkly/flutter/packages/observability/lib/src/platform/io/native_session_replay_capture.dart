@@ -112,9 +112,11 @@ class _NativeSessionReplayCaptureState
     final image = await renderObject.toImage(pixelRatio: pixelRatio);
 
     // "After" pass: let one frame elapse, then re-measure against a freshly
-    // resolved boundary. Anything that moved (scrolling, animating dialogs) is
-    // reconciled by the stabilizer, which either widens coverage with
-    // duplicates or asks us to drop the frame.
+    // resolved boundary. This is also the safety net for content that appears
+    // during the async screenshot — e.g. an instantly-shown dialog. Such a mask
+    // is absent from `before` but present in `after`, so the counts differ and
+    // the stabilizer drops the frame rather than letting it leak unmasked. It is
+    // therefore NOT safe to skip this pass when `before` is empty.
     await _waitForNextFrame();
     final afterContext = _boundaryKey.currentContext;
     if (!mounted || afterContext == null || !afterContext.mounted) {
@@ -128,19 +130,20 @@ class _NativeSessionReplayCaptureState
     }
     final after = collector.collect(afterContext, afterRenderObject);
 
-    final operations = _stabilizer.duplicateUnsimilar(
+    final pairs = _stabilizer.duplicateUnsimilar(
       operationsBefore: before,
       operationsAfter: after,
     );
-    if (operations == null) {
-      // Masks drifted further than they could safely cover — drop the frame.
+    if (pairs == null) {
+      // Masks drifted or appeared/disappeared between the passes — drop the
+      // frame rather than risk exposing content the screenshot may contain.
       image.dispose();
       return null;
     }
 
-    final maskedImage = operations.isEmpty
+    final maskedImage = pairs.isEmpty
         ? image
-        : await _applier.apply(image, operations, pixelRatio);
+        : await _applier.apply(image, pairs, pixelRatio);
 
     final byteData = await maskedImage.toByteData(
       format: ui.ImageByteFormat.rawRgba,

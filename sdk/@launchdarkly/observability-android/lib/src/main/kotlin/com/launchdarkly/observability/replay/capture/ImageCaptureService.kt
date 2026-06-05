@@ -112,7 +112,12 @@ class ImageCaptureService(
                     return@withContext null
                 }
 
-                // Synchronize with UI rendering frame
+                // Synchronize with UI rendering frame. This second pass is also the
+                // safety net for content that appears during capture (e.g. an
+                // instantly-shown dialog): such a mask is absent from beforeMasks
+                // but present in afterMasks, so mergeMasksMap sees mismatched counts
+                // and drops the frame instead of leaking it unmasked. So we must NOT
+                // skip this pass when beforeMasks is empty.
                 suspendCancellableCoroutine { continuation ->
                     Choreographer.getInstance().postFrameCallback {
                         if (continuation.isActive) {

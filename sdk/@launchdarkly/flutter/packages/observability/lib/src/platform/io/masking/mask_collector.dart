@@ -42,37 +42,51 @@ class MaskCollector {
 
   final MaskingPolicy policy;
 
-  /// Collects redaction rectangles under [boundary], walking from [rootContext].
+  /// Collects redaction regions under [boundary], walking from [rootContext].
   List<MaskOperation> collect(
     BuildContext rootContext,
     RenderRepaintBoundary boundary,
   ) {
     final operations = <MaskOperation>[];
 
-    ui.Rect? rectFor(Element element) {
+    // Builds the affine mask for [element]: its local bounds plus the transform
+    // mapping those bounds into the boundary's logical coordinate space. Using
+    // the live transform (rather than an upright bounding box) means a widget
+    // that is mid-animation — rotating, scaling, sliding — is captured as the
+    // parallelogram it actually occupies this frame, the Flutter analogue of
+    // reading a CALayer's `presentation()` on iOS.
+    MaskOperation? maskFor(Element element) {
       final renderObject = element.findRenderObject();
       if (renderObject is! RenderBox || !renderObject.attached) {
         return null;
       }
-      final topLeft = renderObject.localToGlobal(
-        ui.Offset.zero,
-        ancestor: boundary,
-      );
-      return ui.Rect.fromLTWH(
-        topLeft.dx,
-        topLeft.dy,
-        renderObject.size.width,
-        renderObject.size.height,
+      final size = renderObject.size;
+      if (size.width <= 0 || size.height <= 0) {
+        return null;
+      }
+      return MaskOperation(
+        localRect: ui.Offset.zero & size,
+        transform: renderObject.getTransformTo(boundary),
       );
     }
 
     void visit(Element element, bool underUnmask) {
       final widget = element.widget;
 
+      if (_isNotPainted(widget)) {
+        // This subtree isn't painted into the frame (offstage, fully
+        // transparent, or hidden), so none of it appears in the captured image.
+        // Skip it entirely: there's nothing to redact, and not descending prunes
+        // the walk (e.g. the inactive pages of an IndexedStack, or overlay
+        // entries hidden beneath an opaque route). Mirrors the native collectors
+        // skipping hidden / zero-alpha layers and Android's `!view.isShown`.
+        return;
+      }
+
       if (policy.isExplicitMask(widget)) {
-        final rect = rectFor(element);
-        if (rect != null) {
-          operations.add(MaskOperation(rect: rect));
+        final mask = maskFor(element);
+        if (mask != null) {
+          operations.add(mask);
         }
         // Whole subtree is covered by this mask; stop descending so a nested
         // LDUnmask can't carve a hole and we don't emit redundant child masks.
@@ -85,9 +99,9 @@ class MaskCollector {
       }
 
       if (!underUnmask && policy.isGloballyMasked(widget)) {
-        final rect = rectFor(element);
-        if (rect != null) {
-          operations.add(MaskOperation(rect: rect));
+        final mask = maskFor(element);
+        if (mask != null) {
+          operations.add(mask);
         }
       } else if (operations.isNotEmpty && _isOpaqueCover(widget)) {
         // This widget is about to paint a solid fill over everything visited
@@ -95,9 +109,11 @@ class MaskCollector {
         // content behind it isn't visible in the frame, so masking it is
         // redundant. Runs before descending so the widget's own children, which
         // paint on top of its fill, are unaffected.
-        final rect = rectFor(element);
-        if (rect != null) {
-          operations.removeWhere((op) => _covers(rect, op.rect));
+        final mask = maskFor(element);
+        if (mask != null) {
+          operations.removeWhere(
+            (op) => _covers(mask.effectiveFrame, op.effectiveFrame),
+          );
         }
       }
 
@@ -106,6 +122,18 @@ class MaskCollector {
 
     rootContext.visitChildElements((child) => visit(child, false));
     return operations;
+  }
+
+  /// `true` when [widget] paints nothing into the frame, so its whole subtree
+  /// can be skipped: an [Offstage] widget, a fully-transparent [Opacity], or an
+  /// invisible [Visibility]. Conservative — only well-known "renders nothing"
+  /// widgets qualify, so a mask is never dropped for content that is actually
+  /// visible (a partially-transparent `Opacity` still paints, so it is kept).
+  static bool _isNotPainted(Widget widget) {
+    if (widget is Offstage) return widget.offstage;
+    if (widget is Opacity) return widget.opacity == 0.0;
+    if (widget is Visibility) return !widget.visible;
+    return false;
   }
 
   /// `true` only when [widget] is known to paint a fully-opaque rectangle over

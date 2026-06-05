@@ -112,6 +112,11 @@ class MaskCollector(private val logger: ObserveLogger) {
      */
     private fun traverse(view: View, inherited: Boolean?, context: MaskContext, masks: MutableList<Mask>) {
         if (!view.isShown) return
+        // A fully transparent view (and its whole subtree) draws nothing into the
+        // captured frame, so there's nothing to redact and no reason to descend.
+        // `isShown` only covers VISIBLE/GONE + attachment, not alpha, so this is a
+        // complementary prune mirroring iOS's `opacity >= minimumAlpha` skip.
+        if (view.alpha <= 0f) return
 
         when {
             abstractComposeViewClass?.isInstance(view) == true -> traverseCompose(view, inherited, context, masks)

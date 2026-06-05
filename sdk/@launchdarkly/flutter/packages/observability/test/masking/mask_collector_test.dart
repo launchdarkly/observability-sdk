@@ -254,6 +254,94 @@ void main() {
       expect(ops, hasLength(1));
     });
 
+    testWidgets('an offstage subtree is pruned (not masked)', (tester) async {
+      final ops = await collect(
+        tester,
+        const Offstage(
+          offstage: true,
+          child: TextField(),
+        ),
+        maskTextInputs: true,
+      );
+      expect(ops, isEmpty);
+    });
+
+    testWidgets('a fully transparent subtree is pruned (not masked)',
+        (tester) async {
+      final ops = await collect(
+        tester,
+        const Opacity(
+          opacity: 0,
+          child: TextField(),
+        ),
+        maskTextInputs: true,
+      );
+      expect(ops, isEmpty);
+    });
+
+    testWidgets('an invisible Visibility subtree is pruned (not masked)',
+        (tester) async {
+      final ops = await collect(
+        tester,
+        const Visibility(
+          visible: false,
+          maintainState: true,
+          child: TextField(),
+        ),
+        maskTextInputs: true,
+      );
+      expect(ops, isEmpty);
+    });
+
+    testWidgets('a visible Offstage child is still masked', (tester) async {
+      final ops = await collect(
+        tester,
+        const Offstage(
+          offstage: false,
+          child: TextField(),
+        ),
+        maskTextInputs: true,
+      );
+      expect(ops, hasLength(1));
+    });
+
+    testWidgets('a 3D-transformed text input is masked as a non-affine quad',
+        (tester) async {
+      // A perspective tilt (non-affine transform) must still be masked, and the
+      // op must report itself as non-affine so the applier draws it as a quad
+      // polygon rather than a parallelogram. Mirrors the native createMask 3D
+      // branch returning Mask.quad.
+      final ops = await collect(
+        tester,
+        Center(
+          child: Transform(
+            transform: Matrix4.identity()
+              ..setEntry(3, 2, 0.001)
+              ..rotateX(0.9),
+            child: const SizedBox(
+              width: 200,
+              height: 60,
+              child: TextField(),
+            ),
+          ),
+        ),
+        maskTextInputs: true,
+      );
+      expect(ops, hasLength(1));
+      expect(ops.single.isAffine, isFalse);
+    });
+
+    testWidgets('an axis-aligned text input is masked as an affine op',
+        (tester) async {
+      final ops = await collect(
+        tester,
+        const SizedBox(width: 200, height: 60, child: TextField()),
+        maskTextInputs: true,
+      );
+      expect(ops, hasLength(1));
+      expect(ops.single.isAffine, isTrue);
+    });
+
     testWidgets('an opaque background painted underneath keeps the mask',
         (tester) async {
       final ops = await collect(

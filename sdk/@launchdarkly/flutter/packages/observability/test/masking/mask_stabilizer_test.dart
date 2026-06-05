@@ -1,5 +1,4 @@
-import 'dart:ui';
-
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:launchdarkly_flutter_observability/src/platform/io/masking/mask_operation.dart';
 import 'package:launchdarkly_flutter_observability/src/platform/io/masking/mask_stabilizer.dart';
@@ -7,8 +6,13 @@ import 'package:launchdarkly_flutter_observability/src/platform/io/masking/mask_
 void main() {
   const stabilizer = MaskStabilizer();
 
+  // An axis-aligned mask at (left, top): local bounds translated into place, so
+  // its effectiveFrame is Rect.fromLTWH(left, top, size, size).
   MaskOperation op(double left, double top, [double size = 100]) =>
-      MaskOperation(rect: Rect.fromLTWH(left, top, size, size));
+      MaskOperation(
+        localRect: Rect.fromLTWH(0, 0, size, size),
+        transform: Matrix4.translationValues(left, top, 0),
+      );
 
   group('MaskStabilizer.duplicateUnsimilar', () {
     test('drops the frame when the two passes have different counts', () {
@@ -19,39 +23,38 @@ void main() {
       expect(result, isNull);
     });
 
-    test('returns the before list unchanged when nothing moved', () {
-      final before = [op(0, 0), op(200, 200)];
+    test('pairs every op with a null "after" when nothing moved', () {
       final result = stabilizer.duplicateUnsimilar(
-        operationsBefore: before,
+        operationsBefore: [op(0, 0), op(200, 200)],
         operationsAfter: [op(0, 0), op(200, 200)],
       );
       expect(result, isNotNull);
       expect(result!.length, 2);
-      expect(result.every((o) => o.kind == MaskKind.fill), isTrue);
+      expect(result.every((pair) => pair.after == null), isTrue);
     });
 
     test('movement within tolerance is treated as the same position', () {
-      // 1.0px is exactly the move tolerance, so no duplicate is added.
+      // 1.0px is exactly the move tolerance, so no "after" is paired.
       final result = stabilizer.duplicateUnsimilar(
         operationsBefore: [op(0, 0)],
         operationsAfter: [op(1, 1)],
       );
       expect(result, isNotNull);
       expect(result!.length, 1);
-      expect(result.single.kind, MaskKind.fill);
+      expect(result.single.after, isNull);
     });
 
-    test('a mask that moved within its own size gets a fillDuplicate', () {
+    test('a mask that moved within its own size pairs before with after', () {
       final result = stabilizer.duplicateUnsimilar(
         operationsBefore: [op(0, 0)],
         operationsAfter: [op(20, 5)],
       );
       expect(result, isNotNull);
-      expect(result!.length, 2);
-      expect(result[0].kind, MaskKind.fill);
-      expect(result[1].kind, MaskKind.fillDuplicate);
-      // The duplicate covers the "after" position so the gap is masked.
-      expect(result[1].rect, const Rect.fromLTWH(20, 5, 100, 100));
+      expect(result!.length, 1);
+      final pair = result.single;
+      expect(pair.after, isNotNull);
+      // The "after" position is preserved so the hull can span the gap.
+      expect(pair.after!.effectiveFrame, const Rect.fromLTWH(20, 5, 100, 100));
     });
 
     test('drops the frame when a mask moved further than its own size', () {
@@ -64,14 +67,14 @@ void main() {
       expect(result, isNull);
     });
 
-    test('only the ops that drifted get duplicated', () {
+    test('only the ops that drifted get an "after"', () {
       final result = stabilizer.duplicateUnsimilar(
         operationsBefore: [op(0, 0), op(300, 300)],
         operationsAfter: [op(0, 0), op(320, 300)],
       );
       expect(result, isNotNull);
-      expect(result!.length, 3);
-      expect(result.where((o) => o.kind == MaskKind.fillDuplicate).length, 1);
+      expect(result!.length, 2);
+      expect(result.where((pair) => pair.after != null).length, 1);
     });
 
     test('empty input yields an empty (non-null) result', () {
