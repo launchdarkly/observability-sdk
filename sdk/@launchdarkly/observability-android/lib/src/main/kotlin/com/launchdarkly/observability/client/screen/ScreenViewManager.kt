@@ -39,4 +39,15 @@ class ScreenViewManager(
         if (!started) return
         source.captureCurrent(activity)
     }
+
+    /**
+     * Re-emits the screen the user is currently viewing, as if `onActivityResumed` had fired. Used
+     * to seed a fresh session (after a session-id change) so the new session gets an opening
+     * `screen_view` span and `Navigate` event even though no `onActivityResumed` fires for the
+     * already-resumed activity. No-op when automatic capture is not running.
+     */
+    fun captureCurrentScreen() {
+        if (!started) return
+        source.captureCurrent()
+    }
 }

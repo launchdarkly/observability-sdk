@@ -3,6 +3,7 @@ package com.launchdarkly.observability.client.screen
 import android.app.Activity
 import android.app.Application
 import android.os.Bundle
+import java.lang.ref.WeakReference
 
 /**
  * Captures screen appearances from Android Activity lifecycle callbacks.
@@ -20,8 +21,21 @@ internal class ActivityScreenSource(
     private val onScreenView: (ScreenView) -> Unit,
 ) : Application.ActivityLifecycleCallbacks {
 
+    /**
+     * The currently resumed activity, if any. Weak so we never retain an activity beyond its
+     * lifecycle; accessed on the main thread only (lifecycle callbacks run there).
+     */
+    private var currentActivity: WeakReference<Activity>? = null
+
     override fun onActivityResumed(activity: Activity) {
+        currentActivity = WeakReference(activity)
         captureCurrent(activity)
+    }
+
+    override fun onActivityPaused(activity: Activity) {
+        if (currentActivity?.get() === activity) {
+            currentActivity = null
+        }
     }
 
     /**
@@ -32,6 +46,16 @@ internal class ActivityScreenSource(
      */
     fun captureCurrent(activity: Activity) {
         screenView(activity)?.let(onScreenView)
+    }
+
+    /**
+     * Re-emits the currently resumed activity as a [ScreenView], if one is on screen. Used to seed
+     * a new session (after a session-id change) with the screen the user is still viewing, since no
+     * further `onActivityResumed` fires for an already-resumed activity. No-op when nothing is
+     * resumed.
+     */
+    fun captureCurrent() {
+        currentActivity?.get()?.let { captureCurrent(it) }
     }
 
     private fun screenView(activity: Activity): ScreenView? {
@@ -56,7 +80,6 @@ internal class ActivityScreenSource(
 
     override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {}
     override fun onActivityStarted(activity: Activity) {}
-    override fun onActivityPaused(activity: Activity) {}
     override fun onActivityStopped(activity: Activity) {}
     override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
     override fun onActivityDestroyed(activity: Activity) {}

@@ -213,6 +213,10 @@ class ObservabilityService(
             override fun onSessionStarted(newSession: Session, previousSession: Session) {
                 if (previousSession.getId().isNotEmpty()) {
                     screenStack.reset()
+                    // Re-seed the new session with the screen the user is still viewing. No
+                    // onActivityResumed fires for an already-resumed activity, so without this the
+                    // new session would have no opening screen_view span or Navigate event.
+                    screenViewManager?.captureCurrentScreen()
                 }
             }
 
