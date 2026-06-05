@@ -421,7 +421,7 @@ class RRWebEventGenerator(
         val payloadJSONString = try {
             buildJsonObject {
                 put("event", track.name)
-                track.value?.let { put("value", it) }
+                track.metricValue?.let { put("value", it) }
                 putJsonObject("data") {
                     track.attributes.forEach { (k, v) -> put(k, v) }
                 }

@@ -123,6 +123,6 @@ internal interface SessionReplayServicing {
 
     fun flush()
     fun afterIdentify(contextKeys: Map<String, String>, canonicalKey: String, completed: Boolean)
-    fun afterTrack(name: String, value: Double?, attributes: Attributes)
+    fun afterTrack(name: String, metricValue: Double?, attributes: Attributes)
     fun registerActivity(activity: Activity) {}
 }

@@ -14,7 +14,7 @@ import io.opentelemetry.api.common.Attributes
  */
 data class TrackItemPayload(
     val name: String,
-    val value: Double?,
+    val metricValue: Double?,
     val attributes: Map<String, String>,
     override val timestamp: Long,
     val sessionId: String?
@@ -53,7 +53,7 @@ data class TrackItemPayload(
             flattenAttributes(attributes, flat)
             return TrackItemPayload(
                 name = eventKey,
-                value = metricValue,
+                metricValue = metricValue,
                 attributes = flat,
                 timestamp = timestamp,
                 sessionId = sessionId

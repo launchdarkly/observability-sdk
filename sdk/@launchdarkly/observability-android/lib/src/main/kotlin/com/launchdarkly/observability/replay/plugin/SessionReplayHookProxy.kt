@@ -19,9 +19,9 @@ class SessionReplayHookProxy internal constructor(
         sessionReplayService.afterIdentify(contextKeys, canonicalKey, completed)
     }
 
-    fun afterTrack(name: String, value: Double?, attributes: Map<String, String>) {
+    fun afterTrack(name: String, metricValue: Double?, attributes: Map<String, String>) {
         val builder = Attributes.builder()
         attributes.forEach { (k, v) -> builder.put(AttributeKey.stringKey(k), v) }
-        sessionReplayService.afterTrack(name, value, builder.build())
+        sessionReplayService.afterTrack(name, metricValue, builder.build())
     }
 }

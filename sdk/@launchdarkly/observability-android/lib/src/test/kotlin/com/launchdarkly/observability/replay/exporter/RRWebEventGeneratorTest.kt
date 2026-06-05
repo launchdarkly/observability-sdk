@@ -143,7 +143,7 @@ class RRWebEventGeneratorTest {
         val generator = RRWebEventGenerator(canvasDrawEntourage = 1, title = "test")
         val payload = TrackItemPayload(
             name = "purchase",
-            value = 9.99,
+            metricValue = 9.99,
             attributes = mapOf("currency" to "USD", "count" to "2"),
             timestamp = 42L,
             sessionId = "session",
@@ -169,7 +169,7 @@ class RRWebEventGeneratorTest {
         val generator = RRWebEventGenerator(canvasDrawEntourage = 1, title = "test")
         val payload = TrackItemPayload(
             name = "login",
-            value = null,
+            metricValue = null,
             attributes = emptyMap(),
             timestamp = 1L,
             sessionId = "session",

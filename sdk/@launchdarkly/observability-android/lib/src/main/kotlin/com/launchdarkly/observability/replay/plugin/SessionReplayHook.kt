@@ -1,12 +1,11 @@
 package com.launchdarkly.observability.replay.plugin
 
+import com.launchdarkly.observability.bridge.toAttributes
 import com.launchdarkly.observability.sdk.SessionReplayServicing
-import com.launchdarkly.sdk.LDValueType
 import com.launchdarkly.sdk.android.integrations.Hook
 import com.launchdarkly.sdk.android.integrations.IdentifySeriesContext
 import com.launchdarkly.sdk.android.integrations.IdentifySeriesResult
 import com.launchdarkly.sdk.android.integrations.TrackSeriesContext
-import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
 
 /**
@@ -56,24 +55,10 @@ class SessionReplayHook internal constructor() : Hook(HOOK_NAME) {
     override fun afterTrack(seriesContext: TrackSeriesContext) {
         val delegate = delegate ?: return
 
-        val attrBuilder = Attributes.builder()
-        val data = seriesContext.data
-        if (data != null && data.type == LDValueType.OBJECT) {
-            for (key in data.keys()) {
-                val value = data.get(key)
-                when (value.type) {
-                    LDValueType.BOOLEAN -> attrBuilder.put(AttributeKey.booleanKey(key), value.booleanValue())
-                    LDValueType.NUMBER -> attrBuilder.put(AttributeKey.doubleKey(key), value.doubleValue())
-                    LDValueType.STRING -> attrBuilder.put(AttributeKey.stringKey(key), value.stringValue())
-                    else -> {} // skip null/array/object
-                }
-            }
-        }
-
         delegate.afterTrack(
             name = seriesContext.key,
-            value = seriesContext.metricValue,
-            attributes = attrBuilder.build()
+            metricValue = seriesContext.metricValue,
+            attributes = seriesContext.data?.toAttributes() ?: Attributes.empty()
         )
     }
 

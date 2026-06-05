@@ -1,14 +1,13 @@
 package com.launchdarkly.observability.plugin
 
+import com.launchdarkly.observability.bridge.toAttributes
 import com.launchdarkly.sdk.EvaluationDetail
 import com.launchdarkly.sdk.LDValue
-import com.launchdarkly.sdk.LDValueType
 import com.launchdarkly.sdk.android.integrations.EvaluationSeriesContext
 import com.launchdarkly.sdk.android.integrations.Hook
 import com.launchdarkly.sdk.android.integrations.IdentifySeriesContext
 import com.launchdarkly.sdk.android.integrations.IdentifySeriesResult
 import com.launchdarkly.sdk.android.integrations.TrackSeriesContext
-import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
 import java.util.UUID
 
@@ -36,7 +35,7 @@ interface ObservabilityHookExporting {
  * `track` spans and cache context keys.
  */
 interface TrackEmitting {
-    fun track(name: String, value: Double?, attributes: Attributes, contextKeyAttributes: Attributes?)
+    fun track(name: String, metricValue: Double?, attributes: Attributes, contextKeyAttributes: Attributes?)
     fun updateCachedContextKeys(contextKeys: Map<String, String>)
 }
 
@@ -109,25 +108,11 @@ class ObservabilityHook internal constructor() : Hook(HOOK_NAME) {
     }
 
     override fun afterTrack(seriesContext: TrackSeriesContext) {
-        val attrBuilder = Attributes.builder()
-        val data = seriesContext.data
-        if (data != null && data.type == LDValueType.OBJECT) {
-            for (key in data.keys()) {
-                val value = data.get(key)
-                when (value.type) {
-                    LDValueType.BOOLEAN -> attrBuilder.put(AttributeKey.booleanKey(key), value.booleanValue())
-                    LDValueType.NUMBER -> attrBuilder.put(AttributeKey.doubleKey(key), value.doubleValue())
-                    LDValueType.STRING -> attrBuilder.put(AttributeKey.stringKey(key), value.stringValue())
-                    else -> {} // skip null/array/object
-                }
-            }
-        }
-
         val contextKeys = buildContextKeys(seriesContext.context)
         delegate?.afterTrack(
             eventKey = seriesContext.key,
             metricValue = seriesContext.metricValue,
-            attributes = attrBuilder.build(),
+            attributes = seriesContext.data?.toAttributes() ?: Attributes.empty(),
             contextKeys = contextKeys
         )
     }
