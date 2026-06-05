@@ -445,6 +445,24 @@ class RRWebEventGenerator(
     }
 
     /**
+     * Generates a "Navigate" custom event. Mirrors the web SDK, where the payload is the route
+     * (here the screen name) as a plain string.
+     */
+    fun generateNavigateEvent(navigate: NavigateItemPayload): Event {
+        val customData = buildJsonObject {
+            put("tag", JsonPrimitive(RRWebCustomDataTag.NAVIGATE.wireValue))
+            put("payload", JsonPrimitive(navigate.name))
+        }
+
+        return Event(
+            type = EventType.CUSTOM,
+            timestamp = navigate.timestamp,
+            sid = nextSid(),
+            data = EventDataUnion.CustomEventDataWrapper(customData)
+        )
+    }
+
+    /**
      * Generates a "Reload" custom event and a sequence of "wake-up" interaction events.
      * Used by [SessionReplayExporter] to re-trigger player playback after session resumption.
      */

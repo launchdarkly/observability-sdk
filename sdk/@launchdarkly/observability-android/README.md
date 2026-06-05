@@ -10,6 +10,8 @@
 
 The Android observability plugin automatically instruments:
 - **Activity Lifecycle**: App lifecycle events and transitions
+- **Screen Views**: Emits a `screen_view` span for each Android `Activity` that is shown
+- **Taps**: Optionally emits a `click` span for each tap (enable via `analytics.taps`)
 - **HTTP Requests**: OkHttp and HttpURLConnection requests (requires setup of ByteBuddy compile time plugin and additional dependencies)
 - **Crash Reporting**: Automatic crash reporting and stack traces
 - **Feature Flag Evaluations**: Evaluation events added to your spans.
@@ -126,11 +128,15 @@ Additional `ObservabilityOptions` settings:
 - `logsApiLevel`: Minimum log severity to export (defaults to `INFO`). Set to `ObservabilityOptions.LogLevel.NONE` to disable log exporting.
 - `tracesApi`: Controls trace recording (defaults to enabled). Use `ObservabilityOptions.TracesApi.disabled()` to disable all tracing, or set `includeErrors`/`includeSpans`.
 - `metricsApi`: Controls metric export (defaults to enabled). Use `ObservabilityOptions.MetricsApi.disabled()` to disable metrics.
-- `instrumentations`: Enables/disables specific automatic instrumentations like `crashReporting` and `launchTime`.
+- `instrumentations`: Enables/disables specific automatic instrumentations:
+  - `crashReporting` (default `true`): report uncaught exceptions as errors.
+  - `launchTime` (default `false`): record application startup time as metrics.
+  - `screens` (default `true`): automatically detect screen changes from Android `Activity` lifecycle callbacks. This drives the `screen_view` span (gated separately by `analytics.screenViews`) and Session Replay `Navigate` events.
 - `analytics`: Enables/disables analytics telemetry, emitted as OpenTelemetry spans:
-  - `taps` (default `false`): emit a `click` span for each tap.
+  - `taps` (default `false`): emit a `click` span for each tap (with `event.type`/`event.x`/`event.y`).
   - `pageViews` (default `true`): emit spans for Android Activity lifecycle events (screen/page views).
   - `trackEvents` (default `true`): emit a `track` span when a custom event is tracked, either automatically via the LaunchDarkly `afterTrack` hook (`LDClient.track(...)`) or manually via `LDObserve.track(...)`.
+  - `screenViews` (default `true`): emit a `screen_view` span when a screen is shown. This only gates the span; screen *detection* (and Session Replay `Navigate` events) is controlled by `instrumentations.screens`.
 
 Example:
 
@@ -141,15 +147,58 @@ val options = ObservabilityOptions(
     metricsApi = ObservabilityOptions.MetricsApi.disabled(),
     instrumentations = ObservabilityOptions.Instrumentations(
         crashReporting = false,
-        launchTime = true
+        launchTime = true,
+        screens = true
     ),
     analytics = ObservabilityOptions.Analytics(
         taps = true,
         pageViews = true,
-        trackEvents = true
+        trackEvents = true,
+        screenViews = true
     )
 )
 ```
+
+### Tracking Screen Views
+
+The SDK emits a `screen_view` span (following the analytics taxonomy `event.*` namespace) whenever a screen is shown. Each `screen_view` also resolves `event.previous_screen` from a shared navigation stack and broadcasts a Session Replay `Navigate` event.
+
+#### Automatic capture (Activities)
+
+When `instrumentations.screens` is enabled (the default), every Android `Activity` is captured on resume. By default the screen name is derived by cleaning the class name (`ProfileActivity` → `Profile`), and `event.screen_class` / `event.screen_id` are populated from the activity class.
+
+To customize the reported name or category, implement `LDScreenNameProvider` on your `Activity`:
+
+```kotlin
+import com.launchdarkly.observability.client.screen.LDScreenNameProvider
+
+class CheckoutActivity : ComponentActivity(), LDScreenNameProvider {
+    override val ldScreenName: String = "Checkout"
+    override val ldScreenCategory: String = "Commerce"
+}
+```
+
+#### Manual capture (Fragments / Compose)
+
+Screens that aren't backed by a distinct `Activity` (Fragments, Jetpack Compose destinations) won't be captured automatically. Report them manually with `LDObserve.trackScreenView`:
+
+```kotlin
+import com.launchdarkly.observability.sdk.LDObserve
+
+LDObserve.trackScreenView(
+    name = "Profile",
+    screenClass = "ProfileFragment",
+    screenId = "com.example.app.ProfileFragment",
+    category = "Account"
+)
+```
+
+A single call per appearance is sufficient regardless of capture mode — `event.previous_screen` is resolved through the shared stack, which handles re-appearance and back-navigation.
+
+#### Decoupling detection from the span
+
+- `instrumentations.screens` controls automatic screen *detection*. It drives both the automatic `screen_view` span and the Session Replay `Navigate` event.
+- `analytics.screenViews` only gates the `screen_view` span. Detection and the `Navigate` broadcast are independent of this flag, and manual `trackScreenView(...)` still works when `screens` is disabled.
 
 ### Recording Observability Data
 
@@ -209,6 +258,14 @@ LDObserve.track(
     attributes = Attributes.of(
         AttributeKey.stringKey("currency"), "USD"
     )
+)
+
+// Record a `screen_view` span for screens not backed by a distinct Activity
+// (e.g. Fragments or Compose destinations). Activities are captured automatically.
+LDObserve.trackScreenView(
+    name = "Profile",
+    screenClass = "ProfileFragment",
+    category = "Account"
 )
 ```
 

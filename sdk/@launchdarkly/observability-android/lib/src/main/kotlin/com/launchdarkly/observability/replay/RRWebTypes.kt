@@ -60,4 +60,5 @@ enum class RRWebCustomDataTag(val wireValue: String) {
     RELOAD("Reload"),
     IDENTIFY("Identify"),
     TRACK("Track"),
+    NAVIGATE("Navigate"),
 }

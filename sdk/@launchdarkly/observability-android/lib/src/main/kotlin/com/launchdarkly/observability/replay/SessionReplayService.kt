@@ -14,6 +14,7 @@ import com.launchdarkly.observability.replay.capture.ImageCaptureServicing
 import com.launchdarkly.observability.replay.exporter.IdentifyItemPayload
 import com.launchdarkly.observability.replay.exporter.ImageItemPayload
 import com.launchdarkly.observability.replay.exporter.InteractionItemPayload
+import com.launchdarkly.observability.replay.exporter.NavigateItemPayload
 import com.launchdarkly.observability.replay.exporter.SessionReplayExporter
 import com.launchdarkly.observability.replay.exporter.TrackItemPayload
 import com.launchdarkly.observability.replay.transport.BatchWorker
@@ -171,6 +172,30 @@ class SessionReplayService(
                 eventQueue.send(InteractionItemPayload(interaction))
             }
         }
+
+        // Navigate collector: each screen change from Observability becomes an rrweb `Navigate`
+        // event on the active recording.
+        instrumentationScope.launch {
+            observabilityContext.screenViewFlow?.collect { screenView ->
+                if (!_isEnabled.value) return@collect
+                eventQueue.send(
+                    NavigateItemPayload(
+                        name = screenView.name,
+                        timestamp = screenView.timestamp,
+                        sessionId = sessionManager.getSessionId()
+                    )
+                )
+            }
+        }
+
+        // Track collector: each track event from Observability's single emitter becomes an rrweb
+        // `Track` event. This covers both `LDClient.track` and the manual `LDObserve.track` API
+        // (including standalone init without `LDClient`), which the LD client hook alone misses.
+        instrumentationScope.launch {
+            observabilityContext.trackFlow?.collect { track ->
+                recordTrack(track.name, track.metricValue, track.attributes, track.timestamp)
+            }
+        }
     }
 
     /**
@@ -271,6 +296,10 @@ class SessionReplayService(
     override fun registerActivity(activity: Activity) {
         // Touch capture is owned by Observability's shared hook.
         observabilityContext.userInteractionManager?.registerActivity(activity)
+        // Screen capture is also owned by Observability. The automatic source only fires on future
+        // onActivityResumed callbacks, so capture the already-visible screen here to avoid missing
+        // the first screen_view span and Navigate event on late init (e.g. React Native).
+        observabilityContext.screenViewManager?.registerActivity(activity)
     }
 
     // TODO: O11Y-621 - This should be called somewhere (Probably inside ObservabilityService.kt) to shutdown the instrumentation.
@@ -356,8 +385,22 @@ class SessionReplayService(
     }
 
     override fun afterTrack(name: String, metricValue: Double?, attributes: Attributes) {
+        recordTrack(name, metricValue, attributes)
+    }
+
+    /**
+     * Records a `Track` timeline event onto the active recording. Shared by the cross-platform
+     * bridge ([com.launchdarkly.observability.replay.plugin.SessionReplayHookProxy]) and the
+     * in-process track collector fed by Observability's single emitter.
+     */
+    private fun recordTrack(
+        name: String,
+        metricValue: Double?,
+        attributes: Attributes,
+        timestamp: Long = System.currentTimeMillis()
+    ) {
         if (!this::sessionManager.isInitialized || exporter == null) {
-            logger.warn("afterTrack called before SessionReplayService was installed; skipping.")
+            logger.warn("track received before SessionReplayService was installed; skipping.")
             return
         }
         // Track events are timeline indicators on an active recording; skip when replay is disabled.
@@ -367,6 +410,7 @@ class SessionReplayService(
             eventKey = name,
             metricValue = metricValue,
             attributes = attributes,
+            timestamp = timestamp,
             sessionId = sessionManager.getSessionId()
         )
         instrumentationScope.launch {
