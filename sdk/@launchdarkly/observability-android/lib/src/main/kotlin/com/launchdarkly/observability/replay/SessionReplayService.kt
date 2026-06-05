@@ -158,6 +158,8 @@ class SessionReplayService(
         // Feed raw touches from the shared Observability hook into the (scaling + grouping) source.
         instrumentationScope.launch {
             observabilityContext.userInteractionManager?.touchFlow?.collect { sample ->
+                // Speed the capture cadence up while the user is interacting.
+                captureManager?.noteInteraction()
                 interactionSource?.process(sample)
             }
         }
@@ -202,7 +204,7 @@ class SessionReplayService(
                 } catch (e: Exception) {
                     logger.error("Capture failed", e)
                 }
-                delay(captureManager?.captureDelayMillis ?: Long.MAX_VALUE)
+                delay(captureManager?.effectiveCaptureDelayMillis() ?: Long.MAX_VALUE)
             }
         }
     }
