@@ -47590,7 +47590,7 @@ __metadata:
     jsdom:
       optional: true
     vite:
-      optional: true
+      optional: false
   bin:
     vitest: vitest.mjs
   checksum: 10/b9f1308436717da9558b36e149cac6bab8e3730aa7e90b49f9d7a84ba853e353d8afba7d406dc0abec731fb2a9ea9e92b89aba06b94b1a2802203048b43468af
