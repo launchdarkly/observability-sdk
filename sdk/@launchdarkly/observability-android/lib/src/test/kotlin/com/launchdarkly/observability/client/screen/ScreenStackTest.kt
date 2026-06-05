@@ -45,15 +45,24 @@ class ScreenStackTest {
     }
 
     @Test
-    fun `pop-back resolves the screen below the target`() {
+    fun `pop-back reports the screen the user came from`() {
         val stack = ScreenStack()
         stack.record("Home")
         stack.record("List")
         stack.record("Detail")
-        // Navigate back to List; previous is Home, and the stack is trimmed above List.
-        assertEquals("Home", previousOf(stack.record("List")))
+        // Navigate back to List; previous is the screen just left (Detail), stack trimmed above List.
+        assertEquals("Detail", previousOf(stack.record("List")))
         // Going forward again to Detail now reports List as previous.
         assertEquals("List", previousOf(stack.record("Detail")))
+    }
+
+    @Test
+    fun `pop-back to the root still reports the screen just left`() {
+        val stack = ScreenStack()
+        stack.record("Home")
+        stack.record("List")
+        // Back to the root Home: previous_screen must be List, not omitted.
+        assertEquals("List", previousOf(stack.record("Home")))
     }
 
     @Test
@@ -79,8 +88,9 @@ class ScreenStackTest {
         stack.record("Detail", id = "item-1")
         stack.record("Detail", id = "item-2")
         stack.record("Detail", id = "item-3")
-        // Returning to item-1 trims everything above it; previous is null (item-1 is the root).
-        assertNull(previousOf(stack.record("Detail", id = "item-1")))
+        // Returning to item-1 (the root) trims everything above it; previous is the screen just
+        // left (item-3's name), not null.
+        assertEquals("Detail", previousOf(stack.record("Detail", id = "item-1")))
         // Going forward again reports item-1's name as previous.
         assertEquals("Detail", previousOf(stack.record("Detail", id = "item-4")))
     }

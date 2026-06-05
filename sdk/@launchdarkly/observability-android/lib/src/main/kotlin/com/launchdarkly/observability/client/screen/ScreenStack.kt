@@ -54,19 +54,24 @@ class ScreenStack {
             return ScreenChange.Unchanged
         }
 
-        // Pop-back: the screen already exists lower in the stack. Trim everything above it so it
-        // becomes the top again.
+        // `previous_screen` is the screen the user came from, i.e. the prior top, captured before
+        // any pop-back trimming. This matches the iOS ScreenStack semantics, including when the
+        // user navigates back to the root screen (e.g. List -> Home still reports List).
+        val previous = top?.name
+
         val existingIndex = stack.indexOfLast { it.key == key }
         if (existingIndex >= 0) {
+            // Pop-back: the screen already exists lower in the stack. Trim everything above it so
+            // it becomes the top again.
             while (stack.size - 1 > existingIndex) {
                 stack.removeLast()
             }
-            return ScreenChange.Changed(stack.getOrNull(stack.size - 2)?.name)
+        } else {
+            // Forward navigation to a new screen.
+            stack.addLast(Entry(key = key, name = name))
         }
 
-        // Forward navigation to a new screen.
-        stack.addLast(Entry(key = key, name = name))
-        return ScreenChange.Changed(top?.name)
+        return ScreenChange.Changed(previous)
     }
 
     /** Clears the navigation history. */

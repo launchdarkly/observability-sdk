@@ -205,9 +205,15 @@ class ObservabilityService(
         // history, otherwise the first screen_view/Navigate of the new session would resolve
         // previous_screen against the prior session, and a re-appearing first screen would be
         // deduped instead of emitting a fresh navigation.
+        //
+        // Only reset on an actual session *change*. The initial session start carries
+        // Session.NONE (empty id) as the previous session; resetting on it would clobber a first
+        // screen that may already have been recorded by the time this notification fires.
         sessionManager?.addObserver(object : SessionObserver {
             override fun onSessionStarted(newSession: Session, previousSession: Session) {
-                screenStack.reset()
+                if (previousSession.getId().isNotEmpty()) {
+                    screenStack.reset()
+                }
             }
 
             override fun onSessionEnded(session: Session) {}
