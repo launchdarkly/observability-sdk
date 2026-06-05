@@ -112,6 +112,14 @@ class SessionReplayExporter(
                             }
                         }
 
+                        is NavigateItemPayload -> {
+                            val sessionId = payload.sessionId ?: lastCaptureSnapshot.sessionId
+                            sessionId?.let { sessionId ->
+                                val navigateEvent = eventGenerator.generateNavigateEvent(payload)
+                                eventsBySession.getOrPut(sessionId) { mutableListOf() }.add(navigateEvent)
+                            }
+                        }
+
                         else -> {
                             // Noop
                         }

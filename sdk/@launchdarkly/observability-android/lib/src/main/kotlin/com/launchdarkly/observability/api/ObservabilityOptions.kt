@@ -92,11 +92,17 @@ data class ObservabilityOptions(
      * @property trackEvents If `true`, the plugin emits a `track` span when a custom
      *   event is tracked (via the LD `afterTrack` hook or [com.launchdarkly.observability.sdk.LDObserve.track]).
      *   Defaults to `true`.
+     * @property screenViews If `true`, the plugin emits a `screen_view` span when a screen is shown
+     *   (automatically via [Instrumentations.screens] or manually via
+     *   [com.launchdarkly.observability.sdk.LDObserve.trackScreenView]). This flag only gates the
+     *   span; automatic screen *detection* (and therefore Session Replay `Navigate` events) is
+     *   controlled by [Instrumentations.screens]. Defaults to `true`.
      */
     data class Analytics(
         val taps: Boolean = false,
         val pageViews: Boolean = true,
         val trackEvents: Boolean = true,
+        val screenViews: Boolean = true,
     )
 
     /**
@@ -104,10 +110,14 @@ data class ObservabilityOptions(
      *
      * @property crashReporting If `true`, the plugin will automatically report any uncaught exceptions as errors.
      * @property launchTime If `true`, the plugin will automatically measure and report the application's startup time as metrics.
+     * @property screens If `true`, the plugin automatically detects screen changes via Android Activity
+     *   lifecycle callbacks. This drives the `screen_view` span (gated separately by
+     *   [Analytics.screenViews]) and Session Replay `Navigate` events. Defaults to `true`.
      */
     data class Instrumentations(
         val crashReporting: Boolean = true,
         val launchTime: Boolean = false,
+        val screens: Boolean = true,
     )
 
     /**

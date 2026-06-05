@@ -84,4 +84,22 @@ interface Observe : MetricsApi, LogsApi, TracesApi {
      * @param attributes Additional attributes to record with the event.
      */
     fun track(name: String, value: Double? = null, attributes: Attributes = Attributes.empty())
+
+    /**
+     * Record a screen view as a `screen_view` span, following the analytics taxonomy `event.*`
+     * namespace. Use this for screens that are not backed by a distinct Android `Activity` (e.g.
+     * Fragments or Compose destinations); activities are captured automatically when
+     * [com.launchdarkly.observability.api.ObservabilityOptions.Instrumentations.screens] is enabled.
+     *
+     * @param name Human-readable screen name (maps to `event.name`).
+     * @param screenClass Optional class backing the screen (maps to `event.screen_class`).
+     * @param screenId Optional stable identifier (maps to `event.screen_id`).
+     * @param category Optional screen group (maps to `event.category`).
+     */
+    fun trackScreenView(
+        name: String,
+        screenClass: String? = null,
+        screenId: String? = null,
+        category: String? = null
+    )
 }

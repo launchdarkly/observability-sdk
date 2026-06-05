@@ -2,9 +2,11 @@ package com.launchdarkly.observability.client
 
 import android.app.Application
 import com.launchdarkly.observability.api.ObservabilityOptions
+import com.launchdarkly.observability.client.screen.ScreenViewEvent
 import com.launchdarkly.observability.context.ObserveLogger
 import io.opentelemetry.android.session.SessionManager
 import io.opentelemetry.api.common.Attributes
+import kotlinx.coroutines.flow.SharedFlow
 
 /**
  * Shared information between plugins.
@@ -21,4 +23,9 @@ data class ObservabilityContext(
      * [UserInteractionManager.touchFlow] instead of intercepting windows itself.
      */
     var userInteractionManager: UserInteractionManager? = null,
+    /**
+     * Ordered stream of recorded screen views (first screen and every change), owned by
+     * Observability. Session Replay consumes it to emit `Navigate` events.
+     */
+    var screenViewFlow: SharedFlow<ScreenViewEvent>? = null,
 )

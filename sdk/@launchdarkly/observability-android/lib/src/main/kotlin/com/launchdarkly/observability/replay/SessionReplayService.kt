@@ -14,6 +14,7 @@ import com.launchdarkly.observability.replay.capture.ImageCaptureServicing
 import com.launchdarkly.observability.replay.exporter.IdentifyItemPayload
 import com.launchdarkly.observability.replay.exporter.ImageItemPayload
 import com.launchdarkly.observability.replay.exporter.InteractionItemPayload
+import com.launchdarkly.observability.replay.exporter.NavigateItemPayload
 import com.launchdarkly.observability.replay.exporter.SessionReplayExporter
 import com.launchdarkly.observability.replay.exporter.TrackItemPayload
 import com.launchdarkly.observability.replay.transport.BatchWorker
@@ -169,6 +170,21 @@ class SessionReplayService(
             interactionSource?.captureFlow?.collect { interaction ->
                 if (!_isEnabled.value) return@collect
                 eventQueue.send(InteractionItemPayload(interaction))
+            }
+        }
+
+        // Navigate collector: each screen change from Observability becomes an rrweb `Navigate`
+        // event on the active recording.
+        instrumentationScope.launch {
+            observabilityContext.screenViewFlow?.collect { screenView ->
+                if (!_isEnabled.value) return@collect
+                eventQueue.send(
+                    NavigateItemPayload(
+                        name = screenView.name,
+                        timestamp = screenView.timestamp,
+                        sessionId = sessionManager.getSessionId()
+                    )
+                )
             }
         }
     }

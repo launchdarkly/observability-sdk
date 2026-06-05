@@ -183,6 +183,26 @@ class RRWebEventGeneratorTest {
         assertFalse(payloadJson.containsKey("value"))
     }
 
+    @Test
+    fun `generateNavigateEvent emits Navigate custom event with screen name payload`() {
+        val generator = RRWebEventGenerator(canvasDrawEntourage = 1, title = "test")
+        val payload = NavigateItemPayload(
+            name = "Profile",
+            timestamp = 7L,
+            sessionId = "session",
+        )
+
+        val event = generator.generateNavigateEvent(payload)
+
+        assertEquals(EventType.CUSTOM, event.type)
+        assertEquals(7L, event.timestamp)
+        val custom = event.data as EventDataUnion.CustomEventDataWrapper
+        val obj = custom.data.jsonObject
+        assertEquals("Navigate", obj["tag"]!!.jsonPrimitive.content)
+        // payload is the route as a plain string, matching web `addCustomEvent('Navigate', url)`
+        assertEquals("Profile", obj["payload"]!!.jsonPrimitive.content)
+    }
+
     private fun exportFrame(
         keyFrameId: Int,
         isKeyframe: Boolean,

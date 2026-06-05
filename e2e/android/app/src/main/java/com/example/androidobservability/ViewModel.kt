@@ -182,6 +182,16 @@ class ViewModel(application: Application) : AndroidViewModel(application) {
         )
     }
 
+    fun trackScreenView() {
+        // Records a `screen_view` span manually (for screens not backed by a distinct Activity,
+        // e.g. Compose destinations). Activities are captured automatically.
+        LDObserve.trackScreenView(
+            name = "Manual Screen",
+            screenClass = "MainActivity",
+            category = "Demo"
+        )
+    }
+
     fun triggerCrash() {
         throw RuntimeException("Failed to connect to bogus server.")
     }
