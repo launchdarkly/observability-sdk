@@ -127,9 +127,11 @@ final class LDNativeApiImpl: NSObject, LDNativeApi {
         config.startOnline = false
 
         let crashReportingEnabled: Bool = observability.instrumentation?.crashReporting ?? true
-        // `analytics.taps` is the publish gate for tap `click` spans; tap detection itself is
-        // driven by the native `instrumentation.userTaps` default. pageViews and trackEvents are
-        // Android-only and ignored here.
+        // The Flutter API exposes a single `analytics.taps` flag, but natively taps need two
+        // switches: `instrumentation.userTaps` runs the tap-detection machinery, and
+        // `analytics.taps` publishes each detected tap as a `click` span. We drive both from the
+        // one Flutter flag so taps are detected (not just published) regardless of the native
+        // `Instrumentation` defaults. pageViews and trackEvents are Android-only and ignored here.
         let tapsEnabled: Bool = observability.analytics?.taps ?? true
         let launchTimesEnabled: Bool = observability.instrumentation?.launchTimes ?? true
         let metricsEnabled: Bool = observability.metricsEnabled ?? true
@@ -155,6 +157,7 @@ final class LDNativeApiImpl: NSObject, LDNativeApi {
         )
         let instrumentation = ObservabilityOptions.Instrumentation(
             urlSession: .disabled,
+            userTaps: tapsEnabled ? .enabled : .disabled,
             memory: .disabled,
             memoryWarnings: .disabled,
             cpu: .disabled,
