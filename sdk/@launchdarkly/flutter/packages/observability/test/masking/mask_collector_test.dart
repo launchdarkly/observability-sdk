@@ -101,6 +101,32 @@ void main() {
       expect(ops, isEmpty);
     });
 
+    testWidgets('LDUnmask propagates through deep nesting', (tester) async {
+      // Mirrors NestedMaskingPropagationView's "deep unmask through nesting"
+      // section: a text input two levels of non-masking widgets below an
+      // LDUnmask ancestor should still be revealed.
+      final ops = await collect(
+        tester,
+        const LDUnmask(
+          child: Padding(
+            padding: EdgeInsets.all(8),
+            child: ColoredBox(
+              color: Color(0x2600FF00),
+              child: Padding(
+                padding: EdgeInsets.all(8),
+                child: ColoredBox(
+                  color: Color(0x0D00FF00),
+                  child: TextField(),
+                ),
+              ),
+            ),
+          ),
+        ),
+        maskTextInputs: true,
+      );
+      expect(ops, isEmpty);
+    });
+
     testWidgets('LDUnmask nested inside LDMask stays masked (mask wins)',
         (tester) async {
       final ops = await collect(

@@ -9,6 +9,7 @@ import 'package:launchdarkly_flutter_observability/launchdarkly_flutter_observab
 import 'credit_card_page.dart';
 import 'dialogs_page.dart';
 import 'main.dart';
+import 'nested_masking_propagation_page.dart';
 import 'smoothie_list_page.dart';
 import 'web_view_page.dart';
 
@@ -123,7 +124,9 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<void> _onTriggerHttpRequest() async {
     try {
-      final response = await _httpClient.get(Uri.parse('https://www.google.com'));
+      final response = await _httpClient.get(
+        Uri.parse('https://www.google.com'),
+      );
       debugPrint('HTTP Response: ${response.statusCode}');
     } catch (e) {
       debugPrint('HTTP Request failed: $e');
@@ -271,8 +274,7 @@ class _MyHomePageState extends State<MyHomePage> {
       await _showAlert('Flag', 'Flag key cannot be empty');
       return;
     }
-    final result =
-        LDSingleton.client?.boolVariation(flagKey, false) ?? false;
+    final result = LDSingleton.client?.boolVariation(flagKey, false) ?? false;
     if (!mounted) return;
     await _showAlert('Flag', '$flagKey: $result');
     debugPrint('Flag $flagKey: $result');
@@ -376,6 +378,18 @@ class _MyHomePageState extends State<MyHomePage> {
                 MaterialPageRoute<void>(builder: (_) => const DialogsPage()),
               ),
               child: const Text('Dialogs'),
+            ),
+            const SizedBox(height: 4),
+            // Mirrors the Swift TestApp's NestedMaskingPropagationView:
+            // demonstrates how LDMask / LDUnmask propagate down a widget
+            // subtree, including through multiple levels of nesting.
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const NestedMaskingPropagationPage(),
+                ),
+              ),
+              child: const Text('Nested Masking Propagation'),
             ),
 
             const _SectionHeader('Observability'),
