@@ -2,7 +2,7 @@
 
 `launchdarkly_flutter_observability` provides LaunchDarkly observability and session replay for Flutter through a single public facade, `LDObserve`: automatic and manual instrumentation for your application — including spans, logs, error reporting, feature flag correlation, and session replay.
 
-Observability (spans, logs, errors) flows through a cross-platform Dart OpenTelemetry pipeline and works on **mobile and web**. Session replay uses a native bridge on mobile; web session replay is not yet available.
+Observability (spans, logs, errors) works on **mobile and web**. Session replay is available on mobile; web session replay is not yet available.
 
 ## Early Access Preview
 
@@ -149,8 +149,8 @@ On `ObservabilityOptions`:
 - `logsApiLevel` (`ObservabilityLogLevel`): minimum severity of logs forwarded to the logs pipeline. Use `ObservabilityLogLevel.none` to disable logs. Defaults to `ObservabilityLogLevel.info`.
 - `traces` (`TracesOptions`): toggles `includeErrors` and `includeSpans` for automatic trace generation. Both default to `true`.
 - `metricsEnabled` (`bool`): whether metrics are exported. Defaults to `true`.
-- `analytics` (`AnalyticsOptions`): analytics telemetry. Mirrors Android's `Analytics`:
-  - `taps` (`bool`): emit a span for each user tap. Supported on Android and iOS. Defaults to `false`.
+- `analytics` (`AnalyticsOptions`): analytics telemetry:
+  - `taps` (`bool`): emit a span for each user tap. Tap detection is always enabled; this flag only controls whether a span is published. Supported on Android and iOS. Defaults to `true`.
   - `pageViews` (`bool`): emit spans for screen/page view lifecycle events. **Android-only** (no-op on iOS/web). Defaults to `true`.
   - `trackEvents` (`bool`): emit a span when a custom event is tracked. **Android-only** (no-op on iOS/web). Defaults to `true`.
 - `instrumentation.crashReporting` (`bool`): report uncaught exceptions as errors. Defaults to `true`.
@@ -316,7 +316,7 @@ Session Replay captures screen recordings to help you understand how users inter
 runApp(const SessionReplayCapture(child: MyApp()));
 ```
 
-On mobile, `SessionReplayCapture` provides Flutter-rendered screenshots to the native session replay SDK over a method channel; without it, the native SDK has no Flutter frames to record. On web, session replay is not yet available, so `SessionReplayCapture` is a no-op pass-through — wrapping your app with it is safe on every platform.
+On mobile, the part of your app wrapped in `SessionReplayCapture` is what gets recorded; without it, those frames are not captured. On web, session replay is not yet available, so `SessionReplayCapture` is a safe no-op pass-through — wrapping your app with it is safe on every platform.
 
 ### Privacy options
 
@@ -326,6 +326,7 @@ Control what is captured during a session with `PrivacyOptions`:
 - `maskWebViews`: (Default: `false`) Masks all web view content.
 - `maskLabels`: (Default: `false`) Masks all text labels.
 - `maskImages`: (Default: `false`) Masks all images.
+- `minimumAlpha`: (Default: `0.02`) Opacity threshold below which a widget is treated as invisible and skipped during capture and masking. Raise it to ignore nearly-transparent UI.
 
 ```dart
 const SessionReplayOptions(
@@ -335,13 +336,16 @@ const SessionReplayOptions(
     maskWebViews: false,
     maskLabels: false,
     maskImages: false,
+    minimumAlpha: 0.02,
   ),
 );
 ```
 
+Masks are applied to every captured frame: they follow their widgets through scrolling, transforms, and animations, and frames where a mask cannot be placed reliably are dropped rather than risk exposing unmasked content.
+
 ### Per-widget masking
 
-Beyond the screen-wide `PrivacyOptions`, you can redact individual widgets by wrapping them in `LDMask` — the Flutter equivalent of MAUI's `view.LDMask()`, expressed as a wrapper widget rather than a method call. The wrapped subtree's on-screen bounds are painted over in every captured frame, and the mask follows the widget as it lays out and scrolls:
+Beyond the screen-wide `PrivacyOptions`, you can redact individual widgets by wrapping them in `LDMask`. The wrapped subtree's on-screen bounds are painted over in every captured frame, and the mask follows the widget as it lays out and scrolls:
 
 ```dart
 LDMask(
