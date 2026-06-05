@@ -130,7 +130,13 @@ class ObservabilityService(
     val userInteractionManager = UserInteractionManager()
 
     private val screenStack = ScreenStack()
-    private var screenViewManager: ScreenViewManager? = null
+
+    /**
+     * Automatic screen-view capture. Owned by Observability and shared with Session Replay via
+     * [ObservabilityContext] so late-init paths can register an already-resumed activity.
+     */
+    var screenViewManager: ScreenViewManager? = null
+        private set
 
     /**
      * Broadcasts each recorded screen view (first screen and every change) so Session Replay can
@@ -141,6 +147,17 @@ class ObservabilityService(
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
     val screenViewFlow: SharedFlow<ScreenViewEvent> = _screenViewFlow.asSharedFlow()
+
+    /**
+     * Broadcasts each `track` event so Session Replay can emit a `Track` timeline event regardless
+     * of the entry path (`LDClient.track` or [com.launchdarkly.observability.sdk.LDObserve.track],
+     * including standalone init without `LDClient`). Shared via [ObservabilityContext.trackFlow].
+     */
+    private val _trackFlow = MutableSharedFlow<TrackEvent>(
+        extraBufferCapacity = 16,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
+    val trackFlow: SharedFlow<TrackEvent> = _trackFlow.asSharedFlow()
 
     //TODO: Evaluate if this class should have a close/shutdown method to close this scope
     private val scope = CoroutineScope(DispatcherProviderHolder.current.io + SupervisorJob())
@@ -496,6 +513,11 @@ class ObservabilityService(
         attributes: Attributes,
         contextKeyAttributes: Attributes?
     ) {
+        // Broadcast so Session Replay can record a `Track` timeline event for every track path,
+        // independent of the span flags below (mirrors the `Navigate` broadcast in emitScreenView).
+        // Carries only user-supplied track data, matching the previous SessionReplayHook payload.
+        _trackFlow.tryEmit(TrackEvent(name = name, metricValue = metricValue, attributes = attributes))
+
         if (!observabilityOptions.analytics.trackEvents) return
         if (!observabilityOptions.tracesApi.includeSpans) return
 

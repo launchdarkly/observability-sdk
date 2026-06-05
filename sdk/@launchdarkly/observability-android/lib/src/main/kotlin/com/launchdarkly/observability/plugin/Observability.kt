@@ -118,6 +118,8 @@ class Observability(
         LDObserve.context?.sessionManager = observabilityService.sessionManager
         LDObserve.context?.userInteractionManager = observabilityService.userInteractionManager
         LDObserve.context?.screenViewFlow = observabilityService.screenViewFlow
+        LDObserve.context?.screenViewManager = observabilityService.screenViewManager
+        LDObserve.context?.trackFlow = observabilityService.trackFlow
         LDObserve.init(observabilityService)
 
         observabilityHook.delegate = observabilityService.hookExporter

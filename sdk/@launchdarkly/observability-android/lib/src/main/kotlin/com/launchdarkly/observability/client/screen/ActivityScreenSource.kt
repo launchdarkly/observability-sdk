@@ -21,6 +21,16 @@ internal class ActivityScreenSource(
 ) : Application.ActivityLifecycleCallbacks {
 
     override fun onActivityResumed(activity: Activity) {
+        captureCurrent(activity)
+    }
+
+    /**
+     * Emits a [ScreenView] for [activity] as if it had just resumed. Used to capture the
+     * already-visible screen when the SDK initializes after the activity is already resumed
+     * (e.g. the React Native [com.launchdarkly.observability.sdk.LDReplay.registerActivity] path),
+     * where no further `onActivityResumed` fires for the current screen.
+     */
+    fun captureCurrent(activity: Activity) {
         screenView(activity)?.let(onScreenView)
     }
 
