@@ -10,6 +10,7 @@ import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.observability.sdk.LDObserve
 import com.launchdarkly.sdk.ContextKind
 import com.launchdarkly.sdk.LDContext
+import com.launchdarkly.sdk.LDValue
 import com.launchdarkly.sdk.android.LDClient
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
@@ -26,6 +27,8 @@ import java.net.URL
 
 
 class ViewModel(application: Application) : AndroidViewModel(application) {
+
+    private var screenViewCounter = 0
 
     fun triggerMetric() {
         LDObserve.recordMetric(Metric("test-gauge", 50.0))
@@ -170,15 +173,41 @@ class ViewModel(application: Application) : AndroidViewModel(application) {
 
     fun trackViaLdClient() {
         // Records a `track` span automatically via the Observability afterTrack hook.
-        LDClient.get().track("track-via-ld-client")
+        LDClient.get().trackData(
+            "track-via-ld-client",
+            LDValue.buildObject()
+                .put("test-string", "android")
+                .put("test-true", true)
+                .put("test-false", false)
+                .put("test-integer", 42)
+                .put("test-double", 3.14)
+                .build()
+        )
     }
 
     fun trackViaLdObserve() {
         // Records a `track` span directly through the Observability API.
         LDObserve.track(
             "track-via-ld-observe",
-            value = 7.0,
-            attributes = Attributes.of(AttributeKey.stringKey("source"), "ld-observe")
+            data = LDValue.buildObject()
+                .put("test-string", "android")
+                .put("test-true", true)
+                .put("test-false", false)
+                .put("test-integer", 42)
+                .put("test-double", 3.14)
+                .build()
+        )
+    }
+
+    fun trackScreenView() {
+        // Records a `screen_view` span manually (for screens not backed by a distinct Activity,
+        // e.g. Compose destinations). Activities are captured automatically.
+        val count = ++screenViewCounter
+        LDObserve.trackScreenView(
+            name = "Manual Screen $count",
+            screenClass = "MainActivity",
+            screenId = "manual-screen-$count",
+            category = "Demo"
         )
     }
 

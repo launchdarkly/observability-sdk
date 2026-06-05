@@ -234,6 +234,13 @@ private fun MetricButtons(viewModel: ViewModel) {
         ) {
             Text("Track (LDObserve)")
         }
+        Button(
+            onClick = {
+                viewModel.trackScreenView()
+            }
+        ) {
+            Text("Track Screen View")
+        }
     }
 }
 

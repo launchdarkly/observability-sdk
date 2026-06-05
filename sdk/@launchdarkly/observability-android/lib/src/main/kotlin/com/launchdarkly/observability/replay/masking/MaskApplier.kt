@@ -158,9 +158,15 @@ class MaskApplier {
             }
             val dy = abs(after.rect.top - before.rect.top)
             val dx = abs(after.rect.left - before.rect.left)
+            val dRight = abs(after.rect.right - before.rect.right)
+            val dBottom = abs(after.rect.bottom - before.rect.bottom)
 
-            if (max(dx, dy) <= MOVE_TOLERANCE) {
-                // Movement is within tolerance; "before" already covers the area.
+            if (max(max(dx, dy), max(dRight, dBottom)) <= MOVE_TOLERANCE) {
+                // Both position and size are within tolerance; "before" already
+                // covers the area. Checking all four edges (not just the
+                // top-left) ensures a mask that grows in place — without its
+                // top-left moving — still gets hull-drawn below instead of being
+                // dropped, which would expose the newly grown region.
                 resultMasks += Pair(before, null)
                 continue
             }

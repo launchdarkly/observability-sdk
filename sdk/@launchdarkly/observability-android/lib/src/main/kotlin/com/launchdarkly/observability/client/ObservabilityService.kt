@@ -6,6 +6,12 @@ import android.view.ViewConfiguration
 import com.launchdarkly.observability.context.ObserveLogger
 import com.launchdarkly.observability.api.ObservabilityOptions
 import com.launchdarkly.observability.bridge.emitLog
+import com.launchdarkly.observability.bridge.toAttributes
+import com.launchdarkly.observability.client.screen.ScreenChange
+import com.launchdarkly.observability.client.screen.ScreenStack
+import com.launchdarkly.observability.client.screen.ScreenView
+import com.launchdarkly.observability.client.screen.ScreenViewEvent
+import com.launchdarkly.observability.client.screen.ScreenViewManager
 import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
 import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.observability.interfaces.Observe
@@ -27,13 +33,16 @@ import com.launchdarkly.observability.sampling.SamplingLogProcessor
 import com.launchdarkly.observability.traces.EventSpanProcessor
 import com.launchdarkly.observability.traces.OtlpTraceExporter
 import com.launchdarkly.observability.util.requireMainThread
+import com.launchdarkly.sdk.LDValue
 import io.opentelemetry.android.OpenTelemetryRum
 import io.opentelemetry.android.OpenTelemetryRumBuilder
 import io.opentelemetry.android.config.OtelRumConfig
 import io.opentelemetry.android.instrumentation.AndroidInstrumentation
 import io.opentelemetry.android.instrumentation.InstallationContext
+import io.opentelemetry.android.session.Session
 import io.opentelemetry.android.session.SessionConfig
 import io.opentelemetry.android.session.SessionManager
+import io.opentelemetry.android.session.SessionObserver
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Logger
@@ -57,6 +66,10 @@ import io.opentelemetry.sdk.resources.Resource
 import io.opentelemetry.sdk.trace.SdkTracerProviderBuilder
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
@@ -121,6 +134,36 @@ class ObservabilityService(
      */
     val userInteractionManager = UserInteractionManager()
 
+    private val screenStack = ScreenStack()
+
+    /**
+     * Automatic screen-view capture. Owned by Observability and shared with Session Replay via
+     * [ObservabilityContext] so late-init paths can register an already-resumed activity.
+     */
+    var screenViewManager: ScreenViewManager? = null
+        private set
+
+    /**
+     * Broadcasts each recorded screen view (first screen and every change) so Session Replay can
+     * emit `Navigate` events. Shared with Session Replay via [ObservabilityContext.screenViewFlow].
+     */
+    private val _screenViewFlow = MutableSharedFlow<ScreenViewEvent>(
+        extraBufferCapacity = 16,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
+    val screenViewFlow: SharedFlow<ScreenViewEvent> = _screenViewFlow.asSharedFlow()
+
+    /**
+     * Broadcasts each `track` event so Session Replay can emit a `Track` timeline event regardless
+     * of the entry path (`LDClient.track` or [com.launchdarkly.observability.sdk.LDObserve.track],
+     * including standalone init without `LDClient`). Shared via [ObservabilityContext.trackFlow].
+     */
+    private val _trackFlow = MutableSharedFlow<TrackEvent>(
+        extraBufferCapacity = 16,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
+    val trackFlow: SharedFlow<TrackEvent> = _trackFlow.asSharedFlow()
+
     //TODO: Evaluate if this class should have a close/shutdown method to close this scope
     private val scope = CoroutineScope(DispatcherProviderHolder.current.io + SupervisorJob())
 
@@ -159,6 +202,28 @@ class ObservabilityService(
         if (sessionManager == null) {
             logger.warn("SessionManager was not captured during OpenTelemetryRum.build(); session-dependent features will be unavailable.")
         }
+
+        // A new session (e.g. after a background timeout) must start with a fresh navigation
+        // history, otherwise the first screen_view/Navigate of the new session would resolve
+        // previous_screen against the prior session, and a re-appearing first screen would be
+        // deduped instead of emitting a fresh navigation.
+        //
+        // Only reset on an actual session *change*. The initial session start carries
+        // Session.NONE (empty id) as the previous session; resetting on it would clobber a first
+        // screen that may already have been recorded by the time this notification fires.
+        sessionManager?.addObserver(object : SessionObserver {
+            override fun onSessionStarted(newSession: Session, previousSession: Session) {
+                if (previousSession.getId().isNotEmpty()) {
+                    screenStack.reset()
+                    // Re-seed the new session with the screen the user is still viewing. No
+                    // onActivityResumed fires for an already-resumed activity, so without this the
+                    // new session would have no opening screen_view span or Navigate event.
+                    screenViewManager?.captureCurrentScreen()
+                }
+            }
+
+            override fun onSessionEnded(session: Session) {}
+        })
         loadSamplingConfigAsync()
 
         otelMeter = otelRUM.openTelemetry.meterProvider.get(INSTRUMENTATION_SCOPE_NAME)
@@ -181,6 +246,14 @@ class ObservabilityService(
         // tap is published as a `click` span is governed by `analytics.taps` (checked below).
         if (observabilityOptions.instrumentations.userTaps) {
             startTapInstrumentation()
+        }
+
+        // Automatic screen detection routes appearing screens through the same single emitter used
+        // by the manual trackScreenView API. Detection is gated by instrumentations.screens; the
+        // screen_view span itself is gated separately by analytics.screenViews.
+        screenViewManager = ScreenViewManager(application) { screen -> emitScreenView(screen) }
+        if (observabilityOptions.instrumentations.screens) {
+            screenViewManager?.start()
         }
 
         batchWorker.start()
@@ -212,9 +285,12 @@ class ObservabilityService(
                         val duration = sample.timestamp - downTimeMs
                         if (movedTooFar || duration > TAP_TIMEOUT_MS) return@collect
 
+                        // Per analytics-taxonomy §4.1 `click`: one event for all element types,
+                        // described through the `event.*` namespace.
                         val attrs = Attributes.builder()
-                            .put(AttributeKey.stringKey("position.x"), sample.x.toString())
-                            .put(AttributeKey.stringKey("position.y"), sample.y.toString())
+                            .put(EVENT_TYPE, UserInteractionManager.CLICK_SPAN_NAME)
+                            .put(EVENT_X, sample.x.toLong())
+                            .put(EVENT_Y, sample.y.toLong())
                             .build()
                         otelTracer.spanBuilder(UserInteractionManager.CLICK_SPAN_NAME)
                             .setAllAttributes(attrs)
@@ -453,8 +529,8 @@ class ObservabilityService(
             .startSpan()
     }
 
-    override fun track(name: String, value: Double?, attributes: Attributes) {
-        track(name, value, attributes, contextKeyAttributes = null)
+    override fun track(key: String, data: LDValue?, metricValue: Double?) {
+        track(key, metricValue, data?.toAttributes() ?: Attributes.empty(), contextKeyAttributes = null)
     }
 
     /**
@@ -463,10 +539,15 @@ class ObservabilityService(
      */
     override fun track(
         name: String,
-        value: Double?,
+        metricValue: Double?,
         attributes: Attributes,
         contextKeyAttributes: Attributes?
     ) {
+        // Broadcast so Session Replay can record a `Track` timeline event for every track path,
+        // independent of the span flags below (mirrors the `Navigate` broadcast in emitScreenView).
+        // Carries only user-supplied track data, matching the previous SessionReplayHook payload.
+        _trackFlow.tryEmit(TrackEvent(name = name, metricValue = metricValue, attributes = attributes))
+
         if (!observabilityOptions.analytics.trackEvents) return
         if (!observabilityOptions.tracesApi.includeSpans) return
 
@@ -477,9 +558,56 @@ class ObservabilityService(
         // Fresh context keys from the hook take precedence; otherwise use the cached identify keys.
         attrBuilder.putAll(contextKeyAttributes ?: cachedContextKeyAttributes)
         attrBuilder.put(AttributeKey.stringKey("key"), name)
-        value?.let { attrBuilder.put(AttributeKey.doubleKey("value"), it) }
+        metricValue?.let { attrBuilder.put(AttributeKey.doubleKey("value"), it) }
 
         otelTracer.spanBuilder(TRACK_SPAN_NAME)
+            .setAllAttributes(attrBuilder.build())
+            .startSpan()
+            .end()
+    }
+
+    override fun trackScreenView(name: String, screenClass: String?, screenId: String?, category: String?) {
+        emitScreenView(ScreenView(name = name, screenClass = screenClass, screenId = screenId, category = category))
+    }
+
+    /**
+     * Single funnel for screen changes. Both the automatic [ScreenViewManager] capture and the
+     * manual [trackScreenView] API route through here so `previous_screen` resolution stays
+     * consistent.
+     *
+     * The navigation broadcast (Session Replay `Navigate`) always fires once a screen is recorded;
+     * the `screen_view` span is gated by [ObservabilityOptions.Analytics.screenViews].
+     *
+     * Re-appearances of the already-current screen (e.g. an activity resumed again after returning
+     * from an overlay, permission dialog, or the recents switcher) are dropped so they don't emit
+     * duplicate `screen_view` spans or `Navigate` events.
+     */
+    fun emitScreenView(screen: ScreenView) {
+        // Resolve previous_screen against the shared stack before recording this one. A
+        // re-appearance of the current screen is not a navigation, so emit nothing. Identity is
+        // keyed on screenId (when present) so distinct screens sharing a display name aren't
+        // collapsed into a re-appearance of one another.
+        val change = screenStack.record(screen.name, screen.screenId)
+        if (change !is ScreenChange.Changed) return
+        val previous = change.previous
+
+        // Broadcast the navigation so Session Replay can emit a `Navigate` event, independent of
+        // the screen_view span flag.
+        _screenViewFlow.tryEmit(ScreenViewEvent(name = screen.name, previousName = previous, timestamp = screen.timestamp))
+
+        if (!observabilityOptions.analytics.screenViews) return
+        if (!observabilityOptions.tracesApi.includeSpans) return
+
+        val attrBuilder = Attributes.builder()
+        // Context keys first so the reserved `event.*` taxonomy fields always win.
+        attrBuilder.putAll(cachedContextKeyAttributes)
+        attrBuilder.put(EVENT_NAME, screen.name)
+        screen.screenClass?.let { attrBuilder.put(EVENT_SCREEN_CLASS, it) }
+        screen.screenId?.let { attrBuilder.put(EVENT_SCREEN_ID, it) }
+        previous?.let { attrBuilder.put(EVENT_PREVIOUS_SCREEN, it) }
+        screen.category?.let { attrBuilder.put(EVENT_CATEGORY, it) }
+
+        otelTracer.spanBuilder(SCREEN_VIEW_SPAN_NAME)
             .setAllAttributes(attrBuilder.build())
             .startSpan()
             .end()
@@ -551,7 +679,18 @@ class ObservabilityService(
         private const val INSTRUMENTATION_SCOPE_NAME = "com.launchdarkly.observability"
         const val ERROR_SPAN_NAME = "highlight.error"
         const val TRACK_SPAN_NAME = "track"
+        const val SCREEN_VIEW_SPAN_NAME = "screen_view"
         const val SESSION_ID_ATTRIBUTE = "session.id"
+
+        // `event.*` taxonomy attribute keys (see analytics-taxonomy.md).
+        private val EVENT_TYPE = AttributeKey.stringKey("event.type")
+        private val EVENT_X = AttributeKey.longKey("event.x")
+        private val EVENT_Y = AttributeKey.longKey("event.y")
+        private val EVENT_NAME = AttributeKey.stringKey("event.name")
+        private val EVENT_SCREEN_CLASS = AttributeKey.stringKey("event.screen_class")
+        private val EVENT_SCREEN_ID = AttributeKey.stringKey("event.screen_id")
+        private val EVENT_PREVIOUS_SCREEN = AttributeKey.stringKey("event.previous_screen")
+        private val EVENT_CATEGORY = AttributeKey.stringKey("event.category")
 
         // Tap detection thresholds. Long-press timeout separates taps from long presses; the slop
         // (12px, matching the Session Replay move filter) separates taps from drags.

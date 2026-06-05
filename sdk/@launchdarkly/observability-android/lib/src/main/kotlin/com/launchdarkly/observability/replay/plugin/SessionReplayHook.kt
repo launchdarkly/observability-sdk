@@ -49,6 +49,11 @@ class SessionReplayHook internal constructor() : Hook(HOOK_NAME) {
         return seriesData
     }
 
+    // Note: there is intentionally no afterTrack override. `Track` replay events are recorded from
+    // Observability's single track emitter via ObservabilityContext.trackFlow, so they cover both
+    // LDClient.track and the manual LDObserve.track API without double-recording. The native
+    // LDClient.track path reaches the emitter through ObservabilityHook.afterTrack.
+
     companion object {
         const val HOOK_NAME: String = "Session Replay Hook"
     }

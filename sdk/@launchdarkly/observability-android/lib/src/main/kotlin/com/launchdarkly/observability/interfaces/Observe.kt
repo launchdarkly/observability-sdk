@@ -1,5 +1,6 @@
 package com.launchdarkly.observability.interfaces
 
+import com.launchdarkly.sdk.LDValue
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Severity
 import io.opentelemetry.api.trace.Span
@@ -79,9 +80,32 @@ interface Observe : MetricsApi, LogsApi, TracesApi {
 
     /**
      * Record a custom track event as a `track` span.
-     * @param name The event key/name.
-     * @param value An optional metric value associated with the event.
-     * @param attributes Additional attributes to record with the event.
+     *
+     * Mirrors `LDClient.track(key, data, metricValue)` so the same call shape works
+     * whether the event is recorded through the LaunchDarkly client (via the
+     * `afterTrack` hook) or directly through this API.
+     * @param key The key for the event.
+     * @param data The data associated with the event, if any.
+     * @param metricValue A numeric value used by LaunchDarkly experimentation for
+     *   numeric custom metrics, if any.
      */
-    fun track(name: String, value: Double? = null, attributes: Attributes = Attributes.empty())
+    fun track(key: String, data: LDValue? = null, metricValue: Double? = null)
+
+    /**
+     * Record a screen view as a `screen_view` span, following the analytics taxonomy `event.*`
+     * namespace. Use this for screens that are not backed by a distinct Android `Activity` (e.g.
+     * Fragments or Compose destinations); activities are captured automatically when
+     * [com.launchdarkly.observability.api.ObservabilityOptions.Instrumentations.screens] is enabled.
+     *
+     * @param name Human-readable screen name (maps to `event.name`).
+     * @param screenClass Optional class backing the screen (maps to `event.screen_class`).
+     * @param screenId Optional stable identifier (maps to `event.screen_id`).
+     * @param category Optional screen group (maps to `event.category`).
+     */
+    fun trackScreenView(
+        name: String,
+        screenClass: String? = null,
+        screenId: String? = null,
+        category: String? = null
+    )
 }
