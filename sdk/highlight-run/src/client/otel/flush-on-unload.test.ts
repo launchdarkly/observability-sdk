@@ -14,10 +14,10 @@ describe('registerFlushOnUnload', () => {
 	let metricExporter: { setUnloading: Mock }
 	let spanProcessor: { setSkipPendingOnFlush: Mock }
 	let tracerProvider: {
-		forceFlush: Mock<() => Promise<void>>
+		forceFlush: Mock
 	}
 	let meterProvider: {
-		forceFlush: Mock<() => Promise<void>>
+		forceFlush: Mock
 	}
 	let cleanup: () => void
 
@@ -26,14 +26,10 @@ describe('registerFlushOnUnload', () => {
 		metricExporter = { setUnloading: vi.fn() }
 		spanProcessor = { setSkipPendingOnFlush: vi.fn() }
 		tracerProvider = {
-			forceFlush: vi
-				.fn<() => Promise<void>>()
-				.mockResolvedValue(undefined),
+			forceFlush: vi.fn().mockResolvedValue(undefined),
 		}
 		meterProvider = {
-			forceFlush: vi
-				.fn<() => Promise<void>>()
-				.mockResolvedValue(undefined),
+			forceFlush: vi.fn().mockResolvedValue(undefined),
 		}
 		cleanup = registerFlushOnUnload(
 			traceExporter,
