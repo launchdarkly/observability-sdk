@@ -86,7 +86,9 @@ data class ObservabilityOptions(
      * Options for configuring analytics telemetry. These signals are emitted as
      * OpenTelemetry spans.
      *
-     * @property taps If `true`, the plugin emits a `click` span for each tap. Defaults to `false`.
+     * @property taps If `true`, the plugin publishes a `click` span for each detected tap.
+     *   Tap detection itself is governed by [Instrumentations.userTaps]; if that is disabled
+     *   no taps are issued and this flag has no effect. Defaults to `true`.
      * @property pageViews If `true`, the plugin starts spans for Android Activity lifecycle events
      *   (screen/page views). Defaults to `true`.
      * @property trackEvents If `true`, the plugin emits a `track` span when a custom
@@ -94,7 +96,7 @@ data class ObservabilityOptions(
      *   Defaults to `true`.
      */
     data class Analytics(
-        val taps: Boolean = false,
+        val taps: Boolean = true,
         val pageViews: Boolean = true,
         val trackEvents: Boolean = true,
     )
@@ -104,10 +106,15 @@ data class ObservabilityOptions(
      *
      * @property crashReporting If `true`, the plugin will automatically report any uncaught exceptions as errors.
      * @property launchTime If `true`, the plugin will automatically measure and report the application's startup time as metrics.
+     * @property userTaps If `true`, the plugin runs the tap-detection machinery, issuing tap events
+     *   from the captured touch stream. Publishing those taps as `click` spans is governed
+     *   separately by [Analytics.taps]; Session Replay capture is unaffected by either flag.
+     *   Defaults to `true`.
      */
     data class Instrumentations(
         val crashReporting: Boolean = true,
         val launchTime: Boolean = false,
+        val userTaps: Boolean = true,
     )
 
     /**

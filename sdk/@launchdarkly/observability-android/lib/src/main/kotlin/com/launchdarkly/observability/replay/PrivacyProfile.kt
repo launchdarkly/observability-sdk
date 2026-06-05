@@ -53,6 +53,13 @@ data class PrivacyProfile(
     val maskImageViews: Boolean = false,
     val maskWebViews: Boolean = false,
     val maskBySemanticsKeywords: Boolean = false,
+    /**
+     * Opacity threshold below which a view (and its subtree) is treated as
+     * invisible and pruned from masking — it draws nothing into the captured
+     * frame. Defaults to `0.02f`. A view that is at least this opaque still
+     * participates.
+     */
+    val minimumAlpha: Float = DEFAULT_MINIMUM_ALPHA,
 ) {
     private val viewClassSet = buildSet {
         addAll(maskViews.map { it.clazz })
@@ -285,6 +292,9 @@ data class PrivacyProfile(
     }
 
     companion object {
+        /** Default opacity prune threshold, matching the iOS/Flutter `minimumAlpha`. */
+        const val DEFAULT_MINIMUM_ALPHA = 0.02f
+
         private val webViewClassNames = listOf(
             WebView::class.java.name,
             "org.mozilla.geckoview.GeckoView",
