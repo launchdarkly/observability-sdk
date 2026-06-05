@@ -10,7 +10,12 @@ import com.launchdarkly.observability.replay.capture.ImageSignature
 import com.launchdarkly.observability.replay.capture.IntRect
 import com.launchdarkly.observability.replay.capture.IntSize
 import com.launchdarkly.observability.replay.capture.TileSignature
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.double
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
@@ -131,6 +136,51 @@ class RRWebEventGeneratorTest {
         val rollbackToAData = mutationData(rollbackToA)
         assertTrue(rollbackToAData.adds.isNullOrEmpty())
         assertEquals(setOf(bAddId), rollbackToAData.removes!!.map { it.id }.toSet())
+    }
+
+    @Test
+    fun `generateTrackEvent emits Track custom event with stringified payload`() {
+        val generator = RRWebEventGenerator(canvasDrawEntourage = 1, title = "test")
+        val payload = TrackItemPayload(
+            name = "purchase",
+            value = 9.99,
+            attributes = mapOf("currency" to "USD", "count" to "2"),
+            timestamp = 42L,
+            sessionId = "session",
+        )
+
+        val event = generator.generateTrackEvent(payload)!!
+
+        assertEquals(EventType.CUSTOM, event.type)
+        val custom = event.data as EventDataUnion.CustomEventDataWrapper
+        val obj = custom.data.jsonObject
+        assertEquals("Track", obj["tag"]!!.jsonPrimitive.content)
+        // payload is a stringified JSON, matching the web `addCustomEvent('Track', stringify(...))`
+        val payloadJson = Json.parseToJsonElement(obj["payload"]!!.jsonPrimitive.content).jsonObject
+        assertEquals("purchase", payloadJson["event"]!!.jsonPrimitive.content)
+        assertEquals(9.99, payloadJson["value"]!!.jsonPrimitive.double)
+        val data = payloadJson["data"]!!.jsonObject
+        assertEquals("USD", data["currency"]!!.jsonPrimitive.content)
+        assertEquals("2", data["count"]!!.jsonPrimitive.content)
+    }
+
+    @Test
+    fun `generateTrackEvent omits value when null`() {
+        val generator = RRWebEventGenerator(canvasDrawEntourage = 1, title = "test")
+        val payload = TrackItemPayload(
+            name = "login",
+            value = null,
+            attributes = emptyMap(),
+            timestamp = 1L,
+            sessionId = "session",
+        )
+
+        val event = generator.generateTrackEvent(payload)!!
+
+        val custom = event.data as EventDataUnion.CustomEventDataWrapper
+        val payloadJson = Json.parseToJsonElement(custom.data.jsonObject["payload"]!!.jsonPrimitive.content).jsonObject
+        assertEquals("login", payloadJson["event"]!!.jsonPrimitive.content)
+        assertFalse(payloadJson.containsKey("value"))
     }
 
     private fun exportFrame(

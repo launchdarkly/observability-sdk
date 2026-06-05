@@ -15,12 +15,14 @@ import com.launchdarkly.observability.replay.exporter.IdentifyItemPayload
 import com.launchdarkly.observability.replay.exporter.ImageItemPayload
 import com.launchdarkly.observability.replay.exporter.InteractionItemPayload
 import com.launchdarkly.observability.replay.exporter.SessionReplayExporter
+import com.launchdarkly.observability.replay.exporter.TrackItemPayload
 import com.launchdarkly.observability.replay.transport.BatchWorker
 import com.launchdarkly.observability.replay.transport.EventQueue
 import com.launchdarkly.observability.context.LDObserveContext
 import com.launchdarkly.observability.sdk.SessionReplayServicing
 import com.launchdarkly.observability.util.requireMainThread
 import io.opentelemetry.android.session.SessionManager
+import io.opentelemetry.api.common.Attributes
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -350,6 +352,25 @@ class SessionReplayService(
         val observeContext = buildObserveContext(contextKeys)
         instrumentationScope.launch {
             identifySession(observeContext, canonicalKeyOverride = canonicalKey)
+        }
+    }
+
+    override fun afterTrack(name: String, value: Double?, attributes: Attributes) {
+        if (!this::sessionManager.isInitialized || exporter == null) {
+            logger.warn("afterTrack called before SessionReplayService was installed; skipping.")
+            return
+        }
+        // Track events are timeline indicators on an active recording; skip when replay is disabled.
+        if (!_isEnabled.value) return
+
+        val event = TrackItemPayload.from(
+            eventKey = name,
+            metricValue = value,
+            attributes = attributes,
+            sessionId = sessionManager.getSessionId()
+        )
+        instrumentationScope.launch {
+            eventQueue.send(event)
         }
     }
 

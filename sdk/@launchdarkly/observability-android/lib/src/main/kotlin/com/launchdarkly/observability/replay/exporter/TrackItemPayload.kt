@@ -1,0 +1,63 @@
+package com.launchdarkly.observability.replay.exporter
+
+import com.launchdarkly.observability.replay.transport.EventExporting
+import com.launchdarkly.observability.replay.transport.EventQueueItemPayload
+import io.opentelemetry.api.common.AttributeKey
+import io.opentelemetry.api.common.Attributes
+
+/**
+ * Session-replay queue item for a custom analytics `track` event.
+ *
+ * Mirrors the web SDK, where `LDClient.track` -> `afterTrack` hook -> `record.track`
+ * emits an rrweb `Custom` event tagged `"Track"`. On Android the LD `afterTrack` hook
+ * routes here so the same timeline event is produced in the replay.
+ */
+data class TrackItemPayload(
+    val name: String,
+    val value: Double?,
+    val attributes: Map<String, String>,
+    override val timestamp: Long,
+    val sessionId: String?
+) : EventQueueItemPayload {
+
+    override val exporterClass: Class<out EventExporting>
+        get() = SessionReplayExporter::class.java
+
+    /**
+     * Queue cost heuristic: each attribute adds a fixed 100 cost units, plus the event itself.
+     */
+    override fun cost(): Int = (attributes.size + 1) * 100
+
+    companion object {
+        private fun flattenAttributes(source: Attributes, into: MutableMap<String, String>) {
+            source.asMap().forEach { (key: AttributeKey<*>, value: Any) ->
+                when (value) {
+                    is String -> into[key.key] = value
+                    is Boolean, is Int, is Long, is Double, is Float -> into[key.key] = value.toString()
+                    is Iterable<*> -> { /* skip arrays/collections */ }
+                    is Array<*> -> { /* skip arrays */ }
+                    is BooleanArray, is IntArray, is LongArray, is DoubleArray, is FloatArray -> { /* skip primitive arrays */ }
+                    else -> { /* skip unknown types to mirror Swift compactMapValues behavior */ }
+                }
+            }
+        }
+
+        fun from(
+            eventKey: String,
+            metricValue: Double?,
+            attributes: Attributes,
+            timestamp: Long = System.currentTimeMillis(),
+            sessionId: String?
+        ): TrackItemPayload {
+            val flat: MutableMap<String, String> = mutableMapOf()
+            flattenAttributes(attributes, flat)
+            return TrackItemPayload(
+                name = eventKey,
+                value = metricValue,
+                attributes = flat,
+                timestamp = timestamp,
+                sessionId = sessionId
+            )
+        }
+    }
+}
