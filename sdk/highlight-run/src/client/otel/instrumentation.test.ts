@@ -1190,6 +1190,33 @@ describe('Network Instrumentation Custom Attributes', () => {
 				const result = sanitizeUrl(url)
 				expect(result).toBe('https://example.com/path?foo=bar&baz=qux')
 			})
+
+			it('should redact OAuth access_token in query params', () => {
+				const url =
+					'https://example.com/callback?access_token=eyJhbGciOiJS&token_type=bearer'
+				const result = sanitizeUrl(url)
+				expect(result).toBe(
+					'https://example.com/callback?access_token=REDACTED&token_type=bearer',
+				)
+			})
+
+			it('should redact OAuth code in query params (authorization code flow)', () => {
+				const url =
+					'https://example.com/callback?code=auth_code_123&state=xyz'
+				const result = sanitizeUrl(url)
+				expect(result).toBe(
+					'https://example.com/callback?code=REDACTED&state=xyz',
+				)
+			})
+
+			it('should redact multiple OAuth params in query string', () => {
+				const url =
+					'https://example.com/token?refresh_token=rt_abc&id_token=eyJ&session_state=sess123'
+				const result = sanitizeUrl(url)
+				expect(result).toBe(
+					'https://example.com/token?refresh_token=REDACTED&id_token=REDACTED&session_state=REDACTED',
+				)
+			})
 		})
 
 		describe('combined scenarios', () => {
@@ -1202,7 +1229,7 @@ describe('Network Instrumentation Custom Attributes', () => {
 				)
 			})
 
-			it('should handle URLs with fragments', () => {
+			it('should preserve harmless fragments in URLs', () => {
 				const url =
 					'https://user:pass@example.com/path?sig=secret#fragment'
 				const result = sanitizeUrl(url)
@@ -1321,7 +1348,7 @@ describe('Network Instrumentation Custom Attributes', () => {
 				expect(result).toBe('/api/data')
 			})
 
-			it('should handle relative URLs with fragment', () => {
+			it('should preserve harmless fragments in relative URLs', () => {
 				const url = '/api?sig=secret#section'
 				const result = sanitizeUrl(url)
 				expect(result).toBe('/api?sig=REDACTED#section')
@@ -1359,7 +1386,7 @@ describe('Network Instrumentation Custom Attributes', () => {
 				expect(result).toBe('//example.com:8080/api?sig=REDACTED')
 			})
 
-			it('should handle protocol-relative URLs with fragment', () => {
+			it('should preserve harmless fragments in protocol-relative URLs', () => {
 				const url = '//example.com/path?sig=secret#section'
 				const result = sanitizeUrl(url)
 				expect(result).toBe('//example.com/path?sig=REDACTED#section')
@@ -1392,6 +1419,59 @@ describe('Network Instrumentation Custom Attributes', () => {
 				const result = sanitizeUrl(url)
 				expect(result).toBe(
 					'//REDACTED:REDACTED@api.example.com:443/v1/data?AWSAccessKeyId=REDACTED&sig=REDACTED#hash',
+				)
+			})
+		})
+
+		describe('fragment sanitization (OAuth token leak prevention)', () => {
+			it('should strip OAuth access_token from URL fragment', () => {
+				const url =
+					'https://example.com/callback#access_token=eyJhbGciOiJS&token_type=bearer'
+				const result = sanitizeUrl(url)
+				expect(result).toBe('https://example.com/callback')
+			})
+
+			it('should strip fragment containing id_token', () => {
+				const url =
+					'https://example.com/path?foo=bar&sig=secret#id_token=eyJ'
+				const result = sanitizeUrl(url)
+				expect(result).toBe(
+					'https://example.com/path?foo=bar&sig=REDACTED',
+				)
+			})
+
+			it('should preserve hash-based route fragments', () => {
+				const url = 'https://example.com/#/dashboard'
+				const result = sanitizeUrl(url)
+				expect(result).toBe('https://example.com/#/dashboard')
+			})
+
+			it('should preserve simple anchor fragments', () => {
+				const url = 'https://example.com/page#section'
+				const result = sanitizeUrl(url)
+				expect(result).toBe('https://example.com/page#section')
+			})
+
+			it('should preserve non-sensitive key=value fragments', () => {
+				const url = 'https://example.com/page#tab=settings&view=detail'
+				const result = sanitizeUrl(url)
+				expect(result).toBe(
+					'https://example.com/page#tab=settings&view=detail',
+				)
+			})
+
+			it('should strip hash-router OAuth callbacks with query params', () => {
+				const url =
+					'https://example.com/#/callback?access_token=eyJhbGciOiJS&token_type=bearer'
+				const result = sanitizeUrl(url)
+				expect(result).toBe('https://example.com/')
+			})
+
+			it('should preserve hash-router routes with non-sensitive query params', () => {
+				const url = 'https://example.com/#/users?page=2&sort=name'
+				const result = sanitizeUrl(url)
+				expect(result).toBe(
+					'https://example.com/#/users?page=2&sort=name',
 				)
 			})
 		})

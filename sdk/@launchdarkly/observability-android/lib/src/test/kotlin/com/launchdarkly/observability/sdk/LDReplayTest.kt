@@ -33,6 +33,13 @@ class LDReplayTest {
             identifyCalls += IdentifyCall(contextKeys, canonicalKey, completed)
         }
 
+        override fun afterTrack(
+            name: String,
+            metricValue: Double?,
+            attributes: io.opentelemetry.api.common.Attributes
+        ) {
+        }
+
         override fun registerActivity(activity: Activity) {
             registeredActivities += activity
         }

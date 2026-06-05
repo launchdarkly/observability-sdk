@@ -103,6 +103,15 @@ class SessionReplayExporter(
                             }
                         }
 
+                        is TrackItemPayload -> {
+                            val sessionId = payload.sessionId ?: lastCaptureSnapshot.sessionId
+                            sessionId?.let { sessionId ->
+                                eventGenerator.generateTrackEvent(payload)?.let { trackEvent ->
+                                    eventsBySession.getOrPut(sessionId) { mutableListOf() }.add(trackEvent)
+                                }
+                            }
+                        }
+
                         else -> {
                             // Noop
                         }

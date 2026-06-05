@@ -69,7 +69,8 @@
 		"rollup": "^4.34.8",
 		"typedoc": "^0.28.7",
 		"typescript": "^5.0.4",
-		"vitest": "^3.2.5"
+		"vite": "^6.4.3",
+		"vitest": "^4.1.0"
 	},
 	"installConfig": {
 		"hoistingLimits": "dependencies"

@@ -67,7 +67,8 @@ export const DEFAULT_URL_BLOCKLIST = [
 
 /**
  * Sensitive query parameter keys that should be redacted according to
- * OpenTelemetry semantic conventions for HTTP spans.
+ * OpenTelemetry semantic conventions for HTTP spans, plus common OAuth
+ * parameters that may appear in authorization code or token exchange flows.
  * @see https://opentelemetry.io/docs/specs/semconv/http/http-spans/
  */
 const SENSITIVE_QUERY_PARAMS = [
@@ -75,6 +76,25 @@ const SENSITIVE_QUERY_PARAMS = [
 	'signature',
 	'sig',
 	'x-goog-signature',
+	'access_token',
+	'id_token',
+	'token',
+	'code',
+	'refresh_token',
+	'session_state',
+]
+
+/**
+ * Sensitive fragment parameter keys commonly used in OAuth implicit/hybrid flows
+ * and SPA callback patterns that may contain tokens.
+ */
+const SENSITIVE_FRAGMENT_PARAMS = [
+	'access_token',
+	'id_token',
+	'token',
+	'code',
+	'refresh_token',
+	'session_state',
 ]
 
 /**
@@ -94,9 +114,40 @@ export const safeParseUrl = (url: string): URL => {
 }
 
 /**
+ * Sanitizes a URL fragment by stripping it if it contains sensitive parameters
+ * (e.g. OAuth tokens), or preserving it if it's a harmless route/anchor.
+ */
+const sanitizeFragment = (hash: string): string => {
+	if (!hash || hash === '#') return ''
+
+	// Remove the leading '#' for parsing
+	const fragment = hash.slice(1)
+
+	// If the fragment doesn't contain '=', it's likely a route or anchor (e.g. #/dashboard, #section)
+	if (!fragment.includes('=')) return hash
+
+	// Handle hash-router callbacks (e.g. #/callback?access_token=...)
+	// Split on '?' to parse the query portion separately
+	const queryIndex = fragment.indexOf('?')
+	const paramString =
+		queryIndex >= 0 ? fragment.slice(queryIndex + 1) : fragment
+
+	const params = new URLSearchParams(paramString)
+	for (const key of params.keys()) {
+		if (SENSITIVE_FRAGMENT_PARAMS.includes(key.toLowerCase())) {
+			return ''
+		}
+	}
+
+	return hash
+}
+
+/**
  * Sanitizes a URL according to OpenTelemetry semantic conventions.
  * - Redacts credentials (username:password) in the URL
  * - Redacts sensitive query parameter values while preserving keys
+ * - Strips URL fragments containing sensitive tokens (e.g. OAuth implicit flow)
+ * - Preserves harmless fragments like route hashes (#/dashboard) and anchors (#section)
  * - Handles absolute, relative, and protocol-relative URLs
  *
  * @param url - The URL string to sanitize
@@ -136,9 +187,13 @@ export const sanitizeUrl = (url: string): string => {
 			}
 		})
 
+		// Sanitize the fragment — strip if it contains sensitive tokens, preserve otherwise
+		const sanitizedHash = sanitizeFragment(urlObject.hash)
+		urlObject.hash = sanitizedHash
+
 		// If the URL is relative (but not protocol-relative), return only the pathname + search + hash
 		if (!url.includes('://') && !url.startsWith('//')) {
-			return urlObject.pathname + urlObject.search + urlObject.hash
+			return urlObject.pathname + urlObject.search + sanitizedHash
 		}
 
 		// For protocol-relative URLs, preserve the //host format
@@ -152,7 +207,7 @@ export const sanitizeUrl = (url: string): string => {
 				urlObject.host +
 				urlObject.pathname +
 				urlObject.search +
-				urlObject.hash
+				sanitizedHash
 			return result
 		}
 

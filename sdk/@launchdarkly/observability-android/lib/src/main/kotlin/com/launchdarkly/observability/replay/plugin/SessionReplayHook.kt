@@ -1,9 +1,12 @@
 package com.launchdarkly.observability.replay.plugin
 
+import com.launchdarkly.observability.bridge.toAttributes
 import com.launchdarkly.observability.sdk.SessionReplayServicing
 import com.launchdarkly.sdk.android.integrations.Hook
 import com.launchdarkly.sdk.android.integrations.IdentifySeriesContext
 import com.launchdarkly.sdk.android.integrations.IdentifySeriesResult
+import com.launchdarkly.sdk.android.integrations.TrackSeriesContext
+import io.opentelemetry.api.common.Attributes
 
 /**
  * Hook protocol adapter for the native Android SDK.
@@ -47,6 +50,16 @@ class SessionReplayHook internal constructor() : Hook(HOOK_NAME) {
             completed = result.status == IdentifySeriesResult.IdentifySeriesStatus.COMPLETED
         )
         return seriesData
+    }
+
+    override fun afterTrack(seriesContext: TrackSeriesContext) {
+        val delegate = delegate ?: return
+
+        delegate.afterTrack(
+            name = seriesContext.key,
+            metricValue = seriesContext.metricValue,
+            attributes = seriesContext.data?.toAttributes() ?: Attributes.empty()
+        )
     }
 
     companion object {
