@@ -110,16 +110,23 @@ final class LDObservePlugin extends Plugin {
     }
     _booted = true;
 
-    registerPlugin(this, credential, _config);
-    _instrumentations.add(LifecycleInstrumentation());
-    _instrumentations.add(
-      DebugPrintInstrumentation(_config.instrumentationConfig),
-    );
-
+    // Start the native stack (and platform session replay) before wiring up the
+    // Dart OpenTelemetry exporters. On mobile the exporters forward spans/logs
+    // over the pigeon bridge to the native tracer/logger; if they are wired
+    // first, early lifecycle and flag-evaluation telemetry crosses the bridge
+    // while the native tracer/logger are still null and is silently dropped
+    // (never gets `session.id` or reaches the backend). Awaiting start here
+    // ensures the native pipeline is ready before any export can occur.
     await LDObservePlatform.instance.start(
       mobileKey: credential,
       observability: observability,
       replay: replay ?? const SessionReplayOptions(isEnabled: false),
+    );
+
+    registerPlugin(this, credential, _config);
+    _instrumentations.add(LifecycleInstrumentation());
+    _instrumentations.add(
+      DebugPrintInstrumentation(_config.instrumentationConfig),
     );
   }
 

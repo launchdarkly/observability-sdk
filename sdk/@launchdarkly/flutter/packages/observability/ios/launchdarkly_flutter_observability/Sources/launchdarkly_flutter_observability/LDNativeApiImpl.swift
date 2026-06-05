@@ -34,14 +34,21 @@ final class LDNativeApiImpl: NSObject, LDNativeApi {
 
             let context = try makeAnonymousContext()
 
+            // Resolve the pigeon `start` only after `LDClient.start` has
+            // completed. By then the `Observability` plugin has registered and
+            // published its `ObservabilityService`, so the native tracer/logger
+            // are non-null and `exportSpans`/`recordLog` will be honored.
+            // Returning before completion would let the Dart side begin
+            // exporting while the bridge still returns nil, dropping early
+            // lifecycle and flag-evaluation telemetry.
             LDClient.start(
                 config: config,
                 context: context,
                 startWaitSeconds: 15.0,
-                completion: { _ in }
+                completion: { _ in
+                    completion(.success(LDStartResult(nativeVersion: observabilityVersion)))
+                }
             )
-
-            completion(.success(LDStartResult(nativeVersion: observabilityVersion)))
         } catch {
             completion(.failure(error))
         }
