@@ -371,7 +371,7 @@ class SessionReplayService(
         }
     }
 
-    override fun afterTrack(name: String, value: Double?, attributes: Attributes) {
+    override fun afterTrack(name: String, metricValue: Double?, attributes: Attributes) {
         if (!this::sessionManager.isInitialized || exporter == null) {
             logger.warn("afterTrack called before SessionReplayService was installed; skipping.")
             return
@@ -381,7 +381,7 @@ class SessionReplayService(
 
         val event = TrackItemPayload.from(
             eventKey = name,
-            metricValue = value,
+            metricValue = metricValue,
             attributes = attributes,
             sessionId = sessionManager.getSessionId()
         )

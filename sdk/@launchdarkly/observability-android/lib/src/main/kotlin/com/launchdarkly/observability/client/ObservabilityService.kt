@@ -6,6 +6,7 @@ import android.view.ViewConfiguration
 import com.launchdarkly.observability.context.ObserveLogger
 import com.launchdarkly.observability.api.ObservabilityOptions
 import com.launchdarkly.observability.bridge.emitLog
+import com.launchdarkly.observability.bridge.toAttributes
 import com.launchdarkly.observability.client.screen.ScreenStack
 import com.launchdarkly.observability.client.screen.ScreenView
 import com.launchdarkly.observability.client.screen.ScreenViewEvent
@@ -31,6 +32,7 @@ import com.launchdarkly.observability.sampling.SamplingLogProcessor
 import com.launchdarkly.observability.traces.EventSpanProcessor
 import com.launchdarkly.observability.traces.OtlpTraceExporter
 import com.launchdarkly.observability.util.requireMainThread
+import com.launchdarkly.sdk.LDValue
 import io.opentelemetry.android.OpenTelemetryRum
 import io.opentelemetry.android.OpenTelemetryRumBuilder
 import io.opentelemetry.android.config.OtelRumConfig
@@ -480,8 +482,8 @@ class ObservabilityService(
             .startSpan()
     }
 
-    override fun track(name: String, value: Double?, attributes: Attributes) {
-        track(name, value, attributes, contextKeyAttributes = null)
+    override fun track(key: String, data: LDValue?, metricValue: Double?) {
+        track(key, metricValue, data?.toAttributes() ?: Attributes.empty(), contextKeyAttributes = null)
     }
 
     /**
@@ -490,7 +492,7 @@ class ObservabilityService(
      */
     override fun track(
         name: String,
-        value: Double?,
+        metricValue: Double?,
         attributes: Attributes,
         contextKeyAttributes: Attributes?
     ) {
@@ -504,7 +506,7 @@ class ObservabilityService(
         // Fresh context keys from the hook take precedence; otherwise use the cached identify keys.
         attrBuilder.putAll(contextKeyAttributes ?: cachedContextKeyAttributes)
         attrBuilder.put(AttributeKey.stringKey("key"), name)
-        value?.let { attrBuilder.put(AttributeKey.doubleKey("value"), it) }
+        metricValue?.let { attrBuilder.put(AttributeKey.doubleKey("value"), it) }
 
         otelTracer.spanBuilder(TRACK_SPAN_NAME)
             .setAllAttributes(attrBuilder.build())

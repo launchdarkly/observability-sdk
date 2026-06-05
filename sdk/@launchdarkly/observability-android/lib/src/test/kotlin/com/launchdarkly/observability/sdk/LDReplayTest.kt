@@ -35,7 +35,7 @@ class LDReplayTest {
 
         override fun afterTrack(
             name: String,
-            value: Double?,
+            metricValue: Double?,
             attributes: io.opentelemetry.api.common.Attributes
         ) {
         }
