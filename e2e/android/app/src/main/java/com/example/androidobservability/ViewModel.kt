@@ -28,6 +28,8 @@ import java.net.URL
 
 class ViewModel(application: Application) : AndroidViewModel(application) {
 
+    private var screenViewCounter = 0
+
     fun triggerMetric() {
         LDObserve.recordMetric(Metric("test-gauge", 50.0))
     }
@@ -194,6 +196,18 @@ class ViewModel(application: Application) : AndroidViewModel(application) {
                 .put("test-integer", 42)
                 .put("test-double", 3.14)
                 .build()
+        )
+    }
+
+    fun trackScreenView() {
+        // Records a `screen_view` span manually (for screens not backed by a distinct Activity,
+        // e.g. Compose destinations). Activities are captured automatically.
+        val count = ++screenViewCounter
+        LDObserve.trackScreenView(
+            name = "Manual Screen $count",
+            screenClass = "MainActivity",
+            screenId = "manual-screen-$count",
+            category = "Demo"
         )
     }
 

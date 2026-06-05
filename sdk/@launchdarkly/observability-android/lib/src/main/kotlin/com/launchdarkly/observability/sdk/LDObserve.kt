@@ -75,6 +75,10 @@ class LDObserve(private val client: Observe) : Observe {
         client.track(key, data, metricValue)
     }
 
+    override fun trackScreenView(name: String, screenClass: String?, screenId: String?, category: String?) {
+        client.trackScreenView(name, screenClass, screenId, category)
+    }
+
     companion object : Observe {
         // initially a no-op delegate
         // volatile annotation guarantees multiple threads see the same value after init and none continue using the no-op implementation
@@ -92,6 +96,7 @@ class LDObserve(private val client: Observe) : Observe {
             }
             override fun flush() {}
             override fun track(key: String, data: LDValue?, metricValue: Double?) {}
+            override fun trackScreenView(name: String, screenClass: String?, screenId: String?, category: String?) {}
         }
 
         /**
@@ -186,6 +191,9 @@ class LDObserve(private val client: Observe) : Observe {
             )
             obsContext.sessionManager = service.sessionManager
             obsContext.userInteractionManager = service.userInteractionManager
+            obsContext.screenViewFlow = service.screenViewFlow
+            obsContext.screenViewManager = service.screenViewManager
+            obsContext.trackFlow = service.trackFlow
             context = obsContext
             init(service)
         }
@@ -223,6 +231,7 @@ class LDObserve(private val client: Observe) : Observe {
         override fun startSpan(name: String, attributes: Attributes): Span = delegate.startSpan(name, attributes)
         override fun flush() = delegate.flush()
         override fun track(key: String, data: LDValue?, metricValue: Double?) = delegate.track(key, data, metricValue)
+        override fun trackScreenView(name: String, screenClass: String?, screenId: String?, category: String?) = delegate.trackScreenView(name, screenClass, screenId, category)
 
         /**
          * Bridge-friendly overloads that avoid exposing OpenTelemetry types

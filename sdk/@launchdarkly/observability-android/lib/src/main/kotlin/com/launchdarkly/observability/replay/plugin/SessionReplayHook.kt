@@ -1,12 +1,9 @@
 package com.launchdarkly.observability.replay.plugin
 
-import com.launchdarkly.observability.bridge.toAttributes
 import com.launchdarkly.observability.sdk.SessionReplayServicing
 import com.launchdarkly.sdk.android.integrations.Hook
 import com.launchdarkly.sdk.android.integrations.IdentifySeriesContext
 import com.launchdarkly.sdk.android.integrations.IdentifySeriesResult
-import com.launchdarkly.sdk.android.integrations.TrackSeriesContext
-import io.opentelemetry.api.common.Attributes
 
 /**
  * Hook protocol adapter for the native Android SDK.
@@ -52,15 +49,10 @@ class SessionReplayHook internal constructor() : Hook(HOOK_NAME) {
         return seriesData
     }
 
-    override fun afterTrack(seriesContext: TrackSeriesContext) {
-        val delegate = delegate ?: return
-
-        delegate.afterTrack(
-            name = seriesContext.key,
-            metricValue = seriesContext.metricValue,
-            attributes = seriesContext.data?.toAttributes() ?: Attributes.empty()
-        )
-    }
+    // Note: there is intentionally no afterTrack override. `Track` replay events are recorded from
+    // Observability's single track emitter via ObservabilityContext.trackFlow, so they cover both
+    // LDClient.track and the manual LDObserve.track API without double-recording. The native
+    // LDClient.track path reaches the emitter through ObservabilityHook.afterTrack.
 
     companion object {
         const val HOOK_NAME: String = "Session Replay Hook"
