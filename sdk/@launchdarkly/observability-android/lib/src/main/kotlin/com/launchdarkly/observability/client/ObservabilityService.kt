@@ -7,6 +7,7 @@ import com.launchdarkly.observability.context.ObserveLogger
 import com.launchdarkly.observability.api.ObservabilityOptions
 import com.launchdarkly.observability.bridge.emitLog
 import com.launchdarkly.observability.bridge.toAttributes
+import com.launchdarkly.observability.client.screen.ScreenChange
 import com.launchdarkly.observability.client.screen.ScreenStack
 import com.launchdarkly.observability.client.screen.ScreenView
 import com.launchdarkly.observability.client.screen.ScreenViewEvent
@@ -38,8 +39,10 @@ import io.opentelemetry.android.OpenTelemetryRumBuilder
 import io.opentelemetry.android.config.OtelRumConfig
 import io.opentelemetry.android.instrumentation.AndroidInstrumentation
 import io.opentelemetry.android.instrumentation.InstallationContext
+import io.opentelemetry.android.session.Session
 import io.opentelemetry.android.session.SessionConfig
 import io.opentelemetry.android.session.SessionManager
+import io.opentelemetry.android.session.SessionObserver
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Logger
@@ -197,6 +200,18 @@ class ObservabilityService(
         if (sessionManager == null) {
             logger.warn("SessionManager was not captured during OpenTelemetryRum.build(); session-dependent features will be unavailable.")
         }
+
+        // A new session (e.g. after a background timeout) must start with a fresh navigation
+        // history, otherwise the first screen_view/Navigate of the new session would resolve
+        // previous_screen against the prior session, and a re-appearing first screen would be
+        // deduped instead of emitting a fresh navigation.
+        sessionManager?.addObserver(object : SessionObserver {
+            override fun onSessionStarted(newSession: Session, previousSession: Session) {
+                screenStack.reset()
+            }
+
+            override fun onSessionEnded(session: Session) {}
+        })
         loadSamplingConfigAsync()
 
         otelMeter = otelRUM.openTelemetry.meterProvider.get(INSTRUMENTATION_SCOPE_NAME)
@@ -547,10 +562,17 @@ class ObservabilityService(
      *
      * The navigation broadcast (Session Replay `Navigate`) always fires once a screen is recorded;
      * the `screen_view` span is gated by [ObservabilityOptions.Analytics.screenViews].
+     *
+     * Re-appearances of the already-current screen (e.g. an activity resumed again after returning
+     * from an overlay, permission dialog, or the recents switcher) are dropped so they don't emit
+     * duplicate `screen_view` spans or `Navigate` events.
      */
     fun emitScreenView(screen: ScreenView) {
-        // Resolve previous_screen against the shared stack before recording this one.
-        val previous = screenStack.record(screen.name)
+        // Resolve previous_screen against the shared stack before recording this one. A
+        // re-appearance of the current screen is not a navigation, so emit nothing.
+        val change = screenStack.record(screen.name)
+        if (change !is ScreenChange.Changed) return
+        val previous = change.previous
 
         // Broadcast the navigation so Session Replay can emit a `Navigate` event, independent of
         // the screen_view span flag.
