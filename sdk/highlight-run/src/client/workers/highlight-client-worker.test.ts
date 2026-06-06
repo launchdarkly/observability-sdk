@@ -304,10 +304,9 @@ describe('highlight-client-worker', () => {
 			// because worker module loading may be slower after repeated resets)
 			await vi.waitFor(
 				() => {
-					const afterResetEvent =
-						getCustomEventResponses(responses).find((e) =>
-							e.payload?.includes('after-reset'),
-						)
+					const afterResetEvent = getCustomEventResponses(
+						responses,
+					).find((e) => e.payload?.includes('after-reset'))
 					expect(afterResetEvent).toBeDefined()
 				},
 				{ timeout: 10000 },
