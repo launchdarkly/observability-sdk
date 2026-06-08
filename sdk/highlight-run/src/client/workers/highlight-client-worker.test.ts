@@ -129,9 +129,17 @@ describe('highlight-client-worker', () => {
 	beforeEach(async () => {
 		vi.resetModules()
 
-		const { default: HighlightClientWorker } =
-			await import('./highlight-client-worker?worker&inline')
-		worker = new HighlightClientWorker() as unknown as TestWorker
+		// Construct the worker from its source module rather than the
+		// `?worker&inline` build output: the inline build compiles to a `blob:`
+		// URL that @vitest/web-worker cannot resolve (and which the test setup
+		// replaces with an inert stub). Loading the source via
+		// `new URL(..., import.meta.url)` produces a module-URL worker that
+		// @vitest/web-worker runs for real, so this suite exercises the actual
+		// worker code.
+		worker = new Worker(
+			new URL('./highlight-client-worker.ts', import.meta.url),
+			{ type: 'module' },
+		) as unknown as TestWorker
 	})
 
 	afterEach(() => {
