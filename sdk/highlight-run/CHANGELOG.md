@@ -1,5 +1,12 @@
 # highlight.run
 
+## [10.3.3](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.3.2...highlight.run-10.3.3) (2026-06-08)
+
+
+### Bug Fixes
+
+* record session replay Click events in capture phase ([#602](https://github.com/launchdarkly/observability-sdk/issues/602)) ([485f922](https://github.com/launchdarkly/observability-sdk/commit/485f92277371bd22a3169d6edd9cdf2ead85beae))
+
 ## [10.3.2](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.3.1...highlight.run-10.3.2) (2026-06-05)
 
 
