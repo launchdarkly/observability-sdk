@@ -57,9 +57,9 @@ android {
         create("compose") {
             dimension = "uiFramework"
         }
-        create("noCompose") {
+        create("java") {
             dimension = "uiFramework"
-            applicationIdSuffix = ".nocompose"
+            applicationIdSuffix = ".java"
         }
     }
     compileOptions {
@@ -134,12 +134,10 @@ dependencies {
     "composeImplementation"(libs.androidx.ui.tooling.preview)
     "composeImplementation"(libs.androidx.material3)
 
-    // noCompose uses AppCompatActivity for proper Material Components theme resolution
-    "noComposeImplementation"("androidx.appcompat:appcompat:1.7.0")
-    // Provides the `by viewModels()` Kotlin extension on ComponentActivity. Required because
-    // androidx.activity is resolved at 1.7.x here (transitively via appcompat / observability-android),
-    // and the Kotlin extensions only moved into the base `activity` artifact starting in 1.8.0.
-    "noComposeImplementation"("androidx.activity:activity-ktx:1.7.0")
+    // The pure-Java flavor uses AppCompatActivity for proper Material Components theme resolution.
+    "javaImplementation"("androidx.appcompat:appcompat:1.7.0")
+    // Provides AndroidViewModel/ViewModelProvider used by the Java MainActivity and ViewModel.
+    "javaImplementation"("androidx.lifecycle:lifecycle-viewmodel:2.6.1")
 
     testImplementation(libs.junit)
     testImplementation(libs.core.ktx)

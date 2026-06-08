@@ -291,9 +291,80 @@ data class PrivacyProfile(
         return false
     }
 
+    /**
+     * Java-friendly fluent builder for [PrivacyProfile].
+     *
+     * Kotlin callers can keep using the [PrivacyProfile] constructor with named/default arguments.
+     * Every setter defaults to the same value as the [PrivacyProfile] primary constructor. List
+     * properties offer both a replace-all setter and an `addXxx` helper for incremental use.
+     *
+     * ```java
+     * PrivacyProfile profile = PrivacyProfile.builder()
+     *     .maskText(false)
+     *     .maskWebViews(true)
+     *     .addMaskView(MaskViewRef.ofClass(ImageView.class))
+     *     .addMaskXMLViewId("smoothieTitle")
+     *     .build();
+     * ```
+     */
+    class Builder {
+        private var maskTextInputs: Boolean = true
+        private var maskText: Boolean = false
+        private val maskViews: MutableList<MaskViewRef> = mutableListOf()
+        private val maskXMLViewIds: MutableList<String> = mutableListOf()
+        private val unmaskXMLViewIds: MutableList<String> = mutableListOf()
+        private var maskImageViews: Boolean = false
+        private var maskWebViews: Boolean = false
+        private var maskBySemanticsKeywords: Boolean = false
+        private var minimumAlpha: Float = DEFAULT_MINIMUM_ALPHA
+
+        fun maskTextInputs(maskTextInputs: Boolean) = apply { this.maskTextInputs = maskTextInputs }
+        fun maskText(maskText: Boolean) = apply { this.maskText = maskText }
+
+        fun maskViews(maskViews: List<MaskViewRef>) = apply {
+            this.maskViews.clear()
+            this.maskViews.addAll(maskViews)
+        }
+        fun addMaskView(maskView: MaskViewRef) = apply { this.maskViews.add(maskView) }
+
+        fun maskXMLViewIds(maskXMLViewIds: List<String>) = apply {
+            this.maskXMLViewIds.clear()
+            this.maskXMLViewIds.addAll(maskXMLViewIds)
+        }
+        fun addMaskXMLViewId(maskXMLViewId: String) = apply { this.maskXMLViewIds.add(maskXMLViewId) }
+
+        fun unmaskXMLViewIds(unmaskXMLViewIds: List<String>) = apply {
+            this.unmaskXMLViewIds.clear()
+            this.unmaskXMLViewIds.addAll(unmaskXMLViewIds)
+        }
+        fun addUnmaskXMLViewId(unmaskXMLViewId: String) = apply { this.unmaskXMLViewIds.add(unmaskXMLViewId) }
+
+        fun maskImageViews(maskImageViews: Boolean) = apply { this.maskImageViews = maskImageViews }
+        fun maskWebViews(maskWebViews: Boolean) = apply { this.maskWebViews = maskWebViews }
+        fun maskBySemanticsKeywords(maskBySemanticsKeywords: Boolean) = apply {
+            this.maskBySemanticsKeywords = maskBySemanticsKeywords
+        }
+        fun minimumAlpha(minimumAlpha: Float) = apply { this.minimumAlpha = minimumAlpha }
+
+        fun build() = PrivacyProfile(
+            maskTextInputs = maskTextInputs,
+            maskText = maskText,
+            maskViews = maskViews.toList(),
+            maskXMLViewIds = maskXMLViewIds.toList(),
+            unmaskXMLViewIds = unmaskXMLViewIds.toList(),
+            maskImageViews = maskImageViews,
+            maskWebViews = maskWebViews,
+            maskBySemanticsKeywords = maskBySemanticsKeywords,
+            minimumAlpha = minimumAlpha,
+        )
+    }
+
     companion object {
         /** Default opacity prune threshold, matching the iOS/Flutter `minimumAlpha`. */
         const val DEFAULT_MINIMUM_ALPHA = 0.02f
+
+        @JvmStatic
+        fun builder() = Builder()
 
         private val webViewClassNames = listOf(
             WebView::class.java.name,

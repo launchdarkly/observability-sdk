@@ -6,6 +6,7 @@ import com.launchdarkly.observability.context.LDObserveLogging
 import com.launchdarkly.observability.context.ObserveLogAdapter
 import io.opentelemetry.api.common.Attributes
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 
 const val DEFAULT_SERVICE_NAME = "observability-android"
@@ -64,9 +65,28 @@ data class ObservabilityOptions(
         val includeErrors: Boolean = true,
         val includeSpans: Boolean = true
     ) {
+        /**
+         * Java-friendly fluent builder for [TracesApi].
+         */
+        class Builder {
+            private var includeErrors: Boolean = true
+            private var includeSpans: Boolean = true
+
+            fun includeErrors(includeErrors: Boolean) = apply { this.includeErrors = includeErrors }
+            fun includeSpans(includeSpans: Boolean) = apply { this.includeSpans = includeSpans }
+
+            fun build() = TracesApi(includeErrors = includeErrors, includeSpans = includeSpans)
+        }
+
         companion object {
+            @JvmStatic
             fun enabled() = TracesApi()
+
+            @JvmStatic
             fun disabled() = TracesApi(includeErrors = false, includeSpans = false)
+
+            @JvmStatic
+            fun builder() = Builder()
         }
     }
 
@@ -77,7 +97,10 @@ data class ObservabilityOptions(
      */
     data class MetricsApi(val enabled: Boolean = true) {
         companion object {
+            @JvmStatic
             fun enabled() = MetricsApi(true)
+
+            @JvmStatic
             fun disabled() = MetricsApi(false)
         }
     }
@@ -105,7 +128,34 @@ data class ObservabilityOptions(
         val pageViews: Boolean = true,
         val trackEvents: Boolean = true,
         val screenViews: Boolean = true,
-    )
+    ) {
+        /**
+         * Java-friendly fluent builder for [Analytics].
+         */
+        class Builder {
+            private var taps: Boolean = true
+            private var pageViews: Boolean = true
+            private var trackEvents: Boolean = true
+            private var screenViews: Boolean = true
+
+            fun taps(taps: Boolean) = apply { this.taps = taps }
+            fun pageViews(pageViews: Boolean) = apply { this.pageViews = pageViews }
+            fun trackEvents(trackEvents: Boolean) = apply { this.trackEvents = trackEvents }
+            fun screenViews(screenViews: Boolean) = apply { this.screenViews = screenViews }
+
+            fun build() = Analytics(
+                taps = taps,
+                pageViews = pageViews,
+                trackEvents = trackEvents,
+                screenViews = screenViews,
+            )
+        }
+
+        companion object {
+            @JvmStatic
+            fun builder() = Builder()
+        }
+    }
 
     /**
      * This class allows enabling or disabling specific automatic instrumentations.
@@ -125,7 +175,34 @@ data class ObservabilityOptions(
         val launchTime: Boolean = false,
         val userTaps: Boolean = true,
         val screens: Boolean = true,
-    )
+    ) {
+        /**
+         * Java-friendly fluent builder for [Instrumentations].
+         */
+        class Builder {
+            private var crashReporting: Boolean = true
+            private var launchTime: Boolean = false
+            private var userTaps: Boolean = true
+            private var screens: Boolean = true
+
+            fun crashReporting(crashReporting: Boolean) = apply { this.crashReporting = crashReporting }
+            fun launchTime(launchTime: Boolean) = apply { this.launchTime = launchTime }
+            fun userTaps(userTaps: Boolean) = apply { this.userTaps = userTaps }
+            fun screens(screens: Boolean) = apply { this.screens = screens }
+
+            fun build() = Instrumentations(
+                crashReporting = crashReporting,
+                launchTime = launchTime,
+                userTaps = userTaps,
+                screens = screens,
+            )
+        }
+
+        companion object {
+            @JvmStatic
+            fun builder() = Builder()
+        }
+    }
 
     /**
      * Defines the logging levels for telemetry data. These levels correspond to the OpenTelemetry Log Severity.
@@ -169,5 +246,97 @@ data class ObservabilityOptions(
         FATAL3(23),
         FATAL4(24),
         NONE(Int.MAX_VALUE)
+    }
+
+    /**
+     * Java-friendly fluent builder for [ObservabilityOptions].
+     *
+     * Kotlin callers can keep using the [ObservabilityOptions] constructor with named/default
+     * arguments. This builder exists so Java callers, which cannot omit Kotlin default parameters,
+     * can configure only the options they care about. Every setter defaults to the same value as
+     * the [ObservabilityOptions] primary constructor.
+     *
+     * ```java
+     * ObservabilityOptions options = ObservabilityOptions.builder()
+     *     .debug(true)
+     *     .otlpEndpoint(BuildConfig.OTLP_ENDPOINT)
+     *     .instrumentations(
+     *         ObservabilityOptions.Instrumentations.builder()
+     *             .launchTime(true)
+     *             .build())
+     *     .build();
+     * ```
+     */
+    class Builder {
+        private var enabled: Boolean = true
+        private var serviceName: String = DEFAULT_SERVICE_NAME
+        private var serviceVersion: String = BuildConfig.OBSERVABILITY_SDK_VERSION
+        private var otlpEndpoint: String = DEFAULT_OTLP_ENDPOINT
+        private var backendUrl: String = DEFAULT_BACKEND_URL
+        private var contextFriendlyName: String? = null
+        private var resourceAttributes: Attributes = Attributes.empty()
+        private var customHeaders: Map<String, String> = emptyMap()
+        private var sessionBackgroundTimeout: Duration = 15.minutes
+        private var debug: Boolean = false
+        private var logsApiLevel: LogLevel = LogLevel.INFO
+        private var tracesApi: TracesApi = TracesApi.enabled()
+        private var metricsApi: MetricsApi = MetricsApi.enabled()
+        private var analytics: Analytics = Analytics()
+        private var instrumentations: Instrumentations = Instrumentations()
+        private var logAdapter: ObserveLogAdapter = LDObserveLogging.adapter()
+        private var loggerName: String = "LaunchDarklyObservabilityPlugin"
+        private var telemetryInspector: TelemetryInspector? = null
+
+        fun enabled(enabled: Boolean) = apply { this.enabled = enabled }
+        fun serviceName(serviceName: String) = apply { this.serviceName = serviceName }
+        fun serviceVersion(serviceVersion: String) = apply { this.serviceVersion = serviceVersion }
+        fun otlpEndpoint(otlpEndpoint: String) = apply { this.otlpEndpoint = otlpEndpoint }
+        fun backendUrl(backendUrl: String) = apply { this.backendUrl = backendUrl }
+        fun contextFriendlyName(contextFriendlyName: String?) = apply { this.contextFriendlyName = contextFriendlyName }
+        fun resourceAttributes(resourceAttributes: Attributes) = apply { this.resourceAttributes = resourceAttributes }
+        fun customHeaders(customHeaders: Map<String, String>) = apply { this.customHeaders = customHeaders }
+
+        /** Sets the session background timeout in milliseconds (Java-friendly overload). */
+        fun sessionBackgroundTimeoutMillis(millis: Long) = apply {
+            this.sessionBackgroundTimeout = millis.milliseconds
+        }
+        fun sessionBackgroundTimeout(sessionBackgroundTimeout: Duration) = apply {
+            this.sessionBackgroundTimeout = sessionBackgroundTimeout
+        }
+        fun debug(debug: Boolean) = apply { this.debug = debug }
+        fun logsApiLevel(logsApiLevel: LogLevel) = apply { this.logsApiLevel = logsApiLevel }
+        fun tracesApi(tracesApi: TracesApi) = apply { this.tracesApi = tracesApi }
+        fun metricsApi(metricsApi: MetricsApi) = apply { this.metricsApi = metricsApi }
+        fun analytics(analytics: Analytics) = apply { this.analytics = analytics }
+        fun instrumentations(instrumentations: Instrumentations) = apply { this.instrumentations = instrumentations }
+        fun logAdapter(logAdapter: ObserveLogAdapter) = apply { this.logAdapter = logAdapter }
+        fun loggerName(loggerName: String) = apply { this.loggerName = loggerName }
+        fun telemetryInspector(telemetryInspector: TelemetryInspector?) = apply { this.telemetryInspector = telemetryInspector }
+
+        fun build() = ObservabilityOptions(
+            enabled = enabled,
+            serviceName = serviceName,
+            serviceVersion = serviceVersion,
+            otlpEndpoint = otlpEndpoint,
+            backendUrl = backendUrl,
+            contextFriendlyName = contextFriendlyName,
+            resourceAttributes = resourceAttributes,
+            customHeaders = customHeaders,
+            sessionBackgroundTimeout = sessionBackgroundTimeout,
+            debug = debug,
+            logsApiLevel = logsApiLevel,
+            tracesApi = tracesApi,
+            metricsApi = metricsApi,
+            analytics = analytics,
+            instrumentations = instrumentations,
+            logAdapter = logAdapter,
+            loggerName = loggerName,
+            telemetryInspector = telemetryInspector,
+        )
+    }
+
+    companion object {
+        @JvmStatic
+        fun builder() = Builder()
     }
 }

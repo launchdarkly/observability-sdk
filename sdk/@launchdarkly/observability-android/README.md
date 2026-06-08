@@ -69,6 +69,51 @@ class MyApplication : Application() {
 }
 ```
 
+<details>
+<summary>Java</summary>
+
+The SDK is written in Kotlin but is fully usable from Java. `Observability` and `SessionReplay`
+accept the same options objects; use the `*.builder()` factories described below to configure them.
+
+```java
+import com.launchdarkly.observability.plugin.Observability;
+import com.launchdarkly.sdk.ContextKind;
+import com.launchdarkly.sdk.LDContext;
+import com.launchdarkly.sdk.android.Components;
+import com.launchdarkly.sdk.android.LDClient;
+import com.launchdarkly.sdk.android.LDConfig;
+import com.launchdarkly.sdk.android.integrations.Plugin;
+
+import java.util.Collections;
+
+public class MyApplication extends Application {
+    @Override
+    public void onCreate() {
+        super.onCreate();
+
+        String mobileKey = "your-mobile-key";
+
+        LDConfig ldConfig = new LDConfig.Builder(LDConfig.Builder.AutoEnvAttributes.Enabled)
+                .mobileKey(mobileKey)
+                .plugins(
+                        Components.plugins().setPlugins(
+                                Collections.<Plugin>singletonList(
+                                        new Observability(this, mobileKey)
+                                )
+                        )
+                )
+                .build();
+
+        LDContext context = LDContext.builder(ContextKind.DEFAULT, "user-key")
+                .build();
+
+        LDClient.init(this, ldConfig, context);
+    }
+}
+```
+
+</details>
+
 ### Configure additional instrumentations
 
 To enable HTTP request instrumentation and user interaction instrumentation, add the following plugin and dependencies to your top level application's Gradle file.
@@ -123,6 +168,43 @@ val observabilityPlugin = Observability(
 )
 ```
 
+<details>
+<summary>Java</summary>
+
+From Java, build `ObservabilityOptions` with `ObservabilityOptions.builder()` instead of the Kotlin
+constructor (Java cannot omit Kotlin default parameters). Each setter defaults to the same value as
+the constructor, so set only what you need.
+
+```java
+import com.launchdarkly.observability.api.ObservabilityOptions;
+import com.launchdarkly.observability.plugin.Observability;
+import com.launchdarkly.sdk.android.LDAndroidLogging;
+import io.opentelemetry.api.common.AttributeKey;
+import io.opentelemetry.api.common.Attributes;
+
+import java.util.Collections;
+
+String mobileKey = "your-mobile-key";
+
+Observability observabilityPlugin = new Observability(
+        this,
+        mobileKey,
+        ObservabilityOptions.builder()
+                .serviceName("my-android-app")
+                .serviceVersion("1.0.0")
+                .debug(true)
+                .logAdapter(LDAndroidLogging.adapter())
+                .resourceAttributes(Attributes.of(
+                        AttributeKey.stringKey("environment"), "production",
+                        AttributeKey.stringKey("team"), "mobile"
+                ))
+                .customHeaders(Collections.singletonMap("X-Custom-Header", "custom-value"))
+                .build()
+);
+```
+
+</details>
+
 Additional `ObservabilityOptions` settings:
 
 - `logsApiLevel`: Minimum log severity to export (defaults to `INFO`). Set to `ObservabilityOptions.LogLevel.NONE` to disable log exporting.
@@ -159,6 +241,38 @@ val options = ObservabilityOptions(
     )
 )
 ```
+
+<details>
+<summary>Java</summary>
+
+The nested option types (`TracesApi`, `Analytics`, `Instrumentations`) each expose a `builder()` as
+well; `MetricsApi` keeps its `enabled()` / `disabled()` factories.
+
+```java
+import com.launchdarkly.observability.api.ObservabilityOptions;
+
+ObservabilityOptions options = ObservabilityOptions.builder()
+        .logsApiLevel(ObservabilityOptions.LogLevel.WARN)
+        .tracesApi(ObservabilityOptions.TracesApi.builder()
+                .includeErrors(true)
+                .includeSpans(false)
+                .build())
+        .metricsApi(ObservabilityOptions.MetricsApi.disabled())
+        .instrumentations(ObservabilityOptions.Instrumentations.builder()
+                .crashReporting(false)
+                .launchTime(true)
+                .screens(true)
+                .build())
+        .analytics(ObservabilityOptions.Analytics.builder()
+                .taps(true)
+                .pageViews(true)
+                .trackEvents(true)
+                .screenViews(true)
+                .build())
+        .build();
+```
+
+</details>
 
 ### Tracking Screen Views
 
