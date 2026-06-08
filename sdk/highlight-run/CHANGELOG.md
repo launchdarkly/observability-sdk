@@ -1,5 +1,12 @@
 # highlight.run
 
+## [10.3.4](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.3.3...highlight.run-10.3.4) (2026-06-08)
+
+
+### Bug Fixes
+
+* **highlight.run:** stub blob: workers in tests to fix flaky CI teardown ([#606](https://github.com/launchdarkly/observability-sdk/issues/606)) ([fb3fa19](https://github.com/launchdarkly/observability-sdk/commit/fb3fa192ef0de699ec8a0cec1f2b7e1ec8dca1a2))
+
 ## [10.3.3](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.3.2...highlight.run-10.3.3) (2026-06-08)
 
 
