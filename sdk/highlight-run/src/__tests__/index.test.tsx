@@ -148,10 +148,7 @@ describe('LD integration', () => {
 	})
 
 	it('should handle register', () => {
-		const worker = (globalThis.Worker as unknown as typeof Worker).prototype
-		worker.postMessage = vi.fn(
-			(_message: unknown, _options?: unknown) => null,
-		)
+		const worker = vi.spyOn(highlight._worker, 'postMessage')
 
 		const client = {
 			track: vi.fn(),
@@ -163,7 +160,7 @@ describe('LD integration', () => {
 		expect(client.addHook).not.toHaveBeenCalled()
 		expect(client.identify).not.toHaveBeenCalled()
 		expect(client.track).not.toHaveBeenCalled()
-		expect(worker.postMessage).not.toHaveBeenCalled()
+		expect(worker).not.toHaveBeenCalled()
 
 		highlight.identify('123', {})
 		highlight.addProperties('test', {})
@@ -187,7 +184,7 @@ describe('LD integration', () => {
 		)
 		// should call buffered calls
 		expect(client.track).toHaveBeenCalled()
-		expect(worker.postMessage).toHaveBeenCalled()
+		expect(worker).toHaveBeenCalled()
 	})
 })
 
