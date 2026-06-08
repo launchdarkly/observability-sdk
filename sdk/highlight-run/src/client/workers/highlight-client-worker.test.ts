@@ -300,20 +300,24 @@ describe('highlight-client-worker', () => {
 			// Initialize
 			worker.postMessage(createInitializeMessage())
 
-			// Wait for after-reset message to be processed
-			await vi.waitFor(() => {
-				const afterResetEvent = getCustomEventResponses(responses).find(
-					(e) => e.payload?.includes('after-reset'),
-				)
-				expect(afterResetEvent).toBeDefined()
-			})
+			// Wait for after-reset message to be processed (use longer timeout
+			// because worker module loading may be slower after repeated resets)
+			await vi.waitFor(
+				() => {
+					const afterResetEvent = getCustomEventResponses(
+						responses,
+					).find((e) => e.payload?.includes('after-reset'))
+					expect(afterResetEvent).toBeDefined()
+				},
+				{ timeout: 10000 },
+			)
 
 			// Verify before-reset message was NOT processed
 			const beforeResetEvent = getCustomEventResponses(responses).find(
 				(e) => e.payload?.includes('before-reset'),
 			)
 			expect(beforeResetEvent).toBeUndefined()
-		})
+		}, 15000)
 
 		it('queues messages sent after Reset but before new Initialize', async () => {
 			const responses = createResponseCollector(worker)
