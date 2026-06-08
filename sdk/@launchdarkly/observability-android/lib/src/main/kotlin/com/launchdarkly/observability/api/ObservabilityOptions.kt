@@ -69,13 +69,12 @@ data class ObservabilityOptions(
          * Java-friendly fluent builder for [TracesApi].
          */
         class Builder {
-            private var includeErrors: Boolean = true
-            private var includeSpans: Boolean = true
+            private var value = TracesApi()
 
-            fun includeErrors(includeErrors: Boolean) = apply { this.includeErrors = includeErrors }
-            fun includeSpans(includeSpans: Boolean) = apply { this.includeSpans = includeSpans }
+            fun includeErrors(includeErrors: Boolean) = apply { value = value.copy(includeErrors = includeErrors) }
+            fun includeSpans(includeSpans: Boolean) = apply { value = value.copy(includeSpans = includeSpans) }
 
-            fun build() = TracesApi(includeErrors = includeErrors, includeSpans = includeSpans)
+            fun build() = value
         }
 
         companion object {
@@ -133,22 +132,14 @@ data class ObservabilityOptions(
          * Java-friendly fluent builder for [Analytics].
          */
         class Builder {
-            private var taps: Boolean = true
-            private var pageViews: Boolean = true
-            private var trackEvents: Boolean = true
-            private var screenViews: Boolean = true
+            private var value = Analytics()
 
-            fun taps(taps: Boolean) = apply { this.taps = taps }
-            fun pageViews(pageViews: Boolean) = apply { this.pageViews = pageViews }
-            fun trackEvents(trackEvents: Boolean) = apply { this.trackEvents = trackEvents }
-            fun screenViews(screenViews: Boolean) = apply { this.screenViews = screenViews }
+            fun taps(taps: Boolean) = apply { value = value.copy(taps = taps) }
+            fun pageViews(pageViews: Boolean) = apply { value = value.copy(pageViews = pageViews) }
+            fun trackEvents(trackEvents: Boolean) = apply { value = value.copy(trackEvents = trackEvents) }
+            fun screenViews(screenViews: Boolean) = apply { value = value.copy(screenViews = screenViews) }
 
-            fun build() = Analytics(
-                taps = taps,
-                pageViews = pageViews,
-                trackEvents = trackEvents,
-                screenViews = screenViews,
-            )
+            fun build() = value
         }
 
         companion object {
@@ -180,22 +171,14 @@ data class ObservabilityOptions(
          * Java-friendly fluent builder for [Instrumentations].
          */
         class Builder {
-            private var crashReporting: Boolean = true
-            private var launchTime: Boolean = false
-            private var userTaps: Boolean = true
-            private var screens: Boolean = true
+            private var value = Instrumentations()
 
-            fun crashReporting(crashReporting: Boolean) = apply { this.crashReporting = crashReporting }
-            fun launchTime(launchTime: Boolean) = apply { this.launchTime = launchTime }
-            fun userTaps(userTaps: Boolean) = apply { this.userTaps = userTaps }
-            fun screens(screens: Boolean) = apply { this.screens = screens }
+            fun crashReporting(crashReporting: Boolean) = apply { value = value.copy(crashReporting = crashReporting) }
+            fun launchTime(launchTime: Boolean) = apply { value = value.copy(launchTime = launchTime) }
+            fun userTaps(userTaps: Boolean) = apply { value = value.copy(userTaps = userTaps) }
+            fun screens(screens: Boolean) = apply { value = value.copy(screens = screens) }
 
-            fun build() = Instrumentations(
-                crashReporting = crashReporting,
-                launchTime = launchTime,
-                userTaps = userTaps,
-                screens = screens,
-            )
+            fun build() = value
         }
 
         companion object {
@@ -268,71 +251,35 @@ data class ObservabilityOptions(
      * ```
      */
     class Builder {
-        private var enabled: Boolean = true
-        private var serviceName: String = DEFAULT_SERVICE_NAME
-        private var serviceVersion: String = BuildConfig.OBSERVABILITY_SDK_VERSION
-        private var otlpEndpoint: String = DEFAULT_OTLP_ENDPOINT
-        private var backendUrl: String = DEFAULT_BACKEND_URL
-        private var contextFriendlyName: String? = null
-        private var resourceAttributes: Attributes = Attributes.empty()
-        private var customHeaders: Map<String, String> = emptyMap()
-        private var sessionBackgroundTimeout: Duration = 15.minutes
-        private var debug: Boolean = false
-        private var logsApiLevel: LogLevel = LogLevel.INFO
-        private var tracesApi: TracesApi = TracesApi.enabled()
-        private var metricsApi: MetricsApi = MetricsApi.enabled()
-        private var analytics: Analytics = Analytics()
-        private var instrumentations: Instrumentations = Instrumentations()
-        private var logAdapter: ObserveLogAdapter = LDObserveLogging.adapter()
-        private var loggerName: String = "LaunchDarklyObservabilityPlugin"
-        private var telemetryInspector: TelemetryInspector? = null
+        private var options = ObservabilityOptions()
 
-        fun enabled(enabled: Boolean) = apply { this.enabled = enabled }
-        fun serviceName(serviceName: String) = apply { this.serviceName = serviceName }
-        fun serviceVersion(serviceVersion: String) = apply { this.serviceVersion = serviceVersion }
-        fun otlpEndpoint(otlpEndpoint: String) = apply { this.otlpEndpoint = otlpEndpoint }
-        fun backendUrl(backendUrl: String) = apply { this.backendUrl = backendUrl }
-        fun contextFriendlyName(contextFriendlyName: String?) = apply { this.contextFriendlyName = contextFriendlyName }
-        fun resourceAttributes(resourceAttributes: Attributes) = apply { this.resourceAttributes = resourceAttributes }
-        fun customHeaders(customHeaders: Map<String, String>) = apply { this.customHeaders = customHeaders }
+        fun enabled(enabled: Boolean) = apply { options = options.copy(enabled = enabled) }
+        fun serviceName(serviceName: String) = apply { options = options.copy(serviceName = serviceName) }
+        fun serviceVersion(serviceVersion: String) = apply { options = options.copy(serviceVersion = serviceVersion) }
+        fun otlpEndpoint(otlpEndpoint: String) = apply { options = options.copy(otlpEndpoint = otlpEndpoint) }
+        fun backendUrl(backendUrl: String) = apply { options = options.copy(backendUrl = backendUrl) }
+        fun contextFriendlyName(contextFriendlyName: String?) = apply { options = options.copy(contextFriendlyName = contextFriendlyName) }
+        fun resourceAttributes(resourceAttributes: Attributes) = apply { options = options.copy(resourceAttributes = resourceAttributes) }
+        fun customHeaders(customHeaders: Map<String, String>) = apply { options = options.copy(customHeaders = customHeaders) }
 
         /** Sets the session background timeout in milliseconds (Java-friendly overload). */
         fun sessionBackgroundTimeoutMillis(millis: Long) = apply {
-            this.sessionBackgroundTimeout = millis.milliseconds
+            options = options.copy(sessionBackgroundTimeout = millis.milliseconds)
         }
         fun sessionBackgroundTimeout(sessionBackgroundTimeout: Duration) = apply {
-            this.sessionBackgroundTimeout = sessionBackgroundTimeout
+            options = options.copy(sessionBackgroundTimeout = sessionBackgroundTimeout)
         }
-        fun debug(debug: Boolean) = apply { this.debug = debug }
-        fun logsApiLevel(logsApiLevel: LogLevel) = apply { this.logsApiLevel = logsApiLevel }
-        fun tracesApi(tracesApi: TracesApi) = apply { this.tracesApi = tracesApi }
-        fun metricsApi(metricsApi: MetricsApi) = apply { this.metricsApi = metricsApi }
-        fun analytics(analytics: Analytics) = apply { this.analytics = analytics }
-        fun instrumentations(instrumentations: Instrumentations) = apply { this.instrumentations = instrumentations }
-        fun logAdapter(logAdapter: ObserveLogAdapter) = apply { this.logAdapter = logAdapter }
-        fun loggerName(loggerName: String) = apply { this.loggerName = loggerName }
-        fun telemetryInspector(telemetryInspector: TelemetryInspector?) = apply { this.telemetryInspector = telemetryInspector }
+        fun debug(debug: Boolean) = apply { options = options.copy(debug = debug) }
+        fun logsApiLevel(logsApiLevel: LogLevel) = apply { options = options.copy(logsApiLevel = logsApiLevel) }
+        fun tracesApi(tracesApi: TracesApi) = apply { options = options.copy(tracesApi = tracesApi) }
+        fun metricsApi(metricsApi: MetricsApi) = apply { options = options.copy(metricsApi = metricsApi) }
+        fun analytics(analytics: Analytics) = apply { options = options.copy(analytics = analytics) }
+        fun instrumentations(instrumentations: Instrumentations) = apply { options = options.copy(instrumentations = instrumentations) }
+        fun logAdapter(logAdapter: ObserveLogAdapter) = apply { options = options.copy(logAdapter = logAdapter) }
+        fun loggerName(loggerName: String) = apply { options = options.copy(loggerName = loggerName) }
+        fun telemetryInspector(telemetryInspector: TelemetryInspector?) = apply { options = options.copy(telemetryInspector = telemetryInspector) }
 
-        fun build() = ObservabilityOptions(
-            enabled = enabled,
-            serviceName = serviceName,
-            serviceVersion = serviceVersion,
-            otlpEndpoint = otlpEndpoint,
-            backendUrl = backendUrl,
-            contextFriendlyName = contextFriendlyName,
-            resourceAttributes = resourceAttributes,
-            customHeaders = customHeaders,
-            sessionBackgroundTimeout = sessionBackgroundTimeout,
-            debug = debug,
-            logsApiLevel = logsApiLevel,
-            tracesApi = tracesApi,
-            metricsApi = metricsApi,
-            analytics = analytics,
-            instrumentations = instrumentations,
-            logAdapter = logAdapter,
-            loggerName = loggerName,
-            telemetryInspector = telemetryInspector,
-        )
+        fun build() = options
     }
 
     companion object {

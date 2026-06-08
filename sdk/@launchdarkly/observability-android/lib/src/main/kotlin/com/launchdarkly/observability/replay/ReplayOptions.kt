@@ -57,28 +57,16 @@ data class ReplayOptions(
      * ```
      */
     class Builder {
-        private var enabled: Boolean = true
-        private var debug: Boolean = false
-        private var privacyProfile: PrivacyProfile = PrivacyProfile()
-        private var frameRate: Double = 1.0
-        private var scale: Float? = 1.0f
-        private var compression: CompressionMethod = CompressionMethod.OverlayTiles()
+        private var options = ReplayOptions()
 
-        fun enabled(enabled: Boolean) = apply { this.enabled = enabled }
-        fun debug(debug: Boolean) = apply { this.debug = debug }
-        fun privacyProfile(privacyProfile: PrivacyProfile) = apply { this.privacyProfile = privacyProfile }
-        fun frameRate(frameRate: Double) = apply { this.frameRate = frameRate }
-        fun scale(scale: Float?) = apply { this.scale = scale }
-        fun compression(compression: CompressionMethod) = apply { this.compression = compression }
+        fun enabled(enabled: Boolean) = apply { options = options.copy(enabled = enabled) }
+        fun debug(debug: Boolean) = apply { options = options.copy(debug = debug) }
+        fun privacyProfile(privacyProfile: PrivacyProfile) = apply { options = options.copy(privacyProfile = privacyProfile) }
+        fun frameRate(frameRate: Double) = apply { options = options.copy(frameRate = frameRate) }
+        fun scale(scale: Float?) = apply { options = options.copy(scale = scale) }
+        fun compression(compression: CompressionMethod) = apply { options = options.copy(compression = compression) }
 
-        fun build() = ReplayOptions(
-            enabled = enabled,
-            debug = debug,
-            privacyProfile = privacyProfile,
-            frameRate = frameRate,
-            scale = scale,
-            compression = compression,
-        )
+        fun build() = options
     }
 
     companion object {

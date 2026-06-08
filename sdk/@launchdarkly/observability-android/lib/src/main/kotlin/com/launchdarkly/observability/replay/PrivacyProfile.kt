@@ -308,55 +308,28 @@ data class PrivacyProfile(
      * ```
      */
     class Builder {
-        private var maskTextInputs: Boolean = true
-        private var maskText: Boolean = false
-        private val maskViews: MutableList<MaskViewRef> = mutableListOf()
-        private val maskXMLViewIds: MutableList<String> = mutableListOf()
-        private val unmaskXMLViewIds: MutableList<String> = mutableListOf()
-        private var maskImageViews: Boolean = false
-        private var maskWebViews: Boolean = false
-        private var maskBySemanticsKeywords: Boolean = false
-        private var minimumAlpha: Float = DEFAULT_MINIMUM_ALPHA
+        private var profile = PrivacyProfile()
 
-        fun maskTextInputs(maskTextInputs: Boolean) = apply { this.maskTextInputs = maskTextInputs }
-        fun maskText(maskText: Boolean) = apply { this.maskText = maskText }
+        fun maskTextInputs(maskTextInputs: Boolean) = apply { profile = profile.copy(maskTextInputs = maskTextInputs) }
+        fun maskText(maskText: Boolean) = apply { profile = profile.copy(maskText = maskText) }
 
-        fun maskViews(maskViews: List<MaskViewRef>) = apply {
-            this.maskViews.clear()
-            this.maskViews.addAll(maskViews)
-        }
-        fun addMaskView(maskView: MaskViewRef) = apply { this.maskViews.add(maskView) }
+        fun maskViews(maskViews: List<MaskViewRef>) = apply { profile = profile.copy(maskViews = maskViews.toList()) }
+        fun addMaskView(maskView: MaskViewRef) = apply { profile = profile.copy(maskViews = profile.maskViews + maskView) }
 
-        fun maskXMLViewIds(maskXMLViewIds: List<String>) = apply {
-            this.maskXMLViewIds.clear()
-            this.maskXMLViewIds.addAll(maskXMLViewIds)
-        }
-        fun addMaskXMLViewId(maskXMLViewId: String) = apply { this.maskXMLViewIds.add(maskXMLViewId) }
+        fun maskXMLViewIds(maskXMLViewIds: List<String>) = apply { profile = profile.copy(maskXMLViewIds = maskXMLViewIds.toList()) }
+        fun addMaskXMLViewId(maskXMLViewId: String) = apply { profile = profile.copy(maskXMLViewIds = profile.maskXMLViewIds + maskXMLViewId) }
 
-        fun unmaskXMLViewIds(unmaskXMLViewIds: List<String>) = apply {
-            this.unmaskXMLViewIds.clear()
-            this.unmaskXMLViewIds.addAll(unmaskXMLViewIds)
-        }
-        fun addUnmaskXMLViewId(unmaskXMLViewId: String) = apply { this.unmaskXMLViewIds.add(unmaskXMLViewId) }
+        fun unmaskXMLViewIds(unmaskXMLViewIds: List<String>) = apply { profile = profile.copy(unmaskXMLViewIds = unmaskXMLViewIds.toList()) }
+        fun addUnmaskXMLViewId(unmaskXMLViewId: String) = apply { profile = profile.copy(unmaskXMLViewIds = profile.unmaskXMLViewIds + unmaskXMLViewId) }
 
-        fun maskImageViews(maskImageViews: Boolean) = apply { this.maskImageViews = maskImageViews }
-        fun maskWebViews(maskWebViews: Boolean) = apply { this.maskWebViews = maskWebViews }
+        fun maskImageViews(maskImageViews: Boolean) = apply { profile = profile.copy(maskImageViews = maskImageViews) }
+        fun maskWebViews(maskWebViews: Boolean) = apply { profile = profile.copy(maskWebViews = maskWebViews) }
         fun maskBySemanticsKeywords(maskBySemanticsKeywords: Boolean) = apply {
-            this.maskBySemanticsKeywords = maskBySemanticsKeywords
+            profile = profile.copy(maskBySemanticsKeywords = maskBySemanticsKeywords)
         }
-        fun minimumAlpha(minimumAlpha: Float) = apply { this.minimumAlpha = minimumAlpha }
+        fun minimumAlpha(minimumAlpha: Float) = apply { profile = profile.copy(minimumAlpha = minimumAlpha) }
 
-        fun build() = PrivacyProfile(
-            maskTextInputs = maskTextInputs,
-            maskText = maskText,
-            maskViews = maskViews.toList(),
-            maskXMLViewIds = maskXMLViewIds.toList(),
-            unmaskXMLViewIds = unmaskXMLViewIds.toList(),
-            maskImageViews = maskImageViews,
-            maskWebViews = maskWebViews,
-            maskBySemanticsKeywords = maskBySemanticsKeywords,
-            minimumAlpha = minimumAlpha,
-        )
+        fun build() = profile
     }
 
     companion object {
