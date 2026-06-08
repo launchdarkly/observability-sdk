@@ -1,5 +1,12 @@
 # @launchdarkly/observability-node
 
+## [1.1.3](https://github.com/launchdarkly/observability-sdk/compare/observability-node-1.1.2...observability-node-1.1.3) (2026-06-05)
+
+
+### Bug Fixes
+
+* upgrade vulnerable dependencies flagged by Dependabot ([#596](https://github.com/launchdarkly/observability-sdk/issues/596)) ([c15b3d9](https://github.com/launchdarkly/observability-sdk/commit/c15b3d9547946f6dfe334f0a5b43002f5f8781a2))
+
 ## [1.1.2](https://github.com/launchdarkly/observability-sdk/compare/observability-node-1.1.1...observability-node-1.1.2) (2026-06-03)
 
 

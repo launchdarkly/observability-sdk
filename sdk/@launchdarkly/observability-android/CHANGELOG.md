@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.53.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.52.0...launchdarkly-observability-android-0.53.0) (2026-06-05)
+
+
+### Features
+
+* Android - emit Track custom events in session replay ([#598](https://github.com/launchdarkly/observability-sdk/issues/598)) ([1339190](https://github.com/launchdarkly/observability-sdk/commit/13391902d6529dd5a1df5601457f368b8bd7bc56))
+* Android - masking improvements, privacy options, and session replay updates ([#600](https://github.com/launchdarkly/observability-sdk/issues/600)) ([b0bfb11](https://github.com/launchdarkly/observability-sdk/commit/b0bfb114b7eb129bf01ba4be39ee9c7cb5e53155))
+* Android - screen views, navigation, and click taxonomy ([#599](https://github.com/launchdarkly/observability-sdk/issues/599)) ([c1e4c5b](https://github.com/launchdarkly/observability-sdk/commit/c1e4c5bb07dcd20b1fa243d9747a63569e2a14fe))
+
 ## [0.52.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.51.0...launchdarkly-observability-android-0.52.0) (2026-06-04)
 
 
