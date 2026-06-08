@@ -123,7 +123,7 @@ dependencies {
 
     // Compose runtime is needed by the Kotlin Compose compiler plugin (applied project-wide).
     // It does NOT contain any UI classes like AbstractComposeView, so the SDK's
-    // isComposeAvailable runtime check still returns false in the noCompose variant.
+    // isComposeAvailable runtime check still returns false in the java variant.
     implementation(platform(libs.androidx.compose.bom))
     implementation("androidx.compose.runtime:runtime")
 

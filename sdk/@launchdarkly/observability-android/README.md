@@ -146,6 +146,7 @@ import com.launchdarkly.observability.api.ObservabilityOptions
 import com.launchdarkly.sdk.android.LDAndroidLogging
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
+import kotlin.time.Duration.Companion.minutes
 
 val mobileKey = "your-mobile-key"
 
@@ -156,6 +157,7 @@ val observabilityPlugin = Observability(
         serviceName = "my-android-app",
         serviceVersion = "1.0.0",
         debug = true,
+        sessionBackgroundTimeout = 30.minutes,
         logAdapter = LDAndroidLogging.adapter(),
         resourceAttributes = Attributes.of(
             AttributeKey.stringKey("environment"), "production",
@@ -173,7 +175,8 @@ val observabilityPlugin = Observability(
 
 From Java, build `ObservabilityOptions` with `ObservabilityOptions.builder()` instead of the Kotlin
 constructor (Java cannot omit Kotlin default parameters). Each setter defaults to the same value as
-the constructor, so set only what you need.
+the constructor, so set only what you need. Options typed as a Kotlin `Duration` — such as
+`sessionBackgroundTimeout` — have a Java-friendly millis overload (`sessionBackgroundTimeoutMillis(long)`).
 
 ```java
 import com.launchdarkly.observability.api.ObservabilityOptions;
@@ -193,6 +196,8 @@ Observability observabilityPlugin = new Observability(
                 .serviceName("my-android-app")
                 .serviceVersion("1.0.0")
                 .debug(true)
+                // sessionBackgroundTimeout is a Kotlin Duration; use the millis overload from Java.
+                .sessionBackgroundTimeoutMillis(java.util.concurrent.TimeUnit.MINUTES.toMillis(30))
                 .logAdapter(LDAndroidLogging.adapter())
                 .resourceAttributes(Attributes.of(
                         AttributeKey.stringKey("environment"), "production",
@@ -207,6 +212,7 @@ Observability observabilityPlugin = new Observability(
 
 Additional `ObservabilityOptions` settings:
 
+- `sessionBackgroundTimeout`: How long the app can stay backgrounded before the current session ends (defaults to 15 minutes). In Kotlin this is a `kotlin.time.Duration` (e.g. `30.minutes`). From Java, where `Duration` is awkward to construct, the builder exposes `sessionBackgroundTimeoutMillis(long)` instead.
 - `logsApiLevel`: Minimum log severity to export (defaults to `INFO`). Set to `ObservabilityOptions.LogLevel.NONE` to disable log exporting.
 - `tracesApi`: Controls trace recording (defaults to enabled). Use `ObservabilityOptions.TracesApi.disabled()` to disable all tracing, or set `includeErrors`/`includeSpans`.
 - `metricsApi`: Controls metric export (defaults to enabled). Use `ObservabilityOptions.MetricsApi.disabled()` to disable metrics.
