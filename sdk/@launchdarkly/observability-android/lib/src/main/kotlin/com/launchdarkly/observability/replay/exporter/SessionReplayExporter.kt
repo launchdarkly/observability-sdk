@@ -120,6 +120,15 @@ class SessionReplayExporter(
                             }
                         }
 
+                        is AppLifecycleItemPayload -> {
+                            val sessionId = payload.sessionId ?: lastCaptureSnapshot.sessionId
+                            sessionId?.let { sessionId ->
+                                eventGenerator.generateAppLifecycleEvent(payload)?.let { lifecycleEvent ->
+                                    eventsBySession.getOrPut(sessionId) { mutableListOf() }.add(lifecycleEvent)
+                                }
+                            }
+                        }
+
                         else -> {
                             // Noop
                         }

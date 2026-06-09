@@ -10,6 +10,7 @@
 
 The Android observability plugin automatically instruments:
 - **Activity Lifecycle**: App lifecycle events and transitions
+- **App Lifecycle**: Emits `app_foreground` / `app_background` spans on foreground/background transitions, plus matching Session Replay `Foreground` / `Background` breadcrumbs (gate the span via `analytics.appLifecycle`)
 - **Screen Views**: Emits a `screen_view` span for each Android `Activity` that is shown
 - **Taps**: Optionally emits a `click` span for each tap (enable via `analytics.taps`)
 - **HTTP Requests**: OkHttp and HttpURLConnection requests (requires setup of ByteBuddy compile time plugin and additional dependencies)
@@ -138,6 +139,7 @@ Additional `ObservabilityOptions` settings:
   - `pageViews` (default `true`): emit spans for Android Activity lifecycle events (screen/page views).
   - `trackEvents` (default `true`): emit a `track` span when a custom event is tracked, either automatically via the LaunchDarkly `afterTrack` hook (`LDClient.track(...)`) or manually via `LDObserve.track(...)`.
   - `screenViews` (default `true`): emit a `screen_view` span when a screen is shown. This only gates the span; screen *detection* (and Session Replay `Navigate` events) is controlled by `instrumentations.screens`.
+  - `appLifecycle` (default `true`): emit app-lifecycle spans as the app moves between states: `app_foreground` (with `event.lifecycle_state = foreground`) when it enters the foreground, and `app_background` (with `event.lifecycle_state = background`) when it enters the background. This flag only gates the span; the matching Session Replay `Foreground` / `Background` breadcrumbs are emitted regardless.
 
 Example:
 
@@ -155,7 +157,8 @@ val options = ObservabilityOptions(
         taps = true,
         pageViews = true,
         trackEvents = true,
-        screenViews = true
+        screenViews = true,
+        appLifecycle = true
     )
 )
 ```

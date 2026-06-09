@@ -120,6 +120,7 @@ class Observability(
         LDObserve.context?.screenViewFlow = observabilityService.screenViewFlow
         LDObserve.context?.screenViewManager = observabilityService.screenViewManager
         LDObserve.context?.trackFlow = observabilityService.trackFlow
+        LDObserve.context?.appLifecycleFlow = observabilityService.appLifecycleFlow
         LDObserve.init(observabilityService)
 
         observabilityHook.delegate = observabilityService.hookExporter

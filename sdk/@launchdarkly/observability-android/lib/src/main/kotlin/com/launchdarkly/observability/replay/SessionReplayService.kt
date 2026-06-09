@@ -6,11 +6,13 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
 import com.launchdarkly.observability.context.ObserveLogger
+import com.launchdarkly.observability.client.AppLifecycleSignal
 import com.launchdarkly.observability.client.ObservabilityContext
 import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
 import com.launchdarkly.observability.replay.capture.CaptureManager
 import com.launchdarkly.observability.replay.capture.ImageCaptureService
 import com.launchdarkly.observability.replay.capture.ImageCaptureServicing
+import com.launchdarkly.observability.replay.exporter.AppLifecycleItemPayload
 import com.launchdarkly.observability.replay.exporter.IdentifyItemPayload
 import com.launchdarkly.observability.replay.exporter.ImageItemPayload
 import com.launchdarkly.observability.replay.exporter.InteractionItemPayload
@@ -194,6 +196,26 @@ class SessionReplayService(
         instrumentationScope.launch {
             observabilityContext.trackFlow?.collect { track ->
                 recordTrack(track.name, track.metricValue, track.attributes, track.timestamp)
+            }
+        }
+
+        // App-lifecycle collector: each foreground/background transition from Observability becomes
+        // an rrweb `Foreground` / `Background` breadcrumb on the active recording.
+        instrumentationScope.launch {
+            observabilityContext.appLifecycleFlow?.collect { signal ->
+                if (!_isEnabled.value) return@collect
+                val tag = when (signal.kind) {
+                    AppLifecycleSignal.Kind.FOREGROUND -> RRWebCustomDataTag.APP_FOREGROUND
+                    AppLifecycleSignal.Kind.BACKGROUND -> RRWebCustomDataTag.APP_BACKGROUND
+                }
+                eventQueue.send(
+                    AppLifecycleItemPayload(
+                        tag = tag,
+                        lifecycleState = signal.lifecycleState,
+                        timestamp = signal.timestamp,
+                        sessionId = sessionManager.getSessionId()
+                    )
+                )
             }
         }
     }

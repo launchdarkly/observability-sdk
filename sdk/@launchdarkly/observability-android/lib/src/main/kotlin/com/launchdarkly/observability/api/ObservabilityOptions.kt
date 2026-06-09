@@ -99,12 +99,18 @@ data class ObservabilityOptions(
      *   [com.launchdarkly.observability.sdk.LDObserve.trackScreenView]). This flag only gates the
      *   span; automatic screen *detection* (and therefore Session Replay `Navigate` events) is
      *   controlled by [Instrumentations.screens]. Defaults to `true`.
+     * @property appLifecycle If `true`, the plugin emits app-lifecycle spans as the app moves
+     *   between states: `app_foreground` (with `event.lifecycle_state = foreground`) when it enters
+     *   the foreground, and `app_background` (with `event.lifecycle_state = background`) when it
+     *   enters the background. This flag only gates the span; the matching Session Replay
+     *   `Foreground` / `Background` breadcrumbs are emitted regardless. Defaults to `true`.
      */
     data class Analytics(
         val taps: Boolean = true,
         val pageViews: Boolean = true,
         val trackEvents: Boolean = true,
         val screenViews: Boolean = true,
+        val appLifecycle: Boolean = true,
     )
 
     /**

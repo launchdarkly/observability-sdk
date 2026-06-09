@@ -5,6 +5,7 @@ import com.launchdarkly.observability.replay.EventData
 import com.launchdarkly.observability.replay.EventDataUnion
 import com.launchdarkly.observability.replay.EventNode
 import com.launchdarkly.observability.replay.EventType
+import com.launchdarkly.observability.replay.RRWebCustomDataTag
 import com.launchdarkly.observability.replay.capture.ExportFrame
 import com.launchdarkly.observability.replay.capture.ImageSignature
 import com.launchdarkly.observability.replay.capture.IntRect
@@ -201,6 +202,47 @@ class RRWebEventGeneratorTest {
         assertEquals("Navigate", obj["tag"]!!.jsonPrimitive.content)
         // payload is the route as a plain string, matching web `addCustomEvent('Navigate', url)`
         assertEquals("Profile", obj["payload"]!!.jsonPrimitive.content)
+    }
+
+    @Test
+    fun `generateAppLifecycleEvent emits Foreground custom event with stringified payload`() {
+        val generator = RRWebEventGenerator(canvasDrawEntourage = 1, title = "test")
+        val payload = AppLifecycleItemPayload(
+            tag = RRWebCustomDataTag.APP_FOREGROUND,
+            lifecycleState = "foreground",
+            timestamp = 11L,
+            sessionId = "session",
+        )
+
+        val event = generator.generateAppLifecycleEvent(payload)!!
+
+        assertEquals(EventType.CUSTOM, event.type)
+        assertEquals(11L, event.timestamp)
+        val custom = event.data as EventDataUnion.CustomEventDataWrapper
+        val obj = custom.data.jsonObject
+        assertEquals("Foreground", obj["tag"]!!.jsonPrimitive.content)
+        // payload is a stringified JSON object, matching the web/Swift rrweb Custom event contract.
+        val payloadJson = Json.parseToJsonElement(obj["payload"]!!.jsonPrimitive.content).jsonObject
+        assertEquals("foreground", payloadJson["lifecycle_state"]!!.jsonPrimitive.content)
+    }
+
+    @Test
+    fun `generateAppLifecycleEvent emits Background custom event`() {
+        val generator = RRWebEventGenerator(canvasDrawEntourage = 1, title = "test")
+        val payload = AppLifecycleItemPayload(
+            tag = RRWebCustomDataTag.APP_BACKGROUND,
+            lifecycleState = "background",
+            timestamp = 12L,
+            sessionId = "session",
+        )
+
+        val event = generator.generateAppLifecycleEvent(payload)!!
+
+        val custom = event.data as EventDataUnion.CustomEventDataWrapper
+        val obj = custom.data.jsonObject
+        assertEquals("Background", obj["tag"]!!.jsonPrimitive.content)
+        val payloadJson = Json.parseToJsonElement(obj["payload"]!!.jsonPrimitive.content).jsonObject
+        assertEquals("background", payloadJson["lifecycle_state"]!!.jsonPrimitive.content)
     }
 
     private fun exportFrame(
