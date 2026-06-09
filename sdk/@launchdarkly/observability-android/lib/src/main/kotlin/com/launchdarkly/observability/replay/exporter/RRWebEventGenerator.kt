@@ -1,7 +1,6 @@
 package com.launchdarkly.observability.replay.exporter
 
 import android.view.MotionEvent
-import com.launchdarkly.observability.context.ObserveLogger
 import com.launchdarkly.observability.replay.Event
 import com.launchdarkly.observability.replay.Addition
 import com.launchdarkly.observability.replay.EventData
@@ -32,8 +31,7 @@ import kotlinx.serialization.json.putJsonObject
  */
 class RRWebEventGenerator(
     private val canvasDrawEntourage: Int,
-    private val title: String,
-    private val logger: ObserveLogger? = null
+    private val title: String
 ) {
     companion object {
         private const val RRWEB_DOCUMENT_PADDING = 11
@@ -331,8 +329,6 @@ class RRWebEventGenerator(
                         )
                     }
                 }
-                // Debug: log the JSON shape of the Session Replay `Click` custom event.
-                logger?.debug("[SR Click] $clickCustomData")
                 events.add(
                     Event(
                         type = EventType.CUSTOM,

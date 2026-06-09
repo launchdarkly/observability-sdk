@@ -71,9 +71,6 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
-import kotlinx.serialization.json.putJsonObject
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
@@ -335,21 +332,6 @@ class ObservabilityService(
                             .setStartTimestamp(downTimeMs, TimeUnit.MILLISECONDS)
                             .startSpan()
                             .end(sample.timestamp, TimeUnit.MILLISECONDS)
-
-                        // Debug: log the JSON shape of the OTel `click` span (name + `event.*`).
-                        logger.debug(
-                            "[Otel Click] " + buildJsonObject {
-                                put("span", UserInteractionManager.CLICK_SPAN_NAME)
-                                putJsonObject("attributes") {
-                                    put(EVENT_TYPE.key, UserInteractionManager.CLICK_SPAN_NAME)
-                                    put(EVENT_X.key, sample.x.toLong())
-                                    put(EVENT_Y.key, sample.y.toLong())
-                                    downTargetClassName?.let { put(EVENT_TAG.key, it) }
-                                    downTargetText?.let { put(EVENT_TEXT.key, it) }
-                                    downTargetResourceId?.let { put(EVENT_ID.key, it) }
-                                }
-                            }.toString()
-                        )
                     }
                 }
             }
