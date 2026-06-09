@@ -85,10 +85,10 @@ android {
 }
 
 tasks.withType<Test>().configureEach {
-    systemProperty(
-        "java.util.logging.config.file",
-        project.file("src/test/resources/logging.properties").absolutePath
-    )
+    val loggingConfig = project.file("src/testCompose/resources/logging.properties")
+    if (loggingConfig.exists()) {
+        systemProperty("java.util.logging.config.file", loggingConfig.absolutePath)
+    }
 }
 
 dependencies {
