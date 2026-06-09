@@ -58,7 +58,9 @@ class _NativeSpanExporter implements SpanExporter {
   wire.LDSpanData _toWire(ReadOnlySpan span) {
     final startSeconds = span.startTime.toDouble() / 1e9;
     final endNanos = span.endTime;
-    final endSeconds = endNanos != null ? endNanos.toDouble() / 1e9 : startSeconds;
+    final endSeconds = endNanos != null
+        ? endNanos.toDouble() / 1e9
+        : startSeconds;
 
     final attributes = <String, Object?>{};
     for (final key in span.attributes.keys) {

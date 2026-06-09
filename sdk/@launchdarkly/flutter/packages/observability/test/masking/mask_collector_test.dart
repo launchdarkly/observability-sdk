@@ -61,8 +61,9 @@ void main() {
       expect(ops, hasLength(1));
     });
 
-    testWidgets('disabling maskTextInputs leaves text inputs unmasked',
-        (tester) async {
+    testWidgets('disabling maskTextInputs leaves text inputs unmasked', (
+      tester,
+    ) async {
       final ops = await collect(
         tester,
         const TextField(),
@@ -71,8 +72,9 @@ void main() {
       expect(ops, isEmpty);
     });
 
-    testWidgets('LDMask masks its subtree regardless of global config',
-        (tester) async {
+    testWidgets('LDMask masks its subtree regardless of global config', (
+      tester,
+    ) async {
       final ops = await collect(
         tester,
         const LDMask(child: Text('secret')),
@@ -81,15 +83,12 @@ void main() {
       expect(ops, hasLength(1));
     });
 
-    testWidgets('LDMask collapses its subtree into a single op',
-        (tester) async {
+    testWidgets('LDMask collapses its subtree into a single op', (
+      tester,
+    ) async {
       final ops = await collect(
         tester,
-        const LDMask(
-          child: Column(
-            children: [TextField(), TextField()],
-          ),
-        ),
+        const LDMask(child: Column(children: [TextField(), TextField()])),
         maskTextInputs: true,
       );
       // The walk stops at LDMask, so the two inner fields don't add ops.
@@ -105,22 +104,20 @@ void main() {
       expect(ops, hasLength(1));
     });
 
-    testWidgets('LDIgnore collapses its subtree into a single op',
-        (tester) async {
+    testWidgets('LDIgnore collapses its subtree into a single op', (
+      tester,
+    ) async {
       final ops = await collect(
         tester,
-        const LDIgnore(
-          child: Column(
-            children: [TextField(), TextField()],
-          ),
-        ),
+        const LDIgnore(child: Column(children: [TextField(), TextField()])),
         maskTextInputs: true,
       );
       expect(ops, hasLength(1));
     });
 
-    testWidgets('config maskWidgetTypes masks a matching widget',
-        (tester) async {
+    testWidgets('config maskWidgetTypes masks a matching widget', (
+      tester,
+    ) async {
       final ops = await collect(
         tester,
         const Text('secret'),
@@ -141,8 +138,9 @@ void main() {
       expect(ops, hasLength(1));
     });
 
-    testWidgets('config ignoreWidgetTypes covers a matching widget',
-        (tester) async {
+    testWidgets('config ignoreWidgetTypes covers a matching widget', (
+      tester,
+    ) async {
       final ops = await collect(
         tester,
         const Text('secret'),
@@ -152,8 +150,9 @@ void main() {
       expect(ops, hasLength(1));
     });
 
-    testWidgets('config unmaskWidgetKeys reveals a globally-masked input',
-        (tester) async {
+    testWidgets('config unmaskWidgetKeys reveals a globally-masked input', (
+      tester,
+    ) async {
       const key = ValueKey('reveal-me');
       final ops = await collect(
         tester,
@@ -164,24 +163,23 @@ void main() {
       expect(ops, isEmpty);
     });
 
-    testWidgets('config mask wins over config unmask on the same widget',
-        (tester) async {
+    testWidgets('config mask wins over config unmask on the same widget', (
+      tester,
+    ) async {
       const key = ValueKey('conflict');
       final ops = await collect(
         tester,
         const TextField(key: key),
         maskTextInputs: false,
-        widgetConfig: WidgetMaskingConfig(
-          maskKeys: {key},
-          unmaskKeys: {key},
-        ),
+        widgetConfig: WidgetMaskingConfig(maskKeys: {key}, unmaskKeys: {key}),
       );
       // Explicit mask is evaluated before unmask, so it wins.
       expect(ops, hasLength(1));
     });
 
-    testWidgets('LDUnmask reveals a globally-masked text input',
-        (tester) async {
+    testWidgets('LDUnmask reveals a globally-masked text input', (
+      tester,
+    ) async {
       final ops = await collect(
         tester,
         const LDUnmask(child: TextField()),
@@ -203,10 +201,7 @@ void main() {
               color: Color(0x2600FF00),
               child: Padding(
                 padding: EdgeInsets.all(8),
-                child: ColoredBox(
-                  color: Color(0x0D00FF00),
-                  child: TextField(),
-                ),
+                child: ColoredBox(color: Color(0x0D00FF00), child: TextField()),
               ),
             ),
           ),
@@ -216,8 +211,9 @@ void main() {
       expect(ops, isEmpty);
     });
 
-    testWidgets('LDUnmask nested inside LDMask stays masked (mask wins)',
-        (tester) async {
+    testWidgets('LDUnmask nested inside LDMask stays masked (mask wins)', (
+      tester,
+    ) async {
       final ops = await collect(
         tester,
         const LDMask(child: LDUnmask(child: TextField())),
@@ -226,8 +222,9 @@ void main() {
       expect(ops, hasLength(1));
     });
 
-    testWidgets('LDMask nested inside LDUnmask still masks (explicit wins)',
-        (tester) async {
+    testWidgets('LDMask nested inside LDUnmask still masks (explicit wins)', (
+      tester,
+    ) async {
       final ops = await collect(
         tester,
         const LDUnmask(child: LDMask(child: Text('secret'))),
@@ -236,8 +233,9 @@ void main() {
       expect(ops, hasLength(1));
     });
 
-    testWidgets('a revealed field next to a masked field masks only one',
-        (tester) async {
+    testWidgets('a revealed field next to a masked field masks only one', (
+      tester,
+    ) async {
       final ops = await collect(
         tester,
         const Column(
@@ -261,8 +259,9 @@ void main() {
       expect(ops, hasLength(1));
     });
 
-    testWidgets('disabling maskLabels leaves text labels unmasked',
-        (tester) async {
+    testWidgets('disabling maskLabels leaves text labels unmasked', (
+      tester,
+    ) async {
       final ops = await collect(
         tester,
         const Text('account balance'),
@@ -292,8 +291,9 @@ void main() {
       expect(ops, isEmpty);
     });
 
-    testWidgets('an opaque widget painted on top drops the covered mask',
-        (tester) async {
+    testWidgets('an opaque widget painted on top drops the covered mask', (
+      tester,
+    ) async {
       final ops = await collect(
         tester,
         const SizedBox(
@@ -346,58 +346,50 @@ void main() {
     testWidgets('an offstage subtree is pruned (not masked)', (tester) async {
       final ops = await collect(
         tester,
-        const Offstage(
-          offstage: true,
-          child: TextField(),
-        ),
+        const Offstage(offstage: true, child: TextField()),
         maskTextInputs: true,
       );
       expect(ops, isEmpty);
     });
 
-    testWidgets('a fully transparent subtree is pruned (not masked)',
-        (tester) async {
+    testWidgets('a fully transparent subtree is pruned (not masked)', (
+      tester,
+    ) async {
       final ops = await collect(
         tester,
-        const Opacity(
-          opacity: 0,
-          child: TextField(),
-        ),
+        const Opacity(opacity: 0, child: TextField()),
         maskTextInputs: true,
       );
       expect(ops, isEmpty);
     });
 
-    testWidgets('an Opacity below minimumAlpha is pruned (not masked)',
-        (tester) async {
+    testWidgets('an Opacity below minimumAlpha is pruned (not masked)', (
+      tester,
+    ) async {
       final ops = await collect(
         tester,
-        const Opacity(
-          opacity: 0.01,
-          child: TextField(),
-        ),
+        const Opacity(opacity: 0.01, child: TextField()),
         maskTextInputs: true,
         minimumAlpha: 0.02,
       );
       expect(ops, isEmpty);
     });
 
-    testWidgets('an Opacity at or above minimumAlpha is still masked',
-        (tester) async {
+    testWidgets('an Opacity at or above minimumAlpha is still masked', (
+      tester,
+    ) async {
       final ops = await collect(
         tester,
-        const Opacity(
-          opacity: 0.5,
-          child: TextField(),
-        ),
+        const Opacity(opacity: 0.5, child: TextField()),
         maskTextInputs: true,
         minimumAlpha: 0.02,
       );
       expect(ops, hasLength(1));
     });
 
-    testWidgets('an invisible Visibility subtree is pruned (not masked)',
-        (tester) async {
+    testWidgets('an invisible Visibility subtree is pruned (not masked)', (
+      tester,
+    ) async {
       final ops = await collect(
         tester,
         const Visibility(
@@ -413,17 +405,15 @@ void main() {
     testWidgets('a visible Offstage child is still masked', (tester) async {
       final ops = await collect(
         tester,
-        const Offstage(
-          offstage: false,
-          child: TextField(),
-        ),
+        const Offstage(offstage: false, child: TextField()),
         maskTextInputs: true,
       );
       expect(ops, hasLength(1));
     });
 
-    testWidgets('a 3D-transformed text input is masked as a non-affine quad',
-        (tester) async {
+    testWidgets('a 3D-transformed text input is masked as a non-affine quad', (
+      tester,
+    ) async {
       // A perspective tilt (non-affine transform) must still be masked, and the
       // op must report itself as non-affine so the applier draws it as a quad
       // polygon rather than a parallelogram. Mirrors the native createMask 3D
@@ -435,11 +425,7 @@ void main() {
             transform: Matrix4.identity()
               ..setEntry(3, 2, 0.001)
               ..rotateX(0.9),
-            child: const SizedBox(
-              width: 200,
-              height: 60,
-              child: TextField(),
-            ),
+            child: const SizedBox(width: 200, height: 60, child: TextField()),
           ),
         ),
         maskTextInputs: true,
@@ -448,8 +434,9 @@ void main() {
       expect(ops.single.isAffine, isFalse);
     });
 
-    testWidgets('an axis-aligned text input is masked as an affine op',
-        (tester) async {
+    testWidgets('an axis-aligned text input is masked as an affine op', (
+      tester,
+    ) async {
       final ops = await collect(
         tester,
         const SizedBox(width: 200, height: 60, child: TextField()),
@@ -459,8 +446,9 @@ void main() {
       expect(ops.single.isAffine, isTrue);
     });
 
-    testWidgets('an opaque background painted underneath keeps the mask',
-        (tester) async {
+    testWidgets('an opaque background painted underneath keeps the mask', (
+      tester,
+    ) async {
       final ops = await collect(
         tester,
         const SizedBox(

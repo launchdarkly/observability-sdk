@@ -61,8 +61,8 @@ class Quad {
 /// pixels when it paints onto the captured image.
 class MaskOperation {
   MaskOperation({required this.localRect, required this.transform})
-      : quad = _quadFrom(localRect, transform),
-        effectiveFrame = _quadFrom(localRect, transform).boundingBox;
+    : quad = _quadFrom(localRect, transform),
+      effectiveFrame = _quadFrom(localRect, transform).boundingBox;
 
   /// The masked widget's bounds in its own (untransformed) coordinate space,
   /// i.e. `Rect.fromLTWH(0, 0, width, height)`. Mirrors the native `lBounds`.
@@ -94,11 +94,11 @@ class MaskOperation {
       transform.storage[15] == 1.0;
 
   static Quad _quadFrom(ui.Rect rect, Matrix4 transform) => Quad(
-        MatrixUtils.transformPoint(transform, rect.topLeft),
-        MatrixUtils.transformPoint(transform, rect.topRight),
-        MatrixUtils.transformPoint(transform, rect.bottomRight),
-        MatrixUtils.transformPoint(transform, rect.bottomLeft),
-      );
+    MatrixUtils.transformPoint(transform, rect.topLeft),
+    MatrixUtils.transformPoint(transform, rect.topRight),
+    MatrixUtils.transformPoint(transform, rect.bottomRight),
+    MatrixUtils.transformPoint(transform, rect.bottomLeft),
+  );
 }
 
 /// A "before" mask paired with its shifted "after" counterpart.
