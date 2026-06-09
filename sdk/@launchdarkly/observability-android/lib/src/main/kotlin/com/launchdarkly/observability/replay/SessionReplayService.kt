@@ -216,6 +216,14 @@ class SessionReplayService(
                         sessionId = sessionManager.getSessionId()
                     )
                 )
+                // The Background marker must land in the export that fires when the app backgrounds.
+                // The process-lifecycle onStop flush runs from a separate observer and can race
+                // ahead of this asynchronous enqueue, dropping the marker from that batch. The
+                // enqueue above is synchronous, so flushing here guarantees a flush batch that
+                // includes the just-queued Background breadcrumb.
+                if (signal.kind == AppLifecycleSignal.Kind.BACKGROUND) {
+                    batchWorker.flush()
+                }
             }
         }
     }
