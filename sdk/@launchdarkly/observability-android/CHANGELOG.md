@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.55.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.54.0...launchdarkly-observability-android-0.55.0) (2026-06-09)
+
+
+### Features
+
+* app_foreground / app_background lifecycle events (spans + Session Replay breadcrumbs) ([#609](https://github.com/launchdarkly/observability-sdk/issues/609)) ([69173b8](https://github.com/launchdarkly/observability-sdk/commit/69173b85735993bdec106b90201fef84739eaaaf))
+
 ## [0.54.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.53.0...launchdarkly-observability-android-0.54.0) (2026-06-09)
 
 
