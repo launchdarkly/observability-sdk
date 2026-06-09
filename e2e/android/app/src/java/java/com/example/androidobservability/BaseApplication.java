@@ -78,6 +78,7 @@ public class BaseApplication extends Application {
                         .taps(true)
                         .pageViews(true)
                         .trackEvents(true)
+                        .appLifecycle(true)
                         .build())
                 .build();
     }

@@ -194,6 +194,7 @@ class LDObserve(private val client: Observe) : Observe {
             obsContext.screenViewFlow = service.screenViewFlow
             obsContext.screenViewManager = service.screenViewManager
             obsContext.trackFlow = service.trackFlow
+            obsContext.appLifecycleFlow = service.appLifecycleFlow
             context = obsContext
             init(service)
         }

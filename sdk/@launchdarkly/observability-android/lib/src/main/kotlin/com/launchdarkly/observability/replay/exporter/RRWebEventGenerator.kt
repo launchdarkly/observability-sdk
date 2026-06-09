@@ -463,6 +463,33 @@ class RRWebEventGenerator(
     }
 
     /**
+     * Generates a "Foreground"/"Background" custom event for an app-lifecycle transition. The
+     * payload is a stringified JSON object carrying the `lifecycle_state`, matching the rrweb Custom
+     * event contract used by web / Swift.
+     */
+    fun generateAppLifecycleEvent(payload: AppLifecycleItemPayload): Event? {
+        val payloadJSONString = try {
+            buildJsonObject {
+                payload.lifecycleState?.let { put("lifecycle_state", it) }
+            }.toString()
+        } catch (_: Exception) {
+            return null
+        }
+
+        val customData = buildJsonObject {
+            put("tag", JsonPrimitive(payload.tag.wireValue))
+            put("payload", JsonPrimitive(payloadJSONString))
+        }
+
+        return Event(
+            type = EventType.CUSTOM,
+            timestamp = payload.timestamp,
+            sid = nextSid(),
+            data = EventDataUnion.CustomEventDataWrapper(customData)
+        )
+    }
+
+    /**
      * Generates a "Reload" custom event and a sequence of "wake-up" interaction events.
      * Used by [SessionReplayExporter] to re-trigger player playback after session resumption.
      */

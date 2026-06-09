@@ -34,25 +34,27 @@ Everything else around it (`context.*`, `url.*`, `user_agent.*`, `viewport.*`, `
 
 ## 3. Event catalog (overview)
 
-| # | Event name | Type | Platforms | Purpose |
-| --- | --- | --- | --- | --- |
-| 1 | `click` | span | web, ios, android | Click / tap on an element. |
-| 2 | `track` | span | web, ios, android | Generic custom/domain event (see §4.2). |
-| 3 | `page_view` | span | web | A web page / route was viewed. |
-| 4 | `screen_view` | span | ios, android | A screen / view controller / activity was viewed. |
-| 5 | `identify` | log | web, ios, android | Identity resolution. **Existing — do not change** (see §4.5). |
-| 6 | `app_open` | span | ios, android | App launched or resumed into use. |
-| 7 | `app_foreground` | span | ios, android | App entered foreground. |
-| 8 | `app_background` | span | ios, android | App entered background. |
-| 9 | `app_install` | span | ios, android | First launch after install. |
-| 10 | `app_update` | span | ios, android | First launch after version change. |
-| 11 | `error` | span | web, ios, android | A user-facing error/message was displayed. |
-| 12 | `permission_prompt` | span | web, ios, android | An OS/app permission prompt was shown. |
-| 13 | `permission_response` | span | web, ios, android | User responded to a permission prompt. |
-| 14 | `notification_open` | span | ios, android | User opened a push/local notification. |
-| 15 | `deep_link_open` | span | ios, android | App opened via deep/universal link. |
-| 16 | `form_submit` | span | web, ios, android | A form was submitted. |
-| 17 | `scroll` | span | web | Scroll interaction. |
+| # | Event name | Type | Platforms | Breadcrumb | Purpose |
+| --- | --- | --- | --- | --- | --- |
+| 1 | `click` | span | web, ios, android | `Click` | Click / tap on an element. |
+| 2 | `track` | span | web, ios, android | `Track` / `Segment` | Generic custom/domain event (see §4.2). |
+| 3 | `page_view` | span | web | `Navigate` / `Reload` / `Referrer` | A web page / route was viewed. |
+| 4 | `screen_view` | span | ios, android | `Navigate` | A screen / view controller / activity was viewed. |
+| 5 | `identify` | log | web, ios, android | `Identify` | Identity resolution. **Existing — do not change** (see §4.5). |
+| 6 | `app_open` | span | ios, android | `Open` | App launched or resumed into use. |
+| 7 | `app_foreground` | span | ios, android | `Foreground` | App entered foreground. |
+| 8 | `app_background` | span | ios, android | `Background` | App entered background. |
+| 9 | `app_install` | span | ios, android | - | First launch after install. |
+| 10 | `app_update` | span | ios, android | - | First launch after version change. |
+| 11 | `error` | span | web, ios, android | - | A user-facing error/message was displayed. |
+| 12 | `permission_prompt` | span | web, ios, android | - | An OS/app permission prompt was shown. |
+| 13 | `permission_response` | span | web, ios, android | - | User responded to a permission prompt. |
+| 14 | `notification_open` | span | ios, android | - | User opened a push/local notification. |
+| 15 | `deep_link_open` | span | ios, android | - | App opened via deep/universal link. |
+| 16 | `form_submit` | span | web, ios, android | - | A form was submitted. |
+| 17 | `scroll` | span | web | - | Scroll interaction. |
+
+> **Breadcrumb column.** "Breadcrumbs" are the **Events** shown on the Session Replay timeline (and, going forward, also surfaced in RUM). On web they are emitted as **rrweb custom events** by the recording SDK (`sdk/highlight-run`); the complete set emitted today is `Navigate`, `Reload`, `Referrer`, `Click`, `Focus`, `Viewport`, `Performance`, `Jank`, `Page Unload`, `TabHidden`, `Stop`, `Track`, `Segment`, `Identify`. The column above lists the corresponding breadcrumb name(s) for each taxonomy event; `-` means there is no equivalent breadcrumb today. Breadcrumbs without a taxonomy event (`Viewport`, `Performance`, `Jank`, `Page Unload`, `Stop`) are internal diagnostics and are intentionally not part of this taxonomy.
 
 ---
 

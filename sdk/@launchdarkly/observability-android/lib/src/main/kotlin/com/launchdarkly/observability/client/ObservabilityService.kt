@@ -164,6 +164,25 @@ class ObservabilityService(
     )
     val trackFlow: SharedFlow<TrackEvent> = _trackFlow.asSharedFlow()
 
+    /**
+     * Broadcasts each app-lifecycle transition (foreground/background) so Session Replay can emit
+     * `Foreground` / `Background` breadcrumbs regardless of the span flags. Shared with Session
+     * Replay via [ObservabilityContext.appLifecycleFlow].
+     */
+    private val _appLifecycleFlow = MutableSharedFlow<AppLifecycleSignal>(
+        extraBufferCapacity = 16,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
+    val appLifecycleFlow: SharedFlow<AppLifecycleSignal> = _appLifecycleFlow.asSharedFlow()
+
+    /**
+     * Tracks process foreground/background transitions and routes them through the single emitter
+     * [handleAppLifecycleSignal]. Detection runs unconditionally so Session Replay breadcrumbs are
+     * always available; the `app_foreground` / `app_background` span is gated separately by
+     * [ObservabilityOptions.Analytics.appLifecycle].
+     */
+    private val appLifecycleTracker = AppLifecycleTracker(onSignal = { signal -> handleAppLifecycleSignal(signal) })
+
     //TODO: Evaluate if this class should have a close/shutdown method to close this scope
     private val scope = CoroutineScope(DispatcherProviderHolder.current.io + SupervisorJob())
 
@@ -255,6 +274,10 @@ class ObservabilityService(
         if (observabilityOptions.instrumentations.screens) {
             screenViewManager?.start()
         }
+
+        // App-lifecycle detection runs unconditionally so Session Replay breadcrumbs are always
+        // available; the span itself is gated by analytics.appLifecycle inside the handler.
+        appLifecycleTracker.start()
 
         batchWorker.start()
     }
@@ -613,6 +636,37 @@ class ObservabilityService(
             .end()
     }
 
+    /**
+     * Single funnel for app-lifecycle transitions from [appLifecycleTracker].
+     *
+     * The breadcrumb broadcast (Session Replay `Foreground` / `Background`) always fires; the
+     * `app_foreground` / `app_background` span is gated by
+     * [ObservabilityOptions.Analytics.appLifecycle] (and the global span flag), mirroring the
+     * navigation/track emitters.
+     */
+    private fun handleAppLifecycleSignal(signal: AppLifecycleSignal) {
+        // Broadcast so Session Replay can emit a breadcrumb independent of the span flags below.
+        _appLifecycleFlow.tryEmit(signal)
+
+        if (!observabilityOptions.analytics.appLifecycle) return
+        if (!observabilityOptions.tracesApi.includeSpans) return
+
+        val spanName = when (signal.kind) {
+            AppLifecycleSignal.Kind.FOREGROUND -> APP_FOREGROUND_SPAN_NAME
+            AppLifecycleSignal.Kind.BACKGROUND -> APP_BACKGROUND_SPAN_NAME
+        }
+
+        val attrBuilder = Attributes.builder()
+        // Context keys first so the reserved `event.*` taxonomy fields always win.
+        attrBuilder.putAll(cachedContextKeyAttributes)
+        signal.lifecycleState?.let { attrBuilder.put(EVENT_LIFECYCLE_STATE, it) }
+
+        otelTracer.spanBuilder(spanName)
+            .setAllAttributes(attrBuilder.build())
+            .startSpan()
+            .end()
+    }
+
     override fun updateCachedContextKeys(contextKeys: Map<String, String>) {
         val builder = Attributes.builder()
         for ((k, v) in contextKeys) {
@@ -680,6 +734,8 @@ class ObservabilityService(
         const val ERROR_SPAN_NAME = "highlight.error"
         const val TRACK_SPAN_NAME = "track"
         const val SCREEN_VIEW_SPAN_NAME = "screen_view"
+        const val APP_FOREGROUND_SPAN_NAME = "app_foreground"
+        const val APP_BACKGROUND_SPAN_NAME = "app_background"
         const val SESSION_ID_ATTRIBUTE = "session.id"
 
         // `event.*` taxonomy attribute keys (see analytics-taxonomy.md).
@@ -691,6 +747,7 @@ class ObservabilityService(
         private val EVENT_SCREEN_ID = AttributeKey.stringKey("event.screen_id")
         private val EVENT_PREVIOUS_SCREEN = AttributeKey.stringKey("event.previous_screen")
         private val EVENT_CATEGORY = AttributeKey.stringKey("event.category")
+        private val EVENT_LIFECYCLE_STATE = AttributeKey.stringKey("event.lifecycle_state")
 
         // Tap detection thresholds. Long-press timeout separates taps from long presses; the slop
         // (12px, matching the Session Replay move filter) separates taps from drags.
