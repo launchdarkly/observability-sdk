@@ -2,6 +2,13 @@
 
 All notable changes to the LaunchDarkly Observability SDK for Flutter will be documented in this file. This project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.6.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.5.0...launchdarkly_flutter_observability-0.6.0) (2026-06-09)
+
+
+### Features
+
+* Flutter mask stabilization + Native Logs/Spans ([#597](https://github.com/launchdarkly/observability-sdk/issues/597)) ([7e5cfd2](https://github.com/launchdarkly/observability-sdk/commit/7e5cfd29831faea3f04ab083338b15ec05a07489))
+
 ## [0.5.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.4.0...launchdarkly_flutter_observability-0.5.0) (2026-06-04)
 
 
