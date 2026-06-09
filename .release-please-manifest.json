@@ -1,7 +1,7 @@
 {
 	"go": "1.1.1",
 	"sdk/@launchdarkly/observability": "1.1.13",
-	"sdk/@launchdarkly/observability-android": "0.53.0",
+	"sdk/@launchdarkly/observability-android": "0.54.0",
 	"sdk/@launchdarkly/flutter/packages/observability": "0.5.0",
 	"sdk/@launchdarkly/observability-dotnet": "1.2.0",
 	"sdk/@launchdarkly/observability-node": "1.1.3",
