@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.54.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.53.0...launchdarkly-observability-android-0.54.0) (2026-06-09)
+
+
+### Features
+
+* Android - Java-friendly option builders and a pure-Java e2e variant ([#605](https://github.com/launchdarkly/observability-sdk/issues/605)) ([46ca6b9](https://github.com/launchdarkly/observability-sdk/commit/46ca6b90c5857532e3eaf99a8e9f692517302e61))
+
 ## [0.53.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.52.0...launchdarkly-observability-android-0.53.0) (2026-06-05)
 
 
