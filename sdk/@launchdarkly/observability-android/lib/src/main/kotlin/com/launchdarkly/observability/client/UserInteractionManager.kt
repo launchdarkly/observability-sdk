@@ -6,12 +6,14 @@ import android.content.res.Resources
 import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
+import android.text.method.PasswordTransformationMethod
 import android.view.KeyboardShortcutGroup
 import android.view.Menu
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.Window
+import android.widget.EditText
 import android.widget.TextView
 import androidx.annotation.RequiresApi
 import kotlinx.coroutines.channels.BufferOverflow
@@ -223,13 +225,24 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
         return root
     }
 
+    /**
+     * Best-effort, privacy-safe label for the target view. User-entered values are never captured:
+     * editable fields contribute only their hint (placeholder), and any password-masked view is
+     * skipped entirely. This mirrors the web SDK, which records an element's textContent (labels),
+     * never an input's typed value. Non-input [TextView]s (labels, buttons) contribute their text.
+     */
     private fun extractText(view: View): String? {
-        val raw = when (view) {
-            is TextView -> view.text?.toString()
+        val raw = when {
+            view is EditText -> if (isSensitive(view)) null else view.hint?.toString()
+            view is TextView -> if (isSensitive(view)) null else view.text?.toString()
             else -> view.contentDescription?.toString()
         }
         return raw?.takeIf { it.isNotEmpty() }?.take(MAX_TEXT_LENGTH)
     }
+
+    /** True when the field masks its content (password input), so its text must not be captured. */
+    private fun isSensitive(view: TextView): Boolean =
+        view.transformationMethod is PasswordTransformationMethod
 
     private fun resolveResourceId(view: View): String? {
         if (view.id == View.NO_ID) return null
