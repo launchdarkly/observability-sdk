@@ -139,8 +139,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   // --- Track ---
 
-  /// Sample `data` payload shared by both track paths, mirroring the Swift
-  /// TestApp's track buttons.
+  /// Sample `data` payload for `LDClient.track`, which takes an `LDValue`.
   LDValue _trackData() => LDValue.buildObject()
       .addString('test-string', 'flutter')
       .addBool('test-true', true)
@@ -148,6 +147,17 @@ class _MyHomePageState extends State<MyHomePage> {
       .addNum('test-integer', 42)
       .addNum('test-double', 3.14)
       .build();
+
+  /// Same payload as [_trackData] but as a plain map, mirroring the Swift
+  /// TestApp's track buttons. `LDObserve.track` takes a map so callers need not
+  /// depend on `LDValue`.
+  Map<String, dynamic> _trackDataMap() => <String, dynamic>{
+    'test-string': 'flutter',
+    'test-true': true,
+    'test-false': false,
+    'test-integer': 42,
+    'test-double': 3.14,
+  };
 
   // Records a `track` span automatically via the observability `afterTrack`
   // hook on the LaunchDarkly client.
@@ -159,7 +169,7 @@ class _MyHomePageState extends State<MyHomePage> {
   // Records a `track` span directly through the observability API, without
   // routing through the LaunchDarkly client.
   void _onTrackViaObserve() {
-    LDObserve.track('track-via-ld-observe', data: _trackData());
+    LDObserve.track('track-via-ld-observe', data: _trackDataMap());
     debugPrint('Track via LDObserve triggered');
   }
 

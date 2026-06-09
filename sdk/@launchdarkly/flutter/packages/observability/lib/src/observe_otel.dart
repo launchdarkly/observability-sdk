@@ -6,10 +6,8 @@ import 'package:opentelemetry/api.dart' as otel;
 import 'api/attribute.dart';
 import 'api/span.dart';
 import 'api/span_kind.dart';
-import 'api/span_status_code.dart';
 import 'otel/conversions.dart';
 import 'otel/setup.dart';
-import 'otel/track_convention.dart';
 import 'plugin/ld_observe_plugin.dart';
 import 'plugin/observability_config.dart';
 
@@ -25,11 +23,6 @@ const _defaultLogLevel = 'info';
 final class ObserveOtel {
   static bool _shutdown = false;
   static final List<LDObservePlugin> _pluginInstances = [];
-
-  /// Whether `track` spans are emitted. Mirrors `analytics.trackEvents`; set
-  /// during plugin registration. Defaults to `true` so manual track calls made
-  /// before registration completes are not dropped.
-  static bool _trackEventsEnabled = true;
 
   /// Start a span with the given name and optional attributes.
   static Span startSpan(
@@ -50,32 +43,28 @@ final class ObserveOtel {
     return wrapSpan(span, token);
   }
 
-  /// Emit a `track` span for a custom event.
+  /// Record a `track` event for a custom event.
   ///
-  /// The single emitter for both track paths: the LaunchDarkly client's
+  /// The single entry point for both track paths: the LaunchDarkly client's
   /// `afterTrack` hook (which supplies the evaluation [context]) and the manual
-  /// [LDObserve.track] API (which has no context). Gated by
-  /// `analytics.trackEvents`; mirrors the native iOS/Android track span.
+  /// [LDObserve.track] API (which has no context). Delegates to the
+  /// platform-appropriate recorder: on web a Dart `track` span is emitted; on
+  /// mobile the native observability SDK is invoked so it emits the native
+  /// `track` span (gated by `analytics.trackEvents`) and the Session Replay
+  /// `Track` timeline event. `null` before the pipeline is initialized, in which
+  /// case the event is dropped.
   static void track(
     String eventName, {
     LDValue? data,
     num? metricValue,
     LDContext? context,
   }) {
-    if (!_trackEventsEnabled) {
-      return;
-    }
-    final span = startSpan(
-      TrackConvention.spanName,
-      attributes: TrackConvention.getSpanAttributes(
-        eventName: eventName,
-        data: data,
-        metricValue: metricValue,
-        context: context,
-      ),
+    Otel.trackRecorder?.track(
+      eventName,
+      data: data,
+      metricValue: metricValue,
+      context: context,
     );
-    span.setStatus(SpanStatusCode.ok);
-    span.end();
   }
 
   /// Record an exception with an optional stack trace and attributes.
@@ -165,6 +154,5 @@ void registerPlugin(
   ObservabilityConfig config,
 ) {
   Otel.setup(credential, config);
-  ObserveOtel._trackEventsEnabled = config.trackEventsEnabled;
   ObserveOtel._pluginInstances.add(plugin);
 }

@@ -378,10 +378,8 @@ span.end()
 // (Calling LDClient.track(...) records the same span automatically via the afterTrack hook.)
 LDObserve.track(
     "checkout_completed",
-    value = 42.0,
-    attributes = Attributes.of(
-        AttributeKey.stringKey("currency"), "USD"
-    )
+    data = mapOf("currency" to "USD"),
+    metricValue = 42.0
 )
 
 // Record a `screen_view` span for screens not backed by a distinct Activity

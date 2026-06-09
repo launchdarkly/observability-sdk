@@ -193,6 +193,17 @@ internal class LDNativeApiImpl(
         )
     }
 
+    // Forwards a custom track event to the native observability SDK. Native
+    // `track` always broadcasts a Session Replay `Track` timeline event and, when
+    // `analytics.trackEvents` is enabled, emits the `track` span. The Dart side
+    // routes mobile track here instead of through `exportSpans` because only the
+    // native track path reaches Session Replay. The bridge owns the
+    // `Map` -> `LDValue` conversion so this plugin stays independent of the
+    // LaunchDarkly feature-flag SDK.
+    override fun track(key: String, data: Map<String, Any?>?, metricValue: Double?) {
+        LDObserveBridge.track(key, data, metricValue)
+    }
+
     /**
      * Maps the OpenTelemetry log-severity number sent across the bridge onto the
      * native [ObservabilityOptions.LogLevel]. Defaults to [ObservabilityOptions.LogLevel.INFO]

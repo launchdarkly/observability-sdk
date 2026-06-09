@@ -14,7 +14,6 @@ import com.launchdarkly.observability.replay.ReplayOptions
 import com.launchdarkly.observability.replay.capture.ImageCaptureServicing
 import com.launchdarkly.observability.replay.plugin.SessionReplayPluginImpl
 import com.launchdarkly.observability.util.runOnMainThread
-import com.launchdarkly.sdk.LDValue
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Severity
 import io.opentelemetry.api.trace.Span
@@ -71,7 +70,7 @@ class LDObserve(private val client: Observe) : Observe {
         client.flush()
     }
 
-    override fun track(key: String, data: LDValue?, metricValue: Double?) {
+    override fun track(key: String, data: Map<String, Any?>?, metricValue: Double?) {
         client.track(key, data, metricValue)
     }
 
@@ -95,7 +94,7 @@ class LDObserve(private val client: Observe) : Observe {
                 return Span.getInvalid()
             }
             override fun flush() {}
-            override fun track(key: String, data: LDValue?, metricValue: Double?) {}
+            override fun track(key: String, data: Map<String, Any?>?, metricValue: Double?) {}
             override fun trackScreenView(name: String, screenClass: String?, screenId: String?, category: String?) {}
         }
 
@@ -231,7 +230,7 @@ class LDObserve(private val client: Observe) : Observe {
         override fun recordLog(message: String, severity: Severity, attributes: Attributes, spanContext: SpanContext?) = delegate.recordLog(message, severity, attributes, spanContext)
         override fun startSpan(name: String, attributes: Attributes): Span = delegate.startSpan(name, attributes)
         override fun flush() = delegate.flush()
-        override fun track(key: String, data: LDValue?, metricValue: Double?) = delegate.track(key, data, metricValue)
+        override fun track(key: String, data: Map<String, Any?>?, metricValue: Double?) = delegate.track(key, data, metricValue)
         override fun trackScreenView(name: String, screenClass: String?, screenId: String?, category: String?) = delegate.trackScreenView(name, screenClass, screenId, category)
 
         /**

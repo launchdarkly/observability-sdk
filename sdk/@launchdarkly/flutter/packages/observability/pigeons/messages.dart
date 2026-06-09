@@ -145,4 +145,10 @@ abstract class LDNativeApi {
   /// Forwards a Dart log to the native logger so it is emitted as a native
   /// `LogRecord` with `session.id` and trace/span correlation.
   void recordLog(LDLogRecord log);
+
+  /// Forwards a custom track event to the native observability SDK so it emits
+  /// the native `track` span (gated by `analytics.trackEvents`) and the Session
+  /// Replay `Track` timeline event (always). `data` carries the optional event
+  /// payload as a JSON object.
+  void track(String key, Map<String, Object?>? data, double? metricValue);
 }

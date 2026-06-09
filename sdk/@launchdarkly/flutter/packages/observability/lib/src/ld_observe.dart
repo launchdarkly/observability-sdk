@@ -67,9 +67,18 @@ final class LDObserve {
   /// shape works whether the event is recorded through the LaunchDarkly client
   /// (via the `afterTrack` hook) or directly through this API. Use this for
   /// standalone observability (no LaunchDarkly client) or to record custom
-  /// events that should not also be sent to LaunchDarkly.
-  static void track(String eventName, {LDValue? data, num? metricValue}) =>
-      ObserveOtel.track(eventName, data: data, metricValue: metricValue);
+  /// events that should not also be sent to LaunchDarkly. `data` is a plain JSON
+  /// map so callers need not depend on `LDValue`; object members are attached as
+  /// span attributes.
+  static void track(
+    String eventName, {
+    Map<String, dynamic>? data,
+    num? metricValue,
+  }) => ObserveOtel.track(
+    eventName,
+    data: data == null ? null : LDValue.ofDynamic(data),
+    metricValue: metricValue,
+  );
 
   /// Record an exception with an optional stack trace and attributes.
   static void recordException(
