@@ -1,6 +1,6 @@
 {
 	"name": "highlight.run",
-	"version": "10.3.1",
+	"version": "10.3.4",
 	"description": "Open source, fullstack monitoring. Capture frontend errors, record server side logs, and visualize what broke with session replay.",
 	"keywords": [
 		"highlight",
@@ -23,9 +23,9 @@
 		"url": "https://github.com/launchdarkly/observability-sdk.git"
 	},
 	"scripts": {
-		"build": "yarn build:umd && vite build",
-		"build:umd": "FORMAT=umd vite build",
-		"build:watch": "vite build --watch",
+		"build": "yarn build:umd && node ./node_modules/vite5/bin/vite.js build",
+		"build:umd": "FORMAT=umd node ./node_modules/vite5/bin/vite.js build",
+		"build:watch": "node ./node_modules/vite5/bin/vite.js build --watch",
 		"codegen": "graphql-codegen --config codegen.yml",
 		"dev": "run-p dev:server dev:watch",
 		"dev:server": "vite dev",
@@ -33,7 +33,7 @@
 		"enforce-size": "size-limit",
 		"test": "vitest --run",
 		"test:watch": "vitest",
-		"typegen": "yarn typegen:check && FORMAT=d.ts vite build",
+		"typegen": "yarn typegen:check && FORMAT=d.ts node ./node_modules/vite5/bin/vite.js build",
 		"typegen:check": "tsc --noEmit",
 		"docs": "typedoc"
 	},
@@ -114,8 +114,8 @@
 		"@types/js-cookie": "^3.0.6",
 		"@types/json-stringify-safe": "^5.0.3",
 		"@types/node": "^16.3.1",
-		"@vitest/coverage-v8": "^1.6.1",
-		"@vitest/web-worker": "^1.6.1",
+		"@vitest/coverage-v8": "^4.1.0",
+		"@vitest/web-worker": "^4.1.0",
 		"error-stack-parser": "2.0.6",
 		"fflate": "^0.8.1",
 		"graphql": "^16.8.1",
@@ -131,9 +131,10 @@
 		"tslib": "^2.6.2",
 		"typedoc": "^0.28.4",
 		"typescript": "^5.0.4",
-		"vite": "^5.4.21",
+		"vite": "^6.4.3",
 		"vite-plugin-dts": "^4.5.3",
-		"vitest": "^1.6.1",
+		"vite5": "npm:vite@^5.4.21",
+		"vitest": "^4.1.0",
 		"vitest-canvas-mock": "^0.3.3",
 		"web-vitals": "^3.5.0",
 		"zone.js": "^0.15.0"

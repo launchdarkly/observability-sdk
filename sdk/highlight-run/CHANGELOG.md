@@ -1,5 +1,27 @@
 # highlight.run
 
+## [10.3.4](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.3.3...highlight.run-10.3.4) (2026-06-08)
+
+
+### Bug Fixes
+
+* **highlight.run:** stub blob: workers in tests to fix flaky CI teardown ([#606](https://github.com/launchdarkly/observability-sdk/issues/606)) ([fb3fa19](https://github.com/launchdarkly/observability-sdk/commit/fb3fa192ef0de699ec8a0cec1f2b7e1ec8dca1a2))
+
+## [10.3.3](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.3.2...highlight.run-10.3.3) (2026-06-08)
+
+
+### Bug Fixes
+
+* record session replay Click events in capture phase ([#602](https://github.com/launchdarkly/observability-sdk/issues/602)) ([485f922](https://github.com/launchdarkly/observability-sdk/commit/485f92277371bd22a3169d6edd9cdf2ead85beae))
+
+## [10.3.2](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.3.1...highlight.run-10.3.2) (2026-06-05)
+
+
+### Bug Fixes
+
+* strip URL fragments from sanitizeUrl to prevent OAuth token leaks ([#595](https://github.com/launchdarkly/observability-sdk/issues/595)) ([4925031](https://github.com/launchdarkly/observability-sdk/commit/49250315ec48aef5322a0cd9f5363e6cdd476c37))
+* upgrade vulnerable dependencies flagged by Dependabot ([#596](https://github.com/launchdarkly/observability-sdk/issues/596)) ([c15b3d9](https://github.com/launchdarkly/observability-sdk/commit/c15b3d9547946f6dfe334f0a5b43002f5f8781a2))
+
 ## [10.3.1](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.3.0...highlight.run-10.3.1) (2026-05-15)
 
 

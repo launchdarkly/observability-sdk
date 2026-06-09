@@ -6,6 +6,7 @@ import com.launchdarkly.observability.context.LDObserveLogging
 import com.launchdarkly.observability.context.ObserveLogAdapter
 import io.opentelemetry.api.common.Attributes
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 
 const val DEFAULT_SERVICE_NAME = "observability-android"
@@ -64,9 +65,27 @@ data class ObservabilityOptions(
         val includeErrors: Boolean = true,
         val includeSpans: Boolean = true
     ) {
+        /**
+         * Java-friendly fluent builder for [TracesApi].
+         */
+        class Builder {
+            private var value = TracesApi()
+
+            fun includeErrors(includeErrors: Boolean) = apply { value = value.copy(includeErrors = includeErrors) }
+            fun includeSpans(includeSpans: Boolean) = apply { value = value.copy(includeSpans = includeSpans) }
+
+            fun build() = value
+        }
+
         companion object {
+            @JvmStatic
             fun enabled() = TracesApi()
+
+            @JvmStatic
             fun disabled() = TracesApi(includeErrors = false, includeSpans = false)
+
+            @JvmStatic
+            fun builder() = Builder()
         }
     }
 
@@ -77,7 +96,10 @@ data class ObservabilityOptions(
      */
     data class MetricsApi(val enabled: Boolean = true) {
         companion object {
+            @JvmStatic
             fun enabled() = MetricsApi(true)
+
+            @JvmStatic
             fun disabled() = MetricsApi(false)
         }
     }
@@ -105,7 +127,26 @@ data class ObservabilityOptions(
         val pageViews: Boolean = true,
         val trackEvents: Boolean = true,
         val screenViews: Boolean = true,
-    )
+    ) {
+        /**
+         * Java-friendly fluent builder for [Analytics].
+         */
+        class Builder {
+            private var value = Analytics()
+
+            fun taps(taps: Boolean) = apply { value = value.copy(taps = taps) }
+            fun pageViews(pageViews: Boolean) = apply { value = value.copy(pageViews = pageViews) }
+            fun trackEvents(trackEvents: Boolean) = apply { value = value.copy(trackEvents = trackEvents) }
+            fun screenViews(screenViews: Boolean) = apply { value = value.copy(screenViews = screenViews) }
+
+            fun build() = value
+        }
+
+        companion object {
+            @JvmStatic
+            fun builder() = Builder()
+        }
+    }
 
     /**
      * This class allows enabling or disabling specific automatic instrumentations.
@@ -125,7 +166,26 @@ data class ObservabilityOptions(
         val launchTime: Boolean = false,
         val userTaps: Boolean = true,
         val screens: Boolean = true,
-    )
+    ) {
+        /**
+         * Java-friendly fluent builder for [Instrumentations].
+         */
+        class Builder {
+            private var value = Instrumentations()
+
+            fun crashReporting(crashReporting: Boolean) = apply { value = value.copy(crashReporting = crashReporting) }
+            fun launchTime(launchTime: Boolean) = apply { value = value.copy(launchTime = launchTime) }
+            fun userTaps(userTaps: Boolean) = apply { value = value.copy(userTaps = userTaps) }
+            fun screens(screens: Boolean) = apply { value = value.copy(screens = screens) }
+
+            fun build() = value
+        }
+
+        companion object {
+            @JvmStatic
+            fun builder() = Builder()
+        }
+    }
 
     /**
      * Defines the logging levels for telemetry data. These levels correspond to the OpenTelemetry Log Severity.
@@ -169,5 +229,61 @@ data class ObservabilityOptions(
         FATAL3(23),
         FATAL4(24),
         NONE(Int.MAX_VALUE)
+    }
+
+    /**
+     * Java-friendly fluent builder for [ObservabilityOptions].
+     *
+     * Kotlin callers can keep using the [ObservabilityOptions] constructor with named/default
+     * arguments. This builder exists so Java callers, which cannot omit Kotlin default parameters,
+     * can configure only the options they care about. Every setter defaults to the same value as
+     * the [ObservabilityOptions] primary constructor.
+     *
+     * ```java
+     * ObservabilityOptions options = ObservabilityOptions.builder()
+     *     .debug(true)
+     *     .otlpEndpoint(BuildConfig.OTLP_ENDPOINT)
+     *     .instrumentations(
+     *         ObservabilityOptions.Instrumentations.builder()
+     *             .launchTime(true)
+     *             .build())
+     *     .build();
+     * ```
+     */
+    class Builder {
+        private var options = ObservabilityOptions()
+
+        fun enabled(enabled: Boolean) = apply { options = options.copy(enabled = enabled) }
+        fun serviceName(serviceName: String) = apply { options = options.copy(serviceName = serviceName) }
+        fun serviceVersion(serviceVersion: String) = apply { options = options.copy(serviceVersion = serviceVersion) }
+        fun otlpEndpoint(otlpEndpoint: String) = apply { options = options.copy(otlpEndpoint = otlpEndpoint) }
+        fun backendUrl(backendUrl: String) = apply { options = options.copy(backendUrl = backendUrl) }
+        fun contextFriendlyName(contextFriendlyName: String?) = apply { options = options.copy(contextFriendlyName = contextFriendlyName) }
+        fun resourceAttributes(resourceAttributes: Attributes) = apply { options = options.copy(resourceAttributes = resourceAttributes) }
+        fun customHeaders(customHeaders: Map<String, String>) = apply { options = options.copy(customHeaders = customHeaders) }
+
+        /** Sets the session background timeout in milliseconds (Java-friendly overload). */
+        fun sessionBackgroundTimeoutMillis(millis: Long) = apply {
+            options = options.copy(sessionBackgroundTimeout = millis.milliseconds)
+        }
+        fun sessionBackgroundTimeout(sessionBackgroundTimeout: Duration) = apply {
+            options = options.copy(sessionBackgroundTimeout = sessionBackgroundTimeout)
+        }
+        fun debug(debug: Boolean) = apply { options = options.copy(debug = debug) }
+        fun logsApiLevel(logsApiLevel: LogLevel) = apply { options = options.copy(logsApiLevel = logsApiLevel) }
+        fun tracesApi(tracesApi: TracesApi) = apply { options = options.copy(tracesApi = tracesApi) }
+        fun metricsApi(metricsApi: MetricsApi) = apply { options = options.copy(metricsApi = metricsApi) }
+        fun analytics(analytics: Analytics) = apply { options = options.copy(analytics = analytics) }
+        fun instrumentations(instrumentations: Instrumentations) = apply { options = options.copy(instrumentations = instrumentations) }
+        fun logAdapter(logAdapter: ObserveLogAdapter) = apply { options = options.copy(logAdapter = logAdapter) }
+        fun loggerName(loggerName: String) = apply { options = options.copy(loggerName = loggerName) }
+        fun telemetryInspector(telemetryInspector: TelemetryInspector?) = apply { options = options.copy(telemetryInspector = telemetryInspector) }
+
+        fun build() = options
+    }
+
+    companion object {
+        @JvmStatic
+        fun builder() = Builder()
     }
 }

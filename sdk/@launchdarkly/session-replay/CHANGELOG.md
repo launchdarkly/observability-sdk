@@ -1,5 +1,37 @@
 # @launchdarkly/session-replay
 
+## [1.1.13](https://github.com/launchdarkly/observability-sdk/compare/session-replay-1.1.12...session-replay-1.1.13) (2026-06-08)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * highlight.run bumped to 10.3.4
+
+## [1.1.12](https://github.com/launchdarkly/observability-sdk/compare/session-replay-1.1.11...session-replay-1.1.12) (2026-06-08)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * highlight.run bumped to 10.3.3
+
+## [1.1.11](https://github.com/launchdarkly/observability-sdk/compare/session-replay-1.1.10...session-replay-1.1.11) (2026-06-05)
+
+
+### Bug Fixes
+
+* upgrade vulnerable dependencies flagged by Dependabot ([#596](https://github.com/launchdarkly/observability-sdk/issues/596)) ([c15b3d9](https://github.com/launchdarkly/observability-sdk/commit/c15b3d9547946f6dfe334f0a5b43002f5f8781a2))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * highlight.run bumped to 10.3.2
+
 ## [1.1.10](https://github.com/launchdarkly/observability-sdk/compare/session-replay-1.1.9...session-replay-1.1.10) (2026-06-03)
 
 

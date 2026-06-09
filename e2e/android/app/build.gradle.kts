@@ -57,9 +57,9 @@ android {
         create("compose") {
             dimension = "uiFramework"
         }
-        create("noCompose") {
+        create("java") {
             dimension = "uiFramework"
-            applicationIdSuffix = ".nocompose"
+            applicationIdSuffix = ".java"
         }
     }
     compileOptions {
@@ -85,10 +85,10 @@ android {
 }
 
 tasks.withType<Test>().configureEach {
-    systemProperty(
-        "java.util.logging.config.file",
-        project.file("src/test/resources/logging.properties").absolutePath
-    )
+    val loggingConfig = project.file("src/testCompose/resources/logging.properties")
+    if (loggingConfig.exists()) {
+        systemProperty("java.util.logging.config.file", loggingConfig.absolutePath)
+    }
 }
 
 dependencies {
@@ -123,7 +123,7 @@ dependencies {
 
     // Compose runtime is needed by the Kotlin Compose compiler plugin (applied project-wide).
     // It does NOT contain any UI classes like AbstractComposeView, so the SDK's
-    // isComposeAvailable runtime check still returns false in the noCompose variant.
+    // isComposeAvailable runtime check still returns false in the java variant.
     implementation(platform(libs.androidx.compose.bom))
     implementation("androidx.compose.runtime:runtime")
 
@@ -134,12 +134,10 @@ dependencies {
     "composeImplementation"(libs.androidx.ui.tooling.preview)
     "composeImplementation"(libs.androidx.material3)
 
-    // noCompose uses AppCompatActivity for proper Material Components theme resolution
-    "noComposeImplementation"("androidx.appcompat:appcompat:1.7.0")
-    // Provides the `by viewModels()` Kotlin extension on ComponentActivity. Required because
-    // androidx.activity is resolved at 1.7.x here (transitively via appcompat / observability-android),
-    // and the Kotlin extensions only moved into the base `activity` artifact starting in 1.8.0.
-    "noComposeImplementation"("androidx.activity:activity-ktx:1.7.0")
+    // The pure-Java flavor uses AppCompatActivity for proper Material Components theme resolution.
+    "javaImplementation"("androidx.appcompat:appcompat:1.7.0")
+    // Provides AndroidViewModel/ViewModelProvider used by the Java MainActivity and ViewModel.
+    "javaImplementation"("androidx.lifecycle:lifecycle-viewmodel:2.6.1")
 
     testImplementation(libs.junit)
     testImplementation(libs.core.ktx)
