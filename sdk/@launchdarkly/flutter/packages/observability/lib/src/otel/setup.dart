@@ -1,20 +1,26 @@
 import 'package:launchdarkly_flutter_observability/src/otel/conversions.dart';
+import 'package:launchdarkly_flutter_observability/src/otel/exporters/exporter_factory.dart';
 import 'package:launchdarkly_flutter_observability/src/otel/service_convention.dart';
 import 'package:launchdarkly_flutter_observability/src/plugin/observability_config.dart';
 import 'package:opentelemetry/api.dart'
     show registerGlobalTracerProvider, Attribute;
-import 'package:opentelemetry/sdk.dart'
-    show BatchSpanProcessor, CollectorExporter, TracerProviderBase, Resource;
+import 'package:opentelemetry/sdk.dart' show TracerProviderBase, Resource;
 
 const _highlightProjectIdAttr = 'highlight.project_id';
-const _tracesSuffix = '/v1/traces';
 
 class Otel {
   static final List<TracerProviderBase> _tracerProviders = [];
 
+  /// The platform-appropriate log recorder, set during [setup]. `null` before
+  /// the pipeline is initialized.
+  static LogRecorder? _logRecorder;
+  static LogRecorder? get logRecorder => _logRecorder;
+
   static void setup(String sdkKey, ObservabilityConfig config) {
     // TODO: Log when otel is setup multiple times. It will work, but the
     // behavior may be confusing.
+
+    final exporters = ObservabilityExporters.instance;
 
     final resourceAttributes = <Attribute>[
       Attribute.fromString(_highlightProjectIdAttr, sdkKey),
@@ -28,17 +34,15 @@ class Otel {
       ),
     );
     final tracerProvider = TracerProviderBase(
-      processors: [
-        BatchSpanProcessor(
-          CollectorExporter(Uri.parse('${config.otlpEndpoint}$_tracesSuffix')),
-        ),
-      ],
+      processors: exporters.createSpanProcessors(config),
       resource: Resource(resourceAttributes),
     );
 
     _tracerProviders.add(tracerProvider);
 
     registerGlobalTracerProvider(tracerProvider);
+
+    _logRecorder = exporters.createLogRecorder(config);
   }
 
   static void shutdown() {
@@ -46,5 +50,6 @@ class Otel {
       tracerProvider.shutdown();
     }
     _tracerProviders.clear();
+    _logRecorder = null;
   }
 }

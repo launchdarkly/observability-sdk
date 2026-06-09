@@ -6,7 +6,6 @@ import 'api/attribute.dart';
 import 'api/span.dart';
 import 'api/span_kind.dart';
 import 'otel/conversions.dart';
-import 'otel/log_convention.dart';
 import 'otel/setup.dart';
 import 'plugin/ld_observe_plugin.dart';
 import 'plugin/observability_config.dart';
@@ -89,17 +88,15 @@ final class ObserveOtel {
     StackTrace? stackTrace,
     Map<String, Attribute>? attributes,
   }) {
-    final combinedAttributes = LogConvention.getEventAttributes(
+    // Delegate to the platform-appropriate recorder: native log records on
+    // mobile (stamped with `session.id`), span events on web. `null` before
+    // the pipeline is initialized, in which case the log is dropped.
+    Otel.logRecorder?.recordLog(
       message,
-      severity,
-      stackTrace,
+      severity: severity,
+      stackTrace: stackTrace,
+      attributes: attributes,
     );
-    if (attributes != null) {
-      combinedAttributes.addAll(attributes);
-    }
-    final span = startSpan(LogConvention.spanName);
-    span.addEvent(LogConvention.eventName, attributes: combinedAttributes);
-    span.end();
   }
 
   /// Shutdown observability. Once shutdown observability cannot be restarted.

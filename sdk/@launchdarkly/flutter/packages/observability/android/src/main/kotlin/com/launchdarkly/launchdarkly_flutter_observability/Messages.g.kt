@@ -144,18 +144,18 @@ data class LDTracesOptions (
 }
 
 /** Generated class from Pigeon that represents data sent in messages. */
-data class LDProductAnalyticsOptions (
+data class LDAnalyticsOptions (
   val taps: Boolean? = null,
   val pageViews: Boolean? = null,
   val trackEvents: Boolean? = null
 )
  {
   companion object {
-    fun fromList(pigeonVar_list: List<Any?>): LDProductAnalyticsOptions {
+    fun fromList(pigeonVar_list: List<Any?>): LDAnalyticsOptions {
       val taps = pigeonVar_list[0] as Boolean?
       val pageViews = pigeonVar_list[1] as Boolean?
       val trackEvents = pigeonVar_list[2] as Boolean?
-      return LDProductAnalyticsOptions(taps, pageViews, trackEvents)
+      return LDAnalyticsOptions(taps, pageViews, trackEvents)
     }
   }
   fun toList(): List<Any?> {
@@ -166,7 +166,7 @@ data class LDProductAnalyticsOptions (
     )
   }
   override fun equals(other: Any?): Boolean {
-    if (other !is LDProductAnalyticsOptions) {
+    if (other !is LDAnalyticsOptions) {
       return false
     }
     if (this === other) {
@@ -191,7 +191,7 @@ data class LDObservabilityOptions (
   val logsApiLevel: Long? = null,
   val traces: LDTracesOptions? = null,
   val metricsEnabled: Boolean? = null,
-  val productAnalytics: LDProductAnalyticsOptions? = null,
+  val analytics: LDAnalyticsOptions? = null,
   val instrumentation: LDInstrumentationOptions? = null
 )
  {
@@ -209,9 +209,9 @@ data class LDObservabilityOptions (
       val logsApiLevel = pigeonVar_list[9] as Long?
       val traces = pigeonVar_list[10] as LDTracesOptions?
       val metricsEnabled = pigeonVar_list[11] as Boolean?
-      val productAnalytics = pigeonVar_list[12] as LDProductAnalyticsOptions?
+      val analytics = pigeonVar_list[12] as LDAnalyticsOptions?
       val instrumentation = pigeonVar_list[13] as LDInstrumentationOptions?
-      return LDObservabilityOptions(isEnabled, serviceName, serviceVersion, otlpEndpoint, backendUrl, contextFriendlyName, attributes, customHeaders, sessionBackgroundTimeoutMillis, logsApiLevel, traces, metricsEnabled, productAnalytics, instrumentation)
+      return LDObservabilityOptions(isEnabled, serviceName, serviceVersion, otlpEndpoint, backendUrl, contextFriendlyName, attributes, customHeaders, sessionBackgroundTimeoutMillis, logsApiLevel, traces, metricsEnabled, analytics, instrumentation)
     }
   }
   fun toList(): List<Any?> {
@@ -228,7 +228,7 @@ data class LDObservabilityOptions (
       logsApiLevel,
       traces,
       metricsEnabled,
-      productAnalytics,
+      analytics,
       instrumentation,
     )
   }
@@ -348,6 +348,156 @@ data class LDStartResult (
 
   override fun hashCode(): Int = toList().hashCode()
 }
+
+/**
+ * An event recorded on a span, forwarded to the native tracer.
+ *
+ * Generated class from Pigeon that represents data sent in messages.
+ */
+data class LDSpanEvent (
+  val name: String? = null,
+  val attributes: Map<String, Any?>? = null
+)
+ {
+  companion object {
+    fun fromList(pigeonVar_list: List<Any?>): LDSpanEvent {
+      val name = pigeonVar_list[0] as String?
+      val attributes = pigeonVar_list[1] as Map<String, Any?>?
+      return LDSpanEvent(name, attributes)
+    }
+  }
+  fun toList(): List<Any?> {
+    return listOf(
+      name,
+      attributes,
+    )
+  }
+  override fun equals(other: Any?): Boolean {
+    if (other !is LDSpanEvent) {
+      return false
+    }
+    if (this === other) {
+      return true
+    }
+    return MessagesPigeonUtils.deepEquals(toList(), other.toList())  }
+
+  override fun hashCode(): Int = toList().hashCode()
+}
+
+/**
+ * A completed Dart span, forwarded to the native tracer so the native
+ * pipeline re-creates it (stamping `session.id`, sampling, batching).
+ *
+ * Mirrors the data carried by MAUI's `TraceBuilderAdapter`
+ * (`sdk/@launchdarkly/mobile-dotnet/observability/bridge/TraceBuilderAdapter.cs`).
+ *
+ * Generated class from Pigeon that represents data sent in messages.
+ */
+data class LDSpanData (
+  val name: String? = null,
+  /** Span start as epoch seconds. */
+  val startTimeSeconds: Double? = null,
+  /** Span end as epoch seconds. */
+  val endTimeSeconds: Double? = null,
+  /** 32-char hex trace id. */
+  val traceId: String? = null,
+  /** 16-char hex span id. */
+  val spanId: String? = null,
+  /** 16-char hex parent span id, or empty for a root span. */
+  val parentSpanId: String? = null,
+  val attributes: Map<String, Any?>? = null,
+  val events: List<LDSpanEvent?>? = null,
+  /** 0 = unset, 1 = ok, 2 = error. */
+  val statusCode: Long? = null
+)
+ {
+  companion object {
+    fun fromList(pigeonVar_list: List<Any?>): LDSpanData {
+      val name = pigeonVar_list[0] as String?
+      val startTimeSeconds = pigeonVar_list[1] as Double?
+      val endTimeSeconds = pigeonVar_list[2] as Double?
+      val traceId = pigeonVar_list[3] as String?
+      val spanId = pigeonVar_list[4] as String?
+      val parentSpanId = pigeonVar_list[5] as String?
+      val attributes = pigeonVar_list[6] as Map<String, Any?>?
+      val events = pigeonVar_list[7] as List<LDSpanEvent?>?
+      val statusCode = pigeonVar_list[8] as Long?
+      return LDSpanData(name, startTimeSeconds, endTimeSeconds, traceId, spanId, parentSpanId, attributes, events, statusCode)
+    }
+  }
+  fun toList(): List<Any?> {
+    return listOf(
+      name,
+      startTimeSeconds,
+      endTimeSeconds,
+      traceId,
+      spanId,
+      parentSpanId,
+      attributes,
+      events,
+      statusCode,
+    )
+  }
+  override fun equals(other: Any?): Boolean {
+    if (other !is LDSpanData) {
+      return false
+    }
+    if (this === other) {
+      return true
+    }
+    return MessagesPigeonUtils.deepEquals(toList(), other.toList())  }
+
+  override fun hashCode(): Int = toList().hashCode()
+}
+
+/**
+ * A log record forwarded to the native logger so it is emitted as a real
+ * OpenTelemetry `LogRecord` (stamped with `session.id` and correlated with
+ * the active span).
+ *
+ * Generated class from Pigeon that represents data sent in messages.
+ */
+data class LDLogRecord (
+  val message: String? = null,
+  /** OpenTelemetry severity number (e.g. 9 = INFO, 13 = WARN, 17 = ERROR). */
+  val severityNumber: Long? = null,
+  /** 32-char hex trace id of the active span, or null when none. */
+  val traceId: String? = null,
+  /** 16-char hex span id of the active span, or null when none. */
+  val spanId: String? = null,
+  val attributes: Map<String, Any?>? = null
+)
+ {
+  companion object {
+    fun fromList(pigeonVar_list: List<Any?>): LDLogRecord {
+      val message = pigeonVar_list[0] as String?
+      val severityNumber = pigeonVar_list[1] as Long?
+      val traceId = pigeonVar_list[2] as String?
+      val spanId = pigeonVar_list[3] as String?
+      val attributes = pigeonVar_list[4] as Map<String, Any?>?
+      return LDLogRecord(message, severityNumber, traceId, spanId, attributes)
+    }
+  }
+  fun toList(): List<Any?> {
+    return listOf(
+      message,
+      severityNumber,
+      traceId,
+      spanId,
+      attributes,
+    )
+  }
+  override fun equals(other: Any?): Boolean {
+    if (other !is LDLogRecord) {
+      return false
+    }
+    if (this === other) {
+      return true
+    }
+    return MessagesPigeonUtils.deepEquals(toList(), other.toList())  }
+
+  override fun hashCode(): Int = toList().hashCode()
+}
 private open class MessagesPigeonCodec : StandardMessageCodec() {
   override fun readValueOfType(type: Byte, buffer: ByteBuffer): Any? {
     return when (type) {
@@ -363,7 +513,7 @@ private open class MessagesPigeonCodec : StandardMessageCodec() {
       }
       131.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
-          LDProductAnalyticsOptions.fromList(it)
+          LDAnalyticsOptions.fromList(it)
         }
       }
       132.toByte() -> {
@@ -386,6 +536,21 @@ private open class MessagesPigeonCodec : StandardMessageCodec() {
           LDStartResult.fromList(it)
         }
       }
+      136.toByte() -> {
+        return (readValue(buffer) as? List<Any?>)?.let {
+          LDSpanEvent.fromList(it)
+        }
+      }
+      137.toByte() -> {
+        return (readValue(buffer) as? List<Any?>)?.let {
+          LDSpanData.fromList(it)
+        }
+      }
+      138.toByte() -> {
+        return (readValue(buffer) as? List<Any?>)?.let {
+          LDLogRecord.fromList(it)
+        }
+      }
       else -> super.readValueOfType(type, buffer)
     }
   }
@@ -399,7 +564,7 @@ private open class MessagesPigeonCodec : StandardMessageCodec() {
         stream.write(130)
         writeValue(stream, value.toList())
       }
-      is LDProductAnalyticsOptions -> {
+      is LDAnalyticsOptions -> {
         stream.write(131)
         writeValue(stream, value.toList())
       }
@@ -419,6 +584,18 @@ private open class MessagesPigeonCodec : StandardMessageCodec() {
         stream.write(135)
         writeValue(stream, value.toList())
       }
+      is LDSpanEvent -> {
+        stream.write(136)
+        writeValue(stream, value.toList())
+      }
+      is LDSpanData -> {
+        stream.write(137)
+        writeValue(stream, value.toList())
+      }
+      is LDLogRecord -> {
+        stream.write(138)
+        writeValue(stream, value.toList())
+      }
       else -> super.writeValue(stream, value)
     }
   }
@@ -428,6 +605,16 @@ private open class MessagesPigeonCodec : StandardMessageCodec() {
 /** Generated interface from Pigeon that represents a handler of messages from Flutter. */
 interface LDNativeApi {
   fun start(mobileKey: String, observability: LDObservabilityOptions, replay: LDSessionReplayOptions, observabilityVersion: String, callback: (Result<LDStartResult>) -> Unit)
+  /**
+   * Forwards completed Dart spans to the native tracer. Native re-creates each
+   * span so the native pipeline stamps `session.id` and exports it.
+   */
+  fun exportSpans(spans: List<LDSpanData>)
+  /**
+   * Forwards a Dart log to the native logger so it is emitted as a native
+   * `LogRecord` with `session.id` and trace/span correlation.
+   */
+  fun recordLog(log: LDLogRecord)
 
   companion object {
     /** The codec used by LDNativeApi. */
@@ -456,6 +643,42 @@ interface LDNativeApi {
                 reply.reply(MessagesPigeonUtils.wrapResult(data))
               }
             }
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.launchdarkly_flutter_observability.LDNativeApi.exportSpans$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { message, reply ->
+            val args = message as List<Any?>
+            val spansArg = args[0] as List<LDSpanData>
+            val wrapped: List<Any?> = try {
+              api.exportSpans(spansArg)
+              listOf(null)
+            } catch (exception: Throwable) {
+              MessagesPigeonUtils.wrapError(exception)
+            }
+            reply.reply(wrapped)
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.launchdarkly_flutter_observability.LDNativeApi.recordLog$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { message, reply ->
+            val args = message as List<Any?>
+            val logArg = args[0] as LDLogRecord
+            val wrapped: List<Any?> = try {
+              api.recordLog(logArg)
+              listOf(null)
+            } catch (exception: Throwable) {
+              MessagesPigeonUtils.wrapError(exception)
+            }
+            reply.reply(wrapped)
           }
         } else {
           channel.setMessageHandler(null)

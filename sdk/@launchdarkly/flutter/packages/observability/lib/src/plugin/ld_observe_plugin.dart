@@ -23,9 +23,7 @@ const _launchDarklyObservabilityPluginName =
 /// evaluation as an event. Cross-platform (Dart OpenTelemetry).
 final class _ObservabilityHook extends Hook {
   static const _evalSpanDataName = 'eval-span';
-  static const _launchDarklyClientPrefix = 'LDClient';
-  static const _launchDarklyObservabilityHookName =
-      '$_launchDarklyClientPrefix-hook';
+  static const _launchDarklyObservabilityHookName = 'LDClient-hook';
 
   final HookMetadata _metadata = const HookMetadata(
     name: _launchDarklyObservabilityHookName,
@@ -39,8 +37,15 @@ final class _ObservabilityHook extends Hook {
     EvaluationSeriesContext hookContext,
     UnmodifiableMapView<String, dynamic> data,
   ) {
+    // Match the native iOS/Android exporters: a span named "evaluation" with
+    // the feature flag key/provider/context set up front so the backend
+    // recognizes it as a flag evaluation.
     final span = ObserveOtel.startSpan(
-      '$_launchDarklyClientPrefix.${hookContext.method}',
+      FeatureFlagConvention.spanName,
+      attributes: FeatureFlagConvention.getSpanAttributes(
+        key: hookContext.flagKey,
+        context: hookContext.context,
+      ),
     );
 
     var updated = Map<String, dynamic>.from(data);
@@ -105,16 +110,23 @@ final class LDObservePlugin extends Plugin {
     }
     _booted = true;
 
-    registerPlugin(this, credential, _config);
-    _instrumentations.add(LifecycleInstrumentation());
-    _instrumentations.add(
-      DebugPrintInstrumentation(_config.instrumentationConfig),
-    );
-
+    // Start the native stack (and platform session replay) before wiring up the
+    // Dart OpenTelemetry exporters. On mobile the exporters forward spans/logs
+    // over the pigeon bridge to the native tracer/logger; if they are wired
+    // first, early lifecycle and flag-evaluation telemetry crosses the bridge
+    // while the native tracer/logger are still null and is silently dropped
+    // (never gets `session.id` or reaches the backend). Awaiting start here
+    // ensures the native pipeline is ready before any export can occur.
     await LDObservePlatform.instance.start(
       mobileKey: credential,
       observability: observability,
       replay: replay ?? const SessionReplayOptions(isEnabled: false),
+    );
+
+    registerPlugin(this, credential, _config);
+    _instrumentations.add(LifecycleInstrumentation());
+    _instrumentations.add(
+      DebugPrintInstrumentation(_config.instrumentationConfig),
     );
   }
 

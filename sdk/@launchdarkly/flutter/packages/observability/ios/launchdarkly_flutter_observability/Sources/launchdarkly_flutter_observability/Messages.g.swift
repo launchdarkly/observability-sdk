@@ -191,19 +191,19 @@ struct LDTracesOptions: Hashable {
 }
 
 /// Generated class from Pigeon that represents data sent in messages.
-struct LDProductAnalyticsOptions: Hashable {
+struct LDAnalyticsOptions: Hashable {
   var taps: Bool? = nil
   var pageViews: Bool? = nil
   var trackEvents: Bool? = nil
 
 
   // swift-format-ignore: AlwaysUseLowerCamelCase
-  static func fromList(_ pigeonVar_list: [Any?]) -> LDProductAnalyticsOptions? {
+  static func fromList(_ pigeonVar_list: [Any?]) -> LDAnalyticsOptions? {
     let taps: Bool? = nilOrValue(pigeonVar_list[0])
     let pageViews: Bool? = nilOrValue(pigeonVar_list[1])
     let trackEvents: Bool? = nilOrValue(pigeonVar_list[2])
 
-    return LDProductAnalyticsOptions(
+    return LDAnalyticsOptions(
       taps: taps,
       pageViews: pageViews,
       trackEvents: trackEvents
@@ -216,7 +216,7 @@ struct LDProductAnalyticsOptions: Hashable {
       trackEvents,
     ]
   }
-  static func == (lhs: LDProductAnalyticsOptions, rhs: LDProductAnalyticsOptions) -> Bool {
+  static func == (lhs: LDAnalyticsOptions, rhs: LDAnalyticsOptions) -> Bool {
     return deepEqualsMessages(lhs.toList(), rhs.toList())  }
   func hash(into hasher: inout Hasher) {
     deepHashMessages(value: toList(), hasher: &hasher)
@@ -237,7 +237,7 @@ struct LDObservabilityOptions: Hashable {
   var logsApiLevel: Int64? = nil
   var traces: LDTracesOptions? = nil
   var metricsEnabled: Bool? = nil
-  var productAnalytics: LDProductAnalyticsOptions? = nil
+  var analytics: LDAnalyticsOptions? = nil
   var instrumentation: LDInstrumentationOptions? = nil
 
 
@@ -255,7 +255,7 @@ struct LDObservabilityOptions: Hashable {
     let logsApiLevel: Int64? = nilOrValue(pigeonVar_list[9])
     let traces: LDTracesOptions? = nilOrValue(pigeonVar_list[10])
     let metricsEnabled: Bool? = nilOrValue(pigeonVar_list[11])
-    let productAnalytics: LDProductAnalyticsOptions? = nilOrValue(pigeonVar_list[12])
+    let analytics: LDAnalyticsOptions? = nilOrValue(pigeonVar_list[12])
     let instrumentation: LDInstrumentationOptions? = nilOrValue(pigeonVar_list[13])
 
     return LDObservabilityOptions(
@@ -271,7 +271,7 @@ struct LDObservabilityOptions: Hashable {
       logsApiLevel: logsApiLevel,
       traces: traces,
       metricsEnabled: metricsEnabled,
-      productAnalytics: productAnalytics,
+      analytics: analytics,
       instrumentation: instrumentation
     )
   }
@@ -289,7 +289,7 @@ struct LDObservabilityOptions: Hashable {
       logsApiLevel,
       traces,
       metricsEnabled,
-      productAnalytics,
+      analytics,
       instrumentation,
     ]
   }
@@ -403,6 +403,154 @@ struct LDStartResult: Hashable {
   }
 }
 
+/// An event recorded on a span, forwarded to the native tracer.
+///
+/// Generated class from Pigeon that represents data sent in messages.
+struct LDSpanEvent: Hashable {
+  var name: String? = nil
+  var attributes: [String: Any?]? = nil
+
+
+  // swift-format-ignore: AlwaysUseLowerCamelCase
+  static func fromList(_ pigeonVar_list: [Any?]) -> LDSpanEvent? {
+    let name: String? = nilOrValue(pigeonVar_list[0])
+    let attributes: [String: Any?]? = nilOrValue(pigeonVar_list[1])
+
+    return LDSpanEvent(
+      name: name,
+      attributes: attributes
+    )
+  }
+  func toList() -> [Any?] {
+    return [
+      name,
+      attributes,
+    ]
+  }
+  static func == (lhs: LDSpanEvent, rhs: LDSpanEvent) -> Bool {
+    return deepEqualsMessages(lhs.toList(), rhs.toList())  }
+  func hash(into hasher: inout Hasher) {
+    deepHashMessages(value: toList(), hasher: &hasher)
+  }
+}
+
+/// A completed Dart span, forwarded to the native tracer so the native
+/// pipeline re-creates it (stamping `session.id`, sampling, batching).
+///
+/// Mirrors the data carried by MAUI's `TraceBuilderAdapter`
+/// (`sdk/@launchdarkly/mobile-dotnet/observability/bridge/TraceBuilderAdapter.cs`).
+///
+/// Generated class from Pigeon that represents data sent in messages.
+struct LDSpanData: Hashable {
+  var name: String? = nil
+  /// Span start as epoch seconds.
+  var startTimeSeconds: Double? = nil
+  /// Span end as epoch seconds.
+  var endTimeSeconds: Double? = nil
+  /// 32-char hex trace id.
+  var traceId: String? = nil
+  /// 16-char hex span id.
+  var spanId: String? = nil
+  /// 16-char hex parent span id, or empty for a root span.
+  var parentSpanId: String? = nil
+  var attributes: [String: Any?]? = nil
+  var events: [LDSpanEvent?]? = nil
+  /// 0 = unset, 1 = ok, 2 = error.
+  var statusCode: Int64? = nil
+
+
+  // swift-format-ignore: AlwaysUseLowerCamelCase
+  static func fromList(_ pigeonVar_list: [Any?]) -> LDSpanData? {
+    let name: String? = nilOrValue(pigeonVar_list[0])
+    let startTimeSeconds: Double? = nilOrValue(pigeonVar_list[1])
+    let endTimeSeconds: Double? = nilOrValue(pigeonVar_list[2])
+    let traceId: String? = nilOrValue(pigeonVar_list[3])
+    let spanId: String? = nilOrValue(pigeonVar_list[4])
+    let parentSpanId: String? = nilOrValue(pigeonVar_list[5])
+    let attributes: [String: Any?]? = nilOrValue(pigeonVar_list[6])
+    let events: [LDSpanEvent?]? = nilOrValue(pigeonVar_list[7])
+    let statusCode: Int64? = nilOrValue(pigeonVar_list[8])
+
+    return LDSpanData(
+      name: name,
+      startTimeSeconds: startTimeSeconds,
+      endTimeSeconds: endTimeSeconds,
+      traceId: traceId,
+      spanId: spanId,
+      parentSpanId: parentSpanId,
+      attributes: attributes,
+      events: events,
+      statusCode: statusCode
+    )
+  }
+  func toList() -> [Any?] {
+    return [
+      name,
+      startTimeSeconds,
+      endTimeSeconds,
+      traceId,
+      spanId,
+      parentSpanId,
+      attributes,
+      events,
+      statusCode,
+    ]
+  }
+  static func == (lhs: LDSpanData, rhs: LDSpanData) -> Bool {
+    return deepEqualsMessages(lhs.toList(), rhs.toList())  }
+  func hash(into hasher: inout Hasher) {
+    deepHashMessages(value: toList(), hasher: &hasher)
+  }
+}
+
+/// A log record forwarded to the native logger so it is emitted as a real
+/// OpenTelemetry `LogRecord` (stamped with `session.id` and correlated with
+/// the active span).
+///
+/// Generated class from Pigeon that represents data sent in messages.
+struct LDLogRecord: Hashable {
+  var message: String? = nil
+  /// OpenTelemetry severity number (e.g. 9 = INFO, 13 = WARN, 17 = ERROR).
+  var severityNumber: Int64? = nil
+  /// 32-char hex trace id of the active span, or null when none.
+  var traceId: String? = nil
+  /// 16-char hex span id of the active span, or null when none.
+  var spanId: String? = nil
+  var attributes: [String: Any?]? = nil
+
+
+  // swift-format-ignore: AlwaysUseLowerCamelCase
+  static func fromList(_ pigeonVar_list: [Any?]) -> LDLogRecord? {
+    let message: String? = nilOrValue(pigeonVar_list[0])
+    let severityNumber: Int64? = nilOrValue(pigeonVar_list[1])
+    let traceId: String? = nilOrValue(pigeonVar_list[2])
+    let spanId: String? = nilOrValue(pigeonVar_list[3])
+    let attributes: [String: Any?]? = nilOrValue(pigeonVar_list[4])
+
+    return LDLogRecord(
+      message: message,
+      severityNumber: severityNumber,
+      traceId: traceId,
+      spanId: spanId,
+      attributes: attributes
+    )
+  }
+  func toList() -> [Any?] {
+    return [
+      message,
+      severityNumber,
+      traceId,
+      spanId,
+      attributes,
+    ]
+  }
+  static func == (lhs: LDLogRecord, rhs: LDLogRecord) -> Bool {
+    return deepEqualsMessages(lhs.toList(), rhs.toList())  }
+  func hash(into hasher: inout Hasher) {
+    deepHashMessages(value: toList(), hasher: &hasher)
+  }
+}
+
 private class MessagesPigeonCodecReader: FlutterStandardReader {
   override func readValue(ofType type: UInt8) -> Any? {
     switch type {
@@ -411,7 +559,7 @@ private class MessagesPigeonCodecReader: FlutterStandardReader {
     case 130:
       return LDTracesOptions.fromList(self.readValue() as! [Any?])
     case 131:
-      return LDProductAnalyticsOptions.fromList(self.readValue() as! [Any?])
+      return LDAnalyticsOptions.fromList(self.readValue() as! [Any?])
     case 132:
       return LDObservabilityOptions.fromList(self.readValue() as! [Any?])
     case 133:
@@ -420,6 +568,12 @@ private class MessagesPigeonCodecReader: FlutterStandardReader {
       return LDSessionReplayOptions.fromList(self.readValue() as! [Any?])
     case 135:
       return LDStartResult.fromList(self.readValue() as! [Any?])
+    case 136:
+      return LDSpanEvent.fromList(self.readValue() as! [Any?])
+    case 137:
+      return LDSpanData.fromList(self.readValue() as! [Any?])
+    case 138:
+      return LDLogRecord.fromList(self.readValue() as! [Any?])
     default:
       return super.readValue(ofType: type)
     }
@@ -434,7 +588,7 @@ private class MessagesPigeonCodecWriter: FlutterStandardWriter {
     } else if let value = value as? LDTracesOptions {
       super.writeByte(130)
       super.writeValue(value.toList())
-    } else if let value = value as? LDProductAnalyticsOptions {
+    } else if let value = value as? LDAnalyticsOptions {
       super.writeByte(131)
       super.writeValue(value.toList())
     } else if let value = value as? LDObservabilityOptions {
@@ -448,6 +602,15 @@ private class MessagesPigeonCodecWriter: FlutterStandardWriter {
       super.writeValue(value.toList())
     } else if let value = value as? LDStartResult {
       super.writeByte(135)
+      super.writeValue(value.toList())
+    } else if let value = value as? LDSpanEvent {
+      super.writeByte(136)
+      super.writeValue(value.toList())
+    } else if let value = value as? LDSpanData {
+      super.writeByte(137)
+      super.writeValue(value.toList())
+    } else if let value = value as? LDLogRecord {
+      super.writeByte(138)
       super.writeValue(value.toList())
     } else {
       super.writeValue(value)
@@ -473,6 +636,12 @@ class MessagesPigeonCodec: FlutterStandardMessageCodec, @unchecked Sendable {
 /// Generated protocol from Pigeon that represents a handler of messages from Flutter.
 protocol LDNativeApi {
   func start(mobileKey: String, observability: LDObservabilityOptions, replay: LDSessionReplayOptions, observabilityVersion: String, completion: @escaping (Result<LDStartResult, Error>) -> Void)
+  /// Forwards completed Dart spans to the native tracer. Native re-creates each
+  /// span so the native pipeline stamps `session.id` and exports it.
+  func exportSpans(spans: [LDSpanData]) throws
+  /// Forwards a Dart log to the native logger so it is emitted as a native
+  /// `LogRecord` with `session.id` and trace/span correlation.
+  func recordLog(log: LDLogRecord) throws
 }
 
 /// Generated setup class from Pigeon to handle messages through the `binaryMessenger`.
@@ -500,6 +669,40 @@ class LDNativeApiSetup {
       }
     } else {
       startChannel.setMessageHandler(nil)
+    }
+    /// Forwards completed Dart spans to the native tracer. Native re-creates each
+    /// span so the native pipeline stamps `session.id` and exports it.
+    let exportSpansChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.launchdarkly_flutter_observability.LDNativeApi.exportSpans\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      exportSpansChannel.setMessageHandler { message, reply in
+        let args = message as! [Any?]
+        let spansArg = args[0] as! [LDSpanData]
+        do {
+          try api.exportSpans(spans: spansArg)
+          reply(wrapResult(nil))
+        } catch {
+          reply(wrapError(error))
+        }
+      }
+    } else {
+      exportSpansChannel.setMessageHandler(nil)
+    }
+    /// Forwards a Dart log to the native logger so it is emitted as a native
+    /// `LogRecord` with `session.id` and trace/span correlation.
+    let recordLogChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.launchdarkly_flutter_observability.LDNativeApi.recordLog\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      recordLogChannel.setMessageHandler { message, reply in
+        let args = message as! [Any?]
+        let logArg = args[0] as! LDLogRecord
+        do {
+          try api.recordLog(log: logArg)
+          reply(wrapResult(nil))
+        } catch {
+          reply(wrapError(error))
+        }
+      }
+    } else {
+      recordLogChannel.setMessageHandler(nil)
     }
   }
 }

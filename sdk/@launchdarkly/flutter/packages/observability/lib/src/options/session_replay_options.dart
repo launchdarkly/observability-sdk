@@ -1,6 +1,8 @@
 // Ported from
 // sdk/@launchdarkly/mobile-dotnet/observability/replay/plugin/SessionReplayOptions.cs.
 
+import 'package:flutter/widgets.dart' show Key;
+
 /// Configuration for the LaunchDarkly session replay plugin. Mirrors
 /// `LaunchDarkly.SessionReplay.SessionReplayOptions` in the .NET bridge.
 ///
@@ -33,11 +35,38 @@ class PrivacyOptions {
   final bool maskImages;
   final double minimumAlpha;
 
+  /// Widget runtime [Type]s to mask (cover) wherever they appear, e.g.
+  /// `{MyCardWidget}`. Resolved on the Flutter side only — not sent to native.
+  final Set<Type> maskWidgetTypes;
+
+  /// Widget [Key]s to mask (cover) wherever they appear. Dart-side only.
+  final Set<Key> maskWidgetKeys;
+
+  /// Widget runtime [Type]s to reveal from *global* masking. Does not override
+  /// an enclosing explicit mask/ignore. Dart-side only.
+  final Set<Type> unmaskWidgetTypes;
+
+  /// Widget [Key]s to reveal from global masking. Dart-side only.
+  final Set<Key> unmaskWidgetKeys;
+
+  /// Widget runtime [Type]s to ignore. In Flutter this covers the region (the
+  /// single-raster capture can't drop pixels). Dart-side only.
+  final Set<Type> ignoreWidgetTypes;
+
+  /// Widget [Key]s to ignore (cover). Dart-side only.
+  final Set<Key> ignoreWidgetKeys;
+
   const PrivacyOptions({
     this.maskTextInputs = true,
     this.maskWebViews = false,
     this.maskLabels = false,
     this.maskImages = false,
     this.minimumAlpha = 0.02,
+    this.maskWidgetTypes = const {},
+    this.maskWidgetKeys = const {},
+    this.unmaskWidgetTypes = const {},
+    this.unmaskWidgetKeys = const {},
+    this.ignoreWidgetTypes = const {},
+    this.ignoreWidgetKeys = const {},
   });
 }

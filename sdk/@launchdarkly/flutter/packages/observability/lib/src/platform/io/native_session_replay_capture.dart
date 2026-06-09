@@ -1,17 +1,30 @@
+import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
-import '../../masking.dart';
+import 'masking/mask_applier.dart';
+import 'masking/mask_collector.dart';
+import 'masking/mask_stabilizer.dart';
+import 'masking/masking_policy.dart';
+import 'masking/widget_masking_config.dart';
 
 /// Provides Flutter-rendered screenshots to the native session replay SDK.
 ///
 /// Wrap the app, or the subtree that should appear in replay, with this widget.
 /// The native iOS and Android capture services call back into it over a method
-/// channel and receive PNG bytes that they convert into their platform RawFrame
-/// types.
+/// channel and receive raw RGBA bytes that they wrap into their platform
+/// RawFrame types (the native pipeline re-encodes/compresses from there, so we
+/// avoid a redundant PNG round trip on the wire).
+///
+/// Masking mirrors the native pipeline and is split into focused collaborators:
+///   - [MaskingPolicy] — per-widget rule decisions.
+///   - [MaskCollector] — walks the element tree into resolved fill rectangles.
+///   - [MaskStabilizer] — reconciles a "before"/"after" pass to cover masks that
+///     drift mid-capture (and drops frames it can't safely cover).
+///   - [MaskApplier] — paints the rectangles onto the captured frame.
 class NativeSessionReplayCapture extends StatefulWidget {
   final Widget child;
 
@@ -30,6 +43,9 @@ class _NativeSessionReplayCaptureState
   static _NativeSessionReplayCaptureState? _activeState;
 
   final GlobalKey _boundaryKey = GlobalKey();
+
+  final MaskStabilizer _stabilizer = const MaskStabilizer();
+  final MaskApplier _applier = const MaskApplier();
 
   @override
   void initState() {
@@ -76,28 +92,70 @@ class _NativeSessionReplayCaptureState
     }
 
     final pixelRatio = View.of(context).devicePixelRatio;
-    final maskTextInputs =
-        arguments is Map && arguments['maskTextInputs'] == true;
-    final regions = _collectMaskRegions(
-      context,
-      renderObject,
-      pixelRatio,
-      maskTextInputs: maskTextInputs,
+    final args = arguments is Map ? arguments : const <Object?, Object?>{};
+    final minimumAlphaArg = args['minimumAlpha'];
+    final collector = MaskCollector(
+      MaskingPolicy(
+        maskTextInputs: args['maskTextInputs'] == true,
+        maskLabels: args['maskLabels'] == true,
+        maskImages: args['maskImages'] == true,
+        maskWebViews: args['maskWebViews'] == true,
+        minimumAlpha: minimumAlphaArg is num
+            ? minimumAlphaArg.toDouble()
+            : 0.02,
+        widgetConfig: activeWidgetMaskingConfig,
+      ),
     );
-    final orientation = _orientationForView(context);
 
+    // "Before" pass: mask geometry and the screenshot are sampled in the same
+    // synchronous slice, so they share one frame's layout (no coordinate drift
+    // between the rectangles and the captured pixels). The timestamp is taken
+    // here, at capture time, rather than after encoding — so the frame lands on
+    // the replay timeline where its content actually was.
+    final before = collector.collect(context, renderObject);
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final orientation = _orientationForView(context);
     final image = await renderObject.toImage(pixelRatio: pixelRatio);
-    final maskedImage = regions.isEmpty
-        ? image
-        : await _drawMasks(
-            image,
-            regions.globalMask,
-            regions.unmask,
-            regions.explicitMask,
-          );
-    final byteData = await maskedImage.toByteData(
-      format: ui.ImageByteFormat.png,
+
+    // "After" pass: let one frame elapse, then re-measure against a freshly
+    // resolved boundary. This is also the safety net for content that appears
+    // during the async screenshot — e.g. an instantly-shown dialog. Such a mask
+    // is absent from `before` but present in `after`, so the counts differ and
+    // the stabilizer drops the frame rather than letting it leak unmasked. It is
+    // therefore NOT safe to skip this pass when `before` is empty.
+    await _waitForNextFrame();
+    final afterContext = _boundaryKey.currentContext;
+    if (!mounted || afterContext == null || !afterContext.mounted) {
+      image.dispose();
+      return null;
+    }
+    final afterRenderObject = afterContext.findRenderObject();
+    if (afterRenderObject is! RenderRepaintBoundary) {
+      image.dispose();
+      return null;
+    }
+    final after = collector.collect(afterContext, afterRenderObject);
+
+    final pairs = _stabilizer.duplicateUnsimilar(
+      operationsBefore: before,
+      operationsAfter: after,
     );
+    if (pairs == null) {
+      // Masks drifted or appeared/disappeared between the passes — drop the
+      // frame rather than risk exposing content the screenshot may contain.
+      image.dispose();
+      return null;
+    }
+
+    final maskedImage = pairs.isEmpty
+        ? image
+        : await _applier.apply(image, pairs, pixelRatio);
+
+    final byteData = await maskedImage.toByteData(
+      format: ui.ImageByteFormat.rawRgba,
+    );
+    final width = maskedImage.width;
+    final height = maskedImage.height;
 
     if (maskedImage != image) {
       maskedImage.dispose();
@@ -111,128 +169,29 @@ class _NativeSessionReplayCaptureState
 
     return <String, Object?>{
       'bytes': Uint8List.fromList(bytes),
-      'timestamp': DateTime.now().millisecondsSinceEpoch,
+      'width': width,
+      'height': height,
+      'timestamp': timestamp,
       'orientation': orientation,
     };
   }
 
-  /// Walks the element tree once, collecting three kinds of region:
-  ///
-  /// - `explicitMask`: every [LDMask] subtree. Always redacted — highest
-  ///   priority.
-  /// - `globalMask`: every [EditableText] when screen-wide `maskTextInputs`
-  ///   is enabled. Redacted unless revealed by an [LDUnmask].
-  /// - `unmask`: every [LDUnmask] subtree. Reveals `globalMask` regions only;
-  ///   it never overrides an explicit [LDMask].
-  _MaskRegions _collectMaskRegions(
-    BuildContext rootContext,
-    RenderRepaintBoundary boundary,
-    double pixelRatio, {
-    required bool maskTextInputs,
-  }) {
-    final explicitMaskRects = <ui.Rect>[];
-    final globalMaskRects = <ui.Rect>[];
-    final unmaskRects = <ui.Rect>[];
-
-    ui.Rect? rectFor(Element element) {
-      final renderObject = element.findRenderObject();
-      if (renderObject is! RenderBox || !renderObject.attached) {
-        return null;
+  /// Completes after the next frame has been built, laid out and painted, so a
+  /// second mask-collection pass observes up-to-date geometry.
+  Future<void> _waitForNextFrame() {
+    final binding = WidgetsBinding.instance;
+    final completer = Completer<void>();
+    binding.addPostFrameCallback((_) {
+      if (!completer.isCompleted) {
+        completer.complete();
       }
-      final topLeft = renderObject.localToGlobal(
-        ui.Offset.zero,
-        ancestor: boundary,
-      );
-      return ui.Rect.fromLTWH(
-        topLeft.dx * pixelRatio,
-        topLeft.dy * pixelRatio,
-        renderObject.size.width * pixelRatio,
-        renderObject.size.height * pixelRatio,
-      );
-    }
-
-    void visit(Element element) {
-      final widget = element.widget;
-      if (widget is LDMask) {
-        final rect = rectFor(element);
-        if (rect != null) explicitMaskRects.add(rect);
-      } else if (widget is LDUnmask) {
-        final rect = rectFor(element);
-        if (rect != null) unmaskRects.add(rect);
-      } else if (maskTextInputs && widget is EditableText) {
-        final rect = rectFor(element);
-        if (rect != null) globalMaskRects.add(rect);
-      }
-      element.visitChildren(visit);
-    }
-
-    rootContext.visitChildElements(visit);
-    return _MaskRegions(
-      explicitMask: explicitMaskRects,
-      globalMask: globalMaskRects,
-      unmask: unmaskRects,
-    );
-  }
-
-  Future<ui.Image> _drawMasks(
-    ui.Image image,
-    List<ui.Rect> globalMaskRects,
-    List<ui.Rect> unmaskRects,
-    List<ui.Rect> explicitMaskRects,
-  ) async {
-    final recorder = ui.PictureRecorder();
-    final canvas = ui.Canvas(recorder);
-    final maskPaint = ui.Paint()..color = const ui.Color(0xFF808080);
-
-    canvas.drawImage(image, ui.Offset.zero, ui.Paint());
-
-    // 1. Global (screen-wide) masking, e.g. maskTextInputs.
-    for (final rect in globalMaskRects) {
-      canvas.drawRect(rect, maskPaint);
-    }
-
-    // 2. LDUnmask reveals the original pixels — but only over global masking,
-    //    which is why it is applied before the explicit masks below.
-    for (final rect in unmaskRects) {
-      canvas.save();
-      canvas.clipRect(rect);
-      canvas.drawImage(image, ui.Offset.zero, ui.Paint());
-      canvas.restore();
-    }
-
-    // 3. Explicit LDMask is painted last so it always wins — an LDUnmask
-    //    nested inside an LDMask cannot reveal it.
-    for (final rect in explicitMaskRects) {
-      canvas.drawRect(rect, maskPaint);
-    }
-
-    final picture = recorder.endRecording();
-    final maskedImage = await picture.toImage(image.width, image.height);
-    picture.dispose();
-    return maskedImage;
+    });
+    binding.scheduleFrame();
+    return completer.future;
   }
 
   int _orientationForView(BuildContext context) {
     final size = View.of(context).physicalSize;
     return size.width > size.height ? 1 : 0;
   }
-}
-
-/// Regions collected from one capture pass.
-///
-/// [explicitMask] (LDMask) always wins; [globalMask] (screen-wide rules like
-/// maskTextInputs) is redacted unless an [unmask] (LDUnmask) reveals it.
-class _MaskRegions {
-  const _MaskRegions({
-    required this.explicitMask,
-    required this.globalMask,
-    required this.unmask,
-  });
-
-  final List<ui.Rect> explicitMask;
-  final List<ui.Rect> globalMask;
-  final List<ui.Rect> unmask;
-
-  bool get isEmpty =>
-      explicitMask.isEmpty && globalMask.isEmpty && unmask.isEmpty;
 }

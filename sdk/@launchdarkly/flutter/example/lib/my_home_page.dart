@@ -7,7 +7,11 @@ import 'package:launchdarkly_flutter_client_sdk/launchdarkly_flutter_client_sdk.
 import 'package:launchdarkly_flutter_observability/launchdarkly_flutter_observability.dart';
 
 import 'credit_card_page.dart';
+import 'dialogs_page.dart';
 import 'main.dart';
+import 'nested_masking_propagation_page.dart';
+import 'smoothie_list_page.dart';
+import 'web_view_page.dart';
 
 // NOTE: The MAUI sample also has a "Metric" subsection (gauge, histogram,
 // count, incremental, up-down counter) under Observability. The Flutter
@@ -62,8 +66,12 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   final http.Client _httpClient = http.Client();
-  final TextEditingController _customLogController = TextEditingController();
-  final TextEditingController _customSpanController = TextEditingController();
+  final TextEditingController _customLogController = TextEditingController(
+    text: 'Log Message',
+  );
+  final TextEditingController _customSpanController = TextEditingController(
+    text: 'Span Name',
+  );
   final TextEditingController _flagKeyController = TextEditingController(
     text: 'my-feature',
   );
@@ -116,7 +124,9 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<void> _onTriggerHttpRequest() async {
     try {
-      final response = await _httpClient.get(Uri.parse('https://www.google.com'));
+      final response = await _httpClient.get(
+        Uri.parse('https://www.google.com'),
+      );
       debugPrint('HTTP Response: ${response.statusCode}');
     } catch (e) {
       debugPrint('HTTP Request failed: $e');
@@ -127,7 +137,7 @@ class _MyHomePageState extends State<MyHomePage> {
     throw StateError('Failed to connect to bogus server.');
   }
 
-  // --- Customer API ---
+  // --- Error / Logs / Traces ---
 
   void _onTriggerError() {
     final inner = StateError('The error that caused the other error.');
@@ -264,8 +274,7 @@ class _MyHomePageState extends State<MyHomePage> {
       await _showAlert('Flag', 'Flag key cannot be empty');
       return;
     }
-    final result =
-        LDSingleton.client?.boolVariation(flagKey, false) ?? false;
+    final result = LDSingleton.client?.boolVariation(flagKey, false) ?? false;
     if (!mounted) return;
     await _showAlert('Flag', '$flagKey: $result');
     debugPrint('Flag $flagKey: $result');
@@ -328,8 +337,8 @@ class _MyHomePageState extends State<MyHomePage> {
             const _SectionHeader('Session Replay'),
             // Mirrors the "Masking" subsection of the MAUI sample's MainPage,
             // which exposes Credit Card / Number Pad / Dialogs entries that
-            // each demonstrate session replay masking. Only the Credit Card
-            // page is ported so far.
+            // each demonstrate session replay masking. Credit Card and Dialogs
+            // are ported so far.
             ElevatedButton(
               onPressed: () {
                 Navigator.of(context).push(
@@ -339,6 +348,48 @@ class _MyHomePageState extends State<MyHomePage> {
                 );
               },
               child: const Text('Credit Card'),
+            ),
+            const SizedBox(height: 4),
+            // Mirrors the Android sample's SmoothieListActivity: an image-heavy
+            // list used to exercise Session Replay against bundled assets.
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const SmoothieListPage(),
+                  ),
+                );
+              },
+              child: const Text('Smoothie List'),
+            ),
+            const SizedBox(height: 4),
+            // Opens a dialog hosting an embedded web view (a Flutter platform
+            // view), used to exercise the `maskWebViews` Session Replay option.
+            ElevatedButton(
+              onPressed: () => showWebViewDialog(context),
+              child: const Text('Web View'),
+            ),
+            const SizedBox(height: 4),
+            // Catalog of Flutter dialog/overlay types (alerts, sheets, menus,
+            // overlays, notifications, pickers), mirroring MAUI's DialogsPage.
+            // Used to exercise Session Replay against transient and modal UI.
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const DialogsPage()),
+              ),
+              child: const Text('Dialogs'),
+            ),
+            const SizedBox(height: 4),
+            // Mirrors the Swift TestApp's NestedMaskingPropagationView:
+            // demonstrates how LDMask / LDUnmask propagate down a widget
+            // subtree, including through multiple levels of nesting.
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const NestedMaskingPropagationPage(),
+                ),
+              ),
+              child: const Text('Nested Masking Propagation'),
             ),
 
             const _SectionHeader('Observability'),
@@ -377,15 +428,14 @@ class _MyHomePageState extends State<MyHomePage> {
               child: const Text('Trigger Crash'),
             ),
 
-            const _SubsectionHeader('Customer API'),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: ElevatedButton(
-                onPressed: _onTriggerError,
-                style: dangerStyle,
-                child: const Text('Trigger Error'),
-              ),
+            const _SubsectionHeader('Error'),
+            ElevatedButton(
+              onPressed: _onTriggerError,
+              style: dangerStyle,
+              child: const Text('Trigger Error'),
             ),
+
+            const _SubsectionHeader('Logs'),
             Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -418,7 +468,7 @@ class _MyHomePageState extends State<MyHomePage> {
               child: const Text('Send custom log'),
             ),
 
-            const SizedBox(height: 16),
+            const _SubsectionHeader('Traces'),
             Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -455,7 +505,6 @@ class _MyHomePageState extends State<MyHomePage> {
               onPressed: _onSendCustomSpan,
               child: const Text('Send custom span'),
             ),
-
             const SizedBox(height: 16),
             TextField(
               controller: _flagKeyController,

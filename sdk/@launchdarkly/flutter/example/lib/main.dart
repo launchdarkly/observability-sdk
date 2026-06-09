@@ -105,8 +105,9 @@ void _startObservability() {
     isEnabled: true,
     privacy: PrivacyOptions(
       maskTextInputs: true,
-      maskWebViews: false,
+      maskWebViews: true,
       maskLabels: false,
+      maskImages: true,
     ),
   );
 

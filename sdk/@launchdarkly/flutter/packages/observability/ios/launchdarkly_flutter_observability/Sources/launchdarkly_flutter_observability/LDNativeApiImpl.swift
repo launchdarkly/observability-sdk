@@ -34,17 +34,84 @@ final class LDNativeApiImpl: NSObject, LDNativeApi {
 
             let context = try makeAnonymousContext()
 
+            // Resolve the pigeon `start` only after `LDClient.start` has
+            // completed. By then the `Observability` plugin has registered and
+            // published its `ObservabilityService`, so the native tracer/logger
+            // are non-null and `exportSpans`/`recordLog` will be honored.
+            // Returning before completion would let the Dart side begin
+            // exporting while the bridge still returns nil, dropping early
+            // lifecycle and flag-evaluation telemetry.
             LDClient.start(
                 config: config,
                 context: context,
                 startWaitSeconds: 15.0,
-                completion: { _ in }
+                completion: { _ in
+                    completion(.success(LDStartResult(nativeVersion: observabilityVersion)))
+                }
             )
-
-            completion(.success(LDStartResult(nativeVersion: observabilityVersion)))
         } catch {
             completion(.failure(error))
         }
+    }
+
+    // Re-creates each Dart span on the native tracer so the native pipeline
+    // stamps `session.id` (and applies sampling/batching). Mirrors MAUI's
+    // `TraceBuilderAdapter`.
+    func exportSpans(spans: [LDSpanData]) throws {
+        guard let tracer = ObjcLDObserveBridge.getObjcTracer() else { return }
+        for span in spans {
+            let builder = tracer.spanBuilder(
+                name: span.name ?? "",
+                startTime: span.startTimeSeconds ?? 0,
+                traceId: span.traceId ?? "",
+                spanId: span.spanId ?? "",
+                parentSpanId: span.parentSpanId ?? ""
+            )
+
+            builder.setAttributes(cleanAttributes(span.attributes) as NSDictionary)
+
+            for case let event? in span.events ?? [] {
+                let name = event.name ?? ""
+                let eventAttrs = cleanAttributes(event.attributes)
+                if eventAttrs.isEmpty {
+                    builder.addEvent(name: name)
+                } else {
+                    builder.addEvent(name: name, attributes: eventAttrs as NSDictionary)
+                }
+            }
+
+            if let status = span.statusCode, status != 0 {
+                builder.setStatus(code: Int(status))
+            }
+
+            builder.end(time: span.endTimeSeconds ?? span.startTimeSeconds ?? 0)
+        }
+    }
+
+    // Forwards the log to the native customer logger so it is emitted as a real
+    // `LogRecord` with `session.id` and trace/span correlation.
+    func recordLog(log: LDLogRecord) throws {
+        guard let logger = ObjcLDObserveBridge.getObjcLogger() else { return }
+        logger.recordLog(
+            message: log.message ?? "",
+            severity: Int(log.severityNumber ?? 9),
+            traceId: log.traceId,
+            spanId: log.spanId,
+            isInternal: false,
+            attributes: cleanAttributes(log.attributes)
+        )
+    }
+
+    /// Drops `nil` values so the native bridge receives a `[String: Any]`.
+    private func cleanAttributes(_ attributes: [String: Any?]?) -> [String: Any] {
+        guard let attributes = attributes else { return [:] }
+        var result = [String: Any](minimumCapacity: attributes.count)
+        for (key, value) in attributes {
+            if let value = value {
+                result[key] = value
+            }
+        }
+        return result
     }
 
     private func makeConfig(
@@ -59,35 +126,65 @@ final class LDNativeApiImpl: NSObject, LDNativeApi {
         )
         config.startOnline = false
 
-        let crashReportingEnabled = observability.instrumentation?.crashReporting ?? true
-        // iOS currently only supports taps from ProductAnalytics; pageViews and
-        // trackEvents are Android-only and ignored here.
-        let tapsEnabled = observability.productAnalytics?.taps ?? false
-        let observabilityPlugin = Observability(options: .init(
-            serviceName: observability.serviceName ?? Defaults.serviceName,
-            serviceVersion: observability.serviceVersion ?? Defaults.serviceVersion,
-            otlpEndpoint: observability.otlpEndpoint ?? Defaults.otlpEndpoint,
-            backendUrl: observability.backendUrl ?? Defaults.backendUrl,
-            resourceAttributes: buildResourceAttributes(observability.attributes),
-            customHeaders: observability.customHeaders ?? [:],
-            sessionBackgroundTimeout: observability.sessionBackgroundTimeoutMillis
-                .map { TimeInterval($0) / 1000.0 } ?? 15 * 60,
-            logsApiLevel: mapLogLevel(observability.logsApiLevel),
-            tracesApi: .init(
-                includeErrors: observability.traces?.includeErrors ?? true,
-                includeSpans: observability.traces?.includeSpans ?? true
-            ),
-            metricsApi: (observability.metricsEnabled ?? true) ? .enabled : .disabled,
-            crashReporting: .init(source: crashReportingEnabled ? .KSCrash : .none),
-            instrumentation: .init(
-                urlSession: .disabled,
-                userTaps: tapsEnabled ? .enabled : .disabled,
-                memory: .disabled,
-                memoryWarnings: .disabled,
-                cpu: .disabled,
-                launchTimes: (observability.instrumentation?.launchTimes ?? true) ? .enabled : .disabled
-            )
-        ))
+        let crashReportingEnabled: Bool = observability.instrumentation?.crashReporting ?? true
+        // The Flutter API exposes a single `analytics.taps` flag, but natively taps need two
+        // switches: `instrumentation.userTaps` runs the tap-detection machinery, and
+        // `analytics.taps` publishes each detected tap as a `click` span. We drive both from the
+        // one Flutter flag so taps are detected (not just published) regardless of the native
+        // `Instrumentation` defaults. pageViews and trackEvents are Android-only and ignored here.
+        let tapsEnabled: Bool = observability.analytics?.taps ?? true
+        let launchTimesEnabled: Bool = observability.instrumentation?.launchTimes ?? true
+        let metricsEnabled: Bool = observability.metricsEnabled ?? true
+
+        let serviceName: String = observability.serviceName ?? Defaults.serviceName
+        let serviceVersion: String = observability.serviceVersion ?? Defaults.serviceVersion
+        let otlpEndpoint: String = observability.otlpEndpoint ?? Defaults.otlpEndpoint
+        let backendUrl: String = observability.backendUrl ?? Defaults.backendUrl
+        let resourceAttributes: [String: AttributeValue] =
+            buildResourceAttributes(observability.attributes)
+        let customHeaders: [String: String] = observability.customHeaders ?? [:]
+        let sessionBackgroundTimeout: TimeInterval = observability.sessionBackgroundTimeoutMillis
+            .map { TimeInterval($0) / 1000.0 } ?? 15 * 60
+        let logsApiLevel: ObservabilityOptions.LogLevel = mapLogLevel(observability.logsApiLevel)
+
+        let tracesApi = ObservabilityOptions.AppTracing(
+            includeErrors: observability.traces?.includeErrors ?? true,
+            includeSpans: observability.traces?.includeSpans ?? true
+        )
+        let metricsApi: ObservabilityOptions.AppMetrics = metricsEnabled ? .enabled : .disabled
+        let crashReporting = ObservabilityOptions.CrashReporting(
+            source: crashReportingEnabled ? .KSCrash : .none
+        )
+        let instrumentation = ObservabilityOptions.Instrumentation(
+            urlSession: .disabled,
+            userTaps: tapsEnabled ? .enabled : .disabled,
+            memory: .disabled,
+            memoryWarnings: .disabled,
+            cpu: .disabled,
+            launchTimes: launchTimesEnabled ? .enabled : .disabled
+        )
+        // iOS exposes taps via Analytics; track events are Android-only.
+        let analytics = ObservabilityOptions.Analytics(
+            taps: tapsEnabled ? .enabled : .disabled,
+            trackEvents: .disabled
+        )
+
+        let observabilityOptions = ObservabilityOptions(
+            serviceName: serviceName,
+            serviceVersion: serviceVersion,
+            otlpEndpoint: otlpEndpoint,
+            backendUrl: backendUrl,
+            resourceAttributes: resourceAttributes,
+            customHeaders: customHeaders,
+            sessionBackgroundTimeout: sessionBackgroundTimeout,
+            logsApiLevel: logsApiLevel,
+            tracesApi: tracesApi,
+            metricsApi: metricsApi,
+            crashReporting: crashReporting,
+            instrumentation: instrumentation,
+            analytics: analytics
+        )
+        let observabilityPlugin = Observability(options: observabilityOptions)
         observabilityPlugin.distroAttributes = [
             "telemetry.distro.name": "observability-flutter-ios",
             "telemetry.distro.version": observabilityVersion,
@@ -95,10 +192,13 @@ final class LDNativeApiImpl: NSObject, LDNativeApi {
 
         let sessionReplayOptions = makeSessionReplayOptions(replay: replay)
         let privacy = replay.privacy
-        let maskTextInputs = privacy?.maskTextInputs ?? true
         let flutterCaptureService = FlutterImageCaptureService(
             channel: captureChannel,
-            maskTextInputs: maskTextInputs
+            maskTextInputs: privacy?.maskTextInputs ?? true,
+            maskLabels: privacy?.maskLabels ?? false,
+            maskImages: privacy?.maskImages ?? false,
+            maskWebViews: privacy?.maskWebViews ?? false,
+            minimumAlpha: privacy?.minimumAlpha ?? 0.02
         )
         config.plugins = [
             observabilityPlugin,

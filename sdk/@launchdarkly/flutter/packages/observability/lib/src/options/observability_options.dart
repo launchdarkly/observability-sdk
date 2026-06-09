@@ -85,14 +85,16 @@ class InstrumentationOptions {
   });
 }
 
-/// Product-analytics telemetry emitted as OpenTelemetry spans. Mirrors Android
-/// `ObservabilityOptions.ProductAnalytics`, which is currently ahead of iOS.
+/// Analytics telemetry emitted as OpenTelemetry spans. Mirrors Android
+/// `ObservabilityOptions.Analytics`.
 ///
-/// Native-only. On iOS only [taps] is supported (mapped to
-/// `Instrumentation.userTaps`); [pageViews] and [trackEvents] are Android-only
-/// and are no-ops elsewhere.
-class ProductAnalyticsOptions {
-  /// Whether to emit a `click` span for each tap. Defaults to `false`.
+/// Native-only. [taps] maps to the native `analytics.taps` publish gate on both
+/// iOS and Android; [pageViews] and [trackEvents] are Android-only and are
+/// no-ops elsewhere.
+class AnalyticsOptions {
+  /// Whether to publish a `click` span for each detected tap. Tap detection is
+  /// always enabled on the native side (`instrumentation.userTaps`); this flag
+  /// only controls publishing the OpenTelemetry span. Defaults to `true`.
   final bool taps;
 
   /// Whether to start spans for screen/page view lifecycle events. Android-only.
@@ -103,8 +105,8 @@ class ProductAnalyticsOptions {
   /// Android-only. Defaults to `true`.
   final bool trackEvents;
 
-  const ProductAnalyticsOptions({
-    this.taps = false,
+  const AnalyticsOptions({
+    this.taps = true,
     this.pageViews = true,
     this.trackEvents = true,
   });
@@ -155,9 +157,9 @@ class ObservabilityOptions {
   /// `metricsApi`. Native-only. Defaults to `true`.
   final bool metricsEnabled;
 
-  /// Product-analytics telemetry configuration. Mirrors Android
-  /// `ObservabilityOptions.productAnalytics`. Native-only.
-  final ProductAnalyticsOptions productAnalytics;
+  /// Analytics telemetry configuration. Mirrors Android
+  /// `ObservabilityOptions.analytics`. Native-only.
+  final AnalyticsOptions analytics;
 
   final InstrumentationOptions instrumentation;
 
@@ -174,7 +176,7 @@ class ObservabilityOptions {
     this.logsApiLevel = ObservabilityLogLevel.info,
     this.traces = const TracesOptions(),
     this.metricsEnabled = true,
-    this.productAnalytics = const ProductAnalyticsOptions(),
+    this.analytics = const AnalyticsOptions(),
     this.instrumentation = const InstrumentationOptions(),
   }) : otlpEndpoint = otlpEndpoint ?? defaultOtlpEndpoint,
        backendUrl = backendUrl ?? defaultBackendUrl;

@@ -121,8 +121,8 @@ class LDTracesOptions {
   int get hashCode => Object.hashAll(_toList());
 }
 
-class LDProductAnalyticsOptions {
-  LDProductAnalyticsOptions({this.taps, this.pageViews, this.trackEvents});
+class LDAnalyticsOptions {
+  LDAnalyticsOptions({this.taps, this.pageViews, this.trackEvents});
 
   bool? taps;
 
@@ -138,9 +138,9 @@ class LDProductAnalyticsOptions {
     return _toList();
   }
 
-  static LDProductAnalyticsOptions decode(Object result) {
+  static LDAnalyticsOptions decode(Object result) {
     result as List<Object?>;
-    return LDProductAnalyticsOptions(
+    return LDAnalyticsOptions(
       taps: result[0] as bool?,
       pageViews: result[1] as bool?,
       trackEvents: result[2] as bool?,
@@ -150,8 +150,7 @@ class LDProductAnalyticsOptions {
   @override
   // ignore: avoid_equals_and_hash_code_on_mutable_classes
   bool operator ==(Object other) {
-    if (other is! LDProductAnalyticsOptions ||
-        other.runtimeType != runtimeType) {
+    if (other is! LDAnalyticsOptions || other.runtimeType != runtimeType) {
       return false;
     }
     if (identical(this, other)) {
@@ -179,7 +178,7 @@ class LDObservabilityOptions {
     this.logsApiLevel,
     this.traces,
     this.metricsEnabled,
-    this.productAnalytics,
+    this.analytics,
     this.instrumentation,
   });
 
@@ -207,7 +206,7 @@ class LDObservabilityOptions {
 
   bool? metricsEnabled;
 
-  LDProductAnalyticsOptions? productAnalytics;
+  LDAnalyticsOptions? analytics;
 
   LDInstrumentationOptions? instrumentation;
 
@@ -225,7 +224,7 @@ class LDObservabilityOptions {
       logsApiLevel,
       traces,
       metricsEnabled,
-      productAnalytics,
+      analytics,
       instrumentation,
     ];
   }
@@ -251,7 +250,7 @@ class LDObservabilityOptions {
       logsApiLevel: result[9] as int?,
       traces: result[10] as LDTracesOptions?,
       metricsEnabled: result[11] as bool?,
-      productAnalytics: result[12] as LDProductAnalyticsOptions?,
+      analytics: result[12] as LDAnalyticsOptions?,
       instrumentation: result[13] as LDInstrumentationOptions?,
     );
   }
@@ -420,6 +419,203 @@ class LDStartResult {
   int get hashCode => Object.hashAll(_toList());
 }
 
+/// An event recorded on a span, forwarded to the native tracer.
+class LDSpanEvent {
+  LDSpanEvent({this.name, this.attributes});
+
+  String? name;
+
+  Map<String, Object?>? attributes;
+
+  List<Object?> _toList() {
+    return <Object?>[name, attributes];
+  }
+
+  Object encode() {
+    return _toList();
+  }
+
+  static LDSpanEvent decode(Object result) {
+    result as List<Object?>;
+    return LDSpanEvent(
+      name: result[0] as String?,
+      attributes: (result[1] as Map<Object?, Object?>?)
+          ?.cast<String, Object?>(),
+    );
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  bool operator ==(Object other) {
+    if (other is! LDSpanEvent || other.runtimeType != runtimeType) {
+      return false;
+    }
+    if (identical(this, other)) {
+      return true;
+    }
+    return _deepEquals(encode(), other.encode());
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  int get hashCode => Object.hashAll(_toList());
+}
+
+/// A completed Dart span, forwarded to the native tracer so the native
+/// pipeline re-creates it (stamping `session.id`, sampling, batching).
+///
+/// Mirrors the data carried by MAUI's `TraceBuilderAdapter`
+/// (`sdk/@launchdarkly/mobile-dotnet/observability/bridge/TraceBuilderAdapter.cs`).
+class LDSpanData {
+  LDSpanData({
+    this.name,
+    this.startTimeSeconds,
+    this.endTimeSeconds,
+    this.traceId,
+    this.spanId,
+    this.parentSpanId,
+    this.attributes,
+    this.events,
+    this.statusCode,
+  });
+
+  String? name;
+
+  /// Span start as epoch seconds.
+  double? startTimeSeconds;
+
+  /// Span end as epoch seconds.
+  double? endTimeSeconds;
+
+  /// 32-char hex trace id.
+  String? traceId;
+
+  /// 16-char hex span id.
+  String? spanId;
+
+  /// 16-char hex parent span id, or empty for a root span.
+  String? parentSpanId;
+
+  Map<String, Object?>? attributes;
+
+  List<LDSpanEvent?>? events;
+
+  /// 0 = unset, 1 = ok, 2 = error.
+  int? statusCode;
+
+  List<Object?> _toList() {
+    return <Object?>[
+      name,
+      startTimeSeconds,
+      endTimeSeconds,
+      traceId,
+      spanId,
+      parentSpanId,
+      attributes,
+      events,
+      statusCode,
+    ];
+  }
+
+  Object encode() {
+    return _toList();
+  }
+
+  static LDSpanData decode(Object result) {
+    result as List<Object?>;
+    return LDSpanData(
+      name: result[0] as String?,
+      startTimeSeconds: result[1] as double?,
+      endTimeSeconds: result[2] as double?,
+      traceId: result[3] as String?,
+      spanId: result[4] as String?,
+      parentSpanId: result[5] as String?,
+      attributes: (result[6] as Map<Object?, Object?>?)
+          ?.cast<String, Object?>(),
+      events: (result[7] as List<Object?>?)?.cast<LDSpanEvent?>(),
+      statusCode: result[8] as int?,
+    );
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  bool operator ==(Object other) {
+    if (other is! LDSpanData || other.runtimeType != runtimeType) {
+      return false;
+    }
+    if (identical(this, other)) {
+      return true;
+    }
+    return _deepEquals(encode(), other.encode());
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  int get hashCode => Object.hashAll(_toList());
+}
+
+/// A log record forwarded to the native logger so it is emitted as a real
+/// OpenTelemetry `LogRecord` (stamped with `session.id` and correlated with
+/// the active span).
+class LDLogRecord {
+  LDLogRecord({
+    this.message,
+    this.severityNumber,
+    this.traceId,
+    this.spanId,
+    this.attributes,
+  });
+
+  String? message;
+
+  /// OpenTelemetry severity number (e.g. 9 = INFO, 13 = WARN, 17 = ERROR).
+  int? severityNumber;
+
+  /// 32-char hex trace id of the active span, or null when none.
+  String? traceId;
+
+  /// 16-char hex span id of the active span, or null when none.
+  String? spanId;
+
+  Map<String, Object?>? attributes;
+
+  List<Object?> _toList() {
+    return <Object?>[message, severityNumber, traceId, spanId, attributes];
+  }
+
+  Object encode() {
+    return _toList();
+  }
+
+  static LDLogRecord decode(Object result) {
+    result as List<Object?>;
+    return LDLogRecord(
+      message: result[0] as String?,
+      severityNumber: result[1] as int?,
+      traceId: result[2] as String?,
+      spanId: result[3] as String?,
+      attributes: (result[4] as Map<Object?, Object?>?)
+          ?.cast<String, Object?>(),
+    );
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  bool operator ==(Object other) {
+    if (other is! LDLogRecord || other.runtimeType != runtimeType) {
+      return false;
+    }
+    if (identical(this, other)) {
+      return true;
+    }
+    return _deepEquals(encode(), other.encode());
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  int get hashCode => Object.hashAll(_toList());
+}
+
 class _PigeonCodec extends StandardMessageCodec {
   const _PigeonCodec();
   @override
@@ -433,7 +629,7 @@ class _PigeonCodec extends StandardMessageCodec {
     } else if (value is LDTracesOptions) {
       buffer.putUint8(130);
       writeValue(buffer, value.encode());
-    } else if (value is LDProductAnalyticsOptions) {
+    } else if (value is LDAnalyticsOptions) {
       buffer.putUint8(131);
       writeValue(buffer, value.encode());
     } else if (value is LDObservabilityOptions) {
@@ -448,6 +644,15 @@ class _PigeonCodec extends StandardMessageCodec {
     } else if (value is LDStartResult) {
       buffer.putUint8(135);
       writeValue(buffer, value.encode());
+    } else if (value is LDSpanEvent) {
+      buffer.putUint8(136);
+      writeValue(buffer, value.encode());
+    } else if (value is LDSpanData) {
+      buffer.putUint8(137);
+      writeValue(buffer, value.encode());
+    } else if (value is LDLogRecord) {
+      buffer.putUint8(138);
+      writeValue(buffer, value.encode());
     } else {
       super.writeValue(buffer, value);
     }
@@ -461,7 +666,7 @@ class _PigeonCodec extends StandardMessageCodec {
       case 130:
         return LDTracesOptions.decode(readValue(buffer)!);
       case 131:
-        return LDProductAnalyticsOptions.decode(readValue(buffer)!);
+        return LDAnalyticsOptions.decode(readValue(buffer)!);
       case 132:
         return LDObservabilityOptions.decode(readValue(buffer)!);
       case 133:
@@ -470,6 +675,12 @@ class _PigeonCodec extends StandardMessageCodec {
         return LDSessionReplayOptions.decode(readValue(buffer)!);
       case 135:
         return LDStartResult.decode(readValue(buffer)!);
+      case 136:
+        return LDSpanEvent.decode(readValue(buffer)!);
+      case 137:
+        return LDSpanData.decode(readValue(buffer)!);
+      case 138:
+        return LDLogRecord.decode(readValue(buffer)!);
       default:
         return super.readValueOfType(type, buffer);
     }
@@ -527,6 +738,64 @@ class LDNativeApi {
       );
     } else {
       return (pigeonVar_replyList[0] as LDStartResult?)!;
+    }
+  }
+
+  /// Forwards completed Dart spans to the native tracer. Native re-creates each
+  /// span so the native pipeline stamps `session.id` and exports it.
+  Future<void> exportSpans(List<LDSpanData> spans) async {
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.launchdarkly_flutter_observability.LDNativeApi.exportSpans$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
+          pigeonVar_channelName,
+          pigeonChannelCodec,
+          binaryMessenger: pigeonVar_binaryMessenger,
+        );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[spans],
+    );
+    final List<Object?>? pigeonVar_replyList =
+        await pigeonVar_sendFuture as List<Object?>?;
+    if (pigeonVar_replyList == null) {
+      throw _createConnectionError(pigeonVar_channelName);
+    } else if (pigeonVar_replyList.length > 1) {
+      throw PlatformException(
+        code: pigeonVar_replyList[0]! as String,
+        message: pigeonVar_replyList[1] as String?,
+        details: pigeonVar_replyList[2],
+      );
+    } else {
+      return;
+    }
+  }
+
+  /// Forwards a Dart log to the native logger so it is emitted as a native
+  /// `LogRecord` with `session.id` and trace/span correlation.
+  Future<void> recordLog(LDLogRecord log) async {
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.launchdarkly_flutter_observability.LDNativeApi.recordLog$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
+          pigeonVar_channelName,
+          pigeonChannelCodec,
+          binaryMessenger: pigeonVar_binaryMessenger,
+        );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[log],
+    );
+    final List<Object?>? pigeonVar_replyList =
+        await pigeonVar_sendFuture as List<Object?>?;
+    if (pigeonVar_replyList == null) {
+      throw _createConnectionError(pigeonVar_channelName);
+    } else if (pigeonVar_replyList.length > 1) {
+      throw PlatformException(
+        code: pigeonVar_replyList[0]! as String,
+        message: pigeonVar_replyList[1] as String?,
+        details: pigeonVar_replyList[2],
+      );
+    } else {
+      return;
     }
   }
 }

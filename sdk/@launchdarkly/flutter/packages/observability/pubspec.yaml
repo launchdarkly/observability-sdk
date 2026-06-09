@@ -1,6 +1,6 @@
 name: launchdarkly_flutter_observability
 description: 'The LaunchDarkly Observability and Session Replay plugin for Flutter. Get started using LaunchDarkly today!'
-version: 0.5.0
+version: 0.7.0
 homepage: https://github.com/launchdarkly/observability-sdk
 repository: https://github.com/launchdarkly/observability-sdk/tree/main/sdk/@launchdarkly/flutter/packages/observability
 
@@ -14,7 +14,7 @@ dependencies:
 
     opentelemetry: ^0.18.11
 
-    launchdarkly_flutter_client_sdk: ^4.17.0-beta.1
+    launchdarkly_flutter_client_sdk: ^4.18.0
     web: ^1.1.1
 
 dev_dependencies:

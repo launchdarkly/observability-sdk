@@ -6,12 +6,27 @@ import UIKit
 final class FlutterImageCaptureService: ImageCaptureServicing {
     private let channel: FlutterMethodChannel
     private let maskTextInputs: Bool
+    private let maskLabels: Bool
+    private let maskImages: Bool
+    private let maskWebViews: Bool
+    private let minimumAlpha: Double
     @MainActor
     private var shouldCapture = false
 
-    init(channel: FlutterMethodChannel, maskTextInputs: Bool) {
+    init(
+        channel: FlutterMethodChannel,
+        maskTextInputs: Bool,
+        maskLabels: Bool,
+        maskImages: Bool,
+        maskWebViews: Bool,
+        minimumAlpha: Double
+    ) {
         self.channel = channel
         self.maskTextInputs = maskTextInputs
+        self.maskLabels = maskLabels
+        self.maskImages = maskImages
+        self.maskWebViews = maskWebViews
+        self.minimumAlpha = minimumAlpha
     }
 
     @MainActor
@@ -19,7 +34,13 @@ final class FlutterImageCaptureService: ImageCaptureServicing {
         shouldCapture = true
         channel.invokeMethod(
             "captureFrame",
-            arguments: ["maskTextInputs": maskTextInputs]
+            arguments: [
+                "maskTextInputs": maskTextInputs,
+                "maskLabels": maskLabels,
+                "maskImages": maskImages,
+                "maskWebViews": maskWebViews,
+                "minimumAlpha": minimumAlpha,
+            ]
         ) { [weak self] result in
             Task { @MainActor in
                 guard let self, self.shouldCapture else {
@@ -40,7 +61,9 @@ final class FlutterImageCaptureService: ImageCaptureServicing {
         guard
             let payload = result as? [String: Any],
             let data = payload["bytes"] as? FlutterStandardTypedData,
-            let image = UIImage(data: data.data)
+            let width = (payload["width"] as? NSNumber)?.intValue,
+            let height = (payload["height"] as? NSNumber)?.intValue,
+            let image = Self.image(fromRGBA: data.data, width: width, height: height)
         else {
             return nil
         }
@@ -56,5 +79,36 @@ final class FlutterImageCaptureService: ImageCaptureServicing {
             orientation: orientation,
             areas: []
         )
+    }
+
+    /// Wraps Flutter's raw RGBA bytes (8 bits/channel, premultiplied alpha,
+    /// row-major) into a `UIImage` at scale 1, matching the device-pixel
+    /// resolution the Dart side rendered at. Avoids decoding a PNG on the wire.
+    private static func image(fromRGBA data: Data, width: Int, height: Int) -> UIImage? {
+        guard width > 0, height > 0 else { return nil }
+
+        let bytesPerRow = width * 4
+        guard data.count >= bytesPerRow * height else { return nil }
+
+        guard let provider = CGDataProvider(data: data as CFData) else { return nil }
+        let bitmapInfo = CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue)
+
+        guard let cgImage = CGImage(
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bitsPerPixel: 32,
+            bytesPerRow: bytesPerRow,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: bitmapInfo,
+            provider: provider,
+            decode: nil,
+            shouldInterpolate: false,
+            intent: .defaultIntent
+        ) else {
+            return nil
+        }
+
+        return UIImage(cgImage: cgImage, scale: 1.0, orientation: .up)
     }
 }

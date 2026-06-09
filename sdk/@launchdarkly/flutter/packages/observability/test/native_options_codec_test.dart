@@ -14,9 +14,9 @@ void main() {
       expect(wire.traces?.includeErrors, isTrue);
       expect(wire.traces?.includeSpans, isTrue);
       expect(wire.metricsEnabled, isTrue);
-      expect(wire.productAnalytics?.taps, isFalse);
-      expect(wire.productAnalytics?.pageViews, isTrue);
-      expect(wire.productAnalytics?.trackEvents, isTrue);
+      expect(wire.analytics?.taps, isTrue);
+      expect(wire.analytics?.pageViews, isTrue);
+      expect(wire.analytics?.trackEvents, isTrue);
       expect(wire.instrumentation?.crashReporting, isTrue);
     });
 
@@ -27,7 +27,7 @@ void main() {
         logsApiLevel: ObservabilityLogLevel.none,
         traces: TracesOptions(includeErrors: false, includeSpans: false),
         metricsEnabled: false,
-        productAnalytics: ProductAnalyticsOptions(
+        analytics: AnalyticsOptions(
           taps: true,
           pageViews: false,
           trackEvents: false,
@@ -41,9 +41,9 @@ void main() {
       expect(wire.traces?.includeErrors, isFalse);
       expect(wire.traces?.includeSpans, isFalse);
       expect(wire.metricsEnabled, isFalse);
-      expect(wire.productAnalytics?.taps, isTrue);
-      expect(wire.productAnalytics?.pageViews, isFalse);
-      expect(wire.productAnalytics?.trackEvents, isFalse);
+      expect(wire.analytics?.taps, isTrue);
+      expect(wire.analytics?.pageViews, isFalse);
+      expect(wire.analytics?.trackEvents, isFalse);
       expect(wire.instrumentation?.crashReporting, isFalse);
     });
 

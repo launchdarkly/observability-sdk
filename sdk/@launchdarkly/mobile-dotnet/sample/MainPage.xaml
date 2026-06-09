@@ -70,27 +70,34 @@
 				<Button Text="UpDownCounter" Clicked="OnUpDownCounterClicked" Margin="0,0,8,8" />
 			</FlexLayout>
 
-			<!-- Customer API -->
-			<Label Text="Customer API" FontSize="18" FontAttributes="Bold" TextColor="White" Margin="0,8,0,4" />
+			<!-- Error -->
+			<Label Text="Error" FontSize="18" FontAttributes="Bold" TextColor="White" Margin="0,8,0,4" />
 
 			<Button Text="Trigger Error" Clicked="OnTriggerErrorClicked"
 			        BackgroundColor="#F2B8B5" TextColor="White" />
+
+			<!-- Logs -->
+			<Label Text="Logs" FontSize="18" FontAttributes="Bold" TextColor="White" Margin="0,8,0,4" />
+
 			<FlexLayout Direction="Row" Wrap="Wrap" JustifyContent="Start" AlignItems="Center">
 				<Button Text="Trigger Log" Clicked="OnTriggerLogClicked" Margin="0,0,8,0" />
 				<Button Text="Log with Context" Clicked="OnTriggerLogWithContextClicked" />
 			</FlexLayout>
 
-			<Entry x:Name="CustomLogEntry" Placeholder="Log Message" TextColor="White"
+			<Entry x:Name="CustomLogEntry" Placeholder="Log Message" Text="Log Message" TextColor="White"
 			       PlaceholderColor="Gray" Margin="0,8" />
 			<Button Text="Send custom log" Clicked="OnSendCustomLogClicked" />
 
-			<FlexLayout Direction="Row" Wrap="Wrap" JustifyContent="Start" AlignItems="Center" Margin="0,16,0,0">
+			<!-- Traces -->
+			<Label Text="Traces" FontSize="18" FontAttributes="Bold" TextColor="White" Margin="0,16,0,4" />
+
+			<FlexLayout Direction="Row" Wrap="Wrap" JustifyContent="Start" AlignItems="Center">
 				<Button Text="Nested Spans" Clicked="OnTriggerNestedSpansClicked" Margin="0,0,8,0" />
 				<Button Text="Start Polling" Clicked="OnStartPollingClicked" Margin="0,0,8,0" />
 			</FlexLayout>
 			<Button Text="Trigger Sequential Spans" Clicked="OnTriggerSequentialSpansClicked" />
 
-			<Entry x:Name="CustomSpanEntry" Placeholder="Span Name" TextColor="White"
+			<Entry x:Name="CustomSpanEntry" Placeholder="Span Name" Text="Span Name" TextColor="White"
 			       PlaceholderColor="Gray" Margin="0,8" />
 			<Button Text="Send custom span" Clicked="OnSendCustomSpanClicked" />
 
