@@ -57,6 +57,9 @@ class InteractionSource(
                         action = MotionEvent.ACTION_DOWN,
                         positions = listOf(Position(x, y, sample.timestamp)),
                         session = sessionManager.getSessionId(),
+                        targetClassName = sample.targetClassName,
+                        targetText = sample.targetText,
+                        targetResourceId = sample.targetResourceId,
                     )
                 )
             }

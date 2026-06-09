@@ -2,13 +2,17 @@ package com.launchdarkly.observability.client
 
 import android.app.Activity
 import android.app.Application
+import android.content.res.Resources
 import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
 import android.view.KeyboardShortcutGroup
 import android.view.Menu
 import android.view.MotionEvent
+import android.view.View
+import android.view.ViewGroup
 import android.view.Window
+import android.widget.TextView
 import androidx.annotation.RequiresApi
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -81,12 +85,19 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
 
         when (motionEvent.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
+                val downX = motionEvent.getX(pointerIndex)
+                val downY = motionEvent.getY(pointerIndex)
+                // Resolve the tapped view so consumers can describe the click target (web/iOS parity).
+                val target = resolveTargetInfo(window, downX, downY)
                 _touchFlow.tryEmit(
                     TouchSample(
                         action = MotionEvent.ACTION_DOWN,
-                        x = motionEvent.getX(pointerIndex),
-                        y = motionEvent.getY(pointerIndex),
+                        x = downX,
+                        y = downY,
                         timestamp = eventTimeReference + motionEvent.eventTime,
+                        targetClassName = target?.className,
+                        targetText = target?.text,
+                        targetResourceId = target?.resourceId,
                     )
                 )
             }
@@ -167,7 +178,72 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
     override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
     override fun onActivityDestroyed(activity: Activity) {}
 
+    /** Resolved description of the view under a touch point. */
+    private data class TargetInfo(
+        val className: String?,
+        val text: String?,
+        val resourceId: String?,
+    )
+
+    /**
+     * Hit-tests the window's view hierarchy to describe the view under ([x], [y]). Coordinates are
+     * relative to the window's decor view (as delivered to the [Window.Callback]). Best-effort: any
+     * failure resolves to null so touch dispatch is never affected.
+     */
+    private fun resolveTargetInfo(window: Window, x: Float, y: Float): TargetInfo? {
+        return try {
+            val target = findDeepestViewAt(window.decorView, x, y) ?: return null
+            TargetInfo(
+                className = target.javaClass.name,
+                text = extractText(target),
+                resourceId = resolveResourceId(target),
+            )
+        } catch (_: Throwable) {
+            null
+        }
+    }
+
+    /**
+     * Returns the deepest visible view containing the point, translating coordinates into each
+     * child's coordinate space (accounting for child offset and parent scroll). Children are walked
+     * in reverse draw order so the topmost view wins.
+     */
+    private fun findDeepestViewAt(root: View, x: Float, y: Float): View? {
+        if (root.visibility != View.VISIBLE) return null
+        if (root is ViewGroup) {
+            for (i in root.childCount - 1 downTo 0) {
+                val child = root.getChildAt(i)
+                val childX = x - child.left + root.scrollX
+                val childY = y - child.top + root.scrollY
+                if (childX >= 0 && childX < child.width && childY >= 0 && childY < child.height) {
+                    findDeepestViewAt(child, childX, childY)?.let { return it }
+                }
+            }
+        }
+        return root
+    }
+
+    private fun extractText(view: View): String? {
+        val raw = when (view) {
+            is TextView -> view.text?.toString()
+            else -> view.contentDescription?.toString()
+        }
+        return raw?.takeIf { it.isNotEmpty() }?.take(MAX_TEXT_LENGTH)
+    }
+
+    private fun resolveResourceId(view: View): String? {
+        if (view.id == View.NO_ID) return null
+        return try {
+            view.resources.getResourceEntryName(view.id)
+        } catch (_: Resources.NotFoundException) {
+            null
+        }
+    }
+
     companion object {
         const val CLICK_SPAN_NAME = "click"
+
+        // Cap captured text to match the web SDK's `Click` payload truncation.
+        private const val MAX_TEXT_LENGTH = 2000
     }
 }

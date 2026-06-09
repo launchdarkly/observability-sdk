@@ -71,6 +71,9 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonObject
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
@@ -292,12 +295,19 @@ class ObservabilityService(
             var downX = 0f
             var downY = 0f
             var downTimeMs = 0L
+            // Target description is captured at ACTION_DOWN and described on the span at ACTION_UP.
+            var downTargetClassName: String? = null
+            var downTargetText: String? = null
+            var downTargetResourceId: String? = null
             userInteractionManager.touchFlow.collect { sample ->
                 when (sample.action) {
                     MotionEvent.ACTION_DOWN -> {
                         downX = sample.x
                         downY = sample.y
                         downTimeMs = sample.timestamp
+                        downTargetClassName = sample.targetClassName
+                        downTargetText = sample.targetText
+                        downTargetResourceId = sample.targetResourceId
                     }
                     MotionEvent.ACTION_UP -> {
                         if (!observabilityOptions.analytics.taps) return@collect
@@ -314,12 +324,32 @@ class ObservabilityService(
                             .put(EVENT_TYPE, UserInteractionManager.CLICK_SPAN_NAME)
                             .put(EVENT_X, sample.x.toLong())
                             .put(EVENT_Y, sample.y.toLong())
+                            .apply {
+                                downTargetClassName?.let { put(EVENT_TAG, it) }
+                                downTargetText?.let { put(EVENT_TEXT, it) }
+                                downTargetResourceId?.let { put(EVENT_ID, it) }
+                            }
                             .build()
                         otelTracer.spanBuilder(UserInteractionManager.CLICK_SPAN_NAME)
                             .setAllAttributes(attrs)
                             .setStartTimestamp(downTimeMs, TimeUnit.MILLISECONDS)
                             .startSpan()
                             .end(sample.timestamp, TimeUnit.MILLISECONDS)
+
+                        // Debug: log the JSON shape of the OTel `click` span (name + `event.*`).
+                        logger.debug(
+                            "[Otel Click] " + buildJsonObject {
+                                put("span", UserInteractionManager.CLICK_SPAN_NAME)
+                                putJsonObject("attributes") {
+                                    put(EVENT_TYPE.key, UserInteractionManager.CLICK_SPAN_NAME)
+                                    put(EVENT_X.key, sample.x.toLong())
+                                    put(EVENT_Y.key, sample.y.toLong())
+                                    downTargetClassName?.let { put(EVENT_TAG.key, it) }
+                                    downTargetText?.let { put(EVENT_TEXT.key, it) }
+                                    downTargetResourceId?.let { put(EVENT_ID.key, it) }
+                                }
+                            }.toString()
+                        )
                     }
                 }
             }
@@ -742,6 +772,9 @@ class ObservabilityService(
         private val EVENT_TYPE = AttributeKey.stringKey("event.type")
         private val EVENT_X = AttributeKey.longKey("event.x")
         private val EVENT_Y = AttributeKey.longKey("event.y")
+        private val EVENT_TAG = AttributeKey.stringKey("event.tag")
+        private val EVENT_TEXT = AttributeKey.stringKey("event.text")
+        private val EVENT_ID = AttributeKey.stringKey("event.id")
         private val EVENT_NAME = AttributeKey.stringKey("event.name")
         private val EVENT_SCREEN_CLASS = AttributeKey.stringKey("event.screen_class")
         private val EVENT_SCREEN_ID = AttributeKey.stringKey("event.screen_id")

@@ -53,7 +53,7 @@ class SessionReplayExporter(
     // TODO: O11Y-624 - need to implement sid, payloadId reset when multiple sessions occur in one application process lifecycle.
     private var payloadIdCounter = 0
     private var shouldWakeUpSession = true
-    private val eventGenerator = RRWebEventGenerator(canvasDrawEntourage, title)
+    private val eventGenerator = RRWebEventGenerator(canvasDrawEntourage, title, logger)
 
     private data class LastCaptureState(
         val sessionId: String?,
