@@ -137,6 +137,32 @@ class _MyHomePageState extends State<MyHomePage> {
     throw StateError('Failed to connect to bogus server.');
   }
 
+  // --- Track ---
+
+  /// Sample `data` payload shared by both track paths, mirroring the Swift
+  /// TestApp's track buttons.
+  LDValue _trackData() => LDValue.buildObject()
+      .addString('test-string', 'flutter')
+      .addBool('test-true', true)
+      .addBool('test-false', false)
+      .addNum('test-integer', 42)
+      .addNum('test-double', 3.14)
+      .build();
+
+  // Records a `track` span automatically via the observability `afterTrack`
+  // hook on the LaunchDarkly client.
+  void _onTrackViaClient() {
+    LDSingleton.client?.track('track-via-ld-client', data: _trackData());
+    debugPrint('Track via LDClient triggered');
+  }
+
+  // Records a `track` span directly through the observability API, without
+  // routing through the LaunchDarkly client.
+  void _onTrackViaObserve() {
+    LDObserve.track('track-via-ld-observe', data: _trackData());
+    debugPrint('Track via LDObserve triggered');
+  }
+
   // --- Error / Logs / Traces ---
 
   void _onTriggerError() {
@@ -426,6 +452,22 @@ class _MyHomePageState extends State<MyHomePage> {
               onPressed: _onTriggerCrash,
               style: dangerStyle,
               child: const Text('Trigger Crash'),
+            ),
+
+            const _SubsectionHeader('Track'),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                ElevatedButton(
+                  onPressed: _onTrackViaClient,
+                  child: const Text('Track (LDClient)'),
+                ),
+                ElevatedButton(
+                  onPressed: _onTrackViaObserve,
+                  child: const Text('Track (LDObserve)'),
+                ),
+              ],
             ),
 
             const _SubsectionHeader('Error'),
