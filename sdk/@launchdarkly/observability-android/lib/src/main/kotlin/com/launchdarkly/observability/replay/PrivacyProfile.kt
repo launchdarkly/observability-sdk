@@ -291,9 +291,53 @@ data class PrivacyProfile(
         return false
     }
 
+    /**
+     * Java-friendly fluent builder for [PrivacyProfile].
+     *
+     * Kotlin callers can keep using the [PrivacyProfile] constructor with named/default arguments.
+     * Every setter defaults to the same value as the [PrivacyProfile] primary constructor. List
+     * properties offer both a replace-all setter and an `addXxx` helper for incremental use.
+     *
+     * ```java
+     * PrivacyProfile profile = PrivacyProfile.builder()
+     *     .maskText(false)
+     *     .maskWebViews(true)
+     *     .addMaskView(MaskViewRef.ofClass(ImageView.class))
+     *     .addMaskXMLViewId("smoothieTitle")
+     *     .build();
+     * ```
+     */
+    class Builder {
+        private var profile = PrivacyProfile()
+
+        fun maskTextInputs(maskTextInputs: Boolean) = apply { profile = profile.copy(maskTextInputs = maskTextInputs) }
+        fun maskText(maskText: Boolean) = apply { profile = profile.copy(maskText = maskText) }
+
+        fun maskViews(maskViews: List<MaskViewRef>) = apply { profile = profile.copy(maskViews = maskViews.toList()) }
+        fun addMaskView(maskView: MaskViewRef) = apply { profile = profile.copy(maskViews = profile.maskViews + maskView) }
+
+        fun maskXMLViewIds(maskXMLViewIds: List<String>) = apply { profile = profile.copy(maskXMLViewIds = maskXMLViewIds.toList()) }
+        fun addMaskXMLViewId(maskXMLViewId: String) = apply { profile = profile.copy(maskXMLViewIds = profile.maskXMLViewIds + maskXMLViewId) }
+
+        fun unmaskXMLViewIds(unmaskXMLViewIds: List<String>) = apply { profile = profile.copy(unmaskXMLViewIds = unmaskXMLViewIds.toList()) }
+        fun addUnmaskXMLViewId(unmaskXMLViewId: String) = apply { profile = profile.copy(unmaskXMLViewIds = profile.unmaskXMLViewIds + unmaskXMLViewId) }
+
+        fun maskImageViews(maskImageViews: Boolean) = apply { profile = profile.copy(maskImageViews = maskImageViews) }
+        fun maskWebViews(maskWebViews: Boolean) = apply { profile = profile.copy(maskWebViews = maskWebViews) }
+        fun maskBySemanticsKeywords(maskBySemanticsKeywords: Boolean) = apply {
+            profile = profile.copy(maskBySemanticsKeywords = maskBySemanticsKeywords)
+        }
+        fun minimumAlpha(minimumAlpha: Float) = apply { profile = profile.copy(minimumAlpha = minimumAlpha) }
+
+        fun build() = profile
+    }
+
     companion object {
         /** Default opacity prune threshold, matching the iOS/Flutter `minimumAlpha`. */
         const val DEFAULT_MINIMUM_ALPHA = 0.02f
+
+        @JvmStatic
+        fun builder() = Builder()
 
         private val webViewClassNames = listOf(
             WebView::class.java.name,
