@@ -149,6 +149,14 @@ abstract class LDNativeApi {
   /// Forwards a custom track event to the native observability SDK so it emits
   /// the native `track` span (gated by `analytics.trackEvents`) and the Session
   /// Replay `Track` timeline event (always). `data` carries the optional event
-  /// payload as a JSON object.
-  void track(String key, Map<String, Object?>? data, double? metricValue);
+  /// payload as a JSON object. `contextKeys` carries the evaluation context's
+  /// kind -> key pairs (from the LaunchDarkly client's `afterTrack` hook) so the
+  /// native `track` span is attributed to the same context the web SDK records;
+  /// only the span is annotated, not the Session Replay `Track` payload.
+  void track(
+    String key,
+    Map<String, Object?>? data,
+    double? metricValue,
+    Map<String, String>? contextKeys,
+  );
 }

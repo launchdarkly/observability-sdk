@@ -197,11 +197,18 @@ internal class LDNativeApiImpl(
     // `track` always broadcasts a Session Replay `Track` timeline event and, when
     // `analytics.trackEvents` is enabled, emits the `track` span. The Dart side
     // routes mobile track here instead of through `exportSpans` because only the
-    // native track path reaches Session Replay. The bridge owns the
-    // `Map` -> `LDValue` conversion so this plugin stays independent of the
-    // LaunchDarkly feature-flag SDK.
-    override fun track(key: String, data: Map<String, Any?>?, metricValue: Double?) {
-        LDObserveBridge.track(key, data, metricValue)
+    // native track path reaches Session Replay. `contextKeys` (the LD evaluation
+    // context's kind -> key pairs) is applied to the span so it is attributed to
+    // the same context the web SDK records. The bridge owns the `Map` -> `LDValue`
+    // conversion so this plugin stays independent of the LaunchDarkly
+    // feature-flag SDK.
+    override fun track(
+        key: String,
+        data: Map<String, Any?>?,
+        metricValue: Double?,
+        contextKeys: Map<String, String>?,
+    ) {
+        LDObserveBridge.track(key, data, metricValue, contextKeys)
     }
 
     /**

@@ -106,13 +106,15 @@ final class LDNativeApiImpl: NSObject, LDNativeApi {
     // `track` always broadcasts a Session Replay `Track` timeline event and, when
     // `analytics.trackEvents` is enabled, emits the `track` span. This is why the
     // Dart side routes mobile track here instead of through `exportSpans`: only
-    // the native track path reaches Session Replay. The bridge owns the
-    // `Map` -> `LDValue` conversion so this plugin stays free of `LDValue`.
-    func track(key: String, data: [String: Any?]?, metricValue: Double?) throws {
+    // the native track path reaches Session Replay. `contextKeys` (the LD
+    // evaluation context's kind -> key pairs) is applied to the span so it is
+    // attributed to the same context the web SDK records.
+    func track(key: String, data: [String: Any?]?, metricValue: Double?, contextKeys: [String: String]?) throws {
         ObjcLDObserveBridge.track(
             key: key,
             data: data.map { cleanAttributes($0) },
-            metricValue: metricValue.map { NSNumber(value: $0) }
+            metricValue: metricValue.map { NSNumber(value: $0) },
+            contextKeys: contextKeys
         )
     }
 

@@ -54,15 +54,21 @@ class _NativeTrackRecorder implements TrackRecorder {
   }) {
     // Reuse the SDK's canonical `LDValue` -> JSON transformation. Only object
     // payloads carry `track` attributes natively, so non-object payloads map to
-    // `null`. `context` is omitted: the native `LDObserve.track` API takes no
-    // context; native track events are correlated with the native session
-    // pipeline.
+    // `null`.
     final dynamic json = data?.toDynamic();
+    // Forward the evaluation context's kind -> key pairs so the native `track`
+    // span is attributed to the same context the web SDK records (the native
+    // LaunchDarkly client only holds an anonymous bootstrap context). `null` for
+    // the manual `LDObserve.track` path, which has no context.
+    final Map<String, String>? contextKeys = (context != null && context.valid)
+        ? context.keys
+        : null;
     unawaited(
       _api.track(
         eventName,
         json is Map ? Map<String, Object?>.from(json) : null,
         metricValue?.toDouble(),
+        contextKeys,
       ),
     );
   }

@@ -619,9 +619,12 @@ interface LDNativeApi {
    * Forwards a custom track event to the native observability SDK so it emits
    * the native `track` span (gated by `analytics.trackEvents`) and the Session
    * Replay `Track` timeline event (always). `data` carries the optional event
-   * payload as a JSON object.
+   * payload as a JSON object. `contextKeys` carries the evaluation context's
+   * kind -> key pairs (from the LaunchDarkly client's `afterTrack` hook) so the
+   * native `track` span is attributed to the same context the web SDK records;
+   * only the span is annotated, not the Session Replay `Track` payload.
    */
-  fun track(key: String, data: Map<String, Any?>?, metricValue: Double?)
+  fun track(key: String, data: Map<String, Any?>?, metricValue: Double?, contextKeys: Map<String, String>?)
 
   companion object {
     /** The codec used by LDNativeApi. */
@@ -699,8 +702,9 @@ interface LDNativeApi {
             val keyArg = args[0] as String
             val dataArg = args[1] as Map<String, Any?>?
             val metricValueArg = args[2] as Double?
+            val contextKeysArg = args[3] as Map<String, String>?
             val wrapped: List<Any?> = try {
-              api.track(keyArg, dataArg, metricValueArg)
+              api.track(keyArg, dataArg, metricValueArg, contextKeysArg)
               listOf(null)
             } catch (exception: Throwable) {
               MessagesPigeonUtils.wrapError(exception)
