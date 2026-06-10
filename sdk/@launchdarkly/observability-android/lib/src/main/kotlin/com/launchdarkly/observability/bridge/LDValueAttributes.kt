@@ -28,32 +28,27 @@ internal fun LDValue.toAttributes(): Attributes {
 }
 
 /**
- * Converts a plain JSON value (e.g. a `track` event's `data` carried across a
- * bridge as Java collections/primitives) into an [LDValue].
+ * Converts a plain object payload (e.g. a `track` event's `data` carried across
+ * a bridge as a `Map`) directly into OTel [Attributes].
  *
- * The inverse of the value mapping used by [toAttributes], kept here so callers
- * that cannot depend on the LaunchDarkly model types (such as the Flutter
- * plugin) can forward a `Map` and let the bridge build the [LDValue].
+ * Mirrors [toAttributes] for [LDValue]: only scalar members contribute (boolean,
+ * number -> double, string); null/array/object members are skipped because OTel
+ * [Attributes] is a flat scalar map. Kept here so callers that cannot depend on
+ * the LaunchDarkly model types (such as the Flutter plugin) can forward a `Map`
+ * without first building an [LDValue].
  */
-internal fun Any?.toLDValue(): LDValue = when (this) {
-    null -> LDValue.ofNull()
-    is Boolean -> LDValue.of(this)
-    is Int -> LDValue.of(this)
-    is Long -> LDValue.of(this)
-    is Float -> LDValue.of(this)
-    is Double -> LDValue.of(this)
-    is String -> LDValue.of(this)
-    is Map<*, *> -> {
-        val builder = LDValue.buildObject()
-        for ((key, value) in this) {
-            if (key is String) builder.put(key, value.toLDValue())
+internal fun Map<String, Any?>.toAttributes(): Attributes {
+    val builder = Attributes.builder()
+    for ((key, value) in this) {
+        when (value) {
+            is Boolean -> builder.put(AttributeKey.booleanKey(key), value)
+            is Int -> builder.put(AttributeKey.doubleKey(key), value.toDouble())
+            is Long -> builder.put(AttributeKey.doubleKey(key), value.toDouble())
+            is Float -> builder.put(AttributeKey.doubleKey(key), value.toDouble())
+            is Double -> builder.put(AttributeKey.doubleKey(key), value)
+            is String -> builder.put(AttributeKey.stringKey(key), value)
+            else -> {} // skip null/array/object
         }
-        builder.build()
     }
-    is List<*> -> {
-        val builder = LDValue.buildArray()
-        for (element in this) builder.add(element.toLDValue())
-        builder.build()
-    }
-    else -> LDValue.of(this.toString())
+    return builder.build()
 }

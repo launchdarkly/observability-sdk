@@ -7,7 +7,6 @@ import com.launchdarkly.observability.context.ObserveLogger
 import com.launchdarkly.observability.api.ObservabilityOptions
 import com.launchdarkly.observability.bridge.emitLog
 import com.launchdarkly.observability.bridge.toAttributes
-import com.launchdarkly.observability.bridge.toLDValue
 import com.launchdarkly.observability.client.screen.ScreenChange
 import com.launchdarkly.observability.client.screen.ScreenStack
 import com.launchdarkly.observability.client.screen.ScreenView
@@ -553,7 +552,7 @@ class ObservabilityService(
     }
 
     override fun track(key: String, data: Map<String, Any?>?, metricValue: Double?) {
-        track(key, metricValue, data?.toLDValue()?.toAttributes() ?: Attributes.empty(), contextKeyAttributes = null)
+        track(key, metricValue, data?.toAttributes() ?: Attributes.empty(), contextKeyAttributes = null)
     }
 
     /**
