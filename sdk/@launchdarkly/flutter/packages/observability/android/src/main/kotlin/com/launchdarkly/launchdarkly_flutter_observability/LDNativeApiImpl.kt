@@ -215,13 +215,17 @@ internal class LDNativeApiImpl(
     // context keys so the manual track path is attributed to the active context)
     // and Session Replay (which records who the user is on the active recording).
     // The Dart side calls this from the LaunchDarkly client's `afterIdentify`
-    // hook. Mirrors MAUI's `ObservabilityHook.AfterIdentify`.
+    // hook. Reuses the same public cross-platform hook proxies that React Native
+    // (`LDReplay.hookProxy`) and MAUI drive, mirroring the iOS plugin — so no
+    // bespoke combined bridge entry point is needed.
     override fun identify(
         contextKeys: Map<String, String>,
         canonicalKey: String,
         completed: Boolean,
     ) {
-        LDObserveBridge.identify(contextKeys, canonicalKey, completed)
+        LDObserveBridge.getObservabilityHookProxy()
+            ?.afterIdentify(contextKeys, canonicalKey, completed)
+        LDReplay.hookProxy?.afterIdentify(contextKeys, canonicalKey, completed)
     }
 
     /**

@@ -1,7 +1,6 @@
 package com.launchdarkly.observability.bridge
 
 import com.launchdarkly.observability.sdk.LDObserve
-import com.launchdarkly.observability.sdk.LDReplay
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
 
@@ -54,24 +53,5 @@ object LDObserveBridge {
             data?.toOtelAttributes() ?: Attributes.empty(),
             contextKeyBuilder.build(),
         )
-    }
-
-    /**
-     * Forwards an `identify` to native observability and Session Replay. The
-     * observability hook caches [contextKeys] so the manual [track] path is
-     * attributed to the active context, and Session Replay records who the user
-     * is on the active recording. [canonicalKey] is the context's
-     * fully-qualified key and [completed] whether the identify finished
-     * successfully; both downstreams ignore incomplete identifies. Lets hosts
-     * whose LaunchDarkly client lives outside this SDK (e.g. Flutter) drive
-     * identify the same way the in-process hooks do.
-     */
-    fun identify(
-        contextKeys: Map<String, String>,
-        canonicalKey: String,
-        completed: Boolean,
-    ) {
-        getObservabilityHookProxy()?.afterIdentify(contextKeys, canonicalKey, completed)
-        LDReplay.afterIdentify(contextKeys, canonicalKey, completed)
     }
 }
