@@ -34,6 +34,21 @@ class _StubExporters implements ObservabilityExporters {
   @override
   TrackRecorder createTrackRecorder(ObservabilityConfig config) =>
       _SpanTrackRecorder(config.trackEventsEnabled);
+
+  @override
+  IdentifyRecorder createIdentifyRecorder(ObservabilityConfig config) =>
+      _NoopIdentifyRecorder();
+}
+
+/// No Session Replay or context-key caching exists on the Dart pipeline, so
+/// `identify` has nothing to forward.
+class _NoopIdentifyRecorder implements IdentifyRecorder {
+  @override
+  void identify({
+    required Map<String, String> contextKeys,
+    required String canonicalKey,
+    required bool completed,
+  }) {}
 }
 
 /// Emits each `track` event as a Dart `track` span via the OpenTelemetry

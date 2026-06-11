@@ -55,6 +55,23 @@ abstract interface class TrackRecorder {
   });
 }
 
+/// Forwards an `identify` through the platform-appropriate pipeline.
+///
+/// - Web: no-op. The Dart pipeline has no Session Replay and the manual track
+///   path already attributes spans from the live context, so there is nothing
+///   to cache.
+/// - Native (io): forwarded to the native observability SDK (which caches the
+///   context keys so the manual `LDObserve.track` path is attributed to the
+///   active context) and Session Replay (which records who the user is on the
+///   active recording). Mirrors MAUI's `ObservabilityHook.AfterIdentify`.
+abstract interface class IdentifyRecorder {
+  void identify({
+    required Map<String, String> contextKeys,
+    required String canonicalKey,
+    required bool completed,
+  });
+}
+
 /// Factory for the span and log exporters used by the observability pipeline.
 ///
 /// The concrete implementation is selected per build target via conditional
@@ -71,4 +88,7 @@ abstract interface class ObservabilityExporters {
 
   /// Builds the track recorder used by `track`.
   TrackRecorder createTrackRecorder(ObservabilityConfig config);
+
+  /// Builds the identify recorder used by `identify`.
+  IdentifyRecorder createIdentifyRecorder(ObservabilityConfig config);
 }

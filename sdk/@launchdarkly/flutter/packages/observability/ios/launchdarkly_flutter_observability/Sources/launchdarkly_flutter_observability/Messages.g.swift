@@ -650,6 +650,15 @@ protocol LDNativeApi {
   /// native `track` span is attributed to the same context the web SDK records;
   /// only the span is annotated, not the Session Replay `Track` payload.
   func track(key: String, data: [String: Any?]?, metricValue: Double?, contextKeys: [String: String]?) throws
+  /// Forwards an `identify` to the native observability SDK and Session Replay.
+  /// Native observability caches `contextKeys` so manual `LDObserve.track` calls
+  /// (which carry no context) are attributed to the active context, and Session
+  /// Replay records who the user is on the active recording. `contextKeys`
+  /// carries the context's kind -> key pairs, `canonicalKey` the fully-qualified
+  /// key, and `completed` whether the identify finished successfully (native
+  /// ignores incomplete identifies). Mirrors MAUI's
+  /// `ObservabilityHook.AfterIdentify` /  `SessionReplayHook.AfterIdentify`.
+  func identify(contextKeys: [String: String], canonicalKey: String, completed: Bool) throws
 }
 
 /// Generated setup class from Pigeon to handle messages through the `binaryMessenger`.
@@ -736,6 +745,31 @@ class LDNativeApiSetup {
       }
     } else {
       trackChannel.setMessageHandler(nil)
+    }
+    /// Forwards an `identify` to the native observability SDK and Session Replay.
+    /// Native observability caches `contextKeys` so manual `LDObserve.track` calls
+    /// (which carry no context) are attributed to the active context, and Session
+    /// Replay records who the user is on the active recording. `contextKeys`
+    /// carries the context's kind -> key pairs, `canonicalKey` the fully-qualified
+    /// key, and `completed` whether the identify finished successfully (native
+    /// ignores incomplete identifies). Mirrors MAUI's
+    /// `ObservabilityHook.AfterIdentify` /  `SessionReplayHook.AfterIdentify`.
+    let identifyChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.launchdarkly_flutter_observability.LDNativeApi.identify\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      identifyChannel.setMessageHandler { message, reply in
+        let args = message as! [Any?]
+        let contextKeysArg = args[0] as! [String: String]
+        let canonicalKeyArg = args[1] as! String
+        let completedArg = args[2] as! Bool
+        do {
+          try api.identify(contextKeys: contextKeysArg, canonicalKey: canonicalKeyArg, completed: completedArg)
+          reply(wrapResult(nil))
+        } catch {
+          reply(wrapError(error))
+        }
+      }
+    } else {
+      identifyChannel.setMessageHandler(nil)
     }
   }
 }

@@ -21,6 +21,11 @@ class Otel {
   static TrackRecorder? _trackRecorder;
   static TrackRecorder? get trackRecorder => _trackRecorder;
 
+  /// The platform-appropriate identify recorder, set during [setup]. `null`
+  /// before the pipeline is initialized.
+  static IdentifyRecorder? _identifyRecorder;
+  static IdentifyRecorder? get identifyRecorder => _identifyRecorder;
+
   static void setup(String sdkKey, ObservabilityConfig config) {
     // TODO: Log when otel is setup multiple times. It will work, but the
     // behavior may be confusing.
@@ -49,6 +54,7 @@ class Otel {
 
     _logRecorder = exporters.createLogRecorder(config);
     _trackRecorder = exporters.createTrackRecorder(config);
+    _identifyRecorder = exporters.createIdentifyRecorder(config);
   }
 
   static void shutdown() {
@@ -58,5 +64,6 @@ class Otel {
     _tracerProviders.clear();
     _logRecorder = null;
     _trackRecorder = null;
+    _identifyRecorder = null;
   }
 }
