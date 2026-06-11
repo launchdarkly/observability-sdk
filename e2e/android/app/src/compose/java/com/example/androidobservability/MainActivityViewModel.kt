@@ -26,7 +26,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 
-class ViewModel(application: Application) : AndroidViewModel(application) {
+class MainActivityViewModel(application: Application) : AndroidViewModel(application) {
 
     private var screenViewCounter = 0
 

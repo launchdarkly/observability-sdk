@@ -65,7 +65,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val viewModel: ViewModel by viewModels()
+        val viewModel: MainActivityViewModel by viewModels()
 
         enableEdgeToEdge()
         setContent {
@@ -106,7 +106,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun MainScreen(viewModel: ViewModel, innerPadding: PaddingValues) {
+private fun MainScreen(viewModel: MainActivityViewModel, innerPadding: PaddingValues) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -171,7 +171,7 @@ private fun SessionReplayHeader() {
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun MetricButtons(viewModel: ViewModel) {
+private fun MetricButtons(viewModel: MainActivityViewModel) {
     Text(
         text = "Metric",
         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
@@ -252,7 +252,7 @@ private fun MetricButtons(viewModel: ViewModel) {
 }
 
 @Composable
-private fun InstrumentationButtons(viewModel: ViewModel) {
+private fun InstrumentationButtons(viewModel: MainActivityViewModel) {
     Text(
         text = "Instrumentation",
         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
@@ -373,7 +373,7 @@ private fun goToActivity(ctx: Context, activity: Class<out Activity>?){
 }
 
 @Composable
-private fun IdentifyButtons(viewModel: ViewModel) {
+private fun IdentifyButtons(viewModel: MainActivityViewModel) {
     Spacer(modifier = Modifier.height(16.dp))
 
     Text(
@@ -419,7 +419,7 @@ private fun IdentifyButtons(viewModel: ViewModel) {
 }
 
 @Composable
-private fun ErrorButtons(viewModel: ViewModel) {
+private fun ErrorButtons(viewModel: MainActivityViewModel) {
     Text(
         text = "Error",
         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
@@ -440,7 +440,7 @@ private fun ErrorButtons(viewModel: ViewModel) {
 }
 
 @Composable
-private fun LogsButtons(viewModel: ViewModel) {
+private fun LogsButtons(viewModel: MainActivityViewModel) {
     var customLogText by remember { mutableStateOf("Log Message") }
 
     Text(
@@ -485,7 +485,7 @@ private fun LogsButtons(viewModel: ViewModel) {
 }
 
 @Composable
-private fun TracesButtons(viewModel: ViewModel) {
+private fun TracesButtons(viewModel: MainActivityViewModel) {
     var customSpanText by remember { mutableStateOf("Span Name") }
     var flagKey by remember { mutableStateOf("my-feature") }
 

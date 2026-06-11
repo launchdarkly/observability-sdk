@@ -20,14 +20,14 @@ import com.launchdarkly.observability.sdk.LDReplay;
 
 public class MainActivity extends AppCompatActivity {
 
-    private ViewModel viewModel;
+    private MainActivityViewModel viewModel;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        viewModel = new ViewModelProvider(this).get(ViewModel.class);
+        viewModel = new ViewModelProvider(this).get(MainActivityViewModel.class);
 
         setupToolbarSubtitle();
         setupMaskingButtons();

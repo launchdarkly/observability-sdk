@@ -21,6 +21,7 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Arrays;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -37,17 +38,17 @@ import okhttp3.Request;
 import okhttp3.Response;
 
 /**
- * Java counterpart of the Kotlin {@code ViewModel} used by the compose flavor.
+ * Java counterpart of the Kotlin {@code MainActivityViewModel} used by the compose flavor.
  *
  * <p>Kotlin coroutines ({@code viewModelScope.launch(Dispatchers.IO)}) are replaced with a
  * background {@link ExecutorService}; the detached-thread span/context demos still use plain
  * {@link Thread}s, matching the Kotlin original.
  */
-public class ViewModel extends AndroidViewModel {
+public class MainActivityViewModel extends AndroidViewModel {
 
     private final ExecutorService backgroundExecutor = Executors.newCachedThreadPool();
 
-    public ViewModel(@NonNull Application application) {
+    public MainActivityViewModel(@NonNull Application application) {
         super(application);
     }
 
@@ -210,16 +211,17 @@ public class ViewModel extends AndroidViewModel {
     }
 
     public void trackViaLdObserve() {
-        // Records a `track` span directly through the Observability API.
+        // Records a `track` span directly through the Observability API. `track`
+        // takes a map so callers need not depend on `LDValue`.
         LDObserve.Companion.track(
                 "track-via-ld-observe",
-                LDValue.buildObject()
-                        .put("test-string", "android")
-                        .put("test-true", true)
-                        .put("test-false", false)
-                        .put("test-integer", 42)
-                        .put("test-double", 3.14)
-                        .build(),
+                Map.of(
+                        "test-string", "android",
+                        "test-true", true,
+                        "test-false", false,
+                        "test-integer", 42,
+                        "test-double", 3.14
+                ),
                 null
         );
     }
