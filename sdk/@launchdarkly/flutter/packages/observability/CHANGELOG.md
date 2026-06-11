@@ -2,6 +2,13 @@
 
 All notable changes to the LaunchDarkly Observability SDK for Flutter will be documented in this file. This project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.7.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.6.0...launchdarkly_flutter_observability-0.7.0) (2026-06-11)
+
+
+### Features
+
+* Flutter track API (LDObserve.track + afterTrack hook) ([#612](https://github.com/launchdarkly/observability-sdk/issues/612)) ([4d58af4](https://github.com/launchdarkly/observability-sdk/commit/4d58af408f3dcfc181b23c67350aa761a59db2b8))
+
 ## [0.6.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.5.0...launchdarkly_flutter_observability-0.6.0) (2026-06-09)
 
 
