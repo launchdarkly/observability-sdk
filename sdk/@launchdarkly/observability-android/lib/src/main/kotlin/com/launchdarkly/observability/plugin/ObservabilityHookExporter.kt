@@ -7,6 +7,7 @@ import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Severity
 import io.opentelemetry.api.trace.Span
+import io.opentelemetry.api.trace.SpanKind
 import io.opentelemetry.api.trace.Tracer
 import org.json.JSONObject
 
@@ -42,6 +43,7 @@ internal class ObservabilityHookExporter(
 
         val tracer = getTracer()
         val span = tracer.spanBuilder(FEATURE_FLAG_SPAN_NAME)
+            .setSpanKind(SpanKind.INTERNAL)
             .setAllAttributes(
                 Attributes.builder()
                     .put(SEMCONV_FEATURE_FLAG_KEY, flagKey)

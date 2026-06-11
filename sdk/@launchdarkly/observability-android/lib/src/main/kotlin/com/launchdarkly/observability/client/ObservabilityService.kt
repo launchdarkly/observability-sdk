@@ -53,6 +53,7 @@ import io.opentelemetry.api.metrics.LongCounter
 import io.opentelemetry.api.metrics.LongUpDownCounter
 import io.opentelemetry.api.metrics.Meter
 import io.opentelemetry.api.trace.Span
+import io.opentelemetry.api.trace.SpanKind
 import io.opentelemetry.api.trace.Tracer
 import io.opentelemetry.context.Context
 import io.opentelemetry.sdk.logs.LogRecordProcessor
@@ -328,6 +329,7 @@ class ObservabilityService(
                             }
                             .build()
                         otelTracer.spanBuilder(UserInteractionManager.CLICK_SPAN_NAME)
+                            .setSpanKind(SpanKind.CLIENT)
                             .setAllAttributes(attrs)
                             .setStartTimestamp(downTimeMs, TimeUnit.MILLISECONDS)
                             .startSpan()
@@ -546,6 +548,7 @@ class ObservabilityService(
 
         val span = otelTracer
             .spanBuilder(ERROR_SPAN_NAME)
+            .setSpanKind(SpanKind.CLIENT)
             .setParent(Context.current().with(Span.current()))
             .startSpan()
 
@@ -560,6 +563,7 @@ class ObservabilityService(
         if (!observabilityOptions.tracesApi.includeSpans) return Span.getInvalid()
 
         return otelTracer.spanBuilder(name)
+            .setSpanKind(SpanKind.CLIENT)
             .setAllAttributes(attributes)
             .startSpan()
     }
@@ -596,6 +600,7 @@ class ObservabilityService(
         metricValue?.let { attrBuilder.put(AttributeKey.doubleKey("value"), it) }
 
         otelTracer.spanBuilder(TRACK_SPAN_NAME)
+            .setSpanKind(SpanKind.CLIENT)
             .setAllAttributes(attrBuilder.build())
             .startSpan()
             .end()
@@ -643,6 +648,7 @@ class ObservabilityService(
         screen.category?.let { attrBuilder.put(EVENT_CATEGORY, it) }
 
         otelTracer.spanBuilder(SCREEN_VIEW_SPAN_NAME)
+            .setSpanKind(SpanKind.CLIENT)
             .setAllAttributes(attrBuilder.build())
             .startSpan()
             .end()
@@ -674,6 +680,7 @@ class ObservabilityService(
         signal.lifecycleState?.let { attrBuilder.put(EVENT_LIFECYCLE_STATE, it) }
 
         otelTracer.spanBuilder(spanName)
+            .setSpanKind(SpanKind.CLIENT)
             .setAllAttributes(attrBuilder.build())
             .startSpan()
             .end()
