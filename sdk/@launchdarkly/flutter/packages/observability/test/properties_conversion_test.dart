@@ -77,7 +77,10 @@ void main() {
       // the typed helpers (`spanAddEvent`/`spanRecordException`) rather than the
       // native conversion; feeding an `Attribute` back through here would drop
       // it. This guards against re-introducing that double-conversion bug.
-      expect(attributeFromNative(StringAttribute('x')), isA<InvalidAttribute>());
+      expect(
+        attributeFromNative(StringAttribute('x')),
+        isA<InvalidAttribute>(),
+      );
     });
   });
 
