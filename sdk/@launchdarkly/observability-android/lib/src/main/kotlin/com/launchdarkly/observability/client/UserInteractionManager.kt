@@ -245,12 +245,22 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
         view.transformationMethod is PasswordTransformationMethod
 
     private fun resolveResourceId(view: View): String? {
-        if (view.id == View.NO_ID) return null
-        return try {
-            view.resources.getResourceEntryName(view.id)
-        } catch (_: Resources.NotFoundException) {
-            null
+        if (view.id != View.NO_ID) {
+            try {
+                return view.resources.getResourceEntryName(view.id)
+            } catch (_: Resources.NotFoundException) {
+                // Fall through to the React Native testID lookup below.
+            }
         }
+        // React Native views typically have no native id; RN stores the JS `testID` prop on the
+        // `react_test_id` tag (the same identifier the privacy matchers use), so fall back to it.
+        return resolveReactTestId(view)
+    }
+
+    /** Reads React Native's JS `testID` prop from the `react_test_id` tag, when present. */
+    private fun resolveReactTestId(view: View): String? {
+        val resId = reactTestIdResId ?: return null
+        return (view.getTag(resId) as? String)?.takeIf { it.isNotEmpty() }
     }
 
     companion object {
@@ -258,5 +268,19 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
 
         // Cap captured text to match the web SDK's `Click` payload truncation.
         private const val MAX_TEXT_LENGTH = 2000
+
+        /**
+         * Resource id of React Native's `react_test_id` tag, where RN stores the JS `testID` prop
+         * on each view. Resolved reflectively to avoid a compile-time dependency on React Native;
+         * `null` when the RN library isn't on the runtime classpath. Mirrors the lookup used by the
+         * Session Replay privacy matchers.
+         */
+        private val reactTestIdResId: Int? by lazy {
+            runCatching {
+                Class.forName("com.facebook.react.R\$id")
+                    .getField("react_test_id")
+                    .getInt(null)
+            }.getOrNull()
+        }
     }
 }
