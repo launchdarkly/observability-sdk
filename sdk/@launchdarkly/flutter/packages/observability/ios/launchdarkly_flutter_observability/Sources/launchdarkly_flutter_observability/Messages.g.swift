@@ -642,6 +642,14 @@ protocol LDNativeApi {
   /// Forwards a Dart log to the native logger so it is emitted as a native
   /// `LogRecord` with `session.id` and trace/span correlation.
   func recordLog(log: LDLogRecord) throws
+  /// Forwards a custom track event to the native observability SDK so it emits
+  /// the native `track` span (gated by `analytics.trackEvents`) and the Session
+  /// Replay `Track` timeline event (always). `data` carries the optional event
+  /// payload as a JSON object. `contextKeys` carries the evaluation context's
+  /// kind -> key pairs (from the LaunchDarkly client's `afterTrack` hook) so the
+  /// native `track` span is attributed to the same context the web SDK records;
+  /// only the span is annotated, not the Session Replay `Track` payload.
+  func track(key: String, data: [String: Any?]?, metricValue: Double?, contextKeys: [String: String]?) throws
 }
 
 /// Generated setup class from Pigeon to handle messages through the `binaryMessenger`.
@@ -703,6 +711,31 @@ class LDNativeApiSetup {
       }
     } else {
       recordLogChannel.setMessageHandler(nil)
+    }
+    /// Forwards a custom track event to the native observability SDK so it emits
+    /// the native `track` span (gated by `analytics.trackEvents`) and the Session
+    /// Replay `Track` timeline event (always). `data` carries the optional event
+    /// payload as a JSON object. `contextKeys` carries the evaluation context's
+    /// kind -> key pairs (from the LaunchDarkly client's `afterTrack` hook) so the
+    /// native `track` span is attributed to the same context the web SDK records;
+    /// only the span is annotated, not the Session Replay `Track` payload.
+    let trackChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.launchdarkly_flutter_observability.LDNativeApi.track\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      trackChannel.setMessageHandler { message, reply in
+        let args = message as! [Any?]
+        let keyArg = args[0] as! String
+        let dataArg: [String: Any?]? = nilOrValue(args[1])
+        let metricValueArg: Double? = nilOrValue(args[2])
+        let contextKeysArg: [String: String]? = nilOrValue(args[3])
+        do {
+          try api.track(key: keyArg, data: dataArg, metricValue: metricValueArg, contextKeys: contextKeysArg)
+          reply(wrapResult(nil))
+        } catch {
+          reply(wrapError(error))
+        }
+      }
+    } else {
+      trackChannel.setMessageHandler(nil)
     }
   }
 }

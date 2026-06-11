@@ -6,7 +6,7 @@ import android.view.ViewConfiguration
 import com.launchdarkly.observability.context.ObserveLogger
 import com.launchdarkly.observability.api.ObservabilityOptions
 import com.launchdarkly.observability.bridge.emitLog
-import com.launchdarkly.observability.bridge.toAttributes
+import com.launchdarkly.observability.bridge.toOtelAttributes
 import com.launchdarkly.observability.client.screen.ScreenChange
 import com.launchdarkly.observability.client.screen.ScreenStack
 import com.launchdarkly.observability.client.screen.ScreenView
@@ -33,7 +33,6 @@ import com.launchdarkly.observability.sampling.SamplingLogProcessor
 import com.launchdarkly.observability.traces.EventSpanProcessor
 import com.launchdarkly.observability.traces.OtlpTraceExporter
 import com.launchdarkly.observability.util.requireMainThread
-import com.launchdarkly.sdk.LDValue
 import io.opentelemetry.android.OpenTelemetryRum
 import io.opentelemetry.android.OpenTelemetryRumBuilder
 import io.opentelemetry.android.config.OtelRumConfig
@@ -574,8 +573,8 @@ class ObservabilityService(
             .startSpan()
     }
 
-    override fun track(key: String, data: LDValue?, metricValue: Double?) {
-        track(key, metricValue, data?.toAttributes() ?: Attributes.empty(), contextKeyAttributes = null)
+    override fun track(key: String, properties: Map<String, Any?>?, metricValue: Double?) {
+        track(key, metricValue, properties?.toOtelAttributes() ?: Attributes.empty(), contextKeyAttributes = null)
     }
 
     /**
@@ -612,8 +611,16 @@ class ObservabilityService(
             .end()
     }
 
-    override fun trackScreenView(name: String, screenClass: String?, screenId: String?, category: String?) {
-        emitScreenView(ScreenView(name = name, screenClass = screenClass, screenId = screenId, category = category))
+    override fun trackScreenView(name: String, screenClass: String?, screenId: String?, category: String?, properties: Map<String, Any?>?) {
+        emitScreenView(
+            ScreenView(
+                name = name,
+                screenClass = screenClass,
+                screenId = screenId,
+                category = category,
+                attributes = properties?.toOtelAttributes() ?: Attributes.empty()
+            )
+        )
     }
 
     /**
@@ -645,7 +652,10 @@ class ObservabilityService(
         if (!observabilityOptions.tracesApi.includeSpans) return
 
         val attrBuilder = Attributes.builder()
-        // Context keys first so the reserved `event.*` taxonomy fields always win.
+        // Apply in increasing precedence so the screen-view taxonomy can never be clobbered: caller
+        // properties first, then identify context keys, then the reserved `event.*` fields last
+        // (matching the track path).
+        attrBuilder.putAll(screen.attributes)
         attrBuilder.putAll(cachedContextKeyAttributes)
         attrBuilder.put(EVENT_NAME, screen.name)
         screen.screenClass?.let { attrBuilder.put(EVENT_SCREEN_CLASS, it) }

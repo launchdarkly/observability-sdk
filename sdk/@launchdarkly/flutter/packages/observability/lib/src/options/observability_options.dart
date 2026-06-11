@@ -88,9 +88,10 @@ class InstrumentationOptions {
 /// Analytics telemetry emitted as OpenTelemetry spans. Mirrors Android
 /// `ObservabilityOptions.Analytics`.
 ///
-/// Native-only. [taps] maps to the native `analytics.taps` publish gate on both
-/// iOS and Android; [pageViews] and [trackEvents] are Android-only and are
-/// no-ops elsewhere.
+/// [taps] maps to the native `analytics.taps` publish gate on both iOS and
+/// Android; [pageViews] is Android-only and a no-op elsewhere. [trackEvents]
+/// gates the `track` span emitted by the cross-platform Dart pipeline (web and
+/// mobile) as well as the native Android span.
 class AnalyticsOptions {
   /// Whether to publish a `click` span for each detected tap. Tap detection is
   /// always enabled on the native side (`instrumentation.userTaps`); this flag
@@ -101,8 +102,9 @@ class AnalyticsOptions {
   /// Defaults to `true`.
   final bool pageViews;
 
-  /// Whether to emit a `launchdarkly.track` span when a custom event is tracked.
-  /// Android-only. Defaults to `true`.
+  /// Whether to emit a `track` span when a custom event is tracked, either
+  /// through the LaunchDarkly client's `afterTrack` hook or the manual
+  /// `LDObserve.track` API. Defaults to `true`.
   final bool trackEvents;
 
   const AnalyticsOptions({

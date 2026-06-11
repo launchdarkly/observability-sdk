@@ -109,6 +109,12 @@ final class ObservabilityConfig {
   /// Configuration of instrumentations.
   final InstrumentationConfig instrumentationConfig;
 
+  /// Whether a `track` span is emitted when a custom event is tracked (either
+  /// through the LaunchDarkly client's `afterTrack` hook or the manual
+  /// [LDObserve.track] API). Mirrors `analytics.trackEvents`. Defaults to
+  /// `true`.
+  final bool trackEventsEnabled;
+
   ObservabilityConfig({
     this.applicationName,
     this.applicationVersion,
@@ -116,6 +122,7 @@ final class ObservabilityConfig {
     required this.backendUrl,
     required this.instrumentationConfig,
     this.contextFriendlyName,
+    this.trackEventsEnabled = true,
   });
 }
 
@@ -150,5 +157,6 @@ ObservabilityConfig configFromOptions(ObservabilityOptions options) {
     instrumentationConfig: InstrumentationConfig(
       debugPrint: options.instrumentation.debugPrint,
     ),
+    trackEventsEnabled: options.analytics.trackEvents,
   );
 }

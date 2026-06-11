@@ -102,6 +102,22 @@ final class LDNativeApiImpl: NSObject, LDNativeApi {
         )
     }
 
+    // Forwards a custom track event to the native observability SDK. Native
+    // `track` always broadcasts a Session Replay `Track` timeline event and, when
+    // `analytics.trackEvents` is enabled, emits the `track` span. This is why the
+    // Dart side routes mobile track here instead of through `exportSpans`: only
+    // the native track path reaches Session Replay. `contextKeys` (the LD
+    // evaluation context's kind -> key pairs) is applied to the span so it is
+    // attributed to the same context the web SDK records.
+    func track(key: String, data: [String: Any?]?, metricValue: Double?, contextKeys: [String: String]?) throws {
+        ObjcLDObserveBridge.track(
+            key: key,
+            data: data.map { cleanAttributes($0) },
+            metricValue: metricValue.map { NSNumber(value: $0) },
+            contextKeys: contextKeys
+        )
+    }
+
     /// Drops `nil` values so the native bridge receives a `[String: Any]`.
     private func cleanAttributes(_ attributes: [String: Any?]?) -> [String: Any] {
         guard let attributes = attributes else { return [:] }
@@ -131,8 +147,9 @@ final class LDNativeApiImpl: NSObject, LDNativeApi {
         // switches: `instrumentation.userTaps` runs the tap-detection machinery, and
         // `analytics.taps` publishes each detected tap as a `click` span. We drive both from the
         // one Flutter flag so taps are detected (not just published) regardless of the native
-        // `Instrumentation` defaults. pageViews and trackEvents are Android-only and ignored here.
+        // `Instrumentation` defaults. pageViews is Android-only and ignored here.
         let tapsEnabled: Bool = observability.analytics?.taps ?? true
+        let trackEventsEnabled: Bool = observability.analytics?.trackEvents ?? true
         let launchTimesEnabled: Bool = observability.instrumentation?.launchTimes ?? true
         let metricsEnabled: Bool = observability.metricsEnabled ?? true
 
@@ -163,10 +180,12 @@ final class LDNativeApiImpl: NSObject, LDNativeApi {
             cpu: .disabled,
             launchTimes: launchTimesEnabled ? .enabled : .disabled
         )
-        // iOS exposes taps via Analytics; track events are Android-only.
+        // Taps and track events are both published as spans via Analytics. Track
+        // events additionally drive the Session Replay `Track` timeline event,
+        // which the Dart side reaches by calling `track` on this bridge.
         let analytics = ObservabilityOptions.Analytics(
             taps: tapsEnabled ? .enabled : .disabled,
-            trackEvents: .disabled
+            trackEvents: trackEventsEnabled ? .enabled : .disabled
         )
 
         let observabilityOptions = ObservabilityOptions(

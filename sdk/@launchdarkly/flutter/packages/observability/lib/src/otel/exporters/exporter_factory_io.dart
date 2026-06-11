@@ -6,6 +6,7 @@
 
 import 'dart:async';
 
+import 'package:launchdarkly_flutter_client_sdk/launchdarkly_flutter_client_sdk.dart';
 import 'package:opentelemetry/api.dart' as otel;
 import 'package:opentelemetry/sdk.dart'
     show BatchSpanProcessor, ReadOnlySpan, SpanExporter, SpanProcessor;
@@ -29,6 +30,48 @@ class _IoExporters implements ObservabilityExporters {
   @override
   LogRecorder createLogRecorder(ObservabilityConfig config) =>
       _NativeLogRecorder(_api);
+
+  @override
+  TrackRecorder createTrackRecorder(ObservabilityConfig config) =>
+      _NativeTrackRecorder(_api);
+}
+
+/// Forwards each `track` call to the native observability SDK so it emits the
+/// native `track` span (gated natively by `analytics.trackEvents`) and the
+/// Session Replay `Track` timeline event (always). The Dart span pipeline is
+/// intentionally bypassed for track on mobile so the event is not emitted twice.
+class _NativeTrackRecorder implements TrackRecorder {
+  _NativeTrackRecorder(this._api);
+
+  final wire.LDNativeApi _api;
+
+  @override
+  void track(
+    String eventName, {
+    LDValue? data,
+    num? metricValue,
+    LDContext? context,
+  }) {
+    // Reuse the SDK's canonical `LDValue` -> JSON transformation. Only object
+    // payloads carry `track` attributes natively, so non-object payloads map to
+    // `null`.
+    final dynamic json = data?.toDynamic();
+    // Forward the evaluation context's kind -> key pairs so the native `track`
+    // span is attributed to the same context the web SDK records (the native
+    // LaunchDarkly client only holds an anonymous bootstrap context). `null` for
+    // the manual `LDObserve.track` path, which has no context.
+    final Map<String, String>? contextKeys = (context != null && context.valid)
+        ? context.keys
+        : null;
+    unawaited(
+      _api.track(
+        eventName,
+        json is Map ? Map<String, Object?>.from(json) : null,
+        metricValue?.toDouble(),
+        contextKeys,
+      ),
+    );
+  }
 }
 
 /// Converts each completed Dart span into the pigeon wire type and forwards it

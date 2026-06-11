@@ -76,6 +76,18 @@ final class _ObservabilityHook extends Hook {
     }
     return data;
   }
+
+  @override
+  void afterTrack(TrackSeriesContext hookContext) {
+    // Funnel through the single track emitter so the LaunchDarkly client's
+    // track path and the manual LDObserve.track API stay consistent.
+    ObserveOtel.track(
+      hookContext.key,
+      data: hookContext.data,
+      metricValue: hookContext.numericValue,
+      context: hookContext.context,
+    );
+  }
 }
 
 /// Internal LaunchDarkly plugin that wires up the cross-platform Dart

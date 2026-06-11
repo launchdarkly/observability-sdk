@@ -26,7 +26,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 
-class ViewModel(application: Application) : AndroidViewModel(application) {
+class MainActivityViewModel(application: Application) : AndroidViewModel(application) {
 
     private var screenViewCounter = 0
 
@@ -58,18 +58,20 @@ class ViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun triggerLog() {
+        // `recordLog` takes a plain map via `properties`, so no need to build OTel attributes.
         LDObserve.recordLog(
             "Test Log",
             Severity.INFO,
-            Attributes.builder()
-                .put(AttributeKey.stringKey("test-string"), "maui")
-                .put(AttributeKey.booleanKey("test-true"), true)
-                .put(AttributeKey.booleanKey("test-false"), false)
-                .put(AttributeKey.longKey("test-integer"), 42L)
-                .put(AttributeKey.doubleKey("test-double"), 3.14)
-                .put(AttributeKey.doubleArrayKey("test-array"), listOf(3.14))
-                .put(AttributeKey.longArrayKey("test-nested.array"), listOf(1L))
-                .build()
+            properties = mapOf(
+                "test-string" to "maui",
+                "test-true" to true,
+                "test-false" to false,
+                "test-integer" to 42,
+                "test-long" to 9_000_000_000L,
+                "test-double" to 3.14,
+                "test-array" to listOf(3.14),
+                "test-nested" to mapOf("array" to listOf(1))
+            )
         )
     }
 
@@ -141,9 +143,7 @@ class ViewModel(application: Application) : AndroidViewModel(application) {
             viewModelScope.launch(Dispatchers.IO) {
                 val customSpan = LDObserve.startSpan(
                     name = spanName,
-                    attributes = Attributes.of(
-                        AttributeKey.stringKey("custom_span"), "true"
-                    )
+                    properties = mapOf("custom_span" to "true")
                 )
                 customSpan.end()
             }
@@ -180,22 +180,46 @@ class ViewModel(application: Application) : AndroidViewModel(application) {
                 .put("test-true", true)
                 .put("test-false", false)
                 .put("test-integer", 42)
+                .put("test-long", 9_000_000_000_123)
                 .put("test-double", 3.14)
                 .build()
         )
     }
 
     fun trackViaLdObserve() {
-        // Records a `track` span directly through the Observability API.
+        // Records a `track` span directly through the Observability API. `track`
+        // takes a map so callers need not depend on `LDValue`.
         LDObserve.track(
             "track-via-ld-observe",
-            data = LDValue.buildObject()
-                .put("test-string", "android")
-                .put("test-true", true)
-                .put("test-false", false)
-                .put("test-integer", 42)
-                .put("test-double", 3.14)
-                .build()
+            properties = mapOf(
+                "test-string" to "android",
+                "test-true" to true,
+                "test-false" to false,
+                "test-integer" to 42,
+                // A 64-bit value beyond Int32 range (e.g. epoch nanoseconds):
+                // the direct LDObserve APIs keep it as a long, unlike LDClient.track.
+                "test-long" to 9_000_000_000_123,
+                "test-double" to 3.14
+            )
+        )
+    }
+
+    fun trackNested() {
+        // A nested `track` payload following the Segment "Checkout Started"
+        // example from analytics-taxonomy.md (§4.2): scalar fields plus a
+        // `products` array of line-item objects.
+        LDObserve.track(
+            "checkout-started",
+            properties = mapOf(
+                "name" to "Checkout Started",
+                "order_id" to "ord_5521",
+                "value" to 72.0,
+                "currency" to "USD",
+                "products" to listOf(
+                    mapOf("product_id" to "SKU-1234", "quantity" to 2, "price" to 24.0),
+                    mapOf("product_id" to "SKU-9876", "quantity" to 1, "price" to 24.0)
+                )
+            )
         )
     }
 
@@ -207,7 +231,11 @@ class ViewModel(application: Application) : AndroidViewModel(application) {
             name = "Manual Screen $count",
             screenClass = "MainActivity",
             screenId = "manual-screen-$count",
-            category = "Demo"
+            category = "Demo",
+            properties = mapOf(
+                "source" to "manual-demo",
+                "index" to count
+            )
         )
     }
 

@@ -8,6 +8,7 @@
 // standalone Android/iOS SDKs. On web, the Dart OpenTelemetry pipeline is used
 // directly.
 
+import 'package:launchdarkly_flutter_client_sdk/launchdarkly_flutter_client_sdk.dart';
 import 'package:opentelemetry/sdk.dart' show SpanProcessor;
 
 import '../../api/attribute.dart';
@@ -37,6 +38,23 @@ abstract interface class LogRecorder {
   });
 }
 
+/// Records a custom `track` event through the platform-appropriate pipeline.
+///
+/// - Web: emitted as a Dart `track` span via `TrackConvention`, gated by
+///   `analytics.trackEvents`.
+/// - Native (io): forwarded to the native observability SDK so it emits the
+///   native `track` span (gated natively) and the Session Replay `Track`
+///   timeline event (always). The Dart span is intentionally not emitted on
+///   mobile, so `track` is not double-counted.
+abstract interface class TrackRecorder {
+  void track(
+    String eventName, {
+    LDValue? data,
+    num? metricValue,
+    LDContext? context,
+  });
+}
+
 /// Factory for the span and log exporters used by the observability pipeline.
 ///
 /// The concrete implementation is selected per build target via conditional
@@ -50,4 +68,7 @@ abstract interface class ObservabilityExporters {
 
   /// Builds the log recorder used by `recordLog`.
   LogRecorder createLogRecorder(ObservabilityConfig config);
+
+  /// Builds the track recorder used by `track`.
+  TrackRecorder createTrackRecorder(ObservabilityConfig config);
 }

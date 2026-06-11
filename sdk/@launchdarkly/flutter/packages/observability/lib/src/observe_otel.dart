@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:launchdarkly_flutter_client_sdk/launchdarkly_flutter_client_sdk.dart';
 import 'package:opentelemetry/api.dart' as otel;
 
 import 'api/attribute.dart';
@@ -40,6 +41,30 @@ final class ObserveOtel {
     );
 
     return wrapSpan(span, token);
+  }
+
+  /// Record a `track` event for a custom event.
+  ///
+  /// The single entry point for both track paths: the LaunchDarkly client's
+  /// `afterTrack` hook (which supplies the evaluation [context]) and the manual
+  /// [LDObserve.track] API (which has no context). Delegates to the
+  /// platform-appropriate recorder: on web a Dart `track` span is emitted; on
+  /// mobile the native observability SDK is invoked so it emits the native
+  /// `track` span (gated by `analytics.trackEvents`) and the Session Replay
+  /// `Track` timeline event. `null` before the pipeline is initialized, in which
+  /// case the event is dropped.
+  static void track(
+    String eventName, {
+    LDValue? data,
+    num? metricValue,
+    LDContext? context,
+  }) {
+    Otel.trackRecorder?.track(
+      eventName,
+      data: data,
+      metricValue: metricValue,
+      context: context,
+    );
   }
 
   /// Record an exception with an optional stack trace and attributes.

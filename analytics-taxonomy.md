@@ -24,8 +24,8 @@ Everything else around it (`context.*`, `url.*`, `user_agent.*`, `viewport.*`, `
 ## 2. Naming convention
 
 - **Event names:** `snake_case`, pattern **`object_action`** with the action in **base (present) form — never past tense / no `-ed`**.
-  - ✅ `page_view`, `screen_view`, `app_open`, `app_foreground`, `notification_open`, `form_submit`
-  - ❌ `page_viewed`, `app_opened`, `notification_opened`, `screenView`
+  - ✅ `page_view`, `screen_view`, `app_launch`, `app_foreground`, `notification_open`, `form_submit`
+  - ❌ `page_viewed`, `app_launched`, `notification_opened`, `screenView`
   - Single-token verbs are allowed where unambiguous: `click`, `scroll`, `identify`, `error`.
 - **`event.*` field names:** keep the existing in-product spelling. Today's interaction fields are camelCase inside `event` (`relativeX`, `classname`, `xpath`); new fields follow the same nested-`event` style.
 - **Enum values:** lowercase strings.
@@ -41,18 +41,16 @@ Everything else around it (`context.*`, `url.*`, `user_agent.*`, `viewport.*`, `
 | 3 | `page_view` | span | web | `Navigate` / `Reload` / `Referrer` | A web page / route was viewed. |
 | 4 | `screen_view` | span | ios, android | `Navigate` | A screen / view controller / activity was viewed. |
 | 5 | `identify` | log | web, ios, android | `Identify` | Identity resolution. **Existing — do not change** (see §4.5). |
-| 6 | `app_open` | span | ios, android | `Open` | App launched or resumed into use. |
-| 7 | `app_foreground` | span | ios, android | `Foreground` | App entered foreground. |
+| 6 | `app_launch` | span | ios, android | `Launch` | App process launched — `relaunch`, or first launch after `install` / `update` (see `event.launch_type`). |
+| 7 | `app_foreground` | span | ios, android | `Foreground` | App entered foreground (includes resume / hot start from background). |
 | 8 | `app_background` | span | ios, android | `Background` | App entered background. |
-| 9 | `app_install` | span | ios, android | - | First launch after install. |
-| 10 | `app_update` | span | ios, android | - | First launch after version change. |
-| 11 | `error` | span | web, ios, android | - | A user-facing error/message was displayed. |
-| 12 | `permission_prompt` | span | web, ios, android | - | An OS/app permission prompt was shown. |
-| 13 | `permission_response` | span | web, ios, android | - | User responded to a permission prompt. |
-| 14 | `notification_open` | span | ios, android | - | User opened a push/local notification. |
-| 15 | `deep_link_open` | span | ios, android | - | App opened via deep/universal link. |
-| 16 | `form_submit` | span | web, ios, android | - | A form was submitted. |
-| 17 | `scroll` | span | web | - | Scroll interaction. |
+| 9 | `error` | span | web, ios, android | - | A user-facing error/message was displayed. |
+| 10 | `permission_prompt` | span | web, ios, android | - | An OS/app permission prompt was shown. |
+| 11 | `permission_response` | span | web, ios, android | - | User responded to a permission prompt. |
+| 12 | `notification_open` | span | ios, android | - | User opened a push/local notification. |
+| 13 | `deep_link_open` | span | ios, android | - | App opened via deep/universal link. |
+| 14 | `form_submit` | span | web, ios, android | - | A form was submitted. |
+| 15 | `scroll` | span | web | - | Scroll interaction. |
 
 > **Breadcrumb column.** "Breadcrumbs" are the **Events** shown on the Session Replay timeline (and, going forward, also surfaced in RUM). On web they are emitted as **rrweb custom events** by the recording SDK (`sdk/highlight-run`); the complete set emitted today is `Navigate`, `Reload`, `Referrer`, `Click`, `Focus`, `Viewport`, `Performance`, `Jank`, `Page Unload`, `TabHidden`, `Stop`, `Track`, `Segment`, `Identify`. The column above lists the corresponding breadcrumb name(s) for each taxonomy event; `-` means there is no equivalent breadcrumb today. Breadcrumbs without a taxonomy event (`Viewport`, `Performance`, `Jank`, `Page Unload`, `Stop`) are internal diagnostics and are intentionally not part of this taxonomy.
 
@@ -115,18 +113,23 @@ Click (web) or tap (mobile) on an interactive element. One event for all element
 
 ### 4.2 `track` — generic custom & domain events
 
-`track` is the escape hatch for **arbitrary, domain-specific events** that fall outside the standard UI events in this section. It is emitted through the track channel (`track`, event key `$ld:telemetry:track:<event>`); the supplied payload travels under `event.*`.
+`track` is the escape hatch for **arbitrary, domain-specific events** that fall outside the standard UI events in this section. It is emitted through the track channel (`track`, event key `$ld:telemetry:track:<key>`); the supplied payload travels under `event.*`.
 
 **Rules for `track` events**
-- Use a clear `event.name`; per Segment's spec the canonical names are Title-Case `Object Action` (e.g. `Product Added`).
+- Every `track` event **MUST** carry a **root `key`** attribute that encodes the meaning of the product event. This is the developer-supplied `key` from the `track(key:, data:)` API (e.g. `track(key: "checkout-started", data: …)`); it is the canonical identifier downstream tools group on. Use `snake_case` (or `kebab-case`) `object_action`, base-form verb — never past tense (e.g. `checkout-started`, `product-added`).
+- The root `key` lives alongside `span_name`/`context`, **not** under `event.*`. The `data` passed to the API is what populates the `event.*` payload.
+- Optionally include a human-readable `event.name` (per Segment's spec, Title-Case `Object Action`, e.g. `Checkout Started`) as a display label inside the payload; it is supplied as part of `data`, while `key` is the machine identifier.
 - Domain properties go under `event.*`. **Do not** repurpose `context` (reserved) and **do not** add these names to the §3 standard catalog.
 - The samples below follow the **Segment E-Commerce Spec** (<https://segment.com/docs/connections/spec/ecommerce/v2/>) so they map cleanly into downstream tools.
 
 #### `Product Viewed`
 
-| `event.*` field | Type | Description |
+Root `key`: `product-viewed`.
+
+| field | Type | Description |
 | --- | --- | --- |
-| `event.name` | string | `Product Viewed`. |
+| `key` (root) | string | `product-viewed`. Developer-supplied event key encoding the meaning. |
+| `event.name` | string | `Product Viewed`. Optional Segment display label. |
 | `event.product_id` | string | Product/SKU id. |
 | `event.name_label` | string | Product name. |
 | `event.category` | string | Product category. |
@@ -136,6 +139,7 @@ Click (web) or tap (mobile) on an interactive element. One event for all element
 ```json
 {
   "span_name": "track",
+  "key": "product-viewed",
   "event": {
     "name": "Product Viewed",
     "product_id": "SKU-1234",
@@ -150,9 +154,12 @@ Click (web) or tap (mobile) on an interactive element. One event for all element
 
 #### `Product Added`
 
-| `event.*` field | Type | Description |
+Root `key`: `product-added`.
+
+| field | Type | Description |
 | --- | --- | --- |
-| `event.name` | string | `Product Added`. |
+| `key` (root) | string | `product-added`. Developer-supplied event key encoding the meaning. |
+| `event.name` | string | `Product Added`. Optional Segment display label. |
 | `event.product_id` | string | Product/SKU id. |
 | `event.quantity` | int | Quantity added. |
 | `event.price` | number | Unit price. |
@@ -161,6 +168,7 @@ Click (web) or tap (mobile) on an interactive element. One event for all element
 ```json
 {
   "span_name": "track",
+  "key": "product-added",
   "event": {
     "name": "Product Added",
     "product_id": "SKU-1234",
@@ -175,9 +183,12 @@ Click (web) or tap (mobile) on an interactive element. One event for all element
 
 #### `Checkout Started`
 
-| `event.*` field | Type | Description |
+Root `key`: `checkout-started`.
+
+| field | Type | Description |
 | --- | --- | --- |
-| `event.name` | string | `Checkout Started`. |
+| `key` (root) | string | `checkout-started`. Developer-supplied event key encoding the meaning. |
+| `event.name` | string | `Checkout Started`. Optional Segment display label. |
 | `event.order_id` | string | Order/transaction id. |
 | `event.value` | number | Total value of the checkout. |
 | `event.currency` | string | ISO-4217 currency. |
@@ -186,6 +197,7 @@ Click (web) or tap (mobile) on an interactive element. One event for all element
 ```json
 {
   "span_name": "track",
+  "key": "checkout-started",
   "event": {
     "name": "Checkout Started",
     "order_id": "ord_5521",
@@ -202,9 +214,12 @@ Click (web) or tap (mobile) on an interactive element. One event for all element
 
 #### `Order Completed`
 
-| `event.*` field | Type | Description |
+Root `key`: `order-completed`.
+
+| field | Type | Description |
 | --- | --- | --- |
-| `event.name` | string | `Order Completed`. |
+| `key` (root) | string | `order-completed`. Developer-supplied event key encoding the meaning. |
+| `event.name` | string | `Order Completed`. Optional Segment display label. |
 | `event.order_id` | string | Order/transaction id. |
 | `event.total` | number | Order total incl. shipping/tax. |
 | `event.revenue` | number | Revenue (excl. shipping/tax). |
@@ -214,6 +229,7 @@ Click (web) or tap (mobile) on an interactive element. One event for all element
 ```json
 {
   "span_name": "track",
+  "key": "order-completed",
   "event": {
     "name": "Order Completed",
     "order_id": "ord_5521",
@@ -325,24 +341,52 @@ Identity resolution is **already implemented** and is out of scope for changes h
 
 ---
 
-### 4.6 `app_open` (mobile)
+### 4.6 `app_launch` (mobile)
 
-App launched, or resumed from background into active use.
+App process launched. `event.launch_type` captures the **product milestone** of the launch — `relaunch` (a normal launch), `install` (first launch after a fresh install), or `update` (first launch after a version change). A return to the foreground from background (a "resume" / hot start) is **not** a launch and is captured by `app_foreground` (§4.7).
+
+The **startup-performance** dimension (cold vs warm) is orthogonal to the product milestone and is recorded as an **OTel span event** on the launch span, not as a `launch_type` value. Emit an `app.start` span event carrying `start.type` (`cold` | `warm`); finer-grained startup phases may be added as additional span events. This aligns with Sentry (`app.start.cold` / `app.start.warm`) and the OpenTelemetry `AppStart` convention.
 
 | `event.*` field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `event.from_background` | bool | ✅ | `true` if resumed from background, `false` for cold start. |
+| `event.launch_type` | enum | ✅ | `relaunch` (normal launch), `install` (first launch after fresh install), `update` (first launch after version change). |
+| `event.version` | string | ✅ | Current app version. |
+| `event.build` | string | ⛔ | Current build number. |
+| `event.previous_version` | string | ✅ for `update` | Version before the update. |
 | `event.referring_source` | string | ⛔ | `push`, `deep_link`, `icon`, `widget`, … |
 | `event.url` | string | ⛔ | Launch URL, if opened via a link. |
 
+> The `start.type` (cold/warm) lives on the `app.start` **span event**, not under `event.*`. `event.launch_type` answers "what kind of launch is this from the product's view"; the span event answers "how did the process start".
+
 ```json
 {
-  "span_name": "app_open",
+  "span_name": "app_launch",
   "event": {
-    "from_background": false,
+    "launch_type": "relaunch",
+    "version": "4.12.0",
+    "build": "4120",
     "referring_source": "icon"
   },
+  "span_events": [
+    { "name": "app.start", "attributes": { "start.type": "cold" } }
+  ],
   "context": { "contextKeys": { "accountId": "64dd…" } }
+}
+```
+
+```json
+{
+  "span_name": "app_launch",
+  "event": {
+    "launch_type": "update",
+    "version": "4.12.0",
+    "build": "4120",
+    "previous_version": "4.11.2"
+  },
+  "span_events": [
+    { "name": "app.start", "attributes": { "start.type": "warm" } }
+  ],
+  "context": { "contextKeys": { "accountId": "64dd…", "userId": "65b8…" } }
 }
 ```
 
@@ -350,7 +394,7 @@ App launched, or resumed from background into active use.
 
 ### 4.7 `app_foreground` / `app_background` (mobile)
 
-App moved to foreground / background. **OTel mapping:** lifecycle state in `event.lifecycle_state` (Android: `foreground`/`background`; iOS: `active`/`inactive`/`foreground`/`background`).
+App moved to foreground / background. Returning to the foreground from background (a "resume" / hot start) is represented here, not as a launch (`app_launch` is for actual process launches; see §4.6). **OTel mapping:** lifecycle state in `event.lifecycle_state` (Android: `foreground`/`background`; iOS: `active`/`inactive`/`foreground`/`background`).
 
 | `event.*` field | Type | Required | Description |
 | --- | --- | --- | --- |
@@ -378,42 +422,7 @@ App moved to foreground / background. **OTel mapping:** lifecycle state in `even
 
 ---
 
-### 4.8 `app_install` / `app_update` (mobile)
-
-First launch after a fresh install / after a version change.
-
-| `event.*` field | Type | Required | Description |
-| --- | --- | --- | --- |
-| `event.version` | string | ✅ | Current app version. |
-| `event.build` | string | ⛔ | Current build number. |
-| `event.previous_version` | string | ✅ for `app_update` | Version before the update. |
-
-```json
-{
-  "span_name": "app_install",
-  "event": {
-    "version": "4.12.0",
-    "build": "4120"
-  },
-  "context": { "contextKeys": { "accountId": "64dd…", "userId": "65b8…" } }
-}
-```
-
-```json
-{
-  "span_name": "app_update",
-  "event": {
-    "version": "4.12.0",
-    "build": "4120",
-    "previous_version": "4.11.2"
-  },
-  "context": { "contextKeys": { "accountId": "64dd…", "userId": "65b8…" } }
-}
-```
-
----
-
-### 4.9 `error` (user-facing)
+### 4.8 `error` (user-facing)
 
 A user-facing error/message was displayed (validation error, toast, error page). This is about **what the user saw**, not an uncaught exception (those go through crash/error reporting). **OTel mapping:** `event.error_type`↔`exception.type`, `event.message`↔`exception.message`.
 
@@ -441,7 +450,7 @@ A user-facing error/message was displayed (validation error, toast, error page).
 
 ---
 
-### 4.10 `permission_prompt` / `permission_response`
+### 4.9 `permission_prompt` / `permission_response`
 
 A permission prompt was shown / responded to.
 
@@ -476,7 +485,7 @@ A permission prompt was shown / responded to.
 
 ---
 
-### 4.11 `notification_open` (mobile)
+### 4.10 `notification_open` (mobile)
 
 User opened/tapped a push or local notification. **Standard:** GA4 `notification_open`.
 
@@ -502,7 +511,7 @@ User opened/tapped a push or local notification. **Standard:** GA4 `notification
 
 ---
 
-### 4.12 `deep_link_open` (mobile)
+### 4.11 `deep_link_open` (mobile)
 
 App opened/routed via a deep link / universal link / app link. **Standard:** Segment `Deep Link Opened`.
 
@@ -526,7 +535,7 @@ App opened/routed via a deep link / universal link / app link. **Standard:** Seg
 
 ---
 
-### 4.13 `form_submit`
+### 4.12 `form_submit`
 
 A form submission attempt. Domain-agnostic: identify the form, not its business meaning. **Standard:** GA4 `form_submit`.
 
@@ -554,7 +563,7 @@ A form submission attempt. Domain-agnostic: identify the form, not its business 
 
 ---
 
-### 4.14 `scroll` (existing)
+### 4.13 `scroll` (existing)
 
 Same `event.*` payload as `click`, plus scroll offset. Emit at most ~once/60ms.
 
@@ -592,7 +601,7 @@ Same `event.*` payload as `click`, plus scroll offset. Emit at most ~once/60ms.
 | Forms | `form_submit` | `form_submit` |
 | Notifications | — | `notification_open` |
 | Deep links | (link target) | `deep_link_open` |
-| App lifecycle | — | `app_open` / `app_foreground` / `app_background` / `app_install` / `app_update` |
+| App lifecycle | — | `app_launch` (`launch_type`: relaunch/install/update; cold/warm via `app.start` span event) / `app_foreground` / `app_background` |
 | Identity | `identify` (existing) | `identify` (existing) |
 | Domain events | `track` | `track` |
 
@@ -604,6 +613,7 @@ Same `event.*` payload as `click`, plus scroll offset. Emit at most ~once/60ms.
 - Event names and `event.*` enum values are a **closed, governed set**; additions require a PR here.
 - No past-tense (`-ed`) event names.
 - Domain/business events use `track` (§4.2) and must not be promoted into the §3 standard catalog.
+- Every `track` event must carry a **root `key`** (the developer-supplied `track(key:, data:)` key) encoding its meaning; the same `object_action`, base-form-verb, no-past-tense rule applies to `key`.
 
 ---
 
@@ -622,9 +632,10 @@ Same `event.*` payload as `click`, plus scroll offset. Emit at most ~once/60ms.
 
 | Standard | What we borrow | Reference |
 | --- | --- | --- |
-| **Google Analytics 4 / Firebase** | Present-tense names; `page_view` (web) vs `screen_view` (mobile); `app_open`, `notification_open`, `form_submit`. | <https://support.google.com/analytics/answer/9234069> |
+| **Google Analytics 4 / Firebase** | Present-tense names; `page_view` (web) vs `screen_view` (mobile); `notification_open`, `form_submit`. We intentionally diverge on launch: GA4's `app_open` is the foreground/resume event and `first_open`/`app_update` are separate; we use a single `app_launch` with a product `launch_type` (relaunch/install/update) and let `app_foreground` carry resume. | <https://support.google.com/analytics/answer/9234069> |
 | **OpenTelemetry app events** | `event.*` click payload, screen/widget identifiers, click coordinates. | <https://opentelemetry.io/docs/specs/semconv/app/app-events/> |
-| **OpenTelemetry mobile events** | App lifecycle states (`foreground`/`background`/`active`/`inactive`/…). | <https://opentelemetry.io/docs/specs/semconv/mobile/mobile-events/> |
+| **OpenTelemetry mobile events** | App lifecycle states (`foreground`/`background`/`active`/`inactive`/…); `AppStart` `start.type` (cold/warm) recorded as the `app.start` span event on `app_launch`. | <https://opentelemetry.io/docs/specs/semconv/mobile/mobile-events/> |
+| **Sentry mobile vitals** | Cold/warm startup split (`app.start.cold` / `app.start.warm`), modeled as a span event under `app_launch` rather than a separate event. | <https://docs.sentry.io/product/insights/mobile/mobile-vitals/> |
 | **Segment Spec** | The `identify`/`track` call model and the reserved e-commerce event names used in §4.2. | <https://segment.com/docs/connections/spec/> |
 
 > **On OpenTelemetry.** OTel is an observability convention, not a product-analytics one, but it does **not contradict** the web/mobile product taxonomies. We adopt its **attribute names and enum values** (lifecycle states, screen/widget identifiers, click coordinates) and map them into our `event.*` namespace; we keep short, human-readable **event names** that product tools expect.

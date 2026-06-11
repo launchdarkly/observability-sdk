@@ -137,6 +137,63 @@ class _MyHomePageState extends State<MyHomePage> {
     throw StateError('Failed to connect to bogus server.');
   }
 
+  // --- Track ---
+
+  /// Sample `data` payload for `LDClient.track`, which takes an `LDValue`.
+  LDValue _trackData() => LDValue.buildObject()
+      .addString('test-string', 'flutter')
+      .addBool('test-true', true)
+      .addBool('test-false', false)
+      .addNum('test-integer', 42)
+      .addNum('test-double', 3.14)
+      .build();
+
+  /// Same payload as [_trackData] but as a plain map, mirroring the Swift
+  /// TestApp's track buttons. `LDObserve.track` takes a map so callers need not
+  /// depend on `LDValue`.
+  Map<String, dynamic> _trackDataMap() => <String, dynamic>{
+    'test-string': 'flutter',
+    'test-true': true,
+    'test-false': false,
+    'test-integer': 42,
+    'test-double': 3.14,
+  };
+
+  /// A nested `track` payload following the Segment "Checkout Started" example
+  /// from analytics-taxonomy.md (§4.2): scalar fields plus a `products` array of
+  /// line-item objects.
+  Map<String, dynamic> _trackNestedDataMap() => <String, dynamic>{
+    'name': 'Checkout Started',
+    'order_id': 'ord_5521',
+    'value': 72.0,
+    'currency': 'USD',
+    'products': <Map<String, dynamic>>[
+      {'product_id': 'SKU-1234', 'quantity': 2, 'price': 24.0},
+      {'product_id': 'SKU-9876', 'quantity': 1, 'price': 24.0},
+    ],
+  };
+
+  // Records a `track` span automatically via the observability `afterTrack`
+  // hook on the LaunchDarkly client.
+  void _onTrackViaClient() {
+    LDSingleton.client?.track('track-via-ld-client', data: _trackData());
+    debugPrint('Track via LDClient triggered');
+  }
+
+  // Records a `track` span directly through the observability API, without
+  // routing through the LaunchDarkly client.
+  void _onTrackViaObserve() {
+    LDObserve.track('track-via-ld-observe', data: _trackDataMap());
+    debugPrint('Track via LDObserve triggered');
+  }
+
+  // Records a `track` span with a nested payload (scalars + an array of objects)
+  // through the observability API.
+  void _onTrackNested() {
+    LDObserve.track('Checkout Started', data: _trackNestedDataMap());
+    debugPrint('Nested track via LDObserve triggered');
+  }
+
   // --- Error / Logs / Traces ---
 
   void _onTriggerError() {
@@ -426,6 +483,26 @@ class _MyHomePageState extends State<MyHomePage> {
               onPressed: _onTriggerCrash,
               style: dangerStyle,
               child: const Text('Trigger Crash'),
+            ),
+
+            const _SubsectionHeader('Track'),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                ElevatedButton(
+                  onPressed: _onTrackViaClient,
+                  child: const Text('Track (LDClient)'),
+                ),
+                ElevatedButton(
+                  onPressed: _onTrackViaObserve,
+                  child: const Text('Track (LDObserve)'),
+                ),
+                ElevatedButton(
+                  onPressed: _onTrackNested,
+                  child: const Text('Track (Nested)'),
+                ),
+              ],
             ),
 
             const _SubsectionHeader('Error'),

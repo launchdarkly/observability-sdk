@@ -615,6 +615,16 @@ interface LDNativeApi {
    * `LogRecord` with `session.id` and trace/span correlation.
    */
   fun recordLog(log: LDLogRecord)
+  /**
+   * Forwards a custom track event to the native observability SDK so it emits
+   * the native `track` span (gated by `analytics.trackEvents`) and the Session
+   * Replay `Track` timeline event (always). `data` carries the optional event
+   * payload as a JSON object. `contextKeys` carries the evaluation context's
+   * kind -> key pairs (from the LaunchDarkly client's `afterTrack` hook) so the
+   * native `track` span is attributed to the same context the web SDK records;
+   * only the span is annotated, not the Session Replay `Track` payload.
+   */
+  fun track(key: String, data: Map<String, Any?>?, metricValue: Double?, contextKeys: Map<String, String>?)
 
   companion object {
     /** The codec used by LDNativeApi. */
@@ -674,6 +684,27 @@ interface LDNativeApi {
             val logArg = args[0] as LDLogRecord
             val wrapped: List<Any?> = try {
               api.recordLog(logArg)
+              listOf(null)
+            } catch (exception: Throwable) {
+              MessagesPigeonUtils.wrapError(exception)
+            }
+            reply.reply(wrapped)
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.launchdarkly_flutter_observability.LDNativeApi.track$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { message, reply ->
+            val args = message as List<Any?>
+            val keyArg = args[0] as String
+            val dataArg = args[1] as Map<String, Any?>?
+            val metricValueArg = args[2] as Double?
+            val contextKeysArg = args[3] as Map<String, String>?
+            val wrapped: List<Any?> = try {
+              api.track(keyArg, dataArg, metricValueArg, contextKeysArg)
               listOf(null)
             } catch (exception: Throwable) {
               MessagesPigeonUtils.wrapError(exception)

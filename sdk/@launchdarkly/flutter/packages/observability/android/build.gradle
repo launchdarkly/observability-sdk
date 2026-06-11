@@ -54,4 +54,13 @@ dependencies {
     // OTel Attributes appears in ObservabilityOptions parameter types; provided
     // at runtime transitively through launchdarkly-observability-android.
     implementation "io.opentelemetry:opentelemetry-api:1.62.0"
+    // The observability SDK is compiled against the LaunchDarkly client SDK as
+    // `compileOnly` (hosts opt in via `ldClientSdkProvided`), so it does not
+    // package the com.launchdarkly.sdk model types. The bridge's `track` path
+    // touches LDValue at runtime, so provide the lightweight java-sdk-common
+    // (model types only, NOT the feature-flag client). `runtimeOnly` keeps it off
+    // this plugin's compile classpath so the plugin stays independent of the
+    // flagging SDK. Version mirrors what launchdarkly-android-client-sdk:5.12.2
+    // resolves.
+    runtimeOnly "com.launchdarkly:launchdarkly-java-sdk-common:2.4.0"
 }
