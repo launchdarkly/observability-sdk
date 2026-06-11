@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.56.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.55.0...launchdarkly-observability-android-0.56.0) (2026-06-11)
+
+
+### Features
+
+* Flutter track API (LDObserve.track + afterTrack hook) ([#612](https://github.com/launchdarkly/observability-sdk/issues/612)) ([4d58af4](https://github.com/launchdarkly/observability-sdk/commit/4d58af408f3dcfc181b23c67350aa761a59db2b8))
+* richer Session Replay click descriptions (target text/selector) ([#613](https://github.com/launchdarkly/observability-sdk/issues/613)) ([ff138da](https://github.com/launchdarkly/observability-sdk/commit/ff138da07008ac64a16611531ed6eb34675d4aba))
+
 ## [0.55.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.54.0...launchdarkly-observability-android-0.55.0) (2026-06-09)
 
 
