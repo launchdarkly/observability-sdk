@@ -140,23 +140,32 @@ class _MyHomePageState extends State<MyHomePage> {
   // --- Track ---
 
   /// Sample `data` payload for `LDClient.track`, which takes an `LDValue`.
+  /// Mirrors the Swift TestApp's `trackViaLDClient` payload.
   LDValue _trackData() => LDValue.buildObject()
       .addString('test-string', 'flutter')
       .addBool('test-true', true)
       .addBool('test-false', false)
       .addNum('test-integer', 42)
       .addNum('test-double', 3.14)
+      // A 64-bit value beyond Int32 range, demonstrating that long integers
+      // survive conversion.
+      .addNum('test-long-number', 9000000000123)
       .build();
 
-  /// Same payload as [_trackData] but as a plain map, mirroring the Swift
-  /// TestApp's track buttons. `LDObserve.track` takes a map so callers need not
-  /// depend on `LDValue`.
+  /// Plain-map payload for `LDObserve.track`, mirroring the Swift TestApp's
+  /// `trackViaLDObserve` button. `LDObserve.track` takes a map so callers need
+  /// not depend on `LDValue`; it includes a 64-bit integer and a nested map to
+  /// exercise the conversion.
   Map<String, dynamic> _trackDataMap() => <String, dynamic>{
     'test-string': 'flutter',
     'test-true': true,
     'test-false': false,
     'test-integer': 42,
+    // A 64-bit value beyond Int32 range (e.g. epoch nanoseconds),
+    // demonstrating that long integers survive conversion.
+    'test-long': 9000000000123,
     'test-double': 3.14,
+    'test-map': <String, dynamic>{'test-string': 'val'},
   };
 
   /// A nested `track` payload following the Segment "Checkout Started" example
@@ -183,14 +192,14 @@ class _MyHomePageState extends State<MyHomePage> {
   // Records a `track` span directly through the observability API, without
   // routing through the LaunchDarkly client.
   void _onTrackViaObserve() {
-    LDObserve.track('track-via-ld-observe', data: _trackDataMap());
+    LDObserve.track('track-via-ld-observe', properties: _trackDataMap());
     debugPrint('Track via LDObserve triggered');
   }
 
   // Records a `track` span with a nested payload (scalars + an array of objects)
   // through the observability API.
   void _onTrackNested() {
-    LDObserve.track('Checkout Started', data: _trackNestedDataMap());
+    LDObserve.track('checkout-started', properties: _trackNestedDataMap());
     debugPrint('Nested track via LDObserve triggered');
   }
 
@@ -207,13 +216,13 @@ class _MyHomePageState extends State<MyHomePage> {
     LDObserve.recordLog(
       'Test Log',
       severity: 'info',
-      attributes: <String, Attribute>{
-        'test-string': StringAttribute('flutter'),
-        'test-true': BooleanAttribute(true),
-        'test-false': BooleanAttribute(false),
-        'test-integer': IntAttribute(42),
-        'test-double': DoubleAttribute(3.14),
-        'test-array': DoubleListAttribute([3.14, 6.28]),
+      properties: <String, Object?>{
+        'test-string': 'flutter',
+        'test-true': true,
+        'test-false': false,
+        'test-integer': 42,
+        'test-double': 3.14,
+        'test-array': <double>[3.14, 6.28],
       },
     );
     debugPrint('Log triggered');
@@ -225,13 +234,11 @@ class _MyHomePageState extends State<MyHomePage> {
   // associated with that span via the OTel context.
   Future<void> _onTriggerLogWithContext() async {
     final span = LDObserve.startSpan('log-context-demo');
-    span.setAttribute('demo', StringAttribute('log-with-context'));
+    span.setAttribute('demo', 'log-with-context');
     LDObserve.recordLog(
       'Log with span context',
       severity: 'warn',
-      attributes: <String, Attribute>{
-        'source': StringAttribute('detached-task-demo'),
-      },
+      properties: <String, Object?>{'source': 'detached-task-demo'},
     );
     span.end();
     debugPrint('Log with Context triggered');
@@ -242,9 +249,7 @@ class _MyHomePageState extends State<MyHomePage> {
       'This is an error log!',
       severity: 'error',
       stackTrace: StackTrace.current,
-      attributes: <String, Attribute>{
-        'attribute-in-log': StringAttribute('value-in-log'),
-      },
+      properties: <String, Object?>{'attribute-in-log': 'value-in-log'},
     );
     debugPrint('Error log with stack trace triggered');
   }
@@ -277,15 +282,15 @@ class _MyHomePageState extends State<MyHomePage> {
 
   void _onTriggerSequentialSpans() {
     final span1 = LDObserve.startSpan('SequentialSpan1');
-    span1.setAttribute('sequence', StringAttribute('1'));
+    span1.setAttribute('sequence', '1');
     span1.end();
 
     final span2 = LDObserve.startSpan('SequentialSpan2');
-    span2.setAttribute('sequence', StringAttribute('2'));
+    span2.setAttribute('sequence', '2');
     span2.end();
 
     final span3 = LDObserve.startSpan('SequentialSpan3');
-    span3.setAttribute('sequence', StringAttribute('3'));
+    span3.setAttribute('sequence', '3');
     span3.end();
 
     debugPrint('Sequential independent spans triggered');
@@ -295,7 +300,7 @@ class _MyHomePageState extends State<MyHomePage> {
     final spanName = _customSpanController.text;
     if (spanName.isEmpty) return;
     final span = LDObserve.startSpan(spanName);
-    span.setAttribute('custom_span', BooleanAttribute(true));
+    span.setAttribute('custom_span', true);
     span.addEvent('cache.miss');
     span.addEvent('retry.started');
     span.addEvent('download.completed');
@@ -310,7 +315,7 @@ class _MyHomePageState extends State<MyHomePage> {
         final pollSpan = LDObserve.startSpan('PollTick');
         pollSpan.setAttribute(
           'tick.time',
-          StringAttribute(DateTime.now().toUtc().toIso8601String()),
+          DateTime.now().toUtc().toIso8601String(),
         );
         pollSpan.end();
       });

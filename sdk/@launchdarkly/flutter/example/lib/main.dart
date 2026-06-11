@@ -100,6 +100,9 @@ void _startObservability() {
       launchTimes: true,
       debugPrint: DebugPrintSetting.always(),
     ),
+    // Shorthand for enabling all analytics telemetry (taps, page views, track
+    // events). Use AnalyticsOptions.disabled to turn it all off.
+    analytics: AnalyticsOptions.enabled,
   );
   const replay = SessionReplayOptions(
     isEnabled: true,
