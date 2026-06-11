@@ -56,10 +56,10 @@ configurations.all {
 
 dependencies {
     if (isClientSdkProvidedByHost) {
-        compileOnly("com.launchdarkly:launchdarkly-android-client-sdk:5.12.2")
-        testImplementation("com.launchdarkly:launchdarkly-android-client-sdk:5.12.2")
+        compileOnly("com.launchdarkly:launchdarkly-android-client-sdk:5.13.1")
+        testImplementation("com.launchdarkly:launchdarkly-android-client-sdk:5.13.1")
     } else {
-        implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.12.2")
+        implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.13.1")
     }
 
     // AndroidX

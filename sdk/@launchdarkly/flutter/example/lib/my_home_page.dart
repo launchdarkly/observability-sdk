@@ -159,6 +159,20 @@ class _MyHomePageState extends State<MyHomePage> {
     'test-double': 3.14,
   };
 
+  /// A nested `track` payload following the Segment "Checkout Started" example
+  /// from analytics-taxonomy.md (§4.2): scalar fields plus a `products` array of
+  /// line-item objects.
+  Map<String, dynamic> _trackNestedDataMap() => <String, dynamic>{
+    'name': 'Checkout Started',
+    'order_id': 'ord_5521',
+    'value': 72.0,
+    'currency': 'USD',
+    'products': <Map<String, dynamic>>[
+      {'product_id': 'SKU-1234', 'quantity': 2, 'price': 24.0},
+      {'product_id': 'SKU-9876', 'quantity': 1, 'price': 24.0},
+    ],
+  };
+
   // Records a `track` span automatically via the observability `afterTrack`
   // hook on the LaunchDarkly client.
   void _onTrackViaClient() {
@@ -171,6 +185,13 @@ class _MyHomePageState extends State<MyHomePage> {
   void _onTrackViaObserve() {
     LDObserve.track('track-via-ld-observe', data: _trackDataMap());
     debugPrint('Track via LDObserve triggered');
+  }
+
+  // Records a `track` span with a nested payload (scalars + an array of objects)
+  // through the observability API.
+  void _onTrackNested() {
+    LDObserve.track('Checkout Started', data: _trackNestedDataMap());
+    debugPrint('Nested track via LDObserve triggered');
   }
 
   // --- Error / Logs / Traces ---
@@ -476,6 +497,10 @@ class _MyHomePageState extends State<MyHomePage> {
                 ElevatedButton(
                   onPressed: _onTrackViaObserve,
                   child: const Text('Track (LDObserve)'),
+                ),
+                ElevatedButton(
+                  onPressed: _onTrackNested,
+                  child: const Text('Track (Nested)'),
                 ),
               ],
             ),

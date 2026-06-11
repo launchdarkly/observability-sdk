@@ -241,6 +241,13 @@ private fun MetricButtons(viewModel: ViewModel) {
         ) {
             Text("Track Screen View")
         }
+        Button(
+            onClick = {
+                viewModel.trackNested()
+            }
+        ) {
+            Text("Track (Nested)")
+        }
     }
 }
 

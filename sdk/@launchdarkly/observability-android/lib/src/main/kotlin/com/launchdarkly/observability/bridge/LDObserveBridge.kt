@@ -50,7 +50,7 @@ object LDObserveBridge {
         service.track(
             key,
             metricValue,
-            data?.toAttributes() ?: Attributes.empty(),
+            data?.toOtelAttributes() ?: Attributes.empty(),
             contextKeyBuilder.build(),
         )
     }

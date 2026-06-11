@@ -186,16 +186,36 @@ class ViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun trackViaLdObserve() {
-        // Records a `track` span directly through the Observability API.
+        // Records a `track` span directly through the Observability API. `track`
+        // takes a map so callers need not depend on `LDValue`.
         LDObserve.track(
             "track-via-ld-observe",
-            data = LDValue.buildObject()
-                .put("test-string", "android")
-                .put("test-true", true)
-                .put("test-false", false)
-                .put("test-integer", 42)
-                .put("test-double", 3.14)
-                .build()
+            data = mapOf(
+                "test-string" to "android",
+                "test-true" to true,
+                "test-false" to false,
+                "test-integer" to 42,
+                "test-double" to 3.14
+            )
+        )
+    }
+
+    fun trackNested() {
+        // A nested `track` payload following the Segment "Checkout Started"
+        // example from analytics-taxonomy.md (§4.2): scalar fields plus a
+        // `products` array of line-item objects.
+        LDObserve.track(
+            "Checkout Started",
+            data = mapOf(
+                "name" to "Checkout Started",
+                "order_id" to "ord_5521",
+                "value" to 72.0,
+                "currency" to "USD",
+                "products" to listOf(
+                    mapOf("product_id" to "SKU-1234", "quantity" to 2, "price" to 24.0),
+                    mapOf("product_id" to "SKU-9876", "quantity" to 1, "price" to 24.0)
+                )
+            )
         )
     }
 

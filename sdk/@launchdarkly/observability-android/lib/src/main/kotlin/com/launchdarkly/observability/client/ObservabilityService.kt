@@ -6,7 +6,7 @@ import android.view.ViewConfiguration
 import com.launchdarkly.observability.context.ObserveLogger
 import com.launchdarkly.observability.api.ObservabilityOptions
 import com.launchdarkly.observability.bridge.emitLog
-import com.launchdarkly.observability.bridge.toAttributes
+import com.launchdarkly.observability.bridge.toOtelAttributes
 import com.launchdarkly.observability.client.screen.ScreenChange
 import com.launchdarkly.observability.client.screen.ScreenStack
 import com.launchdarkly.observability.client.screen.ScreenView
@@ -52,6 +52,7 @@ import io.opentelemetry.api.metrics.LongCounter
 import io.opentelemetry.api.metrics.LongUpDownCounter
 import io.opentelemetry.api.metrics.Meter
 import io.opentelemetry.api.trace.Span
+import io.opentelemetry.api.trace.SpanKind
 import io.opentelemetry.api.trace.Tracer
 import io.opentelemetry.context.Context
 import io.opentelemetry.sdk.logs.LogRecordProcessor
@@ -552,7 +553,7 @@ class ObservabilityService(
     }
 
     override fun track(key: String, data: Map<String, Any?>?, metricValue: Double?) {
-        track(key, metricValue, data?.toAttributes() ?: Attributes.empty(), contextKeyAttributes = null)
+        track(key, metricValue, data?.toOtelAttributes() ?: Attributes.empty(), contextKeyAttributes = null)
     }
 
     /**
@@ -583,6 +584,7 @@ class ObservabilityService(
         metricValue?.let { attrBuilder.put(AttributeKey.doubleKey("value"), it) }
 
         otelTracer.spanBuilder(TRACK_SPAN_NAME)
+            .setSpanKind(SpanKind.CONSUMER)
             .setAllAttributes(attrBuilder.build())
             .startSpan()
             .end()
