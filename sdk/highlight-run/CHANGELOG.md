@@ -1,5 +1,12 @@
 # highlight.run
 
+## [10.4.0](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.3.4...highlight.run-10.4.0) (2026-06-11)
+
+
+### Features
+
+* update rrweb submodule to upstream v2.0.1 refresh ([#615](https://github.com/launchdarkly/observability-sdk/issues/615)) ([f63b07f](https://github.com/launchdarkly/observability-sdk/commit/f63b07f96c4d7e66334d434a4bbb0a5ebe134588))
+
 ## [10.3.4](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.3.3...highlight.run-10.3.4) (2026-06-08)
 
 
