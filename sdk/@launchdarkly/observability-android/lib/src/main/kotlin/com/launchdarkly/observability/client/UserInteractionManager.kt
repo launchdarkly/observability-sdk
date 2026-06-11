@@ -2,13 +2,19 @@ package com.launchdarkly.observability.client
 
 import android.app.Activity
 import android.app.Application
+import android.content.res.Resources
 import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
+import android.text.method.PasswordTransformationMethod
 import android.view.KeyboardShortcutGroup
 import android.view.Menu
 import android.view.MotionEvent
+import android.view.View
+import android.view.ViewGroup
 import android.view.Window
+import android.widget.EditText
+import android.widget.TextView
 import androidx.annotation.RequiresApi
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -81,12 +87,19 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
 
         when (motionEvent.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
+                val downX = motionEvent.getX(pointerIndex)
+                val downY = motionEvent.getY(pointerIndex)
+                // Resolve the tapped view so consumers can describe the click target (web/iOS parity).
+                val target = resolveTargetInfo(window, downX, downY)
                 _touchFlow.tryEmit(
                     TouchSample(
                         action = MotionEvent.ACTION_DOWN,
-                        x = motionEvent.getX(pointerIndex),
-                        y = motionEvent.getY(pointerIndex),
+                        x = downX,
+                        y = downY,
                         timestamp = eventTimeReference + motionEvent.eventTime,
+                        targetClassName = target?.className,
+                        targetText = target?.text,
+                        targetResourceId = target?.resourceId,
                     )
                 )
             }
@@ -167,7 +180,107 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
     override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
     override fun onActivityDestroyed(activity: Activity) {}
 
+    /** Resolved description of the view under a touch point. */
+    private data class TargetInfo(
+        val className: String?,
+        val text: String?,
+        val resourceId: String?,
+    )
+
+    /**
+     * Hit-tests the window's view hierarchy to describe the view under ([x], [y]). Coordinates are
+     * relative to the window's decor view (as delivered to the [Window.Callback]). Best-effort: any
+     * failure resolves to null so touch dispatch is never affected.
+     */
+    private fun resolveTargetInfo(window: Window, x: Float, y: Float): TargetInfo? {
+        return try {
+            val target = findDeepestViewAt(window.decorView, x, y) ?: return null
+            TargetInfo(
+                className = target.javaClass.name,
+                text = extractText(target),
+                resourceId = resolveResourceId(target),
+            )
+        } catch (_: Throwable) {
+            null
+        }
+    }
+
+    /**
+     * Returns the deepest visible view containing the point, translating coordinates into each
+     * child's coordinate space (accounting for child offset and parent scroll). Children are walked
+     * in reverse draw order so the topmost view wins.
+     */
+    private fun findDeepestViewAt(root: View, x: Float, y: Float): View? {
+        if (root.visibility != View.VISIBLE) return null
+        if (root is ViewGroup) {
+            for (i in root.childCount - 1 downTo 0) {
+                val child = root.getChildAt(i)
+                val childX = x - child.left + root.scrollX
+                val childY = y - child.top + root.scrollY
+                if (childX >= 0 && childX < child.width && childY >= 0 && childY < child.height) {
+                    findDeepestViewAt(child, childX, childY)?.let { return it }
+                }
+            }
+        }
+        return root
+    }
+
+    /**
+     * Best-effort, privacy-safe label for the target view. User-entered values are never captured:
+     * editable fields contribute only their hint (placeholder), and any password-masked view is
+     * skipped entirely. This mirrors the web SDK, which records an element's textContent (labels),
+     * never an input's typed value. Non-input [TextView]s (labels, buttons) contribute their text.
+     */
+    private fun extractText(view: View): String? {
+        val raw = when {
+            view is EditText -> if (isSensitive(view)) null else view.hint?.toString()
+            view is TextView -> if (isSensitive(view)) null else view.text?.toString()
+            else -> view.contentDescription?.toString()
+        }
+        return raw?.takeIf { it.isNotEmpty() }?.take(MAX_TEXT_LENGTH)
+    }
+
+    /** True when the field masks its content (password input), so its text must not be captured. */
+    private fun isSensitive(view: TextView): Boolean =
+        view.transformationMethod is PasswordTransformationMethod
+
+    private fun resolveResourceId(view: View): String? {
+        if (view.id != View.NO_ID) {
+            try {
+                return view.resources.getResourceEntryName(view.id)
+            } catch (_: Resources.NotFoundException) {
+                // Fall through to the React Native testID lookup below.
+            }
+        }
+        // React Native views typically have no native id; RN stores the JS `testID` prop on the
+        // `react_test_id` tag (the same identifier the privacy matchers use), so fall back to it.
+        return resolveReactTestId(view)
+    }
+
+    /** Reads React Native's JS `testID` prop from the `react_test_id` tag, when present. */
+    private fun resolveReactTestId(view: View): String? {
+        val resId = reactTestIdResId ?: return null
+        return (view.getTag(resId) as? String)?.takeIf { it.isNotEmpty() }
+    }
+
     companion object {
         const val CLICK_SPAN_NAME = "click"
+
+        // Cap captured text to match the web SDK's `Click` payload truncation.
+        private const val MAX_TEXT_LENGTH = 2000
+
+        /**
+         * Resource id of React Native's `react_test_id` tag, where RN stores the JS `testID` prop
+         * on each view. Resolved reflectively to avoid a compile-time dependency on React Native;
+         * `null` when the RN library isn't on the runtime classpath. Mirrors the lookup used by the
+         * Session Replay privacy matchers.
+         */
+        private val reactTestIdResId: Int? by lazy {
+            runCatching {
+                Class.forName("com.facebook.react.R\$id")
+                    .getField("react_test_id")
+                    .getInt(null)
+            }.getOrNull()
+        }
     }
 }
