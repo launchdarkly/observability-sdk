@@ -323,7 +323,13 @@ class ObservabilityService(
                             .put(EVENT_X, sample.x.toLong())
                             .put(EVENT_Y, sample.y.toLong())
                             .apply {
-                                downTargetClassName?.let { put(EVENT_TAG, it) }
+                                downTargetClassName?.let {
+                                    // `event.tag` is the short element tag (e.g. `Button`), per
+                                    // analytics-taxonomy; the fully-qualified class name is kept in
+                                    // `event.classname`.
+                                    put(EVENT_TAG, shortElementTag(it))
+                                    put(EVENT_CLASSNAME, it)
+                                }
                                 downTargetText?.let { put(EVENT_TEXT, it) }
                                 downTargetResourceId?.let { put(EVENT_ID, it) }
                             }
@@ -762,6 +768,7 @@ class ObservabilityService(
         private val EVENT_X = AttributeKey.longKey("event.x")
         private val EVENT_Y = AttributeKey.longKey("event.y")
         private val EVENT_TAG = AttributeKey.stringKey("event.tag")
+        private val EVENT_CLASSNAME = AttributeKey.stringKey("event.classname")
         private val EVENT_TEXT = AttributeKey.stringKey("event.text")
         private val EVENT_ID = AttributeKey.stringKey("event.id")
         private val EVENT_NAME = AttributeKey.stringKey("event.name")
@@ -781,5 +788,14 @@ class ObservabilityService(
         // pending instrument values and hand them to the exporter. Kept short so flush stays
         // responsive even if the reader's executor is backed up.
         private const val FLUSH_TIMEOUT_SECONDS = 5L
+
+        /**
+         * Derives the short element tag (`event.tag`) from a fully-qualified view class name,
+         * keeping click analytics aligned with the cross-platform taxonomy (e.g.
+         * `android.widget.Button` -> `Button`). Trailing package and nested-class prefixes are
+         * dropped; the original string is returned if no short form can be derived.
+         */
+        internal fun shortElementTag(className: String): String =
+            className.substringAfterLast('.').substringAfterLast('$').ifEmpty { className }
     }
 }
