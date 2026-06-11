@@ -113,18 +113,23 @@ Click (web) or tap (mobile) on an interactive element. One event for all element
 
 ### 4.2 `track` — generic custom & domain events
 
-`track` is the escape hatch for **arbitrary, domain-specific events** that fall outside the standard UI events in this section. It is emitted through the track channel (`track`, event key `$ld:telemetry:track:<event>`); the supplied payload travels under `event.*`.
+`track` is the escape hatch for **arbitrary, domain-specific events** that fall outside the standard UI events in this section. It is emitted through the track channel (`track`, event key `$ld:telemetry:track:<key>`); the supplied payload travels under `event.*`.
 
 **Rules for `track` events**
-- Use a clear `event.name`; per Segment's spec the canonical names are Title-Case `Object Action` (e.g. `Product Added`).
+- Every `track` event **MUST** carry a **root `key`** attribute that encodes the meaning of the product event. This is the developer-supplied `key` from the `track(key:, data:)` API (e.g. `track(key: "checkout-started", data: …)`); it is the canonical identifier downstream tools group on. Use `snake_case` (or `kebab-case`) `object_action`, base-form verb — never past tense (e.g. `checkout-started`, `product-added`).
+- The root `key` lives alongside `span_name`/`context`, **not** under `event.*`. The `data` passed to the API is what populates the `event.*` payload.
+- Optionally include a human-readable `event.name` (per Segment's spec, Title-Case `Object Action`, e.g. `Checkout Started`) as a display label inside the payload; it is supplied as part of `data`, while `key` is the machine identifier.
 - Domain properties go under `event.*`. **Do not** repurpose `context` (reserved) and **do not** add these names to the §3 standard catalog.
 - The samples below follow the **Segment E-Commerce Spec** (<https://segment.com/docs/connections/spec/ecommerce/v2/>) so they map cleanly into downstream tools.
 
 #### `Product Viewed`
 
-| `event.*` field | Type | Description |
+Root `key`: `product-viewed`.
+
+| field | Type | Description |
 | --- | --- | --- |
-| `event.name` | string | `Product Viewed`. |
+| `key` (root) | string | `product-viewed`. Developer-supplied event key encoding the meaning. |
+| `event.name` | string | `Product Viewed`. Optional Segment display label. |
 | `event.product_id` | string | Product/SKU id. |
 | `event.name_label` | string | Product name. |
 | `event.category` | string | Product category. |
@@ -134,6 +139,7 @@ Click (web) or tap (mobile) on an interactive element. One event for all element
 ```json
 {
   "span_name": "track",
+  "key": "product-viewed",
   "event": {
     "name": "Product Viewed",
     "product_id": "SKU-1234",
@@ -148,9 +154,12 @@ Click (web) or tap (mobile) on an interactive element. One event for all element
 
 #### `Product Added`
 
-| `event.*` field | Type | Description |
+Root `key`: `product-added`.
+
+| field | Type | Description |
 | --- | --- | --- |
-| `event.name` | string | `Product Added`. |
+| `key` (root) | string | `product-added`. Developer-supplied event key encoding the meaning. |
+| `event.name` | string | `Product Added`. Optional Segment display label. |
 | `event.product_id` | string | Product/SKU id. |
 | `event.quantity` | int | Quantity added. |
 | `event.price` | number | Unit price. |
@@ -159,6 +168,7 @@ Click (web) or tap (mobile) on an interactive element. One event for all element
 ```json
 {
   "span_name": "track",
+  "key": "product-added",
   "event": {
     "name": "Product Added",
     "product_id": "SKU-1234",
@@ -173,9 +183,12 @@ Click (web) or tap (mobile) on an interactive element. One event for all element
 
 #### `Checkout Started`
 
-| `event.*` field | Type | Description |
+Root `key`: `checkout-started`.
+
+| field | Type | Description |
 | --- | --- | --- |
-| `event.name` | string | `Checkout Started`. |
+| `key` (root) | string | `checkout-started`. Developer-supplied event key encoding the meaning. |
+| `event.name` | string | `Checkout Started`. Optional Segment display label. |
 | `event.order_id` | string | Order/transaction id. |
 | `event.value` | number | Total value of the checkout. |
 | `event.currency` | string | ISO-4217 currency. |
@@ -184,6 +197,7 @@ Click (web) or tap (mobile) on an interactive element. One event for all element
 ```json
 {
   "span_name": "track",
+  "key": "checkout-started",
   "event": {
     "name": "Checkout Started",
     "order_id": "ord_5521",
@@ -200,9 +214,12 @@ Click (web) or tap (mobile) on an interactive element. One event for all element
 
 #### `Order Completed`
 
-| `event.*` field | Type | Description |
+Root `key`: `order-completed`.
+
+| field | Type | Description |
 | --- | --- | --- |
-| `event.name` | string | `Order Completed`. |
+| `key` (root) | string | `order-completed`. Developer-supplied event key encoding the meaning. |
+| `event.name` | string | `Order Completed`. Optional Segment display label. |
 | `event.order_id` | string | Order/transaction id. |
 | `event.total` | number | Order total incl. shipping/tax. |
 | `event.revenue` | number | Revenue (excl. shipping/tax). |
@@ -212,6 +229,7 @@ Click (web) or tap (mobile) on an interactive element. One event for all element
 ```json
 {
   "span_name": "track",
+  "key": "order-completed",
   "event": {
     "name": "Order Completed",
     "order_id": "ord_5521",
@@ -595,6 +613,7 @@ Same `event.*` payload as `click`, plus scroll offset. Emit at most ~once/60ms.
 - Event names and `event.*` enum values are a **closed, governed set**; additions require a PR here.
 - No past-tense (`-ed`) event names.
 - Domain/business events use `track` (§4.2) and must not be promoted into the §3 standard catalog.
+- Every `track` event must carry a **root `key`** (the developer-supplied `track(key:, data:)` key) encoding its meaning; the same `object_action`, base-form-verb, no-past-tense rule applies to `key`.
 
 ---
 

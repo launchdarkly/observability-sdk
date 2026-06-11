@@ -205,7 +205,7 @@ class MainActivityViewModel(application: Application) : AndroidViewModel(applica
         // example from analytics-taxonomy.md (§4.2): scalar fields plus a
         // `products` array of line-item objects.
         LDObserve.track(
-            "Checkout Started",
+            "checkout-started",
             data = mapOf(
                 "name" to "Checkout Started",
                 "order_id" to "ord_5521",
