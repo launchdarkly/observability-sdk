@@ -140,23 +140,32 @@ class _MyHomePageState extends State<MyHomePage> {
   // --- Track ---
 
   /// Sample `data` payload for `LDClient.track`, which takes an `LDValue`.
+  /// Mirrors the Swift TestApp's `trackViaLDClient` payload.
   LDValue _trackData() => LDValue.buildObject()
       .addString('test-string', 'flutter')
       .addBool('test-true', true)
       .addBool('test-false', false)
       .addNum('test-integer', 42)
       .addNum('test-double', 3.14)
+      // A 64-bit value beyond Int32 range, demonstrating that long integers
+      // survive conversion.
+      .addNum('test-long-number', 9000000000123)
       .build();
 
-  /// Same payload as [_trackData] but as a plain map, mirroring the Swift
-  /// TestApp's track buttons. `LDObserve.track` takes a map so callers need not
-  /// depend on `LDValue`.
+  /// Plain-map payload for `LDObserve.track`, mirroring the Swift TestApp's
+  /// `trackViaLDObserve` button. `LDObserve.track` takes a map so callers need
+  /// not depend on `LDValue`; it includes a 64-bit integer and a nested map to
+  /// exercise the conversion.
   Map<String, dynamic> _trackDataMap() => <String, dynamic>{
     'test-string': 'flutter',
     'test-true': true,
     'test-false': false,
     'test-integer': 42,
+    // A 64-bit value beyond Int32 range (e.g. epoch nanoseconds),
+    // demonstrating that long integers survive conversion.
+    'test-long': 9000000000123,
     'test-double': 3.14,
+    'test-map': <String, dynamic>{'test-string': 'val'},
   };
 
   /// A nested `track` payload following the Segment "Checkout Started" example
@@ -190,7 +199,7 @@ class _MyHomePageState extends State<MyHomePage> {
   // Records a `track` span with a nested payload (scalars + an array of objects)
   // through the observability API.
   void _onTrackNested() {
-    LDObserve.track('Checkout Started', properties: _trackNestedDataMap());
+    LDObserve.track('checkout-started', properties: _trackNestedDataMap());
     debugPrint('Nested track via LDObserve triggered');
   }
 
