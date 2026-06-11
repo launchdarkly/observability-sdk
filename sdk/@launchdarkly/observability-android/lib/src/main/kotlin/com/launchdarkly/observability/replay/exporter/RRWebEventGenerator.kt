@@ -43,9 +43,7 @@ class RRWebEventGenerator(
         private const val DOM_LANG_EN = "en"
         private const val DOM_STYLE = "style"
         private const val DOM_BODY_STYLE = "position:relative;"
-        private const val CLICK_TARGET_VALUE = ""
-        private const val CLICK_TEXT_CONTENT_VALUE = ""
-        private const val CLICK_SELECTOR_VALUE = "view"
+        private const val CLICK_SELECTOR_FALLBACK = "view"
     }
 
     /**
@@ -314,21 +312,29 @@ class RRWebEventGenerator(
                         )
                     )
                 )
+                // Mirror the web `Click` payload (`highlight-run` ClickListener):
+                // - clickTarget: target view class name (web: full CSS selector path)
+                // - clickTextContent: the target's visible text (web: `target.textContent`)
+                // - clickSelector: resource-id else class name (web: `#id` else tag)
+                val clickCustomData = buildJsonObject {
+                    put("tag", RRWebCustomDataTag.CLICK.wireValue)
+                    putJsonObject("payload") {
+                        put("clickTarget", interactionEvent.targetClassName ?: "")
+                        put("clickTextContent", interactionEvent.targetText ?: "")
+                        put(
+                            "clickSelector",
+                            interactionEvent.targetResourceId
+                                ?: interactionEvent.targetClassName
+                                ?: CLICK_SELECTOR_FALLBACK
+                        )
+                    }
+                }
                 events.add(
                     Event(
                         type = EventType.CUSTOM,
                         timestamp = firstPosition.timestamp,
                         sid = nextSid(),
-                        data = EventDataUnion.CustomEventDataWrapper(
-                            buildJsonObject {
-                                put("tag", RRWebCustomDataTag.CLICK.wireValue)
-                                putJsonObject("payload") {
-                                    put("clickTarget", CLICK_TARGET_VALUE)
-                                    put("clickTextContent", CLICK_TEXT_CONTENT_VALUE)
-                                    put("clickSelector", CLICK_SELECTOR_VALUE)
-                                }
-                            }
-                        )
+                        data = EventDataUnion.CustomEventDataWrapper(clickCustomData)
                     )
                 )
             }

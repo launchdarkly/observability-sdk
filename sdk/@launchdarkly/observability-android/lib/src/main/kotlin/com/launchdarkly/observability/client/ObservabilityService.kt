@@ -292,12 +292,19 @@ class ObservabilityService(
             var downX = 0f
             var downY = 0f
             var downTimeMs = 0L
+            // Target description is captured at ACTION_DOWN and described on the span at ACTION_UP.
+            var downTargetClassName: String? = null
+            var downTargetText: String? = null
+            var downTargetResourceId: String? = null
             userInteractionManager.touchFlow.collect { sample ->
                 when (sample.action) {
                     MotionEvent.ACTION_DOWN -> {
                         downX = sample.x
                         downY = sample.y
                         downTimeMs = sample.timestamp
+                        downTargetClassName = sample.targetClassName
+                        downTargetText = sample.targetText
+                        downTargetResourceId = sample.targetResourceId
                     }
                     MotionEvent.ACTION_UP -> {
                         if (!observabilityOptions.analytics.taps) return@collect
@@ -314,8 +321,20 @@ class ObservabilityService(
                             .put(EVENT_TYPE, UserInteractionManager.CLICK_SPAN_NAME)
                             .put(EVENT_X, sample.x.toLong())
                             .put(EVENT_Y, sample.y.toLong())
+                            .apply {
+                                downTargetClassName?.let {
+                                    // `event.tag` is the short element tag (e.g. `Button`), per
+                                    // analytics-taxonomy; the fully-qualified class name is kept in
+                                    // `event.classname`.
+                                    put(EVENT_TAG, shortElementTag(it))
+                                    put(EVENT_CLASSNAME, it)
+                                }
+                                downTargetText?.let { put(EVENT_TEXT, it) }
+                                downTargetResourceId?.let { put(EVENT_ID, it) }
+                            }
                             .build()
                         otelTracer.spanBuilder(UserInteractionManager.CLICK_SPAN_NAME)
+                            .setSpanKind(SpanKind.CLIENT)
                             .setAllAttributes(attrs)
                             .setStartTimestamp(downTimeMs, TimeUnit.MILLISECONDS)
                             .startSpan()
@@ -534,6 +553,7 @@ class ObservabilityService(
 
         val span = otelTracer
             .spanBuilder(ERROR_SPAN_NAME)
+            .setSpanKind(SpanKind.CLIENT)
             .setParent(Context.current().with(Span.current()))
             .startSpan()
 
@@ -548,6 +568,7 @@ class ObservabilityService(
         if (!observabilityOptions.tracesApi.includeSpans) return Span.getInvalid()
 
         return otelTracer.spanBuilder(name)
+            .setSpanKind(SpanKind.CLIENT)
             .setAllAttributes(attributes)
             .startSpan()
     }
@@ -584,7 +605,7 @@ class ObservabilityService(
         metricValue?.let { attrBuilder.put(AttributeKey.doubleKey("value"), it) }
 
         otelTracer.spanBuilder(TRACK_SPAN_NAME)
-            .setSpanKind(SpanKind.CONSUMER)
+            .setSpanKind(SpanKind.CLIENT)
             .setAllAttributes(attrBuilder.build())
             .startSpan()
             .end()
@@ -632,6 +653,7 @@ class ObservabilityService(
         screen.category?.let { attrBuilder.put(EVENT_CATEGORY, it) }
 
         otelTracer.spanBuilder(SCREEN_VIEW_SPAN_NAME)
+            .setSpanKind(SpanKind.CLIENT)
             .setAllAttributes(attrBuilder.build())
             .startSpan()
             .end()
@@ -663,6 +685,7 @@ class ObservabilityService(
         signal.lifecycleState?.let { attrBuilder.put(EVENT_LIFECYCLE_STATE, it) }
 
         otelTracer.spanBuilder(spanName)
+            .setSpanKind(SpanKind.CLIENT)
             .setAllAttributes(attrBuilder.build())
             .startSpan()
             .end()
@@ -743,6 +766,10 @@ class ObservabilityService(
         private val EVENT_TYPE = AttributeKey.stringKey("event.type")
         private val EVENT_X = AttributeKey.longKey("event.x")
         private val EVENT_Y = AttributeKey.longKey("event.y")
+        private val EVENT_TAG = AttributeKey.stringKey("event.tag")
+        private val EVENT_CLASSNAME = AttributeKey.stringKey("event.classname")
+        private val EVENT_TEXT = AttributeKey.stringKey("event.text")
+        private val EVENT_ID = AttributeKey.stringKey("event.id")
         private val EVENT_NAME = AttributeKey.stringKey("event.name")
         private val EVENT_SCREEN_CLASS = AttributeKey.stringKey("event.screen_class")
         private val EVENT_SCREEN_ID = AttributeKey.stringKey("event.screen_id")
@@ -760,5 +787,14 @@ class ObservabilityService(
         // pending instrument values and hand them to the exporter. Kept short so flush stays
         // responsive even if the reader's executor is backed up.
         private const val FLUSH_TIMEOUT_SECONDS = 5L
+
+        /**
+         * Derives the short element tag (`event.tag`) from a fully-qualified view class name,
+         * keeping click analytics aligned with the cross-platform taxonomy (e.g.
+         * `android.widget.Button` -> `Button`). Trailing package and nested-class prefixes are
+         * dropped; the original string is returned if no short form can be derived.
+         */
+        internal fun shortElementTag(className: String): String =
+            className.substringAfterLast('.').substringAfterLast('$').ifEmpty { className }
     }
 }
