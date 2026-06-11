@@ -149,7 +149,7 @@ On `ObservabilityOptions`:
 - `logsApiLevel` (`ObservabilityLogLevel`): minimum severity of logs forwarded to the logs pipeline. Use `ObservabilityLogLevel.none` to disable logs. Defaults to `ObservabilityLogLevel.info`.
 - `traces` (`TracesOptions`): toggles `includeErrors` and `includeSpans` for automatic trace generation. Both default to `true`.
 - `metricsEnabled` (`bool`): whether metrics are exported. Defaults to `true`.
-- `analytics` (`AnalyticsOptions`): analytics telemetry:
+- `analytics` (`AnalyticsOptions`): analytics telemetry. Use the `AnalyticsOptions.enabled` / `AnalyticsOptions.disabled` shorthands to toggle everything at once (mirroring Swift's `analytics: .enabled`), or set the individual flags:
   - `taps` (`bool`): emit a span for each user tap. Tap detection is always enabled; this flag only controls whether a span is published. Supported on Android and iOS. Defaults to `true`.
   - `pageViews` (`bool`): emit spans for screen/page view lifecycle events. **Android-only** (no-op on iOS/web). Defaults to `true`.
   - `trackEvents` (`bool`): emit a span when a custom event is tracked. **Android-only** (no-op on iOS/web). Defaults to `true`.
@@ -168,11 +168,10 @@ LDObserve.init(
     logsApiLevel: ObservabilityLogLevel.warn,
     traces: TracesOptions(includeErrors: true, includeSpans: true),
     metricsEnabled: true,
-    analytics: AnalyticsOptions(
-      taps: true,
-      pageViews: true,
-      trackEvents: true,
-    ),
+    // Shorthand for all analytics enabled; use AnalyticsOptions.disabled to
+    // turn it all off, or AnalyticsOptions(taps: …, pageViews: …, trackEvents: …)
+    // for fine-grained control.
+    analytics: AnalyticsOptions.enabled,
     instrumentation: InstrumentationOptions(
       crashReporting: true,
     ),

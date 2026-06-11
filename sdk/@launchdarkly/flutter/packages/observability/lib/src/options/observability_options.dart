@@ -112,6 +112,26 @@ class AnalyticsOptions {
     this.pageViews = true,
     this.trackEvents = true,
   });
+
+  /// All analytics telemetry enabled. Convenience mirroring Swift's
+  /// `Analytics.enabled`; equivalent to `const AnalyticsOptions()`.
+  ///
+  /// ```dart
+  /// ObservabilityOptions(analytics: AnalyticsOptions.enabled)
+  /// ```
+  static const AnalyticsOptions enabled = AnalyticsOptions();
+
+  /// All analytics telemetry disabled. Convenience mirroring Swift's
+  /// `Analytics.disabled`.
+  ///
+  /// ```dart
+  /// ObservabilityOptions(analytics: AnalyticsOptions.disabled)
+  /// ```
+  static const AnalyticsOptions disabled = AnalyticsOptions(
+    taps: false,
+    pageViews: false,
+    trackEvents: false,
+  );
 }
 
 /// Configuration for the LaunchDarkly observability plugin. Field set mirrors

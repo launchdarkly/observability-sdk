@@ -2,7 +2,12 @@ export 'src/ld_observe.dart' show LDObserve;
 export 'src/session_replay_capture.dart' show SessionReplayCapture;
 export 'src/masking.dart' show LDMask, LDUnmask, LDIgnore;
 export 'src/options/observability_options.dart'
-    show ObservabilityOptions, InstrumentationOptions;
+    show
+        ObservabilityOptions,
+        InstrumentationOptions,
+        AnalyticsOptions,
+        TracesOptions,
+        ObservabilityLogLevel;
 export 'src/options/session_replay_options.dart'
     show SessionReplayOptions, PrivacyOptions;
 export 'src/plugin/observability_config.dart' show DebugPrintSetting;
