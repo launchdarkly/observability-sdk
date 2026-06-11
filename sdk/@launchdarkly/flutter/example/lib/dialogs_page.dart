@@ -23,7 +23,9 @@ class DialogsPage extends StatefulWidget {
 
 class _DialogsPageState extends State<DialogsPage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  final TextEditingController _delayController = TextEditingController(text: '0');
+  final TextEditingController _delayController = TextEditingController(
+    text: '0',
+  );
   final GlobalKey<TooltipState> _tooltipKey = GlobalKey<TooltipState>();
 
   @override
@@ -40,8 +42,9 @@ class _DialogsPageState extends State<DialogsPage> {
 
   /// Waits the configured "Show delay" before presenting, mirroring MAUI's
   /// `WaitForDelay`.
-  Future<void> _waitDelay() =>
-      _delay == Duration.zero ? Future<void>.value() : Future<void>.delayed(_delay);
+  Future<void> _waitDelay() => _delay == Duration.zero
+      ? Future<void>.value()
+      : Future<void>.delayed(_delay);
 
   /// Auto-dismiss interval for transient items (snackbar, banner, overlays).
   /// Falls back to [fallback] when no delay is configured.
@@ -278,7 +281,9 @@ class _DialogsPageState extends State<DialogsPage> {
   Future<void> _onCustomTransitionDialog() async {
     await _waitDelay();
     if (!mounted) return;
-    final seconds = _delay == Duration.zero ? 8 : (_delay.inSeconds).clamp(1, 999);
+    final seconds = _delay == Duration.zero
+        ? 8
+        : (_delay.inSeconds).clamp(1, 999);
     await showGeneralDialog<void>(
       context: context,
       barrierDismissible: true,
@@ -294,7 +299,10 @@ class _DialogsPageState extends State<DialogsPage> {
         ),
       ),
       transitionBuilder: (context, animation, secondaryAnimation, child) {
-        final curved = CurvedAnimation(parent: animation, curve: Curves.easeOutBack);
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutBack,
+        );
         return FadeTransition(
           opacity: animation,
           child: ScaleTransition(scale: curved, child: child),
@@ -333,7 +341,10 @@ class _DialogsPageState extends State<DialogsPage> {
       ),
     );
     overlay.insert(entry);
-    Future<void>.delayed(_autoDismiss(fallback: const Duration(seconds: 8)), remove);
+    Future<void>.delayed(
+      _autoDismiss(fallback: const Duration(seconds: 8)),
+      remove,
+    );
   }
 
   // --- Notifications ---
@@ -384,10 +395,7 @@ class _DialogsPageState extends State<DialogsPage> {
   Future<void> _onTimePicker() async {
     await _waitDelay();
     if (!mounted) return;
-    await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.now(),
-    );
+    await showTimePicker(context: context, initialTime: TimeOfDay.now());
   }
 
   // --- Shared helpers ---
@@ -471,7 +479,10 @@ class _DialogsPageState extends State<DialogsPage> {
                 _DialogButton('Modal Sheet', _onModalSheet),
                 _DialogButton('Expandable Sheet', _onExpandableSheet),
                 _DialogButton('Persistent Sheet', _onPersistentSheet),
-                _DialogButton('Cupertino Action Sheet', _onCupertinoActionSheet),
+                _DialogButton(
+                  'Cupertino Action Sheet',
+                  _onCupertinoActionSheet,
+                ),
               ],
             ),
 
@@ -621,10 +632,7 @@ class _CountdownCardState extends State<_CountdownCard> {
               ],
             ),
             const SizedBox(height: 16),
-            Text(
-              '$mm:$ss',
-              style: Theme.of(context).textTheme.displaySmall,
-            ),
+            Text('$mm:$ss', style: Theme.of(context).textTheme.displaySmall),
             Text(
               'Time Remaining',
               style: Theme.of(context).textTheme.bodySmall,
@@ -649,10 +657,7 @@ class _DialogButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ElevatedButton(
-      onPressed: () => onPressed(),
-      child: Text(label),
-    );
+    return ElevatedButton(onPressed: () => onPressed(), child: Text(label));
   }
 }
 

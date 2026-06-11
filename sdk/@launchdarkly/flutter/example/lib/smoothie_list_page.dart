@@ -78,10 +78,7 @@ class _SmoothieRow extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       child: Row(
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: image,
-          ),
+          ClipRRect(borderRadius: BorderRadius.circular(4), child: image),
           const SizedBox(width: 12),
           Expanded(
             // Redact the smoothie title from session replay. `maskLabels` is
