@@ -58,18 +58,19 @@ class MainActivityViewModel(application: Application) : AndroidViewModel(applica
     }
 
     fun triggerLog() {
+        // `recordLog` takes a plain map via `properties`, so no need to build OTel attributes.
         LDObserve.recordLog(
             "Test Log",
             Severity.INFO,
-            Attributes.builder()
-                .put(AttributeKey.stringKey("test-string"), "maui")
-                .put(AttributeKey.booleanKey("test-true"), true)
-                .put(AttributeKey.booleanKey("test-false"), false)
-                .put(AttributeKey.longKey("test-integer"), 42L)
-                .put(AttributeKey.doubleKey("test-double"), 3.14)
-                .put(AttributeKey.doubleArrayKey("test-array"), listOf(3.14))
-                .put(AttributeKey.longArrayKey("test-nested.array"), listOf(1L))
-                .build()
+            properties = mapOf(
+                "test-string" to "maui",
+                "test-true" to true,
+                "test-false" to false,
+                "test-integer" to 42,
+                "test-double" to 3.14,
+                "test-array" to listOf(3.14),
+                "test-nested" to mapOf("array" to listOf(1))
+            )
         )
     }
 
@@ -141,9 +142,7 @@ class MainActivityViewModel(application: Application) : AndroidViewModel(applica
             viewModelScope.launch(Dispatchers.IO) {
                 val customSpan = LDObserve.startSpan(
                     name = spanName,
-                    attributes = Attributes.of(
-                        AttributeKey.stringKey("custom_span"), "true"
-                    )
+                    properties = mapOf("custom_span" to "true")
                 )
                 customSpan.end()
             }
@@ -190,7 +189,7 @@ class MainActivityViewModel(application: Application) : AndroidViewModel(applica
         // takes a map so callers need not depend on `LDValue`.
         LDObserve.track(
             "track-via-ld-observe",
-            data = mapOf(
+            properties = mapOf(
                 "test-string" to "android",
                 "test-true" to true,
                 "test-false" to false,
@@ -206,7 +205,7 @@ class MainActivityViewModel(application: Application) : AndroidViewModel(applica
         // `products` array of line-item objects.
         LDObserve.track(
             "checkout-started",
-            data = mapOf(
+            properties = mapOf(
                 "name" to "Checkout Started",
                 "order_id" to "ord_5521",
                 "value" to 72.0,
@@ -227,7 +226,11 @@ class MainActivityViewModel(application: Application) : AndroidViewModel(applica
             name = "Manual Screen $count",
             screenClass = "MainActivity",
             screenId = "manual-screen-$count",
-            category = "Demo"
+            category = "Demo",
+            properties = mapOf(
+                "source" to "manual-demo",
+                "index" to count
+            )
         )
     }
 

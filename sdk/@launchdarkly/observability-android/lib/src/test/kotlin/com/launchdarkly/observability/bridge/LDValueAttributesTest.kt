@@ -158,6 +158,38 @@ class LDValueAttributesTest {
     }
 
     @Test
+    fun `mixes native values with a whole Attributes value in one payload`() {
+        // Mirrors a real track/recordLog payload: callers favor native values (the
+        // `properties` API) but can still embed a pre-built OTel Attributes value
+        // (the `attributes` API) in the same map. Both must survive conversion. The
+        // example apps now use only native values, so this is the unit-test home for
+        // the OTel-attribute path.
+        val otel = Attributes.builder()
+            .put(AttributeKey.stringKey("string"), "android")
+            .build()
+        val data: Map<String, Any?> = mapOf(
+            "test-string" to "android",
+            "test-true" to true,
+            "test-integer" to 42,
+            "test-double" to 3.14,
+            "test-map" to mapOf("test-string" to "val"),
+            "test-attributes" to otel
+        )
+
+        val attrs = data.toOtelAttributes()
+
+        assertEquals("android", attrs.get(AttributeKey.stringKey("test-string")))
+        assertEquals(true, attrs.get(AttributeKey.booleanKey("test-true")))
+        assertEquals(42.0, attrs.get(AttributeKey.doubleKey("test-integer")))
+        assertEquals(3.14, attrs.get(AttributeKey.doubleKey("test-double")))
+        // Native nested map flattens with dotted keys.
+        assertEquals("val", attrs.get(AttributeKey.stringKey("test-map.test-string")))
+        // Pre-built OTel attributes merge in with the enclosing key as prefix.
+        assertEquals("android", attrs.get(AttributeKey.stringKey("test-attributes.string")))
+        assertEquals(6, attrs.size())
+    }
+
+    @Test
     fun `merges a whole Attributes value preserving key types`() {
         val inner = Attributes.builder()
             .put(AttributeKey.stringKey("name"), "y")

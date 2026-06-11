@@ -342,13 +342,13 @@ LDObserve.recordIncr(Metric("page_views", 1.0))
 LDObserve.recordHistogram(Metric("response_time", 150.0))
 LDObserve.recordUpDownCounter(Metric("active_connections", 1.0))
 
-// Record logs
+// Record logs — pass attributes as a plain map via `properties`.
 LDObserve.recordLog(
     "User performed action",
     Severity.INFO,
-    Attributes.of(
-        AttributeKey.stringKey("user_id"), "12345",
-        AttributeKey.stringKey("action"), "button_click"
+    properties = mapOf(
+        "user_id" to "12345",
+        "action" to "button_click"
     )
 )
 
@@ -364,9 +364,9 @@ LDObserve.recordError(
 // Create spans for tracing
 val span = LDObserve.startSpan(
     "api_request",
-    Attributes.of(
-        AttributeKey.stringKey("endpoint"), "/api/users",
-        AttributeKey.stringKey("method"), "GET"
+    properties = mapOf(
+        "endpoint" to "/api/users",
+        "method" to "GET"
     )
 )
 span.makeCurrent().use {
@@ -378,7 +378,7 @@ span.end()
 // (Calling LDClient.track(...) records the same span automatically via the afterTrack hook.)
 LDObserve.track(
     "checkout_completed",
-    data = mapOf("currency" to "USD"),
+    properties = mapOf("currency" to "USD"),
     metricValue = 42.0
 )
 
@@ -387,9 +387,18 @@ LDObserve.track(
 LDObserve.trackScreenView(
     name = "Profile",
     screenClass = "ProfileFragment",
-    category = "Account"
+    category = "Account",
+    properties = mapOf("tab" to "overview")
 )
 ```
+
+`recordLog`, `startSpan`, `track`, and `trackScreenView` accept attributes/data as a
+plain Kotlin map via the `properties` parameter — pass `String`, `Boolean`, `Int`,
+`Long`, `Double`, lists, and nested maps directly, with no need to build OpenTelemetry
+`Attributes`. The `Attributes` overloads remain available when you need precise
+OpenTelemetry typing (as shown for `recordError` above). For `trackScreenView`, custom
+properties are applied at lower precedence than the reserved `event.*` taxonomy fields,
+so they can never clobber them.
 
 ### Session Replay
 

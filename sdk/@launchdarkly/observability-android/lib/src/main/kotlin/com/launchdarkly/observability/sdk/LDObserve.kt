@@ -70,12 +70,12 @@ class LDObserve(private val client: Observe) : Observe {
         client.flush()
     }
 
-    override fun track(key: String, data: Map<String, Any?>?, metricValue: Double?) {
-        client.track(key, data, metricValue)
+    override fun track(key: String, properties: Map<String, Any?>?, metricValue: Double?) {
+        client.track(key, properties, metricValue)
     }
 
-    override fun trackScreenView(name: String, screenClass: String?, screenId: String?, category: String?) {
-        client.trackScreenView(name, screenClass, screenId, category)
+    override fun trackScreenView(name: String, screenClass: String?, screenId: String?, category: String?, properties: Map<String, Any?>?) {
+        client.trackScreenView(name, screenClass, screenId, category, properties)
     }
 
     companion object : Observe {
@@ -94,8 +94,8 @@ class LDObserve(private val client: Observe) : Observe {
                 return Span.getInvalid()
             }
             override fun flush() {}
-            override fun track(key: String, data: Map<String, Any?>?, metricValue: Double?) {}
-            override fun trackScreenView(name: String, screenClass: String?, screenId: String?, category: String?) {}
+            override fun track(key: String, properties: Map<String, Any?>?, metricValue: Double?) {}
+            override fun trackScreenView(name: String, screenClass: String?, screenId: String?, category: String?, properties: Map<String, Any?>?) {}
         }
 
         /**
@@ -230,8 +230,8 @@ class LDObserve(private val client: Observe) : Observe {
         override fun recordLog(message: String, severity: Severity, attributes: Attributes, spanContext: SpanContext?) = delegate.recordLog(message, severity, attributes, spanContext)
         override fun startSpan(name: String, attributes: Attributes): Span = delegate.startSpan(name, attributes)
         override fun flush() = delegate.flush()
-        override fun track(key: String, data: Map<String, Any?>?, metricValue: Double?) = delegate.track(key, data, metricValue)
-        override fun trackScreenView(name: String, screenClass: String?, screenId: String?, category: String?) = delegate.trackScreenView(name, screenClass, screenId, category)
+        override fun track(key: String, properties: Map<String, Any?>?, metricValue: Double?) = delegate.track(key, properties, metricValue)
+        override fun trackScreenView(name: String, screenClass: String?, screenId: String?, category: String?, properties: Map<String, Any?>?) = delegate.trackScreenView(name, screenClass, screenId, category, properties)
 
         /**
          * Bridge-friendly overloads that avoid exposing OpenTelemetry types

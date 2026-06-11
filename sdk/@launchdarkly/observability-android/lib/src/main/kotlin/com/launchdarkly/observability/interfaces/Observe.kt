@@ -1,5 +1,6 @@
 package com.launchdarkly.observability.interfaces
 
+import com.launchdarkly.observability.bridge.toOtelAttributes
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Severity
 import io.opentelemetry.api.trace.Span
@@ -46,6 +47,20 @@ interface LogsApi {
      * @param spanContext Optional span context for trace-log correlation
      */
     fun recordLog(message: String, severity: Severity, attributes: Attributes = Attributes.empty(), spanContext: SpanContext? = null)
+
+    /**
+     * Record a log whose attributes are supplied as a plain map.
+     *
+     * Prefer this over the [Attributes] overload for everyday use: pass native
+     * values (String, Boolean, Int, Long, Double, lists, nested maps) and they are
+     * converted to OTel attributes with the same rules as a `track` event's
+     * `properties`. The [Attributes] overload remains available when you need
+     * precise OpenTelemetry typing. A distinct parameter name keeps the two
+     * overloads unambiguous.
+     */
+    fun recordLog(message: String, severity: Severity, properties: Map<String, Any?>, spanContext: SpanContext? = null) {
+        recordLog(message, severity, properties.toOtelAttributes(), spanContext)
+    }
 }
 
 interface TracesApi {
@@ -62,6 +77,18 @@ interface TracesApi {
      * @param attributes The attributes to record with the span
      */
     fun startSpan(name: String, attributes: Attributes = Attributes.empty()): Span
+
+    /**
+     * Start a span whose attributes are supplied as a plain map.
+     *
+     * Prefer this over the [Attributes] overload for everyday use: pass native
+     * values and they are converted to OTel attributes with the same rules as a
+     * `track` event's `properties`. The [Attributes] overload remains available
+     * when you need precise OpenTelemetry typing.
+     */
+    fun startSpan(name: String, properties: Map<String, Any?>): Span {
+        return startSpan(name, properties.toOtelAttributes())
+    }
 }
 
 /**
@@ -80,17 +107,18 @@ interface Observe : MetricsApi, LogsApi, TracesApi {
     /**
      * Record a custom track event as a `track` span.
      *
-     * Mirrors `LDClient.track(key, data, metricValue)` so the same call shape works
-     * whether the event is recorded through the LaunchDarkly client (via the
-     * `afterTrack` hook) or directly through this API. `data` is a plain map so
-     * callers need not depend on `LDValue`.
+     * Mirrors `LDClient.track(...)` so the same call shape works whether the event
+     * is recorded through the LaunchDarkly client (via the `afterTrack` hook) or
+     * directly through this API. The payload is passed as `properties`, a plain
+     * map, so callers need not depend on `LDValue` — matching the `properties`
+     * overloads of `recordLog`/`startSpan`.
      * @param key The key for the event.
-     * @param data The data associated with the event, if any. Object members are
-     *   attached as span attributes.
+     * @param properties The data associated with the event, if any. Object members
+     *   are attached as span attributes.
      * @param metricValue A numeric value used by LaunchDarkly experimentation for
      *   numeric custom metrics, if any.
      */
-    fun track(key: String, data: Map<String, Any?>? = null, metricValue: Double? = null)
+    fun track(key: String, properties: Map<String, Any?>? = null, metricValue: Double? = null)
 
     /**
      * Record a screen view as a `screen_view` span, following the analytics taxonomy `event.*`
@@ -102,11 +130,16 @@ interface Observe : MetricsApi, LogsApi, TracesApi {
      * @param screenClass Optional class backing the screen (maps to `event.screen_class`).
      * @param screenId Optional stable identifier (maps to `event.screen_id`).
      * @param category Optional screen group (maps to `event.category`).
+     * @param properties Optional custom attributes, supplied as a plain map (same
+     *   conversion rules as a `track` event's `properties`). They are attached at
+     *   lower precedence than the reserved `event.*` fields, so they can never
+     *   clobber the taxonomy.
      */
     fun trackScreenView(
         name: String,
         screenClass: String? = null,
         screenId: String? = null,
-        category: String? = null
+        category: String? = null,
+        properties: Map<String, Any?>? = null
     )
 }
