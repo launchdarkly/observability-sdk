@@ -62,9 +62,10 @@ final class _ObservabilityHook extends Hook {
     final span = data[_evalSpanDataName] as Span?;
 
     if (span != null) {
-      span.addEvent(
+      spanAddEvent(
+        span,
         FeatureFlagConvention.eventName,
-        attributes: FeatureFlagConvention.getEventAttributes(
+        FeatureFlagConvention.getEventAttributes(
           key: hookContext.flagKey,
           detail: detail,
           environmentId: hookContext.environmentId,

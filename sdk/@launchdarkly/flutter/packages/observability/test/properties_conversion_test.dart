@@ -70,6 +70,15 @@ void main() {
     test('drops empty list as InvalidAttribute', () {
       expect(attributeFromNative(<dynamic>[]), isA<InvalidAttribute>());
     });
+
+    test('does not re-wrap an already-typed Attribute', () {
+      // Internal convention code (feature flags, errors, etc.) produces
+      // `Attribute` values directly. Those must reach the OTel pipeline through
+      // the typed helpers (`spanAddEvent`/`spanRecordException`) rather than the
+      // native conversion; feeding an `Attribute` back through here would drop
+      // it. This guards against re-introducing that double-conversion bug.
+      expect(attributeFromNative(StringAttribute('x')), isA<InvalidAttribute>());
+    });
   });
 
   group('attributesFromProperties', () {

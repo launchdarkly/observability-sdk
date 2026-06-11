@@ -93,7 +93,8 @@ final class ObserveOtel {
     // is an active span or not. So currently we always create a span for
     // exceptions.
     final span = startSpan(_launchDarklyErrorSpanName);
-    span.recordException(
+    spanRecordException(
+      span,
       exception,
       attributes: attributes,
       stackTrace: stackTrace ?? StackTrace.empty,

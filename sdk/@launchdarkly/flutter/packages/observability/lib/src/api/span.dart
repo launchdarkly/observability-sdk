@@ -1,6 +1,7 @@
 import 'package:opentelemetry/api.dart' as otel;
 
 import '../otel/conversions.dart';
+import 'attribute.dart';
 import 'span_status_code.dart';
 
 /// Represents a single operation within a trace.
@@ -76,4 +77,34 @@ final class Span {
 /// Not for export.
 Span wrapSpan(otel.Span span, dynamic token) {
   return Span._internal(span, token);
+}
+
+/// Add an event built from already-typed internal [Attribute] values.
+///
+/// The public [Span.addEvent] takes native values and converts them, so
+/// internal convention code (which already produces `Attribute` maps) must use
+/// this entry point to avoid a second, lossy conversion pass.
+///
+/// Not for export.
+void spanAddEvent(Span span, String name, Map<String, Attribute>? attributes) {
+  span._innerSpan.addEvent(name, attributes: convertAttributes(attributes));
+}
+
+/// Record an exception with already-typed internal [Attribute] values.
+///
+/// Counterpart to [spanAddEvent] for the exception path; see its note about
+/// avoiding a double conversion.
+///
+/// Not for export.
+void spanRecordException(
+  Span span,
+  dynamic exception, {
+  StackTrace stackTrace = StackTrace.empty,
+  Map<String, Attribute>? attributes,
+}) {
+  span._innerSpan.recordException(
+    exception,
+    stackTrace: stackTrace,
+    attributes: convertAttributes(attributes),
+  );
 }
