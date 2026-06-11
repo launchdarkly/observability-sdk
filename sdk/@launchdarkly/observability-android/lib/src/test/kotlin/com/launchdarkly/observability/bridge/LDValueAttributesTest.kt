@@ -35,8 +35,9 @@ class LDValueAttributesTest {
 
         assertEquals(true, attrs.get(AttributeKey.booleanKey("flag")))
         assertEquals(false, attrs.get(AttributeKey.booleanKey("off")))
-        assertEquals(42.0, attrs.get(AttributeKey.doubleKey("int")))
-        assertEquals(7.0, attrs.get(AttributeKey.doubleKey("long")))
+        // Integers keep their type (64-bit long); only Float/Double become doubles.
+        assertEquals(42L, attrs.get(AttributeKey.longKey("int")))
+        assertEquals(7L, attrs.get(AttributeKey.longKey("long")))
         assertEquals(1.5, attrs.get(AttributeKey.doubleKey("float")))
         assertEquals(3.14, attrs.get(AttributeKey.doubleKey("double")))
         assertEquals("checkout", attrs.get(AttributeKey.stringKey("name")))
@@ -44,13 +45,17 @@ class LDValueAttributesTest {
     }
 
     @Test
-    fun `numbers are normalized to double attributes`() {
-        val data: Map<String, Any?> = mapOf("int" to 42)
+    fun `integers are preserved as 64-bit longs without precision loss`() {
+        // Beyond Int32 range (e.g. epoch nanos / large IDs): must not be coerced
+        // to double, which would lose precision above 2^53.
+        val big = 9_000_000_000L
+        val data: Map<String, Any?> = mapOf("int" to 42, "long" to big)
 
         val attrs = data.toOtelAttributes()
 
-        assertEquals(42.0, attrs.get(AttributeKey.doubleKey("int")))
-        assertNull(attrs.get(AttributeKey.longKey("int")))
+        assertEquals(42L, attrs.get(AttributeKey.longKey("int")))
+        assertEquals(big, attrs.get(AttributeKey.longKey("long")))
+        assertNull(attrs.get(AttributeKey.doubleKey("int")))
         assertNull(attrs.get(AttributeKey.stringKey("int")))
     }
 
@@ -66,7 +71,8 @@ class LDValueAttributesTest {
 
         assertEquals(listOf("a", "b"), attrs.get(AttributeKey.stringArrayKey("tags")))
         assertEquals(listOf(true, false), attrs.get(AttributeKey.booleanArrayKey("flags")))
-        assertEquals(listOf(1.0, 2.0, 3.0), attrs.get(AttributeKey.doubleArrayKey("scores")))
+        // All-integer lists keep 64-bit long precision.
+        assertEquals(listOf(1L, 2L, 3L), attrs.get(AttributeKey.longArrayKey("scores")))
     }
 
     @Test
@@ -81,9 +87,9 @@ class LDValueAttributesTest {
         val attrs = data.toOtelAttributes()
 
         assertEquals("SKU-1234", attrs.get(AttributeKey.stringKey("products.0.product_id")))
-        assertEquals(2.0, attrs.get(AttributeKey.doubleKey("products.0.quantity")))
+        assertEquals(2L, attrs.get(AttributeKey.longKey("products.0.quantity")))
         assertEquals("SKU-9876", attrs.get(AttributeKey.stringKey("products.1.product_id")))
-        assertEquals(1.0, attrs.get(AttributeKey.doubleKey("products.1.quantity")))
+        assertEquals(1L, attrs.get(AttributeKey.longKey("products.1.quantity")))
         assertEquals(4, attrs.size())
     }
 
@@ -104,7 +110,7 @@ class LDValueAttributesTest {
 
         assertEquals("Product Added", attrs.get(AttributeKey.stringKey("name")))
         assertEquals("SKU-1234", attrs.get(AttributeKey.stringKey("product_id")))
-        assertEquals(2.0, attrs.get(AttributeKey.doubleKey("quantity")))
+        assertEquals(2L, attrs.get(AttributeKey.longKey("quantity")))
         assertEquals(24.0, attrs.get(AttributeKey.doubleKey("price")))
         assertEquals("USD", attrs.get(AttributeKey.stringKey("currency")))
         assertEquals("cart_98f1", attrs.get(AttributeKey.stringKey("cart_id")))
@@ -132,10 +138,10 @@ class LDValueAttributesTest {
         assertEquals("USD", attrs.get(AttributeKey.stringKey("currency")))
         // The products array of objects is flattened with indexed dotted keys.
         assertEquals("SKU-1234", attrs.get(AttributeKey.stringKey("products.0.product_id")))
-        assertEquals(2.0, attrs.get(AttributeKey.doubleKey("products.0.quantity")))
+        assertEquals(2L, attrs.get(AttributeKey.longKey("products.0.quantity")))
         assertEquals(24.0, attrs.get(AttributeKey.doubleKey("products.0.price")))
         assertEquals("SKU-9876", attrs.get(AttributeKey.stringKey("products.1.product_id")))
-        assertEquals(1.0, attrs.get(AttributeKey.doubleKey("products.1.quantity")))
+        assertEquals(1L, attrs.get(AttributeKey.longKey("products.1.quantity")))
         assertEquals(24.0, attrs.get(AttributeKey.doubleKey("products.1.price")))
     }
 
@@ -180,7 +186,7 @@ class LDValueAttributesTest {
 
         assertEquals("android", attrs.get(AttributeKey.stringKey("test-string")))
         assertEquals(true, attrs.get(AttributeKey.booleanKey("test-true")))
-        assertEquals(42.0, attrs.get(AttributeKey.doubleKey("test-integer")))
+        assertEquals(42L, attrs.get(AttributeKey.longKey("test-integer")))
         assertEquals(3.14, attrs.get(AttributeKey.doubleKey("test-double")))
         // Native nested map flattens with dotted keys.
         assertEquals("val", attrs.get(AttributeKey.stringKey("test-map.test-string")))
@@ -234,7 +240,7 @@ class LDValueAttributesTest {
 
         val attrs = data.toOtelAttributes()
 
-        assertEquals(1.0, attrs.get(AttributeKey.doubleKey("keep")))
+        assertEquals(1L, attrs.get(AttributeKey.longKey("keep")))
         assertNull(attrs.get(AttributeKey.stringKey("object")))
         assertEquals(1, attrs.size())
     }

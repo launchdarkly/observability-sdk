@@ -67,6 +67,7 @@ class MainActivityViewModel(application: Application) : AndroidViewModel(applica
                 "test-true" to true,
                 "test-false" to false,
                 "test-integer" to 42,
+                "test-long" to 9_000_000_000L,
                 "test-double" to 3.14,
                 "test-array" to listOf(3.14),
                 "test-nested" to mapOf("array" to listOf(1))
@@ -179,6 +180,7 @@ class MainActivityViewModel(application: Application) : AndroidViewModel(applica
                 .put("test-true", true)
                 .put("test-false", false)
                 .put("test-integer", 42)
+                .put("test-long", 9_000_000_000_123)
                 .put("test-double", 3.14)
                 .build()
         )
@@ -194,6 +196,9 @@ class MainActivityViewModel(application: Application) : AndroidViewModel(applica
                 "test-true" to true,
                 "test-false" to false,
                 "test-integer" to 42,
+                // A 64-bit value beyond Int32 range (e.g. epoch nanoseconds):
+                // the direct LDObserve APIs keep it as a long, unlike LDClient.track.
+                "test-long" to 9_000_000_000_123,
                 "test-double" to 3.14
             )
         )

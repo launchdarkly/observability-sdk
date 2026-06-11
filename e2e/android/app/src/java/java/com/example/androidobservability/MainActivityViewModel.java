@@ -220,6 +220,9 @@ public class MainActivityViewModel extends AndroidViewModel {
                         "test-true", true,
                         "test-false", false,
                         "test-integer", 42,
+                        // A 64-bit value beyond Int32 range: the direct LDObserve
+                        // APIs keep it as a long, unlike LDClient.track.
+                        "test-long", 9_000_000_000L,
                         "test-double", 3.14
                 ),
                 null
