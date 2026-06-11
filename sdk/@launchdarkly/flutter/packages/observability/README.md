@@ -187,15 +187,15 @@ Use `LDObserve` to record spans, logs, and errors from your Dart code.
 
 ### Logs
 
-Use `LDObserve.recordLog` to emit a structured log record with a severity level and optional typed attributes. An optional `stackTrace` can be attached:
+Use `LDObserve.recordLog` to emit a structured log record with a severity level and optional `properties`. `properties` is a plain Dart map (`Map<String, Object?>`) — no LaunchDarkly or OpenTelemetry types are needed. An optional `stackTrace` can be attached:
 
 ```dart
 LDObserve.recordLog(
   'Checkout completed',
   severity: 'info',
-  attributes: <String, Attribute>{
-    'order_id': StringAttribute('ORD-9876'),
-    'total': DoubleAttribute(42.99),
+  properties: <String, Object?>{
+    'order_id': 'ORD-9876',
+    'total': 42.99,
   },
 );
 
@@ -215,7 +215,7 @@ final span = LDObserve.startSpan('checkout-flow');
 LDObserve.recordLog(
   'Processing on the same trace',
   severity: 'warn',
-  attributes: <String, Attribute>{'source': StringAttribute('checkout')},
+  properties: <String, Object?>{'source': 'checkout'},
 );
 span.end();
 ```
@@ -238,8 +238,8 @@ Use `LDObserve.startSpan` to create spans for tracing operations. Spans are back
 
 ```dart
 final span = LDObserve.startSpan('api_request');
-span.setAttribute('endpoint', StringAttribute('/api/users'));
-span.setAttribute('method', StringAttribute('GET'));
+span.setAttribute('endpoint', '/api/users');
+span.setAttribute('method', 'GET');
 span.addEvent('cache.miss');
 span.setStatus(SpanStatusCode.ok);
 span.end();
@@ -267,11 +267,11 @@ End each span before starting the next so they are recorded independently rather
 
 ```dart
 final span1 = LDObserve.startSpan('SequentialOperation1');
-span1.setAttribute('sequence', StringAttribute('1'));
+span1.setAttribute('sequence', '1');
 span1.end();
 
 final span2 = LDObserve.startSpan('SequentialOperation2');
-span2.setAttribute('sequence', StringAttribute('2'));
+span2.setAttribute('sequence', '2');
 span2.end();
 ```
 
@@ -279,12 +279,13 @@ span2.end();
 
 | Method | Description |
 |---|---|
-| `LDObserve.startSpan(name, {kind, attributes})` | Start a span that nests under the current active span. Returns a `Span`. |
-| `LDObserve.recordLog(message, {severity, stackTrace, attributes})` | Record a structured log. |
-| `LDObserve.recordException(exception, {stackTrace, attributes})` | Record an error/exception. |
+| `LDObserve.startSpan(name, {kind, properties})` | Start a span that nests under the current active span. Returns a `Span`. |
+| `LDObserve.recordLog(message, {severity, stackTrace, properties})` | Record a structured log. |
+| `LDObserve.recordException(exception, {stackTrace, properties})` | Record an error/exception. |
+| `LDObserve.track(eventName, {properties, metricValue})` | Record a custom `track` event as a `track` span. |
 | `LDObserve.shutdown()` | Shut down observability. It cannot be restarted afterward. |
 | `LDObserve.zoneSpecification()` | A zone spec that forwards `print`/`debugPrint` output as logs. |
-| `span.setAttribute(name, attribute)` | Set a single typed attribute on a span. |
+| `span.setAttribute(name, value)` | Set a single attribute on a span. |
 | `span.setAttributes(map)` | Set multiple attributes on a span. |
 | `span.addEvent(name, {attributes})` | Record a named event on a span. |
 | `span.setStatus(SpanStatusCode)` | Set the span status (`ok`, `error`, `unset`). |
@@ -295,18 +296,22 @@ span2.end();
 
 ### Attributes
 
-Attribute values are strongly typed. Use the type-safe constructors, or `Attribute.fromDynamic` when the value's type is not known ahead of time:
+Attributes are supplied as plain Dart values — no LaunchDarkly or OpenTelemetry types are involved. A value may be a `String`, `int`, `double`, `bool`, or a homogeneous list of any of those. Values that cannot be represented as an attribute (such as nested maps or mixed-type lists) are ignored.
 
 ```dart
-span.setAttribute('count', IntAttribute(42));
-span.setAttribute('name', StringAttribute('flutter'));
-span.setAttribute('ratio', DoubleAttribute(3.14));
-span.setAttribute('enabled', BooleanAttribute(true));
-span.setAttribute('samples', DoubleListAttribute([3.14, 6.28]));
-span.setAttribute('dynamic', Attribute.fromDynamic(someValue));
+span.setAttribute('count', 42);
+span.setAttribute('name', 'flutter');
+span.setAttribute('ratio', 3.14);
+span.setAttribute('enabled', true);
+span.setAttribute('samples', <double>[3.14, 6.28]);
+
+span.setAttributes(<String, Object?>{
+  'order_id': 'ORD-9876',
+  'total': 42.99,
+});
 ```
 
-Available types: `StringAttribute`, `IntAttribute`, `DoubleAttribute`, `BooleanAttribute`, and their list variants (`StringListAttribute`, `IntListAttribute`, `DoubleListAttribute`, `BooleanListAttribute`).
+Methods that accept `properties` (`recordLog`, `recordException`, `startSpan`, `track`) take a `Map<String, Object?>` of these same plain values.
 
 ## Session replay
 

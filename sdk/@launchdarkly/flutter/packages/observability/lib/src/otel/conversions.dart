@@ -43,6 +43,66 @@ List<otel.Attribute> convertAttributes(Map<String, Attribute>? attributes) {
   return otelAttributes;
 }
 
+/// Converts a plain Dart value into an [Attribute].
+///
+/// The public Flutter API takes native dictionaries (`Map<String, Object?>`)
+/// rather than the `Attribute` types, so this is the single choke point that
+/// maps native values onto the OTel attribute model. Homogeneous lists
+/// (including `List<dynamic>` produced by JSON decoding) are coerced into the
+/// matching typed list attribute; anything that cannot be represented (nested
+/// maps, mixed lists, `null`, etc.) becomes an [InvalidAttribute] and is later
+/// dropped by [convertAttribute].
+///
+/// Not for export.
+Attribute attributeFromNative(Object? value) {
+  if (value is List) {
+    final listAttribute = _listAttributeFromNative(value);
+    if (listAttribute != null) {
+      return listAttribute;
+    }
+  }
+  return Attribute.fromDynamic(value);
+}
+
+Attribute? _listAttributeFromNative(List<Object?> values) {
+  if (values.isEmpty) {
+    return null;
+  }
+  if (values.every((e) => e is String)) {
+    return StringListAttribute(values.cast<String>());
+  }
+  if (values.every((e) => e is bool)) {
+    return BooleanListAttribute(values.cast<bool>());
+  }
+  if (values.every((e) => e is int)) {
+    return IntListAttribute(values.cast<int>());
+  }
+  if (values.every((e) => e is num)) {
+    return DoubleListAttribute(
+      values.map((e) => (e as num).toDouble()).toList(),
+    );
+  }
+  return null;
+}
+
+/// Converts a native dictionary into a `Map<String, Attribute>` for the
+/// internal OTel pipeline. Unrepresentable values are kept as
+/// [InvalidAttribute] entries and dropped during [convertAttributes].
+///
+/// Not for export.
+Map<String, Attribute> attributesFromProperties(
+  Map<String, Object?>? properties,
+) {
+  if (properties == null) {
+    return const {};
+  }
+  final attributes = <String, Attribute>{};
+  properties.forEach((name, value) {
+    attributes[name] = attributeFromNative(value);
+  });
+  return attributes;
+}
+
 /// Not for export.
 otel.SpanKind convertKind(SpanKind kind) {
   switch (kind) {

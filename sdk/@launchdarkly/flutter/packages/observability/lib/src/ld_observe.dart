@@ -5,10 +5,10 @@ import 'dart:async';
 
 import 'package:launchdarkly_flutter_client_sdk/launchdarkly_flutter_client_sdk.dart';
 
-import 'api/attribute.dart';
 import 'api/span.dart';
 import 'api/span_kind.dart';
 import 'observe_otel.dart';
+import 'otel/conversions.dart';
 import 'options/observability_options.dart';
 import 'options/session_replay_options.dart';
 import 'platform/ld_observe_platform.dart';
@@ -54,12 +54,20 @@ final class LDObserve {
     return LDObservePlugin(observability, replay: replay).boot(mobileKey);
   }
 
-  /// Start a span with the given name and optional attributes.
+  /// Start a span with the given name and optional [properties].
+  ///
+  /// [properties] is a plain Dart map (`Map<String, Object?>`); scalar and
+  /// homogeneous-list values are attached to the span as attributes. Values
+  /// that cannot be represented as span attributes are ignored.
   static Span startSpan(
     String name, {
     SpanKind kind = SpanKind.internal,
-    Map<String, Attribute>? attributes,
-  }) => ObserveOtel.startSpan(name, kind: kind, attributes: attributes);
+    Map<String, Object?>? properties,
+  }) => ObserveOtel.startSpan(
+    name,
+    kind: kind,
+    attributes: attributesFromProperties(properties),
+  );
 
   /// Record a custom `track` event as a `track` span.
   ///
@@ -67,41 +75,47 @@ final class LDObserve {
   /// shape works whether the event is recorded through the LaunchDarkly client
   /// (via the `afterTrack` hook) or directly through this API. Use this for
   /// standalone observability (no LaunchDarkly client) or to record custom
-  /// events that should not also be sent to LaunchDarkly. `data` is a plain JSON
-  /// map so callers need not depend on `LDValue`; object members are attached as
-  /// span attributes.
+  /// events that should not also be sent to LaunchDarkly. [properties] is a
+  /// plain JSON map so callers need not depend on `LDValue`; object members are
+  /// attached as span attributes.
   static void track(
     String eventName, {
-    Map<String, dynamic>? data,
+    Map<String, Object?>? properties,
     num? metricValue,
   }) => ObserveOtel.track(
     eventName,
-    data: data == null ? null : LDValue.ofDynamic(data),
+    data: properties == null ? null : LDValue.ofDynamic(properties),
     metricValue: metricValue,
   );
 
-  /// Record an exception with an optional stack trace and attributes.
+  /// Record an exception with an optional stack trace and [properties].
+  ///
+  /// [properties] is a plain Dart map (`Map<String, Object?>`) of additional
+  /// attributes to attach to the error.
   static void recordException(
     dynamic exception, {
     StackTrace? stackTrace,
-    Map<String, Attribute>? attributes,
+    Map<String, Object?>? properties,
   }) => ObserveOtel.recordException(
     exception,
     stackTrace: stackTrace,
-    attributes: attributes,
+    attributes: attributesFromProperties(properties),
   );
 
-  /// Record a log with optional attributes. Defaults [severity] to `info`.
+  /// Record a log with optional [properties]. Defaults [severity] to `info`.
+  ///
+  /// [properties] is a plain Dart map (`Map<String, Object?>`) of additional
+  /// attributes to attach to the log.
   static void recordLog(
     String message, {
     String severity = 'info',
     StackTrace? stackTrace,
-    Map<String, Attribute>? attributes,
+    Map<String, Object?>? properties,
   }) => ObserveOtel.recordLog(
     message,
     severity: severity,
     stackTrace: stackTrace,
-    attributes: attributes,
+    attributes: attributesFromProperties(properties),
   );
 
   /// Get a zone specification which intercepts print statements.
