@@ -186,8 +186,14 @@ class ObservabilityService(
     /**
      * Broadcasts the app-launch signal (one per process launch) so Session Replay can emit a
      * `Launch` breadcrumb regardless of the span flags. Shared via [ObservabilityContext.appLaunchFlow].
+     *
+     * `replay = 1`: the launch fires once during this service's init, before Session Replay
+     * subscribes in its own `initialize()`. The replay cache delivers that one-shot signal to the
+     * late subscriber so the `Launch` breadcrumb is not dropped (the span path is unaffected as it
+     * runs inline in [handleAppLaunchSignal]).
      */
     private val _appLaunchFlow = MutableSharedFlow<AppLaunchSignal>(
+        replay = 1,
         extraBufferCapacity = 4,
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
