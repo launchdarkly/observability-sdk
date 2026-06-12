@@ -33,40 +33,40 @@ PODS:
     - LDSwiftEventSource (= 3.3.0)
   - launchdarkly_flutter_observability (0.0.0):
     - Flutter
-    - LaunchDarklyObservability (~> 0.41.0)
-    - LaunchDarklySessionReplay (~> 0.41.0)
-  - LaunchDarklyObservability (0.41.0):
-    - LaunchDarklyObservability/LaunchDarklyObservability (= 0.41.0)
-  - LaunchDarklyObservability/Common (0.41.0):
+    - LaunchDarklyObservability (~> 0.42.0)
+    - LaunchDarklySessionReplay (~> 0.42.0)
+  - LaunchDarklyObservability (0.42.0):
+    - LaunchDarklyObservability/LaunchDarklyObservability (= 0.42.0)
+  - LaunchDarklyObservability/Common (0.42.0):
     - LaunchDarkly (~> 11.2)
-  - LaunchDarklyObservability/JSONExporters (0.41.0):
+  - LaunchDarklyObservability/JSONExporters (0.42.0):
     - OpenTelemetry-Swift-Api (~> 2.3.0)
     - OpenTelemetry-Swift-Sdk (~> 2.3.0)
-  - LaunchDarklyObservability/LaunchDarklyObservability (0.41.0):
+  - LaunchDarklyObservability/LaunchDarklyObservability (0.42.0):
     - LaunchDarklyObservability/Common
     - LaunchDarklyObservability/JSONExporters
     - LaunchDarklyObservability/Misc
     - LaunchDarklyObservability/OpenTelemetry
     - LaunchDarklyObservability/SDKResourceExtension
     - LaunchDarklyObservability/URLSessionInstrumentation
-  - LaunchDarklyObservability/Misc (0.41.0):
+  - LaunchDarklyObservability/Misc (0.42.0):
     - KSCrash
-  - LaunchDarklyObservability/NetworkStatus (0.41.0):
+  - LaunchDarklyObservability/NetworkStatus (0.42.0):
     - OpenTelemetry-Swift-Api (~> 2.3.0)
-  - LaunchDarklyObservability/OpenTelemetry (0.41.0):
+  - LaunchDarklyObservability/OpenTelemetry (0.42.0):
     - OpenTelemetry-Swift-Api (~> 2.3.0)
     - OpenTelemetry-Swift-Sdk (~> 2.3.0)
-  - LaunchDarklyObservability/SDKResourceExtension (0.41.0):
+  - LaunchDarklyObservability/SDKResourceExtension (0.42.0):
     - LaunchDarklyObservability/OpenTelemetry
-  - LaunchDarklyObservability/URLSessionInstrumentation (0.41.0):
+  - LaunchDarklyObservability/URLSessionInstrumentation (0.42.0):
     - LaunchDarklyObservability/NetworkStatus
     - OpenTelemetry-Swift-Sdk (~> 2.3.0)
-  - LaunchDarklySessionReplay (0.41.0):
-    - LaunchDarklySessionReplay/LaunchDarklySessionReplay (= 0.41.0)
-  - LaunchDarklySessionReplay/LaunchDarklySessionReplay (0.41.0):
+  - LaunchDarklySessionReplay (0.42.0):
+    - LaunchDarklySessionReplay/LaunchDarklySessionReplay (= 0.42.0)
+  - LaunchDarklySessionReplay/LaunchDarklySessionReplay (0.42.0):
     - LaunchDarklyObservability
     - LaunchDarklySessionReplay/SessionReplayC
-  - LaunchDarklySessionReplay/SessionReplayC (0.41.0)
+  - LaunchDarklySessionReplay/SessionReplayC (0.42.0)
   - LDSwiftEventSource (3.3.0)
   - OpenTelemetry-Swift-Api (2.3.0)
   - OpenTelemetry-Swift-Sdk (2.3.0):
@@ -125,9 +125,9 @@ SPEC CHECKSUMS:
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
   KSCrash: 8c4464fd5da7de520f2ce4a00fdf63f169a80f18
   LaunchDarkly: 196f8e6c8b3ae801762fcf328704c495a36bdeee
-  launchdarkly_flutter_observability: 0fcfcea661ac2c2e38f7a3cfbd46e26abd954877
-  LaunchDarklyObservability: 5a4e03887051c549627ef25dff2ee7aaabab10dd
-  LaunchDarklySessionReplay: 1429d8601154256391c214ff0c3d2651f9187fbd
+  launchdarkly_flutter_observability: 547afbbfe93463f3228c0e7d20a59365f368d955
+  LaunchDarklyObservability: d4d9833ed046ac89cf536c3cc32d18f33553655e
+  LaunchDarklySessionReplay: 9ebd26785e1704e990f4b0b87084a9e6aa01bae8
   LDSwiftEventSource: b0826ca826ca890609a9833a05cae1f357fd3b99
   OpenTelemetry-Swift-Api: 3d77582ab6837a63b65bf7d2eacc57d8f2595edd
   OpenTelemetry-Swift-Sdk: 69d60f0242e830366e359481edd575d6776eb983
