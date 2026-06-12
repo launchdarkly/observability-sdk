@@ -129,6 +129,15 @@ class SessionReplayExporter(
                             }
                         }
 
+                        is AppLaunchItemPayload -> {
+                            val sessionId = payload.sessionId ?: lastCaptureSnapshot.sessionId
+                            sessionId?.let { sessionId ->
+                                eventGenerator.generateAppLaunchEvent(payload)?.let { launchEvent ->
+                                    eventsBySession.getOrPut(sessionId) { mutableListOf() }.add(launchEvent)
+                                }
+                            }
+                        }
+
                         else -> {
                             // Noop
                         }

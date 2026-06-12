@@ -849,4 +849,43 @@ class LDNativeApi {
       return;
     }
   }
+
+  /// Forwards an `identify` to the native observability SDK and Session Replay.
+  /// Native observability caches `contextKeys` so manual `LDObserve.track` calls
+  /// (which carry no context) are attributed to the active context, and Session
+  /// Replay records who the user is on the active recording. `contextKeys`
+  /// carries the context's kind -> key pairs, `canonicalKey` the fully-qualified
+  /// key, and `completed` whether the identify finished successfully (native
+  /// ignores incomplete identifies). Mirrors MAUI's
+  /// `ObservabilityHook.AfterIdentify` /  `SessionReplayHook.AfterIdentify`.
+  Future<void> identify(
+    Map<String, String> contextKeys,
+    String canonicalKey,
+    bool completed,
+  ) async {
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.launchdarkly_flutter_observability.LDNativeApi.identify$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
+          pigeonVar_channelName,
+          pigeonChannelCodec,
+          binaryMessenger: pigeonVar_binaryMessenger,
+        );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[contextKeys, canonicalKey, completed],
+    );
+    final List<Object?>? pigeonVar_replyList =
+        await pigeonVar_sendFuture as List<Object?>?;
+    if (pigeonVar_replyList == null) {
+      throw _createConnectionError(pigeonVar_channelName);
+    } else if (pigeonVar_replyList.length > 1) {
+      throw PlatformException(
+        code: pigeonVar_replyList[0]! as String,
+        message: pigeonVar_replyList[1] as String?,
+        details: pigeonVar_replyList[2],
+      );
+    } else {
+      return;
+    }
+  }
 }

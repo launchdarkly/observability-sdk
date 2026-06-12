@@ -118,6 +118,26 @@ final class LDNativeApiImpl: NSObject, LDNativeApi {
         )
     }
 
+    // Forwards an identify to the native observability SDK (which caches the
+    // context keys so the manual track path is attributed to the active context)
+    // and Session Replay (which records who the user is on the active recording).
+    // The Dart side calls this from the LaunchDarkly client's `afterIdentify`
+    // hook. Mirrors MAUI's `ObservabilityHook.AfterIdentify` /
+    // `SessionReplayHook.AfterIdentify`.
+    func identify(contextKeys: [String: String], canonicalKey: String, completed: Bool) throws {
+        let keys = contextKeys as NSDictionary
+        ObjcLDObserveBridge.getObservabilityHookProxy()?.afterIdentify(
+            contextKeys: keys,
+            canonicalKey: canonicalKey,
+            completed: completed
+        )
+        LDReplay.shared.hookProxy?.afterIdentify(
+            contextKeys: keys,
+            canonicalKey: canonicalKey,
+            completed: completed
+        )
+    }
+
     /// Drops `nil` values so the native bridge receives a `[String: Any]`.
     private func cleanAttributes(_ attributes: [String: Any?]?) -> [String: Any] {
         guard let attributes = attributes else { return [:] }

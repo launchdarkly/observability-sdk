@@ -161,4 +161,18 @@ abstract class LDNativeApi {
     double? metricValue,
     Map<String, String>? contextKeys,
   );
+
+  /// Forwards an `identify` to the native observability SDK and Session Replay.
+  /// Native observability caches `contextKeys` so manual `LDObserve.track` calls
+  /// (which carry no context) are attributed to the active context, and Session
+  /// Replay records who the user is on the active recording. `contextKeys`
+  /// carries the context's kind -> key pairs, `canonicalKey` the fully-qualified
+  /// key, and `completed` whether the identify finished successfully (native
+  /// ignores incomplete identifies). Mirrors MAUI's
+  /// `ObservabilityHook.AfterIdentify` /  `SessionReplayHook.AfterIdentify`.
+  void identify(
+    Map<String, String> contextKeys,
+    String canonicalKey,
+    bool completed,
+  );
 }

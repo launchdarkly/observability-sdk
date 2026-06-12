@@ -34,6 +34,29 @@ class _IoExporters implements ObservabilityExporters {
   @override
   TrackRecorder createTrackRecorder(ObservabilityConfig config) =>
       _NativeTrackRecorder(_api);
+
+  @override
+  IdentifyRecorder createIdentifyRecorder(ObservabilityConfig config) =>
+      _NativeIdentifyRecorder(_api);
+}
+
+/// Forwards each `identify` to the native observability SDK (which caches the
+/// context keys so the manual `LDObserve.track` path is attributed to the active
+/// context) and Session Replay (which records who the user is on the active
+/// recording). Mirrors MAUI's `ObservabilityHook.AfterIdentify`.
+class _NativeIdentifyRecorder implements IdentifyRecorder {
+  _NativeIdentifyRecorder(this._api);
+
+  final wire.LDNativeApi _api;
+
+  @override
+  void identify({
+    required Map<String, String> contextKeys,
+    required String canonicalKey,
+    required bool completed,
+  }) {
+    unawaited(_api.identify(contextKeys, canonicalKey, completed));
+  }
 }
 
 /// Forwards each `track` call to the native observability SDK so it emits the

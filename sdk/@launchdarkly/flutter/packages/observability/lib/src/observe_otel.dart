@@ -67,6 +67,28 @@ final class ObserveOtel {
     );
   }
 
+  /// Forward an `identify` to the platform-appropriate pipeline.
+  ///
+  /// Invoked from the LaunchDarkly client's `afterIdentify` hook. On mobile the
+  /// native observability SDK caches [contextKeys] so the manual
+  /// [LDObserve.track] path is attributed to the active context, and Session
+  /// Replay records who the user is on the active recording. On web this is a
+  /// no-op. [canonicalKey] is the context's fully-qualified key; [completed]
+  /// indicates whether the identify finished successfully (native ignores
+  /// incomplete identifies). `null` before the pipeline is initialized, in which
+  /// case the identify is dropped.
+  static void identify({
+    required Map<String, String> contextKeys,
+    required String canonicalKey,
+    required bool completed,
+  }) {
+    Otel.identifyRecorder?.identify(
+      contextKeys: contextKeys,
+      canonicalKey: canonicalKey,
+      completed: completed,
+    );
+  }
+
   /// Record an exception with an optional stack trace and attributes.
   ///
   /// In dart the stack trace is independent of the exception object and can

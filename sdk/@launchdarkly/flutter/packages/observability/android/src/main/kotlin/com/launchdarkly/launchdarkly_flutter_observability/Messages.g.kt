@@ -631,6 +631,17 @@ interface LDNativeApi {
    * only the span is annotated, not the Session Replay `Track` payload.
    */
   fun track(key: String, data: Map<String, Any?>?, metricValue: Double?, contextKeys: Map<String, String>?)
+  /**
+   * Forwards an `identify` to the native observability SDK and Session Replay.
+   * Native observability caches `contextKeys` so manual `LDObserve.track` calls
+   * (which carry no context) are attributed to the active context, and Session
+   * Replay records who the user is on the active recording. `contextKeys`
+   * carries the context's kind -> key pairs, `canonicalKey` the fully-qualified
+   * key, and `completed` whether the identify finished successfully (native
+   * ignores incomplete identifies). Mirrors MAUI's
+   * `ObservabilityHook.AfterIdentify` /  `SessionReplayHook.AfterIdentify`.
+   */
+  fun identify(contextKeys: Map<String, String>, canonicalKey: String, completed: Boolean)
 
   companion object {
     /** The codec used by LDNativeApi. */
@@ -711,6 +722,26 @@ interface LDNativeApi {
             val contextKeysArg = args[3] as Map<String, String>?
             val wrapped: List<Any?> = try {
               api.track(keyArg, dataArg, metricValueArg, contextKeysArg)
+              listOf(null)
+            } catch (exception: Throwable) {
+              MessagesPigeonUtils.wrapError(exception)
+            }
+            reply.reply(wrapped)
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.launchdarkly_flutter_observability.LDNativeApi.identify$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { message, reply ->
+            val args = message as List<Any?>
+            val contextKeysArg = args[0] as Map<String, String>
+            val canonicalKeyArg = args[1] as String
+            val completedArg = args[2] as Boolean
+            val wrapped: List<Any?> = try {
+              api.identify(contextKeysArg, canonicalKeyArg, completedArg)
               listOf(null)
             } catch (exception: Throwable) {
               MessagesPigeonUtils.wrapError(exception)

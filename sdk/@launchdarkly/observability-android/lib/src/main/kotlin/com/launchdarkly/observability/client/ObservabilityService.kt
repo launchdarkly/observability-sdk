@@ -183,6 +183,24 @@ class ObservabilityService(
      */
     private val appLifecycleTracker = AppLifecycleTracker(onSignal = { signal -> handleAppLifecycleSignal(signal) })
 
+    /**
+     * Broadcasts the app-launch signal (one per process launch) so Session Replay can emit a
+     * `Launch` breadcrumb regardless of the span flags. Shared via [ObservabilityContext.appLaunchFlow].
+     */
+    private val _appLaunchFlow = MutableSharedFlow<AppLaunchSignal>(
+        extraBufferCapacity = 4,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
+    val appLaunchFlow: SharedFlow<AppLaunchSignal> = _appLaunchFlow.asSharedFlow()
+
+    /**
+     * Resolves the launch type (install/update/relaunch) and cold/warm startup dimension once per
+     * process launch, routing it through [handleAppLaunchSignal]. Runs unconditionally so the
+     * Session Replay `Launch` breadcrumb is always available; the `app_launch` span is gated by
+     * [ObservabilityOptions.Analytics.appLaunch].
+     */
+    private val appLaunchTracker = AppLaunchTracker(application, onSignal = { signal -> handleAppLaunchSignal(signal) })
+
     //TODO: Evaluate if this class should have a close/shutdown method to close this scope
     private val scope = CoroutineScope(DispatcherProviderHolder.current.io + SupervisorJob())
 
@@ -278,6 +296,10 @@ class ObservabilityService(
         // App-lifecycle detection runs unconditionally so Session Replay breadcrumbs are always
         // available; the span itself is gated by analytics.appLifecycle inside the handler.
         appLifecycleTracker.start()
+
+        // App-launch detection runs unconditionally so the Session Replay `Launch` breadcrumb is
+        // always available; the `app_launch` span is gated by analytics.appLaunch inside the handler.
+        appLaunchTracker.start()
 
         batchWorker.start()
     }
@@ -702,6 +724,44 @@ class ObservabilityService(
             .end()
     }
 
+    /**
+     * Single funnel for the app-launch signal. Broadcasts it so Session Replay can record a `Launch`
+     * breadcrumb (always), then emits the taxonomy `app_launch` span only when gated on by
+     * [ObservabilityOptions.Analytics.appLaunch] (and the global span flag).
+     *
+     * The cold/warm startup-performance dimension is attached as an `app.start` span event, gated by
+     * [ObservabilityOptions.Instrumentations.launchTime] (the refactored home of the legacy
+     * launch-time metering).
+     */
+    private fun handleAppLaunchSignal(signal: AppLaunchSignal) {
+        // Broadcast so Session Replay can emit a breadcrumb independent of the span flags below.
+        _appLaunchFlow.tryEmit(signal)
+
+        if (!observabilityOptions.analytics.appLaunch) return
+        if (!observabilityOptions.tracesApi.includeSpans) return
+
+        val attrBuilder = Attributes.builder()
+        // Context keys first so the reserved `event.*` taxonomy fields always win.
+        attrBuilder.putAll(cachedContextKeyAttributes)
+        attrBuilder.put(EVENT_LAUNCH_TYPE, signal.launchType.wireValue)
+        signal.version?.let { attrBuilder.put(EVENT_VERSION, it) }
+        signal.build?.let { attrBuilder.put(EVENT_BUILD, it) }
+        signal.previousVersion?.let { attrBuilder.put(EVENT_PREVIOUS_VERSION, it) }
+
+        val span = otelTracer.spanBuilder(APP_LAUNCH_SPAN_NAME)
+            .setSpanKind(SpanKind.CLIENT)
+            .setAllAttributes(attrBuilder.build())
+            .startSpan()
+        if (observabilityOptions.instrumentations.launchTime) {
+            signal.startType?.let { startType ->
+                val eventAttrs = Attributes.builder().put(START_TYPE, startType.wireValue)
+                signal.startDurationMs?.let { eventAttrs.put(START_DURATION_MS, it) }
+                span.addEvent(APP_START_EVENT_NAME, eventAttrs.build())
+            }
+        }
+        span.end()
+    }
+
     override fun updateCachedContextKeys(contextKeys: Map<String, String>) {
         val builder = Attributes.builder()
         for ((k, v) in contextKeys) {
@@ -771,6 +831,8 @@ class ObservabilityService(
         const val SCREEN_VIEW_SPAN_NAME = "screen_view"
         const val APP_FOREGROUND_SPAN_NAME = "app_foreground"
         const val APP_BACKGROUND_SPAN_NAME = "app_background"
+        const val APP_LAUNCH_SPAN_NAME = "app_launch"
+        const val APP_START_EVENT_NAME = "app.start"
         const val SESSION_ID_ATTRIBUTE = "session.id"
 
         // `event.*` taxonomy attribute keys (see analytics-taxonomy.md).
@@ -787,6 +849,12 @@ class ObservabilityService(
         private val EVENT_PREVIOUS_SCREEN = AttributeKey.stringKey("event.previous_screen")
         private val EVENT_CATEGORY = AttributeKey.stringKey("event.category")
         private val EVENT_LIFECYCLE_STATE = AttributeKey.stringKey("event.lifecycle_state")
+        private val EVENT_LAUNCH_TYPE = AttributeKey.stringKey("event.launch_type")
+        private val EVENT_VERSION = AttributeKey.stringKey("event.version")
+        private val EVENT_BUILD = AttributeKey.stringKey("event.build")
+        private val EVENT_PREVIOUS_VERSION = AttributeKey.stringKey("event.previous_version")
+        private val START_TYPE = AttributeKey.stringKey("start.type")
+        private val START_DURATION_MS = AttributeKey.longKey("start.duration_ms")
 
         // Tap detection thresholds. Long-press timeout separates taps from long presses; the slop
         // (12px, matching the Session Replay move filter) separates taps from drags.
