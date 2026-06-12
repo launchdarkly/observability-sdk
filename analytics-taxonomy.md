@@ -358,6 +358,8 @@ The **startup-performance** dimension (cold vs warm) is orthogonal to the produc
 
 > The `start.type` (cold/warm) lives on the `app.start` **span event**, not under `event.*`. `event.launch_type` answers "what kind of launch is this from the product's view"; the span event answers "how did the process start".
 
+> **Session Replay breadcrumb.** The `Launch` timeline breadcrumb carries the same product fields as the span, as a stringified-JSON custom-event payload (mirroring the `app_foreground` / `app_background` breadcrumb shape): `launch_type` (always) plus `version`, `build`, and `previous_version` when known. The startup-performance dimension (`start.type`) stays on the span event only.
+
 ```json
 {
   "span_name": "app_launch",

@@ -246,6 +246,9 @@ class SessionReplayService(
             observabilityContext.appLaunchFlow?.collect { signal ->
                 pendingAppLaunch = AppLaunchItemPayload(
                     launchType = signal.launchType.wireValue,
+                    version = signal.version,
+                    build = signal.build,
+                    previousVersion = signal.previousVersion,
                     timestamp = signal.timestamp,
                     sessionId = null
                 )

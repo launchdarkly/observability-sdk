@@ -503,6 +503,9 @@ class RRWebEventGenerator(
         val payloadJSONString = try {
             buildJsonObject {
                 payload.launchType?.let { put("launch_type", it) }
+                payload.version?.let { put("version", it) }
+                payload.build?.let { put("build", it) }
+                payload.previousVersion?.let { put("previous_version", it) }
             }.toString()
         } catch (_: Exception) {
             return null
