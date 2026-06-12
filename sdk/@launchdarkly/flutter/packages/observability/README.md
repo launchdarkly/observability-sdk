@@ -155,6 +155,7 @@ On `ObservabilityOptions`:
 On `SessionReplayOptions`:
 
 - `frameRate` (`double`): target capture rate in frames per second. Defaults to `1.0`.
+- `scale` (`double?`): replay capture resolution multiplier — `1.0` = 1x (160 DPI), `2.0` = 2x, etc. Higher values capture more detail but produce larger frames. `null` is treated as `1.0`. Defaults to `1.0`.
 
 ```dart
 LDObserve.init(

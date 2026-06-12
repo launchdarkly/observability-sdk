@@ -71,6 +71,7 @@ class LDSessionReplayOptions {
   bool? isEnabled;
   String? serviceName;
   double? frameRate;
+  double? scale;
   LDPrivacyOptions? privacy;
 }
 

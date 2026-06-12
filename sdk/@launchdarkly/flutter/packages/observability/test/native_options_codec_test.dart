@@ -63,16 +63,29 @@ void main() {
   });
 
   group('SessionReplayOptions.toWire', () {
-    test('uses default frame rate', () {
+    test('uses default frame rate and scale', () {
       final wire = const SessionReplayOptions().toWire();
 
       expect(wire.frameRate, 1.0);
+      expect(wire.scale, 1.0);
     });
 
     test('propagates a custom frame rate', () {
       final wire = const SessionReplayOptions(frameRate: 4.0).toWire();
 
       expect(wire.frameRate, 4.0);
+    });
+
+    test('propagates a custom scale', () {
+      final wire = const SessionReplayOptions(scale: 2.0).toWire();
+
+      expect(wire.scale, 2.0);
+    });
+
+    test('propagates a null scale to disable the scaling override', () {
+      final wire = const SessionReplayOptions(scale: null).toWire();
+
+      expect(wire.scale, isNull);
     });
   });
 }

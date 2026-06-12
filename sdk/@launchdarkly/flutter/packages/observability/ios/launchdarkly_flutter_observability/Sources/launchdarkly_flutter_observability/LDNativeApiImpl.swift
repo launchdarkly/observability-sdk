@@ -241,7 +241,10 @@ final class LDNativeApiImpl: NSObject, LDNativeApi {
             maskLabels: privacy?.maskLabels ?? false,
             maskImages: privacy?.maskImages ?? false,
             maskWebViews: privacy?.maskWebViews ?? false,
-            minimumAlpha: privacy?.minimumAlpha ?? 0.02
+            minimumAlpha: privacy?.minimumAlpha ?? 0.02,
+            // Match the scale recorded by the Session Replay exporter so the
+            // Dart side captures frames at the same resolution.
+            scale: Double(sessionReplayOptions.scale)
         )
         config.plugins = [
             observabilityPlugin,
@@ -267,7 +270,8 @@ final class LDNativeApiImpl: NSObject, LDNativeApi {
                 maskLabels: privacy?.maskLabels ?? false,
                 maskImages: privacy?.maskImages ?? false
             ),
-            frameRate: replay.frameRate ?? 1.0
+            frameRate: replay.frameRate ?? 1.0,
+            scale: replay.scale.map(CGFloat.init) ?? 1.0
         )
     }
 
