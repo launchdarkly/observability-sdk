@@ -87,9 +87,12 @@ class SamplingE2ETest {
         LDObserve.flush()
         waitForTelemetryData(telemetryInspector = application.telemetryInspector, telemetryType = TelemetryType.SPANS)
 
-        val spansExported = telemetryInspector?.spanExporter?.finishedSpanItems?.map {
-            it.name
-        }
+        val spansExported = telemetryInspector?.spanExporter?.finishedSpanItems
+            ?.map { it.name }
+            // The SDK emits its own analytics spans during init (e.g. `app_launch`, and the
+            // `app_foreground`/`app_background` lifecycle spans). Filter them out so this test only
+            // observes the spans triggered by triggerSpans().
+            ?.filter { !it.startsWith("app_") }
 
         // Only first and final spans should be exported
         assertEquals(2, spansExported?.size)

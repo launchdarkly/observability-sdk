@@ -496,18 +496,52 @@ class RRWebEventGenerator(
     }
 
     /**
+     * Generates a `Launch` custom event. The payload is a stringified JSON `{ "launch_type" }`
+     * (mirroring the app-lifecycle breadcrumb).
+     */
+    fun generateAppLaunchEvent(payload: AppLaunchItemPayload): Event? {
+        val payloadJSONString = try {
+            buildJsonObject {
+                payload.launchType?.let { put("launch_type", it) }
+                payload.version?.let { put("version", it) }
+                payload.build?.let { put("build", it) }
+                payload.previousVersion?.let { put("previous_version", it) }
+            }.toString()
+        } catch (_: Exception) {
+            return null
+        }
+
+        val customData = buildJsonObject {
+            put("tag", JsonPrimitive(payload.tag.wireValue))
+            put("payload", JsonPrimitive(payloadJSONString))
+        }
+
+        return Event(
+            type = EventType.CUSTOM,
+            timestamp = payload.timestamp,
+            sid = nextSid(),
+            data = EventDataUnion.CustomEventDataWrapper(customData)
+        )
+    }
+
+    /**
      * Generates a "Reload" custom event and a sequence of "wake-up" interaction events.
      * Used by [SessionReplayExporter] to re-trigger player playback after session resumption.
+     *
+     * When [appLaunch] is provided, the one-shot `Launch` breadcrumb is folded into this batch
+     * instead of being enqueued via the live collector: the launch signal fires during SDK start
+     * before Session Replay subscribes, and enqueuing it directly would race session
+     * initialization. Emitting it here guarantees it lands on an already-initialized session.
      */
-    fun generateWakeUpEvents(timestamp: Long): List<Event> {
+    fun generateWakeUpEvents(timestamp: Long, appLaunch: AppLaunchItemPayload? = null): List<Event> {
         val imageId = imageNodeId ?: return emptyList()
 
-        return listOf(
-            generateReloadEvent(timestamp),
-            // artificial mouse down/up to wake up player
-            generateMouseInteractionEvent(EventType.INCREMENTAL_SNAPSHOT, RRWebMouseInteraction.MOUSE_DOWN, imageId, timestamp),
-            generateMouseInteractionEvent(EventType.INCREMENTAL_SNAPSHOT, RRWebMouseInteraction.MOUSE_UP, imageId, timestamp)
-        )
+        val events = mutableListOf(generateReloadEvent(timestamp))
+        appLaunch?.let { payload -> generateAppLaunchEvent(payload)?.let(events::add) }
+        // artificial mouse down/up to wake up player
+        events += generateMouseInteractionEvent(EventType.INCREMENTAL_SNAPSHOT, RRWebMouseInteraction.MOUSE_DOWN, imageId, timestamp)
+        events += generateMouseInteractionEvent(EventType.INCREMENTAL_SNAPSHOT, RRWebMouseInteraction.MOUSE_UP, imageId, timestamp)
+        return events
     }
 
     private fun generateReloadEvent(timestamp: Long): Event {

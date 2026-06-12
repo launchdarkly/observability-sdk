@@ -47,4 +47,12 @@ data class ObservabilityContext(
      * timeline breadcrumbs.
      */
     var appLifecycleFlow: SharedFlow<AppLifecycleSignal>? = null,
+    /**
+     * The one-shot app-launch signal (resolved during Observability start, before Session Replay
+     * registers), owned by Observability. Cached synchronously rather than streamed because the
+     * launch fires before any Session Replay subscriber exists; Session Replay reads it directly
+     * when building the first wake-up batch to emit the `Launch` timeline breadcrumb.
+     */
+
+    var appLaunchSignal: AppLaunchSignal? = null,
 )

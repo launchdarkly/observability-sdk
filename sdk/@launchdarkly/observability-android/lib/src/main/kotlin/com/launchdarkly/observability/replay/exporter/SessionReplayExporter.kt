@@ -34,7 +34,14 @@ class SessionReplayExporter(
     private val injectedReplayApiService: SessionReplayApiService? = null,
     private val logger: ObserveLogger,
     private val canvasBufferLimit: Int = RRWEB_CANVAS_BUFFER_LIMIT,
-    canvasDrawEntourage: Int = RRWEB_CANVAS_DRAW_ENTOURAGE
+    canvasDrawEntourage: Int = RRWEB_CANVAS_DRAW_ENTOURAGE,
+    /**
+     * The one-shot `Launch` breadcrumb, resolved during SDK start (before Session Replay subscribes)
+     * and injected here so it can be folded into the first wake-up batch instead of being enqueued
+     * early and racing session initialization. Owned by the exporter (guarded by [exportMutex]) so it
+     * is never read from the shared context on the export thread.
+     */
+    initialAppLaunchItemPayload: AppLaunchItemPayload? = null,
 ) : EventExporting {
     private val exportMutex = Mutex()
 
@@ -50,6 +57,9 @@ class SessionReplayExporter(
         )
 
     private var identifyItemPayload = initialIdentifyItemPayload
+    // `val` (never reassigned) so its constructor write is safely published to the export coroutine
+    // that reads it in `wakeUpEvents` (JMM final-field guarantee), independent of any lock.
+    private val appLaunchItemPayload = initialAppLaunchItemPayload
     // TODO: O11Y-624 - need to implement sid, payloadId reset when multiple sessions occur in one application process lifecycle.
     private var payloadIdCounter = 0
     private var shouldWakeUpSession = true
@@ -129,6 +139,15 @@ class SessionReplayExporter(
                             }
                         }
 
+                        is AppLaunchItemPayload -> {
+                            val sessionId = payload.sessionId ?: lastCaptureSnapshot.sessionId
+                            sessionId?.let { sessionId ->
+                                eventGenerator.generateAppLaunchEvent(payload)?.let { launchEvent ->
+                                    eventsBySession.getOrPut(sessionId) { mutableListOf() }.add(launchEvent)
+                                }
+                            }
+                        }
+
                         else -> {
                             // Noop
                         }
@@ -172,7 +191,7 @@ class SessionReplayExporter(
         try {
             if (shouldWakeUpSession) {
                 val lastEventTimestamp = events.lastOrNull()?.timestamp ?: 0L
-                val wakeUpEvents = eventGenerator.generateWakeUpEvents(lastEventTimestamp)
+                val wakeUpEvents = eventGenerator.generateWakeUpEvents(lastEventTimestamp, appLaunchItemPayload)
                 if (wakeUpEvents.isNotEmpty()) {
                     // we need a separate payload to wake up player
                     replayApiService.pushPayload(sessionId, "${nextPayloadId()}", wakeUpEvents)

@@ -13,6 +13,7 @@ import com.launchdarkly.observability.replay.capture.CaptureManager
 import com.launchdarkly.observability.replay.capture.ImageCaptureService
 import com.launchdarkly.observability.replay.capture.ImageCaptureServicing
 import com.launchdarkly.observability.replay.exporter.AppLifecycleItemPayload
+import com.launchdarkly.observability.replay.exporter.AppLaunchItemPayload
 import com.launchdarkly.observability.replay.exporter.IdentifyItemPayload
 import com.launchdarkly.observability.replay.exporter.ImageItemPayload
 import com.launchdarkly.observability.replay.exporter.InteractionItemPayload
@@ -130,6 +131,19 @@ class SessionReplayService(
         } catch (_: Exception) {
             "Android app"
         }
+        // The launch signal is resolved during Observability init (before this runs), so build the
+        // `Launch` breadcrumb once here on the main thread and inject it — the exporter never reads
+        // the shared context on its background export thread.
+        val initialAppLaunchItemPayload = observabilityContext.appLaunchSignal?.let { signal ->
+            AppLaunchItemPayload(
+                launchType = signal.launchType.wireValue,
+                version = signal.version,
+                build = signal.build,
+                previousVersion = signal.previousVersion,
+                timestamp = signal.timestamp,
+                sessionId = null
+            )
+        }
         val exporter = SessionReplayExporter(
             organizationVerboseId = observabilityContext.sdkKey,
             backendUrl = observabilityContext.options.backendUrl,
@@ -137,7 +151,8 @@ class SessionReplayService(
             serviceVersion = observabilityContext.options.serviceVersion,
             initialIdentifyItemPayload = initialIdentifyItemPayload,
             title = appName,
-            logger = logger
+            logger = logger,
+            initialAppLaunchItemPayload = initialAppLaunchItemPayload,
         )
         this@SessionReplayService.exporter = exporter
         batchWorker.addExporter(exporter)
@@ -226,6 +241,10 @@ class SessionReplayService(
                 }
             }
         }
+
+        // The `Launch` breadcrumb is not collected here: Observability resolves the launch signal
+        // synchronously at start (before this service registers), so it is read once in
+        // `initialize()` and injected into the exporter, which emits it on the first wake-up batch.
     }
 
     /**
