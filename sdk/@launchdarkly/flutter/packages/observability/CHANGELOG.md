@@ -2,6 +2,14 @@
 
 All notable changes to the LaunchDarkly Observability SDK for Flutter will be documented in this file. This project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.9.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.8.0...launchdarkly_flutter_observability-0.9.0) (2026-06-12)
+
+
+### Features
+
+* **android:** app_launch span + Session Replay Launch breadcrumb ([#620](https://github.com/launchdarkly/observability-sdk/issues/620)) ([1822333](https://github.com/launchdarkly/observability-sdk/commit/18223336dcf2ec19cb38658e5c299c0c043c5c72))
+* **flutter:** propagate appLifecycle + appLaunch analytics options ([#621](https://github.com/launchdarkly/observability-sdk/issues/621)) ([3cb99be](https://github.com/launchdarkly/observability-sdk/commit/3cb99be9ef92af0d1ded32aab00f7d042986c7c7))
+
 ## [0.8.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.7.0...launchdarkly_flutter_observability-0.8.0) (2026-06-12)
 
 
