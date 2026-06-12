@@ -271,7 +271,7 @@ final class LDNativeApiImpl: NSObject, LDNativeApi {
                 maskImages: privacy?.maskImages ?? false
             ),
             frameRate: replay.frameRate ?? 1.0,
-            scale: replay.scale.map(CGFloat.init) ?? 1.0
+            scale: replay.scale.map { CGFloat($0) } ?? 1.0
         )
     }
 
