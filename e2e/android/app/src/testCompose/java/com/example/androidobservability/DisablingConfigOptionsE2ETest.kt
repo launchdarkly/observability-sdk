@@ -162,7 +162,6 @@ class DisablingConfigOptionsE2ETest {
             tracesApi = ObservabilityOptions.TracesApi(includeErrors = false)
         )
         application.initForTest()
-        val tracesUrl = "http://localhost:${application.mockWebServer?.port}/v1/traces"
 
         triggerError()
         LDObserve.flush()
@@ -170,8 +169,11 @@ class DisablingConfigOptionsE2ETest {
 
         val spansExported = application.telemetryInspector?.spanExporter?.finishedSpanItems
 
-        assertFalse(requestsContainsUrl(tracesUrl))
-        assertEquals(0, spansExported?.size)
+        // includeErrors = false only drops the error span; regular spans still export because
+        // includeSpans defaults to true (e.g. the SDK's own `app_launch` analytics span emitted
+        // during init). So we assert specifically that no error span reached the exporter rather
+        // than that nothing at all was exported.
+        assertFalse(spansExported.orEmpty().any { it.name == ERROR_SPAN_NAME })
     }
 
     @Test
@@ -289,5 +291,6 @@ class DisablingConfigOptionsE2ETest {
     companion object {
         private const val TEST_LOG_MESSAGE = "test-log"
         private const val CRASH_INSTRUMENTATION_SCOPE = "io.opentelemetry.crash"
+        private const val ERROR_SPAN_NAME = "highlight.error"
     }
 }
