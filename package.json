@@ -171,7 +171,7 @@
 		"hono": "^4.12.21",
 		"shell-quote": "^1.8.4",
 		"js-cookie": "^3.0.7",
-		"@grpc/grpc-js@~1.8.0": "^1.9.16",
+		"@grpc/grpc-js@~1.8.0": "~1.9.16",
 		"@grpc/grpc-js@^1.14.3": "^1.14.4",
 		"handlebars": "^4.7.9",
 		"picomatch@^2": "^2.3.2",

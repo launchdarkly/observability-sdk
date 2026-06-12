@@ -68,7 +68,6 @@
 		"@babel/plugin-transform-modules-systemjs": "^7.29.4",
 		"shell-quote": "^1.8.4",
 		"@remix-run/server-runtime": "^2.17.5",
-		"tmp": "^0.2.6",
-		"turbo-stream": "^3.0.0"
+		"tmp": "^0.2.6"
 	}
 }
