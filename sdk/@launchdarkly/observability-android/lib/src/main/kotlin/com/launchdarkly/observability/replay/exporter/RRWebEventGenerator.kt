@@ -496,6 +496,32 @@ class RRWebEventGenerator(
     }
 
     /**
+     * Generates a `Launch` custom event. The payload is a stringified JSON `{ "launch_type" }`
+     * (mirroring the app-lifecycle breadcrumb).
+     */
+    fun generateAppLaunchEvent(payload: AppLaunchItemPayload): Event? {
+        val payloadJSONString = try {
+            buildJsonObject {
+                payload.launchType?.let { put("launch_type", it) }
+            }.toString()
+        } catch (_: Exception) {
+            return null
+        }
+
+        val customData = buildJsonObject {
+            put("tag", JsonPrimitive(payload.tag.wireValue))
+            put("payload", JsonPrimitive(payloadJSONString))
+        }
+
+        return Event(
+            type = EventType.CUSTOM,
+            timestamp = payload.timestamp,
+            sid = nextSid(),
+            data = EventDataUnion.CustomEventDataWrapper(customData)
+        )
+    }
+
+    /**
      * Generates a "Reload" custom event and a sequence of "wake-up" interaction events.
      * Used by [SessionReplayExporter] to re-trigger player playback after session resumption.
      */

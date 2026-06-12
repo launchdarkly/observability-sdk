@@ -133,6 +133,7 @@ data class ObservabilityOptions(
         val trackEvents: Boolean = true,
         val screenViews: Boolean = true,
         val appLifecycle: Boolean = true,
+        val appLaunch: Boolean = true,
     ) {
         /**
          * Java-friendly fluent builder for [Analytics].
@@ -145,6 +146,7 @@ data class ObservabilityOptions(
             fun trackEvents(trackEvents: Boolean) = apply { value = value.copy(trackEvents = trackEvents) }
             fun screenViews(screenViews: Boolean) = apply { value = value.copy(screenViews = screenViews) }
             fun appLifecycle(appLifecycle: Boolean) = apply { value = value.copy(appLifecycle = appLifecycle) }
+            fun appLaunch(appLaunch: Boolean) = apply { value = value.copy(appLaunch = appLaunch) }
 
             fun build() = value
         }

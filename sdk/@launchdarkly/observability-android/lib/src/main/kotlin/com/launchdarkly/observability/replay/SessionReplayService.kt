@@ -13,6 +13,7 @@ import com.launchdarkly.observability.replay.capture.CaptureManager
 import com.launchdarkly.observability.replay.capture.ImageCaptureService
 import com.launchdarkly.observability.replay.capture.ImageCaptureServicing
 import com.launchdarkly.observability.replay.exporter.AppLifecycleItemPayload
+import com.launchdarkly.observability.replay.exporter.AppLaunchItemPayload
 import com.launchdarkly.observability.replay.exporter.IdentifyItemPayload
 import com.launchdarkly.observability.replay.exporter.ImageItemPayload
 import com.launchdarkly.observability.replay.exporter.InteractionItemPayload
@@ -224,6 +225,21 @@ class SessionReplayService(
                 if (signal.kind == AppLifecycleSignal.Kind.BACKGROUND) {
                     batchWorker.flush()
                 }
+            }
+        }
+
+        // App-launch collector: the process launch from Observability becomes an rrweb `Launch`
+        // breadcrumb on the active recording.
+        instrumentationScope.launch {
+            observabilityContext.appLaunchFlow?.collect { signal ->
+                if (!_isEnabled.value) return@collect
+                eventQueue.send(
+                    AppLaunchItemPayload(
+                        launchType = signal.launchType.wireValue,
+                        timestamp = signal.timestamp,
+                        sessionId = sessionManager.getSessionId()
+                    )
+                )
             }
         }
     }

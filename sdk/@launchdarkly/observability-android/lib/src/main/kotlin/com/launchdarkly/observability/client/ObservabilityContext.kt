@@ -47,4 +47,9 @@ data class ObservabilityContext(
      * timeline breadcrumbs.
      */
     var appLifecycleFlow: SharedFlow<AppLifecycleSignal>? = null,
+    /**
+     * Stream of app-launch signals (one per process launch) from the single emitter, owned by
+     * Observability. Session Replay consumes it to emit a `Launch` timeline breadcrumb.
+     */
+    var appLaunchFlow: SharedFlow<AppLaunchSignal>? = null,
 )
