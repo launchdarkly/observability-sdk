@@ -34,7 +34,13 @@ class SessionReplayExporter(
     private val injectedReplayApiService: SessionReplayApiService? = null,
     private val logger: ObserveLogger,
     private val canvasBufferLimit: Int = RRWEB_CANVAS_BUFFER_LIMIT,
-    canvasDrawEntourage: Int = RRWEB_CANVAS_DRAW_ENTOURAGE
+    canvasDrawEntourage: Int = RRWEB_CANVAS_DRAW_ENTOURAGE,
+    /**
+     * Supplies the one-shot `Launch` breadcrumb (resolved during SDK start, before Session Replay
+     * subscribes) so it can be folded into the first wake-up batch instead of being enqueued early
+     * and racing session initialization. Returns `null` once there is no pending launch.
+     */
+    private val appLaunchProvider: () -> AppLaunchItemPayload? = { null },
 ) : EventExporting {
     private val exportMutex = Mutex()
 
@@ -181,7 +187,7 @@ class SessionReplayExporter(
         try {
             if (shouldWakeUpSession) {
                 val lastEventTimestamp = events.lastOrNull()?.timestamp ?: 0L
-                val wakeUpEvents = eventGenerator.generateWakeUpEvents(lastEventTimestamp)
+                val wakeUpEvents = eventGenerator.generateWakeUpEvents(lastEventTimestamp, appLaunchProvider())
                 if (wakeUpEvents.isNotEmpty()) {
                     // we need a separate payload to wake up player
                     replayApiService.pushPayload(sessionId, "${nextPayloadId()}", wakeUpEvents)

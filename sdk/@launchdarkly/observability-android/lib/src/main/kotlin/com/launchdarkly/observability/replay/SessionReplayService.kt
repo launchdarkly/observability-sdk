@@ -91,6 +91,15 @@ class SessionReplayService(
     private var pendingIdentify: IdentifyItemPayload? = null
 
     /**
+     * The one-shot `Launch` breadcrumb. The launch signal fires during Observability start (before
+     * this service subscribes), so it is cached here and folded into the exporter's first wake-up
+     * batch rather than enqueued directly, which would race session initialization and drop the
+     * event. Written from the collector coroutine, read from the export coroutine.
+     */
+    @Volatile
+    private var pendingAppLaunch: AppLaunchItemPayload? = null
+
+    /**
      * Installs replay instrumentation. Idempotent.
      *
      * Returns `true` if the service is now installed (by this call or a previous one).
@@ -138,7 +147,8 @@ class SessionReplayService(
             serviceVersion = observabilityContext.options.serviceVersion,
             initialIdentifyItemPayload = initialIdentifyItemPayload,
             title = appName,
-            logger = logger
+            logger = logger,
+            appLaunchProvider = { pendingAppLaunch },
         )
         this@SessionReplayService.exporter = exporter
         batchWorker.addExporter(exporter)
@@ -228,17 +238,16 @@ class SessionReplayService(
             }
         }
 
-        // App-launch collector: the process launch from Observability becomes an rrweb `Launch`
-        // breadcrumb on the active recording.
+        // App-launch collector: the process launch fires once during Observability start, before
+        // this subscription is attached (delivered via the flow's replay cache). Enqueuing it
+        // directly would race session initialization, so cache it and let the exporter fold the
+        // `Launch` breadcrumb into the first wake-up batch (which runs after the session is inited).
         instrumentationScope.launch {
             observabilityContext.appLaunchFlow?.collect { signal ->
-                if (!_isEnabled.value) return@collect
-                eventQueue.send(
-                    AppLaunchItemPayload(
-                        launchType = signal.launchType.wireValue,
-                        timestamp = signal.timestamp,
-                        sessionId = sessionManager.getSessionId()
-                    )
+                pendingAppLaunch = AppLaunchItemPayload(
+                    launchType = signal.launchType.wireValue,
+                    timestamp = signal.timestamp,
+                    sessionId = null
                 )
             }
         }
