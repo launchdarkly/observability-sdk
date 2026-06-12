@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.57.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.56.0...launchdarkly-observability-android-0.57.0) (2026-06-12)
+
+
+### Features
+
+* **android:** app_launch span + Session Replay Launch breadcrumb ([#620](https://github.com/launchdarkly/observability-sdk/issues/620)) ([1822333](https://github.com/launchdarkly/observability-sdk/commit/18223336dcf2ec19cb38658e5c299c0c043c5c72))
+* **flutter:** propagate appLifecycle + appLaunch analytics options ([#621](https://github.com/launchdarkly/observability-sdk/issues/621)) ([3cb99be](https://github.com/launchdarkly/observability-sdk/commit/3cb99be9ef92af0d1ded32aab00f7d042986c7c7))
+
+
+### Bug Fixes
+
+* include userIdentifier in Session Replay Identify payload ([#619](https://github.com/launchdarkly/observability-sdk/issues/619)) ([d6dc9be](https://github.com/launchdarkly/observability-sdk/commit/d6dc9be3aa5f59b3f8af43a81249e07e3e98d9af))
+
 ## [0.56.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.55.0...launchdarkly-observability-android-0.56.0) (2026-06-11)
 
 
