@@ -24,11 +24,6 @@ Add the package to your app's `pubspec.yaml`:
 flutter pub add launchdarkly_flutter_observability
 ```
 
-```yaml
-dependencies:
-  launchdarkly_flutter_observability: ^0.0.0
-```
-
 Then fetch dependencies:
 
 ```bash
