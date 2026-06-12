@@ -17,6 +17,8 @@ void main() {
       expect(wire.analytics?.taps, isTrue);
       expect(wire.analytics?.pageViews, isTrue);
       expect(wire.analytics?.trackEvents, isTrue);
+      expect(wire.analytics?.appLifecycle, isTrue);
+      expect(wire.analytics?.appLaunch, isTrue);
       expect(wire.instrumentation?.crashReporting, isTrue);
     });
 
@@ -31,6 +33,8 @@ void main() {
           taps: true,
           pageViews: false,
           trackEvents: false,
+          appLifecycle: false,
+          appLaunch: false,
         ),
         instrumentation: InstrumentationOptions(crashReporting: false),
       ).toWire();
@@ -44,6 +48,8 @@ void main() {
       expect(wire.analytics?.taps, isTrue);
       expect(wire.analytics?.pageViews, isFalse);
       expect(wire.analytics?.trackEvents, isFalse);
+      expect(wire.analytics?.appLifecycle, isFalse);
+      expect(wire.analytics?.appLaunch, isFalse);
       expect(wire.instrumentation?.crashReporting, isFalse);
     });
 

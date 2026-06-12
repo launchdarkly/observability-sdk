@@ -195,6 +195,8 @@ struct LDAnalyticsOptions: Hashable {
   var taps: Bool? = nil
   var pageViews: Bool? = nil
   var trackEvents: Bool? = nil
+  var appLifecycle: Bool? = nil
+  var appLaunch: Bool? = nil
 
 
   // swift-format-ignore: AlwaysUseLowerCamelCase
@@ -202,11 +204,15 @@ struct LDAnalyticsOptions: Hashable {
     let taps: Bool? = nilOrValue(pigeonVar_list[0])
     let pageViews: Bool? = nilOrValue(pigeonVar_list[1])
     let trackEvents: Bool? = nilOrValue(pigeonVar_list[2])
+    let appLifecycle: Bool? = nilOrValue(pigeonVar_list[3])
+    let appLaunch: Bool? = nilOrValue(pigeonVar_list[4])
 
     return LDAnalyticsOptions(
       taps: taps,
       pageViews: pageViews,
-      trackEvents: trackEvents
+      trackEvents: trackEvents,
+      appLifecycle: appLifecycle,
+      appLaunch: appLaunch
     )
   }
   func toList() -> [Any?] {
@@ -214,6 +220,8 @@ struct LDAnalyticsOptions: Hashable {
       taps,
       pageViews,
       trackEvents,
+      appLifecycle,
+      appLaunch,
     ]
   }
   static func == (lhs: LDAnalyticsOptions, rhs: LDAnalyticsOptions) -> Bool {

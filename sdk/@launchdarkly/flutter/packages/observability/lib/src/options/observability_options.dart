@@ -107,10 +107,22 @@ class AnalyticsOptions {
   /// `LDObserve.track` API. Defaults to `true`.
   final bool trackEvents;
 
+  /// Whether to emit app-lifecycle spans (`app_foreground` / `app_background`)
+  /// as the app moves between foreground and background. Mobile-only (iOS,
+  /// Android); a no-op elsewhere. Defaults to `true`.
+  final bool appLifecycle;
+
+  /// Whether to emit an `app_launch` span (carrying `event.launch_type` —
+  /// `install` / `update` / `relaunch` — and version fields) once per process
+  /// launch. Mobile-only (iOS, Android); a no-op elsewhere. Defaults to `true`.
+  final bool appLaunch;
+
   const AnalyticsOptions({
     this.taps = true,
     this.pageViews = true,
     this.trackEvents = true,
+    this.appLifecycle = true,
+    this.appLaunch = true,
   });
 
   /// All analytics telemetry enabled. Convenience mirroring Swift's
@@ -131,6 +143,8 @@ class AnalyticsOptions {
     taps: false,
     pageViews: false,
     trackEvents: false,
+    appLifecycle: false,
+    appLaunch: false,
   );
 }
 
