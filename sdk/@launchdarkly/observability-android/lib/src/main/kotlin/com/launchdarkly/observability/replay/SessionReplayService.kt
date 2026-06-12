@@ -91,24 +91,6 @@ class SessionReplayService(
     private var pendingIdentify: IdentifyItemPayload? = null
 
     /**
-     * Builds the one-shot `Launch` breadcrumb from the signal Observability cached synchronously at
-     * start ([ObservabilityContext.appLaunchSignal]). Read directly (not via a collector) so the
-     * exporter's first wake-up batch can't race an async subscription and drop the event. Returns
-     * `null` if no launch was resolved.
-     */
-    private fun pendingAppLaunch(): AppLaunchItemPayload? =
-        observabilityContext.appLaunchSignal?.let { signal ->
-            AppLaunchItemPayload(
-                launchType = signal.launchType.wireValue,
-                version = signal.version,
-                build = signal.build,
-                previousVersion = signal.previousVersion,
-                timestamp = signal.timestamp,
-                sessionId = null
-            )
-        }
-
-    /**
      * Installs replay instrumentation. Idempotent.
      *
      * Returns `true` if the service is now installed (by this call or a previous one).
@@ -149,6 +131,19 @@ class SessionReplayService(
         } catch (_: Exception) {
             "Android app"
         }
+        // The launch signal is resolved during Observability init (before this runs), so build the
+        // `Launch` breadcrumb once here on the main thread and inject it — the exporter never reads
+        // the shared context on its background export thread.
+        val initialAppLaunchItemPayload = observabilityContext.appLaunchSignal?.let { signal ->
+            AppLaunchItemPayload(
+                launchType = signal.launchType.wireValue,
+                version = signal.version,
+                build = signal.build,
+                previousVersion = signal.previousVersion,
+                timestamp = signal.timestamp,
+                sessionId = null
+            )
+        }
         val exporter = SessionReplayExporter(
             organizationVerboseId = observabilityContext.sdkKey,
             backendUrl = observabilityContext.options.backendUrl,
@@ -157,7 +152,7 @@ class SessionReplayService(
             initialIdentifyItemPayload = initialIdentifyItemPayload,
             title = appName,
             logger = logger,
-            appLaunchProvider = { pendingAppLaunch() },
+            initialAppLaunchItemPayload = initialAppLaunchItemPayload,
         )
         this@SessionReplayService.exporter = exporter
         batchWorker.addExporter(exporter)
@@ -248,8 +243,8 @@ class SessionReplayService(
         }
 
         // The `Launch` breadcrumb is not collected here: Observability resolves the launch signal
-        // synchronously at start (before this service registers) and caches it on the context, so
-        // the exporter reads it directly via `appLaunchProvider` when building the wake-up batch.
+        // synchronously at start (before this service registers), so it is read once in
+        // `initialize()` and injected into the exporter, which emits it on the first wake-up batch.
     }
 
     /**

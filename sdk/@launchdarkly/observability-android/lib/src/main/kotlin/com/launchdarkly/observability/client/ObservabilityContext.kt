@@ -53,5 +53,6 @@ data class ObservabilityContext(
      * launch fires before any Session Replay subscriber exists; Session Replay reads it directly
      * when building the first wake-up batch to emit the `Launch` timeline breadcrumb.
      */
+
     var appLaunchSignal: AppLaunchSignal? = null,
 )
