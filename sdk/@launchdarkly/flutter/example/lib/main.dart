@@ -86,6 +86,13 @@ void main() {
 /// LaunchDarkly client backed variant is active; the standalone variant is
 /// shown below for reference.
 void _startObservability() {
+  // Optional overrides for the OTLP endpoint and backend URL (e.g. to target
+  // staging). Mirrors `otlpEndpoint` / `backendUrl` in the Swift sample's
+  // Secrets.xcconfig. Leave the dart-define unset/empty to use the production
+  // defaults baked into ObservabilityOptions.
+  const otlpEndpoint = String.fromEnvironment('OTLP_ENDPOINT');
+  const backendUrl = String.fromEnvironment('BACKEND_URL');
+
   final observability = ObservabilityOptions(
     serviceName: 'flutter-sample-app',
     // This could be a semantic version or a git commit hash. This demonstrates
@@ -95,6 +102,8 @@ void _startObservability() {
       'GIT_SHA',
       defaultValue: 'no-version',
     ),
+    otlpEndpoint: otlpEndpoint.isEmpty ? null : otlpEndpoint,
+    backendUrl: backendUrl.isEmpty ? null : backendUrl,
     instrumentation: InstrumentationOptions(
       networkRequests: true,
       launchTimes: true,
