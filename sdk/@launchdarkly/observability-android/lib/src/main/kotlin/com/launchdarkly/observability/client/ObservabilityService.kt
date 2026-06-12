@@ -729,9 +729,9 @@ class ObservabilityService(
      * breadcrumb (always), then emits the taxonomy `app_launch` span only when gated on by
      * [ObservabilityOptions.Analytics.appLaunch] (and the global span flag).
      *
-     * The cold/warm startup-performance dimension is attached as an `app.start` span event, gated by
-     * [ObservabilityOptions.Instrumentations.launchTime] (the refactored home of the legacy
-     * launch-time metering).
+     * The cold/warm startup-performance dimension is attached as an `app.start` span event whenever
+     * [startType] is known (taxonomy §4.6). [ObservabilityOptions.Instrumentations.launchTime] only
+     * gates legacy TTID/TTFD histogram metrics, not this event.
      */
     private fun handleAppLaunchSignal(signal: AppLaunchSignal) {
         // Broadcast so Session Replay can emit a breadcrumb independent of the span flags below.
@@ -752,12 +752,10 @@ class ObservabilityService(
             .setSpanKind(SpanKind.CLIENT)
             .setAllAttributes(attrBuilder.build())
             .startSpan()
-        if (observabilityOptions.instrumentations.launchTime) {
-            signal.startType?.let { startType ->
-                val eventAttrs = Attributes.builder().put(START_TYPE, startType.wireValue)
-                signal.startDurationMs?.let { eventAttrs.put(START_DURATION_MS, it) }
-                span.addEvent(APP_START_EVENT_NAME, eventAttrs.build())
-            }
+        signal.startType?.let { startType ->
+            val eventAttrs = Attributes.builder().put(START_TYPE, startType.wireValue)
+            signal.startDurationMs?.let { eventAttrs.put(START_DURATION_MS, it) }
+            span.addEvent(APP_START_EVENT_NAME, eventAttrs.build())
         }
         span.end()
     }
