@@ -69,6 +69,7 @@ data class IdentifyItemPayload(
             val canonicalKey = canonicalKeyOverride ?: ldContext?.fullyQualifiedKey ?: "unknown"
             attributes["key"] = contextFriendlyName ?: canonicalKey
             attributes["canonicalKey"] = canonicalKey
+            attributes["userIdentifier"] = contextFriendlyName ?: canonicalKey
 
             return IdentifyItemPayload(
                 attributes = attributes,
