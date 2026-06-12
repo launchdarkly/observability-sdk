@@ -262,6 +262,16 @@ final class LDNativeApiImpl: NSObject, LDNativeApi {
     ) -> LaunchDarklySessionReplay.SessionReplayOptions {
         let privacy = replay.privacy
 
+        // Treat a missing or non-positive scale as the 1.0 default; otherwise the
+        // exporter would record an invalid scale while the Dart capture falls back
+        // to the device pixel ratio, reintroducing the mismatch.
+        let resolvedScale: CGFloat
+        if let scale = replay.scale, scale > 0 {
+            resolvedScale = CGFloat(scale)
+        } else {
+            resolvedScale = 1.0
+        }
+
         return LaunchDarklySessionReplay.SessionReplayOptions(
             isEnabled: replay.isEnabled ?? true,
             privacy: .init(
@@ -271,7 +281,7 @@ final class LDNativeApiImpl: NSObject, LDNativeApi {
                 maskImages: privacy?.maskImages ?? false
             ),
             frameRate: replay.frameRate ?? 1.0,
-            scale: replay.scale.map { CGFloat($0) } ?? 1.0
+            scale: resolvedScale
         )
     }
 
