@@ -2,6 +2,13 @@
 
 All notable changes to the LaunchDarkly Observability SDK for Flutter will be documented in this file. This project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.8.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.7.0...launchdarkly_flutter_observability-0.8.0) (2026-06-12)
+
+
+### Features
+
+* **flutter:** forward identify to native observability + Session Replay ([#617](https://github.com/launchdarkly/observability-sdk/issues/617)) ([8384b4e](https://github.com/launchdarkly/observability-sdk/commit/8384b4e63d366b0a78b2134f98ea47a8e0040f36))
+
 ## [0.7.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.6.0...launchdarkly_flutter_observability-0.7.0) (2026-06-11)
 
 
