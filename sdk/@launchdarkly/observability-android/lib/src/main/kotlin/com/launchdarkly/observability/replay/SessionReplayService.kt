@@ -91,13 +91,22 @@ class SessionReplayService(
     private var pendingIdentify: IdentifyItemPayload? = null
 
     /**
-     * The one-shot `Launch` breadcrumb. The launch signal fires during Observability start (before
-     * this service subscribes), so it is cached here and folded into the exporter's first wake-up
-     * batch rather than enqueued directly, which would race session initialization and drop the
-     * event. Written from the collector coroutine, read from the export coroutine.
+     * Builds the one-shot `Launch` breadcrumb from the signal Observability cached synchronously at
+     * start ([ObservabilityContext.appLaunchSignal]). Read directly (not via a collector) so the
+     * exporter's first wake-up batch can't race an async subscription and drop the event. Returns
+     * `null` if no launch was resolved.
      */
-    @Volatile
-    private var pendingAppLaunch: AppLaunchItemPayload? = null
+    private fun pendingAppLaunch(): AppLaunchItemPayload? =
+        observabilityContext.appLaunchSignal?.let { signal ->
+            AppLaunchItemPayload(
+                launchType = signal.launchType.wireValue,
+                version = signal.version,
+                build = signal.build,
+                previousVersion = signal.previousVersion,
+                timestamp = signal.timestamp,
+                sessionId = null
+            )
+        }
 
     /**
      * Installs replay instrumentation. Idempotent.
@@ -148,7 +157,7 @@ class SessionReplayService(
             initialIdentifyItemPayload = initialIdentifyItemPayload,
             title = appName,
             logger = logger,
-            appLaunchProvider = { pendingAppLaunch },
+            appLaunchProvider = { pendingAppLaunch() },
         )
         this@SessionReplayService.exporter = exporter
         batchWorker.addExporter(exporter)
@@ -238,22 +247,9 @@ class SessionReplayService(
             }
         }
 
-        // App-launch collector: the process launch fires once during Observability start, before
-        // this subscription is attached (delivered via the flow's replay cache). Enqueuing it
-        // directly would race session initialization, so cache it and let the exporter fold the
-        // `Launch` breadcrumb into the first wake-up batch (which runs after the session is inited).
-        instrumentationScope.launch {
-            observabilityContext.appLaunchFlow?.collect { signal ->
-                pendingAppLaunch = AppLaunchItemPayload(
-                    launchType = signal.launchType.wireValue,
-                    version = signal.version,
-                    build = signal.build,
-                    previousVersion = signal.previousVersion,
-                    timestamp = signal.timestamp,
-                    sessionId = null
-                )
-            }
-        }
+        // The `Launch` breadcrumb is not collected here: Observability resolves the launch signal
+        // synchronously at start (before this service registers) and caches it on the context, so
+        // the exporter reads it directly via `appLaunchProvider` when building the wake-up batch.
     }
 
     /**

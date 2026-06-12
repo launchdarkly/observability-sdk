@@ -184,20 +184,13 @@ class ObservabilityService(
     private val appLifecycleTracker = AppLifecycleTracker(onSignal = { signal -> handleAppLifecycleSignal(signal) })
 
     /**
-     * Broadcasts the app-launch signal (one per process launch) so Session Replay can emit a
-     * `Launch` breadcrumb regardless of the span flags. Shared via [ObservabilityContext.appLaunchFlow].
-     *
-     * `replay = 1`: the launch fires once during this service's init, before Session Replay
-     * subscribes in its own `initialize()`. The replay cache delivers that one-shot signal to the
-     * late subscriber so the `Launch` breadcrumb is not dropped (the span path is unaffected as it
-     * runs inline in [handleAppLaunchSignal]).
+     * The one-shot app-launch signal, resolved synchronously during this service's `init` (before
+     * Session Replay registers). Cached here rather than streamed so Session Replay can read it
+     * directly when building its first wake-up batch — a stream would race the launch, which fires
+     * before any subscriber exists. Wired into [ObservabilityContext.appLaunchSignal].
      */
-    private val _appLaunchFlow = MutableSharedFlow<AppLaunchSignal>(
-        replay = 1,
-        extraBufferCapacity = 4,
-        onBufferOverflow = BufferOverflow.DROP_OLDEST
-    )
-    val appLaunchFlow: SharedFlow<AppLaunchSignal> = _appLaunchFlow.asSharedFlow()
+    var appLaunchSignal: AppLaunchSignal? = null
+        private set
 
     /**
      * Resolves the launch type (install/update/relaunch) and cold/warm startup dimension once per
@@ -740,8 +733,10 @@ class ObservabilityService(
      * gates legacy TTID/TTFD histogram metrics, not this event.
      */
     private fun handleAppLaunchSignal(signal: AppLaunchSignal) {
-        // Broadcast so Session Replay can emit a breadcrumb independent of the span flags below.
-        _appLaunchFlow.tryEmit(signal)
+        // Cache before the span flag checks so Session Replay can emit the `Launch` breadcrumb
+        // independent of the span flags below. Runs synchronously during init, so the signal is
+        // available before Session Replay reads it.
+        appLaunchSignal = signal
 
         if (!observabilityOptions.analytics.appLaunch) return
         if (!observabilityOptions.tracesApi.includeSpans) return
