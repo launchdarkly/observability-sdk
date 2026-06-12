@@ -84,6 +84,10 @@ class AppLaunchTracker(
         /** Classifies a launch relative to the stored version. Pure, for testability. */
         fun classify(storedVersion: String?, currentVersion: String?): AppLaunchSignal.LaunchType =
             when {
+                // Without a readable version there is nothing to persist or compare, so the
+                // milestone is indeterminable. Returning UNKNOWN (rather than INSTALL) avoids
+                // misclassifying every such relaunch as a fresh install.
+                currentVersion == null -> AppLaunchSignal.LaunchType.UNKNOWN
                 storedVersion == null -> AppLaunchSignal.LaunchType.INSTALL
                 storedVersion != currentVersion -> AppLaunchSignal.LaunchType.UPDATE
                 else -> AppLaunchSignal.LaunchType.RELAUNCH

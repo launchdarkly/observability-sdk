@@ -28,6 +28,12 @@ data class AppLaunchSignal(
         RELAUNCH("relaunch"),
         INSTALL("install"),
         UPDATE("update"),
+
+        /**
+         * The current app version could not be read, so the launch milestone is indeterminable
+         * (nothing is persisted, so it can't be compared across launches).
+         */
+        UNKNOWN("unknown"),
     }
 
     enum class StartType(val wireValue: String) {

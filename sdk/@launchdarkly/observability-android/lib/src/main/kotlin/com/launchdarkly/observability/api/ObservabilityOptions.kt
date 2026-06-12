@@ -161,7 +161,9 @@ data class ObservabilityOptions(
      * This class allows enabling or disabling specific automatic instrumentations.
      *
      * @property crashReporting If `true`, the plugin will automatically report any uncaught exceptions as errors.
-     * @property launchTime If `true`, the plugin will automatically measure and report the application's startup time as metrics.
+     * @property launchTime If `true`, emits legacy TTID/TTFD launch-time histogram metrics. The
+     *   `app.start` span event on `app_launch` (cold/warm via `start.type`) is always attached
+     *   when [Analytics.appLaunch] is enabled and is not gated by this flag.
      * @property userTaps If `true`, the plugin runs the tap-detection machinery, issuing tap events
      *   from the captured touch stream. Publishing those taps as `click` spans is governed
      *   separately by [Analytics.taps]; Session Replay capture is unaffected by either flag.

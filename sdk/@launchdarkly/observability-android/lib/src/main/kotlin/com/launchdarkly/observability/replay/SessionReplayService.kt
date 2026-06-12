@@ -131,6 +131,19 @@ class SessionReplayService(
         } catch (_: Exception) {
             "Android app"
         }
+        // The launch signal is resolved during Observability init (before this runs), so build the
+        // `Launch` breadcrumb once here on the main thread and inject it — the exporter never reads
+        // the shared context on its background export thread.
+        val initialAppLaunchItemPayload = observabilityContext.appLaunchSignal?.let { signal ->
+            AppLaunchItemPayload(
+                launchType = signal.launchType.wireValue,
+                version = signal.version,
+                build = signal.build,
+                previousVersion = signal.previousVersion,
+                timestamp = signal.timestamp,
+                sessionId = null
+            )
+        }
         val exporter = SessionReplayExporter(
             organizationVerboseId = observabilityContext.sdkKey,
             backendUrl = observabilityContext.options.backendUrl,
@@ -138,7 +151,8 @@ class SessionReplayService(
             serviceVersion = observabilityContext.options.serviceVersion,
             initialIdentifyItemPayload = initialIdentifyItemPayload,
             title = appName,
-            logger = logger
+            logger = logger,
+            initialAppLaunchItemPayload = initialAppLaunchItemPayload,
         )
         this@SessionReplayService.exporter = exporter
         batchWorker.addExporter(exporter)
@@ -228,20 +242,9 @@ class SessionReplayService(
             }
         }
 
-        // App-launch collector: the process launch from Observability becomes an rrweb `Launch`
-        // breadcrumb on the active recording.
-        instrumentationScope.launch {
-            observabilityContext.appLaunchFlow?.collect { signal ->
-                if (!_isEnabled.value) return@collect
-                eventQueue.send(
-                    AppLaunchItemPayload(
-                        launchType = signal.launchType.wireValue,
-                        timestamp = signal.timestamp,
-                        sessionId = sessionManager.getSessionId()
-                    )
-                )
-            }
-        }
+        // The `Launch` breadcrumb is not collected here: Observability resolves the launch signal
+        // synchronously at start (before this service registers), so it is read once in
+        // `initialize()` and injected into the exporter, which emits it on the first wake-up batch.
     }
 
     /**
