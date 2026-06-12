@@ -403,6 +403,8 @@ final userContext = LDContextBuilder()
 await client.identify(userContext);
 ```
 
+You do not need to call anything on `LDObserve`: the observability plugin hooks into the LaunchDarkly client and, on mobile, forwards each completed identify to the native observability SDK and Session Replay. This attributes subsequent `LDObserve.track` events to the active context and records who the user is on the active Session Replay recording.
+
 ## Example
 
 A complete, runnable sample app lives in [`example/`](../../example). See its [README](../../example/README.md) for how to configure credentials and launch it on each platform.

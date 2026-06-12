@@ -79,6 +79,28 @@ final class _ObservabilityHook extends Hook {
   }
 
   @override
+  UnmodifiableMapView<String, dynamic> afterIdentify(
+    IdentifySeriesContext hookContext,
+    UnmodifiableMapView<String, dynamic> data,
+    IdentifyResult result,
+  ) {
+    // Forward the identified context to the native observability SDK and Session
+    // Replay so the manual `LDObserve.track` path is attributed to the active
+    // context and the replay session records who the user is. Mirrors MAUI's
+    // `ObservabilityHook.AfterIdentify`. The native side ignores incomplete
+    // identifies, so the `completed` flag is forwarded as-is.
+    final context = hookContext.context;
+    if (context.valid) {
+      ObserveOtel.identify(
+        contextKeys: context.keys,
+        canonicalKey: context.canonicalKey,
+        completed: result is IdentifyComplete,
+      );
+    }
+    return data;
+  }
+
+  @override
   void afterTrack(TrackSeriesContext hookContext) {
     // Funnel through the single track emitter so the LaunchDarkly client's
     // track path and the manual LDObserve.track API stay consistent.
