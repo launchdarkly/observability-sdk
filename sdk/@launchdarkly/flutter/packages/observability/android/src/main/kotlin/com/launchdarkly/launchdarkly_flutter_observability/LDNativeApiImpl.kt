@@ -95,6 +95,8 @@ internal class LDNativeApiImpl(
                 taps = observability.analytics?.taps ?: true,
                 pageViews = observability.analytics?.pageViews ?: true,
                 trackEvents = observability.analytics?.trackEvents ?: true,
+                appLifecycle = observability.analytics?.appLifecycle ?: true,
+                appLaunch = observability.analytics?.appLaunch ?: true,
             ),
             instrumentations = ObservabilityOptions.Instrumentations(
                 crashReporting = observability.instrumentation?.crashReporting ?: true,

@@ -38,6 +38,8 @@ class LDAnalyticsOptions {
   bool? taps;
   bool? pageViews;
   bool? trackEvents;
+  bool? appLifecycle;
+  bool? appLaunch;
 }
 
 class LDObservabilityOptions {

@@ -122,7 +122,13 @@ class LDTracesOptions {
 }
 
 class LDAnalyticsOptions {
-  LDAnalyticsOptions({this.taps, this.pageViews, this.trackEvents});
+  LDAnalyticsOptions({
+    this.taps,
+    this.pageViews,
+    this.trackEvents,
+    this.appLifecycle,
+    this.appLaunch,
+  });
 
   bool? taps;
 
@@ -130,8 +136,12 @@ class LDAnalyticsOptions {
 
   bool? trackEvents;
 
+  bool? appLifecycle;
+
+  bool? appLaunch;
+
   List<Object?> _toList() {
-    return <Object?>[taps, pageViews, trackEvents];
+    return <Object?>[taps, pageViews, trackEvents, appLifecycle, appLaunch];
   }
 
   Object encode() {
@@ -144,6 +154,8 @@ class LDAnalyticsOptions {
       taps: result[0] as bool?,
       pageViews: result[1] as bool?,
       trackEvents: result[2] as bool?,
+      appLifecycle: result[3] as bool?,
+      appLaunch: result[4] as bool?,
     );
   }
 

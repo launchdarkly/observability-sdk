@@ -170,6 +170,8 @@ final class LDNativeApiImpl: NSObject, LDNativeApi {
         // `Instrumentation` defaults. pageViews is Android-only and ignored here.
         let tapsEnabled: Bool = observability.analytics?.taps ?? true
         let trackEventsEnabled: Bool = observability.analytics?.trackEvents ?? true
+        let appLifecycleEnabled: Bool = observability.analytics?.appLifecycle ?? true
+        let appLaunchEnabled: Bool = observability.analytics?.appLaunch ?? true
         let launchTimesEnabled: Bool = observability.instrumentation?.launchTimes ?? true
         let metricsEnabled: Bool = observability.metricsEnabled ?? true
 
@@ -205,7 +207,9 @@ final class LDNativeApiImpl: NSObject, LDNativeApi {
         // which the Dart side reaches by calling `track` on this bridge.
         let analytics = ObservabilityOptions.Analytics(
             taps: tapsEnabled ? .enabled : .disabled,
-            trackEvents: trackEventsEnabled ? .enabled : .disabled
+            trackEvents: trackEventsEnabled ? .enabled : .disabled,
+            appLifecycle: appLifecycleEnabled ? .enabled : .disabled,
+            appLaunch: appLaunchEnabled ? .enabled : .disabled
         )
 
         let observabilityOptions = ObservabilityOptions(

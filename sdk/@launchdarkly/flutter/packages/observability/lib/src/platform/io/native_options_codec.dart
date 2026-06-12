@@ -37,6 +37,8 @@ extension AnalyticsOptionsWire on AnalyticsOptions {
     taps: taps,
     pageViews: pageViews,
     trackEvents: trackEvents,
+    appLifecycle: appLifecycle,
+    appLaunch: appLaunch,
   );
 }
 

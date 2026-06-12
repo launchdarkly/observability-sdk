@@ -147,7 +147,9 @@ data class LDTracesOptions (
 data class LDAnalyticsOptions (
   val taps: Boolean? = null,
   val pageViews: Boolean? = null,
-  val trackEvents: Boolean? = null
+  val trackEvents: Boolean? = null,
+  val appLifecycle: Boolean? = null,
+  val appLaunch: Boolean? = null
 )
  {
   companion object {
@@ -155,7 +157,9 @@ data class LDAnalyticsOptions (
       val taps = pigeonVar_list[0] as Boolean?
       val pageViews = pigeonVar_list[1] as Boolean?
       val trackEvents = pigeonVar_list[2] as Boolean?
-      return LDAnalyticsOptions(taps, pageViews, trackEvents)
+      val appLifecycle = pigeonVar_list[3] as Boolean?
+      val appLaunch = pigeonVar_list[4] as Boolean?
+      return LDAnalyticsOptions(taps, pageViews, trackEvents, appLifecycle, appLaunch)
     }
   }
   fun toList(): List<Any?> {
@@ -163,6 +167,8 @@ data class LDAnalyticsOptions (
       taps,
       pageViews,
       trackEvents,
+      appLifecycle,
+      appLaunch,
     )
   }
   override fun equals(other: Any?): Boolean {
