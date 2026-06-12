@@ -343,14 +343,14 @@ Identity resolution is **already implemented** and is out of scope for changes h
 
 ### 4.6 `app_launch` (mobile)
 
-App process launched. `event.launch_type` captures the **product milestone** of the launch — `relaunch` (a normal launch), `install` (first launch after a fresh install), or `update` (first launch after a version change). A return to the foreground from background (a "resume" / hot start) is **not** a launch and is captured by `app_foreground` (§4.7).
+App process launched. `event.launch_type` captures the **product milestone** of the launch — `relaunch` (a normal launch), `install` (first launch after a fresh install), or `update` (first launch after a version change); `unknown` is used when the app version can't be read, so the milestone can't be determined (and `version` is absent). A return to the foreground from background (a "resume" / hot start) is **not** a launch and is captured by `app_foreground` (§4.7).
 
 The **startup-performance** dimension (cold vs warm) is orthogonal to the product milestone and is recorded as an **OTel span event** on the launch span, not as a `launch_type` value. Emit an `app.start` span event carrying `start.type` (`cold` | `warm`); finer-grained startup phases may be added as additional span events. This aligns with Sentry (`app.start.cold` / `app.start.warm`) and the OpenTelemetry `AppStart` convention.
 
 | `event.*` field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `event.launch_type` | enum | ✅ | `relaunch` (normal launch), `install` (first launch after fresh install), `update` (first launch after version change). |
-| `event.version` | string | ✅ | Current app version. |
+| `event.launch_type` | enum | ✅ | `relaunch` (normal launch), `install` (first launch after fresh install), `update` (first launch after version change), `unknown` (app version unreadable, so the milestone is indeterminable). |
+| `event.version` | string | ✅ | Current app version. Absent for `unknown` launches. |
 | `event.build` | string | ⛔ | Current build number. |
 | `event.previous_version` | string | ✅ for `update` | Version before the update. |
 | `event.referring_source` | string | ⛔ | `push`, `deep_link`, `icon`, `widget`, … |

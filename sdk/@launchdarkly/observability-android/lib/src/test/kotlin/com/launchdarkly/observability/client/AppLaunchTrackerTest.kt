@@ -27,4 +27,20 @@ class AppLaunchTrackerTest {
             AppLaunchTracker.classify(storedVersion = "1.0.0", currentVersion = "1.1.0")
         )
     }
+
+    @Test
+    fun `unreadable current version is unknown`() {
+        assertEquals(
+            AppLaunchSignal.LaunchType.UNKNOWN,
+            AppLaunchTracker.classify(storedVersion = null, currentVersion = null)
+        )
+    }
+
+    @Test
+    fun `unreadable current version is unknown even with a stored version`() {
+        assertEquals(
+            AppLaunchSignal.LaunchType.UNKNOWN,
+            AppLaunchTracker.classify(storedVersion = "1.0.0", currentVersion = null)
+        )
+    }
 }
