@@ -67,9 +67,7 @@ class _WebViewDialogState extends State<WebViewDialog> {
             const Divider(height: 1),
             // The web view is a platform view; with `maskWebViews: true` its
             // region is redacted in Session Replay recordings.
-            Expanded(
-              child: WebViewWidget(controller: _controller),
-            ),
+            Expanded(child: WebViewWidget(controller: _controller)),
           ],
         ),
       ),

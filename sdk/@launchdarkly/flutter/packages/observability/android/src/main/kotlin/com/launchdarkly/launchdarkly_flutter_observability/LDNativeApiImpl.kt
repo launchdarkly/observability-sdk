@@ -211,6 +211,23 @@ internal class LDNativeApiImpl(
         LDObserveBridge.track(key, data, metricValue, contextKeys)
     }
 
+    // Forwards an identify to the native observability SDK (which caches the
+    // context keys so the manual track path is attributed to the active context)
+    // and Session Replay (which records who the user is on the active recording).
+    // The Dart side calls this from the LaunchDarkly client's `afterIdentify`
+    // hook. Reuses the same public cross-platform hook proxies that React Native
+    // (`LDReplay.hookProxy`) and MAUI drive, mirroring the iOS plugin — so no
+    // bespoke combined bridge entry point is needed.
+    override fun identify(
+        contextKeys: Map<String, String>,
+        canonicalKey: String,
+        completed: Boolean,
+    ) {
+        LDObserveBridge.getObservabilityHookProxy()
+            ?.afterIdentify(contextKeys, canonicalKey, completed)
+        LDReplay.hookProxy?.afterIdentify(contextKeys, canonicalKey, completed)
+    }
+
     /**
      * Maps the OpenTelemetry log-severity number sent across the bridge onto the
      * native [ObservabilityOptions.LogLevel]. Defaults to [ObservabilityOptions.LogLevel.INFO]
