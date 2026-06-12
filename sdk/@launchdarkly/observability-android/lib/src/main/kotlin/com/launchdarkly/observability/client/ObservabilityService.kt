@@ -749,16 +749,25 @@ class ObservabilityService(
         signal.build?.let { attrBuilder.put(EVENT_BUILD, it) }
         signal.previousVersion?.let { attrBuilder.put(EVENT_PREVIOUS_VERSION, it) }
 
+        // The span represents the launch itself, not the (later) point where this handler runs after
+        // startup work. Anchor it to process start (the launch-detection time minus the measured
+        // startup duration) and end it at the launch-detection time carried by the signal, so
+        // analytics timestamps reflect the real startup window and aren't skewed by SDK init work.
+        val launchTimeMs = signal.timestamp
+        val spanStartMs = signal.startDurationMs?.let { launchTimeMs - it } ?: launchTimeMs
+
         val span = otelTracer.spanBuilder(APP_LAUNCH_SPAN_NAME)
             .setSpanKind(SpanKind.CLIENT)
             .setAllAttributes(attrBuilder.build())
+            .setStartTimestamp(spanStartMs, TimeUnit.MILLISECONDS)
             .startSpan()
         signal.startType?.let { startType ->
             val eventAttrs = Attributes.builder().put(START_TYPE, startType.wireValue)
             signal.startDurationMs?.let { eventAttrs.put(START_DURATION_MS, it) }
-            span.addEvent(APP_START_EVENT_NAME, eventAttrs.build())
+            // Place the event at the launch-detection time so it falls within the span window.
+            span.addEvent(APP_START_EVENT_NAME, eventAttrs.build(), launchTimeMs, TimeUnit.MILLISECONDS)
         }
-        span.end()
+        span.end(launchTimeMs, TimeUnit.MILLISECONDS)
     }
 
     override fun updateCachedContextKeys(contextKeys: Map<String, String>) {
