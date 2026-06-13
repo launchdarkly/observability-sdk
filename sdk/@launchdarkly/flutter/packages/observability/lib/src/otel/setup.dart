@@ -26,6 +26,11 @@ class Otel {
   static IdentifyRecorder? _identifyRecorder;
   static IdentifyRecorder? get identifyRecorder => _identifyRecorder;
 
+  /// The platform-appropriate screen-view recorder, set during [setup]. `null`
+  /// before the pipeline is initialized.
+  static ScreenViewRecorder? _screenViewRecorder;
+  static ScreenViewRecorder? get screenViewRecorder => _screenViewRecorder;
+
   static void setup(String sdkKey, ObservabilityConfig config) {
     // TODO: Log when otel is setup multiple times. It will work, but the
     // behavior may be confusing.
@@ -55,6 +60,7 @@ class Otel {
     _logRecorder = exporters.createLogRecorder(config);
     _trackRecorder = exporters.createTrackRecorder(config);
     _identifyRecorder = exporters.createIdentifyRecorder(config);
+    _screenViewRecorder = exporters.createScreenViewRecorder(config);
   }
 
   static void shutdown() {
@@ -65,5 +71,6 @@ class Otel {
     _logRecorder = null;
     _trackRecorder = null;
     _identifyRecorder = null;
+    _screenViewRecorder = null;
   }
 }

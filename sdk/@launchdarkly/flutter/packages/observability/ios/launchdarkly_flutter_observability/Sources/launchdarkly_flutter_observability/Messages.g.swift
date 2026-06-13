@@ -667,6 +667,15 @@ protocol LDNativeApi {
   /// ignores incomplete identifies). Mirrors MAUI's
   /// `ObservabilityHook.AfterIdentify` /  `SessionReplayHook.AfterIdentify`.
   func identify(contextKeys: [String: String], canonicalKey: String, completed: Bool) throws
+  /// Forwards a screen view to the native observability SDK so it emits the
+  /// native `screen_view` span and the Session Replay `Navigate` timeline event.
+  /// Flutter owns its own routing inside a single host Activity/UIViewController,
+  /// so native screen detection never sees Flutter route changes; screen views
+  /// must therefore be reported from Dart (e.g. via a `NavigatorObserver`).
+  /// [name] is the screen/route name; [screenClass], [screenId] and [category]
+  /// are optional classifiers, and [properties] carries optional extra
+  /// attributes attached to the `screen_view` span.
+  func trackScreenView(name: String, screenClass: String?, screenId: String?, category: String?, properties: [String: Any?]?) throws
 }
 
 /// Generated setup class from Pigeon to handle messages through the `binaryMessenger`.
@@ -778,6 +787,33 @@ class LDNativeApiSetup {
       }
     } else {
       identifyChannel.setMessageHandler(nil)
+    }
+    /// Forwards a screen view to the native observability SDK so it emits the
+    /// native `screen_view` span and the Session Replay `Navigate` timeline event.
+    /// Flutter owns its own routing inside a single host Activity/UIViewController,
+    /// so native screen detection never sees Flutter route changes; screen views
+    /// must therefore be reported from Dart (e.g. via a `NavigatorObserver`).
+    /// [name] is the screen/route name; [screenClass], [screenId] and [category]
+    /// are optional classifiers, and [properties] carries optional extra
+    /// attributes attached to the `screen_view` span.
+    let trackScreenViewChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.launchdarkly_flutter_observability.LDNativeApi.trackScreenView\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      trackScreenViewChannel.setMessageHandler { message, reply in
+        let args = message as! [Any?]
+        let nameArg = args[0] as! String
+        let screenClassArg: String? = nilOrValue(args[1])
+        let screenIdArg: String? = nilOrValue(args[2])
+        let categoryArg: String? = nilOrValue(args[3])
+        let propertiesArg: [String: Any?]? = nilOrValue(args[4])
+        do {
+          try api.trackScreenView(name: nameArg, screenClass: screenClassArg, screenId: screenIdArg, category: categoryArg, properties: propertiesArg)
+          reply(wrapResult(nil))
+        } catch {
+          reply(wrapError(error))
+        }
+      }
+    } else {
+      trackScreenViewChannel.setMessageHandler(nil)
     }
   }
 }

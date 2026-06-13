@@ -642,6 +642,17 @@ interface LDNativeApi {
    * `ObservabilityHook.AfterIdentify` /  `SessionReplayHook.AfterIdentify`.
    */
   fun identify(contextKeys: Map<String, String>, canonicalKey: String, completed: Boolean)
+  /**
+   * Forwards a screen view to the native observability SDK so it emits the
+   * native `screen_view` span and the Session Replay `Navigate` timeline event.
+   * Flutter owns its own routing inside a single host Activity/UIViewController,
+   * so native screen detection never sees Flutter route changes; screen views
+   * must therefore be reported from Dart (e.g. via a `NavigatorObserver`).
+   * [name] is the screen/route name; [screenClass], [screenId] and [category]
+   * are optional classifiers, and [properties] carries optional extra
+   * attributes attached to the `screen_view` span.
+   */
+  fun trackScreenView(name: String, screenClass: String?, screenId: String?, category: String?, properties: Map<String, Any?>?)
 
   companion object {
     /** The codec used by LDNativeApi. */
@@ -742,6 +753,28 @@ interface LDNativeApi {
             val completedArg = args[2] as Boolean
             val wrapped: List<Any?> = try {
               api.identify(contextKeysArg, canonicalKeyArg, completedArg)
+              listOf(null)
+            } catch (exception: Throwable) {
+              MessagesPigeonUtils.wrapError(exception)
+            }
+            reply.reply(wrapped)
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.launchdarkly_flutter_observability.LDNativeApi.trackScreenView$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { message, reply ->
+            val args = message as List<Any?>
+            val nameArg = args[0] as String
+            val screenClassArg = args[1] as String?
+            val screenIdArg = args[2] as String?
+            val categoryArg = args[3] as String?
+            val propertiesArg = args[4] as Map<String, Any?>?
+            val wrapped: List<Any?> = try {
+              api.trackScreenView(nameArg, screenClassArg, screenIdArg, categoryArg, propertiesArg)
               listOf(null)
             } catch (exception: Throwable) {
               MessagesPigeonUtils.wrapError(exception)
