@@ -2,6 +2,13 @@
 
 All notable changes to the LaunchDarkly Observability SDK for Flutter will be documented in this file. This project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.9.1](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.9.0...launchdarkly_flutter_observability-0.9.1) (2026-06-12)
+
+
+### Bug Fixes
+
+* **ios:** bump native `LaunchDarklyObservability` and `LaunchDarklySessionReplay` pod dependencies to `~> 0.43.0` (0.9.0 shipped with the wrong `~> 0.42.0` constraint)
+
 ## [0.9.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.8.0...launchdarkly_flutter_observability-0.9.0) (2026-06-12)
 
 
