@@ -1,5 +1,8 @@
 {
   "_comment": "Set ONLY ONE of LAUNCHDARKLY_MOBILE_KEY or LAUNCHDARKLY_CLIENT_SIDE_ID. The SDK rejects builds that have both. Use the mobile key for iOS/Android/macOS/Windows/Linux, and the client-side ID only for web (Chrome).",
   "LAUNCHDARKLY_MOBILE_KEY": "mob-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-  "GIT_SHA": "local-dev"
+  "GIT_SHA": "local-dev",
+  "_comment_endpoints": "Optional. Override the observability OTLP endpoint and backend URL (e.g. to target staging). Remove these keys to use the production defaults.",
+  "OTLP_ENDPOINT": "https://otel.observability.ld-stg.launchdarkly.com:4318",
+  "BACKEND_URL": "https://pub.observability.ld-stg.launchdarkly.com"
 }
