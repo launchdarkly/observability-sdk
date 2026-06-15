@@ -15,8 +15,8 @@ The LaunchDarkly Observability and Session Replay plugin for Flutter.
   # Native dependencies mirrored from the LaunchDarkly mobile SDKs (the same
   # stack used by sdk/@launchdarkly/react-native-ld-session-replay and the
   # .NET MAUI bridge in sdk/@launchdarkly/mobile-dotnet).
-  s.dependency 'LaunchDarklyObservability', '~> 0.43.0'
-  s.dependency 'LaunchDarklySessionReplay', '~> 0.43.0'
+  s.dependency 'LaunchDarklyObservability', '~> 0.44.0'
+  s.dependency 'LaunchDarklySessionReplay', '~> 0.44.0'
 
   s.platform         = :ios, '14.0'
   s.pod_target_xcconfig = { 'DEFINES_MODULE' => 'YES' }
