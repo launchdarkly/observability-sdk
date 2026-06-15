@@ -2,6 +2,13 @@
 
 All notable changes to the LaunchDarkly Observability SDK for Flutter will be documented in this file. This project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.10.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.9.0...launchdarkly_flutter_observability-0.10.0) (2026-06-15)
+
+
+### Features
+
+* **flutter:** allow overriding OTLP endpoint and backend URL in example ([#624](https://github.com/launchdarkly/observability-sdk/issues/624)) ([7eff0cd](https://github.com/launchdarkly/observability-sdk/commit/7eff0cdacd029995fda822c6c95e4d3645fed01c))
+
 ## [0.9.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.8.0...launchdarkly_flutter_observability-0.9.0) (2026-06-12)
 
 
