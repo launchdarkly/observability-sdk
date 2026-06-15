@@ -1,8 +1,8 @@
 PATH
   remote: ../../../../sdk/@launchdarkly/observability-ruby
   specs:
-    launchdarkly-observability (0.1.0)
-      launchdarkly-server-sdk (>= 8.0)
+    launchdarkly-observability (0.2.1)
+      launchdarkly-server-sdk (>= 8.11.0)
       opentelemetry-exporter-otlp (~> 0.28)
       opentelemetry-exporter-otlp-logs (~> 0.1)
       opentelemetry-instrumentation-all (~> 0.62)
@@ -249,7 +249,7 @@ GEM
     opentelemetry-semantic_conventions (1.36.0)
       opentelemetry-api (~> 1.0)
     public_suffix (7.0.2)
-    puma (6.6.1)
+    puma (7.2.1)
       nio4r (~> 2.0)
     rack (3.2.6)
     rack-protection (4.2.1)
@@ -280,7 +280,7 @@ PLATFORMS
 DEPENDENCIES
   launchdarkly-observability!
   launchdarkly-server-sdk (~> 8.0)
-  puma (~> 6.6)
+  puma (~> 7.2)
   rackup (~> 2.2)
   sinatra
 
