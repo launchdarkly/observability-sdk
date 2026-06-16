@@ -1,0 +1,38 @@
+import { isNodeJsRuntime } from './is-node-js-runtime'
+import { standaloneMetadata, type StandalonePlugin } from './standalone'
+import type { ObservabilityEnv } from './types'
+
+let initPromise: Promise<void> | undefined
+
+async function init(env: ObservabilityEnv) {
+	// Import lazily so the OpenTelemetry/node dependencies are never pulled into
+	// an edge bundle.
+	const { Observability } = await import('@launchdarkly/observability-node')
+
+	const { sdkKey, ...options } = env
+	const plugin = new Observability(options) as unknown as StandalonePlugin
+	// `register` ignores the client argument and initializes LDObserve from the
+	// SDK key in the metadata. See util/standalone.ts.
+	plugin.register?.({}, standaloneMetadata(sdkKey))
+}
+
+/**
+ * Initialize the server-side LaunchDarkly observability plugin in standalone
+ * mode. Call this from your Next.js `instrumentation.ts` `register()` hook.
+ *
+ * Initialization only happens in the Node.js runtime; in the edge runtime this
+ * is a no-op (the OpenTelemetry-based node SDK is not edge-compatible). It is
+ * idempotent and concurrency-safe, so route-handler wrappers can safely await
+ * it on every request.
+ */
+export async function registerObservability(env: ObservabilityEnv) {
+	if (!isNodeJsRuntime()) {
+		console.info(
+			`LaunchDarkly observability not registered: NEXT_RUNTIME=${process.env.NEXT_RUNTIME}`,
+		)
+		return
+	}
+
+	initPromise ??= init(env)
+	return initPromise
+}
