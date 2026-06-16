@@ -108,7 +108,10 @@ export class ObserveSDK implements Observe {
 	private readonly sampler: ExportSampler = new CustomSampler()
 	private _started = false
 	private _ldContextKeys: Attributes | undefined
-	private graphqlSDK!: Sdk
+	// ECMAScript-private (#) so the internal GraphQL SDK type — which
+	// references graphql-request / graphql — does not leak into the published
+	// declaration file and break consumer type-checking.
+	#graphqlSDK!: Sdk
 	constructor(
 		options: ObserveOptions & {
 			projectId: string
@@ -203,7 +206,7 @@ export class ObserveSDK implements Observe {
 				headers: {},
 			},
 		)
-		this.graphqlSDK = getSdk(client, getGraphQLRequestWrapper())
+		this.#graphqlSDK = getSdk(client, getGraphQLRequestWrapper())
 		await this.configureSampling()
 		this.setupListeners()
 	}
@@ -218,7 +221,7 @@ export class ObserveSDK implements Observe {
 
 	private async configureSampling() {
 		try {
-			const res = await this.graphqlSDK.GetSamplingConfig({
+			const res = await this.#graphqlSDK.GetSamplingConfig({
 				organization_verbose_id: `${this.organizationID}`,
 			})
 			this.sampler.setConfig(res.sampling)

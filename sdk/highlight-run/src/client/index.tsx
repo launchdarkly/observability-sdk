@@ -128,7 +128,7 @@ import { CustomSampler } from './otel/sampling/CustomSampler'
 import randomUuidV4 from './utils/randomUuidV4'
 import { LDContext } from '@launchdarkly/js-client-sdk'
 import { MaskInputOptions } from './types/record'
-import { ProductAnalyticsEvents } from 'client/types/observe'
+import { ProductAnalyticsEvents } from './types/observe'
 
 export const HighlightWarning = (context: string, msg: any) => {
 	console.warn(`Highlight Warning: (${context}): `, { output: msg })
@@ -194,7 +194,10 @@ export class Highlight {
 	isRunningOnHighlight!: boolean
 	/** Verbose project ID that is exposed to users. Legacy users may still be using ints. */
 	organizationID!: string
-	graphqlSDK!: Sdk
+	// ECMAScript-private (#) so the internal GraphQL SDK type — which
+	// references graphql-request / graphql — does not leak into the published
+	// declaration file and break consumer type-checking.
+	#graphqlSDK!: Sdk
 	events!: eventWithTime[]
 	sessionData!: SessionData
 	ready!: boolean
@@ -431,7 +434,7 @@ export class Highlight {
 		const client = new GraphQLClient(`${this._backendUrl}`, {
 			headers: {},
 		})
-		this.graphqlSDK = getSdk(client, getGraphQLRequestWrapper())
+		this.#graphqlSDK = getSdk(client, getGraphQLRequestWrapper())
 		this.environment = options.environment ?? 'production'
 		this.appVersion = options.appVersion
 		this.serviceName = options.serviceName ?? ''
@@ -701,7 +704,7 @@ export class Highlight {
 				// wait for 'cross-origin iframe ready' message
 				await this._setupCrossOriginIframe()
 			} else {
-				const gr = await this.graphqlSDK.initializeSession({
+				const gr = await this.#graphqlSDK.initializeSession({
 					organization_verbose_id: this.organizationID,
 					enable_strict_privacy: this.privacySetting === 'strict',
 					privacy_setting: this.privacySetting,
