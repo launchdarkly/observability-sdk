@@ -9,6 +9,36 @@ import { globalStorage } from '../client/utils/storage'
 import { Record } from '../plugins/record'
 import * as otel from '../client/otel'
 
+// `graphqlSDK` is an ECMAScript-private field on the SDK classes (so its
+// GraphQL types don't leak into the published declarations), which means tests
+// can no longer assign it directly. Stub the only seam — the generated
+// `getSdk` factory — so the classes never hit the network during unit tests.
+vi.mock('../client/graph/generated/operations', async (importOriginal) => {
+	const actual =
+		await importOriginal<
+			typeof import('../client/graph/generated/operations')
+		>()
+	return {
+		...actual,
+		getSdk: () => ({
+			initializeSession: vi.fn().mockResolvedValue({
+				initializeSession: {
+					secure_id: 'test-session',
+					project_id: '1',
+				},
+			}),
+			GetSamplingConfig: vi
+				.fn()
+				.mockResolvedValue({ sampling: undefined }),
+			PushSessionEvents: vi.fn().mockResolvedValue({}),
+			pushMetrics: vi.fn().mockResolvedValue({}),
+			identifySession: vi.fn().mockResolvedValue({}),
+			addSessionProperties: vi.fn().mockResolvedValue({}),
+			addSessionFeedback: vi.fn().mockResolvedValue({}),
+		}),
+	}
+})
+
 describe('SDK', () => {
 	let observe: typeof LDObserve
 	let record: typeof LDRecord
@@ -34,15 +64,7 @@ describe('SDK', () => {
 			sessionSecureID: 'test-session',
 		})
 
-		// Mock the graphqlSDK and initializeSession function
-		recordImpl.graphqlSDK = {
-			initializeSession: vi.fn().mockResolvedValue({
-				initializeSession: {
-					secure_id: 'test-session',
-					project_id: '1',
-				},
-			}),
-		} as any
+		// graphqlSDK is stubbed via the vi.mock of getSdk above.
 		observe.load(observeImpl)
 		record.load(recordImpl)
 	})

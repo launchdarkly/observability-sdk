@@ -82,7 +82,8 @@
 	],
 	"dependencies": {
 		"@launchdarkly/js-client-sdk": "^4.0.0",
-		"imurmurhash": "^0.1.4"
+		"imurmurhash": "^0.1.4",
+		"stacktrace-js": "2.0.2"
 	},
 	"devDependencies": {
 		"@graphql-codegen/cli": "^5.0.0",
@@ -127,7 +128,6 @@
 		"prettier": "^3.3.3",
 		"readdirp": "^3.6.0",
 		"size-limit": "^8.1.0",
-		"stacktrace-js": "2.0.2",
 		"tslib": "^2.6.2",
 		"typedoc": "^0.28.4",
 		"typescript": "^5.0.4",
