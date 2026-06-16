@@ -33,6 +33,12 @@ export async function registerObservability(env: ObservabilityEnv) {
 		return
 	}
 
-	initPromise ??= init(env)
+	// Cache the in-flight/successful init, but drop the cached promise if it
+	// rejects so a failed import or registration can be retried on a later
+	// call rather than poisoning every subsequent request.
+	initPromise ??= init(env).catch((err) => {
+		initPromise = undefined
+		throw err
+	})
 	return initPromise
 }

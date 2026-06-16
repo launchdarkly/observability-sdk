@@ -76,8 +76,10 @@ export function ensureStandaloneInit(
 	if (registry[key]) {
 		return
 	}
-	registry[key] = true
 
 	const plugin = createPlugin()
 	plugin.getHooks?.(standaloneMetadata(sdkKey, application))
+	// Only mark the key initialized once init succeeds, so a throw from
+	// createPlugin / getHooks leaves the plugin retryable on the next call.
+	registry[key] = true
 }
