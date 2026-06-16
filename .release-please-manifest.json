@@ -1,6 +1,6 @@
 {
 	"go": "1.1.1",
-	"sdk/@launchdarkly/observability": "1.1.14",
+	"sdk/@launchdarkly/observability": "1.1.15",
 	"sdk/@launchdarkly/observability-android": "0.57.0",
 	"sdk/@launchdarkly/flutter/packages/observability": "0.10.0",
 	"sdk/@launchdarkly/observability-dotnet": "1.2.0",
@@ -8,7 +8,7 @@
 	"sdk/@launchdarkly/observability-python": "1.2.3",
 	"sdk/@launchdarkly/observability-react-native": "0.9.3",
 	"sdk/@launchdarkly/react-native-ld-session-replay": "0.11.1",
-	"sdk/@launchdarkly/session-replay": "1.1.14",
-	"sdk/highlight-run": "10.4.0",
+	"sdk/@launchdarkly/session-replay": "1.1.15",
+	"sdk/highlight-run": "10.4.1",
 	"sdk/@launchdarkly/observability-ruby": "0.2.1"
 }
