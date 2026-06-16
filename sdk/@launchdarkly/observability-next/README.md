@@ -95,11 +95,11 @@ export default PageRouterObservability({ sdkKey: process.env.LAUNCHDARKLY_SDK_KE
 
 ```ts
 import { observabilityMiddleware } from '@launchdarkly/observability-next/server'
-import { NextResponse } from 'next/server'
 
 export async function middleware(request: Request) {
-	await observabilityMiddleware(request)
-	return NextResponse.next()
+	// Return the response so the forwarded x-highlight-request header reaches
+	// downstream route handlers.
+	return observabilityMiddleware(request)
 }
 ```
 

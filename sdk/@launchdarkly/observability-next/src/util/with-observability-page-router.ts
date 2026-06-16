@@ -1,6 +1,7 @@
 import { LDObserve } from '@launchdarkly/observability-node'
 
 import { registerObservability } from './register-observability'
+import { sanitizeSpanUrl } from './sanitize-url'
 import type { ObservabilityEnv } from './types'
 
 import type { IncomingHttpHeaders } from 'http'
@@ -34,7 +35,7 @@ export const Highlight =
 			await registerObservability(env)
 
 			return await LDObserve.runWithHeaders(
-				`${req.method?.toUpperCase()} - ${req.url}`,
+				`${req.method?.toUpperCase()} - ${sanitizeSpanUrl(req.url)}`,
 				req.headers,
 				async () => {
 					return await originalHandler(req, res)

@@ -1,6 +1,7 @@
 import { LDObserve } from '@launchdarkly/observability-node'
 
 import { registerObservability } from './register-observability'
+import { sanitizeSpanUrl } from './sanitize-url'
 import type { ObservabilityEnv } from './types'
 
 type NextContext = {
@@ -18,7 +19,7 @@ export function Highlight(env: ObservabilityEnv) {
 			await registerObservability(env)
 
 			return await LDObserve.runWithHeaders(
-				`${request.method?.toUpperCase()} - ${request.url}`,
+				`${request.method?.toUpperCase()} - ${sanitizeSpanUrl(request.url)}`,
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				request.headers as any,
 				async () => originalHandler(request, context),
