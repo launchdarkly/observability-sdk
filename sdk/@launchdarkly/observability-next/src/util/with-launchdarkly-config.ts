@@ -8,6 +8,20 @@ import {
 	PROXY_ENV_FLAG,
 } from './proxy'
 
+/**
+ * Packages that the LaunchDarkly observability node SDK relies on and that must
+ * be loaded natively at runtime rather than webpack-bundled. Bundling them
+ * breaks `require-in-the-middle`-based instrumentation (and therefore
+ * server-side tracing initialized via {@link registerObservability}).
+ */
+const LD_SERVER_EXTERNAL_PACKAGES = [
+	'@launchdarkly/observability-node',
+	'@launchdarkly/node-server-sdk-otel',
+	'@prisma/instrumentation',
+	'require-in-the-middle',
+	'import-in-the-middle',
+]
+
 export interface LaunchDarklyConfigOptions {
 	/**
 	 * Configures same-origin rewrites that proxy browser telemetry through your
@@ -96,6 +110,13 @@ const getLaunchDarklyConfig = (
 		}
 	}
 
+	const serverExternalPackages = Array.from(
+		new Set([
+			...(config.serverExternalPackages ?? []),
+			...LD_SERVER_EXTERNAL_PACKAGES,
+		]),
+	)
+
 	return {
 		...config,
 		env: {
@@ -105,6 +126,7 @@ const getLaunchDarklyConfig = (
 				: '',
 		},
 		rewrites: newRewrites,
+		serverExternalPackages,
 	}
 }
 
