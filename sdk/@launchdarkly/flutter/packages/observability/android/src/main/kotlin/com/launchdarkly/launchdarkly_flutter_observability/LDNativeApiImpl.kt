@@ -70,6 +70,10 @@ internal class LDNativeApiImpl(
             observabilityVersion,
         )
 
+        // Drives both `analytics.taps` (publish `click` spans) and `instrumentations.userTaps`
+        // (run tap detection: window wrapping + hit-testing) from the single Flutter flag.
+        val tapsEnabled = observability.analytics?.taps ?: true
+
         val nativeObservabilityOptions = ObservabilityOptions(
             enabled = observability.isEnabled ?: true,
             serviceName = observability.serviceName ?: DEFAULT_SERVICE_NAME,
@@ -92,7 +96,7 @@ internal class LDNativeApiImpl(
                 ObservabilityOptions.MetricsApi.disabled()
             },
             analytics = ObservabilityOptions.Analytics(
-                taps = observability.analytics?.taps ?: true,
+                taps = tapsEnabled,
                 // The Flutter-facing `views` option maps to the native `screenViews`
                 // (`screen_view` spans); the legacy OpenTelemetry activity-lifecycle spans it used
                 // to control have been removed.
@@ -104,6 +108,12 @@ internal class LDNativeApiImpl(
             instrumentations = ObservabilityOptions.Instrumentations(
                 crashReporting = observability.instrumentation?.crashReporting ?: true,
                 launchTime = observability.instrumentation?.launchTimes ?: true,
+                // The Flutter API exposes a single `analytics.taps` flag, but natively taps need two
+                // switches: `instrumentation.userTaps` runs the tap-detection machinery (window
+                // wrapping + hit-testing) and `analytics.taps` publishes each detected tap as a
+                // `click` span. Drive both from the one Flutter flag - matching iOS - so disabling
+                // taps stops detection too, instead of leaving the invasive capture running.
+                userTaps = tapsEnabled,
             ),
         )
 
