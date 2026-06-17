@@ -770,9 +770,10 @@ class ObservabilityService(
      * breadcrumb (always), then emits the taxonomy `app_launch` span only when gated on by
      * [ObservabilityOptions.Analytics.appLaunch] (and the global span flag).
      *
-     * The cold/warm startup-performance dimension is attached as an `app.start` span event whenever
-     * [startType] is known (taxonomy §4.6). [ObservabilityOptions.Instrumentations.launchTime] only
-     * gates legacy TTID/TTFD histogram metrics, not this event.
+     * The cold/warm startup-performance dimension is attached as an `app.start` span event (taxonomy
+     * §4.6) only when [ObservabilityOptions.Instrumentations.launchTime] is enabled. That flag also
+     * gates the legacy TTID/TTFD histogram metrics; when it is off the span is anchored at the
+     * launch-detection time so it carries no startup duration.
      */
     private fun handleAppLaunchSignal(signal: AppLaunchSignal) {
         // Cache before the span flag checks so Session Replay can emit the `Launch` breadcrumb
@@ -796,18 +797,30 @@ class ObservabilityService(
         // startup duration) and end it at the launch-detection time carried by the signal, so
         // analytics timestamps reflect the real startup window and aren't skewed by SDK init work.
         val launchTimeMs = signal.timestamp
-        val spanStartMs = signal.startDurationMs?.let { launchTimeMs - it } ?: launchTimeMs
+
+        // The startup-performance dimension (cold/warm `start.type` + `start.duration_ms`) is gated by
+        // instrumentations.launchTime. When it is off we also anchor the span at the launch-detection
+        // time instead of back-dating it to process start, so the span window carries no startup
+        // duration and `start.duration_ms` can't be recovered from it.
+        val includeLaunchTime = observabilityOptions.instrumentations.launchTime
+        val spanStartMs = if (includeLaunchTime) {
+            signal.startDurationMs?.let { launchTimeMs - it } ?: launchTimeMs
+        } else {
+            launchTimeMs
+        }
 
         val span = otelTracer.spanBuilder(APP_LAUNCH_SPAN_NAME)
             .setSpanKind(SpanKind.CLIENT)
             .setAllAttributes(attrBuilder.build())
             .setStartTimestamp(spanStartMs, TimeUnit.MILLISECONDS)
             .startSpan()
-        signal.startType?.let { startType ->
-            val eventAttrs = Attributes.builder().put(START_TYPE, startType.wireValue)
-            signal.startDurationMs?.let { eventAttrs.put(START_DURATION_MS, it) }
-            // Place the event at the launch-detection time so it falls within the span window.
-            span.addEvent(APP_START_EVENT_NAME, eventAttrs.build(), launchTimeMs, TimeUnit.MILLISECONDS)
+        if (includeLaunchTime) {
+            signal.startType?.let { startType ->
+                val eventAttrs = Attributes.builder().put(START_TYPE, startType.wireValue)
+                signal.startDurationMs?.let { eventAttrs.put(START_DURATION_MS, it) }
+                // Place the event at the launch-detection time so it falls within the span window.
+                span.addEvent(APP_START_EVENT_NAME, eventAttrs.build(), launchTimeMs, TimeUnit.MILLISECONDS)
+            }
         }
         span.end(launchTimeMs, TimeUnit.MILLISECONDS)
     }
