@@ -242,6 +242,11 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
             // Compose symbols) from loading in apps that don't ship Compose UI. Coordinates here are
             // window-relative, matching SemanticsNode.boundsInWindow.
             composeHostFor(target)?.let { host ->
+                // The tap landed on Compose, so `target` is an internal platform view whose
+                // class/text/id are meaningless. Prefer composable semantics; if they can't be
+                // resolved (e.g. no semantics at the point), describe the Compose host itself rather
+                // than falling back to the internal child, which would emit a misleading
+                // `event.classname`/`event.tag` and drop `Modifier.ldId`/`event.id`.
                 ComposeClickResolver.resolve(host, x, y)?.let { info ->
                     return TargetInfo(
                         className = info.role,
@@ -249,6 +254,11 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
                         resourceId = info.ldId,
                     )
                 }
+                return TargetInfo(
+                    className = host.javaClass.name,
+                    text = extractText(host),
+                    resourceId = resolveResourceId(host),
+                )
             }
             TargetInfo(
                 className = target.javaClass.name,
