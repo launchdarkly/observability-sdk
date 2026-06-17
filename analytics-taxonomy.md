@@ -64,13 +64,13 @@ For each event below, only the **`event.*` fields** are part of this taxonomy. T
 
 ### 4.1 `click` (existing)
 
-Click (web) or tap (mobile) on an interactive element. One event for all element types; the element is described via `event.*` fields, not separate event names. On mobile, `event.id` is the stable accessibility/view identifier when available, and `event.screen_id` links the tap to the current `screen_view` identity. **OTel mapping:** `app.widget.click` / `app.screen.click` (`event.id`↔`app.widget.id`, `event.text`↔`app.widget.name`, `event.screen_id`↔`app.screen.id`, `event.x/y`↔`app.screen.coordinate.x/y`).
+Click (web) or tap (mobile) on an interactive element. One event for all element types; the element is described via `event.*` fields, not separate event names. On mobile, `event.id` is the explicit developer-supplied `ldId` when set (iOS `.ldId(_:)` / `UIView.ldId(_:)`, Android `Modifier.ldId(...)` / `View.ldId(...)`), otherwise it falls back to the platform identifier (iOS accessibility id; Android resource entry name or React Native `testID`). `event.screen_id` links the tap to the current `screen_view` identity. **OTel mapping:** `app.widget.click` / `app.screen.click` (`event.id`↔`app.widget.id`, `event.text`↔`app.widget.name`, `event.screen_id`↔`app.screen.id`, `event.x/y`↔`app.screen.coordinate.x/y`).
 
 | `event.*` field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `event.type` | string | ✅ | Interaction type, e.g. `click`. |
 | `event.tag` | string | ✅ | Element tag/class, e.g. `BUTTON`, `INPUT`, `A`, `UITabBarButton`. |
-| `event.id` | string | ⛔ | Stable element identifier: DOM id on web, accessibility id / view id on mobile. |
+| `event.id` | string | ⛔ | Stable element identifier: DOM id on web; on mobile the explicit `ldId` when set, else accessibility id (iOS) / resource id or RN `testID` (Android). |
 | `event.classname` | string | ⛔ | Element class list. |
 | `event.text` | string | ⛔ | Visible text/label of the element. |
 | `event.xpath` | string | ⛔ | XPath (web) / view path (mobile) of the element. |

@@ -58,6 +58,7 @@ import com.example.androidobservability.ui.theme.AndroidObservabilityTheme
 import com.example.androidobservability.ui.theme.DangerRed
 import com.example.androidobservability.ui.theme.IdentifyBgColor
 import com.example.androidobservability.ui.theme.IdentifyTextColor
+import com.launchdarkly.observability.api.ldId
 import com.launchdarkly.observability.sdk.LDReplay
 
 class MainActivity : ComponentActivity() {
@@ -188,14 +189,16 @@ private fun MetricButtons(viewModel: MainActivityViewModel) {
         Button(
             onClick = {
                 viewModel.triggerMetric()
-            }
+            },
+            modifier = Modifier.ldId("metric.gauge")
         ) {
             Text("Metric")
         }
         Button(
             onClick = {
                 viewModel.triggerHistogramMetric()
-            }
+            },
+            modifier = Modifier.ldId("metric.histogram")
         ) {
             Text("Histogram")
         }
@@ -267,7 +270,8 @@ private fun InstrumentationButtons(viewModel: MainActivityViewModel) {
         Button(
             onClick = {
                 viewModel.triggerHttpRequests()
-            }
+            },
+            modifier = Modifier.ldId("instrumentation.http_request")
         ) {
             Text("Trigger HTTP Request")
         }
@@ -289,6 +293,7 @@ private fun InstrumentationButtons(viewModel: MainActivityViewModel) {
             onClick = {
                 viewModel.triggerCrash()
             },
+            modifier = Modifier.ldId("instrumentation.crash"),
             colors = ButtonDefaults.buttonColors(
                 containerColor = DangerRed,
                 contentColor = Color.White
@@ -390,6 +395,7 @@ private fun IdentifyButtons(viewModel: MainActivityViewModel) {
     ) {
         Button(
             onClick = { viewModel.identifyUser() },
+            modifier = Modifier.ldId("identify.user"),
             colors = ButtonDefaults.buttonColors(
                 containerColor = IdentifyBgColor,
                 contentColor = IdentifyTextColor
@@ -399,6 +405,7 @@ private fun IdentifyButtons(viewModel: MainActivityViewModel) {
         }
         Button(
             onClick = { viewModel.identifyMulti() },
+            modifier = Modifier.ldId("identify.multi"),
             colors = ButtonDefaults.buttonColors(
                 containerColor = IdentifyBgColor,
                 contentColor = IdentifyTextColor
@@ -408,6 +415,7 @@ private fun IdentifyButtons(viewModel: MainActivityViewModel) {
         }
         Button(
             onClick = { viewModel.identifyAnonymous() },
+            modifier = Modifier.ldId("identify.anonymous"),
             colors = ButtonDefaults.buttonColors(
                 containerColor = IdentifyBgColor,
                 contentColor = IdentifyTextColor
@@ -430,6 +438,7 @@ private fun ErrorButtons(viewModel: MainActivityViewModel) {
         onClick = {
             viewModel.triggerError()
         },
+        modifier = Modifier.ldId("error.trigger"),
         colors = ButtonDefaults.buttonColors(
             containerColor = DangerRed,
             contentColor = Color.White

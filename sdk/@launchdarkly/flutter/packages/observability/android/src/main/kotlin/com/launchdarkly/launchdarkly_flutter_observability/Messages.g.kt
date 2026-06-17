@@ -146,7 +146,7 @@ data class LDTracesOptions (
 /** Generated class from Pigeon that represents data sent in messages. */
 data class LDAnalyticsOptions (
   val taps: Boolean? = null,
-  val pageViews: Boolean? = null,
+  val views: Boolean? = null,
   val trackEvents: Boolean? = null,
   val appLifecycle: Boolean? = null,
   val appLaunch: Boolean? = null
@@ -155,17 +155,17 @@ data class LDAnalyticsOptions (
   companion object {
     fun fromList(pigeonVar_list: List<Any?>): LDAnalyticsOptions {
       val taps = pigeonVar_list[0] as Boolean?
-      val pageViews = pigeonVar_list[1] as Boolean?
+      val views = pigeonVar_list[1] as Boolean?
       val trackEvents = pigeonVar_list[2] as Boolean?
       val appLifecycle = pigeonVar_list[3] as Boolean?
       val appLaunch = pigeonVar_list[4] as Boolean?
-      return LDAnalyticsOptions(taps, pageViews, trackEvents, appLifecycle, appLaunch)
+      return LDAnalyticsOptions(taps, views, trackEvents, appLifecycle, appLaunch)
     }
   }
   fun toList(): List<Any?> {
     return listOf(
       taps,
-      pageViews,
+      views,
       trackEvents,
       appLifecycle,
       appLaunch,

@@ -93,7 +93,10 @@ internal class LDNativeApiImpl(
             },
             analytics = ObservabilityOptions.Analytics(
                 taps = observability.analytics?.taps ?: true,
-                pageViews = observability.analytics?.pageViews ?: true,
+                // The Flutter-facing `views` option maps to the native `screenViews`
+                // (`screen_view` spans); the legacy OpenTelemetry activity-lifecycle spans it used
+                // to control have been removed.
+                screenViews = observability.analytics?.views ?: true,
                 trackEvents = observability.analytics?.trackEvents ?: true,
                 appLifecycle = observability.analytics?.appLifecycle ?: true,
                 appLaunch = observability.analytics?.appLaunch ?: true,

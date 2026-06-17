@@ -16,6 +16,7 @@ import android.view.Window
 import android.widget.EditText
 import android.widget.TextView
 import androidx.annotation.RequiresApi
+import com.launchdarkly.observability.R
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -45,6 +46,7 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
     private var mostRecentWindow: Window? = null
     private val interceptedWindows: MutableList<Window> = mutableListOf()
     private var watchedPointerId: Int = -1
+    private var attachedApplication: Application? = null
 
     private class InteractionDetector(
         val window: Window,
@@ -140,8 +142,15 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
         }
     }
 
-    /** Attaches to the [Application] whose activities' touches will be captured. */
+    /**
+     * Attaches to the [Application] whose activities' touches will be captured. Idempotent so it
+     * can be called by both the Observability tap instrumentation (gated by
+     * [ObservabilityOptions.Instrumentations.userTaps]) and by Session Replay, whichever activates
+     * first. When neither needs it the window callbacks are never wrapped.
+     */
     fun attachToApplication(application: Application) {
+        if (attachedApplication != null) return
+        attachedApplication = application
         application.registerActivityLifecycleCallbacks(this)
     }
 
@@ -158,6 +167,7 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
     /** Detaches from the [Application]. */
     fun detachFromApplication(application: Application) {
         application.unregisterActivityLifecycleCallbacks(this)
+        attachedApplication = null
     }
 
     override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {}
@@ -195,6 +205,22 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
     private fun resolveTargetInfo(window: Window, x: Float, y: Float): TargetInfo? {
         return try {
             val target = findDeepestViewAt(window.decorView, x, y) ?: return null
+            // Compose renders into a single AndroidComposeView, so the native hit-test bottoms out
+            // either at that host or at one of its internal container children (e.g.
+            // AndroidViewsHandler) that overlays the whole Compose area. In both cases the real
+            // target is a composable, so walk the Compose semantics tree to describe it. The
+            // class-name guard keeps ComposeClickResolver (and its Compose symbols) from loading in
+            // apps that don't ship Compose UI. Coordinates here are window-relative, matching
+            // SemanticsNode.boundsInWindow.
+            composeHostFor(target)?.let { host ->
+                ComposeClickResolver.resolve(host, x, y)?.let { info ->
+                    return TargetInfo(
+                        className = info.role,
+                        text = info.text?.take(MAX_TEXT_LENGTH),
+                        resourceId = info.ldId,
+                    )
+                }
+            }
             TargetInfo(
                 className = target.javaClass.name,
                 text = extractText(target),
@@ -203,6 +229,28 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
         } catch (_: Throwable) {
             null
         }
+    }
+
+    /**
+     * Returns the enclosing `AndroidComposeView` host when [view] is the host itself or one of its
+     * internal container children (e.g. `AndroidViewsHandler`), or null otherwise.
+     *
+     * The native hit-test in [findDeepestViewAt] can bottom out at one of these full-bleed internal
+     * containers instead of the host, which would otherwise hide the actual composable (and any
+     * `ldId`) behind a meaningless `AndroidViewsHandler` target. Climbing stops at the first view
+     * that is neither the host nor a known internal container so real `AndroidView` interop children
+     * keep their native identity. Detected by class-name suffix (the types aren't public API) so this
+     * never references Compose symbols directly.
+     */
+    private fun composeHostFor(view: View): View? {
+        var current: View? = view
+        while (current != null) {
+            val name = current::class.java.name
+            if (name.contains("AndroidComposeView")) return current
+            if (!name.contains("AndroidViewsHandler")) return null
+            current = current.parent as? View
+        }
+        return null
     }
 
     /**
@@ -245,6 +293,8 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
         view.transformationMethod is PasswordTransformationMethod
 
     private fun resolveResourceId(view: View): String? {
+        // An explicit `ldId(...)` always wins over inferred identifiers.
+        resolveLdId(view)?.let { return it }
         if (view.id != View.NO_ID) {
             try {
                 return view.resources.getResourceEntryName(view.id)
@@ -255,6 +305,20 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
         // React Native views typically have no native id; RN stores the JS `testID` prop on the
         // `react_test_id` tag (the same identifier the privacy matchers use), so fall back to it.
         return resolveReactTestId(view)
+    }
+
+    /**
+     * Reads the developer-supplied `ldId(...)` tag, walking up the view hierarchy so a tap that
+     * resolves to a child of a tagged view still reports its analytics id. Returns null when no
+     * ancestor carries an id.
+     */
+    internal fun resolveLdId(view: View): String? {
+        var current: View? = view
+        while (current != null) {
+            (current.getTag(R.id.ld_id_tag) as? String)?.takeIf { it.isNotEmpty() }?.let { return it }
+            current = current.parent as? View
+        }
+        return null
     }
 
     /** Reads React Native's JS `testID` prop from the `react_test_id` tag, when present. */

@@ -276,11 +276,13 @@ class ObservabilityService(
         // so it remains the single emitter of track spans.
         hookExporter.trackEmitter = this
 
-        // Capture runs unconditionally so Session Replay can consume the shared touch stream.
-        userInteractionManager.attachToApplication(application)
-        // `instrumentations.userTaps` starts the tap-detection machinery; whether a detected
-        // tap is published as a `click` span is governed by `analytics.taps` (checked below).
+        // The touch-capture hook (wrapping each window's callback + hit-testing) is invasive, so it
+        // is only installed when something needs it: tap detection here (gated by
+        // `instrumentations.userTaps`) or Session Replay, which attaches the same shared manager
+        // itself. With both off, window callbacks are never wrapped. Whether a detected tap is
+        // published as a `click` span is governed separately by `analytics.taps`.
         if (observabilityOptions.instrumentations.userTaps) {
+            userInteractionManager.attachToApplication(application)
             startTapInstrumentation()
         }
 
@@ -395,10 +397,13 @@ class ObservabilityService(
             config.suppressInstrumentation("crash")
         }
 
-        if(!observabilityOptions.analytics.pageViews) {
-            // Disables [io.opentelemetry.android.instrumentation.activity.ActivityLifecycleInstrumentation.java]
-            config.suppressInstrumentation("activity")
-        }
+        // Always disable the OpenTelemetry Android activity instrumentation
+        // ([io.opentelemetry.android.instrumentation.activity.ActivityLifecycleInstrumentation]).
+        // It emits an `AppStart` span plus per-activity lifecycle spans (`Created`, `Resumed`,
+        // `Paused`, `Stopped`, `Destroyed`, `Restarted`). These are now superseded by LaunchDarkly's
+        // own `app_launch`, `app_foreground`/`app_background`, and `screen_view` spans, so leaving
+        // it on would double-report the same app/screen lifecycle.
+        config.suppressInstrumentation("activity")
 
         return config
     }

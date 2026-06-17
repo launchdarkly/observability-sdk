@@ -167,7 +167,7 @@ final class LDNativeApiImpl: NSObject, LDNativeApi {
         // switches: `instrumentation.userTaps` runs the tap-detection machinery, and
         // `analytics.taps` publishes each detected tap as a `click` span. We drive both from the
         // one Flutter flag so taps are detected (not just published) regardless of the native
-        // `Instrumentation` defaults. pageViews is Android-only and ignored here.
+        // `Instrumentation` defaults. `views` is Android-only and ignored here.
         let tapsEnabled: Bool = observability.analytics?.taps ?? true
         let trackEventsEnabled: Bool = observability.analytics?.trackEvents ?? true
         let appLifecycleEnabled: Bool = observability.analytics?.appLifecycle ?? true

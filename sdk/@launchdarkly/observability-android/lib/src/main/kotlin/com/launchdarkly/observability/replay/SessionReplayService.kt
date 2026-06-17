@@ -257,7 +257,15 @@ class SessionReplayService(
                 .collect { shouldRun ->
                     val running = captureJob?.isActive == true
                     if (shouldRun == running) return@collect
-                    if (shouldRun) doRunCapture() else doPauseCapture()
+                    if (shouldRun) {
+                        // Session Replay needs the shared touch hook regardless of
+                        // `instrumentations.userTaps`. Attach is idempotent, so this installs the
+                        // window-callback wrap when tap detection hasn't already, and is a no-op
+                        // otherwise.
+                        observabilityContext.userInteractionManager
+                            ?.attachToApplication(observabilityContext.application)
+                        doRunCapture()
+                    } else doPauseCapture()
                 }
         }
     }

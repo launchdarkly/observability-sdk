@@ -15,7 +15,7 @@ void main() {
       expect(wire.traces?.includeSpans, isTrue);
       expect(wire.metricsEnabled, isTrue);
       expect(wire.analytics?.taps, isTrue);
-      expect(wire.analytics?.pageViews, isTrue);
+      expect(wire.analytics?.views, isTrue);
       expect(wire.analytics?.trackEvents, isTrue);
       expect(wire.analytics?.appLifecycle, isTrue);
       expect(wire.analytics?.appLaunch, isTrue);
@@ -31,7 +31,7 @@ void main() {
         metricsEnabled: false,
         analytics: AnalyticsOptions(
           taps: true,
-          pageViews: false,
+          views: false,
           trackEvents: false,
           appLifecycle: false,
           appLaunch: false,
@@ -46,7 +46,7 @@ void main() {
       expect(wire.traces?.includeSpans, isFalse);
       expect(wire.metricsEnabled, isFalse);
       expect(wire.analytics?.taps, isTrue);
-      expect(wire.analytics?.pageViews, isFalse);
+      expect(wire.analytics?.views, isFalse);
       expect(wire.analytics?.trackEvents, isFalse);
       expect(wire.analytics?.appLifecycle, isFalse);
       expect(wire.analytics?.appLaunch, isFalse);
