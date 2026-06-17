@@ -62,7 +62,7 @@ import version from '../../version'
 
 import { ExportSampler } from './sampling/ExportSampler'
 import { getPersistentSessionSecureID } from '../utils/sessionStorage/highlightSession'
-import { ProductAnalyticsEvents } from 'client/types/observe'
+import { ProductAnalyticsEvents } from '../types/observe'
 
 export type Callback = (span?: Span) => any
 

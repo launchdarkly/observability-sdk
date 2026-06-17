@@ -13,7 +13,7 @@ import {
 import { SpanData } from '@opentelemetry/instrumentation-user-interaction/build/src/internal-types'
 import { getElementXPath } from '@opentelemetry/sdk-trace-web'
 import { AsyncTask } from '@opentelemetry/instrumentation-user-interaction/build/esnext/internal-types'
-import { ProductAnalyticsEvents } from 'client/types/observe'
+import { ProductAnalyticsEvents } from '../types/observe'
 import * as SemanticAttributes from '@opentelemetry/semantic-conventions'
 const ZONE_CONTEXT_KEY = 'OT_ZONE_CONTEXT'
 const EVENT_NAVIGATION_NAME = 'Navigation:'
