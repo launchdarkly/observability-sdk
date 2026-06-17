@@ -295,6 +295,7 @@ data class LDSessionReplayOptions (
   val isEnabled: Boolean? = null,
   val serviceName: String? = null,
   val frameRate: Double? = null,
+  val scale: Double? = null,
   val privacy: LDPrivacyOptions? = null
 )
  {
@@ -303,8 +304,9 @@ data class LDSessionReplayOptions (
       val isEnabled = pigeonVar_list[0] as Boolean?
       val serviceName = pigeonVar_list[1] as String?
       val frameRate = pigeonVar_list[2] as Double?
-      val privacy = pigeonVar_list[3] as LDPrivacyOptions?
-      return LDSessionReplayOptions(isEnabled, serviceName, frameRate, privacy)
+      val scale = pigeonVar_list[3] as Double?
+      val privacy = pigeonVar_list[4] as LDPrivacyOptions?
+      return LDSessionReplayOptions(isEnabled, serviceName, frameRate, scale, privacy)
     }
   }
   fun toList(): List<Any?> {
@@ -312,6 +314,7 @@ data class LDSessionReplayOptions (
       isEnabled,
       serviceName,
       frameRate,
+      scale,
       privacy,
     )
   }

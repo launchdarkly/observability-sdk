@@ -18,6 +18,7 @@ internal class FlutterImageCaptureService(
     private val maskImages: Boolean,
     private val maskWebViews: Boolean,
     private val minimumAlpha: Double,
+    private val scale: Double,
 ) : ImageCaptureServicing {
 
     override suspend fun captureRawFrame(): ImageCaptureService.RawFrame? {
@@ -65,6 +66,7 @@ internal class FlutterImageCaptureService(
                     ARG_MASK_IMAGES to maskImages,
                     ARG_MASK_WEB_VIEWS to maskWebViews,
                     ARG_MINIMUM_ALPHA to minimumAlpha,
+                    ARG_SCALE to scale,
                 ),
                 object : MethodChannel.Result {
                     override fun success(result: Any?) {
@@ -99,6 +101,7 @@ internal class FlutterImageCaptureService(
         const val ARG_MASK_IMAGES = "maskImages"
         const val ARG_MASK_WEB_VIEWS = "maskWebViews"
         const val ARG_MINIMUM_ALPHA = "minimumAlpha"
+        const val ARG_SCALE = "scale"
         private val logger = Logger.getLogger("FlutterImageCaptureService")
     }
 }

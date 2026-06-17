@@ -2,6 +2,13 @@
 
 All notable changes to the LaunchDarkly Observability SDK for Flutter will be documented in this file. This project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.11.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.10.0...launchdarkly_flutter_observability-0.11.0) (2026-06-17)
+
+
+### Features
+
+* **flutter:** configurable Session Replay capture scale ([#626](https://github.com/launchdarkly/observability-sdk/issues/626)) ([e3d8383](https://github.com/launchdarkly/observability-sdk/commit/e3d83830edcefb8b82019099d0d0bd924f5e5b6f))
+
 ## [0.10.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.9.0...launchdarkly_flutter_observability-0.10.0) (2026-06-15)
 
 
