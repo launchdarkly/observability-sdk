@@ -1,5 +1,12 @@
 # highlight.run
 
+## [10.4.1](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.4.0...highlight.run-10.4.1) (2026-06-16)
+
+
+### Bug Fixes
+
+* **highlight.run:** make published TypeScript declarations resolvable ([#629](https://github.com/launchdarkly/observability-sdk/issues/629)) ([38453be](https://github.com/launchdarkly/observability-sdk/commit/38453be49323615ea6879899c8825a6cbae65a29))
+
 ## [10.4.0](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.3.4...highlight.run-10.4.0) (2026-06-11)
 
 
