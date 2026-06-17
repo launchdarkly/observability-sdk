@@ -259,11 +259,14 @@ class SessionReplayService(
                     if (shouldRun == running) return@collect
                     if (shouldRun) {
                         // Session Replay needs the shared touch hook regardless of
-                        // `instrumentations.userTaps`. Attach is idempotent, so this installs the
-                        // window-callback wrap when tap detection hasn't already, and is a no-op
-                        // otherwise.
-                        observabilityContext.userInteractionManager
-                            ?.attachToApplication(observabilityContext.application)
+                        // `instrumentations.userTaps`. Both calls are idempotent: attach ensures the
+                        // current window is tracked (Observability already attaches at init), and
+                        // enable wraps that already-current window plus future ones - so capture
+                        // starting after the first activity is up still records its touches.
+                        observabilityContext.userInteractionManager?.apply {
+                            attachToApplication(observabilityContext.application)
+                            enableTouchCapture()
+                        }
                         doRunCapture()
                     } else doPauseCapture()
                 }

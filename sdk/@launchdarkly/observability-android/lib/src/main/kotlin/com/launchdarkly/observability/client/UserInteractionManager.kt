@@ -47,6 +47,9 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
     private val interceptedWindows: MutableList<Window> = mutableListOf()
     private var watchedPointerId: Int = -1
     private var attachedApplication: Application? = null
+    // Window-callback wrapping (the invasive part) is deferred until a consumer enables it; until
+    // then the manager only tracks the current window so a late enable can wrap it.
+    private var captureEnabled = false
 
     private class InteractionDetector(
         val window: Window,
@@ -143,15 +146,39 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
     }
 
     /**
-     * Attaches to the [Application] whose activities' touches will be captured. Idempotent so it
-     * can be called by both the Observability tap instrumentation (gated by
-     * [ObservabilityOptions.Instrumentations.userTaps]) and by Session Replay, whichever activates
-     * first. When neither needs it the window callbacks are never wrapped.
+     * Attaches to the [Application] so the manager can track the current activity's window.
+     * Idempotent. This is the benign half of the hook: it registers lifecycle callbacks but does
+     * NOT wrap any window callback or hit-test until [enableTouchCapture] is called. It is invoked
+     * unconditionally during Observability init so that, whenever a consumer later enables capture
+     * (e.g. Session Replay starts recording after the first activity is already running), the
+     * already-current window is known and can be wrapped immediately.
      */
     fun attachToApplication(application: Application) {
         if (attachedApplication != null) return
         attachedApplication = application
         application.registerActivityLifecycleCallbacks(this)
+    }
+
+    /**
+     * Enables touch capture: wraps the current window's callback right away and every subsequently
+     * started window's callback. Idempotent. Called by the Observability tap instrumentation (gated
+     * by [ObservabilityOptions.Instrumentations.userTaps]) and by Session Replay, whichever needs
+     * it first.
+     *
+     * Wrapping the current window here (rather than relying solely on future [onActivityStarted]
+     * callbacks) is what keeps a late enable - capture starting after the first activity's
+     * `onActivityStarted` has already fired - from missing that activity's touches.
+     */
+    fun enableTouchCapture() {
+        captureEnabled = true
+        mostRecentWindow?.let { interceptWindow(it) }
+    }
+
+    /** Wraps [window]'s callback once so touches flow through [handleInteraction]. Idempotent. */
+    private fun interceptWindow(window: Window) {
+        if (interceptedWindows.contains(window)) return
+        window.callback = InteractionDetector(window, window.callback, this::handleInteraction)
+        interceptedWindows.add(window)
     }
 
     /**
@@ -168,21 +195,23 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
     fun detachFromApplication(application: Application) {
         application.unregisterActivityLifecycleCallbacks(this)
         attachedApplication = null
+        captureEnabled = false
     }
 
     override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {}
 
     override fun onActivityStarted(activity: Activity) {
-        activity.window?.let { window ->
-            if (!interceptedWindows.contains(window)) {
-                window.callback = InteractionDetector(window, window.callback, this::handleInteraction)
-                interceptedWindows.add(window)
-            }
-        }
+        if (!captureEnabled) return
+        activity.window?.let { interceptWindow(it) }
     }
 
     override fun onActivityResumed(activity: Activity) {
-        activity.window?.let { mostRecentWindow = it }
+        activity.window?.let { window ->
+            mostRecentWindow = window
+            // Capture may have been enabled after this activity started; ensure its window is
+            // wrapped so the current screen's touches are captured.
+            if (captureEnabled) interceptWindow(window)
+        }
     }
 
     override fun onActivityPaused(activity: Activity) {}
@@ -206,12 +235,12 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
         return try {
             val target = findDeepestViewAt(window.decorView, x, y) ?: return null
             // Compose renders into a single AndroidComposeView, so the native hit-test bottoms out
-            // either at that host or at one of its internal container children (e.g.
-            // AndroidViewsHandler) that overlays the whole Compose area. In both cases the real
-            // target is a composable, so walk the Compose semantics tree to describe it. The
-            // class-name guard keeps ComposeClickResolver (and its Compose symbols) from loading in
-            // apps that don't ship Compose UI. Coordinates here are window-relative, matching
-            // SemanticsNode.boundsInWindow.
+            // either at that host or at one of its internal platform children (e.g.
+            // AndroidViewsHandler, ViewLayer) that overlay the Compose area. In those cases the real
+            // target is a composable, so walk up to the host (composeHostFor) and resolve against
+            // the Compose semantics tree. The class-name guard keeps ComposeClickResolver (and its
+            // Compose symbols) from loading in apps that don't ship Compose UI. Coordinates here are
+            // window-relative, matching SemanticsNode.boundsInWindow.
             composeHostFor(target)?.let { host ->
                 ComposeClickResolver.resolve(host, x, y)?.let { info ->
                     return TargetInfo(
@@ -232,22 +261,24 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
     }
 
     /**
-     * Returns the enclosing `AndroidComposeView` host when [view] is the host itself or one of its
-     * internal container children (e.g. `AndroidViewsHandler`), or null otherwise.
+     * Returns the enclosing `AndroidComposeView` host when [view] is the host itself or one of
+     * Compose's internal platform children, or null otherwise.
      *
-     * The native hit-test in [findDeepestViewAt] can bottom out at one of these full-bleed internal
-     * containers instead of the host, which would otherwise hide the actual composable (and any
-     * `ldId`) behind a meaningless `AndroidViewsHandler` target. Climbing stops at the first view
-     * that is neither the host nor a known internal container so real `AndroidView` interop children
-     * keep their native identity. Detected by class-name suffix (the types aren't public API) so this
-     * never references Compose symbols directly.
+     * The native hit-test in [findDeepestViewAt] can bottom out at any of Compose's internal
+     * full-bleed platform views (e.g. `AndroidViewsHandler`, `ViewLayer`, `DrawChildContainer`)
+     * rather than the host, which would otherwise hide the actual composable (and any `ldId`)
+     * behind a meaningless internal target. So climb through any view in Compose's internal
+     * platform namespace (`androidx.compose.ui.*`) until the host is found. Climbing stops at the
+     * first view outside that namespace - a real `AndroidView` interop child or unrelated native
+     * view - so genuine native content keeps its own identity. Detected by class name (the types
+     * aren't public API) so this never references Compose symbols directly.
      */
     private fun composeHostFor(view: View): View? {
         var current: View? = view
         while (current != null) {
             val name = current::class.java.name
             if (name.contains("AndroidComposeView")) return current
-            if (!name.contains("AndroidViewsHandler")) return null
+            if (!name.startsWith("androidx.compose.ui.")) return null
             current = current.parent as? View
         }
         return null

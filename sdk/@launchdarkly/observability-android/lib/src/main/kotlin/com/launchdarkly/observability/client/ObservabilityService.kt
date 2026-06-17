@@ -276,13 +276,19 @@ class ObservabilityService(
         // so it remains the single emitter of track spans.
         hookExporter.trackEmitter = this
 
+        // Always track the current activity/window (benign: registers lifecycle callbacks only, no
+        // window wrapping or hit-testing). This lets a later consumer - Session Replay starting to
+        // record after the first activity is already running - enable capture and wrap that
+        // already-current window instead of missing its touches.
+        userInteractionManager.attachToApplication(application)
+
         // The touch-capture hook (wrapping each window's callback + hit-testing) is invasive, so it
-        // is only installed when something needs it: tap detection here (gated by
-        // `instrumentations.userTaps`) or Session Replay, which attaches the same shared manager
+        // is only enabled when something needs it: tap detection here (gated by
+        // `instrumentations.userTaps`) or Session Replay, which enables the same shared manager
         // itself. With both off, window callbacks are never wrapped. Whether a detected tap is
         // published as a `click` span is governed separately by `analytics.taps`.
         if (observabilityOptions.instrumentations.userTaps) {
-            userInteractionManager.attachToApplication(application)
+            userInteractionManager.enableTouchCapture()
             startTapInstrumentation()
         }
 
