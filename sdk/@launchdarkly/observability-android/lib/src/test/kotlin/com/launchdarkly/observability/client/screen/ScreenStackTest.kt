@@ -103,4 +103,38 @@ class ScreenStackTest {
         stack.reset()
         assertNull(previousOf(stack.record("Fresh")))
     }
+
+    @Test
+    fun `currentScreenId reflects the most recent screen id`() {
+        val stack = ScreenStack()
+        stack.record("Home", id = "home")
+        assertEquals("home", stack.currentScreenId)
+        stack.record("Detail", id = "item-1")
+        assertEquals("item-1", stack.currentScreenId)
+    }
+
+    @Test
+    fun `currentScreenId is null when the current screen has no id`() {
+        val stack = ScreenStack()
+        stack.record("Home")
+        assertNull(stack.currentScreenId)
+    }
+
+    @Test
+    fun `currentScreenId follows pop-back to the earlier screen id`() {
+        val stack = ScreenStack()
+        stack.record("Home", id = "home")
+        stack.record("Detail", id = "item-1")
+        stack.record("More", id = "more")
+        stack.record("Home", id = "home")
+        assertEquals("home", stack.currentScreenId)
+    }
+
+    @Test
+    fun `currentScreenId is null after reset`() {
+        val stack = ScreenStack()
+        stack.record("Home", id = "home")
+        stack.reset()
+        assertNull(stack.currentScreenId)
+    }
 }

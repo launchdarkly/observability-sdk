@@ -337,23 +337,19 @@ class ObservabilityService(
                         if (movedTooFar || duration > TAP_TIMEOUT_MS) return@collect
 
                         // Per analytics-taxonomy §4.1 `click`: one event for all element types,
-                        // described through the `event.*` namespace.
-                        val attrs = Attributes.builder()
-                            .put(EVENT_TYPE, UserInteractionManager.CLICK_SPAN_NAME)
-                            .put(EVENT_X, sample.x.toLong())
-                            .put(EVENT_Y, sample.y.toLong())
-                            .apply {
-                                downTargetClassName?.let {
-                                    // `event.tag` is the short element tag (e.g. `Button`), per
-                                    // analytics-taxonomy; the fully-qualified class name is kept in
-                                    // `event.classname`.
-                                    put(EVENT_TAG, shortElementTag(it))
-                                    put(EVENT_CLASSNAME, it)
-                                }
-                                downTargetText?.let { put(EVENT_TEXT, it) }
-                                downTargetResourceId?.let { put(EVENT_ID, it) }
-                            }
-                            .build()
+                        // described through the `event.*` namespace. `event.tag` is the short
+                        // element tag (e.g. `Button`); the fully-qualified class name is kept in
+                        // `event.classname`. `event.screen_id` correlates the tap with the active
+                        // screen when a current screen id is known.
+                        val attrs = ClickAttributes.build(
+                            tag = downTargetClassName?.let { shortElementTag(it) },
+                            classname = downTargetClassName,
+                            id = downTargetResourceId,
+                            text = downTargetText,
+                            screenId = screenStack.currentScreenId,
+                            x = sample.x.toLong(),
+                            y = sample.y.toLong(),
+                        )
                         otelTracer.spanBuilder(UserInteractionManager.CLICK_SPAN_NAME)
                             .setSpanKind(SpanKind.CLIENT)
                             .setAllAttributes(attrs)
@@ -645,6 +641,47 @@ class ObservabilityService(
     }
 
     /**
+     * Manually emit a `click` span, mirroring the automatic tap instrumentation. Use this to
+     * reproduce the taxonomy `click` event for interactions automatic capture can't observe.
+     *
+     * Gated by [ObservabilityOptions.Analytics.taps] (the same flag as automatic click spans) and
+     * the global span flag. When [screenId] is `null`, the current tracked screen id is used so the
+     * click correlates with the active `screen_view`. Reserved `event.*` fields take precedence over
+     * caller [properties], matching the `screen_view`/`track` precedence model.
+     */
+    override fun trackClick(
+        id: String?,
+        tag: String?,
+        text: String?,
+        screenId: String?,
+        x: Int?,
+        y: Int?,
+        properties: Map<String, Any?>?
+    ) {
+        if (!observabilityOptions.analytics.taps) return
+        if (!observabilityOptions.tracesApi.includeSpans) return
+
+        val attrs = ClickAttributes.build(
+            tag = tag,
+            classname = null,
+            id = id,
+            text = text,
+            // Default to the current screen so the click correlates with the active `screen_view`.
+            screenId = screenId ?: screenStack.currentScreenId,
+            x = x?.toLong(),
+            y = y?.toLong(),
+            contextKeyAttributes = cachedContextKeyAttributes,
+            properties = properties?.toOtelAttributes() ?: Attributes.empty(),
+        )
+
+        otelTracer.spanBuilder(UserInteractionManager.CLICK_SPAN_NAME)
+            .setSpanKind(SpanKind.CLIENT)
+            .setAllAttributes(attrs)
+            .startSpan()
+            .end()
+    }
+
+    /**
      * Single funnel for screen changes. Both the automatic [ScreenViewManager] capture and the
      * manual [trackScreenView] API route through here so `previous_screen` resolution stays
      * consistent.
@@ -843,14 +880,8 @@ class ObservabilityService(
         const val APP_START_EVENT_NAME = "app.start"
         const val SESSION_ID_ATTRIBUTE = "session.id"
 
-        // `event.*` taxonomy attribute keys (see analytics-taxonomy.md).
-        private val EVENT_TYPE = AttributeKey.stringKey("event.type")
-        private val EVENT_X = AttributeKey.longKey("event.x")
-        private val EVENT_Y = AttributeKey.longKey("event.y")
-        private val EVENT_TAG = AttributeKey.stringKey("event.tag")
-        private val EVENT_CLASSNAME = AttributeKey.stringKey("event.classname")
-        private val EVENT_TEXT = AttributeKey.stringKey("event.text")
-        private val EVENT_ID = AttributeKey.stringKey("event.id")
+        // `event.*` taxonomy attribute keys (see analytics-taxonomy.md). Click-specific keys live
+        // in [ClickAttributes], which is kept free of Android-framework dependencies.
         private val EVENT_NAME = AttributeKey.stringKey("event.name")
         private val EVENT_SCREEN_CLASS = AttributeKey.stringKey("event.screen_class")
         private val EVENT_SCREEN_ID = AttributeKey.stringKey("event.screen_id")

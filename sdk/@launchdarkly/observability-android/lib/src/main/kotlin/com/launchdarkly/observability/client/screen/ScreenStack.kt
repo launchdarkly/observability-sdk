@@ -31,11 +31,23 @@ sealed interface ScreenChange {
  * using the human-readable name.
  */
 class ScreenStack {
-    /** A recorded screen: [key] is the identity for matching, [name] is reported as previous. */
-    private data class Entry(val key: String, val name: String)
+    /**
+     * A recorded screen: [key] is the identity for matching, [name] is reported as previous, and
+     * [id] is the caller-supplied stable screen id (`event.screen_id`), or `null` when the screen
+     * was recorded without one (identity then falls back to [name]).
+     */
+    private data class Entry(val key: String, val name: String, val id: String?)
 
     private val lock = Any()
     private val stack = ArrayDeque<Entry>()
+
+    /**
+     * The stable id (`event.screen_id`) of the most recently viewed screen, if it had one. Used to
+     * attach `event.screen_id` to `click` spans so taps correlate with the current `screen_view`.
+     * Returns `null` when the current screen was recorded without an id.
+     */
+    val currentScreenId: String?
+        get() = synchronized(lock) { stack.lastOrNull()?.id }
 
     /**
      * Records a screen appearance and returns a [ScreenChange] describing the transition.
@@ -68,7 +80,7 @@ class ScreenStack {
             }
         } else {
             // Forward navigation to a new screen.
-            stack.addLast(Entry(key = key, name = name))
+            stack.addLast(Entry(key = key, name = name, id = id))
         }
 
         return ScreenChange.Changed(previous)
