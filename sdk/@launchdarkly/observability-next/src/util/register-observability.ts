@@ -24,6 +24,11 @@ async function init(env: ObservabilityEnv) {
  * is a no-op (the OpenTelemetry-based node SDK is not edge-compatible). It is
  * idempotent and concurrency-safe, so route-handler wrappers can safely await
  * it on every request.
+ *
+ * `LDObserve` is a process-global singleton that can only be initialized once,
+ * so the first successful call wins and later calls reuse it. All callers
+ * (`instrumentation.ts` and any route wrappers) should therefore pass the same
+ * `env` — initialize once in `instrumentation.ts` for the canonical config.
  */
 export async function registerObservability(env: ObservabilityEnv) {
 	if (!isNodeJsRuntime()) {

@@ -96,10 +96,29 @@ export function LDObservabilityInit({
 			application,
 		)
 
-		const session = LDRecord.getSession()
-		if (session?.sessionSecureID) {
-			Cookies.set('sessionSecureID', session.sessionSecureID)
+		// The session secure id only becomes available once the session replay
+		// SDK has finished loading, so LDRecord.getSession() returns null right
+		// after init. Poll briefly until it resolves, then persist it for
+		// observabilityMiddleware to forward as x-highlight-request. If replay
+		// never loads, there is no session to link and the cookie is left unset.
+		const persistSessionCookie = () => {
+			const sessionSecureID = LDRecord.getSession()?.sessionSecureID
+			if (sessionSecureID) {
+				Cookies.set('sessionSecureID', sessionSecureID)
+				return true
+			}
+			return false
 		}
+		if (persistSessionCookie()) {
+			return
+		}
+		let attempts = 0
+		const interval = setInterval(() => {
+			if (persistSessionCookie() || ++attempts >= 50) {
+				clearInterval(interval)
+			}
+		}, 100)
+		return () => clearInterval(interval)
 	}, []) // eslint-disable-line react-hooks/exhaustive-deps
 
 	return null
