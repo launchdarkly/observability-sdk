@@ -2,6 +2,13 @@
 
 All notable changes to the LaunchDarkly Observability SDK for Flutter will be documented in this file. This project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.12.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.11.0...launchdarkly_flutter_observability-0.12.0) (2026-06-18)
+
+
+### Features
+
+* richer click analytics (ldId, screen_id/screen_name) + touch-capture gating + lifecycle span cleanup ([#634](https://github.com/launchdarkly/observability-sdk/issues/634)) ([91f5816](https://github.com/launchdarkly/observability-sdk/commit/91f5816d0db59cc55f33c651a3c7eab806208c73))
+
 ## [0.11.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.10.0...launchdarkly_flutter_observability-0.11.0) (2026-06-17)
 
 
