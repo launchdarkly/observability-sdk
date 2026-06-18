@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.58.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.57.0...launchdarkly-observability-android-0.58.0) (2026-06-18)
+
+
+### Features
+
+* richer click analytics (ldId, screen_id/screen_name) + touch-capture gating + lifecycle span cleanup ([#634](https://github.com/launchdarkly/observability-sdk/issues/634)) ([91f5816](https://github.com/launchdarkly/observability-sdk/commit/91f5816d0db59cc55f33c651a3c7eab806208c73))
+
 ## [0.57.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.56.0...launchdarkly-observability-android-0.57.0) (2026-06-12)
 
 

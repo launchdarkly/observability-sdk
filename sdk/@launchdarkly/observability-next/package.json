@@ -1,6 +1,6 @@
 {
 	"name": "@launchdarkly/observability-next",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"description": "LaunchDarkly observability and session replay for Next.js. Capture frontend and backend errors, logs, traces, and session replays.",
 	"keywords": [
 		"launchdarkly",
