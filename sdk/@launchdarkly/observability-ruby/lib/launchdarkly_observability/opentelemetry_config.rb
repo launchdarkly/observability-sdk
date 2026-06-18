@@ -4,6 +4,7 @@ require 'opentelemetry/sdk'
 require 'opentelemetry/exporter/otlp'
 require 'opentelemetry/semantic_conventions'
 require_relative 'instrumentations'
+require_relative 'instrumentation_log_filter'
 
 module LaunchDarklyObservability
   # Configures OpenTelemetry SDK with appropriate providers and exporters
@@ -23,55 +24,6 @@ module LaunchDarklyObservability
 
     # Metrics export interval
     METRICS_EXPORT_INTERVAL_MS = 60_000
-
-    # Wraps the OpenTelemetry logger to suppress the per-instrumentation install
-    # chatter ("... was successfully installed" / "... failed to install") and
-    # record the names of instrumentations that failed to install. Everything
-    # else (including level / level=) is delegated to the real logger.
-    class InstrumentationLogFilter
-      FAILED_PATTERN = /Instrumentation: (\S+) failed to install/.freeze
-
-      def initialize(delegate, failed)
-        @delegate = delegate
-        @failed = failed
-      end
-
-      # OTel logs installs via OpenTelemetry.logger.info / .warn, so intercept
-      # the level methods (not just #add) — otherwise the calls fall through to
-      # method_missing and bypass the filter.
-      %i[debug info warn error fatal unknown].each do |level|
-        define_method(level) do |message = nil, &block|
-          forward?(message || (block && block.call)) ? @delegate.public_send(level, message, &block) : true
-        end
-      end
-
-      def add(severity, message = nil, progname = nil, &block)
-        forward?(message || progname || (block&.call)) ? @delegate.add(severity, message, progname, &block) : true
-      end
-
-      def method_missing(name, *args, &block)
-        @delegate.send(name, *args, &block)
-      end
-
-      def respond_to_missing?(name, include_private = false)
-        @delegate.respond_to?(name, include_private) || super
-      end
-
-      private
-
-      # Returns false when the message is install chatter that should be
-      # suppressed (recording failed-instrumentation names as a side effect),
-      # true when it should be forwarded to the real logger.
-      def forward?(message)
-        text = message.to_s
-        if (match = text.match(FAILED_PATTERN))
-          @failed << match[1]
-          return false
-        end
-
-        !text.include?('was successfully installed')
-      end
-    end
 
     # @return [String] The LaunchDarkly project ID
     attr_reader :project_id
@@ -127,7 +79,7 @@ module LaunchDarklyObservability
     # #register / #configure — is created lazily afterward. Exporters are added
     # later by #configure_traces when the client registers the plugin.
     def install_instrumentation_only
-      OpenTelemetry::SDK.configure do |c|
+      configure_sdk_capturing_failures do |c|
         c.resource = create_resource
         configure_instrumentations(c)
       end
@@ -167,7 +119,7 @@ module LaunchDarklyObservability
         return
       end
 
-      OpenTelemetry::SDK.configure do |c|
+      configure_sdk_capturing_failures do |c|
         c.resource = create_resource
         c.add_span_processor(create_batch_span_processor)
 
@@ -212,46 +164,23 @@ module LaunchDarklyObservability
       }
 
       user_config = @options.fetch(:instrumentations, {})
-
-      # Replace the OTel SDK's per-instrumentation install logging (a flurry of
-      # "Instrumentation: <X> failed to install" WARN lines when instrumentations
-      # are incompatible with the framework version — e.g. the Rails family on a
-      # Rails version below its floor) with a single, actionable summary.
-      failed = with_captured_instrumentation_failures do
-        config.use_all(defaults.merge(user_config))
-      end
-      warn_failed_instrumentations(failed) unless failed.empty?
+      config.use_all(defaults.merge(user_config))
     rescue StandardError => e
       warn "[LaunchDarklyObservability] Error configuring instrumentations: #{e.message}"
     end
 
-    # Temporarily swap OpenTelemetry.logger for a filter that suppresses the
-    # per-instrumentation install chatter and records the names of any
-    # instrumentations that report "failed to install", returning them so the
-    # caller can emit a single summary instead of a noisy flurry.
-    def with_captured_instrumentation_failures
-      original = OpenTelemetry.logger
-      failed = []
-      OpenTelemetry.logger = InstrumentationLogFilter.new(original, failed)
-      yield
-      failed
-    ensure
-      OpenTelemetry.logger = original
-    end
-
-    # Emit ONE actionable warning naming the instrumentations that could not
-    # attach and how to resolve it. Telemetry that does not depend on those
-    # instrumentations (flag-eval spans, manual instrumentation, logs, errors)
-    # keeps working regardless.
-    def warn_failed_instrumentations(failed)
-      names = failed.map { |n| n.sub('OpenTelemetry::Instrumentation::', '') }.uniq
-      rails_part = defined?(::Rails) && ::Rails.respond_to?(:version) ? " on Rails #{::Rails.version}" : ''
-      warn "[LaunchDarklyObservability] #{names.size} OpenTelemetry instrumentation(s) could not " \
-           "attach#{rails_part} (Ruby #{RUBY_VERSION}): #{names.join(', ')}. Those libraries will not " \
-           'be auto-instrumented; flag-eval spans, manual instrumentation, logs and error capture are ' \
-           'unaffected. This usually means an instrumentation gem dropped support for your framework ' \
-           'version — upgrade the framework, or pin the instrumentation gem to a compatible release ' \
-           '(e.g. gem "opentelemetry-instrumentation-rails", "~> 0.41").'
+    # Run an OpenTelemetry::SDK.configure block, replacing the SDK's
+    # per-instrumentation install logging (a flurry of "Instrumentation: <X>
+    # failed to install" WARN lines when instrumentations are incompatible with
+    # the framework version — e.g. the Rails family below its Rails floor) with a
+    # single actionable summary. The SDK installs the instrumentations AFTER the
+    # configure block returns (use_all only queues them), so the filter wraps the
+    # whole call, not just use_all.
+    def configure_sdk_capturing_failures(&block)
+      failed = InstrumentationLogFilter.capture_failures do
+        OpenTelemetry::SDK.configure(&block)
+      end
+      warn InstrumentationLogFilter.failure_warning(failed) unless failed.empty?
     end
 
     # Configure OpenTelemetry logs with OTLP exporter.
