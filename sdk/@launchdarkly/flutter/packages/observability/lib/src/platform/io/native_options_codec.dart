@@ -55,6 +55,7 @@ extension SessionReplayOptionsWire on SessionReplayOptions {
     isEnabled: isEnabled,
     serviceName: serviceName,
     frameRate: frameRate,
+    scale: scale,
     privacy: privacy.toWire(),
   );
 }

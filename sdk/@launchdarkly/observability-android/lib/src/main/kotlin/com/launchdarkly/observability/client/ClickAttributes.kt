@@ -19,6 +19,7 @@ internal object ClickAttributes {
     val EVENT_ID = AttributeKey.stringKey("event.id")
     val EVENT_TEXT = AttributeKey.stringKey("event.text")
     val EVENT_SCREEN_ID = AttributeKey.stringKey("event.screen_id")
+    val EVENT_SCREEN_NAME = AttributeKey.stringKey("event.screen_name")
     val EVENT_X = AttributeKey.longKey("event.x")
     val EVENT_Y = AttributeKey.longKey("event.y")
 
@@ -33,6 +34,7 @@ internal object ClickAttributes {
         id: String?,
         text: String?,
         screenId: String?,
+        screenName: String?,
         x: Long?,
         y: Long?,
         contextKeyAttributes: Attributes = Attributes.empty(),
@@ -47,6 +49,7 @@ internal object ClickAttributes {
         id?.let { builder.put(EVENT_ID, it) }
         text?.let { builder.put(EVENT_TEXT, it) }
         screenId?.let { builder.put(EVENT_SCREEN_ID, it) }
+        screenName?.let { builder.put(EVENT_SCREEN_NAME, it) }
         x?.let { builder.put(EVENT_X, it) }
         y?.let { builder.put(EVENT_Y, it) }
         return builder.build()

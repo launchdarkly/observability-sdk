@@ -17,17 +17,19 @@ class ClickAttributesTest {
     private val eventId = AttributeKey.stringKey("event.id")
     private val eventText = AttributeKey.stringKey("event.text")
     private val eventScreenId = AttributeKey.stringKey("event.screen_id")
+    private val eventScreenName = AttributeKey.stringKey("event.screen_name")
     private val eventX = AttributeKey.longKey("event.x")
     private val eventY = AttributeKey.longKey("event.y")
 
     @Test
-    fun `auto tap shape includes tag, classname, id, text, screen_id and coordinates`() {
+    fun `auto tap shape includes tag, classname, id, text, screen_id, screen_name and coordinates`() {
         val attrs = ClickAttributes.build(
             tag = "Button",
             classname = "android.widget.Button",
             id = "save_profile_btn",
             text = "Save",
             screenId = "com.example.app.ProfileActivity",
+            screenName = "Profile",
             x = 586L,
             y = 33L,
         )
@@ -38,6 +40,7 @@ class ClickAttributesTest {
         assertEquals("save_profile_btn", attrs.get(eventId))
         assertEquals("Save", attrs.get(eventText))
         assertEquals("com.example.app.ProfileActivity", attrs.get(eventScreenId))
+        assertEquals("Profile", attrs.get(eventScreenName))
         assertEquals(586L, attrs.get(eventX))
         assertEquals(33L, attrs.get(eventY))
     }
@@ -50,6 +53,7 @@ class ClickAttributesTest {
             id = null,
             text = null,
             screenId = null,
+            screenName = null,
             x = null,
             y = null,
         )
@@ -61,6 +65,7 @@ class ClickAttributesTest {
         assertNull(attrs.get(eventId))
         assertNull(attrs.get(eventText))
         assertNull(attrs.get(eventScreenId))
+        assertNull(attrs.get(eventScreenName))
         assertNull(attrs.get(eventX))
         assertNull(attrs.get(eventY))
     }
@@ -79,6 +84,7 @@ class ClickAttributesTest {
             id = "reserved_id",
             text = null,
             screenId = null,
+            screenName = null,
             x = null,
             y = null,
             properties = properties,
@@ -105,6 +111,7 @@ class ClickAttributesTest {
             id = null,
             text = null,
             screenId = null,
+            screenName = null,
             x = null,
             y = null,
             contextKeyAttributes = contextKeys,

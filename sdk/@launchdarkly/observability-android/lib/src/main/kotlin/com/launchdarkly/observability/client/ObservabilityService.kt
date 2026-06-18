@@ -276,6 +276,13 @@ class ObservabilityService(
         // so it remains the single emitter of track spans.
         hookExporter.trackEmitter = this
 
+        // Supply the active screen at touch-capture time. Read on the main thread when the touch is
+        // captured (before it reaches app handlers), so a tap that navigates synchronously is still
+        // stamped with the screen the user tapped rather than the destination screen.
+        userInteractionManager.screenInfoProvider = {
+            screenStack.currentScreenId to screenStack.currentScreenName
+        }
+
         // Always track the current activity/window (benign: registers lifecycle callbacks only, no
         // window wrapping or hit-testing). This lets a later consumer - Session Replay starting to
         // record after the first activity is already running - enable capture and wrap that
@@ -321,10 +328,15 @@ class ObservabilityService(
             var downX = 0f
             var downY = 0f
             var downTimeMs = 0L
-            // Target description is captured at ACTION_DOWN and described on the span at ACTION_UP.
+            // Target description and active screen are captured at ACTION_DOWN (on the main thread,
+            // before app handlers run) and described on the span at ACTION_UP. Reading the screen
+            // from the sample - not from the live `screenStack` here on this background collector -
+            // avoids stamping the click with a destination screen when the tap navigates.
             var downTargetClassName: String? = null
             var downTargetText: String? = null
             var downTargetResourceId: String? = null
+            var downScreenId: String? = null
+            var downScreenName: String? = null
             userInteractionManager.touchFlow.collect { sample ->
                 when (sample.action) {
                     MotionEvent.ACTION_DOWN -> {
@@ -334,6 +346,8 @@ class ObservabilityService(
                         downTargetClassName = sample.targetClassName
                         downTargetText = sample.targetText
                         downTargetResourceId = sample.targetResourceId
+                        downScreenId = sample.screenId
+                        downScreenName = sample.screenName
                     }
                     MotionEvent.ACTION_UP -> {
                         if (!observabilityOptions.analytics.taps) return@collect
@@ -347,14 +361,15 @@ class ObservabilityService(
                         // Per analytics-taxonomy §4.1 `click`: one event for all element types,
                         // described through the `event.*` namespace. `event.tag` is the short
                         // element tag (e.g. `Button`); the fully-qualified class name is kept in
-                        // `event.classname`. `event.screen_id` correlates the tap with the active
-                        // screen when a current screen id is known.
+                        // `event.classname`. `event.screen_id`/`event.screen_name` correlate the tap
+                        // with the screen it landed on, captured at ACTION_DOWN.
                         val attrs = ClickAttributes.build(
                             tag = downTargetClassName?.let { shortElementTag(it) },
                             classname = downTargetClassName,
                             id = downTargetResourceId,
                             text = downTargetText,
-                            screenId = screenStack.currentScreenId,
+                            screenId = downScreenId,
+                            screenName = downScreenName,
                             x = sample.x.toLong(),
                             y = sample.y.toLong(),
                         )
@@ -656,9 +671,11 @@ class ObservabilityService(
      * reproduce the taxonomy `click` event for interactions automatic capture can't observe.
      *
      * Gated by [ObservabilityOptions.Analytics.taps] (the same flag as automatic click spans) and
-     * the global span flag. When [screenId] is `null`, the current tracked screen id is used so the
-     * click correlates with the active `screen_view`. Reserved `event.*` fields take precedence over
-     * caller [properties], matching the `screen_view`/`track` precedence model.
+     * the global span flag. When [screenId] is `null`, the current tracked screen's id and name are
+     * used so the click correlates with the active `screen_view`; when an explicit [screenId] is
+     * supplied, `event.screen_name` is omitted (its name is unknown here) to avoid pairing one
+     * screen's id with another's name. Reserved `event.*` fields take precedence over caller
+     * [properties], matching the `screen_view`/`track` precedence model.
      */
     override fun trackClick(
         id: String?,
@@ -672,13 +689,20 @@ class ObservabilityService(
         if (!observabilityOptions.analytics.taps) return
         if (!observabilityOptions.tracesApi.includeSpans) return
 
+        // Default to the current screen so the click correlates with the active `screen_view`. Only
+        // pair the current screen's name when we actually defaulted to it; for a caller-supplied
+        // `screenId` the matching name is unknown here, so omit `screen_name` rather than mismatch a
+        // different screen's name with that id.
+        val resolvedScreenId = screenId ?: screenStack.currentScreenId
+        val resolvedScreenName = if (screenId == null) screenStack.currentScreenName else null
+
         val attrs = ClickAttributes.build(
             tag = tag,
             classname = null,
             id = id,
             text = text,
-            // Default to the current screen so the click correlates with the active `screen_view`.
-            screenId = screenId ?: screenStack.currentScreenId,
+            screenId = resolvedScreenId,
+            screenName = resolvedScreenName,
             x = x?.toLong(),
             y = y?.toLong(),
             contextKeyAttributes = cachedContextKeyAttributes,
