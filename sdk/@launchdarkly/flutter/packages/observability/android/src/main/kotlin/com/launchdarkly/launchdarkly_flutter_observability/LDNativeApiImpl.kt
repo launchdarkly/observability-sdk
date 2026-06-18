@@ -119,9 +119,16 @@ internal class LDNativeApiImpl(
 
         val privacy = replay.privacy
         val maskTextInputs = privacy?.maskTextInputs ?: true
+        // Resolve once so the Flutter capture resolution and the exporter scale
+        // stay in sync (a mismatch produces oversized replay frames). Treat a
+        // missing or non-positive scale as the 1.0 default; otherwise the exporter
+        // would record an invalid scale while the Dart capture falls back to the
+        // device pixel ratio, reintroducing the mismatch.
+        val replayScale = replay.scale?.takeIf { it > 0 } ?: 1.0
         val nativeReplayOptions = ReplayOptions(
             enabled = replay.isEnabled ?: true,
             frameRate = replay.frameRate ?: 1.0,
+            scale = replayScale.toFloat(),
             privacyProfile = PrivacyProfile(
                 maskTextInputs = maskTextInputs,
                 maskText = privacy?.maskLabels ?: false,
@@ -148,6 +155,7 @@ internal class LDNativeApiImpl(
                 maskImages = privacy?.maskImages ?: false,
                 maskWebViews = privacy?.maskWebViews ?: false,
                 minimumAlpha = privacy?.minimumAlpha ?: 0.02,
+                scale = replayScale,
             ),
         )
 
