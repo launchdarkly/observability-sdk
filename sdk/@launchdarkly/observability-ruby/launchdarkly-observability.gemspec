@@ -52,14 +52,14 @@ Gem::Specification.new do |spec|
   # must be capped below its enforcing version to keep attaching on Rails 7.0.
   # These releases are still compatible with Rails 7.1+, so modern apps are
   # unaffected. Revisit when the plugin drops Rails 7.0 support.
-  spec.add_dependency 'opentelemetry-instrumentation-rails', '>= 0.34', '< 0.42'
+  spec.add_dependency 'opentelemetry-instrumentation-action_mailer', '< 0.8'
   spec.add_dependency 'opentelemetry-instrumentation-action_pack', '< 0.18'
   spec.add_dependency 'opentelemetry-instrumentation-action_view', '< 0.13'
-  spec.add_dependency 'opentelemetry-instrumentation-active_record', '< 0.13'
-  spec.add_dependency 'opentelemetry-instrumentation-active_support', '< 0.12'
   spec.add_dependency 'opentelemetry-instrumentation-active_job', '< 0.12'
-  spec.add_dependency 'opentelemetry-instrumentation-action_mailer', '< 0.8'
+  spec.add_dependency 'opentelemetry-instrumentation-active_record', '< 0.13'
   spec.add_dependency 'opentelemetry-instrumentation-active_storage', '< 0.5'
+  spec.add_dependency 'opentelemetry-instrumentation-active_support', '< 0.12'
+  spec.add_dependency 'opentelemetry-instrumentation-rails', '>= 0.34', '< 0.42'
 
   # Non-Rails instrumentations: latest. Consumers can add any other
   # opentelemetry-instrumentation-* gem to their Gemfile and it is picked up
