@@ -35,7 +35,7 @@ extension TracesOptionsWire on TracesOptions {
 extension AnalyticsOptionsWire on AnalyticsOptions {
   wire.LDAnalyticsOptions toWire() => wire.LDAnalyticsOptions(
     taps: taps,
-    pageViews: pageViews,
+    views: views,
     trackEvents: trackEvents,
     appLifecycle: appLifecycle,
     appLaunch: appLaunch,

@@ -27,6 +27,15 @@ open class BaseApplication : Application() {
         const val LAUNCHDARKLY_MOBILE_KEY = BuildConfig.LAUNCHDARKLY_MOBILE_KEY
     }
 
+    // Analog of the iOS TestApp configuration (AppDelegate.swift): a minimal setup with all
+    // automatic instrumentation disabled, for testing the `Instrumentations.disabled()` path.
+//    var observabilityOptions = ObservabilityOptions(
+//        enabled = true,
+//        serviceName = "observability-android-test-app",
+//        instrumentations = ObservabilityOptions.Instrumentations.disabled(),
+//    )
+
+    // Current configuration, commented out for testing.
     var observabilityOptions = ObservabilityOptions(
         resourceAttributes = Attributes.of(
             AttributeKey.stringKey("resourceAttributes"), "BaseApplication"
@@ -40,7 +49,7 @@ open class BaseApplication : Application() {
             crashReporting = true, launchTime = true
         ),
         analytics = ObservabilityOptions.Analytics(
-            taps = true, pageViews = true, trackEvents = true
+            taps = true, screenViews = true, trackEvents = true
         ),
     )
 

@@ -224,7 +224,6 @@ Additional `ObservabilityOptions` settings:
   - `screens` (default `true`): automatically detect screen changes from Android `Activity` lifecycle callbacks. This drives the `screen_view` span (gated separately by `analytics.screenViews`) and Session Replay `Navigate` events.
 - `analytics`: Enables/disables analytics telemetry, emitted as OpenTelemetry spans:
   - `taps` (default `true`): publish a `click` span for each detected tap. Tap detection is governed by `instrumentations.userTaps`; this flag only controls publishing the span.
-  - `pageViews` (default `true`): emit spans for Android Activity lifecycle events (screen/page views).
   - `trackEvents` (default `true`): emit a `track` span when a custom event is tracked, either automatically via the LaunchDarkly `afterTrack` hook (`LDClient.track(...)`) or manually via `LDObserve.track(...)`.
   - `screenViews` (default `true`): emit a `screen_view` span when a screen is shown. This only gates the span; screen *detection* (and Session Replay `Navigate` events) is controlled by `instrumentations.screens`.
   - `appLifecycle` (default `true`): emit app-lifecycle spans as the app moves between states: `app_foreground` (with `event.lifecycle_state = foreground`) when it enters the foreground, and `app_background` (with `event.lifecycle_state = background`) when it enters the background. This flag only gates the span; the matching Session Replay `Foreground` / `Background` breadcrumbs are emitted regardless.
@@ -243,7 +242,6 @@ val options = ObservabilityOptions(
     ),
     analytics = ObservabilityOptions.Analytics(
         taps = true,
-        pageViews = true,
         trackEvents = true,
         screenViews = true,
         appLifecycle = true
@@ -274,7 +272,6 @@ ObservabilityOptions options = ObservabilityOptions.builder()
                 .build())
         .analytics(ObservabilityOptions.Analytics.builder()
                 .taps(true)
-                .pageViews(true)
                 .trackEvents(true)
                 .screenViews(true)
                 .build())

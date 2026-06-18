@@ -257,7 +257,18 @@ class SessionReplayService(
                 .collect { shouldRun ->
                     val running = captureJob?.isActive == true
                     if (shouldRun == running) return@collect
-                    if (shouldRun) doRunCapture() else doPauseCapture()
+                    if (shouldRun) {
+                        // Session Replay needs the shared touch hook regardless of
+                        // `instrumentations.userTaps`. Both calls are idempotent: attach ensures the
+                        // current window is tracked (Observability already attaches at init), and
+                        // enable wraps that already-current window plus future ones - so capture
+                        // starting after the first activity is up still records its touches.
+                        observabilityContext.userInteractionManager?.apply {
+                            attachToApplication(observabilityContext.application)
+                            enableTouchCapture()
+                        }
+                        doRunCapture()
+                    } else doPauseCapture()
                 }
         }
     }

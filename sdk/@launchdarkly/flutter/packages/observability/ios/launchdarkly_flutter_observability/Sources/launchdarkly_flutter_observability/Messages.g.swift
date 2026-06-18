@@ -193,7 +193,7 @@ struct LDTracesOptions: Hashable {
 /// Generated class from Pigeon that represents data sent in messages.
 struct LDAnalyticsOptions: Hashable {
   var taps: Bool? = nil
-  var pageViews: Bool? = nil
+  var views: Bool? = nil
   var trackEvents: Bool? = nil
   var appLifecycle: Bool? = nil
   var appLaunch: Bool? = nil
@@ -202,14 +202,14 @@ struct LDAnalyticsOptions: Hashable {
   // swift-format-ignore: AlwaysUseLowerCamelCase
   static func fromList(_ pigeonVar_list: [Any?]) -> LDAnalyticsOptions? {
     let taps: Bool? = nilOrValue(pigeonVar_list[0])
-    let pageViews: Bool? = nilOrValue(pigeonVar_list[1])
+    let views: Bool? = nilOrValue(pigeonVar_list[1])
     let trackEvents: Bool? = nilOrValue(pigeonVar_list[2])
     let appLifecycle: Bool? = nilOrValue(pigeonVar_list[3])
     let appLaunch: Bool? = nilOrValue(pigeonVar_list[4])
 
     return LDAnalyticsOptions(
       taps: taps,
-      pageViews: pageViews,
+      views: views,
       trackEvents: trackEvents,
       appLifecycle: appLifecycle,
       appLaunch: appLaunch
@@ -218,7 +218,7 @@ struct LDAnalyticsOptions: Hashable {
   func toList() -> [Any?] {
     return [
       taps,
-      pageViews,
+      views,
       trackEvents,
       appLifecycle,
       appLaunch,

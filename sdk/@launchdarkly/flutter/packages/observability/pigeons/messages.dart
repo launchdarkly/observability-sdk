@@ -36,7 +36,7 @@ class LDTracesOptions {
 
 class LDAnalyticsOptions {
   bool? taps;
-  bool? pageViews;
+  bool? views;
   bool? trackEvents;
   bool? appLifecycle;
   bool? appLaunch;

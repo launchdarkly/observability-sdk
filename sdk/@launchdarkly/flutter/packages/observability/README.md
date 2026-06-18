@@ -146,7 +146,7 @@ On `ObservabilityOptions`:
 - `metricsEnabled` (`bool`): whether metrics are exported. Defaults to `true`.
 - `analytics` (`AnalyticsOptions`): analytics telemetry. Use the `AnalyticsOptions.enabled` / `AnalyticsOptions.disabled` shorthands to toggle everything at once (mirroring Swift's `analytics: .enabled`), or set the individual flags:
   - `taps` (`bool`): emit a span for each user tap. Tap detection is always enabled; this flag only controls whether a span is published. Supported on Android and iOS. Defaults to `true`.
-  - `pageViews` (`bool`): emit spans for screen/page view lifecycle events. **Android-only** (no-op on iOS/web). Defaults to `true`.
+  - `views` (`bool`): emit spans for screen/page views. **Android-only** (no-op on iOS/web). Defaults to `true`.
   - `trackEvents` (`bool`): emit a span when a custom event is tracked. **Android-only** (no-op on iOS/web). Defaults to `true`.
   - `appLifecycle` (`bool`): emit `app_foreground` / `app_background` spans as the app moves between foreground and background. **Mobile-only** (Android, iOS; no-op on web). Defaults to `true`.
   - `appLaunch` (`bool`): emit an `app_launch` span (carrying the launch type — `install` / `update` / `relaunch` — and version fields) once per process launch. **Mobile-only** (Android, iOS; no-op on web). Defaults to `true`.
@@ -167,7 +167,7 @@ LDObserve.init(
     traces: TracesOptions(includeErrors: true, includeSpans: true),
     metricsEnabled: true,
     // Shorthand for all analytics enabled; use AnalyticsOptions.disabled to
-    // turn it all off, or AnalyticsOptions(taps: …, pageViews: …, trackEvents: …,
+    // turn it all off, or AnalyticsOptions(taps: …, views: …, trackEvents: …,
     // appLifecycle: …, appLaunch: …) for fine-grained control.
     analytics: AnalyticsOptions.enabled,
     instrumentation: InstrumentationOptions(

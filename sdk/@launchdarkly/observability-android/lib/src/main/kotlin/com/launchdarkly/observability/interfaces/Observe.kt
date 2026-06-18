@@ -142,4 +142,31 @@ interface Observe : MetricsApi, LogsApi, TracesApi {
         category: String? = null,
         properties: Map<String, Any?>? = null
     )
+
+    /**
+     * Manually record a `click` event as a `click` span, following the analytics taxonomy `event.*`
+     * namespace. Use this to reproduce the `click` event for interactions that automatic tap
+     * capture cannot observe. Emitted through the same `analytics.taps` gate as automatic click
+     * spans.
+     *
+     * @param id Stable element identifier (maps to `event.id`).
+     * @param tag Element tag/class (maps to `event.tag`), e.g. `Button`.
+     * @param text Visible label/text of the element (maps to `event.text`).
+     * @param screenId Stable screen id (maps to `event.screen_id`). When `null`, the current
+     *   tracked screen id is used so the click correlates with the active `screen_view`.
+     * @param x Tap x coordinate in screen pixels (maps to `event.x`).
+     * @param y Tap y coordinate in screen pixels (maps to `event.y`).
+     * @param properties Optional custom attributes, supplied as a plain map (same conversion rules
+     *   as a `track` event's `properties`). They are attached at lower precedence than the reserved
+     *   `event.*` fields, so they can never clobber the taxonomy.
+     */
+    fun trackClick(
+        id: String? = null,
+        tag: String? = null,
+        text: String? = null,
+        screenId: String? = null,
+        x: Int? = null,
+        y: Int? = null,
+        properties: Map<String, Any?>? = null
+    )
 }

@@ -16,6 +16,7 @@ import android.view.Window
 import android.widget.EditText
 import android.widget.TextView
 import androidx.annotation.RequiresApi
+import com.launchdarkly.observability.R
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -42,9 +43,21 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
     /** Raw, unscaled touch samples from the most recently resumed window. */
     val touchFlow: SharedFlow<TouchSample> = _touchFlow.asSharedFlow()
 
+    /**
+     * Supplies the active screen (`event.screen_id`, `event.screen_name`) at touch-capture time.
+     * Invoked on the main UI thread inside [handleInteraction] - before the touch is dispatched to
+     * app handlers that may navigate synchronously - so the captured screen is the one the user
+     * tapped, not a destination screen. Defaults to no screen until a consumer wires it up.
+     */
+    var screenInfoProvider: () -> Pair<String?, String?> = { null to null }
+
     private var mostRecentWindow: Window? = null
     private val interceptedWindows: MutableList<Window> = mutableListOf()
     private var watchedPointerId: Int = -1
+    private var attachedApplication: Application? = null
+    // Window-callback wrapping (the invasive part) is deferred until a consumer enables it; until
+    // then the manager only tracks the current window so a late enable can wrap it.
+    private var captureEnabled = false
 
     private class InteractionDetector(
         val window: Window,
@@ -91,6 +104,10 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
                 val downY = motionEvent.getY(pointerIndex)
                 // Resolve the tapped view so consumers can describe the click target (web/iOS parity).
                 val target = resolveTargetInfo(window, downX, downY)
+                // Read the active screen now, on the main thread and before the original
+                // dispatchTouchEvent runs, so a synchronous navigation in the tap handler can't make
+                // the click report the destination screen instead of the tapped one.
+                val (screenId, screenName) = screenInfoProvider()
                 _touchFlow.tryEmit(
                     TouchSample(
                         action = MotionEvent.ACTION_DOWN,
@@ -100,6 +117,8 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
                         targetClassName = target?.className,
                         targetText = target?.text,
                         targetResourceId = target?.resourceId,
+                        screenId = screenId,
+                        screenName = screenName,
                     )
                 )
             }
@@ -140,9 +159,40 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
         }
     }
 
-    /** Attaches to the [Application] whose activities' touches will be captured. */
+    /**
+     * Attaches to the [Application] so the manager can track the current activity's window.
+     * Idempotent. This is the benign half of the hook: it registers lifecycle callbacks but does
+     * NOT wrap any window callback or hit-test until [enableTouchCapture] is called. It is invoked
+     * unconditionally during Observability init so that, whenever a consumer later enables capture
+     * (e.g. Session Replay starts recording after the first activity is already running), the
+     * already-current window is known and can be wrapped immediately.
+     */
     fun attachToApplication(application: Application) {
+        if (attachedApplication != null) return
+        attachedApplication = application
         application.registerActivityLifecycleCallbacks(this)
+    }
+
+    /**
+     * Enables touch capture: wraps the current window's callback right away and every subsequently
+     * started window's callback. Idempotent. Called by the Observability tap instrumentation (gated
+     * by [ObservabilityOptions.Instrumentations.userTaps]) and by Session Replay, whichever needs
+     * it first.
+     *
+     * Wrapping the current window here (rather than relying solely on future [onActivityStarted]
+     * callbacks) is what keeps a late enable - capture starting after the first activity's
+     * `onActivityStarted` has already fired - from missing that activity's touches.
+     */
+    fun enableTouchCapture() {
+        captureEnabled = true
+        mostRecentWindow?.let { interceptWindow(it) }
+    }
+
+    /** Wraps [window]'s callback once so touches flow through [handleInteraction]. Idempotent. */
+    private fun interceptWindow(window: Window) {
+        if (interceptedWindows.contains(window)) return
+        window.callback = InteractionDetector(window, window.callback, this::handleInteraction)
+        interceptedWindows.add(window)
     }
 
     /**
@@ -158,21 +208,24 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
     /** Detaches from the [Application]. */
     fun detachFromApplication(application: Application) {
         application.unregisterActivityLifecycleCallbacks(this)
+        attachedApplication = null
+        captureEnabled = false
     }
 
     override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {}
 
     override fun onActivityStarted(activity: Activity) {
-        activity.window?.let { window ->
-            if (!interceptedWindows.contains(window)) {
-                window.callback = InteractionDetector(window, window.callback, this::handleInteraction)
-                interceptedWindows.add(window)
-            }
-        }
+        if (!captureEnabled) return
+        activity.window?.let { interceptWindow(it) }
     }
 
     override fun onActivityResumed(activity: Activity) {
-        activity.window?.let { mostRecentWindow = it }
+        activity.window?.let { window ->
+            mostRecentWindow = window
+            // Capture may have been enabled after this activity started; ensure its window is
+            // wrapped so the current screen's touches are captured.
+            if (captureEnabled) interceptWindow(window)
+        }
     }
 
     override fun onActivityPaused(activity: Activity) {}
@@ -195,6 +248,32 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
     private fun resolveTargetInfo(window: Window, x: Float, y: Float): TargetInfo? {
         return try {
             val target = findDeepestViewAt(window.decorView, x, y) ?: return null
+            // Compose renders into a single AndroidComposeView, so the native hit-test bottoms out
+            // either at that host or at one of its internal platform children (e.g.
+            // AndroidViewsHandler, ViewLayer) that overlay the Compose area. In those cases the real
+            // target is a composable, so walk up to the host (composeHostFor) and resolve against
+            // the Compose semantics tree. The class-name guard keeps ComposeClickResolver (and its
+            // Compose symbols) from loading in apps that don't ship Compose UI. Coordinates here are
+            // window-relative, matching SemanticsNode.boundsInWindow.
+            composeHostFor(target)?.let { host ->
+                // The tap landed on Compose, so `target` is an internal platform view whose
+                // class/text/id are meaningless. Prefer composable semantics; if they can't be
+                // resolved (e.g. no semantics at the point), describe the Compose host itself rather
+                // than falling back to the internal child, which would emit a misleading
+                // `event.classname`/`event.tag` and drop `Modifier.ldId`/`event.id`.
+                ComposeClickResolver.resolve(host, x, y)?.let { info ->
+                    return TargetInfo(
+                        className = info.role,
+                        text = info.text?.take(MAX_TEXT_LENGTH),
+                        resourceId = info.ldId,
+                    )
+                }
+                return TargetInfo(
+                    className = host.javaClass.name,
+                    text = extractText(host),
+                    resourceId = resolveResourceId(host),
+                )
+            }
             TargetInfo(
                 className = target.javaClass.name,
                 text = extractText(target),
@@ -203,6 +282,30 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
         } catch (_: Throwable) {
             null
         }
+    }
+
+    /**
+     * Returns the enclosing `AndroidComposeView` host when [view] is the host itself or one of
+     * Compose's internal platform children, or null otherwise.
+     *
+     * The native hit-test in [findDeepestViewAt] can bottom out at any of Compose's internal
+     * full-bleed platform views (e.g. `AndroidViewsHandler`, `ViewLayer`, `DrawChildContainer`)
+     * rather than the host, which would otherwise hide the actual composable (and any `ldId`)
+     * behind a meaningless internal target. So climb through any view in Compose's internal
+     * platform namespace (`androidx.compose.ui.*`) until the host is found. Climbing stops at the
+     * first view outside that namespace - a real `AndroidView` interop child or unrelated native
+     * view - so genuine native content keeps its own identity. Detected by class name (the types
+     * aren't public API) so this never references Compose symbols directly.
+     */
+    private fun composeHostFor(view: View): View? {
+        var current: View? = view
+        while (current != null) {
+            val name = current::class.java.name
+            if (name.contains("AndroidComposeView")) return current
+            if (!name.startsWith("androidx.compose.ui.")) return null
+            current = current.parent as? View
+        }
+        return null
     }
 
     /**
@@ -245,6 +348,8 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
         view.transformationMethod is PasswordTransformationMethod
 
     private fun resolveResourceId(view: View): String? {
+        // An explicit `ldId(...)` always wins over inferred identifiers.
+        resolveLdId(view)?.let { return it }
         if (view.id != View.NO_ID) {
             try {
                 return view.resources.getResourceEntryName(view.id)
@@ -255,6 +360,20 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
         // React Native views typically have no native id; RN stores the JS `testID` prop on the
         // `react_test_id` tag (the same identifier the privacy matchers use), so fall back to it.
         return resolveReactTestId(view)
+    }
+
+    /**
+     * Reads the developer-supplied `ldId(...)` tag, walking up the view hierarchy so a tap that
+     * resolves to a child of a tagged view still reports its analytics id. Returns null when no
+     * ancestor carries an id.
+     */
+    internal fun resolveLdId(view: View): String? {
+        var current: View? = view
+        while (current != null) {
+            (current.getTag(R.id.ld_id_tag) as? String)?.takeIf { it.isNotEmpty() }?.let { return it }
+            current = current.parent as? View
+        }
+        return null
     }
 
     /** Reads React Native's JS `testID` prop from the `react_test_id` tag, when present. */
