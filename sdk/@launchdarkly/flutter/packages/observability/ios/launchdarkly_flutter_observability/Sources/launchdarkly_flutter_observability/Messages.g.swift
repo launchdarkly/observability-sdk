@@ -354,6 +354,7 @@ struct LDSessionReplayOptions: Hashable {
   var isEnabled: Bool? = nil
   var serviceName: String? = nil
   var frameRate: Double? = nil
+  var scale: Double? = nil
   var privacy: LDPrivacyOptions? = nil
 
 
@@ -362,12 +363,14 @@ struct LDSessionReplayOptions: Hashable {
     let isEnabled: Bool? = nilOrValue(pigeonVar_list[0])
     let serviceName: String? = nilOrValue(pigeonVar_list[1])
     let frameRate: Double? = nilOrValue(pigeonVar_list[2])
-    let privacy: LDPrivacyOptions? = nilOrValue(pigeonVar_list[3])
+    let scale: Double? = nilOrValue(pigeonVar_list[3])
+    let privacy: LDPrivacyOptions? = nilOrValue(pigeonVar_list[4])
 
     return LDSessionReplayOptions(
       isEnabled: isEnabled,
       serviceName: serviceName,
       frameRate: frameRate,
+      scale: scale,
       privacy: privacy
     )
   }
@@ -376,6 +379,7 @@ struct LDSessionReplayOptions: Hashable {
       isEnabled,
       serviceName,
       frameRate,
+      scale,
       privacy,
     ]
   }
