@@ -44,15 +44,20 @@ export function pageRouterCustomErrorHandler(
 	const { sdkKey, application, ...options } = initProps
 
 	const handler = (props: LDErrorProps) => {
-		if (sdkKey) {
-			ensureStandaloneInit(
-				'observe',
-				() => new Observability(options),
-				sdkKey,
-				application,
-			)
-		}
-		LDObserve.recordError(new Error(props.errorMessage))
+		// Record inside an effect (keyed on the message) rather than during
+		// render so a re-render of the `_error` page does not emit duplicate
+		// error events for the same failure. Mirrors appRouterSsrErrorHandler.
+		useEffect(() => {
+			if (sdkKey) {
+				ensureStandaloneInit(
+					'observe',
+					() => new Observability(options),
+					sdkKey,
+					application,
+				)
+			}
+			LDObserve.recordError(new Error(props.errorMessage))
+		}, [props.errorMessage])
 
 		return Child ? <Child {...props} /> : <NextError {...props} />
 	}
