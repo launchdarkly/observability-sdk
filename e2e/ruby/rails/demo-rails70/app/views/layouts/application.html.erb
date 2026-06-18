@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>LaunchDarkly Observability Ruby Demo</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+    <%= launchdarkly_traceparent_meta_tag %>
+
+    <%= stylesheet_link_tag "application", "data-turbo-track": "reload" %>
+    <%= javascript_importmap_tags %>
+  </head>
+
+  <body>
+    <header class="site-header">
+      <div class="site-logo">
+        <%= link_to root_path do %>
+          &#9670; LaunchDarkly Observability
+        <% end %>
+      </div>
+      <nav class="site-nav">
+        <%= link_to "Home", root_path %>
+        <%= link_to "Flags", flags_path %>
+      </nav>
+    </header>
+
+    <main class="container">
+      <%= yield %>
+    </main>
+
+    <footer class="site-footer">
+      LaunchDarkly Ruby SDK &middot; Observability Plugin Demo
+    </footer>
+  </body>
+</html>
