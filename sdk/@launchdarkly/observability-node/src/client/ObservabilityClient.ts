@@ -65,6 +65,7 @@ import { Headers, IncomingHttpHeaders } from '../api/headers.js'
 import { getSamplingConfig } from '../graph/getSamplingConfig.js'
 import { SamplingTraceExporter } from '../otel/SamplingTraceExporter.js'
 import { SamplingLogExporter } from '../otel/SamplingLogExporter.js'
+import { createRequire } from 'module'
 import { CustomSampler } from '../otel/sampling/CustomSampler.js'
 
 const OTLP_HTTP = 'https://otel.observability.app.launchdarkly.com:4318'
@@ -100,6 +101,25 @@ const instrumentations = getNodeAutoInstrumentations({
 })
 
 instrumentations.push(new PrismaInstrumentation())
+
+const req =
+	typeof require !== 'undefined' ? require : createRequire(import.meta.url)
+
+const OPTIONAL_LLM_INSTRUMENTATIONS = [
+	{ package: '@traceloop/instrumentation-openai', className: 'OpenAIInstrumentation' },
+	{ package: '@traceloop/instrumentation-langchain', className: 'LangChainInstrumentation' },
+]
+
+for (const { package: pkg, className } of OPTIONAL_LLM_INSTRUMENTATIONS) {
+	try {
+		const mod = req(pkg) as Record<string, new () => Instrumentation>
+		const Ctor = mod[className]
+		if (Ctor) instrumentations.push(new Ctor())
+	} catch {
+		// Optional package not installed; LLM spans will not be captured.
+	}
+}
+
 registerInstrumentations({ instrumentations })
 
 const OTEL_TO_OPTIONS = {
