@@ -2,8 +2,12 @@
 
 require 'opentelemetry/sdk'
 require 'opentelemetry/exporter/otlp'
-require 'opentelemetry/instrumentation/all'
 require 'opentelemetry/semantic_conventions'
+
+# Loads the individual OpenTelemetry instrumentation gems (not the
+# opentelemetry-instrumentation-all meta-gem) so the Rails family can be pinned
+# for old-Rails compatibility independently of everything else.
+require_relative 'launchdarkly_observability/instrumentations'
 
 require_relative 'launchdarkly_observability/version'
 require_relative 'launchdarkly_observability/hook'
