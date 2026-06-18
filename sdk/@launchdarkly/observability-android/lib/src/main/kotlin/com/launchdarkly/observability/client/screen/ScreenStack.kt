@@ -50,6 +50,14 @@ class ScreenStack {
         get() = synchronized(lock) { stack.lastOrNull()?.id }
 
     /**
+     * The human-readable name (`event.screen_name`) of the most recently viewed screen, if any.
+     * Used to attach `event.screen_name` to `click` spans so taps correlate with the current
+     * `screen_view`. Returns `null` when no screen has been recorded.
+     */
+    val currentScreenName: String?
+        get() = synchronized(lock) { stack.lastOrNull()?.name }
+
+    /**
      * Records a screen appearance and returns a [ScreenChange] describing the transition.
      *
      * Identity is keyed on [id] when provided, otherwise [name]. Returns [ScreenChange.Unchanged]

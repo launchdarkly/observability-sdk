@@ -16,6 +16,10 @@ import android.view.MotionEvent
  * @property targetText visible text / content description of the target view (truncated), if any.
  * @property targetResourceId the target view's resource entry name (the `accessibilityIdentifier`
  *   analog), if any.
+ * @property screenId stable id (`event.screen_id`) of the active screen, read on the main thread at
+ *   capture time (ACTION_DOWN) - before the touch is dispatched to app handlers that may navigate -
+ *   so the click correlates with the screen the user actually tapped, not a destination screen.
+ * @property screenName human-readable name (`event.screen_name`) of that screen. See [screenId].
  */
 data class TouchSample(
     val action: Int,
@@ -25,4 +29,6 @@ data class TouchSample(
     val targetClassName: String? = null,
     val targetText: String? = null,
     val targetResourceId: String? = null,
+    val screenId: String? = null,
+    val screenName: String? = null,
 )

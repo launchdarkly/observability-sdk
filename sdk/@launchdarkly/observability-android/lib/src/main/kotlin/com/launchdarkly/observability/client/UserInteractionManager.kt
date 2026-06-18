@@ -43,6 +43,14 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
     /** Raw, unscaled touch samples from the most recently resumed window. */
     val touchFlow: SharedFlow<TouchSample> = _touchFlow.asSharedFlow()
 
+    /**
+     * Supplies the active screen (`event.screen_id`, `event.screen_name`) at touch-capture time.
+     * Invoked on the main UI thread inside [handleInteraction] - before the touch is dispatched to
+     * app handlers that may navigate synchronously - so the captured screen is the one the user
+     * tapped, not a destination screen. Defaults to no screen until a consumer wires it up.
+     */
+    var screenInfoProvider: () -> Pair<String?, String?> = { null to null }
+
     private var mostRecentWindow: Window? = null
     private val interceptedWindows: MutableList<Window> = mutableListOf()
     private var watchedPointerId: Int = -1
@@ -96,6 +104,10 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
                 val downY = motionEvent.getY(pointerIndex)
                 // Resolve the tapped view so consumers can describe the click target (web/iOS parity).
                 val target = resolveTargetInfo(window, downX, downY)
+                // Read the active screen now, on the main thread and before the original
+                // dispatchTouchEvent runs, so a synchronous navigation in the tap handler can't make
+                // the click report the destination screen instead of the tapped one.
+                val (screenId, screenName) = screenInfoProvider()
                 _touchFlow.tryEmit(
                     TouchSample(
                         action = MotionEvent.ACTION_DOWN,
@@ -105,6 +117,8 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
                         targetClassName = target?.className,
                         targetText = target?.text,
                         targetResourceId = target?.resourceId,
+                        screenId = screenId,
+                        screenName = screenName,
                     )
                 )
             }
