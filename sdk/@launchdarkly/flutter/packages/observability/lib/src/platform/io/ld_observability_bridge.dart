@@ -9,7 +9,7 @@ import 'native_options_codec.dart';
 /// The version of this Flutter package, surfaced in the resource attributes
 /// the native bridge attaches as `telemetry.distro.version`. Kept in sync
 /// with `pubspec.yaml` by release-please.
-const String _packageVersion = '0.12.0'; // x-release-please-version
+const String _packageVersion = '0.12.1'; // x-release-please-version
 
 /// Internal entry point for starting the LaunchDarkly observability +
 /// session replay native stack from Flutter. Mirrors the C#

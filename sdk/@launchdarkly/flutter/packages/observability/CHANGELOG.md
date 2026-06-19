@@ -2,6 +2,13 @@
 
 All notable changes to the LaunchDarkly Observability SDK for Flutter will be documented in this file. This project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.12.1](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.12.0...launchdarkly_flutter_observability-0.12.1) (2026-06-19)
+
+
+### Bug Fixes
+
+* **flutter:** gate Android touch capture on analytics.taps ([#635](https://github.com/launchdarkly/observability-sdk/issues/635)) ([394d8a7](https://github.com/launchdarkly/observability-sdk/commit/394d8a7e15b62dd937ae5f3cdbfb63ed81672d2b))
+
 ## [0.12.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.11.0...launchdarkly_flutter_observability-0.12.0) (2026-06-18)
 
 
