@@ -27,7 +27,7 @@ open class BaseApplication : Application() {
         const val LAUNCHDARKLY_MOBILE_KEY = BuildConfig.LAUNCHDARKLY_MOBILE_KEY
     }
 
-    // Analog of the iOS TestApp configuration (AppDelegate.swift): a minimal setup with all
+    // A minimal setup with all
     // automatic instrumentation disabled, for testing the `Instrumentations.disabled()` path.
 //    var observabilityOptions = ObservabilityOptions(
 //        enabled = true,
