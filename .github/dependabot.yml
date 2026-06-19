@@ -385,6 +385,12 @@ updates:
     cooldown:
       default-days: 7
   - package-ecosystem: "npm"
+    directory: "/e2e/nextjs-ld"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7
+  - package-ecosystem: "npm"
     directory: "/e2e/node-plugin-express"
     schedule:
       interval: "weekly"
@@ -428,6 +434,12 @@ updates:
       default-days: 7
   - package-ecosystem: "npm"
     directory: "/sdk/@launchdarkly/observability"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7
+  - package-ecosystem: "npm"
+    directory: "/sdk/@launchdarkly/observability-next"
     schedule:
       interval: "weekly"
     cooldown:
