@@ -81,16 +81,16 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="OpenTelemetry">
-      <Version>1.11.2</Version>
+      <Version>1.15.3</Version>
     </PackageReference>
     <PackageReference Include="OpenTelemetry.Api">
-      <Version>1.11.2</Version>
+      <Version>1.15.3</Version>
     </PackageReference>
     <PackageReference Include="OpenTelemetry.Api.ProviderBuilderExtensions">
-      <Version>1.11.2</Version>
+      <Version>1.15.3</Version>
     </PackageReference>
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol">
-      <Version>1.11.2</Version>
+      <Version>1.15.3</Version>
     </PackageReference>
     <PackageReference Include="OpenTelemetry.Extensions.Hosting">
       <Version>1.11.2</Version>
