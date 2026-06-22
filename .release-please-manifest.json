@@ -11,5 +11,5 @@
 	"sdk/@launchdarkly/react-native-ld-session-replay": "0.11.1",
 	"sdk/@launchdarkly/session-replay": "1.1.15",
 	"sdk/highlight-run": "10.4.1",
-	"sdk/@launchdarkly/observability-ruby": "0.2.1"
+	"sdk/@launchdarkly/observability-ruby": "0.2.2"
 }
