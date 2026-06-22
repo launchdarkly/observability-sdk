@@ -136,8 +136,12 @@ module LaunchDarklyObservability
         # file is still loading, so the module method does not exist yet and the
         # delegation raised "undefined method `otel_logger_provider_available?'".
         def otel_logger_provider_available?
-          defined?(OpenTelemetry::SDK::Logs::LoggerProvider) &&
-            OpenTelemetry.respond_to?(:logger_provider) &&
+          # `defined?` returns nil (not false) when the constant is absent, so
+          # guard first and return an explicit boolean — callers (and the
+          # railtie test) expect true/false, never nil.
+          return false unless defined?(OpenTelemetry::SDK::Logs::LoggerProvider)
+
+          OpenTelemetry.respond_to?(:logger_provider) &&
             OpenTelemetry.logger_provider.is_a?(OpenTelemetry::SDK::Logs::LoggerProvider)
         end
       end
