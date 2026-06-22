@@ -2,6 +2,13 @@
 
 All notable changes to the LaunchDarkly Python Observability will be documented in this file. This project adheres to Semantic Versioning.
 
+## [1.2.4](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-python-1.2.3...launchdarkly-observability-python-1.2.4) (2026-06-22)
+
+
+### Bug Fixes
+
+* **observability-python:** prevent logging recursion with coexisting agents ([#637](https://github.com/launchdarkly/observability-sdk/issues/637)) ([b66da6c](https://github.com/launchdarkly/observability-sdk/commit/b66da6c98c8639ba92b9cdac15e16e775a7ee523))
+
 ## [1.2.3](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-python-1.2.2...launchdarkly-observability-python-1.2.3) (2026-05-13)
 
 
