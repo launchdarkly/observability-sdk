@@ -12,8 +12,10 @@ import {
 } from '@launchdarkly/react-native-client-sdk';
 import { useEffect, useState } from 'react';
 import { createSessionReplayPlugin } from '@launchdarkly/session-replay-react-native';
+import { Observability } from '@launchdarkly/observability-react-native';
 import DialogsScreen from './DialogsScreen';
 import MaskingScreen from './MaskingScreen';
+import TracingScreen from './TracingScreen';
 
 const plugin = createSessionReplayPlugin({
   isEnabled: true,
@@ -26,17 +28,28 @@ const plugin = createSessionReplayPlugin({
   minimumAlpha: 0.05,
 });
 
+// The observability plugin powers the distributed tracing examples on the
+// "Tracing" tab. `tracingOrigins` opts the demo API hosts into W3C
+// `traceparent` / `baggage` header propagation so device spans can link to a
+// backend trace (see the distributed-tracing guide, sections 11 and 12).
+const observability = new Observability({
+  serviceName: 'session-replay-rn-example',
+  serviceVersion: '1.0.0',
+  debug: true,
+  tracingOrigins: ['jsonplaceholder.typicode.com', 'reactnative.dev'],
+});
+
 // Replace with your LaunchDarkly mobile key.
 // You can also set the LAUNCHDARKLY_MOBILE_KEY environment variable.
 const MOBILE_KEY =
   process.env.LAUNCHDARKLY_MOBILE_KEY || 'YOUR_LAUNCHDARKLY_MOBILE_KEY_HERE';
 
 const client = new ReactNativeLDClient(MOBILE_KEY, AutoEnvAttributes.Enabled, {
-  plugins: [plugin],
+  plugins: [plugin, observability],
 });
 const context = { kind: 'user', key: 'user-key-123abc' };
 
-type Tab = 'masking' | 'dialogs';
+type Tab = 'masking' | 'dialogs' | 'tracing';
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('masking');
@@ -59,8 +72,15 @@ export default function App() {
             active={tab === 'dialogs'}
             onPress={() => setTab('dialogs')}
           />
+          <TabButton
+            label="Tracing"
+            active={tab === 'tracing'}
+            onPress={() => setTab('tracing')}
+          />
         </View>
-        {tab === 'masking' ? <MaskingScreen /> : <DialogsScreen />}
+        {tab === 'masking' && <MaskingScreen />}
+        {tab === 'dialogs' && <DialogsScreen />}
+        {tab === 'tracing' && <TracingScreen />}
       </SafeAreaView>
     </LDProvider>
   );
