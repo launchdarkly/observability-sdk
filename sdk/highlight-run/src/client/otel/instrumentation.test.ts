@@ -1293,7 +1293,6 @@ describe('Network Instrumentation Custom Attributes', () => {
 
 				expect(attributes['graphql.operation.name']).toBe('GetUser')
 				expect(attributes['graphql.operation.type']).toBe('query')
-				// Span name is left as-is (low cardinality) per OTel conventions.
 				expect(updateName).not.toHaveBeenCalled()
 			})
 

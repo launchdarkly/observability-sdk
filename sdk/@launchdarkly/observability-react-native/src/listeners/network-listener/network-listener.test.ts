@@ -16,8 +16,7 @@ const createMockSpan = () => {
 	return { span: span as unknown as Span, attributes, updateName }
 }
 
-// Body recording disabled: GraphQL tagging must still happen because it reads
-// only the low-sensitivity operation name/type, never stores the body.
+// Body recording off: tagging must still run.
 const recording: NetworkRecordingOptions = { recordHeadersAndBody: false }
 
 describe('FetchHook GraphQL operation attributes', () => {
@@ -36,7 +35,6 @@ describe('FetchHook GraphQL operation attributes', () => {
 
 		expect(attributes['graphql.operation.name']).toBe('GetUser')
 		expect(attributes['graphql.operation.type']).toBe('query')
-		// The OTel-generated span name is left as-is (low cardinality).
 		expect(updateName).not.toHaveBeenCalled()
 	})
 
