@@ -93,6 +93,7 @@
 		"@highlight-run/rrweb": "workspace:*",
 		"@highlight-run/rrweb-rrweb-plugin-sequential-id-record": "workspace:*",
 		"@highlight-run/rrweb-types": "workspace:*",
+		"@launchdarkly/observability-shared": "workspace:*",
 		"@opentelemetry/api": "^1.9.0",
 		"@opentelemetry/exporter-metrics-otlp-http": ">=0.57.1 < 0.200.0",
 		"@opentelemetry/exporter-trace-otlp-http": ">=0.57.1 < 0.200.0",

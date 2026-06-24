@@ -1,4 +1,5 @@
 import { Span } from '@opentelemetry/api'
+import { parseGraphQLOperation } from '@launchdarkly/observability-shared'
 import { FetchCustomAttributeFunction } from '@opentelemetry/instrumentation-fetch'
 import { NetworkRecordingOptions } from '../../api/Options'
 import { sanitizeHeaders, sanitizeUrl } from './utils/network-sanitizer'
@@ -24,6 +25,26 @@ const applyNetworkAttributes = (
 
 	if (urlBlocklist.some((blocked) => url.toLowerCase().includes(blocked))) {
 		return
+	}
+
+	// Give GraphQL requests a useful span name derived from the operation in the
+	// request body. Every GraphQL call hits the same endpoint, so the default
+	// OTel name ("HTTP POST" / "POST /graphql") carries no signal. This runs
+	// regardless of `recordHeadersAndBody`: the operation name/type are
+	// low-sensitivity and we only read them from the body, never store it.
+	const gql = parseGraphQLOperation(requestBody)
+	if (gql) {
+		if (gql.name) {
+			span.setAttribute('graphql.operation.name', gql.name)
+		}
+		if (gql.type) {
+			span.setAttribute('graphql.operation.type', gql.type)
+		}
+		span.updateName(
+			gql.name
+				? `${gql.type ?? 'query'} ${gql.name}`
+				: (gql.type ?? 'graphql'),
+		)
 	}
 
 	if (!recording.recordHeadersAndBody) {

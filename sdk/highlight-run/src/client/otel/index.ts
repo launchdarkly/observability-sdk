@@ -24,6 +24,7 @@ import {
 	WebTracerProvider,
 } from '@opentelemetry/sdk-trace-web'
 import * as SemanticAttributes from '@opentelemetry/semantic-conventions'
+import { parseGraphQLOperation } from '@launchdarkly/observability-shared'
 import { getResponseBody } from '../listeners/network-listener/utils/fetch-listener'
 import {
 	DEFAULT_URL_BLOCKLIST,
@@ -689,7 +690,7 @@ export const shutdown = async () => {
 	])
 }
 
-const enhanceSpanWithHttpRequestAttributes = (
+export const enhanceSpanWithHttpRequestAttributes = (
 	span: api.Span,
 	body: Request['body'] | RequestInit['body'] | BrowserXHR['_body'],
 	headers:
@@ -706,17 +707,22 @@ const enhanceSpanWithHttpRequestAttributes = (
 	const sanitizedUrl = sanitizeUrl(url)
 	const sanitizedUrlObject = safeParseUrl(sanitizedUrl)
 
-	const stringBody = typeof body === 'string' ? body : String(body)
-	try {
-		const parsedBody = body ? JSON.parse(stringBody) : undefined
-		if (parsedBody?.operationName) {
-			span.setAttribute(
-				'graphql.operation.name',
-				parsedBody.operationName,
-			)
+	// Give GraphQL requests a useful span name derived from the operation in
+	// the request body. Every GraphQL call hits the same endpoint, so the
+	// default OTel name carries no signal in the trace list.
+	const gql = parseGraphQLOperation(body)
+	if (gql) {
+		if (gql.name) {
+			span.setAttribute('graphql.operation.name', gql.name)
 		}
-	} catch {
-		// Ignore parsing errors
+		if (gql.type) {
+			span.setAttribute('graphql.operation.type', gql.type)
+		}
+		span.updateName(
+			gql.name
+				? `${gql.type ?? 'query'} ${gql.name}`
+				: (gql.type ?? 'graphql'),
+		)
 	}
 
 	span.setAttributes({

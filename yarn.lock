@@ -28975,6 +28975,7 @@ __metadata:
     "@highlight-run/rrweb-rrweb-plugin-sequential-id-record": "workspace:*"
     "@highlight-run/rrweb-types": "workspace:*"
     "@launchdarkly/js-client-sdk": "npm:^4.0.0"
+    "@launchdarkly/observability-shared": "workspace:*"
     "@opentelemetry/api": "npm:^1.9.0"
     "@opentelemetry/exporter-metrics-otlp-http": "npm:>=0.57.1 < 0.200.0"
     "@opentelemetry/exporter-trace-otlp-http": "npm:>=0.57.1 < 0.200.0"
