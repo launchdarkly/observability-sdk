@@ -39,6 +39,10 @@ const client = new LDClient(
 );
 ```
 
+## Guides
+
+- [Distributed Tracing Guide](guides/distributed-tracing.md) — a cookbook of common tracing patterns (spans, nested operations, error handling, correlated logs, and end-to-end mobile-to-backend traces).
+
 ## About LaunchDarkly
 
 - LaunchDarkly Observability provides a way to collect and send errors, logs, traces to LaunchDarkly. Correlate latency or exceptions with your releases to safely ship code.
