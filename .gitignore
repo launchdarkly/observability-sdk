@@ -81,3 +81,9 @@ sdk/@launchdarkly/mobile-dotnet/**/*.csproj.user
 sdk/@launchdarkly/mobile-dotnet/**/*.sln
 sdk/@launchdarkly/mobile-dotnet/**/nupkgs/
 sdk/@launchdarkly/mobile-dotnet/**/xcuserdata/
+
+# React Native session-replay example: local iOS/Ruby tooling locks
+# (regenerated per-machine by `pod install` / `bundle install`).
+# NOTE: the monorepo yarn.lock is intentionally NOT ignored.
+sdk/@launchdarkly/react-native-ld-session-replay/example/ios/Podfile.lock
+sdk/@launchdarkly/react-native-ld-session-replay/example/Gemfile.lock
