@@ -445,6 +445,65 @@ new Observability({
 
 ---
 
+## 12. Propagating Baggage Across Spans and Services
+
+Baggage is a set of key-value pairs that travels with the active context — across child spans and, when a request targets one of your `tracingOrigins`, across the network to your backend via the W3C `baggage` header. The SDK registers a `W3CBaggagePropagator` by default, so you only need the standard OpenTelemetry baggage API.
+
+Add the import:
+
+```typescript
+import { propagation } from '@opentelemetry/api'
+```
+
+Set baggage and run work within it. Spans started inside the callback — and outgoing `fetch`/`XHR` requests to tracing origins — carry these entries:
+
+```typescript
+function withTenantContext<T>(tenantId: string, tier: string, fn: () => T): T {
+  const baggage = propagation.createBaggage({
+    'app.tenant_id': { value: tenantId },
+    'app.user_tier': { value: tier },
+  })
+  return context.with(propagation.setBaggage(context.active(), baggage), fn)
+}
+
+withTenantContext('acme', 'gold', () => {
+  LDObserve.startActiveSpan('LoadDashboard', async (span) => {
+    // api.example.com is a tracing origin -> the `baggage` header
+    // (app.tenant_id=acme,app.user_tier=gold) is sent to the backend.
+    await fetch('https://api.example.com/dashboard')
+  })
+})
+```
+
+Read baggage anywhere it is active:
+
+```typescript
+const current = propagation.getActiveBaggage()
+const tenantId = current?.getEntry('app.tenant_id')?.value
+```
+
+Add to (or update) existing baggage without dropping what is already there — `Baggage` is immutable, so each change returns a new instance:
+
+```typescript
+const existing = propagation.getActiveBaggage() ?? propagation.createBaggage()
+const updated = existing.setEntry('app.experiment', { value: 'new-checkout' })
+
+context.with(propagation.setBaggage(context.active(), updated), () => {
+  // ... work that should see the added entry ...
+})
+```
+
+> **Baggage is not automatically copied onto spans.** It rides along the context and is sent to the backend, but it does not become span attributes unless you put it there. Copy the entries you want to query on explicitly:
+>
+> ```typescript
+> const bag = propagation.getActiveBaggage()
+> bag?.getAllEntries().forEach(([key, entry]) => span.setAttribute(key, entry.value))
+> ```
+
+Like trace headers, the `baggage` header is only attached to requests whose URL matches `tracingOrigins`, and `urlBlocklist` suppresses it. Avoid putting sensitive data in baggage, and keep entries small — they are sent on every matching request.
+
+---
+
 ## Quick Reference
 
 ### Span Creation (`LDObserve`)
@@ -500,3 +559,7 @@ new Observability({
 | `trace.getActiveSpan()` | Get the currently active span, if any |
 | `context.active()` | Get the currently active context |
 | `context.with(ctx, fn)` | Run `fn` with `ctx` as the active context (re-establish across async boundaries) |
+| `propagation.getActiveBaggage()` | Get the baggage from the active context, if any |
+| `propagation.createBaggage(entries?)` | Create a `Baggage` (e.g. `{ key: { value } }`) |
+| `propagation.setBaggage(ctx, baggage)` | Return a new context with the baggage attached |
+| `baggage.setEntry` / `getEntry` / `getAllEntries` | Read or modify baggage entries (immutable; returns a new `Baggage`) |
