@@ -707,9 +707,9 @@ export const enhanceSpanWithHttpRequestAttributes = (
 	const sanitizedUrl = sanitizeUrl(url)
 	const sanitizedUrlObject = safeParseUrl(sanitizedUrl)
 
-	// Give GraphQL requests a useful span name derived from the operation in
-	// the request body. Every GraphQL call hits the same endpoint, so the
-	// default OTel name carries no signal in the trace list.
+	// Tag GraphQL requests with their operation as OTel semconv attributes so
+	// the UI can show which operation ran. The span name is left as-is to keep
+	// it low-cardinality, per the HTTP/GraphQL semantic conventions.
 	const gql = parseGraphQLOperation(body)
 	if (gql) {
 		if (gql.name) {
@@ -718,11 +718,6 @@ export const enhanceSpanWithHttpRequestAttributes = (
 		if (gql.type) {
 			span.setAttribute('graphql.operation.type', gql.type)
 		}
-		span.updateName(
-			gql.name
-				? `${gql.type ?? 'query'} ${gql.name}`
-				: (gql.type ?? 'graphql'),
-		)
 	}
 
 	span.setAttributes({

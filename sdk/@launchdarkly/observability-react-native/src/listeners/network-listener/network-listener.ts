@@ -27,9 +27,11 @@ const applyNetworkAttributes = (
 		return
 	}
 
-	// Give GraphQL requests a useful span name derived from the operation in the
-	// request body. Every GraphQL call hits the same endpoint, so the default
-	// OTel name ("HTTP POST" / "POST /graphql") carries no signal. This runs
+	// Tag GraphQL requests with their operation as OTel semconv attributes so
+	// the UI can show which operation ran — every GraphQL call hits the same
+	// endpoint, so the span name alone is unhelpful. We deliberately leave the
+	// low-cardinality OTel span name as-is (per the HTTP/GraphQL conventions)
+	// and let the UI format the display name from these attributes. This runs
 	// regardless of `recordHeadersAndBody`: the operation name/type are
 	// low-sensitivity and we only read them from the body, never store it.
 	const gql = parseGraphQLOperation(requestBody)
@@ -40,11 +42,6 @@ const applyNetworkAttributes = (
 		if (gql.type) {
 			span.setAttribute('graphql.operation.type', gql.type)
 		}
-		span.updateName(
-			gql.name
-				? `${gql.type ?? 'query'} ${gql.name}`
-				: (gql.type ?? 'graphql'),
-		)
 	}
 
 	if (!recording.recordHeadersAndBody) {

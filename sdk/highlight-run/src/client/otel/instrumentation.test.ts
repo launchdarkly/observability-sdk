@@ -1259,7 +1259,7 @@ describe('Network Instrumentation Custom Attributes', () => {
 			})
 		})
 
-		describe('graphql operation naming', () => {
+		describe('graphql operation attributes', () => {
 			const createMockSpan = (url: string) => {
 				const attributes: Record<string, unknown> = {
 					'url.full': url,
@@ -1280,7 +1280,7 @@ describe('Network Instrumentation Custom Attributes', () => {
 				return { span: span as unknown as Span, attributes, updateName }
 			}
 
-			it('names a GraphQL request and sets semconv attributes', () => {
+			it('sets semconv attributes without renaming the span', () => {
 				const { span, attributes, updateName } = createMockSpan(
 					'https://api.example.com/graphql',
 				)
@@ -1293,10 +1293,11 @@ describe('Network Instrumentation Custom Attributes', () => {
 
 				expect(attributes['graphql.operation.name']).toBe('GetUser')
 				expect(attributes['graphql.operation.type']).toBe('query')
-				expect(updateName).toHaveBeenCalledWith('query GetUser')
+				// Span name is left as-is (low cardinality) per OTel conventions.
+				expect(updateName).not.toHaveBeenCalled()
 			})
 
-			it('leaves a non-GraphQL request unnamed', () => {
+			it('leaves a non-GraphQL request untouched', () => {
 				const { span, attributes, updateName } = createMockSpan(
 					'https://api.example.com/rest',
 				)

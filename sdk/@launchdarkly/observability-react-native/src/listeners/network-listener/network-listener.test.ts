@@ -5,32 +5,24 @@ import { NetworkRecordingOptions } from '../../api/Options'
 
 const createMockSpan = () => {
 	const attributes: Record<string, unknown> = {}
-	let name = 'HTTP POST'
+	const updateName = vi.fn()
 	const span = {
 		setAttribute: vi.fn((key: string, value: unknown) => {
 			attributes[key] = value
 			return span
 		}),
-		updateName: vi.fn((newName: string) => {
-			name = newName
-			return span
-		}),
+		updateName,
 	}
-	return {
-		span: span as unknown as Span,
-		attributes,
-		updateName: span.updateName,
-		getName: () => name,
-	}
+	return { span: span as unknown as Span, attributes, updateName }
 }
 
-// Body recording disabled: GraphQL naming must still happen because it reads
+// Body recording disabled: GraphQL tagging must still happen because it reads
 // only the low-sensitivity operation name/type, never stores the body.
 const recording: NetworkRecordingOptions = { recordHeadersAndBody: false }
 
-describe('FetchHook GraphQL span naming', () => {
-	it('renames a GraphQL fetch and sets semconv attributes', () => {
-		const { span, attributes, getName } = createMockSpan()
+describe('FetchHook GraphQL operation attributes', () => {
+	it('sets semconv attributes for a GraphQL fetch without renaming the span', () => {
+		const { span, attributes, updateName } = createMockSpan()
 		const body = JSON.stringify({
 			query: 'query GetUser($id: ID!) { user(id: $id) { id } }',
 			operationName: 'GetUser',
@@ -44,11 +36,12 @@ describe('FetchHook GraphQL span naming', () => {
 
 		expect(attributes['graphql.operation.name']).toBe('GetUser')
 		expect(attributes['graphql.operation.type']).toBe('query')
-		expect(getName()).toBe('query GetUser')
+		// The OTel-generated span name is left as-is (low cardinality).
+		expect(updateName).not.toHaveBeenCalled()
 	})
 
 	it('infers the type for an anonymous query with no operation name', () => {
-		const { span, attributes, getName } = createMockSpan()
+		const { span, attributes, updateName } = createMockSpan()
 		const body = JSON.stringify({ query: '{ viewer { id } }' })
 
 		FetchHook(recording, [])(
@@ -59,7 +52,7 @@ describe('FetchHook GraphQL span naming', () => {
 
 		expect(attributes['graphql.operation.type']).toBe('query')
 		expect(attributes['graphql.operation.name']).toBeUndefined()
-		expect(getName()).toBe('query')
+		expect(updateName).not.toHaveBeenCalled()
 	})
 
 	it('leaves a non-GraphQL fetch untouched', () => {
