@@ -3,6 +3,8 @@ package com.launchdarkly.observability.client
 import android.app.Application
 import android.view.MotionEvent
 import android.view.ViewConfiguration
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.ProcessLifecycleOwner
 import com.launchdarkly.observability.context.ObserveLogger
 import com.launchdarkly.observability.api.ObservabilityOptions
 import com.launchdarkly.observability.bridge.emitLog
@@ -313,6 +315,16 @@ class ObservabilityService(
         // App-lifecycle detection runs unconditionally so Session Replay breadcrumbs are always
         // available; the span itself is gated by analytics.appLifecycle inside the handler.
         appLifecycleTracker.start()
+
+        // Prime the session manager with the actual process state. [appLifecycleTracker] only
+        // reports genuine foreground/background transitions (it suppresses the initial replay and
+        // never emits a catch-up background), so if the SDK initializes while the app is already
+        // backgrounded the manager would otherwise stay FOREGROUND and skip background-inactivity
+        // rotation until the next foreground/background cycle. A genuine onStart will later settle
+        // it back to foreground if the app comes forward.
+        if (!ProcessLifecycleOwner.get().lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+            ldSessionManager.onApplicationBackgrounded()
+        }
 
         // App-launch detection runs unconditionally so the Session Replay `Launch` breadcrumb is
         // always available; the `app_launch` span is gated by analytics.appLaunch inside the handler.
