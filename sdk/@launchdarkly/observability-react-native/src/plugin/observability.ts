@@ -160,16 +160,18 @@ class TracingHook implements Hook {
 				...(hookContext.context
 					? getContextKeys(hookContext.context)
 					: {}),
+				// Spread user-supplied track data first so the LaunchDarkly event
+				// `key` and metric `value` set below always win over any
+				// same-named properties in the payload. Non-primitive members are
+				// ignored by OpenTelemetry.
+				...(typeof hookContext.data === 'object' &&
+				hookContext.data !== null
+					? (hookContext.data as Attributes)
+					: {}),
 				key: hookContext.key,
 				...(hookContext.metricValue !== undefined &&
 				hookContext.metricValue !== null
 					? { value: hookContext.metricValue }
-					: {}),
-				// Spread user-supplied track data last so it is attached as
-				// attributes. Non-primitive members are ignored by OpenTelemetry.
-				...(typeof hookContext.data === 'object' &&
-				hookContext.data !== null
-					? (hookContext.data as Attributes)
 					: {}),
 			}
 
