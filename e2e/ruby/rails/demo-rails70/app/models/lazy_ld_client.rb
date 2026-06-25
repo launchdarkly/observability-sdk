@@ -10,7 +10,7 @@ class LazyLdClient
     @instance ||= begin
       plugin = LaunchDarklyObservability::Plugin.new(
         otlp_endpoint: ENV.fetch('OTEL_EXPORTER_OTLP_ENDPOINT', LaunchDarklyObservability::DEFAULT_ENDPOINT),
-        service_name: 'rails-demo-app',
+        service_name: 'rails7-demo-app',
         service_version: '1.0.0'
       )
       config = LaunchDarkly::Config.new(plugins: [plugin])

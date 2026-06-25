@@ -8,7 +8,7 @@ require 'launchdarkly_observability'
 unless ENV['LD_LAZY_INIT']
   observability_plugin = LaunchDarklyObservability::Plugin.new(
     otlp_endpoint: ENV.fetch('OTEL_EXPORTER_OTLP_ENDPOINT', LaunchDarklyObservability::DEFAULT_ENDPOINT),
-    service_name: 'rails-demo-app',
+    service_name: 'rails7-demo-app',
     service_version: '1.0.0'
   )
 
