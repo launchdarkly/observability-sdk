@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.0](https://github.com/launchdarkly/observability-sdk/compare/observability-react-native-0.9.3...observability-react-native-0.10.0) (2026-06-25)
+
+
+### Features
+
+* supporting advanced trace cases ([#645](https://github.com/launchdarkly/observability-sdk/issues/645)) ([dac45eb](https://github.com/launchdarkly/observability-sdk/commit/dac45eb6e61c63f954da1ec63aec58764bc810e1))
+
 ## [0.9.3](https://github.com/launchdarkly/observability-sdk/compare/observability-react-native-0.9.2...observability-react-native-0.9.3) (2026-06-05)
 
 

@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.12.0](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.11.1...session-replay-react-native-0.12.0) (2026-06-25)
+
+
+### Features
+
+* supporting advanced trace cases ([#645](https://github.com/launchdarkly/observability-sdk/issues/645)) ([dac45eb](https://github.com/launchdarkly/observability-sdk/commit/dac45eb6e61c63f954da1ec63aec58764bc810e1))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @launchdarkly/observability-react-native bumped to 0.10.0
+
 ## [0.11.1](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.11.0...session-replay-react-native-0.11.1) (2026-06-05)
 
 
