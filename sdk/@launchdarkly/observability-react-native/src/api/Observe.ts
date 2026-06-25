@@ -8,6 +8,7 @@ import { Metric } from './Metric'
 import { RequestContext } from './RequestContext'
 import { SessionInfo } from '../client/SessionManager'
 import { SpanScope, WithSpanOptions } from './SpanScope'
+import { TrackProperties } from './TrackProperties'
 
 export interface Observe {
 	/**
@@ -73,11 +74,21 @@ export interface Observe {
 	 * `value` for LaunchDarkly numeric custom metrics, and any `properties` as
 	 * additional span attributes.
 	 *
+	 * `properties` is a plain dictionary (like the native `[String: Any]` /
+	 * `Map<String, Any?>` surfaces): nested objects are flattened with
+	 * dot-separated keys (e.g. `user.id`), arrays of objects with indexed dotted
+	 * keys (e.g. `products.0.price`), and homogeneous scalar arrays become array
+	 * attributes. `null` / `undefined` values are skipped.
+	 *
 	 * @param key The key for the event.
-	 * @param properties Optional data associated with the event; attached as span attributes.
+	 * @param properties Optional data associated with the event; flattened and attached as span attributes.
 	 * @param metricValue Optional numeric value used by LaunchDarkly experimentation for numeric custom metrics.
 	 */
-	track(key: string, properties?: Attributes, metricValue?: number): void
+	track(
+		key: string,
+		properties?: TrackProperties,
+		metricValue?: number,
+	): void
 
 	/**
 	 * Parse headers to extract request context.

@@ -10,6 +10,7 @@ import { Metric } from '../api/Metric'
 import { RequestContext } from '../api/RequestContext'
 import { Observe } from '../api/Observe'
 import { SpanScope, WithSpanOptions } from '../api/SpanScope'
+import { TrackProperties } from '../api/TrackProperties'
 import { BufferedClass } from './BufferedClass'
 import { noOpSpan } from '../utils/NoOpSpan'
 import { NOOP_SPAN_OPS, runInSpan, SpanOps } from './withSpan'
@@ -58,7 +59,11 @@ class LDObserveClass
 		return this._bufferCall('recordLog', [message, level, attributes])
 	}
 
-	track(key: string, properties?: Attributes, metricValue?: number): void {
+	track(
+		key: string,
+		properties?: TrackProperties,
+		metricValue?: number,
+	): void {
 		return this._bufferCall('track', [key, properties, metricValue])
 	}
 

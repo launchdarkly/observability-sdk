@@ -17,6 +17,7 @@ import { ReactNativeOptions } from '../api/Options'
 import { DEFAULT_URL_BLOCKLIST } from '../listeners/network-listener/utils/network-sanitizer'
 import { Metric } from '../api/Metric'
 import { RequestContext } from '../api/RequestContext'
+import { TrackProperties } from '../api/TrackProperties'
 import { SessionManager } from '../client/SessionManager'
 import {
 	InstrumentationManager,
@@ -169,7 +170,7 @@ export class ObservabilityClient {
 
 	public track(
 		key: string,
-		properties?: Attributes,
+		properties?: TrackProperties,
 		metricValue?: number,
 	): void {
 		if (this.options.disableTraces) return
