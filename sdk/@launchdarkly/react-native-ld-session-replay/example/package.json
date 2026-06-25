@@ -10,8 +10,10 @@
     "build:ios": "react-native build-ios --mode Debug"
   },
   "dependencies": {
+    "@launchdarkly/observability-react-native": "workspace:*",
     "@launchdarkly/react-native-client-sdk": "^10.12.5",
     "@launchdarkly/session-replay-react-native": "workspace:*",
+    "@opentelemetry/api": "^1.9.0",
     "react": "19.2.0",
     "react-native": "0.83.0",
     "react-native-webview": "13.16.1"

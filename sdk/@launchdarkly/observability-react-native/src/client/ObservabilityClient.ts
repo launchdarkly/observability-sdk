@@ -167,6 +167,15 @@ export class ObservabilityClient {
 		this.instrumentationManager.recordLog(message, level, attributes)
 	}
 
+	public track(
+		key: string,
+		properties?: Attributes,
+		metricValue?: number,
+	): void {
+		if (this.options.disableTraces) return
+		this.instrumentationManager.track(key, properties, metricValue)
+	}
+
 	public parseHeaders(headers: Record<string, string>): RequestContext {
 		const sessionInfo = this.sessionManager.getSessionInfo()
 		return {

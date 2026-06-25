@@ -7,6 +7,7 @@ import {
 import { Metric } from './Metric'
 import { RequestContext } from './RequestContext'
 import { SessionInfo } from '../client/SessionManager'
+import { SpanScope, WithSpanOptions } from './SpanScope'
 
 export interface Observe {
 	/**
@@ -65,6 +66,20 @@ export interface Observe {
 	recordLog(message: any, level: string, attributes?: Attributes): void
 
 	/**
+	 * Record a custom track event as a `track` span.
+	 *
+	 * Mirrors the iOS and Android `LDObserve.track(...)` API (and `LDClient.track`):
+	 * emits a span named `track` carrying the event `key`, an optional numeric
+	 * `value` for LaunchDarkly numeric custom metrics, and any `properties` as
+	 * additional span attributes.
+	 *
+	 * @param key The key for the event.
+	 * @param properties Optional data associated with the event; attached as span attributes.
+	 * @param metricValue Optional numeric value used by LaunchDarkly experimentation for numeric custom metrics.
+	 */
+	track(key: string, properties?: Attributes, metricValue?: number): void
+
+	/**
 	 * Parse headers to extract request context.
 	 * @param headers The headers to parse
 	 */
@@ -114,6 +129,30 @@ export interface Observe {
 		fn: (span: OtelSpan) => T,
 		options?: SpanOptions,
 		ctx?: Context,
+	): T
+
+	/**
+	 * Start a span, run `fn` within it, and end the span automatically.
+	 *
+	 * This is an ergonomic wrapper over {@link startSpan} designed for React
+	 * Native, where the active context is tracked only synchronously and is lost
+	 * across each `await`. The {@link SpanScope} passed to `fn` exposes a
+	 * {@link SpanScope.child} method that parents child spans off the captured
+	 * context, so the hierarchy is preserved across `await`s and even under
+	 * concurrent (`Promise.all`) work — without manually threading context.
+	 *
+	 * The span's status is set to `OK` on success, or `ERROR` (with the error
+	 * recorded) if `fn` throws or returns a rejecting promise. If `fn` returns a
+	 * promise, the span ends when it settles and the promise is returned.
+	 *
+	 * @param spanName The span name
+	 * @param fn The callback to run within the span's scope
+	 * @param options Optional span options, including an explicit `parent`
+	 */
+	withSpan<T>(
+		spanName: string,
+		fn: (scope: SpanScope) => T,
+		options?: WithSpanOptions,
 	): T
 
 	/**

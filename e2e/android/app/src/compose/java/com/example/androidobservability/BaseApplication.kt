@@ -20,6 +20,7 @@ import com.launchdarkly.sdk.android.LDClient
 import com.launchdarkly.sdk.android.LDConfig
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
+import kotlin.time.Duration.Companion.minutes
 
 open class BaseApplication : Application() {
 
@@ -43,6 +44,7 @@ open class BaseApplication : Application() {
         debug = true,
         otlpEndpoint = BuildConfig.OTLP_ENDPOINT,
         backendUrl = BuildConfig.BACKEND_URL,
+        sessionBackgroundTimeout = 3.minutes,
         tracesApi = ObservabilityOptions.TracesApi.enabled(),
         metricsApi = ObservabilityOptions.MetricsApi.enabled(),
         instrumentations = ObservabilityOptions.Instrumentations(

@@ -19,9 +19,17 @@ export const FEATURE_FLAG_CONTEXT_ID_ATTR = `${FEATURE_FLAG_SCOPE}.context.id`
 export const FEATURE_FLAG_ENV_ATTR = `${FEATURE_FLAG_SCOPE}.environment.id`
 
 export const LD_SCOPE = 'launchdarkly'
+// Span name for `track` events recorded via the LaunchDarkly client's
+// afterTrack hook. Uses the simple "track" name to match the mobile SDKs
+// (iOS / Android / Flutter).
+export const LD_TRACK_SPAN_NAME = 'track'
 export const FEATURE_FLAG_APP_ID_ATTR = `${LD_SCOPE}.application.id`
 export const FEATURE_FLAG_APP_VERSION_ATTR = `${LD_SCOPE}.application.version`
 export const LD_IDENTIFY_RESULT_STATUS = `${LD_SCOPE}.identify.result.status`
+// Universal, cross-SDK marker for telemetry produced internally by the
+// LaunchDarkly SDK itself (e.g. flag-evaluation spans), so it can be filtered or
+// hidden regardless of which SDK/instrumentation-scope emitted it.
+export const LD_INTERNAL_ATTR = `${LD_SCOPE}.internal`
 
 export const FEATURE_FLAG_REASON_ATTRS: {
 	[key in keyof LDEvaluationReason]: string
