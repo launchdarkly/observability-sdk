@@ -2,20 +2,12 @@
 
 This cookbook covers common tracing patterns with the LaunchDarkly Observability SDK for React Native — from simple spans to nested operations, error handling, correlated logs, and end-to-end mobile-to-backend distributed traces. Each recipe is self-contained and demonstrates a single concept with realistic examples.
 
-Each runnable recipe below matches the example screen [`TracingScreen.tsx`](../../react-native-ld-session-replay/example/src/TracingScreen.tsx) verbatim (only the on-screen `log(...)` lines are omitted here); a few recipes additionally show the lower-level explicit form for reference. They assume the SDK has already been initialized (see [Usage](../README.md#usage)) and the following imports and demo endpoints are present:
+Each runnable recipe below matches the example screen [`TracingScreen.tsx`](../../react-native-ld-session-replay/example/src/TracingScreen.tsx) verbatim (only the on-screen `log(...)` lines are omitted here); a few recipes additionally show the lower-level explicit form for reference. The endpoints are inlined so each recipe stands on its own; requests to the `jsonplaceholder` host carry trace/baggage headers because it is configured as a tracing origin (see [recipe 11](#11-connecting-mobile-traces-to-your-backend-end-to-end-distributed-tracing)). They assume the SDK has already been initialized (see [Usage](../README.md#usage)) and the following imports are present:
 
 ```typescript
 import { Platform } from 'react-native'
 import { LDObserve } from '@launchdarkly/observability-react-native'
 import { context, propagation, SpanStatusCode, trace } from '@opentelemetry/api'
-
-// Public demo endpoints. jsonplaceholder is listed in `tracingOrigins`, so
-// requests to it carry trace headers; the tiny logo is used for the
-// download/cache checkpoint recipe.
-const POSTS_URL = 'https://jsonplaceholder.typicode.com/posts'
-const USERS_URL = 'https://jsonplaceholder.typicode.com/users'
-const CHECKOUT_URL = 'https://jsonplaceholder.typicode.com/posts'
-const IMAGE_URL = 'https://reactnative.dev/img/tiny_logo.png'
 ```
 
 Spans returned by the SDK are standard OpenTelemetry [`Span`](https://open-telemetry.github.io/opentelemetry-js/interfaces/_opentelemetry_api.Span.html) objects, so every span operation in this guide is the regular OpenTelemetry API.
@@ -46,7 +38,7 @@ const nestedSpans = async () => {
   // synchronously).
   const count = await LDObserve.withSpan('LoadProducts', async (load) => {
     const items = await load.child('FetchFromApi', async (fetchScope) => {
-      const response = await fetch(POSTS_URL)
+      const response = await fetch('https://jsonplaceholder.typicode.com/posts')
       fetchScope.span.setAttribute('http.status_code', response.status)
       const json = await response.text()
       // Parents to FetchFromApi even though we are past two awaits.
@@ -214,7 +206,7 @@ const httpWithErrorHandling = async () => {
     span.setAttribute('user.id', '1')
     span.setAttribute('http.method', 'GET')
     try {
-      const url = `${USERS_URL}/1`
+      const url = 'https://jsonplaceholder.typicode.com/users/1'
       span.setAttribute('http.url', url)
       const response = await fetch(url)
       span.setAttribute('http.status_code', response.status)
@@ -249,7 +241,9 @@ async function syncOrders() {
     span.setAttribute('sync.direction', 'pull')
 
     // The HTTP span for this fetch is auto-created as a child of "SyncOrders"
-    const response = await fetch(`${POSTS_URL}?_limit=5`)
+    const response = await fetch(
+      'https://jsonplaceholder.typicode.com/posts?_limit=5',
+    )
     span.setAttribute('http.status_code', response.status)
 
     const orders = (await response.json()) as unknown[]
@@ -276,7 +270,9 @@ const autoInstrumentedChild = async () => {
     span.setAttribute('sync.direction', 'pull')
     // `withSpan` makes SyncOrders active for the synchronous window, so this
     // fetch (started before the first await) auto-parents to it.
-    const response = await fetch(`${POSTS_URL}?_limit=5`)
+    const response = await fetch(
+      'https://jsonplaceholder.typicode.com/posts?_limit=5',
+    )
     span.setAttribute('http.status_code', response.status)
     const orders = (await response.json()) as unknown[]
     span.setAttribute('order_count', orders.length)
@@ -291,7 +287,7 @@ const autoInstrumentedChild = async () => {
 >   const cart = await loadCart() // <- await drops the active context
 >   // Re-establish it so the auto HTTP span parents to "Checkout":
 >   const res = await scope.active(() =>
->     fetch(CHECKOUT_URL, { method: 'POST' }),
+>     fetch('https://jsonplaceholder.typicode.com/posts', { method: 'POST' }),
 >   )
 >   scope.span.setAttribute('http.status_code', res.status)
 > })
@@ -402,7 +398,9 @@ const detachedChildSpan = () => {
       await LDObserve.withSpan(
         'BackgroundSync',
         async ({ span: childSpan }) => {
-          const response = await fetch(`${POSTS_URL}/1`)
+          const response = await fetch(
+            'https://jsonplaceholder.typicode.com/posts/1',
+          )
           childSpan.setAttribute('http.status_code', response.status)
           childSpan.addEvent('sync.complete')
         },
@@ -511,9 +509,10 @@ Use `span.addEvent` to mark milestones within a long-running span without creati
 ```typescript
 const spanEvents = async () => {
   await LDObserve.withSpan('DownloadAndCacheImage', async ({ span }) => {
-    span.setAttribute('image.url', IMAGE_URL)
+    const imageUrl = 'https://reactnative.dev/img/tiny_logo.png'
+    span.setAttribute('image.url', imageUrl)
     span.addEvent('download.started')
-    const response = await fetch(IMAGE_URL)
+    const response = await fetch(imageUrl)
     const blob = await response.blob()
     span.addEvent('download.completed')
     span.setAttribute('image.size_bytes', blob.size)
@@ -548,7 +547,7 @@ const backendDistributedTrace = async () => {
     span.setAttribute('cart.id', 'cart-7')
     // traceparent is injected automatically because the host is a tracing
     // origin -> a backend span would join this trace.
-    const response = await fetch(CHECKOUT_URL, {
+    const response = await fetch('https://jsonplaceholder.typicode.com/posts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ cartId: 'cart-7' }),
@@ -633,7 +632,7 @@ const baggage = async () => {
           .forEach(([key, entry]) => span.setAttribute(key, entry.value))
 
         // Outgoing request to a tracing origin also carries the baggage header.
-        await fetch(`${POSTS_URL}/1`)
+        await fetch('https://jsonplaceholder.typicode.com/posts/1')
         span.end()
       })
     },

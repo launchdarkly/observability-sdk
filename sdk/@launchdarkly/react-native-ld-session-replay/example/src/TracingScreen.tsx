@@ -31,14 +31,9 @@ import {
  * to LaunchDarkly only happens once a real key is configured.
  */
 
-// Public demo endpoints. jsonplaceholder is listed in `tracingOrigins`, so
-// requests to it carry trace headers; the tiny logo is used for the
-// download/cache checkpoint recipe.
-const POSTS_URL = 'https://jsonplaceholder.typicode.com/posts';
-const USERS_URL = 'https://jsonplaceholder.typicode.com/users';
-const CHECKOUT_URL = 'https://jsonplaceholder.typicode.com/posts';
-const IMAGE_URL = 'https://reactnative.dev/img/tiny_logo.png';
-
+// Recipes below use literal demo endpoints so each one stands on its own. The
+// jsonplaceholder host is listed in `tracingOrigins` (see App.tsx), so requests
+// to it carry trace/baggage headers.
 const short = (id?: string) => (id ? id.slice(0, 8) : 'n/a');
 const traceOf = (span: Span) => short(span.spanContext().traceId);
 
@@ -93,7 +88,9 @@ export default function TracingScreen() {
     // synchronously).
     const count = await LDObserve.withSpan('LoadProducts', async (load) => {
       const items = await load.child('FetchFromApi', async (fetchScope) => {
-        const response = await fetch(POSTS_URL);
+        const response = await fetch(
+          'https://jsonplaceholder.typicode.com/posts'
+        );
         fetchScope.span.setAttribute('http.status_code', response.status);
         const json = await response.text();
         // Parents to FetchFromApi even though we are past two awaits.
@@ -118,7 +115,7 @@ export default function TracingScreen() {
       span.setAttribute('user.id', '1');
       span.setAttribute('http.method', 'GET');
       try {
-        const url = `${USERS_URL}/1`;
+        const url = 'https://jsonplaceholder.typicode.com/users/1';
         span.setAttribute('http.url', url);
         const response = await fetch(url);
         span.setAttribute('http.status_code', response.status);
@@ -147,7 +144,9 @@ export default function TracingScreen() {
       span.setAttribute('sync.direction', 'pull');
       // `withSpan` makes SyncOrders active for the synchronous window, so this
       // fetch (started before the first await) auto-parents to it.
-      const response = await fetch(`${POSTS_URL}?_limit=5`);
+      const response = await fetch(
+        'https://jsonplaceholder.typicode.com/posts?_limit=5'
+      );
       span.setAttribute('http.status_code', response.status);
       const orders = (await response.json()) as unknown[];
       span.setAttribute('order_count', orders.length);
@@ -231,7 +230,9 @@ export default function TracingScreen() {
         await LDObserve.withSpan(
           'BackgroundSync',
           async ({ span: childSpan }) => {
-            const response = await fetch(`${POSTS_URL}/1`);
+            const response = await fetch(
+              'https://jsonplaceholder.typicode.com/posts/1'
+            );
             childSpan.setAttribute('http.status_code', response.status);
             childSpan.addEvent('sync.complete');
           },
@@ -317,9 +318,10 @@ export default function TracingScreen() {
   // -- 10. Span events as lightweight checkpoints --------------------------
   const spanEvents = async () => {
     await LDObserve.withSpan('DownloadAndCacheImage', async ({ span }) => {
-      span.setAttribute('image.url', IMAGE_URL);
+      const imageUrl = 'https://reactnative.dev/img/tiny_logo.png';
+      span.setAttribute('image.url', imageUrl);
       span.addEvent('download.started');
-      const response = await fetch(IMAGE_URL);
+      const response = await fetch(imageUrl);
       const blob = await response.blob();
       span.addEvent('download.completed');
       span.setAttribute('image.size_bytes', blob.size);
@@ -336,11 +338,14 @@ export default function TracingScreen() {
       span.setAttribute('cart.id', 'cart-7');
       // traceparent is injected automatically because the host is a tracing
       // origin -> a backend span would join this trace.
-      const response = await fetch(CHECKOUT_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cartId: 'cart-7' }),
-      });
+      const response = await fetch(
+        'https://jsonplaceholder.typicode.com/posts',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cartId: 'cart-7' }),
+        }
+      );
       span.setAttribute('http.status_code', response.status);
       log(`[11] Checkout POST (traceparent propagated) trace=${traceOf(span)}`);
     });
@@ -382,7 +387,7 @@ export default function TracingScreen() {
             .forEach(([key, entry]) => span.setAttribute(key, entry.value));
 
           // Outgoing request to a tracing origin also carries the baggage header.
-          await fetch(`${POSTS_URL}/1`);
+          await fetch('https://jsonplaceholder.typicode.com/posts/1');
           log(`[12] baggage tenant=${tenant} copied onto LoadDashboard span`);
           span.end();
         });

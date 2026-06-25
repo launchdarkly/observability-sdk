@@ -24,12 +24,6 @@ import { context } from '@opentelemetry/api';
  * turns it into a span via its afterTrack hook).
  */
 
-// Public endpoint used by the network-request recipe.
-const NETWORK_URL = 'https://launchdarkly.com/';
-// Endpoints used by the nested-span recipe (mirrors the Swift demo).
-const GOOGLE_URL = 'https://www.google.com';
-const ANDROID_URL = 'https://www.android.com/';
-
 export default function ApiScreen() {
   const ldClient = useLDClient();
   const [lines, setLines] = useState<string[]>([]);
@@ -93,8 +87,8 @@ export default function ApiScreen() {
   // NestedSpan2 (the second one would otherwise become its own root trace).
   const fetchUrlsForNestedSpanDemo = async (scope: SpanScope) => {
     try {
-      await scope.active(() => fetch(GOOGLE_URL));
-      await scope.active(() => fetch(ANDROID_URL));
+      await scope.active(() => fetch('https://www.google.com'));
+      await scope.active(() => fetch('https://www.android.com/'));
     } catch {
       // ignore network errors in the demo
     }
@@ -195,7 +189,7 @@ export default function ApiScreen() {
   // -- Network -------------------------------------------------------------
   const performNetworkRequest = async () => {
     try {
-      await fetch(NETWORK_URL);
+      await fetch('https://launchdarkly.com/');
       log('[network] GET launchdarkly.com');
     } catch {
       log('[network] GET launchdarkly.com (failed, ignored)');
