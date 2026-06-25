@@ -7408,6 +7408,7 @@ __metadata:
     "@opentelemetry/exporter-metrics-otlp-http": "npm:^0.203.0"
     "@opentelemetry/exporter-trace-otlp-http": "npm:^0.203.0"
     "@opentelemetry/instrumentation": "npm:^0.203.0"
+    "@opentelemetry/instrumentation-pg": "npm:^0.69.0"
     "@opentelemetry/otlp-exporter-base": "npm:^0.203.0"
     "@opentelemetry/otlp-transformer": "npm:^0.203.0"
     "@opentelemetry/resources": "npm:^2.0.1"
