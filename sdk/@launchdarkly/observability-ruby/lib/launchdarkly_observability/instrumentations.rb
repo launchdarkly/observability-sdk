@@ -15,8 +15,12 @@
 # loaded, so any additional `opentelemetry-instrumentation-*` gem a consumer adds
 # to their own Gemfile is picked up automatically alongside these defaults.
 
-# Rails family. Requiring this pulls action_pack, active_record, active_support,
-# action_view and active_job.
+# Rails family. Requiring this pulls every Rails-family instrumentation —
+# action_mailer, action_pack, action_view, active_job, active_record,
+# active_storage and active_support — which is why each is capped in the gemspec
+# (the Rails 7.0 floor has to hold on all of them, not just the rails meta-gem).
+# It also pulls concurrent_ruby, which tracks latest and is required explicitly
+# below.
 require 'opentelemetry/instrumentation/rails'
 
 # Common non-Rails instrumentations (latest; see gemspec for version policy).
