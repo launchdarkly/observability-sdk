@@ -18,7 +18,11 @@ import kotlin.time.Duration
  * [io.opentelemetry.android.LDRumSessionManagerAccessor] so it backs OpenTelemetry Android's own
  * `session.id` span/log appenders as well — making it the single source of session identity.
  *
- * Rotation behavior mirrors OpenTelemetry Android's default `SessionManagerImpl` /
+ * When [initialSessionId] is supplied the session is treated as *custom*: the caller owns the
+ * session lifecycle, so automatic rotation is disabled and the seeded id is used for the lifetime
+ * of this manager (mirrors iOS's `isCustomSession`).
+ *
+ * Otherwise rotation mirrors OpenTelemetry Android's default `SessionManagerImpl` /
  * `SessionIdTimeoutHandler`:
  *  - a foreground session never times out;
  *  - a background gap of at least [backgroundInactivityTimeout] rotates the session on next use;
@@ -27,8 +31,9 @@ import kotlin.time.Duration
  * Foreground/background transitions are fed in via [onApplicationForegrounded] /
  * [onApplicationBackgrounded] (wired from the service's app-lifecycle tracker).
  *
- * @param initialSessionId Optional session id to start with. When null or blank, an id is generated
- *   lazily on first use (matching the default manager).
+ * @param initialSessionId Optional session id to start with. When non-blank the session is custom
+ *   (never auto-rotated). When null or blank, an id is generated lazily on first use and rotated
+ *   automatically (matching the default manager).
  * @param backgroundInactivityTimeout Background inactivity after which the session rotates.
  * @param maxLifetime Absolute maximum session lifetime before rotation.
  * @param clock Time source; defaults to the OpenTelemetry default clock.
@@ -45,10 +50,17 @@ internal class LDSessionManager(
     private val lock = Any()
     private val observers = synchronizedList(ArrayList<SessionObserver>())
 
+    /**
+     * Whether a session id was supplied externally. When true, the caller owns the session
+     * lifecycle, so automatic rotation (background-inactivity timeout and max-lifetime) is disabled
+     * and the seeded id is used for the lifetime of this manager. Mirrors iOS's `isCustomSession`.
+     */
+    private val isCustomSession: Boolean = !initialSessionId.isNullOrBlank()
+
     // Guarded by [lock].
     private var session: Session =
-        if (!initialSessionId.isNullOrBlank()) {
-            Session.DefaultSession(initialSessionId, clock.now())
+        if (isCustomSession) {
+            Session.DefaultSession(initialSessionId!!, clock.now())
         } else {
             // Empty id + (-1) timestamp forces generation on first getSessionId(), exactly like
             // the default manager's initial Session.NONE.
@@ -73,7 +85,8 @@ internal class LDSessionManager(
 
         synchronized(lock) {
             var candidate = session
-            if (sessionHasExpired() || hasTimedOut()) {
+            // An externally supplied session id is never rotated; the caller owns its lifecycle.
+            if (!isCustomSession && (sessionHasExpired() || hasTimedOut())) {
                 candidate = Session.DefaultSession(idGenerator.generateSessionId(), clock.now())
             }
             // Bump the inactivity timer after deciding, before notifying (a new span may be created).
