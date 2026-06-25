@@ -84,7 +84,7 @@ dependencies {
   implementation "com.facebook.react:react-android"
   implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
   implementation "com.launchdarkly:launchdarkly-observability-android:0.45.0"
-  implementation "com.launchdarkly:launchdarkly-android-client-sdk:5.12.2"
+  implementation "com.launchdarkly:launchdarkly-android-client-sdk:0.46.1"
   // compileOnly: OTel Attributes appears in ObservabilityOptions parameter types; provided at
   // runtime transitively through launchdarkly-observability-android.
   compileOnly "io.opentelemetry:opentelemetry-api:1.51.0"
