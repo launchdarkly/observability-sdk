@@ -2,11 +2,20 @@
 
 This cookbook covers common tracing patterns with the LaunchDarkly Observability SDK for React Native — from simple spans to nested operations, error handling, correlated logs, and end-to-end mobile-to-backend distributed traces. Each recipe is self-contained and demonstrates a single concept with realistic examples.
 
-All examples assume the SDK has already been initialized (see [Usage](../README.md#usage)) and the following imports are present:
+Each runnable recipe below matches the example screen [`TracingScreen.tsx`](../../react-native-ld-session-replay/example/src/TracingScreen.tsx) verbatim (only the on-screen `log(...)` lines are omitted here); a few recipes additionally show the lower-level explicit form for reference. They assume the SDK has already been initialized (see [Usage](../README.md#usage)) and the following imports and demo endpoints are present:
 
 ```typescript
+import { Platform } from 'react-native'
 import { LDObserve } from '@launchdarkly/observability-react-native'
-import { context, trace, SpanStatusCode } from '@opentelemetry/api'
+import { context, propagation, SpanStatusCode, trace } from '@opentelemetry/api'
+
+// Public demo endpoints. jsonplaceholder is listed in `tracingOrigins`, so
+// requests to it carry trace headers; the tiny logo is used for the
+// download/cache checkpoint recipe.
+const POSTS_URL = 'https://jsonplaceholder.typicode.com/posts'
+const USERS_URL = 'https://jsonplaceholder.typicode.com/users'
+const CHECKOUT_URL = 'https://jsonplaceholder.typicode.com/posts'
+const IMAGE_URL = 'https://reactnative.dev/img/tiny_logo.png'
 ```
 
 Spans returned by the SDK are standard OpenTelemetry [`Span`](https://open-telemetry.github.io/opentelemetry-js/interfaces/_opentelemetry_api.Span.html) objects, so every span operation in this guide is the regular OpenTelemetry API.
@@ -29,28 +38,29 @@ Spans returned by the SDK are standard OpenTelemetry [`Span`](https://open-telem
 The nested workflow from [recipe 2](#2-nested-spans-for-a-typical-react-native-workflow), written with `withSpan`:
 
 ```typescript
-async function loadProducts() {
-  return LDObserve.withSpan('LoadProducts', async (load) => {
-    const products = await load.child('FetchFromApi', async (fetchScope) => {
-      const response = await fetch('https://api.example.com/products')
+const nestedSpans = async () => {
+  // `withSpan` ends each span automatically and `scope.child` parents off the
+  // captured context, so the LoadProducts > FetchFromApi > DeserializeJson /
+  // RenderUI hierarchy survives the `await`s without threading context by hand
+  // (React Native's StackContextManager only tracks the active span
+  // synchronously).
+  const count = await LDObserve.withSpan('LoadProducts', async (load) => {
+    const items = await load.child('FetchFromApi', async (fetchScope) => {
+      const response = await fetch(POSTS_URL)
       fetchScope.span.setAttribute('http.status_code', response.status)
       const json = await response.text()
-
       // Parents to FetchFromApi even though we are past two awaits.
       return fetchScope.child('DeserializeJson', (parseScope) => {
-        const result = JSON.parse(json) as Product[]
+        const result = JSON.parse(json) as unknown[]
         parseScope.span.setAttribute('product_count', result.length)
         return result
       })
     })
-
     // Parents to LoadProducts (not FetchFromApi) — uses the captured context.
     load.child('RenderUI', (renderScope) => {
-      renderScope.span.setAttribute('product_count', products.length)
-      setProducts(products)
+      renderScope.span.setAttribute('product_count', items.length)
     })
-
-    return products
+    return items.length
   })
 }
 ```
@@ -93,20 +103,19 @@ await LDObserve.withSpan('LoadDashboard', async (root) => {
 Create an independent span that begins a brand-new trace by passing `{ root: true }`. `startActiveSpan` makes the span active for the duration of the callback; as in standard OpenTelemetry, it does **not** end the span for you, so call `span.end()` when the work is done (otherwise the span is never exported).
 
 ```typescript
-LDObserve.startActiveSpan(
-  'app-cold-start',
-  (span) => {
-    span.setAttribute('launch_type', 'cold')
-    span.setAttribute('device_model', Platform.constants.Model ?? 'unknown')
-    span.addEvent('splash_rendered')
-
-    // ... initialization work ...
-
-    span.addEvent('home_screen_ready')
-    span.end()
-  },
-  { root: true },
-)
+const rootSpan = () => {
+  LDObserve.startActiveSpan(
+    'app-cold-start',
+    (span) => {
+      span.setAttribute('launch_type', 'cold')
+      span.setAttribute('device_os', Platform.OS)
+      span.addEvent('splash_rendered')
+      span.addEvent('home_screen_ready')
+      span.end()
+    },
+    { root: true },
+  )
+}
 ```
 
 If you need to control the span's lifetime manually (for example, it ends in a different function), use `startSpan` and call `span.end()` yourself:
@@ -200,31 +209,25 @@ graph TD
 Wrap a network call in a span to capture timing, status codes, and errors in a single trace unit.
 
 ```typescript
-async function fetchUserProfile(userId: string): Promise<UserProfile | null> {
-  return LDObserve.startActiveSpan('FetchUserProfile', async (span) => {
-    span.setAttribute('user.id', userId)
+const httpWithErrorHandling = async () => {
+  await LDObserve.startActiveSpan('FetchUserProfile', async (span) => {
+    span.setAttribute('user.id', '1')
     span.setAttribute('http.method', 'GET')
-
     try {
-      const url = `https://api.example.com/users/${userId}`
+      const url = `${USERS_URL}/1`
       span.setAttribute('http.url', url)
-
       const response = await fetch(url)
       span.setAttribute('http.status_code', response.status)
-
       if (!response.ok) {
         span.setStatus({ code: SpanStatusCode.ERROR })
         span.setAttribute('error.type', `HTTP ${response.status}`)
-        return null
+        return
       }
-
-      const profile = (await response.json()) as UserProfile
+      await response.json()
       span.setStatus({ code: SpanStatusCode.OK })
-      return profile
     } catch (err) {
       span.recordException(err as Error)
       span.setStatus({ code: SpanStatusCode.ERROR })
-      throw err
     } finally {
       span.end()
     }
@@ -246,10 +249,10 @@ async function syncOrders() {
     span.setAttribute('sync.direction', 'pull')
 
     // The HTTP span for this fetch is auto-created as a child of "SyncOrders"
-    const response = await fetch('https://api.example.com/orders?since=yesterday')
+    const response = await fetch(`${POSTS_URL}?_limit=5`)
     span.setAttribute('http.status_code', response.status)
 
-    const orders = (await response.json()) as Order[]
+    const orders = (await response.json()) as unknown[]
     span.setAttribute('order_count', orders.length)
     span.end()
   })
@@ -268,12 +271,14 @@ You do not need to create a span for the HTTP call itself; the SDK handles it. Y
 The same recipe with `withSpan` (note the request is in the synchronous window before the first `await`, so it auto-parents):
 
 ```typescript
-async function syncOrders() {
+const autoInstrumentedChild = async () => {
   await LDObserve.withSpan('SyncOrders', async ({ span }) => {
     span.setAttribute('sync.direction', 'pull')
-    const response = await fetch('https://api.example.com/orders?since=yesterday')
+    // `withSpan` makes SyncOrders active for the synchronous window, so this
+    // fetch (started before the first await) auto-parents to it.
+    const response = await fetch(`${POSTS_URL}?_limit=5`)
     span.setAttribute('http.status_code', response.status)
-    const orders = (await response.json()) as Order[]
+    const orders = (await response.json()) as unknown[]
     span.setAttribute('order_count', orders.length)
   })
 }
@@ -286,7 +291,7 @@ async function syncOrders() {
 >   const cart = await loadCart() // <- await drops the active context
 >   // Re-establish it so the auto HTTP span parents to "Checkout":
 >   const res = await scope.active(() =>
->     fetch('https://api.example.com/checkout', { method: 'POST' }),
+>     fetch(CHECKOUT_URL, { method: 'POST' }),
 >   )
 >   scope.span.setAttribute('http.status_code', res.status)
 > })
@@ -299,24 +304,20 @@ async function syncOrders() {
 Use `span.recordException` to attach structured error data to a span, then `span.setStatus` to mark it as failed. Pair it with `LDObserve.recordError` to surface the error in your error backend.
 
 ```typescript
-async function processPayment(orderId: string, amount: number) {
+const recordException = async () => {
   await LDObserve.startActiveSpan('ProcessPayment', async (span) => {
-    span.setAttribute('order.id', orderId)
-    span.setAttribute('payment.amount', amount)
-
+    span.setAttribute('order.id', 'order-42')
+    span.setAttribute('payment.amount', 19.99)
     try {
-      const result = await paymentGateway.charge(orderId, amount)
-      span.setAttribute('payment.transaction_id', result.transactionId)
-      span.setStatus({ code: SpanStatusCode.OK })
+      // Simulate a gateway failure.
+      throw new Error('Payment gateway timeout')
     } catch (err) {
       const error = err as Error
       span.recordException(error)
       span.setStatus({ code: SpanStatusCode.ERROR })
       span.setAttribute('error.category', error.name)
-
-      // Pass the active span so the error attaches to it instead of a new one
-      LDObserve.recordError(error, { 'order.id': orderId }, { span })
-      throw err
+      // Pass the active span so the error attaches to it instead of a new one.
+      LDObserve.recordError(error, { 'order.id': 'order-42' }, { span })
     } finally {
       span.end()
     }
@@ -330,35 +331,32 @@ async function processPayment(orderId: string, amount: number) {
 
 ## 6. Correlated Logs Inside the Active Span
 
-When a span is active, `LDObserve.recordLog` automatically picks up the ambient trace and span IDs from the active context. That works for logs emitted in the **synchronous** part of the callback. After an `await` the active context is gone (see the note above), so re-establish it with `context.with(capturedContext, ...)` for any log you emit later.
+When a span is active, `LDObserve.recordLog` automatically picks up the ambient trace and span IDs from the active context. That works for logs emitted in the **synchronous** part of the callback. After an `await` the active context is gone (see the note above), so re-establish it with `scope.active(...)` (or `context.with(capturedContext, ...)`) for any log you emit later.
 
 ```typescript
-async function importCatalog(rows: AsyncIterable<CatalogRow>) {
-  await LDObserve.startActiveSpan('ImportCatalog', async (span) => {
-    const ctx = LDObserve.getContextFromSpan(span)
-
-    // Synchronous: picks up the active span automatically.
-    LDObserve.recordLog('Import started', 'info', { source: 'csv' })
-
+const correlatedLogs = async () => {
+  await LDObserve.withSpan('ImportCatalog', async ({ span, active }) => {
+    // Logs correlate to a span via the active context. The first log is in the
+    // synchronous window so it correlates automatically.
+    LDObserve.recordLog('Import started', 'info', { source: 'demo' })
     let imported = 0
-    for await (const row of rows) {
-      await db.upsertProduct(row)
+    for (const _row of [1, 2, 3, 4, 5]) {
+      await new Promise<void>((r) => setTimeout(r, 5))
       imported++
     }
-
     span.setAttribute('imported_count', imported)
-
-    // After the `await` loop the active context is gone, so re-establish it so
-    // this log still correlates with the ImportCatalog span.
-    context.with(ctx, () => {
-      LDObserve.recordLog('Import completed', 'info', { imported_count: imported })
-    })
-    span.end()
+    // After the awaits the active context is gone — re-establish it with
+    // `active()` so this log still correlates to ImportCatalog.
+    active(() =>
+      LDObserve.recordLog('Import completed', 'info', {
+        imported_count: imported,
+      }),
+    )
   })
 }
 ```
 
-Both log records carry the same `traceId` and `spanId` as the `ImportCatalog` span, linking them together in your observability backend — the first because the span is active synchronously, the second because `context.with` re-establishes that span's context.
+Both log records carry the same `traceId` and `spanId` as the `ImportCatalog` span, linking them together in your observability backend — the first because the span is active synchronously, the second because `scope.active(...)` re-establishes that span's context.
 
 ---
 
@@ -367,21 +365,18 @@ Both log records carry the same `traceId` and `spanId` as the `ImportCatalog` sp
 The active context is not automatically restored inside a detached callback such as `setTimeout`, a timer, or an event handler that runs after the original `startActiveSpan` callback has returned. Capture the span's context with `LDObserve.getContextFromSpan` and re-activate it with `context.with` so the log correlates with the right span.
 
 ```typescript
-function onUploadPressed() {
+const correlateAcrossAsync = () => {
   const span = LDObserve.startSpan('UploadReport')
   span.setAttribute('report.type', 'daily')
   const capturedContext = LDObserve.getContextFromSpan(span)
   span.end()
 
   setTimeout(() => {
-    // The active context is empty here -- re-establish it explicitly.
+    // Active context is empty here -- re-establish it explicitly.
     context.with(capturedContext, () => {
       LDObserve.recordLog('Upload processing on background tick', 'info', {
         phase: 'start',
       })
-
-      // ... heavy processing ...
-
       LDObserve.recordLog('Upload complete', 'info', { phase: 'end' })
     })
   }, 0)
@@ -394,58 +389,61 @@ Every `recordLog` call made inside `context.with(capturedContext, ...)` is stamp
 
 ## 8. Creating a Child Span Where Automatic Propagation Won't Work
 
-Sometimes you need a full child *span* (not just a correlated log) in a callback where the active context has been lost. Both `startSpan` and `startActiveSpan` accept an explicit parent `Context` as their final argument. Capture the parent's context with `getContextFromSpan` and pass it through.
+Sometimes you need a full child *span* (not just a correlated log) in a callback where the active context has been lost. `withSpan` accepts an explicit `parent` context via its options (and `startSpan`/`startActiveSpan` accept one as their final argument). Capture the parent scope's `ctx` (or use `getContextFromSpan`) and pass it through once the deferred work runs.
 
 ```typescript
-function startBackgroundSync() {
-  LDObserve.startActiveSpan('ScheduleSync', (parentSpan) => {
-    parentSpan.setAttribute('sync.mode', 'background')
-    const parentContext = LDObserve.getContextFromSpan(parentSpan)
+const detachedChildSpan = () => {
+  LDObserve.withSpan('ScheduleSync', ({ span, ctx }) => {
+    span.setAttribute('sync.mode', 'background')
 
-    // setTimeout drops the active context
+    // setTimeout drops the active context -> capture ScheduleSync's `ctx` and
+    // pass it as the explicit `parent` once the timer fires.
     setTimeout(async () => {
-      await LDObserve.startActiveSpan(
+      await LDObserve.withSpan(
         'BackgroundSync',
-        async (childSpan) => {
-          const response = await fetch('https://api.example.com/sync')
+        async ({ span: childSpan }) => {
+          const response = await fetch(`${POSTS_URL}/1`)
           childSpan.setAttribute('http.status_code', response.status)
           childSpan.addEvent('sync.complete')
-          childSpan.end()
         },
-        undefined, // no extra span options
-        parentContext, // explicit parent context
+        { parent: ctx },
       )
     }, 0)
-    parentSpan.end()
   })
 }
 ```
 
-The same technique applies to recurring timer callbacks:
+The same technique applies to recurring timer callbacks (here bounded to three ticks; `intervalRef` is a `useRef` held by the screen):
 
 ```typescript
-function startPolling() {
+const startBoundedPolling = () => {
+  if (intervalRef.current) {
+    return
+  }
   const span = LDObserve.startSpan('StartPolling')
   const parentContext = LDObserve.getContextFromSpan(span)
   span.end()
 
-  setInterval(() => {
-    // Interval callbacks run with no ambient span context
-    LDObserve.startActiveSpan(
+  let ticks = 0
+  intervalRef.current = setInterval(() => {
+    ticks++
+    LDObserve.withSpan(
       'PollTick',
-      (pollSpan) => {
+      ({ span: pollSpan }) => {
         pollSpan.setAttribute('tick.time', new Date().toISOString())
-        // ... polling logic ...
-        pollSpan.end()
+        pollSpan.setAttribute('tick.number', ticks)
       },
-      undefined,
-      parentContext,
+      { parent: parentContext },
     )
-  }, 30_000)
+    if (ticks >= 3 && intervalRef.current) {
+      clearInterval(intervalRef.current)
+      intervalRef.current = null
+    }
+  }, 1000)
 }
 ```
 
-The resulting trace has `StartPolling` as the short-lived parent, with each `PollTick` appearing as a child span fired at 30-second intervals.
+The resulting trace has `StartPolling` as the short-lived parent, with each `PollTick` appearing as a child span fired at one-second intervals.
 
 If you need a span that is *not* active but still parented explicitly, use `startSpan`:
 
@@ -462,31 +460,30 @@ childSpan.end()
 Use `{ root: true }` to create spans that each begin a separate trace, **even when there is an active span on the current context**. This is useful for batch operations or analytics events where each item should be its own trace rather than nesting under the surrounding work.
 
 ```typescript
-function processAnalyticsQueue(events: AnalyticsEvent[]) {
-  // The batch itself is a span; without `{ root: true }` each event below would
-  // nest under it. With `root` they detach and start brand-new traces.
+const independentRootSpans = () => {
+  const events = [
+    { type: 'view', userId: 'u1' },
+    { type: 'click', userId: 'u2' },
+    { type: 'purchase', userId: 'u3' },
+  ]
+  // Created inside an active parent span on purpose: with `{ root: true }` each
+  // analytics span must start a brand-new trace instead of nesting under the
+  // parent. We then assert every child trace differs from the parent's and from
+  // each other, so this actually exercises `root` rather than relying on there
+  // being no ambient context.
   LDObserve.startActiveSpan('AnalyticsBatch', (parent) => {
     const parentTrace = parent.spanContext().traceId
     const childTraces: string[] = []
-
     for (const evt of events) {
       LDObserve.startActiveSpan(
         `Analytics:${evt.type}`,
         (span) => {
           span.setAttribute('event.type', evt.type)
-          span.setAttribute('event.timestamp', evt.timestamp)
+          span.setAttribute('event.timestamp', new Date().toISOString())
           span.setAttribute('event.user_id', evt.userId)
-
-          try {
-            analyticsService.process(evt)
-            span.setStatus({ code: SpanStatusCode.OK })
-          } catch (err) {
-            span.recordException(err as Error)
-            span.setStatus({ code: SpanStatusCode.ERROR })
-          } finally {
-            childTraces.push(span.spanContext().traceId)
-            span.end()
-          }
+          span.setStatus({ code: SpanStatusCode.OK })
+          childTraces.push(span.spanContext().traceId)
+          span.end()
         },
         { root: true },
       )
@@ -512,24 +509,17 @@ Each iteration creates an independent trace: every child `traceId` differs from 
 Use `span.addEvent` to mark milestones within a long-running span without creating child spans. Events are cheaper than spans and ideal for logging progress through a linear pipeline.
 
 ```typescript
-async function downloadAndCacheImage(url: string) {
-  await LDObserve.startActiveSpan('DownloadAndCacheImage', async (span) => {
-    span.setAttribute('image.url', url)
-
+const spanEvents = async () => {
+  await LDObserve.withSpan('DownloadAndCacheImage', async ({ span }) => {
+    span.setAttribute('image.url', IMAGE_URL)
     span.addEvent('download.started')
-    const response = await fetch(url)
+    const response = await fetch(IMAGE_URL)
     const blob = await response.blob()
     span.addEvent('download.completed')
-
     span.setAttribute('image.size_bytes', blob.size)
-
     span.addEvent('cache.write.started')
-    const path = `${FileSystem.cacheDirectory}${fileNameFromUrl(url)}`
-    await writeBlobToFile(path, blob)
-    span.addEvent('cache.write.completed')
-
-    span.setAttribute('cache.path', path)
-    span.end()
+    // (no real filesystem write in the demo)
+    span.addEvent('cache.write.completed', { bytes: blob.size })
   })
 }
 ```
@@ -553,18 +543,17 @@ new Observability({
 With `tracingOrigins` configured, any `fetch`/`XHR` request to a matching host carries a `traceparent` header, so the backend continues the same trace:
 
 ```typescript
-async function checkout(cartId: string) {
-  await LDObserve.startActiveSpan('Checkout', async (span) => {
-    span.setAttribute('cart.id', cartId)
-
-    // traceparent is injected automatically because api.example.com is a tracing origin.
-    // The backend span becomes a child of "Checkout" in the same trace.
-    const response = await fetch('https://api.example.com/checkout', {
+const backendDistributedTrace = async () => {
+  await LDObserve.withSpan('Checkout', async ({ span }) => {
+    span.setAttribute('cart.id', 'cart-7')
+    // traceparent is injected automatically because the host is a tracing
+    // origin -> a backend span would join this trace.
+    const response = await fetch(CHECKOUT_URL, {
       method: 'POST',
-      body: JSON.stringify({ cartId }),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cartId: 'cart-7' }),
     })
     span.setAttribute('http.status_code', response.status)
-    span.end()
   })
 }
 ```
@@ -581,21 +570,21 @@ graph TD
 If your app receives work along with trace headers (for example, a push payload or a webhook-style message that carries `x-request-id` / `x-session-id`), use the header helpers to start a span annotated with that context:
 
 ```typescript
-// Run a callback inside a span that records the incoming headers as attributes.
-LDObserve.runWithHeaders('HandlePushPayload', incomingHeaders, (span) => {
-  span.setAttribute('payload.kind', payload.kind)
-  handlePayload(payload)
-})
-
-// Or get a span you end yourself:
-const span = LDObserve.startWithHeaders('HandlePushPayload', incomingHeaders)
-// ... work ...
-span.end()
-
-// Extract just the correlation IDs without starting a span:
-const requestContext = LDObserve.parseHeaders(incomingHeaders)
-// requestContext.sessionId, requestContext.requestId
+const incomingHeaders = () => {
+  const headers = {
+    'x-session-id': 'sess-abc',
+    'x-request-id': 'req-123',
+  }
+  // Run a callback inside a span that records the incoming headers as attributes.
+  LDObserve.runWithHeaders('HandlePushPayload', headers, (span) => {
+    span.setAttribute('payload.kind', 'promo')
+  })
+  // Extract just the correlation IDs (sessionId, requestId) without a span.
+  const ctx = LDObserve.parseHeaders(headers)
+}
 ```
+
+> Prefer a span you end yourself? `LDObserve.startWithHeaders('HandlePushPayload', headers)` returns a started span (records the same `http.header.*` attributes); call `span.end()` when the work completes.
 
 ### Suppressing propagation for specific URLs
 
@@ -623,22 +612,33 @@ import { propagation } from '@opentelemetry/api'
 Set baggage and run work within it. Spans started inside the callback — and outgoing `fetch`/`XHR` requests to tracing origins — carry these entries:
 
 ```typescript
-function withTenantContext<T>(tenantId: string, tier: string, fn: () => T): T {
-  const baggage = propagation.createBaggage({
-    'app.tenant_id': { value: tenantId },
-    'app.user_tier': { value: tier },
+const baggage = async () => {
+  const bag = propagation.createBaggage({
+    'app.tenant_id': { value: 'acme' },
+    'app.user_tier': { value: 'gold' },
   })
-  return context.with(propagation.setBaggage(context.active(), baggage), fn)
-}
+  await context.with(
+    propagation.setBaggage(context.active(), bag),
+    async () => {
+      // Read it back.
+      const tenant = propagation
+        .getActiveBaggage()
+        ?.getEntry('app.tenant_id')?.value
 
-withTenantContext('acme', 'gold', () => {
-  LDObserve.startActiveSpan('LoadDashboard', async (span) => {
-    // api.example.com is a tracing origin -> the `baggage` header
-    // (app.tenant_id=acme,app.user_tier=gold) is sent to the backend.
-    await fetch('https://api.example.com/dashboard')
-    span.end()
-  })
-})
+      await LDObserve.startActiveSpan('LoadDashboard', async (span) => {
+        // Baggage is not copied onto spans automatically -- do it explicitly.
+        propagation
+          .getActiveBaggage()
+          ?.getAllEntries()
+          .forEach(([key, entry]) => span.setAttribute(key, entry.value))
+
+        // Outgoing request to a tracing origin also carries the baggage header.
+        await fetch(`${POSTS_URL}/1`)
+        span.end()
+      })
+    },
+  )
+}
 ```
 
 Read baggage anywhere it is active:
