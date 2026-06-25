@@ -11,9 +11,7 @@ describe('getCorsUrlsPattern', () => {
 	})
 
 	it('treats string entries as literal substrings (escapes regex metachars)', () => {
-		const patterns = getCorsUrlsPattern([
-			'api.example.com',
-		]) as RegExp[]
+		const patterns = getCorsUrlsPattern(['api.example.com']) as RegExp[]
 		expect(patterns[0]).toEqual(/api\.example\.com/)
 		// The literal host matches.
 		expect(patterns[0].test('https://api.example.com/posts')).toBe(true)

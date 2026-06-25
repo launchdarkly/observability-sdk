@@ -65,24 +65,23 @@ export default function ApiScreen() {
 
   // -- Nested spans (counter + log + network inside) -----------------------
   const triggerNestedSpans = async () => {
-    await LDObserve.startActiveSpan(
-      'NestedSpan',
-      async (span0) => {
-        span0.setAttribute('test-true', true);
-        span0.setAttribute('test-double', 3.14);
-        await LDObserve.startActiveSpan('NestedSpan1', async (span1) => {
-          await LDObserve.startActiveSpan('NestedSpan2', async (span2) => {
-            LDObserve.recordCount({ name: 'NestedCounter', value: 10.0 });
-            LDObserve.recordLog('NestedLog', 'info', {});
-            await fetchUrlsForNestedSpanDemo();
-            span2.end();
-          });
-          span1.end();
+    await LDObserve.startActiveSpan('NestedSpan', async (span0) => {
+      span0.setAttribute('test-true', true);
+      span0.setAttribute('test-double', 3.14);
+      await LDObserve.startActiveSpan('NestedSpan1', async (span1) => {
+        await LDObserve.startActiveSpan('NestedSpan2', async (span2) => {
+          LDObserve.recordCount({ name: 'NestedCounter', value: 10.0 });
+          LDObserve.recordLog('NestedLog', 'info', {});
+          await fetchUrlsForNestedSpanDemo();
+          span2.end();
         });
-        span0.end();
-      }
+        span1.end();
+      });
+      span0.end();
+    });
+    log(
+      '[nested] NestedSpan > NestedSpan1 > NestedSpan2 (+ counter, log, http)'
     );
-    log('[nested] NestedSpan > NestedSpan1 > NestedSpan2 (+ counter, log, http)');
   };
 
   const fetchUrlsForNestedSpanDemo = async () => {
@@ -116,7 +115,10 @@ export default function ApiScreen() {
   };
 
   const recordUpDownCounterMetric = () => {
-    LDObserve.recordUpDownCounter({ name: 'test-up-down-counter', value: 25.0 });
+    LDObserve.recordUpDownCounter({
+      name: 'test-up-down-counter',
+      value: 25.0,
+    });
     log('[metric] up/down test-up-down-counter=25');
   };
 
@@ -275,7 +277,10 @@ export default function ApiScreen() {
             label="Track via LD client"
             onPress={run('track-client', trackViaLDClient)}
           />
-          <Btn label="Track nested" onPress={run('track-nested', trackNested)} />
+          <Btn
+            label="Track nested"
+            onPress={run('track-nested', trackNested)}
+          />
         </View>
 
         <SectionHeader title="Spans" topSpacing />
@@ -365,7 +370,10 @@ function SectionHeader({
   return (
     <>
       <Text
-        style={[styles.sectionTitle, topSpacing ? { marginTop: 16 } : undefined]}
+        style={[
+          styles.sectionTitle,
+          topSpacing ? { marginTop: 16 } : undefined,
+        ]}
       >
         {title}
       </Text>

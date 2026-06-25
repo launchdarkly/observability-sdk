@@ -459,7 +459,11 @@ export default function TracingScreen() {
         <View style={styles.row}>
           <Btn label="Session info" onPress={run('info', showSessionInfo)} />
           <Btn label="Flush" onPress={flush} />
-          <Btn label="Clear log" onPress={() => setLines([])} variant="danger" />
+          <Btn
+            label="Clear log"
+            onPress={() => setLines([])}
+            variant="danger"
+          />
         </View>
       </ScrollView>
 
@@ -491,7 +495,10 @@ function SectionHeader({
   return (
     <>
       <Text
-        style={[styles.sectionTitle, topSpacing ? { marginTop: 16 } : undefined]}
+        style={[
+          styles.sectionTitle,
+          topSpacing ? { marginTop: 16 } : undefined,
+        ]}
       >
         {title}
       </Text>
