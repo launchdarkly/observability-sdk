@@ -422,12 +422,13 @@ class ObservabilityService(
             config.suppressInstrumentation("crash")
         }
 
-        // Always disable the OpenTelemetry Android activity instrumentation
+        // Defensively disable the OpenTelemetry Android activity instrumentation
         // ([io.opentelemetry.android.instrumentation.activity.ActivityLifecycleInstrumentation]).
-        // It emits an `AppStart` span plus per-activity lifecycle spans (`Created`, `Resumed`,
-        // `Paused`, `Stopped`, `Destroyed`, `Restarted`). These are now superseded by LaunchDarkly's
-        // own `app_launch`, `app_foreground`/`app_background`, and `screen_view` spans, so leaving
-        // it on would double-report the same app/screen lifecycle.
+        // We no longer depend on that artifact (see lib/build.gradle.kts), so it is normally not on
+        // the classpath; this suppression guards against it being reintroduced transitively by a
+        // host. It emits an `AppStart` span plus per-activity lifecycle spans, which are superseded
+        // by LaunchDarkly's own `app_launch`, `app_foreground`/`app_background`, and `screen_view`
+        // spans, so leaving it on would double-report the same app/screen lifecycle.
         config.suppressInstrumentation("activity")
 
         return config
