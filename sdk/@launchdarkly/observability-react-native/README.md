@@ -41,7 +41,7 @@ const client = new LDClient(
 
 ## Guides
 
-- [Distributed Tracing Guide](guides/distributed-tracing.md) — a cookbook of common tracing patterns (spans, nested operations, error handling, correlated logs, and end-to-end mobile-to-backend traces).
+- [Tracing Guide](guides/tracing.md) — a cookbook of common tracing patterns (spans, nested operations, error handling, correlated logs, and end-to-end mobile-to-backend traces).
 
 ## About LaunchDarkly
 

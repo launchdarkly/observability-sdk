@@ -25,6 +25,8 @@ internal class SessionReplayClientAdapter private constructor() {
     private val lock = Any()
     private var mobileKey: String? = null
     private var serviceName: String = DEFAULT_SERVICE_NAME
+    // Optional `service.version` forwarded from JS. null keeps the SDK default.
+    private var serviceVersion: String? = null
     private var replayOptions: ReplayOptions? = null
     // Only accessed from the main thread (all reads/writes are inside Handler(mainLooper).post blocks).
     private var initialized = false
@@ -40,6 +42,9 @@ internal class SessionReplayClientAdapter private constructor() {
                 ?.getString("serviceName")
                 ?.takeIf { it.isNotBlank() }
                 ?: DEFAULT_SERVICE_NAME
+            this.serviceVersion = options?.takeIf { it.hasKey("serviceVersion") }
+                ?.getString("serviceVersion")
+                ?.takeIf { it.isNotBlank() }
             this.replayOptions = replayOptionsFrom(options)
         }
     }
@@ -47,6 +52,7 @@ internal class SessionReplayClientAdapter private constructor() {
     fun start(application: Application, activity: Activity?, completion: (Boolean, String?) -> Unit) {
         val localMobileKey: String?
         val localServiceName: String
+        val localServiceVersion: String?
         val localReplayOptions: ReplayOptions?
 
         // Capture configuration under the lock, then release it before posting to the main thread.
@@ -54,6 +60,7 @@ internal class SessionReplayClientAdapter private constructor() {
             localMobileKey = mobileKey
             localReplayOptions = replayOptions
             localServiceName = serviceName
+            localServiceVersion = serviceVersion
         }
         if (localMobileKey == null || localReplayOptions == null) {
             val msg = "start: configure() was not called — mobile key or options are missing"
@@ -68,7 +75,7 @@ internal class SessionReplayClientAdapter private constructor() {
         Handler(Looper.getMainLooper()).post {
             if (!initialized) {
                 try {
-                    initLDClient(application, localMobileKey, localServiceName, localReplayOptions)
+                    initLDClient(application, localMobileKey, localServiceName, localServiceVersion, localReplayOptions)
                 } catch (e: Exception) {
                     logger.error("start: LDClient.init() threw {0}: {1}", e::class.simpleName, e.message)
                     completion(false, "Session replay failed to initialize.")
@@ -126,8 +133,26 @@ internal class SessionReplayClientAdapter private constructor() {
         }
     }
 
-    private fun initLDClient(application: Application, mobileKey: String, serviceName: String, replayOptions: ReplayOptions) {
+    private fun initLDClient(
+        application: Application,
+        mobileKey: String,
+        serviceName: String,
+        serviceVersion: String?,
+        replayOptions: ReplayOptions
+    ) {
         logger.debug("initLDClient: calling LDClient.init()")
+        // Apply the forwarded service.version only when provided; otherwise keep the SDK default.
+        var observabilityOptions = ObservabilityOptions(
+            serviceName = serviceName,
+            logAdapter = LDObserveLogging.adapter(),
+            // Disable the OpenTelemetry Android CrashReporterInstrumentation
+            instrumentations = ObservabilityOptions.Instrumentations(
+                crashReporting = false,
+            ),
+        )
+        if (serviceVersion != null) {
+            observabilityOptions = observabilityOptions.copy(serviceVersion = serviceVersion)
+        }
         val config = LDConfig.Builder(LDConfig.Builder.AutoEnvAttributes.Enabled)
             .mobileKey(mobileKey)
             .offline(true)
@@ -139,14 +164,7 @@ internal class SessionReplayClientAdapter private constructor() {
                         Observability(
                             application = application,
                             mobileKey = mobileKey,
-                            options = ObservabilityOptions(
-                                serviceName = serviceName,
-                                logAdapter = LDObserveLogging.adapter(),
-                                // Disable the OpenTelemetry Android CrashReporterInstrumentation
-                                instrumentations = ObservabilityOptions.Instrumentations(
-                                    crashReporting = false,
-                                ),
-                            )
+                            options = observabilityOptions
                         ),
                         SessionReplay(options = replayOptions),
                     )

@@ -18,8 +18,8 @@ import {
 
 /**
  * Manual test screen that exercises every recipe from the React Native
- * distributed tracing guide:
- *   sdk/@launchdarkly/observability-react-native/guides/distributed-tracing.md
+ * tracing guide:
+ *   sdk/@launchdarkly/observability-react-native/guides/tracing.md
  *
  * Each button runs one recipe and appends a line (with the resulting trace/span
  * IDs where relevant) to the on-screen log. The observability plugin is wired up
@@ -78,6 +78,7 @@ export default function TracingScreen() {
         span.addEvent('splash_rendered');
         span.addEvent('home_screen_ready');
         log(`[1] root span "app-cold-start" trace=${traceOf(span)}`);
+        span.end();
       },
       { root: true }
     );
@@ -85,25 +86,30 @@ export default function TracingScreen() {
 
   // -- 2. Nested spans -----------------------------------------------------
   const nestedSpans = async () => {
-    await LDObserve.startActiveSpan('LoadProducts', async () => {
-      const items = await LDObserve.startActiveSpan(
-        'FetchFromApi',
-        async (fetchSpan) => {
-          const response = await fetch(POSTS_URL);
-          fetchSpan.setAttribute('http.status_code', response.status);
-          const json = await response.text();
-          return LDObserve.startActiveSpan('DeserializeJson', (parseSpan) => {
-            const parsed = JSON.parse(json) as unknown[];
-            parseSpan.setAttribute('product_count', parsed.length);
-            return parsed;
-          });
-        }
-      );
-      LDObserve.startActiveSpan('RenderUI', (renderSpan) => {
-        renderSpan.setAttribute('product_count', items.length);
+    // `withSpan` ends each span automatically and `scope.child` parents off the
+    // captured context, so the LoadProducts > FetchFromApi > DeserializeJson /
+    // RenderUI hierarchy survives the `await`s without threading context by hand
+    // (React Native's StackContextManager only tracks the active span
+    // synchronously).
+    const count = await LDObserve.withSpan('LoadProducts', async (load) => {
+      const items = await load.child('FetchFromApi', async (fetchScope) => {
+        const response = await fetch(POSTS_URL);
+        fetchScope.span.setAttribute('http.status_code', response.status);
+        const json = await response.text();
+        // Parents to FetchFromApi even though we are past two awaits.
+        return fetchScope.child('DeserializeJson', (parseScope) => {
+          const result = JSON.parse(json) as unknown[];
+          parseScope.span.setAttribute('product_count', result.length);
+          return result;
+        });
       });
-      log(`[2] LoadProducts > FetchFromApi > DeserializeJson (${items.length})`);
+      // Parents to LoadProducts (not FetchFromApi) — uses the captured context.
+      load.child('RenderUI', (renderScope) => {
+        renderScope.span.setAttribute('product_count', items.length);
+      });
+      return items.length;
     });
+    log(`[2] LoadProducts > FetchFromApi > DeserializeJson (${count})`);
   };
 
   // -- 3. HTTP span with manual error handling -----------------------------
@@ -137,9 +143,10 @@ export default function TracingScreen() {
 
   // -- 4. Auto fetch instrumentation under a custom parent -----------------
   const autoInstrumentedChild = async () => {
-    await LDObserve.startActiveSpan('SyncOrders', async (span) => {
+    await LDObserve.withSpan('SyncOrders', async ({ span }) => {
       span.setAttribute('sync.direction', 'pull');
-      // The auto-instrumented fetch span becomes a child of SyncOrders.
+      // `withSpan` makes SyncOrders active for the synchronous window, so this
+      // fetch (started before the first await) auto-parents to it.
       const response = await fetch(`${POSTS_URL}?_limit=5`);
       span.setAttribute('http.status_code', response.status);
       const orders = (await response.json()) as unknown[];
@@ -163,13 +170,17 @@ export default function TracingScreen() {
         span.setAttribute('error.category', error.name);
         LDObserve.recordError(error, { 'order.id': 'order-42' }, { span });
         log(`[5] ProcessPayment recorded exception: ${error.message}`);
+      } finally {
+        span.end();
       }
     });
   };
 
   // -- 6. Correlated logs inside the active span ---------------------------
   const correlatedLogs = async () => {
-    await LDObserve.startActiveSpan('ImportCatalog', async (span) => {
+    await LDObserve.withSpan('ImportCatalog', async ({ span, active }) => {
+      // Logs correlate to a span via the active context. The first log is in the
+      // synchronous window so it correlates automatically.
       LDObserve.recordLog('Import started', 'info', { source: 'demo' });
       let imported = 0;
       for (const _row of [1, 2, 3, 4, 5]) {
@@ -177,9 +188,13 @@ export default function TracingScreen() {
         imported++;
       }
       span.setAttribute('imported_count', imported);
-      LDObserve.recordLog('Import completed', 'info', {
-        imported_count: imported,
-      });
+      // After the awaits the active context is gone — re-establish it with
+      // `active()` so this log still correlates to ImportCatalog.
+      active(() =>
+        LDObserve.recordLog('Import completed', 'info', {
+          imported_count: imported,
+        })
+      );
       log(`[6] ImportCatalog: 2 correlated logs, trace=${traceOf(span)}`);
     });
   };
@@ -206,22 +221,21 @@ export default function TracingScreen() {
 
   // -- 8a. Child span where automatic propagation won't work ---------------
   const detachedChildSpan = () => {
-    LDObserve.startActiveSpan('ScheduleSync', (parentSpan) => {
-      parentSpan.setAttribute('sync.mode', 'background');
-      const parentContext = LDObserve.getContextFromSpan(parentSpan);
-      const tid = traceOf(parentSpan);
+    LDObserve.withSpan('ScheduleSync', ({ span, ctx }) => {
+      span.setAttribute('sync.mode', 'background');
+      const tid = traceOf(span);
 
-      // setTimeout drops the active context -> pass it explicitly.
+      // setTimeout drops the active context -> capture ScheduleSync's `ctx` and
+      // pass it as the explicit `parent` once the timer fires.
       setTimeout(async () => {
-        await LDObserve.startActiveSpan(
+        await LDObserve.withSpan(
           'BackgroundSync',
-          async (childSpan) => {
+          async ({ span: childSpan }) => {
             const response = await fetch(`${POSTS_URL}/1`);
             childSpan.setAttribute('http.status_code', response.status);
             childSpan.addEvent('sync.complete');
           },
-          undefined,
-          parentContext
+          { parent: ctx }
         );
         log(`[8a] BackgroundSync re-parented to ScheduleSync trace=${tid}`);
       }, 0);
@@ -242,14 +256,13 @@ export default function TracingScreen() {
     let ticks = 0;
     intervalRef.current = setInterval(() => {
       ticks++;
-      LDObserve.startActiveSpan(
+      LDObserve.withSpan(
         'PollTick',
-        (pollSpan) => {
+        ({ span: pollSpan }) => {
           pollSpan.setAttribute('tick.time', new Date().toISOString());
           pollSpan.setAttribute('tick.number', ticks);
         },
-        undefined,
-        parentContext
+        { parent: parentContext }
       );
       log(`[8b] PollTick #${ticks} parent trace=${tid}`);
       if (ticks >= 3 && intervalRef.current) {
@@ -276,6 +289,7 @@ export default function TracingScreen() {
           span.setAttribute('event.user_id', evt.userId);
           span.setStatus({ code: SpanStatusCode.OK });
           traces.push(traceOf(span));
+          span.end();
         },
         { root: true }
       );
@@ -285,7 +299,7 @@ export default function TracingScreen() {
 
   // -- 10. Span events as lightweight checkpoints --------------------------
   const spanEvents = async () => {
-    await LDObserve.startActiveSpan('DownloadAndCacheImage', async (span) => {
+    await LDObserve.withSpan('DownloadAndCacheImage', async ({ span }) => {
       span.setAttribute('image.url', IMAGE_URL);
       span.addEvent('download.started');
       const response = await fetch(IMAGE_URL);
@@ -301,7 +315,7 @@ export default function TracingScreen() {
 
   // -- 11. Connecting mobile traces to your backend ------------------------
   const backendDistributedTrace = async () => {
-    await LDObserve.startActiveSpan('Checkout', async (span) => {
+    await LDObserve.withSpan('Checkout', async ({ span }) => {
       span.setAttribute('cart.id', 'cart-7');
       // traceparent is injected automatically because the host is a tracing
       // origin -> a backend span would join this trace.
@@ -353,6 +367,7 @@ export default function TracingScreen() {
           // Outgoing request to a tracing origin also carries the baggage header.
           await fetch(`${POSTS_URL}/1`);
           log(`[12] baggage tenant=${tenant} copied onto LoadDashboard span`);
+          span.end();
         });
       }
     );
@@ -377,11 +392,6 @@ export default function TracingScreen() {
   return (
     <View style={styles.root}>
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Text style={styles.intro}>
-          Each button runs one recipe from the distributed tracing guide. Results
-          (with trace IDs) appear in the log below.
-        </Text>
-
         <SectionHeader title="Spans" />
         <View style={styles.col}>
           <Btn label="1 · Root span" onPress={run('1', rootSpan)} />
@@ -518,12 +528,6 @@ const styles = StyleSheet.create({
   scroll: {
     padding: 16,
     paddingBottom: 24,
-  },
-  intro: {
-    color: '#CAC4D0',
-    fontSize: 14,
-    fontStyle: 'italic',
-    marginBottom: 12,
   },
   sectionTitle: {
     color: '#fff',

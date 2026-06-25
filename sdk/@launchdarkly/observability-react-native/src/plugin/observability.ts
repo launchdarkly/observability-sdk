@@ -26,6 +26,8 @@ import {
 	getCanonicalKey,
 	getContextKeys,
 	LD_IDENTIFY_RESULT_STATUS,
+	LD_INTERNAL_ATTR,
+	LD_TRACK_SPAN_NAME,
 } from '../constants/featureFlags'
 import type { LDEvaluationReason } from '@launchdarkly/js-sdk-common'
 import {
@@ -35,6 +37,7 @@ import {
 	IdentifySeriesContext,
 	EvaluationSeriesContext,
 	EvaluationSeriesData,
+	TrackSeriesContext,
 } from '@launchdarkly/react-native-client-sdk'
 
 class TracingHook implements Hook {
@@ -126,6 +129,9 @@ class TracingHook implements Hook {
 					[FEATURE_FLAG_KEY_ATTR]: hookContext.flagKey,
 					[FEATURE_FLAG_PROVIDER_ATTR]: 'LaunchDarkly',
 					[FEATURE_FLAG_VALUE_ATTR]: JSON.stringify(detail.value),
+					// Mark this as SDK-internal telemetry so it can be filtered
+					// out universally (independent of instrumentation scope).
+					[LD_INTERNAL_ATTR]: true,
 				})
 
 				span.setStatus({ code: 1 })
@@ -145,6 +151,39 @@ class TracingHook implements Hook {
 		}
 
 		return data
+	}
+
+	afterTrack(hookContext: TrackSeriesContext): void {
+		try {
+			const trackAttributes: Attributes = {
+				...this.metaAttributes,
+				...(hookContext.context
+					? getContextKeys(hookContext.context)
+					: {}),
+				key: hookContext.key,
+				...(hookContext.metricValue !== undefined &&
+				hookContext.metricValue !== null
+					? { value: hookContext.metricValue }
+					: {}),
+				// Spread user-supplied track data last so it is attached as
+				// attributes. Non-primitive members are ignored by OpenTelemetry.
+				...(typeof hookContext.data === 'object' &&
+				hookContext.data !== null
+					? (hookContext.data as Attributes)
+					: {}),
+			}
+
+			_LDObserve.startActiveSpan(LD_TRACK_SPAN_NAME, (span) => {
+				span.setAttributes(trackAttributes)
+				span.setStatus({ code: 1 })
+				span.end()
+			})
+		} catch (error) {
+			_LDObserve.recordError(error as Error, {
+				'track.key': hookContext.key,
+				'error.context': 'track_tracing',
+			})
+		}
 	}
 }
 

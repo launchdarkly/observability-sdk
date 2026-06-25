@@ -16,13 +16,19 @@ import { Observability } from '@launchdarkly/observability-react-native';
 import DialogsScreen from './DialogsScreen';
 import MaskingScreen from './MaskingScreen';
 import TracingScreen from './TracingScreen';
+import ApiScreen from './ApiScreen';
 
 const plugin = createSessionReplayPlugin({
   isEnabled: true,
+  // Forwarded to the native observability + session replay instances so their
+  // spans report the same service.name / service.version as the JS observability
+  // plugin below. serviceVersion only affects observability-emitted signals.
+  serviceName: 'session-replay-rn-example',
+  serviceVersion: '1.0.0',
   maskTextInputs: true,
   maskWebViews: true,
-  maskLabels: true,
-  maskImages: true,
+  maskLabels: false,
+  maskImages: false,
   maskTestIDs: ['password', 'ssn'],
   unmaskTestIDs: ['safe'],
   minimumAlpha: 0.05,
@@ -31,7 +37,7 @@ const plugin = createSessionReplayPlugin({
 // The observability plugin powers the distributed tracing examples on the
 // "Tracing" tab. `tracingOrigins` opts the demo API hosts into W3C
 // `traceparent` / `baggage` header propagation so device spans can link to a
-// backend trace (see the distributed-tracing guide, sections 11 and 12).
+// backend trace (see the tracing guide, sections 11 and 12).
 const observability = new Observability({
   serviceName: 'session-replay-rn-example',
   serviceVersion: '1.0.0',
@@ -44,12 +50,15 @@ const observability = new Observability({
 const MOBILE_KEY =
   process.env.LAUNCHDARKLY_MOBILE_KEY || 'YOUR_LAUNCHDARKLY_MOBILE_KEY_HERE';
 
+// Observability must come before the session replay plugin: the replay plugin
+// reads the observability session id during registration so the native replay /
+// observability instance can adopt it (shared `session.id` across JS + native).
 const client = new ReactNativeLDClient(MOBILE_KEY, AutoEnvAttributes.Enabled, {
-  plugins: [plugin, observability],
+  plugins: [observability, plugin],
 });
 const context = { kind: 'user', key: 'user-key-123abc' };
 
-type Tab = 'masking' | 'dialogs' | 'tracing';
+type Tab = 'masking' | 'dialogs' | 'api' | 'tracing';
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('masking');
@@ -73,6 +82,11 @@ export default function App() {
             onPress={() => setTab('dialogs')}
           />
           <TabButton
+            label="API"
+            active={tab === 'api'}
+            onPress={() => setTab('api')}
+          />
+          <TabButton
             label="Tracing"
             active={tab === 'tracing'}
             onPress={() => setTab('tracing')}
@@ -80,6 +94,7 @@ export default function App() {
         </View>
         {tab === 'masking' && <MaskingScreen />}
         {tab === 'dialogs' && <DialogsScreen />}
+        {tab === 'api' && <ApiScreen />}
         {tab === 'tracing' && <TracingScreen />}
       </SafeAreaView>
     </LDProvider>

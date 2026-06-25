@@ -9,8 +9,10 @@ import { ObservabilityClient } from '../client/ObservabilityClient'
 import { Metric } from '../api/Metric'
 import { RequestContext } from '../api/RequestContext'
 import { Observe } from '../api/Observe'
+import { SpanScope, WithSpanOptions } from '../api/SpanScope'
 import { BufferedClass } from './BufferedClass'
 import { noOpSpan } from '../utils/NoOpSpan'
+import { NOOP_SPAN_OPS, runInSpan, SpanOps } from './withSpan'
 
 class LDObserveClass
 	extends BufferedClass<ObservabilityClient>
@@ -125,6 +127,18 @@ class LDObserveClass
 		return this._isLoaded
 			? response
 			: fn(noOpSpan.setAttribute('method', 'startActiveSpan'))
+	}
+
+	withSpan<T>(
+		spanName: string,
+		fn: (scope: SpanScope) => T,
+		options?: WithSpanOptions,
+	): T {
+		// When loaded, `this` provides real startSpan/recordError that execute
+		// immediately (no buffering). Before init we use no-op span ops so the
+		// callback still runs without enqueueing stray spans.
+		const ops: SpanOps = this._isLoaded ? this : NOOP_SPAN_OPS
+		return runInSpan(ops, spanName, fn, options)
 	}
 
 	getContextFromSpan(span: OtelSpan): Context {
