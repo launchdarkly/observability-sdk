@@ -10,6 +10,23 @@ describe('getCorsUrlsPattern', () => {
 		expect(getCorsUrlsPattern(false)).toEqual(/^$/)
 	})
 
+	it('treats string entries as literal substrings (escapes regex metachars)', () => {
+		const patterns = getCorsUrlsPattern([
+			'api.example.com',
+		]) as RegExp[]
+		expect(patterns[0]).toEqual(/api\.example\.com/)
+		// The literal host matches.
+		expect(patterns[0].test('https://api.example.com/posts')).toBe(true)
+		// `.` must not act as a wildcard, so look-alike hosts do not match.
+		expect(patterns[0].test('https://apiXexampleYcom/posts')).toBe(false)
+	})
+
+	it('passes RegExp entries through unchanged', () => {
+		const re = /^https?:\/\/backend\./
+		const patterns = getCorsUrlsPattern([re]) as RegExp[]
+		expect(patterns[0]).toBe(re)
+	})
+
 	it('anchors the page host at the origin position', () => {
 		vi.stubGlobal('window', {
 			location: { host: 'example.com' },

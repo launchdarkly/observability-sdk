@@ -87,6 +87,9 @@ export const shouldRecordRequest = (
 	)
 }
 
+const escapeRegExp = (s: string): string =>
+	s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
 // Helper to convert tracingOrigins to a RegExp or array of RegExp
 export function getCorsUrlsPattern(
 	tracingOrigins: TracingOrigins,
@@ -98,16 +101,18 @@ export function getCorsUrlsPattern(
 		}
 		return patterns
 	} else if (Array.isArray(tracingOrigins)) {
+		// Per the documented contract, string entries are literal substrings while RegExp entries
+		// are used as-is. Escape strings so characters like `.` are matched literally instead of as
+		// regex wildcards (e.g. `api.example.com` must not match `apiXexampleYcom`).
 		return tracingOrigins.map((pattern) =>
-			typeof pattern === 'string' ? new RegExp(pattern) : pattern,
+			typeof pattern === 'string'
+				? new RegExp(escapeRegExp(pattern))
+				: pattern,
 		)
 	}
 
 	return /^$/ // Match nothing if tracingOrigins is false or undefined
 }
-
-const escapeRegExp = (s: string): string =>
-	s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
 // Build a regex that matches the page host (and its subdomains) at the origin
 // position of a URL, not anywhere inside it. Anchoring matters: an unanchored
