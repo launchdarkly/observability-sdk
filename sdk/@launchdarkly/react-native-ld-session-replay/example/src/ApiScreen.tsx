@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 import { LDObserve } from '@launchdarkly/observability-react-native';
+import type { SpanScope } from '@launchdarkly/observability-react-native';
 import { useLDClient } from '@launchdarkly/react-native-client-sdk';
 import { context } from '@opentelemetry/api';
 
@@ -64,30 +65,36 @@ export default function ApiScreen() {
   };
 
   // -- Nested spans (counter + log + network inside) -----------------------
+  // Uses `withSpan` / `scope.child` so the hierarchy survives the `await`s. On
+  // React Native the active OTel context is tracked only synchronously, so
+  // reading it back after an `await` (e.g. plain nested `startActiveSpan`)
+  // would re-root the inner spans — `scope.child` captures the parent context
+  // explicitly instead. See the distributed tracing guide.
   const triggerNestedSpans = async () => {
-    await LDObserve.startActiveSpan('NestedSpan', async (span0) => {
-      span0.setAttribute('test-true', true);
-      span0.setAttribute('test-double', 3.14);
-      await LDObserve.startActiveSpan('NestedSpan1', async (span1) => {
-        await LDObserve.startActiveSpan('NestedSpan2', async (span2) => {
+    await LDObserve.withSpan('NestedSpan', async (scope0) => {
+      scope0.span.setAttribute('test-true', true);
+      scope0.span.setAttribute('test-double', 3.14);
+      await scope0.child('NestedSpan1', async (scope1) => {
+        await scope1.child('NestedSpan2', async (scope2) => {
           LDObserve.recordCount({ name: 'NestedCounter', value: 10.0 });
           LDObserve.recordLog('NestedLog', 'info', {});
-          await fetchUrlsForNestedSpanDemo();
-          span2.end();
+          await fetchUrlsForNestedSpanDemo(scope2);
         });
-        span1.end();
       });
-      span0.end();
     });
     log(
       '[nested] NestedSpan > NestedSpan1 > NestedSpan2 (+ counter, log, http)'
     );
   };
 
-  const fetchUrlsForNestedSpanDemo = async () => {
+  // Auto-instrumented fetch spans only attach to the active span when `fetch`
+  // is *invoked* synchronously. The active context is lost across each `await`,
+  // so wrap every call in `scope.active(...)` to keep both requests parented to
+  // NestedSpan2 (the second one would otherwise become its own root trace).
+  const fetchUrlsForNestedSpanDemo = async (scope: SpanScope) => {
     try {
-      await fetch(GOOGLE_URL);
-      await fetch(ANDROID_URL);
+      await scope.active(() => fetch(GOOGLE_URL));
+      await scope.active(() => fetch(ANDROID_URL));
     } catch {
       // ignore network errors in the demo
     }
