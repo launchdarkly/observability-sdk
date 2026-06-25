@@ -58,6 +58,10 @@ class LDObserveClass
 		return this._bufferCall('recordLog', [message, level, attributes])
 	}
 
+	track(key: string, properties?: Attributes, metricValue?: number): void {
+		return this._bufferCall('track', [key, properties, metricValue])
+	}
+
 	parseHeaders(headers: Record<string, string>): RequestContext {
 		const response = this._bufferCall('parseHeaders', [headers])
 		return this._isLoaded

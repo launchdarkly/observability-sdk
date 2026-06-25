@@ -66,6 +66,20 @@ export interface Observe {
 	recordLog(message: any, level: string, attributes?: Attributes): void
 
 	/**
+	 * Record a custom track event as a `track` span.
+	 *
+	 * Mirrors the iOS and Android `LDObserve.track(...)` API (and `LDClient.track`):
+	 * emits a span named `track` carrying the event `key`, an optional numeric
+	 * `value` for LaunchDarkly numeric custom metrics, and any `properties` as
+	 * additional span attributes.
+	 *
+	 * @param key The key for the event.
+	 * @param properties Optional data associated with the event; attached as span attributes.
+	 * @param metricValue Optional numeric value used by LaunchDarkly experimentation for numeric custom metrics.
+	 */
+	track(key: string, properties?: Attributes, metricValue?: number): void
+
+	/**
 	 * Parse headers to extract request context.
 	 * @param headers The headers to parse
 	 */
