@@ -44,6 +44,28 @@ describe('parseGraphQLOperation', () => {
 		})
 	})
 
+	it('takes the type from the named operation in a mixed document', () => {
+		const body = JSON.stringify({
+			query: 'query GetUser { user { id } }\nmutation UpdateUser { updateUser { id } }',
+			operationName: 'UpdateUser',
+		})
+		expect(parseGraphQLOperation(body)).toEqual({
+			name: 'UpdateUser',
+			type: 'mutation',
+		})
+	})
+
+	it('falls back to the first operation when operationName is not in the document', () => {
+		const body = JSON.stringify({
+			query: 'mutation UpdateUser { updateUser { id } }',
+			operationName: 'Missing',
+		})
+		expect(parseGraphQLOperation(body)).toEqual({
+			name: 'Missing',
+			type: 'mutation',
+		})
+	})
+
 	it('parses the name from the document when operationName is absent', () => {
 		const body = JSON.stringify({
 			query: 'query GetTeams { teams { id } }',

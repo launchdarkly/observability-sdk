@@ -5,8 +5,9 @@ export interface GraphQLOperation {
 	type?: GraphQLOperationType
 }
 
-// Leading operation keyword + optional name, e.g. `query GetUser`.
-const OPERATION_RE = /\b(query|mutation|subscription)\b\s*([A-Za-z_]\w*)?/
+// Operation keyword + optional name, e.g. `query GetUser`. Global so we can
+// scan every operation in a multi-operation document.
+const OPERATION_RE = /\b(query|mutation|subscription)\b\s*([A-Za-z_]\w*)?/g
 
 // Best-effort extraction of a GraphQL operation from a request body (Apollo,
 // urql, graphql-request shapes). Returns null for non-GraphQL bodies. Regex
@@ -34,7 +35,7 @@ export function parseGraphQLOperation(body: unknown): GraphQLOperation | null {
 		return null
 	}
 
-	const match = query ? OPERATION_RE.exec(query) : null
+	const match = query ? matchOperation(query, operationName) : null
 	const type =
 		(match?.[1] as GraphQLOperationType | undefined) ?? inferType(query)
 	const name = operationName ?? match?.[2]
@@ -44,6 +45,31 @@ export function parseGraphQLOperation(body: unknown): GraphQLOperation | null {
 	}
 
 	return { name, type }
+}
+
+// Finds the relevant operation in the document. When operationName is given,
+// returns that specific operation so the type reflects the named operation in a
+// multi-operation document (which may mix queries and mutations); otherwise, or
+// when the named operation isn't found, returns the first operation.
+function matchOperation(
+	query: string,
+	operationName: string | undefined,
+): RegExpExecArray | null {
+	OPERATION_RE.lastIndex = 0
+	let first: RegExpExecArray | null = null
+	for (
+		let match = OPERATION_RE.exec(query);
+		match !== null;
+		match = OPERATION_RE.exec(query)
+	) {
+		if (operationName === undefined || match[2] === operationName) {
+			return match
+		}
+		if (first === null) {
+			first = match
+		}
+	}
+	return first
 }
 
 // Parses a JSON string, or passes an already-parsed object/array through.
