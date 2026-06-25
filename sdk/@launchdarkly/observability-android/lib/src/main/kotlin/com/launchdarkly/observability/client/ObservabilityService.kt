@@ -33,13 +33,11 @@ import com.launchdarkly.observability.sampling.SamplingLogProcessor
 import com.launchdarkly.observability.traces.EventSpanProcessor
 import com.launchdarkly.observability.traces.OtlpTraceExporter
 import com.launchdarkly.observability.util.requireMainThread
+import io.opentelemetry.android.LDRumSessionManagerAccessor
 import io.opentelemetry.android.OpenTelemetryRum
 import io.opentelemetry.android.OpenTelemetryRumBuilder
 import io.opentelemetry.android.config.OtelRumConfig
-import io.opentelemetry.android.instrumentation.AndroidInstrumentation
-import io.opentelemetry.android.instrumentation.InstallationContext
 import io.opentelemetry.android.session.Session
-import io.opentelemetry.android.session.SessionConfig
 import io.opentelemetry.android.session.SessionManager
 import io.opentelemetry.android.session.SessionObserver
 import io.opentelemetry.api.common.AttributeKey
@@ -73,6 +71,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
+import kotlin.time.Duration.Companion.hours
 
 /**
  * The [ObservabilityService] can be used for recording observability data such as
@@ -98,9 +97,22 @@ class ObservabilityService(
     private val resources: Resource,
     private val logger: ObserveLogger,
     private val observabilityOptions: ObservabilityOptions,
+    // Optional session id to adopt (e.g. forwarded from another LaunchDarkly SDK on the device) so
+    // all signals share one `session.id`. Null lets the manager generate its own.
+    private val customSessionId: String? = null,
 ) : Observe, TrackEmitting {
     private val otelRUM: OpenTelemetryRum
-    var sessionManager: SessionManager? = null
+
+    // LaunchDarkly's own session manager. Owns session identity for all signals (it also backs the
+    // RUM SDK's `session.id` appenders via LDRumSessionManagerAccessor) and can be seeded with
+    // [customSessionId]. Exposed through [sessionManager] for Session Replay.
+    private val ldSessionManager = LDSessionManager(
+        initialSessionId = customSessionId,
+        backgroundInactivityTimeout = observabilityOptions.sessionBackgroundTimeout,
+        maxLifetime = 4.hours,
+    )
+
+    var sessionManager: SessionManager? = ldSessionManager
         private set
     private var otelMeter: Meter
     private var otelLogger: Logger
@@ -209,8 +221,6 @@ class ObservabilityService(
         registerOtlpExporters()
         val otelRumConfig = createOtelRumConfig()
 
-        var capturedSessionManager: SessionManager? = null
-
         val rumBuilder = OpenTelemetryRum.builder(application, otelRumConfig)
             .addLoggerProviderCustomizer { sdkLoggerProviderBuilder, _ ->
                 return@addLoggerProviderCustomizer configureLoggerProvider(sdkLoggerProviderBuilder)
@@ -222,22 +232,15 @@ class ObservabilityService(
                 return@addMeterProviderCustomizer configureMeterProvider(sdkMeterProviderBuilder)
             }
 
-        rumBuilder.addInstrumentation(object : AndroidInstrumentation {
-            override val name = "ld-session-manager-bridge"
-            override fun install(ctx: InstallationContext) {
-                capturedSessionManager = ctx.sessionManager
-            }
-        })
+        // Use our own session manager (instead of the RUM SDK's default) so we can seed the session
+        // id and keep a single source of session identity across spans, logs, metrics, and replay.
+        LDRumSessionManagerAccessor.setSessionManager(rumBuilder, ldSessionManager)
 
         if (observabilityOptions.instrumentations.launchTime) {
             addLaunchTimeInstrumentation(rumBuilder)
         }
 
         otelRUM = rumBuilder.build()
-        sessionManager = capturedSessionManager
-        if (sessionManager == null) {
-            logger.warn("SessionManager was not captured during OpenTelemetryRum.build(); session-dependent features will be unavailable.")
-        }
 
         // A new session (e.g. after a background timeout) must start with a fresh navigation
         // history, otherwise the first screen_view/Navigate of the new session would resolve
@@ -410,8 +413,9 @@ class ObservabilityService(
     }
 
     private fun createOtelRumConfig(): OtelRumConfig {
+        // Session lifetime/rotation is owned by [ldSessionManager] (injected via
+        // [LDRumSessionManagerAccessor]), so no SessionConfig is applied here.
         val config = OtelRumConfig()
-            .setSessionConfig(SessionConfig(backgroundInactivityTimeout = observabilityOptions.sessionBackgroundTimeout))
 
         if (!observabilityOptions.instrumentations.crashReporting) {
             // Disables [io.opentelemetry.android.instrumentation.crash.CrashReporterInstrumentation.java]
@@ -772,6 +776,12 @@ class ObservabilityService(
      * navigation/track emitters.
      */
     private fun handleAppLifecycleSignal(signal: AppLifecycleSignal) {
+        // Drive the session manager's background-inactivity timeout from the same lifecycle source.
+        when (signal.kind) {
+            AppLifecycleSignal.Kind.FOREGROUND -> ldSessionManager.onApplicationForegrounded()
+            AppLifecycleSignal.Kind.BACKGROUND -> ldSessionManager.onApplicationBackgrounded()
+        }
+
         // Broadcast so Session Replay can emit a breadcrumb independent of the span flags below.
         _appLifecycleFlow.tryEmit(signal)
 
@@ -912,7 +922,7 @@ class ObservabilityService(
         }
     }
 
-    private fun Attributes.addSessionId() = this.toBuilder().put(SESSION_ID_ATTRIBUTE, otelRUM.rumSessionId).build()
+    private fun Attributes.addSessionId() = this.toBuilder().put(SESSION_ID_ATTRIBUTE, ldSessionManager.getSessionId()).build()
 
     companion object {
         private const val METRICS_PATH = "/v1/metrics"

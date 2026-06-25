@@ -47,11 +47,15 @@ import java.util.Collections
  * @param application The application instance.
  * @param options The options for the plugin.
  * @param mobileKey The primary mobile key used in LDConfig.
+ * @param customSessionId Optional session id to adopt instead of generating one. Lets the native
+ *   instance share a single `session.id` with another LaunchDarkly SDK on the device (e.g. the
+ *   JavaScript SDK in a React Native app). When null, a session id is generated automatically.
  */
 class Observability(
     private val application: Application,
     private val mobileKey: String,
-    private val options: ObservabilityOptions = ObservabilityOptions() // new instance has reasonable defaults
+    private val options: ObservabilityOptions = ObservabilityOptions(), // new instance has reasonable defaults
+    private val customSessionId: String? = null,
 ) : Plugin() {
     var distroAttributes: Map<String, String> = DEFAULT_DISTRO_ATTRIBUTES
     private val logger: ObserveLogger
@@ -112,7 +116,7 @@ class Observability(
         LDObserve.context?.resourceAttributes = resource.attributes
 
         val observabilityService = ObservabilityService(
-            application, sdkKey, resource, logger, options,
+            application, sdkKey, resource, logger, options, customSessionId,
         )
         observabilityClient = observabilityService
         LDObserve.context?.sessionManager = observabilityService.sessionManager
