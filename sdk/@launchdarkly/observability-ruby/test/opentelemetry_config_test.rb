@@ -140,6 +140,39 @@ class OpenTelemetryConfigTest < Minitest::Test
     assert_equal '2.0.0', attrs['service.version']
   end
 
+  # Regression: in the lazy-init path the Railtie installs instrumentation at
+  # boot with no plugin options, so the trace provider's resource carries the
+  # inferred service name. When the client is later created with service_name,
+  # configure must update the existing trace resource too — otherwise spans keep
+  # the boot identity while logs/metrics use the configured one (mismatch across
+  # signals). See configure_traces' boot-installed branch.
+  def test_boot_installed_traces_resource_picks_up_configured_service_name
+    # Simulate boot-time install: a resource with the inferred/boot service name.
+    boot = LaunchDarklyObservability::OpenTelemetryConfig.new(
+      project_id: @project_id,
+      otlp_endpoint: @otlp_endpoint,
+      service_name: 'boot-inferred-service'
+    )
+    boot.install_instrumentation_only
+    LaunchDarklyObservability.instance_variable_set(:@instrumentation_installed_at_boot, true)
+    assert_equal 'boot-inferred-service', resource_attributes['service.name']
+
+    # Later: the client is created and the plugin configures with its own name.
+    config = LaunchDarklyObservability::OpenTelemetryConfig.new(
+      project_id: @project_id,
+      otlp_endpoint: @otlp_endpoint,
+      service_name: 'lazy-configured-service',
+      enable_logs: false,
+      enable_metrics: false
+    )
+    config.configure
+
+    # Trace spans now report the configured identity, matching logs/metrics.
+    assert_equal 'lazy-configured-service', resource_attributes['service.name']
+  ensure
+    LaunchDarklyObservability.reset_instrumentation_state!
+  end
+
   def test_flush_does_not_raise
     config = LaunchDarklyObservability::OpenTelemetryConfig.new(
       project_id: @project_id,

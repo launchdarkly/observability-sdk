@@ -109,13 +109,24 @@ module LaunchDarklyObservability
     #
     # If auto-instrumentation was already installed during Rails boot (see
     # LaunchDarklyObservability.install_rails_instrumentation), the SDK tracer
-    # provider already exists with instrumentation attached — so we only add the
-    # OTLP span exporter. Re-running OpenTelemetry::SDK.configure here would
-    # replace that provider and, in the lazy-init case, drop the Rails-family
-    # instrumentation that can only attach during boot.
+    # provider already exists with instrumentation attached — so we add the OTLP
+    # span exporter and refresh its resource, rather than re-running
+    # OpenTelemetry::SDK.configure (which would replace the provider and, in the
+    # lazy-init case, drop the Rails-family instrumentation that can only attach
+    # during boot).
     def configure_traces
       if LaunchDarklyObservability.instrumentation_installed_at_boot?
-        OpenTelemetry.tracer_provider.add_span_processor(create_batch_span_processor)
+        provider = OpenTelemetry.tracer_provider
+        provider.add_span_processor(create_batch_span_processor)
+
+        # The boot-time install built the provider's resource before this plugin
+        # (and its service_name/service_version options) existed, so it carries
+        # the inferred service name. configure_logs/configure_metrics below build
+        # a fresh resource from those options; without updating the trace
+        # resource too, spans would report a different service identity than logs
+        # and metrics. OTel exposes no resource setter, but the provider reads
+        # @resource live when creating each span — so update it in place.
+        provider.instance_variable_set(:@resource, create_resource)
         return
       end
 
