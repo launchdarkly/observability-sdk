@@ -459,35 +459,51 @@ childSpan.end()
 
 ## 9. Sequential Independent Root Spans
 
-Use `{ root: true }` to create spans that each begin a separate trace. This is useful for batch operations or analytics events where each item should be its own trace.
+Use `{ root: true }` to create spans that each begin a separate trace, **even when there is an active span on the current context**. This is useful for batch operations or analytics events where each item should be its own trace rather than nesting under the surrounding work.
 
 ```typescript
 function processAnalyticsQueue(events: AnalyticsEvent[]) {
-  for (const evt of events) {
-    LDObserve.startActiveSpan(
-      `Analytics:${evt.type}`,
-      (span) => {
-        span.setAttribute('event.type', evt.type)
-        span.setAttribute('event.timestamp', evt.timestamp)
-        span.setAttribute('event.user_id', evt.userId)
+  // The batch itself is a span; without `{ root: true }` each event below would
+  // nest under it. With `root` they detach and start brand-new traces.
+  LDObserve.startActiveSpan('AnalyticsBatch', (parent) => {
+    const parentTrace = parent.spanContext().traceId
+    const childTraces: string[] = []
 
-        try {
-          analyticsService.process(evt)
-          span.setStatus({ code: SpanStatusCode.OK })
-        } catch (err) {
-          span.recordException(err as Error)
-          span.setStatus({ code: SpanStatusCode.ERROR })
-        } finally {
-          span.end()
-        }
-      },
-      { root: true },
-    )
-  }
+    for (const evt of events) {
+      LDObserve.startActiveSpan(
+        `Analytics:${evt.type}`,
+        (span) => {
+          span.setAttribute('event.type', evt.type)
+          span.setAttribute('event.timestamp', evt.timestamp)
+          span.setAttribute('event.user_id', evt.userId)
+
+          try {
+            analyticsService.process(evt)
+            span.setStatus({ code: SpanStatusCode.OK })
+          } catch (err) {
+            span.recordException(err as Error)
+            span.setStatus({ code: SpanStatusCode.ERROR })
+          } finally {
+            childTraces.push(span.spanContext().traceId)
+            span.end()
+          }
+        },
+        { root: true },
+      )
+    }
+    parent.end()
+
+    // Each child started its own trace, distinct from the batch and each other.
+    const detachedFromParent = childTraces.every((t) => t !== parentTrace)
+    const allUnique = new Set(childTraces).size === childTraces.length
+    console.log('independent roots:', { detachedFromParent, allUnique })
+  })
 }
 ```
 
-Each iteration creates an independent trace. Without `{ root: true }`, successive `startActiveSpan` calls would nest under whatever span is currently active.
+Each iteration creates an independent trace: every child `traceId` differs from the enclosing `AnalyticsBatch` trace and from the other children. Drop `{ root: true }` and the children would instead share `AnalyticsBatch`'s `traceId`.
+
+> The `{ root: true }` option is honored by the underlying OpenTelemetry tracer — it drops the active span from context so the new span starts a fresh trace. It only matters when a span is currently active; with no ambient context a span is already a root.
 
 ---
 

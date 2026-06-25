@@ -273,28 +273,45 @@ export default function TracingScreen() {
   };
 
   // -- 9. Sequential independent root spans --------------------------------
+  // Created inside an active parent span on purpose: with `{ root: true }` each
+  // analytics span must start a brand-new trace instead of nesting under the
+  // parent. We then assert every child trace differs from the parent's and from
+  // each other, so this actually exercises `root` rather than relying on there
+  // being no ambient context.
   const independentRootSpans = () => {
     const events = [
       { type: 'view', userId: 'u1' },
       { type: 'click', userId: 'u2' },
       { type: 'purchase', userId: 'u3' },
     ];
-    const traces: string[] = [];
-    for (const evt of events) {
-      LDObserve.startActiveSpan(
-        `Analytics:${evt.type}`,
-        (span) => {
-          span.setAttribute('event.type', evt.type);
-          span.setAttribute('event.timestamp', new Date().toISOString());
-          span.setAttribute('event.user_id', evt.userId);
-          span.setStatus({ code: SpanStatusCode.OK });
-          traces.push(traceOf(span));
-          span.end();
-        },
-        { root: true }
+    LDObserve.startActiveSpan('AnalyticsBatch', (parent) => {
+      const parentTrace = parent.spanContext().traceId;
+      const childTraces: string[] = [];
+      for (const evt of events) {
+        LDObserve.startActiveSpan(
+          `Analytics:${evt.type}`,
+          (span) => {
+            span.setAttribute('event.type', evt.type);
+            span.setAttribute('event.timestamp', new Date().toISOString());
+            span.setAttribute('event.user_id', evt.userId);
+            span.setStatus({ code: SpanStatusCode.OK });
+            childTraces.push(span.spanContext().traceId);
+            span.end();
+          },
+          { root: true }
+        );
+      }
+      parent.end();
+
+      const detachedFromParent = childTraces.every((t) => t !== parentTrace);
+      const allUnique = new Set(childTraces).size === childTraces.length;
+      const verdict = detachedFromParent && allUnique ? 'PASS' : 'FAIL';
+      log(
+        `[9] ${verdict} independence: parent=${short(parentTrace)} ` +
+          `children=[${childTraces.map(short).join(', ')}] ` +
+          `(detachedFromParent=${detachedFromParent}, allUnique=${allUnique})`
       );
-    }
-    log(`[9] 3 independent traces: ${traces.join(', ')}`);
+    });
   };
 
   // -- 10. Span events as lightweight checkpoints --------------------------
