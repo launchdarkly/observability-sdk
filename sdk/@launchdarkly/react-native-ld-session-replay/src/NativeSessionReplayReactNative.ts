@@ -40,11 +40,12 @@ export type SessionReplayOptions = {
   /**
    * Session id to adopt for the native session replay / observability instance,
    * so its spans (e.g. `click`) share the same `session.id` as the JS
-   * observability SDK. When provided, the native side calls its observability
-   * `start(sessionId:)` so both pipelines report a single session.
+   * observability SDK. When provided, the native side seeds its observability
+   * session with this id so both pipelines report a single session.
    *
-   * iOS only for now: the Android observability SDK does not yet expose a custom
-   * session API, so this value is ignored on Android.
+   * Supported on both platforms: iOS starts observability with
+   * `start(sessionId:)`, and Android forwards it as the `Observability` plugin's
+   * `customSessionId` (seeding its session manager).
    */
   sessionId?: string;
 };
