@@ -173,6 +173,50 @@ class OpenTelemetryConfigTest < Minitest::Test
     LaunchDarklyObservability.reset_instrumentation_state!
   end
 
+  # Install-time options (custom instrumentations config, disabling traces) can't
+  # be applied once instrumentation has attached at boot, so the lazy-init path
+  # warns instead of silently dropping them.
+  def test_warns_about_options_that_cannot_apply_in_boot_installed_path
+    LaunchDarklyObservability::OpenTelemetryConfig.new(
+      project_id: @project_id,
+      otlp_endpoint: @otlp_endpoint
+    ).install_instrumentation_only
+    LaunchDarklyObservability.instance_variable_set(:@instrumentation_installed_at_boot, true)
+
+    config = LaunchDarklyObservability::OpenTelemetryConfig.new(
+      project_id: @project_id,
+      otlp_endpoint: @otlp_endpoint,
+      instrumentations: { 'OpenTelemetry::Instrumentation::Redis' => { enabled: false } },
+      enable_traces: false,
+      enable_logs: false,
+      enable_metrics: false
+    )
+
+    _out, err = capture_io { config.configure }
+
+    assert_match(/cannot be applied and will be ignored/, err)
+    assert_match(/instrumentations/, err)
+    assert_match(/enable_traces: false/, err)
+  ensure
+    LaunchDarklyObservability.reset_instrumentation_state!
+  end
+
+  def test_does_not_warn_about_options_when_not_installed_at_boot
+    LaunchDarklyObservability.reset_instrumentation_state!
+
+    config = LaunchDarklyObservability::OpenTelemetryConfig.new(
+      project_id: @project_id,
+      otlp_endpoint: @otlp_endpoint,
+      instrumentations: { 'OpenTelemetry::Instrumentation::Redis' => { enabled: false } },
+      enable_logs: false,
+      enable_metrics: false
+    )
+
+    _out, err = capture_io { config.configure }
+
+    refute_match(/will be ignored/, err)
+  end
+
   def test_flush_does_not_raise
     config = LaunchDarklyObservability::OpenTelemetryConfig.new(
       project_id: @project_id,

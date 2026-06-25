@@ -62,6 +62,8 @@ module LaunchDarklyObservability
     def configure
       return if @configured
 
+      warn_ignored_boot_options if LaunchDarklyObservability.instrumentation_installed_at_boot?
+
       configure_traces if @options.fetch(:enable_traces, true)
       configure_logs if @options.fetch(:enable_logs, true)
       configure_metrics if @options.fetch(:enable_metrics, true)
@@ -154,6 +156,28 @@ module LaunchDarklyObservability
            'booting, so the Rails auto-instrumentation (ActionPack, ActiveRecord, ...) could not be ' \
            'installed. To enable it, set LAUNCHDARKLY_SDK_KEY in the environment before Rails boots, ' \
            'or create the LaunchDarkly client from a config/initializer.'
+    end
+
+    # Emit a single actionable warning when the client is created lazily (so
+    # instrumentation was installed at boot, before this plugin existed) but was
+    # given options that can only take effect at install time. Custom
+    # `instrumentations` config and `enable_traces: false` cannot be applied
+    # retroactively: an OTel instrumentation patches its library during boot via
+    # ActiveSupport.on_load hooks and cannot be reconfigured or detached
+    # afterward. (service_name/service_version are the exception — the trace
+    # resource is refreshed in #configure_traces because it is read live per
+    # span.) To honor these options, create the client from a config/initializer
+    # so #configure runs during boot with them.
+    def warn_ignored_boot_options
+      ignored = []
+      ignored << 'instrumentations' unless @options.fetch(:instrumentations, {}).empty?
+      ignored << 'enable_traces: false' unless @options.fetch(:enable_traces, true)
+      return if ignored.empty?
+
+      warn '[LaunchDarklyObservability] Rails auto-instrumentation was installed at boot, so these ' \
+           "plugin option(s) cannot be applied and will be ignored: #{ignored.join(', ')}. Instrumentations " \
+           'attach during boot, before the client exists, and cannot be reconfigured or detached afterward. ' \
+           'To apply these options, create the LaunchDarkly client from a config/initializer instead of lazily.'
     end
 
     # Configure auto-instrumentations with sensible defaults.
