@@ -41,8 +41,18 @@
  * @packageDocumentation
  */
 
+import { setupURLPolyfill } from 'react-native-url-polyfill'
 // Imported for documentation.
 import { ReactNativeOptions } from './api/Options'
+
+// React Native's built-in `URL` does not implement `.origin`, which the
+// OpenTelemetry OTLP HTTP exporter relies on. Without a spec-compliant `URL`,
+// every trace/log export throws "URL.origin is not implemented" and is silently
+// dropped (regardless of Old/New Architecture). Apply the polyfill at the
+// package entry so a working `URL` is guaranteed before any exporter runs.
+// (An explicit call is used instead of the `/auto` side-effect import so it
+// survives the bundler's aggressive tree-shaking.)
+setupURLPolyfill()
 
 export { LDObserve } from './sdk/LDObserve'
 export type { Observe } from './api/Observe'

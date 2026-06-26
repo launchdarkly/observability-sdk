@@ -139,7 +139,10 @@
     "modulePathIgnorePatterns": [
       "<rootDir>/example/node_modules",
       "<rootDir>/lib/"
-    ]
+    ],
+    "moduleNameMapper": {
+      "^react-native-url-polyfill(/.*)?$": "<rootDir>/jest/mocks/react-native-url-polyfill.js"
+    }
   },
   "commitlint": {
     "extends": [

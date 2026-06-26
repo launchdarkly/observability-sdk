@@ -45,6 +45,8 @@ import {
 	XHRHook,
 } from '../listeners/network-listener/network-listener'
 import { Metric } from '../api/Metric'
+import { TrackProperties } from '../api/TrackProperties'
+import { flattenTrackProperties } from '../utils/trackAttributes'
 import { SessionManager } from './SessionManager'
 import {
 	CustomSampler,
@@ -404,13 +406,13 @@ export class InstrumentationManager {
 	 */
 	public track(
 		key: string,
-		properties?: Attributes,
+		properties?: TrackProperties,
 		metricValue?: number,
 	): void {
 		try {
 			const sessionId = this.sessionManager?.getSessionInfo().sessionId
 			const attributes: Attributes = {
-				...(properties ?? {}),
+				...flattenTrackProperties(properties),
 				key,
 				...(metricValue !== undefined ? { value: metricValue } : {}),
 				...(sessionId ? { ['highlight.session_id']: sessionId } : {}),

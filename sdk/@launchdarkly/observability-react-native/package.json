@@ -43,7 +43,8 @@
 		"@opentelemetry/sdk-metrics": "^2.0.1",
 		"@opentelemetry/sdk-trace-base": "2.0.1",
 		"@opentelemetry/sdk-trace-web": "^2.0.1",
-		"@opentelemetry/semantic-conventions": "^1.35.0"
+		"@opentelemetry/semantic-conventions": "^1.35.0",
+		"react-native-url-polyfill": "^3.0.0"
 	},
 	"peerDependencies": {
 		"@launchdarkly/react-native-client-sdk": "^10.0.0",

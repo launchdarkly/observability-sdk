@@ -1,5 +1,7 @@
 import { LDClientMin, LDPlugin } from './plugin'
 import { ReactNativeOptions } from '../api/Options'
+import { TrackProperties } from '../api/TrackProperties'
+import { flattenTrackProperties } from '../utils/trackAttributes'
 import { ObservabilityClient } from '../client/ObservabilityClient'
 import { _LDObserve } from '../sdk/LDObserve'
 import type {
@@ -160,14 +162,16 @@ class TracingHook implements Hook {
 				...(hookContext.context
 					? getContextKeys(hookContext.context)
 					: {}),
-				// Spread user-supplied track data first so the LaunchDarkly event
-				// `key` and metric `value` set below always win over any
-				// same-named properties in the payload. Non-primitive members are
-				// ignored by OpenTelemetry.
+				// Flatten user-supplied track data the same way LDObserve.track
+				// does, so nested objects/arrays survive as dotted attributes
+				// instead of being dropped by OpenTelemetry.
 				...(typeof hookContext.data === 'object' &&
 				hookContext.data !== null
-					? (hookContext.data as Attributes)
+					? flattenTrackProperties(
+							hookContext.data as TrackProperties,
+						)
 					: {}),
+				// Reserved fields are written last so caller data can't clobber them.
 				key: hookContext.key,
 				...(hookContext.metricValue !== undefined &&
 				hookContext.metricValue !== null

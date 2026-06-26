@@ -18,10 +18,15 @@ import { context } from '@opentelemetry/api';
  * exercising the public Observability + LaunchDarkly client APIs from React
  * Native.
  *
- * The iOS sample has both `LDObserve.track` and `LDClient.track` variants. The
- * React Native Observability API does not expose `track`, so every track recipe
- * here goes through the LaunchDarkly client's `track` (the Observability plugin
- * turns it into a span via its afterTrack hook).
+ * The iOS sample has both `LDObserve.track` and `LDClient.track` variants, and
+ * so does this screen. Both accept a plain dictionary (matching the native
+ * `[String: Any]` / `Map<String, Any?>` surfaces): nested objects and arrays of
+ * objects are flattened into dotted attribute keys (e.g. `products.0.price`).
+ *   - `LDObserve.track(...)` records a `track` span directly through the
+ *     Observability API.
+ *   - `ldClient.track(...)` goes through the LaunchDarkly client; the
+ *     Observability plugin turns it into the same `track` span via its
+ *     afterTrack hook.
  */
 
 export default function ApiScreen() {
@@ -159,6 +164,49 @@ export default function ApiScreen() {
     log('[log] recordLog(logs-button-pressed) with mixed attributes');
   };
 
+  // -- Track (via Observability API) ---------------------------------------
+  const trackViaLDObserve = () => {
+    // Records a `track` span directly through the Observability API, mirroring
+    // the iOS `LDObserve.shared.track(...)` demo. `properties` is a plain
+    // dictionary; the nested map is flattened to dotted keys (e.g.
+    // `test-map.test-string`).
+    LDObserve.track('track-via-ld-observe', {
+      'test-string': 'react-native',
+      'test-true': true,
+      'test-false': false,
+      'test-integer': 42,
+      // A 64-bit value beyond Int32 range (e.g. epoch nanoseconds).
+      'test-long': 9_000_000_000_123,
+      'test-double': 3.14,
+      'test-map': { 'test-string': 'val' },
+    });
+    log('[track] LDObserve.track(track-via-ld-observe)');
+  };
+
+  const trackNestedViaLDObserve = () => {
+    // A nested `track` payload via the plain-dictionary variant, mirroring the
+    // iOS `trackNested` demo. The `products` array of objects is flattened to
+    // `products.0.product_id`, `products.1.price`, etc.
+    LDObserve.track('checkout-started', {
+      name: 'Checkout Started',
+      order_id: 'ord_5521',
+      value: 72.0,
+      currency: 'USD',
+      products: [
+        { product_id: 'SKU-1234', quantity: 2, price: 24.0 },
+        { product_id: 'SKU-9876', quantity: 1, price: 24.0 },
+      ],
+    });
+    log('[track] LDObserve.track(checkout-started) nested payload');
+  };
+
+  const trackViaLDObserveWithMetric = () => {
+    // The optional third argument is the numeric metric value used by
+    // LaunchDarkly experimentation for numeric custom metrics.
+    LDObserve.track('purchase-completed', { currency: 'USD' }, 72.0);
+    log('[track] LDObserve.track(purchase-completed, value=72)');
+  };
+
   // -- Track (via LaunchDarkly client) -------------------------------------
   const trackViaLDClient = () => {
     ldClient.track('track-via-ld-client', {
@@ -269,6 +317,22 @@ export default function ApiScreen() {
             label="Anon"
             variant="identify"
             onPress={run('identify-anon', identifyAnonymous)}
+          />
+        </View>
+
+        <SectionHeader title="Track (via Observability API)" topSpacing />
+        <View style={styles.col}>
+          <Btn
+            label="Track via LDObserve"
+            onPress={run('track-observe', trackViaLDObserve)}
+          />
+          <Btn
+            label="Track nested via LDObserve"
+            onPress={run('track-observe-nested', trackNestedViaLDObserve)}
+          />
+          <Btn
+            label="Track via LDObserve + metric value"
+            onPress={run('track-observe-metric', trackViaLDObserveWithMetric)}
           />
         </View>
 
