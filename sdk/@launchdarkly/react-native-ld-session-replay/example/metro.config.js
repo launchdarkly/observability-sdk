@@ -46,7 +46,7 @@ config.resolver.nodeModulesPaths = [
 // plugin). Force every react / react-native import, from anywhere in the graph,
 // to resolve to the example's single copy.
 const forcedSingletons = {
-  react: path.resolve(__dirname, 'node_modules/react'),
+  'react': path.resolve(__dirname, 'node_modules/react'),
   'react-native': path.resolve(__dirname, 'node_modules/react-native'),
 };
 const defaultResolveRequest = config.resolver.resolveRequest;

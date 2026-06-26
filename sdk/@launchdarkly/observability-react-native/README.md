@@ -39,6 +39,30 @@ const client = new LDClient(
 );
 ```
 
+### Manual tracing
+
+Use the `LDObserve` singleton to create spans by hand. `withSpan` runs your
+callback inside a span and ends it automatically — even across `await`s, where
+React Native only tracks the active context synchronously. Use `scope.child` to
+parent nested spans off the captured context:
+
+```typescript
+import { LDObserve } from '@launchdarkly/observability-react-native';
+
+await LDObserve.withSpan('LoadProducts', async (scope) => {
+  scope.span.setAttribute('source', 'api');
+
+  // `scope.child` parents off LoadProducts even after the await above.
+  const products = await scope.child('FetchFromApi', async (fetchScope) => {
+    const response = await fetch('https://api.example.com/products');
+    fetchScope.span.setAttribute('http.status_code', response.status);
+    return response.json();
+  });
+
+  scope.span.setAttribute('product_count', products.length);
+});
+```
+
 ## Guides
 
 - [Tracing Guide](guides/tracing.md) — a cookbook of common tracing patterns (spans, nested operations, error handling, correlated logs, and end-to-end mobile-to-backend traces).

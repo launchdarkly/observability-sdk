@@ -1,4 +1,5 @@
 import {
+  Platform,
   SafeAreaView,
   StyleSheet,
   Text,
@@ -58,6 +59,18 @@ const client = new ReactNativeLDClient(MOBILE_KEY, AutoEnvAttributes.Enabled, {
 });
 const context = { kind: 'user', key: 'user-key-123abc' };
 
+// The New Architecture installs the Fabric UIManager on the JS global; its
+// absence means the app is running on the legacy bridge architecture.
+const IS_NEW_ARCH =
+  (global as { nativeFabricUIManager?: unknown }).nativeFabricUIManager != null;
+const RN_VERSION = (() => {
+  const v = Platform.constants.reactNativeVersion;
+  return `${v.major}.${v.minor}.${v.patch}`;
+})();
+const ARCH_LABEL = `${
+  IS_NEW_ARCH ? 'New' : 'Legacy'
+} Architecture · React Native ${RN_VERSION}`;
+
 type Tab = 'masking' | 'dialogs' | 'api' | 'tracing';
 
 export default function App() {
@@ -70,6 +83,17 @@ export default function App() {
   return (
     <LDProvider client={client}>
       <SafeAreaView style={{ flex: 1, backgroundColor: '#000' }}>
+        <View
+          testID="safe"
+          style={[
+            styles.archBanner,
+            IS_NEW_ARCH ? styles.archBannerNew : styles.archBannerLegacy,
+          ]}
+        >
+          <Text testID="safe" style={styles.archBannerText}>
+            {ARCH_LABEL}
+          </Text>
+        </View>
         <View style={styles.tabBar}>
           <TabButton
             label="Masking"
@@ -126,6 +150,22 @@ function TabButton({
 }
 
 const styles = StyleSheet.create({
+  archBanner: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    alignItems: 'center',
+  },
+  archBannerLegacy: {
+    backgroundColor: '#7A3E00',
+  },
+  archBannerNew: {
+    backgroundColor: '#0B5D1E',
+  },
+  archBannerText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '700',
+  },
   tabBar: {
     flexDirection: 'row',
     borderBottomWidth: 1,

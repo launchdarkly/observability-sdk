@@ -15,6 +15,22 @@ export type SessionReplayOptions = {
    * observability-emitted signals.
    */
   serviceVersion?: string;
+
+  /**
+   * Override the OTLP exporter endpoint used by the native observability instance.
+   * When unset, the native SDK uses its production default. Applied to the
+   * observability plugin on iOS and Android.
+   */
+  otlpEndpoint?: string;
+
+  /**
+   * Override the backend URL used by the native observability instance. The native
+   * session replay plugin derives its upload endpoint from this value, so setting
+   * it routes both observability and session replay to the same environment. When
+   * unset, the native SDK uses its production default. Applied on iOS and Android.
+   */
+  backendUrl?: string;
+
   maskTextInputs?: boolean;
   maskWebViews?: boolean;
   maskLabels?: boolean;

@@ -25,7 +25,7 @@ class SessionReplayReactNativePackage : BaseReactPackage() {
         false,  // canOverrideExistingModule
         false,  // needsEagerInit
         false,  // isCxxModule
-        true // isTurboModule
+        BuildConfig.IS_NEW_ARCHITECTURE_ENABLED // isTurboModule
       )
       moduleInfos
     }

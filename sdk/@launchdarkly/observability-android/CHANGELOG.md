@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.59.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.58.0...launchdarkly-observability-android-0.59.0) (2026-06-25)
+
+
+### Features
+
+* **observability-android:** support external session id ([#647](https://github.com/launchdarkly/observability-sdk/issues/647)) ([48c83ba](https://github.com/launchdarkly/observability-sdk/commit/48c83ba94befa880f1f9f0c8d933ff22d8762de4))
+
+
+### Bug Fixes
+
+* **observability-android:** report service.name and service.version as resource attributes ([#646](https://github.com/launchdarkly/observability-sdk/issues/646)) ([f19b704](https://github.com/launchdarkly/observability-sdk/commit/f19b70475858014e286f61dad40d0cff0d045a17))
+
 ## [0.58.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.57.0...launchdarkly-observability-android-0.58.0) (2026-06-18)
 
 
