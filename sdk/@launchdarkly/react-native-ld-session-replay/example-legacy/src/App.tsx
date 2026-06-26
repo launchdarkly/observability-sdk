@@ -24,6 +24,14 @@ import MaskingScreen from './MaskingScreen';
 import TracingScreen from './TracingScreen';
 import ApiScreen from './ApiScreen';
 
+// Optional endpoint overrides from .env. When unset, the SDK falls back to its
+// production defaults. Passed to both the JS observability plugin (traces, logs,
+// metrics, errors) and the native session replay plugin (which forwards them to
+// the native observability instance, so on-device replay uploads to the same
+// environment), e.g. staging.
+const OTLP_ENDPOINT = LAUNCHDARKLY_OTLP_ENDPOINT || undefined;
+const BACKEND_URL = LAUNCHDARKLY_BACKEND_URL || undefined;
+
 const plugin = createSessionReplayPlugin({
   isEnabled: true,
   serviceName: 'session-replay-rn-legacy-example',
@@ -35,13 +43,9 @@ const plugin = createSessionReplayPlugin({
   maskTestIDs: ['password', 'ssn'],
   unmaskTestIDs: ['safe'],
   minimumAlpha: 0.05,
+  ...(OTLP_ENDPOINT ? {otlpEndpoint: OTLP_ENDPOINT} : {}),
+  ...(BACKEND_URL ? {backendUrl: BACKEND_URL} : {}),
 });
-
-// Optional endpoint overrides from .env. When unset, the SDK falls back to its
-// production defaults. These route the JS observability telemetry (traces, logs,
-// metrics, errors) to the configured environment, e.g. staging.
-const OTLP_ENDPOINT = LAUNCHDARKLY_OTLP_ENDPOINT || undefined;
-const BACKEND_URL = LAUNCHDARKLY_BACKEND_URL || undefined;
 
 const observability = new Observability({
   serviceName: 'session-replay-rn-legacy-example',

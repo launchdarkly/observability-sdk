@@ -50,6 +50,26 @@ await startSessionReplay();
 // later: await stopSessionReplay();
 ```
 
+## Custom endpoints
+
+By default the native session replay and observability instances report to
+LaunchDarkly's production endpoints. To target a different environment (for
+example staging or a proxy), set `otlpEndpoint` and/or `backendUrl`:
+
+```js
+const plugin = createSessionReplayPlugin({
+  isEnabled: true,
+  otlpEndpoint: 'https://otel.observability.app.launchdarkly.com:4318',
+  backendUrl: 'https://pub.observability.app.launchdarkly.com',
+});
+```
+
+`backendUrl` drives the session replay upload endpoint as well: the native
+session replay plugin derives its upload URL from the shared observability
+options, so setting `backendUrl` routes both observability and session replay to
+the same environment. Either option falls back to its production default when
+unset. Both are applied on iOS and Android.
+
 ## Masking sensitive content
 
 ### How the SDK decides what to mask

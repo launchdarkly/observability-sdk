@@ -19,6 +19,11 @@ public class SessionReplayClientAdapter: NSObject {
   // plugin only (the session replay options have no version). nil keeps the
   // SDK default.
   private var serviceVersion: String?
+  // Optional OTLP endpoint / backend URL forwarded from JS. nil keeps the SDK
+  // default. backendUrl also drives the session replay upload endpoint (the
+  // SessionReplay plugin reads it from the shared observability options).
+  private var otlpEndpoint: String?
+  private var backendUrl: String?
   // Each start()/stop() appends a new Task that awaits the previous one, serializing all work.
   private var lastTask: Task<Void, Never> = Task {}
 
@@ -52,6 +57,18 @@ public class SessionReplayClientAdapter: NSObject {
     } else {
       self.serviceVersion = nil
     }
+    if let otlpEndpoint = (options?["otlpEndpoint"] as? String)?
+      .trimmingCharacters(in: .whitespacesAndNewlines), !otlpEndpoint.isEmpty {
+      self.otlpEndpoint = otlpEndpoint
+    } else {
+      self.otlpEndpoint = nil
+    }
+    if let backendUrl = (options?["backendUrl"] as? String)?
+      .trimmingCharacters(in: .whitespacesAndNewlines), !backendUrl.isEmpty {
+      self.backendUrl = backendUrl
+    } else {
+      self.backendUrl = nil
+    }
   }
 
   private func makeConfig(mobileKey: String, options: SessionReplayOptions) -> LDConfig {
@@ -66,6 +83,11 @@ public class SessionReplayClientAdapter: NSObject {
       // first start — which the auto-start would consume.
       isEnabled: false,
       serviceName: options.serviceName,
+      // Forwarded endpoints (when provided) override the SDK defaults; nil/empty
+      // falls back to the production defaults. backendUrl also drives the session
+      // replay upload endpoint via the shared observability options.
+      otlpEndpoint: self.otlpEndpoint,
+      backendUrl: self.backendUrl,
       sessionBackgroundTimeout: 10,
       /// Disable the underlying KSCrash-based crash reporter that
       crashReporting: .init(source: .none)

@@ -27,6 +27,11 @@ internal class SessionReplayClientAdapter private constructor() {
     private var serviceName: String = DEFAULT_SERVICE_NAME
     // Optional `service.version` forwarded from JS. null keeps the SDK default.
     private var serviceVersion: String? = null
+    // Optional OTLP endpoint / backend URL forwarded from JS. null keeps the SDK
+    // default. backendUrl also drives the session replay upload endpoint (the
+    // SessionReplay plugin reads it from the shared observability options).
+    private var otlpEndpoint: String? = null
+    private var backendUrl: String? = null
     // Optional session id forwarded from the JS observability SDK so the native observability
     // instance (which emits e.g. `click` spans) seeds its session manager with the same
     // `session.id`. null means the native SDK generates and owns its own session.
@@ -52,6 +57,12 @@ internal class SessionReplayClientAdapter private constructor() {
             this.customSessionId = options?.takeIf { it.hasKey("sessionId") }
                 ?.getString("sessionId")
                 ?.takeIf { it.isNotBlank() }
+            this.otlpEndpoint = options?.takeIf { it.hasKey("otlpEndpoint") }
+                ?.getString("otlpEndpoint")
+                ?.takeIf { it.isNotBlank() }
+            this.backendUrl = options?.takeIf { it.hasKey("backendUrl") }
+                ?.getString("backendUrl")
+                ?.takeIf { it.isNotBlank() }
             this.replayOptions = replayOptionsFrom(options)
         }
     }
@@ -62,6 +73,8 @@ internal class SessionReplayClientAdapter private constructor() {
         val localServiceVersion: String?
         val localCustomSessionId: String?
         val localReplayOptions: ReplayOptions?
+        val localOtlpEndpoint: String?
+        val localBackendUrl: String?
 
         // Capture configuration under the lock, then release it before posting to the main thread.
         synchronized(lock) {
@@ -70,6 +83,8 @@ internal class SessionReplayClientAdapter private constructor() {
             localServiceName = serviceName
             localServiceVersion = serviceVersion
             localCustomSessionId = customSessionId
+            localOtlpEndpoint = otlpEndpoint
+            localBackendUrl = backendUrl
         }
         if (localMobileKey == null || localReplayOptions == null) {
             val msg = "start: configure() was not called — mobile key or options are missing"
@@ -84,7 +99,7 @@ internal class SessionReplayClientAdapter private constructor() {
         Handler(Looper.getMainLooper()).post {
             if (!initialized) {
                 try {
-                    initLDClient(application, localMobileKey, localServiceName, localServiceVersion, localCustomSessionId, localReplayOptions)
+                    initLDClient(application, localMobileKey, localServiceName, localServiceVersion, localCustomSessionId, localReplayOptions, localOtlpEndpoint, localBackendUrl)
                 } catch (e: Exception) {
                     logger.error("start: LDClient.init() threw {0}: {1}", e::class.simpleName, e.message)
                     completion(false, "Session replay failed to initialize.")
@@ -148,7 +163,9 @@ internal class SessionReplayClientAdapter private constructor() {
         serviceName: String,
         serviceVersion: String?,
         customSessionId: String?,
-        replayOptions: ReplayOptions
+        replayOptions: ReplayOptions,
+        otlpEndpoint: String?,
+        backendUrl: String?
     ) {
         logger.debug("initLDClient: calling LDClient.init()")
         // Apply the forwarded service.version only when provided; otherwise keep the SDK default.
@@ -163,14 +180,21 @@ internal class SessionReplayClientAdapter private constructor() {
         if (serviceVersion != null) {
             observabilityOptions = observabilityOptions.copy(serviceVersion = serviceVersion)
         }
+        // Forwarded endpoints (when provided) override the SDK defaults. backendUrl also
+        // drives the session replay upload endpoint, since the SessionReplay plugin reads it
+        // from the shared observability options.
+        if (otlpEndpoint != null) {
+            observabilityOptions = observabilityOptions.copy(otlpEndpoint = otlpEndpoint)
+        }
+        if (backendUrl != null) {
+            observabilityOptions = observabilityOptions.copy(backendUrl = backendUrl)
+        }
         val config = LDConfig.Builder(LDConfig.Builder.AutoEnvAttributes.Enabled)
             .mobileKey(mobileKey)
             .offline(true)
             .plugins(
                 Components.plugins().setPlugins(
                     listOf(
-                        // TODO: Pass JS ObservabilityOptions such as backendUrl,
-                        //  resourceAttributes, and sessionBackgroundTimeout through to here.
                         // Forward the JS observability session id (when provided) so the native
                         // observability instance seeds its session manager with the same
                         // `session.id`, matching iOS. null lets the native SDK own its session.
