@@ -66,6 +66,8 @@ function putArray(out: Attributes, key: string, list: unknown[]): void {
 	} else if (list.every((e) => typeof e === 'number')) {
 		out[key] = list as number[]
 	} else {
-		list.forEach((element, index) => putValue(out, `${key}.${index}`, element))
+		list.forEach((element, index) =>
+			putValue(out, `${key}.${index}`, element),
+		)
 	}
 }

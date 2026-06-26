@@ -84,11 +84,7 @@ export interface Observe {
 	 * @param properties Optional data associated with the event; flattened and attached as span attributes.
 	 * @param metricValue Optional numeric value used by LaunchDarkly experimentation for numeric custom metrics.
 	 */
-	track(
-		key: string,
-		properties?: TrackProperties,
-		metricValue?: number,
-	): void
+	track(key: string, properties?: TrackProperties, metricValue?: number): void
 
 	/**
 	 * Parse headers to extract request context.
