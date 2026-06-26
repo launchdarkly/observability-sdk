@@ -49,8 +49,26 @@ const forcedSingletons = {
   react: path.resolve(__dirname, 'node_modules/react'),
   'react-native': path.resolve(__dirname, 'node_modules/react-native'),
 };
+
+// This example runs on RN 0.78, whose bundled Metro (0.81) has package
+// `exports` resolution disabled by default. Without it, the workspace package's
+// `exports["."].source` condition is ignored and Metro falls back to `main`
+// (lib/module/index.js), which only exists after a build. Resolve the package
+// to its TypeScript source directly so the example consumes live source like
+// the new-arch example does (where Metro 0.83 honours `exports` automatically).
+const sourcePackageEntries = {
+  '@launchdarkly/session-replay-react-native': path.resolve(
+    __dirname,
+    '../src/index.tsx',
+  ),
+};
+
 const defaultResolveRequest = config.resolver.resolveRequest;
 config.resolver.resolveRequest = (context, moduleName, platform) => {
+  const sourceEntry = sourcePackageEntries[moduleName];
+  if (sourceEntry) {
+    return context.resolveRequest(context, sourceEntry, platform);
+  }
   for (const [name, target] of Object.entries(forcedSingletons)) {
     if (moduleName === name || moduleName.startsWith(`${name}/`)) {
       return context.resolveRequest(
