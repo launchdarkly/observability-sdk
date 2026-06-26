@@ -136,6 +136,9 @@ class LDObserve(private val client: Observe) : Observe {
          * @param replay Optional configuration for session replay. Pass `null` (the default)
          *                      to skip session replay initialization.
          * @param imageCaptureService Optional capture implementation for session replay.
+         * @param customSessionId Optional session id to adopt instead of generating one, so this
+         *                      instance can share a single `session.id` with another LaunchDarkly
+         *                      SDK on the device. When null, a session id is generated automatically.
          */
         fun init(
             application: Application,
@@ -144,6 +147,7 @@ class LDObserve(private val client: Observe) : Observe {
             observability: ObservabilityOptions = ObservabilityOptions(),
             replay: ReplayOptions? = null,
             imageCaptureService: ImageCaptureServicing? = null,
+            customSessionId: String? = null,
         ) {
             val logger = ObserveLogger.build(observability.logAdapter, observability.loggerName, observability.debug)
 
@@ -164,7 +168,7 @@ class LDObserve(private val client: Observe) : Observe {
             // NOTE: the calling thread must not hold any lock the main thread is waiting on, or
             // this will deadlock — see runOnMainThread KDoc.
             runOnMainThread {
-                installObservability(application, mobileKey, resource, logger, observability, obsContext)
+                installObservability(application, mobileKey, resource, logger, observability, obsContext, customSessionId)
                 if (replay != null) {
                     installSessionReplay(
                         replay,
@@ -189,9 +193,10 @@ class LDObserve(private val client: Observe) : Observe {
             logger: ObserveLogger,
             options: ObservabilityOptions,
             obsContext: ObservabilityContext,
+            customSessionId: String? = null,
         ) {
             val service = ObservabilityService(
-                application, mobileKey, resource, logger, options,
+                application, mobileKey, resource, logger, options, customSessionId,
             )
             obsContext.sessionManager = service.sessionManager
             obsContext.userInteractionManager = service.userInteractionManager

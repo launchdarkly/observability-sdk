@@ -11,6 +11,19 @@ public class SessionReplayClientAdapter: NSObject {
   private let lock = NSLock()
   private var mobileKey: String?
   private var sessionReplayOptions: SessionReplayOptions?
+  // Optional session id forwarded from the JS observability SDK so the native
+  // observability instance (which emits e.g. `click` spans) reports the same
+  // `session.id`. nil means the native SDK uses its own generated session.
+  private var customSessionId: String?
+  // Optional `service.version` forwarded from JS. Applied to the observability
+  // plugin only (the session replay options have no version). nil keeps the
+  // SDK default.
+  private var serviceVersion: String?
+  // Optional OTLP endpoint / backend URL forwarded from JS. nil keeps the SDK
+  // default. backendUrl also drives the session replay upload endpoint (the
+  // SessionReplay plugin reads it from the shared observability options).
+  private var otlpEndpoint: String?
+  private var backendUrl: String?
   // Each start()/stop() appends a new Task that awaits the previous one, serializing all work.
   private var lastTask: Task<Void, Never> = Task {}
 
@@ -32,6 +45,30 @@ public class SessionReplayClientAdapter: NSObject {
     }
     self.mobileKey = key
     self.sessionReplayOptions = sessionReplayOptionsFrom(dictionary: options)
+    if let sessionId = (options?["sessionId"] as? String)?
+      .trimmingCharacters(in: .whitespacesAndNewlines), !sessionId.isEmpty {
+      self.customSessionId = sessionId
+    } else {
+      self.customSessionId = nil
+    }
+    if let serviceVersion = (options?["serviceVersion"] as? String)?
+      .trimmingCharacters(in: .whitespacesAndNewlines), !serviceVersion.isEmpty {
+      self.serviceVersion = serviceVersion
+    } else {
+      self.serviceVersion = nil
+    }
+    if let otlpEndpoint = (options?["otlpEndpoint"] as? String)?
+      .trimmingCharacters(in: .whitespacesAndNewlines), !otlpEndpoint.isEmpty {
+      self.otlpEndpoint = otlpEndpoint
+    } else {
+      self.otlpEndpoint = nil
+    }
+    if let backendUrl = (options?["backendUrl"] as? String)?
+      .trimmingCharacters(in: .whitespacesAndNewlines), !backendUrl.isEmpty {
+      self.backendUrl = backendUrl
+    } else {
+      self.backendUrl = nil
+    }
   }
 
   private func makeConfig(mobileKey: String, options: SessionReplayOptions) -> LDConfig {
@@ -39,15 +76,29 @@ public class SessionReplayClientAdapter: NSObject {
       mobileKey: mobileKey,
       autoEnvAttributes: .enabled
     )
+    var observabilityOptions = ObservabilityOptions(
+      // Disable the plugin's auto-start so we can start observability ourselves
+      // (see start()) and inject the JS session id. The native `startSession` is
+      // guarded by `task == nil`, so a session id can only be supplied on the
+      // first start — which the auto-start would consume.
+      isEnabled: false,
+      serviceName: options.serviceName,
+      // Forwarded endpoints (when provided) override the SDK defaults; nil/empty
+      // falls back to the production defaults. backendUrl also drives the session
+      // replay upload endpoint via the shared observability options.
+      otlpEndpoint: self.otlpEndpoint,
+      backendUrl: self.backendUrl,
+      sessionBackgroundTimeout: 10,
+      /// Disable the underlying KSCrash-based crash reporter that
+      crashReporting: .init(source: .none)
+    )
+    // The session replay options carry no version, so apply the forwarded
+    // `service.version` to the observability plugin only.
+    if let serviceVersion = self.serviceVersion {
+      observabilityOptions.serviceVersion = serviceVersion
+    }
     config.plugins = [
-      Observability(
-        options: .init(
-          serviceName: options.serviceName,
-          sessionBackgroundTimeout: 10,
-          /// Disable the underlying KSCrash-based crash reporter that
-          crashReporting: .init(source: .none)
-        )
-      ),
+      Observability(options: observabilityOptions),
       SessionReplay(options: options)
     ]
     /// we set the LDClient offline to stop communication with the LaunchDarkly servers.
@@ -93,6 +144,7 @@ public class SessionReplayClientAdapter: NSObject {
       completion(false, "Client not initialized. Call SetMobileKey first.")
       return
     }
+    let customSessionId = self.customSessionId
     let prev = lastTask
     lastTask = Task { @MainActor [weak self] in
       await prev.value
@@ -104,6 +156,16 @@ public class SessionReplayClientAdapter: NSObject {
           LDClient.start(config: config, context: context, startWaitSeconds: 0) { _ in
             cont.resume()
           }
+        }
+        // The Observability plugin is configured with isEnabled=false (see
+        // makeConfig), so it did not auto-start. Start it now: when a session id
+        // was forwarded from the JS observability SDK, adopt it so native spans
+        // (e.g. `click`) share the same `session.id`; otherwise start with a
+        // generated session.
+        if let customSessionId {
+          LDObserve.shared.start(sessionId: customSessionId)
+        } else {
+          LDObserve.shared.start()
         }
         self.initialized = true
       } else {

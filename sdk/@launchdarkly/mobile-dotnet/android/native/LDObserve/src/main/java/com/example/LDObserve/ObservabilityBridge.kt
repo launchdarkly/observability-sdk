@@ -81,8 +81,10 @@ public class ObservabilityBridge(
                 backendUrl = observability.backendUrl,
                 tracesApi = com.launchdarkly.observability.api.ObservabilityOptions.TracesApi(includeErrors = true, includeSpans = true),
                 metricsApi = com.launchdarkly.observability.api.ObservabilityOptions.MetricsApi.enabled(),
+                // Page views rely on the OTel `activity` instrumentation AAR, which MAUI no longer ships.
+                analytics = com.launchdarkly.observability.api.ObservabilityOptions.Analytics(pageViews = false),
                 instrumentations = com.launchdarkly.observability.api.ObservabilityOptions.Instrumentations(
-                    crashReporting = false, launchTime = observability.launchTime, activityLifecycle = true
+                    crashReporting = false, launchTime = observability.launchTime
                 ),
             )
         } catch (t: Throwable) {

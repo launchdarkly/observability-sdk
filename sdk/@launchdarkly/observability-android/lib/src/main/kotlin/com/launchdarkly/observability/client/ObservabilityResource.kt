@@ -34,7 +34,9 @@ internal val DEFAULT_DISTRO_ATTRIBUTES: Map<String, String> = mapOf(
  *  2. `highlight.project_id` = [sdkKey].
  *  3. [distroAttributes] (defaults to [DEFAULT_DISTRO_ATTRIBUTES] — `telemetry.distro.{name,version}`).
  *  4. Caller-supplied [ObservabilityOptions.resourceAttributes].
- *  5. `launchdarkly.application.id`, `launchdarkly.application.version`, `launchdarkly.sdk.version`
+ *  5. `service.name` = [ObservabilityOptions.serviceName] and `service.version` =
+ *     [ObservabilityOptions.serviceVersion], so the configured service identity always wins.
+ *  6. `launchdarkly.application.id`, `launchdarkly.application.version`, `launchdarkly.sdk.version`
  *     when provided (LDClient plugin path only).
  *
  * The metadata-derived attributes (5) come *after* the user's [ObservabilityOptions.resourceAttributes]
@@ -75,6 +77,9 @@ internal fun buildObservabilityResource(
     }
 
     builder.putAll(options.resourceAttributes)
+
+    builder.put("service.name", options.serviceName)
+    builder.put("service.version", options.serviceVersion)
 
     applicationId?.let { builder.put("launchdarkly.application.id", it) }
     applicationVersion?.let { builder.put("launchdarkly.application.version", it) }

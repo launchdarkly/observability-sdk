@@ -89,9 +89,6 @@ dependencies {
     implementation("io.opentelemetry.android.instrumentation:crash:0.11.0-alpha")
     "copyDependencies"("io.opentelemetry.android.instrumentation:crash:0.11.0-alpha")
 
-    implementation("io.opentelemetry.android.instrumentation:activity:0.11.0-alpha")
-    "copyDependencies"("io.opentelemetry.android.instrumentation:activity:0.11.0-alpha")
-
     implementation("io.opentelemetry.android:android-agent:0.11.0-alpha")
     "copyDependencies"("io.opentelemetry.android:android-agent:0.11.0-alpha")
 }

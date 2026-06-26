@@ -2,7 +2,35 @@ import { TurboModuleRegistry, type TurboModule } from 'react-native';
 
 export type SessionReplayOptions = {
   isEnabled?: boolean;
+  /**
+   * The OpenTelemetry `service.name` reported by the native session replay /
+   * observability instance. Applied to both the observability and session replay
+   * plugins on iOS and Android.
+   */
   serviceName?: string;
+  /**
+   * The OpenTelemetry `service.version` reported by the native observability
+   * instance. Applied to the observability plugin on iOS and Android. The native
+   * session replay plugin does not expose a version, so this only affects
+   * observability-emitted signals.
+   */
+  serviceVersion?: string;
+
+  /**
+   * Override the OTLP exporter endpoint used by the native observability instance.
+   * When unset, the native SDK uses its production default. Applied to the
+   * observability plugin on iOS and Android.
+   */
+  otlpEndpoint?: string;
+
+  /**
+   * Override the backend URL used by the native observability instance. The native
+   * session replay plugin derives its upload endpoint from this value, so setting
+   * it routes both observability and session replay to the same environment. When
+   * unset, the native SDK uses its production default. Applied on iOS and Android.
+   */
+  backendUrl?: string;
+
   maskTextInputs?: boolean;
   maskWebViews?: boolean;
   maskLabels?: boolean;
@@ -24,6 +52,18 @@ export type SessionReplayOptions = {
    * Defaults to `0.02`. Has no effect on Android.
    */
   minimumAlpha?: number;
+
+  /**
+   * Session id to adopt for the native session replay / observability instance,
+   * so its spans (e.g. `click`) share the same `session.id` as the JS
+   * observability SDK. When provided, the native side seeds its observability
+   * session with this id so both pipelines report a single session.
+   *
+   * Supported on both platforms: iOS starts observability with
+   * `start(sessionId:)`, and Android forwards it as the `Observability` plugin's
+   * `customSessionId` (seeding its session manager).
+   */
+  sessionId?: string;
 };
 
 export interface Spec extends TurboModule {

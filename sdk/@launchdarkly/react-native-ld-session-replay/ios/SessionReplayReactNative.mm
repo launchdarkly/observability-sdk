@@ -1,12 +1,30 @@
 #import <Foundation/Foundation.h>
 #import "SessionReplayReactNative.h"
+
+// The Swift-generated interop header is emitted under the module name. When the
+// pod is built as a framework (use_frameworks! / :modular_headers => true) it is
+// reachable via angle brackets; under default static-library linking it is only
+// reachable via the quoted form. Support both so the module compiles regardless
+// of how the host app links its pods.
+#if __has_include(<SessionReplayReactNative/SessionReplayReactNative-Swift.h>)
+#import <SessionReplayReactNative/SessionReplayReactNative-Swift.h>
+#else
 #import "SessionReplayReactNative-Swift.h" // Auto-generated header
+#endif
 
 @implementation SessionReplayReactNative
-- (void)configure:(NSString *)mobileKey
-           options:(NSDictionary *)options
-             resolve:(RCTPromiseResolveBlock)resolve
-              reject:(RCTPromiseRejectBlock)reject
+
+RCT_EXPORT_MODULE()
+
++ (BOOL)requiresMainQueueSetup
+{
+  return NO;
+}
+
+RCT_EXPORT_METHOD(configure:(NSString *)mobileKey
+                  options:(NSDictionary *)options
+                  resolve:(RCTPromiseResolveBlock)resolve
+                  reject:(RCTPromiseRejectBlock)reject)
 {
     NSString *trimmed = [mobileKey stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
     if (!trimmed || trimmed.length == 0) {
@@ -22,8 +40,8 @@
     }
 }
 
-- (void)startSessionReplay:(RCTPromiseResolveBlock)resolve
-                    reject:(RCTPromiseRejectBlock)reject
+RCT_EXPORT_METHOD(startSessionReplay:(RCTPromiseResolveBlock)resolve
+                  reject:(RCTPromiseRejectBlock)reject)
 {
     @try {
       [[SessionReplayClientAdapter shared] startWithCompletion:^(BOOL success, NSString * _Nullable errorMessage) {
@@ -40,8 +58,8 @@
     }
 }
 
-- (void)stopSessionReplay:(RCTPromiseResolveBlock)resolve
-                    reject:(RCTPromiseRejectBlock)reject
+RCT_EXPORT_METHOD(stopSessionReplay:(RCTPromiseResolveBlock)resolve
+                  reject:(RCTPromiseRejectBlock)reject)
 {
     @try {
       [[SessionReplayClientAdapter shared] stopWithCompletion:^{
@@ -53,11 +71,11 @@
     }
 }
 
-- (void)afterIdentify:(NSDictionary *)contextKeys
-         canonicalKey:(NSString *)canonicalKey
-            completed:(BOOL)completed
-              resolve:(RCTPromiseResolveBlock)resolve
-               reject:(RCTPromiseRejectBlock)reject
+RCT_EXPORT_METHOD(afterIdentify:(NSDictionary *)contextKeys
+                  canonicalKey:(NSString *)canonicalKey
+                  completed:(BOOL)completed
+                  resolve:(RCTPromiseResolveBlock)resolve
+                  reject:(RCTPromiseRejectBlock)reject)
 {
     @try {
       [[SessionReplayClientAdapter shared] afterIdentifyWithContextKeys:contextKeys canonicalKey:canonicalKey completed:completed];
@@ -68,15 +86,12 @@
     }
 }
 
+#ifdef RCT_NEW_ARCH_ENABLED
 - (std::shared_ptr<facebook::react::TurboModule>)getTurboModule:
     (const facebook::react::ObjCTurboModule::InitParams &)params
 {
     return std::make_shared<facebook::react::NativeSessionReplayReactNativeSpecJSI>(params);
 }
-
-+ (NSString *)moduleName
-{
-  return @"SessionReplayReactNative";
-}
+#endif
 
 @end
