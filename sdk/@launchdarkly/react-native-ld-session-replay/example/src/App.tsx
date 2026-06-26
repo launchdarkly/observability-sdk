@@ -61,8 +61,8 @@ const context = { kind: 'user', key: 'user-key-123abc' };
 
 // The New Architecture installs the Fabric UIManager on the JS global; its
 // absence means the app is running on the legacy bridge architecture.
-const IS_NEW_ARCH = (global as { nativeFabricUIManager?: unknown })
-  .nativeFabricUIManager != null;
+const IS_NEW_ARCH =
+  (global as { nativeFabricUIManager?: unknown }).nativeFabricUIManager != null;
 const RN_VERSION = (() => {
   const v = Platform.constants.reactNativeVersion;
   return `${v.major}.${v.minor}.${v.patch}`;

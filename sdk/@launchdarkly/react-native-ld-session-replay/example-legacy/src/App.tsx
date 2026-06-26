@@ -11,10 +11,10 @@ import {
   LDProvider,
   AutoEnvAttributes,
 } from '@launchdarkly/react-native-client-sdk';
-import { useEffect, useState } from 'react';
-import { createSessionReplayPlugin } from '@launchdarkly/session-replay-react-native';
-import { Observability } from '@launchdarkly/observability-react-native';
-import { LAUNCHDARKLY_MOBILE_KEY } from '@env';
+import {useEffect, useState} from 'react';
+import {createSessionReplayPlugin} from '@launchdarkly/session-replay-react-native';
+import {Observability} from '@launchdarkly/observability-react-native';
+import {LAUNCHDARKLY_MOBILE_KEY} from '@env';
 import DialogsScreen from './DialogsScreen';
 import MaskingScreen from './MaskingScreen';
 import TracingScreen from './TracingScreen';
@@ -41,17 +41,18 @@ const observability = new Observability({
 });
 
 // Set LAUNCHDARKLY_MOBILE_KEY in example-legacy/.env to record real sessions.
-const MOBILE_KEY = LAUNCHDARKLY_MOBILE_KEY ?? 'YOUR_LAUNCHDARKLY_MOBILE_KEY_HERE';
+const MOBILE_KEY =
+  LAUNCHDARKLY_MOBILE_KEY ?? 'YOUR_LAUNCHDARKLY_MOBILE_KEY_HERE';
 
 const client = new ReactNativeLDClient(MOBILE_KEY, AutoEnvAttributes.Enabled, {
   plugins: [observability, plugin],
 });
-const context = { kind: 'user', key: 'user-key-123abc' };
+const context = {kind: 'user', key: 'user-key-123abc'};
 
 // The New Architecture installs the Fabric UIManager on the JS global; its
 // absence means the app is running on the legacy bridge architecture.
-const IS_NEW_ARCH = (global as { nativeFabricUIManager?: unknown })
-  .nativeFabricUIManager != null;
+const IS_NEW_ARCH =
+  (global as {nativeFabricUIManager?: unknown}).nativeFabricUIManager != null;
 const RN_VERSION = (() => {
   const v = Platform.constants.reactNativeVersion;
   return `${v.major}.${v.minor}.${v.patch}`;
@@ -78,14 +79,13 @@ export default function App() {
 
   return (
     <LDProvider client={client}>
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#000' }}>
+      <SafeAreaView style={{flex: 1, backgroundColor: '#000'}}>
         <View
           testID="safe"
           style={[
             styles.archBanner,
             IS_NEW_ARCH ? styles.archBannerNew : styles.archBannerLegacy,
-          ]}
-        >
+          ]}>
           <Text testID="safe" style={styles.archBannerText}>
             {ARCH_LABEL}
           </Text>
@@ -137,8 +137,7 @@ function TabButton({
     <TouchableOpacity
       testID="safe"
       style={[styles.tab, active ? styles.tabActive : undefined]}
-      onPress={onPress}
-    >
+      onPress={onPress}>
       <Text testID="safe" style={styles.tabText}>
         {label}
       </Text>

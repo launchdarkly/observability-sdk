@@ -7,7 +7,7 @@ import {
   View,
 } from 'react-native';
 import WebView from 'react-native-webview';
-import { LDMask, LDUnmask } from '@launchdarkly/session-replay-react-native';
+import {LDMask, LDUnmask} from '@launchdarkly/session-replay-react-native';
 
 /**
  * Manual test screen for `maskTestIDs` / `unmaskTestIDs` and the `<LDMask>` / `<LDUnmask>`
@@ -105,7 +105,7 @@ export default function MaskingScreen() {
       <WebView
         testID="other"
         style={styles.webView}
-        source={{ html: WEBVIEW_HTML }}
+        source={{html: WEBVIEW_HTML}}
       />
 
       <Text testID="safe" style={styles.sectionHeader}>
@@ -136,7 +136,7 @@ export default function MaskingScreen() {
   );
 }
 
-const LOGO = { uri: 'https://reactnative.dev/img/tiny_logo.png' };
+const LOGO = {uri: 'https://reactnative.dev/img/tiny_logo.png'};
 
 const WEBVIEW_HTML = `<!DOCTYPE html>
 <html>

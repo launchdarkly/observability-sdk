@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import {useEffect, useRef, useState} from 'react';
 import {
   Platform,
   ScrollView,
@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { LDObserve } from '@launchdarkly/observability-react-native';
+import {LDObserve} from '@launchdarkly/observability-react-native';
 import {
   context,
   propagation,
@@ -42,8 +42,8 @@ export default function TracingScreen() {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const log = (msg: string) =>
-    setLines((prev) =>
-      [`${new Date().toLocaleTimeString()}  ${msg}`, ...prev].slice(0, 200)
+    setLines(prev =>
+      [`${new Date().toLocaleTimeString()}  ${msg}`, ...prev].slice(0, 200),
     );
 
   // Wrap each recipe so a thrown error is surfaced in the log instead of
@@ -60,14 +60,14 @@ export default function TracingScreen() {
     () => () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     },
-    []
+    [],
   );
 
   // -- 1. Root span --------------------------------------------------------
   const rootSpan = () => {
     LDObserve.startActiveSpan(
       'app-cold-start',
-      (span) => {
+      span => {
         span.setAttribute('launch_type', 'cold');
         span.setAttribute('device_os', Platform.OS);
         span.addEvent('splash_rendered');
@@ -75,7 +75,7 @@ export default function TracingScreen() {
         log(`[1] root span "app-cold-start" trace=${traceOf(span)}`);
         span.end();
       },
-      { root: true }
+      {root: true},
     );
   };
 
@@ -86,22 +86,22 @@ export default function TracingScreen() {
     // RenderUI hierarchy survives the `await`s without threading context by hand
     // (React Native's StackContextManager only tracks the active span
     // synchronously).
-    const count = await LDObserve.withSpan('LoadProducts', async (load) => {
-      const items = await load.child('FetchFromApi', async (fetchScope) => {
+    const count = await LDObserve.withSpan('LoadProducts', async load => {
+      const items = await load.child('FetchFromApi', async fetchScope => {
         const response = await fetch(
-          'https://jsonplaceholder.typicode.com/posts'
+          'https://jsonplaceholder.typicode.com/posts',
         );
         fetchScope.span.setAttribute('http.status_code', response.status);
         const json = await response.text();
         // Parents to FetchFromApi even though we are past two awaits.
-        return fetchScope.child('DeserializeJson', (parseScope) => {
+        return fetchScope.child('DeserializeJson', parseScope => {
           const result = JSON.parse(json) as unknown[];
           parseScope.span.setAttribute('product_count', result.length);
           return result;
         });
       });
       // Parents to LoadProducts (not FetchFromApi) — uses the captured context.
-      load.child('RenderUI', (renderScope) => {
+      load.child('RenderUI', renderScope => {
         renderScope.span.setAttribute('product_count', items.length);
       });
       return items.length;
@@ -111,7 +111,7 @@ export default function TracingScreen() {
 
   // -- 3. HTTP span with manual error handling -----------------------------
   const httpWithErrorHandling = async () => {
-    await LDObserve.startActiveSpan('FetchUserProfile', async (span) => {
+    await LDObserve.startActiveSpan('FetchUserProfile', async span => {
       span.setAttribute('user.id', '1');
       span.setAttribute('http.method', 'GET');
       try {
@@ -120,17 +120,17 @@ export default function TracingScreen() {
         const response = await fetch(url);
         span.setAttribute('http.status_code', response.status);
         if (!response.ok) {
-          span.setStatus({ code: SpanStatusCode.ERROR });
+          span.setStatus({code: SpanStatusCode.ERROR});
           span.setAttribute('error.type', `HTTP ${response.status}`);
           log(`[3] FetchUserProfile failed: HTTP ${response.status}`);
           return;
         }
         await response.json();
-        span.setStatus({ code: SpanStatusCode.OK });
+        span.setStatus({code: SpanStatusCode.OK});
         log(`[3] FetchUserProfile OK trace=${traceOf(span)}`);
       } catch (err) {
         span.recordException(err as Error);
-        span.setStatus({ code: SpanStatusCode.ERROR });
+        span.setStatus({code: SpanStatusCode.ERROR});
         log(`[3] FetchUserProfile threw: ${(err as Error).message}`);
       } finally {
         span.end();
@@ -140,12 +140,12 @@ export default function TracingScreen() {
 
   // -- 4. Auto fetch instrumentation under a custom parent -----------------
   const autoInstrumentedChild = async () => {
-    await LDObserve.withSpan('SyncOrders', async ({ span }) => {
+    await LDObserve.withSpan('SyncOrders', async ({span}) => {
       span.setAttribute('sync.direction', 'pull');
       // `withSpan` makes SyncOrders active for the synchronous window, so this
       // fetch (started before the first await) auto-parents to it.
       const response = await fetch(
-        'https://jsonplaceholder.typicode.com/posts?_limit=5'
+        'https://jsonplaceholder.typicode.com/posts?_limit=5',
       );
       span.setAttribute('http.status_code', response.status);
       const orders = (await response.json()) as unknown[];
@@ -156,7 +156,7 @@ export default function TracingScreen() {
 
   // -- 5. Record exception and mark span failed ----------------------------
   const recordException = async () => {
-    await LDObserve.startActiveSpan('ProcessPayment', async (span) => {
+    await LDObserve.startActiveSpan('ProcessPayment', async span => {
       span.setAttribute('order.id', 'order-42');
       span.setAttribute('payment.amount', 19.99);
       try {
@@ -165,9 +165,9 @@ export default function TracingScreen() {
       } catch (err) {
         const error = err as Error;
         span.recordException(error);
-        span.setStatus({ code: SpanStatusCode.ERROR });
+        span.setStatus({code: SpanStatusCode.ERROR});
         span.setAttribute('error.category', error.name);
-        LDObserve.recordError(error, { 'order.id': 'order-42' }, { span });
+        LDObserve.recordError(error, {'order.id': 'order-42'}, {span});
         log(`[5] ProcessPayment recorded exception: ${error.message}`);
       } finally {
         span.end();
@@ -177,13 +177,13 @@ export default function TracingScreen() {
 
   // -- 6. Correlated logs inside the active span ---------------------------
   const correlatedLogs = async () => {
-    await LDObserve.withSpan('ImportCatalog', async ({ span, active }) => {
+    await LDObserve.withSpan('ImportCatalog', async ({span, active}) => {
       // Logs correlate to a span via the active context. The first log is in the
       // synchronous window so it correlates automatically.
-      LDObserve.recordLog('Import started', 'info', { source: 'demo' });
+      LDObserve.recordLog('Import started', 'info', {source: 'demo'});
       let imported = 0;
       for (const _row of [1, 2, 3, 4, 5]) {
-        await new Promise<void>((r) => setTimeout(r, 5));
+        await new Promise<void>(r => setTimeout(r, 5));
         imported++;
       }
       span.setAttribute('imported_count', imported);
@@ -192,7 +192,7 @@ export default function TracingScreen() {
       active(() =>
         LDObserve.recordLog('Import completed', 'info', {
           imported_count: imported,
-        })
+        }),
       );
       log(`[6] ImportCatalog: 2 correlated logs, trace=${traceOf(span)}`);
     });
@@ -212,7 +212,7 @@ export default function TracingScreen() {
         LDObserve.recordLog('Upload processing on background tick', 'info', {
           phase: 'start',
         });
-        LDObserve.recordLog('Upload complete', 'info', { phase: 'end' });
+        LDObserve.recordLog('Upload complete', 'info', {phase: 'end'});
       });
       log(`[7] Re-established context for logs, trace=${tid}`);
     }, 0);
@@ -220,7 +220,7 @@ export default function TracingScreen() {
 
   // -- 8a. Child span where automatic propagation won't work ---------------
   const detachedChildSpan = () => {
-    LDObserve.withSpan('ScheduleSync', ({ span, ctx }) => {
+    LDObserve.withSpan('ScheduleSync', ({span, ctx}) => {
       span.setAttribute('sync.mode', 'background');
       const tid = traceOf(span);
 
@@ -229,14 +229,14 @@ export default function TracingScreen() {
       setTimeout(async () => {
         await LDObserve.withSpan(
           'BackgroundSync',
-          async ({ span: childSpan }) => {
+          async ({span: childSpan}) => {
             const response = await fetch(
-              'https://jsonplaceholder.typicode.com/posts/1'
+              'https://jsonplaceholder.typicode.com/posts/1',
             );
             childSpan.setAttribute('http.status_code', response.status);
             childSpan.addEvent('sync.complete');
           },
-          { parent: ctx }
+          {parent: ctx},
         );
         log(`[8a] BackgroundSync re-parented to ScheduleSync trace=${tid}`);
       }, 0);
@@ -259,11 +259,11 @@ export default function TracingScreen() {
       ticks++;
       LDObserve.withSpan(
         'PollTick',
-        ({ span: pollSpan }) => {
+        ({span: pollSpan}) => {
           pollSpan.setAttribute('tick.time', new Date().toISOString());
           pollSpan.setAttribute('tick.number', ticks);
         },
-        { parent: parentContext }
+        {parent: parentContext},
       );
       log(`[8b] PollTick #${ticks} parent trace=${tid}`);
       if (ticks >= 3 && intervalRef.current) {
@@ -281,43 +281,43 @@ export default function TracingScreen() {
   // being no ambient context.
   const independentRootSpans = () => {
     const events = [
-      { type: 'view', userId: 'u1' },
-      { type: 'click', userId: 'u2' },
-      { type: 'purchase', userId: 'u3' },
+      {type: 'view', userId: 'u1'},
+      {type: 'click', userId: 'u2'},
+      {type: 'purchase', userId: 'u3'},
     ];
-    LDObserve.startActiveSpan('AnalyticsBatch', (parent) => {
+    LDObserve.startActiveSpan('AnalyticsBatch', parent => {
       const parentTrace = parent.spanContext().traceId;
       const childTraces: string[] = [];
       for (const evt of events) {
         LDObserve.startActiveSpan(
           `Analytics:${evt.type}`,
-          (span) => {
+          span => {
             span.setAttribute('event.type', evt.type);
             span.setAttribute('event.timestamp', new Date().toISOString());
             span.setAttribute('event.user_id', evt.userId);
-            span.setStatus({ code: SpanStatusCode.OK });
+            span.setStatus({code: SpanStatusCode.OK});
             childTraces.push(span.spanContext().traceId);
             span.end();
           },
-          { root: true }
+          {root: true},
         );
       }
       parent.end();
 
-      const detachedFromParent = childTraces.every((t) => t !== parentTrace);
+      const detachedFromParent = childTraces.every(t => t !== parentTrace);
       const allUnique = new Set(childTraces).size === childTraces.length;
       const verdict = detachedFromParent && allUnique ? 'PASS' : 'FAIL';
       log(
         `[9] ${verdict} independence: parent=${short(parentTrace)} ` +
           `children=[${childTraces.map(short).join(', ')}] ` +
-          `(detachedFromParent=${detachedFromParent}, allUnique=${allUnique})`
+          `(detachedFromParent=${detachedFromParent}, allUnique=${allUnique})`,
       );
     });
   };
 
   // -- 10. Span events as lightweight checkpoints --------------------------
   const spanEvents = async () => {
-    await LDObserve.withSpan('DownloadAndCacheImage', async ({ span }) => {
+    await LDObserve.withSpan('DownloadAndCacheImage', async ({span}) => {
       const imageUrl = 'https://reactnative.dev/img/tiny_logo.png';
       span.setAttribute('image.url', imageUrl);
       span.addEvent('download.started');
@@ -327,14 +327,14 @@ export default function TracingScreen() {
       span.setAttribute('image.size_bytes', blob.size);
       span.addEvent('cache.write.started');
       // (no real filesystem write in the demo)
-      span.addEvent('cache.write.completed', { bytes: blob.size });
+      span.addEvent('cache.write.completed', {bytes: blob.size});
       log(`[10] DownloadAndCacheImage: ${blob.size} bytes, 4 events`);
     });
   };
 
   // -- 11. Connecting mobile traces to your backend ------------------------
   const backendDistributedTrace = async () => {
-    await LDObserve.withSpan('Checkout', async ({ span }) => {
+    await LDObserve.withSpan('Checkout', async ({span}) => {
       span.setAttribute('cart.id', 'cart-7');
       // traceparent is injected automatically because the host is a tracing
       // origin -> a backend span would join this trace.
@@ -342,9 +342,9 @@ export default function TracingScreen() {
         'https://jsonplaceholder.typicode.com/posts',
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ cartId: 'cart-7' }),
-        }
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({cartId: 'cart-7'}),
+        },
       );
       span.setAttribute('http.status_code', response.status);
       log(`[11] Checkout POST (traceparent propagated) trace=${traceOf(span)}`);
@@ -357,7 +357,7 @@ export default function TracingScreen() {
       'x-session-id': 'sess-abc',
       'x-request-id': 'req-123',
     };
-    LDObserve.runWithHeaders('HandlePushPayload', headers, (span) => {
+    LDObserve.runWithHeaders('HandlePushPayload', headers, span => {
       span.setAttribute('payload.kind', 'promo');
       log(`[11b] runWithHeaders span, trace=${traceOf(span)}`);
     });
@@ -368,8 +368,8 @@ export default function TracingScreen() {
   // -- 12. Propagating baggage --------------------------------------------
   const baggage = async () => {
     const bag = propagation.createBaggage({
-      'app.tenant_id': { value: 'acme' },
-      'app.user_tier': { value: 'gold' },
+      'app.tenant_id': {value: 'acme'},
+      'app.user_tier': {value: 'gold'},
     });
     await context.with(
       propagation.setBaggage(context.active(), bag),
@@ -379,7 +379,7 @@ export default function TracingScreen() {
           .getActiveBaggage()
           ?.getEntry('app.tenant_id')?.value;
 
-        await LDObserve.startActiveSpan('LoadDashboard', async (span) => {
+        await LDObserve.startActiveSpan('LoadDashboard', async span => {
           // Baggage is not copied onto spans automatically -- do it explicitly.
           propagation
             .getActiveBaggage()
@@ -391,7 +391,7 @@ export default function TracingScreen() {
           log(`[12] baggage tenant=${tenant} copied onto LoadDashboard span`);
           span.end();
         });
-      }
+      },
     );
   };
 
@@ -401,8 +401,8 @@ export default function TracingScreen() {
     const active = trace.getActiveSpan();
     log(
       `[i] initialized=${LDObserve.isInitialized()} session=${JSON.stringify(
-        info
-      )} activeSpan=${active ? 'yes' : 'none'}`
+        info,
+      )} activeSpan=${active ? 'yes' : 'none'}`,
     );
   };
 
@@ -517,11 +517,7 @@ function SectionHeader({
   return (
     <>
       <Text
-        style={[
-          styles.sectionTitle,
-          topSpacing ? { marginTop: 16 } : undefined,
-        ]}
-      >
+        style={[styles.sectionTitle, topSpacing ? {marginTop: 16} : undefined]}>
         {title}
       </Text>
       <View style={styles.divider} />
@@ -542,8 +538,7 @@ function Btn({
     <TouchableOpacity
       style={[styles.btn, variant === 'danger' ? styles.btnDanger : undefined]}
       onPress={onPress}
-      activeOpacity={0.75}
-    >
+      activeOpacity={0.75}>
       <Text style={styles.btnText}>{label}</Text>
     </TouchableOpacity>
   );

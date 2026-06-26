@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import {useState} from 'react';
 import {
   Platform,
   ScrollView,
@@ -7,10 +7,10 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { LDObserve } from '@launchdarkly/observability-react-native';
-import type { SpanScope } from '@launchdarkly/observability-react-native';
-import { useLDClient } from '@launchdarkly/react-native-client-sdk';
-import { context } from '@opentelemetry/api';
+import {LDObserve} from '@launchdarkly/observability-react-native';
+import type {SpanScope} from '@launchdarkly/observability-react-native';
+import {useLDClient} from '@launchdarkly/react-native-client-sdk';
+import {context} from '@opentelemetry/api';
 
 /**
  * Manual test screen that mirrors the iOS TestApp `MainMenuViewModel`
@@ -29,8 +29,8 @@ export default function ApiScreen() {
   const [lines, setLines] = useState<string[]>([]);
 
   const log = (msg: string) =>
-    setLines((prev) =>
-      [`${new Date().toLocaleTimeString()}  ${msg}`, ...prev].slice(0, 200)
+    setLines(prev =>
+      [`${new Date().toLocaleTimeString()}  ${msg}`, ...prev].slice(0, 200),
     );
 
   // Wrap each recipe so a thrown error is surfaced in the log instead of
@@ -65,19 +65,19 @@ export default function ApiScreen() {
   // would re-root the inner spans — `scope.child` captures the parent context
   // explicitly instead. See the distributed tracing guide.
   const triggerNestedSpans = async () => {
-    await LDObserve.withSpan('NestedSpan', async (scope0) => {
+    await LDObserve.withSpan('NestedSpan', async scope0 => {
       scope0.span.setAttribute('test-true', true);
       scope0.span.setAttribute('test-double', 3.14);
-      await scope0.child('NestedSpan1', async (scope1) => {
-        await scope1.child('NestedSpan2', async (scope2) => {
-          LDObserve.recordCount({ name: 'NestedCounter', value: 10.0 });
+      await scope0.child('NestedSpan1', async scope1 => {
+        await scope1.child('NestedSpan2', async scope2 => {
+          LDObserve.recordCount({name: 'NestedCounter', value: 10.0});
           LDObserve.recordLog('NestedLog', 'info', {});
           await fetchUrlsForNestedSpanDemo(scope2);
         });
       });
     });
     log(
-      '[nested] NestedSpan > NestedSpan1 > NestedSpan2 (+ counter, log, http)'
+      '[nested] NestedSpan > NestedSpan1 > NestedSpan2 (+ counter, log, http)',
     );
   };
 
@@ -96,22 +96,22 @@ export default function ApiScreen() {
 
   // -- Metrics -------------------------------------------------------------
   const recordMetric = () => {
-    LDObserve.recordMetric({ name: 'test-gauge', value: 50.0 });
+    LDObserve.recordMetric({name: 'test-gauge', value: 50.0});
     log('[metric] gauge test-gauge=50');
   };
 
   const recordHistogramMetric = () => {
-    LDObserve.recordHistogram({ name: 'test-histogram', value: 15.0 });
+    LDObserve.recordHistogram({name: 'test-histogram', value: 15.0});
     log('[metric] histogram test-histogram=15');
   };
 
   const recordCounterMetric = () => {
-    LDObserve.recordCount({ name: 'test-counter', value: 10.0 });
+    LDObserve.recordCount({name: 'test-counter', value: 10.0});
     log('[metric] counter test-counter=10');
   };
 
   const recordIncrementalMetric = () => {
-    LDObserve.recordIncr({ name: 'test-incremental-counter', value: 12.0 });
+    LDObserve.recordIncr({name: 'test-incremental-counter', value: 12.0});
     log('[metric] incr test-incremental-counter=12');
   };
 
@@ -126,7 +126,7 @@ export default function ApiScreen() {
   // -- Logs ----------------------------------------------------------------
   const recordLogWithContext = () => {
     const span = LDObserve.startSpan('log-context-demo', {
-      attributes: { demo: 'log-with-context' },
+      attributes: {demo: 'log-with-context'},
     });
     const capturedContext = LDObserve.getContextFromSpan(span);
     span.end();
@@ -154,7 +154,7 @@ export default function ApiScreen() {
       // OTel attributes only allow primitives or homogeneous arrays of
       // primitives, so the iOS sample's nested map is represented as JSON here.
       'test-array': [3.14],
-      'test-nested': JSON.stringify({ array: [1] }),
+      'test-nested': JSON.stringify({array: [1]}),
     });
     log('[log] recordLog(logs-button-pressed) with mixed attributes');
   };
@@ -179,8 +179,8 @@ export default function ApiScreen() {
       value: 72.0,
       currency: 'USD',
       products: [
-        { product_id: 'SKU-1234', quantity: 2, price: 24.0 },
-        { product_id: 'SKU-9876', quantity: 1, price: 24.0 },
+        {product_id: 'SKU-1234', quantity: 2, price: 24.0},
+        {product_id: 'SKU-9876', quantity: 1, price: 24.0},
       ],
     });
     log('[track] ldClient.track(checkout-started) nested payload');
@@ -208,7 +208,7 @@ export default function ApiScreen() {
   };
 
   const identifyAnonymous = async () => {
-    await ldClient.identify({ kind: 'user', anonymous: true });
+    await ldClient.identify({kind: 'user', anonymous: true});
     log('[identify] anonymous user');
   };
 
@@ -371,11 +371,7 @@ function SectionHeader({
   return (
     <>
       <Text
-        style={[
-          styles.sectionTitle,
-          topSpacing ? { marginTop: 16 } : undefined,
-        ]}
-      >
+        style={[styles.sectionTitle, topSpacing ? {marginTop: 16} : undefined]}>
         {title}
       </Text>
       <View style={styles.divider} />
@@ -400,14 +396,12 @@ function Btn({
         variant === 'identify' ? styles.btnIdentify : undefined,
       ]}
       onPress={onPress}
-      activeOpacity={0.75}
-    >
+      activeOpacity={0.75}>
       <Text
         style={[
           styles.btnText,
           variant === 'identify' ? styles.btnIdentifyText : undefined,
-        ]}
-      >
+        ]}>
         {label}
       </Text>
     </TouchableOpacity>

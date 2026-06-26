@@ -1,6 +1,6 @@
 const path = require('path');
-const { getDefaultConfig } = require('@react-native/metro-config');
-const { withMetroConfig } = require('react-native-monorepo-config');
+const {getDefaultConfig} = require('@react-native/metro-config');
+const {withMetroConfig} = require('react-native-monorepo-config');
 
 const root = path.resolve(__dirname, '..');
 
@@ -46,7 +46,7 @@ config.resolver.nodeModulesPaths = [
 // plugin). Force every react / react-native import, from anywhere in the graph,
 // to resolve to the example's single copy.
 const forcedSingletons = {
-  'react': path.resolve(__dirname, 'node_modules/react'),
+  react: path.resolve(__dirname, 'node_modules/react'),
   'react-native': path.resolve(__dirname, 'node_modules/react-native'),
 };
 const defaultResolveRequest = config.resolver.resolveRequest;
@@ -56,14 +56,14 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
       return context.resolveRequest(
         context,
         target + moduleName.slice(name.length),
-        platform
+        platform,
       );
     }
   }
   return (defaultResolveRequest || context.resolveRequest)(
     context,
     moduleName,
-    platform
+    platform,
   );
 };
 

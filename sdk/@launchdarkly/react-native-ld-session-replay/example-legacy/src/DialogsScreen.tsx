@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {
   ActionSheetIOS,
   Alert,
@@ -29,11 +29,7 @@ function SectionHeader({
   return (
     <>
       <Text
-        style={[
-          styles.sectionTitle,
-          topSpacing ? { marginTop: 16 } : undefined,
-        ]}
-      >
+        style={[styles.sectionTitle, topSpacing ? {marginTop: 16} : undefined]}>
         {title}
       </Text>
       <View style={styles.divider} />
@@ -60,8 +56,7 @@ function Btn({
     <TouchableOpacity
       style={[styles.btn, extra]}
       onPress={onPress}
-      activeOpacity={0.75}
-    >
+      activeOpacity={0.75}>
       <Text style={styles.btnText}>{label}</Text>
     </TouchableOpacity>
   );
@@ -137,7 +132,7 @@ export default function DialogsScreen() {
   // Delay helper
   // ---------------------------------------------------------------------------
   const waitForDelay = () =>
-    new Promise<void>((resolve) => {
+    new Promise<void>(resolve => {
       const secs = parseFloat(delayText);
       if (secs > 0) setTimeout(resolve, secs * 1000);
       else resolve();
@@ -150,18 +145,17 @@ export default function DialogsScreen() {
   const onSimpleAlert = async () => {
     await waitForDelay();
     Alert.alert('Simple Alert', 'This is a simple alert dialog.', [
-      { text: 'OK' },
+      {text: 'OK'},
     ]);
   };
 
   const onAcceptCancelAlert = async () => {
     await waitForDelay();
     Alert.alert('Question', 'Do you want to proceed?', [
-      { text: 'No', style: 'cancel' },
+      {text: 'No', style: 'cancel'},
       {
         text: 'Yes',
-        onPress: () =>
-          Alert.alert('Result', 'You chose: Yes', [{ text: 'OK' }]),
+        onPress: () => Alert.alert('Result', 'You chose: Yes', [{text: 'OK'}]),
       },
     ]);
   };
@@ -172,16 +166,16 @@ export default function DialogsScreen() {
       Alert.prompt(
         'Prompt',
         'Enter your name:',
-        (result) => {
+        result => {
           if (result != null) {
             Alert.alert('Prompt Result', `You entered: ${result}`, [
-              { text: 'OK' },
+              {text: 'OK'},
             ]);
           }
         },
         'plain-text',
         '',
-        'default'
+        'default',
       );
     } else {
       setPromptText('');
@@ -203,19 +197,19 @@ export default function DialogsScreen() {
           cancelButtonIndex: 0,
           destructiveButtonIndex: 1,
         },
-        (index) => console.log(`Action Sheet selection: ${index}`)
+        index => console.log(`Action Sheet selection: ${index}`),
       );
     } else {
       Alert.alert('Action Sheet: Choose an option', undefined, [
-        { text: 'Option A', onPress: () => console.log('Option A') },
-        { text: 'Option B', onPress: () => console.log('Option B') },
-        { text: 'Option C', onPress: () => console.log('Option C') },
+        {text: 'Option A', onPress: () => console.log('Option A')},
+        {text: 'Option B', onPress: () => console.log('Option B')},
+        {text: 'Option C', onPress: () => console.log('Option C')},
         {
           text: 'Delete',
           style: 'destructive',
           onPress: () => console.log('Delete'),
         },
-        { text: 'Cancel', style: 'cancel' },
+        {text: 'Cancel', style: 'cancel'},
       ]);
     }
   };
@@ -401,8 +395,7 @@ export default function DialogsScreen() {
       {slideUpVisible && (
         <Pressable style={styles.dimBottom} onPress={dismissSlideUp}>
           <Animated.View
-            style={[styles.sheet, { transform: [{ translateY: slideUpY }] }]}
-          >
+            style={[styles.sheet, {transform: [{translateY: slideUpY}]}]}>
             <Pressable>
               <SheetContent
                 title="Slide-up Sheet (View Tree)"
@@ -420,9 +413,8 @@ export default function DialogsScreen() {
           <Animated.View
             style={[
               styles.card,
-              { transform: [{ scale: cardScale }], opacity: cardOpacity },
-            ]}
-          >
+              {transform: [{scale: cardScale}], opacity: cardOpacity},
+            ]}>
             <Pressable>
               {/* Header */}
               <View style={styles.cardHeader}>
@@ -451,8 +443,7 @@ export default function DialogsScreen() {
       {tooltipVisible && (
         <Animated.View
           pointerEvents="none"
-          style={[styles.tooltip, { opacity: tooltipOpacity }]}
-        >
+          style={[styles.tooltip, {opacity: tooltipOpacity}]}>
           <Text style={styles.tooltipText}>
             This is a custom tooltip popup!
           </Text>
@@ -468,12 +459,10 @@ export default function DialogsScreen() {
         visible={modalSheetVisible}
         transparent
         animationType="slide"
-        onRequestClose={() => setModalSheetVisible(false)}
-      >
+        onRequestClose={() => setModalSheetVisible(false)}>
         <Pressable
           style={styles.dimBottom}
-          onPress={() => setModalSheetVisible(false)}
-        >
+          onPress={() => setModalSheetVisible(false)}>
           <Pressable style={styles.sheet}>
             <SheetContent
               title="Modal Overlay Sheet"
@@ -489,12 +478,10 @@ export default function DialogsScreen() {
         visible={modalSlideVisible}
         transparent
         animationType="fade"
-        onRequestClose={dismissModalSlide}
-      >
+        onRequestClose={dismissModalSlide}>
         <Pressable style={styles.dimBottom} onPress={dismissModalSlide}>
           <Animated.View
-            style={[styles.sheet, { transform: [{ translateY: modalSlideY }] }]}
-          >
+            style={[styles.sheet, {transform: [{translateY: modalSlideY}]}]}>
             <Pressable>
               <SheetContent
                 title="Modal + Slide-up Sheet"
@@ -512,8 +499,7 @@ export default function DialogsScreen() {
           visible={promptVisible}
           transparent
           animationType="fade"
-          onRequestClose={() => setPromptVisible(false)}
-        >
+          onRequestClose={() => setPromptVisible(false)}>
           <KeyboardAvoidingView style={styles.dimCenter} behavior="padding">
             <Pressable>
               <View style={styles.promptCard}>
@@ -537,7 +523,7 @@ export default function DialogsScreen() {
                       Alert.alert(
                         'Prompt Result',
                         `You entered: ${promptText}`,
-                        [{ text: 'OK' }]
+                        [{text: 'OK'}],
                       );
                     }}
                   />
