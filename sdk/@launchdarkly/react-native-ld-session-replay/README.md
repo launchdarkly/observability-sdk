@@ -107,6 +107,51 @@ import { LDMask, LDUnmask } from '@launchdarkly/session-replay-react-native';
 
 `<LDMask>` propagates to descendants and beats any `<LDUnmask>` further down the tree — once a subtree is wrapped in `<LDMask>`, nothing inside it can opt back in.
 
+## Architecture support
+
+This package supports both the React Native **New Architecture** and the
+**Legacy Architecture** (bridge / `NativeModules`), on **React Native 0.75+**.
+The native module registers itself on whichever architecture the host app uses,
+so no per-app configuration is required for the module to load.
+
+## Troubleshooting
+
+### Android: `generateCodegenArtifactsFromSchema` fails with `Cannot read properties of undefined (reading 'map')`
+
+This crash originates inside React Native's own codegen
+(`GenerateModuleJniCpp.js`), not in this package, and it indicates a **codegen
+version mismatch in your app's dependency tree**: an older `@react-native/codegen`
+parser produces a schema using the legacy `spec.properties` field, while the
+generator from your app's React Native version reads `spec.methods`, so it
+iterates `undefined`.
+
+It is not caused by this module's spec (the spec generates cleanly on a single,
+consistent codegen version). To fix it, deduplicate `@react-native/codegen` so a
+single version — matching your app's React Native — is used for both parsing and
+generation. For example, with Yarn:
+
+```sh
+yarn why @react-native/codegen   # find the duplicate/older copy
+yarn dedupe @react-native/codegen
+```
+
+or pin a single version via a `resolutions` / `overrides` entry that matches your
+React Native release, then reinstall and clean the Android build.
+
+### iOS: `'SessionReplayReactNative-Swift.h' file not found`
+
+This package mixes Swift and Objective-C++, so the pod must define a Clang module
+for the Swift interop header to be generated. The podspec sets `DEFINES_MODULE`,
+and the import is guarded with `__has_include` to work under both framework and
+static-library linking. If you still hit this on an older toolchain, enable
+modular headers for the pod in your `Podfile`:
+
+```ruby
+pod 'SessionReplayReactNative', :modular_headers => true
+# or, app-wide:
+use_frameworks! :linkage => :static
+```
+
 ## Contributing
 
 - [Development workflow](CONTRIBUTING.md#development-workflow)

@@ -14,6 +14,7 @@ import {
 import { useEffect, useState } from 'react';
 import { createSessionReplayPlugin } from '@launchdarkly/session-replay-react-native';
 import { Observability } from '@launchdarkly/observability-react-native';
+import { LAUNCHDARKLY_MOBILE_KEY } from '@env';
 import DialogsScreen from './DialogsScreen';
 import MaskingScreen from './MaskingScreen';
 import TracingScreen from './TracingScreen';
@@ -21,10 +22,7 @@ import ApiScreen from './ApiScreen';
 
 const plugin = createSessionReplayPlugin({
   isEnabled: true,
-  // Forwarded to the native observability + session replay instances so their
-  // spans report the same service.name / service.version as the JS observability
-  // plugin below. serviceVersion only affects observability-emitted signals.
-  serviceName: 'session-replay-rn-example',
+  serviceName: 'session-replay-rn-legacy-example',
   serviceVersion: '1.0.0',
   maskTextInputs: true,
   maskWebViews: true,
@@ -35,25 +33,16 @@ const plugin = createSessionReplayPlugin({
   minimumAlpha: 0.05,
 });
 
-// The observability plugin powers the distributed tracing examples on the
-// "Tracing" tab. `tracingOrigins` opts the demo API hosts into W3C
-// `traceparent` / `baggage` header propagation so device spans can link to a
-// backend trace (see the tracing guide, sections 11 and 12).
 const observability = new Observability({
-  serviceName: 'session-replay-rn-example',
+  serviceName: 'session-replay-rn-legacy-example',
   serviceVersion: '1.0.0',
   debug: true,
   tracingOrigins: ['jsonplaceholder.typicode.com', 'reactnative.dev'],
 });
 
-// Replace with your LaunchDarkly mobile key.
-// You can also set the LAUNCHDARKLY_MOBILE_KEY environment variable.
-const MOBILE_KEY =
-  process.env.LAUNCHDARKLY_MOBILE_KEY || 'YOUR_LAUNCHDARKLY_MOBILE_KEY_HERE';
+// Set LAUNCHDARKLY_MOBILE_KEY in example-legacy/.env to record real sessions.
+const MOBILE_KEY = LAUNCHDARKLY_MOBILE_KEY ?? 'YOUR_LAUNCHDARKLY_MOBILE_KEY_HERE';
 
-// Observability must come before the session replay plugin: the replay plugin
-// reads the observability session id during registration so the native replay /
-// observability instance can adopt it (shared `session.id` across JS + native).
 const client = new ReactNativeLDClient(MOBILE_KEY, AutoEnvAttributes.Enabled, {
   plugins: [observability, plugin],
 });
@@ -75,9 +64,16 @@ type Tab = 'masking' | 'dialogs' | 'api' | 'tracing';
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('masking');
+  const [status, setStatus] = useState('identifying…');
 
   useEffect(() => {
-    client.identify(context).catch((e: unknown) => console.log(e));
+    client
+      .identify(context)
+      .then(() => setStatus('identified — session replay active'))
+      .catch((e: unknown) => {
+        console.log(e);
+        setStatus(`identify failed: ${String(e)}`);
+      });
   }, []);
 
   return (
@@ -94,6 +90,9 @@ export default function App() {
             {ARCH_LABEL}
           </Text>
         </View>
+        <Text testID="safe" style={styles.status}>
+          {status}
+        </Text>
         <View style={styles.tabBar}>
           <TabButton
             label="Masking"
@@ -136,8 +135,6 @@ function TabButton({
 }) {
   return (
     <TouchableOpacity
-      // testID="safe" so the tab labels stay visible regardless of maskLabels —
-      // they're navigation chrome, not content under test.
       testID="safe"
       style={[styles.tab, active ? styles.tabActive : undefined]}
       onPress={onPress}
@@ -165,6 +162,12 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 13,
     fontWeight: '700',
+  },
+  status: {
+    color: '#9c9',
+    fontSize: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
   },
   tabBar: {
     flexDirection: 'row',

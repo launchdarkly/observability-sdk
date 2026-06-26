@@ -97,7 +97,8 @@
     "react-native": "*"
   },
   "workspaces": [
-    "example"
+    "example",
+    "example-legacy"
   ],
   "packageManager": "yarn@4.11.0",
   "react-native-builder-bob": {
