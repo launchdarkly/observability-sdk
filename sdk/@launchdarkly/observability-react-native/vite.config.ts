@@ -20,7 +20,13 @@ export default defineConfig({
 			output: {
 				exports: 'named',
 			},
-			external: ['@launchdarkly/react-native-client-sdk', 'react-native'],
+			external: [
+				'@launchdarkly/react-native-client-sdk',
+				'react-native',
+				// Resolved at runtime from the consumer app (transitive dep) so the
+				// polyfill shares a single global URL and isn't duplicated in the bundle.
+				/^react-native-url-polyfill/,
+			],
 		},
 	},
 })
