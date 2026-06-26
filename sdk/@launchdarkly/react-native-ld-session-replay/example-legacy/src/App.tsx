@@ -14,7 +14,11 @@ import {
 import {useEffect, useState} from 'react';
 import {createSessionReplayPlugin} from '@launchdarkly/session-replay-react-native';
 import {Observability} from '@launchdarkly/observability-react-native';
-import {LAUNCHDARKLY_MOBILE_KEY} from '@env';
+import {
+  LAUNCHDARKLY_MOBILE_KEY,
+  LAUNCHDARKLY_OTLP_ENDPOINT,
+  LAUNCHDARKLY_BACKEND_URL,
+} from '@env';
 import DialogsScreen from './DialogsScreen';
 import MaskingScreen from './MaskingScreen';
 import TracingScreen from './TracingScreen';
@@ -33,14 +37,23 @@ const plugin = createSessionReplayPlugin({
   minimumAlpha: 0.05,
 });
 
+// Optional endpoint overrides from .env. When unset, the SDK falls back to its
+// production defaults. These route the JS observability telemetry (traces, logs,
+// metrics, errors) to the configured environment, e.g. staging.
+const OTLP_ENDPOINT = LAUNCHDARKLY_OTLP_ENDPOINT || undefined;
+const BACKEND_URL = LAUNCHDARKLY_BACKEND_URL || undefined;
+
 const observability = new Observability({
   serviceName: 'session-replay-rn-legacy-example',
   serviceVersion: '1.0.0',
   debug: true,
   tracingOrigins: ['jsonplaceholder.typicode.com', 'reactnative.dev'],
+  ...(OTLP_ENDPOINT ? {otlpEndpoint: OTLP_ENDPOINT} : {}),
+  ...(BACKEND_URL ? {backendUrl: BACKEND_URL} : {}),
 });
 
-// Set LAUNCHDARKLY_MOBILE_KEY in example-legacy/.env to record real sessions.
+// Set the values in example-legacy/.env (see .env.example) to record real
+// sessions against your chosen environment.
 const MOBILE_KEY =
   LAUNCHDARKLY_MOBILE_KEY ?? 'YOUR_LAUNCHDARKLY_MOBILE_KEY_HERE';
 

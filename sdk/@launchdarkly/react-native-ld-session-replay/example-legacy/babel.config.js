@@ -8,13 +8,13 @@ module.exports = getConfig(
   {
     presets: ['module:@react-native/babel-preset'],
     plugins: [
-      // Reuse the sibling `example`'s .env as the single source of truth for the
-      // LaunchDarkly mobile key, so this legacy example doesn't need its own copy.
+      // Reads this example's own .env (see .env.example) so the legacy app can
+      // point at a different environment (e.g. staging) than the new-arch example.
       [
         'module:react-native-dotenv',
         {
           moduleName: '@env',
-          path: '../example/.env',
+          path: '.env',
           // safe=false: don't enforce that .env keys match a .env.example schema.
           safe: false,
           // allowUndefined=true: missing keys resolve to undefined.

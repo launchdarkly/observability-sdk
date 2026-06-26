@@ -21,16 +21,30 @@ Run everything from the monorepo root unless noted otherwise.
 yarn install
 ```
 
-2. Provide a LaunchDarkly mobile key. Both apps read the key from
-   `example/.env` (the legacy app points its dotenv config at that file), so you
-   only need to set it once:
+2. Provide a LaunchDarkly mobile key (and optional endpoint overrides). Each app
+   reads its own gitignored `.env`, so the two examples can target different
+   environments:
 
 ```bash
+# new-arch example
 # sdk/@launchdarkly/react-native-ld-session-replay/example/.env
 LAUNCHDARKLY_MOBILE_KEY=mob-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+
+# legacy example (see example-legacy/.env.example for all keys)
+# sdk/@launchdarkly/react-native-ld-session-replay/example-legacy/.env
+LAUNCHDARKLY_MOBILE_KEY=mob-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+LAUNCHDARKLY_OTLP_ENDPOINT=https://otel.observability.app.launchdarkly.com:4318
+LAUNCHDARKLY_BACKEND_URL=https://pub.observability.app.launchdarkly.com/
 ```
 
-Get your key from https://app.launchdarkly.com/settings/projects.
+The legacy example's `LAUNCHDARKLY_OTLP_ENDPOINT` / `LAUNCHDARKLY_BACKEND_URL`
+route the JS observability telemetry to the configured environment (they fall
+back to production defaults if unset). Get your key from
+https://app.launchdarkly.com/settings/projects.
+
+> Note: native session replay upload endpoints are not yet configurable from JS
+> (tracked by a TODO in the Android adapter), so on-device replay capture still
+> targets the production observability backend.
 
 ## New-arch example (`example`)
 
