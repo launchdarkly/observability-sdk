@@ -1611,7 +1611,7 @@ PODS:
     - React-utils (= 0.78.0)
   - RNCAsyncStorage (2.2.0):
     - React-Core
-  - SessionReplayReactNative (0.11.1):
+  - SessionReplayReactNative (0.13.0):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -1936,7 +1936,7 @@ SPEC CHECKSUMS:
   ReactCodegen: 008c319179d681a6a00966edfc67fda68f9fbb2e
   ReactCommon: 0c097b53f03d6bf166edbcd0915da32f3015dd90
   RNCAsyncStorage: b44e8a4e798c3e1f56bffccd0f591f674fb9198f
-  SessionReplayReactNative: 4386ca84c305214b2b8f770a6ad1865abc3d5d9d
+  SessionReplayReactNative: 2fa8f51d5389f579335f83fb8a922176535a530b
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
   Yoga: afd04ff05ebe0121a00c468a8a3c8080221cb14c
 
