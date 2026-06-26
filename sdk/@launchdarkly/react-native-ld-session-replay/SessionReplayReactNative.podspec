@@ -16,6 +16,14 @@ Pod::Spec.new do |s|
   s.source_files = "ios/**/*.{h,m,mm,swift,cpp}"
   s.private_header_files = "ios/**/*.h"
 
+  # Mixing Swift and Objective-C++ in one pod requires the pod to define its own
+  # Clang module so the Swift compiler emits the `-Swift.h` interop header that
+  # SessionReplayReactNative.mm imports. Without this the header is not generated
+  # under default static-library linking and the build fails to compile.
+  s.pod_target_xcconfig = {
+    "DEFINES_MODULE" => "YES"
+  }
+
   s.dependency 'LaunchDarklySessionReplay', '~> 0.46.1'
 
   install_modules_dependencies(s)
