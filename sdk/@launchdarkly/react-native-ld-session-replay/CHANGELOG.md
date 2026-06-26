@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.13.0](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.12.0...session-replay-react-native-0.13.0) (2026-06-26)
+
+
+### Features
+
+* **session-replay-react-native:** support React Native legacy architecture (RN 0.75+) ([#653](https://github.com/launchdarkly/observability-sdk/issues/653)) ([8ef4b30](https://github.com/launchdarkly/observability-sdk/commit/8ef4b30afc0d785ae25a4db2135a7064c9c32950))
+
+
+### Bug Fixes
+
+* backendurl and otlpendpoind pass through ([#648](https://github.com/launchdarkly/observability-sdk/issues/648)) ([a7b5a47](https://github.com/launchdarkly/observability-sdk/commit/a7b5a47f9aa02a44191df81a96a3a9db7eb38823))
+
 ## [0.12.0](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.11.1...session-replay-react-native-0.12.0) (2026-06-25)
 
 
