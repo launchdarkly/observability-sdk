@@ -31,6 +31,12 @@ updates:
     cooldown:
       default-days: 7
   - package-ecosystem: "bundler"
+    directory: "/sdk/@launchdarkly/react-native-ld-session-replay/example-legacy"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7
+  - package-ecosystem: "bundler"
     directory: "/sdk/highlight-ruby/highlight"
     schedule:
       interval: "weekly"
@@ -80,6 +86,12 @@ updates:
       default-days: 7
   - package-ecosystem: "cocoapods"
     directory: "/sdk/@launchdarkly/flutter/example/macos"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7
+  - package-ecosystem: "cocoapods"
+    directory: "/sdk/@launchdarkly/react-native-ld-session-replay/example-legacy/ios"
     schedule:
       interval: "weekly"
     cooldown:
@@ -242,6 +254,18 @@ updates:
       default-days: 7
   - package-ecosystem: "gradle"
     directory: "/sdk/@launchdarkly/react-native-ld-session-replay/android"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7
+  - package-ecosystem: "gradle"
+    directory: "/sdk/@launchdarkly/react-native-ld-session-replay/example-legacy/android"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7
+  - package-ecosystem: "gradle"
+    directory: "/sdk/@launchdarkly/react-native-ld-session-replay/example-legacy/android/app"
     schedule:
       interval: "weekly"
     cooldown:
@@ -470,6 +494,12 @@ updates:
       default-days: 7
   - package-ecosystem: "npm"
     directory: "/sdk/@launchdarkly/react-native-ld-session-replay/example"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7
+  - package-ecosystem: "npm"
+    directory: "/sdk/@launchdarkly/react-native-ld-session-replay/example-legacy"
     schedule:
       interval: "weekly"
     cooldown:
