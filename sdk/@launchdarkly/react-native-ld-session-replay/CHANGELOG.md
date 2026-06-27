@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.14.0](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.13.0...session-replay-react-native-0.14.0) (2026-06-26)
+
+
+### Features
+
+* **observability-react-native:** accept plain nested dictionaries in track ([#650](https://github.com/launchdarkly/observability-sdk/issues/650)) ([f34ec69](https://github.com/launchdarkly/observability-sdk/commit/f34ec69ab830c9486705dc68247a5f50b114accb))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @launchdarkly/observability-react-native bumped to 0.11.0
+
 ## [0.13.0](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.12.0...session-replay-react-native-0.13.0) (2026-06-26)
 
 

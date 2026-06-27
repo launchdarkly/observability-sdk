@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.0](https://github.com/launchdarkly/observability-sdk/compare/observability-react-native-0.10.0...observability-react-native-0.11.0) (2026-06-26)
+
+
+### Features
+
+* **observability-react-native:** accept plain nested dictionaries in track ([#650](https://github.com/launchdarkly/observability-sdk/issues/650)) ([f34ec69](https://github.com/launchdarkly/observability-sdk/commit/f34ec69ab830c9486705dc68247a5f50b114accb))
+
 ## [0.10.0](https://github.com/launchdarkly/observability-sdk/compare/observability-react-native-0.9.3...observability-react-native-0.10.0) (2026-06-25)
 
 
