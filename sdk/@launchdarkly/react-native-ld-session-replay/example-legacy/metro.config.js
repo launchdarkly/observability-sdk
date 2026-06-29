@@ -95,7 +95,12 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
       {
         ...context,
         unstable_enablePackageExports: true,
-        unstable_conditionNames: ['browser', 'require', 'react-native', 'default'],
+        unstable_conditionNames: [
+          'browser',
+          'require',
+          'react-native',
+          'default',
+        ],
       },
       moduleName,
       platform,

@@ -13,7 +13,7 @@ const sdkPackages = path.resolve(__dirname, '../..');
 const monorepoNodeModules = path.resolve(__dirname, '../../../../node_modules');
 const observabilityNodeModules = path.resolve(
   __dirname,
-  '../../observability-react-native/node_modules',
+  '../../observability-react-native/node_modules'
 );
 
 /**
@@ -58,11 +58,11 @@ const forcedSingletons = {
 const sourcePackageEntries = {
   '@launchdarkly/session-replay-react-native': path.resolve(
     __dirname,
-    '../src/index.tsx',
+    '../src/index.tsx'
   ),
   '@launchdarkly/observability-react-native': path.resolve(
     __dirname,
-    '../../observability-react-native/src/index.ts',
+    '../../observability-react-native/src/index.ts'
   ),
 };
 
@@ -80,10 +80,15 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
       {
         ...context,
         unstable_enablePackageExports: true,
-        unstable_conditionNames: ['browser', 'require', 'react-native', 'default'],
+        unstable_conditionNames: [
+          'browser',
+          'require',
+          'react-native',
+          'default',
+        ],
       },
       moduleName,
-      platform,
+      platform
     );
   }
   for (const [name, target] of Object.entries(forcedSingletons)) {

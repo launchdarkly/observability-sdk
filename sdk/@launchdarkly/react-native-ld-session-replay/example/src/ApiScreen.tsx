@@ -112,18 +112,24 @@ export default function ApiScreen() {
   const tracerWithSpanNested = async () => {
     const tracer = LDObserve.getTracer();
     await tracer.withSpan('LoadProducts', async (load: SpanScope) => {
-      const items = await load.child('FetchFromApi', async (fetchScope: SpanScope) => {
-        const response = await fetch(
-          'https://jsonplaceholder.typicode.com/posts'
-        );
-        fetchScope.span.setAttribute('http.status_code', response.status);
-        const json = await response.text();
-        return fetchScope.child('DeserializeJson', (parseScope: SpanScope) => {
-          const result = JSON.parse(json) as unknown[];
-          parseScope.span.setAttribute('product_count', result.length);
-          return result;
-        });
-      });
+      const items = await load.child(
+        'FetchFromApi',
+        async (fetchScope: SpanScope) => {
+          const response = await fetch(
+            'https://jsonplaceholder.typicode.com/posts'
+          );
+          fetchScope.span.setAttribute('http.status_code', response.status);
+          const json = await response.text();
+          return fetchScope.child(
+            'DeserializeJson',
+            (parseScope: SpanScope) => {
+              const result = JSON.parse(json) as unknown[];
+              parseScope.span.setAttribute('product_count', result.length);
+              return result;
+            }
+          );
+        }
+      );
       load.child('RenderUI', (renderScope: SpanScope) => {
         renderScope.span.setAttribute('product_count', items.length);
       });
