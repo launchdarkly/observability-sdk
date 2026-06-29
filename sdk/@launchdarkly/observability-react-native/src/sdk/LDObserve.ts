@@ -5,6 +5,8 @@ import {
 	Span as OtelSpan,
 	SpanOptions,
 } from '@opentelemetry/api'
+import { wrapTracer } from '../api/LDTracer'
+import type { LDTracer } from '../api/LDTracer'
 import { ObservabilityClient } from '../client/ObservabilityClient'
 import { Metric } from '../api/Metric'
 import { RequestContext } from '../api/RequestContext'
@@ -19,6 +21,37 @@ class LDObserveClass
 	extends BufferedClass<ObservabilityClient>
 	implements Observe
 {
+	private _lazyTracer?: LDTracer
+
+	private _resolveTracer(): LDTracer {
+		if (this._isLoaded) {
+			return this._sdk.getTracer()
+		}
+		return wrapTracer(NOOP_SPAN_OPS)
+	}
+
+	private _getLazyTracer(): LDTracer {
+		if (!this._lazyTracer) {
+			this._lazyTracer = {
+				startSpan: (name, options, ctx) =>
+					this._resolveTracer().startSpan(name, options, ctx),
+				startActiveSpan: ((name: string, ...rest: unknown[]) =>
+					(this._resolveTracer().startActiveSpan as Function)(
+						name,
+						...rest,
+					)) as LDTracer['startActiveSpan'],
+				withSpan: (name, fn, options) =>
+					this._resolveTracer().withSpan(name, fn, options),
+			}
+		}
+		return this._lazyTracer
+	}
+
+	_resetForTesting(): void {
+		this._lazyTracer = undefined
+		super._resetForTesting()
+	}
+
 	recordError(
 		error: Error,
 		attributes?: Attributes,
@@ -143,11 +176,14 @@ class LDObserveClass
 		fn: (scope: SpanScope) => T,
 		options?: WithSpanOptions,
 	): T {
-		// When loaded, `this` provides real startSpan/recordError that execute
-		// immediately (no buffering). Before init we use no-op span ops so the
-		// callback still runs without enqueueing stray spans.
+		// When loaded, `this` routes recordError through consumeCustomError (respects
+		// disableErrorTracking). Before init we use no-op span ops.
 		const ops: SpanOps = this._isLoaded ? this : NOOP_SPAN_OPS
 		return runInSpan(ops, spanName, fn, options)
+	}
+
+	getTracer(): LDTracer {
+		return this._getLazyTracer()
 	}
 
 	getContextFromSpan(span: OtelSpan): Context {

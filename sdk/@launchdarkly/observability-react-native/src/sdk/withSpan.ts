@@ -18,6 +18,12 @@ import { noOpSpan } from '../utils/NoOpSpan'
  */
 export interface SpanOps {
 	startSpan(spanName: string, options?: SpanOptions, ctx?: Context): OtelSpan
+	startActiveSpan<T>(
+		spanName: string,
+		fn: (span: OtelSpan) => T,
+		options?: SpanOptions,
+		ctx?: Context,
+	): T
 	recordError(
 		error: Error,
 		attributes?: Attributes,
@@ -33,6 +39,7 @@ export interface SpanOps {
  */
 export const NOOP_SPAN_OPS: SpanOps = {
 	startSpan: () => noOpSpan,
+	startActiveSpan: (_spanName, fn) => fn(noOpSpan),
 	recordError: () => {},
 }
 

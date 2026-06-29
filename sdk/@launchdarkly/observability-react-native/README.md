@@ -63,6 +63,43 @@ await LDObserve.withSpan('LoadProducts', async (scope) => {
 });
 ```
 
+### Using the OpenTelemetry API directly
+
+If you prefer to follow the standard [OpenTelemetry JS](https://opentelemetry.io/docs/languages/js/)
+documentation, or you need to hand a `Tracer` to a third-party library,
+`LDObserve.getTracer()` returns an [`LDTracer`](https://launchdarkly.github.io/observability-sdk/sdk/@launchdarkly/observability-react-native/interfaces/LDTracer.html)
+— a standard OpenTelemetry [`Tracer`](https://open-telemetry.github.io/opentelemetry-js/interfaces/_opentelemetry_api.Tracer.html)
+plus the async-safe `withSpan` helper. It is wired to the same exporter and
+sampler as the rest of the SDK. It is always safe to call — before the SDK
+finishes initializing (or when `disableTraces` is set) it returns a no-op tracer.
+
+```typescript
+import { LDObserve } from '@launchdarkly/observability-react-native';
+
+const tracer = LDObserve.getTracer();
+
+// Standard OpenTelemetry API
+const span = tracer.startSpan('checkout');
+span.setAttribute('cart.id', 'cart-7');
+span.end();
+
+// Async-safe nested spans (React Native) — same helper as LDObserve.withSpan
+await tracer.withSpan('LoadProducts', async (scope) => {
+  const products = await scope.child('FetchFromApi', async (fetchScope) => {
+    const response = await fetch('https://api.example.com/products');
+    fetchScope.span.setAttribute('http.status_code', response.status);
+    return response.json();
+  });
+  scope.span.setAttribute('product_count', products.length);
+});
+```
+
+> **Context propagation in React Native.** React Native tracks the active span
+> only synchronously (there is no `AsyncLocalStorage`), so it is not restored
+> after an `await`. Use `tracer.withSpan` / `scope.child` (or
+> `LDObserve.withSpan`) for nested async work. See the
+> [Tracing Guide](guides/tracing.md) for details.
+
 ## Guides
 
 - [Tracing Guide](guides/tracing.md) — a cookbook of common tracing patterns (spans, nested operations, error handling, correlated logs, and end-to-end mobile-to-backend traces).

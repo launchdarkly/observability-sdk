@@ -233,7 +233,9 @@ const httpWithErrorHandling = async () => {
 
 ## 4. Automatic `fetch` / `XMLHttpRequest` Instrumentation Under a Custom Parent
 
-The SDK auto-instruments `fetch` and `XMLHttpRequest` (unless `disableTraces` is set). Every network request generates its own span automatically. If a custom span is active at call time, the auto-generated HTTP span becomes its child.
+The SDK auto-instruments `fetch` and `XMLHttpRequest`. Every network request generates its own span automatically. If a custom span is active at call time, the auto-generated HTTP span becomes its child.
+
+> `disableTraces` turns off **custom/public** span APIs (`startSpan`, `getTracer()`, etc.) only. Auto-instrumented network spans and other SDK-internal telemetry continue to be recorded.
 
 ```typescript
 async function syncOrders() {
@@ -669,6 +671,67 @@ Like trace headers, the `baggage` header is only attached to requests whose URL 
 
 ---
 
+## 13. Using the OpenTelemetry Tracer Directly
+
+Everything above goes through `LDObserve`, but the SDK is built on standard OpenTelemetry. Call `LDObserve.getTracer()` to get an [`LDTracer`](../src/api/LDTracer.ts) — a standard OpenTelemetry [`Tracer`](https://open-telemetry.github.io/opentelemetry-js/interfaces/_opentelemetry_api.Tracer.html) (`startSpan`, `startActiveSpan`) **plus** the async-safe `withSpan` helper for React Native.
+
+The returned tracer is wired to the same exporter and sampler as the rest of the SDK. It is always safe to call: before the SDK finishes initializing (or when `disableTraces` is set) it returns a no-op tracer.
+
+### Standard OpenTelemetry API
+
+```typescript
+const withTracer = async () => {
+  const tracer = LDObserve.getTracer()
+
+  await tracer.startActiveSpan('Checkout', async (span) => {
+    span.setAttribute('cart.id', 'cart-7')
+    try {
+      const response = await fetch('https://jsonplaceholder.typicode.com/posts')
+      span.setAttribute('http.status_code', response.status)
+      span.setStatus({ code: SpanStatusCode.OK })
+    } catch (err) {
+      span.recordException(err as Error)
+      span.setStatus({ code: SpanStatusCode.ERROR })
+    } finally {
+      span.end()
+    }
+  })
+}
+```
+
+### Async-safe spans via `tracer.withSpan`
+
+For nested work across `await`s, use `tracer.withSpan` — the same helper as [`LDObserve.withSpan`](#0-recommended-withspan-for-nested-async-work), available directly on the tracer:
+
+```typescript
+const withTracerNested = async () => {
+  const tracer = LDObserve.getTracer()
+
+  const count = await tracer.withSpan('LoadProducts', async (load) => {
+    const items = await load.child('FetchFromApi', async (fetchScope) => {
+      const response = await fetch('https://jsonplaceholder.typicode.com/posts')
+      fetchScope.span.setAttribute('http.status_code', response.status)
+      const json = await response.text()
+      return fetchScope.child('DeserializeJson', (parseScope) => {
+        const result = JSON.parse(json) as unknown[]
+        parseScope.span.setAttribute('product_count', result.length)
+        return result
+      })
+    })
+    load.child('RenderUI', (renderScope) => {
+      renderScope.span.setAttribute('product_count', items.length)
+    })
+    return items.length
+  })
+}
+```
+
+`LDObserve.withSpan`, `LDObserve.startSpan`, and `LDObserve.startActiveSpan` all delegate to this same tracer under the hood.
+
+> **The React Native context caveat still applies** when using `startSpan` / `startActiveSpan` directly: the active span is tracked only synchronously and is **not** restored after an `await`. Use `tracer.withSpan` / `scope.child` for nested async work, or thread context explicitly as shown in [recipe 2](#2-nested-spans-for-a-typical-react-native-workflow).
+
+---
+
 ## Quick Reference
 
 ### Span Creation (`LDObserve`)
@@ -682,12 +745,15 @@ Like trace headers, the `baggage` header is only attached to requests whose URL 
 | `startSpan(name, { root: true })` | None (new trace) | `Span` |
 | `runWithHeaders(name, headers, cb, options?)` | Current active span; records `http.header.*` attributes | result of `cb` |
 | `startWithHeaders(name, headers, options?)` | Current active span; records `http.header.*` attributes | `Span` |
+| `getTracer()` | -- | `LDTracer` (OTel `Tracer` + `withSpan`; same exporter/sampler) |
 | `getContextFromSpan(span)` | -- | `Context` (for explicit re-parenting) |
 | `parseHeaders(headers)` | -- | `RequestContext` (`sessionId`, `requestId`) |
 
 > Both `startActiveSpan` and `startSpan` require a manual `span.end()`. The difference is that `startActiveSpan` makes the span active (the current parent) for the duration of its callback, while `startSpan` does not change the active context. `withSpan` is the recommended wrapper: it ends the span automatically and its `scope.child(...)` keeps nesting correct across `await`s.
 
 > **`withSpan` scope** — the callback receives a `SpanScope`: `scope.span` (the OTel `Span`), `scope.child(name, fn, options?)` (start a correctly-parented child), `scope.active(fn)` (run with this span active, e.g. for auto-instrumented `fetch`/XHR after an `await`), and `scope.ctx` (the span's `Context`).
+
+> **`LDTracer.withSpan`** — `getTracer()` returns an `LDTracer`, which adds `tracer.withSpan(name, fn, options?)` with the same `SpanScope` API as `LDObserve.withSpan`. Use it when working in OpenTelemetry style but still need async-safe nesting in React Native.
 
 ### Span Operations (OpenTelemetry `Span`)
 

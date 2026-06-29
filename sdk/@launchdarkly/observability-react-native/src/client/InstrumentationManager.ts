@@ -125,8 +125,6 @@ export class InstrumentationManager {
 	}
 
 	private initializeTracing() {
-		if (this.options.disableTraces) return
-
 		const compositePropagator = new CompositePropagator({
 			propagators: [
 				new W3CBaggagePropagator(),

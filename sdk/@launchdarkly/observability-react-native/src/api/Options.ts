@@ -115,7 +115,9 @@ export interface ReactNativeOptions {
 	disableLogs?: boolean
 
 	/**
-	 * Whether traces are disabled.
+	 * Disables public custom tracing APIs (`startSpan`, `startActiveSpan`,
+	 * `withSpan`, `getTracer()`, `track`, `runWithHeaders`, `startWithHeaders`).
+	 * SDK auto-instrumentation (network requests, internal telemetry) is unaffected.
 	 */
 	disableTraces?: boolean
 

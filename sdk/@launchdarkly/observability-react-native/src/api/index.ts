@@ -1,5 +1,7 @@
 export * from './Options'
 export * from './Metric'
 export * from './RequestContext'
+export type { LDTracer } from './LDTracer'
+export { wrapTracer } from './LDTracer'
 export type { SpanScope, WithSpanOptions } from './SpanScope'
 export type { TrackProperties, TrackPropertyValue } from './TrackProperties'

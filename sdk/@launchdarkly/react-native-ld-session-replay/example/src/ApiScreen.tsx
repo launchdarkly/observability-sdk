@@ -10,7 +10,7 @@ import {
 import { LDObserve } from '@launchdarkly/observability-react-native';
 import type { SpanScope } from '@launchdarkly/observability-react-native';
 import { useLDClient } from '@launchdarkly/react-native-client-sdk';
-import { context } from '@opentelemetry/api';
+import { context, SpanStatusCode, type Span } from '@opentelemetry/api';
 
 /**
  * Manual test screen that mirrors the iOS TestApp `MainMenuViewModel`
@@ -84,6 +84,59 @@ export default function ApiScreen() {
     log(
       '[nested] NestedSpan > NestedSpan1 > NestedSpan2 (+ counter, log, http)'
     );
+  };
+
+  // -- getTracer(): standard OpenTelemetry startActiveSpan ----------------
+  const tracerStartActiveSpan = async () => {
+    const tracer = LDObserve.getTracer();
+    await tracer.startActiveSpan('Checkout', async (span: Span) => {
+      span.setAttribute('cart.id', 'cart-7');
+      try {
+        const response = await fetch(
+          'https://jsonplaceholder.typicode.com/posts'
+        );
+        span.setAttribute('http.status_code', response.status);
+        span.setStatus({ code: SpanStatusCode.OK });
+        log(`[tracer] startActiveSpan Checkout status=${response.status}`);
+      } catch (err) {
+        span.recordException(err as Error);
+        span.setStatus({ code: SpanStatusCode.ERROR });
+        log(`[tracer] Checkout threw: ${(err as Error).message}`);
+      } finally {
+        span.end();
+      }
+    });
+  };
+
+  // -- getTracer(): async-safe nested spans via tracer.withSpan -------------
+  const tracerWithSpanNested = async () => {
+    const tracer = LDObserve.getTracer();
+    await tracer.withSpan('LoadProducts', async (load: SpanScope) => {
+      const items = await load.child(
+        'FetchFromApi',
+        async (fetchScope: SpanScope) => {
+          const response = await fetch(
+            'https://jsonplaceholder.typicode.com/posts'
+          );
+          fetchScope.span.setAttribute('http.status_code', response.status);
+          const json = await response.text();
+          return fetchScope.child(
+            'DeserializeJson',
+            (parseScope: SpanScope) => {
+              const result = JSON.parse(json) as unknown[];
+              parseScope.span.setAttribute('product_count', result.length);
+              return result;
+            }
+          );
+        }
+      );
+      load.child('RenderUI', (renderScope: SpanScope) => {
+        renderScope.span.setAttribute('product_count', items.length);
+      });
+      log(
+        `[tracer] withSpan LoadProducts > FetchFromApi > DeserializeJson / RenderUI (${items.length})`
+      );
+    });
   };
 
   // Auto-instrumented fetch spans only attach to the active span when `fetch`
@@ -357,6 +410,18 @@ export default function ApiScreen() {
           <Btn
             label="Nested spans"
             onPress={run('nested', triggerNestedSpans)}
+          />
+        </View>
+
+        <SectionHeader title="OpenTelemetry Tracer (getTracer)" topSpacing />
+        <View style={styles.col}>
+          <Btn
+            label="Tracer · startActiveSpan"
+            onPress={run('tracer-active', tracerStartActiveSpan)}
+          />
+          <Btn
+            label="Tracer · withSpan (nested)"
+            onPress={run('tracer-withSpan', tracerWithSpanNested)}
           />
         </View>
 
