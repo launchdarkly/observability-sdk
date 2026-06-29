@@ -1,5 +1,12 @@
 # @launchdarkly/observability-node
 
+## [1.2.0](https://github.com/launchdarkly/observability-sdk/compare/observability-node-1.1.3...observability-node-1.2.0) (2026-06-29)
+
+
+### Features
+
+* add GraphQL operation attributes to instrumented spans ([#644](https://github.com/launchdarkly/observability-sdk/issues/644)) ([4772f5e](https://github.com/launchdarkly/observability-sdk/commit/4772f5e938f0020e43c0d5725ca879dc2476041d))
+
 ## [1.1.3](https://github.com/launchdarkly/observability-sdk/compare/observability-node-1.1.2...observability-node-1.1.3) (2026-06-05)
 
 
