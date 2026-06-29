@@ -1,4 +1,3 @@
-import { parse } from 'graphql'
 import { isLDContextUrl } from '../launchdarkly/urlFilters'
 import { TracingOrigins } from './types'
 

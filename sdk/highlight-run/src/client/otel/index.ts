@@ -24,6 +24,7 @@ import {
 	WebTracerProvider,
 } from '@opentelemetry/sdk-trace-web'
 import * as SemanticAttributes from '@opentelemetry/semantic-conventions'
+import { parseGraphQLOperation } from '@launchdarkly/observability-shared'
 import { getResponseBody } from '../listeners/network-listener/utils/fetch-listener'
 import {
 	DEFAULT_URL_BLOCKLIST,
@@ -689,7 +690,7 @@ export const shutdown = async () => {
 	])
 }
 
-const enhanceSpanWithHttpRequestAttributes = (
+export const enhanceSpanWithHttpRequestAttributes = (
 	span: api.Span,
 	body: Request['body'] | RequestInit['body'] | BrowserXHR['_body'],
 	headers:
@@ -706,17 +707,16 @@ const enhanceSpanWithHttpRequestAttributes = (
 	const sanitizedUrl = sanitizeUrl(url)
 	const sanitizedUrlObject = safeParseUrl(sanitizedUrl)
 
-	const stringBody = typeof body === 'string' ? body : String(body)
-	try {
-		const parsedBody = body ? JSON.parse(stringBody) : undefined
-		if (parsedBody?.operationName) {
-			span.setAttribute(
-				'graphql.operation.name',
-				parsedBody.operationName,
-			)
+	// Tag GraphQL requests with operation attributes; the span name is left as
+	// the low-cardinality OTel default and the UI formats the display name.
+	const gql = parseGraphQLOperation(body)
+	if (gql) {
+		if (gql.name) {
+			span.setAttribute('graphql.operation.name', gql.name)
 		}
-	} catch {
-		// Ignore parsing errors
+		if (gql.type) {
+			span.setAttribute('graphql.operation.type', gql.type)
+		}
 	}
 
 	span.setAttributes({
