@@ -146,9 +146,10 @@ class LDObserveClass
 		fn: (scope: SpanScope) => T,
 		options?: WithSpanOptions,
 	): T {
-		return this._isLoaded
-			? this.getTracer().withSpan(spanName, fn, options)
-			: runInSpan(NOOP_SPAN_OPS, spanName, fn, options)
+		// When loaded, `this` routes recordError through consumeCustomError (respects
+		// disableErrorTracking). Before init we use no-op span ops.
+		const ops: SpanOps = this._isLoaded ? this : NOOP_SPAN_OPS
+		return runInSpan(ops, spanName, fn, options)
 	}
 
 	getTracer(): LDTracer {

@@ -4,8 +4,8 @@ import type {
 	Span as OtelSpan,
 	SpanOptions,
 } from '@opentelemetry/api'
-import { LDTracer } from '../api/LDTracer'
-import { context } from '@opentelemetry/api'
+import { LDTracer, wrapTracer } from '../api/LDTracer'
+import { context, trace } from '@opentelemetry/api'
 import { resourceFromAttributes } from '@opentelemetry/resources'
 import {
 	ATTR_SERVICE_NAME,
@@ -32,6 +32,7 @@ export class ObservabilityClient {
 	private errorInstrumentation?: ErrorInstrumentation
 	private options: InstrumentationManagerOptions
 	private isInitialized = false
+	private ldTracer?: LDTracer
 
 	constructor(
 		private readonly sdkKey: string,
@@ -251,7 +252,18 @@ export class ObservabilityClient {
 	}
 
 	public getTracer(): LDTracer {
-		return this.instrumentationManager.getTracer()
+		if (!this.ldTracer) {
+			const otelTracer = trace
+				.getTracerProvider()
+				.getTracer(this.options.serviceName)
+			this.ldTracer = wrapTracer(otelTracer, {
+				startSpan: (name, options, ctx) =>
+					this.startSpan(name, options, ctx),
+				recordError: (error, attributes, options) =>
+					this.consumeCustomError(error, attributes, options),
+			})
+		}
+		return this.ldTracer
 	}
 
 	public getContextFromSpan(span: OtelSpan): Context {
@@ -270,6 +282,7 @@ export class ObservabilityClient {
 		}
 
 		await this.instrumentationManager.stop()
+		this.ldTracer = undefined
 		this.isInitialized = false
 	}
 
