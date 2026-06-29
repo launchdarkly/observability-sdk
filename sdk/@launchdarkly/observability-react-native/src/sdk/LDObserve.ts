@@ -22,6 +22,40 @@ class LDObserveClass
 	extends BufferedClass<ObservabilityClient>
 	implements Observe
 {
+	private _lazyTracer?: LDTracer
+
+	private _resolveTracer(): LDTracer {
+		if (this._isLoaded) {
+			return this._sdk.getTracer()
+		}
+		return wrapTracer(
+			trace.getTracer('launchdarkly-observability-react-native'),
+			NOOP_SPAN_OPS,
+		)
+	}
+
+	private _getLazyTracer(): LDTracer {
+		if (!this._lazyTracer) {
+			this._lazyTracer = {
+				startSpan: (name, options, ctx) =>
+					this._resolveTracer().startSpan(name, options, ctx),
+				startActiveSpan: ((name: string, ...rest: unknown[]) =>
+					(this._resolveTracer().startActiveSpan as Function)(
+						name,
+						...rest,
+					)) as LDTracer['startActiveSpan'],
+				withSpan: (name, fn, options) =>
+					this._resolveTracer().withSpan(name, fn, options),
+			}
+		}
+		return this._lazyTracer
+	}
+
+	_resetForTesting(): void {
+		this._lazyTracer = undefined
+		super._resetForTesting()
+	}
+
 	recordError(
 		error: Error,
 		attributes?: Attributes,
@@ -153,13 +187,7 @@ class LDObserveClass
 	}
 
 	getTracer(): LDTracer {
-		const response = this._bufferCall('getTracer', [])
-		return this._isLoaded
-			? response
-			: wrapTracer(
-					trace.getTracer('launchdarkly-observability-react-native'),
-					NOOP_SPAN_OPS,
-				)
+		return this._getLazyTracer()
 	}
 
 	getContextFromSpan(span: OtelSpan): Context {

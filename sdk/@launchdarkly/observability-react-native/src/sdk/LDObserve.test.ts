@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { _LDObserve } from './LDObserve'
 import { ObservabilityClient } from '../client/ObservabilityClient'
 
@@ -103,6 +103,24 @@ describe('LDObserve Buffering', () => {
 
 			expect(callbackSpan).toBeTruthy()
 			expect(callbackSpan.isRecording()).toBe(false)
+		})
+
+		it('should upgrade getTracer() obtained before init after client loads', async () => {
+			const earlyTracer = _LDObserve.getTracer()
+			const client = new ObservabilityClient('sdkKey', {})
+			const getTracerSpy = vi.spyOn(client, 'getTracer')
+
+			_LDObserve._init(client)
+
+			await vi.waitFor(
+				() => {
+					expect(_LDObserve.isInitialized()).toBe(true)
+				},
+				{ timeout: 2000 },
+			)
+
+			earlyTracer.startSpan('post-init-span')
+			expect(getTracerSpy).toHaveBeenCalled()
 		})
 	})
 })
