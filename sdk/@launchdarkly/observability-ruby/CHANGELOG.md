@@ -5,12 +5,6 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
-
-### Bug Fixes
-
-* **ruby:** keep OpenTelemetry auto-instrumentation working on Rails 7.0. The plugin now depends on individual `opentelemetry-instrumentation-*` gems instead of `opentelemetry-instrumentation-all`, pinning the Rails-family instrumentations below the releases that require Rails 7.1 (so Rails 7.0 keeps working) while every other instrumentation tracks the latest. Instrumentations that cannot attach now produce a single actionable warning instead of a flurry of "failed to install" lines.
-
 ## [0.2.2](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-ruby/0.2.1...launchdarkly-observability-ruby/0.2.2) (2026-06-22)
 
 
