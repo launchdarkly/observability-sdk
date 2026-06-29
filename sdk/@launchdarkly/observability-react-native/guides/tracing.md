@@ -233,7 +233,9 @@ const httpWithErrorHandling = async () => {
 
 ## 4. Automatic `fetch` / `XMLHttpRequest` Instrumentation Under a Custom Parent
 
-The SDK auto-instruments `fetch` and `XMLHttpRequest` (unless `disableTraces` is set). Every network request generates its own span automatically. If a custom span is active at call time, the auto-generated HTTP span becomes its child.
+The SDK auto-instruments `fetch` and `XMLHttpRequest`. Every network request generates its own span automatically. If a custom span is active at call time, the auto-generated HTTP span becomes its child.
+
+> `disableTraces` turns off **custom/public** span APIs (`startSpan`, `getTracer()`, etc.) only. Auto-instrumented network spans and other SDK-internal telemetry continue to be recorded.
 
 ```typescript
 async function syncOrders() {

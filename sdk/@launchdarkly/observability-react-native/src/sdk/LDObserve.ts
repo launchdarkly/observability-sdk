@@ -4,7 +4,6 @@ import {
 	Context,
 	Span as OtelSpan,
 	SpanOptions,
-	trace,
 } from '@opentelemetry/api'
 import { wrapTracer } from '../api/LDTracer'
 import type { LDTracer } from '../api/LDTracer'
@@ -28,10 +27,7 @@ class LDObserveClass
 		if (this._isLoaded) {
 			return this._sdk.getTracer()
 		}
-		return wrapTracer(
-			trace.getTracer('launchdarkly-observability-react-native'),
-			NOOP_SPAN_OPS,
-		)
+		return wrapTracer(NOOP_SPAN_OPS)
 	}
 
 	private _getLazyTracer(): LDTracer {

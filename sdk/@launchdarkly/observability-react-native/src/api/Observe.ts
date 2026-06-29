@@ -173,7 +173,8 @@ export interface Observe {
 	 * The tracer is wired to the same exporter/sampler as the rest of the SDK.
 	 *
 	 * Before the SDK finishes initializing (or when `disableTraces` is set) this
-	 * returns a no-op tracer, so it is always safe to call.
+	 * returns a no-op tracer, so it is always safe to call. `disableTraces` affects
+	 * only public custom tracing APIs; SDK auto-instrumentation is unaffected.
 	 */
 	getTracer(): LDTracer
 

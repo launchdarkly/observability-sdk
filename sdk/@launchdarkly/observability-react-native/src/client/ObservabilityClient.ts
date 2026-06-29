@@ -5,7 +5,8 @@ import type {
 	SpanOptions,
 } from '@opentelemetry/api'
 import { LDTracer, wrapTracer } from '../api/LDTracer'
-import { context, trace } from '@opentelemetry/api'
+import { context } from '@opentelemetry/api'
+import { NOOP_SPAN_OPS } from '../sdk/withSpan'
 import { resourceFromAttributes } from '@opentelemetry/resources'
 import {
 	ATTR_SERVICE_NAME,
@@ -253,15 +254,27 @@ export class ObservabilityClient {
 
 	public getTracer(): LDTracer {
 		if (!this.ldTracer) {
-			const otelTracer = trace
-				.getTracerProvider()
-				.getTracer(this.options.serviceName)
-			this.ldTracer = wrapTracer(otelTracer, {
-				startSpan: (name, options, ctx) =>
-					this.startSpan(name, options, ctx),
-				recordError: (error, attributes, options) =>
-					this.consumeCustomError(error, attributes, options),
-			})
+			if (this.options.disableTraces) {
+				this.ldTracer = wrapTracer(NOOP_SPAN_OPS)
+			} else {
+				this.ldTracer = wrapTracer({
+					startSpan: (name, options, ctx) =>
+						this.instrumentationManager.startSpan(
+							name,
+							options,
+							ctx,
+						),
+					startActiveSpan: (name, fn, options, ctx) =>
+						this.instrumentationManager.startActiveSpan(
+							name,
+							options || {},
+							ctx || context.active(),
+							fn,
+						),
+					recordError: (error, attributes, options) =>
+						this.consumeCustomError(error, attributes, options),
+				})
+			}
 		}
 		return this.ldTracer
 	}
