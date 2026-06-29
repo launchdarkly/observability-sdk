@@ -7,6 +7,7 @@ import {
 import { Metric } from './Metric'
 import { RequestContext } from './RequestContext'
 import { SessionInfo } from '../client/SessionManager'
+import { LDTracer } from './LDTracer'
 import { SpanScope, WithSpanOptions } from './SpanScope'
 import { TrackProperties } from './TrackProperties'
 
@@ -161,6 +162,20 @@ export interface Observe {
 		fn: (scope: SpanScope) => T,
 		options?: WithSpanOptions,
 	): T
+
+	/**
+	 * Get the OpenTelemetry {@link LDTracer} backing this SDK.
+	 *
+	 * Returns a standard OpenTelemetry {@link Tracer} (`startSpan`,
+	 * `startActiveSpan`) plus {@link LDTracer.withSpan} for async-safe nested
+	 * spans in React Native. Use this to follow the official OpenTelemetry JS
+	 * documentation or integrate a third-party library that expects a `Tracer`.
+	 * The tracer is wired to the same exporter/sampler as the rest of the SDK.
+	 *
+	 * Before the SDK finishes initializing (or when `disableTraces` is set) this
+	 * returns a no-op tracer, so it is always safe to call.
+	 */
+	getTracer(): LDTracer
 
 	/**
 	 * Get the context from a span.

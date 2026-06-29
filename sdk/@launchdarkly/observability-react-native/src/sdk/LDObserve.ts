@@ -4,7 +4,10 @@ import {
 	Context,
 	Span as OtelSpan,
 	SpanOptions,
+	trace,
 } from '@opentelemetry/api'
+import { wrapTracer } from '../api/LDTracer'
+import type { LDTracer } from '../api/LDTracer'
 import { ObservabilityClient } from '../client/ObservabilityClient'
 import { Metric } from '../api/Metric'
 import { RequestContext } from '../api/RequestContext'
@@ -143,11 +146,19 @@ class LDObserveClass
 		fn: (scope: SpanScope) => T,
 		options?: WithSpanOptions,
 	): T {
-		// When loaded, `this` provides real startSpan/recordError that execute
-		// immediately (no buffering). Before init we use no-op span ops so the
-		// callback still runs without enqueueing stray spans.
-		const ops: SpanOps = this._isLoaded ? this : NOOP_SPAN_OPS
-		return runInSpan(ops, spanName, fn, options)
+		return this._isLoaded
+			? this.getTracer().withSpan(spanName, fn, options)
+			: runInSpan(NOOP_SPAN_OPS, spanName, fn, options)
+	}
+
+	getTracer(): LDTracer {
+		const response = this._bufferCall('getTracer', [])
+		return this._isLoaded
+			? response
+			: wrapTracer(
+					trace.getTracer('launchdarkly-observability-react-native'),
+					NOOP_SPAN_OPS,
+				)
 	}
 
 	getContextFromSpan(span: OtelSpan): Context {

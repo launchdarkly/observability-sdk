@@ -7,9 +7,11 @@ This package ships two example apps:
 | New arch        | `example`        | New (Fabric/Turbo)   | 0.83         |
 | Legacy arch     | `example-legacy` | Legacy (bridge)      | 0.78         |
 
-Both consume the workspace packages (`@launchdarkly/session-replay-react-native`,
-`@launchdarkly/observability-react-native`) directly from local source, so any
-change you make to the library is picked up by a Metro reload / rebuild.
+Both consume the workspace packages from local source via Metro (`metro.config.js`
+maps `@launchdarkly/session-replay-react-native` and
+`@launchdarkly/observability-react-native` to their `src/` entry points), so any
+change you make to the library is picked up by a Metro reload — no separate
+`yarn build` in the observability package is required for the examples.
 
 ## Prerequisites
 
@@ -123,3 +125,17 @@ own web examples instead.
   `bundle exec pod install --project-directory=ios` (new arch).
 - **Stale native module after editing the library:** rebuild the native app
   (`yarn ios` / `yarn android`); a Metro reload only refreshes JS.
+- **JS observability changes not showing up:** restart Metro with a clean cache
+  (`yarn start --reset-cache`). The examples resolve both workspace SDKs from
+  `src/`; if Metro fails on OpenTelemetry subpath imports (e.g.
+  `@opentelemetry/otlp-exporter-base/browser-http`), ensure `metro.config.js`
+  has `unstable_enablePackageExports: true` (already set for both examples).
+  As a fallback, remove the observability `sourcePackageEntries` mapping and
+  run `yarn build` inside `@launchdarkly/observability-react-native` to use
+  the prebundled `dist/` instead.
+- **JS spans missing but native replay traces appear:** these are separate
+  pipelines — JS spans go through `LDObserve` / OpenTelemetry OTLP export;
+  native replay uses the session-replay native module. Check the Tracing tab
+  **Session info** button (`initialized=true`) and tap **Flush** after creating
+  spans. With `debug: true` in `App.tsx`, look for `[InstrumentationManager]
+  Tracing initialized` in the Metro console.

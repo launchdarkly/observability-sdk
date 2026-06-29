@@ -10,9 +10,11 @@ const root = path.resolve(__dirname, '..');
 // workspace symlinks; the sdk/@launchdarkly directory covers them all without
 // dragging in the much larger rrweb/ and e2e/ trees.
 const sdkPackages = path.resolve(__dirname, '../..');
-// Several of those packages' dependencies (@opentelemetry/*, graphql) are
-// hoisted to the monorepo root node_modules, so it must be resolvable too.
 const monorepoNodeModules = path.resolve(__dirname, '../../../../node_modules');
+const observabilityNodeModules = path.resolve(
+  __dirname,
+  '../../observability-react-native/node_modules',
+);
 
 /**
  * Metro configuration
@@ -34,6 +36,7 @@ config.watchFolders = [
 config.resolver.nodeModulesPaths = [
   ...(config.resolver.nodeModulesPaths || []),
   monorepoNodeModules,
+  observabilityNodeModules,
 ];
 
 // This monorepo has SEVERAL different react-native versions installed (the root
@@ -49,8 +52,40 @@ const forcedSingletons = {
   'react': path.resolve(__dirname, 'node_modules/react'),
   'react-native': path.resolve(__dirname, 'node_modules/react-native'),
 };
+
+// RN 0.83 honours package `exports`, but force source anyway so both workspace
+// packages always track live TypeScript during SDK development.
+const sourcePackageEntries = {
+  '@launchdarkly/session-replay-react-native': path.resolve(
+    __dirname,
+    '../src/index.tsx',
+  ),
+  '@launchdarkly/observability-react-native': path.resolve(
+    __dirname,
+    '../../observability-react-native/src/index.ts',
+  ),
+};
+
 const defaultResolveRequest = config.resolver.resolveRequest;
 config.resolver.resolveRequest = (context, moduleName, platform) => {
+  const sourceEntry = sourcePackageEntries[moduleName];
+  if (sourceEntry) {
+    return context.resolveRequest(context, sourceEntry, platform);
+  }
+  if (
+    moduleName === '@opentelemetry/otlp-exporter-base/browser-http' ||
+    moduleName.startsWith('@opentelemetry/otlp-exporter-base/')
+  ) {
+    return context.resolveRequest(
+      {
+        ...context,
+        unstable_enablePackageExports: true,
+        unstable_conditionNames: ['browser', 'require', 'react-native', 'default'],
+      },
+      moduleName,
+      platform,
+    );
+  }
   for (const [name, target] of Object.entries(forcedSingletons)) {
     if (moduleName === name || moduleName.startsWith(`${name}/`)) {
       return context.resolveRequest(

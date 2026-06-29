@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 import { LDObserve } from '@launchdarkly/observability-react-native';
+import type { SpanScope } from '@launchdarkly/observability-react-native';
 import {
   context,
   propagation,
@@ -25,7 +26,7 @@ import {
  * IDs where relevant) to the on-screen log. The observability plugin is wired up
  * in App.tsx with `tracingOrigins` set to the demo API hosts used below, so the
  * backend-propagation recipes (11, 12) actually inject `traceparent` / `baggage`
- * headers.
+ * headers. Recipes 13a/13b exercise {@link LDObserve.getTracer} (`LDTracer`).
  *
  * Note: with a placeholder mobile key the SDK still creates spans locally; export
  * to LaunchDarkly only happens once a real key is configured.
@@ -395,6 +396,54 @@ export default function TracingScreen() {
     );
   };
 
+  // -- 13a. Standard OpenTelemetry API via getTracer() --------------------
+  const tracerStartActiveSpan = async () => {
+    const tracer = LDObserve.getTracer();
+    await tracer.startActiveSpan('Checkout', async (span: Span) => {
+      span.setAttribute('cart.id', 'cart-7');
+      try {
+        const response = await fetch(
+          'https://jsonplaceholder.typicode.com/posts'
+        );
+        span.setAttribute('http.status_code', response.status);
+        span.setStatus({ code: SpanStatusCode.OK });
+        log(`[13a] tracer.startActiveSpan Checkout trace=${traceOf(span)}`);
+      } catch (err) {
+        span.recordException(err as Error);
+        span.setStatus({ code: SpanStatusCode.ERROR });
+        log(`[13a] Checkout threw: ${(err as Error).message}`);
+      } finally {
+        span.end();
+      }
+    });
+  };
+
+  // -- 13b. Async-safe nested spans via tracer.withSpan -------------------
+  const tracerWithSpanNested = async () => {
+    const tracer = LDObserve.getTracer();
+    const count = await tracer.withSpan('LoadProducts', async (load: SpanScope) => {
+      const items = await load.child('FetchFromApi', async (fetchScope: SpanScope) => {
+        const response = await fetch(
+          'https://jsonplaceholder.typicode.com/posts'
+        );
+        fetchScope.span.setAttribute('http.status_code', response.status);
+        const json = await response.text();
+        return fetchScope.child('DeserializeJson', (parseScope: SpanScope) => {
+          const result = JSON.parse(json) as unknown[];
+          parseScope.span.setAttribute('product_count', result.length);
+          return result;
+        });
+      });
+      load.child('RenderUI', (renderScope: SpanScope) => {
+        renderScope.span.setAttribute('product_count', items.length);
+      });
+      return items.length;
+    });
+    log(
+      `[13b] tracer.withSpan LoadProducts > FetchFromApi > DeserializeJson / RenderUI (${count})`
+    );
+  };
+
   // -- Utilities -----------------------------------------------------------
   const showSessionInfo = () => {
     const info = LDObserve.getSessionInfo();
@@ -475,6 +524,18 @@ export default function TracingScreen() {
             onPress={run('11b', incomingHeaders)}
           />
           <Btn label="12 · Baggage" onPress={run('12', baggage)} />
+        </View>
+
+        <SectionHeader title="OpenTelemetry Tracer (getTracer)" topSpacing />
+        <View style={styles.col}>
+          <Btn
+            label="13a · tracer.startActiveSpan"
+            onPress={run('13a', tracerStartActiveSpan)}
+          />
+          <Btn
+            label="13b · tracer.withSpan (nested)"
+            onPress={run('13b', tracerWithSpanNested)}
+          />
         </View>
 
         <SectionHeader title="Utilities" topSpacing />

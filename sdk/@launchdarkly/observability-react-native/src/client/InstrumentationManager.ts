@@ -57,6 +57,7 @@ import {
 import { CustomBatchSpanProcessor } from '../otel/CustomBatchSpanProcessor'
 import { CustomTraceExporter } from '../otel/CustomTraceExporter'
 import { CustomLogExporter } from '../otel/CustomLogExporter'
+import { LDTracer, wrapTracer } from '../api/LDTracer'
 
 export type InstrumentationManagerOptions = Required<ReactNativeOptions> & {
 	projectId: string
@@ -88,6 +89,7 @@ export class InstrumentationManager {
 		string,
 		UpDownCounter
 	>()
+	private ldTracer?: LDTracer
 
 	constructor(
 		private options: Required<ReactNativeOptions> & {
@@ -169,6 +171,8 @@ export class InstrumentationManager {
 
 		this.traceProvider.register()
 		trace.setGlobalTracerProvider(this.traceProvider)
+		// Any tracer cached before the real provider was registered must be rebuilt.
+		this.ldTracer = undefined
 
 		const corsPattern = getCorsUrlsPattern(this.options.tracingOrigins)
 		const networkRecording = this.options.networkRecording
@@ -518,14 +522,40 @@ export class InstrumentationManager {
 			}
 
 			this.isInitialized = false
+			this.ldTracer = undefined
 			this._log('InstrumentationManager stopped')
 		} catch (e) {
 			console.error('Failed to stop InstrumentationManager:', e)
 		}
 	}
 
-	private getTracer() {
-		return trace.getTracerProvider().getTracer(this.serviceName)
+	/**
+	 * Returns the OpenTelemetry {@link Tracer} backing this SDK, enriched with
+	 * {@link LDTracer.withSpan} for React Native async context propagation.
+	 * Falls back to a no-op tracer before initialization.
+	 */
+	public getTracer(): LDTracer {
+		// Never cache a wrapper around the pre-init no-op provider.
+		if (!this.traceProvider) {
+			const noop = trace.getTracerProvider().getTracer(this.serviceName)
+			return wrapTracer(noop, {
+				startSpan: (name, options, ctx) =>
+					noop.startSpan(name, options, ctx),
+				recordError: (error, attributes, options) =>
+					this.recordError(error, attributes, options),
+			})
+		}
+
+		if (!this.ldTracer) {
+			const tracer = this.traceProvider.getTracer(this.serviceName)
+			this.ldTracer = wrapTracer(tracer, {
+				startSpan: (name, options, ctx) =>
+					tracer.startSpan(name, options, ctx),
+				recordError: (error, attributes, options) =>
+					this.recordError(error, attributes, options),
+			})
+		}
+		return this.ldTracer
 	}
 
 	private getLogger() {

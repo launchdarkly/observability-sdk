@@ -4,6 +4,7 @@ import type {
 	Span as OtelSpan,
 	SpanOptions,
 } from '@opentelemetry/api'
+import { LDTracer } from '../api/LDTracer'
 import { context } from '@opentelemetry/api'
 import { resourceFromAttributes } from '@opentelemetry/resources'
 import {
@@ -247,6 +248,10 @@ export class ObservabilityClient {
 			ctx || context.active(),
 			fn,
 		)
+	}
+
+	public getTracer(): LDTracer {
+		return this.instrumentationManager.getTracer()
 	}
 
 	public getContextFromSpan(span: OtelSpan): Context {
