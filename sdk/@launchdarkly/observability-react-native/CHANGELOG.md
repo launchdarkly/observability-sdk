@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.0](https://github.com/launchdarkly/observability-sdk/compare/observability-react-native-0.12.0...observability-react-native-0.13.0) (2026-06-29)
+
+
+### Features
+
+* **observability-react-native:** expose LDTracer with withSpan via getTracer() ([#658](https://github.com/launchdarkly/observability-sdk/issues/658)) ([36a622a](https://github.com/launchdarkly/observability-sdk/commit/36a622a6ab2878ac7b262b51cbf557ebdba57271))
+
 ## [0.12.0](https://github.com/launchdarkly/observability-sdk/compare/observability-react-native-0.11.0...observability-react-native-0.12.0) (2026-06-29)
 
 

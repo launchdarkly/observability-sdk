@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.15.0](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.14.1...session-replay-react-native-0.15.0) (2026-06-29)
+
+
+### Features
+
+* **observability-react-native:** expose LDTracer with withSpan via getTracer() ([#658](https://github.com/launchdarkly/observability-sdk/issues/658)) ([36a622a](https://github.com/launchdarkly/observability-sdk/commit/36a622a6ab2878ac7b262b51cbf557ebdba57271))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @launchdarkly/observability-react-native bumped to 0.13.0
+
 ## [0.14.1](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.14.0...session-replay-react-native-0.14.1) (2026-06-29)
 
 
