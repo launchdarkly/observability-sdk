@@ -233,6 +233,53 @@ class HookTest < Minitest::Test
     refute flag_event.attributes.key?('feature_flag.context.id')
   end
 
+  # USER_NOT_SPECIFIED means the context was missing or invalid — not that the
+  # provider was unready. It must map to the OTel `invalid_context` error.type,
+  # not `provider_not_ready` (which is reserved for CLIENT_NOT_READY).
+  def test_user_not_specified_maps_to_invalid_context_error_type
+    series_context = create_series_context
+    detail = create_error_detail(error_kind: :USER_NOT_SPECIFIED)
+
+    data = @hook.before_evaluation(series_context, {})
+    @hook.after_evaluation(series_context, data, detail)
+
+    span = @exporter.finished_spans.first
+    assert_equal 'invalid_context', span.attributes['error.type']
+  end
+
+  def test_client_not_ready_maps_to_provider_not_ready_error_type
+    series_context = create_series_context
+    detail = create_error_detail(error_kind: :CLIENT_NOT_READY)
+
+    data = @hook.before_evaluation(series_context, {})
+    @hook.after_evaluation(series_context, data, detail)
+
+    span = @exporter.finished_spans.first
+    assert_equal 'provider_not_ready', span.attributes['error.type']
+  end
+
+  # When the context is invalid the SDK returns USER_NOT_SPECIFIED but otherwise
+  # drops *why* it was invalid. Surface the context's own validation error on the
+  # span error message so the failure is debuggable from the trace alone.
+  def test_invalid_context_error_message_includes_validation_reason
+    invalid_context = LaunchDarkly::LDContext.create({ key: 'k', kind: 123 })
+    refute invalid_context.valid?
+    refute_nil invalid_context.error
+
+    series_context = LaunchDarkly::Interfaces::Hooks::EvaluationSeriesContext.new(
+      'my-flag', invalid_context, false, :variation
+    )
+    detail = create_error_detail(error_kind: :USER_NOT_SPECIFIED)
+
+    data = @hook.before_evaluation(series_context, {})
+    @hook.after_evaluation(series_context, data, detail)
+
+    span = @exporter.finished_spans.first
+    assert_equal 'invalid_context', span.attributes['error.type']
+    assert_includes span.attributes['error.message'], invalid_context.error
+    assert_equal OpenTelemetry::Trace::Status::ERROR, span.status.code
+  end
+
   def test_nil_context_does_not_raise_and_still_records_event
     series_context = LaunchDarkly::Interfaces::Hooks::EvaluationSeriesContext.new(
       'my-flag', nil, false, :variation

@@ -237,8 +237,12 @@ module LaunchDarklyObservability
     private
 
     def otel_logger_provider_available?
-      defined?(OpenTelemetry::SDK::Logs::LoggerProvider) &&
-        OpenTelemetry.respond_to?(:logger_provider) &&
+      # `defined?` returns nil (not false) when the constant is absent, so guard
+      # first and return an explicit boolean — never nil. Mirrors the inlined
+      # copy in the Railtie (see rails.rb).
+      return false unless defined?(OpenTelemetry::SDK::Logs::LoggerProvider)
+
+      OpenTelemetry.respond_to?(:logger_provider) &&
         OpenTelemetry.logger_provider.is_a?(OpenTelemetry::SDK::Logs::LoggerProvider)
     end
   end

@@ -67,7 +67,7 @@ module LaunchDarklyObservability
       return data unless span
 
       add_result_attributes(span, detail)
-      handle_evaluation_error(span, detail)
+      handle_evaluation_error(span, series_context, detail)
       add_feature_flag_event(span, series_context, detail)
 
       span.finish
@@ -179,31 +179,56 @@ module LaunchDarklyObservability
       end
     end
 
-    def handle_evaluation_error(span, detail)
+    def handle_evaluation_error(span, series_context, detail)
       reason = detail.reason
       return unless reason.respond_to?(:kind) && reason.kind == :ERROR
 
       error_kind = reason.respond_to?(:error_kind) ? reason.error_kind.to_s : 'general'
 
-      error_type = case error_kind.upcase
-                   when 'FLAG_NOT_FOUND'
-                     'flag_not_found'
-                   when 'MALFORMED_FLAG'
-                     'parse_error'
-                   when 'USER_NOT_SPECIFIED', 'CLIENT_NOT_READY'
-                     'provider_not_ready'
-                   when 'WRONG_TYPE'
-                     'type_mismatch'
-                   else
-                     'general'
-                   end
+      span.set_attribute(ERROR_TYPE, error_type_for(error_kind))
 
-      span.set_attribute(ERROR_TYPE, error_type)
-
-      error_message = "Flag evaluation error: #{error_kind}"
+      error_message = error_message_for(error_kind, series_context)
       span.set_attribute(ERROR_MESSAGE, error_message)
 
       span.status = OpenTelemetry::Trace::Status.error(error_message)
+    end
+
+    # Maps a LaunchDarkly evaluation error kind to an OpenTelemetry feature-flag
+    # `error.type` value. USER_NOT_SPECIFIED means the *context* was missing or
+    # invalid — not that the provider was unready — so it maps to
+    # `invalid_context`, not `provider_not_ready` (which is CLIENT_NOT_READY).
+    def error_type_for(error_kind)
+      case error_kind.upcase
+      when 'FLAG_NOT_FOUND'
+        'flag_not_found'
+      when 'MALFORMED_FLAG'
+        'parse_error'
+      when 'USER_NOT_SPECIFIED'
+        'invalid_context'
+      when 'CLIENT_NOT_READY'
+        'provider_not_ready'
+      when 'WRONG_TYPE'
+        'type_mismatch'
+      else
+        'general'
+      end
+    end
+
+    # Builds the span error message. For an invalid context the SDK returns
+    # USER_NOT_SPECIFIED and otherwise drops *why* it was invalid from the
+    # trace; recover that from the context's own validation error so someone
+    # debugging in traces sees e.g. "context key must not be null or empty"
+    # instead of a bare error kind. The SDK's validation messages are static and
+    # structural (never key/kind/attribute values), so this leaks no context
+    # data.
+    def error_message_for(error_kind, series_context)
+      base = "Flag evaluation error: #{error_kind}"
+
+      context = series_context.context
+      return base unless context.respond_to?(:valid?) && !context.valid?
+      return base unless context.respond_to?(:error) && context.error
+
+      "#{base} (#{context.error})"
     end
   end
 end
