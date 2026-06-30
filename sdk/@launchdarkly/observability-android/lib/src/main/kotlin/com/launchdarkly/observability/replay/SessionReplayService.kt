@@ -480,6 +480,11 @@ class SessionReplayService(
             return
         }
 
+        // Sampled-out sessions are enabled but not recording; skip identify like tracks/collectors.
+        if (!_isRunning.value) {
+            return
+        }
+
         synchronized(pendingIdentifyLock) {
             pendingIdentify = null
         }
