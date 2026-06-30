@@ -43,6 +43,7 @@ const plugin = createSessionReplayPlugin({
   maskTestIDs: ['password', 'ssn'],
   unmaskTestIDs: ['safe'],
   minimumAlpha: 0.05,
+  sampleRate: 1.0,
   ...(OTLP_ENDPOINT ? {otlpEndpoint: OTLP_ENDPOINT} : {}),
   ...(BACKEND_URL ? {backendUrl: BACKEND_URL} : {}),
 });
