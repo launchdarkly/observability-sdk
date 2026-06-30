@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.60.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.59.0...launchdarkly-observability-android-0.60.0) (2026-06-30)
+
+
+### Features
+
+* client-side sampleRate to Android session replay ([#660](https://github.com/launchdarkly/observability-sdk/issues/660)) ([44b0e44](https://github.com/launchdarkly/observability-sdk/commit/44b0e44142ce799a2cc82aee7e77e8e032304945))
+
 ## [0.59.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.58.0...launchdarkly-observability-android-0.59.0) (2026-06-25)
 
 
