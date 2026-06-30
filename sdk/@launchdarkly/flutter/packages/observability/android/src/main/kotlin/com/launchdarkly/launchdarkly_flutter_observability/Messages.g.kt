@@ -293,7 +293,7 @@ data class LDPrivacyOptions (
 /** Generated class from Pigeon that represents data sent in messages. */
 data class LDSessionReplayOptions (
   val isEnabled: Boolean? = null,
-  val serviceName: String? = null,
+  val sampleRate: Double? = null,
   val frameRate: Double? = null,
   val scale: Double? = null,
   val privacy: LDPrivacyOptions? = null
@@ -302,17 +302,17 @@ data class LDSessionReplayOptions (
   companion object {
     fun fromList(pigeonVar_list: List<Any?>): LDSessionReplayOptions {
       val isEnabled = pigeonVar_list[0] as Boolean?
-      val serviceName = pigeonVar_list[1] as String?
+      val sampleRate = pigeonVar_list[1] as Double?
       val frameRate = pigeonVar_list[2] as Double?
       val scale = pigeonVar_list[3] as Double?
       val privacy = pigeonVar_list[4] as LDPrivacyOptions?
-      return LDSessionReplayOptions(isEnabled, serviceName, frameRate, scale, privacy)
+      return LDSessionReplayOptions(isEnabled, sampleRate, frameRate, scale, privacy)
     }
   }
   fun toList(): List<Any?> {
     return listOf(
       isEnabled,
-      serviceName,
+      sampleRate,
       frameRate,
       scale,
       privacy,

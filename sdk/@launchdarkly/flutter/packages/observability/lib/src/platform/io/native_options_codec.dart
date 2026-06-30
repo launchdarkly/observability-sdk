@@ -53,7 +53,7 @@ extension InstrumentationOptionsWire on InstrumentationOptions {
 extension SessionReplayOptionsWire on SessionReplayOptions {
   wire.LDSessionReplayOptions toWire() => wire.LDSessionReplayOptions(
     isEnabled: isEnabled,
-    serviceName: serviceName,
+    sampleRate: sampleRate,
     frameRate: frameRate,
     scale: scale,
     privacy: privacy.toWire(),

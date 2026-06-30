@@ -42,15 +42,15 @@ class _StubExporters implements ObservabilityExporters {
 
   @override
   ScreenViewRecorder createScreenViewRecorder(ObservabilityConfig config) =>
-      _SpanScreenViewRecorder(config.pageViewsEnabled);
+      _SpanScreenViewRecorder(config.viewsEnabled);
 }
 
 /// Emits each screen view as a Dart `screen_view` span via the OpenTelemetry
-/// pipeline. Gated by `analytics.pageViews`.
+/// pipeline. Gated by `analytics.views`.
 class _SpanScreenViewRecorder implements ScreenViewRecorder {
-  _SpanScreenViewRecorder(this._pageViewsEnabled);
+  _SpanScreenViewRecorder(this._viewsEnabled);
 
-  final bool _pageViewsEnabled;
+  final bool _viewsEnabled;
 
   @override
   void trackScreenView(
@@ -60,7 +60,7 @@ class _SpanScreenViewRecorder implements ScreenViewRecorder {
     String? category,
     Map<String, Object?>? properties,
   }) {
-    if (!_pageViewsEnabled) {
+    if (!_viewsEnabled) {
       return;
     }
     final tracer = otel.globalTracerProvider.getTracer(_tracerName);

@@ -72,7 +72,7 @@ final class ObserveOtel {
   /// On mobile the native observability SDK is invoked so it emits the native
   /// `screen_view` span and the Session Replay `Navigate` timeline event (native
   /// automatic screen detection never sees Flutter route changes). On web a Dart
-  /// `screen_view` span is emitted, gated by `analytics.pageViews`. `null` before
+  /// `screen_view` span is emitted, gated by `analytics.views`. `null` before
   /// the pipeline is initialized, in which case the screen view is dropped.
   static void trackScreenView(
     String name, {

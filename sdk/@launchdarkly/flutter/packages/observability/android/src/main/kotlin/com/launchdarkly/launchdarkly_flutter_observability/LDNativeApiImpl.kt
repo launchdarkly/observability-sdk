@@ -127,6 +127,7 @@ internal class LDNativeApiImpl(
         val replayScale = replay.scale?.takeIf { it > 0 } ?: 1.0
         val nativeReplayOptions = ReplayOptions(
             enabled = replay.isEnabled ?: true,
+            sampleRate = replay.sampleRate ?: 1.0,
             frameRate = replay.frameRate ?: 1.0,
             scale = replayScale.toFloat(),
             privacyProfile = PrivacyProfile(

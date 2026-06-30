@@ -348,7 +348,7 @@ class LDPrivacyOptions {
 class LDSessionReplayOptions {
   LDSessionReplayOptions({
     this.isEnabled,
-    this.serviceName,
+    this.sampleRate,
     this.frameRate,
     this.scale,
     this.privacy,
@@ -356,7 +356,7 @@ class LDSessionReplayOptions {
 
   bool? isEnabled;
 
-  String? serviceName;
+  double? sampleRate;
 
   double? frameRate;
 
@@ -365,7 +365,7 @@ class LDSessionReplayOptions {
   LDPrivacyOptions? privacy;
 
   List<Object?> _toList() {
-    return <Object?>[isEnabled, serviceName, frameRate, scale, privacy];
+    return <Object?>[isEnabled, sampleRate, frameRate, scale, privacy];
   }
 
   Object encode() {
@@ -376,7 +376,7 @@ class LDSessionReplayOptions {
     result as List<Object?>;
     return LDSessionReplayOptions(
       isEnabled: result[0] as bool?,
-      serviceName: result[1] as String?,
+      sampleRate: result[1] as double?,
       frameRate: result[2] as double?,
       scale: result[3] as double?,
       privacy: result[4] as LDPrivacyOptions?,

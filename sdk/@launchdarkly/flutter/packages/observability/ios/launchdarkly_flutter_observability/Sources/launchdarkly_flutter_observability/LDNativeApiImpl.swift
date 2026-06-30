@@ -296,6 +296,7 @@ final class LDNativeApiImpl: NSObject, LDNativeApi {
 
         return LaunchDarklySessionReplay.SessionReplayOptions(
             isEnabled: replay.isEnabled ?? true,
+            sampleRate: replay.sampleRate ?? 1.0,
             privacy: .init(
                 maskTextInputs: privacy?.maskTextInputs ?? true,
                 maskWebViews: privacy?.maskWebViews ?? false,

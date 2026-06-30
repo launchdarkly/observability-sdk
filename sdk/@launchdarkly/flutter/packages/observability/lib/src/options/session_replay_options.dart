@@ -10,7 +10,13 @@ import 'package:flutter/widgets.dart' show Key;
 /// `platform/io/native_options_codec.dart`.
 class SessionReplayOptions {
   final bool isEnabled;
-  final String serviceName;
+
+  /// Probability from `0.0` to `1.0` that session replay starts when
+  /// [isEnabled] is true. Values less than or equal to zero never start;
+  /// values greater than or equal to one always start. Mirrors Android
+  /// `ReplayOptions.sampleRate` and iOS `SessionReplayOptions.sampleRate`.
+  /// Native-only. Defaults to `1.0`.
+  final double sampleRate;
 
   /// Target capture rate in frames per second. Mirrors Android/iOS
   /// `frameRate`. Native-only. Defaults to `1.0`.
@@ -27,7 +33,7 @@ class SessionReplayOptions {
 
   const SessionReplayOptions({
     this.isEnabled = true,
-    this.serviceName = 'sessionreplay-flutter',
+    this.sampleRate = 1.0,
     this.frameRate = 1.0,
     this.scale = 1.0,
     this.privacy = const PrivacyOptions(),

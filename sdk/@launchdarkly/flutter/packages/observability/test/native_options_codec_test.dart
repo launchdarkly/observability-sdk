@@ -63,9 +63,10 @@ void main() {
   });
 
   group('SessionReplayOptions.toWire', () {
-    test('uses default frame rate and scale', () {
+    test('uses default sample rate, frame rate and scale', () {
       final wire = const SessionReplayOptions().toWire();
 
+      expect(wire.sampleRate, 1.0);
       expect(wire.frameRate, 1.0);
       expect(wire.scale, 1.0);
     });
@@ -74,6 +75,12 @@ void main() {
       final wire = const SessionReplayOptions(frameRate: 4.0).toWire();
 
       expect(wire.frameRate, 4.0);
+    });
+
+    test('propagates a custom sample rate', () {
+      final wire = const SessionReplayOptions(sampleRate: 0.25).toWire();
+
+      expect(wire.sampleRate, 0.25);
     });
 
     test('propagates a custom scale', () {
