@@ -88,6 +88,31 @@ final class LDObserve {
     metricValue: metricValue,
   );
 
+  /// Record a screen view (navigation) so it appears on the Session Replay
+  /// timeline as a `Navigate` event and as a `screen_view` span.
+  ///
+  /// Native automatic screen detection only sees the single host
+  /// Activity/UIViewController that Flutter renders into, so Flutter route
+  /// changes must be reported explicitly. Call this on navigation (or attach the
+  /// provided [LDNavigatorObserver] to your `MaterialApp`/`Navigator`).
+  ///
+  /// [name] is the human-readable screen/route name. [screenClass], [screenId]
+  /// and [category] are optional classifiers, and [properties] is a plain Dart
+  /// map of additional attributes attached to the `screen_view` span.
+  static void trackScreenView(
+    String name, {
+    String? screenClass,
+    String? screenId,
+    String? category,
+    Map<String, Object?>? properties,
+  }) => ObserveOtel.trackScreenView(
+    name,
+    screenClass: screenClass,
+    screenId: screenId,
+    category: category,
+    properties: properties,
+  );
+
   /// Record an exception with an optional stack trace and [properties].
   ///
   /// [properties] is a plain Dart map (`Map<String, Object?>`) of additional
