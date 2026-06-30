@@ -7,6 +7,9 @@ package com.launchdarkly.observability.replay
  * @property privacyProfile privacy profile that controls masking behavior
  * @property frameRate target capture rate in frames per second
  * @property scale optional replay scale override. When null, no additional scaling is applied. Usually from 1-4. 1 = 160DPI
+ * @property sampleRate probability from `0.0` to `1.0` that session replay starts when [enabled] is
+ *   true. Values less than or equal to zero never start; values greater than or equal to one always
+ *   start. The decision is made once per enable cycle and reset when replay is stopped.
  * @property enabled controls whether session replay starts capturing immediately on initialization
  * @property compression compression strategy for frame export
  */
@@ -14,6 +17,7 @@ data class ReplayOptions(
     val enabled: Boolean = true,
     val debug: Boolean = false,
     val privacyProfile: PrivacyProfile = PrivacyProfile(),
+    val sampleRate: Double = 1.0,
     val frameRate: Double = 1.0,
     /** Optional replay scale. Null disables scaling override. */
     val scale: Float? = 1.0f,
@@ -62,6 +66,7 @@ data class ReplayOptions(
         fun enabled(enabled: Boolean) = apply { options = options.copy(enabled = enabled) }
         fun debug(debug: Boolean) = apply { options = options.copy(debug = debug) }
         fun privacyProfile(privacyProfile: PrivacyProfile) = apply { options = options.copy(privacyProfile = privacyProfile) }
+        fun sampleRate(sampleRate: Double) = apply { options = options.copy(sampleRate = sampleRate) }
         fun frameRate(frameRate: Double) = apply { options = options.copy(frameRate = frameRate) }
         fun scale(scale: Float?) = apply { options = options.copy(scale = scale) }
         fun compression(compression: CompressionMethod) = apply { options = options.copy(compression = compression) }
