@@ -226,6 +226,22 @@ public class SessionReplayClientAdapter: NSObject {
 }
 
 extension SessionReplayClientAdapter {
+  private func doubleOption(
+    _ dictionary: NSDictionary,
+    key: String,
+    default defaultValue: Double
+  ) -> Double {
+    guard let number = dictionary[key] as? NSNumber else { return defaultValue }
+    return number.doubleValue
+  }
+
+  /// Mirrors Android `replayOptionsFrom`: non-positive scale falls back to `1.0`.
+  private func scaleOption(_ dictionary: NSDictionary, default defaultValue: CGFloat = 1.0) -> CGFloat {
+    guard let number = dictionary["scale"] as? NSNumber else { return defaultValue }
+    let value = number.doubleValue
+    return value > 0 ? CGFloat(value) : defaultValue
+  }
+
   private func sessionReplayOptionsFrom(dictionary: NSDictionary?) -> SessionReplayOptions {
     // Handle nil dictionary by using all default values
     guard let dictionary = dictionary else {
@@ -244,8 +260,11 @@ extension SessionReplayClientAdapter {
       )
       return .init(
         isEnabled: true,
+        sampleRate: 1.0,
         serviceName: "sessionreplay-react-native",
-        privacy: privacy
+        privacy: privacy,
+        frameRate: 1.0,
+        scale: 1.0
       )
     }
 
@@ -277,8 +296,11 @@ extension SessionReplayClientAdapter {
 
     return .init(
       isEnabled: dictionary["isEnabled"] as? Bool ?? true,
+      sampleRate: doubleOption(dictionary, key: "sampleRate", default: 1.0),
       serviceName: dictionary["serviceName"] as? String ?? "sessionreplay-react-native",
-      privacy: privacy
+      privacy: privacy,
+      frameRate: doubleOption(dictionary, key: "frameRate", default: 1.0),
+      scale: scaleOption(dictionary)
     )
   }
 }

@@ -260,8 +260,24 @@ internal class SessionReplayClientAdapter private constructor() {
         val maskTestIDs = stringListFromMap(map, "maskTestIDs")
         val unmaskTestIDs = stringListFromMap(map, "unmaskTestIDs")
 
+        val frameRate = if (map.hasKey("frameRate")) map.getDouble("frameRate") else 1.0
+        val replayScale = if (map.hasKey("scale")) {
+            map.getDouble("scale").takeIf { it > 0 }?.toFloat() ?: 1.0f
+        } else {
+            1.0f
+        }
+        val minimumAlpha = if (map.hasKey("minimumAlpha")) {
+            map.getDouble("minimumAlpha").toFloat()
+        } else {
+            PrivacyProfile.DEFAULT_MINIMUM_ALPHA
+        }
+        val sampleRate = if (map.hasKey("sampleRate")) map.getDouble("sampleRate") else 1.0
+
         return ReplayOptions(
             enabled = isEnabled,
+            sampleRate = sampleRate,
+            frameRate = frameRate,
+            scale = replayScale,
             privacyProfile = PrivacyProfile(
                 maskTextInputs = maskTextInputs,
                 maskWebViews = maskWebViews,
@@ -269,6 +285,7 @@ internal class SessionReplayClientAdapter private constructor() {
                 maskImageViews = maskImages,
                 maskXMLViewIds = maskTestIDs,
                 unmaskXMLViewIds = unmaskTestIDs,
+                minimumAlpha = minimumAlpha,
             )
         )
     }

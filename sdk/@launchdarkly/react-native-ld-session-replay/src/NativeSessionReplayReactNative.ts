@@ -48,10 +48,29 @@ export type SessionReplayOptions = {
   unmaskTestIDs?: string[];
 
   /**
-   * iOS only. Mask views whose effective opacity is below this threshold (0.0–1.0).
-   * Defaults to `0.02`. Has no effect on Android.
+   * Target capture rate in frames per second. Applied on iOS and Android. Defaults to `1.0`.
+   */
+  frameRate?: number;
+
+  /**
+   * Replay capture scale. Controls the resolution frames are captured and
+   * exported at: `1.0` = 1x (160 DPI), `2.0` = 2x, etc. Applied on iOS and
+   * Android. Non-positive values are treated as `1.0`. Defaults to `1.0`.
+   */
+  scale?: number;
+
+  /**
+   * Mask views whose effective opacity is below this threshold (0.0–1.0).
+   * Defaults to `0.02`.
    */
   minimumAlpha?: number;
+
+  /**
+   * Probability from `0.0` to `1.0` that session replay starts when `isEnabled` is true.
+   * `0.0` never records; `1.0` always records. Applied on iOS and Android. The decision is
+   * made once per enable cycle and reset when replay is stopped. Defaults to `1.0`.
+   */
+  sampleRate?: number;
 
   /**
    * Session id to adopt for the native session replay / observability instance,

@@ -70,6 +70,31 @@ options, so setting `backendUrl` routes both observability and session replay to
 the same environment. Either option falls back to its production default when
 unset. Both are applied on iOS and Android.
 
+## Capture and sampling options
+
+These options control how often frames are captured, at what resolution, and whether
+this session is selected for recording. All are forwarded to the native session replay
+SDK on **iOS and Android**.
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `frameRate` | `number` | `1.0` | Target capture rate in frames per second. |
+| `scale` | `number` | `1.0` | Capture/export resolution multiplier (`1.0` = 1x / 160 DPI, `2.0` = 2x, etc.). Non-positive values are treated as `1.0`. |
+| `sampleRate` | `number` | `1.0` | Probability from `0.0` to `1.0` that replay starts when `isEnabled` is `true`. `0.0` never records; `1.0` always records. Evaluated once per enable cycle and reset when replay is stopped. |
+
+```js
+const plugin = createSessionReplayPlugin({
+  isEnabled: true,
+  frameRate: 2.0,
+  scale: 1.0,
+  sampleRate: 0.25, // record roughly 25% of sessions
+});
+```
+
+When a session is sampled out, `isEnabled` may stay `true` but no frames, interactions,
+or identify payloads are exported for that enable cycle — matching native iOS and Android
+behavior.
+
 ## Masking sensitive content
 
 ### How the SDK decides what to mask
@@ -80,7 +105,7 @@ For each view, the SDK evaluates these rules in order and stops at the first tha
    - **Yes**: the view is **masked**. This overrides everything below.
 2. **Explicit unmasking**: is this view — or any of its ancestors — explicitly unmasked (wrapped in `<LDUnmask>`, or `testID` matched by `unmaskTestIDs`)?
    - **Yes**: the view is **unmasked**.
-3. **Global configuration**: does the global privacy config (`maskTextInputs`, `maskLabels`, `maskImages`, `maskWebViews`) apply to this view?
+3. **Global configuration**: does the global privacy config (`maskTextInputs`, `maskLabels`, `maskImages`, `maskWebViews`, `minimumAlpha`) apply to this view?
    - **Yes**: the view follows the global config.
 
 When two rules conflict at the same level, **masking wins over unmasking**.
@@ -95,6 +120,7 @@ createSessionReplayPlugin({
   maskLabels: false, // when true, masks every <Text>
   maskImages: false, // when true, masks every <Image>
   maskWebViews: false, // when true, masks every <WebView>
+  minimumAlpha: 0.02, // mask views below this opacity (0.0–1.0); default 0.02
 });
 ```
 
