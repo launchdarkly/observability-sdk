@@ -21,6 +21,24 @@ describe('configureSessionReplay', () => {
     await expect(configureSessionReplay('   ')).rejects.toThrow();
   });
 
+  it('forwards frameRate, scale, and sampleRate to native configure', async () => {
+    await configureSessionReplay('mob-key-123', {
+      frameRate: 2,
+      scale: 2.5,
+      sampleRate: 0.25,
+    });
+    expect(NativeSessionReplayReactNative.configure).toHaveBeenCalledWith(
+      'mob-key-123',
+      expect.objectContaining({
+        frameRate: 2,
+        scale: 2.5,
+        sampleRate: 0.25,
+        maskTestIDs: ['__LD_INTERNAL_MASK__'],
+        unmaskTestIDs: ['__LD_INTERNAL_UNMASK__'],
+      })
+    );
+  });
+
   it('prepends LDMask / LDUnmask sentinels to the user lists', async () => {
     // configure with user-supplied testID lists
     await configureSessionReplay('mob-key-123', {
@@ -173,7 +191,11 @@ describe('SessionReplayPluginAdapter', () => {
   });
 
   it('calls configure and startSessionReplay on register', async () => {
-    const plugin = createSessionReplayPlugin();
+    const plugin = createSessionReplayPlugin({
+      frameRate: 4,
+      scale: 2,
+      sampleRate: 0.5,
+    });
     plugin.register(
       {},
       { sdk: { name: 'test', version: '0.0.0' }, mobileKey: 'mob-key-123' }
@@ -181,14 +203,15 @@ describe('SessionReplayPluginAdapter', () => {
 
     await new Promise(process.nextTick);
 
-    // configure receives the user options plus the LDMask / LDUnmask sentinel testIDs
-    // that withInternalSentinels prepends.
     expect(NativeSessionReplayReactNative.configure).toHaveBeenCalledWith(
       'mob-key-123',
-      {
+      expect.objectContaining({
+        frameRate: 4,
+        scale: 2,
+        sampleRate: 0.5,
         maskTestIDs: ['__LD_INTERNAL_MASK__'],
         unmaskTestIDs: ['__LD_INTERNAL_UNMASK__'],
-      }
+      })
     );
     expect(
       NativeSessionReplayReactNative.startSessionReplay
