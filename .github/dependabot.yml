@@ -13,6 +13,12 @@ updates:
     cooldown:
       default-days: 7
   - package-ecosystem: "bundler"
+    directory: "/e2e/ruby/rails/demo-rails70"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7
+  - package-ecosystem: "bundler"
     directory: "/e2e/ruby/sinatra/demo"
     schedule:
       interval: "weekly"
