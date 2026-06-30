@@ -72,9 +72,12 @@ jobs:
                         - '**'
                         - '!sdk/@launchdarkly/observability-android/**'
                         - '!sdk/@launchdarkly/mobile-dotnet/**'
+                        - '!sdk/@launchdarkly/flutter/**'
                         - '!e2e/android/**'
                         - '!.github/workflows/android-observability.yml'
                         - '!.github/workflows/android-e2e.yml'
+                        - '!.github/workflows/flutter-observability.yml'
+                        - '!.github/workflows/flutter-observability-publish.yml'
 
             - name: Check yarn for duplicate deps
               run: yarn dedupe --check
@@ -89,15 +92,20 @@ jobs:
                   NEXT_PUBLIC_HIGHLIGHT_PROJECT_ID: 1jdkoe52
                   REACT_APP_COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
-            - name: Skipped yarn test (Android/MAUI-only change)
+            - name: Skipped yarn test (native-only change)
               if: steps.changes.outputs.yarn-test != 'true' && github.event_name != 'workflow_dispatch'
-              run: echo "Skipping yarn test — only Android observability and/or MAUI (.NET) paths changed."
+              run: echo "Skipping yarn test — only Android, MAUI (.NET), and/or Flutter paths changed."
 
             # Guard against shipping unresolvable types: install the freshly
             # built package into a clean consumer and type-check it with
             # skipLibCheck:false. Runs before publish so a broken .d.ts blocks
             # the release. See scripts/check-published-types.mjs.
+            #
+            # Skipped on native-only changes for the same reason as `yarn test`:
+            # the script requires sdk/highlight-run/dist/index.d.ts, which is
+            # produced by the turbo build that only runs as part of `yarn test`.
             - name: Verify published types resolve in a clean consumer
+              if: steps.changes.outputs.yarn-test == 'true' || github.event_name == 'workflow_dispatch'
               run: node scripts/check-published-types.mjs
 
             - name: Configure yarn npm registry credentials
