@@ -73,11 +73,18 @@ jobs:
                         - '!sdk/@launchdarkly/observability-android/**'
                         - '!sdk/@launchdarkly/mobile-dotnet/**'
                         - '!sdk/@launchdarkly/flutter/**'
+                        - '!sdk/@launchdarkly/launchdarkly_flutter_observability/**'
+                        - '!sdk/@launchdarkly/observability-dotnet/**'
+                        - '!sdk/@launchdarkly/observability-python/**'
+                        - '!sdk/@launchdarkly/observability-ruby/**'
                         - '!e2e/android/**'
                         - '!.github/workflows/android-observability.yml'
                         - '!.github/workflows/android-e2e.yml'
                         - '!.github/workflows/flutter-observability.yml'
                         - '!.github/workflows/flutter-observability-publish.yml'
+                        - '!.github/workflows/dotnet-plugin.yml'
+                        - '!.github/workflows/python-plugin.yml'
+                        - '!.github/workflows/ruby-plugin.yml'
 
             - name: Check yarn for duplicate deps
               run: yarn dedupe --check
@@ -94,7 +101,7 @@ jobs:
 
             - name: Skipped yarn test (native-only change)
               if: steps.changes.outputs.yarn-test != 'true' && github.event_name != 'workflow_dispatch'
-              run: echo "Skipping yarn test — only Android, MAUI (.NET), and/or Flutter paths changed."
+              run: echo "Skipping yarn test — only non-yarn SDK paths changed (Android, MAUI/.NET, Flutter, and the .NET/Python/Ruby plugins)."
 
             # Guard against shipping unresolvable types: install the freshly
             # built package into a clean consumer and type-check it with
