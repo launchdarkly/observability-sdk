@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.16.0](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.15.0...session-replay-react-native-0.16.0) (2026-06-30)
+
+
+### Features
+
+* Propagate session replay frameRate, scale, and sampleRate in React Native ([#661](https://github.com/launchdarkly/observability-sdk/issues/661)) ([3cf63ab](https://github.com/launchdarkly/observability-sdk/commit/3cf63ab22071e581b02c49baabc299293abfe7f6))
+
 ## [0.15.0](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.14.1...session-replay-react-native-0.15.0) (2026-06-29)
 
 
