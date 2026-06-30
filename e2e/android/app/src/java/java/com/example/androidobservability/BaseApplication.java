@@ -76,7 +76,7 @@ public class BaseApplication extends Application {
                         .build())
                 .analytics(ObservabilityOptions.Analytics.builder()
                         .taps(true)
-                        .pageViews(true)
+                        .screenViews(true)
                         .trackEvents(true)
                         .appLifecycle(true)
                         .build())

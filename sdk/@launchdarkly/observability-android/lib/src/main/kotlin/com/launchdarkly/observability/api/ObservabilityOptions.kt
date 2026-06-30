@@ -111,8 +111,6 @@ data class ObservabilityOptions(
      * @property taps If `true`, the plugin publishes a `click` span for each detected tap.
      *   Tap detection itself is governed by [Instrumentations.userTaps]; if that is disabled
      *   no taps are issued and this flag has no effect. Defaults to `true`.
-     * @property pageViews If `true`, the plugin starts spans for Android Activity lifecycle events
-     *   (screen/page views). Defaults to `true`.
      * @property trackEvents If `true`, the plugin emits a `track` span when a custom
      *   event is tracked (via the LD `afterTrack` hook or [com.launchdarkly.observability.sdk.LDObserve.track]).
      *   Defaults to `true`.
@@ -129,7 +127,6 @@ data class ObservabilityOptions(
      */
     data class Analytics(
         val taps: Boolean = true,
-        val pageViews: Boolean = true,
         val trackEvents: Boolean = true,
         val screenViews: Boolean = true,
         val appLifecycle: Boolean = true,
@@ -142,7 +139,6 @@ data class ObservabilityOptions(
             private var value = Analytics()
 
             fun taps(taps: Boolean) = apply { value = value.copy(taps = taps) }
-            fun pageViews(pageViews: Boolean) = apply { value = value.copy(pageViews = pageViews) }
             fun trackEvents(trackEvents: Boolean) = apply { value = value.copy(trackEvents = trackEvents) }
             fun screenViews(screenViews: Boolean) = apply { value = value.copy(screenViews = screenViews) }
             fun appLifecycle(appLifecycle: Boolean) = apply { value = value.copy(appLifecycle = appLifecycle) }
@@ -161,9 +157,12 @@ data class ObservabilityOptions(
      * This class allows enabling or disabling specific automatic instrumentations.
      *
      * @property crashReporting If `true`, the plugin will automatically report any uncaught exceptions as errors.
-     * @property launchTime If `true`, emits legacy TTID/TTFD launch-time histogram metrics. The
-     *   `app.start` span event on `app_launch` (cold/warm via `start.type`) is always attached
-     *   when [Analytics.appLaunch] is enabled and is not gated by this flag.
+     * @property launchTime If `true`, emits launch-time performance telemetry: the legacy TTID/TTFD
+     *   histogram metrics, plus the `app.start` span event on `app_launch` (cold/warm via `start.type`,
+     *   with `start.duration_ms`). When `false` the `app.start` event is omitted and the `app_launch`
+     *   span is anchored at the launch-detection time (rather than back-dated to process start) so it
+     *   carries no startup duration. The `app_launch` span itself is still emitted when
+     *   [Analytics.appLaunch] is enabled.
      * @property userTaps If `true`, the plugin runs the tap-detection machinery, issuing tap events
      *   from the captured touch stream. Publishing those taps as `click` spans is governed
      *   separately by [Analytics.taps]; Session Replay capture is unaffected by either flag.
@@ -195,6 +194,28 @@ data class ObservabilityOptions(
         companion object {
             @JvmStatic
             fun builder() = Builder()
+
+            /** Every automatic instrumentation enabled. */
+            @JvmStatic
+            fun enabled() = Instrumentations(
+                crashReporting = true,
+                launchTime = true,
+                userTaps = true,
+                screens = true,
+            )
+
+            /**
+             * Every automatic instrumentation disabled. Note this also turns off user-tap detection
+             * (so no `click` spans are emitted regardless of [Analytics.taps]) and automatic screen
+             * detection (so no `screen_view` / Session Replay `Navigate` events).
+             */
+            @JvmStatic
+            fun disabled() = Instrumentations(
+                crashReporting = false,
+                launchTime = false,
+                userTaps = false,
+                screens = false,
+            )
         }
     }
 

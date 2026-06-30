@@ -24,6 +24,12 @@ Lint/DuplicateBranch:
 Naming/MethodParameterName:
     Enabled: false
 
+Naming/FileName:
+    # launchdarkly-observability.rb is intentionally hyphenated to match the gem
+    # name so Bundler.require can auto-load the gem (and its Railtie) at boot.
+    Exclude:
+        - 'lib/launchdarkly-observability.rb'
+
 Naming/PredicateMethod:
     Enabled: false
 

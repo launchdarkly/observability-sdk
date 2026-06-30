@@ -32,8 +32,49 @@ Gem::Specification.new do |spec|
   # versions raise "uninitialized constant LaunchDarkly::Interfaces::Plugins" on require.
   spec.add_dependency 'launchdarkly-server-sdk', '>= 8.11.0'
   spec.add_dependency 'opentelemetry-exporter-otlp', '~> 0.28'
-  spec.add_dependency 'opentelemetry-instrumentation-all', '~> 0.62'
   spec.add_dependency 'opentelemetry-sdk', '~> 1.4'
+
+  # OpenTelemetry auto-instrumentation.
+  #
+  # We depend on INDIVIDUAL instrumentation gems instead of the
+  # opentelemetry-instrumentation-all meta-gem on purpose. The meta-gem couples
+  # every instrumentation to one version, so when the Rails-family
+  # instrumentations raised their floor to Rails 7.1
+  # (opentelemetry-instrumentation-rails 0.42.0), the whole bundle moved with
+  # them and Rails 7.0 apps silently lost ALL auto-instrumentation. Listing gems
+  # individually keeps the Rails family on a Rails-7.0-compatible release while
+  # everything else tracks the latest. See lib/launchdarkly_observability/
+  # instrumentations.rb.
+  #
+  # Rails family. Each of these gems independently enforces a Rails 7.1 floor in
+  # its latest release (the coordinated "Min Rails 7.1 enforced" bump), so the
+  # meta gem (opentelemetry-instrumentation-rails) is NOT enough — each member
+  # must be capped below its enforcing version to keep attaching on Rails 7.0.
+  # These releases are still compatible with Rails 7.1+, so modern apps are
+  # unaffected. Revisit when the plugin drops Rails 7.0 support.
+  spec.add_dependency 'opentelemetry-instrumentation-action_mailer', '< 0.8'
+  spec.add_dependency 'opentelemetry-instrumentation-action_pack', '< 0.18'
+  spec.add_dependency 'opentelemetry-instrumentation-action_view', '< 0.13'
+  spec.add_dependency 'opentelemetry-instrumentation-active_job', '< 0.12'
+  spec.add_dependency 'opentelemetry-instrumentation-active_record', '< 0.13'
+  spec.add_dependency 'opentelemetry-instrumentation-active_storage', '< 0.5'
+  spec.add_dependency 'opentelemetry-instrumentation-active_support', '< 0.12'
+  spec.add_dependency 'opentelemetry-instrumentation-rails', '>= 0.34', '< 0.42'
+
+  # Non-Rails instrumentations: latest. Consumers can add any other
+  # opentelemetry-instrumentation-* gem to their Gemfile and it is picked up
+  # automatically (the plugin activates every loaded instrumentation).
+  spec.add_dependency 'opentelemetry-instrumentation-concurrent_ruby', '>= 0.21'
+  spec.add_dependency 'opentelemetry-instrumentation-faraday', '>= 0.24'
+  spec.add_dependency 'opentelemetry-instrumentation-graphql', '>= 0.28'
+  spec.add_dependency 'opentelemetry-instrumentation-http', '>= 0.23'
+  spec.add_dependency 'opentelemetry-instrumentation-mysql2', '>= 0.28'
+  spec.add_dependency 'opentelemetry-instrumentation-net_http', '>= 0.22'
+  spec.add_dependency 'opentelemetry-instrumentation-pg', '>= 0.29'
+  spec.add_dependency 'opentelemetry-instrumentation-rack', '>= 0.24'
+  spec.add_dependency 'opentelemetry-instrumentation-redis', '>= 0.25'
+  spec.add_dependency 'opentelemetry-instrumentation-sidekiq', '>= 0.25'
+  spec.add_dependency 'opentelemetry-instrumentation-sinatra', '>= 0.24'
   spec.add_dependency 'opentelemetry-semantic_conventions', '~> 1.10'
 
   # Logs support (included by default for out-of-box DX; opt out via enable_logs: false)

@@ -52,6 +52,7 @@ Prefer to keep only the key(s) for the platforms you run? That works too — jus
 Notes:
 
 - `GIT_SHA` is passed to `ObservabilityOptions.serviceVersion`; any string works.
+- `OTLP_ENDPOINT` and `BACKEND_URL` are **optional** overrides for the observability OTLP endpoint and backend URL (e.g. to target staging), mirroring `otlpEndpoint` / `backendUrl` in the Swift sample's `Secrets.xcconfig`. Omit them to use the production defaults baked into `ObservabilityOptions`.
 - `dart_defines.json` is **gitignored** — never commit it. The committed `dart_defines.example.json` is the template.
 - `--dart-define-from-file` values are **compile-time constants**. After editing the file you must fully stop and re-launch — hot reload/restart will not pick up new values.
 

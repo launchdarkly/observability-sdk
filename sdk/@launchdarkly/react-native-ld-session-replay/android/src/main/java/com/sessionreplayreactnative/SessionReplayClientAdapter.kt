@@ -25,6 +25,17 @@ internal class SessionReplayClientAdapter private constructor() {
     private val lock = Any()
     private var mobileKey: String? = null
     private var serviceName: String = DEFAULT_SERVICE_NAME
+    // Optional `service.version` forwarded from JS. null keeps the SDK default.
+    private var serviceVersion: String? = null
+    // Optional OTLP endpoint / backend URL forwarded from JS. null keeps the SDK
+    // default. backendUrl also drives the session replay upload endpoint (the
+    // SessionReplay plugin reads it from the shared observability options).
+    private var otlpEndpoint: String? = null
+    private var backendUrl: String? = null
+    // Optional session id forwarded from the JS observability SDK so the native observability
+    // instance (which emits e.g. `click` spans) seeds its session manager with the same
+    // `session.id`. null means the native SDK generates and owns its own session.
+    private var customSessionId: String? = null
     private var replayOptions: ReplayOptions? = null
     // Only accessed from the main thread (all reads/writes are inside Handler(mainLooper).post blocks).
     private var initialized = false
@@ -40,6 +51,18 @@ internal class SessionReplayClientAdapter private constructor() {
                 ?.getString("serviceName")
                 ?.takeIf { it.isNotBlank() }
                 ?: DEFAULT_SERVICE_NAME
+            this.serviceVersion = options?.takeIf { it.hasKey("serviceVersion") }
+                ?.getString("serviceVersion")
+                ?.takeIf { it.isNotBlank() }
+            this.customSessionId = options?.takeIf { it.hasKey("sessionId") }
+                ?.getString("sessionId")
+                ?.takeIf { it.isNotBlank() }
+            this.otlpEndpoint = options?.takeIf { it.hasKey("otlpEndpoint") }
+                ?.getString("otlpEndpoint")
+                ?.takeIf { it.isNotBlank() }
+            this.backendUrl = options?.takeIf { it.hasKey("backendUrl") }
+                ?.getString("backendUrl")
+                ?.takeIf { it.isNotBlank() }
             this.replayOptions = replayOptionsFrom(options)
         }
     }
@@ -47,13 +70,21 @@ internal class SessionReplayClientAdapter private constructor() {
     fun start(application: Application, activity: Activity?, completion: (Boolean, String?) -> Unit) {
         val localMobileKey: String?
         val localServiceName: String
+        val localServiceVersion: String?
+        val localCustomSessionId: String?
         val localReplayOptions: ReplayOptions?
+        val localOtlpEndpoint: String?
+        val localBackendUrl: String?
 
         // Capture configuration under the lock, then release it before posting to the main thread.
         synchronized(lock) {
             localMobileKey = mobileKey
             localReplayOptions = replayOptions
             localServiceName = serviceName
+            localServiceVersion = serviceVersion
+            localCustomSessionId = customSessionId
+            localOtlpEndpoint = otlpEndpoint
+            localBackendUrl = backendUrl
         }
         if (localMobileKey == null || localReplayOptions == null) {
             val msg = "start: configure() was not called — mobile key or options are missing"
@@ -68,7 +99,7 @@ internal class SessionReplayClientAdapter private constructor() {
         Handler(Looper.getMainLooper()).post {
             if (!initialized) {
                 try {
-                    initLDClient(application, localMobileKey, localServiceName, localReplayOptions)
+                    initLDClient(application, localMobileKey, localServiceName, localServiceVersion, localCustomSessionId, localReplayOptions, localOtlpEndpoint, localBackendUrl)
                 } catch (e: Exception) {
                     logger.error("start: LDClient.init() threw {0}: {1}", e::class.simpleName, e.message)
                     completion(false, "Session replay failed to initialize.")
@@ -126,27 +157,52 @@ internal class SessionReplayClientAdapter private constructor() {
         }
     }
 
-    private fun initLDClient(application: Application, mobileKey: String, serviceName: String, replayOptions: ReplayOptions) {
+    private fun initLDClient(
+        application: Application,
+        mobileKey: String,
+        serviceName: String,
+        serviceVersion: String?,
+        customSessionId: String?,
+        replayOptions: ReplayOptions,
+        otlpEndpoint: String?,
+        backendUrl: String?
+    ) {
         logger.debug("initLDClient: calling LDClient.init()")
+        // Apply the forwarded service.version only when provided; otherwise keep the SDK default.
+        var observabilityOptions = ObservabilityOptions(
+            serviceName = serviceName,
+            logAdapter = LDObserveLogging.adapter(),
+            // Disable the OpenTelemetry Android CrashReporterInstrumentation
+            instrumentations = ObservabilityOptions.Instrumentations(
+                crashReporting = false,
+            ),
+        )
+        if (serviceVersion != null) {
+            observabilityOptions = observabilityOptions.copy(serviceVersion = serviceVersion)
+        }
+        // Forwarded endpoints (when provided) override the SDK defaults. backendUrl also
+        // drives the session replay upload endpoint, since the SessionReplay plugin reads it
+        // from the shared observability options.
+        if (otlpEndpoint != null) {
+            observabilityOptions = observabilityOptions.copy(otlpEndpoint = otlpEndpoint)
+        }
+        if (backendUrl != null) {
+            observabilityOptions = observabilityOptions.copy(backendUrl = backendUrl)
+        }
         val config = LDConfig.Builder(LDConfig.Builder.AutoEnvAttributes.Enabled)
             .mobileKey(mobileKey)
             .offline(true)
             .plugins(
                 Components.plugins().setPlugins(
                     listOf(
-                        // TODO: Pass JS ObservabilityOptions such as backendUrl,
-                        //  resourceAttributes, and sessionBackgroundTimeout through to here.
+                        // Forward the JS observability session id (when provided) so the native
+                        // observability instance seeds its session manager with the same
+                        // `session.id`, matching iOS. null lets the native SDK own its session.
                         Observability(
                             application = application,
                             mobileKey = mobileKey,
-                            options = ObservabilityOptions(
-                                serviceName = serviceName,
-                                logAdapter = LDObserveLogging.adapter(),
-                                // Disable the OpenTelemetry Android CrashReporterInstrumentation
-                                instrumentations = ObservabilityOptions.Instrumentations(
-                                    crashReporting = false,
-                                ),
-                            )
+                            options = observabilityOptions,
+                            customSessionId = customSessionId
                         ),
                         SessionReplay(options = replayOptions),
                     )
@@ -204,8 +260,24 @@ internal class SessionReplayClientAdapter private constructor() {
         val maskTestIDs = stringListFromMap(map, "maskTestIDs")
         val unmaskTestIDs = stringListFromMap(map, "unmaskTestIDs")
 
+        val frameRate = if (map.hasKey("frameRate")) map.getDouble("frameRate") else 1.0
+        val replayScale = if (map.hasKey("scale")) {
+            map.getDouble("scale").takeIf { it > 0 }?.toFloat() ?: 1.0f
+        } else {
+            1.0f
+        }
+        val minimumAlpha = if (map.hasKey("minimumAlpha")) {
+            map.getDouble("minimumAlpha").toFloat()
+        } else {
+            PrivacyProfile.DEFAULT_MINIMUM_ALPHA
+        }
+        val sampleRate = if (map.hasKey("sampleRate")) map.getDouble("sampleRate") else 1.0
+
         return ReplayOptions(
             enabled = isEnabled,
+            sampleRate = sampleRate,
+            frameRate = frameRate,
+            scale = replayScale,
             privacyProfile = PrivacyProfile(
                 maskTextInputs = maskTextInputs,
                 maskWebViews = maskWebViews,
@@ -213,6 +285,7 @@ internal class SessionReplayClientAdapter private constructor() {
                 maskImageViews = maskImages,
                 maskXMLViewIds = maskTestIDs,
                 unmaskXMLViewIds = unmaskTestIDs,
+                minimumAlpha = minimumAlpha,
             )
         )
     }

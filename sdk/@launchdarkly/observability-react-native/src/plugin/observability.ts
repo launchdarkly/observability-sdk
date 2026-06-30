@@ -1,6 +1,9 @@
 import { LDClientMin, LDPlugin } from './plugin'
 import { ReactNativeOptions } from '../api/Options'
+import { TrackProperties } from '../api/TrackProperties'
+import { flattenTrackProperties } from '../utils/trackAttributes'
 import { ObservabilityClient } from '../client/ObservabilityClient'
+import { startInternalActiveSpan } from '../internal/internalSpans'
 import { _LDObserve } from '../sdk/LDObserve'
 import type {
 	LDEvaluationDetail,
@@ -26,6 +29,8 @@ import {
 	getCanonicalKey,
 	getContextKeys,
 	LD_IDENTIFY_RESULT_STATUS,
+	LD_INTERNAL_ATTR,
+	LD_TRACK_SPAN_NAME,
 } from '../constants/featureFlags'
 import type { LDEvaluationReason } from '@launchdarkly/js-sdk-common'
 import {
@@ -35,6 +40,7 @@ import {
 	IdentifySeriesContext,
 	EvaluationSeriesContext,
 	EvaluationSeriesData,
+	TrackSeriesContext,
 } from '@launchdarkly/react-native-client-sdk'
 
 class TracingHook implements Hook {
@@ -119,18 +125,25 @@ class TracingHook implements Hook {
 
 			const allAttributes = { ...this.metaAttributes, ...eventAttributes }
 
-			_LDObserve.startActiveSpan(FEATURE_FLAG_SPAN_NAME, (span) => {
-				span.addEvent(FEATURE_FLAG_SCOPE, allAttributes)
+			startInternalActiveSpan(
+				this._options?.serviceName,
+				FEATURE_FLAG_SPAN_NAME,
+				(span) => {
+					span.addEvent(FEATURE_FLAG_SCOPE, allAttributes)
 
-				span.setAttributes({
-					[FEATURE_FLAG_KEY_ATTR]: hookContext.flagKey,
-					[FEATURE_FLAG_PROVIDER_ATTR]: 'LaunchDarkly',
-					[FEATURE_FLAG_VALUE_ATTR]: JSON.stringify(detail.value),
-				})
+					span.setAttributes({
+						[FEATURE_FLAG_KEY_ATTR]: hookContext.flagKey,
+						[FEATURE_FLAG_PROVIDER_ATTR]: 'LaunchDarkly',
+						[FEATURE_FLAG_VALUE_ATTR]: JSON.stringify(detail.value),
+						// Mark this as SDK-internal telemetry so it can be filtered
+						// out universally (independent of instrumentation scope).
+						[LD_INTERNAL_ATTR]: true,
+					})
 
-				span.setStatus({ code: 1 })
-				span.end()
-			})
+					span.setStatus({ code: 1 })
+					span.end()
+				},
+			)
 
 			_LDObserve.recordLog(
 				`Feature flag "${hookContext.flagKey}" evaluated`,
@@ -145,6 +158,47 @@ class TracingHook implements Hook {
 		}
 
 		return data
+	}
+
+	afterTrack(hookContext: TrackSeriesContext): void {
+		try {
+			const trackAttributes: Attributes = {
+				...this.metaAttributes,
+				...(hookContext.context
+					? getContextKeys(hookContext.context)
+					: {}),
+				// Flatten user-supplied track data the same way LDObserve.track
+				// does, so nested objects/arrays survive as dotted attributes
+				// instead of being dropped by OpenTelemetry.
+				...(typeof hookContext.data === 'object' &&
+				hookContext.data !== null
+					? flattenTrackProperties(
+							hookContext.data as TrackProperties,
+						)
+					: {}),
+				// Reserved fields are written last so caller data can't clobber them.
+				key: hookContext.key,
+				...(hookContext.metricValue !== undefined &&
+				hookContext.metricValue !== null
+					? { value: hookContext.metricValue }
+					: {}),
+			}
+
+			startInternalActiveSpan(
+				this._options?.serviceName,
+				LD_TRACK_SPAN_NAME,
+				(span) => {
+					span.setAttributes(trackAttributes)
+					span.setStatus({ code: 1 })
+					span.end()
+				},
+			)
+		} catch (error) {
+			_LDObserve.recordError(error as Error, {
+				'track.key': hookContext.key,
+				'error.context': 'track_tracing',
+			})
+		}
 	}
 }
 

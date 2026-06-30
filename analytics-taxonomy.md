@@ -64,17 +64,19 @@ For each event below, only the **`event.*` fields** are part of this taxonomy. T
 
 ### 4.1 `click` (existing)
 
-Click (web) or tap (mobile) on an interactive element. One event for all element types; the element is described via `event.*` fields, not separate event names. **OTel mapping:** `app.widget.click` / `app.screen.click` (`event.id`↔`app.widget.id`, `event.text`↔`app.widget.name`, `event.x/y`↔`app.screen.coordinate.x/y`).
+Click (web) or tap (mobile) on an interactive element. One event for all element types; the element is described via `event.*` fields, not separate event names. On mobile, `event.id` is the explicit developer-supplied `ldId` when set (iOS `.ldId(_:)` / `UIView.ldId(_:)`, Android `Modifier.ldId(...)` / `View.ldId(...)`), otherwise it falls back to the platform identifier (iOS accessibility id; Android resource entry name or React Native `testID`). `event.screen_id` links the tap to the current `screen_view` identity, and `event.screen_name` carries that screen's human-readable name (matching `screen_view.event.name`). **OTel mapping:** `app.widget.click` / `app.screen.click` (`event.id`↔`app.widget.id`, `event.text`↔`app.widget.name`, `event.screen_id`↔`app.screen.id`, `event.screen_name`↔`app.screen.name`, `event.x/y`↔`app.screen.coordinate.x/y`).
 
 | `event.*` field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `event.type` | string | ✅ | Interaction type, e.g. `click`. |
-| `event.tag` | string | ✅ | Element tag, e.g. `BUTTON`, `INPUT`, `A`. |
-| `event.id` | string | ⛔ | Element DOM id / accessibility id. |
+| `event.tag` | string | ✅ | Element tag/class, e.g. `BUTTON`, `INPUT`, `A`, `UITabBarButton`. |
+| `event.id` | string | ⛔ | Stable element identifier: DOM id on web; on mobile the explicit `ldId` when set, else accessibility id (iOS) / resource id or RN `testID` (Android). |
 | `event.classname` | string | ⛔ | Element class list. |
 | `event.text` | string | ⛔ | Visible text/label of the element. |
 | `event.xpath` | string | ⛔ | XPath (web) / view path (mobile) of the element. |
 | `event.url` | string | ⛔ | URL/route the click happened on. |
+| `event.screen_id` | string | ⛔ | Stable mobile screen identifier matching `screen_view.event.screen_id`. |
+| `event.screen_name` | string | ⛔ | Human-readable name of the mobile screen, matching `screen_view.event.name`. |
 | `event.x` / `event.y` | int | ⛔ | Click coordinates in screen pixels. |
 | `event.relativeX` / `event.relativeY` | number | ⛔ | Click position relative to viewport (0–1). |
 
@@ -106,6 +108,29 @@ Click (web) or tap (mobile) on an interactive element. One event for all element
   "environment": "Production",
   "trace_id": "14bc2f58fef76d58d1c35f499a8c51ca",
   "span_id": "7a8802b7e69c9683"
+}
+```
+
+Mobile example:
+
+```json
+{
+  "span_name": "click",
+  "event": {
+    "type": "click",
+    "tag": "UITabBarButton",
+    "id": "tab.search",
+    "text": "Search and Explore",
+    "screen_id": "com.example.app.MainTabViewController",
+    "screen_name": "Home",
+    "x": 120,
+    "y": 818
+  },
+  "context": { "contextKeys": { "accountId": "64dd…", "userId": "65b8…" } },
+  "service_name": "ios-app",
+  "environment": "Production",
+  "trace_id": "8bc001fd5a92da116a86969dce2a2a9f",
+  "span_id": "7aaf1880fa8820eb"
 }
 ```
 

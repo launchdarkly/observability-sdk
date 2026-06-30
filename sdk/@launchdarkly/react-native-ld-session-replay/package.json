@@ -1,6 +1,6 @@
 {
   "name": "@launchdarkly/session-replay-react-native",
-  "version": "0.11.1",
+  "version": "0.16.0",
   "description": "session replay for react native",
   "main": "./lib/module/index.js",
   "types": "./lib/typescript/src/index.d.ts",
@@ -97,7 +97,8 @@
     "react-native": "*"
   },
   "workspaces": [
-    "example"
+    "example",
+    "example-legacy"
   ],
   "packageManager": "yarn@4.11.0",
   "react-native-builder-bob": {
@@ -138,7 +139,10 @@
     "modulePathIgnorePatterns": [
       "<rootDir>/example/node_modules",
       "<rootDir>/lib/"
-    ]
+    ],
+    "moduleNameMapper": {
+      "^react-native-url-polyfill(/.*)?$": "<rootDir>/jest/mocks/react-native-url-polyfill.js"
+    }
   },
   "commitlint": {
     "extends": [

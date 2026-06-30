@@ -78,6 +78,10 @@ class LDObserve(private val client: Observe) : Observe {
         client.trackScreenView(name, screenClass, screenId, category, properties)
     }
 
+    override fun trackClick(id: String?, tag: String?, text: String?, screenId: String?, x: Int?, y: Int?, properties: Map<String, Any?>?) {
+        client.trackClick(id, tag, text, screenId, x, y, properties)
+    }
+
     companion object : Observe {
         // initially a no-op delegate
         // volatile annotation guarantees multiple threads see the same value after init and none continue using the no-op implementation
@@ -96,6 +100,7 @@ class LDObserve(private val client: Observe) : Observe {
             override fun flush() {}
             override fun track(key: String, properties: Map<String, Any?>?, metricValue: Double?) {}
             override fun trackScreenView(name: String, screenClass: String?, screenId: String?, category: String?, properties: Map<String, Any?>?) {}
+            override fun trackClick(id: String?, tag: String?, text: String?, screenId: String?, x: Int?, y: Int?, properties: Map<String, Any?>?) {}
         }
 
         /**
@@ -131,6 +136,9 @@ class LDObserve(private val client: Observe) : Observe {
          * @param replay Optional configuration for session replay. Pass `null` (the default)
          *                      to skip session replay initialization.
          * @param imageCaptureService Optional capture implementation for session replay.
+         * @param customSessionId Optional session id to adopt instead of generating one, so this
+         *                      instance can share a single `session.id` with another LaunchDarkly
+         *                      SDK on the device. When null, a session id is generated automatically.
          */
         fun init(
             application: Application,
@@ -139,6 +147,7 @@ class LDObserve(private val client: Observe) : Observe {
             observability: ObservabilityOptions = ObservabilityOptions(),
             replay: ReplayOptions? = null,
             imageCaptureService: ImageCaptureServicing? = null,
+            customSessionId: String? = null,
         ) {
             val logger = ObserveLogger.build(observability.logAdapter, observability.loggerName, observability.debug)
 
@@ -159,7 +168,7 @@ class LDObserve(private val client: Observe) : Observe {
             // NOTE: the calling thread must not hold any lock the main thread is waiting on, or
             // this will deadlock — see runOnMainThread KDoc.
             runOnMainThread {
-                installObservability(application, mobileKey, resource, logger, observability, obsContext)
+                installObservability(application, mobileKey, resource, logger, observability, obsContext, customSessionId)
                 if (replay != null) {
                     installSessionReplay(
                         replay,
@@ -184,9 +193,10 @@ class LDObserve(private val client: Observe) : Observe {
             logger: ObserveLogger,
             options: ObservabilityOptions,
             obsContext: ObservabilityContext,
+            customSessionId: String? = null,
         ) {
             val service = ObservabilityService(
-                application, mobileKey, resource, logger, options,
+                application, mobileKey, resource, logger, options, customSessionId,
             )
             obsContext.sessionManager = service.sessionManager
             obsContext.userInteractionManager = service.userInteractionManager
@@ -233,6 +243,7 @@ class LDObserve(private val client: Observe) : Observe {
         override fun flush() = delegate.flush()
         override fun track(key: String, properties: Map<String, Any?>?, metricValue: Double?) = delegate.track(key, properties, metricValue)
         override fun trackScreenView(name: String, screenClass: String?, screenId: String?, category: String?, properties: Map<String, Any?>?) = delegate.trackScreenView(name, screenClass, screenId, category, properties)
+        override fun trackClick(id: String?, tag: String?, text: String?, screenId: String?, x: Int?, y: Int?, properties: Map<String, Any?>?) = delegate.trackClick(id, tag, text, screenId, x, y, properties)
 
         /**
          * Bridge-friendly overloads that avoid exposing OpenTelemetry types

@@ -1,5 +1,75 @@
 # Changelog
 
+## [0.16.0](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.15.0...session-replay-react-native-0.16.0) (2026-06-30)
+
+
+### Features
+
+* Propagate session replay frameRate, scale, and sampleRate in React Native ([#661](https://github.com/launchdarkly/observability-sdk/issues/661)) ([3cf63ab](https://github.com/launchdarkly/observability-sdk/commit/3cf63ab22071e581b02c49baabc299293abfe7f6))
+
+## [0.15.0](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.14.1...session-replay-react-native-0.15.0) (2026-06-29)
+
+
+### Features
+
+* **observability-react-native:** expose LDTracer with withSpan via getTracer() ([#658](https://github.com/launchdarkly/observability-sdk/issues/658)) ([36a622a](https://github.com/launchdarkly/observability-sdk/commit/36a622a6ab2878ac7b262b51cbf557ebdba57271))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @launchdarkly/observability-react-native bumped to 0.13.0
+
+## [0.14.1](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.14.0...session-replay-react-native-0.14.1) (2026-06-29)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @launchdarkly/observability-react-native bumped to 0.12.0
+
+## [0.14.0](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.13.0...session-replay-react-native-0.14.0) (2026-06-26)
+
+
+### Features
+
+* **observability-react-native:** accept plain nested dictionaries in track ([#650](https://github.com/launchdarkly/observability-sdk/issues/650)) ([f34ec69](https://github.com/launchdarkly/observability-sdk/commit/f34ec69ab830c9486705dc68247a5f50b114accb))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @launchdarkly/observability-react-native bumped to 0.11.0
+
+## [0.13.0](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.12.0...session-replay-react-native-0.13.0) (2026-06-26)
+
+
+### Features
+
+* **session-replay-react-native:** support React Native legacy architecture (RN 0.75+) ([#653](https://github.com/launchdarkly/observability-sdk/issues/653)) ([8ef4b30](https://github.com/launchdarkly/observability-sdk/commit/8ef4b30afc0d785ae25a4db2135a7064c9c32950))
+
+
+### Bug Fixes
+
+* backendurl and otlpendpoind pass through ([#648](https://github.com/launchdarkly/observability-sdk/issues/648)) ([a7b5a47](https://github.com/launchdarkly/observability-sdk/commit/a7b5a47f9aa02a44191df81a96a3a9db7eb38823))
+
+## [0.12.0](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.11.1...session-replay-react-native-0.12.0) (2026-06-25)
+
+
+### Features
+
+* supporting advanced trace cases ([#645](https://github.com/launchdarkly/observability-sdk/issues/645)) ([dac45eb](https://github.com/launchdarkly/observability-sdk/commit/dac45eb6e61c63f954da1ec63aec58764bc810e1))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @launchdarkly/observability-react-native bumped to 0.10.0
+
 ## [0.11.1](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.11.0...session-replay-react-native-0.11.1) (2026-06-05)
 
 

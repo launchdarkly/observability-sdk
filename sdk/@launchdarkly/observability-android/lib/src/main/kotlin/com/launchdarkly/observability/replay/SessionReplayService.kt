@@ -84,6 +84,9 @@ class SessionReplayService(
     private var captureJob: Job? = null
     private val shouldCapture = MutableStateFlow(false)
     private val _isEnabled = MutableStateFlow(options.enabled)
+    private val _isRunning = MutableStateFlow(false)
+    private val sampleRate = options.sampleRate
+    private val samplingSession = SessionReplaySamplingSession()
     private var processLifecycleObserver: DefaultLifecycleObserver? = null
     private var isInstalled: Boolean = false
     private var exporter: SessionReplayExporter? = null
@@ -162,6 +165,10 @@ class SessionReplayService(
         startCaptureStateObserver()
         startProcessLifecycleObserver()
 
+        if (_isEnabled.value) {
+            attemptStart(ignoreSampling = false)
+        }
+
         isInstalled = true
         return true
     }
@@ -170,7 +177,7 @@ class SessionReplayService(
         // Images collector
         instrumentationScope.launch {
             captureManager?.captureFlow?.collect { capture ->
-                if (!_isEnabled.value) return@collect
+                if (!_isRunning.value) return@collect
                 eventQueue.send(ImageItemPayload(capture))
             }
         }
@@ -185,7 +192,7 @@ class SessionReplayService(
         // Interactions collector
         instrumentationScope.launch {
             interactionSource?.captureFlow?.collect { interaction ->
-                if (!_isEnabled.value) return@collect
+                if (!_isRunning.value) return@collect
                 eventQueue.send(InteractionItemPayload(interaction))
             }
         }
@@ -194,7 +201,7 @@ class SessionReplayService(
         // event on the active recording.
         instrumentationScope.launch {
             observabilityContext.screenViewFlow?.collect { screenView ->
-                if (!_isEnabled.value) return@collect
+                if (!_isRunning.value) return@collect
                 eventQueue.send(
                     NavigateItemPayload(
                         name = screenView.name,
@@ -218,7 +225,7 @@ class SessionReplayService(
         // an rrweb `Foreground` / `Background` breadcrumb on the active recording.
         instrumentationScope.launch {
             observabilityContext.appLifecycleFlow?.collect { signal ->
-                if (!_isEnabled.value) return@collect
+                if (!_isRunning.value) return@collect
                 val tag = when (signal.kind) {
                     AppLifecycleSignal.Kind.FOREGROUND -> RRWebCustomDataTag.APP_FOREGROUND
                     AppLifecycleSignal.Kind.BACKGROUND -> RRWebCustomDataTag.APP_BACKGROUND
@@ -253,11 +260,22 @@ class SessionReplayService(
      */
     private fun startCaptureStateObserver() {
         instrumentationScope.launch {
-            combine(shouldCapture, _isEnabled) { shouldRun, enabled -> shouldRun && enabled }
+            combine(shouldCapture, _isRunning) { shouldRun, running -> shouldRun && running }
                 .collect { shouldRun ->
                     val running = captureJob?.isActive == true
                     if (shouldRun == running) return@collect
-                    if (shouldRun) doRunCapture() else doPauseCapture()
+                    if (shouldRun) {
+                        // Session Replay needs the shared touch hook regardless of
+                        // `instrumentations.userTaps`. Both calls are idempotent: attach ensures the
+                        // current window is tracked (Observability already attaches at init), and
+                        // enable wraps that already-current window plus future ones - so capture
+                        // starting after the first activity is up still records its touches.
+                        observabilityContext.userInteractionManager?.apply {
+                            attachToApplication(observabilityContext.application)
+                            enableTouchCapture()
+                        }
+                        doRunCapture()
+                    } else doPauseCapture()
                 }
         }
     }
@@ -306,17 +324,44 @@ class SessionReplayService(
     }
 
     /**
-     * Whether replay capture is enabled. Setting to `true` flushes any identify payload that
-     * was cached while disabled (mirroring the previous `start()` behaviour); setting to
-     * `false` simply pauses event production (mirroring `stop()`).
+     * Whether replay capture is enabled. Setting to `true` evaluates [ReplayOptions.sampleRate]
+     * once per enable cycle and starts recording when selected; setting to `false` pauses event
+     * production and resets the sampling decision (mirroring `stop()` on iOS).
      */
     override var isEnabled: Boolean
         get() = _isEnabled.value
         set(value) {
             if (_isEnabled.value == value) return
             _isEnabled.value = value
-            if (value) flushPendingIdentify()
+            if (value) {
+                attemptStart(ignoreSampling = false)
+            } else {
+                stopRecording()
+            }
         }
+
+    /**
+     * Whether this session was selected by [ReplayOptions.sampleRate] and is actively recording.
+     * When [isEnabled] is true but sampling excluded this session, this stays false.
+     */
+    internal val isRunning: Boolean
+        get() = _isRunning.value
+
+    private fun attemptStart(ignoreSampling: Boolean): Boolean {
+        if (_isRunning.value) return true
+        if (!samplingSession.shouldStartCapture(ignoreSampling, sampleRate)) {
+            logger.info("Session replay skipped by sampling.")
+            return false
+        }
+        _isRunning.value = true
+        flushPendingIdentify()
+        return true
+    }
+
+    private fun stopRecording() {
+        samplingSession.reset()
+        _isRunning.value = false
+    }
 
     override fun flush() {
         batchWorker.flush()
@@ -435,6 +480,11 @@ class SessionReplayService(
             return
         }
 
+        // Sampled-out sessions are enabled but not recording; skip identify like tracks/collectors.
+        if (!_isRunning.value) {
+            return
+        }
+
         synchronized(pendingIdentifyLock) {
             pendingIdentify = null
         }
@@ -471,8 +521,8 @@ class SessionReplayService(
             logger.warn("track received before SessionReplayService was installed; skipping.")
             return
         }
-        // Track events are timeline indicators on an active recording; skip when replay is disabled.
-        if (!_isEnabled.value) return
+        // Track events are timeline indicators on an active recording; skip when not running.
+        if (!_isRunning.value) return
 
         val event = TrackItemPayload.from(
             eventKey = name,

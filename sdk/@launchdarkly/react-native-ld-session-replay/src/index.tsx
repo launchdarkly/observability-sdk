@@ -2,9 +2,10 @@ import { View, type StyleProp, type ViewStyle } from 'react-native';
 import type { ReactNode } from 'react';
 import SessionReplayReactNative from './NativeSessionReplayReactNative';
 import type { SessionReplayOptions } from './NativeSessionReplayReactNative';
-import type {
-  LDPlugin,
-  LDClientMin,
+import {
+  LDObserve,
+  type LDPlugin,
+  type LDClientMin,
 } from '@launchdarkly/observability-react-native';
 import type {
   LDContext,
@@ -201,7 +202,16 @@ class SessionReplayPluginAdapter implements LDPlugin {
       console.error('[SessionReplay]', MOBILE_KEY_REQUIRED_MESSAGE);
       return;
     }
-    configureSessionReplay(key, this.options)
+    // Adopt the JS observability session id so native spans (e.g. `click`) share
+    // the same `session.id`. This requires the observability plugin to have been
+    // registered before this one; if it hasn't initialized yet the id is empty
+    // and native keeps its own session.
+    const sessionId = this.resolveObservabilitySessionId();
+    const options: SessionReplayOptions = sessionId
+      ? { ...this.options, sessionId }
+      : this.options;
+
+    configureSessionReplay(key, options)
       .then(() => {
         return startSessionReplay();
       })
@@ -211,6 +221,15 @@ class SessionReplayPluginAdapter implements LDPlugin {
           error
         );
       });
+  }
+
+  private resolveObservabilitySessionId(): string | undefined {
+    try {
+      const id = LDObserve.getSessionInfo()?.sessionId;
+      return typeof id === 'string' && id.length > 0 ? id : undefined;
+    } catch {
+      return undefined;
+    }
   }
 }
 

@@ -1,5 +1,33 @@
 # Changelog
 
+## [0.13.0](https://github.com/launchdarkly/observability-sdk/compare/observability-react-native-0.12.0...observability-react-native-0.13.0) (2026-06-29)
+
+
+### Features
+
+* **observability-react-native:** expose LDTracer with withSpan via getTracer() ([#658](https://github.com/launchdarkly/observability-sdk/issues/658)) ([36a622a](https://github.com/launchdarkly/observability-sdk/commit/36a622a6ab2878ac7b262b51cbf557ebdba57271))
+
+## [0.12.0](https://github.com/launchdarkly/observability-sdk/compare/observability-react-native-0.11.0...observability-react-native-0.12.0) (2026-06-29)
+
+
+### Features
+
+* add GraphQL operation attributes to instrumented spans ([#644](https://github.com/launchdarkly/observability-sdk/issues/644)) ([4772f5e](https://github.com/launchdarkly/observability-sdk/commit/4772f5e938f0020e43c0d5725ca879dc2476041d))
+
+## [0.11.0](https://github.com/launchdarkly/observability-sdk/compare/observability-react-native-0.10.0...observability-react-native-0.11.0) (2026-06-26)
+
+
+### Features
+
+* **observability-react-native:** accept plain nested dictionaries in track ([#650](https://github.com/launchdarkly/observability-sdk/issues/650)) ([f34ec69](https://github.com/launchdarkly/observability-sdk/commit/f34ec69ab830c9486705dc68247a5f50b114accb))
+
+## [0.10.0](https://github.com/launchdarkly/observability-sdk/compare/observability-react-native-0.9.3...observability-react-native-0.10.0) (2026-06-25)
+
+
+### Features
+
+* supporting advanced trace cases ([#645](https://github.com/launchdarkly/observability-sdk/issues/645)) ([dac45eb](https://github.com/launchdarkly/observability-sdk/commit/dac45eb6e61c63f954da1ec63aec58764bc810e1))
+
 ## [0.9.3](https://github.com/launchdarkly/observability-sdk/compare/observability-react-native-0.9.2...observability-react-native-0.9.3) (2026-06-05)
 
 

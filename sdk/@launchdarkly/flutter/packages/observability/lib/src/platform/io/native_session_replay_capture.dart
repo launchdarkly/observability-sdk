@@ -91,8 +91,16 @@ class _NativeSessionReplayCaptureState
       return null;
     }
 
-    final pixelRatio = View.of(context).devicePixelRatio;
     final args = arguments is Map ? arguments : const <Object?, Object?>{};
+    // Capture at the configured replay scale (e.g. 1.0 = 160 DPI / 1x) instead
+    // of the full device pixel ratio. Rendering at the device pixel ratio would
+    // produce oversized frames (e.g. 3x on a typical phone) that don't match the
+    // scale the native exporter records. Fall back to the device pixel ratio
+    // only when no usable scale is provided.
+    final scaleArg = args['scale'];
+    final pixelRatio = (scaleArg is num && scaleArg > 0)
+        ? scaleArg.toDouble()
+        : View.of(context).devicePixelRatio;
     final minimumAlphaArg = args['minimumAlpha'];
     final collector = MaskCollector(
       MaskingPolicy(

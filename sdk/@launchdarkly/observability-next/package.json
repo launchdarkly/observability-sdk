@@ -1,0 +1,95 @@
+{
+	"name": "@launchdarkly/observability-next",
+	"version": "0.2.1",
+	"description": "LaunchDarkly observability and session replay for Next.js. Capture frontend and backend errors, logs, traces, and session replays.",
+	"keywords": [
+		"launchdarkly",
+		"error monitoring",
+		"logging",
+		"tracing",
+		"metrics",
+		"debugging",
+		"observability",
+		"session replay",
+		"nextjs",
+		"next",
+		"library"
+	],
+	"homepage": "https://github.com/launchdarkly/observability-sdk/tree/main/sdk/@launchdarkly/observability-next#readme",
+	"bugs": {
+		"url": "https://github.com/launchdarkly/observability-sdk/issues",
+		"email": "support@launchdarkly.com"
+	},
+	"license": "Apache-2.0",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/launchdarkly/observability-sdk.git"
+	},
+	"files": [
+		"dist",
+		"client.d.ts",
+		"config.d.ts",
+		"server.d.ts",
+		"ssr.d.ts"
+	],
+	"exports": {
+		"./server": {
+			"types": "./dist/server.d.ts",
+			"edge": "./dist/server.edge.js",
+			"edge-light": "./dist/server.edge.js",
+			"worker": "./dist/server.edge.js",
+			"workerd": "./dist/server.edge.js",
+			"require": "./dist/server.cjs",
+			"import": "./dist/server.js"
+		},
+		"./client": {
+			"types": "./dist/next-client.d.ts",
+			"import": "./dist/next-client.js",
+			"require": "./dist/next-client.cjs"
+		},
+		"./config": {
+			"types": "./dist/config.d.ts",
+			"import": "./dist/config.js",
+			"require": "./dist/config.cjs"
+		},
+		"./ssr": {
+			"types": "./dist/ssr.d.ts",
+			"import": "./dist/ssr.js",
+			"require": "./dist/ssr.cjs"
+		}
+	},
+	"type": "module",
+	"publishConfig": {
+		"access": "public"
+	},
+	"scripts": {
+		"typegen": "tsc -d --emitDeclarationOnly",
+		"dev": "yarn build --watch",
+		"build": "rollup --config rollup.config.js && sh bin/clean-dist.sh"
+	},
+	"author": "",
+	"peerDependencies": {
+		"next": ">=14",
+		"react": ">=17"
+	},
+	"dependencies": {
+		"@launchdarkly/observability": "workspace:*",
+		"@launchdarkly/observability-node": "workspace:*",
+		"@launchdarkly/session-replay": "workspace:*",
+		"js-cookie": "^3.0.5"
+	},
+	"devDependencies": {
+		"@opentelemetry/api": "^1.9.0",
+		"@opentelemetry/semantic-conventions": "^1.34.0",
+		"@rollup/plugin-json": "^6.1.0",
+		"@rollup/plugin-terser": "^0.4.4",
+		"@rollup/plugin-typescript": "^11.1.5",
+		"@types/js-cookie": "^3",
+		"@types/node": "^20.14.7",
+		"@types/react": "^19.0.10",
+		"next": ">=14",
+		"react": "^19.0.0",
+		"rollup": "^4.4.1",
+		"typescript": "^5.0.4"
+	}
+}

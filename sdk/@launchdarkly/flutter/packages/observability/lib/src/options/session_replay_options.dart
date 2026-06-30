@@ -16,12 +16,20 @@ class SessionReplayOptions {
   /// `frameRate`. Native-only. Defaults to `1.0`.
   final double frameRate;
 
+  /// Replay capture scale. Controls the resolution frames are captured and
+  /// exported at: `1.0` = 1x (160 DPI), `2.0` = 2x, etc. Higher values capture
+  /// more detail at the cost of larger frames. Mirrors Android
+  /// `ReplayOptions.scale` and iOS `SessionReplayOptions.scale`. `null` is
+  /// treated as `1.0`. Defaults to `1.0`.
+  final double? scale;
+
   final PrivacyOptions privacy;
 
   const SessionReplayOptions({
     this.isEnabled = true,
     this.serviceName = 'sessionreplay-flutter',
     this.frameRate = 1.0,
+    this.scale = 1.0,
     this.privacy = const PrivacyOptions(),
   });
 }

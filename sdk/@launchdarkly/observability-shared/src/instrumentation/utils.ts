@@ -1,4 +1,3 @@
-import { parse } from 'graphql'
 import { isLDContextUrl } from '../launchdarkly/urlFilters'
 import { TracingOrigins } from './types'
 
@@ -87,6 +86,9 @@ export const shouldRecordRequest = (
 	)
 }
 
+const escapeRegExp = (s: string): string =>
+	s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
 // Helper to convert tracingOrigins to a RegExp or array of RegExp
 export function getCorsUrlsPattern(
 	tracingOrigins: TracingOrigins,
@@ -94,25 +96,33 @@ export function getCorsUrlsPattern(
 	if (tracingOrigins === true) {
 		const patterns = [/localhost/, /^\//]
 		if (typeof window !== 'undefined' && window.location?.host) {
-			patterns.push(buildLocationHostPattern(window.location.host))
+			patterns.push(buildOriginHostPattern(window.location.host))
 		}
 		return patterns
 	} else if (Array.isArray(tracingOrigins)) {
+		// Per the documented contract, string entries are hosts while RegExp
+		// entries are used as-is. Anchor string entries to the origin position
+		// (host + optional subdomains) rather than matching them as a bare
+		// substring. This matters because these patterns are also handed to the
+		// instrumentations' `propagateTraceHeaderCorsUrls`, which tests them
+		// against the *full* request URL — an unanchored `api.example.com` would
+		// otherwise match a third-party URL that merely carries the host as a
+		// query-parameter value (e.g. `https://evil.test/?x=api.example.com`),
+		// leaking trace and baggage headers to unintended origins.
 		return tracingOrigins.map((pattern) =>
-			typeof pattern === 'string' ? new RegExp(pattern) : pattern,
+			typeof pattern === 'string'
+				? buildOriginHostPattern(pattern)
+				: pattern,
 		)
 	}
 
 	return /^$/ // Match nothing if tracingOrigins is false or undefined
 }
 
-const escapeRegExp = (s: string): string =>
-	s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-
-// Build a regex that matches the page host (and its subdomains) at the origin
-// position of a URL, not anywhere inside it. Anchoring matters: an unanchored
+// Build a regex that matches a host (and its subdomains) at the origin position
+// of a URL, not anywhere inside it. Anchoring matters: an unanchored
 // /example.com/ also matches https://third-party.io/?store=example.com.
-const buildLocationHostPattern = (host: string): RegExp =>
+const buildOriginHostPattern = (host: string): RegExp =>
 	new RegExp('^https?://([^/]+\\.)?' + escapeRegExp(host) + '([:/?#]|$)')
 
 // Returns the URL's origin for absolute URLs, or the original string for

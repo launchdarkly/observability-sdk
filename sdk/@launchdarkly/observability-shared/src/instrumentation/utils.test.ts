@@ -10,6 +10,36 @@ describe('getCorsUrlsPattern', () => {
 		expect(getCorsUrlsPattern(false)).toEqual(/^$/)
 	})
 
+	it('anchors string entries to the origin position (host + subdomains)', () => {
+		const patterns = getCorsUrlsPattern(['api.example.com']) as RegExp[]
+		expect(patterns[0]).toEqual(
+			/^https?:\/\/([^/]+\.)?api\.example\.com([:/?#]|$)/,
+		)
+		// The configured host (and its subdomains) match at the origin.
+		expect(patterns[0].test('https://api.example.com/posts')).toBe(true)
+		expect(patterns[0].test('https://eu.api.example.com/posts')).toBe(true)
+		// `.` must not act as a wildcard, so look-alike hosts do not match.
+		expect(patterns[0].test('https://apiXexampleYcom/posts')).toBe(false)
+		// Regression: these patterns are also matched against the full URL by
+		// the instrumentations' `propagateTraceHeaderCorsUrls`, so a third-party
+		// URL carrying the host as a query value must NOT match (otherwise
+		// baggage/trace headers leak to unintended origins).
+		expect(patterns[0].test('https://evil.test/?x=api.example.com')).toBe(
+			false,
+		)
+		// A different host that merely contains the configured host as a suffix
+		// of a longer label must not match either.
+		expect(patterns[0].test('https://notapi.example.com.evil.test')).toBe(
+			false,
+		)
+	})
+
+	it('passes RegExp entries through unchanged', () => {
+		const re = /^https?:\/\/backend\./
+		const patterns = getCorsUrlsPattern([re]) as RegExp[]
+		expect(patterns[0]).toBe(re)
+	})
+
 	it('anchors the page host at the origin position', () => {
 		vi.stubGlobal('window', {
 			location: { host: 'example.com' },

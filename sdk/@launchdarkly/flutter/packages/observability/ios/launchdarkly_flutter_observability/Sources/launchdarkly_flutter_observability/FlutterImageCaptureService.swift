@@ -10,6 +10,9 @@ final class FlutterImageCaptureService: ImageCaptureServicing {
     private let maskImages: Bool
     private let maskWebViews: Bool
     private let minimumAlpha: Double
+    /// Render scale the Dart side should capture at (1.0 = 1x). Kept in sync
+    /// with the scale the native exporter records so frames are not oversized.
+    private let scale: Double
     @MainActor
     private var shouldCapture = false
 
@@ -19,7 +22,8 @@ final class FlutterImageCaptureService: ImageCaptureServicing {
         maskLabels: Bool,
         maskImages: Bool,
         maskWebViews: Bool,
-        minimumAlpha: Double
+        minimumAlpha: Double,
+        scale: Double
     ) {
         self.channel = channel
         self.maskTextInputs = maskTextInputs
@@ -27,6 +31,7 @@ final class FlutterImageCaptureService: ImageCaptureServicing {
         self.maskImages = maskImages
         self.maskWebViews = maskWebViews
         self.minimumAlpha = minimumAlpha
+        self.scale = scale
     }
 
     @MainActor
@@ -40,6 +45,7 @@ final class FlutterImageCaptureService: ImageCaptureServicing {
                 "maskImages": maskImages,
                 "maskWebViews": maskWebViews,
                 "minimumAlpha": minimumAlpha,
+                "scale": scale,
             ]
         ) { [weak self] result in
             Task { @MainActor in

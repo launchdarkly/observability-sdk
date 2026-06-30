@@ -229,7 +229,7 @@ class SamplingE2ETest {
                 crashReporting = true,
                 launchTime = true
             ),
-            analytics = ObservabilityOptions.Analytics(pageViews = true)
+            analytics = ObservabilityOptions.Analytics(screenViews = true)
         )
     }
 

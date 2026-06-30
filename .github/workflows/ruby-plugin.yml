@@ -96,3 +96,32 @@ jobs:
               run: bundle install
             - name: Test
               run: bundle exec rake
+
+    e2e-rails-legacy:
+        # Regression guard for the CardFlight failure. The other e2e apps run on
+        # Rails 7.2, which is above the floor the OTel Rails-family instrumentations
+        # enforce, so they can never catch an old-Rails compatibility break. This
+        # app pins Rails 7.0 (on current Ruby, so bundler still resolves the latest
+        # instrumentation gems) and fails if the Rails-family auto-instrumentation
+        # stops attaching — i.e. if a future dependency bump re-breaks Rails 7.0.
+        # See e2e/ruby/rails/demo-rails70/README.md.
+        name: Rails 7.0 (legacy) E2E Tests
+        runs-on: ubuntu-22.04-8core-32gb
+        defaults:
+            run:
+                working-directory: ./e2e/ruby/rails/demo-rails70
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  token: ${{ secrets.GITHUB_TOKEN }}
+            - name: Install Ruby
+              uses: ruby/setup-ruby@3ff19f5e2baf30647122352b96108b1fbe250c64 # v1
+              with:
+                  ruby-version: '3.3'
+                  # See the note above: install non-frozen to absorb release-please version bumps.
+                  bundler-cache: false
+                  working-directory: ./e2e/ruby/rails/demo-rails70
+            - name: Install dependencies
+              run: bundle install
+            - name: Test
+              run: bundle exec rake

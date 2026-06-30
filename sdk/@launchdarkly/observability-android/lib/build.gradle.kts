@@ -92,7 +92,9 @@ dependencies {
 
     // OTEL Android Instrumentations
     implementation("io.opentelemetry.android.instrumentation:crash:0.11.0-alpha")
-    implementation("io.opentelemetry.android.instrumentation:activity:0.11.0-alpha")
+    // NOTE: the `activity` instrumentation is intentionally NOT depended on. It is superseded by
+    // LaunchDarkly's own app/screen lifecycle spans and would otherwise double-report; we also
+    // defensively suppress it by name (see ObservabilityService.createOtelRumConfig).
 
     // Use JUnit Jupiter for testing.
     // Testing exporters for telemetry inspection

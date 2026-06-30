@@ -15,7 +15,7 @@ void main() {
       expect(wire.traces?.includeSpans, isTrue);
       expect(wire.metricsEnabled, isTrue);
       expect(wire.analytics?.taps, isTrue);
-      expect(wire.analytics?.pageViews, isTrue);
+      expect(wire.analytics?.views, isTrue);
       expect(wire.analytics?.trackEvents, isTrue);
       expect(wire.analytics?.appLifecycle, isTrue);
       expect(wire.analytics?.appLaunch, isTrue);
@@ -31,7 +31,7 @@ void main() {
         metricsEnabled: false,
         analytics: AnalyticsOptions(
           taps: true,
-          pageViews: false,
+          views: false,
           trackEvents: false,
           appLifecycle: false,
           appLaunch: false,
@@ -46,7 +46,7 @@ void main() {
       expect(wire.traces?.includeSpans, isFalse);
       expect(wire.metricsEnabled, isFalse);
       expect(wire.analytics?.taps, isTrue);
-      expect(wire.analytics?.pageViews, isFalse);
+      expect(wire.analytics?.views, isFalse);
       expect(wire.analytics?.trackEvents, isFalse);
       expect(wire.analytics?.appLifecycle, isFalse);
       expect(wire.analytics?.appLaunch, isFalse);
@@ -63,16 +63,29 @@ void main() {
   });
 
   group('SessionReplayOptions.toWire', () {
-    test('uses default frame rate', () {
+    test('uses default frame rate and scale', () {
       final wire = const SessionReplayOptions().toWire();
 
       expect(wire.frameRate, 1.0);
+      expect(wire.scale, 1.0);
     });
 
     test('propagates a custom frame rate', () {
       final wire = const SessionReplayOptions(frameRate: 4.0).toWire();
 
       expect(wire.frameRate, 4.0);
+    });
+
+    test('propagates a custom scale', () {
+      final wire = const SessionReplayOptions(scale: 2.0).toWire();
+
+      expect(wire.scale, 2.0);
+    });
+
+    test('propagates a null scale to disable the scaling override', () {
+      final wire = const SessionReplayOptions(scale: null).toWire();
+
+      expect(wire.scale, isNull);
     });
   });
 }

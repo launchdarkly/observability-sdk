@@ -192,6 +192,47 @@ class HookTest < Minitest::Test
     assert_equal 'org:org-1:user:user-1', span.attributes['feature_flag.context.id']
   end
 
+  # Regression: an invalid context (e.g. a non-string kind) is a non-nil
+  # object whose fully_qualified_key is nil. Setting a nil OTel attribute
+  # raised "OpenTelemetry error: invalid attribute value type NilClass for
+  # key 'feature_flag.context.id'" on every evaluation. The attribute must be
+  # omitted instead.
+  def test_invalid_context_omits_context_id_attribute
+    invalid_context = LaunchDarkly::LDContext.create({ key: 'k', kind: 123 })
+    refute invalid_context.valid?
+    assert_nil invalid_context.fully_qualified_key
+
+    series_context = LaunchDarkly::Interfaces::Hooks::EvaluationSeriesContext.new(
+      'my-flag', invalid_context, false, :variation
+    )
+
+    # Capture OpenTelemetry's error channel. Setting an attribute to nil does not
+    # raise and does not set the attribute (OTel drops it) — the only observable
+    # symptom is an "invalid attribute value type NilClass" error logged here,
+    # which is exactly the noise the customer saw on every evaluation.
+    captured = StringIO.new
+    original_logger = OpenTelemetry.logger
+    OpenTelemetry.logger = ::Logger.new(captured)
+    begin
+      data = @hook.before_evaluation(series_context, {})
+      @hook.after_evaluation(series_context, data, create_evaluation_detail)
+    ensure
+      OpenTelemetry.logger = original_logger
+    end
+
+    refute_match(/invalid .*attribute value type NilClass/, captured.string,
+                 'must not emit an OTel nil-attribute error for an invalid context')
+    refute_match(/feature_flag\.context\.id/, captured.string)
+
+    span = @exporter.finished_spans.first
+    refute_nil span
+    refute span.attributes.key?('feature_flag.context.id')
+
+    flag_event = span.events.find { |e| e.name == 'feature_flag' }
+    refute_nil flag_event
+    refute flag_event.attributes.key?('feature_flag.context.id')
+  end
+
   def test_nil_context_does_not_raise_and_still_records_event
     series_context = LaunchDarkly::Interfaces::Hooks::EvaluationSeriesContext.new(
       'my-flag', nil, false, :variation

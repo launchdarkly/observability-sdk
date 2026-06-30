@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.60.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.59.0...launchdarkly-observability-android-0.60.0) (2026-06-30)
+
+
+### Features
+
+* client-side sampleRate to Android session replay ([#660](https://github.com/launchdarkly/observability-sdk/issues/660)) ([44b0e44](https://github.com/launchdarkly/observability-sdk/commit/44b0e44142ce799a2cc82aee7e77e8e032304945))
+
+## [0.59.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.58.0...launchdarkly-observability-android-0.59.0) (2026-06-25)
+
+
+### Features
+
+* **observability-android:** support external session id ([#647](https://github.com/launchdarkly/observability-sdk/issues/647)) ([48c83ba](https://github.com/launchdarkly/observability-sdk/commit/48c83ba94befa880f1f9f0c8d933ff22d8762de4))
+
+
+### Bug Fixes
+
+* **observability-android:** report service.name and service.version as resource attributes ([#646](https://github.com/launchdarkly/observability-sdk/issues/646)) ([f19b704](https://github.com/launchdarkly/observability-sdk/commit/f19b70475858014e286f61dad40d0cff0d045a17))
+
+## [0.58.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.57.0...launchdarkly-observability-android-0.58.0) (2026-06-18)
+
+
+### Features
+
+* richer click analytics (ldId, screen_id/screen_name) + touch-capture gating + lifecycle span cleanup ([#634](https://github.com/launchdarkly/observability-sdk/issues/634)) ([91f5816](https://github.com/launchdarkly/observability-sdk/commit/91f5816d0db59cc55f33c651a3c7eab806208c73))
+
 ## [0.57.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.56.0...launchdarkly-observability-android-0.57.0) (2026-06-12)
 
 

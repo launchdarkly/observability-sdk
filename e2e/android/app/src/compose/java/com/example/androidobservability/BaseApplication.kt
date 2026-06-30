@@ -20,6 +20,7 @@ import com.launchdarkly.sdk.android.LDClient
 import com.launchdarkly.sdk.android.LDConfig
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
+import kotlin.time.Duration.Companion.minutes
 
 open class BaseApplication : Application() {
 
@@ -27,6 +28,15 @@ open class BaseApplication : Application() {
         const val LAUNCHDARKLY_MOBILE_KEY = BuildConfig.LAUNCHDARKLY_MOBILE_KEY
     }
 
+    // A minimal setup with all
+    // automatic instrumentation disabled, for testing the `Instrumentations.disabled()` path.
+//    var observabilityOptions = ObservabilityOptions(
+//        enabled = true,
+//        serviceName = "observability-android-test-app",
+//        instrumentations = ObservabilityOptions.Instrumentations.disabled(),
+//    )
+
+    // Current configuration, commented out for testing.
     var observabilityOptions = ObservabilityOptions(
         resourceAttributes = Attributes.of(
             AttributeKey.stringKey("resourceAttributes"), "BaseApplication"
@@ -34,13 +44,14 @@ open class BaseApplication : Application() {
         debug = true,
         otlpEndpoint = BuildConfig.OTLP_ENDPOINT,
         backendUrl = BuildConfig.BACKEND_URL,
+        sessionBackgroundTimeout = 3.minutes,
         tracesApi = ObservabilityOptions.TracesApi.enabled(),
         metricsApi = ObservabilityOptions.MetricsApi.enabled(),
         instrumentations = ObservabilityOptions.Instrumentations(
             crashReporting = true, launchTime = true
         ),
         analytics = ObservabilityOptions.Analytics(
-            taps = true, pageViews = true, trackEvents = true
+            taps = true, screenViews = true, trackEvents = true
         ),
     )
 
@@ -55,6 +66,7 @@ open class BaseApplication : Application() {
                 ),
                 maskXMLViewIds = listOf("smoothieTitle")
             ),
+            sampleRate = 1.0,
             frameRate = 1.0
         )
     )

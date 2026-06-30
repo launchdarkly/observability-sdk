@@ -91,12 +91,23 @@ module LaunchDarklyObservability
         FEATURE_FLAG_PROVIDER_NAME => 'LaunchDarkly'
       }
 
-      context = series_context.context
-      if context
-        attrs[FEATURE_FLAG_CONTEXT_ID] = context.fully_qualified_key
-      end
+      attrs[FEATURE_FLAG_CONTEXT_ID] = context_id_for(series_context)
 
-      attrs
+      # OpenTelemetry rejects nil attribute values and logs an error for each
+      # one. Drop nils centrally so individual call sites cannot reintroduce the
+      # "invalid attribute value type NilClass" noise (e.g. an invalid context
+      # whose fully_qualified_key is nil).
+      attrs.compact
+    end
+
+    # Returns the fully-qualified context key, or nil if unavailable.
+    #
+    # An invalid context (e.g. a non-string context kind) is still a non-nil
+    # object but yields a nil fully_qualified_key. OpenTelemetry rejects nil
+    # attribute values ("invalid attribute value type NilClass"), so callers
+    # must omit the attribute entirely when this returns nil.
+    def context_id_for(series_context)
+      series_context.context&.fully_qualified_key
     end
 
     def serialize_value(value)
@@ -127,10 +138,7 @@ module LaunchDarklyObservability
         FEATURE_FLAG_PROVIDER_NAME => 'LaunchDarkly'
       }
 
-      context = series_context.context
-      if context
-        event_attributes[FEATURE_FLAG_CONTEXT_ID] = context.fully_qualified_key
-      end
+      event_attributes[FEATURE_FLAG_CONTEXT_ID] = context_id_for(series_context)
 
       if detail.variation_index
         event_attributes[FEATURE_FLAG_RESULT_VARIANT] = detail.variation_index.to_s
@@ -146,7 +154,9 @@ module LaunchDarklyObservability
         add_reason_event_details(event_attributes, reason)
       end
 
-      span.add_event(FEATURE_FLAG_EVENT_NAME, attributes: event_attributes)
+      # See build_before_attributes: drop nil values so a missing context id (or
+      # any future optional attribute) cannot emit a nil-attribute OTel error.
+      span.add_event(FEATURE_FLAG_EVENT_NAME, attributes: event_attributes.compact)
     end
 
     def add_reason_event_details(event_attributes, reason)

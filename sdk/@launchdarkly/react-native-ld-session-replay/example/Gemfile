@@ -14,3 +14,6 @@ gem 'bigdecimal'
 gem 'logger'
 gem 'benchmark'
 gem 'mutex_m'
+
+# Ruby 4.0.0 removed nkf/kconv from the standard library; CFPropertyList needs it.
+gem 'nkf'

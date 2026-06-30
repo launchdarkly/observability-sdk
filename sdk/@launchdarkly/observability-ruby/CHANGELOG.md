@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-ruby/0.2.2...launchdarkly-observability-ruby/0.3.0) (2026-06-29)
+
+
+### Features
+
+* **ruby:** boot-time OTel auto-instrumentation; keep it working on Rails 7.0 ([#643](https://github.com/launchdarkly/observability-sdk/issues/643)) ([350d549](https://github.com/launchdarkly/observability-sdk/commit/350d54994ff3745aba3d8f9a4c8602ce18dc6807))
+
+## [0.2.2](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-ruby/0.2.1...launchdarkly-observability-ruby/0.2.2) (2026-06-22)
+
+
+### Bug Fixes
+
+* **ruby:** omit nil feature_flag.context.id for invalid contexts ([#641](https://github.com/launchdarkly/observability-sdk/issues/641)) ([587e2e4](https://github.com/launchdarkly/observability-sdk/commit/587e2e40764bade29198c47e6746887f1af6d856))
+
 ## [0.2.1](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-ruby/0.2.0...launchdarkly-observability-ruby/0.2.1) (2026-06-02)
 
 

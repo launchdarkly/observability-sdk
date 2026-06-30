@@ -6,6 +6,7 @@ import {
 	Gauge,
 	Histogram,
 	Span as OtelSpan,
+	SpanKind,
 	SpanOptions,
 	trace,
 	propagation,
@@ -44,6 +45,8 @@ import {
 	XHRHook,
 } from '../listeners/network-listener/network-listener'
 import { Metric } from '../api/Metric'
+import { TrackProperties } from '../api/TrackProperties'
+import { flattenTrackProperties } from '../utils/trackAttributes'
 import { SessionManager } from './SessionManager'
 import {
 	CustomSampler,
@@ -58,6 +61,9 @@ import { CustomLogExporter } from '../otel/CustomLogExporter'
 export type InstrumentationManagerOptions = Required<ReactNativeOptions> & {
 	projectId: string
 }
+
+// Span name for custom track events, matching the iOS/Android SDKs (`track`).
+const TRACK_SPAN_NAME = 'track'
 
 export class InstrumentationManager {
 	private traceProvider?: WebTracerProvider
@@ -119,8 +125,6 @@ export class InstrumentationManager {
 	}
 
 	private initializeTracing() {
-		if (this.options.disableTraces) return
-
 		const compositePropagator = new CompositePropagator({
 			propagators: [
 				new W3CBaggagePropagator(),
@@ -390,6 +394,36 @@ export class InstrumentationManager {
 			})
 		} catch (e) {
 			console.error('Failed to record log:', e)
+		}
+	}
+
+	/**
+	 * Single emitter for `track` spans, mirroring the iOS/Android `track` API.
+	 * Emits a span named `track` carrying the event `key`, an optional numeric
+	 * `value`, and any caller `properties` as attributes.
+	 */
+	public track(
+		key: string,
+		properties?: TrackProperties,
+		metricValue?: number,
+	): void {
+		try {
+			const sessionId = this.sessionManager?.getSessionInfo().sessionId
+			const attributes: Attributes = {
+				...flattenTrackProperties(properties),
+				key,
+				...(metricValue !== undefined ? { value: metricValue } : {}),
+				...(sessionId ? { ['highlight.session_id']: sessionId } : {}),
+			}
+
+			this.getTracer()
+				.startSpan(TRACK_SPAN_NAME, {
+					kind: SpanKind.CLIENT,
+					attributes,
+				})
+				.end()
+		} catch (e) {
+			console.error('Failed to record track event:', e)
 		}
 	}
 

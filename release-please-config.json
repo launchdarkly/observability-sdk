@@ -57,6 +57,13 @@
 			"include-v-in-tag": false,
 			"include-component-in-tag": true
 		},
+		"sdk/@launchdarkly/observability-next": {
+			"package-name": "@launchdarkly/observability-next",
+			"release-type": "node",
+			"versioning": "default",
+			"include-v-in-tag": false,
+			"include-component-in-tag": true
+		},
 		"sdk/@launchdarkly/session-replay": {
 			"package-name": "@launchdarkly/session-replay",
 			"release-type": "node",

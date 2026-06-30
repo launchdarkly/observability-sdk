@@ -2,8 +2,9 @@
 
 require 'opentelemetry/sdk'
 require 'opentelemetry/exporter/otlp'
-require 'opentelemetry/instrumentation/all'
 require 'opentelemetry/semantic_conventions'
+require_relative 'instrumentations'
+require_relative 'instrumentation_log_filter'
 
 module LaunchDarklyObservability
   # Configures OpenTelemetry SDK with appropriate providers and exporters
@@ -61,6 +62,8 @@ module LaunchDarklyObservability
     def configure
       return if @configured
 
+      warn_ignored_boot_options if LaunchDarklyObservability.instrumentation_installed_at_boot?
+
       configure_traces if @options.fetch(:enable_traces, true)
       configure_logs if @options.fetch(:enable_logs, true)
       configure_metrics if @options.fetch(:enable_metrics, true)
@@ -68,6 +71,20 @@ module LaunchDarklyObservability
       setup_shutdown_hook
 
       @configured = true
+    end
+
+    # Install the SDK tracer provider and auto-instrumentation WITHOUT exporters.
+    #
+    # Called from the Rails Railtie during boot so the Rails-family
+    # instrumentations (which patch via ActiveSupport.on_load hooks that fire
+    # during boot) attach even when the LaunchDarkly client — and therefore
+    # #register / #configure — is created lazily afterward. Exporters are added
+    # later by #configure_traces when the client registers the plugin.
+    def install_instrumentation_only
+      configure_sdk_capturing_failures do |c|
+        c.resource = create_resource
+        configure_instrumentations(c)
+      end
     end
 
     # Flush all pending telemetry data
@@ -90,24 +107,93 @@ module LaunchDarklyObservability
 
     private
 
-    # Configure OpenTelemetry traces with OTLP exporter
+    # Configure OpenTelemetry traces with OTLP exporter.
+    #
+    # If auto-instrumentation was already installed during Rails boot (see
+    # LaunchDarklyObservability.install_rails_instrumentation), the SDK tracer
+    # provider already exists with instrumentation attached — so we add the OTLP
+    # span exporter and refresh its resource, rather than re-running
+    # OpenTelemetry::SDK.configure (which would replace the provider and, in the
+    # lazy-init case, drop the Rails-family instrumentation that can only attach
+    # during boot).
     def configure_traces
-      OpenTelemetry::SDK.configure do |c|
+      if LaunchDarklyObservability.instrumentation_installed_at_boot?
+        provider = OpenTelemetry.tracer_provider
+        provider.add_span_processor(create_batch_span_processor)
+
+        # The boot-time install built the provider's resource before this plugin
+        # (and its service_name/service_version options) existed, so it carries
+        # the inferred service name. configure_logs/configure_metrics below build
+        # a fresh resource from those options; without updating the trace
+        # resource too, spans would report a different service identity than logs
+        # and metrics. OTel exposes no resource setter, but the provider reads
+        # @resource live when creating each span — so update it in place.
+        provider.instance_variable_set(:@resource, create_resource)
+        return
+      end
+
+      configure_sdk_capturing_failures do |c|
         c.resource = create_resource
         c.add_span_processor(create_batch_span_processor)
 
         # Enable auto-instrumentation
         configure_instrumentations(c)
       end
+
+      warn_if_rails_instrumentation_missed
+    end
+
+    # Emit a single actionable warning when the plugin is registered after Rails
+    # has finished booting and boot-time instrumentation install did not run
+    # (e.g. LAUNCHDARKLY_SDK_KEY was not set in the environment at boot). In that
+    # case the OTel Rails-family instrumentations log a flurry of
+    # "failed to install" warnings because their load hooks have already fired.
+    def warn_if_rails_instrumentation_missed
+      return unless defined?(::Rails) && ::Rails.respond_to?(:application)
+      return unless ::Rails.application.respond_to?(:initialized?) && ::Rails.application.initialized?
+
+      warn '[LaunchDarklyObservability] The LaunchDarkly client was created after Rails finished ' \
+           'booting, so the Rails auto-instrumentation (ActionPack, ActiveRecord, ...) could not be ' \
+           'installed. To enable it, set LAUNCHDARKLY_SDK_KEY in the environment before Rails boots, ' \
+           'or create the LaunchDarkly client from a config/initializer.'
+    end
+
+    # Emit a single actionable warning when the client is created lazily (so
+    # instrumentation was installed at boot, before this plugin existed) but was
+    # given options that can only take effect at install time. Custom
+    # `instrumentations` config and `enable_traces: false` cannot be applied
+    # retroactively: an OTel instrumentation patches its library during boot via
+    # ActiveSupport.on_load hooks and cannot be reconfigured or detached
+    # afterward. (service_name/service_version are the exception — the trace
+    # resource is refreshed in #configure_traces because it is read live per
+    # span.) To honor these options, create the client from a config/initializer
+    # so #configure runs during boot with them.
+    def warn_ignored_boot_options
+      ignored = []
+      ignored << 'instrumentations' unless @options.fetch(:instrumentations, {}).empty?
+      ignored << 'enable_traces: false' unless @options.fetch(:enable_traces, true)
+      return if ignored.empty?
+
+      warn '[LaunchDarklyObservability] Rails auto-instrumentation was installed at boot, so these ' \
+           "plugin option(s) cannot be applied and will be ignored: #{ignored.join(', ')}. Instrumentations " \
+           'attach during boot, before the client exists, and cannot be reconfigured or detached afterward. ' \
+           'To apply these options, create the LaunchDarkly client from a config/initializer instead of lazily.'
     end
 
     # Configure auto-instrumentations with sensible defaults.
     # User-provided instrumentation config is merged on top of defaults,
     # so users only need to specify the instrumentations they want to override.
     def configure_instrumentations(config)
+      # Only pass options that the instrumentations actually accept. Unknown
+      # options are not fatal but emit a warning on every boot ("ignored the
+      # following unknown configuration options [...]"):
+      # - `enable_recognize_route` is not an option on the Rails, Rack, or
+      #   ActionPack instrumentations; route-based span naming (http.route) is
+      #   handled automatically by the ActionPack instrumentation.
+      # - ActiveRecord has no `db_statement` option; SQL capture comes from the
+      #   database adapter instrumentations (Mysql2, PG, ...) which default to
+      #   obfuscating statements.
       defaults = {
-        'OpenTelemetry::Instrumentation::Rails' => { enable_recognize_route: true },
-        'OpenTelemetry::Instrumentation::ActiveRecord' => { db_statement: :include },
         'OpenTelemetry::Instrumentation::Net::HTTP' => { untraced_hosts: [] },
         'OpenTelemetry::Instrumentation::Rack' => { untraced_endpoints: ['/health', '/healthz', '/ready'] }
       }
@@ -116,6 +202,20 @@ module LaunchDarklyObservability
       config.use_all(defaults.merge(user_config))
     rescue StandardError => e
       warn "[LaunchDarklyObservability] Error configuring instrumentations: #{e.message}"
+    end
+
+    # Run an OpenTelemetry::SDK.configure block, replacing the SDK's
+    # per-instrumentation install logging (a flurry of "Instrumentation: <X>
+    # failed to install" WARN lines when instrumentations are incompatible with
+    # the framework version — e.g. the Rails family below its Rails floor) with a
+    # single actionable summary. The SDK installs the instrumentations AFTER the
+    # configure block returns (use_all only queues them), so the filter wraps the
+    # whole call, not just use_all.
+    def configure_sdk_capturing_failures(&block)
+      failed = InstrumentationLogFilter.capture_failures do
+        OpenTelemetry::SDK.configure(&block)
+      end
+      warn InstrumentationLogFilter.failure_warning(failed) unless failed.empty?
     end
 
     # Configure OpenTelemetry logs with OTLP exporter.

@@ -1,4 +1,5 @@
 import { Span } from '@opentelemetry/api'
+import { parseGraphQLOperation } from '@launchdarkly/observability-shared'
 import { FetchCustomAttributeFunction } from '@opentelemetry/instrumentation-fetch'
 import { NetworkRecordingOptions } from '../../api/Options'
 import { sanitizeHeaders, sanitizeUrl } from './utils/network-sanitizer'
@@ -24,6 +25,19 @@ const applyNetworkAttributes = (
 
 	if (urlBlocklist.some((blocked) => url.toLowerCase().includes(blocked))) {
 		return
+	}
+
+	// Tag GraphQL requests with operation attributes (the UI builds the display
+	// name from them); runs even when body recording is off since the operation
+	// name/type are low-sensitivity and the body isn't stored.
+	const gql = parseGraphQLOperation(requestBody)
+	if (gql) {
+		if (gql.name) {
+			span.setAttribute('graphql.operation.name', gql.name)
+		}
+		if (gql.type) {
+			span.setAttribute('graphql.operation.type', gql.type)
+		}
 	}
 
 	if (!recording.recordHeadersAndBody) {

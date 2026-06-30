@@ -1,15 +1,17 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import {
 	safeParseUrl,
 	sanitizeHeaders,
 	sanitizeUrl,
 } from '../listeners/network-listener/utils/network-sanitizer'
 import {
+	enhanceSpanWithHttpRequestAttributes,
 	parseXhrResponseHeaders,
 	splitHeaderValue,
 	convertHeadersToOtelAttributes,
 	convertSearchParamsToOtelAttributes,
 } from './index'
+import type { Span } from '@opentelemetry/api'
 
 describe('Network Instrumentation Custom Attributes', () => {
 	describe('splitHeaderValue', () => {
@@ -1254,6 +1256,60 @@ describe('Network Instrumentation Custom Attributes', () => {
 				expect(result).toBe(
 					'https://REDACTED:REDACTED@api.example.com/v1/users?AWSAccessKeyId=REDACTED&Signature=REDACTED&filter=active#section',
 				)
+			})
+		})
+
+		describe('graphql operation attributes', () => {
+			const createMockSpan = (url: string) => {
+				const attributes: Record<string, unknown> = {
+					'url.full': url,
+				}
+				const updateName = vi.fn()
+				const span = {
+					attributes,
+					setAttribute: (key: string, value: unknown) => {
+						attributes[key] = value
+						return span
+					},
+					setAttributes: (attrs: Record<string, unknown>) => {
+						Object.assign(attributes, attrs)
+						return span
+					},
+					updateName,
+				}
+				return { span: span as unknown as Span, attributes, updateName }
+			}
+
+			it('sets semconv attributes without renaming the span', () => {
+				const { span, attributes, updateName } = createMockSpan(
+					'https://api.example.com/graphql',
+				)
+				const body = JSON.stringify({
+					query: 'query GetUser($id: ID!) { user(id: $id) { id } }',
+					operationName: 'GetUser',
+				})
+
+				enhanceSpanWithHttpRequestAttributes(span, body, {}, undefined)
+
+				expect(attributes['graphql.operation.name']).toBe('GetUser')
+				expect(attributes['graphql.operation.type']).toBe('query')
+				expect(updateName).not.toHaveBeenCalled()
+			})
+
+			it('leaves a non-GraphQL request untouched', () => {
+				const { span, attributes, updateName } = createMockSpan(
+					'https://api.example.com/rest',
+				)
+
+				enhanceSpanWithHttpRequestAttributes(
+					span,
+					JSON.stringify({ hello: 'world' }),
+					{},
+					undefined,
+				)
+
+				expect(attributes['graphql.operation.name']).toBeUndefined()
+				expect(updateName).not.toHaveBeenCalled()
 			})
 		})
 

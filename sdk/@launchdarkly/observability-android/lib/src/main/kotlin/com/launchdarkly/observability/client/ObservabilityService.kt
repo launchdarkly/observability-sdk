@@ -3,6 +3,8 @@ package com.launchdarkly.observability.client
 import android.app.Application
 import android.view.MotionEvent
 import android.view.ViewConfiguration
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.ProcessLifecycleOwner
 import com.launchdarkly.observability.context.ObserveLogger
 import com.launchdarkly.observability.api.ObservabilityOptions
 import com.launchdarkly.observability.bridge.emitLog
@@ -33,13 +35,11 @@ import com.launchdarkly.observability.sampling.SamplingLogProcessor
 import com.launchdarkly.observability.traces.EventSpanProcessor
 import com.launchdarkly.observability.traces.OtlpTraceExporter
 import com.launchdarkly.observability.util.requireMainThread
+import io.opentelemetry.android.LDRumSessionManagerAccessor
 import io.opentelemetry.android.OpenTelemetryRum
 import io.opentelemetry.android.OpenTelemetryRumBuilder
 import io.opentelemetry.android.config.OtelRumConfig
-import io.opentelemetry.android.instrumentation.AndroidInstrumentation
-import io.opentelemetry.android.instrumentation.InstallationContext
 import io.opentelemetry.android.session.Session
-import io.opentelemetry.android.session.SessionConfig
 import io.opentelemetry.android.session.SessionManager
 import io.opentelemetry.android.session.SessionObserver
 import io.opentelemetry.api.common.AttributeKey
@@ -73,6 +73,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
+import kotlin.time.Duration.Companion.hours
 
 /**
  * The [ObservabilityService] can be used for recording observability data such as
@@ -98,9 +99,22 @@ class ObservabilityService(
     private val resources: Resource,
     private val logger: ObserveLogger,
     private val observabilityOptions: ObservabilityOptions,
+    // Optional session id to adopt (e.g. forwarded from another LaunchDarkly SDK on the device) so
+    // all signals share one `session.id`. Null lets the manager generate its own.
+    private val customSessionId: String? = null,
 ) : Observe, TrackEmitting {
     private val otelRUM: OpenTelemetryRum
-    var sessionManager: SessionManager? = null
+
+    // LaunchDarkly's own session manager. Owns session identity for all signals (it also backs the
+    // RUM SDK's `session.id` appenders via LDRumSessionManagerAccessor) and can be seeded with
+    // [customSessionId]. Exposed through [sessionManager] for Session Replay.
+    private val ldSessionManager = LDSessionManager(
+        initialSessionId = customSessionId,
+        backgroundInactivityTimeout = observabilityOptions.sessionBackgroundTimeout,
+        maxLifetime = 4.hours,
+    )
+
+    var sessionManager: SessionManager? = ldSessionManager
         private set
     private var otelMeter: Meter
     private var otelLogger: Logger
@@ -209,8 +223,6 @@ class ObservabilityService(
         registerOtlpExporters()
         val otelRumConfig = createOtelRumConfig()
 
-        var capturedSessionManager: SessionManager? = null
-
         val rumBuilder = OpenTelemetryRum.builder(application, otelRumConfig)
             .addLoggerProviderCustomizer { sdkLoggerProviderBuilder, _ ->
                 return@addLoggerProviderCustomizer configureLoggerProvider(sdkLoggerProviderBuilder)
@@ -222,22 +234,15 @@ class ObservabilityService(
                 return@addMeterProviderCustomizer configureMeterProvider(sdkMeterProviderBuilder)
             }
 
-        rumBuilder.addInstrumentation(object : AndroidInstrumentation {
-            override val name = "ld-session-manager-bridge"
-            override fun install(ctx: InstallationContext) {
-                capturedSessionManager = ctx.sessionManager
-            }
-        })
+        // Use our own session manager (instead of the RUM SDK's default) so we can seed the session
+        // id and keep a single source of session identity across spans, logs, metrics, and replay.
+        LDRumSessionManagerAccessor.setSessionManager(rumBuilder, ldSessionManager)
 
         if (observabilityOptions.instrumentations.launchTime) {
             addLaunchTimeInstrumentation(rumBuilder)
         }
 
         otelRUM = rumBuilder.build()
-        sessionManager = capturedSessionManager
-        if (sessionManager == null) {
-            logger.warn("SessionManager was not captured during OpenTelemetryRum.build(); session-dependent features will be unavailable.")
-        }
 
         // A new session (e.g. after a background timeout) must start with a fresh navigation
         // history, otherwise the first screen_view/Navigate of the new session would resolve
@@ -276,11 +281,26 @@ class ObservabilityService(
         // so it remains the single emitter of track spans.
         hookExporter.trackEmitter = this
 
-        // Capture runs unconditionally so Session Replay can consume the shared touch stream.
+        // Supply the active screen at touch-capture time. Read on the main thread when the touch is
+        // captured (before it reaches app handlers), so a tap that navigates synchronously is still
+        // stamped with the screen the user tapped rather than the destination screen.
+        userInteractionManager.screenInfoProvider = {
+            screenStack.currentScreenId to screenStack.currentScreenName
+        }
+
+        // Always track the current activity/window (benign: registers lifecycle callbacks only, no
+        // window wrapping or hit-testing). This lets a later consumer - Session Replay starting to
+        // record after the first activity is already running - enable capture and wrap that
+        // already-current window instead of missing its touches.
         userInteractionManager.attachToApplication(application)
-        // `instrumentations.userTaps` starts the tap-detection machinery; whether a detected
-        // tap is published as a `click` span is governed by `analytics.taps` (checked below).
+
+        // The touch-capture hook (wrapping each window's callback + hit-testing) is invasive, so it
+        // is only enabled when something needs it: tap detection here (gated by
+        // `instrumentations.userTaps`) or Session Replay, which enables the same shared manager
+        // itself. With both off, window callbacks are never wrapped. Whether a detected tap is
+        // published as a `click` span is governed separately by `analytics.taps`.
         if (observabilityOptions.instrumentations.userTaps) {
+            userInteractionManager.enableTouchCapture()
             startTapInstrumentation()
         }
 
@@ -295,6 +315,16 @@ class ObservabilityService(
         // App-lifecycle detection runs unconditionally so Session Replay breadcrumbs are always
         // available; the span itself is gated by analytics.appLifecycle inside the handler.
         appLifecycleTracker.start()
+
+        // Prime the session manager with the actual process state. [appLifecycleTracker] only
+        // reports genuine foreground/background transitions (it suppresses the initial replay and
+        // never emits a catch-up background), so if the SDK initializes while the app is already
+        // backgrounded the manager would otherwise stay FOREGROUND and skip background-inactivity
+        // rotation until the next foreground/background cycle. A genuine onStart will later settle
+        // it back to foreground if the app comes forward.
+        if (!ProcessLifecycleOwner.get().lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+            ldSessionManager.onApplicationBackgrounded()
+        }
 
         // App-launch detection runs unconditionally so the Session Replay `Launch` breadcrumb is
         // always available; the `app_launch` span is gated by analytics.appLaunch inside the handler.
@@ -313,10 +343,15 @@ class ObservabilityService(
             var downX = 0f
             var downY = 0f
             var downTimeMs = 0L
-            // Target description is captured at ACTION_DOWN and described on the span at ACTION_UP.
+            // Target description and active screen are captured at ACTION_DOWN (on the main thread,
+            // before app handlers run) and described on the span at ACTION_UP. Reading the screen
+            // from the sample - not from the live `screenStack` here on this background collector -
+            // avoids stamping the click with a destination screen when the tap navigates.
             var downTargetClassName: String? = null
             var downTargetText: String? = null
             var downTargetResourceId: String? = null
+            var downScreenId: String? = null
+            var downScreenName: String? = null
             userInteractionManager.touchFlow.collect { sample ->
                 when (sample.action) {
                     MotionEvent.ACTION_DOWN -> {
@@ -326,6 +361,8 @@ class ObservabilityService(
                         downTargetClassName = sample.targetClassName
                         downTargetText = sample.targetText
                         downTargetResourceId = sample.targetResourceId
+                        downScreenId = sample.screenId
+                        downScreenName = sample.screenName
                     }
                     MotionEvent.ACTION_UP -> {
                         if (!observabilityOptions.analytics.taps) return@collect
@@ -337,23 +374,20 @@ class ObservabilityService(
                         if (movedTooFar || duration > TAP_TIMEOUT_MS) return@collect
 
                         // Per analytics-taxonomy §4.1 `click`: one event for all element types,
-                        // described through the `event.*` namespace.
-                        val attrs = Attributes.builder()
-                            .put(EVENT_TYPE, UserInteractionManager.CLICK_SPAN_NAME)
-                            .put(EVENT_X, sample.x.toLong())
-                            .put(EVENT_Y, sample.y.toLong())
-                            .apply {
-                                downTargetClassName?.let {
-                                    // `event.tag` is the short element tag (e.g. `Button`), per
-                                    // analytics-taxonomy; the fully-qualified class name is kept in
-                                    // `event.classname`.
-                                    put(EVENT_TAG, shortElementTag(it))
-                                    put(EVENT_CLASSNAME, it)
-                                }
-                                downTargetText?.let { put(EVENT_TEXT, it) }
-                                downTargetResourceId?.let { put(EVENT_ID, it) }
-                            }
-                            .build()
+                        // described through the `event.*` namespace. `event.tag` is the short
+                        // element tag (e.g. `Button`); the fully-qualified class name is kept in
+                        // `event.classname`. `event.screen_id`/`event.screen_name` correlate the tap
+                        // with the screen it landed on, captured at ACTION_DOWN.
+                        val attrs = ClickAttributes.build(
+                            tag = downTargetClassName?.let { shortElementTag(it) },
+                            classname = downTargetClassName,
+                            id = downTargetResourceId,
+                            text = downTargetText,
+                            screenId = downScreenId,
+                            screenName = downScreenName,
+                            x = sample.x.toLong(),
+                            y = sample.y.toLong(),
+                        )
                         otelTracer.spanBuilder(UserInteractionManager.CLICK_SPAN_NAME)
                             .setSpanKind(SpanKind.CLIENT)
                             .setAllAttributes(attrs)
@@ -391,18 +425,23 @@ class ObservabilityService(
     }
 
     private fun createOtelRumConfig(): OtelRumConfig {
+        // Session lifetime/rotation is owned by [ldSessionManager] (injected via
+        // [LDRumSessionManagerAccessor]), so no SessionConfig is applied here.
         val config = OtelRumConfig()
-            .setSessionConfig(SessionConfig(backgroundInactivityTimeout = observabilityOptions.sessionBackgroundTimeout))
 
         if (!observabilityOptions.instrumentations.crashReporting) {
             // Disables [io.opentelemetry.android.instrumentation.crash.CrashReporterInstrumentation.java]
             config.suppressInstrumentation("crash")
         }
 
-        if(!observabilityOptions.analytics.pageViews) {
-            // Disables [io.opentelemetry.android.instrumentation.activity.ActivityLifecycleInstrumentation.java]
-            config.suppressInstrumentation("activity")
-        }
+        // Defensively disable the OpenTelemetry Android activity instrumentation
+        // ([io.opentelemetry.android.instrumentation.activity.ActivityLifecycleInstrumentation]).
+        // We no longer depend on that artifact (see lib/build.gradle.kts), so it is normally not on
+        // the classpath; this suppression guards against it being reintroduced transitively by a
+        // host. It emits an `AppStart` span plus per-activity lifecycle spans, which are superseded
+        // by LaunchDarkly's own `app_launch`, `app_foreground`/`app_background`, and `screen_view`
+        // spans, so leaving it on would double-report the same app/screen lifecycle.
+        config.suppressInstrumentation("activity")
 
         return config
     }
@@ -645,6 +684,56 @@ class ObservabilityService(
     }
 
     /**
+     * Manually emit a `click` span, mirroring the automatic tap instrumentation. Use this to
+     * reproduce the taxonomy `click` event for interactions automatic capture can't observe.
+     *
+     * Gated by [ObservabilityOptions.Analytics.taps] (the same flag as automatic click spans) and
+     * the global span flag. When [screenId] is `null`, the current tracked screen's id and name are
+     * used so the click correlates with the active `screen_view`; when an explicit [screenId] is
+     * supplied, `event.screen_name` is omitted (its name is unknown here) to avoid pairing one
+     * screen's id with another's name. Reserved `event.*` fields take precedence over caller
+     * [properties], matching the `screen_view`/`track` precedence model.
+     */
+    override fun trackClick(
+        id: String?,
+        tag: String?,
+        text: String?,
+        screenId: String?,
+        x: Int?,
+        y: Int?,
+        properties: Map<String, Any?>?
+    ) {
+        if (!observabilityOptions.analytics.taps) return
+        if (!observabilityOptions.tracesApi.includeSpans) return
+
+        // Default to the current screen so the click correlates with the active `screen_view`. Only
+        // pair the current screen's name when we actually defaulted to it; for a caller-supplied
+        // `screenId` the matching name is unknown here, so omit `screen_name` rather than mismatch a
+        // different screen's name with that id.
+        val resolvedScreenId = screenId ?: screenStack.currentScreenId
+        val resolvedScreenName = if (screenId == null) screenStack.currentScreenName else null
+
+        val attrs = ClickAttributes.build(
+            tag = tag,
+            classname = null,
+            id = id,
+            text = text,
+            screenId = resolvedScreenId,
+            screenName = resolvedScreenName,
+            x = x?.toLong(),
+            y = y?.toLong(),
+            contextKeyAttributes = cachedContextKeyAttributes,
+            properties = properties?.toOtelAttributes() ?: Attributes.empty(),
+        )
+
+        otelTracer.spanBuilder(UserInteractionManager.CLICK_SPAN_NAME)
+            .setSpanKind(SpanKind.CLIENT)
+            .setAllAttributes(attrs)
+            .startSpan()
+            .end()
+    }
+
+    /**
      * Single funnel for screen changes. Both the automatic [ScreenViewManager] capture and the
      * manual [trackScreenView] API route through here so `previous_screen` resolution stays
      * consistent.
@@ -700,6 +789,12 @@ class ObservabilityService(
      * navigation/track emitters.
      */
     private fun handleAppLifecycleSignal(signal: AppLifecycleSignal) {
+        // Drive the session manager's background-inactivity timeout from the same lifecycle source.
+        when (signal.kind) {
+            AppLifecycleSignal.Kind.FOREGROUND -> ldSessionManager.onApplicationForegrounded()
+            AppLifecycleSignal.Kind.BACKGROUND -> ldSessionManager.onApplicationBackgrounded()
+        }
+
         // Broadcast so Session Replay can emit a breadcrumb independent of the span flags below.
         _appLifecycleFlow.tryEmit(signal)
 
@@ -728,9 +823,10 @@ class ObservabilityService(
      * breadcrumb (always), then emits the taxonomy `app_launch` span only when gated on by
      * [ObservabilityOptions.Analytics.appLaunch] (and the global span flag).
      *
-     * The cold/warm startup-performance dimension is attached as an `app.start` span event whenever
-     * [startType] is known (taxonomy §4.6). [ObservabilityOptions.Instrumentations.launchTime] only
-     * gates legacy TTID/TTFD histogram metrics, not this event.
+     * The cold/warm startup-performance dimension is attached as an `app.start` span event (taxonomy
+     * §4.6) only when [ObservabilityOptions.Instrumentations.launchTime] is enabled. That flag also
+     * gates the legacy TTID/TTFD histogram metrics; when it is off the span is anchored at the
+     * launch-detection time so it carries no startup duration.
      */
     private fun handleAppLaunchSignal(signal: AppLaunchSignal) {
         // Cache before the span flag checks so Session Replay can emit the `Launch` breadcrumb
@@ -754,18 +850,30 @@ class ObservabilityService(
         // startup duration) and end it at the launch-detection time carried by the signal, so
         // analytics timestamps reflect the real startup window and aren't skewed by SDK init work.
         val launchTimeMs = signal.timestamp
-        val spanStartMs = signal.startDurationMs?.let { launchTimeMs - it } ?: launchTimeMs
+
+        // The startup-performance dimension (cold/warm `start.type` + `start.duration_ms`) is gated by
+        // instrumentations.launchTime. When it is off we also anchor the span at the launch-detection
+        // time instead of back-dating it to process start, so the span window carries no startup
+        // duration and `start.duration_ms` can't be recovered from it.
+        val includeLaunchTime = observabilityOptions.instrumentations.launchTime
+        val spanStartMs = if (includeLaunchTime) {
+            signal.startDurationMs?.let { launchTimeMs - it } ?: launchTimeMs
+        } else {
+            launchTimeMs
+        }
 
         val span = otelTracer.spanBuilder(APP_LAUNCH_SPAN_NAME)
             .setSpanKind(SpanKind.CLIENT)
             .setAllAttributes(attrBuilder.build())
             .setStartTimestamp(spanStartMs, TimeUnit.MILLISECONDS)
             .startSpan()
-        signal.startType?.let { startType ->
-            val eventAttrs = Attributes.builder().put(START_TYPE, startType.wireValue)
-            signal.startDurationMs?.let { eventAttrs.put(START_DURATION_MS, it) }
-            // Place the event at the launch-detection time so it falls within the span window.
-            span.addEvent(APP_START_EVENT_NAME, eventAttrs.build(), launchTimeMs, TimeUnit.MILLISECONDS)
+        if (includeLaunchTime) {
+            signal.startType?.let { startType ->
+                val eventAttrs = Attributes.builder().put(START_TYPE, startType.wireValue)
+                signal.startDurationMs?.let { eventAttrs.put(START_DURATION_MS, it) }
+                // Place the event at the launch-detection time so it falls within the span window.
+                span.addEvent(APP_START_EVENT_NAME, eventAttrs.build(), launchTimeMs, TimeUnit.MILLISECONDS)
+            }
         }
         span.end(launchTimeMs, TimeUnit.MILLISECONDS)
     }
@@ -827,7 +935,7 @@ class ObservabilityService(
         }
     }
 
-    private fun Attributes.addSessionId() = this.toBuilder().put(SESSION_ID_ATTRIBUTE, otelRUM.rumSessionId).build()
+    private fun Attributes.addSessionId() = this.toBuilder().put(SESSION_ID_ATTRIBUTE, ldSessionManager.getSessionId()).build()
 
     companion object {
         private const val METRICS_PATH = "/v1/metrics"
@@ -843,14 +951,8 @@ class ObservabilityService(
         const val APP_START_EVENT_NAME = "app.start"
         const val SESSION_ID_ATTRIBUTE = "session.id"
 
-        // `event.*` taxonomy attribute keys (see analytics-taxonomy.md).
-        private val EVENT_TYPE = AttributeKey.stringKey("event.type")
-        private val EVENT_X = AttributeKey.longKey("event.x")
-        private val EVENT_Y = AttributeKey.longKey("event.y")
-        private val EVENT_TAG = AttributeKey.stringKey("event.tag")
-        private val EVENT_CLASSNAME = AttributeKey.stringKey("event.classname")
-        private val EVENT_TEXT = AttributeKey.stringKey("event.text")
-        private val EVENT_ID = AttributeKey.stringKey("event.id")
+        // `event.*` taxonomy attribute keys (see analytics-taxonomy.md). Click-specific keys live
+        // in [ClickAttributes], which is kept free of Android-framework dependencies.
         private val EVENT_NAME = AttributeKey.stringKey("event.name")
         private val EVENT_SCREEN_CLASS = AttributeKey.stringKey("event.screen_class")
         private val EVENT_SCREEN_ID = AttributeKey.stringKey("event.screen_id")

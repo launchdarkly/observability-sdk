@@ -38,12 +38,42 @@ The gem includes everything needed for traces and logs out of the box:
 - `launchdarkly-server-sdk` >= 8.11.0 (plugin support was added in 8.11.0)
 - `opentelemetry-sdk` ~> 1.4
 - `opentelemetry-exporter-otlp` ~> 0.28
-- `opentelemetry-instrumentation-all` ~> 0.62
 - `opentelemetry-logs-sdk` ~> 0.1
 - `opentelemetry-exporter-otlp-logs` ~> 0.1
+- A curated set of individual `opentelemetry-instrumentation-*` gems (see [Ruby & Rails compatibility](#ruby--rails-compatibility))
 
 For metrics support (optional):
 - `opentelemetry-metrics-sdk` ~> 0.1
+
+### Ruby & Rails compatibility
+
+| Component | Supported |
+|-----------|-----------|
+| Ruby      | >= 3.0 |
+| Rails     | >= 7.0 (auto-instrumentation); Rack / Sinatra / other Rack apps are unaffected by Rails version |
+
+The plugin depends on **individual** `opentelemetry-instrumentation-*` gems rather
+than the `opentelemetry-instrumentation-all` meta-gem. The meta-gem couples every
+instrumentation to a single version, so when the Rails-family instrumentations
+raised their minimum to Rails 7.1, Rails 7.0 apps silently lost *all*
+auto-instrumentation. Listing gems individually keeps the Rails family
+(`opentelemetry-instrumentation-rails`, `-action_pack`, `-active_record`,
+`-active_support`, `-action_view`, `-active_job`, `-action_mailer`,
+`-active_storage`) pinned below the releases that require Rails 7.1, while every
+other instrumentation tracks the latest version. Those pinned releases are still
+compatible with Rails 7.1+, so modern apps are unaffected.
+
+If an instrumentation cannot attach on your framework version, the plugin emits a
+**single actionable warning** (instead of a flurry of "failed to install" lines)
+and keeps everything else working — flag-eval spans, manual instrumentation, logs,
+and error capture are unaffected. You can add any other
+`opentelemetry-instrumentation-*` gem to your own Gemfile and it is picked up
+automatically (the plugin activates every instrumentation that is loaded), or pin
+one to a framework-compatible release, e.g.:
+
+```ruby
+gem 'opentelemetry-instrumentation-rails', '~> 0.41'
+```
 
 ## Quick Start
 
@@ -91,6 +121,15 @@ Rails.configuration.ld_client = LaunchDarkly::LDClient.new(
 # Ensure clean shutdown
 at_exit { Rails.configuration.ld_client.close }
 ```
+
+> **Lazy client initialization:** Creating the LaunchDarkly client during boot
+> (as above) is recommended. If your app instead creates the client lazily —
+> e.g. from a model on first request, after Rails has finished booting — the gem
+> still installs the Rails auto-instrumentation during boot via its Railtie, as
+> long as `LAUNCHDARKLY_SDK_KEY` is set in the environment before Rails boots. If
+> it isn't, the OpenTelemetry Rails instrumentations can't attach (their load
+> hooks have already fired) and the plugin logs a single warning explaining how
+> to fix it.
 
 Use in controllers:
 
@@ -145,10 +184,12 @@ LaunchDarklyObservability::Plugin.new(
   enable_logs: true,     # default: true
   enable_metrics: true,  # default: true
 
-  # Optional: Custom instrumentation configuration
+  # Optional: Custom instrumentation configuration. Keys are instrumentation
+  # class names; values are that instrumentation's own options (only pass
+  # options the installed instrumentation version supports).
   instrumentations: {
-    'OpenTelemetry::Instrumentation::Rails' => { enable_recognize_route: true },
-    'OpenTelemetry::Instrumentation::ActiveRecord' => { db_statement: :include }
+    'OpenTelemetry::Instrumentation::Rack' => { untraced_endpoints: ['/health'] },
+    'OpenTelemetry::Instrumentation::Net::HTTP' => { untraced_hosts: ['internal.example.com'] }
   }
 )
 ```
@@ -308,12 +349,17 @@ This generates:
 
 By default, the plugin enables OpenTelemetry auto-instrumentation for common Ruby libraries:
 
-- **Rails**: Request tracing, route recognition
-- **ActiveRecord**: Database query tracing
-- **Net::HTTP**: Outbound HTTP request tracing
+- **Rails** (and the Action/Active family): Request tracing, route recognition, DB queries, view rendering, jobs
+- **Net::HTTP**, **HTTP**, **Faraday**: Outbound HTTP request tracing
 - **Rack**: Request/response tracing
+- **PG**, **MySQL2**: Database query tracing
 - **Redis**: Cache operation tracing
 - **Sidekiq**: Background job tracing
+- **GraphQL**: Query/field tracing
+- **Sinatra**: Request tracing
+
+Need another library instrumented? Add its `opentelemetry-instrumentation-*` gem
+to your Gemfile — the plugin activates every loaded instrumentation automatically.
 
 ### Customizing Instrumentations
 

@@ -189,7 +189,7 @@ final class LDNativeApiImpl: NSObject, LDNativeApi {
         // switches: `instrumentation.userTaps` runs the tap-detection machinery, and
         // `analytics.taps` publishes each detected tap as a `click` span. We drive both from the
         // one Flutter flag so taps are detected (not just published) regardless of the native
-        // `Instrumentation` defaults. pageViews is Android-only and ignored here.
+        // `Instrumentation` defaults. `views` is Android-only and ignored here.
         let tapsEnabled: Bool = observability.analytics?.taps ?? true
         let trackEventsEnabled: Bool = observability.analytics?.trackEvents ?? true
         let appLifecycleEnabled: Bool = observability.analytics?.appLifecycle ?? true
@@ -263,7 +263,10 @@ final class LDNativeApiImpl: NSObject, LDNativeApi {
             maskLabels: privacy?.maskLabels ?? false,
             maskImages: privacy?.maskImages ?? false,
             maskWebViews: privacy?.maskWebViews ?? false,
-            minimumAlpha: privacy?.minimumAlpha ?? 0.02
+            minimumAlpha: privacy?.minimumAlpha ?? 0.02,
+            // Match the scale recorded by the Session Replay exporter so the
+            // Dart side captures frames at the same resolution.
+            scale: Double(sessionReplayOptions.scale)
         )
         config.plugins = [
             observabilityPlugin,
@@ -281,6 +284,16 @@ final class LDNativeApiImpl: NSObject, LDNativeApi {
     ) -> LaunchDarklySessionReplay.SessionReplayOptions {
         let privacy = replay.privacy
 
+        // Treat a missing or non-positive scale as the 1.0 default; otherwise the
+        // exporter would record an invalid scale while the Dart capture falls back
+        // to the device pixel ratio, reintroducing the mismatch.
+        let resolvedScale: CGFloat
+        if let scale = replay.scale, scale > 0 {
+            resolvedScale = CGFloat(scale)
+        } else {
+            resolvedScale = 1.0
+        }
+
         return LaunchDarklySessionReplay.SessionReplayOptions(
             isEnabled: replay.isEnabled ?? true,
             privacy: .init(
@@ -289,7 +302,8 @@ final class LDNativeApiImpl: NSObject, LDNativeApi {
                 maskLabels: privacy?.maskLabels ?? false,
                 maskImages: privacy?.maskImages ?? false
             ),
-            frameRate: replay.frameRate ?? 1.0
+            frameRate: replay.frameRate ?? 1.0,
+            scale: resolvedScale
         )
     }
 

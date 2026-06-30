@@ -35,7 +35,7 @@ extension TracesOptionsWire on TracesOptions {
 extension AnalyticsOptionsWire on AnalyticsOptions {
   wire.LDAnalyticsOptions toWire() => wire.LDAnalyticsOptions(
     taps: taps,
-    pageViews: pageViews,
+    views: views,
     trackEvents: trackEvents,
     appLifecycle: appLifecycle,
     appLaunch: appLaunch,
@@ -55,6 +55,7 @@ extension SessionReplayOptionsWire on SessionReplayOptions {
     isEnabled: isEnabled,
     serviceName: serviceName,
     frameRate: frameRate,
+    scale: scale,
     privacy: privacy.toWire(),
   );
 }

@@ -2,6 +2,34 @@
 
 All notable changes to the LaunchDarkly Observability SDK for Flutter will be documented in this file. This project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.12.1](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.12.0...launchdarkly_flutter_observability-0.12.1) (2026-06-19)
+
+
+### Bug Fixes
+
+* **flutter:** gate Android touch capture on analytics.taps ([#635](https://github.com/launchdarkly/observability-sdk/issues/635)) ([394d8a7](https://github.com/launchdarkly/observability-sdk/commit/394d8a7e15b62dd937ae5f3cdbfb63ed81672d2b))
+
+## [0.12.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.11.0...launchdarkly_flutter_observability-0.12.0) (2026-06-18)
+
+
+### Features
+
+* richer click analytics (ldId, screen_id/screen_name) + touch-capture gating + lifecycle span cleanup ([#634](https://github.com/launchdarkly/observability-sdk/issues/634)) ([91f5816](https://github.com/launchdarkly/observability-sdk/commit/91f5816d0db59cc55f33c651a3c7eab806208c73))
+
+## [0.11.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.10.0...launchdarkly_flutter_observability-0.11.0) (2026-06-17)
+
+
+### Features
+
+* **flutter:** configurable Session Replay capture scale ([#626](https://github.com/launchdarkly/observability-sdk/issues/626)) ([e3d8383](https://github.com/launchdarkly/observability-sdk/commit/e3d83830edcefb8b82019099d0d0bd924f5e5b6f))
+
+## [0.10.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.9.0...launchdarkly_flutter_observability-0.10.0) (2026-06-15)
+
+
+### Features
+
+* **flutter:** allow overriding OTLP endpoint and backend URL in example ([#624](https://github.com/launchdarkly/observability-sdk/issues/624)) ([7eff0cd](https://github.com/launchdarkly/observability-sdk/commit/7eff0cdacd029995fda822c6c95e4d3645fed01c))
+
 ## [0.9.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.8.0...launchdarkly_flutter_observability-0.9.0) (2026-06-12)
 
 

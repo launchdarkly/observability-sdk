@@ -26,6 +26,9 @@ class SessionReplayClientAdapterTest {
         val options = adapter.replayOptionsFrom(null)
 
         assertTrue(options.enabled)
+        assertEquals(1.0, options.frameRate)
+        assertEquals(1.0f, options.scale)
+        assertEquals(1.0, options.sampleRate)
         assertTrue(options.privacyProfile.maskTextInputs)
         assertFalse(options.privacyProfile.maskWebViews)
         assertFalse(options.privacyProfile.maskText)
@@ -44,11 +47,67 @@ class SessionReplayClientAdapterTest {
             every { hasKey("maskImages") } returns false
             every { hasKey("maskTestIDs") } returns false
             every { hasKey("unmaskTestIDs") } returns false
+            every { hasKey("frameRate") } returns false
+            every { hasKey("scale") } returns false
+            every { hasKey("minimumAlpha") } returns false
+            every { hasKey("sampleRate") } returns false
         }
 
         val options = adapter.replayOptionsFrom(map)
 
         assertTrue(options.privacyProfile.maskText)
+    }
+
+    @Test
+    fun `replayOptionsFrom maps frameRate scale sampleRate and minimumAlpha`() {
+        val adapter = newAdapter()
+        val map = mockk<ReadableMap> {
+            every { hasKey("isEnabled") } returns false
+            every { hasKey("maskTextInputs") } returns false
+            every { hasKey("maskWebViews") } returns false
+            every { hasKey("maskLabels") } returns false
+            every { hasKey("maskImages") } returns false
+            every { hasKey("maskTestIDs") } returns false
+            every { hasKey("unmaskTestIDs") } returns false
+            every { hasKey("frameRate") } returns true
+            every { getDouble("frameRate") } returns 2.0
+            every { hasKey("scale") } returns true
+            every { getDouble("scale") } returns 2.5
+            every { hasKey("minimumAlpha") } returns true
+            every { getDouble("minimumAlpha") } returns 0.05
+            every { hasKey("sampleRate") } returns true
+            every { getDouble("sampleRate") } returns 0.25
+        }
+
+        val options = adapter.replayOptionsFrom(map)
+
+        assertEquals(2.0, options.frameRate)
+        assertEquals(2.5f, options.scale)
+        assertEquals(0.05f, options.privacyProfile.minimumAlpha)
+        assertEquals(0.25, options.sampleRate)
+    }
+
+    @Test
+    fun `replayOptionsFrom treats non-positive scale as default`() {
+        val adapter = newAdapter()
+        val map = mockk<ReadableMap> {
+            every { hasKey("isEnabled") } returns false
+            every { hasKey("maskTextInputs") } returns false
+            every { hasKey("maskWebViews") } returns false
+            every { hasKey("maskLabels") } returns false
+            every { hasKey("maskImages") } returns false
+            every { hasKey("maskTestIDs") } returns false
+            every { hasKey("unmaskTestIDs") } returns false
+            every { hasKey("frameRate") } returns false
+            every { hasKey("scale") } returns true
+            every { getDouble("scale") } returns 0.0
+            every { hasKey("minimumAlpha") } returns false
+            every { hasKey("sampleRate") } returns false
+        }
+
+        val options = adapter.replayOptionsFrom(map)
+
+        assertEquals(1.0f, options.scale)
     }
 
     @Test
