@@ -63,6 +63,19 @@ jobs:
             - name: Install js dependencies
               run: yarn install
 
+            - name: Detect JS monorepo changes
+              uses: dorny/paths-filter@4512585405083f25c027a35db413c2b3b9006d50 # v2
+              id: changes
+              with:
+                  filters: |
+                      yarn-test:
+                        - '**'
+                        - '!sdk/@launchdarkly/observability-android/**'
+                        - '!sdk/@launchdarkly/mobile-dotnet/**'
+                        - '!e2e/android/**'
+                        - '!.github/workflows/android-observability.yml'
+                        - '!.github/workflows/android-e2e.yml'
+
             - name: Check yarn for duplicate deps
               run: yarn dedupe --check
 
@@ -70,10 +83,15 @@ jobs:
               run: yarn format-check
 
             - name: Build & test (in a fork without doppler)
+              if: steps.changes.outputs.yarn-test == 'true' || github.event_name == 'workflow_dispatch'
               run: yarn test
               env:
                   NEXT_PUBLIC_HIGHLIGHT_PROJECT_ID: 1jdkoe52
                   REACT_APP_COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+            - name: Skipped yarn test (Android/MAUI-only change)
+              if: steps.changes.outputs.yarn-test != 'true' && github.event_name != 'workflow_dispatch'
+              run: echo "Skipping yarn test — only Android observability and/or MAUI (.NET) paths changed."
 
             # Guard against shipping unresolvable types: install the freshly
             # built package into a clean consumer and type-check it with
