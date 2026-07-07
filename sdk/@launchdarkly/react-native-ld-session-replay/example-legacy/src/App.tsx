@@ -111,26 +111,14 @@ async function softReload() {
     `[soft-reload] reloading JS runtime; native SR singleton persists, sampling NOT re-exercised (was JS_LOAD_ID=${JS_LOAD_ID})`,
   );
 
-  // Mark the reload boundary with an `app_reload` span so the JS session before
-  // the reload can be correlated with the one minted on the next JS load. The
-  // reload tears down the JS runtime, so we must flush before triggering it or
-  // the span is lost with the batch queue.
+  // No manual `app_reload` span is needed: the observability SDK persists the
+  // session and, on the next JS load, resumes it and emits `app_reload`
+  // automatically. We just flush any buffered telemetry so nothing is lost when
+  // the reload tears down the JS runtime.
   try {
-    let sessionId: string | undefined;
-    try {
-      sessionId = LDObserve.getSessionInfo().sessionId;
-    } catch {}
-    const span = LDObserve.startSpan('app_reload');
-    span.setAttribute('js.load_id', JS_LOAD_ID);
-    span.setAttribute('app.reload.type', 'soft');
-    span.setAttribute('app.reload.reason', 'DevSettings.reload');
-    if (sessionId) {
-      span.setAttribute('app.reload.previous_session_id', sessionId);
-    }
-    span.end();
     await LDObserve.flush();
   } catch (e) {
-    console.warn('[soft-reload] failed to emit app_reload span', e);
+    console.warn('[soft-reload] failed to flush before reload', e);
   }
 
   if (typeof DevSettings?.reload === 'function') {
