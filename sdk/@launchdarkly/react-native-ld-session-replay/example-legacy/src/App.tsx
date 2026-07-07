@@ -14,7 +14,7 @@ import {
 } from '@launchdarkly/react-native-client-sdk';
 import {useEffect, useState} from 'react';
 import {createSessionReplayPlugin} from '@launchdarkly/session-replay-react-native';
-import {Observability} from '@launchdarkly/observability-react-native';
+import {LDObserve, Observability} from '@launchdarkly/observability-react-native';
 import {
   LAUNCHDARKLY_MOBILE_KEY,
   LAUNCHDARKLY_ENV,
@@ -103,10 +103,33 @@ const context = {kind: 'user', key: 'user-key-123abc'};
 // process (and the SR singleton) alive. Sampling is intentionally NOT re-rolled —
 // the native enable cycle never resets, so a sampled-out session stays out and a
 // recording session keeps its original decision. Only a full cold start re-rolls.
-function softReload() {
+async function softReload() {
   console.log(
     `[soft-reload] reloading JS runtime; native SR singleton persists, sampling NOT re-exercised (was JS_LOAD_ID=${JS_LOAD_ID})`,
   );
+
+  // Mark the reload boundary with an `app_reload` span so the JS session before
+  // the reload can be correlated with the one minted on the next JS load. The
+  // reload tears down the JS runtime, so we must flush before triggering it or
+  // the span is lost with the batch queue.
+  try {
+    let sessionId: string | undefined;
+    try {
+      sessionId = LDObserve.getSessionInfo().sessionId;
+    } catch {}
+    const span = LDObserve.startSpan('app_reload');
+    span.setAttribute('js.load_id', JS_LOAD_ID);
+    span.setAttribute('app.reload.type', 'soft');
+    span.setAttribute('app.reload.reason', 'DevSettings.reload');
+    if (sessionId) {
+      span.setAttribute('app.reload.previous_session_id', sessionId);
+    }
+    span.end();
+    await LDObserve.flush();
+  } catch (e) {
+    console.warn('[soft-reload] failed to emit app_reload span', e);
+  }
+
   if (typeof DevSettings?.reload === 'function') {
     DevSettings.reload('SR soft-reload test');
   } else {
