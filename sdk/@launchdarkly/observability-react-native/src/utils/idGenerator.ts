@@ -15,12 +15,3 @@ import { randomUuidV4 } from './randomUuidV4'
 export function generateUniqueId(): string {
 	return randomUuidV4()
 }
-
-/**
- * Generates a shorter unique ID for cases where full UUID length isn't needed.
- */
-export function generateShortId(): string {
-	const timestamp = Date.now().toString(36) // Base36 for shorter string
-	const random = Math.random().toString(36).substring(2, 8)
-	return `${timestamp}_${random}`
-}
