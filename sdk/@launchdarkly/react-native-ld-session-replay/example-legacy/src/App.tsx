@@ -14,23 +14,19 @@ import {
 import {useEffect, useState} from 'react';
 import {createSessionReplayPlugin} from '@launchdarkly/session-replay-react-native';
 import {Observability} from '@launchdarkly/observability-react-native';
-import {
-  LAUNCHDARKLY_MOBILE_KEY,
-  LAUNCHDARKLY_OTLP_ENDPOINT,
-  LAUNCHDARKLY_BACKEND_URL,
-} from '@env';
+import {LAUNCHDARKLY_MOBILE_KEY, LAUNCHDARKLY_ENV} from '@env';
+import {resolveLDEnvironment} from './ldEnvironments';
 import DialogsScreen from './DialogsScreen';
 import MaskingScreen from './MaskingScreen';
 import TracingScreen from './TracingScreen';
 import ApiScreen from './ApiScreen';
 
-// Optional endpoint overrides from .env. When unset, the SDK falls back to its
-// production defaults. Passed to both the JS observability plugin (traces, logs,
-// metrics, errors) and the native session replay plugin (which forwards them to
-// the native observability instance, so on-device replay uploads to the same
-// environment), e.g. staging.
-const OTLP_ENDPOINT = LAUNCHDARKLY_OTLP_ENDPOINT || undefined;
-const BACKEND_URL = LAUNCHDARKLY_BACKEND_URL || undefined;
+// Single source of truth: pick the LaunchDarkly instance once, then derive every
+// endpoint from it. The observability URLs feed the JS observability plugin and
+// the native session replay modules; the client-side URLs feed the online JS
+// client below. Because they come from one bundle they can't drift apart (a
+// staging key against production URLs is what produces the identify 401).
+const {env: LD_ENV, endpoints} = resolveLDEnvironment(LAUNCHDARKLY_ENV);
 
 const plugin = createSessionReplayPlugin({
   isEnabled: true,
@@ -44,8 +40,8 @@ const plugin = createSessionReplayPlugin({
   unmaskTestIDs: ['safe'],
   minimumAlpha: 0.05,
   sampleRate: 1.0,
-  ...(OTLP_ENDPOINT ? {otlpEndpoint: OTLP_ENDPOINT} : {}),
-  ...(BACKEND_URL ? {backendUrl: BACKEND_URL} : {}),
+  otlpEndpoint: endpoints.otlpEndpoint,
+  backendUrl: endpoints.backendUrl,
 });
 
 const observability = new Observability({
@@ -53,8 +49,8 @@ const observability = new Observability({
   serviceVersion: '1.0.0',
   debug: true,
   tracingOrigins: ['jsonplaceholder.typicode.com', 'reactnative.dev'],
-  ...(OTLP_ENDPOINT ? {otlpEndpoint: OTLP_ENDPOINT} : {}),
-  ...(BACKEND_URL ? {backendUrl: BACKEND_URL} : {}),
+  otlpEndpoint: endpoints.otlpEndpoint,
+  backendUrl: endpoints.backendUrl,
 });
 
 // Set the values in example-legacy/.env (see .env.example) to record real
@@ -62,8 +58,18 @@ const observability = new Observability({
 const MOBILE_KEY =
   LAUNCHDARKLY_MOBILE_KEY ?? 'YOUR_LAUNCHDARKLY_MOBILE_KEY_HERE';
 
+console.log(
+  `[env] LaunchDarkly env = ${LD_ENV}, mobile key prefix = ${MOBILE_KEY.slice(
+    0,
+    4,
+  )}`,
+); // expect "mob-"
+
 const client = new ReactNativeLDClient(MOBILE_KEY, AutoEnvAttributes.Enabled, {
   plugins: [observability, plugin],
+  streamUri: endpoints.streamUri,
+  baseUri: endpoints.baseUri,
+  eventsUri: endpoints.eventsUri,
 });
 const context = {kind: 'user', key: 'user-key-123abc'};
 
