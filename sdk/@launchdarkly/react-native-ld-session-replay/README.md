@@ -23,11 +23,6 @@ Both the **New Architecture** and the **Legacy Architecture** (bridge /
 architecture the host app uses, so no per-app configuration is required for the
 module to load.
 
-Not all React Native and Expo versions have been explicitly tested with the
-session replay plugin, as it is in Early Access. New React Native and Expo
-releases are expected to work; if you run into an issue, please
-[file an issue on GitHub](https://github.com/launchdarkly/observability-sdk/issues).
-
 ## Usage
 
 Use the session replay plugin with the LaunchDarkly React Native client:
@@ -114,6 +109,36 @@ const plugin = createSessionReplayPlugin({
 When a session is sampled out, `isEnabled` may stay `true` but no frames, interactions,
 or identify payloads are exported for that enable cycle — matching native iOS and Android
 behavior.
+
+## Service version (Expo)
+
+The SDK does not read the app version from the native binary automatically.
+`serviceVersion` defaults to `'1.0.0'` when unset. In an Expo app, use
+[`expo-application`](https://docs.expo.dev/versions/latest/sdk/application/) to
+read the store-visible version and pass it to both plugins:
+
+```tsx
+import * as Application from 'expo-application';
+import { createSessionReplayPlugin } from '@launchdarkly/session-replay-react-native';
+import { Observability } from '@launchdarkly/observability-react-native';
+
+const serviceVersion =
+  Application.nativeApplicationVersion ?? '1.0.0';
+
+const observability = new Observability({
+  serviceName: 'my-expo-app',
+  serviceVersion,
+});
+
+const sessionReplay = createSessionReplayPlugin({
+  isEnabled: true,
+  serviceName: 'my-expo-app',
+  serviceVersion,
+});
+```
+
+`Application.nativeApplicationVersion` maps to `CFBundleShortVersionString` on iOS
+and `versionName` on Android — the same version users see in the app store listing.
 
 ## Masking sensitive content
 
