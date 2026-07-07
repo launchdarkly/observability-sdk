@@ -22,6 +22,9 @@ class LDObserveClass
 	implements Observe
 {
 	private _lazyTracer?: LDTracer
+	// Captured at _init time, before async initialization completes, so the
+	// (provisional) session id can be read synchronously.
+	private _earlyClient?: ObservabilityClient
 
 	private _resolveTracer(): LDTracer {
 		if (this._isLoaded) {
@@ -49,6 +52,7 @@ class LDObserveClass
 
 	_resetForTesting(): void {
 		this._lazyTracer = undefined
+		this._earlyClient = undefined
 		super._resetForTesting()
 	}
 
@@ -192,8 +196,19 @@ class LDObserveClass
 	}
 
 	getSessionInfo(): any {
-		const response = this._bufferCall('getSessionInfo', [])
-		return this._isLoaded ? response : {}
+		if (this._isLoaded) {
+			return this._bufferCall('getSessionInfo', [])
+		}
+		// Init is async, but the session id is resolved (at least provisionally)
+		// when the client is constructed — before init finishes. Expose it early
+		// so integrations that register right after observability (e.g. session
+		// replay) can adopt the same `session.id` synchronously instead of
+		// falling back to a separate id.
+		try {
+			return this._earlyClient?.getSessionInfo() ?? {}
+		} catch {
+			return {}
+		}
 	}
 
 	stop(): Promise<void> {
@@ -207,6 +222,7 @@ class LDObserveClass
 	}
 
 	_init(client: ObservabilityClient): void {
+		this._earlyClient = client
 		const checkInitialized = () => {
 			if (client.getIsInitialized()) {
 				this.load(client)

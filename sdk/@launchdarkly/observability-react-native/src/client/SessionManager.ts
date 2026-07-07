@@ -116,8 +116,11 @@ export class SessionManager {
 				reloadCount: this.reloadCount,
 			}
 		} else {
-			// Stale or missing — start a fresh session.
-			this.sessionInfo = { sessionId: generateUniqueId(), startTime: now }
+			// Stale or missing — start a fresh session. Keep the provisional id
+			// generated in the constructor rather than minting a new one, so the
+			// session id is stable and can be read synchronously (e.g. by the
+			// session replay plugin adopting `session.id`) before this async init
+			// completes.
 			this.reloadCount = 0
 			this.resumeInfo = { reloaded: false, elapsedMs: 0, reloadCount: 0 }
 		}

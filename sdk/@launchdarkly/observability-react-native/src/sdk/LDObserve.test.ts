@@ -5,6 +5,12 @@ import { ObservabilityClient } from '../client/ObservabilityClient'
 describe('LDObserve Buffering', () => {
 	beforeEach(() => {
 		_LDObserve._resetForTesting()
+		// The test environment may provide localStorage; clear any persisted
+		// session so each test starts from a clean (cold-start) state rather than
+		// resuming a session written by a previous test.
+		try {
+			;(globalThis as { localStorage?: Storage }).localStorage?.clear()
+		} catch {}
 	})
 
 	describe('Method Calls Before Initialization', () => {
@@ -115,6 +121,25 @@ describe('LDObserve Buffering', () => {
 
 			expect(callbackSpan).toBeTruthy()
 			expect(callbackSpan.isRecording()).toBe(false)
+		})
+
+		it('exposes the session id synchronously before init completes (session replay adoption)', async () => {
+			const client = new ObservabilityClient('sdkKey', {})
+			_LDObserve._init(client)
+
+			// Before async init finishes, integrations (e.g. session replay)
+			// must still be able to read a stable session id to adopt it.
+			const earlyId = _LDObserve.getSessionInfo().sessionId
+			expect(typeof earlyId).toBe('string')
+			expect(earlyId.length).toBeGreaterThan(0)
+
+			await vi.waitFor(
+				() => expect(_LDObserve.isInitialized()).toBe(true),
+				{ timeout: 2000 },
+			)
+
+			// On a fresh (cold) start the id must not change once init completes.
+			expect(_LDObserve.getSessionInfo().sessionId).toBe(earlyId)
 		})
 
 		it('should upgrade getTracer() obtained before init after client loads', async () => {
