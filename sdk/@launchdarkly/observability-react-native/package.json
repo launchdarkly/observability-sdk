@@ -48,7 +48,13 @@
 	},
 	"peerDependencies": {
 		"@launchdarkly/react-native-client-sdk": "^10.0.0",
+		"@react-native-async-storage/async-storage": ">=1.17.0",
 		"react-native": ">=0.70.0"
+	},
+	"peerDependenciesMeta": {
+		"@react-native-async-storage/async-storage": {
+			"optional": true
+		}
 	},
 	"devDependencies": {
 		"@launchdarkly/observability-shared": "workspace:*",

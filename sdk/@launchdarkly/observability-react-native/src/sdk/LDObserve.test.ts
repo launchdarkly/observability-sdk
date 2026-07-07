@@ -22,6 +22,10 @@ describe('LDObserve Buffering', () => {
 			const client = new ObservabilityClient('sdkKey', {})
 			_LDObserve._init(client)
 
+			await vi.waitFor(
+				() => expect(_LDObserve.isInitialized()).toBe(true),
+				{ timeout: 2000 },
+			)
 			bufferStatus = _LDObserve._getBufferStatus()
 			expect(bufferStatus.bufferSize).toBe(0)
 		})
@@ -40,6 +44,10 @@ describe('LDObserve Buffering', () => {
 
 			_LDObserve._init(new ObservabilityClient('sdkKey', {}))
 
+			await vi.waitFor(
+				() => expect(_LDObserve.isInitialized()).toBe(true),
+				{ timeout: 2000 },
+			)
 			bufferStatus = _LDObserve._getBufferStatus()
 			expect(bufferStatus.bufferSize).toBe(0)
 		})
@@ -57,6 +65,10 @@ describe('LDObserve Buffering', () => {
 
 			_LDObserve._init(new ObservabilityClient('sdkKey', {}))
 
+			await vi.waitFor(
+				() => expect(_LDObserve.isInitialized()).toBe(true),
+				{ timeout: 2000 },
+			)
 			bufferStatus = _LDObserve._getBufferStatus()
 			expect(bufferStatus.bufferSize).toBe(0)
 		})

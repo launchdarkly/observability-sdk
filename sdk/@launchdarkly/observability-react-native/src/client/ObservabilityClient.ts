@@ -33,6 +33,7 @@ export class ObservabilityClient {
 	private errorInstrumentation?: ErrorInstrumentation
 	private options: InstrumentationManagerOptions
 	private isInitialized = false
+	private initStarted = false
 	private ldTracer?: LDTracer
 
 	constructor(
@@ -42,7 +43,10 @@ export class ObservabilityClient {
 		this.options = this.mergeOptions(sdkKey, options)
 		this.sessionManager = new SessionManager(this.options)
 		this.instrumentationManager = new InstrumentationManager(this.options)
-		this.init()
+		// Init is async (it resolves any persisted session from storage before
+		// building the OTel resource). Callers observe readiness via
+		// getIsInitialized(); LDObserve buffers calls until then.
+		void this.init()
 	}
 
 	private mergeOptions(
@@ -85,11 +89,15 @@ export class ObservabilityClient {
 		}
 	}
 
-	private init() {
-		if (this.isInitialized) return
+	private async init() {
+		if (this.isInitialized || this.initStarted) return
+		this.initStarted = true
 
 		try {
-			this.sessionManager.initialize()
+			// Resolve (and possibly resume) the session before building the
+			// resource, so the session id baked into the tracer resource is the
+			// resumed id from the start.
+			await this.sessionManager.initialize()
 
 			const sessionAttributes = this.sessionManager.getSessionAttributes()
 			const resource = resourceFromAttributes({
@@ -108,7 +116,7 @@ export class ObservabilityClient {
 			})
 
 			this.instrumentationManager.setSessionManager(this.sessionManager)
-			void this.instrumentationManager.initialize(resource)
+			await this.instrumentationManager.initialize(resource)
 
 			// Initialize automatic error instrumentation (enabled by default)
 			if (!this.options.disableErrorTracking) {
@@ -117,6 +125,16 @@ export class ObservabilityClient {
 			}
 
 			this.isInitialized = true
+
+			// If this JS load resumed a previously persisted session (soft reload,
+			// OTA reload, or quick relaunch within the resume window), emit an
+			// `app_reload` span marking the boundary. Tracing is live at this point.
+			if (this.sessionManager.wasReloaded()) {
+				this.instrumentationManager.emitAppReload(
+					this.sessionManager.getResumeInfo(),
+					this.sessionManager.getSessionInfo().sessionId,
+				)
+			}
 
 			this._log('initialized successfully')
 		} catch (error) {
@@ -297,6 +315,7 @@ export class ObservabilityClient {
 		await this.instrumentationManager.stop()
 		this.ldTracer = undefined
 		this.isInitialized = false
+		this.initStarted = false
 	}
 
 	public getIsInitialized(): boolean {

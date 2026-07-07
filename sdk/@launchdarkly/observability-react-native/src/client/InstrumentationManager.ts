@@ -47,7 +47,8 @@ import {
 import { Metric } from '../api/Metric'
 import { TrackProperties } from '../api/TrackProperties'
 import { flattenTrackProperties } from '../utils/trackAttributes'
-import { SessionManager } from './SessionManager'
+import { SessionManager, SessionResumeInfo } from './SessionManager'
+import { APP_RELOAD_SPAN_NAME } from '../constants/sessions'
 import {
 	CustomSampler,
 	CustomTraceContextPropagator,
@@ -266,6 +267,7 @@ export class InstrumentationManager {
 		options?: { span: OtelSpan },
 	): void {
 		try {
+			this.sessionManager?.touch()
 			const activeSpan = options?.span || trace.getActiveSpan()
 			const span = activeSpan ?? this.getTracer().startSpan('error')
 			const sessionId = this.sessionManager?.getSessionInfo().sessionId
@@ -372,6 +374,7 @@ export class InstrumentationManager {
 		attributes?: Attributes,
 	): void {
 		try {
+			this.sessionManager?.touch()
 			const logger = this.getLogger()
 			const sessionId = this.sessionManager?.getSessionInfo().sessionId
 
@@ -408,6 +411,7 @@ export class InstrumentationManager {
 		metricValue?: number,
 	): void {
 		try {
+			this.sessionManager?.touch()
 			const sessionId = this.sessionManager?.getSessionInfo().sessionId
 			const attributes: Attributes = {
 				...flattenTrackProperties(properties),
@@ -424,6 +428,29 @@ export class InstrumentationManager {
 				.end()
 		} catch (e) {
 			console.error('Failed to record track event:', e)
+		}
+	}
+
+	/**
+	 * Emits a single `app_reload` span marking that this JS load resumed a
+	 * previously persisted session (a soft reload / OTA reload / quick relaunch).
+	 * The span carries the resumed session id plus how long the app was gone and
+	 * how many times the session has been reloaded.
+	 */
+	public emitAppReload(resumeInfo: SessionResumeInfo, sessionId: string): void {
+		try {
+			this.getTracer()
+				.startSpan(APP_RELOAD_SPAN_NAME, {
+					kind: SpanKind.INTERNAL,
+					attributes: {
+						'app.reload.elapsed_ms': resumeInfo.elapsedMs,
+						'app.reload.count': resumeInfo.reloadCount,
+						'highlight.session_id': sessionId,
+					},
+				})
+				.end()
+		} catch (e) {
+			console.error('Failed to emit app_reload span:', e)
 		}
 	}
 
@@ -467,6 +494,7 @@ export class InstrumentationManager {
 		options?: SpanOptions,
 		ctx?: Context,
 	): OtelSpan {
+		this.sessionManager?.touch()
 		return this.getTracer().startSpan(spanName, options, ctx)
 	}
 
@@ -476,6 +504,7 @@ export class InstrumentationManager {
 		ctx: Context = context.active(),
 		fn: (span: OtelSpan) => T,
 	): T {
+		this.sessionManager?.touch()
 		return this.getTracer().startActiveSpan(spanName, options, ctx, fn)
 	}
 
@@ -484,6 +513,7 @@ export class InstrumentationManager {
 	}
 
 	public async flush(): Promise<void> {
+		this.sessionManager?.touch()
 		try {
 			if (this.traceProvider) {
 				await this.traceProvider.forceFlush()
