@@ -8,20 +8,16 @@ session replay for react native
 npm install session-replay-react-native
 ```
 
-## Supported React Native and Expo versions
+## Supported React Native versions
 
-The LaunchDarkly session replay plugin for React Native targets the following
-React Native and Expo versions:
-
-| Framework | Supported versions |
-| --- | --- |
-| React Native | 0.75+ |
-| Expo | 51+ |
-
-Both the **New Architecture** and the **Legacy Architecture** (bridge /
+The LaunchDarkly session replay plugin for React Native targets React Native
+`0.75+`. Both the **New Architecture** and the **Legacy Architecture** (bridge /
 `NativeModules`) are supported. The native module registers itself on whichever
 architecture the host app uses, so no per-app configuration is required for the
 module to load.
+
+Expo (SDK `51+`) is supported as well — see [Expo](#expo) for setup and version
+reporting.
 
 ## Usage
 
@@ -110,12 +106,23 @@ When a session is sampled out, `isEnabled` may stay `true` but no frames, intera
 or identify payloads are exported for that enable cycle — matching native iOS and Android
 behavior.
 
-## Service version (Expo)
+## Expo
 
-The SDK does not read the app version from the native binary automatically.
-`serviceVersion` defaults to `'1.0.0'` when unset. In an Expo app, use
-[`expo-application`](https://docs.expo.dev/versions/latest/sdk/application/) to
-read the store-visible version and pass it to both plugins:
+Expo SDK `51+` is supported. Session replay is a **native module**, so it does
+not run in **Expo Go** — use an
+[Expo development build](https://docs.expo.dev/develop/development-builds/introduction/)
+(`expo-dev-client`) or a standalone build from EAS Build / `expo prebuild`.
+
+### Passing version information
+
+The SDK does not read any version from the Expo runtime automatically — it only
+uses the `serviceVersion` string you pass, which defaults to `'1.0.0'` when unset.
+To attribute telemetry to a specific build, read the version from Expo and pass it
+into the plugins yourself.
+
+Read the store-visible app version with
+[`expo-application`](https://docs.expo.dev/versions/latest/sdk/application/) and
+set it as `serviceVersion` on both plugins:
 
 ```tsx
 import * as Application from 'expo-application';
@@ -139,6 +146,31 @@ const sessionReplay = createSessionReplayPlugin({
 
 `Application.nativeApplicationVersion` maps to `CFBundleShortVersionString` on iOS
 and `versionName` on Android — the same version users see in the app store listing.
+
+### Over-the-air (OTA) updates
+
+If you ship over-the-air updates with
+[Expo Updates](https://docs.expo.dev/versions/latest/sdk/updates/), the native app
+version stays fixed across updates, so pass the update identifiers as extra
+`resourceAttributes` on the observability plugin to tell builds apart:
+
+```tsx
+import * as Application from 'expo-application';
+import * as Updates from 'expo-updates';
+
+const observability = new Observability({
+  serviceName: 'my-expo-app',
+  serviceVersion: Application.nativeApplicationVersion ?? '1.0.0',
+  resourceAttributes: {
+    'ota.update_id': Updates.updateId ?? 'embedded',
+    'ota.runtime_version': Updates.runtimeVersion ?? undefined,
+  },
+});
+```
+
+`Updates.updateId` identifies the running OTA bundle (`null` — shown here as
+`'embedded'` — when the app runs the bundle shipped with the binary), and
+`Updates.runtimeVersion` is the native-compatibility gate for OTA delivery.
 
 ## Masking sensitive content
 

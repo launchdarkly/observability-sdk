@@ -1,4 +1,5 @@
 import {
+  DevSettings,
   Platform,
   SafeAreaView,
   StyleSheet,
@@ -35,6 +36,15 @@ const {env: LD_ENV, endpoints} = resolveLDEnvironment(LAUNCHDARKLY_ENV, {
   backendUrl: LAUNCHDARKLY_BACKEND_URL,
 });
 
+// Regenerated every time the JS bundle loads. A soft reload (DevSettings.reload)
+// restarts the JS runtime in the same process, so this changes while the native
+// session replay singleton — and its sampling decision — persist untouched.
+// It is also passed as a JS `resourceAttribute` below to demonstrate that JS
+// observability resource attributes ARE reapplied on soft reload (unlike the
+// native session replay config, which is frozen until a full cold start).
+const JS_LOAD_ID = Math.random().toString(36).slice(2, 8);
+console.log(`[soft-reload] JS_LOAD_ID=${JS_LOAD_ID} (new value each JS load)`);
+
 const plugin = createSessionReplayPlugin({
   isEnabled: true,
   serviceName: 'session-replay-rn-legacy-example',
@@ -58,6 +68,12 @@ const observability = new Observability({
   tracingOrigins: ['jsonplaceholder.typicode.com', 'reactnative.dev'],
   otlpEndpoint: endpoints.otlpEndpoint,
   backendUrl: endpoints.backendUrl,
+  // Reapplied on every JS (soft) reload: the JS observability SDK is fully
+  // recreated when the runtime restarts, so this attribute reflects the current
+  // JS load. Compare with the native SR service.version, which stays frozen.
+  resourceAttributes: {
+    'js.load_id': JS_LOAD_ID,
+  },
 });
 
 // Set the values in example-legacy/.env (see .env.example) to record real
@@ -82,6 +98,23 @@ const client = new ReactNativeLDClient(MOBILE_KEY, AutoEnvAttributes.Enabled, {
   eventsUri: endpoints.eventsUri,
 });
 const context = {kind: 'user', key: 'user-key-123abc'};
+
+// Emulates an OTA "soft reload": restarts only the JS runtime, leaving the native
+// process (and the SR singleton) alive. Sampling is intentionally NOT re-rolled —
+// the native enable cycle never resets, so a sampled-out session stays out and a
+// recording session keeps its original decision. Only a full cold start re-rolls.
+function softReload() {
+  console.log(
+    `[soft-reload] reloading JS runtime; native SR singleton persists, sampling NOT re-exercised (was JS_LOAD_ID=${JS_LOAD_ID})`,
+  );
+  if (typeof DevSettings?.reload === 'function') {
+    DevSettings.reload('SR soft-reload test');
+  } else {
+    console.warn(
+      '[soft-reload] DevSettings.reload is unavailable (release build); use a dev build to test soft reload',
+    );
+  }
+}
 
 // The New Architecture installs the Fabric UIManager on the JS global; its
 // absence means the app is running on the legacy bridge architecture.
@@ -127,6 +160,19 @@ export default function App() {
         <Text testID="safe" style={styles.status}>
           {status}
         </Text>
+        <View style={styles.actionBar}>
+          <Text testID="safe" style={styles.actionLabel}>
+            JS load: {JS_LOAD_ID}
+          </Text>
+          <TouchableOpacity
+            testID="safe"
+            style={styles.actionButton}
+            onPress={softReload}>
+            <Text testID="safe" style={styles.actionButtonText}>
+              Soft reload
+            </Text>
+          </TouchableOpacity>
+        </View>
         <View style={styles.tabBar}>
           <TabButton
             label="Masking"
@@ -201,6 +247,28 @@ const styles = StyleSheet.create({
     fontSize: 12,
     paddingHorizontal: 12,
     paddingVertical: 4,
+  },
+  actionBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingBottom: 8,
+  },
+  actionLabel: {
+    color: '#888',
+    fontSize: 12,
+  },
+  actionButton: {
+    backgroundColor: '#6650A4',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  actionButtonText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '700',
   },
   tabBar: {
     flexDirection: 'row',
