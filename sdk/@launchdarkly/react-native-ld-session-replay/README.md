@@ -8,6 +8,26 @@ session replay for react native
 npm install session-replay-react-native
 ```
 
+## Supported React Native and Expo versions
+
+The LaunchDarkly session replay plugin for React Native targets the following
+React Native and Expo versions:
+
+| Framework | Supported versions |
+| --- | --- |
+| React Native | 0.75+ |
+| Expo | 51+ |
+
+Both the **New Architecture** and the **Legacy Architecture** (bridge /
+`NativeModules`) are supported. The native module registers itself on whichever
+architecture the host app uses, so no per-app configuration is required for the
+module to load.
+
+Not all React Native and Expo versions have been explicitly tested with the
+session replay plugin, as it is in Early Access. New React Native and Expo
+releases are expected to work; if you run into an issue, please
+[file an issue on GitHub](https://github.com/launchdarkly/observability-sdk/issues).
+
 ## Usage
 
 Use the session replay plugin with the LaunchDarkly React Native client:
@@ -152,13 +172,6 @@ import { LDMask, LDUnmask } from '@launchdarkly/session-replay-react-native';
 ```
 
 `<LDMask>` propagates to descendants and beats any `<LDUnmask>` further down the tree — once a subtree is wrapped in `<LDMask>`, nothing inside it can opt back in.
-
-## Architecture support
-
-This package supports both the React Native **New Architecture** and the
-**Legacy Architecture** (bridge / `NativeModules`), on **React Native 0.75+**.
-The native module registers itself on whichever architecture the host app uses,
-so no per-app configuration is required for the module to load.
 
 ## Troubleshooting
 
