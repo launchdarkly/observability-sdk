@@ -116,6 +116,40 @@ describe('SessionManager session preservation', () => {
 		expect(mgr.wasReloaded()).toBe(false)
 	})
 
+	it('adopts a preferred (native) session id without a store and marks a reload', async () => {
+		// Simulates a soft reload where the native session replay module hands back
+		// its frozen session id and no persistence store is available.
+		const mgr = new SessionManager({}, noOpStore)
+		mgr.setPreferredSessionId('native-frozen-id')
+		await mgr.initialize()
+
+		expect(mgr.getSessionInfo().sessionId).toBe('native-frozen-id')
+		expect(mgr.wasReloaded()).toBe(true)
+		expect(mgr.getResumeInfo().reloadCount).toBe(1)
+	})
+
+	it('preferred session id wins over a resumable persisted session and keeps its timing', async () => {
+		const store = new MemoryStore()
+		const now = Date.now()
+		store.seed({
+			sessionId: 'native-frozen-id',
+			startTime: now - 120_000,
+			lastActivityTime: now - 2_000,
+			reloadCount: 4,
+		})
+
+		const mgr = new SessionManager({}, store)
+		mgr.setPreferredSessionId('native-frozen-id')
+		await mgr.initialize()
+
+		expect(mgr.getSessionInfo().sessionId).toBe('native-frozen-id')
+		// Timing carried over from the matching persisted session.
+		expect(mgr.getSessionInfo().startTime).toBe(now - 120_000)
+		expect(mgr.wasReloaded()).toBe(true)
+		expect(mgr.getResumeInfo().reloadCount).toBe(5)
+		expect(store.read().sessionId).toBe('native-frozen-id')
+	})
+
 	it('ignores corrupt persisted data', async () => {
 		const store = new MemoryStore()
 		await store.setItem(SESSION_STORAGE_KEY, '{ not valid json')

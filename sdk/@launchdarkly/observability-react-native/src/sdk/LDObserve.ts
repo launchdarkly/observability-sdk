@@ -211,6 +211,19 @@ class LDObserveClass
 		}
 	}
 
+	setPreferredSessionId(sessionId: string): void {
+		// Applied synchronously to the (early) client rather than buffered:
+		// buffering would defer it until after init completes, which is too late
+		// to influence the session id resolved during init (and baked into the
+		// OTel resource). The early client is captured in _init, before async
+		// init finishes, so this lands in time.
+		try {
+			this._earlyClient?.setPreferredSessionId(sessionId)
+		} catch {
+			// ignore — session id adoption is best-effort
+		}
+	}
+
 	stop(): Promise<void> {
 		const response = this._bufferCall('stop', [])
 		return this._isLoaded ? response : Promise.resolve()

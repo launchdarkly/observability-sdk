@@ -54,6 +54,10 @@ export class SessionManager {
 		reloadCount: 0,
 	}
 	private lastPersistAt = 0
+	// A session id handed to us by a native integration (session replay) that
+	// survived a JS soft reload. Takes precedence over minting/resuming when set
+	// before initialize() resolves. See setPreferredSessionId / resolveSession.
+	private preferredSessionId?: string
 
 	constructor(options?: Options, store?: SessionStore) {
 		this.options = {
@@ -99,6 +103,36 @@ export class SessionManager {
 	private async resolveSession(): Promise<void> {
 		const previous = await this.readPersisted()
 		const now = Date.now()
+
+		// Highest priority: a session id supplied by a native integration (e.g.
+		// the session replay module) that outlived this JS runtime. The native
+		// session replay singleton stays frozen on its original session id across
+		// a soft reload, so adopting it keeps the JS `session.id` aligned with
+		// native even when no persistent store is available to resume from. A
+		// non-empty preferred id can only originate from a *prior* JS load in the
+		// same process, so it always signals a reload.
+		if (this.preferredSessionId) {
+			const matchesPersisted =
+				previous?.sessionId === this.preferredSessionId
+			this.sessionInfo = {
+				sessionId: this.preferredSessionId,
+				startTime: matchesPersisted
+					? previous!.startTime
+					: this.sessionInfo.startTime,
+			}
+			this.reloadCount =
+				(matchesPersisted ? previous!.reloadCount : this.reloadCount) +
+				1
+			this.resumeInfo = {
+				reloaded: true,
+				elapsedMs: matchesPersisted
+					? now - previous!.lastActivityTime
+					: 0,
+				reloadCount: this.reloadCount,
+			}
+			await this.persist(now, true)
+			return
+		}
 
 		if (
 			previous &&
@@ -183,6 +217,19 @@ export class SessionManager {
 	 */
 	public touch(): void {
 		void this.persist(Date.now())
+	}
+
+	/**
+	 * Supply a session id from a native integration that survived a JS reload
+	 * (see resolveSession). Must be called before initialize() resolves — i.e.
+	 * synchronously during plugin registration — to influence the session id
+	 * baked into the OTel resource.
+	 */
+	public setPreferredSessionId(sessionId: string): void {
+		const trimmed = sessionId?.trim()
+		if (trimmed) {
+			this.preferredSessionId = trimmed
+		}
 	}
 
 	/** Whether this JS load resumed a previously persisted session. */

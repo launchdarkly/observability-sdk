@@ -305,6 +305,17 @@ export class ObservabilityClient {
 		return this.sessionManager.getSessionInfo()
 	}
 
+	/**
+	 * Adopt a session id supplied by a native integration (session replay) that
+	 * survived a JS soft reload. Forwarded to the session manager, which honors
+	 * it when resolving the session during the in-flight async init. Must be
+	 * called synchronously after construction (before init resolves) to take
+	 * effect.
+	 */
+	public setPreferredSessionId(sessionId: string): void {
+		this.sessionManager.setPreferredSessionId(sessionId)
+	}
+
 	public async stop(): Promise<void> {
 		// Clean up error instrumentation
 		if (this.errorInstrumentation) {

@@ -55,6 +55,9 @@ class SessionReplayReactNativeModule(reactContext: ReactApplicationContext) :
     }
   }
 
+  override fun getSessionId(): String =
+    SessionReplayClientAdapter.shared.getSessionId() ?: ""
+
   override fun afterIdentify(
     contextKeys: ReadableMap,
     canonicalKey: String,

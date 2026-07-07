@@ -202,11 +202,13 @@ class SessionReplayPluginAdapter implements LDPlugin {
       console.error('[SessionReplay]', MOBILE_KEY_REQUIRED_MESSAGE);
       return;
     }
-    // Adopt the JS observability session id so native spans (e.g. `click`) share
-    // the same `session.id`. This requires the observability plugin to have been
-    // registered before this one; if it hasn't initialized yet the id is empty
-    // and native keeps its own session.
-    const sessionId = this.resolveObservabilitySessionId();
+    // Resolve the session id to share between the JS observability SDK and the
+    // native replay / observability instance so their spans report a single
+    // `session.id`. Two directions, depending on whether native already has a
+    // session (see resolveSharedSessionId):
+    //   - cold start: adopt the JS observability id and seed native with it;
+    //   - warm reload: read native's frozen id back and hand it to observability.
+    const sessionId = this.resolveSharedSessionId();
     const options: SessionReplayOptions = sessionId
       ? { ...this.options, sessionId }
       : this.options;
@@ -221,6 +223,47 @@ class SessionReplayPluginAdapter implements LDPlugin {
           error
         );
       });
+  }
+
+  /**
+   * Determines the `session.id` shared by the JS observability SDK and the
+   * native replay / observability instance, and wires the two together.
+   *
+   * On a warm JS reload (soft reload / OTA reload) the native session replay
+   * singleton is still alive and frozen on the session id it was initialized
+   * with, while the JS observability SDK has lost its in-memory session. We read
+   * the native id back and hand it to observability via `setPreferredSessionId`
+   * so both pipelines stay aligned even when no persistence store (AsyncStorage
+   * / localStorage) is available to resume from.
+   *
+   * On a cold start native has no session yet (returns an empty id), so we fall
+   * back to adopting the observability session id; native then seeds itself with
+   * it during init.
+   */
+  private resolveSharedSessionId(): string | undefined {
+    const nativeId = this.readNativeSessionId();
+    if (nativeId) {
+      // Warm reload: native is the surviving source of truth.
+      try {
+        LDObserve.setPreferredSessionId(nativeId);
+      } catch {
+        // Older observability SDK without the seam — native still records under
+        // its own id; JS may diverge until a cold start. Best-effort.
+      }
+      return nativeId;
+    }
+    // Cold start: adopt the (provisional) observability id.
+    return this.resolveObservabilitySessionId();
+  }
+
+  private readNativeSessionId(): string | undefined {
+    try {
+      const id = SessionReplayReactNative.getSessionId?.();
+      return typeof id === 'string' && id.length > 0 ? id : undefined;
+    } catch {
+      // getSessionId is unavailable on older native builds — treat as cold.
+      return undefined;
+    }
   }
 
   private resolveObservabilitySessionId(): string | undefined {

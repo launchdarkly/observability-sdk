@@ -15,6 +15,12 @@ public class SessionReplayClientAdapter: NSObject {
   // observability instance (which emits e.g. `click` spans) reports the same
   // `session.id`. nil means the native SDK uses its own generated session.
   private var customSessionId: String?
+  // The session id the native observability instance was actually initialized
+  // with, captured once at init and never overwritten by a later setMobileKey().
+  // Survives a JS soft reload via this shared singleton, so getSessionId() can
+  // hand it back to the JS observability SDK to keep session.id aligned. Guarded
+  // by `lock` since it is read synchronously from the JS thread.
+  private var activeSessionId: String?
   // Optional `service.version` forwarded from JS. Applied to the observability
   // plugin only (the session replay options have no version). nil keeps the
   // SDK default.
@@ -168,6 +174,11 @@ public class SessionReplayClientAdapter: NSObject {
           LDObserve.shared.start()
         }
         self.initialized = true
+        // Remember the id the native observability session was seeded with so a
+        // later JS load (soft reload) can read it back via getSessionId().
+        self.lock.lock()
+        self.activeSessionId = customSessionId
+        self.lock.unlock()
       } else {
         NSLog(
           "[SessionReplayClientAdapter] start: already initialized, re-applying isEnabled=%@",
@@ -213,6 +224,15 @@ public class SessionReplayClientAdapter: NSObject {
   /// LDClient is only needed as a holder of the SessionReplay plugin
   ///
   /// Stop is intended to provide a stop like API, internally is disabling session replay until app start it with start method
+  /// The session id the native observability instance was initialized with, or an
+  /// empty string if it has not initialized yet. Read synchronously from the JS
+  /// thread; guarded by `lock`.
+  @objc public func getSessionId() -> String {
+    lock.lock()
+    defer { lock.unlock() }
+    return activeSessionId ?? ""
+  }
+
   @objc public func stop(completion: @escaping () -> Void) {
     lock.lock()
     defer { lock.unlock() }

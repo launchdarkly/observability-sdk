@@ -37,6 +37,13 @@ internal class SessionReplayClientAdapter private constructor() {
     // `session.id`. null means the native SDK generates and owns its own session.
     private var customSessionId: String? = null
     private var replayOptions: ReplayOptions? = null
+    // The session id the native observability instance was actually initialized
+    // with, captured once at init and never overwritten by a later configure().
+    // Survives a JS soft reload via this process singleton, so getSessionId() can
+    // hand it back to the JS observability SDK to keep session.id aligned. null
+    // until the first successful init (cold start).
+    @Volatile
+    private var activeSessionId: String? = null
     // Only accessed from the main thread (all reads/writes are inside Handler(mainLooper).post blocks).
     private var initialized = false
     // The most recently identified context. Defaults to anonymous; updated on each successful identify.
@@ -106,6 +113,9 @@ internal class SessionReplayClientAdapter private constructor() {
                     return@post
                 }
                 initialized = true
+                // Remember the id the native observability session was seeded with so a
+                // later JS load (soft reload) can read it back via getSessionId().
+                activeSessionId = localCustomSessionId
                 // React Native is often initialized after the main activity has already been
                 // created, so we miss its lifecycle events. Manually register it, just in case.
                 activity?.let { LDReplay.registerActivity(it) }
@@ -143,6 +153,13 @@ internal class SessionReplayClientAdapter private constructor() {
             }
         }
     }
+
+    /**
+     * The session id the native observability instance was initialized with, or null
+     * if it has not initialized yet. Read synchronously from the JS thread; backed by
+     * a @Volatile field written once on the main thread at init.
+     */
+    fun getSessionId(): String? = activeSessionId
 
     fun stop(completion: () -> Unit) {
         logger.debug("stop")

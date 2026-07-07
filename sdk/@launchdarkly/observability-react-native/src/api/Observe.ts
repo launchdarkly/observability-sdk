@@ -190,6 +190,19 @@ export interface Observe {
 	getSessionInfo(): SessionInfo
 
 	/**
+	 * Adopt a session id supplied by a native integration.
+	 *
+	 * Primarily an integration hook for the session replay plugin: on a JS soft
+	 * reload the native session replay module stays alive and frozen on its
+	 * original `session.id`, while this JS SDK loses its in-memory session. The
+	 * replay plugin reads the native id back and calls this so both pipelines
+	 * report the same session even without a persistence store. Must be called
+	 * synchronously during plugin registration (before init resolves) to take
+	 * effect; ignored once the session has been resolved.
+	 */
+	setPreferredSessionId(sessionId: string): void
+
+	/**
 	 * Stop the observability client.
 	 */
 	stop(): Promise<void>

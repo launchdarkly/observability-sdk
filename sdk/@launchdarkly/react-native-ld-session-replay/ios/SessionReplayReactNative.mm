@@ -71,6 +71,16 @@ RCT_EXPORT_METHOD(stopSessionReplay:(RCTPromiseResolveBlock)resolve
     }
 }
 
+RCT_EXPORT_BLOCKING_SYNCHRONOUS_METHOD(getSessionId)
+{
+    @try {
+      return [[SessionReplayClientAdapter shared] getSessionId];
+    } @catch(NSException *exception) {
+      NSLog(@"⚠️ getSessionId crash: %@", exception);
+      return @"";
+    }
+}
+
 RCT_EXPORT_METHOD(afterIdentify:(NSDictionary *)contextKeys
                   canonicalKey:(NSString *)canonicalKey
                   completed:(BOOL)completed
