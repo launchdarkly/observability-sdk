@@ -14,7 +14,10 @@ import {
 } from '@launchdarkly/react-native-client-sdk';
 import {useEffect, useState} from 'react';
 import {createSessionReplayPlugin} from '@launchdarkly/session-replay-react-native';
-import {LDObserve, Observability} from '@launchdarkly/observability-react-native';
+import {
+  LDObserve,
+  Observability,
+} from '@launchdarkly/observability-react-native';
 import {
   LAUNCHDARKLY_MOBILE_KEY,
   LAUNCHDARKLY_ENV,

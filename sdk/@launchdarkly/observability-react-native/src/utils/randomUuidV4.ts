@@ -79,7 +79,8 @@ export function formatDataAsUuidV4(bytes: number[]): string {
 	bytes[clockSeqHiAndReserved.start] =
 		(bytes[clockSeqHiAndReserved.start] | 0x80) & 0xbf
 	// Set the version: high nibble of time_hi_and_version to 4.
-	bytes[timeHiAndVersion.start] = (bytes[timeHiAndVersion.start] & 0x0f) | 0x40
+	bytes[timeHiAndVersion.start] =
+		(bytes[timeHiAndVersion.start] & 0x0f) | 0x40
 
 	return (
 		`${hex(bytes, timeLow)}-${hex(bytes, timeMid)}-${hex(bytes, timeHiAndVersion)}-` +

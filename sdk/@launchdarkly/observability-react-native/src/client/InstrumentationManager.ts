@@ -437,7 +437,10 @@ export class InstrumentationManager {
 	 * The span carries the resumed session id plus how long the app was gone and
 	 * how many times the session has been reloaded.
 	 */
-	public emitAppReload(resumeInfo: SessionResumeInfo, sessionId: string): void {
+	public emitAppReload(
+		resumeInfo: SessionResumeInfo,
+		sessionId: string,
+	): void {
 		try {
 			this.getTracer()
 				.startSpan(APP_RELOAD_SPAN_NAME, {

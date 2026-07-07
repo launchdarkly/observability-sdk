@@ -55,7 +55,7 @@ export interface LDObservabilityOverrides {
 export function resolveLDEnvironment(
   name: string | undefined,
   overrides: LDObservabilityOverrides = {},
-): { env: LDEnvironmentName; endpoints: LDEndpoints } {
+): {env: LDEnvironmentName; endpoints: LDEndpoints} {
   const env: LDEnvironmentName =
     name === 'staging' || name === 'production' ? name : 'production';
   if (name && name !== env) {
@@ -70,6 +70,6 @@ export function resolveLDEnvironment(
 
   return {
     env,
-    endpoints: { ...base, otlpEndpoint, backendUrl },
+    endpoints: {...base, otlpEndpoint, backendUrl},
   };
 }

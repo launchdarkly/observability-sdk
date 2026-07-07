@@ -100,7 +100,10 @@ export class SessionManager {
 		const previous = await this.readPersisted()
 		const now = Date.now()
 
-		if (previous && now - previous.lastActivityTime < SESSION_RESUME_THRESHOLD_MS) {
+		if (
+			previous &&
+			now - previous.lastActivityTime < SESSION_RESUME_THRESHOLD_MS
+		) {
 			// Continue the same session across the reload.
 			this.sessionInfo = {
 				sessionId: previous.sessionId,
@@ -161,7 +164,10 @@ export class SessionManager {
 			reloadCount: this.reloadCount,
 		}
 		try {
-			await this.store.setItem(SESSION_STORAGE_KEY, JSON.stringify(payload))
+			await this.store.setItem(
+				SESSION_STORAGE_KEY,
+				JSON.stringify(payload),
+			)
 		} catch {
 			// Best-effort persistence; ignore write failures.
 		}
