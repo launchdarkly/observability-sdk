@@ -14,19 +14,26 @@ import {
 import {useEffect, useState} from 'react';
 import {createSessionReplayPlugin} from '@launchdarkly/session-replay-react-native';
 import {Observability} from '@launchdarkly/observability-react-native';
-import {LAUNCHDARKLY_MOBILE_KEY, LAUNCHDARKLY_ENV} from '@env';
+import {
+  LAUNCHDARKLY_MOBILE_KEY,
+  LAUNCHDARKLY_ENV,
+  LAUNCHDARKLY_OTLP_ENDPOINT,
+  LAUNCHDARKLY_BACKEND_URL,
+} from '@env';
 import {resolveLDEnvironment} from './ldEnvironments';
 import DialogsScreen from './DialogsScreen';
 import MaskingScreen from './MaskingScreen';
 import TracingScreen from './TracingScreen';
 import ApiScreen from './ApiScreen';
 
-// Single source of truth: pick the LaunchDarkly instance once, then derive every
-// endpoint from it. The observability URLs feed the JS observability plugin and
-// the native session replay modules; the client-side URLs feed the online JS
-// client below. Because they come from one bundle they can't drift apart (a
-// staging key against production URLs is what produces the identify 401).
-const {env: LD_ENV, endpoints} = resolveLDEnvironment(LAUNCHDARKLY_ENV);
+// Pick the LaunchDarkly instance once for the client-side URLs (they must stay
+// paired with the mobile key, or identify fails with a 401). The observability
+// URLs default to the same bundle but can be pointed at localhost or any staging
+// server via LAUNCHDARKLY_OTLP_ENDPOINT / LAUNCHDARKLY_BACKEND_URL in .env.
+const {env: LD_ENV, endpoints} = resolveLDEnvironment(LAUNCHDARKLY_ENV, {
+  otlpEndpoint: LAUNCHDARKLY_OTLP_ENDPOINT,
+  backendUrl: LAUNCHDARKLY_BACKEND_URL,
+});
 
 const plugin = createSessionReplayPlugin({
   isEnabled: true,
@@ -64,6 +71,9 @@ console.log(
     4,
   )}`,
 ); // expect "mob-"
+console.log(
+  `[env] observability otlpEndpoint = ${endpoints.otlpEndpoint}, backendUrl = ${endpoints.backendUrl}`,
+);
 
 const client = new ReactNativeLDClient(MOBILE_KEY, AutoEnvAttributes.Enabled, {
   plugins: [observability, plugin],

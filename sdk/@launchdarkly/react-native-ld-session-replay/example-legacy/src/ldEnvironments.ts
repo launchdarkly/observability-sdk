@@ -1,17 +1,18 @@
 // Single source of truth for which LaunchDarkly instance this example talks to.
 //
-// Every endpoint the app uses is bundled here per environment so they can never
-// drift apart: the LaunchDarkly client-side URLs (streamUri/baseUri/eventsUri,
-// used by the online JS ReactNativeLDClient for flag streaming + identify) and
-// the observability URLs (otlpEndpoint/backendUrl, forwarded to the JS
-// observability plugin and the native session replay modules for trace/log/
-// replay upload). Pick the environment once via LAUNCHDARKLY_ENV in .env; the
-// mobile key is the only value set separately, since it is a per-environment
-// secret that cannot be derived.
+// LAUNCHDARKLY_ENV selects a bundle of the LaunchDarkly client-side URLs
+// (streamUri/baseUri/eventsUri, used by the online JS ReactNativeLDClient for
+// flag streaming + identify). These must stay paired with the mobile key: a
+// mismatch (e.g. a staging mobile key streaming against production) surfaces as
+// a LaunchDarklyStreamingError with code 401, which makes identify resolve with
+// status 'error' and silently drops all downstream identify telemetry.
 //
-// A mismatch (e.g. a staging mobile key streaming against production) surfaces
-// as a LaunchDarklyStreamingError with code 401, which makes identify resolve
-// with status 'error' and silently drops all downstream identify telemetry.
+// The observability URLs (otlpEndpoint/backendUrl, forwarded to the JS
+// observability plugin and the native session replay modules for trace/log/
+// replay upload) default to the same bundle, but can be overridden
+// independently via LAUNCHDARKLY_OTLP_ENDPOINT / LAUNCHDARKLY_BACKEND_URL in
+// .env. This lets you point observability at localhost or an arbitrary staging
+// server while still streaming flags from a real LaunchDarkly instance.
 
 export type LDEnvironmentName = 'production' | 'staging';
 
@@ -44,8 +45,16 @@ export const LD_ENVIRONMENTS: Record<LDEnvironmentName, LDEndpoints> = {
   },
 };
 
+// Optional per-endpoint overrides for the observability URLs. Anything left
+// unset (or blank) falls back to the selected environment's bundled default.
+export interface LDObservabilityOverrides {
+  otlpEndpoint?: string;
+  backendUrl?: string;
+}
+
 export function resolveLDEnvironment(
   name: string | undefined,
+  overrides: LDObservabilityOverrides = {},
 ): { env: LDEnvironmentName; endpoints: LDEndpoints } {
   const env: LDEnvironmentName =
     name === 'staging' || name === 'production' ? name : 'production';
@@ -54,5 +63,13 @@ export function resolveLDEnvironment(
       `[env] unknown LAUNCHDARKLY_ENV="${name}", falling back to "production"`,
     );
   }
-  return { env, endpoints: LD_ENVIRONMENTS[env] };
+
+  const base = LD_ENVIRONMENTS[env];
+  const otlpEndpoint = overrides.otlpEndpoint?.trim() || base.otlpEndpoint;
+  const backendUrl = overrides.backendUrl?.trim() || base.backendUrl;
+
+  return {
+    env,
+    endpoints: { ...base, otlpEndpoint, backendUrl },
+  };
 }
