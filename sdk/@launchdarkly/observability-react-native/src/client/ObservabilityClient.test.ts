@@ -25,4 +25,24 @@ describe('ObservabilityClient — stop during async init', () => {
 
 		expect(client.getIsInitialized()).toBe(false)
 	})
+
+	it('whenInitialized() resolves true once init settles successfully', async () => {
+		const client = new ObservabilityClient('sdkKey', {})
+
+		const ready = await client.whenInitialized()
+
+		expect(ready).toBe(true)
+		expect(client.getIsInitialized()).toBe(true)
+	})
+
+	it('whenInitialized() resolves false when stop() aborts init (no infinite wait)', async () => {
+		const client = new ObservabilityClient('sdkKey', {})
+		await client.stop()
+
+		// Must settle (not hang) so awaiters/pollers terminate on a torn-down client.
+		const ready = await client.whenInitialized()
+
+		expect(ready).toBe(false)
+		expect(client.getIsInitialized()).toBe(false)
+	})
 })

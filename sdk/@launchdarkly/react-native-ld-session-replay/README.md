@@ -106,6 +106,26 @@ When a session is sampled out, `isEnabled` may stay `true` but no frames, intera
 or identify payloads are exported for that enable cycle — matching native iOS and Android
 behavior.
 
+## Automatically captured lifecycle events
+
+Registering the plugin initializes the native session replay / observability layer,
+which auto-instruments **app lifecycle** on both iOS and Android. No extra wiring is
+required — these spans are emitted alongside your other telemetry:
+
+| Span | When | Notes |
+| --- | --- | --- |
+| `app_launch` | The native app **process** launches. | Carries `event.launch_type` (`relaunch` / `install` / `update`). This is a native process launch, distinct from a JS / OTA reload (see `app_reload` below). |
+| `app_foreground` | The app enters the foreground (including resume from background). | `event.lifecycle_state = foreground`. |
+| `app_background` | The app enters the background. | `event.lifecycle_state = background`. |
+
+In addition, when the JavaScript runtime reloads (a React Native soft reload, an OTA
+bundle reload, or a quick relaunch within the session-resume window) while the same
+session continues, the observability SDK emits an `app_reload` span so the session
+stays stitched together across the reload.
+
+See the [event taxonomy](../../../analytics-taxonomy.md) for the full `event.*` payload
+of each event.
+
 ## Expo
 
 Expo SDK `51+` is supported. Session replay is a **native module**, so it does

@@ -161,6 +161,25 @@ describe('LDObserve Buffering', () => {
 			).resolves.toBeUndefined()
 		})
 
+		it('stop() before load aborts the in-flight init and never loads the client', async () => {
+			const client = new ObservabilityClient('sdkKey', {})
+			const stopSpy = vi.spyOn(client, 'stop')
+			_LDObserve._init(client)
+
+			// Stop while init() is still in flight (buffered, not yet loaded). This
+			// must reach the real client so its `stopped` guard is set, rather than
+			// being swallowed by the buffer.
+			await _LDObserve.stop()
+			expect(stopSpy).toHaveBeenCalledTimes(1)
+
+			// Give any lingering init() microtasks and poller ticks a chance to run;
+			// the client must not come up initialized/loaded after being stopped.
+			await new Promise((resolve) => setTimeout(resolve, 150))
+
+			expect(client.getIsInitialized()).toBe(false)
+			expect(_LDObserve.isInitialized()).toBe(false)
+		})
+
 		it('should upgrade getTracer() obtained before init after client loads', async () => {
 			const earlyTracer = _LDObserve.getTracer()
 			const client = new ObservabilityClient('sdkKey', {})

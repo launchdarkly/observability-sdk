@@ -25,6 +25,9 @@ class LDObserveClass
 	// Captured at _init time, before async initialization completes, so the
 	// (provisional) session id can be read synchronously.
 	private _earlyClient?: ObservabilityClient
+	// Set when stop() runs before load(), so the readiness poller in _init()
+	// stops waiting for a client that has been torn down mid-initialization.
+	private _initCancelled = false
 
 	private _resolveTracer(): LDTracer {
 		if (this._isLoaded) {
@@ -53,6 +56,7 @@ class LDObserveClass
 	_resetForTesting(): void {
 		this._lazyTracer = undefined
 		this._earlyClient = undefined
+		this._initCancelled = false
 		super._resetForTesting()
 	}
 
@@ -246,6 +250,16 @@ class LDObserveClass
 	}
 
 	stop(): Promise<void> {
+		// When init() is still in flight (early client captured but not yet
+		// loaded), buffering `stop` would resolve immediately and never reach the
+		// client — so the in-flight async init() could still finish (e.g. emit
+		// app_reload) after we asked to stop. Stop the early client directly to set
+		// its `stopped` guard now, and cancel the readiness poller so it does not
+		// spin forever waiting for a client that will never initialize.
+		if (!this._isLoaded && this._earlyClient) {
+			this._initCancelled = true
+			return this._earlyClient.stop()
+		}
 		const response = this._bufferCall('stop', [])
 		return this._isLoaded ? response : Promise.resolve()
 	}
@@ -257,15 +271,19 @@ class LDObserveClass
 
 	_init(client: ObservabilityClient): void {
 		this._earlyClient = client
-		const checkInitialized = () => {
-			if (client.getIsInitialized()) {
-				this.load(client)
-			} else {
-				setTimeout(checkInitialized, 100)
+		this._initCancelled = false
+		// Await the client's terminal init outcome instead of polling
+		// getIsInitialized() on a timer: this resolves once init is ready,
+		// stop-aborted, or (a retryable) failure leaves it pending forever — so
+		// there is no timer that spins indefinitely when init never becomes ready.
+		void client.whenInitialized().then((ready) => {
+			// A stop() before load() cancels initialization; don't load a client
+			// that has been torn down.
+			if (this._initCancelled || !ready) {
+				return
 			}
-		}
-
-		checkInitialized()
+			this.load(client)
+		})
 	}
 }
 

@@ -40,6 +40,11 @@ export class ObservabilityClient {
 	// torn-down client (re-enabling instrumentation, emitting app_reload, or
 	// letting LDObserve load() a stopped client).
 	private stopped = false
+	// Resolved once init() reaches any terminal outcome — ready, stop-aborted, or
+	// failed — with the final readiness. Lets callers (LDObserve) await readiness
+	// instead of polling getIsInitialized() forever when init aborts or fails.
+	private initSettled = false
+	private initReadyResolvers: Array<(ready: boolean) => void> = []
 	private ldTracer?: LDTracer
 
 	constructor(
@@ -50,9 +55,33 @@ export class ObservabilityClient {
 		this.sessionManager = new SessionManager(this.options)
 		this.instrumentationManager = new InstrumentationManager(this.options)
 		// Init is async (it resolves any persisted session from storage before
-		// building the OTel resource). Callers observe readiness via
-		// getIsInitialized(); LDObserve buffers calls until then.
+		// building the OTel resource). Callers await readiness via
+		// whenInitialized(); LDObserve buffers calls until then.
 		void this.init()
+	}
+
+	/**
+	 * Resolves when init() settles: `true` once the client is initialized, or
+	 * `false` if init was aborted by stop() or failed. Never rejects and always
+	 * settles, so callers can await readiness without polling forever.
+	 */
+	public whenInitialized(): Promise<boolean> {
+		if (this.initSettled) {
+			return Promise.resolve(this.isInitialized)
+		}
+		return new Promise<boolean>((resolve) => {
+			this.initReadyResolvers.push(resolve)
+		})
+	}
+
+	private settleInit(): void {
+		if (this.initSettled) return
+		this.initSettled = true
+		const resolvers = this.initReadyResolvers
+		this.initReadyResolvers = []
+		for (const resolve of resolvers) {
+			resolve(this.isInitialized)
+		}
 	}
 
 	private mergeOptions(
@@ -108,7 +137,10 @@ export class ObservabilityClient {
 
 			// A stop() may have landed while we were awaiting; abort before
 			// building any pipeline so we don't revive a torn-down client.
-			if (this.stopped) return
+			if (this.stopped) {
+				this.settleInit()
+				return
+			}
 
 			const sessionAttributes = this.sessionManager.getSessionAttributes()
 			const resource = resourceFromAttributes({
@@ -135,6 +167,7 @@ export class ObservabilityClient {
 			// don't leave a live pipeline on a stopped client.
 			if (this.stopped) {
 				await this.instrumentationManager.stop()
+				this.settleInit()
 				return
 			}
 
@@ -157,12 +190,16 @@ export class ObservabilityClient {
 			}
 
 			this._log('initialized successfully')
+			this.settleInit()
 		} catch (error) {
 			console.error('Failed to initialize ObservabilityClient:', error)
 			// Release the guard so a later init() can retry; otherwise a single
 			// failed attempt would permanently prevent this client from ever
 			// becoming ready (initStarted stays true while isInitialized is false).
 			this.initStarted = false
+			// Intentionally do NOT settle here: a failure is retryable, so leaving
+			// whenInitialized() pending lets a later successful init() resolve it as
+			// ready. There is no polling timer to leak — awaiters just keep waiting.
 		}
 	}
 
@@ -344,6 +381,9 @@ export class ObservabilityClient {
 		this.ldTracer = undefined
 		this.isInitialized = false
 		this.initStarted = false
+		// Resolve any pending whenInitialized() awaiters as not-ready so they stop
+		// waiting on a client that has been torn down.
+		this.settleInit()
 	}
 
 	public getIsInitialized(): boolean {
