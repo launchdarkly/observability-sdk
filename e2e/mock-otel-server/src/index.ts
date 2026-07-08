@@ -85,11 +85,16 @@ export function startMockOtelServer({
 	return () => server.close()
 }
 
-export function getResourceSpans(port = DEFAULT_PORT, names: string[] = []) {
+export function getResourceSpans(
+	port = DEFAULT_PORT,
+	names: string[] = [],
+	timeoutMs = 30_000,
+) {
 	return new Promise<{
 		details: ReturnType<typeof aggregateAttributes>
 		resourceSpans: IResourceSpans[]
 	}>((resolve, reject) => {
+		const start = Date.now()
 		const interval = setInterval(() => {
 			const resourceSpans = getResourceSpansByPort(port)
 			const details = aggregateAttributes(resourceSpans)
@@ -106,6 +111,25 @@ export function getResourceSpans(port = DEFAULT_PORT, names: string[] = []) {
 				clearInterval(interval)
 
 				resolve({ details, resourceSpans })
+
+				return
+			}
+
+			// Fail fast with diagnostics instead of hanging until the test
+			// runner's global timeout kills the whole run.
+			if (Date.now() - start >= timeoutMs) {
+				clearInterval(interval)
+
+				logDetails(details)
+
+				reject(
+					new Error(
+						`getResourceSpans timed out after ${timeoutMs}ms waiting for a span with a highlight.session_id` +
+							(names.length
+								? ` and event(s): ${names.join(', ')}`
+								: ''),
+					),
+				)
 			}
 		}, 250)
 	})
