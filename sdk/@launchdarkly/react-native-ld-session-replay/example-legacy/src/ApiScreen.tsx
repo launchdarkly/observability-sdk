@@ -299,13 +299,25 @@ export default function ApiScreen() {
 
   // -- Identify ------------------------------------------------------------
   const identifyUser = async () => {
-    await ldClient.identify({
-      kind: 'user',
-      key: 'single-userkey',
-      firstName: 'Bob',
-      lastName: 'Bobberson',
-    });
-    log('[identify] user single-userkey');
+    try {
+      await ldClient.identify({
+        kind: 'user',
+        key: 'single-userkey',
+        firstName: 'Bob',
+        lastName: 'Bobberson',
+      });
+      log('[identify] user single-userkey');
+    } catch (err) {
+      const e = err as any;
+      console.log('[identify] ERROR', {
+        name: e?.name,
+        message: e?.message,
+        code: e?.code,
+        cause: e?.cause,
+        stack: e?.stack,
+      });
+      throw err;
+    }
   };
 
   const identifyAnonymous = async () => {

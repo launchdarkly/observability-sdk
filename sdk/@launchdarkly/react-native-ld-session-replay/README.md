@@ -8,6 +8,17 @@ session replay for react native
 npm install session-replay-react-native
 ```
 
+## Supported React Native versions
+
+The LaunchDarkly session replay plugin for React Native targets React Native
+`0.75+`. Both the **New Architecture** and the **Legacy Architecture** (bridge /
+`NativeModules`) are supported. The native module registers itself on whichever
+architecture the host app uses, so no per-app configuration is required for the
+module to load.
+
+Expo (SDK `51+`) is supported as well — see [Expo](#expo) for setup and version
+reporting.
+
 ## Usage
 
 Use the session replay plugin with the LaunchDarkly React Native client:
@@ -95,6 +106,92 @@ When a session is sampled out, `isEnabled` may stay `true` but no frames, intera
 or identify payloads are exported for that enable cycle — matching native iOS and Android
 behavior.
 
+## Automatically captured lifecycle events
+
+Registering the plugin initializes the native session replay / observability layer,
+which auto-instruments **app lifecycle** on both iOS and Android. No extra wiring is
+required — these spans are emitted alongside your other telemetry:
+
+| Span | When | Notes |
+| --- | --- | --- |
+| `app_launch` | The native app **process** launches. | Carries `event.launch_type` (`relaunch` / `install` / `update`). This is a native process launch, distinct from a JS / OTA reload (see `app_reload` below). |
+| `app_foreground` | The app enters the foreground (including resume from background). | `event.lifecycle_state = foreground`. |
+| `app_background` | The app enters the background. | `event.lifecycle_state = background`. |
+
+In addition, when the JavaScript runtime reloads (a React Native soft reload, an OTA
+bundle reload, or a quick relaunch within the session-resume window) while the same
+session continues, the observability SDK emits an `app_reload` span so the session
+stays stitched together across the reload.
+
+See the [event taxonomy](../../../analytics-taxonomy.md) for the full `event.*` payload
+of each event.
+
+## Expo
+
+Expo SDK `51+` is supported. Session replay is a **native module**, so it does
+not run in **Expo Go** — use an
+[Expo development build](https://docs.expo.dev/develop/development-builds/introduction/)
+(`expo-dev-client`) or a standalone build from EAS Build / `expo prebuild`.
+
+### Passing version information
+
+The SDK does not read any version from the Expo runtime automatically — it only
+uses the `serviceVersion` string you pass, which defaults to `'1.0.0'` when unset.
+To attribute telemetry to a specific build, read the version from Expo and pass it
+into the plugins yourself.
+
+Read the store-visible app version with
+[`expo-application`](https://docs.expo.dev/versions/latest/sdk/application/) and
+set it as `serviceVersion` on both plugins:
+
+```tsx
+import * as Application from 'expo-application';
+import { createSessionReplayPlugin } from '@launchdarkly/session-replay-react-native';
+import { Observability } from '@launchdarkly/observability-react-native';
+
+const serviceVersion =
+  Application.nativeApplicationVersion ?? '1.0.0';
+
+const observability = new Observability({
+  serviceName: 'my-expo-app',
+  serviceVersion,
+});
+
+const sessionReplay = createSessionReplayPlugin({
+  isEnabled: true,
+  serviceName: 'my-expo-app',
+  serviceVersion,
+});
+```
+
+`Application.nativeApplicationVersion` maps to `CFBundleShortVersionString` on iOS
+and `versionName` on Android — the same version users see in the app store listing.
+
+### Over-the-air (OTA) updates
+
+If you ship over-the-air updates with
+[Expo Updates](https://docs.expo.dev/versions/latest/sdk/updates/), the native app
+version stays fixed across updates, so pass the update identifiers as extra
+`resourceAttributes` on the observability plugin to tell builds apart:
+
+```tsx
+import * as Application from 'expo-application';
+import * as Updates from 'expo-updates';
+
+const observability = new Observability({
+  serviceName: 'my-expo-app',
+  serviceVersion: Application.nativeApplicationVersion ?? '1.0.0',
+  resourceAttributes: {
+    'ota.update_id': Updates.updateId ?? 'embedded',
+    'ota.runtime_version': Updates.runtimeVersion ?? undefined,
+  },
+});
+```
+
+`Updates.updateId` identifies the running OTA bundle (`null` — shown here as
+`'embedded'` — when the app runs the bundle shipped with the binary), and
+`Updates.runtimeVersion` is the native-compatibility gate for OTA delivery.
+
 ## Masking sensitive content
 
 ### How the SDK decides what to mask
@@ -152,13 +249,6 @@ import { LDMask, LDUnmask } from '@launchdarkly/session-replay-react-native';
 ```
 
 `<LDMask>` propagates to descendants and beats any `<LDUnmask>` further down the tree — once a subtree is wrapped in `<LDMask>`, nothing inside it can opt back in.
-
-## Architecture support
-
-This package supports both the React Native **New Architecture** and the
-**Legacy Architecture** (bridge / `NativeModules`), on **React Native 0.75+**.
-The native module registers itself on whichever architecture the host app uses,
-so no per-app configuration is required for the module to load.
 
 ## Troubleshooting
 

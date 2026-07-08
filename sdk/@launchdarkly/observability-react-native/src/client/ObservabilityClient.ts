@@ -21,6 +21,7 @@ import { Metric } from '../api/Metric'
 import { RequestContext } from '../api/RequestContext'
 import { TrackProperties } from '../api/TrackProperties'
 import { SessionManager } from '../client/SessionManager'
+import { SESSION_RESUME_THRESHOLD_MS } from '../constants/sessions'
 import {
 	InstrumentationManager,
 	InstrumentationManagerOptions,
@@ -33,6 +34,17 @@ export class ObservabilityClient {
 	private errorInstrumentation?: ErrorInstrumentation
 	private options: InstrumentationManagerOptions
 	private isInitialized = false
+	private initStarted = false
+	// Set once stop() runs. init() is async, so a stop() can land while init()
+	// is awaiting; this lets the in-flight init() abort instead of reviving a
+	// torn-down client (re-enabling instrumentation, emitting app_reload, or
+	// letting LDObserve load() a stopped client).
+	private stopped = false
+	// Resolved once init() reaches any terminal outcome — ready, stop-aborted, or
+	// failed — with the final readiness. Lets callers (LDObserve) await readiness
+	// instead of polling getIsInitialized() forever when init aborts or fails.
+	private initSettled = false
+	private initReadyResolvers: Array<(ready: boolean) => void> = []
 	private ldTracer?: LDTracer
 
 	constructor(
@@ -42,7 +54,34 @@ export class ObservabilityClient {
 		this.options = this.mergeOptions(sdkKey, options)
 		this.sessionManager = new SessionManager(this.options)
 		this.instrumentationManager = new InstrumentationManager(this.options)
-		this.init()
+		// Init is async (it resolves any persisted session from storage before
+		// building the OTel resource). Callers await readiness via
+		// whenInitialized(); LDObserve buffers calls until then.
+		void this.init()
+	}
+
+	/**
+	 * Resolves when init() settles: `true` once the client is initialized, or
+	 * `false` if init was aborted by stop() or failed. Never rejects and always
+	 * settles, so callers can await readiness without polling forever.
+	 */
+	public whenInitialized(): Promise<boolean> {
+		if (this.initSettled) {
+			return Promise.resolve(this.isInitialized)
+		}
+		return new Promise<boolean>((resolve) => {
+			this.initReadyResolvers.push(resolve)
+		})
+	}
+
+	private settleInit(): void {
+		if (this.initSettled) return
+		this.initSettled = true
+		const resolvers = this.initReadyResolvers
+		this.initReadyResolvers = []
+		for (const resolve of resolvers) {
+			resolve(this.isInitialized)
+		}
 	}
 
 	private mergeOptions(
@@ -68,7 +107,8 @@ export class ObservabilityClient {
 				'X-LaunchDarkly-Project': this.sdkKey,
 				...(options.customHeaders ?? {}),
 			},
-			sessionTimeout: options.sessionTimeout ?? 30 * 60 * 1000,
+			sessionTimeout:
+				options.sessionTimeout ?? SESSION_RESUME_THRESHOLD_MS,
 			debug: options.debug ?? false,
 			disableErrorTracking: options.disableErrorTracking ?? false,
 			disableLogs: options.disableLogs ?? false,
@@ -85,11 +125,22 @@ export class ObservabilityClient {
 		}
 	}
 
-	private init() {
-		if (this.isInitialized) return
+	private async init() {
+		if (this.isInitialized || this.initStarted || this.stopped) return
+		this.initStarted = true
 
 		try {
-			this.sessionManager.initialize()
+			// Resolve (and possibly resume) the session before building the
+			// resource, so the session id baked into the tracer resource is the
+			// resumed id from the start.
+			await this.sessionManager.initialize()
+
+			// A stop() may have landed while we were awaiting; abort before
+			// building any pipeline so we don't revive a torn-down client.
+			if (this.stopped) {
+				this.settleInit()
+				return
+			}
 
 			const sessionAttributes = this.sessionManager.getSessionAttributes()
 			const resource = resourceFromAttributes({
@@ -108,7 +159,17 @@ export class ObservabilityClient {
 			})
 
 			this.instrumentationManager.setSessionManager(this.sessionManager)
-			void this.instrumentationManager.initialize(resource)
+			await this.instrumentationManager.initialize(resource)
+
+			// If stop() ran while instrumentation was initializing, its
+			// instrumentationManager.stop() may have run before this initialize()
+			// finished — tear the freshly-built pipeline back down and abort so we
+			// don't leave a live pipeline on a stopped client.
+			if (this.stopped) {
+				await this.instrumentationManager.stop()
+				this.settleInit()
+				return
+			}
 
 			// Initialize automatic error instrumentation (enabled by default)
 			if (!this.options.disableErrorTracking) {
@@ -118,9 +179,29 @@ export class ObservabilityClient {
 
 			this.isInitialized = true
 
+			// If this JS load resumed a previously persisted session (soft reload,
+			// OTA reload, or quick relaunch within the resume window), emit an
+			// `app_reload` span marking the boundary. Tracing is live at this point.
+			if (this.sessionManager.wasReloaded()) {
+				this.instrumentationManager.emitAppReload(
+					this.sessionManager.getResumeInfo(),
+					this.sessionManager.getSessionInfo().sessionId,
+				)
+			}
+
 			this._log('initialized successfully')
+			this.settleInit()
 		} catch (error) {
 			console.error('Failed to initialize ObservabilityClient:', error)
+			// Release the guard so a later init() can retry; otherwise a single
+			// failed attempt would permanently prevent this client from ever
+			// becoming ready (initStarted stays true while isInitialized is false).
+			this.initStarted = false
+			// Settle readiness as not-ready so awaiters (e.g. LDObserve._init) don't
+			// hang forever: init() is only ever driven from the constructor, so
+			// nothing retries on our behalf, and a still-pending whenInitialized()
+			// would never resolve. Callers that want to retry can start a new client.
+			this.settleInit()
 		}
 	}
 
@@ -288,6 +369,10 @@ export class ObservabilityClient {
 	}
 
 	public async stop(): Promise<void> {
+		// Signal any in-flight async init() to abort instead of reviving the
+		// client after teardown (see init() and the `stopped` field).
+		this.stopped = true
+
 		// Clean up error instrumentation
 		if (this.errorInstrumentation) {
 			this.errorInstrumentation.destroy()
@@ -297,6 +382,10 @@ export class ObservabilityClient {
 		await this.instrumentationManager.stop()
 		this.ldTracer = undefined
 		this.isInitialized = false
+		this.initStarted = false
+		// Resolve any pending whenInitialized() awaiters as not-ready so they stop
+		// waiting on a client that has been torn down.
+		this.settleInit()
 	}
 
 	public getIsInitialized(): boolean {

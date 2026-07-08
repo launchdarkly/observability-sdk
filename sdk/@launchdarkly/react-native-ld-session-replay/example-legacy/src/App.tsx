@@ -1,4 +1,5 @@
 import {
+  DevSettings,
   Platform,
   SafeAreaView,
   StyleSheet,
@@ -13,24 +14,39 @@ import {
 } from '@launchdarkly/react-native-client-sdk';
 import {useEffect, useState} from 'react';
 import {createSessionReplayPlugin} from '@launchdarkly/session-replay-react-native';
-import {Observability} from '@launchdarkly/observability-react-native';
+import {
+  LDObserve,
+  Observability,
+} from '@launchdarkly/observability-react-native';
 import {
   LAUNCHDARKLY_MOBILE_KEY,
+  LAUNCHDARKLY_ENV,
   LAUNCHDARKLY_OTLP_ENDPOINT,
   LAUNCHDARKLY_BACKEND_URL,
 } from '@env';
+import {resolveLDEnvironment} from './ldEnvironments';
 import DialogsScreen from './DialogsScreen';
 import MaskingScreen from './MaskingScreen';
 import TracingScreen from './TracingScreen';
 import ApiScreen from './ApiScreen';
 
-// Optional endpoint overrides from .env. When unset, the SDK falls back to its
-// production defaults. Passed to both the JS observability plugin (traces, logs,
-// metrics, errors) and the native session replay plugin (which forwards them to
-// the native observability instance, so on-device replay uploads to the same
-// environment), e.g. staging.
-const OTLP_ENDPOINT = LAUNCHDARKLY_OTLP_ENDPOINT || undefined;
-const BACKEND_URL = LAUNCHDARKLY_BACKEND_URL || undefined;
+// Pick the LaunchDarkly instance once for the client-side URLs (they must stay
+// paired with the mobile key, or identify fails with a 401). The observability
+// URLs default to the same bundle but can be pointed at localhost or any staging
+// server via LAUNCHDARKLY_OTLP_ENDPOINT / LAUNCHDARKLY_BACKEND_URL in .env.
+const {env: LD_ENV, endpoints} = resolveLDEnvironment(LAUNCHDARKLY_ENV, {
+  otlpEndpoint: LAUNCHDARKLY_OTLP_ENDPOINT,
+  backendUrl: LAUNCHDARKLY_BACKEND_URL,
+});
+
+// Regenerated every time the JS bundle loads. A soft reload (DevSettings.reload)
+// restarts the JS runtime in the same process, so this changes while the native
+// session replay singleton — and its sampling decision — persist untouched.
+// It is also passed as a JS `resourceAttribute` below to demonstrate that JS
+// observability resource attributes ARE reapplied on soft reload (unlike the
+// native session replay config, which is frozen until a full cold start).
+const JS_LOAD_ID = Math.random().toString(36).slice(2, 8);
+console.log(`[soft-reload] JS_LOAD_ID=${JS_LOAD_ID} (new value each JS load)`);
 
 const plugin = createSessionReplayPlugin({
   isEnabled: true,
@@ -44,8 +60,8 @@ const plugin = createSessionReplayPlugin({
   unmaskTestIDs: ['safe'],
   minimumAlpha: 0.05,
   sampleRate: 1.0,
-  ...(OTLP_ENDPOINT ? {otlpEndpoint: OTLP_ENDPOINT} : {}),
-  ...(BACKEND_URL ? {backendUrl: BACKEND_URL} : {}),
+  otlpEndpoint: endpoints.otlpEndpoint,
+  backendUrl: endpoints.backendUrl,
 });
 
 const observability = new Observability({
@@ -53,8 +69,14 @@ const observability = new Observability({
   serviceVersion: '1.0.0',
   debug: true,
   tracingOrigins: ['jsonplaceholder.typicode.com', 'reactnative.dev'],
-  ...(OTLP_ENDPOINT ? {otlpEndpoint: OTLP_ENDPOINT} : {}),
-  ...(BACKEND_URL ? {backendUrl: BACKEND_URL} : {}),
+  otlpEndpoint: endpoints.otlpEndpoint,
+  backendUrl: endpoints.backendUrl,
+  // Reapplied on every JS (soft) reload: the JS observability SDK is fully
+  // recreated when the runtime restarts, so this attribute reflects the current
+  // JS load. Compare with the native SR service.version, which stays frozen.
+  resourceAttributes: {
+    'js.load_id': JS_LOAD_ID,
+  },
 });
 
 // Set the values in example-legacy/.env (see .env.example) to record real
@@ -62,10 +84,51 @@ const observability = new Observability({
 const MOBILE_KEY =
   LAUNCHDARKLY_MOBILE_KEY ?? 'YOUR_LAUNCHDARKLY_MOBILE_KEY_HERE';
 
+console.log(
+  `[env] LaunchDarkly env = ${LD_ENV}, mobile key prefix = ${MOBILE_KEY.slice(
+    0,
+    4,
+  )}`,
+); // expect "mob-"
+console.log(
+  `[env] observability otlpEndpoint = ${endpoints.otlpEndpoint}, backendUrl = ${endpoints.backendUrl}`,
+);
+
 const client = new ReactNativeLDClient(MOBILE_KEY, AutoEnvAttributes.Enabled, {
   plugins: [observability, plugin],
+  streamUri: endpoints.streamUri,
+  baseUri: endpoints.baseUri,
+  eventsUri: endpoints.eventsUri,
 });
 const context = {kind: 'user', key: 'user-key-123abc'};
+
+// Emulates an OTA "soft reload": restarts only the JS runtime, leaving the native
+// process (and the SR singleton) alive. Sampling is intentionally NOT re-rolled —
+// the native enable cycle never resets, so a sampled-out session stays out and a
+// recording session keeps its original decision. Only a full cold start re-rolls.
+async function softReload() {
+  console.log(
+    `[soft-reload] reloading JS runtime; native SR singleton persists, sampling NOT re-exercised (was JS_LOAD_ID=${JS_LOAD_ID})`,
+  );
+
+  // No manual `app_reload` span is needed: the observability SDK persists the
+  // session and, on the next JS load, resumes it and emits `app_reload`
+  // automatically. We just flush any buffered telemetry so nothing is lost when
+  // the reload tears down the JS runtime.
+  try {
+    await LDObserve.flush();
+  } catch (e) {
+    console.warn('[soft-reload] failed to flush before reload', e);
+  }
+
+  if (typeof DevSettings?.reload === 'function') {
+    DevSettings.reload('SR soft-reload test');
+  } else {
+    console.warn(
+      '[soft-reload] DevSettings.reload is unavailable (release build); use a dev build to test soft reload',
+    );
+  }
+}
 
 // The New Architecture installs the Fabric UIManager on the JS global; its
 // absence means the app is running on the legacy bridge architecture.
@@ -111,6 +174,19 @@ export default function App() {
         <Text testID="safe" style={styles.status}>
           {status}
         </Text>
+        <View style={styles.actionBar}>
+          <Text testID="safe" style={styles.actionLabel}>
+            JS load: {JS_LOAD_ID}
+          </Text>
+          <TouchableOpacity
+            testID="safe"
+            style={styles.actionButton}
+            onPress={softReload}>
+            <Text testID="safe" style={styles.actionButtonText}>
+              Soft reload
+            </Text>
+          </TouchableOpacity>
+        </View>
         <View style={styles.tabBar}>
           <TabButton
             label="Masking"
@@ -185,6 +261,28 @@ const styles = StyleSheet.create({
     fontSize: 12,
     paddingHorizontal: 12,
     paddingVertical: 4,
+  },
+  actionBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingBottom: 8,
+  },
+  actionLabel: {
+    color: '#888',
+    fontSize: 12,
+  },
+  actionButton: {
+    backgroundColor: '#6650A4',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  actionButtonText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '700',
   },
   tabBar: {
     flexDirection: 'row',

@@ -41,9 +41,9 @@ Everything else around it (`context.*`, `url.*`, `user_agent.*`, `viewport.*`, `
 | 3 | `page_view` | span | web | `Navigate` / `Reload` / `Referrer` | A web page / route was viewed. |
 | 4 | `screen_view` | span | ios, android | `Navigate` | A screen / view controller / activity was viewed. |
 | 5 | `identify` | log | web, ios, android | `Identify` | Identity resolution. **Existing — do not change** (see §4.5). |
-| 6 | `app_launch` | span | ios, android | `Launch` | App process launched — `relaunch`, or first launch after `install` / `update` (see `event.launch_type`). |
-| 7 | `app_foreground` | span | ios, android | `Foreground` | App entered foreground (includes resume / hot start from background). |
-| 8 | `app_background` | span | ios, android | `Background` | App entered background. |
+| 6 | `app_launch` | span | ios, android, react native | `Launch` | App process launched — `relaunch`, or first launch after `install` / `update` (see `event.launch_type`). |
+| 7 | `app_foreground` | span | ios, android, react native | `Foreground` | App entered foreground (includes resume / hot start from background). |
+| 8 | `app_background` | span | ios, android, react native | `Background` | App entered background. |
 | 9 | `error` | span | web, ios, android | - | A user-facing error/message was displayed. |
 | 10 | `permission_prompt` | span | web, ios, android | - | An OS/app permission prompt was shown. |
 | 11 | `permission_response` | span | web, ios, android | - | User responded to a permission prompt. |
@@ -51,6 +51,7 @@ Everything else around it (`context.*`, `url.*`, `user_agent.*`, `viewport.*`, `
 | 13 | `deep_link_open` | span | ios, android | - | App opened via deep/universal link. |
 | 14 | `form_submit` | span | web, ios, android | - | A form was submitted. |
 | 15 | `scroll` | span | web | - | Scroll interaction. |
+| 16 | `app_reload` | span | react native | `Reload` | JS runtime reloaded, same session continued (see §4.14). |
 
 > **Breadcrumb column.** "Breadcrumbs" are the **Events** shown on the Session Replay timeline (and, going forward, also surfaced in RUM). On web they are emitted as **rrweb custom events** by the recording SDK (`sdk/highlight-run`); the complete set emitted today is `Navigate`, `Reload`, `Referrer`, `Click`, `Focus`, `Viewport`, `Performance`, `Jank`, `Page Unload`, `TabHidden`, `Stop`, `Track`, `Segment`, `Identify`. The column above lists the corresponding breadcrumb name(s) for each taxonomy event; `-` means there is no equivalent breadcrumb today. Breadcrumbs without a taxonomy event (`Viewport`, `Performance`, `Jank`, `Page Unload`, `Stop`) are internal diagnostics and are intentionally not part of this taxonomy.
 
@@ -368,9 +369,11 @@ Identity resolution is **already implemented** and is out of scope for changes h
 
 ### 4.6 `app_launch` (mobile)
 
-App process launched. `event.launch_type` captures the **product milestone** of the launch — `relaunch` (a normal launch), `install` (first launch after a fresh install), or `update` (first launch after a version change); `unknown` is used when the app version can't be read, so the milestone can't be determined (and `version` is absent). A return to the foreground from background (a "resume" / hot start) is **not** a launch and is captured by `app_foreground` (§4.7).
+App process launched. `event.launch_type` captures the **product milestone** of the launch — `relaunch` (a normal launch), `install` (first launch after a fresh install), or `update` (first launch after a version change); `unknown` is used when the app version can't be read, so the milestone can't be determined (and `version` is absent). A return to the foreground from background (a "resume" / hot start) is **not** a launch and is captured by `app_foreground` (§4.7). A React Native JS / OTA reload that keeps the **same** session alive is not a launch either — it is `app_reload` (§4.14).
 
 The **startup-performance** dimension (cold vs warm) is orthogonal to the product milestone and is recorded as an **OTel span event** on the launch span, not as a `launch_type` value. Emit an `app.start` span event carrying `start.type` (`cold` | `warm`); finer-grained startup phases may be added as additional span events. This aligns with Sentry (`app.start.cold` / `app.start.warm`) and the OpenTelemetry `AppStart` convention.
+
+> **React Native.** This event is also emitted for React Native apps: the native session replay / observability layer the plugin initializes auto-instruments the native (iOS / Android) process launch, so no extra wiring is required. It reflects a native **process** launch — distinct from a JS / OTA reload that keeps the same session alive, which is `app_reload` (§4.14).
 
 | `event.*` field | Type | Required | Description |
 | --- | --- | --- | --- |
@@ -422,6 +425,8 @@ The **startup-performance** dimension (cold vs warm) is orthogonal to the produc
 ### 4.7 `app_foreground` / `app_background` (mobile)
 
 App moved to foreground / background. Returning to the foreground from background (a "resume" / hot start) is represented here, not as a launch (`app_launch` is for actual process launches; see §4.6). **OTel mapping:** lifecycle state in `event.lifecycle_state` (Android: `foreground`/`background`; iOS: `active`/`inactive`/`foreground`/`background`).
+
+> **React Native.** These events are also emitted for React Native apps: the native session replay / observability layer the plugin initializes tracks the native (iOS / Android) foreground/background transitions automatically, so no extra wiring is required.
 
 | `event.*` field | Type | Required | Description |
 | --- | --- | --- | --- |
@@ -617,6 +622,30 @@ Same `event.*` payload as `click`, plus scroll offset. Emit at most ~once/60ms.
 
 ---
 
+### 4.14 `app_reload` (React Native)
+
+Emitted once on the JS load that **resumes an existing session** instead of starting a new one — a React Native soft reload (`DevSettings.reload`), an OTA bundle reload, or a quick relaunch within the session-resume window. It marks the boundary so a session that spans a reload stays stitched together as one session.
+
+Distinct from `app_launch` (a fresh process / new session, §4.6) and `app_foreground` (resume from background with no runtime reload, §4.7). This is currently a **React Native** event: on web the same concept is surfaced through `page_view` + the `Reload` breadcrumb rather than a dedicated span. **Impl mapping:** `event.elapsed_ms`↔`app.reload.elapsed_ms`, `event.reload_count`↔`app.reload.count`; the continued session id is carried by the SDK's session fields (`highlight.session_id` / `session.*`), **not** under `event.*`.
+
+| `event.*` field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `event.elapsed_ms` | int | ⛔ | Milliseconds between the previous session's last recorded activity and this reload. `0` when unknown (e.g. no persisted timing was available). |
+| `event.reload_count` | int | ⛔ | Number of times the current session has been reloaded. |
+
+```json
+{
+  "span_name": "app_reload",
+  "event": {
+    "elapsed_ms": 1280,
+    "reload_count": 2
+  },
+  "context": { "contextKeys": { "accountId": "64dd…", "userId": "65b8…" } }
+}
+```
+
+---
+
 ## 5. Web ↔ Mobile parity
 
 | Concept | Web | Mobile |
@@ -628,7 +657,8 @@ Same `event.*` payload as `click`, plus scroll offset. Emit at most ~once/60ms.
 | Forms | `form_submit` | `form_submit` |
 | Notifications | — | `notification_open` |
 | Deep links | (link target) | `deep_link_open` |
-| App lifecycle | — | `app_launch` (`launch_type`: relaunch/install/update; cold/warm via `app.start` span event) / `app_foreground` / `app_background` |
+| App lifecycle | — | `app_launch` (`launch_type`: relaunch/install/update; cold/warm via `app.start` span event) / `app_foreground` / `app_background` (iOS, Android, and React Native via the native layer) |
+| Runtime reload (same session) | `page_view` + `Reload` breadcrumb | `app_reload` (React Native — JS / OTA reload) |
 | Identity | `identify` (existing) | `identify` (existing) |
 | Domain events | `track` | `track` |
 
