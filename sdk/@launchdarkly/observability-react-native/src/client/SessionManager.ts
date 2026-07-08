@@ -44,7 +44,6 @@ const PERSIST_THROTTLE_MS = 5 * 1000
 
 export class SessionManager {
 	private sessionInfo: SessionInfo
-	private backgroundTime: number | null = null
 	private options: Required<Options>
 	private store: SessionStore
 	private reloadCount = 0
@@ -54,14 +53,11 @@ export class SessionManager {
 		reloadCount: 0,
 	}
 	private lastPersistAt = 0
-	// A session id handed to us by a native integration (session replay) that
-	// survived a JS soft reload. Takes precedence over minting/resuming when set
-	// before initialize() resolves. See setPreferredSessionId / resolveSession.
-	private preferredSessionId?: string
 
 	constructor(options?: Options, store?: SessionStore) {
 		this.options = {
-			sessionTimeout: options?.sessionTimeout ?? 30 * 60 * 1000,
+			sessionTimeout:
+				options?.sessionTimeout ?? SESSION_RESUME_THRESHOLD_MS,
 			debug: !!options?.debug,
 		}
 		this.store = store ?? createSessionStore()
@@ -76,6 +72,17 @@ export class SessionManager {
 
 	public async initialize(): Promise<void> {
 		try {
+			if (!this.store.isPersistent) {
+				// Persistence is what keeps the session id stable across a JS
+				// reload (and aligned with native session replay). Without it every
+				// reload mints a new session. AsyncStorage is a required peer
+				// dependency on native; warn loudly if it is missing.
+				console.warn(
+					'[LaunchDarkly] No persistent session store available. ' +
+						'Install @react-native-async-storage/async-storage so the ' +
+						'session id survives reloads and stays aligned with session replay.',
+				)
+			}
 			await this.resolveSession()
 			this.setupAppStateListener()
 
@@ -104,39 +111,9 @@ export class SessionManager {
 		const previous = await this.readPersisted()
 		const now = Date.now()
 
-		// Highest priority: a session id supplied by a native integration (e.g.
-		// the session replay module) that outlived this JS runtime. The native
-		// session replay singleton stays frozen on its original session id across
-		// a soft reload, so adopting it keeps the JS `session.id` aligned with
-		// native even when no persistent store is available to resume from. A
-		// non-empty preferred id can only originate from a *prior* JS load in the
-		// same process, so it always signals a reload.
-		if (this.preferredSessionId) {
-			const matchesPersisted =
-				previous?.sessionId === this.preferredSessionId
-			this.sessionInfo = {
-				sessionId: this.preferredSessionId,
-				startTime: matchesPersisted
-					? previous!.startTime
-					: this.sessionInfo.startTime,
-			}
-			this.reloadCount =
-				(matchesPersisted ? previous!.reloadCount : this.reloadCount) +
-				1
-			this.resumeInfo = {
-				reloaded: true,
-				elapsedMs: matchesPersisted
-					? now - previous!.lastActivityTime
-					: 0,
-				reloadCount: this.reloadCount,
-			}
-			await this.persist(now, true)
-			return
-		}
-
 		if (
 			previous &&
-			now - previous.lastActivityTime < SESSION_RESUME_THRESHOLD_MS
+			now - previous.lastActivityTime < this.options.sessionTimeout
 		) {
 			// Continue the same session across the reload.
 			this.sessionInfo = {
@@ -219,19 +196,6 @@ export class SessionManager {
 		void this.persist(Date.now())
 	}
 
-	/**
-	 * Supply a session id from a native integration that survived a JS reload
-	 * (see resolveSession). Must be called before initialize() resolves — i.e.
-	 * synchronously during plugin registration — to influence the session id
-	 * baked into the OTel resource.
-	 */
-	public setPreferredSessionId(sessionId: string): void {
-		const trimmed = sessionId?.trim()
-		if (trimmed) {
-			this.preferredSessionId = trimmed
-		}
-	}
-
 	/** Whether this JS load resumed a previously persisted session. */
 	public wasReloaded(): boolean {
 		return this.resumeInfo.reloaded
@@ -248,63 +212,23 @@ export class SessionManager {
 				console.log('🔄 App state changed:', nextAppState)
 			}
 
+			// The session id is never rotated in-process. The native session
+			// replay / observability instance we seed treats an externally
+			// supplied id as a *custom* session and holds it for the whole
+			// process lifetime (Android LDSessionManager.isCustomSession; iOS
+			// isCustomSession) — it cannot follow an in-process rotation. So the
+			// JS side must not rotate either; session boundaries are decided only
+			// at the next JS load, from persisted `lastActivityTime` vs
+			// `sessionTimeout` (see resolveSession). We only persist on background
+			// so a kill-while-backgrounded still leaves an accurate
+			// lastActivityTime for that next-load decision.
 			if (nextAppState === 'background') {
-				this.backgroundTime = Date.now()
-				// Persist immediately so a kill-while-backgrounded still leaves an
-				// accurate lastActivityTime for the next launch to resume from.
-				void this.persist(this.backgroundTime, true)
+				void this.persist(Date.now(), true)
 				if (this.options.debug) {
 					console.log('📱 App went to background')
 				}
-			} else if (nextAppState === 'active') {
-				this.handleAppForeground()
 			}
 		})
-	}
-
-	private handleAppForeground(): void {
-		if (this.backgroundTime) {
-			const timeInBackground = Date.now() - this.backgroundTime
-
-			if (timeInBackground >= this.options.sessionTimeout) {
-				if (this.options.debug) {
-					console.log(
-						`🕐 App was in background for >${this.options.sessionTimeout / 60000} minutes, resetting session`,
-					)
-				}
-				this.resetSession()
-			} else {
-				if (this.options.debug) {
-					console.log(
-						'📱 App returned to foreground, continuing session',
-					)
-				}
-			}
-
-			this.backgroundTime = null
-		}
-	}
-
-	private resetSession(): void {
-		const oldSessionId = this.sessionInfo.sessionId
-		const newSessionId = generateUniqueId()
-		const now = Date.now()
-
-		// TODO: Update resource attributes
-		this.sessionInfo = {
-			sessionId: newSessionId,
-			startTime: now,
-		}
-		this.reloadCount = 0
-		this.resumeInfo = { reloaded: false, elapsedMs: 0, reloadCount: 0 }
-		void this.persist(now, true)
-
-		if (this.options.debug) {
-			console.log('🔄 Session reset:', {
-				oldSessionId: oldSessionId,
-				newSessionId: newSessionId,
-			})
-		}
 	}
 
 	public getSessionInfo(): SessionInfo {

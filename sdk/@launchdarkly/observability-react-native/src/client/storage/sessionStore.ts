@@ -3,14 +3,17 @@
  * resumed across a JS reload. Works across React Native targets with a single
  * code path:
  *
- *   - Native (iOS/Android): `@react-native-async-storage/async-storage` when the
- *     consumer has it installed. It is an *optional* dependency — the `require`
- *     lives in a `try/catch` so Metro treats it as optional and bundling never
- *     fails when it is absent.
+ *   - Native (iOS/Android): `@react-native-async-storage/async-storage`. It is a
+ *     *required* peer dependency — session preservation (and keeping the JS
+ *     `session.id` aligned with native session replay across a reload) depends
+ *     on it. The `require` still lives in a `try/catch` so Metro tolerates it on
+ *     targets where the native module is absent (e.g. web) and bundling never
+ *     hard-fails.
  *   - React Native for Web / browser: `localStorage` (also what AsyncStorage is
  *     backed by on web), wrapped in the async interface.
  *   - Anything else / not installed: a no-op store, so session preservation is
- *     simply disabled and id generation never hard-fails.
+ *     simply disabled and id generation never hard-fails. This is a degraded
+ *     fallback; callers warn when they land here (see SessionManager).
  */
 export interface SessionStore {
 	getItem(key: string): Promise<string | null>

@@ -142,6 +142,25 @@ describe('LDObserve Buffering', () => {
 			expect(_LDObserve.getSessionInfo().sessionId).toBe(earlyId)
 		})
 
+		it('getSessionIdWhenReady waits for init and returns the resolved session id', async () => {
+			const client = new ObservabilityClient('sdkKey', {})
+			_LDObserve._init(client)
+
+			const readyId = await _LDObserve.getSessionIdWhenReady(2000)
+
+			expect(_LDObserve.isInitialized()).toBe(true)
+			expect(typeof readyId).toBe('string')
+			expect(readyId).toBe(_LDObserve.getSessionInfo().sessionId)
+		})
+
+		it('getSessionIdWhenReady resolves (does not hang) when init never completes', async () => {
+			// No _init(): load() is never called. The bounded wait must still resolve
+			// instead of blocking session replay from starting forever.
+			await expect(
+				_LDObserve.getSessionIdWhenReady(50),
+			).resolves.toBeUndefined()
+		})
+
 		it('should upgrade getTracer() obtained before init after client loads', async () => {
 			const earlyTracer = _LDObserve.getTracer()
 			const client = new ObservabilityClient('sdkKey', {})

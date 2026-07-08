@@ -21,6 +21,7 @@ import { Metric } from '../api/Metric'
 import { RequestContext } from '../api/RequestContext'
 import { TrackProperties } from '../api/TrackProperties'
 import { SessionManager } from '../client/SessionManager'
+import { SESSION_RESUME_THRESHOLD_MS } from '../constants/sessions'
 import {
 	InstrumentationManager,
 	InstrumentationManagerOptions,
@@ -72,7 +73,7 @@ export class ObservabilityClient {
 				'X-LaunchDarkly-Project': this.sdkKey,
 				...(options.customHeaders ?? {}),
 			},
-			sessionTimeout: options.sessionTimeout ?? 30 * 60 * 1000,
+			sessionTimeout: options.sessionTimeout ?? SESSION_RESUME_THRESHOLD_MS,
 			debug: options.debug ?? false,
 			disableErrorTracking: options.disableErrorTracking ?? false,
 			disableLogs: options.disableLogs ?? false,
@@ -307,17 +308,6 @@ export class ObservabilityClient {
 
 	public getSessionInfo(): any {
 		return this.sessionManager.getSessionInfo()
-	}
-
-	/**
-	 * Adopt a session id supplied by a native integration (session replay) that
-	 * survived a JS soft reload. Forwarded to the session manager, which honors
-	 * it when resolving the session during the in-flight async init. Must be
-	 * called synchronously after construction (before init resolves) to take
-	 * effect.
-	 */
-	public setPreferredSessionId(sessionId: string): void {
-		this.sessionManager.setPreferredSessionId(sessionId)
 	}
 
 	public async stop(): Promise<void> {

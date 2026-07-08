@@ -211,16 +211,37 @@ class LDObserveClass
 		}
 	}
 
-	setPreferredSessionId(sessionId: string): void {
-		// Applied synchronously to the (early) client rather than buffered:
-		// buffering would defer it until after init completes, which is too late
-		// to influence the session id resolved during init (and baked into the
-		// OTel resource). The early client is captured in _init, before async
-		// init finishes, so this lands in time.
+	async getSessionIdWhenReady(
+		timeoutMs: number = 3000,
+	): Promise<string | undefined> {
+		// Unlike getSessionInfo (which returns the provisional id synchronously),
+		// this waits for init to finish resolving the session so a persisted
+		// session that gets *resumed* asynchronously is reflected. Integrations
+		// that seed a separate pipeline with the session id (e.g. session replay
+		// on a cold start) must use this to avoid baking in the provisional id and
+		// then diverging once the stored id is restored.
+		//
+		// Bounded by a timeout and falls back to the provisional id, so a slow or
+		// failed init never blocks the caller (load() may never run on failure).
+		//
+		// If init has not even started (no observability plugin registered, or the
+		// caller ran before _init), there is nothing to wait for — return at once
+		// rather than stalling the caller for the whole timeout.
+		if (!this._isLoaded && !this._earlyClient) {
+			return undefined
+		}
+		await Promise.race([
+			this._whenLoaded(),
+			new Promise<void>((resolve) => setTimeout(resolve, timeoutMs)),
+		])
 		try {
-			this._earlyClient?.setPreferredSessionId(sessionId)
+			const info = this._isLoaded
+				? this._sdk.getSessionInfo()
+				: this._earlyClient?.getSessionInfo()
+			const id = info?.sessionId
+			return typeof id === 'string' && id.length > 0 ? id : undefined
 		} catch {
-			// ignore — session id adoption is best-effort
+			return undefined
 		}
 	}
 

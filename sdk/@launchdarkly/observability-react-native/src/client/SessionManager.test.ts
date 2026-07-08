@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { AppState } from 'react-native'
 import { SessionManager } from './SessionManager'
 import { SessionStore } from './storage/sessionStore'
 import {
@@ -116,38 +117,29 @@ describe('SessionManager session preservation', () => {
 		expect(mgr.wasReloaded()).toBe(false)
 	})
 
-	it('adopts a preferred (native) session id without a store and marks a reload', async () => {
-		// Simulates a soft reload where the native session replay module hands back
-		// its frozen session id and no persistence store is available.
-		const mgr = new SessionManager({}, noOpStore)
-		mgr.setPreferredSessionId('native-frozen-id')
-		await mgr.initialize()
-
-		expect(mgr.getSessionInfo().sessionId).toBe('native-frozen-id')
-		expect(mgr.wasReloaded()).toBe(true)
-		expect(mgr.getResumeInfo().reloadCount).toBe(1)
-	})
-
-	it('preferred session id wins over a resumable persisted session and keeps its timing', async () => {
+	it('never rotates the session id in-process on background/foreground', async () => {
+		// The native (custom) session is frozen for the process lifetime and can't
+		// follow an in-process rotation, so the JS side must not rotate either —
+		// even with a tiny timeout that a background gap would exceed. Session
+		// boundaries only happen at the next load (see resolveSession).
 		const store = new MemoryStore()
-		const now = Date.now()
-		store.seed({
-			sessionId: 'native-frozen-id',
-			startTime: now - 120_000,
-			lastActivityTime: now - 2_000,
-			reloadCount: 4,
-		})
-
-		const mgr = new SessionManager({}, store)
-		mgr.setPreferredSessionId('native-frozen-id')
+		const mgr = new SessionManager({ sessionTimeout: 1 }, store)
 		await mgr.initialize()
+		const id = mgr.getSessionInfo().sessionId
 
-		expect(mgr.getSessionInfo().sessionId).toBe('native-frozen-id')
-		// Timing carried over from the matching persisted session.
-		expect(mgr.getSessionInfo().startTime).toBe(now - 120_000)
-		expect(mgr.wasReloaded()).toBe(true)
-		expect(mgr.getResumeInfo().reloadCount).toBe(5)
-		expect(store.read().sessionId).toBe('native-frozen-id')
+		const calls = (
+			AppState.addEventListener as unknown as {
+				mock: { calls: [string, (s: string) => void][] }
+			}
+		).mock.calls
+		const handler = calls[calls.length - 1][1]
+
+		handler('background')
+		await new Promise((resolve) => setTimeout(resolve, 5))
+		handler('active')
+
+		expect(mgr.getSessionInfo().sessionId).toBe(id)
+		expect(mgr.wasReloaded()).toBe(false)
 	})
 
 	it('ignores corrupt persisted data', async () => {

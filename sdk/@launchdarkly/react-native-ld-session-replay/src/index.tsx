@@ -202,71 +202,55 @@ class SessionReplayPluginAdapter implements LDPlugin {
       console.error('[SessionReplay]', MOBILE_KEY_REQUIRED_MESSAGE);
       return;
     }
-    // Resolve the session id to share between the JS observability SDK and the
-    // native replay / observability instance so their spans report a single
-    // `session.id`. Two directions, depending on whether native already has a
-    // session (see resolveSharedSessionId):
-    //   - cold start: adopt the JS observability id and seed native with it;
-    //   - warm reload: read native's frozen id back and hand it to observability.
-    const sessionId = this.resolveSharedSessionId();
+    // Resolving observability's session id can require awaiting its async init
+    // (see resolveObservabilitySessionId), so run the whole configure/start flow
+    // off the (synchronous) register call.
+    void this.configureAndStart(key);
+  }
+
+  private async configureAndStart(key: string): Promise<void> {
+    // The JS observability SDK is the single source of truth for `session.id`.
+    // Seed the native replay / observability instance with observability's
+    // *resolved* session id so both pipelines report one `session.id`.
+    //
+    // Observability persists its session (AsyncStorage) and resumes it across a
+    // JS reload, so on a soft/OTA reload it recovers the same id the native
+    // singleton is already frozen on from the cold-start seed — they stay
+    // aligned without ever reading anything back from native.
+    const sessionId = await this.resolveObservabilitySessionId();
     const options: SessionReplayOptions = sessionId
       ? { ...this.options, sessionId }
       : this.options;
 
-    configureSessionReplay(key, options)
-      .then(() => {
-        return startSessionReplay();
-      })
-      .catch((error) => {
-        console.error(
-          '[SessionReplay] Failed to initialize session replay:',
-          error
-        );
-      });
+    try {
+      await configureSessionReplay(key, options);
+      await startSessionReplay();
+    } catch (error) {
+      console.error(
+        '[SessionReplay] Failed to initialize session replay:',
+        error
+      );
+    }
   }
 
   /**
-   * Determines the `session.id` shared by the JS observability SDK and the
-   * native replay / observability instance, and wires the two together.
+   * Resolves observability's session id to seed native with.
    *
-   * On a warm JS reload (soft reload / OTA reload) the native session replay
-   * singleton is still alive and frozen on the session id it was initialized
-   * with, while the JS observability SDK has lost its in-memory session. We read
-   * the native id back and hand it to observability via `setPreferredSessionId`
-   * so both pipelines stay aligned even when no persistence store (AsyncStorage
-   * / localStorage) is available to resume from.
-   *
-   * On a cold start native has no session yet (returns an empty id), so we fall
-   * back to adopting the observability session id; native then seeds itself with
-   * it during init.
+   * Prefers the *resolved* id (getSessionIdWhenReady waits out observability's
+   * async init, including a persisted-session resume) rather than the
+   * provisional id, so native isn't seeded with an id that init later replaces.
+   * Falls back to the synchronous id for older observability builds without the
+   * seam, and returns undefined when observability isn't present (native then
+   * owns its own session).
    */
-  private resolveSharedSessionId(): string | undefined {
-    const nativeId = this.readNativeSessionId();
-    if (nativeId) {
-      // Warm reload: native is the surviving source of truth.
-      try {
-        LDObserve.setPreferredSessionId(nativeId);
-      } catch {
-        // Older observability SDK without the seam — native still records under
-        // its own id; JS may diverge until a cold start. Best-effort.
-      }
-      return nativeId;
-    }
-    // Cold start: adopt the (provisional) observability id.
-    return this.resolveObservabilitySessionId();
-  }
-
-  private readNativeSessionId(): string | undefined {
+  private async resolveObservabilitySessionId(): Promise<string | undefined> {
     try {
-      const id = SessionReplayReactNative.getSessionId?.();
-      return typeof id === 'string' && id.length > 0 ? id : undefined;
+      if (typeof LDObserve.getSessionIdWhenReady === 'function') {
+        return await LDObserve.getSessionIdWhenReady();
+      }
     } catch {
-      // getSessionId is unavailable on older native builds — treat as cold.
-      return undefined;
+      // fall through to the synchronous read
     }
-  }
-
-  private resolveObservabilitySessionId(): string | undefined {
     try {
       const id = LDObserve.getSessionInfo()?.sessionId;
       return typeof id === 'string' && id.length > 0 ? id : undefined;

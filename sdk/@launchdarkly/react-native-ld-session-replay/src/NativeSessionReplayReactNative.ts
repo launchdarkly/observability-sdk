@@ -94,14 +94,6 @@ export interface Spec extends TurboModule {
     canonicalKey: string,
     completed: boolean
   ): Promise<void>;
-  /**
-   * Returns the `session.id` the native session replay / observability instance
-   * is currently running with, or `''` if it has not initialized yet (cold
-   * start). Synchronous so the session replay plugin can read it during
-   * registration — before the JS observability SDK finishes its async init — and
-   * hand it back so both pipelines share the same session across a soft reload.
-   */
-  getSessionId(): string;
 }
 
 export default TurboModuleRegistry.getEnforcing<Spec>(

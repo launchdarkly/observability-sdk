@@ -201,7 +201,10 @@ describe('SessionReplayPluginAdapter', () => {
       { sdk: { name: 'test', version: '0.0.0' }, mobileKey: 'mob-key-123' }
     );
 
-    await new Promise(process.nextTick);
+    // register() resolves the shared session id asynchronously before calling
+    // native configure/start, so flush all microtasks (a macrotask boundary)
+    // before asserting.
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(NativeSessionReplayReactNative.configure).toHaveBeenCalledWith(
       'mob-key-123',
