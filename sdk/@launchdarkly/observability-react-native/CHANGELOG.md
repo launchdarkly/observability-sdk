@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.14.0](https://github.com/launchdarkly/observability-sdk/compare/observability-react-native-0.13.0...observability-react-native-0.14.0) (2026-07-08)
+
+
+### Features
+
+* add app_reload event with session preservation across reloads (React Native) ([#670](https://github.com/launchdarkly/observability-sdk/issues/670)) ([518bb22](https://github.com/launchdarkly/observability-sdk/commit/518bb225df0d06d7d5bf7029f38b60125e7b7624))
+
+
+### Bug Fixes
+
+* use secure RNG for React Native session ids ([#668](https://github.com/launchdarkly/observability-sdk/issues/668)) ([2761a2d](https://github.com/launchdarkly/observability-sdk/commit/2761a2dd090680b2a751a183fbcf2a4397670caf))
+
 ## [0.13.0](https://github.com/launchdarkly/observability-sdk/compare/observability-react-native-0.12.0...observability-react-native-0.13.0) (2026-06-29)
 
 
