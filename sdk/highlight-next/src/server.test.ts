@@ -165,16 +165,20 @@ async function warmup() {
 		`${NEXT_URL}/api/app-router-test?success=false&sql=false`,
 	]
 
+	const maxAttempts = 5
+
 	for (const endpoint of endpoints) {
 		// Retry the initial hit: on a cold dev server the first request can
 		// arrive before the route is ready to be compiled.
-		for (let attempt = 0; attempt < 5; attempt++) {
+		let succeeded = false
+		for (let attempt = 0; attempt < maxAttempts; attempt++) {
 			try {
 				await fetch(endpoint, {
 					method: 'GET',
 					headers: { ...HIGHLIGHT_HEADER },
 				})
 
+				succeeded = true
 				break
 			} catch (err) {
 				console.warn('warmup request failed, retrying', {
@@ -184,6 +188,15 @@ async function warmup() {
 				})
 				await new Promise((r) => setTimeout(r, 1_000))
 			}
+		}
+
+		// If a route never responds, the dev server isn't usable. Fail setup
+		// loudly instead of continuing as if routes were compiled and letting
+		// later tests hit cold routes or hang in `getResourceSpans`.
+		if (!succeeded) {
+			throw new Error(
+				`warmup failed: ${endpoint} did not respond after ${maxAttempts} attempts`,
+			)
 		}
 	}
 
