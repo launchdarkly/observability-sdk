@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ObservabilityClient } from './ObservabilityClient'
 
 describe('ObservabilityClient — stop during async init', () => {
@@ -44,5 +44,28 @@ describe('ObservabilityClient — stop during async init', () => {
 
 		expect(ready).toBe(false)
 		expect(client.getIsInitialized()).toBe(false)
+	})
+
+	it('whenInitialized() resolves false when init() throws (does not hang forever)', async () => {
+		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+		const client = new ObservabilityClient('sdkKey', {})
+
+		// Force init() to fail after its first await, before it can mark the client
+		// ready. Installed synchronously (before the first await resolves) so the
+		// rejecting mock is in place when init() reaches instrumentation setup.
+		const internals = client as unknown as {
+			instrumentationManager: {
+				initialize: (...args: unknown[]) => Promise<void>
+			}
+		}
+		internals.instrumentationManager.initialize = vi
+			.fn()
+			.mockRejectedValue(new Error('init boom'))
+
+		const ready = await client.whenInitialized()
+
+		expect(ready).toBe(false)
+		expect(client.getIsInitialized()).toBe(false)
+		errorSpy.mockRestore()
 	})
 })

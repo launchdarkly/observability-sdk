@@ -197,9 +197,11 @@ export class ObservabilityClient {
 			// failed attempt would permanently prevent this client from ever
 			// becoming ready (initStarted stays true while isInitialized is false).
 			this.initStarted = false
-			// Intentionally do NOT settle here: a failure is retryable, so leaving
-			// whenInitialized() pending lets a later successful init() resolve it as
-			// ready. There is no polling timer to leak — awaiters just keep waiting.
+			// Settle readiness as not-ready so awaiters (e.g. LDObserve._init) don't
+			// hang forever: init() is only ever driven from the constructor, so
+			// nothing retries on our behalf, and a still-pending whenInitialized()
+			// would never resolve. Callers that want to retry can start a new client.
+			this.settleInit()
 		}
 	}
 
