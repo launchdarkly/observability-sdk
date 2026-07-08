@@ -37,7 +37,13 @@ describe('Next.js server instrumentation', () => {
 	beforeAll(async () => {
 		stopOtel = startMockOtelServer({ port: OTEL_PORT })
 		stopNext = await startNext(OTEL_PORT)
-	}, 60_000)
+
+		// `next dev` compiles routes on demand, so the very first request to a
+		// route is slow and its telemetry races against compilation. Warm up
+		// every endpoint under test up front so the per-test requests hit
+		// already-compiled routes and reliably emit spans.
+		await warmup()
+	}, 120_000)
 
 	afterAll(async () => {
 		try {
@@ -150,6 +156,42 @@ describe('Next.js server instrumentation', () => {
 		}, 60_000)
 	})
 }, 60_000)
+
+async function warmup() {
+	const endpoints = [
+		`${NEXT_URL}/api/page-router-test?success=true`,
+		`${NEXT_URL}/api/page-router-test?success=false`,
+		`${NEXT_URL}/api/app-router-test?success=true&sql=false`,
+		`${NEXT_URL}/api/app-router-test?success=false&sql=false`,
+	]
+
+	for (const endpoint of endpoints) {
+		// Retry the initial hit: on a cold dev server the first request can
+		// arrive before the route is ready to be compiled.
+		for (let attempt = 0; attempt < 5; attempt++) {
+			try {
+				await fetch(endpoint, {
+					method: 'GET',
+					headers: { ...HIGHLIGHT_HEADER },
+				})
+
+				break
+			} catch (err) {
+				console.warn('warmup request failed, retrying', {
+					endpoint,
+					attempt,
+					err,
+				})
+				await new Promise((r) => setTimeout(r, 1_000))
+			}
+		}
+	}
+
+	// Spans are exported on a batch interval (~5s). Wait out one full cycle so
+	// warm-up spans are flushed before the first test's `beforeEach` clears
+	// them, otherwise late arrivals could pollute exact-count assertions.
+	await new Promise((r) => setTimeout(r, 7_000))
+}
 
 async function startNext(port: number) {
 	return new Promise<() => Promise<void>>(async (resolve) => {
