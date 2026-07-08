@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.17.0](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.16.0...session-replay-react-native-0.17.0) (2026-07-08)
+
+
+### Features
+
+* add app_reload event with session preservation across reloads (React Native) ([#670](https://github.com/launchdarkly/observability-sdk/issues/670)) ([518bb22](https://github.com/launchdarkly/observability-sdk/commit/518bb225df0d06d7d5bf7029f38b60125e7b7624))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @launchdarkly/observability-react-native bumped to 0.14.0
+
 ## [0.16.0](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.15.0...session-replay-react-native-0.16.0) (2026-06-30)
 
 
