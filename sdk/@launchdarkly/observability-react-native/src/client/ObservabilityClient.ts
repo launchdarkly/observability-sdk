@@ -35,6 +35,11 @@ export class ObservabilityClient {
 	private options: InstrumentationManagerOptions
 	private isInitialized = false
 	private initStarted = false
+	// Set once stop() runs. init() is async, so a stop() can land while init()
+	// is awaiting; this lets the in-flight init() abort instead of reviving a
+	// torn-down client (re-enabling instrumentation, emitting app_reload, or
+	// letting LDObserve load() a stopped client).
+	private stopped = false
 	private ldTracer?: LDTracer
 
 	constructor(
@@ -73,7 +78,8 @@ export class ObservabilityClient {
 				'X-LaunchDarkly-Project': this.sdkKey,
 				...(options.customHeaders ?? {}),
 			},
-			sessionTimeout: options.sessionTimeout ?? SESSION_RESUME_THRESHOLD_MS,
+			sessionTimeout:
+				options.sessionTimeout ?? SESSION_RESUME_THRESHOLD_MS,
 			debug: options.debug ?? false,
 			disableErrorTracking: options.disableErrorTracking ?? false,
 			disableLogs: options.disableLogs ?? false,
@@ -91,7 +97,7 @@ export class ObservabilityClient {
 	}
 
 	private async init() {
-		if (this.isInitialized || this.initStarted) return
+		if (this.isInitialized || this.initStarted || this.stopped) return
 		this.initStarted = true
 
 		try {
@@ -99,6 +105,10 @@ export class ObservabilityClient {
 			// resource, so the session id baked into the tracer resource is the
 			// resumed id from the start.
 			await this.sessionManager.initialize()
+
+			// A stop() may have landed while we were awaiting; abort before
+			// building any pipeline so we don't revive a torn-down client.
+			if (this.stopped) return
 
 			const sessionAttributes = this.sessionManager.getSessionAttributes()
 			const resource = resourceFromAttributes({
@@ -118,6 +128,15 @@ export class ObservabilityClient {
 
 			this.instrumentationManager.setSessionManager(this.sessionManager)
 			await this.instrumentationManager.initialize(resource)
+
+			// If stop() ran while instrumentation was initializing, its
+			// instrumentationManager.stop() may have run before this initialize()
+			// finished — tear the freshly-built pipeline back down and abort so we
+			// don't leave a live pipeline on a stopped client.
+			if (this.stopped) {
+				await this.instrumentationManager.stop()
+				return
+			}
 
 			// Initialize automatic error instrumentation (enabled by default)
 			if (!this.options.disableErrorTracking) {
@@ -311,6 +330,10 @@ export class ObservabilityClient {
 	}
 
 	public async stop(): Promise<void> {
+		// Signal any in-flight async init() to abort instead of reviving the
+		// client after teardown (see init() and the `stopped` field).
+		this.stopped = true
+
 		// Clean up error instrumentation
 		if (this.errorInstrumentation) {
 			this.errorInstrumentation.destroy()
