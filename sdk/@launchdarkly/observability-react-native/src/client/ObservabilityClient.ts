@@ -139,6 +139,10 @@ export class ObservabilityClient {
 			this._log('initialized successfully')
 		} catch (error) {
 			console.error('Failed to initialize ObservabilityClient:', error)
+			// Release the guard so a later init() can retry; otherwise a single
+			// failed attempt would permanently prevent this client from ever
+			// becoming ready (initStarted stays true while isInitialized is false).
+			this.initStarted = false
 		}
 	}
 
