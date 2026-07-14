@@ -2,6 +2,13 @@
 
 All notable changes to the LaunchDarkly Observability SDK for Flutter will be documented in this file. This project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.12.2](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.12.1...launchdarkly_flutter_observability-0.12.2) (2026-07-14)
+
+
+### Bug Fixes
+
+* **flutter:** remove conflicting ios-client-sdk pin in SPM manifest ([#674](https://github.com/launchdarkly/observability-sdk/issues/674)) ([a8da119](https://github.com/launchdarkly/observability-sdk/commit/a8da11901a2304213526dd183f610059ea43ce01))
+
 ## [0.12.1](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.12.0...launchdarkly_flutter_observability-0.12.1) (2026-06-19)
 
 
