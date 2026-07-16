@@ -151,7 +151,6 @@ class TracingHook implements Hook {
 
 			const allAttributes = { ...this.metaAttributes, ...eventAttributes }
 
-			let recorded = false
 			startInternalActiveSpan(
 				this._options?.serviceName,
 				FEATURE_FLAG_SPAN_NAME,
@@ -168,22 +167,15 @@ class TracingHook implements Hook {
 					})
 
 					span.setStatus({ code: 1 })
-					// A non-recording span means the tracer provider isn't
-					// exporting yet (e.g. observability init is still async), so
-					// no exposure was actually captured. Read before end().
-					recorded = span.isRecording()
+					// Only start the dedupe window once an exposure is actually
+					// recorded; a non-recording span (e.g. init still async)
+					// shouldn't suppress later evaluations. Read before end().
+					if (span.isRecording()) {
+						this.exposureDeduper.markRecorded(dedupeKey)
+					}
 					span.end()
 				},
 			)
-
-			// The span is the exposure, so start the dedupe window as soon as it
-			// has been recorded. This is done before the debug log below so a
-			// failing log doesn't cause duplicate exposure spans, and only when
-			// the span actually recorded so a no-op/failed span doesn't suppress
-			// later evaluations.
-			if (recorded) {
-				this.exposureDeduper.markRecorded(dedupeKey)
-			}
 
 			_LDObserve.recordLog(
 				`Feature flag "${hookContext.flagKey}" evaluated`,
