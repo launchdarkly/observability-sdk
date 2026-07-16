@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.18.0](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.17.0...session-replay-react-native-0.18.0) (2026-07-16)
+
+
+### Features
+
+* **observability:** dedupe feature flag exposures within a time window (web + React Native) ([#676](https://github.com/launchdarkly/observability-sdk/issues/676)) ([c34b390](https://github.com/launchdarkly/observability-sdk/commit/c34b390d68ff642e13f2863d1aa3f2732c61b70b))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @launchdarkly/observability-react-native bumped to 0.15.0
+
 ## [0.17.0](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.16.0...session-replay-react-native-0.17.0) (2026-07-08)
 
 

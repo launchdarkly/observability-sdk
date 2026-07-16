@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.15.0](https://github.com/launchdarkly/observability-sdk/compare/observability-react-native-0.14.0...observability-react-native-0.15.0) (2026-07-16)
+
+
+### Features
+
+* **observability:** dedupe feature flag exposures within a time window (web + React Native) ([#676](https://github.com/launchdarkly/observability-sdk/issues/676)) ([c34b390](https://github.com/launchdarkly/observability-sdk/commit/c34b390d68ff642e13f2863d1aa3f2732c61b70b))
+
 ## [0.14.0](https://github.com/launchdarkly/observability-sdk/compare/observability-react-native-0.13.0...observability-react-native-0.14.0) (2026-07-08)
 
 
