@@ -1,5 +1,12 @@
 # highlight.run
 
+## [10.6.0](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.5.0...highlight.run-10.6.0) (2026-07-16)
+
+
+### Features
+
+* **observability:** dedupe feature flag exposures within a time window (web + React Native) ([#676](https://github.com/launchdarkly/observability-sdk/issues/676)) ([c34b390](https://github.com/launchdarkly/observability-sdk/commit/c34b390d68ff642e13f2863d1aa3f2732c61b70b))
+
 ## [10.5.0](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.4.1...highlight.run-10.5.0) (2026-06-29)
 
 
