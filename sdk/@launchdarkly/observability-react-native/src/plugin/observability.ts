@@ -4,7 +4,7 @@ import { TrackProperties } from '../api/TrackProperties'
 import { flattenTrackProperties } from '../utils/trackAttributes'
 import { ObservabilityClient } from '../client/ObservabilityClient'
 import { startInternalActiveSpan } from '../internal/internalSpans'
-import { ExposureDeduper } from '../utils/ExposureDeduper'
+import { ExposureDeduper } from '@launchdarkly/observability-shared'
 import { _LDObserve } from '../sdk/LDObserve'
 import type {
 	LDEvaluationDetail,

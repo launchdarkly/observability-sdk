@@ -7,6 +7,10 @@ export type {
 	GraphQLOperation,
 	GraphQLOperationType,
 } from './instrumentation/graphql'
+export {
+	ExposureDeduper,
+	DEFAULT_FLAG_EXPOSURE_DEDUPE_WINDOW_MILLIS,
+} from './launchdarkly/ExposureDeduper'
 export { CustomSampler } from './sampling/CustomSampler'
 export type { ExportSampler } from './sampling/ExportSampler'
 export type { SamplingResult } from './sampling/ExportSampler'

@@ -24,7 +24,7 @@ import { ObserveSDK } from '../sdk/observe'
 import { LDObserve } from '../sdk/LDObserve'
 import type { ObserveOptions } from '../client/types/observe'
 import { Plugin } from './common'
-import { ExposureDeduper } from './exposureDeduper'
+import { ExposureDeduper } from '@launchdarkly/observability-shared'
 import {
 	ATTR_TELEMETRY_SDK_NAME,
 	ATTR_TELEMETRY_SDK_VERSION,

@@ -8,6 +8,9 @@ export const DEFAULT_FLAG_EXPOSURE_DEDUPE_WINDOW_MILLIS = 3 * 60 * 1000
  * resolving to the same result do not emit a new exposure within a time window.
  *
  * Each unique exposure key is only recorded once per window.
+ *
+ * Shared by the web (`@launchdarkly/observability`) and React Native
+ * (`@launchdarkly/observability-react-native`) plugins.
  */
 export class ExposureDeduper {
 	private readonly windowMillis: number
