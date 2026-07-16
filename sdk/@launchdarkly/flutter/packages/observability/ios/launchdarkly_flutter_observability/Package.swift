@@ -20,7 +20,7 @@ let swiftObservabilityDependency: Package.Dependency = if useLocalNativeSdk {
 } else {
     .package(
         url: "https://github.com/launchdarkly/swift-launchdarkly-observability.git",
-        .upToNextMinor(from: "0.46.1")
+        .upToNextMinor(from: "0.46.3")
     )
 }
 
@@ -38,14 +38,12 @@ let package = Package(
     dependencies: [
         .package(name: "FlutterFramework", path: "../FlutterFramework"),
         swiftObservabilityDependency,
-        .package(url: "https://github.com/launchdarkly/ios-client-sdk.git", exact: "11.1.1"),
     ],
     targets: [
         .target(
             name: "launchdarkly_flutter_observability",
             dependencies: [
                 .product(name: "FlutterFramework", package: "FlutterFramework"),
-                .product(name: "LaunchDarkly", package: "ios-client-sdk"),
                 .product(name: "LaunchDarklyObservability", package: "swift-launchdarkly-observability"),
                 .product(name: "LaunchDarklySessionReplay", package: "swift-launchdarkly-observability"),
             ]

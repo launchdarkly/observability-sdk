@@ -1,4 +1,5 @@
 import {
+  DevSettings,
   Platform,
   SafeAreaView,
   StyleSheet,
@@ -13,11 +14,23 @@ import {
 } from '@launchdarkly/react-native-client-sdk';
 import { useEffect, useState } from 'react';
 import { createSessionReplayPlugin } from '@launchdarkly/session-replay-react-native';
-import { Observability } from '@launchdarkly/observability-react-native';
+import {
+  LDObserve,
+  Observability,
+} from '@launchdarkly/observability-react-native';
 import DialogsScreen from './DialogsScreen';
 import MaskingScreen from './MaskingScreen';
 import TracingScreen from './TracingScreen';
 import ApiScreen from './ApiScreen';
+
+// Regenerated every time the JS bundle loads. A soft reload (DevSettings.reload)
+// restarts the JS runtime in the same process, so this changes while the native
+// session replay singleton — and its sampling decision — persist untouched.
+// It is also passed as a JS `resourceAttribute` below to demonstrate that JS
+// observability resource attributes ARE reapplied on soft reload (unlike the
+// native session replay config, which is frozen until a full cold start).
+const JS_LOAD_ID = Math.random().toString(36).slice(2, 8);
+console.log(`[soft-reload] JS_LOAD_ID=${JS_LOAD_ID} (new value each JS load)`);
 
 const plugin = createSessionReplayPlugin({
   isEnabled: true,
@@ -44,6 +57,12 @@ const observability = new Observability({
   serviceVersion: '1.0.0',
   debug: true,
   tracingOrigins: ['jsonplaceholder.typicode.com', 'reactnative.dev'],
+  // Reapplied on every JS (soft) reload: the JS observability SDK is fully
+  // recreated when the runtime restarts, so this attribute reflects the current
+  // JS load. Compare with the native SR service.version, which stays frozen.
+  resourceAttributes: {
+    'js.load_id': JS_LOAD_ID,
+  },
 });
 
 // Replace with your LaunchDarkly mobile key.
@@ -58,6 +77,34 @@ const client = new ReactNativeLDClient(MOBILE_KEY, AutoEnvAttributes.Enabled, {
   plugins: [observability, plugin],
 });
 const context = { kind: 'user', key: 'user-key-123abc' };
+
+// Emulates an OTA "soft reload": restarts only the JS runtime, leaving the native
+// process (and the SR singleton) alive. Sampling is intentionally NOT re-rolled —
+// the native enable cycle never resets, so a sampled-out session stays out and a
+// recording session keeps its original decision. Only a full cold start re-rolls.
+async function softReload() {
+  console.log(
+    `[soft-reload] reloading JS runtime; native SR singleton persists, sampling NOT re-exercised (was JS_LOAD_ID=${JS_LOAD_ID})`
+  );
+
+  // No manual `app_reload` span is needed: the observability SDK persists the
+  // session and, on the next JS load, resumes it and emits `app_reload`
+  // automatically. We just flush any buffered telemetry so nothing is lost when
+  // the reload tears down the JS runtime.
+  try {
+    await LDObserve.flush();
+  } catch (e) {
+    console.warn('[soft-reload] failed to flush before reload', e);
+  }
+
+  if (typeof DevSettings?.reload === 'function') {
+    DevSettings.reload('SR soft-reload test');
+  } else {
+    console.warn(
+      '[soft-reload] DevSettings.reload is unavailable (release build); use a dev build to test soft reload'
+    );
+  }
+}
 
 // The New Architecture installs the Fabric UIManager on the JS global; its
 // absence means the app is running on the legacy bridge architecture.
@@ -93,6 +140,20 @@ export default function App() {
           <Text testID="safe" style={styles.archBannerText}>
             {ARCH_LABEL}
           </Text>
+        </View>
+        <View style={styles.actionBar}>
+          <Text testID="safe" style={styles.actionLabel}>
+            JS load: {JS_LOAD_ID}
+          </Text>
+          <TouchableOpacity
+            testID="safe"
+            style={styles.actionButton}
+            onPress={softReload}
+          >
+            <Text testID="safe" style={styles.actionButtonText}>
+              Soft reload
+            </Text>
+          </TouchableOpacity>
         </View>
         <View style={styles.tabBar}>
           <TabButton
@@ -164,6 +225,28 @@ const styles = StyleSheet.create({
   archBannerText: {
     color: '#fff',
     fontSize: 13,
+    fontWeight: '700',
+  },
+  actionBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  actionLabel: {
+    color: '#888',
+    fontSize: 12,
+  },
+  actionButton: {
+    backgroundColor: '#6650A4',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  actionButtonText: {
+    color: '#fff',
+    fontSize: 12,
     fontWeight: '700',
   },
   tabBar: {

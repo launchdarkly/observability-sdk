@@ -1,20 +1,16 @@
-# demo-rails70 — Rails 7.0 observability regression repro
+# demo-rails70 — legacy Rails observability regression repro
 
-A Rails **7.0** application that pins the LaunchDarkly observability plugin to a
-known-broken scenario and guards against it regressing. It is a copy of
-[`../demo`](../demo) (Rails 7.2) with Rails pinned to `~> 7.0`.
+A legacy Rails application that pins the LaunchDarkly observability plugin to a
+known-broken scenario and guards against it regressing. The historical directory
+name is retained to avoid path churn, while Rails is constrained to the oldest
+safe 7.1 release line.
 
 ## Why this exists
 
-CardFlight runs Rails 7.0. The plugin used to depend on
-`opentelemetry-instrumentation-all`, whose Rails-family members raised their
-minimum to **Rails 7.1**. On Rails 7.0 every Rails-family instrumentation failed
-its runtime `compatible?` check, logged a flurry of `"... failed to install"`
-warnings, and never attached — so the app lost all Rails auto-instrumentation
-(no HTTP server spans, DB spans, etc.) and got only manual instrumentation.
-
-The other e2e apps run Rails 7.2, which is **above** that floor, so they can
-never catch this class of break. This app reproduces it on Rails 7.0.
+The plugin used to depend on `opentelemetry-instrumentation-all`, whose
+Rails-family members could fail their runtime `compatible?` checks and never
+attach. This app keeps dedicated coverage for the individually pinned
+Rails-family instrumentations on an older supported Rails release.
 
 Ruby stays at **3.3.4** on purpose: on a current Ruby, Bundler still resolves the
 *latest* instrumentation gems, faithfully matching a real Rails 7.0 customer. (On
@@ -33,9 +29,9 @@ are actually **exported over the wire** — in pure Ruby, no Docker or Node, und
 
 `test/integration/otlp_export_e2e_test.rb` is the headline test:
 
-- **Before the fix** (instrumentation-all → instrumentation-rails 0.42): no server
-  span is produced or exported — the test fails.
-- **After the fix** (instrumentation-rails pinned to 0.41): the server span,
+- **Without compatible Rails-family instrumentation**: no server span is
+  produced or exported — the test fails.
+- **With instrumentation-rails pinned to 0.41**: the server span,
   log, and exception all reach the sink — the test passes.
 
 ## Running it

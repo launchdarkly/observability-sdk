@@ -37,31 +37,14 @@ permissions:
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 jobs:
-    yarn-monorepo:
-        name: Build Yarn Turborepo
-        timeout-minutes: 60
-        runs-on: ubuntu-22.04-8core-32gb
-        # configures turborepo Remote Caching
-        env:
-            TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
-            TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
+    detect-changes:
+        name: Detect JS monorepo changes
+        runs-on: ubuntu-latest
+        outputs:
+            yarn-test: ${{ steps.changes.outputs.yarn-test }}
         steps:
             - name: Checkout
               uses: actions/checkout@v4
-            - run: git submodule update --init --recursive
-
-            # automatically caches dependencies based on yarn.lock
-            - name: Setup Node.js environment
-              uses: actions/setup-node@v4
-              with:
-                  # Pinned: lts/* floated to Node 24.16.0, which hangs the rrvideo
-                  # Playwright browser download during `yarn install` until the job
-                  # times out. 24.15.0 is the last known-good. See PR #575.
-                  node-version: 24.15.0
-                  cache: 'yarn'
-
-            - name: Install js dependencies
-              run: yarn install
 
             - name: Detect JS monorepo changes
               uses: dorny/paths-filter@4512585405083f25c027a35db413c2b3b9006d50 # v2
@@ -86,6 +69,34 @@ jobs:
                         - '!.github/workflows/python-plugin.yml'
                         - '!.github/workflows/ruby-plugin.yml'
 
+    yarn-monorepo:
+        name: Build Yarn Turborepo
+        needs: detect-changes
+        if: needs.detect-changes.outputs.yarn-test == 'true' || github.event_name == 'workflow_dispatch'
+        timeout-minutes: 60
+        runs-on: ubuntu-22.04-8core-32gb
+        # configures turborepo Remote Caching
+        env:
+            TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+            TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+            - run: git submodule update --init --recursive
+
+            # automatically caches dependencies based on yarn.lock
+            - name: Setup Node.js environment
+              uses: actions/setup-node@v4
+              with:
+                  # Pinned: lts/* floated to Node 24.16.0, which hangs the rrvideo
+                  # Playwright browser download during `yarn install` until the job
+                  # times out. 24.15.0 is the last known-good. See PR #575.
+                  node-version: 24.15.0
+                  cache: 'yarn'
+
+            - name: Install js dependencies
+              run: yarn install
+
             - name: Check yarn for duplicate deps
               run: yarn dedupe --check
 
@@ -93,26 +104,16 @@ jobs:
               run: yarn format-check
 
             - name: Build & test (in a fork without doppler)
-              if: steps.changes.outputs.yarn-test == 'true' || github.event_name == 'workflow_dispatch'
               run: yarn test
               env:
                   NEXT_PUBLIC_HIGHLIGHT_PROJECT_ID: 1jdkoe52
                   REACT_APP_COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
-            - name: Skipped yarn test (native-only change)
-              if: steps.changes.outputs.yarn-test != 'true' && github.event_name != 'workflow_dispatch'
-              run: echo "Skipping yarn test — only non-yarn SDK paths changed (Android, MAUI/.NET, Flutter, and the .NET/Python/Ruby plugins)."
-
             # Guard against shipping unresolvable types: install the freshly
             # built package into a clean consumer and type-check it with
             # skipLibCheck:false. Runs before publish so a broken .d.ts blocks
             # the release. See scripts/check-published-types.mjs.
-            #
-            # Skipped on native-only changes for the same reason as `yarn test`:
-            # the script requires sdk/highlight-run/dist/index.d.ts, which is
-            # produced by the turbo build that only runs as part of `yarn test`.
             - name: Verify published types resolve in a clean consumer
-              if: steps.changes.outputs.yarn-test == 'true' || github.event_name == 'workflow_dispatch'
               run: node scripts/check-published-types.mjs
 
             - name: Configure yarn npm registry credentials

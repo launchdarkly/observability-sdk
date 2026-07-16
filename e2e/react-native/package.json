@@ -19,6 +19,7 @@
 		"@expo/vector-icons": "^14.0.2",
 		"@launchdarkly/observability-react-native": "workspace:*",
 		"@launchdarkly/react-native-client-sdk": "^10.0.0",
+		"@react-native-async-storage/async-storage": "2.1.0",
 		"@react-navigation/bottom-tabs": "^7.2.0",
 		"@react-navigation/native": "^7.0.14",
 		"expo": "~52.0.23",

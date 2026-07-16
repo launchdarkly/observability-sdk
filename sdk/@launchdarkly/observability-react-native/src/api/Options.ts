@@ -93,8 +93,17 @@ export interface ReactNativeOptions {
 	urlBlocklist?: string[]
 
 	/**
-	 * Session timeout in milliseconds.
-	 * @default 30 * 60 * 1000 (30 minutes)
+	 * Maximum inactivity, in milliseconds, before the next app launch / JS reload
+	 * starts a **new** session instead of continuing the previous one. Measured
+	 * from the last recorded activity to the next load.
+	 *
+	 * The session id is never rotated while the app is running (in-process): it is
+	 * decided once per JS load and held for that load's lifetime, mirroring the
+	 * native session replay / observability instance, which treats an externally
+	 * supplied id as a custom session and never auto-rotates it. Session
+	 * boundaries therefore only occur at a launch/reload, governed by this value.
+	 *
+	 * @default 15 * 60 * 1000 (15 minutes)
 	 */
 	sessionTimeout?: number
 

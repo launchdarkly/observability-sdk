@@ -5,18 +5,11 @@ git_source(:github) { |repo| "https://github.com/#{repo}.git" }
 
 ruby '~> 3.3.4'
 
-# Rails 7.0 on purpose: this app reproduces the CardFlight failure where the
-# OTel Rails-family instrumentations (opentelemetry-instrumentation-rails >= 0.35)
-# raised their floor to Rails 7.1, so on Rails 7.0 they fail their runtime
-# `compatible?` check and never attach. Ruby stays at 3.3.4 (>= 3.2) so bundler
-# resolves the LATEST opentelemetry-instrumentation-all — the same versions a
-# real Rails 7.0 customer on a current Ruby gets. (On Ruby < 3.2 bundler would
-# self-heal to an older instrumentation-all and the bug would not reproduce.)
-gem 'rails', '~> 7.0.0'
+# Keep the legacy Rails-family instrumentation coverage on the oldest safe
+# Rails 7.1 release line.
+gem 'rails', '~> 7.1.5', '>= 7.1.5.2'
 
-# Rails 7.0's test runner (railties test_unit line filtering) is incompatible
-# with minitest 6.x (the `run` arity changed). Pin to 5.x so the suite runs.
-# Unrelated to the instrumentation bug — just a Rails-7.0 test-toolchain pin.
+# The Rails test runner is incompatible with minitest 6.x (`run` arity changed).
 gem 'minitest', '~> 5.0'
 
 # The original asset pipeline for Rails [https://github.com/rails/sprockets-rails]

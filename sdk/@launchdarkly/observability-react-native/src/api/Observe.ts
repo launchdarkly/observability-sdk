@@ -190,6 +190,19 @@ export interface Observe {
 	getSessionInfo(): SessionInfo
 
 	/**
+	 * Resolve the session id once initialization has settled the session,
+	 * including any asynchronous *resume* of a persisted session.
+	 *
+	 * Integration hook for the session replay plugin's cold-start path: unlike
+	 * {@link getSessionInfo}, which returns the provisional id synchronously,
+	 * this waits so native is seeded with the same id the JS SDK ultimately uses
+	 * instead of a provisional id that a persisted resume would later replace.
+	 * Bounded by `timeoutMs`; falls back to the provisional id (or `undefined`)
+	 * so a slow or failed init never blocks the caller.
+	 */
+	getSessionIdWhenReady(timeoutMs?: number): Promise<string | undefined>
+
+	/**
 	 * Stop the observability client.
 	 */
 	stop(): Promise<void>
