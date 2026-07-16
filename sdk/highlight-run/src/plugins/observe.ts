@@ -218,6 +218,9 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 							s.addEvent(FEATURE_FLAG_SCOPE, attributes)
 						}
 					})
+					// Only start the dedupe window once the exposure has been
+					// emitted, so a failure above doesn't suppress later ones.
+					this.exposureDeduper.markRecorded(dedupeKey)
 
 					return data
 				},

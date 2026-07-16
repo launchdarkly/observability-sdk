@@ -27,9 +27,13 @@ export class ExposureDeduper {
 	}
 
 	/**
-	 * Returns `true` if an exposure for the given key should be recorded, marking
-	 * it as recorded for the current window. Returns `false` if an exposure for
-	 * the same key was already recorded within the window.
+	 * Returns `true` if an exposure for the given key should be recorded (i.e. no
+	 * exposure for the same key was recorded within the window). Returns `false`
+	 * if it should be suppressed.
+	 *
+	 * This is a pure query and does NOT update the window. Call
+	 * {@link markRecorded} only after the exposure has actually been emitted, so
+	 * that a failure to emit doesn't suppress subsequent exposures.
 	 *
 	 * @param key A stable key identifying the exposure (e.g. flag key, value,
 	 * variation, reason, and context).
@@ -41,12 +45,23 @@ export class ExposureDeduper {
 		}
 
 		const last = this.lastRecordedAt.get(key)
-		if (last === undefined || last <= now - this.windowMillis) {
-			this.lastRecordedAt.set(key, now)
-			return true
+		return last === undefined || last <= now - this.windowMillis
+	}
+
+	/**
+	 * Marks an exposure for the given key as recorded at `now`, starting a new
+	 * dedupe window. Call this only after the exposure has been successfully
+	 * emitted.
+	 *
+	 * @param key A stable key identifying the exposure.
+	 * @param now The current time in milliseconds. Defaults to `Date.now()`.
+	 */
+	markRecorded(key: string, now: number = Date.now()): void {
+		if (this.windowMillis <= 0) {
+			return
 		}
 
-		return false
+		this.lastRecordedAt.set(key, now)
 	}
 
 	/**

@@ -176,6 +176,10 @@ class TracingHook implements Hook {
 				'debug',
 				allAttributes,
 			)
+
+			// Only start the dedupe window once the exposure has been emitted,
+			// so a throw above doesn't suppress later evaluations.
+			this.exposureDeduper.markRecorded(dedupeKey)
 		} catch (error) {
 			_LDObserve.recordError(error as Error, {
 				'flag.key': hookContext.flagKey,
