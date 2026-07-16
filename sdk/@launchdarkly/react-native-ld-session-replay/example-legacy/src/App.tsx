@@ -51,7 +51,7 @@ console.log(`[soft-reload] JS_LOAD_ID=${JS_LOAD_ID} (new value each JS load)`);
 const plugin = createSessionReplayPlugin({
   isEnabled: true,
   serviceName: 'session-replay-rn-legacy-example',
-  serviceVersion: '1.0.0',
+  serviceVersion: '1.0.5',
   maskTextInputs: true,
   maskWebViews: true,
   maskLabels: false,
@@ -66,7 +66,7 @@ const plugin = createSessionReplayPlugin({
 
 const observability = new Observability({
   serviceName: 'session-replay-rn-legacy-example',
-  serviceVersion: '1.0.0',
+  serviceVersion: '1.0.5',
   debug: true,
   tracingOrigins: ['jsonplaceholder.typicode.com', 'reactnative.dev'],
   otlpEndpoint: endpoints.otlpEndpoint,

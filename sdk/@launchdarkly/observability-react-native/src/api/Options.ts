@@ -170,10 +170,10 @@ export interface ReactNativeOptions {
 	 * This is useful for reducing exposure volume caused by frequent
 	 * re-evaluations (for example, React re-renders).
 	 *
-	 * Set to `0` to disable deduplication and emit an exposure for every
-	 * evaluation.
+	 * Set to `0` (the default) to disable deduplication and emit an exposure
+	 * for every evaluation. Set a positive value to enable it.
 	 *
-	 * @default 180000 (3 minutes)
+	 * @default 0 (disabled)
 	 */
 	flagExposureDedupeWindowMillis?: number
 }

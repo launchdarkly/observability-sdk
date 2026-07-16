@@ -96,6 +96,56 @@ You've successfully run and modified your React Native App. :partying_face:
 - If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
 - If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
 
+# Uploading sourcemaps for error monitoring
+
+To get readable stack traces for JavaScript errors in the LaunchDarkly UI, upload
+this app's sourcemaps with the [LaunchDarkly CLI](https://launchdarkly.com/docs/home/getting-started/ldcli-commands#use-ldcli-for-uploading-sourcemaps).
+
+## Step 1: Generate the JS bundle + sourcemap
+
+React Native doesn't emit a sourcemap during `run-ios` / `run-android`, so generate
+one explicitly. Run from this example's directory:
+
+```sh
+mkdir -p build
+
+# iOS
+npx react-native bundle \
+  --platform ios \
+  --dev false \
+  --entry-file index.js \
+  --bundle-output ./build/main.jsbundle \
+  --sourcemap-output ./build/main.jsbundle.map
+
+# Android
+npx react-native bundle \
+  --platform android \
+  --dev false \
+  --entry-file index.js \
+  --bundle-output ./build/index.android.bundle \
+  --sourcemap-output ./build/index.android.bundle.map
+```
+
+## Step 2: Upload the sourcemap(s)
+
+```sh
+ldcli sourcemaps upload \
+  --app-version 1.0.0 \
+  --path ./build \
+  --base-path ./ \
+  --project YOUR_LAUNCHDARKLY_PROJECT_KEY
+```
+
+- `--app-version 1.0.0` must match the `serviceVersion` configured in `src/App.tsx`.
+  If you change one, change the other or the uploaded map won't match reported errors.
+- `--project` is your LaunchDarkly [project key](https://launchdarkly.com/docs/home/account/project#project-keys)
+  (not the mobile key from `.env`).
+- `ldcli sourcemaps upload` uploads every sourcemap under `--path`, so a single
+  upload of `./build` covers both platforms. Requires an `ldcli` version that
+  supports React Native bundles (`.jsbundle` / `.bundle`).
+- Uploading requires CLI [authentication](https://launchdarkly.com/docs/home/getting-started/ldcli#authentication)
+  (log in or pass an access token).
+
 # Troubleshooting
 
 If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.

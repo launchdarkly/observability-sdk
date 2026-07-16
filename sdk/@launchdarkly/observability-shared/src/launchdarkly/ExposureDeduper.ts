@@ -1,7 +1,8 @@
 /**
- * Default exposure dedupe window, in milliseconds (3 minutes).
+ * Default exposure dedupe window, in milliseconds. `0` means deduplication is
+ * disabled by default; callers opt in by configuring a positive window.
  */
-export const DEFAULT_FLAG_EXPOSURE_DEDUPE_WINDOW_MILLIS = 3 * 60 * 1000
+export const DEFAULT_FLAG_EXPOSURE_DEDUPE_WINDOW_MILLIS = 0
 
 /**
  * Tracks recently recorded feature flag exposures so that repeated evaluations

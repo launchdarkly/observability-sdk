@@ -68,22 +68,12 @@ describe('ExposureDeduper', () => {
 		expect(deduper.shouldRecord('a', 100)).toBe(true)
 	})
 
-	it('defaults to a 3 minute window', () => {
-		expect(DEFAULT_FLAG_EXPOSURE_DEDUPE_WINDOW_MILLIS).toBe(3 * 60 * 1000)
+	it('defaults to deduplication disabled (window 0)', () => {
+		expect(DEFAULT_FLAG_EXPOSURE_DEDUPE_WINDOW_MILLIS).toBe(0)
 		const deduper = new ExposureDeduper()
-		expect(deduper.shouldRecord('a', 0)).toBe(true)
 		deduper.markRecorded('a', 0)
-		expect(
-			deduper.shouldRecord(
-				'a',
-				DEFAULT_FLAG_EXPOSURE_DEDUPE_WINDOW_MILLIS - 1,
-			),
-		).toBe(false)
-		expect(
-			deduper.shouldRecord(
-				'a',
-				DEFAULT_FLAG_EXPOSURE_DEDUPE_WINDOW_MILLIS,
-			),
-		).toBe(true)
+		// With the default window, nothing is ever deduplicated.
+		expect(deduper.shouldRecord('a', 0)).toBe(true)
+		expect(deduper.shouldRecord('a', 1)).toBe(true)
 	})
 })

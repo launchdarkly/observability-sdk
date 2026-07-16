@@ -219,14 +219,22 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 					}
 
 					const attributes = { ...metaAttrs, ...eventAttributes }
+					let recorded = false
 					this.observe.startSpan(FEATURE_FLAG_SPAN_NAME, (s) => {
 						if (s) {
 							s.addEvent(FEATURE_FLAG_SCOPE, attributes)
+							// A non-recording span means telemetry isn't
+							// exporting yet (e.g. manualStart before start()),
+							// so no exposure was actually captured.
+							recorded = s.isRecording()
 						}
 					})
-					// Only start the dedupe window once the exposure has been
-					// emitted, so a failure above doesn't suppress later ones.
-					this.exposureDeduper.markRecorded(dedupeKey)
+					// Only start the dedupe window once an exposure has actually
+					// been recorded, so a failed/no-op emission doesn't suppress
+					// later evaluations.
+					if (recorded) {
+						this.exposureDeduper.markRecorded(dedupeKey)
+					}
 
 					return data
 				},
