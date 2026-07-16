@@ -160,4 +160,20 @@ export interface ReactNativeOptions {
 	 * default identifier.
 	 */
 	contextFriendlyName?: (context: LDContext) => string | undefined
+
+	/**
+	 * The time window, in milliseconds, during which repeated feature flag
+	 * evaluations that resolve to the same result are deduplicated, so that only
+	 * a single `feature_flag` exposure span is emitted per unique
+	 * (flag key, value, variation, reason, context) within the window.
+	 *
+	 * This is useful for reducing exposure volume caused by frequent
+	 * re-evaluations (for example, React re-renders).
+	 *
+	 * Set to `0` to disable deduplication and emit an exposure for every
+	 * evaluation.
+	 *
+	 * @default 180000 (3 minutes)
+	 */
+	flagExposureDedupeWindowMillis?: number
 }

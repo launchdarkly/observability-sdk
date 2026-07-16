@@ -4,6 +4,7 @@ import { TrackProperties } from '../api/TrackProperties'
 import { flattenTrackProperties } from '../utils/trackAttributes'
 import { ObservabilityClient } from '../client/ObservabilityClient'
 import { startInternalActiveSpan } from '../internal/internalSpans'
+import { ExposureDeduper } from '../utils/ExposureDeduper'
 import { _LDObserve } from '../sdk/LDObserve'
 import type {
 	LDEvaluationDetail,
@@ -45,11 +46,15 @@ import {
 
 class TracingHook implements Hook {
 	private metaAttributes: Attributes = {}
+	private readonly exposureDeduper: ExposureDeduper
 
 	constructor(
 		private metadata: LDPluginEnvironmentMetadata,
 		private readonly _options?: ReactNativeOptions,
 	) {
+		this.exposureDeduper = new ExposureDeduper(
+			_options?.flagExposureDedupeWindowMillis,
+		)
 		this.metaAttributes = {
 			[ATTR_TELEMETRY_SDK_NAME]:
 				'@launchdarkly/observability-react-native',
@@ -70,6 +75,10 @@ class TracingHook implements Hook {
 		data: IdentifySeriesData,
 		result: IdentifySeriesResult,
 	): IdentifySeriesData {
+		// The evaluation context changed, so previously recorded exposures are
+		// no longer relevant for deduplication.
+		this.exposureDeduper.reset()
+
 		if (result.status === 'completed') {
 			_LDObserve.recordLog(`LD.identify`, 'info', {
 				...this.metaAttributes,
@@ -91,6 +100,25 @@ class TracingHook implements Hook {
 		detail: LDEvaluationDetail,
 	): EvaluationSeriesData {
 		try {
+			const canonicalKey = hookContext.context
+				? getCanonicalKey(hookContext.context)
+				: undefined
+
+			// Deduplicate repeated exposures that resolve to the same result
+			// within the configured window, so that frequent re-evaluations
+			// (e.g. React re-renders) don't emit a span per evaluation.
+			const dedupeKey = [
+				hookContext.flagKey,
+				JSON.stringify(detail.value),
+				detail.variationIndex ?? '',
+				detail.reason?.kind ?? '',
+				detail.reason?.ruleId ?? '',
+				canonicalKey ?? '',
+			].join('|')
+			if (!this.exposureDeduper.shouldRecord(dedupeKey)) {
+				return data
+			}
+
 			const eventAttributes: Attributes = {
 				[FEATURE_FLAG_KEY_ATTR]: hookContext.flagKey,
 				[FEATURE_FLAG_VALUE_ATTR]: JSON.stringify(detail.value),
@@ -118,9 +146,7 @@ class TracingHook implements Hook {
 				eventAttributes[FEATURE_FLAG_CONTEXT_ATTR] = JSON.stringify(
 					getContextKeys(hookContext.context),
 				)
-				eventAttributes[FEATURE_FLAG_CONTEXT_ID_ATTR] = getCanonicalKey(
-					hookContext.context,
-				)
+				eventAttributes[FEATURE_FLAG_CONTEXT_ID_ATTR] = canonicalKey
 			}
 
 			const allAttributes = { ...this.metaAttributes, ...eventAttributes }
