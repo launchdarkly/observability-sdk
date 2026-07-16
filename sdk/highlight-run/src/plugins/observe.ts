@@ -208,12 +208,18 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 						detail.reason?.ruleId ?? '',
 						canonicalKey ?? '',
 					].join('|')
+					if (!this.observe) {
+						// No exposure is emitted when the SDK isn't initialized,
+						// so don't start a dedupe window that would suppress
+						// later evaluations.
+						return data
+					}
 					if (!this.exposureDeduper.shouldRecord(dedupeKey)) {
 						return data
 					}
 
 					const attributes = { ...metaAttrs, ...eventAttributes }
-					this.observe?.startSpan(FEATURE_FLAG_SPAN_NAME, (s) => {
+					this.observe.startSpan(FEATURE_FLAG_SPAN_NAME, (s) => {
 						if (s) {
 							s.addEvent(FEATURE_FLAG_SCOPE, attributes)
 						}

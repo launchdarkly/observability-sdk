@@ -80,7 +80,10 @@ describe('ExposureDeduper', () => {
 			),
 		).toBe(false)
 		expect(
-			deduper.shouldRecord('a', DEFAULT_FLAG_EXPOSURE_DEDUPE_WINDOW_MILLIS),
+			deduper.shouldRecord(
+				'a',
+				DEFAULT_FLAG_EXPOSURE_DEDUPE_WINDOW_MILLIS,
+			),
 		).toBe(true)
 	})
 })
