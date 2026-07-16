@@ -134,14 +134,16 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 						hook.afterIdentify?.(hookContext, data, result)
 					}
 
-					// The evaluation context changed, so previously recorded
-					// exposures are no longer relevant for deduplication.
-					this.exposureDeduper.reset()
-
 					const ldContextKeys = getContextKeys(hookContext.context)
 					this.observe?.setLDContextKeyAttributes(ldContextKeys)
 
 					if (result.status === 'completed') {
+						// The evaluation context changed, so previously
+						// recorded exposures are no longer relevant for
+						// deduplication. Only reset on a completed identify; a
+						// failed one leaves the context unchanged.
+						this.exposureDeduper.reset()
+
 						const metadata = {
 							...ldContextKeys,
 							key:

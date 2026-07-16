@@ -76,11 +76,12 @@ class TracingHook implements Hook {
 		data: IdentifySeriesData,
 		result: IdentifySeriesResult,
 	): IdentifySeriesData {
-		// The evaluation context changed, so previously recorded exposures are
-		// no longer relevant for deduplication.
-		this.exposureDeduper.reset()
-
 		if (result.status === 'completed') {
+			// The evaluation context changed, so previously recorded exposures
+			// are no longer relevant for deduplication. Only reset on a
+			// completed identify; a failed one leaves the context unchanged.
+			this.exposureDeduper.reset()
+
 			_LDObserve.recordLog(`LD.identify`, 'info', {
 				...this.metaAttributes,
 				...getContextKeys(hookContext.context),
