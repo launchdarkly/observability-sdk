@@ -153,6 +153,7 @@ class TracingHook implements Hook {
 
 			const allAttributes = { ...this.metaAttributes, ...eventAttributes }
 
+			let recorded = false
 			startInternalActiveSpan(
 				this._options?.serviceName,
 				FEATURE_FLAG_SPAN_NAME,
@@ -169,21 +170,26 @@ class TracingHook implements Hook {
 					})
 
 					span.setStatus({ code: 1 })
-					// Only start the dedupe window once an exposure is actually
-					// recorded; a non-recording span (e.g. init still async)
-					// shouldn't suppress later evaluations. Read before end().
-					if (span.isRecording()) {
-						this.exposureDeduper.markRecorded(dedupeKey)
-					}
+					// A non-recording span (e.g. init still async) means no
+					// exposure was captured, so it shouldn't start the dedupe
+					// window or emit the paired debug log. Read before end().
+					recorded = span.isRecording()
 					span.end()
 				},
 			)
 
-			_LDObserve.recordLog(
-				`Feature flag "${hookContext.flagKey}" evaluated`,
-				'debug',
-				allAttributes,
-			)
+			// The span and its debug log form a single exposure, so only start
+			// the dedupe window and emit the log when the exposure was actually
+			// recorded. Otherwise repeated evaluations would keep emitting logs
+			// that dedupe is meant to collapse.
+			if (recorded) {
+				this.exposureDeduper.markRecorded(dedupeKey)
+				_LDObserve.recordLog(
+					`Feature flag "${hookContext.flagKey}" evaluated`,
+					'debug',
+					allAttributes,
+				)
+			}
 		} catch (error) {
 			_LDObserve.recordError(error as Error, {
 				'flag.key': hookContext.flagKey,
