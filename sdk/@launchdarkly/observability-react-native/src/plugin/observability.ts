@@ -171,15 +171,17 @@ class TracingHook implements Hook {
 				},
 			)
 
+			// The span is the exposure, so start the dedupe window as soon as it
+			// has been emitted. This is done before the debug log below so a
+			// failing log doesn't cause duplicate exposure spans, and after the
+			// span so a failing span doesn't suppress later evaluations.
+			this.exposureDeduper.markRecorded(dedupeKey)
+
 			_LDObserve.recordLog(
 				`Feature flag "${hookContext.flagKey}" evaluated`,
 				'debug',
 				allAttributes,
 			)
-
-			// Only start the dedupe window once the exposure has been emitted,
-			// so a throw above doesn't suppress later evaluations.
-			this.exposureDeduper.markRecorded(dedupeKey)
 		} catch (error) {
 			_LDObserve.recordError(error as Error, {
 				'flag.key': hookContext.flagKey,
