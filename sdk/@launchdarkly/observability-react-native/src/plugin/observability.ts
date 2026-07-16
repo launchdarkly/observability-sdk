@@ -54,6 +54,7 @@ class TracingHook implements Hook {
 	) {
 		this.exposureDeduper = new ExposureDeduper(
 			_options?.flagExposureDedupeWindowMillis,
+			_options?.flagExposureDedupeMaxSize,
 		)
 		this.metaAttributes = {
 			[ATTR_TELEMETRY_SDK_NAME]:

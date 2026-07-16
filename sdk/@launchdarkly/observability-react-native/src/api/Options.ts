@@ -176,4 +176,13 @@ export interface ReactNativeOptions {
 	 * @default 0 (disabled)
 	 */
 	flagExposureDedupeWindowMillis?: number
+
+	/**
+	 * The maximum number of unique feature flag exposure keys tracked for
+	 * deduplication at once. When exceeded, the least recently recorded keys are
+	 * evicted to bound memory usage.
+	 *
+	 * @default 2000
+	 */
+	flagExposureDedupeMaxSize?: number
 }

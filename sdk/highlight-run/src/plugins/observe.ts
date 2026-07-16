@@ -44,6 +44,7 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 		this.options = options
 		this.exposureDeduper = new ExposureDeduper(
 			options?.flagExposureDedupeWindowMillis,
+			options?.flagExposureDedupeMaxSize,
 		)
 	}
 

@@ -10,6 +10,7 @@ export type {
 export {
 	ExposureDeduper,
 	DEFAULT_FLAG_EXPOSURE_DEDUPE_WINDOW_MILLIS,
+	DEFAULT_FLAG_EXPOSURE_DEDUPE_MAX_SIZE,
 } from './launchdarkly/ExposureDeduper'
 export { CustomSampler } from './sampling/CustomSampler'
 export type { ExportSampler } from './sampling/ExportSampler'

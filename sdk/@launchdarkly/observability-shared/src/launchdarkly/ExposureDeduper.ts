@@ -5,26 +5,41 @@
 export const DEFAULT_FLAG_EXPOSURE_DEDUPE_WINDOW_MILLIS = 0
 
 /**
+ * Default maximum number of exposure keys tracked at once. When exceeded, the
+ * least recently recorded keys are evicted to bound memory usage.
+ */
+export const DEFAULT_FLAG_EXPOSURE_DEDUPE_MAX_SIZE = 2000
+
+/**
  * Tracks recently recorded feature flag exposures so that repeated evaluations
  * resolving to the same result do not emit a new exposure within a time window.
  *
- * Each unique exposure key is only recorded once per window.
+ * Each unique exposure key is only recorded once per window. The number of
+ * tracked keys is bounded; when the cap is exceeded the least recently recorded
+ * keys are evicted.
  *
  * Shared by the web (`@launchdarkly/observability`) and React Native
  * (`@launchdarkly/observability-react-native`) plugins.
  */
 export class ExposureDeduper {
 	private readonly windowMillis: number
+	private readonly maxSize: number
 	private readonly lastRecordedAt = new Map<string, number>()
 
 	/**
 	 * @param windowMillis The dedupe window in milliseconds. A value of `0` (or
 	 * negative) disables deduplication, so every exposure is recorded.
+	 * @param maxSize The maximum number of exposure keys to track. When exceeded,
+	 * the least recently recorded keys are evicted. A value of `0` (or negative)
+	 * falls back to the default.
 	 */
 	constructor(
 		windowMillis: number = DEFAULT_FLAG_EXPOSURE_DEDUPE_WINDOW_MILLIS,
+		maxSize: number = DEFAULT_FLAG_EXPOSURE_DEDUPE_MAX_SIZE,
 	) {
 		this.windowMillis = windowMillis
+		this.maxSize =
+			maxSize > 0 ? maxSize : DEFAULT_FLAG_EXPOSURE_DEDUPE_MAX_SIZE
 	}
 
 	/**
@@ -62,7 +77,18 @@ export class ExposureDeduper {
 			return
 		}
 
+		// Re-insert so the key moves to the most-recent end of the Map's
+		// insertion order, keeping eviction least-recently-recorded first.
+		this.lastRecordedAt.delete(key)
 		this.lastRecordedAt.set(key, now)
+
+		while (this.lastRecordedAt.size > this.maxSize) {
+			const oldest = this.lastRecordedAt.keys().next().value
+			if (oldest === undefined) {
+				break
+			}
+			this.lastRecordedAt.delete(oldest)
+		}
 	}
 
 	/**

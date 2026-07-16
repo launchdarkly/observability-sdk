@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+	DEFAULT_FLAG_EXPOSURE_DEDUPE_MAX_SIZE,
 	DEFAULT_FLAG_EXPOSURE_DEDUPE_WINDOW_MILLIS,
 	ExposureDeduper,
 } from './ExposureDeduper'
@@ -75,5 +76,44 @@ describe('ExposureDeduper', () => {
 		// With the default window, nothing is ever deduplicated.
 		expect(deduper.shouldRecord('a', 0)).toBe(true)
 		expect(deduper.shouldRecord('a', 1)).toBe(true)
+	})
+
+	it('evicts least recently recorded keys past the max size', () => {
+		const deduper = new ExposureDeduper(1000, 2)
+		deduper.markRecorded('a', 0)
+		deduper.markRecorded('b', 0)
+		// Adding a third key evicts the oldest ('a').
+		deduper.markRecorded('c', 0)
+		expect(deduper.shouldRecord('a', 100)).toBe(true)
+		expect(deduper.shouldRecord('b', 100)).toBe(false)
+		expect(deduper.shouldRecord('c', 100)).toBe(false)
+	})
+
+	it('re-recording a key refreshes its recency to avoid eviction', () => {
+		const deduper = new ExposureDeduper(1000, 2)
+		deduper.markRecorded('a', 0)
+		deduper.markRecorded('b', 0)
+		// Touch 'a' so 'b' becomes the least recently recorded.
+		deduper.markRecorded('a', 10)
+		deduper.markRecorded('c', 20)
+		expect(deduper.shouldRecord('b', 100)).toBe(true)
+		expect(deduper.shouldRecord('a', 100)).toBe(false)
+		expect(deduper.shouldRecord('c', 100)).toBe(false)
+	})
+
+	it('falls back to the default max size for non-positive values', () => {
+		expect(DEFAULT_FLAG_EXPOSURE_DEDUPE_MAX_SIZE).toBe(2000)
+		const deduper = new ExposureDeduper(1000, 0)
+		for (let i = 0; i <= DEFAULT_FLAG_EXPOSURE_DEDUPE_MAX_SIZE; i++) {
+			deduper.markRecorded(`k${i}`, 0)
+		}
+		// The very first key is evicted once the default cap is exceeded.
+		expect(deduper.shouldRecord('k0', 100)).toBe(true)
+		expect(
+			deduper.shouldRecord(
+				`k${DEFAULT_FLAG_EXPOSURE_DEDUPE_MAX_SIZE}`,
+				100,
+			),
+		).toBe(false)
 	})
 })
