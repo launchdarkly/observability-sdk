@@ -63,6 +63,16 @@ export default function ApiScreen() {
     log(`[span] button-pressed + boolVariation(feature1)=${value}`);
   };
 
+  // -- Flag evaluation -----------------------------------------------------
+  // Evaluates a flag directly, exercising the Observability afterEvaluation
+  // hook (which emits a `feature_flag` exposure span). Tapping repeatedly is
+  // a handy way to see exposure deduplication in action: identical results
+  // within the dedupe window are collapsed to a single exposure span.
+  const evaluateFlag = () => {
+    const value = ldClient.boolVariation('feature1', false);
+    log(`[flag] boolVariation(feature1)=${value}`);
+  };
+
   // -- Nested spans (counter + log + network inside) -----------------------
   // Uses `withSpan` / `scope.child` so the hierarchy survives the `await`s. On
   // React Native the active OTel context is tracked only synchronously, so
@@ -419,6 +429,7 @@ export default function ApiScreen() {
             label="Record span + variation"
             onPress={run('span+variation', recordSpanAndVariation)}
           />
+          <Btn label="Flag Eval" onPress={run('flag-eval', evaluateFlag)} />
           <Btn
             label="Nested spans"
             onPress={run('nested', triggerNestedSpans)}

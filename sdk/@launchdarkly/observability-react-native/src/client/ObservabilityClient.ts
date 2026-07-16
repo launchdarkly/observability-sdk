@@ -16,6 +16,10 @@ import {
 	ATTR_TELEMETRY_SDK_VERSION,
 } from '@opentelemetry/semantic-conventions'
 import { ReactNativeOptions } from '../api/Options'
+import {
+	DEFAULT_FLAG_EXPOSURE_DEDUPE_MAX_SIZE,
+	DEFAULT_FLAG_EXPOSURE_DEDUPE_WINDOW_MILLIS,
+} from '@launchdarkly/observability-shared'
 import { DEFAULT_URL_BLOCKLIST } from '../listeners/network-listener/utils/network-sanitizer'
 import { Metric } from '../api/Metric'
 import { RequestContext } from '../api/RequestContext'
@@ -122,6 +126,12 @@ export class ObservabilityClient {
 			networkRecording: options.networkRecording ?? {},
 			contextFriendlyName:
 				options.contextFriendlyName ?? (() => undefined),
+			flagExposureDedupeWindowMillis:
+				options.flagExposureDedupeWindowMillis ??
+				DEFAULT_FLAG_EXPOSURE_DEDUPE_WINDOW_MILLIS,
+			flagExposureDedupeMaxSize:
+				options.flagExposureDedupeMaxSize ??
+				DEFAULT_FLAG_EXPOSURE_DEDUPE_MAX_SIZE,
 		}
 	}
 
