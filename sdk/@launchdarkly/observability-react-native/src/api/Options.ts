@@ -197,7 +197,7 @@ export interface ReactNativeOptions {
 	 * Larger values retain more data across short outages at the cost of memory;
 	 * anything still buffered is lost if the app is terminated.
 	 *
-	 * @default 1000
+	 * @default 2048
 	 */
 	maxBufferSize?: number
 
@@ -207,7 +207,7 @@ export interface ReactNativeOptions {
 	 * frequently in smaller batches; higher values upload less frequently in
 	 * larger batches.
 	 *
-	 * @default 500
+	 * @default 5000
 	 */
 	uploadIntervalMillis?: number
 }
