@@ -12,10 +12,25 @@
 #   public *;
 #}
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# Keep line numbers so R8 can emit a precise mapping.txt and the backend can
+# retrace obfuscated Java/Kotlin frames back to original source lines (Symbols Id Lane).
+-keepattributes SourceFile,LineNumberTable
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# Replace the original source file name with "SourceFile"; the backend derives
+# the real file name from the retraced class, so this is safe and hides source
+# names in shipped stack traces.
+-renamesourcefileattribute SourceFile
+
+# The observability SDK and OpenTelemetry rely on reflection / service loading;
+# keep them intact so the app runs. The demo app's own classes
+# (com.example.androidobservability.*) are still obfuscated, which is what the
+# Symbols Id Lane retrace demo exercises.
+-keep class com.launchdarkly.** { *; }
+-dontwarn com.launchdarkly.**
+-keep class io.opentelemetry.** { *; }
+-dontwarn io.opentelemetry.**
+
+# snakeyaml (pulled in transitively) references desktop java.beans APIs that do
+# not exist on Android. They are only used on the JVM, so it is safe to ignore.
+-dontwarn java.beans.**
+-dontwarn org.yaml.snakeyaml.**

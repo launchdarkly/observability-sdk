@@ -8,6 +8,7 @@ import com.launchdarkly.observability.bridge.AttributeConverter
 import com.launchdarkly.observability.client.ObservabilityContext
 import com.launchdarkly.observability.client.ObservabilityService
 import com.launchdarkly.observability.client.buildObservabilityResource
+import com.launchdarkly.observability.client.readInjectedSymbolsId
 import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.observability.interfaces.Observe
 import com.launchdarkly.observability.replay.ReplayOptions
@@ -158,7 +159,11 @@ class LDObserve(private val client: Observe) : Observe {
                 logger = logger
             )
 
-            val resource = buildObservabilityResource(sdkKey = mobileKey, options = observability)
+            val resource = buildObservabilityResource(
+                sdkKey = mobileKey,
+                options = observability,
+                symbolsId = readInjectedSymbolsId(application),
+            )
             obsContext.resourceAttributes = resource.attributes
 
             // ObservabilityService and SessionReplayService install OpenTelemetry instrumentations

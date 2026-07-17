@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test
 class ObservabilityResourceTest {
     private val serviceName = AttributeKey.stringKey("service.name")
     private val serviceVersion = AttributeKey.stringKey("service.version")
+    private val symbolsIdKey = AttributeKey.stringKey("launchdarkly.symbols_id.htlhash")
 
     @Test
     fun `service name and version from options are written to the resource`() {
@@ -39,5 +40,29 @@ class ObservabilityResourceTest {
         )
 
         assertEquals("configured-service", resource.attributes.get(serviceName))
+    }
+
+    @Test
+    fun `symbols id is written to the resource when provided (Symbols Id Lane)`() {
+        val resource = buildObservabilityResource(
+            sdkKey = "test-key",
+            options = ObservabilityOptions(serviceName = "my-service"),
+            symbolsId = "0123456789abcdef0123456789abcdef",
+        )
+
+        assertEquals(
+            "0123456789abcdef0123456789abcdef",
+            resource.attributes.get(symbolsIdKey),
+        )
+    }
+
+    @Test
+    fun `symbols id attribute is omitted when not provided`() {
+        val resource = buildObservabilityResource(
+            sdkKey = "test-key",
+            options = ObservabilityOptions(serviceName = "my-service"),
+        )
+
+        assertEquals(null, resource.attributes.get(symbolsIdKey))
     }
 }

@@ -446,6 +446,21 @@ private fun ErrorButtons(viewModel: MainActivityViewModel) {
     ) {
         Text("Trigger Error")
     }
+
+    Button(
+        onClick = {
+            viewModel.triggerObfuscatedError()
+        },
+        modifier = Modifier
+            .padding(top = 8.dp)
+            .ldId("error.obfuscated"),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = DangerRed,
+            contentColor = Color.White
+        )
+    ) {
+        Text("Trigger Obfuscated Error")
+    }
 }
 
 @Composable

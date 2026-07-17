@@ -32,6 +32,28 @@ import {
 } from '../client/InstrumentationManager'
 import { ErrorInstrumentation } from '../instrumentation/ErrorInstrumentation'
 
+// Resource attribute carrying the deterministic symbols id (htlhash of the
+// composed source map). The Metro plugin injects globalThis.__LD_SYMBOLS_ID__ at
+// build time; reporting it here lets the backend resolve React Native symbols by
+// symbols id (Symbols Id Lane), independent of the bundle filename or app
+// version.
+const ATTR_LAUNCHDARKLY_SYMBOLS_ID_HTLHASH =
+	'launchdarkly.symbols_id.htlhash'
+
+// The Metro plugin reserves a fixed-length placeholder (32 zeros) and overwrites
+// it in place with the real id. Seeing the placeholder (or nothing) means no
+// usable symbols id was injected, so we omit the attribute and fall back to the
+// Version Lane.
+const SYMBOLS_ID_PLACEHOLDER = '0'.repeat(32)
+
+function getInjectedSymbolsId(): string | undefined {
+	const id = (globalThis as { __LD_SYMBOLS_ID__?: string }).__LD_SYMBOLS_ID__
+	if (typeof id !== 'string' || id === '' || id === SYMBOLS_ID_PLACEHOLDER) {
+		return undefined
+	}
+	return id
+}
+
 export class ObservabilityClient {
 	private sessionManager: SessionManager
 	private instrumentationManager: InstrumentationManager
@@ -153,6 +175,7 @@ export class ObservabilityClient {
 			}
 
 			const sessionAttributes = this.sessionManager.getSessionAttributes()
+			const symbolsId = getInjectedSymbolsId()
 			const resource = resourceFromAttributes({
 				[ATTR_SERVICE_NAME]: this.options.serviceName,
 				[ATTR_SERVICE_VERSION]: this.options.serviceVersion,
@@ -160,6 +183,15 @@ export class ObservabilityClient {
 					'@launchdarkly/observability-react-native',
 				[ATTR_TELEMETRY_SDK_VERSION]: this.options.serviceVersion,
 				[ATTR_TELEMETRY_SDK_LANGUAGE]: 'javascript',
+				// Report the symbols id (Symbols Id Lane) only when the Metro plugin
+				// injected a real one; otherwise omit it and let the backend fall back
+				// to the Version Lane.
+				...(symbolsId
+					? {
+							[ATTR_LAUNCHDARKLY_SYMBOLS_ID_HTLHASH]:
+								symbolsId,
+						}
+					: {}),
 				// Old attribute for connecting to LD project. Can be deprecated in the
 				// future in favor of X-LaunchDarkly-Project header.
 				'highlight.project_id': this.sdkKey,

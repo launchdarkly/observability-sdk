@@ -55,6 +55,22 @@ react {
 }
 
 /**
+ * Copy the composed (Metro + Hermes) release source map the RN Gradle plugin
+ * emits into example/build, so it sits next to the iOS map and a single
+ * `ldcli symbols upload --path ./build` covers both platforms. This map is
+ * produced from the exact bundle that ships, so it never drifts from the running
+ * build -- the root cause of "error extracting true error info from source map".
+ * rootDir is the android/ project dir, so ../build resolves to example/build.
+ */
+tasks.register("copyReleaseSourcemapToBuild", Copy) {
+    from("${layout.buildDirectory.get()}/generated/sourcemaps/react/release/index.android.bundle.map")
+    into("${rootDir}/../build")
+}
+tasks.matching { it.name == "createBundleReleaseJsAndAssets" }.configureEach {
+    finalizedBy("copyReleaseSourcemapToBuild")
+}
+
+/**
  * Set this to true to Run Proguard on Release builds to minify the Java bytecode.
  */
 def enableProguardInReleaseBuilds = false

@@ -25,6 +25,7 @@ import {
   LAUNCHDARKLY_BACKEND_URL,
 } from '@env';
 import {resolveLDEnvironment} from './ldEnvironments';
+import {SERVICE_VERSION} from './serviceVersion';
 import DialogsScreen from './DialogsScreen';
 import MaskingScreen from './MaskingScreen';
 import TracingScreen from './TracingScreen';
@@ -51,7 +52,7 @@ console.log(`[soft-reload] JS_LOAD_ID=${JS_LOAD_ID} (new value each JS load)`);
 const plugin = createSessionReplayPlugin({
   isEnabled: true,
   serviceName: 'session-replay-rn-legacy-example',
-  serviceVersion: '1.0.5',
+  serviceVersion: SERVICE_VERSION,
   maskTextInputs: true,
   maskWebViews: true,
   maskLabels: false,
@@ -66,7 +67,7 @@ const plugin = createSessionReplayPlugin({
 
 const observability = new Observability({
   serviceName: 'session-replay-rn-legacy-example',
-  serviceVersion: '1.0.5',
+  serviceVersion: SERVICE_VERSION,
   debug: true,
   tracingOrigins: ['jsonplaceholder.typicode.com', 'reactnative.dev'],
   otlpEndpoint: endpoints.otlpEndpoint,
@@ -77,6 +78,7 @@ const observability = new Observability({
   resourceAttributes: {
     'js.load_id': JS_LOAD_ID,
   },
+  flagExposureDedupeWindowMillis: 1000 * 60 * 5, // 5 minutes
 });
 
 // Set the values in example-legacy/.env (see .env.example) to record real

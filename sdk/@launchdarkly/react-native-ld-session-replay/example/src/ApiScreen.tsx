@@ -11,6 +11,32 @@ import { LDObserve } from '@launchdarkly/observability-react-native';
 import type { SpanScope } from '@launchdarkly/observability-react-native';
 import { useLDClient } from '@launchdarkly/react-native-client-sdk';
 import { context, SpanStatusCode, type Span } from '@opentelemetry/api';
+import { SERVICE_VERSION } from './serviceVersion';
+
+// Hermes/V8 truncate `error.stack` at Error.stackTraceLimit (often ~10 frames).
+// Raise it so the recorded error carries the full call chain.
+(Error as ErrorConstructor & { stackTraceLimit?: number }).stackTraceLimit = 50;
+
+// A realistic failure that originates several frames deep. `error.stack` is
+// captured where `new Error()` runs, so throwing from the bottom of this chain
+// gives a full, real stack trace (loadAppVersion -> parseVersionResponse ->
+// decodeVersionField) rather than just the button handler. In a Hermes release
+// build these become bytecode offsets that the uploaded source map resolves
+// back to these functions.
+//
+// The thrown message embeds the running `service.version` so the demo error is
+// easy to tell apart between builds when reading the symbolicated stack trace.
+function loadAppVersion(version: string): never {
+  return parseVersionResponse(version);
+}
+
+function parseVersionResponse(version: string): never {
+  return decodeVersionField(version);
+}
+
+function decodeVersionField(version: string): never {
+  throw new Error(`Demo failure: crash while decoding app version ${version}`);
+}
 
 /**
  * Manual test screen that mirrors the iOS TestApp `MainMenuViewModel`
@@ -50,8 +76,15 @@ export default function ApiScreen() {
 
   // -- Errors --------------------------------------------------------------
   const recordError = () => {
-    LDObserve.recordError(new Error('Demo failure: crash'), {});
-    log('[error] recordError(Demo failure)');
+    try {
+      // Trigger the failure deep in the call chain so the captured stack is
+      // real and multi-frame. Pass the running service.version so the error
+      // message pins the build the reported stack trace came from.
+      loadAppVersion(SERVICE_VERSION);
+    } catch (err) {
+      LDObserve.recordError(err as Error, {});
+      log(`[error] recordError(${(err as Error).message})`);
+    }
   };
 
   // -- Span + flag variation ----------------------------------------------

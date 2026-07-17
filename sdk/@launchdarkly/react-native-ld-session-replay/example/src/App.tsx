@@ -18,6 +18,7 @@ import {
   LDObserve,
   Observability,
 } from '@launchdarkly/observability-react-native';
+import { SERVICE_VERSION } from './serviceVersion';
 import DialogsScreen from './DialogsScreen';
 import MaskingScreen from './MaskingScreen';
 import TracingScreen from './TracingScreen';
@@ -38,7 +39,7 @@ const plugin = createSessionReplayPlugin({
   // spans report the same service.name / service.version as the JS observability
   // plugin below. serviceVersion only affects observability-emitted signals.
   serviceName: 'session-replay-rn-example',
-  serviceVersion: '1.0.0',
+  serviceVersion: SERVICE_VERSION,
   maskTextInputs: true,
   maskWebViews: true,
   maskLabels: false,
@@ -54,7 +55,7 @@ const plugin = createSessionReplayPlugin({
 // backend trace (see the tracing guide, sections 11 and 12).
 const observability = new Observability({
   serviceName: 'session-replay-rn-example',
-  serviceVersion: '1.0.0',
+  serviceVersion: SERVICE_VERSION,
   debug: true,
   tracingOrigins: ['jsonplaceholder.typicode.com', 'reactnative.dev'],
   // Reapplied on every JS (soft) reload: the JS observability SDK is fully
@@ -63,6 +64,7 @@ const observability = new Observability({
   resourceAttributes: {
     'js.load_id': JS_LOAD_ID,
   },
+  flagExposureDedupeWindowMillis: 1000 * 60 * 5, // 5 minutes
 });
 
 // Replace with your LaunchDarkly mobile key.
