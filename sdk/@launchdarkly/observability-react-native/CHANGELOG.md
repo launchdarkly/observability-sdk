@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.16.0](https://github.com/launchdarkly/observability-sdk/compare/observability-react-native-0.15.0...observability-react-native-0.16.0) (2026-07-17)
+
+
+### Features
+
+* **observability:** expose configurable telemetry buffer options (React Native) ([#679](https://github.com/launchdarkly/observability-sdk/issues/679)) ([96db586](https://github.com/launchdarkly/observability-sdk/commit/96db5862923fda6da6fa3ebdc4727316eebf231f))
+
 ## [0.15.0](https://github.com/launchdarkly/observability-sdk/compare/observability-react-native-0.14.0...observability-react-native-0.15.0) (2026-07-16)
 
 
