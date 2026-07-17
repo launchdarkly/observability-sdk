@@ -31,6 +31,10 @@ import {
 	InstrumentationManagerOptions,
 } from '../client/InstrumentationManager'
 import { ErrorInstrumentation } from '../instrumentation/ErrorInstrumentation'
+import {
+	DEFAULT_MAX_BUFFER_SIZE,
+	DEFAULT_UPLOAD_INTERVAL_MILLIS,
+} from '../constants/telemetry'
 
 export class ObservabilityClient {
 	private sessionManager: SessionManager
@@ -132,6 +136,9 @@ export class ObservabilityClient {
 			flagExposureDedupeMaxSize:
 				options.flagExposureDedupeMaxSize ??
 				DEFAULT_FLAG_EXPOSURE_DEDUPE_MAX_SIZE,
+			maxBufferSize: options.maxBufferSize ?? DEFAULT_MAX_BUFFER_SIZE,
+			uploadIntervalMillis:
+				options.uploadIntervalMillis ?? DEFAULT_UPLOAD_INTERVAL_MILLIS,
 		}
 	}
 
