@@ -1,6 +1,7 @@
 /**
- * Maximum number of spans/log records held in the in-memory export buffer
- * before the oldest are dropped. Applied to both the trace and log batch
+ * Maximum number of spans/log records held in the in-memory export buffer.
+ * Once full, newly recorded items are dropped until space frees up (buffered
+ * items are kept and exported). Applied to both the trace and log batch
  * processors. Telemetry is buffered in memory only, so this bounds how much
  * can be retained while offline or between flushes.
  */

@@ -192,7 +192,8 @@ export interface ReactNativeOptions {
 	 *
 	 * Telemetry is buffered in memory only (there is no on-disk persistence), so
 	 * this value bounds how much can be retained while the device is offline or
-	 * between uploads. When the buffer is full, the oldest items are dropped.
+	 * between uploads. When the buffer is full, newly recorded items are dropped
+	 * until space frees up (the already-buffered items are kept and exported).
 	 * Larger values retain more data across short outages at the cost of memory;
 	 * anything still buffered is lost if the app is terminated.
 	 *
