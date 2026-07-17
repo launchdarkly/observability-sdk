@@ -185,4 +185,29 @@ export interface ReactNativeOptions {
 	 * @default 2000
 	 */
 	flagExposureDedupeMaxSize?: number
+
+	/**
+	 * The maximum number of spans and log records held in the in-memory export
+	 * buffer before the oldest are dropped. Applied to both traces and logs.
+	 *
+	 * Telemetry is buffered in memory only (there is no on-disk persistence), so
+	 * this value bounds how much can be retained while the device is offline or
+	 * between uploads. When the buffer is full, newly recorded items are dropped
+	 * until space frees up (the already-buffered items are kept and exported).
+	 * Larger values retain more data across short outages at the cost of memory;
+	 * anything still buffered is lost if the app is terminated.
+	 *
+	 * @default 2048
+	 */
+	maxBufferSize?: number
+
+	/**
+	 * The delay, in milliseconds, between scheduled uploads of buffered spans
+	 * and log records. Applied to both traces and logs. Lower values upload more
+	 * frequently in smaller batches; higher values upload less frequently in
+	 * larger batches.
+	 *
+	 * @default 5000
+	 */
+	uploadIntervalMillis?: number
 }

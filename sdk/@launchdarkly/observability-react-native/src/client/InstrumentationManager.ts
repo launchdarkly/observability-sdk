@@ -58,6 +58,10 @@ import {
 import { CustomBatchSpanProcessor } from '../otel/CustomBatchSpanProcessor'
 import { CustomTraceExporter } from '../otel/CustomTraceExporter'
 import { CustomLogExporter } from '../otel/CustomLogExporter'
+import {
+	DEFAULT_EXPORT_TIMEOUT_MILLIS,
+	DEFAULT_MAX_EXPORT_BATCH_SIZE,
+} from '../constants/telemetry'
 
 export type InstrumentationManagerOptions = Required<ReactNativeOptions> & {
 	projectId: string
@@ -154,10 +158,10 @@ export class InstrumentationManager {
 
 		const processors: SpanProcessor[] = [
 			new CustomBatchSpanProcessor(exporter, {
-				maxQueueSize: 100,
-				scheduledDelayMillis: 500,
-				exportTimeoutMillis: 5000,
-				maxExportBatchSize: 10,
+				maxQueueSize: this.options.maxBufferSize,
+				scheduledDelayMillis: this.options.uploadIntervalMillis,
+				exportTimeoutMillis: DEFAULT_EXPORT_TIMEOUT_MILLIS,
+				maxExportBatchSize: DEFAULT_MAX_EXPORT_BATCH_SIZE,
 			}),
 		]
 
@@ -222,10 +226,10 @@ export class InstrumentationManager {
 			resource: this.resource,
 			processors: [
 				new BatchLogRecordProcessor(logExporter, {
-					maxQueueSize: 100,
-					scheduledDelayMillis: 500,
-					exportTimeoutMillis: 5000,
-					maxExportBatchSize: 10,
+					maxQueueSize: this.options.maxBufferSize,
+					scheduledDelayMillis: this.options.uploadIntervalMillis,
+					exportTimeoutMillis: DEFAULT_EXPORT_TIMEOUT_MILLIS,
+					maxExportBatchSize: DEFAULT_MAX_EXPORT_BATCH_SIZE,
 				}),
 			],
 		})
