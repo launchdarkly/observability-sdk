@@ -138,8 +138,7 @@ export class ObservabilityClient {
 				DEFAULT_FLAG_EXPOSURE_DEDUPE_MAX_SIZE,
 			maxBufferSize: options.maxBufferSize ?? DEFAULT_MAX_BUFFER_SIZE,
 			uploadIntervalMillis:
-				options.uploadIntervalMillis ??
-				DEFAULT_UPLOAD_INTERVAL_MILLIS,
+				options.uploadIntervalMillis ?? DEFAULT_UPLOAD_INTERVAL_MILLIS,
 		}
 	}
 
