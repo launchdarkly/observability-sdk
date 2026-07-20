@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.19.0](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.18.1...session-replay-react-native-0.19.0) (2026-07-20)
+
+
+### Features
+
+* React Native + Android symbolication (symbols_id) ([#678](https://github.com/launchdarkly/observability-sdk/issues/678)) ([2694011](https://github.com/launchdarkly/observability-sdk/commit/26940113ee7777cbcf58702f90d6cf865377af35))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @launchdarkly/observability-react-native bumped to 0.17.0
+
 ## [0.18.1](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.18.0...session-replay-react-native-0.18.1) (2026-07-17)
 
 
