@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.61.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.60.0...launchdarkly-observability-android-0.61.0) (2026-07-20)
+
+
+### Features
+
+* React Native + Android symbolication (symbols_id) ([#678](https://github.com/launchdarkly/observability-sdk/issues/678)) ([2694011](https://github.com/launchdarkly/observability-sdk/commit/26940113ee7777cbcf58702f90d6cf865377af35))
+
 ## [0.60.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.59.0...launchdarkly-observability-android-0.60.0) (2026-06-30)
 
 
