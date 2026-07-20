@@ -66,8 +66,26 @@ tasks.register("copyReleaseSourcemapToBuild", Copy) {
     from("${layout.buildDirectory.get()}/generated/sourcemaps/react/release/index.android.bundle.map")
     into("${rootDir}/../build")
 }
+
+/**
+ * If the LaunchDarkly Metro plugin is enabled (Symbols Id Lane), copy its
+ * symbols-id sidecar next to the composed map in example-legacy/build, renamed
+ * to <map>.symbolsid, so `ldcli symbols upload --path ./build` keys this map by
+ * the id the app reports. The RN Gradle plugin runs Metro via an inherited-env
+ * exec, so it can't be handed LD_SYMBOLS_ID_SIDECAR (as iOS is); the plugin
+ * writes <sourcemap-basename>.symbolsid into Metro's cwd (${rootDir}/..). For
+ * Hermes that basename is the intermediate packager map, so match and rename it.
+ * No-op when the plugin isn't enabled.
+ */
+tasks.register("copyReleaseSymbolsIdToBuild", Copy) {
+    from(fileTree("${rootDir}/..") {
+        include "index.android.bundle*.map.symbolsid"
+    })
+    into("${rootDir}/../build")
+    rename { "index.android.bundle.map.symbolsid" }
+}
 tasks.matching { it.name == "createBundleReleaseJsAndAssets" }.configureEach {
-    finalizedBy("copyReleaseSourcemapToBuild")
+    finalizedBy("copyReleaseSourcemapToBuild", "copyReleaseSymbolsIdToBuild")
 }
 
 /**

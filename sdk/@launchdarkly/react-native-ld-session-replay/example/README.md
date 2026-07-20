@@ -166,24 +166,30 @@ hand-build a separate bundle with `react-native bundle` + `hermesc` +
 Gradle compile and embed, so its line/column grid won't match the running app
 and symbolication fails with `error extracting true error info from source map`.
 
-- **iOS.** `ios/.xcode.env` exports `SOURCEMAP_FILE=$PODS_ROOT/../../build/main.jsbundle.map`,
-  so `react-native-xcode.sh` writes the composed map to `./build/main.jsbundle.map`
-  on every Release build (Debug builds run Metro and skip bundling).
-- **Android.** The RN Gradle plugin already emits a composed map on release
-  builds; `android/app/build.gradle` adds a `copyReleaseSourcemapToBuild` task
-  that copies it to `./build/index.android.bundle.map`.
+- **iOS.** `ios/.xcode.env` exports `SOURCEMAP_FILE=$PODS_ROOT/../../build/main.jsbundle.map`
+  (so `react-native-xcode.sh` writes the composed map to `./build/main.jsbundle.map`)
+  and `LD_SYMBOLS_ID_SIDECAR=${SOURCEMAP_FILE}.symbolsid`, which tells the Metro
+  plugin to drop the sidecar right beside that map. Debug builds run Metro and
+  skip bundling, so this is a no-op there.
+- **Android.** The RN Gradle plugin runs Metro via an inherited-env exec, so it
+  can't be handed `LD_SYMBOLS_ID_SIDECAR` the way iOS is; the plugin instead
+  writes the sidecar into Metro's cwd (the RN project root). `android/app/build.gradle`
+  therefore adds two tasks that finalize the release bundle:
+  `copyReleaseSourcemapToBuild` copies the composed map to
+  `./build/index.android.bundle.map`, and `copyReleaseSymbolsIdToBuild` copies the
+  sidecar next to it as `./build/index.android.bundle.map.symbolsid`.
 
-When Metro runs through the symbols-id plugin it prints the id and writes a
+When Metro runs through the symbols-id plugin it prints the id and writes the
 sidecar, e.g.:
 
 ```
 [LaunchDarkly] bundle symbols id 1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d
-[LaunchDarkly] wrote symbols id sidecar ./index.android.bundle.map.symbolsid
+[LaunchDarkly] wrote symbols id sidecar .../build/index.android.bundle.map.symbolsid
 ```
 
-So after the Step 1 release build, everything you need (bundle, composed map,
-and `*.symbolsid` sidecar) is already in `./build`. Nothing else to run — skip to
-Step 3.
+So after the Step 1 release build, everything you need (composed map and its
+`<map>.symbolsid` sidecar) is already in `./build`, one sidecar per map so each
+platform is keyed by its own id. Nothing else to run — skip to Step 3.
 
 > **Why the bundle names differ per platform.** These are React Native's own
 > default output names, and they're intentionally asymmetric — the map filename

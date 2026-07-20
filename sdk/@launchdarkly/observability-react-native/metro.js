@@ -110,6 +110,7 @@ function writeSidecar(symbolsId, options) {
 		return
 	}
 	try {
+		fs.mkdirSync(path.dirname(target), { recursive: true })
 		fs.writeFileSync(target, symbolsId)
 		// eslint-disable-next-line no-console
 		console.log(`[LaunchDarkly] wrote symbols id sidecar ${target}`)
