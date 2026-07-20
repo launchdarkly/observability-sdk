@@ -176,4 +176,20 @@ abstract class LDNativeApi {
     String canonicalKey,
     bool completed,
   );
+
+  /// Forwards a screen view to the native observability SDK so it emits the
+  /// native `screen_view` span and the Session Replay `Navigate` timeline event.
+  /// Flutter owns its own routing inside a single host Activity/UIViewController,
+  /// so native screen detection never sees Flutter route changes; screen views
+  /// must therefore be reported from Dart (e.g. via a `NavigatorObserver`).
+  /// [name] is the screen/route name; [screenClass], [screenId] and [category]
+  /// are optional classifiers, and [properties] carries optional extra
+  /// attributes attached to the `screen_view` span.
+  void trackScreenView(
+    String name,
+    String? screenClass,
+    String? screenId,
+    String? category,
+    Map<String, Object?>? properties,
+  );
 }

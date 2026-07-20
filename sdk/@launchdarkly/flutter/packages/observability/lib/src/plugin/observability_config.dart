@@ -115,6 +115,12 @@ final class ObservabilityConfig {
   /// `true`.
   final bool trackEventsEnabled;
 
+  /// Whether a `screen_view` span is emitted when a screen view is recorded via
+  /// [LDObserve.trackScreenView]. Mirrors `analytics.views`. Only consulted
+  /// on the web/stub pipeline; on mobile the native SDK applies its own gating.
+  /// Defaults to `true`.
+  final bool screenViewsEnabled;
+
   ObservabilityConfig({
     this.applicationName,
     this.applicationVersion,
@@ -123,6 +129,7 @@ final class ObservabilityConfig {
     required this.instrumentationConfig,
     this.contextFriendlyName,
     this.trackEventsEnabled = true,
+    this.screenViewsEnabled = true,
   });
 }
 
@@ -158,5 +165,6 @@ ObservabilityConfig configFromOptions(ObservabilityOptions options) {
       debugPrint: options.instrumentation.debugPrint,
     ),
     trackEventsEnabled: options.analytics.trackEvents,
+    screenViewsEnabled: options.analytics.views,
   );
 }
