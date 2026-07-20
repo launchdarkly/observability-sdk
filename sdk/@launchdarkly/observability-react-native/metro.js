@@ -83,11 +83,14 @@ function defaultSerialize(entryPoint, preModules, graph, options) {
 
 	const bundle = baseJSBundle(entryPoint, preModules, graph, options)
 	const { code } = bundleToString(bundle)
-	const map = sourceMapString([...preModules, ...graph.dependencies.values()], {
-		excludeSource: options.excludeSource,
-		processModuleFilter: options.processModuleFilter,
-		shouldAddToIgnoreList: options.shouldAddToIgnoreList,
-	})
+	const map = sourceMapString(
+		[...preModules, ...graph.dependencies.values()],
+		{
+			excludeSource: options.excludeSource,
+			processModuleFilter: options.processModuleFilter,
+			shouldAddToIgnoreList: options.shouldAddToIgnoreList,
+		},
+	)
 	return { code, map }
 }
 
@@ -112,7 +115,9 @@ function writeSidecar(symbolsId, options) {
 		console.log(`[LaunchDarkly] wrote symbols id sidecar ${target}`)
 	} catch (err) {
 		// eslint-disable-next-line no-console
-		console.warn(`[LaunchDarkly] could not write symbols id sidecar: ${err}`)
+		console.warn(
+			`[LaunchDarkly] could not write symbols id sidecar: ${err}`,
+		)
 	}
 }
 
@@ -132,8 +137,18 @@ function withLaunchDarklySymbolsId(config) {
 		let output
 		try {
 			output = previous
-				? await previous(entryPoint, augmentedPreModules, graph, options)
-				: defaultSerialize(entryPoint, augmentedPreModules, graph, options)
+				? await previous(
+						entryPoint,
+						augmentedPreModules,
+						graph,
+						options,
+					)
+				: defaultSerialize(
+						entryPoint,
+						augmentedPreModules,
+						graph,
+						options,
+					)
 		} catch (err) {
 			// eslint-disable-next-line no-console
 			console.warn(
@@ -148,7 +163,9 @@ function withLaunchDarklySymbolsId(config) {
 		// Normalize to { code, map }. A string result carries no map, so there is
 		// nothing to hash — leave it as-is (Version Lane).
 		const result =
-			typeof output === 'string' ? { code: output, map: undefined } : output
+			typeof output === 'string'
+				? { code: output, map: undefined }
+				: output
 		if (!result || !result.map) {
 			return output
 		}

@@ -459,7 +459,7 @@ private fun ErrorButtons(viewModel: MainActivityViewModel) {
             contentColor = Color.White
         )
     ) {
-        Text("Trigger Obfuscated Error")
+        Text("${BuildConfig.VERSION_NAME} Trigger Obfuscated Error")
     }
 }
 

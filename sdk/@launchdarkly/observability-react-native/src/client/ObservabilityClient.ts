@@ -41,8 +41,7 @@ import {
 // build time; reporting it here lets the backend resolve React Native symbols by
 // symbols id (Symbols Id Lane), independent of the bundle filename or app
 // version.
-const ATTR_LAUNCHDARKLY_SYMBOLS_ID_HTLHASH =
-	'launchdarkly.symbols_id.htlhash'
+const ATTR_LAUNCHDARKLY_SYMBOLS_ID_HTLHASH = 'launchdarkly.symbols_id.htlhash'
 
 // The Metro plugin reserves a fixed-length placeholder (32 zeros) and overwrites
 // it in place with the real id. Seeing the placeholder (or nothing) means no
@@ -195,8 +194,7 @@ export class ObservabilityClient {
 				// to the Version Lane.
 				...(symbolsId
 					? {
-							[ATTR_LAUNCHDARKLY_SYMBOLS_ID_HTLHASH]:
-								symbolsId,
+							[ATTR_LAUNCHDARKLY_SYMBOLS_ID_HTLHASH]: symbolsId,
 						}
 					: {}),
 				// Old attribute for connecting to LD project. Can be deprecated in the

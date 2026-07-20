@@ -72,7 +72,12 @@ describe('withLaunchDarklySymbolsId', () => {
 			const wrapped = withLaunchDarklySymbolsId({
 				serializer: { customSerializer: previous },
 			})
-			await wrapped.serializer.customSerializer('entry.js', [], fakeGraph, {})
+			await wrapped.serializer.customSerializer(
+				'entry.js',
+				[],
+				fakeGraph,
+				{},
+			)
 
 			expect(readFileSync(sidecar, 'utf8')).toBe(
 				computeHtlhash(Buffer.from(map)),

@@ -65,7 +65,7 @@ class MainActivityViewModel(application: Application) : AndroidViewModel(applica
      */
     fun triggerObfuscatedError() {
         try {
-            CheckoutDemo.startCheckout("ord-42")
+            CheckoutDemo.startCheckout("ord-${BuildConfig.VERSION_NAME}")
         } catch (e: Error) {
             LDObserve.recordError(
                 e,
