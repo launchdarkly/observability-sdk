@@ -14,7 +14,7 @@
 // .env. This lets you point observability at localhost or an arbitrary staging
 // server while still streaming flags from a real LaunchDarkly instance.
 
-import {Platform} from 'react-native';
+import { Platform } from 'react-native';
 
 // Android emulators can't reach the host machine through "localhost" /
 // "127.0.0.1" — that resolves to the emulator itself. 10.0.2.2 is the emulator's
@@ -29,7 +29,7 @@ function adaptHostForPlatform(url: string): string {
   }
   return url.replace(
     /\/\/(?:localhost|127\.0\.0\.1)(?=[:/]|$)/,
-    `//${ANDROID_HOST_LOOPBACK}`,
+    `//${ANDROID_HOST_LOOPBACK}`
   );
 }
 
@@ -73,26 +73,26 @@ export interface LDObservabilityOverrides {
 
 export function resolveLDEnvironment(
   name: string | undefined,
-  overrides: LDObservabilityOverrides = {},
-): {env: LDEnvironmentName; endpoints: LDEndpoints} {
+  overrides: LDObservabilityOverrides = {}
+): { env: LDEnvironmentName; endpoints: LDEndpoints } {
   const env: LDEnvironmentName =
     name === 'staging' || name === 'production' ? name : 'production';
   if (name && name !== env) {
     console.warn(
-      `[env] unknown LAUNCHDARKLY_ENV="${name}", falling back to "production"`,
+      `[env] unknown LAUNCHDARKLY_ENV="${name}", falling back to "production"`
     );
   }
 
   const base = LD_ENVIRONMENTS[env];
   const otlpEndpoint = adaptHostForPlatform(
-    overrides.otlpEndpoint?.trim() || base.otlpEndpoint,
+    overrides.otlpEndpoint?.trim() || base.otlpEndpoint
   );
   const backendUrl = adaptHostForPlatform(
-    overrides.backendUrl?.trim() || base.backendUrl,
+    overrides.backendUrl?.trim() || base.backendUrl
   );
 
   return {
     env,
-    endpoints: {...base, otlpEndpoint, backendUrl},
+    endpoints: { ...base, otlpEndpoint, backendUrl },
   };
 }
