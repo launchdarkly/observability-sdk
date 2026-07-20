@@ -73,13 +73,39 @@ function createSymbolsIdPreModule() {
 	}
 }
 
+// resolveMetroExport unwraps a Metro internal module to the callable it exports.
+// Metro's export shapes vary by version: a bare function (older), a Babel
+// `.default` export (baseJSBundle/bundleToString on 0.8x), or a named export
+// (sourceMapString). Try each so the plugin works across Metro versions.
+function resolveMetroExport(mod, namedKey) {
+	if (typeof mod === 'function') {
+		return mod
+	}
+	if (mod && typeof mod.default === 'function') {
+		return mod.default
+	}
+	if (namedKey && mod && typeof mod[namedKey] === 'function') {
+		return mod[namedKey]
+	}
+	throw new TypeError(
+		`could not resolve callable from Metro module${namedKey ? ` (${namedKey})` : ''}`,
+	)
+}
+
 // defaultSerialize reproduces Metro's built-in bundle+map output for the case
 // where the project has no existing customSerializer. Uses Metro internals the
 // same way other RN symbols-id tools do; guarded by the caller's try/catch.
 function defaultSerialize(entryPoint, preModules, graph, options) {
-	const baseJSBundle = require('metro/src/DeltaBundler/Serializers/baseJSBundle')
-	const bundleToString = require('metro/src/lib/bundleToString')
-	const sourceMapString = require('metro/src/DeltaBundler/Serializers/sourceMapString')
+	const baseJSBundle = resolveMetroExport(
+		require('metro/src/DeltaBundler/Serializers/baseJSBundle'),
+	)
+	const bundleToString = resolveMetroExport(
+		require('metro/src/lib/bundleToString'),
+	)
+	const sourceMapString = resolveMetroExport(
+		require('metro/src/DeltaBundler/Serializers/sourceMapString'),
+		'sourceMapString',
+	)
 
 	const bundle = baseJSBundle(entryPoint, preModules, graph, options)
 	const { code } = bundleToString(bundle)
