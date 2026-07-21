@@ -318,6 +318,13 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
         if (root is ViewGroup) {
             for (i in root.childCount - 1 downTo 0) {
                 val child = root.getChildAt(i)
+                // Skip views that don't take part in touch delivery so hit-testing looks past
+                // them to the content beneath - exactly as Android's real dispatch does. Without
+                // this, React Native's full-screen `DebuggingOverlay` (a non-interactive highlight
+                // layer drawn on top of everything in dev builds) captures every tap, so the
+                // resolved target is the overlay and the real button's text/id - including
+                // `nativeID` - is lost.
+                if (isTouchTransparent(child)) continue
                 val childX = x - child.left + root.scrollX
                 val childY = y - child.top + root.scrollY
                 if (childX >= 0 && childX < child.width && childY >= 0 && childY < child.height) {
@@ -326,6 +333,26 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
             }
         }
         return root
+    }
+
+    /**
+     * True when [view] does not participate in touch delivery, so hit-testing must look past it to
+     * whatever is drawn beneath. Covers React Native's debug-only full-screen `DebuggingOverlay`
+     * (a plain, non-interactive `View` that draws element highlights on top of everything) and any
+     * React Native view declared with `pointerEvents="none"`. Detected without a compile-time
+     * dependency on React Native: the overlay by class name, pointer-events via the
+     * `ReactPointerEventsView` interface. Best-effort - any reflection failure resolves to false so
+     * hit-testing simply falls back to its previous behaviour.
+     */
+    private fun isTouchTransparent(view: View): Boolean {
+        if (view::class.java.name == DEBUGGING_OVERLAY_CLASS_NAME) return true
+        val getter = pointerEventsGetter ?: return false
+        if (pointerEventsViewClass?.isInstance(view) != true) return false
+        return runCatching {
+            // enum PointerEvents { BOX_NONE, NONE, BOX_ONLY, AUTO }; only NONE makes the whole
+            // subtree transparent to touches, so it is the only value that lets us skip it here.
+            (getter.invoke(view) as? Enum<*>)?.name == "NONE"
+        }.getOrDefault(false)
     }
 
     /**
@@ -409,6 +436,28 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
 
         // Cap captured text to match the web SDK's `Click` payload truncation.
         private const val MAX_TEXT_LENGTH = 2000
+
+        // React Native's dev-only highlight layer. It is a plain, non-interactive `View` added
+        // full-screen on top of every surface, so a naive geometric hit-test would resolve every
+        // tap to it instead of the real target beneath.
+        private const val DEBUGGING_OVERLAY_CLASS_NAME =
+            "com.facebook.react.views.debuggingoverlay.DebuggingOverlay"
+
+        /**
+         * React Native's `ReactPointerEventsView` interface, implemented by views that expose a
+         * `pointerEvents` value. Resolved reflectively to avoid a compile-time dependency on React
+         * Native; `null` when the RN library isn't on the runtime classpath.
+         */
+        private val pointerEventsViewClass: Class<*>? by lazy {
+            runCatching {
+                Class.forName("com.facebook.react.uimanager.ReactPointerEventsView")
+            }.getOrNull()
+        }
+
+        /** The `getPointerEvents()` accessor on [pointerEventsViewClass], when available. */
+        private val pointerEventsGetter: java.lang.reflect.Method? by lazy {
+            runCatching { pointerEventsViewClass?.getMethod("getPointerEvents") }.getOrNull()
+        }
 
         /**
          * Resource id of React Native's `react_test_id` tag, where RN stores the JS `testID` prop
