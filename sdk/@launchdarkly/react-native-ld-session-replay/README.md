@@ -118,10 +118,12 @@ required — these spans are emitted alongside your other telemetry:
 | `app_foreground` | The app enters the foreground (including resume from background). | `event.lifecycle_state = foreground`. |
 | `app_background` | The app enters the background. | `event.lifecycle_state = background`. |
 
-In addition, when the JavaScript runtime reloads (a React Native soft reload, an OTA
-bundle reload, or a quick relaunch within the session-resume window) while the same
-session continues, the observability SDK emits an `app_reload` span so the session
-stays stitched together across the reload.
+In addition, when the JavaScript runtime reloads **while the native process stays
+alive** (a React Native soft reload or an OTA bundle reload) and the previous session
+is still within the resume window, the observability SDK emits an `app_reload` span so
+the session stays stitched together across the reload. A full cold start (the process
+was terminated and relaunched, i.e. `app_launch` above) always begins a **new** session
+rather than resuming the previous one.
 
 See the [event taxonomy](../../../analytics-taxonomy.md) for the full `event.*` payload
 of each event.

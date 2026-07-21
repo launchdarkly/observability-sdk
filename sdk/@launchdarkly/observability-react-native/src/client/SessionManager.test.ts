@@ -93,6 +93,51 @@ describe('SessionManager session preservation', () => {
 		expect(store.read().reloadCount).toBe(1)
 	})
 
+	it('starts a fresh session on a cold start even within the resume window', async () => {
+		const store = new MemoryStore()
+		const now = Date.now()
+		store.seed({
+			sessionId: 'prev-session-id',
+			startTime: now - 60_000,
+			lastActivityTime: now - 1_000,
+			reloadCount: 0,
+		})
+
+		// Process started *after* the previous session's last activity → that
+		// activity came from a prior process, i.e. a cold restart.
+		const mgr = new SessionManager(
+			{ getProcessStartTimeMs: () => now - 500 },
+			store,
+		)
+		await mgr.initialize()
+
+		expect(mgr.getSessionInfo().sessionId).not.toBe('prev-session-id')
+		expect(mgr.wasReloaded()).toBe(false)
+		expect(mgr.getResumeInfo().reloadCount).toBe(0)
+	})
+
+	it('resumes on a surviving process (soft reload) within the window', async () => {
+		const store = new MemoryStore()
+		const now = Date.now()
+		store.seed({
+			sessionId: 'prev-session-id',
+			startTime: now - 60_000,
+			lastActivityTime: now - 1_000,
+			reloadCount: 0,
+		})
+
+		// Process started *before* the last activity → the process stayed alive
+		// across the reload, so the session may resume.
+		const mgr = new SessionManager(
+			{ getProcessStartTimeMs: () => now - 5_000 },
+			store,
+		)
+		await mgr.initialize()
+
+		expect(mgr.getSessionInfo().sessionId).toBe('prev-session-id')
+		expect(mgr.wasReloaded()).toBe(true)
+	})
+
 	it('starts a fresh session when the previous one is stale', async () => {
 		const store = new MemoryStore()
 		const now = Date.now()
