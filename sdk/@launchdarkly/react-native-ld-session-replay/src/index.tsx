@@ -176,6 +176,9 @@ export type LDClickProps = {
  * the view hierarchy), so wrapping a composite control tags the whole thing. The wrapper also
  * prevents React Native view flattening so the tag always reaches native.
  *
+ * For a single element (e.g. a `Button`) you can skip the wrapper and set React Native's built-in
+ * `nativeID` prop directly — the native SDK reads it the same way.
+ *
  * The id takes precedence over `testID` when the native SDK resolves `event.id`. Unlike `testID`, it
  * is a dedicated channel: not overloaded with e2e testing and never stripped by session-replay
  * privacy masking.
