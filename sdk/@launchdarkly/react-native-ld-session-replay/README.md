@@ -252,6 +252,35 @@ import { LDMask, LDUnmask } from '@launchdarkly/session-replay-react-native';
 
 `<LDMask>` propagates to descendants and beats any `<LDUnmask>` further down the tree — once a subtree is wrapped in `<LDMask>`, nothing inside it can opt back in.
 
+## Identifying tapped elements
+
+Taps are captured natively and reported as `click` events. To reliably identify an element in
+product analytics — regardless of layout, visible text, or A/B copy — give it a stable id.
+
+Wrap it in `<LDClick>`:
+
+```tsx
+import { LDClick } from '@launchdarkly/session-replay-react-native';
+
+<LDClick id="checkout.pay_button">
+  <Button title="Pay" onPress={pay} />
+</LDClick>;
+```
+
+The id is carried to the native view through React Native's `nativeID` prop and reported as
+`event.id` on the `click` event. A tap on any descendant resolves to the nearest enclosing
+`<LDClick>` id, so wrapping a composite control tags the whole thing.
+
+You can equivalently set `nativeID` directly on a single element for the same effect:
+
+```tsx
+<Button title="Pay" nativeID="checkout.pay_button" onPress={pay} />
+```
+
+`nativeID` is a dedicated channel for the click id: unlike `testID`, it is not overloaded with e2e
+testing and is never stripped by session-replay privacy masking. When an element has both, `nativeID`
+takes precedence over `testID` for `event.id`.
+
 ## Troubleshooting
 
 ### Android: `generateCodegenArtifactsFromSchema` fails with `Cannot read properties of undefined (reading 'map')`
