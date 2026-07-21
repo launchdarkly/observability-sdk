@@ -7,8 +7,8 @@
 	"sdk/@launchdarkly/observability-dotnet": "1.2.0",
 	"sdk/@launchdarkly/observability-node": "1.2.0",
 	"sdk/@launchdarkly/observability-python": "1.2.4",
-	"sdk/@launchdarkly/observability-react-native": "0.17.0",
-	"sdk/@launchdarkly/react-native-ld-session-replay": "0.19.0",
+	"sdk/@launchdarkly/observability-react-native": "0.17.1",
+	"sdk/@launchdarkly/react-native-ld-session-replay": "0.19.1",
 	"sdk/@launchdarkly/session-replay": "1.1.17",
 	"sdk/highlight-run": "10.6.0",
 	"sdk/@launchdarkly/observability-ruby": "0.3.0"
