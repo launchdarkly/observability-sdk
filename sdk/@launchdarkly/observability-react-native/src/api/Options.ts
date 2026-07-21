@@ -93,15 +93,19 @@ export interface ReactNativeOptions {
 	urlBlocklist?: string[]
 
 	/**
-	 * Maximum inactivity, in milliseconds, before the next app launch / JS reload
-	 * starts a **new** session instead of continuing the previous one. Measured
-	 * from the last recorded activity to the next load.
+	 * Maximum inactivity, in milliseconds, before a **surviving process**
+	 * (soft/OTA reload) starts a **new** session instead of continuing the
+	 * previous one. Measured from the last recorded activity to the next load.
+	 *
+	 * This only governs reloads within a still-running process. A cold start (the
+	 * app was terminated and relaunched) always starts a fresh session regardless
+	 * of this value, so the native session-replay recording never reuses (and
+	 * corrupts) a previous session id — see SessionManager.resolveSession.
 	 *
 	 * The session id is never rotated while the app is running (in-process): it is
 	 * decided once per JS load and held for that load's lifetime, mirroring the
 	 * native session replay / observability instance, which treats an externally
-	 * supplied id as a custom session and never auto-rotates it. Session
-	 * boundaries therefore only occur at a launch/reload, governed by this value.
+	 * supplied id as a custom session and never auto-rotates it.
 	 *
 	 * @default 15 * 60 * 1000 (15 minutes)
 	 */

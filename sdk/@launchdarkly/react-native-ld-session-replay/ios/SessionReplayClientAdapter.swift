@@ -7,6 +7,24 @@ import LaunchDarklySessionReplay
 public class SessionReplayClientAdapter: NSObject {
   @objc public static let shared = SessionReplayClientAdapter()
 
+  // Shared marker so the whole native init sequence can be filtered from the
+  // device/Xcode console with a single search (e.g. `[SR init]`). Matches the
+  // Android adapter's LOG_PREFIX for cross-platform correlation.
+  fileprivate static let logPrefix = "[SR init]"
+
+  // Wall-clock time (ms since epoch) captured once per OS process, the first
+  // time this value is read. As a `static let` it is lazily initialized once
+  // and held for the process lifetime, so it survives a JS soft/OTA reload
+  // (same process) but is regenerated on a cold start (new process). The JS
+  // observability session uses it to tell a cold restart from a surviving
+  // process when deciding whether to resume a persisted session.
+  private static let processStartTimeMillisValue: Double =
+    Date().timeIntervalSince1970 * 1000
+
+  @objc public static func processStartTimeMillis() -> Double {
+    return processStartTimeMillisValue
+  }
+
   // Guarded by lock.
   private let lock = NSLock()
   private var mobileKey: String?
@@ -69,6 +87,27 @@ public class SessionReplayClientAdapter: NSObject {
     } else {
       self.backendUrl = nil
     }
+    // serviceName/enabled/sampleRate are read back from the incoming dictionary
+    // (mirroring sessionReplayOptionsFrom's defaults) rather than the parsed
+    // SessionReplayOptions, whose stored properties are not all publicly readable.
+    let trimmedServiceName = (options?["serviceName"] as? String)?
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+    let loggedServiceName = (trimmedServiceName?.isEmpty ?? true) ? "<sdk-default>" : trimmedServiceName!
+    let loggedEnabled = (options?["isEnabled"] as? Bool) ?? true
+    let loggedSampleRate = (options?["sampleRate"] as? NSNumber)?.doubleValue ?? 1.0
+    NSLog(
+      "%@ configure: serviceName=%@, serviceVersion=%@, otlpEndpoint=%@, backendUrl=%@, forwardedSessionId=%@, enabled=%@, sampleRate=%@",
+      Self.logPrefix,
+      loggedServiceName,
+      self.serviceVersion ?? "<sdk-default>",
+      self.otlpEndpoint ?? "<sdk-default>",
+      self.backendUrl ?? "<sdk-default>",
+      // A session id is not a secret; log the value so it can be matched against
+      // the JS observability session.id and the id the backend receives.
+      self.customSessionId ?? "<none>",
+      loggedEnabled ? "true" : "false",
+      String(loggedSampleRate)
+    )
   }
 
   private func makeConfig(mobileKey: String, options: SessionReplayOptions) -> LDConfig {
@@ -141,6 +180,7 @@ public class SessionReplayClientAdapter: NSObject {
     lock.lock()
     defer { lock.unlock() }
     guard let mobileKey = mobileKey, let sessionReplayOptions = sessionReplayOptions else {
+      NSLog("%@ start: configure() was not called — mobile key or options are missing", Self.logPrefix)
       completion(false, "Client not initialized. Call SetMobileKey first.")
       return
     }
@@ -150,6 +190,7 @@ public class SessionReplayClientAdapter: NSObject {
       await prev.value
       guard let self else { return }
       if !self.initialized {
+        NSLog("%@ start: first start — calling LDClient.start(offline, startWait=0)", Self.logPrefix)
         let config = self.makeConfig(mobileKey: mobileKey, options: sessionReplayOptions)
         let context = self.cachedContext
         await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
@@ -163,16 +204,15 @@ public class SessionReplayClientAdapter: NSObject {
         // (e.g. `click`) share the same `session.id`; otherwise start with a
         // generated session.
         if let customSessionId {
+          NSLog("%@ start: starting observability with forwarded JS session.id=%@", Self.logPrefix, customSessionId)
           LDObserve.shared.start(sessionId: customSessionId)
         } else {
+          NSLog("%@ start: starting observability with a native-generated session.id", Self.logPrefix)
           LDObserve.shared.start()
         }
         self.initialized = true
       } else {
-        NSLog(
-          "[SessionReplayClientAdapter] start: already initialized, re-applying isEnabled=%@",
-          sessionReplayOptions.isEnabled ? "true" : "false"
-        )
+        NSLog("%@ start: already initialized, re-applying isEnabled=%@", Self.logPrefix, sessionReplayOptions.isEnabled ? "true" : "false")
       }
       LDReplay.shared.isEnabled = sessionReplayOptions.isEnabled
       completion(true, nil)
@@ -216,10 +256,12 @@ public class SessionReplayClientAdapter: NSObject {
   @objc public func stop(completion: @escaping () -> Void) {
     lock.lock()
     defer { lock.unlock() }
+    NSLog("%@ stop: requested", Self.logPrefix)
     let prev = lastTask
     lastTask = Task { @MainActor in
       await prev.value
       LDReplay.shared.isEnabled = false
+      NSLog("%@ stop: completed", Self.logPrefix)
       completion()
     }
   }

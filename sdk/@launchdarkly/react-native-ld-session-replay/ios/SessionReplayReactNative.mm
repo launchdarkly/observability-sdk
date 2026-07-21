@@ -87,6 +87,18 @@ RCT_EXPORT_METHOD(afterIdentify:(NSDictionary *)contextKeys
 }
 
 #ifdef RCT_NEW_ARCH_ENABLED
+- (NSNumber *)getProcessStartTimeMillis
+{
+    return @([SessionReplayClientAdapter processStartTimeMillis]);
+}
+#else
+RCT_EXPORT_BLOCKING_SYNCHRONOUS_METHOD(getProcessStartTimeMillis)
+{
+    return @([SessionReplayClientAdapter processStartTimeMillis]);
+}
+#endif
+
+#ifdef RCT_NEW_ARCH_ENABLED
 - (std::shared_ptr<facebook::react::TurboModule>)getTurboModule:
     (const facebook::react::ObjCTurboModule::InitParams &)params
 {

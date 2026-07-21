@@ -419,6 +419,7 @@ export default function ApiScreen() {
         <SectionHeader title="Track (via Observability API)" topSpacing />
         <View style={styles.col}>
           <Btn
+            test-id="track-observe"
             label="Track via LDObserve"
             onPress={run('track-observe', trackViaLDObserve)}
           />
@@ -435,6 +436,7 @@ export default function ApiScreen() {
         <SectionHeader title="Track (via LD client)" topSpacing />
         <View style={styles.col}>
           <Btn
+            test-id="track-client"
             label="Track via LD client"
             onPress={run('track-client', trackViaLDClient)}
           />

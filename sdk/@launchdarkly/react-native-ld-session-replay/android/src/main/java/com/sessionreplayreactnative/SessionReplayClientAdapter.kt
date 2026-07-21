@@ -64,6 +64,16 @@ internal class SessionReplayClientAdapter private constructor() {
                 ?.getString("backendUrl")
                 ?.takeIf { it.isNotBlank() }
             this.replayOptions = replayOptionsFrom(options)
+            logger.info(
+                "$LOG_PREFIX configure: serviceName=$serviceName, " +
+                    "serviceVersion=${serviceVersion ?: "<sdk-default>"}, " +
+                    "otlpEndpoint=${otlpEndpoint ?: "<sdk-default>"}, " +
+                    "backendUrl=${backendUrl ?: "<sdk-default>"}, " +
+                    // A session id is not a secret; log the value so it can be matched
+                    // against the JS observability session.id and what the backend receives.
+                    "forwardedSessionId=${customSessionId ?: "<none>"}, " +
+                    "enabled=${replayOptions?.enabled}, sampleRate=${replayOptions?.sampleRate}"
+            )
         }
     }
 
@@ -88,7 +98,7 @@ internal class SessionReplayClientAdapter private constructor() {
         }
         if (localMobileKey == null || localReplayOptions == null) {
             val msg = "start: configure() was not called — mobile key or options are missing"
-            logger.error(msg)
+            logger.error("$LOG_PREFIX $msg")
             completion(false, msg)
             return
         }
@@ -98,24 +108,33 @@ internal class SessionReplayClientAdapter private constructor() {
         //  2. Consecutive start()/stop() calls are naturally serialized without locks.
         Handler(Looper.getMainLooper()).post {
             if (!initialized) {
+                logger.info("$LOG_PREFIX start: first start — initializing LDClient")
                 try {
                     initLDClient(application, localMobileKey, localServiceName, localServiceVersion, localCustomSessionId, localReplayOptions, localOtlpEndpoint, localBackendUrl)
                 } catch (e: Exception) {
-                    logger.error("start: LDClient.init() threw {0}: {1}", e::class.simpleName, e.message)
+                    logger.error("$LOG_PREFIX start: LDClient.init() threw {0}: {1}", e::class.simpleName, e.message)
                     completion(false, "Session replay failed to initialize.")
                     return@post
                 }
                 initialized = true
                 // React Native is often initialized after the main activity has already been
                 // created, so we miss its lifecycle events. Manually register it, just in case.
-                activity?.let { LDReplay.registerActivity(it) }
+                if (activity != null) {
+                    logger.info("$LOG_PREFIX start: registering current activity for lifecycle capture")
+                    LDReplay.registerActivity(activity)
+                } else {
+                    logger.warn(
+                        "$LOG_PREFIX start: no current activity at init — lifecycle registration " +
+                            "skipped; recording may not attach until the next foreground event"
+                    )
+                }
             } else {
-                logger.debug("start: already initialized, re-applying isEnabled={0}", localReplayOptions.enabled)
+                logger.info("$LOG_PREFIX start: already initialized, re-applying enabled=${localReplayOptions.enabled}")
             }
             try {
                 applyEnabled(localReplayOptions.enabled)
             } catch (e: Exception) {
-                logger.error("start: applyEnabled threw {0}: {1}", e::class.simpleName, e.message)
+                logger.error("$LOG_PREFIX start: applyEnabled threw {0}: {1}", e::class.simpleName, e.message)
                 completion(false, "Session replay failed to start.")
                 return@post
             }
@@ -139,19 +158,19 @@ internal class SessionReplayClientAdapter private constructor() {
                     LDReplay.hookProxy?.afterIdentify(keys, canonicalKey, completed)
                 }
             } catch (e: Exception) {
-                logger.error("afterIdentify: threw {0}: {1}", e::class.simpleName, e.message)
+                logger.error("$LOG_PREFIX afterIdentify: threw {0}: {1}", e::class.simpleName, e.message)
             }
         }
     }
 
     fun stop(completion: () -> Unit) {
-        logger.debug("stop")
+        logger.info("$LOG_PREFIX stop: requested")
         // Post to the main thread so that stop() queues behind any in-progress start().
         Handler(Looper.getMainLooper()).post {
             try {
                 LDReplay.stop()
             } catch (e: Exception) {
-                logger.error("stop: threw {0}: {1}", e::class.simpleName, e.message)
+                logger.error("$LOG_PREFIX stop: threw {0}: {1}", e::class.simpleName, e.message)
             }
             completion()
         }
@@ -167,7 +186,7 @@ internal class SessionReplayClientAdapter private constructor() {
         otlpEndpoint: String?,
         backendUrl: String?
     ) {
-        logger.debug("initLDClient: calling LDClient.init()")
+        logger.info("$LOG_PREFIX initLDClient: building LDConfig and calling LDClient.init(offline=true, startWait=0)")
         // Apply the forwarded service.version only when provided; otherwise keep the SDK default.
         var observabilityOptions = ObservabilityOptions(
             serviceName = serviceName,
@@ -210,6 +229,9 @@ internal class SessionReplayClientAdapter private constructor() {
             )
             .build()
 
+        logger.info(
+            "$LOG_PREFIX initLDClient: observability session.id=${customSessionId ?: "<native-generated>"}"
+        )
         // timeout=0: return immediately without blocking the main thread waiting for flags.
         // onPluginsReady() fires synchronously during init() before it returns.
         LDClient.init(application, config, cachedContext, 0)
@@ -312,5 +334,16 @@ internal class SessionReplayClientAdapter private constructor() {
         val shared = SessionReplayClientAdapter()
         private const val TAG = "LDSessionReplay"
         private const val DEFAULT_SERVICE_NAME = "sessionreplay-react-native"
+        // Shared marker so the whole native init sequence can be filtered from logcat
+        // with a single grep (`adb logcat | grep 'SR init'`).
+        private const val LOG_PREFIX = "[SR init]"
+
+        // Wall-clock time (ms since epoch) captured once per OS process, when this
+        // companion is first loaded. Static state lives for the process lifetime, so
+        // it survives a JS soft/OTA reload (same process) but is regenerated on a
+        // cold start (new process). The JS observability session uses it to tell a
+        // cold restart from a surviving process when deciding whether to resume a
+        // persisted session.
+        val processStartTimeMillis: Double = System.currentTimeMillis().toDouble()
     }
 }
