@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.17.1](https://github.com/launchdarkly/observability-sdk/compare/observability-react-native-0.17.0...observability-react-native-0.17.1) (2026-07-21)
+
+
+### Bug Fixes
+
+* **observability:** start a fresh session on cold start (React Native) ([#682](https://github.com/launchdarkly/observability-sdk/issues/682)) ([4e226d7](https://github.com/launchdarkly/observability-sdk/commit/4e226d7113fc5c493acd53540403a6704040915f))
+
 ## [0.17.0](https://github.com/launchdarkly/observability-sdk/compare/observability-react-native-0.16.0...observability-react-native-0.17.0) (2026-07-20)
 
 
