@@ -322,8 +322,8 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
                 // them to the content beneath - exactly as Android's real dispatch does. Without
                 // this, React Native's full-screen `DebuggingOverlay` (a non-interactive highlight
                 // layer drawn on top of everything in dev builds) captures every tap, so the
-                // resolved target is the overlay and the real button's text/id - including
-                // `nativeID` - is lost.
+                // resolved target is the overlay rather than the real view beneath (losing its
+                // class, text, and id).
                 if (isTouchTransparent(child)) continue
                 val childX = x - child.left + root.scrollX
                 val childY = y - child.top + root.scrollY

@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.19.1](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.19.0...session-replay-react-native-0.19.1) (2026-07-21)
+
+
+### Bug Fixes
+
+* **observability:** start a fresh session on cold start (React Native) ([#682](https://github.com/launchdarkly/observability-sdk/issues/682)) ([4e226d7](https://github.com/launchdarkly/observability-sdk/commit/4e226d7113fc5c493acd53540403a6704040915f))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @launchdarkly/observability-react-native bumped to 0.17.1
+
 ## [0.19.0](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.18.1...session-replay-react-native-0.19.0) (2026-07-20)
 
 
