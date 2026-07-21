@@ -156,6 +156,41 @@ export function LDUnmask({ children, style }: LDMaskProps) {
   );
 }
 
+export type LDClickProps = {
+  /**
+   * Stable, developer-chosen identifier reported as `event.id` on the `click` span (and as the
+   * replay click selector) when a tap lands anywhere inside this wrapper. Use it to reliably
+   * identify an element in product analytics regardless of layout, visible text, or A/B copy.
+   */
+  id: string;
+  children?: ReactNode;
+  style?: StyleProp<ViewStyle>;
+};
+
+/**
+ * Tags its children with a stable analytics [id] for click tracking, reported as `event.id` on the
+ * `click` event (and as the replay click selector). Use it to reliably identify an element in
+ * product analytics regardless of layout, visible text, or A/B copy.
+ *
+ * A tap on any descendant resolves to the nearest enclosing `<LDClick>` id (the native SDK walks up
+ * the view hierarchy), so wrapping a composite control tags the whole thing. The wrapper also
+ * prevents React Native view flattening so the tag always reaches native.
+ *
+ * For a single element (e.g. a `Button`) you can skip the wrapper and set React Native's built-in
+ * `nativeID` prop directly — the native SDK reads it the same way.
+ *
+ * The id takes precedence over `testID` when the native SDK resolves `event.id`. Unlike `testID`, it
+ * is a dedicated channel: not overloaded with e2e testing and never stripped by session-replay
+ * privacy masking.
+ */
+export function LDClick({ id, children, style }: LDClickProps) {
+  return (
+    <View collapsable={false} nativeID={id} style={style}>
+      {children}
+    </View>
+  );
+}
+
 class SessionReplayHook implements Hook {
   getMetadata(): HookMetadata {
     return { name: 'session-replay-react-native' };

@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { LDObserve } from '@launchdarkly/observability-react-native';
 import type { SpanScope } from '@launchdarkly/observability-react-native';
+import { LDClick } from '@launchdarkly/session-replay-react-native';
 import { useLDClient } from '@launchdarkly/react-native-client-sdk';
 import { context, SpanStatusCode, type Span } from '@opentelemetry/api';
 import { SERVICE_VERSION } from './serviceVersion';
@@ -397,37 +398,53 @@ export default function ApiScreen() {
   return (
     <View style={styles.root}>
       <ScrollView contentContainerStyle={styles.scroll}>
+        {/*
+          Two ways to give a tap a stable analytics id (reported as `event.id` on
+          the native `click` event):
+            - <LDClick id="..."> wraps an element or subtree — see the Identify
+              row below.
+            - the built-in `nativeID` prop on a single element — used on every
+              other button (forwarded by <Btn> to its TouchableOpacity).
+        */}
         <SectionHeader title="Identify" />
         <View style={styles.row}>
-          <Btn
-            label="User"
-            variant="identify"
-            onPress={run('identify', identifyUser)}
-          />
-          <Btn
-            label="Multi"
-            variant="identify"
-            onPress={run('identify-multi', identifyMulti)}
-          />
-          <Btn
-            label="Anon"
-            variant="identify"
-            onPress={run('identify-anon', identifyAnonymous)}
-          />
+          <LDClick id="api.identify.user">
+            <Btn
+              label="User"
+              variant="identify"
+              onPress={run('identify', identifyUser)}
+            />
+          </LDClick>
+          <LDClick id="api.identify.multi">
+            <Btn
+              label="Multi"
+              variant="identify"
+              onPress={run('identify-multi', identifyMulti)}
+            />
+          </LDClick>
+          <LDClick id="api.identify.anon">
+            <Btn
+              label="Anon"
+              variant="identify"
+              onPress={run('identify-anon', identifyAnonymous)}
+            />
+          </LDClick>
         </View>
 
         <SectionHeader title="Track (via Observability API)" topSpacing />
         <View style={styles.col}>
           <Btn
-            test-id="track-observe"
+            nativeID="api.track-observe"
             label="Track via LDObserve"
             onPress={run('track-observe', trackViaLDObserve)}
           />
           <Btn
+            nativeID="api.track-observe-nested"
             label="Track nested via LDObserve"
             onPress={run('track-observe-nested', trackNestedViaLDObserve)}
           />
           <Btn
+            nativeID="api.track-observe-metric"
             label="Track via LDObserve + metric value"
             onPress={run('track-observe-metric', trackViaLDObserveWithMetric)}
           />
@@ -436,11 +453,12 @@ export default function ApiScreen() {
         <SectionHeader title="Track (via LD client)" topSpacing />
         <View style={styles.col}>
           <Btn
-            test-id="track-client"
+            nativeID="api.track-client"
             label="Track via LD client"
             onPress={run('track-client', trackViaLDClient)}
           />
           <Btn
+            nativeID="api.track-nested"
             label="Track nested"
             onPress={run('track-nested', trackNested)}
           />
@@ -449,11 +467,17 @@ export default function ApiScreen() {
         <SectionHeader title="Spans" topSpacing />
         <View style={styles.col}>
           <Btn
+            nativeID="api.span-variation"
             label="Record span + variation"
             onPress={run('span+variation', recordSpanAndVariation)}
           />
-          <Btn label="Flag Eval" onPress={run('flag-eval', evaluateFlag)} />
           <Btn
+            nativeID="api.flag-eval"
+            label="Flag Eval"
+            onPress={run('flag-eval', evaluateFlag)}
+          />
+          <Btn
+            nativeID="api.nested-spans"
             label="Nested spans"
             onPress={run('nested', triggerNestedSpans)}
           />
@@ -462,10 +486,12 @@ export default function ApiScreen() {
         <SectionHeader title="OpenTelemetry Tracer (getTracer)" topSpacing />
         <View style={styles.col}>
           <Btn
+            nativeID="api.tracer-active"
             label="Tracer · startActiveSpan"
             onPress={run('tracer-active', tracerStartActiveSpan)}
           />
           <Btn
+            nativeID="api.tracer-withspan"
             label="Tracer · withSpan (nested)"
             onPress={run('tracer-withSpan', tracerWithSpanNested)}
           />
@@ -473,20 +499,28 @@ export default function ApiScreen() {
 
         <SectionHeader title="Metrics" topSpacing />
         <View style={styles.col}>
-          <Btn label="Gauge metric" onPress={run('gauge', recordMetric)} />
           <Btn
+            nativeID="api.metric-gauge"
+            label="Gauge metric"
+            onPress={run('gauge', recordMetric)}
+          />
+          <Btn
+            nativeID="api.metric-histogram"
             label="Histogram metric"
             onPress={run('histogram', recordHistogramMetric)}
           />
           <Btn
+            nativeID="api.metric-counter"
             label="Counter metric"
             onPress={run('counter', recordCounterMetric)}
           />
           <Btn
+            nativeID="api.metric-incr"
             label="Incremental counter"
             onPress={run('incr', recordIncrementalMetric)}
           />
           <Btn
+            nativeID="api.metric-updown"
             label="Up/Down counter"
             onPress={run('updown', recordUpDownCounterMetric)}
           />
@@ -494,9 +528,18 @@ export default function ApiScreen() {
 
         <SectionHeader title="Errors & Logs" topSpacing />
         <View style={styles.col}>
-          <Btn label="Record error" onPress={run('error', recordError)} />
-          <Btn label="Record logs" onPress={run('logs', recordLogs)} />
           <Btn
+            nativeID="api.error"
+            label="Record error"
+            onPress={run('error', recordError)}
+          />
+          <Btn
+            nativeID="api.logs"
+            label="Record logs"
+            onPress={run('logs', recordLogs)}
+          />
+          <Btn
+            nativeID="api.log-context"
             label="Log with span context"
             onPress={run('log-context', recordLogWithContext)}
           />
@@ -505,12 +548,19 @@ export default function ApiScreen() {
         <SectionHeader title="Utilities" topSpacing />
         <View style={styles.row}>
           <Btn
+            nativeID="api.network"
             label="Network request"
             onPress={run('network', performNetworkRequest)}
           />
-          <Btn label="Flush" onPress={flush} />
-          <Btn label="Crash" onPress={run('crash', crash)} variant="danger" />
+          <Btn nativeID="api.flush" label="Flush" onPress={flush} />
           <Btn
+            nativeID="api.crash"
+            label="Crash"
+            onPress={run('crash', crash)}
+            variant="danger"
+          />
+          <Btn
+            nativeID="api.clear-log"
             label="Clear log"
             onPress={() => setLines([])}
             variant="danger"
@@ -562,13 +612,19 @@ function Btn({
   label,
   onPress,
   variant,
+  nativeID,
 }: {
   label: string;
   onPress: () => void;
   variant?: 'default' | 'danger' | 'identify';
+  // Setting `nativeID` tags this button with a stable click id: the LaunchDarkly
+  // native SDK reports it as `event.id` on the tap's `click` event. This is the
+  // bare-element alternative to wrapping in `<LDClick id="...">`.
+  nativeID?: string;
 }) {
   return (
     <TouchableOpacity
+      nativeID={nativeID}
       style={[
         styles.btn,
         variant === 'danger' ? styles.btnDanger : undefined,

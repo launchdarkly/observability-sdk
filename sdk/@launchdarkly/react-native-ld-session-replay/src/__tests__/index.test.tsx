@@ -3,6 +3,7 @@ import {
   afterIdentify,
   configureSessionReplay,
   createSessionReplayPlugin,
+  LDClick,
 } from '../index';
 
 jest.mock('../NativeSessionReplayReactNative', () => ({
@@ -138,6 +139,18 @@ describe('afterIdentify', () => {
       'abc',
       false
     );
+  });
+});
+
+describe('LDClick', () => {
+  it('carries the id to the native view via nativeID', () => {
+    const element = LDClick({ id: 'checkout_button', children: null }) as any;
+    expect(element.props.nativeID).toBe('checkout_button');
+  });
+
+  it('disables view flattening so the tag survives to native', () => {
+    const element = LDClick({ id: 'checkout_button', children: null }) as any;
+    expect(element.props.collapsable).toBe(false);
   });
 });
 

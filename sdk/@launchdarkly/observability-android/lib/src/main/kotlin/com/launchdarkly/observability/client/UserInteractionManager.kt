@@ -377,6 +377,11 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
     private fun resolveResourceId(view: View): String? {
         // An explicit `ldId(...)` always wins over inferred identifiers.
         resolveLdId(view)?.let { return it }
+        // React Native's `nativeID` is the explicit, developer-supplied analytics id for RN apps
+        // (set directly or via <LDClick id=...>). It is distinct from `testID` (which is overloaded
+        // for e2e tests and stripped by session-replay privacy masking), so it wins over inferred
+        // native ids and the `testID` fallback below.
+        resolveReactNativeId(view)?.let { return it }
         if (view.id != View.NO_ID) {
             try {
                 return view.resources.getResourceEntryName(view.id)
@@ -407,6 +412,23 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
     private fun resolveReactTestId(view: View): String? {
         val resId = reactTestIdResId ?: return null
         return (view.getTag(resId) as? String)?.takeIf { it.isNotEmpty() }
+    }
+
+    /**
+     * Reads the React Native `nativeID` prop, walking up the view hierarchy so a tap that lands on a
+     * child of a tagged view (e.g. an `<LDClick id=...>` wrapper) still reports its analytics id. RN
+     * stores the JS `nativeID` prop on the `view_tag_native_id` tag; resolved reflectively to avoid a
+     * compile-time dependency on React Native. Returns null when no ancestor carries a `nativeID` (or
+     * React Native isn't on the runtime classpath).
+     */
+    private fun resolveReactNativeId(view: View): String? {
+        val resId = reactNativeIdResId ?: return null
+        var current: View? = view
+        while (current != null) {
+            (current.getTag(resId) as? String)?.takeIf { it.isNotEmpty() }?.let { return it }
+            current = current.parent as? View
+        }
+        return null
     }
 
     companion object {
@@ -447,6 +469,19 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
             runCatching {
                 Class.forName("com.facebook.react.R\$id")
                     .getField("react_test_id")
+                    .getInt(null)
+            }.getOrNull()
+        }
+
+        /**
+         * Resource id of React Native's `view_tag_native_id` tag, where RN stores the JS `nativeID`
+         * prop on each view. Resolved reflectively to avoid a compile-time dependency on React Native;
+         * `null` when the RN library isn't on the runtime classpath.
+         */
+        private val reactNativeIdResId: Int? by lazy {
+            runCatching {
+                Class.forName("com.facebook.react.R\$id")
+                    .getField("view_tag_native_id")
                     .getInt(null)
             }.getOrNull()
         }

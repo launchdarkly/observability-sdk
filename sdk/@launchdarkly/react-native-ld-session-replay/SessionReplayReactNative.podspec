@@ -24,7 +24,7 @@ Pod::Spec.new do |s|
     "DEFINES_MODULE" => "YES"
   }
 
-  s.dependency 'LaunchDarklySessionReplay', '~> 0.46.1'
+  s.dependency 'LaunchDarklySessionReplay', '~> 0.47.0'
 
   install_modules_dependencies(s)
 end
