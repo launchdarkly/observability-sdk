@@ -168,16 +168,17 @@ export type LDClickProps = {
 };
 
 /**
- * Tags its children with a stable analytics [id] for click tracking. The id is carried to the
- * native view via React Native's `nativeID` prop and takes precedence over `testID` when the native
- * SDK resolves `event.id` for a tap. Unlike `testID`, `nativeID` is a dedicated channel: it is not
- * overloaded with e2e testing and is never stripped by session-replay privacy masking.
+ * Tags its children with a stable analytics [id] for click tracking, reported as `event.id` on the
+ * `click` event (and as the replay click selector). Use it to reliably identify an element in
+ * product analytics regardless of layout, visible text, or A/B copy.
  *
  * A tap on any descendant resolves to the nearest enclosing `<LDClick>` id (the native SDK walks up
- * the view hierarchy), so wrapping a composite control tags the whole thing.
+ * the view hierarchy), so wrapping a composite control tags the whole thing. The wrapper also
+ * prevents React Native view flattening so the tag always reaches native.
  *
- * You can equivalently set `nativeID={id}` directly on a single React Native element for the same
- * effect; `<LDClick>` is a convenience wrapper that also prevents view flattening.
+ * The id takes precedence over `testID` when the native SDK resolves `event.id`. Unlike `testID`, it
+ * is a dedicated channel: not overloaded with e2e testing and never stripped by session-replay
+ * privacy masking.
  */
 export function LDClick({ id, children, style }: LDClickProps) {
   return (

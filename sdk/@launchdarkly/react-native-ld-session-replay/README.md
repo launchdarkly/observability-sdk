@@ -267,19 +267,14 @@ import { LDClick } from '@launchdarkly/session-replay-react-native';
 </LDClick>;
 ```
 
-The id is carried to the native view through React Native's `nativeID` prop and reported as
-`event.id` on the `click` event. A tap on any descendant resolves to the nearest enclosing
-`<LDClick>` id, so wrapping a composite control tags the whole thing.
+`<LDClick>` reports the given `id` as `event.id` on the `click` event. A tap on any descendant
+resolves to the nearest enclosing `<LDClick>` id, so wrapping a composite control tags the whole
+thing. It also survives React Native view flattening and works with components that don't otherwise
+expose a native view, which is why it's the recommended way to tag an element.
 
-You can equivalently set `nativeID` directly on a single element for the same effect:
-
-```tsx
-<Button title="Pay" nativeID="checkout.pay_button" onPress={pay} />
-```
-
-`nativeID` is a dedicated channel for the click id: unlike `testID`, it is not overloaded with e2e
-testing and is never stripped by session-replay privacy masking. When an element has both, `nativeID`
-takes precedence over `testID` for `event.id`.
+The click id is a dedicated channel: unlike `testID`, it is not overloaded with e2e testing and is
+never stripped by session-replay privacy masking. When an element also has a `testID`, the `<LDClick>`
+id takes precedence for `event.id`.
 
 ## Troubleshooting
 
