@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.61.1](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.61.0...launchdarkly-observability-android-0.61.1) (2026-07-21)
+
+
+### Bug Fixes
+
+* **observability:** skip touch-transparent overlays when resolving Android click targets ([#685](https://github.com/launchdarkly/observability-sdk/issues/685)) ([7eedd03](https://github.com/launchdarkly/observability-sdk/commit/7eedd03eb45ddb519ad2f2409753e8ac94cc7f21))
+
 ## [0.61.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.60.0...launchdarkly-observability-android-0.61.0) (2026-07-20)
 
 
