@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.62.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.61.1...launchdarkly-observability-android-0.62.0) (2026-07-22)
+
+
+### Features
+
+* **react-native:** stable click id via nativeID and &lt;LDClick&gt; ([#683](https://github.com/launchdarkly/observability-sdk/issues/683)) ([e9da376](https://github.com/launchdarkly/observability-sdk/commit/e9da376c5725f10076df28edc3417f5e1c6ebea3))
+
 ## [0.61.1](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.61.0...launchdarkly-observability-android-0.61.1) (2026-07-21)
 
 
