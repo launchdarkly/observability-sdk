@@ -22,7 +22,7 @@
 	},
 	"devDependencies": {
 		"@types/node": "^14.18.63",
-		"hono": "^4.12.14",
+		"hono": "^4.12.27",
 		"typescript": "^5.0.4",
 		"vitest": "^4.1.0"
 	}
