@@ -7,7 +7,7 @@
 	},
 	"dependencies": {
 		"@highlight-run/hono": "workspace:*",
-		"@hono/node-server": "^1.13.7",
+		"@hono/node-server": "^2.0.11",
 		"@opentelemetry/api": "^1.9.0",
 		"hono": "^4.11.7"
 	},
