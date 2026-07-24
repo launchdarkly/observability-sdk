@@ -1,3 +1,5 @@
+import com.android.build.api.artifact.SingleArtifact
+import java.security.MessageDigest
 import java.util.Properties
 
 plugins {
@@ -22,7 +24,7 @@ android {
         applicationId = "com.example.androidobservability"
         minSdk = 23
         versionCode = 1
-        versionName = "1.0"
+        versionName = "1.0.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -45,11 +47,14 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // Enabled so R8 obfuscates the app and emits mapping.txt, which the
+            // build stamps into the app (Symbols Id Lane symbols id) and stages for upload.
+            isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
     flavorDimensions += "uiFramework"
@@ -152,4 +157,102 @@ dependencies {
 
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+}
+
+// --- LaunchDarkly Android symbolication (Symbols Id Lane) ---
+//
+// For each obfuscated (release) variant, derive a deterministic symbols id from
+// R8's mapping.txt and:
+//   1. embed it as assets/ld_symbols_id.txt, so the SDK reports it as the
+//      resource attribute `launchdarkly.symbols_id.htlhash`; and
+//   2. stage mapping.txt + mapping.txt.symbolsid under build/symbols/<variant>/ so
+//      `ldcli symbols upload --type android` keys the upload by the same id.
+//
+// The symbols id is htlhash(mapping.txt) — a content hash of the mapping, NOT of
+// the app — so injecting it back into the app's assets never changes the mapping
+// (no self-reference). The task consumes the R8 mapping and transforms the merged
+// ASSETS artifact, so Gradle orders it after R8 and before packaging.
+abstract class StampSymbolsIdTask : DefaultTask() {
+    @get:InputFiles
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val inputAssets: DirectoryProperty
+
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
+    abstract val mappingFile: RegularFileProperty
+
+    @get:OutputDirectory
+    abstract val outputAssets: DirectoryProperty
+
+    @get:OutputDirectory
+    abstract val symbolsDir: DirectoryProperty
+
+    @TaskAction
+    fun run() {
+        val outDir = outputAssets.get().asFile
+        outDir.deleteRecursively()
+        outDir.mkdirs()
+        val inDir = inputAssets.get().asFile
+        if (inDir.exists()) {
+            inDir.copyRecursively(outDir, overwrite = true)
+        }
+
+        val mapping = mappingFile.get().asFile
+        val symbolsId = htlhash(mapping.readBytes())
+
+        // 1. Embed the symbols id for the SDK to report at runtime.
+        outDir.resolve("ld_symbols_id.txt").writeText(symbolsId)
+
+        // 2. Stage mapping + sidecar for `ldcli symbols upload --type android`.
+        val sym = symbolsDir.get().asFile
+        sym.deleteRecursively()
+        sym.mkdirs()
+        mapping.copyTo(sym.resolve("mapping.txt"), overwrite = true)
+        sym.resolve("mapping.txt.symbolsid").writeText(symbolsId)
+
+        logger.lifecycle(
+            "LaunchDarkly: symbols id $symbolsId (mapping ${mapping.length()} bytes) -> " +
+                "assets/ld_symbols_id.txt + ${sym.resolve("mapping.txt.symbolsid")}"
+        )
+    }
+
+    // OTel htlhash: sha256 over head(4096) + tail(4096) + 8-byte LE length,
+    // truncated to 16 bytes (32 hex chars). Matches the React Native Metro
+    // plugin so the id shape is identical across platforms.
+    private fun htlhash(buffer: ByteArray): String {
+        val headTail = 4096
+        val md = MessageDigest.getInstance("SHA-256")
+        if (buffer.size <= headTail * 2) {
+            md.update(buffer)
+        } else {
+            md.update(buffer, 0, headTail)
+            md.update(buffer, buffer.size - headTail, headTail)
+        }
+        val lenBuf = ByteArray(8)
+        var len = buffer.size.toLong()
+        for (i in 0 until 8) {
+            lenBuf[i] = (len and 0xFF).toByte()
+            len = len ushr 8
+        }
+        md.update(lenBuf)
+        return md.digest().joinToString("") { "%02x".format(it) }.substring(0, 32)
+    }
+}
+
+androidComponents {
+    onVariants { variant ->
+        // Only obfuscated (release) variants produce a mapping.txt to key by.
+        if (variant.buildType != "release") return@onVariants
+
+        val capitalized = variant.name.replaceFirstChar { it.uppercase() }
+        val stamp = tasks.register<StampSymbolsIdTask>("stampLaunchDarklySymbolsId$capitalized") {
+            mappingFile.set(variant.artifacts.get(SingleArtifact.OBFUSCATION_MAPPING_FILE))
+            symbolsDir.set(layout.buildDirectory.dir("symbols/${variant.name}"))
+        }
+
+        variant.artifacts
+            .use(stamp)
+            .wiredWithDirectories(StampSymbolsIdTask::inputAssets, StampSymbolsIdTask::outputAssets)
+            .toTransform(SingleArtifact.ASSETS)
+    }
 }

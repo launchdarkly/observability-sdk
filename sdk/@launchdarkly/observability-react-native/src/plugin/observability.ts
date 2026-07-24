@@ -4,6 +4,7 @@ import { TrackProperties } from '../api/TrackProperties'
 import { flattenTrackProperties } from '../utils/trackAttributes'
 import { ObservabilityClient } from '../client/ObservabilityClient'
 import { startInternalActiveSpan } from '../internal/internalSpans'
+import { ExposureDeduper } from '@launchdarkly/observability-shared'
 import { _LDObserve } from '../sdk/LDObserve'
 import type {
 	LDEvaluationDetail,
@@ -45,11 +46,16 @@ import {
 
 class TracingHook implements Hook {
 	private metaAttributes: Attributes = {}
+	private readonly exposureDeduper: ExposureDeduper
 
 	constructor(
 		private metadata: LDPluginEnvironmentMetadata,
 		private readonly _options?: ReactNativeOptions,
 	) {
+		this.exposureDeduper = new ExposureDeduper(
+			_options?.flagExposureDedupeWindowMillis,
+			_options?.flagExposureDedupeMaxSize,
+		)
 		this.metaAttributes = {
 			[ATTR_TELEMETRY_SDK_NAME]:
 				'@launchdarkly/observability-react-native',
@@ -71,6 +77,11 @@ class TracingHook implements Hook {
 		result: IdentifySeriesResult,
 	): IdentifySeriesData {
 		if (result.status === 'completed') {
+			// The evaluation context changed, so previously recorded exposures
+			// are no longer relevant for deduplication. Only reset on a
+			// completed identify; a failed one leaves the context unchanged.
+			this.exposureDeduper.reset()
+
 			_LDObserve.recordLog(`LD.identify`, 'info', {
 				...this.metaAttributes,
 				...getContextKeys(hookContext.context),
@@ -91,6 +102,25 @@ class TracingHook implements Hook {
 		detail: LDEvaluationDetail,
 	): EvaluationSeriesData {
 		try {
+			const canonicalKey = hookContext.context
+				? getCanonicalKey(hookContext.context)
+				: undefined
+
+			// Deduplicate repeated exposures that resolve to the same result
+			// within the configured window, so that frequent re-evaluations
+			// (e.g. React re-renders) don't emit a span per evaluation.
+			const dedupeKey = [
+				hookContext.flagKey,
+				JSON.stringify(detail.value),
+				detail.variationIndex ?? '',
+				detail.reason?.kind ?? '',
+				detail.reason?.ruleId ?? '',
+				canonicalKey ?? '',
+			].join('|')
+			if (!this.exposureDeduper.shouldRecord(dedupeKey)) {
+				return data
+			}
+
 			const eventAttributes: Attributes = {
 				[FEATURE_FLAG_KEY_ATTR]: hookContext.flagKey,
 				[FEATURE_FLAG_VALUE_ATTR]: JSON.stringify(detail.value),
@@ -118,13 +148,12 @@ class TracingHook implements Hook {
 				eventAttributes[FEATURE_FLAG_CONTEXT_ATTR] = JSON.stringify(
 					getContextKeys(hookContext.context),
 				)
-				eventAttributes[FEATURE_FLAG_CONTEXT_ID_ATTR] = getCanonicalKey(
-					hookContext.context,
-				)
+				eventAttributes[FEATURE_FLAG_CONTEXT_ID_ATTR] = canonicalKey
 			}
 
 			const allAttributes = { ...this.metaAttributes, ...eventAttributes }
 
+			let recorded = false
 			startInternalActiveSpan(
 				this._options?.serviceName,
 				FEATURE_FLAG_SPAN_NAME,
@@ -141,15 +170,26 @@ class TracingHook implements Hook {
 					})
 
 					span.setStatus({ code: 1 })
+					// A non-recording span (e.g. init still async) means no
+					// exposure was captured, so it shouldn't start the dedupe
+					// window or emit the paired debug log. Read before end().
+					recorded = span.isRecording()
 					span.end()
 				},
 			)
 
-			_LDObserve.recordLog(
-				`Feature flag "${hookContext.flagKey}" evaluated`,
-				'debug',
-				allAttributes,
-			)
+			// The span and its debug log form a single exposure, so only start
+			// the dedupe window and emit the log when the exposure was actually
+			// recorded. Otherwise repeated evaluations would keep emitting logs
+			// that dedupe is meant to collapse.
+			if (recorded) {
+				this.exposureDeduper.markRecorded(dedupeKey)
+				_LDObserve.recordLog(
+					`Feature flag "${hookContext.flagKey}" evaluated`,
+					'debug',
+					allAttributes,
+				)
+			}
 		} catch (error) {
 			_LDObserve.recordError(error as Error, {
 				'flag.key': hookContext.flagKey,

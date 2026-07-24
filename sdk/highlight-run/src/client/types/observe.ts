@@ -78,6 +78,29 @@ export type ObserveOptions = CommonOptions & {
 	 * @default true
 	 */
 	productAnalytics?: boolean | ProductAnalyticsEvents
+	/**
+	 * The time window, in milliseconds, during which repeated feature flag
+	 * evaluations that resolve to the same result are deduplicated, so that only
+	 * a single `feature_flag` exposure span is emitted per unique
+	 * (flag key, value, variation, reason, context) within the window.
+	 *
+	 * This is useful for reducing exposure volume caused by frequent
+	 * re-evaluations (for example, React re-renders).
+	 *
+	 * Set to `0` (the default) to disable deduplication and emit an exposure
+	 * for every evaluation. Set a positive value to enable it.
+	 *
+	 * @default 0 (disabled)
+	 */
+	flagExposureDedupeWindowMillis?: number
+	/**
+	 * The maximum number of unique feature flag exposure keys tracked for
+	 * deduplication at once. When exceeded, the least recently recorded keys are
+	 * evicted to bound memory usage.
+	 *
+	 * @default 2000
+	 */
+	flagExposureDedupeMaxSize?: number
 }
 
 export type ProductAnalyticsEvents = {

@@ -6,6 +6,7 @@ import {
 	SESSION_STORAGE_KEY,
 } from '../constants/sessions'
 import { createSessionStore, SessionStore } from './storage/sessionStore'
+import { getNativeProcessStartTimeMs } from './nativeProcess'
 
 export interface SessionInfo {
 	sessionId: string
@@ -35,11 +36,18 @@ type PersistedSession = {
 type Options = {
 	sessionTimeout?: ReactNativeOptions['sessionTimeout']
 	debug?: ReactNativeOptions['debug']
+	/**
+	 * Resolves the current OS process's start time (ms since epoch), used to
+	 * distinguish a cold start from a surviving process. Injectable for tests;
+	 * defaults to reading the native session-replay module. Returns `undefined`
+	 * when no native signal is available.
+	 */
+	getProcessStartTimeMs?: () => number | undefined
 }
 
 // Minimum spacing between persistence writes triggered by activity, so a burst
-// of spans doesn't hammer AsyncStorage. The resume window is measured in
-// minutes, so a few seconds of write granularity is more than enough.
+// of spans doesn't hammer AsyncStorage. Backgrounding and each JS load persist
+// unconditionally (force=true), so this only throttles mid-run activity writes.
 const PERSIST_THROTTLE_MS = 5 * 1000
 
 export class SessionManager {
@@ -59,6 +67,8 @@ export class SessionManager {
 			sessionTimeout:
 				options?.sessionTimeout ?? SESSION_RESUME_THRESHOLD_MS,
 			debug: !!options?.debug,
+			getProcessStartTimeMs:
+				options?.getProcessStartTimeMs ?? getNativeProcessStartTimeMs,
 		}
 		this.store = store ?? createSessionStore()
 
@@ -111,8 +121,25 @@ export class SessionManager {
 		const previous = await this.readPersisted()
 		const now = Date.now()
 
+		// A cold start (the app was terminated and relaunched) must always begin a
+		// fresh session: the native session-replay recording restarts its payload
+		// sequence at 0 on a new process, so reusing the previous session id would
+		// collide with and corrupt that session's earlier recording on the backend.
+		// We detect it by comparing the previous session's last activity against
+		// this process's start time — if the activity predates the process, it came
+		// from a prior process (a cold restart). A surviving process (soft/OTA
+		// reload) keeps activity newer than its start time, so it may resume within
+		// the window. When no native signal is available we can't tell, so we don't
+		// block resume (purely time-based, matching observability-only behavior).
+		const processStartMs = this.options.getProcessStartTimeMs()
+		const isColdStart =
+			previous !== undefined &&
+			processStartMs !== undefined &&
+			previous.lastActivityTime < processStartMs
+
 		if (
 			previous &&
+			!isColdStart &&
 			now - previous.lastActivityTime < this.options.sessionTimeout
 		) {
 			// Continue the same session across the reload.
@@ -134,6 +161,15 @@ export class SessionManager {
 			// completes.
 			this.reloadCount = 0
 			this.resumeInfo = { reloaded: false, elapsedMs: 0, reloadCount: 0 }
+
+			if (this.options.debug && isColdStart) {
+				console.log(
+					'📱 Cold start detected — starting a fresh session instead of ' +
+						`resuming ${previous?.sessionId} (last activity ` +
+						`${now - (previous?.lastActivityTime ?? now)}ms ago, before ` +
+						'this process started)',
+				)
+			}
 		}
 
 		await this.persist(now, true)

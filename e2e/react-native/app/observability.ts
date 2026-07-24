@@ -29,6 +29,9 @@ const observabilityOptions: ReactNativeOptions = {
 	serviceVersion: '1.0.0',
 	debug: true, // Enable debug logging
 
+	// Retain more telemetry across short network outages before dropping.
+	maxBufferSize: 2000,
+
 	// Optional error handling configuration
 	errorHandling: {
 		errorSampleRate: 1.0, // Capture all errors for testing

@@ -69,6 +69,9 @@ class SessionReplayReactNativeModule(reactContext: ReactApplicationContext) :
     }
   }
 
+  override fun getProcessStartTimeMillis(): Double =
+    SessionReplayClientAdapter.processStartTimeMillis
+
   companion object {
     const val NAME = "SessionReplayReactNative"
   }

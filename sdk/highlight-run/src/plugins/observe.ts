@@ -24,6 +24,7 @@ import { ObserveSDK } from '../sdk/observe'
 import { LDObserve } from '../sdk/LDObserve'
 import type { ObserveOptions } from '../client/types/observe'
 import { Plugin } from './common'
+import { ExposureDeduper } from '@launchdarkly/observability-shared'
 import {
 	ATTR_TELEMETRY_SDK_NAME,
 	ATTR_TELEMETRY_SDK_VERSION,
@@ -36,10 +37,15 @@ import { LDEvaluationReason } from '@launchdarkly/js-sdk-common/dist/cjs/api/dat
 export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 	observe: ObserveAPI | undefined
 	options: ObserveOptions | undefined
+	private readonly exposureDeduper: ExposureDeduper
 
 	constructor(options?: ObserveOptions) {
 		super(options)
 		this.options = options
+		this.exposureDeduper = new ExposureDeduper(
+			options?.flagExposureDedupeWindowMillis,
+			options?.flagExposureDedupeMaxSize,
+		)
 	}
 
 	private initialize(
@@ -132,6 +138,12 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 					this.observe?.setLDContextKeyAttributes(ldContextKeys)
 
 					if (result.status === 'completed') {
+						// The evaluation context changed, so previously
+						// recorded exposures are no longer relevant for
+						// deduplication. Only reset on a completed identify; a
+						// failed one leaves the context unchanged.
+						this.exposureDeduper.reset()
+
 						const metadata = {
 							...ldContextKeys,
 							key:
@@ -177,16 +189,47 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 						}
 					}
 
+					const canonicalKey = hookContext.context
+						? getCanonicalKey(hookContext.context)
+						: undefined
 					if (hookContext.context) {
 						eventAttributes[FEATURE_FLAG_CONTEXT_ATTR] =
 							JSON.stringify(getContextKeys(hookContext.context))
 						eventAttributes[FEATURE_FLAG_CONTEXT_ID_ATTR] =
-							getCanonicalKey(hookContext.context)
+							canonicalKey
 					}
+
+					// Deduplicate repeated exposures that resolve to the same
+					// result within the configured window, so that frequent
+					// re-evaluations (e.g. React re-renders) don't emit a span
+					// per evaluation.
+					const dedupeKey = [
+						hookContext.flagKey,
+						JSON.stringify(detail.value),
+						detail.variationIndex ?? '',
+						detail.reason?.kind ?? '',
+						detail.reason?.ruleId ?? '',
+						canonicalKey ?? '',
+					].join('|')
+					if (!this.observe) {
+						// No exposure is emitted when the SDK isn't initialized,
+						// so don't start a dedupe window that would suppress
+						// later evaluations.
+						return data
+					}
+					if (!this.exposureDeduper.shouldRecord(dedupeKey)) {
+						return data
+					}
+
 					const attributes = { ...metaAttrs, ...eventAttributes }
-					this.observe?.startSpan(FEATURE_FLAG_SPAN_NAME, (s) => {
-						if (s) {
+					this.observe.startSpan(FEATURE_FLAG_SPAN_NAME, (s) => {
+						// Only start the dedupe window once an exposure is
+						// actually recorded; a non-recording span (e.g.
+						// manualStart before start()) shouldn't suppress later
+						// evaluations.
+						if (s?.isRecording()) {
 							s.addEvent(FEATURE_FLAG_SCOPE, attributes)
+							this.exposureDeduper.markRecorded(dedupeKey)
 						}
 					})
 

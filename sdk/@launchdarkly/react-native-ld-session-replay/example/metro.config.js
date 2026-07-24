@@ -1,6 +1,12 @@
 const path = require('path');
 const { getDefaultConfig } = require('@react-native/metro-config');
 const { withMetroConfig } = require('react-native-monorepo-config');
+// Symbols Id Lane symbolication: stamps every release bundle with a
+// deterministic symbols id derived from its composed source map, which the SDK
+// reports and `ldcli symbols upload` keys the map by. See README.
+const {
+  withLaunchDarklySymbolsId,
+} = require('@launchdarkly/observability-react-native/metro');
 
 const root = path.resolve(__dirname, '..');
 
@@ -107,4 +113,4 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
   );
 };
 
-module.exports = config;
+module.exports = withLaunchDarklySymbolsId(config);

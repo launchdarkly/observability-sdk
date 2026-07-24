@@ -1,5 +1,6 @@
 package com.launchdarkly.observability.client
 
+import android.content.Context
 import com.launchdarkly.observability.BuildConfig
 import com.launchdarkly.observability.api.ObservabilityOptions
 import io.opentelemetry.api.common.AttributeKey
@@ -18,6 +19,38 @@ internal val DEFAULT_DISTRO_ATTRIBUTES: Map<String, String> = mapOf(
     "telemetry.distro.name" to "launchdarkly-observability-android",
     "telemetry.distro.version" to BuildConfig.OBSERVABILITY_SDK_VERSION,
 )
+
+/**
+ * Resource attribute carrying the artifact's deterministic symbols id — the
+ * `htlhash` of the R8/ProGuard `mapping.txt`. The app build embeds it as an
+ * asset ([SYMBOLS_ID_ASSET_NAME]); reporting it lets the backend resolve the
+ * mapping by symbols id (the "Symbols Id Lane"), independent of the app version.
+ */
+internal const val SYMBOLS_ID_HTLHASH_KEY = "launchdarkly.symbols_id.htlhash"
+
+/** Asset (packaged under `assets/`) the build writes the 32-hex-char symbols id to. */
+internal const val SYMBOLS_ID_ASSET_NAME = "ld_symbols_id.txt"
+
+// The symbols id is the first 16 bytes of a SHA-256 rendered as 32 lowercase hex
+// chars. Anything else (missing asset, an all-zero placeholder) is treated as
+// "no symbols id" so reporting cleanly falls back to no Symbols Id Lane attribute.
+private val SYMBOLS_ID_PATTERN = Regex("^[0-9a-f]{32}$")
+
+/**
+ * Reads the symbols id the app build embedded at [SYMBOLS_ID_ASSET_NAME], or
+ * returns `null` when absent/invalid (e.g. a non-obfuscated or older build).
+ * Best-effort: any failure yields `null` so it can never break initialization.
+ */
+internal fun readInjectedSymbolsId(context: Context): String? {
+    return try {
+        val raw = context.assets.open(SYMBOLS_ID_ASSET_NAME).use { it.readBytes() }
+            .toString(Charsets.UTF_8)
+            .trim()
+        if (SYMBOLS_ID_PATTERN.matches(raw) && raw.any { it != '0' }) raw else null
+    } catch (_: Exception) {
+        null
+    }
+}
 
 /**
  * Builds the OpenTelemetry [Resource] attached to every observability signal emitted by this SDK.
@@ -52,6 +85,8 @@ internal val DEFAULT_DISTRO_ATTRIBUTES: Map<String, String> = mapOf(
  * @param applicationVersion `launchdarkly.application.version`, or `null` to omit.
  * @param sdkVersion        `launchdarkly.sdk.version`, or `null` to omit. Already formatted
  *                          (typically `"$sdkName/$sdkVersion"`) — this helper does not compose it.
+ * @param symbolsId         `launchdarkly.symbols_id.htlhash` (the R8 mapping's htlhash), or
+ *                          `null` to omit. Read from the app via [readInjectedSymbolsId].
  */
 internal fun buildObservabilityResource(
     sdkKey: String,
@@ -60,6 +95,7 @@ internal fun buildObservabilityResource(
     applicationId: String? = null,
     applicationVersion: String? = null,
     sdkVersion: String? = null,
+    symbolsId: String? = null,
 ): Resource {
     val builder = Attributes.builder()
 
@@ -80,6 +116,10 @@ internal fun buildObservabilityResource(
 
     builder.put("service.name", options.serviceName)
     builder.put("service.version", options.serviceVersion)
+
+    // Symbols identity: keep it authoritative (after user resourceAttributes) so a
+    // stray user attribute can't shadow the value the backend matches maps by.
+    symbolsId?.let { builder.put(AttributeKey.stringKey(SYMBOLS_ID_HTLHASH_KEY), it) }
 
     applicationId?.let { builder.put("launchdarkly.application.id", it) }
     applicationVersion?.let { builder.put("launchdarkly.application.version", it) }

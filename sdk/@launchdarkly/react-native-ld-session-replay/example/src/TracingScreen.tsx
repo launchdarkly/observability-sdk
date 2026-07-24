@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { LDObserve } from '@launchdarkly/observability-react-native';
 import type { SpanScope } from '@launchdarkly/observability-react-native';
+import { LDClick } from '@launchdarkly/session-replay-react-native';
 import {
   context,
   propagation,
@@ -472,23 +473,43 @@ export default function TracingScreen() {
   return (
     <View style={styles.root}>
       <ScrollView contentContainerStyle={styles.scroll}>
+        {/*
+          Two ways to give a tap a stable analytics id (reported as `event.id` on
+          the native `click` event):
+            - the built-in `nativeID` prop on a single element — used on most
+              buttons (forwarded by <Btn> to its TouchableOpacity).
+            - <LDClick id="..."> wraps an element or subtree — see the
+              Distributed tracing section below.
+        */}
         <SectionHeader title="Spans" />
         <View style={styles.col}>
-          <Btn label="1 · Root span" onPress={run('1', rootSpan)} />
-          <Btn label="2 · Nested spans" onPress={run('2', nestedSpans)} />
           <Btn
+            nativeID="tracing.root-span"
+            label="1 · Root span"
+            onPress={run('1', rootSpan)}
+          />
+          <Btn
+            nativeID="tracing.nested-spans"
+            label="2 · Nested spans"
+            onPress={run('2', nestedSpans)}
+          />
+          <Btn
+            nativeID="tracing.http-error"
             label="3 · HTTP span + error handling"
             onPress={run('3', httpWithErrorHandling)}
           />
           <Btn
+            nativeID="tracing.auto-fetch"
             label="4 · Auto fetch child span"
             onPress={run('4', autoInstrumentedChild)}
           />
           <Btn
+            nativeID="tracing.independent-roots"
             label="9 · Independent root spans"
             onPress={run('9', independentRootSpans)}
           />
           <Btn
+            nativeID="tracing.span-events"
             label="10 · Span events (checkpoints)"
             onPress={run('10', spanEvents)}
           />
@@ -497,10 +518,12 @@ export default function TracingScreen() {
         <SectionHeader title="Errors & Logs" topSpacing />
         <View style={styles.col}>
           <Btn
+            nativeID="tracing.record-exception"
             label="5 · Record exception + fail span"
             onPress={run('5', recordException)}
           />
           <Btn
+            nativeID="tracing.correlated-logs"
             label="6 · Correlated logs in span"
             onPress={run('6', correlatedLogs)}
           />
@@ -509,14 +532,17 @@ export default function TracingScreen() {
         <SectionHeader title="Context propagation" topSpacing />
         <View style={styles.col}>
           <Btn
+            nativeID="tracing.correlate-async"
             label="7 · Correlate logs across async"
             onPress={run('7', correlateAcrossAsync)}
           />
           <Btn
+            nativeID="tracing.detached-child"
             label="8a · Detached child span"
             onPress={run('8a', detachedChildSpan)}
           />
           <Btn
+            nativeID="tracing.bounded-polling"
             label="8b · Bounded polling (3 ticks)"
             onPress={run('8b', startBoundedPolling)}
           />
@@ -524,24 +550,32 @@ export default function TracingScreen() {
 
         <SectionHeader title="Distributed tracing" topSpacing />
         <View style={styles.col}>
-          <Btn
-            label="11 · Backend trace (traceparent)"
-            onPress={run('11', backendDistributedTrace)}
-          />
-          <Btn
-            label="11b · Incoming headers"
-            onPress={run('11b', incomingHeaders)}
-          />
-          <Btn label="12 · Baggage" onPress={run('12', baggage)} />
+          <LDClick id="tracing.backend-trace">
+            <Btn
+              label="11 · Backend trace (traceparent)"
+              onPress={run('11', backendDistributedTrace)}
+            />
+          </LDClick>
+          <LDClick id="tracing.incoming-headers">
+            <Btn
+              label="11b · Incoming headers"
+              onPress={run('11b', incomingHeaders)}
+            />
+          </LDClick>
+          <LDClick id="tracing.baggage">
+            <Btn label="12 · Baggage" onPress={run('12', baggage)} />
+          </LDClick>
         </View>
 
         <SectionHeader title="OpenTelemetry Tracer (getTracer)" topSpacing />
         <View style={styles.col}>
           <Btn
+            nativeID="tracing.tracer-active"
             label="13a · tracer.startActiveSpan"
             onPress={run('13a', tracerStartActiveSpan)}
           />
           <Btn
+            nativeID="tracing.tracer-withspan"
             label="13b · tracer.withSpan (nested)"
             onPress={run('13b', tracerWithSpanNested)}
           />
@@ -549,9 +583,14 @@ export default function TracingScreen() {
 
         <SectionHeader title="Utilities" topSpacing />
         <View style={styles.row}>
-          <Btn label="Session info" onPress={run('info', showSessionInfo)} />
-          <Btn label="Flush" onPress={flush} />
           <Btn
+            nativeID="tracing.session-info"
+            label="Session info"
+            onPress={run('info', showSessionInfo)}
+          />
+          <Btn nativeID="tracing.flush" label="Flush" onPress={flush} />
+          <Btn
+            nativeID="tracing.clear-log"
             label="Clear log"
             onPress={() => setLines([])}
             variant="danger"
@@ -603,13 +642,19 @@ function Btn({
   label,
   onPress,
   variant,
+  nativeID,
 }: {
   label: string;
   onPress: () => void;
   variant?: 'default' | 'danger';
+  // Setting `nativeID` tags this button with a stable click id: the LaunchDarkly
+  // native SDK reports it as `event.id` on the tap's `click` event. This is the
+  // bare-element alternative to wrapping in `<LDClick id="...">`.
+  nativeID?: string;
 }) {
   return (
     <TouchableOpacity
+      nativeID={nativeID}
       style={[styles.btn, variant === 'danger' ? styles.btnDanger : undefined]}
       onPress={onPress}
       activeOpacity={0.75}

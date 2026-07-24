@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:launchdarkly_flutter_client_sdk/launchdarkly_flutter_client_sdk.dart';
 import 'package:launchdarkly_flutter_observability/launchdarkly_flutter_observability.dart';
 
+import 'crash_scenarios.dart';
 import 'credit_card_page.dart';
 import 'dialogs_page.dart';
 import 'main.dart';
@@ -78,6 +79,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Timer? _pollingTimer;
   int _counter = 0;
+  CrashScenario _selectedScenario = CrashScenario.exception;
 
   @override
   void dispose() {
@@ -131,10 +133,6 @@ class _MyHomePageState extends State<MyHomePage> {
     } catch (e) {
       debugPrint('HTTP Request failed: $e');
     }
-  }
-
-  void _onTriggerCrash() {
-    throw StateError('Failed to connect to bogus server.');
   }
 
   // --- Track ---
@@ -205,11 +203,25 @@ class _MyHomePageState extends State<MyHomePage> {
 
   // --- Error / Logs / Traces ---
 
-  void _onTriggerError() {
-    final inner = StateError('The error that caused the other error.');
-    final exception = Exception('Manual error womp womp: $inner');
-    LDObserve.recordException(exception, stackTrace: StackTrace.current);
-    debugPrint('Error triggered');
+  /// Explains how the selected scenario will be reported, since that differs
+  /// between a caught failure, one only the framework sees, and a fatal one.
+  String _scenarioHint(CrashScenario scenario) {
+    if (scenario.isFatal) {
+      return 'Terminates the process; the report arrives on the next launch.';
+    }
+    if (!scenario.supportsHandled) {
+      return 'Cannot be caught by the app: reported through '
+          'FlutterError.onError or the guarded zone in main.dart.';
+    }
+    return 'Error reports it via LDObserve.recordException; '
+        'Crash leaves it unhandled.';
+  }
+
+  /// Runs the selected scenario, mirroring the Swift TestApp's Error / Crash
+  /// buttons. The future is deliberately not awaited: in [CrashMode.crash] the
+  /// failure has to escape to the handlers wired up in `main.dart`.
+  void _onTriggerScenario(CrashMode mode) {
+    unawaited(triggerScenario(_selectedScenario, mode: mode, context: context));
   }
 
   void _onTriggerLog() {
@@ -477,17 +489,9 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
 
             const _SubsectionHeader('Instrumentation'),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: ElevatedButton(
-                onPressed: _onTriggerHttpRequest,
-                child: const Text('Trigger HTTP Request'),
-              ),
-            ),
             ElevatedButton(
-              onPressed: _onTriggerCrash,
-              style: dangerStyle,
-              child: const Text('Trigger Crash'),
+              onPressed: _onTriggerHttpRequest,
+              child: const Text('Trigger HTTP Request'),
             ),
 
             const _SubsectionHeader('Track'),
@@ -511,10 +515,61 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
 
             const _SubsectionHeader('Error'),
-            ElevatedButton(
-              onPressed: _onTriggerError,
-              style: dangerStyle,
-              child: const Text('Trigger Error'),
+            // Pick a failure, then report it as a handled error or let it go
+            // unhandled — the same picker + Error / Crash pair the Swift
+            // TestApp's MainMenuView exposes.
+            InputDecorator(
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+              child: DropdownButton<CrashScenario>(
+                value: _selectedScenario,
+                isExpanded: true,
+                underline: const SizedBox.shrink(),
+                items: [
+                  for (final scenario in CrashScenario.values.where(
+                    (s) => s.isAvailable,
+                  ))
+                    DropdownMenuItem<CrashScenario>(
+                      value: scenario,
+                      child: Text(scenario.label),
+                    ),
+                ],
+                onChanged: (scenario) {
+                  if (scenario == null) return;
+                  setState(() => _selectedScenario = scenario);
+                },
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(top: 4, bottom: 8),
+              child: Text(
+                _scenarioHint(_selectedScenario),
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                // Handled path: only catchable failures can be reported this
+                // way, so the rest leave this button disabled.
+                ElevatedButton(
+                  onPressed: _selectedScenario.supportsHandled
+                      ? () => _onTriggerScenario(CrashMode.error)
+                      : null,
+                  child: const Text('Error'),
+                ),
+                // Unhandled path: reported by `FlutterError.onError` / the
+                // guarded zone, or by the native crash reporter on the next
+                // launch for the fatal scenarios.
+                ElevatedButton(
+                  onPressed: () => _onTriggerScenario(CrashMode.crash),
+                  style: dangerStyle,
+                  child: const Text('Crash'),
+                ),
+              ],
             ),
 
             const _SubsectionHeader('Logs'),

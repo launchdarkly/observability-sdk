@@ -9,6 +9,7 @@ import com.launchdarkly.observability.client.ObservabilityService
 import com.launchdarkly.observability.client.ObservabilityContext
 import com.launchdarkly.observability.client.TelemetryInspector
 import com.launchdarkly.observability.client.buildObservabilityResource
+import com.launchdarkly.observability.client.readInjectedSymbolsId
 import com.launchdarkly.observability.sdk.LDObserve
 import com.launchdarkly.sdk.android.LDClient
 import com.launchdarkly.sdk.android.integrations.EnvironmentMetadata
@@ -112,6 +113,7 @@ class Observability(
             applicationId = metadata?.applicationInfo?.applicationId,
             applicationVersion = metadata?.applicationInfo?.applicationVersion,
             sdkVersion = composeLaunchDarklySdkVersion(metadata),
+            symbolsId = readInjectedSymbolsId(application),
         )
         LDObserve.context?.resourceAttributes = resource.attributes
 

@@ -57,6 +57,23 @@ class MainActivityViewModel(application: Application) : AndroidViewModel(applica
         )
     }
 
+    /**
+     * Records an error thrown deep in an obfuscated multi-class call chain
+     * ([CheckoutDemo]). On a release (R8) build the frames are obfuscated; the
+     * backend retraces them via the Symbols Id Lane (the uploaded mapping.txt
+     * keyed by the symbols id the SDK reports).
+     */
+    fun triggerObfuscatedError() {
+        try {
+            CheckoutDemo.startCheckout("ord-${BuildConfig.VERSION_NAME}")
+        } catch (e: Error) {
+            LDObserve.recordError(
+                e,
+                Attributes.of(AttributeKey.stringKey("demo"), "symbols-id-lane-obfuscated-android")
+            )
+        }
+    }
+
     fun triggerLog() {
         // `recordLog` takes a plain map via `properties`, so no need to build OTel attributes.
         LDObserve.recordLog(

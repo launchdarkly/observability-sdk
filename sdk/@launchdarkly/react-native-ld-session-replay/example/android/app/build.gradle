@@ -55,6 +55,39 @@ react {
 }
 
 /**
+ * Copy the composed (Metro + Hermes) release source map the RN Gradle plugin
+ * emits into example/build, so it sits next to the iOS map and a single
+ * `ldcli symbols upload --path ./build` covers both platforms. This map is
+ * produced from the exact bundle that ships, so it never drifts from the running
+ * build -- the root cause of "error extracting true error info from source map".
+ * rootDir is the android/ project dir, so ../build resolves to example/build.
+ */
+tasks.register("copyReleaseSourcemapToBuild", Copy) {
+    from("${layout.buildDirectory.get()}/generated/sourcemaps/react/release/index.android.bundle.map")
+    into("${rootDir}/../build")
+}
+
+/**
+ * Copy the symbols-id sidecar next to the composed map in example/build, renamed
+ * to <map>.symbolsid, so `ldcli symbols upload --path ./build` keys this map by
+ * the id the app reports (Symbols Id Lane). The RN Gradle plugin runs Metro via
+ * an inherited-env exec, so we can't hand it LD_SYMBOLS_ID_SIDECAR (as iOS does);
+ * instead the plugin writes <sourcemap-basename>.symbolsid into Metro's cwd (the
+ * RN project root, ${rootDir}/..). For Hermes that basename is the intermediate
+ * packager map, so match and rename it to the composed map's name.
+ */
+tasks.register("copyReleaseSymbolsIdToBuild", Copy) {
+    from(fileTree("${rootDir}/..") {
+        include "index.android.bundle*.map.symbolsid"
+    })
+    into("${rootDir}/../build")
+    rename { "index.android.bundle.map.symbolsid" }
+}
+tasks.matching { it.name == "createBundleReleaseJsAndAssets" }.configureEach {
+    finalizedBy("copyReleaseSourcemapToBuild", "copyReleaseSymbolsIdToBuild")
+}
+
+/**
  * Set this to true to Run Proguard on Release builds to minify the Java bytecode.
  */
 def enableProguardInReleaseBuilds = false

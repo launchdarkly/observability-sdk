@@ -1,5 +1,33 @@
 # Changelog
 
+## [0.17.1](https://github.com/launchdarkly/observability-sdk/compare/observability-react-native-0.17.0...observability-react-native-0.17.1) (2026-07-21)
+
+
+### Bug Fixes
+
+* **observability:** start a fresh session on cold start (React Native) ([#682](https://github.com/launchdarkly/observability-sdk/issues/682)) ([4e226d7](https://github.com/launchdarkly/observability-sdk/commit/4e226d7113fc5c493acd53540403a6704040915f))
+
+## [0.17.0](https://github.com/launchdarkly/observability-sdk/compare/observability-react-native-0.16.0...observability-react-native-0.17.0) (2026-07-20)
+
+
+### Features
+
+* React Native + Android symbolication (symbols_id) ([#678](https://github.com/launchdarkly/observability-sdk/issues/678)) ([2694011](https://github.com/launchdarkly/observability-sdk/commit/26940113ee7777cbcf58702f90d6cf865377af35))
+
+## [0.16.0](https://github.com/launchdarkly/observability-sdk/compare/observability-react-native-0.15.0...observability-react-native-0.16.0) (2026-07-17)
+
+
+### Features
+
+* **observability:** expose configurable telemetry buffer options (React Native) ([#679](https://github.com/launchdarkly/observability-sdk/issues/679)) ([96db586](https://github.com/launchdarkly/observability-sdk/commit/96db5862923fda6da6fa3ebdc4727316eebf231f))
+
+## [0.15.0](https://github.com/launchdarkly/observability-sdk/compare/observability-react-native-0.14.0...observability-react-native-0.15.0) (2026-07-16)
+
+
+### Features
+
+* **observability:** dedupe feature flag exposures within a time window (web + React Native) ([#676](https://github.com/launchdarkly/observability-sdk/issues/676)) ([c34b390](https://github.com/launchdarkly/observability-sdk/commit/c34b390d68ff642e13f2863d1aa3f2732c61b70b))
+
 ## [0.14.0](https://github.com/launchdarkly/observability-sdk/compare/observability-react-native-0.13.0...observability-react-native-0.14.0) (2026-07-08)
 
 

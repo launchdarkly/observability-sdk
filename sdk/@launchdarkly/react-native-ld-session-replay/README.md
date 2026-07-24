@@ -118,10 +118,12 @@ required — these spans are emitted alongside your other telemetry:
 | `app_foreground` | The app enters the foreground (including resume from background). | `event.lifecycle_state = foreground`. |
 | `app_background` | The app enters the background. | `event.lifecycle_state = background`. |
 
-In addition, when the JavaScript runtime reloads (a React Native soft reload, an OTA
-bundle reload, or a quick relaunch within the session-resume window) while the same
-session continues, the observability SDK emits an `app_reload` span so the session
-stays stitched together across the reload.
+In addition, when the JavaScript runtime reloads **while the native process stays
+alive** (a React Native soft reload or an OTA bundle reload) and the previous session
+is still within the resume window, the observability SDK emits an `app_reload` span so
+the session stays stitched together across the reload. A full cold start (the process
+was terminated and relaunched, i.e. `app_launch` above) always begins a **new** session
+rather than resuming the previous one.
 
 See the [event taxonomy](../../../analytics-taxonomy.md) for the full `event.*` payload
 of each event.
@@ -249,6 +251,41 @@ import { LDMask, LDUnmask } from '@launchdarkly/session-replay-react-native';
 ```
 
 `<LDMask>` propagates to descendants and beats any `<LDUnmask>` further down the tree — once a subtree is wrapped in `<LDMask>`, nothing inside it can opt back in.
+
+## Identifying tapped elements
+
+Taps are captured natively and reported as `click` events. To reliably identify an element in
+product analytics — regardless of layout, visible text, or A/B copy — give it a stable id.
+
+Wrap it in `<LDClick>`:
+
+```tsx
+import { LDClick } from '@launchdarkly/session-replay-react-native';
+
+<LDClick id="checkout.pay_button">
+  <Button title="Pay" onPress={pay} />
+</LDClick>;
+```
+
+`<LDClick>` reports the given `id` as `event.id` on the `click` event. A tap on any descendant
+resolves to the nearest enclosing `<LDClick>` id, so wrapping a composite control tags the whole
+thing. It also survives React Native view flattening and works with components that don't otherwise
+expose a native view.
+
+For a single element such as a `Button`, you can skip the wrapper and set React Native's built-in
+`nativeID` prop directly:
+
+```tsx
+<Button title="Pay" nativeID="checkout.pay_button" onPress={pay} />
+```
+
+`nativeID` is carried to the native view by React Native itself (no extra setup), and the native SDK
+reads it as `event.id`. Use `<LDClick>` when you instead want to tag a whole subtree, an element that
+may be flattened away, or a component that doesn't forward `nativeID`.
+
+The click id is a dedicated channel: unlike `testID`, it is not overloaded with e2e testing and is
+never stripped by session-replay privacy masking. When an element also has a `testID`, the click id
+(`<LDClick>` or `nativeID`) takes precedence for `event.id`.
 
 ## Troubleshooting
 

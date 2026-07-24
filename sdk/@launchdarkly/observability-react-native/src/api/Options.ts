@@ -93,15 +93,19 @@ export interface ReactNativeOptions {
 	urlBlocklist?: string[]
 
 	/**
-	 * Maximum inactivity, in milliseconds, before the next app launch / JS reload
-	 * starts a **new** session instead of continuing the previous one. Measured
-	 * from the last recorded activity to the next load.
+	 * Maximum inactivity, in milliseconds, before a **surviving process**
+	 * (soft/OTA reload) starts a **new** session instead of continuing the
+	 * previous one. Measured from the last recorded activity to the next load.
+	 *
+	 * This only governs reloads within a still-running process. A cold start (the
+	 * app was terminated and relaunched) always starts a fresh session regardless
+	 * of this value, so the native session-replay recording never reuses (and
+	 * corrupts) a previous session id — see SessionManager.resolveSession.
 	 *
 	 * The session id is never rotated while the app is running (in-process): it is
 	 * decided once per JS load and held for that load's lifetime, mirroring the
 	 * native session replay / observability instance, which treats an externally
-	 * supplied id as a custom session and never auto-rotates it. Session
-	 * boundaries therefore only occur at a launch/reload, governed by this value.
+	 * supplied id as a custom session and never auto-rotates it.
 	 *
 	 * @default 15 * 60 * 1000 (15 minutes)
 	 */
@@ -160,4 +164,54 @@ export interface ReactNativeOptions {
 	 * default identifier.
 	 */
 	contextFriendlyName?: (context: LDContext) => string | undefined
+
+	/**
+	 * The time window, in milliseconds, during which repeated feature flag
+	 * evaluations that resolve to the same result are deduplicated, so that only
+	 * a single `feature_flag` exposure span is emitted per unique
+	 * (flag key, value, variation, reason, context) within the window.
+	 *
+	 * This is useful for reducing exposure volume caused by frequent
+	 * re-evaluations (for example, React re-renders).
+	 *
+	 * Set to `0` (the default) to disable deduplication and emit an exposure
+	 * for every evaluation. Set a positive value to enable it.
+	 *
+	 * @default 0 (disabled)
+	 */
+	flagExposureDedupeWindowMillis?: number
+
+	/**
+	 * The maximum number of unique feature flag exposure keys tracked for
+	 * deduplication at once. When exceeded, the least recently recorded keys are
+	 * evicted to bound memory usage.
+	 *
+	 * @default 2000
+	 */
+	flagExposureDedupeMaxSize?: number
+
+	/**
+	 * The maximum number of spans and log records held in the in-memory export
+	 * buffer before the oldest are dropped. Applied to both traces and logs.
+	 *
+	 * Telemetry is buffered in memory only (there is no on-disk persistence), so
+	 * this value bounds how much can be retained while the device is offline or
+	 * between uploads. When the buffer is full, newly recorded items are dropped
+	 * until space frees up (the already-buffered items are kept and exported).
+	 * Larger values retain more data across short outages at the cost of memory;
+	 * anything still buffered is lost if the app is terminated.
+	 *
+	 * @default 2048
+	 */
+	maxBufferSize?: number
+
+	/**
+	 * The delay, in milliseconds, between scheduled uploads of buffered spans
+	 * and log records. Applied to both traces and logs. Lower values upload more
+	 * frequently in smaller batches; higher values upload less frequently in
+	 * larger batches.
+	 *
+	 * @default 5000
+	 */
+	uploadIntervalMillis?: number
 }

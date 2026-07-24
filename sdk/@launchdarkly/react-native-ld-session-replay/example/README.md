@@ -96,6 +96,14 @@ You've successfully run and modified your React Native App. :partying_face:
 - If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
 - If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
 
+# Symbolication (readable stack traces)
+
+Release builds run Hermes bytecode, so JavaScript errors need the composed
+sourcemap uploaded to LaunchDarkly to render readable stack traces. See
+**[SYMBOLICATION.md](./SYMBOLICATION.md)** for the full walkthrough — building in
+release, uploading with `ldcli symbols upload --type react-native`, and the
+Symbols Id vs Version lanes.
+
 # Troubleshooting
 
 If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.

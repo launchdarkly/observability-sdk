@@ -14,6 +14,25 @@
 // .env. This lets you point observability at localhost or an arbitrary staging
 // server while still streaming flags from a real LaunchDarkly instance.
 
+import {Platform} from 'react-native';
+
+// Android emulators can't reach the host machine through "localhost" /
+// "127.0.0.1" — that resolves to the emulator itself. 10.0.2.2 is the emulator's
+// special alias for the host loopback. iOS simulators share the host network
+// stack, so localhost already points at the host and is left untouched.
+// (Genymotion emulators use 10.0.3.2 instead; swap the constant if you use one.)
+const ANDROID_HOST_LOOPBACK = '10.0.2.2';
+
+function adaptHostForPlatform(url: string): string {
+  if (Platform.OS !== 'android') {
+    return url;
+  }
+  return url.replace(
+    /\/\/(?:localhost|127\.0\.0\.1)(?=[:/]|$)/,
+    `//${ANDROID_HOST_LOOPBACK}`,
+  );
+}
+
 export type LDEnvironmentName = 'production' | 'staging';
 
 export interface LDEndpoints {
@@ -65,8 +84,12 @@ export function resolveLDEnvironment(
   }
 
   const base = LD_ENVIRONMENTS[env];
-  const otlpEndpoint = overrides.otlpEndpoint?.trim() || base.otlpEndpoint;
-  const backendUrl = overrides.backendUrl?.trim() || base.backendUrl;
+  const otlpEndpoint = adaptHostForPlatform(
+    overrides.otlpEndpoint?.trim() || base.otlpEndpoint,
+  );
+  const backendUrl = adaptHostForPlatform(
+    overrides.backendUrl?.trim() || base.backendUrl,
+  );
 
   return {
     env,

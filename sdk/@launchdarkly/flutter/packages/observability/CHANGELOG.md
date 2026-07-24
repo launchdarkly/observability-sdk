@@ -2,6 +2,13 @@
 
 All notable changes to the LaunchDarkly Observability SDK for Flutter will be documented in this file. This project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.13.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.12.2...launchdarkly_flutter_observability-0.13.0) (2026-07-24)
+
+
+### Features
+
+* **flutter:** Dart AOT symbolication + uniform SYMBOLICATION.md docs ([#691](https://github.com/launchdarkly/observability-sdk/issues/691)) ([7432a78](https://github.com/launchdarkly/observability-sdk/commit/7432a787a477608dbab7dd1ec1e85c4072239cb8))
+
 ## [0.12.2](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.12.1...launchdarkly_flutter_observability-0.12.2) (2026-07-14)
 
 

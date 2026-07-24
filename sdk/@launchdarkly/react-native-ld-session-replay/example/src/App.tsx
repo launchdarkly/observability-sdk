@@ -18,10 +18,27 @@ import {
   LDObserve,
   Observability,
 } from '@launchdarkly/observability-react-native';
+import {
+  LAUNCHDARKLY_MOBILE_KEY,
+  LAUNCHDARKLY_ENV,
+  LAUNCHDARKLY_OTLP_ENDPOINT,
+  LAUNCHDARKLY_BACKEND_URL,
+} from '@env';
+import { resolveLDEnvironment } from './ldEnvironments';
+import { SERVICE_VERSION } from './serviceVersion';
 import DialogsScreen from './DialogsScreen';
 import MaskingScreen from './MaskingScreen';
 import TracingScreen from './TracingScreen';
 import ApiScreen from './ApiScreen';
+
+// Pick the LaunchDarkly instance once for the client-side URLs (they must stay
+// paired with the mobile key, or identify fails with a 401). The observability
+// URLs default to the same bundle but can be pointed at localhost or any staging
+// server via LAUNCHDARKLY_OTLP_ENDPOINT / LAUNCHDARKLY_BACKEND_URL in .env.
+const { env: LD_ENV, endpoints } = resolveLDEnvironment(LAUNCHDARKLY_ENV, {
+  otlpEndpoint: LAUNCHDARKLY_OTLP_ENDPOINT,
+  backendUrl: LAUNCHDARKLY_BACKEND_URL,
+});
 
 // Regenerated every time the JS bundle loads. A soft reload (DevSettings.reload)
 // restarts the JS runtime in the same process, so this changes while the native
@@ -38,7 +55,7 @@ const plugin = createSessionReplayPlugin({
   // spans report the same service.name / service.version as the JS observability
   // plugin below. serviceVersion only affects observability-emitted signals.
   serviceName: 'session-replay-rn-example',
-  serviceVersion: '1.0.0',
+  serviceVersion: SERVICE_VERSION,
   maskTextInputs: true,
   maskWebViews: true,
   maskLabels: false,
@@ -46,6 +63,8 @@ const plugin = createSessionReplayPlugin({
   maskTestIDs: ['password', 'ssn'],
   unmaskTestIDs: ['safe'],
   minimumAlpha: 0.05,
+  otlpEndpoint: endpoints.otlpEndpoint,
+  backendUrl: endpoints.backendUrl,
 });
 
 // The observability plugin powers the distributed tracing examples on the
@@ -54,27 +73,43 @@ const plugin = createSessionReplayPlugin({
 // backend trace (see the tracing guide, sections 11 and 12).
 const observability = new Observability({
   serviceName: 'session-replay-rn-example',
-  serviceVersion: '1.0.0',
+  serviceVersion: SERVICE_VERSION,
   debug: true,
   tracingOrigins: ['jsonplaceholder.typicode.com', 'reactnative.dev'],
+  otlpEndpoint: endpoints.otlpEndpoint,
+  backendUrl: endpoints.backendUrl,
   // Reapplied on every JS (soft) reload: the JS observability SDK is fully
   // recreated when the runtime restarts, so this attribute reflects the current
   // JS load. Compare with the native SR service.version, which stays frozen.
   resourceAttributes: {
     'js.load_id': JS_LOAD_ID,
   },
+  flagExposureDedupeWindowMillis: 1000 * 60 * 5, // 5 minutes
 });
 
-// Replace with your LaunchDarkly mobile key.
-// You can also set the LAUNCHDARKLY_MOBILE_KEY environment variable.
+// Set the values in example/.env (see .env.example) to record real sessions
+// against your chosen environment.
 const MOBILE_KEY =
-  process.env.LAUNCHDARKLY_MOBILE_KEY || 'YOUR_LAUNCHDARKLY_MOBILE_KEY_HERE';
+  LAUNCHDARKLY_MOBILE_KEY ?? 'YOUR_LAUNCHDARKLY_MOBILE_KEY_HERE';
+
+console.log(
+  `[env] LaunchDarkly env = ${LD_ENV}, mobile key prefix = ${MOBILE_KEY.slice(
+    0,
+    4
+  )}`
+); // expect "mob-"
+console.log(
+  `[env] observability otlpEndpoint = ${endpoints.otlpEndpoint}, backendUrl = ${endpoints.backendUrl}`
+);
 
 // Observability must come before the session replay plugin: the replay plugin
 // reads the observability session id during registration so the native replay /
 // observability instance can adopt it (shared `session.id` across JS + native).
 const client = new ReactNativeLDClient(MOBILE_KEY, AutoEnvAttributes.Enabled, {
   plugins: [observability, plugin],
+  streamUri: endpoints.streamUri,
+  baseUri: endpoints.baseUri,
+  eventsUri: endpoints.eventsUri,
 });
 const context = { kind: 'user', key: 'user-key-123abc' };
 
@@ -109,7 +144,8 @@ async function softReload() {
 // The New Architecture installs the Fabric UIManager on the JS global; its
 // absence means the app is running on the legacy bridge architecture.
 const IS_NEW_ARCH =
-  (global as { nativeFabricUIManager?: unknown }).nativeFabricUIManager != null;
+  (globalThis as { nativeFabricUIManager?: unknown }).nativeFabricUIManager !=
+  null;
 const RN_VERSION = (() => {
   const v = Platform.constants.reactNativeVersion;
   return `${v.major}.${v.minor}.${v.patch}`;

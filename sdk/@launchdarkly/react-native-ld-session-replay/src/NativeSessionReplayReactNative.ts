@@ -94,6 +94,20 @@ export interface Spec extends TurboModule {
     canonicalKey: string,
     completed: boolean
   ): Promise<void>;
+
+  /**
+   * Wall-clock time (ms since epoch) captured once, the first time this native
+   * module is touched in the current OS process. The value is held in
+   * process-global (static) native state, so it survives a JS soft/OTA reload
+   * (same process) but is regenerated on a cold start (new process).
+   *
+   * Consumers use it to distinguish a cold start from a surviving process:
+   * a persisted `session.lastActivityTime` that predates this value must have
+   * come from a previous process (i.e. a cold restart), whereas a later one
+   * means the process stayed alive across the reload. Synchronous so the
+   * observability session can make its resume decision before it resolves.
+   */
+  getProcessStartTimeMillis(): number;
 }
 
 export default TurboModuleRegistry.getEnforcing<Spec>(

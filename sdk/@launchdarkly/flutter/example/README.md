@@ -106,7 +106,7 @@ cd ios && LD_USE_LOCAL_NATIVE=true pod install && cd ..
 
 In the running app:
 
-- **Trigger Error** / **Trigger Crash** → reported through `LDObserve.recordException`.
+- **Error** section → pick one of the failure scenarios (Dart exceptions, framework and async errors, isolate and native signals), then **Error** to report it through `LDObserve.recordException` or **Crash** to leave it unhandled. See `lib/crash_scenarios.dart`.
 - **Trigger Log** / **Log with Context** / **Record error log with stack trace** → flow through `LDObserve.recordLog`.
 - **Nested Spans** / **Trigger Sequential Spans** / **Send custom span** → spans recorded via `LDObserve.startSpan`.
 - **Trigger HTTP Request** → an outgoing request that is traced when network instrumentation is enabled.
@@ -114,6 +114,14 @@ In the running app:
 - **Credit Card** → a masked form for the session replay masking demo.
 
 Then check the **Observability** section of your LaunchDarkly project for traces, logs, and errors tagged with your `serviceName`.
+
+## Symbolication (readable stack traces)
+
+Obfuscated release builds (`--obfuscate --split-debug-info`) report Dart AOT
+stack traces as raw addresses until the debug symbols are uploaded to
+LaunchDarkly. See **[SYMBOLICATION.md](./SYMBOLICATION.md)** for the full
+walkthrough — building with split debug info, uploading with
+`ldcli symbols upload --type flutter`, and the Symbols Id vs Version lanes.
 
 ## Troubleshooting
 
@@ -125,6 +133,7 @@ Then check the **Observability** section of your LaunchDarkly project for traces
 ## Resources
 
 - [`launchdarkly_flutter_observability` package README](../packages/observability/README.md) — install & API usage.
+- [SYMBOLICATION.md](./SYMBOLICATION.md) — symbolicating obfuscated release stack traces.
 - [Flutter installation](https://docs.flutter.dev/get-started/install)
 - [LaunchDarkly Flutter SDK docs](https://docs.launchdarkly.com/sdk/client-side/flutter)
 - [LaunchDarkly observability docs](https://docs.launchdarkly.com/home/observability)
