@@ -217,4 +217,41 @@ class ObservabilityOptions {
     this.instrumentation = const InstrumentationOptions(),
   }) : otlpEndpoint = otlpEndpoint ?? defaultOtlpEndpoint,
        backendUrl = backendUrl ?? defaultBackendUrl;
+
+  /// Returns a copy with the given fields replaced. Only non-null arguments
+  /// override; existing values (including [attributes]) are otherwise preserved.
+  ObservabilityOptions copyWith({
+    bool? isEnabled,
+    String? serviceName,
+    String? serviceVersion,
+    String? otlpEndpoint,
+    String? backendUrl,
+    String? contextFriendlyName,
+    Map<String, Object?>? attributes,
+    Map<String, String>? customHeaders,
+    Duration? sessionBackgroundTimeout,
+    ObservabilityLogLevel? logsApiLevel,
+    TracesOptions? traces,
+    bool? metricsEnabled,
+    AnalyticsOptions? analytics,
+    InstrumentationOptions? instrumentation,
+  }) {
+    return ObservabilityOptions(
+      isEnabled: isEnabled ?? this.isEnabled,
+      serviceName: serviceName ?? this.serviceName,
+      serviceVersion: serviceVersion ?? this.serviceVersion,
+      otlpEndpoint: otlpEndpoint ?? this.otlpEndpoint,
+      backendUrl: backendUrl ?? this.backendUrl,
+      contextFriendlyName: contextFriendlyName ?? this.contextFriendlyName,
+      attributes: attributes ?? this.attributes,
+      customHeaders: customHeaders ?? this.customHeaders,
+      sessionBackgroundTimeout:
+          sessionBackgroundTimeout ?? this.sessionBackgroundTimeout,
+      logsApiLevel: logsApiLevel ?? this.logsApiLevel,
+      traces: traces ?? this.traces,
+      metricsEnabled: metricsEnabled ?? this.metricsEnabled,
+      analytics: analytics ?? this.analytics,
+      instrumentation: instrumentation ?? this.instrumentation,
+    );
+  }
 }

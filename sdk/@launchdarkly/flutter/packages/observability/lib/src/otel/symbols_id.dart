@@ -9,6 +9,12 @@
 /// header, so extraction returns null and symbolication simply doesn't apply.
 library;
 
+/// Resource attribute carrying the Dart AOT snapshot build id (surfaced as
+/// symbols_id). The backend keys the Id-lane symbol map by this value. Shared by
+/// the Dart OpenTelemetry [Resource] (web) and the native init options (mobile),
+/// so both export paths report the same key.
+const String symbolsIdAttributeKey = 'launchdarkly.symbols_id';
+
 /// Matches the `build_id: '<hex>'` line Dart prints in obfuscated stack traces.
 /// Tolerant of the `:`/`=` separator and optional quotes across Dart versions.
 final RegExp _buildIdPattern = RegExp(

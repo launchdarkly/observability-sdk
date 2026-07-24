@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:collection';
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:launchdarkly_flutter_client_sdk/launchdarkly_flutter_client_sdk.dart';
 
 import '../api/span.dart';
@@ -12,6 +13,7 @@ import '../observe_otel.dart';
 import '../options/observability_options.dart';
 import '../options/session_replay_options.dart';
 import '../otel/feature_flag_convention.dart';
+import '../otel/symbols_id.dart';
 import '../platform/ld_observe_platform.dart';
 import 'observability_config.dart';
 
@@ -154,7 +156,7 @@ final class LDObservePlugin extends Plugin {
     // ensures the native pipeline is ready before any export can occur.
     await LDObservePlatform.instance.start(
       mobileKey: credential,
-      observability: observability,
+      observability: _withSymbolsId(observability),
       replay: replay ?? const SessionReplayOptions(isEnabled: false),
     );
 
@@ -164,6 +166,15 @@ final class LDObservePlugin extends Plugin {
       DebugPrintInstrumentation(_config.instrumentationConfig),
     );
   }
+
+  /// Merges the Dart AOT snapshot build id (symbols_id) into the native init
+  /// [ObservabilityOptions.attributes], so it becomes an OTel Resource attribute
+  /// on the native SDK and rides along with every native-exported signal —
+  /// including Dart spans/logs re-exported over the pigeon bridge, which carry
+  /// the native Resource rather than the Dart one. No-op in debug/profile/web
+  /// builds (no build id) and never clobbers an app-provided value.
+  static ObservabilityOptions _withSymbolsId(ObservabilityOptions options) =>
+      applySymbolsId(options, readSymbolsId());
 
   @override
   void register(
@@ -187,4 +198,22 @@ final class LDObservePlugin extends Plugin {
       instrumentation.dispose();
     }
   }
+}
+
+/// Merges [symbolsId] into [options.attributes] under [symbolsIdAttributeKey],
+/// preserving an app-provided value and leaving [options] unchanged when
+/// [symbolsId] is null. Extracted from [LDObservePlugin.boot]'s native-init path
+/// so the merge can be unit tested (the live source, `readSymbolsId`, only
+/// yields a value in obfuscated release builds).
+@visibleForTesting
+ObservabilityOptions applySymbolsId(
+  ObservabilityOptions options,
+  String? symbolsId,
+) {
+  if (symbolsId == null) {
+    return options;
+  }
+  final attributes = <String, Object?>{...?options.attributes};
+  attributes.putIfAbsent(symbolsIdAttributeKey, () => symbolsId);
+  return options.copyWith(attributes: attributes);
 }

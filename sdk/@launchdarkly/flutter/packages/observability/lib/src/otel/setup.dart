@@ -9,10 +9,6 @@ import 'package:opentelemetry/sdk.dart' show TracerProviderBase, Resource;
 
 const _highlightProjectIdAttr = 'highlight.project_id';
 
-/// Resource attribute carrying the Dart AOT snapshot build id (surfaced as
-/// symbols_id). The backend keys the Id-lane symbol map by this value.
-const _symbolsIdAttr = 'launchdarkly.symbols_id';
-
 class Otel {
   static final List<TracerProviderBase> _tracerProviders = [];
 
@@ -51,9 +47,15 @@ class Otel {
     // In obfuscated release builds, report the Dart snapshot build id so the
     // backend can symbolicate crashes against the uploaded .symbols map. Absent
     // in debug/profile builds and on web, where it is null (and skipped).
+    // Web/Dart export path: attach the symbols id to the Dart OTel Resource,
+    // which the OTLP exporter serializes. On mobile the Dart Resource is not
+    // sent over the pigeon bridge, so the id is also injected into the native
+    // init options (see LDObservePlugin.boot) to reach native-exported signals.
     final symbolsId = readSymbolsId();
     if (symbolsId != null) {
-      resourceAttributes.add(Attribute.fromString(_symbolsIdAttr, symbolsId));
+      resourceAttributes.add(
+        Attribute.fromString(symbolsIdAttributeKey, symbolsId),
+      );
     }
     final tracerProvider = TracerProviderBase(
       processors: exporters.createSpanProcessors(config),
