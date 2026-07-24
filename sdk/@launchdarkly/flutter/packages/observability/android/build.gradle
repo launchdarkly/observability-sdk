@@ -30,6 +30,10 @@ android {
 
     defaultConfig {
         minSdk 24
+        // Shipped to consumer apps so their R8/minified release builds don't fail
+        // on the compile-only annotations referenced by the bundled OpenTelemetry
+        // + Gson stack (see consumer-rules.pro).
+        consumerProguardFiles 'consumer-rules.pro'
     }
 
     compileOptions {
