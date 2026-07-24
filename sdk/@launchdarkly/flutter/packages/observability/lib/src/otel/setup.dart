@@ -1,6 +1,7 @@
 import 'package:launchdarkly_flutter_observability/src/otel/conversions.dart';
 import 'package:launchdarkly_flutter_observability/src/otel/exporters/exporter_factory.dart';
 import 'package:launchdarkly_flutter_observability/src/otel/service_convention.dart';
+import 'package:launchdarkly_flutter_observability/src/otel/symbols_id.dart';
 import 'package:launchdarkly_flutter_observability/src/plugin/observability_config.dart';
 import 'package:opentelemetry/api.dart'
     show registerGlobalTracerProvider, Attribute;
@@ -43,6 +44,19 @@ class Otel {
         ),
       ),
     );
+    // In obfuscated release builds, report the Dart snapshot build id so the
+    // backend can symbolicate crashes against the uploaded .symbols map. Absent
+    // in debug/profile builds and on web, where it is null (and skipped).
+    // Web/Dart export path: attach the symbols id to the Dart OTel Resource,
+    // which the OTLP exporter serializes. On mobile the Dart Resource is not
+    // sent over the pigeon bridge, so the id is also injected into the native
+    // init options (see LDObservePlugin.boot) to reach native-exported signals.
+    final symbolsId = readSymbolsId();
+    if (symbolsId != null) {
+      resourceAttributes.add(
+        Attribute.fromString(symbolsIdAttributeKey, symbolsId),
+      );
+    }
     final tracerProvider = TracerProviderBase(
       processors: exporters.createSpanProcessors(config),
       resource: Resource(resourceAttributes),

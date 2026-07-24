@@ -115,6 +115,14 @@ In the running app:
 
 Then check the **Observability** section of your LaunchDarkly project for traces, logs, and errors tagged with your `serviceName`.
 
+## Symbolication (readable stack traces)
+
+Obfuscated release builds (`--obfuscate --split-debug-info`) report Dart AOT
+stack traces as raw addresses until the debug symbols are uploaded to
+LaunchDarkly. See **[SYMBOLICATION.md](./SYMBOLICATION.md)** for the full
+walkthrough — building with split debug info, uploading with
+`ldcli symbols upload --type flutter`, and the Symbols Id vs Version lanes.
+
 ## Troubleshooting
 
 - **`No supported devices found ...`** — run `flutter devices` for the exact name/UDID. Don't use `-d ios`; use the device name/UDID or `-d apple_ios`.
@@ -125,6 +133,7 @@ Then check the **Observability** section of your LaunchDarkly project for traces
 ## Resources
 
 - [`launchdarkly_flutter_observability` package README](../packages/observability/README.md) — install & API usage.
+- [SYMBOLICATION.md](./SYMBOLICATION.md) — symbolicating obfuscated release stack traces.
 - [Flutter installation](https://docs.flutter.dev/get-started/install)
 - [LaunchDarkly Flutter SDK docs](https://docs.launchdarkly.com/sdk/client-side/flutter)
 - [LaunchDarkly observability docs](https://docs.launchdarkly.com/home/observability)
