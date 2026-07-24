@@ -69,9 +69,12 @@ flutter build apk \
 # from the ldcli repo (or wherever ldcli is on your PATH)
 ldcli symbols upload \
   --type flutter \
-  --path <path-to>/example/build/symbols \
-  --project <your-project-key> \
-  --access-token <your-api-token>
+  --path ./build/symbols \
+  --project default \
+  --access-token YOUR_ACCESS_TOKEN \
+  --base-uri https://ld-stg.launchdarkly.com \
+  --backend-url http://localhost:8082/private \
+  --app-version "$(git rev-parse HEAD)"
 ```
 
 `--type dart` is accepted as an alias for `--type flutter`.
@@ -81,20 +84,81 @@ compiles them to `app.dartmap`, and uploads one per architecture to the Id lane.
 Add `--app-version $(git rev-parse HEAD)` (matching the `GIT_SHA` dart-define
 above) to also populate the Version lane.
 
+> **iOS requires `--app-version`.** Android `.symbols` ELFs carry a GNU
+> build-id note, so their `symbols_id` is read straight from the file and they go
+> to the Id lane automatically. iOS `.symbols` files carry **no** build id (the
+> Dart snapshot ships in the Mach-O `App.framework`, not the ELF), so `ldcli`
+> can't key them by `symbols_id`. Instead iOS is uploaded to the **Version lane**
+> under `<app-version>/app.ios-arm64.dartmap`, which the backend also tries for
+> Flutter crashes. Run the upload with `--app-version <your-app-version>` (the
+> value your app reports as its version) or iOS files are skipped with a warning.
+> The Android arches still upload to the Id lane in the same run.
+
 To inspect what would be uploaded without sending it, use
 `ldcli symbols generate --type flutter --path build/symbols --out ./out`; the
 `out/` tree mirrors the storage keys described above.
 
 ## 3. Run the exact build and trigger a crash/error
 
-Install and run the **same** obfuscated binary you generated symbols for (the
-build id must match). On the home screen:
+Install and run the **same** obfuscated artifact you generated symbols for — the
+build id must match. Install the prepared `.apk`/`.ipa` directly; do **not**
+`flutter run`, which recompiles and produces a new build id that won't match your
+uploaded symbols.
 
-- **Trigger Crash** — throws `StateError('Failed to connect to bogus server.')`,
-  reported via the app's `FlutterError.onError` / zone guard.
-- **Trigger Error** — calls `LDObserve.recordException(...)` directly.
+### Android (APK)
 
-Both send the obfuscated stack trace as the error's `exception.stacktrace`.
+`flutter build apk` wrote the artifact to
+`build/app/outputs/flutter-apk/app-release.apk`. Install it on a connected device
+(`adb devices` to confirm one is attached):
+
+```bash
+# from example/
+adb install -r build/app/outputs/flutter-apk/app-release.apk
+```
+
+Then launch it from the app drawer (or
+`adb shell monkey -p com.example.example 1`).
+
+### iOS (IPA)
+
+`flutter build ipa` wrote a signed archive to `build/ios/ipa/*.ipa` (requires a
+real device and valid signing — the simulator uses a JIT build with no build id).
+Install the exact `.ipa` on a connected device using one of:
+
+> **The iOS Simulator can't test this flow.** It only runs Flutter debug (JIT)
+> builds; `--obfuscate`/release AOT — and therefore the `build_id:` this whole
+> flow depends on — isn't produced there. Use a physical iOS device, **or** just
+> validate the pipeline on an **Android emulator**, which does run release
+> obfuscated AOT builds. The backend symbolication path is platform-agnostic, so
+> a successful Android-emulator run confirms iOS will work the same way on a real
+> device.
+
+```bash
+# Xcode 15+: install the built .ipa on a connected device
+xcrun devicectl device install app --device <device-udid> build/ios/ipa/*.ipa
+```
+
+- **Xcode** — Window ▸ Devices and Simulators, select the device, drag the
+  `.ipa` onto "Installed Apps".
+- **Apple Configurator** — drag the `.ipa` onto the device.
+
+(`xcrun xctrace list devices` lists device UDIDs.) Then tap the app to launch it.
+
+### Trigger the report
+
+On the home screen, under **Observability ▸ Error**, pick a scenario from the
+dropdown and tap either button:
+
+- **Error** — catches the failure and reports it with
+  `LDObserve.recordException(...)`. Enabled only for catchable scenarios.
+- **Crash** — leaves the failure unhandled: Dart and framework failures are
+  reported via the app's `FlutterError.onError` / zone guard, while the
+  `Native: …` scenarios terminate the process and are delivered by the native
+  crash reporter on the next launch.
+
+Both send the obfuscated stack trace as the error's `exception.stacktrace`. The
+catalog lives in `lib/crash_scenarios.dart`; note that `assert() (debug only)`
+does nothing in the release build you need here, so pick any other scenario.
 
 ## 4. Verify symbolication in the dashboard
 

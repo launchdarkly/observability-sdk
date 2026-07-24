@@ -106,7 +106,7 @@ cd ios && LD_USE_LOCAL_NATIVE=true pod install && cd ..
 
 In the running app:
 
-- **Trigger Error** / **Trigger Crash** → reported through `LDObserve.recordException`.
+- **Error** section → pick one of the failure scenarios (Dart exceptions, framework and async errors, isolate and native signals), then **Error** to report it through `LDObserve.recordException` or **Crash** to leave it unhandled. See `lib/crash_scenarios.dart`.
 - **Trigger Log** / **Log with Context** / **Record error log with stack trace** → flow through `LDObserve.recordLog`.
 - **Nested Spans** / **Trigger Sequential Spans** / **Send custom span** → spans recorded via `LDObserve.startSpan`.
 - **Trigger HTTP Request** → an outgoing request that is traced when network instrumentation is enabled.
