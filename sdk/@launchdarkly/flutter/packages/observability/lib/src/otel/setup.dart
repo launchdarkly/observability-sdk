@@ -1,12 +1,17 @@
 import 'package:launchdarkly_flutter_observability/src/otel/conversions.dart';
 import 'package:launchdarkly_flutter_observability/src/otel/exporters/exporter_factory.dart';
 import 'package:launchdarkly_flutter_observability/src/otel/service_convention.dart';
+import 'package:launchdarkly_flutter_observability/src/otel/symbols_id.dart';
 import 'package:launchdarkly_flutter_observability/src/plugin/observability_config.dart';
 import 'package:opentelemetry/api.dart'
     show registerGlobalTracerProvider, Attribute;
 import 'package:opentelemetry/sdk.dart' show TracerProviderBase, Resource;
 
 const _highlightProjectIdAttr = 'highlight.project_id';
+
+/// Resource attribute carrying the Dart AOT snapshot build id (surfaced as
+/// symbols_id). The backend keys the Id-lane symbol map by this value.
+const _symbolsIdAttr = 'launchdarkly.symbols_id';
 
 class Otel {
   static final List<TracerProviderBase> _tracerProviders = [];
@@ -43,6 +48,13 @@ class Otel {
         ),
       ),
     );
+    // In obfuscated release builds, report the Dart snapshot build id so the
+    // backend can symbolicate crashes against the uploaded .symbols map. Absent
+    // in debug/profile builds and on web, where it is null (and skipped).
+    final symbolsId = readSymbolsId();
+    if (symbolsId != null) {
+      resourceAttributes.add(Attribute.fromString(_symbolsIdAttr, symbolsId));
+    }
     final tracerProvider = TracerProviderBase(
       processors: exporters.createSpanProcessors(config),
       resource: Resource(resourceAttributes),
