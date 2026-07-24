@@ -93,6 +93,52 @@ ldcli symbols upload \
 You can also pass `--symbols-id <id>` explicitly, or `--app-version <version>` to
 key by version instead (the Version Lane) if you don't inject a symbols id.
 
+### Optional — also upload your sources (`--include-sources`)
+
+Retracing alone gets you `CartPricing.computeTotal` at `SymbolicationDemo.kt:42`.
+Adding `--include-sources` also uploads your `.java`/`.kt` files, so the errors
+page shows the **code around each frame** instead of just the location:
+
+```bash
+# from e2e/android/
+ldcli symbols upload \
+  --type android \
+  --path ./app/build/symbols/composeRelease \
+  --project <project-key> \
+  --backend-url http://localhost:8082/private \
+  --access-token <api-token> \
+  --include-sources \
+  --source-path ./app/src/main
+```
+
+```
+Built source bundle from ./app/src/main (14 files, 21504 bytes)
+```
+
+Unlike Apple, an R8 mapping records no file paths at all — only
+(class, method, line) — so `ldcli` has to be told where your sources are.
+`--source-path` defaults to the current directory, which works from a project
+root; pointing it at a source directory is faster and avoids bundling test or
+sample code. Files under `build/`, `.gradle/`, `.git/`, `.idea/` and
+`node_modules/` are always skipped.
+
+The files are packed into a `sources.srcbundle` uploaded beside `mapping.txt`
+under the same symbols id, so sources are matched to a build exactly as the
+mapping is. Each file is keyed by its **declared package** plus its file name
+(`com/example/androidobservability/SymbolicationDemo.kt`), which is what a
+retraced frame's fully-qualified class name reconstructs — so a Kotlin file in a
+directory that doesn't mirror its package still resolves.
+
+- **Off by default, because it stores your source code in LaunchDarkly.**
+- Individual files over 2 MiB, and a bundle over 64 MiB, are skipped.
+- If no sources are found it says so and uploads the mapping alone, so this flag
+  can't break an upload that would otherwise work.
+
+A side benefit: R8 usually reports the placeholder `SourceFile`, leaving the
+backend to guess `.java` for every frame. When a source bundle resolves the
+frame, the guess is replaced with the real path — so Kotlin frames finally show
+`.kt` and get Kotlin syntax highlighting.
+
 ## 3. Trigger an obfuscated error
 
 In the app, tap **Trigger Obfuscated Error**. It throws deep inside an
