@@ -9,6 +9,7 @@ import opentelemetry.trace as trace
 from opentelemetry.util.types import Attributes
 from opentelemetry._logs import get_logger_provider
 from ldobserve._otel.configuration import _OTELConfiguration
+from ldobserve._source_context import exception_attributes
 from ldobserve._util.dict import flatten_dict
 
 from opentelemetry.metrics import (
@@ -60,7 +61,8 @@ class _ObserveInstance:
             ctx = self.start_span(_ERROR_NAME)
 
         with ctx as span:
-            attrs = {}
+            # Source context first, so caller-supplied attributes win on conflict.
+            attrs = exception_attributes(error)
             if attributes:
                 addedAttributes = flatten_dict(attributes, sep=".")
                 attrs.update(addedAttributes)
