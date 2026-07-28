@@ -9,7 +9,9 @@ This module reads the surrounding lines off disk at capture time and reports the
 as ``exception.structured_stacktrace``: a JSON array of frames, innermost first,
 each carrying ``linesBefore`` / ``lineContent`` / ``linesAfter``. Ingestion
 prefers that attribute over the raw text stacktrace, so the frames land in the
-errors UI as-is. The Ruby SDK reports the same attribute in the same shape.
+errors UI as-is -- and so the whole exception chain has to be described here,
+because the text form that would otherwise have carried the root cause is no
+longer read. The Ruby SDK reports the same attribute in the same shape.
 
 Everything here is best-effort. Frames whose source is not on the running host
 (``exec``-compiled code, source-stripped or frozen bundles, bytecode compiled at
@@ -28,10 +30,14 @@ import typing
 # backend produces for every other language it symbolicates.
 _CONTEXT_LINES = 5
 
-# Deepest frames reported per exception. The backend keeps the leading frames of
-# the trace (which are the innermost ones, see _structured_stacktrace) and drops
-# the rest, so this only bounds payload size.
-_MAX_FRAMES = 20
+# Deepest frames reported for each exception in the chain, so that a deep stack
+# on the raised exception cannot crowd out its root cause entirely.
+_MAX_FRAMES_PER_EXCEPTION = 20
+
+# Total frames reported. Matches the backend's own frame cap: it keeps the
+# leading frames (the innermost ones, see _structured_stacktrace) and drops the
+# rest, so anything past this would be discarded on arrival.
+_MAX_FRAMES = 64
 
 # Per-line cap. The backend trims each field to the same length, so anything
 # longer is bytes on the wire that would be discarded on arrival.
@@ -61,19 +67,59 @@ def exception_attributes(error: BaseException) -> typing.Dict[str, str]:
 def _structured_stacktrace(
     error: BaseException,
 ) -> typing.Optional[typing.List[typing.Dict[str, typing.Any]]]:
-    frames = list(_walk_traceback(error.__traceback__))
-    if not frames:
+    collected: typing.List[typing.Tuple[types.FrameType, int, str]] = []
+    for exception in _exception_chain(error):
+        message = _error_message(exception)
+        frames = list(_walk_traceback(exception.__traceback__))
+        collected.extend(
+            (frame, lineno, message)
+            for frame, lineno in frames[-_MAX_FRAMES_PER_EXCEPTION:]
+        )
+    if not collected:
         return None
 
-    message = _error_message(error)
-    # A traceback runs outermost -> innermost, while the backend stores and
-    # displays frames innermost first (which is also the order it reverses the
-    # parsed text form into). Take the deepest _MAX_FRAMES, then reverse, so the
-    # frames nearest the raise survive both this cap and the backend's.
+    # ``collected`` now runs the way a traceback prints: root cause first, each
+    # exception outermost -> innermost. The backend stores and displays the
+    # reverse of that (it reverses the parsed text form to get there), so flip
+    # the whole list. The raise site of the final exception leads, root cause
+    # frames trail, and the backend's tail truncation drops the least relevant
+    # frames rather than the most relevant ones.
+    collected.reverse()
     return [
         _build_frame(frame, lineno, message)
-        for frame, lineno in reversed(frames[-_MAX_FRAMES:])
+        for frame, lineno, message in collected[:_MAX_FRAMES]
     ]
+
+
+def _exception_chain(error: BaseException) -> typing.List[BaseException]:
+    """The exceptions to describe, root cause first.
+
+    An exception raised while handling another one carries the first as its
+    ``__cause__`` (explicit ``raise ... from``) or ``__context__`` (implicit),
+    and ``traceback.format_exception`` prints the whole chain. Ingestion prefers
+    the structured stacktrace over that text, so leaving the chain out here would
+    drop the root cause frames from the errors UI entirely.
+    """
+    chain: typing.List[BaseException] = []
+    seen: typing.Set[int] = set()
+    current: typing.Optional[BaseException] = error
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        chain.append(current)
+        current = _chained_cause(current)
+    # Printed order: deepest cause first, the exception that was raised last.
+    chain.reverse()
+    return chain
+
+
+def _chained_cause(error: BaseException) -> typing.Optional[BaseException]:
+    # The same precedence ``traceback`` applies: an explicit "raise ... from"
+    # wins, and an implicit context is skipped once "from None" suppressed it.
+    if error.__cause__ is not None:
+        return error.__cause__
+    if error.__context__ is not None and not error.__suppress_context__:
+        return error.__context__
+    return None
 
 
 def _walk_traceback(

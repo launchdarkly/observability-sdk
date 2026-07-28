@@ -4,6 +4,7 @@ import os
 from ldobserve._source_context import (
     _CONTEXT_LINES,
     _MAX_FRAMES,
+    _MAX_FRAMES_PER_EXCEPTION,
     _MAX_LINE_LENGTH,
     _STRUCTURED_STACKTRACE_ATTRIBUTE,
     exception_attributes,
@@ -88,15 +89,115 @@ def _recurse(depth: int):
 
 def test_limits_frame_count_keeping_deepest():
     try:
-        _recurse(_MAX_FRAMES + 10)
+        _recurse(_MAX_FRAMES_PER_EXCEPTION + 10)
     except RuntimeError as error:
         frames = _frames(error)
 
-    assert len(frames) == _MAX_FRAMES
+    assert len(frames) == _MAX_FRAMES_PER_EXCEPTION
     # Innermost first, so the raise survives the cap and this test's own frame
     # (the outermost one) is what gets dropped.
     assert frames[0]["lineContent"].strip() == 'raise RuntimeError("deep")'
     assert all(frame["functionName"] == "_recurse" for frame in frames)
+
+
+def _raise_root_cause():
+    marker = "root cause marker"
+    raise KeyError("root cause")
+
+
+def test_explicit_cause_frames_are_reported():
+    try:
+        try:
+            _raise_root_cause()
+        except KeyError as cause:
+            raise ValueError("wrapper") from cause
+    except ValueError as error:
+        frames = _frames(error)
+
+    # The raised exception leads, innermost first; the cause's frames trail it.
+    assert frames[0]["functionName"] == "test_explicit_cause_frames_are_reported"
+    assert frames[0]["lineContent"].strip() == 'raise ValueError("wrapper") from cause'
+    assert [frame["functionName"] for frame in frames[1:]] == [
+        "_raise_root_cause",
+        "test_explicit_cause_frames_are_reported",
+    ]
+    assert frames[1]["lineContent"].strip() == 'raise KeyError("root cause")'
+    assert "root cause marker" in frames[1]["linesBefore"]
+
+
+def test_each_frame_carries_its_own_exception_message():
+    try:
+        try:
+            _raise_root_cause()
+        except KeyError as cause:
+            raise ValueError("wrapper") from cause
+    except ValueError as error:
+        frames = _frames(error)
+
+    assert frames[0]["error"] == "ValueError: wrapper"
+    assert frames[1]["error"] == "KeyError: 'root cause'"
+
+
+def test_implicit_context_frames_are_reported():
+    try:
+        try:
+            _raise_root_cause()
+        except KeyError:
+            raise ValueError("during handling")
+    except ValueError as error:
+        frames = _frames(error)
+
+    assert [frame["functionName"] for frame in frames] == [
+        "test_implicit_context_frames_are_reported",
+        "_raise_root_cause",
+        "test_implicit_context_frames_are_reported",
+    ]
+
+
+def test_suppressed_context_is_not_reported():
+    try:
+        try:
+            _raise_root_cause()
+        except KeyError:
+            raise ValueError("standalone") from None
+    except ValueError as error:
+        frames = _frames(error)
+
+    # "from None" means the context is deliberately hidden, as in a traceback.
+    assert [frame["functionName"] for frame in frames] == [
+        "test_suppressed_context_is_not_reported"
+    ]
+
+
+def test_chain_frame_count_is_capped_in_total():
+    try:
+        try:
+            _recurse(_MAX_FRAMES)
+        except RuntimeError as cause:
+            raise ValueError("wrapper") from cause
+    except ValueError as error:
+        frames = _frames(error)
+
+    assert len(frames) <= _MAX_FRAMES
+    # The cause is capped per exception, so it still gets its deepest frames in
+    # rather than being crowded out by the raised exception's stack.
+    assert any(frame["functionName"] == "_recurse" for frame in frames)
+
+
+def test_cyclic_exception_chain_terminates():
+    error = ValueError("self-referential")
+    try:
+        raise error
+    except ValueError:
+        pass
+    # A cycle cannot arise from normal raising, but the attributes are writable
+    # and a walk that trusted them would not terminate.
+    error.__context__ = error
+
+    frames = _frames(error)
+    assert [frame["functionName"] for frame in frames] == [
+        "test_cyclic_exception_chain_terminates"
+    ]
 
 
 def test_missing_file_reports_frame_without_source():
