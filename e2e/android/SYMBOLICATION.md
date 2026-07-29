@@ -85,7 +85,7 @@ automatically, so no `--symbols-id` is needed:
 ldcli symbols upload \
   --type android \
   --path ./app/build/symbols/composeRelease \
-  --project <project-key> \
+  --project default \
   --backend-url http://localhost:8082/private \
   --access-token <api-token>
 ```
@@ -104,15 +104,16 @@ page shows the **code around each frame** instead of just the location:
 ldcli symbols upload \
   --type android \
   --path ./app/build/symbols/composeRelease \
-  --project <project-key> \
+  --project default \
+  --base-uri https://ld-stg.launchdarkly.com \
   --backend-url http://localhost:8082/private \
   --access-token <api-token> \
   --include-sources \
-  --source-path ./app/src/main
+  --source-path ./app/src
 ```
 
 ```
-Built source bundle from ./app/src/main (14 files, 21504 bytes)
+Built source bundle from ./app/src (28 files, 37272 bytes)
 ```
 
 Unlike Apple, an R8 mapping records no file paths at all — only
@@ -122,22 +123,27 @@ root; pointing it at a source directory is faster and avoids bundling test or
 sample code. Files under `build/`, `.gradle/`, `.git/`, `.idea/` and
 `node_modules/` are always skipped.
 
+> **Point it above your source sets, not at `main`.** This app has product
+> flavors, so a `composeRelease` build compiles `app/src/main` **and**
+> `app/src/compose`. `--source-path ./app/src/main` would bundle only the former
+> and silently omit `MainActivity.kt` and `MainActivityViewModel.kt` — the upload
+> succeeds, and those frames just never get a snippet. `./app/src` covers every
+> source set. The same applies to any multi-module project: pass a directory that
+> contains all the modules you ship.
+
 The files are packed into a `sources.srcbundle` uploaded beside `mapping.txt`
 under the same symbols id, so sources are matched to a build exactly as the
 mapping is. Each file is keyed by its **declared package** plus its file name
-(`com/example/androidobservability/SymbolicationDemo.kt`), which is what a
-retraced frame's fully-qualified class name reconstructs — so a Kotlin file in a
-directory that doesn't mirror its package still resolves.
+(`com/example/androidobservability/SymbolicationDemo.kt`), which is what R8's
+own `sourceFile` metadata names for each retraced class — so a Kotlin file in a
+directory that doesn't mirror its package still resolves, and so does a file
+that declares several classes (`SymbolicationDemo.kt` holds both `CheckoutDemo`
+and `CartPricing`).
 
 - **Off by default, because it stores your source code in LaunchDarkly.**
 - Individual files over 2 MiB, and a bundle over 64 MiB, are skipped.
 - If no sources are found it says so and uploads the mapping alone, so this flag
   can't break an upload that would otherwise work.
-
-A side benefit: R8 usually reports the placeholder `SourceFile`, leaving the
-backend to guess `.java` for every frame. When a source bundle resolves the
-frame, the guess is replaced with the real path — so Kotlin frames finally show
-`.kt` and get Kotlin syntax highlighting.
 
 ## 3. Trigger an obfuscated error
 
