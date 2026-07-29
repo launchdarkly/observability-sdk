@@ -20,6 +20,22 @@ cd observability-sdk/e2e/go-plugin
 export LAUNCHDARKLY_SDK_KEY="your-sdk-key-here"
 ```
 
+## Pointing somewhere other than LaunchDarkly
+
+The examples export to LaunchDarkly by default. The HTTP example also honours the
+standard endpoint variable, so it can be pointed at a local stack instead — OTLP
+over HTTP, port 4318:
+
+```bash
+export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
+```
+
+Data is attributed to the project the SDK key belongs to, so use a key from the
+environment the data should land in.
+
+To see what the SDK sends without a stack at all, run the `otlpdump` command
+(below) and point the example at that.
+
 ## Examples
 
 This project contains several examples, each demonstrating the LaunchDarkly Observability plugin with different Go frameworks and libraries:
@@ -30,6 +46,7 @@ This project contains several examples, each demonstrating the LaunchDarkly Obse
 - [Standard HTTP Example](#4-standard-http-example-cmdhttp)
 - [Logrus Example](#5-logrus-example-cmdlogrus)
 - [Pre-Initialize Example](#6-pre-initialize-example-cmdpreinit)
+- [OTLP Dump](#otlp-dump-cmdotlpdump)
 
 ### 1. Fiber Example (`cmd/fiber/`)
 
@@ -100,6 +117,10 @@ go run cmd/http/http.go
 
 **Endpoints:**
 - `GET /rolldice` - Rolls a dice and returns the result, with verbose output controlled by the `verbose-response` feature flag
+- `GET /error/plain` - Records an error with no stack of its own, so the SDK has to capture one. The reported frames should start at the handler's helper, not inside the SDK
+- `GET /error/stack` - Records a `pkg/errors` error, whose stack was captured where the error was created, three calls below the handler
+- `GET /error/wrapped` - Records a wrapped error. The frames should reach the root cause, not stop at the wrap
+- `GET /error/goroutine` - Records an error raised in nested closures on another goroutine, with no span to attach it to
 
 ### 5. Logrus Example (`cmd/logrus/`)
 
@@ -144,3 +165,46 @@ go run cmd/preinit/preinit.go
 - Using observability features without a LaunchDarkly client (some features will be unavailable)
 - Custom initialization timing requirements
  
+### OTLP Dump (`cmd/otlpdump/`)
+
+An OTLP endpoint that prints the exceptions it receives, including the source
+context attached to every frame. It stands in for the backend while working on
+how errors are recorded: what reaches it is what the backend would have parsed,
+so a change can be checked without a stack running and without waiting for the
+data to appear in the UI.
+
+**To run:**
+
+```bash
+go run ./cmd/otlpdump
+```
+
+Then, in another shell, point an example at it and record some errors:
+
+```bash
+OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 go run ./cmd/http
+curl localhost:8080/error/wrapped
+```
+
+Each exception prints as its frames, innermost first, with the reported line
+marked:
+
+```
+===== exception on span "/error/wrapped" =====
+exception.type = *errors.withStack
+exception.message = could not start worker: worker config has no timeout
+--- 12 frames ---
+[0] failure.connectWorker in .../internal/failure/failure.go at line 65
+       | func connectWorker() (int, error) {
+       | 	timeout, ok := workerSettings["timeout"]
+       | 	if !ok {
+    >> | 		return 0, errors.New("worker config has no timeout")
+       | 	}
+       | 	return timeout, nil
+       | }
+```
+
+A frame printed as `(no source for this frame on this host)` is the normal result
+for a binary running without its source tree, a container built from `scratch`
+being the obvious case. Pass `-text` to print the plain text stack trace too,
+which is what the backend has to fall back on when no frames are sent.

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
@@ -56,22 +55,32 @@ func RecordError(ctx context.Context, err error, tags ...attribute.KeyValue) con
 }
 
 func recordSpanError(span trace.Span, err error, tags ...attribute.KeyValue) {
-	type withStackTrace interface {
-		StackTrace() errors.StackTrace
-	}
-
-	if stackErr, ok := err.(withStackTrace); ok {
-		stackTrace := fmt.Sprintf("%+v", stackErr.StackTrace())
-		attributes := make([]attribute.KeyValue, 0, 3+len(tags))
+	// A stack the error carries was captured where the error was created, which
+	// is closer to the failure than anything this function could capture.
+	if stack, ok := stackTraceOf(err); ok {
+		stackTrace := fmt.Sprintf("%+v", stack)
+		attributes := make([]attribute.KeyValue, 0, 4+len(tags))
 		attributes = append(attributes,
 			semconv.ExceptionTypeKey.String(reflect.TypeOf(err).String()),
 			semconv.ExceptionMessageKey.String(err.Error()),
 			semconv.ExceptionStacktraceKey.String(stackTrace),
 		)
+		if structured, ok := structuredStacktraceAttribute(err, callersFromStackTrace(stack)); ok {
+			attributes = append(attributes, structured)
+		}
 		attributes = append(attributes, tags...)
 		span.AddEvent(semconv.ExceptionEventName, trace.WithAttributes(attributes...))
 	} else {
-		span.RecordError(err, trace.WithStackTrace(true))
+		options := []trace.EventOption{trace.WithStackTrace(true)}
+		attributes := make([]attribute.KeyValue, 0, 1+len(tags))
+		if structured, ok := structuredStacktraceAttribute(err, callersAtRecordTime()); ok {
+			attributes = append(attributes, structured)
+		}
+		attributes = append(attributes, tags...)
+		if len(attributes) > 0 {
+			options = append(options, trace.WithAttributes(attributes...))
+		}
+		span.RecordError(err, options...)
 	}
 }
 
