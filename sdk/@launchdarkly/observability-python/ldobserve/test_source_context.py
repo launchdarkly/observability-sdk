@@ -1,5 +1,8 @@
 import json
 import os
+import sys
+
+import pytest
 
 from ldobserve._source_context import (
     _CONTEXT_LINES,
@@ -253,3 +256,153 @@ def test_error_message_uses_exception_type_and_message():
         frames = _frames(error)
 
     assert frames[0]["error"] == "KeyError: 'missing-key'"
+
+
+def test_syntax_error_message_survives_its_source_preview():
+    try:
+        compile("x ===\n", "<string>", "exec")
+    except SyntaxError as error:
+        frames = _frames(error)
+
+    # A SyntaxError is formatted with its file, source and caret before the
+    # message, so the message is not the first line printed.
+    assert frames[0]["error"].startswith("SyntaxError:")
+
+
+@pytest.mark.skipif(
+    sys.version_info < (3, 11), reason="add_note was added in Python 3.11"
+)
+def test_note_does_not_replace_the_exception_message():
+    try:
+        raise KeyError("noted")
+    except KeyError as error:
+        error.add_note("worker was retrying the config load")
+        frames = _frames(error)
+
+    # Notes are formatted after the message, so the message is not the last line
+    # printed either.
+    assert frames[0]["error"] == "KeyError: 'noted'"
+
+
+def _two_failures():
+    """Two exceptions that have been raised, ready to be put in a group."""
+    caught = []
+    for raiser in (_raise_root_cause, _raise_with_context):
+        try:
+            raiser()
+        except (KeyError, ValueError) as error:
+            caught.append(error)
+    return caught
+
+
+@pytest.mark.skipif(
+    sys.version_info < (3, 11), reason="exception groups were added in Python 3.11"
+)
+def test_exception_group_members_are_reported():
+    try:
+        raise ExceptionGroup("worker failures", _two_failures())
+    except BaseException as error:
+        frames = _frames(error)
+
+    functions = [frame["functionName"] for frame in frames]
+    assert "_raise_root_cause" in functions
+    assert "_raise_with_context" in functions
+
+    # A member's frames carry that member's message, not the group's.
+    messages = {frame["error"] for frame in frames}
+    assert "KeyError: 'root cause'" in messages
+    assert "ValueError: context failure" in messages
+    assert any(message.startswith("ExceptionGroup:") for message in messages)
+
+
+@pytest.mark.skipif(
+    sys.version_info < (3, 11), reason="exception groups were added in Python 3.11"
+)
+def test_exception_group_members_report_source_context():
+    try:
+        raise ExceptionGroup("worker failures", _two_failures())
+    except BaseException as error:
+        frames = _frames(error)
+
+    member = next(
+        frame for frame in frames if frame["functionName"] == "_raise_root_cause"
+    )
+    assert member["lineContent"].strip() == 'raise KeyError("root cause")'
+    assert "root cause marker" in member["linesBefore"]
+
+
+@pytest.mark.skipif(
+    sys.version_info < (3, 11), reason="exception groups were added in Python 3.11"
+)
+def test_nested_exception_group_members_are_reported():
+    inner = ExceptionGroup("inner failures", _two_failures())
+    try:
+        raise ExceptionGroup("outer failures", [inner])
+    except BaseException as error:
+        frames = _frames(error)
+
+    functions = [frame["functionName"] for frame in frames]
+    assert "_raise_root_cause" in functions
+    assert "_raise_with_context" in functions
+
+
+class _BackportedGroup(Exception):
+    """A group as the ``exceptiongroup`` backport presents one.
+
+    That backport is how anyio and trio raise groups on 3.10, where the builtin
+    does not exist, and it is why members are found by shape.
+    """
+
+    def __init__(self, message, exceptions):
+        super().__init__(message)
+        self.exceptions = tuple(exceptions)
+
+
+def test_group_members_are_found_by_shape():
+    try:
+        raise _BackportedGroup("worker failures", _two_failures())
+    except _BackportedGroup as error:
+        frames = _frames(error)
+
+    functions = [frame["functionName"] for frame in frames]
+    assert "_raise_root_cause" in functions
+    assert "_raise_with_context" in functions
+
+
+def test_group_member_count_is_capped_in_total():
+    members = _two_failures() * 100
+    try:
+        raise _BackportedGroup("many failures", members)
+    except _BackportedGroup as error:
+        frames = _frames(error)
+
+    assert len(frames) <= _MAX_FRAMES
+
+
+def test_cyclic_group_membership_terminates():
+    try:
+        raise _BackportedGroup("self-referential", [])
+    except _BackportedGroup as error:
+        group = error
+    # A group cannot normally contain itself, but the attribute is writable and a
+    # walk that trusted it would not terminate.
+    group.exceptions = (group,)
+
+    frames = _frames(group)
+    assert [frame["functionName"] for frame in frames] == [
+        "test_cyclic_group_membership_terminates"
+    ]
+
+
+def test_non_group_exceptions_attribute_is_ignored():
+    class Confusing(Exception):
+        exceptions = "not a group at all"
+
+    try:
+        raise Confusing("just an exception")
+    except Confusing as error:
+        frames = _frames(error)
+
+    assert [frame["functionName"] for frame in frames] == [
+        "test_non_group_exceptions_attribute_is_ignored"
+    ]

@@ -43,6 +43,11 @@ _MAX_FRAMES = 64
 # longer is bytes on the wire that would be discarded on arrival.
 _MAX_LINE_LENGTH = 1000
 
+# How far into nested exception groups to look. Groups this deep are describing
+# the machinery that gathered the failures rather than the failures, and the walk
+# needs a bound it cannot get from cycle detection alone.
+_MAX_GROUP_DEPTH = 8
+
 _STRUCTURED_STACKTRACE_ATTRIBUTE = "exception.structured_stacktrace"
 
 
@@ -68,7 +73,11 @@ def _structured_stacktrace(
     error: BaseException,
 ) -> typing.Optional[typing.List[typing.Dict[str, typing.Any]]]:
     collected: typing.List[typing.Tuple[types.FrameType, int, str]] = []
-    for exception in _exception_chain(error):
+    # Every exception contributes at least one frame, so only the last _MAX_FRAMES
+    # of them can survive the cap below (the list is reversed before it is cut).
+    # Without this, the source for every member of a wide group is read and then
+    # thrown away.
+    for exception in _exception_chain(error)[-_MAX_FRAMES:]:
         message = _error_message(exception)
         frames = list(_walk_traceback(exception.__traceback__))
         collected.extend(
@@ -92,24 +101,59 @@ def _structured_stacktrace(
 
 
 def _exception_chain(error: BaseException) -> typing.List[BaseException]:
-    """The exceptions to describe, root cause first.
+    """The exceptions to describe, in the order a traceback prints them.
 
     An exception raised while handling another one carries the first as its
-    ``__cause__`` (explicit ``raise ... from``) or ``__context__`` (implicit),
-    and ``traceback.format_exception`` prints the whole chain. Ingestion prefers
-    the structured stacktrace over that text, so leaving the chain out here would
-    drop the root cause frames from the errors UI entirely.
+    ``__cause__`` (explicit ``raise ... from``) or ``__context__`` (implicit), and
+    an exception group carries several at once. ``traceback.format_exception``
+    prints all of them; ingestion prefers the structured stacktrace over that
+    text, so anything left out here is missing from the errors UI entirely.
     """
     chain: typing.List[BaseException] = []
-    seen: typing.Set[int] = set()
+    _collect_exceptions(error, chain, set(), 0)
+    return chain
+
+
+def _collect_exceptions(
+    error: BaseException,
+    chain: typing.List[BaseException],
+    seen: typing.Set[int],
+    depth: int,
+) -> None:
+    # The cause walk is iterative because the chain has no bound: raising inside
+    # an except block in a loop adds a link per iteration. Recursion is used only
+    # for group nesting, which _MAX_GROUP_DEPTH bounds.
+    causes: typing.List[BaseException] = []
     current: typing.Optional[BaseException] = error
     while current is not None and id(current) not in seen:
         seen.add(id(current))
-        chain.append(current)
+        causes.append(current)
         current = _chained_cause(current)
     # Printed order: deepest cause first, the exception that was raised last.
-    chain.reverse()
-    return chain
+    causes.reverse()
+
+    for exception in causes:
+        chain.append(exception)
+        if depth < _MAX_GROUP_DEPTH:
+            # A group's own traceback is the machinery that gathered the
+            # failures; the failures themselves are its members, and a member can
+            # be another group.
+            for member in _group_members(exception):
+                _collect_exceptions(member, chain, seen, depth + 1)
+
+
+def _group_members(error: BaseException) -> typing.List[BaseException]:
+    """The exceptions held by ``error`` when it is a group, otherwise nothing.
+
+    Groups are recognized by shape rather than by type. ``BaseExceptionGroup`` is
+    new in 3.11, so on 3.10 the name cannot even be referred to, and the same
+    shape arrives there from the ``exceptiongroup`` backport that anyio and trio
+    depend on.
+    """
+    members = getattr(error, "exceptions", None)
+    if not isinstance(members, (tuple, list)):
+        return []
+    return [member for member in members if isinstance(member, BaseException)]
 
 
 def _chained_cause(error: BaseException) -> typing.Optional[BaseException]:
@@ -214,11 +258,21 @@ def _clean_line(line: str) -> str:
 
 
 def _error_message(error: BaseException) -> str:
-    """The exception's type and message, as the trailing line of a traceback."""
+    """The exception's type and message, as a traceback prints it.
+
+    ``format_exception_only`` returns more than that one line, and what surrounds
+    it differs by version, so the line is picked out by position rather than by
+    taking an end of the list. A ``SyntaxError`` is preceded by its file, source
+    and caret, all indented; notes added by ``add_note`` (3.11+) follow it. The
+    line wanted is the first one written flush left.
+    """
     try:
         formatted = traceback.format_exception_only(type(error), error)
     except Exception:
         formatted = []
+    for entry in formatted:
+        if entry and not entry[0].isspace():
+            return entry.strip()
     if formatted:
         return formatted[-1].strip()
     return str(error)
