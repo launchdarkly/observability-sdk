@@ -190,6 +190,19 @@ class SessionReplayExporterErrorHandlingTest {
         assertEquals(listOf(SessionReplayInitializationVerdict.Allowed), verdicts)
     }
 
+    @Test
+    fun `a refused session is not identified again`() = runTest {
+        coEvery { mockService.pushPayload(any(), any(), any()) } throws refusal("pushPayload")
+        assertNotNull(exportFailure(captureItems("session-a")))
+
+        exporter.sendIdentifyAndCache(
+            IdentifyItemPayload(attributes = mapOf("key" to "user-2"), timestamp = 1L, sessionId = "session-a")
+        )
+
+        // Only the identify that came with the initialization, none for the abandoned session.
+        coVerify(exactly = 1) { mockService.identifyReplaySession(any<String>(), any<IdentifyItemPayload>()) }
+    }
+
     /** A refusal the backend cannot be retried out of: a GraphQL error marked non-retryable. */
     private fun refusal(operation: String) = SessionReplayApiException(
         operation,

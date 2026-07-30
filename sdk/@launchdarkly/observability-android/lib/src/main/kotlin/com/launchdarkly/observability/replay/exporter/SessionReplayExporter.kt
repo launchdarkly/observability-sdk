@@ -293,6 +293,10 @@ class SessionReplayExporter(
 
     suspend fun sendIdentifyAndCache(newIdentifyEvent: IdentifyItemPayload) {
         exportMutex.withLock {
+            // The identify hook stays registered after recording ends, so without this the abandoned
+            // session would keep receiving identify calls.
+            if (hasFailedUnrecoverably) return@withLock
+
             val sessionId = newIdentifyEvent.sessionId
             if (sessionId != null) {
                 try {
