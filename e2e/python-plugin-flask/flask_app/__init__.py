@@ -57,6 +57,22 @@ def manual_record_exception():
 def raise_exception():
     raise Exception("uncaught exception")
 
+def _load_worker_config():
+    settings = {"retries": 3}
+    # The root cause. Its frames and source context have to survive the chain.
+    return settings["timeout"]
+
+@app.route('/manual-record-chained-exception')
+def manual_record_chained_exception():
+    try:
+        try:
+            _load_worker_config()
+        except KeyError as cause:
+            raise RuntimeError("could not start worker") from cause
+    except RuntimeError as e:
+        observe.record_exception(e)
+        return 'Manual record chained exception'
+
 @app.route('/manual-record-log')
 def manual_record_log():
     observe.record_log("manual-record-log", logging.INFO, {"custom": "value"})
