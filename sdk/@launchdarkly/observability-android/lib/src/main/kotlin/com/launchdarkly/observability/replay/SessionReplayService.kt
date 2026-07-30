@@ -372,12 +372,14 @@ class SessionReplayService(
             if (_isEnabled.value == value) return
             if (value) {
                 // A launch the backend has refused cannot record again, so enabling must not report itself
-                // as enabled. The next launch tries again.
-                if (!withGate { canStartRecording }) {
+                // as enabled. The next launch tries again. Checking and enabling under the gate's lock, the
+                // same one a verdict is applied under, keeps a refusal that lands in between from being
+                // overwritten by the enable that raced it.
+                val canStart = withGate { canStartRecording.also { if (it) _isEnabled.value = true } }
+                if (!canStart) {
                     logger.info("Session replay cannot start, the backend refused this launch.")
                     return
                 }
-                _isEnabled.value = true
                 attemptStart(ignoreSampling = false)
             } else {
                 _isEnabled.value = false
@@ -449,7 +451,16 @@ class SessionReplayService(
      * next launch does not take screenshots before the backend has answered.
      */
     private fun handleInitializationVerdict(verdict: SessionReplayInitializationVerdict) {
-        when (val outcome = withGate { apply(verdict) }) {
+        // Recording is over for this launch, so report replay as disabled rather than leaving `isEnabled`
+        // claiming otherwise. Set under the gate's lock, together with the verdict that decided it, so an
+        // `isEnabled = true` racing this refusal cannot end up as the last write.
+        val outcome = withGate {
+            apply(verdict).also {
+                if (it is SessionReplayRecordingGate.Outcome.StopRecording) _isEnabled.value = false
+            }
+        }
+
+        when (outcome) {
             is SessionReplayRecordingGate.Outcome.None -> Unit
 
             is SessionReplayRecordingGate.Outcome.ReleaseScreenCapture -> {
@@ -462,9 +473,6 @@ class SessionReplayService(
                 initializationStore?.store(outcome.reason)
                 logger.error("Session replay stopped, the backend refused this launch: ${outcome.reason}")
                 isScreenCaptureAllowed.value = false
-                // Recording is over for this launch, so report replay as disabled rather than leaving
-                // `isEnabled` claiming otherwise.
-                _isEnabled.value = false
                 stopRecording()
             }
         }

@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class SessionReplayInitializationStoreTest {
@@ -100,6 +101,21 @@ class SessionReplayInitializationStoreTest {
         assertFalse(stored!!.contains("mob-secret-key"))
         // The environment is part of the key name now, so that has to stay a fingerprint too.
         assertFalse(key.contains("mob-secret-key"))
+    }
+
+    @Test
+    fun `the environment fingerprint is a fixed-length hex digest`() {
+        val prefix = "${SessionReplayInitializationStore.KEY_PREFIX_LAST_UNRECOVERABLE_FAILURE}."
+
+        // Across this many keys some digests start with a byte whose high bit is set, which is where a
+        // sign-extending hex conversion would widen the fingerprint past the 8 bytes it is meant to be.
+        val fingerprints = (1..64).map { SessionReplayInitializationStore.failureKey("mob-key-$it").removePrefix(prefix) }
+
+        fingerprints.forEach { fingerprint ->
+            assertEquals(16, fingerprint.length, "unexpected fingerprint: $fingerprint")
+            assertTrue(fingerprint.all { it in "0123456789abcdef" }, "unexpected fingerprint: $fingerprint")
+        }
+        assertEquals(fingerprints.size, fingerprints.distinct().size)
     }
 
     /** In-memory stand-in for [SharedPreferences], enough for the string get/put/remove this store uses. */
