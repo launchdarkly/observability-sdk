@@ -6,7 +6,8 @@ import kotlinx.serialization.json.Json
 import java.security.MessageDigest
 
 /**
- * Outcome of an `initializeSession` / `pushPayload` attempt as far as recording is concerned. Reported by
+ * Outcome of a Session Replay request as far as recording is concerned. Any of them can refuse the launch,
+ * including the `identifyReplaySession` that follows a successful `initializeReplaySession`. Reported by
  * [com.launchdarkly.observability.replay.exporter.SessionReplayExporter], which is public, hence public.
  */
 sealed interface SessionReplayInitializationVerdict {

@@ -252,6 +252,7 @@ class SessionReplayExporter(
             replayApiService.initializeReplaySession(organizationVerboseId, sessionId)
             // Accepting the session is the recording verdict on its own: reporting it here rather than
             // after `identifyReplaySession` keeps a transient identify failure from withholding screenshots.
+            // An unrecoverable identify failure still refuses the launch, through the catch below.
             report(SessionReplayInitializationVerdict.Allowed)
             replayApiService.identifyReplaySession(sessionId, identifyItemPayload)
         } catch (e: Exception) {
