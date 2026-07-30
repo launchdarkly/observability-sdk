@@ -112,6 +112,28 @@ func TestStructuredStacktraceLooksPastStandardWrapping(t *testing.T) {
 	}
 }
 
+// emptyStackError carries a StackTrace method that describes nothing, as an
+// error type can when it captured no frames.
+type emptyStackError struct{}
+
+func (emptyStackError) Error() string { return "boom" }
+
+func (emptyStackError) StackTrace() errors.StackTrace { return nil }
+
+func TestStructuredStacktraceKeepsAnOuterStackOverAnEmptyInnerOne(t *testing.T) {
+	err := errors.Wrap(emptyStackError{}, "could not start the worker")
+
+	stack, ok := stackTraceOf(err)
+	if !ok {
+		t.Fatal("expected the wrap's stack to be used")
+	}
+	frames := framesFrom(t, err, callersFromStackTrace(stack))
+
+	if !strings.HasSuffix(frames[0].FunctionName, ".TestStructuredStacktraceKeepsAnOuterStackOverAnEmptyInnerOne") {
+		t.Errorf("expected the wrap site as the innermost frame, got %q", frames[0].FunctionName)
+	}
+}
+
 func TestStructuredStacktraceIgnoresAnErrorWithoutAStack(t *testing.T) {
 	if _, ok := stackTraceOf(fmt.Errorf("no stack here")); ok {
 		t.Error("expected no stack to be found")

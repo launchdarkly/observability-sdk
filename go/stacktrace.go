@@ -89,8 +89,12 @@ func stackTraceOf(err error) (errors.StackTrace, bool) {
 
 	var deepest errors.StackTrace
 	for wrapped := err; wrapped != nil; wrapped = errors.Unwrap(wrapped) {
+		// An empty stack describes nothing, so it leaves the one found above it
+		// in place rather than replacing it.
 		if carrier, ok := wrapped.(withStackTrace); ok {
-			deepest = carrier.StackTrace()
+			if stack := carrier.StackTrace(); len(stack) > 0 {
+				deepest = stack
+			}
 		}
 	}
 	return deepest, len(deepest) > 0
