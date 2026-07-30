@@ -41,6 +41,8 @@ const (
 // sit on top of a stack captured at record time and describe the recording, not
 // the failure: they are why an OTeL-captured Go trace opens with
 // recordStackTrace and RecordError rather than with the code that broke.
+//
+//nolint:gochecknoglobals
 var instrumentationPackages = []string{
 	"github.com/launchdarkly/observability-sdk/go",
 	"go.opentelemetry.io/otel",
@@ -213,11 +215,12 @@ func sourceContext(path string, line int) (before string, content string, after 
 // which covers a missing file, an unreadable one, and one whose lines are too
 // long to be worth reading.
 func readSourceLines(path string, first, last int) ([]string, bool) {
+	//nolint:gosec // The path is one the runtime reported for a frame, not input.
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, false
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	scanner := bufio.NewScanner(file)
 	scanner.Buffer(nil, maxSourceLineBuffer)
