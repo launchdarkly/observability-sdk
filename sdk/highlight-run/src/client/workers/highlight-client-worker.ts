@@ -443,6 +443,7 @@ function stringifyProperties(
 			// us stop no longer applies.
 			hasStoppedRecording = false
 			numberOfFailedRequests = 0
+			numberOfFailedPushPayloads = 0
 			graphqlSDK = getSdk(
 				new GraphQLClient(backend, {
 					headers: {},
