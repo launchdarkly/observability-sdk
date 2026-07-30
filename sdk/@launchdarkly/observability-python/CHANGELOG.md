@@ -2,6 +2,13 @@
 
 All notable changes to the LaunchDarkly Python Observability will be documented in this file. This project adheres to Semantic Versioning.
 
+## [1.3.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-python-1.2.4...launchdarkly-observability-python-1.3.0) (2026-07-30)
+
+
+### Features
+
+* **python:** report source context for recorded exceptions ([#693](https://github.com/launchdarkly/observability-sdk/issues/693)) ([54aa031](https://github.com/launchdarkly/observability-sdk/commit/54aa0315f864e45d02bde7088a032cff42236d0f))
+
 ## [1.2.4](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-python-1.2.3...launchdarkly-observability-python-1.2.4) (2026-06-22)
 
 
