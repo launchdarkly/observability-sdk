@@ -370,13 +370,52 @@ def test_group_members_are_found_by_shape():
 
 
 def test_group_member_count_is_capped_in_total():
-    members = _two_failures() * 100
+    members = [failure for _ in range(50) for failure in _two_failures()]
     try:
         raise _BackportedGroup("many failures", members)
     except _BackportedGroup as error:
         frames = _frames(error)
 
-    assert len(frames) <= _MAX_FRAMES
+    assert len(frames) == _MAX_FRAMES
+
+
+def _unraised_failures(count):
+    """Exceptions built rather than caught, as a group's members often are.
+
+    ``raise ExceptionGroup("...", [ValueError("a"), ValueError("b")])`` puts
+    exceptions that were never raised in the group, so they have no traceback.
+    """
+    return [ValueError("failure {}".format(number)) for number in range(count)]
+
+
+def test_wide_group_of_unraised_members_reports_the_raise_site():
+    members = _unraised_failures(_MAX_FRAMES * 2)
+    try:
+        raise _BackportedGroup("many failures", members)
+    except _BackportedGroup as error:
+        frames = _frames(error)
+
+    # The members carry no frames, so the group's own are all there is to report
+    # -- and there are more members than the frame cap, which must not be spent
+    # on them.
+    assert [frame["functionName"] for frame in frames] == [
+        "test_wide_group_of_unraised_members_reports_the_raise_site"
+    ]
+
+
+def test_unraised_group_members_do_not_crowd_out_the_root_cause():
+    try:
+        try:
+            _raise_root_cause()
+        except KeyError as cause:
+            raise _BackportedGroup(
+                "many failures", _unraised_failures(_MAX_FRAMES * 2)
+            ) from cause
+    except _BackportedGroup as error:
+        frames = _frames(error)
+
+    functions = [frame["functionName"] for frame in frames]
+    assert "_raise_root_cause" in functions
 
 
 def test_cyclic_group_membership_terminates():

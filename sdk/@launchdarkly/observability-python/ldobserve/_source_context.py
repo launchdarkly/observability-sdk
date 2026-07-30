@@ -20,6 +20,7 @@ get today. No failure in this module is allowed to interfere with recording the
 exception itself.
 """
 
+import itertools
 import json
 import linecache
 import traceback
@@ -72,32 +73,39 @@ def exception_attributes(error: BaseException) -> typing.Dict[str, str]:
 def _structured_stacktrace(
     error: BaseException,
 ) -> typing.Optional[typing.List[typing.Dict[str, typing.Any]]]:
-    collected: typing.List[typing.Tuple[types.FrameType, int, str]] = []
-    # Every exception contributes at least one frame, so only the last _MAX_FRAMES
-    # of them can survive the cap below (the list is reversed before it is cut).
-    # Without this, the source for every member of a wide group is read and then
-    # thrown away.
-    for exception in _exception_chain(error)[-_MAX_FRAMES:]:
-        message = _error_message(exception)
-        frames = list(_walk_traceback(exception.__traceback__))
-        collected.extend(
-            (frame, lineno, message)
-            for frame, lineno in frames[-_MAX_FRAMES_PER_EXCEPTION:]
-        )
+    # Lazily, so that a wide group costs the frames reported rather than the
+    # frames held: the walk stops as soon as the cap is met. Trimming the chain
+    # up front instead would assume every exception contributes a frame, and a
+    # group member that was built rather than raised contributes none.
+    collected = list(itertools.islice(_chain_frames(error), _MAX_FRAMES))
     if not collected:
         return None
-
-    # ``collected`` now runs the way a traceback prints: root cause first, each
-    # exception outermost -> innermost. The backend stores and displays the
-    # reverse of that (it reverses the parsed text form to get there), so flip
-    # the whole list. The raise site of the final exception leads, root cause
-    # frames trail, and the backend's tail truncation drops the least relevant
-    # frames rather than the most relevant ones.
-    collected.reverse()
     return [
-        _build_frame(frame, lineno, message)
-        for frame, lineno, message in collected[:_MAX_FRAMES]
+        _build_frame(frame, lineno, message) for frame, lineno, message in collected
     ]
+
+
+def _chain_frames(
+    error: BaseException,
+) -> typing.Iterator[typing.Tuple[types.FrameType, int, str]]:
+    """Every frame of the exception chain, in the order the backend stores them.
+
+    A traceback prints the root cause first and each exception outermost ->
+    innermost. The backend stores and displays the reverse of that (it reverses
+    the parsed text form to get there), which is why both walks here run
+    backwards: the raise site of the exception raised last comes first and the
+    root cause frames trail. A caller that keeps a prefix therefore keeps the
+    most relevant frames, the same way the backend's own truncation does.
+    """
+    for exception in reversed(_exception_chain(error)):
+        frames = list(_walk_traceback(exception.__traceback__))
+        # A never-raised exception -- a group member built at the raise site
+        # rather than caught -- has no traceback and nothing to describe.
+        if not frames:
+            continue
+        message = _error_message(exception)
+        for frame, lineno in reversed(frames[-_MAX_FRAMES_PER_EXCEPTION:]):
+            yield frame, lineno, message
 
 
 def _exception_chain(error: BaseException) -> typing.List[BaseException]:
