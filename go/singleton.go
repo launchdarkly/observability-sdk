@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
@@ -39,6 +38,13 @@ func EndSpan(span trace.Span) {
 // If there is no active recording span, then a new span is created and the error is recorded in it.
 // If this function starts a span, then that span will be ended after the error is recorded.
 func RecordError(ctx context.Context, err error, tags ...attribute.KeyValue) context.Context {
+	if err == nil {
+		// Nothing to record, as in the other SDKs. Recording used to reach
+		// span.RecordError, which ignores a nil error but only after a span had
+		// been started for it.
+		return ctx
+	}
+
 	span := trace.SpanFromContext(ctx)
 	if span.IsRecording() {
 		recordSpanError(span, err, tags...)
@@ -56,22 +62,33 @@ func RecordError(ctx context.Context, err error, tags ...attribute.KeyValue) con
 }
 
 func recordSpanError(span trace.Span, err error, tags ...attribute.KeyValue) {
-	type withStackTrace interface {
-		StackTrace() errors.StackTrace
-	}
-
-	if stackErr, ok := err.(withStackTrace); ok {
-		stackTrace := fmt.Sprintf("%+v", stackErr.StackTrace())
-		attributes := make([]attribute.KeyValue, 0, 3+len(tags))
+	// A stack the error carries was captured where the error was created, which
+	// is closer to the failure than anything this function could capture.
+	if stack, ok := stackTraceOf(err); ok {
+		stackTrace := fmt.Sprintf("%+v", stack)
+		attributes := make([]attribute.KeyValue, 0, 4+len(tags))
 		attributes = append(attributes,
 			semconv.ExceptionTypeKey.String(reflect.TypeOf(err).String()),
 			semconv.ExceptionMessageKey.String(err.Error()),
 			semconv.ExceptionStacktraceKey.String(stackTrace),
 		)
+		carried := structuredFrames(callersFromStackTrace(stack), err.Error())
+		if structured, ok := structuredStacktraceAttribute(carried); ok {
+			attributes = append(attributes, structured)
+		}
 		attributes = append(attributes, tags...)
 		span.AddEvent(semconv.ExceptionEventName, trace.WithAttributes(attributes...))
 	} else {
-		span.RecordError(err, trace.WithStackTrace(true))
+		options := []trace.EventOption{trace.WithStackTrace(true)}
+		attributes := make([]attribute.KeyValue, 0, 1+len(tags))
+		if structured, ok := structuredStacktraceAttribute(framesAtRecordTime(err.Error())); ok {
+			attributes = append(attributes, structured)
+		}
+		attributes = append(attributes, tags...)
+		if len(attributes) > 0 {
+			options = append(options, trace.WithAttributes(attributes...))
+		}
+		span.RecordError(err, options...)
 	}
 }
 

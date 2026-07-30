@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/launchdarkly/observability-sdk/compare/go/v1.1.1...go/v1.2.0) (2026-07-30)
+
+
+### Features
+
+* **go:** report source context for recorded errors ([#695](https://github.com/launchdarkly/observability-sdk/issues/695)) ([34e3201](https://github.com/launchdarkly/observability-sdk/commit/34e3201f37980bcae8b0a51d1cce3b43bd44055f))
+
 ## [1.1.1](https://github.com/launchdarkly/observability-sdk/compare/go/v1.1.0...go/v1.1.1) (2026-04-22)
 
 

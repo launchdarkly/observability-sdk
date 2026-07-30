@@ -19,6 +19,7 @@ import (
 
 	appcontext "dice/internal/context"
 	"dice/internal/dice"
+	"dice/internal/failure"
 	"dice/internal/version"
 )
 
@@ -33,14 +34,21 @@ func run() (err error) {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
 
+	options := []ldobserve.Option{
+		ldobserve.WithEnvironment("test"),
+		ldobserve.WithServiceName("go-plugin-example"),
+		ldobserve.WithServiceVersion(version.Commit),
+	}
+	// The SDK sets its endpoint explicitly, so the standard environment variable
+	// has to be applied by hand for this example to reach a local stack.
+	if endpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"); endpoint != "" {
+		options = append(options, ldobserve.WithOTLPEndpoint(endpoint))
+	}
+
 	client, _ := ld.MakeCustomClient(os.Getenv("LAUNCHDARKLY_SDK_KEY"),
 		ld.Config{
 			Plugins: []ldplugins.Plugin{
-				ldobserve.NewObservabilityPlugin(
-					ldobserve.WithEnvironment("test"),
-					ldobserve.WithServiceName("go-plugin-example"),
-					ldobserve.WithServiceVersion(version.Commit),
-				),
+				ldobserve.NewObservabilityPlugin(options...),
 			},
 		}, 5*time.Second)
 
@@ -92,6 +100,10 @@ func newHTTPHandler() http.Handler {
 
 	// Register handlers.Als
 	handleFunc("/rolldice", dice.Rolldice)
+	handleFunc("/error/plain", failure.Plain)
+	handleFunc("/error/stack", failure.WithStack)
+	handleFunc("/error/wrapped", failure.Wrapped)
+	handleFunc("/error/goroutine", failure.InGoroutine)
 
 	// Add HTTP instrumentation for the whole server.
 	handler := otelhttp.NewHandler(
