@@ -20,21 +20,47 @@ cd observability-sdk/e2e/go-plugin
 export LAUNCHDARKLY_SDK_KEY="your-sdk-key-here"
 ```
 
-## Pointing somewhere other than LaunchDarkly
+## Running against a backend on localhost
 
 The examples export to LaunchDarkly by default. The HTTP example also honours the
-standard endpoint variable, so it can be pointed at a local stack instead — OTLP
-over HTTP, port 4318:
+standard endpoint variable, so it can be pointed at a stack running locally. The
+SDK exports OTLP over HTTP, which the local collector receives on port 4318 — not
+4317, which is the gRPC port other SDKs use:
 
 ```bash
 export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
+export LAUNCHDARKLY_SDK_KEY="key-from-the-local-project"
 ```
 
-Data is attributed to the project the SDK key belongs to, so use a key from the
-environment the data should land in.
+Data is attributed to the project the SDK key belongs to, so this has to be a key
+from the local stack rather than a real one, or the errors land somewhere you are
+not looking.
 
-To see what the SDK sends without a stack at all, run the `otlpdump` command
-(below) and point the example at that.
+Then start the example and record one error of each shape:
+
+```bash
+go run ./cmd/http &
+until curl -s -o /dev/null localhost:8080/; do sleep 1; done
+for route in plain stack wrapped goroutine; do curl -s "localhost:8080/error/$route"; done
+```
+
+The example is waited for because it has to compile and then wait for the
+LaunchDarkly client before it starts serving. The errors reach the local backend a
+few seconds later, once the SDK batches its spans out, and appear in the errors UI
+as four separate error groups.
+
+What to look for on each of them:
+
+- The first frame is the application's own code. It should never be
+  `RecordError`, `recordSpanError` or anything else belonging to the SDK.
+- Frames read as `package.(*Receiver).Method`, and a closure reads as
+  `Method.func1` rather than as a bare number.
+- Each frame shows the source line that ran with the lines around it. A frame
+  reporting no source at all is expected for any code whose file is not on this
+  machine, which for a Go binary is the normal case anywhere but a dev box.
+
+If nothing arrives, the example logs its export failures, so check its output
+first: a wrong port shows up there as `connection refused`.
 
 ## Examples
 
@@ -46,7 +72,6 @@ This project contains several examples, each demonstrating the LaunchDarkly Obse
 - [Standard HTTP Example](#4-standard-http-example-cmdhttp)
 - [Logrus Example](#5-logrus-example-cmdlogrus)
 - [Pre-Initialize Example](#6-pre-initialize-example-cmdpreinit)
-- [OTLP Dump](#otlp-dump-cmdotlpdump)
 
 ### 1. Fiber Example (`cmd/fiber/`)
 
@@ -164,47 +189,3 @@ go run cmd/preinit/preinit.go
 - Advanced initialization scenarios where you need observability before the LaunchDarkly client
 - Using observability features without a LaunchDarkly client (some features will be unavailable)
 - Custom initialization timing requirements
- 
-### OTLP Dump (`cmd/otlpdump/`)
-
-An OTLP endpoint that prints the exceptions it receives, including the source
-context attached to every frame. It stands in for the backend while working on
-how errors are recorded: what reaches it is what the backend would have parsed,
-so a change can be checked without a stack running and without waiting for the
-data to appear in the UI.
-
-**To run:**
-
-```bash
-go run ./cmd/otlpdump
-```
-
-Then, in another shell, point an example at it and record some errors:
-
-```bash
-OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 go run ./cmd/http
-curl localhost:8080/error/wrapped
-```
-
-Each exception prints as its frames, innermost first, with the reported line
-marked:
-
-```
-===== exception on span "/error/wrapped" =====
-exception.type = *errors.withStack
-exception.message = could not start worker: worker config has no timeout
---- 12 frames ---
-[0] failure.connectWorker in .../internal/failure/failure.go at line 65
-       | func connectWorker() (int, error) {
-       | 	timeout, ok := workerSettings["timeout"]
-       | 	if !ok {
-    >> | 		return 0, errors.New("worker config has no timeout")
-       | 	}
-       | 	return timeout, nil
-       | }
-```
-
-A frame printed as `(no source for this frame on this host)` is the normal result
-for a binary running without its source tree, a container built from `scratch`
-being the obvious case. Pass `-text` to print the plain text stack trace too,
-which is what the backend has to fall back on when no frames are sent.
