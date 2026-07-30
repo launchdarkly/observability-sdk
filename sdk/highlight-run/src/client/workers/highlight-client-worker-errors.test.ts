@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ClientError } from 'graphql-request'
+import { MAX_PUBLIC_GRAPH_RETRY_ATTEMPTS } from './constants'
 import {
 	CustomEventResponse,
 	HighlightClientWorkerParams,
@@ -162,6 +163,27 @@ describe('highlight-client-worker error handling', () => {
 
 		expect(responsesOfType<StopEventResponse>(MessageType.Stop)).toEqual([])
 		expect((await status()).initialized).toBe(true)
+	})
+
+	it('stops recording once the retry budget is spent', async () => {
+		graph.error = clientError(503)
+
+		worker.postMessage(initializeMessage())
+		for (let i = 0; i < MAX_PUBLIC_GRAPH_RETRY_ATTEMPTS; i++) {
+			worker.postMessage(identifyMessage(`retried-user-${i}`))
+		}
+
+		await vi.waitFor(() => {
+			const stops = responsesOfType<StopEventResponse>(MessageType.Stop)
+			expect(stops).toHaveLength(1)
+			expect(stops[0].reason).toBe(StopReason.RetriesExhausted)
+		})
+
+		worker.postMessage(identifyMessage('dropped-user'))
+
+		const { pendingCount, initialized } = await status()
+		expect(pendingCount).toBe(0)
+		expect(initialized).toBe(false)
 	})
 
 	it('resumes after a new session initializes', async () => {

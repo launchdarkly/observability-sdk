@@ -103,7 +103,7 @@ function stringifyProperties(
 	let sessionSecureID: string
 	let numberOfFailedRequests: number = 0
 	let numberOfFailedPushPayloads: number = 0
-	let hasFailedUnrecoverably: boolean = false
+	let hasStoppedRecording: boolean = false
 	let debug: boolean = false
 	let recordingStartTime: number = 0
 	let logger = new Logger(false, '[worker]')
@@ -120,9 +120,8 @@ function stringifyProperties(
 
 	const shouldSendRequest = (): boolean => {
 		return (
-			!hasFailedUnrecoverably &&
+			!hasStoppedRecording &&
 			recordingStartTime !== 0 &&
-			numberOfFailedRequests < MAX_PUBLIC_GRAPH_RETRY_ATTEMPTS &&
 			!!sessionSecureID?.length
 		)
 	}
@@ -137,6 +136,11 @@ function stringifyProperties(
 		})
 	}
 
+	/**
+	 * Asks the client to stop recording and stops accepting work until it initializes again.
+	 * Everything buffered here is dropped: the client stops handing us events, so a queue kept
+	 * across a stop would only hold memory for data that will never be uploaded.
+	 */
 	const stopRecording = (
 		reason: StopReason,
 		details?: Pick<
@@ -144,6 +148,10 @@ function stringifyProperties(
 			'requestStart' | 'asyncEventsResponse'
 		>,
 	) => {
+		hasStoppedRecording = true
+		pendingMessages.length = 0
+		metricsPayload.length = 0
+
 		worker.postMessage({
 			response: {
 				type: MessageType.Stop,
@@ -162,26 +170,30 @@ function stringifyProperties(
 	}
 
 	/**
-	 * Accounts for a message we could not send. A recoverable failure spends part of the retry
-	 * budget, while an unrecoverable one ends recording for this page load: the backend would
-	 * reject every later request the same way, so continuing only buffers events that can never
-	 * be uploaded.
+	 * Accounts for a message we could not send. An unrecoverable failure ends recording right
+	 * away, because the backend would reject every later request the same way. A recoverable one
+	 * spends part of the retry budget, and exhausting that budget also ends recording: the client
+	 * would otherwise keep producing payloads that pile up here unsent.
 	 */
 	const handleFailedMessage = (e: unknown) => {
 		if (debug) {
 			console.error(e)
 		}
 
-		if (isErrorRecoverable(e)) {
-			numberOfFailedRequests += 1
+		if (!isErrorRecoverable(e)) {
+			console.warn(`Session data was rejected, stopping recording.`, e)
+			stopRecording(StopReason.UnrecoverableError)
 			return
 		}
 
-		console.warn(`Session data was rejected, stopping recording.`, e)
-		hasFailedUnrecoverably = true
-		pendingMessages.length = 0
-		metricsPayload.length = 0
-		stopRecording(StopReason.UnrecoverableError)
+		numberOfFailedRequests += 1
+		if (numberOfFailedRequests >= MAX_PUBLIC_GRAPH_RETRY_ATTEMPTS) {
+			console.warn(
+				`Session data failed to upload ${numberOfFailedRequests} times, stopping recording.`,
+				e,
+			)
+			stopRecording(StopReason.RetriesExhausted)
+		}
 	}
 
 	const processAsyncEventsMessage = async (msg: AsyncEventsMessage) => {
@@ -427,9 +439,10 @@ function stringifyProperties(
 			debug = e.data.message.debug
 			recordingStartTime = e.data.message.recordingStartTime
 			logger.debug = debug
-			// The client only initializes after `initializeSession` succeeded, so an earlier
-			// rejection no longer applies.
-			hasFailedUnrecoverably = false
+			// The client only initializes after `initializeSession` succeeded, so whatever made
+			// us stop no longer applies.
+			hasStoppedRecording = false
+			numberOfFailedRequests = 0
 			graphqlSDK = getSdk(
 				new GraphQLClient(backend, {
 					headers: {},
@@ -448,7 +461,7 @@ function stringifyProperties(
 			metricsPayload.length = 0
 			numberOfFailedRequests = 0
 			numberOfFailedPushPayloads = 0
-			hasFailedUnrecoverably = false
+			hasStoppedRecording = false
 			// Reset sessionSecureID and recordingStartTime so that messages arriving
 			// between Reset and new Initialize are queued rather than processed with
 			// the old session SecureID
@@ -469,9 +482,9 @@ function stringifyProperties(
 			return
 		}
 
-		// Drop messages once the backend has permanently rejected this session: queueing them
-		// would grow without bound because nothing is going to send them.
-		if (hasFailedUnrecoverably) {
+		// Drop messages once recording has stopped: queueing them would grow without bound
+		// because nothing is going to send them.
+		if (hasStoppedRecording) {
 			return
 		}
 

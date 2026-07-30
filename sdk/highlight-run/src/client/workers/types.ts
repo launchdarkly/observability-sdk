@@ -105,6 +105,8 @@ export enum StopReason {
 	PushPayloadTimeout = 'Push Payload Timeout',
 	/** The backend rejected the session data permanently; retrying cannot help. */
 	UnrecoverableError = 'Unrecoverable Error',
+	/** Enough uploads failed in a row that the backend is not answering us at all. */
+	RetriesExhausted = 'Retries Exhausted',
 }
 
 export type StopEventResponse = {

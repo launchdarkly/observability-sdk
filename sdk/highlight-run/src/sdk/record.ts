@@ -79,7 +79,7 @@ import { getDefaultDataURLOptions } from '../client/utils/utils'
 import { type HighlightClientRequestWorker } from '../client/workers/highlight-client-worker'
 import { payloadToBase64 } from '../client/utils/payload'
 import HighlightClientWorker from '../client/workers/highlight-client-worker?worker&inline'
-import { MessageType, PropertyType, StopReason } from '../client/workers/types'
+import { MessageType, PropertyType } from '../client/workers/types'
 import { IntegrationClient } from '../integrations'
 import { Record } from '../api/record'
 import { internalLog } from './util'
@@ -184,20 +184,18 @@ export class RecordSDK implements Record {
 					e.data.response.payload,
 				)
 			} else if (e.data.response?.type === MessageType.Stop) {
-				const { reason } = e.data.response
 				internalLog(
 					'worker.onmessage',
 					'warn',
-					`Stopping recording due to worker failure: ${reason}`,
+					`Stopping recording due to worker failure: ${e.data.response.reason}`,
 					e.data.response,
 				)
 				this.stop(false)
-				if (reason === StopReason.UnrecoverableError) {
-					// Nothing more will be uploaded during this page load, so detach the recorder
-					// and drop what it buffered instead of growing the buffer forever.
-					this._stopRecorder()
-					this.events = []
-				}
+				// The worker only asks us to stop when it cannot upload what we record, and
+				// `_save` no longer runs once we are not recording, so detach the recorder and
+				// drop its buffer instead of filling memory for the rest of this page load.
+				this._stopRecorder()
+				this.events = []
 			}
 		}
 

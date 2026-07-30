@@ -112,7 +112,7 @@ import { getDefaultDataURLOptions, isMetricSafeNumber } from './utils/utils'
 import { type HighlightClientRequestWorker } from './workers/highlight-client-worker'
 import { payloadToBase64 } from './utils/payload'
 import HighlightClientWorker from './workers/highlight-client-worker?worker&inline'
-import { MessageType, PropertyType, StopReason } from './workers/types'
+import { MessageType, PropertyType } from './workers/types'
 import { parseError } from './utils/errors'
 import {
 	Attributes,
@@ -297,18 +297,16 @@ export class Highlight {
 					e.data.response.payload,
 				)
 			} else if (e.data.response?.type === MessageType.Stop) {
-				const { reason } = e.data.response
 				HighlightWarning(
-					`Stopping recording due to worker failure: ${reason}`,
+					`Stopping recording due to worker failure: ${e.data.response.reason}`,
 					e.data.response,
 				)
 				this.stopRecording(false)
-				if (reason === StopReason.UnrecoverableError) {
-					// Nothing more will be uploaded during this page load, so detach the
-					// recorder and drop what it buffered instead of growing the buffer forever.
-					this._stopRecorder()
-					this.events = []
-				}
+				// The worker only asks us to stop when it cannot upload what we record, and
+				// `_save` no longer runs once we are not recording, so detach the recorder and
+				// drop its buffer instead of filling memory for the rest of this page load.
+				this._stopRecorder()
+				this.events = []
 			}
 		}
 
