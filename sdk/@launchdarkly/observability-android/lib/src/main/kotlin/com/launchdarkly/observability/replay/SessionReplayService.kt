@@ -290,24 +290,30 @@ class SessionReplayService(
      */
     private fun startCaptureStateObserver() {
         instrumentationScope.launch {
-            combine(shouldCapture, _isRunning, isScreenCaptureAllowed) { shouldRun, running, allowed ->
-                shouldRun && running && allowed
+            var hasEnabledTouchCapture = false
+
+            combine(shouldCapture, _isRunning, isScreenCaptureAllowed) { shouldRun, running, screenshotsAllowed ->
+                (shouldRun && running) to screenshotsAllowed
             }
-                .collect { shouldRun ->
-                    val running = captureJob?.isActive == true
-                    if (shouldRun == running) return@collect
-                    if (shouldRun) {
-                        // Session Replay needs the shared touch hook regardless of
-                        // `instrumentations.userTaps`. Both calls are idempotent: attach ensures the
-                        // current window is tracked (Observability already attaches at init), and
-                        // enable wraps that already-current window plus future ones - so capture
-                        // starting after the first activity is up still records its touches.
+                .collect { (isRecording, screenshotsAllowed) ->
+                    // Session Replay needs the shared touch hook regardless of
+                    // `instrumentations.userTaps`, and regardless of [isScreenCaptureAllowed]: while
+                    // screenshots are withheld, interactions still queue and are pushed once the backend
+                    // accepts the session. Both calls are idempotent: attach ensures the current window is
+                    // tracked (Observability already attaches at init), and enable wraps that
+                    // already-current window plus future ones - so capture starting after the first
+                    // activity is up still records its touches.
+                    if (isRecording && !hasEnabledTouchCapture) {
+                        hasEnabledTouchCapture = true
                         observabilityContext.userInteractionManager?.apply {
                             attachToApplication(observabilityContext.application)
                             enableTouchCapture()
                         }
-                        doRunCapture()
-                    } else doPauseCapture()
+                    }
+
+                    val shouldCaptureScreen = isRecording && screenshotsAllowed
+                    if (shouldCaptureScreen == (captureJob?.isActive == true)) return@collect
+                    if (shouldCaptureScreen) doRunCapture() else doPauseCapture()
                 }
         }
     }
