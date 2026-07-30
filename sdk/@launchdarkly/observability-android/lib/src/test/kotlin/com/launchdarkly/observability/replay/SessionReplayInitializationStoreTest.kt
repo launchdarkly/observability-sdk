@@ -40,6 +40,25 @@ class SessionReplayInitializationStoreTest {
     }
 
     @Test
+    fun `one environment's failure does not displace another's`() {
+        val prefs = fakePrefs()
+        val staging = SessionReplayInitializationStore(prefs, sdkKey = "mob-staging")
+        val production = SessionReplayInitializationStore(prefs, sdkKey = "mob-production")
+
+        staging.store(reason = "unauthorized", timestamp = 1L)
+        production.store(reason = "blocked in region", timestamp = 2L)
+
+        assertEquals("unauthorized", staging.loadFailure()?.reason)
+        assertEquals("blocked in region", production.loadFailure()?.reason)
+
+        // Clearing is scoped the same way: recovering in one environment leaves the other withheld.
+        production.clearFailure()
+
+        assertEquals("unauthorized", staging.loadFailure()?.reason)
+        assertNull(production.loadFailure())
+    }
+
+    @Test
     fun `clearing removes the stored failure`() {
         val store = SessionReplayInitializationStore(fakePrefs(), sdkKey = "mob-key")
         store.store(reason = "unauthorized")
@@ -63,7 +82,7 @@ class SessionReplayInitializationStoreTest {
     fun `unreadable stored values are ignored`() {
         val prefs = fakePrefs()
         prefs.edit()
-            .putString(SessionReplayInitializationStore.KEY_LAST_UNRECOVERABLE_FAILURE, "not json")
+            .putString(SessionReplayInitializationStore.failureKey("mob-key"), "not json")
             .apply()
 
         assertNull(SessionReplayInitializationStore(prefs, sdkKey = "mob-key").loadFailure())
@@ -74,10 +93,13 @@ class SessionReplayInitializationStoreTest {
         val prefs = fakePrefs()
         SessionReplayInitializationStore(prefs, sdkKey = "mob-secret-key").store(reason = "unauthorized")
 
-        val stored = prefs.getString(SessionReplayInitializationStore.KEY_LAST_UNRECOVERABLE_FAILURE, null)
+        val key = SessionReplayInitializationStore.failureKey("mob-secret-key")
+        val stored = prefs.getString(key, null)
 
         assertNotNull(stored)
         assertFalse(stored!!.contains("mob-secret-key"))
+        // The environment is part of the key name now, so that has to stay a fingerprint too.
+        assertFalse(key.contains("mob-secret-key"))
     }
 
     /** In-memory stand-in for [SharedPreferences], enough for the string get/put/remove this store uses. */

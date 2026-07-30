@@ -27,11 +27,6 @@ sealed interface SessionReplayInitializationVerdict {
 internal data class SessionReplayInitializationFailure(
     val reason: String,
     val timestamp: Long,
-    /**
-     * Fingerprint of the SDK key the failure was produced for. Entitlements differ per environment, so
-     * a verdict from one must not gate another.
-     */
-    val environment: String,
 )
 
 /**
@@ -47,30 +42,29 @@ internal class SessionReplayInitializationStore(
     private val prefs: SharedPreferences,
     sdkKey: String,
 ) {
-    private val environment = fingerprint(sdkKey)
+    private val failureKey = failureKey(sdkKey)
 
-    /** The stored failure, or `null` when there is none or it belongs to a different environment. */
+    /** The stored failure for this environment, or `null` when there is none. */
     fun loadFailure(): SessionReplayInitializationFailure? {
-        val stored = prefs.getString(KEY_LAST_UNRECOVERABLE_FAILURE, null) ?: return null
+        val stored = prefs.getString(failureKey, null) ?: return null
 
-        return decode(stored)?.takeIf { it.environment == environment }
+        return decode(stored)
     }
 
     fun store(reason: String, timestamp: Long = System.currentTimeMillis()) {
         val failure = SessionReplayInitializationFailure(
             reason = reason.take(MAX_REASON_LENGTH),
             timestamp = timestamp,
-            environment = environment,
         )
-        prefs.edit().putString(KEY_LAST_UNRECOVERABLE_FAILURE, encode(failure)).apply()
+        prefs.edit().putString(failureKey, encode(failure)).apply()
     }
 
     fun clearFailure() {
-        prefs.edit().remove(KEY_LAST_UNRECOVERABLE_FAILURE).apply()
+        prefs.edit().remove(failureKey).apply()
     }
 
     internal companion object {
-        const val KEY_LAST_UNRECOVERABLE_FAILURE = "sessionReplayLastUnrecoverableFailure"
+        const val KEY_PREFIX_LAST_UNRECOVERABLE_FAILURE = "sessionReplayLastUnrecoverableFailure"
 
         /**
          * The reason is diagnostic only, and an error message can carry a whole response body, so it is
@@ -90,10 +84,17 @@ internal class SessionReplayInitializationStore(
         }
 
         /**
+         * Entitlements differ per environment, so a verdict from one must neither gate another nor
+         * overwrite what is cached for it - hence a key per SDK key rather than a shared one.
+         */
+        fun failureKey(sdkKey: String): String =
+            "$KEY_PREFIX_LAST_UNRECOVERABLE_FAILURE.${fingerprint(sdkKey)}"
+
+        /**
          * Distinguishes environments without writing the SDK key itself to disk. Only equality matters,
          * so a truncated digest is enough.
          */
-        fun fingerprint(sdkKey: String): String =
+        private fun fingerprint(sdkKey: String): String =
             MessageDigest.getInstance("SHA-256")
                 .digest(sdkKey.toByteArray())
                 .take(8)
