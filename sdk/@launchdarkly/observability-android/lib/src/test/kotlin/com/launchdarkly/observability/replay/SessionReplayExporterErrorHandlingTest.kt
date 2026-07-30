@@ -13,6 +13,8 @@ import com.launchdarkly.observability.replay.transport.EventQueueItem
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -141,6 +143,40 @@ class SessionReplayExporterErrorHandlingTest {
             ),
             verdicts
         )
+    }
+
+    @Test
+    fun `a refusal while a batch waits for the export lock stops that batch`() = runTest {
+        val probeReachedBackend = CompletableDeferred<Unit>()
+        val releaseProbe = CompletableDeferred<Unit>()
+        coEvery { mockService.initializeReplaySession(any(), any()) } coAnswers {
+            probeReachedBackend.complete(Unit)
+            releaseProbe.await()
+            throw refusal("initializeReplaySession")
+        }
+
+        // The probe holds the export lock while it waits on the backend, so the batch below queues up
+        // behind it and only sees the refusal after acquiring the lock.
+        launch { exporter.prepareSession("session-a") }
+        probeReachedBackend.await()
+        val export = launch { exportFailure(captureItems("session-a")) }
+        releaseProbe.complete(Unit)
+        export.join()
+
+        coVerify(exactly = 0) { mockService.pushPayload(any(), any(), any()) }
+    }
+
+    @Test
+    fun `a refusal part-way through a batch stops the remaining sessions`() = runTest {
+        // The first session's wake-up push is refused. That failure is swallowed to protect the buffering
+        // logic, so only the recording verdict can stop the rest of the batch.
+        coEvery { mockService.pushPayload("session-a", "2", any()) } throws refusal("pushPayload")
+
+        exportFailure(captureItems("session-a") + captureItems("session-b"))
+
+        coVerify(exactly = 1) { mockService.pushPayload("session-a", "1", any()) }
+        coVerify(exactly = 0) { mockService.pushPayload("session-b", any(), any()) }
+        assertEquals(1, verdicts.count { it is SessionReplayInitializationVerdict.Unrecoverable })
     }
 
     @Test

@@ -117,6 +117,9 @@ class SessionReplayExporter(
         if (hasFailedUnrecoverably) return
 
         exportMutex.withLock {
+            // The refusal can also arrive while this batch waits for the lock, from the startup probe.
+            if (hasFailedUnrecoverably) return@withLock
+
             val lastCaptureSnapshot = lastCaptureState
             val payloadIdSnapshot = payloadIdCounter
             val pushedCanvasSnapshot = pushedCanvasSize
@@ -201,6 +204,11 @@ class SessionReplayExporter(
                 // Send all events grouped by session
                 for ((sessionId, events) in eventsBySession) {
                     if (events.isNotEmpty()) {
+                        // A refusal can also land part-way through a batch, from a wake-up push whose
+                        // failure is swallowed below, and a refused session accepts no payloads. What is
+                        // left of the batch is dropped rather than retried, like any batch after a refusal.
+                        if (hasFailedUnrecoverably) return@withLock
+
                         // Events can belong to a session no capture has been taken of yet — while
                         // screenshots are withheld, or from a touch that precedes the first frame — and the
                         // backend only accepts payloads for an initialized session.
