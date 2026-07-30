@@ -93,6 +93,31 @@ func TestRecordErrorReportsTheCallerFirst(t *testing.T) {
 	}
 }
 
+// Recording a nil error is a no-op in the other SDKs, and used to be one here
+// too: it reached span.RecordError, which ignores it. Building a structured
+// stack trace for every error put an err.Error() in front of that.
+func TestRecordErrorIgnoresANilError(t *testing.T) {
+	exporter := tracetest.NewInMemoryExporter()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sdktrace.NewSimpleSpanProcessor(exporter)))
+	defer provider.Shutdown(context.Background())
+
+	ctx, span := provider.Tracer("test").Start(context.Background(), "test-span")
+	ldobserve.RecordError(ctx, nil)
+	span.End()
+
+	// Recording without a span in the context is the other path, and starts one
+	// of its own. Neither may panic.
+	ldobserve.RecordError(context.Background(), nil)
+
+	spans := exporter.GetSpans()
+	if len(spans) != 1 {
+		t.Fatalf("expected 1 span, got %d", len(spans))
+	}
+	if len(spans[0].Events) != 0 {
+		t.Errorf("expected nothing to be recorded, got %v", spans[0].Events)
+	}
+}
+
 func TestRecordErrorReportsSourceContext(t *testing.T) {
 	frames := recordedFrames(t)
 

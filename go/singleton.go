@@ -38,6 +38,13 @@ func EndSpan(span trace.Span) {
 // If there is no active recording span, then a new span is created and the error is recorded in it.
 // If this function starts a span, then that span will be ended after the error is recorded.
 func RecordError(ctx context.Context, err error, tags ...attribute.KeyValue) context.Context {
+	if err == nil {
+		// Nothing to record, as in the other SDKs. Recording used to reach
+		// span.RecordError, which ignores a nil error but only after a span had
+		// been started for it.
+		return ctx
+	}
+
 	span := trace.SpanFromContext(ctx)
 	if span.IsRecording() {
 		recordSpanError(span, err, tags...)
