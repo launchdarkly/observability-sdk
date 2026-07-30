@@ -136,6 +136,7 @@ class GraphQLClient(
     ): T = withContext(DispatcherProviderHolder.current.io) {
         var connection: HttpURLConnection? = null
         try {
+            GraphQLFaultInjection.failIfNeeded(query)
             val request = GraphQLRequest(
                 query = query,
                 variables = variables

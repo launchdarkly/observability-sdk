@@ -197,9 +197,7 @@ class SessionReplayExporterErrorHandlingTest {
         coEvery { mockService.pushPayload(any(), any(), any()) } throws refusal("pushPayload")
         exporter.export(captureItems("session-a"))
 
-        exporter.sendIdentifyAndCache(
-            IdentifyItemPayload(attributes = mapOf("key" to "user-2"), timestamp = 1L, sessionId = "session-a")
-        )
+        exporter.sendIdentifyAndCache(identify("user-2"))
 
         // Only the identify that came with the initialization, none for the abandoned session.
         coVerify(exactly = 1) { mockService.identifyReplaySession(any<String>(), any<IdentifyItemPayload>()) }
@@ -212,15 +210,39 @@ class SessionReplayExporterErrorHandlingTest {
 
         coEvery { mockService.identifyReplaySession(any<String>(), any<IdentifyItemPayload>()) } throws
             refusal("identifyReplaySession")
-        exporter.sendIdentifyAndCache(
-            IdentifyItemPayload(attributes = mapOf("key" to "user-2"), timestamp = 1L, sessionId = "session-a")
-        )
+        exporter.sendIdentifyAndCache(identify("user-2"))
 
         assertEquals(1, verdicts.count { it is SessionReplayInitializationVerdict.Unrecoverable })
         // Recording is over, so the batch that follows drains rather than being pushed or retried.
         assertNull(exportFailure(captureItems("session-b")))
         coVerify(exactly = 0) { mockService.pushPayload("session-b", any(), any()) }
     }
+
+    @Test
+    fun `an identify before the session is accepted is cached rather than sent`() = runTest {
+        coEvery { mockService.identifyReplaySession(any<String>(), any<IdentifyItemPayload>()) } throws
+            refusal("identifyReplaySession")
+
+        exporter.sendIdentifyAndCache(identify("user-2"))
+
+        // The probe has not accepted the session yet, so nothing is sent and the error the backend would
+        // answer with cannot end the launch.
+        coVerify(exactly = 0) { mockService.identifyReplaySession(any<String>(), any<IdentifyItemPayload>()) }
+        assertTrue(verdicts.isEmpty())
+    }
+
+    @Test
+    fun `an identify cached before initialization is the one initialization sends`() = runTest {
+        val pending = identify("user-2")
+        exporter.sendIdentifyAndCache(pending)
+
+        exporter.prepareSession("session-a")
+
+        coVerify(exactly = 1) { mockService.identifyReplaySession("session-a", pending) }
+    }
+
+    private fun identify(key: String) =
+        IdentifyItemPayload(attributes = mapOf("key" to key), timestamp = 1L, sessionId = "session-a")
 
     /** A refusal the backend cannot be retried out of: a GraphQL error marked non-retryable. */
     private fun refusal(operation: String) = SessionReplayApiException(

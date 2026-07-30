@@ -305,19 +305,27 @@ class SessionReplayExporter(
             // session would keep receiving identify calls.
             if (hasFailedUnrecoverably) return@withLock
 
-            val sessionId = newIdentifyEvent.sessionId
-            if (sessionId != null) {
-                try {
-                    replayApiService.identifyReplaySession(sessionId, newIdentifyEvent)
-                    identifyItemPayload = newIdentifyEvent
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    // There is nothing to retry an identify with, so the failure is only logged - but a
-                    // refusal ends recording here like it does for any other request.
-                    logger.error(e)
-                    reportIfUnrecoverable(e)
-                }
+            val sessionId = newIdentifyEvent.sessionId ?: return@withLock
+
+            // The backend only accepts identify for a session it has already accepted, and the startup
+            // probe can still be in flight - identifying now would be answered with an error that a
+            // refusal cannot be told apart from. Caching is enough: initialization sends the payload it
+            // finds here, so the latest one reaches the backend either way.
+            if (sessionId !in initializedSessions) {
+                identifyItemPayload = newIdentifyEvent
+                return@withLock
+            }
+
+            try {
+                replayApiService.identifyReplaySession(sessionId, newIdentifyEvent)
+                identifyItemPayload = newIdentifyEvent
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // There is nothing to retry an identify with, so the failure is only logged - but a
+                // refusal ends recording here like it does for any other request.
+                logger.error(e)
+                reportIfUnrecoverable(e)
             }
         }
     }
