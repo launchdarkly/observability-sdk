@@ -406,7 +406,14 @@ class SessionReplayService(
             logger.info("Session replay skipped by sampling.")
             return false
         }
-        _isRunning.value = true
+        // Re-checked while holding the gate's lock, the one a verdict is applied under, because a refusal
+        // can land while sampling is being evaluated above: without this, its `stopRecording` would be
+        // undone here and the collectors would keep running for a launch reporting itself disabled.
+        val canStart = withGate { canStartRecording.also { if (it) _isRunning.value = true } }
+        if (!canStart) {
+            logger.info("Session replay cannot start, the backend refused this launch.")
+            return false
+        }
         flushPendingIdentify()
         // Ask the backend up front instead of waiting for the first export batch, so a refusal can stop
         // (or keep withholding) screenshots at the very start of the launch. Input events keep flowing into
