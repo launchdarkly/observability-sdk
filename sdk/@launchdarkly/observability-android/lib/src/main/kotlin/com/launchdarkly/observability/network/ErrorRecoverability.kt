@@ -38,35 +38,31 @@ object ErrorRecoverability {
     }
 
     /**
-     * Classifies a [GraphQLResponse] that carries errors.
+     * Classifies any failure thrown by [GraphQLClient]. Errors of unknown origin are treated as
+     * recoverable: retrying costs a backed-off request, while a wrong permanent verdict silently disables
+     * a feature for the rest of the launch.
      */
-    fun isErrorRecoverable(response: GraphQLResponse<*>): Boolean =
-        isErrorRecoverable(response.httpStatusCode, response.errors)
-
-    /**
-     * Classifies a failed request from the status it returned and the GraphQL errors it carried.
-     *
-     * @param statusCode the HTTP status, or `null` when the request never reached one
-     * @param errors the GraphQL errors the response carried, if any
-     */
-    fun isErrorRecoverable(statusCode: Int?, errors: List<GraphQLError>?): Boolean {
-        // An explicit server verdict is more specific than the status code, so it wins.
-        retryableFlag(errors)?.let { return it }
-        // Without a status the request timed out or lost connectivity, neither of which is permanent.
-        val status = statusCode ?: return true
-        // The public graph reports rejections as `200` + `errors`, so those are classified like a
-        // generic 4xx: unrecoverable unless the server marked an error retryable.
-        if (status == HttpURLConnection.HTTP_OK) return errors.isNullOrEmpty()
-
-        return isHttpErrorRecoverable(status)
+    fun isErrorRecoverable(error: Throwable): Boolean = when (error) {
+        is GraphQLClientException -> isRecoverable(error)
+        is RecoverableFailure -> error.isRecoverable
+        else -> true
     }
 
-    /**
-     * Classifies a thrown failure. Errors of unknown origin are treated as recoverable: retrying costs
-     * a backed-off request, while a wrong permanent verdict silently disables a feature for the rest of
-     * the launch.
-     */
-    fun isErrorRecoverable(error: Throwable): Boolean = (error as? RecoverableFailure)?.isRecoverable ?: true
+    private fun isRecoverable(error: GraphQLClientException): Boolean = when (error) {
+        // A rejected request can still carry a GraphQL envelope, and an explicit `retryable` there is more
+        // specific than the status code, so it wins.
+        is GraphQLClientException.HttpStatus ->
+            retryableFlag(error.errors) ?: isHttpErrorRecoverable(error.statusCode)
+
+        // The public graph reports rejections as `200` + `errors`, so these are classified like a generic
+        // 4xx: unrecoverable unless the server marks an error retryable.
+        is GraphQLClientException.GraphQLErrors -> retryableFlag(error.errors) ?: false
+
+        // Timeouts, connectivity loss and malformed responses carry no permanent signal.
+        is GraphQLClientException.Transport,
+        is GraphQLClientException.Decoding,
+        is GraphQLClientException.MissingData -> true
+    }
 
     /**
      * The server's retry verdict for a set of GraphQL errors, or `null` when none of them states one.

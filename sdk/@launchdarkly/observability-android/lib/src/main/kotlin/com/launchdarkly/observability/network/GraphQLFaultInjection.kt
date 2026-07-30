@@ -12,7 +12,7 @@ import java.util.Calendar
  * add the call at the top of [GraphQLClient.execute] and remove it again afterwards:
  *
  * ```kotlin
- * GraphQLFaultInjection.responseIfNeeded<T>(query)?.let { return@withContext it }
+ * GraphQLFaultInjection.failIfNeeded(query)
  * ```
  */
 internal object GraphQLFaultInjection {
@@ -37,17 +37,17 @@ internal object GraphQLFaultInjection {
     private val operationMarkers = listOf("mutation initializeSession", "mutation PushPayload")
 
     /**
-     * The simulated failure for [query], or `null` when the call should be left alone.
+     * Throws the simulated failure when [query] is one of the covered operations and this is a failing
+     * minute.
      */
-    fun <T> responseIfNeeded(query: String): GraphQLResponse<T>? {
-        if (!BuildConfig.DEBUG) return null
-        if (operationMarkers.none { query.contains(it) }) return null
-        if (!isFailingMinute()) return null
+    fun failIfNeeded(query: String) {
+        if (!BuildConfig.DEBUG) return
+        if (operationMarkers.none { query.contains(it) }) return
+        if (!isFailingMinute()) return
 
-        return when (mode) {
-            Mode.NON_RETRYABLE_GRAPHQL_ERROR -> GraphQLResponse(
-                data = null,
-                errors = listOf(
+        throw when (mode) {
+            Mode.NON_RETRYABLE_GRAPHQL_ERROR -> GraphQLClientException.GraphQLErrors(
+                listOf(
                     GraphQLError(
                         message = "Session replay is not available in this region.",
                         extensions = GraphQLErrorExtensions(
@@ -55,20 +55,13 @@ internal object GraphQLFaultInjection {
                             retryable = false,
                         ),
                     )
-                ),
-                httpStatusCode = 200,
+                )
             )
 
-            Mode.UNAUTHORIZED -> httpFailure(403)
-            Mode.TOO_MANY_REQUESTS -> httpFailure(429)
+            Mode.UNAUTHORIZED -> GraphQLClientException.HttpStatus(403, "injected failure")
+            Mode.TOO_MANY_REQUESTS -> GraphQLClientException.HttpStatus(429, "injected failure")
         }
     }
-
-    private fun <T> httpFailure(statusCode: Int): GraphQLResponse<T> = GraphQLResponse(
-        data = null,
-        errors = listOf(GraphQLError(message = "HTTP Error $statusCode: injected failure")),
-        httpStatusCode = statusCode,
-    )
 
     private fun isFailingMinute(): Boolean = Calendar.getInstance().get(Calendar.MINUTE) % 2 == 0
 }

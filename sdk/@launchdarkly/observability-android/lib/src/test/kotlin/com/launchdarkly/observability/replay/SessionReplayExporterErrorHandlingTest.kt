@@ -1,5 +1,8 @@
 package com.launchdarkly.observability.replay
 
+import com.launchdarkly.observability.network.GraphQLClientException
+import com.launchdarkly.observability.network.GraphQLError
+import com.launchdarkly.observability.network.GraphQLErrorExtensions
 import com.launchdarkly.observability.replay.capture.ExportFrame
 import com.launchdarkly.observability.replay.exporter.IdentifyItemPayload
 import com.launchdarkly.observability.replay.exporter.ImageItemPayload
@@ -70,12 +73,15 @@ class SessionReplayExporterErrorHandlingTest {
 
     @Test
     fun `an unrecoverable initialization failure stops further exports`() = runTest {
-        coEvery { mockService.initializeReplaySession(any(), any()) } throws
-            SessionReplayApiException("initializeReplaySession failed: blocked in region", isRecoverable = false)
+        coEvery { mockService.initializeReplaySession(any(), any()) } throws refusal("initializeReplaySession")
 
         assertNotNull(exportFailure(captureItems("session-a")))
         assertEquals(
-            listOf(SessionReplayInitializationVerdict.Unrecoverable("initializeReplaySession failed: blocked in region")),
+            listOf(
+                SessionReplayInitializationVerdict.Unrecoverable(
+                    "initializeReplaySession failed: GraphQL errors: blocked in region"
+                )
+            ),
             verdicts
         )
 
@@ -87,8 +93,7 @@ class SessionReplayExporterErrorHandlingTest {
 
     @Test
     fun `an unrecoverable push failure stops further exports`() = runTest {
-        coEvery { mockService.pushPayload(any(), any(), any()) } throws
-            SessionReplayApiException("pushPayload failed: blocked in region", isRecoverable = false)
+        coEvery { mockService.pushPayload(any(), any(), any()) } throws refusal("pushPayload")
 
         assertNotNull(exportFailure(captureItems("session-a")))
         assertEquals(1, verdicts.count { it is SessionReplayInitializationVerdict.Unrecoverable })
@@ -100,7 +105,7 @@ class SessionReplayExporterErrorHandlingTest {
     @Test
     fun `a recoverable failure is retried and never reported`() = runTest {
         coEvery { mockService.initializeReplaySession(any(), any()) } throws
-            SessionReplayApiException("initializeReplaySession failed: too many requests", isRecoverable = true)
+            transientFailure("initializeReplaySession")
 
         assertNotNull(exportFailure(captureItems("session-a")))
         assertNotNull(exportFailure(captureItems("session-a")))
@@ -124,12 +129,16 @@ class SessionReplayExporterErrorHandlingTest {
     @Test
     fun `prepareSession reports a refusal without throwing`() = runTest {
         coEvery { mockService.initializeReplaySession(any(), any()) } throws
-            SessionReplayApiException("initializeReplaySession failed: unauthorized", isRecoverable = false)
+            SessionReplayApiException("initializeReplaySession", GraphQLClientException.HttpStatus(403, "Forbidden"))
 
         exporter.prepareSession("session-a")
 
         assertEquals(
-            listOf(SessionReplayInitializationVerdict.Unrecoverable("initializeReplaySession failed: unauthorized")),
+            listOf(
+                SessionReplayInitializationVerdict.Unrecoverable(
+                    "initializeReplaySession failed: HTTP Error 403: Forbidden"
+                )
+            ),
             verdicts
         )
     }
@@ -137,13 +146,29 @@ class SessionReplayExporterErrorHandlingTest {
     @Test
     fun `a transient identify failure does not withhold recording`() = runTest {
         coEvery { mockService.identifyReplaySession(any<String>(), any<IdentifyItemPayload>()) } throws
-            SessionReplayApiException("identifyReplaySession failed: too many requests", isRecoverable = true)
+            transientFailure("identifyReplaySession")
 
         assertNotNull(exportFailure(captureItems("session-a")))
 
         // The session itself was accepted, so screenshots start even though identify has to be retried.
         assertEquals(listOf(SessionReplayInitializationVerdict.Allowed), verdicts)
     }
+
+    /** A refusal the backend cannot be retried out of: a GraphQL error marked non-retryable. */
+    private fun refusal(operation: String) = SessionReplayApiException(
+        operation,
+        GraphQLClientException.GraphQLErrors(
+            listOf(
+                GraphQLError(
+                    message = "blocked in region",
+                    extensions = GraphQLErrorExtensions(code = "SESSION_REPLAY_BLOCKED_IN_REGION", retryable = false),
+                )
+            )
+        ),
+    )
+
+    private fun transientFailure(operation: String) =
+        SessionReplayApiException(operation, GraphQLClientException.HttpStatus(429, "Slow down"))
 
     private fun captureItems(sessionId: String): List<EventQueueItem> =
         listOf(EventQueueItem(ImageItemPayload(ExportFrame("base64data", 800, 600, 1000L, sessionId))))

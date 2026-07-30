@@ -3,6 +3,7 @@ package com.launchdarkly.observability.network
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import java.io.IOException
 
 class ErrorRecoverabilityTest {
 
@@ -35,26 +36,26 @@ class ErrorRecoverabilityTest {
     }
 
     @Test
-    fun `graph errors on a 200 are unrecoverable`() {
-        val response = response(statusCode = 200, errors = listOf(GraphQLError(message = "session replay blocked")))
+    fun `graph errors are unrecoverable`() {
+        val failure = GraphQLClientException.GraphQLErrors(listOf(GraphQLError(message = "session replay blocked")))
 
-        assertFalse(ErrorRecoverability.isErrorRecoverable(response))
+        assertFalse(ErrorRecoverability.isErrorRecoverable(failure))
     }
 
     @Test
-    fun `a retryable graph error is recoverable despite the 200`() {
-        val response = response(
-            statusCode = 200,
-            errors = listOf(GraphQLError(message = "try later", extensions = GraphQLErrorExtensions(retryable = true))),
+    fun `a retryable graph error is recoverable`() {
+        val failure = GraphQLClientException.GraphQLErrors(
+            listOf(GraphQLError(message = "try later", extensions = GraphQLErrorExtensions(retryable = true)))
         )
 
-        assertTrue(ErrorRecoverability.isErrorRecoverable(response))
+        assertTrue(ErrorRecoverability.isErrorRecoverable(failure))
     }
 
     @Test
     fun `a non retryable graph error wins over a recoverable status`() {
-        val response = response(
+        val failure = GraphQLClientException.HttpStatus(
             statusCode = 429,
+            body = "rejected",
             errors = listOf(
                 GraphQLError(
                     message = "blocked in region",
@@ -63,45 +64,51 @@ class ErrorRecoverabilityTest {
             ),
         )
 
-        assertFalse(ErrorRecoverability.isErrorRecoverable(response))
+        assertFalse(ErrorRecoverability.isErrorRecoverable(failure))
     }
 
     @Test
     fun `a retryable graph error wins over an unrecoverable status`() {
-        val response = response(
+        val failure = GraphQLClientException.HttpStatus(
             statusCode = 403,
+            body = "rejected",
             errors = listOf(GraphQLError(message = "expired token", extensions = GraphQLErrorExtensions(retryable = true))),
         )
 
-        assertTrue(ErrorRecoverability.isErrorRecoverable(response))
+        assertTrue(ErrorRecoverability.isErrorRecoverable(failure))
     }
 
     @Test
-    fun `one non retryable error makes the whole response unrecoverable`() {
-        val response = response(
-            statusCode = 200,
-            errors = listOf(
+    fun `one non retryable error makes the whole failure unrecoverable`() {
+        val failure = GraphQLClientException.GraphQLErrors(
+            listOf(
                 GraphQLError(message = "try later", extensions = GraphQLErrorExtensions(retryable = true)),
                 GraphQLError(message = "blocked", extensions = GraphQLErrorExtensions(retryable = false)),
-            ),
+            )
         )
 
-        assertFalse(ErrorRecoverability.isErrorRecoverable(response))
+        assertFalse(ErrorRecoverability.isErrorRecoverable(failure))
     }
 
     @Test
-    fun `errors without extensions fall back to the status code`() {
+    fun `a rejection without extensions falls back to the status code`() {
         val errors = listOf(GraphQLError(message = "rejected"))
 
-        assertFalse(ErrorRecoverability.isErrorRecoverable(response(statusCode = 403, errors = errors)))
-        assertTrue(ErrorRecoverability.isErrorRecoverable(response(statusCode = 503, errors = errors)))
+        assertFalse(ErrorRecoverability.isErrorRecoverable(GraphQLClientException.HttpStatus(403, "rejected", errors)))
+        assertTrue(ErrorRecoverability.isErrorRecoverable(GraphQLClientException.HttpStatus(503, "rejected", errors)))
     }
 
     @Test
-    fun `a failure without a status is recoverable`() {
-        val response = response(statusCode = null, errors = listOf(GraphQLError(message = "timeout")))
+    fun `a rejection with no GraphQL body is classified by its status`() {
+        assertFalse(ErrorRecoverability.isErrorRecoverable(GraphQLClientException.HttpStatus(403, "Forbidden")))
+        assertTrue(ErrorRecoverability.isErrorRecoverable(GraphQLClientException.HttpStatus(429, "Slow down")))
+    }
 
-        assertTrue(ErrorRecoverability.isErrorRecoverable(response))
+    @Test
+    fun `failures that never reached a status are recoverable`() {
+        assertTrue(ErrorRecoverability.isErrorRecoverable(GraphQLClientException.Transport(IOException("timeout"))))
+        assertTrue(ErrorRecoverability.isErrorRecoverable(GraphQLClientException.Decoding(IOException("bad shape"))))
+        assertTrue(ErrorRecoverability.isErrorRecoverable(GraphQLClientException.MissingData()))
     }
 
     @Test
@@ -114,9 +121,6 @@ class ErrorRecoverabilityTest {
     fun `an unclassified failure is recoverable`() {
         assertTrue(ErrorRecoverability.isErrorRecoverable(IllegalStateException("something went wrong")))
     }
-
-    private fun response(statusCode: Int?, errors: List<GraphQLError>) =
-        GraphQLResponse<String>(data = null, errors = errors, httpStatusCode = statusCode)
 
     private class ClassifiedFailure(override val isRecoverable: Boolean) : RuntimeException(), RecoverableFailure
 }
