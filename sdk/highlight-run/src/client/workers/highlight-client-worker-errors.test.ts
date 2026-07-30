@@ -124,6 +124,28 @@ describe('highlight-client-worker error handling', () => {
 		expect((await status()).initialized).toBe(false)
 	})
 
+	it('does not report the stop as a timeline event', async () => {
+		graph.error = clientError(403)
+
+		worker.postMessage(initializeMessage())
+		worker.postMessage(identifyMessage('refused-user'))
+
+		await vi.waitFor(() => {
+			expect(
+				responsesOfType<StopEventResponse>(MessageType.Stop),
+			).toHaveLength(1)
+		})
+
+		// The client is NotRecording by the time it handles this, so a Track event could never be
+		// captured; it would only leave `addCustomEvent` polling every 500ms for the rest of the
+		// page load.
+		expect(
+			responsesOfType<CustomEventResponse>(MessageType.CustomEvent).map(
+				(e) => e.tag,
+			),
+		).not.toContain('Track')
+	})
+
 	it('drops later messages after a permanent rejection', async () => {
 		graph.error = clientError(403)
 

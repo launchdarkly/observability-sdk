@@ -140,6 +140,9 @@ function stringifyProperties(
 	 * Asks the client to stop recording and stops accepting work until it initializes again.
 	 * Everything buffered here is dropped: the client stops handing us events, so a queue kept
 	 * across a stop would only hold memory for data that will never be uploaded.
+	 *
+	 * Only the first caller is served. Requests already in flight when we stop keep failing and
+	 * arrive here afterwards, and the client has nothing left to tear down by then.
 	 */
 	const stopRecording = (
 		reason: StopReason,
@@ -148,6 +151,10 @@ function stringifyProperties(
 			'requestStart' | 'asyncEventsResponse'
 		>,
 	) => {
+		if (hasStoppedRecording) {
+			return
+		}
+
 		hasStoppedRecording = true
 		pendingMessages.length = 0
 		metricsPayload.length = 0
@@ -158,14 +165,6 @@ function stringifyProperties(
 				reason,
 				...details,
 			},
-		})
-
-		processPropertiesMessage({
-			type: MessageType.Properties,
-			propertiesObject: {
-				stopReason: reason,
-			},
-			propertyType: { type: 'track' },
 		})
 	}
 
