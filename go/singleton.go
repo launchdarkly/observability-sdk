@@ -72,7 +72,8 @@ func recordSpanError(span trace.Span, err error, tags ...attribute.KeyValue) {
 			semconv.ExceptionMessageKey.String(err.Error()),
 			semconv.ExceptionStacktraceKey.String(stackTrace),
 		)
-		if structured, ok := structuredStacktraceAttribute(err, callersFromStackTrace(stack)); ok {
+		carried := structuredFrames(callersFromStackTrace(stack), err.Error())
+		if structured, ok := structuredStacktraceAttribute(carried); ok {
 			attributes = append(attributes, structured)
 		}
 		attributes = append(attributes, tags...)
@@ -80,7 +81,7 @@ func recordSpanError(span trace.Span, err error, tags ...attribute.KeyValue) {
 	} else {
 		options := []trace.EventOption{trace.WithStackTrace(true)}
 		attributes := make([]attribute.KeyValue, 0, 1+len(tags))
-		if structured, ok := structuredStacktraceAttribute(err, callersAtRecordTime()); ok {
+		if structured, ok := structuredStacktraceAttribute(framesAtRecordTime(err.Error())); ok {
 			attributes = append(attributes, structured)
 		}
 		attributes = append(attributes, tags...)

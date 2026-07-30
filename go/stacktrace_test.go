@@ -20,7 +20,7 @@ func failInHelper() error {
 func framesFrom(t *testing.T, err error, callers []uintptr) []structuredFrame {
 	t.Helper()
 
-	attr, ok := structuredStacktraceAttribute(err, callers)
+	attr, ok := structuredStacktraceAttribute(structuredFrames(callers, err.Error()))
 	if !ok {
 		t.Fatal("expected a structured stack trace")
 	}
@@ -260,5 +260,19 @@ func TestIsInstrumentationFunction(t *testing.T) {
 		if isInstrumentationFunction(name) {
 			t.Errorf("expected %q to be application code", name)
 		}
+	}
+}
+
+// Every function in this package is recording machinery by the same rule that
+// applies to the SDK proper, so a stack captured here holds nothing else until
+// it reaches the test harness underneath.
+func TestFramesAtRecordTimeDropsTheRecordingFrames(t *testing.T) {
+	frames := framesAtRecordTime("boom")
+
+	if len(frames) == 0 {
+		t.Fatal("expected the frames beneath the recording to survive")
+	}
+	if frames[0].FunctionName != "testing.tRunner" {
+		t.Errorf("expected the first frame beneath this package, got %q", frames[0].FunctionName)
 	}
 }

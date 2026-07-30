@@ -60,11 +60,10 @@ type structuredFrame struct {
 	LinesAfter   string `json:"linesAfter,omitempty"`
 }
 
-// structuredStacktraceAttribute describes err as frames with source context. It
-// reports false when there is nothing to describe, leaving the error to be
+// structuredStacktraceAttribute encodes frames as the attribute ingestion reads.
+// It reports false when there is nothing to describe, leaving the error to be
 // recorded with its text stack trace alone.
-func structuredStacktraceAttribute(err error, callers []uintptr) (attribute.KeyValue, bool) {
-	frames := structuredFrames(callers, err.Error())
+func structuredStacktraceAttribute(frames []structuredFrame) (attribute.KeyValue, bool) {
 	if len(frames) == 0 {
 		return attribute.KeyValue{}, false
 	}
@@ -108,28 +107,25 @@ func callersFromStackTrace(stack errors.StackTrace) []uintptr {
 	return callers
 }
 
-// callersAtRecordTime captures the stack of the caller for an error that carries
-// none of its own, dropping the recording machinery from the top so the first
-// frame is the code that recorded the error.
-func callersAtRecordTime() []uintptr {
+// framesAtRecordTime describes the stack of the caller, for an error that
+// carries no stack of its own.
+//
+// The frames on top of that stack are this SDK and the OTeL API doing the
+// recording; they say nothing about the failure and are dropped, so the trace
+// starts at the code that recorded the error. Only the leading run goes: once
+// the stack reaches the application, a package of ours appearing again is a
+// real caller.
+//
+// They are dropped from the resolved frames rather than from the counters,
+// which also resolves the stack once instead of twice. runtime.Callers emits a
+// counter per frame today, inlined calls included, but runtime.CallersFrames
+// documents that several frames can share one counter -- so a counter index
+// taken from a frame count is only as good as that behavior.
+func framesAtRecordTime(message string) []structuredFrame {
 	callers := make([]uintptr, maxCallers)
 	// 2 skips runtime.Callers and this function.
 	captured := runtime.Callers(2, callers)
-	return trimInstrumentationFrames(callers[:captured])
-}
-
-// trimInstrumentationFrames drops the leading frames that belong to the
-// recording packages. Only the leading run is dropped: once the stack reaches
-// the application, a package of ours appearing again is a real caller.
-func trimInstrumentationFrames(callers []uintptr) []uintptr {
-	frames := runtime.CallersFrames(callers)
-	for skipped := 0; skipped < len(callers); skipped++ {
-		frame, _ := frames.Next()
-		if !isInstrumentationFunction(frame.Function) {
-			return callers[skipped:]
-		}
-	}
-	return nil
+	return framesFromCallers(callers[:captured], message, true)
 }
 
 func isInstrumentationFunction(name string) bool {
@@ -141,18 +137,29 @@ func isInstrumentationFunction(name string) bool {
 	return false
 }
 
-// structuredFrames resolves callers to frames, reading the source around each
-// one where the file can be read.
+// structuredFrames describes the stack an error carried. Every frame of it is
+// reported: that stack was captured where the error was created, so all of it
+// describes the failure and none of it is the recording.
 func structuredFrames(callers []uintptr, message string) []structuredFrame {
+	return framesFromCallers(callers, message, false)
+}
+
+// framesFromCallers resolves callers to frames, reading the source around each
+// one where the file can be read.
+func framesFromCallers(
+	callers []uintptr, message string, dropInstrumentation bool,
+) []structuredFrame {
 	if len(callers) == 0 {
 		return nil
 	}
 
 	frames := make([]structuredFrame, 0, len(callers))
 	iterator := runtime.CallersFrames(callers)
+	instrumentation := dropInstrumentation
 	for len(frames) < maxStructuredFrames {
 		frame, more := iterator.Next()
-		if frame.Function != "" || frame.File != "" {
+		instrumentation = instrumentation && isInstrumentationFunction(frame.Function)
+		if !instrumentation && (frame.Function != "" || frame.File != "") {
 			structured := structuredFrame{
 				FileName:     frame.File,
 				LineNumber:   frame.Line,
