@@ -1,5 +1,5 @@
 {
-	"go": "1.1.1",
+	"go": "1.2.0",
 	"sdk/@launchdarkly/observability": "1.1.17",
 	"sdk/@launchdarkly/observability-next": "0.2.2",
 	"sdk/@launchdarkly/observability-android": "0.62.0",
