@@ -10,6 +10,7 @@ import { payloadToBase64 } from '../utils/payload'
 import { ReplayEventsInput } from '../graph/generated/schemas'
 import { Logger } from '../logger'
 import { MetricCategory } from '../types/client'
+import { isErrorRecoverable } from '../utils/error-recoverability'
 import { getGraphQLRequestWrapper } from '../utils/graph'
 import {
 	MAX_PUBLIC_GRAPH_RETRY_ATTEMPTS,
@@ -26,6 +27,8 @@ import {
 	MessageType,
 	MetricsMessage,
 	PropertiesMessage,
+	StopEventResponse,
+	StopReason,
 } from './types'
 
 export interface HighlightClientRequestWorker {
@@ -100,6 +103,7 @@ function stringifyProperties(
 	let sessionSecureID: string
 	let numberOfFailedRequests: number = 0
 	let numberOfFailedPushPayloads: number = 0
+	let hasFailedUnrecoverably: boolean = false
 	let debug: boolean = false
 	let recordingStartTime: number = 0
 	let logger = new Logger(false, '[worker]')
@@ -116,6 +120,7 @@ function stringifyProperties(
 
 	const shouldSendRequest = (): boolean => {
 		return (
+			!hasFailedUnrecoverably &&
 			recordingStartTime !== 0 &&
 			numberOfFailedRequests < MAX_PUBLIC_GRAPH_RETRY_ATTEMPTS &&
 			!!sessionSecureID?.length
@@ -130,6 +135,53 @@ function stringifyProperties(
 				payload: payload,
 			},
 		})
+	}
+
+	const stopRecording = (
+		reason: StopReason,
+		details?: Pick<
+			StopEventResponse,
+			'requestStart' | 'asyncEventsResponse'
+		>,
+	) => {
+		worker.postMessage({
+			response: {
+				type: MessageType.Stop,
+				reason,
+				...details,
+			},
+		})
+
+		processPropertiesMessage({
+			type: MessageType.Properties,
+			propertiesObject: {
+				stopReason: reason,
+			},
+			propertyType: { type: 'track' },
+		})
+	}
+
+	/**
+	 * Accounts for a message we could not send. A recoverable failure spends part of the retry
+	 * budget, while an unrecoverable one ends recording for this page load: the backend would
+	 * reject every later request the same way, so continuing only buffers events that can never
+	 * be uploaded.
+	 */
+	const handleFailedMessage = (e: unknown) => {
+		if (debug) {
+			console.error(e)
+		}
+
+		if (isErrorRecoverable(e)) {
+			numberOfFailedRequests += 1
+			return
+		}
+
+		console.warn(`Session data was rejected, stopping recording.`, e)
+		hasFailedUnrecoverably = true
+		pendingMessages.length = 0
+		metricsPayload.length = 0
+		stopRecording(StopReason.UnrecoverableError)
 	}
 
 	const processAsyncEventsMessage = async (msg: AsyncEventsMessage) => {
@@ -229,20 +281,9 @@ function stringifyProperties(
 						`Uploading pushPayload took too long, stopping recording to avoid OOM.`,
 					)
 
-					worker.postMessage({
-						response: {
-							type: MessageType.Stop,
-							requestStart,
-							asyncEventsResponse: response,
-						},
-					})
-
-					processPropertiesMessage({
-						type: MessageType.Properties,
-						propertiesObject: {
-							stopReason: 'Push Payload Timeout',
-						},
-						propertyType: { type: 'track' },
+					stopRecording(StopReason.PushPayloadTimeout, {
+						requestStart,
+						asyncEventsResponse: response,
 					})
 				}
 			}
@@ -374,10 +415,7 @@ function stringifyProperties(
 				await processMessage(msg)
 				numberOfFailedRequests = 0
 			} catch (e) {
-				if (debug) {
-					console.error(e)
-				}
-				numberOfFailedRequests += 1
+				handleFailedMessage(e)
 			}
 		}
 	}
@@ -389,6 +427,9 @@ function stringifyProperties(
 			debug = e.data.message.debug
 			recordingStartTime = e.data.message.recordingStartTime
 			logger.debug = debug
+			// The client only initializes after `initializeSession` succeeded, so an earlier
+			// rejection no longer applies.
+			hasFailedUnrecoverably = false
 			graphqlSDK = getSdk(
 				new GraphQLClient(backend, {
 					headers: {},
@@ -407,6 +448,7 @@ function stringifyProperties(
 			metricsPayload.length = 0
 			numberOfFailedRequests = 0
 			numberOfFailedPushPayloads = 0
+			hasFailedUnrecoverably = false
 			// Reset sessionSecureID and recordingStartTime so that messages arriving
 			// between Reset and new Initialize are queued rather than processed with
 			// the old session SecureID
@@ -427,6 +469,12 @@ function stringifyProperties(
 			return
 		}
 
+		// Drop messages once the backend has permanently rejected this session: queueing them
+		// would grow without bound because nothing is going to send them.
+		if (hasFailedUnrecoverably) {
+			return
+		}
+
 		if (!shouldSendRequest()) {
 			pendingMessages.push(e.data.message)
 			return
@@ -437,10 +485,7 @@ function stringifyProperties(
 			numberOfFailedRequests = 0
 			await drainPendingMessages()
 		} catch (e) {
-			if (debug) {
-				console.error(e)
-			}
-			numberOfFailedRequests += 1
+			handleFailedMessage(e)
 		}
 	}
 }
