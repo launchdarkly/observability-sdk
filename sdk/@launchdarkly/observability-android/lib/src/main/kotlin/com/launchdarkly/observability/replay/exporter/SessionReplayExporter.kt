@@ -310,8 +310,13 @@ class SessionReplayExporter(
                 try {
                     replayApiService.identifyReplaySession(sessionId, newIdentifyEvent)
                     identifyItemPayload = newIdentifyEvent
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
+                    // There is nothing to retry an identify with, so the failure is only logged - but a
+                    // refusal ends recording here like it does for any other request.
                     logger.error(e)
+                    reportIfUnrecoverable(e)
                 }
             }
         }

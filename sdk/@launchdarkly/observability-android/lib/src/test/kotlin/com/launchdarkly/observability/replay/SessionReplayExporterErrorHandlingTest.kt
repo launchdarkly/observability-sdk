@@ -205,6 +205,23 @@ class SessionReplayExporterErrorHandlingTest {
         coVerify(exactly = 1) { mockService.identifyReplaySession(any<String>(), any<IdentifyItemPayload>()) }
     }
 
+    @Test
+    fun `an identify refused after the session was accepted ends recording`() = runTest {
+        exporter.export(captureItems("session-a"))
+        assertEquals(listOf(SessionReplayInitializationVerdict.Allowed), verdicts)
+
+        coEvery { mockService.identifyReplaySession(any<String>(), any<IdentifyItemPayload>()) } throws
+            refusal("identifyReplaySession")
+        exporter.sendIdentifyAndCache(
+            IdentifyItemPayload(attributes = mapOf("key" to "user-2"), timestamp = 1L, sessionId = "session-a")
+        )
+
+        assertEquals(1, verdicts.count { it is SessionReplayInitializationVerdict.Unrecoverable })
+        // Recording is over, so the batch that follows drains rather than being pushed or retried.
+        assertNull(exportFailure(captureItems("session-b")))
+        coVerify(exactly = 0) { mockService.pushPayload("session-b", any(), any()) }
+    }
+
     /** A refusal the backend cannot be retried out of: a GraphQL error marked non-retryable. */
     private fun refusal(operation: String) = SessionReplayApiException(
         operation,
