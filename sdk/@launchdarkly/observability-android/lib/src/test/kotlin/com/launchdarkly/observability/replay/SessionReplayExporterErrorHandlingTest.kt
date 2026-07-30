@@ -77,7 +77,9 @@ class SessionReplayExporterErrorHandlingTest {
     fun `an unrecoverable initialization failure stops further exports`() = runTest {
         coEvery { mockService.initializeReplaySession(any(), any()) } throws refusal("initializeReplaySession")
 
-        assertNotNull(exportFailure(captureItems("session-a")))
+        // The refusal is not surfaced as an export failure: it would earn the batch a retry with backoff,
+        // when nothing will accept it any more.
+        assertNull(exportFailure(captureItems("session-a")))
         assertEquals(
             listOf(
                 SessionReplayInitializationVerdict.Unrecoverable(
@@ -97,7 +99,7 @@ class SessionReplayExporterErrorHandlingTest {
     fun `an unrecoverable push failure stops further exports`() = runTest {
         coEvery { mockService.pushPayload(any(), any(), any()) } throws refusal("pushPayload")
 
-        assertNotNull(exportFailure(captureItems("session-a")))
+        assertNull(exportFailure(captureItems("session-a")))
         assertEquals(1, verdicts.count { it is SessionReplayInitializationVerdict.Unrecoverable })
 
         assertNull(exportFailure(captureItems("session-a")))
@@ -193,7 +195,7 @@ class SessionReplayExporterErrorHandlingTest {
     @Test
     fun `a refused session is not identified again`() = runTest {
         coEvery { mockService.pushPayload(any(), any(), any()) } throws refusal("pushPayload")
-        assertNotNull(exportFailure(captureItems("session-a")))
+        exporter.export(captureItems("session-a"))
 
         exporter.sendIdentifyAndCache(
             IdentifyItemPayload(attributes = mapOf("key" to "user-2"), timestamp = 1L, sessionId = "session-a")

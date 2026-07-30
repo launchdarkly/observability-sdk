@@ -228,7 +228,14 @@ class SessionReplayExporter(
                 pushedCanvasSize = pushedCanvasSnapshot
                 shouldWakeUpSession = shouldWakeUpSnapshot
                 eventGenerator.restoreState(generatorSnapshot)
+                if (e is CancellationException) throw e
+
                 reportIfUnrecoverable(e)
+                // A refusal is not a retryable export failure: rethrowing it would have the worker back
+                // off (up to a minute) still holding a batch nothing accepts any more, so the drain would
+                // only start once that backoff expires.
+                if (hasFailedUnrecoverably) return@withLock
+
                 throw e
             }
         }
