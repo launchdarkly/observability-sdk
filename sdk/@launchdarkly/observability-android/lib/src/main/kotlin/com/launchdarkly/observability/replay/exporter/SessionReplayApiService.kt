@@ -1,8 +1,10 @@
 package com.launchdarkly.observability.replay.exporter
 
 import com.launchdarkly.observability.BuildConfig
+import com.launchdarkly.observability.network.ErrorRecoverability
 import com.launchdarkly.observability.network.GraphQLClient
 import com.launchdarkly.observability.network.GraphQLResponse
+import com.launchdarkly.observability.network.RecoverableFailure
 import com.launchdarkly.observability.replay.Event
 import com.launchdarkly.observability.replay.IdentifySessionResponse
 import com.launchdarkly.observability.replay.InitializeReplaySessionResponse
@@ -257,8 +259,15 @@ class SessionReplayApiService(
     private fun <T> throwOnErrors(response: GraphQLResponse<T>, operation: String) {
         val errors = response.errors?.takeIf { it.isNotEmpty() } ?: return
         val message = errors.joinToString("; ") { it.message }
-        throw SessionReplayApiException("$operation failed: $message")
+        // Classify here, while the status code and the error `extensions` are still available.
+        throw SessionReplayApiException(
+            message = "$operation failed: $message",
+            isRecoverable = ErrorRecoverability.isErrorRecoverable(response),
+        )
     }
 }
 
-internal class SessionReplayApiException(message: String) : RuntimeException(message)
+internal class SessionReplayApiException(
+    message: String,
+    override val isRecoverable: Boolean = true,
+) : RuntimeException(message), RecoverableFailure

@@ -443,6 +443,11 @@ LDReplay.start()
 
 Call `LDReplay.stop()` to pause recording.
 
+Recording can also end on its own: if LaunchDarkly refuses the session — for example when session replay is
+not available for the environment — the SDK stops capturing for the rest of the launch, and
+`LDReplay.isEnabled` reports `false`. The next launch withholds screenshots until the backend accepts a
+session again, so a refusal is not permanent.
+
 #### Masking sensitive UI
 
 Use `ldMask()` to mark views that should be masked in session replay. There are helpers for both XML-based Views and Jetpack Compose.

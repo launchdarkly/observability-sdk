@@ -1,13 +1,16 @@
 package com.launchdarkly.observability.replay.exporter
 
 import com.launchdarkly.observability.context.ObserveLogger
+import com.launchdarkly.observability.network.ErrorRecoverability
 import com.launchdarkly.observability.network.GraphQLClient
 import com.launchdarkly.observability.replay.Event
+import com.launchdarkly.observability.replay.SessionReplayInitializationVerdict
 import com.launchdarkly.observability.replay.capture.ExportFrame
 import com.launchdarkly.observability.replay.transport.EventExporting
 import com.launchdarkly.observability.replay.transport.EventQueueItem
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlin.coroutines.cancellation.CancellationException
 
 // size limit of accumulated continues canvas operations on the RRWeb player
 private const val RRWEB_CANVAS_BUFFER_LIMIT =  10_000_000 // ~10mb
@@ -42,6 +45,11 @@ class SessionReplayExporter(
      * is never read from the shared context on the export thread.
      */
     initialAppLaunchItemPayload: AppLaunchItemPayload? = null,
+    /**
+     * Receives every recording verdict, so the service can withhold or stop screenshots. Invoked from
+     * the export thread.
+     */
+    private val onInitializationVerdict: ((SessionReplayInitializationVerdict) -> Unit)? = null,
 ) : EventExporting {
     private val exportMutex = Mutex()
 
@@ -65,6 +73,17 @@ class SessionReplayExporter(
     private var shouldWakeUpSession = true
     private val eventGenerator = RRWebEventGenerator(canvasDrawEntourage, title)
 
+    /** Sessions the backend has accepted, so they are initialized at most once. Guarded by [exportMutex]. */
+    private val initializedSessions = mutableSetOf<String>()
+
+    /**
+     * Set once the backend rejects the session unrecoverably. Recording cannot come back within this
+     * process — a new attempt is made only on a fresh launch — so no further requests are made and queued
+     * items are drained instead of retried. Read before taking [exportMutex], hence volatile.
+     */
+    @Volatile
+    private var hasFailedUnrecoverably = false
+
     private data class LastCaptureState(
         val sessionId: String?,
         val height: Int,
@@ -74,8 +93,28 @@ class SessionReplayExporter(
     private var lastCaptureState = LastCaptureState(sessionId = null, height = 0, width = 0)
     private var pushedCanvasSize = 0
 
+    /**
+     * Initializes [sessionId] without waiting for the first export batch, so an unrecoverable rejection
+     * can stop capture at the very start of the launch. The verdict is delivered through
+     * [onInitializationVerdict] and the export retry loop owns any retry, so failures are not rethrown.
+     */
+    suspend fun prepareSession(sessionId: String) {
+        exportMutex.withLock {
+            try {
+                initializeSessionIfNeeded(sessionId)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                logger.error(e)
+            }
+        }
+    }
+
     override suspend fun export(items: List<EventQueueItem>) {
         if (items.isEmpty()) return
+        // Return without pushing so the queue drains: recording is over for this launch, and holding the
+        // items would only keep the buffer full.
+        if (hasFailedUnrecoverably) return
 
         exportMutex.withLock {
             val lastCaptureSnapshot = lastCaptureState
@@ -156,14 +195,16 @@ class SessionReplayExporter(
 
                 // Initialize sessions that need it
                 for (sessionId in sessionsNeedingInit) {
-                    replayApiService.initializeReplaySession(organizationVerboseId, sessionId)
-                    replayApiService.identifyReplaySession(sessionId, identifyItemPayload)
-                    // TODO: O11Y-624 - handle request failures
+                    initializeSessionIfNeeded(sessionId)
                 }
 
                 // Send all events grouped by session
                 for ((sessionId, events) in eventsBySession) {
                     if (events.isNotEmpty()) {
+                        // Events can belong to a session no capture has been taken of yet — while
+                        // screenshots are withheld, or from a touch that precedes the first frame — and the
+                        // backend only accepts payloads for an initialized session.
+                        initializeSessionIfNeeded(sessionId)
                         replayApiService.pushPayload(sessionId, "${nextPayloadId()}", events)
                         // flushes generating canvas size into pushedCanvasSize
                         pushedCanvasSize = eventGenerator.accumulatedCanvasSize
@@ -179,9 +220,46 @@ class SessionReplayExporter(
                 pushedCanvasSize = pushedCanvasSnapshot
                 shouldWakeUpSession = shouldWakeUpSnapshot
                 eventGenerator.restoreState(generatorSnapshot)
+                reportIfUnrecoverable(e)
                 throw e
             }
         }
+    }
+
+    /**
+     * Initializes [sessionId] once, and reports what the backend made of it. A failure leaves the session
+     * uninitialized so the next attempt retries both calls, and is rethrown for the export retry loop.
+     */
+    private suspend fun initializeSessionIfNeeded(sessionId: String) {
+        if (hasFailedUnrecoverably || !initializedSessions.add(sessionId)) return
+
+        try {
+            replayApiService.initializeReplaySession(organizationVerboseId, sessionId)
+            // Accepting the session is the recording verdict on its own: reporting it here rather than
+            // after `identifyReplaySession` keeps a transient identify failure from withholding screenshots.
+            report(SessionReplayInitializationVerdict.Allowed)
+            replayApiService.identifyReplaySession(sessionId, identifyItemPayload)
+        } catch (e: Exception) {
+            initializedSessions.remove(sessionId)
+            reportIfUnrecoverable(e)
+            throw e
+        }
+    }
+
+    /**
+     * Classifies a failed request: recoverable errors are left to the export retry loop (items stay
+     * buffered until the queue overflows), while an unrecoverable one ends recording for this launch.
+     */
+    private fun reportIfUnrecoverable(error: Throwable) {
+        if (hasFailedUnrecoverably || ErrorRecoverability.isErrorRecoverable(error)) return
+
+        hasFailedUnrecoverably = true
+        logger.error("Session replay stopped, unrecoverable error", error)
+        report(SessionReplayInitializationVerdict.Unrecoverable(error.message ?: error.toString()))
+    }
+
+    private fun report(verdict: SessionReplayInitializationVerdict) {
+        onInitializationVerdict?.invoke(verdict)
     }
 
     private suspend fun wakeUpEvents(
@@ -201,6 +279,7 @@ class SessionReplayExporter(
         } catch (e: Exception) {
             // put wake up in the try/catch do not break buffering logic
             logger.error(e)
+            reportIfUnrecoverable(e)
         }
     }
 
