@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.63.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.62.0...launchdarkly-observability-android-0.63.0) (2026-07-31)
+
+
+### Features
+
+* **android:** stop session replay on unrecoverable initialization errors ([#698](https://github.com/launchdarkly/observability-sdk/issues/698)) ([2982a7a](https://github.com/launchdarkly/observability-sdk/commit/2982a7ac324f651dff8f827a62983aabba767a03))
+
 ## [0.62.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.61.1...launchdarkly-observability-android-0.62.0) (2026-07-22)
 
 

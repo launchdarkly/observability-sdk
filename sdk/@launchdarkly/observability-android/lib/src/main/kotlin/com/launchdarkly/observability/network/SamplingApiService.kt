@@ -76,18 +76,15 @@ class SamplingApiService(
     suspend fun getSamplingConfig(organizationVerboseId: String): SamplingConfig? {
         try {
             val variables = mapOf("organization_verbose_id" to JsonPrimitive(organizationVerboseId))
-            val response = graphqlClient.execute(
+
+            return graphqlClient.execute(
                 query = GET_SAMPLING_CONFIG_QUERY,
                 variables = variables,
                 dataSerializer = SamplingResponse.serializer()
-            )
-
-            if (response.errors?.isNotEmpty() == true) {
-                return null
-            }
-
-            return response.data?.mapToEntity()
+            ).mapToEntity()
         } catch (e: Exception) {
+            // Sampling falls back to "sample everything" when the config cannot be read, so every failure
+            // is the same as an absent config here.
             println("Error fetching sampling config: ${e.message}")
             return null
         }
