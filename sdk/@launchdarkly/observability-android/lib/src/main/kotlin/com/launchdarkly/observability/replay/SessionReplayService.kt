@@ -1,11 +1,13 @@
 package com.launchdarkly.observability.replay
 
 import android.app.Activity
+import android.content.Context
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
 import com.launchdarkly.observability.context.ObserveLogger
+import com.launchdarkly.observability.client.AppLaunchTracker
 import com.launchdarkly.observability.client.AppLifecycleSignal
 import com.launchdarkly.observability.client.ObservabilityContext
 import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
@@ -83,6 +85,11 @@ class SessionReplayService(
     private val instrumentationScope = CoroutineScope(DispatcherProviderHolder.current.default + SupervisorJob())
     private var captureJob: Job? = null
     private val shouldCapture = MutableStateFlow(false)
+    /**
+     * Whether the backend has cleared this launch for screenshots. Starts withheld when a previous launch
+     * was refused, and is released once `initializeSession` succeeds.
+     */
+    private val isScreenCaptureAllowed = MutableStateFlow(true)
     private val _isEnabled = MutableStateFlow(options.enabled)
     private val _isRunning = MutableStateFlow(false)
     private val sampleRate = options.sampleRate
@@ -92,6 +99,13 @@ class SessionReplayService(
     private var exporter: SessionReplayExporter? = null
     private val pendingIdentifyLock = Any()
     private var pendingIdentify: IdentifyItemPayload? = null
+    private var initializationStore: SessionReplayInitializationStore? = null
+    /**
+     * Decides whether screenshots may be taken, from this launch's verdicts and the failure cached from a
+     * previous launch. Verdicts arrive on the export thread, so every access goes through [withGate].
+     */
+    private val recordingGateLock = Any()
+    private var recordingGate = SessionReplayRecordingGate(hasCachedFailure = false)
 
     /**
      * Installs replay instrumentation. Idempotent.
@@ -147,6 +161,21 @@ class SessionReplayService(
                 sessionId = null
             )
         }
+        val store = SessionReplayInitializationStore(
+            prefs = application.getSharedPreferences(AppLaunchTracker.PREFS_NAME, Context.MODE_PRIVATE),
+            sdkKey = observabilityContext.sdkKey,
+        )
+        val cachedFailure = store.loadFailure()
+        initializationStore = store
+        recordingGate = SessionReplayRecordingGate(hasCachedFailure = cachedFailure != null)
+        isScreenCaptureAllowed.value = recordingGate.isScreenCaptureAllowed
+        if (cachedFailure != null) {
+            logger.info(
+                "Session replay is holding screenshots until initializeSession succeeds, " +
+                    "previous launch failed with: ${cachedFailure.reason}"
+            )
+        }
+
         val exporter = SessionReplayExporter(
             organizationVerboseId = observabilityContext.sdkKey,
             backendUrl = observabilityContext.options.backendUrl,
@@ -156,6 +185,7 @@ class SessionReplayService(
             title = appName,
             logger = logger,
             initialAppLaunchItemPayload = initialAppLaunchItemPayload,
+            onInitializationVerdict = ::handleInitializationVerdict,
         )
         this@SessionReplayService.exporter = exporter
         batchWorker.addExporter(exporter)
@@ -260,22 +290,30 @@ class SessionReplayService(
      */
     private fun startCaptureStateObserver() {
         instrumentationScope.launch {
-            combine(shouldCapture, _isRunning) { shouldRun, running -> shouldRun && running }
-                .collect { shouldRun ->
-                    val running = captureJob?.isActive == true
-                    if (shouldRun == running) return@collect
-                    if (shouldRun) {
-                        // Session Replay needs the shared touch hook regardless of
-                        // `instrumentations.userTaps`. Both calls are idempotent: attach ensures the
-                        // current window is tracked (Observability already attaches at init), and
-                        // enable wraps that already-current window plus future ones - so capture
-                        // starting after the first activity is up still records its touches.
+            var hasEnabledTouchCapture = false
+
+            combine(shouldCapture, _isRunning, isScreenCaptureAllowed) { shouldRun, running, screenshotsAllowed ->
+                (shouldRun && running) to screenshotsAllowed
+            }
+                .collect { (isRecording, screenshotsAllowed) ->
+                    // Session Replay needs the shared touch hook regardless of
+                    // `instrumentations.userTaps`, and regardless of [isScreenCaptureAllowed]: while
+                    // screenshots are withheld, interactions still queue and are pushed once the backend
+                    // accepts the session. Both calls are idempotent: attach ensures the current window is
+                    // tracked (Observability already attaches at init), and enable wraps that
+                    // already-current window plus future ones - so capture starting after the first
+                    // activity is up still records its touches.
+                    if (isRecording && !hasEnabledTouchCapture) {
+                        hasEnabledTouchCapture = true
                         observabilityContext.userInteractionManager?.apply {
                             attachToApplication(observabilityContext.application)
                             enableTouchCapture()
                         }
-                        doRunCapture()
-                    } else doPauseCapture()
+                    }
+
+                    val shouldCaptureScreen = isRecording && screenshotsAllowed
+                    if (shouldCaptureScreen == (captureJob?.isActive == true)) return@collect
+                    if (shouldCaptureScreen) doRunCapture() else doPauseCapture()
                 }
         }
     }
@@ -332,10 +370,19 @@ class SessionReplayService(
         get() = _isEnabled.value
         set(value) {
             if (_isEnabled.value == value) return
-            _isEnabled.value = value
             if (value) {
+                // A launch the backend has refused cannot record again, so enabling must not report itself
+                // as enabled. The next launch tries again. Checking and enabling under the gate's lock, the
+                // same one a verdict is applied under, keeps a refusal that lands in between from being
+                // overwritten by the enable that raced it.
+                val canStart = withGate { canStartRecording.also { if (it) _isEnabled.value = true } }
+                if (!canStart) {
+                    logger.info("Session replay cannot start, the backend refused this launch.")
+                    return
+                }
                 attemptStart(ignoreSampling = false)
             } else {
+                _isEnabled.value = false
                 stopRecording()
             }
         }
@@ -349,12 +396,30 @@ class SessionReplayService(
 
     private fun attemptStart(ignoreSampling: Boolean): Boolean {
         if (_isRunning.value) return true
+        // The exporter stops talking to the backend after an unrecoverable refusal, so starting would only
+        // collect events that can never be pushed.
+        if (!withGate { canStartRecording }) {
+            logger.info("Session replay cannot start, the backend refused this launch.")
+            return false
+        }
         if (!samplingSession.shouldStartCapture(ignoreSampling, sampleRate)) {
             logger.info("Session replay skipped by sampling.")
             return false
         }
-        _isRunning.value = true
+        // Re-checked while holding the gate's lock, the one a verdict is applied under, because a refusal
+        // can land while sampling is being evaluated above: without this, its `stopRecording` would be
+        // undone here and the collectors would keep running for a launch reporting itself disabled.
+        val canStart = withGate { canStartRecording.also { if (it) _isRunning.value = true } }
+        if (!canStart) {
+            logger.info("Session replay cannot start, the backend refused this launch.")
+            return false
+        }
         flushPendingIdentify()
+        // Ask the backend up front instead of waiting for the first export batch, so a refusal can stop
+        // (or keep withholding) screenshots at the very start of the launch. Input events keep flowing into
+        // the event queue meanwhile: they buffer there until the queue overflows, and are pushed as soon as
+        // the session is accepted.
+        startInitializationProbe()
         return true
     }
 
@@ -362,6 +427,66 @@ class SessionReplayService(
         samplingSession.reset()
         _isRunning.value = false
     }
+
+    /**
+     * Initializes the current session on the backend, off the export path.
+     */
+    private fun startInitializationProbe() {
+        if (!this::sessionManager.isInitialized) return
+        val exporterSnapshot = exporter ?: return
+
+        val sessionId = sessionManager.getSessionId()
+        instrumentationScope.launch { exporterSnapshot.prepareSession(sessionId) }
+    }
+
+    /**
+     * Asks the backend again while screenshots are withheld by a failure cached from a previous launch. A
+     * launch that starts in the background often probes with no network, or is suspended mid-request, and
+     * becoming visible is the moment worth retrying: with capture withheld there are no frames to export,
+     * so nothing else would trigger an attempt until the user happens to tap or navigate.
+     */
+    private fun retryInitializationIfWithheld() {
+        if (!_isRunning.value) return
+        if (!withGate { isAwaitingVerdict }) return
+
+        startInitializationProbe()
+    }
+
+    /**
+     * Applies a recording verdict from the exporter: an accepted session releases screen capture (and
+     * clears any cached failure), a refused one ends recording for this launch and is remembered so the
+     * next launch does not take screenshots before the backend has answered.
+     */
+    private fun handleInitializationVerdict(verdict: SessionReplayInitializationVerdict) {
+        // Recording is over for this launch, so report replay as disabled rather than leaving `isEnabled`
+        // claiming otherwise. Set under the gate's lock, together with the verdict that decided it, so an
+        // `isEnabled = true` racing this refusal cannot end up as the last write.
+        val outcome = withGate {
+            apply(verdict).also {
+                if (it is SessionReplayRecordingGate.Outcome.StopRecording) _isEnabled.value = false
+            }
+        }
+
+        when (outcome) {
+            is SessionReplayRecordingGate.Outcome.None -> Unit
+
+            is SessionReplayRecordingGate.Outcome.ReleaseScreenCapture -> {
+                initializationStore?.clearFailure()
+                logger.info("Session replay recovered, resuming screenshots.")
+                isScreenCaptureAllowed.value = true
+            }
+
+            is SessionReplayRecordingGate.Outcome.StopRecording -> {
+                initializationStore?.store(outcome.reason)
+                logger.error("Session replay stopped, the backend refused this launch: ${outcome.reason}")
+                isScreenCaptureAllowed.value = false
+                stopRecording()
+            }
+        }
+    }
+
+    private inline fun <T> withGate(block: SessionReplayRecordingGate.() -> T): T =
+        synchronized(recordingGateLock) { recordingGate.block() }
 
     override fun flush() {
         batchWorker.flush()
@@ -380,6 +505,7 @@ class SessionReplayService(
             // activity transitions and configuration changes don't flicker capture.
             override fun onResume(owner: LifecycleOwner) {
                 runCapture()
+                retryInitializationIfWithheld()
             }
 
             override fun onPause(owner: LifecycleOwner) {
