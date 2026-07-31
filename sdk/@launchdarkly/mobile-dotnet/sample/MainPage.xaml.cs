@@ -109,7 +109,7 @@ public partial class MainPage : ContentPage
 
 	private void OnTriggerCrashClicked(object? sender, EventArgs e)
 	{
-		throw new InvalidOperationException("Failed to connect to bogus server.");
+		throw new InvalidOperationException(".NET MAUI: Crash - failed to connect to bogus server.");
 	}
 
 	// --- Metrics ---
@@ -149,7 +149,7 @@ public partial class MainPage : ContentPage
 	private void OnTriggerErrorClicked(object? sender, EventArgs e)
 	{
 		var innerException = new InvalidOperationException("The error that caused the other error.");
-		var exception = new Exception("Manual error womp womp", innerException);
+		var exception = new Exception(".NET MAUI: Manual error womp womp", innerException);
 		LDObserve.RecordError(exception);
 		Console.WriteLine("Error triggered");
 	}
