@@ -7333,7 +7333,7 @@ __metadata:
   dependencies:
     "@highlight-run/node": "workspace:*"
     "@types/node": "npm:^14.18.63"
-    hono: "npm:^4.12.14"
+    hono: "npm:^4.12.33"
     typescript: "npm:^5.0.4"
     vitest: "npm:^4.1.0"
   languageName: unknown
@@ -7381,7 +7381,7 @@ __metadata:
     eslint: "npm:^9.26.0"
     highlight.run: "workspace:*"
     js-cookie: "npm:^3.0.5"
-    next: "npm:^15.5.15"
+    next: "npm:^16.2.12"
     rollup: "npm:^4.4.1"
     semver: "npm:^7.6.3"
     tree-kill: "npm:^1.2.2"
@@ -7389,7 +7389,7 @@ __metadata:
     vite: "npm:^6.4.3"
     vitest: "npm:^4.1.0"
   peerDependencies:
-    next: ^15.5.15
+    next: ^16.2.12
     react: ">=17"
   languageName: unknown
   linkType: soft
@@ -7931,11 +7931,11 @@ __metadata:
   linkType: soft
 
 "@hono/node-server@npm:^1.19.13":
-  version: 1.19.14
-  resolution: "@hono/node-server@npm:1.19.14"
+  version: 1.19.17
+  resolution: "@hono/node-server@npm:1.19.17"
   peerDependencies:
     hono: ^4
-  checksum: 10/618dd95feeb3fd11ec8502e088879cd86529523788de19602edebd16892dd61899e73564d6e3d00875cc5a49488a908ddb2aa425d28f9cdeb7f22cfecabf022c
+  checksum: 10/b3fb8f627e59caafdcf49b463d5263931ccc404cb2d58999b9863636e68dcf01e919a73a449761db07349bd39dc91983b68a9f549b4c9927fde8c2de7e498689
   languageName: node
   linkType: hard
 
@@ -9263,12 +9263,12 @@ __metadata:
     "@types/node": "npm:^20.14.7"
     "@types/react": "npm:^19.0.10"
     js-cookie: "npm:^3.0.5"
-    next: "npm:>=14.2.25"
+    next: "npm:>=16.2.12"
     react: "npm:^19.0.0"
     rollup: "npm:^4.4.1"
     typescript: "npm:^5.0.4"
   peerDependencies:
-    next: ">=14.2.25"
+    next: ">=16.2.12"
     react: ">=17"
   languageName: unknown
   linkType: soft
@@ -10241,17 +10241,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@next/env@npm:15.5.22, @next/env@npm:^15.5.10":
-  version: 15.5.22
-  resolution: "@next/env@npm:15.5.22"
-  checksum: 10/0289b68fe3aeb5783d239637ff50dd483d1609e45b9e98b31ac0d5578fc3228f696fbda1a860b4b0a7ae414c30156ce1d3d889d3a173a5dbd96b362a1a1436f9
-  languageName: node
-  linkType: hard
-
 "@next/env@npm:16.2.12":
   version: 16.2.12
   resolution: "@next/env@npm:16.2.12"
   checksum: 10/b9cfd8e32892dc1bcfc34496cbc09a30bdba9a83d2caaf828fd646d03da65a8e2f2a01db2a6779ac9527592cfacf6a6e71975851657da277d8c4af6097bc5b21
+  languageName: node
+  linkType: hard
+
+"@next/env@npm:^15.5.10":
+  version: 15.5.22
+  resolution: "@next/env@npm:15.5.22"
+  checksum: 10/0289b68fe3aeb5783d239637ff50dd483d1609e45b9e98b31ac0d5578fc3228f696fbda1a860b4b0a7ae414c30156ce1d3d889d3a173a5dbd96b362a1a1436f9
   languageName: node
   linkType: hard
 
@@ -10264,24 +10264,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@next/swc-darwin-arm64@npm:15.5.22":
-  version: 15.5.22
-  resolution: "@next/swc-darwin-arm64@npm:15.5.22"
-  conditions: os=darwin & cpu=arm64
-  languageName: node
-  linkType: hard
-
 "@next/swc-darwin-arm64@npm:16.2.12":
   version: 16.2.12
   resolution: "@next/swc-darwin-arm64@npm:16.2.12"
   conditions: os=darwin & cpu=arm64
-  languageName: node
-  linkType: hard
-
-"@next/swc-darwin-x64@npm:15.5.22":
-  version: 15.5.22
-  resolution: "@next/swc-darwin-x64@npm:15.5.22"
-  conditions: os=darwin & cpu=x64
   languageName: node
   linkType: hard
 
@@ -10292,24 +10278,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@next/swc-linux-arm64-gnu@npm:15.5.22":
-  version: 15.5.22
-  resolution: "@next/swc-linux-arm64-gnu@npm:15.5.22"
-  conditions: os=linux & cpu=arm64 & libc=glibc
-  languageName: node
-  linkType: hard
-
 "@next/swc-linux-arm64-gnu@npm:16.2.12":
   version: 16.2.12
   resolution: "@next/swc-linux-arm64-gnu@npm:16.2.12"
   conditions: os=linux & cpu=arm64 & libc=glibc
-  languageName: node
-  linkType: hard
-
-"@next/swc-linux-arm64-musl@npm:15.5.22":
-  version: 15.5.22
-  resolution: "@next/swc-linux-arm64-musl@npm:15.5.22"
-  conditions: os=linux & cpu=arm64 & libc=musl
   languageName: node
   linkType: hard
 
@@ -10320,24 +10292,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@next/swc-linux-x64-gnu@npm:15.5.22":
-  version: 15.5.22
-  resolution: "@next/swc-linux-x64-gnu@npm:15.5.22"
-  conditions: os=linux & cpu=x64 & libc=glibc
-  languageName: node
-  linkType: hard
-
 "@next/swc-linux-x64-gnu@npm:16.2.12":
   version: 16.2.12
   resolution: "@next/swc-linux-x64-gnu@npm:16.2.12"
   conditions: os=linux & cpu=x64 & libc=glibc
-  languageName: node
-  linkType: hard
-
-"@next/swc-linux-x64-musl@npm:15.5.22":
-  version: 15.5.22
-  resolution: "@next/swc-linux-x64-musl@npm:15.5.22"
-  conditions: os=linux & cpu=x64 & libc=musl
   languageName: node
   linkType: hard
 
@@ -10348,24 +10306,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@next/swc-win32-arm64-msvc@npm:15.5.22":
-  version: 15.5.22
-  resolution: "@next/swc-win32-arm64-msvc@npm:15.5.22"
-  conditions: os=win32 & cpu=arm64
-  languageName: node
-  linkType: hard
-
 "@next/swc-win32-arm64-msvc@npm:16.2.12":
   version: 16.2.12
   resolution: "@next/swc-win32-arm64-msvc@npm:16.2.12"
   conditions: os=win32 & cpu=arm64
-  languageName: node
-  linkType: hard
-
-"@next/swc-win32-x64-msvc@npm:15.5.22":
-  version: 15.5.22
-  resolution: "@next/swc-win32-x64-msvc@npm:15.5.22"
-  conditions: os=win32 & cpu=x64
   languageName: node
   linkType: hard
 
@@ -15783,12 +15727,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@sigstore/bundle@npm:^3.0.0":
-  version: 3.0.0
-  resolution: "@sigstore/bundle@npm:3.0.0"
+"@sigstore/bundle@npm:^3.1.0":
+  version: 3.1.0
+  resolution: "@sigstore/bundle@npm:3.1.0"
   dependencies:
-    "@sigstore/protobuf-specs": "npm:^0.3.2"
-  checksum: 10/819351758918926271d1784b5725f15339db5c117db4a73ec2904d1cf38f799cb28aeba84ca02be85dbf7e489c09fce62a9fde5a739cec61570babb49f95d30b
+    "@sigstore/protobuf-specs": "npm:^0.4.0"
+  checksum: 10/21b246ec63462e8508a8d001ca5d7937f63b6e15d5f2947ee2726d1e4674fb3f7640faa47b165bfea1d5b09df93fbdf10d1556427bba7e005e7f3a65b87f89b2
   languageName: node
   linkType: hard
 
@@ -15799,35 +15743,28 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@sigstore/protobuf-specs@npm:^0.3.2":
-  version: 0.3.3
-  resolution: "@sigstore/protobuf-specs@npm:0.3.3"
-  checksum: 10/8de4a6f2fc5034b35e9d6e570fdb4dfa21d10cf544e68597276eba4991636a8fb0a399e2aba0ad68f86a3589e7ec8a28395e7e6bc08085237f81dec5640a310a
-  languageName: node
-  linkType: hard
-
-"@sigstore/protobuf-specs@npm:^0.4.1":
+"@sigstore/protobuf-specs@npm:^0.4.0, @sigstore/protobuf-specs@npm:^0.4.1":
   version: 0.4.3
   resolution: "@sigstore/protobuf-specs@npm:0.4.3"
   checksum: 10/05bcb534b6096c095185c74b1718af89666299444490d84d35610f590bc4e2bf1a6a29c2c4f18598ddbd3a8a43c95f0a89faa98c05b44ff0be1dcd8b39f7e323
   languageName: node
   linkType: hard
 
-"@sigstore/sign@npm:^3.0.0":
-  version: 3.0.0
-  resolution: "@sigstore/sign@npm:3.0.0"
+"@sigstore/sign@npm:^3.1.0":
+  version: 3.1.0
+  resolution: "@sigstore/sign@npm:3.1.0"
   dependencies:
-    "@sigstore/bundle": "npm:^3.0.0"
+    "@sigstore/bundle": "npm:^3.1.0"
     "@sigstore/core": "npm:^2.0.0"
-    "@sigstore/protobuf-specs": "npm:^0.3.2"
-    make-fetch-happen: "npm:^14.0.1"
+    "@sigstore/protobuf-specs": "npm:^0.4.0"
+    make-fetch-happen: "npm:^14.0.2"
     proc-log: "npm:^5.0.0"
     promise-retry: "npm:^2.0.1"
-  checksum: 10/7a79aa0035d81a423a009c8ae986ec2a6fd1effcb0d74249953571200af66f985aaf6ba854a3f873c23380f8e412957fbd7603491f981af59a09e1f9197f8988
+  checksum: 10/e0ce0aa52b572eefa06a8260a7329f349c56217f2bbb6f167259c6e02e148987073e0dddc5e3c40ea4aafc89b8b0176e2617fb16f9c8c50cf0c1437b6c90fca4
   languageName: node
   linkType: hard
 
-"@sigstore/tuf@npm:^3.0.0, @sigstore/tuf@npm:^3.1.1":
+"@sigstore/tuf@npm:^3.1.0, @sigstore/tuf@npm:^3.1.1":
   version: 3.1.1
   resolution: "@sigstore/tuf@npm:3.1.1"
   dependencies:
@@ -15837,14 +15774,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@sigstore/verify@npm:^2.0.0":
-  version: 2.0.0
-  resolution: "@sigstore/verify@npm:2.0.0"
+"@sigstore/verify@npm:^2.1.0":
+  version: 2.1.1
+  resolution: "@sigstore/verify@npm:2.1.1"
   dependencies:
-    "@sigstore/bundle": "npm:^3.0.0"
+    "@sigstore/bundle": "npm:^3.1.0"
     "@sigstore/core": "npm:^2.0.0"
-    "@sigstore/protobuf-specs": "npm:^0.3.2"
-  checksum: 10/f2c2ea713bdedcb07f8a6ef057f3fab785e8e3b3db9fd12d85c224e453a8fdef572ece356bd42ce41a105e5a87fed922ef5f34ff7c53d91b4a99643ce57740a1
+    "@sigstore/protobuf-specs": "npm:^0.4.1"
+  checksum: 10/ff2aa8c441fd45b20a048b8746fa1d6096e3385a7098352b24703bca790d0555383d21f29b0ce8223c36dd98e14ed7dae82d044ff005c76e0e68c240f0a0458d
   languageName: node
   linkType: hard
 
@@ -19543,9 +19480,9 @@ __metadata:
   linkType: hard
 
 "adm-zip@npm:^0.5.2, adm-zip@npm:~0.5.x":
-  version: 0.5.10
-  resolution: "adm-zip@npm:0.5.10"
-  checksum: 10/c5ab79b77114d8277f0cbfd6cca830198d6c7ee4971f6960f48e08cd2375953b11dc71729b7f396abd51d2d6cce8c862fad185ea90cb2c84ab5161c37ed1b099
+  version: 0.5.18
+  resolution: "adm-zip@npm:0.5.18"
+  checksum: 10/6eaa298828b92e543241fa24d01af774ad8709b80539b3fa60d4ba6f69fd5a15a19d8177e6d739f18f4e0933610ed555215dc6553b51c532534414702c255167
   languageName: node
   linkType: hard
 
@@ -27481,10 +27418,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"fast-uri@npm:^3.1.4":
-  version: 3.1.4
-  resolution: "fast-uri@npm:3.1.4"
-  checksum: 10/1c1ff8e7b6f7b38e997b1528aa2c97e290e0173d51250bfe4e11a303e454fc297a287555b5cb2ded59dbfce7876855fb15994a1a6b439f2497a2b8926513e397
+"fast-uri@npm:^3.1.5":
+  version: 3.1.5
+  resolution: "fast-uri@npm:3.1.5"
+  checksum: 10/784bef687ca3ecfb4587a05104a4d41101796f0fec72be47a9abed743b10109e69a24d1ad0854ee7d2705912dc2ca9d93e03d35b65df0a3da0339e05b5d83b5c
   languageName: node
   linkType: hard
 
@@ -29417,10 +29354,10 @@ __metadata:
   resolution: "highlight-hono-example@workspace:e2e/hono"
   dependencies:
     "@highlight-run/hono": "workspace:*"
-    "@hono/node-server": "npm:^1.13.7"
+    "@hono/node-server": "npm:^2.0.10"
     "@opentelemetry/api": "npm:^1.9.0"
     "@types/node": "npm:^20.11.17"
-    hono: "npm:^4.11.7"
+    hono: "npm:^4.12.33"
     tsx: "npm:^4.7.1"
   languageName: unknown
   linkType: soft
@@ -29498,9 +29435,9 @@ __metadata:
   linkType: hard
 
 "hono@npm:^4.12.27":
-  version: 4.12.32
-  resolution: "hono@npm:4.12.32"
-  checksum: 10/82fe817b875553bb35a2d02df1e2801e09feaa5b33685bde95dbee5f9f32f5948cf8e65d1ecf132d399b8a94d44999adea2e978a8cef971a57646e680bbfdda3
+  version: 4.12.33
+  resolution: "hono@npm:4.12.33"
+  checksum: 10/1a4d8c2f05731d28785b19488d53ed629dd83f10dce79042da75dbbc9581a7205c20a840a6657d79c50c0d638057cb42adc4656ee6e8a73bde6ab0d0c4f68719
   languageName: node
   linkType: hard
 
@@ -32546,14 +32483,14 @@ __metadata:
   linkType: hard
 
 "js-yaml@npm:^3.15.0":
-  version: 3.15.0
-  resolution: "js-yaml@npm:3.15.0"
+  version: 3.15.1
+  resolution: "js-yaml@npm:3.15.1"
   dependencies:
     argparse: "npm:^1.0.7"
     esprima: "npm:^4.0.0"
   bin:
     js-yaml: bin/js-yaml.js
-  checksum: 10/2fdf3a1453ed93a8e06d6ca8054c0bec145cf40ab51f305d1071736a03668b95e40f47cfd0239d7d50019b4780a18cdaca3c935def935594c9876964c49f1185
+  checksum: 10/905842ce08c18b154ff2c187ff81bb41294cc5dda214331b5d9b8bcf395894e48b00fa37b9d4dd4c3ffec672b7496a94558e3876d3a8ad4d12b06248112e6d92
   languageName: node
   linkType: hard
 
@@ -34753,7 +34690,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"make-fetch-happen@npm:^14.0.0, make-fetch-happen@npm:^14.0.1, make-fetch-happen@npm:^14.0.3":
+"make-fetch-happen@npm:^14.0.0, make-fetch-happen@npm:^14.0.1, make-fetch-happen@npm:^14.0.2, make-fetch-happen@npm:^14.0.3":
   version: 14.0.3
   resolution: "make-fetch-happen@npm:14.0.3"
   dependencies:
@@ -37118,66 +37055,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"next@npm:^15.5.21":
-  version: 15.5.22
-  resolution: "next@npm:15.5.22"
-  dependencies:
-    "@next/env": "npm:15.5.22"
-    "@next/swc-darwin-arm64": "npm:15.5.22"
-    "@next/swc-darwin-x64": "npm:15.5.22"
-    "@next/swc-linux-arm64-gnu": "npm:15.5.22"
-    "@next/swc-linux-arm64-musl": "npm:15.5.22"
-    "@next/swc-linux-x64-gnu": "npm:15.5.22"
-    "@next/swc-linux-x64-musl": "npm:15.5.22"
-    "@next/swc-win32-arm64-msvc": "npm:15.5.22"
-    "@next/swc-win32-x64-msvc": "npm:15.5.22"
-    "@swc/helpers": "npm:0.5.15"
-    caniuse-lite: "npm:^1.0.30001579"
-    postcss: "npm:8.4.31"
-    sharp: "npm:^0.34.3"
-    styled-jsx: "npm:5.1.6"
-  peerDependencies:
-    "@opentelemetry/api": ^1.1.0
-    "@playwright/test": ^1.51.1
-    babel-plugin-react-compiler: "*"
-    react: ^18.2.0 || 19.0.0-rc-de68d2f4-20241204 || ^19.0.0
-    react-dom: ^18.2.0 || 19.0.0-rc-de68d2f4-20241204 || ^19.0.0
-    sass: ^1.3.0
-  dependenciesMeta:
-    "@next/swc-darwin-arm64":
-      optional: true
-    "@next/swc-darwin-x64":
-      optional: true
-    "@next/swc-linux-arm64-gnu":
-      optional: true
-    "@next/swc-linux-arm64-musl":
-      optional: true
-    "@next/swc-linux-x64-gnu":
-      optional: true
-    "@next/swc-linux-x64-musl":
-      optional: true
-    "@next/swc-win32-arm64-msvc":
-      optional: true
-    "@next/swc-win32-x64-msvc":
-      optional: true
-    sharp:
-      optional: true
-  peerDependenciesMeta:
-    "@opentelemetry/api":
-      optional: true
-    "@playwright/test":
-      optional: true
-    babel-plugin-react-compiler:
-      optional: true
-    sass:
-      optional: true
-  bin:
-    next: dist/bin/next
-  checksum: 10/92acab567b9b1436ec024d8d5227949bab5aa747320a7dee1b618a24ae163f2c1fb23bf9b4de7acfba91b7ad8288db23f295d1a0d8449bbf6c7de3f6f13dd146
-  languageName: node
-  linkType: hard
-
-"next@npm:^16.2.11":
+"next@npm:>=16.2.12, next@npm:^16.2.12":
   version: 16.2.12
   resolution: "next@npm:16.2.12"
   dependencies:
@@ -37245,7 +37123,7 @@ __metadata:
     "@types/node": "npm:^22.13.5"
     "@types/react": "npm:^19.0.10"
     "@types/react-dom": "npm:^19.0.4"
-    next: "npm:^15.5.10"
+    next: "npm:^16.2.12"
     react: "npm:^19.0.0"
     react-dom: "npm:^19.0.0"
     typescript: "npm:^5.7.2"
@@ -37276,7 +37154,7 @@ __metadata:
     eslint: "npm:^9.17.0"
     eslint-config-next: "npm:^15.5.10"
     ky: "npm:^1.7.4"
-    next: "npm:^15.5.10"
+    next: "npm:^16.2.12"
     next-build-id: "npm:^3.0.0"
     pg: "npm:^8.13.3"
     pino: "npm:^9.6.0"
@@ -43780,16 +43658,16 @@ __metadata:
   linkType: hard
 
 "sigstore@npm:^3.0.0":
-  version: 3.0.0
-  resolution: "sigstore@npm:3.0.0"
+  version: 3.1.0
+  resolution: "sigstore@npm:3.1.0"
   dependencies:
-    "@sigstore/bundle": "npm:^3.0.0"
+    "@sigstore/bundle": "npm:^3.1.0"
     "@sigstore/core": "npm:^2.0.0"
-    "@sigstore/protobuf-specs": "npm:^0.3.2"
-    "@sigstore/sign": "npm:^3.0.0"
-    "@sigstore/tuf": "npm:^3.0.0"
-    "@sigstore/verify": "npm:^2.0.0"
-  checksum: 10/3bf84e87dbd9a50f0659b450a5ed41d7dc3c19e901494541df4c7ee5d252d4d6244baa7fb85f8bc42ad3291c4633ef948a42f7d447b754819eeb88b14c5f3c64
+    "@sigstore/protobuf-specs": "npm:^0.4.0"
+    "@sigstore/sign": "npm:^3.1.0"
+    "@sigstore/tuf": "npm:^3.1.0"
+    "@sigstore/verify": "npm:^2.1.0"
+  checksum: 10/fc2a38d11bd0e02b5dc8271e906ba7ea1aaa3dc19010dc6d29602b900532fa16b132cd6c80ec1c294f201f81f1277fb351020d0c65b6a62968f229db0b6c5a4f
   languageName: node
   linkType: hard
 
