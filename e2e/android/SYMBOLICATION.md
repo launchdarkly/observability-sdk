@@ -1,7 +1,7 @@
 # Android Symbolication — uploading `mapping.txt` for this example
 
 R8 obfuscates release builds, so a recorded error's stack trace looks like
-`at g5.g.invoke(SourceFile:57)`. Uploading the `mapping.txt` R8 produced lets the
+`at g5.g.invoke(r8-map-id-92d0222…:57)`. Uploading the `mapping.txt` R8 produced lets the
 backend retrace those frames back to the original class, method and line.
 
 There are two ways to say *which build* a mapping belongs to, and this app can
@@ -9,36 +9,42 @@ build either way so you can compare them:
 
 | | keyed by | build setup | stored at |
 |---|---|---|---|
-| **Symbols Id Lane** (default) | a content hash of the mapping | a Gradle task stamps the id into the app | `_sym/android/id/<id>/mapping.txt` |
-| **Version Lane** (`-Pld.symbolsId=false`) | the app's version | none | `<version>/mapping.txt` |
+| **Symbols Id Lane** (default) | the id R8 gave the mapping | none | `_sym/android/id/<id>/mapping.v1.index` |
+| **Version Lane** (add `-renamesourcefileattribute`) | the app's version | none | `<version>/mapping.v1.index` |
 
 Neither needs anything on the `ldcli` command line: it finds the mapping where R8
-wrote it, and reads the id or the version out of the packaged APK.
+wrote it, and reads the id and the version out of the build.
 
 ## How the Symbols Id Lane works
 
-1. **Build** — R8 emits `app/build/outputs/mapping/<variant>/mapping.txt`. A Gradle
-   task (`stampLaunchDarklySymbolsId<Variant>` in [`app/build.gradle.kts`](app/build.gradle.kts))
-   derives a deterministic symbols id (`htlhash(mapping.txt)`) and embeds it into
-   the app as `assets/ld_symbols_id.txt`.
+1. **Build** — R8 emits `app/build/outputs/mapping/<variant>/mapping.txt`, records
+   its own id for it in the header (`# pg_map_id: <sha-256 of the mapping>`), and —
+   since AGP 8.12, unless the build sets `-renamesourcefileattribute` — stamps that
+   same id into every class as its source file: `r8-map-id-<id>`.
 
-   Because the id is a hash of the *mapping* (not the app), embedding it back into
-   the app never changes the mapping — no self-reference.
+   Nothing in [`app/build.gradle.kts`](app/build.gradle.kts) takes part. The id is a
+   hash of the *mapping*, so R8 putting it into the classes it just wrote the mapping
+   for changes nothing about the mapping — no self-reference.
 
-2. **Runtime** — the SDK reads `assets/ld_symbols_id.txt` and reports it as the
-   resource attribute `launchdarkly.symbols_id.htlhash` on every signal.
+2. **Runtime** — every frame of a crash carries the id where a file name goes, since
+   that is what `StackTraceElement.getFileName()` returns:
+   `at g5.g.invoke(r8-map-id-92d0222…:57)`.
 
-3. **Upload** — `ldcli symbols upload --type android` reads that same asset back
-   out of the packaged APK, so the mapping is keyed by exactly what the app
-   reports.
+3. **Upload** — `ldcli symbols upload --type android` reads `pg_map_id` out of the
+   mapping header, so the index is keyed by exactly what a crash will report.
 
-4. **Symbolication** — the backend sees the symbols id on the error, loads the
-   matching mapping, and retraces each frame (expanding inlined frames).
+4. **Symbolication** — the backend takes the id off the frame, loads the index stored
+   under it, and retraces each frame (expanding inlined frames).
+
+A build can also stamp an id into `assets/ld_symbols_id.txt` for the SDK to report as
+`launchdarkly.symbols_id.htlhash`, which is how this app used to do it and how a
+project on AGP older than 8.12 still can. `ldcli` prefers that id when the packaged
+app carries one; the backend prefers the one on the frame. This app carries none.
 
 ## How the Version Lane works
 
-The fallback when a build stamps no id: the SDK reports the app's version as
-`service.version`, the upload stores the mapping at `<version>/mapping.txt`, and
+The fallback when a crash reports no id: the SDK reports the app's version as
+`service.version`, the upload stores the index at `<version>/mapping.v1.index`, and
 the backend looks it up by the version on the error.
 
 > **The app has to report its own version.** `ObservabilityOptions.serviceVersion`
@@ -47,15 +53,14 @@ the backend looks it up by the version on the error.
 > `serviceVersion = BuildConfig.VERSION_NAME` in
 > [`BaseApplication.kt`](app/src/compose/java/com/example/androidobservability/BaseApplication.kt).
 
-It costs no build setup, and in exchange the newest upload for a version wins.
-That is fine while a version is one build, and wrong as soon as it isn't: rebuild
-`1.0.1` after changing code and the second mapping replaces the first, so errors
-still arriving from the first build retrace to the wrong lines. A symbols id is
-derived from the mapping's own contents, so two builds are never the same id and
-neither can overwrite the other.
+The newest upload for a version wins. That is fine while a version is one build, and
+wrong as soon as it isn't: rebuild `1.0.1` after changing code and the second mapping
+replaces the first, so errors still arriving from the first build retrace to the
+wrong lines. An id is derived from the mapping's own contents, so two builds are
+never the same id and neither can overwrite the other.
 
-Both lanes can hold a mapping at once, and the backend tries the symbols id first,
-so adding the id to a build that was on the Version Lane is not a cutover.
+Both lanes can hold a mapping at once, and the backend tries the id first, so a build
+that starts reporting one is not a cutover.
 
 ## Prerequisites
 
@@ -81,15 +86,17 @@ mapping. Debug builds are not obfuscated and don't need symbolication.
 ./gradlew :app:assembleComposeRelease
 ```
 
-The stamp task logs the symbols id it embedded:
+The id R8 gave the mapping is the first thing in it:
 
-```
-LaunchDarkly: symbols id 7e0d66142a85de6c6b2850dcbba5f066 (mapping 64266122 bytes) -> assets/ld_symbols_id.txt
+```bash
+head -7 app/build/outputs/mapping/composeRelease/mapping.txt | grep pg_map_id
+# pg_map_id: 92d0222f1a7a3b92fca00ddc75fbcf893c89be03e02286414d51abcfd9b02063
 ```
 
-Add `-Pld.symbolsId=false` to build without one and exercise the Version Lane
-instead. The app code is identical either way, so R8 produces the same mapping and
-the only difference is how it gets found.
+To build without one and exercise the Version Lane instead, add
+`-renamesourcefileattribute SourceFile` to [`app/proguard-rules.pro`](app/proguard-rules.pro).
+That overwrites the marker R8 would have stamped, so the app reports `SourceFile` on
+every frame, as it did before AGP 8.12.
 
 Install it on a device/emulator (from `e2e/android/`):
 
@@ -117,36 +124,34 @@ ldcli symbols upload \
   --access-token <api-token>
 ```
 
-With a stamped build it keys by the id:
+It reports which id it keyed by, and stores the index on both lanes:
 
 ```
 Found the composeRelease mapping at app/build/outputs/mapping/composeRelease/mapping.txt
 Using app version 1.0.1, as packaged for composeRelease
-Using symbols id 7e0d66142a85de6c6b2850dcbba5f066 for all files (Symbols Id Lane: _sym/android/id/7e0d66142a85de6c6b2850dcbba5f066)
+Using symbols id 92d0222f1a7a3b92fca00ddc75fbcf893c89be03e02286414d51abcfd9b02063, as recorded by R8 in the mapping
+Indexed mapping.txt (61.2 MB of mapping into a 5.2 MB index)
+[LaunchDarkly] Uploaded mapping.v1.index (Symbols Id Lane)
+[LaunchDarkly] Uploaded mapping.v1.index (Version Lane)
 ```
 
-and after `-Pld.symbolsId=false`, where there is no id to find, by the version —
-storing the same mapping at `1.0.1/mapping.txt` instead:
-
-```
-Found the composeRelease mapping at app/build/outputs/mapping/composeRelease/mapping.txt
-Using app version 1.0.1, as packaged for composeRelease
-[LaunchDarkly] Uploaded .../mapping.txt to mapping.txt
-```
+A mapping always records an id, so the id lane copy is written whether or not the app
+will report one. With `-renamesourcefileattribute` in place the output looks the same
+and nothing asks for that copy; the backend finds the build under `1.0.1` instead.
 
 It looks for `<module>/build/outputs/mapping/<variant>/mapping.txt`, which is where
-R8 writes it; for `assets/ld_symbols_id.txt` inside the packaged APK, which is the
-id the app will actually report; and for the version in the `output-metadata.json`
-AGP writes beside that APK. Build more than one obfuscated variant and it names
-them and asks for `--path`, rather than guessing which one you shipped.
+R8 writes it; for `assets/ld_symbols_id.txt` inside the packaged APK, in case the
+build stamped an id of its own; and for the version in the `output-metadata.json` AGP
+writes beside that APK. Build more than one obfuscated variant and it names them and
+asks for `--path`, rather than guessing which one you shipped.
 
 Any of it can still be given explicitly: `--path` to point at a mapping somewhere
 else, `--symbols-id <id>`, or `--app-version <version>`.
 
-Re-running an upload for a build already uploaded skips it: a symbols id is
-derived from the mapping's contents, so LaunchDarkly having the id means it has
-the bytes. Use `--no-skip-existing` to force the upload anyway. Version Lane
-uploads are always re-sent, since a version says nothing about what changed.
+Re-running an upload for a build already uploaded skips it: an id is derived from the
+mapping's contents, so LaunchDarkly having the id means it has the bytes. Use
+`--no-skip-existing` to force the upload anyway. Version Lane uploads are always
+re-sent, since a version says nothing about what changed.
 
 ### Optional — also upload your sources (`--include-sources`)
 
@@ -185,8 +190,8 @@ sample code. Files under `build/`, `.gradle/`, `.git/`, `.idea/` and
 > source set. The same applies to any multi-module project: pass a directory that
 > contains all the modules you ship.
 
-The files are packed into a `sources.srcbundle` uploaded beside `mapping.txt`
-on the same lane, so sources are matched to a build exactly as the mapping is.
+The files are packed into a `sources.srcbundle` uploaded beside the index on the same
+lane, so sources are matched to a build exactly as the mapping is.
 Each file is keyed by its **declared package** plus its file name
 (`com/example/androidobservability/SymbolicationDemo.kt`), which is what R8's
 own `sourceFile` metadata names for each retraced class — so a Kotlin file in a
@@ -213,19 +218,26 @@ Retracing is the same either way, so what you are comparing is how the mapping g
 found, which the upload output tells you. Run each side end to end:
 
 ```bash
-# Symbols Id Lane — the app carries the id
+# Symbols Id Lane — every frame reports the mapping's id
 ./gradlew :app:installComposeRelease
-ldcli symbols upload --type android --project default …   # → _sym/android/id/<id>/mapping.txt
+ldcli symbols upload --type android --project default …   # → _sym/android/id/<id>/…
 
-# Version Lane — the app carries nothing
-./gradlew :app:installComposeRelease -Pld.symbolsId=false
-ldcli symbols upload --type android --project default …   # → 1.0.1/mapping.txt
+# Version Lane — add -renamesourcefileattribute SourceFile to app/proguard-rules.pro
+./gradlew :app:installComposeRelease
+ldcli symbols upload --type android --project default …   # → also 1.0.1/…
 ```
 
 Trigger an obfuscated error after each and the frames should resolve identically.
-Rebuilding the app for each side is what makes it a clean test: a stamped app
-reports an id, and the backend only falls back to the version after failing to
-find anything under it.
+Rebuilding the app for each side is what makes it a clean test: what changes is what
+the app reports, and the backend only falls back to the version after failing to find
+anything under an id.
+
+To see which one you built, ask the APK what it reports:
+
+```bash
+unzip -p app/build/outputs/apk/compose/release/app-compose-release.apk classes.dex \
+  | strings | grep -m1 r8-map-id
+```
 
 What actually differs shows up when you build the same version twice. Change a
 line in `SymbolicationDemo.kt`, rebuild, and upload again:
@@ -247,5 +259,7 @@ ones already stored.
   only the app's own `com.example.androidobservability.*` classes are obfuscated,
   which is what the retrace demo exercises.
 - `-keepattributes SourceFile,LineNumberTable` is required so R8 records line
-  numbers; `-renamesourcefileattribute SourceFile` hides original file names (the
-  backend derives them from the retraced class).
+  numbers. There is deliberately no `-renamesourcefileattribute`: R8 fills that
+  attribute with the mapping's id, which hides the original file names just as well
+  and is what puts a build on the Symbols Id Lane. The backend derives a file name to
+  display from the retraced class either way.

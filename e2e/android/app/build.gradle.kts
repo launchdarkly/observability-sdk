@@ -1,5 +1,3 @@
-import com.android.build.api.artifact.SingleArtifact
-import java.security.MessageDigest
 import java.util.Properties
 
 plugins {
@@ -48,8 +46,9 @@ android {
 
     buildTypes {
         release {
-            // Enabled so R8 obfuscates the app and emits mapping.txt, which the
-            // build stamps into the app (Symbols Id Lane symbols id) and stages for upload.
+            // Enabled so R8 obfuscates the app and emits the mapping.txt that
+            // `ldcli symbols upload --type android` finds and uploads. R8 stamps its
+            // own id for that mapping into every class, so nothing here has to.
             isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -158,95 +157,4 @@ dependencies {
 
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
-}
-
-// --- LaunchDarkly Android symbolication (Symbols Id Lane) ---
-//
-// For each obfuscated (release) variant, derive a deterministic symbols id from
-// R8's mapping.txt and embed it as assets/ld_symbols_id.txt, so the SDK reports it
-// as the resource attribute `launchdarkly.symbols_id.htlhash`.
-//
-// That is all the build has to do. `ldcli symbols upload --type android` finds the
-// mapping where R8 wrote it and reads this same id back out of the packaged APK,
-// so the upload is keyed by exactly what the app will report.
-//
-// The symbols id is htlhash(mapping.txt) — a content hash of the mapping, NOT of
-// the app — so injecting it back into the app's assets never changes the mapping
-// (no self-reference). The task consumes the R8 mapping and transforms the merged
-// ASSETS artifact, so Gradle orders it after R8 and before packaging.
-abstract class StampSymbolsIdTask : DefaultTask() {
-    @get:InputFiles
-    @get:PathSensitive(PathSensitivity.RELATIVE)
-    abstract val inputAssets: DirectoryProperty
-
-    @get:InputFile
-    @get:PathSensitive(PathSensitivity.NONE)
-    abstract val mappingFile: RegularFileProperty
-
-    @get:OutputDirectory
-    abstract val outputAssets: DirectoryProperty
-
-    @TaskAction
-    fun run() {
-        val outDir = outputAssets.get().asFile
-        outDir.deleteRecursively()
-        outDir.mkdirs()
-        val inDir = inputAssets.get().asFile
-        if (inDir.exists()) {
-            inDir.copyRecursively(outDir, overwrite = true)
-        }
-
-        val mapping = mappingFile.get().asFile
-        val symbolsId = htlhash(mapping.readBytes())
-        outDir.resolve("ld_symbols_id.txt").writeText(symbolsId)
-
-        logger.lifecycle(
-            "LaunchDarkly: symbols id $symbolsId (mapping ${mapping.length()} bytes) -> assets/ld_symbols_id.txt"
-        )
-    }
-
-    // OTel htlhash: sha256 over head(4096) + tail(4096) + 8-byte LE length,
-    // truncated to 16 bytes (32 hex chars). Matches the React Native Metro
-    // plugin so the id shape is identical across platforms.
-    private fun htlhash(buffer: ByteArray): String {
-        val headTail = 4096
-        val md = MessageDigest.getInstance("SHA-256")
-        if (buffer.size <= headTail * 2) {
-            md.update(buffer)
-        } else {
-            md.update(buffer, 0, headTail)
-            md.update(buffer, buffer.size - headTail, headTail)
-        }
-        val lenBuf = ByteArray(8)
-        var len = buffer.size.toLong()
-        for (i in 0 until 8) {
-            lenBuf[i] = (len and 0xFF).toByte()
-            len = len ushr 8
-        }
-        md.update(lenBuf)
-        return md.digest().joinToString("") { "%02x".format(it) }.substring(0, 32)
-    }
-}
-
-// Build with -Pld.symbolsId=false to stamp nothing and have the upload key the
-// mapping by app version instead. Only the app's assets differ between the two,
-// so the mapping R8 produces is the same either way and the only thing that
-// changes is how symbolication finds it.
-val stampSymbolsId = (providers.gradleProperty("ld.symbolsId").orNull ?: "true").toBoolean()
-
-androidComponents {
-    onVariants { variant ->
-        // Only obfuscated (release) variants produce a mapping.txt to key by.
-        if (variant.buildType != "release" || !stampSymbolsId) return@onVariants
-
-        val capitalized = variant.name.replaceFirstChar { it.uppercase() }
-        val stamp = tasks.register<StampSymbolsIdTask>("stampLaunchDarklySymbolsId$capitalized") {
-            mappingFile.set(variant.artifacts.get(SingleArtifact.OBFUSCATION_MAPPING_FILE))
-        }
-
-        variant.artifacts
-            .use(stamp)
-            .wiredWithDirectories(StampSymbolsIdTask::inputAssets, StampSymbolsIdTask::outputAssets)
-            .toTransform(SingleArtifact.ASSETS)
-    }
 }
