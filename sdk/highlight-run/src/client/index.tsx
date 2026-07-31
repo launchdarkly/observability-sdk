@@ -301,11 +301,10 @@ export class Highlight {
 					`Stopping recording due to worker failure: ${e.data.response.reason}`,
 					e.data.response,
 				)
-				this.stopRecording(false)
-				// The worker only asks us to stop when it cannot upload what we record, and
-				// `_save` no longer runs once we are not recording, so detach the recorder and
-				// drop its buffer instead of filling memory for the rest of this page load.
-				this._stopRecorder()
+				// Replay is what failed, so tracing and metrics keep running. `_save` no longer
+				// runs once we are not recording, so detach the recorder and drop its buffer
+				// instead of filling memory for the rest of this page load.
+				this._stopCapture(true)
 				this.events = []
 			}
 		}
@@ -1445,14 +1444,24 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 				'H.stop() was called which stops Highlight from recording.',
 			)
 		}
+		this._stopCapture(manual)
+		void shutdown()
+	}
+
+	/**
+	 * Stops session replay and leaves telemetry alone. `stopRecording` shuts OTel down as well,
+	 * which is right when the whole SDK is stopping but not when only replay uploads have failed.
+	 *
+	 * @param detachRecorder also release rrweb's observers.
+	 */
+	_stopCapture(detachRecorder?: boolean) {
 		this.state = 'NotRecording'
-		if (manual) {
+		if (detachRecorder) {
 			this._stopRecorder()
 		}
 		// stop all other event listeners, to be restarted on initialize()
 		this.listeners.forEach((stop) => stop())
 		this.listeners = []
-		void shutdown()
 	}
 
 	/**
