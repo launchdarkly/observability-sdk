@@ -3,9 +3,10 @@ import { RecordSDK } from '../sdk/record'
 import { MessageType, StopReason } from '../client/workers/types'
 
 const recordStop = vi.fn()
+const recordSpy = vi.fn(() => recordStop)
 vi.mock('@highlight-run/rrweb', () => ({
 	addCustomEvent: vi.fn(),
-	record: () => recordStop,
+	record: () => recordSpy(),
 }))
 
 vi.mock('../client/graph/generated/operations', () => ({
@@ -26,10 +27,13 @@ vi.mock('../client/workers/highlight-client-worker?worker&inline', () => ({
 	},
 }))
 
-async function startedSDK(): Promise<RecordSDK> {
+async function startedSDK(
+	options: Partial<ConstructorParameters<typeof RecordSDK>[0]> = {},
+): Promise<RecordSDK> {
 	const sdk = new RecordSDK({
 		organizationID: '1',
 		sessionSecureID: 'seed',
+		...options,
 	})
 	await sdk.start()
 	return sdk
@@ -44,6 +48,7 @@ describe('RecordSDK worker stop handling', () => {
 	beforeEach(() => {
 		vi.useFakeTimers()
 		recordStop.mockClear()
+		recordSpy.mockClear()
 	})
 
 	afterEach(() => {
@@ -67,6 +72,23 @@ describe('RecordSDK worker stop handling', () => {
 			expect(sdk.getRecordingState()).toBe('NotRecording')
 		},
 	)
+
+	// The page visibility listener stays attached once recording has ever started, so it is the
+	// one thing that can restart us after the worker has given up.
+	it('stays stopped when the tab becomes visible again', async () => {
+		const sdk = await startedSDK({ disableBackgroundRecording: true })
+
+		postToSDK(sdk, {
+			type: MessageType.Stop,
+			reason: StopReason.UnrecoverableError,
+		})
+		recordSpy.mockClear()
+		sdk._lastVisibilityChangeTime = 0 // clear the debounce frozen fake timers impose
+		await sdk._visibilityHandler(false)
+
+		expect(recordSpy).not.toHaveBeenCalled()
+		expect(sdk.getRecordingState()).toBe('NotRecording')
+	})
 
 	it('keeps recording while the worker only reports uploads', async () => {
 		const sdk = await startedSDK()

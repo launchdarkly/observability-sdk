@@ -37,6 +37,8 @@ describe('Highlight worker stop handling', () => {
 
 		expect(shutdown).not.toHaveBeenCalled()
 		expect(highlight.state).toBe('NotRecording')
+		// Keeps the page visibility listener, which outlives a stop, from restarting us.
+		expect(highlight.manualStopped).toBe(true)
 	})
 
 	it('shuts telemetry down when the SDK itself stops', () => {

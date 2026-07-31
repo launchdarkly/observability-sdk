@@ -201,6 +201,10 @@ export class Highlight {
 	events!: eventWithTime[]
 	sessionData!: SessionData
 	ready!: boolean
+	/**
+	 * Recording must not resume on its own: either the app stopped us, or the worker gave up on
+	 * uploading. Starting again explicitly clears it.
+	 */
 	manualStopped!: boolean
 	state!: 'NotRecording' | 'Recording'
 	logger!: Logger
@@ -303,8 +307,10 @@ export class Highlight {
 				)
 				// Replay is what failed, so tracing and metrics keep running. `_save` no longer
 				// runs once we are not recording, so detach the recorder and drop its buffer
-				// instead of filling memory for the rest of this page load.
+				// instead of filling memory for the rest of this page load. The visibility
+				// listener outlives a stop by design, so mark the stop as one it must not undo.
 				this._stopCapture(true)
+				this.manualStopped = true
 				this.events = []
 			}
 		}

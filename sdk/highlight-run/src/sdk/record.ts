@@ -116,6 +116,10 @@ export class RecordSDK implements Record {
 	events!: eventWithTime[]
 	sessionData!: SessionData
 	ready!: boolean
+	/**
+	 * Recording must not resume on its own: either the app stopped us, or the worker gave up on
+	 * uploading. Starting again explicitly clears it.
+	 */
 	manualStopped!: boolean
 	state!: 'NotRecording' | 'Recording'
 	logger!: Logger
@@ -194,6 +198,9 @@ export class RecordSDK implements Record {
 				// The worker only asks us to stop when it cannot upload what we record, and
 				// `_save` no longer runs once we are not recording, so detach the recorder and
 				// drop its buffer instead of filling memory for the rest of this page load.
+				// The visibility listener outlives a stop by design, so mark the stop as one it
+				// must not undo.
+				this.manualStopped = true
 				this._stopRecorder()
 				this.events = []
 			}
