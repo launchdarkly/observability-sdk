@@ -4,35 +4,58 @@ R8 obfuscates release builds, so a recorded error's stack trace looks like
 `at g5.g.invoke(SourceFile:57)`. Uploading the `mapping.txt` R8 produced lets the
 backend retrace those frames back to the original class, method and line.
 
-This app uploads it keyed by **app version** — the "Version Lane". The build does
-nothing for symbolication at all: `ldcli` finds the mapping where R8 wrote it and
-reads the version out of the packaged APK.
+There are two ways to say *which build* a mapping belongs to, and this app can
+build either way so you can compare them:
+
+| | keyed by | build setup | stored at |
+|---|---|---|---|
+| **Symbols Id Lane** (default) | a content hash of the mapping | a Gradle task stamps the id into the app | `_sym/android/id/<id>/mapping.txt` |
+| **Version Lane** (`-Pld.symbolsId=false`) | the app's version | none | `<version>/mapping.txt` |
+
+Neither needs anything on the `ldcli` command line: it finds the mapping where R8
+wrote it, and reads the id or the version out of the packaged APK.
+
+## How the Symbols Id Lane works
+
+1. **Build** — R8 emits `app/build/outputs/mapping/<variant>/mapping.txt`. A Gradle
+   task (`stampLaunchDarklySymbolsId<Variant>` in [`app/build.gradle.kts`](app/build.gradle.kts))
+   derives a deterministic symbols id (`htlhash(mapping.txt)`) and embeds it into
+   the app as `assets/ld_symbols_id.txt`.
+
+   Because the id is a hash of the *mapping* (not the app), embedding it back into
+   the app never changes the mapping — no self-reference.
+
+2. **Runtime** — the SDK reads `assets/ld_symbols_id.txt` and reports it as the
+   resource attribute `launchdarkly.symbols_id.htlhash` on every signal.
+
+3. **Upload** — `ldcli symbols upload --type android` reads that same asset back
+   out of the packaged APK, so the mapping is keyed by exactly what the app
+   reports.
+
+4. **Symbolication** — the backend sees the symbols id on the error, loads the
+   matching mapping, and retraces each frame (expanding inlined frames).
 
 ## How the Version Lane works
 
-1. **Build** — R8 emits `app/build/outputs/mapping/<variant>/mapping.txt`.
-
-2. **Runtime** — the SDK reports the app's version as `service.version`, which the
-   backend records on every error.
-
-3. **Upload** — `ldcli symbols upload --type android`, run from the project root,
-   finds the mapping and the version and stores it at `<version>/mapping.txt`.
-
-4. **Symbolication** — the backend looks up the mapping by the version on the
-   error and retraces each frame (expanding inlined frames).
+The fallback when a build stamps no id: the SDK reports the app's version as
+`service.version`, the upload stores the mapping at `<version>/mapping.txt`, and
+the backend looks it up by the version on the error.
 
 > **The app has to report its own version.** `ObservabilityOptions.serviceVersion`
 > defaults to the *SDK's* version, which describes no build of your app, so a
 > mapping uploaded for `1.0.1` would never be matched. This app sets
 > `serviceVersion = BuildConfig.VERSION_NAME` in
 > [`BaseApplication.kt`](app/src/compose/java/com/example/androidobservability/BaseApplication.kt).
-> That one line is the whole setup.
 
-Keying by version means the newest upload for a version wins. That is fine while a
-version is one build, and wrong as soon as it isn't: rebuild `1.0.1` after changing
-code and the second mapping replaces the first, so errors still coming in from the
-first build retrace to the wrong lines. Keying by a content-derived symbols id
-instead avoids that.
+It costs no build setup, and in exchange the newest upload for a version wins.
+That is fine while a version is one build, and wrong as soon as it isn't: rebuild
+`1.0.1` after changing code and the second mapping replaces the first, so errors
+still arriving from the first build retrace to the wrong lines. A symbols id is
+derived from the mapping's own contents, so two builds are never the same id and
+neither can overwrite the other.
+
+Both lanes can hold a mapping at once, and the backend tries the symbols id first,
+so adding the id to a build that was on the Version Lane is not a cutover.
 
 ## Prerequisites
 
@@ -58,6 +81,16 @@ mapping. Debug builds are not obfuscated and don't need symbolication.
 ./gradlew :app:assembleComposeRelease
 ```
 
+The stamp task logs the symbols id it embedded:
+
+```
+LaunchDarkly: symbols id 7e0d66142a85de6c6b2850dcbba5f066 (mapping 64266122 bytes) -> assets/ld_symbols_id.txt
+```
+
+Add `-Pld.symbolsId=false` to build without one and exercise the Version Lane
+instead. The app code is identical either way, so R8 produces the same mapping and
+the only difference is how it gets found.
+
 Install it on a device/emulator (from `e2e/android/`):
 
 ```bash
@@ -71,8 +104,9 @@ production keystore; swap in a real release `signingConfig` before shipping.
 
 ## 2. Upload the mapping
 
-Run this from the `e2e/android/` directory. There is no `--path` and no
-`--app-version`: `ldcli` reads both out of the build.
+Run this from the `e2e/android/` directory. The same command covers both lanes —
+there is no `--path`, `--symbols-id` or `--app-version`, because `ldcli` reads all
+three out of the build:
 
 ```bash
 # from e2e/android/
@@ -83,21 +117,36 @@ ldcli symbols upload \
   --access-token <api-token>
 ```
 
+With a stamped build it keys by the id:
+
+```
+Found the composeRelease mapping at app/build/outputs/mapping/composeRelease/mapping.txt
+Using app version 1.0.1, as packaged for composeRelease
+Using symbols id 7e0d66142a85de6c6b2850dcbba5f066 for all files (Symbols Id Lane: _sym/android/id/7e0d66142a85de6c6b2850dcbba5f066)
+```
+
+and after `-Pld.symbolsId=false`, where there is no id to find, by the version —
+storing the same mapping at `1.0.1/mapping.txt` instead:
+
 ```
 Found the composeRelease mapping at app/build/outputs/mapping/composeRelease/mapping.txt
 Using app version 1.0.1, as packaged for composeRelease
 [LaunchDarkly] Uploaded .../mapping.txt to mapping.txt
-Successfully uploaded all symbols
 ```
 
 It looks for `<module>/build/outputs/mapping/<variant>/mapping.txt`, which is where
-R8 writes it, and takes the version from the `output-metadata.json` AGP writes
-beside the packaged APK — the same version the app reports. Build more than one
-obfuscated variant and it names them and asks for `--path`, rather than guessing
-which one you shipped.
+R8 writes it; for `assets/ld_symbols_id.txt` inside the packaged APK, which is the
+id the app will actually report; and for the version in the `output-metadata.json`
+AGP writes beside that APK. Build more than one obfuscated variant and it names
+them and asks for `--path`, rather than guessing which one you shipped.
 
-Either can still be given explicitly: `--path` to point at a mapping somewhere
-else, `--app-version <version>` to key by something other than what was packaged.
+Any of it can still be given explicitly: `--path` to point at a mapping somewhere
+else, `--symbols-id <id>`, or `--app-version <version>`.
+
+Re-running an upload for a build already uploaded skips it: a symbols id is
+derived from the mapping's contents, so LaunchDarkly having the id means it has
+the bytes. Use `--no-skip-existing` to force the upload anyway. Version Lane
+uploads are always re-sent, since a version says nothing about what changed.
 
 ### Optional — also upload your sources (`--include-sources`)
 
@@ -137,8 +186,8 @@ sample code. Files under `build/`, `.gradle/`, `.git/`, `.idea/` and
 > contains all the modules you ship.
 
 The files are packed into a `sources.srcbundle` uploaded beside `mapping.txt`
-under the same version, so sources are matched to a build exactly as the mapping
-is. Each file is keyed by its **declared package** plus its file name
+on the same lane, so sources are matched to a build exactly as the mapping is.
+Each file is keyed by its **declared package** plus its file name
 (`com/example/androidobservability/SymbolicationDemo.kt`), which is what R8's
 own `sourceFile` metadata names for each retraced class — so a Kotlin file in a
 directory that doesn't mirror its package still resolves, and so does a file
@@ -157,6 +206,39 @@ obfuscated multi-class chain ([`CheckoutDemo`](app/src/main/java/com/example/and
 and records it via `LDObserve.recordError`. On the LaunchDarkly errors view the
 frames should resolve to `CartPricing.computeTotal`, `CartPricing.priceOrder`, and
 `CheckoutDemo.startCheckout` (R8 inlines the chain, and the backend expands it).
+
+## Comparing the two lanes
+
+Retracing is the same either way, so what you are comparing is how the mapping got
+found, which the upload output tells you. Run each side end to end:
+
+```bash
+# Symbols Id Lane — the app carries the id
+./gradlew :app:installComposeRelease
+ldcli symbols upload --type android --project default …   # → _sym/android/id/<id>/mapping.txt
+
+# Version Lane — the app carries nothing
+./gradlew :app:installComposeRelease -Pld.symbolsId=false
+ldcli symbols upload --type android --project default …   # → 1.0.1/mapping.txt
+```
+
+Trigger an obfuscated error after each and the frames should resolve identically.
+Rebuilding the app for each side is what makes it a clean test: a stamped app
+reports an id, and the backend only falls back to the version after failing to
+find anything under it.
+
+What actually differs shows up when you build the same version twice. Change a
+line in `SymbolicationDemo.kt`, rebuild, and upload again:
+
+- **Symbols Id Lane** — the mapping changed, so its id changed, and the second
+  upload lands beside the first. Errors from either build retrace correctly.
+- **Version Lane** — both are `1.0.1`, so the second upload replaces the first.
+  Errors still arriving from the first build now retrace against the wrong
+  mapping, usually to a plausible-looking but wrong line.
+
+A re-upload of an unchanged build shows the other half of it: on the Symbols Id
+Lane it is skipped (`already uploaded`), because the id proves the bytes are the
+ones already stored.
 
 ## Notes
 
