@@ -13,18 +13,19 @@
 #}
 
 # Keep line numbers so R8 can emit a precise mapping.txt and the backend can
-# retrace obfuscated Java/Kotlin frames back to original source lines (Symbols Id Lane).
+# retrace obfuscated Java/Kotlin frames back to original source lines.
 -keepattributes SourceFile,LineNumberTable
 
-# Replace the original source file name with "SourceFile"; the backend derives
-# the real file name from the retraced class, so this is safe and hides source
-# names in shipped stack traces.
--renamesourcefileattribute SourceFile
+# Note there is deliberately no -renamesourcefileattribute here. R8 uses that
+# attribute to stamp every class with "r8-map-id-<hash of the mapping>", which is
+# how a crash says which mapping retraces it (Symbols Id Lane), and it hides the
+# real source file names just the same. Add the rule back to see the app fall
+# through to the Version Lane instead — see SYMBOLICATION.md.
 
 # The observability SDK and OpenTelemetry rely on reflection / service loading;
 # keep them intact so the app runs. The demo app's own classes
 # (com.example.androidobservability.*) are still obfuscated, which is what the
-# Symbols Id Lane retrace demo exercises.
+# retrace demo exercises.
 -keep class com.launchdarkly.** { *; }
 -dontwarn com.launchdarkly.**
 -keep class io.opentelemetry.** { *; }

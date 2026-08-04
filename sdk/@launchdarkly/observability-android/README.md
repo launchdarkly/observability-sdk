@@ -14,7 +14,7 @@ The Android observability plugin automatically instruments:
 - **Screen Views**: Emits a `screen_view` span for each Android `Activity` that is shown
 - **Taps**: Optionally emits a `click` span for each tap (enable via `analytics.taps`)
 - **HTTP Requests**: OkHttp and HttpURLConnection requests (requires setup of ByteBuddy compile time plugin and additional dependencies)
-- **Crash Reporting**: Automatic crash reporting and stack traces
+- **Crash Reporting**: Automatic crash reporting and stack traces, deobfuscated for release builds (see [Deobfuscating Release Stack Traces](#deobfuscating-release-stack-traces))
 - **Feature Flag Evaluations**: Evaluation events added to your spans.
 - **Session Management**: User session tracking and background timeout handling
 
@@ -396,6 +396,88 @@ plain Kotlin map via the `properties` parameter — pass `String`, `Boolean`, `I
 OpenTelemetry typing (as shown for `recordError` above). For `trackScreenView`, custom
 properties are applied at lower precedence than the reserved `event.*` taxonomy fields,
 so they can never clobber them.
+
+### Deobfuscating Release Stack Traces
+
+R8 shrinks and obfuscates release builds, so a crash or a recorded error arrives naming
+`a.b.c(SourceFile:5)` instead of your classes, methods, and lines. Upload the `mapping.txt`
+R8 produced for the build and LaunchDarkly restores the original names and line numbers,
+expands frames the compiler inlined, and — if you opt in — shows the source around each one.
+
+There is nothing to add to your build script. Keep line numbers, tell the SDK which version
+it is running, and upload the mapping after each release build.
+
+#### 1. Keep line numbers
+
+R8 discards the metadata a stack trace is retraced from unless it is asked to keep it. In
+your app's `proguard-rules.pro`:
+
+```proguard
+-keepattributes SourceFile,LineNumberTable
+```
+
+Do not add `-renamesourcefileattribute`. R8 uses that attribute to stamp each class with the
+identity of the mapping produced for the build, which is how LaunchDarkly tells one build's
+mapping from another's — including two builds of the same version. Overriding it is
+supported; matching then falls back to the app version below.
+
+#### 2. Report the app version
+
+Set `serviceVersion` to the version you release, and upload the mapping under the same
+string:
+
+```kotlin
+val observabilityPlugin = Observability(
+    application = this@MyApplication,
+    mobileKey = mobileKey,
+    options = ObservabilityOptions(
+        serviceVersion = BuildConfig.VERSION_NAME,
+    )
+)
+```
+
+`BuildConfig.VERSION_NAME` is generated only when the app sets `buildFeatures { buildConfig = true }`;
+otherwise pass the version however your build already exposes it.
+
+#### 3. Upload the mapping
+
+After a release build, from your project root:
+
+```bash
+ldcli symbols upload --type android --project <project-key> --access-token <token>
+```
+
+The mapping is found under `app/build/outputs/`, and the version is read from the build
+output when you don't pass `--app-version`. It is safe to run on every build: a mapping
+LaunchDarkly already has is not uploaded again, and `--no-skip-existing` sends one anyway.
+
+To also see the source around each frame on the errors page, add `--include-sources`. This
+uploads the `.java` and `.kt` files the mapping refers to, and they are stored in
+LaunchDarkly; narrow what is collected with `--source-path`.
+
+#### In CI
+
+Upload from the job that builds the release, so a mapping exists before the build it belongs
+to reaches anyone:
+
+```yaml
+- run: ./gradlew :app:bundleRelease
+- run: |
+    ldcli symbols upload \
+      --type android \
+      --project ${{ vars.LD_PROJECT_KEY }} \
+      --access-token ${{ secrets.LD_ACCESS_TOKEN }}
+```
+
+#### If frames are still obfuscated
+
+- **Was the mapping uploaded for that build?** A mapping is specific to one R8 run: rebuilding
+  the same version produces a different one, and only the uploaded mapping can retrace the
+  crashes of the build it came from.
+- **Do the versions agree?** When a build is matched by version rather than by R8's stamp,
+  `serviceVersion` has to be exactly the `--app-version` the mapping was uploaded under.
+- **Is the build actually obfuscated?** Debug builds usually are not, and their traces arrive
+  readable with nothing to retrace.
 
 ### Session Replay
 

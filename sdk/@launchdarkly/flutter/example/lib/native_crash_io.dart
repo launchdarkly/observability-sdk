@@ -43,7 +43,7 @@ Future<void> crashInIsolate() async {
   final errors = ReceivePort();
   await Isolate.spawn(
     _throwInIsolate,
-    'Uncaught error in a spawned isolate',
+    'Flutter: Isolate error - uncaught error in a spawned isolate',
     onError: errors.sendPort,
     errorsAreFatal: true,
     debugName: 'ld-crash-scenario',

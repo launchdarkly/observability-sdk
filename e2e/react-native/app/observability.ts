@@ -98,7 +98,7 @@ export const ErrorTestUtils = {
 	// Test unhandled JavaScript exception
 	triggerUnhandledException: () => {
 		setTimeout(() => {
-			throw new Error('Test unhandled exception from setTimeout')
+			throw new Error('React Native: Unhandled exception from setTimeout')
 		}, 100)
 	},
 
@@ -106,7 +106,7 @@ export const ErrorTestUtils = {
 	triggerUnhandledRejection: () => {
 		new Promise((_, reject) => {
 			setTimeout(() => {
-				reject(new Error('Test unhandled promise rejection'))
+				reject(new Error('React Native: Unhandled promise rejection'))
 			}, 100)
 		})
 		// Don't add .catch() - we want it to be unhandled
@@ -114,7 +114,7 @@ export const ErrorTestUtils = {
 
 	// Test console error
 	triggerConsoleError: () => {
-		console.error('Test console error', {
+		console.error('React Native: Console error', {
 			errorCode: 'TEST_001',
 			timestamp: new Date().toISOString(),
 			userAgent: 'React Native Test',
@@ -123,9 +123,9 @@ export const ErrorTestUtils = {
 
 	// Test manual error reporting
 	triggerManualError: () => {
-		const error = new Error('Test manual error report')
+		const error = new Error('React Native: Manual error report')
 		error.stack =
-			'Error: Test manual error report\n    at triggerManualError\n    at TestComponent'
+			'Error: React Native: Manual error report\n    at triggerManualError\n    at TestComponent'
 
 		LDObserve.recordError(error, {
 			'error.manual': true,
@@ -146,14 +146,14 @@ export const ErrorTestUtils = {
 
 	// Test React component error (would need error boundary)
 	triggerReactError: () => {
-		throw new Error('Test React component error')
+		throw new Error('React Native: React component error')
 	},
 
 	// Test sampling by generating multiple similar errors
 	triggerSamplingTest: () => {
 		for (let i = 0; i < 5; i++) {
 			setTimeout(() => {
-				console.error(`Sampling test error ${i + 1}`, {
+				console.error(`React Native: Sampling test error ${i + 1}`, {
 					iteration: i + 1,
 				})
 			}, i * 500)

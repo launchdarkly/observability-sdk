@@ -41,6 +41,10 @@ open class BaseApplication : Application() {
         resourceAttributes = Attributes.of(
             AttributeKey.stringKey("resourceAttributes"), "BaseApplication"
         ),
+        // Report the app's own version rather than the SDK's, which is what the
+        // default would be. Symbolication matches an uploaded mapping.txt to a
+        // build by this version, so it has to name a build of the app.
+        serviceVersion = BuildConfig.VERSION_NAME,
         debug = true,
         otlpEndpoint = BuildConfig.OTLP_ENDPOINT,
         backendUrl = BuildConfig.BACKEND_URL,

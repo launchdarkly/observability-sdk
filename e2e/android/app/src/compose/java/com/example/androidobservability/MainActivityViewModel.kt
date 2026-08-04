@@ -52,7 +52,7 @@ class MainActivityViewModel(application: Application) : AndroidViewModel(applica
 
     fun triggerError() {
         LDObserve.recordError(
-            Error("Manual error womp womp", Error("The error that caused the other error.")),
+            Error("Android: Manual error womp womp", Error("The error that caused the other error.")),
             Attributes.of(AttributeKey.stringKey("FakeAttribute"), "FakeVal")
         )
     }
@@ -257,7 +257,7 @@ class MainActivityViewModel(application: Application) : AndroidViewModel(applica
     }
 
     fun triggerCrash() {
-        throw RuntimeException("Failed to connect to bogus server.")
+        throw RuntimeException("Android: Crash - failed to connect to bogus server.")
     }
 
     fun triggerHttpRequests() {
