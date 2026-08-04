@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.64.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.63.0...launchdarkly-observability-android-0.64.0) (2026-08-04)
+
+
+### Features
+
+* Let R8 identify the Android example's mapping, and name the platform in sample errors ([#704](https://github.com/launchdarkly/observability-sdk/issues/704)) ([4961e54](https://github.com/launchdarkly/observability-sdk/commit/4961e54e085ce952c6b35a0a86983cb349eeac86))
+
 ## [0.63.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.62.0...launchdarkly-observability-android-0.63.0) (2026-07-31)
 
 
