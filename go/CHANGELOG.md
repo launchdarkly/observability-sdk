@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1](https://github.com/launchdarkly/observability-sdk/compare/go/v1.2.0...go/v1.2.1) (2026-08-04)
+
+
+### Bug Fixes
+
+* update vulnerable dependencies across SDKs and examples ([#699](https://github.com/launchdarkly/observability-sdk/issues/699)) ([3a5fe1c](https://github.com/launchdarkly/observability-sdk/commit/3a5fe1c62a972830d44a522b312728509bccceb2))
+
 ## [1.2.0](https://github.com/launchdarkly/observability-sdk/compare/go/v1.1.1...go/v1.2.0) (2026-07-30)
 
 
