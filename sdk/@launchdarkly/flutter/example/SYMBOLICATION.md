@@ -73,11 +73,15 @@ ldcli symbols upload \
   --project default \
   --access-token YOUR_ACCESS_TOKEN \
   --base-uri https://ld-stg.launchdarkly.com \
-  --backend-url http://localhost:8082/private \
   --app-version "$(git rev-parse HEAD)"
 ```
 
 `--type dart` is accepted as an alias for `--type flutter`.
+
+`--base-uri` names the LaunchDarkly instance your token belongs to, and the upload
+endpoint follows from it, so production needs neither flag. `--backend-url` is only
+for a backend running on your own machine: add
+`--backend-url http://localhost:8082/private` to send the symbols there instead.
 
 `ldcli` reads each `.symbols` ELF, extracts its build id (`symbols_id`) and DWARF,
 compiles them to `app.dartmap`, and uploads one per architecture to the Id lane.

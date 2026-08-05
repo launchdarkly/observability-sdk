@@ -120,9 +120,14 @@ three out of the build:
 ldcli symbols upload \
   --type android \
   --project default \
-  --backend-url http://localhost:8082/private \
+  --base-uri https://ld-stg.launchdarkly.com \
   --access-token <api-token>
 ```
+
+Name the instance your token belongs to with `--base-uri` and the upload endpoint
+follows from it, so production needs neither flag. `--backend-url` is only for a
+backend running on your own machine: add `--backend-url http://localhost:8082/private`
+to send the index there instead.
 
 It reports which id it keyed by, and stores the index on both lanes:
 
@@ -165,7 +170,6 @@ ldcli symbols upload \
   --type android \
   --project default \
   --base-uri https://ld-stg.launchdarkly.com \
-  --backend-url http://localhost:8082/private \
   --access-token <api-token> \
   --include-sources \
   --source-path ./app/src

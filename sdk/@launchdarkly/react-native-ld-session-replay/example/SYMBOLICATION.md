@@ -135,11 +135,15 @@ ldcli symbols upload \
 > sidecar), add `--app-version <version>` matching `SERVICE_VERSION` in
 > `src/serviceVersion.ts` so the backend can match by basename + version instead.
 
-### Uploading against a local backend
+### Uploading against another instance, or a local backend
 
-When testing against a local observability backend, point the CLI at the
-**private** endpoint (not `/public`), and pass the base URI of the LaunchDarkly
-instance your access token belongs to (for example staging):
+To upload to an instance other than production, name it with `--base-uri` (for
+example `--base-uri https://ld-stg.launchdarkly.com`) and stop there: the upload
+endpoint follows from it.
+
+`--backend-url` is only for a backend running on your own machine. Point it at the
+**private** endpoint (not `/public`), and still pass the base URI of the instance
+your access token belongs to, since that is where the project is looked up:
 
 ```sh
 ldcli symbols upload \
