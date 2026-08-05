@@ -276,8 +276,65 @@
 		"vitest@^4.1.0": "^4.1.0"
 	},
 	"dependenciesMeta": {
+		"@apollo/protobufjs": {
+			"built": true
+		},
+		"@nestjs/core": {
+			"built": true
+		},
+		"@prisma/client": {
+			"built": true
+		},
+		"@prisma/engines": {
+			"built": true
+		},
+		"@swc/core": {
+			"built": true
+		},
+		"babylonjs": {
+			"built": true
+		},
+		"dtrace-provider": {
+			"built": true
+		},
+		"esbuild": {
+			"built": true
+		},
+		"lefthook": {
+			"built": true
+		},
+		"lmdb": {
+			"built": true
+		},
+		"msgpackr-extract": {
+			"built": true
+		},
+		"prisma": {
+			"built": true
+		},
+		"protobufjs": {
+			"built": true
+		},
 		"puppeteer@9.1.1": {
 			"built": false
+		},
+		"puppeteer": {
+			"built": true
+		},
+		"sharp": {
+			"built": true
+		},
+		"spawn-sync": {
+			"built": true
+		},
+		"svelte-preprocess": {
+			"built": true
+		},
+		"unrs-resolver": {
+			"built": true
+		},
+		"workerd": {
+			"built": true
 		}
 	},
 	"packageManager": "yarn@4.13.0"

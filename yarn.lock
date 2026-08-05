@@ -9367,8 +9367,46 @@ __metadata:
     turbo: "npm:2.8.7"
     typescript: "npm:^5.8.3"
   dependenciesMeta:
+    "@apollo/protobufjs":
+      built: true
+    "@nestjs/core":
+      built: true
+    "@prisma/client":
+      built: true
+    "@prisma/engines":
+      built: true
+    "@swc/core":
+      built: true
+    babylonjs:
+      built: true
+    dtrace-provider:
+      built: true
+    esbuild:
+      built: true
+    lefthook:
+      built: true
+    lmdb:
+      built: true
+    msgpackr-extract:
+      built: true
+    prisma:
+      built: true
+    protobufjs:
+      built: true
+    puppeteer:
+      built: true
     puppeteer@9.1.1:
       built: false
+    sharp:
+      built: true
+    spawn-sync:
+      built: true
+    svelte-preprocess:
+      built: true
+    unrs-resolver:
+      built: true
+    workerd:
+      built: true
   languageName: unknown
   linkType: soft
 
