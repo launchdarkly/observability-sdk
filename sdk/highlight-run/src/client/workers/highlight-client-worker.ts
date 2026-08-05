@@ -104,6 +104,13 @@ function stringifyProperties(
 	let numberOfFailedRequests: number = 0
 	let numberOfFailedPushPayloads: number = 0
 	let hasStoppedRecording: boolean = false
+	/**
+	 * Counts the sessions this worker has served. Requests are stamped with the generation they
+	 * were issued for, because a request outlives the session that issued it: it can still be in
+	 * flight when recording stops, and what the backend answers about it says nothing about a
+	 * session that has started since.
+	 */
+	let sessionGeneration: number = 0
 	let debug: boolean = false
 	let recordingStartTime: number = 0
 	let logger = new Logger(false, '[worker]')
@@ -173,10 +180,19 @@ function stringifyProperties(
 	 * away, because the backend would reject every later request the same way. A recoverable one
 	 * spends part of the retry budget, and exhausting that budget also ends recording: the client
 	 * would otherwise keep producing payloads that pile up here unsent.
+	 *
+	 * @param generation which session the failed request was issued for.
 	 */
-	const handleFailedMessage = (e: unknown) => {
+	const handleFailedMessage = (e: unknown, generation: number) => {
 		if (debug) {
 			console.error(e)
+		}
+
+		// The session this request was issued for is over, and the one recording now neither sent
+		// it nor has any reason to be stopped by it.
+		if (generation !== sessionGeneration) {
+			logger.log('Ignoring a failure from a session that already ended.')
+			return
 		}
 
 		if (!isErrorRecoverable(e)) {
@@ -196,6 +212,7 @@ function stringifyProperties(
 	}
 
 	const processAsyncEventsMessage = async (msg: AsyncEventsMessage) => {
+		const generation = sessionGeneration
 		const {
 			id,
 			events,
@@ -274,6 +291,12 @@ function stringifyProperties(
 
 		let requestStart: number = performance.now()
 		const int = setInterval(() => {
+			// A slow upload can outlast the session it belongs to, and how long it takes is then
+			// no reason to stop the session recording now.
+			if (generation !== sessionGeneration) {
+				clearInterval(int)
+				return
+			}
 			if (
 				requestStart &&
 				performance.now() - requestStart > UPLOAD_TIMEOUT
@@ -422,11 +445,12 @@ function stringifyProperties(
 	const drainPendingMessages = async () => {
 		while (pendingMessages.length > 0 && shouldSendRequest()) {
 			const msg = pendingMessages.shift()!
+			const generation = sessionGeneration
 			try {
 				await processMessage(msg)
 				numberOfFailedRequests = 0
 			} catch (e) {
-				handleFailedMessage(e)
+				handleFailedMessage(e, generation)
 			}
 		}
 	}
@@ -441,6 +465,7 @@ function stringifyProperties(
 			// The client only initializes after `initializeSession` succeeded, so whatever made
 			// us stop no longer applies.
 			hasStoppedRecording = false
+			sessionGeneration += 1
 			numberOfFailedRequests = 0
 			numberOfFailedPushPayloads = 0
 			graphqlSDK = getSdk(
@@ -462,6 +487,7 @@ function stringifyProperties(
 			numberOfFailedRequests = 0
 			numberOfFailedPushPayloads = 0
 			hasStoppedRecording = false
+			sessionGeneration += 1
 			// Reset sessionSecureID and recordingStartTime so that messages arriving
 			// between Reset and new Initialize are queued rather than processed with
 			// the old session SecureID
@@ -493,12 +519,13 @@ function stringifyProperties(
 			return
 		}
 
+		const generation = sessionGeneration
 		try {
 			await processMessage(e.data.message)
 			numberOfFailedRequests = 0
 			await drainPendingMessages()
-		} catch (e) {
-			handleFailedMessage(e)
+		} catch (err) {
+			handleFailedMessage(err, generation)
 		}
 	}
 }

@@ -11,14 +11,27 @@ import {
 	StopReason,
 } from './types'
 
-// Every operation the worker performs rejects with this, so a single knob decides whether the
-// worker sees a recoverable or an unrecoverable failure.
-const graph = vi.hoisted(() => ({ error: undefined as unknown }))
+// Every operation the worker performs rejects with `error`, so a single knob decides whether the
+// worker sees a recoverable or an unrecoverable failure. Setting `hang` holds the next operation
+// open instead, and `failInFlight` is how the test answers it later.
+const graph = vi.hoisted(() => ({
+	error: undefined as unknown,
+	hang: false,
+	failInFlight: undefined as ((e: unknown) => void) | undefined,
+}))
 
 vi.mock('../graph/generated/operations', async (importOriginal) => {
 	const actual =
 		await importOriginal<typeof import('../graph/generated/operations')>()
-	const reject = () => Promise.reject(graph.error)
+	const reject = (): Promise<never> => {
+		if (graph.hang) {
+			graph.hang = false
+			return new Promise<never>((_, rejectInFlight) => {
+				graph.failInFlight = rejectInFlight
+			})
+		}
+		return Promise.reject(graph.error)
+	}
 	return {
 		...actual,
 		getSdk: () => ({
@@ -66,6 +79,14 @@ function identifyMessage(userIdentifier: string): HighlightClientWorkerParams {
 	}
 }
 
+/**
+ * A worker that ignores a failure says nothing about it, so telling that apart from one still on
+ * its way means giving the worker time to answer.
+ */
+function settle(): Promise<void> {
+	return new Promise((resolve) => setTimeout(resolve, 300))
+}
+
 describe('highlight-client-worker error handling', () => {
 	let worker: TestWorker
 	let responses: HighlightClientWorkerResponse[]
@@ -91,6 +112,8 @@ describe('highlight-client-worker error handling', () => {
 
 	beforeEach(() => {
 		vi.resetModules()
+		graph.hang = false
+		graph.failInFlight = undefined
 		vi.spyOn(console, 'warn').mockImplementation(() => {})
 		// See highlight-client-worker.test.ts: the source module (rather than the `?worker&inline`
 		// build output) is what @vitest/web-worker can run for real.
@@ -207,6 +230,48 @@ describe('highlight-client-worker error handling', () => {
 		expect(pendingCount).toBe(0)
 		expect(initialized).toBe(false)
 	})
+
+	it.each([
+		['initializes again', [initializeMessage()]],
+		[
+			'is reset for a new session',
+			[
+				{ message: { type: MessageType.Reset } },
+				initializeMessage(),
+			] as HighlightClientWorkerParams[],
+		],
+	] as [string, HighlightClientWorkerParams[]][])(
+		'ignores a refusal owed to a session that ended before the client %s',
+		async (_name, revival) => {
+			graph.error = clientError(403)
+
+			// A request the backend never answers, so it is still open when the stop below lands.
+			graph.hang = true
+			worker.postMessage(initializeMessage())
+			worker.postMessage(identifyMessage('slow-user'))
+			await vi.waitFor(() => {
+				expect(graph.failInFlight).toBeDefined()
+			})
+
+			worker.postMessage(identifyMessage('refused-user'))
+			await vi.waitFor(() => {
+				expect(
+					responsesOfType<StopEventResponse>(MessageType.Stop),
+				).toHaveLength(1)
+			})
+
+			revival.forEach((message) => worker.postMessage(message))
+			expect((await status()).initialized).toBe(true)
+
+			graph.failInFlight!(clientError(403))
+			await settle()
+
+			expect((await status()).initialized).toBe(true)
+			expect(
+				responsesOfType<StopEventResponse>(MessageType.Stop),
+			).toHaveLength(1)
+		},
+	)
 
 	it('resumes after a new session initializes', async () => {
 		graph.error = clientError(403)
