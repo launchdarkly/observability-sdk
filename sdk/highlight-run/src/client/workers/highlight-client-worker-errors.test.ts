@@ -13,21 +13,26 @@ import {
 
 // Every operation the worker performs rejects with `error`, so a single knob decides whether the
 // worker sees a recoverable or an unrecoverable failure. Setting `hang` holds the next operation
-// open instead, and `failInFlight` is how the test answers it later.
+// open instead, and `answerInFlight` is how the test settles it later.
 const graph = vi.hoisted(() => ({
 	error: undefined as unknown,
 	hang: false,
-	failInFlight: undefined as ((e: unknown) => void) | undefined,
+	answerInFlight: undefined as
+		| { succeed: () => void; fail: (e: unknown) => void }
+		| undefined,
 }))
 
 vi.mock('../graph/generated/operations', async (importOriginal) => {
 	const actual =
 		await importOriginal<typeof import('../graph/generated/operations')>()
-	const reject = (): Promise<never> => {
+	const reject = (): Promise<any> => {
 		if (graph.hang) {
 			graph.hang = false
-			return new Promise<never>((_, rejectInFlight) => {
-				graph.failInFlight = rejectInFlight
+			return new Promise<any>((resolve, rejectInFlight) => {
+				graph.answerInFlight = {
+					succeed: () => resolve({}),
+					fail: rejectInFlight,
+				}
 			})
 		}
 		return Promise.reject(graph.error)
@@ -79,6 +84,22 @@ function identifyMessage(userIdentifier: string): HighlightClientWorkerParams {
 	}
 }
 
+function asyncEventsMessage(id: number): HighlightClientWorkerParams {
+	return {
+		message: {
+			type: MessageType.AsyncEvents,
+			id,
+			hasSessionUnloaded: false,
+			highlightLogs: '',
+			events: [],
+			messages: [],
+			errors: [],
+			resourcesString: '[]',
+			webSocketEventsString: '[]',
+		},
+	}
+}
+
 /**
  * A worker that ignores a failure says nothing about it, so telling that apart from one still on
  * its way means giving the worker time to answer.
@@ -113,7 +134,7 @@ describe('highlight-client-worker error handling', () => {
 	beforeEach(() => {
 		vi.resetModules()
 		graph.hang = false
-		graph.failInFlight = undefined
+		graph.answerInFlight = undefined
 		vi.spyOn(console, 'warn').mockImplementation(() => {})
 		// See highlight-client-worker.test.ts: the source module (rather than the `?worker&inline`
 		// build output) is what @vitest/web-worker can run for real.
@@ -250,7 +271,7 @@ describe('highlight-client-worker error handling', () => {
 			worker.postMessage(initializeMessage())
 			worker.postMessage(identifyMessage('slow-user'))
 			await vi.waitFor(() => {
-				expect(graph.failInFlight).toBeDefined()
+				expect(graph.answerInFlight).toBeDefined()
 			})
 
 			worker.postMessage(identifyMessage('refused-user'))
@@ -263,7 +284,7 @@ describe('highlight-client-worker error handling', () => {
 			revival.forEach((message) => worker.postMessage(message))
 			expect((await status()).initialized).toBe(true)
 
-			graph.failInFlight!(clientError(403))
+			graph.answerInFlight!.fail(clientError(403))
 			await settle()
 
 			expect((await status()).initialized).toBe(true)
@@ -272,6 +293,54 @@ describe('highlight-client-worker error handling', () => {
 			).toHaveLength(1)
 		},
 	)
+
+	it('does not restore the retry budget of a new session with a stale success', async () => {
+		// A request the backend answers only after the session that sent it has been replaced.
+		graph.hang = true
+		worker.postMessage(initializeMessage())
+		worker.postMessage(identifyMessage('slow-user'))
+		await vi.waitFor(() => {
+			expect(graph.answerInFlight).toBeDefined()
+		})
+
+		worker.postMessage(initializeMessage())
+
+		// One short of the budget, so what the stale answer does to the count is what decides
+		// whether the next failure stops recording.
+		graph.error = clientError(503)
+		for (let i = 0; i < MAX_PUBLIC_GRAPH_RETRY_ATTEMPTS - 1; i++) {
+			worker.postMessage(identifyMessage(`retried-user-${i}`))
+		}
+		await settle()
+
+		graph.answerInFlight!.succeed()
+		await settle()
+
+		worker.postMessage(identifyMessage('last-straw'))
+		await vi.waitFor(() => {
+			const stops = responsesOfType<StopEventResponse>(MessageType.Stop)
+			expect(stops).toHaveLength(1)
+			expect(stops[0].reason).toBe(StopReason.RetriesExhausted)
+		})
+	})
+
+	it('does not report a payload uploaded for a session that has ended', async () => {
+		// The client counts the bytes of every payload the worker reports towards its next full
+		// snapshot, and this one was recorded by a session it is no longer replaying.
+		graph.hang = true
+		worker.postMessage(initializeMessage())
+		worker.postMessage(asyncEventsMessage(1))
+		await vi.waitFor(() => {
+			expect(graph.answerInFlight).toBeDefined()
+		})
+
+		worker.postMessage(initializeMessage())
+		graph.answerInFlight!.succeed()
+		await settle()
+
+		expect(responsesOfType(MessageType.AsyncEvents)).toHaveLength(0)
+		expect((await status()).initialized).toBe(true)
+	})
 
 	it('resumes after a new session initializes', async () => {
 		graph.error = clientError(403)

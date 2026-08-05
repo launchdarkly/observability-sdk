@@ -211,6 +211,22 @@ function stringifyProperties(
 		}
 	}
 
+	/**
+	 * Accounts for a message we did send. The retry budget covers consecutive failures, so it
+	 * starts over.
+	 *
+	 * @param generation which session the sent request was issued for.
+	 */
+	const handleSentMessage = (generation: number) => {
+		// A request the backend accepted for a session that has ended says nothing about how the
+		// one recording now is faring, and restoring its budget would postpone a stop it is due.
+		if (generation !== sessionGeneration) {
+			return
+		}
+
+		numberOfFailedRequests = 0
+	}
+
 	const processAsyncEventsMessage = async (msg: AsyncEventsMessage) => {
 		const generation = sessionGeneration
 		const {
@@ -325,6 +341,9 @@ function stringifyProperties(
 		try {
 			await Promise.all([pushPayload, pushMetrics])
 			if (
+				// An upload that beat the timeout for a session that has ended says nothing
+				// about how the one recording now is faring.
+				generation === sessionGeneration &&
 				numberOfFailedPushPayloads &&
 				performance.now() - requestStart <= UPLOAD_TIMEOUT
 			) {
@@ -336,6 +355,12 @@ function stringifyProperties(
 		} finally {
 			requestStart = 0
 			clearInterval(int)
+		}
+
+		// The client counts these bytes towards its next full snapshot, and they were recorded by
+		// a session it is no longer replaying.
+		if (generation !== sessionGeneration) {
+			return
 		}
 
 		worker.postMessage({
@@ -448,7 +473,7 @@ function stringifyProperties(
 			const generation = sessionGeneration
 			try {
 				await processMessage(msg)
-				numberOfFailedRequests = 0
+				handleSentMessage(generation)
 			} catch (e) {
 				handleFailedMessage(e, generation)
 			}
@@ -522,7 +547,7 @@ function stringifyProperties(
 		const generation = sessionGeneration
 		try {
 			await processMessage(e.data.message)
-			numberOfFailedRequests = 0
+			handleSentMessage(generation)
 			await drainPendingMessages()
 		} catch (err) {
 			handleFailedMessage(err, generation)
