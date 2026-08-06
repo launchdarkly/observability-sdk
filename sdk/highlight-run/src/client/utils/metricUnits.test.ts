@@ -11,6 +11,9 @@ describe('metricInstrumentOptions', () => {
 		expect(metricInstrumentOptions('usedJSHeapSize')).toEqual({
 			unit: 'By',
 		})
+		expect(metricInstrumentOptions('DeviceMemory')).toEqual({
+			unit: 'MiBy',
+		})
 		expect(metricInstrumentOptions('long_task.duration')).toEqual({
 			unit: 'ms',
 		})

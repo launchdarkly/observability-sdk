@@ -21,7 +21,8 @@ export const FIRST_PARTY_METRIC_UNITS: Readonly<Record<string, string>> = {
 	[MetricName.ScreenHeight]: '{px}',
 	[MetricName.ScreenWidth]: '{px}',
 	[MetricName.ViewportArea]: '{px2}',
-	[MetricName.DeviceMemory]: 'MBy',
+	// Value is 1024 * navigator.deviceMemory (GiB → MiB), not decimal megabytes.
+	[MetricName.DeviceMemory]: 'MiBy',
 	downlink: 'Mbit/s',
 	downlinkMax: 'Mbit/s',
 	rtt: 'ms',
