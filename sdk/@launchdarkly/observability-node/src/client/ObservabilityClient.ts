@@ -341,7 +341,10 @@ export class ObservabilityClient {
 
 		let gauge = this._gauges.get(metric.name)
 		if (!gauge) {
-			gauge = this.meter.createGauge(metric.name)
+			gauge = this.meter.createGauge(
+				metric.name,
+				metric.unit ? { unit: metric.unit } : undefined,
+			)
 			this._gauges.set(metric.name, gauge)
 		}
 
@@ -356,7 +359,10 @@ export class ObservabilityClient {
 
 		let counter = this._counters.get(metric.name)
 		if (!counter) {
-			counter = this.meter.createCounter(metric.name)
+			counter = this.meter.createCounter(
+				metric.name,
+				metric.unit ? { unit: metric.unit } : undefined,
+			)
 			this._counters.set(metric.name, counter)
 		}
 
@@ -375,7 +381,10 @@ export class ObservabilityClient {
 
 		let histogram = this._histograms.get(metric.name)
 		if (!histogram) {
-			histogram = this.meter.createHistogram(metric.name)
+			histogram = this.meter.createHistogram(
+				metric.name,
+				metric.unit ? { unit: metric.unit } : undefined,
+			)
 			this._histograms.set(metric.name, histogram)
 		}
 
@@ -390,7 +399,10 @@ export class ObservabilityClient {
 
 		let up_down_counter = this._up_down_counters.get(metric.name)
 		if (!up_down_counter) {
-			up_down_counter = this.meter.createUpDownCounter(metric.name)
+			up_down_counter = this.meter.createUpDownCounter(
+				metric.name,
+				metric.unit ? { unit: metric.unit } : undefined,
+			)
 			this._up_down_counters.set(metric.name, up_down_counter)
 		}
 

@@ -20,12 +20,16 @@ export interface Metadata {
 export interface Metric {
 	name: string
 	value: number
+	/** UCUM / OTel unit for the instrument (e.g. `ms`, `By`). */
+	unit?: string
 	tags?: { name: string; value: string }[]
 }
 
 export interface RecordMetric {
 	name: string
 	value: number
+	/** UCUM / OTel unit for the instrument (e.g. `ms`, `By`). */
+	unit?: string
 	category?: MetricCategory
 	group?: string
 	tags?: { name: string; value: string }[]
@@ -34,6 +38,8 @@ export interface RecordMetric {
 export interface OTelMetric {
 	name: string
 	value: number
+	/** UCUM / OTel unit for the instrument (e.g. `ms`, `By`). */
+	unit?: string
 	attributes?: Attributes
 }
 
