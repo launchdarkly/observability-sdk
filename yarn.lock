@@ -7938,11 +7938,11 @@ __metadata:
   linkType: soft
 
 "@hono/node-server@npm:^1.19.13":
-  version: 1.19.14
-  resolution: "@hono/node-server@npm:1.19.14"
+  version: 1.19.17
+  resolution: "@hono/node-server@npm:1.19.17"
   peerDependencies:
     hono: ^4
-  checksum: 10/618dd95feeb3fd11ec8502e088879cd86529523788de19602edebd16892dd61899e73564d6e3d00875cc5a49488a908ddb2aa425d28f9cdeb7f22cfecabf022c
+  checksum: 10/b3fb8f627e59caafdcf49b463d5263931ccc404cb2d58999b9863636e68dcf01e919a73a449761db07349bd39dc91983b68a9f549b4c9927fde8c2de7e498689
   languageName: node
   linkType: hard
 
@@ -29558,7 +29558,7 @@ __metadata:
   resolution: "highlight-hono-example@workspace:e2e/hono"
   dependencies:
     "@highlight-run/hono": "workspace:*"
-    "@hono/node-server": "npm:^1.13.7"
+    "@hono/node-server": "npm:^2.0.10"
     "@opentelemetry/api": "npm:^1.9.0"
     "@types/node": "npm:^20.11.17"
     hono: "npm:^4.11.7"
