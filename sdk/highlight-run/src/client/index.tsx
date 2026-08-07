@@ -109,6 +109,7 @@ import {
 	setStorageMode,
 } from './utils/storage'
 import { getDefaultDataURLOptions, isMetricSafeNumber } from './utils/utils'
+import { metricInstrumentOptions } from './utils/metricUnits'
 import { type HighlightClientRequestWorker } from './workers/highlight-client-worker'
 import { payloadToBase64 } from './utils/payload'
 import HighlightClientWorker from './workers/highlight-client-worker?worker&inline'
@@ -1364,7 +1365,10 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 	recordGauge(metric: RecordMetric) {
 		let gauge = this._gauges.get(metric.name)
 		if (!gauge) {
-			gauge = getMeter()?.createGauge(metric.name)
+			gauge = getMeter()?.createGauge(
+				metric.name,
+				metricInstrumentOptions(metric.name, metric.unit),
+			)
 			if (!gauge) return
 			this._gauges.set(metric.name, gauge)
 		}
@@ -1382,7 +1386,10 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 	recordCount(metric: RecordMetric) {
 		let counter = this._counters.get(metric.name)
 		if (!counter) {
-			counter = getMeter()?.createCounter(metric.name)
+			counter = getMeter()?.createCounter(
+				metric.name,
+				metricInstrumentOptions(metric.name, metric.unit),
+			)
 			if (!counter) return
 			this._counters.set(metric.name, counter)
 		}
@@ -1401,7 +1408,10 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 	recordHistogram(metric: RecordMetric) {
 		let histogram = this._histograms.get(metric.name)
 		if (!histogram) {
-			histogram = getMeter()?.createHistogram(metric.name)
+			histogram = getMeter()?.createHistogram(
+				metric.name,
+				metricInstrumentOptions(metric.name, metric.unit),
+			)
 			if (!histogram) return
 			this._histograms.set(metric.name, histogram)
 		}
@@ -1416,7 +1426,10 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 	recordUpDownCounter(metric: RecordMetric) {
 		let up_down_counter = this._up_down_counters.get(metric.name)
 		if (!up_down_counter) {
-			up_down_counter = getMeter()?.createUpDownCounter(metric.name)
+			up_down_counter = getMeter()?.createUpDownCounter(
+				metric.name,
+				metricInstrumentOptions(metric.name, metric.unit),
+			)
 			if (!up_down_counter) return
 			this._up_down_counters.set(metric.name, up_down_counter)
 		}

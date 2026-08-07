@@ -57,6 +57,8 @@ type Metric = {
 	name: string
 	value: number
 	requestId: string
+	/** UCUM / OTel unit for the instrument (e.g. `ms`, `By`). */
+	unit?: string
 	tags?: { name: string; value: string }[]
 }
 
@@ -239,7 +241,7 @@ export const H: HighlightInterface = {
 		)
 	},
 
-	recordMetric: ({ secureSessionId, name, value, requestId, tags }) => {
+	recordMetric: ({ secureSessionId, name, value, requestId, tags, unit }) => {
 		if (!sdk) {
 			console.error(
 				'please call H.init(...) before calling H.recordMetric(...)',
@@ -249,7 +251,7 @@ export const H: HighlightInterface = {
 
 		let gauge = _gauges.get(name)
 		if (!gauge) {
-			gauge = sdk.meter.createGauge(name)
+			gauge = sdk.meter.createGauge(name, unit ? { unit } : undefined)
 			_gauges.set(name, gauge)
 		}
 		gauge.record(value, {

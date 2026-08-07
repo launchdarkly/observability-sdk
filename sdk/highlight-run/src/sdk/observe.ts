@@ -42,6 +42,7 @@ import {
 	MetricCategory,
 	MetricName,
 } from '../client/types/client'
+import { metricInstrumentOptions } from '../client/utils/metricUnits'
 import { ConsoleListener } from '../client/listeners/console-listener'
 import stringify from 'json-stringify-safe'
 import {
@@ -361,7 +362,10 @@ export class ObserveSDK implements Observe {
 	recordCount(metric: Metric) {
 		let counter = this._counters.get(metric.name)
 		if (!counter) {
-			counter = getMeter()?.createCounter(metric.name)
+			counter = getMeter()?.createCounter(
+				metric.name,
+				metricInstrumentOptions(metric.name, metric.unit),
+			)
 			if (!counter) return
 			this._counters.set(metric.name, counter)
 		}
@@ -375,7 +379,10 @@ export class ObserveSDK implements Observe {
 	recordGauge(metric: Metric) {
 		let gauge = this._gauges.get(metric.name)
 		if (!gauge) {
-			gauge = getMeter()?.createGauge(metric.name)
+			gauge = getMeter()?.createGauge(
+				metric.name,
+				metricInstrumentOptions(metric.name, metric.unit),
+			)
 			if (!gauge) return
 			this._gauges.set(metric.name, gauge)
 		}
@@ -390,6 +397,7 @@ export class ObserveSDK implements Observe {
 		const recordMetric: RecordMetric = {
 			name: metric.name,
 			value: metric.value,
+			unit: metric.unit,
 			category: attributes['category'] as MetricCategory,
 			group: attributes['group']?.toString(),
 			tags: Object.entries(attributes).map(([key, value]) => ({
@@ -412,7 +420,10 @@ export class ObserveSDK implements Observe {
 	recordHistogram(metric: Metric) {
 		let histogram = this._histograms.get(metric.name)
 		if (!histogram) {
-			histogram = getMeter()?.createHistogram(metric.name)
+			histogram = getMeter()?.createHistogram(
+				metric.name,
+				metricInstrumentOptions(metric.name, metric.unit),
+			)
 			if (!histogram) return
 			this._histograms.set(metric.name, histogram)
 		}
@@ -426,7 +437,10 @@ export class ObserveSDK implements Observe {
 	recordUpDownCounter(metric: Metric) {
 		let up_down_counter = this._up_down_counters.get(metric.name)
 		if (!up_down_counter) {
-			up_down_counter = getMeter()?.createUpDownCounter(metric.name)
+			up_down_counter = getMeter()?.createUpDownCounter(
+				metric.name,
+				metricInstrumentOptions(metric.name, metric.unit),
+			)
 			if (!up_down_counter) return
 			this._up_down_counters.set(metric.name, up_down_counter)
 		}
