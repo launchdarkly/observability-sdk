@@ -1,5 +1,12 @@
 # @launchdarkly/observability-node
 
+## [1.3.0](https://github.com/launchdarkly/observability-sdk/compare/observability-node-1.2.0...observability-node-1.3.0) (2026-08-07)
+
+
+### Features
+
+* emit UCUM units for first-party SDK instruments (O11Y-1820) ([#707](https://github.com/launchdarkly/observability-sdk/issues/707)) ([1d83bd5](https://github.com/launchdarkly/observability-sdk/commit/1d83bd5c484ca3d30b6f09012d02ddf8b3134ea6))
+
 ## [1.2.0](https://github.com/launchdarkly/observability-sdk/compare/observability-node-1.1.3...observability-node-1.2.0) (2026-06-29)
 
 
