@@ -14,8 +14,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/kstenerud/KSCrash.git",
       "state" : {
-        "revision" : "95a8895d75f3c22aa9ad9f2a15d2fbd97b0a55e2",
-        "version" : "2.5.1"
+        "revision" : "fb26b1b62eca4bbf71ae441b312d0126e6ce75cf",
+        "version" : "2.6.0-beta.3"
       }
     },
     {
@@ -50,8 +50,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/launchdarkly/swift-launchdarkly-observability.git",
       "state" : {
-        "revision" : "5e53279e7a4067b0665210ef0f651cbf280fee30",
-        "version" : "0.46.3"
+        "revision" : "6d28f81c4bf47e4c1e22ae1b2e22433d03b58855",
+        "version" : "0.50.0"
       }
     }
   ],

@@ -78,6 +78,7 @@ internal class LDNativeApiImpl(
             enabled = observability.isEnabled ?: true,
             serviceName = observability.serviceName ?: DEFAULT_SERVICE_NAME,
             serviceVersion = observability.serviceVersion ?: DEFAULT_SERVICE_VERSION,
+            contextFriendlyName = observability.contextFriendlyName,
             resourceAttributes = resourceAttributes,
             customHeaders = observability.customHeaders ?: emptyMap(),
             sessionBackgroundTimeout = observability.sessionBackgroundTimeoutMillis
@@ -127,6 +128,7 @@ internal class LDNativeApiImpl(
         val replayScale = replay.scale?.takeIf { it > 0 } ?: 1.0
         val nativeReplayOptions = ReplayOptions(
             enabled = replay.isEnabled ?: true,
+            sampleRate = replay.sampleRate ?: 1.0,
             frameRate = replay.frameRate ?: 1.0,
             scale = replayScale.toFloat(),
             privacyProfile = PrivacyProfile(
