@@ -68,7 +68,7 @@ jobs:
                   cat > local.properties <<EOF
                   launchdarkly.mobileKey=${{ secrets.LD_E2E_MOBILE_KEY }}
                   launchdarkly.otlpEndpoint=https://otel.observability.ld-stg.launchdarkly.com:4318
-                  launchdarkly.backendUrl=https://pub.observability.ld-stg.launchdarkly.com
+                  launchdarkly.backendUrl=https://pub.observability.ld-stg.launchdarkly.com/
                   EOF
 
             # The release build type signs with the debug config, so this produces an
