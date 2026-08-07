@@ -70,6 +70,7 @@ class LDPrivacyOptions {
 class LDSessionReplayOptions {
   bool? isEnabled;
   String? serviceName;
+  double? sampleRate;
   double? frameRate;
   double? scale;
   LDPrivacyOptions? privacy;

@@ -12,6 +12,11 @@ class SessionReplayOptions {
   final bool isEnabled;
   final String serviceName;
 
+  /// Probability from `0.0` to `1.0` that Session Replay starts when enabled.
+  /// Values at or below zero never record; values at or above one always
+  /// record. The native SDK makes a new decision each time replay is enabled.
+  final double sampleRate;
+
   /// Target capture rate in frames per second. Mirrors Android/iOS
   /// `frameRate`. Native-only. Defaults to `1.0`.
   final double frameRate;
@@ -28,6 +33,7 @@ class SessionReplayOptions {
   const SessionReplayOptions({
     this.isEnabled = true,
     this.serviceName = 'sessionreplay-flutter',
+    this.sampleRate = 1.0,
     this.frameRate = 1.0,
     this.scale = 1.0,
     this.privacy = const PrivacyOptions(),
