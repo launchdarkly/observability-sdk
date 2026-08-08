@@ -12,6 +12,8 @@ const config = {
 		'require-in-the-middle',
 		'@launchdarkly/node-server-sdk',
 		'@launchdarkly/node-server-sdk-otel',
+		'@traceloop/instrumentation-langchain',
+		'@traceloop/instrumentation-openai',
 	],
 	plugins: [
 		json(),
@@ -25,7 +27,9 @@ const config = {
 			resolveOnly: (module) =>
 				!module.includes('require-in-the-middle') &&
 				!module.includes('@launchdarkly/node-server-sdk') &&
-				!module.includes('@launchdarkly/node-server-sdk-otel'),
+				!module.includes('@launchdarkly/node-server-sdk-otel') &&
+				!module.includes('@traceloop/instrumentation-openai') &&
+				!module.includes('@traceloop/instrumentation-langchain'),
 		}),
 		typescript(),
 		terser(),
