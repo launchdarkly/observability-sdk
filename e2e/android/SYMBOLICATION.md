@@ -252,6 +252,37 @@ A re-upload of an unchanged build shows the other half of it: on the Symbols Id
 Lane it is skipped (`already uploaded`), because the id proves the bytes are the
 ones already stored.
 
+## CI — download a ready-made APK
+
+The [Android Symbolication Artifact](../../.github/workflows/android-symbolication-artifact.yml)
+workflow builds `assembleComposeRelease`, uploads that run's mapping and sources,
+and publishes the APK. Symbols and APK come from the same job on purpose: the
+backend finds the mapping by the id R8 stamped into the binary you install.
+
+It runs on pull requests that touch this app (or the workflow itself), and via
+**Actions → Android Symbolication Artifact → Run workflow**. Download the
+`android-symbolication-apk-<N>` artifact from the run page, or:
+
+```bash
+gh run list --repo launchdarkly/observability-sdk --workflow android-symbolication-artifact.yml --limit 5
+gh run download <run-id> --repo launchdarkly/observability-sdk -n android-symbolication-apk-<N>
+```
+
+Install and launch (package `com.example.androidobservability`):
+
+```bash
+adb uninstall com.example.androidobservability   # if a previous CI APK is installed
+adb install -r app-compose-release.apk
+adb shell am start -n com.example.androidobservability/.MainActivity
+```
+
+Then tap **Trigger Obfuscated Error** and check the LaunchDarkly errors view.
+Each CI run signs with a freshly generated debug keystore, so consecutive
+downloads will not upgrade over each other — uninstall first. The artifact also
+includes `mapping.txt` so you can retrace by hand without relying on the upload.
+The app is configured for staging from repo secrets; you do not need
+`local.properties` for a downloaded build.
+
 ## Notes
 
 - The mapping can be large because [`app/proguard-rules.pro`](app/proguard-rules.pro)
