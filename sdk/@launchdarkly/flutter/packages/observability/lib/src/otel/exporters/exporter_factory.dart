@@ -72,6 +72,24 @@ abstract interface class IdentifyRecorder {
   });
 }
 
+/// Records a screen view through the platform-appropriate pipeline.
+///
+/// - Web: emitted as a Dart `screen_view` span via `ScreenViewConvention`, gated
+///   by `analytics.views`.
+/// - Native (io): forwarded to the native observability SDK so it emits the
+///   native `screen_view` span and the Session Replay `Navigate` timeline event.
+///   Flutter routing is invisible to native screen detection (a single host
+///   Activity/UIViewController), so screen views must be reported from Dart.
+abstract interface class ScreenViewRecorder {
+  void trackScreenView(
+    String name, {
+    String? screenClass,
+    String? screenId,
+    String? category,
+    Map<String, Object?>? properties,
+  });
+}
+
 /// Factory for the span and log exporters used by the observability pipeline.
 ///
 /// The concrete implementation is selected per build target via conditional
@@ -91,4 +109,7 @@ abstract interface class ObservabilityExporters {
 
   /// Builds the identify recorder used by `identify`.
   IdentifyRecorder createIdentifyRecorder(ObservabilityConfig config);
+
+  /// Builds the screen-view recorder used by `trackScreenView`.
+  ScreenViewRecorder createScreenViewRecorder(ObservabilityConfig config);
 }

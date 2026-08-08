@@ -251,6 +251,21 @@ internal class LDNativeApiImpl(
         LDReplay.hookProxy?.afterIdentify(contextKeys, canonicalKey, completed)
     }
 
+    // Forwards a screen view to the native observability SDK, which emits the
+    // `screen_view` span and broadcasts a Session Replay `Navigate` timeline
+    // event. Native automatic screen detection (Activity lifecycle) never fires
+    // for Flutter route changes inside the single host Activity, so the Dart side
+    // reports them here (typically from a `NavigatorObserver`).
+    override fun trackScreenView(
+        name: String,
+        screenClass: String?,
+        screenId: String?,
+        category: String?,
+        properties: Map<String, Any?>?,
+    ) {
+        LDObserve.trackScreenView(name, screenClass, screenId, category, properties)
+    }
+
     /**
      * Maps the OpenTelemetry log-severity number sent across the bridge onto the
      * native [ObservabilityOptions.LogLevel]. Defaults to [ObservabilityOptions.LogLevel.INFO]

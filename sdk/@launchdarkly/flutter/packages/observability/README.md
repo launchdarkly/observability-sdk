@@ -272,6 +272,42 @@ span2.setAttribute('sequence', '2');
 span2.end();
 ```
 
+### Screen views (navigation)
+
+Flutter renders into a single native `Activity`/`UIViewController`, so the native SDK's automatic screen detection never sees your Flutter route changes. Report them from Dart with `LDObserve.trackScreenView`, which emits a `screen_view` span and a Session Replay `Navigate` timeline event:
+
+```dart
+LDObserve.trackScreenView(
+  'Checkout',
+  screenClass: 'CheckoutPage',
+  category: 'commerce',
+  properties: {'cart_size': 3},
+);
+```
+
+To record navigations automatically, attach the provided `LDNavigatorObserver` to your app's navigator. By default it uses each route's `settings.name` and skips unnamed routes:
+
+```dart
+MaterialApp(
+  navigatorObservers: [LDNavigatorObserver()],
+  // ...
+);
+```
+
+Name your routes (for example via `MaterialPageRoute(settings: RouteSettings(name: 'Home'), ...)` or named routes) so they are reported. To customize how a name is derived — or to name otherwise-anonymous routes — pass a `screenNameExtractor`:
+
+```dart
+MaterialApp(
+  navigatorObservers: [
+    LDNavigatorObserver(
+      screenNameExtractor: (route) =>
+          route.settings.name ?? route.settings.arguments?.toString(),
+      category: 'navigation',
+    ),
+  ],
+);
+```
+
 ### API reference
 
 | Method | Description |
@@ -280,6 +316,7 @@ span2.end();
 | `LDObserve.recordLog(message, {severity, stackTrace, properties})` | Record a structured log. |
 | `LDObserve.recordException(exception, {stackTrace, properties})` | Record an error/exception. |
 | `LDObserve.track(eventName, {properties, metricValue})` | Record a custom `track` event as a `track` span. |
+| `LDObserve.trackScreenView(name, {screenClass, screenId, category, properties})` | Record a screen view (navigation) as a `screen_view` span and a Session Replay `Navigate` event. |
 | `LDObserve.shutdown()` | Shut down observability. It cannot be restarted afterward. |
 | `LDObserve.zoneSpecification()` | A zone spec that forwards `print`/`debugPrint` output as logs. |
 | `span.setAttribute(name, value)` | Set a single attribute on a span. |
