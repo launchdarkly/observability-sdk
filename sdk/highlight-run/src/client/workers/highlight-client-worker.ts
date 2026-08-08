@@ -10,6 +10,7 @@ import { payloadToBase64 } from '../utils/payload'
 import { ReplayEventsInput } from '../graph/generated/schemas'
 import { Logger } from '../logger'
 import { MetricCategory } from '../types/client'
+import { isErrorRecoverable } from '../utils/error-recoverability'
 import { getGraphQLRequestWrapper } from '../utils/graph'
 import {
 	MAX_PUBLIC_GRAPH_RETRY_ATTEMPTS,
@@ -26,6 +27,8 @@ import {
 	MessageType,
 	MetricsMessage,
 	PropertiesMessage,
+	StopEventResponse,
+	StopReason,
 } from './types'
 
 export interface HighlightClientRequestWorker {
@@ -100,6 +103,14 @@ function stringifyProperties(
 	let sessionSecureID: string
 	let numberOfFailedRequests: number = 0
 	let numberOfFailedPushPayloads: number = 0
+	let hasStoppedRecording: boolean = false
+	/**
+	 * Counts the sessions this worker has served. Requests are stamped with the generation they
+	 * were issued for, because a request outlives the session that issued it: it can still be in
+	 * flight when recording stops, and what the backend answers about it says nothing about a
+	 * session that has started since.
+	 */
+	let sessionGeneration: number = 0
 	let debug: boolean = false
 	let recordingStartTime: number = 0
 	let logger = new Logger(false, '[worker]')
@@ -116,8 +127,8 @@ function stringifyProperties(
 
 	const shouldSendRequest = (): boolean => {
 		return (
+			!hasStoppedRecording &&
 			recordingStartTime !== 0 &&
-			numberOfFailedRequests < MAX_PUBLIC_GRAPH_RETRY_ATTEMPTS &&
 			!!sessionSecureID?.length
 		)
 	}
@@ -132,7 +143,92 @@ function stringifyProperties(
 		})
 	}
 
+	/**
+	 * Asks the client to stop recording and stops accepting work until it initializes again.
+	 * Everything buffered here is dropped: the client stops handing us events, so a queue kept
+	 * across a stop would only hold memory for data that will never be uploaded.
+	 *
+	 * Only the first caller is served. Requests already in flight when we stop keep failing and
+	 * arrive here afterwards, and the client has nothing left to tear down by then.
+	 */
+	const stopRecording = (
+		reason: StopReason,
+		details?: Pick<
+			StopEventResponse,
+			'requestStart' | 'asyncEventsResponse'
+		>,
+	) => {
+		if (hasStoppedRecording) {
+			return
+		}
+
+		hasStoppedRecording = true
+		pendingMessages.length = 0
+		metricsPayload.length = 0
+
+		worker.postMessage({
+			response: {
+				type: MessageType.Stop,
+				reason,
+				...details,
+			},
+		})
+	}
+
+	/**
+	 * Accounts for a message we could not send. An unrecoverable failure ends recording right
+	 * away, because the backend would reject every later request the same way. A recoverable one
+	 * spends part of the retry budget, and exhausting that budget also ends recording: the client
+	 * would otherwise keep producing payloads that pile up here unsent.
+	 *
+	 * @param generation which session the failed request was issued for.
+	 */
+	const handleFailedMessage = (e: unknown, generation: number) => {
+		if (debug) {
+			console.error(e)
+		}
+
+		// The session this request was issued for is over, and the one recording now neither sent
+		// it nor has any reason to be stopped by it.
+		if (generation !== sessionGeneration) {
+			logger.log('Ignoring a failure from a session that already ended.')
+			return
+		}
+
+		if (!isErrorRecoverable(e)) {
+			console.warn(`Session data was rejected, stopping recording.`, e)
+			stopRecording(StopReason.UnrecoverableError)
+			return
+		}
+
+		numberOfFailedRequests += 1
+		if (numberOfFailedRequests >= MAX_PUBLIC_GRAPH_RETRY_ATTEMPTS) {
+			console.warn(
+				`Session data failed to upload ${numberOfFailedRequests} times, stopping recording.`,
+				e,
+			)
+			stopRecording(StopReason.RetriesExhausted)
+		}
+	}
+
+	/**
+	 * Accounts for a message we did send. The retry budget covers consecutive failures, so it
+	 * starts over.
+	 *
+	 * @param generation which session the sent request was issued for.
+	 */
+	const handleSentMessage = (generation: number) => {
+		// A request the backend accepted for a session that has ended says nothing about how the
+		// one recording now is faring, and restoring its budget would postpone a stop it is due.
+		if (generation !== sessionGeneration) {
+			return
+		}
+
+		numberOfFailedRequests = 0
+	}
+
 	const processAsyncEventsMessage = async (msg: AsyncEventsMessage) => {
+		const generation = sessionGeneration
 		const {
 			id,
 			events,
@@ -211,6 +307,12 @@ function stringifyProperties(
 
 		let requestStart: number = performance.now()
 		const int = setInterval(() => {
+			// A slow upload can outlast the session it belongs to, and how long it takes is then
+			// no reason to stop the session recording now.
+			if (generation !== sessionGeneration) {
+				clearInterval(int)
+				return
+			}
 			if (
 				requestStart &&
 				performance.now() - requestStart > UPLOAD_TIMEOUT
@@ -229,20 +331,9 @@ function stringifyProperties(
 						`Uploading pushPayload took too long, stopping recording to avoid OOM.`,
 					)
 
-					worker.postMessage({
-						response: {
-							type: MessageType.Stop,
-							requestStart,
-							asyncEventsResponse: response,
-						},
-					})
-
-					processPropertiesMessage({
-						type: MessageType.Properties,
-						propertiesObject: {
-							stopReason: 'Push Payload Timeout',
-						},
-						propertyType: { type: 'track' },
+					stopRecording(StopReason.PushPayloadTimeout, {
+						requestStart,
+						asyncEventsResponse: response,
 					})
 				}
 			}
@@ -250,6 +341,9 @@ function stringifyProperties(
 		try {
 			await Promise.all([pushPayload, pushMetrics])
 			if (
+				// An upload that beat the timeout for a session that has ended says nothing
+				// about how the one recording now is faring.
+				generation === sessionGeneration &&
 				numberOfFailedPushPayloads &&
 				performance.now() - requestStart <= UPLOAD_TIMEOUT
 			) {
@@ -261,6 +355,12 @@ function stringifyProperties(
 		} finally {
 			requestStart = 0
 			clearInterval(int)
+		}
+
+		// The client counts these bytes towards its next full snapshot, and they were recorded by
+		// a session it is no longer replaying.
+		if (generation !== sessionGeneration) {
+			return
 		}
 
 		worker.postMessage({
@@ -370,14 +470,12 @@ function stringifyProperties(
 	const drainPendingMessages = async () => {
 		while (pendingMessages.length > 0 && shouldSendRequest()) {
 			const msg = pendingMessages.shift()!
+			const generation = sessionGeneration
 			try {
 				await processMessage(msg)
-				numberOfFailedRequests = 0
+				handleSentMessage(generation)
 			} catch (e) {
-				if (debug) {
-					console.error(e)
-				}
-				numberOfFailedRequests += 1
+				handleFailedMessage(e, generation)
 			}
 		}
 	}
@@ -389,6 +487,12 @@ function stringifyProperties(
 			debug = e.data.message.debug
 			recordingStartTime = e.data.message.recordingStartTime
 			logger.debug = debug
+			// The client only initializes after `initializeSession` succeeded, so whatever made
+			// us stop no longer applies.
+			hasStoppedRecording = false
+			sessionGeneration += 1
+			numberOfFailedRequests = 0
+			numberOfFailedPushPayloads = 0
 			graphqlSDK = getSdk(
 				new GraphQLClient(backend, {
 					headers: {},
@@ -407,6 +511,8 @@ function stringifyProperties(
 			metricsPayload.length = 0
 			numberOfFailedRequests = 0
 			numberOfFailedPushPayloads = 0
+			hasStoppedRecording = false
+			sessionGeneration += 1
 			// Reset sessionSecureID and recordingStartTime so that messages arriving
 			// between Reset and new Initialize are queued rather than processed with
 			// the old session SecureID
@@ -427,20 +533,24 @@ function stringifyProperties(
 			return
 		}
 
+		// Drop messages once recording has stopped: queueing them would grow without bound
+		// because nothing is going to send them.
+		if (hasStoppedRecording) {
+			return
+		}
+
 		if (!shouldSendRequest()) {
 			pendingMessages.push(e.data.message)
 			return
 		}
 
+		const generation = sessionGeneration
 		try {
 			await processMessage(e.data.message)
-			numberOfFailedRequests = 0
+			handleSentMessage(generation)
 			await drainPendingMessages()
-		} catch (e) {
-			if (debug) {
-				console.error(e)
-			}
-			numberOfFailedRequests += 1
+		} catch (err) {
+			handleFailedMessage(err, generation)
 		}
 	}
 }

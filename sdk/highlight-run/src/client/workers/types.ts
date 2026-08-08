@@ -100,10 +100,20 @@ export type CustomEventResponse = {
 	payload: any
 }
 
+export enum StopReason {
+	/** Uploads are outrunning the recording, so events would pile up in memory. */
+	PushPayloadTimeout = 'Push Payload Timeout',
+	/** The backend rejected the session data permanently; retrying cannot help. */
+	UnrecoverableError = 'Unrecoverable Error',
+	/** Enough uploads failed in a row that the backend is not answering us at all. */
+	RetriesExhausted = 'Retries Exhausted',
+}
+
 export type StopEventResponse = {
 	type: MessageType.Stop
-	requestStart: number
-	asyncEventsResponse: AsyncEventsResponse
+	reason: StopReason
+	requestStart?: number
+	asyncEventsResponse?: AsyncEventsResponse
 }
 
 export type HighlightClientWorkerParams = {

@@ -202,6 +202,10 @@ export class Highlight {
 	events!: eventWithTime[]
 	sessionData!: SessionData
 	ready!: boolean
+	/**
+	 * Recording must not resume on its own: either the app stopped us, or the worker gave up on
+	 * uploading. Starting again explicitly clears it.
+	 */
 	manualStopped!: boolean
 	state!: 'NotRecording' | 'Recording'
 	logger!: Logger
@@ -299,10 +303,16 @@ export class Highlight {
 				)
 			} else if (e.data.response?.type === MessageType.Stop) {
 				HighlightWarning(
-					'Stopping recording due to worker failure',
+					`Stopping recording due to worker failure: ${e.data.response.reason}`,
 					e.data.response,
 				)
-				this.stopRecording(false)
+				// Replay is what failed, so tracing and metrics keep running. `_save` no longer
+				// runs once we are not recording, so detach the recorder and drop its buffer
+				// instead of filling memory for the rest of this page load. The visibility
+				// listener outlives a stop by design, so mark the stop as one it must not undo.
+				this._stopCapture(true)
+				this.manualStopped = true
+				this.events = []
 			}
 		}
 
@@ -1453,16 +1463,36 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 				'H.stop() was called which stops Highlight from recording.',
 			)
 		}
+		this._stopCapture(manual)
+		void shutdown()
+	}
+
+	/**
+	 * Stops session replay and leaves telemetry alone. `stopRecording` shuts OTel down as well,
+	 * which is right when the whole SDK is stopping but not when only replay uploads have failed.
+	 *
+	 * @param detachRecorder also release rrweb's observers.
+	 */
+	_stopCapture(detachRecorder?: boolean) {
 		this.state = 'NotRecording'
-		// stop rrweb recording mutation observers
-		if (manual && this._recordStop) {
-			this._recordStop()
-			this._recordStop = undefined
+		if (detachRecorder) {
+			this._stopRecorder()
 		}
 		// stop all other event listeners, to be restarted on initialize()
 		this.listeners.forEach((stop) => stop())
 		this.listeners = []
-		void shutdown()
+	}
+
+	/**
+	 * Stops rrweb's recording mutation observers. `stopRecording` only does this on a manual stop
+	 * because rrweb's stop -> restart path is unreliable (eg. iframe listeners), so call this only
+	 * when recording will not resume during this page load.
+	 */
+	_stopRecorder() {
+		if (this._recordStop) {
+			this._recordStop()
+			this._recordStop = undefined
+		}
 	}
 
 	getCurrentSessionTimestamp() {

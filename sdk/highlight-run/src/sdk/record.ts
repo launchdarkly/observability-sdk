@@ -116,6 +116,10 @@ export class RecordSDK implements Record {
 	events!: eventWithTime[]
 	sessionData!: SessionData
 	ready!: boolean
+	/**
+	 * Recording must not resume on its own: either the app stopped us, or the worker gave up on
+	 * uploading. Starting again explicitly clears it.
+	 */
 	manualStopped!: boolean
 	state!: 'NotRecording' | 'Recording'
 	logger!: Logger
@@ -187,10 +191,18 @@ export class RecordSDK implements Record {
 				internalLog(
 					'worker.onmessage',
 					'warn',
-					'Stopping recording due to worker failure',
+					`Stopping recording due to worker failure: ${e.data.response.reason}`,
 					e.data.response,
 				)
 				this.stop(false)
+				// The worker only asks us to stop when it cannot upload what we record, and
+				// `_save` no longer runs once we are not recording, so detach the recorder and
+				// drop its buffer instead of filling memory for the rest of this page load.
+				// The visibility listener outlives a stop by design, so mark the stop as one it
+				// must not undo.
+				this.manualStopped = true
+				this._stopRecorder()
+				this.events = []
 			}
 		}
 
@@ -950,14 +962,24 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 			)
 		}
 		this.state = 'NotRecording'
-		// stop rrweb recording mutation observers
-		if (manual && this._recordStop) {
-			this._recordStop()
-			this._recordStop = undefined
+		if (manual) {
+			this._stopRecorder()
 		}
 		// stop all other event listeners, to be restarted on initialize()
 		this.listeners.forEach((stop) => stop())
 		this.listeners = []
+	}
+
+	/**
+	 * Stops rrweb's recording mutation observers. `stop` only does this on a manual stop because
+	 * rrweb's stop -> restart path is unreliable (eg. iframe listeners), so call this only when
+	 * recording will not resume during this page load.
+	 */
+	_stopRecorder() {
+		if (this._recordStop) {
+			this._recordStop()
+			this._recordStop = undefined
+		}
 	}
 
 	/**
