@@ -86,12 +86,20 @@ compiles them to `app.dartmap`, and uploads one per architecture to the Id lane.
 Add `--app-version $(git rev-parse HEAD)` (matching the `GIT_SHA` dart-define
 above) to also populate the Version lane.
 
-`--include-sources` packs the project's `.dart` files into a `sources.srcbundle`
+`--include-sources` packs your app's `.dart` files into a `sources.srcbundle`
 uploaded beside each map, so the errors page can show code around each
-symbolicated frame. Keys match the DWARF paths stored in the `.dartmap`; when
-those paths were recorded on another machine, `--source-path` (defaults to `.`)
-resolves the same basenames from your checkout. Flutter SDK and pub-cache paths
-are excluded.
+symbolicated frame.
+
+Dart records a compilation unit by its script URI, so a frame's file is usually
+`package:<your_app>/....` `--source-path` (defaults to `.`) must therefore be your
+**Flutter project root** — the directory holding `pubspec.yaml` — because its
+`name:` is what identifies your package's URIs and maps them to `lib/`. Builds
+whose DWARF recorded plain paths instead are read from those paths, falling back
+to the same file in your checkout.
+
+Only your own code is uploaded: the Dart SDK, Flutter, and every pub dependency
+are excluded, so those frames render without a snippet rather than with someone
+else's.
 
 > **iOS requires `--app-version`.** Android `.symbols` ELFs carry a GNU
 > build-id note, so their `symbols_id` is read straight from the file and they go
