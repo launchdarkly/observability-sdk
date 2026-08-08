@@ -74,7 +74,9 @@ ldcli symbols upload \
   --access-token YOUR_ACCESS_TOKEN \
   --base-uri https://ld-stg.launchdarkly.com \
   --backend-url http://localhost:8082/private \
-  --app-version "$(git rev-parse HEAD)"
+  --app-version "$(git rev-parse HEAD)" \
+  --include-sources \
+  --source-path .
 ```
 
 `--type dart` is accepted as an alias for `--type flutter`.
@@ -83,6 +85,13 @@ ldcli symbols upload \
 compiles them to `app.dartmap`, and uploads one per architecture to the Id lane.
 Add `--app-version $(git rev-parse HEAD)` (matching the `GIT_SHA` dart-define
 above) to also populate the Version lane.
+
+`--include-sources` packs the project's `.dart` files into a `sources.srcbundle`
+uploaded beside each map, so the errors page can show code around each
+symbolicated frame. Keys match the DWARF paths stored in the `.dartmap`; when
+those paths were recorded on another machine, `--source-path` (defaults to `.`)
+resolves the same basenames from your checkout. Flutter SDK and pub-cache paths
+are excluded.
 
 > **iOS requires `--app-version`.** Android `.symbols` ELFs carry a GNU
 > build-id note, so their `symbols_id` is read straight from the file and they go
@@ -95,7 +104,7 @@ above) to also populate the Version lane.
 > The Android arches still upload to the Id lane in the same run.
 
 To inspect what would be uploaded without sending it, use
-`ldcli symbols generate --type flutter --path build/symbols --out ./out`; the
+`ldcli symbols generate --type flutter --path build/symbols --out ./out --include-sources --source-path .`; the
 `out/` tree mirrors the storage keys described above.
 
 ## 3. Run the exact build and trigger a crash/error
