@@ -9,7 +9,7 @@ To verify SLSA provenance attestations, we recommend using [slsa-verifier](https
 <!-- x-release-please-start-version -->
 ```
 # Set the version of the SDK to verify
-PLUGIN_VERSION=1.3.1
+PLUGIN_VERSION=1.3.2
 ```
 <!-- x-release-please-end -->
 
