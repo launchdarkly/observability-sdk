@@ -24,6 +24,8 @@ void main() {
 
     test('propagates custom values', () {
       final wire = const ObservabilityOptions(
+        isEnabled: false,
+        contextFriendlyName: 'checkout user',
         customHeaders: {'x-proxy': 'value'},
         sessionBackgroundTimeout: Duration(minutes: 5),
         logsApiLevel: ObservabilityLogLevel.none,
@@ -39,6 +41,8 @@ void main() {
         instrumentation: InstrumentationOptions(crashReporting: false),
       ).toWire();
 
+      expect(wire.isEnabled, isFalse);
+      expect(wire.contextFriendlyName, 'checkout user');
       expect(wire.customHeaders, {'x-proxy': 'value'});
       expect(wire.sessionBackgroundTimeoutMillis, 5 * 60 * 1000);
       expect(wire.logsApiLevel, 0x7fffffff);
@@ -63,11 +67,18 @@ void main() {
   });
 
   group('SessionReplayOptions.toWire', () {
-    test('uses default frame rate and scale', () {
+    test('uses default sample rate, frame rate, and scale', () {
       final wire = const SessionReplayOptions().toWire();
 
+      expect(wire.sampleRate, 1.0);
       expect(wire.frameRate, 1.0);
       expect(wire.scale, 1.0);
+    });
+
+    test('propagates a custom sample rate', () {
+      final wire = const SessionReplayOptions(sampleRate: 0.25).toWire();
+
+      expect(wire.sampleRate, 0.25);
     });
 
     test('propagates a custom frame rate', () {
