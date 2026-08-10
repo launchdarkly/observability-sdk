@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.21.2](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.21.1...session-replay-react-native-0.21.2) (2026-08-10)
+
+
+### Bug Fixes
+
+* remediate high and critical Dependabot alerts across SDKs and examples ([#710](https://github.com/launchdarkly/observability-sdk/issues/710)) ([32fdfc1](https://github.com/launchdarkly/observability-sdk/commit/32fdfc1c1a1d0881877a0334ff245701cb22cf7d))
+
 ## [0.21.1](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.21.0...session-replay-react-native-0.21.1) (2026-08-07)
 
 
