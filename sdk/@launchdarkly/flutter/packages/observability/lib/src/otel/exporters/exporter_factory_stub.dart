@@ -11,6 +11,7 @@ import '../../api/attribute.dart';
 import '../../plugin/observability_config.dart';
 import '../conversions.dart';
 import '../log_convention.dart';
+import '../screen_view_convention.dart';
 import '../track_convention.dart';
 import 'exporter_factory.dart';
 
@@ -38,6 +39,46 @@ class _StubExporters implements ObservabilityExporters {
   @override
   IdentifyRecorder createIdentifyRecorder(ObservabilityConfig config) =>
       _NoopIdentifyRecorder();
+
+  @override
+  ScreenViewRecorder createScreenViewRecorder(ObservabilityConfig config) =>
+      _SpanScreenViewRecorder(config.screenViewsEnabled);
+}
+
+/// Emits each screen view as a Dart `screen_view` span via the OpenTelemetry
+/// pipeline. Gated by `analytics.views`.
+class _SpanScreenViewRecorder implements ScreenViewRecorder {
+  _SpanScreenViewRecorder(this._screenViewsEnabled);
+
+  final bool _screenViewsEnabled;
+
+  @override
+  void trackScreenView(
+    String name, {
+    String? screenClass,
+    String? screenId,
+    String? category,
+    Map<String, Object?>? properties,
+  }) {
+    if (!_screenViewsEnabled) {
+      return;
+    }
+    final tracer = otel.globalTracerProvider.getTracer(_tracerName);
+    final span = tracer.startSpan(
+      ScreenViewConvention.spanName,
+      attributes: convertAttributes(
+        ScreenViewConvention.getSpanAttributes(
+          name: name,
+          screenClass: screenClass,
+          screenId: screenId,
+          category: category,
+          properties: properties,
+        ),
+      ),
+    );
+    span.setStatus(otel.StatusCode.ok);
+    span.end();
+  }
 }
 
 /// No Session Replay or context-key caching exists on the Dart pipeline, so
