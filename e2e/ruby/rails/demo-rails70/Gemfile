@@ -6,8 +6,9 @@ git_source(:github) { |repo| "https://github.com/#{repo}.git" }
 ruby '~> 3.3.4'
 
 # Keep the legacy Rails-family instrumentation coverage on the oldest safe
-# Rails 7.1 release line.
-gem 'rails', '~> 7.1.5', '>= 7.1.5.2'
+# Rails release line. 7.1 no longer receives security patches (see
+# GHSA-xr9x-r78c-5hrm, fixed in 7.2.3.2 with no 7.1 backport).
+gem 'rails', '~> 7.2.3', '>= 7.2.3.2'
 
 # The Rails test runner is incompatible with minitest 6.x (`run` arity changed).
 gem 'minitest', '~> 5.0'
