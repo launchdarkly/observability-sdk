@@ -2,6 +2,13 @@
 
 All notable changes to the LaunchDarkly Observability SDK for Flutter will be documented in this file. This project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.15.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.14.1...launchdarkly_flutter_observability-0.15.0) (2026-08-12)
+
+
+### Features
+
+* Android scale issues and imageQuality option ([#716](https://github.com/launchdarkly/observability-sdk/issues/716)) ([acacd0e](https://github.com/launchdarkly/observability-sdk/commit/acacd0e5cc637cf879572431b266c342eff2d2fb))
+
 ## [0.14.1](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.14.0...launchdarkly_flutter_observability-0.14.1) (2026-08-12)
 
 

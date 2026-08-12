@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.22.0](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.21.2...session-replay-react-native-0.22.0) (2026-08-12)
+
+
+### Features
+
+* Android scale issues and imageQuality option ([#716](https://github.com/launchdarkly/observability-sdk/issues/716)) ([acacd0e](https://github.com/launchdarkly/observability-sdk/commit/acacd0e5cc637cf879572431b266c342eff2d2fb))
+
 ## [0.21.2](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.21.1...session-replay-react-native-0.21.2) (2026-08-10)
 
 
