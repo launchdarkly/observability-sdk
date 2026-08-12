@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.65.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.64.0...launchdarkly-observability-android-0.65.0) (2026-08-12)
+
+
+### Features
+
+* Android scale issues and imageQuality option ([#716](https://github.com/launchdarkly/observability-sdk/issues/716)) ([acacd0e](https://github.com/launchdarkly/observability-sdk/commit/acacd0e5cc637cf879572431b266c342eff2d2fb))
+
 ## [0.64.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.63.0...launchdarkly-observability-android-0.64.0) (2026-08-04)
 
 
