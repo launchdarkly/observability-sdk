@@ -54,7 +54,7 @@ dependencies {
     // Native dependencies mirrored from the LaunchDarkly mobile SDKs (the same
     // stack used by sdk/@launchdarkly/react-native-ld-session-replay and the
     // .NET MAUI bridge in sdk/@launchdarkly/mobile-dotnet).
-    implementation "com.launchdarkly:launchdarkly-observability-android:0.64.0"
+    implementation "com.launchdarkly:launchdarkly-observability-android:0.65.0"
     // OTel Attributes appears in ObservabilityOptions parameter types; provided
     // at runtime transitively through launchdarkly-observability-android.
     implementation "io.opentelemetry:opentelemetry-api:1.62.0"
@@ -64,7 +64,7 @@ dependencies {
     // touches LDValue at runtime, so provide the lightweight java-sdk-common
     // (model types only, NOT the feature-flag client). `runtimeOnly` keeps it off
     // this plugin's compile classpath so the plugin stays independent of the
-    // flagging SDK. Version mirrors what launchdarkly-android-client-sdk:5.12.2
+    // flagging SDK. Version mirrors what launchdarkly-android-client-sdk:5.13.3
     // resolves.
     runtimeOnly "com.launchdarkly:launchdarkly-java-sdk-common:2.4.0"
 }
