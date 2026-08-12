@@ -134,7 +134,7 @@ class SessionReplayService(
             imageCaptureService = imageCaptureService
                 ?: ImageCaptureService(options, logger),
         )
-        val density = observabilityContext.application.resources.displayMetrics.density
+        val density = observabilityContext.application.resources.displayMetrics.density.toDouble()
         interactionSource = InteractionSource(sm, options.scale, density)
 
         val initialIdentifyItemPayload = IdentifyItemPayload.from(

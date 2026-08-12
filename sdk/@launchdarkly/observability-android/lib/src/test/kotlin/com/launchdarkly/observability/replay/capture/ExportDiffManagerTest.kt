@@ -9,6 +9,7 @@ import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.runs
 import io.mockk.unmockkStatic
+import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -20,13 +21,46 @@ import java.util.Base64 as JBase64
 class ExportDiffManagerTest {
 
     @Test
+    fun `configured image quality is used for JPEG encoding`() {
+        mockBase64Android()
+        try {
+            val bitmap = mockCompressibleBitmap(0x01)
+            val rawFrame = RawFrame(bitmap = bitmap, timestamp = 1L, orientation = 0)
+            val tileDiffManager = mockk<TileDiffManager>()
+            every { tileDiffManager.computeTiledFrame(rawFrame) } returns TiledFrame(
+                id = 1,
+                tiles = listOf(TiledFrame.Tile(bitmap = bitmap, rect = IntRect(0, 0, 120, 88))),
+                scale = 1.0,
+                originalSize = IntSize(120, 88),
+                timestamp = 1L,
+                orientation = 0,
+                isKeyframe = true,
+                imageSignature = null,
+            )
+            val exportDiffManager = ExportDiffManager(
+                compression = ReplayOptions.CompressionMethod.ScreenImage,
+                imageQuality = 0.75,
+                tileDiffManager = tileDiffManager,
+            )
+
+            assertNotNull(exportDiffManager.createCaptureEvent(rawFrame, "session"))
+
+            verify {
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 75, any())
+            }
+        } finally {
+            unmockkStatic(Base64::class)
+        }
+    }
+
+    @Test
     fun `backtracking emits remove-only frame on rollback`() {
         mockBase64Android()
         try {
             val tileDiffManager = mockk<TileDiffManager>()
             val exportDiffManager = ExportDiffManager(
                 compression = ReplayOptions.CompressionMethod.OverlayTiles(backtracking = true),
-                scale = 1f,
+                scale = 1.0,
                 tileDiffManager = tileDiffManager,
             )
 
@@ -44,7 +78,7 @@ class ExportDiffManagerTest {
             every { tileDiffManager.computeTiledFrame(frame1) } returns TiledFrame(
                 id = 1,
                 tiles = listOf(TiledFrame.Tile(bitmap = bitmap1, rect = IntRect(0, 0, 120, 88))),
-                scale = 1f,
+                scale = 1.0,
                 originalSize = IntSize(120, 88),
                 timestamp = 1L,
                 orientation = 0,
@@ -54,7 +88,7 @@ class ExportDiffManagerTest {
             every { tileDiffManager.computeTiledFrame(frame2) } returns TiledFrame(
                 id = 2,
                 tiles = listOf(TiledFrame.Tile(bitmap = bitmap2, rect = IntRect(0, 0, 120, 22))),
-                scale = 1f,
+                scale = 1.0,
                 originalSize = IntSize(120, 88),
                 timestamp = 2L,
                 orientation = 0,
@@ -64,7 +98,7 @@ class ExportDiffManagerTest {
             every { tileDiffManager.computeTiledFrame(frame3) } returns TiledFrame(
                 id = 3,
                 tiles = listOf(TiledFrame.Tile(bitmap = bitmap3, rect = IntRect(0, 0, 120, 88))),
-                scale = 1f,
+                scale = 1.0,
                 originalSize = IntSize(120, 88),
                 timestamp = 3L,
                 orientation = 0,
@@ -95,7 +129,7 @@ class ExportDiffManagerTest {
             val tileDiffManager = mockk<TileDiffManager>()
             val exportDiffManager = ExportDiffManager(
                 compression = ReplayOptions.CompressionMethod.OverlayTiles(backtracking = false),
-                scale = 1f,
+                scale = 1.0,
                 tileDiffManager = tileDiffManager,
             )
 
@@ -117,7 +151,7 @@ class ExportDiffManagerTest {
                     TiledFrame.Tile(bitmap = mockCompressibleBitmap(0x01), rect = IntRect(0, 0, 60, 88)),
                     TiledFrame.Tile(bitmap = mockCompressibleBitmap(0x02), rect = IntRect(60, 0, 60, 88)),
                 ),
-                scale = 1f,
+                scale = 1.0,
                 originalSize = IntSize(120, 88),
                 timestamp = 1L,
                 orientation = 0,
@@ -130,7 +164,7 @@ class ExportDiffManagerTest {
                     TiledFrame.Tile(bitmap = mockCompressibleBitmap(0x03), rect = IntRect(0, 0, 60, 88)),
                     TiledFrame.Tile(bitmap = mockCompressibleBitmap(0x04), rect = IntRect(60, 0, 60, 88)),
                 ),
-                scale = 1f,
+                scale = 1.0,
                 originalSize = IntSize(120, 88),
                 timestamp = 2L,
                 orientation = 0,
@@ -167,7 +201,7 @@ class ExportDiffManagerTest {
             val tileDiffManager = mockk<TileDiffManager>()
             val exportDiffManager = ExportDiffManager(
                 compression = ReplayOptions.CompressionMethod.OverlayTiles(backtracking = true),
-                scale = 1f,
+                scale = 1.0,
                 tileDiffManager = tileDiffManager,
             )
 
@@ -190,7 +224,7 @@ class ExportDiffManagerTest {
                     TiledFrame.Tile(bitmap = mockCompressibleBitmap(0x01), rect = IntRect(0, 0, 60, 88)),
                     TiledFrame.Tile(bitmap = mockCompressibleBitmap(0x02), rect = IntRect(60, 0, 60, 88)),
                 ),
-                scale = 1f, originalSize = IntSize(120, 88),
+                scale = 1.0, originalSize = IntSize(120, 88),
                 timestamp = 1L, orientation = 0, isKeyframe = true, imageSignature = imageA,
             )
             every { tileDiffManager.computeTiledFrame(frame2) } returns TiledFrame(
@@ -198,7 +232,7 @@ class ExportDiffManagerTest {
                 tiles = listOf(
                     TiledFrame.Tile(bitmap = mockCompressibleBitmap(0x03), rect = IntRect(0, 0, 120, 22)),
                 ),
-                scale = 1f, originalSize = IntSize(120, 88),
+                scale = 1.0, originalSize = IntSize(120, 88),
                 timestamp = 2L, orientation = 0, isKeyframe = false, imageSignature = imageB,
             )
             every { tileDiffManager.computeTiledFrame(frame3) } returns TiledFrame(
@@ -207,7 +241,7 @@ class ExportDiffManagerTest {
                     TiledFrame.Tile(bitmap = mockCompressibleBitmap(0x04), rect = IntRect(0, 0, 60, 88)),
                     TiledFrame.Tile(bitmap = mockCompressibleBitmap(0x05), rect = IntRect(60, 0, 60, 88)),
                 ),
-                scale = 1f, originalSize = IntSize(120, 88),
+                scale = 1.0, originalSize = IntSize(120, 88),
                 timestamp = 3L, orientation = 0, isKeyframe = false, imageSignature = imageA,
             )
 

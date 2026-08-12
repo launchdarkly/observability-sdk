@@ -130,7 +130,7 @@ internal class LDNativeApiImpl(
             enabled = replay.isEnabled ?: true,
             sampleRate = replay.sampleRate ?: 1.0,
             frameRate = replay.frameRate ?: 1.0,
-            scale = replayScale.toFloat(),
+            scale = replayScale,
             privacyProfile = PrivacyProfile(
                 maskTextInputs = maskTextInputs,
                 maskText = privacy?.maskLabels ?: false,

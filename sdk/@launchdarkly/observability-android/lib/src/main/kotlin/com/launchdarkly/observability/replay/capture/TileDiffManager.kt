@@ -5,7 +5,7 @@ import com.launchdarkly.observability.replay.ReplayOptions
 
 class TileDiffManager(
     private val compression: ReplayOptions.CompressionMethod,
-    private val scale: Float,
+    private val scale: Double,
     private val tileSignatureManager: TileSignatureManager = TileSignatureManager(),
 ) {
     private var previousSignature: ImageSignature? = null

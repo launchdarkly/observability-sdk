@@ -256,7 +256,7 @@ class RRWebEventGeneratorTest {
         addImages = addImages,
         removeImages = removeImages,
         originalSize = IntSize(width = 120, height = 88),
-        scale = 1f,
+        scale = 1.0,
         timestamp = timestamp,
         orientation = 0,
         isKeyframe = isKeyframe,
