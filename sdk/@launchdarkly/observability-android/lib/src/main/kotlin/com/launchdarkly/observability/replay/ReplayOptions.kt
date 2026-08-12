@@ -20,7 +20,7 @@ data class ReplayOptions(
     val sampleRate: Double = 1.0,
     val frameRate: Double = 1.0,
     /** Optional replay scale. Null disables scaling override. */
-    val scale: Float? = 1.0f,
+    val scale: Double? = 1.0,
     val compression: CompressionMethod = CompressionMethod.OverlayTiles(),
     // TODO O11Y-623 - Add storage options
 ) {
@@ -68,7 +68,7 @@ data class ReplayOptions(
         fun privacyProfile(privacyProfile: PrivacyProfile) = apply { options = options.copy(privacyProfile = privacyProfile) }
         fun sampleRate(sampleRate: Double) = apply { options = options.copy(sampleRate = sampleRate) }
         fun frameRate(frameRate: Double) = apply { options = options.copy(frameRate = frameRate) }
-        fun scale(scale: Float?) = apply { options = options.copy(scale = scale) }
+        fun scale(scale: Double?) = apply { options = options.copy(scale = scale) }
         fun compression(compression: CompressionMethod) = apply { options = options.copy(compression = compression) }
 
         fun build() = options

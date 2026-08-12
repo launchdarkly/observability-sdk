@@ -33,6 +33,32 @@ class RRWebEventGeneratorTest {
     }
 
     @Test
+    fun `document padding stays in logical coordinates for scaled captures`() {
+        val generator = RRWebEventGenerator(canvasDrawEntourage = 1, title = "test")
+        val signature = ImageSignature(
+            rows = 1,
+            columns = 1,
+            tileWidth = 240,
+            tileHeight = 176,
+            tileSignatures = listOf(TileSignature(1L)),
+        )
+        val frame = exportFrame(
+            keyFrameId = 1,
+            isKeyframe = true,
+            addImages = listOf(addImage(signature, 0, 0, 120, 88)),
+            removeImages = null,
+            timestamp = 1L,
+            scale = 2.0,
+        )
+
+        val meta = generator.generateCaptureFullEvents(frame).first()
+        val data = (meta.data as EventDataUnion.StandardEventData).data
+
+        assertEquals(142, data.width)
+        assertEquals(110, data.height)
+    }
+
+    @Test
     fun `keyframe incremental resolves removes before map reset`() {
         val generator = RRWebEventGenerator(canvasDrawEntourage = 1, title = "test")
         val sigA = ImageSignature(rows = 1, columns = 1, tileWidth = 64, tileHeight = 22, tileSignatures = listOf(TileSignature(101)))
@@ -251,12 +277,13 @@ class RRWebEventGeneratorTest {
         addImages: List<ExportFrame.AddImage>,
         removeImages: List<ExportFrame.RemoveImage>?,
         timestamp: Long,
+        scale: Double = 1.0,
     ): ExportFrame = ExportFrame(
         keyFrameId = keyFrameId,
         addImages = addImages,
         removeImages = removeImages,
         originalSize = IntSize(width = 120, height = 88),
-        scale = 1f,
+        scale = scale,
         timestamp = timestamp,
         orientation = 0,
         isKeyframe = isKeyframe,

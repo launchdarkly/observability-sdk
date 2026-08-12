@@ -284,9 +284,9 @@ internal class SessionReplayClientAdapter private constructor() {
 
         val frameRate = if (map.hasKey("frameRate")) map.getDouble("frameRate") else 1.0
         val replayScale = if (map.hasKey("scale")) {
-            map.getDouble("scale").takeIf { it > 0 }?.toFloat() ?: 1.0f
+            map.getDouble("scale").takeIf { it > 0 } ?: 1.0
         } else {
-            1.0f
+            1.0
         }
         val minimumAlpha = if (map.hasKey("minimumAlpha")) {
             map.getDouble("minimumAlpha").toFloat()

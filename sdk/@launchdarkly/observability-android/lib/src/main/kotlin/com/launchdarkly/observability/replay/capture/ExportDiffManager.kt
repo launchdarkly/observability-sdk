@@ -7,7 +7,7 @@ import java.io.ByteArrayOutputStream
 
 class ExportDiffManager(
     private val compression: ReplayOptions.CompressionMethod,
-    private val scale: Float = 1f,
+    private val scale: Double = 1.0,
     private val tileDiffManager: TileDiffManager = TileDiffManager(compression = compression, scale = scale),
 ) {
     private val currentImages = mutableListOf<ExportFrame.RemoveImage>()

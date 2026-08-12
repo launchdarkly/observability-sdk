@@ -148,8 +148,8 @@ class ImageCaptureService(
                         for (i in 1 until captureResults.size) {
                             val res = captureResults[i] ?: continue
                             val entry = res.windowEntry
-                            val dx = (entry.screenLeft - baseWindowEntry.screenLeft).toFloat() * scaleFactor
-                            val dy = (entry.screenTop - baseWindowEntry.screenTop).toFloat() * scaleFactor
+                            val dx = ((entry.screenLeft - baseWindowEntry.screenLeft) * scaleFactor).toFloat()
+                            val dy = ((entry.screenTop - baseWindowEntry.screenTop) * scaleFactor).toFloat()
 
                             canvas.withTranslation(dx, dy) {
                                 drawBitmap(res.bitmap, 0f, 0f, null)
@@ -226,12 +226,12 @@ class ImageCaptureService(
         return if (windowsEntries.isNotEmpty()) 0 else null
     }
 
-    private suspend fun captureViewResult(windowEntry: WindowEntry, scaleFactor: Float): CaptureResult? {
+    private suspend fun captureViewResult(windowEntry: WindowEntry, scaleFactor: Double): CaptureResult? {
         val bitmap = captureViewBitmap(windowEntry, scaleFactor) ?: return null
         return CaptureResult(windowEntry, bitmap)
     }
 
-    private suspend fun captureViewBitmap(windowEntry: WindowEntry, scaleFactor: Float): Bitmap? {
+    private suspend fun captureViewBitmap(windowEntry: WindowEntry, scaleFactor: Double): Bitmap? {
         val view = windowEntry.rootView
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && windowEntry.isPixelCopyCandidate()) {
@@ -256,7 +256,7 @@ class ImageCaptureService(
         window: Window,
         view: View,
         rect: Rect,
-        scaleFactor: Float
+        scaleFactor: Double
     ): Bitmap? {
         val bitmap = createBitmapForView(view, scaleFactor) ?: return null
 
@@ -317,7 +317,7 @@ class ImageCaptureService(
     private suspend fun compositeSurfaceViews(
         rootView: View,
         target: Bitmap,
-        scaleFactor: Float
+        scaleFactor: Double
     ) {
         val surfaceViews = mutableListOf<SurfaceView>()
         collectSurfaceViews(rootView, surfaceViews)
@@ -347,8 +347,8 @@ class ImageCaptureService(
             // window-level PixelCopy source rect uses the same space (see WindowEntry.rect()
             // which is `Rect(0, 0, width, height)` in window coords).
             surfaceView.getLocationInWindow(location)
-            val dx = location[0].toFloat() * scaleFactor
-            val dy = location[1].toFloat() * scaleFactor
+            val dx = (location[0] * scaleFactor).toFloat()
+            val dy = (location[1] * scaleFactor).toFloat()
 
             try {
                 canvas.drawBitmap(captured, dx, dy, null)
@@ -408,13 +408,13 @@ class ImageCaptureService(
 
     private fun canvasDrawBitmap(
         view: View,
-        scaleFactor: Float
+        scaleFactor: Double
     ): Bitmap? {
         val bitmap = createBitmapForView(view, scaleFactor) ?: return null
 
         val canvas = Canvas(bitmap)
         canvas.save()
-        canvas.scale(scaleFactor, scaleFactor)
+        canvas.scale(scaleFactor.toFloat(), scaleFactor.toFloat())
 
         try {
             view.draw(canvas)
@@ -429,7 +429,7 @@ class ImageCaptureService(
         return bitmap
     }
 
-    private fun createBitmapForView(view: View, scaleFactor: Float): Bitmap? {
+    private fun createBitmapForView(view: View, scaleFactor: Double): Bitmap? {
         val width = scaleCoordinate(view.width.toFloat(), scaleFactor)
         val height = scaleCoordinate(view.height.toFloat(), scaleFactor)
         if (width <= 0 || height <= 0) {
