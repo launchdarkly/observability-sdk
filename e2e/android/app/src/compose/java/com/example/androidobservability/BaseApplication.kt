@@ -71,8 +71,7 @@ open class BaseApplication : Application() {
                 maskXMLViewIds = listOf("smoothieTitle")
             ),
             sampleRate = 1.0,
-            frameRate = 1.0,
-            scale = 0.5,
+            frameRate = 1.0
         )
     )
 

@@ -69,12 +69,7 @@ final class FlutterImageCaptureService: ImageCaptureServicing {
             let data = payload["bytes"] as? FlutterStandardTypedData,
             let width = (payload["width"] as? NSNumber)?.intValue,
             let height = (payload["height"] as? NSNumber)?.intValue,
-            let image = Self.image(
-                fromRGBA: data.data,
-                width: width,
-                height: height,
-                scale: scale > 0 ? CGFloat(scale) : 1.0
-            )
+            let image = Self.image(fromRGBA: data.data, width: width, height: height)
         else {
             return nil
         }
@@ -93,17 +88,9 @@ final class FlutterImageCaptureService: ImageCaptureServicing {
     }
 
     /// Wraps Flutter's raw RGBA bytes (8 bits/channel, premultiplied alpha,
-    /// row-major) into a `UIImage`. Avoids decoding a PNG on the wire.
-    ///
-    /// The bytes are `scale`x pixels (Dart rasterized the boundary at that
-    /// pixel ratio), so the `UIImage` must carry the same `scale` to keep
-    /// `size` in points. `TileDiffManager` treats `RawFrame.image.size` as
-    /// points — it becomes the replay viewport and it divides pixel crop rects
-    /// by `scale` to place incremental tiles inside it. A scale-1 image here
-    /// would report a viewport `scale`x too large while partial-frame tiles
-    /// stayed in point space, so anything captured as a diff (a dialog, sheet
-    /// or popup appearing) would land at 1/scale of its real size and position.
-    private static func image(fromRGBA data: Data, width: Int, height: Int, scale: CGFloat) -> UIImage? {
+    /// row-major) into a `UIImage` at scale 1, matching the device-pixel
+    /// resolution the Dart side rendered at. Avoids decoding a PNG on the wire.
+    private static func image(fromRGBA data: Data, width: Int, height: Int) -> UIImage? {
         guard width > 0, height > 0 else { return nil }
 
         let bytesPerRow = width * 4
@@ -128,6 +115,6 @@ final class FlutterImageCaptureService: ImageCaptureServicing {
             return nil
         }
 
-        return UIImage(cgImage: cgImage, scale: scale, orientation: .up)
+        return UIImage(cgImage: cgImage, scale: 1.0, orientation: .up)
     }
 }
