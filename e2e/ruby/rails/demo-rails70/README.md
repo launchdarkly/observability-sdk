@@ -3,7 +3,8 @@
 A legacy Rails application that pins the LaunchDarkly observability plugin to a
 known-broken scenario and guards against it regressing. The historical directory
 name is retained to avoid path churn, while Rails is constrained to the oldest
-safe 7.1 release line.
+release line that still receives security patches (7.2), and the app keeps
+`config.load_defaults 7.0`.
 
 ## Why this exists
 
