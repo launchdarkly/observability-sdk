@@ -2,6 +2,13 @@
 
 All notable changes to the LaunchDarkly Observability SDK for Flutter will be documented in this file. This project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.14.1](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.14.0...launchdarkly_flutter_observability-0.14.1) (2026-08-12)
+
+
+### Bug Fixes
+
+* carry render scale into Flutter iOS replay frames ([#717](https://github.com/launchdarkly/observability-sdk/issues/717)) ([046f389](https://github.com/launchdarkly/observability-sdk/commit/046f3893783b41a2050d43339c6488fa1f682c10))
+
 ## [0.14.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.13.0...launchdarkly_flutter_observability-0.14.0) (2026-08-10)
 
 
