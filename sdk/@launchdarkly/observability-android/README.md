@@ -530,6 +530,18 @@ not available for the environment — the SDK stops capturing for the rest of th
 `LDReplay.isEnabled` reports `false`. The next launch withholds screenshots until the backend accepts a
 session again, so a refusal is not permanent.
 
+#### Image quality
+
+Use `ReplayOptions.imageQuality` to control JPEG encoding quality. It accepts values from `0.0`
+(lowest quality and smallest payload) to `1.0` (highest quality and largest payload), defaults to
+`0.3`, and clamps values outside that range.
+
+```kotlin
+val sessionReplay = SessionReplay(
+    ReplayOptions(imageQuality = 0.75)
+)
+```
+
 #### Masking sensitive UI
 
 Use `ldMask()` to mark views that should be masked in session replay. There are helpers for both XML-based Views and Jetpack Compose.

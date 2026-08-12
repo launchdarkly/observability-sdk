@@ -9,6 +9,7 @@ import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.runs
 import io.mockk.unmockkStatic
+import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -18,6 +19,39 @@ import java.io.ByteArrayOutputStream
 import java.util.Base64 as JBase64
 
 class ExportDiffManagerTest {
+
+    @Test
+    fun `configured image quality is used for JPEG encoding`() {
+        mockBase64Android()
+        try {
+            val bitmap = mockCompressibleBitmap(0x01)
+            val rawFrame = RawFrame(bitmap = bitmap, timestamp = 1L, orientation = 0)
+            val tileDiffManager = mockk<TileDiffManager>()
+            every { tileDiffManager.computeTiledFrame(rawFrame) } returns TiledFrame(
+                id = 1,
+                tiles = listOf(TiledFrame.Tile(bitmap = bitmap, rect = IntRect(0, 0, 120, 88))),
+                scale = 1.0,
+                originalSize = IntSize(120, 88),
+                timestamp = 1L,
+                orientation = 0,
+                isKeyframe = true,
+                imageSignature = null,
+            )
+            val exportDiffManager = ExportDiffManager(
+                compression = ReplayOptions.CompressionMethod.ScreenImage,
+                imageQuality = 0.75,
+                tileDiffManager = tileDiffManager,
+            )
+
+            assertNotNull(exportDiffManager.createCaptureEvent(rawFrame, "session"))
+
+            verify {
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 75, any())
+            }
+        } finally {
+            unmockkStatic(Base64::class)
+        }
+    }
 
     @Test
     fun `backtracking emits remove-only frame on rollback`() {

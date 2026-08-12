@@ -12,6 +12,8 @@ package com.launchdarkly.observability.replay
  *   start. The decision is made once per enable cycle and reset when replay is stopped.
  * @property enabled controls whether session replay starts capturing immediately on initialization
  * @property compression compression strategy for frame export
+ * @property imageQuality JPEG encoding quality from `0.0` (lowest quality) to `1.0` (highest
+ *   quality). Values outside this range are clamped. Defaults to `0.3`.
  */
 data class ReplayOptions(
     val enabled: Boolean = true,
@@ -22,6 +24,7 @@ data class ReplayOptions(
     /** Optional replay scale. Null disables scaling override. */
     val scale: Double? = 1.0,
     val compression: CompressionMethod = CompressionMethod.OverlayTiles(),
+    val imageQuality: Double = 0.3,
     // TODO O11Y-623 - Add storage options
 ) {
     sealed class CompressionMethod {
@@ -70,6 +73,7 @@ data class ReplayOptions(
         fun frameRate(frameRate: Double) = apply { options = options.copy(frameRate = frameRate) }
         fun scale(scale: Double?) = apply { options = options.copy(scale = scale) }
         fun compression(compression: CompressionMethod) = apply { options = options.copy(compression = compression) }
+        fun imageQuality(imageQuality: Double) = apply { options = options.copy(imageQuality = imageQuality) }
 
         fun build() = options
     }
