@@ -2,7 +2,6 @@ package com.launchdarkly.observability.replay.capture
 
 import android.graphics.Bitmap
 import com.launchdarkly.observability.replay.ReplayOptions
-import kotlin.math.roundToInt
 
 class TileDiffManager(
     private val compression: ReplayOptions.CompressionMethod,
@@ -16,9 +15,6 @@ class TileDiffManager(
     fun computeTiledFrame(frame: RawFrame): TiledFrame? {
         val frameWidth = frame.bitmap.width
         val frameHeight = frame.bitmap.height
-        val replayScale = scale.takeIf { it > 0.0 } ?: 1.0
-        val replayWidth = (frameWidth / replayScale).roundToInt()
-        val replayHeight = (frameHeight / replayScale).roundToInt()
         val imageSignature = tileSignatureManager.compute(frame.bitmap) ?: run {
             if (!frame.bitmap.isRecycled) {
                 frame.bitmap.recycle()
@@ -62,8 +58,8 @@ class TileDiffManager(
             finalRect = IntRect(
                 left = 0,
                 top = 0,
-                width = replayWidth,
-                height = replayHeight,
+                width = frameWidth,
+                height = frameHeight,
             )
         } else {
             val croppedWidth = minOf(frameWidth - diffRect.left, diffRect.width)
@@ -74,13 +70,19 @@ class TileDiffManager(
                 }
                 return null
             }
+            finalRect = IntRect(
+                left = diffRect.left,
+                top = diffRect.top,
+                width = croppedWidth,
+                height = croppedHeight,
+            )
             finalBitmap = try {
                 Bitmap.createBitmap(
                     frame.bitmap,
-                    diffRect.left,
-                    diffRect.top,
-                    croppedWidth,
-                    croppedHeight
+                    finalRect.left,
+                    finalRect.top,
+                    finalRect.width,
+                    finalRect.height
                 )
             } catch (_: Throwable) {
                 if (!frame.bitmap.isRecycled) {
@@ -91,15 +93,6 @@ class TileDiffManager(
             if (!frame.bitmap.isRecycled) {
                 frame.bitmap.recycle()
             }
-            // Bitmap diffing and cropping use pixels, while RRWeb lays images out in
-            // logical coordinates. Match Swift by converting only the exported tile
-            // rectangle; the encoded bitmap retains its full pixel resolution.
-            finalRect = IntRect(
-                left = (diffRect.left / replayScale).roundToInt(),
-                top = (diffRect.top / replayScale).roundToInt(),
-                width = (croppedWidth / replayScale).roundToInt(),
-                height = (croppedHeight / replayScale).roundToInt(),
-            )
         }
 
         val imageSignatureForTransfer = when (compression) {
@@ -111,7 +104,7 @@ class TileDiffManager(
             id = frameId,
             tiles = listOf(TiledFrame.Tile(bitmap = finalBitmap, rect = finalRect)),
             scale = scale,
-            originalSize = IntSize(width = replayWidth, height = replayHeight),
+            originalSize = IntSize(width = frameWidth, height = frameHeight),
             timestamp = frame.timestamp,
             orientation = frame.orientation,
             isKeyframe = isKeyframe,

@@ -9,18 +9,18 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 
 /**
- * Converts raw [TouchSample]s from the shared `UserInteractionManager` into logical, grouped
+ * Converts raw [TouchSample]s from the shared `UserInteractionManager` into scaled, grouped
  * [InteractionEvent]s for Session Replay.
  *
  * Window interception is no longer performed here; the Observability plugin owns the single touch
- * hook and this class is a pure consumer. Coordinate conversion and move grouping (to reduce
- * bandwidth) remain Session Replay concerns and live here.
+ * hook and this class is a pure consumer. Scaling (to match the scaled screenshots) and move
+ * grouping (to reduce bandwidth) remain Session Replay concerns and live here.
  *
  * [process] is expected to be called from a single thread (the collector coroutine).
  *
  * @param sessionManager used to tag emitted events with the current session id.
- * @param scale the replay capture scale, or `null` when captures remain in physical pixels.
- * @param density the display density used to convert physical pixels to logical coordinates.
+ * @param scale the replay scale factor, or `null` for no scaling.
+ * @param density the display density used to derive the pixel scale factor.
  */
 class InteractionSource(
     private val sessionManager: SessionManager,
@@ -38,7 +38,7 @@ class InteractionSource(
 
     private val scaleFactor: Double = when {
         scale == null -> 1.0
-        density > 0.0 -> 1.0 / density
+        density > 0.0 -> scale / density
         else -> 1.0
     }
 
