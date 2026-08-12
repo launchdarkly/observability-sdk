@@ -4,6 +4,29 @@
 
 **NB: APIs are subject to change until a 1.x version is released.**
 
+## Choosing a product
+
+This repository ships two observability plugins. They share the same `LDObserve` API and the same
+OTLP pipeline, and differ only in how much they hook into your app.
+
+| | `launchdarkly-observability-android` | `launchdarkly-otel-android` |
+| --- | --- | --- |
+| Plugin class | `Observability` | `Otel` |
+| `LDObserve` recording API | yes | yes |
+| Flag evaluation, identify and track hooks | yes | yes |
+| Session management (incl. background timeout) | yes | yes |
+| Automatic instrumentation | yes | none |
+| Crash reporting | yes | none |
+| Session Replay | yes | none |
+
+Pick `launchdarkly-otel-android` when your app already runs another observability SDK. It wraps no
+window callbacks, installs no crash handler, and depends on no `io.opentelemetry.android` artifact,
+so the two can't fight over the same hooks — it records only what you ask it to. See
+[OpenTelemetry-only setup](#opentelemetry-only-setup).
+
+Pick `launchdarkly-observability-android` otherwise, for the automatic instrumentation below. It
+includes everything in the OpenTelemetry-only product, so there is no reason to depend on both.
+
 ## Features
 
 ### Automatic Instrumentation
@@ -114,6 +137,44 @@ public class MyApplication extends Application {
 ```
 
 </details>
+
+### OpenTelemetry-only setup
+
+Swap the `Observability` plugin for `Otel` to get the recording API and OTLP export without any
+automatic instrumentation. Everything else — `LDObserve`, `ObservabilityOptions`, the evaluation
+hooks, session management — behaves identically, and the Kotlin package names are the same, so
+switching between the two is an import and a class name.
+
+```kotlin
+dependencies {
+    implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.+")
+    implementation("com.launchdarkly:launchdarkly-otel-android:0.19.1")
+}
+```
+
+```kotlin
+import com.launchdarkly.observability.plugin.Otel
+
+val ldConfig = LDConfig.Builder(LDConfig.Builder.AutoEnvAttributes.Enabled)
+    .mobileKey(mobileKey)
+    .plugins(
+        Components.plugins().setPlugins(
+            listOf(
+                Otel(this@MyApplication, mobileKey)
+            )
+        )
+    )
+    .build()
+```
+
+Because this plugin installs no hooks, nothing is captured automatically: no crashes, taps, screen
+views, HTTP spans, app-lifecycle spans or launch timing. The `instrumentations` section of
+`ObservabilityOptions` is ignored. Record what you need through
+[`LDObserve`](#recording-observability-data), and call
+[`trackScreenView`](#tracking-screen-views) for navigation.
+
+Session Replay requires `launchdarkly-observability-android`; the `SessionReplay` plugin is not part
+of this artifact.
 
 ### Configure additional instrumentations
 

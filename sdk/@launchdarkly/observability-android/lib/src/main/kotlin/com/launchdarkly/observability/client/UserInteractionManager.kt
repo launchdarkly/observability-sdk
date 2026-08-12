@@ -32,7 +32,7 @@ import kotlinx.coroutines.flow.asSharedFlow
  *
  * Samples are reported for the primary pointer of the most recently resumed window.
  */
-class UserInteractionManager : Application.ActivityLifecycleCallbacks {
+class UserInteractionManager : Application.ActivityLifecycleCallbacks, UserInteractionManaging {
 
     // Buffered so emission never blocks the UI thread; oldest samples are dropped under pressure.
     private val _touchFlow = MutableSharedFlow<TouchSample>(
@@ -41,7 +41,7 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
     )
 
     /** Raw, unscaled touch samples from the most recently resumed window. */
-    val touchFlow: SharedFlow<TouchSample> = _touchFlow.asSharedFlow()
+    override val touchFlow: SharedFlow<TouchSample> = _touchFlow.asSharedFlow()
 
     /**
      * Supplies the active screen (`event.screen_id`, `event.screen_name`) at touch-capture time.
@@ -49,7 +49,7 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
      * app handlers that may navigate synchronously - so the captured screen is the one the user
      * tapped, not a destination screen. Defaults to no screen until a consumer wires it up.
      */
-    var screenInfoProvider: () -> Pair<String?, String?> = { null to null }
+    override var screenInfoProvider: () -> Pair<String?, String?> = { null to null }
 
     private var mostRecentWindow: Window? = null
     private val interceptedWindows: MutableList<Window> = mutableListOf()
@@ -167,7 +167,7 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
      * (e.g. Session Replay starts recording after the first activity is already running), the
      * already-current window is known and can be wrapped immediately.
      */
-    fun attachToApplication(application: Application) {
+    override fun attachToApplication(application: Application) {
         if (attachedApplication != null) return
         attachedApplication = application
         application.registerActivityLifecycleCallbacks(this)
@@ -183,7 +183,7 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
      * callbacks) is what keeps a late enable - capture starting after the first activity's
      * `onActivityStarted` has already fired - from missing that activity's touches.
      */
-    fun enableTouchCapture() {
+    override fun enableTouchCapture() {
         captureEnabled = true
         mostRecentWindow?.let { interceptWindow(it) }
     }
@@ -200,7 +200,7 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
      * [onActivityResumed] had fired. Call this when the SDK initializes after the activity is
      * already running (e.g. React Native).
      */
-    fun registerActivity(activity: Activity) {
+    override fun registerActivity(activity: Activity) {
         onActivityStarted(activity)
         onActivityResumed(activity)
     }
@@ -432,8 +432,6 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
     }
 
     companion object {
-        const val CLICK_SPAN_NAME = "click"
-
         // Cap captured text to match the web SDK's `Click` payload truncation.
         private const val MAX_TEXT_LENGTH = 2000
 

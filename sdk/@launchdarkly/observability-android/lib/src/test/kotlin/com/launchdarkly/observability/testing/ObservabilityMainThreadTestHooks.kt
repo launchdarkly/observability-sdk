@@ -18,6 +18,10 @@ import com.launchdarkly.observability.util.MainThreadExecutorHolder
  * the published jar. If/when consumer modules need this hook, either upgrade KGP (which adds
  * Kotlin testFixtures support) or republish this file as Java/`src/testFixtures/java/`.
  *
+ * It lives in this module rather than `:otel` (which owns the executor it swaps) only because
+ * that same limitation leaves no way to share it across modules; `:otel`'s own tests do not
+ * need it.
+ *
  * Typical usage:
  *
  * ```

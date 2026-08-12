@@ -3,7 +3,7 @@ package com.launchdarkly.observability.replay
 import android.view.MotionEvent
 import io.mockk.every
 import io.mockk.mockk
-import io.opentelemetry.android.session.SessionManager
+import com.launchdarkly.observability.client.LDSessionManaging
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
@@ -14,13 +14,13 @@ import org.junit.jupiter.api.Test
 
 class InteractionMoveGrouperTest {
 
-    private lateinit var mockSessionManager: SessionManager
+    private lateinit var mockSessionManager: LDSessionManaging
     private lateinit var bufferedFlow: MutableSharedFlow<InteractionEvent>
     private lateinit var grouper: InteractionMoveGrouper
 
     @BeforeEach
     fun setUp() {
-        mockSessionManager = mockk<SessionManager>(relaxed = true)
+        mockSessionManager = mockk<LDSessionManaging>(relaxed = true)
         every { mockSessionManager.getSessionId() } returns "test-session-id"
         bufferedFlow = MutableSharedFlow(replay = 64, extraBufferCapacity = 64)
         grouper = InteractionMoveGrouper(mockSessionManager, bufferedFlow)

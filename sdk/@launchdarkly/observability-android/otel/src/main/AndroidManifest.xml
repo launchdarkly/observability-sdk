@@ -1,0 +1,5 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- OTLP export only. Unlike :lib this module needs no ACCESS_NETWORK_STATE, because it does
+         not run the OpenTelemetry Android network-attribute appenders. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+</manifest>

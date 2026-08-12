@@ -16,4 +16,5 @@ pluginManagement {
 }
 
 rootProject.name = "observability-android"
+include("otel")
 include("lib")

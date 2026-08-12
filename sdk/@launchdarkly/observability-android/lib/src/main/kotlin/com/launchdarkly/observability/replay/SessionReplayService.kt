@@ -27,7 +27,7 @@ import com.launchdarkly.observability.replay.transport.EventQueue
 import com.launchdarkly.observability.context.LDObserveContext
 import com.launchdarkly.observability.sdk.SessionReplayServicing
 import com.launchdarkly.observability.util.requireMainThread
-import io.opentelemetry.android.session.SessionManager
+import com.launchdarkly.observability.client.LDSessionManaging
 import io.opentelemetry.api.common.Attributes
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -76,7 +76,7 @@ class SessionReplayService(
     private val imageCaptureService: ImageCaptureServicing? = null,
 ) : SessionReplayServicing {
 
-    private lateinit var sessionManager: SessionManager
+    private lateinit var sessionManager: LDSessionManaging
     private val logger: ObserveLogger = observabilityContext.logger
     private val eventQueue = EventQueue()
     private val batchWorker = BatchWorker(eventQueue, logger)

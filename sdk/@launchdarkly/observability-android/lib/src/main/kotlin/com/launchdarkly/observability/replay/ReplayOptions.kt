@@ -1,5 +1,7 @@
 package com.launchdarkly.observability.replay
 
+import com.launchdarkly.observability.sdk.ReplayConfiguration
+
 /**
  * Options for Session Replay plugin.
  *
@@ -23,7 +25,7 @@ data class ReplayOptions(
     val scale: Float? = 1.0f,
     val compression: CompressionMethod = CompressionMethod.OverlayTiles(),
     // TODO O11Y-623 - Add storage options
-) {
+) : ReplayConfiguration {
     sealed class CompressionMethod {
         data object ScreenImage : CompressionMethod()
         data class OverlayTiles(

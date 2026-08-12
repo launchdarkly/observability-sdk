@@ -2,7 +2,7 @@ package com.launchdarkly.observability.replay.capture
 
 import com.launchdarkly.observability.context.ObserveLogger
 import com.launchdarkly.observability.replay.ReplayOptions
-import io.opentelemetry.android.session.SessionManager
+import com.launchdarkly.observability.client.LDSessionManaging
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -14,7 +14,7 @@ import kotlinx.coroutines.flow.asSharedFlow
  * @param sessionManager Used to get current session for tagging [ExportFrame] with session id
  */
 class CaptureManager(
-    private val sessionManager: SessionManager,
+    private val sessionManager: LDSessionManaging,
     private val options: ReplayOptions,
     private val logger: ObserveLogger,
     private val imageCaptureService: ImageCaptureServicing = ImageCaptureService(options, logger),

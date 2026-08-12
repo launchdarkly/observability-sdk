@@ -4,11 +4,11 @@ install:
 	@echo "Install target does nothing for this project"
 
 build:
-	./gradlew :lib:build
+	./gradlew :otel:build :lib:build
 
 test:
-	./gradlew :lib:test
+	./gradlew :otel:test :lib:test
 
 docs:
-	./gradlew :lib:dokkaJavadoc
+	./gradlew :lib:dokkaGeneratePublicationJavadoc
 	ln -sf lib/docs docs

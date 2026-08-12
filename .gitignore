@@ -87,3 +87,7 @@ sdk/@launchdarkly/mobile-dotnet/**/xcuserdata/
 # NOTE: the monorepo yarn.lock is intentionally NOT ignored.
 sdk/@launchdarkly/react-native-ld-session-replay/example/ios/Podfile.lock
 sdk/@launchdarkly/react-native-ld-session-replay/example/Gemfile.lock
+
+# JVM heap dumps. Gradle/Dokka workers write these into the project directory when they run out
+# of memory, and they are large enough to be rejected by GitHub's file size limit.
+*.hprof

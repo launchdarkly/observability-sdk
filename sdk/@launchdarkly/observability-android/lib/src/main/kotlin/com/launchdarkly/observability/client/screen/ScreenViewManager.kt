@@ -2,6 +2,7 @@ package com.launchdarkly.observability.client.screen
 
 import android.app.Activity
 import android.app.Application
+import com.launchdarkly.observability.client.ScreenViewCapturing
 
 /**
  * Orchestrates automatic screen-view capture.
@@ -13,17 +14,17 @@ import android.app.Application
 class ScreenViewManager(
     private val application: Application,
     onScreenView: (ScreenView) -> Unit,
-) {
+) : ScreenViewCapturing {
     private val source = ActivityScreenSource(onScreenView)
     private var started = false
 
-    fun start() {
+    override fun start() {
         if (started) return
         application.registerActivityLifecycleCallbacks(source)
         started = true
     }
 
-    fun stop() {
+    override fun stop() {
         if (!started) return
         application.unregisterActivityLifecycleCallbacks(source)
         started = false
@@ -35,7 +36,7 @@ class ScreenViewManager(
      * so the first `screen_view` span and `Navigate` event aren't missed. No-op when automatic
      * capture is not running (screens instrumentation disabled).
      */
-    fun registerActivity(activity: Activity) {
+    override fun registerActivity(activity: Activity) {
         if (!started) return
         source.captureCurrent(activity)
     }
@@ -46,7 +47,7 @@ class ScreenViewManager(
      * `screen_view` span and `Navigate` event even though no `onActivityResumed` fires for the
      * already-resumed activity. No-op when automatic capture is not running.
      */
-    fun captureCurrentScreen() {
+    override fun captureCurrentScreen() {
         if (!started) return
         source.captureCurrent()
     }

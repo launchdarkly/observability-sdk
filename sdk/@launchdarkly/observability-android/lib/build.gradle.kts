@@ -55,6 +55,11 @@ configurations.all {
 }
 
 dependencies {
+    // The OTel-only core: recording APIs, session management, and OTLP export. Exposed with `api`
+    // so `com.launchdarkly.observability.*` types keep resolving for existing consumers of this
+    // artifact without any source changes.
+    api(project(":otel"))
+
     if (isClientSdkProvidedByHost) {
         compileOnly("com.launchdarkly:launchdarkly-android-client-sdk:5.13.1")
         testImplementation("com.launchdarkly:launchdarkly-android-client-sdk:5.13.1")
@@ -110,6 +115,12 @@ dependencies {
     testFixturesImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
 }
 
+// Applied to every Kotlin compilation (main, unit test, and test fixtures) rather than through
+// `android { kotlin { ... } }`, which does not reach the test-fixtures variant.
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+    compilerOptions.optIn.add("com.launchdarkly.observability.InternalObservabilityApi")
+}
+
 val releaseVersion = version.toString()
 
 tasks.withType<Test> {
@@ -129,6 +140,7 @@ android {
         version = releaseVersion
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "OBSERVABILITY_SDK_VERSION", "\"${project.version}\"")
+        consumerProguardFiles("consumer-rules.pro")
     }
 
     buildTypes {
@@ -231,5 +243,14 @@ dokka {
 
     dokkaSourceSets.configureEach {
         includes.from("doc-module.md")
+    }
+
+    // :otel is re-exported through `api(project(":otel"))`, so its declarations are part of this
+    // artifact's public surface and belong in the same doc set. Dokka's Javadoc format cannot merge
+    // multi-module output, so the sources are documented here directly. Dokka rejects a source root
+    // shared between source sets, so it is attached to the common `main` set that `debug` and
+    // `release` both depend on.
+    dokkaSourceSets.named("main") {
+        sourceRoots.from(project(":otel").layout.projectDirectory.dir("src/main/kotlin"))
     }
 }

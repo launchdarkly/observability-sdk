@@ -1,0 +1,161 @@
+package com.launchdarkly.observability.plugin
+
+import com.launchdarkly.observability.sdk.LDObserve
+import com.launchdarkly.observability.utils.BoundedMap
+import io.opentelemetry.api.GlobalOpenTelemetry
+import io.opentelemetry.api.common.AttributeKey
+import io.opentelemetry.api.common.Attributes
+import io.opentelemetry.api.logs.Severity
+import io.opentelemetry.api.trace.Span
+import io.opentelemetry.api.trace.SpanKind
+import io.opentelemetry.api.trace.Tracer
+import org.json.JSONObject
+
+/**
+ * Pure data-sending logic for observability hook tracing.
+ *
+ * Manages span lifecycle (start/end) and identify logging.
+ * Takes only simple JVM types — no Hook interface, no SDK-specific types.
+ * Both [ObservabilityHook] (native Android SDK) and [com.launchdarkly.observability.bridge.ObservabilityHookProxy] (C# bridge)
+ * delegate here so the tracing logic is written exactly once.
+ */
+@com.launchdarkly.observability.InternalObservabilityApi
+class ObservabilityHookExporter(
+    private val withSpans: Boolean,
+    private val withValue: Boolean,
+    private val tracerProvider: (() -> Tracer?),
+    private val contextFriendlyName: String? = null,
+    maxInFlightSpans: Int = 1024
+) : ObservabilityHookExporting {
+    private val spans = BoundedMap<String, Span>(maxInFlightSpans)
+
+    /** The single track-span emitter. Set by `ObservabilityService` after construction. */
+    @Volatile
+    var trackEmitter: TrackEmitting? = null
+
+    private fun getTracer(): Tracer {
+        return tracerProvider.invoke() ?: GlobalOpenTelemetry.get().getTracer(INSTRUMENTATION_NAME)
+    }
+
+    // -- Evaluation --
+
+    override fun beforeEvaluation(evaluationId: String, flagKey: String, contextKey: String) {
+        if (!withSpans) return
+
+        val tracer = getTracer()
+        val span = tracer.spanBuilder(FEATURE_FLAG_SPAN_NAME)
+            .setSpanKind(SpanKind.INTERNAL)
+            .setAllAttributes(
+                Attributes.builder()
+                    .put(SEMCONV_FEATURE_FLAG_KEY, flagKey)
+                    .put(SEMCONV_FEATURE_FLAG_PROVIDER_NAME, PROVIDER_NAME)
+                    .put(SEMCONV_FEATURE_FLAG_CONTEXT_ID, contextKey)
+                    .build()
+            )
+            .startSpan()
+
+        val evicted = spans.put(evaluationId, span)
+        evicted?.end()
+    }
+
+    override fun afterEvaluation(
+        evaluationId: String,
+        flagKey: String,
+        contextKey: String,
+        valueJson: String?,
+        variationIndex: Int?,
+        inExperiment: Boolean?
+    ) {
+        val span = spans.remove(evaluationId) ?: return
+
+        val attrBuilder = Attributes.builder()
+        attrBuilder.put(SEMCONV_FEATURE_FLAG_KEY, flagKey)
+        attrBuilder.put(SEMCONV_FEATURE_FLAG_PROVIDER_NAME, PROVIDER_NAME)
+        attrBuilder.put(SEMCONV_FEATURE_FLAG_CONTEXT_ID, contextKey)
+
+        inExperiment?.let {
+            attrBuilder.put(CUSTOM_FEATURE_FLAG_RESULT_REASON_IN_EXPERIMENT, it)
+        }
+
+        if (withValue && valueJson != null) {
+            attrBuilder.put(SEMCONV_FEATURE_FLAG_RESULT_VALUE, valueJson)
+        }
+
+        variationIndex?.let {
+            attrBuilder.put(CUSTOM_FEATURE_FLAG_RESULT_VARIATION_INDEX, it.toLong())
+        }
+
+        span.addEvent(FEATURE_FLAG_EVENT_NAME, attrBuilder.build())
+        span.end()
+    }
+
+    fun afterEvaluation(
+        evaluationId: String,
+        flagKey: String,
+        contextKey: String,
+        valueJson: String,
+        variationIndex: Int,
+        reasonJson: String?
+    ) {
+        val normalizedIndex = if (variationIndex >= 0) variationIndex else null
+        afterEvaluation(evaluationId, flagKey, contextKey, valueJson, normalizedIndex, parseInExperiment(reasonJson))
+    }
+
+    private fun parseInExperiment(reasonJson: String?): Boolean? {
+        if (reasonJson == null) return null
+        return try {
+            val json = JSONObject(reasonJson)
+            if (json.has("inExperiment")) json.getBoolean("inExperiment") else null
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    // -- Identify --
+
+    override fun afterIdentify(contextKeys: Map<String, String>, canonicalKey: String, completed: Boolean) {
+        if (!completed) return
+
+        // Cache context keys so the manual track path can attribute events.
+        trackEmitter?.updateCachedContextKeys(contextKeys)
+
+        val attrBuilder = Attributes.builder()
+        for ((k, v) in contextKeys) {
+            attrBuilder.put(AttributeKey.stringKey(k), v)
+        }
+        attrBuilder.put(AttributeKey.stringKey("key"), contextFriendlyName ?: canonicalKey)
+        attrBuilder.put(AttributeKey.stringKey("canonicalKey"), canonicalKey)
+        attrBuilder.put(AttributeKey.stringKey(IDENTIFY_RESULT_STATUS), "completed")
+
+        LDObserve.recordLog("LD.identify", Severity.INFO, attrBuilder.build())
+    }
+
+    override fun afterTrack(
+        eventKey: String,
+        metricValue: Double?,
+        attributes: Attributes,
+        contextKeys: Map<String, String>
+    ) {
+        val contextKeyBuilder = Attributes.builder()
+        for ((k, v) in contextKeys) {
+            contextKeyBuilder.put(AttributeKey.stringKey(k), v)
+        }
+        // Route through the single emitter so gating/caching stay in one place.
+        trackEmitter?.track(eventKey, metricValue, attributes, contextKeyBuilder.build())
+    }
+
+    companion object {
+        const val PROVIDER_NAME = "LaunchDarkly"
+        const val INSTRUMENTATION_NAME = "com.launchdarkly.observability"
+        const val FEATURE_FLAG_SPAN_NAME = "evaluation"
+        const val FEATURE_FLAG_EVENT_NAME = "feature_flag"
+        const val SEMCONV_FEATURE_FLAG_KEY = "feature_flag.key"
+        const val SEMCONV_FEATURE_FLAG_PROVIDER_NAME = "feature_flag.provider.name"
+        const val SEMCONV_FEATURE_FLAG_CONTEXT_ID = "feature_flag.context.id"
+        const val SEMCONV_FEATURE_FLAG_RESULT_VALUE = "feature_flag.result.value"
+        const val CUSTOM_FEATURE_FLAG_RESULT_VARIATION_INDEX = "feature_flag.result.variationIndex"
+        const val CUSTOM_FEATURE_FLAG_RESULT_REASON_IN_EXPERIMENT = "feature_flag.result.reason.inExperiment"
+        const val IDENTIFY_RESULT_STATUS = "identify.result.status"
+        const val DATA_KEY_EVAL_ID = "evaluationId"
+    }
+}

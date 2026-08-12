@@ -2,7 +2,7 @@ package com.launchdarkly.observability.replay
 
 import android.view.MotionEvent
 import com.launchdarkly.observability.client.TouchSample
-import io.opentelemetry.android.session.SessionManager
+import com.launchdarkly.observability.client.LDSessionManaging
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -23,7 +23,7 @@ import kotlinx.coroutines.flow.asSharedFlow
  * @param density the display density used to derive the pixel scale factor.
  */
 class InteractionSource(
-    private val sessionManager: SessionManager,
+    private val sessionManager: LDSessionManaging,
     private val scale: Float?,
     private val density: Float,
 ) {

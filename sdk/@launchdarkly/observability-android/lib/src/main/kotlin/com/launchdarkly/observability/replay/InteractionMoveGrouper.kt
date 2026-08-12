@@ -1,7 +1,7 @@
 package com.launchdarkly.observability.replay
 
 import android.view.MotionEvent
-import io.opentelemetry.android.session.SessionManager
+import com.launchdarkly.observability.client.LDSessionManaging
 import kotlinx.coroutines.flow.MutableSharedFlow
 
 private const val FILTER_THRESHOLD_DISTANCE_SQUARED_PIXELS = 144 // 12 X 12 pixels, matches iOS tapMaxDistanceSquared
@@ -18,7 +18,7 @@ private const val EMIT_PERIOD_MILLIS = 240 // time to gather 4 positions into gr
  * avoid delays handing off data to collector of flow
  */
 class InteractionMoveGrouper(
-    private val _sessionManager: SessionManager,
+    private val _sessionManager: LDSessionManaging,
     private val _bufferedFlow: MutableSharedFlow<InteractionEvent>,
 ) {
     private val acceptedPositions = mutableListOf<Position>()

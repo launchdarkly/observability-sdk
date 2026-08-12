@@ -92,10 +92,6 @@ data class GraphQLLocation(
     val column: Int
 )
 
-interface UrlConnectionProvider {
-    fun openConnection(url: String): HttpURLConnection
-}
-
 /**
  * Generic GraphQL client for making HTTP requests to GraphQL endpoints
  */

@@ -1,6 +1,8 @@
 package com.launchdarkly.observability.replay.capture
 
-interface ImageCaptureServicing {
+import com.launchdarkly.observability.sdk.ImageCapturing
+
+interface ImageCaptureServicing : ImageCapturing {
     suspend fun captureRawFrame(): RawFrame?
 }
 

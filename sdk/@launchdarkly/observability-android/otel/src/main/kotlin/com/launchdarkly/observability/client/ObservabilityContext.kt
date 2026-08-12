@@ -1,0 +1,56 @@
+package com.launchdarkly.observability.client
+
+import android.app.Application
+import com.launchdarkly.observability.api.ObservabilityOptions
+import com.launchdarkly.observability.client.screen.ScreenViewEvent
+import com.launchdarkly.observability.context.ObserveLogger
+import io.opentelemetry.api.common.Attributes
+import kotlinx.coroutines.flow.SharedFlow
+
+/**
+ * Shared information between plugins.
+ */
+data class ObservabilityContext(
+    val sdkKey: String,
+    val options: ObservabilityOptions,
+    val application: Application,
+    val logger: ObserveLogger,
+    var sessionManager: LDSessionManaging? = null,
+    var resourceAttributes: Attributes = Attributes.empty(),
+    /**
+     * The single touch-capture hook owned by Observability. Session Replay consumes its
+     * [UserInteractionManaging.touchFlow] instead of intercepting windows itself.
+     */
+    var userInteractionManager: UserInteractionManaging? = null,
+    /**
+     * Ordered stream of recorded screen views (first screen and every change), owned by
+     * Observability. Session Replay consumes it to emit `Navigate` events.
+     */
+    var screenViewFlow: SharedFlow<ScreenViewEvent>? = null,
+    /**
+     * The automatic screen-view capture manager owned by Observability. Session Replay uses it to
+     * register an already-resumed activity on late init (e.g. React Native) so the first screen
+     * isn't missed.
+     */
+    var screenViewManager: ScreenViewCapturing? = null,
+    /**
+     * Ordered stream of `track` events from the single emitter, owned by Observability. Session
+     * Replay consumes it to emit `Track` timeline events for every track path (`LDClient.track`
+     * and the manual `LDObserve.track` API).
+     */
+    var trackFlow: SharedFlow<TrackEvent>? = null,
+    /**
+     * Ordered stream of app-lifecycle transitions (foreground/background) from the single emitter,
+     * owned by Observability. Session Replay consumes it to emit `Foreground` / `Background`
+     * timeline breadcrumbs.
+     */
+    var appLifecycleFlow: SharedFlow<AppLifecycleSignal>? = null,
+    /**
+     * The one-shot app-launch signal (resolved during Observability start, before Session Replay
+     * registers), owned by Observability. Cached synchronously rather than streamed because the
+     * launch fires before any Session Replay subscriber exists; Session Replay reads it directly
+     * when building the first wake-up batch to emit the `Launch` timeline breadcrumb.
+     */
+
+    var appLaunchSignal: AppLaunchSignal? = null,
+)
