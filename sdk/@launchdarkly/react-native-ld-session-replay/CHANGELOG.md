@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.22.1](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.22.0...session-replay-react-native-0.22.1) (2026-08-13)
+
+
+### Bug Fixes
+
+* **deps:** bump mobile bridges to observability-android 0.65.0 and client SDK 5.13.3 ([#720](https://github.com/launchdarkly/observability-sdk/issues/720)) ([b951c0c](https://github.com/launchdarkly/observability-sdk/commit/b951c0c038f99cb5025abf104b08865f1e24fe7a))
+
 ## [0.22.0](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.21.2...session-replay-react-native-0.22.0) (2026-08-12)
 
 
