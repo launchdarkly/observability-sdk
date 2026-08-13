@@ -4,6 +4,7 @@ import com.launchdarkly.observability.BuildConfig
 import com.launchdarkly.observability.replay.ReplayOptions
 import com.launchdarkly.observability.sdk.LDObserve
 import com.launchdarkly.sdk.android.LDClient
+import com.launchdarkly.sdk.android.integrations.DedupingHook
 import com.launchdarkly.sdk.android.integrations.EnvironmentMetadata
 import com.launchdarkly.sdk.android.integrations.Hook
 import com.launchdarkly.sdk.android.integrations.Plugin
@@ -53,7 +54,9 @@ class SessionReplay(
     }
 
     override fun getHooks(metadata: EnvironmentMetadata?): MutableList<Hook> {
-        return Collections.singletonList(sessionReplayHook)
+        // Deduplicate repeated identical evaluations (default 10-minute window).
+        // Resets after identify or when the evaluation result changes.
+        return Collections.singletonList(DedupingHook(sessionReplayHook))
     }
 
     override fun onPluginsReady(result: RegistrationCompleteResult?, metadata: EnvironmentMetadata?) {
