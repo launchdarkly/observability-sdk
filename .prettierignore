@@ -26,3 +26,4 @@ sdk/highlight-php
 sdk/@launchdarkly/observability-dotnet
 sdk/@launchdarkly/flutter
 sdk/@launchdarkly/mobile-dotnet
+e2e/skipapp-howdy
