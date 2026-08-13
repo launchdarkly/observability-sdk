@@ -299,7 +299,7 @@ internal class SessionReplayClientAdapter private constructor() {
             enabled = isEnabled,
             sampleRate = sampleRate,
             frameRate = frameRate,
-            scale = replayScale.toFloat(),
+            scale = replayScale,
             privacyProfile = PrivacyProfile(
                 maskTextInputs = maskTextInputs,
                 maskWebViews = maskWebViews,

@@ -27,7 +27,7 @@ class SessionReplayClientAdapterTest {
 
         assertTrue(options.enabled)
         assertEquals(1.0, options.frameRate)
-        assertEquals(1.0f, options.scale)
+        assertEquals(1.0, options.scale)
         assertEquals(1.0, options.sampleRate)
         assertTrue(options.privacyProfile.maskTextInputs)
         assertFalse(options.privacyProfile.maskWebViews)
@@ -82,7 +82,7 @@ class SessionReplayClientAdapterTest {
         val options = adapter.replayOptionsFrom(map)
 
         assertEquals(2.0, options.frameRate)
-        assertEquals(2.5f, options.scale)
+        assertEquals(2.5, options.scale)
         assertEquals(0.05f, options.privacyProfile.minimumAlpha)
         assertEquals(0.25, options.sampleRate)
     }
@@ -107,7 +107,7 @@ class SessionReplayClientAdapterTest {
 
         val options = adapter.replayOptionsFrom(map)
 
-        assertEquals(1.0f, options.scale)
+        assertEquals(1.0, options.scale)
     }
 
     @Test
