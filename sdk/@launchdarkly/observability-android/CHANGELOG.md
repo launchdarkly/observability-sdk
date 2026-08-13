@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.66.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.65.1...launchdarkly-observability-android-0.66.0) (2026-08-13)
+
+
+### Features
+
+* **android:** deduplicate flag evaluation telemetry with SDK DedupingHook ([#723](https://github.com/launchdarkly/observability-sdk/issues/723)) ([90d5e87](https://github.com/launchdarkly/observability-sdk/commit/90d5e87b955b7ec15247e4236e11f60b1a44b2b3))
+
 ## [0.65.1](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.65.0...launchdarkly-observability-android-0.65.1) (2026-08-13)
 
 
