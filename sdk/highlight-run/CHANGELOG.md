@@ -1,5 +1,12 @@
 # highlight.run
 
+## [10.7.1](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.7.0...highlight.run-10.7.1) (2026-08-13)
+
+
+### Bug Fixes
+
+* **highlight.run:** recover CSS-in-JS rules when another script unhooks rrweb ([#725](https://github.com/launchdarkly/observability-sdk/issues/725)) ([9faca28](https://github.com/launchdarkly/observability-sdk/commit/9faca2864c0a3f87b6a89eac7593431f3a485235))
+
 ## [10.7.0](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.6.0...highlight.run-10.7.0) (2026-08-07)
 
 
