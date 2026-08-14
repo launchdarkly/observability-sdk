@@ -4,12 +4,13 @@ import Foundation
 import PackageDescription
 
 // The OTel-only `LaunchDarklyOtel` product is not published yet, so iOS builds it from a
-// checkout of swift-launchdarkly-observability. Skip copies this manifest into the Swift
-// package it generates for Android, so a relative path would not survive; override
-// `LD_SWIFT_OBSERVABILITY_PATH` if the checkout lives elsewhere.
-let observabilityPath = ProcessInfo.processInfo.environment["LD_SWIFT_OBSERVABILITY_PATH"]
-    ?? FileManager.default.homeDirectoryForCurrentUser
-        .appendingPathComponent("flutter/swift-launchdarkly-observability").path
+// checkout of swift-launchdarkly-observability that sits alongside this repository. Skip
+// copies this manifest into the Swift package it generates for Android, so the sibling
+// path is resolved to an absolute one here rather than left relative.
+let observabilityPath = URL(fileURLWithPath: #filePath)
+    .deletingLastPathComponent()
+    .appendingPathComponent("../../../swift-launchdarkly-observability")
+    .standardized.path
 
 let package = Package(
     name: "skipapp-howdy",
@@ -24,7 +25,7 @@ let package = Package(
         // Official LaunchDarkly iOS / Apple client SDK. Android uses the Maven artifact
         // declared in Sources/HowdySkip/Skip/skip.yml instead. Pinned to the version
         // swift-launchdarkly-observability requires.
-        .package(url: "https://github.com/launchdarkly/ios-client-sdk.git", exact: "11.5.0-beta.1"),
+        .package(url: "https://github.com/launchdarkly/ios-client-sdk.git", exact: "11.5.0"),
         .package(path: observabilityPath),
     ],
     targets: [
