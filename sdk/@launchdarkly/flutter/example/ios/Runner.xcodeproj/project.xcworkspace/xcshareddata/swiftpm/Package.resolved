@@ -44,15 +44,6 @@
         "revision" : "57051701c58a93603ffa2051f8e9cf0c8cff7814",
         "version" : "3.3.0"
       }
-    },
-    {
-      "identity" : "swift-launchdarkly-observability",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/launchdarkly/swift-launchdarkly-observability.git",
-      "state" : {
-        "revision" : "1872c3f7f60d21f364afa3b4de85a5e8c5ee2f79",
-        "version" : "0.52.0"
-      }
     }
   ],
   "version" : 2
