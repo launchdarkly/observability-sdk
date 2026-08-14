@@ -46,7 +46,6 @@ import com.launchdarkly.sdk.EvaluationDetail
 import com.launchdarkly.sdk.LDValue
 import com.launchdarkly.sdk.android.integrations.EvaluationSeriesContext
 import com.launchdarkly.sdk.android.integrations.Hook
-import com.launchdarkly.sdk.android.integrations.IdentifySeriesContext
 
 /// Kotlin-side counterpart of the iOS exposure hook.
 ///
