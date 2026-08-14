@@ -157,6 +157,7 @@ On `SessionReplayOptions`:
 - `sampleRate` (`double`): probability from `0.0` to `1.0` that replay starts when enabled. Defaults to `1.0`.
 - `frameRate` (`double`): target capture rate in frames per second. Defaults to `1.0`.
 - `scale` (`double?`): replay capture resolution multiplier — `1.0` = 1x (160 DPI), `2.0` = 2x, etc. Higher values capture more detail but produce larger frames. `null` is treated as `1.0`. Defaults to `1.0`.
+- `imageQuality` (`double`): JPEG encoding quality of exported frames, from `0.0` (lowest quality, smallest payload) to `1.0` (highest quality, largest payload). Values outside that range are clamped. Defaults to `0.3`.
 
 ```dart
 LDObserve.init(
@@ -179,6 +180,7 @@ LDObserve.init(
     isEnabled: true,
     sampleRate: 0.25,
     frameRate: 2.0,
+    imageQuality: 0.2,
   ),
 );
 ```
