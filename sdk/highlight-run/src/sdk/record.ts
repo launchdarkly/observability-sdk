@@ -15,6 +15,7 @@ import {
 	Sdk,
 } from '../client/graph/generated/operations'
 import { PathListener } from '../client/listeners/path-listener'
+import { sanitizeUrl } from '../client/listeners/network-listener/utils/network-sanitizer'
 import { DebugOptions, SessionShortcutOptions } from '../client/types/client'
 import {
 	type Metadata,
@@ -679,11 +680,9 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 						document.referrer.includes(window.location.origin)
 					)
 				) {
-					this.addCustomEvent<string>('Referrer', document.referrer)
-					this.addProperties(
-						{ referrer: document.referrer },
-						{ type: 'session' },
-					)
+					const referrer = sanitizeUrl(document.referrer)
+					this.addCustomEvent<string>('Referrer', referrer)
+					this.addProperties({ referrer }, { type: 'session' })
 				}
 			}
 
@@ -815,15 +814,18 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 			}
 			this.listeners.push(
 				PathListener((url: string) => {
+					// PathListener hands back the raw href for change detection;
+					// redact before it lands in a recorded custom event.
+					const sanitized = sanitizeUrl(url)
 					if (this.reloaded) {
-						this.addCustomEvent<string>('Reload', url)
+						this.addCustomEvent<string>('Reload', sanitized)
 						this.reloaded = false
 						highlightThis.addProperties(
 							{ reload: true },
 							{ type: 'session' },
 						)
 					} else {
-						this.addCustomEvent<string>('Navigate', url)
+						this.addCustomEvent<string>('Navigate', sanitized)
 					}
 				}),
 			)
