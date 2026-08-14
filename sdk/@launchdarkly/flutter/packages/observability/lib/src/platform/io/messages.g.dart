@@ -352,6 +352,7 @@ class LDSessionReplayOptions {
     this.sampleRate,
     this.frameRate,
     this.scale,
+    this.imageQuality,
     this.privacy,
   });
 
@@ -365,6 +366,8 @@ class LDSessionReplayOptions {
 
   double? scale;
 
+  double? imageQuality;
+
   LDPrivacyOptions? privacy;
 
   List<Object?> _toList() {
@@ -374,6 +377,7 @@ class LDSessionReplayOptions {
       sampleRate,
       frameRate,
       scale,
+      imageQuality,
       privacy,
     ];
   }
@@ -390,7 +394,8 @@ class LDSessionReplayOptions {
       sampleRate: result[2] as double?,
       frameRate: result[3] as double?,
       scale: result[4] as double?,
-      privacy: result[5] as LDPrivacyOptions?,
+      imageQuality: result[5] as double?,
+      privacy: result[6] as LDPrivacyOptions?,
     );
   }
 

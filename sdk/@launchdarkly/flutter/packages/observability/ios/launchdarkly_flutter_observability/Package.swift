@@ -12,15 +12,26 @@ func isTruthy(_ value: String?) -> Bool {
 }
 
 let useLocalNativeSdk = isTruthy(ProcessInfo.processInfo.environment["LD_USE_LOCAL_NATIVE"])
+
+// Flutter's Swift Package Manager integration exposes this manifest to Xcode
+// through a symlink under `<app>/ios/Flutter/ephemeral/Packages/.packages`, and
+// SwiftPM resolves a relative dependency path against that symlink instead of
+// this directory. Resolve the manifest's real location first so the sibling
+// checkout is found however the package was reached.
+let localSwiftObservabilityPath = ProcessInfo.processInfo.environment["LD_SWIFT_OBSERVABILITY_PATH"]
+    ?? URL(fileURLWithPath: #filePath)
+        .resolvingSymlinksInPath()
+        .deletingLastPathComponent()
+        .appendingPathComponent("../../../../../../../../swift-launchdarkly-observability")
+        .standardizedFileURL
+        .path
+
 let swiftObservabilityDependency: Package.Dependency = if useLocalNativeSdk {
-    .package(
-        path: ProcessInfo.processInfo.environment["LD_SWIFT_OBSERVABILITY_PATH"]
-            ?? "../../../../../../../../swift-launchdarkly-observability"
-    )
+    .package(path: localSwiftObservabilityPath)
 } else {
     .package(
         url: "https://github.com/launchdarkly/swift-launchdarkly-observability.git",
-        .upToNextMinor(from: "0.50.0")
+        .upToNextMinor(from: "0.52.0")
     )
 }
 

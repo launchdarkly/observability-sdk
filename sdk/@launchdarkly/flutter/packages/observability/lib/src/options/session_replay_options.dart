@@ -28,6 +28,13 @@ class SessionReplayOptions {
   /// treated as `1.0`. Defaults to `1.0`.
   final double? scale;
 
+  /// JPEG encoding quality of exported frames, from `0.0` (lowest quality,
+  /// smallest payload) to `1.0` (highest quality, largest payload). Values
+  /// outside that range are clamped by the native SDK. Mirrors Android
+  /// `ReplayOptions.imageQuality` and iOS `SessionReplayOptions.imageQuality`.
+  /// Native-only. Defaults to `0.3`.
+  final double imageQuality;
+
   final PrivacyOptions privacy;
 
   const SessionReplayOptions({
@@ -36,6 +43,7 @@ class SessionReplayOptions {
     this.sampleRate = 1.0,
     this.frameRate = 1.0,
     this.scale = 1.0,
+    this.imageQuality = 0.3,
     this.privacy = const PrivacyOptions(),
   });
 }

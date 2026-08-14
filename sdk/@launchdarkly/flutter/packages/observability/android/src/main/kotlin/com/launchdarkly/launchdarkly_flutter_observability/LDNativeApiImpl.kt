@@ -131,6 +131,7 @@ internal class LDNativeApiImpl(
             sampleRate = replay.sampleRate ?: 1.0,
             frameRate = replay.frameRate ?: 1.0,
             scale = replayScale,
+            imageQuality = replay.imageQuality ?: 0.3,
             privacyProfile = PrivacyProfile(
                 maskTextInputs = maskTextInputs,
                 maskText = privacy?.maskLabels ?: false,

@@ -67,12 +67,13 @@ void main() {
   });
 
   group('SessionReplayOptions.toWire', () {
-    test('uses default sample rate, frame rate, and scale', () {
+    test('uses default sample rate, frame rate, scale, and image quality', () {
       final wire = const SessionReplayOptions().toWire();
 
       expect(wire.sampleRate, 1.0);
       expect(wire.frameRate, 1.0);
       expect(wire.scale, 1.0);
+      expect(wire.imageQuality, 0.3);
     });
 
     test('propagates a custom sample rate', () {
@@ -91,6 +92,12 @@ void main() {
       final wire = const SessionReplayOptions(scale: 2.0).toWire();
 
       expect(wire.scale, 2.0);
+    });
+
+    test('propagates a custom image quality', () {
+      final wire = const SessionReplayOptions(imageQuality: 0.75).toWire();
+
+      expect(wire.imageQuality, 0.75);
     });
 
     test('propagates a null scale to disable the scaling override', () {

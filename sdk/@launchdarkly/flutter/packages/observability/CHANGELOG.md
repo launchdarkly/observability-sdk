@@ -2,6 +2,13 @@
 
 All notable changes to the LaunchDarkly Observability SDK for Flutter will be documented in this file. This project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.15.2](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.15.1...launchdarkly_flutter_observability-0.15.2) (2026-08-13)
+
+
+### Features
+
+* expose Session Replay `imageQuality` and bump native SDKs to observability-android 0.66.0 and swift-launchdarkly-observability 0.52.0 ([#730](https://github.com/launchdarkly/observability-sdk/pull/730))
+
 ## [0.15.1](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.15.0...launchdarkly_flutter_observability-0.15.1) (2026-08-13)
 
 

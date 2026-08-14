@@ -73,6 +73,7 @@ class LDSessionReplayOptions {
   double? sampleRate;
   double? frameRate;
   double? scale;
+  double? imageQuality;
   LDPrivacyOptions? privacy;
 }
 

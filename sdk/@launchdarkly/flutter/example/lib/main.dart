@@ -115,6 +115,7 @@ void _startObservability() {
   );
   const replay = SessionReplayOptions(
     isEnabled: true,
+    imageQuality: 0.2,
     privacy: PrivacyOptions(
       maskTextInputs: true,
       maskWebViews: true,

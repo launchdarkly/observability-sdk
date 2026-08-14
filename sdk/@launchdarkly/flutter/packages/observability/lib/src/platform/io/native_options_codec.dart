@@ -57,6 +57,7 @@ extension SessionReplayOptionsWire on SessionReplayOptions {
     sampleRate: sampleRate,
     frameRate: frameRate,
     scale: scale,
+    imageQuality: imageQuality,
     privacy: privacy.toWire(),
   );
 }
