@@ -15,6 +15,10 @@ import { getElementXPath } from '@opentelemetry/sdk-trace-web'
 import { AsyncTask } from '@opentelemetry/instrumentation-user-interaction/build/esnext/internal-types'
 import { ProductAnalyticsEvents } from '../types/observe'
 import * as SemanticAttributes from '@opentelemetry/semantic-conventions'
+import {
+	sanitizeUrl,
+	sanitizedLocationHref,
+} from '../listeners/network-listener/utils/network-sanitizer'
 const ZONE_CONTEXT_KEY = 'OT_ZONE_CONTEXT'
 const EVENT_NAVIGATION_NAME = 'Navigation:'
 
@@ -134,14 +138,14 @@ export class UserInteractionInstrumentation extends InstrumentationBase {
 				{
 					attributes: {
 						[SemanticAttributes.ATTR_URL_FULL]:
-							window.location.href,
+							sanitizedLocationHref(),
 						['event.type']: eventName,
 						['event.tag']: element.tagName,
 						['event.xpath']: xpath,
 						['event.id']: element.id,
 						['event.classname']: element.className,
 						['event.text']: element.textContent ?? '',
-						['event.url']: window.location.href,
+						['event.url']: sanitizedLocationHref(),
 						['viewport.width']: window.innerWidth,
 						['viewport.height']: window.innerHeight,
 					},
@@ -477,7 +481,8 @@ export class UserInteractionInstrumentation extends InstrumentationBase {
 				const result = original.apply(this, args)
 				const urlAfter = `${location.pathname}${location.hash}${location.search}`
 				if (url !== urlAfter) {
-					plugin._updateInteractionName(urlAfter)
+					// Compare the raw URLs, but keep tokens out of the span name.
+					plugin._updateInteractionName(sanitizeUrl(urlAfter))
 				}
 				return result
 			}
