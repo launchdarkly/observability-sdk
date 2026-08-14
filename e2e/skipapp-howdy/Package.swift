@@ -24,7 +24,7 @@ let package = Package(
         // Official LaunchDarkly iOS / Apple client SDK. Android uses the Maven artifact
         // declared in Sources/HowdySkip/Skip/skip.yml instead. Pinned to the version
         // swift-launchdarkly-observability requires.
-        .package(url: "https://github.com/launchdarkly/ios-client-sdk.git", exact: "11.4.0-beta.1"),
+        .package(url: "https://github.com/launchdarkly/ios-client-sdk.git", exact: "11.5.0-beta.1"),
         .package(path: observabilityPath),
     ],
     targets: [
