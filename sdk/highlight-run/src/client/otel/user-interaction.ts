@@ -477,9 +477,12 @@ export class UserInteractionInstrumentation extends InstrumentationBase {
 				this: History,
 				...args: unknown[]
 			) {
-				const url = `${location.pathname}${location.hash}${location.search}`
+				// `search` before `hash` so the string is a well-formed URL.
+				// The reverse order makes `sanitizeUrl` read the query as part
+				// of the fragment, leaving tokens in both unredacted.
+				const url = `${location.pathname}${location.search}${location.hash}`
 				const result = original.apply(this, args)
-				const urlAfter = `${location.pathname}${location.hash}${location.search}`
+				const urlAfter = `${location.pathname}${location.search}${location.hash}`
 				if (url !== urlAfter) {
 					// Compare the raw URLs, but keep tokens out of the span name.
 					plugin._updateInteractionName(sanitizeUrl(urlAfter))
