@@ -52,30 +52,43 @@ func TestTraceSampler_ShouldSample_WithUnsampledParent(t *testing.T) {
 	}
 	sampler := getSampler(rates)
 
-	parentContext := trace.NewSpanContext(trace.SpanContextConfig{
-		TraceID:    trace.TraceID{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
-		SpanID:     trace.SpanID{1, 2, 3, 4, 5, 6, 7, 8},
-		TraceFlags: 0,
-	})
-	ctx := trace.ContextWithSpanContext(context.Background(), parentContext)
-
 	// Trace ID would sample at any positive rate, and Producer is 100%.
 	traceID := trace.TraceID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x20}
 
-	for _, kind := range []trace.SpanKind{trace.SpanKindServer, trace.SpanKindProducer} {
-		result := sampler.ShouldSample(sdktrace.SamplingParameters{
-			ParentContext: ctx,
-			TraceID:       traceID,
-			Name:          "test-span",
-			Kind:          kind,
+	// Local covers in-process parents; remote covers the propagated-header
+	// case that motivated this change (unsampled parent from another service).
+	for _, tc := range []struct {
+		name   string
+		remote bool
+	}{
+		{name: "local", remote: false},
+		{name: "remote", remote: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			parentContext := trace.NewSpanContext(trace.SpanContextConfig{
+				TraceID:    trace.TraceID{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+				SpanID:     trace.SpanID{1, 2, 3, 4, 5, 6, 7, 8},
+				TraceFlags: 0,
+				Remote:     tc.remote,
+			})
+			ctx := trace.ContextWithSpanContext(context.Background(), parentContext)
+
+			for _, kind := range []trace.SpanKind{trace.SpanKindServer, trace.SpanKindProducer} {
+				result := sampler.ShouldSample(sdktrace.SamplingParameters{
+					ParentContext: ctx,
+					TraceID:       traceID,
+					Name:          "test-span",
+					Kind:          kind,
+				})
+				if result.Decision != sdktrace.Drop {
+					t.Errorf("kind %v: expected Drop when parent is unsampled, got %v", kind, result.Decision)
+				}
+			}
 		})
-		if result.Decision != sdktrace.Drop {
-			t.Errorf("kind %v: expected Drop when parent is unsampled, got %v", kind, result.Decision)
-		}
 	}
 }
 
-func TestTraceSampler_ShouldSample_WithUnsampledParent_AboveThreshold(t *testing.T) {
+func TestTraceSampler_ShouldSample_NoParent_AboveThreshold(t *testing.T) {
 	// Create a sampler with specific rates
 	rates := map[trace.SpanKind]float64{
 		trace.SpanKindServer: 0.5,
@@ -110,7 +123,7 @@ func TestTraceSampler_ShouldSample_WithUnsampledParent_AboveThreshold(t *testing
 	}
 }
 
-func TestTraceSampler_ShouldSample_WithUnsampledParent_NoParentContext(t *testing.T) {
+func TestTraceSampler_ShouldSample_NoParent(t *testing.T) {
 	// Create a sampler with specific rates
 	rates := map[trace.SpanKind]float64{
 		trace.SpanKindServer: 0.5,
@@ -133,7 +146,7 @@ func TestTraceSampler_ShouldSample_WithUnsampledParent_NoParentContext(t *testin
 	}
 }
 
-func TestTraceSampler_ShouldSample_WithUnsampledParent_UnspecifiedKind(t *testing.T) {
+func TestTraceSampler_ShouldSample_NoParent_UnspecifiedKind(t *testing.T) {
 	// Create a sampler with specific rates but no Unspecified kind
 	rates := map[trace.SpanKind]float64{
 		trace.SpanKindServer: 0.5,
@@ -156,7 +169,7 @@ func TestTraceSampler_ShouldSample_WithUnsampledParent_UnspecifiedKind(t *testin
 	}
 }
 
-func TestTraceSampler_ShouldSample_WithUnsampledParent_UnspecifiedKindWithDefault(t *testing.T) {
+func TestTraceSampler_ShouldSample_NoParent_UnspecifiedKindWithDefault(t *testing.T) {
 	// Create a sampler with specific rates including Unspecified kind
 	rates := map[trace.SpanKind]float64{
 		trace.SpanKindServer:      0.5,
@@ -180,7 +193,7 @@ func TestTraceSampler_ShouldSample_WithUnsampledParent_UnspecifiedKindWithDefaul
 	}
 }
 
-func TestTraceSampler_ShouldSample_WithUnsampledParent_UnknownKind(t *testing.T) {
+func TestTraceSampler_ShouldSample_NoParent_UnknownKind(t *testing.T) {
 	// Create a sampler with specific rates but no Client kind
 	rates := map[trace.SpanKind]float64{
 		trace.SpanKindServer: 0.5,
@@ -203,7 +216,7 @@ func TestTraceSampler_ShouldSample_WithUnsampledParent_UnknownKind(t *testing.T)
 	}
 }
 
-func TestTraceSampler_ShouldSample_WithUnsampledParent_UnknownKindWithUnspecifiedFallback(t *testing.T) {
+func TestTraceSampler_ShouldSample_NoParent_UnknownKindWithUnspecifiedFallback(t *testing.T) {
 	// Create a sampler with specific rates including Unspecified kind as fallback
 	rates := map[trace.SpanKind]float64{
 		trace.SpanKindServer:      0.5,
@@ -227,7 +240,7 @@ func TestTraceSampler_ShouldSample_WithUnsampledParent_UnknownKindWithUnspecifie
 	}
 }
 
-func TestTraceSampler_ShouldSample_WithUnsampledParent_UnknownKindWithUnspecifiedFallback_AboveThreshold(t *testing.T) {
+func TestTraceSampler_ShouldSample_NoParent_UnknownKindWithUnspecifiedFallback_AboveThreshold(t *testing.T) {
 	// Create a sampler with specific rates including Unspecified kind as fallback
 	rates := map[trace.SpanKind]float64{
 		trace.SpanKindServer:      0.5,
