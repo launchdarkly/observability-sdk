@@ -22,6 +22,17 @@ func (ts traceSampler) ShouldSample(p sdktrace.SamplingParameters) sdktrace.Samp
 			Tracestate: psc.TraceState(),
 		}
 	}
+	// A valid unsampled parent already decided this trace. Do not let the
+	// child's SpanKind re-roll — that would sample-in Producer children of
+	// dropped Internal/Consumer work (e.g. kafka.submit under GraphQL).
+	// Kind rates apply only to roots (no parent), which is how customer
+	// replay spans and explicit sample-in hacks start.
+	if psc.IsValid() {
+		return sdktrace.SamplingResult{
+			Decision:   sdktrace.Drop,
+			Tracestate: psc.TraceState(),
+		}
+	}
 	bound, ok := ts.traceIDUpperBounds[p.Kind]
 	if !ok {
 		bound, ok = ts.traceIDUpperBounds[trace.SpanKindUnspecified]
