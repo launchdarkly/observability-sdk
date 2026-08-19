@@ -68,7 +68,12 @@ data class MaskContext(
  * If multiple rules at the same level conflict (e.g. the same view is both `ldMask`-tagged and
  * `ldUnmask`-tagged), mask wins over unmask.
  */
-class MaskCollector(private val logger: ObserveLogger) {
+class MaskCollector internal constructor(
+    private val logger: ObserveLogger,
+    private val nativeStretchOf: (View) -> StretchDisplacement?,
+) {
+    constructor(logger: ObserveLogger) : this(logger, StretchOverscroll::displacementIn)
+
     /**
      * Find sensitive areas from all views under [root] and return a list of masks describing
      * regions that should be redacted in the recorded frame.
@@ -135,11 +140,38 @@ class MaskCollector(private val logger: ObserveLogger) {
         // masks" pass.
         cullCoveredMasks(view, masks)
 
+        // A stretch overscroll distorts the pixels this container already recorded without moving
+        // anything in the tree, so the masks its subtree is about to emit describe an undistorted
+        // layout that was never rendered. Grow them by however far the stretch can displace
+        // content; nested containers compound, each growing what its own subtree emitted.
+        val stretch = nativeStretchOf(view)
+        val firstSubtreeMask = masks.size
+
         when {
             abstractComposeViewClass?.isInstance(view) == true -> traverseCompose(view, inherited, context, masks)
             isAndroidComposeView(view) -> traverseAndroidComposeView(view, inherited, context, masks)
             else -> traverseNative(view, inherited, context, masks)
         }
+
+        if (stretch != null) {
+            inflateMasks(masks, from = firstSubtreeMask, stretch = stretch)
+        }
+    }
+
+    /**
+     * Grows every mask from index [from] onwards by [stretch]. Those are exactly the masks emitted
+     * by the subtree of the container being stretched.
+     */
+    private fun inflateMasks(masks: MutableList<Mask>, from: Int, stretch: StretchDisplacement) {
+        if (from >= masks.size) return
+
+        for (i in from until masks.size) {
+            masks[i].inflate(stretch.dx, stretch.dy)
+        }
+        logger.debug(
+            "Stretch overscroll: grew ${masks.size - from} mask(s) by " +
+                "(${stretch.dx}, ${stretch.dy})px"
+        )
     }
 
     /**
@@ -213,6 +245,12 @@ class MaskCollector(private val logger: ObserveLogger) {
         masks: MutableList<Mask>
     ) {
         val resolvedExplicit = resolveExplicit(target, inherited, context)
+
+        // See the stretch handling in [traverse]: a Compose scrollable distorts its content the
+        // same way, and its semantics bounds are just as blind to it.
+        val stretch = ComposeStretchOverscroll.displacementIn(target.rootNode)
+        val firstSubtreeMask = masks.size
+
         if (shouldMask(target, resolvedExplicit, context)) {
             target.mask(context)?.let { masks += it }
         }
@@ -225,6 +263,10 @@ class MaskCollector(private val logger: ObserveLogger) {
                 boundsInWindow = child.boundsInWindow
             )
             traverseComposeNodes(childTarget, resolvedExplicit, context, masks)
+        }
+
+        if (stretch != null) {
+            inflateMasks(masks, from = firstSubtreeMask, stretch = stretch)
         }
     }
 
