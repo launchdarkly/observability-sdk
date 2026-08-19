@@ -1,10 +1,14 @@
 package com.launchdarkly.observability.replay.masking
 
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.view.View
 import android.view.ViewGroup
 import com.launchdarkly.observability.context.ObserveLogger
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
@@ -27,6 +31,22 @@ class MaskCollectorStretchTest {
         every { it.width } returns 10
         every { it.height } returns 10
         every { it.id } returns View.NO_ID
+    }
+
+    /**
+     * Leaf that paints a solid opaque fill, so it absorbs the masks collected before it. Emits no
+     * mask of its own. Every rect is all-zero here, so it covers any axis-aligned mask.
+     */
+    private fun opaqueLeaf(): View = mockk<View>(relaxed = true).also {
+        every { it.isShown } returns true
+        every { it.alpha } returns 1f
+        every { it.getTag(any()) } returns null
+        every { it.width } returns 100
+        every { it.height } returns 100
+        every { it.id } returns View.NO_ID
+        every { it.background } returns mockk<ColorDrawable>(relaxed = true) {
+            every { alpha } returns 255
+        }
     }
 
     private fun group(vararg children: View): ViewGroup = mockk<ViewGroup>(relaxed = true).also {
@@ -83,6 +103,34 @@ class MaskCollectorStretchTest {
         assertEquals(0f, masks[0].rect.top)
         assertEquals(0f, masks[0].rect.right)
         assertEquals(0f, masks[0].rect.bottom)
+    }
+
+    @Test
+    fun `grows the subtree's masks even when culling drops an earlier one`() {
+        // An opaque child inside the scroller absorbs the mask that the leaf behind it emitted,
+        // shortening the list mid-walk. The scroller's own mask must still grow.
+        val culledLeaf = maskedLeaf()
+        val stretchedLeaf = maskedLeaf()
+        // Visited before the leaf, so the mask it absorbs is the one from outside the scroller.
+        val scroller = group(opaqueLeaf(), stretchedLeaf)
+        val root = group(culledLeaf, scroller)
+
+        mockkStatic(Color::class)
+        try {
+            every { Color.alpha(any()) } returns 255
+
+            val masks = collect(root) { view ->
+                if (view === scroller) StretchDisplacement(dx = 4f, dy = 8f) else null
+            }
+
+            assertEquals(1, masks.size)
+            assertEquals(-4f, masks[0].rect.left)
+            assertEquals(-8f, masks[0].rect.top)
+            assertEquals(4f, masks[0].rect.right)
+            assertEquals(8f, masks[0].rect.bottom)
+        } finally {
+            unmockkStatic(Color::class)
+        }
     }
 
     @Test
