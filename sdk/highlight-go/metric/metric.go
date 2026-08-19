@@ -7,12 +7,35 @@ import (
 	"math/rand"
 )
 
+// HistogramConfig configures histogram instrument creation for a single record call.
+type HistogramConfig struct {
+	Unit        string
+	Description string
+	Boundaries  []float64
+}
+
 // Histogram tracks the statistical distribution of a set of values on each host.
 func Histogram(ctx context.Context, name string, value float64, tags []attribute.KeyValue, rate float64) {
+	HistogramWithConfig(ctx, name, value, tags, rate, HistogramConfig{})
+}
+
+// HistogramWithConfig records a histogram value with explicit instrument options.
+func HistogramWithConfig(
+	ctx context.Context,
+	name string,
+	value float64,
+	tags []attribute.KeyValue,
+	rate float64,
+	config HistogramConfig,
+) {
 	if rand.Float64() > rate {
 		return
 	}
-	highlight.RecordHistogram(ctx, name, value, tags...)
+	highlight.RecordHistogramWithConfig(ctx, name, value, highlight.HistogramConfig{
+		Unit:        config.Unit,
+		Description: config.Description,
+		Boundaries:  config.Boundaries,
+	}, tags...)
 }
 
 // Incr is just Count of 1

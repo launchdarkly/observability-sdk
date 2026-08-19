@@ -452,12 +452,32 @@ func RecordMetric(ctx context.Context, name string, value float64, tags ...attri
 }
 
 func RecordHistogram(ctx context.Context, name string, value float64, tags ...attribute.KeyValue) {
+	RecordHistogramWithConfig(ctx, name, value, HistogramConfig{}, tags...)
+}
+
+// HistogramConfig configures histogram instrument creation.
+type HistogramConfig struct {
+	Unit        string
+	Description string
+	Boundaries  []float64
+}
+
+func RecordHistogramWithConfig(
+	ctx context.Context,
+	name string,
+	value float64,
+	config HistogramConfig,
+	tags ...attribute.KeyValue,
+) {
 	var err error
 	float64HistogramsLock.RLock()
 	if h := float64Histograms[name]; h == nil {
 		float64HistogramsLock.RUnlock()
 		float64HistogramsLock.Lock()
-		float64Histograms[name], err = defaultMeter.Float64Histogram(name)
+		if h := float64Histograms[name]; h == nil {
+			opts := histogramInstrumentOptions(config)
+			float64Histograms[name], err = defaultMeter.Float64Histogram(name, opts...)
+		}
 		float64HistogramsLock.Unlock()
 		if err != nil {
 			fmt.Printf("error creating float64 histogram %s: %v", name, err)
@@ -468,6 +488,20 @@ func RecordHistogram(ctx context.Context, name string, value float64, tags ...at
 	}
 	metricCtx, tags := getMetricContext(ctx, nil, tags...)
 	float64Histograms[name].Record(metricCtx, value, metric.WithAttributes(tags...))
+}
+
+func histogramInstrumentOptions(config HistogramConfig) []metric.Float64HistogramOption {
+	opts := make([]metric.Float64HistogramOption, 0, 3)
+	if config.Unit != "" {
+		opts = append(opts, metric.WithUnit(config.Unit))
+	}
+	if config.Description != "" {
+		opts = append(opts, metric.WithDescription(config.Description))
+	}
+	if len(config.Boundaries) > 0 {
+		opts = append(opts, metric.WithExplicitBucketBoundaries(config.Boundaries...))
+	}
+	return opts
 }
 
 func RecordCount(ctx context.Context, name string, value int64, tags ...attribute.KeyValue) {
