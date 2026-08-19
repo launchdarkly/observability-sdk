@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.22.2](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.22.1...session-replay-react-native-0.22.2) (2026-08-19)
+
+
+### Bug Fixes
+
+* remediate dependency vulnerabilities across npm, go, pip, and rubygems ([#732](https://github.com/launchdarkly/observability-sdk/issues/732)) ([9cbe8d5](https://github.com/launchdarkly/observability-sdk/commit/9cbe8d586266d3d23c063bb8ae1c6621a745776c))
+
 ## [0.22.1](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.22.0...session-replay-react-native-0.22.1) (2026-08-13)
 
 

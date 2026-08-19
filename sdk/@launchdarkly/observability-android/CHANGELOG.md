@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.66.1](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.66.0...launchdarkly-observability-android-0.66.1) (2026-08-19)
+
+
+### Bug Fixes
+
+* **android:** anchor session replay masks to the rendered frame and cover stretch overscroll (Rubber animation) ([#739](https://github.com/launchdarkly/observability-sdk/issues/739)) ([b2f151a](https://github.com/launchdarkly/observability-sdk/commit/b2f151a287904dfc461db2beaaa6a1529e062bad))
+
 ## [0.66.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.65.1...launchdarkly-observability-android-0.66.0) (2026-08-13)
 
 
