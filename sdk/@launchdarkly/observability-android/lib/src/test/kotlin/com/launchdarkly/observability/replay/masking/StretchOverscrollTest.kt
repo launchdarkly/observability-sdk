@@ -96,8 +96,8 @@ class StretchOverscrollTest {
 
         val displacement = StretchOverscroll.displacementOf(scroller, width = 1000, height = 2000)
 
-        // A tenth of a pull already spends about two thirds of the effect; scaling the 0.032 cap
-        // linearly would have covered only ~8px of the ~26px the framework actually displaces.
+        // The framework displaces ~21px here, a third of its 64px maximum, for a tenth of a pull.
+        // With slack that is ~26px; scaling the 0.032 cap linearly would have covered only ~8px.
         assertEquals(26.5f, displacement!!.dy, 1f)
     }
 

@@ -118,20 +118,25 @@ internal object StretchOverscroll {
      * Fraction of a container's size that content is displaced by at pull distance [distance].
      *
      * Mirrors `EdgeEffect.dampStretchVector`, whose result is what the framework hands to
-     * `RenderNode.stretch` alongside the container's width and height as the pixel scale. The curve
-     * rises steeply — a tenth of a pull already spends two thirds of the effect — so scaling
-     * linearly with [distance] would undercover exactly the gentle overscrolls that are most common.
-     * Results carry [SAFETY_MARGIN] of slack so a future retune of the curve degrades into slightly
+     * `RenderNode.stretch` alongside the container's width and height as the pixel scale. The
+     * expression below is kept in the framework's shape, constant for constant, so it can be diffed
+     * against the original — including the `Math.E` in its scalar, which is easy to mistake for a
+     * stray factor.
+     *
+     * The curve rises steeply: a third of a pull already spends two thirds of the effect, and a
+     * tenth spends a third of it. Scaling linearly with [distance] instead would undercover by
+     * roughly a factor of three exactly the gentle overscrolls that are the common case. Results
+     * carry [SAFETY_MARGIN] of slack on top, so a future retune of the curve degrades into slightly
      * oversized masks rather than exposed content.
      */
     private fun stretchFraction(distance: Float): Float {
         if (distance <= 0f) return 0f
 
         val pull = distance.coerceAtMost(1f)
-        val linear = LINEAR_STRETCH_INTENSITY * pull
-        val exponential =
-            EXP_STRETCH_INTENSITY * (1 - exp(-pull * E / SCROLL_DIST_AFFECTED_BY_EXP_STRETCH))
-        return ((linear + exponential) * SAFETY_MARGIN).toFloat()
+        val linearIntensity = LINEAR_STRETCH_INTENSITY * pull
+        val scalar = E / SCROLL_DIST_AFFECTED_BY_EXP_STRETCH
+        val expIntensity = EXP_STRETCH_INTENSITY * (1 - exp(-pull * scalar))
+        return ((linearIntensity + expIntensity) * SAFETY_MARGIN).toFloat()
     }
 
     /** Axis a stretch distorts content along. */
@@ -195,7 +200,8 @@ internal object StretchOverscroll {
         }
     }
 
-    // From AOSP's android.widget.EdgeEffect.
+    // From AOSP's android.widget.EdgeEffect, where the stretch caps at their sum, 3.2% of the
+    // container.
     private const val LINEAR_STRETCH_INTENSITY = 0.016
     private const val EXP_STRETCH_INTENSITY = 0.016
     private const val SCROLL_DIST_AFFECTED_BY_EXP_STRETCH = 0.33
