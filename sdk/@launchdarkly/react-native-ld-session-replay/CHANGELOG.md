@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.23.0](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.22.2...session-replay-react-native-0.23.0) (2026-08-20)
+
+
+### Features
+
+* **react-native:** fix lagging masks and imageQuality option ([#734](https://github.com/launchdarkly/observability-sdk/issues/734)) ([d0e2f99](https://github.com/launchdarkly/observability-sdk/commit/d0e2f99eb0c554eb1a1a9213d19c320f5c40e8f0))
+
 ## [0.22.2](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.22.1...session-replay-react-native-0.22.2) (2026-08-19)
 
 
