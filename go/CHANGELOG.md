@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.2](https://github.com/launchdarkly/observability-sdk/compare/go/v1.2.1...go/v1.2.2) (2026-08-17)
+
+
+### Bug Fixes
+
+* **go:** Honor unsampled parent in span-kind sampler ([#722](https://github.com/launchdarkly/observability-sdk/issues/722)) ([a3cc841](https://github.com/launchdarkly/observability-sdk/commit/a3cc84136938bde76e9dd22415ff0df5c4b9e47b))
+
 ## [1.2.1](https://github.com/launchdarkly/observability-sdk/compare/go/v1.2.0...go/v1.2.1) (2026-08-04)
 
 

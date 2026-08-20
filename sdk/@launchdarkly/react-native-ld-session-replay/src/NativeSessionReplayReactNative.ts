@@ -60,6 +60,14 @@ export type SessionReplayOptions = {
   scale?: number;
 
   /**
+   * JPEG encoding quality of exported frames, from `0.0` (lowest quality,
+   * smallest payload) to `1.0` (highest quality, largest payload). Values
+   * outside that range are clamped by the native SDK. Applied on iOS and
+   * Android. Defaults to `0.3`.
+   */
+  imageQuality?: number;
+
+  /**
    * Mask views whose effective opacity is below this threshold (0.0–1.0).
    * Defaults to `0.02`.
    */
