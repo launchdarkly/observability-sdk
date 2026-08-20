@@ -51,7 +51,7 @@ import com.launchdarkly.sdk.android.integrations.Hook
 ///
 /// `LDObserve` lives on the Kotlin side, so `recordExposure` starts and immediately
 /// ends the same `flag_exposure` span produced by `LaunchDarklyObserve.recordSpan`
-/// on iOS. Deduplication is provided by Android SDK 5.14's `DedupingHook`; this
+/// on iOS. Deduplication is provided by Android SDK 5.15's `DedupingHook`; this
 /// hook deliberately keeps no exposure cache or identify-reset logic of its own.
 // SKIP @nobridge
 public class ExposureHook: Hook {

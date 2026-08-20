@@ -61,6 +61,12 @@ struct WelcomeView : View {
                 FlagsView()
                 Divider().padding(.horizontal, 40)
                 ObserveView()
+
+                if let built = BuildInfo.displayString {
+                    Text("Compiled \(built)")
+                        .font(.caption2.monospaced())
+                        .foregroundStyle(.secondary)
+                }
             }
             .padding()
         }
