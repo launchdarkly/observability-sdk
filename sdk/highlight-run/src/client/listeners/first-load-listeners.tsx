@@ -13,7 +13,10 @@ import {
 	WebSocketEvent,
 	WebSocketRequest,
 } from './network-listener/utils/models'
-import { DEFAULT_URL_BLOCKLIST } from './network-listener/utils/network-sanitizer'
+import {
+	DEFAULT_URL_BLOCKLIST,
+	sanitizedLocationHref,
+} from './network-listener/utils/network-sanitizer'
 import {
 	matchPerformanceTimingsWithRequestResponsePair,
 	shouldNetworkRequestBeRecorded,
@@ -95,7 +98,7 @@ export class FirstLoadListeners {
 							highlightThis.errors.push({
 								event: errorValue,
 								type: 'console.error',
-								url: window.location.href,
+								url: sanitizedLocationHref(),
 								source: c.trace[0]?.fileName
 									? c.trace[0].fileName
 									: '',
