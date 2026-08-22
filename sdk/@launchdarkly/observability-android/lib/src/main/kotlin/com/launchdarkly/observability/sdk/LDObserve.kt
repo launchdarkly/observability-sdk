@@ -11,10 +11,14 @@ import com.launchdarkly.observability.client.buildObservabilityResource
 import com.launchdarkly.observability.client.readInjectedSymbolsId
 import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.observability.interfaces.Observe
+import com.launchdarkly.observability.plugin.Observability
 import com.launchdarkly.observability.replay.ReplayOptions
+import com.launchdarkly.observability.replay.SessionReplayService
 import com.launchdarkly.observability.replay.capture.ImageCaptureServicing
+import com.launchdarkly.observability.replay.plugin.SessionReplay
 import com.launchdarkly.observability.replay.plugin.SessionReplayPluginImpl
 import com.launchdarkly.observability.util.runOnMainThread
+import com.launchdarkly.sdk.android.LDClient
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Severity
 import io.opentelemetry.api.trace.Span
@@ -71,6 +75,10 @@ class LDObserve(private val client: Observe) : Observe {
         client.flush()
     }
 
+    override fun identify(contextKeys: Map<String, String>, canonicalKey: String, attributes: Map<String, Any?>?) {
+        client.identify(contextKeys, canonicalKey, attributes)
+    }
+
     override fun track(key: String, properties: Map<String, Any?>?, metricValue: Double?) {
         client.track(key, properties, metricValue)
     }
@@ -99,6 +107,7 @@ class LDObserve(private val client: Observe) : Observe {
                 return Span.getInvalid()
             }
             override fun flush() {}
+            override fun identify(contextKeys: Map<String, String>, canonicalKey: String, attributes: Map<String, Any?>?) {}
             override fun track(key: String, properties: Map<String, Any?>?, metricValue: Double?) {}
             override fun trackScreenView(name: String, screenClass: String?, screenId: String?, category: String?, properties: Map<String, Any?>?) {}
             override fun trackClick(id: String?, tag: String?, text: String?, screenId: String?, x: Int?, y: Int?, properties: Map<String, Any?>?) {}
@@ -109,6 +118,20 @@ class LDObserve(private val client: Observe) : Observe {
          */
         @Volatile
         var context: ObservabilityContext? = null
+            internal set
+
+        /**
+         * Whether observability is attached to an initialized [LDClient], which is the case when the
+         * plugin was registered with one — through [init] or
+         * [com.launchdarkly.sdk.android.LDConfig.Builder.plugins].
+         *
+         * `false` after a standalone [init], where no feature-flag SDK is present: nothing can be
+         * evaluated, [LDClient.identify] and `LDClient.track` are unavailable, and telemetry is
+         * attributed through [identify] instead. Hosts that support both setups can read this to hide
+         * what the flagging SDK would drive.
+         */
+        @Volatile
+        var isFlagClientInitialized: Boolean = false
             internal set
 
         @Volatile
@@ -186,6 +209,80 @@ class LDObserve(private val client: Observe) : Observe {
         }
 
         /**
+         * Initialization that attaches observability (and optionally session replay) to an already
+         * initialized [LDClient], so that flag evaluations, identify calls, and track calls made
+         * through that client are instrumented.
+         *
+         * This takes the same arguments as the standalone [init] above, differing only in that the
+         * environment comes from [ldClient] rather than a mobile key. Prefer it over passing
+         * [Observability] and [SessionReplay] to
+         * [com.launchdarkly.sdk.android.LDConfig.Builder.plugins]: the client's configuration is
+         * left alone, and observability is set up the same way whether or not the flagging SDK is
+         * involved.
+         *
+         * @param application The Android [Application] instance.
+         * @param ldClient    The initialized [LDClient] to instrument.
+         * @param ldContext    The [LDObserveContext] identifying the current user/context.
+         * @param observability      Configuration for observability telemetry.
+         * @param replay Optional configuration for session replay. Pass `null` (the default)
+         *                      to skip session replay initialization.
+         * @param imageCaptureService Optional capture implementation for session replay.
+         * @param customSessionId Optional session id to adopt instead of generating one, so this
+         *                      instance can share a single `session.id` with another LaunchDarkly
+         *                      SDK on the device. When null, a session id is generated automatically.
+         */
+        fun init(
+            application: Application,
+            ldClient: LDClient,
+            ldContext: LDObserveContext,
+            observability: ObservabilityOptions = ObservabilityOptions(),
+            replay: ReplayOptions? = null,
+            imageCaptureService: ImageCaptureServicing? = null,
+            customSessionId: String? = null,
+        ) {
+            // Both plugins install OpenTelemetry instrumentations during registration, for the same
+            // reasons the standalone init above documents, so registration runs on the main thread
+            // and blocks the caller until the SDK is ready.
+            runOnMainThread {
+                // Observability goes first: registering session replay reads the ObservabilityContext
+                // that registering observability publishes.
+                ldClient.registerPlugin(
+                    Observability(
+                        application = application,
+                        options = observability,
+                        customSessionId = customSessionId,
+                        expectedMobileKey = null,
+                    )
+                )
+                if (replay != null) {
+                    registerSessionReplay(ldClient, replay, ldContext, imageCaptureService)
+                }
+            }
+        }
+
+        /**
+         * Registers session replay with [ldClient] and, if it came up, records the context it starts
+         * with.
+         *
+         * A plugin registered on a running client misses that client's initial identify, so session
+         * replay would otherwise have no context until the next one — hence the explicit seed, which
+         * is what [installSessionReplay] does for the standalone path.
+         *
+         * Must run on the main thread; called from inside the [runOnMainThread] block in [init].
+         */
+        private fun registerSessionReplay(
+            ldClient: LDClient,
+            replayOptions: ReplayOptions,
+            ldContext: LDObserveContext,
+            imageCaptureService: ImageCaptureServicing?,
+        ) {
+            val plugin = SessionReplay(replayOptions, imageCaptureService)
+            ldClient.registerPlugin(plugin)
+            val replayService = plugin.liveSessionReplayService ?: return
+            seedInitialIdentify(replayService, ldContext)
+        }
+
+        /**
          * Constructs the [ObservabilityService], publishes it as the active [LDObserve] delegate,
          * and finishes wiring [obsContext] (sessionManager + global publication).
          *
@@ -208,6 +305,7 @@ class LDObserve(private val client: Observe) : Observe {
             obsContext.screenViewFlow = service.screenViewFlow
             obsContext.screenViewManager = service.screenViewManager
             obsContext.trackFlow = service.trackFlow
+            obsContext.identifyFlow = service.identifyFlow
             obsContext.appLifecycleFlow = service.appLifecycleFlow
             obsContext.appLaunchSignal = service.appLaunchSignal
             context = obsContext
@@ -232,6 +330,17 @@ class LDObserve(private val client: Observe) : Observe {
             plugin.register(obsContext)
             if (!plugin.initialize()) return
             val replayService = plugin.sessionReplayService ?: return
+            seedInitialIdentify(replayService, ldContext)
+        }
+
+        /**
+         * Records the context session replay starts with. Runs off the main thread because the
+         * identify is exported over the network.
+         */
+        private fun seedInitialIdentify(
+            replayService: SessionReplayService,
+            ldContext: LDObserveContext,
+        ) {
             CoroutineScope(Dispatchers.Default + SupervisorJob()).launch {
                 replayService.identifySession(ldContext)
             }
@@ -246,6 +355,7 @@ class LDObserve(private val client: Observe) : Observe {
         override fun recordLog(message: String, severity: Severity, attributes: Attributes, spanContext: SpanContext?) = delegate.recordLog(message, severity, attributes, spanContext)
         override fun startSpan(name: String, attributes: Attributes): Span = delegate.startSpan(name, attributes)
         override fun flush() = delegate.flush()
+        override fun identify(contextKeys: Map<String, String>, canonicalKey: String, attributes: Map<String, Any?>?) = delegate.identify(contextKeys, canonicalKey, attributes)
         override fun track(key: String, properties: Map<String, Any?>?, metricValue: Double?) = delegate.track(key, properties, metricValue)
         override fun trackScreenView(name: String, screenClass: String?, screenId: String?, category: String?, properties: Map<String, Any?>?) = delegate.trackScreenView(name, screenClass, screenId, category, properties)
         override fun trackClick(id: String?, tag: String?, text: String?, screenId: String?, x: Int?, y: Int?, properties: Map<String, Any?>?) = delegate.trackClick(id, tag, text, screenId, x, y, properties)

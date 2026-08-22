@@ -46,7 +46,7 @@ class TestApplication : BaseApplication() {
         val inspector = InMemoryTelemetryInspector()
         telemetryInspector = inspector
         observabilityOptions = observabilityOptions.copy(telemetryInspector = inspector)
-        super.realInit()
+        super.initWithFlagClient()
     }
 
     /**

@@ -59,6 +59,7 @@ import com.example.androidobservability.ui.theme.DangerRed
 import com.example.androidobservability.ui.theme.IdentifyBgColor
 import com.example.androidobservability.ui.theme.IdentifyTextColor
 import com.launchdarkly.observability.api.ldId
+import com.launchdarkly.observability.sdk.LDObserve
 import com.launchdarkly.observability.sdk.LDReplay
 
 class MainActivity : ComponentActivity() {
@@ -223,12 +224,15 @@ private fun MetricButtons(viewModel: MainActivityViewModel) {
         ) {
             Text("UpDownCounter")
         }
-        Button(
-            onClick = {
-                viewModel.trackViaLdClient()
+        // Needs an initialized LDClient; absent when observability runs standalone.
+        if (LDObserve.isFlagClientInitialized) {
+            Button(
+                onClick = {
+                    viewModel.trackViaLdClient()
+                }
+            ) {
+                Text("Track (LDClient)")
             }
-        ) {
-            Text("Track (LDClient)")
         }
         Button(
             onClick = {
@@ -381,8 +385,56 @@ private fun goToActivity(ctx: Context, activity: Class<out Activity>?){
 private fun IdentifyButtons(viewModel: MainActivityViewModel) {
     Spacer(modifier = Modifier.height(16.dp))
 
+    // Hidden when observability runs standalone: LDClient.get() throws with no client initialized,
+    // so these would crash. Only the LDObserve row below works in that setup.
+    if (LDObserve.isFlagClientInitialized) {
+        Text(
+            text = "Identify (LDClient):",
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+            modifier = Modifier.padding(bottom = 8.dp, top = 8.dp)
+        )
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 8.dp, bottom = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Button(
+                onClick = { viewModel.identifyUser() },
+                modifier = Modifier.ldId("identify.user"),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = IdentifyBgColor,
+                    contentColor = IdentifyTextColor
+                )
+            ) {
+                Text("User")
+            }
+            Button(
+                onClick = { viewModel.identifyMulti() },
+                modifier = Modifier.ldId("identify.multi"),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = IdentifyBgColor,
+                    contentColor = IdentifyTextColor
+                )
+            ) {
+                Text("Multi")
+            }
+            Button(
+                onClick = { viewModel.identifyAnonymous() },
+                modifier = Modifier.ldId("identify.anonymous"),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = IdentifyBgColor,
+                    contentColor = IdentifyTextColor
+                )
+            ) {
+                Text("Anon")
+            }
+        }
+    }
+
     Text(
-        text = "Identify:",
+        text = "Identify (LDObserve):",
         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
         modifier = Modifier.padding(bottom = 8.dp, top = 8.dp)
     )
@@ -394,8 +446,8 @@ private fun IdentifyButtons(viewModel: MainActivityViewModel) {
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Button(
-            onClick = { viewModel.identifyUser() },
-            modifier = Modifier.ldId("identify.user"),
+            onClick = { viewModel.identifyUserViaLDObserve() },
+            modifier = Modifier.ldId("identify.observe.user"),
             colors = ButtonDefaults.buttonColors(
                 containerColor = IdentifyBgColor,
                 contentColor = IdentifyTextColor
@@ -404,8 +456,8 @@ private fun IdentifyButtons(viewModel: MainActivityViewModel) {
             Text("User")
         }
         Button(
-            onClick = { viewModel.identifyMulti() },
-            modifier = Modifier.ldId("identify.multi"),
+            onClick = { viewModel.identifyMultiViaLDObserve() },
+            modifier = Modifier.ldId("identify.observe.multi"),
             colors = ButtonDefaults.buttonColors(
                 containerColor = IdentifyBgColor,
                 contentColor = IdentifyTextColor
@@ -414,8 +466,8 @@ private fun IdentifyButtons(viewModel: MainActivityViewModel) {
             Text("Multi")
         }
         Button(
-            onClick = { viewModel.identifyAnonymous() },
-            modifier = Modifier.ldId("identify.anonymous"),
+            onClick = { viewModel.identifyAnonymousViaLDObserve() },
+            modifier = Modifier.ldId("identify.observe.anonymous"),
             colors = ButtonDefaults.buttonColors(
                 containerColor = IdentifyBgColor,
                 contentColor = IdentifyTextColor
@@ -541,20 +593,23 @@ private fun TracesButtons(viewModel: MainActivityViewModel) {
         Text("Send custom span")
     }
 
-    Spacer(modifier = Modifier.height(16.dp))
+    // Nothing to evaluate against when observability runs standalone.
+    if (LDObserve.isFlagClientInitialized) {
+        Spacer(modifier = Modifier.height(16.dp))
 
-    OutlinedTextField(
-        value = flagKey,
-        onValueChange = { flagKey = it },
-        label = { Text("Flag key") },
-        modifier = Modifier.padding(8.dp)
-    )
-    Button(
-        onClick = {
-            viewModel.evaluateBooleanFlag(flagKey)
-        },
-        modifier = Modifier.padding(8.dp)
-    ) {
-        Text("Evaluate boolean flag")
+        OutlinedTextField(
+            value = flagKey,
+            onValueChange = { flagKey = it },
+            label = { Text("Flag key") },
+            modifier = Modifier.padding(8.dp)
+        )
+        Button(
+            onClick = {
+                viewModel.evaluateBooleanFlag(flagKey)
+            },
+            modifier = Modifier.padding(8.dp)
+        ) {
+            Text("Evaluate boolean flag")
+        }
     }
 }

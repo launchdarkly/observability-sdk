@@ -22,19 +22,15 @@ import java.util.Collections
 
 /**
  * This Observability class is a plugin implementation for recording observability data such as metrics, logs, errors, and traces.
- * Provide the plugin to the LaunchDarkly Android Client SDK to enable observability.
+ *
+ * Prefer [LDObserve.init] to register it against an initialized [LDClient]:
  *
  * ```
- * val ldConfig = LDConfig.Builder(LDConfig.Builder.AutoEnvAttributes.Enabled)
- *     .mobileKey(LAUNCHDARKLY_MOBILE_KEY)
- *     .plugins(
- *         Components.plugins().setPlugins(
- *             listOf(
- *                 Observability(this@BaseApplication)
- *             )
- *         )
- *     )
- *     .build()
+ * LDObserve.init(
+ *     application = this@BaseApplication,
+ *     ldClient = LDClient.get(),
+ *     ldContext = ldObserveContext,
+ * )
  * ```
  *
  * Later after initialization you can use [LDObserve] to record observability data.
@@ -48,16 +44,17 @@ import java.util.Collections
  *
  * @param application The application instance.
  * @param options The options for the plugin.
- * @param mobileKey The primary mobile key used in LDConfig.
  * @param customSessionId Optional session id to adopt instead of generating one. Lets the native
  *   instance share a single `session.id` with another LaunchDarkly SDK on the device (e.g. the
  *   JavaScript SDK in a React Native app). When null, a session id is generated automatically.
+ * @param expectedMobileKey The mobile key of the environment this plugin should initialize for, or
+ *   `null` to initialize for whichever environment it is registered with.
  */
-class Observability(
+class Observability internal constructor(
     private val application: Application,
-    private val mobileKey: String,
-    private val options: ObservabilityOptions = ObservabilityOptions(), // new instance has reasonable defaults
-    private val customSessionId: String? = null,
+    private val options: ObservabilityOptions,
+    private val customSessionId: String?,
+    private val expectedMobileKey: String?,
 ) : Plugin() {
     var distroAttributes: Map<String, String> = DEFAULT_DISTRO_ATTRIBUTES
     private val logger: ObserveLogger
@@ -69,6 +66,20 @@ class Observability(
         logger = ObserveLogger.build(options.logAdapter, options.loggerName, options.debug)
     }
 
+    /**
+     * Creates a plugin to pass to [com.launchdarkly.sdk.android.LDConfig.Builder.plugins], which
+     * initializes only for the environment identified by [mobileKey].
+     */
+    @Deprecated(
+        "Pass an initialized LDClient to LDObserve.init instead of adding this plugin to LDConfig."
+    )
+    constructor(
+        application: Application,
+        mobileKey: String,
+        options: ObservabilityOptions = ObservabilityOptions(), // new instance has reasonable defaults
+        customSessionId: String? = null,
+    ) : this(application, options, customSessionId, expectedMobileKey = mobileKey)
+
     override fun getMetadata(): PluginMetadata {
         return object : PluginMetadata() {
             override fun getName(): String = PLUGIN_NAME
@@ -79,10 +90,13 @@ class Observability(
     override fun register(client: LDClient, metadata: EnvironmentMetadata?) {
         this.client = client
         val sdkKey = metadata?.credential ?: ""
-        if (mobileKey != sdkKey) {
+        if (!isForEnvironment(sdkKey)) {
             logger.warn("ObservabilityContext could not be initialized for sdkKey: $sdkKey")
             return
         }
+        // Only this path has a client, so it is what distinguishes an installation that instruments
+        // the flagging SDK from a standalone one.
+        LDObserve.isFlagClientInitialized = true
         LDObserve.context = ObservabilityContext(
             sdkKey = sdkKey,
             options = options,
@@ -104,7 +118,7 @@ class Observability(
             logger.error("Observability could not be initialized: LDClient is null in onPluginsReady")
             return
         }
-        if (mobileKey != sdkKey) {
+        if (!isForEnvironment(sdkKey)) {
             logger.warn("Observability could not be initialized for sdkKey: $sdkKey")
             return
         }
@@ -135,6 +149,17 @@ class Observability(
 
         observabilityHook.delegate = observabilityService.hookExporter
     }
+
+    /**
+     * Whether this plugin should initialize for the environment identified by [sdkKey].
+     *
+     * A plugin configured on [com.launchdarkly.sdk.android.LDConfig] is handed to every
+     * environment's client, so it names the one environment it belongs to and declines the rest.
+     * A plugin registered against a single [LDClient] belongs to whichever environment that client
+     * is for, so there is nothing to decline.
+     */
+    private fun isForEnvironment(sdkKey: String): Boolean =
+        expectedMobileKey == null || expectedMobileKey == sdkKey
 
     /**
      * Combines `EnvironmentMetadata.sdkMetadata.{name, version}` into the single
