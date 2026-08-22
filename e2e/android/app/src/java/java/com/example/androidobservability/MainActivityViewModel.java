@@ -2,12 +2,14 @@ package com.example.androidobservability;
 
 import android.app.Application;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
 import androidx.lifecycle.AndroidViewModel;
 
+import com.launchdarkly.observability.context.LDObserveContext;
 import com.launchdarkly.observability.interfaces.Metric;
 import com.launchdarkly.observability.sdk.LDObserve;
 import com.launchdarkly.sdk.ContextKind;
@@ -22,6 +24,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -274,6 +277,60 @@ public class MainActivityViewModel extends AndroidViewModel {
 
         LDContext multiContext = LDContext.createMulti(userContext, deviceContext);
         ldClient().identify(multiContext);
+    }
+
+    /**
+     * Identifies a single `user` context directly through the observability API, which is the only
+     * identify path available when observability runs without {@link LDClient}.
+     */
+    public void identifyUserViaLDObserve() {
+        LDObserve.Companion.identify("single-userkey-observe", Map.of("name", "Bob Bobberson"));
+    }
+
+    /**
+     * Identifies an anonymous context, imitating what the client SDK does for one.
+     *
+     * <p>{@code LDConfig.Builder.generateAnonymousKeys(true)} replaces an anonymous context's
+     * placeholder key with a UUID it generates once and persists per context kind, so the device
+     * keeps a single anonymous identity across launches. That generation belongs to the client SDK,
+     * so with observability on its own the app holds the key itself and passes {@code anonymous}
+     * through, the way the client SDK sends it as a context attribute.
+     */
+    public void identifyAnonymousViaLDObserve() {
+        LDObserve.Companion.identify(
+                anonymousKey(LDObserveContext.DEFAULT_KIND),
+                Map.of("anonymous", true)
+        );
+    }
+
+    /**
+     * The anonymous key for {@code kind}, generated on first use and reused afterwards. Kept in the
+     * app's own preferences rather than read out of the client SDK's
+     * ({@code LaunchDarkly}/{@code anonKey_<kind>}), which is private to it.
+     */
+    private String anonymousKey(String kind) {
+        SharedPreferences store = getApplication()
+                .getSharedPreferences("anonymous-keys", android.content.Context.MODE_PRIVATE);
+        String storageKey = "anonKey_" + kind;
+        String stored = store.getString(storageKey, null);
+        if (stored != null) {
+            return stored;
+        }
+        String generated = UUID.randomUUID().toString();
+        store.edit().putString(storageKey, generated).apply();
+        return generated;
+    }
+
+    /**
+     * Identifies a multi-kind context. The canonical key follows {@link LDContext} semantics:
+     * sub-context keys sorted by kind, joined as {@code kind:key}.
+     */
+    public void identifyMultiViaLDObserve() {
+        LDObserve.Companion.identify(
+                Map.of("user", "multi-username-observe", "device", "iphone"),
+                "device:iphone:user:multi-username-observe",
+                Map.of("platform", "android")
+        );
     }
 
     public void evaluateBooleanFlag(String flagKey) {
