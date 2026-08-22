@@ -2,14 +2,13 @@ package com.launchdarkly.observability.replay.plugin
 
 import com.launchdarkly.observability.BuildConfig
 import com.launchdarkly.observability.replay.ReplayOptions
+import com.launchdarkly.observability.replay.capture.ImageCaptureServicing
 import com.launchdarkly.observability.sdk.LDObserve
 import com.launchdarkly.sdk.android.LDClient
 import com.launchdarkly.sdk.android.integrations.EnvironmentMetadata
-import com.launchdarkly.sdk.android.integrations.Hook
 import com.launchdarkly.sdk.android.integrations.Plugin
 import com.launchdarkly.sdk.android.integrations.PluginMetadata
 import com.launchdarkly.sdk.android.integrations.RegistrationCompleteResult
-import java.util.Collections
 import java.util.logging.Logger
 
 /**
@@ -24,14 +23,36 @@ import java.util.logging.Logger
  * Once we have it, we forward it to [SessionReplayPluginImpl] explicitly — keeping the global lookup
  * confined to this boundary.
  */
-class SessionReplay(
-    options: ReplayOptions = ReplayOptions(),
+class SessionReplay internal constructor(
+    options: ReplayOptions,
+    imageCaptureService: ImageCaptureServicing?,
 ) : Plugin() {
 
-    private val impl = SessionReplayPluginImpl(options)
-    private val sessionReplayHook = SessionReplayHook()
+    private val impl = SessionReplayPluginImpl(options, imageCaptureService)
+
+    @Volatile
+    private var installed = false
 
     val sessionReplayService get() = impl.sessionReplayService
+
+    /**
+     * The replay service once it is recording, or `null` while it is absent or was never installed.
+     *
+     * Distinct from [sessionReplayService], which is non-null as soon as the service is constructed:
+     * callers that drive the service themselves (notably the initial `identifySession`) must wait
+     * for it to be published to [com.launchdarkly.observability.sdk.LDReplay].
+     */
+    internal val liveSessionReplayService get() = if (installed) impl.sessionReplayService else null
+
+    /**
+     * Creates a plugin to pass to [com.launchdarkly.sdk.android.LDConfig.Builder.plugins].
+     */
+    @Deprecated(
+        "Pass replay options to LDObserve.init instead of adding this plugin to LDConfig."
+    )
+    constructor(
+        options: ReplayOptions = ReplayOptions(),
+    ) : this(options, imageCaptureService = null)
 
     override fun getMetadata(): PluginMetadata {
         return object : PluginMetadata() {
@@ -49,19 +70,15 @@ class SessionReplay(
             return
         }
         impl.register(obsContext)
-        sessionReplayHook.delegate = impl.sessionReplayService
     }
 
-    // Note: this hook is intentionally not wrapped in DedupingHook. Deduplication only
-    // suppresses evaluation stages, and [SessionReplayHook] implements identify only, which
-    // DedupingHook always forwards. Evaluation spans come from ObservabilityHook, which is
-    // wrapped there instead.
-    override fun getHooks(metadata: EnvironmentMetadata?): MutableList<Hook> {
-        return Collections.singletonList(sessionReplayHook)
-    }
+    // Note: this plugin intentionally contributes no hooks. `Identify` and `Track` replay events are
+    // recorded from Observability's single emitters via ObservabilityContext.identifyFlow and
+    // trackFlow, so they cover both the LDClient calls and the manual LDObserve APIs without
+    // double-recording. The native LDClient paths reach those emitters through ObservabilityHook.
 
     override fun onPluginsReady(result: RegistrationCompleteResult?, metadata: EnvironmentMetadata?) {
-        impl.initialize()
+        installed = impl.initialize()
     }
 
     private companion object {

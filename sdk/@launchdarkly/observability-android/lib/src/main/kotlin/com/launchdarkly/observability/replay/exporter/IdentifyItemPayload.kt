@@ -37,6 +37,7 @@ data class IdentifyItemPayload(
         fun from(
             contextFriendlyName: String? = null,
             resourceAttributes: Attributes,
+            userAttributes: Attributes = Attributes.empty(),
             ldContext: LDObserveContext? = null,
             timestamp: Long = System.currentTimeMillis(),
             sessionId: String?,
@@ -44,7 +45,10 @@ data class IdentifyItemPayload(
         ): IdentifyItemPayload {
             val attributes: MutableMap<String, String> = mutableMapOf()
 
+            // Increasing precedence: resource attributes describe the app, attributes supplied with
+            // the identify describe the user, and the identity fields below are reserved.
             flattenAttributes(resourceAttributes, attributes)
+            flattenAttributes(userAttributes, attributes)
 
             if (ldContext != null) {
                 if (ldContext.isMultiple) {

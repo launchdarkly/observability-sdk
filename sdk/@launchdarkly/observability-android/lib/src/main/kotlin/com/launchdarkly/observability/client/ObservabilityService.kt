@@ -179,6 +179,18 @@ class ObservabilityService(
     val trackFlow: SharedFlow<TrackEvent> = _trackFlow.asSharedFlow()
 
     /**
+     * Broadcasts each identified context so Session Replay can identify its session regardless of
+     * the entry path (`LDClient.identify` or
+     * [com.launchdarkly.observability.sdk.LDObserve.identify], including standalone init without
+     * `LDClient`). Shared via [ObservabilityContext.identifyFlow].
+     */
+    private val _identifyFlow = MutableSharedFlow<IdentifyEvent>(
+        extraBufferCapacity = 16,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
+    val identifyFlow: SharedFlow<IdentifyEvent> = _identifyFlow.asSharedFlow()
+
+    /**
      * Broadcasts each app-lifecycle transition (foreground/background) so Session Replay can emit
      * `Foreground` / `Background` breadcrumbs regardless of the span flags. Shared with Session
      * Replay via [ObservabilityContext.appLifecycleFlow].
@@ -633,6 +645,16 @@ class ObservabilityService(
             .startSpan()
     }
 
+    override fun identify(contextKeys: Map<String, String>, canonicalKey: String, attributes: Map<String, Any?>?) {
+        // Routed through the hook exporter so the manual API and the `afterIdentify` hook share one
+        // funnel: same caching, same broadcast, same `LD.identify` log.
+        hookExporter.sendAfterIdentify(
+            contextKeys,
+            canonicalKey,
+            attributes?.toOtelAttributes() ?: Attributes.empty()
+        )
+    }
+
     override fun track(key: String, properties: Map<String, Any?>?, metricValue: Double?) {
         track(key, metricValue, properties?.toOtelAttributes() ?: Attributes.empty(), contextKeyAttributes = null)
     }
@@ -649,7 +671,7 @@ class ObservabilityService(
     ) {
         // Broadcast so Session Replay can record a `Track` timeline event for every track path,
         // independent of the span flags below (mirrors the `Navigate` broadcast in emitScreenView).
-        // Carries only user-supplied track data, matching the previous SessionReplayHook payload.
+        // Carries only user-supplied track data, no context keys.
         _trackFlow.tryEmit(TrackEvent(name = name, metricValue = metricValue, attributes = attributes))
 
         if (!observabilityOptions.analytics.trackEvents) return
@@ -878,12 +900,18 @@ class ObservabilityService(
         span.end(launchTimeMs, TimeUnit.MILLISECONDS)
     }
 
-    override fun updateCachedContextKeys(contextKeys: Map<String, String>) {
+    override fun recordIdentify(contextKeys: Map<String, String>, canonicalKey: String, attributes: Attributes) {
         val builder = Attributes.builder()
         for ((k, v) in contextKeys) {
             builder.put(AttributeKey.stringKey(k), v)
         }
         cachedContextKeyAttributes = builder.build()
+
+        // Broadcast so Session Replay identifies its session for every identify path, mirroring the
+        // `track` broadcast above.
+        _identifyFlow.tryEmit(
+            IdentifyEvent(contextKeys = contextKeys, canonicalKey = canonicalKey, attributes = attributes)
+        )
     }
 
     /**

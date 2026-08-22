@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.EditText;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -16,6 +17,7 @@ import com.example.androidobservability.smoothie.SmoothieListActivity;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.switchmaterial.SwitchMaterial;
+import com.launchdarkly.observability.sdk.LDObserve;
 import com.launchdarkly.observability.sdk.LDReplay;
 
 public class MainActivity extends AppCompatActivity {
@@ -36,6 +38,27 @@ public class MainActivity extends AppCompatActivity {
         setupInstrumentationButtons();
         setupMetricButtons();
         setupCustomerApiButtons();
+        hideFlagClientControlsIfStandalone();
+    }
+
+    /**
+     * Hides the controls that need an initialized {@code LDClient}. With observability set up
+     * standalone there is no client, and {@code LDClient.get()} throws, so these would crash rather
+     * than demonstrate anything.
+     */
+    private void hideFlagClientControlsIfStandalone() {
+        if (LDObserve.Companion.isFlagClientInitialized()) {
+            return;
+        }
+        int[] flagClientViewIds = {
+                R.id.label_identify_ldclient,
+                R.id.row_identify_ldclient,
+                R.id.edit_flag_key,
+                R.id.btn_evaluate_flag,
+        };
+        for (int viewId : flagClientViewIds) {
+            findViewById(viewId).setVisibility(View.GONE);
+        }
     }
 
     private void setupToolbarSubtitle() {
@@ -78,6 +101,9 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.btn_identify_user).setOnClickListener(v -> viewModel.identifyUser());
         findViewById(R.id.btn_identify_multi).setOnClickListener(v -> viewModel.identifyMulti());
         findViewById(R.id.btn_identify_anon).setOnClickListener(v -> viewModel.identifyAnonymous());
+        findViewById(R.id.btn_identify_observe_user).setOnClickListener(v -> viewModel.identifyUserViaLDObserve());
+        findViewById(R.id.btn_identify_observe_multi).setOnClickListener(v -> viewModel.identifyMultiViaLDObserve());
+        findViewById(R.id.btn_identify_observe_anon).setOnClickListener(v -> viewModel.identifyAnonymousViaLDObserve());
     }
 
     private void setupInstrumentationButtons() {

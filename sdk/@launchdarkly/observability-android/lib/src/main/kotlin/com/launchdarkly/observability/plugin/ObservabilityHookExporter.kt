@@ -115,10 +115,27 @@ internal class ObservabilityHookExporter(
     override fun afterIdentify(contextKeys: Map<String, String>, canonicalKey: String, completed: Boolean) {
         if (!completed) return
 
-        // Cache context keys so the manual track path can attribute events.
-        trackEmitter?.updateCachedContextKeys(contextKeys)
+        // The hook carries no identity attributes of its own; `LDContext` attributes are not
+        // exposed to hooks. The manual API supplies them through the overload below.
+        sendAfterIdentify(contextKeys, canonicalKey, Attributes.empty())
+    }
+
+    /**
+     * The single identify funnel: caches the context keys, broadcasts the identify so in-process
+     * consumers (Session Replay) see it, and records the `LD.identify` log.
+     *
+     * Both the `afterIdentify` hook and the manual
+     * [com.launchdarkly.observability.sdk.LDObserve.identify] API land here, so every identify path
+     * behaves identically — including standalone init, where there is no hook at all.
+     */
+    fun sendAfterIdentify(contextKeys: Map<String, String>, canonicalKey: String, attributes: Attributes) {
+        // Caches context keys for span attribution and fans the identify out to Session Replay.
+        trackEmitter?.recordIdentify(contextKeys, canonicalKey, attributes)
 
         val attrBuilder = Attributes.builder()
+        // Increasing precedence: caller-supplied identity attributes first, so they can never
+        // clobber the reserved identity fields below.
+        attrBuilder.putAll(attributes)
         for ((k, v) in contextKeys) {
             attrBuilder.put(AttributeKey.stringKey(k), v)
         }
