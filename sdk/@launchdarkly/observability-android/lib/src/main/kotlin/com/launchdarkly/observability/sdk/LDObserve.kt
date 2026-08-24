@@ -13,7 +13,6 @@ import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.observability.interfaces.Observe
 import com.launchdarkly.observability.plugin.Observability
 import com.launchdarkly.observability.replay.ReplayOptions
-import com.launchdarkly.observability.replay.SessionReplayService
 import com.launchdarkly.observability.replay.capture.ImageCaptureServicing
 import com.launchdarkly.observability.replay.plugin.SessionReplay
 import com.launchdarkly.observability.replay.plugin.SessionReplayPluginImpl
@@ -201,11 +200,12 @@ class LDObserve(private val client: Observe) : Observe {
                     installSessionReplay(
                         replay,
                         obsContext,
-                        ldContext,
                         imageCaptureService,
                     )
                 }
             }
+
+            seedInitialIdentify(ldContext)
         }
 
         /**
@@ -255,31 +255,24 @@ class LDObserve(private val client: Observe) : Observe {
                     )
                 )
                 if (replay != null) {
-                    registerSessionReplay(ldClient, replay, ldContext, imageCaptureService)
+                    registerSessionReplay(ldClient, replay, imageCaptureService)
                 }
             }
+
+            seedInitialIdentify(ldContext)
         }
 
         /**
-         * Registers session replay with [ldClient] and, if it came up, records the context it starts
-         * with.
-         *
-         * A plugin registered on a running client misses that client's initial identify, so session
-         * replay would otherwise have no context until the next one — hence the explicit seed, which
-         * is what [installSessionReplay] does for the standalone path.
+         * Registers session replay with [ldClient], which starts it recording.
          *
          * Must run on the main thread; called from inside the [runOnMainThread] block in [init].
          */
         private fun registerSessionReplay(
             ldClient: LDClient,
             replayOptions: ReplayOptions,
-            ldContext: LDObserveContext,
             imageCaptureService: ImageCaptureServicing?,
         ) {
-            val plugin = SessionReplay(replayOptions, imageCaptureService)
-            ldClient.registerPlugin(plugin)
-            val replayService = plugin.liveSessionReplayService ?: return
-            seedInitialIdentify(replayService, ldContext)
+            ldClient.registerPlugin(SessionReplay(replayOptions, imageCaptureService))
         }
 
         /**
@@ -313,37 +306,56 @@ class LDObserve(private val client: Observe) : Observe {
         }
 
         /**
-         * Creates the Session Replay plugin, registers + initializes it (which drains any pre-init
-         * buffer in [LDReplay]), and — only if the underlying service was actually installed and
-         * published — kicks off the initial identify in the background.
+         * Creates the Session Replay plugin and registers + initializes it, which drains any
+         * pre-init buffer in [LDReplay].
          *
          * Must run on the main thread; called from inside the [runOnMainThread] block in [init].
          */
         private fun installSessionReplay(
             replayOptions: ReplayOptions,
             obsContext: ObservabilityContext,
-            ldContext: LDObserveContext,
             imageCaptureService: ImageCaptureServicing? = null,
         ) {
             val plugin = SessionReplayPluginImpl(replayOptions, imageCaptureService)
             sessionReplayPlugin = plugin
             plugin.register(obsContext)
-            if (!plugin.initialize()) return
-            val replayService = plugin.sessionReplayService ?: return
-            seedInitialIdentify(replayService, ldContext)
+            plugin.initialize()
         }
 
         /**
-         * Records the context session replay starts with. Runs off the main thread because the
-         * identify is exported over the network.
+         * Records the context this SDK starts with, so telemetry is attributed to it instead of
+         * waiting for the app's next identify.
+         *
+         * Both paths need it: `LDClient` performs its initial identify before a plugin registered on
+         * a running client can hook it, and the standalone path has no client to identify at all. It
+         * goes through the same funnel as every other identify, so the context keys are cached for
+         * later spans, the `LD.identify` log is emitted and session replay is identified — driving
+         * replay directly instead would leave observability itself unattributed.
+         *
+         * Called after session replay is installed, because the identify is broadcast rather than
+         * buffered: a replay service that does not exist yet would never see it. Runs off the
+         * calling thread since the identify is exported over the network.
          */
-        private fun seedInitialIdentify(
-            replayService: SessionReplayService,
-            ldContext: LDObserveContext,
-        ) {
+        private fun seedInitialIdentify(ldContext: LDObserveContext) {
+            val contextKeys = contextKeysOf(ldContext)
+            if (contextKeys.isEmpty()) return
             CoroutineScope(Dispatchers.Default + SupervisorJob()).launch {
-                replayService.identifySession(ldContext)
+                identify(contextKeys, ldContext.fullyQualifiedKey, attributes = null)
             }
+        }
+
+        /**
+         * Kind -> key pairs for [ldContext], the shape the identify funnel takes. Keyless
+         * sub-contexts are skipped, matching what session replay puts on an identify payload.
+         */
+        private fun contextKeysOf(ldContext: LDObserveContext): Map<String, String> {
+            if (!ldContext.isMultiple) {
+                return if (ldContext.key.isEmpty()) emptyMap() else mapOf(ldContext.kind to ldContext.key)
+            }
+            return (0 until ldContext.individualContextCount)
+                .map { ldContext.getIndividualContext(it) }
+                .filter { it.key.isNotEmpty() }
+                .associate { it.kind to it.key }
         }
 
         override fun recordMetric(metric: Metric) = delegate.recordMetric(metric)

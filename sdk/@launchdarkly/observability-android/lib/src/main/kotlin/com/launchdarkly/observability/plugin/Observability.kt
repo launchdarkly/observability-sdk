@@ -17,7 +17,6 @@ import com.launchdarkly.sdk.android.integrations.EnvironmentMetadata
 import com.launchdarkly.sdk.android.integrations.Hook
 import com.launchdarkly.sdk.android.integrations.Plugin
 import com.launchdarkly.sdk.android.integrations.PluginMetadata
-import com.launchdarkly.sdk.android.integrations.RegistrationCompleteResult
 import java.util.Collections
 
 /**
@@ -59,8 +58,6 @@ class Observability internal constructor(
     var distroAttributes: Map<String, String> = DEFAULT_DISTRO_ATTRIBUTES
     private val logger: ObserveLogger
     private val observabilityHook = ObservabilityHook()
-    private var observabilityClient: ObservabilityService? = null
-    private var client: LDClient? = null
 
     init {
         logger = ObserveLogger.build(options.logAdapter, options.loggerName, options.debug)
@@ -87,37 +84,17 @@ class Observability internal constructor(
         }
     }
 
+    /**
+     * Installs observability for [client]'s environment: builds the pipeline and publishes it, so
+     * the recording API starts working and the hook handed to [getHooks] has somewhere to report.
+     *
+     * All of it happens here rather than split across [onPluginsReady] so both initialization paths
+     * install the same way. Nothing here depends on the other plugins having registered, and Session
+     * Replay reads the context this publishes, so it must be complete by the time the next plugin
+     * registers.
+     */
     override fun register(client: LDClient, metadata: EnvironmentMetadata?) {
-        this.client = client
         val sdkKey = metadata?.credential ?: ""
-        if (!isForEnvironment(sdkKey)) {
-            logger.warn("ObservabilityContext could not be initialized for sdkKey: $sdkKey")
-            return
-        }
-        // Only this path has a client, so it is what distinguishes an installation that instruments
-        // the flagging SDK from a standalone one.
-        LDObserve.isFlagClientInitialized = true
-        LDObserve.context = ObservabilityContext(
-            sdkKey = sdkKey,
-            options = options,
-            application = application,
-            logger = logger
-        )
-    }
-
-    override fun getHooks(metadata: EnvironmentMetadata?): MutableList<Hook> {
-        // Deduplicate repeated identical evaluations (default 10-minute window).
-        // Resets after identify or when the evaluation result changes.
-        return Collections.singletonList(DedupingHook(observabilityHook))
-    }
-
-    override fun onPluginsReady(result: RegistrationCompleteResult?, metadata: EnvironmentMetadata?) {
-        val sdkKey = metadata?.credential ?: ""
-
-        if (client == null) {
-            logger.error("Observability could not be initialized: LDClient is null in onPluginsReady")
-            return
-        }
         if (!isForEnvironment(sdkKey)) {
             logger.warn("Observability could not be initialized for sdkKey: $sdkKey")
             return
@@ -132,22 +109,40 @@ class Observability internal constructor(
             sdkVersion = composeLaunchDarklySdkVersion(metadata),
             symbolsId = readInjectedSymbolsId(application),
         )
-        LDObserve.context?.resourceAttributes = resource.attributes
 
         val observabilityService = ObservabilityService(
             application, sdkKey, resource, logger, options, customSessionId,
         )
-        observabilityClient = observabilityService
-        LDObserve.context?.sessionManager = observabilityService.sessionManager
-        LDObserve.context?.userInteractionManager = observabilityService.userInteractionManager
-        LDObserve.context?.screenViewFlow = observabilityService.screenViewFlow
-        LDObserve.context?.screenViewManager = observabilityService.screenViewManager
-        LDObserve.context?.trackFlow = observabilityService.trackFlow
-        LDObserve.context?.appLifecycleFlow = observabilityService.appLifecycleFlow
-        LDObserve.context?.appLaunchSignal = observabilityService.appLaunchSignal
-        LDObserve.init(observabilityService)
+
+        // Wired before publication so no reader can observe a half-built context.
+        val obsContext = ObservabilityContext(
+            sdkKey = sdkKey,
+            options = options,
+            application = application,
+            logger = logger
+        )
+        obsContext.resourceAttributes = resource.attributes
+        obsContext.sessionManager = observabilityService.sessionManager
+        obsContext.userInteractionManager = observabilityService.userInteractionManager
+        obsContext.screenViewFlow = observabilityService.screenViewFlow
+        obsContext.screenViewManager = observabilityService.screenViewManager
+        obsContext.trackFlow = observabilityService.trackFlow
+        obsContext.identifyFlow = observabilityService.identifyFlow
+        obsContext.appLifecycleFlow = observabilityService.appLifecycleFlow
+        obsContext.appLaunchSignal = observabilityService.appLaunchSignal
 
         observabilityHook.delegate = observabilityService.hookExporter
+        LDObserve.context = obsContext
+        // Only this path has a client, so it is what distinguishes an installation that instruments
+        // the flagging SDK from a standalone one.
+        LDObserve.isFlagClientInitialized = true
+        LDObserve.init(observabilityService)
+    }
+
+    override fun getHooks(metadata: EnvironmentMetadata?): MutableList<Hook> {
+        // Deduplicate repeated identical evaluations (default 10-minute window).
+        // Resets after identify or when the evaluation result changes.
+        return Collections.singletonList(DedupingHook(observabilityHook))
     }
 
     /**

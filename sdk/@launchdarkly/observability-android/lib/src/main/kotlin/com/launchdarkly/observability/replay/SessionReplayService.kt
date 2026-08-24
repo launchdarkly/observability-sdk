@@ -596,13 +596,14 @@ class SessionReplayService(
         } ?: return
 
         val pendingUpdated = pending.copy(sessionId = sessionManager.getSessionId())
+        // Claimed like any other delivered identify, so the app re-identifying this same user right
+        // after recording starts does not repeat the request — and claimed here rather than inside
+        // the coroutine, so an identify racing this one cannot slip past the claim.
+        synchronized(pendingIdentifyLock) {
+            lastAppliedIdentify = pendingUpdated
+        }
         instrumentationScope.launch {
             exporterSnapshot.sendIdentifyAndCache(pendingUpdated)
-            // Recorded like any other delivered identify, so the app re-identifying this same user
-            // right after recording starts does not repeat the request.
-            synchronized(pendingIdentifyLock) {
-                lastAppliedIdentify = pendingUpdated
-            }
             eventQueue.send(pendingUpdated)
         }
     }
@@ -650,17 +651,23 @@ class SessionReplayService(
         // dropped instead of costing a second request and a duplicate timeline event.
         // Any pending identify is stale by now — the session is recording — so it is cleared even
         // when this identify turns out to be a duplicate.
-        val isDuplicate = synchronized(pendingIdentifyLock) {
+        //
+        // Checked and claimed in one step, before the request rather than after it: identifies run
+        // concurrently on the default dispatcher, so a duplicate arriving while this one is in
+        // flight would otherwise pass the check and be sent again. There is nothing to release on
+        // failure — the exporter logs its own and reports nothing back.
+        val accepted = synchronized(pendingIdentifyLock) {
             pendingIdentify = null
-            event.isSameIdentityAs(lastAppliedIdentify)
+            if (event.isSameIdentityAs(lastAppliedIdentify)) {
+                false
+            } else {
+                lastAppliedIdentify = event
+                true
+            }
         }
-        if (isDuplicate) return
+        if (!accepted) return
 
         exporter?.sendIdentifyAndCache(event)
-        // Recorded only once accepted, so a failed identify can be retried by an identical one.
-        synchronized(pendingIdentifyLock) {
-            lastAppliedIdentify = event
-        }
         eventQueue.send(event)
     }
 

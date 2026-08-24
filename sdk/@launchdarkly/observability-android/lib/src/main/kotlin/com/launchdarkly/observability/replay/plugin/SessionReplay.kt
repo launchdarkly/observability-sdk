@@ -8,7 +8,6 @@ import com.launchdarkly.sdk.android.LDClient
 import com.launchdarkly.sdk.android.integrations.EnvironmentMetadata
 import com.launchdarkly.sdk.android.integrations.Plugin
 import com.launchdarkly.sdk.android.integrations.PluginMetadata
-import com.launchdarkly.sdk.android.integrations.RegistrationCompleteResult
 import java.util.logging.Logger
 
 /**
@@ -30,19 +29,7 @@ class SessionReplay internal constructor(
 
     private val impl = SessionReplayPluginImpl(options, imageCaptureService)
 
-    @Volatile
-    private var installed = false
-
     val sessionReplayService get() = impl.sessionReplayService
-
-    /**
-     * The replay service once it is recording, or `null` while it is absent or was never installed.
-     *
-     * Distinct from [sessionReplayService], which is non-null as soon as the service is constructed:
-     * callers that drive the service themselves (notably the initial `identifySession`) must wait
-     * for it to be published to [com.launchdarkly.observability.sdk.LDReplay].
-     */
-    internal val liveSessionReplayService get() = if (installed) impl.sessionReplayService else null
 
     /**
      * Creates a plugin to pass to [com.launchdarkly.sdk.android.LDConfig.Builder.plugins].
@@ -61,6 +48,14 @@ class SessionReplay internal constructor(
         }
     }
 
+    /**
+     * Installs Session Replay onto the observability pipeline Observability published.
+     *
+     * Recording starts here rather than in `onPluginsReady` so replay is running by the time
+     * registration returns, which is what lets the caller seed the initial identify. Nothing here
+     * waits on the other plugins: the one thing this needs is Observability's context, and a
+     * registration order that has not yet produced it cannot be salvaged later either.
+     */
     override fun register(client: LDClient, metadata: EnvironmentMetadata?) {
         val obsContext = LDObserve.context ?: run {
             logger.warning(
@@ -70,16 +65,13 @@ class SessionReplay internal constructor(
             return
         }
         impl.register(obsContext)
+        impl.initialize()
     }
 
     // Note: this plugin intentionally contributes no hooks. `Identify` and `Track` replay events are
     // recorded from Observability's single emitters via ObservabilityContext.identifyFlow and
     // trackFlow, so they cover both the LDClient calls and the manual LDObserve APIs without
     // double-recording. The native LDClient paths reach those emitters through ObservabilityHook.
-
-    override fun onPluginsReady(result: RegistrationCompleteResult?, metadata: EnvironmentMetadata?) {
-        installed = impl.initialize()
-    }
 
     private companion object {
         private val logger = Logger.getLogger("SessionReplay")
