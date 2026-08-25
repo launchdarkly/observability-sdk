@@ -7,6 +7,7 @@ import com.launchdarkly.observability.context.ObserveLogger
 import com.launchdarkly.observability.bridge.AttributeConverter
 import com.launchdarkly.observability.client.ObservabilityContext
 import com.launchdarkly.observability.client.ObservabilityService
+import com.launchdarkly.observability.client.UserInteractionManager
 import com.launchdarkly.observability.client.buildObservabilityResource
 import com.launchdarkly.observability.client.readInjectedSymbolsId
 import com.launchdarkly.observability.interfaces.Metric
@@ -172,6 +173,16 @@ class LDObserve(private val client: Observe) : Observe {
             imageCaptureService: ImageCaptureServicing? = null,
             customSessionId: String? = null,
         ) {
+            // First thing this path does, on the caller's thread: the touch hook only learns about an
+            // activity through lifecycle callbacks, and those are not replayed, so every millisecond
+            // spent before attaching (building the resource below reads app assets, for instance) is a
+            // millisecond in which the activity can resume unseen. Losing that race is recoverable -
+            // ObservabilityService adopts the visible activity - but winning it keeps the common case
+            // callback-driven.
+            val userInteractionManager = UserInteractionManager().apply {
+                attachToApplication(application)
+            }
+
             val logger = ObserveLogger.build(observability.logAdapter, observability.loggerName, observability.debug)
 
             val obsContext = ObservabilityContext(
@@ -195,7 +206,10 @@ class LDObserve(private val client: Observe) : Observe {
             // NOTE: the calling thread must not hold any lock the main thread is waiting on, or
             // this will deadlock — see runOnMainThread KDoc.
             runOnMainThread {
-                installObservability(application, mobileKey, resource, logger, observability, obsContext, customSessionId)
+                installObservability(
+                    application, mobileKey, resource, logger, observability, obsContext,
+                    customSessionId, userInteractionManager,
+                )
                 if (replay != null) {
                     installSessionReplay(
                         replay,
@@ -240,20 +254,22 @@ class LDObserve(private val client: Observe) : Observe {
             imageCaptureService: ImageCaptureServicing? = null,
             customSessionId: String? = null,
         ) {
+            // Constructed before the main-thread hop so its touch hook starts watching activity
+            // lifecycle callbacks now, for the reason the plugin's own field documents.
+            val observabilityPlugin = Observability(
+                application = application,
+                options = observability,
+                customSessionId = customSessionId,
+                expectedMobileKey = null,
+            )
+
             // Both plugins install OpenTelemetry instrumentations during registration, for the same
             // reasons the standalone init above documents, so registration runs on the main thread
             // and blocks the caller until the SDK is ready.
             runOnMainThread {
                 // Observability goes first: registering session replay reads the ObservabilityContext
                 // that registering observability publishes.
-                ldClient.registerPlugin(
-                    Observability(
-                        application = application,
-                        options = observability,
-                        customSessionId = customSessionId,
-                        expectedMobileKey = null,
-                    )
-                )
+                ldClient.registerPlugin(observabilityPlugin)
                 if (replay != null) {
                     registerSessionReplay(ldClient, replay, imageCaptureService)
                 }
@@ -289,9 +305,11 @@ class LDObserve(private val client: Observe) : Observe {
             options: ObservabilityOptions,
             obsContext: ObservabilityContext,
             customSessionId: String? = null,
+            userInteractionManager: UserInteractionManager = UserInteractionManager(),
         ) {
             val service = ObservabilityService(
                 application, mobileKey, resource, logger, options, customSessionId,
+                userInteractionManager,
             )
             obsContext.sessionManager = service.sessionManager
             obsContext.userInteractionManager = service.userInteractionManager

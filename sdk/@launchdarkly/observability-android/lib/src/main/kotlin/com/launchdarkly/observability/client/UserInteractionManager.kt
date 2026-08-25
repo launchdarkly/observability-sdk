@@ -17,6 +17,9 @@ import android.widget.EditText
 import android.widget.TextView
 import androidx.annotation.RequiresApi
 import com.launchdarkly.observability.R
+import com.launchdarkly.observability.util.isMainThread
+import com.launchdarkly.observability.util.postOnMainThread
+import java.lang.ref.WeakReference
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -31,6 +34,9 @@ import kotlinx.coroutines.flow.asSharedFlow
  * (which applies its own scaling and grouping).
  *
  * Samples are reported for the primary pointer of the most recently resumed window.
+ *
+ * Its public methods are safe to call from any thread - consumers include coroutines - but the
+ * window state they touch is confined to the main thread; see [onMainThread].
  */
 class UserInteractionManager : Application.ActivityLifecycleCallbacks {
 
@@ -52,8 +58,22 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
     var screenInfoProvider: () -> Pair<String?, String?> = { null to null }
 
     private var mostRecentWindow: Window? = null
+
+    /**
+     * The activity that is currently resumed, or null when none is. Weak so a finished activity is
+     * never retained. Written from the lifecycle callbacks (main thread) and read by
+     * instrumentations that install after an activity is already resumed and have to register it
+     * themselves, since no further callback arrives for it.
+     */
+    private var resumedActivity: WeakReference<Activity>? = null
+
+    /** See [resumedActivity]. Main thread only. */
+    internal val currentActivity: Activity? get() = resumedActivity?.get()
+
     private val interceptedWindows: MutableList<Window> = mutableListOf()
     private var watchedPointerId: Int = -1
+
+    @Volatile
     private var attachedApplication: Application? = null
     // Window-callback wrapping (the invasive part) is deferred until a consumer enables it; until
     // then the manager only tracks the current window so a late enable can wrap it.
@@ -161,11 +181,21 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
 
     /**
      * Attaches to the [Application] so the manager can track the current activity's window.
-     * Idempotent. This is the benign half of the hook: it registers lifecycle callbacks but does
-     * NOT wrap any window callback or hit-test until [enableTouchCapture] is called. It is invoked
+     * Idempotent, and safe to call from any thread.
+     *
+     * This is the benign half of the hook: it registers lifecycle callbacks but does NOT wrap any
+     * window callback or hit-test until [enableTouchCapture] is called. It is invoked
      * unconditionally during Observability init so that, whenever a consumer later enables capture
      * (e.g. Session Replay starts recording after the first activity is already running), the
      * already-current window is known and can be wrapped immediately.
+     *
+     * Attach as early as the SDK is asked to do anything: lifecycle callbacks are not replayed, so
+     * an activity that resumed before this call reports no window here, and in a single-activity app
+     * no further callback arrives until the app is backgrounded and brought back. That is why the
+     * initialization paths attach on the caller's thread rather than waiting for the main-thread
+     * install to run. Attaching early is a best effort, not a guarantee - init from a background
+     * thread races the activity launch and can simply lose - so a missed activity is recovered by
+     * [registerActivity], driven from [ObservabilityService].
      */
     fun attachToApplication(application: Application) {
         if (attachedApplication != null) return
@@ -183,7 +213,7 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
      * callbacks) is what keeps a late enable - capture starting after the first activity's
      * `onActivityStarted` has already fired - from missing that activity's touches.
      */
-    fun enableTouchCapture() {
+    fun enableTouchCapture() = onMainThread {
         captureEnabled = true
         mostRecentWindow?.let { interceptWindow(it) }
     }
@@ -198,11 +228,44 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
     /**
      * Registers an already-running activity for touch capture, as if [onActivityStarted] and
      * [onActivityResumed] had fired. Call this when the SDK initializes after the activity is
-     * already running (e.g. React Native).
+     * already running: the activity sends no further callback of its own, so this is the only way it
+     * is ever seen. Used by [ObservabilityService] for the activity it finds on screen at install
+     * time, and by React Native, which registers its activity explicitly.
      */
-    fun registerActivity(activity: Activity) {
+    fun registerActivity(activity: Activity) = onMainThread {
         onActivityStarted(activity)
         onActivityResumed(activity)
+    }
+
+    /**
+     * Adopts [window] as the current one and captures its touches, as if the `onActivityResumed` of
+     * the activity behind it had fired.
+     *
+     * Used when the SDK installs while a window is already on screen, where no lifecycle callback
+     * will ever describe it. Takes the window rather than the activity because that is all touch
+     * capture needs, and because the activity behind a window cannot always be resolved.
+     */
+    fun registerWindow(window: Window) = onMainThread {
+        mostRecentWindow = window
+        if (captureEnabled) interceptWindow(window)
+    }
+
+    /** Whether a window is known, i.e. whether touches can be captured at all. Main thread only. */
+    internal val hasCurrentWindow: Boolean get() = mostRecentWindow != null
+
+    /**
+     * Runs [block] on the main thread, in place when already there.
+     *
+     * Everything this class mutates - [Window.callback], [interceptedWindows], [mostRecentWindow],
+     * [captureEnabled] - is main-thread state: the framework reads a window's callback on the main
+     * thread for every single event. Consumers do not all live there, though; Session Replay enables
+     * capture from its own coroutine. Wrapping a callback from that thread races the lifecycle
+     * callbacks doing the same, and because `Window.callback` is a plain field the write may not
+     * become visible to the main thread at all, leaving the framework dispatching to the unwrapped
+     * callback - no touches captured, intermittently and depending on timing.
+     */
+    private inline fun onMainThread(crossinline block: () -> Unit) {
+        if (isMainThread()) block() else postOnMainThread { block() }
     }
 
     /** Detaches from the [Application]. */
@@ -220,6 +283,7 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
     }
 
     override fun onActivityResumed(activity: Activity) {
+        resumedActivity = WeakReference(activity)
         activity.window?.let { window ->
             mostRecentWindow = window
             // Capture may have been enabled after this activity started; ensure its window is
@@ -228,7 +292,12 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
         }
     }
 
-    override fun onActivityPaused(activity: Activity) {}
+    override fun onActivityPaused(activity: Activity) {
+        if (currentActivity === activity) {
+            resumedActivity = null
+        }
+    }
+
     override fun onActivityStopped(activity: Activity) {}
     override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
     override fun onActivityDestroyed(activity: Activity) {}

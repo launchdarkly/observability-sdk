@@ -8,6 +8,7 @@ import com.launchdarkly.observability.client.DEFAULT_DISTRO_ATTRIBUTES
 import com.launchdarkly.observability.client.ObservabilityService
 import com.launchdarkly.observability.client.ObservabilityContext
 import com.launchdarkly.observability.client.TelemetryInspector
+import com.launchdarkly.observability.client.UserInteractionManager
 import com.launchdarkly.observability.client.buildObservabilityResource
 import com.launchdarkly.observability.client.readInjectedSymbolsId
 import com.launchdarkly.observability.sdk.LDObserve
@@ -59,8 +60,18 @@ class Observability internal constructor(
     private val logger: ObserveLogger
     private val observabilityHook = ObservabilityHook()
 
+    /**
+     * Created and attached here rather than with the rest of the pipeline in [register], because it
+     * has to be watching activity lifecycle callbacks before the first activity resumes: an activity
+     * that resumed already sends no further callback, so its window would never be wrapped and no
+     * touch would be captured. Constructing a plugin is cheap and thread-agnostic, so this happens
+     * as soon as the host asks for one, while [register] can be several main-thread turns later.
+     */
+    private val userInteractionManager = UserInteractionManager()
+
     init {
         logger = ObserveLogger.build(options.logAdapter, options.loggerName, options.debug)
+        userInteractionManager.attachToApplication(application)
     }
 
     /**
@@ -111,7 +122,7 @@ class Observability internal constructor(
         )
 
         val observabilityService = ObservabilityService(
-            application, sdkKey, resource, logger, options, customSessionId,
+            application, sdkKey, resource, logger, options, customSessionId, userInteractionManager,
         )
 
         // Wired before publication so no reader can observe a half-built context.

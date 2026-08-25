@@ -27,6 +27,7 @@ import com.launchdarkly.observability.otlp.OtlpConfiguration
 import com.launchdarkly.observability.otlp.OtlpHttpClient
 import com.launchdarkly.observability.plugin.ObservabilityHookExporter
 import com.launchdarkly.observability.plugin.TrackEmitting
+import com.launchdarkly.observability.replay.capture.WindowInspector
 import com.launchdarkly.observability.replay.transport.BatchWorker
 import com.launchdarkly.observability.replay.transport.EventQueue
 import com.launchdarkly.observability.sampling.CustomSampler
@@ -34,6 +35,7 @@ import com.launchdarkly.observability.sampling.SamplingConfig
 import com.launchdarkly.observability.sampling.SamplingLogProcessor
 import com.launchdarkly.observability.traces.EventSpanProcessor
 import com.launchdarkly.observability.traces.OtlpTraceExporter
+import com.launchdarkly.observability.util.postOnMainThread
 import com.launchdarkly.observability.util.requireMainThread
 import io.opentelemetry.android.LDRumSessionManagerAccessor
 import io.opentelemetry.android.OpenTelemetryRum
@@ -92,6 +94,11 @@ import kotlin.time.Duration.Companion.hours
  * @param resources The OpenTelemetry resource describing this service.
  * @param logger The logger for internal logging.
  * @param observabilityOptions Additional configuration options for the SDK.
+ * @param userInteractionManager The touch-capture hook, which the initialization path creates and
+ *   attaches to the application before this service is built: it has to be watching activity
+ *   lifecycle callbacks before the first activity resumes, while this service can only be
+ *   constructed on the main thread and therefore not before that. Defaults to a fresh (unattached)
+ *   one, which this service attaches itself — good enough when init runs before the first activity.
  */
 class ObservabilityService(
     private val application: Application,
@@ -102,6 +109,14 @@ class ObservabilityService(
     // Optional session id to adopt (e.g. forwarded from another LaunchDarkly SDK on the device) so
     // all signals share one `session.id`. Null lets the manager generate its own.
     private val customSessionId: String? = null,
+    /**
+     * The single touch-capture hook. Owned by Observability and shared with Session Replay via
+     * [ObservabilityContext]. Capture runs unconditionally (so Session Replay always works). The
+     * tap-detection machinery is started only when [ObservabilityOptions.Instrumentations.userTaps]
+     * is enabled, and `click` span emission is additionally gated by
+     * [ObservabilityOptions.Analytics.taps].
+     */
+    val userInteractionManager: UserInteractionManager = UserInteractionManager(),
 ) : Observe, TrackEmitting {
     private val otelRUM: OpenTelemetryRum
 
@@ -138,15 +153,6 @@ class ObservabilityService(
 
     @Volatile
     private var cachedContextKeyAttributes: Attributes = Attributes.empty()
-
-    /**
-     * The single touch-capture hook. Owned by Observability and shared with Session Replay via
-     * [ObservabilityContext]. Capture runs unconditionally (so Session Replay always works). The
-     * tap-detection machinery is started only when [ObservabilityOptions.Instrumentations.userTaps]
-     * is enabled, and `click` span emission is additionally gated by
-     * [ObservabilityOptions.Analytics.taps].
-     */
-    val userInteractionManager = UserInteractionManager()
 
     private val screenStack = ScreenStack()
 
@@ -303,7 +309,8 @@ class ObservabilityService(
         // Always track the current activity/window (benign: registers lifecycle callbacks only, no
         // window wrapping or hit-testing). This lets a later consumer - Session Replay starting to
         // record after the first activity is already running - enable capture and wrap that
-        // already-current window instead of missing its touches.
+        // already-current window instead of missing its touches. No-ops when the initialization
+        // path already attached it, which is what it does when it can attach earlier than this.
         userInteractionManager.attachToApplication(application)
 
         // The touch-capture hook (wrapping each window's callback + hit-testing) is invasive, so it
@@ -322,6 +329,31 @@ class ObservabilityService(
         screenViewManager = ScreenViewManager(application) { screen -> emitScreenView(screen) }
         if (observabilityOptions.instrumentations.screens) {
             screenViewManager?.start()
+            // An activity that resumed before this install sends no further `onActivityResumed`, so
+            // detection alone would never report the screen the user is already looking at. Same
+            // recovery the React Native path performs explicitly through `LDReplay.registerActivity`.
+            userInteractionManager.currentActivity?.let { screenViewManager?.registerActivity(it) }
+        }
+
+        // Everything above is driven by activity lifecycle callbacks, which are never replayed. When
+        // this install happens after the first activity resumed - init on a background thread that
+        // lost the race with the activity launch, or a deliberately late init - no callback will ever
+        // describe that activity, so its touches and its screen would be missed until the app is
+        // backgrounded and brought back. Adopt it explicitly instead.
+        if (!adoptWindowOnScreen()) {
+            // The activity may have resumed without its window being registered with the window
+            // manager yet, which happens later in the same main-thread message. Retry on the next
+            // one, guarded because an exception on a posted runnable would crash from the looper.
+            postOnMainThread {
+                runCatching {
+                    if (!adoptWindowOnScreen()) {
+                        logger.debug(
+                            "No window found on screen to adopt; touches and screens will be " +
+                                "reported from the next activity lifecycle callback"
+                        )
+                    }
+                }.onFailure { logger.debug("Could not adopt the window on screen: ${it.message}") }
+            }
         }
 
         // App-lifecycle detection runs unconditionally so Session Replay breadcrumbs are always
@@ -350,6 +382,26 @@ class ObservabilityService(
      * for each when [ObservabilityOptions.Analytics.taps] is enabled. A tap is an ACTION_DOWN
      * followed by an ACTION_UP on the watched pointer within the long-press timeout and touch slop.
      */
+    /**
+     * Registers the window that is already on screen with the touch instrumentation - and the
+     * activity behind it with screen reporting, when it can be resolved - as if the lifecycle
+     * callbacks had fired. Returns whether one was found. Main thread only.
+     */
+    private fun adoptWindowOnScreen(): Boolean {
+        if (userInteractionManager.hasCurrentWindow) return true
+        val onScreen = WindowInspector(logger).topmostAppWindow(application) ?: return false
+        logger.debug(
+            "Adopting window already on screen, hosted by " +
+                (onScreen.activity?.javaClass?.simpleName ?: "an unresolved activity")
+        )
+        userInteractionManager.registerWindow(onScreen.window)
+        // Only the screen report needs the activity itself; touches are covered by the window above.
+        if (observabilityOptions.instrumentations.screens) {
+            onScreen.activity?.let { screenViewManager?.registerActivity(it) }
+        }
+        return true
+    }
+
     private fun startTapInstrumentation() {
         scope.launch {
             var downX = 0f
