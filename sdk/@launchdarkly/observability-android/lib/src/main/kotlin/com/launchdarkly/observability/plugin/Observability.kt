@@ -99,10 +99,9 @@ class Observability internal constructor(
      * Installs observability for [client]'s environment: builds the pipeline and publishes it, so
      * the recording API starts working and the hook handed to [getHooks] has somewhere to report.
      *
-     * All of it happens here rather than split across [onPluginsReady] so both initialization paths
-     * install the same way. Nothing here depends on the other plugins having registered, and Session
-     * Replay reads the context this publishes, so it must be complete by the time the next plugin
-     * registers.
+     * Both initialization paths install the same way. Nothing here depends on the other plugins
+     * having registered, and Session Replay reads the context this publishes, so it must be
+     * complete by the time the next plugin registers.
      */
     override fun register(client: LDClient, metadata: EnvironmentMetadata?) {
         val sdkKey = metadata?.credential ?: ""

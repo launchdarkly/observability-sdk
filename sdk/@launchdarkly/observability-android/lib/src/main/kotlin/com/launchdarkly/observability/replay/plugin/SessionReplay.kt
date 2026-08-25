@@ -51,10 +51,10 @@ class SessionReplay internal constructor(
     /**
      * Installs Session Replay onto the observability pipeline Observability published.
      *
-     * Recording starts here rather than in `onPluginsReady` so replay is running by the time
-     * registration returns, which is what lets the caller seed the initial identify. Nothing here
-     * waits on the other plugins: the one thing this needs is Observability's context, and a
-     * registration order that has not yet produced it cannot be salvaged later either.
+     * Recording starts during registration so replay is running by the time it returns, which is
+     * what lets the caller seed the initial identify. Nothing here waits on the other plugins: the
+     * one thing this needs is Observability's context, and a registration order that has not yet
+     * produced it cannot be salvaged later either.
      */
     override fun register(client: LDClient, metadata: EnvironmentMetadata?) {
         val obsContext = LDObserve.context ?: run {
