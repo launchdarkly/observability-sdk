@@ -2,6 +2,13 @@
 
 All notable changes to the LaunchDarkly Python Observability will be documented in this file. This project adheres to Semantic Versioning.
 
+## [1.3.3](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-python-1.3.2...launchdarkly-observability-python-1.3.3) (2026-08-24)
+
+
+### Bug Fixes
+
+* bump nanoid, @hono/node-server, and sqlparse to patched versions ([#744](https://github.com/launchdarkly/observability-sdk/issues/744)) ([03b4da5](https://github.com/launchdarkly/observability-sdk/commit/03b4da5be9452677a934456758ee8de17de0b06d))
+
 ## [1.3.2](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-python-1.3.1...launchdarkly-observability-python-1.3.2) (2026-08-10)
 
 
