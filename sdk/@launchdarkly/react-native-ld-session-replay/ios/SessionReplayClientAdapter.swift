@@ -306,7 +306,8 @@ extension SessionReplayClientAdapter {
         serviceName: "sessionreplay-react-native",
         privacy: privacy,
         frameRate: 1.0,
-        scale: 1.0
+        scale: 1.0,
+        imageQuality: 0.3
       )
     }
 
@@ -342,7 +343,8 @@ extension SessionReplayClientAdapter {
       serviceName: dictionary["serviceName"] as? String ?? "sessionreplay-react-native",
       privacy: privacy,
       frameRate: doubleOption(dictionary, key: "frameRate", default: 1.0),
-      scale: scaleOption(dictionary)
+      scale: scaleOption(dictionary),
+      imageQuality: CGFloat(doubleOption(dictionary, key: "imageQuality", default: 0.3))
     )
   }
 }

@@ -13,7 +13,7 @@ build:
   contents:
     - block: 'dependencies'
       contents:
-        - 'implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.14.0")'
+        - 'implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.15.0")'
         - 'implementation("com.launchdarkly:launchdarkly-observability-android:0.65.1")'
         # The observability AAR pulls OpenTelemetry in at runtime only; this app needs the
         # API on its compile classpath because it holds on to Span instances.

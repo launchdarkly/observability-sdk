@@ -100,7 +100,7 @@ The two platforms deliberately use different observability products:
 Android dependencies are declared in `Sources/HowdySkip/Skip/skip.yml`. That file also
 adds `io.opentelemetry:opentelemetry-api`, which the observability AAR only pulls in at
 runtime but the bridging code needs at compile time because it holds `Span` instances.
-The sample pins Android client SDK `5.14.0` and observability `0.65.1`. Both platforms
+The sample pins Android client SDK `5.15.0` and observability `0.65.1`. Both platforms
 wrap the forwarding hook in their SDK-provided `DedupingHook`; the sample does not
 maintain its own exposure cache.
 

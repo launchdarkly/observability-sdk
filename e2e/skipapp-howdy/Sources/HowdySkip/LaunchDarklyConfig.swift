@@ -25,8 +25,13 @@ public enum LaunchDarklyConfig {
     public static let stringFlagKey = "string-flag"
     public static let jsonFlagKey = "json-flag"
 
-    /// OpenTelemetry `service.name` reported with every signal.
-    public static let serviceName = "observability-skip-howdy"
+    /// OpenTelemetry `service.name` reported with every signal. Each platform reports its
+    /// own service so signals from the two builds stay separable in LaunchDarkly.
+    #if os(Android)
+    public static let serviceName = "observability-skip-android"
+    #else
+    public static let serviceName = "observability-skip-ios"
+    #endif
 
     /// OpenTelemetry `service.version` reported with every signal.
     public static let serviceVersion = "1.0.0"
