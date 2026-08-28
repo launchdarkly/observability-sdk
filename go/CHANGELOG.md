@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/launchdarkly/observability-sdk/compare/go/v1.2.2...go/v1.3.0) (2026-08-28)
+
+
+### Features
+
+* **go:** Add explicit ForceSample marker to the span-kind sampler ([#738](https://github.com/launchdarkly/observability-sdk/issues/738)) ([b2e2fed](https://github.com/launchdarkly/observability-sdk/commit/b2e2fed8e5ce54cc35f5cda7a2882ddb8d2721b2))
+
 ## [1.2.2](https://github.com/launchdarkly/observability-sdk/compare/go/v1.2.1...go/v1.2.2) (2026-08-17)
 
 
