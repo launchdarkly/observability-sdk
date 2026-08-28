@@ -57,6 +57,7 @@
 		"typescript": "^5.3.3"
 	},
 	"overrides": {
+		"image-size": "^1.2.1",
 		"tar": "^7.5.19",
 		"minimatch": "^3.1.5",
 		"serialize-javascript": "^7.0.5",
