@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"testing"
 
+	"go.opentelemetry.io/otel/attribute"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -555,4 +556,148 @@ func generateRandomTraceID() trace.TraceID {
 		traceID[i] = byte(rand.Intn(256))
 	}
 	return traceID
+}
+
+// neverSampledTraceID is above the upper bound of any rate below 1, so a
+// decision to sample it can only have come from the ForceSample marker.
+var neverSampledTraceID = trace.TraceID{
+	0, 0, 0, 0, 0, 0, 0, 0,
+	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+}
+
+var allSpanKinds = []trace.SpanKind{
+	trace.SpanKindUnspecified,
+	trace.SpanKindInternal,
+	trace.SpanKindServer,
+	trace.SpanKindClient,
+	trace.SpanKindProducer,
+	trace.SpanKindConsumer,
+}
+
+// The whole point of the marker is that it works for every kind, so that nobody
+// has to reach for a SpanKind to mean "keep this" (INC-241).
+func TestTraceSampler_ShouldSample_ForceSample_AnyKind_NoParent(t *testing.T) {
+	sampler := getSampler(map[trace.SpanKind]float64{
+		trace.SpanKindUnspecified: 0.001,
+	})
+
+	for _, kind := range allSpanKinds {
+		t.Run(kind.String(), func(t *testing.T) {
+			params := sdktrace.SamplingParameters{
+				ParentContext: context.Background(),
+				TraceID:       neverSampledTraceID,
+				Name:          "test-span",
+				Kind:          kind,
+			}
+
+			// Control: without the marker this trace ID is dropped.
+			if got := sampler.ShouldSample(params).Decision; got != sdktrace.Drop {
+				t.Fatalf("without marker: expected Drop, got %v", got)
+			}
+
+			params.Attributes = []attribute.KeyValue{ForceSampleAttribute()}
+			if got := sampler.ShouldSample(params).Decision; got != sdktrace.RecordAndSample {
+				t.Errorf("with marker: expected RecordAndSample, got %v", got)
+			}
+		})
+	}
+}
+
+// An explicit per-call marker is a deliberate statement, not a re-roll of the
+// trace's decision, so it outranks the unsampled-parent drop from #722. The
+// force-sampled paths are leaf event spans that carry their payload in their own
+// attributes, where being orphaned is harmless but being dropped loses data.
+func TestTraceSampler_ShouldSample_ForceSample_BeatsUnsampledParent(t *testing.T) {
+	sampler := getSampler(map[trace.SpanKind]float64{
+		trace.SpanKindUnspecified: 0.001,
+	})
+
+	for _, tc := range []struct {
+		name   string
+		remote bool
+	}{
+		{name: "local", remote: false},
+		{name: "remote", remote: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			parentContext := trace.NewSpanContext(trace.SpanContextConfig{
+				TraceID:    trace.TraceID{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+				SpanID:     trace.SpanID{1, 2, 3, 4, 5, 6, 7, 8},
+				TraceFlags: 0,
+				Remote:     tc.remote,
+			})
+			ctx := trace.ContextWithSpanContext(context.Background(), parentContext)
+
+			params := sdktrace.SamplingParameters{
+				ParentContext: ctx,
+				TraceID:       neverSampledTraceID,
+				Name:          "test-span",
+				Kind:          trace.SpanKindInternal,
+			}
+
+			// Control: an unsampled parent still drops an unmarked child.
+			if got := sampler.ShouldSample(params).Decision; got != sdktrace.Drop {
+				t.Fatalf("without marker: expected Drop, got %v", got)
+			}
+
+			params.Attributes = []attribute.KeyValue{ForceSampleAttribute()}
+			if got := sampler.ShouldSample(params).Decision; got != sdktrace.RecordAndSample {
+				t.Errorf("with marker: expected RecordAndSample, got %v", got)
+			}
+		})
+	}
+}
+
+// Only a genuine boolean true forces sampling. A false value, a string, or an
+// unrelated attribute must all leave the rate alone -- otherwise the marker
+// becomes as easy to trip accidentally as the SpanKind it replaces.
+func TestTraceSampler_ShouldSample_ForceSample_OnlyBoolTrueCounts(t *testing.T) {
+	sampler := getSampler(map[trace.SpanKind]float64{
+		trace.SpanKindUnspecified: 0.001,
+	})
+
+	for _, tc := range []struct {
+		name string
+		attr attribute.KeyValue
+	}{
+		{name: "false", attr: attribute.Bool("launchdarkly.sampling.force", false)},
+		{name: "string true", attr: attribute.String("launchdarkly.sampling.force", "true")},
+		{name: "int one", attr: attribute.Int("launchdarkly.sampling.force", 1)},
+		{name: "unrelated key", attr: attribute.Bool("launchdarkly.sampling.forced", true)},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			result := sampler.ShouldSample(sdktrace.SamplingParameters{
+				ParentContext: context.Background(),
+				TraceID:       neverSampledTraceID,
+				Name:          "test-span",
+				Kind:          trace.SpanKindInternal,
+				Attributes:    []attribute.KeyValue{tc.attr},
+			})
+			if result.Decision != sdktrace.Drop {
+				t.Errorf("expected Drop, got %v", result.Decision)
+			}
+		})
+	}
+}
+
+// Guards the seam between the public option and the sampler: a span started with
+// ForceSample() must produce attributes the sampler actually recognizes.
+func TestForceSample_OptionIsRecognizedBySampler(t *testing.T) {
+	cfg := trace.NewSpanStartConfig(ForceSample())
+	attrs := cfg.Attributes()
+	if !hasForceSample(attrs) {
+		t.Fatalf("ForceSample() produced attributes the sampler does not recognize: %v", attrs)
+	}
+
+	sampler := getSampler(map[trace.SpanKind]float64{trace.SpanKindUnspecified: 0.001})
+	result := sampler.ShouldSample(sdktrace.SamplingParameters{
+		ParentContext: context.Background(),
+		TraceID:       neverSampledTraceID,
+		Name:          "test-span",
+		Kind:          trace.SpanKindConsumer,
+		Attributes:    attrs,
+	})
+	if result.Decision != sdktrace.RecordAndSample {
+		t.Errorf("expected RecordAndSample, got %v", result.Decision)
+	}
 }
