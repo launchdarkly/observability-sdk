@@ -138,6 +138,28 @@ final class LDNativeApiImpl: NSObject, LDNativeApi {
         )
     }
 
+    // Forwards a screen view to the native observability SDK, which emits the
+    // `screen_view` span and broadcasts a Session Replay `Navigate` timeline
+    // event. Native automatic screen detection (`UIViewController.viewDidAppear`)
+    // never fires for Flutter route changes inside the single host view
+    // controller, so the Dart side reports them here (typically from a
+    // `NavigatorObserver`).
+    func trackScreenView(
+        name: String,
+        screenClass: String?,
+        screenId: String?,
+        category: String?,
+        properties: [String: Any?]?
+    ) throws {
+        LDObserve.shared.trackScreenView(
+            name: name,
+            screenClass: screenClass,
+            screenId: screenId,
+            category: category,
+            properties: properties.map { cleanAttributes($0) }
+        )
+    }
+
     /// Drops `nil` values so the native bridge receives a `[String: Any]`.
     private func cleanAttributes(_ attributes: [String: Any?]?) -> [String: Any] {
         guard let attributes = attributes else { return [:] }

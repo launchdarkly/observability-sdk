@@ -1,4 +1,6 @@
 export 'src/ld_observe.dart' show LDObserve;
+export 'src/instrumentation/navigation/ld_navigator_observer.dart'
+    show LDNavigatorObserver, LDScreenNameExtractor;
 export 'src/session_replay_capture.dart' show SessionReplayCapture;
 export 'src/masking.dart' show LDMask, LDUnmask, LDIgnore;
 export 'src/options/observability_options.dart'
