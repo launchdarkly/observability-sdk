@@ -28,6 +28,7 @@ class SessionReplayClientAdapterTest {
         assertTrue(options.enabled)
         assertEquals(1.0, options.frameRate)
         assertEquals(1.0, options.scale)
+        assertEquals(0.3, options.imageQuality)
         assertEquals(1.0, options.sampleRate)
         assertTrue(options.privacyProfile.maskTextInputs)
         assertFalse(options.privacyProfile.maskWebViews)
@@ -49,6 +50,7 @@ class SessionReplayClientAdapterTest {
             every { hasKey("unmaskTestIDs") } returns false
             every { hasKey("frameRate") } returns false
             every { hasKey("scale") } returns false
+            every { hasKey("imageQuality") } returns false
             every { hasKey("minimumAlpha") } returns false
             every { hasKey("sampleRate") } returns false
         }
@@ -59,7 +61,7 @@ class SessionReplayClientAdapterTest {
     }
 
     @Test
-    fun `replayOptionsFrom maps frameRate scale sampleRate and minimumAlpha`() {
+    fun `replayOptionsFrom maps frameRate scale imageQuality sampleRate and minimumAlpha`() {
         val adapter = newAdapter()
         val map = mockk<ReadableMap> {
             every { hasKey("isEnabled") } returns false
@@ -73,6 +75,8 @@ class SessionReplayClientAdapterTest {
             every { getDouble("frameRate") } returns 2.0
             every { hasKey("scale") } returns true
             every { getDouble("scale") } returns 2.5
+            every { hasKey("imageQuality") } returns true
+            every { getDouble("imageQuality") } returns 0.75
             every { hasKey("minimumAlpha") } returns true
             every { getDouble("minimumAlpha") } returns 0.05
             every { hasKey("sampleRate") } returns true
@@ -83,6 +87,7 @@ class SessionReplayClientAdapterTest {
 
         assertEquals(2.0, options.frameRate)
         assertEquals(2.5, options.scale)
+        assertEquals(0.75, options.imageQuality)
         assertEquals(0.05f, options.privacyProfile.minimumAlpha)
         assertEquals(0.25, options.sampleRate)
     }
@@ -101,6 +106,7 @@ class SessionReplayClientAdapterTest {
             every { hasKey("frameRate") } returns false
             every { hasKey("scale") } returns true
             every { getDouble("scale") } returns 0.0
+            every { hasKey("imageQuality") } returns false
             every { hasKey("minimumAlpha") } returns false
             every { hasKey("sampleRate") } returns false
         }

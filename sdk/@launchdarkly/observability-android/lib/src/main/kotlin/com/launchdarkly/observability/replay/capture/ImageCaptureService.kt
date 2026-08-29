@@ -6,7 +6,6 @@ import android.graphics.Rect
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
-import android.view.Choreographer
 import android.view.PixelCopy
 import android.view.SurfaceView
 import android.view.View
@@ -48,6 +47,7 @@ class ImageCaptureService(
     private val windowInspector = WindowInspector(logger)
     private val maskCollector = MaskCollector(logger)
     private val maskApplier = MaskApplier()
+    private val frameSynchronizer = FrameSynchronizer(logger)
     private val explicitMaskMatchers = options.privacyProfile.explicitMaskMatchers
     private val explicitUnmaskMatchers = options.privacyProfile.explicitUnmaskMatchers
     private val globalMaskMatchers = options.privacyProfile.globalMaskMatchers
@@ -55,14 +55,8 @@ class ImageCaptureService(
 
     override suspend fun captureRawFrame(): RawFrame? =
         withContext(DispatcherProviderHolder.current.main) {
-            // Synchronize with UI rendering frame
-            suspendCancellableCoroutine { continuation ->
-                Choreographer.getInstance().postFrameCallback {
-                    if (continuation.isActive) {
-                        continuation.resume(Unit)
-                    }
-                }
-            }
+            // Start on a frame boundary so the window list isn't read mid-traversal.
+            frameSynchronizer.awaitVsync()
 
             val timestamp = System.currentTimeMillis()
             val windowsEntries = windowInspector.appWindows()
@@ -86,8 +80,20 @@ class ImageCaptureService(
             // TODO: O11Y-628 - use captureQuality option for scaling and adjust this bitmap accordingly, may need to investigate power of 2 rounding for performance
 
             val capturingWindowEntries = windowsEntries.subList(baseIndex, windowsEntries.size)
+            val baseRootView = baseWindowEntry.rootView
+            val baseWindow = windowInspector.findWindow(baseRootView)
 
-            val beforeMasks = collectMasks(capturingWindowEntries)
+            // Read the geometry from inside the draw pass that produces the next frame, and let
+            // that frame reach the surface before copying pixels below. Without this the masks
+            // describe a traversal the captured pixels haven't caught up with yet, which is what
+            // makes them slip off scrolling or animating content.
+            //
+            // The base window is the anchor: every window's traversal runs off the same
+            // Choreographer frame, so its draw is the moment they all agree on. A capture where
+            // only an overlay animates sees no base draw and falls back to an unanchored read.
+            val beforeMasks = frameSynchronizer.sampleAtRenderedFrame(baseRootView, baseWindow) {
+                collectMasks(capturingWindowEntries)
+            }
 
             val captureResults: MutableList<CaptureResult?> = MutableList(capturingWindowEntries.size) { null }
             try {
@@ -113,21 +119,18 @@ class ImageCaptureService(
                     return@withContext null
                 }
 
-                // Synchronize with UI rendering frame. This second pass is also the
-                // safety net for content that appears during capture (e.g. an
-                // instantly-shown dialog): such a mask is absent from beforeMasks
-                // but present in afterMasks, so mergeMasksMap sees mismatched counts
-                // and drops the frame instead of leaking it unmasked. So we must NOT
-                // skip this pass when beforeMasks is empty.
-                suspendCancellableCoroutine { continuation ->
-                    Choreographer.getInstance().postFrameCallback {
-                        if (continuation.isActive) {
-                            continuation.resume(Unit)
-                        }
-                    }
+                // Sample again from the next frame that draws. Because the captured pixels are no
+                // older than beforeMasks and no newer than this pass, the two bracket the frame
+                // and the hull spanning them covers wherever the content actually was.
+                //
+                // This second pass is also the safety net for content that appears during capture
+                // (e.g. an instantly-shown dialog): such a mask is absent from beforeMasks but
+                // present in afterMasks, so mergeMasksMap sees mismatched counts and drops the
+                // frame instead of leaking it unmasked. So we must NOT skip this pass when
+                // beforeMasks is empty.
+                val afterMasks = frameSynchronizer.sampleAtDraw(baseRootView) {
+                    collectMasksFromResults(captureResults)
                 }
-
-                val afterMasks = collectMasksFromResults(captureResults)
 
                 // off the main thread to avoid blocking the UI thread
                 return@withContext withContext(DispatcherProviderHolder.current.default) {

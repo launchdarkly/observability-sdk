@@ -22,10 +22,11 @@ describe('configureSessionReplay', () => {
     await expect(configureSessionReplay('   ')).rejects.toThrow();
   });
 
-  it('forwards frameRate, scale, and sampleRate to native configure', async () => {
+  it('forwards frameRate, scale, imageQuality, and sampleRate to native configure', async () => {
     await configureSessionReplay('mob-key-123', {
       frameRate: 2,
       scale: 2.5,
+      imageQuality: 0.75,
       sampleRate: 0.25,
     });
     expect(NativeSessionReplayReactNative.configure).toHaveBeenCalledWith(
@@ -33,6 +34,7 @@ describe('configureSessionReplay', () => {
       expect.objectContaining({
         frameRate: 2,
         scale: 2.5,
+        imageQuality: 0.75,
         sampleRate: 0.25,
         maskTestIDs: ['__LD_INTERNAL_MASK__'],
         unmaskTestIDs: ['__LD_INTERNAL_UNMASK__'],
@@ -207,6 +209,7 @@ describe('SessionReplayPluginAdapter', () => {
     const plugin = createSessionReplayPlugin({
       frameRate: 4,
       scale: 2,
+      imageQuality: 0.2,
       sampleRate: 0.5,
     });
     plugin.register(
@@ -224,6 +227,7 @@ describe('SessionReplayPluginAdapter', () => {
       expect.objectContaining({
         frameRate: 4,
         scale: 2,
+        imageQuality: 0.2,
         sampleRate: 0.5,
         maskTestIDs: ['__LD_INTERNAL_MASK__'],
         unmaskTestIDs: ['__LD_INTERNAL_UNMASK__'],

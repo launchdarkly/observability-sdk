@@ -6,5 +6,5 @@ const (
 
 	// InstrumentationVersion is the version of the instrumentation.
 	// This is automatically updated by the release process.
-	InstrumentationVersion = "1.2.2" // {{ x-release-please-version }}
+	InstrumentationVersion = "1.3.0" // {{ x-release-please-version }}
 )
