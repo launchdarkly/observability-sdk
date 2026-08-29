@@ -15,7 +15,6 @@ import com.launchdarkly.observability.interfaces.Observe
 import com.launchdarkly.observability.plugin.Observability
 import com.launchdarkly.observability.replay.ReplayOptions
 import com.launchdarkly.observability.replay.capture.ImageCaptureServicing
-import com.launchdarkly.observability.replay.plugin.SessionReplay
 import com.launchdarkly.observability.replay.plugin.SessionReplayPluginImpl
 import com.launchdarkly.observability.util.runOnMainThread
 import com.launchdarkly.sdk.android.LDClient
@@ -143,9 +142,6 @@ class LDObserve(private val client: Observe) : Observe {
             delegate = LDObserve(client)
         }
 
-        @Volatile
-        private var sessionReplayPlugin: SessionReplayPluginImpl? = null
-
         /**
          * Standalone initialization that sets up observability (and optionally session replay)
          * without requiring [com.launchdarkly.sdk.android.LDClient].
@@ -263,15 +259,15 @@ class LDObserve(private val client: Observe) : Observe {
                 expectedMobileKey = null,
             )
 
-            // Both plugins install OpenTelemetry instrumentations during registration, for the same
-            // reasons the standalone init above documents, so registration runs on the main thread
-            // and blocks the caller until the SDK is ready.
+            // Observability and session replay both install OpenTelemetry instrumentations as they
+            // come up, for the same reasons the standalone init above documents, so this runs on the
+            // main thread and blocks the caller until the SDK is ready.
             runOnMainThread {
-                // Observability goes first: registering session replay reads the ObservabilityContext
+                // Observability goes first: installing session replay needs the ObservabilityContext
                 // that registering observability publishes.
                 ldClient.registerPlugin(observabilityPlugin)
                 if (replay != null) {
-                    registerSessionReplay(ldClient, replay, imageCaptureService)
+                    installSessionReplayForClient(replay, observability, imageCaptureService)
                 }
             }
 
@@ -279,16 +275,27 @@ class LDObserve(private val client: Observe) : Observe {
         }
 
         /**
-         * Registers session replay with [ldClient], which starts it recording.
+         * Installs session replay onto the [ObservabilityContext] that registering [Observability]
+         * with the client published.
+         *
+         * Replay contributes no hooks and reads nothing off the [LDClient], so registering it as a
+         * plugin would do no more than forward to the same install the standalone path performs.
+         * Installing it directly keeps both paths on one code path and hands over the context
+         * explicitly instead of leaving the plugin to look it up globally.
          *
          * Must run on the main thread; called from inside the [runOnMainThread] block in [init].
          */
-        private fun registerSessionReplay(
-            ldClient: LDClient,
+        private fun installSessionReplayForClient(
             replayOptions: ReplayOptions,
+            observability: ObservabilityOptions,
             imageCaptureService: ImageCaptureServicing?,
         ) {
-            ldClient.registerPlugin(SessionReplay(replayOptions, imageCaptureService))
+            val obsContext = context ?: run {
+                ObserveLogger.build(observability.logAdapter, observability.loggerName, observability.debug)
+                    .error("Observability is not installed; skipping session replay")
+                return
+            }
+            installSessionReplay(replayOptions, obsContext, imageCaptureService)
         }
 
         /**
@@ -335,7 +342,6 @@ class LDObserve(private val client: Observe) : Observe {
             imageCaptureService: ImageCaptureServicing? = null,
         ) {
             val plugin = SessionReplayPluginImpl(replayOptions, imageCaptureService)
-            sessionReplayPlugin = plugin
             plugin.register(obsContext)
             plugin.initialize()
         }

@@ -14,7 +14,10 @@ import java.util.logging.Logger
  * LDClient plugin adapter for Session Replay.
  *
  * Wraps [SessionReplayPluginImpl] so it can be registered as a [Plugin] with the LaunchDarkly
- * Android Client SDK. Only loaded when using the LDClient integration path.
+ * Android Client SDK, which is only how the deprecated
+ * [com.launchdarkly.sdk.android.LDConfig.Builder.plugins] setup reaches replay. [LDObserve.init]
+ * installs [SessionReplayPluginImpl] directly, since replay contributes no hooks and so needs
+ * nothing from the client.
  *
  * This adapter is the only place that resolves the [com.launchdarkly.observability.client.ObservabilityContext]
  * from the global [LDObserve.context]. The LDClient plugin lifecycle constructs plugins eagerly
@@ -51,10 +54,9 @@ class SessionReplay internal constructor(
     /**
      * Installs Session Replay onto the observability pipeline Observability published.
      *
-     * Recording starts during registration so replay is running by the time it returns, which is
-     * what lets the caller seed the initial identify. Nothing here waits on the other plugins: the
-     * one thing this needs is Observability's context, and a registration order that has not yet
-     * produced it cannot be salvaged later either.
+     * Recording starts during registration so replay is running by the time it returns. Nothing
+     * here waits on the other plugins: the one thing this needs is Observability's context, and a
+     * registration order that has not yet produced it cannot be salvaged later either.
      */
     override fun register(client: LDClient, metadata: EnvironmentMetadata?) {
         val obsContext = LDObserve.context ?: run {
