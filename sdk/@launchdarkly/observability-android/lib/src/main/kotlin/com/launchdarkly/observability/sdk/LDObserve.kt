@@ -356,16 +356,35 @@ class LDObserve(private val client: Observe) : Observe {
          * later spans, the `LD.identify` log is emitted and session replay is identified — driving
          * replay directly instead would leave observability itself unattributed.
          *
-         * Called after session replay is installed, because the identify is broadcast rather than
-         * buffered: a replay service that does not exist yet would never see it. Runs off the
-         * calling thread since the identify is exported over the network.
+         * Called after session replay is installed so it is recording by the time the identify
+         * lands; replay's collector subscribes asynchronously, so
+         * [com.launchdarkly.observability.client.ObservabilityService.identifyFlow] retains this
+         * identify for a collector that has not started yet. Runs off the calling thread since the
+         * identify is exported over the network.
          */
         private fun seedInitialIdentify(ldContext: LDObserveContext) {
             val contextKeys = contextKeysOf(ldContext)
             if (contextKeys.isEmpty()) return
             CoroutineScope(Dispatchers.Default + SupervisorJob()).launch {
-                identify(contextKeys, ldContext.fullyQualifiedKey, attributes = null)
+                identify(contextKeys, ldContext.fullyQualifiedKey, identityAttributesOf(ldContext))
             }
+        }
+
+        /**
+         * The identity attributes [ldContext] carries beyond its keys, in the shape the identify
+         * funnel takes them: `name` when set, and `anonymous` only when true, the way the client
+         * SDK sends it as a context attribute.
+         *
+         * A multi context holds these per kind and the identify payload is a flat map with no way
+         * to say which kind a value belongs to, so they are left out for one; an app identifying a
+         * multi context can pass whatever it needs to [identify] directly.
+         */
+        private fun identityAttributesOf(ldContext: LDObserveContext): Map<String, Any?>? {
+            if (ldContext.isMultiple) return null
+            val attributes = mutableMapOf<String, Any?>()
+            ldContext.name?.let { attributes["name"] = it }
+            if (ldContext.anonymous) attributes["anonymous"] = true
+            return attributes.ifEmpty { null }
         }
 
         /**

@@ -189,8 +189,15 @@ class ObservabilityService(
      * the entry path (`LDClient.identify` or
      * [com.launchdarkly.observability.sdk.LDObserve.identify], including standalone init without
      * `LDClient`). Shared via [ObservabilityContext.identifyFlow].
+     *
+     * Unlike the event flows above, this one retains its latest value: it carries the current
+     * identity rather than a moment in time. Session replay subscribes from a coroutine that may
+     * not have reached `collect` by the time the initial identify is seeded, and without retention
+     * that seed is dropped and the session stays attributed as `unknown`. Re-delivering an identity
+     * already applied costs nothing — session replay drops a repeat of the identity it last sent.
      */
     private val _identifyFlow = MutableSharedFlow<IdentifyEvent>(
+        replay = 1,
         extraBufferCapacity = 16,
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
