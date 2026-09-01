@@ -57,7 +57,10 @@ import {
 } from './listeners/jank-listener/jank-listener'
 import { HighlightFetchWindow } from './listeners/network-listener/utils/fetch-listener'
 import { RequestResponsePair } from './listeners/network-listener/utils/models'
-import { sanitizeUrl } from './listeners/network-listener/utils/network-sanitizer'
+import {
+	sanitizeUrl,
+	sanitizedLocationHref,
+} from './listeners/network-listener/utils/network-sanitizer'
 import { PageVisibilityListener } from './listeners/page-visibility-listener'
 import {
 	PerformanceListener,
@@ -555,7 +558,7 @@ export class Highlight {
 		const errorMsg: ErrorMessage = {
 			event,
 			type: type ?? 'custom',
-			url: window.location.href,
+			url: sanitizedLocationHref(),
 			source: source ?? '',
 			lineNumber: res[0]?.lineNumber ? res[0]?.lineNumber : 0,
 			columnNumber: res[0]?.columnNumber ? res[0]?.columnNumber : 0,
@@ -818,7 +821,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 					name: MetricName.DeviceMemory,
 					value: getDeviceDetails().deviceMemory,
 					category: MetricCategory.Device,
-					group: window.location.href,
+					group: sanitizedLocationHref(),
 				})
 			}
 
@@ -913,11 +916,9 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 						document.referrer.includes(window.location.origin)
 					)
 				) {
-					this.addCustomEvent<string>('Referrer', document.referrer)
-					this.addProperties(
-						{ referrer: document.referrer },
-						{ type: 'session' },
-					)
+					const referrer = sanitizeUrl(document.referrer)
+					this.addCustomEvent<string>('Referrer', referrer)
+					this.addProperties({ referrer }, { type: 'session' })
 				}
 			}
 
@@ -1075,15 +1076,18 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 			}
 			this.listeners.push(
 				PathListener((url: string) => {
+					// PathListener hands back the raw href for change detection;
+					// redact before it lands in a recorded custom event.
+					const sanitized = sanitizeUrl(url)
 					if (this.reloaded) {
-						this.addCustomEvent<string>('Reload', url)
+						this.addCustomEvent<string>('Reload', sanitized)
 						this.reloaded = false
 						highlightThis.addProperties(
 							{ reload: true },
 							{ type: 'session' },
 						)
 					} else {
-						this.addCustomEvent<string>('Navigate', url)
+						this.addCustomEvent<string>('Navigate', sanitized)
 					}
 				}),
 			)
@@ -1171,7 +1175,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 					this.recordGauge({
 						name,
 						value,
-						group: window.location.href,
+						group: sanitizedLocationHref(),
 						category: MetricCategory.WebVital,
 						tags: tags.length ? tags : undefined,
 					})
@@ -1206,7 +1210,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 									name,
 									value: value as number,
 									category: MetricCategory.Performance,
-									group: window.location.href,
+									group: sanitizedLocationHref(),
 									tags,
 								})
 							}
@@ -1238,7 +1242,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 										name,
 										value,
 										category: MetricCategory.Performance,
-										group: window.location.href,
+										group: sanitizedLocationHref(),
 									}),
 							)
 					}, this._recordingStartTime),
@@ -1334,31 +1338,31 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 			name: MetricName.ViewportHeight,
 			value: height,
 			category: MetricCategory.Device,
-			group: window.location.href,
+			group: sanitizedLocationHref(),
 		})
 		this.recordGauge({
 			name: MetricName.ViewportWidth,
 			value: width,
 			category: MetricCategory.Device,
-			group: window.location.href,
+			group: sanitizedLocationHref(),
 		})
 		this.recordGauge({
 			name: MetricName.ScreenHeight,
 			value: availHeight,
 			category: MetricCategory.Device,
-			group: window.location.href,
+			group: sanitizedLocationHref(),
 		})
 		this.recordGauge({
 			name: MetricName.ScreenWidth,
 			value: availWidth,
 			category: MetricCategory.Device,
-			group: window.location.href,
+			group: sanitizedLocationHref(),
 		})
 		this.recordGauge({
 			name: MetricName.ViewportArea,
 			value: height * width,
 			category: MetricCategory.Device,
-			group: window.location.href,
+			group: sanitizedLocationHref(),
 		})
 	}
 

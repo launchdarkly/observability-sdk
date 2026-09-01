@@ -216,3 +216,17 @@ export const sanitizeUrl = (url: string): string => {
 		return url
 	}
 }
+
+/**
+ * The current page URL, with sensitive query parameters and fragments redacted.
+ *
+ * Use this instead of `window.location.href` anywhere the value is recorded
+ * into telemetry (error URLs, span attributes, metric groups, custom events).
+ * `window.location.href` carries the raw query string and fragment, which
+ * commonly hold OAuth tokens, magic links, and password reset tokens.
+ *
+ * Comparisons and change detection should keep using the raw
+ * `window.location.href` so that redaction never collapses two distinct URLs.
+ */
+export const sanitizedLocationHref = (): string =>
+	sanitizeUrl(globalThis.location?.href ?? '')
