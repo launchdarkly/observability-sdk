@@ -356,15 +356,6 @@ export const setupBrowserTracing = (
 				'@opentelemetry/instrumentation-xml-http-request'
 			]
 		if (xmlInstrumentationConfig !== false) {
-			if (config.networkRecordingOptions?.recordHeadersAndBody) {
-				// The XHR hook below reads `_body` / `_requestHeaders` off the
-				// XHR instance. Stash them ourselves rather than relying on
-				// the session replay XHRListener, which is only present when
-				// the SessionReplay plugin also has recordHeadersAndBody set.
-				xhrRequestCaptureCleanup?.()
-				xhrRequestCaptureCleanup =
-					installXhrRequestCapture(urlBlocklist)
-			}
 			instrumentations.push(
 				new XMLHttpRequestInstrumentation({
 					propagateTraceHeaderCorsUrls: getCorsUrlsPattern(
@@ -436,6 +427,26 @@ export const setupBrowserTracing = (
 	}
 
 	registerInstrumentations({ instrumentations })
+
+	if (
+		config.networkRecordingOptions?.enabled &&
+		config.networkRecordingOptions.recordHeadersAndBody &&
+		config.instrumentations?.[
+			'@opentelemetry/instrumentation-xml-http-request'
+		] !== false
+	) {
+		// The XHR hook above reads `_body` / `_requestHeaders` off the XHR
+		// instance. Stash them ourselves rather than relying on the session
+		// replay XHRListener, which is only present when the SessionReplay
+		// plugin also has recordHeadersAndBody set.
+		//
+		// Installed after registerInstrumentations so it sits on top of the
+		// OTel XHR wrapper: shutdown() can then restore it cleanly, and a
+		// later re-init still finds the OTel wrapper (which enable() knows
+		// how to unwrap) rather than ours.
+		xhrRequestCaptureCleanup?.()
+		xhrRequestCaptureCleanup = installXhrRequestCapture(urlBlocklist)
+	}
 
 	const contextManager = new StackContextManager()
 	contextManager.enable()
