@@ -52,6 +52,7 @@ import {
 	TraceExporterConfig,
 } from './exporter'
 import { UserInteractionInstrumentation } from './user-interaction'
+import { installXhrRequestCapture } from './xhr-request-capture'
 import { LocationChangeInstrumentation } from './location-change'
 import {
 	MeterProvider,
@@ -90,6 +91,7 @@ let providers: {
 } = {}
 let otelConfig: BrowserTracingConfig | undefined
 let unloadListenerCleanup: (() => void) | undefined
+let xhrRequestCaptureCleanup: (() => void) | undefined
 
 const RECORD_ATTRIBUTE = 'highlight.record'
 const SESSION_ID_ATTRIBUTE = 'highlight.session_id'
@@ -354,6 +356,15 @@ export const setupBrowserTracing = (
 				'@opentelemetry/instrumentation-xml-http-request'
 			]
 		if (xmlInstrumentationConfig !== false) {
+			if (config.networkRecordingOptions?.recordHeadersAndBody) {
+				// The XHR hook below reads `_body` / `_requestHeaders` off the
+				// XHR instance. Stash them ourselves rather than relying on
+				// the session replay XHRListener, which is only present when
+				// the SessionReplay plugin also has recordHeadersAndBody set.
+				xhrRequestCaptureCleanup?.()
+				xhrRequestCaptureCleanup =
+					installXhrRequestCapture(urlBlocklist)
+			}
 			instrumentations.push(
 				new XMLHttpRequestInstrumentation({
 					propagateTraceHeaderCorsUrls: getCorsUrlsPattern(
@@ -665,6 +676,10 @@ export const shutdown = async () => {
 	if (unloadListenerCleanup) {
 		unloadListenerCleanup()
 		unloadListenerCleanup = undefined
+	}
+	if (xhrRequestCaptureCleanup) {
+		xhrRequestCaptureCleanup()
+		xhrRequestCaptureCleanup = undefined
 	}
 	await Promise.allSettled([
 		(async () => {
