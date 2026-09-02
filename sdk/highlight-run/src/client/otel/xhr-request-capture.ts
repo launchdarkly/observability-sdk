@@ -44,6 +44,11 @@ export const installXhrRequestCapture = (
 		this._method = method
 		this._url = typeof url === 'string' ? url : String(url)
 		this._requestHeaders = {}
+		// A reused XMLHttpRequest keeps the previous request's body otherwise,
+		// and `send` below would skip stashing the new one. Both this patch and
+		// the XHRListener only set `_body` in `send`, which always runs after
+		// `open`, so clearing here cannot drop a value stashed for this request.
+		this._body = undefined
 
 		// @ts-expect-error
 		return originalOpen.apply(this, arguments)

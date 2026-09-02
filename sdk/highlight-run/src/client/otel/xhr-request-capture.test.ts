@@ -115,6 +115,21 @@ describe('installXhrRequestCapture', () => {
 		expect(xhr._url).toBe('https://api.example.com/other')
 	})
 
+	it('does not carry a stale body onto a reused request', () => {
+		const xhr = new XMLHttpRequest() as BrowserXHR
+		xhr.open('POST', 'https://api.example.com/items')
+		xhr.send('{"name":"first"}')
+		expect(xhr._body).toBe('{"name":"first"}')
+
+		xhr.open('POST', 'https://api.example.com/items')
+		xhr.send('{"name":"second"}')
+		expect(xhr._body).toBe('{"name":"second"}')
+
+		xhr.open('GET', 'https://api.example.com/items')
+		xhr.send()
+		expect(xhr._body).toBeUndefined()
+	})
+
 	it('restores the original prototype methods on uninstall', () => {
 		uninstall()
 
