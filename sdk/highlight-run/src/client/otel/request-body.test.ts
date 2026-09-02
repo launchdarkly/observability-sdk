@@ -1,6 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import * as nodeBuffer from 'node:buffer'
 import type { Span } from '@opentelemetry/api'
+
+// Node's own File class (undici's brand checks only accept this one); the
+// installed @types/node predates its export, hence the cast.
+const NodeFile = (nodeBuffer as unknown as { File: typeof File }).File
 import { enhanceSpanWithHttpRequestAttributes } from './index'
+import { getBodyThatShouldBeRecorded } from '../listeners/network-listener/utils/xhr-listener'
 import {
 	getCapturedRequestBody,
 	installFetchRequestBodyCapture,
@@ -137,6 +143,7 @@ describe('installFetchRequestBodyCapture', () => {
 	afterEach(() => {
 		uninstall()
 		window.fetch = originalFetch
+		vi.unstubAllGlobals()
 	})
 
 	it('captures the body of a Request object and still calls through', async () => {
@@ -207,6 +214,111 @@ describe('installFetchRequestBodyCapture', () => {
 		await window.fetch(request)
 
 		expect((await getCapturedRequestBody(request))?.length).toBe(64 * 1024)
+	})
+
+	it('does not split a multi-byte character when truncating a text body', async () => {
+		// '€' is 3 bytes; 64 KB is not a multiple of 3, so the cut lands
+		// inside a character.
+		const request = new Request('https://api.example.com/upload', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/octet-stream' },
+			body: '€'.repeat(30 * 1024),
+		})
+
+		await window.fetch(request)
+
+		expect(await getCapturedRequestBody(request)).toBe(
+			'€'.repeat(Math.floor((64 * 1024) / 3)),
+		)
+	})
+
+	it('describes a binary Request body instead of decoding it', async () => {
+		const request = new Request('https://api.example.com/upload', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/octet-stream' },
+			body: new Uint8Array([0xff, 0xfe, 0x00, 0x01]),
+		})
+
+		await window.fetch(request)
+
+		expect(await getCapturedRequestBody(request)).toBe('[binary size=4]')
+	})
+
+	it('records a multipart Request body as form fields, not raw multipart text', async () => {
+		// Node's multipart parser creates file parts with the global File and
+		// then brand-checks them against its own; jsdom's File fails that.
+		vi.stubGlobal('File', NodeFile)
+		// The bytes a browser puts on the wire for
+		// new Request(url, { body: formData }) with two fields and one file.
+		// (jsdom's FormData stringifies File values, so it cannot build this.)
+		const boundary = '----WebKitFormBoundaryK7Tq2xP9'
+		const request = new Request('https://api.example.com/upload', {
+			method: 'POST',
+			headers: {
+				'Content-Type': `multipart/form-data; boundary=${boundary}`,
+			},
+			body: [
+				`--${boundary}`,
+				'Content-Disposition: form-data; name="username"',
+				'',
+				'alice',
+				`--${boundary}`,
+				'Content-Disposition: form-data; name="password"',
+				'',
+				'hunter2',
+				`--${boundary}`,
+				'Content-Disposition: form-data; name="avatar"; filename="avatar.txt"',
+				'Content-Type: text/plain',
+				'',
+				'secret file bytes',
+				`--${boundary}--`,
+				'',
+			].join('\r\n'),
+		})
+
+		await window.fetch(request)
+		const captured = await getCapturedRequestBody(request)
+
+		expect(captured).toBe(
+			JSON.stringify({
+				username: 'alice',
+				password: 'hunter2',
+				avatar: '[File name="avatar.txt" type="text/plain" size=17]',
+			}),
+		)
+		expect(captured).not.toContain('secret file bytes')
+		expect(captured).not.toContain('boundary')
+		// The JSON shape is what lets networkBodyKeysToRedact apply to fields.
+		expect(
+			getBodyThatShouldBeRecorded(
+				captured,
+				['password'],
+				undefined,
+				normalizeHeaders(request.headers),
+			),
+		).toBe(
+			JSON.stringify({
+				username: 'alice',
+				password: '[REDACTED]',
+				avatar: '[File name="avatar.txt" type="text/plain" size=17]',
+			}),
+		)
+		// The network layer's copy is untouched.
+		expect(request.bodyUsed).toBe(false)
+	})
+
+	it('describes a multipart body that is not valid multipart', async () => {
+		const request = new Request('https://api.example.com/upload', {
+			method: 'POST',
+			headers: { 'Content-Type': 'multipart/form-data; boundary=abc' },
+			body: 'not multipart at all',
+		})
+
+		await window.fetch(request)
+
+		expect(await getCapturedRequestBody(request)).toBe(
+			'[multipart/form-data size=20]',
+		)
 	})
 
 	it('restores the original fetch on uninstall', () => {

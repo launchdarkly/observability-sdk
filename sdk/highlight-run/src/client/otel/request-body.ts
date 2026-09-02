@@ -3,8 +3,14 @@ import { getBodySizeLimit } from '../listeners/network-listener/utils/xhr-listen
 
 export type HeaderRecord = { [key: string]: string }
 
-// Bodies larger than this are described rather than decoded to text.
+// Bodies larger than this are described rather than decoded or parsed.
 const MAX_BINARY_DECODE_BYTES = 64 * 1024 * 1024
+
+const isMultipartFormData = (
+	contentType: string | null | undefined,
+): contentType is string =>
+	!!contentType &&
+	contentType.split(';')[0].trim().toLowerCase() === 'multipart/form-data'
 
 /**
  * Turns any of the header shapes a caller can hand to fetch/XHR into a plain
@@ -45,8 +51,12 @@ const isArrayBufferLike = (value: unknown): value is ArrayBuffer =>
 	tagOf(value) === '[object SharedArrayBuffer]'
 
 const describeBlob = (blob: Blob): string => {
-	if (typeof File !== 'undefined' && blob instanceof File) {
-		return `[File name="${blob.name}" type="${blob.type}" size=${blob.size}]`
+	if (
+		(typeof File !== 'undefined' && blob instanceof File) ||
+		tagOf(blob) === '[object File]'
+	) {
+		const file = blob as File
+		return `[File name="${file.name}" type="${file.type}" size=${file.size}]`
 	}
 	return `[Blob type="${blob.type}" size=${blob.size}]`
 }
@@ -165,29 +175,87 @@ export const getCapturedRequestBody = (
 	request: Request,
 ): Promise<string | undefined> | undefined => capturedRequestBodies.get(request)
 
-const readStreamText = async (
+type StreamBytes = {
+	chunks: Uint8Array[]
+	byteLength: number
+	// True when the read stopped at maxBytes before the stream ended.
+	truncated: boolean
+}
+
+const readStreamBytes = async (
 	stream: ReadableStream<Uint8Array>,
 	maxBytes: number,
-): Promise<string> => {
+): Promise<StreamBytes> => {
 	const reader = stream.getReader()
-	const decoder = new TextDecoder()
-	let text = ''
-	let bytesRead = 0
-	while (bytesRead < maxBytes) {
+	const chunks: Uint8Array[] = []
+	let byteLength = 0
+	while (byteLength < maxBytes) {
 		const { done, value } = await reader.read()
 		if (done) {
-			return text + decoder.decode()
+			return { chunks, byteLength, truncated: false }
 		}
-		const remaining = maxBytes - bytesRead
+		const remaining = maxBytes - byteLength
 		const chunk =
 			value.byteLength > remaining ? value.subarray(0, remaining) : value
-		bytesRead += chunk.byteLength
-		text += decoder.decode(chunk, { stream: true })
+		chunks.push(chunk)
+		byteLength += chunk.byteLength
 	}
 	// Past the recording limit; stop pulling from the clone. The request's
 	// own stream is a separate tee branch and is unaffected.
 	reader.cancel().catch(() => {})
-	return text + decoder.decode()
+	return { chunks, byteLength, truncated: true }
+}
+
+const concatChunks = ({
+	chunks,
+	byteLength,
+}: StreamBytes): Uint8Array<ArrayBuffer> => {
+	const out = new Uint8Array(byteLength)
+	let offset = 0
+	for (const chunk of chunks) {
+		out.set(chunk, offset)
+		offset += chunk.byteLength
+	}
+	return out
+}
+
+// The bytes as UTF-8 text, or a `[binary ...]` descriptor when they are not
+// valid UTF-8 (a Blob / typed-array body), mirroring `decodeBinary`.
+const decodeStreamBytes = (bytes: StreamBytes): string => {
+	// fatal: anything that is not valid UTF-8 is treated as binary.
+	const decoder = new TextDecoder('utf-8', { fatal: true })
+	try {
+		let text = ''
+		for (const chunk of bytes.chunks) {
+			text += decoder.decode(chunk, { stream: true })
+		}
+		// A body cut off at the size limit can end mid-character, so only
+		// flush the decoder when the whole body was read.
+		return bytes.truncated ? text : text + decoder.decode()
+	} catch {
+		return `[binary size${bytes.truncated ? '>' : '='}${bytes.byteLength}]`
+	}
+}
+
+// A FormData body is serialized to multipart when the Request is built, so
+// its stream holds raw multipart text: form fields the JSON-based key
+// redaction cannot see, plus the contents of every file part. Parse it back
+// into FormData so it is recorded exactly like an init.body FormData.
+const parseMultipartBody = async (
+	bytes: StreamBytes,
+	contentType: string,
+): Promise<string> => {
+	if (bytes.truncated) {
+		return `[multipart/form-data size>${bytes.byteLength}]`
+	}
+	try {
+		const form = await new Response(concatChunks(bytes), {
+			headers: { 'content-type': contentType },
+		}).formData()
+		return stringifyFormData(form)
+	} catch {
+		return `[multipart/form-data size=${bytes.byteLength}]`
+	}
 }
 
 const captureRequestBody = (
@@ -206,10 +274,18 @@ const captureRequestBody = (
 		if (!clone.body) {
 			return Promise.resolve(undefined)
 		}
-		return readStreamText(
-			clone.body,
-			getBodySizeLimit(request.headers),
-		).catch(() => undefined)
+		const contentType = request.headers.get('content-type')
+		if (isMultipartFormData(contentType)) {
+			// The recorded value is the field JSON, not the raw body, so the
+			// read is bounded by the decode limit rather than the recording
+			// limit for this content type.
+			return readStreamBytes(clone.body, MAX_BINARY_DECODE_BYTES)
+				.then((bytes) => parseMultipartBody(bytes, contentType))
+				.catch(() => undefined)
+		}
+		return readStreamBytes(clone.body, getBodySizeLimit(request.headers))
+			.then(decodeStreamBytes)
+			.catch(() => undefined)
 	} catch {
 		return Promise.resolve(undefined)
 	}
