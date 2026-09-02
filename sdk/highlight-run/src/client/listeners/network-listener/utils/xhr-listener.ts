@@ -264,27 +264,40 @@ const BODY_SIZE_LIMITS = {
 	'text/plain': 64 * 1024 * 1024, // MB
 } as const
 
+/** Max recorded body size in characters, keyed by the content type. */
+export const getBodySizeLimit = (
+	headers?: Headers | { [key: string]: string },
+): number => {
+	if (!headers) {
+		return DEFAULT_BODY_LIMIT
+	}
+	let contentType: string = ''
+	if (typeof headers['get'] === 'function') {
+		contentType = headers.get('content-type') ?? ''
+	} else {
+		// Plain header objects keep whatever casing the caller used.
+		const record = headers as { [key: string]: string }
+		const key = Object.keys(record).find(
+			(k) => k.toLowerCase() === 'content-type',
+		)
+		contentType = (key && record[key]) || ''
+	}
+	try {
+		contentType = contentType.split(';')[0].trim()
+	} catch {}
+	return (
+		BODY_SIZE_LIMITS[contentType as keyof typeof BODY_SIZE_LIMITS] ??
+		DEFAULT_BODY_LIMIT
+	)
+}
+
 export const getBodyThatShouldBeRecorded = (
 	bodyData: any,
 	bodyKeysToRedact?: string[],
 	bodyKeysToRecord?: string[],
 	headers?: Headers | { [key: string]: string },
 ) => {
-	let bodyLimit: number = DEFAULT_BODY_LIMIT
-	if (headers) {
-		let contentType: string = ''
-		if (typeof headers['get'] === 'function') {
-			contentType = headers.get('content-type') ?? ''
-		} else {
-			contentType = headers['content-type'] ?? ''
-		}
-		try {
-			contentType = contentType.split(';')[0]
-		} catch {}
-		bodyLimit =
-			BODY_SIZE_LIMITS[contentType as keyof typeof BODY_SIZE_LIMITS] ??
-			DEFAULT_BODY_LIMIT
-	}
+	const bodyLimit = getBodySizeLimit(headers)
 
 	if (bodyData) {
 		if (bodyKeysToRedact) {

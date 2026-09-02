@@ -53,6 +53,12 @@ import {
 } from './exporter'
 import { UserInteractionInstrumentation } from './user-interaction'
 import { installXhrRequestCapture } from './xhr-request-capture'
+import {
+	getCapturedRequestBody,
+	installFetchRequestBodyCapture,
+	normalizeHeaders,
+	normalizeRequestBody,
+} from './request-body'
 import { LocationChangeInstrumentation } from './location-change'
 import {
 	MeterProvider,
@@ -92,6 +98,7 @@ let providers: {
 let otelConfig: BrowserTracingConfig | undefined
 let unloadListenerCleanup: (() => void) | undefined
 let xhrRequestCaptureCleanup: (() => void) | undefined
+let fetchRequestBodyCaptureCleanup: (() => void) | undefined
 
 const RECORD_ATTRIBUTE = 'highlight.record'
 const SESSION_ID_ATTRIBUTE = 'highlight.session_id'
@@ -254,12 +261,48 @@ export const setupBrowserTracing = (
 						return
 					}
 
+					// `request` is the RequestInit, or the Request object itself
+					// when the app called fetch(new Request(...)). A Request's
+					// body is a stream the network layer has already consumed,
+					// so it comes from the copy installFetchRequestBodyCapture
+					// stashed when the call went through window.fetch.
+					const isRequestObject =
+						typeof Request !== 'undefined' &&
+						request instanceof Request
+					const capturedRequestBody = isRequestObject
+						? getCapturedRequestBody(request as Request)
+						: undefined
+
 					enhanceSpanWithHttpRequestAttributes(
 						span,
-						request.body,
+						isRequestObject
+							? undefined
+							: (request as RequestInit).body,
 						request.headers,
 						config.networkRecordingOptions,
 					)
+
+					const applyCapturedRequestBody = async () => {
+						const body = await capturedRequestBody
+						if (
+							body === undefined ||
+							!config.networkRecordingOptions
+								?.recordHeadersAndBody
+						) {
+							return
+						}
+						// Object.assign because span.setAttribute is a no-op
+						// once the span has ended.
+						Object.assign(readableSpan.attributes, {
+							'http.request.body': getBodyThatShouldBeRecorded(
+								body,
+								config.networkRecordingOptions
+									.networkBodyKeysToRedact,
+								config.networkRecordingOptions.bodyKeysToRecord,
+								normalizeHeaders(request.headers),
+							),
+						})
+					}
 
 					if (!(response instanceof Response)) {
 						span.setAttributes({
@@ -267,6 +310,12 @@ export const setupBrowserTracing = (
 							[SemanticAttributes.ATTR_HTTP_RESPONSE_STATUS_CODE]:
 								response.status,
 						})
+						if (capturedRequestBody) {
+							pendingResponseAttributes.set(
+								spanKey(span),
+								applyCapturedRequestBody(),
+							)
+						}
 						return
 					}
 
@@ -300,6 +349,7 @@ export const setupBrowserTracing = (
 						// promise. CustomBatchSpanProcessor.onEnd() will await
 						// it before exporting the span.
 						const promise = (async () => {
+							await applyCapturedRequestBody()
 							const responseBody = await getResponseBody(
 								response,
 								config.networkRecordingOptions
@@ -446,6 +496,17 @@ export const setupBrowserTracing = (
 		// how to unwrap) rather than ours.
 		xhrRequestCaptureCleanup?.()
 		xhrRequestCaptureCleanup = installXhrRequestCapture(urlBlocklist)
+	}
+
+	if (
+		config.networkRecordingOptions?.enabled &&
+		config.networkRecordingOptions.recordHeadersAndBody &&
+		config.instrumentations?.['@opentelemetry/instrumentation-fetch'] !==
+			false
+	) {
+		// Same placement rationale as the XHR capture above.
+		fetchRequestBodyCaptureCleanup?.()
+		fetchRequestBodyCaptureCleanup = installFetchRequestBodyCapture()
 	}
 
 	const contextManager = new StackContextManager()
@@ -692,6 +753,10 @@ export const shutdown = async () => {
 		xhrRequestCaptureCleanup()
 		xhrRequestCaptureCleanup = undefined
 	}
+	if (fetchRequestBodyCaptureCleanup) {
+		fetchRequestBodyCaptureCleanup()
+		fetchRequestBodyCaptureCleanup = undefined
+	}
 	await Promise.allSettled([
 		(async () => {
 			if (providers.tracerProvider) {
@@ -718,11 +783,13 @@ export const shutdown = async () => {
 
 export const enhanceSpanWithHttpRequestAttributes = (
 	span: api.Span,
-	body: Request['body'] | RequestInit['body'] | BrowserXHR['_body'],
+	body: unknown,
 	headers:
 		| Headers
 		| RequestInit['headers']
-		| ReturnType<XMLHttpRequest['getAllResponseHeaders']>,
+		| { [key: string]: string }
+		| ReturnType<XMLHttpRequest['getAllResponseHeaders']>
+		| undefined,
 	networkRecordingOptions?: NetworkRecordingOptions,
 ) => {
 	if (!(span as any).attributes) {
@@ -733,9 +800,15 @@ export const enhanceSpanWithHttpRequestAttributes = (
 	const sanitizedUrl = sanitizeUrl(url)
 	const sanitizedUrlObject = safeParseUrl(sanitizedUrl)
 
+	// Bodies and headers arrive in many shapes (FormData, URLSearchParams,
+	// Blob, ArrayBuffer, Headers instance, tuple array, XHR stash). Reduce
+	// them to a string and a plain object; OTel drops non-primitive values.
+	const requestBody = normalizeRequestBody(body)
+	const requestHeaders = normalizeHeaders(headers)
+
 	// Tag GraphQL requests with operation attributes; the span name is left as
 	// the low-cardinality OTel default and the UI formats the display name.
-	const gql = parseGraphQLOperation(body)
+	const gql = parseGraphQLOperation(requestBody ?? body)
 	if (gql) {
 		if (gql.name) {
 			span.setAttribute('graphql.operation.name', gql.name)
@@ -763,17 +836,21 @@ export const enhanceSpanWithHttpRequestAttributes = (
 	)
 
 	if (networkRecordingOptions?.recordHeadersAndBody) {
-		const requestBody = getBodyThatShouldBeRecorded(
-			body,
-			networkRecordingOptions.networkBodyKeysToRedact,
-			networkRecordingOptions.bodyKeysToRecord,
-			headers as Headers,
-		)
-		span.setAttribute('http.request.body', requestBody)
+		if (requestBody !== undefined) {
+			span.setAttribute(
+				'http.request.body',
+				getBodyThatShouldBeRecorded(
+					requestBody,
+					networkRecordingOptions.networkBodyKeysToRedact,
+					networkRecordingOptions.bodyKeysToRecord,
+					requestHeaders,
+				),
+			)
+		}
 
 		const sanitizedHeaders = sanitizeHeaders(
 			networkRecordingOptions.networkHeadersToRedact ?? [],
-			headers as Headers,
+			requestHeaders,
 			networkRecordingOptions.headerKeysToRecord,
 		)
 
