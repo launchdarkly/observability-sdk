@@ -52,6 +52,7 @@ import {
 	TraceExporterConfig,
 } from './exporter'
 import { UserInteractionInstrumentation } from './user-interaction'
+import { installXhrRequestCapture } from './xhr-request-capture'
 import { LocationChangeInstrumentation } from './location-change'
 import {
 	MeterProvider,
@@ -90,6 +91,7 @@ let providers: {
 } = {}
 let otelConfig: BrowserTracingConfig | undefined
 let unloadListenerCleanup: (() => void) | undefined
+let xhrRequestCaptureCleanup: (() => void) | undefined
 
 const RECORD_ATTRIBUTE = 'highlight.record'
 const SESSION_ID_ATTRIBUTE = 'highlight.session_id'
@@ -426,6 +428,26 @@ export const setupBrowserTracing = (
 
 	registerInstrumentations({ instrumentations })
 
+	if (
+		config.networkRecordingOptions?.enabled &&
+		config.networkRecordingOptions.recordHeadersAndBody &&
+		config.instrumentations?.[
+			'@opentelemetry/instrumentation-xml-http-request'
+		] !== false
+	) {
+		// The XHR hook above reads `_body` / `_requestHeaders` off the XHR
+		// instance. Stash them ourselves rather than relying on the session
+		// replay XHRListener, which is only present when the SessionReplay
+		// plugin also has recordHeadersAndBody set.
+		//
+		// Installed after registerInstrumentations so it sits on top of the
+		// OTel XHR wrapper: shutdown() can then restore it cleanly, and a
+		// later re-init still finds the OTel wrapper (which enable() knows
+		// how to unwrap) rather than ours.
+		xhrRequestCaptureCleanup?.()
+		xhrRequestCaptureCleanup = installXhrRequestCapture(urlBlocklist)
+	}
+
 	const contextManager = new StackContextManager()
 	contextManager.enable()
 
@@ -665,6 +687,10 @@ export const shutdown = async () => {
 	if (unloadListenerCleanup) {
 		unloadListenerCleanup()
 		unloadListenerCleanup = undefined
+	}
+	if (xhrRequestCaptureCleanup) {
+		xhrRequestCaptureCleanup()
+		xhrRequestCaptureCleanup = undefined
 	}
 	await Promise.allSettled([
 		(async () => {

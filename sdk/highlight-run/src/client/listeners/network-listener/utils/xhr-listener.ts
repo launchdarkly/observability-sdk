@@ -233,7 +233,7 @@ export const XHRListener = (
 	}
 }
 
-const getBodyData = (postData: any, url: string | undefined) => {
+export const getBodyData = (postData: any, url: string | undefined) => {
 	if (typeof postData === 'string') {
 		// TODO: This should be removed when we move recording logic from client to firstload.
 		// This is only for development purposes. We don't want to send the body of pushPayload requests because it'll end up being recursive.
