@@ -1,0 +1,161 @@
+{
+	"name": "@launchdarkly/o11y",
+	"version": "1.1.20",
+	"description": "Shared browser foundation for @launchdarkly/observability and @launchdarkly/session-replay. Capture frontend metrics, errors, logs, traces, and session replays.",
+	"keywords": [
+		"launchdarkly",
+		"session replay",
+		"error monitoring",
+		"logging",
+		"tracing",
+		"metrics",
+		"debugging",
+		"observability",
+		"browser",
+		"library"
+	],
+	"homepage": "https://github.com/launchdarkly/observability-sdk#readme",
+	"bugs": {
+		"url": "https://github.com/launchdarkly/observability-sdk/issues",
+		"email": "support@launchdarkly.com"
+	},
+	"license": "Apache-2.0",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/launchdarkly/observability-sdk.git"
+	},
+	"scripts": {
+		"build": "yarn build:umd && node ./node_modules/vite5/bin/vite.js build",
+		"build:umd": "FORMAT=umd node ./node_modules/vite5/bin/vite.js build",
+		"build:watch": "node ./node_modules/vite5/bin/vite.js build --watch",
+		"codegen": "graphql-codegen --config codegen.yml",
+		"dev": "run-p dev:server dev:watch",
+		"dev:server": "vite dev",
+		"dev:watch": "yarn build:watch",
+		"enforce-size": "size-limit",
+		"test": "vitest --run",
+		"test:watch": "vitest",
+		"typegen": "yarn typegen:check && FORMAT=d.ts node ./node_modules/vite5/bin/vite.js build",
+		"typegen:check": "tsc --noEmit",
+		"docs": "typedoc"
+	},
+	"type": "module",
+	"types": "./dist/index.d.ts",
+	"main": "./dist/index.js",
+	"module": "./dist/index.js",
+	"unpkg": "./dist/index.umd.js",
+	"jsdelivr": "./dist/index.umd.js",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"unpkg": "./dist/index.umd.js",
+			"jsdelivr": "./dist/index.umd.js",
+			"import": "./dist/index.js",
+			"require": "./dist/index.js",
+			"default": "./dist/index.js"
+		},
+		"./observe": {
+			"types": "./dist/observe.d.ts",
+			"import": "./dist/observe.js",
+			"require": "./dist/observe.js",
+			"default": "./dist/observe.js"
+		},
+		"./record": {
+			"types": "./dist/record.d.ts",
+			"import": "./dist/record.js",
+			"require": "./dist/record.js",
+			"default": "./dist/record.js"
+		},
+		"./ld/observe": {
+			"types": "./dist/LDObserve.d.ts",
+			"import": "./dist/LDObserve.js",
+			"require": "./dist/LDObserve.js",
+			"default": "./dist/LDObserve.js"
+		},
+		"./ld/record": {
+			"types": "./dist/LDRecord.d.ts",
+			"import": "./dist/LDRecord.js",
+			"require": "./dist/LDRecord.js",
+			"default": "./dist/LDRecord.js"
+		}
+	},
+	"files": [
+		"dist"
+	],
+	"dependencies": {
+		"@launchdarkly/js-client-sdk": "^4.0.0",
+		"imurmurhash": "^0.1.4",
+		"stacktrace-js": "2.0.2"
+	},
+	"devDependencies": {
+		"@graphql-codegen/cli": "^5.0.0",
+		"@graphql-codegen/typescript": "^4.0.1",
+		"@graphql-codegen/typescript-graphql-request": "^6.0.1",
+		"@graphql-codegen/typescript-operations": "^4.0.1",
+		"@highlight-run/rrweb": "workspace:*",
+		"@highlight-run/rrweb-rrweb-plugin-sequential-id-record": "workspace:*",
+		"@highlight-run/rrweb-types": "workspace:*",
+		"@launchdarkly/observability-shared": "workspace:*",
+		"@opentelemetry/api": "^1.9.0",
+		"@opentelemetry/exporter-metrics-otlp-http": ">=0.57.1 < 0.200.0",
+		"@opentelemetry/exporter-trace-otlp-http": ">=0.57.1 < 0.200.0",
+		"@opentelemetry/instrumentation": ">=0.57.1 < 0.200.0",
+		"@opentelemetry/instrumentation-document-load": ">=0.44.0",
+		"@opentelemetry/instrumentation-fetch": ">=0.57.1 < 0.200.0",
+		"@opentelemetry/instrumentation-user-interaction": ">=0.44.0",
+		"@opentelemetry/instrumentation-xml-http-request": ">=0.57.1 < 0.200.0",
+		"@opentelemetry/otlp-exporter-base": ">=0.57.1 < 0.200.0",
+		"@opentelemetry/otlp-transformer": ">=0.57.1 < 0.200.0",
+		"@opentelemetry/resources": "^1.30.1",
+		"@opentelemetry/sdk-metrics": "^1.30.1",
+		"@opentelemetry/sdk-trace-web": "^1.30.1",
+		"@opentelemetry/semantic-conventions": "^1.28.0",
+		"@rollup/plugin-commonjs": "^28.0.2",
+		"@rollup/plugin-node-resolve": "^16.0.0",
+		"@size-limit/file": "^8.1.0",
+		"@types/chrome": "^0.0.268",
+		"@types/imurmurhash": "^0",
+		"@types/js-cookie": "^3.0.6",
+		"@types/json-stringify-safe": "^5.0.3",
+		"@types/node": "^16.3.1",
+		"@vitest/coverage-v8": "^4.1.0",
+		"@vitest/web-worker": "^4.1.0",
+		"error-stack-parser": "2.0.6",
+		"fflate": "^0.8.1",
+		"graphql": "^16.8.1",
+		"graphql-request": "^6.1.0",
+		"graphql-tag": "^2.12.6",
+		"js-cookie": "^3.0.5",
+		"json-stringify-safe": "^5.0.1",
+		"npm-run-all": "^4.1.5",
+		"prettier": "^3.3.3",
+		"readdirp": "^3.6.0",
+		"size-limit": "^8.1.0",
+		"tslib": "^2.6.2",
+		"typedoc": "^0.28.4",
+		"typescript": "^5.0.4",
+		"vite": "^6.4.3",
+		"vite-plugin-dts": "^4.5.3",
+		"vite5": "npm:vite@^5.4.21",
+		"vitest": "^4.1.0",
+		"vitest-canvas-mock": "^0.3.3",
+		"web-vitals": "^3.5.0",
+		"zone.js": "^0.15.0"
+	},
+	"size-limit": [
+		{
+			"path": [
+				"dist/index.umd.js",
+				"dist/LDObserve.js",
+				"dist/LDRecord.js",
+				"dist/observe.js",
+				"dist/record.js"
+			],
+			"limit": "256 kB",
+			"brotli": true
+		}
+	],
+	"resolutions": {
+		"@opentelemetry/sdk-trace-web": "~1.30.1"
+	}
+}
