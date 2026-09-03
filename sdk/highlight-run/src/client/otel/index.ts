@@ -284,24 +284,38 @@ export const setupBrowserTracing = (
 
 					const applyCapturedRequestBody = async () => {
 						const body = await capturedRequestBody
-						if (
-							body === undefined ||
-							!config.networkRecordingOptions
-								?.recordHeadersAndBody
-						) {
-							return
-						}
-						// Object.assign because span.setAttribute is a no-op
-						// once the span has ended.
-						Object.assign(readableSpan.attributes, {
-							'http.request.body': getBodyThatShouldBeRecorded(
+						if (body !== undefined) {
+							applyCapturedRequestBodyAttributes(
+								span,
 								body,
+								request.headers,
+								config.networkRecordingOptions,
+							)
+						}
+					}
+
+					// Runs the user's requestResponseSanitizer over what is on
+					// the span right now. Returns false when it asked for the
+					// span not to be recorded, so callers can stop early.
+					const runSanitizer = () => {
+						if (
+							config.networkRecordingOptions
+								?.requestResponseSanitizer
+						) {
+							applyRequestResponseSanitizer(
+								span,
 								config.networkRecordingOptions
-									.networkBodyKeysToRedact,
-								config.networkRecordingOptions.bodyKeysToRecord,
-								normalizeHeaders(request.headers),
-							),
-						})
+									.requestResponseSanitizer,
+							)
+						}
+						return (
+							(
+								readableSpan.attributes as Record<
+									string,
+									unknown
+								>
+							)[RECORD_ATTRIBUTE] !== false
+						)
 					}
 
 					if (!(response instanceof Response)) {
@@ -310,10 +324,19 @@ export const setupBrowserTracing = (
 							[SemanticAttributes.ATTR_HTTP_RESPONSE_STATUS_CODE]:
 								response.status,
 						})
+						// A failed fetch still carries request headers and
+						// body, so it gets the same sanitizer passes as a
+						// successful one: now, and again once the captured
+						// Request body has been attached.
+						if (!runSanitizer()) {
+							return
+						}
 						if (capturedRequestBody) {
 							pendingResponseAttributes.set(
 								spanKey(span),
-								applyCapturedRequestBody(),
+								applyCapturedRequestBody().then(() => {
+									runSanitizer()
+								}),
 							)
 						}
 						return
@@ -322,26 +345,10 @@ export const setupBrowserTracing = (
 					// Run sanitizer synchronously for request attributes
 					// before the async body read, so changes are visible
 					// even if span.end() fires before the promise resolves.
-					if (
-						config.networkRecordingOptions?.requestResponseSanitizer
-					) {
-						applyRequestResponseSanitizer(
-							span,
-							config.networkRecordingOptions
-								.requestResponseSanitizer,
-						)
-						// If sanitizer returned null (RECORD_ATTRIBUTE=false),
-						// skip the async body read to avoid a memory leak.
-						if (
-							(
-								readableSpan.attributes as Record<
-									string,
-									unknown
-								>
-							)[RECORD_ATTRIBUTE] === false
-						) {
-							return
-						}
+					// If it returned null (RECORD_ATTRIBUTE=false), skip the
+					// async body read to avoid a memory leak.
+					if (!runSanitizer()) {
+						return
 					}
 
 					if (config.networkRecordingOptions?.recordHeadersAndBody) {
@@ -380,18 +387,9 @@ export const setupBrowserTracing = (
 								},
 							)
 
-							// Re-run sanitizer now that response
-							// body/headers are on the span.
-							if (
-								config.networkRecordingOptions
-									?.requestResponseSanitizer
-							) {
-								applyRequestResponseSanitizer(
-									span,
-									config.networkRecordingOptions
-										.requestResponseSanitizer,
-								)
-							}
+							// Re-run sanitizer now that the request body and
+							// response body/headers are on the span.
+							runSanitizer()
 						})()
 						pendingResponseAttributes.set(spanKey(span), promise)
 					}
@@ -506,7 +504,8 @@ export const setupBrowserTracing = (
 	) {
 		// Same placement rationale as the XHR capture above.
 		fetchRequestBodyCaptureCleanup?.()
-		fetchRequestBodyCaptureCleanup = installFetchRequestBodyCapture()
+		fetchRequestBodyCaptureCleanup =
+			installFetchRequestBodyCapture(urlBlocklist)
 	}
 
 	const contextManager = new StackContextManager()
@@ -781,6 +780,50 @@ export const shutdown = async () => {
 	])
 }
 
+const graphQLOperationAttributes = (body: unknown): api.Attributes => {
+	const gql = parseGraphQLOperation(body)
+	const attributes: api.Attributes = {}
+	if (gql?.name) {
+		attributes['graphql.operation.name'] = gql.name
+	}
+	if (gql?.type) {
+		attributes['graphql.operation.type'] = gql.type
+	}
+	return attributes
+}
+
+/**
+ * Attaches a request body that only became readable after the span's other
+ * request attributes were set: the copy `installFetchRequestBodyCapture`
+ * stashed for a `fetch(new Request(...))` call. Does for that body what
+ * `enhanceSpanWithHttpRequestAttributes` does for an `init.body`: GraphQL
+ * operation tags, then the recorded (redacted, size-limited) body. Written
+ * with Object.assign because span.setAttribute is a no-op once the span has
+ * ended, which it usually has by the time the copy resolves.
+ */
+export const applyCapturedRequestBodyAttributes = (
+	span: api.Span,
+	body: string,
+	headers: RequestInit['headers'] | undefined,
+	networkRecordingOptions?: NetworkRecordingOptions,
+) => {
+	if (!(span as any).attributes) {
+		return
+	}
+	const attributes = (span as unknown as ReadableSpan).attributes
+	Object.assign(attributes, graphQLOperationAttributes(body))
+	if (networkRecordingOptions?.recordHeadersAndBody) {
+		Object.assign(attributes, {
+			'http.request.body': getBodyThatShouldBeRecorded(
+				body,
+				networkRecordingOptions.networkBodyKeysToRedact,
+				networkRecordingOptions.bodyKeysToRecord,
+				normalizeHeaders(headers),
+			),
+		})
+	}
+}
+
 export const enhanceSpanWithHttpRequestAttributes = (
 	span: api.Span,
 	body: unknown,
@@ -808,15 +851,7 @@ export const enhanceSpanWithHttpRequestAttributes = (
 
 	// Tag GraphQL requests with operation attributes; the span name is left as
 	// the low-cardinality OTel default and the UI formats the display name.
-	const gql = parseGraphQLOperation(requestBody ?? body)
-	if (gql) {
-		if (gql.name) {
-			span.setAttribute('graphql.operation.name', gql.name)
-		}
-		if (gql.type) {
-			span.setAttribute('graphql.operation.type', gql.type)
-		}
-	}
+	span.setAttributes(graphQLOperationAttributes(requestBody ?? body))
 
 	span.setAttributes({
 		'highlight.type': 'http.request',

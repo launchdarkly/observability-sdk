@@ -373,10 +373,16 @@ const captureRequestBody = (
  * nothing left to read. Wrap `window.fetch` so a clone of the body is read
  * up front and can be looked up by Request identity later.
  *
+ * Requests to `urlBlocklist` endpoints (auth and token exchanges by default)
+ * are never copied, matching the XHR capture; their spans are marked
+ * not-to-record later anyway, so the copy would only sit in memory.
+ *
  * Install after `registerInstrumentations` so this sits on top of the OTel
  * wrapper. Returns a function that removes the wrapper.
  */
-export const installFetchRequestBodyCapture = (): (() => void) => {
+export const installFetchRequestBodyCapture = (
+	urlBlocklist: string[] = [],
+): (() => void) => {
 	if (
 		typeof window === 'undefined' ||
 		typeof window.fetch !== 'function' ||
@@ -384,13 +390,21 @@ export const installFetchRequestBodyCapture = (): (() => void) => {
 	) {
 		return () => {}
 	}
+	const isBlocklisted = (url: string) =>
+		urlBlocklist.some((blockedUrl) =>
+			url.toLowerCase().includes(blockedUrl),
+		)
 	const originalFetch = window.fetch
 	const patchedFetch: typeof window.fetch = function (
 		this: unknown,
 		input,
 		init,
 	) {
-		if (input instanceof Request && !capturedRequestBodies.has(input)) {
+		if (
+			input instanceof Request &&
+			!capturedRequestBodies.has(input) &&
+			!isBlocklisted(input.url)
+		) {
 			capturedRequestBodies.set(input, captureRequestBody(input, init))
 		}
 		return originalFetch.call(this ?? window, input, init)

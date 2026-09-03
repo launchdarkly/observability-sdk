@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Span } from '@opentelemetry/api'
-import { enhanceSpanWithHttpRequestAttributes } from './index'
+import {
+	applyCapturedRequestBodyAttributes,
+	enhanceSpanWithHttpRequestAttributes,
+} from './index'
 import { getBodyThatShouldBeRecorded } from '../listeners/network-listener/utils/xhr-listener'
 import {
 	getCapturedRequestBody,
@@ -422,6 +425,26 @@ describe('installFetchRequestBodyCapture', () => {
 		)
 	})
 
+	it('never copies the body of a Request to a blocklisted URL', async () => {
+		uninstall()
+		uninstall = installFetchRequestBodyCapture(['/oauth/token'])
+		const blocked = new Request('https://auth.example.com/OAuth/Token', {
+			method: 'POST',
+			body: 'grant_type=password&password=hunter2',
+		})
+		const allowed = new Request('https://api.example.com/items', {
+			method: 'POST',
+			body: '{"name":"widget"}',
+		})
+
+		await window.fetch(blocked)
+		await window.fetch(allowed)
+
+		expect(fetchSpy).toHaveBeenCalledTimes(2)
+		expect(getCapturedRequestBody(blocked)).toBeUndefined()
+		expect(await getCapturedRequestBody(allowed)).toBe('{"name":"widget"}')
+	})
+
 	it('restores the original fetch on uninstall', () => {
 		uninstall()
 		expect(window.fetch).toBe(fetchSpy)
@@ -484,5 +507,70 @@ describe('enhanceSpanWithHttpRequestAttributes with non-string inputs', () => {
 		)
 
 		expect('http.request.body' in span.attributes).toBe(false)
+	})
+})
+
+describe('applyCapturedRequestBodyAttributes', () => {
+	const graphqlBody = JSON.stringify({
+		operationName: 'GetViewer',
+		query: 'query GetViewer($token: String!) { viewer(token: $token) { id } }',
+		variables: { token: 'secret' },
+	})
+
+	it('tags the GraphQL operation and records the redacted body after the span ended', () => {
+		const span = createMockSpan('https://api.example.com/graphql')
+		// Simulate an ended span: setAttribute(s) are no-ops on it.
+		span.setAttribute = vi.fn(() => span)
+		span.setAttributes = vi.fn(() => span)
+
+		applyCapturedRequestBodyAttributes(
+			span,
+			graphqlBody,
+			{ 'Content-Type': 'application/json' },
+			{
+				enabled: true,
+				recordHeadersAndBody: true,
+				networkBodyKeysToRedact: ['variables'],
+			},
+		)
+
+		expect(span.attributes['graphql.operation.name']).toBe('GetViewer')
+		expect(span.attributes['graphql.operation.type']).toBe('query')
+		expect(
+			JSON.parse(span.attributes['http.request.body'] as string),
+		).toEqual({
+			operationName: 'GetViewer',
+			query: 'query GetViewer($token: String!) { viewer(token: $token) { id } }',
+			variables: '[REDACTED]',
+		})
+	})
+
+	it('still tags GraphQL when bodies are not recorded', () => {
+		const span = createMockSpan('https://api.example.com/graphql')
+
+		applyCapturedRequestBodyAttributes(span, graphqlBody, undefined, {
+			enabled: true,
+			recordHeadersAndBody: false,
+		})
+
+		expect(span.attributes['graphql.operation.name']).toBe('GetViewer')
+		expect('http.request.body' in span.attributes).toBe(false)
+	})
+
+	it('adds no GraphQL attributes for a non-GraphQL body', () => {
+		const span = createMockSpan('https://api.example.com/items')
+
+		applyCapturedRequestBodyAttributes(
+			span,
+			'{"name":"widget"}',
+			undefined,
+			{
+				enabled: true,
+				recordHeadersAndBody: true,
+			},
+		)
+
+		expect('graphql.operation.name' in span.attributes).toBe(false)
+		expect(span.attributes['http.request.body']).toBe('{"name":"widget"}')
 	})
 })
