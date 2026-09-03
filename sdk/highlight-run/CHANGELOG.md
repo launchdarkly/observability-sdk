@@ -1,5 +1,13 @@
 # highlight.run
 
+## [10.7.2](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.7.1...highlight.run-10.7.2) (2026-09-03)
+
+
+### Bug Fixes
+
+* **highlight.run:** capture XMLHttpRequest bodies and headers on traces without the session replay listener ([#752](https://github.com/launchdarkly/observability-sdk/issues/752)) ([68eb0fe](https://github.com/launchdarkly/observability-sdk/commit/68eb0fee05540147a87eba1133c1ebc83c2122c4))
+* **highlight.run:** record fetch request bodies and headers that are not plain strings or objects ([#753](https://github.com/launchdarkly/observability-sdk/issues/753)) ([dc97c02](https://github.com/launchdarkly/observability-sdk/commit/dc97c022e6d68cd95fb6e9a5f1c604eb5da010b1))
+
 ## [10.7.1](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.7.0...highlight.run-10.7.1) (2026-08-13)
 
 
