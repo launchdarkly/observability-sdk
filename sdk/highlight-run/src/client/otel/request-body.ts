@@ -291,7 +291,12 @@ const parseMultipartPrefix = (
 			if (headersEnd === -1) {
 				break // the read stopped inside this part's headers
 			}
-			const headers = text.slice(headersStart + 2, headersEnd)
+			// Browsers write name/filename parameters as UTF-8, so decode
+			// the header bytes properly rather than reusing the byte-indexed
+			// windows-1252 view.
+			const headers = new TextDecoder().decode(
+				data.subarray(headersStart + 2, headersEnd),
+			)
 			const contentStart = headersEnd + 4
 			const next = text.indexOf(`\r\n${delimiter}`, contentStart)
 			// No delimiter after the content: the read stopped inside it.

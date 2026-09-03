@@ -356,7 +356,7 @@ describe('installFetchRequestBodyCapture', () => {
 		expect(request.bodyUsed).toBe(false)
 	})
 
-	it('collects repeated multipart names and does not mistake delimiter-like file bytes', async () => {
+	it('collects repeated names, decodes UTF-8 names, and does not mistake delimiter-like file bytes', async () => {
 		const boundary = '----WebKitFormBoundaryJYRKp7afg92B7vvW'
 		const encoder = new TextEncoder()
 		const head = encoder.encode(
@@ -374,8 +374,9 @@ describe('installFetchRequestBodyCapture', () => {
 				'',
 				'b',
 				`--${boundary}`,
-				// Chromium percent-encodes quotes in filenames.
-				'Content-Disposition: form-data; name="upload"; filename="we%22ird.bin"',
+				// Chromium writes names and filenames as raw UTF-8 and
+				// percent-encodes quotes.
+				'Content-Disposition: form-data; name="téléchargement"; filename="rés%22umé.bin"',
 				'Content-Type: application/octet-stream',
 				'',
 				'',
@@ -414,7 +415,8 @@ describe('installFetchRequestBodyCapture', () => {
 			JSON.stringify({
 				title: 'héllo "quoted"',
 				tags: ['a', 'b'],
-				upload: '[File name="we%22ird.bin" type="application/octet-stream" size=6]',
+				téléchargement:
+					'[File name="rés%22umé.bin" type="application/octet-stream" size=6]',
 				after: 'trailing',
 			}),
 		)
