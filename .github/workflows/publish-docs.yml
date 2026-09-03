@@ -8,19 +8,19 @@ permissions:
     contents: write
 
 jobs:
-    publish-highlight-run-docs:
-        concurrency: ${{ github.workflow }}-${{ github.ref }}-publish-highlight-run-docs
-        name: Publish Highlight.run Docs
+    publish-o11y-docs:
+        concurrency: ${{ github.workflow }}-${{ github.ref }}-publish-o11y-docs
+        name: Publish @launchdarkly/o11y Docs
         if: github.ref == 'refs/heads/main'
         uses: ./.github/workflows/manual-publish-docs.yml
         with:
-            workspace_path: sdk/highlight-run
+            workspace_path: sdk/@launchdarkly/o11y
 
     publish-observability-node-docs:
         concurrency: ${{ github.workflow }}-${{ github.ref }}-publish-observability-node-docs
-        # Run the docs publish after the highlight.run docs are published.
-        needs: publish-highlight-run-docs
-        # Runs the job even if the highlight.run docs publish fails.
+        # Run the docs publish after the @launchdarkly/o11y docs are published.
+        needs: publish-o11y-docs
+        # Runs the job even if the @launchdarkly/o11y docs publish fails.
         if: ${{ always() && !cancelled() && github.ref == 'refs/heads/main'}}
         name: Publish @launchdarkly/observability-node Docs
         uses: ./.github/workflows/manual-publish-docs.yml
