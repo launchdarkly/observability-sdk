@@ -1,10 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import * as nodeBuffer from 'node:buffer'
 import type { Span } from '@opentelemetry/api'
-
-// Node's own File class (undici's brand checks only accept this one); the
-// installed @types/node predates its export, hence the cast.
-const NodeFile = (nodeBuffer as unknown as { File: typeof File }).File
 import { enhanceSpanWithHttpRequestAttributes } from './index'
 import { getBodyThatShouldBeRecorded } from '../listeners/network-listener/utils/xhr-listener'
 import {
@@ -143,7 +138,6 @@ describe('installFetchRequestBodyCapture', () => {
 	afterEach(() => {
 		uninstall()
 		window.fetch = originalFetch
-		vi.unstubAllGlobals()
 	})
 
 	it('captures the body of a Request object and still calls through', async () => {
@@ -245,10 +239,7 @@ describe('installFetchRequestBodyCapture', () => {
 	})
 
 	it('records a multipart Request body as form fields, not raw multipart text', async () => {
-		// Node's multipart parser creates file parts with the global File and
-		// then brand-checks them against its own; jsdom's File fails that.
-		vi.stubGlobal('File', NodeFile)
-		// The bytes a browser puts on the wire for
+		// The bytes Chromium puts on the wire for
 		// new Request(url, { body: formData }) with two fields and one file.
 		// (jsdom's FormData stringifies File values, so it cannot build this.)
 		const boundary = '----WebKitFormBoundaryK7Tq2xP9'
@@ -318,6 +309,114 @@ describe('installFetchRequestBodyCapture', () => {
 
 		expect(await getCapturedRequestBody(request)).toBe(
 			'[multipart/form-data size=20]',
+		)
+	})
+
+	it('scans only the recorded prefix of a multipart body and marks the cut file part', async () => {
+		const boundary = '----WebKitFormBoundaryK7Tq2xP9'
+		const head = [
+			`--${boundary}`,
+			'Content-Disposition: form-data; name="title"',
+			'',
+			'big upload',
+			`--${boundary}`,
+			'Content-Disposition: form-data; name="upload"; filename="big.bin"',
+			'Content-Type: application/octet-stream',
+			'',
+			'',
+		].join('\r\n')
+		const tail = [
+			'',
+			`--${boundary}`,
+			'Content-Disposition: form-data; name="after"',
+			'',
+			'never recorded',
+			`--${boundary}--`,
+			'',
+		].join('\r\n')
+		const request = new Request('https://api.example.com/upload', {
+			method: 'POST',
+			headers: {
+				'Content-Type': `multipart/form-data; boundary=${boundary}`,
+			},
+			body: head + 'x'.repeat(200 * 1024) + tail,
+		})
+
+		await window.fetch(request)
+
+		// Reading stops at the 64 KB limit inside the file part, so the file
+		// is described with the bytes seen so far and the trailing field is
+		// not recorded. The upload itself is untouched.
+		expect(await getCapturedRequestBody(request)).toBe(
+			JSON.stringify({
+				title: 'big upload',
+				upload: `[File name="big.bin" type="application/octet-stream" size>=${64 * 1024 - head.length}]`,
+			}),
+		)
+		expect(request.bodyUsed).toBe(false)
+	})
+
+	it('collects repeated multipart names and does not mistake delimiter-like file bytes', async () => {
+		const boundary = '----WebKitFormBoundaryJYRKp7afg92B7vvW'
+		const encoder = new TextEncoder()
+		const head = encoder.encode(
+			[
+				`--${boundary}`,
+				'Content-Disposition: form-data; name="title"',
+				'',
+				'héllo "quoted"',
+				`--${boundary}`,
+				'Content-Disposition: form-data; name="tags"',
+				'',
+				'a',
+				`--${boundary}`,
+				'Content-Disposition: form-data; name="tags"',
+				'',
+				'b',
+				`--${boundary}`,
+				// Chromium percent-encodes quotes in filenames.
+				'Content-Disposition: form-data; name="upload"; filename="we%22ird.bin"',
+				'Content-Type: application/octet-stream',
+				'',
+				'',
+			].join('\r\n'),
+		)
+		// Binary content that contains CRLF followed by "--".
+		const fileBytes = new Uint8Array([0xff, 0x00, 0x0d, 0x0a, 0x2d, 0x2d])
+		const tail = encoder.encode(
+			[
+				'',
+				`--${boundary}`,
+				'Content-Disposition: form-data; name="after"',
+				'',
+				'trailing',
+				`--${boundary}--`,
+				'',
+			].join('\r\n'),
+		)
+		const body = new Uint8Array(
+			head.byteLength + fileBytes.byteLength + tail.byteLength,
+		)
+		body.set(head, 0)
+		body.set(fileBytes, head.byteLength)
+		body.set(tail, head.byteLength + fileBytes.byteLength)
+		const request = new Request('https://api.example.com/upload', {
+			method: 'POST',
+			headers: {
+				'Content-Type': `multipart/form-data; boundary=${boundary}`,
+			},
+			body,
+		})
+
+		await window.fetch(request)
+
+		expect(await getCapturedRequestBody(request)).toBe(
+			JSON.stringify({
+				title: 'héllo "quoted"',
+				tags: ['a', 'b'],
+				upload: '[File name="we%22ird.bin" type="application/octet-stream" size=6]',
+				after: 'trailing',
+			}),
 		)
 	})
 

@@ -3,7 +3,7 @@ import { getBodySizeLimit } from '../listeners/network-listener/utils/xhr-listen
 
 export type HeaderRecord = { [key: string]: string }
 
-// Bodies larger than this are described rather than decoded or parsed.
+// Bodies larger than this are described rather than decoded to text.
 const MAX_BINARY_DECODE_BYTES = 64 * 1024 * 1024
 
 const isMultipartFormData = (
@@ -61,20 +61,30 @@ const describeBlob = (blob: Blob): string => {
 	return `[Blob type="${blob.type}" size=${blob.size}]`
 }
 
+type FormFields = { [key: string]: string | string[] }
+
+// Repeated names collect into an array, the way FormData.getAll would.
+const addFormField = (fields: FormFields, key: string, text: string) => {
+	const existing = fields[key]
+	if (existing === undefined) {
+		fields[key] = text
+	} else if (Array.isArray(existing)) {
+		existing.push(text)
+	} else {
+		fields[key] = [existing, text]
+	}
+}
+
 // Recorded as JSON so bodyKeysToRedact / bodyKeysToRecord apply to form
 // fields too. File parts are described, not read.
 const stringifyFormData = (form: FormData): string => {
-	const fields: { [key: string]: string | string[] } = {}
+	const fields: FormFields = {}
 	form.forEach((value, key) => {
-		const text = typeof value === 'string' ? value : describeBlob(value)
-		const existing = fields[key]
-		if (existing === undefined) {
-			fields[key] = text
-		} else if (Array.isArray(existing)) {
-			existing.push(text)
-		} else {
-			fields[key] = [existing, text]
-		}
+		addFormField(
+			fields,
+			key,
+			typeof value === 'string' ? value : describeBlob(value),
+		)
 	})
 	return JSON.stringify(fields)
 }
@@ -206,10 +216,7 @@ const readStreamBytes = async (
 	return { chunks, byteLength, truncated: true }
 }
 
-const concatChunks = ({
-	chunks,
-	byteLength,
-}: StreamBytes): Uint8Array<ArrayBuffer> => {
+const concatChunks = ({ chunks, byteLength }: StreamBytes): Uint8Array => {
 	const out = new Uint8Array(byteLength)
 	let offset = 0
 	for (const chunk of chunks) {
@@ -237,24 +244,91 @@ const decodeStreamBytes = (bytes: StreamBytes): string => {
 	}
 }
 
+const describeMultipart = (bytes: StreamBytes): string =>
+	`[multipart/form-data size${bytes.truncated ? '>' : '='}${bytes.byteLength}]`
+
 // A FormData body is serialized to multipart when the Request is built, so
 // its stream holds raw multipart text: form fields the JSON-based key
-// redaction cannot see, plus the contents of every file part. Parse it back
-// into FormData so it is recorded exactly like an init.body FormData.
-const parseMultipartBody = async (
+// redaction cannot see, plus the contents of every file part. Scan the
+// bounded prefix that was read and record it like an init.body FormData:
+// field values redactable, file parts described (never copied). Only the
+// prefix is scanned, so a form whose large file part comes first loses the
+// fields after the cut; finding them would mean reading the whole upload and
+// holding copies of every file on the heap.
+const parseMultipartPrefix = (
 	bytes: StreamBytes,
 	contentType: string,
-): Promise<string> => {
-	if (bytes.truncated) {
-		return `[multipart/form-data size>${bytes.byteLength}]`
+): string => {
+	const boundaryMatch = /;\s*boundary=(?:"([^"]*)"|([^;]*))/i.exec(
+		contentType,
+	)
+	const boundary = (boundaryMatch?.[1] ?? boundaryMatch?.[2])?.trim()
+	if (!boundary) {
+		return describeMultipart(bytes)
 	}
 	try {
-		const form = await new Response(concatChunks(bytes), {
-			headers: { 'content-type': contentType },
-		}).formData()
-		return stringifyFormData(form)
+		const data = concatChunks(bytes)
+		// windows-1252 maps every byte to exactly one code unit, so string
+		// offsets are byte offsets and the ASCII delimiters can be found with
+		// indexOf. Field values are re-decoded from the bytes as UTF-8.
+		const text = new TextDecoder('windows-1252').decode(data)
+		const delimiter = `--${boundary}`
+		const fields: FormFields = {}
+		let pos = text.indexOf(delimiter)
+		if (pos === -1) {
+			return describeMultipart(bytes)
+		}
+		while (pos !== -1) {
+			pos += delimiter.length
+			if (text.startsWith('--', pos)) {
+				break // closing delimiter
+			}
+			const headersStart = text.indexOf('\r\n', pos)
+			const headersEnd =
+				headersStart === -1
+					? -1
+					: text.indexOf('\r\n\r\n', headersStart)
+			if (headersEnd === -1) {
+				break // the read stopped inside this part's headers
+			}
+			const headers = text.slice(headersStart + 2, headersEnd)
+			const contentStart = headersEnd + 4
+			const next = text.indexOf(`\r\n${delimiter}`, contentStart)
+			// No delimiter after the content: the read stopped inside it.
+			const cut = next === -1
+			const contentEnd = cut ? text.length : next
+			const name = /\bname="([^"]*)"/i.exec(headers)?.[1]
+			if (name !== undefined) {
+				const filename = /\bfilename="([^"]*)"/i.exec(headers)?.[1]
+				if (filename !== undefined) {
+					const type =
+						/^content-type:[ \t]*(.*)$/im
+							.exec(headers)?.[1]
+							?.trim() ?? ''
+					const size = contentEnd - contentStart
+					addFormField(
+						fields,
+						name,
+						`[File name="${filename}" type="${type}" size${cut ? '>=' : '='}${size}]`,
+					)
+				} else {
+					addFormField(
+						fields,
+						name,
+						new TextDecoder().decode(
+							data.subarray(contentStart, contentEnd),
+						),
+					)
+				}
+			}
+			pos = cut ? -1 : next + 2
+		}
+		if (bytes.truncated && Object.keys(fields).length === 0) {
+			return describeMultipart(bytes)
+		}
+		return JSON.stringify(fields)
 	} catch {
-		return `[multipart/form-data size=${bytes.byteLength}]`
+		return describeMultipart(bytes)
 	}
 }
 
@@ -275,16 +349,12 @@ const captureRequestBody = (
 			return Promise.resolve(undefined)
 		}
 		const contentType = request.headers.get('content-type')
-		if (isMultipartFormData(contentType)) {
-			// The recorded value is the field JSON, not the raw body, so the
-			// read is bounded by the decode limit rather than the recording
-			// limit for this content type.
-			return readStreamBytes(clone.body, MAX_BINARY_DECODE_BYTES)
-				.then((bytes) => parseMultipartBody(bytes, contentType))
-				.catch(() => undefined)
-		}
 		return readStreamBytes(clone.body, getBodySizeLimit(request.headers))
-			.then(decodeStreamBytes)
+			.then((bytes) =>
+				isMultipartFormData(contentType)
+					? parseMultipartPrefix(bytes, contentType)
+					: decodeStreamBytes(bytes),
+			)
 			.catch(() => undefined)
 	} catch {
 		return Promise.resolve(undefined)
