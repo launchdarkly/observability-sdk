@@ -233,7 +233,7 @@ internal class SessionReplayClientAdapter private constructor() {
             "$LOG_PREFIX initLDClient: observability session.id=${customSessionId ?: "<native-generated>"}"
         )
         // timeout=0: return immediately without blocking the main thread waiting for flags.
-        // onPluginsReady() fires synchronously during init() before it returns.
+        // The plugins register synchronously during init(), before it returns.
         LDClient.init(application, config, cachedContext, 0)
     }
 

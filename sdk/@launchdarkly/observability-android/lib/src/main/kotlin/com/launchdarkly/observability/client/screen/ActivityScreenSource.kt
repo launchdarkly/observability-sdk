@@ -45,6 +45,10 @@ internal class ActivityScreenSource(
      * where no further `onActivityResumed` fires for the current screen.
      */
     fun captureCurrent(activity: Activity) {
+        // Adopted as the current activity, as a real resume would: the callback for it has already
+        // been missed, so nothing else would record it here, and [captureCurrent] (which reseeds a
+        // new session with the screen still on screen) would have nothing to work from.
+        currentActivity = WeakReference(activity)
         screenView(activity)?.let(onScreenView)
     }
 

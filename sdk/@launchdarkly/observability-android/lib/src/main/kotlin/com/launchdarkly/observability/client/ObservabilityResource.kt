@@ -56,7 +56,7 @@ internal fun readInjectedSymbolsId(context: Context): String? {
  * Builds the OpenTelemetry [Resource] attached to every observability signal emitted by this SDK.
  *
  * Single source of truth for resource shape, used by both initialization paths:
- *  - [com.launchdarkly.observability.plugin.Observability.onPluginsReady] (LDClient plugin path),
+ *  - [com.launchdarkly.observability.plugin.Observability.register] (LDClient plugin path),
  *    which flattens its [com.launchdarkly.sdk.android.integrations.EnvironmentMetadata] into the
  *    [applicationId], [applicationVersion], and [sdkVersion] params.
  *  - [com.launchdarkly.observability.sdk.LDObserve.init] (standalone path), which has no

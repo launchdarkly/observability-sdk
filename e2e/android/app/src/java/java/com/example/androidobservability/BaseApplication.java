@@ -8,27 +8,20 @@ import androidx.annotation.Nullable;
 
 import com.launchdarkly.observability.api.ObservabilityOptions;
 import com.launchdarkly.observability.context.LDObserveContext;
-import com.launchdarkly.observability.plugin.Observability;
 import com.launchdarkly.observability.replay.MaskViewRef;
 import com.launchdarkly.observability.replay.PrivacyProfile;
 import com.launchdarkly.observability.replay.ReplayOptions;
-import com.launchdarkly.observability.replay.plugin.SessionReplay;
 import com.launchdarkly.observability.sdk.LDObserve;
 import com.launchdarkly.observability.sdk.LDReplay;
 import com.launchdarkly.sdk.ContextKind;
 import com.launchdarkly.sdk.LDContext;
-import com.launchdarkly.sdk.android.Components;
 import com.launchdarkly.sdk.android.FeatureFlagChangeListener;
 import com.launchdarkly.sdk.android.LDClient;
 import com.launchdarkly.sdk.android.LDConfig;
 import com.launchdarkly.sdk.android.LaunchDarklyException;
-import com.launchdarkly.sdk.android.integrations.Plugin;
 
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.common.Attributes;
-
-import java.util.Arrays;
-import java.util.List;
 
 /**
  * Java counterpart of the Kotlin {@code BaseApplication} used by the compose flavor.
@@ -37,12 +30,21 @@ import java.util.List;
  * Observability and Session Replay SDKs using the Java-friendly fluent builders. Both
  * initialization paths from the Kotlin example are mirrored here:
  * <ul>
- *     <li>{@link #realInit()} - registers Observability and Session Replay as LDClient plugins.</li>
- *     <li>{@link #realInitIndependent()} - initializes via {@code LDObserve.init} without the
+ *     <li>{@link #initWithFlagClient()} - attaches Observability and Session Replay to an
+ *     initialized LDClient via {@code LDObserve.init}.</li>
+ *     <li>{@link #initIndependently()} - initializes via {@code LDObserve.init} without the
  *     feature-flag client.</li>
  * </ul>
  */
 public class BaseApplication extends Application {
+
+    /**
+     * Which setup {@link #onCreate()} runs: standalone observability ({@link #initIndependently()})
+     * or observability attached to an initialized LDClient ({@link #initWithFlagClient()}). Flip it
+     * to exercise the app without the flagging SDK, which also hides the screens' LDClient-driven
+     * controls.
+     */
+    public boolean isIndependent = false;
 
     public static final String LAUNCHDARKLY_MOBILE_KEY = BuildConfig.LAUNCHDARKLY_MOBILE_KEY;
 
@@ -50,8 +52,6 @@ public class BaseApplication extends Application {
             BuildConfig.OTLP_ENDPOINT,
             BuildConfig.BACKEND_URL
     );
-
-    private final SessionReplay sessionReplayPlugin = new SessionReplay(buildReplayOptions());
 
     @Nullable
     private String testUrl = null;
@@ -104,25 +104,26 @@ public class BaseApplication extends Application {
     }
 
     /** Example of creating OBS/SR with the LaunchDarkly feature-flag SDK. */
-    public void realInit() {
-        Observability observabilityPlugin = new Observability(
-                this,
-                LAUNCHDARKLY_MOBILE_KEY,
-                effectiveOptions()
-        );
-
-        List<Plugin> plugins = Arrays.asList(observabilityPlugin, sessionReplayPlugin);
-
+    public void initWithFlagClient() {
         LDConfig ldConfig = new LDConfig.Builder(LDConfig.Builder.AutoEnvAttributes.Enabled)
                 .mobileKey(LAUNCHDARKLY_MOBILE_KEY)
-                .plugins(Components.plugins().setPlugins(plugins))
                 .build();
 
         LDContext context = LDContext.builder(ContextKind.DEFAULT, "example-user-key")
                 .anonymous(true)
                 .build();
 
-        LDClient.init(this, ldConfig, context, 0);
+        LDClient ldClient = LDClient.init(this, ldConfig, context, 0);
+
+        LDObserve.Companion.init(
+                this,
+                ldClient,
+                observeContext(),
+                effectiveOptions(),
+                buildReplayOptions(),
+                null,
+                null
+        );
 
         if (testUrl == null) {
             // intervenes in E2E tests by triggering spans
@@ -133,13 +134,9 @@ public class BaseApplication extends Application {
     }
 
     /** Example of creating OBS/SR without the feature-flag SDK. */
-    public void realInitIndependent() {
+    public void initIndependently() {
         final ObservabilityOptions options = effectiveOptions();
-
-        final LDObserveContext context = LDObserveContext.Companion
-                .builder(LDObserveContext.DEFAULT_KIND, "example-user-key")
-                .anonymous(true)
-                .build();
+        final LDObserveContext context = observeContext();
 
         new Thread(() -> {
             LDObserve.Companion.init(
@@ -148,11 +145,19 @@ public class BaseApplication extends Application {
                     context,
                     options,
                     buildReplayOptions(),
+                    null,
                     null
             );
 
             LDReplay.INSTANCE.start();
         }).start();
+    }
+
+    private LDObserveContext observeContext() {
+        return LDObserveContext.Companion
+                .builder(LDObserveContext.DEFAULT_KIND, "example-user-key")
+                .anonymous(true)
+                .build();
     }
 
     public void flagEvaluation() {
@@ -178,6 +183,10 @@ public class BaseApplication extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
-        realInit();
+        if (isIndependent) {
+            initIndependently();
+        } else {
+            initWithFlagClient();
+        }
     }
 }

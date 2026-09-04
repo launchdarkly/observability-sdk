@@ -42,6 +42,12 @@ data class ObservabilityContext(
      */
     var trackFlow: SharedFlow<TrackEvent>? = null,
     /**
+     * Ordered stream of identified contexts from the single identify funnel, owned by Observability.
+     * Session Replay consumes it to identify its session for every identify path (`LDClient.identify`
+     * and the manual `LDObserve.identify` API).
+     */
+    var identifyFlow: SharedFlow<IdentifyEvent>? = null,
+    /**
      * Ordered stream of app-lifecycle transitions (foreground/background) from the single emitter,
      * owned by Observability. Session Replay consumes it to emit `Foreground` / `Background`
      * timeline breadcrumbs.

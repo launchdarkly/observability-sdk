@@ -1,10 +1,20 @@
 package com.launchdarkly.observability.replay.capture
 
+import android.app.Activity
 import android.graphics.Rect
 import android.view.View
+import android.view.Window
 import android.view.WindowManager
 import android.view.WindowManager.LayoutParams.TYPE_APPLICATION_STARTING
 
+/**
+ * A [Window] this process currently has on screen, as reported by
+ * [WindowInspector.topmostAppWindow].
+ *
+ * [activity] is best effort: touch capture only needs the window, while screen reporting needs the
+ * activity, so a window whose activity cannot be resolved is still useful.
+ */
+data class OnScreenWindow(val window: Window, val activity: Activity?)
 
 enum class WindowType {
     ACTIVITY,

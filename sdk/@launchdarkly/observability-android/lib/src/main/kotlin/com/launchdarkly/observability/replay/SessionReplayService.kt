@@ -42,6 +42,14 @@ import kotlinx.coroutines.launch
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
+ * Whether this identify delivers the identity [other] already delivered: the same user object, on
+ * the same session. Timestamps are ignored, so a repeat of an unchanged identity compares equal
+ * while a session rotation does not — the fresh session needs identifying again.
+ */
+private fun IdentifyItemPayload.isSameIdentityAs(other: IdentifyItemPayload?): Boolean =
+    other != null && attributes == other.attributes && sessionId == other.sessionId
+
+/**
  * Provides session replay instrumentation. Session replays that are sampled will appear on the LaunchDarkly dashboard.
  *
  * @param options Configuration options for replay behavior including privacy settings and capture interval
@@ -99,6 +107,8 @@ class SessionReplayService(
     private var exporter: SessionReplayExporter? = null
     private val pendingIdentifyLock = Any()
     private var pendingIdentify: IdentifyItemPayload? = null
+    /** The identify last delivered to the backend, used to drop a redundant repeat. */
+    private var lastAppliedIdentify: IdentifyItemPayload? = null
     private var initializationStore: SessionReplayInitializationStore? = null
     /**
      * Decides whether screenshots may be taken, from this launch's verdicts and the failure cached from a
@@ -248,6 +258,21 @@ class SessionReplayService(
         instrumentationScope.launch {
             observabilityContext.trackFlow?.collect { track ->
                 recordTrack(track.name, track.metricValue, track.attributes, track.timestamp)
+            }
+        }
+
+        // Identify collector: each identified context from Observability's single identify funnel
+        // identifies the replay session. This covers both `LDClient.identify` and the manual
+        // `LDObserve.identify` API (including standalone init without `LDClient`), which the LD
+        // client hook alone misses.
+        instrumentationScope.launch {
+            observabilityContext.identifyFlow?.collect { identify ->
+                recordIdentify(
+                    contextKeys = identify.contextKeys,
+                    canonicalKey = identify.canonicalKey,
+                    attributes = identify.attributes,
+                    timestamp = identify.timestamp
+                )
             }
         }
 
@@ -571,6 +596,12 @@ class SessionReplayService(
         } ?: return
 
         val pendingUpdated = pending.copy(sessionId = sessionManager.getSessionId())
+        // Claimed like any other delivered identify, so the app re-identifying this same user right
+        // after recording starts does not repeat the request — and claimed here rather than inside
+        // the coroutine, so an identify racing this one cannot slip past the claim.
+        synchronized(pendingIdentifyLock) {
+            lastAppliedIdentify = pendingUpdated
+        }
         instrumentationScope.launch {
             exporterSnapshot.sendIdentifyAndCache(pendingUpdated)
             eventQueue.send(pendingUpdated)
@@ -580,7 +611,8 @@ class SessionReplayService(
     suspend fun identifySession(
         ldContext: LDObserveContext,
         timestamp: Long = System.currentTimeMillis(),
-        canonicalKeyOverride: String? = null
+        canonicalKeyOverride: String? = null,
+        userAttributes: Attributes = Attributes.empty()
     ) {
         if (!this::sessionManager.isInitialized || exporter == null) {
             logger.warn("identifySession called before SessionReplayService was installed; skipping.")
@@ -591,6 +623,7 @@ class SessionReplayService(
         val event = IdentifyItemPayload.from(
             contextFriendlyName = observabilityContext.options.contextFriendlyName,
             resourceAttributes = observabilityContext.resourceAttributes,
+            userAttributes = userAttributes,
             ldContext = ldContext,
             timestamp = timestamp,
             sessionId = sessionId,
@@ -611,9 +644,28 @@ class SessionReplayService(
             return
         }
 
-        synchronized(pendingIdentifyLock) {
+        // The same identity can arrive twice: a cross-platform host forwards `afterIdentify` to both
+        // the observability and the replay bridge, and the initial seed identifies the context the
+        // client was started with just before the app may identify that same user itself.
+        // Re-identifying an unchanged user on the session already carrying it is redundant, so it is
+        // dropped instead of costing a second request and a duplicate timeline event.
+        // Any pending identify is stale by now — the session is recording — so it is cleared even
+        // when this identify turns out to be a duplicate.
+        //
+        // Checked and claimed in one step, before the request rather than after it: identifies run
+        // concurrently on the default dispatcher, so a duplicate arriving while this one is in
+        // flight would otherwise pass the check and be sent again. There is nothing to release on
+        // failure — the exporter logs its own and reports nothing back.
+        val accepted = synchronized(pendingIdentifyLock) {
             pendingIdentify = null
+            if (event.isSameIdentityAs(lastAppliedIdentify)) {
+                false
+            } else {
+                lastAppliedIdentify = event
+                true
+            }
         }
+        if (!accepted) return
 
         exporter?.sendIdentifyAndCache(event)
         eventQueue.send(event)
@@ -622,9 +674,28 @@ class SessionReplayService(
     override fun afterIdentify(contextKeys: Map<String, String>, canonicalKey: String, completed: Boolean) {
         if (!completed) return
 
+        recordIdentify(contextKeys = contextKeys, canonicalKey = canonicalKey)
+    }
+
+    /**
+     * Identifies the replay session. Shared by the cross-platform bridge
+     * ([com.launchdarkly.observability.replay.plugin.SessionReplayHookProxy]) and the in-process
+     * identify collector fed by Observability's single identify funnel.
+     */
+    private fun recordIdentify(
+        contextKeys: Map<String, String>,
+        canonicalKey: String,
+        attributes: Attributes = Attributes.empty(),
+        timestamp: Long = System.currentTimeMillis()
+    ) {
         val observeContext = buildObserveContext(contextKeys)
         instrumentationScope.launch {
-            identifySession(observeContext, canonicalKeyOverride = canonicalKey)
+            identifySession(
+                ldContext = observeContext,
+                timestamp = timestamp,
+                canonicalKeyOverride = canonicalKey,
+                userAttributes = attributes
+            )
         }
     }
 
