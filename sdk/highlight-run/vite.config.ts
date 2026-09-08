@@ -5,8 +5,32 @@ import { resolve as resolvePath } from 'path'
 import { defineConfig } from 'vite'
 import dts from 'vite-plugin-dts'
 
+// OpenTelemetry packages that must be bundled exactly once. The monorepo hoists
+// a newer @opentelemetry/instrumentation (used by the Node SDKs) to the root, so
+// the 0.57.x copies the web instrumentations depend on get nested under each of
+// them and Rollup bundled them four times (plus duplicate core/api-logs). Since
+// highlight.run 10.3.4 this inflated the observe chunk by ~44 KB and created
+// independent copies of module-level state. Resolve them from this package only.
+const OTEL_DEDUPE = [
+	'@opentelemetry/api',
+	'@opentelemetry/api-logs',
+	'@opentelemetry/core',
+	'@opentelemetry/instrumentation',
+	'@opentelemetry/resources',
+	'@opentelemetry/sdk-trace-base',
+	'@opentelemetry/sdk-trace-web',
+	'@opentelemetry/sdk-metrics',
+	'@opentelemetry/otlp-exporter-base',
+	'@opentelemetry/otlp-transformer',
+	'@opentelemetry/exporter-trace-otlp-http',
+	'@opentelemetry/exporter-metrics-otlp-http',
+]
+
 export default defineConfig({
 	envPrefix: ['REACT_APP_'],
+	resolve: {
+		dedupe: OTEL_DEDUPE,
+	},
 	server: {
 		host: '0.0.0.0',
 		port: 8877,
@@ -87,6 +111,7 @@ export default defineConfig({
 				}),
 				resolve({
 					browser: true,
+					dedupe: OTEL_DEDUPE,
 				}),
 			],
 			output: {
