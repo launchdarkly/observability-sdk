@@ -164,6 +164,7 @@ export type HighlightClassOptions = {
 	inlineImages?: boolean
 	inlineVideos?: boolean
 	inlineStylesheet?: boolean
+	styleSheetResyncInterval?: number
 	recordCrossOriginIframe?: boolean
 	firstloadVersion?: string
 	environment?: 'development' | 'production' | 'staging' | string
@@ -213,6 +214,7 @@ export class Highlight {
 	inlineImages!: boolean
 	inlineVideos!: boolean
 	inlineStylesheet!: boolean
+	styleSheetResyncInterval!: number
 	debugOptions!: DebugOptions
 	listeners!: listenerHandler[]
 	firstloadVersion!: string
@@ -415,6 +417,7 @@ export class Highlight {
 		this.inlineImages = options.inlineImages ?? this._isOnLocalHost
 		this.inlineVideos = options.inlineVideos ?? this._isOnLocalHost
 		this.inlineStylesheet = options.inlineStylesheet ?? this._isOnLocalHost
+		this.styleSheetResyncInterval = options.styleSheetResyncInterval ?? 2000
 		this.samplingStrategy = {
 			canvasFactor: 0.5,
 			canvasMaxSnapshotDimension: 360,
@@ -880,6 +883,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 				inlineVideos: this.inlineVideos,
 				collectFonts: this.inlineImages,
 				inlineStylesheet: this.inlineStylesheet,
+				styleSheetResyncInterval: this.styleSheetResyncInterval,
 				plugins: [getRecordSequentialIdPlugin()],
 				logger:
 					(typeof this.options.debug === 'boolean' &&

@@ -280,6 +280,14 @@ export type HighlightOptions = CommonOptions & {
 	 */
 	inlineStylesheet?: boolean
 	/**
+	 * How often, in milliseconds, session replay checks that its CSSOM patches
+	 * are still installed and re-sends CSS-in-JS rules another script on the
+	 * page may have caused it to miss. Set to 0 to disable. Lower values recover
+	 * styles faster; each check walks every stylesheet on the page.
+	 * @default 2000
+	 */
+	styleSheetResyncInterval?: number
+	/**
 	 * Enables recording of cross-origin iframes. Should be set in both the parent window and
 	 * in the cross-origin iframe.
 	 * @default false
