@@ -50,6 +50,13 @@
 				"src/LaunchDarkly.Observability/LaunchDarkly.Observability.csproj"
 			]
 		},
+		"sdk/@launchdarkly/o11y": {
+			"package-name": "@launchdarkly/o11y",
+			"release-type": "node",
+			"versioning": "default",
+			"include-v-in-tag": false,
+			"include-component-in-tag": true
+		},
 		"sdk/@launchdarkly/observability": {
 			"package-name": "@launchdarkly/observability",
 			"release-type": "node",

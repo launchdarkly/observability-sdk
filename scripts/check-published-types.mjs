@@ -2,9 +2,10 @@
 // Guard against shipping broken TypeScript declarations.
 //
 // Why this exists:
-//   `highlight.run` (and the thin `@launchdarkly/observability` /
-//   `@launchdarkly/session-replay` wrappers that re-export it) bundles its
-//   implementation into a single rolled-up `dist/index.d.ts`. If that
+//   `@launchdarkly/o11y` (and the thin `highlight.run` /
+//   `@launchdarkly/observability` / `@launchdarkly/session-replay` wrappers
+//   that re-export it) bundles its implementation into a single rolled-up
+//   `dist/index.d.ts`. If that
 //   declaration file `import`s a type from a package that is NOT a declared
 //   runtime dependency (e.g. a dev-only or workspace package), or from an
 //   internal path alias (e.g. `client/types/observe`), the import is
@@ -46,19 +47,22 @@ const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 // Pin the compiler so the check is deterministic across CI runs.
 const TYPESCRIPT_VERSION = '5.8.3'
 
-// Packages to verify. `highlight.run` holds the entire generated type surface;
-// the `@launchdarkly/*` wrappers below just re-export from it, so their own
-// declaration files are trivial. We test `highlight.run` because all of its
-// runtime dependencies are published to npm, so its tarball installs cleanly
-// in isolation. `imports` is what the consumer file imports from the package.
+// Packages to verify. `@launchdarkly/o11y` holds the entire generated type
+// surface; the `highlight.run` / `@launchdarkly/observability` /
+// `@launchdarkly/session-replay` wrappers just re-export from it, so their own
+// declaration files are trivial. We test `@launchdarkly/o11y` because all of
+// its runtime dependencies are published to npm, so its tarball installs
+// cleanly in isolation (the wrappers depend on `@launchdarkly/o11y` via the
+// `workspace:` protocol, which `npm pack` does not resolve). `consumer` is
+// what the consumer file imports from the package.
 const PACKAGES = [
 	{
-		dir: 'sdk/highlight-run',
-		name: 'highlight.run',
+		dir: 'sdk/@launchdarkly/o11y',
+		name: '@launchdarkly/o11y',
 		dts: 'dist/index.d.ts',
 		consumer: [
-			`import { Observe, LDObserve, LDRecord, H } from 'highlight.run'`,
-			`import type { ObserveOptions, RecordOptions } from 'highlight.run'`,
+			`import { Observe, LDObserve, LDRecord, H } from '@launchdarkly/o11y'`,
+			`import type { ObserveOptions, RecordOptions } from '@launchdarkly/o11y'`,
 			`const _opts: ObserveOptions = {}`,
 			`void [Observe, LDObserve, LDRecord, H, _opts]`,
 			`export type _RecordOptions = RecordOptions`,

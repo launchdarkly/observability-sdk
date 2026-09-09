@@ -53,7 +53,7 @@ Everything else around it (`context.*`, `url.*`, `user_agent.*`, `viewport.*`, `
 | 15 | `scroll` | span | web | - | Scroll interaction. |
 | 16 | `app_reload` | span | react native | `Reload` | JS runtime reloaded, same session continued (see §4.14). |
 
-> **Breadcrumb column.** "Breadcrumbs" are the **Events** shown on the Session Replay timeline (and, going forward, also surfaced in RUM). On web they are emitted as **rrweb custom events** by the recording SDK (`sdk/highlight-run`); the complete set emitted today is `Navigate`, `Reload`, `Referrer`, `Click`, `Focus`, `Viewport`, `Performance`, `Jank`, `Page Unload`, `TabHidden`, `Stop`, `Track`, `Segment`, `Identify`. The column above lists the corresponding breadcrumb name(s) for each taxonomy event; `-` means there is no equivalent breadcrumb today. Breadcrumbs without a taxonomy event (`Viewport`, `Performance`, `Jank`, `Page Unload`, `Stop`) are internal diagnostics and are intentionally not part of this taxonomy.
+> **Breadcrumb column.** "Breadcrumbs" are the **Events** shown on the Session Replay timeline (and, going forward, also surfaced in RUM). On web they are emitted as **rrweb custom events** by the recording SDK (`sdk/@launchdarkly/o11y`); the complete set emitted today is `Navigate`, `Reload`, `Referrer`, `Click`, `Focus`, `Viewport`, `Performance`, `Jank`, `Page Unload`, `TabHidden`, `Stop`, `Track`, `Segment`, `Identify`. The column above lists the corresponding breadcrumb name(s) for each taxonomy event; `-` means there is no equivalent breadcrumb today. Breadcrumbs without a taxonomy event (`Viewport`, `Performance`, `Jank`, `Page Unload`, `Stop`) are internal diagnostics and are intentionally not part of this taxonomy.
 
 ---
 

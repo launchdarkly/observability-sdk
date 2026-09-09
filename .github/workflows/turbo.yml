@@ -2,8 +2,10 @@
 # as well as npm publishing for @launchdarkly and @highlight-run packages.
 #
 # AUTOMATED PUBLISHING (on push to main):
-#   - Publishes @highlight-run/* and highlight.run packages using NPM token
 #   - Publishes @launchdarkly/* packages using OIDC authentication
+#   - Then publishes @highlight-run/* and highlight.run packages using NPM token.
+#     highlight.run depends on @launchdarkly/o11y at runtime, so the
+#     @launchdarkly/* packages must be on npm first.
 #
 # MANUAL PUBLISHING (via workflow_dispatch):
 #   - Can be triggered manually from the Actions tab
@@ -116,18 +118,12 @@ jobs:
             - name: Verify published types resolve in a clean consumer
               run: node scripts/check-published-types.mjs
 
-            - name: Configure yarn npm registry credentials
-              if: github.ref == 'refs/heads/main'
-              run: |
-                  yarn config set npmRegistryServer "https://registry.npmjs.org"
-                  yarn config set npmAuthToken "${NPM_TOKEN}"
-              env:
-                  NPM_TOKEN: ${{ secrets.NPM_TOKEN_HIGHLIGHT_RUN }}
-
-            - name: Publish highlight npm packages
-              if: github.ref == 'refs/heads/main'
-              run: yarn publish:highlight
-
+            # Publish order matters: highlight.run declares @launchdarkly/o11y as
+            # a runtime dependency, so the @launchdarkly/* packages must be on npm
+            # before highlight.run is published. If the @launchdarkly/* publish
+            # fails, the job stops here and highlight.run is not published
+            # against a dependency version that does not exist on npm.
+            #
             # Publishing credentials for @launchdarkly/* NPM packages come from OIDC.
             - name: Setup Node.js for OIDC publishing
               if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
@@ -140,3 +136,15 @@ jobs:
               env:
                   LD_RELEASE_IS_PRERELEASE: ${{ github.event_name == 'workflow_dispatch' && inputs.prerelease || false }}
                   LD_RELEASE_IS_DRYRUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry-run || false }}
+
+            - name: Configure yarn npm registry credentials
+              if: github.ref == 'refs/heads/main'
+              run: |
+                  yarn config set npmRegistryServer "https://registry.npmjs.org"
+                  yarn config set npmAuthToken "${NPM_TOKEN}"
+              env:
+                  NPM_TOKEN: ${{ secrets.NPM_TOKEN_HIGHLIGHT_RUN }}
+
+            - name: Publish highlight npm packages
+              if: github.ref == 'refs/heads/main'
+              run: yarn publish:highlight

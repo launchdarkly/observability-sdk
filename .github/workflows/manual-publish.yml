@@ -55,6 +55,10 @@ jobs:
     # @launchdarkly/* npm packages are published via the Monorepo workflow (turbo.yml)
     # using OIDC authentication. npm OIDC only supports a single workflow per package.
 
+    # highlight.run depends on @launchdarkly/o11y at runtime. Only run this
+    # after the matching @launchdarkly/o11y version has been published by the
+    # Monorepo workflow (turbo.yml); otherwise `npm install highlight.run`
+    # cannot resolve its dependency.
     publish-highlight-packages:
         if: ${{ inputs.release_highlight == true }}
         runs-on: ubuntu-22.04-8core-32gb
