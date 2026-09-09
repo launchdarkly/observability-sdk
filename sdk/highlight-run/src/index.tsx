@@ -13,6 +13,7 @@
 import type { HighlightClassOptions, RequestResponsePair } from './client'
 import { GenerateSecureID, Highlight } from './client'
 import { FirstLoadListeners } from './client/listeners/first-load-listeners'
+import { sanitizedLocationHref } from './client/listeners/network-listener/utils/network-sanitizer'
 import type {
 	HighlightOptions,
 	HighlightPublicInterface,
@@ -387,7 +388,7 @@ const H: HighlightPublicInterface = {
 				highlight_obj.recordGauge({
 					...metric,
 					tags: metric.tags ?? [],
-					group: window.location.href,
+					group: sanitizedLocationHref(),
 					category: MetricCategory.Frontend,
 				})
 			})

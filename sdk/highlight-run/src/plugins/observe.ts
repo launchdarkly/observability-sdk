@@ -31,6 +31,7 @@ import {
 	ATTR_URL_FULL,
 } from '@opentelemetry/semantic-conventions'
 import { Attributes } from '@opentelemetry/api'
+import { sanitizedLocationHref } from '../client/listeners/network-listener/utils/network-sanitizer'
 import { internalLog } from '../sdk/util'
 import { LDEvaluationReason } from '@launchdarkly/js-sdk-common/dist/cjs/api/data/LDEvaluationReason'
 
@@ -251,7 +252,7 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 					}
 
 					const trackAttrs: Attributes = {
-						[ATTR_URL_FULL]: window.location.href,
+						[ATTR_URL_FULL]: sanitizedLocationHref(),
 						...(this.observe?.getLDContextKeyAttributes() ?? {}),
 						...metaAttrs,
 						key: hookContext.key,
