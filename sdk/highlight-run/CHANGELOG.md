@@ -1,5 +1,12 @@
 # highlight.run
 
+## [10.7.3](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.7.2...highlight.run-10.7.3) (2026-09-09)
+
+
+### Bug Fixes
+
+* **highlight.run:** WebKit/iPad performance hardening — dedupe OpenTelemetry bundles, cap body capture, resync option, telemetry-intake blocklist ([#758](https://github.com/launchdarkly/observability-sdk/issues/758)) ([bdf077a](https://github.com/launchdarkly/observability-sdk/commit/bdf077ad5a363f9163f2a20b12163558d3e39ec6))
+
 ## [10.7.2](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.7.1...highlight.run-10.7.2) (2026-09-03)
 
 

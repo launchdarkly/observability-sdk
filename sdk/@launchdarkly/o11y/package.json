@@ -1,6 +1,6 @@
 {
 	"name": "@launchdarkly/o11y",
-	"version": "1.1.20",
+	"version": "1.1.21",
 	"description": "Shared browser foundation for @launchdarkly/observability and @launchdarkly/session-replay. Capture frontend metrics, errors, logs, traces, and session replays.",
 	"keywords": [
 		"launchdarkly",
