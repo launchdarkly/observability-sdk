@@ -138,6 +138,12 @@ export const setupBrowserTracing = (
 		...(config.networkRecordingOptions?.urlBlocklist ?? []),
 		...DEFAULT_URL_BLOCKLIST,
 	]
+	// The SDK's own OTLP exports and replay uploads: their bodies must never be
+	// stashed or recorded. Compared case-insensitively as substrings, like the
+	// rest of the blocklist.
+	const ownEndpoints = [backendUrl, config.otlpEndpoint]
+		.filter((u): u is string => !!u)
+		.map((u) => u.toLowerCase())
 	const isDebug = import.meta.env.DEBUG === 'true'
 	const environment = config.environment ?? 'production'
 
@@ -493,7 +499,10 @@ export const setupBrowserTracing = (
 		// later re-init still finds the OTel wrapper (which enable() knows
 		// how to unwrap) rather than ours.
 		xhrRequestCaptureCleanup?.()
-		xhrRequestCaptureCleanup = installXhrRequestCapture(urlBlocklist)
+		xhrRequestCaptureCleanup = installXhrRequestCapture([
+			...urlBlocklist,
+			...ownEndpoints,
+		])
 	}
 
 	if (
@@ -504,8 +513,10 @@ export const setupBrowserTracing = (
 	) {
 		// Same placement rationale as the XHR capture above.
 		fetchRequestBodyCaptureCleanup?.()
-		fetchRequestBodyCaptureCleanup =
-			installFetchRequestBodyCapture(urlBlocklist)
+		fetchRequestBodyCaptureCleanup = installFetchRequestBodyCapture([
+			...urlBlocklist,
+			...ownEndpoints,
+		])
 	}
 
 	const contextManager = new StackContextManager()
