@@ -63,6 +63,31 @@ const SENSITIVE_HEADERS = [
 export const DEFAULT_URL_BLOCKLIST = [
 	'https://www.googleapis.com/identitytoolkit',
 	'https://securetoken.googleapis.com',
+	// Intake endpoints of other telemetry vendors. Their batched payloads are
+	// large, frequent and never interesting as spans; on one POS deployment
+	// they were 20% of all request spans and gigabytes of captured bodies.
+	'browser-intake-datadoghq.com',
+	'browser-intake-datadoghq.eu',
+	'browser-intake-us3-datadoghq.com',
+	'browser-intake-us5-datadoghq.com',
+	'browser-intake-ap1-datadoghq.com',
+	'browser-intake-ddog-gov.com',
+	'r.lr-ingest.io',
+	'r.lr-in-prod.com',
+	'r.logrocket.io',
+	'data.pendo.io',
+	'ingest.sentry.io',
+	'ingest.us.sentry.io',
+	'ingest.de.sentry.io',
+	'bam.nr-data.net',
+	'bam-cell.nr-data.net',
+	'rs.fullstory.com',
+	'in.hotjar.com',
+	'api2.amplitude.com',
+	'api.mixpanel.com',
+	'api.segment.io/v1',
+	'google-analytics.com/g/collect',
+	'analytics.google.com/g/collect',
 ]
 
 /**
