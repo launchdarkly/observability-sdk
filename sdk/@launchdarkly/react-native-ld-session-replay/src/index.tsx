@@ -46,7 +46,7 @@ function escapeContextKey(key: string): string {
   return key.replace(/%/g, '%25').replace(/:/g, '%3A');
 }
 
-// Mirrors SessionReplayHook.afterIdentify() in SessionReplayHook.kt (observability-android)
+// Mirrors ObservabilityHook.afterIdentify() in ObservabilityHook.kt (observability-android)
 function contextKeysFromContext(context: LDContext): Record<string, string> {
   const keys: Record<string, string> = {};
   if (!('kind' in context)) {

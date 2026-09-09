@@ -155,14 +155,16 @@
 
         <!-- Identify -->
         <TextView
+            android:id="@+id/label_identify_ldclient"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Identify:"
+            android:text="Identify (LDClient):"
             android:textSize="16sp"
             android:textStyle="bold"
             android:layout_marginBottom="8dp" />
 
         <LinearLayout
+            android:id="@+id/row_identify_ldclient"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
@@ -185,6 +187,44 @@
                 android:text="Multi" />
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_identify_anon"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:backgroundTint="@color/identify_bg"
+                android:textColor="@color/identify_text"
+                android:text="Anon" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Identify (LDObserve):"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="16dp">
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_identify_observe_user"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:backgroundTint="@color/identify_bg"
+                android:textColor="@color/identify_text"
+                android:text="User" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_identify_observe_multi"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:backgroundTint="@color/identify_bg"
+                android:textColor="@color/identify_text"
+                android:text="Multi" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_identify_observe_anon"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:backgroundTint="@color/identify_bg"

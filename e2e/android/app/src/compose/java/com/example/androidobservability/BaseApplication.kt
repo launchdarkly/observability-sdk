@@ -4,17 +4,14 @@ import android.app.Application
 import android.util.Log
 import android.widget.ImageView
 import com.launchdarkly.observability.api.ObservabilityOptions
-import com.launchdarkly.observability.plugin.Observability
 import com.launchdarkly.observability.replay.PrivacyProfile
 import com.launchdarkly.observability.replay.ReplayOptions
-import com.launchdarkly.observability.replay.plugin.SessionReplay
 import com.launchdarkly.observability.replay.view
 import com.launchdarkly.observability.context.LDObserveContext
 import com.launchdarkly.observability.sdk.LDObserve
 import com.launchdarkly.observability.sdk.LDReplay
 import com.launchdarkly.sdk.ContextKind
 import com.launchdarkly.sdk.LDContext
-import com.launchdarkly.sdk.android.Components
 import com.launchdarkly.sdk.android.FeatureFlagChangeListener
 import com.launchdarkly.sdk.android.LDClient
 import com.launchdarkly.sdk.android.LDConfig
@@ -27,6 +24,13 @@ open class BaseApplication : Application() {
     companion object {
         const val LAUNCHDARKLY_MOBILE_KEY = BuildConfig.LAUNCHDARKLY_MOBILE_KEY
     }
+
+    /**
+     * Which setup [onCreate] runs: standalone observability ([initIndependently]) or observability
+     * attached to an initialized [LDClient] ([initWithFlagClient]). Flip it to exercise the app
+     * without the flagging SDK, which also hides the screens' LDClient-driven controls.
+     */
+    var isIndependent = false
 
     // A minimal setup with all
     // automatic instrumentation disabled, for testing the `Instrumentations.disabled()` path.
@@ -59,31 +63,13 @@ open class BaseApplication : Application() {
         ),
     )
 
-    val sessionReplayPlugin = SessionReplay(
-        options = ReplayOptions(
-            enabled = false,
-            privacyProfile = PrivacyProfile(
-                maskText = false,
-                maskWebViews = true,
-                maskViews = listOf(
-                    view(ImageView::class.java),
-                ),
-                maskXMLViewIds = listOf("smoothieTitle")
-            ),
-            sampleRate = 1.0,
-            frameRate = 1.0
-        )
-    )
-
     var testUrl: String? = null
 
     // example on creating OBS/SR with flagging sdk
-    open fun realInit() {
-        val observabilityPlugin = Observability(
-            application = this@BaseApplication,
-            mobileKey = LAUNCHDARKLY_MOBILE_KEY,
-            options = testUrl?.let { observabilityOptions.copy(backendUrl = it, otlpEndpoint = it) } ?: observabilityOptions
-        )
+    open fun initWithFlagClient() {
+        val effectiveOptions = testUrl?.let {
+            observabilityOptions.copy(backendUrl = it, otlpEndpoint = it)
+        } ?: observabilityOptions
 
         // Set LAUNCHDARKLY_MOBILE_KEY to your LaunchDarkly mobile key found on the LaunchDarkly
         // dashboard in the start guide.
@@ -91,14 +77,6 @@ open class BaseApplication : Application() {
         // Use AutoEnvAttributes.Disabled as the argument to the Builder
         val ldConfig = LDConfig.Builder(LDConfig.Builder.AutoEnvAttributes.Enabled)
             .mobileKey(LAUNCHDARKLY_MOBILE_KEY)
-            .plugins(
-                Components.plugins().setPlugins(
-                    listOf(
-                        observabilityPlugin,
-                        sessionReplayPlugin
-                    )
-                )
-            )
             .build()
 
         // Set up the context properties. This context should appear on your LaunchDarkly context
@@ -107,7 +85,29 @@ open class BaseApplication : Application() {
             .anonymous(true)
             .build()
 
-        LDClient.init(this@BaseApplication, ldConfig, context, 0)
+        val ldClient = LDClient.init(this@BaseApplication, ldConfig, context, 0)
+
+        LDObserve.init(
+            application = this@BaseApplication,
+            ldClient = ldClient,
+            ldContext = LDObserveContext.builder(LDObserveContext.DEFAULT_KIND, "example-user-key")
+                .anonymous(true)
+                .build(),
+            observability = effectiveOptions,
+            replay = ReplayOptions(
+                enabled = false,
+                privacyProfile = PrivacyProfile(
+                    maskText = false,
+                    maskWebViews = true,
+                    maskViews = listOf(
+                        view(ImageView::class.java),
+                    ),
+                    maskXMLViewIds = listOf("smoothieTitle")
+                ),
+                sampleRate = 1.0,
+                frameRate = 1.0
+            )
+        )
 
         if (testUrl == null) {
             // intervenes in E2E tests by trigger spans
@@ -118,7 +118,7 @@ open class BaseApplication : Application() {
     }
 
     // example on creating OBS/SR without flagging
-    open fun realInitIndependent() {
+    open fun initIndependently() {
         val effectiveOptions = testUrl?.let {
             observabilityOptions.copy(backendUrl = it, otlpEndpoint = it)
         } ?: observabilityOptions
@@ -165,6 +165,10 @@ open class BaseApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        realInit()
+        if (isIndependent) {
+            initIndependently()
+        } else {
+            initWithFlagClient()
+        }
     }
 }

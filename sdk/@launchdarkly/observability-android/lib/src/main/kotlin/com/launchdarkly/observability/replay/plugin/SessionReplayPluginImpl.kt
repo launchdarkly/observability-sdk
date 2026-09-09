@@ -54,10 +54,8 @@ class SessionReplayPluginImpl(
      * Initializes the service produced by [register] and publishes it to [LDReplay], draining
      * any pre-init buffer.
      *
-     * Returns `true` when the live service was published to [LDReplay] — i.e. post-init steps
-     * that depend on a fully installed service (most notably the initial `identifySession`
-     * kick-off in [com.launchdarkly.observability.sdk.LDObserve.init]) are safe to run.
-     * Callers without post-publish work can ignore the return value.
+     * Returns whether the live service reached [LDReplay]; `false` means replay is not recording,
+     * which the warnings below explain. Callers that only install may ignore it.
      */
     fun initialize(): Boolean {
         val service = sessionReplayService ?: run {

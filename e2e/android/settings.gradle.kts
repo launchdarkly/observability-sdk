@@ -14,6 +14,9 @@ pluginManagement {
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.PREFER_PROJECT)
     repositories {
+        // Resolves the locally built launchdarkly-android-client-sdk, published with
+        // `./gradlew publishToMavenLocal` from a checkout of that repository.
+        mavenLocal()
         google()
         mavenCentral()
         maven(url = "https://maven.mozilla.org/maven2/")

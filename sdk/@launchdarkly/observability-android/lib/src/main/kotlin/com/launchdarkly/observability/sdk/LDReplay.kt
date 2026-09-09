@@ -76,8 +76,11 @@ object LDReplay {
      * to the new context. Calls made before [init] are buffered; only the most recent identify
      * is replayed during init (older identifies are stale by definition).
      *
-     * Internal-only: invoked by SDK-internal hooks ([com.launchdarkly.observability.replay.plugin.SessionReplayHookProxy],
-     * [com.launchdarkly.observability.replay.plugin.SessionReplayHook]). Not part of the public surface.
+     * Internal-only: invoked by the cross-platform bridge
+     * ([com.launchdarkly.observability.replay.plugin.SessionReplayHookProxy]). Native identifies
+     * arrive through Observability's identify funnel instead, so both `LDClient.identify` and the
+     * manual [com.launchdarkly.observability.sdk.LDObserve.identify] API are covered. Not part of
+     * the public surface.
      */
     internal fun afterIdentify(
         contextKeys: Map<String, String>,

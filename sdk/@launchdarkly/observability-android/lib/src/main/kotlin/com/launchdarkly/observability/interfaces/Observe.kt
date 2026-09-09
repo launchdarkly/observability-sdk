@@ -105,6 +105,40 @@ interface Observe : MetricsApi, LogsApi, TracesApi {
     fun flush()
 
     /**
+     * Record the context telemetry should be attributed to.
+     *
+     * Mirrors `LDClient.identify(...)` so the same identity reaches observability and Session
+     * Replay whether it arrives through the LaunchDarkly client (via the `afterIdentify` hook) or
+     * directly through this API — which is the only path available when observability runs without
+     * `LDClient`. Until the first identify, telemetry is unattributed and a replay session is
+     * recorded as `unknown`.
+     *
+     * The keys are cached and stamped onto subsequent `track`, `screen_view`, `click` and
+     * app-lifecycle spans, so an identify affects everything recorded after it, not just the
+     * `LD.identify` log it emits.
+     *
+     * @param contextKeys Context kind -> key pairs. A multi-kind context passes one entry per kind.
+     * @param canonicalKey The fully qualified context key, matching `LDContext.getFullyQualifiedKey`.
+     * @param attributes Optional attributes describing the identity itself, supplied as a plain map
+     *   (same conversion rules as a `track` event's `properties`). These are attached to the
+     *   `LD.identify` log and the replay identify, but not to later spans.
+     */
+    fun identify(contextKeys: Map<String, String>, canonicalKey: String, attributes: Map<String, Any?>? = null)
+
+    /**
+     * Record a single-kind `user` context by key, the common case.
+     *
+     * Equivalent to calling [identify] with `{"user": key}` and [key] as the canonical key, which
+     * is how `LDContext` qualifies a single `user` context.
+     *
+     * @param key The user key telemetry is attributed to.
+     * @param attributes Optional attributes describing the identity itself.
+     */
+    fun identify(key: String, attributes: Map<String, Any?>? = null) {
+        identify(mapOf(USER_CONTEXT_KIND to key), key, attributes)
+    }
+
+    /**
      * Record a custom track event as a `track` span.
      *
      * Mirrors `LDClient.track(...)` so the same call shape works whether the event
@@ -169,4 +203,9 @@ interface Observe : MetricsApi, LogsApi, TracesApi {
         y: Int? = null,
         properties: Map<String, Any?>? = null
     )
+
+    companion object {
+        /** The context kind `LDContext` uses when none is given. */
+        const val USER_CONTEXT_KIND: String = "user"
+    }
 }

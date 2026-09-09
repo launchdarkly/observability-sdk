@@ -17,12 +17,7 @@ class WindowInspector(private val logger: ObserveLogger) {
 
     fun appWindows(appContext: Context? = null): List<WindowEntry> {
         val appUid = appContext?.applicationInfo?.uid
-        val views: List<View> = if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q){
-            android.view.inspector.WindowInspector.getGlobalWindowViews().map { it.rootView }
-        } else {
-            getRootViews()
-        }
-        return views.mapNotNull { view ->
+        return rootViews().mapNotNull { view ->
             if (appUid != null && view.context.applicationInfo?.uid != appUid) return@mapNotNull null
             if (!view.isAttachedToWindow || !view.isShown) return@mapNotNull null
             if (view.width == 0 || view.height == 0) return@mapNotNull null
@@ -46,6 +41,68 @@ class WindowInspector(private val logger: ObserveLogger) {
                 screenTop = screenY.toInt()
             )
         }
+    }
+
+    /**
+     * The topmost activity window this process currently has on screen, paired with the activity
+     * hosting it when that can be resolved, or null when there is no activity window yet.
+     *
+     * Activity lifecycle callbacks are never replayed, so an instrumentation that installs after an
+     * activity has already resumed learns nothing about it from
+     * [android.app.Application.ActivityLifecycleCallbacks] - and in a single-activity app, nothing
+     * ever will until the app is backgrounded and brought back. Asking the platform which windows
+     * exist is the way to recover in that case.
+     *
+     * Deliberately does not reuse [appWindows]: its filters describe windows that are ready to be
+     * *rendered*, while an activity is added to the window manager during `onResume` and only
+     * measured on a later traversal. During startup - exactly when this recovery is needed - the
+     * window may therefore still be zero-sized and would be filtered out.
+     *
+     * Main thread only: it reads live view state.
+     */
+    fun topmostAppWindow(appContext: Context? = null): OnScreenWindow? {
+        val appUid = appContext?.applicationInfo?.uid
+        // Views come back in the order their windows were added, so the last one is the topmost.
+        return rootViews().asReversed().firstNotNullOfOrNull { view ->
+            if (appUid != null && view.context.applicationInfo?.uid != appUid) {
+                return@firstNotNullOfOrNull null
+            }
+            val layoutParams = view.layoutParams as? WindowManager.LayoutParams
+            if (determineWindowType(layoutParams?.type ?: 0) != WindowType.ACTIVITY) {
+                return@firstNotNullOfOrNull null
+            }
+            findWindow(view)?.let { OnScreenWindow(it, activityOf(it)) }
+        }
+    }
+
+    /** The root view of every window this process owns, newest last. */
+    private fun rootViews(): List<View> =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            android.view.inspector.WindowInspector.getGlobalWindowViews().map { it.rootView }
+        } else {
+            getRootViews()
+        }
+
+    /**
+     * The [Activity] hosting [window], when it can be resolved.
+     *
+     * An activity is its own window's callback ([Activity] implements [Window.Callback]) unless
+     * something has wrapped it - this SDK's touch interceptor does, and so does AppCompat - in which
+     * case the window's context still leads there. Note that a *decor view's* context never does: it
+     * is a `DecorContext` over the application context, precisely so the decor cannot retain the
+     * activity, which is why this resolves from the window rather than from the view.
+     */
+    private fun activityOf(window: Window): Activity? =
+        window.callback as? Activity ?: activityOf(window.context)
+
+    /** Walks a context's wrapper chain looking for the [Activity] behind it. */
+    private fun activityOf(context: Context?): Activity? {
+        var current: Context? = context
+        while (current is ContextWrapper) {
+            if (current is Activity) return current
+            current = current.baseContext
+        }
+        return null
     }
 
     /**
@@ -92,13 +149,7 @@ class WindowInspector(private val logger: ObserveLogger) {
 
         // 3) Fallback: unwrap context to Activity and return Activity.window
         try {
-            var ctx: Context? = rootView.context
-            while (ctx is ContextWrapper) {
-                if (ctx is Activity) {
-                    return ctx.window
-                }
-                ctx = ctx.baseContext
-            }
+            activityOf(rootView.context)?.let { return it.window }
         } catch (t: Throwable) {
             logger.debug("findWindow via context unwrap failed: ${t.message}")
         }

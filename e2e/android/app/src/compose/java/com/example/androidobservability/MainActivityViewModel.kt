@@ -6,6 +6,7 @@ import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.launchdarkly.observability.context.LDObserveContext
 import com.launchdarkly.observability.interfaces.Metric
 import com.launchdarkly.observability.sdk.LDObserve
 import com.launchdarkly.sdk.ContextKind
@@ -24,6 +25,7 @@ import okhttp3.Request
 import java.io.BufferedInputStream
 import java.net.HttpURLConnection
 import java.net.URL
+import java.util.UUID
 
 
 class MainActivityViewModel(application: Application) : AndroidViewModel(application) {
@@ -301,6 +303,59 @@ class MainActivityViewModel(application: Application) : AndroidViewModel(applica
 
         val multiContext = LDContext.createMulti(userContext, deviceContext)
         LDClient.get().identify(multiContext)
+    }
+
+    /**
+     * Identifies a single `user` context directly through the observability API, which is the only
+     * identify path available when observability runs without [LDClient].
+     */
+    fun identifyUserViaLDObserve() {
+        LDObserve.identify(
+            key = "single-userkey-observe",
+            attributes = mapOf("name" to "Bob Bobberson")
+        )
+    }
+
+    /**
+     * Identifies an anonymous context, imitating what the client SDK does for one.
+     *
+     * `LDConfig.Builder.generateAnonymousKeys(true)` replaces an anonymous context's placeholder
+     * key with a UUID it generates once and persists per context kind, so the device keeps a single
+     * anonymous identity across launches — iOS does the same for a keyless `LDContextBuilder`. That
+     * generation belongs to the client SDK, so with observability on its own the app holds the key
+     * itself and passes `anonymous` through, the way the client SDK sends it as a context attribute.
+     */
+    fun identifyAnonymousViaLDObserve() {
+        LDObserve.identify(
+            key = anonymousKey(LDObserveContext.DEFAULT_KIND),
+            attributes = mapOf("anonymous" to true)
+        )
+    }
+
+    /**
+     * The anonymous key for [kind], generated on first use and reused afterwards. Kept in the app's
+     * own preferences rather than read out of the client SDK's (`LaunchDarkly`/`anonKey_<kind>`),
+     * which is private to it.
+     */
+    private fun anonymousKey(kind: String): String {
+        val store = getApplication<Application>()
+            .getSharedPreferences("anonymous-keys", android.content.Context.MODE_PRIVATE)
+        val storageKey = "anonKey_$kind"
+        store.getString(storageKey, null)?.let { return it }
+        return UUID.randomUUID().toString()
+            .also { store.edit().putString(storageKey, it).apply() }
+    }
+
+    /**
+     * Identifies a multi-kind context. `canonicalKey` follows `LDContext` semantics: sub-context
+     * keys sorted by kind, joined as `kind:key`.
+     */
+    fun identifyMultiViaLDObserve() {
+        LDObserve.identify(
+            contextKeys = mapOf("user" to "multi-username-observe", "device" to "iphone"),
+            canonicalKey = "device:iphone:user:multi-username-observe",
+            attributes = mapOf("platform" to "android")
+        )
     }
 
     fun evaluateBooleanFlag(flagKey: String) {

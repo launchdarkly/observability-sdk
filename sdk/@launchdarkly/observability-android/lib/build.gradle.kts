@@ -15,6 +15,9 @@ plugins {
 
 allprojects {
     repositories {
+        // Resolves the locally built launchdarkly-android-client-sdk, published with
+        // `./gradlew publishToMavenLocal` from a checkout of that repository.
+        mavenLocal()
         google() // Google's Maven repository
         mavenCentral() // Maven Central repository
     }
@@ -56,10 +59,10 @@ configurations.all {
 
 dependencies {
     if (isClientSdkProvidedByHost) {
-        compileOnly("com.launchdarkly:launchdarkly-android-client-sdk:5.14.0")
-        testImplementation("com.launchdarkly:launchdarkly-android-client-sdk:5.14.0")
+        compileOnly("com.launchdarkly:launchdarkly-android-client-sdk:5.15.0")
+        testImplementation("com.launchdarkly:launchdarkly-android-client-sdk:5.15.0")
     } else {
-        implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.14.0")
+        implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.15.0")
     }
 
     // AndroidX

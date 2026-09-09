@@ -14,7 +14,7 @@ The Android observability plugin automatically instruments:
 - **Screen Views**: Emits a `screen_view` span for each Android `Activity` that is shown
 - **Taps**: Optionally emits a `click` span for each tap (enable via `analytics.taps`)
 - **HTTP Requests**: OkHttp and HttpURLConnection requests (requires setup of ByteBuddy compile time plugin and additional dependencies)
-- **Crash Reporting**: Automatic crash reporting and stack traces, deobfuscated for release builds (see [Deobfuscating Release Stack Traces](#deobfuscating-release-stack-traces))
+- **Crash Reporting**: Opt-in through `instrumentations.crashReporting`, deobfuscated for release builds (see [Deobfuscating Release Stack Traces](#deobfuscating-release-stack-traces))
 - **Feature Flag Evaluations**: Evaluation events added to your spans.
 - **Session Management**: User session tracking and background timeout handling
 
@@ -218,7 +218,7 @@ Additional `ObservabilityOptions` settings:
 - `tracesApi`: Controls trace recording (defaults to enabled). Use `ObservabilityOptions.TracesApi.disabled()` to disable all tracing, or set `includeErrors`/`includeSpans`.
 - `metricsApi`: Controls metric export (defaults to enabled). Use `ObservabilityOptions.MetricsApi.disabled()` to disable metrics.
 - `instrumentations`: Enables/disables specific automatic instrumentations:
-  - `crashReporting` (default `true`): report uncaught exceptions as errors.
+  - `crashReporting` (default `false`): report uncaught exceptions as errors. Off by default because the handler is process-wide and would contend with another crash reporter in the app. Pass `true` to opt in.
   - `launchTime` (default `false`): record application startup time as metrics.
   - `userTaps` (default `true`): run the tap-detection machinery. Disabling `userTaps` stops tap detection entirely, so no `click` spans are emitted regardless of `analytics.taps`.
   - `screens` (default `true`): automatically detect screen changes from Android `Activity` lifecycle callbacks. This drives the `screen_view` span (gated separately by `analytics.screenViews`) and Session Replay `Navigate` events.
@@ -236,7 +236,7 @@ val options = ObservabilityOptions(
     tracesApi = ObservabilityOptions.TracesApi(includeErrors = true, includeSpans = false),
     metricsApi = ObservabilityOptions.MetricsApi.disabled(),
     instrumentations = ObservabilityOptions.Instrumentations(
-        crashReporting = false,
+        crashReporting = true,
         launchTime = true,
         screens = true
     ),
@@ -266,7 +266,7 @@ ObservabilityOptions options = ObservabilityOptions.builder()
                 .build())
         .metricsApi(ObservabilityOptions.MetricsApi.disabled())
         .instrumentations(ObservabilityOptions.Instrumentations.builder()
-                .crashReporting(false)
+                .crashReporting(true)
                 .launchTime(true)
                 .screens(true)
                 .build())

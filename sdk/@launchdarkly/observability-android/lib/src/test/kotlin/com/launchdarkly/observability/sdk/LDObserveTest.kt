@@ -23,4 +23,20 @@ class LDObserveTest {
 
         verify(exactly = 1) { mockObserve.flush() }
     }
+
+    @Test
+    fun `should delegate identify to underlying Observe implementation`() {
+        ldObserve.identify(mapOf("org" to "org-key"), "org:org-key", mapOf("plan" to "pro"))
+
+        verify(exactly = 1) {
+            mockObserve.identify(mapOf("org" to "org-key"), "org:org-key", mapOf("plan" to "pro"))
+        }
+    }
+
+    @Test
+    fun `should identify a key as a single-kind user context`() {
+        ldObserve.identify("user-key")
+
+        verify(exactly = 1) { mockObserve.identify(mapOf("user" to "user-key"), "user-key", null) }
+    }
 }

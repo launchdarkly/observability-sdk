@@ -156,7 +156,9 @@ data class ObservabilityOptions(
     /**
      * This class allows enabling or disabling specific automatic instrumentations.
      *
-     * @property crashReporting If `true`, the plugin will automatically report any uncaught exceptions as errors.
+     * @property crashReporting If `true`, the plugin reports uncaught exceptions as errors.
+     *   Defaults to `false`, since the handler is process-wide and would contend with another
+     *   crash reporter in the app. Pass `true` to opt in.
      * @property launchTime If `true`, emits launch-time performance telemetry: the legacy TTID/TTFD
      *   histogram metrics, plus the `app.start` span event on `app_launch` (cold/warm via `start.type`,
      *   with `start.duration_ms`). When `false` the `app.start` event is omitted and the `app_launch`
@@ -172,7 +174,7 @@ data class ObservabilityOptions(
      *   [Analytics.screenViews]) and Session Replay `Navigate` events. Defaults to `true`.
      */
     data class Instrumentations(
-        val crashReporting: Boolean = true,
+        val crashReporting: Boolean = false,
         val launchTime: Boolean = false,
         val userTaps: Boolean = true,
         val screens: Boolean = true,

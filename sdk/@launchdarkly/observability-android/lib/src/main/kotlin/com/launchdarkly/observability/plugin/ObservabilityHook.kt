@@ -30,13 +30,18 @@ interface ObservabilityHookExporting {
 }
 
 /**
- * Receives track events and identify context keys so the single span emitter
- * ([com.launchdarkly.observability.client.ObservabilityService]) can produce
- * `track` spans and cache context keys.
+ * Receives track events and identified contexts so the single span emitter
+ * ([com.launchdarkly.observability.client.ObservabilityService]) can produce `track` spans, cache
+ * context keys, and broadcast identifies to in-process consumers such as Session Replay.
  */
 interface TrackEmitting {
     fun track(name: String, metricValue: Double?, attributes: Attributes, contextKeyAttributes: Attributes?)
-    fun updateCachedContextKeys(contextKeys: Map<String, String>)
+
+    /**
+     * Caches [contextKeys] for attribution of subsequent spans and broadcasts the identify as a
+     * [com.launchdarkly.observability.client.IdentifyEvent].
+     */
+    fun recordIdentify(contextKeys: Map<String, String>, canonicalKey: String, attributes: Attributes)
 }
 
 /**
