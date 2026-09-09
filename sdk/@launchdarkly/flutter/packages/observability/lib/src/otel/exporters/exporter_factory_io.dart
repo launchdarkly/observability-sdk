@@ -38,6 +38,33 @@ class _IoExporters implements ObservabilityExporters {
   @override
   IdentifyRecorder createIdentifyRecorder(ObservabilityConfig config) =>
       _NativeIdentifyRecorder(_api);
+
+  @override
+  ScreenViewRecorder createScreenViewRecorder(ObservabilityConfig config) =>
+      _NativeScreenViewRecorder(_api);
+}
+
+/// Forwards each screen view to the native observability SDK so it emits the
+/// native `screen_view` span and the Session Replay `Navigate` timeline event.
+/// The native automatic screen detection never sees Flutter route changes, so
+/// this is the only path that records navigation in mobile Session Replay.
+class _NativeScreenViewRecorder implements ScreenViewRecorder {
+  _NativeScreenViewRecorder(this._api);
+
+  final wire.LDNativeApi _api;
+
+  @override
+  void trackScreenView(
+    String name, {
+    String? screenClass,
+    String? screenId,
+    String? category,
+    Map<String, Object?>? properties,
+  }) {
+    unawaited(
+      _api.trackScreenView(name, screenClass, screenId, category, properties),
+    );
+  }
 }
 
 /// Forwards each `identify` to the native observability SDK (which caches the

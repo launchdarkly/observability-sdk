@@ -67,6 +67,29 @@ final class ObserveOtel {
     );
   }
 
+  /// Record a screen view through the platform-appropriate pipeline.
+  ///
+  /// On mobile the native observability SDK is invoked so it emits the native
+  /// `screen_view` span and the Session Replay `Navigate` timeline event (native
+  /// automatic screen detection never sees Flutter route changes). On web a Dart
+  /// `screen_view` span is emitted, gated by `analytics.views`. `null` before
+  /// the pipeline is initialized, in which case the screen view is dropped.
+  static void trackScreenView(
+    String name, {
+    String? screenClass,
+    String? screenId,
+    String? category,
+    Map<String, Object?>? properties,
+  }) {
+    Otel.screenViewRecorder?.trackScreenView(
+      name,
+      screenClass: screenClass,
+      screenId: screenId,
+      category: category,
+      properties: properties,
+    );
+  }
+
   /// Forward an `identify` to the platform-appropriate pipeline.
   ///
   /// Invoked from the LaunchDarkly client's `afterIdentify` hook. On mobile the
