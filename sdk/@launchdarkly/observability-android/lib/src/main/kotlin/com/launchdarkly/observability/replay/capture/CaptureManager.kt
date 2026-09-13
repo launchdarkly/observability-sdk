@@ -24,7 +24,8 @@ class CaptureManager(
     val captureFlow: SharedFlow<ExportFrame> = _captureEventFlow.asSharedFlow()
     private val exportDiffManager = ExportDiffManager(
         compression = options.compression,
-        scale = options.scale ?: 1f,
+        scale = options.scale ?: 1.0,
+        imageQuality = options.imageQuality,
     )
     val captureDelayMillis: Long = if (options.frameRate > 0) {
         (1000.0 / options.frameRate).toLong().coerceAtLeast(1L)

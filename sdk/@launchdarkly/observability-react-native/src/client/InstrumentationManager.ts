@@ -316,7 +316,10 @@ export class InstrumentationManager {
 			let gauge = this._gauges.get(metric.name)
 			if (!gauge) {
 				const meter = this.getMeter()
-				gauge = meter.createGauge(metric.name)
+				gauge = meter.createGauge(
+					metric.name,
+					metric.unit ? { unit: metric.unit } : undefined,
+				)
 				this._gauges.set(metric.name, gauge)
 			}
 			gauge.record(metric.value, metric.attributes)
@@ -330,7 +333,10 @@ export class InstrumentationManager {
 			let counter = this._counters.get(metric.name)
 			if (!counter) {
 				const meter = this.getMeter()
-				counter = meter.createCounter(metric.name)
+				counter = meter.createCounter(
+					metric.name,
+					metric.unit ? { unit: metric.unit } : undefined,
+				)
 				this._counters.set(metric.name, counter)
 			}
 			counter.add(metric.value, metric.attributes)
@@ -349,7 +355,10 @@ export class InstrumentationManager {
 			let histogram = this._histograms.get(metric.name)
 			if (!histogram) {
 				const meter = this.getMeter()
-				histogram = meter.createHistogram(metric.name)
+				histogram = meter.createHistogram(
+					metric.name,
+					metric.unit ? { unit: metric.unit } : undefined,
+				)
 				this._histograms.set(metric.name, histogram)
 			}
 			histogram.record(metric.value, metric.attributes)
@@ -363,7 +372,10 @@ export class InstrumentationManager {
 			let upDownCounter = this._upDownCounters.get(metric.name)
 			if (!upDownCounter) {
 				const meter = this.getMeter()
-				upDownCounter = meter.createUpDownCounter(metric.name)
+				upDownCounter = meter.createUpDownCounter(
+					metric.name,
+					metric.unit ? { unit: metric.unit } : undefined,
+				)
 				this._upDownCounters.set(metric.name, upDownCounter)
 			}
 			upDownCounter.add(metric.value, metric.attributes)

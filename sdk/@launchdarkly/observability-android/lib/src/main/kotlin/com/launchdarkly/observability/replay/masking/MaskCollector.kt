@@ -9,6 +9,8 @@ import android.view.ViewGroup
 import com.launchdarkly.observability.context.ObserveLogger
 import kotlin.collections.plusAssign
 import com.launchdarkly.observability.replay.utils.locationOnScreen
+import java.util.Collections
+import java.util.IdentityHashMap
 
 /**
  * Cached class reference for AbstractComposeView, resolved once via reflection.
@@ -68,7 +70,12 @@ data class MaskContext(
  * If multiple rules at the same level conflict (e.g. the same view is both `ldMask`-tagged and
  * `ldUnmask`-tagged), mask wins over unmask.
  */
-class MaskCollector(private val logger: ObserveLogger) {
+class MaskCollector internal constructor(
+    private val logger: ObserveLogger,
+    private val nativeStretchOf: (View) -> StretchDisplacement?,
+) {
+    constructor(logger: ObserveLogger) : this(logger, StretchOverscroll::displacementIn)
+
     /**
      * Find sensitive areas from all views under [root] and return a list of masks describing
      * regions that should be redacted in the recorded frame.
@@ -135,12 +142,74 @@ class MaskCollector(private val logger: ObserveLogger) {
         // masks" pass.
         cullCoveredMasks(view, masks)
 
-        when {
-            abstractComposeViewClass?.isInstance(view) == true -> traverseCompose(view, inherited, context, masks)
-            isAndroidComposeView(view) -> traverseAndroidComposeView(view, inherited, context, masks)
-            else -> traverseNative(view, inherited, context, masks)
+        // A stretch overscroll distorts the pixels this container already recorded without moving
+        // anything in the tree, so the masks its subtree is about to emit describe an undistorted
+        // layout that was never rendered. Grow them by however far the stretch can displace
+        // content; nested containers compound, each growing what its own subtree emitted.
+        inflatingStretch(nativeStretchOf(view), masks) {
+            when {
+                abstractComposeViewClass?.isInstance(view) == true -> traverseCompose(view, inherited, context, masks)
+                isAndroidComposeView(view) -> traverseAndroidComposeView(view, inherited, context, masks)
+                else -> traverseNative(view, inherited, context, masks)
+            }
         }
     }
+
+    /**
+     * Runs [collect], then grows whatever masks it added to [masks] by [stretch] — the masks
+     * belonging to the stretched container's subtree. A `null` [stretch] just runs [collect].
+     *
+     * The additions are recognized by identity rather than by where they landed in the list:
+     * [cullCoveredMasks] runs at every view of the subtree and can delete masks collected before
+     * this container ever came up, sliding the subtree's own masks down to lower indices. Taking
+     * the snapshot costs an allocation, but only for a container that is actually being stretched,
+     * which is a handful of frames per gesture and none at rest.
+     */
+    private inline fun inflatingStretch(
+        stretch: StretchDisplacement?,
+        masks: MutableList<Mask>,
+        collect: () -> Unit,
+    ) {
+        if (stretch == null) {
+            collect()
+            return
+        }
+
+        val collectedBefore = identitySnapshot(masks)
+        collect()
+        inflateMasks(masks, collectedBefore, stretch)
+    }
+
+    /**
+     * Grows every mask in [masks] that isn't in [collectedBefore], which are the ones the stretched
+     * container's subtree emitted.
+     */
+    private fun inflateMasks(
+        masks: List<Mask>,
+        collectedBefore: Set<Mask>,
+        stretch: StretchDisplacement,
+    ) {
+        var grown = 0
+        for (mask in masks) {
+            if (mask in collectedBefore) continue
+            mask.inflate(stretch.dx, stretch.dy)
+            grown++
+        }
+        if (grown == 0) return
+
+        logger.debug(
+            "Stretch overscroll: grew $grown mask(s) by (${stretch.dx}, ${stretch.dy})px"
+        )
+    }
+
+    /**
+     * The masks collected so far, held by reference. Identity-based so that [Mask.equals] — which
+     * compares geometry, and so calls two masks of equal size and position the same mask — can't
+     * make a newly emitted mask look like one that was already there.
+     */
+    private fun identitySnapshot(masks: List<Mask>): Set<Mask> =
+        Collections.newSetFromMap(IdentityHashMap<Mask, Boolean>(masks.size + 1))
+            .apply { addAll(masks) }
 
     /**
      * Visits a Compose host view: walks its semantics tree to evaluate compose nodes, then
@@ -213,18 +282,23 @@ class MaskCollector(private val logger: ObserveLogger) {
         masks: MutableList<Mask>
     ) {
         val resolvedExplicit = resolveExplicit(target, inherited, context)
-        if (shouldMask(target, resolvedExplicit, context)) {
-            target.mask(context)?.let { masks += it }
-        }
 
-        for (child in target.rootNode.children) {
-            val childTarget = ComposeMaskTarget(
-                view = target.view,
-                rootNode = child,
-                config = child.config,
-                boundsInWindow = child.boundsInWindow
-            )
-            traverseComposeNodes(childTarget, resolvedExplicit, context, masks)
+        // See the stretch handling in [traverse]: a Compose scrollable distorts its content the
+        // same way, and its semantics bounds are just as blind to it.
+        inflatingStretch(ComposeStretchOverscroll.displacementIn(target.rootNode), masks) {
+            if (shouldMask(target, resolvedExplicit, context)) {
+                target.mask(context)?.let { masks += it }
+            }
+
+            for (child in target.rootNode.children) {
+                val childTarget = ComposeMaskTarget(
+                    view = target.view,
+                    rootNode = child,
+                    config = child.config,
+                    boundsInWindow = child.boundsInWindow
+                )
+                traverseComposeNodes(childTarget, resolvedExplicit, context, masks)
+            }
         }
     }
 

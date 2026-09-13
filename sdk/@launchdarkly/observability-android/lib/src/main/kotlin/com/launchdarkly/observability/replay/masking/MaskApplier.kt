@@ -25,10 +25,11 @@ class MaskApplier {
 
     private val maskIntRect = Rect()
 
-    fun drawMasks(canvas: Canvas, maskPairsList: List<Pair<Mask, Mask?>>, scaleFactor: Float) {
+    fun drawMasks(canvas: Canvas, maskPairsList: List<Pair<Mask, Mask?>>, scaleFactor: Double) {
         if (maskPairsList.isEmpty()) return
 
-        canvas.withScale(scaleFactor, scaleFactor) {
+        val scale = scaleFactor.toFloat()
+        canvas.withScale(scale, scale) {
             val path = Path()
             maskPairsList.forEach { pairOfMasks ->
                 drawMask(pairOfMasks, path, this)

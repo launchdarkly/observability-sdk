@@ -16,5 +16,5 @@ private object CartPricing {
     fun priceOrder(orderId: String): Int = computeTotal(orderId)
 
     private fun computeTotal(orderId: String): Int =
-        throw Error("Symbols Id Lane demo: checkout failed while pricing order $orderId")
+        throw Error("Android: Obfuscated error - checkout failed while pricing order $orderId")
 }

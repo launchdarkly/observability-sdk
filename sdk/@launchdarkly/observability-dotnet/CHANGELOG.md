@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-dotnet-1.2.0...launchdarkly-observability-dotnet-1.2.1) (2026-08-04)
+
+
+### Bug Fixes
+
+* update vulnerable dependencies across SDKs and examples ([#699](https://github.com/launchdarkly/observability-sdk/issues/699)) ([3a5fe1c](https://github.com/launchdarkly/observability-sdk/commit/3a5fe1c62a972830d44a522b312728509bccceb2))
+
 ## [1.2.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-dotnet-1.1.0...launchdarkly-observability-dotnet-1.2.0) (2026-06-03)
 
 

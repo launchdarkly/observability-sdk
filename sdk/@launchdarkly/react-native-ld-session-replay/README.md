@@ -83,14 +83,15 @@ unset. Both are applied on iOS and Android.
 
 ## Capture and sampling options
 
-These options control how often frames are captured, at what resolution, and whether
-this session is selected for recording. All are forwarded to the native session replay
-SDK on **iOS and Android**.
+These options control how often frames are captured, at what resolution and JPEG
+quality, and whether this session is selected for recording. All are forwarded to
+the native session replay SDK on **iOS and Android**.
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
 | `frameRate` | `number` | `1.0` | Target capture rate in frames per second. |
 | `scale` | `number` | `1.0` | Capture/export resolution multiplier (`1.0` = 1x / 160 DPI, `2.0` = 2x, etc.). Non-positive values are treated as `1.0`. |
+| `imageQuality` | `number` | `0.3` | JPEG encoding quality of exported frames (`0.0` = lowest quality / smallest payload, `1.0` = highest quality / largest payload). Values outside that range are clamped by the native SDK. |
 | `sampleRate` | `number` | `1.0` | Probability from `0.0` to `1.0` that replay starts when `isEnabled` is `true`. `0.0` never records; `1.0` always records. Evaluated once per enable cycle and reset when replay is stopped. |
 
 ```js
@@ -98,6 +99,7 @@ const plugin = createSessionReplayPlugin({
   isEnabled: true,
   frameRate: 2.0,
   scale: 1.0,
+  imageQuality: 0.2,
   sampleRate: 0.25, // record roughly 25% of sessions
 });
 ```

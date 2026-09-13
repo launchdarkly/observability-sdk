@@ -1,5 +1,47 @@
 # Changelog
 
+## [0.66.1](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.66.0...launchdarkly-observability-android-0.66.1) (2026-08-19)
+
+
+### Bug Fixes
+
+* **android:** anchor session replay masks to the rendered frame and cover stretch overscroll (Rubber animation) ([#739](https://github.com/launchdarkly/observability-sdk/issues/739)) ([b2f151a](https://github.com/launchdarkly/observability-sdk/commit/b2f151a287904dfc461db2beaaa6a1529e062bad))
+
+## [0.66.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.65.1...launchdarkly-observability-android-0.66.0) (2026-08-13)
+
+
+### Features
+
+* **android:** deduplicate flag evaluation telemetry with SDK DedupingHook ([#723](https://github.com/launchdarkly/observability-sdk/issues/723)) ([90d5e87](https://github.com/launchdarkly/observability-sdk/commit/90d5e87b955b7ec15247e4236e11f60b1a44b2b3))
+
+## [0.65.1](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.65.0...launchdarkly-observability-android-0.65.1) (2026-08-13)
+
+
+### Bug Fixes
+
+* **deps:** bump mobile bridges to observability-android 0.65.0 and client SDK 5.13.3 ([#720](https://github.com/launchdarkly/observability-sdk/issues/720)) ([b951c0c](https://github.com/launchdarkly/observability-sdk/commit/b951c0c038f99cb5025abf104b08865f1e24fe7a))
+
+## [0.65.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.64.0...launchdarkly-observability-android-0.65.0) (2026-08-12)
+
+
+### Features
+
+* Android scale issues and imageQuality option ([#716](https://github.com/launchdarkly/observability-sdk/issues/716)) ([acacd0e](https://github.com/launchdarkly/observability-sdk/commit/acacd0e5cc637cf879572431b266c342eff2d2fb))
+
+## [0.64.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.63.0...launchdarkly-observability-android-0.64.0) (2026-08-04)
+
+
+### Features
+
+* Let R8 identify the Android example's mapping, and name the platform in sample errors ([#704](https://github.com/launchdarkly/observability-sdk/issues/704)) ([4961e54](https://github.com/launchdarkly/observability-sdk/commit/4961e54e085ce952c6b35a0a86983cb349eeac86))
+
+## [0.63.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.62.0...launchdarkly-observability-android-0.63.0) (2026-07-31)
+
+
+### Features
+
+* **android:** stop session replay on unrecoverable initialization errors ([#698](https://github.com/launchdarkly/observability-sdk/issues/698)) ([2982a7a](https://github.com/launchdarkly/observability-sdk/commit/2982a7ac324f651dff8f827a62983aabba767a03))
+
 ## [0.62.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.61.1...launchdarkly-observability-android-0.62.0) (2026-07-22)
 
 

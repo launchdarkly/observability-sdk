@@ -349,8 +349,10 @@ class LDSessionReplayOptions {
   LDSessionReplayOptions({
     this.isEnabled,
     this.serviceName,
+    this.sampleRate,
     this.frameRate,
     this.scale,
+    this.imageQuality,
     this.privacy,
   });
 
@@ -358,14 +360,26 @@ class LDSessionReplayOptions {
 
   String? serviceName;
 
+  double? sampleRate;
+
   double? frameRate;
 
   double? scale;
 
+  double? imageQuality;
+
   LDPrivacyOptions? privacy;
 
   List<Object?> _toList() {
-    return <Object?>[isEnabled, serviceName, frameRate, scale, privacy];
+    return <Object?>[
+      isEnabled,
+      serviceName,
+      sampleRate,
+      frameRate,
+      scale,
+      imageQuality,
+      privacy,
+    ];
   }
 
   Object encode() {
@@ -377,9 +391,11 @@ class LDSessionReplayOptions {
     return LDSessionReplayOptions(
       isEnabled: result[0] as bool?,
       serviceName: result[1] as String?,
-      frameRate: result[2] as double?,
-      scale: result[3] as double?,
-      privacy: result[4] as LDPrivacyOptions?,
+      sampleRate: result[2] as double?,
+      frameRate: result[3] as double?,
+      scale: result[4] as double?,
+      imageQuality: result[5] as double?,
+      privacy: result[6] as LDPrivacyOptions?,
     );
   }
 

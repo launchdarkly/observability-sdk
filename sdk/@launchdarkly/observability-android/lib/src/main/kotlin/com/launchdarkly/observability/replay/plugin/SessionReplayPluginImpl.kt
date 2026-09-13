@@ -4,7 +4,6 @@ import com.launchdarkly.observability.client.ObservabilityContext
 import com.launchdarkly.observability.replay.ReplayOptions
 import com.launchdarkly.observability.replay.SessionReplayService
 import com.launchdarkly.observability.replay.capture.ImageCaptureServicing
-import com.launchdarkly.observability.sdk.LDObserve
 import com.launchdarkly.observability.sdk.LDReplay
 import java.util.logging.Logger
 

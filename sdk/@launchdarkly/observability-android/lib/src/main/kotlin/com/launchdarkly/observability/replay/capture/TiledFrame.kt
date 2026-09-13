@@ -5,7 +5,7 @@ import android.graphics.Bitmap
 data class TiledFrame(
     val id: Int,
     val tiles: List<Tile>,
-    val scale: Float,
+    val scale: Double,
     val originalSize: IntSize,
     val timestamp: Long,
     val orientation: Int,

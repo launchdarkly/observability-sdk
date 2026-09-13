@@ -54,8 +54,10 @@ extension SessionReplayOptionsWire on SessionReplayOptions {
   wire.LDSessionReplayOptions toWire() => wire.LDSessionReplayOptions(
     isEnabled: isEnabled,
     serviceName: serviceName,
+    sampleRate: sampleRate,
     frameRate: frameRate,
     scale: scale,
+    imageQuality: imageQuality,
     privacy: privacy.toWire(),
   );
 }

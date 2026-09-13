@@ -6,7 +6,6 @@ import android.graphics.Rect
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
-import android.view.Choreographer
 import android.view.PixelCopy
 import android.view.SurfaceView
 import android.view.View
@@ -48,6 +47,7 @@ class ImageCaptureService(
     private val windowInspector = WindowInspector(logger)
     private val maskCollector = MaskCollector(logger)
     private val maskApplier = MaskApplier()
+    private val frameSynchronizer = FrameSynchronizer(logger)
     private val explicitMaskMatchers = options.privacyProfile.explicitMaskMatchers
     private val explicitUnmaskMatchers = options.privacyProfile.explicitUnmaskMatchers
     private val globalMaskMatchers = options.privacyProfile.globalMaskMatchers
@@ -55,14 +55,8 @@ class ImageCaptureService(
 
     override suspend fun captureRawFrame(): RawFrame? =
         withContext(DispatcherProviderHolder.current.main) {
-            // Synchronize with UI rendering frame
-            suspendCancellableCoroutine { continuation ->
-                Choreographer.getInstance().postFrameCallback {
-                    if (continuation.isActive) {
-                        continuation.resume(Unit)
-                    }
-                }
-            }
+            // Start on a frame boundary so the window list isn't read mid-traversal.
+            frameSynchronizer.awaitVsync()
 
             val timestamp = System.currentTimeMillis()
             val windowsEntries = windowInspector.appWindows()
@@ -86,8 +80,20 @@ class ImageCaptureService(
             // TODO: O11Y-628 - use captureQuality option for scaling and adjust this bitmap accordingly, may need to investigate power of 2 rounding for performance
 
             val capturingWindowEntries = windowsEntries.subList(baseIndex, windowsEntries.size)
+            val baseRootView = baseWindowEntry.rootView
+            val baseWindow = windowInspector.findWindow(baseRootView)
 
-            val beforeMasks = collectMasks(capturingWindowEntries)
+            // Read the geometry from inside the draw pass that produces the next frame, and let
+            // that frame reach the surface before copying pixels below. Without this the masks
+            // describe a traversal the captured pixels haven't caught up with yet, which is what
+            // makes them slip off scrolling or animating content.
+            //
+            // The base window is the anchor: every window's traversal runs off the same
+            // Choreographer frame, so its draw is the moment they all agree on. A capture where
+            // only an overlay animates sees no base draw and falls back to an unanchored read.
+            val beforeMasks = frameSynchronizer.sampleAtRenderedFrame(baseRootView, baseWindow) {
+                collectMasks(capturingWindowEntries)
+            }
 
             val captureResults: MutableList<CaptureResult?> = MutableList(capturingWindowEntries.size) { null }
             try {
@@ -113,21 +119,18 @@ class ImageCaptureService(
                     return@withContext null
                 }
 
-                // Synchronize with UI rendering frame. This second pass is also the
-                // safety net for content that appears during capture (e.g. an
-                // instantly-shown dialog): such a mask is absent from beforeMasks
-                // but present in afterMasks, so mergeMasksMap sees mismatched counts
-                // and drops the frame instead of leaking it unmasked. So we must NOT
-                // skip this pass when beforeMasks is empty.
-                suspendCancellableCoroutine { continuation ->
-                    Choreographer.getInstance().postFrameCallback {
-                        if (continuation.isActive) {
-                            continuation.resume(Unit)
-                        }
-                    }
+                // Sample again from the next frame that draws. Because the captured pixels are no
+                // older than beforeMasks and no newer than this pass, the two bracket the frame
+                // and the hull spanning them covers wherever the content actually was.
+                //
+                // This second pass is also the safety net for content that appears during capture
+                // (e.g. an instantly-shown dialog): such a mask is absent from beforeMasks but
+                // present in afterMasks, so mergeMasksMap sees mismatched counts and drops the
+                // frame instead of leaking it unmasked. So we must NOT skip this pass when
+                // beforeMasks is empty.
+                val afterMasks = frameSynchronizer.sampleAtDraw(baseRootView) {
+                    collectMasksFromResults(captureResults)
                 }
-
-                val afterMasks = collectMasksFromResults(captureResults)
 
                 // off the main thread to avoid blocking the UI thread
                 return@withContext withContext(DispatcherProviderHolder.current.default) {
@@ -148,8 +151,8 @@ class ImageCaptureService(
                         for (i in 1 until captureResults.size) {
                             val res = captureResults[i] ?: continue
                             val entry = res.windowEntry
-                            val dx = (entry.screenLeft - baseWindowEntry.screenLeft).toFloat() * scaleFactor
-                            val dy = (entry.screenTop - baseWindowEntry.screenTop).toFloat() * scaleFactor
+                            val dx = ((entry.screenLeft - baseWindowEntry.screenLeft) * scaleFactor).toFloat()
+                            val dy = ((entry.screenTop - baseWindowEntry.screenTop) * scaleFactor).toFloat()
 
                             canvas.withTranslation(dx, dy) {
                                 drawBitmap(res.bitmap, 0f, 0f, null)
@@ -226,12 +229,12 @@ class ImageCaptureService(
         return if (windowsEntries.isNotEmpty()) 0 else null
     }
 
-    private suspend fun captureViewResult(windowEntry: WindowEntry, scaleFactor: Float): CaptureResult? {
+    private suspend fun captureViewResult(windowEntry: WindowEntry, scaleFactor: Double): CaptureResult? {
         val bitmap = captureViewBitmap(windowEntry, scaleFactor) ?: return null
         return CaptureResult(windowEntry, bitmap)
     }
 
-    private suspend fun captureViewBitmap(windowEntry: WindowEntry, scaleFactor: Float): Bitmap? {
+    private suspend fun captureViewBitmap(windowEntry: WindowEntry, scaleFactor: Double): Bitmap? {
         val view = windowEntry.rootView
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && windowEntry.isPixelCopyCandidate()) {
@@ -256,7 +259,7 @@ class ImageCaptureService(
         window: Window,
         view: View,
         rect: Rect,
-        scaleFactor: Float
+        scaleFactor: Double
     ): Bitmap? {
         val bitmap = createBitmapForView(view, scaleFactor) ?: return null
 
@@ -317,7 +320,7 @@ class ImageCaptureService(
     private suspend fun compositeSurfaceViews(
         rootView: View,
         target: Bitmap,
-        scaleFactor: Float
+        scaleFactor: Double
     ) {
         val surfaceViews = mutableListOf<SurfaceView>()
         collectSurfaceViews(rootView, surfaceViews)
@@ -347,8 +350,8 @@ class ImageCaptureService(
             // window-level PixelCopy source rect uses the same space (see WindowEntry.rect()
             // which is `Rect(0, 0, width, height)` in window coords).
             surfaceView.getLocationInWindow(location)
-            val dx = location[0].toFloat() * scaleFactor
-            val dy = location[1].toFloat() * scaleFactor
+            val dx = (location[0] * scaleFactor).toFloat()
+            val dy = (location[1] * scaleFactor).toFloat()
 
             try {
                 canvas.drawBitmap(captured, dx, dy, null)
@@ -408,13 +411,13 @@ class ImageCaptureService(
 
     private fun canvasDrawBitmap(
         view: View,
-        scaleFactor: Float
+        scaleFactor: Double
     ): Bitmap? {
         val bitmap = createBitmapForView(view, scaleFactor) ?: return null
 
         val canvas = Canvas(bitmap)
         canvas.save()
-        canvas.scale(scaleFactor, scaleFactor)
+        canvas.scale(scaleFactor.toFloat(), scaleFactor.toFloat())
 
         try {
             view.draw(canvas)
@@ -429,7 +432,7 @@ class ImageCaptureService(
         return bitmap
     }
 
-    private fun createBitmapForView(view: View, scaleFactor: Float): Bitmap? {
+    private fun createBitmapForView(view: View, scaleFactor: Double): Bitmap? {
         val width = scaleCoordinate(view.width.toFloat(), scaleFactor)
         val height = scaleCoordinate(view.height.toFloat(), scaleFactor)
         if (width <= 0 || height <= 0) {

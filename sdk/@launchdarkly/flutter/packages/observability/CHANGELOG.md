@@ -2,6 +2,48 @@
 
 All notable changes to the LaunchDarkly Observability SDK for Flutter will be documented in this file. This project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.16.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.15.1...launchdarkly_flutter_observability-0.16.0) (2026-08-14)
+
+
+### Features
+
+* **flutter:** expose session replay imageQuality and bump native SDKs ([#730](https://github.com/launchdarkly/observability-sdk/issues/730)) ([f46fc13](https://github.com/launchdarkly/observability-sdk/commit/f46fc13c21efd9c4e796a4b22ed86299134a3219))
+
+## [0.15.2](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.15.1...launchdarkly_flutter_observability-0.15.2) (2026-08-13)
+
+
+### Features
+
+* expose Session Replay `imageQuality` and bump native SDKs to observability-android 0.66.0 and swift-launchdarkly-observability 0.52.0 ([#730](https://github.com/launchdarkly/observability-sdk/pull/730))
+
+## [0.15.1](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.15.0...launchdarkly_flutter_observability-0.15.1) (2026-08-13)
+
+
+### Bug Fixes
+
+* **deps:** bump mobile bridges to observability-android 0.65.0 and client SDK 5.13.3 ([#720](https://github.com/launchdarkly/observability-sdk/issues/720)) ([b951c0c](https://github.com/launchdarkly/observability-sdk/commit/b951c0c038f99cb5025abf104b08865f1e24fe7a))
+
+## [0.15.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.14.1...launchdarkly_flutter_observability-0.15.0) (2026-08-12)
+
+
+### Features
+
+* Android scale issues and imageQuality option ([#716](https://github.com/launchdarkly/observability-sdk/issues/716)) ([acacd0e](https://github.com/launchdarkly/observability-sdk/commit/acacd0e5cc637cf879572431b266c342eff2d2fb))
+
+## [0.14.1](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.14.0...launchdarkly_flutter_observability-0.14.1) (2026-08-12)
+
+
+### Bug Fixes
+
+* carry render scale into Flutter iOS replay frames ([#717](https://github.com/launchdarkly/observability-sdk/issues/717)) ([046f389](https://github.com/launchdarkly/observability-sdk/commit/046f3893783b41a2050d43339c6488fa1f682c10))
+
+## [0.14.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.13.0...launchdarkly_flutter_observability-0.14.0) (2026-08-10)
+
+
+### Features
+
+* expose native Flutter observability options ([#713](https://github.com/launchdarkly/observability-sdk/issues/713)) ([ab29eea](https://github.com/launchdarkly/observability-sdk/commit/ab29eea4b85652ceeed025cab2c53f558e3e7a7e))
+
 ## [0.13.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.12.2...launchdarkly_flutter_observability-0.13.0) (2026-07-24)
 
 

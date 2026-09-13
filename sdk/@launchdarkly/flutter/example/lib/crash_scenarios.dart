@@ -159,7 +159,9 @@ Future<void> triggerScenario(
       // surfaces as an unhandled async error in the guarded zone.
       unawaited(
         Future<void>.delayed(const Duration(milliseconds: 50), () {
-          throw StateError('Unawaited future failed');
+          throw StateError(
+            'Flutter: Unawaited future error - unawaited future failed',
+          );
         }),
       );
 
@@ -167,7 +169,9 @@ Future<void> triggerScenario(
       // A throw from a timer callback runs on the event loop, outside of any
       // `try`/`catch`, and is reported by the zone handler.
       Timer(const Duration(milliseconds: 50), () {
-        throw StateError('Timer callback failed');
+        throw StateError(
+          'Flutter: Timer callback error - timer callback failed',
+        );
       });
 
     case CrashScenario.widgetBuild:
@@ -198,10 +202,12 @@ Future<void> _runCatchable(CrashScenario scenario) async {
   switch (scenario) {
     case CrashScenario.exception:
       final inner = StateError('The error that caused the other error.');
-      throw Exception('Manual error womp womp: $inner');
+      throw Exception('Flutter: Manual error womp womp: $inner');
 
     case CrashScenario.stateError:
-      throw StateError('Failed to connect to bogus server.');
+      throw StateError(
+        'Flutter: StateError - failed to connect to bogus server.',
+      );
 
     case CrashScenario.argumentError:
       _use(_parsePositive('-1'));
@@ -227,7 +233,10 @@ Future<void> _runCatchable(CrashScenario scenario) async {
       _use(value.missingMethod());
 
     case CrashScenario.assertionError:
-      assert(false, 'Intentional assertion failure');
+      assert(
+        false,
+        'Flutter: Assertion failure - intentional assertion failure',
+      );
 
     case CrashScenario.stackOverflow:
       _use(_infiniteRecursion(0));
@@ -250,7 +259,11 @@ Future<void> _runCatchable(CrashScenario scenario) async {
 int _parsePositive(String raw) {
   final value = int.parse(raw);
   if (value <= 0) {
-    throw ArgumentError.value(value, 'raw', 'must be greater than zero');
+    throw ArgumentError.value(
+      value,
+      'raw',
+      'Flutter: ArgumentError - must be greater than zero',
+    );
   }
   return value;
 }
@@ -258,7 +271,9 @@ int _parsePositive(String raw) {
 /// Fails after suspending, so the reported stack trace covers an async gap.
 Future<int> _failingAsyncWork() async {
   await Future<void>.delayed(const Duration(milliseconds: 50));
-  throw TimeoutException('Async work failed after a delay');
+  throw TimeoutException(
+    'Flutter: Async error - async work failed after a delay',
+  );
 }
 
 // Dart does not eliminate tail calls, so this grows the stack until it
@@ -272,6 +287,8 @@ class _BrokenPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    throw StateError('Exception thrown while building BrokenPage');
+    throw StateError(
+      'Flutter: Widget build error - exception thrown while building BrokenPage',
+    );
   }
 }

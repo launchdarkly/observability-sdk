@@ -20,6 +20,48 @@ cd observability-sdk/e2e/go-plugin
 export LAUNCHDARKLY_SDK_KEY="your-sdk-key-here"
 ```
 
+## Running against a backend on localhost
+
+The examples export to LaunchDarkly by default. The HTTP example also honours the
+standard endpoint variable, so it can be pointed at a stack running locally. The
+SDK exports OTLP over HTTP, which the local collector receives on port 4318 — not
+4317, which is the gRPC port other SDKs use:
+
+```bash
+export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
+export LAUNCHDARKLY_SDK_KEY="key-from-the-local-project"
+```
+
+Data is attributed to the project the SDK key belongs to, so this has to be a key
+from the local stack rather than a real one, or the errors land somewhere you are
+not looking.
+
+Then start the example and record one error of each shape:
+
+```bash
+go run ./cmd/http &
+until curl -s -o /dev/null localhost:8080/; do sleep 1; done
+for route in plain stack wrapped goroutine; do curl -s "localhost:8080/error/$route"; done
+```
+
+The example is waited for because it has to compile and then wait for the
+LaunchDarkly client before it starts serving. The errors reach the local backend a
+few seconds later, once the SDK batches its spans out, and appear in the errors UI
+as four separate error groups.
+
+What to look for on each of them:
+
+- The first frame is the application's own code. It should never be
+  `RecordError`, `recordSpanError` or anything else belonging to the SDK.
+- Frames read as `package.(*Receiver).Method`, and a closure reads as
+  `Method.func1` rather than as a bare number.
+- Each frame shows the source line that ran with the lines around it. A frame
+  reporting no source at all is expected for any code whose file is not on this
+  machine, which for a Go binary is the normal case anywhere but a dev box.
+
+If nothing arrives, the example logs its export failures, so check its output
+first: a wrong port shows up there as `connection refused`.
+
 ## Examples
 
 This project contains several examples, each demonstrating the LaunchDarkly Observability plugin with different Go frameworks and libraries:
@@ -100,6 +142,10 @@ go run cmd/http/http.go
 
 **Endpoints:**
 - `GET /rolldice` - Rolls a dice and returns the result, with verbose output controlled by the `verbose-response` feature flag
+- `GET /error/plain` - Records an error with no stack of its own, so the SDK has to capture one. The reported frames should start at the handler's helper, not inside the SDK
+- `GET /error/stack` - Records a `pkg/errors` error, whose stack was captured where the error was created, three calls below the handler
+- `GET /error/wrapped` - Records a wrapped error. The frames should reach the root cause, not stop at the wrap
+- `GET /error/goroutine` - Records an error raised in nested closures on another goroutine, with no span to attach it to
 
 ### 5. Logrus Example (`cmd/logrus/`)
 
@@ -143,4 +189,3 @@ go run cmd/preinit/preinit.go
 - Advanced initialization scenarios where you need observability before the LaunchDarkly client
 - Using observability features without a LaunchDarkly client (some features will be unavailable)
 - Custom initialization timing requirements
- 

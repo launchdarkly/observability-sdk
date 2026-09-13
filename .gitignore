@@ -87,3 +87,17 @@ sdk/@launchdarkly/mobile-dotnet/**/xcuserdata/
 # NOTE: the monorepo yarn.lock is intentionally NOT ignored.
 sdk/@launchdarkly/react-native-ld-session-replay/example/ios/Podfile.lock
 sdk/@launchdarkly/react-native-ld-session-replay/example/Gemfile.lock
+
+# Skip dual-platform sample: SwiftPM, Gradle, and Xcode build output.
+# The sample carries its own .gitignore; these repeat the generated paths so they stay
+# ignored from the repo root too.
+e2e/skipapp-howdy/.build/
+e2e/skipapp-howdy/.swiftpm/
+e2e/skipapp-howdy/Package.resolved
+e2e/skipapp-howdy/Android/.gradle/
+e2e/skipapp-howdy/Android/.kotlin/
+e2e/skipapp-howdy/Android/local.properties
+e2e/skipapp-howdy/Android/**/build/
+e2e/skipapp-howdy/**/xcuserdata/
+e2e/skipapp-howdy/**/DerivedData/
+e2e/skipapp-howdy/xcodebuild*.log

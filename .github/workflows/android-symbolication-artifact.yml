@@ -1,0 +1,111 @@
+name: 'Android Symbolication Artifact'
+
+# Builds the e2e app the way a released app is built -- R8 on, obfuscated --
+# uploads its mapping and sources, and publishes the APK for download, so
+# symbolication can be exercised end to end against a real build rather than a
+# locally produced one.
+#
+# The symbols and the APK come out of the same job on purpose: the backend finds
+# the mapping by the id R8 stamped into the very binary you install, so a mapping
+# uploaded from any other build would not be found.
+#
+# Requires, for the upload steps only:
+#   secrets.LD_E2E_MOBILE_KEY        mobile key the app initializes with
+#   secrets.LD_SYMBOLS_ACCESS_TOKEN  API token for the instance below
+#   vars.LD_SYMBOLS_PROJECT          project key the symbols belong to
+# Without them the app still builds; only the upload is skipped, which is what
+# makes this safe to run on a fork's pull request.
+
+on:
+    workflow_dispatch:
+        inputs:
+            base-uri:
+                description: 'LaunchDarkly instance to upload symbols to'
+                default: 'https://ld-stg.launchdarkly.com'
+                required: true
+    pull_request:
+        types: [opened, synchronize]
+        paths:
+            - 'e2e/android/**'
+            - 'sdk/@launchdarkly/observability-android/**'
+            - '.github/workflows/android-symbolication-artifact.yml'
+
+permissions:
+    contents: read
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+env:
+    # 3.10.0 is the first release that keys an Android upload by the id R8 records
+    # in the mapping, and that derives the upload endpoint from --base-uri.
+    LDCLI_VERSION: '3.10.0'
+
+jobs:
+    build:
+        name: Build APK and upload symbols
+        runs-on: ubuntu-22.04-8core-32gb
+        env:
+            LD_BASE_URI: ${{ inputs.base-uri || 'https://ld-stg.launchdarkly.com' }}
+            LD_ACCESS_TOKEN: ${{ secrets.LD_SYMBOLS_ACCESS_TOKEN }}
+            LD_PROJECT: ${{ vars.LD_SYMBOLS_PROJECT }}
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Set up JDK 17
+              uses: actions/setup-java@v4
+              with:
+                  distribution: 'temurin'
+                  java-version: 17
+
+            - name: Set up Android SDK
+              uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3.2.2
+
+            # The app reads these through buildConfigField, so they have to be in
+            # place before the build rather than supplied to the running app.
+            - name: Configure the app
+              working-directory: ./e2e/android
+              run: |
+                  cat > local.properties <<EOF
+                  launchdarkly.mobileKey=${{ secrets.LD_E2E_MOBILE_KEY }}
+                  launchdarkly.otlpEndpoint=https://otel.observability.ld-stg.launchdarkly.com:4318
+                  launchdarkly.backendUrl=https://pub.observability.ld-stg.launchdarkly.com/
+                  EOF
+
+            # The release build type signs with the debug config, so this produces an
+            # installable APK without a keystore. Each runner generates its own debug
+            # key, so builds from different runs will not upgrade over each other.
+            - name: Build the release APK
+              working-directory: ./e2e/android
+              run: ./gradlew :app:assembleComposeRelease
+
+            - name: Install ldcli
+              if: env.LD_ACCESS_TOKEN != '' && env.LD_PROJECT != ''
+              run: |
+                  curl -fsSL "https://github.com/launchdarkly/ldcli/releases/download/v${LDCLI_VERSION}/ldcli_${LDCLI_VERSION}_linux_amd64.tar.gz" \
+                    | sudo tar -xz -C /usr/local/bin ldcli
+                  ldcli --version
+
+            # --base-uri alone names the instance; the observability endpoint is
+            # derived from it. The id comes from the mapping's own pg_map_id header,
+            # so no app version has to be threaded through.
+            - name: Upload the mapping and sources
+              if: env.LD_ACCESS_TOKEN != '' && env.LD_PROJECT != ''
+              working-directory: ./e2e/android
+              run: |
+                  ldcli symbols upload \
+                    --type android \
+                    --path app/build/outputs/mapping/composeRelease/mapping.txt \
+                    --include-sources \
+                    --source-path app/src
+
+            # The mapping rides along so a stack trace from this APK can also be
+            # retraced by hand, without depending on what was uploaded.
+            - name: Publish the APK and its mapping
+              uses: actions/upload-artifact@v4
+              with:
+                  name: android-symbolication-apk-${{ github.run_number }}
+                  path: |
+                      e2e/android/app/build/outputs/apk/compose/release/app-compose-release.apk
+                      e2e/android/app/build/outputs/mapping/composeRelease/mapping.txt
+                  if-no-files-found: error
+                  retention-days: 14

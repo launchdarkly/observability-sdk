@@ -24,8 +24,8 @@ import kotlinx.coroutines.flow.asSharedFlow
  */
 class InteractionSource(
     private val sessionManager: SessionManager,
-    private val scale: Float?,
-    private val density: Float,
+    private val scale: Double?,
+    private val density: Double,
 ) {
     private val _captureEventFlow = MutableSharedFlow<InteractionEvent>(
         extraBufferCapacity = 64,
@@ -36,10 +36,10 @@ class InteractionSource(
 
     private val _moveGrouper: InteractionMoveGrouper = InteractionMoveGrouper(sessionManager, _captureEventFlow)
 
-    private val scaleFactor: Float = when {
-        scale == null -> 1f
-        density > 0f -> scale / density
-        else -> 1f
+    private val scaleFactor: Double = when {
+        scale == null -> 1.0
+        density > 0.0 -> scale / density
+        else -> 1.0
     }
 
     /**

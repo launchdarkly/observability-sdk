@@ -87,7 +87,7 @@ public class MainActivityViewModel extends AndroidViewModel {
 
     public void triggerError() {
         LDObserve.Companion.recordError(
-                new Error("Manual error womp womp", new Error("The error that caused the other error.")),
+                new Error("Android: Manual error womp womp", new Error("The error that caused the other error.")),
                 Attributes.of(AttributeKey.stringKey("FakeAttribute"), "FakeVal")
         );
     }
@@ -230,7 +230,7 @@ public class MainActivityViewModel extends AndroidViewModel {
     }
 
     public void triggerCrash() {
-        throw new RuntimeException("Failed to connect to bogus server.");
+        throw new RuntimeException("Android: Crash - failed to connect to bogus server.");
     }
 
     public void triggerHttpRequests() {

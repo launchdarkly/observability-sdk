@@ -7,13 +7,14 @@ import java.io.ByteArrayOutputStream
 
 class ExportDiffManager(
     private val compression: ReplayOptions.CompressionMethod,
-    private val scale: Float = 1f,
+    private val scale: Double = 1.0,
+    imageQuality: Double = 0.3,
     private val tileDiffManager: TileDiffManager = TileDiffManager(compression = compression, scale = scale),
 ) {
     private val currentImages = mutableListOf<ExportFrame.RemoveImage>()
     private val currentImagesIndex = mutableMapOf<ImageSignature, Int>()
     private val lock = Any()
-    private val format = ExportFrame.DEFAULT_EXPORT_FORMAT
+    private val format = ExportFrame.ExportFormat.Jpeg(quality = imageQuality.toFloat())
 
     private var keyFrameId = 0
 

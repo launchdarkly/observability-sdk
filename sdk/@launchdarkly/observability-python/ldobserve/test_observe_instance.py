@@ -1,3 +1,4 @@
+import json
 import logging
 import pytest
 import typing
@@ -239,6 +240,27 @@ class TestObserveInstance:
             assert attrs_dict.get("error.type") == "validation"
             assert attrs_dict.get("error.code") == 400
             assert attrs_dict.get("user.id") == "12345"
+
+    def test_record_exception_adds_structured_stacktrace(self):
+        """Test recorded exceptions carry source context for their frames"""
+        try:
+            raise RuntimeError("recorded with source context")
+        except RuntimeError as exception:
+            with self.test_otel_config.tracer.start_as_current_span(
+                "test-span"
+            ) as span:
+                self.observe_instance.record_exception(exception)
+
+                exception_event = span.events[-1]
+                attrs_dict = dict(exception_event.attributes)
+                frames = json.loads(attrs_dict["exception.structured_stacktrace"])
+
+                assert frames
+                assert (
+                    frames[0]["lineContent"].strip()
+                    == 'raise RuntimeError("recorded with source context")'
+                )
+                assert frames[0]["linesBefore"]
 
     def test_record_exception_with_null_exception(self):
         """Test recording None exception doesn't crash"""

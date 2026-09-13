@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.18.0](https://github.com/launchdarkly/observability-sdk/compare/observability-react-native-0.17.1...observability-react-native-0.18.0) (2026-08-07)
+
+
+### Features
+
+* emit UCUM units for first-party SDK instruments (O11Y-1820) ([#707](https://github.com/launchdarkly/observability-sdk/issues/707)) ([1d83bd5](https://github.com/launchdarkly/observability-sdk/commit/1d83bd5c484ca3d30b6f09012d02ddf8b3134ea6))
+
 ## [0.17.1](https://github.com/launchdarkly/observability-sdk/compare/observability-react-native-0.17.0...observability-react-native-0.17.1) (2026-07-21)
 
 

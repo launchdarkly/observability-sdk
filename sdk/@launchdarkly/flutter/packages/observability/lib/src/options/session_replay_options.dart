@@ -12,6 +12,11 @@ class SessionReplayOptions {
   final bool isEnabled;
   final String serviceName;
 
+  /// Probability from `0.0` to `1.0` that Session Replay starts when enabled.
+  /// Values at or below zero never record; values at or above one always
+  /// record. The native SDK makes a new decision each time replay is enabled.
+  final double sampleRate;
+
   /// Target capture rate in frames per second. Mirrors Android/iOS
   /// `frameRate`. Native-only. Defaults to `1.0`.
   final double frameRate;
@@ -23,13 +28,22 @@ class SessionReplayOptions {
   /// treated as `1.0`. Defaults to `1.0`.
   final double? scale;
 
+  /// JPEG encoding quality of exported frames, from `0.0` (lowest quality,
+  /// smallest payload) to `1.0` (highest quality, largest payload). Values
+  /// outside that range are clamped by the native SDK. Mirrors Android
+  /// `ReplayOptions.imageQuality` and iOS `SessionReplayOptions.imageQuality`.
+  /// Native-only. Defaults to `0.3`.
+  final double imageQuality;
+
   final PrivacyOptions privacy;
 
   const SessionReplayOptions({
     this.isEnabled = true,
     this.serviceName = 'sessionreplay-flutter',
+    this.sampleRate = 1.0,
     this.frameRate = 1.0,
     this.scale = 1.0,
+    this.imageQuality = 0.3,
     this.privacy = const PrivacyOptions(),
   });
 }

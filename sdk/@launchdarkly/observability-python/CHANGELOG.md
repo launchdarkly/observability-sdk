@@ -2,6 +2,34 @@
 
 All notable changes to the LaunchDarkly Python Observability will be documented in this file. This project adheres to Semantic Versioning.
 
+## [1.3.3](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-python-1.3.2...launchdarkly-observability-python-1.3.3) (2026-08-24)
+
+
+### Bug Fixes
+
+* bump nanoid, @hono/node-server, and sqlparse to patched versions ([#744](https://github.com/launchdarkly/observability-sdk/issues/744)) ([03b4da5](https://github.com/launchdarkly/observability-sdk/commit/03b4da5be9452677a934456758ee8de17de0b06d))
+
+## [1.3.2](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-python-1.3.1...launchdarkly-observability-python-1.3.2) (2026-08-10)
+
+
+### Bug Fixes
+
+* remediate high and critical Dependabot alerts across SDKs and examples ([#710](https://github.com/launchdarkly/observability-sdk/issues/710)) ([32fdfc1](https://github.com/launchdarkly/observability-sdk/commit/32fdfc1c1a1d0881877a0334ff245701cb22cf7d))
+
+## [1.3.1](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-python-1.3.0...launchdarkly-observability-python-1.3.1) (2026-08-04)
+
+
+### Bug Fixes
+
+* update vulnerable dependencies across SDKs and examples ([#699](https://github.com/launchdarkly/observability-sdk/issues/699)) ([3a5fe1c](https://github.com/launchdarkly/observability-sdk/commit/3a5fe1c62a972830d44a522b312728509bccceb2))
+
+## [1.3.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-python-1.2.4...launchdarkly-observability-python-1.3.0) (2026-07-30)
+
+
+### Features
+
+* **python:** report source context for recorded exceptions ([#693](https://github.com/launchdarkly/observability-sdk/issues/693)) ([54aa031](https://github.com/launchdarkly/observability-sdk/commit/54aa0315f864e45d02bde7088a032cff42236d0f))
+
 ## [1.2.4](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-python-1.2.3...launchdarkly-observability-python-1.2.4) (2026-06-22)
 
 

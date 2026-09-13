@@ -52,6 +52,10 @@ class SessionReplay(
         sessionReplayHook.delegate = impl.sessionReplayService
     }
 
+    // Note: this hook is intentionally not wrapped in DedupingHook. Deduplication only
+    // suppresses evaluation stages, and [SessionReplayHook] implements identify only, which
+    // DedupingHook always forwards. Evaluation spans come from ObservabilityHook, which is
+    // wrapped there instead.
     override fun getHooks(metadata: EnvironmentMetadata?): MutableList<Hook> {
         return Collections.singletonList(sessionReplayHook)
     }

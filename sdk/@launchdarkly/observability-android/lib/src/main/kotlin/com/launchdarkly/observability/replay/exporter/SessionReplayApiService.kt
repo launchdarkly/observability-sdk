@@ -1,13 +1,16 @@
 package com.launchdarkly.observability.replay.exporter
 
 import com.launchdarkly.observability.BuildConfig
+import com.launchdarkly.observability.network.ErrorRecoverability
 import com.launchdarkly.observability.network.GraphQLClient
-import com.launchdarkly.observability.network.GraphQLResponse
+import com.launchdarkly.observability.network.GraphQLClientException
+import com.launchdarkly.observability.network.RecoverableFailure
 import com.launchdarkly.observability.replay.Event
 import com.launchdarkly.observability.replay.IdentifySessionResponse
 import com.launchdarkly.observability.replay.InitializeReplaySessionResponse
 import com.launchdarkly.observability.replay.PushPayloadResponse
 import com.launchdarkly.observability.replay.ReplayEventsInput
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -175,12 +178,12 @@ class SessionReplayApiService(
             "privacy_setting" to JsonPrimitive("none"), // TODO: O11Y-631 - remove hardcoded params
             "id" to JsonPrimitive("") // TODO: O11Y-631 - remove hardcoded params
         )
-        val response = graphqlClient.execute(
+        execute(
+            operation = "initializeReplaySession",
             query = INITIALIZE_REPLAY_SESSION_QUERY,
             variables = variables,
             dataSerializer = InitializeReplaySessionResponse.serializer()
         )
-        throwOnErrors(response, "initializeReplaySession")
     }
 
     /**
@@ -199,13 +202,12 @@ class SessionReplayApiService(
             "user_identifier" to JsonPrimitive(userIdentifier),
             "user_object" to userObject
         )
-        val response = graphqlClient.execute(
+        execute(
+            operation = "identifyReplaySession",
             query = IDENTIFY_REPLAY_SESSION_QUERY,
             variables = variables,
             dataSerializer = IdentifySessionResponse.serializer()
         )
-
-        throwOnErrors(response, "identifyReplaySession")
     }
 
     /**
@@ -245,20 +247,39 @@ class SessionReplayApiService(
             "errors" to JsonArray(emptyList()),
         )
 
-        val response = graphqlClient.execute(
+        execute(
+            operation = "pushPayload",
             query = PUSH_PAYLOAD_QUERY,
             variables = variables,
             dataSerializer = PushPayloadResponse.serializer()
         )
-
-        throwOnErrors(response, "pushPayload")
     }
 
-    private fun <T> throwOnErrors(response: GraphQLResponse<T>, operation: String) {
-        val errors = response.errors?.takeIf { it.isNotEmpty() } ?: return
-        val message = errors.joinToString("; ") { it.message }
-        throw SessionReplayApiException("$operation failed: $message")
+    /**
+     * Runs [query] and discards the response data, which none of these mutations reports anything useful
+     * in, naming the operation in whatever it throws.
+     */
+    private suspend fun <T> execute(
+        operation: String,
+        query: String,
+        variables: Map<String, JsonElement>,
+        dataSerializer: KSerializer<T>,
+    ) {
+        try {
+            graphqlClient.execute(query = query, variables = variables, dataSerializer = dataSerializer)
+        } catch (e: GraphQLClientException) {
+            throw SessionReplayApiException(operation, e)
+        }
     }
 }
 
-internal class SessionReplayApiException(message: String) : RuntimeException(message)
+/**
+ * A failed session replay operation, named. Adds the operation to the failure the client threw and takes
+ * its recoverability from it, so no verdict is derived twice.
+ */
+internal class SessionReplayApiException(
+    operation: String,
+    cause: GraphQLClientException,
+) : RuntimeException("$operation failed: ${cause.message}", cause), RecoverableFailure {
+    override val isRecoverable: Boolean = ErrorRecoverability.isErrorRecoverable(cause)
+}

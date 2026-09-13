@@ -1,5 +1,33 @@
 # Changelog
 
+## [1.3.0](https://github.com/launchdarkly/observability-sdk/compare/go/v1.2.2...go/v1.3.0) (2026-08-28)
+
+
+### Features
+
+* **go:** Add explicit ForceSample marker to the span-kind sampler ([#738](https://github.com/launchdarkly/observability-sdk/issues/738)) ([b2e2fed](https://github.com/launchdarkly/observability-sdk/commit/b2e2fed8e5ce54cc35f5cda7a2882ddb8d2721b2))
+
+## [1.2.2](https://github.com/launchdarkly/observability-sdk/compare/go/v1.2.1...go/v1.2.2) (2026-08-17)
+
+
+### Bug Fixes
+
+* **go:** Honor unsampled parent in span-kind sampler ([#722](https://github.com/launchdarkly/observability-sdk/issues/722)) ([a3cc841](https://github.com/launchdarkly/observability-sdk/commit/a3cc84136938bde76e9dd22415ff0df5c4b9e47b))
+
+## [1.2.1](https://github.com/launchdarkly/observability-sdk/compare/go/v1.2.0...go/v1.2.1) (2026-08-04)
+
+
+### Bug Fixes
+
+* update vulnerable dependencies across SDKs and examples ([#699](https://github.com/launchdarkly/observability-sdk/issues/699)) ([3a5fe1c](https://github.com/launchdarkly/observability-sdk/commit/3a5fe1c62a972830d44a522b312728509bccceb2))
+
+## [1.2.0](https://github.com/launchdarkly/observability-sdk/compare/go/v1.1.1...go/v1.2.0) (2026-07-30)
+
+
+### Features
+
+* **go:** report source context for recorded errors ([#695](https://github.com/launchdarkly/observability-sdk/issues/695)) ([34e3201](https://github.com/launchdarkly/observability-sdk/commit/34e3201f37980bcae8b0a51d1cce3b43bd44055f))
+
 ## [1.1.1](https://github.com/launchdarkly/observability-sdk/compare/go/v1.1.0...go/v1.1.1) (2026-04-22)
 
 

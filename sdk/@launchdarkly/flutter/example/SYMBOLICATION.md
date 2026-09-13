@@ -74,7 +74,9 @@ ldcli symbols upload \
   --access-token YOUR_ACCESS_TOKEN \
   --base-uri https://ld-stg.launchdarkly.com \
   --backend-url http://localhost:8082/private \
-  --app-version "$(git rev-parse HEAD)"
+  --app-version "$(git rev-parse HEAD)" \
+  --include-sources \
+  --source-path .
 ```
 
 `--type dart` is accepted as an alias for `--type flutter`.
@@ -83,6 +85,21 @@ ldcli symbols upload \
 compiles them to `app.dartmap`, and uploads one per architecture to the Id lane.
 Add `--app-version $(git rev-parse HEAD)` (matching the `GIT_SHA` dart-define
 above) to also populate the Version lane.
+
+`--include-sources` packs your app's `.dart` files into a `sources.srcbundle`
+uploaded beside each map, so the errors page can show code around each
+symbolicated frame.
+
+Dart records a compilation unit by its script URI, so a frame's file is usually
+`package:<your_app>/....` `--source-path` (defaults to `.`) must therefore be your
+**Flutter project root** — the directory holding `pubspec.yaml` — because its
+`name:` is what identifies your package's URIs and maps them to `lib/`. Builds
+whose DWARF recorded plain paths instead are read from those paths, falling back
+to the same file in your checkout.
+
+Only your own code is uploaded: the Dart SDK, Flutter, and every pub dependency
+are excluded, so those frames render without a snippet rather than with someone
+else's.
 
 > **iOS requires `--app-version`.** Android `.symbols` ELFs carry a GNU
 > build-id note, so their `symbols_id` is read straight from the file and they go
@@ -95,7 +112,7 @@ above) to also populate the Version lane.
 > The Android arches still upload to the Id lane in the same run.
 
 To inspect what would be uploaded without sending it, use
-`ldcli symbols generate --type flutter --path build/symbols --out ./out`; the
+`ldcli symbols generate --type flutter --path build/symbols --out ./out --include-sources --source-path .`; the
 `out/` tree mirrors the storage keys described above.
 
 ## 3. Run the exact build and trigger a crash/error

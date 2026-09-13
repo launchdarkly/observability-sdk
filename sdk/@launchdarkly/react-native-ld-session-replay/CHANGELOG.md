@@ -1,5 +1,49 @@
 # Changelog
 
+## [0.23.0](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.22.2...session-replay-react-native-0.23.0) (2026-08-20)
+
+
+### Features
+
+* **react-native:** fix lagging masks and imageQuality option ([#734](https://github.com/launchdarkly/observability-sdk/issues/734)) ([d0e2f99](https://github.com/launchdarkly/observability-sdk/commit/d0e2f99eb0c554eb1a1a9213d19c320f5c40e8f0))
+
+## [0.22.2](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.22.1...session-replay-react-native-0.22.2) (2026-08-19)
+
+
+### Bug Fixes
+
+* remediate dependency vulnerabilities across npm, go, pip, and rubygems ([#732](https://github.com/launchdarkly/observability-sdk/issues/732)) ([9cbe8d5](https://github.com/launchdarkly/observability-sdk/commit/9cbe8d586266d3d23c063bb8ae1c6621a745776c))
+
+## [0.22.1](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.22.0...session-replay-react-native-0.22.1) (2026-08-13)
+
+
+### Bug Fixes
+
+* **deps:** bump mobile bridges to observability-android 0.65.0 and client SDK 5.13.3 ([#720](https://github.com/launchdarkly/observability-sdk/issues/720)) ([b951c0c](https://github.com/launchdarkly/observability-sdk/commit/b951c0c038f99cb5025abf104b08865f1e24fe7a))
+
+## [0.22.0](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.21.2...session-replay-react-native-0.22.0) (2026-08-12)
+
+
+### Features
+
+* Android scale issues and imageQuality option ([#716](https://github.com/launchdarkly/observability-sdk/issues/716)) ([acacd0e](https://github.com/launchdarkly/observability-sdk/commit/acacd0e5cc637cf879572431b266c342eff2d2fb))
+
+## [0.21.2](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.21.1...session-replay-react-native-0.21.2) (2026-08-10)
+
+
+### Bug Fixes
+
+* remediate high and critical Dependabot alerts across SDKs and examples ([#710](https://github.com/launchdarkly/observability-sdk/issues/710)) ([32fdfc1](https://github.com/launchdarkly/observability-sdk/commit/32fdfc1c1a1d0881877a0334ff245701cb22cf7d))
+
+## [0.21.1](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.21.0...session-replay-react-native-0.21.1) (2026-08-07)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @launchdarkly/observability-react-native bumped to 0.18.0
+
 ## [0.21.0](https://github.com/launchdarkly/observability-sdk/compare/session-replay-react-native-0.20.0...session-replay-react-native-0.21.0) (2026-07-24)
 
 

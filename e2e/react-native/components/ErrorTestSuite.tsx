@@ -78,7 +78,9 @@ const ErrorThrowingComponent: React.FC<{ shouldThrow: boolean }> = ({
 	shouldThrow,
 }) => {
 	if (shouldThrow) {
-		throw new Error('Intentional React component error for testing')
+		throw new Error(
+			'React Native: React component error - intentional error for testing',
+		)
 	}
 	return (
 		<Text style={styles.successText}>

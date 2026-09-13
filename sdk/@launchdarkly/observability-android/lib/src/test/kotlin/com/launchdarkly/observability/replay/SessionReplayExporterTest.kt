@@ -82,7 +82,7 @@ class SessionReplayExporterTest {
     }
 
     @Test
-    fun `sendIdentifyAndCache should call identifyReplaySession`() = runTest {
+    fun `sendIdentifyAndCache should call identifyReplaySession for an accepted session`() = runTest {
         val updatedIdentify = IdentifyItemPayload(
             attributes = mapOf("key" to "updated-user"),
             timestamp = 1L,
@@ -91,6 +91,8 @@ class SessionReplayExporterTest {
 
         coEvery { mockService.identifyReplaySession(any<String>(), any<IdentifyItemPayload>()) } just Runs
 
+        // The backend only accepts identify for a session it has accepted, so this follows initialization.
+        exporter.prepareSession("session-a")
         exporter.sendIdentifyAndCache(updatedIdentify)
 
         coVerify(exactly = 1) { mockService.identifyReplaySession("session-a", updatedIdentify) }

@@ -1,5 +1,41 @@
 # highlight.run
 
+## [10.7.4](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.7.3...highlight.run-10.7.4) (2026-09-09)
+
+
+### Bug Fixes
+
+* **highlight.run:** never JSON.stringify binary XHR bodies or capture the SDK's own exports (iPad crash root cause) ([#760](https://github.com/launchdarkly/observability-sdk/issues/760)) ([2ad7c4f](https://github.com/launchdarkly/observability-sdk/commit/2ad7c4fffbc11e2e7b6e59cf712e339de844fede))
+
+## [10.7.3](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.7.2...highlight.run-10.7.3) (2026-09-09)
+
+
+### Bug Fixes
+
+* **highlight.run:** WebKit/iPad performance hardening — dedupe OpenTelemetry bundles, cap body capture, resync option, telemetry-intake blocklist ([#758](https://github.com/launchdarkly/observability-sdk/issues/758)) ([bdf077a](https://github.com/launchdarkly/observability-sdk/commit/bdf077ad5a363f9163f2a20b12163558d3e39ec6))
+
+## [10.7.2](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.7.1...highlight.run-10.7.2) (2026-09-03)
+
+
+### Bug Fixes
+
+* **highlight.run:** capture XMLHttpRequest bodies and headers on traces without the session replay listener ([#752](https://github.com/launchdarkly/observability-sdk/issues/752)) ([68eb0fe](https://github.com/launchdarkly/observability-sdk/commit/68eb0fee05540147a87eba1133c1ebc83c2122c4))
+* **highlight.run:** record fetch request bodies and headers that are not plain strings or objects ([#753](https://github.com/launchdarkly/observability-sdk/issues/753)) ([dc97c02](https://github.com/launchdarkly/observability-sdk/commit/dc97c022e6d68cd95fb6e9a5f1c604eb5da010b1))
+
+## [10.7.1](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.7.0...highlight.run-10.7.1) (2026-08-13)
+
+
+### Bug Fixes
+
+* **highlight.run:** recover CSS-in-JS rules when another script unhooks rrweb ([#725](https://github.com/launchdarkly/observability-sdk/issues/725)) ([9faca28](https://github.com/launchdarkly/observability-sdk/commit/9faca2864c0a3f87b6a89eac7593431f3a485235))
+
+## [10.7.0](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.6.0...highlight.run-10.7.0) (2026-08-07)
+
+
+### Features
+
+* emit UCUM units for first-party SDK instruments (O11Y-1820) ([#707](https://github.com/launchdarkly/observability-sdk/issues/707)) ([1d83bd5](https://github.com/launchdarkly/observability-sdk/commit/1d83bd5c484ca3d30b6f09012d02ddf8b3134ea6))
+
 ## [10.6.0](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.5.0...highlight.run-10.6.0) (2026-07-16)
 
 

@@ -235,10 +235,12 @@ final class LDNativeApiImpl: NSObject, LDNativeApi {
         )
 
         let observabilityOptions = ObservabilityOptions(
+            isEnabled: observability.isEnabled ?? true,
             serviceName: serviceName,
             serviceVersion: serviceVersion,
             otlpEndpoint: otlpEndpoint,
             backendUrl: backendUrl,
+            contextFriendlyName: observability.contextFriendlyName,
             resourceAttributes: resourceAttributes,
             customHeaders: customHeaders,
             sessionBackgroundTimeout: sessionBackgroundTimeout,
@@ -296,6 +298,7 @@ final class LDNativeApiImpl: NSObject, LDNativeApi {
 
         return LaunchDarklySessionReplay.SessionReplayOptions(
             isEnabled: replay.isEnabled ?? true,
+            sampleRate: replay.sampleRate ?? 1.0,
             privacy: .init(
                 maskTextInputs: privacy?.maskTextInputs ?? true,
                 maskWebViews: privacy?.maskWebViews ?? false,
@@ -303,7 +306,8 @@ final class LDNativeApiImpl: NSObject, LDNativeApi {
                 maskImages: privacy?.maskImages ?? false
             ),
             frameRate: replay.frameRate ?? 1.0,
-            scale: resolvedScale
+            scale: resolvedScale,
+            imageQuality: CGFloat(replay.imageQuality ?? 0.3)
         )
     }
 

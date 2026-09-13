@@ -24,4 +24,15 @@ class ReplayOptionsTest {
     fun `sampleRate can be configured`() {
         assertEquals(0.25, ReplayOptions(sampleRate = 0.25).sampleRate)
     }
+
+    @Test
+    fun `imageQuality defaults to thirty percent`() {
+        assertEquals(0.3, ReplayOptions().imageQuality)
+    }
+
+    @Test
+    fun `imageQuality can be configured`() {
+        assertEquals(0.75, ReplayOptions(imageQuality = 0.75).imageQuality)
+        assertEquals(0.75, ReplayOptions.builder().imageQuality(0.75).build().imageQuality)
+    }
 }
