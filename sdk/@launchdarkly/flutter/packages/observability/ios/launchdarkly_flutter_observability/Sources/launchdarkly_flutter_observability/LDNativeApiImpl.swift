@@ -160,6 +160,47 @@ final class LDNativeApiImpl: NSObject, LDNativeApi {
         )
     }
 
+    // Forwards a click to the native observability SDK, which emits the `click`
+    // span and broadcasts a Session Replay `Click` timeline event. Flutter renders
+    // its whole UI into one `FlutterView`, so native hit-testing can only ever name
+    // that view; the Dart side walks the widget tree instead and reports the real
+    // target here.
+    func trackClick(
+        id: String?,
+        tag: String?,
+        classname: String?,
+        text: String?,
+        xpath: String?,
+        screenId: String?,
+        x: Int64?,
+        y: Int64?,
+        timestampMillis: Int64?,
+        properties: [String: Any?]?
+    ) throws {
+        LDObserve.shared.trackClick(
+            id: id,
+            tag: tag,
+            classname: classname,
+            text: text,
+            xpath: xpath,
+            screenId: screenId,
+            x: x.map { Int($0) },
+            y: y.map { Int($0) },
+            // The bridge carries epoch millis (matching Android); iOS times events in seconds.
+            timestamp: timestampMillis.map { TimeInterval($0) / 1000.0 },
+            properties: properties.map { cleanAttributes($0) }
+        )
+    }
+
+    // Declares that Dart now resolves clicks for the Flutter view, so native tap
+    // detection stops reporting taps that land on it and each tap is counted once.
+    // Handshaked from Dart rather than set at init: native starts before the widget
+    // tree exists, so an app that never installs Dart click detection keeps the
+    // coarse native clicks instead of silently reporting none.
+    func setEmbedderClickHandling(enabled: Bool) throws {
+        LDObserve.shared.setEmbedderClickHandling(enabled)
+    }
+
     /// Drops `nil` values so the native bridge receives a `[String: Any]`.
     private func cleanAttributes(_ attributes: [String: Any?]?) -> [String: Any] {
         guard let attributes = attributes else { return [:] }
@@ -189,8 +230,9 @@ final class LDNativeApiImpl: NSObject, LDNativeApi {
         // switches: `instrumentation.userTaps` runs the tap-detection machinery, and
         // `analytics.taps` publishes each detected tap as a `click` span. We drive both from the
         // one Flutter flag so taps are detected (not just published) regardless of the native
-        // `Instrumentation` defaults. `views` is Android-only and ignored here.
+        // `Instrumentation` defaults.
         let tapsEnabled: Bool = observability.analytics?.taps ?? true
+        let screenViewsEnabled: Bool = observability.analytics?.views ?? true
         let trackEventsEnabled: Bool = observability.analytics?.trackEvents ?? true
         let appLifecycleEnabled: Bool = observability.analytics?.appLifecycle ?? true
         let appLaunchEnabled: Bool = observability.analytics?.appLaunch ?? true
@@ -222,7 +264,11 @@ final class LDNativeApiImpl: NSObject, LDNativeApi {
             memory: .disabled,
             memoryWarnings: .disabled,
             cpu: .disabled,
-            launchTimes: launchTimesEnabled ? .enabled : .disabled
+            launchTimes: launchTimesEnabled ? .enabled : .disabled,
+            // Flutter navigation is reported explicitly through trackScreenView. UIViewController
+            // swizzling only sees the single host view controller and would overwrite the active
+            // Flutter route when it re-appears (foreground/resume or session reseed).
+            screens: .disabled
         )
         // Taps and track events are both published as spans via Analytics. Track
         // events additionally drive the Session Replay `Track` timeline event,
@@ -230,6 +276,7 @@ final class LDNativeApiImpl: NSObject, LDNativeApi {
         let analytics = ObservabilityOptions.Analytics(
             taps: tapsEnabled ? .enabled : .disabled,
             trackEvents: trackEventsEnabled ? .enabled : .disabled,
+            screenViews: screenViewsEnabled ? .enabled : .disabled,
             appLifecycle: appLifecycleEnabled ? .enabled : .disabled,
             appLaunch: appLaunchEnabled ? .enabled : .disabled
         )

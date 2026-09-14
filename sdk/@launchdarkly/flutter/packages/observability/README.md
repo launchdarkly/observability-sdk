@@ -18,6 +18,8 @@ Observability (spans, logs, errors) works on **mobile and web**. Session replay 
 
 ## Install
 
+Requires Flutter 3.27 or newer.
+
 Add the package to your app's `pubspec.yaml`:
 
 ```bash
@@ -112,6 +114,7 @@ When enabled through `InstrumentationOptions`, the SDK automatically instruments
 - **HTTP Requests**: Outgoing HTTP requests (when `InstrumentationOptions.networkRequests` is enabled).
 - **Crash / Error Reporting**: Uncaught errors captured through `runZonedGuarded` and `FlutterError.onError`.
 - **Feature Flag Evaluations**: Evaluation events are added to your spans via the bundled hook.
+- **Clicks**: Every tap, resolved to the widget it landed on (requires `SessionReplayCapture`; see [Clicks (taps)](#clicks-taps)).
 - **App Lifecycle / Launch Times**: Session and launch-time tracking.
 - **`debugPrint` / `print` Capture**: Console output forwarded as logs via the print-intercepting zone.
 
@@ -135,7 +138,7 @@ runZonedGuarded(
 
 ## Native-only options
 
-The following options are forwarded to the native Android and iOS SDKs. They are **no-ops on web**, where the Dart OpenTelemetry pipeline is used instead.
+The following options are forwarded to the native Android and iOS SDKs. Unless noted otherwise they are **no-ops on web**, where the Dart OpenTelemetry pipeline is used instead.
 
 On `ObservabilityOptions`:
 
@@ -145,9 +148,10 @@ On `ObservabilityOptions`:
 - `traces` (`TracesOptions`): toggles `includeErrors` and `includeSpans` for automatic trace generation. Both default to `true`.
 - `metricsEnabled` (`bool`): whether metrics are exported. Defaults to `true`.
 - `analytics` (`AnalyticsOptions`): analytics telemetry. Use the `AnalyticsOptions.enabled` / `AnalyticsOptions.disabled` shorthands to toggle everything at once (mirroring Swift's `analytics: .enabled`), or set the individual flags:
-  - `taps` (`bool`): emit a span for each user tap. Tap detection is always enabled; this flag only controls whether a span is published. Supported on Android and iOS. Defaults to `true`.
-  - `views` (`bool`): emit spans for screen/page views. **Android-only** (no-op on iOS/web). Defaults to `true`.
-  - `trackEvents` (`bool`): emit a span when a custom event is tracked. **Android-only** (no-op on iOS/web). Defaults to `true`.
+  - `taps` (`bool`): capture taps and emit a `click` event for each. Gates the Dart click detection described under [Clicks (taps)](#clicks-taps), so turning it off stops the widget resolution too, not just the span. Supported on Android, iOS and web. Defaults to `true`.
+  - `customClickTargetResolver` (`LDClickTargetResolver?`): names your own widget types as click targets. Dart-side only. See [Clicks (taps)](#clicks-taps).
+  - `views` (`bool`): emit spans for screen/page views. Supported on Android, iOS and web. This gates the `screen_view` span only; on mobile the Session Replay `Navigate` event is emitted either way. Defaults to `true`.
+  - `trackEvents` (`bool`): emit a span when a custom event is tracked. Supported on Android, iOS and web. Defaults to `true`.
   - `appLifecycle` (`bool`): emit `app_foreground` / `app_background` spans as the app moves between foreground and background. **Mobile-only** (Android, iOS; no-op on web). Defaults to `true`.
   - `appLaunch` (`bool`): emit an `app_launch` span (carrying the launch type — `install` / `update` / `relaunch` — and version fields) once per process launch. **Mobile-only** (Android, iOS; no-op on web). Defaults to `true`.
 - `instrumentation.crashReporting` (`bool`): report uncaught exceptions as errors. Defaults to `true`.
@@ -281,18 +285,9 @@ span2.end();
 
 ### Screen views (navigation)
 
-Flutter renders into a single native `Activity`/`UIViewController`, so the native SDK's automatic screen detection never sees your Flutter route changes. Report them from Dart with `LDObserve.trackScreenView`, which emits a `screen_view` span and a Session Replay `Navigate` timeline event:
+Flutter renders into a single native `Activity`/`UIViewController`, so the native SDK's automatic screen detection never sees your Flutter route changes. Nothing is recorded until you report them from Dart.
 
-```dart
-LDObserve.trackScreenView(
-  'Checkout',
-  screenClass: 'CheckoutPage',
-  category: 'commerce',
-  properties: {'cart_size': 3},
-);
-```
-
-To record navigations automatically, attach the provided `LDNavigatorObserver` to your app's navigator. By default it uses each route's `settings.name` and skips unnamed routes:
+Usually that means attaching `LDNavigatorObserver` to your app's navigator. Each route change then emits a `screen_view` span and a Session Replay `Navigate` timeline event:
 
 ```dart
 MaterialApp(
@@ -301,7 +296,18 @@ MaterialApp(
 );
 ```
 
-Name your routes (for example via `MaterialPageRoute(settings: RouteSettings(name: 'Home'), ...)` or named routes) so they are reported. To customize how a name is derived — or to name otherwise-anonymous routes — pass a `screenNameExtractor`:
+**Routes must be named to be reported.** The observer reads `route.settings.name` and skips routes without one, so an app that pushes bare `MaterialPageRoute(builder: ...)` records nothing and gives no error. Name them at the push site:
+
+```dart
+Navigator.of(context).push(
+  MaterialPageRoute<void>(
+    settings: const RouteSettings(name: '/checkout'),
+    builder: (_) => const CheckoutPage(),
+  ),
+);
+```
+
+Skipping unnamed routes is deliberate: it keeps the dialogs and bottom sheets that `showDialog` and `showModalBottomSheet` push without settings from showing up as screens. To name those anyway, or to derive names some other way, pass a `screenNameExtractor`:
 
 ```dart
 MaterialApp(
@@ -315,6 +321,79 @@ MaterialApp(
 );
 ```
 
+An observer only sees one navigator, which a few common setups run into:
+
+- **Nested navigators** — a tab shell, or a `Navigator` inside a page — report only their own routes, so each needs its own observer. One instance cannot be shared between navigators; Flutter asserts on that.
+- **`MaterialApp.router`** (go_router, auto_route, Beamer) does not accept `navigatorObservers` at all. Pass the observer to the router's own observer list instead, such as `GoRouter(observers: [LDNavigatorObserver()])`.
+- **Navigation that leaves the route stack unchanged** — switching tabs in an `IndexedStack`, paging a `PageView` — is invisible to any observer.
+
+For those cases, and for screens you want to report with extra detail, call `LDObserve.trackScreenView` directly:
+
+```dart
+LDObserve.trackScreenView(
+  'Checkout',
+  screenClass: 'CheckoutPage',
+  category: 'commerce',
+  properties: {'cart_size': 3},
+);
+```
+
+### Clicks (taps)
+
+Taps are captured automatically. Every tap that resolves to a recognizable widget emits a `click` span describing the widget by type, identifier, visible label, ancestry path, and coordinates. On iOS and Android the same tap also becomes a `Click` marker on the replay timeline, so you can jump to the moment a widget was pressed.
+
+This needs `SessionReplayCapture` around your app — it hosts the detector, so the same widget that feeds session replay also feeds click tracking. Wrap as high as possible, ideally around `MaterialApp`: dialogs and bottom sheets are children of the app's `Navigator`, so a wrap further down excludes taps on anything your app pushes above it.
+
+Resolution happens in Dart because it can only happen in Dart: Flutter renders its whole UI into one native view, so a native hit-test names that view — `FlutterSurfaceView` — for every tap in your app regardless of what was pressed.
+
+What ends up on the click:
+
+- **`event.tag`** — the widget type, e.g. `ElevatedButton`. The Material and Cupertino buttons, selection controls, chips, tabs, menu items, `ListTile`, `InkWell`, and `GestureDetector` are recognized out of the box. A tap on unrecognized empty space, or on a **disabled** control, reports nothing at all.
+- **`event.id`** — the first of an enclosing `LDClick` id, a `Semantics.identifier`, or a `ValueKey`. Optional: a widget with none of those is still reported, grouped by type and path.
+- **`event.text`** — the label: a button's own text, otherwise a semantic label, icon label, or tooltip. A container's inner text is deliberately *not* harvested, so a tapped row reports `ListTile` rather than whichever word sat under the finger.
+- **`event.xpath`** — the widget ancestry, e.g. `Scaffold/Column/ProductRow/IconButton#cart.add`.
+
+To name a specific widget, wrap it in `LDClick`. It renders its child unchanged and emits nothing itself, so wrapping a button cannot double-count a tap:
+
+```dart
+LDClick(
+  id: 'checkout.pay',
+  properties: {'cart_size': 3},
+  child: ElevatedButton(onPressed: _pay, child: const Text('Pay')),
+);
+```
+
+To name every instance of one of your own widget types — a design-system button that looks like an anonymous composition of Material widgets — register a resolver once instead of tagging each call site:
+
+```dart
+ObservabilityOptions(
+  analytics: AnalyticsOptions(
+    customClickTargetResolver: (widget) => switch (widget) {
+      PrimaryButton(:final label) =>
+        LDClickTargetInfo(tag: 'PrimaryButton', text: label),
+      _ => null,
+    },
+  ),
+);
+```
+
+Use string literals for `tag`, not `runtimeType.toString()`: release builds compiled with `--obfuscate` mangle runtime type names, and the built-in rules use literals for the same reason.
+
+For an interaction automatic capture cannot observe — a shake, a hardware button, a custom recognizer — report it yourself. Avoid calling this from an `onPressed` that capture already sees, which would count the tap twice:
+
+```dart
+LDObserve.trackClick(
+  id: 'onboarding.shake_to_skip',
+  tag: 'ShakeGesture',
+  properties: {'step': 2},
+);
+```
+
+Two limitations worth knowing:
+
+- **Embedded platform views** (`WebView`, native maps) resolve to the Flutter widget hosting them, e.g. `WebViewWidget`. What was pressed *inside* the embedded view is not described.
+- **Click text follows your masking.** Text inside an `LDMask`/`LDIgnore` subtree is never reported, editable field contents are never read, and `PrivacyOptions.maskClickText` turns off click labels entirely while keeping the clicks themselves.
+
 ### API reference
 
 | Method | Description |
@@ -324,6 +403,7 @@ MaterialApp(
 | `LDObserve.recordException(exception, {stackTrace, properties})` | Record an error/exception. |
 | `LDObserve.track(eventName, {properties, metricValue})` | Record a custom `track` event as a `track` span. |
 | `LDObserve.trackScreenView(name, {screenClass, screenId, category, properties})` | Record a screen view (navigation) as a `screen_view` span and a Session Replay `Navigate` event. |
+| `LDObserve.trackClick({id, tag, classname, text, xpath, x, y, properties})` | Record a click as a `click` span and a Session Replay `Click` event, for interactions automatic capture cannot observe. |
 | `LDObserve.shutdown()` | Shut down observability. It cannot be restarted afterward. |
 | `LDObserve.zoneSpecification()` | A zone spec that forwards `print`/`debugPrint` output as logs. |
 | `span.setAttribute(name, value)` | Set a single attribute on a span. |
@@ -373,6 +453,7 @@ Control what is captured during a session with `PrivacyOptions`:
 - `maskLabels`: (Default: `false`) Masks all text labels.
 - `maskImages`: (Default: `false`) Masks all images.
 - `minimumAlpha`: (Default: `0.02`) Opacity threshold below which a widget is treated as invisible and skipped during capture and masking. Raise it to ignore nearly-transparent UI.
+- `maskClickText`: (Default: `false`) Drops the visible label from click events, so clicks report the widget type and identifier but no text. Independent of `maskLabels`, which controls whether text is painted over in the frames — a screen can be readable in replay while its click stream stays anonymous, or the reverse.
 
 ```dart
 const SessionReplayOptions(

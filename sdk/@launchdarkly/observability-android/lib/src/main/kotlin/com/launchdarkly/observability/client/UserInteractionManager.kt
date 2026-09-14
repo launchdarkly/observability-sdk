@@ -51,6 +51,33 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
      */
     var screenInfoProvider: () -> Pair<String?, String?> = { null to null }
 
+    /**
+     * Whether to hit-test the view hierarchy on each ACTION_DOWN to describe the tapped view.
+     *
+     * Resolution walks the view hierarchy on the main thread, so it is only worth doing when
+     * something reads the result. Tap detection is the sole consumer, so Observability enables this
+     * alongside [ObservabilityOptions.Instrumentations.userTaps]; Session Replay, which needs only
+     * the coordinates to draw pointer trails, leaves it off.
+     */
+    var targetResolutionEnabled: Boolean = false
+
+    /**
+     * Whether an embedder resolves clicks for its own views, in which case this manager must stop
+     * describing taps that land on an embedder surface.
+     *
+     * Flutter draws its entire UI into one native view, so a native hit-test bottoms out at
+     * `FlutterSurfaceView` for every tap no matter which widget was pressed. Only Dart can see the
+     * widget tree, so the Flutter plugin resolves the target itself and reports it through
+     * `trackClick`. This flag is the embedder's half of that handshake: it is set only once Dart's
+     * click detection is actually installed, so an app that never mounts it keeps the coarse native
+     * clicks rather than silently reporting none.
+     *
+     * Scoped to the touched view rather than switching off tap detection globally, because the
+     * embedder is not always the whole app: in an add-to-app host, native screens sit alongside a
+     * `FlutterActivity` and must keep reporting their real targets.
+     */
+    var embedderHandlesClicks: Boolean = false
+
     private var mostRecentWindow: Window? = null
     private val interceptedWindows: MutableList<Window> = mutableListOf()
     private var watchedPointerId: Int = -1
@@ -102,8 +129,10 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
             MotionEvent.ACTION_DOWN -> {
                 val downX = motionEvent.getX(pointerIndex)
                 val downY = motionEvent.getY(pointerIndex)
-                // Resolve the tapped view so consumers can describe the click target (web/iOS parity).
-                val target = resolveTargetInfo(window, downX, downY)
+                // Resolve the tapped view so consumers can describe the click target (web/iOS
+                // parity). Skipped when nothing consumes the description, since hit-testing the
+                // hierarchy here runs on the main thread ahead of the app's own touch handling.
+                val target = if (targetResolutionEnabled) resolveTargetInfo(window, downX, downY) else null
                 // Read the active screen now, on the main thread and before the original
                 // dispatchTouchEvent runs, so a synchronous navigation in the tap handler can't make
                 // the click report the destination screen instead of the tapped one.
@@ -117,6 +146,7 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
                         targetClassName = target?.className,
                         targetText = target?.text,
                         targetResourceId = target?.resourceId,
+                        targetEmbedderOwned = target?.embedderOwned == true,
                         screenId = screenId,
                         screenName = screenName,
                     )
@@ -233,11 +263,19 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
     override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
     override fun onActivityDestroyed(activity: Activity) {}
 
-    /** Resolved description of the view under a touch point. */
+    /**
+     * Resolved description of the view under a touch point.
+     *
+     * @property embedderOwned True when the touch landed on an embedder surface whose contents this
+     *   SDK cannot describe, so consumers must skip the tap rather than report the surface itself.
+     *   Distinct from a null [TargetInfo], which means resolution simply failed and the tap should
+     *   still be reported without a target.
+     */
     private data class TargetInfo(
         val className: String?,
         val text: String?,
         val resourceId: String?,
+        val embedderOwned: Boolean = false,
     )
 
     /**
@@ -248,6 +286,9 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
     private fun resolveTargetInfo(window: Window, x: Float, y: Float): TargetInfo? {
         return try {
             val target = findDeepestViewAt(window.decorView, x, y) ?: return null
+            // A tap on an embedder surface (Flutter) is resolved by the embedder itself, so hand it
+            // off rather than describing the surface view - see [embedderHandlesClicks].
+            if (embedderHandlesClicks && isEmbedderSurface(target)) return EMBEDDER_OWNED_TARGET
             // Compose renders into a single AndroidComposeView, so the native hit-test bottoms out
             // either at that host or at one of its internal platform children (e.g.
             // AndroidViewsHandler, ViewLayer) that overlay the Compose area. In those cases the real
@@ -282,6 +323,25 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
         } catch (_: Throwable) {
             null
         }
+    }
+
+    /**
+     * True when [view] is a Flutter render surface or sits inside a Flutter view, meaning the
+     * embedder owns everything drawn there.
+     *
+     * Flutter's `FlutterView` hosts a `FlutterSurfaceView` / `FlutterTextureView` /
+     * `FlutterImageView` depending on rendering mode, and in add-to-app hosts that whole subtree can
+     * be nested anywhere, so climb the ancestors rather than testing the hit view alone. Matched by
+     * class name - like the React Native handling in [isTouchTransparent] - so no Flutter dependency
+     * is introduced.
+     */
+    private fun isEmbedderSurface(view: View): Boolean {
+        var current: View? = view
+        while (current != null) {
+            if (current::class.java.name in EMBEDDER_SURFACE_CLASS_NAMES) return true
+            current = current.parent as? View
+        }
+        return false
     }
 
     /**
@@ -442,6 +502,27 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
         // tap to it instead of the real target beneath.
         private const val DEBUGGING_OVERLAY_CLASS_NAME =
             "com.facebook.react.views.debuggingoverlay.DebuggingOverlay"
+
+        /**
+         * Flutter's view classes: the `FlutterView` container plus the three render surfaces it
+         * hosts (surface, texture, and the image view used during transitions). The legacy
+         * `io.flutter.view.FlutterView` covers pre-embedding-v2 add-to-app hosts.
+         */
+        private val EMBEDDER_SURFACE_CLASS_NAMES = setOf(
+            "io.flutter.embedding.android.FlutterView",
+            "io.flutter.embedding.android.FlutterSurfaceView",
+            "io.flutter.embedding.android.FlutterTextureView",
+            "io.flutter.embedding.android.FlutterImageView",
+            "io.flutter.view.FlutterView",
+        )
+
+        /** Sentinel for a touch the embedder resolves itself. See [TargetInfo.embedderOwned]. */
+        private val EMBEDDER_OWNED_TARGET = TargetInfo(
+            className = null,
+            text = null,
+            resourceId = null,
+            embedderOwned = true,
+        )
 
         /**
          * React Native's `ReactPointerEventsView` interface, implemented by views that expose a

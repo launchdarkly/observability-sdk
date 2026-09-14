@@ -31,7 +31,7 @@ let swiftObservabilityDependency: Package.Dependency = if useLocalNativeSdk {
 } else {
     .package(
         url: "https://github.com/launchdarkly/swift-launchdarkly-observability.git",
-        .upToNextMinor(from: "0.52.0")
+        .upToNextMinor(from: "0.53.1")
     )
 }
 

@@ -6,7 +6,8 @@ repository: https://github.com/launchdarkly/observability-sdk/tree/main/sdk/@lau
 
 environment:
     sdk: ^3.9.0
-    flutter: '>=1.17.0'
+    # NavigatorObserver.didChangeTop, used by LDNavigatorObserver, landed in 3.27.
+    flutter: '>=3.27.0'
 
 dependencies:
     flutter:

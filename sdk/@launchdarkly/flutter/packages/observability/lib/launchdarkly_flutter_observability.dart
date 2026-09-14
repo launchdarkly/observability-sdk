@@ -3,6 +3,8 @@ export 'src/instrumentation/navigation/ld_navigator_observer.dart'
     show LDNavigatorObserver, LDScreenNameExtractor;
 export 'src/session_replay_capture.dart' show SessionReplayCapture;
 export 'src/masking.dart' show LDMask, LDUnmask, LDIgnore;
+export 'src/instrumentation/click/ld_click.dart'
+    show LDClick, LDClickTargetInfo, LDClickTargetResolver;
 export 'src/options/observability_options.dart'
     show
         ObservabilityOptions,

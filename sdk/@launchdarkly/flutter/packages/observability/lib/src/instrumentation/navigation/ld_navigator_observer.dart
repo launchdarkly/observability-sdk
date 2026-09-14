@@ -30,6 +30,15 @@ typedef LDScreenNameExtractor = String? Function(Route<dynamic> route);
 /// without a name are skipped. Provide [screenNameExtractor] to customize this
 /// (for example to derive a name from `route.settings.arguments` or to name
 /// otherwise-anonymous routes).
+///
+/// Observers are per-[Navigator] and a single instance cannot be shared, so an
+/// app with nested navigators (tab shells, or a [Navigator] inside a page) needs
+/// a separate instance for each. Routers that build their own navigator
+/// (`MaterialApp.router` with go_router and friends) do not accept
+/// `navigatorObservers`; pass the observer to the router's own observer list
+/// instead. Navigation that does not change the route stack — switching tabs in
+/// an `IndexedStack`, paging a `PageView` — is invisible to any observer and
+/// needs an explicit [LDObserve.trackScreenView].
 class LDNavigatorObserver extends NavigatorObserver {
   /// Creates an observer.
   ///
@@ -46,38 +55,31 @@ class LDNavigatorObserver extends NavigatorObserver {
   final LDScreenNameExtractor _screenNameExtractor;
   final String? _category;
 
+  /// The route behind the most recent [LDObserve.trackScreenView] call, used to
+  /// suppress duplicates. See [didChangeTop].
+  Route<dynamic>? _lastRecordedRoute;
+
   /// Default extractor: uses the route's [RouteSettings.name].
   static String? defaultScreenNameExtractor(Route<dynamic> route) =>
       route.settings.name;
 
-  void _record(Route<dynamic>? route) {
-    if (route == null) {
-      return;
-    }
-    final name = _screenNameExtractor(route);
+  @override
+  void didChangeTop(Route<dynamic> topRoute, Route<dynamic>? previousTopRoute) {
+    super.didChangeTop(topRoute, previousTopRoute);
+
+    final name = _screenNameExtractor(topRoute);
     if (name == null || name.isEmpty) {
       return;
     }
+
+    // A skipped route (typically an unnamed dialog or bottom sheet) leaves the
+    // route underneath it as the last one recorded, so dismissing it makes that
+    // route top again without it being a new navigation.
+    if (identical(_lastRecordedRoute, topRoute)) {
+      return;
+    }
+
     LDObserve.trackScreenView(name, category: _category);
-  }
-
-  @override
-  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    super.didPush(route, previousRoute);
-    _record(route);
-  }
-
-  @override
-  void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
-    super.didReplace(newRoute: newRoute, oldRoute: oldRoute);
-    _record(newRoute);
-  }
-
-  @override
-  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    super.didPop(route, previousRoute);
-    // After a pop the previously-underlying route becomes visible again, so it
-    // is the screen the user navigates back to.
-    _record(previousRoute);
+    _lastRecordedRoute = topRoute;
   }
 }

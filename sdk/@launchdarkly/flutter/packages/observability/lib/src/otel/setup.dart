@@ -32,6 +32,35 @@ class Otel {
   static ScreenViewRecorder? _screenViewRecorder;
   static ScreenViewRecorder? get screenViewRecorder => _screenViewRecorder;
 
+  /// The platform-appropriate click recorder, set during [setup]. `null` before
+  /// the pipeline is initialized.
+  static ClickRecorder? _clickRecorder;
+  static ClickRecorder? get clickRecorder => _clickRecorder;
+
+  /// The screen view recorded before the pipeline was ready, replayed at the end
+  /// of [setup]. See [recordScreenView].
+  static void Function(ScreenViewRecorder)? _pendingScreenView;
+
+  /// Applies [record] to the screen-view recorder, deferring it to the end of
+  /// [setup] when the pipeline is not ready yet.
+  ///
+  /// Unlike the other signals, the opening screen view is not something the app
+  /// can retry: a navigator observer reports the initial route on the first
+  /// frame, which always races the asynchronous native boot. Without deferral
+  /// the app would never record the screen the session starts on.
+  ///
+  /// Only the most recent pending screen view is kept. An earlier one is already
+  /// stale by the time the pipeline is ready, and replaying it would emit a
+  /// `Navigate` for a screen the user has left.
+  static void recordScreenView(void Function(ScreenViewRecorder) record) {
+    final recorder = _screenViewRecorder;
+    if (recorder == null) {
+      _pendingScreenView = record;
+      return;
+    }
+    record(recorder);
+  }
+
   static void setup(String sdkKey, ObservabilityConfig config) {
     // TODO: Log when otel is setup multiple times. It will work, but the
     // behavior may be confusing.
@@ -74,7 +103,13 @@ class Otel {
     _logRecorder = exporters.createLogRecorder(config);
     _trackRecorder = exporters.createTrackRecorder(config);
     _identifyRecorder = exporters.createIdentifyRecorder(config);
-    _screenViewRecorder = exporters.createScreenViewRecorder(config);
+    _clickRecorder = exporters.createClickRecorder(config);
+    final screenViewRecorder = exporters.createScreenViewRecorder(config);
+    _screenViewRecorder = screenViewRecorder;
+
+    final pendingScreenView = _pendingScreenView;
+    _pendingScreenView = null;
+    pendingScreenView?.call(screenViewRecorder);
   }
 
   static void shutdown() {
@@ -85,6 +120,8 @@ class Otel {
     _logRecorder = null;
     _trackRecorder = null;
     _identifyRecorder = null;
+    _clickRecorder = null;
     _screenViewRecorder = null;
+    _pendingScreenView = null;
   }
 }

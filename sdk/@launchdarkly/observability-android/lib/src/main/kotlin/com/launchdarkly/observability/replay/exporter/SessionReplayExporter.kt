@@ -172,6 +172,14 @@ class SessionReplayExporter(
                             }
                         }
 
+                        is ClickItemPayload -> {
+                            val sessionId = payload.sessionId ?: lastCaptureSnapshot.sessionId
+                            sessionId?.let { sessionId ->
+                                val clickEvent = eventGenerator.generateClickEvent(payload)
+                                eventsBySession.getOrPut(sessionId) { mutableListOf() }.add(clickEvent)
+                            }
+                        }
+
                         is AppLifecycleItemPayload -> {
                             val sessionId = payload.sessionId ?: lastCaptureSnapshot.sessionId
                             sessionId?.let { sessionId ->

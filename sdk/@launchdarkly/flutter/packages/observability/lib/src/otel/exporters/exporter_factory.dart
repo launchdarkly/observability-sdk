@@ -90,6 +90,43 @@ abstract interface class ScreenViewRecorder {
   });
 }
 
+/// Records a click through the platform-appropriate pipeline.
+///
+/// - Web: emitted as a Dart `click` span via `ClickConvention`, gated by
+///   `analytics.taps`.
+/// - Native (io): forwarded to the native observability SDK so it emits the
+///   native `click` span and the Session Replay `Click` timeline event. Flutter
+///   draws its whole UI into one native view, so a native hit-test can only ever
+///   name that view; the target has to be resolved in Dart and reported here.
+///
+/// [x] and [y] are in the platform's own units for `event.x`/`event.y`: physical
+/// pixels on Android, logical pixels (UIKit points) on iOS. [timestampMillis] is
+/// the epoch millisecond the click happened, needed because the native bridge is
+/// asynchronous — see the Pigeon `trackClick` documentation.
+abstract interface class ClickRecorder {
+  void trackClick({
+    String? id,
+    String? tag,
+    String? classname,
+    String? text,
+    String? xpath,
+    int? x,
+    int? y,
+    int? timestampMillis,
+    Map<String, Object?>? properties,
+  });
+
+  /// Announces whether Dart is currently resolving clicks, so the platform can
+  /// stop reporting the taps Dart now describes.
+  ///
+  /// Only native has anything to suppress: its hit-test finds the single Flutter
+  /// view for every tap and would report each one a second time, as that view.
+  /// The announcement is a handshake rather than a fixed setting because native
+  /// starts before the widget tree exists — a build that never installs Dart
+  /// detection keeps its coarse native clicks instead of reporting none at all.
+  void setEmbedderClickHandling(bool enabled);
+}
+
 /// Factory for the span and log exporters used by the observability pipeline.
 ///
 /// The concrete implementation is selected per build target via conditional
@@ -112,4 +149,7 @@ abstract interface class ObservabilityExporters {
 
   /// Builds the screen-view recorder used by `trackScreenView`.
   ScreenViewRecorder createScreenViewRecorder(ObservabilityConfig config);
+
+  /// Builds the click recorder used by `trackClick` and automatic click capture.
+  ClickRecorder createClickRecorder(ObservabilityConfig config);
 }

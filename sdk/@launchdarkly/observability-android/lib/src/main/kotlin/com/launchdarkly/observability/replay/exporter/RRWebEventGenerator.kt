@@ -312,31 +312,9 @@ class RRWebEventGenerator(
                         )
                     )
                 )
-                // Mirror the web `Click` payload (`highlight-run` ClickListener):
-                // - clickTarget: target view class name (web: full CSS selector path)
-                // - clickTextContent: the target's visible text (web: `target.textContent`)
-                // - clickSelector: resource-id else class name (web: `#id` else tag)
-                val clickCustomData = buildJsonObject {
-                    put("tag", RRWebCustomDataTag.CLICK.wireValue)
-                    putJsonObject("payload") {
-                        put("clickTarget", interactionEvent.targetClassName ?: "")
-                        put("clickTextContent", interactionEvent.targetText ?: "")
-                        put(
-                            "clickSelector",
-                            interactionEvent.targetResourceId
-                                ?: interactionEvent.targetClassName
-                                ?: CLICK_SELECTOR_FALLBACK
-                        )
-                    }
-                }
-                events.add(
-                    Event(
-                        type = EventType.CUSTOM,
-                        timestamp = firstPosition.timestamp,
-                        sid = nextSid(),
-                        data = EventDataUnion.CustomEventDataWrapper(clickCustomData)
-                    )
-                )
+                // No `Click` event here: a touch-down is not yet a click (it may become a drag or a
+                // long press), and this stream cannot see clicks an embedder resolves itself. Clicks
+                // arrive from Observability's click funnel instead - see [generateClickEvent].
             }
 
             MotionEvent.ACTION_UP -> { // CANCEL is not here because UP and CANCEL are merged to UP in interaction source.
@@ -463,6 +441,36 @@ class RRWebEventGenerator(
         return Event(
             type = EventType.CUSTOM,
             timestamp = navigate.timestamp,
+            sid = nextSid(),
+            data = EventDataUnion.CustomEventDataWrapper(customData)
+        )
+    }
+
+    /**
+     * Generates a "Click" custom event from Observability's click funnel, which covers both
+     * automatically detected taps and clicks reported through `LDObserve.trackClick` (the path
+     * embedders such as Flutter use, since a native hit-test only ever finds their render surface).
+     *
+     * Mirrors the web `Click` payload (`highlight-run` ClickListener):
+     * - `clickTarget`: element class name (web: full CSS selector path)
+     * - `clickTextContent`: the element's visible text (web: `target.textContent`)
+     * - `clickSelector`: stable id else class name (web: `#id` else tag)
+     */
+    fun generateClickEvent(click: ClickItemPayload): Event {
+        val customData = buildJsonObject {
+            put("tag", RRWebCustomDataTag.CLICK.wireValue)
+            putJsonObject("payload") {
+                put("clickTarget", click.target ?: "")
+                put("clickTextContent", click.text ?: "")
+                put("clickSelector", click.id ?: click.target ?: CLICK_SELECTOR_FALLBACK)
+                click.screenId?.let { put("screenId", it) }
+                click.screenName?.let { put("screenName", it) }
+            }
+        }
+
+        return Event(
+            type = EventType.CUSTOM,
+            timestamp = click.timestamp,
             sid = nextSid(),
             data = EventDataUnion.CustomEventDataWrapper(customData)
         )

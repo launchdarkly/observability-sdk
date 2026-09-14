@@ -177,9 +177,12 @@ Future<void> triggerScenario(
     case CrashScenario.widgetBuild:
       // A build failure is caught by the framework and reported through
       // `FlutterError.onError`; the route shows Flutter's error widget.
-      Navigator.of(
-        context,
-      ).push(MaterialPageRoute<void>(builder: (_) => const _BrokenPage()));
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          settings: const RouteSettings(name: '/broken-widget'),
+          builder: (_) => const _BrokenPage(),
+        ),
+      );
 
     case CrashScenario.isolate:
       await crashInIsolate();

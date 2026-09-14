@@ -19,6 +19,7 @@ import com.launchdarkly.observability.replay.exporter.AppLaunchItemPayload
 import com.launchdarkly.observability.replay.exporter.IdentifyItemPayload
 import com.launchdarkly.observability.replay.exporter.ImageItemPayload
 import com.launchdarkly.observability.replay.exporter.InteractionItemPayload
+import com.launchdarkly.observability.replay.exporter.ClickItemPayload
 import com.launchdarkly.observability.replay.exporter.NavigateItemPayload
 import com.launchdarkly.observability.replay.exporter.SessionReplayExporter
 import com.launchdarkly.observability.replay.exporter.TrackItemPayload
@@ -236,6 +237,27 @@ class SessionReplayService(
                     NavigateItemPayload(
                         name = screenView.name,
                         timestamp = screenView.timestamp,
+                        sessionId = sessionManager.getSessionId()
+                    )
+                )
+            }
+        }
+
+        // Click collector: each click from Observability's single emitter becomes an rrweb `Click`
+        // event. This covers automatic tap detection and the manual `LDObserve.trackClick` API, which
+        // an embedder (Flutter) uses to report the widget it resolved itself - the only side that can
+        // see past its single native render surface.
+        instrumentationScope.launch {
+            observabilityContext.clickFlow?.collect { click ->
+                if (!_isRunning.value) return@collect
+                eventQueue.send(
+                    ClickItemPayload(
+                        target = click.tag ?: click.classname,
+                        text = click.text,
+                        id = click.id,
+                        screenId = click.screenId,
+                        screenName = click.screenName,
+                        timestamp = click.timestamp,
                         sessionId = sessionManager.getSessionId()
                     )
                 )

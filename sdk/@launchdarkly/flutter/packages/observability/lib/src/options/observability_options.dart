@@ -1,6 +1,7 @@
 // Ported from
 // sdk/@launchdarkly/mobile-dotnet/observability/observe/plugin/ObservabilityOptions.cs.
 
+import '../instrumentation/click/ld_click.dart';
 import '../plugin/observability_config.dart';
 
 /// Severity threshold for exported logs. Mirrors the `LogLevel` enums in the
@@ -88,19 +89,27 @@ class InstrumentationOptions {
 /// Analytics telemetry emitted as OpenTelemetry spans. Mirrors Android
 /// `ObservabilityOptions.Analytics`.
 ///
-/// [taps] maps to the native `analytics.taps` publish gate on both iOS and
-/// Android; [views] is Android-only and a no-op elsewhere. [trackEvents]
-/// gates the `track` span emitted by the cross-platform Dart pipeline (web and
-/// mobile) as well as the native Android span.
+/// [taps] and [views] map to the native `analytics.taps` / `analytics.screenViews`
+/// publish gates on both iOS and Android. [trackEvents] gates the `track` span
+/// emitted by the cross-platform Dart pipeline (web and mobile) as well as the
+/// native Android span.
 class AnalyticsOptions {
-  /// Whether to publish a `click` span for each detected tap. Tap detection is
-  /// always enabled on the native side (`instrumentation.userTaps`); this flag
-  /// only controls publishing the OpenTelemetry span. Defaults to `true`.
+  /// Whether to capture taps and publish a `click` event for each.
+  ///
+  /// Flutter draws its whole UI into one native view, so the tapped widget is
+  /// resolved in Dart (see `SessionReplayCapture`, which hosts the detector) and
+  /// reported to the native SDK; this flag gates that detection as well as the
+  /// native publish gates it drives (`analytics.taps` and
+  /// `instrumentation.userTaps`). On mobile the `click` span is gated by this
+  /// flag while the Session Replay `Click` event is emitted regardless — matching
+  /// how [views] treats `Navigate`. Defaults to `true`.
   final bool taps;
 
-  /// Whether to emit spans for screen/page views. Android-only (maps to the
-  /// native `analytics.screenViews` gate); a no-op on iOS and web. Defaults to
-  /// `true`.
+  /// Whether to emit spans for screen/page views. Maps to the native
+  /// `analytics.screenViews` gate on Android and iOS; a no-op on web. Screen
+  /// views are reported from Dart (see `LDNavigatorObserver`), so this gates the
+  /// `screen_view` span only — the Session Replay `Navigate` event is emitted
+  /// regardless. Defaults to `true`.
   final bool views;
 
   /// Whether to emit a `track` span when a custom event is tracked, either
@@ -118,12 +127,32 @@ class AnalyticsOptions {
   /// launch. Mobile-only (iOS, Android); a no-op elsewhere. Defaults to `true`.
   final bool appLaunch;
 
+  /// Recognizes the application's own widget types as click targets, so a
+  /// design-system `PrimaryButton` reports itself instead of the anonymous
+  /// `InkWell` it is built from.
+  ///
+  /// Registers a type once for the whole app, where the `LDClick` widget names a
+  /// single instance. Dart-side only — it runs while the tapped widget is
+  /// resolved, so it is not sent to native.
+  ///
+  /// ```dart
+  /// AnalyticsOptions(
+  ///   customClickTargetResolver: (widget) => switch (widget) {
+  ///     PrimaryButton(:final label) =>
+  ///       LDClickTargetInfo(tag: 'PrimaryButton', text: label),
+  ///     _ => null,
+  ///   },
+  /// )
+  /// ```
+  final LDClickTargetResolver? customClickTargetResolver;
+
   const AnalyticsOptions({
     this.taps = true,
     this.views = true,
     this.trackEvents = true,
     this.appLifecycle = true,
     this.appLaunch = true,
+    this.customClickTargetResolver,
   });
 
   /// All analytics telemetry enabled. Convenience mirroring Swift's

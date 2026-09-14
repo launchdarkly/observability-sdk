@@ -194,4 +194,45 @@ abstract class LDNativeApi {
     String? category,
     Map<String, Object?>? properties,
   );
+
+  /// Forwards a click to the native observability SDK so it emits the native
+  /// `click` span and the Session Replay `Click` timeline event.
+  ///
+  /// Flutter draws its entire UI into one native view, so a native hit-test
+  /// bottoms out at `FlutterSurfaceView` / `FlutterView` for every tap no matter
+  /// which widget was pressed. Only Dart can see the widget tree, so the widget
+  /// is resolved here and reported through this method.
+  ///
+  /// [id] is the stable element identifier, [tag] the widget type (e.g.
+  /// `ElevatedButton`), [classname] a more specific class name when one is
+  /// known, [text] the element's visible label, [xpath] the widget's path within
+  /// the tree, and [x]/[y] the tap coordinates in the platform's own units
+  /// (physical pixels on Android, logical pixels on iOS). [screenId] is left
+  /// null so native fills it from the screen stack Dart already keeps current.
+  /// [timestampMillis] is captured in Dart at pointer-up: the bridge is
+  /// asynchronous, so without it the replay marker would land wherever the call
+  /// happens to arrive rather than with the pointer trail it belongs to.
+  void trackClick(
+    String? id,
+    String? tag,
+    String? classname,
+    String? text,
+    String? xpath,
+    String? screenId,
+    int? x,
+    int? y,
+    int? timestampMillis,
+    Map<String, Object?>? properties,
+  );
+
+  /// Tells native that Dart now resolves clicks for the Flutter view, so native
+  /// must stop reporting taps that land on it.
+  ///
+  /// Handshake rather than a fixed setting: native starts before the widget tree
+  /// exists, so suppressing Flutter-view taps unconditionally would leave an app
+  /// that never installs Dart click detection reporting no clicks at all — worse
+  /// than today's coarse `FlutterSurfaceView`. Enabled when Dart's detection
+  /// installs and disabled when it is torn down. Taps on native views elsewhere
+  /// in the app (an add-to-app host's own screens) are never affected.
+  void setEmbedderClickHandling(bool enabled);
 }

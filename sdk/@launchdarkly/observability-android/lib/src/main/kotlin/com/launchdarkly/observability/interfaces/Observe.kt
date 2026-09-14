@@ -144,18 +144,30 @@ interface Observe : MetricsApi, LogsApi, TracesApi {
     )
 
     /**
-     * Manually record a `click` event as a `click` span, following the analytics taxonomy `event.*`
-     * namespace. Use this to reproduce the `click` event for interactions that automatic tap
-     * capture cannot observe. Emitted through the same `analytics.taps` gate as automatic click
-     * spans.
+     * Manually record a `click` event, following the analytics taxonomy `event.*` namespace. Use
+     * this to reproduce the `click` event for interactions that automatic tap capture cannot
+     * observe - including embedders such as Flutter, which resolve the tapped element in their own
+     * UI tree because a native hit-test only ever finds their single render surface.
+     *
+     * The `click` span is emitted through the same `analytics.taps` gate as automatic click spans;
+     * the matching Session Replay `Click` event is emitted regardless, so a click reported here
+     * appears in replay exactly like an automatically detected tap.
      *
      * @param id Stable element identifier (maps to `event.id`).
      * @param tag Element tag/class (maps to `event.tag`), e.g. `Button`.
+     * @param classname Fully-qualified element class name (maps to `event.classname`), when the
+     *   caller has one that is more specific than [tag].
      * @param text Visible label/text of the element (maps to `event.text`).
+     * @param xpath Path of the element within its UI hierarchy (maps to `event.xpath`), e.g.
+     *   `Scaffold/Column/ElevatedButton#checkout`.
      * @param screenId Stable screen id (maps to `event.screen_id`). When `null`, the current
      *   tracked screen id is used so the click correlates with the active `screen_view`.
      * @param x Tap x coordinate in screen pixels (maps to `event.x`).
      * @param y Tap y coordinate in screen pixels (maps to `event.y`).
+     * @param timestampMillis Time the click happened, in epoch milliseconds. Pass this when the
+     *   click is reported across an asynchronous boundary (an embedder bridge), so the Session
+     *   Replay event orders with the touch samples of the gesture it belongs to rather than wherever
+     *   the call happens to arrive. Defaults to the time of the call.
      * @param properties Optional custom attributes, supplied as a plain map (same conversion rules
      *   as a `track` event's `properties`). They are attached at lower precedence than the reserved
      *   `event.*` fields, so they can never clobber the taxonomy.
@@ -163,10 +175,13 @@ interface Observe : MetricsApi, LogsApi, TracesApi {
     fun trackClick(
         id: String? = null,
         tag: String? = null,
+        classname: String? = null,
         text: String? = null,
+        xpath: String? = null,
         screenId: String? = null,
         x: Int? = null,
         y: Int? = null,
+        timestampMillis: Long? = null,
         properties: Map<String, Any?>? = null
     )
 }

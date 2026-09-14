@@ -42,6 +42,60 @@ class _IoExporters implements ObservabilityExporters {
   @override
   ScreenViewRecorder createScreenViewRecorder(ObservabilityConfig config) =>
       _NativeScreenViewRecorder(_api);
+
+  @override
+  ClickRecorder createClickRecorder(ObservabilityConfig config) =>
+      _NativeClickRecorder(_api);
+}
+
+/// Forwards each click to the native observability SDK so it emits the native
+/// `click` span and the Session Replay `Click` timeline event.
+///
+/// Flutter renders its entire UI into one `FlutterSurfaceView`/`FlutterView`, so
+/// native hit-testing bottoms out there for every tap regardless of which widget
+/// was pressed. Dart resolves the widget instead, which makes this the only path
+/// that can describe a Flutter tap in either pipeline.
+class _NativeClickRecorder implements ClickRecorder {
+  _NativeClickRecorder(this._api);
+
+  final wire.LDNativeApi _api;
+
+  @override
+  void trackClick({
+    String? id,
+    String? tag,
+    String? classname,
+    String? text,
+    String? xpath,
+    int? x,
+    int? y,
+    int? timestampMillis,
+    Map<String, Object?>? properties,
+  }) {
+    unawaited(
+      _api.trackClick(
+        id,
+        tag,
+        classname,
+        text,
+        xpath,
+        // Left null so native fills `event.screen_id`/`event.screen_name` from
+        // the screen stack Dart already keeps current through `trackScreenView`.
+        // Resolving the route per tap in Dart would mean walking to the enclosing
+        // `ModalRoute` on every click for information native already has.
+        null,
+        x,
+        y,
+        timestampMillis,
+        properties,
+      ),
+    );
+  }
+
+  @override
+  void setEmbedderClickHandling(bool enabled) {
+    unawaited(_api.setEmbedderClickHandling(enabled));
+  }
 }
 
 /// Forwards each screen view to the native observability SDK so it emits the

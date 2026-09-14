@@ -121,6 +121,12 @@ final class ObservabilityConfig {
   /// Defaults to `true`.
   final bool screenViewsEnabled;
 
+  /// Whether taps are captured and published as `click` events. Mirrors
+  /// `analytics.taps`. Gates the automatic Dart click detection on every
+  /// platform; on the web/stub pipeline it additionally gates the `click` span,
+  /// while on mobile the native SDK applies its own gating. Defaults to `true`.
+  final bool tapsEnabled;
+
   ObservabilityConfig({
     this.applicationName,
     this.applicationVersion,
@@ -130,6 +136,7 @@ final class ObservabilityConfig {
     this.contextFriendlyName,
     this.trackEventsEnabled = true,
     this.screenViewsEnabled = true,
+    this.tapsEnabled = true,
   });
 }
 
@@ -166,5 +173,6 @@ ObservabilityConfig configFromOptions(ObservabilityOptions options) {
     ),
     trackEventsEnabled: options.analytics.trackEvents,
     screenViewsEnabled: options.analytics.views,
+    tapsEnabled: options.analytics.taps,
   );
 }
