@@ -141,17 +141,22 @@ class LDObserve(private val client: Observe) : Observe {
          * Latest [setEmbedderClickHandling] request, retained because the embedder installs its click
          * detection independently of - and typically before - observability initialization. Kept here
          * so the handshake survives that ordering instead of being dropped on the floor.
+         *
+         * Guarded by [embedderClickLock] together with the copy onto the manager: reading the request
+         * and writing it through have to be one step, or a request arriving between the two would be
+         * applied and then immediately overwritten by the older value for the rest of the session.
          */
-        @Volatile
         private var embedderHandlesClicks: Boolean = false
+        private val embedderClickLock = Any()
 
         fun init(client: ObservabilityService) {
+            // Publish the client first: a request that arrives after the block below then finds a
+            // manager to write through to, rather than only updating the retained value.
             observabilityClient = client
             delegate = LDObserve(client)
-            // Publish the client before applying, so a concurrent setEmbedderClickHandling either sees
-            // it and writes through itself or stores its value before this read: both orderings leave
-            // the manager agreeing with the last request rather than with whoever raced last.
-            client.userInteractionManager.embedderHandlesClicks = embedderHandlesClicks
+            synchronized(embedderClickLock) {
+                client.userInteractionManager.embedderHandlesClicks = embedderHandlesClicks
+            }
         }
 
         @Volatile
@@ -316,8 +321,10 @@ class LDObserve(private val client: Observe) : Observe {
          */
         @JvmStatic
         fun setEmbedderClickHandling(enabled: Boolean) {
-            embedderHandlesClicks = enabled
-            observabilityClient?.userInteractionManager?.embedderHandlesClicks = enabled
+            synchronized(embedderClickLock) {
+                embedderHandlesClicks = enabled
+                observabilityClient?.userInteractionManager?.embedderHandlesClicks = enabled
+            }
         }
 
         /**

@@ -74,6 +74,21 @@ class LDObserveTest {
         assertTrue(userInteractionManager.embedderHandlesClicks)
     }
 
+    @Test
+    fun `should apply embedder click handling requested after initialization`() {
+        mockkStatic(ViewConfiguration::class)
+        every { ViewConfiguration.getLongPressTimeout() } returns 500
+
+        val userInteractionManager = UserInteractionManager()
+        val service: ObservabilityService = mockk(relaxed = true)
+        every { service.userInteractionManager } returns userInteractionManager
+
+        LDObserve.init(service)
+        LDObserve.setEmbedderClickHandling(true)
+
+        assertTrue(userInteractionManager.embedderHandlesClicks)
+    }
+
     @AfterEach
     fun resetEmbedderClickHandling() {
         // Companion state is process-wide; leave it off so later tests see the default.
