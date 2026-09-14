@@ -233,7 +233,40 @@ export const XHRListener = (
 	}
 }
 
+// Body shapes that must never go through JSON.stringify: stringifying a typed
+// array yields `{"0":123,"1":34,...}`, ~15x the payload. The SDK's own OTLP
+// exporter sends its batches as a Uint8Array through XMLHttpRequest.send, so
+// this was run on every export (and retry) once XHR bodies were captured.
+// Object.prototype.toString reads the internal class tag, so it also matches
+// values created in another realm (an iframe, a worker, a test runner).
+const BINARY_BODY_TAG =
+	/^\[object (ArrayBuffer|SharedArrayBuffer|DataView|(?:Ui|I)nt(?:8|16|32)Array|Uint8ClampedArray|Float(?:16|32|64)Array|Big(?:Ui|I)nt64Array|Blob|File|FormData|URLSearchParams|ReadableStream)\]$/
+const isBinaryBody = (body: unknown): boolean =>
+	typeof body === 'object' &&
+	body !== null &&
+	BINARY_BODY_TAG.test(Object.prototype.toString.call(body))
+
+const describeBinaryBody = (body: any): string => {
+	if (typeof Blob !== 'undefined' && body instanceof Blob) {
+		return `[Blob type="${body.type}" size=${body.size}]`
+	}
+	if (typeof FormData !== 'undefined' && body instanceof FormData) {
+		return '[FormData]'
+	}
+	if (
+		typeof URLSearchParams !== 'undefined' &&
+		body instanceof URLSearchParams
+	) {
+		return body.toString().slice(0, DEFAULT_BODY_LIMIT)
+	}
+	const size = body?.byteLength ?? body?.size ?? 0
+	return `[binary size=${size}]`
+}
+
 export const getBodyData = (postData: any, url: string | undefined) => {
+	if (isBinaryBody(postData)) {
+		return describeBinaryBody(postData)
+	}
 	if (typeof postData === 'string') {
 		// TODO: This should be removed when we move recording logic from client to firstload.
 		// This is only for development purposes. We don't want to send the body of pushPayload requests because it'll end up being recursive.
@@ -258,11 +291,20 @@ export const getBodyData = (postData: any, url: string | undefined) => {
 	return null
 }
 
-const DEFAULT_BODY_LIMIT = 64 * 1024 // KB
+// Bodies are cut to 64 KiB by the ingest path anyway, so anything recorded
+// past that only costs client memory and upload bandwidth. JSON and text get a
+// little more room so key redaction still sees a complete document. The old
+// limits here were 64 MiB, which let multi-megabyte API responses be copied,
+// parsed and re-serialized on the main thread for every request.
+const DEFAULT_BODY_LIMIT = 64 * 1024 // 64 KiB
 const BODY_SIZE_LIMITS = {
-	'application/json': 64 * 1024 * 1024, // MB
-	'text/plain': 64 * 1024 * 1024, // MB
+	'application/json': 256 * 1024, // 256 KiB
+	'text/plain': 256 * 1024, // 256 KiB
 } as const
+
+/** Recorded in place of a body that exceeds the size limit for its content type. */
+export const bodyOmittedPlaceholder = (size: number, limit: number) =>
+	`[body omitted: ${size} bytes exceeds the ${limit} byte limit]`
 
 /** Max recorded body size in characters, keyed by the content type. */
 export const getBodySizeLimit = (
@@ -298,6 +340,14 @@ export const getBodyThatShouldBeRecorded = (
 	headers?: Headers | { [key: string]: string },
 ) => {
 	const bodyLimit = getBodySizeLimit(headers)
+
+	// Check the size before any JSON parsing. Parsing a multi-megabyte body only
+	// to slice it afterwards was the most expensive thing the SDK did per request
+	// on low-end devices, and a truncated JSON document cannot be redacted
+	// safely, so oversized bodies are described instead of recorded.
+	if (typeof bodyData === 'string' && bodyData.length > bodyLimit) {
+		return bodyOmittedPlaceholder(bodyData.length, bodyLimit)
+	}
 
 	if (bodyData) {
 		if (bodyKeysToRedact) {
