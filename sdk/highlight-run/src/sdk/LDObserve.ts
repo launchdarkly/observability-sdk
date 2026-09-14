@@ -9,14 +9,24 @@ import { getNoopSpan } from '../client/otel/utils'
 import { ConsoleMethods } from '../client/types/client'
 
 /**
- * Mirrors the no-tracer path in `ObserveSDK`: hand the callback a noop span so it
- * still runs, whichever argument position it was passed in.
+ * Resolves the span callback from whichever argument position it was passed in,
+ * matching the overloads `startSpan` and `startManualSpan` accept.
  */
-function runWithNoopSpan(options: unknown, context: unknown, fn: unknown) {
-	const callback = [fn, context, options].find(
-		(candidate) => typeof candidate === 'function',
-	) as ((span: Span) => any) | undefined
-	return callback?.(getNoopSpan())
+function resolveSpanCallback(
+	options: unknown,
+	context: unknown,
+	fn: unknown,
+): ((span: Span) => any) | undefined {
+	if (typeof fn === 'function') {
+		return fn as (span: Span) => any
+	}
+	if (typeof context === 'function') {
+		return context as (span: Span) => any
+	}
+	if (typeof options === 'function') {
+		return options as (span: Span) => any
+	}
+	return undefined
 }
 
 class _LDObserve extends BufferedClass<Observe> implements Observe {
@@ -59,7 +69,7 @@ class _LDObserve extends BufferedClass<Observe> implements Observe {
 		fn?: (span?: Span) => any,
 	) {
 		if (!this._isLoaded) {
-			return runWithNoopSpan(options, context, fn)
+			return resolveSpanCallback(options, context, fn)?.(getNoopSpan())
 		}
 		return this._bufferCall('startSpan', [name, options, context, fn])
 	}
@@ -71,7 +81,7 @@ class _LDObserve extends BufferedClass<Observe> implements Observe {
 		fn?: (span: Span) => any,
 	) {
 		if (!this._isLoaded) {
-			return runWithNoopSpan(options, context, fn)
+			return resolveSpanCallback(options, context, fn)?.(getNoopSpan())
 		}
 		return this._bufferCall('startManualSpan', [name, options, context, fn])
 	}
