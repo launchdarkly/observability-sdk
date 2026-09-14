@@ -137,9 +137,21 @@ class LDObserve(private val client: Observe) : Observe {
         internal var observabilityClient: ObservabilityService? = null
             private set
 
+        /**
+         * Latest [setEmbedderClickHandling] request, retained because the embedder installs its click
+         * detection independently of - and typically before - observability initialization. Kept here
+         * so the handshake survives that ordering instead of being dropped on the floor.
+         */
+        @Volatile
+        private var embedderHandlesClicks: Boolean = false
+
         fun init(client: ObservabilityService) {
             observabilityClient = client
             delegate = LDObserve(client)
+            // Publish the client before applying, so a concurrent setEmbedderClickHandling either sees
+            // it and writes through itself or stores its value before this read: both orderings leave
+            // the manager agreeing with the last request rather than with whoever raced last.
+            client.userInteractionManager.embedderHandlesClicks = embedderHandlesClicks
         }
 
         @Volatile
@@ -296,9 +308,15 @@ class LDObserve(private val client: Observe) : Observe {
          * Called by the embedder's plugin when its click detection is installed, and again with
          * `false` when it is torn down: until then native keeps reporting its own coarse clicks, so a
          * missing embedder integration degrades rather than silently dropping every click.
+         *
+         * Safe to call before observability is initialized - the embedder's plugin usually boots
+         * first - because the request is retained and applied once a client is installed. Without
+         * that, an early handshake would be lost and every tap would be reported twice: once coarsely
+         * by native detection and once by the embedder.
          */
         @JvmStatic
         fun setEmbedderClickHandling(enabled: Boolean) {
+            embedderHandlesClicks = enabled
             observabilityClient?.userInteractionManager?.embedderHandlesClicks = enabled
         }
 

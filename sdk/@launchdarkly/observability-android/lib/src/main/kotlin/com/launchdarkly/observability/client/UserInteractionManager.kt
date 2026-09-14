@@ -75,7 +75,11 @@ class UserInteractionManager : Application.ActivityLifecycleCallbacks {
      * Scoped to the touched view rather than switching off tap detection globally, because the
      * embedder is not always the whole app: in an add-to-app host, native screens sit alongside a
      * `FlutterActivity` and must keep reporting their real targets.
+     *
+     * Volatile because the embedder sets it through [com.launchdarkly.observability.sdk.LDObserve]
+     * from whichever thread its plugin runs on, while touch dispatch reads it on the main thread.
      */
+    @Volatile
     var embedderHandlesClicks: Boolean = false
 
     private var mostRecentWindow: Window? = null
