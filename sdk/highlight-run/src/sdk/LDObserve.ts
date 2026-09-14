@@ -5,7 +5,19 @@ import type { OTelMetric as Metric } from '../client/types/types'
 import type { Attributes, Context, Span, SpanOptions } from '@opentelemetry/api'
 import type { LDPluginEnvironmentMetadata } from '../plugins/plugin'
 import { BufferedClass } from './buffer'
+import { getNoopSpan } from '../client/otel/utils'
 import { ConsoleMethods } from '../client/types/client'
+
+/**
+ * Mirrors the no-tracer path in `ObserveSDK`: hand the callback a noop span so it
+ * still runs, whichever argument position it was passed in.
+ */
+function runWithNoopSpan(options: unknown, context: unknown, fn: unknown) {
+	const callback = [fn, context, options].find(
+		(candidate) => typeof candidate === 'function',
+	) as ((span: Span) => any) | undefined
+	return callback?.(getNoopSpan())
+}
 
 class _LDObserve extends BufferedClass<Observe> implements Observe {
 	start() {
@@ -38,14 +50,17 @@ class _LDObserve extends BufferedClass<Observe> implements Observe {
 		return this._bufferCall('recordUpDownCounter', [metric])
 	}
 
-	// TODO: Ask @vkorolik about using this method before initialization. Doesn't
-	// this cause problems if someone tries to work with the returned span?
+	// The callback holds the caller's own work, so it must never be buffered:
+	// deferring it would replay that work at an arbitrary later time, or drop it.
 	startSpan(
 		name: string,
 		options: SpanOptions | ((span?: Span) => any),
 		context?: Context | ((span?: Span) => any),
 		fn?: (span?: Span) => any,
 	) {
+		if (!this._isLoaded) {
+			return runWithNoopSpan(options, context, fn)
+		}
 		return this._bufferCall('startSpan', [name, options, context, fn])
 	}
 
@@ -55,6 +70,9 @@ class _LDObserve extends BufferedClass<Observe> implements Observe {
 		context?: Context | ((span: Span) => any),
 		fn?: (span: Span) => any,
 	) {
+		if (!this._isLoaded) {
+			return runWithNoopSpan(options, context, fn)
+		}
 		return this._bufferCall('startManualSpan', [name, options, context, fn])
 	}
 
