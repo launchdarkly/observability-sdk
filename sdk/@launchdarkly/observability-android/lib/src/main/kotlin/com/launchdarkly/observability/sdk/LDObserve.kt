@@ -79,8 +79,19 @@ class LDObserve(private val client: Observe) : Observe {
         client.trackScreenView(name, screenClass, screenId, category, properties)
     }
 
-    override fun trackClick(id: String?, tag: String?, text: String?, screenId: String?, x: Int?, y: Int?, properties: Map<String, Any?>?) {
-        client.trackClick(id, tag, text, screenId, x, y, properties)
+    override fun trackClick(
+        id: String?,
+        tag: String?,
+        classname: String?,
+        text: String?,
+        xpath: String?,
+        screenId: String?,
+        x: Int?,
+        y: Int?,
+        timestampMillis: Long?,
+        properties: Map<String, Any?>?
+    ) {
+        client.trackClick(id, tag, classname, text, xpath, screenId, x, y, timestampMillis, properties)
     }
 
     companion object : Observe {
@@ -101,7 +112,18 @@ class LDObserve(private val client: Observe) : Observe {
             override fun flush() {}
             override fun track(key: String, properties: Map<String, Any?>?, metricValue: Double?) {}
             override fun trackScreenView(name: String, screenClass: String?, screenId: String?, category: String?, properties: Map<String, Any?>?) {}
-            override fun trackClick(id: String?, tag: String?, text: String?, screenId: String?, x: Int?, y: Int?, properties: Map<String, Any?>?) {}
+            override fun trackClick(
+                id: String?,
+                tag: String?,
+                classname: String?,
+                text: String?,
+                xpath: String?,
+                screenId: String?,
+                x: Int?,
+                y: Int?,
+                timestampMillis: Long?,
+                properties: Map<String, Any?>?
+            ) {}
         }
 
         /**
@@ -206,6 +228,7 @@ class LDObserve(private val client: Observe) : Observe {
             obsContext.sessionManager = service.sessionManager
             obsContext.userInteractionManager = service.userInteractionManager
             obsContext.screenViewFlow = service.screenViewFlow
+            obsContext.clickFlow = service.clickFlow
             obsContext.screenViewManager = service.screenViewManager
             obsContext.trackFlow = service.trackFlow
             obsContext.appLifecycleFlow = service.appLifecycleFlow
@@ -248,7 +271,36 @@ class LDObserve(private val client: Observe) : Observe {
         override fun flush() = delegate.flush()
         override fun track(key: String, properties: Map<String, Any?>?, metricValue: Double?) = delegate.track(key, properties, metricValue)
         override fun trackScreenView(name: String, screenClass: String?, screenId: String?, category: String?, properties: Map<String, Any?>?) = delegate.trackScreenView(name, screenClass, screenId, category, properties)
-        override fun trackClick(id: String?, tag: String?, text: String?, screenId: String?, x: Int?, y: Int?, properties: Map<String, Any?>?) = delegate.trackClick(id, tag, text, screenId, x, y, properties)
+        override fun trackClick(
+            id: String?,
+            tag: String?,
+            classname: String?,
+            text: String?,
+            xpath: String?,
+            screenId: String?,
+            x: Int?,
+            y: Int?,
+            timestampMillis: Long?,
+            properties: Map<String, Any?>?
+        ) = delegate.trackClick(id, tag, classname, text, xpath, screenId, x, y, timestampMillis, properties)
+
+        /**
+         * Declares whether an embedder (Flutter) resolves clicks for its own views and reports them
+         * through [trackClick].
+         *
+         * While enabled, automatic tap detection skips taps landing on the embedder's render surface,
+         * so each tap is reported once - by the embedder, which is the only side able to describe the
+         * element that was actually pressed. Taps on native views elsewhere in the app (an add-to-app
+         * host's own screens) are unaffected.
+         *
+         * Called by the embedder's plugin when its click detection is installed, and again with
+         * `false` when it is torn down: until then native keeps reporting its own coarse clicks, so a
+         * missing embedder integration degrades rather than silently dropping every click.
+         */
+        @JvmStatic
+        fun setEmbedderClickHandling(enabled: Boolean) {
+            observabilityClient?.userInteractionManager?.embedderHandlesClicks = enabled
+        }
 
         /**
          * Bridge-friendly overloads that avoid exposing OpenTelemetry types
