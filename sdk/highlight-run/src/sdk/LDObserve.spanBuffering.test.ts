@@ -40,9 +40,15 @@ describe('LDObserve span methods before initialization', () => {
 		expect(fn).toHaveBeenCalledOnce()
 	})
 
-	it('still buffers fire-and-forget telemetry', () => {
-		expect(
-			LDObserve.recordHistogram({ name: 'test', value: 1 }),
-		).toBeUndefined()
+	it('still buffers fire-and-forget telemetry, but never spans', () => {
+		LDObserve.recordHistogram({ name: 'test', value: 1 })
+
+		const buffered = (
+			LDObserve as unknown as { _callBuffer: Array<{ method: string }> }
+		)._callBuffer.map((call) => call.method)
+
+		expect(buffered).toContain('recordHistogram')
+		expect(buffered).not.toContain('startSpan')
+		expect(buffered).not.toContain('startManualSpan')
 	})
 })
