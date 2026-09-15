@@ -23,8 +23,11 @@ ClickTarget? resolveAt(
   );
 }
 
-Future<void> pumpApp(WidgetTester tester, Widget body) =>
-    tester.pumpWidget(MaterialApp(home: Scaffold(body: Center(child: body))));
+Future<void> pumpApp(WidgetTester tester, Widget body) => tester.pumpWidget(
+  MaterialApp(
+    home: Scaffold(body: Center(child: body)),
+  ),
+);
 
 void main() {
   group('target selection', () {
@@ -202,7 +205,10 @@ void main() {
                 child: GestureDetector(onTap: () {}, child: const SizedBox()),
               ),
               Positioned.fill(
-                child: TextButton(onPressed: () {}, child: const Text('On top')),
+                child: TextButton(
+                  onPressed: () {},
+                  child: const Text('On top'),
+                ),
               ),
             ],
           ),
@@ -264,7 +270,10 @@ void main() {
         ),
       );
 
-      expect(resolveAt(tester, find.text('Semantic'))?.id, equals('semantic-id'));
+      expect(
+        resolveAt(tester, find.text('Semantic'))?.id,
+        equals('semantic-id'),
+      );
       expect(resolveAt(tester, find.text('Keyed'))?.id, equals('key-id'));
     });
 
@@ -295,7 +304,10 @@ void main() {
         ),
       );
 
-      expect(resolveAt(tester, find.byType(ElevatedButton))?.id, equals('inner'));
+      expect(
+        resolveAt(tester, find.byType(ElevatedButton))?.id,
+        equals('inner'),
+      );
     });
   });
 
@@ -430,10 +442,7 @@ void main() {
     testWidgets('names an application widget type and supplies its label', (
       tester,
     ) async {
-      await pumpApp(
-        tester,
-        const LDClickTestButton(child: Text('Pay now')),
-      );
+      await pumpApp(tester, const LDClickTestButton(child: Text('Pay now')));
 
       final target = resolveAt(
         tester,
@@ -512,8 +521,6 @@ class LDClickTestButton extends StatelessWidget {
   const LDClickTestButton({super.key, required this.child});
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
-    onTap: () {},
-    child: child,
-  );
+  Widget build(BuildContext context) =>
+      GestureDetector(onTap: () {}, child: child);
 }

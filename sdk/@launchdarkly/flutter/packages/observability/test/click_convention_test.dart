@@ -25,7 +25,10 @@ void main() {
   test('always identifies the event type', () {
     final attributes = ClickConvention.getSpanAttributes();
 
-    expect(attributes.entries, contains(matchesAttribute('event.type', 'click')));
+    expect(
+      attributes.entries,
+      contains(matchesAttribute('event.type', 'click')),
+    );
   });
 
   test('maps a resolved widget onto the reserved event.* keys', () {

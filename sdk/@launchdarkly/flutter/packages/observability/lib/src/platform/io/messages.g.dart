@@ -14,20 +14,24 @@ PlatformException _createConnectionError(String channelName) {
     message: 'Unable to establish connection on channel: "$channelName".',
   );
 }
+
 bool _deepEquals(Object? a, Object? b) {
   if (a is List && b is List) {
     return a.length == b.length &&
-        a.indexed
-        .every(((int, dynamic) item) => _deepEquals(item.$2, b[item.$1]));
+        a.indexed.every(
+          ((int, dynamic) item) => _deepEquals(item.$2, b[item.$1]),
+        );
   }
   if (a is Map && b is Map) {
-    return a.length == b.length && a.entries.every((MapEntry<Object?, Object?> entry) =>
-        (b as Map<Object?, Object?>).containsKey(entry.key) &&
-        _deepEquals(entry.value, b[entry.key]));
+    return a.length == b.length &&
+        a.entries.every(
+          (MapEntry<Object?, Object?> entry) =>
+              (b as Map<Object?, Object?>).containsKey(entry.key) &&
+              _deepEquals(entry.value, b[entry.key]),
+        );
   }
   return a == b;
 }
-
 
 class LDInstrumentationOptions {
   LDInstrumentationOptions({
@@ -43,15 +47,12 @@ class LDInstrumentationOptions {
   bool? crashReporting;
 
   List<Object?> _toList() {
-    return <Object?>[
-      networkRequests,
-      launchTimes,
-      crashReporting,
-    ];
+    return <Object?>[networkRequests, launchTimes, crashReporting];
   }
 
   Object encode() {
-    return _toList();  }
+    return _toList();
+  }
 
   static LDInstrumentationOptions decode(Object result) {
     result as List<Object?>;
@@ -65,7 +66,8 @@ class LDInstrumentationOptions {
   @override
   // ignore: avoid_equals_and_hash_code_on_mutable_classes
   bool operator ==(Object other) {
-    if (other is! LDInstrumentationOptions || other.runtimeType != runtimeType) {
+    if (other is! LDInstrumentationOptions ||
+        other.runtimeType != runtimeType) {
       return false;
     }
     if (identical(this, other)) {
@@ -76,29 +78,23 @@ class LDInstrumentationOptions {
 
   @override
   // ignore: avoid_equals_and_hash_code_on_mutable_classes
-  int get hashCode => Object.hashAll(_toList())
-;
+  int get hashCode => Object.hashAll(_toList());
 }
 
 class LDTracesOptions {
-  LDTracesOptions({
-    this.includeErrors,
-    this.includeSpans,
-  });
+  LDTracesOptions({this.includeErrors, this.includeSpans});
 
   bool? includeErrors;
 
   bool? includeSpans;
 
   List<Object?> _toList() {
-    return <Object?>[
-      includeErrors,
-      includeSpans,
-    ];
+    return <Object?>[includeErrors, includeSpans];
   }
 
   Object encode() {
-    return _toList();  }
+    return _toList();
+  }
 
   static LDTracesOptions decode(Object result) {
     result as List<Object?>;
@@ -122,8 +118,7 @@ class LDTracesOptions {
 
   @override
   // ignore: avoid_equals_and_hash_code_on_mutable_classes
-  int get hashCode => Object.hashAll(_toList())
-;
+  int get hashCode => Object.hashAll(_toList());
 }
 
 class LDAnalyticsOptions {
@@ -146,17 +141,12 @@ class LDAnalyticsOptions {
   bool? appLaunch;
 
   List<Object?> _toList() {
-    return <Object?>[
-      taps,
-      views,
-      trackEvents,
-      appLifecycle,
-      appLaunch,
-    ];
+    return <Object?>[taps, views, trackEvents, appLifecycle, appLaunch];
   }
 
   Object encode() {
-    return _toList();  }
+    return _toList();
+  }
 
   static LDAnalyticsOptions decode(Object result) {
     result as List<Object?>;
@@ -183,8 +173,7 @@ class LDAnalyticsOptions {
 
   @override
   // ignore: avoid_equals_and_hash_code_on_mutable_classes
-  int get hashCode => Object.hashAll(_toList())
-;
+  int get hashCode => Object.hashAll(_toList());
 }
 
 class LDObservabilityOptions {
@@ -253,7 +242,8 @@ class LDObservabilityOptions {
   }
 
   Object encode() {
-    return _toList();  }
+    return _toList();
+  }
 
   static LDObservabilityOptions decode(Object result) {
     result as List<Object?>;
@@ -264,8 +254,10 @@ class LDObservabilityOptions {
       otlpEndpoint: result[3] as String?,
       backendUrl: result[4] as String?,
       contextFriendlyName: result[5] as String?,
-      attributes: (result[6] as Map<Object?, Object?>?)?.cast<String, Object?>(),
-      customHeaders: (result[7] as Map<Object?, Object?>?)?.cast<String, String>(),
+      attributes: (result[6] as Map<Object?, Object?>?)
+          ?.cast<String, Object?>(),
+      customHeaders: (result[7] as Map<Object?, Object?>?)
+          ?.cast<String, String>(),
       sessionBackgroundTimeoutMillis: result[8] as int?,
       logsApiLevel: result[9] as int?,
       traces: result[10] as LDTracesOptions?,
@@ -289,8 +281,7 @@ class LDObservabilityOptions {
 
   @override
   // ignore: avoid_equals_and_hash_code_on_mutable_classes
-  int get hashCode => Object.hashAll(_toList())
-;
+  int get hashCode => Object.hashAll(_toList());
 }
 
 class LDPrivacyOptions {
@@ -323,7 +314,8 @@ class LDPrivacyOptions {
   }
 
   Object encode() {
-    return _toList();  }
+    return _toList();
+  }
 
   static LDPrivacyOptions decode(Object result) {
     result as List<Object?>;
@@ -350,8 +342,7 @@ class LDPrivacyOptions {
 
   @override
   // ignore: avoid_equals_and_hash_code_on_mutable_classes
-  int get hashCode => Object.hashAll(_toList())
-;
+  int get hashCode => Object.hashAll(_toList());
 }
 
 class LDSessionReplayOptions {
@@ -392,7 +383,8 @@ class LDSessionReplayOptions {
   }
 
   Object encode() {
-    return _toList();  }
+    return _toList();
+  }
 
   static LDSessionReplayOptions decode(Object result) {
     result as List<Object?>;
@@ -421,31 +413,25 @@ class LDSessionReplayOptions {
 
   @override
   // ignore: avoid_equals_and_hash_code_on_mutable_classes
-  int get hashCode => Object.hashAll(_toList())
-;
+  int get hashCode => Object.hashAll(_toList());
 }
 
 class LDStartResult {
-  LDStartResult({
-    this.nativeVersion,
-  });
+  LDStartResult({this.nativeVersion});
 
   String? nativeVersion;
 
   List<Object?> _toList() {
-    return <Object?>[
-      nativeVersion,
-    ];
+    return <Object?>[nativeVersion];
   }
 
   Object encode() {
-    return _toList();  }
+    return _toList();
+  }
 
   static LDStartResult decode(Object result) {
     result as List<Object?>;
-    return LDStartResult(
-      nativeVersion: result[0] as String?,
-    );
+    return LDStartResult(nativeVersion: result[0] as String?);
   }
 
   @override
@@ -462,36 +448,31 @@ class LDStartResult {
 
   @override
   // ignore: avoid_equals_and_hash_code_on_mutable_classes
-  int get hashCode => Object.hashAll(_toList())
-;
+  int get hashCode => Object.hashAll(_toList());
 }
 
 /// An event recorded on a span, forwarded to the native tracer.
 class LDSpanEvent {
-  LDSpanEvent({
-    this.name,
-    this.attributes,
-  });
+  LDSpanEvent({this.name, this.attributes});
 
   String? name;
 
   Map<String, Object?>? attributes;
 
   List<Object?> _toList() {
-    return <Object?>[
-      name,
-      attributes,
-    ];
+    return <Object?>[name, attributes];
   }
 
   Object encode() {
-    return _toList();  }
+    return _toList();
+  }
 
   static LDSpanEvent decode(Object result) {
     result as List<Object?>;
     return LDSpanEvent(
       name: result[0] as String?,
-      attributes: (result[1] as Map<Object?, Object?>?)?.cast<String, Object?>(),
+      attributes: (result[1] as Map<Object?, Object?>?)
+          ?.cast<String, Object?>(),
     );
   }
 
@@ -509,8 +490,7 @@ class LDSpanEvent {
 
   @override
   // ignore: avoid_equals_and_hash_code_on_mutable_classes
-  int get hashCode => Object.hashAll(_toList())
-;
+  int get hashCode => Object.hashAll(_toList());
 }
 
 /// A completed Dart span, forwarded to the native tracer so the native
@@ -570,7 +550,8 @@ class LDSpanData {
   }
 
   Object encode() {
-    return _toList();  }
+    return _toList();
+  }
 
   static LDSpanData decode(Object result) {
     result as List<Object?>;
@@ -581,7 +562,8 @@ class LDSpanData {
       traceId: result[3] as String?,
       spanId: result[4] as String?,
       parentSpanId: result[5] as String?,
-      attributes: (result[6] as Map<Object?, Object?>?)?.cast<String, Object?>(),
+      attributes: (result[6] as Map<Object?, Object?>?)
+          ?.cast<String, Object?>(),
       events: (result[7] as List<Object?>?)?.cast<LDSpanEvent?>(),
       statusCode: result[8] as int?,
     );
@@ -601,8 +583,7 @@ class LDSpanData {
 
   @override
   // ignore: avoid_equals_and_hash_code_on_mutable_classes
-  int get hashCode => Object.hashAll(_toList())
-;
+  int get hashCode => Object.hashAll(_toList());
 }
 
 /// A log record forwarded to the native logger so it is emitted as a real
@@ -631,17 +612,12 @@ class LDLogRecord {
   Map<String, Object?>? attributes;
 
   List<Object?> _toList() {
-    return <Object?>[
-      message,
-      severityNumber,
-      traceId,
-      spanId,
-      attributes,
-    ];
+    return <Object?>[message, severityNumber, traceId, spanId, attributes];
   }
 
   Object encode() {
-    return _toList();  }
+    return _toList();
+  }
 
   static LDLogRecord decode(Object result) {
     result as List<Object?>;
@@ -650,7 +626,8 @@ class LDLogRecord {
       severityNumber: result[1] as int?,
       traceId: result[2] as String?,
       spanId: result[3] as String?,
-      attributes: (result[4] as Map<Object?, Object?>?)?.cast<String, Object?>(),
+      attributes: (result[4] as Map<Object?, Object?>?)
+          ?.cast<String, Object?>(),
     );
   }
 
@@ -668,10 +645,8 @@ class LDLogRecord {
 
   @override
   // ignore: avoid_equals_and_hash_code_on_mutable_classes
-  int get hashCode => Object.hashAll(_toList())
-;
+  int get hashCode => Object.hashAll(_toList());
 }
-
 
 class _PigeonCodec extends StandardMessageCodec {
   const _PigeonCodec();
@@ -680,34 +655,34 @@ class _PigeonCodec extends StandardMessageCodec {
     if (value is int) {
       buffer.putUint8(4);
       buffer.putInt64(value);
-    }    else if (value is LDInstrumentationOptions) {
+    } else if (value is LDInstrumentationOptions) {
       buffer.putUint8(129);
       writeValue(buffer, value.encode());
-    }    else if (value is LDTracesOptions) {
+    } else if (value is LDTracesOptions) {
       buffer.putUint8(130);
       writeValue(buffer, value.encode());
-    }    else if (value is LDAnalyticsOptions) {
+    } else if (value is LDAnalyticsOptions) {
       buffer.putUint8(131);
       writeValue(buffer, value.encode());
-    }    else if (value is LDObservabilityOptions) {
+    } else if (value is LDObservabilityOptions) {
       buffer.putUint8(132);
       writeValue(buffer, value.encode());
-    }    else if (value is LDPrivacyOptions) {
+    } else if (value is LDPrivacyOptions) {
       buffer.putUint8(133);
       writeValue(buffer, value.encode());
-    }    else if (value is LDSessionReplayOptions) {
+    } else if (value is LDSessionReplayOptions) {
       buffer.putUint8(134);
       writeValue(buffer, value.encode());
-    }    else if (value is LDStartResult) {
+    } else if (value is LDStartResult) {
       buffer.putUint8(135);
       writeValue(buffer, value.encode());
-    }    else if (value is LDSpanEvent) {
+    } else if (value is LDSpanEvent) {
       buffer.putUint8(136);
       writeValue(buffer, value.encode());
-    }    else if (value is LDSpanData) {
+    } else if (value is LDSpanData) {
       buffer.putUint8(137);
       writeValue(buffer, value.encode());
-    }    else if (value is LDLogRecord) {
+    } else if (value is LDLogRecord) {
       buffer.putUint8(138);
       writeValue(buffer, value.encode());
     } else {
@@ -718,25 +693,25 @@ class _PigeonCodec extends StandardMessageCodec {
   @override
   Object? readValueOfType(int type, ReadBuffer buffer) {
     switch (type) {
-      case 129: 
+      case 129:
         return LDInstrumentationOptions.decode(readValue(buffer)!);
-      case 130: 
+      case 130:
         return LDTracesOptions.decode(readValue(buffer)!);
-      case 131: 
+      case 131:
         return LDAnalyticsOptions.decode(readValue(buffer)!);
-      case 132: 
+      case 132:
         return LDObservabilityOptions.decode(readValue(buffer)!);
-      case 133: 
+      case 133:
         return LDPrivacyOptions.decode(readValue(buffer)!);
-      case 134: 
+      case 134:
         return LDSessionReplayOptions.decode(readValue(buffer)!);
-      case 135: 
+      case 135:
         return LDStartResult.decode(readValue(buffer)!);
-      case 136: 
+      case 136:
         return LDSpanEvent.decode(readValue(buffer)!);
-      case 137: 
+      case 137:
         return LDSpanData.decode(readValue(buffer)!);
-      case 138: 
+      case 138:
         return LDLogRecord.decode(readValue(buffer)!);
       default:
         return super.readValueOfType(type, buffer);
@@ -748,23 +723,36 @@ class LDNativeApi {
   /// Constructor for [LDNativeApi].  The [binaryMessenger] named argument is
   /// available for dependency injection.  If it is left null, the default
   /// BinaryMessenger will be used which routes to the host platform.
-  LDNativeApi({BinaryMessenger? binaryMessenger, String messageChannelSuffix = ''})
-      : pigeonVar_binaryMessenger = binaryMessenger,
-        pigeonVar_messageChannelSuffix = messageChannelSuffix.isNotEmpty ? '.$messageChannelSuffix' : '';
+  LDNativeApi({
+    BinaryMessenger? binaryMessenger,
+    String messageChannelSuffix = '',
+  }) : pigeonVar_binaryMessenger = binaryMessenger,
+       pigeonVar_messageChannelSuffix = messageChannelSuffix.isNotEmpty
+           ? '.$messageChannelSuffix'
+           : '';
   final BinaryMessenger? pigeonVar_binaryMessenger;
 
   static const MessageCodec<Object?> pigeonChannelCodec = _PigeonCodec();
 
   final String pigeonVar_messageChannelSuffix;
 
-  Future<LDStartResult> start(String mobileKey, LDObservabilityOptions observability, LDSessionReplayOptions replay, String observabilityVersion) async {
-    final String pigeonVar_channelName = 'dev.flutter.pigeon.launchdarkly_flutter_observability.LDNativeApi.start$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
-      pigeonVar_channelName,
-      pigeonChannelCodec,
-      binaryMessenger: pigeonVar_binaryMessenger,
+  Future<LDStartResult> start(
+    String mobileKey,
+    LDObservabilityOptions observability,
+    LDSessionReplayOptions replay,
+    String observabilityVersion,
+  ) async {
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.launchdarkly_flutter_observability.LDNativeApi.start$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
+          pigeonVar_channelName,
+          pigeonChannelCodec,
+          binaryMessenger: pigeonVar_binaryMessenger,
+        );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[mobileKey, observability, replay, observabilityVersion],
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[mobileKey, observability, replay, observabilityVersion]);
     final List<Object?>? pigeonVar_replyList =
         await pigeonVar_sendFuture as List<Object?>?;
     if (pigeonVar_replyList == null) {
@@ -788,13 +776,17 @@ class LDNativeApi {
   /// Forwards completed Dart spans to the native tracer. Native re-creates each
   /// span so the native pipeline stamps `session.id` and exports it.
   Future<void> exportSpans(List<LDSpanData> spans) async {
-    final String pigeonVar_channelName = 'dev.flutter.pigeon.launchdarkly_flutter_observability.LDNativeApi.exportSpans$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
-      pigeonVar_channelName,
-      pigeonChannelCodec,
-      binaryMessenger: pigeonVar_binaryMessenger,
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.launchdarkly_flutter_observability.LDNativeApi.exportSpans$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
+          pigeonVar_channelName,
+          pigeonChannelCodec,
+          binaryMessenger: pigeonVar_binaryMessenger,
+        );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[spans],
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[spans]);
     final List<Object?>? pigeonVar_replyList =
         await pigeonVar_sendFuture as List<Object?>?;
     if (pigeonVar_replyList == null) {
@@ -813,13 +805,17 @@ class LDNativeApi {
   /// Forwards a Dart log to the native logger so it is emitted as a native
   /// `LogRecord` with `session.id` and trace/span correlation.
   Future<void> recordLog(LDLogRecord log) async {
-    final String pigeonVar_channelName = 'dev.flutter.pigeon.launchdarkly_flutter_observability.LDNativeApi.recordLog$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
-      pigeonVar_channelName,
-      pigeonChannelCodec,
-      binaryMessenger: pigeonVar_binaryMessenger,
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.launchdarkly_flutter_observability.LDNativeApi.recordLog$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
+          pigeonVar_channelName,
+          pigeonChannelCodec,
+          binaryMessenger: pigeonVar_binaryMessenger,
+        );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[log],
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[log]);
     final List<Object?>? pigeonVar_replyList =
         await pigeonVar_sendFuture as List<Object?>?;
     if (pigeonVar_replyList == null) {
@@ -842,14 +838,23 @@ class LDNativeApi {
   /// kind -> key pairs (from the LaunchDarkly client's `afterTrack` hook) so the
   /// native `track` span is attributed to the same context the web SDK records;
   /// only the span is annotated, not the Session Replay `Track` payload.
-  Future<void> track(String key, Map<String, Object?>? data, double? metricValue, Map<String, String>? contextKeys) async {
-    final String pigeonVar_channelName = 'dev.flutter.pigeon.launchdarkly_flutter_observability.LDNativeApi.track$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
-      pigeonVar_channelName,
-      pigeonChannelCodec,
-      binaryMessenger: pigeonVar_binaryMessenger,
+  Future<void> track(
+    String key,
+    Map<String, Object?>? data,
+    double? metricValue,
+    Map<String, String>? contextKeys,
+  ) async {
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.launchdarkly_flutter_observability.LDNativeApi.track$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
+          pigeonVar_channelName,
+          pigeonChannelCodec,
+          binaryMessenger: pigeonVar_binaryMessenger,
+        );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[key, data, metricValue, contextKeys],
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[key, data, metricValue, contextKeys]);
     final List<Object?>? pigeonVar_replyList =
         await pigeonVar_sendFuture as List<Object?>?;
     if (pigeonVar_replyList == null) {
@@ -873,14 +878,22 @@ class LDNativeApi {
   /// key, and `completed` whether the identify finished successfully (native
   /// ignores incomplete identifies). Mirrors MAUI's
   /// `ObservabilityHook.AfterIdentify` /  `SessionReplayHook.AfterIdentify`.
-  Future<void> identify(Map<String, String> contextKeys, String canonicalKey, bool completed) async {
-    final String pigeonVar_channelName = 'dev.flutter.pigeon.launchdarkly_flutter_observability.LDNativeApi.identify$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
-      pigeonVar_channelName,
-      pigeonChannelCodec,
-      binaryMessenger: pigeonVar_binaryMessenger,
+  Future<void> identify(
+    Map<String, String> contextKeys,
+    String canonicalKey,
+    bool completed,
+  ) async {
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.launchdarkly_flutter_observability.LDNativeApi.identify$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
+          pigeonVar_channelName,
+          pigeonChannelCodec,
+          binaryMessenger: pigeonVar_binaryMessenger,
+        );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[contextKeys, canonicalKey, completed],
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[contextKeys, canonicalKey, completed]);
     final List<Object?>? pigeonVar_replyList =
         await pigeonVar_sendFuture as List<Object?>?;
     if (pigeonVar_replyList == null) {
@@ -904,14 +917,24 @@ class LDNativeApi {
   /// [name] is the screen/route name; [screenClass], [screenId] and [category]
   /// are optional classifiers, and [properties] carries optional extra
   /// attributes attached to the `screen_view` span.
-  Future<void> trackScreenView(String name, String? screenClass, String? screenId, String? category, Map<String, Object?>? properties) async {
-    final String pigeonVar_channelName = 'dev.flutter.pigeon.launchdarkly_flutter_observability.LDNativeApi.trackScreenView$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
-      pigeonVar_channelName,
-      pigeonChannelCodec,
-      binaryMessenger: pigeonVar_binaryMessenger,
+  Future<void> trackScreenView(
+    String name,
+    String? screenClass,
+    String? screenId,
+    String? category,
+    Map<String, Object?>? properties,
+  ) async {
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.launchdarkly_flutter_observability.LDNativeApi.trackScreenView$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
+          pigeonVar_channelName,
+          pigeonChannelCodec,
+          binaryMessenger: pigeonVar_binaryMessenger,
+        );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[name, screenClass, screenId, category, properties],
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[name, screenClass, screenId, category, properties]);
     final List<Object?>? pigeonVar_replyList =
         await pigeonVar_sendFuture as List<Object?>?;
     if (pigeonVar_replyList == null) {
@@ -944,14 +967,40 @@ class LDNativeApi {
   /// [timestampMillis] is captured in Dart at pointer-up: the bridge is
   /// asynchronous, so without it the replay marker would land wherever the call
   /// happens to arrive rather than with the pointer trail it belongs to.
-  Future<void> trackClick(String? id, String? tag, String? classname, String? text, String? xpath, String? screenId, int? x, int? y, int? timestampMillis, Map<String, Object?>? properties) async {
-    final String pigeonVar_channelName = 'dev.flutter.pigeon.launchdarkly_flutter_observability.LDNativeApi.trackClick$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
-      pigeonVar_channelName,
-      pigeonChannelCodec,
-      binaryMessenger: pigeonVar_binaryMessenger,
+  Future<void> trackClick(
+    String? id,
+    String? tag,
+    String? classname,
+    String? text,
+    String? xpath,
+    String? screenId,
+    int? x,
+    int? y,
+    int? timestampMillis,
+    Map<String, Object?>? properties,
+  ) async {
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.launchdarkly_flutter_observability.LDNativeApi.trackClick$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
+          pigeonVar_channelName,
+          pigeonChannelCodec,
+          binaryMessenger: pigeonVar_binaryMessenger,
+        );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[
+        id,
+        tag,
+        classname,
+        text,
+        xpath,
+        screenId,
+        x,
+        y,
+        timestampMillis,
+        properties,
+      ],
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[id, tag, classname, text, xpath, screenId, x, y, timestampMillis, properties]);
     final List<Object?>? pigeonVar_replyList =
         await pigeonVar_sendFuture as List<Object?>?;
     if (pigeonVar_replyList == null) {
@@ -977,13 +1026,17 @@ class LDNativeApi {
   /// installs and disabled when it is torn down. Taps on native views elsewhere
   /// in the app (an add-to-app host's own screens) are never affected.
   Future<void> setEmbedderClickHandling(bool enabled) async {
-    final String pigeonVar_channelName = 'dev.flutter.pigeon.launchdarkly_flutter_observability.LDNativeApi.setEmbedderClickHandling$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
-      pigeonVar_channelName,
-      pigeonChannelCodec,
-      binaryMessenger: pigeonVar_binaryMessenger,
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.launchdarkly_flutter_observability.LDNativeApi.setEmbedderClickHandling$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
+          pigeonVar_channelName,
+          pigeonChannelCodec,
+          binaryMessenger: pigeonVar_binaryMessenger,
+        );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[enabled],
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[enabled]);
     final List<Object?>? pigeonVar_replyList =
         await pigeonVar_sendFuture as List<Object?>?;
     if (pigeonVar_replyList == null) {

@@ -347,7 +347,10 @@ class ClickTargetResolver {
 
   /// The name [widget] contributes to `event.xpath`, or null when it should not
   /// appear in the path.
-  static String? _pathSegment(Widget widget, RecognizedClickTarget? recognized) {
+  static String? _pathSegment(
+    Widget widget,
+    RecognizedClickTarget? recognized,
+  ) {
     if (recognized != null) {
       return recognized.tag;
     }

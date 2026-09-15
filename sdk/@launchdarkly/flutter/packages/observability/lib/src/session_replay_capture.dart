@@ -26,7 +26,6 @@ class SessionReplayCapture extends StatelessWidget {
   const SessionReplayCapture({super.key, required this.child});
 
   @override
-  Widget build(BuildContext context) => LDClickDetector(
-    child: LDObservePlatform.instance.wrapForCapture(child),
-  );
+  Widget build(BuildContext context) =>
+      LDClickDetector(child: LDObservePlatform.instance.wrapForCapture(child));
 }

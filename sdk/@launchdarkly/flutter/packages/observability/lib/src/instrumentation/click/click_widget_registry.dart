@@ -194,7 +194,8 @@ abstract final class ClickWidgetRegistry {
         tag: 'ListTile',
         precedence: ClickTargetPrecedence.container,
         enabled:
-            widget.enabled && (widget.onTap != null || widget.onLongPress != null),
+            widget.enabled &&
+            (widget.onTap != null || widget.onLongPress != null),
       );
     }
     if (widget is BottomNavigationBar) {
@@ -220,7 +221,8 @@ abstract final class ClickWidgetRegistry {
       return RecognizedClickTarget(
         tag: tag,
         precedence: ClickTargetPrecedence.container,
-        enabled: widget.onTap != null ||
+        enabled:
+            widget.onTap != null ||
             widget.onDoubleTap != null ||
             widget.onLongPress != null,
       );
@@ -229,7 +231,8 @@ abstract final class ClickWidgetRegistry {
       return RecognizedClickTarget(
         tag: 'GestureDetector',
         precedence: ClickTargetPrecedence.container,
-        enabled: widget.onTap != null ||
+        enabled:
+            widget.onTap != null ||
             widget.onTapUp != null ||
             widget.onDoubleTap != null ||
             widget.onLongPress != null,
