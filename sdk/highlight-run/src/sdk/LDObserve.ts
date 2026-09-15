@@ -5,7 +5,29 @@ import type { OTelMetric as Metric } from '../client/types/types'
 import type { Attributes, Context, Span, SpanOptions } from '@opentelemetry/api'
 import type { LDPluginEnvironmentMetadata } from '../plugins/plugin'
 import { BufferedClass } from './buffer'
+import { getNoopSpan } from '../client/otel/utils'
 import { ConsoleMethods } from '../client/types/client'
+
+/**
+ * Resolves the span callback from whichever argument position it was passed in,
+ * matching the overloads `startSpan` and `startManualSpan` accept.
+ */
+function resolveSpanCallback(
+	options: unknown,
+	context: unknown,
+	fn: unknown,
+): ((span: Span) => any) | undefined {
+	if (typeof fn === 'function') {
+		return fn as (span: Span) => any
+	}
+	if (typeof context === 'function') {
+		return context as (span: Span) => any
+	}
+	if (typeof options === 'function') {
+		return options as (span: Span) => any
+	}
+	return undefined
+}
 
 class _LDObserve extends BufferedClass<Observe> implements Observe {
 	start() {
@@ -38,14 +60,17 @@ class _LDObserve extends BufferedClass<Observe> implements Observe {
 		return this._bufferCall('recordUpDownCounter', [metric])
 	}
 
-	// TODO: Ask @vkorolik about using this method before initialization. Doesn't
-	// this cause problems if someone tries to work with the returned span?
+	// The callback holds the caller's own work, so it must never be buffered:
+	// deferring it would replay that work at an arbitrary later time, or drop it.
 	startSpan(
 		name: string,
 		options: SpanOptions | ((span?: Span) => any),
 		context?: Context | ((span?: Span) => any),
 		fn?: (span?: Span) => any,
 	) {
+		if (!this._isLoaded) {
+			return resolveSpanCallback(options, context, fn)?.(getNoopSpan())
+		}
 		return this._bufferCall('startSpan', [name, options, context, fn])
 	}
 
@@ -55,6 +80,9 @@ class _LDObserve extends BufferedClass<Observe> implements Observe {
 		context?: Context | ((span: Span) => any),
 		fn?: (span: Span) => any,
 	) {
+		if (!this._isLoaded) {
+			return resolveSpanCallback(options, context, fn)?.(getNoopSpan())
+		}
 		return this._bufferCall('startManualSpan', [name, options, context, fn])
 	}
 
