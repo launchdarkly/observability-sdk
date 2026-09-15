@@ -1,5 +1,12 @@
 # highlight.run
 
+## [10.7.5](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.7.4...highlight.run-10.7.5) (2026-09-15)
+
+
+### Bug Fixes
+
+* **observability:** run span callbacks instead of buffering them pre-init ([#764](https://github.com/launchdarkly/observability-sdk/issues/764)) ([194ed01](https://github.com/launchdarkly/observability-sdk/commit/194ed0170000dcccd2dc8595d56da7b066626c08))
+
 ## [10.7.4](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.7.3...highlight.run-10.7.4) (2026-09-09)
 
 
