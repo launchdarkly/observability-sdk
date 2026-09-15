@@ -39,8 +39,14 @@ jobs:
             - name: Analyze
               run: flutter analyze
 
+            # Generated sources are excluded: Pigeon formats its output with whichever
+            # Dart SDK regenerated it, and `dart format` output shifts between SDK
+            # versions, so checking them here fails on SDK drift rather than on
+            # anything a contributor wrote.
             - name: Verify formatting
-              run: dart format --output=none --set-exit-if-changed .
+              run: |
+                  git ls-files '*.dart' | grep -v '\.g\.dart$' \
+                      | xargs dart format --output=none --set-exit-if-changed
 
             - name: Run unit tests
               run: flutter test --reporter expanded
