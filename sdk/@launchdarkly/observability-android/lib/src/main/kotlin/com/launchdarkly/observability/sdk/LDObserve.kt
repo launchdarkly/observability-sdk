@@ -137,9 +137,26 @@ class LDObserve(private val client: Observe) : Observe {
         internal var observabilityClient: ObservabilityService? = null
             private set
 
+        /**
+         * Latest [setEmbedderClickHandling] request, retained because the embedder installs its click
+         * detection independently of - and typically before - observability initialization. Kept here
+         * so the handshake survives that ordering instead of being dropped on the floor.
+         *
+         * Guarded by [embedderClickLock] together with the copy onto the manager: reading the request
+         * and writing it through have to be one step, or a request arriving between the two would be
+         * applied and then immediately overwritten by the older value for the rest of the session.
+         */
+        private var embedderHandlesClicks: Boolean = false
+        private val embedderClickLock = Any()
+
         fun init(client: ObservabilityService) {
+            // Publish the client first: a request that arrives after the block below then finds a
+            // manager to write through to, rather than only updating the retained value.
             observabilityClient = client
             delegate = LDObserve(client)
+            synchronized(embedderClickLock) {
+                client.userInteractionManager.embedderHandlesClicks = embedderHandlesClicks
+            }
         }
 
         @Volatile
@@ -296,10 +313,18 @@ class LDObserve(private val client: Observe) : Observe {
          * Called by the embedder's plugin when its click detection is installed, and again with
          * `false` when it is torn down: until then native keeps reporting its own coarse clicks, so a
          * missing embedder integration degrades rather than silently dropping every click.
+         *
+         * Safe to call before observability is initialized - the embedder's plugin usually boots
+         * first - because the request is retained and applied once a client is installed. Without
+         * that, an early handshake would be lost and every tap would be reported twice: once coarsely
+         * by native detection and once by the embedder.
          */
         @JvmStatic
         fun setEmbedderClickHandling(enabled: Boolean) {
-            observabilityClient?.userInteractionManager?.embedderHandlesClicks = enabled
+            synchronized(embedderClickLock) {
+                embedderHandlesClicks = enabled
+                observabilityClient?.userInteractionManager?.embedderHandlesClicks = enabled
+            }
         }
 
         /**

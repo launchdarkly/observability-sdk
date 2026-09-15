@@ -165,9 +165,9 @@ interface Observe : MetricsApi, LogsApi, TracesApi {
      * @param x Tap x coordinate in screen pixels (maps to `event.x`).
      * @param y Tap y coordinate in screen pixels (maps to `event.y`).
      * @param timestampMillis Time the click happened, in epoch milliseconds. Pass this when the
-     *   click is reported across an asynchronous boundary (an embedder bridge), so the Session
-     *   Replay event orders with the touch samples of the gesture it belongs to rather than wherever
-     *   the call happens to arrive. Defaults to the time of the call.
+     *   click is reported across an asynchronous boundary (an embedder bridge), so both the
+     *   `click` span and the Session Replay event order with the touch samples of the gesture they
+     *   belong to rather than wherever the call happens to arrive. Defaults to the time of the call.
      * @param properties Optional custom attributes, supplied as a plain map (same conversion rules
      *   as a `track` event's `properties`). They are attached at lower precedence than the reserved
      *   `event.*` fields, so they can never clobber the taxonomy.

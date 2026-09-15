@@ -35,3 +35,17 @@ data class ClickEvent(
     val y: Long? = null,
     val timestamp: Long = System.currentTimeMillis(),
 )
+
+/**
+ * OTel `click` span window for this event.
+ *
+ * Automatic tap detection times the span from ACTION_DOWN to ACTION_UP and passes both
+ * overrides. The manual [com.launchdarkly.observability.sdk.LDObserve.trackClick] path has a
+ * single gesture time ([timestamp], from `timestampMillis` or the call), so both ends default
+ * to that so embedder clicks line up with Session Replay and other analytics from the same
+ * gesture rather than the later bridge-call time.
+ */
+internal fun ClickEvent.spanWindow(
+    spanStartTimeMs: Long? = null,
+    spanEndTimeMs: Long? = null,
+): Pair<Long, Long> = (spanStartTimeMs ?: timestamp) to (spanEndTimeMs ?: timestamp)

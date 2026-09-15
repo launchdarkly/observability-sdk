@@ -21,12 +21,14 @@ on:
             - 'sdk/@launchdarkly/react-native-ld-session-replay/**'
             - 'sdk/@launchdarkly/observability-react-native/**'
             - '.github/workflows/session-replay-legacy-arch.yml'
+            - '.github/actions/setup-android-sdk/**'
     pull_request:
         types: [opened, synchronize]
         paths:
             - 'sdk/@launchdarkly/react-native-ld-session-replay/**'
             - 'sdk/@launchdarkly/observability-react-native/**'
             - '.github/workflows/session-replay-legacy-arch.yml'
+            - '.github/actions/setup-android-sdk/**'
     workflow_dispatch:
 
 permissions:
@@ -60,7 +62,7 @@ jobs:
                   java-version: 17
 
             - name: Set up Android SDK
-              uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3.2.2
+              uses: ./.github/actions/setup-android-sdk
 
             - name: Install workspace dependencies
               run: yarn install --immutable
