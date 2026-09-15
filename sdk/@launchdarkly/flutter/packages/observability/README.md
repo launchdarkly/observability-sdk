@@ -348,10 +348,11 @@ Resolution happens in Dart because it can only happen in Dart: Flutter renders i
 
 What ends up on the click:
 
-- **`event.tag`** — the widget type, e.g. `ElevatedButton`. The Material and Cupertino buttons, selection controls, chips, tabs, menu items, `ListTile`, `InkWell`, and `GestureDetector` are recognized out of the box. A tap on unrecognized empty space, or on a **disabled** control, reports nothing at all.
+- **`event.tag`** — the widget type, e.g. `ElevatedButton`. The Material and Cupertino buttons, selection controls (`Switch`, `Checkbox`, `Radio`, `Slider`), chips, tabs, menu items, `DropdownButton`, `ListTile`, `InkWell`, and `GestureDetector` are recognized out of the box. A tap on unrecognized empty space, or on a **disabled** control, reports nothing at all.
 - **`event.id`** — the first of an enclosing `LDClick` id, a `Semantics.identifier`, or a `ValueKey`. Optional: a widget with none of those is still reported, grouped by type and path.
-- **`event.text`** — the label: a button's own text, otherwise a semantic label, icon label, or tooltip. A container's inner text is deliberately *not* harvested, so a tapped row reports `ListTile` rather than whichever word sat under the finger.
+- **`event.text`** — the label: a button's own text, otherwise a semantic label, icon label, or tooltip. A container's inner text is deliberately *not* harvested, so a tapped row reports `ListTile` rather than whichever word sat under the finger. A radio with no label falls back to its `value`.
 - **`event.xpath`** — the widget ancestry, e.g. `Scaffold/Column/ProductRow/IconButton#cart.add`.
+- **`event.x` / `event.y`** — the tap point. Automatic capture reports the same units native taps use on that platform (physical pixels on Android, logical pixels / UIKit points on iOS), so a Flutter click lands on the replay timeline next to a native one. `LDObserve.trackClick`'s `x`/`y` are logical pixels (the same units Flutter `Offset` uses).
 
 To name a specific widget, wrap it in `LDClick`. It renders its child unchanged and emits nothing itself, so wrapping a button cannot double-count a tap:
 
@@ -379,19 +380,22 @@ ObservabilityOptions(
 
 Use string literals for `tag`, not `runtimeType.toString()`: release builds compiled with `--obfuscate` mangle runtime type names, and the built-in rules use literals for the same reason.
 
-For an interaction automatic capture cannot observe — a shake, a hardware button, a custom recognizer — report it yourself. Avoid calling this from an `onPressed` that capture already sees, which would count the tap twice:
+For an interaction automatic capture cannot observe — a shake, a hardware button, a custom recognizer — report it yourself. Pass `x`/`y` in logical pixels (the same units `Offset` uses). Avoid calling this from an `onPressed` that capture already sees, which would count the tap twice:
 
 ```dart
 LDObserve.trackClick(
   id: 'onboarding.shake_to_skip',
   tag: 'ShakeGesture',
+  x: 24,
+  y: 80,
   properties: {'step': 2},
 );
 ```
 
-Two limitations worth knowing:
+Limitations worth knowing:
 
 - **Embedded platform views** (`WebView`, native maps) resolve to the Flutter widget hosting them, e.g. `WebViewWidget`. What was pressed *inside* the embedded view is not described.
+- **Pointer-blocking overlays are honored.** An `IgnorePointer` is transparent to the walk (the tap went past it). An absorbing `AbsorbPointer` — a loading overlay laid over a `Stack` — swallows the tap, so neither its children nor the controls painted behind it are reported. That matches what Flutter delivered to the app.
 - **Click text follows your masking.** Text inside an `LDMask`/`LDIgnore` subtree is never reported, editable field contents are never read, and `PrivacyOptions.maskClickText` turns off click labels entirely while keeping the clicks themselves.
 
 ### API reference
@@ -402,8 +406,8 @@ Two limitations worth knowing:
 | `LDObserve.recordLog(message, {severity, stackTrace, properties})` | Record a structured log. |
 | `LDObserve.recordException(exception, {stackTrace, properties})` | Record an error/exception. |
 | `LDObserve.track(eventName, {properties, metricValue})` | Record a custom `track` event as a `track` span. |
-| `LDObserve.trackScreenView(name, {screenClass, screenId, category, properties})` | Record a screen view (navigation) as a `screen_view` span and a Session Replay `Navigate` event. |
-| `LDObserve.trackClick({id, tag, classname, text, xpath, x, y, properties})` | Record a click as a `click` span and a Session Replay `Click` event, for interactions automatic capture cannot observe. |
+| `LDObserve.trackScreenView(name, {screenClass, screenId, category, properties})` | Record a screen view (navigation) as a `screen_view` span and a Session Replay `Navigate` event. Prefer `LDNavigatorObserver` for ordinary route changes. |
+| `LDObserve.trackClick({id, tag, text, x, y, properties})` | Record a click as a `click` span and a Session Replay `Click` event, for interactions automatic capture cannot observe. `x`/`y` are logical pixels. |
 | `LDObserve.shutdown()` | Shut down observability. It cannot be restarted afterward. |
 | `LDObserve.zoneSpecification()` | A zone spec that forwards `print`/`debugPrint` output as logs. |
 | `span.setAttribute(name, value)` | Set a single attribute on a span. |
@@ -432,7 +436,7 @@ span.setAttributes(<String, Object?>{
 });
 ```
 
-Methods that accept `properties` (`recordLog`, `recordException`, `startSpan`, `track`) take a `Map<String, Object?>` of these same plain values.
+Methods that accept `properties` (`recordLog`, `recordException`, `startSpan`, `track`, `trackScreenView`, `trackClick`) take a `Map<String, Object?>` of these same plain values.
 
 ## Session replay
 
