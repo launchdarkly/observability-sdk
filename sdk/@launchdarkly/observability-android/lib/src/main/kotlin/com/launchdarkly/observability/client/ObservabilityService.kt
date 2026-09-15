@@ -747,8 +747,8 @@ class ObservabilityService(
                 x = x?.toLong(),
                 y = y?.toLong(),
                 // An embedder captures the timestamp when the pointer actually went up; without it
-                // the replay marker would land wherever the (asynchronous) bridge call arrives,
-                // after the pointer trail it belongs to.
+                // the replay marker and the `click` span would land wherever the (asynchronous)
+                // bridge call arrives, after the pointer trail they belong to.
                 timestamp = timestampMillis ?: System.currentTimeMillis(),
             ),
             properties = properties?.toOtelAttributes() ?: Attributes.empty(),
@@ -765,7 +765,10 @@ class ObservabilityService(
      *
      * @param spanStartTimeMs Span start, when the caller knows the gesture began earlier than
      *   [ClickEvent.timestamp] (automatic detection times the span from ACTION_DOWN to ACTION_UP).
-     * @param spanEndTimeMs Span end, paired with [spanStartTimeMs].
+     *   Defaults to [ClickEvent.timestamp] so `trackClick(timestampMillis=...)` backdates the
+     *   span, not only the Session Replay marker.
+     * @param spanEndTimeMs Span end, paired with [spanStartTimeMs]. Defaults to
+     *   [ClickEvent.timestamp].
      */
     fun emitClick(
         click: ClickEvent,
@@ -788,12 +791,13 @@ class ObservabilityService(
             properties = properties,
         )
 
-        val spanBuilder = otelTracer.spanBuilder(UserInteractionManager.CLICK_SPAN_NAME)
+        val (startMs, endMs) = click.spanWindow(spanStartTimeMs, spanEndTimeMs)
+        val span = otelTracer.spanBuilder(UserInteractionManager.CLICK_SPAN_NAME)
             .setSpanKind(SpanKind.CLIENT)
             .setAllAttributes(attrs)
-        spanStartTimeMs?.let { spanBuilder.setStartTimestamp(it, TimeUnit.MILLISECONDS) }
-        val span = spanBuilder.startSpan()
-        if (spanEndTimeMs != null) span.end(spanEndTimeMs, TimeUnit.MILLISECONDS) else span.end()
+            .setStartTimestamp(startMs, TimeUnit.MILLISECONDS)
+            .startSpan()
+        span.end(endMs, TimeUnit.MILLISECONDS)
     }
 
     /**

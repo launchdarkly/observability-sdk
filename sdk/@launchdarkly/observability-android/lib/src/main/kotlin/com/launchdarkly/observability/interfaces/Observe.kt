@@ -168,9 +168,9 @@ interface Observe : MetricsApi, LogsApi, TracesApi {
      * @param xpath Path of the element within its UI hierarchy (maps to `event.xpath`), e.g.
      *   `Scaffold/Column/ElevatedButton#checkout`.
      * @param timestampMillis Time the click happened, in epoch milliseconds. Pass this when the
-     *   click is reported across an asynchronous boundary (an embedder bridge), so the Session
-     *   Replay event orders with the touch samples of the gesture it belongs to rather than wherever
-     *   the call happens to arrive. Defaults to the time of the call.
+     *   click is reported across an asynchronous boundary (an embedder bridge), so both the
+     *   `click` span and the Session Replay event order with the touch samples of the gesture they
+     *   belong to rather than wherever the call happens to arrive. Defaults to the time of the call.
      */
     fun trackClick(
         id: String? = null,
