@@ -2,6 +2,13 @@
 
 All notable changes to the LaunchDarkly Observability SDK for Flutter will be documented in this file. This project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.17.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.16.0...launchdarkly_flutter_observability-0.17.0) (2026-09-15)
+
+
+### Features
+
+* **flutter:** record screen views (Navigate) from Dart ([#627](https://github.com/launchdarkly/observability-sdk/issues/627)) ([cdd2190](https://github.com/launchdarkly/observability-sdk/commit/cdd219004a83ff59ff9e827e4e99da567ea4adbb))
+
 ## [0.16.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.15.1...launchdarkly_flutter_observability-0.16.0) (2026-08-14)
 
 
