@@ -82,16 +82,16 @@ class LDObserve(private val client: Observe) : Observe {
     override fun trackClick(
         id: String?,
         tag: String?,
+        classname: String?,
         text: String?,
+        xpath: String?,
         screenId: String?,
         x: Int?,
         y: Int?,
-        properties: Map<String, Any?>?,
-        classname: String?,
-        xpath: String?,
-        timestampMillis: Long?
+        timestampMillis: Long?,
+        properties: Map<String, Any?>?
     ) {
-        client.trackClick(id, tag, text, screenId, x, y, properties, classname, xpath, timestampMillis)
+        client.trackClick(id, tag, classname, text, xpath, screenId, x, y, timestampMillis, properties)
     }
 
     companion object : Observe {
@@ -115,14 +115,14 @@ class LDObserve(private val client: Observe) : Observe {
             override fun trackClick(
                 id: String?,
                 tag: String?,
+                classname: String?,
                 text: String?,
+                xpath: String?,
                 screenId: String?,
                 x: Int?,
                 y: Int?,
-                properties: Map<String, Any?>?,
-                classname: String?,
-                xpath: String?,
-                timestampMillis: Long?
+                timestampMillis: Long?,
+                properties: Map<String, Any?>?
             ) {}
         }
 
@@ -291,15 +291,15 @@ class LDObserve(private val client: Observe) : Observe {
         override fun trackClick(
             id: String?,
             tag: String?,
+            classname: String?,
             text: String?,
+            xpath: String?,
             screenId: String?,
             x: Int?,
             y: Int?,
-            properties: Map<String, Any?>?,
-            classname: String?,
-            xpath: String?,
-            timestampMillis: Long?
-        ) = delegate.trackClick(id, tag, text, screenId, x, y, properties, classname, xpath, timestampMillis)
+            timestampMillis: Long?,
+            properties: Map<String, Any?>?
+        ) = delegate.trackClick(id, tag, classname, text, xpath, screenId, x, y, timestampMillis, properties)
 
         /**
          * Declares whether an embedder (Flutter) resolves clicks for its own views and reports them

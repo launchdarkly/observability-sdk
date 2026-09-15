@@ -719,14 +719,14 @@ class ObservabilityService(
     override fun trackClick(
         id: String?,
         tag: String?,
+        classname: String?,
         text: String?,
+        xpath: String?,
         screenId: String?,
         x: Int?,
         y: Int?,
-        properties: Map<String, Any?>?,
-        classname: String?,
-        xpath: String?,
-        timestampMillis: Long?
+        timestampMillis: Long?,
+        properties: Map<String, Any?>?
     ) {
         // Default to the current screen so the click correlates with the active `screen_view`. Only
         // pair the current screen's name when we actually defaulted to it; for a caller-supplied

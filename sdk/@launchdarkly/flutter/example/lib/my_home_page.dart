@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:launchdarkly_flutter_client_sdk/launchdarkly_flutter_client_sdk.dart';
 import 'package:launchdarkly_flutter_observability/launchdarkly_flutter_observability.dart';
 
+import 'click_scenarios.dart';
 import 'crash_scenarios.dart';
 import 'credit_card_page.dart';
 import 'dialogs_page.dart';
@@ -417,6 +418,7 @@ class _MyHomePageState extends State<MyHomePage> {
               onPressed: () {
                 Navigator.of(context).push(
                   MaterialPageRoute<void>(
+                    settings: const RouteSettings(name: '/credit-card'),
                     builder: (_) => const CreditCardPage(),
                   ),
                 );
@@ -430,6 +432,7 @@ class _MyHomePageState extends State<MyHomePage> {
               onPressed: () {
                 Navigator.of(context).push(
                   MaterialPageRoute<void>(
+                    settings: const RouteSettings(name: '/smoothie-list'),
                     builder: (_) => const SmoothieListPage(),
                   ),
                 );
@@ -449,7 +452,10 @@ class _MyHomePageState extends State<MyHomePage> {
             // Used to exercise Session Replay against transient and modal UI.
             ElevatedButton(
               onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(builder: (_) => const DialogsPage()),
+                MaterialPageRoute<void>(
+                  settings: const RouteSettings(name: '/dialogs'),
+                  builder: (_) => const DialogsPage(),
+                ),
               ),
               child: const Text('Dialogs'),
             ),
@@ -460,6 +466,9 @@ class _MyHomePageState extends State<MyHomePage> {
             ElevatedButton(
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
+                  settings: const RouteSettings(
+                    name: '/nested-masking-propagation',
+                  ),
                   builder: (_) => const NestedMaskingPropagationPage(),
                 ),
               ),
@@ -655,6 +664,9 @@ class _MyHomePageState extends State<MyHomePage> {
               onPressed: _onEvaluateFlag,
               child: const Text('Evaluate boolean flag'),
             ),
+
+            const _SubsectionHeader('Clicks'),
+            const ClickScenarios(),
 
             const _SubsectionHeader('Other'),
             ElevatedButton(

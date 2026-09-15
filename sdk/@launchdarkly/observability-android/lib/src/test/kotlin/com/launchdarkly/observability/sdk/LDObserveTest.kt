@@ -34,14 +34,14 @@ class LDObserveTest {
 
     @Test
     fun `should preserve positional trackClick arguments when delegating`() {
-        ldObserve.trackClick("element-id", "Button", "Visible label")
+        ldObserve.trackClick("element-id", "Button", "android.widget.Button", "Visible label")
 
         verify(exactly = 1) {
             mockObserve.trackClick(
                 "element-id",
                 "Button",
+                "android.widget.Button",
                 "Visible label",
-                null,
                 null,
                 null,
                 null,

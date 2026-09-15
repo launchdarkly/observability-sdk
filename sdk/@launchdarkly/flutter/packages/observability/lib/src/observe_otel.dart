@@ -67,6 +67,66 @@ final class ObserveOtel {
     );
   }
 
+  /// Record a screen view through the platform-appropriate pipeline.
+  ///
+  /// On mobile the native observability SDK is invoked so it emits the native
+  /// `screen_view` span and the Session Replay `Navigate` timeline event (native
+  /// automatic screen detection never sees Flutter route changes). On web a Dart
+  /// `screen_view` span is emitted, gated by `analytics.views`. A screen view
+  /// recorded before the pipeline is initialized is held and replayed once it
+  /// is, so the screen a session opens on is not lost to the asynchronous boot.
+  static void trackScreenView(
+    String name, {
+    String? screenClass,
+    String? screenId,
+    String? category,
+    Map<String, Object?>? properties,
+  }) {
+    Otel.recordScreenView(
+      (recorder) => recorder.trackScreenView(
+        name,
+        screenClass: screenClass,
+        screenId: screenId,
+        category: category,
+        properties: properties,
+      ),
+    );
+  }
+
+  /// Record a click through the platform-appropriate pipeline.
+  ///
+  /// The single entry point for both click paths: automatic detection (which
+  /// resolves the tapped widget in Dart) and the manual [LDObserve.trackClick]
+  /// API. On mobile the native observability SDK is invoked so it emits the
+  /// native `click` span and the Session Replay `Click` timeline event; a native
+  /// hit-test only ever finds the single Flutter view, so this is the only path
+  /// that can describe a Flutter tap. On web a Dart `click` span is emitted,
+  /// gated by `analytics.taps`. Dropped before the pipeline is initialized —
+  /// unlike the opening screen view, a click before boot has no lasting meaning.
+  static void trackClick({
+    String? id,
+    String? tag,
+    String? classname,
+    String? text,
+    String? xpath,
+    int? x,
+    int? y,
+    int? timestampMillis,
+    Map<String, Object?>? properties,
+  }) {
+    Otel.clickRecorder?.trackClick(
+      id: id,
+      tag: tag,
+      classname: classname,
+      text: text,
+      xpath: xpath,
+      x: x,
+      y: y,
+      timestampMillis: timestampMillis,
+      properties: properties,
+    );
+  }
+
   /// Forward an `identify` to the platform-appropriate pipeline.
   ///
   /// Invoked from the LaunchDarkly client's `afterIdentify` hook. On mobile the

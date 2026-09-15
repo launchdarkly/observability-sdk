@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:launchdarkly_flutter_client_sdk/launchdarkly_flutter_client_sdk.dart';
 import 'package:launchdarkly_flutter_observability/launchdarkly_flutter_observability.dart';
 
+import 'click_scenarios.dart';
 import 'my_app.dart';
 
 class LDSingleton {
@@ -109,9 +110,13 @@ void _startObservability() {
       launchTimes: true,
       debugPrint: DebugPrintSetting.always(),
     ),
-    // Shorthand for enabling all analytics telemetry (taps, page views, track
-    // events). Use AnalyticsOptions.disabled to turn it all off.
-    analytics: AnalyticsOptions.enabled,
+    // Every analytics signal (taps, page views, track events) is on by default;
+    // use AnalyticsOptions.disabled to turn it all off. The resolver teaches
+    // click tracking about this app's own button type, so taps on it report
+    // `DemoPrimaryButton` instead of the InkWell it is built from.
+    analytics: const AnalyticsOptions(
+      customClickTargetResolver: demoClickTargetResolver,
+    ),
   );
   const replay = SessionReplayOptions(
     isEnabled: true,

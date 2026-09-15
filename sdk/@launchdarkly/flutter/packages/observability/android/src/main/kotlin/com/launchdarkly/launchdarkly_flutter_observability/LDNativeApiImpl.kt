@@ -115,6 +115,10 @@ internal class LDNativeApiImpl(
                 // `click` span. Drive both from the one Flutter flag - matching iOS - so disabling
                 // taps stops detection too, instead of leaving the invasive capture running.
                 userTaps = tapsEnabled,
+                // Flutter navigation is reported explicitly through trackScreenView. Activity
+                // lifecycle detection only sees the single host Activity and would overwrite the
+                // active Flutter route after a foreground/resume or session reseed.
+                screens = false,
             ),
         )
 
@@ -252,6 +256,61 @@ internal class LDNativeApiImpl(
         LDObserveBridge.getObservabilityHookProxy()
             ?.afterIdentify(contextKeys, canonicalKey, completed)
         LDReplay.hookProxy?.afterIdentify(contextKeys, canonicalKey, completed)
+    }
+
+    // Forwards a screen view to the native observability SDK, which emits the
+    // `screen_view` span and broadcasts a Session Replay `Navigate` timeline
+    // event. Native automatic screen detection (Activity lifecycle) never fires
+    // for Flutter route changes inside the single host Activity, so the Dart side
+    // reports them here (typically from a `NavigatorObserver`).
+    override fun trackScreenView(
+        name: String,
+        screenClass: String?,
+        screenId: String?,
+        category: String?,
+        properties: Map<String, Any?>?,
+    ) {
+        LDObserve.trackScreenView(name, screenClass, screenId, category, properties)
+    }
+
+    // Forwards a click to the native observability SDK, which emits the `click`
+    // span and broadcasts a Session Replay `Click` timeline event. Flutter renders
+    // its whole UI into one `FlutterSurfaceView`, so native hit-testing can only
+    // ever name that view; the Dart side walks the widget tree instead and reports
+    // the real target here.
+    override fun trackClick(
+        id: String?,
+        tag: String?,
+        classname: String?,
+        text: String?,
+        xpath: String?,
+        screenId: String?,
+        x: Long?,
+        y: Long?,
+        timestampMillis: Long?,
+        properties: Map<String, Any?>?,
+    ) {
+        LDObserve.trackClick(
+            id = id,
+            tag = tag,
+            classname = classname,
+            text = text,
+            xpath = xpath,
+            screenId = screenId,
+            x = x?.toInt(),
+            y = y?.toInt(),
+            timestampMillis = timestampMillis,
+            properties = properties,
+        )
+    }
+
+    // Declares that Dart now resolves clicks for the Flutter view, so native tap
+    // detection stops reporting taps that land on it and each tap is counted once.
+    // Handshaked from Dart rather than set at init: native starts before the widget
+    // tree exists, so an app that never installs Dart click detection keeps the
+    // coarse native clicks instead of silently reporting none.
+    override fun setEmbedderClickHandling(enabled: Boolean) {
+        LDObserve.setEmbedderClickHandling(enabled)
     }
 
     /**

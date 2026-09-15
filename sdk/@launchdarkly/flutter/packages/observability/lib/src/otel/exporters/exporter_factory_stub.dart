@@ -9,8 +9,10 @@ import 'package:opentelemetry/sdk.dart'
 
 import '../../api/attribute.dart';
 import '../../plugin/observability_config.dart';
+import '../click_convention.dart';
 import '../conversions.dart';
 import '../log_convention.dart';
+import '../screen_view_convention.dart';
 import '../track_convention.dart';
 import 'exporter_factory.dart';
 
@@ -38,6 +40,99 @@ class _StubExporters implements ObservabilityExporters {
   @override
   IdentifyRecorder createIdentifyRecorder(ObservabilityConfig config) =>
       _NoopIdentifyRecorder();
+
+  @override
+  ScreenViewRecorder createScreenViewRecorder(ObservabilityConfig config) =>
+      _SpanScreenViewRecorder(config.screenViewsEnabled);
+
+  @override
+  ClickRecorder createClickRecorder(ObservabilityConfig config) =>
+      _SpanClickRecorder(config.tapsEnabled);
+}
+
+/// Emits each click as a Dart `click` span via the OpenTelemetry pipeline. Gated
+/// by `analytics.taps`.
+class _SpanClickRecorder implements ClickRecorder {
+  _SpanClickRecorder(this._tapsEnabled);
+
+  final bool _tapsEnabled;
+
+  @override
+  void trackClick({
+    String? id,
+    String? tag,
+    String? classname,
+    String? text,
+    String? xpath,
+    int? x,
+    int? y,
+    int? timestampMillis,
+    Map<String, Object?>? properties,
+  }) {
+    if (!_tapsEnabled) {
+      return;
+    }
+    final tracer = otel.globalTracerProvider.getTracer(_tracerName);
+    final span = tracer.startSpan(
+      ClickConvention.spanName,
+      kind: otel.SpanKind.client,
+      attributes: convertAttributes(
+        ClickConvention.getSpanAttributes(
+          id: id,
+          tag: tag,
+          classname: classname,
+          text: text,
+          xpath: xpath,
+          x: x,
+          y: y,
+          properties: properties,
+        ),
+      ),
+    );
+    span.setStatus(otel.StatusCode.ok);
+    span.end();
+  }
+
+  @override
+  void setEmbedderClickHandling(bool enabled) {
+    // No platform tap detection to suppress on this target.
+  }
+}
+
+/// Emits each screen view as a Dart `screen_view` span via the OpenTelemetry
+/// pipeline. Gated by `analytics.views`.
+class _SpanScreenViewRecorder implements ScreenViewRecorder {
+  _SpanScreenViewRecorder(this._screenViewsEnabled);
+
+  final bool _screenViewsEnabled;
+
+  @override
+  void trackScreenView(
+    String name, {
+    String? screenClass,
+    String? screenId,
+    String? category,
+    Map<String, Object?>? properties,
+  }) {
+    if (!_screenViewsEnabled) {
+      return;
+    }
+    final tracer = otel.globalTracerProvider.getTracer(_tracerName);
+    final span = tracer.startSpan(
+      ScreenViewConvention.spanName,
+      attributes: convertAttributes(
+        ScreenViewConvention.getSpanAttributes(
+          name: name,
+          screenClass: screenClass,
+          screenId: screenId,
+          category: category,
+          properties: properties,
+        ),
+      ),
+    );
+    span.setStatus(otel.StatusCode.ok);
+    span.end();
+  }
 }
 
 /// No Session Replay or context-key caching exists on the Dart pipeline, so

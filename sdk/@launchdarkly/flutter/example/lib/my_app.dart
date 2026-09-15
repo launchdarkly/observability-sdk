@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:launchdarkly_flutter_observability/launchdarkly_flutter_observability.dart';
 
 import 'my_home_page.dart';
 
@@ -10,6 +11,13 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Flutter Demo',
+      // Reports each route change as a screen view, which emits a `screen_view`
+      // span and a Session Replay `Navigate` event. Flutter routes live inside a
+      // single host Activity/UIViewController, so native screen detection never
+      // sees them and this observer is the only thing that records navigation.
+      // Routes are named via `RouteSettings` at each push site; unnamed routes
+      // (dialogs, bottom sheets) are intentionally skipped.
+      navigatorObservers: [LDNavigatorObserver()],
       theme: ThemeData(
         // This is the theme of your application.
         //
