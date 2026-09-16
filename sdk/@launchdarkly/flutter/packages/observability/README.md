@@ -429,6 +429,8 @@ Limitations worth knowing:
 | `LDObserve.trackClick({id, tag, text, x, y, properties})` | Record a click as a `click` span and a Session Replay `Click` event, for interactions automatic capture cannot observe. `x`/`y` are logical pixels. |
 | `LDObserve.shutdown()` | Shut down observability. It cannot be restarted afterward. |
 | `LDObserve.zoneSpecification()` | A zone spec that forwards `print`/`debugPrint` output as logs. |
+| `LDNavigatorObserver({screenNameExtractor, category})` | A `NavigatorObserver` that reports each route change as a screen view. |
+| `LDRoutePatterns.extractor(patterns, {skipUnmatched})` | A `screenNameExtractor` that reports the route pattern a navigation matched, so `/orders/42` becomes `/orders/:id`. |
 | `span.setAttribute(name, value)` | Set a single attribute on a span. |
 | `span.setAttributes(map)` | Set multiple attributes on a span. |
 | `span.addEvent(name, {attributes})` | Record a named event on a span. |
