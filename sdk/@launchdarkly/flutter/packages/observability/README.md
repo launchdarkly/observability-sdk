@@ -307,7 +307,7 @@ Navigator.of(context).push(
 );
 ```
 
-Skipping unnamed routes is deliberate: it keeps the dialogs and bottom sheets that `showDialog` and `showModalBottomSheet` push without settings from showing up as screens. To name those anyway, or to derive names some other way, pass a `screenNameExtractor`:
+Skipping unnamed routes is deliberate: it keeps the dialogs and bottom sheets that `showDialog` and `showModalBottomSheet` push without settings from showing up as screens. To name those anyway, or to derive names some other way, pass a `screenNameExtractor`. Returning `null` from it skips the route, so it doubles as a filter for routes you don't want recorded:
 
 ```dart
 MaterialApp(
@@ -325,6 +325,7 @@ An observer only sees one navigator, which a few common setups run into:
 
 - **Nested navigators** — a tab shell, or a `Navigator` inside a page — report only their own routes, so each needs its own observer. One instance cannot be shared between navigators; Flutter asserts on that.
 - **`MaterialApp.router`** (go_router, auto_route, Beamer) does not accept `navigatorObservers` at all. Pass the observer to the router's own observer list instead, such as `GoRouter(observers: [LDNavigatorObserver()])`.
+- **`GetMaterialApp`** (GetX) merges the observers you pass with its own, so `navigatorObservers: [LDNavigatorObserver()]` works as it does on `MaterialApp`. Two GetX details: `GetMaterialApp.router` accepts `navigatorObservers` and then builds its delegate without them, so pass them as `routerDelegate: GetDelegate(navigatorObservers: [LDNavigatorObserver()])`; and GetX names a route after the URL it was pushed with, so a `GetPage(name: '/orders/:id')` reports `/orders/42` until a `screenNameExtractor` maps it back to the registered pattern.
 - **Navigation that leaves the route stack unchanged** — switching tabs in an `IndexedStack`, paging a `PageView` — is invisible to any observer.
 
 For those cases, and for screens you want to report with extra detail, call `LDObserve.trackScreenView` directly:
@@ -348,10 +349,10 @@ Resolution happens in Dart because it can only happen in Dart: Flutter renders i
 
 What ends up on the click:
 
-- **`event.tag`** — the widget type, e.g. `ElevatedButton`. The Material and Cupertino buttons, selection controls (`Switch`, `Checkbox`, `Radio`, `Slider`), chips, tabs, menu items, `DropdownButton`, `ListTile`, `InkWell`, and `GestureDetector` are recognized out of the box. A tap on unrecognized empty space, or on a **disabled** control, reports nothing at all.
-- **`event.id`** — the first of an enclosing `LDClick` id, a `Semantics.identifier`, or a `ValueKey`. Optional: a widget with none of those is still reported, grouped by type and path.
+- **`event.tag`** — the widget type, e.g. `ElevatedButton`. The Material and Cupertino buttons (`IconButton` and `FloatingActionButton` included), selection controls (`Switch`, `Checkbox`, `Radio`, `Slider`), chips, tabs, menus (`PopupMenuButton`, `DropdownButton`), navigation bars, `ListTile`, `InkWell`, and `GestureDetector` are recognized out of the box. A tap on unrecognized empty space, or on a **disabled** control, reports nothing at all.
+- **`event.id`** — the first of an enclosing `LDClick` id, an id from your own `customClickTargetResolver`, a `Semantics.identifier`, or a `ValueKey`. Optional: a widget with none of those is still reported, grouped by type and path.
 - **`event.text`** — the label: a button's own text, otherwise a semantic label, icon label, or tooltip. A container's inner text is deliberately *not* harvested, so a tapped row reports `ListTile` rather than whichever word sat under the finger. A radio with no label falls back to its `value`.
-- **`event.xpath`** — the widget ancestry, e.g. `Scaffold/Column/ProductRow/IconButton#cart.add`.
+- **`event.xpath`** — the widget ancestry, e.g. `Scaffold/Column/ProductRow/IconButton#cart.add`. Framework plumbing (theme and media-query providers, builders, focus and semantics wrappers, single-child layout and painting boxes) is left out and only the innermost ten segments are kept, so the path names the screen and row a tap came from rather than the scaffolding every screen shares. Segments for widget types the SDK does not recognize come from the runtime type, which `--obfuscate` mangles; `event.tag` and `event.id` stay readable, so group on those.
 - **`event.x` / `event.y`** — the tap point. Automatic capture reports the same units native taps use on that platform (physical pixels on Android, logical pixels / UIKit points on iOS), so a Flutter click lands on the replay timeline next to a native one. `LDObserve.trackClick`'s `x`/`y` are logical pixels (the same units Flutter `Offset` uses).
 
 To name a specific widget, wrap it in `LDClick`. It renders its child unchanged and emits nothing itself, so wrapping a button cannot double-count a tap:
@@ -394,6 +395,7 @@ LDObserve.trackClick(
 
 Limitations worth knowing:
 
+- **Only taps count as clicks.** A press that moves further than `kTouchSlop` (a scroll or a drag), one that outlasts the long-press timeout, and anything multi-touch are all left unreported — the same rule the native SDKs apply, so Flutter and native clicks stay comparable.
 - **Embedded platform views** (`WebView`, native maps) resolve to the Flutter widget hosting them, e.g. `WebViewWidget`. What was pressed *inside* the embedded view is not described.
 - **Pointer-blocking overlays are honored.** An `IgnorePointer` is transparent to the walk (the tap went past it). An absorbing `AbsorbPointer` — a loading overlay laid over a `Stack` — swallows the tap, so neither its children nor the controls painted behind it are reported. That matches what Flutter delivered to the app.
 - **Click text follows your masking.** Text inside an `LDMask`/`LDIgnore` subtree is never reported, editable field contents are never read, and `PrivacyOptions.maskClickText` turns off click labels entirely while keeping the clicks themselves.
