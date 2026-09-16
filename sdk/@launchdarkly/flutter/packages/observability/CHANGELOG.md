@@ -2,6 +2,13 @@
 
 All notable changes to the LaunchDarkly Observability SDK for Flutter will be documented in this file. This project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.19.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.18.0...launchdarkly_flutter_observability-0.19.0) (2026-09-16)
+
+
+### Features
+
+* **flutter:** report route patterns and drop query strings from scre… ([#773](https://github.com/launchdarkly/observability-sdk/issues/773)) ([7e99338](https://github.com/launchdarkly/observability-sdk/commit/7e9933817b4894c6917bf9743ad030a216611183))
+
 ## [0.18.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.17.0...launchdarkly_flutter_observability-0.18.0) (2026-09-15)
 
 
