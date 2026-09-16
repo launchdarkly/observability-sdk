@@ -31,8 +31,9 @@ const useGetX = bool.fromEnvironment('USE_GETX');
 ///   constructor needs
 ///   `routerDelegate: GetDelegate(navigatorObservers: [LDNavigatorObserver()])`
 ///   instead.
-/// - GetX names a route after the URL it was pushed with. [_screenName] maps a
-///   concrete smoothie id back to its registered route pattern.
+/// - GetX names a route after the URL it was pushed with, so `/smoothies/2`
+///   would be its own screen. `LDRoutePatterns.extractor` maps it back to the
+///   `/smoothies/:id` pattern the page was registered under.
 class GetXApp extends StatelessWidget {
   const GetXApp({super.key});
 
@@ -41,7 +42,9 @@ class GetXApp extends StatelessWidget {
     return GetMaterialApp(
       title: 'Flutter Demo (GetX)',
       navigatorObservers: [
-        LDNavigatorObserver(screenNameExtractor: _screenName),
+        LDNavigatorObserver(
+          screenNameExtractor: LDRoutePatterns.extractor(_pages.keys),
+        ),
       ],
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
@@ -52,29 +55,21 @@ class GetXApp extends StatelessWidget {
       // derives from a widget type does not. Passing `home:` would also stop
       // GetX from generating the initial route from `getPages`.
       getPages: [
-        // The same home page as the MaterialApp build, so both modes start from
-        // the same screen and the smoothie flow is pushed on top of it.
-        GetPage(name: '/', page: () => const MyHomePage()),
-        GetPage(name: '/smoothies', page: () => const GetXSmoothieMenuView()),
-        GetPage(name: '/smoothies/:id', page: () => const GetXSmoothieView()),
-        GetPage(
-          name: '/smoothies/:id/purchase',
-          page: () => const GetXPurchaseView(),
-        ),
+        for (final page in _pages.entries)
+          GetPage(name: page.key, page: page.value),
       ],
     );
   }
 }
 
-/// Reports the `GetPage` pattern a route matched rather than the URL it was
-/// pushed with, so smoothie ids collapse into one screen instead of one screen
-/// per product.
-String? _screenName(Route<dynamic> route) {
-  final name = route.settings.name;
-  if (name == null) return null;
-  final path = Uri.parse(name).path;
-  for (final page in Get.routeTree.routes) {
-    if (page.path.regex.hasMatch(path)) return page.name;
-  }
-  return name;
-}
+/// The app's routes, registered with GetX and handed to the observer as the
+/// patterns to report — one list, so a new page cannot be added to the router
+/// and forgotten in the telemetry.
+final _pages = <String, Widget Function()>{
+  // The same home page as the MaterialApp build, so both modes start from the
+  // same screen and the smoothie flow is pushed on top of it.
+  '/': () => const MyHomePage(),
+  '/smoothies': () => const GetXSmoothieMenuView(),
+  '/smoothies/:id': () => const GetXSmoothieView(),
+  '/smoothies/:id/purchase': () => const GetXPurchaseView(),
+};

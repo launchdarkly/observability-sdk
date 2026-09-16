@@ -321,11 +321,28 @@ MaterialApp(
 );
 ```
 
+The query string and fragment are always dropped from a reported name, so `'/reset?token=abc123'` and `'/search?q=<whatever was typed>'` become `/reset` and `/search`: a query holds values, and a screen name identifies a screen. Names that aren't paths are left alone, so a route legitimately called `'Delete this?'` keeps its punctuation.
+
+**Routers that navigate by URL need their patterns named.** GetX, go_router, Beamer, and anything else pushing `'/orders/42'` put that concrete path in `route.settings.name`, so every order becomes its own screen and an order id ends up in a name shown in the UI. Path parameters are the one thing the SDK can't clean up on its own — only your app knows which segments are ids — so name the patterns you registered and `LDRoutePatterns.extractor` collapses them back:
+
+```dart
+LDNavigatorObserver(
+  screenNameExtractor: LDRoutePatterns.extractor(const [
+    '/orders',
+    '/orders/new', // A literal listed first wins over '/orders/:id'.
+    '/orders/:id',
+    '/orders/:id/receipt',
+  ]),
+);
+```
+
+That flow then reports `/orders/:id` and `/orders/:id/receipt` whatever ids were involved. A `:name` segment matches one segment and a trailing `*` matches the rest of the path, the same syntax those routers use. A route matching nothing is reported by its path, so a screen you forgot to list still shows up; pass `skipUnmatched: true` to record only the patterns you named.
+
 An observer only sees one navigator, which a few common setups run into:
 
 - **Nested navigators** — a tab shell, or a `Navigator` inside a page — report only their own routes, so each needs its own observer. One instance cannot be shared between navigators; Flutter asserts on that.
 - **`MaterialApp.router`** (go_router, auto_route, Beamer) does not accept `navigatorObservers` at all. Pass the observer to the router's own observer list instead, such as `GoRouter(observers: [LDNavigatorObserver()])`.
-- **`GetMaterialApp`** (GetX) merges the observers you pass with its own, so `navigatorObservers: [LDNavigatorObserver()]` works as it does on `MaterialApp`. Two GetX details: `GetMaterialApp.router` accepts `navigatorObservers` and then builds its delegate without them, so pass them as `routerDelegate: GetDelegate(navigatorObservers: [LDNavigatorObserver()])`; and GetX names a route after the URL it was pushed with, so a `GetPage(name: '/orders/:id')` reports `/orders/42` until a `screenNameExtractor` maps it back to the registered pattern.
+- **`GetMaterialApp`** (GetX) merges the observers you pass with its own, so `navigatorObservers: [LDNavigatorObserver()]` works as it does on `MaterialApp`, with `LDRoutePatterns.extractor` fed your `GetPage` names. `GetMaterialApp.router` is the exception: it accepts `navigatorObservers` and then builds its delegate without them, so pass them as `routerDelegate: GetDelegate(navigatorObservers: [LDNavigatorObserver()])`.
 - **Navigation that leaves the route stack unchanged** — switching tabs in an `IndexedStack`, paging a `PageView` — is invisible to any observer.
 
 For those cases, and for screens you want to report with extra detail, call `LDObserve.trackScreenView` directly:

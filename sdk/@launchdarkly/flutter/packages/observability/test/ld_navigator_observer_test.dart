@@ -159,4 +159,29 @@ void main() {
 
     expect(recordedNames, ['/home', '/details', '/checkout']);
   });
+
+  // A pushed URL carries values a screen name should not: a reset token, or
+  // whatever the user typed into a search box.
+  testWidgets('drops the query string and fragment from a pushed URL', (
+    tester,
+  ) async {
+    final navigator = await pumpApp(tester);
+
+    unawaited(navigator.push(_route('/reset?token=abc123')));
+    await tester.pumpAndSettle();
+    unawaited(navigator.push(_route('/help#billing')));
+    await tester.pumpAndSettle();
+
+    expect(recordedNames, ['/home', '/reset', '/help']);
+  });
+
+  testWidgets('reports a name that is not a path unchanged', (tester) async {
+    final navigator = await pumpApp(tester);
+
+    // Route names need not be URLs, so punctuation in one is not a query.
+    unawaited(navigator.push(_route('Delete this?')));
+    await tester.pumpAndSettle();
+
+    expect(recordedNames, ['/home', 'Delete this?']);
+  });
 }
