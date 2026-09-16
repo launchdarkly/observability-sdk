@@ -27,6 +27,15 @@ import 'masking_policy.dart';
 /// The walk order is deterministic, so two passes over an unchanged tree yield
 /// positionally-aligned lists that [MaskStabilizer] can zip together.
 ///
+/// Buried routes: a pushed route does not remove the routes beneath it from the
+/// element tree, it only stops painting them, and `Overlay` expresses that by
+/// skipping children rather than by wrapping them in [Offstage]. So the walk
+/// descends with `debugVisitOnstageChildren`, which `Navigator` and `Overlay`
+/// override to skip what they no longer paint. Despite the name it is plain
+/// release-mode code, and the same traversal the click resolver relies on. With
+/// a plain `visitChildren` the masks of a covered screen keep being emitted, at
+/// whatever offset that screen's exit transition left it at.
+///
 /// Z-order / occlusion: children are visited in paint order — Flutter paints
 /// siblings in child order, so a later sibling (and its subtree) is drawn *on
 /// top of* earlier ones, the same role `zPosition` plays in the native
@@ -94,7 +103,7 @@ class MaskCollector {
       }
 
       if (policy.isUnmask(widget)) {
-        element.visitChildren((child) => visit(child, true));
+        element.debugVisitOnstageChildren((child) => visit(child, true));
         return;
       }
 
@@ -117,7 +126,7 @@ class MaskCollector {
         }
       }
 
-      element.visitChildren((child) => visit(child, underUnmask));
+      element.debugVisitOnstageChildren((child) => visit(child, underUnmask));
     }
 
     rootContext.visitChildElements((child) => visit(child, false));

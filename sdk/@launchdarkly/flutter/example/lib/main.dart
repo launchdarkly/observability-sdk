@@ -6,6 +6,7 @@ import 'package:launchdarkly_flutter_client_sdk/launchdarkly_flutter_client_sdk.
 import 'package:launchdarkly_flutter_observability/launchdarkly_flutter_observability.dart';
 
 import 'click_scenarios.dart';
+import 'getx_app.dart';
 import 'my_app.dart';
 
 class LDSingleton {
@@ -66,7 +67,11 @@ void main() {
         LDObserve.recordException(details.exception, stackTrace: details.stack);
       };
 
-      runApp(const SessionReplayCapture(child: MyApp()));
+      // `--dart-define=USE_GETX=true` roots the same app at `GetMaterialApp`
+      // instead of `MaterialApp`; see lib/getx_app.dart.
+      runApp(
+        SessionReplayCapture(child: useGetX ? const GetXApp() : const MyApp()),
+      );
     },
     (err, stack) {
       // Report any errors reported from the guarded zone.
