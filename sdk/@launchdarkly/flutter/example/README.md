@@ -88,6 +88,31 @@ flutter run -d emulator-5554 --dart-define-from-file=dart_defines.json
 flutter run -d chrome --dart-define-from-file=dart_defines.json
 ```
 
+## Run the focused GetX example
+
+The build can be rooted at `GetMaterialApp` instead of the full example's `MaterialApp`, to check automatic clicks and screen views under GetX:
+
+```bash
+flutter run -d <device-id> --dart-define-from-file=dart_defines.json --dart-define=USE_GETX=true
+```
+
+The **example (debug, GetX)** launch config does the same from the Run & Debug panel. Because dart-defines are compile-time constants, switching modes needs a full stop and re-launch.
+
+The root stays the same home page as the default build, so both modes start from the same screen. A **GetX** subsection there opens the smoothie catalog, which pushes a full-size **SmoothieView**, which pushes a **PurchaseView** — four levels deep including the home page:
+
+```text
+/
+  → /smoothies
+    → /smoothies/:id
+      → /smoothies/:id/purchase
+```
+
+All pages are declared with `getPages` and navigated through `Get.toNamed`. `LDNavigatorObserver` uses a `screenNameExtractor` that reports the registered route pattern rather than the concrete smoothie URL, preventing every product id from becoming a separate screen. The three-level stack and the nested image/button trees provide a focused test for screen hierarchy, click targets, and Session Replay image capture.
+
+Both builds share these three screens (`lib/smoothie_list_page.dart`); only the navigation differs, so the same UI can be compared across routing stacks. The default build reaches them from **Smoothie List** under Session Replay, pushing `MaterialPageRoute`s named `/smoothie-detail` and `/smoothie-purchase` — deliberately without the smoothie id, the same grouping the GetX extractor achieves by reporting route patterns.
+
+Clicks need nothing GetX-specific: `SessionReplayCapture` still wraps the root, and GetX pushes ordinary routes onto the same navigator. One thing to watch for in your own app: `GetMaterialApp.router` accepts `navigatorObservers` but never passes them to its delegate, so that constructor needs `routerDelegate: GetDelegate(navigatorObservers: [LDNavigatorObserver()])` instead.
+
 ## Use local native SDK checkouts
 
 By default, the example uses the published native dependencies declared by `packages/observability`. To test local native changes, set `LD_USE_LOCAL_NATIVE` (the `*, local native` launch configs do this for you):

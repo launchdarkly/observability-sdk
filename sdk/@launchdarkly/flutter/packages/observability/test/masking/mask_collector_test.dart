@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -471,6 +473,68 @@ void main() {
         maskTextInputs: true,
       );
       expect(ops, hasLength(1));
+    });
+  });
+
+  group('MaskCollector buried routes', () {
+    // Pushing an opaque route leaves the screen underneath in the element tree,
+    // and its exit transition leaves it translated. Collecting it anyway put the
+    // covered screen's masks into the frame, offset from where they had been.
+    Future<List<MaskOperation>> collectAfterPush(
+      WidgetTester tester, {
+      required bool opaque,
+    }) async {
+      final boundaryKey = GlobalKey();
+      final navigatorKey = GlobalKey<NavigatorState>();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          navigatorKey: navigatorKey,
+          builder: (context, child) =>
+              RepaintBoundary(key: boundaryKey, child: child),
+          home: const Scaffold(body: LDMask(child: Text('behind'))),
+        ),
+      );
+
+      // Not awaited: `push` completes only when the route is popped.
+      unawaited(
+        navigatorKey.currentState!.push(
+          PageRouteBuilder<void>(
+            opaque: opaque,
+            pageBuilder: (_, _, _) =>
+                const Scaffold(body: Center(child: Text('front'))),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final context = boundaryKey.currentContext!;
+      final collector = MaskCollector(
+        MaskingPolicy(
+          maskTextInputs: false,
+          maskLabels: false,
+          maskImages: false,
+          maskWebViews: false,
+          minimumAlpha: 0.02,
+          widgetConfig: WidgetMaskingConfig.empty,
+        ),
+      );
+      return collector.collect(
+        context,
+        context.findRenderObject()! as RenderRepaintBoundary,
+      );
+    }
+
+    testWidgets('a mask on the screen behind an opaque route is dropped', (
+      tester,
+    ) async {
+      expect(await collectAfterPush(tester, opaque: true), isEmpty);
+    });
+
+    testWidgets('a mask behind a transparent route is still collected', (
+      tester,
+    ) async {
+      expect(await collectAfterPush(tester, opaque: false), hasLength(1));
     });
   });
 }
