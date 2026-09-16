@@ -7,7 +7,13 @@ All notable changes to the LaunchDarkly Observability SDK for Flutter will be do
 
 ### Features
 
-* **flutter:** report route patterns and drop query strings from scre… ([#773](https://github.com/launchdarkly/observability-sdk/issues/773)) ([7e99338](https://github.com/launchdarkly/observability-sdk/commit/7e9933817b4894c6917bf9743ad030a216611183))
+* **flutter:** report route patterns and drop query strings from screen names ([#771](https://github.com/launchdarkly/observability-sdk/issues/771)) ([820b9b9](https://github.com/launchdarkly/observability-sdk/commit/820b9b906f0469c029040f70d6dc30c15a00f80f))
+
+
+### Bug Fixes
+
+* **flutter:** stop collecting masks from screens behind an opaque route ([#771](https://github.com/launchdarkly/observability-sdk/issues/771)) ([820b9b9](https://github.com/launchdarkly/observability-sdk/commit/820b9b906f0469c029040f70d6dc30c15a00f80f))
+* **flutter:** require iOS native observability 0.54.0, without which the plugin does not compile ([#771](https://github.com/launchdarkly/observability-sdk/issues/771)) ([820b9b9](https://github.com/launchdarkly/observability-sdk/commit/820b9b906f0469c029040f70d6dc30c15a00f80f))
 
 ## [0.18.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.17.0...launchdarkly_flutter_observability-0.18.0) (2026-09-15)
 
