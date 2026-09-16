@@ -83,7 +83,10 @@ import { recordException } from '../client/otel/recordException'
 import { ObserveOptions, ProductAnalyticsEvents } from '../client/types/observe'
 import { isMetricSafeNumber } from '../client/utils/utils'
 import * as SemanticAttributes from '@opentelemetry/semantic-conventions'
-import { sanitizeUrl } from '../client/listeners/network-listener/utils/network-sanitizer'
+import {
+	sanitizeUrl,
+	sanitizedLocationHref,
+} from '../client/listeners/network-listener/utils/network-sanitizer'
 
 export class ObserveSDK implements Observe {
 	/** Verbose project ID that is exposed to users. Legacy users may still be using ints. */
@@ -271,7 +274,7 @@ export class ObserveSDK implements Observe {
 						error: err,
 						event: err.message,
 						type: 'custom',
-						url: window.location.href,
+						url: sanitizedLocationHref(),
 						source: 'frontend',
 						lineNumber: trace[0]?.lineNumber ?? 0,
 						columnNumber: trace[0]?.columnNumber ?? 0,
@@ -348,7 +351,7 @@ export class ObserveSDK implements Observe {
 			error,
 			event,
 			type: type ?? 'custom',
-			url: window.location.href,
+			url: sanitizedLocationHref(),
 			source: source ?? 'frontend',
 			lineNumber: res[0]?.lineNumber ? res[0]?.lineNumber : 0,
 			columnNumber: res[0]?.columnNumber ? res[0]?.columnNumber : 0,
@@ -561,7 +564,7 @@ export class ObserveSDK implements Observe {
 			value: height,
 			attributes: {
 				category: MetricCategory.Device,
-				group: window.location.href,
+				group: sanitizedLocationHref(),
 			},
 		})
 		this.recordGauge({
@@ -569,7 +572,7 @@ export class ObserveSDK implements Observe {
 			value: width,
 			attributes: {
 				category: MetricCategory.Device,
-				group: window.location.href,
+				group: sanitizedLocationHref(),
 			},
 		})
 		this.recordGauge({
@@ -577,7 +580,7 @@ export class ObserveSDK implements Observe {
 			value: availHeight,
 			attributes: {
 				category: MetricCategory.Device,
-				group: window.location.href,
+				group: sanitizedLocationHref(),
 			},
 		})
 		this.recordGauge({
@@ -585,7 +588,7 @@ export class ObserveSDK implements Observe {
 			value: availWidth,
 			attributes: {
 				category: MetricCategory.Device,
-				group: window.location.href,
+				group: sanitizedLocationHref(),
 			},
 		})
 		this.recordGauge({
@@ -593,7 +596,7 @@ export class ObserveSDK implements Observe {
 			value: height * width,
 			attributes: {
 				category: MetricCategory.Device,
-				group: window.location.href,
+				group: sanitizedLocationHref(),
 			},
 		})
 	}
@@ -634,7 +637,7 @@ export class ObserveSDK implements Observe {
 								value,
 								attributes: {
 									category: MetricCategory.Performance,
-									group: window.location.href,
+									group: sanitizedLocationHref(),
 								},
 							}),
 					)
@@ -744,7 +747,7 @@ export class ObserveSDK implements Observe {
 		NetworkPerformanceListener((payload: NetworkPerformancePayload) => {
 			const attributes: Attributes = {
 				category: MetricCategory.Performance,
-				group: window.location.href,
+				group: sanitizedLocationHref(),
 			}
 			if (payload.saveData !== undefined) {
 				attributes['saveData'] = payload.saveData.toString()
@@ -775,7 +778,7 @@ export class ObserveSDK implements Observe {
 				value: getDeviceDetails().deviceMemory,
 				attributes: {
 					category: MetricCategory.Device,
-					group: window.location.href,
+					group: sanitizedLocationHref(),
 				},
 			})
 		}

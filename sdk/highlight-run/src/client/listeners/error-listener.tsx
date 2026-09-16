@@ -2,6 +2,7 @@ import type { StackFrame } from 'error-stack-parser'
 import stringify from 'json-stringify-safe'
 import { ErrorMessage } from '../types/shared-types'
 import { parseError } from '../utils/errors'
+import { sanitizedLocationHref } from './network-listener/utils/network-sanitizer'
 import randomUuidV4 from '../utils/randomUuidV4'
 
 interface HighlightPromise<T> extends Promise<T> {
@@ -29,7 +30,7 @@ function handleError(
 		error: e,
 		event: stringify(event),
 		type: 'window.onerror',
-		url: window.location.href,
+		url: sanitizedLocationHref(),
 		source: source ?? '',
 		lineNumber: framesToUse[0]?.lineNumber ? framesToUse[0]?.lineNumber : 0,
 		columnNumber: framesToUse[0]?.columnNumber
