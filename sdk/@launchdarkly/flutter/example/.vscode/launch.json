@@ -11,6 +11,16 @@
       ]
     },
     {
+      "name": "example (debug, GetX)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "toolArgs": [
+        "--dart-define-from-file=dart_defines.json",
+        "--dart-define=USE_GETX=true"
+      ]
+    },
+    {
       "name": "example (profile)",
       "request": "launch",
       "type": "dart",

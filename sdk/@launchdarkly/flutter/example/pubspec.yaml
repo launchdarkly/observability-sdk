@@ -43,6 +43,10 @@ dependencies:
   http: ^1.2.0
   webview_flutter: ^4.13.1
 
+  # Used only by the GetX build of the example
+  # (`--dart-define=USE_GETX=true`); see lib/getx_app.dart.
+  get: ^4.7.3
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
