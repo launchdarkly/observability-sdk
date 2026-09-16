@@ -47,9 +47,14 @@ jobs:
               uses: actions/checkout@v4
 
             - name: Detect JS monorepo changes
-              uses: dorny/paths-filter@4512585405083f25c027a35db413c2b3b9006d50 # v2
+              uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
               id: changes
               with:
+                  # Without a quantifier the patterns below are OR-ed, so '**'
+                  # matches every file and the exclusions never subtract
+                  # anything. This mode requires a file to match an inclusion
+                  # and no exclusion, which is what the list means to say.
+                  predicate-quantifier: some-with-excludes
                   filters: |
                       yarn-test:
                         - '**'
