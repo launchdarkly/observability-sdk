@@ -5,11 +5,13 @@ on:
         branches: ['main']
         paths:
             - 'sdk/@launchdarkly/flutter/packages/observability/**'
+            - 'sdk/@launchdarkly/flutter/example/**'
             - '.github/workflows/flutter-observability.yml'
     pull_request:
         types: [opened, synchronize]
         paths:
             - 'sdk/@launchdarkly/flutter/packages/observability/**'
+            - 'sdk/@launchdarkly/flutter/example/**'
             - '.github/workflows/flutter-observability.yml'
 
 permissions:
@@ -48,6 +50,23 @@ jobs:
                   git ls-files '*.dart' | grep -v '\.g\.dart$' \
                       | xargs dart format --output=none --set-exit-if-changed
 
+            # The two iOS pins are maintained by hand and only one of them is
+            # exercised by a build: the example resolves through Swift Package
+            # Manager, while apps still on CocoaPods read the podspec.
+            - name: Verify the iOS native pins agree
+              run: |
+                  podspec=$(sed -nE "s/.*dependency 'LaunchDarklyObservability', '~> ([0-9.]+)'.*/\1/p" \
+                      ios/launchdarkly_flutter_observability.podspec)
+                  replay=$(sed -nE "s/.*dependency 'LaunchDarklySessionReplay', '~> ([0-9.]+)'.*/\1/p" \
+                      ios/launchdarkly_flutter_observability.podspec)
+                  spm=$(sed -nE 's/.*upToNextMinor\(from: "([0-9.]+)"\).*/\1/p' \
+                      ios/launchdarkly_flutter_observability/Package.swift)
+                  echo "podspec observability: $podspec, podspec session replay: $replay, SPM: $spm"
+                  if [ "$podspec" != "$spm" ] || [ "$replay" != "$spm" ]; then
+                      echo "::error::podspec and Package.swift pin different native versions"
+                      exit 1
+                  fi
+
             - name: Run unit tests
               run: flutter test --reporter expanded
 
@@ -58,3 +77,61 @@ jobs:
                   name: flutter-observability-test-results
                   path: sdk/@launchdarkly/flutter/packages/observability/test-results/**
                   retention-days: 7
+
+    # `flutter analyze` and `flutter test` never compile the plugin's Kotlin or
+    # Swift, so the native dependency versions the plugin pins are only checked
+    # by building an app against them. Both jobs build the example the way a
+    # consumer would, resolving the pinned releases rather than the sibling
+    # checkouts that `LD_USE_LOCAL_NATIVE` selects for local development.
+    build-android:
+        name: Build Example (Android)
+        runs-on: ubuntu-latest
+        defaults:
+            run:
+                working-directory: ./sdk/@launchdarkly/flutter/example
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Install Java
+              uses: actions/setup-java@v4
+              with:
+                  distribution: 'temurin'
+                  java-version: 17
+
+            - name: Install Flutter
+              uses: subosito/flutter-action@0ca7a949e71ae44c8e688a51c5e7e93b2c87e295 # v2
+              with:
+                  channel: 'stable'
+                  cache: true
+
+            - name: Install dependencies
+              run: flutter pub get
+
+            - name: Build debug APK
+              run: flutter build apk --debug
+
+    build-ios:
+        name: Build Example (iOS)
+        runs-on: macos-latest
+        defaults:
+            run:
+                working-directory: ./sdk/@launchdarkly/flutter/example
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Install Flutter
+              uses: subosito/flutter-action@0ca7a949e71ae44c8e688a51c5e7e93b2c87e295 # v2
+              with:
+                  channel: 'stable'
+                  cache: true
+
+            # The example has migrated off CocoaPods, so its native dependencies
+            # come from the plugin's Package.swift.
+            - name: Enable Swift Package Manager
+              run: flutter config --enable-swift-package-manager
+
+            - name: Install dependencies
+              run: flutter pub get
+
+            - name: Build for device
+              run: flutter build ios --debug --no-codesign

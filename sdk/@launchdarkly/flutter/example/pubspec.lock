@@ -222,7 +222,7 @@ packages:
       path: "../packages/observability"
       relative: true
     source: path
-    version: "0.17.0"
+    version: "0.19.0"
   leak_tracker:
     dependency: transitive
     description:

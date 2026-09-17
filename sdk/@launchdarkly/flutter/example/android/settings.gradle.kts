@@ -23,7 +23,7 @@ plugins {
     // substitution below pulls in that AGP version, and Gradle disallows
     // mixing AGP versions within a single build.
     id("com.android.application") version "8.13.2" apply false
-    id("org.jetbrains.kotlin.android") version "2.1.0" apply false
+    id("org.jetbrains.kotlin.android") version "2.2.20" apply false
 }
 
 include(":app")
