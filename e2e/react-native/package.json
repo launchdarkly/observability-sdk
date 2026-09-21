@@ -82,8 +82,8 @@
 		"form-data@4": "^4.0.6",
 		"brace-expansion@1": "^1.1.18",
 		"brace-expansion@2": "^2.1.4",
-		"js-yaml@3": "^3.15.0",
-		"js-yaml@4": "^4.3.0",
+		"js-yaml@3": "^3.15.2",
+		"js-yaml@4": "^4.3.2",
 		"nanoid@3": "^3.3.18",
 		"postcss": "^8.5.18",
 		"turbo-stream": "^3.0.0"
