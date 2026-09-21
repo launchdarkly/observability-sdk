@@ -6,9 +6,12 @@ import 'package:http/http.dart' as http;
 import 'package:launchdarkly_flutter_client_sdk/launchdarkly_flutter_client_sdk.dart';
 import 'package:launchdarkly_flutter_observability/launchdarkly_flutter_observability.dart';
 
+import 'click_scenarios.dart';
 import 'crash_scenarios.dart';
 import 'credit_card_page.dart';
 import 'dialogs_page.dart';
+import 'getx_app.dart' show useGetX;
+import 'getx_scenarios.dart';
 import 'main.dart';
 import 'nested_masking_propagation_page.dart';
 import 'smoothie_list_page.dart';
@@ -38,6 +41,10 @@ String _platformName() {
       return 'Flutter Fuchsia';
   }
 }
+
+/// Names the navigation framework this build runs on, so which mode is live is
+/// visible in the app bar rather than only in the launch configuration.
+String _frameworkName() => useGetX ? 'GetX' : 'Material';
 
 /// Returns a Material icon that visually represents the current platform.
 IconData _platformIcon() {
@@ -399,7 +406,7 @@ class _MyHomePageState extends State<MyHomePage> {
           children: [
             Icon(_platformIcon()),
             const SizedBox(width: 8),
-            Text(_platformName()),
+            Text('${_platformName()} · ${_frameworkName()}'),
           ],
         ),
       ),
@@ -417,6 +424,7 @@ class _MyHomePageState extends State<MyHomePage> {
               onPressed: () {
                 Navigator.of(context).push(
                   MaterialPageRoute<void>(
+                    settings: const RouteSettings(name: '/credit-card'),
                     builder: (_) => const CreditCardPage(),
                   ),
                 );
@@ -430,6 +438,7 @@ class _MyHomePageState extends State<MyHomePage> {
               onPressed: () {
                 Navigator.of(context).push(
                   MaterialPageRoute<void>(
+                    settings: const RouteSettings(name: '/smoothie-list'),
                     builder: (_) => const SmoothieListPage(),
                   ),
                 );
@@ -449,7 +458,10 @@ class _MyHomePageState extends State<MyHomePage> {
             // Used to exercise Session Replay against transient and modal UI.
             ElevatedButton(
               onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(builder: (_) => const DialogsPage()),
+                MaterialPageRoute<void>(
+                  settings: const RouteSettings(name: '/dialogs'),
+                  builder: (_) => const DialogsPage(),
+                ),
               ),
               child: const Text('Dialogs'),
             ),
@@ -460,6 +472,9 @@ class _MyHomePageState extends State<MyHomePage> {
             ElevatedButton(
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
+                  settings: const RouteSettings(
+                    name: '/nested-masking-propagation',
+                  ),
                   builder: (_) => const NestedMaskingPropagationPage(),
                 ),
               ),
@@ -655,6 +670,17 @@ class _MyHomePageState extends State<MyHomePage> {
               onPressed: _onEvaluateFlag,
               child: const Text('Evaluate boolean flag'),
             ),
+
+            const _SubsectionHeader('Clicks'),
+            const ClickScenarios(),
+
+            // Three levels of GetX navigation pushed on top of this page, for
+            // checking how a deep screen hierarchy is reported. Only present
+            // under `GetMaterialApp`, so it is absent from the default build.
+            if (useGetX) ...[
+              const _SubsectionHeader('GetX'),
+              const GetXSmoothieEntry(),
+            ],
 
             const _SubsectionHeader('Other'),
             ElevatedButton(

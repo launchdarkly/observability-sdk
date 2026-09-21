@@ -6,6 +6,7 @@ import 'package:launchdarkly_flutter_client_sdk/launchdarkly_flutter_client_sdk.
 
 import '../api/span.dart';
 import '../api/span_status_code.dart';
+import '../instrumentation/click/click_instrumentation.dart';
 import '../instrumentation/debug_print.dart';
 import '../instrumentation/instrumentation.dart';
 import '../instrumentation/lifecycle/lifecycle_instrumentation.dart';
@@ -165,6 +166,18 @@ final class LDObservePlugin extends Plugin {
     _instrumentations.add(
       DebugPrintInstrumentation(_config.instrumentationConfig),
     );
+    if (_config.tapsEnabled) {
+      // Resolves the tapped widget in Dart, which is the only place the widget
+      // tree is visible. Takes effect once a `SessionReplayCapture` mounts the
+      // detector that feeds it; until then native keeps reporting its own coarse
+      // taps.
+      _instrumentations.add(
+        ClickInstrumentation(
+          customResolver: observability.analytics.customClickTargetResolver,
+          captureText: !(replay?.privacy.maskClickText ?? false),
+        ),
+      );
+    }
   }
 
   /// Merges the Dart AOT snapshot build id (symbols_id) into the native init

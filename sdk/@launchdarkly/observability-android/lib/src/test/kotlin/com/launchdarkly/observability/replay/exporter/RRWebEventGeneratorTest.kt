@@ -1,11 +1,15 @@
 package com.launchdarkly.observability.replay.exporter
 
+import android.view.MotionEvent
 import com.launchdarkly.observability.replay.Event
 import com.launchdarkly.observability.replay.EventData
 import com.launchdarkly.observability.replay.EventDataUnion
 import com.launchdarkly.observability.replay.EventNode
 import com.launchdarkly.observability.replay.EventType
+import com.launchdarkly.observability.replay.InteractionEvent
+import com.launchdarkly.observability.replay.Position
 import com.launchdarkly.observability.replay.RRWebCustomDataTag
+import com.launchdarkly.observability.replay.RRWebMouseInteraction
 import com.launchdarkly.observability.replay.capture.ExportFrame
 import com.launchdarkly.observability.replay.capture.ImageSignature
 import com.launchdarkly.observability.replay.capture.IntRect
@@ -13,6 +17,7 @@ import com.launchdarkly.observability.replay.capture.IntSize
 import com.launchdarkly.observability.replay.capture.TileSignature
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.double
+import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -243,6 +248,85 @@ class RRWebEventGeneratorTest {
         assertEquals("Background", obj["tag"]!!.jsonPrimitive.content)
         val payloadJson = Json.parseToJsonElement(obj["payload"]!!.jsonPrimitive.content).jsonObject
         assertEquals("background", payloadJson["lifecycle_state"]!!.jsonPrimitive.content)
+    }
+
+    @Test
+    fun `a touch down still draws the pointer trail and no longer claims a click`() {
+        val generator = RRWebEventGenerator(canvasDrawEntourage = 1, title = "test")
+        val interaction = InteractionEvent(
+            action = MotionEvent.ACTION_DOWN,
+            positions = listOf(Position(x = 10, y = 20, timestamp = 5L)),
+            session = "session",
+        )
+
+        val events = generator.generateInteractionEvents(interaction)
+
+        // The trail snapshot replay needs to draw the pointer is untouched.
+        assertEquals(1, events.size)
+        assertEquals(EventType.INCREMENTAL_SNAPSHOT, events.single().type)
+        val data = (events.single().data as EventDataUnion.CustomEventDataWrapper).data.jsonObject
+        assertEquals(
+            RRWebMouseInteraction.TOUCH_START.code,
+            data["type"]!!.jsonPrimitive.int,
+        )
+        // A touch-down is not a click: it may still become a drag or a long press, and this stream
+        // cannot see clicks an embedder resolves in its own UI tree. Clicks come from the funnel.
+        assertTrue(events.none { it.type == EventType.CUSTOM })
+    }
+
+    @Test
+    fun `generateClickEvent emits Click custom event with target, text and selector`() {
+        val generator = RRWebEventGenerator(canvasDrawEntourage = 1, title = "test")
+        val payload = ClickItemPayload(
+            target = "ElevatedButton",
+            text = "Pay",
+            id = "checkout.pay",
+            screenId = "cart-1",
+            screenName = "Cart",
+            timestamp = 21L,
+            sessionId = "session",
+        )
+
+        val event = generator.generateClickEvent(payload)
+
+        assertEquals(EventType.CUSTOM, event.type)
+        // Stamped from the payload, not from arrival: an embedder's click crosses an
+        // asynchronous bridge and must still order against the touch snapshots around it.
+        assertEquals(21L, event.timestamp)
+        val custom = event.data as EventDataUnion.CustomEventDataWrapper
+        val obj = custom.data.jsonObject
+        assertEquals("Click", obj["tag"]!!.jsonPrimitive.content)
+        val clickPayload = obj["payload"]!!.jsonObject
+        assertEquals("ElevatedButton", clickPayload["clickTarget"]!!.jsonPrimitive.content)
+        assertEquals("Pay", clickPayload["clickTextContent"]!!.jsonPrimitive.content)
+        // Prefers the stable id, mirroring the web `#id` selector.
+        assertEquals("checkout.pay", clickPayload["clickSelector"]!!.jsonPrimitive.content)
+        assertEquals("cart-1", clickPayload["screenId"]!!.jsonPrimitive.content)
+        assertEquals("Cart", clickPayload["screenName"]!!.jsonPrimitive.content)
+    }
+
+    @Test
+    fun `generateClickEvent falls back to the target when no id is known`() {
+        val generator = RRWebEventGenerator(canvasDrawEntourage = 1, title = "test")
+        val payload = ClickItemPayload(
+            target = "InkWell",
+            text = null,
+            id = null,
+            screenId = null,
+            screenName = null,
+            timestamp = 22L,
+            sessionId = "session",
+        )
+
+        val event = generator.generateClickEvent(payload)
+
+        val custom = event.data as EventDataUnion.CustomEventDataWrapper
+        val clickPayload = custom.data.jsonObject["payload"]!!.jsonObject
+        assertEquals("InkWell", clickPayload["clickSelector"]!!.jsonPrimitive.content)
+        assertEquals("", clickPayload["clickTextContent"]!!.jsonPrimitive.content)
+        // Screen fields are omitted rather than sent empty when the stack has no screen.
+        assertFalse(clickPayload.containsKey("screenId"))
+        assertFalse(clickPayload.containsKey("screenName"))
     }
 
     private fun exportFrame(

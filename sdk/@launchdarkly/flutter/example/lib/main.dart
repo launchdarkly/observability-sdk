@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:launchdarkly_flutter_client_sdk/launchdarkly_flutter_client_sdk.dart';
 import 'package:launchdarkly_flutter_observability/launchdarkly_flutter_observability.dart';
 
+import 'click_scenarios.dart';
+import 'getx_app.dart';
 import 'my_app.dart';
 
 class LDSingleton {
@@ -65,7 +67,11 @@ void main() {
         LDObserve.recordException(details.exception, stackTrace: details.stack);
       };
 
-      runApp(const SessionReplayCapture(child: MyApp()));
+      // `--dart-define=USE_GETX=true` roots the same app at `GetMaterialApp`
+      // instead of `MaterialApp`; see lib/getx_app.dart.
+      runApp(
+        SessionReplayCapture(child: useGetX ? const GetXApp() : const MyApp()),
+      );
     },
     (err, stack) {
       // Report any errors reported from the guarded zone.
@@ -109,9 +115,13 @@ void _startObservability() {
       launchTimes: true,
       debugPrint: DebugPrintSetting.always(),
     ),
-    // Shorthand for enabling all analytics telemetry (taps, page views, track
-    // events). Use AnalyticsOptions.disabled to turn it all off.
-    analytics: AnalyticsOptions.enabled,
+    // Every analytics signal (taps, page views, track events) is on by default;
+    // use AnalyticsOptions.disabled to turn it all off. The resolver teaches
+    // click tracking about this app's own button type, so taps on it report
+    // `DemoPrimaryButton` instead of the InkWell it is built from.
+    analytics: const AnalyticsOptions(
+      customClickTargetResolver: demoClickTargetResolver,
+    ),
   );
   const replay = SessionReplayOptions(
     isEnabled: true,

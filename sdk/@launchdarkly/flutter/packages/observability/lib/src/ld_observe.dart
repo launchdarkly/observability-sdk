@@ -88,6 +88,65 @@ final class LDObserve {
     metricValue: metricValue,
   );
 
+  /// Record a screen view (navigation) so it appears on the Session Replay
+  /// timeline as a `Navigate` event and as a `screen_view` span.
+  ///
+  /// Native automatic screen detection only sees the single host
+  /// Activity/UIViewController that Flutter renders into, so Flutter route
+  /// changes must be reported explicitly. Call this on navigation (or attach the
+  /// provided [LDNavigatorObserver] to your `MaterialApp`/`Navigator`).
+  ///
+  /// [name] is the human-readable screen/route name. [screenClass], [screenId]
+  /// and [category] are optional classifiers, and [properties] is a plain Dart
+  /// map of additional attributes attached to the `screen_view` span.
+  static void trackScreenView(
+    String name, {
+    String? screenClass,
+    String? screenId,
+    String? category,
+    Map<String, Object?>? properties,
+  }) => ObserveOtel.trackScreenView(
+    name,
+    screenClass: screenClass,
+    screenId: screenId,
+    category: category,
+    properties: properties,
+  );
+
+  /// Record a click so it appears on the Session Replay timeline as a `Click`
+  /// event and as a `click` span.
+  ///
+  /// Taps are captured automatically when the widget tree is wrapped in
+  /// `SessionReplayCapture`, which resolves the pressed widget and reports it
+  /// through this same path. Use this API for interactions that automatic capture
+  /// cannot observe — a gesture inside a custom painter, a hardware button, a
+  /// programmatic action you want to appear as a click. Calling it from an
+  /// `onPressed` that automatic capture also sees will report the tap twice; to
+  /// give an automatically captured widget a stable name, wrap it in [LDClick]
+  /// instead.
+  ///
+  /// [id] is a stable identifier for the element (`event.id`), [tag] its type
+  /// (`event.tag`, e.g. `ElevatedButton`), [text] its visible label
+  /// (`event.text`), and [x]/[y] the tap coordinates in logical pixels.
+  /// [properties] is a plain Dart map of additional attributes attached to the
+  /// `click` span. The screen is filled in automatically from the most recent
+  /// [trackScreenView].
+  static void trackClick({
+    String? id,
+    String? tag,
+    String? text,
+    int? x,
+    int? y,
+    Map<String, Object?>? properties,
+  }) => ObserveOtel.trackClick(
+    id: id,
+    tag: tag,
+    text: text,
+    x: x,
+    y: y,
+    properties: properties,
+  );
+
   /// Record an exception with an optional stack trace and [properties].
   ///
   /// [properties] is a plain Dart map (`Map<String, Object?>`) of additional

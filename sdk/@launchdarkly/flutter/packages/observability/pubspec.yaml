@@ -1,12 +1,13 @@
 name: launchdarkly_flutter_observability
 description: 'The LaunchDarkly Observability and Session Replay plugin for Flutter. Get started using LaunchDarkly today!'
-version: 0.16.0
+version: 0.19.0
 homepage: https://github.com/launchdarkly/observability-sdk
 repository: https://github.com/launchdarkly/observability-sdk/tree/main/sdk/@launchdarkly/flutter/packages/observability
 
 environment:
     sdk: ^3.9.0
-    flutter: '>=1.17.0'
+    # NavigatorObserver.didChangeTop, used by LDNavigatorObserver, landed in 3.27.
+    flutter: '>=3.27.0'
 
 dependencies:
     flutter:

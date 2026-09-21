@@ -29,6 +29,7 @@ on:
             - 'e2e/android/**'
             - 'sdk/@launchdarkly/observability-android/**'
             - '.github/workflows/android-symbolication-artifact.yml'
+            - '.github/actions/setup-android-sdk/**'
 
 permissions:
     contents: read
@@ -58,7 +59,7 @@ jobs:
                   java-version: 17
 
             - name: Set up Android SDK
-              uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3.2.2
+              uses: ./.github/actions/setup-android-sdk
 
             # The app reads these through buildConfigField, so they have to be in
             # place before the build rather than supplied to the running app.

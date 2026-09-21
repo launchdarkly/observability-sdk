@@ -78,6 +78,25 @@ class PrivacyOptions {
   /// Widget [Key]s to ignore (cover). Dart-side only.
   final Set<Key> ignoreWidgetKeys;
 
+  /// Redacts the visible text of tapped widgets, so clicks report the widget
+  /// type and identifier but no label.
+  ///
+  /// Off by default, matching what the native SDKs already capture for native
+  /// views. Turn it on when button labels themselves are sensitive — a list of
+  /// diagnoses, say, where "which row" is as revealing as the row's contents.
+  ///
+  /// Independent of [maskLabels], which controls whether text is *painted over*
+  /// in the recorded frames. This one controls the `clickTextContent` replay
+  /// field and the `event.text` span attribute, so a screen can be readable in
+  /// replay while its click stream stays anonymous, or the reverse.
+  ///
+  /// Narrower redactions apply regardless of this flag: text is never read from
+  /// an [LDMask]/[LDIgnore] subtree or from an editable field's contents.
+  ///
+  /// Dart-side only — resolved while the tapped widget is identified, so it is
+  /// not sent to native.
+  final bool maskClickText;
+
   const PrivacyOptions({
     this.maskTextInputs = true,
     this.maskWebViews = false,
@@ -90,5 +109,6 @@ class PrivacyOptions {
     this.unmaskWidgetKeys = const {},
     this.ignoreWidgetTypes = const {},
     this.ignoreWidgetKeys = const {},
+    this.maskClickText = false,
   });
 }

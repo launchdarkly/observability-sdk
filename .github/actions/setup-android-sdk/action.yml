@@ -1,0 +1,79 @@
+# Prefer the runner image's Android SDK when it is already present.
+# android-actions/setup-android@v3.2.2 always downloads cmdline-tools 16.0 when
+# the image's cmdline-tools/latest is a different revision (currently 12.0),
+# then runs `sdkmanager --licenses` which fetches dl.google.com and flakes.
+name: Set up Android SDK
+description: Use the preinstalled Android SDK when present; otherwise install it with retries
+
+runs:
+    using: composite
+    steps:
+        - name: Use preinstalled Android SDK
+          id: preinstalled
+          shell: bash
+          run: |
+              set -euo pipefail
+
+              sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+              sdkmanager=""
+              if [[ -x "$sdk_root/cmdline-tools/latest/bin/sdkmanager" ]]; then
+                  sdkmanager="$sdk_root/cmdline-tools/latest/bin/sdkmanager"
+              else
+                  shopt -s nullglob
+                  for candidate in "$sdk_root/cmdline-tools/"*/bin/sdkmanager; do
+                      sdkmanager="$candidate"
+                  done
+              fi
+
+              export_sdk() {
+                  echo "Using Android SDK at $sdk_root ($sdkmanager)"
+                  {
+                      echo "ANDROID_SDK_ROOT=$sdk_root"
+                      echo "ANDROID_HOME=$sdk_root"
+                  } >> "$GITHUB_ENV"
+                  echo "$sdk_root/platform-tools" >> "$GITHUB_PATH"
+                  echo "$(dirname "$sdkmanager")" >> "$GITHUB_PATH"
+                  echo "ready=true" >> "$GITHUB_OUTPUT"
+              }
+
+              licenses_dir="$sdk_root/licenses"
+              if [[ -n "$sdkmanager" && -d "$licenses_dir" && -n "$(ls -A "$licenses_dir" 2>/dev/null || true)" ]]; then
+                  export_sdk
+                  exit 0
+              fi
+
+              if [[ -n "$sdkmanager" ]]; then
+                  echo "Preinstalled sdkmanager found but licenses are missing; accepting with retries"
+                  accepted=false
+                  for attempt in 1 2 3; do
+                      echo "sdkmanager --licenses (attempt $attempt/3)"
+                      set +e +o pipefail
+                      printf 'y\n%.0s' {1..30} | "$sdkmanager" --sdk_root="$sdk_root" --licenses
+                      status=${PIPESTATUS[1]:-1}
+                      set -e -o pipefail
+                      if [[ "$status" -eq 0 ]]; then
+                          accepted=true
+                          break
+                      fi
+                      sleep $((attempt * 4))
+                  done
+                  if [[ "$accepted" == true ]]; then
+                      export_sdk
+                      exit 0
+                  fi
+                  echo "Failed to accept Android SDK licenses with the preinstalled sdkmanager"
+              else
+                  echo "No preinstalled sdkmanager under $sdk_root"
+              fi
+
+              echo "ready=false" >> "$GITHUB_OUTPUT"
+
+        - name: Download Android SDK
+          if: steps.preinstalled.outputs.ready != 'true'
+          uses: Wandalen/wretry.action@e68c23e6309f2871ca8ae4763e7629b9c258e1ea # v3.8.0
+          with:
+              action: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407
+              with: |
+                  log-accepted-android-sdk-licenses: false
+              attempt_limit: 3
+              attempt_delay: 5000

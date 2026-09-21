@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.68.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.67.0...launchdarkly-observability-android-0.68.0) (2026-09-15)
+
+
+### Features
+
+* **flutter:** record screen views (Navigate) from Dart ([#627](https://github.com/launchdarkly/observability-sdk/issues/627)) ([cdd2190](https://github.com/launchdarkly/observability-sdk/commit/cdd219004a83ff59ff9e827e4e99da567ea4adbb))
+
+## [0.67.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.66.1...launchdarkly-observability-android-0.67.0) (2026-09-15)
+
+
+### Features
+
+* **observability-android:** emit every click through one funnel and let embedders report their own targets ([#763](https://github.com/launchdarkly/observability-sdk/issues/763)) ([7cab681](https://github.com/launchdarkly/observability-sdk/commit/7cab681a86a713a688aefe57c0193f06f1ba8d1d))
+
 ## [0.66.1](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.66.0...launchdarkly-observability-android-0.66.1) (2026-08-19)
 
 

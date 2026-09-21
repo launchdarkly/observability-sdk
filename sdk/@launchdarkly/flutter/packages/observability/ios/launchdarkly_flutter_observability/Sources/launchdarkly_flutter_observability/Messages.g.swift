@@ -679,6 +679,43 @@ protocol LDNativeApi {
   /// ignores incomplete identifies). Mirrors MAUI's
   /// `ObservabilityHook.AfterIdentify` /  `SessionReplayHook.AfterIdentify`.
   func identify(contextKeys: [String: String], canonicalKey: String, completed: Bool) throws
+  /// Forwards a screen view to the native observability SDK so it emits the
+  /// native `screen_view` span and the Session Replay `Navigate` timeline event.
+  /// Flutter owns its own routing inside a single host Activity/UIViewController,
+  /// so native screen detection never sees Flutter route changes; screen views
+  /// must therefore be reported from Dart (e.g. via a `NavigatorObserver`).
+  /// [name] is the screen/route name; [screenClass], [screenId] and [category]
+  /// are optional classifiers, and [properties] carries optional extra
+  /// attributes attached to the `screen_view` span.
+  func trackScreenView(name: String, screenClass: String?, screenId: String?, category: String?, properties: [String: Any?]?) throws
+  /// Forwards a click to the native observability SDK so it emits the native
+  /// `click` span and the Session Replay `Click` timeline event.
+  ///
+  /// Flutter draws its entire UI into one native view, so a native hit-test
+  /// bottoms out at `FlutterSurfaceView` / `FlutterView` for every tap no matter
+  /// which widget was pressed. Only Dart can see the widget tree, so the widget
+  /// is resolved here and reported through this method.
+  ///
+  /// [id] is the stable element identifier, [tag] the widget type (e.g.
+  /// `ElevatedButton`), [classname] a more specific class name when one is
+  /// known, [text] the element's visible label, [xpath] the widget's path within
+  /// the tree, and [x]/[y] the tap coordinates in the platform's own units
+  /// (physical pixels on Android, logical pixels on iOS). [screenId] is left
+  /// null so native fills it from the screen stack Dart already keeps current.
+  /// [timestampMillis] is captured in Dart at pointer-up: the bridge is
+  /// asynchronous, so without it the replay marker would land wherever the call
+  /// happens to arrive rather than with the pointer trail it belongs to.
+  func trackClick(id: String?, tag: String?, classname: String?, text: String?, xpath: String?, screenId: String?, x: Int64?, y: Int64?, timestampMillis: Int64?, properties: [String: Any?]?) throws
+  /// Tells native that Dart now resolves clicks for the Flutter view, so native
+  /// must stop reporting taps that land on it.
+  ///
+  /// Handshake rather than a fixed setting: native starts before the widget tree
+  /// exists, so suppressing Flutter-view taps unconditionally would leave an app
+  /// that never installs Dart click detection reporting no clicks at all — worse
+  /// than today's coarse `FlutterSurfaceView`. Enabled when Dart's detection
+  /// installs and disabled when it is torn down. Taps on native views elsewhere
+  /// in the app (an add-to-app host's own screens) are never affected.
+  func setEmbedderClickHandling(enabled: Bool) throws
 }
 
 /// Generated setup class from Pigeon to handle messages through the `binaryMessenger`.
@@ -790,6 +827,98 @@ class LDNativeApiSetup {
       }
     } else {
       identifyChannel.setMessageHandler(nil)
+    }
+    /// Forwards a screen view to the native observability SDK so it emits the
+    /// native `screen_view` span and the Session Replay `Navigate` timeline event.
+    /// Flutter owns its own routing inside a single host Activity/UIViewController,
+    /// so native screen detection never sees Flutter route changes; screen views
+    /// must therefore be reported from Dart (e.g. via a `NavigatorObserver`).
+    /// [name] is the screen/route name; [screenClass], [screenId] and [category]
+    /// are optional classifiers, and [properties] carries optional extra
+    /// attributes attached to the `screen_view` span.
+    let trackScreenViewChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.launchdarkly_flutter_observability.LDNativeApi.trackScreenView\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      trackScreenViewChannel.setMessageHandler { message, reply in
+        let args = message as! [Any?]
+        let nameArg = args[0] as! String
+        let screenClassArg: String? = nilOrValue(args[1])
+        let screenIdArg: String? = nilOrValue(args[2])
+        let categoryArg: String? = nilOrValue(args[3])
+        let propertiesArg: [String: Any?]? = nilOrValue(args[4])
+        do {
+          try api.trackScreenView(name: nameArg, screenClass: screenClassArg, screenId: screenIdArg, category: categoryArg, properties: propertiesArg)
+          reply(wrapResult(nil))
+        } catch {
+          reply(wrapError(error))
+        }
+      }
+    } else {
+      trackScreenViewChannel.setMessageHandler(nil)
+    }
+    /// Forwards a click to the native observability SDK so it emits the native
+    /// `click` span and the Session Replay `Click` timeline event.
+    ///
+    /// Flutter draws its entire UI into one native view, so a native hit-test
+    /// bottoms out at `FlutterSurfaceView` / `FlutterView` for every tap no matter
+    /// which widget was pressed. Only Dart can see the widget tree, so the widget
+    /// is resolved here and reported through this method.
+    ///
+    /// [id] is the stable element identifier, [tag] the widget type (e.g.
+    /// `ElevatedButton`), [classname] a more specific class name when one is
+    /// known, [text] the element's visible label, [xpath] the widget's path within
+    /// the tree, and [x]/[y] the tap coordinates in the platform's own units
+    /// (physical pixels on Android, logical pixels on iOS). [screenId] is left
+    /// null so native fills it from the screen stack Dart already keeps current.
+    /// [timestampMillis] is captured in Dart at pointer-up: the bridge is
+    /// asynchronous, so without it the replay marker would land wherever the call
+    /// happens to arrive rather than with the pointer trail it belongs to.
+    let trackClickChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.launchdarkly_flutter_observability.LDNativeApi.trackClick\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      trackClickChannel.setMessageHandler { message, reply in
+        let args = message as! [Any?]
+        let idArg: String? = nilOrValue(args[0])
+        let tagArg: String? = nilOrValue(args[1])
+        let classnameArg: String? = nilOrValue(args[2])
+        let textArg: String? = nilOrValue(args[3])
+        let xpathArg: String? = nilOrValue(args[4])
+        let screenIdArg: String? = nilOrValue(args[5])
+        let xArg: Int64? = nilOrValue(args[6])
+        let yArg: Int64? = nilOrValue(args[7])
+        let timestampMillisArg: Int64? = nilOrValue(args[8])
+        let propertiesArg: [String: Any?]? = nilOrValue(args[9])
+        do {
+          try api.trackClick(id: idArg, tag: tagArg, classname: classnameArg, text: textArg, xpath: xpathArg, screenId: screenIdArg, x: xArg, y: yArg, timestampMillis: timestampMillisArg, properties: propertiesArg)
+          reply(wrapResult(nil))
+        } catch {
+          reply(wrapError(error))
+        }
+      }
+    } else {
+      trackClickChannel.setMessageHandler(nil)
+    }
+    /// Tells native that Dart now resolves clicks for the Flutter view, so native
+    /// must stop reporting taps that land on it.
+    ///
+    /// Handshake rather than a fixed setting: native starts before the widget tree
+    /// exists, so suppressing Flutter-view taps unconditionally would leave an app
+    /// that never installs Dart click detection reporting no clicks at all — worse
+    /// than today's coarse `FlutterSurfaceView`. Enabled when Dart's detection
+    /// installs and disabled when it is torn down. Taps on native views elsewhere
+    /// in the app (an add-to-app host's own screens) are never affected.
+    let setEmbedderClickHandlingChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.launchdarkly_flutter_observability.LDNativeApi.setEmbedderClickHandling\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      setEmbedderClickHandlingChannel.setMessageHandler { message, reply in
+        let args = message as! [Any?]
+        let enabledArg = args[0] as! Bool
+        do {
+          try api.setEmbedderClickHandling(enabled: enabledArg)
+          reply(wrapResult(nil))
+        } catch {
+          reply(wrapError(error))
+        }
+      }
+    } else {
+      setEmbedderClickHandlingChannel.setMessageHandler(nil)
     }
   }
 }

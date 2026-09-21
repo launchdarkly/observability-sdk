@@ -127,6 +127,7 @@ class Observability(
         LDObserve.context?.sessionManager = observabilityService.sessionManager
         LDObserve.context?.userInteractionManager = observabilityService.userInteractionManager
         LDObserve.context?.screenViewFlow = observabilityService.screenViewFlow
+        LDObserve.context?.clickFlow = observabilityService.clickFlow
         LDObserve.context?.screenViewManager = observabilityService.screenViewManager
         LDObserve.context?.trackFlow = observabilityService.trackFlow
         LDObserve.context?.appLifecycleFlow = observabilityService.appLifecycleFlow
