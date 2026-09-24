@@ -1051,4 +1051,35 @@ class LDNativeApi {
       return;
     }
   }
+
+  /// Stops Session Replay capture as part of `LDObserve.shutdown`.
+  ///
+  /// Only Session Replay can be stopped: neither native observability SDK has
+  /// a teardown, so its automatic instrumentation (crash reporting, network
+  /// requests, launch times, native lifecycle spans) keeps running until the
+  /// process exits.
+  Future<void> shutdown() async {
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.launchdarkly_flutter_observability.LDNativeApi.shutdown$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
+          pigeonVar_channelName,
+          pigeonChannelCodec,
+          binaryMessenger: pigeonVar_binaryMessenger,
+        );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(null);
+    final List<Object?>? pigeonVar_replyList =
+        await pigeonVar_sendFuture as List<Object?>?;
+    if (pigeonVar_replyList == null) {
+      throw _createConnectionError(pigeonVar_channelName);
+    } else if (pigeonVar_replyList.length > 1) {
+      throw PlatformException(
+        code: pigeonVar_replyList[0]! as String,
+        message: pigeonVar_replyList[1] as String?,
+        details: pigeonVar_replyList[2],
+      );
+    } else {
+      return;
+    }
+  }
 }

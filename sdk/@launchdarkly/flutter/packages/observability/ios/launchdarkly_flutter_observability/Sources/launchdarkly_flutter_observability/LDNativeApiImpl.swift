@@ -201,6 +201,14 @@ final class LDNativeApiImpl: NSObject, LDNativeApi {
         LDObserve.shared.setEmbedderClickHandling(enabled)
     }
 
+    // Session Replay is the only native component with a teardown; the native
+    // observability SDK keeps its automatic instrumentation running.
+    func shutdown() throws {
+        Task { @MainActor in
+            LDReplay.shared.stop()
+        }
+    }
+
     /// Drops `nil` values so the native bridge receives a `[String: Any]`.
     private func cleanAttributes(_ attributes: [String: Any?]?) -> [String: Any] {
         guard let attributes = attributes else { return [:] }

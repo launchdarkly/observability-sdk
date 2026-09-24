@@ -181,7 +181,16 @@ final class LDObserve {
   static ZoneSpecification zoneSpecification() =>
       ObserveOtel.zoneSpecification();
 
-  /// Shutdown observability. Once shutdown observability cannot be restarted.
+  /// Shut down observability and session replay for the rest of the process.
+  ///
+  /// Flushes buffered spans, removes the Dart instrumentations (lifecycle,
+  /// `debugPrint`, click capture), stops native session replay, and makes every
+  /// recording API a no-op. Shutdown is terminal: calling [init] or
+  /// [initStandalone] afterwards does nothing.
+  ///
+  /// On iOS and Android the native observability SDK has no teardown, so its
+  /// automatic instrumentation (crash reporting, network requests, launch
+  /// times, native lifecycle spans) keeps running until the process exits.
   static void shutdown() => ObserveOtel.shutdown();
 
   /// The native observability bridge version reported during startup, or an

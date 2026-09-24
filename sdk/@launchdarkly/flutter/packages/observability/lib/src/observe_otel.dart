@@ -8,6 +8,7 @@ import 'api/span.dart';
 import 'api/span_kind.dart';
 import 'otel/conversions.dart';
 import 'otel/setup.dart';
+import 'platform/ld_observe_platform.dart';
 import 'plugin/ld_observe_plugin.dart';
 import 'plugin/observability_config.dart';
 
@@ -207,15 +208,28 @@ final class ObserveOtel {
     );
   }
 
-  /// Shutdown observability. Once shutdown observability cannot be restarted.
+  /// Whether [shutdown] has run. Terminal: a later boot does nothing.
+  static bool get isShutdown => _shutdown;
+
+  /// Shut down observability. Terminal: observability cannot be restarted in
+  /// this process, and a later `LDObserve.init` does nothing.
+  ///
+  /// Flushes buffered Dart spans, removes the Dart instrumentations, and stops
+  /// native Session Replay. Native automatic instrumentation keeps running,
+  /// because the native observability SDKs have no teardown.
   static void shutdown() {
-    if (!_shutdown) {
-      Otel.shutdown();
-      for (final plugin in _pluginInstances) {
-        plugin.dispose();
-      }
-      _shutdown = true;
+    if (_shutdown) {
+      return;
     }
+    _shutdown = true;
+    // Plugins first: disposing click capture hands tap reporting back to native
+    // through the click recorder, which Otel.shutdown clears.
+    for (final plugin in _pluginInstances) {
+      plugin.dispose();
+    }
+    _pluginInstances.clear();
+    Otel.shutdown();
+    unawaited(LDObservePlatform.instance.shutdown());
   }
 
   /// Get a zone specification which intercepts print statements.
@@ -230,12 +244,17 @@ final class ObserveOtel {
 }
 
 /// Not for export.
-/// Registers a plugin with the singleton and sets up otel.
+/// Registers a plugin with the singleton and sets up otel. Does nothing after
+/// [ObserveOtel.shutdown].
 void registerPlugin(
   LDObservePlugin plugin,
   String credential,
-  ObservabilityConfig config,
-) {
-  Otel.setup(credential, config);
+  ObservabilityConfig config, {
+  bool replayEnabled = false,
+}) {
+  if (ObserveOtel._shutdown) {
+    return;
+  }
+  Otel.setup(credential, config, replayEnabled: replayEnabled);
   ObserveOtel._pluginInstances.add(plugin);
 }

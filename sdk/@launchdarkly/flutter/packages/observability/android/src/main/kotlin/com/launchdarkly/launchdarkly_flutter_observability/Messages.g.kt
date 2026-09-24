@@ -694,6 +694,15 @@ interface LDNativeApi {
    * in the app (an add-to-app host's own screens) are never affected.
    */
   fun setEmbedderClickHandling(enabled: Boolean)
+  /**
+   * Stops Session Replay capture as part of `LDObserve.shutdown`.
+   *
+   * Only Session Replay can be stopped: neither native observability SDK has
+   * a teardown, so its automatic instrumentation (crash reporting, network
+   * requests, launch times, native lifecycle spans) keeps running until the
+   * process exits.
+   */
+  fun shutdown()
 
   companion object {
     /** The codec used by LDNativeApi. */
@@ -861,6 +870,22 @@ interface LDNativeApi {
             val enabledArg = args[0] as Boolean
             val wrapped: List<Any?> = try {
               api.setEmbedderClickHandling(enabledArg)
+              listOf(null)
+            } catch (exception: Throwable) {
+              MessagesPigeonUtils.wrapError(exception)
+            }
+            reply.reply(wrapped)
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.launchdarkly_flutter_observability.LDNativeApi.shutdown$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { _, reply ->
+            val wrapped: List<Any?> = try {
+              api.shutdown()
               listOf(null)
             } catch (exception: Throwable) {
               MessagesPigeonUtils.wrapError(exception)

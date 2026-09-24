@@ -105,11 +105,11 @@ class AnalyticsOptions {
   /// how [views] treats `Navigate`. Defaults to `true`.
   final bool taps;
 
-  /// Whether to emit spans for screen/page views. Maps to the native
-  /// `analytics.screenViews` gate on Android and iOS; a no-op on web. Screen
-  /// views are reported from Dart (see `LDNavigatorObserver`), so this gates the
-  /// `screen_view` span only — the Session Replay `Navigate` event is emitted
-  /// regardless. Defaults to `true`.
+  /// Whether to emit spans for screen/page views. Screen views are reported from
+  /// Dart (see `LDNavigatorObserver`); on web this gates the Dart `screen_view`
+  /// span, and on Android and iOS it maps to the native `analytics.screenViews`
+  /// gate. It gates the span only — the mobile Session Replay `Navigate` event is
+  /// emitted regardless. Defaults to `true`.
   final bool views;
 
   /// Whether to emit a `track` span when a custom event is tracked, either
@@ -117,9 +117,12 @@ class AnalyticsOptions {
   /// `LDObserve.track` API. Defaults to `true`.
   final bool trackEvents;
 
-  /// Whether to emit app-lifecycle spans (`app_foreground` / `app_background`)
-  /// as the app moves between foreground and background. Mobile-only (iOS,
-  /// Android); a no-op elsewhere. Defaults to `true`.
+  /// Whether to emit app-lifecycle spans as the app changes state.
+  ///
+  /// On every platform this gates the Dart `device.app.lifecycle` span, emitted
+  /// on each Flutter `AppLifecycleState` change (`resumed`, `inactive`,
+  /// `hidden`, `paused`, `detached`). On iOS and Android it also gates the
+  /// native `app_foreground` / `app_background` spans. Defaults to `true`.
   final bool appLifecycle;
 
   /// Whether to emit an `app_launch` span (carrying `event.launch_type` —
@@ -193,7 +196,17 @@ class ObservabilityOptions {
   static const String defaultBackendUrl =
       'https://pub.observability.app.launchdarkly.com';
 
+  /// Whether observability telemetry is recorded. Defaults to `true`.
+  ///
+  /// When `false`, no spans or logs are recorded from Dart: flag evaluations,
+  /// `LDObserve.startSpan`, `recordException`, `recordLog`, `debugPrint` and
+  /// lifecycle capture are all no-ops, and on web nothing is exported. Session
+  /// replay is controlled separately by `SessionReplayOptions.isEnabled`; while
+  /// it is on, screen views, clicks, track events and identifies are still
+  /// forwarded to native, because the replay timeline is built from them. The
+  /// flag is also passed to the native SDK for its automatic instrumentation.
   final bool isEnabled;
+
   final String serviceName;
   final String serviceVersion;
   final String otlpEndpoint;
@@ -224,7 +237,8 @@ class ObservabilityOptions {
   final bool metricsEnabled;
 
   /// Analytics telemetry configuration. Mirrors Android
-  /// `ObservabilityOptions.analytics`. Native-only.
+  /// `ObservabilityOptions.analytics`. See each [AnalyticsOptions] field for
+  /// which platforms it applies to.
   final AnalyticsOptions analytics;
 
   final InstrumentationOptions instrumentation;

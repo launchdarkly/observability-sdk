@@ -34,9 +34,11 @@ class _WebExporters implements ObservabilityExporters {
   LogRecorder createLogRecorder(ObservabilityConfig config) =>
       _SpanEventLogRecorder();
 
+  // Without session replay on web these recorders only emit spans, so they
+  // follow `isEnabled` as well as their own analytics flag.
   @override
   TrackRecorder createTrackRecorder(ObservabilityConfig config) =>
-      _SpanTrackRecorder(config.trackEventsEnabled);
+      _SpanTrackRecorder(config.enabled && config.trackEventsEnabled);
 
   @override
   IdentifyRecorder createIdentifyRecorder(ObservabilityConfig config) =>
@@ -44,11 +46,11 @@ class _WebExporters implements ObservabilityExporters {
 
   @override
   ScreenViewRecorder createScreenViewRecorder(ObservabilityConfig config) =>
-      _SpanScreenViewRecorder(config.screenViewsEnabled);
+      _SpanScreenViewRecorder(config.enabled && config.screenViewsEnabled);
 
   @override
   ClickRecorder createClickRecorder(ObservabilityConfig config) =>
-      _SpanClickRecorder(config.tapsEnabled);
+      _SpanClickRecorder(config.enabled && config.tapsEnabled);
 }
 
 /// Emits each click as a Dart `click` span via the OpenTelemetry pipeline. Gated
@@ -96,8 +98,8 @@ class _SpanClickRecorder implements ClickRecorder {
 
   @override
   void setEmbedderClickHandling(bool enabled) {
-    // Nothing to suppress: the browser session replay records the DOM and has no
-    // tap detection of its own that could describe — or double-report — a click.
+    // Nothing to suppress: web has no native tap detection that could describe
+    // — or double-report — a click.
   }
 }
 

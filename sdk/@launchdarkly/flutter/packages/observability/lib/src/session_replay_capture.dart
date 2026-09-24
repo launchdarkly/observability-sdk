@@ -8,8 +8,8 @@ import 'platform/ld_observe_platform.dart';
 ///
 /// The capture mechanism is platform specific and resolved at compile time:
 /// on native (iOS/Android) it provides Flutter-rendered screenshots to the
-/// native session replay SDK; on web it is a pass-through because the browser
-/// session replay records the DOM directly.
+/// native session replay SDK. Session replay is not supported on web, where
+/// the capture part is a pass-through.
 ///
 /// Click capture also lives here, on every platform. Flutter renders its whole
 /// UI into one native view, so the tapped widget can only be identified in Dart,

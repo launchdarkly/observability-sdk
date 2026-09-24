@@ -41,6 +41,11 @@ class Otel {
   /// of [setup]. See [recordScreenView].
   static void Function(ScreenViewRecorder)? _pendingScreenView;
 
+  /// Whether [setup] has not run yet, so a screen view is still worth holding.
+  /// Cleared by both [setup] and [shutdown]: afterwards a missing recorder means
+  /// screen views are not recorded at all, not that they are early.
+  static bool _awaitingSetup = true;
+
   /// Applies [record] to the screen-view recorder, deferring it to the end of
   /// [setup] when the pipeline is not ready yet.
   ///
@@ -55,18 +60,58 @@ class Otel {
   static void recordScreenView(void Function(ScreenViewRecorder) record) {
     final recorder = _screenViewRecorder;
     if (recorder == null) {
-      _pendingScreenView = record;
+      if (_awaitingSetup) {
+        _pendingScreenView = record;
+      }
       return;
     }
     record(recorder);
   }
 
-  static void setup(String sdkKey, ObservabilityConfig config) {
+  /// Wires the recorders and, when observability is enabled, registers the
+  /// global tracer provider.
+  ///
+  /// With `config.enabled` false no tracer provider is registered, so spans
+  /// started anywhere (flag evaluations, `LDObserve.startSpan`, exceptions) are
+  /// no-ops, and logs are dropped. Screen views, clicks, track events and
+  /// identifies are still forwarded when [replayEnabled], because native
+  /// Session Replay builds its `Navigate`/`Click`/`Track` timeline and context
+  /// from them.
+  static void setup(
+    String sdkKey,
+    ObservabilityConfig config, {
+    bool replayEnabled = false,
+  }) {
     // TODO: Log when otel is setup multiple times. It will work, but the
     // behavior may be confusing.
 
+    _awaitingSetup = false;
     final exporters = ObservabilityExporters.instance;
 
+    if (config.enabled) {
+      _setupTracing(sdkKey, config, exporters);
+      _logRecorder = exporters.createLogRecorder(config);
+    }
+
+    final pendingScreenView = _pendingScreenView;
+    _pendingScreenView = null;
+    if (!config.enabled && !replayEnabled) {
+      return;
+    }
+
+    _trackRecorder = exporters.createTrackRecorder(config);
+    _identifyRecorder = exporters.createIdentifyRecorder(config);
+    _clickRecorder = exporters.createClickRecorder(config);
+    final screenViewRecorder = exporters.createScreenViewRecorder(config);
+    _screenViewRecorder = screenViewRecorder;
+    pendingScreenView?.call(screenViewRecorder);
+  }
+
+  static void _setupTracing(
+    String sdkKey,
+    ObservabilityConfig config,
+    ObservabilityExporters exporters,
+  ) {
     final resourceAttributes = <Attribute>[
       Attribute.fromString(_highlightProjectIdAttr, sdkKey),
     ];
@@ -99,20 +144,10 @@ class Otel {
     _tracerProviders.add(tracerProvider);
 
     registerGlobalTracerProvider(tracerProvider);
-
-    _logRecorder = exporters.createLogRecorder(config);
-    _trackRecorder = exporters.createTrackRecorder(config);
-    _identifyRecorder = exporters.createIdentifyRecorder(config);
-    _clickRecorder = exporters.createClickRecorder(config);
-    final screenViewRecorder = exporters.createScreenViewRecorder(config);
-    _screenViewRecorder = screenViewRecorder;
-
-    final pendingScreenView = _pendingScreenView;
-    _pendingScreenView = null;
-    pendingScreenView?.call(screenViewRecorder);
   }
 
   static void shutdown() {
+    _awaitingSetup = false;
     for (final tracerProvider in _tracerProviders) {
       tracerProvider.shutdown();
     }

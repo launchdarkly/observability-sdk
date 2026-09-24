@@ -2,7 +2,7 @@
 
 `launchdarkly_flutter_observability` provides LaunchDarkly observability and session replay for Flutter through a single public facade, `LDObserve`: automatic and manual instrumentation for your application — including spans, logs, error reporting, feature flag correlation, and session replay.
 
-Observability (spans, logs, errors) works on **mobile and web**. Session replay is available on mobile; web session replay is not yet available.
+Observability (spans, logs, errors) works on **mobile and web**. Session replay is available on iOS and Android only; it is not supported on web.
 
 ## Early Access Preview
 
@@ -14,7 +14,7 @@ Observability (spans, logs, errors) works on **mobile and web**. Session replay 
 |---|---|---|
 | iOS | ✅ | ✅ (native screenshot capture) |
 | Android | ✅ | ✅ (native screenshot capture) |
-| Web | ✅ | 🚧 Not yet available |
+| Web | ✅ | ❌ Not supported |
 
 ## Install
 
@@ -107,6 +107,8 @@ await LDObserve.initStandalone(
 
 > When `replay` is omitted, session replay is not started.
 
+> `ObservabilityOptions(isEnabled: false)` turns off observability telemetry: no spans, logs, errors, flag-evaluation spans, lifecycle or `debugPrint` capture are recorded, and nothing is exported on web. Session replay is controlled separately by `SessionReplayOptions.isEnabled`; while it is on, screen views, clicks and track events still reach the replay timeline.
+
 ## Automatic instrumentation
 
 When enabled through `InstrumentationOptions`, the SDK automatically instruments:
@@ -152,7 +154,7 @@ On `ObservabilityOptions`:
   - `customClickTargetResolver` (`LDClickTargetResolver?`): names your own widget types as click targets. Dart-side only. See [Clicks (taps)](#clicks-taps).
   - `views` (`bool`): emit spans for screen/page views. Supported on Android, iOS and web. This gates the `screen_view` span only; on mobile the Session Replay `Navigate` event is emitted either way. Defaults to `true`.
   - `trackEvents` (`bool`): emit a span when a custom event is tracked. Supported on Android, iOS and web. Defaults to `true`.
-  - `appLifecycle` (`bool`): emit `app_foreground` / `app_background` spans as the app moves between foreground and background. **Mobile-only** (Android, iOS; no-op on web). Defaults to `true`.
+  - `appLifecycle` (`bool`): emit app-lifecycle spans. On every platform, including web, this gates the Dart `device.app.lifecycle` span emitted on each Flutter `AppLifecycleState` change; on Android and iOS it also gates the native `app_foreground` / `app_background` spans. Defaults to `true`.
   - `appLaunch` (`bool`): emit an `app_launch` span (carrying the launch type — `install` / `update` / `relaunch` — and version fields) once per process launch. **Mobile-only** (Android, iOS; no-op on web). Defaults to `true`.
 - `instrumentation.crashReporting` (`bool`): report uncaught exceptions as errors. Defaults to `true`.
 
@@ -427,7 +429,7 @@ Limitations worth knowing:
 | `LDObserve.track(eventName, {properties, metricValue})` | Record a custom `track` event as a `track` span. |
 | `LDObserve.trackScreenView(name, {screenClass, screenId, category, properties})` | Record a screen view (navigation) as a `screen_view` span and a Session Replay `Navigate` event. Prefer `LDNavigatorObserver` for ordinary route changes. |
 | `LDObserve.trackClick({id, tag, text, x, y, properties})` | Record a click as a `click` span and a Session Replay `Click` event, for interactions automatic capture cannot observe. `x`/`y` are logical pixels. |
-| `LDObserve.shutdown()` | Shut down observability. It cannot be restarted afterward. |
+| `LDObserve.shutdown()` | Flush buffered spans, remove the Dart instrumentations, stop session replay, and turn every recording API into a no-op. Terminal: a later `init` does nothing. On Android and iOS the native SDK's automatic instrumentation (crashes, network, launch times) keeps running, because it has no teardown. |
 | `LDObserve.zoneSpecification()` | A zone spec that forwards `print`/`debugPrint` output as logs. |
 | `LDNavigatorObserver({screenNameExtractor, category})` | A `NavigatorObserver` that reports each route change as a screen view. |
 | `LDRoutePatterns.extractor(patterns, {skipUnmatched})` | A `screenNameExtractor` that reports the route pattern a navigation matched, so `/orders/42` becomes `/orders/:id`. |
@@ -467,7 +469,7 @@ Session Replay captures screen recordings to help you understand how users inter
 runApp(const SessionReplayCapture(child: MyApp()));
 ```
 
-On mobile, the part of your app wrapped in `SessionReplayCapture` is what gets recorded; without it, those frames are not captured. On web, session replay is not yet available, so `SessionReplayCapture` is a safe no-op pass-through — wrapping your app with it is safe on every platform.
+On mobile, the part of your app wrapped in `SessionReplayCapture` is what gets recorded; without it, those frames are not captured. Session replay is not supported on web, so there `SessionReplayCapture` records nothing, but it still hosts [click capture](#clicks-taps) — wrapping your app with it is safe and useful on every platform.
 
 ### Privacy options
 
@@ -524,7 +526,7 @@ LDUnmask(
 
 Precedence: `LDUnmask` only overrides global masking — it does **not** override an explicit `LDMask` or `LDIgnore`. An `LDUnmask` nested inside one stays masked, because an explicit per-widget mask always wins.
 
-`LDMask` / `LDIgnore` / `LDUnmask` are active on iOS and Android. On web they render their child unchanged for now, since web session replay is not yet available.
+`LDMask` / `LDIgnore` / `LDUnmask` are active on iOS and Android. On web, where session replay is not supported, they render their child unchanged.
 
 #### Masking by widget key or type
 

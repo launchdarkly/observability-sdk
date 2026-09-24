@@ -14,6 +14,7 @@ import '../observe_otel.dart';
 import '../options/observability_options.dart';
 import '../options/session_replay_options.dart';
 import '../otel/feature_flag_convention.dart';
+import '../otel/setup.dart';
 import '../otel/symbols_id.dart';
 import '../platform/ld_observe_platform.dart';
 import 'observability_config.dart';
@@ -141,9 +142,9 @@ final class LDObservePlugin extends Plugin {
 
   /// Boots the Dart OpenTelemetry pipeline and the platform session replay /
   /// native stack with the given [credential]. Safe to call once; subsequent
-  /// calls are ignored.
+  /// calls are ignored, as are calls after `LDObserve.shutdown`.
   Future<void> boot(String credential) async {
-    if (_booted) {
+    if (_booted || ObserveOtel.isShutdown) {
       return;
     }
     _booted = true;
@@ -155,18 +156,37 @@ final class LDObservePlugin extends Plugin {
     // while the native tracer/logger are still null and is silently dropped
     // (never gets `session.id` or reaches the backend). Awaiting start here
     // ensures the native pipeline is ready before any export can occur.
+    //
+    // Native receives `isEnabled` itself, so it is started either way: session
+    // replay does not depend on observability being enabled.
     await LDObservePlatform.instance.start(
       mobileKey: credential,
       observability: _withSymbolsId(observability),
       replay: replay ?? const SessionReplayOptions(isEnabled: false),
     );
 
-    registerPlugin(this, credential, _config);
-    _instrumentations.add(LifecycleInstrumentation());
-    _instrumentations.add(
-      DebugPrintInstrumentation(_config.instrumentationConfig),
+    if (ObserveOtel.isShutdown) {
+      // Shut down while native was starting; the earlier stop may have landed
+      // before replay started.
+      unawaited(LDObservePlatform.instance.shutdown());
+      return;
+    }
+
+    registerPlugin(
+      this,
+      credential,
+      _config,
+      replayEnabled: replay?.isEnabled ?? false,
     );
-    if (_config.tapsEnabled) {
+    if (_config.enabled) {
+      if (observability.analytics.appLifecycle) {
+        _instrumentations.add(LifecycleInstrumentation());
+      }
+      _instrumentations.add(
+        DebugPrintInstrumentation(_config.instrumentationConfig),
+      );
+    }
+    if (_config.tapsEnabled && Otel.clickRecorder != null) {
       // Resolves the tapped widget in Dart, which is the only place the widget
       // tree is visible. Takes effect once a `SessionReplayCapture` mounts the
       // detector that feeds it; until then native keeps reporting its own coarse
@@ -204,12 +224,18 @@ final class LDObservePlugin extends Plugin {
   @override
   List<Hook> get hooks => [_ObservabilityHook()];
 
+  /// The instrumentations installed by [boot].
+  @visibleForTesting
+  List<Instrumentation> get instrumentations =>
+      List.unmodifiable(_instrumentations);
+
   /// Unregister any event handlers used by the plugin and cleanup any
   /// resources requiring manual cleanup.
   void dispose() {
     for (final instrumentation in _instrumentations) {
       instrumentation.dispose();
     }
+    _instrumentations.clear();
   }
 }
 

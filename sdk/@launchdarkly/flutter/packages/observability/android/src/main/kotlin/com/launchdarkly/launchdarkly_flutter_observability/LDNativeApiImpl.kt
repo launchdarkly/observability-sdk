@@ -313,6 +313,13 @@ internal class LDNativeApiImpl(
         LDObserve.setEmbedderClickHandling(enabled)
     }
 
+    // Session Replay is the only native component with a teardown; the native
+    // observability SDK keeps its automatic instrumentation running.
+    override fun shutdown() {
+        LDReplay.stop()
+        LDReplay.flush()
+    }
+
     /**
      * Maps the OpenTelemetry log-severity number sent across the bridge onto the
      * native [ObservabilityOptions.LogLevel]. Defaults to [ObservabilityOptions.LogLevel.INFO]

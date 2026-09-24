@@ -8,13 +8,9 @@ import 'web_session_replay_capture.dart';
 /// Web implementation.
 ///
 /// Observability (traces/logs) is handled by the cross-platform Dart
-/// OpenTelemetry pipeline, so this implementation is only responsible for web
-/// session replay.
-///
-/// TODO(observability): wire [start] to the LaunchDarkly browser session
-/// replay JS SDK via `dart:js_interop` / `package:web`. For now it is a
-/// documented no-op so the package compiles and runs on web; the capture
-/// wrapper is a pass-through because the browser SR records the DOM directly.
+/// OpenTelemetry pipeline, and session replay is not supported on web, so
+/// there is no platform stack to start or stop and the capture wrapper is a
+/// pass-through.
 LDObservePlatform createLDObservePlatform() => _WebLDObservePlatform();
 
 class _WebLDObservePlatform implements LDObservePlatform {
@@ -23,9 +19,10 @@ class _WebLDObservePlatform implements LDObservePlatform {
     required String mobileKey,
     required ObservabilityOptions observability,
     required SessionReplayOptions replay,
-  }) async {
-    // No-op until the browser session replay SDK is bridged.
-  }
+  }) async {}
+
+  @override
+  Future<void> shutdown() async {}
 
   @override
   Widget wrapForCapture(Widget child) => WebSessionReplayCapture(child: child);

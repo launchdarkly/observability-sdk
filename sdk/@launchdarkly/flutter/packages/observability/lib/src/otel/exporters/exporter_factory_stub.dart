@@ -33,9 +33,11 @@ class _StubExporters implements ObservabilityExporters {
   LogRecorder createLogRecorder(ObservabilityConfig config) =>
       _SpanEventLogRecorder();
 
+  // Without session replay on this target these recorders only emit spans, so
+  // they follow `isEnabled` as well as their own analytics flag.
   @override
   TrackRecorder createTrackRecorder(ObservabilityConfig config) =>
-      _SpanTrackRecorder(config.trackEventsEnabled);
+      _SpanTrackRecorder(config.enabled && config.trackEventsEnabled);
 
   @override
   IdentifyRecorder createIdentifyRecorder(ObservabilityConfig config) =>
@@ -43,11 +45,11 @@ class _StubExporters implements ObservabilityExporters {
 
   @override
   ScreenViewRecorder createScreenViewRecorder(ObservabilityConfig config) =>
-      _SpanScreenViewRecorder(config.screenViewsEnabled);
+      _SpanScreenViewRecorder(config.enabled && config.screenViewsEnabled);
 
   @override
   ClickRecorder createClickRecorder(ObservabilityConfig config) =>
-      _SpanClickRecorder(config.tapsEnabled);
+      _SpanClickRecorder(config.enabled && config.tapsEnabled);
 }
 
 /// Emits each click as a Dart `click` span via the OpenTelemetry pipeline. Gated

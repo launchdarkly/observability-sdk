@@ -716,6 +716,13 @@ protocol LDNativeApi {
   /// installs and disabled when it is torn down. Taps on native views elsewhere
   /// in the app (an add-to-app host's own screens) are never affected.
   func setEmbedderClickHandling(enabled: Bool) throws
+  /// Stops Session Replay capture as part of `LDObserve.shutdown`.
+  ///
+  /// Only Session Replay can be stopped: neither native observability SDK has
+  /// a teardown, so its automatic instrumentation (crash reporting, network
+  /// requests, launch times, native lifecycle spans) keeps running until the
+  /// process exits.
+  func shutdown() throws
 }
 
 /// Generated setup class from Pigeon to handle messages through the `binaryMessenger`.
@@ -919,6 +926,25 @@ class LDNativeApiSetup {
       }
     } else {
       setEmbedderClickHandlingChannel.setMessageHandler(nil)
+    }
+    /// Stops Session Replay capture as part of `LDObserve.shutdown`.
+    ///
+    /// Only Session Replay can be stopped: neither native observability SDK has
+    /// a teardown, so its automatic instrumentation (crash reporting, network
+    /// requests, launch times, native lifecycle spans) keeps running until the
+    /// process exits.
+    let shutdownChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.launchdarkly_flutter_observability.LDNativeApi.shutdown\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      shutdownChannel.setMessageHandler { _, reply in
+        do {
+          try api.shutdown()
+          reply(wrapResult(nil))
+        } catch {
+          reply(wrapError(error))
+        }
+      }
+    } else {
+      shutdownChannel.setMessageHandler(nil)
     }
   }
 }

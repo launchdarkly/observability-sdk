@@ -18,6 +18,9 @@ class _StubLDObservePlatform implements LDObservePlatform {
   }) async {}
 
   @override
+  Future<void> shutdown() async {}
+
+  @override
   Widget wrapForCapture(Widget child) => child;
 
   @override

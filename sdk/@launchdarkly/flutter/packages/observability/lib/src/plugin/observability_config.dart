@@ -88,6 +88,12 @@ final class InstrumentationConfig {
 }
 
 final class ObservabilityConfig {
+  /// Whether observability telemetry is recorded. Mirrors
+  /// `ObservabilityOptions.isEnabled`. When `false` the Dart pipeline records no
+  /// spans or logs; screen views, clicks, track events and identifies are only
+  /// forwarded when session replay needs them. Defaults to `true`.
+  final bool enabled;
+
   /// The configured OTLP endpoint.
   final String otlpEndpoint;
 
@@ -128,6 +134,7 @@ final class ObservabilityConfig {
   final bool tapsEnabled;
 
   ObservabilityConfig({
+    this.enabled = true,
     this.applicationName,
     this.applicationVersion,
     required this.otlpEndpoint,
@@ -163,6 +170,7 @@ ObservabilityConfig configWithDefaults({
 ObservabilityConfig configFromOptions(ObservabilityOptions options) {
   final friendlyName = options.contextFriendlyName;
   return ObservabilityConfig(
+    enabled: options.isEnabled,
     applicationName: options.serviceName,
     applicationVersion: options.serviceVersion,
     otlpEndpoint: options.otlpEndpoint,
