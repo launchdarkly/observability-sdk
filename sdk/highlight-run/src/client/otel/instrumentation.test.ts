@@ -1,8 +1,9 @@
-import { describe, it, expect, vi } from 'vitest'
+import { afterEach, describe, it, expect, vi } from 'vitest'
 import {
 	safeParseUrl,
 	sanitizeHeaders,
 	sanitizeUrl,
+	sanitizedLocationHref,
 } from '../listeners/network-listener/utils/network-sanitizer'
 import {
 	enhanceSpanWithHttpRequestAttributes,
@@ -1530,6 +1531,30 @@ describe('Network Instrumentation Custom Attributes', () => {
 					'https://example.com/#/users?page=2&sort=name',
 				)
 			})
+		})
+	})
+
+	describe('sanitizedLocationHref', () => {
+		afterEach(() => {
+			window.history.replaceState({}, '', '/')
+		})
+
+		it('should redact sensitive query params from the current URL', () => {
+			window.history.replaceState({}, '', '/cb?access_token=SECRET')
+			expect(sanitizedLocationHref()).not.toContain('SECRET')
+			expect(sanitizedLocationHref()).toContain('access_token=REDACTED')
+		})
+
+		it('should strip token-bearing fragments from the current URL', () => {
+			window.history.replaceState({}, '', '/cb#id_token=SECRET')
+			expect(sanitizedLocationHref()).not.toContain('SECRET')
+		})
+
+		it('should preserve a harmless current URL', () => {
+			window.history.replaceState({}, '', '/users?page=2#section')
+			const result = sanitizedLocationHref()
+			expect(result).toContain('/users?page=2')
+			expect(result).toContain('#section')
 		})
 	})
 

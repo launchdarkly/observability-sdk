@@ -6,6 +6,7 @@ import { Attributes } from '@opentelemetry/api'
 import * as SemanticAttributes from '@opentelemetry/semantic-conventions'
 import { LD_PAGE_VIEW_SPAN_NAME } from '../../integrations/launchdarkly'
 import { PathListener } from '../listeners/path-listener'
+import { sanitizeUrl } from '../listeners/network-listener/utils/network-sanitizer'
 
 export type LocationChangeConfig = InstrumentationConfig & {
 	getLDContextKeyAttributes?: () => Attributes | undefined
@@ -45,12 +46,15 @@ export class LocationChangeInstrumentation extends InstrumentationBase {
 			if (previousUrl === currentUrl) {
 				return
 			}
+			// Change detection compares the raw URLs above; only the recorded
+			// values are sanitized.
+			const sanitizedCurrentUrl = sanitizeUrl(currentUrl)
 			try {
 				const span = this.tracer.startSpan(LD_PAGE_VIEW_SPAN_NAME, {
 					attributes: {
-						[SemanticAttributes.ATTR_URL_FULL]: currentUrl,
-						'page_view.previous_url': previousUrl,
-						'page_view.url': currentUrl,
+						[SemanticAttributes.ATTR_URL_FULL]: sanitizedCurrentUrl,
+						'page_view.previous_url': sanitizeUrl(previousUrl),
+						'page_view.url': sanitizedCurrentUrl,
 					},
 				})
 				const contextKeys = this._getLDContextKeyAttributes?.()

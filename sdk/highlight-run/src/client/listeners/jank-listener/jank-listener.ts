@@ -1,4 +1,5 @@
 import { getSimpleSelector } from '../../utils/dom'
+import { sanitizedLocationHref } from '../network-listener/utils/network-sanitizer'
 
 // samples taken to calculate expected RAF
 const RAF_SAMPLES = 30
@@ -70,7 +71,7 @@ export const JankListener = (
 			querySelector: generateQuerySelector(),
 			newLocation:
 				window.location.href != jankState.location
-					? window.location.href
+					? sanitizedLocationHref()
 					: undefined,
 		})
 	}
