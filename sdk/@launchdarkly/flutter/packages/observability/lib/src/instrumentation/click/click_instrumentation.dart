@@ -24,6 +24,8 @@ final class ClickInstrumentation implements Instrumentation {
   /// The installed instrumentation, or null when clicks are not being captured
   /// (`analytics.taps` is off, or the pipeline has not booted).
   static ClickInstrumentation? _active;
+
+  /// The installed instrumentation, or null when clicks are not being captured.
   static ClickInstrumentation? get active => _active;
 
   /// Mounted detectors.
@@ -40,8 +42,16 @@ final class ClickInstrumentation implements Instrumentation {
 
   final ClickTargetResolver _resolver;
 
+  /// Whether a target's visible text may be reported.
+  @visibleForTesting
+  bool get captureText => _resolver.captureText;
+
   bool _disposed = false;
 
+  /// Creates the instrumentation and installs it as [active].
+  ///
+  /// [customResolver] recognizes application widget types, and [captureText]
+  /// controls whether a target's visible text may be reported.
   ClickInstrumentation({
     LDClickTargetResolver? customResolver,
     bool captureText = true,
@@ -126,16 +136,20 @@ final class ClickInstrumentation implements Instrumentation {
     );
   }
 
-  /// Converts a Flutter logical position into the units each platform reports
-  /// `event.x`/`event.y` in, so a Flutter click sits in the same coordinate space
-  /// as a native one on the same device.
+  static Offset _coordinates(Offset logical, double devicePixelRatio) =>
+      logical * platformScale(devicePixelRatio);
+
+  /// The factor converting Flutter logical pixels into the units each platform
+  /// reports `event.x`/`event.y` in, so a Flutter click sits in the same
+  /// coordinate space as a native one on the same device. Shared by automatic
+  /// capture and `LDObserve.trackClick`.
   ///
   /// Android's native taps come from `MotionEvent`, in physical pixels; iOS uses
-  /// UIKit points, which are Flutter logical pixels already.
-  static Offset _coordinates(Offset logical, double devicePixelRatio) =>
-      defaultTargetPlatform == TargetPlatform.android
-      ? logical * devicePixelRatio
-      : logical;
+  /// UIKit points, which are Flutter logical pixels already, as is web.
+  static double platformScale(double devicePixelRatio) =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android
+      ? devicePixelRatio
+      : 1.0;
 
   @override
   void dispose() {
@@ -166,8 +180,10 @@ final class ClickInstrumentation implements Instrumentation {
 /// observes pointers without entering the gesture arena: it cannot win, lose, or
 /// delay a tap the app is handling.
 class LDClickDetector extends StatefulWidget {
+  /// The subtree whose taps are observed.
   final Widget child;
 
+  /// Creates a detector observing taps on [child].
   const LDClickDetector({super.key, required this.child});
 
   @override

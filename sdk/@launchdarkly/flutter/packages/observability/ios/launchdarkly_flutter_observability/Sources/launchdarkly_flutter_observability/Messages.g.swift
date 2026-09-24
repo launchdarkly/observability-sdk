@@ -130,26 +130,22 @@ func deepHashMessages(value: Any?, hasher: inout Hasher) {
 
 /// Generated class from Pigeon that represents data sent in messages.
 struct LDInstrumentationOptions: Hashable {
-  var networkRequests: Bool? = nil
   var launchTimes: Bool? = nil
   var crashReporting: Bool? = nil
 
 
   // swift-format-ignore: AlwaysUseLowerCamelCase
   static func fromList(_ pigeonVar_list: [Any?]) -> LDInstrumentationOptions? {
-    let networkRequests: Bool? = nilOrValue(pigeonVar_list[0])
-    let launchTimes: Bool? = nilOrValue(pigeonVar_list[1])
-    let crashReporting: Bool? = nilOrValue(pigeonVar_list[2])
+    let launchTimes: Bool? = nilOrValue(pigeonVar_list[0])
+    let crashReporting: Bool? = nilOrValue(pigeonVar_list[1])
 
     return LDInstrumentationOptions(
-      networkRequests: networkRequests,
       launchTimes: launchTimes,
       crashReporting: crashReporting
     )
   }
   func toList() -> [Any?] {
     return [
-      networkRequests,
       launchTimes,
       crashReporting,
     ]
@@ -716,6 +712,13 @@ protocol LDNativeApi {
   /// installs and disabled when it is torn down. Taps on native views elsewhere
   /// in the app (an add-to-app host's own screens) are never affected.
   func setEmbedderClickHandling(enabled: Bool) throws
+  /// Stops Session Replay capture as part of `LDObserve.shutdown`, replying
+  /// only once capture has stopped and queued replay events have been flushed.
+  ///
+  /// Only Session Replay can be stopped: neither native observability SDK has
+  /// a teardown, so its automatic instrumentation (crash reporting, launch
+  /// times, native lifecycle spans) keeps running until the process exits.
+  func shutdown(completion: @escaping (Result<Void, Error>) -> Void)
 }
 
 /// Generated setup class from Pigeon to handle messages through the `binaryMessenger`.
@@ -919,6 +922,27 @@ class LDNativeApiSetup {
       }
     } else {
       setEmbedderClickHandlingChannel.setMessageHandler(nil)
+    }
+    /// Stops Session Replay capture as part of `LDObserve.shutdown`, replying
+    /// only once capture has stopped and queued replay events have been flushed.
+    ///
+    /// Only Session Replay can be stopped: neither native observability SDK has
+    /// a teardown, so its automatic instrumentation (crash reporting, launch
+    /// times, native lifecycle spans) keeps running until the process exits.
+    let shutdownChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.launchdarkly_flutter_observability.LDNativeApi.shutdown\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      shutdownChannel.setMessageHandler { _, reply in
+        api.shutdown { result in
+          switch result {
+          case .success:
+            reply(wrapResult(nil))
+          case .failure(let error):
+            reply(wrapError(error))
+          }
+        }
+      }
+    } else {
+      shutdownChannel.setMessageHandler(nil)
     }
   }
 }

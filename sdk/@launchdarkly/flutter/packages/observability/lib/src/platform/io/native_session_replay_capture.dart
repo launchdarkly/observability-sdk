@@ -26,8 +26,10 @@ import 'masking/widget_masking_config.dart';
 ///     drift mid-capture (and drops frames it can't safely cover).
 ///   - [MaskApplier] — paints the rectangles onto the captured frame.
 class NativeSessionReplayCapture extends StatefulWidget {
+  /// The subtree that is captured for session replay.
   final Widget child;
 
+  /// Creates a capture wrapper around [child].
   const NativeSessionReplayCapture({super.key, required this.child});
 
   @override

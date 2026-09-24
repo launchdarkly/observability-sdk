@@ -21,6 +21,7 @@ class RecognizedClickTarget {
   /// Widget type name for `event.tag` and the replay `clickTarget`.
   final String tag;
 
+  /// How this target competes with recognized widgets above and below it.
   final ClickTargetPrecedence precedence;
 
   /// Whether the widget currently responds to a press. A disabled button is
@@ -49,6 +50,7 @@ class RecognizedClickTarget {
   /// [LDClickTargetResolver].
   final String? id;
 
+  /// Creates a recognized click target.
   const RecognizedClickTarget({
     required this.tag,
     required this.precedence,

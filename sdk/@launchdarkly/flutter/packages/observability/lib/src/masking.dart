@@ -15,16 +15,17 @@ import 'package:flutter/widgets.dart';
 /// ```
 ///
 /// Masking follows the widget as it lays out and scrolls — there is nothing to
-/// register or tear down. Nesting an [LDUnmask] inside reveals that inner
-/// subtree again.
+/// register or tear down. An explicit mask covers its whole subtree: an
+/// [LDUnmask] nested inside stays masked.
 ///
 /// Platform behavior: active on iOS/Android (the native screenshot pipeline
-/// redacts the region). On web it renders [child] unchanged for now — web
-/// session replay is not yet available.
+/// redacts the region). On web, where session replay is not supported, it
+/// renders [child] unchanged.
 class LDMask extends StatelessWidget {
   /// The subtree to redact from session replay.
   final Widget child;
 
+  /// Creates a marker that redacts [child] from session replay.
   const LDMask({super.key, required this.child});
 
   @override
@@ -53,6 +54,7 @@ class LDIgnore extends StatelessWidget {
   /// The subtree to exclude from session replay.
   final Widget child;
 
+  /// Creates a marker that excludes [child] from session replay.
   const LDIgnore({super.key, required this.child});
 
   @override
@@ -78,12 +80,13 @@ class LDIgnore extends StatelessWidget {
 /// override an explicit [LDMask]. An [LDUnmask] nested inside an [LDMask] stays
 /// masked, because an explicit per-widget mask always wins.
 ///
-/// Platform behavior: active on iOS/Android. On web it renders [child]
-/// unchanged for now — web session replay is not yet available.
+/// Platform behavior: active on iOS/Android. On web, where session replay is
+/// not supported, it renders [child] unchanged.
 class LDUnmask extends StatelessWidget {
   /// The subtree to reveal in session replay.
   final Widget child;
 
+  /// Creates a marker that reveals [child] from global masking.
   const LDUnmask({super.key, required this.child});
 
   @override

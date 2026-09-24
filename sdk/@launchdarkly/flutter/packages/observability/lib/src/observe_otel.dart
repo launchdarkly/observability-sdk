@@ -1,19 +1,23 @@
 import 'dart:async';
+import 'dart:developer' as developer;
+import 'package:flutter/foundation.dart' show visibleForTesting;
 
 import 'package:launchdarkly_flutter_client_sdk/launchdarkly_flutter_client_sdk.dart';
 import 'package:opentelemetry/api.dart' as otel;
 
 import 'api/attribute.dart';
+import 'api/log_severity.dart';
 import 'api/span.dart';
 import 'api/span_kind.dart';
+import 'api/span_status_code.dart';
 import 'otel/conversions.dart';
 import 'otel/setup.dart';
+import 'platform/ld_observe_platform.dart';
 import 'plugin/ld_observe_plugin.dart';
 import 'plugin/observability_config.dart';
 
 const _launchDarklyTracerName = 'launchdarkly-observability';
 const _launchDarklyErrorSpanName = 'launchdarkly.error';
-const _defaultLogLevel = 'info';
 
 /// Internal implementation of the observability recording APIs.
 ///
@@ -41,6 +45,63 @@ final class ObserveOtel {
     );
 
     return wrapSpan(span, token);
+  }
+
+  /// Runs [fn] inside a new span and ends the span when [fn] completes.
+  ///
+  /// The span is current for everything [fn] runs, including across `await`s,
+  /// because it is scoped to a zone rather than a global stack. When [fn]
+  /// returns a `Future` the span ends once it completes. A thrown error or a
+  /// failed future is recorded on the span, which is marked as an error, and
+  /// then propagated unchanged.
+  static T withSpan<T>(
+    String name,
+    T Function(Span span) fn, {
+    SpanKind kind = SpanKind.internal,
+    Map<String, Attribute>? attributes,
+  }) {
+    final tracer = otel.globalTracerProvider.getTracer(_launchDarklyTracerName);
+    final otelSpan = tracer.startSpan(
+      name,
+      kind: convertKind(kind),
+      attributes: convertAttributes(attributes),
+    );
+    final span = wrapSpan(otelSpan, null);
+
+    late final T result;
+    try {
+      otel.zone(otel.contextWithSpan(otel.Context.current, otelSpan)).run(() {
+        result = fn(span);
+        // The zone keeps the span current until the future it is handed
+        // completes, and chains `whenComplete` onto it, which would surface a
+        // failure as an unhandled error. Hand it a future that cannot fail;
+        // the caller still gets the original.
+        final Object? pending = result;
+        return pending is Future ? pending.then((_) {}, onError: (_) {}) : null;
+      });
+    } catch (error, stackTrace) {
+      _failSpan(span, error, stackTrace);
+      rethrow;
+    }
+    final Object? outcome = result;
+    if (outcome is Future) {
+      unawaited(
+        outcome.then(
+          (_) => span.end(),
+          onError: (Object error, StackTrace stackTrace) =>
+              _failSpan(span, error, stackTrace),
+        ),
+      );
+    } else {
+      span.end();
+    }
+    return result;
+  }
+
+  static void _failSpan(Span span, Object error, StackTrace stackTrace) {
+    spanRecordException(span, error, stackTrace: stackTrace);
+    span.setStatus(SpanStatusCode.error);
+    span.end();
   }
 
   /// Record a `track` event for a custom event.
@@ -186,13 +247,13 @@ final class ObserveOtel {
 
   /// Record a log with optional attributes.
   ///
-  /// If [severity] is not provided, then it will default to 'info'.
-  /// An optional [stackTrace] can be provided.
+  /// If [severity] is not provided, then it will default to
+  /// [LogSeverity.info]. An optional [stackTrace] can be provided.
   ///
   /// The `StackTrace.current` property can be used to capture a stack trace.
   static void recordLog(
     String message, {
-    String severity = _defaultLogLevel,
+    LogSeverity severity = LogSeverity.info,
     StackTrace? stackTrace,
     Map<String, Attribute>? attributes,
   }) {
@@ -207,14 +268,48 @@ final class ObserveOtel {
     );
   }
 
-  /// Shutdown observability. Once shutdown observability cannot be restarted.
-  static void shutdown() {
-    if (!_shutdown) {
-      Otel.shutdown();
-      for (final plugin in _pluginInstances) {
-        plugin.dispose();
-      }
-      _shutdown = true;
+  /// Whether [shutdown] has run. Terminal: a later boot does nothing.
+  static bool get isShutdown => _shutdown;
+
+  /// Shut down observability. Terminal: observability cannot be restarted in
+  /// this process, and a later `LDObserve.init` does nothing.
+  ///
+  /// Flushes buffered Dart spans, removes the Dart instrumentations, and stops
+  /// native Session Replay. Native automatic instrumentation keeps running,
+  /// because the native observability SDKs have no teardown.
+  ///
+  /// Every call returns the same future, which completes once native has
+  /// acknowledged the stop. It never completes with an error; a failure to
+  /// reach native is logged.
+  static Future<void> shutdown() => _shutdownResult ??= _shutdownOnce();
+
+  static Future<void>? _shutdownResult;
+
+  /// How long [shutdown] waits for native to confirm Session Replay stopped.
+  /// A host that never replies must not leave the shutdown future pending.
+  @visibleForTesting
+  static Duration nativeShutdownTimeout = const Duration(seconds: 5);
+
+  static Future<void> _shutdownOnce() async {
+    _shutdown = true;
+    // Plugins first: disposing click capture hands tap reporting back to native
+    // through the click recorder, which Otel.shutdown clears.
+    for (final plugin in _pluginInstances) {
+      plugin.dispose();
+    }
+    _pluginInstances.clear();
+    Otel.shutdown();
+    try {
+      await LDObservePlatform.instance.shutdown().timeout(
+        nativeShutdownTimeout,
+      );
+    } catch (error, stackTrace) {
+      developer.log(
+        'LDObserve could not stop session replay during shutdown.',
+        name: 'LDObserve',
+        error: error,
+        stackTrace: stackTrace,
+      );
     }
   }
 
@@ -230,12 +325,17 @@ final class ObserveOtel {
 }
 
 /// Not for export.
-/// Registers a plugin with the singleton and sets up otel.
+/// Registers a plugin with the singleton and sets up otel. Does nothing after
+/// [ObserveOtel.shutdown].
 void registerPlugin(
   LDObservePlugin plugin,
   String credential,
-  ObservabilityConfig config,
-) {
-  Otel.setup(credential, config);
+  ObservabilityConfig config, {
+  bool replayEnabled = false,
+}) {
+  if (ObserveOtel._shutdown) {
+    return;
+  }
+  Otel.setup(credential, config, replayEnabled: replayEnabled);
   ObserveOtel._pluginInstances.add(plugin);
 }

@@ -9,6 +9,7 @@ import 'package:flutter/widgets.dart';
 class LDAppLifecycleListener {
   late final StreamController<AppLifecycleState> _streamController;
 
+  /// Creates a listener whose [stream] emits lifecycle state changes.
   LDAppLifecycleListener() {
     _streamController = StreamController.broadcast();
 
@@ -30,8 +31,10 @@ class LDAppLifecycleListener {
     };
   }
 
+  /// Broadcast stream of application lifecycle state changes.
   Stream<AppLifecycleState> get stream => _streamController.stream;
 
+  /// Closes [stream] and stops listening for lifecycle changes.
   void close() {
     _streamController.close();
   }

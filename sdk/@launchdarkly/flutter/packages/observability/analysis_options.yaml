@@ -8,3 +8,7 @@ analyzer:
     # experimental. We depend on it intentionally; don't fail analysis on it.
     experimental_member_use: ignore
 
+
+linter:
+  rules:
+    - public_member_api_docs

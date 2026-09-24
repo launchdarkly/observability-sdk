@@ -11,29 +11,76 @@ import '../plugin/observability_config.dart';
 ///
 /// Native-only: the web/Dart pipeline currently ignores this value.
 enum ObservabilityLogLevel {
+  /// OTel severity `TRACE` (1): export every log.
   trace(1),
+
+  /// OTel severity `TRACE2` (2).
   trace2(2),
+
+  /// OTel severity `TRACE3` (3).
   trace3(3),
+
+  /// OTel severity `TRACE4` (4).
   trace4(4),
+
+  /// OTel severity `DEBUG` (5).
   debug(5),
+
+  /// OTel severity `DEBUG2` (6).
   debug2(6),
+
+  /// OTel severity `DEBUG3` (7).
   debug3(7),
+
+  /// OTel severity `DEBUG4` (8).
   debug4(8),
+
+  /// OTel severity `INFO` (9). The default threshold.
   info(9),
+
+  /// OTel severity `INFO2` (10).
   info2(10),
+
+  /// OTel severity `INFO3` (11).
   info3(11),
+
+  /// OTel severity `INFO4` (12).
   info4(12),
+
+  /// OTel severity `WARN` (13).
   warn(13),
+
+  /// OTel severity `WARN2` (14).
   warn2(14),
+
+  /// OTel severity `WARN3` (15).
   warn3(15),
+
+  /// OTel severity `WARN4` (16).
   warn4(16),
+
+  /// OTel severity `ERROR` (17).
   error(17),
+
+  /// OTel severity `ERROR2` (18).
   error2(18),
+
+  /// OTel severity `ERROR3` (19).
   error3(19),
+
+  /// OTel severity `ERROR4` (20).
   error4(20),
+
+  /// OTel severity `FATAL` (21).
   fatal(21),
+
+  /// OTel severity `FATAL2` (22).
   fatal2(22),
+
+  /// OTel severity `FATAL3` (23).
   fatal3(23),
+
+  /// OTel severity `FATAL4` (24).
   fatal4(24),
 
   /// Disables log exporting entirely.
@@ -56,15 +103,13 @@ class TracesOptions {
   /// Whether to automatically record UI performance and other events as spans.
   final bool includeSpans;
 
+  /// Creates trace options; both kinds of automatic spans are on by default.
   const TracesOptions({this.includeErrors = true, this.includeSpans = true});
 }
 
 /// Toggles for SDK-side instrumentation. Mirrors `InstrumentationOptions` in
 /// the .NET MAUI bridge, extended with the Dart-only [debugPrint] control.
 class InstrumentationOptions {
-  /// Whether to instrument network requests (native bridge only).
-  final bool networkRequests;
-
   /// Whether to instrument launch times (native bridge only).
   final bool launchTimes;
 
@@ -78,8 +123,9 @@ class InstrumentationOptions {
   /// pipeline. Defaults to [DebugPrintSetting.releaseOnly].
   final DebugPrintSetting debugPrint;
 
+  /// Creates instrumentation options; every instrumentation is on by default,
+  /// with `debugPrint` captured in release builds only.
   const InstrumentationOptions({
-    this.networkRequests = true,
     this.launchTimes = true,
     this.crashReporting = true,
     this.debugPrint = const DebugPrintReleaseOnly(),
@@ -105,11 +151,11 @@ class AnalyticsOptions {
   /// how [views] treats `Navigate`. Defaults to `true`.
   final bool taps;
 
-  /// Whether to emit spans for screen/page views. Maps to the native
-  /// `analytics.screenViews` gate on Android and iOS; a no-op on web. Screen
-  /// views are reported from Dart (see `LDNavigatorObserver`), so this gates the
-  /// `screen_view` span only — the Session Replay `Navigate` event is emitted
-  /// regardless. Defaults to `true`.
+  /// Whether to emit spans for screen/page views. Screen views are reported from
+  /// Dart (see `LDNavigatorObserver`); on web this gates the Dart `screen_view`
+  /// span, and on Android and iOS it maps to the native `analytics.screenViews`
+  /// gate. It gates the span only — the mobile Session Replay `Navigate` event is
+  /// emitted regardless. Defaults to `true`.
   final bool views;
 
   /// Whether to emit a `track` span when a custom event is tracked, either
@@ -117,9 +163,12 @@ class AnalyticsOptions {
   /// `LDObserve.track` API. Defaults to `true`.
   final bool trackEvents;
 
-  /// Whether to emit app-lifecycle spans (`app_foreground` / `app_background`)
-  /// as the app moves between foreground and background. Mobile-only (iOS,
-  /// Android); a no-op elsewhere. Defaults to `true`.
+  /// Whether to emit app-lifecycle spans as the app changes state.
+  ///
+  /// On every platform this gates the Dart `device.app.lifecycle` span, emitted
+  /// on each Flutter `AppLifecycleState` change (`resumed`, `inactive`,
+  /// `hidden`, `paused`, `detached`). On iOS and Android it also gates the
+  /// native `app_foreground` / `app_background` spans. Defaults to `true`.
   final bool appLifecycle;
 
   /// Whether to emit an `app_launch` span (carrying `event.launch_type` —
@@ -146,6 +195,7 @@ class AnalyticsOptions {
   /// ```
   final LDClickTargetResolver? customClickTargetResolver;
 
+  /// Creates analytics options; all analytics telemetry is on by default.
   const AnalyticsOptions({
     this.taps = true,
     this.views = true,
@@ -186,19 +236,61 @@ class AnalyticsOptions {
 /// or web implementation. The native wire conversion lives in
 /// `platform/io/native_options_codec.dart`.
 class ObservabilityOptions {
+  /// The [serviceName] used when none is given.
   static const String defaultServiceName = 'observability-flutter';
-  static const String defaultServiceVersion = '0.1.0';
+
+  /// The LaunchDarkly OTLP collector used when no [otlpEndpoint] is given.
   static const String defaultOtlpEndpoint =
       'https://otel.observability.app.launchdarkly.com:4318';
+
+  /// The LaunchDarkly observability backend used when no [backendUrl] is
+  /// given.
   static const String defaultBackendUrl =
       'https://pub.observability.app.launchdarkly.com';
 
+  /// Whether observability telemetry is recorded. Defaults to `true`.
+  ///
+  /// When `false`, no spans or logs are recorded from Dart: flag evaluations,
+  /// `LDObserve.startSpan`, `recordException`, `recordLog`, `debugPrint` and
+  /// lifecycle capture are all no-ops, and on web nothing is exported. Session
+  /// replay is controlled separately by `SessionReplayOptions.isEnabled`; while
+  /// it is on, screen views, clicks, track events and identifies are still
+  /// forwarded to native, because the replay timeline is built from them. The
+  /// flag is also passed to the native SDK for its automatic instrumentation.
   final bool isEnabled;
+
+  /// The `service.name` resource attribute. Defaults to [defaultServiceName],
+  /// which names the SDK rather than your app — set it to identify your app.
   final String serviceName;
-  final String serviceVersion;
+
+  /// The `service.version` resource attribute, such as a release version or
+  /// Git SHA.
+  ///
+  /// When `null` (the default), iOS and Android report the host app's version
+  /// (`CFBundleShortVersionString` / `versionName`, which Flutter sets from the
+  /// `version` in `pubspec.yaml`), and web omits `service.version`.
+  final String? serviceVersion;
+
+  /// The OTLP/HTTP endpoint telemetry is exported to (without the `/v1/...`
+  /// signal path). Defaults to [defaultOtlpEndpoint]; override it to send data
+  /// through a proxy.
   final String otlpEndpoint;
+
+  /// The LaunchDarkly observability backend used for session and replay
+  /// metadata. Defaults to [defaultBackendUrl].
   final String backendUrl;
+
+  /// A human-readable name for the current context, shown in the
+  /// observability UI instead of its key.
   final String? contextFriendlyName;
+
+  /// Extra OTel Resource attributes attached to every exported signal on
+  /// every platform, such as `deployment.environment`.
+  ///
+  /// Use strings, numbers, booleans, or homogeneous lists of those; other
+  /// values are not portable across platforms. Use [serviceName] and
+  /// [serviceVersion] rather than the `service.*` keys, which the SDK sets
+  /// itself.
   final Map<String, Object?>? attributes;
 
   /// Extra HTTP headers added to OTLP exports (e.g. for proxies or auth).
@@ -224,15 +316,20 @@ class ObservabilityOptions {
   final bool metricsEnabled;
 
   /// Analytics telemetry configuration. Mirrors Android
-  /// `ObservabilityOptions.analytics`. Native-only.
+  /// `ObservabilityOptions.analytics`. See each [AnalyticsOptions] field for
+  /// which platforms it applies to.
   final AnalyticsOptions analytics;
 
+  /// Toggles for automatic instrumentation: launch times,
+  /// crash reporting and `debugPrint` capture.
   final InstrumentationOptions instrumentation;
 
+  /// Creates observability options. Every argument is optional; the defaults
+  /// enable all telemetry and export to LaunchDarkly.
   const ObservabilityOptions({
     this.isEnabled = true,
     this.serviceName = defaultServiceName,
-    this.serviceVersion = defaultServiceVersion,
+    this.serviceVersion,
     String? otlpEndpoint,
     String? backendUrl,
     this.contextFriendlyName,
@@ -246,41 +343,27 @@ class ObservabilityOptions {
     this.instrumentation = const InstrumentationOptions(),
   }) : otlpEndpoint = otlpEndpoint ?? defaultOtlpEndpoint,
        backendUrl = backendUrl ?? defaultBackendUrl;
+}
 
-  /// Returns a copy with the given fields replaced. Only non-null arguments
-  /// override; existing values (including [attributes]) are otherwise preserved.
-  ObservabilityOptions copyWith({
-    bool? isEnabled,
-    String? serviceName,
-    String? serviceVersion,
-    String? otlpEndpoint,
-    String? backendUrl,
-    String? contextFriendlyName,
-    Map<String, Object?>? attributes,
-    Map<String, String>? customHeaders,
-    Duration? sessionBackgroundTimeout,
-    ObservabilityLogLevel? logsApiLevel,
-    TracesOptions? traces,
-    bool? metricsEnabled,
-    AnalyticsOptions? analytics,
-    InstrumentationOptions? instrumentation,
-  }) {
-    return ObservabilityOptions(
-      isEnabled: isEnabled ?? this.isEnabled,
-      serviceName: serviceName ?? this.serviceName,
-      serviceVersion: serviceVersion ?? this.serviceVersion,
-      otlpEndpoint: otlpEndpoint ?? this.otlpEndpoint,
-      backendUrl: backendUrl ?? this.backendUrl,
-      contextFriendlyName: contextFriendlyName ?? this.contextFriendlyName,
-      attributes: attributes ?? this.attributes,
-      customHeaders: customHeaders ?? this.customHeaders,
-      sessionBackgroundTimeout:
-          sessionBackgroundTimeout ?? this.sessionBackgroundTimeout,
-      logsApiLevel: logsApiLevel ?? this.logsApiLevel,
-      traces: traces ?? this.traces,
-      metricsEnabled: metricsEnabled ?? this.metricsEnabled,
-      analytics: analytics ?? this.analytics,
-      instrumentation: instrumentation ?? this.instrumentation,
-    );
-  }
+/// Not for export: a public `copyWith` could not clear nullable fields
+/// without a sentinel design, so the SDK keeps its one copy internal.
+extension ObservabilityOptionsCopy on ObservabilityOptions {
+  /// A copy with [attributes] replaced (`null` clears them).
+  ObservabilityOptions withAttributes(Map<String, Object?>? attributes) =>
+      ObservabilityOptions(
+        isEnabled: isEnabled,
+        serviceName: serviceName,
+        serviceVersion: serviceVersion,
+        otlpEndpoint: otlpEndpoint,
+        backendUrl: backendUrl,
+        contextFriendlyName: contextFriendlyName,
+        attributes: attributes,
+        customHeaders: customHeaders,
+        sessionBackgroundTimeout: sessionBackgroundTimeout,
+        logsApiLevel: logsApiLevel,
+        traces: traces,
+        metricsEnabled: metricsEnabled,
+        analytics: analytics,
+        instrumentation: instrumentation,
+      );
 }

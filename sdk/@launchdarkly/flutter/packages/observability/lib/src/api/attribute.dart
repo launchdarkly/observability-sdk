@@ -12,6 +12,8 @@
 /// span.setAttribute('from-dynamic-value', Attribute.fromDynamic(value));
 /// ```
 sealed class Attribute {
+  /// Creates the typed attribute matching the runtime type of [value], or an
+  /// [InvalidAttribute] when [value] is not a supported type.
   factory Attribute.fromDynamic(dynamic value) {
     if (value is bool) {
       return BooleanAttribute(value);
@@ -61,7 +63,10 @@ final class InvalidAttribute extends Attribute {
 
 /// An integer attribute.
 final class IntAttribute extends Attribute {
+  /// The integer value of the attribute.
   final int value;
+
+  /// Creates an attribute holding the integer [value].
   IntAttribute(this.value) : super._internal();
 
   @override
@@ -70,8 +75,10 @@ final class IntAttribute extends Attribute {
 
 /// A double attribute.
 final class DoubleAttribute extends Attribute {
+  /// The double value of the attribute.
   final double value;
 
+  /// Creates an attribute holding the double [value].
   DoubleAttribute(this.value) : super._internal();
 
   @override
@@ -80,8 +87,10 @@ final class DoubleAttribute extends Attribute {
 
 /// A boolean attribute.
 final class BooleanAttribute extends Attribute {
+  /// The boolean value of the attribute.
   final bool value;
 
+  /// Creates an attribute holding the boolean [value].
   BooleanAttribute(this.value) : super._internal();
 
   @override
@@ -90,8 +99,10 @@ final class BooleanAttribute extends Attribute {
 
 /// A string attribute.
 final class StringAttribute extends Attribute {
+  /// The string value of the attribute.
   final String value;
 
+  /// Creates an attribute holding the string [value].
   StringAttribute(this.value) : super._internal();
 
   @override
@@ -100,8 +111,10 @@ final class StringAttribute extends Attribute {
 
 /// An attribute containing a list of strings.
 final class StringListAttribute extends Attribute {
+  /// The unmodifiable list of strings held by the attribute.
   late final List<String> value;
 
+  /// Creates an attribute holding an unmodifiable copy of [input].
   StringListAttribute(List<String> input)
     : value = List.unmodifiable(input),
       super._internal();
@@ -112,8 +125,10 @@ final class StringListAttribute extends Attribute {
 
 /// An attribute containing a list of doubles.
 final class DoubleListAttribute extends Attribute {
+  /// The unmodifiable list of doubles held by the attribute.
   late final List<double> value;
 
+  /// Creates an attribute holding an unmodifiable copy of [input].
   DoubleListAttribute(List<double> input)
     : value = List.unmodifiable(input),
       super._internal();
@@ -124,8 +139,10 @@ final class DoubleListAttribute extends Attribute {
 
 /// An attribute containing a list of integers.
 final class IntListAttribute extends Attribute {
+  /// The unmodifiable list of integers held by the attribute.
   late final List<int> value;
 
+  /// Creates an attribute holding an unmodifiable copy of [input].
   IntListAttribute(List<int> input)
     : value = List.unmodifiable(input),
       super._internal();
@@ -136,8 +153,10 @@ final class IntListAttribute extends Attribute {
 
 /// An attribute containing a list of booleans.
 final class BooleanListAttribute extends Attribute {
+  /// The unmodifiable list of booleans held by the attribute.
   late final List<bool> value;
 
+  /// Creates an attribute holding an unmodifiable copy of [input].
   BooleanListAttribute(List<bool> input)
     : value = List.unmodifiable(input),
       super._internal();

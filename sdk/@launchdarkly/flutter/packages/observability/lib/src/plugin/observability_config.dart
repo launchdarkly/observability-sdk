@@ -58,18 +58,21 @@ final class DebugPrintSetting {
 /// Not for export.
 /// Should be created using the factories for DebugPrintSetting.
 final class DebugPrintReleaseOnly extends DebugPrintSetting {
+  /// Use [DebugPrintSetting.releaseOnly] instead.
   const DebugPrintReleaseOnly() : super._internal();
 }
 
 /// Not for export.
 /// Should be created using the factories for DebugPrintSetting.
 final class DebugPrintAlways extends DebugPrintSetting {
+  /// Use [DebugPrintSetting.always] instead.
   const DebugPrintAlways() : super._internal();
 }
 
 /// Not for export.
 /// Should be created using the factories for DebugPrintSetting.
 final class DebugPrintDisabled extends DebugPrintSetting {
+  /// Use [DebugPrintSetting.disabled] instead.
   const DebugPrintDisabled() : super._internal();
 }
 
@@ -87,7 +90,16 @@ final class InstrumentationConfig {
   InstrumentationConfig({this.debugPrint = const DebugPrintReleaseOnly()});
 }
 
+/// The resolved, defaults-applied configuration consumed by the Dart
+/// OpenTelemetry pipeline. Built from `ObservabilityOptions` by
+/// [configFromOptions]. Not for export.
 final class ObservabilityConfig {
+  /// Whether observability telemetry is recorded. Mirrors
+  /// `ObservabilityOptions.isEnabled`. When `false` the Dart pipeline records no
+  /// spans or logs; screen views, clicks, track events and identifies are only
+  /// forwarded when session replay needs them. Defaults to `true`.
+  final bool enabled;
+
   /// The configured OTLP endpoint.
   final String otlpEndpoint;
 
@@ -101,6 +113,10 @@ final class ObservabilityConfig {
   ///
   /// This is commonly a Git hash or a semantic version.
   final String? applicationVersion;
+
+  /// Extra OTel Resource attributes from `ObservabilityOptions.attributes`,
+  /// attached to every signal the Dart pipeline exports.
+  final Map<String, Object?> resourceAttributes;
 
   /// Function for mapping context to a friendly name for use in the
   /// observability UI.
@@ -127,9 +143,13 @@ final class ObservabilityConfig {
   /// while on mobile the native SDK applies its own gating. Defaults to `true`.
   final bool tapsEnabled;
 
+  /// Creates a configuration; prefer [configFromOptions] or
+  /// [configWithDefaults], which fill in the default endpoints.
   ObservabilityConfig({
+    this.enabled = true,
     this.applicationName,
     this.applicationVersion,
+    this.resourceAttributes = const {},
     required this.otlpEndpoint,
     required this.backendUrl,
     required this.instrumentationConfig,
@@ -140,6 +160,8 @@ final class ObservabilityConfig {
   });
 }
 
+/// Creates an [ObservabilityConfig], using the LaunchDarkly endpoints and
+/// default instrumentation for anything not given.
 ObservabilityConfig configWithDefaults({
   String? applicationName,
   String? applicationVersion,
@@ -163,8 +185,10 @@ ObservabilityConfig configWithDefaults({
 ObservabilityConfig configFromOptions(ObservabilityOptions options) {
   final friendlyName = options.contextFriendlyName;
   return ObservabilityConfig(
+    enabled: options.isEnabled,
     applicationName: options.serviceName,
     applicationVersion: options.serviceVersion,
+    resourceAttributes: {...?options.attributes},
     otlpEndpoint: options.otlpEndpoint,
     backendUrl: options.backendUrl,
     contextFriendlyName: friendlyName == null ? null : (_) => friendlyName,

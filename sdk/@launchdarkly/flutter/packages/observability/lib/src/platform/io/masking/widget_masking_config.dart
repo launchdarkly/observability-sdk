@@ -34,6 +34,8 @@ class WidgetMaskingConfig {
   /// Widgets whose `key` is in this set are ignored (covered).
   final Set<Key> ignoreKeys;
 
+  /// Creates a config from sets of widget types and keys to mask, unmask, or
+  /// ignore.
   const WidgetMaskingConfig({
     this.maskTypes = const {},
     this.maskKeys = const {},

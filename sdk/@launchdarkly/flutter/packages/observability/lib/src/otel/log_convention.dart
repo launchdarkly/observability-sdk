@@ -6,7 +6,10 @@ const _logSeverityAttributeName = 'log.severity';
 const _logMessageAttributeName = 'log.message';
 const _logStackTrace = 'code.stacktrace';
 
+/// Semantic convention for logs emitted as span events on the Dart pipeline.
 class LogConvention {
+  /// Builds the log event attributes: `log.message`, `log.severity`, and, when
+  /// [stack] is provided, `code.stacktrace`.
   static Map<String, Attribute> getEventAttributes(
     String message,
     String severity,
@@ -24,6 +27,9 @@ class LogConvention {
     return attributes;
   }
 
+  /// Name of the span carrying the log event: `launchdarkly.flutter.log`.
   static const spanName = _launchDarklyLogSpanName;
+
+  /// Name of the span event representing the log: `log`.
   static const eventName = _logEventName;
 }

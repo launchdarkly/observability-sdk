@@ -20,6 +20,8 @@ void main() {
       expect(wire.analytics?.appLifecycle, isTrue);
       expect(wire.analytics?.appLaunch, isTrue);
       expect(wire.instrumentation?.crashReporting, isTrue);
+      // Null lets native report the host app's own version.
+      expect(wire.serviceVersion, isNull);
     });
 
     test('propagates custom values', () {
