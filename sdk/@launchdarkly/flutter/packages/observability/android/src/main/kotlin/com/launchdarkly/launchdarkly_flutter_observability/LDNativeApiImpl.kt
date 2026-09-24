@@ -316,9 +316,10 @@ internal class LDNativeApiImpl(
 
     // Session Replay is the only native component with a teardown; the native
     // observability SDK keeps its automatic instrumentation running.
-    override fun shutdown() {
+    override fun shutdown(callback: (Result<Unit>) -> Unit) {
         LDReplay.stop()
         LDReplay.flush()
+        callback(Result.success(Unit))
     }
 
     /**

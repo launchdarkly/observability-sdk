@@ -236,11 +236,14 @@ abstract class LDNativeApi {
   /// in the app (an add-to-app host's own screens) are never affected.
   void setEmbedderClickHandling(bool enabled);
 
-  /// Stops Session Replay capture as part of `LDObserve.shutdown`.
+  /// Stops Session Replay capture as part of `LDObserve.shutdown`, replying
+  /// only once capture has stopped (and, on Android, queued replay events have
+  /// been flushed; the iOS SDK exposes no flush).
   ///
   /// Only Session Replay can be stopped: neither native observability SDK has
   /// a teardown, so its automatic instrumentation (crash reporting, network
   /// requests, launch times, native lifecycle spans) keeps running until the
   /// process exits.
+  @async
   void shutdown();
 }
