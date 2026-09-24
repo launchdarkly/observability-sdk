@@ -312,5 +312,5 @@ ObservabilityOptions applySymbolsId(
   }
   final attributes = <String, Object?>{...?options.attributes};
   attributes.putIfAbsent(symbolsIdAttributeKey, () => symbolsId);
-  return options.copyWith(attributes: attributes);
+  return options.withAttributes(attributes);
 }

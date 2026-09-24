@@ -12,6 +12,7 @@ import 'package:launchdarkly_flutter_client_sdk/launchdarkly_flutter_client_sdk.
 import 'package:opentelemetry/sdk.dart' show SpanProcessor;
 
 import '../../api/attribute.dart';
+import '../../api/log_severity.dart';
 import '../../plugin/observability_config.dart';
 
 // Selects the implementation at compile time, matching the platform split used
@@ -32,7 +33,7 @@ import 'exporter_factory_stub.dart'
 abstract interface class LogRecorder {
   void recordLog(
     String message, {
-    required String severity,
+    required LogSeverity severity,
     StackTrace? stackTrace,
     Map<String, Attribute>? attributes,
   });

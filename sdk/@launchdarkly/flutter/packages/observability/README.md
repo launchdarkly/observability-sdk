@@ -109,6 +109,8 @@ await LDObserve.initStandalone(
 
 > `LDObserve.init` and `LDObserve.initStandalone` return a `Future<bool>` that completes with `true` once observability is ready. Awaiting it is optional, but anything recorded before it completes is dropped (except the most recent screen view, which is replayed once ready). It never completes with an error: it completes with `false` if startup fails (the error is logged, and calling `init` again retries) or after `LDObserve.shutdown()`. Only the first successful `init` takes effect; later calls are logged and ignored.
 
+> Set `serviceName` to identify your app; it defaults to `observability-flutter`. `serviceVersion` is optional: when omitted, iOS and Android report your app's version (the `version` in `pubspec.yaml`) and web omits `service.version`.
+
 > `ObservabilityOptions(isEnabled: false)` turns off observability telemetry: no spans, logs, errors, flag-evaluation spans, lifecycle or `debugPrint` capture are recorded, and nothing is exported on web. Session replay is controlled separately by `SessionReplayOptions.isEnabled`; while it is on, screen views, clicks and track events still reach the replay timeline.
 
 ## Automatic instrumentation
@@ -204,7 +206,7 @@ Use `LDObserve.recordLog` to emit a structured log record with a severity level 
 ```dart
 LDObserve.recordLog(
   'Checkout completed',
-  severity: 'info',
+  severity: LogSeverity.info,
   properties: <String, Object?>{
     'order_id': 'ORD-9876',
     'total': 42.99,
@@ -213,12 +215,12 @@ LDObserve.recordLog(
 
 LDObserve.recordLog(
   'This is an error log!',
-  severity: 'error',
+  severity: LogSeverity.error,
   stackTrace: StackTrace.current,
 );
 ```
 
-`severity` is a string; common levels are `trace`, `debug`, `info`, `warn`, `error`, and `fatal`. It defaults to `info`.
+`severity` is a `LogSeverity`: `trace`, `debug`, `info`, `warn`, `error`, or `fatal`. It defaults to `LogSeverity.info`.
 
 A log recorded while a span is active is automatically associated with that span through the OpenTelemetry context:
 
@@ -226,7 +228,7 @@ A log recorded while a span is active is automatically associated with that span
 final span = LDObserve.startSpan('checkout-flow');
 LDObserve.recordLog(
   'Processing on the same trace',
-  severity: 'warn',
+  severity: LogSeverity.warn,
   properties: <String, Object?>{'source': 'checkout'},
 );
 span.end();
@@ -272,6 +274,21 @@ grandchild.end();
 child.end();
 parent.end();
 ```
+
+End nested spans in reverse order. Calling `end()` again on an ended span does nothing.
+
+#### Scoped spans
+
+`LDObserve.withSpan` runs a function inside a new span and ends the span for you — when the function returns, or when its `Future` completes. The span stays current across `await`s, so spans started inside it are its children. A thrown error or failed future is recorded on the span and marks it as an error, then propagates unchanged:
+
+```dart
+final orders = await LDObserve.withSpan('load-orders', (span) async {
+  span.setAttribute('page', 1);
+  return api.fetchOrders(page: 1);
+});
+```
+
+Prefer `withSpan` for asynchronous work: a span from `startSpan` is current for every piece of code in the zone until it ends, including unrelated work that runs during an `await`.
 
 #### Sequential spans
 
@@ -374,7 +391,7 @@ What ends up on the click:
 - **`event.id`** — the first of an enclosing `LDClick` id, an id from your own `customClickTargetResolver`, a `Semantics.identifier`, or a `ValueKey`. Optional: a widget with none of those is still reported, grouped by type and path.
 - **`event.text`** — the label: a button's own text, otherwise a semantic label, icon label, or tooltip. A container's inner text is deliberately *not* harvested, so a tapped row reports `ListTile` rather than whichever word sat under the finger. A radio with no label falls back to its `value`.
 - **`event.xpath`** — the widget ancestry, e.g. `Scaffold/Column/ProductRow/IconButton#cart.add`. Framework plumbing (theme and media-query providers, builders, focus and semantics wrappers, single-child layout and painting boxes) is left out and only the innermost ten segments are kept, so the path names the screen and row a tap came from rather than the scaffolding every screen shares. Segments for widget types the SDK does not recognize come from the runtime type, which `--obfuscate` mangles; `event.tag` and `event.id` stay readable, so group on those.
-- **`event.x` / `event.y`** — the tap point. Automatic capture reports the same units native taps use on that platform (physical pixels on Android, logical pixels / UIKit points on iOS), so a Flutter click lands on the replay timeline next to a native one. `LDObserve.trackClick`'s `x`/`y` are logical pixels (the same units Flutter `Offset` uses).
+- **`event.x` / `event.y`** — the tap point. Automatic capture reports the same units native taps use on that platform (physical pixels on Android, logical pixels / UIKit points on iOS), so a Flutter click lands on the replay timeline next to a native one. `LDObserve.trackClick` takes `x`/`y` as `double` logical pixels (the units of a gesture's `globalPosition`) and converts them to those same platform units, so manual and automatic clicks share one coordinate space.
 
 To name a specific widget, wrap it in `LDClick`. It renders its child unchanged and emits nothing itself, so wrapping a button cannot double-count a tap:
 
@@ -426,12 +443,13 @@ Limitations worth knowing:
 | Method | Description |
 |---|---|
 | `LDObserve.startSpan(name, {kind, properties})` | Start a span that nests under the current active span. Returns a `Span`. |
-| `LDObserve.recordLog(message, {severity, stackTrace, properties})` | Record a structured log. |
+| `LDObserve.withSpan(name, fn, {kind, properties})` | Run `fn` inside a span that ends when `fn` returns or its `Future` completes, recording any error. Returns `fn`'s result. |
+| `LDObserve.recordLog(message, {severity, stackTrace, properties})` | Record a structured log. `severity` is a `LogSeverity` (default `info`). |
 | `LDObserve.recordException(exception, {stackTrace, properties})` | Record an error/exception. |
 | `LDObserve.track(eventName, {properties, metricValue})` | Record a custom `track` event as a `track` span. |
 | `LDObserve.trackScreenView(name, {screenClass, screenId, category, properties})` | Record a screen view (navigation) as a `screen_view` span and a Session Replay `Navigate` event. Prefer `LDNavigatorObserver` for ordinary route changes. |
-| `LDObserve.trackClick({id, tag, text, x, y, properties})` | Record a click as a `click` span and a Session Replay `Click` event, for interactions automatic capture cannot observe. `x`/`y` are logical pixels. |
-| `LDObserve.shutdown()` | Flush buffered spans, remove the Dart instrumentations, stop session replay, and turn every recording API into a no-op. Terminal: a later `init` does nothing. On Android and iOS the native SDK's automatic instrumentation (crashes, network, launch times) keeps running, because it has no teardown. |
+| `LDObserve.trackClick({id, tag, text, x, y, properties})` | Record a click as a `click` span and a Session Replay `Click` event, for interactions automatic capture cannot observe. `x`/`y` are `double` logical pixels. |
+| `LDObserve.shutdown()` | Returns a `Future<void>`. Flush buffered spans, remove the Dart instrumentations, stop session replay, and turn every recording API into a no-op. Terminal: a later `init` does nothing. On Android and iOS the native SDK's automatic instrumentation (crashes, network, launch times) keeps running, because it has no teardown. |
 | `LDObserve.zoneSpecification()` | A zone spec that forwards `print`/`debugPrint` output as logs. |
 | `LDNavigatorObserver({screenNameExtractor, category})` | A `NavigatorObserver` that reports each route change as a screen view. |
 | `LDRoutePatterns.extractor(patterns, {skipUnmatched})` | A `screenNameExtractor` that reports the route pattern a navigation matched, so `/orders/42` becomes `/orders/:id`. |

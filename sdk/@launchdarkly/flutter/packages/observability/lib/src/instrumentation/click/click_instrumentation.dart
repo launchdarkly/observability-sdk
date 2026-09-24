@@ -126,16 +126,20 @@ final class ClickInstrumentation implements Instrumentation {
     );
   }
 
-  /// Converts a Flutter logical position into the units each platform reports
-  /// `event.x`/`event.y` in, so a Flutter click sits in the same coordinate space
-  /// as a native one on the same device.
+  static Offset _coordinates(Offset logical, double devicePixelRatio) =>
+      logical * platformScale(devicePixelRatio);
+
+  /// The factor converting Flutter logical pixels into the units each platform
+  /// reports `event.x`/`event.y` in, so a Flutter click sits in the same
+  /// coordinate space as a native one on the same device. Shared by automatic
+  /// capture and `LDObserve.trackClick`.
   ///
   /// Android's native taps come from `MotionEvent`, in physical pixels; iOS uses
-  /// UIKit points, which are Flutter logical pixels already.
-  static Offset _coordinates(Offset logical, double devicePixelRatio) =>
-      defaultTargetPlatform == TargetPlatform.android
-      ? logical * devicePixelRatio
-      : logical;
+  /// UIKit points, which are Flutter logical pixels already, as is web.
+  static double platformScale(double devicePixelRatio) =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android
+      ? devicePixelRatio
+      : 1.0;
 
   @override
   void dispose() {

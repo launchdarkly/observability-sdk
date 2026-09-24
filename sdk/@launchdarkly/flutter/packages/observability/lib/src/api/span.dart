@@ -5,16 +5,33 @@ import 'attribute.dart';
 import 'span_status_code.dart';
 
 /// Represents a single operation within a trace.
+///
+/// A span from `LDObserve.startSpan` is the current span, and the parent of
+/// spans started after it, until [end] is called. End nested spans in reverse
+/// order of starting them. For work that spans `await`s, prefer
+/// `LDObserve.withSpan`, which ends the span for you and keeps it current
+/// across asynchronous gaps.
 final class Span {
   final otel.Span _innerSpan;
 
   // The context token type is not exported from the opentelemetry package.
+  // Null for a zone-scoped span (`LDObserve.withSpan`), which attaches none.
   final dynamic _contextToken;
+
+  bool _ended = false;
 
   Span._internal(this._innerSpan, this._contextToken);
 
+  /// Ends the span, recording its end time, and stops it being the current
+  /// span. Calls after the first have no effect.
   void end() {
-    otel.Context.detach(_contextToken);
+    if (_ended) {
+      return;
+    }
+    _ended = true;
+    if (_contextToken != null) {
+      otel.Context.detach(_contextToken);
+    }
     _innerSpan.end();
   }
 
@@ -67,6 +84,8 @@ final class Span {
     );
   }
 
+  /// Sets the span's status. Spans default to [SpanStatusCode.unset]; set
+  /// [SpanStatusCode.error] when the operation failed.
   void setStatus(SpanStatusCode status) {
     _innerSpan.setStatus(convertSpanStatus(status));
   }
@@ -75,7 +94,7 @@ final class Span {
 /// Wrap a span with a LaunchDarkly specific API type.
 ///
 /// Not for export.
-Span wrapSpan(otel.Span span, dynamic token) {
+Span wrapSpan(otel.Span span, Object? token) {
   return Span._internal(span, token);
 }
 

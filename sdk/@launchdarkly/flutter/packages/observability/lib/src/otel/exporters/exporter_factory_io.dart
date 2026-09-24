@@ -12,6 +12,7 @@ import 'package:opentelemetry/sdk.dart'
     show BatchSpanProcessor, ReadOnlySpan, SpanExporter, SpanProcessor;
 
 import '../../api/attribute.dart';
+import '../../api/log_severity.dart';
 import '../../plugin/observability_config.dart';
 import '../../platform/io/messages.g.dart' as wire;
 import '../conversions.dart';
@@ -267,7 +268,7 @@ class _NativeLogRecorder implements LogRecorder {
   @override
   void recordLog(
     String message, {
-    required String severity,
+    required LogSeverity severity,
     StackTrace? stackTrace,
     Map<String, Attribute>? attributes,
   }) {
@@ -289,34 +290,12 @@ class _NativeLogRecorder implements LogRecorder {
       _api.recordLog(
         wire.LDLogRecord(
           message: message,
-          severityNumber: _severityNumber(severity),
+          severityNumber: severity.severityNumber,
           traceId: hasContext ? spanContext.traceId.toString() : null,
           spanId: hasContext ? spanContext.spanId.toString() : null,
           attributes: attrs,
         ),
       ),
     );
-  }
-
-  /// Maps a textual severity to the OpenTelemetry severity number. Defaults to
-  /// INFO (9) for unknown values.
-  static int _severityNumber(String severity) {
-    switch (severity.toLowerCase()) {
-      case 'trace':
-        return 1;
-      case 'debug':
-        return 5;
-      case 'info':
-        return 9;
-      case 'warn':
-      case 'warning':
-        return 13;
-      case 'error':
-        return 17;
-      case 'fatal':
-        return 21;
-      default:
-        return 9;
-    }
   }
 }

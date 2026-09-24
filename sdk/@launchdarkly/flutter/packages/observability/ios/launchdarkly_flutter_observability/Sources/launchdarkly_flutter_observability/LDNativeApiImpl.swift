@@ -403,7 +403,11 @@ final class LDNativeApiImpl: NSObject, LDNativeApi {
 
     private enum Defaults {
         static let serviceName = "observability-flutter"
-        static let serviceVersion = "0.1.0"
+        // The host app's version, which Flutter sets from `pubspec.yaml`. Empty
+        // rather than a made-up version when the app declares none.
+        static var serviceVersion: String {
+            Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
+        }
         static let otlpEndpoint = "https://otel.observability.app.launchdarkly.com:4318"
         static let backendUrl = "https://pub.observability.app.launchdarkly.com"
     }

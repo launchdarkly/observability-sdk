@@ -234,7 +234,7 @@ class _MyHomePageState extends State<MyHomePage> {
   void _onTriggerLog() {
     LDObserve.recordLog(
       'Test Log',
-      severity: 'info',
+      severity: LogSeverity.info,
       properties: <String, Object?>{
         'test-string': 'flutter',
         'test-true': true,
@@ -256,7 +256,7 @@ class _MyHomePageState extends State<MyHomePage> {
     span.setAttribute('demo', 'log-with-context');
     LDObserve.recordLog(
       'Log with span context',
-      severity: 'warn',
+      severity: LogSeverity.warn,
       properties: <String, Object?>{'source': 'detached-task-demo'},
     );
     span.end();
@@ -266,7 +266,7 @@ class _MyHomePageState extends State<MyHomePage> {
   void _onTriggerErrorLogWithStack() {
     LDObserve.recordLog(
       'This is an error log!',
-      severity: 'error',
+      severity: LogSeverity.error,
       stackTrace: StackTrace.current,
       properties: <String, Object?>{'attribute-in-log': 'value-in-log'},
     );
@@ -276,7 +276,7 @@ class _MyHomePageState extends State<MyHomePage> {
   void _onSendCustomLog() {
     final message = _customLogController.text;
     if (message.isEmpty) return;
-    LDObserve.recordLog(message, severity: 'info');
+    LDObserve.recordLog(message, severity: LogSeverity.info);
     debugPrint('Custom log sent: $message');
   }
 
@@ -285,7 +285,7 @@ class _MyHomePageState extends State<MyHomePage> {
     final span1 = LDObserve.startSpan('NestedSpan1');
     final span2 = LDObserve.startSpan('NestedSpan2');
 
-    LDObserve.recordLog('NestedLog', severity: 'info');
+    LDObserve.recordLog('NestedLog', severity: LogSeverity.info);
 
     try {
       await _httpClient.get(Uri.parse('https://www.google.com'));

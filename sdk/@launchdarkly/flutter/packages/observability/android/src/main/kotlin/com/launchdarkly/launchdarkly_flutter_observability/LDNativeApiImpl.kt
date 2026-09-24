@@ -2,6 +2,7 @@ package com.launchdarkly.launchdarkly_flutter_observability
 
 import android.app.Activity
 import android.app.Application
+import android.content.pm.PackageManager
 import android.os.Handler
 import android.os.Looper
 import com.launchdarkly.observability.api.ObservabilityOptions
@@ -77,7 +78,7 @@ internal class LDNativeApiImpl(
         val nativeObservabilityOptions = ObservabilityOptions(
             enabled = observability.isEnabled ?: true,
             serviceName = observability.serviceName ?: DEFAULT_SERVICE_NAME,
-            serviceVersion = observability.serviceVersion ?: DEFAULT_SERVICE_VERSION,
+            serviceVersion = observability.serviceVersion ?: hostAppVersion(),
             contextFriendlyName = observability.contextFriendlyName,
             resourceAttributes = resourceAttributes,
             customHeaders = observability.customHeaders ?: emptyMap(),
@@ -331,6 +332,18 @@ internal class LDNativeApiImpl(
             ?: ObservabilityOptions.LogLevel.INFO
     }
 
+    // The host app's `versionName`, which Flutter sets from `pubspec.yaml`.
+    // Empty rather than a made-up version when the app declares none.
+    private fun hostAppVersion(): String = try {
+        @Suppress("DEPRECATION")
+        application.packageManager
+            .getPackageInfo(application.packageName, 0)
+            .versionName
+            .orEmpty()
+    } catch (e: PackageManager.NameNotFoundException) {
+        ""
+    }
+
     private fun buildResourceAttributes(
         source: Map<String, Any?>?,
         observabilityVersion: String,
@@ -356,7 +369,6 @@ internal class LDNativeApiImpl(
     companion object {
         private const val FLUTTER_DISTRO_NAME = "observability-flutter-android"
         private const val DEFAULT_SERVICE_NAME = "observability-flutter"
-        private const val DEFAULT_SERVICE_VERSION = "0.1.0"
         private const val DEFAULT_OTLP_ENDPOINT =
             "https://otel.observability.app.launchdarkly.com:4318"
         private const val DEFAULT_BACKEND_URL =

@@ -190,7 +190,6 @@ class AnalyticsOptions {
 /// `platform/io/native_options_codec.dart`.
 class ObservabilityOptions {
   static const String defaultServiceName = 'observability-flutter';
-  static const String defaultServiceVersion = '0.1.0';
   static const String defaultOtlpEndpoint =
       'https://otel.observability.app.launchdarkly.com:4318';
   static const String defaultBackendUrl =
@@ -207,8 +206,18 @@ class ObservabilityOptions {
   /// flag is also passed to the native SDK for its automatic instrumentation.
   final bool isEnabled;
 
+  /// The `service.name` resource attribute. Defaults to [defaultServiceName],
+  /// which names the SDK rather than your app — set it to identify your app.
   final String serviceName;
-  final String serviceVersion;
+
+  /// The `service.version` resource attribute, such as a release version or
+  /// Git SHA.
+  ///
+  /// When `null` (the default), iOS and Android report the host app's version
+  /// (`CFBundleShortVersionString` / `versionName`, which Flutter sets from the
+  /// `version` in `pubspec.yaml`), and web omits `service.version`.
+  final String? serviceVersion;
+
   final String otlpEndpoint;
   final String backendUrl;
   final String? contextFriendlyName;
@@ -246,7 +255,7 @@ class ObservabilityOptions {
   const ObservabilityOptions({
     this.isEnabled = true,
     this.serviceName = defaultServiceName,
-    this.serviceVersion = defaultServiceVersion,
+    this.serviceVersion,
     String? otlpEndpoint,
     String? backendUrl,
     this.contextFriendlyName,
@@ -260,41 +269,27 @@ class ObservabilityOptions {
     this.instrumentation = const InstrumentationOptions(),
   }) : otlpEndpoint = otlpEndpoint ?? defaultOtlpEndpoint,
        backendUrl = backendUrl ?? defaultBackendUrl;
+}
 
-  /// Returns a copy with the given fields replaced. Only non-null arguments
-  /// override; existing values (including [attributes]) are otherwise preserved.
-  ObservabilityOptions copyWith({
-    bool? isEnabled,
-    String? serviceName,
-    String? serviceVersion,
-    String? otlpEndpoint,
-    String? backendUrl,
-    String? contextFriendlyName,
-    Map<String, Object?>? attributes,
-    Map<String, String>? customHeaders,
-    Duration? sessionBackgroundTimeout,
-    ObservabilityLogLevel? logsApiLevel,
-    TracesOptions? traces,
-    bool? metricsEnabled,
-    AnalyticsOptions? analytics,
-    InstrumentationOptions? instrumentation,
-  }) {
-    return ObservabilityOptions(
-      isEnabled: isEnabled ?? this.isEnabled,
-      serviceName: serviceName ?? this.serviceName,
-      serviceVersion: serviceVersion ?? this.serviceVersion,
-      otlpEndpoint: otlpEndpoint ?? this.otlpEndpoint,
-      backendUrl: backendUrl ?? this.backendUrl,
-      contextFriendlyName: contextFriendlyName ?? this.contextFriendlyName,
-      attributes: attributes ?? this.attributes,
-      customHeaders: customHeaders ?? this.customHeaders,
-      sessionBackgroundTimeout:
-          sessionBackgroundTimeout ?? this.sessionBackgroundTimeout,
-      logsApiLevel: logsApiLevel ?? this.logsApiLevel,
-      traces: traces ?? this.traces,
-      metricsEnabled: metricsEnabled ?? this.metricsEnabled,
-      analytics: analytics ?? this.analytics,
-      instrumentation: instrumentation ?? this.instrumentation,
-    );
-  }
+/// Not for export: a public `copyWith` could not clear nullable fields
+/// without a sentinel design, so the SDK keeps its one copy internal.
+extension ObservabilityOptionsCopy on ObservabilityOptions {
+  /// A copy with [attributes] replaced (`null` clears them).
+  ObservabilityOptions withAttributes(Map<String, Object?>? attributes) =>
+      ObservabilityOptions(
+        isEnabled: isEnabled,
+        serviceName: serviceName,
+        serviceVersion: serviceVersion,
+        otlpEndpoint: otlpEndpoint,
+        backendUrl: backendUrl,
+        contextFriendlyName: contextFriendlyName,
+        attributes: attributes,
+        customHeaders: customHeaders,
+        sessionBackgroundTimeout: sessionBackgroundTimeout,
+        logsApiLevel: logsApiLevel,
+        traces: traces,
+        metricsEnabled: metricsEnabled,
+        analytics: analytics,
+        instrumentation: instrumentation,
+      );
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:launchdarkly_flutter_observability/src/instrumentation/instrumentation.dart';
 
+import '../api/log_severity.dart';
 import '../plugin/observability_config.dart';
 import '../observe_otel.dart';
 
@@ -26,7 +27,7 @@ class DebugPrintInstrumentation implements Instrumentation {
 
     debugPrint = (String? message, {int? wrapWidth}) {
       if (message != null) {
-        ObserveOtel.recordLog(message, severity: 'debug');
+        ObserveOtel.recordLog(message, severity: LogSeverity.debug);
       }
     };
   }

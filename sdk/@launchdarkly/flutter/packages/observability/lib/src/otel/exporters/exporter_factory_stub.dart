@@ -8,6 +8,7 @@ import 'package:opentelemetry/sdk.dart'
     show BatchSpanProcessor, CollectorExporter, SpanProcessor;
 
 import '../../api/attribute.dart';
+import '../../api/log_severity.dart';
 import '../../plugin/observability_config.dart';
 import '../click_convention.dart';
 import '../conversions.dart';
@@ -186,13 +187,13 @@ class _SpanEventLogRecorder implements LogRecorder {
   @override
   void recordLog(
     String message, {
-    required String severity,
+    required LogSeverity severity,
     StackTrace? stackTrace,
     Map<String, Attribute>? attributes,
   }) {
     final combinedAttributes = LogConvention.getEventAttributes(
       message,
-      severity,
+      severity.name,
       stackTrace,
     );
     if (attributes != null) {

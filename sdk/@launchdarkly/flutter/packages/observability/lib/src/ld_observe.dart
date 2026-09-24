@@ -2,11 +2,15 @@
 // sdk/@launchdarkly/mobile-dotnet/observability/observe/api/LDObserve.cs.
 
 import 'dart:async';
+import 'dart:ui' show PlatformDispatcher;
 
 import 'package:launchdarkly_flutter_client_sdk/launchdarkly_flutter_client_sdk.dart';
 
+import 'api/log_severity.dart';
 import 'api/span.dart';
 import 'api/span_kind.dart';
+import 'api/span_status_code.dart';
+import 'instrumentation/click/click_instrumentation.dart';
 import 'observe_otel.dart';
 import 'otel/conversions.dart';
 import 'options/observability_options.dart';
@@ -72,6 +76,11 @@ final class LDObserve {
 
   /// Start a span with the given name and optional [properties].
   ///
+  /// The span is the current span, and the parent of spans started after it,
+  /// until you call [Span.end]; end nested spans in reverse order. A span that
+  /// is never ended is never exported. For work that crosses `await`s, prefer
+  /// [withSpan].
+  ///
   /// [properties] is a plain Dart map (`Map<String, Object?>`); scalar and
   /// homogeneous-list values are attached to the span as attributes. Values
   /// that cannot be represented as span attributes are ignored.
@@ -81,6 +90,32 @@ final class LDObserve {
     Map<String, Object?>? properties,
   }) => ObserveOtel.startSpan(
     name,
+    kind: kind,
+    attributes: attributesFromProperties(properties),
+  );
+
+  /// Run [fn] inside a new span that ends automatically.
+  ///
+  /// The span is current for everything [fn] does, including across `await`s,
+  /// so spans started inside it are its children. If [fn] returns a `Future`,
+  /// the span ends when that future completes. If [fn] throws or its future
+  /// fails, the error is recorded on the span, the span's status is set to
+  /// [SpanStatusCode.error], and the error propagates unchanged.
+  ///
+  /// ```dart
+  /// final orders = await LDObserve.withSpan('load-orders', (span) async {
+  ///   span.setAttribute('page', 1);
+  ///   return api.fetchOrders(page: 1);
+  /// });
+  /// ```
+  static T withSpan<T>(
+    String name,
+    T Function(Span span) fn, {
+    SpanKind kind = SpanKind.internal,
+    Map<String, Object?>? properties,
+  }) => ObserveOtel.withSpan(
+    name,
+    fn,
     kind: kind,
     attributes: attributesFromProperties(properties),
   );
@@ -142,26 +177,33 @@ final class LDObserve {
   /// instead.
   ///
   /// [id] is a stable identifier for the element (`event.id`), [tag] its type
-  /// (`event.tag`, e.g. `ElevatedButton`), [text] its visible label
-  /// (`event.text`), and [x]/[y] the tap coordinates in logical pixels.
-  /// [properties] is a plain Dart map of additional attributes attached to the
-  /// `click` span. The screen is filled in automatically from the most recent
-  /// [trackScreenView].
+  /// (`event.tag`, e.g. `ElevatedButton`), and [text] its visible label
+  /// (`event.text`). [x]/[y] are the tap position in Flutter logical pixels —
+  /// the units of a gesture's `globalPosition` — and are converted to the units
+  /// automatic capture reports on the current platform, so manual and automatic
+  /// clicks share one coordinate space. [properties] is a plain Dart map of
+  /// additional attributes attached to the `click` span. The screen is filled
+  /// in automatically from the most recent [trackScreenView].
   static void trackClick({
     String? id,
     String? tag,
     String? text,
-    int? x,
-    int? y,
+    double? x,
+    double? y,
     Map<String, Object?>? properties,
-  }) => ObserveOtel.trackClick(
-    id: id,
-    tag: tag,
-    text: text,
-    x: x,
-    y: y,
-    properties: properties,
-  );
+  }) {
+    final scale = ClickInstrumentation.platformScale(
+      PlatformDispatcher.instance.implicitView?.devicePixelRatio ?? 1.0,
+    );
+    ObserveOtel.trackClick(
+      id: id,
+      tag: tag,
+      text: text,
+      x: x == null ? null : (x * scale).round(),
+      y: y == null ? null : (y * scale).round(),
+      properties: properties,
+    );
+  }
 
   /// Record an exception with an optional stack trace and [properties].
   ///
@@ -177,13 +219,14 @@ final class LDObserve {
     attributes: attributesFromProperties(properties),
   );
 
-  /// Record a log with optional [properties]. Defaults [severity] to `info`.
+  /// Record a log with optional [properties]. Defaults [severity] to
+  /// [LogSeverity.info].
   ///
   /// [properties] is a plain Dart map (`Map<String, Object?>`) of additional
   /// attributes to attach to the log.
   static void recordLog(
     String message, {
-    String severity = 'info',
+    LogSeverity severity = LogSeverity.info,
     StackTrace? stackTrace,
     Map<String, Object?>? properties,
   }) => ObserveOtel.recordLog(
@@ -204,10 +247,14 @@ final class LDObserve {
   /// recording API a no-op. Shutdown is terminal: calling [init] or
   /// [initStandalone] afterwards does nothing.
   ///
+  /// The returned future completes once native has stopped session replay;
+  /// awaiting it is optional. It never completes with an error, and repeated
+  /// calls return the same future.
+  ///
   /// On iOS and Android the native observability SDK has no teardown, so its
   /// automatic instrumentation (crash reporting, network requests, launch
   /// times, native lifecycle spans) keeps running until the process exits.
-  static void shutdown() => ObserveOtel.shutdown();
+  static Future<void> shutdown() => ObserveOtel.shutdown();
 
   /// The native observability bridge version reported during startup, or an
   /// empty string before initialization (or on web, which has no native
