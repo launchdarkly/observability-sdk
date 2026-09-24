@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.68.1](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.68.0...launchdarkly-observability-android-0.68.1) (2026-09-24)
+
+
+### Bug Fixes
+
+* **observability-android:** honor ObservabilityOptions.enabled ([#778](https://github.com/launchdarkly/observability-sdk/issues/778)) ([23f5ebc](https://github.com/launchdarkly/observability-sdk/commit/23f5ebc8dad2d2c2ef0f27f8a1ed91795ecd627f))
+
 ## [0.68.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.67.0...launchdarkly-observability-android-0.68.0) (2026-09-15)
 
 
