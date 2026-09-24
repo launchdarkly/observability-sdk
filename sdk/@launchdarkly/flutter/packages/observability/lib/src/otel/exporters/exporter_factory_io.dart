@@ -18,6 +18,7 @@ import '../../platform/io/messages.g.dart' as wire;
 import '../conversions.dart';
 import 'exporter_factory.dart';
 
+/// Creates the native (iOS/Android) implementation of [ObservabilityExporters].
 ObservabilityExporters createObservabilityExporters() => _IoExporters();
 
 class _IoExporters implements ObservabilityExporters {

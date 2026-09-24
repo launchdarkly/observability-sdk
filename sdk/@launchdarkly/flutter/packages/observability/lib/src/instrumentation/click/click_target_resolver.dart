@@ -24,6 +24,7 @@ class ClickTarget {
   /// Attributes contributed by an enclosing [LDClick].
   final Map<String, Object?>? properties;
 
+  /// Creates a click target description.
   const ClickTarget({
     required this.tag,
     this.id,
@@ -67,6 +68,7 @@ class ClickTarget {
 /// fallback so a real button nested inside them — an `IconButton` trailing a
 /// `ListTile` — is reported instead when there is one.
 class ClickTargetResolver {
+  /// Creates a resolver using an optional [customResolver] hook.
   const ClickTargetResolver({this.customResolver, this.captureText = true});
 
   /// Application hook for recognizing its own widget types.

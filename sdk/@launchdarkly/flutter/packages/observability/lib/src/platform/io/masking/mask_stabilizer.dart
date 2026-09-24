@@ -14,6 +14,7 @@ import 'mask_operation.dart';
 /// purely geometric: it reads only the [MaskOperation.effectiveFrame] of the two
 /// lists, never any privacy settings or tree state.
 class MaskStabilizer {
+  /// Creates a mask stabilizer.
   const MaskStabilizer();
 
   /// Movement under this many logical pixels (on either axis) is treated as the

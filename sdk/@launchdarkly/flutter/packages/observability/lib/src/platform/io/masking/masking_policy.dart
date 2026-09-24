@@ -19,6 +19,7 @@ import 'widget_masking_config.dart';
 ///    `maskWebViews` privacy flags, matched against the widget that renders the
 ///    corresponding content.
 class MaskingPolicy {
+  /// Creates a policy from the screen-wide privacy flags and per-widget rules.
   const MaskingPolicy({
     required this.maskTextInputs,
     this.maskLabels = false,

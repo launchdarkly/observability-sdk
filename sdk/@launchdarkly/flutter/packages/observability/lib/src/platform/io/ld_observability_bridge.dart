@@ -24,8 +24,14 @@ class LDNative {
   /// `internal static LDNative? Current` field in the .NET bridge.
   static LDNative? current;
 
+  /// The observability options the native stack was started with.
   final ObservabilityOptions observability;
+
+  /// The session replay options the native stack was started with.
   final SessionReplayOptions replay;
+
+  /// The native SDK version reported by the platform after [start] completes,
+  /// or an empty string when unknown.
   String nativeVersion;
 
   LDNative._({required this.observability, required this.replay})

@@ -21,8 +21,10 @@ import 'platform/ld_observe_platform.dart';
 /// sheets, and other routes are children of the app's `Navigator`, so a wrap
 /// further down excludes taps on anything the app pushes above it.
 class SessionReplayCapture extends StatelessWidget {
+  /// The app subtree to capture, typically the `MaterialApp`.
   final Widget child;
 
+  /// Creates a capture root for [child].
   const SessionReplayCapture({super.key, required this.child});
 
   @override

@@ -138,7 +138,10 @@ final class _ObservabilityHook extends Hook {
 ///
 /// Not exported: customer code reaches it through `LDObserve.init`.
 final class LDObservePlugin extends Plugin {
+  /// Options configuring the observability pipeline.
   final ObservabilityOptions observability;
+
+  /// Options configuring session replay, or null to leave it disabled.
   final SessionReplayOptions? replay;
 
   final ObservabilityConfig _config;
@@ -151,6 +154,7 @@ final class LDObservePlugin extends Plugin {
 
   bool get _isActive => identical(_active, this);
 
+  /// Clears the process-wide active plugin so tests can boot a fresh one.
   @visibleForTesting
   static void resetActiveForTesting() => _active = null;
 
@@ -158,6 +162,8 @@ final class LDObservePlugin extends Plugin {
     name: _launchDarklyObservabilityPluginName,
   );
 
+  /// Creates the plugin with the given [observability] and optional [replay]
+  /// options.
   LDObservePlugin(this.observability, {this.replay})
     : _config = configFromOptions(observability);
 

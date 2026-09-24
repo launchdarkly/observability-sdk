@@ -21,6 +21,7 @@ import 'exporter_factory.dart';
 const _tracesSuffix = '/v1/traces';
 const _tracerName = 'launchdarkly-observability';
 
+/// Creates the web implementation of [ObservabilityExporters].
 ObservabilityExporters createObservabilityExporters() => _WebExporters();
 
 class _WebExporters implements ObservabilityExporters {

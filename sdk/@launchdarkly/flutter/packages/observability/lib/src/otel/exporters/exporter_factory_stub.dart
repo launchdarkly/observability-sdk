@@ -20,6 +20,7 @@ import 'exporter_factory.dart';
 const _tracesSuffix = '/v1/traces';
 const _tracerName = 'launchdarkly-observability';
 
+/// Creates the fallback implementation of [ObservabilityExporters].
 ObservabilityExporters createObservabilityExporters() => _StubExporters();
 
 class _StubExporters implements ObservabilityExporters {

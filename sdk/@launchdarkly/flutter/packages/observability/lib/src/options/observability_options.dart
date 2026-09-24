@@ -11,29 +11,76 @@ import '../plugin/observability_config.dart';
 ///
 /// Native-only: the web/Dart pipeline currently ignores this value.
 enum ObservabilityLogLevel {
+  /// OTel severity `TRACE` (1): export every log.
   trace(1),
+
+  /// OTel severity `TRACE2` (2).
   trace2(2),
+
+  /// OTel severity `TRACE3` (3).
   trace3(3),
+
+  /// OTel severity `TRACE4` (4).
   trace4(4),
+
+  /// OTel severity `DEBUG` (5).
   debug(5),
+
+  /// OTel severity `DEBUG2` (6).
   debug2(6),
+
+  /// OTel severity `DEBUG3` (7).
   debug3(7),
+
+  /// OTel severity `DEBUG4` (8).
   debug4(8),
+
+  /// OTel severity `INFO` (9). The default threshold.
   info(9),
+
+  /// OTel severity `INFO2` (10).
   info2(10),
+
+  /// OTel severity `INFO3` (11).
   info3(11),
+
+  /// OTel severity `INFO4` (12).
   info4(12),
+
+  /// OTel severity `WARN` (13).
   warn(13),
+
+  /// OTel severity `WARN2` (14).
   warn2(14),
+
+  /// OTel severity `WARN3` (15).
   warn3(15),
+
+  /// OTel severity `WARN4` (16).
   warn4(16),
+
+  /// OTel severity `ERROR` (17).
   error(17),
+
+  /// OTel severity `ERROR2` (18).
   error2(18),
+
+  /// OTel severity `ERROR3` (19).
   error3(19),
+
+  /// OTel severity `ERROR4` (20).
   error4(20),
+
+  /// OTel severity `FATAL` (21).
   fatal(21),
+
+  /// OTel severity `FATAL2` (22).
   fatal2(22),
+
+  /// OTel severity `FATAL3` (23).
   fatal3(23),
+
+  /// OTel severity `FATAL4` (24).
   fatal4(24),
 
   /// Disables log exporting entirely.
@@ -56,13 +103,17 @@ class TracesOptions {
   /// Whether to automatically record UI performance and other events as spans.
   final bool includeSpans;
 
+  /// Creates trace options; both kinds of automatic spans are on by default.
   const TracesOptions({this.includeErrors = true, this.includeSpans = true});
 }
 
 /// Toggles for SDK-side instrumentation. Mirrors `InstrumentationOptions` in
 /// the .NET MAUI bridge, extended with the Dart-only [debugPrint] control.
 class InstrumentationOptions {
-  /// Whether to instrument network requests (native bridge only).
+  /// Reserved for network request instrumentation. Currently has no effect:
+  /// HTTP requests are not instrumented on any platform, because Flutter's
+  /// HTTP clients go through `dart:io`, which native instrumentation cannot
+  /// see.
   final bool networkRequests;
 
   /// Whether to instrument launch times (native bridge only).
@@ -78,6 +129,8 @@ class InstrumentationOptions {
   /// pipeline. Defaults to [DebugPrintSetting.releaseOnly].
   final DebugPrintSetting debugPrint;
 
+  /// Creates instrumentation options; every instrumentation is on by default,
+  /// with `debugPrint` captured in release builds only.
   const InstrumentationOptions({
     this.networkRequests = true,
     this.launchTimes = true,
@@ -149,6 +202,7 @@ class AnalyticsOptions {
   /// ```
   final LDClickTargetResolver? customClickTargetResolver;
 
+  /// Creates analytics options; all analytics telemetry is on by default.
   const AnalyticsOptions({
     this.taps = true,
     this.views = true,
@@ -189,9 +243,15 @@ class AnalyticsOptions {
 /// or web implementation. The native wire conversion lives in
 /// `platform/io/native_options_codec.dart`.
 class ObservabilityOptions {
+  /// The [serviceName] used when none is given.
   static const String defaultServiceName = 'observability-flutter';
+
+  /// The LaunchDarkly OTLP collector used when no [otlpEndpoint] is given.
   static const String defaultOtlpEndpoint =
       'https://otel.observability.app.launchdarkly.com:4318';
+
+  /// The LaunchDarkly observability backend used when no [backendUrl] is
+  /// given.
   static const String defaultBackendUrl =
       'https://pub.observability.app.launchdarkly.com';
 
@@ -218,9 +278,26 @@ class ObservabilityOptions {
   /// `version` in `pubspec.yaml`), and web omits `service.version`.
   final String? serviceVersion;
 
+  /// The OTLP/HTTP endpoint telemetry is exported to (without the `/v1/...`
+  /// signal path). Defaults to [defaultOtlpEndpoint]; override it to send data
+  /// through a proxy.
   final String otlpEndpoint;
+
+  /// The LaunchDarkly observability backend used for session and replay
+  /// metadata. Defaults to [defaultBackendUrl].
   final String backendUrl;
+
+  /// A human-readable name for the current context, shown in the
+  /// observability UI instead of its key.
   final String? contextFriendlyName;
+
+  /// Extra OTel Resource attributes attached to every exported signal on
+  /// every platform, such as `deployment.environment`.
+  ///
+  /// Use strings, numbers, booleans, or homogeneous lists of those; other
+  /// values are not portable across platforms. Use [serviceName] and
+  /// [serviceVersion] rather than the `service.*` keys, which the SDK sets
+  /// itself.
   final Map<String, Object?>? attributes;
 
   /// Extra HTTP headers added to OTLP exports (e.g. for proxies or auth).
@@ -250,8 +327,12 @@ class ObservabilityOptions {
   /// which platforms it applies to.
   final AnalyticsOptions analytics;
 
+  /// Toggles for automatic instrumentation: network requests, launch times,
+  /// crash reporting and `debugPrint` capture.
   final InstrumentationOptions instrumentation;
 
+  /// Creates observability options. Every argument is optional; the defaults
+  /// enable all telemetry and export to LaunchDarkly.
   const ObservabilityOptions({
     this.isEnabled = true,
     this.serviceName = defaultServiceName,

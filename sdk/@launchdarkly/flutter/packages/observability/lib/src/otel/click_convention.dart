@@ -16,10 +16,20 @@ class ClickConvention {
   /// (`SemanticConvention.clickSpanName` / `CLICK_SPAN_NAME`).
   static const spanName = 'click';
 
+  /// Attribute key `event.type`; always set to [spanName].
   static const typeAttr = 'event.type';
+
+  /// Attribute key `event.tag`: the type name of the clicked element.
   static const tagAttr = 'event.tag';
+
+  /// Attribute key `event.classname`: the fully-qualified class name of the
+  /// clicked element, when the platform has one.
   static const classnameAttr = 'event.classname';
+
+  /// Attribute key `event.id`: a stable identifier for the clicked element.
   static const idAttr = 'event.id';
+
+  /// Attribute key `event.text`: the visible label of the clicked element.
   static const textAttr = 'event.text';
 
   /// Path of the element within its UI hierarchy. Taxonomy §4.1 defines this as
@@ -27,7 +37,12 @@ class ClickConvention {
   /// path, e.g. `Scaffold/Column/Center/ElevatedButton#checkout`.
   static const xpathAttr = 'event.xpath';
 
+  /// Attribute key `event.x`: the horizontal click position, in the platform's
+  /// native units (physical pixels on Android, logical pixels elsewhere).
   static const xAttr = 'event.x';
+
+  /// Attribute key `event.y`: the vertical click position, in the platform's
+  /// native units (physical pixels on Android, logical pixels elsewhere).
   static const yAttr = 'event.y';
 
   /// Builds the span attributes for a click.

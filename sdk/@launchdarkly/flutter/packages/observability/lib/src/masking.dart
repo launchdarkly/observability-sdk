@@ -25,6 +25,7 @@ class LDMask extends StatelessWidget {
   /// The subtree to redact from session replay.
   final Widget child;
 
+  /// Creates a marker that redacts [child] from session replay.
   const LDMask({super.key, required this.child});
 
   @override
@@ -53,6 +54,7 @@ class LDIgnore extends StatelessWidget {
   /// The subtree to exclude from session replay.
   final Widget child;
 
+  /// Creates a marker that excludes [child] from session replay.
   const LDIgnore({super.key, required this.child});
 
   @override
@@ -84,6 +86,7 @@ class LDUnmask extends StatelessWidget {
   /// The subtree to reveal in session replay.
   final Widget child;
 
+  /// Creates a marker that reveals [child] from global masking.
   const LDUnmask({super.key, required this.child});
 
   @override

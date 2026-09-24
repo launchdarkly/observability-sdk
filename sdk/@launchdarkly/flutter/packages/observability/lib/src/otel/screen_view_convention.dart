@@ -16,9 +16,16 @@ class ScreenViewConvention {
   /// (`SemanticConvention.screenViewSpanName` / `SCREEN_VIEW_SPAN_NAME`).
   static const spanName = 'screen_view';
 
+  /// Attribute key `event.name`: the name of the viewed screen.
   static const nameAttr = 'event.name';
+
+  /// Attribute key `event.screen_class`: the class or type of the screen.
   static const screenClassAttr = 'event.screen_class';
+
+  /// Attribute key `event.screen_id`: a stable identifier for the screen.
   static const screenIdAttr = 'event.screen_id';
+
+  /// Attribute key `event.category`: a grouping category for the screen.
   static const categoryAttr = 'event.category';
 
   /// Builds the span attributes for a screen view.

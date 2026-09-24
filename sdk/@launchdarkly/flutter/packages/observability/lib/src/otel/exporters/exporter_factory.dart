@@ -31,6 +31,8 @@ import 'exporter_factory_stub.dart'
 ///   `LogRecord`, so it is stamped with `session.id` and correlated with the
 ///   active span — matching the Android/iOS SDKs.
 abstract interface class LogRecorder {
+  /// Records [message] at [severity], with an optional [stackTrace] and extra
+  /// [attributes].
   void recordLog(
     String message, {
     required LogSeverity severity,
@@ -48,6 +50,8 @@ abstract interface class LogRecorder {
 ///   timeline event (always). The Dart span is intentionally not emitted on
 ///   mobile, so `track` is not double-counted.
 abstract interface class TrackRecorder {
+  /// Records a custom event named [eventName] with optional [data],
+  /// [metricValue], and evaluation [context].
   void track(
     String eventName, {
     LDValue? data,
@@ -66,6 +70,8 @@ abstract interface class TrackRecorder {
 ///   active context) and Session Replay (which records who the user is on the
 ///   active recording). Mirrors MAUI's `ObservabilityHook.AfterIdentify`.
 abstract interface class IdentifyRecorder {
+  /// Forwards an identify for the context described by [contextKeys] (kind to
+  /// key) and [canonicalKey]; [completed] is whether the identify succeeded.
   void identify({
     required Map<String, String> contextKeys,
     required String canonicalKey,
@@ -82,6 +88,8 @@ abstract interface class IdentifyRecorder {
 ///   Flutter routing is invisible to native screen detection (a single host
 ///   Activity/UIViewController), so screen views must be reported from Dart.
 abstract interface class ScreenViewRecorder {
+  /// Records a view of the screen called [name], with optional class, id,
+  /// category, and custom [properties].
   void trackScreenView(
     String name, {
     String? screenClass,
@@ -105,6 +113,8 @@ abstract interface class ScreenViewRecorder {
 /// the epoch millisecond the click happened, needed because the native bridge is
 /// asynchronous — see the Pigeon `trackClick` documentation.
 abstract interface class ClickRecorder {
+  /// Records a click on the described element; see the class documentation for
+  /// the units of [x], [y], and [timestampMillis].
   void trackClick({
     String? id,
     String? tag,

@@ -71,7 +71,6 @@ LDObserve.init(
     serviceVersion: const String.fromEnvironment('GIT_SHA',
         defaultValue: 'no-version'),
     instrumentation: InstrumentationOptions(
-      networkRequests: true,
       launchTimes: true,
       debugPrint: DebugPrintSetting.always(),
     ),
@@ -111,20 +110,25 @@ await LDObserve.initStandalone(
 
 > Set `serviceName` to identify your app; it defaults to `observability-flutter`. `serviceVersion` is optional: when omitted, iOS and Android report your app's version (the `version` in `pubspec.yaml`) and web omits `service.version`.
 
+> `attributes` (for example `{'deployment.environment': 'staging'}`) adds OpenTelemetry Resource attributes to every signal, on iOS, Android and web.
+
 > `ObservabilityOptions(isEnabled: false)` turns off observability telemetry: no spans, logs, errors, flag-evaluation spans, lifecycle or `debugPrint` capture are recorded, and nothing is exported on web. Session replay is controlled separately by `SessionReplayOptions.isEnabled`; while it is on, screen views, clicks and track events still reach the replay timeline.
 
 ## Automatic instrumentation
 
-When enabled through `InstrumentationOptions`, the SDK automatically instruments:
+While `ObservabilityOptions.isEnabled` is `true`, the SDK records the following. Each item names the option that controls it:
 
-- **HTTP Requests**: Outgoing HTTP requests (when `InstrumentationOptions.networkRequests` is enabled).
-- **Crash / Error Reporting**: Uncaught errors captured through `runZonedGuarded` and `FlutterError.onError`.
-- **Feature Flag Evaluations**: Evaluation events are added to your spans via the bundled hook.
-- **Clicks**: Every tap, resolved to the widget it landed on (requires `SessionReplayCapture`; see [Clicks (taps)](#clicks-taps)).
-- **App Lifecycle / Launch Times**: Session and launch-time tracking.
-- **`debugPrint` / `print` Capture**: Console output forwarded as logs via the print-intercepting zone.
+- **Feature flag evaluations**: a span for each evaluation, from the hook `LDObserve.init` registers on your client. Not recorded by `initStandalone`, which has no client.
+- **Clicks**: every tap, resolved to the widget it landed on. Controlled by `AnalyticsOptions.taps` and requires `SessionReplayCapture`; see [Clicks (taps)](#clicks-taps).
+- **Screen views**: reported by `LDNavigatorObserver` or `LDObserve.trackScreenView`, and controlled by `AnalyticsOptions.views`. See [Screen views](#screen-views-navigation).
+- **App lifecycle**: a span on each Flutter `AppLifecycleState` change and, on iOS and Android, native foreground/background spans. Controlled by `AnalyticsOptions.appLifecycle`.
+- **App launch** (iOS and Android): an `app_launch` span per process launch, controlled by `AnalyticsOptions.appLaunch`. Launch-time measurement is controlled by `InstrumentationOptions.launchTimes`.
+- **Native crashes** (iOS and Android): controlled by `InstrumentationOptions.crashReporting`.
+- **Dart errors and `print` / `debugPrint` output**: only when your app runs inside the guarded zone shown below. `debugPrint` capture is controlled by `InstrumentationOptions.debugPrint`.
 
-To forward uncaught errors and `print`/`debugPrint` output automatically, run your app inside a guarded zone:
+> `InstrumentationOptions.networkRequests` currently has no effect. HTTP requests are not instrumented on any platform. Flutter's HTTP clients go through `dart:io`, which native network instrumentation cannot see.
+
+To forward uncaught Dart errors and `print`/`debugPrint` output, run your app inside a guarded zone:
 
 ```dart
 runZonedGuarded(
