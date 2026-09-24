@@ -6,7 +6,7 @@ require (
 	github.com/99designs/gqlgen v0.17.71
 	github.com/gin-gonic/gin v1.10.1
 	github.com/gofiber/fiber/v2 v2.52.14
-	github.com/labstack/echo/v4 v4.11.4
+	github.com/labstack/echo/v4 v4.15.3
 	github.com/pkg/errors v0.9.1
 	github.com/samber/lo v1.51.0
 	github.com/sirupsen/logrus v1.9.3
@@ -50,10 +50,10 @@ require (
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.11 // indirect
-	github.com/labstack/gommon v0.4.2 // indirect
+	github.com/labstack/gommon v0.5.0 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
-	github.com/mattn/go-isatty v0.0.20 // indirect
+	github.com/mattn/go-isatty v0.0.22 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
 	github.com/mattn/go-sqlite3 v1.14.16 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
