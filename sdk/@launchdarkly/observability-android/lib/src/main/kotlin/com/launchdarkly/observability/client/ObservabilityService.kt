@@ -233,7 +233,14 @@ class ObservabilityService(
     init {
         requireMainThread { "ObservabilityService must be initialized on the main thread" }
 
-        registerOtlpExporters()
+        // With `enabled = false` the service is still built, so Session Replay keeps its session,
+        // screen, click and lifecycle signals, but nothing is exported: no exporters, span/log
+        // processors or metric reader are registered, the batch worker never starts, and the crash,
+        // launch-time and sampling-config network work is skipped. Mirrors iOS, which leaves the
+        // service unstarted when `isEnabled` is false.
+        if (observabilityOptions.enabled) {
+            registerOtlpExporters()
+        }
         val otelRumConfig = createOtelRumConfig()
 
         val rumBuilder = OpenTelemetryRum.builder(application, otelRumConfig)
@@ -251,7 +258,7 @@ class ObservabilityService(
         // id and keep a single source of session identity across spans, logs, metrics, and replay.
         LDRumSessionManagerAccessor.setSessionManager(rumBuilder, ldSessionManager)
 
-        if (observabilityOptions.instrumentations.launchTime) {
+        if (observabilityOptions.enabled && observabilityOptions.instrumentations.launchTime) {
             addLaunchTimeInstrumentation(rumBuilder)
         }
 
@@ -278,7 +285,9 @@ class ObservabilityService(
 
             override fun onSessionEnded(session: Session) {}
         })
-        loadSamplingConfigAsync()
+        if (observabilityOptions.enabled) {
+            loadSamplingConfigAsync()
+        }
 
         otelMeter = otelRUM.openTelemetry.meterProvider.get(INSTRUMENTATION_SCOPE_NAME)
         otelLogger = otelRUM.openTelemetry.logsBridge.get(INSTRUMENTATION_SCOPE_NAME)
@@ -346,7 +355,9 @@ class ObservabilityService(
         // always available; the `app_launch` span is gated by analytics.appLaunch inside the handler.
         appLaunchTracker.start()
 
-        batchWorker.start()
+        if (observabilityOptions.enabled) {
+            batchWorker.start()
+        }
     }
 
     /**
@@ -450,7 +461,7 @@ class ObservabilityService(
         // [LDRumSessionManagerAccessor]), so no SessionConfig is applied here.
         val config = OtelRumConfig()
 
-        if (!observabilityOptions.instrumentations.crashReporting) {
+        if (!observabilityOptions.enabled || !observabilityOptions.instrumentations.crashReporting) {
             // Disables [io.opentelemetry.android.instrumentation.crash.CrashReporterInstrumentation.java]
             config.suppressInstrumentation("crash")
         }
@@ -482,6 +493,7 @@ class ObservabilityService(
 
     private fun configureLoggerProvider(sdkLoggerProviderBuilder: SdkLoggerProviderBuilder): SdkLoggerProviderBuilder {
         sdkLoggerProviderBuilder.setResource(resources)
+        if (!observabilityOptions.enabled) return sdkLoggerProviderBuilder
 
         val delegates = buildList<LogRecordProcessor> {
             add(EventLogRecordProcessor(eventQueue = eventQueue, batchWorker = batchWorker))
@@ -504,6 +516,7 @@ class ObservabilityService(
 
     private fun configureTracerProvider(sdkTracerProviderBuilder: SdkTracerProviderBuilder): SdkTracerProviderBuilder {
         sdkTracerProviderBuilder.setResource(resources)
+        if (!observabilityOptions.enabled) return sdkTracerProviderBuilder
 
         val debugExporters = buildList<io.opentelemetry.sdk.trace.export.SpanExporter> {
             if (observabilityOptions.debug) {
@@ -531,6 +544,7 @@ class ObservabilityService(
     }
 
     private fun configureMeterProvider(sdkMeterProviderBuilder: SdkMeterProviderBuilder): SdkMeterProviderBuilder {
+        if (!observabilityOptions.enabled) return sdkMeterProviderBuilder.setResource(resources)
         val eventExporter = EventMetricExporter(
             eventQueue = eventQueue,
             temporalitySelector = AggregationTemporalitySelector.deltaPreferred(),

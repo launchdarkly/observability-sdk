@@ -16,6 +16,9 @@ const val DEFAULT_BACKEND_URL = "https://pub.observability.app.launchdarkly.com"
 /**
  * Configuration options for the Observability plugin.
  *
+ * @property enabled Whether the plugin exports telemetry. When `false` the plugin is installed and
+ *   Session Replay keeps working, but no logs, traces, or metrics are exported and crash reporting
+ *   and launch-time instrumentation are off. Defaults to `true`.
  * @property serviceName The service name for the application. Defaults to [DEFAULT_SERVICE_NAME].
  * @property serviceVersion The version of the service. Defaults to the SDK version.
  * @property otlpEndpoint The OTLP exporter endpoint. Defaults to LaunchDarkly endpoint [DEFAULT_OTLP_ENDPOINT].

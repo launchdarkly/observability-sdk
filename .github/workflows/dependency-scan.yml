@@ -13,11 +13,15 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - name: Generate SBOM
-              uses: launchdarkly/gh-actions/actions/dependency-scan/generate-sbom@main
+              uses: launchdarkly/gh-actions/actions/dependency-scan/generate-sbom@8e082b23efd8be075c180606c8dc80b81e0c3544 # main
               with:
                   types: 'nodejs'
 
             - name: Evaluate SBOM Policy
-              uses: launchdarkly/gh-actions/actions/dependency-scan/evaluate-policy@main
+              uses: launchdarkly/gh-actions/actions/dependency-scan/evaluate-policy@8e082b23efd8be075c180606c8dc80b81e0c3544 # main
               with:
                   bom-file: bom.nodejs.json
+                  # The action's default, `latest`, resolves through an unauthenticated
+                  # GitHub API call; when rate-limited it downloads an HTML 404 page as
+                  # the `opa` binary and caches it. The policy needs OPA 1.x syntax.
+                  opa-version: v1.9.0
