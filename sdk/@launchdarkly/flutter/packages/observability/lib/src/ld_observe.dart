@@ -252,8 +252,8 @@ final class LDObserve {
   /// calls return the same future.
   ///
   /// On iOS and Android the native observability SDK has no teardown, so its
-  /// automatic instrumentation (crash reporting, network requests, launch
-  /// times, native lifecycle spans) keeps running until the process exits.
+  /// automatic instrumentation (crash reporting, launch times, native
+  /// lifecycle spans) keeps running until the process exits.
   static Future<void> shutdown() => ObserveOtel.shutdown();
 
   /// The native observability bridge version reported during startup, or an

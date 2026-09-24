@@ -52,7 +52,6 @@ extension AnalyticsOptionsWire on AnalyticsOptions {
 extension InstrumentationOptionsWire on InstrumentationOptions {
   /// Returns the equivalent `LDInstrumentationOptions` for the native bridge.
   wire.LDInstrumentationOptions toWire() => wire.LDInstrumentationOptions(
-    networkRequests: networkRequests,
     launchTimes: launchTimes,
     crashReporting: crashReporting,
   );

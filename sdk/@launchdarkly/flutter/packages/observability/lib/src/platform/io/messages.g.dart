@@ -34,20 +34,14 @@ bool _deepEquals(Object? a, Object? b) {
 }
 
 class LDInstrumentationOptions {
-  LDInstrumentationOptions({
-    this.networkRequests,
-    this.launchTimes,
-    this.crashReporting,
-  });
-
-  bool? networkRequests;
+  LDInstrumentationOptions({this.launchTimes, this.crashReporting});
 
   bool? launchTimes;
 
   bool? crashReporting;
 
   List<Object?> _toList() {
-    return <Object?>[networkRequests, launchTimes, crashReporting];
+    return <Object?>[launchTimes, crashReporting];
   }
 
   Object encode() {
@@ -57,9 +51,8 @@ class LDInstrumentationOptions {
   static LDInstrumentationOptions decode(Object result) {
     result as List<Object?>;
     return LDInstrumentationOptions(
-      networkRequests: result[0] as bool?,
-      launchTimes: result[1] as bool?,
-      crashReporting: result[2] as bool?,
+      launchTimes: result[0] as bool?,
+      crashReporting: result[1] as bool?,
     );
   }
 
@@ -1057,9 +1050,8 @@ class LDNativeApi {
   /// been flushed; the iOS SDK exposes no flush).
   ///
   /// Only Session Replay can be stopped: neither native observability SDK has
-  /// a teardown, so its automatic instrumentation (crash reporting, network
-  /// requests, launch times, native lifecycle spans) keeps running until the
-  /// process exits.
+  /// a teardown, so its automatic instrumentation (crash reporting, launch
+  /// times, native lifecycle spans) keeps running until the process exits.
   Future<void> shutdown() async {
     final String pigeonVar_channelName =
         'dev.flutter.pigeon.launchdarkly_flutter_observability.LDNativeApi.shutdown$pigeonVar_messageChannelSuffix';

@@ -24,7 +24,6 @@ import 'package:pigeon/pigeon.dart';
   ),
 )
 class LDInstrumentationOptions {
-  bool? networkRequests;
   bool? launchTimes;
   bool? crashReporting;
 }
@@ -241,9 +240,8 @@ abstract class LDNativeApi {
   /// been flushed; the iOS SDK exposes no flush).
   ///
   /// Only Session Replay can be stopped: neither native observability SDK has
-  /// a teardown, so its automatic instrumentation (crash reporting, network
-  /// requests, launch times, native lifecycle spans) keeps running until the
-  /// process exits.
+  /// a teardown, so its automatic instrumentation (crash reporting, launch
+  /// times, native lifecycle spans) keeps running until the process exits.
   @async
   void shutdown();
 }

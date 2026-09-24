@@ -80,22 +80,19 @@ class FlutterError (
 
 /** Generated class from Pigeon that represents data sent in messages. */
 data class LDInstrumentationOptions (
-  val networkRequests: Boolean? = null,
   val launchTimes: Boolean? = null,
   val crashReporting: Boolean? = null
 )
  {
   companion object {
     fun fromList(pigeonVar_list: List<Any?>): LDInstrumentationOptions {
-      val networkRequests = pigeonVar_list[0] as Boolean?
-      val launchTimes = pigeonVar_list[1] as Boolean?
-      val crashReporting = pigeonVar_list[2] as Boolean?
-      return LDInstrumentationOptions(networkRequests, launchTimes, crashReporting)
+      val launchTimes = pigeonVar_list[0] as Boolean?
+      val crashReporting = pigeonVar_list[1] as Boolean?
+      return LDInstrumentationOptions(launchTimes, crashReporting)
     }
   }
   fun toList(): List<Any?> {
     return listOf(
-      networkRequests,
       launchTimes,
       crashReporting,
     )
@@ -700,9 +697,8 @@ interface LDNativeApi {
    * been flushed; the iOS SDK exposes no flush).
    *
    * Only Session Replay can be stopped: neither native observability SDK has
-   * a teardown, so its automatic instrumentation (crash reporting, network
-   * requests, launch times, native lifecycle spans) keeps running until the
-   * process exits.
+   * a teardown, so its automatic instrumentation (crash reporting, launch
+   * times, native lifecycle spans) keeps running until the process exits.
    */
   fun shutdown(callback: (Result<Unit>) -> Unit)
 

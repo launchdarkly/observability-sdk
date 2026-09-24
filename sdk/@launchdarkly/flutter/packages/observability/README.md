@@ -126,7 +126,7 @@ While `ObservabilityOptions.isEnabled` is `true`, the SDK records the following.
 - **Native crashes** (iOS and Android): controlled by `InstrumentationOptions.crashReporting`.
 - **Dart errors and `print` / `debugPrint` output**: only when your app runs inside the guarded zone shown below. `debugPrint` capture is controlled by `InstrumentationOptions.debugPrint`.
 
-> `InstrumentationOptions.networkRequests` currently has no effect. HTTP requests are not instrumented on any platform. Flutter's HTTP clients go through `dart:io`, which native network instrumentation cannot see.
+> HTTP requests are not instrumented automatically. Flutter's HTTP clients go through `dart:io`, which native network instrumentation cannot see; wrap requests in `LDObserve.withSpan` to trace them.
 
 To forward uncaught Dart errors and `print`/`debugPrint` output, run your app inside a guarded zone:
 

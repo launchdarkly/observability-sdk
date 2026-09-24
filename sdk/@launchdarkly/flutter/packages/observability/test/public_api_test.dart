@@ -190,7 +190,6 @@ void main() {
 
     test('InstrumentationOptions', () {
       const options = InstrumentationOptions();
-      expect(options.networkRequests, isTrue);
       expect(options.launchTimes, isTrue);
       expect(options.crashReporting, isTrue);
       expect(options.debugPrint, same(DebugPrintSetting.releaseOnly()));

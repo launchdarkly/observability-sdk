@@ -111,7 +111,6 @@ void _startObservability() {
     otlpEndpoint: otlpEndpoint.isEmpty ? null : otlpEndpoint,
     backendUrl: backendUrl.isEmpty ? null : backendUrl,
     instrumentation: InstrumentationOptions(
-      networkRequests: true,
       launchTimes: true,
       debugPrint: DebugPrintSetting.always(),
     ),

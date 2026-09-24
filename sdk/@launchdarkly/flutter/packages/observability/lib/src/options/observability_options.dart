@@ -110,12 +110,6 @@ class TracesOptions {
 /// Toggles for SDK-side instrumentation. Mirrors `InstrumentationOptions` in
 /// the .NET MAUI bridge, extended with the Dart-only [debugPrint] control.
 class InstrumentationOptions {
-  /// Reserved for network request instrumentation. Currently has no effect:
-  /// HTTP requests are not instrumented on any platform, because Flutter's
-  /// HTTP clients go through `dart:io`, which native instrumentation cannot
-  /// see.
-  final bool networkRequests;
-
   /// Whether to instrument launch times (native bridge only).
   final bool launchTimes;
 
@@ -132,7 +126,6 @@ class InstrumentationOptions {
   /// Creates instrumentation options; every instrumentation is on by default,
   /// with `debugPrint` captured in release builds only.
   const InstrumentationOptions({
-    this.networkRequests = true,
     this.launchTimes = true,
     this.crashReporting = true,
     this.debugPrint = const DebugPrintReleaseOnly(),
@@ -327,7 +320,7 @@ class ObservabilityOptions {
   /// which platforms it applies to.
   final AnalyticsOptions analytics;
 
-  /// Toggles for automatic instrumentation: network requests, launch times,
+  /// Toggles for automatic instrumentation: launch times,
   /// crash reporting and `debugPrint` capture.
   final InstrumentationOptions instrumentation;
 
