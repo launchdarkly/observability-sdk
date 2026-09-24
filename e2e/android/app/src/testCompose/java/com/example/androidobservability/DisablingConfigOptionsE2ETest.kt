@@ -34,6 +34,26 @@ class DisablingConfigOptionsE2ETest {
     }
 
     @Test
+    fun `Nothing should be exported when observability is disabled`() {
+        application.observabilityOptions = getOptionsAllEnabled().copy(enabled = false)
+        application.initForTest()
+        val otlpPrefix = "http://localhost:${application.mockWebServer?.port}/v1/"
+
+        triggerTestLog(severity = Severity.WARN)
+        triggerTestSpan()
+        triggerError()
+        triggerTestMetric()
+        LDObserve.flush()
+        waitForTelemetryData(telemetryInspector = application.telemetryInspector, telemetryType = TelemetryType.SPANS)
+
+        val inspector = application.telemetryInspector
+        assertTrue(inspector?.logExporter?.finishedLogRecordItems.orEmpty().isEmpty())
+        assertTrue(inspector?.spanExporter?.finishedSpanItems.orEmpty().isEmpty())
+        assertTrue(inspector?.metricExporter?.finishedMetricItems.orEmpty().isEmpty())
+        assertFalse(requestsStartWith(otlpPrefix))
+    }
+
+    @Test
     fun `Logs should NOT be exported when logsApiLevel is NONE`() {
         application.observabilityOptions = getOptionsAllEnabled().copy(logsApiLevel = ObservabilityOptions.LogLevel.NONE)
         application.initForTest()
@@ -245,6 +265,13 @@ class DisablingConfigOptionsE2ETest {
         while (true) {
             val request = application.mockWebServer?.takeRequest(100, TimeUnit.MILLISECONDS) ?: return false
             if (request.requestUrl.toString() == url) return true
+        }
+    }
+
+    private fun requestsStartWith(prefix: String): Boolean {
+        while (true) {
+            val request = application.mockWebServer?.takeRequest(100, TimeUnit.MILLISECONDS) ?: return false
+            if (request.requestUrl.toString().startsWith(prefix)) return true
         }
     }
 
