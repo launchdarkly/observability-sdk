@@ -4,10 +4,6 @@
 
 Observability (spans, logs, errors) works on **mobile and web**. Session replay is available on iOS and Android only; it is not supported on web.
 
-## Early Access Preview
-
-**NB: APIs are subject to change until a 1.x version is released.**
-
 ## Supported platforms
 
 | Platform | Minimum version | Observability | Session replay |
