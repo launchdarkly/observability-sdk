@@ -2,6 +2,13 @@
 
 All notable changes to the LaunchDarkly Observability SDK for Flutter will be documented in this file. This project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.19.1](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.19.0...launchdarkly_flutter_observability-0.19.1) (2026-09-24)
+
+
+### Bug Fixes
+
+* **flutter:** Brings the plugin's public contract 1.0.  ([#777](https://github.com/launchdarkly/observability-sdk/issues/777)) ([a65ca7d](https://github.com/launchdarkly/observability-sdk/commit/a65ca7de5a4948160c6bf6a8b47de4a76ba874ec))
+
 ## [0.19.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.18.0...launchdarkly_flutter_observability-0.19.0) (2026-09-16)
 
 
