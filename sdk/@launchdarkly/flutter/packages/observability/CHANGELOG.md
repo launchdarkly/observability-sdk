@@ -2,6 +2,17 @@
 
 All notable changes to the LaunchDarkly Observability SDK for Flutter will be documented in this file. This project adheres to [Semantic Versioning](https://semver.org).
 
+## [1.0.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.19.1...launchdarkly_flutter_observability-1.0.0) (2026-09-24)
+
+
+### ⚠ BREAKING CHANGES
+
+* Flutter SR Release 1.0.0 ([#781](https://github.com/launchdarkly/observability-sdk/issues/781))
+
+### Features
+
+* Flutter SR Release 1.0.0 ([#781](https://github.com/launchdarkly/observability-sdk/issues/781)) ([4f004d5](https://github.com/launchdarkly/observability-sdk/commit/4f004d50662b67a9bdf40489385a3e45abfb8dde))
+
 ## [0.19.1](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.19.0...launchdarkly_flutter_observability-0.19.1) (2026-09-24)
 
 
