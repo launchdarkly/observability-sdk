@@ -203,11 +203,11 @@ final class LDNativeApiImpl: NSObject, LDNativeApi {
 
     // Session Replay is the only native component with a teardown; the native
     // observability SDK keeps its automatic instrumentation running. Replies
-    // after capture has stopped. The iOS SDK exposes no flush, so queued replay
-    // events are left to its exporter.
+    // after capture has stopped and queued replay events have been flushed.
     func shutdown(completion: @escaping (Result<Void, Error>) -> Void) {
         Task { @MainActor in
             LDReplay.shared.stop()
+            await LDReplay.shared.flush()
             completion(.success(()))
         }
     }

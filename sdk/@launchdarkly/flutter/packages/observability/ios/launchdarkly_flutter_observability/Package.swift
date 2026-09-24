@@ -31,14 +31,14 @@ let swiftObservabilityDependency: Package.Dependency = if useLocalNativeSdk {
 } else {
     .package(
         url: "https://github.com/launchdarkly/swift-launchdarkly-observability.git",
-        .upToNextMinor(from: "0.54.0")
+        .upToNextMinor(from: "0.55.0")
     )
 }
 
 let package = Package(
     name: "launchdarkly_flutter_observability",
     platforms: [
-        .iOS("14.0")
+        .iOS("15.0")
     ],
     products: [
         .library(
