@@ -10,15 +10,15 @@ Observability (spans, logs, errors) works on **mobile and web**. Session replay 
 
 ## Supported platforms
 
-| Platform | Observability | Session replay |
-|---|---|---|
-| iOS | ✅ | ✅ (native screenshot capture) |
-| Android | ✅ | ✅ (native screenshot capture) |
-| Web | ✅ | ❌ Not supported |
+| Platform | Minimum version | Observability | Session replay |
+|---|---|---|---|
+| iOS | 15.0 | ✅ | ✅ (native screenshot capture) |
+| Android | API 24 | ✅ | ✅ (native screenshot capture) |
+| Web | | ✅ | ❌ Not supported |
 
 ## Install
 
-Requires Flutter 3.27 or newer.
+Requires Flutter 3.27 or newer and an iOS deployment target of 15.0 or newer.
 
 Add the package to your app's `pubspec.yaml`:
 
@@ -32,7 +32,13 @@ Then fetch dependencies:
 flutter pub get
 ```
 
-On iOS, install the native pods (from your app's `ios/` directory):
+On iOS, set the deployment target to at least 15.0. With CocoaPods, set it in `ios/Podfile`:
+
+```ruby
+platform :ios, '15.0'
+```
+
+and set `IPHONEOS_DEPLOYMENT_TARGET` to `15.0` for the Runner target in Xcode. Then install the native pods (from your app's `ios/` directory):
 
 ```bash
 cd ios && pod install
