@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:developer' as developer;
+import 'package:flutter/foundation.dart' show visibleForTesting;
 
 import 'package:launchdarkly_flutter_client_sdk/launchdarkly_flutter_client_sdk.dart';
 import 'package:opentelemetry/api.dart' as otel;
@@ -284,6 +285,11 @@ final class ObserveOtel {
 
   static Future<void>? _shutdownResult;
 
+  /// How long [shutdown] waits for native to confirm Session Replay stopped.
+  /// A host that never replies must not leave the shutdown future pending.
+  @visibleForTesting
+  static Duration nativeShutdownTimeout = const Duration(seconds: 5);
+
   static Future<void> _shutdownOnce() async {
     _shutdown = true;
     // Plugins first: disposing click capture hands tap reporting back to native
@@ -294,7 +300,9 @@ final class ObserveOtel {
     _pluginInstances.clear();
     Otel.shutdown();
     try {
-      await LDObservePlatform.instance.shutdown();
+      await LDObservePlatform.instance.shutdown().timeout(
+        nativeShutdownTimeout,
+      );
     } catch (error, stackTrace) {
       developer.log(
         'LDObserve could not stop session replay during shutdown.',

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:launchdarkly_flutter_observability/src/platform/io/messages.g.dart'
@@ -26,6 +28,9 @@ final class NativeApiMock {
   /// When set, `start` replies with a platform error instead of a result.
   bool failStart = false;
 
+  /// When set, `shutdown` never replies, like a host whose callback is lost.
+  bool hangShutdown = false;
+
   List<List<Object?>> callsTo(String method) => calls[method] ?? const [];
 
   void install() {
@@ -38,6 +43,9 @@ final class NativeApiMock {
             .add((message as List<Object?>?) ?? const []);
         if (method == 'start' && failStart) {
           return <Object?>['start-failed', 'native start failed', null];
+        }
+        if (method == 'shutdown' && hangShutdown) {
+          return Completer<Object?>().future;
         }
         return <Object?>[
           method == 'start' ? wire.LDStartResult(nativeVersion: 'test') : null,

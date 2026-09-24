@@ -315,11 +315,15 @@ internal class LDNativeApiImpl(
     }
 
     // Session Replay is the only native component with a teardown; the native
-    // observability SDK keeps its automatic instrumentation running.
+    // observability SDK keeps its automatic instrumentation running. The callback
+    // must run even if stopping throws, or the Dart shutdown future never settles.
     override fun shutdown(callback: (Result<Unit>) -> Unit) {
-        LDReplay.stop()
-        LDReplay.flush()
-        callback(Result.success(Unit))
+        callback(
+            runCatching {
+                LDReplay.stop()
+                LDReplay.flush()
+            }
+        )
     }
 
     /**
