@@ -34,19 +34,35 @@ final class LDObserve {
   /// `LDObserve.Init(LdClient client, ...)`.
   ///
   /// When [replay] is omitted, session replay is not wired up.
-  static void init(
+  ///
+  /// The returned future completes with `true` once observability is ready.
+  /// Recording calls made before then are dropped (the most recent screen
+  /// view is the exception: it is replayed once ready), so await it before
+  /// recording anything that must not be lost. Awaiting is optional.
+  ///
+  /// The future never completes with an error. It completes with `false` when
+  /// startup fails (the error is logged, and calling [init] again retries) or
+  /// after [shutdown]. Only the first successful init takes effect: a later
+  /// call is logged and ignored, including its options, and reports the first
+  /// call's outcome.
+  static Future<bool> init(
     LDClient client, {
     required ObservabilityOptions observability,
     SessionReplayOptions? replay,
   }) {
-    client.registerPlugin(LDObservePlugin(observability, replay: replay));
+    final plugin = LDObservePlugin(observability, replay: replay);
+    client.registerPlugin(plugin);
+    return plugin.bootResult ?? Future.value(false);
   }
 
   /// Boots observability (and optional session replay) standalone, without a
   /// LaunchDarkly client. Mirrors `LDObserve.Init(string mobileKey, ...)`.
   ///
   /// When [replay] is omitted, session replay is started disabled.
-  static Future<void> initStandalone(
+  ///
+  /// Completes like [init]: `true` once ready, `false` if startup fails or
+  /// after [shutdown], never with an error.
+  static Future<bool> initStandalone(
     String mobileKey, {
     required ObservabilityOptions observability,
     SessionReplayOptions? replay,

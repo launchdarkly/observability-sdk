@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:collection';
+import 'dart:developer' as developer;
 
 import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:launchdarkly_flutter_client_sdk/launchdarkly_flutter_client_sdk.dart';
@@ -19,15 +20,23 @@ import '../otel/symbols_id.dart';
 import '../platform/ld_observe_platform.dart';
 import 'observability_config.dart';
 
+const _logName = 'LDObserve';
 const _launchDarklyObservabilityName = 'launchdarkly-observability';
 const _launchDarklyObservabilityPluginName =
     '$_launchDarklyObservabilityName-plugin';
 
 /// Hook that opens a span around each flag evaluation and records the
 /// evaluation as an event. Cross-platform (Dart OpenTelemetry).
+///
+/// Inert unless its plugin owns the pipeline, so an ignored repeat init does
+/// not record every evaluation, track and identify a second time.
 final class _ObservabilityHook extends Hook {
   static const _evalSpanDataName = 'eval-span';
   static const _launchDarklyObservabilityHookName = 'LDClient-hook';
+
+  _ObservabilityHook(this._plugin);
+
+  final LDObservePlugin _plugin;
 
   final HookMetadata _metadata = const HookMetadata(
     name: _launchDarklyObservabilityHookName,
@@ -41,6 +50,9 @@ final class _ObservabilityHook extends Hook {
     EvaluationSeriesContext hookContext,
     UnmodifiableMapView<String, dynamic> data,
   ) {
+    if (!_plugin._isActive) {
+      return data;
+    }
     // Match the native iOS/Android exporters: a span named "evaluation" with
     // the feature flag key/provider/context set up front so the backend
     // recognizes it as a flag evaluation.
@@ -94,7 +106,7 @@ final class _ObservabilityHook extends Hook {
     // `ObservabilityHook.AfterIdentify`. The native side ignores incomplete
     // identifies, so the `completed` flag is forwarded as-is.
     final context = hookContext.context;
-    if (context.valid) {
+    if (_plugin._isActive && context.valid) {
       ObserveOtel.identify(
         contextKeys: context.keys,
         canonicalKey: context.canonicalKey,
@@ -106,6 +118,9 @@ final class _ObservabilityHook extends Hook {
 
   @override
   void afterTrack(TrackSeriesContext hookContext) {
+    if (!_plugin._isActive) {
+      return;
+    }
     // Funnel through the single track emitter so the LaunchDarkly client's
     // track path and the manual LDObserve.track API stay consistent.
     ObserveOtel.track(
@@ -128,7 +143,16 @@ final class LDObservePlugin extends Plugin {
 
   final ObservabilityConfig _config;
   final List<Instrumentation> _instrumentations = [];
-  bool _booted = false;
+  Future<bool>? _boot;
+
+  /// The plugin that owns the pipeline: set when its boot starts, cleared if
+  /// that boot fails. Process-wide because the pipeline is.
+  static LDObservePlugin? _active;
+
+  bool get _isActive => identical(_active, this);
+
+  @visibleForTesting
+  static void resetActiveForTesting() => _active = null;
 
   final PluginMetadata _metadata = const PluginMetadata(
     name: _launchDarklyObservabilityPluginName,
@@ -143,11 +167,28 @@ final class LDObservePlugin extends Plugin {
   /// Boots the Dart OpenTelemetry pipeline and the platform session replay /
   /// native stack with the given [credential]. Safe to call once; subsequent
   /// calls are ignored, as are calls after `LDObserve.shutdown`.
-  Future<void> boot(String credential) async {
-    if (_booted || ObserveOtel.isShutdown) {
-      return;
+  ///
+  /// Completes with `true` once the pipeline is ready. Completes with `false`,
+  /// never an error, when native start fails (the error is logged, and a later
+  /// init may try again) or after shutdown. Only the first plugin to boot is
+  /// used: a later one logs that it is ignored and reports the first one's
+  /// outcome.
+  Future<bool> boot(String credential) => _boot ??= _startBoot(credential);
+
+  Future<bool> _startBoot(String credential) async {
+    if (ObserveOtel.isShutdown) {
+      return false;
     }
-    _booted = true;
+    final active = _active;
+    if (active != null) {
+      developer.log(
+        'LDObserve is already initialized; ignoring this init call and its '
+        'options.',
+        name: _logName,
+      );
+      return active._boot!;
+    }
+    _active = this;
 
     // Start the native stack (and platform session replay) before wiring up the
     // Dart OpenTelemetry exporters. On mobile the exporters forward spans/logs
@@ -159,17 +200,29 @@ final class LDObservePlugin extends Plugin {
     //
     // Native receives `isEnabled` itself, so it is started either way: session
     // replay does not depend on observability being enabled.
-    await LDObservePlatform.instance.start(
-      mobileKey: credential,
-      observability: _withSymbolsId(observability),
-      replay: replay ?? const SessionReplayOptions(isEnabled: false),
-    );
+    try {
+      await LDObservePlatform.instance.start(
+        mobileKey: credential,
+        observability: _withSymbolsId(observability),
+        replay: replay ?? const SessionReplayOptions(isEnabled: false),
+      );
+    } catch (error, stackTrace) {
+      developer.log(
+        'LDObserve failed to start; observability is not running.',
+        name: _logName,
+        error: error,
+        stackTrace: stackTrace,
+      );
+      _active = null;
+      _boot = null;
+      return false;
+    }
 
     if (ObserveOtel.isShutdown) {
       // Shut down while native was starting; the earlier stop may have landed
       // before replay started.
       unawaited(LDObservePlatform.instance.shutdown());
-      return;
+      return false;
     }
 
     registerPlugin(
@@ -198,7 +251,12 @@ final class LDObservePlugin extends Plugin {
         ),
       );
     }
+    return true;
   }
+
+  /// The outcome of [boot], or `null` if it has not been called — for example
+  /// when the client did not register the plugin.
+  Future<bool>? get bootResult => _boot;
 
   /// Merges the Dart AOT snapshot build id (symbols_id) into the native init
   /// [ObservabilityOptions.attributes], so it becomes an OTel Resource attribute
@@ -215,14 +273,14 @@ final class LDObservePlugin extends Plugin {
     PluginEnvironmentMetadata environmentMetadata,
   ) {
     // boot() is asynchronous (the native bridge crosses the pigeon channel),
-    // whereas register is synchronous; fire-and-forget so registration stays
-    // non-blocking.
+    // whereas register is synchronous. LDObserve.init hands the result back to
+    // the caller through bootResult.
     unawaited(boot(environmentMetadata.credential.value));
     super.register(client, environmentMetadata);
   }
 
   @override
-  List<Hook> get hooks => [_ObservabilityHook()];
+  List<Hook> get hooks => [_ObservabilityHook(this)];
 
   /// The instrumentations installed by [boot].
   @visibleForTesting

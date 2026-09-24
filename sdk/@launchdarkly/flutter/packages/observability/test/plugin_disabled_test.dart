@@ -17,6 +17,7 @@ void main() {
   final native = NativeApiMock();
 
   setUp(() {
+    LDObservePlugin.resetActiveForTesting();
     native.calls.clear();
     native.install();
   });
@@ -29,7 +30,7 @@ void main() {
     final plugin = LDObservePlugin(
       const ObservabilityOptions(isEnabled: false),
     );
-    await plugin.boot('mobile-key');
+    expect(await plugin.boot('mobile-key'), isTrue);
 
     // Native still starts: it applies `isEnabled` to its own instrumentation.
     expect(native.callsTo('start'), hasLength(1));

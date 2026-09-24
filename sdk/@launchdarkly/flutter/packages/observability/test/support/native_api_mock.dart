@@ -23,6 +23,9 @@ const _methods = [
 final class NativeApiMock {
   final calls = <String, List<List<Object?>>>{};
 
+  /// When set, `start` replies with a platform error instead of a result.
+  bool failStart = false;
+
   List<List<Object?>> callsTo(String method) => calls[method] ?? const [];
 
   void install() {
@@ -33,6 +36,9 @@ final class NativeApiMock {
         calls
             .putIfAbsent(method, () => [])
             .add((message as List<Object?>?) ?? const []);
+        if (method == 'start' && failStart) {
+          return <Object?>['start-failed', 'native start failed', null];
+        }
         return <Object?>[
           method == 'start' ? wire.LDStartResult(nativeVersion: 'test') : null,
         ];

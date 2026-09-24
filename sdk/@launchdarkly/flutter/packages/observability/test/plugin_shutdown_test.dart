@@ -56,11 +56,13 @@ void main() {
     LDObserve.trackScreenView('/after-shutdown');
     LDObserve.track('purchase');
     LDObserve.recordLog('hello');
-    await LDObserve.initStandalone(
+    final restarted = await LDObserve.initStandalone(
       'mobile-key',
       observability: const ObservabilityOptions(),
     );
     await pumpEventQueue();
+
+    expect(restarted, isFalse);
 
     expect(native.calls, isEmpty);
     expect(Otel.screenViewRecorder, isNull);

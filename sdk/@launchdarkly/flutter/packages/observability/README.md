@@ -107,6 +107,8 @@ await LDObserve.initStandalone(
 
 > When `replay` is omitted, session replay is not started.
 
+> `LDObserve.init` and `LDObserve.initStandalone` return a `Future<bool>` that completes with `true` once observability is ready. Awaiting it is optional, but anything recorded before it completes is dropped (except the most recent screen view, which is replayed once ready). It never completes with an error: it completes with `false` if startup fails (the error is logged, and calling `init` again retries) or after `LDObserve.shutdown()`. Only the first successful `init` takes effect; later calls are logged and ignored.
+
 > `ObservabilityOptions(isEnabled: false)` turns off observability telemetry: no spans, logs, errors, flag-evaluation spans, lifecycle or `debugPrint` capture are recorded, and nothing is exported on web. Session replay is controlled separately by `SessionReplayOptions.isEnabled`; while it is on, screen views, clicks and track events still reach the replay timeline.
 
 ## Automatic instrumentation
