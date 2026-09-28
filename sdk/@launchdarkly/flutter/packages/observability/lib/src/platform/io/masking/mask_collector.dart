@@ -47,8 +47,10 @@ import 'masking_policy.dart';
 /// paints a solid, fully-opaque rectangle over it, so we never drop a mask that
 /// might still be visible.
 class MaskCollector {
+  /// Creates a collector that applies [policy] to each widget it visits.
   const MaskCollector(this.policy);
 
+  /// The rules deciding how each widget participates in masking.
   final MaskingPolicy policy;
 
   /// Collects redaction regions under [boundary], walking from [rootContext].

@@ -9,6 +9,7 @@ class LDAppLifecycleListener {
   late final StreamController<AppLifecycleState> _streamController;
   AppLifecycleListener? _underlyingListener;
 
+  /// Creates a listener whose [stream] emits lifecycle state changes.
   LDAppLifecycleListener() {
     _streamController = StreamController.broadcast(
       onListen: () {
@@ -23,8 +24,10 @@ class LDAppLifecycleListener {
     );
   }
 
+  /// Broadcast stream of application lifecycle state changes.
   Stream<AppLifecycleState> get stream => _streamController.stream;
 
+  /// Closes [stream] and stops listening for lifecycle changes.
   void close() {
     _streamController.close();
   }

@@ -36,6 +36,7 @@ class LDClick extends StatelessWidget {
   /// The subtree this marker names.
   final Widget child;
 
+  /// Creates a marker that reports taps inside [child] under [id].
   const LDClick({
     super.key,
     required this.id,
@@ -74,6 +75,7 @@ class LDClickTargetInfo {
   /// widgets that are themselves the thing being pressed.
   final bool preferInnerTarget;
 
+  /// Describes a click target; only [tag] is required.
   const LDClickTargetInfo({
     required this.tag,
     this.id,

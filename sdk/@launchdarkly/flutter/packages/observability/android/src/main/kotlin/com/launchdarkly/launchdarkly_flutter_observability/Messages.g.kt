@@ -80,22 +80,19 @@ class FlutterError (
 
 /** Generated class from Pigeon that represents data sent in messages. */
 data class LDInstrumentationOptions (
-  val networkRequests: Boolean? = null,
   val launchTimes: Boolean? = null,
   val crashReporting: Boolean? = null
 )
  {
   companion object {
     fun fromList(pigeonVar_list: List<Any?>): LDInstrumentationOptions {
-      val networkRequests = pigeonVar_list[0] as Boolean?
-      val launchTimes = pigeonVar_list[1] as Boolean?
-      val crashReporting = pigeonVar_list[2] as Boolean?
-      return LDInstrumentationOptions(networkRequests, launchTimes, crashReporting)
+      val launchTimes = pigeonVar_list[0] as Boolean?
+      val crashReporting = pigeonVar_list[1] as Boolean?
+      return LDInstrumentationOptions(launchTimes, crashReporting)
     }
   }
   fun toList(): List<Any?> {
     return listOf(
-      networkRequests,
       launchTimes,
       crashReporting,
     )
@@ -694,6 +691,15 @@ interface LDNativeApi {
    * in the app (an add-to-app host's own screens) are never affected.
    */
   fun setEmbedderClickHandling(enabled: Boolean)
+  /**
+   * Stops Session Replay capture as part of `LDObserve.shutdown`, replying
+   * only once capture has stopped and queued replay events have been flushed.
+   *
+   * Only Session Replay can be stopped: neither native observability SDK has
+   * a teardown, so its automatic instrumentation (crash reporting, launch
+   * times, native lifecycle spans) keeps running until the process exits.
+   */
+  fun shutdown(callback: (Result<Unit>) -> Unit)
 
   companion object {
     /** The codec used by LDNativeApi. */
@@ -866,6 +872,23 @@ interface LDNativeApi {
               MessagesPigeonUtils.wrapError(exception)
             }
             reply.reply(wrapped)
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.launchdarkly_flutter_observability.LDNativeApi.shutdown$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { _, reply ->
+            api.shutdown{ result: Result<Unit> ->
+              val error = result.exceptionOrNull()
+              if (error != null) {
+                reply.reply(MessagesPigeonUtils.wrapError(error))
+              } else {
+                reply.reply(MessagesPigeonUtils.wrapResult(null))
+              }
+            }
           }
         } else {
           channel.setMessageHandler(null)

@@ -119,6 +119,7 @@ otel.SpanKind convertKind(SpanKind kind) {
   }
 }
 
+/// Not for export.
 otel.StatusCode convertSpanStatus(SpanStatusCode status) {
   switch (status) {
     case SpanStatusCode.unset:

@@ -201,6 +201,17 @@ final class LDNativeApiImpl: NSObject, LDNativeApi {
         LDObserve.shared.setEmbedderClickHandling(enabled)
     }
 
+    // Session Replay is the only native component with a teardown; the native
+    // observability SDK keeps its automatic instrumentation running. Replies
+    // after capture has stopped and queued replay events have been flushed.
+    func shutdown(completion: @escaping (Result<Void, Error>) -> Void) {
+        Task { @MainActor in
+            LDReplay.shared.stop()
+            await LDReplay.shared.flush()
+            completion(.success(()))
+        }
+    }
+
     /// Drops `nil` values so the native bridge receives a `[String: Any]`.
     private func cleanAttributes(_ attributes: [String: Any?]?) -> [String: Any] {
         guard let attributes = attributes else { return [:] }
@@ -395,7 +406,11 @@ final class LDNativeApiImpl: NSObject, LDNativeApi {
 
     private enum Defaults {
         static let serviceName = "observability-flutter"
-        static let serviceVersion = "0.1.0"
+        // The host app's version, which Flutter sets from `pubspec.yaml`. Empty
+        // rather than a made-up version when the app declares none.
+        static var serviceVersion: String {
+            Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
+        }
         static let otlpEndpoint = "https://otel.observability.app.launchdarkly.com:4318"
         static let backendUrl = "https://pub.observability.app.launchdarkly.com"
     }

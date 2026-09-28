@@ -9,7 +9,7 @@ import 'native_options_codec.dart';
 /// The version of this Flutter package, surfaced in the resource attributes
 /// the native bridge attaches as `telemetry.distro.version`. Kept in sync
 /// with `pubspec.yaml` by release-please.
-const String _packageVersion = '0.19.0'; // x-release-please-version
+const String _packageVersion = '1.0.0'; // x-release-please-version
 
 /// Internal entry point for starting the LaunchDarkly observability +
 /// session replay native stack from Flutter. Mirrors the C#
@@ -24,8 +24,14 @@ class LDNative {
   /// `internal static LDNative? Current` field in the .NET bridge.
   static LDNative? current;
 
+  /// The observability options the native stack was started with.
   final ObservabilityOptions observability;
+
+  /// The session replay options the native stack was started with.
   final SessionReplayOptions replay;
+
+  /// The native SDK version reported by the platform after [start] completes,
+  /// or an empty string when unknown.
   String nativeVersion;
 
   LDNative._({required this.observability, required this.replay})

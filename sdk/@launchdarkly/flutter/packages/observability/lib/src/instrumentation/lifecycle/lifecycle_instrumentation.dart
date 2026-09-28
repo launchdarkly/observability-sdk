@@ -9,10 +9,16 @@ import 'platform/stub_lifecycle_listener.dart'
     if (dart.library.io) 'platform/io_lifecycle_listener.dart'
     if (dart.library.js_interop) 'platform/js_lifecycle_listener.dart';
 
+/// Records a `device.app.lifecycle` span for each application lifecycle
+/// state change.
 final class LifecycleInstrumentation implements Instrumentation {
   late final LDAppLifecycleListener _lifecycleListener;
+
+  /// Whether [dispose] has been called.
   bool disposed = false;
 
+  /// Creates the instrumentation, recording the current lifecycle state (if
+  /// known) and listening for subsequent changes.
   LifecycleInstrumentation() {
     final initialState = SchedulerBinding.instance.lifecycleState;
     if (initialState != null) {

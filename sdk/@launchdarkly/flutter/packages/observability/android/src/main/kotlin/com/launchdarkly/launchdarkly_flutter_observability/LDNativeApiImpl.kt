@@ -2,6 +2,7 @@ package com.launchdarkly.launchdarkly_flutter_observability
 
 import android.app.Activity
 import android.app.Application
+import android.content.pm.PackageManager
 import android.os.Handler
 import android.os.Looper
 import com.launchdarkly.observability.api.ObservabilityOptions
@@ -77,7 +78,7 @@ internal class LDNativeApiImpl(
         val nativeObservabilityOptions = ObservabilityOptions(
             enabled = observability.isEnabled ?: true,
             serviceName = observability.serviceName ?: DEFAULT_SERVICE_NAME,
-            serviceVersion = observability.serviceVersion ?: DEFAULT_SERVICE_VERSION,
+            serviceVersion = observability.serviceVersion ?: hostAppVersion(),
             contextFriendlyName = observability.contextFriendlyName,
             resourceAttributes = resourceAttributes,
             customHeaders = observability.customHeaders ?: emptyMap(),
@@ -313,6 +314,18 @@ internal class LDNativeApiImpl(
         LDObserve.setEmbedderClickHandling(enabled)
     }
 
+    // Session Replay is the only native component with a teardown; the native
+    // observability SDK keeps its automatic instrumentation running. The callback
+    // must run even if stopping throws, or the Dart shutdown future never settles.
+    override fun shutdown(callback: (Result<Unit>) -> Unit) {
+        callback(
+            runCatching {
+                LDReplay.stop()
+                LDReplay.flush()
+            }
+        )
+    }
+
     /**
      * Maps the OpenTelemetry log-severity number sent across the bridge onto the
      * native [ObservabilityOptions.LogLevel]. Defaults to [ObservabilityOptions.LogLevel.INFO]
@@ -322,6 +335,18 @@ internal class LDNativeApiImpl(
         if (severity == null) return ObservabilityOptions.LogLevel.INFO
         return ObservabilityOptions.LogLevel.entries.firstOrNull { it.level == severity }
             ?: ObservabilityOptions.LogLevel.INFO
+    }
+
+    // The host app's `versionName`, which Flutter sets from `pubspec.yaml`.
+    // Empty rather than a made-up version when the app declares none.
+    private fun hostAppVersion(): String = try {
+        @Suppress("DEPRECATION")
+        application.packageManager
+            .getPackageInfo(application.packageName, 0)
+            .versionName
+            .orEmpty()
+    } catch (e: PackageManager.NameNotFoundException) {
+        ""
     }
 
     private fun buildResourceAttributes(
@@ -349,7 +374,6 @@ internal class LDNativeApiImpl(
     companion object {
         private const val FLUTTER_DISTRO_NAME = "observability-flutter-android"
         private const val DEFAULT_SERVICE_NAME = "observability-flutter"
-        private const val DEFAULT_SERVICE_VERSION = "0.1.0"
         private const val DEFAULT_OTLP_ENDPOINT =
             "https://otel.observability.app.launchdarkly.com:4318"
         private const val DEFAULT_BACKEND_URL =

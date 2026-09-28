@@ -1,12 +1,16 @@
 import 'package:flutter/foundation.dart';
 import 'package:launchdarkly_flutter_observability/src/instrumentation/instrumentation.dart';
 
+import '../api/log_severity.dart';
 import '../plugin/observability_config.dart';
 import '../observe_otel.dart';
 
+/// Forwards [debugPrint] output to the observability pipeline as debug logs.
 class DebugPrintInstrumentation implements Instrumentation {
   DebugPrintCallback? _originalCallback;
 
+  /// Creates the instrumentation, replacing [debugPrint] when
+  /// `config.debugPrint` enables capture for the current build mode.
   DebugPrintInstrumentation(InstrumentationConfig config) {
     switch (config.debugPrint) {
       case DebugPrintReleaseOnly():
@@ -26,7 +30,7 @@ class DebugPrintInstrumentation implements Instrumentation {
 
     debugPrint = (String? message, {int? wrapWidth}) {
       if (message != null) {
-        ObserveOtel.recordLog(message, severity: 'debug');
+        ObserveOtel.recordLog(message, severity: LogSeverity.debug);
       }
     };
   }

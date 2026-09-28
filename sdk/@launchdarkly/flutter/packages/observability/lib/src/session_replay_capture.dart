@@ -8,8 +8,8 @@ import 'platform/ld_observe_platform.dart';
 ///
 /// The capture mechanism is platform specific and resolved at compile time:
 /// on native (iOS/Android) it provides Flutter-rendered screenshots to the
-/// native session replay SDK; on web it is a pass-through because the browser
-/// session replay records the DOM directly.
+/// native session replay SDK. Session replay is not supported on web, where
+/// the capture part is a pass-through.
 ///
 /// Click capture also lives here, on every platform. Flutter renders its whole
 /// UI into one native view, so the tapped widget can only be identified in Dart,
@@ -21,8 +21,10 @@ import 'platform/ld_observe_platform.dart';
 /// sheets, and other routes are children of the app's `Navigator`, so a wrap
 /// further down excludes taps on anything the app pushes above it.
 class SessionReplayCapture extends StatelessWidget {
+  /// The app subtree to capture, typically the `MaterialApp`.
   final Widget child;
 
+  /// Creates a capture root for [child].
   const SessionReplayCapture({super.key, required this.child});
 
   @override

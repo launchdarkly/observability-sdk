@@ -9,7 +9,12 @@ import 'package:flutter/widgets.dart' show Key;
 /// Platform-agnostic: the native wire conversion lives in
 /// `platform/io/native_options_codec.dart`.
 class SessionReplayOptions {
+  /// Whether Session Replay records on iOS and Android. Defaults to `true`.
+  /// Session Replay is not supported on web, where this has no effect.
   final bool isEnabled;
+
+  /// The `service.name` reported with Session Replay's own telemetry.
+  /// Defaults to `sessionreplay-flutter`.
   final String serviceName;
 
   /// Probability from `0.0` to `1.0` that Session Replay starts when enabled.
@@ -35,8 +40,11 @@ class SessionReplayOptions {
   /// Native-only. Defaults to `0.3`.
   final double imageQuality;
 
+  /// What is masked in recorded frames and click events.
   final PrivacyOptions privacy;
 
+  /// Creates Session Replay options. The defaults record every session at one
+  /// frame per second with text inputs masked.
   const SessionReplayOptions({
     this.isEnabled = true,
     this.serviceName = 'sessionreplay-flutter',
@@ -51,10 +59,20 @@ class SessionReplayOptions {
 /// Privacy controls for session replay. Mirrors
 /// `SessionReplayOptions.PrivacyOptions` in the .NET bridge.
 class PrivacyOptions {
+  /// Covers editable text fields in recorded frames. Defaults to `true`.
   final bool maskTextInputs;
+
+  /// Covers web views in recorded frames. Defaults to `false`.
   final bool maskWebViews;
+
+  /// Covers non-editable text in recorded frames. Defaults to `false`.
   final bool maskLabels;
+
+  /// Covers images in recorded frames. Defaults to `false`.
   final bool maskImages;
+
+  /// Opacity below which a view is treated as invisible and not masked, from
+  /// `0.0` to `1.0`. Defaults to `0.02`.
   final double minimumAlpha;
 
   /// Widget runtime [Type]s to mask (cover) wherever they appear, e.g.
@@ -97,6 +115,7 @@ class PrivacyOptions {
   /// not sent to native.
   final bool maskClickText;
 
+  /// Creates privacy options. By default only text inputs are masked.
   const PrivacyOptions({
     this.maskTextInputs = true,
     this.maskWebViews = false,

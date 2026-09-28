@@ -10,6 +10,8 @@ import 'package:flutter/rendering.dart';
 /// be stroked directly, and so the convex-hull merge in [MaskApplier] can treat
 /// two quads as a single 8-point cloud.
 class Quad {
+  /// Creates a quad from its corners in top-left, top-right, bottom-right,
+  /// bottom-left order.
   const Quad(this.p0, this.p1, this.p2, this.p3);
 
   /// Top-left corner of the source rect, transformed into boundary coords.
@@ -24,6 +26,7 @@ class Quad {
   /// Bottom-left corner of the source rect, transformed into boundary coords.
   final ui.Offset p3;
 
+  /// The four corners in winding order: [p0], [p1], [p2], [p3].
   List<ui.Offset> get points => <ui.Offset>[p0, p1, p2, p3];
 
   /// Axis-aligned bounding box enclosing all four corners.
@@ -60,6 +63,7 @@ class Quad {
 /// [MaskStabilizer] stay unit-compatible. [MaskApplier] scales to physical
 /// pixels when it paints onto the captured image.
 class MaskOperation {
+  /// Creates a mask covering [localRect] mapped through [transform].
   MaskOperation({required this.localRect, required this.transform})
     : quad = _quadFrom(localRect, transform),
       effectiveFrame = _quadFrom(localRect, transform).boundingBox;
@@ -108,8 +112,13 @@ class MaskOperation {
 /// moved far enough between the two collection passes that the gap must be
 /// bridged — [MaskApplier] then fills the convex hull spanning both positions.
 class MaskPair {
+  /// Creates a pair from the [before] mask and its optional shifted [after].
   const MaskPair(this.before, [this.after]);
 
+  /// The mask collected in the pass taken with the captured frame.
   final MaskOperation before;
+
+  /// The same mask from the following frame, when it moved far enough that the
+  /// gap must be covered; otherwise null.
   final MaskOperation? after;
 }

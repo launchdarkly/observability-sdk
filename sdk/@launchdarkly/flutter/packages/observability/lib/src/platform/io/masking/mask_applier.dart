@@ -18,6 +18,7 @@ import 'mask_operation.dart';
 /// Operations carry *logical* geometry; the applier scales by [pixelRatio] to
 /// land on the captured (physical-resolution) image.
 class MaskApplier {
+  /// Creates a mask applier.
   const MaskApplier();
 
   // Mirrors the native `MaskApplier`:

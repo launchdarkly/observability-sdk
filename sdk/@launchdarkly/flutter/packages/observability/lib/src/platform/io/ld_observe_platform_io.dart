@@ -5,6 +5,7 @@ import '../../options/session_replay_options.dart';
 import '../ld_observe_platform.dart';
 import 'ld_observability_bridge.dart';
 import 'masking/widget_masking_config.dart';
+import 'messages.g.dart';
 import 'native_session_replay_capture.dart';
 
 /// Native (iOS/Android) implementation. Boots the LaunchDarkly observability +
@@ -37,6 +38,14 @@ class _IoLDObservePlatform implements LDObservePlatform {
       observability: observability,
       replay: replay,
     );
+  }
+
+  @override
+  Future<void> shutdown() async {
+    if (LDNative.current == null) {
+      return;
+    }
+    await LDNativeApi().shutdown();
   }
 
   @override
