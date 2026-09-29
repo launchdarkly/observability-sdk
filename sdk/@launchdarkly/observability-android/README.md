@@ -525,6 +525,25 @@ LDReplay.start()
 
 Call `LDReplay.stop()` to pause recording.
 
+`LDReplay.start()` reports why recording did or did not begin, which is useful when a replay you expected
+never shows up in the dashboard:
+
+```kotlin
+when (val result = LDReplay.start()) {
+    SessionReplayStartResult.STARTED,
+    SessionReplayStartResult.ALREADY_STARTED -> Unit // recording
+    SessionReplayStartResult.SAMPLED_OUT -> Unit // excluded by ReplayOptions.sampleRate
+    SessionReplayStartResult.UNRECOVERABLE_ERROR -> Unit // refused for this launch, see below
+    SessionReplayStartResult.UNAVAILABLE -> Unit // SDK not initialized yet; the start is buffered
+}
+```
+
+`result.isRunning` collapses that to whether replay is recording.
+
+`sampleRate` is evaluated once per enable cycle, so a session it excluded stays excluded until
+`LDReplay.stop()` resets the decision. To record regardless — when reproducing a bug, for instance — pass
+`LDReplay.start(ignoreSampling = true)`.
+
 Recording can also end on its own: if LaunchDarkly refuses the session — for example when session replay is
 not available for the environment — the SDK stops capturing for the rest of the launch, and
 `LDReplay.isEnabled` reports `false`. The next launch withholds screenshots until the backend accepts a

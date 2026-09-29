@@ -1,6 +1,7 @@
 package com.launchdarkly.observability.sdk
 
 import android.app.Activity
+import com.launchdarkly.observability.replay.SessionReplayStartResult
 import com.launchdarkly.observability.util.runOnMainThread
 
 /**
@@ -12,16 +13,16 @@ import com.launchdarkly.observability.util.runOnMainThread
  * Buffered state:
  *  - [liveReplayService]: the live replay service once [bind] has run; `null` doubles as the
  *    "pre-init" flag.
- *  - `pendingEnabled`: latest pre-init `isEnabled` write. `null` means "no buffered value",
- *    so [bind] won't clobber the replay service's `ReplayOptions.enabled` default.
+ *  - `pendingEnable`: latest pre-init `isEnabled` write or [start]. `null` means "no buffered
+ *    value", so [bind] won't clobber the replay service's `ReplayOptions.enabled` default.
  *  - `pendingActivities`: every pre-init [registerActivity], in submission order.
  *  - `pendingIdentify`: most recent pre-init [afterIdentify] only — older identifies are stale.
  *
  * Concurrency:
  *  - [isEnabled] reads hold the private monitor so they observe a consistent snapshot of
- *    ([liveReplayService], `pendingEnabled`). Reading the two `@Volatile` fields lock-free
+ *    ([liveReplayService], `pendingEnable`). Reading the two `@Volatile` fields lock-free
  *    is unsafe during [bind]: a reader can read `liveReplayService = null` (stale) and then
- *    `pendingEnabled = null` (cleared by `bind`), reporting `false` even when the buffered
+ *    `pendingEnable = null` (cleared by `bind`), reporting `false` even when the buffered
  *    `true` was already applied to the live service. JMM happens-before flows forward from
  *    the later volatile read, not backward to the earlier one.
  *  - Setters and [bind] hold the same monitor so the setters' "check [liveReplayService],
@@ -38,7 +39,7 @@ internal class PreInitReplayBuffer {
         private set
 
     @Volatile
-    private var pendingEnabled: Boolean? = null
+    private var pendingEnable: PendingEnable? = null
 
     private val pendingActivities = mutableListOf<Activity>()
     private var pendingIdentify: PendingIdentify? = null
@@ -48,9 +49,9 @@ internal class PreInitReplayBuffer {
             // Snapshot both fields under the same monitor [bind] uses, otherwise a reader can
             // observe the dual-field tear documented in the class header and return `false`
             // mid-bind. The live service's `isEnabled` itself is read outside the lock —
-            // the lock only needs to protect the (liveReplayService, pendingEnabled) pair.
+            // the lock only needs to protect the (liveReplayService, pendingEnable) pair.
             val service = synchronized(this) {
-                liveReplayService ?: return pendingEnabled ?: false
+                liveReplayService ?: return pendingEnable?.isEnabled ?: false
             }
             return service.isEnabled
         }
@@ -59,13 +60,31 @@ internal class PreInitReplayBuffer {
         val target: SessionReplayServicing? = synchronized(this) {
             val current = liveReplayService
             if (current == null) {
-                pendingEnabled = value
+                pendingEnable = if (value) PendingEnable.Start(ignoreSampling = false) else PendingEnable.Stop
                 null
             } else {
                 current
             }
         }
         target?.let { runOnMainThread { it.isEnabled = value } }
+    }
+
+    fun start(ignoreSampling: Boolean): SessionReplayStartResult {
+        val target: SessionReplayServicing = synchronized(this) {
+            val current = liveReplayService
+            if (current == null) {
+                // The start is applied during [bind]; its outcome cannot be known until then.
+                pendingEnable = PendingEnable.Start(ignoreSampling)
+                return SessionReplayStartResult.UNAVAILABLE
+            }
+            current
+        }
+        // Dispatched outside the monitor, like every other forwarding path here: [runOnMainThread]
+        // blocks until the block completes, so holding the lock across it could deadlock against a
+        // main thread waiting to enter [bind]. The latch it waits on also publishes `result`.
+        var result = SessionReplayStartResult.UNAVAILABLE
+        runOnMainThread { result = target.start(ignoreSampling) }
+        return result
     }
 
     fun registerActivity(activity: Activity) {
@@ -107,7 +126,13 @@ internal class PreInitReplayBuffer {
             // Drain buffered state into the live replay service in a deterministic order:
             // enable first (so subsequent operations see the right gate), then activities,
             // then the latest identify.
-            pendingEnabled?.let { replayService.isEnabled = it }
+            when (val pending = pendingEnable) {
+                // Routed through `start` rather than `isEnabled` so a buffered
+                // `LDReplay.start(ignoreSampling = true)` still forces recording here.
+                is PendingEnable.Start -> replayService.start(pending.ignoreSampling)
+                PendingEnable.Stop -> replayService.isEnabled = false
+                null -> Unit
+            }
             pendingActivities.forEach { replayService.registerActivity(it) }
             pendingIdentify?.let { replayService.afterIdentify(it.contextKeys, it.canonicalKey, it.completed) }
 
@@ -115,7 +140,7 @@ internal class PreInitReplayBuffer {
             // cleared buffer is guaranteed to also see the live service (per JMM volatile
             // ordering).
             liveReplayService = replayService
-            pendingEnabled = null
+            pendingEnable = null
             pendingActivities.clear()
             pendingIdentify = null
         }
@@ -124,9 +149,25 @@ internal class PreInitReplayBuffer {
     fun reset() {
         synchronized(this) {
             liveReplayService = null
-            pendingEnabled = null
+            pendingEnable = null
             pendingActivities.clear()
             pendingIdentify = null
+        }
+    }
+
+    /**
+     * Latest pre-init enable/disable intent. [Start] carries its `ignoreSampling` flag so a
+     * pre-init forced start is still forced when [bind] applies it.
+     */
+    private sealed interface PendingEnable {
+        val isEnabled: Boolean
+
+        data class Start(val ignoreSampling: Boolean) : PendingEnable {
+            override val isEnabled: Boolean get() = true
+        }
+
+        data object Stop : PendingEnable {
+            override val isEnabled: Boolean get() = false
         }
     }
 
