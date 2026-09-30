@@ -16,6 +16,7 @@ import { useEffect, useState } from 'react';
 import {
   createSessionReplayPlugin,
   startSessionReplay,
+  stopSessionReplay,
   type SessionReplayOptions,
 } from '@launchdarkly/session-replay-react-native';
 import {
@@ -134,6 +135,18 @@ async function beginSessionReplay() {
   );
 }
 
+// There is no API to query whether native replay is recording, so this mirrors it
+// from the calls we make. `startSessionReplay()` resolving means recording is on —
+// or that sampling excluded this session, which the native log distinguishes.
+type ReplayState = 'deferred' | 'recording' | 'stopped' | 'failed';
+
+const REPLAY_STATE_LABEL: Record<ReplayState, string> = {
+  deferred: 'not recording (isEnabled: false)',
+  recording: 'RECORDING',
+  stopped: 'stopped',
+  failed: 'start FAILED',
+};
+
 // Emulates an OTA "soft reload": restarts only the JS runtime, leaving the native
 // process (and the SR singleton) alive. Sampling is intentionally NOT re-rolled —
 // the native enable cycle never resets, so a sampled-out session stays out and a
@@ -179,10 +192,53 @@ type Tab = 'masking' | 'dialogs' | 'api' | 'tracing';
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('masking');
+  const [replayState, setReplayState] = useState<ReplayState>('deferred');
+  const [replayError, setReplayError] = useState<string | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
 
   useEffect(() => {
     client.identify(context).catch((e: unknown) => console.log(e));
   }, []);
+
+  // Shown so a recording can be found in the dashboard. Polled because the id is
+  // assigned asynchronously by the observability plugin during registration.
+  useEffect(() => {
+    const id = setInterval(() => {
+      const current = LDObserve.getSessionInfo()?.sessionId ?? null;
+      if (current) {
+        setSessionId(current);
+        clearInterval(id);
+      }
+    }, 250);
+    return () => clearInterval(id);
+  }, []);
+
+  async function onStart() {
+    setReplayError(null);
+    try {
+      await beginSessionReplay();
+      setReplayState('recording');
+    } catch (e: unknown) {
+      // Only reachable now that the adapters report outcomes: before the fix a
+      // failed start still resolved successfully.
+      console.warn('[deferred-start] failed to start', e);
+      setReplayState('failed');
+      setReplayError(e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  async function onStop() {
+    setReplayError(null);
+    try {
+      await stopSessionReplay();
+      // A later Start resumes, but sampling is re-rolled for the new enable cycle.
+      console.log('[deferred-start] stopped; tap Start replay to resume');
+      setReplayState('stopped');
+    } catch (e: unknown) {
+      console.warn('[deferred-start] failed to stop', e);
+      setReplayError(e instanceof Error ? e.message : String(e));
+    }
+  }
 
   return (
     <LDProvider client={client}>
@@ -198,6 +254,29 @@ export default function App() {
             {ARCH_LABEL}
           </Text>
         </View>
+        <View
+          testID="safe"
+          style={[
+            styles.replayStatus,
+            replayState === 'recording'
+              ? styles.replayStatusRecording
+              : replayState === 'failed'
+                ? styles.replayStatusFailed
+                : styles.replayStatusIdle,
+          ]}
+        >
+          <Text testID="safe" style={styles.replayStatusText}>
+            Replay: {REPLAY_STATE_LABEL[replayState]}
+          </Text>
+          <Text testID="safe" style={styles.replayStatusDetail}>
+            session.id: {sessionId ?? 'pending…'}
+          </Text>
+          {replayError != null && (
+            <Text testID="safe" style={styles.replayStatusDetail}>
+              {replayError}
+            </Text>
+          )}
+        </View>
         <View style={styles.actionBar}>
           <Text testID="safe" style={styles.actionLabel}>
             JS load: {JS_LOAD_ID}
@@ -205,14 +284,19 @@ export default function App() {
           <TouchableOpacity
             testID="safe"
             style={styles.actionButton}
-            onPress={() => {
-              beginSessionReplay().catch((e: unknown) =>
-                console.warn('[deferred-start] failed to start', e)
-              );
-            }}
+            onPress={onStart}
           >
             <Text testID="safe" style={styles.actionButtonText}>
               Start replay
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            testID="safe"
+            style={styles.actionButton}
+            onPress={onStop}
+          >
+            <Text testID="safe" style={styles.actionButtonText}>
+              Stop
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -297,10 +381,36 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
   },
+  replayStatus: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  replayStatusIdle: {
+    backgroundColor: '#333',
+  },
+  replayStatusRecording: {
+    backgroundColor: '#0B5D1E',
+  },
+  replayStatusFailed: {
+    backgroundColor: '#7A1212',
+  },
+  replayStatusText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  replayStatusDetail: {
+    color: '#ccc',
+    fontSize: 11,
+    marginTop: 2,
+  },
   actionBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    // Wraps so the added Stop button cannot push the row off-screen on narrow devices.
+    flexWrap: 'wrap',
+    gap: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
