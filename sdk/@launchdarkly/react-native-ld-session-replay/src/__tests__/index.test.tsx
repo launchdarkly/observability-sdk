@@ -4,14 +4,20 @@ import {
   configureSessionReplay,
   createSessionReplayPlugin,
   LDClick,
+  startSessionReplay,
 } from '../index';
 
 jest.mock('../NativeSessionReplayReactNative', () => ({
   configure: jest.fn().mockResolvedValue(undefined),
+  initializeSessionReplay: jest.fn().mockResolvedValue(undefined),
   startSessionReplay: jest.fn().mockResolvedValue(undefined),
   stopSessionReplay: jest.fn().mockResolvedValue(undefined),
   afterIdentify: jest.fn().mockResolvedValue(undefined),
 }));
+
+// register() resolves the shared session id asynchronously before touching native, so tests
+// have to cross a macrotask boundary before asserting.
+const flushAsync = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 describe('configureSessionReplay', () => {
   it('rejects if key is empty', async () => {
@@ -205,7 +211,7 @@ describe('SessionReplayPluginAdapter', () => {
     );
   });
 
-  it('calls configure and startSessionReplay on register', async () => {
+  it('calls configure and initializeSessionReplay on register', async () => {
     const plugin = createSessionReplayPlugin({
       frameRate: 4,
       scale: 2,
@@ -217,10 +223,7 @@ describe('SessionReplayPluginAdapter', () => {
       { sdk: { name: 'test', version: '0.0.0' }, mobileKey: 'mob-key-123' }
     );
 
-    // register() resolves the shared session id asynchronously before calling
-    // native configure/start, so flush all microtasks (a macrotask boundary)
-    // before asserting.
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await flushAsync();
 
     expect(NativeSessionReplayReactNative.configure).toHaveBeenCalledWith(
       'mob-key-123',
@@ -233,8 +236,74 @@ describe('SessionReplayPluginAdapter', () => {
         unmaskTestIDs: ['__LD_INTERNAL_UNMASK__'],
       })
     );
+    // The auto-start must go through the init path, which honors the configured isEnabled.
+    // Using startSessionReplay here would force recording on for `isEnabled: false` users.
+    expect(
+      NativeSessionReplayReactNative.initializeSessionReplay
+    ).toHaveBeenCalled();
     expect(
       NativeSessionReplayReactNative.startSessionReplay
-    ).toHaveBeenCalled();
+    ).not.toHaveBeenCalled();
+  });
+
+  it('does not force recording on when registered with isEnabled false', async () => {
+    const plugin = createSessionReplayPlugin({ isEnabled: false });
+    plugin.register(
+      {},
+      { sdk: { name: 'test', version: '0.0.0' }, mobileKey: 'mob-key-123' }
+    );
+
+    await flushAsync();
+
+    expect(NativeSessionReplayReactNative.configure).toHaveBeenCalledWith(
+      'mob-key-123',
+      expect.objectContaining({ isEnabled: false })
+    );
+    expect(
+      NativeSessionReplayReactNative.startSessionReplay
+    ).not.toHaveBeenCalled();
+  });
+
+  it('falls back to startSessionReplay when native has no initializeSessionReplay', async () => {
+    // A JS-only (OTA) update can run against an older native binary. Losing the init path
+    // entirely would leave replay uninitialized, so register() degrades to the old call.
+    const native = NativeSessionReplayReactNative as unknown as Record<
+      string,
+      unknown
+    >;
+    const initialize = native.initializeSessionReplay;
+    delete native.initializeSessionReplay;
+    try {
+      const plugin = createSessionReplayPlugin({});
+      plugin.register(
+        {},
+        { sdk: { name: 'test', version: '0.0.0' }, mobileKey: 'mob-key-123' }
+      );
+
+      await flushAsync();
+
+      expect(
+        NativeSessionReplayReactNative.startSessionReplay
+      ).toHaveBeenCalled();
+    } finally {
+      native.initializeSessionReplay = initialize;
+    }
+  });
+});
+
+describe('startSessionReplay', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('starts without re-sending configure', async () => {
+    // The whole point of the fix: a deferred start needs no configure round-trip, so callers
+    // cannot accidentally clobber the options the plugin already applied.
+    await startSessionReplay();
+
+    expect(
+      NativeSessionReplayReactNative.startSessionReplay
+    ).toHaveBeenCalledTimes(1);
+    expect(NativeSessionReplayReactNative.configure).not.toHaveBeenCalled();
   });
 });

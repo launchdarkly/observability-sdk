@@ -1,6 +1,13 @@
 import { TurboModuleRegistry, type TurboModule } from 'react-native';
 
 export type SessionReplayOptions = {
+  /**
+   * Whether recording starts as soon as session replay initializes. Defaults to `true`.
+   *
+   * `false` still initializes the native session replay / observability instance — so
+   * native-emitted signals such as `click` spans keep flowing — it only leaves recording
+   * off. Call `startSessionReplay()` to begin recording later.
+   */
   isEnabled?: boolean;
   /**
    * The OpenTelemetry `service.name` reported by the native session replay /
@@ -95,6 +102,21 @@ export type SessionReplayOptions = {
 
 export interface Spec extends TurboModule {
   configure(mobileKey: string, options?: Object): Promise<void>;
+
+  /**
+   * Initializes the native session replay / observability instance, and starts recording
+   * only when the configured `isEnabled` is true. This is the auto-start path used by
+   * `createSessionReplayPlugin`; call `startSessionReplay()` to begin recording later.
+   */
+  initializeSessionReplay(): Promise<void>;
+
+  /**
+   * Initializes the native instance if it is not initialized yet, then starts recording
+   * regardless of the configured `isEnabled`.
+   *
+   * Subject to `sampleRate` for the current enable cycle: a session that sampling already
+   * excluded stays excluded until `stopSessionReplay()` resets the decision.
+   */
   startSessionReplay(): Promise<void>;
   stopSessionReplay(): Promise<void>;
   afterIdentify(
