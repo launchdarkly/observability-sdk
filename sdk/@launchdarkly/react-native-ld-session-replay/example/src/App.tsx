@@ -57,7 +57,7 @@ console.log(`[soft-reload] JS_LOAD_ID=${JS_LOAD_ID} (new value each JS load)`);
 // initializes native replay and observability with recording off, and the "Start
 // replay" button turns it on later.
 const replayOptions: SessionReplayOptions = {
-  isEnabled: false,
+  isEnabled: true,
   // Forwarded to the native observability + session replay instances so their
   // spans report the same service.name / service.version as the JS observability
   // plugin below. serviceVersion only affects observability-emitted signals.
