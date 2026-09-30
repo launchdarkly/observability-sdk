@@ -11,6 +11,7 @@ import com.launchdarkly.observability.context.LDObserveLogging
 import com.launchdarkly.observability.plugin.Observability
 import com.launchdarkly.observability.replay.PrivacyProfile
 import com.launchdarkly.observability.replay.ReplayOptions
+import com.launchdarkly.observability.replay.SessionReplayStartResult
 import com.launchdarkly.observability.replay.plugin.SessionReplay
 import com.launchdarkly.observability.sdk.LDReplay
 import com.launchdarkly.sdk.ContextKind
@@ -153,17 +154,37 @@ internal class SessionReplayClientAdapter private constructor() {
                 completion(true, null)
                 return@post
             }
-            try {
-                // TODO: report the outcome (and support ignoreSampling) once the
-                // launchdarkly-observability-android dependency exposes
-                // LDReplay.start(ignoreSampling): SessionReplayStartResult, matching iOS.
-                LDReplay.start()
+            // `start` over `isEnabled = true` so the outcome is reported: the setter's no-change
+            // guard would also swallow a start on a session that is already enabled but not
+            // recording. Runs inline here rather than hopping threads, since we are on the main
+            // thread already.
+            val result = try {
+                LDReplay.start(ignoreSampling = false)
             } catch (e: Exception) {
                 logger.error("$LOG_PREFIX start: LDReplay.start threw {0}: {1}", e::class.simpleName, e.message)
                 completion(false, "Session replay failed to start.")
                 return@post
             }
-            completion(true, null)
+            when (result) {
+                SessionReplayStartResult.STARTED,
+                SessionReplayStartResult.ALREADY_STARTED -> completion(true, null)
+                SessionReplayStartResult.SAMPLED_OUT -> {
+                    // A legitimate outcome of honoring sampleRate, not a failure.
+                    logger.info("$LOG_PREFIX start: not recording, the session was sampled out")
+                    completion(true, null)
+                }
+                SessionReplayStartResult.UNAVAILABLE -> {
+                    logger.error("$LOG_PREFIX start: session replay is unavailable — the plugin did not register")
+                    completion(false, "Session replay is unavailable; the native plugin did not register.")
+                }
+                SessionReplayStartResult.UNRECOVERABLE_ERROR -> {
+                    logger.error("$LOG_PREFIX start: LaunchDarkly refused session replay for this launch")
+                    completion(
+                        false,
+                        "LaunchDarkly refused session replay for this launch; it is retried on the next launch."
+                    )
+                }
+            }
         }
     }
 
