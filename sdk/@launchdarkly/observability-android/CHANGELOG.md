@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.69.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.68.1...launchdarkly-observability-android-0.69.0) (2026-09-30)
+
+
+### Features
+
+* **observability-android:** report the outcome of LDReplay.start and allow forcing past sampling ([#783](https://github.com/launchdarkly/observability-sdk/issues/783)) ([dd5d71c](https://github.com/launchdarkly/observability-sdk/commit/dd5d71c6ad005cd5df77f7c3ab59cb8f51cdfc49))
+
 ## [0.68.1](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly-observability-android-0.68.0...launchdarkly-observability-android-0.68.1) (2026-09-24)
 
 
