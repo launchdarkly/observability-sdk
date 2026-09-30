@@ -393,21 +393,40 @@ class SessionReplayService(
         set(value) {
             if (_isEnabled.value == value) return
             if (value) {
-                // A launch the backend has refused cannot record again, so enabling must not report itself
-                // as enabled. The next launch tries again. Checking and enabling under the gate's lock, the
-                // same one a verdict is applied under, keeps a refusal that lands in between from being
-                // overwritten by the enable that raced it.
-                val canStart = withGate { canStartRecording.also { if (it) _isEnabled.value = true } }
-                if (!canStart) {
-                    logger.info("Session replay cannot start, the backend refused this launch.")
-                    return
-                }
-                attemptStart(ignoreSampling = false)
+                start(ignoreSampling = false)
             } else {
                 _isEnabled.value = false
                 stopRecording()
             }
         }
+
+    /**
+     * Enables capture and reports the outcome.
+     *
+     * Deliberately without the `isEnabled` setter's no-change short-circuit: a session that is
+     * enabled but not recording — most commonly one [ReplayOptions.sampleRate] excluded — is only
+     * reachable through here, and only with [ignoreSampling] set.
+     */
+    override fun start(ignoreSampling: Boolean): SessionReplayStartResult {
+        // Nothing is wired up until `initialize()` installs the collectors and exporter, so a start
+        // would enable a service that cannot record or export. Record the intent anyway — this is
+        // the state `initialize()` reads to decide whether to begin capture — but report that the
+        // outcome is not settled yet.
+        if (!isInstalled) {
+            _isEnabled.value = true
+            return SessionReplayStartResult.UNAVAILABLE
+        }
+        // A launch the backend has refused cannot record again, so enabling must not report itself
+        // as enabled. The next launch tries again. Checking and enabling under the gate's lock, the
+        // same one a verdict is applied under, keeps a refusal that lands in between from being
+        // overwritten by the enable that raced it.
+        val canStart = withGate { canStartRecording.also { if (it) _isEnabled.value = true } }
+        if (!canStart) {
+            logger.info("Session replay cannot start, the backend refused this launch.")
+            return SessionReplayStartResult.UNRECOVERABLE_ERROR
+        }
+        return attemptStart(ignoreSampling)
+    }
 
     /**
      * Whether this session was selected by [ReplayOptions.sampleRate] and is actively recording.
@@ -416,17 +435,17 @@ class SessionReplayService(
     internal val isRunning: Boolean
         get() = _isRunning.value
 
-    private fun attemptStart(ignoreSampling: Boolean): Boolean {
-        if (_isRunning.value) return true
+    private fun attemptStart(ignoreSampling: Boolean): SessionReplayStartResult {
+        if (_isRunning.value) return SessionReplayStartResult.ALREADY_STARTED
         // The exporter stops talking to the backend after an unrecoverable refusal, so starting would only
         // collect events that can never be pushed.
         if (!withGate { canStartRecording }) {
             logger.info("Session replay cannot start, the backend refused this launch.")
-            return false
+            return SessionReplayStartResult.UNRECOVERABLE_ERROR
         }
         if (!samplingSession.shouldStartCapture(ignoreSampling, sampleRate)) {
             logger.info("Session replay skipped by sampling.")
-            return false
+            return SessionReplayStartResult.SAMPLED_OUT
         }
         // Re-checked while holding the gate's lock, the one a verdict is applied under, because a refusal
         // can land while sampling is being evaluated above: without this, its `stopRecording` would be
@@ -434,7 +453,7 @@ class SessionReplayService(
         val canStart = withGate { canStartRecording.also { if (it) _isRunning.value = true } }
         if (!canStart) {
             logger.info("Session replay cannot start, the backend refused this launch.")
-            return false
+            return SessionReplayStartResult.UNRECOVERABLE_ERROR
         }
         flushPendingIdentify()
         // Ask the backend up front instead of waiting for the first export batch, so a refusal can stop
@@ -442,7 +461,7 @@ class SessionReplayService(
         // the event queue meanwhile: they buffer there until the queue overflows, and are pushed as soon as
         // the session is accepted.
         startInitializationProbe()
-        return true
+        return SessionReplayStartResult.STARTED
     }
 
     private fun stopRecording() {

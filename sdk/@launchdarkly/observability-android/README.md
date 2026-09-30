@@ -525,6 +525,14 @@ LDReplay.start()
 
 Call `LDReplay.stop()` to pause recording.
 
+`LDReplay.start()` returns a `SessionReplayStartResult` reporting whether recording began, and why not when it
+didn't — `isRunning` collapses it to a boolean. Useful when a replay you expected never shows up in the
+dashboard.
+
+`sampleRate` is evaluated once per enable cycle, so a session it excluded stays excluded until
+`LDReplay.stop()` resets the decision. To record regardless — when reproducing a bug, for instance — pass
+`LDReplay.start(ignoreSampling = true)`.
+
 Recording can also end on its own: if LaunchDarkly refuses the session — for example when session replay is
 not available for the environment — the SDK stops capturing for the rest of the launch, and
 `LDReplay.isEnabled` reports `false`. The next launch withholds screenshots until the backend accepts a

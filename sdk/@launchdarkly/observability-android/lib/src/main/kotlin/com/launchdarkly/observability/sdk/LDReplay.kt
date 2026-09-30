@@ -1,6 +1,7 @@
 package com.launchdarkly.observability.sdk
 
 import android.app.Activity
+import com.launchdarkly.observability.replay.SessionReplayStartResult
 import com.launchdarkly.observability.replay.plugin.SessionReplayHookProxy
 import io.opentelemetry.api.common.Attributes
 
@@ -9,7 +10,7 @@ import io.opentelemetry.api.common.Attributes
  *
  * If Session Replay is not configured, most methods are no-ops. The exceptions are stateful
  * operations whose data is buffered and replayed onto the live replay service during
- * [init]: [isEnabled], [registerActivity], and [afterIdentify]. This way, callers can
+ * [init]: [isEnabled], [start], [registerActivity], and [afterIdentify]. This way, callers can
  * configure replay before SDK initialization without losing their preferences.
  *
  * All public operations are thread-safe.
@@ -40,10 +41,25 @@ object LDReplay {
             state.setEnabled(value)
         }
 
-    /** Starts session replay capture. */
-    fun start() {
-        isEnabled = true
-    }
+    /**
+     * Starts session replay capture and reports the outcome.
+     *
+     * Unlike setting [isEnabled] to `true`, this always attempts a start rather than short-circuiting
+     * when replay already reports itself enabled. That distinction matters for a session that is
+     * enabled but not recording — most commonly one that [com.launchdarkly.observability.replay.ReplayOptions.sampleRate]
+     * excluded — which can only be started by passing [ignoreSampling].
+     *
+     * Calls made before the SDK has wired up the underlying replay service buffer the start (along
+     * with [ignoreSampling]) and apply it during [init], and report
+     * [SessionReplayStartResult.UNAVAILABLE] because the outcome is not known yet.
+     *
+     * @param ignoreSampling starts recording even when `sampleRate` would exclude this session.
+     *   Intended for debugging: it also overrides a sampling decision already made for the current
+     *   enable cycle, which a plain start cannot do until [stop] resets it.
+     */
+    @JvmOverloads
+    fun start(ignoreSampling: Boolean = false): SessionReplayStartResult =
+        state.start(ignoreSampling)
 
     /** Pauses session replay capture. */
     fun stop() {
@@ -120,6 +136,12 @@ internal interface SessionReplayServicing {
      * forward it to a live replay service during initialization.
      */
     var isEnabled: Boolean
+
+    /**
+     * Enables capture and reports the outcome. Unlike assigning [isEnabled], this always attempts
+     * a start, so it can recover a session that reports itself enabled but is not recording.
+     */
+    fun start(ignoreSampling: Boolean = false): SessionReplayStartResult
 
     fun flush()
     fun afterIdentify(contextKeys: Map<String, String>, canonicalKey: String, completed: Boolean)
