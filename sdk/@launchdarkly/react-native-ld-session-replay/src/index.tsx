@@ -116,6 +116,28 @@ export function configureSessionReplay(
   );
 }
 
+/**
+ * Initializes native session replay, starting recording only when the configured
+ * `isEnabled` is true.
+ *
+ * `createSessionReplayPlugin` calls this for you, so reach for it only when driving session
+ * replay by hand and you want the configured `isEnabled` respected. To begin recording
+ * regardless of it, use {@link startSessionReplay}.
+ */
+export function initializeSessionReplay(): Promise<void> {
+  return SessionReplayReactNative.initializeSessionReplay();
+}
+
+/**
+ * Starts recording, initializing native session replay first if it is not initialized yet.
+ *
+ * Starts regardless of the configured `isEnabled`, which is what makes deferred recording work:
+ * configure with `isEnabled: false`, then call this after login or wherever recording should
+ * begin. Recording stays on until {@link stopSessionReplay}.
+ *
+ * `sampleRate` still applies. It is evaluated once per enable cycle, so a session that sampling
+ * already excluded stays excluded until `stopSessionReplay()` resets the decision.
+ */
 export function startSessionReplay(): Promise<void> {
   return SessionReplayReactNative.startSessionReplay();
 }
@@ -259,7 +281,17 @@ class SessionReplayPluginAdapter implements LDPlugin {
 
     try {
       await configureSessionReplay(key, options);
-      await startSessionReplay();
+      // Feature-detected because a JS-only (OTA) update can run this bundle against an older
+      // native binary that has no `initializeSessionReplay`. Since this is the plugin's only
+      // init path, falling back keeps replay working there — honoring `isEnabled` on the first
+      // start is the old binary's behavior anyway — instead of leaving it uninitialized.
+      if (
+        typeof SessionReplayReactNative.initializeSessionReplay === 'function'
+      ) {
+        await initializeSessionReplay();
+      } else {
+        await startSessionReplay();
+      }
     } catch (error) {
       console.error(
         '[SessionReplay] Failed to initialize session replay:',

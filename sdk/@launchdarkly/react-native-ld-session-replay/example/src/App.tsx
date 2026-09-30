@@ -13,7 +13,11 @@ import {
   AutoEnvAttributes,
 } from '@launchdarkly/react-native-client-sdk';
 import { useEffect, useState } from 'react';
-import { createSessionReplayPlugin } from '@launchdarkly/session-replay-react-native';
+import {
+  createSessionReplayPlugin,
+  startSessionReplay,
+  type SessionReplayOptions,
+} from '@launchdarkly/session-replay-react-native';
 import {
   LDObserve,
   Observability,
@@ -49,8 +53,11 @@ const { env: LD_ENV, endpoints } = resolveLDEnvironment(LAUNCHDARKLY_ENV, {
 const JS_LOAD_ID = Math.random().toString(36).slice(2, 8);
 console.log(`[soft-reload] JS_LOAD_ID=${JS_LOAD_ID} (new value each JS load)`);
 
-const plugin = createSessionReplayPlugin({
-  isEnabled: true,
+// Replay is deferred so the example exercises the isEnabled: false path: the plugin
+// initializes native replay and observability with recording off, and the "Start
+// replay" button turns it on later.
+const replayOptions: SessionReplayOptions = {
+  isEnabled: false,
   // Forwarded to the native observability + session replay instances so their
   // spans report the same service.name / service.version as the JS observability
   // plugin below. serviceVersion only affects observability-emitted signals.
@@ -65,7 +72,9 @@ const plugin = createSessionReplayPlugin({
   minimumAlpha: 0.05,
   otlpEndpoint: endpoints.otlpEndpoint,
   backendUrl: endpoints.backendUrl,
-});
+};
+
+const plugin = createSessionReplayPlugin(replayOptions);
 
 // The observability plugin powers the distributed tracing examples on the
 // "Tracing" tab. `tracingOrigins` opts the demo API hosts into W3C
@@ -112,6 +121,18 @@ const client = new ReactNativeLDClient(MOBILE_KEY, AutoEnvAttributes.Enabled, {
   eventsUri: endpoints.eventsUri,
 });
 const context = { kind: 'user', key: 'user-key-123abc' };
+
+// The plugin above initialized native replay with recording off (isEnabled: false).
+// startSessionReplay() turns it on regardless of that setting, with no configure
+// round-trip, so the options and session id the plugin already applied stay intact.
+async function beginSessionReplay() {
+  await startSessionReplay();
+  console.log(
+    `[deferred-start] session replay started, session.id=${
+      LDObserve.getSessionInfo()?.sessionId
+    }`
+  );
+}
 
 // Emulates an OTA "soft reload": restarts only the JS runtime, leaving the native
 // process (and the SR singleton) alive. Sampling is intentionally NOT re-rolled —
@@ -181,6 +202,19 @@ export default function App() {
           <Text testID="safe" style={styles.actionLabel}>
             JS load: {JS_LOAD_ID}
           </Text>
+          <TouchableOpacity
+            testID="safe"
+            style={styles.actionButton}
+            onPress={() => {
+              beginSessionReplay().catch((e: unknown) =>
+                console.warn('[deferred-start] failed to start', e)
+              );
+            }}
+          >
+            <Text testID="safe" style={styles.actionButtonText}>
+              Start replay
+            </Text>
+          </TouchableOpacity>
           <TouchableOpacity
             testID="safe"
             style={styles.actionButton}

@@ -61,6 +61,32 @@ await startSessionReplay();
 // later: await stopSessionReplay();
 ```
 
+## Delaying recording
+
+`isEnabled` controls whether recording starts as soon as session replay initializes. Set it to
+`false` to initialize without recording — native observability still starts, so signals such as
+`click` spans keep flowing — and call `startSessionReplay()` when recording should begin, for
+example after login:
+
+```js
+const plugin = createSessionReplayPlugin({ isEnabled: false });
+
+// later, wherever recording should begin:
+await startSessionReplay();
+```
+
+`startSessionReplay()` starts recording regardless of the configured `isEnabled`, and needs no
+`configureSessionReplay()` call first. `stopSessionReplay()` is the only thing that stops it, and a
+`startSessionReplay()` afterwards resumes.
+
+Two things to know:
+
+- **`sampleRate` still applies.** It is evaluated once per enable cycle, so a session that sampling
+  already excluded stays excluded until `stopSessionReplay()` resets the decision.
+- **Recording outlives a JS reload.** The native instance lives in the host process, so a soft/OTA
+  reload that re-runs your plugin setup will not stop a recording that an earlier
+  `startSessionReplay()` began. Call `stopSessionReplay()` if you need it off.
+
 ## Custom endpoints
 
 By default the native session replay and observability instances report to
@@ -89,10 +115,11 @@ the native session replay SDK on **iOS and Android**.
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
+| `isEnabled` | `boolean` | `true` | Whether recording starts as soon as session replay initializes. `false` still initializes native session replay and observability; call `startSessionReplay()` to begin recording later. See [Delaying recording](#delaying-recording). |
 | `frameRate` | `number` | `1.0` | Target capture rate in frames per second. |
 | `scale` | `number` | `1.0` | Capture/export resolution multiplier (`1.0` = 1x / 160 DPI, `2.0` = 2x, etc.). Non-positive values are treated as `1.0`. |
 | `imageQuality` | `number` | `0.3` | JPEG encoding quality of exported frames (`0.0` = lowest quality / smallest payload, `1.0` = highest quality / largest payload). Values outside that range are clamped by the native SDK. |
-| `sampleRate` | `number` | `1.0` | Probability from `0.0` to `1.0` that replay starts when `isEnabled` is `true`. `0.0` never records; `1.0` always records. Evaluated once per enable cycle and reset when replay is stopped. |
+| `sampleRate` | `number` | `1.0` | Probability from `0.0` to `1.0` that replay starts when recording is turned on, whether by `isEnabled` or by `startSessionReplay()`. `0.0` never records; `1.0` always records. Evaluated once per enable cycle and reset when replay is stopped. |
 
 ```js
 const plugin = createSessionReplayPlugin({
