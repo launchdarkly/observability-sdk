@@ -1,6 +1,7 @@
 package com.launchdarkly.observability.sdk
 
 import android.app.Activity
+import com.launchdarkly.observability.replay.SessionReplayStartResult
 import com.launchdarkly.observability.testing.ObservabilityMainThreadTestHooks
 import io.mockk.mockk
 import org.junit.jupiter.api.AfterEach
@@ -12,14 +13,26 @@ import org.junit.jupiter.api.Test
 
 class LDReplayTest {
 
-    private class TestReplayService(initialIsEnabled: Boolean = false) : SessionReplayServicing {
+    private class TestReplayService(
+        initialIsEnabled: Boolean = false,
+        private val startResult: SessionReplayStartResult = SessionReplayStartResult.STARTED,
+    ) : SessionReplayServicing {
         override var isEnabled: Boolean = initialIsEnabled
         var flushCalls = 0
         val registeredActivities = mutableListOf<Activity>()
         val identifyCalls = mutableListOf<IdentifyCall>()
 
+        /** `ignoreSampling` of every [start] call, in order. */
+        val startCalls = mutableListOf<Boolean>()
+
         val registerActivityCalls: Int get() = registeredActivities.size
         val afterIdentifyCalls: Int get() = identifyCalls.size
+
+        override fun start(ignoreSampling: Boolean): SessionReplayStartResult {
+            startCalls += ignoreSampling
+            if (startResult.isRunning) isEnabled = true
+            return startResult
+        }
 
         override fun flush() {
             flushCalls++
@@ -84,6 +97,115 @@ class LDReplayTest {
         LDReplay.start()
 
         assertTrue(replayService.isEnabled)
+    }
+
+    @Test
+    fun `start reports the outcome from the replay service`() {
+        val replayService = TestReplayService(startResult = SessionReplayStartResult.ALREADY_STARTED)
+        LDReplay.init(replayService)
+
+        assertEquals(SessionReplayStartResult.ALREADY_STARTED, LDReplay.start())
+    }
+
+    @Test
+    fun `start reports a sampled-out session without recording`() {
+        val replayService = TestReplayService(startResult = SessionReplayStartResult.SAMPLED_OUT)
+        LDReplay.init(replayService)
+
+        val result = LDReplay.start()
+
+        assertEquals(SessionReplayStartResult.SAMPLED_OUT, result)
+        assertFalse(result.isRunning)
+    }
+
+    @Test
+    fun `start defaults to honoring sampling`() {
+        val replayService = TestReplayService()
+        LDReplay.init(replayService)
+
+        LDReplay.start()
+
+        assertEquals(listOf(false), replayService.startCalls)
+    }
+
+    @Test
+    fun `start forwards ignoreSampling to the replay service`() {
+        val replayService = TestReplayService()
+        LDReplay.init(replayService)
+
+        LDReplay.start(ignoreSampling = true)
+
+        assertEquals(listOf(true), replayService.startCalls)
+    }
+
+    @Test
+    fun `setting isEnabled to true does not ignore sampling`() {
+        // The setter is the "respect the configured sample rate" path; only an explicit
+        // start(ignoreSampling = true) may override a sampling decision.
+        val replayService = TestReplayService()
+        LDReplay.init(replayService)
+
+        LDReplay.isEnabled = true
+
+        assertTrue(replayService.isEnabled)
+        assertTrue(replayService.startCalls.none { it })
+    }
+
+    @Test
+    fun `start before init reports unavailable and is replayed during init`() {
+        // No live service yet, so the outcome cannot be known — but the intent must survive.
+        assertEquals(SessionReplayStartResult.UNAVAILABLE, LDReplay.start())
+
+        val replayService = TestReplayService()
+        LDReplay.init(replayService)
+
+        assertEquals(listOf(false), replayService.startCalls)
+        assertTrue(replayService.isEnabled)
+    }
+
+    @Test
+    fun `start before init preserves ignoreSampling when replayed during init`() {
+        // A forced start buffered from e.g. Application.onCreate must still be forced once it is
+        // applied, otherwise sampling would silently discard it.
+        LDReplay.start(ignoreSampling = true)
+
+        val replayService = TestReplayService()
+        LDReplay.init(replayService)
+
+        assertEquals(listOf(true), replayService.startCalls)
+    }
+
+    @Test
+    fun `start before init is reflected by the isEnabled getter`() {
+        LDReplay.start()
+
+        assertTrue(LDReplay.isEnabled)
+    }
+
+    @Test
+    fun `stop after a buffered start wins`() {
+        LDReplay.start(ignoreSampling = true)
+        LDReplay.stop()
+
+        val replayService = TestReplayService(initialIsEnabled = true)
+        LDReplay.init(replayService)
+
+        // Only the last pre-init intent is applied, so the buffered start must not resurrect itself.
+        assertTrue(replayService.startCalls.isEmpty())
+        assertFalse(replayService.isEnabled)
+        assertFalse(LDReplay.isEnabled)
+    }
+
+    @Test
+    fun `resetForTest clears a buffered start`() {
+        LDReplay.start(ignoreSampling = true)
+
+        LDReplay.resetForTest()
+
+        val replayService = TestReplayService()
+        LDReplay.init(replayService)
+
+        assertTrue(replayService.startCalls.isEmpty())
     }
 
     @Test
