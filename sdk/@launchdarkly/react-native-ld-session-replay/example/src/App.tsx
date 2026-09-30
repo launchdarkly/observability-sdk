@@ -200,17 +200,16 @@ export default function App() {
     client.identify(context).catch((e: unknown) => console.log(e));
   }, []);
 
-  // Shown so a recording can be found in the dashboard. Polled because the id is
-  // assigned asynchronously by the observability plugin during registration.
+  // Shown so a recording can be found in the dashboard. getSessionInfo() would return
+  // the provisional id, which a resumed session (e.g. after a soft reload) replaces.
   useEffect(() => {
-    const id = setInterval(() => {
-      const current = LDObserve.getSessionInfo()?.sessionId ?? null;
-      if (current) {
-        setSessionId(current);
-        clearInterval(id);
-      }
-    }, 250);
-    return () => clearInterval(id);
+    let cancelled = false;
+    LDObserve.getSessionIdWhenReady().then((id) => {
+      if (!cancelled) setSessionId(id ?? null);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   async function onStart() {
