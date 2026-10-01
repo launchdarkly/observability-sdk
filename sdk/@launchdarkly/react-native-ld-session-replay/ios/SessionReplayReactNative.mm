@@ -40,11 +40,31 @@ RCT_EXPORT_METHOD(configure:(NSString *)mobileKey
     }
 }
 
+// Initializes and honors the configured isEnabled (the plugin's auto-start).
+RCT_EXPORT_METHOD(initializeSessionReplay:(RCTPromiseResolveBlock)resolve
+                  reject:(RCTPromiseRejectBlock)reject)
+{
+    @try {
+      [[SessionReplayClientAdapter shared] startWithForceEnable:NO completion:^(BOOL success, NSString * _Nullable errorMessage) {
+        if (success) {
+          resolve(nil);
+        } else {
+          NSString *error = errorMessage ?: @"Session replay failed to initialize";
+          reject(@"start_failed", error, nil);
+        }
+      }];
+    } @catch(NSException *exception) {
+      NSLog(@"⚠️ initializeSessionReplay crash: %@", exception);
+      reject(@"start_failed", exception.reason, nil);
+    }
+}
+
+// Starts recording regardless of the configured isEnabled.
 RCT_EXPORT_METHOD(startSessionReplay:(RCTPromiseResolveBlock)resolve
                   reject:(RCTPromiseRejectBlock)reject)
 {
     @try {
-      [[SessionReplayClientAdapter shared] startWithCompletion:^(BOOL success, NSString * _Nullable errorMessage) {
+      [[SessionReplayClientAdapter shared] startWithForceEnable:YES completion:^(BOOL success, NSString * _Nullable errorMessage) {
         if (success) {
           resolve(nil);
         } else {
