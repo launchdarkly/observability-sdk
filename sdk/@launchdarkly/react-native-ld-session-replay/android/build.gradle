@@ -10,6 +10,7 @@ buildscript {
 
   dependencies {
     classpath "com.android.tools.build:gradle:8.7.2"
+    classpath platform("io.netty:netty-bom:4.1.137.Final")
     // noinspection DifferentKotlinGradleVersion
     classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${getExtOrDefault('kotlinVersion')}"
   }
