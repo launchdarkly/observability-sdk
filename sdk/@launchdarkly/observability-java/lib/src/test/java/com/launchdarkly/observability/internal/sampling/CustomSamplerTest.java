@@ -153,6 +153,9 @@ class CustomSamplerTest {
         assertDoesNotThrow(() -> SamplingConfig.MatchConfig.ofRegex("(a+)+"));
         assertFalse(CustomSampler.matchesValue(
                 SamplingConfig.MatchConfig.ofRegex("(a+)+"), "aaaa"));
+        assertDoesNotThrow(() -> SamplingConfig.MatchConfig.ofRegex("((a+))+"));
+        assertFalse(CustomSampler.matchesValue(
+                SamplingConfig.MatchConfig.ofRegex("((a+))+"), "aaaa"));
         assertFalse(CustomSampler.matchesValue(
                 SamplingConfig.MatchConfig.ofRegex("("), "x"));
         assertFalse(CustomSampler.matchesValue(
