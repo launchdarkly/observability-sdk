@@ -27,12 +27,12 @@ public final class SamplingApiService {
     private static final Logger log = Logger.getLogger(SamplingApiService.class.getName());
     private static final String QUERY_FILE = "graphql/GetSamplingConfigQuery.graphql";
 
+    private static final String QUERY = GraphQLClient.loadQuery(QUERY_FILE);
+
     private final GraphQLClient client;
-    private final String query;
 
     public SamplingApiService(GraphQLClient client) {
         this.client = client;
-        this.query = GraphQLClient.loadQuery(QUERY_FILE);
     }
 
     /**
@@ -45,7 +45,7 @@ public final class SamplingApiService {
         try {
             Map<String, Object> variables = new HashMap<>();
             variables.put("organization_verbose_id", sdkKey);
-            JsonElement data = client.execute(query, variables);
+            JsonElement data = client.execute(QUERY, variables);
             if (data == null || !data.isJsonObject()) {
                 return null;
             }

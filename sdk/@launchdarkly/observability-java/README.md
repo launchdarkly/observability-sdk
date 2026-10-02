@@ -13,10 +13,10 @@ Official LaunchDarkly Observability plugin for the [Java Server SDK](https://git
 
 ### Gradle
 
-```kotlin
+```groovy
 dependencies {
-    implementation("com.launchdarkly:launchdarkly-observability-java:0.1.0")
-    implementation("com.launchdarkly:launchdarkly-java-server-sdk:7.12.0")
+    implementation 'com.launchdarkly:launchdarkly-observability-java:0.1.0'
+    implementation 'com.launchdarkly:launchdarkly-java-server-sdk:7.12.0'
 }
 ```
 

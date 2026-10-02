@@ -26,6 +26,7 @@ import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
 
 import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
 
@@ -38,6 +39,9 @@ public final class OtelManager {
             java.util.logging.Logger.getLogger(OtelManager.class.getName());
 
     private static final AtomicReference<OtelManager> INSTANCE = new AtomicReference<>();
+    private static final AtomicReference<SamplingConfig> PENDING_SAMPLING_CONFIG = new AtomicReference<>();
+    private static final Object INIT_LOCK = new Object();
+    private static Thread shutdownHook;
 
     private final SdkTracerProvider tracerProvider;
     private final SdkLoggerProvider loggerProvider;
@@ -75,13 +79,34 @@ public final class OtelManager {
 
     /**
      * Initializes the OTel providers with the given options and SDK key.
+     *
+     * <p>Safe for concurrent callers. Only the first call builds providers and
+     * registers a shutdown hook. Sampling configuration fetched before this
+     * returns is applied to the new sampler.</p>
      */
     public static void initialize(String sdkKey, ObservabilityOptions options) {
-        if (INSTANCE.get() != null) {
-            log.fine("OtelManager already initialized, skipping");
-            return;
+        synchronized (INIT_LOCK) {
+            if (INSTANCE.get() != null) {
+                log.fine("OtelManager already initialized, skipping");
+                return;
+            }
+            OtelManager manager = create(sdkKey, options);
+            INSTANCE.set(manager);
+            SamplingConfig pending = PENDING_SAMPLING_CONFIG.get();
+            if (pending != null) {
+                manager.customSampler.setConfig(pending);
+            }
+            shutdownHook = new Thread(() -> {
+                OtelManager current = INSTANCE.get();
+                if (current != null) {
+                    current.shutdownProviders();
+                }
+            }, "ld-observability-shutdown");
+            Runtime.getRuntime().addShutdownHook(shutdownHook);
         }
+    }
 
+    private static OtelManager create(String sdkKey, ObservabilityOptions options) {
         Resource resource = buildResource(sdkKey, options);
         String endpoint = options.getOtlpEndpoint();
 
@@ -159,28 +184,25 @@ public final class OtelManager {
 
         OtelManager manager = new OtelManager(
                 tracerProvider, loggerProvider, meterProvider, sdk, customSampler);
-        INSTANCE.set(manager);
-
-        // Register shutdown hook
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            OtelManager m = INSTANCE.get();
-            if (m != null) {
-                m.shutdownProviders();
-            }
-        }));
 
         if (options.isDebug()) {
             log.info("OtelManager initialized with endpoint: " + endpoint);
         }
+        return manager;
     }
 
     /**
      * Sets the sampling configuration received from the backend.
+     *
+     * <p>If providers have not been started yet (manual start), the config is
+     * kept and applied when {@link #initialize} runs. Concurrent callers share
+     * one config reference; the latest write wins.</p>
      */
     public static void setSamplingConfig(SamplingConfig config) {
-        OtelManager m = INSTANCE.get();
-        if (m != null) {
-            m.customSampler.setConfig(config);
+        PENDING_SAMPLING_CONFIG.set(config);
+        OtelManager manager = INSTANCE.get();
+        if (manager != null) {
+            manager.customSampler.setConfig(config);
         }
     }
 
@@ -203,11 +225,9 @@ public final class OtelManager {
      * Flushes all pending telemetry data.
      */
     public static void flush() {
-        OtelManager m = INSTANCE.get();
-        if (m != null) {
-            m.tracerProvider.forceFlush();
-            m.loggerProvider.forceFlush();
-            m.meterProvider.forceFlush();
+        OtelManager manager = INSTANCE.get();
+        if (manager != null) {
+            manager.flushProviders();
         }
     }
 
@@ -215,9 +235,12 @@ public final class OtelManager {
      * Shuts down all providers and flushes pending data.
      */
     public static void shutdown() {
-        OtelManager m = INSTANCE.getAndSet(null);
-        if (m != null) {
-            m.shutdownProviders();
+        OtelManager manager;
+        synchronized (INIT_LOCK) {
+            manager = INSTANCE.getAndSet(null);
+        }
+        if (manager != null) {
+            manager.shutdownProviders();
         }
     }
 
@@ -225,13 +248,45 @@ public final class OtelManager {
         return INSTANCE.get() != null;
     }
 
+    static boolean isSamplingConfigured() {
+        OtelManager manager = INSTANCE.get();
+        return manager != null && manager.customSampler.isSamplingEnabled();
+    }
+
+    /**
+     * Drops process-wide state so tests can initialize again. Removes the
+     * shutdown hook registered by {@link #initialize}.
+     */
+    static void resetForTest() {
+        OtelManager manager;
+        synchronized (INIT_LOCK) {
+            manager = INSTANCE.getAndSet(null);
+            PENDING_SAMPLING_CONFIG.set(null);
+            if (shutdownHook != null) {
+                try {
+                    Runtime.getRuntime().removeShutdownHook(shutdownHook);
+                } catch (IllegalStateException ignored) {
+                    // JVM shutdown is already in progress.
+                }
+                shutdownHook = null;
+            }
+        }
+        if (manager != null) {
+            manager.shutdownProviders();
+        }
+    }
+
+    private void flushProviders() {
+        tracerProvider.forceFlush().join(10, TimeUnit.SECONDS);
+        loggerProvider.forceFlush().join(10, TimeUnit.SECONDS);
+        meterProvider.forceFlush().join(10, TimeUnit.SECONDS);
+    }
+
     private void shutdownProviders() {
-        tracerProvider.forceFlush();
-        loggerProvider.forceFlush();
-        meterProvider.forceFlush();
-        tracerProvider.shutdown();
-        loggerProvider.shutdown();
-        meterProvider.shutdown();
+        flushProviders();
+        tracerProvider.shutdown().join(10, TimeUnit.SECONDS);
+        loggerProvider.shutdown().join(10, TimeUnit.SECONDS);
+        meterProvider.shutdown().join(10, TimeUnit.SECONDS);
     }
 
     private static Resource buildResource(String sdkKey, ObservabilityOptions options) {

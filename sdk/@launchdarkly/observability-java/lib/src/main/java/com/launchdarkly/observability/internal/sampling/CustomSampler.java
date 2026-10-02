@@ -6,20 +6,21 @@ import io.opentelemetry.sdk.logs.data.LogRecordData;
 import io.opentelemetry.sdk.trace.data.EventData;
 import io.opentelemetry.sdk.trace.data.SpanData;
 
+import com.launchdarkly.observability.internal.Constants;
+
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.IntPredicate;
-import java.util.regex.Pattern;
 
 /**
  * Applies export-time sampling based on a configuration fetched from the backend.
  */
 public final class CustomSampler {
 
-    private static final String ATTR_SAMPLING_RATIO = "highlight.sampling.ratio";
-    private static final AttributeKey<Long> SAMPLING_RATIO_KEY = AttributeKey.longKey(ATTR_SAMPLING_RATIO);
+    private static final AttributeKey<Long> SAMPLING_RATIO_KEY =
+            AttributeKey.longKey(Constants.ATTR_SAMPLING_RATIO);
 
     private final AtomicReference<SamplingConfig> configRef = new AtomicReference<>();
     private final IntPredicate sampler;
@@ -161,11 +162,7 @@ public final class CustomSampler {
         if (actual == null) {
             return false;
         }
-        if (config.isRegex()) {
-            return Pattern.matches(config.getRegexPattern(), actual);
-        } else {
-            return config.getValue().equals(actual);
-        }
+        return config.matches(actual);
     }
 
     /**
@@ -176,7 +173,7 @@ public final class CustomSampler {
     static boolean defaultSampler(int ratio) {
         if (ratio <= 0) return false;
         if (ratio == 1) return true;
-        return new Random().nextInt(ratio) == 0;
+        return ThreadLocalRandom.current().nextInt(ratio) == 0;
     }
 
     public static final class SamplingResult {

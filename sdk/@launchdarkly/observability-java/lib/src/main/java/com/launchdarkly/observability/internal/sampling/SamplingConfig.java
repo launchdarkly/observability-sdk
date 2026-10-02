@@ -2,6 +2,8 @@ package com.launchdarkly.observability.internal.sampling;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 /**
  * Sampling configuration received from the LaunchDarkly backend.
@@ -24,44 +26,49 @@ public final class SamplingConfig {
         return "SamplingConfig{spans=" + spans.size() + ", logs=" + logs.size() + "}";
     }
 
-    // --- Match config types ---
-
-    public static final class ValueMatch {
-        private final String value;
-        public ValueMatch(String value) { this.value = value; }
-        public String getValue() { return value; }
-    }
-
-    public static final class RegexMatch {
-        private final String pattern;
-        public RegexMatch(String pattern) { this.pattern = pattern; }
-        public String getPattern() { return pattern; }
-    }
-
     /**
-     * A match config is either a ValueMatch or a RegexMatch.
-     * Stored as a pair: at most one of value/regex is non-null.
+     * A match config is either an exact value or a regular expression.
+     * The pattern is compiled once so export-time matching does not recompile
+     * it on every span or log.
      */
     public static final class MatchConfig {
         private final String value;
         private final String regexPattern;
+        private final Pattern compiledRegex;
 
-        private MatchConfig(String value, String regexPattern) {
+        private MatchConfig(String value, String regexPattern, Pattern compiledRegex) {
             this.value = value;
             this.regexPattern = regexPattern;
+            this.compiledRegex = compiledRegex;
         }
 
         public static MatchConfig ofValue(String value) {
-            return new MatchConfig(value, null);
+            return new MatchConfig(value, null, null);
         }
 
         public static MatchConfig ofRegex(String pattern) {
-            return new MatchConfig(null, pattern);
+            Pattern compiled = null;
+            try {
+                compiled = Pattern.compile(pattern);
+            } catch (PatternSyntaxException ignored) {
+                // An invalid rule never matches, instead of failing the export.
+            }
+            return new MatchConfig(null, pattern, compiled);
         }
 
         public boolean isRegex() { return regexPattern != null; }
         public String getValue() { return value; }
         public String getRegexPattern() { return regexPattern; }
+
+        public boolean matches(String actual) {
+            if (actual == null) {
+                return false;
+            }
+            if (regexPattern != null) {
+                return compiledRegex != null && compiledRegex.matcher(actual).matches();
+            }
+            return value != null && value.equals(actual);
+        }
     }
 
     public static final class AttributeMatchConfig {
