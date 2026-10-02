@@ -149,6 +149,19 @@ class CustomSamplerTest {
     }
 
     @Test
+    void unsafeRegexNeverMatchesAndDoesNotThrow() {
+        assertDoesNotThrow(() -> SamplingConfig.MatchConfig.ofRegex("(a+)+"));
+        assertFalse(CustomSampler.matchesValue(
+                SamplingConfig.MatchConfig.ofRegex("(a+)+"), "aaaa"));
+        assertFalse(CustomSampler.matchesValue(
+                SamplingConfig.MatchConfig.ofRegex("("), "x"));
+        assertFalse(CustomSampler.matchesValue(
+                SamplingConfig.MatchConfig.ofRegex("a\\1"), "a"));
+        assertTrue(CustomSampler.matchesValue(
+                SamplingConfig.MatchConfig.ofRegex("health.*"), "health-check"));
+    }
+
+    @Test
     void defaultSamplerBehavior() {
         assertFalse(CustomSampler.defaultSampler(0));
         assertTrue(CustomSampler.defaultSampler(1));
