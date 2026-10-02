@@ -5,21 +5,7 @@ import com.launchdarkly.observability.network.intOrNull
 import com.launchdarkly.observability.network.objectOrNull
 import com.launchdarkly.observability.network.stringOrNull
 import com.launchdarkly.observability.sampling.SamplingConfig
-import kotlinx.serialization.EncodeDefault
-import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.KSerializer
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.descriptors.PrimitiveKind
-import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
-import kotlinx.serialization.descriptors.SerialDescriptor
-import kotlinx.serialization.descriptors.buildClassSerialDescriptor
-import kotlinx.serialization.encoding.Decoder
-import kotlinx.serialization.encoding.Encoder
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonElement
 import org.json.JSONObject
-import kotlin.reflect.KClass
 
 data class InitializeReplaySessionResponse(
     val initializeSession: InitializeSessionResponse?
@@ -69,7 +55,7 @@ data class InitializeSessionResponse(
     }
 }
 
-@Serializable(with = EventTypeSerializer::class)
+/** Written as its [value]. */
 enum class EventType(val value: Int) {
     DOM_CONTENT_LOADED(0),
     LOAD(1),
@@ -80,9 +66,7 @@ enum class EventType(val value: Int) {
     PLUGIN(6)
 }
 
-object EventTypeSerializer : IntEnumSerializer<EventType>(EventType::class, "EventType", EventType::value)
-
-@Serializable(with = NodeTypeSerializer::class)
+/** Written as its [value]. */
 enum class NodeType(val value: Int) {
     DOCUMENT(0),
     DOCUMENT_TYPE(1),
@@ -92,9 +76,7 @@ enum class NodeType(val value: Int) {
     COMMENT(5)
 }
 
-object NodeTypeSerializer : IntEnumSerializer<NodeType>(NodeType::class, "NodeType", NodeType::value)
-
-@Serializable(with = IncrementalSourceSerializer::class)
+/** Written as its [value]. */
 enum class IncrementalSource(val value: Int) {
     MUTATION(0),
     MOUSE_MOVE(1),
@@ -115,9 +97,7 @@ enum class IncrementalSource(val value: Int) {
     CUSTOM_ELEMENT(16)
 }
 
-object IncrementalSourceSerializer : IntEnumSerializer<IncrementalSource>(IncrementalSource::class, "IncrementalSource", IncrementalSource::value)
-
-@Serializable(with = MouseInteractionsSerializer::class)
+/** Written as its [value]. */
 enum class MouseInteractions(val value: Int) {
     MOUSE_UP(0),
     MOUSE_DOWN(1),
@@ -132,63 +112,33 @@ enum class MouseInteractions(val value: Int) {
     TOUCH_CANCEL(10)
 }
 
-object MouseInteractionsSerializer : IntEnumSerializer<MouseInteractions>(MouseInteractions::class, "MouseInteractions", MouseInteractions::value)
-
-open class IntEnumSerializer<T : Enum<T>>(
-    enumClass: KClass<T>,
-    private val serialName: String,
-    private val valueSelector: (T) -> Int
-) : KSerializer<T> {
-    private val entries: List<T> = enumClass.java.enumConstants?.toList() ?: emptyList()
-    private val lookup: Map<Int, T> = entries.associateBy(valueSelector)
-
-    override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor(serialName, PrimitiveKind.INT)
-
-    override fun serialize(encoder: Encoder, value: T) {
-        encoder.encodeInt(valueSelector(value))
-    }
-
-    override fun deserialize(decoder: Decoder): T {
-        val intValue = decoder.decodeInt()
-        // TODO: O11Y-624 - determine better error handling
-        return lookup[intValue]
-            ?: throw IllegalArgumentException("Unknown $serialName value: $intValue")
-    }
-}
-
-@OptIn(ExperimentalSerializationApi::class)
-@Serializable
 data class EventNode(
     val type: NodeType,
     val name: String? = null,
     val tagName: String? = null,
     val attributes: Map<String, String>? = null,
-    // This EncodeDefault is needed as a workaround, rrweb replay is expecting childNodes to be present even when empty list
-    @EncodeDefault val childNodes: List<EventNode> = emptyList(),
+    /** Always written, even when empty: rrweb replay expects every node to carry it. */
+    val childNodes: List<EventNode> = emptyList(),
     val rootId: Int? = null,
     val id: Int? = null
 )
 
-@Serializable
 data class Attributes(
     val id: Int? = null,
     val attributes: Map<String, String>? = null
 )
 
-@Serializable
 data class Removal(
     val parentId: Int,
     val id: Int
 )
 
-@Serializable
 data class Addition(
     val parentId: Int,
     val nextId: Int? = null,
     val node: EventNode
 )
 
-@Serializable
 data class EventData(
     val source: IncrementalSource? = null,
     val type: MouseInteractions? = null,
@@ -205,65 +155,26 @@ data class EventData(
     val y: Double? = null,
 )
 
-object EventDataUnionSerializer : KSerializer<EventDataUnion> {
-    override val descriptor: SerialDescriptor = buildClassSerialDescriptor("EventDataUnion")
-
-    override fun serialize(encoder: Encoder, value: EventDataUnion) {
-        when (value) {
-            is EventDataUnion.StandardEventData -> {
-                encoder.encodeSerializableValue(EventData.serializer(), value.data)
-            }
-            is EventDataUnion.CustomEventDataWrapper -> {
-                encoder.encodeSerializableValue(JsonElement.serializer(), value.data)
-            }
-        }
-    }
-
-    override fun deserialize(decoder: Decoder): EventDataUnion {
-        // For deserialization, we need to determine the type based on the content
-        // This is a simplified implementation - in practice, you might need more sophisticated logic
-        // to determine whether the data should be StandardEventData or CustomEventDataWrapper
-        val jsonElement = decoder.decodeSerializableValue(JsonElement.serializer())
-
-        // Try to deserialize as StandardEventData first
-        return try {
-            val eventData = Json.decodeFromJsonElement(EventData.serializer(), jsonElement)
-            EventDataUnion.StandardEventData(eventData)
-        } catch (e: Exception) {
-            // If that fails, treat as CustomEventDataWrapper with JsonElement
-            EventDataUnion.CustomEventDataWrapper(jsonElement)
-        }
-    }
-}
-
-@Serializable(with = EventDataUnionSerializer::class)
 sealed class EventDataUnion {
-    @Serializable
     data class StandardEventData(val data: EventData) : EventDataUnion()
 
-    @Serializable
-    data class CustomEventDataWrapper(val data: JsonElement) : EventDataUnion()
+    /**
+     * Event data with no fixed shape, written as a JSON object. Values may be `null`, [String], [Boolean],
+     * any [Number], or a nested [Map] or [List] of those.
+     */
+    data class CustomEventDataWrapper(val data: Map<String, Any?>) : EventDataUnion()
 }
 
-@Serializable
 data class Event(
     val type: EventType,
     val data: EventDataUnion,
     val timestamp: Long,
-    @SerialName("_sid")
+    /** Written as `_sid`. */
     val sid: Int
 )
 
-@Serializable
 data class ReplayEventsInput(
     val events: List<Event>
-)
-
-@Serializable
-data class ErrorObjectInput(
-    val message: String? = null,
-    val stack: String? = null,
-    val timestamp: Long? = null
 )
 
 data class PushPayloadResponse(

@@ -2,20 +2,32 @@ package com.launchdarkly.observability.network
 
 import com.launchdarkly.observability.context.ObserveLogger
 import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
+import com.launchdarkly.observability.json.JsonByteWriter
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonElement
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 import kotlin.coroutines.cancellation.CancellationException
 
-@Serializable
+/**
+ * @property variables Written by [JsonByteWriter.anyValue], so each value may be `null`, a [String],
+ * [Boolean] or [Number], or a nested [Map] or [List] of those.
+ */
 data class GraphQLRequest(
     val query: String,
-    val variables: Map<String, JsonElement> = emptyMap()
-)
+    val variables: Map<String, Any?> = emptyMap()
+) {
+    internal fun toJsonBytes(): ByteArray = JsonByteWriter.encode {
+        beginObject()
+        name("query").value(query)
+        // No variables is the default, and defaults are not written.
+        if (variables.isNotEmpty()) {
+            name("variables")
+            anyValue(variables)
+        }
+        endObject()
+    }
+}
 
 /**
  * Every way a [GraphQLClient.execute] call can fail, as the failure the caller can act on:
@@ -112,10 +124,6 @@ class GraphQLClient(
     val endpoint: String,
     val headers: Map<String, String> = emptyMap(),
     private val logger: ObserveLogger,
-    private val json: Json = Json {
-        isLenient = true
-        ignoreUnknownKeys = true
-    },
     private val connectionProvider: UrlConnectionProvider = object : UrlConnectionProvider {
         override fun openConnection(url: String): HttpURLConnection {
             return URL(url).openConnection() as HttpURLConnection
@@ -140,7 +148,7 @@ class GraphQLClient(
      */
     suspend fun <T> execute(
         query: String,
-        variables: Map<String, JsonElement> = emptyMap(),
+        variables: Map<String, Any?> = emptyMap(),
         dataParser: (JSONObject) -> T,
         compress: Boolean = true
     ): T = withContext(DispatcherProviderHolder.current.io) {
@@ -151,8 +159,7 @@ class GraphQLClient(
                 variables = variables
             )
 
-            val requestJson = json.encodeToString(GraphQLRequest.serializer(), request)
-            val requestBytes = requestJson.toByteArray(Charsets.UTF_8)
+            val requestBytes = request.toJsonBytes()
             val payloadBytes = if (compress) GzipUtil.gzip(requestBytes) else requestBytes
             val connectionLocal = connectionProvider.openConnection(endpoint).also { connection = it }
 

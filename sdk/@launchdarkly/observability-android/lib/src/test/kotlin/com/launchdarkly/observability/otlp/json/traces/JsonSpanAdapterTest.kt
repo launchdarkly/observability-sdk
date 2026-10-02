@@ -2,6 +2,8 @@ package com.launchdarkly.observability.otlp.json.traces
 
 import com.launchdarkly.observability.otlp.json.JsonTestHelpers.array
 import com.launchdarkly.observability.otlp.json.JsonTestHelpers.encodeToTree
+import com.launchdarkly.observability.otlp.json.JsonTree
+import com.launchdarkly.observability.otlp.json.toJsonBytes
 import com.launchdarkly.observability.otlp.json.JsonTestHelpers.int
 import com.launchdarkly.observability.otlp.json.JsonTestHelpers.obj
 import com.launchdarkly.observability.otlp.json.JsonTestHelpers.string
@@ -20,7 +22,6 @@ import io.opentelemetry.sdk.trace.data.EventData
 import io.opentelemetry.sdk.trace.data.LinkData
 import io.opentelemetry.sdk.trace.data.SpanData
 import io.opentelemetry.sdk.trace.data.StatusData
-import kotlinx.serialization.json.JsonObject
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
@@ -217,12 +218,12 @@ class JsonSpanAdapterTest {
         assertNull(JsonSpanAdapter.encodeTraceState(TraceState.getDefault()))
     }
 
-    private fun encode(span: SpanData): JsonObject {
+    private fun encode(span: SpanData): JsonTree {
         val request = JsonSpanAdapter.toJsonRequest(listOf(span))
-        return encodeToTree(request, OtlpJsonExportTraceServiceRequest.serializer())
+        return encodeToTree(request.toJsonBytes())
     }
 
-    private fun drillToSpan(tree: JsonObject): JsonObject {
+    private fun drillToSpan(tree: JsonTree): JsonTree {
         val resourceSpan = obj(array(tree["resourceSpans"])[0])
         val scopeSpan = obj(array(resourceSpan["scopeSpans"])[0])
         return obj(array(scopeSpan["spans"])[0])

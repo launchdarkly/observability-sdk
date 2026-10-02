@@ -1,8 +1,7 @@
 package com.launchdarkly.observability.replay
 
 import android.content.SharedPreferences
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
+import com.launchdarkly.observability.json.JsonByteWriter
 import org.json.JSONObject
 import java.security.MessageDigest
 
@@ -25,7 +24,6 @@ sealed interface SessionReplayInitializationVerdict {
 /**
  * The last unrecoverable failure, as persisted between launches.
  */
-@Serializable
 internal data class SessionReplayInitializationFailure(
     val reason: String,
     val timestamp: Long,
@@ -74,8 +72,12 @@ internal class SessionReplayInitializationStore(
          */
         const val MAX_REASON_LENGTH = 512
 
-        fun encode(failure: SessionReplayInitializationFailure): String =
-            Json.encodeToString(SessionReplayInitializationFailure.serializer(), failure)
+        fun encode(failure: SessionReplayInitializationFailure): String = JsonByteWriter.encodeToString(initialCapacity = 128) {
+            beginObject()
+            name("reason").value(failure.reason)
+            name("timestamp").value(failure.timestamp)
+            endObject()
+        }
 
         fun decode(stored: String): SessionReplayInitializationFailure? = try {
             val decoded = JSONObject(stored)

@@ -4,7 +4,6 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
-import kotlinx.serialization.json.JsonPrimitive
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
@@ -50,7 +49,7 @@ class SamplingApiServiceTest {
             coEvery {
                 mockGraphqlClient.execute<SamplingResponse>(
                     any(),
-                    mapOf("organization_verbose_id" to JsonPrimitive(organizationId)),
+                    mapOf("organization_verbose_id" to organizationId),
                     any()
                 )
             } returns samplingResponse
@@ -63,7 +62,7 @@ class SamplingApiServiceTest {
             coVerify(exactly = 1) {
                 mockGraphqlClient.execute<SamplingResponse>(
                     any(),
-                    mapOf("organization_verbose_id" to JsonPrimitive(organizationId)),
+                    mapOf("organization_verbose_id" to organizationId),
                     any()
                 )
             }

@@ -6,7 +6,6 @@ import io.mockk.mockk
 import io.mockk.unmockkAll
 import io.mockk.verify
 import kotlinx.coroutines.test.runTest
-import kotlinx.serialization.Serializable
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -22,8 +21,7 @@ import kotlin.time.Duration.Companion.seconds
 
 class OtlpHttpClientTest {
 
-    @Serializable
-    data class FakeBody(val a: String, val b: Int)
+    private fun body(json: String): ByteArray = json.toByteArray(Charsets.UTF_8)
 
     private lateinit var mockConnection: HttpURLConnection
     private lateinit var capturedBody: ByteArrayOutputStream
@@ -65,10 +63,7 @@ class OtlpHttpClientTest {
     fun `send gzips body and sets the expected headers`() = runTest {
         val client = clientWith()
 
-        client.send(
-            body = FakeBody(a = "hi", b = 7),
-            serializer = FakeBody.serializer(),
-        )
+        client.send(body = body("""{"a":"hi","b":7}"""))
 
         assertEquals("https://otlp.example.com/v1/logs", openConnectionCalledWith)
         verify {
@@ -88,10 +83,7 @@ class OtlpHttpClientTest {
     fun `send without gzip sends the raw body and omits Content-Encoding`() = runTest {
         val client = clientWith(OtlpConfiguration(compression = OtlpCompression.NONE))
 
-        client.send(
-            body = FakeBody(a = "ok", b = 1),
-            serializer = FakeBody.serializer(),
-        )
+        client.send(body = body("""{"a":"ok","b":1}"""))
 
         assertEquals("""{"a":"ok","b":1}""", capturedBody.toByteArray().toString(Charsets.UTF_8))
         verify(exactly = 0) { mockConnection.setRequestProperty("Content-Encoding", any()) }
@@ -106,7 +98,7 @@ class OtlpHttpClientTest {
             )
         )
 
-        client.send(FakeBody("x", 0), FakeBody.serializer())
+        client.send(body("{}"))
 
         verify {
             mockConnection.setRequestProperty("X-Api-Key", "sdk-token")
@@ -119,8 +111,7 @@ class OtlpHttpClientTest {
         val client = clientWith(OtlpConfiguration(timeout = 30.seconds))
 
         client.send(
-            body = FakeBody("x", 0),
-            serializer = FakeBody.serializer(),
+            body = body("{}"),
             explicitTimeout = 5.seconds,
         )
 
@@ -137,7 +128,7 @@ class OtlpHttpClientTest {
         val client = clientWith()
 
         val error = assertThrows(IOException::class.java) {
-            runTest { client.send(FakeBody("x", 0), FakeBody.serializer()) }
+            runTest { client.send(body("{}")) }
         }
         assertTrue(error.message!!.contains("503"), "message should include status: ${error.message}")
         assertTrue(error.message!!.contains("oops"), "message should include body: ${error.message}")
@@ -149,7 +140,7 @@ class OtlpHttpClientTest {
         every { mockConnection.errorStream } returns null
         val client = clientWith()
 
-        runCatching { client.send(FakeBody("x", 0), FakeBody.serializer()) }
+        runCatching { client.send(body("{}")) }
 
         verify { mockConnection.disconnect() }
     }
