@@ -43,6 +43,9 @@ export async function initializeLaunchDarkly() {
 							Constants.expoConfig?.version || '1.0.0',
 						otlpEndpoint,
 						debug: __DEV__,
+						// Retain more telemetry across short network
+						// outages before dropping.
+						maxBufferSize: 2000,
 						customHeaders: {
 							'x-service-name': serviceName,
 							'x-environment': __DEV__

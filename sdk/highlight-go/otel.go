@@ -420,12 +420,53 @@ func getMetricContext(ctx context.Context, opts []metric.RecordOption, tags ...a
 	return trace.ContextWithSpanContext(ctx, spanCtx), tags
 }
 
-var float64GaugesLock = sync.RWMutex{}
-var float64Gauges = make(map[string]metric.Float64Gauge, 1000)
-var float64HistogramsLock = sync.RWMutex{}
-var float64Histograms = make(map[string]metric.Float64Histogram, 1000)
-var int64CountersLock = sync.RWMutex{}
-var int64Counters = make(map[string]metric.Int64Counter, 1000)
+// instrumentCache memoizes one instrument per metric name.
+//
+// Instruments are built lazily rather than up front because defaultMeter is a noop
+// until StartOTLP installs the real provider, and an instrument built from the noop
+// meter would silently discard every measurement for the life of the process.
+type instrumentCache[T any] struct {
+	mu          sync.RWMutex
+	kind        string
+	instruments map[string]T
+}
+
+func newInstrumentCache[T any](kind string) *instrumentCache[T] {
+	return &instrumentCache[T]{kind: kind, instruments: make(map[string]T, 1000)}
+}
+
+// get returns the instrument for name, building it on first use. The second return
+// value is false only when construction failed, in which case nothing is cached and
+// the next call retries.
+func (c *instrumentCache[T]) get(name string, build func() (T, error)) (T, bool) {
+	c.mu.RLock()
+	instrument, ok := c.instruments[name]
+	c.mu.RUnlock()
+	if ok {
+		return instrument, true
+	}
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	// Another goroutine may have built it while this one waited for the write lock.
+	if instrument, ok := c.instruments[name]; ok {
+		return instrument, true
+	}
+
+	instrument, err := build()
+	if err != nil {
+		var zero T
+		logger.Errorf("error creating %s %s: %v", c.kind, name, err)
+		return zero, false
+	}
+
+	c.instruments[name] = instrument
+	return instrument, true
+}
+
+var float64Gauges = newInstrumentCache[metric.Float64Gauge]("float64 gauge")
+var float64Histograms = newInstrumentCache[metric.Float64Histogram]("float64 histogram")
+var int64Counters = newInstrumentCache[metric.Int64Counter]("int64 counter")
 
 // RecordMetric is used to record arbitrary metrics in your golang backend.
 // Highlight will process these metrics in the context of your session and expose them
@@ -433,60 +474,68 @@ var int64Counters = make(map[string]metric.Int64Counter, 1000)
 // as a metric that you would like to graph and monitor. You'll be able to view the metric
 // in the context of the session and network request and recorded it.
 func RecordMetric(ctx context.Context, name string, value float64, tags ...attribute.KeyValue) {
-	var err error
-	float64GaugesLock.RLock()
-	if g := float64Gauges[name]; g == nil {
-		float64GaugesLock.RUnlock()
-		float64GaugesLock.Lock()
-		float64Gauges[name], err = defaultMeter.Float64Gauge(name)
-		float64GaugesLock.Unlock()
-		if err != nil {
-			fmt.Printf("error creating float64 gauge %s: %v", name, err)
-			return
-		}
-	} else {
-		float64GaugesLock.RUnlock()
+	RecordMetricWithOptions(ctx, name, value, tags)
+}
+
+// RecordMetricWithOptions is RecordMetric with control over how the instrument is
+// declared — its unit and description. See RecordHistogramWithOptions for when the
+// options take effect.
+func RecordMetricWithOptions(ctx context.Context, name string, value float64, tags []attribute.KeyValue, opts ...metric.Float64GaugeOption) {
+	gauge, ok := float64Gauges.get(name, func() (metric.Float64Gauge, error) {
+		return defaultMeter.Float64Gauge(name, opts...)
+	})
+	if !ok {
+		return
 	}
 	metricCtx, tags := getMetricContext(ctx, nil, tags...)
-	float64Gauges[name].Record(metricCtx, value, metric.WithAttributes(tags...))
+	gauge.Record(metricCtx, value, metric.WithAttributes(tags...))
 }
 
 func RecordHistogram(ctx context.Context, name string, value float64, tags ...attribute.KeyValue) {
-	var err error
-	float64HistogramsLock.RLock()
-	if h := float64Histograms[name]; h == nil {
-		float64HistogramsLock.RUnlock()
-		float64HistogramsLock.Lock()
-		float64Histograms[name], err = defaultMeter.Float64Histogram(name)
-		float64HistogramsLock.Unlock()
-		if err != nil {
-			fmt.Printf("error creating float64 histogram %s: %v", name, err)
-			return
-		}
-	} else {
-		float64HistogramsLock.RUnlock()
+	RecordHistogramWithOptions(ctx, name, value, tags)
+}
+
+// RecordHistogramWithOptions is RecordHistogram with control over how the instrument
+// is declared — most usefully its bucket boundaries, but also its unit and
+// description.
+//
+// Without explicit boundaries a histogram inherits the OTEL default set, which tops
+// out at 10000 and is shaped for millisecond latencies. A metric whose values sit
+// outside that range lands entirely in the +Inf overflow bucket, leaving every
+// quantile uncomputable, so any histogram on a different scale should declare its
+// own boundaries.
+//
+// The instrument is built once per name and memoized, so options are read on the
+// first record for that name and ignored afterwards. Pass the same options at every
+// call site for a given metric — hoisting them into a package-level slice and
+// spreading it is the easy way to keep them consistent.
+func RecordHistogramWithOptions(ctx context.Context, name string, value float64, tags []attribute.KeyValue, opts ...metric.Float64HistogramOption) {
+	histogram, ok := float64Histograms.get(name, func() (metric.Float64Histogram, error) {
+		return defaultMeter.Float64Histogram(name, opts...)
+	})
+	if !ok {
+		return
 	}
 	metricCtx, tags := getMetricContext(ctx, nil, tags...)
-	float64Histograms[name].Record(metricCtx, value, metric.WithAttributes(tags...))
+	histogram.Record(metricCtx, value, metric.WithAttributes(tags...))
 }
 
 func RecordCount(ctx context.Context, name string, value int64, tags ...attribute.KeyValue) {
-	var err error
-	int64CountersLock.RLock()
-	if c := int64Counters[name]; c == nil {
-		int64CountersLock.RUnlock()
-		int64CountersLock.Lock()
-		int64Counters[name], err = defaultMeter.Int64Counter(name)
-		int64CountersLock.Unlock()
-		if err != nil {
-			fmt.Printf("error creating float64 histogram %s: %v", name, err)
-			return
-		}
-	} else {
-		int64CountersLock.RUnlock()
+	RecordCountWithOptions(ctx, name, value, tags)
+}
+
+// RecordCountWithOptions is RecordCount with control over how the instrument is
+// declared — its unit and description. See RecordHistogramWithOptions for when the
+// options take effect.
+func RecordCountWithOptions(ctx context.Context, name string, value int64, tags []attribute.KeyValue, opts ...metric.Int64CounterOption) {
+	counter, ok := int64Counters.get(name, func() (metric.Int64Counter, error) {
+		return defaultMeter.Int64Counter(name, opts...)
+	})
+	if !ok {
+		return
 	}
 	metricCtx, tags := getMetricContext(ctx, nil, tags...)
-	int64Counters[name].Add(metricCtx, value, metric.WithAttributes(tags...))
+	counter.Add(metricCtx, value, metric.WithAttributes(tags...))
 }
 
 func RecordLogWithLogger(ctx context.Context, lg log.Logger, record log.Record, tags ...log.KeyValue) error {

@@ -12,7 +12,10 @@ sealed interface MaskTarget {
     fun isText(): Boolean
     fun isSensitive(sensitiveKeywords: List<String>): Boolean
     fun mask(context: MaskContext): Mask?
+    /** Returns true when this target carries an explicit "mask" marker (e.g. `View.ldMask()`). */
     fun hasLDMask(): Boolean
+    /** Returns true when this target carries an explicit "unmask" marker (e.g. `View.ldUnmask()`). */
+    fun hasLDUnmask(): Boolean
 }
 
 

@@ -7,6 +7,19 @@ import com.launchdarkly.observability.replay.masking.MaskMatcher
 import com.launchdarkly.observability.replay.masking.MaskTarget
 
 /**
+ * Normalizes a list of Android XML view id strings into the form returned by
+ * `Resources.getResourceEntryName()`. Strips the `@+id/` and `@id/` prefixes; bare names
+ * (`"foo"`) are passed through unchanged. Returns the result as a Set for O(1) lookup.
+ */
+private fun List<String>.normalizeXmlIds(): Set<String> = map {
+    when {
+        it.startsWith("@+id/") -> it.substring(5)
+        it.startsWith("@id/") -> it.substring(4)
+        else -> it
+    }
+}.toSet()
+
+/**
  * [PrivacyProfile] controls what UI elements are masked in session replay.
  *
  * Masking is implemented as a list of [MaskMatcher]s that are evaluated against a [MaskTarget].
@@ -15,10 +28,16 @@ import com.launchdarkly.observability.replay.masking.MaskTarget
  *
  * @param maskTextInputs Set to false to disable masking text input targets.
  * @param maskText Set to false to disable masking text targets.
- * @param maskImageViews Set to true to mask [ImageView] targets by exact class match.
+ * @param maskImageViews Set to true to mask [ImageView] targets.
  * @param maskViews Additional Views to mask by exact class match (see [viewsMatcher]).
  * @param maskXMLViewIds Additional Views to mask by resource entry name (see [xmlViewIdsMatcher]).
- * accepts `"@+id/foo"`, `"@id/foo"`, or `"foo"`.
+ * accepts `"@+id/foo"`, `"@id/foo"`, or `"foo"`. When the React Native library is on the runtime
+ * classpath, this list is also matched against the React Native `testID` prop, which RN stores in
+ * `com.facebook.react.R.id.react_test_id` on each view.
+ * @param unmaskXMLViewIds Views whose resource entry name appears in this list are explicitly
+ * *unmasked* (see [unmaskXMLViewIdsMatcher]). Same id format and same React Native `testID`
+ * support as [maskXMLViewIds]. Takes precedence over global masking rules — see `MaskCollector`
+ * for the full precedence rules.
  * @param maskWebViews Set to true to mask known WebView types and their subclasses
  * (e.g., "android.webkit.WebView", "org.mozilla.geckoview.GeckoView", etc).
  * @param maskBySemanticsKeywords Set to true to enable masking of "sensitive" targets detected by
@@ -29,41 +48,27 @@ data class PrivacyProfile(
     val maskText: Boolean = false,
     val maskViews: List<MaskViewRef> = emptyList(),
     val maskXMLViewIds: List<String> = emptyList(),
+    val unmaskXMLViewIds: List<String> = emptyList(),
     // only for XML ImageViews
     val maskImageViews: Boolean = false,
     val maskWebViews: Boolean = false,
     val maskBySemanticsKeywords: Boolean = false,
+    /**
+     * Opacity threshold below which a view (and its subtree) is treated as
+     * invisible and pruned from masking — it draws nothing into the captured
+     * frame. Defaults to `0.02f`. A view that is at least this opaque still
+     * participates.
+     */
+    val minimumAlpha: Float = DEFAULT_MINIMUM_ALPHA,
 ) {
     private val viewClassSet = buildSet {
         addAll(maskViews.map { it.clazz })
-        if (maskImageViews) add(ImageView::class.java)
     }
 
     private val webViewClassNameSet = if (maskWebViews) webViewClassNames.toSet() else emptySet()
 
-    private val maskXMLViewIdSet = maskXMLViewIds.map {
-        when {
-            it.startsWith("@+id/") -> it.substring(5)
-            it.startsWith("@id/") -> it.substring(4)
-            else -> it
-        }
-    }.toSet()
-
-    /**
-     * Converts this [PrivacyProfile] into its equivalent [MaskMatcher] list.
-     *
-     * Note: matchers are evaluated with `any { ... }`, so ordering only affects performance
-     * (earlier matchers can short-circuit later ones).
-     */
-    internal fun asMatchersList(): List<MaskMatcher> = buildList {
-        // Prefer cheaper checks first; heavier checks should be later.
-        if (maskTextInputs) add(textInputMatcher)
-        if (maskText) add(textMatcher)
-        if (viewClassSet.isNotEmpty()) add(viewsMatcher)
-        if (maskXMLViewIdSet.isNotEmpty()) add(xmlViewIdsMatcher)
-        if (maskBySemanticsKeywords) add(sensitiveMatcher)
-        if (webViewClassNameSet.isNotEmpty()) add(webViewClassHierarchyMatcher)
-    }
+    private val maskXMLViewIdSet = maskXMLViewIds.normalizeXmlIds()
+    private val unmaskXMLViewIdSet = unmaskXMLViewIds.normalizeXmlIds()
 
     /**
      * Matches targets whose underlying Android View has an exact class match with [maskViews].
@@ -73,6 +78,15 @@ data class PrivacyProfile(
     internal val viewsMatcher: MaskMatcher = object : MaskMatcher {
         override fun isMatch(target: MaskTarget): Boolean {
             return viewClassSet.contains(target.view.javaClass)
+        }
+    }
+
+    /**
+     * Matches targets whose underlying Android View is an [ImageView].
+     */
+    internal val imageViewMatcher: MaskMatcher = object : MaskMatcher {
+        override fun isMatch(target: MaskTarget): Boolean {
+            return target.view is ImageView
         }
     }
 
@@ -92,21 +106,43 @@ data class PrivacyProfile(
     }
 
     /**
-     * Matches targets whose underlying Android View's resource entry name is included in
-     * [maskXMLViewIds].
+     * Matches targets whose underlying Android View has an id (or React Native `testID`) included
+     * in [maskXMLViewIds].
      *
-     * IDs are compared using `resources.getResourceEntryName(view.id)`, so this only applies to
-     * Views with a non-[View.NO_ID] id that resolves to a resource entry.
+     * Two lookups are performed against the same configured set:
+     *  - `resources.getResourceEntryName(view.id)` — applies to Views with a non-[View.NO_ID] id
+     *    that resolves to a resource entry.
+     *  - The value stored in `com.facebook.react.R.id.react_test_id` on the View, if React Native
+     *    is on the runtime classpath. RN's framework writes the JS `testID` prop into that tag.
      */
-    internal val xmlViewIdsMatcher: MaskMatcher = object : MaskMatcher {
+    internal val xmlViewIdsMatcher: MaskMatcher = xmlIdMatcher(maskXMLViewIdSet)
+
+    /**
+     * Matches targets whose underlying Android View has an id (or React Native `testID`) included
+     * in [unmaskXMLViewIds]. Counterpart to [xmlViewIdsMatcher] — same lookup, different set.
+     */
+    internal val unmaskXMLViewIdsMatcher: MaskMatcher = xmlIdMatcher(unmaskXMLViewIdSet)
+
+    /**
+     * Builds a [MaskMatcher] that checks whether a target view's XML resource entry name or
+     * React Native test id (when RN is on the runtime classpath) appears in [idSet].
+     *
+     * @param idSet the set of normalized identifiers to match against.
+     */
+    private fun xmlIdMatcher(idSet: Set<String>): MaskMatcher = object : MaskMatcher {
         fun View.idNameOrNull(): String? =
             if (id == View.NO_ID) null
             else runCatching { resources.getResourceEntryName(id) }.getOrNull()
 
         override fun isMatch(target: MaskTarget): Boolean {
-            val id = target.view.idNameOrNull() ?: return false
-
-            return maskXMLViewIdSet.contains(id)
+            val view = target.view
+            view.idNameOrNull()?.let { if (idSet.contains(it)) return true }
+            reactTestIdResId?.let { resId ->
+                (view.getTag(resId) as? String)?.let { testId ->
+                    if (idSet.contains(testId)) return true
+                }
+            }
+            return false
         }
     }
 
@@ -138,6 +174,54 @@ data class PrivacyProfile(
         override fun isMatch(target: MaskTarget): Boolean {
             return target.isSensitive(sensitiveKeywords)
         }
+    }
+
+    /**
+     * Matchers whose match counts as an "explicit" masking signal — equivalent to a call to
+     * `View.ldMask()` on the matched view. An explicit-mask match propagates to descendants per
+     * the precedence rules in `MaskCollector`.
+     *
+     * Identifier-based matchers belong here (the developer named a specific view to mask).
+     * Type-based / heuristic matchers belong in [globalMaskMatchers].
+     *
+     * Matchers are evaluated with `any { ... }`, so ordering only affects performance (earlier
+     * matchers can short-circuit later ones).
+     */
+    internal val explicitMaskMatchers: List<MaskMatcher> = buildList {
+        if (maskXMLViewIdSet.isNotEmpty()) add(xmlViewIdsMatcher)
+    }
+
+    /**
+     * Matchers whose match counts as an "explicit" unmask signal — equivalent to a call to
+     * `View.ldUnmask()` on the matched view. An explicit-unmask match propagates to descendants
+     * per the precedence rules in `MaskCollector`. An ancestor's explicit mask still wins over
+     * an explicit unmask.
+     *
+     * Matchers are evaluated with `any { ... }`, so ordering only affects performance (earlier
+     * matchers can short-circuit later ones).
+     */
+    internal val explicitUnmaskMatchers: List<MaskMatcher> = buildList {
+        if (unmaskXMLViewIdSet.isNotEmpty()) add(unmaskXMLViewIdsMatcher)
+    }
+
+    /**
+     * Matchers whose match applies only to the matched view itself: a global match does not
+     * propagate to descendants and does not override an explicit unmask.
+     *
+     * Type-based / heuristic matchers belong here (the developer asked to mask all views *of a
+     * kind*, not specific ones). Identifier-based matchers belong in [explicitMaskMatchers].
+     *
+     * Matchers are evaluated with `any { ... }`, so ordering only affects performance (earlier
+     * matchers can short-circuit later ones).
+     */
+    internal val globalMaskMatchers: List<MaskMatcher> = buildList {
+        // Prefer cheaper checks first; heavier checks should be later.
+        if (maskTextInputs) add(textInputMatcher)
+        if (maskText) add(textMatcher)
+        if (maskImageViews) add(imageViewMatcher)
+        if (viewClassSet.isNotEmpty()) add(viewsMatcher)
+        if (maskBySemanticsKeywords) add(sensitiveMatcher)
+        if (webViewClassNameSet.isNotEmpty()) add(webViewClassHierarchyMatcher)
     }
 
     // this list of sensitive keywords is used to detect sensitive content descriptions
@@ -207,7 +291,54 @@ data class PrivacyProfile(
         return false
     }
 
+    /**
+     * Java-friendly fluent builder for [PrivacyProfile].
+     *
+     * Kotlin callers can keep using the [PrivacyProfile] constructor with named/default arguments.
+     * Every setter defaults to the same value as the [PrivacyProfile] primary constructor. List
+     * properties offer both a replace-all setter and an `addXxx` helper for incremental use.
+     *
+     * ```java
+     * PrivacyProfile profile = PrivacyProfile.builder()
+     *     .maskText(false)
+     *     .maskWebViews(true)
+     *     .addMaskView(MaskViewRef.ofClass(ImageView.class))
+     *     .addMaskXMLViewId("smoothieTitle")
+     *     .build();
+     * ```
+     */
+    class Builder {
+        private var profile = PrivacyProfile()
+
+        fun maskTextInputs(maskTextInputs: Boolean) = apply { profile = profile.copy(maskTextInputs = maskTextInputs) }
+        fun maskText(maskText: Boolean) = apply { profile = profile.copy(maskText = maskText) }
+
+        fun maskViews(maskViews: List<MaskViewRef>) = apply { profile = profile.copy(maskViews = maskViews.toList()) }
+        fun addMaskView(maskView: MaskViewRef) = apply { profile = profile.copy(maskViews = profile.maskViews + maskView) }
+
+        fun maskXMLViewIds(maskXMLViewIds: List<String>) = apply { profile = profile.copy(maskXMLViewIds = maskXMLViewIds.toList()) }
+        fun addMaskXMLViewId(maskXMLViewId: String) = apply { profile = profile.copy(maskXMLViewIds = profile.maskXMLViewIds + maskXMLViewId) }
+
+        fun unmaskXMLViewIds(unmaskXMLViewIds: List<String>) = apply { profile = profile.copy(unmaskXMLViewIds = unmaskXMLViewIds.toList()) }
+        fun addUnmaskXMLViewId(unmaskXMLViewId: String) = apply { profile = profile.copy(unmaskXMLViewIds = profile.unmaskXMLViewIds + unmaskXMLViewId) }
+
+        fun maskImageViews(maskImageViews: Boolean) = apply { profile = profile.copy(maskImageViews = maskImageViews) }
+        fun maskWebViews(maskWebViews: Boolean) = apply { profile = profile.copy(maskWebViews = maskWebViews) }
+        fun maskBySemanticsKeywords(maskBySemanticsKeywords: Boolean) = apply {
+            profile = profile.copy(maskBySemanticsKeywords = maskBySemanticsKeywords)
+        }
+        fun minimumAlpha(minimumAlpha: Float) = apply { profile = profile.copy(minimumAlpha = minimumAlpha) }
+
+        fun build() = profile
+    }
+
     companion object {
+        /** Default opacity prune threshold, matching the iOS/Flutter `minimumAlpha`. */
+        const val DEFAULT_MINIMUM_ALPHA = 0.02f
+
+        @JvmStatic
+        fun builder() = Builder()
+
         private val webViewClassNames = listOf(
             WebView::class.java.name,
             "org.mozilla.geckoview.GeckoView",
@@ -215,5 +346,18 @@ data class PrivacyProfile(
             "com.tencent.smtt.sdk.WebView",
             "com.uc.webview.export.WebView",
         )
+
+        /**
+         * Resource id of the `react_test_id` tag, where React Native stores the JS `testID` prop on
+         * each view. Resolved reflectively to avoid a compile-time dependency on React Native;
+         * `null` when the RN library isn't on the classpath.
+         */
+        internal val reactTestIdResId: Int? by lazy {
+            runCatching {
+                Class.forName("com.facebook.react.R\$id")
+                    .getField("react_test_id")
+                    .getInt(null)
+            }.getOrNull()
+        }
     }
 }

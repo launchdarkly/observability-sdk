@@ -4,7 +4,6 @@ import type {
 	OtelOptions,
 } from './client'
 import type { CommonOptions } from './types'
-import type { EventName } from '@opentelemetry/instrumentation-user-interaction'
 
 export type ObserveOptions = CommonOptions & {
 	/**
@@ -42,6 +41,18 @@ export type ObserveOptions = CommonOptions & {
 	 */
 	enablePerformanceRecording?: boolean
 	/**
+	 * Specifies whether to record main-thread `longtask` entries (>50ms) as
+	 * `long_task.duration` histogram samples.
+	 * @default true
+	 */
+	enableLongtaskRecording?: boolean
+	/**
+	 * Specifies whether to subscribe to the browser Reporting API and emit
+	 * CSP/intervention reports as errors and deprecation reports as warn logs.
+	 * @default true
+	 */
+	enableReportingObserver?: boolean
+	/**
 	 * Specifies the environment your application is running in.
 	 * This is useful to distinguish whether your session was recorded on localhost or in production.
 	 * @default 'production'
@@ -61,10 +72,53 @@ export type ObserveOptions = CommonOptions & {
 		 * OTLP HTTP endpoint for OpenTelemetry tracing.
 		 */
 		otlpEndpoint?: string
-		/**
-		 * User interaction instrumentation event names to record.
-		 * Defaults to 'click', 'input', 'submit' window events.
-		 */
-		eventNames?: EventName[]
 	}
+	/**
+	 * Specifies whether to record product analytics events.
+	 * @default true
+	 */
+	productAnalytics?: boolean | ProductAnalyticsEvents
+	/**
+	 * The time window, in milliseconds, during which repeated feature flag
+	 * evaluations that resolve to the same result are deduplicated, so that only
+	 * a single `feature_flag` exposure span is emitted per unique
+	 * (flag key, value, variation, reason, context) within the window.
+	 *
+	 * This is useful for reducing exposure volume caused by frequent
+	 * re-evaluations (for example, React re-renders).
+	 *
+	 * Set to `0` (the default) to disable deduplication and emit an exposure
+	 * for every evaluation. Set a positive value to enable it.
+	 *
+	 * @default 0 (disabled)
+	 */
+	flagExposureDedupeWindowMillis?: number
+	/**
+	 * The maximum number of unique feature flag exposure keys tracked for
+	 * deduplication at once. When exceeded, the least recently recorded keys are
+	 * evicted to bound memory usage.
+	 *
+	 * @default 2000
+	 */
+	flagExposureDedupeMaxSize?: number
+}
+
+export type ProductAnalyticsEvents = {
+	/**
+	 * Specifies whether to record product analytics for clicks.
+	 * Requires the use of the @opentelemetry/instrumentation-user-interaction instrumentation.
+	 * @default true
+	 */
+	clicks?: boolean
+	/**
+	 * Specifies whether to record product analytics for page views.
+	 * Requires the use of the @opentelemetry/instrumentation-document-load instrumentation.
+	 * @default true
+	 */
+	pageViews?: boolean
+	/**
+	 * Specifies whether to record product analytics for custom events.
+	 * @default true
+	 */
+	trackEvents?: boolean
 }

@@ -109,7 +109,10 @@ export class RecordSDK implements Record {
 	isRunningOnHighlight!: boolean
 	/** Verbose project ID that is exposed to users. Legacy users may still be using ints. */
 	organizationID!: string
-	graphqlSDK!: Sdk
+	// ECMAScript-private (#) so the internal GraphQL SDK type — which
+	// references graphql-request / graphql — does not leak into the published
+	// declaration file and break consumer type-checking.
+	#graphqlSDK!: Sdk
 	events!: eventWithTime[]
 	sessionData!: SessionData
 	ready!: boolean
@@ -123,6 +126,7 @@ export class RecordSDK implements Record {
 	inlineImages!: boolean
 	inlineVideos!: boolean
 	inlineStylesheet!: boolean
+	styleSheetResyncInterval!: number
 	debugOptions!: DebugOptions
 	listeners!: listenerHandler[]
 	firstloadVersion!: string
@@ -295,6 +299,7 @@ export class RecordSDK implements Record {
 		this.inlineImages = options.inlineImages ?? this._isOnLocalHost
 		this.inlineVideos = options.inlineVideos ?? this._isOnLocalHost
 		this.inlineStylesheet = options.inlineStylesheet ?? this._isOnLocalHost
+		this.styleSheetResyncInterval = options.styleSheetResyncInterval ?? 2000
 		this.samplingStrategy = {
 			canvasFactor: 0.5,
 			canvasMaxSnapshotDimension: 360,
@@ -317,7 +322,7 @@ export class RecordSDK implements Record {
 		const client = new GraphQLClient(`${this._backendUrl}`, {
 			headers: {},
 		})
-		this.graphqlSDK = getSdk(client, getGraphQLRequestWrapper())
+		this.#graphqlSDK = getSdk(client, getGraphQLRequestWrapper())
 		this.environment = options.environment ?? 'production'
 		this.appVersion = options.appVersion
 		this.serviceName = options.serviceName ?? 'browser'
@@ -487,7 +492,7 @@ export class RecordSDK implements Record {
 				// wait for 'cross-origin iframe ready' message
 				await this._setupCrossOriginIframe()
 			} else {
-				const gr = await this.graphqlSDK.initializeSession({
+				const gr = await this.#graphqlSDK.initializeSession({
 					organization_verbose_id: this.organizationID,
 					enable_strict_privacy: this.privacySetting === 'strict',
 					privacy_setting: this.privacySetting,
@@ -643,6 +648,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 				inlineVideos: this.inlineVideos,
 				collectFonts: this.inlineImages,
 				inlineStylesheet: this.inlineStylesheet,
+				styleSheetResyncInterval: this.styleSheetResyncInterval,
 				plugins: [getRecordSequentialIdPlugin()],
 				logger:
 					(typeof this.options.debug === 'boolean' &&

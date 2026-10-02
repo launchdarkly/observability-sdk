@@ -1,0 +1,350 @@
+package com.example.androidobservability
+
+import android.app.Application
+import android.content.Intent
+import android.widget.Toast
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.launchdarkly.observability.interfaces.Metric
+import com.launchdarkly.observability.sdk.LDObserve
+import com.launchdarkly.sdk.ContextKind
+import com.launchdarkly.sdk.LDContext
+import com.launchdarkly.sdk.LDValue
+import com.launchdarkly.sdk.android.LDClient
+import io.opentelemetry.api.common.AttributeKey
+import io.opentelemetry.api.common.Attributes
+import io.opentelemetry.api.logs.Severity
+import io.opentelemetry.api.trace.Span
+import io.opentelemetry.context.Context
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import java.io.BufferedInputStream
+import java.net.HttpURLConnection
+import java.net.URL
+
+
+class MainActivityViewModel(application: Application) : AndroidViewModel(application) {
+
+    private var screenViewCounter = 0
+
+    fun triggerMetric() {
+        LDObserve.recordMetric(Metric("test-gauge", 50.0))
+    }
+
+    fun triggerHistogramMetric() {
+        LDObserve.recordHistogram(Metric("test-histogram", 15.0))
+    }
+
+    fun triggerCountMetric() {
+        LDObserve.recordCount(Metric("test-counter", 10.0))
+    }
+
+    fun triggerIncrementalMetric() {
+        LDObserve.recordIncr(Metric("test-incremental-counter", 12.0))
+    }
+
+    fun triggerUpDownCounterMetric() {
+        LDObserve.recordUpDownCounter(Metric("test-up-down-counter", 25.0))
+    }
+
+    fun triggerError() {
+        LDObserve.recordError(
+            Error("Android: Manual error womp womp", Error("The error that caused the other error.")),
+            Attributes.of(AttributeKey.stringKey("FakeAttribute"), "FakeVal")
+        )
+    }
+
+    /**
+     * Records an error thrown deep in an obfuscated multi-class call chain
+     * ([CheckoutDemo]). On a release (R8) build the frames are obfuscated; the
+     * backend retraces them via the Symbols Id Lane (the uploaded mapping.txt
+     * keyed by the symbols id the SDK reports).
+     */
+    fun triggerObfuscatedError() {
+        try {
+            CheckoutDemo.startCheckout("ord-${BuildConfig.VERSION_NAME}")
+        } catch (e: Error) {
+            LDObserve.recordError(
+                e,
+                Attributes.of(AttributeKey.stringKey("demo"), "symbols-id-lane-obfuscated-android")
+            )
+        }
+    }
+
+    fun triggerLog() {
+        // `recordLog` takes a plain map via `properties`, so no need to build OTel attributes.
+        LDObserve.recordLog(
+            "Test Log",
+            Severity.INFO,
+            properties = mapOf(
+                "test-string" to "maui",
+                "test-true" to true,
+                "test-false" to false,
+                "test-integer" to 42,
+                "test-long" to 9_000_000_000L,
+                "test-double" to 3.14,
+                "test-array" to listOf(3.14),
+                "test-nested" to mapOf("array" to listOf(1))
+            )
+        )
+    }
+
+    fun triggerCustomLog(
+        message: String,
+        severity: Severity = Severity.INFO,
+        attributes: Attributes = Attributes.empty()
+    ) {
+        if (message.isNotEmpty()) {
+            LDObserve.recordLog(
+                message = message,
+                severity = severity,
+                attributes = attributes
+            )
+        }
+    }
+
+    fun triggerLogWithContext(message: String) {
+        val text = message.ifEmpty { "Log with span context" }
+
+        val parentSpan = LDObserve.startSpan("parentSpan")
+        parentSpan.makeCurrent().use {
+            val context = Context.current()
+
+            Thread {
+                context.makeCurrent().use {
+                    val childSpan = LDObserve.startSpan("childSpan")
+                    childSpan.makeCurrent().use {
+                        // do work
+                        childSpan.end()
+                    }
+                }
+            }.start()
+        }
+        parentSpan.end()
+
+        viewModelScope.launch(Dispatchers.IO) {
+            val span = LDObserve.startSpan(
+                name = "log-context-demo",
+                attributes = Attributes.of(
+                    AttributeKey.stringKey("demo"), "log-with-context"
+                )
+            )
+            // Capture span context while still on the originating thread.
+            val capturedContext = span.makeCurrent().use { span.spanContext }
+            span.end()
+
+            // Simulate a detached thread where OTel context is lost automatically.
+            // Span.current() here returns INVALID, so we pass the captured context explicitly.
+            Thread {
+                Span.wrap(capturedContext).makeCurrent().use {
+                    val childSpan = LDObserve.startSpan("child of log-context-demo", Attributes.empty())
+                    childSpan.end()
+                }
+                LDObserve.recordLog(
+                    message = text,
+                    severity = Severity.WARN,
+                    attributes = Attributes.of(
+                        AttributeKey.stringKey("source"), "detached-thread-demo"
+                    ),
+                    spanContext = capturedContext
+                )
+            }.start()
+        }
+    }
+
+    fun triggerCustomSpan(spanName: String) {
+        if (spanName.isNotEmpty()) {
+            viewModelScope.launch(Dispatchers.IO) {
+                val customSpan = LDObserve.startSpan(
+                    name = spanName,
+                    properties = mapOf("custom_span" to "true")
+                )
+                customSpan.end()
+            }
+        }
+    }
+
+    fun triggerNestedSpans() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val newSpan0 = LDObserve.startSpan("NestedSpan", Attributes.empty())
+            newSpan0.makeCurrent().use {
+                val newSpan1 = LDObserve.startSpan("NestedSpan1", Attributes.empty())
+                newSpan1.makeCurrent().use {
+                    val newSpan2 = LDObserve.startSpan("NestedSpan2", Attributes.empty())
+                    newSpan2.makeCurrent().use {
+                        LDObserve.recordCount(Metric("test-counter", 10.0))
+                        LDObserve.recordLog("NestedLog", Severity.INFO, Attributes.empty())
+                        sendOkHttpRequest()
+                        sendURLRequest()
+                        newSpan2.end()
+                    }
+                    newSpan1.end()
+                }
+                newSpan0.end()
+            }
+        }
+    }
+
+    fun trackViaLdClient() {
+        // Records a `track` span automatically via the Observability afterTrack hook.
+        LDClient.get().trackData(
+            "track-via-ld-client",
+            LDValue.buildObject()
+                .put("test-string", "android")
+                .put("test-true", true)
+                .put("test-false", false)
+                .put("test-integer", 42)
+                .put("test-long", 9_000_000_000_123)
+                .put("test-double", 3.14)
+                .build()
+        )
+    }
+
+    fun trackViaLdObserve() {
+        // Records a `track` span directly through the Observability API. `track`
+        // takes a map so callers need not depend on `LDValue`.
+        LDObserve.track(
+            "track-via-ld-observe",
+            properties = mapOf(
+                "test-string" to "android",
+                "test-true" to true,
+                "test-false" to false,
+                "test-integer" to 42,
+                // A 64-bit value beyond Int32 range (e.g. epoch nanoseconds):
+                // the direct LDObserve APIs keep it as a long, unlike LDClient.track.
+                "test-long" to 9_000_000_000_123,
+                "test-double" to 3.14
+            )
+        )
+    }
+
+    fun trackNested() {
+        // A nested `track` payload following the Segment "Checkout Started"
+        // example from analytics-taxonomy.md (§4.2): scalar fields plus a
+        // `products` array of line-item objects.
+        LDObserve.track(
+            "checkout-started",
+            properties = mapOf(
+                "name" to "Checkout Started",
+                "order_id" to "ord_5521",
+                "value" to 72.0,
+                "currency" to "USD",
+                "products" to listOf(
+                    mapOf("product_id" to "SKU-1234", "quantity" to 2, "price" to 24.0),
+                    mapOf("product_id" to "SKU-9876", "quantity" to 1, "price" to 24.0)
+                )
+            )
+        )
+    }
+
+    fun trackScreenView() {
+        // Records a `screen_view` span manually (for screens not backed by a distinct Activity,
+        // e.g. Compose destinations). Activities are captured automatically.
+        val count = ++screenViewCounter
+        LDObserve.trackScreenView(
+            name = "Manual Screen $count",
+            screenClass = "MainActivity",
+            screenId = "manual-screen-$count",
+            category = "Demo",
+            properties = mapOf(
+                "source" to "manual-demo",
+                "index" to count
+            )
+        )
+    }
+
+    fun triggerCrash() {
+        throw RuntimeException("Android: Crash - failed to connect to bogus server.")
+    }
+
+    fun triggerHttpRequests() {
+        viewModelScope.launch(Dispatchers.IO) {
+            sendOkHttpRequest()
+            sendURLRequest()
+        }
+    }
+
+    fun identifyLDContext(contextKey: String = "test-context-key") {
+        val context = LDContext.builder(ContextKind.DEFAULT, contextKey)
+            .name("test-context-name")
+            .build()
+
+        LDClient.get().identify(context)
+    }
+
+    fun identifyUser() {
+        val userContext = LDContext.builder(ContextKind.DEFAULT, "single-userkey")
+            .name("Bob Bobberson")
+            .build()
+
+        LDClient.get().identify(userContext)
+    }
+
+    fun identifyAnonymous() {
+        val anonContext = LDContext.builder(ContextKind.DEFAULT, "anonymous-userkey")
+            .anonymous(true)
+            .build()
+
+        LDClient.get().identify(anonContext)
+    }
+
+    fun identifyMulti() {
+        val userContext = LDContext.builder(ContextKind.DEFAULT, "multi-username")
+            .name("multi-username")
+            .build()
+        val deviceContext = LDContext.builder(ContextKind.of("device"), "iphone")
+            .name("iphone")
+            .build()
+
+        val multiContext = LDContext.createMulti(userContext, deviceContext)
+        LDClient.get().identify(multiContext)
+    }
+
+    fun evaluateBooleanFlag(flagKey: String) {
+        if (flagKey.isNotEmpty()) {
+            val result = LDClient.get().boolVariation(flagKey, false)
+            Toast.makeText(getApplication(), "Flag $flagKey: $result", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(getApplication(), "Flag key cannot be empty", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun startForegroundService() {
+        val intent = Intent(getApplication(), ObservabilityForegroundService::class.java)
+        ContextCompat.startForegroundService(getApplication(), intent)
+    }
+
+    fun startBackgroundService() {
+        val intent = Intent(getApplication(), ObservabilityBackgroundService::class.java)
+        getApplication<Application>().startService(intent)
+    }
+
+    private fun sendOkHttpRequest() {
+        // Create HTTP client
+        val client = OkHttpClient()
+
+        // Build request
+        val request: Request = Request.Builder()
+            .url("https://www.google.com")
+            .build()
+
+        client.newCall(request).execute().use { response ->
+            println("Response code: " + response.code)
+            println("Response body: " + response.body?.string())
+        }
+    }
+
+    private fun sendURLRequest() {
+        val url = URL("https://www.android.com/")
+        val urlConnection = url.openConnection() as HttpURLConnection
+        try {
+            val output = BufferedInputStream(urlConnection.inputStream).bufferedReader().use { it.readText() }
+            println("URLRequest output: $output")
+        } finally {
+            urlConnection.disconnect()
+        }
+    }
+}

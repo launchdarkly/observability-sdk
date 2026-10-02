@@ -1,68 +1,70 @@
 package com.launchdarkly.observability.replay.plugin
 
 import com.launchdarkly.observability.BuildConfig
-import com.launchdarkly.observability.interfaces.LDExtendedInstrumentation
-import com.launchdarkly.observability.plugin.InstrumentationContributor
-import com.launchdarkly.observability.plugin.InstrumentationContributorManager
-import com.launchdarkly.observability.replay.ReplayInstrumentation
 import com.launchdarkly.observability.replay.ReplayOptions
 import com.launchdarkly.observability.sdk.LDObserve
-import com.launchdarkly.observability.sdk.LDReplay
 import com.launchdarkly.sdk.android.LDClient
 import com.launchdarkly.sdk.android.integrations.EnvironmentMetadata
 import com.launchdarkly.sdk.android.integrations.Hook
 import com.launchdarkly.sdk.android.integrations.Plugin
 import com.launchdarkly.sdk.android.integrations.PluginMetadata
-import timber.log.Timber
+import com.launchdarkly.sdk.android.integrations.RegistrationCompleteResult
 import java.util.Collections
+import java.util.logging.Logger
 
 /**
- * Session Replay plugin for the LaunchDarkly Android SDK.
+ * LDClient plugin adapter for Session Replay.
  *
- * This plugin depends on the Observability plugin being present and initialized first.
+ * Wraps [SessionReplayPluginImpl] so it can be registered as a [Plugin] with the LaunchDarkly
+ * Android Client SDK. Only loaded when using the LDClient integration path.
+ *
+ * This adapter is the only place that resolves the [com.launchdarkly.observability.client.ObservabilityContext]
+ * from the global [LDObserve.context]. The LDClient plugin lifecycle constructs plugins eagerly
+ * and only hands them dependencies at [register], so we can't constructor-inject the context here.
+ * Once we have it, we forward it to [SessionReplayPluginImpl] explicitly — keeping the global lookup
+ * confined to this boundary.
  */
 class SessionReplay(
-    private val options: ReplayOptions = ReplayOptions(),
-) : Plugin(), InstrumentationContributor {
+    options: ReplayOptions = ReplayOptions(),
+) : Plugin() {
 
-    private var cachedInstrumentations: List<LDExtendedInstrumentation>? = null
+    private val impl = SessionReplayPluginImpl(options)
+    private val sessionReplayHook = SessionReplayHook()
 
-    @Volatile
-    var replayInstrumentation: ReplayInstrumentation? = null
+    val sessionReplayService get() = impl.sessionReplayService
 
     override fun getMetadata(): PluginMetadata {
         return object : PluginMetadata() {
-            override fun getName(): String = PLUGIN_NAME
+            override fun getName(): String = SessionReplayPluginImpl.PLUGIN_NAME
             override fun getVersion(): String = BuildConfig.OBSERVABILITY_SDK_VERSION
         }
     }
 
     override fun register(client: LDClient, metadata: EnvironmentMetadata?) {
-        LDObserve.context?.let {
-            InstrumentationContributorManager.add(client, this)
-        } ?: run {
-            Timber.tag(TAG).e("Observability plugin is not initialized")
+        val obsContext = LDObserve.context ?: run {
+            logger.warning(
+                "Observability is not initialized; skipping SessionReplay registration. " +
+                    "Ensure the Observability plugin is registered before SessionReplay."
+            )
+            return
         }
+        impl.register(obsContext)
+        sessionReplayHook.delegate = impl.sessionReplayService
     }
 
-    override fun provideInstrumentations(): List<LDExtendedInstrumentation> = synchronized(this) {
-        val instrumentations = cachedInstrumentations ?: LDObserve.context?.let { context ->
-            val instrumentation = ReplayInstrumentation(options, context).also { replayInstrumentation = it }
-            listOf(instrumentation).also { cachedInstrumentations = it }
-        }.orEmpty()
-
-        replayInstrumentation?.let(LDReplay::init)
-        instrumentations
-    }
-
+    // Note: this hook is intentionally not wrapped in DedupingHook. Deduplication only
+    // suppresses evaluation stages, and [SessionReplayHook] implements identify only, which
+    // DedupingHook always forwards. Evaluation spans come from ObservabilityHook, which is
+    // wrapped there instead.
     override fun getHooks(metadata: EnvironmentMetadata?): MutableList<Hook> {
-        return Collections.singletonList(
-            SessionReplayHook(this)
-        )
+        return Collections.singletonList(sessionReplayHook)
     }
 
-    companion object {
-        const val PLUGIN_NAME = "@launchdarkly/session-replay-android"
-        private const val TAG = "SessionReplay"
+    override fun onPluginsReady(result: RegistrationCompleteResult?, metadata: EnvironmentMetadata?) {
+        impl.initialize()
+    }
+
+    private companion object {
+        private val logger = Logger.getLogger("SessionReplay")
     }
 }

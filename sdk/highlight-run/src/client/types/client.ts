@@ -1,5 +1,4 @@
 import { RequestResponsePair } from '../listeners/network-listener/utils/models'
-import type { EventName } from '@opentelemetry/instrumentation-user-interaction'
 
 export const ALL_CONSOLE_METHODS = [
 	'assert',
@@ -73,7 +72,10 @@ export type NetworkRecordingOptions = {
 	 */
 	networkBodyKeysToRedact?: string[]
 	/**
-	 * URLs to not record headers and bodies for.
+	 * URLs to not record headers and bodies for, and to not propagate trace
+	 * headers (e.g. `traceparent`) to. Each entry is matched as a
+	 * case-insensitive substring of the full request URL; a match suppresses
+	 * both recording and trace-header propagation for that request.
 	 * To disable recording headers and bodies for all URLs, set `recordHeadersAndBody` to `false`.
 	 * @default ['https://www.googleapis.com/identitytoolkit', 'https://securetoken.googleapis.com']
 	 */
@@ -141,7 +143,6 @@ export type NetworkRecordingOptions = {
 
 export type OtelOptions = {
 	instrumentations?: OtelInstrumentatonOptions
-	eventNames?: EventName[]
 }
 
 export type OtelInstrumentatonOptions = {

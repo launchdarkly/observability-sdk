@@ -1,7 +1,6 @@
 package com.launchdarkly.observability.network
 
 import com.launchdarkly.observability.sampling.SamplingConfig
-import kotlinx.serialization.json.JsonPrimitive
 
 /**
  * Service for fetching sampling configuration
@@ -11,7 +10,61 @@ class SamplingApiService(
 ) {
 
     companion object {
-        private const val GET_SAMPLING_CONFIG_QUERY_FILE_PATH = "graphql/GetSamplingConfigQuery.graphql"
+        private val GET_SAMPLING_CONFIG_QUERY = """
+            fragment MatchParts on MatchConfig {
+                regexValue
+                matchValue
+            }
+
+            query GetSamplingConfig(${'$'}organization_verbose_id: String!) {
+                sampling(organization_verbose_id: ${'$'}organization_verbose_id) {
+                    spans {
+                        name {
+                            ...MatchParts
+                        }
+                        attributes {
+                            key {
+                                ...MatchParts
+                            }
+                            attribute {
+                                ...MatchParts
+                            }
+                        }
+                        events {
+                            name {
+                                ...MatchParts
+                            }
+                            attributes {
+                                key {
+                                    ...MatchParts
+                                }
+                                attribute {
+                                    ...MatchParts
+                                }
+                            }
+                        }
+                        samplingRatio
+                    }
+                    logs {
+                        message {
+                            ...MatchParts
+                        }
+                        severityText {
+                            ...MatchParts
+                        }
+                        attributes {
+                            key {
+                                ...MatchParts
+                            }
+                            attribute {
+                                ...MatchParts
+                            }
+                        }
+                        samplingRatio
+                    }
+                }
+            }
+        """.trimIndent()
     }
 
     /**
@@ -21,19 +74,16 @@ class SamplingApiService(
      */
     suspend fun getSamplingConfig(organizationVerboseId: String): SamplingConfig? {
         try {
-            val variables = mapOf("organization_verbose_id" to JsonPrimitive(organizationVerboseId))
-            val response = graphqlClient.execute(
-                queryFileName = GET_SAMPLING_CONFIG_QUERY_FILE_PATH,
+            val variables = mapOf("organization_verbose_id" to organizationVerboseId)
+
+            return graphqlClient.execute(
+                query = GET_SAMPLING_CONFIG_QUERY,
                 variables = variables,
-                dataSerializer = SamplingResponse.serializer()
-            )
-
-            if (response.errors?.isNotEmpty() == true) {
-                return null
-            }
-
-            return response.data?.mapToEntity()
+                dataParser = SamplingResponse::fromJson
+            ).mapToEntity()
         } catch (e: Exception) {
+            // Sampling falls back to "sample everything" when the config cannot be read, so every failure
+            // is the same as an absent config here.
             println("Error fetching sampling config: ${e.message}")
             return null
         }

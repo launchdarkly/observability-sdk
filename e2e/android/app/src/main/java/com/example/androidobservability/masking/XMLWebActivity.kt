@@ -4,6 +4,8 @@ import android.annotation.SuppressLint
 import android.os.Bundle
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.FrameLayout
+import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.annotation.IdRes
 import com.example.androidobservability.R
@@ -22,8 +24,19 @@ class XMLWebActivity : ComponentActivity() {
 
         setupWebView(R.id.webview)
         setupWebView(R.id.customWebView)
-        setupGeckoWebView(R.id.geckoview)
-        setupGeckoWebView(R.id.customGeckoView)
+
+        setupLazyGeckoView(
+            labelId = R.id.geckoLabel,
+            containerId = R.id.geckoContainer,
+            factory = { GeckoView(this) },
+            label = "org.mozilla.geckoview.GeckoView (device)"
+        )
+        setupLazyGeckoView(
+            labelId = R.id.customGeckoLabel,
+            containerId = R.id.customGeckoContainer,
+            factory = { CustomGeckoView(this) },
+            label = "CustomGeckoView (device)"
+        )
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -34,16 +47,41 @@ class XMLWebActivity : ComponentActivity() {
         webView.loadUrl(url)
     }
 
-    private fun setupGeckoWebView(@IdRes geckoViewId: Int) {
-        val view = findViewById<GeckoView?>(geckoViewId)
+    private fun setupLazyGeckoView(
+        @IdRes labelId: Int,
+        @IdRes containerId: Int,
+        factory: () -> GeckoView,
+        label: String
+    ) {
+        val labelView = findViewById<TextView>(labelId)
+        val container = findViewById<FrameLayout>(containerId)
+
+        labelView.setOnClickListener { loadGeckoView(container, factory(), label, labelView) }
+        container.setOnClickListener { loadGeckoView(container, factory(), label, labelView) }
+    }
+
+    private fun loadGeckoView(
+        container: FrameLayout,
+        geckoView: GeckoView,
+        label: String,
+        labelView: TextView
+    ) {
+        container.setOnClickListener(null)
+        labelView.setOnClickListener(null)
+        labelView.text = label
+
         val session = GeckoSession()
-
         session.setContentDelegate(object : ContentDelegate {})
-
-        GeckoRuntime.getDefault(application).let {
-            session.open(it)
-        }
-        view?.setSession(session)
+        GeckoRuntime.getDefault(application).let { session.open(it) }
+        geckoView.setSession(session)
         session.loadUri(url)
+
+        container.addView(
+            geckoView,
+            FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+        )
     }
 }

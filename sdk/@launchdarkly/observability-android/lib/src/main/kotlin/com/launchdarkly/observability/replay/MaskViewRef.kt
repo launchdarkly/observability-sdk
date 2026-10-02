@@ -29,6 +29,16 @@ sealed interface MaskViewRef {
                 )
             }
     }
+
+    companion object {
+        /** Java-friendly factory matching views by exact [clazz]. Equivalent to [view]. */
+        @JvmStatic
+        fun ofClass(clazz: Class<*>): MaskViewRef = FromClass(clazz)
+
+        /** Java-friendly factory matching views by fully-qualified class [name]. Equivalent to [view]. */
+        @JvmStatic
+        fun ofName(name: String): MaskViewRef = FromName(name)
+    }
 }
 
 fun view(clazz: Class<*>): MaskViewRef = MaskViewRef.FromClass(clazz)

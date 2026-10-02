@@ -1,0 +1,302 @@
+using LaunchDarkly.Observability;
+using LaunchDarkly.Sdk;
+using LaunchDarkly.Sdk.Client;
+using LaunchDarkly.SessionReplay;
+using OpenTelemetry.Trace;
+
+namespace MauiSample9;
+
+public partial class MainPage : ContentPage
+{
+	private readonly HttpClient _httpClient = new();
+
+	public MainPage()
+	{
+		InitializeComponent();
+	}
+
+	// --- Masking Navigation ---
+
+	private async void OnMenuSelectionChanged(object? sender, SelectionChangedEventArgs e)
+	{
+		if (e.CurrentSelection == null || e.CurrentSelection.Count == 0)
+			return;
+
+		var selected = e.CurrentSelection[0] as string;
+		if (string.IsNullOrEmpty(selected))
+			return;
+
+		switch (selected)
+		{
+			case "Credit Card":
+				await Shell.Current.GoToAsync(nameof(CreditCardPage));
+				break;
+			case "Number Pad":
+				await Shell.Current.GoToAsync(nameof(NumberPadPage));
+				break;
+			case "Dialogs":
+				await Shell.Current.GoToAsync(nameof(DialogsPage));
+				break;
+		}
+
+		if (sender is CollectionView cv)
+			cv.SelectedItem = null;
+	}
+
+	// --- Session Replay ---
+
+	private void OnSessionReplayToggled(object? sender, ToggledEventArgs e)
+	{
+		LDReplay.IsEnabled = e.Value;
+
+		Console.WriteLine($"Session Replay toggled: {e.Value}");
+	}
+
+	// --- Identify ---
+
+	private void OnIdentifyUserClicked(object? sender, EventArgs e)
+	{
+		var userContext = Context.Builder("single-userkey")
+			.Name("Bob Smith")
+			.Build();
+		_ = Task.Run(async () => await LdClient.Instance.IdentifyAsync(userContext));
+
+		Console.WriteLine("Identified as User");
+	}
+
+	private void OnIdentifyMultiClicked(object? sender, EventArgs e)
+	{
+		var userContext = Context.Builder("multi-username")
+			.Name("multi-username")
+			.Build();
+		var deviceContext = Context.Builder(ContextKind.Of("device"), "iphone")
+			.Name("iphone")
+			.Build();
+
+		var multiContext = Context.MultiBuilder()
+			.Add(userContext)
+			.Add(deviceContext)
+			.Build();
+
+		LdClient.Instance.Identify(multiContext, TimeSpan.FromSeconds(5));
+		Console.WriteLine("Identified as Multi");
+	}
+
+	private void OnIdentifyAnonClicked(object? sender, EventArgs e)
+	{
+		var anonContext = Context.Builder("anonymous-userkey")
+			.Anonymous(true)
+			.Build();
+
+		LdClient.Instance.Identify(anonContext, TimeSpan.FromSeconds(5));
+		Console.WriteLine("Identified as Anonymous");
+	}
+
+	// --- Instrumentation ---
+
+	private async void OnTriggerHttpRequestClicked(object? sender, EventArgs e)
+	{
+		try
+		{
+			var response = await _httpClient.GetAsync("https://www.google.com");
+			Console.WriteLine($"HTTP Response: {response.StatusCode}");
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"HTTP Request failed: {ex.Message}");
+		}
+	}
+
+	private void OnTriggerCrashClicked(object? sender, EventArgs e)
+	{
+		throw new InvalidOperationException(".NET MAUI: Crash - failed to connect to bogus server.");
+	}
+
+	// --- Metrics ---
+
+	private void OnMetricClicked(object? sender, EventArgs e)
+	{
+		LDObserve.RecordMetric("test-gauge", 50.0);
+		Console.WriteLine("Metric (gauge) triggered");
+	}
+
+	private void OnHistogramClicked(object? sender, EventArgs e)
+	{
+		LDObserve.RecordHistogram("test-histogram", 15.0);
+		Console.WriteLine("Histogram triggered");
+	}
+
+	private void OnCountClicked(object? sender, EventArgs e)
+	{
+		LDObserve.RecordCount("test-counter", 10.0);
+		Console.WriteLine("Count triggered");
+	}
+
+	private void OnIncrementalClicked(object? sender, EventArgs e)
+	{
+		LDObserve.RecordIncr("test-incremental-counter", 12.0);
+		Console.WriteLine("Incremental triggered");
+	}
+
+	private void OnUpDownCounterClicked(object? sender, EventArgs e)
+	{
+		LDObserve.RecordUpDownCounter("test-up-down-counter", 25.0);
+		Console.WriteLine("UpDownCounter triggered");
+	}
+
+	// --- Customer API ---
+
+	private void OnTriggerErrorClicked(object? sender, EventArgs e)
+	{
+		var innerException = new InvalidOperationException("The error that caused the other error.");
+		var exception = new Exception(".NET MAUI: Manual error womp womp", innerException);
+		LDObserve.RecordError(exception);
+		Console.WriteLine("Error triggered");
+	}
+
+	private void OnTriggerLogClicked(object? sender, EventArgs e)
+	{
+		LDObserve.RecordLog(
+			"Test Log",
+			Severity.Info,
+			new Dictionary<string, object?>
+			{
+				{ "test-string", "maui" },
+				{ "test-true", true },
+				{ "test-false", false },
+				{ "test-integer", 42 },
+				{ "test-double", 3.14 },
+				{ "test-array", new double[] { 3.14, 6.28 } },
+				{ "test-nested", new Dictionary<string, object?> {
+					{ "nested-string", "maui2" },
+					{ "nested-true", true },
+					{ "nested-false", false },
+					{ "nested-integer", 420 },
+					{ "nested-double", 3.14159 },
+					{ "nested-array", new double[] { 3.14159, 6.28318 } }}
+				}
+			}
+		);
+		Console.WriteLine("Log triggered");
+	}
+
+	private async void OnTriggerLogWithContextClicked(object? sender, EventArgs e)
+	{
+		// distributed tracing - capture the current span context and pass it along with the log so it can be correlated in the backend
+		var span = LDObserve.StartActiveSpan("log-context-demo");
+		span.SetAttribute("demo", "log-with-context");
+		var capturedContext = span.Context;
+		span.End();
+
+		await Task.Run(() =>
+		{
+			LDObserve.RecordLog(
+				"Log with span context",
+				Severity.Warn,
+				new Dictionary<string, object?> { { "source", "detached-task-demo" } },
+				spanContext: capturedContext);
+		});
+
+		Console.WriteLine("Log with Context triggered");
+	}
+
+	private void OnSendCustomLogClicked(object? sender, EventArgs e)
+	{
+		var message = CustomLogEntry.Text;
+		if (!string.IsNullOrEmpty(message))
+		{
+			LDObserve.RecordLog(message, Severity.Info);
+			Console.WriteLine($"Custom log sent: {message}");
+		}
+	}
+
+	private async void OnTriggerNestedSpansClicked(object? sender, EventArgs e)
+	{
+		// distributed tracing - create nested spans to demonstrate parent-child relationships and context propagation, including across async boundaries
+		await Task.Run(async () =>
+		{
+			using var span0 = LDObserve.StartActiveSpan("NestedSpan");
+			using var span1 = LDObserve.StartActiveSpan("NestedSpan1");
+			using var span2 = LDObserve.StartActiveSpan("NestedSpan2");
+
+			LDObserve.RecordLog("NestedLog", Severity.Info);
+
+			try
+			{
+				await _httpClient.GetAsync("https://www.google.com");
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine($"HTTP Request failed: {ex.Message}");
+			}
+		});
+
+		Console.WriteLine("Nested Spans triggered");
+	}
+
+	private void OnTriggerSequentialSpansClicked(object? sender, EventArgs e)
+	{
+		using (var span1 = LDObserve.StartRootSpan("SequentialSpan1"))
+		{
+			span1.SetAttribute("sequence", "1");
+		}
+
+		using (var span2 = LDObserve.StartRootSpan("SequentialSpan2"))
+		{
+			span2.SetAttribute("sequence", "2");
+		}
+
+		using (var span3 = LDObserve.StartRootSpan("SequentialSpan3"))
+		{
+			span3.SetAttribute("sequence", "3");
+		}
+
+		Console.WriteLine("Sequential independent spans triggered");
+	}
+
+	private void OnSendCustomSpanClicked(object? sender, EventArgs e)
+	{
+		var spanName = CustomSpanEntry.Text;
+		if (!string.IsNullOrEmpty(spanName))
+		{
+			using var span = LDObserve.StartActiveSpan(spanName);
+			span.SetAttribute("custom_span", "true");
+			span.AddEvent("cache.miss");
+			span.AddEvent("retry.started");
+			span.AddEvent("download.completed");
+			Console.WriteLine($"Custom span sent: {spanName}");
+		}
+	}
+
+	private void OnEvaluateFlagClicked(object? sender, EventArgs e)
+	{
+		var flagKey = FlagKeyEntry.Text;
+		if (string.IsNullOrEmpty(flagKey))
+		{
+			DisplayAlert("Flag", "Flag key cannot be empty", "OK");
+			return;
+		}
+
+		var result = LdClient.Instance.BoolVariation(flagKey, false);
+		DisplayAlert("Flag", $"{flagKey}: {result}", "OK");
+		Console.WriteLine($"Flag {flagKey}: {result}");
+	}
+
+	private void OnStartPollingClicked(object? sender, EventArgs e)
+	{
+		using var span = LDObserve.StartActiveSpan("StartPolling");
+		var parentContext = span.Context;
+
+		var timer = Application.Current!.Dispatcher.CreateTimer();
+		timer.Interval = TimeSpan.FromSeconds(30);
+		timer.Tick += (s, e) =>
+		{
+			// Timer callbacks run on the UI thread with no ambient span context
+			using var pollSpan = LDObserve.StartActiveSpan("PollTick", parentContext);
+			pollSpan.SetAttribute("tick.time", DateTime.UtcNow.ToString("O"));
+
+			// ... polling logic ...
+		};
+		timer.Start();
+	}
+}

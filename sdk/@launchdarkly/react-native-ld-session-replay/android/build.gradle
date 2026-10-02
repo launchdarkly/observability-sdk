@@ -1,0 +1,110 @@
+buildscript {
+  ext.getExtOrDefault = {name ->
+    return rootProject.ext.has(name) ? rootProject.ext.get(name) : project.properties['SessionReplayReactNative_' + name]
+  }
+
+  repositories {
+    google()
+    mavenCentral()
+  }
+
+  dependencies {
+    // AGP 8.7.2 pulls io.grpc:grpc-netty:1.57.0, which pins netty-codec-http2
+    // at 4.1.93.Final (CVE-2023-44487). The BOM aligns every io.netty module.
+    classpath platform("io.netty:netty-bom:4.1.137.Final")
+    classpath "com.android.tools.build:gradle:8.7.2"
+    // noinspection DifferentKotlinGradleVersion
+    classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${getExtOrDefault('kotlinVersion')}"
+  }
+}
+
+
+apply plugin: "com.android.library"
+apply plugin: "kotlin-android"
+
+apply plugin: "com.facebook.react"
+
+def getExtOrIntegerDefault(name) {
+  return rootProject.ext.has(name) ? rootProject.ext.get(name) : (project.properties["SessionReplayReactNative_" + name]).toInteger()
+}
+
+def isNewArchitectureEnabled() {
+  return project.hasProperty("newArchEnabled") && project.getProperty("newArchEnabled") == "true"
+}
+
+android {
+  namespace "com.sessionreplayreactnative"
+
+  compileSdkVersion getExtOrIntegerDefault("compileSdkVersion")
+
+  defaultConfig {
+    minSdkVersion getExtOrIntegerDefault("minSdkVersion")
+    targetSdkVersion getExtOrIntegerDefault("targetSdkVersion")
+    buildConfigField "boolean", "IS_NEW_ARCHITECTURE_ENABLED", isNewArchitectureEnabled().toString()
+  }
+
+  buildFeatures {
+    buildConfig true
+  }
+
+  buildTypes {
+    release {
+      minifyEnabled false
+    }
+  }
+
+  lintOptions {
+    disable "GradleCompatible"
+  }
+
+  compileOptions {
+    sourceCompatibility JavaVersion.VERSION_1_8
+    targetCompatibility JavaVersion.VERSION_1_8
+  }
+
+  testOptions {
+    unitTests {
+      returnDefaultValues = true
+      all {
+        useJUnitPlatform()
+      }
+    }
+  }
+
+  sourceSets {
+    main {
+      if (isNewArchitectureEnabled()) {
+        java.srcDirs += [
+          "generated/java",
+          "generated/jni"
+        ]
+      } else {
+        java.srcDirs += [
+          "generated/java"
+        ]
+      }
+    }
+  }
+}
+
+repositories {
+  mavenCentral()
+  google()
+}
+
+def kotlin_version = getExtOrDefault("kotlinVersion")
+
+dependencies {
+  implementation "com.facebook.react:react-android"
+  implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+  implementation "com.launchdarkly:launchdarkly-observability-android:0.69.0"
+  implementation "com.launchdarkly:launchdarkly-android-client-sdk:5.14.0"
+  // compileOnly: OTel Attributes appears in ObservabilityOptions parameter types; provided at
+  // runtime transitively through launchdarkly-observability-android.
+  compileOnly "io.opentelemetry:opentelemetry-api:1.51.0"
+
+  testImplementation platform("org.junit:junit-bom:5.13.4")
+  testImplementation "org.junit.jupiter:junit-jupiter"
+  testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+  testImplementation "io.mockk:mockk:1.14.5"
+}

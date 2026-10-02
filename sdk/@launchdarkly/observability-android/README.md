@@ -10,8 +10,11 @@
 
 The Android observability plugin automatically instruments:
 - **Activity Lifecycle**: App lifecycle events and transitions
+- **App Lifecycle**: Emits `app_foreground` / `app_background` spans on foreground/background transitions, plus matching Session Replay `Foreground` / `Background` breadcrumbs (gate the span via `analytics.appLifecycle`)
+- **Screen Views**: Emits a `screen_view` span for each Android `Activity` that is shown
+- **Taps**: Optionally emits a `click` span for each tap (enable via `analytics.taps`)
 - **HTTP Requests**: OkHttp and HttpURLConnection requests (requires setup of ByteBuddy compile time plugin and additional dependencies)
-- **Crash Reporting**: Automatic crash reporting and stack traces
+- **Crash Reporting**: Automatic crash reporting and stack traces, deobfuscated for release builds (see [Deobfuscating Release Stack Traces](#deobfuscating-release-stack-traces))
 - **Feature Flag Evaluations**: Evaluation events added to your spans.
 - **Session Management**: User session tracking and background timeout handling
 
@@ -67,6 +70,51 @@ class MyApplication : Application() {
 }
 ```
 
+<details>
+<summary>Java</summary>
+
+The SDK is written in Kotlin but is fully usable from Java. `Observability` and `SessionReplay`
+accept the same options objects; use the `*.builder()` factories described below to configure them.
+
+```java
+import com.launchdarkly.observability.plugin.Observability;
+import com.launchdarkly.sdk.ContextKind;
+import com.launchdarkly.sdk.LDContext;
+import com.launchdarkly.sdk.android.Components;
+import com.launchdarkly.sdk.android.LDClient;
+import com.launchdarkly.sdk.android.LDConfig;
+import com.launchdarkly.sdk.android.integrations.Plugin;
+
+import java.util.Collections;
+
+public class MyApplication extends Application {
+    @Override
+    public void onCreate() {
+        super.onCreate();
+
+        String mobileKey = "your-mobile-key";
+
+        LDConfig ldConfig = new LDConfig.Builder(LDConfig.Builder.AutoEnvAttributes.Enabled)
+                .mobileKey(mobileKey)
+                .plugins(
+                        Components.plugins().setPlugins(
+                                Collections.<Plugin>singletonList(
+                                        new Observability(this, mobileKey)
+                                )
+                        )
+                )
+                .build();
+
+        LDContext context = LDContext.builder(ContextKind.DEFAULT, "user-key")
+                .build();
+
+        LDClient.init(this, ldConfig, context);
+    }
+}
+```
+
+</details>
+
 ### Configure additional instrumentations
 
 To enable HTTP request instrumentation and user interaction instrumentation, add the following plugin and dependencies to your top level application's Gradle file.
@@ -99,6 +147,7 @@ import com.launchdarkly.observability.api.ObservabilityOptions
 import com.launchdarkly.sdk.android.LDAndroidLogging
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
+import kotlin.time.Duration.Companion.minutes
 
 val mobileKey = "your-mobile-key"
 
@@ -109,6 +158,7 @@ val observabilityPlugin = Observability(
         serviceName = "my-android-app",
         serviceVersion = "1.0.0",
         debug = true,
+        sessionBackgroundTimeout = 30.minutes,
         logAdapter = LDAndroidLogging.adapter(),
         resourceAttributes = Attributes.of(
             AttributeKey.stringKey("environment"), "production",
@@ -121,12 +171,62 @@ val observabilityPlugin = Observability(
 )
 ```
 
+<details>
+<summary>Java</summary>
+
+From Java, build `ObservabilityOptions` with `ObservabilityOptions.builder()` instead of the Kotlin
+constructor (Java cannot omit Kotlin default parameters). Each setter defaults to the same value as
+the constructor, so set only what you need. Options typed as a Kotlin `Duration` — such as
+`sessionBackgroundTimeout` — have a Java-friendly millis overload (`sessionBackgroundTimeoutMillis(long)`).
+
+```java
+import com.launchdarkly.observability.api.ObservabilityOptions;
+import com.launchdarkly.observability.plugin.Observability;
+import com.launchdarkly.sdk.android.LDAndroidLogging;
+import io.opentelemetry.api.common.AttributeKey;
+import io.opentelemetry.api.common.Attributes;
+
+import java.util.Collections;
+
+String mobileKey = "your-mobile-key";
+
+Observability observabilityPlugin = new Observability(
+        this,
+        mobileKey,
+        ObservabilityOptions.builder()
+                .serviceName("my-android-app")
+                .serviceVersion("1.0.0")
+                .debug(true)
+                // sessionBackgroundTimeout is a Kotlin Duration; use the millis overload from Java.
+                .sessionBackgroundTimeoutMillis(java.util.concurrent.TimeUnit.MINUTES.toMillis(30))
+                .logAdapter(LDAndroidLogging.adapter())
+                .resourceAttributes(Attributes.of(
+                        AttributeKey.stringKey("environment"), "production",
+                        AttributeKey.stringKey("team"), "mobile"
+                ))
+                .customHeaders(Collections.singletonMap("X-Custom-Header", "custom-value"))
+                .build()
+);
+```
+
+</details>
+
 Additional `ObservabilityOptions` settings:
 
+- `sessionBackgroundTimeout`: How long the app can stay backgrounded before the current session ends (defaults to 15 minutes). In Kotlin this is a `kotlin.time.Duration` (e.g. `30.minutes`). From Java, where `Duration` is awkward to construct, the builder exposes `sessionBackgroundTimeoutMillis(long)` instead.
 - `logsApiLevel`: Minimum log severity to export (defaults to `INFO`). Set to `ObservabilityOptions.LogLevel.NONE` to disable log exporting.
 - `tracesApi`: Controls trace recording (defaults to enabled). Use `ObservabilityOptions.TracesApi.disabled()` to disable all tracing, or set `includeErrors`/`includeSpans`.
 - `metricsApi`: Controls metric export (defaults to enabled). Use `ObservabilityOptions.MetricsApi.disabled()` to disable metrics.
-- `instrumentations`: Enables/disables specific automatic instrumentations like `crashReporting`, `activityLifecycle`, and `launchTime`.
+- `instrumentations`: Enables/disables specific automatic instrumentations:
+  - `crashReporting` (default `true`): report uncaught exceptions as errors.
+  - `launchTime` (default `false`): record application startup time as metrics.
+  - `userTaps` (default `true`): run the tap-detection machinery. Disabling `userTaps` stops tap detection entirely, so no `click` spans are emitted regardless of `analytics.taps`.
+  - `screens` (default `true`): automatically detect screen changes from Android `Activity` lifecycle callbacks. This drives the `screen_view` span (gated separately by `analytics.screenViews`) and Session Replay `Navigate` events.
+- `analytics`: Enables/disables analytics telemetry, emitted as OpenTelemetry spans:
+  - `taps` (default `true`): publish a `click` span for each detected tap. Tap detection is governed by `instrumentations.userTaps`; this flag only controls publishing the span.
+  - `trackEvents` (default `true`): emit a `track` span when a custom event is tracked, either automatically via the LaunchDarkly `afterTrack` hook (`LDClient.track(...)`) or manually via `LDObserve.track(...)`.
+  - `screenViews` (default `true`): emit a `screen_view` span when a screen is shown. This only gates the span; screen *detection* (and Session Replay `Navigate` events) is controlled by `instrumentations.screens`.
+  - `appLifecycle` (default `true`): emit app-lifecycle spans as the app moves between states: `app_foreground` (with `event.lifecycle_state = foreground`) when it enters the foreground, and `app_background` (with `event.lifecycle_state = background`) when it enters the background. This flag only gates the span; the matching Session Replay `Foreground` / `Background` breadcrumbs are emitted regardless.
 
 Example:
 
@@ -137,11 +237,89 @@ val options = ObservabilityOptions(
     metricsApi = ObservabilityOptions.MetricsApi.disabled(),
     instrumentations = ObservabilityOptions.Instrumentations(
         crashReporting = false,
-        activityLifecycle = true,
-        launchTime = true
+        launchTime = true,
+        screens = true
+    ),
+    analytics = ObservabilityOptions.Analytics(
+        taps = true,
+        trackEvents = true,
+        screenViews = true,
+        appLifecycle = true
     )
 )
 ```
+
+<details>
+<summary>Java</summary>
+
+The nested option types (`TracesApi`, `Analytics`, `Instrumentations`) each expose a `builder()` as
+well; `MetricsApi` keeps its `enabled()` / `disabled()` factories.
+
+```java
+import com.launchdarkly.observability.api.ObservabilityOptions;
+
+ObservabilityOptions options = ObservabilityOptions.builder()
+        .logsApiLevel(ObservabilityOptions.LogLevel.WARN)
+        .tracesApi(ObservabilityOptions.TracesApi.builder()
+                .includeErrors(true)
+                .includeSpans(false)
+                .build())
+        .metricsApi(ObservabilityOptions.MetricsApi.disabled())
+        .instrumentations(ObservabilityOptions.Instrumentations.builder()
+                .crashReporting(false)
+                .launchTime(true)
+                .screens(true)
+                .build())
+        .analytics(ObservabilityOptions.Analytics.builder()
+                .taps(true)
+                .trackEvents(true)
+                .screenViews(true)
+                .build())
+        .build();
+```
+
+</details>
+
+### Tracking Screen Views
+
+The SDK emits a `screen_view` span (following the analytics taxonomy `event.*` namespace) whenever a screen is shown. Each `screen_view` also resolves `event.previous_screen` from a shared navigation stack and broadcasts a Session Replay `Navigate` event.
+
+#### Automatic capture (Activities)
+
+When `instrumentations.screens` is enabled (the default), every Android `Activity` is captured on resume. By default the screen name is derived by cleaning the class name (`ProfileActivity` → `Profile`), and `event.screen_class` / `event.screen_id` are populated from the activity class.
+
+To customize the reported name or category, implement `LDScreenNameProvider` on your `Activity`:
+
+```kotlin
+import com.launchdarkly.observability.client.screen.LDScreenNameProvider
+
+class CheckoutActivity : ComponentActivity(), LDScreenNameProvider {
+    override val ldScreenName: String = "Checkout"
+    override val ldScreenCategory: String = "Commerce"
+}
+```
+
+#### Manual capture (Fragments / Compose)
+
+Screens that aren't backed by a distinct `Activity` (Fragments, Jetpack Compose destinations) won't be captured automatically. Report them manually with `LDObserve.trackScreenView`:
+
+```kotlin
+import com.launchdarkly.observability.sdk.LDObserve
+
+LDObserve.trackScreenView(
+    name = "Profile",
+    screenClass = "ProfileFragment",
+    screenId = "com.example.app.ProfileFragment",
+    category = "Account"
+)
+```
+
+A single call per appearance is sufficient regardless of capture mode — `event.previous_screen` is resolved through the shared stack, which handles re-appearance and back-navigation.
+
+#### Decoupling detection from the span
+
+- `instrumentations.screens` controls automatic screen *detection*. It drives both the automatic `screen_view` span and the Session Replay `Navigate` event.
+- `analytics.screenViews` only gates the `screen_view` span. Detection and the `Navigate` broadcast are independent of this flag, and manual `trackScreenView(...)` still works when `screens` is disabled.
 
 ### Recording Observability Data
 
@@ -161,13 +339,13 @@ LDObserve.recordIncr(Metric("page_views", 1.0))
 LDObserve.recordHistogram(Metric("response_time", 150.0))
 LDObserve.recordUpDownCounter(Metric("active_connections", 1.0))
 
-// Record logs
+// Record logs — pass attributes as a plain map via `properties`.
 LDObserve.recordLog(
     "User performed action",
     Severity.INFO,
-    Attributes.of(
-        AttributeKey.stringKey("user_id"), "12345",
-        AttributeKey.stringKey("action"), "button_click"
+    properties = mapOf(
+        "user_id" to "12345",
+        "action" to "button_click"
     )
 )
 
@@ -183,16 +361,123 @@ LDObserve.recordError(
 // Create spans for tracing
 val span = LDObserve.startSpan(
     "api_request",
-    Attributes.of(
-        AttributeKey.stringKey("endpoint"), "/api/users",
-        AttributeKey.stringKey("method"), "GET"
+    properties = mapOf(
+        "endpoint" to "/api/users",
+        "method" to "GET"
     )
 )
 span.makeCurrent().use {
     // Your code here
 }
 span.end()
+
+// Record a custom track event as a `track` span.
+// (Calling LDClient.track(...) records the same span automatically via the afterTrack hook.)
+LDObserve.track(
+    "checkout_completed",
+    properties = mapOf("currency" to "USD"),
+    metricValue = 42.0
+)
+
+// Record a `screen_view` span for screens not backed by a distinct Activity
+// (e.g. Fragments or Compose destinations). Activities are captured automatically.
+LDObserve.trackScreenView(
+    name = "Profile",
+    screenClass = "ProfileFragment",
+    category = "Account",
+    properties = mapOf("tab" to "overview")
+)
 ```
+
+`recordLog`, `startSpan`, `track`, and `trackScreenView` accept attributes/data as a
+plain Kotlin map via the `properties` parameter — pass `String`, `Boolean`, `Int`,
+`Long`, `Double`, lists, and nested maps directly, with no need to build OpenTelemetry
+`Attributes`. The `Attributes` overloads remain available when you need precise
+OpenTelemetry typing (as shown for `recordError` above). For `trackScreenView`, custom
+properties are applied at lower precedence than the reserved `event.*` taxonomy fields,
+so they can never clobber them.
+
+### Deobfuscating Release Stack Traces
+
+R8 shrinks and obfuscates release builds, so a crash or a recorded error arrives naming
+`a.b.c(SourceFile:5)` instead of your classes, methods, and lines. Upload the `mapping.txt`
+R8 produced for the build and LaunchDarkly restores the original names and line numbers,
+expands frames the compiler inlined, and — if you opt in — shows the source around each one.
+
+There is nothing to add to your build script. Keep line numbers, tell the SDK which version
+it is running, and upload the mapping after each release build.
+
+#### 1. Keep line numbers
+
+R8 discards the metadata a stack trace is retraced from unless it is asked to keep it. In
+your app's `proguard-rules.pro`:
+
+```proguard
+-keepattributes SourceFile,LineNumberTable
+```
+
+Do not add `-renamesourcefileattribute`. R8 uses that attribute to stamp each class with the
+identity of the mapping produced for the build, which is how LaunchDarkly tells one build's
+mapping from another's — including two builds of the same version. Overriding it is
+supported; matching then falls back to the app version below.
+
+#### 2. Report the app version
+
+Set `serviceVersion` to the version you release, and upload the mapping under the same
+string:
+
+```kotlin
+val observabilityPlugin = Observability(
+    application = this@MyApplication,
+    mobileKey = mobileKey,
+    options = ObservabilityOptions(
+        serviceVersion = BuildConfig.VERSION_NAME,
+    )
+)
+```
+
+`BuildConfig.VERSION_NAME` is generated only when the app sets `buildFeatures { buildConfig = true }`;
+otherwise pass the version however your build already exposes it.
+
+#### 3. Upload the mapping
+
+After a release build, from your project root:
+
+```bash
+ldcli symbols upload --type android --project <project-key> --access-token <token>
+```
+
+The mapping is found under `app/build/outputs/`, and the version is read from the build
+output when you don't pass `--app-version`. It is safe to run on every build: a mapping
+LaunchDarkly already has is not uploaded again, and `--no-skip-existing` sends one anyway.
+
+To also see the source around each frame on the errors page, add `--include-sources`. This
+uploads the `.java` and `.kt` files the mapping refers to, and they are stored in
+LaunchDarkly; narrow what is collected with `--source-path`.
+
+#### In CI
+
+Upload from the job that builds the release, so a mapping exists before the build it belongs
+to reaches anyone:
+
+```yaml
+- run: ./gradlew :app:bundleRelease
+- run: |
+    ldcli symbols upload \
+      --type android \
+      --project ${{ vars.LD_PROJECT_KEY }} \
+      --access-token ${{ secrets.LD_ACCESS_TOKEN }}
+```
+
+#### If frames are still obfuscated
+
+- **Was the mapping uploaded for that build?** A mapping is specific to one R8 run: rebuilding
+  the same version produces a different one, and only the uploaded mapping can retrace the
+  crashes of the build it came from.
+- **Do the versions agree?** When a build is matched by version rather than by R8's stamp,
+  `serviceVersion` has to be exactly the `--app-version` the mapping was uploaded under.
+- **Is the build actually obfuscated?** Debug builds usually are not, and their traces arrive
+  readable with nothing to retrace.
 
 ### Session Replay
 
@@ -240,9 +525,47 @@ LDReplay.start()
 
 Call `LDReplay.stop()` to pause recording.
 
+`LDReplay.start()` returns a `SessionReplayStartResult` reporting whether recording began, and why not when it
+didn't — `isRunning` collapses it to a boolean. Useful when a replay you expected never shows up in the
+dashboard.
+
+`sampleRate` is evaluated once per enable cycle, so a session it excluded stays excluded until
+`LDReplay.stop()` resets the decision. To record regardless — when reproducing a bug, for instance — pass
+`LDReplay.start(ignoreSampling = true)`.
+
+Recording can also end on its own: if LaunchDarkly refuses the session — for example when session replay is
+not available for the environment — the SDK stops capturing for the rest of the launch, and
+`LDReplay.isEnabled` reports `false`. The next launch withholds screenshots until the backend accepts a
+session again, so a refusal is not permanent.
+
+#### Image quality
+
+Use `ReplayOptions.imageQuality` to control JPEG encoding quality. It accepts values from `0.0`
+(lowest quality and smallest payload) to `1.0` (highest quality and largest payload), defaults to
+`0.3`, and clamps values outside that range.
+
+```kotlin
+val sessionReplay = SessionReplay(
+    ReplayOptions(imageQuality = 0.75)
+)
+```
+
 #### Masking sensitive UI
 
 Use `ldMask()` to mark views that should be masked in session replay. There are helpers for both XML-based Views and Jetpack Compose.
+
+##### How the SDK Determines What to Mask
+
+When deciding whether a specific view should be masked in a Session Replay, the SDK evaluates rules in a strict order of precedence. It checks these conditions from top to bottom and stops at the first one that applies:
+
+1. **Explicit Masking (Highest Priority)**: Is the view, or *any* of its parent views, explicitly masked (e.g., using `.ldMask()` or matching `maskXMLViewIds`)?
+   * **Yes**: The view is **masked**. This overrides all other rules.
+2. **Explicit Unmasking**: Is the view, or *any* of its parent views, explicitly unmasked (e.g., using `.ldUnmask()` or matching `unmaskXMLViewIds`)?
+   * **Yes**: The view is **unmasked**.
+3. **Global Configuration**: Does your global privacy configuration (like `maskTextInputs`, `maskImages`, etc.) apply to this view?
+   * **Yes**: The view follows the global configuration.
+
+*Note: If multiple rules conflict at the same level, masking wins over unmasking.*
 
 ##### Configure masking via `PrivacyProfile`
 
@@ -276,6 +599,12 @@ val sessionReplay = SessionReplay(
                 "@+id/password",
                 "credit_card_number",
             ),
+            unmaskXMLViewIds = listOf(
+                // Unmasks views matching these ids. Same id format as maskXMLViewIds. Takes
+                // precedence over global rules like `maskText`/`maskTextInputs`, but an explicit
+                // mask on the same view or any of its ancestors still wins.
+                "@+id/greeting",
+            ),
         )
     )
 )
@@ -284,7 +613,7 @@ val sessionReplay = SessionReplay(
 Notes:
 - `maskViews` matches on `target.view.javaClass` equality (exact class only).
 - `maskWebViews` uses a default list of WebView class names for masking (and still allows subclasses), including AndroidView-hosted views inside Compose.
-- `maskXMLViewIds` applies only to Views with a non-`View.NO_ID` id that resolves to a resource entry name.
+- `maskXMLViewIds` and `unmaskXMLViewIds` apply to Views with a non-`View.NO_ID` id that resolves to a resource entry name. When the React Native library is on the runtime classpath, they also match the value of the `react_test_id` tag — i.e. the JS `testID` prop on RN-rendered views.
 
 ##### XML Views
 
@@ -322,7 +651,7 @@ override fun onCreateView(
 }
 ```
 
-Optional: use `ldUnmask()` to explicitly clear masking on a view you previously masked.
+Use `ldUnmask()` to explicitly opt a view out of masking. This overrides global masking rules (e.g. `maskText`) for the view and its descendants — but an explicit `ldMask()` on the view itself or any ancestor still wins.
 
 ##### Jetpack Compose
 
@@ -348,7 +677,7 @@ fun CreditCardField() {
 }
 ```
 
-Optional: use `Modifier.ldUnmask()` to explicitly clear masking on a composable you previously masked.
+Use `Modifier.ldUnmask()` to explicitly opt a composable out of masking. This overrides global masking rules (e.g. `maskText`) for the composable and its descendants — but an explicit `ldMask()` on the composable itself or any ancestor still wins.
 
 Notes:
 - Masking marks elements so their contents are obscured in recorded sessions.

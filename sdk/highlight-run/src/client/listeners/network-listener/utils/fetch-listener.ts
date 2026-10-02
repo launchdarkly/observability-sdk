@@ -12,7 +12,11 @@ import {
 } from './utils'
 
 import { NetworkListenerCallback } from '../network-listener'
-import { getBodyThatShouldBeRecorded } from './xhr-listener'
+import {
+	getBodyThatShouldBeRecorded,
+	getBodySizeLimit,
+	bodyOmittedPlaceholder,
+} from './xhr-listener'
 
 export interface HighlightFetchWindow extends WindowOrWorkerGlobalScope {
 	_originalFetch: WindowOrWorkerGlobalScope['fetch']
@@ -223,13 +227,29 @@ export const getResponseBody = async (
 			let utf8Decoder = new TextDecoder()
 			let nextChunk
 
+			const bodyLimit = getBodySizeLimit(response.headers)
 			let result = ''
+			let overLimit = false
 
 			while (!(nextChunk = await reader.read()).done) {
 				let partialData = nextChunk.value
 				result += utf8Decoder.decode(partialData)
+				if (result.length > bodyLimit) {
+					// Stop pulling the clone: the rest would be dropped anyway,
+					// and on a streaming or multi-megabyte response this is
+					// what held the whole payload in memory a second time.
+					overLimit = true
+					reader.cancel().catch(() => {})
+					break
+				}
 			}
-			text = result
+			text = overLimit
+				? bodyOmittedPlaceholder(
+						Number(response.headers.get('content-length')) ||
+							result.length,
+						bodyLimit,
+					)
+				: result
 			text = getBodyThatShouldBeRecorded(
 				text,
 				bodyKeysToRedact,

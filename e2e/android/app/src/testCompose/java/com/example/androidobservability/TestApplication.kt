@@ -1,0 +1,81 @@
+package com.example.androidobservability
+
+import com.launchdarkly.observability.testing.InMemoryTelemetryInspector
+import com.launchdarkly.sdk.android.LDClient
+import io.opentelemetry.android.features.diskbuffering.SignalFromDiskExporter
+import okhttp3.mockwebserver.MockResponse
+import okhttp3.mockwebserver.MockWebServer
+import java.net.InetAddress
+
+class TestApplication : BaseApplication() {
+
+    private val host = "127.0.0.1"
+    var mockWebServer: MockWebServer? = null
+    var telemetryInspector: InMemoryTelemetryInspector? = null
+        private set
+
+    override fun onCreate() {
+        // The Application class won't be initialized unless initForTest() is executed. This helps us to set up
+        // everything we need in a test before calling super.onCreate().
+    }
+
+    private fun setupMockServer() {
+        val responseBody = getSamplingConfigResponseBody()
+        val response = MockResponse()
+            .setResponseCode(200)
+            .setBody(responseBody)
+            .setHeader("Content-Type", "application/json")
+
+        mockWebServer = MockWebServer().apply {
+            enqueue(response)
+            start(InetAddress.getByName(host), 0)
+        }
+
+        testUrl = "http://$host:${mockWebServer?.port}"
+    }
+
+    private fun getSamplingConfigResponseBody(): String {
+        return assets
+            .open("get_sampling_config_response.json")
+            .bufferedReader()
+            .use { it.readText() }
+    }
+
+    fun initForTest() {
+        setupMockServer()
+        val inspector = InMemoryTelemetryInspector()
+        telemetryInspector = inspector
+        observabilityOptions = observabilityOptions.copy(telemetryInspector = inspector)
+        super.realInit()
+    }
+
+    /**
+     * Tears down per-test state so tests don't leak into each other.
+     *
+     * Robolectric isolates Android framework classes with a per-method sandbox classloader,
+     * but third-party JVM classes (including `com.launchdarkly.sdk.android.LDClient`) live
+     * in the shared system classloader. `LDClient.init()` silently returns the existing
+     * client if already initialized, which means a second test's `Observability` plugin is
+     * never registered and `LDObserve` keeps pointing at the previous test's
+     * `ObservabilityService` (with a now-dead mock server port). Closing `LDClient` resets
+     * its `instances` static so the next `init` fully reinitializes.
+     */
+    fun tearDownTest() {
+        try {
+            LDClient.get().close()
+        } catch (_: Throwable) {
+            // LDClient may not have been initialized successfully; ignore.
+        }
+        mockWebServer?.let {
+            it.shutdown()
+            mockWebServer = null
+        }
+        telemetryInspector = null
+        SignalFromDiskExporter.resetForTesting()
+    }
+
+    override fun onTerminate() {
+        tearDownTest()
+        super.onTerminate()
+    }
+}

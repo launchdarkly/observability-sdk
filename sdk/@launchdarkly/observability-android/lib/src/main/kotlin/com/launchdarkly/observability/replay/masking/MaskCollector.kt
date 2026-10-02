@@ -1,31 +1,101 @@
 package com.launchdarkly.observability.replay.masking
 
+import android.graphics.Color
 import android.graphics.Matrix
+import android.graphics.RectF
+import android.graphics.drawable.ColorDrawable
 import android.view.View
 import android.view.ViewGroup
-import androidx.compose.ui.platform.AbstractComposeView
-import com.launchdarkly.logging.LDLogger
+import com.launchdarkly.observability.context.ObserveLogger
 import kotlin.collections.plusAssign
 import com.launchdarkly.observability.replay.utils.locationOnScreen
+import java.util.Collections
+import java.util.IdentityHashMap
 
+/**
+ * Cached class reference for AbstractComposeView, resolved once via reflection.
+ * Null when Compose UI is not on the runtime classpath.
+ */
+private val abstractComposeViewClass: Class<*>? by lazy {
+    try {
+        Class.forName("androidx.compose.ui.platform.AbstractComposeView")
+    } catch (_: ClassNotFoundException) {
+        null
+    }
+}
+
+/**
+ * Per-call constants for a single [MaskCollector.collectMasks] traversal.
+ *
+ * @param matrix scratch matrix reused while computing per-view transformations.
+ * @param rootX x-coordinate of the root view in screen space; used to translate window-relative
+ *     points back into root-relative coordinates.
+ * @param rootY y-coordinate of the root view in screen space.
+ * @param explicitMaskMatchers matchers whose match counts as an explicit mask signal that
+ *     propagates to descendants (e.g. `PrivacyProfile.explicitMaskMatchers`).
+ * @param explicitUnmaskMatchers matchers whose match counts as an explicit unmask signal that
+ *     propagates to descendants (e.g. `PrivacyProfile.explicitUnmaskMatchers`).
+ * @param globalMaskMatchers matchers whose match applies only to the matched view itself; they do
+ *     not propagate to descendants and do not override an explicit unmask.
+ * @param minimumAlpha opacity threshold below which a view (and its subtree) is pruned as invisible.
+ */
 data class MaskContext(
     val matrix: Matrix,
     val rootX: Float,
     val rootY: Float,
-    val matchers: List<MaskMatcher>
+    val explicitMaskMatchers: List<MaskMatcher>,
+    val explicitUnmaskMatchers: List<MaskMatcher>,
+    val globalMaskMatchers: List<MaskMatcher>,
+    val minimumAlpha: Float = 0.02f,
 )
 /**
  * Collects sensitive screen areas that should be masked in session replay.
  *
  * This encapsulates both Jetpack Compose and native View detection logic.
+ *
+ * # Precedence
+ *
+ * For each target the collector evaluates these rules in order, stopping at the first that
+ * applies:
+ *
+ *  1. **Explicit Masking (highest priority).** Is the target — or any of its ancestors —
+ *     explicitly masked (via [MaskTarget.hasLDMask] or matched by any
+ *     [MaskContext.explicitMaskMatchers] entry)? If so, the target is masked.
+ *  2. **Explicit Unmasking.** Is the target — or any of its ancestors — explicitly unmasked
+ *     (via [MaskTarget.hasLDUnmask] or matched by any [MaskContext.explicitUnmaskMatchers]
+ *     entry)? If so, the target is not masked.
+ *  3. **Global configuration.** Does any [MaskContext.globalMaskMatchers] entry match the
+ *     target? If so, the target is masked. Global matches do not propagate to descendants.
+ *
+ * If multiple rules at the same level conflict (e.g. the same view is both `ldMask`-tagged and
+ * `ldUnmask`-tagged), mask wins over unmask.
  */
-class MaskCollector(private val logger: LDLogger) {
+class MaskCollector internal constructor(
+    private val logger: ObserveLogger,
+    private val nativeStretchOf: (View) -> StretchDisplacement?,
+) {
+    constructor(logger: ObserveLogger) : this(logger, StretchOverscroll::displacementIn)
+
     /**
-     * Find sensitive areas from all views in the provided [root] view.
+     * Find sensitive areas from all views under [root] and return a list of masks describing
+     * regions that should be redacted in the recorded frame.
      *
-     * @return a list of masks that represent sensitive areas that need to be masked
+     * @param root root view of the window being captured; traversal walks its descendants.
+     * @param explicitMaskMatchers matchers whose match counts as an explicit mask signal that
+     *     propagates to descendants. Pass an empty list when no identifier-based masking is
+     *     configured.
+     * @param explicitUnmaskMatchers matchers whose match counts as an explicit unmask signal that
+     *     propagates to descendants. Pass an empty list when no identifier-based unmasking is
+     *     configured.
+     * @param globalMaskMatchers matchers whose match applies only to the matched view itself.
      */
-    fun collectMasks(root: View, matchers: List<MaskMatcher>): List<Mask> {
+    fun collectMasks(
+        root: View,
+        explicitMaskMatchers: List<MaskMatcher>,
+        explicitUnmaskMatchers: List<MaskMatcher>,
+        globalMaskMatchers: List<MaskMatcher>,
+        minimumAlpha: Float = 0.02f,
+    ): List<Mask> {
         val resultMasks = mutableListOf<Mask>()
 
         val (rootX, rootY) = root.locationOnScreen()
@@ -33,86 +103,276 @@ class MaskCollector(private val logger: LDLogger) {
             matrix = Matrix(),
             rootX = rootX,
             rootY = rootY,
-            matchers = matchers
+            explicitMaskMatchers = explicitMaskMatchers,
+            explicitUnmaskMatchers = explicitUnmaskMatchers,
+            globalMaskMatchers = globalMaskMatchers,
+            minimumAlpha = minimumAlpha,
         )
 
-        traverse(root, context, resultMasks)
+        traverse(root, inherited = null, context, resultMasks)
         return resultMasks
     }
 
-    private fun traverseCompose(view: AbstractComposeView, context: MaskContext, masks: MutableList<Mask>) {
-        val target = ComposeMaskTarget.from(view, logger)
-        if (target != null) {
-            traverseComposeNodes(target, context, masks)
-        }
-
-        for (i in 0 until view.childCount) {
-            val child = view.getChildAt(i)
-            traverse(child, context, masks)
-        }
-    }
-
-    private fun traverseNative(view: View, context: MaskContext, masks: MutableList<Mask>) {
-        val target = NativeMaskTarget(view)
-        if (shouldMask(target, context.matchers)) {
-            target.mask(context)?.let {  masks += it }
-        }
-
-        if (view !is ViewGroup) return
-
-        for (i in 0 until view.childCount) {
-            val child = view.getChildAt(i)
-            traverse(child, context, masks)
-        }
-    }
-
-    private fun traverse(view: View, context: MaskContext, masks: MutableList<Mask>) {
+    /**
+     * Dispatcher for one view in the traversal: hands off to the right traversal variant for
+     * Compose host views, AndroidComposeView wrappers, or plain native Views. Skips views that
+     * aren't currently shown.
+     *
+     * @param view the view to visit.
+     * @param inherited the resolved-explicit state passed down from the nearest ancestor — `true`
+     *     for inherited mask, `false` for inherited unmask, `null` for no inherited signal.
+     * @param context per-call constants and matcher configuration.
+     * @param masks output list; new mask entries are appended to it.
+     */
+    private fun traverse(view: View, inherited: Boolean?, context: MaskContext, masks: MutableList<Mask>) {
         if (!view.isShown) return
+        // A near-transparent view (and its whole subtree) draws (almost) nothing
+        // into the captured frame, so there's nothing to redact and no reason to
+        // descend. `isShown` only covers VISIBLE/GONE + attachment, not alpha, so
+        // this is a complementary prune mirroring iOS's `opacity < minimumAlpha`
+        // skip. The `<= 0f` keeps fully-transparent views pruned even if the
+        // configured threshold is 0.
+        if (view.alpha <= 0f || view.alpha < context.minimumAlpha) return
 
-        when {
-            view is AbstractComposeView -> traverseCompose(view, context, masks)
-            isAndroidComposeView(view) -> traverseAndroidComposeView(view, context, masks)
-            else -> traverseNative(view, context, masks)
+        // Occlusion culling: if this view paints a solid, fully-opaque rectangle,
+        // drop any already-collected masks it fully covers — that content isn't
+        // visible in the captured frame, so masking it is redundant. Runs before
+        // descending so the view's own children (painted on top of its fill) are
+        // unaffected. Mirrors the iOS/Flutter "opaque container absorbs covered
+        // masks" pass.
+        cullCoveredMasks(view, masks)
+
+        // A stretch overscroll distorts the pixels this container already recorded without moving
+        // anything in the tree, so the masks its subtree is about to emit describe an undistorted
+        // layout that was never rendered. Grow them by however far the stretch can displace
+        // content; nested containers compound, each growing what its own subtree emitted.
+        inflatingStretch(nativeStretchOf(view), masks) {
+            when {
+                abstractComposeViewClass?.isInstance(view) == true -> traverseCompose(view, inherited, context, masks)
+                isAndroidComposeView(view) -> traverseAndroidComposeView(view, inherited, context, masks)
+                else -> traverseNative(view, inherited, context, masks)
+            }
         }
     }
 
     /**
-     * Check if a native view is sensitive and add its bounds to the list if it is.
+     * Runs [collect], then grows whatever masks it added to [masks] by [stretch] — the masks
+     * belonging to the stretched container's subtree. A `null` [stretch] just runs [collect].
+     *
+     * The additions are recognized by identity rather than by where they landed in the list:
+     * [cullCoveredMasks] runs at every view of the subtree and can delete masks collected before
+     * this container ever came up, sliding the subtree's own masks down to lower indices. Taking
+     * the snapshot costs an allocation, but only for a container that is actually being stretched,
+     * which is a handful of frames per gesture and none at rest.
+     */
+    private inline fun inflatingStretch(
+        stretch: StretchDisplacement?,
+        masks: MutableList<Mask>,
+        collect: () -> Unit,
+    ) {
+        if (stretch == null) {
+            collect()
+            return
+        }
+
+        val collectedBefore = identitySnapshot(masks)
+        collect()
+        inflateMasks(masks, collectedBefore, stretch)
+    }
+
+    /**
+     * Grows every mask in [masks] that isn't in [collectedBefore], which are the ones the stretched
+     * container's subtree emitted.
+     */
+    private fun inflateMasks(
+        masks: List<Mask>,
+        collectedBefore: Set<Mask>,
+        stretch: StretchDisplacement,
+    ) {
+        var grown = 0
+        for (mask in masks) {
+            if (mask in collectedBefore) continue
+            mask.inflate(stretch.dx, stretch.dy)
+            grown++
+        }
+        if (grown == 0) return
+
+        logger.debug(
+            "Stretch overscroll: grew $grown mask(s) by (${stretch.dx}, ${stretch.dy})px"
+        )
+    }
+
+    /**
+     * The masks collected so far, held by reference. Identity-based so that [Mask.equals] — which
+     * compares geometry, and so calls two masks of equal size and position the same mask — can't
+     * make a newly emitted mask look like one that was already there.
+     */
+    private fun identitySnapshot(masks: List<Mask>): Set<Mask> =
+        Collections.newSetFromMap(IdentityHashMap<Mask, Boolean>(masks.size + 1))
+            .apply { addAll(masks) }
+
+    /**
+     * Visits a Compose host view: walks its semantics tree to evaluate compose nodes, then
+     * recurses into any non-compose child views. The compose host itself produces no masking
+     * signal of its own, so [inherited] is passed through unchanged.
+     *
+     * The parameter type is [View] (not `AbstractComposeView`) so this file's signatures don't
+     * reference a Compose UI class. That keeps the JVM verifier from trying to load Compose
+     * symbols when MaskCollector loads in apps that don't pull in Compose UI; the cast inside the
+     * method body is only reached after the dispatcher in [traverse] has confirmed Compose is on
+     * the classpath via [abstractComposeViewClass].
+     *
+     * @param view a view that is an instance of `AbstractComposeView`.
+     * @param inherited see [traverse].
+     * @param context see [traverse].
+     * @param masks see [traverse].
+     */
+    private fun traverseCompose(view: View, inherited: Boolean?, context: MaskContext, masks: MutableList<Mask>) {
+        val composeView = view as androidx.compose.ui.platform.AbstractComposeView
+        val target = ComposeMaskTarget.from(composeView, logger)
+        if (target != null) {
+            traverseComposeNodes(target, inherited, context, masks)
+        }
+
+        for (i in 0 until composeView.childCount) {
+            val child = composeView.getChildAt(i)
+            traverse(child, inherited, context, masks)
+        }
+    }
+
+    /**
+     * Visits a plain native View: applies the precedence rules to decide whether to emit a mask
+     * for this view, then recurses into its children passing the resolved-explicit state.
+     *
+     * @param view the native view to evaluate.
+     * @param inherited see [traverse].
+     * @param context see [traverse].
+     * @param masks see [traverse].
+     */
+    private fun traverseNative(view: View, inherited: Boolean?, context: MaskContext, masks: MutableList<Mask>) {
+        val target = NativeMaskTarget(view)
+        val resolvedExplicit = resolveExplicit(target, inherited, context)
+        if (shouldMask(target, resolvedExplicit, context)) {
+            target.mask(context)?.let { masks += it }
+        }
+
+        if (view !is ViewGroup) return
+
+        for (i in 0 until view.childCount) {
+            val child = view.getChildAt(i)
+            traverse(child, resolvedExplicit, context, masks)
+        }
+    }
+
+    /**
+     * Visits a Compose semantics node and its descendants, applying the same precedence rules
+     * used for native Views. Compose nodes carry their own explicit masking signal via the
+     * `LdMaskSemanticsKey` semantics property, exposed through [MaskTarget.hasLDMask] /
+     * [MaskTarget.hasLDUnmask].
+     *
+     * @param target compose target wrapping the node being visited.
+     * @param inherited see [traverse].
+     * @param context see [traverse].
+     * @param masks see [traverse].
      */
     private fun traverseComposeNodes(
         target: ComposeMaskTarget,
+        inherited: Boolean?,
         context: MaskContext,
         masks: MutableList<Mask>
     ) {
-        if (shouldMask(target, context.matchers)) {
-            target.mask(context)?.let {  masks += it }
-        }
+        val resolvedExplicit = resolveExplicit(target, inherited, context)
 
-        for (child in target.rootNode.children) {
-            val childTarget = ComposeMaskTarget(
-                view = target.view,
-                rootNode = child,
-                config = child.config,
-                boundsInWindow = child.boundsInWindow
-            )
-            traverseComposeNodes(childTarget, context, masks)
+        // See the stretch handling in [traverse]: a Compose scrollable distorts its content the
+        // same way, and its semantics bounds are just as blind to it.
+        inflatingStretch(ComposeStretchOverscroll.displacementIn(target.rootNode), masks) {
+            if (shouldMask(target, resolvedExplicit, context)) {
+                target.mask(context)?.let { masks += it }
+            }
+
+            for (child in target.rootNode.children) {
+                val childTarget = ComposeMaskTarget(
+                    view = target.view,
+                    rootNode = child,
+                    config = child.config,
+                    boundsInWindow = child.boundsInWindow
+                )
+                traverseComposeNodes(childTarget, resolvedExplicit, context, masks)
+            }
         }
     }
 
-    private fun shouldMask(
-        target: MaskTarget,
-        matchers: List<MaskMatcher>
-    ): Boolean {
-        return target.hasLDMask()
-            || matchers.any { matcher -> matcher.isMatch(target) }
+    /**
+     * Combines the target's own explicit signal with [inherited] from ancestors and returns the
+     * resolved-explicit state for this target. The result is what gets propagated to descendants
+     * — global-matcher matches are deliberately not part of this state.
+     *
+     * @param target the target whose explicit state we're resolving.
+     * @param inherited resolved-explicit state from the nearest ancestor.
+     * @param context provides the [MaskContext.explicitMaskMatchers] consulted during resolution.
+     * @return `true` for resolved mask, `false` for resolved unmask, `null` when no explicit
+     *     signal applies.
+     */
+    private fun resolveExplicit(target: MaskTarget, inherited: Boolean?, context: MaskContext): Boolean? {
+        if (inherited == true) return true
+        val ownExplicit = explicitOf(target, context)
+        return ownExplicit ?: inherited
     }
 
+    /**
+     * The target's *own* explicit signal, ignoring ancestors. Per-view markers
+     * ([MaskTarget.hasLDMask] / [MaskTarget.hasLDUnmask]) and any
+     * [MaskContext.explicitMaskMatchers] / [MaskContext.explicitUnmaskMatchers] entry that
+     * matches all count as explicit signals; mask wins over unmask if both are present on the
+     * same target.
+     *
+     * @param target the target to inspect.
+     * @param context provides the explicit-mask and explicit-unmask matcher lists.
+     * @return `true` for explicit mask, `false` for explicit unmask, `null` for no signal.
+     */
+    private fun explicitOf(target: MaskTarget, context: MaskContext): Boolean? = when {
+        target.hasLDMask() -> true
+        context.explicitMaskMatchers.any { it.isMatch(target) } -> true
+        target.hasLDUnmask() -> false
+        context.explicitUnmaskMatchers.any { it.isMatch(target) } -> false
+        else -> null
+    }
+
+    /**
+     * Decides whether to emit a mask for [target] given its [resolvedExplicit] state. Falls
+     * through to [MaskContext.globalMaskMatchers] only when no explicit signal applies to the
+     * target or any of its ancestors.
+     *
+     * @param target the target being evaluated.
+     * @param resolvedExplicit value returned by [resolveExplicit].
+     * @param context provides [MaskContext.globalMaskMatchers].
+     */
+    private fun shouldMask(target: MaskTarget, resolvedExplicit: Boolean?, context: MaskContext): Boolean {
+        return resolvedExplicit ?: context.globalMaskMatchers.any { it.isMatch(target) }
+    }
+
+    /**
+     * Whether [view] is the internal `AndroidComposeView` host that wraps a Compose subtree.
+     * Detected by class-name suffix because the type isn't part of the public Compose API.
+     *
+     * @param view the view to inspect.
+     */
     private fun isAndroidComposeView(view: View): Boolean {
         return view::class.java.name.contains("AndroidComposeView")
     }
 
+    /**
+     * Visits an `AndroidComposeView`, which holds Compose content but isn't itself a target we
+     * evaluate. Recurses into its children carrying [inherited] forward.
+     *
+     * @param view the AndroidComposeView; recursion only proceeds if it's a [ViewGroup].
+     * @param inherited see [traverse].
+     * @param context see [traverse].
+     * @param masks see [traverse].
+     */
     private fun traverseAndroidComposeView(
         view: View,
+        inherited: Boolean?,
         context: MaskContext,
         masks: MutableList<Mask>
     ) {
@@ -120,7 +380,50 @@ class MaskCollector(private val logger: LDLogger) {
 
         for (i in 0 until view.childCount) {
             val child = view.getChildAt(i)
-            traverse(child, context, masks)
+            traverse(child, inherited, context, masks)
         }
     }
+
+    /**
+     * Removes already-collected masks fully covered by [view] when it paints a
+     * solid, fully-opaque rectangle over its bounds. Only axis-aligned masks
+     * (`points == null`) are culled, since their [Mask.rect] is in the same
+     * window coordinate space as the cover; transformed masks are kept to avoid a
+     * coordinate-space mismatch. Conservative: a mask is dropped only when we are
+     * certain the covering view is fully opaque and fully contains it.
+     *
+     * @param view the candidate occluder being visited.
+     * @param masks output list collected so far (entries painted beneath [view]).
+     */
+    private fun cullCoveredMasks(view: View, masks: MutableList<Mask>) {
+        if (masks.isEmpty()) return
+        val cover = opaqueCoverRect(view) ?: return
+        masks.removeAll { it.points == null && covers(cover, it.rect) }
+    }
+
+    /**
+     * The window-space rectangle [view] paints fully opaque, or `null` when it
+     * isn't a solid opaque fill. Requires a fully-opaque [ColorDrawable] background
+     * and a fully-opaque view alpha, mirroring the iOS/Flutter opacity heuristic.
+     */
+    private fun opaqueCoverRect(view: View): RectF? {
+        if (view.alpha < 1f) return null
+        if (view.width <= 0 || view.height <= 0) return null
+        val background = view.background as? ColorDrawable ?: return null
+        if (background.alpha != 255) return null
+        if (Color.alpha(background.color) != 255) return null
+
+        val location = IntArray(2)
+        view.getLocationInWindow(location)
+        val left = location[0].toFloat()
+        val top = location[1].toFloat()
+        return RectF(left, top, left + view.width, top + view.height)
+    }
+
+    /** `true` when [cover] fully contains [inner] (strict, no slack). */
+    private fun covers(cover: RectF, inner: RectF): Boolean =
+        inner.left >= cover.left &&
+            inner.top >= cover.top &&
+            inner.right <= cover.right &&
+            inner.bottom <= cover.bottom
 }

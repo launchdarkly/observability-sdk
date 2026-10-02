@@ -1,7 +1,7 @@
 {
 	"name": "@launchdarkly/session-replay",
-	"version": "1.0.1",
-	"description": "Browser observability for your web app. Record session replays to visualize usage patterns.",
+	"version": "1.1.23",
+	"description": "Browser session replay for your web app. Record session replays to visualize usage patterns.",
 	"keywords": [
 		"launchdarkly",
 		"session replay",
@@ -30,8 +30,8 @@
 	"devDependencies": {
 		"rollup-plugin-visualizer": "^5.14.0",
 		"typescript": "^5.8.3",
-		"vite": "^6.3.4",
-		"vitest": "^3.1.2"
+		"vite": "^6.4.3",
+		"vitest": "^4.1.0"
 	},
 	"type": "module",
 	"main": "./dist/index.js",

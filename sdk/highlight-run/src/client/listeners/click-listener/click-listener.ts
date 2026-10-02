@@ -11,6 +11,11 @@ export const ClickListener = (
 			callback(targetSelector, event)
 		}
 	}
-	window.addEventListener('click', recordClick)
-	return () => window.removeEventListener('click', recordClick)
+	// Listen in the capture phase so clicks are still recorded when app code
+	// calls event.stopPropagation() before the event bubbles back up to window.
+	// This mirrors how rrweb records mouse interactions (capture phase) and
+	// prevents the custom `Click` event from being silently dropped.
+	const options: AddEventListenerOptions = { capture: true }
+	window.addEventListener('click', recordClick, options)
+	return () => window.removeEventListener('click', recordClick, options)
 }

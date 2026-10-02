@@ -12,7 +12,7 @@ builder.Services.AddSwaggerGen();
 var config = Configuration.Builder(Environment.GetEnvironmentVariable("LAUNCHDARKLY_SDK_KEY"))
     .Plugins(new PluginConfigurationBuilder()
         .Add(ObservabilityPlugin.Builder(builder.Services)
-            .WithServiceName("ryan-test-service")
+            .WithServiceName("asp-core-test-service")
             .WithServiceVersion("0.0.0")
             .Build())).Build();
 

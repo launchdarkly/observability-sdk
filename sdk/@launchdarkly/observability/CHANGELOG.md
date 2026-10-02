@@ -1,5 +1,250 @@
 # @launchdarkly/observability
 
+## [1.1.23](https://github.com/launchdarkly/observability-sdk/compare/observability-1.1.22...observability-1.1.23) (2026-09-15)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * highlight.run bumped to 10.7.5
+
+## [1.1.22](https://github.com/launchdarkly/observability-sdk/compare/observability-1.1.21...observability-1.1.22) (2026-09-09)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * highlight.run bumped to 10.7.4
+
+## [1.1.21](https://github.com/launchdarkly/observability-sdk/compare/observability-1.1.20...observability-1.1.21) (2026-09-09)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * highlight.run bumped to 10.7.3
+
+## [1.1.20](https://github.com/launchdarkly/observability-sdk/compare/observability-1.1.19...observability-1.1.20) (2026-09-03)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * highlight.run bumped to 10.7.2
+
+## [1.1.19](https://github.com/launchdarkly/observability-sdk/compare/observability-1.1.18...observability-1.1.19) (2026-08-13)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * highlight.run bumped to 10.7.1
+
+## [1.1.18](https://github.com/launchdarkly/observability-sdk/compare/observability-1.1.17...observability-1.1.18) (2026-08-07)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * highlight.run bumped to 10.7.0
+
+## [1.1.17](https://github.com/launchdarkly/observability-sdk/compare/observability-1.1.16...observability-1.1.17) (2026-07-16)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * highlight.run bumped to 10.6.0
+
+## [1.1.16](https://github.com/launchdarkly/observability-sdk/compare/observability-1.1.15...observability-1.1.16) (2026-06-29)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * highlight.run bumped to 10.5.0
+
+## [1.1.15](https://github.com/launchdarkly/observability-sdk/compare/observability-1.1.14...observability-1.1.15) (2026-06-16)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * highlight.run bumped to 10.4.1
+
+## [1.1.14](https://github.com/launchdarkly/observability-sdk/compare/observability-1.1.13...observability-1.1.14) (2026-06-11)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * highlight.run bumped to 10.4.0
+
+## [1.1.13](https://github.com/launchdarkly/observability-sdk/compare/observability-1.1.12...observability-1.1.13) (2026-06-08)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * highlight.run bumped to 10.3.4
+
+## [1.1.12](https://github.com/launchdarkly/observability-sdk/compare/observability-1.1.11...observability-1.1.12) (2026-06-08)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * highlight.run bumped to 10.3.3
+
+## [1.1.11](https://github.com/launchdarkly/observability-sdk/compare/observability-1.1.10...observability-1.1.11) (2026-06-05)
+
+
+### Bug Fixes
+
+* upgrade vulnerable dependencies flagged by Dependabot ([#596](https://github.com/launchdarkly/observability-sdk/issues/596)) ([c15b3d9](https://github.com/launchdarkly/observability-sdk/commit/c15b3d9547946f6dfe334f0a5b43002f5f8781a2))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * highlight.run bumped to 10.3.2
+
+## [1.1.10](https://github.com/launchdarkly/observability-sdk/compare/observability-1.1.9...observability-1.1.10) (2026-06-03)
+
+
+### Bug Fixes
+
+* update vite and vitest to resolve security vulnerabilities ([#589](https://github.com/launchdarkly/observability-sdk/issues/589)) ([4538396](https://github.com/launchdarkly/observability-sdk/commit/45383961bdd2d07caa7804034dda79cf42a8a8f4))
+
+## [1.1.9](https://github.com/launchdarkly/observability-sdk/compare/observability-1.1.8...observability-1.1.9) (2026-05-15)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * highlight.run bumped to 10.3.1
+
+## [1.1.8](https://github.com/launchdarkly/observability-sdk/compare/observability-1.1.7...observability-1.1.8) (2026-05-06)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * highlight.run bumped to 10.3.0
+
+## [1.1.7](https://github.com/launchdarkly/observability-sdk/compare/observability-1.1.6...observability-1.1.7) (2026-05-01)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * highlight.run bumped to 10.2.0
+
+## [1.1.6](https://github.com/launchdarkly/observability-sdk/compare/observability-1.1.5...observability-1.1.6) (2026-04-24)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * highlight.run bumped to 10.1.2
+
+## [1.1.5](https://github.com/launchdarkly/observability-sdk/compare/observability-1.1.4...observability-1.1.5) (2026-04-24)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * highlight.run bumped to 10.1.1
+
+## [1.1.4](https://github.com/launchdarkly/observability-sdk/compare/observability-1.1.3...observability-1.1.4) (2026-04-22)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * highlight.run bumped to 10.1.0
+
+## [1.1.3](https://github.com/launchdarkly/observability-sdk/compare/observability-1.1.2...observability-1.1.3) (2026-04-22)
+
+
+### Bug Fixes
+
+* **deps:** address dependabot security alerts across SDK manifests ([#478](https://github.com/launchdarkly/observability-sdk/issues/478)) ([02f6a7c](https://github.com/launchdarkly/observability-sdk/commit/02f6a7ce6c5d5dbb22f8cde81647c3e4deb05ab6))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * highlight.run bumped to 10.0.1
+
+## [1.1.2](https://github.com/launchdarkly/observability-sdk/compare/observability-1.1.1...observability-1.1.2) (2026-04-01)
+
+
+### Bug Fixes
+
+* OIDC publishing with npm ([#454](https://github.com/launchdarkly/observability-sdk/issues/454)) ([ab4221b](https://github.com/launchdarkly/observability-sdk/commit/ab4221b4fa8559a59afd5f0913993ca992b84e41))
+
+## [1.1.1](https://github.com/launchdarkly/observability-sdk/compare/observability-1.1.0...observability-1.1.1) (2026-03-30)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * highlight.run bumped to 10.0.0
+
+## [1.1.0](https://github.com/launchdarkly/observability-sdk/compare/observability-1.0.3...observability-1.1.0) (2026-03-26)
+
+
+### Features
+
+* **@launchdarkly/session-replay-react-native:** use cocoapods for native session replay ([#434](https://github.com/launchdarkly/observability-sdk/issues/434)) ([41988e1](https://github.com/launchdarkly/observability-sdk/commit/41988e196b02901964efdad0e25f892d5ba55fc4))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * highlight.run bumped to 9.28.0
+
+## [1.0.3](https://github.com/launchdarkly/observability-sdk/compare/observability-1.0.2...observability-1.0.3) (2026-02-26)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * highlight.run bumped to 9.27.1
+
+## [1.0.2](https://github.com/launchdarkly/observability-sdk/compare/observability-1.0.1...observability-1.0.2) (2026-02-23)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * highlight.run bumped to 9.27.0
+
 ## [1.0.1](https://github.com/launchdarkly/observability-sdk/compare/observability-1.0.0...observability-1.0.1) (2026-02-13)
 
 

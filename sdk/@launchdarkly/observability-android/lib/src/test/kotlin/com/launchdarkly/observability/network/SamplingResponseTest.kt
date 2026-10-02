@@ -11,6 +11,9 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
+import org.junit.jupiter.api.assertThrows
+import org.json.JSONException
+import org.json.JSONObject
 
 class SamplingResponseTest {
 
@@ -309,6 +312,82 @@ class SamplingResponseTest {
             assertNotNull(result)
             assertTrue(result is MatchConfig.Value)
             assertEquals("exact", (result as MatchConfig.Value).value)
+        }
+    }
+
+    @Nested
+    @DisplayName("SamplingResponse parsing")
+    inner class SamplingResponseParsingTests {
+
+        @Test
+        fun `should parse a full sampling response`() {
+            val response = SamplingResponse.fromJson(
+                JSONObject(
+                    """
+                    {"sampling": {
+                        "spans": [{
+                            "name": {"regexValue": ".*http.*", "matchValue": null},
+                            "attributes": [{"key": {"matchValue": "service"}, "attribute": {"matchValue": "api"}}],
+                            "events": [{"name": {"matchValue": "click"}, "attributes": []}],
+                            "samplingRatio": 25
+                        }, null],
+                        "logs": [{
+                            "message": {"matchValue": "error"},
+                            "severityText": {"regexValue": "ERROR|WARN"},
+                            "attributes": null,
+                            "samplingRatio": 75,
+                            "unknownField": true
+                        }]
+                    }}
+                    """.trimIndent()
+                )
+            )
+
+            val expected = SamplingResponse(
+                sampling = SamplingConfigResponse(
+                    spans = listOf(
+                        SpanSamplingConfigResponse(
+                            name = MatchConfigResponse(regexValue = ".*http.*"),
+                            attributes = listOf(
+                                AttributeMatchConfigResponse(
+                                    key = MatchConfigResponse(matchValue = "service"),
+                                    attribute = MatchConfigResponse(matchValue = "api")
+                                )
+                            ),
+                            events = listOf(
+                                SpanEventMatchConfigResponse(
+                                    name = MatchConfigResponse(matchValue = "click"),
+                                    attributes = emptyList()
+                                )
+                            ),
+                            samplingRatio = 25
+                        ),
+                        null
+                    ),
+                    logs = listOf(
+                        LogSamplingConfigResponse(
+                            message = MatchConfigResponse(matchValue = "error"),
+                            severityText = MatchConfigResponse(regexValue = "ERROR|WARN"),
+                            attributes = null,
+                            samplingRatio = 75
+                        )
+                    )
+                )
+            )
+            assertEquals(expected, response)
+        }
+
+        @Test
+        fun `should treat a null or missing sampling as absent`() {
+            assertNull(SamplingResponse.fromJson(JSONObject("""{"sampling": null}""")).sampling)
+            assertNull(SamplingResponse.fromJson(JSONObject("{}")).sampling)
+        }
+
+        @Test
+        fun `should fail when a required attribute matcher is missing`() {
+            assertThrows<JSONException> {
+                AttributeMatchConfigResponse.fromJson(JSONObject("""{"key": {"matchValue": "service"}}"""))
+            }
         }
     }
 }

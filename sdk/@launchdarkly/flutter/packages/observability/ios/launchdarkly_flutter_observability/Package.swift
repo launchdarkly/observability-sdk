@@ -1,0 +1,63 @@
+// swift-tools-version: 5.9
+import PackageDescription
+import Foundation
+
+func isTruthy(_ value: String?) -> Bool {
+    switch value?.lowercased() {
+    case "true", "1", "yes":
+        return true
+    default:
+        return false
+    }
+}
+
+let useLocalNativeSdk = isTruthy(ProcessInfo.processInfo.environment["LD_USE_LOCAL_NATIVE"])
+
+// Flutter's Swift Package Manager integration exposes this manifest to Xcode
+// through a symlink under `<app>/ios/Flutter/ephemeral/Packages/.packages`, and
+// SwiftPM resolves a relative dependency path against that symlink instead of
+// this directory. Resolve the manifest's real location first so the sibling
+// checkout is found however the package was reached.
+let localSwiftObservabilityPath = ProcessInfo.processInfo.environment["LD_SWIFT_OBSERVABILITY_PATH"]
+    ?? URL(fileURLWithPath: #filePath)
+        .resolvingSymlinksInPath()
+        .deletingLastPathComponent()
+        .appendingPathComponent("../../../../../../../../swift-launchdarkly-observability")
+        .standardizedFileURL
+        .path
+
+let swiftObservabilityDependency: Package.Dependency = if useLocalNativeSdk {
+    .package(path: localSwiftObservabilityPath)
+} else {
+    .package(
+        url: "https://github.com/launchdarkly/swift-launchdarkly-observability.git",
+        .upToNextMinor(from: "0.55.0")
+    )
+}
+
+let package = Package(
+    name: "launchdarkly_flutter_observability",
+    platforms: [
+        .iOS("15.0")
+    ],
+    products: [
+        .library(
+            name: "launchdarkly-flutter-observability",
+            targets: ["launchdarkly_flutter_observability"]
+        )
+    ],
+    dependencies: [
+        .package(name: "FlutterFramework", path: "../FlutterFramework"),
+        swiftObservabilityDependency,
+    ],
+    targets: [
+        .target(
+            name: "launchdarkly_flutter_observability",
+            dependencies: [
+                .product(name: "FlutterFramework", package: "FlutterFramework"),
+                .product(name: "LaunchDarklyObservability", package: "swift-launchdarkly-observability"),
+                .product(name: "LaunchDarklySessionReplay", package: "swift-launchdarkly-observability"),
+            ]
+        )
+    ]
+)

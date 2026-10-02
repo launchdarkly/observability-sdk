@@ -4,14 +4,18 @@ on:
     release:
         types:
             - created
-        tags:
-            - 'v[0-9]+.[0-9]+.[0-9]+'
-            - '**/v[0-9]+.[0-9]+.[0-9]+'
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 jobs:
     build:
         name: Renew documentation
+        # The `release: created` event fires for every package release in this
+        # monorepo (a `tags` filter is only honored for `push` events, not
+        # `release`). Only the Go module is published to pkg.go.dev, and
+        # release-please tags it as `go/vX.Y.Z`. Other tags (e.g.
+        # `highlight.run-10.3.4`) break the go-proxy-pull action's version
+        # parsing, so restrict this job to Go module releases.
+        if: startsWith(github.event.release.tag_name, 'go/v')
         runs-on: ubuntu-22.04-8core-32gb
         steps:
             - name: Pull new module version

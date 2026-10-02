@@ -14,10 +14,6 @@ on:
                 description: 'Should release @highlight-run/... packages.'
                 type: boolean
                 required: true
-            release_launchdarkly:
-                description: 'Should release @launchdarkly/... packages.'
-                type: boolean
-                required: true
             release_launchdarkly_python:
                 description: 'Should release @launchdarkly/observability-python package.'
                 type: boolean
@@ -38,6 +34,14 @@ on:
                 description: 'The tag name for the dotnet package. Should be set when publishing a dotnet package.'
                 type: string
                 required: false
+            release_launchdarkly_ruby:
+                description: 'Should release @launchdarkly/observability-ruby package.'
+                type: boolean
+                required: true
+            ruby_tag_name:
+                description: 'The tag name for the ruby package. Should be set when publishing a ruby package.'
+                type: string
+                required: false
 
 permissions:
     id-token: write
@@ -48,8 +52,11 @@ permissions:
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 jobs:
-    publish-package:
-        if: ${{ inputs.release_highlight == true || inputs.release_launchdarkly == true }}
+    # @launchdarkly/* npm packages are published via the Monorepo workflow (turbo.yml)
+    # using OIDC authentication. npm OIDC only supports a single workflow per package.
+
+    publish-highlight-packages:
+        if: ${{ inputs.release_highlight == true }}
         runs-on: ubuntu-22.04-8core-32gb
         steps:
             - name: Checkout
@@ -72,7 +79,6 @@ jobs:
                   REACT_APP_COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
             - name: Configure yarn npm registry credentials for highlight
-              if: ${{ inputs.release_highlight == true }}
               run: |
                   yarn config set npmRegistryServer "https://registry.npmjs.org"
                   yarn config set npmAuthToken "${NPM_TOKEN}"
@@ -80,30 +86,8 @@ jobs:
                   NPM_TOKEN: ${{ secrets.NPM_TOKEN_HIGHLIGHT_RUN }}
 
             - name: Publish highlight npm packages
-              if: ${{ inputs.release_highlight == true }}
               id: publish-highlight
               run: yarn publish:highlight
-
-            - uses: launchdarkly/gh-actions/actions/release-secrets@release-secrets-v1.2.0
-              if: ${{ inputs.release_launchdarkly == true }}
-              name: 'Get NPM token'
-              with:
-                  aws_assume_role: ${{ vars.AWS_ROLE_ARN }}
-                  ssm_parameter_pairs: '/production/common/releasing/npm/token = NODE_AUTH_TOKEN'
-
-            - name: Configure yarn npm registry credentials for launchdarkly
-              if: ${{ inputs.release_launchdarkly == true }}
-              run: |
-                  yarn config set npmRegistryServer "https://registry.npmjs.org"
-                  yarn config set npmAuthToken "${NODE_AUTH_TOKEN}"
-
-            - name: Publish
-              if: ${{ inputs.release_launchdarkly == true }}
-              shell: bash
-              run: ./scripts/publish-npm.sh
-              env:
-                  LD_RELEASE_IS_PRERELEASE: ${{ inputs.prerelease }}
-                  LD_RELEASE_IS_DRYRUN: ${{ inputs.dry-run }}
 
     publish-python-sdk:
         runs-on: ubuntu-latest
@@ -185,3 +169,35 @@ jobs:
             base64-subjects: '${{ needs.publish-dotnet-sdk.outputs.package-hashes }}'
             upload-assets: true
             upload-tag-name: ${{ inputs.dotnet_tag_name }}
+
+    publish-ruby-sdk:
+        runs-on: ubuntu-latest
+        if: ${{ inputs.release_launchdarkly_ruby == true }}
+        permissions:
+            id-token: write
+        outputs:
+            package-hashes: ${{ steps.publish.outputs.package-hashes }}
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Publish Ruby SDK
+              id: publish
+              uses: ./.github/actions/publish-ruby-sdk
+              with:
+                  workspace-path: sdk/@launchdarkly/observability-ruby
+                  aws-role-arn: ${{ vars.AWS_ROLE_ARN }}
+                  dry-run: ${{ inputs.dry-run }}
+
+    publish-ruby-sdk-provenance:
+        needs: ['publish-ruby-sdk']
+        if: ${{ inputs.release_launchdarkly_ruby == true && inputs.dry-run == false }}
+        permissions:
+            actions: read
+            id-token: write
+            contents: write
+        uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.0.0
+        with:
+            base64-subjects: '${{ needs.publish-ruby-sdk.outputs.package-hashes }}'
+            upload-assets: true
+            upload-tag-name: ${{ inputs.ruby_tag_name }}

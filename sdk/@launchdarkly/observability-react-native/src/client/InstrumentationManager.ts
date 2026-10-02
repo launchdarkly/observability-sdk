@@ -6,6 +6,7 @@ import {
 	Gauge,
 	Histogram,
 	Span as OtelSpan,
+	SpanKind,
 	SpanOptions,
 	trace,
 	propagation,
@@ -39,8 +40,15 @@ import {
 import { SpanStatusCode } from '@opentelemetry/api'
 import { W3CBaggagePropagator, CompositePropagator } from '@opentelemetry/core'
 import { ReactNativeOptions } from '../api/Options'
+import {
+	FetchHook,
+	XHRHook,
+} from '../listeners/network-listener/network-listener'
 import { Metric } from '../api/Metric'
-import { SessionManager } from './SessionManager'
+import { TrackProperties } from '../api/TrackProperties'
+import { flattenTrackProperties } from '../utils/trackAttributes'
+import { SessionManager, SessionResumeInfo } from './SessionManager'
+import { APP_RELOAD_SPAN_NAME } from '../constants/sessions'
 import {
 	CustomSampler,
 	CustomTraceContextPropagator,
@@ -50,10 +58,17 @@ import {
 import { CustomBatchSpanProcessor } from '../otel/CustomBatchSpanProcessor'
 import { CustomTraceExporter } from '../otel/CustomTraceExporter'
 import { CustomLogExporter } from '../otel/CustomLogExporter'
+import {
+	DEFAULT_EXPORT_TIMEOUT_MILLIS,
+	DEFAULT_MAX_EXPORT_BATCH_SIZE,
+} from '../constants/telemetry'
 
 export type InstrumentationManagerOptions = Required<ReactNativeOptions> & {
 	projectId: string
 }
+
+// Span name for custom track events, matching the iOS/Android SDKs (`track`).
+const TRACK_SPAN_NAME = 'track'
 
 export class InstrumentationManager {
 	private traceProvider?: WebTracerProvider
@@ -115,8 +130,6 @@ export class InstrumentationManager {
 	}
 
 	private initializeTracing() {
-		if (this.options.disableTraces) return
-
 		const compositePropagator = new CompositePropagator({
 			propagators: [
 				new W3CBaggagePropagator(),
@@ -145,10 +158,10 @@ export class InstrumentationManager {
 
 		const processors: SpanProcessor[] = [
 			new CustomBatchSpanProcessor(exporter, {
-				maxQueueSize: 100,
-				scheduledDelayMillis: 500,
-				exportTimeoutMillis: 5000,
-				maxExportBatchSize: 10,
+				maxQueueSize: this.options.maxBufferSize,
+				scheduledDelayMillis: this.options.uploadIntervalMillis,
+				exportTimeoutMillis: DEFAULT_EXPORT_TIMEOUT_MILLIS,
+				maxExportBatchSize: DEFAULT_MAX_EXPORT_BATCH_SIZE,
 			}),
 		]
 
@@ -161,14 +174,23 @@ export class InstrumentationManager {
 		trace.setGlobalTracerProvider(this.traceProvider)
 
 		const corsPattern = getCorsUrlsPattern(this.options.tracingOrigins)
+		const networkRecording = this.options.networkRecording
 
 		registerInstrumentations({
 			instrumentations: [
 				new FetchInstrumentation({
 					propagateTraceHeaderCorsUrls: corsPattern,
+					applyCustomAttributesOnSpan: FetchHook(
+						networkRecording,
+						this.options.urlBlocklist,
+					),
 				}),
 				new XMLHttpRequestInstrumentation({
 					propagateTraceHeaderCorsUrls: corsPattern,
+					applyCustomAttributesOnSpan: XHRHook(
+						networkRecording,
+						this.options.urlBlocklist,
+					),
 				}),
 			],
 		})
@@ -204,10 +226,10 @@ export class InstrumentationManager {
 			resource: this.resource,
 			processors: [
 				new BatchLogRecordProcessor(logExporter, {
-					maxQueueSize: 100,
-					scheduledDelayMillis: 500,
-					exportTimeoutMillis: 5000,
-					maxExportBatchSize: 10,
+					maxQueueSize: this.options.maxBufferSize,
+					scheduledDelayMillis: this.options.uploadIntervalMillis,
+					exportTimeoutMillis: DEFAULT_EXPORT_TIMEOUT_MILLIS,
+					maxExportBatchSize: DEFAULT_MAX_EXPORT_BATCH_SIZE,
 				}),
 			],
 		})
@@ -249,6 +271,7 @@ export class InstrumentationManager {
 		options?: { span: OtelSpan },
 	): void {
 		try {
+			this.sessionManager?.touch()
 			const activeSpan = options?.span || trace.getActiveSpan()
 			const span = activeSpan ?? this.getTracer().startSpan('error')
 			const sessionId = this.sessionManager?.getSessionInfo().sessionId
@@ -293,7 +316,10 @@ export class InstrumentationManager {
 			let gauge = this._gauges.get(metric.name)
 			if (!gauge) {
 				const meter = this.getMeter()
-				gauge = meter.createGauge(metric.name)
+				gauge = meter.createGauge(
+					metric.name,
+					metric.unit ? { unit: metric.unit } : undefined,
+				)
 				this._gauges.set(metric.name, gauge)
 			}
 			gauge.record(metric.value, metric.attributes)
@@ -307,7 +333,10 @@ export class InstrumentationManager {
 			let counter = this._counters.get(metric.name)
 			if (!counter) {
 				const meter = this.getMeter()
-				counter = meter.createCounter(metric.name)
+				counter = meter.createCounter(
+					metric.name,
+					metric.unit ? { unit: metric.unit } : undefined,
+				)
 				this._counters.set(metric.name, counter)
 			}
 			counter.add(metric.value, metric.attributes)
@@ -326,7 +355,10 @@ export class InstrumentationManager {
 			let histogram = this._histograms.get(metric.name)
 			if (!histogram) {
 				const meter = this.getMeter()
-				histogram = meter.createHistogram(metric.name)
+				histogram = meter.createHistogram(
+					metric.name,
+					metric.unit ? { unit: metric.unit } : undefined,
+				)
 				this._histograms.set(metric.name, histogram)
 			}
 			histogram.record(metric.value, metric.attributes)
@@ -340,7 +372,10 @@ export class InstrumentationManager {
 			let upDownCounter = this._upDownCounters.get(metric.name)
 			if (!upDownCounter) {
 				const meter = this.getMeter()
-				upDownCounter = meter.createUpDownCounter(metric.name)
+				upDownCounter = meter.createUpDownCounter(
+					metric.name,
+					metric.unit ? { unit: metric.unit } : undefined,
+				)
 				this._upDownCounters.set(metric.name, upDownCounter)
 			}
 			upDownCounter.add(metric.value, metric.attributes)
@@ -355,6 +390,7 @@ export class InstrumentationManager {
 		attributes?: Attributes,
 	): void {
 		try {
+			this.sessionManager?.touch()
 			const logger = this.getLogger()
 			const sessionId = this.sessionManager?.getSessionInfo().sessionId
 
@@ -377,6 +413,63 @@ export class InstrumentationManager {
 			})
 		} catch (e) {
 			console.error('Failed to record log:', e)
+		}
+	}
+
+	/**
+	 * Single emitter for `track` spans, mirroring the iOS/Android `track` API.
+	 * Emits a span named `track` carrying the event `key`, an optional numeric
+	 * `value`, and any caller `properties` as attributes.
+	 */
+	public track(
+		key: string,
+		properties?: TrackProperties,
+		metricValue?: number,
+	): void {
+		try {
+			this.sessionManager?.touch()
+			const sessionId = this.sessionManager?.getSessionInfo().sessionId
+			const attributes: Attributes = {
+				...flattenTrackProperties(properties),
+				key,
+				...(metricValue !== undefined ? { value: metricValue } : {}),
+				...(sessionId ? { ['highlight.session_id']: sessionId } : {}),
+			}
+
+			this.getTracer()
+				.startSpan(TRACK_SPAN_NAME, {
+					kind: SpanKind.CLIENT,
+					attributes,
+				})
+				.end()
+		} catch (e) {
+			console.error('Failed to record track event:', e)
+		}
+	}
+
+	/**
+	 * Emits a single `app_reload` span marking that this JS load resumed a
+	 * previously persisted session (a soft reload / OTA reload / quick relaunch).
+	 * The span carries the resumed session id plus how long the app was gone and
+	 * how many times the session has been reloaded.
+	 */
+	public emitAppReload(
+		resumeInfo: SessionResumeInfo,
+		sessionId: string,
+	): void {
+		try {
+			this.getTracer()
+				.startSpan(APP_RELOAD_SPAN_NAME, {
+					kind: SpanKind.INTERNAL,
+					attributes: {
+						'app.reload.elapsed_ms': resumeInfo.elapsedMs,
+						'app.reload.count': resumeInfo.reloadCount,
+						'highlight.session_id': sessionId,
+					},
+				})
+				.end()
+		} catch (e) {
+			console.error('Failed to emit app_reload span:', e)
 		}
 	}
 
@@ -420,6 +513,7 @@ export class InstrumentationManager {
 		options?: SpanOptions,
 		ctx?: Context,
 	): OtelSpan {
+		this.sessionManager?.touch()
 		return this.getTracer().startSpan(spanName, options, ctx)
 	}
 
@@ -429,6 +523,7 @@ export class InstrumentationManager {
 		ctx: Context = context.active(),
 		fn: (span: OtelSpan) => T,
 	): T {
+		this.sessionManager?.touch()
 		return this.getTracer().startActiveSpan(spanName, options, ctx, fn)
 	}
 
@@ -437,6 +532,7 @@ export class InstrumentationManager {
 	}
 
 	public async flush(): Promise<void> {
+		this.sessionManager?.touch()
 		try {
 			if (this.traceProvider) {
 				await this.traceProvider.forceFlush()

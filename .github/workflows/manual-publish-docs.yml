@@ -34,8 +34,10 @@ jobs:
 
             - name: Check if JS package
               id: check-js-package
+              env:
+                  WORKSPACE_PATH: ${{ inputs.workspace_path }}
               run: |
-                  if ./scripts/is-js-package.sh ${{ inputs.workspace_path }}; then
+                  if ./scripts/is-js-package.sh "$WORKSPACE_PATH"; then
                       echo "is_js_package=true" >> $GITHUB_OUTPUT
                   else
                       echo "is_js_package=false" >> $GITHUB_OUTPUT
@@ -43,8 +45,10 @@ jobs:
 
             - name: Check if python package
               id: check-python-package
+              env:
+                  WORKSPACE_PATH: ${{ inputs.workspace_path }}
               run: |
-                  if ./scripts/is-python-package.sh ${{ inputs.workspace_path }}; then
+                  if ./scripts/is-python-package.sh "$WORKSPACE_PATH"; then
                       echo "is_python_package=true" >> $GITHUB_OUTPUT
                   else
                       echo "is_python_package=false" >> $GITHUB_OUTPUT
@@ -66,13 +70,15 @@ jobs:
             - name: 'Set WORKSPACE_NAME variable'
               if: ${{ steps.check-js-package.outputs.is_js_package == 'true' }}
               shell: bash
+              env:
+                  WORKSPACE_PATH: ${{ inputs.workspace_path }}
               run: |
-                  WORKSPACE_NAME=$(./scripts/package-name.sh ${{ inputs.workspace_path }})
+                  WORKSPACE_NAME=$(./scripts/package-name.sh "$WORKSPACE_PATH")
                   echo "WORKSPACE_NAME=$WORKSPACE_NAME" >> $GITHUB_ENV
 
             - name: Build JS package docs
               if: ${{ steps.check-js-package.outputs.is_js_package == 'true' }}
-              run: yarn docs --filter ${{ env.WORKSPACE_NAME }}
+              run: yarn docs --filter "$WORKSPACE_NAME"
 
             - uses: actions/setup-python@v5
               if: ${{ steps.check-python-package.outputs.is_python_package == 'true' }}
@@ -87,15 +93,19 @@ jobs:
               # Assume non-js projects will use a Makefile to install dependencies.
               # Or an empty install target.
               if: ${{ steps.check-js-package.outputs.is_js_package == 'false' }}
+              env:
+                  WORKSPACE_PATH: ${{ inputs.workspace_path }}
               run: |
-                  cd ${{ inputs.workspace_path }}
+                  cd "$WORKSPACE_PATH"
                   make install
 
             - name: Build Makefile Docs
               # Assume non-js projects will use a Makefile to build docs.
               if: ${{ steps.check-js-package.outputs.is_js_package == 'false' }}
+              env:
+                  WORKSPACE_PATH: ${{ inputs.workspace_path }}
               run: |
-                  cd ${{ inputs.workspace_path }}
+                  cd "$WORKSPACE_PATH"
                   make docs
 
             - name: Publish Highlight.run as Observability Plugin

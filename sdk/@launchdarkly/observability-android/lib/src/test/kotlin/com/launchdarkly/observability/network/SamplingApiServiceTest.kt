@@ -4,7 +4,6 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
-import kotlinx.serialization.json.JsonPrimitive
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
@@ -47,18 +46,13 @@ class SamplingApiServiceTest {
                     )
                 )
             )
-            val graphqlResponse = GraphQLResponse(
-                data = samplingResponse,
-                errors = null
-            )
-
             coEvery {
-                mockGraphqlClient.execute(
-                    "graphql/GetSamplingConfigQuery.graphql",
-                    mapOf("organization_verbose_id" to JsonPrimitive(organizationId)),
-                    SamplingResponse.serializer()
+                mockGraphqlClient.execute<SamplingResponse>(
+                    any(),
+                    mapOf("organization_verbose_id" to organizationId),
+                    any()
                 )
-            } returns graphqlResponse
+            } returns samplingResponse
 
             val result = service.getSamplingConfig(organizationId)
 
@@ -66,10 +60,10 @@ class SamplingApiServiceTest {
             assertEquals(samplingResponse.mapToEntity(), result)
 
             coVerify(exactly = 1) {
-                mockGraphqlClient.execute(
-                    "graphql/GetSamplingConfigQuery.graphql",
-                    mapOf("organization_verbose_id" to JsonPrimitive(organizationId)),
-                    SamplingResponse.serializer()
+                mockGraphqlClient.execute<SamplingResponse>(
+                    any(),
+                    mapOf("organization_verbose_id" to organizationId),
+                    any()
                 )
             }
         }
@@ -77,16 +71,10 @@ class SamplingApiServiceTest {
         @Test
         fun `should return null when network response has errors`() = runTest {
             val organizationId = "test-org"
-            val graphqlResponse = GraphQLResponse<SamplingResponse>(
-                data = null,
-                errors = listOf(
-                    GraphQLError(message = "Organization not found")
-                )
-            )
 
             coEvery {
                 mockGraphqlClient.execute<SamplingResponse>(any(), any(), any())
-            } returns graphqlResponse
+            } throws GraphQLClientException.GraphQLErrors(listOf(GraphQLError(message = "Organization not found")))
 
             val result = service.getSamplingConfig(organizationId)
 
@@ -96,14 +84,10 @@ class SamplingApiServiceTest {
         @Test
         fun `should return null when network response has no data and no errors`() = runTest {
             val organizationId = "test-org"
-            val graphqlResponse = GraphQLResponse<SamplingResponse>(
-                data = null,
-                errors = emptyList()
-            )
 
             coEvery {
                 mockGraphqlClient.execute<SamplingResponse>(any(), any(), any())
-            } returns graphqlResponse
+            } throws GraphQLClientException.MissingData()
 
             val result = service.getSamplingConfig(organizationId)
 
@@ -113,15 +97,10 @@ class SamplingApiServiceTest {
         @Test
         fun `should return null when sampling config data is null`() = runTest {
             val organizationId = "test-org"
-            val samplingResponse = SamplingResponse(sampling = null)
-            val graphqlResponse = GraphQLResponse(
-                data = samplingResponse,
-                errors = null
-            )
 
             coEvery {
                 mockGraphqlClient.execute<SamplingResponse>(any(), any(), any())
-            } returns graphqlResponse
+            } returns SamplingResponse(sampling = null)
 
             val result = service.getSamplingConfig(organizationId)
 

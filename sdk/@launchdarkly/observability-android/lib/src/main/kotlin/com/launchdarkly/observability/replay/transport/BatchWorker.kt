@@ -1,7 +1,7 @@
 package com.launchdarkly.observability.replay.transport
 
 import android.os.SystemClock
-import com.launchdarkly.logging.LDLogger
+import com.launchdarkly.observability.context.ObserveLogger
 import com.launchdarkly.observability.coroutines.DispatcherProvider
 import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
 import kotlinx.coroutines.CoroutineScope
@@ -14,7 +14,7 @@ import kotlin.random.Random
 
 internal class BatchWorker(
     private val eventQueue: EventQueue,
-    private val logger: LDLogger,
+    private val logger: ObserveLogger,
     dispatcherProvider: DispatcherProvider = DispatcherProviderHolder.current,
 ) {
     private val scope = CoroutineScope(dispatcherProvider.default + SupervisorJob())

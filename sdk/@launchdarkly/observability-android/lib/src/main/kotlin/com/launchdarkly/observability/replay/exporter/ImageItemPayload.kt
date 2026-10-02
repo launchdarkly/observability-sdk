@@ -1,11 +1,11 @@
 package com.launchdarkly.observability.replay.exporter
 
-import com.launchdarkly.observability.replay.capture.CaptureEvent
+import com.launchdarkly.observability.replay.capture.ExportFrame
 import com.launchdarkly.observability.replay.transport.EventExporting
 import com.launchdarkly.observability.replay.transport.EventQueueItemPayload
 
 data class ImageItemPayload(
-    val capture: CaptureEvent,
+    val capture: ExportFrame,
 ) : EventQueueItemPayload {
 
     override val timestamp: Long
@@ -17,5 +17,5 @@ data class ImageItemPayload(
     /**
      * Queue cost derived from the base64 string length; it is a cost unit, not exact bytes.
      */
-    override fun cost(): Int = capture.imageBase64.length
+    override fun cost(): Int = capture.addImages.firstOrNull()?.imageBase64?.length ?: 0
 }

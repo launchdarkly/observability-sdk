@@ -1,0 +1,322 @@
+import 'dart:async';
+import 'dart:collection';
+import 'dart:developer' as developer;
+
+import 'package:flutter/foundation.dart' show visibleForTesting;
+import 'package:launchdarkly_flutter_client_sdk/launchdarkly_flutter_client_sdk.dart';
+
+import '../api/span.dart';
+import '../api/span_status_code.dart';
+import '../instrumentation/click/click_instrumentation.dart';
+import '../instrumentation/debug_print.dart';
+import '../instrumentation/instrumentation.dart';
+import '../instrumentation/lifecycle/lifecycle_instrumentation.dart';
+import '../observe_otel.dart';
+import '../options/observability_options.dart';
+import '../options/session_replay_options.dart';
+import '../otel/feature_flag_convention.dart';
+import '../otel/setup.dart';
+import '../otel/symbols_id.dart';
+import '../platform/ld_observe_platform.dart';
+import 'observability_config.dart';
+
+const _logName = 'LDObserve';
+const _launchDarklyObservabilityName = 'launchdarkly-observability';
+const _launchDarklyObservabilityPluginName =
+    '$_launchDarklyObservabilityName-plugin';
+
+/// Hook that opens a span around each flag evaluation and records the
+/// evaluation as an event. Cross-platform (Dart OpenTelemetry).
+///
+/// Inert unless its plugin owns the pipeline, so an ignored repeat init does
+/// not record every evaluation, track and identify a second time.
+final class _ObservabilityHook extends Hook {
+  static const _evalSpanDataName = 'eval-span';
+  static const _launchDarklyObservabilityHookName = 'LDClient-hook';
+
+  _ObservabilityHook(this._plugin);
+
+  final LDObservePlugin _plugin;
+
+  final HookMetadata _metadata = const HookMetadata(
+    name: _launchDarklyObservabilityHookName,
+  );
+
+  @override
+  HookMetadata get metadata => _metadata;
+
+  @override
+  UnmodifiableMapView<String, dynamic> beforeEvaluation(
+    EvaluationSeriesContext hookContext,
+    UnmodifiableMapView<String, dynamic> data,
+  ) {
+    if (!_plugin._isActive) {
+      return data;
+    }
+    // Match the native iOS/Android exporters: a span named "evaluation" with
+    // the feature flag key/provider/context set up front so the backend
+    // recognizes it as a flag evaluation.
+    final span = ObserveOtel.startSpan(
+      FeatureFlagConvention.spanName,
+      attributes: FeatureFlagConvention.getSpanAttributes(
+        key: hookContext.flagKey,
+        context: hookContext.context,
+      ),
+    );
+
+    var updated = Map<String, dynamic>.from(data);
+    updated[_evalSpanDataName] = span;
+    return UnmodifiableMapView(updated);
+  }
+
+  @override
+  UnmodifiableMapView<String, dynamic> afterEvaluation(
+    EvaluationSeriesContext hookContext,
+    UnmodifiableMapView<String, dynamic> data,
+    LDEvaluationDetail<LDValue> detail,
+  ) {
+    final span = data[_evalSpanDataName] as Span?;
+
+    if (span != null) {
+      spanAddEvent(
+        span,
+        FeatureFlagConvention.eventName,
+        FeatureFlagConvention.getEventAttributes(
+          key: hookContext.flagKey,
+          detail: detail,
+          environmentId: hookContext.environmentId,
+          context: hookContext.context,
+        ),
+      );
+      span.setStatus(SpanStatusCode.ok);
+      span.end();
+    }
+    return data;
+  }
+
+  @override
+  UnmodifiableMapView<String, dynamic> afterIdentify(
+    IdentifySeriesContext hookContext,
+    UnmodifiableMapView<String, dynamic> data,
+    IdentifyResult result,
+  ) {
+    // Forward the identified context to the native observability SDK and Session
+    // Replay so the manual `LDObserve.track` path is attributed to the active
+    // context and the replay session records who the user is. Mirrors MAUI's
+    // `ObservabilityHook.AfterIdentify`. The native side ignores incomplete
+    // identifies, so the `completed` flag is forwarded as-is.
+    final context = hookContext.context;
+    if (_plugin._isActive && context.valid) {
+      ObserveOtel.identify(
+        contextKeys: context.keys,
+        canonicalKey: context.canonicalKey,
+        completed: result is IdentifyComplete,
+      );
+    }
+    return data;
+  }
+
+  @override
+  void afterTrack(TrackSeriesContext hookContext) {
+    if (!_plugin._isActive) {
+      return;
+    }
+    // Funnel through the single track emitter so the LaunchDarkly client's
+    // track path and the manual LDObserve.track API stay consistent.
+    ObserveOtel.track(
+      hookContext.key,
+      data: hookContext.data,
+      metricValue: hookContext.numericValue,
+      context: hookContext.context,
+    );
+  }
+}
+
+/// Internal LaunchDarkly plugin that wires up the cross-platform Dart
+/// OpenTelemetry pipeline together with the platform-specific session replay
+/// (and, on native, the native observability bridge).
+///
+/// Not exported: customer code reaches it through `LDObserve.init`.
+final class LDObservePlugin extends Plugin {
+  /// Options configuring the observability pipeline.
+  final ObservabilityOptions observability;
+
+  /// Options configuring session replay, or null to leave it disabled.
+  final SessionReplayOptions? replay;
+
+  final ObservabilityConfig _config;
+  final List<Instrumentation> _instrumentations = [];
+  Future<bool>? _boot;
+
+  /// The plugin that owns the pipeline: set when its boot starts, cleared if
+  /// that boot fails. Process-wide because the pipeline is.
+  static LDObservePlugin? _active;
+
+  bool get _isActive => identical(_active, this);
+
+  /// Clears the process-wide active plugin so tests can boot a fresh one.
+  @visibleForTesting
+  static void resetActiveForTesting() => _active = null;
+
+  final PluginMetadata _metadata = const PluginMetadata(
+    name: _launchDarklyObservabilityPluginName,
+  );
+
+  /// Creates the plugin with the given [observability] and optional [replay]
+  /// options.
+  LDObservePlugin(this.observability, {this.replay})
+    : _config = configFromOptions(observability);
+
+  @override
+  PluginMetadata get metadata => _metadata;
+
+  /// Boots the Dart OpenTelemetry pipeline and the platform session replay /
+  /// native stack with the given [credential]. Safe to call once; subsequent
+  /// calls are ignored, as are calls after `LDObserve.shutdown`.
+  ///
+  /// Completes with `true` once the pipeline is ready. Completes with `false`,
+  /// never an error, when native start fails (the error is logged, and a later
+  /// init may try again) or after shutdown. Only the first plugin to boot is
+  /// used: a later one logs that it is ignored and reports the first one's
+  /// outcome.
+  Future<bool> boot(String credential) => _boot ??= _startBoot(credential);
+
+  Future<bool> _startBoot(String credential) async {
+    if (ObserveOtel.isShutdown) {
+      return false;
+    }
+    final active = _active;
+    if (active != null) {
+      developer.log(
+        'LDObserve is already initialized; ignoring this init call and its '
+        'options.',
+        name: _logName,
+      );
+      return active._boot!;
+    }
+    _active = this;
+
+    // Start the native stack (and platform session replay) before wiring up the
+    // Dart OpenTelemetry exporters. On mobile the exporters forward spans/logs
+    // over the pigeon bridge to the native tracer/logger; if they are wired
+    // first, early lifecycle and flag-evaluation telemetry crosses the bridge
+    // while the native tracer/logger are still null and is silently dropped
+    // (never gets `session.id` or reaches the backend). Awaiting start here
+    // ensures the native pipeline is ready before any export can occur.
+    //
+    // Native receives `isEnabled` itself, so it is started either way: session
+    // replay does not depend on observability being enabled.
+    try {
+      await LDObservePlatform.instance.start(
+        mobileKey: credential,
+        observability: _withSymbolsId(observability),
+        replay: replay ?? const SessionReplayOptions(isEnabled: false),
+      );
+    } catch (error, stackTrace) {
+      developer.log(
+        'LDObserve failed to start; observability is not running.',
+        name: _logName,
+        error: error,
+        stackTrace: stackTrace,
+      );
+      _active = null;
+      _boot = null;
+      return false;
+    }
+
+    if (ObserveOtel.isShutdown) {
+      // Shut down while native was starting; the earlier stop may have landed
+      // before replay started.
+      unawaited(LDObservePlatform.instance.shutdown());
+      return false;
+    }
+
+    registerPlugin(
+      this,
+      credential,
+      _config,
+      replayEnabled: replay?.isEnabled ?? false,
+    );
+    if (_config.enabled) {
+      if (observability.analytics.appLifecycle) {
+        _instrumentations.add(LifecycleInstrumentation());
+      }
+      _instrumentations.add(
+        DebugPrintInstrumentation(_config.instrumentationConfig),
+      );
+    }
+    if (_config.tapsEnabled && Otel.clickRecorder != null) {
+      // Resolves the tapped widget in Dart, which is the only place the widget
+      // tree is visible. Takes effect once a `SessionReplayCapture` mounts the
+      // detector that feeds it; until then native keeps reporting its own coarse
+      // taps.
+      _instrumentations.add(
+        ClickInstrumentation(
+          customResolver: observability.analytics.customClickTargetResolver,
+          captureText: !(replay?.privacy.maskClickText ?? false),
+        ),
+      );
+    }
+    return true;
+  }
+
+  /// The outcome of [boot], or `null` if it has not been called — for example
+  /// when the client did not register the plugin.
+  Future<bool>? get bootResult => _boot;
+
+  /// Merges the Dart AOT snapshot build id (symbols_id) into the native init
+  /// [ObservabilityOptions.attributes], so it becomes an OTel Resource attribute
+  /// on the native SDK and rides along with every native-exported signal —
+  /// including Dart spans/logs re-exported over the pigeon bridge, which carry
+  /// the native Resource rather than the Dart one. No-op in debug/profile/web
+  /// builds (no build id) and never clobbers an app-provided value.
+  static ObservabilityOptions _withSymbolsId(ObservabilityOptions options) =>
+      applySymbolsId(options, readSymbolsId());
+
+  @override
+  void register(
+    LDClient client,
+    PluginEnvironmentMetadata environmentMetadata,
+  ) {
+    // boot() is asynchronous (the native bridge crosses the pigeon channel),
+    // whereas register is synchronous. LDObserve.init hands the result back to
+    // the caller through bootResult.
+    unawaited(boot(environmentMetadata.credential.value));
+    super.register(client, environmentMetadata);
+  }
+
+  @override
+  List<Hook> get hooks => [_ObservabilityHook(this)];
+
+  /// The instrumentations installed by [boot].
+  @visibleForTesting
+  List<Instrumentation> get instrumentations =>
+      List.unmodifiable(_instrumentations);
+
+  /// Unregister any event handlers used by the plugin and cleanup any
+  /// resources requiring manual cleanup.
+  void dispose() {
+    for (final instrumentation in _instrumentations) {
+      instrumentation.dispose();
+    }
+    _instrumentations.clear();
+  }
+}
+
+/// Merges [symbolsId] into [options.attributes] under [symbolsIdAttributeKey],
+/// preserving an app-provided value and leaving [options] unchanged when
+/// [symbolsId] is null. Extracted from [LDObservePlugin.boot]'s native-init path
+/// so the merge can be unit tested (the live source, `readSymbolsId`, only
+/// yields a value in obfuscated release builds).
+@visibleForTesting
+ObservabilityOptions applySymbolsId(
+  ObservabilityOptions options,
+  String? symbolsId,
+) {
+  if (symbolsId == null) {
+    return options;
+  }
+  final attributes = <String, Object?>{...?options.attributes};
+  attributes.putIfAbsent(symbolsIdAttributeKey, () => symbolsId);
+  return options.withAttributes(attributes);
+}

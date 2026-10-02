@@ -1,0 +1,88 @@
+<Project>
+	<!--
+		Single source of truth for native Android artifacts (AARs / JARs) that
+		must travel with the observability SDK.  Both LDObservability.csproj
+		(local dev builds) and LDObservability.Fat.csproj (NuGet packaging)
+		import this file and transform the items into the appropriate MSBuild
+		item types.
+
+		Callers may override _LDNativeDepsDir / _LDNativeAarDir before this
+		import to point at a different output location.
+
+		Items are split into _LDNativeAAR and _LDNativeJAR because MSBuild
+		does not allow %(Extension) metadata filtering in Include conditions.
+	-->
+	<PropertyGroup>
+		<_LDNativeDepsDir Condition="'$(_LDNativeDepsDir)' == ''">$(MSBuildThisFileDirectory)..\android\native\LDObserve\bin\Release\net9.0-android\outputs\deps\</_LDNativeDepsDir>
+		<_LDNativeAarDir Condition="'$(_LDNativeAarDir)' == ''">$(MSBuildThisFileDirectory)..\android\native\LDObserve\bin\Release\net9.0-android\outputs\aar\</_LDNativeAarDir>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- OTel Android AARs -->
+		<_LDNativeAAR Include="$(_LDNativeDepsDir)android-agent-*.aar" />
+		<_LDNativeAAR Include="$(_LDNativeDepsDir)android-instrumentation-*.aar" />
+		<_LDNativeAAR Include="$(_LDNativeDepsDir)common-0*.aar" />
+		<_LDNativeAAR Include="$(_LDNativeDepsDir)common-api-*.aar" />
+		<_LDNativeAAR Include="$(_LDNativeDepsDir)core-*-alpha.aar" />
+		<_LDNativeAAR Include="$(_LDNativeDepsDir)anr-*-alpha.aar" />
+		<_LDNativeAAR Include="$(_LDNativeDepsDir)activity-*-alpha.aar" />
+		<_LDNativeAAR Include="$(_LDNativeDepsDir)fragment-*-alpha.aar" />
+		<_LDNativeAAR Include="$(_LDNativeDepsDir)network-*-alpha.aar" />
+		<_LDNativeAAR Include="$(_LDNativeDepsDir)services-*-alpha.aar" />
+		<_LDNativeAAR Include="$(_LDNativeDepsDir)session-*-alpha.aar" />
+		<_LDNativeAAR Include="$(_LDNativeDepsDir)slowrendering-*-alpha.aar" />
+		<_LDNativeAAR Include="$(_LDNativeDepsDir)startup-*-alpha.aar" />
+
+		<!-- Observability Android library AAR -->
+		<_LDNativeAAR Include="$(_LDNativeDepsDir)lib-release.aar" />
+
+		<!-- Bridge module AAR -->
+		<_LDNativeAAR Include="$(_LDNativeAarDir)LDObserve-release.aar" />
+
+		<!--
+			Single fat JAR produced by the LDObserve native module's `bundleOtelJars`
+			Gradle task. It bundles every transitive OTel + okhttp + okio JAR's
+			class files and code resources, plus a deduplicated, merged copy of
+			`META-INF/services/*` SPI registrations. All other `META-INF/*`
+			entries (MANIFEST.MF, LICENSE, NOTICE, maven/*, signature files)
+			are stripped.
+
+			One JAR (instead of ~15 individual ones) avoids the .NET-for-Android
+			10 hazard where `BuildArchive` drops jar-extracted entries whose
+			`ArchivePath` is already present in the APK: overlapping
+			`META-INF/services/*` paths across sibling JARs would race and lose
+			entries (including the unique HttpSenderProvider in
+			opentelemetry-exporter-sender-okhttp).
+
+			`META-INF/services/*` IS kept inside the JAR — once merged,
+			each path is unique within the bundle, so neither .NET 9's BuildApk
+			nor .NET 10's BuildArchive drops entries:
+			  - .NET 9: BuildApk extracts JAR contents directly into the APK
+			    (it does NOT consume `@(FilesToAddToArchive)`), so the JAR
+			    copy is the only way `ServiceLoader` can find the SPI
+			    registrations on this version.
+			  - .NET 10: `CollectJarContentFilesForArchive` extracts the JAR
+			    services into `@(FilesToAddToArchive)`, auto-prefixing with
+			    `root/` for AAB so bundletool's XABAB0000 module-dir check
+			    is satisfied. If the standalone-file injection (see
+			    `_LDNativeMetaInfService` below) produces the same path,
+			    BuildArchive silently dedupes.
+		-->
+		<_LDNativeJAR Include="$(_LDNativeDepsDir)ldobserve-otel-bundle.jar" />
+
+		<!--
+			Standalone copies of the merged `META-INF/services/*` files produced
+			by the same `bundleOtelJars` task. Used by the consumer-side
+			`_LDInjectMetaInfServices` MSBuild target on .NET 10 builds to add
+			the registrations to `@(FilesToAddToArchive)` with the correct
+			`ArchivePath` (`META-INF/services/*` for APK,
+			`root/META-INF/services/*` for AAB). This injection is a no-op on
+			.NET 9 (the older `BuildApk` task ignores `@(FilesToAddToArchive)`)
+			and is redundant on current .NET 10 builds because the same
+			services are also embedded in the bundle JAR; it remains as a
+			defensive fallback for older .NET 10 SDKs whose BuildArchive
+			stripped `META-INF/` from extracted JARs.
+		-->
+		<_LDNativeMetaInfService Include="$(_LDNativeDepsDir)META-INF\services\*" />
+	</ItemGroup>
+</Project>

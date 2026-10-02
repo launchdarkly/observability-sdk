@@ -5,17 +5,61 @@ import {
 	Span as OtelSpan,
 	SpanOptions,
 } from '@opentelemetry/api'
+import { wrapTracer } from '../api/LDTracer'
+import type { LDTracer } from '../api/LDTracer'
 import { ObservabilityClient } from '../client/ObservabilityClient'
 import { Metric } from '../api/Metric'
 import { RequestContext } from '../api/RequestContext'
 import { Observe } from '../api/Observe'
+import { SpanScope, WithSpanOptions } from '../api/SpanScope'
+import { TrackProperties } from '../api/TrackProperties'
 import { BufferedClass } from './BufferedClass'
 import { noOpSpan } from '../utils/NoOpSpan'
+import { NOOP_SPAN_OPS, runInSpan, SpanOps } from './withSpan'
 
 class LDObserveClass
 	extends BufferedClass<ObservabilityClient>
 	implements Observe
 {
+	private _lazyTracer?: LDTracer
+	// Captured at _init time, before async initialization completes, so the
+	// (provisional) session id can be read synchronously.
+	private _earlyClient?: ObservabilityClient
+	// Set when stop() runs before load(), so the readiness poller in _init()
+	// stops waiting for a client that has been torn down mid-initialization.
+	private _initCancelled = false
+
+	private _resolveTracer(): LDTracer {
+		if (this._isLoaded) {
+			return this._sdk.getTracer()
+		}
+		return wrapTracer(NOOP_SPAN_OPS)
+	}
+
+	private _getLazyTracer(): LDTracer {
+		if (!this._lazyTracer) {
+			this._lazyTracer = {
+				startSpan: (name, options, ctx) =>
+					this._resolveTracer().startSpan(name, options, ctx),
+				startActiveSpan: ((name: string, ...rest: unknown[]) =>
+					(this._resolveTracer().startActiveSpan as Function)(
+						name,
+						...rest,
+					)) as LDTracer['startActiveSpan'],
+				withSpan: (name, fn, options) =>
+					this._resolveTracer().withSpan(name, fn, options),
+			}
+		}
+		return this._lazyTracer
+	}
+
+	_resetForTesting(): void {
+		this._lazyTracer = undefined
+		this._earlyClient = undefined
+		this._initCancelled = false
+		super._resetForTesting()
+	}
+
 	recordError(
 		error: Error,
 		attributes?: Attributes,
@@ -54,6 +98,14 @@ class LDObserveClass
 
 	recordLog(message: any, level: string, attributes?: Attributes): void {
 		return this._bufferCall('recordLog', [message, level, attributes])
+	}
+
+	track(
+		key: string,
+		properties?: TrackProperties,
+		metricValue?: number,
+	): void {
+		return this._bufferCall('track', [key, properties, metricValue])
 	}
 
 	parseHeaders(headers: Record<string, string>): RequestContext {
@@ -127,17 +179,87 @@ class LDObserveClass
 			: fn(noOpSpan.setAttribute('method', 'startActiveSpan'))
 	}
 
+	withSpan<T>(
+		spanName: string,
+		fn: (scope: SpanScope) => T,
+		options?: WithSpanOptions,
+	): T {
+		// When loaded, `this` routes recordError through consumeCustomError (respects
+		// disableErrorTracking). Before init we use no-op span ops.
+		const ops: SpanOps = this._isLoaded ? this : NOOP_SPAN_OPS
+		return runInSpan(ops, spanName, fn, options)
+	}
+
+	getTracer(): LDTracer {
+		return this._getLazyTracer()
+	}
+
 	getContextFromSpan(span: OtelSpan): Context {
 		const response = this._bufferCall('getContextFromSpan', [span])
 		return this._isLoaded ? response : context.active()
 	}
 
 	getSessionInfo(): any {
-		const response = this._bufferCall('getSessionInfo', [])
-		return this._isLoaded ? response : {}
+		if (this._isLoaded) {
+			return this._bufferCall('getSessionInfo', [])
+		}
+		// Init is async, but the session id is resolved (at least provisionally)
+		// when the client is constructed — before init finishes. Expose it early
+		// so integrations that register right after observability (e.g. session
+		// replay) can adopt the same `session.id` synchronously instead of
+		// falling back to a separate id.
+		try {
+			return this._earlyClient?.getSessionInfo() ?? {}
+		} catch {
+			return {}
+		}
+	}
+
+	async getSessionIdWhenReady(
+		timeoutMs: number = 3000,
+	): Promise<string | undefined> {
+		// Unlike getSessionInfo (which returns the provisional id synchronously),
+		// this waits for init to finish resolving the session so a persisted
+		// session that gets *resumed* asynchronously is reflected. Integrations
+		// that seed a separate pipeline with the session id (e.g. session replay
+		// on a cold start) must use this to avoid baking in the provisional id and
+		// then diverging once the stored id is restored.
+		//
+		// Bounded by a timeout and falls back to the provisional id, so a slow or
+		// failed init never blocks the caller (load() may never run on failure).
+		//
+		// If init has not even started (no observability plugin registered, or the
+		// caller ran before _init), there is nothing to wait for — return at once
+		// rather than stalling the caller for the whole timeout.
+		if (!this._isLoaded && !this._earlyClient) {
+			return undefined
+		}
+		await Promise.race([
+			this._whenLoaded(),
+			new Promise<void>((resolve) => setTimeout(resolve, timeoutMs)),
+		])
+		try {
+			const info = this._isLoaded
+				? this._sdk.getSessionInfo()
+				: this._earlyClient?.getSessionInfo()
+			const id = info?.sessionId
+			return typeof id === 'string' && id.length > 0 ? id : undefined
+		} catch {
+			return undefined
+		}
 	}
 
 	stop(): Promise<void> {
+		// When init() is still in flight (early client captured but not yet
+		// loaded), buffering `stop` would resolve immediately and never reach the
+		// client — so the in-flight async init() could still finish (e.g. emit
+		// app_reload) after we asked to stop. Stop the early client directly to set
+		// its `stopped` guard now, and cancel the readiness poller so it does not
+		// spin forever waiting for a client that will never initialize.
+		if (!this._isLoaded && this._earlyClient) {
+			this._initCancelled = true
+			return this._earlyClient.stop()
+		}
 		const response = this._bufferCall('stop', [])
 		return this._isLoaded ? response : Promise.resolve()
 	}
@@ -148,15 +270,20 @@ class LDObserveClass
 	}
 
 	_init(client: ObservabilityClient): void {
-		const checkInitialized = () => {
-			if (client.getIsInitialized()) {
-				this.load(client)
-			} else {
-				setTimeout(checkInitialized, 100)
+		this._earlyClient = client
+		this._initCancelled = false
+		// Await the client's terminal init outcome instead of polling
+		// getIsInitialized() on a timer: this resolves once init is ready,
+		// stop-aborted, or (a retryable) failure leaves it pending forever — so
+		// there is no timer that spins indefinitely when init never becomes ready.
+		void client.whenInitialized().then((ready) => {
+			// A stop() before load() cancels initialization; don't load a client
+			// that has been torn down.
+			if (this._initCancelled || !ready) {
+				return
 			}
-		}
-
-		checkInitialized()
+			this.load(client)
+		})
 	}
 }
 

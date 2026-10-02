@@ -1,0 +1,82 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "example (debug)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "toolArgs": [
+        "--dart-define-from-file=dart_defines.json"
+      ]
+    },
+    {
+      "name": "example (debug, GetX)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "toolArgs": [
+        "--dart-define-from-file=dart_defines.json",
+        "--dart-define=USE_GETX=true"
+      ]
+    },
+    {
+      "name": "example (profile)",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "profile",
+      "program": "lib/main.dart",
+      "toolArgs": [
+        "--dart-define-from-file=dart_defines.json"
+      ]
+    },
+    {
+      "name": "example (release)",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "release",
+      "program": "lib/main.dart",
+      "toolArgs": [
+        "--dart-define-from-file=dart_defines.json"
+      ]
+    },
+    {
+      "name": "example (debug, local native)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "toolArgs": [
+        "--dart-define-from-file=dart_defines.json"
+      ],
+      "env": {
+        "LD_USE_LOCAL_NATIVE": "true"
+      }
+    },
+    {
+      "name": "example (profile, local native)",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "profile",
+      "program": "lib/main.dart",
+      "toolArgs": [
+        "--dart-define-from-file=dart_defines.json"
+      ],
+      "env": {
+        "LD_USE_LOCAL_NATIVE": "true"
+      }
+    },
+    {
+      "name": "example (release, local native)",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "release",
+      "program": "lib/main.dart",
+      "toolArgs": [
+        "--dart-define-from-file=dart_defines.json"
+      ],
+      "env": {
+        "LD_USE_LOCAL_NATIVE": "true"
+      }
+    }
+  ]
+}

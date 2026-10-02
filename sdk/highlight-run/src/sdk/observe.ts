@@ -32,6 +32,7 @@ import {
 	type Hook,
 	LaunchDarklyIntegration,
 	type LDClient,
+	CONTEXT_SCOPE_CONTEXT_KEYS_ATTR,
 } from '../integrations/launchdarkly'
 import type { IntegrationClient } from '../integrations'
 import type { OTelMetric as Metric, RecordMetric } from '../client/types/types'
@@ -41,6 +42,7 @@ import {
 	MetricCategory,
 	MetricName,
 } from '../client/types/client'
+import { metricInstrumentOptions } from '../client/utils/metricUnits'
 import { ConsoleListener } from '../client/listeners/console-listener'
 import stringify from 'json-stringify-safe'
 import {
@@ -74,9 +76,11 @@ import {
 	NetworkPerformanceListener,
 	NetworkPerformancePayload,
 } from '../client/listeners/network-listener/performance-listener'
+import { LongtaskListener } from '../client/listeners/longtask-listener'
+import { ReportingObserverListener } from '../client/listeners/reporting-observer-listener'
 import randomUuidV4 from '../client/utils/randomUuidV4'
 import { recordException } from '../client/otel/recordException'
-import { ObserveOptions } from '../client/types/observe'
+import { ObserveOptions, ProductAnalyticsEvents } from '../client/types/observe'
 import { isMetricSafeNumber } from '../client/utils/utils'
 import * as SemanticAttributes from '@opentelemetry/semantic-conventions'
 import { sanitizeUrl } from '../client/listeners/network-listener/utils/network-sanitizer'
@@ -104,7 +108,11 @@ export class ObserveSDK implements Observe {
 	>()
 	private readonly sampler: ExportSampler = new CustomSampler()
 	private _started = false
-	private graphqlSDK!: Sdk
+	private _ldContextKeys: Attributes | undefined
+	// ECMAScript-private (#) so the internal GraphQL SDK type — which
+	// references graphql-request / graphql — does not leak into the published
+	// declaration file and break consumer type-checking.
+	#graphqlSDK!: Sdk
 	constructor(
 		options: ObserveOptions & {
 			projectId: string
@@ -113,6 +121,45 @@ export class ObserveSDK implements Observe {
 	) {
 		this._options = options
 		this.organizationID = options.projectId
+	}
+
+	private _productAnalyticsEvents(): ProductAnalyticsEvents {
+		const pa = this._options?.productAnalytics
+		if (pa === false) {
+			return {}
+		}
+
+		const paEvents = {
+			clicks: true,
+			pageViews: true,
+			trackEvents: true,
+		}
+		if (pa === undefined || pa === true) {
+			return paEvents
+		}
+
+		for (const event of Object.keys(pa)) {
+			if (pa[event as keyof ProductAnalyticsEvents] === false) {
+				paEvents[event as keyof ProductAnalyticsEvents] = false
+			}
+		}
+		return paEvents
+	}
+
+	setLDContextKeyAttributes(contextKeys: Attributes): void {
+		if (!contextKeys) {
+			return
+		}
+		this._ldContextKeys = Object.fromEntries(
+			Object.entries(contextKeys).map(([k, v]) => [
+				`${CONTEXT_SCOPE_CONTEXT_KEYS_ATTR}.${k}`,
+				v,
+			]),
+		)
+	}
+
+	getLDContextKeyAttributes(): Attributes | undefined {
+		return this._ldContextKeys
 	}
 
 	public async start() {
@@ -140,7 +187,9 @@ export class ObserveSDK implements Observe {
 					serviceName: this._options?.serviceName ?? 'browser',
 					serviceVersion: this._options?.version,
 					instrumentations: this._options?.otel?.instrumentations,
-					eventNames: this._options?.otel?.eventNames,
+					productAnalyticsEvents: this._productAnalyticsEvents(),
+					getLDContextKeyAttributes: () =>
+						this.getLDContextKeyAttributes(),
 				},
 				getIntegrations: () => this._integrations,
 			},
@@ -158,7 +207,7 @@ export class ObserveSDK implements Observe {
 				headers: {},
 			},
 		)
-		this.graphqlSDK = getSdk(client, getGraphQLRequestWrapper())
+		this.#graphqlSDK = getSdk(client, getGraphQLRequestWrapper())
 		await this.configureSampling()
 		this.setupListeners()
 	}
@@ -173,7 +222,7 @@ export class ObserveSDK implements Observe {
 
 	private async configureSampling() {
 		try {
-			const res = await this.graphqlSDK.GetSamplingConfig({
+			const res = await this.#graphqlSDK.GetSamplingConfig({
 				organization_verbose_id: `${this.organizationID}`,
 			})
 			this.sampler.setConfig(res.sampling)
@@ -196,25 +245,43 @@ export class ObserveSDK implements Observe {
 			const msg =
 				typeof message === 'string' ? message : stringify(message)
 			const stackTrace = trace
-				? stringify(trace.map((s) => s.toString()))
+				? trace.map((s) => s.toString()).join('\n')
 				: undefined
 			span?.addEvent('log', {
 				[ATTR_LOG_SEVERITY]: level,
 				[ATTR_LOG_MESSAGE]: msg,
 				'code.stacktrace': stackTrace,
+				...(this._ldContextKeys ?? {}),
 				...metadata,
 			})
 			if (this._options.reportConsoleErrors && level === 'error') {
-				span?.recordException(new Error(msg))
+				const err = new Error(msg)
+				span?.recordException(err)
 				span?.setStatus({
 					code: SpanStatusCode.ERROR,
 					message: msg,
 				})
-				const err = new Error(msg)
 				if (trace) {
-					err.stack = stackTrace
+					// Pass the pre-parsed trace through directly. The prior
+					// code stuffed a JSON-stringified array into err.stack and
+					// let recordError → parseError re-parse it, which triggers
+					// catastrophic backtracking in error-stack-parser's
+					// parseFFOrSafari regex.
+					this._recordErrorMessage({
+						error: err,
+						event: err.message,
+						type: 'custom',
+						url: window.location.href,
+						source: 'frontend',
+						lineNumber: trace[0]?.lineNumber ?? 0,
+						columnNumber: trace[0]?.columnNumber ?? 0,
+						stackTrace: trace,
+						timestamp: new Date().toISOString(),
+						id: randomUuidV4(),
+					})
+				} else {
+					this.recordError(err)
 				}
-				this.recordError(err)
 			}
 		})
 	}
@@ -237,6 +304,8 @@ export class ObserveSDK implements Observe {
 			recordException(span, errorMsg.error ?? new Error(errorMsg.event), {
 				[ATTR_EXCEPTION_ID]: errorMsg.id,
 			})
+			// LD context keys are applied to the span by the startSpan
+			// wrapper above; only the error-specific attributes are added here.
 			span?.setAttributes({
 				event: errorMsg.event,
 				type: errorMsg.type,
@@ -293,11 +362,15 @@ export class ObserveSDK implements Observe {
 	recordCount(metric: Metric) {
 		let counter = this._counters.get(metric.name)
 		if (!counter) {
-			counter = getMeter()?.createCounter(metric.name)
+			counter = getMeter()?.createCounter(
+				metric.name,
+				metricInstrumentOptions(metric.name, metric.unit),
+			)
 			if (!counter) return
 			this._counters.set(metric.name, counter)
 		}
 		counter.add(metric.value, {
+			...(this._ldContextKeys ?? {}),
 			...metric.attributes,
 			'highlight.session_id': getPersistentSessionSecureID(),
 		})
@@ -306,25 +379,31 @@ export class ObserveSDK implements Observe {
 	recordGauge(metric: Metric) {
 		let gauge = this._gauges.get(metric.name)
 		if (!gauge) {
-			gauge = getMeter()?.createGauge(metric.name)
+			gauge = getMeter()?.createGauge(
+				metric.name,
+				metricInstrumentOptions(metric.name, metric.unit),
+			)
 			if (!gauge) return
 			this._gauges.set(metric.name, gauge)
 		}
-		gauge.record(metric.value, {
+		const attributes: Attributes = {
+			...(this._ldContextKeys ?? {}),
 			...metric.attributes,
+		}
+		gauge.record(metric.value, {
+			...attributes,
 			'highlight.session_id': getPersistentSessionSecureID(),
 		})
 		const recordMetric: RecordMetric = {
 			name: metric.name,
 			value: metric.value,
-			category: metric.attributes?.['category'] as MetricCategory,
-			group: metric.attributes?.['group']?.toString(),
-			tags: metric.attributes
-				? Object.entries(metric.attributes).map(([key, value]) => ({
-						name: key ?? '',
-						value: value?.toString() ?? '',
-					}))
-				: [],
+			unit: metric.unit,
+			category: attributes['category'] as MetricCategory,
+			group: attributes['group']?.toString(),
+			tags: Object.entries(attributes).map(([key, value]) => ({
+				name: key ?? '',
+				value: value?.toString() ?? '',
+			})),
 		}
 		for (const integration of this._integrations) {
 			integration.recordGauge(
@@ -341,11 +420,15 @@ export class ObserveSDK implements Observe {
 	recordHistogram(metric: Metric) {
 		let histogram = this._histograms.get(metric.name)
 		if (!histogram) {
-			histogram = getMeter()?.createHistogram(metric.name)
+			histogram = getMeter()?.createHistogram(
+				metric.name,
+				metricInstrumentOptions(metric.name, metric.unit),
+			)
 			if (!histogram) return
 			this._histograms.set(metric.name, histogram)
 		}
 		histogram.record(metric.value, {
+			...(this._ldContextKeys ?? {}),
 			...metric.attributes,
 			'highlight.session_id': getPersistentSessionSecureID(),
 		})
@@ -354,11 +437,15 @@ export class ObserveSDK implements Observe {
 	recordUpDownCounter(metric: Metric) {
 		let up_down_counter = this._up_down_counters.get(metric.name)
 		if (!up_down_counter) {
-			up_down_counter = getMeter()?.createUpDownCounter(metric.name)
+			up_down_counter = getMeter()?.createUpDownCounter(
+				metric.name,
+				metricInstrumentOptions(metric.name, metric.unit),
+			)
 			if (!up_down_counter) return
 			this._up_down_counters.set(metric.name, up_down_counter)
 		}
 		up_down_counter.add(metric.value, {
+			...(this._ldContextKeys ?? {}),
 			...metric.attributes,
 			'highlight.session_id': getPersistentSessionSecureID(),
 		})
@@ -384,6 +471,11 @@ export class ObserveSDK implements Observe {
 		}
 
 		const wrapCallback = (span: Span, callback: (span: Span) => any) => {
+			// Apply LD context keys before invoking the caller so any
+			// span.setAttributes the caller makes wins on key collisions.
+			if (this._ldContextKeys) {
+				span.setAttributes(this._ldContextKeys)
+			}
 			const result = callback(span)
 			if (result instanceof Promise) {
 				return result.finally(() => span.end())
@@ -586,16 +678,64 @@ export class ObserveSDK implements Observe {
 		WebVitalsListener((data) => {
 			const { name, value } = data
 			const { hostname, pathname, href } = window.location
+			const attributes: Attributes = {
+				group: window.location.pathname,
+				category: MetricCategory.WebVital,
+				[SemanticAttributes.ATTR_URL_FULL]: sanitizeUrl(href),
+				[SemanticAttributes.ATTR_URL_PATH]: pathname,
+				[SemanticAttributes.ATTR_SERVER_ADDRESS]: hostname,
+			}
+			switch (data.name) {
+				case 'LCP': {
+					const a = data.attribution
+					if (a.element) attributes['web_vital.element'] = a.element
+					if (a.url)
+						attributes['web_vital.attribution.url'] = sanitizeUrl(
+							a.url,
+						)
+					break
+				}
+				case 'CLS': {
+					const a = data.attribution
+					if (a.largestShiftTarget)
+						attributes['web_vital.element'] = a.largestShiftTarget
+					if (a.loadState)
+						attributes['web_vital.load_state'] = a.loadState
+					break
+				}
+				case 'INP': {
+					const a = data.attribution
+					if (a.eventTarget)
+						attributes['web_vital.element'] = a.eventTarget
+					if (a.eventType)
+						attributes['web_vital.event_type'] = a.eventType
+					if (a.loadState)
+						attributes['web_vital.load_state'] = a.loadState
+					break
+				}
+				case 'FID': {
+					const a = data.attribution
+					if (a.eventTarget)
+						attributes['web_vital.element'] = a.eventTarget
+					if (a.eventType)
+						attributes['web_vital.event_type'] = a.eventType
+					break
+				}
+				case 'FCP': {
+					const a = data.attribution
+					if (a.loadState)
+						attributes['web_vital.load_state'] = a.loadState
+					break
+				}
+				case 'TTFB':
+					// No high-signal selector to attribute; timing breakdown
+					// is already captured by the metric value itself.
+					break
+			}
 			this.recordGauge({
 				name,
 				value,
-				attributes: {
-					group: window.location.pathname,
-					category: MetricCategory.WebVital,
-					[SemanticAttributes.ATTR_URL_FULL]: sanitizeUrl(href),
-					[SemanticAttributes.ATTR_URL_PATH]: pathname,
-					[SemanticAttributes.ATTR_SERVER_ADDRESS]: hostname,
-				},
+				attributes,
 			})
 		})
 		ViewportResizeListener((viewport: ViewportResizeListenerArgs) => {
@@ -637,6 +777,63 @@ export class ObserveSDK implements Observe {
 					category: MetricCategory.Device,
 					group: window.location.href,
 				},
+			})
+		}
+		if (this._options.enableLongtaskRecording !== false) {
+			LongtaskListener((entry) => {
+				const attributes: Attributes = {
+					category: MetricCategory.Performance,
+					name: entry.name,
+					[SemanticAttributes.ATTR_URL_PATH]:
+						window.location.pathname,
+				}
+				if (entry.containerType) {
+					attributes['container_type'] = entry.containerType
+				}
+				if (entry.containerSrc) {
+					attributes['container_src'] = entry.containerSrc
+				}
+				if (entry.containerId) {
+					attributes['container_id'] = entry.containerId
+				}
+				if (entry.containerName) {
+					attributes['container_name'] = entry.containerName
+				}
+				this.recordHistogram({
+					name: 'long_task.duration',
+					value: entry.duration,
+					attributes,
+				})
+			})
+		}
+		if (this._options.enableReportingObserver !== false) {
+			ReportingObserverListener((report) => {
+				const attributes: Attributes = {
+					...report.attributes,
+					[SemanticAttributes.ATTR_URL_PATH]:
+						window.location.pathname,
+				}
+				if (report.kind === 'log') {
+					this._recordLog(
+						report.message,
+						report.level ?? 'warn',
+						attributes,
+					)
+				} else {
+					const err = new Error(report.message)
+					this.recordError(
+						err,
+						undefined,
+						Object.fromEntries(
+							Object.entries(attributes).map(([k, v]) => [
+								k,
+								v === undefined ? '' : String(v),
+							]),
+						),
+						'reporting-observer',
+						'custom',
+					)
+				}
 			})
 		}
 	}

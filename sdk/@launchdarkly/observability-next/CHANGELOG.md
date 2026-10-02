@@ -1,0 +1,98 @@
+# Changelog
+
+## [0.2.9](https://github.com/launchdarkly/observability-sdk/compare/observability-next-0.2.8...observability-next-0.2.9) (2026-09-24)
+
+
+### Bug Fixes
+
+* **observability-next:** require next &gt;=16.3.3 to resolve GHSA-p293-qw3h-jr36 ([#762](https://github.com/launchdarkly/observability-sdk/issues/762)) ([42dc7ed](https://github.com/launchdarkly/observability-sdk/commit/42dc7ed12783a0a7618185f6538a0f61ec4066ee))
+
+## [0.2.8](https://github.com/launchdarkly/observability-sdk/compare/observability-next-0.2.7...observability-next-0.2.8) (2026-09-15)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @launchdarkly/observability bumped to 1.1.23
+    * @launchdarkly/session-replay bumped to 1.1.23
+
+## [0.2.7](https://github.com/launchdarkly/observability-sdk/compare/observability-next-0.2.6...observability-next-0.2.7) (2026-09-09)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @launchdarkly/observability bumped to 1.1.22
+    * @launchdarkly/session-replay bumped to 1.1.22
+
+## [0.2.6](https://github.com/launchdarkly/observability-sdk/compare/observability-next-0.2.5...observability-next-0.2.6) (2026-09-09)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @launchdarkly/observability bumped to 1.1.21
+    * @launchdarkly/session-replay bumped to 1.1.21
+
+## [0.2.5](https://github.com/launchdarkly/observability-sdk/compare/observability-next-0.2.4...observability-next-0.2.5) (2026-09-03)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @launchdarkly/observability bumped to 1.1.20
+    * @launchdarkly/session-replay bumped to 1.1.20
+
+## [0.2.4](https://github.com/launchdarkly/observability-sdk/compare/observability-next-0.2.3...observability-next-0.2.4) (2026-08-13)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @launchdarkly/observability bumped to 1.1.19
+    * @launchdarkly/session-replay bumped to 1.1.19
+
+## [0.2.3](https://github.com/launchdarkly/observability-sdk/compare/observability-next-0.2.2...observability-next-0.2.3) (2026-08-07)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @launchdarkly/observability bumped to 1.1.18
+    * @launchdarkly/observability-node bumped to 1.3.0
+    * @launchdarkly/session-replay bumped to 1.1.18
+
+## [0.2.2](https://github.com/launchdarkly/observability-sdk/compare/observability-next-0.2.1...observability-next-0.2.2) (2026-07-16)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @launchdarkly/observability bumped to 1.1.17
+    * @launchdarkly/session-replay bumped to 1.1.17
+
+## [0.2.1](https://github.com/launchdarkly/observability-sdk/compare/observability-next-0.2.0...observability-next-0.2.1) (2026-06-29)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @launchdarkly/observability bumped to 1.1.16
+    * @launchdarkly/observability-node bumped to 1.2.0
+    * @launchdarkly/session-replay bumped to 1.1.16
+
+## [0.2.0](https://github.com/launchdarkly/observability-sdk/compare/observability-next-0.1.0...observability-next-0.2.0) (2026-06-18)
+
+
+### Features
+
+* **@launchdarkly/session-replay-react-native:** use cocoapods for native session replay ([#434](https://github.com/launchdarkly/observability-sdk/issues/434)) ([41988e1](https://github.com/launchdarkly/observability-sdk/commit/41988e196b02901964efdad0e25f892d5ba55fc4))
+* **observability-next:** add LaunchDarkly Next.js SDK ([#630](https://github.com/launchdarkly/observability-sdk/issues/630)) ([08cb95b](https://github.com/launchdarkly/observability-sdk/commit/08cb95b88cdd58351f5f2aaad87710836b177e2e))

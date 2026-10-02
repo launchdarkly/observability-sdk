@@ -65,7 +65,11 @@ data class NativeMaskTarget(
     }
 
     override fun hasLDMask(): Boolean {
-        return view.getTag(R.id.ld_mask_tag) as? Boolean ?: false
+        return view.getTag(R.id.ld_mask_tag) == true
+    }
+
+    override fun hasLDUnmask(): Boolean {
+        return view.getTag(R.id.ld_mask_tag) == false
     }
 
     // return 4 points of polygon under transformations

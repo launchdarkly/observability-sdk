@@ -6,10 +6,10 @@ plugins {
 
     // Apply the Kotlin Android plugin for Android-compatible Kotlin support.
     alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.kotlin.serialization)
 
     // Apply Dokka plugin for documentation generation
-    id("org.jetbrains.dokka") version "2.0.0"
+    id("org.jetbrains.dokka") version "2.1.0"
+    id("org.jetbrains.dokka-javadoc") version "2.1.0"
 }
 
 allprojects {
@@ -19,34 +19,68 @@ allprojects {
     }
 }
 
-dependencies {
-    implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.10.0")
-    implementation("com.jakewharton.timber:timber:5.0.1")
+// Hosts that already provide com.launchdarkly:launchdarkly-android-client-sdk on the app
+// classpath (e.g. the MAUI bridge, and Flutter via launchdarkly_flutter_client_sdk) opt in by
+// setting `ldClientSdkProvided=true`. It is read as a system property because that is the only
+// channel that reliably crosses the composite-build boundary into this included build; a Gradle
+// property fallback supports passing it directly when building this library standalone.
+val isClientSdkProvidedByHost =
+    (providers.gradleProperty("ldClientSdkProvided").orNull
+        ?: providers.systemProperty("ldClientSdkProvided").orNull)
+        ?.toBoolean() == true
 
-    // Android
-    implementation("androidx.activity:activity:1.11.0")
-    implementation("androidx.lifecycle:lifecycle-process:2.6.2")
+// Pin Kotlin runtime artifacts on this build's classpath to match the configured Kotlin
+// compiler version (2.0.21). Without this, transitive deps such as the
+// io.opentelemetry.android:*:0.11.0-alpha modules drag in newer kotlin-stdlib / kotlin-reflect
+// whose metadata version the 2.0.21 compiler cannot read, producing
+// "Module was compiled with an incompatible version of Kotlin" errors at compileDebugKotlin.
+//
+// Scope is intentionally limited to stdlib / reflect / test — the @Metadata-bearing artifacts
+// that end up on user-code compile/runtime classpaths. KGP-internal artifacts
+// (kotlin-build-tools-impl, kotlin-compiler-embeddable, kotlin-gradle-plugin-api, etc.) are
+// NOT pinned because they must match the active KGP version; downgrading them triggers KGP
+// 2.x's "Build Tools API Version Mismatch Detected" check during artifact transforms.
+configurations.all {
+    resolutionStrategy.eachDependency {
+        val name = requested.name
+        val isRuntimeArtifact = name.startsWith("kotlin-stdlib") ||
+                name == "kotlin-reflect" ||
+                name.startsWith("kotlin-test")
+        if (requested.group == "org.jetbrains.kotlin" && isRuntimeArtifact) {
+            useVersion("2.0.21")
+            because("Align Kotlin runtime artifacts with the project's Kotlin compiler version (2.0.21).")
+        }
+    }
+}
+
+dependencies {
+    if (isClientSdkProvidedByHost) {
+        compileOnly("com.launchdarkly:launchdarkly-android-client-sdk:5.14.0")
+        testImplementation("com.launchdarkly:launchdarkly-android-client-sdk:5.14.0")
+    } else {
+        implementation("com.launchdarkly:launchdarkly-android-client-sdk:5.14.0")
+    }
+
+    // AndroidX
+    // This only used by Session Replay.
+    implementation("androidx.activity:activity:1.7.0")
+    implementation("androidx.lifecycle:lifecycle-process:2.4.0")
+    compileOnly("androidx.compose.ui:ui:1.7.5")
+    compileOnly("androidx.compose.ui:ui-tooling:1.7.5")
 
     // Coroutines
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
-
-    // Kotlinx serialization for JSON parsing
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 
     // TODO: revise these versions to be as old as usable for compatibility
     implementation("io.opentelemetry:opentelemetry-api:1.51.0")
     implementation("io.opentelemetry:opentelemetry-sdk:1.51.0")
-    implementation("io.opentelemetry:opentelemetry-exporter-otlp:1.51.0")
-    implementation("io.opentelemetry:opentelemetry-exporter-logging-otlp:1.51.0")
     implementation("io.opentelemetry:opentelemetry-sdk-metrics:1.51.0")
     implementation("io.opentelemetry:opentelemetry-sdk-logs:1.51.0")
 
-    // TODO: Evaluate risks associated with incubator APIs
+    // Required at runtime by io.opentelemetry.android:core, which uses incubator APIs
+    // internally for the logs bridge. Can be removed once the OTel Android SDK drops this dependency.
     implementation("io.opentelemetry:opentelemetry-api-incubator:1.51.0-alpha")
-    
-    // Testing exporters for telemetry inspection
-    implementation("io.opentelemetry:opentelemetry-sdk-testing:1.51.0")
 
     // OTEL Android
     implementation("io.opentelemetry.android:core:0.11.0-alpha")
@@ -54,22 +88,24 @@ dependencies {
 
     // OTEL Android Instrumentations
     implementation("io.opentelemetry.android.instrumentation:crash:0.11.0-alpha")
-    implementation("io.opentelemetry.android.instrumentation:activity:0.11.0-alpha")
-
-    // TODO: O11Y-626 - move replay instrumentation and associated compose dependencies into dedicated package
-    // Compose dependencies for capture functionality
-    implementation("androidx.compose.ui:ui:1.7.5")
-    implementation("androidx.compose.ui:ui-tooling:1.7.5")
+    // NOTE: the `activity` instrumentation is intentionally NOT depended on. It is superseded by
+    // LaunchDarkly's own app/screen lifecycle spans and would otherwise double-report; we also
+    // defensively suppress it by name (see ObservabilityService.createOtelRumConfig).
 
     // Use JUnit Jupiter for testing.
+    // Testing exporters for telemetry inspection
+    testImplementation("io.opentelemetry:opentelemetry-sdk-testing:1.51.0")
     testImplementation(platform("org.junit:junit-bom:5.13.4"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
+    // android.jar only ships org.json stubs, so JVM unit tests need a real implementation.
+    testImplementation("org.json:json:20260814")
     testImplementation("io.mockk:mockk:1.14.5")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
 
-    testFixturesImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
+    testFixturesApi("io.opentelemetry:opentelemetry-sdk-testing:1.51.0")
+    testFixturesImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
 }
 
 val releaseVersion = version.toString()
@@ -80,14 +116,14 @@ tasks.withType<Test> {
 
 android {
     namespace = "com.launchdarkly.observability"
-    compileSdk = 36
+    compileSdk = 35
 
     buildFeatures {
         buildConfig = true
     }
 
     defaultConfig {
-        minSdk = 24
+        minSdk = 23
         version = releaseVersion
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "OBSERVABILITY_SDK_VERSION", "\"${project.version}\"")
@@ -99,11 +135,21 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
     }
-    kotlinOptions {
-        jvmTarget = "1.8"
+    kotlin {
+        // Pin the Kotlin language/api version so the compiler emits bytecode compatible with
+        // Kotlin 2.0 runtime, even when a host project (e.g. e2e) forces a newer compiler
+        // (e.g. 2.2.0) onto this module via its version catalog. Without this, the newer
+        // compiler would emit references to classes like kotlin.coroutines.jvm.internal.SpillingKt
+        // that do not exist in the 2.0.21 stdlib we ship with.
+        coreLibrariesVersion = "2.0.21"
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
+            languageVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_0)
+            apiVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_0)
+        }
     }
 
     publishing {
@@ -169,18 +215,19 @@ publishing {
 }
 
 signing {
+    isRequired = gradle.taskGraph.allTasks.any { it.name.contains("sonatype", ignoreCase = true) }
     sign(publishing.publications["release"])
 }
 
-// Dokka configuration for Android library documentation
-tasks.dokkaJavadoc.configure {
+dokka {
     moduleName.set("launchdarkly-observability-android")
     moduleVersion.set(project.version.toString())
-    outputDirectory.set(layout.projectDirectory.dir("docs"))
 
-    dokkaSourceSets {
-        configureEach {
-            includes.from("doc-module.md")
-        }
+    dokkaPublications.javadoc {
+        outputDirectory.set(layout.projectDirectory.dir("docs"))
+    }
+
+    dokkaSourceSets.configureEach {
+        includes.from("doc-module.md")
     }
 }

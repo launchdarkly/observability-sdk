@@ -1,0 +1,581 @@
+package com.launchdarkly.observability.replay.exporter
+
+import android.view.MotionEvent
+import com.launchdarkly.observability.replay.Event
+import com.launchdarkly.observability.replay.Addition
+import com.launchdarkly.observability.replay.EventData
+import com.launchdarkly.observability.replay.EventDataUnion
+import com.launchdarkly.observability.replay.EventNode
+import com.launchdarkly.observability.replay.EventType
+import com.launchdarkly.observability.replay.IncrementalSource
+import com.launchdarkly.observability.replay.InteractionEvent
+import com.launchdarkly.observability.replay.NodeType
+import com.launchdarkly.observability.replay.Removal
+import com.launchdarkly.observability.replay.transport.EventQueueItem
+import com.launchdarkly.observability.replay.RRWebCustomDataTag
+import com.launchdarkly.observability.replay.RRWebIncrementalSource
+import com.launchdarkly.observability.replay.RRWebMouseInteraction
+import com.launchdarkly.observability.replay.capture.ExportFrame
+import com.launchdarkly.observability.replay.capture.ImageSignature
+import com.launchdarkly.observability.json.JsonByteWriter
+
+/**
+ * Generates RRWeb-compatible events for session replay.
+ *
+ * Encapsulates generation state like sid sequencing and canvas size accounting.
+ */
+class RRWebEventGenerator(
+    private val canvasDrawEntourage: Int,
+    private val title: String
+) {
+    companion object {
+        private const val RRWEB_DOCUMENT_PADDING = 11
+        private const val RRWEB_INITIAL_NODE_ID = 16
+        private const val DOM_HTML = "html"
+        private const val DOM_HEAD = "head"
+        private const val DOM_BODY = "body"
+        private const val DOM_LANG = "lang"
+        private const val DOM_LANG_EN = "en"
+        private const val DOM_STYLE = "style"
+        private const val DOM_BODY_STYLE = "position:relative;"
+        private const val CLICK_SELECTOR_FALLBACK = "view"
+    }
+
+    /**
+     * Sequence ID for the events being generated.
+     * Each event in a session needs a unique, monotonically increasing "sid".
+     * This is incremented by [nextSid] for each new event.
+     */
+    private var lastSid = 0
+    var accumulatedCanvasSize: Int = 0
+    private var lastNodeId: Int = RRWEB_INITIAL_NODE_ID
+    private var imageNodeId: Int? = null
+    private var bodyNodeId: Int? = null
+    private var knownKeyFrameId: Int? = null
+    private val nodeIds = mutableMapOf<ImageSignature, Int>()
+
+    data class State(
+        val lastSid: Int = 0,
+        val generatingCanvasSize: Int = 0,
+        val lastNodeId: Int = RRWEB_INITIAL_NODE_ID,
+        val imageNodeId: Int? = null,
+        val bodyNodeId: Int? = null,
+        val knownKeyFrameId: Int? = null,
+        val nodeIds: Map<ImageSignature, Int> = emptyMap(),
+    )
+
+    private fun nextSid(): Int {
+        lastSid++
+        return lastSid
+    }
+
+    private fun nextNodeId(): Int {
+        lastNodeId++
+        return lastNodeId
+    }
+
+    private fun imageMimeType(): String =
+        when (ExportFrame.DEFAULT_EXPORT_FORMAT) {
+            ExportFrame.ExportFormat.Png -> "image/png"
+            is ExportFrame.ExportFormat.Jpeg -> "image/jpeg"
+            is ExportFrame.ExportFormat.Webp -> "image/webp"
+        }
+
+    private fun tileNode(image: ExportFrame.AddImage): Pair<EventNode, Int> {
+        val tileCanvasId = nextNodeId()
+        image.imageSignature?.let { nodeIds[it] = tileCanvasId }
+        val dataUrl = "data:${imageMimeType()};base64,${image.imageBase64}"
+        val node = EventNode(
+            id = tileCanvasId,
+            type = NodeType.ELEMENT,
+            tagName = "img",
+            attributes = mapOf(
+                "src" to dataUrl,
+                "width" to "${image.rect.width}",
+                "height" to "${image.rect.height}",
+                "style" to "position:absolute;left:${image.rect.left}px;top:${image.rect.top}px;pointer-events:none;",
+            ),
+            childNodes = emptyList(),
+        )
+        return node to dataUrl.length
+    }
+
+    private fun addCommandNodes(exportFrame: ExportFrame): List<Event> {
+        val bodyId = bodyNodeId ?: return emptyList()
+
+        var totalCanvasSize = 0
+        val removes = exportFrame.removeImages?.mapNotNull { removal ->
+            nodeIds[removal.imageSignature]?.let { nodeId ->
+                Removal(parentId = bodyId, id = nodeId)
+            }
+        } ?: emptyList()
+
+        if (exportFrame.isKeyframe) {
+            nodeIds.clear()
+        } else if (exportFrame.keyFrameId != knownKeyFrameId) {
+            // Drop frame, it cannot be reconstructed from currently known keyframe state.
+            return emptyList()
+        }
+
+        val adds = exportFrame.addImages.map { image ->
+            val (node, canvasSize) = tileNode(image)
+            totalCanvasSize += canvasSize
+            Addition(parentId = bodyId, nextId = null, node = node)
+        }
+
+        if (exportFrame.isKeyframe) {
+            adds.firstOrNull()?.node?.id?.let { firstId ->
+                if (firstId != imageNodeId) {
+                    imageNodeId = firstId
+                }
+            }
+        }
+
+        val mutationEvent = Event(
+            type = EventType.INCREMENTAL_SNAPSHOT,
+            timestamp = exportFrame.timestamp,
+            sid = nextSid(),
+            data = EventDataUnion.StandardEventData(
+                EventData(
+                    source = IncrementalSource.MUTATION,
+                    adds = adds,
+                    removes = removes,
+                )
+            ),
+        )
+        accumulatedCanvasSize += totalCanvasSize + canvasDrawEntourage
+        return listOf(mutationEvent)
+    }
+
+    fun getState(): State = State(
+        lastSid = lastSid,
+        generatingCanvasSize = accumulatedCanvasSize,
+        lastNodeId = lastNodeId,
+        imageNodeId = imageNodeId,
+        bodyNodeId = bodyNodeId,
+        knownKeyFrameId = knownKeyFrameId,
+        nodeIds = nodeIds.toMap(),
+    )
+
+    fun restoreState(state: State) {
+        lastSid = state.lastSid
+        accumulatedCanvasSize = state.generatingCanvasSize
+        lastNodeId = state.lastNodeId
+        imageNodeId = state.imageNodeId
+        bodyNodeId = state.bodyNodeId
+        knownKeyFrameId = state.knownKeyFrameId
+        nodeIds.clear()
+        nodeIds.putAll(state.nodeIds)
+    }
+
+    /**
+     * Generates events for an incremental capture. Used after [generateCaptureFullEvents] has already been called
+     * for a previous capture in the same session.
+     */
+    fun generateCaptureIncrementalEvents(exportFrame: ExportFrame): List<Event> {
+        if (exportFrame.isKeyframe) {
+            knownKeyFrameId = exportFrame.keyFrameId
+        }
+        return addCommandNodes(exportFrame)
+    }
+
+    /**
+     * Generates events for a full capture. May be invoked multiple times for a single session if a substantial
+     * change occurs requiring a full capture to be sent.
+     */
+    fun generateCaptureFullEvents(exportFrame: ExportFrame): List<Event> {
+        if (exportFrame.addImages.isEmpty()) return emptyList()
+        nodeIds.clear()
+        val eventBatch = mutableListOf<Event>()
+        knownKeyFrameId = exportFrame.keyFrameId
+
+        val metaEvent = Event(
+            type = EventType.META,
+            timestamp = exportFrame.timestamp,
+            sid = nextSid(),
+            data = EventDataUnion.StandardEventData(
+                EventData(
+                    width = exportFrame.originalSize.width + RRWEB_DOCUMENT_PADDING * 2,
+                    height = exportFrame.originalSize.height + RRWEB_DOCUMENT_PADDING * 2,
+                    )
+            ),
+        )
+        eventBatch.add(metaEvent)
+
+        lastNodeId = 0
+        var totalCanvasSize = 0
+        val documentNodeId = nextNodeId()
+        val headNodeId = nextNodeId()
+        val currentBodyNodeId = nextNodeId()
+        val tileNodes = exportFrame.addImages.map { image ->
+            val (node, canvasSize) = tileNode(image)
+            totalCanvasSize += canvasSize
+            node
+        }
+        val htmlNodeId = nextNodeId()
+
+        val snapshotEvent = Event(
+            type = EventType.FULL_SNAPSHOT,
+            timestamp = exportFrame.timestamp,
+            sid = nextSid(),
+            data = EventDataUnion.StandardEventData(
+                EventData(
+                    node = EventNode(
+                        id = documentNodeId,
+                        type = NodeType.DOCUMENT,
+                        childNodes = listOf(
+                            EventNode(
+                                id = htmlNodeId,
+                                type = NodeType.ELEMENT,
+                                tagName = DOM_HTML,
+                                attributes = mapOf(DOM_LANG to DOM_LANG_EN),
+                                childNodes = listOf(
+                                    EventNode(
+                                        id = headNodeId,
+                                        type = NodeType.ELEMENT,
+                                        tagName = DOM_HEAD,
+                                        attributes = emptyMap(),
+                                    ),
+                                    EventNode(
+                                        id = currentBodyNodeId,
+                                        type = NodeType.ELEMENT,
+                                        tagName = DOM_BODY,
+                                        attributes = mapOf(DOM_STYLE to DOM_BODY_STYLE),
+                                        childNodes = tileNodes
+                                    )
+                                )
+                            )
+                        ),
+                    ),
+                )
+            ),
+        )
+
+        imageNodeId = tileNodes.firstOrNull()?.id
+        bodyNodeId = currentBodyNodeId
+        accumulatedCanvasSize = totalCanvasSize + canvasDrawEntourage
+        eventBatch.add(snapshotEvent)
+
+        val viewportEvent = Event(
+            type = EventType.CUSTOM,
+            timestamp = exportFrame.timestamp,
+            sid = nextSid(),
+            data = EventDataUnion.CustomEventDataWrapper(
+                mapOf(
+                    "tag" to RRWebCustomDataTag.VIEWPORT.wireValue,
+                    "payload" to mapOf(
+                        "width" to exportFrame.originalSize.width,
+                        "height" to exportFrame.originalSize.height,
+                        "availWidth" to exportFrame.originalSize.width,
+                        "availHeight" to exportFrame.originalSize.height,
+                        "colorDepth" to 30,
+                        "pixelDepth" to 30,
+                        "orientation" to exportFrame.orientation,
+                    ),
+                )
+            )
+        )
+        eventBatch.add(viewportEvent)
+
+        return eventBatch
+    }
+
+
+    /**
+     * Generates events for a touch interaction.
+     */
+    fun generateInteractionEvents(interactionEvent: InteractionEvent): List<Event> {
+        val events = mutableListOf<Event>()
+
+        when (interactionEvent.action) {
+            MotionEvent.ACTION_DOWN -> {
+                val firstPosition = interactionEvent.positions.first()
+                events.add(
+                    Event(
+                        type = EventType.INCREMENTAL_SNAPSHOT,
+                        timestamp = firstPosition.timestamp,
+                        sid = nextSid(),
+                        data = EventDataUnion.CustomEventDataWrapper(
+                            touchData(RRWebMouseInteraction.TOUCH_START, firstPosition.x, firstPosition.y)
+                        )
+                    )
+                )
+                // No `Click` event here: a touch-down is not yet a click (it may become a drag or a
+                // long press), and this stream cannot see clicks an embedder resolves itself. Clicks
+                // arrive from Observability's click funnel instead - see [generateClickEvent].
+            }
+
+            MotionEvent.ACTION_UP -> { // CANCEL is not here because UP and CANCEL are merged to UP in interaction source.
+                val lastPosition = interactionEvent.positions.last()
+                events.add(
+                    Event(
+                        type = EventType.INCREMENTAL_SNAPSHOT,
+                        timestamp = lastPosition.timestamp,
+                        sid = nextSid(),
+                        data = EventDataUnion.CustomEventDataWrapper(
+                            touchData(RRWebMouseInteraction.TOUCH_END, lastPosition.x, lastPosition.y)
+                        )
+                    )
+                )
+            }
+
+            MotionEvent.ACTION_MOVE -> {
+                // Generate one event per position. Each positionsJson will only contain one position.
+                interactionEvent.positions.forEach { position ->
+                    events.add(
+                        Event(
+                            type = EventType.INCREMENTAL_SNAPSHOT,
+                            timestamp = position.timestamp,
+                            sid = nextSid(),
+                            data = EventDataUnion.CustomEventDataWrapper(
+                                mapOf(
+                                    "source" to RRWebIncrementalSource.TOUCH_MOVE.code,
+                                    "positions" to listOf(
+                                        buildMap {
+                                            imageNodeId?.let { put("id", it) }
+                                            put("timeOffset", 0)
+                                            put("x", position.x + RRWEB_DOCUMENT_PADDING)
+                                            put("y", position.y + RRWEB_DOCUMENT_PADDING)
+                                        }
+                                    ),
+                                )
+                            )
+                        )
+                    )
+                }
+            }
+        }
+
+        return events
+    }
+
+    private fun touchData(interaction: RRWebMouseInteraction, x: Int, y: Int): Map<String, Any?> = buildMap {
+        put("source", RRWebIncrementalSource.MOUSE_INTERACTION.code)
+        put("texts", emptyList<String>())
+        put("type", interaction.code)
+        imageNodeId?.let { put("id", it) }
+        put("x", x + RRWEB_DOCUMENT_PADDING)
+        put("y", y + RRWEB_DOCUMENT_PADDING)
+    }
+
+    /** A compact JSON string, for the custom events whose payload is stringified JSON. */
+    private fun jsonString(value: Map<String, Any?>): String = JsonByteWriter.encodeToString { anyValue(value) }
+
+    /**
+     * Payload is a JSON string representing the user attributes map.
+     */
+    fun generateIdentifyEvent(identify: IdentifyItemPayload): Event? {
+        val userJSONString = try {
+            jsonString(identify.attributes)
+        } catch (_: Exception) {
+            return null
+        }
+
+        val customData = mapOf(
+            "tag" to RRWebCustomDataTag.IDENTIFY.wireValue,
+            // Payload must be a JSON string per rrweb Custom event contract used by Swift
+            "payload" to userJSONString,
+        )
+
+        return Event(
+            type = EventType.CUSTOM,
+            timestamp = identify.timestamp,
+            sid = nextSid(),
+            data = EventDataUnion.CustomEventDataWrapper(customData)
+        )
+    }
+
+    /**
+     * Generates a "Track" custom event. Mirrors the web SDK, where the payload is a JSON string
+     * of `{ event, value, data }` (`value` omitted when null).
+     */
+    fun generateTrackEvent(track: TrackItemPayload): Event? {
+        val payloadJSONString = try {
+            jsonString(
+                buildMap {
+                    put("event", track.name)
+                    track.metricValue?.let { put("value", it) }
+                    put("data", track.attributes)
+                }
+            )
+        } catch (_: Exception) {
+            return null
+        }
+
+        val customData = mapOf(
+            "tag" to RRWebCustomDataTag.TRACK.wireValue,
+            // Payload must be a JSON string per rrweb Custom event contract used by web / Swift.
+            "payload" to payloadJSONString,
+        )
+
+        return Event(
+            type = EventType.CUSTOM,
+            timestamp = track.timestamp,
+            sid = nextSid(),
+            data = EventDataUnion.CustomEventDataWrapper(customData)
+        )
+    }
+
+    /**
+     * Generates a "Navigate" custom event. Mirrors the web SDK, where the payload is the route
+     * (here the screen name) as a plain string.
+     */
+    fun generateNavigateEvent(navigate: NavigateItemPayload): Event {
+        val customData = mapOf(
+            "tag" to RRWebCustomDataTag.NAVIGATE.wireValue,
+            "payload" to navigate.name,
+        )
+
+        return Event(
+            type = EventType.CUSTOM,
+            timestamp = navigate.timestamp,
+            sid = nextSid(),
+            data = EventDataUnion.CustomEventDataWrapper(customData)
+        )
+    }
+
+    /**
+     * Generates a "Click" custom event from Observability's click funnel, which covers both
+     * automatically detected taps and clicks reported through `LDObserve.trackClick` (the path
+     * embedders such as Flutter use, since a native hit-test only ever finds their render surface).
+     *
+     * Mirrors the web `Click` payload (`highlight-run` ClickListener):
+     * - `clickTarget`: element class name (web: full CSS selector path)
+     * - `clickTextContent`: the element's visible text (web: `target.textContent`)
+     * - `clickSelector`: stable id else class name (web: `#id` else tag)
+     */
+    fun generateClickEvent(click: ClickItemPayload): Event {
+        val customData = mapOf(
+            "tag" to RRWebCustomDataTag.CLICK.wireValue,
+            "payload" to buildMap {
+                put("clickTarget", click.target ?: "")
+                put("clickTextContent", click.text ?: "")
+                put("clickSelector", click.id ?: click.target ?: CLICK_SELECTOR_FALLBACK)
+                click.screenId?.let { put("screenId", it) }
+                click.screenName?.let { put("screenName", it) }
+            },
+        )
+
+        return Event(
+            type = EventType.CUSTOM,
+            timestamp = click.timestamp,
+            sid = nextSid(),
+            data = EventDataUnion.CustomEventDataWrapper(customData)
+        )
+    }
+
+    /**
+     * Generates a "Foreground"/"Background" custom event for an app-lifecycle transition. The
+     * payload is a stringified JSON object carrying the `lifecycle_state`, matching the rrweb Custom
+     * event contract used by web / Swift.
+     */
+    fun generateAppLifecycleEvent(payload: AppLifecycleItemPayload): Event? {
+        val payloadJSONString = try {
+            jsonString(
+                buildMap {
+                    payload.lifecycleState?.let { put("lifecycle_state", it) }
+                }
+            )
+        } catch (_: Exception) {
+            return null
+        }
+
+        val customData = mapOf(
+            "tag" to payload.tag.wireValue,
+            "payload" to payloadJSONString,
+        )
+
+        return Event(
+            type = EventType.CUSTOM,
+            timestamp = payload.timestamp,
+            sid = nextSid(),
+            data = EventDataUnion.CustomEventDataWrapper(customData)
+        )
+    }
+
+    /**
+     * Generates a `Launch` custom event. The payload is a stringified JSON `{ "launch_type" }`
+     * (mirroring the app-lifecycle breadcrumb).
+     */
+    fun generateAppLaunchEvent(payload: AppLaunchItemPayload): Event? {
+        val payloadJSONString = try {
+            jsonString(
+                buildMap {
+                    payload.launchType?.let { put("launch_type", it) }
+                    payload.version?.let { put("version", it) }
+                    payload.build?.let { put("build", it) }
+                    payload.previousVersion?.let { put("previous_version", it) }
+                }
+            )
+        } catch (_: Exception) {
+            return null
+        }
+
+        val customData = mapOf(
+            "tag" to payload.tag.wireValue,
+            "payload" to payloadJSONString,
+        )
+
+        return Event(
+            type = EventType.CUSTOM,
+            timestamp = payload.timestamp,
+            sid = nextSid(),
+            data = EventDataUnion.CustomEventDataWrapper(customData)
+        )
+    }
+
+    /**
+     * Generates a "Reload" custom event and a sequence of "wake-up" interaction events.
+     * Used by [SessionReplayExporter] to re-trigger player playback after session resumption.
+     *
+     * When [appLaunch] is provided, the one-shot `Launch` breadcrumb is folded into this batch
+     * instead of being enqueued via the live collector: the launch signal fires during SDK start
+     * before Session Replay subscribes, and enqueuing it directly would race session
+     * initialization. Emitting it here guarantees it lands on an already-initialized session.
+     */
+    fun generateWakeUpEvents(timestamp: Long, appLaunch: AppLaunchItemPayload? = null): List<Event> {
+        val imageId = imageNodeId ?: return emptyList()
+
+        val events = mutableListOf(generateReloadEvent(timestamp))
+        appLaunch?.let { payload -> generateAppLaunchEvent(payload)?.let(events::add) }
+        // artificial mouse down/up to wake up player
+        events += generateMouseInteractionEvent(EventType.INCREMENTAL_SNAPSHOT, RRWebMouseInteraction.MOUSE_DOWN, imageId, timestamp)
+        events += generateMouseInteractionEvent(EventType.INCREMENTAL_SNAPSHOT, RRWebMouseInteraction.MOUSE_UP, imageId, timestamp)
+        return events
+    }
+
+    private fun generateReloadEvent(timestamp: Long): Event {
+        val customData = mapOf(
+            "tag" to RRWebCustomDataTag.RELOAD.wireValue,
+            "payload" to title,
+        )
+        return Event(
+            type = EventType.CUSTOM,
+            timestamp = timestamp,
+            sid = nextSid(),
+            data = EventDataUnion.CustomEventDataWrapper(customData)
+        )
+    }
+
+    private fun generateMouseInteractionEvent(
+        eventType: EventType,
+        interactionType: RRWebMouseInteraction,
+        id: Int,
+        timestamp: Long
+    ): Event {
+        val customData = mapOf(
+            "source" to RRWebIncrementalSource.MOUSE_INTERACTION.code,
+            "texts" to emptyList<String>(),
+            "type" to interactionType.code,
+            "id" to id,
+            "x" to RRWEB_DOCUMENT_PADDING,
+            "y" to RRWEB_DOCUMENT_PADDING,
+        )
+        return Event(
+            type = eventType,
+            timestamp = timestamp,
+            sid = nextSid(),
+            data = EventDataUnion.CustomEventDataWrapper(customData)
+        )
+    }
+}

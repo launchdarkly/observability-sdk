@@ -6,8 +6,13 @@ import android.app.Activity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.androidobservability.R
+import com.launchdarkly.observability.client.screen.LDScreenNameProvider
 
-class SmoothieListActivity : Activity() {
+class SmoothieListActivity : Activity(), LDScreenNameProvider {
+
+    // Demonstrates customizing the automatic `screen_view` name/category for this Activity.
+    override val ldScreenName: String = "Smoothie Menu"
+    override val ldScreenCategory: String = "Catalog"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

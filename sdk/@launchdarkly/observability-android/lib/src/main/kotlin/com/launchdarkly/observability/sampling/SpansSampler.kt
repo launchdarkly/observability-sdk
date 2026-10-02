@@ -1,6 +1,6 @@
 package com.launchdarkly.observability.sampling
 
-import com.launchdarkly.observability.client.InstrumentationManager
+import com.launchdarkly.observability.client.ObservabilityService
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.trace.SpanKind
 import io.opentelemetry.context.Context
@@ -36,7 +36,7 @@ class SpansSampler(
     override fun getDescription(): String = "LaunchDarklySpansSampler"
 
     private fun shouldRecordSpan(spanName: String): Boolean {
-        val isErrorSpan = spanName == InstrumentationManager.ERROR_SPAN_NAME
+        val isErrorSpan = spanName == ObservabilityService.ERROR_SPAN_NAME
 
         return when {
             isErrorSpan -> allowErrorSpans

@@ -1,0 +1,379 @@
+import Foundation
+import LaunchDarklyObservability // From Dependency A
+import LaunchDarklySessionReplay
+
+@objc(SessionReplayClientAdapter)
+//@objcMembers
+public class SessionReplayClientAdapter: NSObject {
+  @objc public static let shared = SessionReplayClientAdapter()
+
+  // Shared marker so the whole native init sequence can be filtered from the
+  // device/Xcode console with a single search (e.g. `[SR init]`). Matches the
+  // Android adapter's LOG_PREFIX for cross-platform correlation.
+  fileprivate static let logPrefix = "[SR init]"
+
+  // Wall-clock time (ms since epoch) captured once per OS process, the first
+  // time this value is read. As a `static let` it is lazily initialized once
+  // and held for the process lifetime, so it survives a JS soft/OTA reload
+  // (same process) but is regenerated on a cold start (new process). The JS
+  // observability session uses it to tell a cold restart from a surviving
+  // process when deciding whether to resume a persisted session.
+  private static let processStartTimeMillisValue: Double =
+    Date().timeIntervalSince1970 * 1000
+
+  @objc public static func processStartTimeMillis() -> Double {
+    return processStartTimeMillisValue
+  }
+
+  // Guarded by lock.
+  private let lock = NSLock()
+  private var mobileKey: String?
+  private var sessionReplayOptions: SessionReplayOptions?
+  // Optional session id forwarded from the JS observability SDK so the native
+  // observability instance (which emits e.g. `click` spans) reports the same
+  // `session.id`. nil means the native SDK uses its own generated session.
+  private var customSessionId: String?
+  // Optional `service.version` forwarded from JS. Applied to the observability
+  // plugin only (the session replay options have no version). nil keeps the
+  // SDK default.
+  private var serviceVersion: String?
+  // Optional OTLP endpoint / backend URL forwarded from JS. nil keeps the SDK
+  // default. backendUrl also drives the session replay upload endpoint (the
+  // SessionReplay plugin reads it from the shared observability options).
+  private var otlpEndpoint: String?
+  private var backendUrl: String?
+  // Each start()/stop() appends a new Task that awaits the previous one, serializing all work.
+  private var lastTask: Task<Void, Never> = Task {}
+
+  @MainActor private var initialized = false
+  // The most recently identified LDContext. Defaults to nil (LDClient will use its own anonymous
+  // context). Updated on each successful identify via afterIdentify.
+  @MainActor private var cachedContext: LDContext? = nil
+
+  private override init() {
+    super.init()
+  }
+
+  @objc public func setMobileKey(_ mobileKey: String, options: NSDictionary?) {
+    lock.lock()
+    defer { lock.unlock() }
+    let key = mobileKey.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !key.isEmpty else {
+      return assertionFailure("[SessionReplayClientAdapter] setMobileKey called with empty key; session replay will not connect. Configure with a valid LaunchDarkly mobile key.")
+    }
+    self.mobileKey = key
+    self.sessionReplayOptions = sessionReplayOptionsFrom(dictionary: options)
+    if let sessionId = (options?["sessionId"] as? String)?
+      .trimmingCharacters(in: .whitespacesAndNewlines), !sessionId.isEmpty {
+      self.customSessionId = sessionId
+    } else {
+      self.customSessionId = nil
+    }
+    if let serviceVersion = (options?["serviceVersion"] as? String)?
+      .trimmingCharacters(in: .whitespacesAndNewlines), !serviceVersion.isEmpty {
+      self.serviceVersion = serviceVersion
+    } else {
+      self.serviceVersion = nil
+    }
+    if let otlpEndpoint = (options?["otlpEndpoint"] as? String)?
+      .trimmingCharacters(in: .whitespacesAndNewlines), !otlpEndpoint.isEmpty {
+      self.otlpEndpoint = otlpEndpoint
+    } else {
+      self.otlpEndpoint = nil
+    }
+    if let backendUrl = (options?["backendUrl"] as? String)?
+      .trimmingCharacters(in: .whitespacesAndNewlines), !backendUrl.isEmpty {
+      self.backendUrl = backendUrl
+    } else {
+      self.backendUrl = nil
+    }
+    // serviceName/enabled/sampleRate are read back from the incoming dictionary
+    // (mirroring sessionReplayOptionsFrom's defaults) rather than the parsed
+    // SessionReplayOptions, whose stored properties are not all publicly readable.
+    let trimmedServiceName = (options?["serviceName"] as? String)?
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+    let loggedServiceName = (trimmedServiceName?.isEmpty ?? true) ? "<sdk-default>" : trimmedServiceName!
+    let loggedEnabled = (options?["isEnabled"] as? Bool) ?? true
+    let loggedSampleRate = (options?["sampleRate"] as? NSNumber)?.doubleValue ?? 1.0
+    NSLog(
+      "%@ configure: serviceName=%@, serviceVersion=%@, otlpEndpoint=%@, backendUrl=%@, forwardedSessionId=%@, enabled=%@, sampleRate=%@",
+      Self.logPrefix,
+      loggedServiceName,
+      self.serviceVersion ?? "<sdk-default>",
+      self.otlpEndpoint ?? "<sdk-default>",
+      self.backendUrl ?? "<sdk-default>",
+      // A session id is not a secret; log the value so it can be matched against
+      // the JS observability session.id and the id the backend receives.
+      self.customSessionId ?? "<none>",
+      loggedEnabled ? "true" : "false",
+      String(loggedSampleRate)
+    )
+  }
+
+  private func makeConfig(mobileKey: String, options: SessionReplayOptions) -> LDConfig {
+    var config = LDConfig(
+      mobileKey: mobileKey,
+      autoEnvAttributes: .enabled
+    )
+    var observabilityOptions = ObservabilityOptions(
+      // Disable the plugin's auto-start so we can start observability ourselves
+      // (see start()) and inject the JS session id. The native `startSession` is
+      // guarded by `task == nil`, so a session id can only be supplied on the
+      // first start — which the auto-start would consume.
+      isEnabled: false,
+      serviceName: options.serviceName,
+      // Forwarded endpoints (when provided) override the SDK defaults; nil/empty
+      // falls back to the production defaults. backendUrl also drives the session
+      // replay upload endpoint via the shared observability options.
+      otlpEndpoint: self.otlpEndpoint,
+      backendUrl: self.backendUrl,
+      sessionBackgroundTimeout: 10,
+      /// Disable the underlying KSCrash-based crash reporter that
+      crashReporting: .init(source: .none)
+    )
+    // The session replay options carry no version, so apply the forwarded
+    // `service.version` to the observability plugin only.
+    if let serviceVersion = self.serviceVersion {
+      observabilityOptions.serviceVersion = serviceVersion
+    }
+    config.plugins = [
+      Observability(options: observabilityOptions),
+      SessionReplay(options: options)
+    ]
+    /// we set the LDClient offline to stop communication with the LaunchDarkly servers.
+    /// The React Native LDClient will be in charge of communicating with the LaunchDarkly servers.
+    /// offline is considered a short circuited timed out case
+    config.startOnline = false
+    return config
+  }
+
+  // Builds an LDContext from a [kind: key] map. Returns nil if the map is empty or a context
+  // cannot be built. Mirrors buildContextFromKeys() in SessionReplayClientAdapter.kt.
+  private func buildContextFromKeys(_ keys: [String: String]) -> LDContext? {
+    guard let first = keys.first else { return nil }
+    if keys.count == 1 {
+      let (kind, key) = first
+      var builder = LDContextBuilder(key: key)
+      builder.kind(kind)
+      guard case .success(let context) = builder.build() else {
+        NSLog("[SessionReplayAdapter] Failed to build LDContext for kind=%@", kind)
+        return nil
+      }
+      return context
+    }
+    var multiBuilder = LDMultiContextBuilder()
+    for (kind, key) in keys {
+      var builder = LDContextBuilder(key: key)
+      builder.kind(kind)
+      if case .success(let context) = builder.build() {
+        multiBuilder.addContext(context)
+      }
+    }
+    guard case .success(let context) = multiBuilder.build() else {
+      NSLog("[SessionReplayAdapter] Failed to build multi-context")
+      return nil
+    }
+    return context
+  }
+
+  /// Initializes session replay if needed and enables recording.
+  ///
+  /// - Parameter forceEnable: `true` for an explicit `startSessionReplay()`, which records
+  ///   regardless of the configured `isEnabled`. `false` for the plugin's auto-start, which
+  ///   honors it. Either way this never *disables* recording — that is `stop()`'s job — so a
+  ///   deferred start is not undone by a later re-init.
+  @objc public func start(forceEnable: Bool, completion: @escaping (Bool, String?) -> Void) {
+    lock.lock()
+    defer { lock.unlock() }
+    guard let mobileKey = mobileKey, let sessionReplayOptions = sessionReplayOptions else {
+      NSLog("%@ start: configure() was not called — mobile key or options are missing", Self.logPrefix)
+      completion(false, "Client not initialized. Call SetMobileKey first.")
+      return
+    }
+    let customSessionId = self.customSessionId
+    let prev = lastTask
+    lastTask = Task { @MainActor [weak self] in
+      await prev.value
+      guard let self else { return }
+      if !self.initialized {
+        NSLog("%@ start: first start — calling LDClient.start(offline, startWait=0)", Self.logPrefix)
+        let config = self.makeConfig(mobileKey: mobileKey, options: sessionReplayOptions)
+        let context = self.cachedContext
+        await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
+          LDClient.start(config: config, context: context, startWaitSeconds: 0) { _ in
+            cont.resume()
+          }
+        }
+        // The Observability plugin is configured with isEnabled=false (see
+        // makeConfig), so it did not auto-start. Start it now: when a session id
+        // was forwarded from the JS observability SDK, adopt it so native spans
+        // (e.g. `click`) share the same `session.id`; otherwise start with a
+        // generated session.
+        if let customSessionId {
+          NSLog("%@ start: starting observability with forwarded JS session.id=%@", Self.logPrefix, customSessionId)
+          LDObserve.shared.start(sessionId: customSessionId)
+        } else {
+          NSLog("%@ start: starting observability with a native-generated session.id", Self.logPrefix)
+          LDObserve.shared.start()
+        }
+        self.initialized = true
+      } else {
+        NSLog("%@ start: already initialized, forceEnable=%@", Self.logPrefix, forceEnable ? "true" : "false")
+      }
+      // Only ever enables. On the first start the SessionReplay plugin has already applied the
+      // configured `isEnabled`, so this covers an explicit start and a start after stop(). Writing
+      // `false` here instead would make `startSessionReplay()` a no-op for a deferred start, and
+      // would silently stop a recording that an earlier explicit start had begun.
+      guard forceEnable || sessionReplayOptions.isEnabled else {
+        NSLog("%@ start: leaving recording off (isEnabled=false)", Self.logPrefix)
+        completion(true, nil)
+        return
+      }
+      // `start` over `isEnabled = true` so the outcome is reported: the setter's no-change guard
+      // would also swallow a start on a session that is already enabled but not recording.
+      switch LDReplay.shared.start(ignoreSampling: false) {
+      case .started, .alreadyStarted:
+        completion(true, nil)
+      case .sampledOut:
+        // A legitimate outcome of honoring sampleRate, not a failure.
+        NSLog("%@ start: not recording, the session was sampled out", Self.logPrefix)
+        completion(true, nil)
+      case .unavailable:
+        NSLog("%@ start: session replay is unavailable — the plugin did not register", Self.logPrefix)
+        completion(false, "Session replay is unavailable; the native plugin did not register.")
+      case .unrecoverableError:
+        NSLog("%@ start: LaunchDarkly refused session replay for this launch", Self.logPrefix)
+        completion(false, "LaunchDarkly refused session replay for this launch; it is retried on the next launch.")
+      }
+    }
+  }
+
+  @objc public func afterIdentify(contextKeys: NSDictionary, canonicalKey: String, completed: Bool) {
+    var keys = [String: String]()
+    for (k, v) in contextKeys {
+      if let kind = k as? String, let key = v as? String {
+        keys[kind] = key
+      }
+    }
+    lock.lock()
+    defer { lock.unlock() }
+    let prev = lastTask
+    lastTask = Task { @MainActor [weak self] in
+      await prev.value
+      guard let self else { return }
+      if completed {
+        // If buildContextFromKeys returns nil, that's fine — LaunchDarkly will
+        // use a default anonymous context.
+        self.cachedContext = self.buildContextFromKeys(keys)
+      }
+      if self.initialized {
+        LDReplay.shared.hookProxy?.afterIdentify(
+          contextKeys: contextKeys,
+          canonicalKey: canonicalKey,
+          completed: completed
+        )
+      }
+    }
+  }
+
+  /// There is almost no reason to stop the LDClient. Normally, set the LDClient offline to stop communication with the LaunchDarkly servers. Stop the LDClient to stop recording events. There is no need to stop the LDClient prior to suspending, moving to the background, or terminating the app. The SDK will respond to these events as the system requires and as configured in LDConfig.
+  ///
+  /// So in order to not record anything from the Swift's LDClient, LDClient is configured to be offline in the start method
+  /// LDClient is only needed as a holder of the SessionReplay plugin
+  ///
+  /// Stop is intended to provide a stop like API, internally is disabling session replay until app start it with start method
+  @objc public func stop(completion: @escaping () -> Void) {
+    lock.lock()
+    defer { lock.unlock() }
+    NSLog("%@ stop: requested", Self.logPrefix)
+    let prev = lastTask
+    lastTask = Task { @MainActor in
+      await prev.value
+      LDReplay.shared.isEnabled = false
+      NSLog("%@ stop: completed", Self.logPrefix)
+      completion()
+    }
+  }
+}
+
+extension SessionReplayClientAdapter {
+  private func doubleOption(
+    _ dictionary: NSDictionary,
+    key: String,
+    default defaultValue: Double
+  ) -> Double {
+    guard let number = dictionary[key] as? NSNumber else { return defaultValue }
+    return number.doubleValue
+  }
+
+  /// Mirrors Android `replayOptionsFrom`: non-positive scale falls back to `1.0`.
+  private func scaleOption(_ dictionary: NSDictionary, default defaultValue: CGFloat = 1.0) -> CGFloat {
+    guard let number = dictionary["scale"] as? NSNumber else { return defaultValue }
+    let value = number.doubleValue
+    return value > 0 ? CGFloat(value) : defaultValue
+  }
+
+  private func sessionReplayOptionsFrom(dictionary: NSDictionary?) -> SessionReplayOptions {
+    // Handle nil dictionary by using all default values
+    guard let dictionary = dictionary else {
+      let privacy = SessionReplayOptions.PrivacyOptions(
+        maskTextInputs: true,
+        maskWebViews: false,
+        maskLabels: false,
+        maskImages: false,
+        maskUIViews: [],
+        unmaskUIViews: [],
+        ignoreUIViews: [],
+        maskAccessibilityIdentifiers: [],
+        unmaskAccessibilityIdentifiers: [],
+        ignoreAccessibilityIdentifiers: [],
+        minimumAlpha: 0.02
+      )
+      return .init(
+        isEnabled: true,
+        sampleRate: 1.0,
+        serviceName: "sessionreplay-react-native",
+        privacy: privacy,
+        frameRate: 1.0,
+        scale: 1.0,
+        imageQuality: 0.3
+      )
+    }
+
+    let maskTestIDs = dictionary["maskTestIDs"] as? [String] ?? []
+    let unmaskTestIDs = dictionary["unmaskTestIDs"] as? [String] ?? []
+
+    // RN's <Text> renders to RCTTextView (Paper) or RCTParagraphComponentView (Fabric), neither
+    // of which extends UILabel — so the iOS SDK's `maskLabels` (which matches UILabel) doesn't
+    // catch RN text on its own. Add the RN text classes to `maskUIViews` when `maskLabels` is on.
+    let maskLabels = dictionary["maskLabels"] as? Bool ?? false
+    let maskUIViews: [AnyClass] = maskLabels
+      ? ["RCTTextView", "RCTParagraphComponentView"].compactMap { NSClassFromString($0) }
+      : []
+
+    let privacy = SessionReplayOptions.PrivacyOptions(
+      maskTextInputs: dictionary["maskTextInputs"] as? Bool ?? true,
+      maskWebViews: dictionary["maskWebViews"] as? Bool ?? false,
+      maskLabels: maskLabels,
+      maskImages: dictionary["maskImages"] as? Bool ?? false,
+      maskUIViews: maskUIViews,
+      unmaskUIViews: [], /// Not supported, since AnyClass has type erased and it is very likely is not serializable
+      ignoreUIViews: [], /// Not supported, since AnyClass has type erased and it is very likely is not serializable
+      maskAccessibilityIdentifiers: maskTestIDs,
+      unmaskAccessibilityIdentifiers: unmaskTestIDs,
+      ignoreAccessibilityIdentifiers: [],
+      minimumAlpha:
+        CGFloat((dictionary["minimumAlpha"] as? NSNumber)?.doubleValue ?? 0.02)
+    )
+
+    return .init(
+      isEnabled: dictionary["isEnabled"] as? Bool ?? true,
+      sampleRate: doubleOption(dictionary, key: "sampleRate", default: 1.0),
+      serviceName: dictionary["serviceName"] as? String ?? "sessionreplay-react-native",
+      privacy: privacy,
+      frameRate: doubleOption(dictionary, key: "frameRate", default: 1.0),
+      scale: scaleOption(dictionary),
+      imageQuality: CGFloat(doubleOption(dictionary, key: "imageQuality", default: 0.3))
+    )
+  }
+}

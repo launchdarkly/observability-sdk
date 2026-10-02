@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:bottomsheet="http://pluginmauibottomsheet.com"
+             x:Class="MauiSample9.DialogsPage"
+             Title="Dialogs"
+             Background="Black">
+
+	<Grid>
+		<ScrollView>
+			<VerticalStackLayout Padding="16" Spacing="8">
+
+				<!-- Delay configuration -->
+				<HorizontalStackLayout Spacing="10" VerticalOptions="Center" Margin="0,0,0,16">
+					<Label Text="Show Delay (s):" VerticalOptions="Center" TextColor="White" />
+					<Entry x:Name="DelayEntry" Text="0" Keyboard="Numeric" WidthRequest="60"
+					       TextColor="White" BackgroundColor="#333333" HorizontalTextAlignment="Center" />
+				</HorizontalStackLayout>
+
+				<!-- Alerts -->
+				<Label Text="Alerts" FontSize="22" FontAttributes="Bold" TextColor="White" />
+				<BoxView HeightRequest="1" Color="Gray" Margin="0,0,0,8" />
+				<FlexLayout Direction="Row" Wrap="Wrap" JustifyContent="Start" AlignItems="Center">
+					<Button Text="Simple Alert" Clicked="OnSimpleAlertClicked" Margin="0,0,8,8" />
+					<Button Text="Accept/Cancel" Clicked="OnAcceptCancelAlertClicked" Margin="0,0,8,8" />
+					<Button Text="Prompt" Clicked="OnPromptClicked" Margin="0,0,8,8" />
+				</FlexLayout>
+
+				<!-- Bottom Sheets -->
+				<Label Text="Bottom Sheets" FontSize="22" FontAttributes="Bold" TextColor="White" Margin="0,16,0,0" />
+				<BoxView HeightRequest="1" Color="Gray" Margin="0,0,0,8" />
+				<VerticalStackLayout Spacing="8">
+					<Button Text="Action Sheet (native)" Clicked="OnActionSheetClicked" />
+					<Button Text="XAML Overlay Sheet" Clicked="OnXamlOverlaySheetClicked" />
+					<Button Text="Centered Popup Card" Clicked="OnCenteredPopupCardClicked" />
+					<Button Text="Modal Page Sheet" Clicked="OnModalPageSheetClicked" />
+					<Button Text="Toolkit Popup Sheet" Clicked="OnToolkitPopupSheetClicked" />
+					<Button Text="Native BottomSheet (Plugin)" Clicked="OnNativeBottomSheetClicked" />
+					<Button Text="UIWindow Sheet (iOS)" Clicked="OnUIWindowSheetClicked" />
+				</VerticalStackLayout>
+
+				<!-- Tooltip -->
+				<Label Text="Tooltip" FontSize="22" FontAttributes="Bold" TextColor="White" Margin="0,16,0,0" />
+				<BoxView HeightRequest="1" Color="Gray" Margin="0,0,0,8" />
+				<FlexLayout Direction="Row" Wrap="Wrap" JustifyContent="Start" AlignItems="Center">
+					<Button Text="Hover me (Tooltip)" ToolTipProperties.Text="This is a native tooltip on a button!"
+					        Margin="0,0,8,8" />
+					<Button Text="Show Tooltip Popup" Clicked="OnShowTooltipPopupClicked" Margin="0,0,8,8" />
+				</FlexLayout>
+
+			</VerticalStackLayout>
+		</ScrollView>
+
+		<!-- Dim overlay for XAML bottom sheet (tap to dismiss) -->
+		<Grid x:Name="OverlayDim" Background="#80000000" IsVisible="False" InputTransparent="True">
+			<Grid.GestureRecognizers>
+				<TapGestureRecognizer Tapped="OnOverlayDimTapped" />
+			</Grid.GestureRecognizers>
+		</Grid>
+
+		<!-- XAML Overlay Bottom Sheet (Type 2: regular MAUI views) -->
+		<Border x:Name="XamlOverlaySheet"
+		        StrokeShape="RoundRectangle 20,20,0,0"
+		        Background="#1C1B1F"
+		        Stroke="Gray"
+		        StrokeThickness="1"
+		        VerticalOptions="End"
+		        IsVisible="False"
+		        InputTransparent="True"
+		        Padding="20">
+			<VerticalStackLayout Spacing="12">
+				<BoxView HeightRequest="4" WidthRequest="40" CornerRadius="2" Color="Gray"
+				         HorizontalOptions="Center" Margin="0,0,0,8" />
+				<Label Text="XAML Overlay Bottom Sheet" FontSize="20" FontAttributes="Bold" TextColor="White" />
+				<Label Text="Built from regular MAUI views (Border + VerticalStackLayout) with slide-up animation. SR should capture this since it lives in the normal view tree."
+				       TextColor="#CAC4D0" />
+				<Button Text="Option A" />
+				<Button Text="Option B" />
+				<Button Text="Close" Clicked="OnXamlOverlayCloseClicked"
+				        BackgroundColor="#F2B8B5" TextColor="White" />
+			</VerticalStackLayout>
+		</Border>
+
+		<!-- Dim overlay for centered popup card (tap to dismiss) -->
+		<Grid x:Name="PopupCardDim" Background="#80000000" IsVisible="False" InputTransparent="True">
+			<Grid.GestureRecognizers>
+				<TapGestureRecognizer Tapped="OnPopupCardDimTapped" />
+			</Grid.GestureRecognizers>
+		</Grid>
+
+		<!-- Centered Popup Card (matches the style from the reference screenshot) -->
+		<Border x:Name="CenteredPopupCard"
+		        StrokeShape="RoundRectangle 16"
+		        Background="White"
+		        Stroke="Transparent"
+		        VerticalOptions="Center"
+		        HorizontalOptions="Center"
+		        WidthRequest="320"
+		        IsVisible="False"
+		        InputTransparent="True"
+		        Padding="24">
+			<Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="16">
+				<!-- Header with title + close button -->
+				<Grid ColumnDefinitions="*,Auto" Grid.Row="0">
+					<VerticalStackLayout>
+						<Label Text="Testing..." FontSize="20" FontAttributes="Bold" TextColor="#1C1B1F" />
+						<Label Text="Sample subtitle" FontSize="14" TextColor="#666666" />
+					</VerticalStackLayout>
+					<Button Text="✕" Grid.Column="1"
+					        FontSize="18" TextColor="#666666"
+					        BackgroundColor="Transparent"
+					        VerticalOptions="Start"
+					        Clicked="OnPopupCardCloseClicked"
+					        Padding="0" WidthRequest="36" HeightRequest="36" />
+				</Grid>
+
+				<!-- Circular progress indicator area -->
+				<Frame Grid.Row="1" CornerRadius="80" WidthRequest="160" HeightRequest="160"
+				       BorderColor="#3F51B5" HasShadow="False" BackgroundColor="Transparent"
+				       HorizontalOptions="Center" Padding="0">
+					<VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="4">
+						<Label x:Name="PopupTimerLabel" Text="00:08" FontSize="36" FontAttributes="Bold" TextColor="#1C1B1F"
+						       HorizontalOptions="Center" />
+						<Label Text="Time Remaining" FontSize="12" TextColor="#999999"
+						       HorizontalOptions="Center" />
+					</VerticalStackLayout>
+				</Frame>
+
+				<!-- Action button -->
+				<Button Grid.Row="2" Text="Stop"
+				        BackgroundColor="#3F51B5" TextColor="White"
+				        CornerRadius="8" HeightRequest="48" />
+
+				<!-- Footer text -->
+				<Label Grid.Row="3" Text="Device is unresponsive"
+				       FontSize="13" TextColor="#666666"
+				       HorizontalTextAlignment="Center" />
+			</Grid>
+		</Border>
+
+		<!-- Tooltip overlay (appears briefly when "Show Tooltip Popup" is tapped) -->
+		<Border x:Name="TooltipOverlay"
+		        Background="#333333"
+		        StrokeShape="RoundRectangle 8"
+		        Stroke="Transparent"
+		        Padding="16,10"
+		        IsVisible="False"
+		        InputTransparent="True"
+		        VerticalOptions="Center"
+		        HorizontalOptions="Center">
+			<Label Text="This is a custom tooltip popup!" TextColor="White" FontSize="14" />
+		</Border>
+
+		<!-- Native BottomSheet (Type 5: Plugin.Maui.BottomSheet) -->
+		<bottomsheet:BottomSheet x:Name="NativeBottomSheet"
+		                         HasHandle="True"
+		                         IsModal="True"
+		                         IsCancelable="True"
+		                         ShowHeader="True"
+		                         States="Peek,Medium,Large"
+		                         CurrentState="Medium"
+		                         IsVisible="False"
+		                         InputTransparent="True">
+			<bottomsheet:BottomSheet.Header>
+				<bottomsheet:BottomSheetHeader TitleText="Native Bottom Sheet" />
+			</bottomsheet:BottomSheet.Header>
+			<bottomsheet:BottomSheetContent>
+				<bottomsheet:BottomSheetContent.ContentTemplate>
+					<DataTemplate>
+						<VerticalStackLayout Padding="20" Spacing="12">
+							<Label Text="Native BottomSheet (Plugin.Maui.BottomSheet)" FontSize="20" FontAttributes="Bold" />
+							<Label Text="Uses UISheetPresentationController on iOS and BottomSheetDialog on Android. These are truly native sheets and most likely to cause SR capture issues." />
+							<Button Text="Item 1" />
+							<Button Text="Item 2" />
+							<Button Text="Item 3" />
+						</VerticalStackLayout>
+					</DataTemplate>
+				</bottomsheet:BottomSheetContent.ContentTemplate>
+			</bottomsheet:BottomSheetContent>
+		</bottomsheet:BottomSheet>
+
+	</Grid>
+</ContentPage>

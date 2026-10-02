@@ -69,7 +69,9 @@ export default function HomeScreen() {
 
 	const handleTestError = () => {
 		try {
-			throw new Error('This is a test error for observability demo')
+			throw new Error(
+				'React Native: Manual error - test error for observability demo',
+			)
 		} catch (error) {
 			LDObserve.recordError(error as Error, {
 				action: 'test_error_button',
@@ -302,17 +304,25 @@ export default function HomeScreen() {
 			// Using setTimeout to escape from the current execution context
 			try {
 				// Direct rejection using Promise.reject - this should be detected
-				Promise.reject(new Error('Unhandled Promise Rejection Test'))
+				Promise.reject(
+					new Error('React Native: Unhandled promise rejection test'),
+				)
 
 				// Also try the constructor form
 				new Promise((resolve, reject) => {
 					// Explicit rejection without a catch handler
-					reject(new Error('Unhandled Promise Constructor Rejection'))
+					reject(
+						new Error(
+							'React Native: Unhandled promise constructor rejection',
+						),
+					)
 				})
 
 				// Also try throwing in a Promise - this is another common case
 				new Promise(() => {
-					throw new Error('Error thrown inside Promise constructor')
+					throw new Error(
+						'React Native: Error thrown inside promise constructor',
+					)
 				})
 
 				// Log to confirm execution
@@ -337,7 +347,7 @@ export default function HomeScreen() {
 				// Add some protection to prevent actually crashing the app
 				if (depth > 5000) {
 					throw new Error(
-						'Maximum recursion depth reached (stack overflow simulation)',
+						'React Native: Stack overflow - maximum recursion depth reached',
 					)
 				}
 				return recursiveFunction(depth + 1)
@@ -358,7 +368,9 @@ export default function HomeScreen() {
 					const makeAsyncError = async () => {
 						await new Promise((resolve) => setTimeout(resolve, 200))
 						console.log('About to throw from async function...')
-						throw new Error('Async operation failed')
+						throw new Error(
+							'React Native: Async error - async operation failed',
+						)
 					}
 
 					// Run without awaiting or catching the error to ensure it becomes unhandled
@@ -369,7 +381,9 @@ export default function HomeScreen() {
 						await new Promise((resolve) => setTimeout(resolve, 300))
 						console.log('About to reject from async function...')
 						await Promise.reject(
-							new Error('Async promise rejection'),
+							new Error(
+								'React Native: Async error - async promise rejection',
+							),
 						)
 					}
 
@@ -385,7 +399,7 @@ export default function HomeScreen() {
 								)
 								reject(
 									new Error(
-										'Delayed rejection in async context',
+										'React Native: Async error - delayed rejection in async context',
 									),
 								)
 							}, 400)
@@ -453,7 +467,7 @@ export default function HomeScreen() {
 			fetch('https://httpstat.us/500').then((response) => {
 				if (!response.ok) {
 					throw new Error(
-						`Server responded with status: ${response.status}`,
+						`React Native: Network error - server responded with status: ${response.status}`,
 					)
 				}
 				return response.json()

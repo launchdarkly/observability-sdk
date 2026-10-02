@@ -1,5 +1,5 @@
 import * as api from '@opentelemetry/api'
-import { Context, Span } from '@opentelemetry/api'
+import { Attributes, Context, Span } from '@opentelemetry/api'
 import {
 	CompositePropagator,
 	W3CBaggagePropagator,
@@ -24,6 +24,7 @@ import {
 	WebTracerProvider,
 } from '@opentelemetry/sdk-trace-web'
 import * as SemanticAttributes from '@opentelemetry/semantic-conventions'
+import { parseGraphQLOperation } from '@launchdarkly/observability-shared'
 import { getResponseBody } from '../listeners/network-listener/utils/fetch-listener'
 import {
 	DEFAULT_URL_BLOCKLIST,
@@ -32,9 +33,11 @@ import {
 	sanitizeUrl,
 } from '../listeners/network-listener/utils/network-sanitizer'
 import {
+	buildLocationHostPattern,
 	shouldNetworkRequestBeRecorded,
 	shouldNetworkRequestBeTraced,
 } from '../listeners/network-listener/utils/utils'
+import type { RequestResponsePair } from '../listeners/network-listener/utils/models'
 import {
 	BrowserXHR,
 	getBodyThatShouldBeRecorded,
@@ -49,6 +52,14 @@ import {
 	TraceExporterConfig,
 } from './exporter'
 import { UserInteractionInstrumentation } from './user-interaction'
+import { installXhrRequestCapture } from './xhr-request-capture'
+import {
+	getCapturedRequestBody,
+	installFetchRequestBodyCapture,
+	normalizeHeaders,
+	normalizeRequestBody,
+} from './request-body'
+import { LocationChangeInstrumentation } from './location-change'
 import {
 	MeterProvider,
 	PeriodicExportingMetricReader,
@@ -59,7 +70,7 @@ import version from '../../version'
 
 import { ExportSampler } from './sampling/ExportSampler'
 import { getPersistentSessionSecureID } from '../utils/sessionStorage/highlightSession'
-import type { EventName } from '@opentelemetry/instrumentation-user-interaction'
+import { ProductAnalyticsEvents } from '../types/observe'
 
 export type Callback = (span?: Span) => any
 
@@ -74,9 +85,10 @@ export type BrowserTracingConfig = {
 	serviceVersion?: string
 	tracingOrigins?: boolean | (string | RegExp)[]
 	urlBlocklist?: string[]
-	eventNames?: EventName[]
 	instrumentations?: OtelInstrumentatonOptions
 	getIntegrations?: () => IntegrationClient[]
+	productAnalyticsEvents?: ProductAnalyticsEvents
+	getLDContextKeyAttributes?: () => Attributes | undefined
 }
 
 let providers: {
@@ -84,9 +96,22 @@ let providers: {
 	meterProvider?: MeterProvider
 } = {}
 let otelConfig: BrowserTracingConfig | undefined
+let unloadListenerCleanup: (() => void) | undefined
+let xhrRequestCaptureCleanup: (() => void) | undefined
+let fetchRequestBodyCaptureCleanup: (() => void) | undefined
 
 const RECORD_ATTRIBUTE = 'highlight.record'
 const SESSION_ID_ATTRIBUTE = 'highlight.session_id'
+
+// Shared map to coordinate async response body reads between the
+// FetchInstrumentation's applyCustomAttributesOnSpan callback and
+// CustomBatchSpanProcessor.onEnd(). The callback starts the async
+// work (cloning + reading the response body) and stores a promise
+// here; the span processor awaits it before exporting the span.
+const pendingResponseAttributes = new Map<string, Promise<void>>()
+const spanKey = (span: {
+	spanContext(): { traceId: string; spanId: string }
+}) => `${span.spanContext().traceId}:${span.spanContext().spanId}`
 export const LOG_SPAN_NAME = 'launchdarkly.js.log'
 
 export const ATTR_EXCEPTION_ID = 'launchdarkly.exception.id'
@@ -113,6 +138,12 @@ export const setupBrowserTracing = (
 		...(config.networkRecordingOptions?.urlBlocklist ?? []),
 		...DEFAULT_URL_BLOCKLIST,
 	]
+	// The SDK's own OTLP exports and replay uploads: their bodies must never be
+	// stashed or recorded. Compared case-insensitively as substrings, like the
+	// rest of the blocklist.
+	const ownEndpoints = [backendUrl, config.otlpEndpoint]
+		.filter((u): u is string => !!u)
+		.map((u) => u.toLowerCase())
 	const isDebug = import.meta.env.DEBUG === 'true'
 	const environment = config.environment ?? 'production'
 
@@ -139,7 +170,7 @@ export const setupBrowserTracing = (
 		maxExportBatchSize: 1024, // Default value from SDK is 512
 		maxQueueSize: 2048, // Default value from SDK is 2048
 		exportTimeoutMillis: exporterOptions.timeoutMillis, // Default value from SDK is 30_000
-		scheduledDelayMillis: exporterOptions.timeoutMillis, // Default value from SDK is 1000
+		scheduledDelayMillis: 5_000, // OTEL default; shorter window reduces data lost to page unload
 	})
 
 	const resource = new Resource({
@@ -205,7 +236,16 @@ export const setupBrowserTracing = (
 	if (userInteractionConfig !== false) {
 		instrumentations.push(
 			new UserInteractionInstrumentation({
-				eventNames: config.eventNames,
+				productAnalyticsEvents: config.productAnalyticsEvents,
+				getLDContextKeyAttributes: config.getLDContextKeyAttributes,
+			}),
+		)
+	}
+
+	if (config.productAnalyticsEvents?.pageViews !== false) {
+		instrumentations.push(
+			new LocationChangeInstrumentation({
+				getLDContextKeyAttributes: config.getLDContextKeyAttributes,
 			}),
 		)
 	}
@@ -214,45 +254,115 @@ export const setupBrowserTracing = (
 		const fetchInstrumentationConfig =
 			config.instrumentations?.['@opentelemetry/instrumentation-fetch']
 		if (fetchInstrumentationConfig !== false) {
-			instrumentations.push(
-				new FetchInstrumentation({
-					propagateTraceHeaderCorsUrls: getCorsUrlsPattern(
-						config.tracingOrigins,
-					),
-					applyCustomAttributesOnSpan: async (
+			const fetchInstrumentation = new FetchInstrumentation({
+				propagateTraceHeaderCorsUrls: getCorsUrlsPattern(
+					config.tracingOrigins,
+				),
+				applyCustomAttributesOnSpan: (span, request, response) => {
+					if (!(span as any).attributes) {
+						return
+					}
+					const readableSpan = span as unknown as ReadableSpan
+					if (readableSpan.attributes[RECORD_ATTRIBUTE] === false) {
+						return
+					}
+
+					// `request` is the RequestInit, or the Request object itself
+					// when the app called fetch(new Request(...)). A Request's
+					// body is a stream the network layer has already consumed,
+					// so it comes from the copy installFetchRequestBodyCapture
+					// stashed when the call went through window.fetch.
+					const isRequestObject =
+						typeof Request !== 'undefined' &&
+						request instanceof Request
+					const capturedRequestBody = isRequestObject
+						? getCapturedRequestBody(request as Request)
+						: undefined
+
+					enhanceSpanWithHttpRequestAttributes(
 						span,
-						request,
-						response,
-					) => {
-						if (!(span as any).attributes) {
-							return
-						}
-						const readableSpan = span as unknown as ReadableSpan
-						if (
-							readableSpan.attributes[RECORD_ATTRIBUTE] === false
-						) {
-							return
-						}
+						isRequestObject
+							? undefined
+							: (request as RequestInit).body,
+						request.headers,
+						config.networkRecordingOptions,
+					)
 
-						enhanceSpanWithHttpRequestAttributes(
-							span,
-							request.body,
-							request.headers,
-							config.networkRecordingOptions,
+					const applyCapturedRequestBody = async () => {
+						const body = await capturedRequestBody
+						if (body !== undefined) {
+							applyCapturedRequestBodyAttributes(
+								span,
+								body,
+								request.headers,
+								config.networkRecordingOptions,
+							)
+						}
+					}
+
+					// Runs the user's requestResponseSanitizer over what is on
+					// the span right now. Returns false when it asked for the
+					// span not to be recorded, so callers can stop early.
+					const runSanitizer = () => {
+						if (
+							config.networkRecordingOptions
+								?.requestResponseSanitizer
+						) {
+							applyRequestResponseSanitizer(
+								span,
+								config.networkRecordingOptions
+									.requestResponseSanitizer,
+							)
+						}
+						return (
+							(
+								readableSpan.attributes as Record<
+									string,
+									unknown
+								>
+							)[RECORD_ATTRIBUTE] !== false
 						)
+					}
 
-						if (!(response instanceof Response)) {
-							span.setAttributes({
-								'http.response.error': response.message,
-								[SemanticAttributes.ATTR_HTTP_RESPONSE_STATUS_CODE]:
-									response.status,
-							})
+					if (!(response instanceof Response)) {
+						span.setAttributes({
+							'http.response.error': response.message,
+							[SemanticAttributes.ATTR_HTTP_RESPONSE_STATUS_CODE]:
+								response.status,
+						})
+						// A failed fetch still carries request headers and
+						// body, so it gets the same sanitizer passes as a
+						// successful one: now, and again once the captured
+						// Request body has been attached.
+						if (!runSanitizer()) {
 							return
 						}
+						if (capturedRequestBody) {
+							pendingResponseAttributes.set(
+								spanKey(span),
+								applyCapturedRequestBody().then(() => {
+									runSanitizer()
+								}),
+							)
+						}
+						return
+					}
 
-						if (
-							config.networkRecordingOptions?.recordHeadersAndBody
-						) {
+					// Run sanitizer synchronously for request attributes
+					// before the async body read, so changes are visible
+					// even if span.end() fires before the promise resolves.
+					// If it returned null (RECORD_ATTRIBUTE=false), skip the
+					// async body read to avoid a memory leak.
+					if (!runSanitizer()) {
+						return
+					}
+
+					if (config.networkRecordingOptions?.recordHeadersAndBody) {
+						// Start async response body reading and store the
+						// promise. CustomBatchSpanProcessor.onEnd() will await
+						// it before exporting the span.
+						const promise = (async () => {
+							await applyCapturedRequestBody()
 							const responseBody = await getResponseBody(
 								response,
 								config.networkRecordingOptions
@@ -263,17 +373,36 @@ export const setupBrowserTracing = (
 							const responseHeaders = Object.fromEntries(
 								response.headers.entries(),
 							)
-
-							enhanceSpanWithHttpResponseAttributes(
-								span,
+							const sanitizedResponseHeaders = sanitizeHeaders(
+								config.networkRecordingOptions
+									?.networkHeadersToRedact ?? [],
 								responseHeaders,
-								responseBody,
-								config.networkRecordingOptions,
+								config.networkRecordingOptions
+									?.headerKeysToRecord,
 							)
-						}
-					},
-				}),
-			)
+							const headerAttributes =
+								convertHeadersToOtelAttributes(
+									sanitizedResponseHeaders,
+									'http.response.header',
+								)
+							Object.assign(
+								(span as unknown as ReadableSpan).attributes,
+								{
+									'http.response.body': responseBody,
+									...headerAttributes,
+								},
+							)
+
+							// Re-run sanitizer now that the request body and
+							// response body/headers are on the span.
+							runSanitizer()
+						})()
+						pendingResponseAttributes.set(spanKey(span), promise)
+					}
+				},
+			})
+
+			instrumentations.push(fetchInstrumentation)
 		}
 
 		const xmlInstrumentationConfig =
@@ -334,6 +463,17 @@ export const setupBrowserTracing = (
 								config.networkRecordingOptions,
 							)
 						}
+
+						if (
+							config.networkRecordingOptions
+								?.requestResponseSanitizer
+						) {
+							applyRequestResponseSanitizer(
+								span,
+								config.networkRecordingOptions
+									.requestResponseSanitizer,
+							)
+						}
 					},
 				}),
 			)
@@ -341,6 +481,43 @@ export const setupBrowserTracing = (
 	}
 
 	registerInstrumentations({ instrumentations })
+
+	if (
+		config.networkRecordingOptions?.enabled &&
+		config.networkRecordingOptions.recordHeadersAndBody &&
+		config.instrumentations?.[
+			'@opentelemetry/instrumentation-xml-http-request'
+		] !== false
+	) {
+		// The XHR hook above reads `_body` / `_requestHeaders` off the XHR
+		// instance. Stash them ourselves rather than relying on the session
+		// replay XHRListener, which is only present when the SessionReplay
+		// plugin also has recordHeadersAndBody set.
+		//
+		// Installed after registerInstrumentations so it sits on top of the
+		// OTel XHR wrapper: shutdown() can then restore it cleanly, and a
+		// later re-init still finds the OTel wrapper (which enable() knows
+		// how to unwrap) rather than ours.
+		xhrRequestCaptureCleanup?.()
+		xhrRequestCaptureCleanup = installXhrRequestCapture([
+			...urlBlocklist,
+			...ownEndpoints,
+		])
+	}
+
+	if (
+		config.networkRecordingOptions?.enabled &&
+		config.networkRecordingOptions.recordHeadersAndBody &&
+		config.instrumentations?.['@opentelemetry/instrumentation-fetch'] !==
+			false
+	) {
+		// Same placement rationale as the XHR capture above.
+		fetchRequestBodyCaptureCleanup?.()
+		fetchRequestBodyCaptureCleanup = installFetchRequestBodyCapture([
+			...urlBlocklist,
+			...ownEndpoints,
+		])
+	}
 
 	const contextManager = new StackContextManager()
 	contextManager.enable()
@@ -360,10 +537,90 @@ export const setupBrowserTracing = (
 		}),
 	})
 
+	unloadListenerCleanup = registerFlushOnUnload(
+		exporter,
+		meterExporter,
+		spanProcessor,
+		() => providers,
+	)
+
 	return providers
 }
 
+type FlushableExporter = { setUnloading: (unloading: boolean) => void }
+type FlushableProvider = { forceFlush: () => Promise<void> }
+type FlushableSpanProcessor = {
+	setSkipPendingOnFlush: (skip: boolean) => void
+}
+
+// Flush pending spans/metrics when the page is about to be unloaded.
+// Uses visibilitychange and pagehide (not beforeunload) per web.dev guidance:
+// beforeunload is unreliable on mobile and blocks the bfcache, while
+// visibilitychange: hidden covers client-side navigations (including SPA
+// fetch-triggered redirects) and iOS Safari tab switches.
+// The exporter's unloading flag routes the flush through
+// `fetch({ keepalive: true })`, which survives the navigation; XHR does not.
+// Setting skipPendingOnFlush on the span processor prevents forceFlush from
+// awaiting in-flight response-body reads — those won't finish before the page
+// freezes, and spans without body attributes are still worth keeping.
+export const registerFlushOnUnload = (
+	traceExporter: FlushableExporter,
+	metricExporter: FlushableExporter,
+	spanProcessor: FlushableSpanProcessor,
+	getProviders: () => {
+		tracerProvider?: FlushableProvider
+		meterProvider?: FlushableProvider
+	},
+): (() => void) => {
+	if (typeof document === 'undefined' || typeof window === 'undefined') {
+		return () => {}
+	}
+
+	const flush = () => {
+		traceExporter.setUnloading(true)
+		metricExporter.setUnloading(true)
+		spanProcessor.setSkipPendingOnFlush(true)
+		const current = getProviders()
+		// Fire and forget: the browser will not wait for these promises, but
+		// keepalive fetches remain in flight after the page unloads.
+		void current.tracerProvider?.forceFlush().catch(() => {})
+		void current.meterProvider?.forceFlush().catch(() => {})
+	}
+
+	const onVisibilityChange = () => {
+		if (document.visibilityState === 'hidden') {
+			flush()
+		} else if (document.visibilityState === 'visible') {
+			// Restored from bfcache (or tab refocused) — resume normal XHR
+			// exports so retries work against backpressure.
+			traceExporter.setUnloading(false)
+			metricExporter.setUnloading(false)
+			spanProcessor.setSkipPendingOnFlush(false)
+		}
+	}
+
+	const onPageHide = () => flush()
+
+	document.addEventListener('visibilitychange', onVisibilityChange)
+	window.addEventListener('pagehide', onPageHide)
+
+	return () => {
+		document.removeEventListener('visibilitychange', onVisibilityChange)
+		window.removeEventListener('pagehide', onPageHide)
+	}
+}
+
 class CustomBatchSpanProcessor extends BatchSpanProcessor {
+	private _pendingSpans = new Set<Promise<void>>()
+	// When set, forceFlush/shutdown return immediately without waiting for
+	// in-flight response-body reads. Used on page unload where waiting risks
+	// the browser freezing JS before we hand the spans to the transport.
+	private _skipPendingOnFlush = false
+
+	setSkipPendingOnFlush(skip: boolean) {
+		this._skipPendingOnFlush = skip
+	}
+
 	onStart(span: SDKSpan, parentContext: Context): void {
 		span.setAttribute(SESSION_ID_ATTRIBUTE, getPersistentSessionSecureID())
 		super.onStart(span, parentContext)
@@ -374,7 +631,47 @@ class CustomBatchSpanProcessor extends BatchSpanProcessor {
 			return // don't record spans that are marked as not to be recorded
 		}
 
+		// If there is a pending async response body read for this span
+		// (started in applyCustomAttributesOnSpan), wait for it to
+		// resolve and assign the attributes before exporting.
+		const key = spanKey(span)
+		const pending = pendingResponseAttributes.get(key)
+		if (pending) {
+			const completion = pending
+				.catch((e) => {
+					console.warn(
+						'[CustomBatchSpanProcessor] Failed to capture response body attributes',
+						e,
+					)
+				})
+				.finally(() => {
+					pendingResponseAttributes.delete(key)
+					this._pendingSpans.delete(completion)
+					// Re-check RECORD_ATTRIBUTE in case the sanitizer
+					// returned null and marked the span as not-to-record.
+					if (span.attributes[RECORD_ATTRIBUTE] !== false) {
+						super.onEnd(span)
+					}
+				})
+			this._pendingSpans.add(completion)
+			return
+		}
+
 		super.onEnd(span)
+	}
+
+	override async shutdown(): Promise<void> {
+		if (!this._skipPendingOnFlush) {
+			await Promise.allSettled(this._pendingSpans)
+		}
+		return super.shutdown()
+	}
+
+	override async forceFlush(): Promise<void> {
+		if (!this._skipPendingOnFlush) {
+			await Promise.allSettled(this._pendingSpans)
+		}
+		return super.forceFlush()
 	}
 }
 
@@ -458,6 +755,18 @@ export const getActiveSpanContext = () => {
 }
 
 export const shutdown = async () => {
+	if (unloadListenerCleanup) {
+		unloadListenerCleanup()
+		unloadListenerCleanup = undefined
+	}
+	if (xhrRequestCaptureCleanup) {
+		xhrRequestCaptureCleanup()
+		xhrRequestCaptureCleanup = undefined
+	}
+	if (fetchRequestBodyCaptureCleanup) {
+		fetchRequestBodyCaptureCleanup()
+		fetchRequestBodyCaptureCleanup = undefined
+	}
 	await Promise.allSettled([
 		(async () => {
 			if (providers.tracerProvider) {
@@ -482,13 +791,59 @@ export const shutdown = async () => {
 	])
 }
 
-const enhanceSpanWithHttpRequestAttributes = (
+const graphQLOperationAttributes = (body: unknown): api.Attributes => {
+	const gql = parseGraphQLOperation(body)
+	const attributes: api.Attributes = {}
+	if (gql?.name) {
+		attributes['graphql.operation.name'] = gql.name
+	}
+	if (gql?.type) {
+		attributes['graphql.operation.type'] = gql.type
+	}
+	return attributes
+}
+
+/**
+ * Attaches a request body that only became readable after the span's other
+ * request attributes were set: the copy `installFetchRequestBodyCapture`
+ * stashed for a `fetch(new Request(...))` call. Does for that body what
+ * `enhanceSpanWithHttpRequestAttributes` does for an `init.body`: GraphQL
+ * operation tags, then the recorded (redacted, size-limited) body. Written
+ * with Object.assign because span.setAttribute is a no-op once the span has
+ * ended, which it usually has by the time the copy resolves.
+ */
+export const applyCapturedRequestBodyAttributes = (
 	span: api.Span,
-	body: Request['body'] | RequestInit['body'] | BrowserXHR['_body'],
+	body: string,
+	headers: RequestInit['headers'] | undefined,
+	networkRecordingOptions?: NetworkRecordingOptions,
+) => {
+	if (!(span as any).attributes) {
+		return
+	}
+	const attributes = (span as unknown as ReadableSpan).attributes
+	Object.assign(attributes, graphQLOperationAttributes(body))
+	if (networkRecordingOptions?.recordHeadersAndBody) {
+		Object.assign(attributes, {
+			'http.request.body': getBodyThatShouldBeRecorded(
+				body,
+				networkRecordingOptions.networkBodyKeysToRedact,
+				networkRecordingOptions.bodyKeysToRecord,
+				normalizeHeaders(headers),
+			),
+		})
+	}
+}
+
+export const enhanceSpanWithHttpRequestAttributes = (
+	span: api.Span,
+	body: unknown,
 	headers:
 		| Headers
 		| RequestInit['headers']
-		| ReturnType<XMLHttpRequest['getAllResponseHeaders']>,
+		| { [key: string]: string }
+		| ReturnType<XMLHttpRequest['getAllResponseHeaders']>
+		| undefined,
 	networkRecordingOptions?: NetworkRecordingOptions,
 ) => {
 	if (!(span as any).attributes) {
@@ -499,18 +854,15 @@ const enhanceSpanWithHttpRequestAttributes = (
 	const sanitizedUrl = sanitizeUrl(url)
 	const sanitizedUrlObject = safeParseUrl(sanitizedUrl)
 
-	const stringBody = typeof body === 'string' ? body : String(body)
-	try {
-		const parsedBody = body ? JSON.parse(stringBody) : undefined
-		if (parsedBody?.operationName) {
-			span.setAttribute(
-				'graphql.operation.name',
-				parsedBody.operationName,
-			)
-		}
-	} catch {
-		// Ignore parsing errors
-	}
+	// Bodies and headers arrive in many shapes (FormData, URLSearchParams,
+	// Blob, ArrayBuffer, Headers instance, tuple array, XHR stash). Reduce
+	// them to a string and a plain object; OTel drops non-primitive values.
+	const requestBody = normalizeRequestBody(body)
+	const requestHeaders = normalizeHeaders(headers)
+
+	// Tag GraphQL requests with operation attributes; the span name is left as
+	// the low-cardinality OTel default and the UI formats the display name.
+	span.setAttributes(graphQLOperationAttributes(requestBody ?? body))
 
 	span.setAttributes({
 		'highlight.type': 'http.request',
@@ -520,29 +872,31 @@ const enhanceSpanWithHttpRequestAttributes = (
 		[SemanticAttributes.ATTR_URL_QUERY]: sanitizedUrlObject.search,
 	})
 
-	// Set sanitized query params as JSON object for easier querying
-	const searchParamsEntries = Array.from(
-		sanitizedUrlObject.searchParams.entries(),
-	)
-	if (searchParamsEntries.length > 0) {
-		span.setAttribute(
+	// Emit each query param as its own dotted attribute so the backend's
+	// hlog.FormatAttributes handles them as a nested attribute map natively.
+	span.setAttributes(
+		convertSearchParamsToOtelAttributes(
+			sanitizedUrlObject.searchParams,
 			'url.query_params',
-			JSON.stringify(Object.fromEntries(searchParamsEntries)),
-		)
-	}
+		),
+	)
 
 	if (networkRecordingOptions?.recordHeadersAndBody) {
-		const requestBody = getBodyThatShouldBeRecorded(
-			body,
-			networkRecordingOptions.networkBodyKeysToRedact,
-			networkRecordingOptions.bodyKeysToRecord,
-			headers as Headers,
-		)
-		span.setAttribute('http.request.body', requestBody)
+		if (requestBody !== undefined) {
+			span.setAttribute(
+				'http.request.body',
+				getBodyThatShouldBeRecorded(
+					requestBody,
+					networkRecordingOptions.networkBodyKeysToRedact,
+					networkRecordingOptions.bodyKeysToRecord,
+					requestHeaders,
+				),
+			)
+		}
 
 		const sanitizedHeaders = sanitizeHeaders(
 			networkRecordingOptions.networkHeadersToRedact ?? [],
-			headers as Headers,
+			requestHeaders,
 			networkRecordingOptions.headerKeysToRecord,
 		)
 
@@ -610,6 +964,36 @@ export const convertHeadersToOtelAttributes = (
 			attributes[attributeName] = values.length === 1 ? values[0] : values
 		}
 	})
+
+	return attributes
+}
+
+/**
+ * Converts URL query params to OpenTelemetry attributes with dotted keys.
+ * Each param becomes its own attribute (`<prefix>.<name>`), so the backend's
+ * `hlog.FormatAttributes` flattens them natively into a nested attribute map
+ * without needing to JSON-parse a stringified blob.
+ *
+ * Repeated keys (`?foo=1&foo=2`) become array-valued attributes — single
+ * values stay as strings to keep simple equality queries working.
+ */
+export const convertSearchParamsToOtelAttributes = (
+	searchParams: URLSearchParams,
+	prefix: string,
+): { [key: string]: string | string[] } => {
+	const attributes: { [key: string]: string | string[] } = {}
+
+	for (const [key, value] of searchParams.entries()) {
+		const attributeName = `${prefix}.${key}`
+		const existing = attributes[attributeName]
+		if (existing === undefined) {
+			attributes[attributeName] = value
+		} else if (Array.isArray(existing)) {
+			existing.push(value)
+		} else {
+			attributes[attributeName] = [existing, value]
+		}
+	}
 
 	return attributes
 }
@@ -698,6 +1082,102 @@ const enhanceSpanWithHttpResponseAttributes = (
 		'http.response.header',
 	)
 	span.setAttributes(headerAttributes)
+}
+
+/**
+ * Runs the user-provided requestResponseSanitizer on span attributes,
+ * matching the behavior of the session replay network listener path.
+ * If the sanitizer returns null, marks the span as not-to-record.
+ */
+const applyRequestResponseSanitizer = (
+	span: api.Span,
+	sanitizer: NonNullable<NetworkRecordingOptions['requestResponseSanitizer']>,
+) => {
+	const readableSpan = span as unknown as ReadableSpan
+	const attrs = readableSpan.attributes
+
+	// Reconstruct headers from otel span attributes
+	const requestHeaders: Record<string, string> = {}
+	const responseHeaders: Record<string, string> = {}
+	for (const [key, value] of Object.entries(attrs)) {
+		if (key.startsWith('http.request.header.')) {
+			requestHeaders[key.slice('http.request.header.'.length)] =
+				String(value)
+		}
+		if (key.startsWith('http.response.header.')) {
+			responseHeaders[key.slice('http.response.header.'.length)] =
+				String(value)
+		}
+	}
+
+	const url =
+		(attrs[SemanticAttributes.ATTR_URL_FULL] as string) ??
+		(attrs[SemanticAttributes.SEMATTRS_HTTP_URL] as string) ??
+		''
+
+	let pair: RequestResponsePair = {
+		request: {
+			sessionSecureID: '',
+			id: '',
+			url,
+			verb: (attrs['http.request.method'] as string) ?? 'GET',
+			headers: requestHeaders,
+			body: (attrs['http.request.body'] as string) ?? '',
+		},
+		response: {
+			status: Number(
+				attrs[SemanticAttributes.ATTR_HTTP_RESPONSE_STATUS_CODE] ?? 0,
+			),
+			headers: responseHeaders,
+			body: (attrs['http.response.body'] as string) ?? '',
+		},
+		urlBlocked: false,
+	}
+
+	// JSON.parse bodies so the user sees objects (matches session replay behavior)
+	let stringifyRequestBody = true
+	try {
+		pair.request.body = JSON.parse(pair.request.body)
+	} catch {
+		stringifyRequestBody = false
+	}
+	let stringifyResponseBody = true
+	try {
+		pair.response.body = JSON.parse(pair.response.body)
+	} catch {
+		stringifyResponseBody = false
+	}
+
+	let sanitized: RequestResponsePair | null
+	try {
+		sanitized = sanitizer(pair)
+	} catch {
+		return // sanitizer threw, keep original attributes
+	}
+
+	if (!sanitized) {
+		// Use Object.assign because span.setAttribute is a no-op
+		// on ended spans (the async promise runs after span.end()).
+		Object.assign((span as unknown as ReadableSpan).attributes, {
+			[RECORD_ATTRIBUTE]: false,
+		})
+		return
+	}
+
+	// Stringify back if we parsed earlier
+	if (stringifyRequestBody && sanitized.request?.body) {
+		sanitized.request.body = JSON.stringify(sanitized.request.body)
+	}
+	if (stringifyResponseBody && sanitized.response?.body) {
+		sanitized.response.body = JSON.stringify(sanitized.response.body)
+	}
+
+	// Write back sanitized values via Object.assign because
+	// span.setAttribute is a no-op on ended spans.
+	Object.assign((span as unknown as ReadableSpan).attributes, {
+		'http.request.body': sanitized.request.body ?? '',
+		'http.response.body': sanitized.response.body ?? '',
+	})
 }
 
 const shouldRecordRequest = (
@@ -851,7 +1331,11 @@ export const getCorsUrlsPattern = (
 	tracingOrigins: BrowserTracingConfig['tracingOrigins'],
 ): PropagateTraceHeaderCorsUrls => {
 	if (tracingOrigins === true) {
-		return [/localhost/, /^\//, new RegExp(window.location.host)]
+		return [
+			/localhost/,
+			/^\//,
+			buildLocationHostPattern(window.location.host),
+		]
 	} else if (Array.isArray(tracingOrigins)) {
 		return tracingOrigins.map((pattern) =>
 			typeof pattern === 'string' ? new RegExp(pattern) : pattern,

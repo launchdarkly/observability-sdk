@@ -2,4 +2,5 @@
 <resources>
     <item name = "ld_mask_tag" type="id"/>
     <item name = "ld_unmask_tag" type="id"/>
+    <item name = "ld_id_tag" type="id"/>
 </resources>

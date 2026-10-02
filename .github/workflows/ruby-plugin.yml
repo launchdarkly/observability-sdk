@@ -1,0 +1,127 @@
+name: Ruby Observability Plugin
+
+on:
+    push:
+        branches: ['main']
+        paths:
+            - 'sdk/@launchdarkly/observability-ruby/**'
+            - 'e2e/ruby/**'
+            - '.github/workflows/ruby-plugin.yml'
+    pull_request:
+        types: [opened, synchronize]
+        paths:
+            - 'sdk/@launchdarkly/observability-ruby/**'
+            - 'e2e/ruby/**'
+            - '.github/workflows/ruby-plugin.yml'
+
+permissions:
+    contents: read
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+jobs:
+    build:
+        name: Quality Check
+        runs-on: ubuntu-22.04-8core-32gb
+        strategy:
+            matrix:
+                ruby: ['3.1', '3.3']
+        defaults:
+            run:
+                working-directory: ./sdk/@launchdarkly/observability-ruby
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  token: ${{ secrets.GITHUB_TOKEN }}
+            - name: Install Ruby
+              uses: ruby/setup-ruby@3ff19f5e2baf30647122352b96108b1fbe250c64 # v1
+              with:
+                  ruby-version: ${{ matrix.ruby }}
+                  bundler-cache: true
+                  working-directory: ./sdk/@launchdarkly/observability-ruby
+            - name: Install dependencies
+              run: bundle install
+            - name: Test
+              run: bundle exec rake test
+            - name: Rubocop
+              run: bundle exec rubocop
+            - name: Build gem
+              run: gem build *.gemspec
+
+    e2e-rails:
+        name: Rails E2E Tests
+        runs-on: ubuntu-22.04-8core-32gb
+        defaults:
+            run:
+                working-directory: ./e2e/ruby/rails/demo
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  token: ${{ secrets.GITHUB_TOKEN }}
+            - name: Install Ruby
+              uses: ruby/setup-ruby@3ff19f5e2baf30647122352b96108b1fbe250c64 # v1
+              with:
+                  ruby-version: '3.3'
+                  # bundler-cache implies frozen (deployment) mode. These e2e apps use the local
+                  # launchdarkly-observability gem via `path:`, whose version is bumped by release-please
+                  # without updating Gemfile.lock, so a frozen `bundle install` fails on the version drift.
+                  # Install non-frozen (the "Install dependencies" step below) to absorb the bump.
+                  bundler-cache: false
+                  working-directory: ./e2e/ruby/rails/demo
+            - name: Install dependencies
+              run: bundle install
+            - name: Test
+              run: bundle exec rake
+
+    e2e-rails-api-only:
+        name: Rails API-Only E2E Tests
+        runs-on: ubuntu-22.04-8core-32gb
+        defaults:
+            run:
+                working-directory: ./e2e/ruby/rails/api-only
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  token: ${{ secrets.GITHUB_TOKEN }}
+            - name: Install Ruby
+              uses: ruby/setup-ruby@3ff19f5e2baf30647122352b96108b1fbe250c64 # v1
+              with:
+                  ruby-version: '3.3'
+                  # bundler-cache implies frozen (deployment) mode. These e2e apps use the local
+                  # launchdarkly-observability gem via `path:`, whose version is bumped by release-please
+                  # without updating Gemfile.lock, so a frozen `bundle install` fails on the version drift.
+                  # Install non-frozen (the "Install dependencies" step below) to absorb the bump.
+                  bundler-cache: false
+                  working-directory: ./e2e/ruby/rails/api-only
+            - name: Install dependencies
+              run: bundle install
+            - name: Test
+              run: bundle exec rake
+
+    e2e-rails-legacy:
+        # Regression guard for the CardFlight failure. The other e2e apps run on
+        # Rails 7.2, which is above the floor the OTel Rails-family instrumentations
+        # enforce, so they can never catch an old-Rails compatibility break. This
+        # app pins Rails 7.0 (on current Ruby, so bundler still resolves the latest
+        # instrumentation gems) and fails if the Rails-family auto-instrumentation
+        # stops attaching — i.e. if a future dependency bump re-breaks Rails 7.0.
+        # See e2e/ruby/rails/demo-rails70/README.md.
+        name: Rails 7.0 (legacy) E2E Tests
+        runs-on: ubuntu-22.04-8core-32gb
+        defaults:
+            run:
+                working-directory: ./e2e/ruby/rails/demo-rails70
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  token: ${{ secrets.GITHUB_TOKEN }}
+            - name: Install Ruby
+              uses: ruby/setup-ruby@3ff19f5e2baf30647122352b96108b1fbe250c64 # v1
+              with:
+                  ruby-version: '3.3'
+                  # See the note above: install non-frozen to absorb release-please version bumps.
+                  bundler-cache: false
+                  working-directory: ./e2e/ruby/rails/demo-rails70
+            - name: Install dependencies
+              run: bundle install
+            - name: Test
+              run: bundle exec rake

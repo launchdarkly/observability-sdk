@@ -10,8 +10,28 @@ describe('getCorsUrlsPattern', () => {
 		expect(getCorsUrlsPattern(true)).toEqual([
 			/localhost/,
 			/^\//,
-			/localhost:3000/,
+			/^https?:\/\/([^/]+\.)?localhost:3000([:/?#]|$)/,
 		])
+	})
+
+	it('does not match the page host as a substring of a third-party URL', () => {
+		// Regression for a bug where tracingOrigins: true produced an
+		// unanchored /host/ regex, causing trace headers to be injected into
+		// cross-origin requests that happened to contain the page host as a
+		// query-parameter value (e.g. ?store=<page host>). The page-host
+		// regex is the last entry in the returned pattern array.
+		const pageHostPattern = (getCorsUrlsPattern(true) as RegExp[])[2]
+		const thirdParty =
+			'https://api.third-party.example/timeline?store=127.0.0.1:3000'
+		expect(pageHostPattern.test(thirdParty)).toBe(false)
+	})
+
+	it('still matches the page origin and its subdomains', () => {
+		const pageHostPattern = (getCorsUrlsPattern(true) as RegExp[])[2]
+		expect(pageHostPattern.test('http://localhost:3000/api/foo')).toBe(true)
+		expect(pageHostPattern.test('https://api.localhost:3000/api/foo')).toBe(
+			true,
+		)
 	})
 
 	it('handles `tracingOrigins: [string, string]` correctly', () => {

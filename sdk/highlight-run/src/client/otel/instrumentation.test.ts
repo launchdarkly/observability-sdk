@@ -1,14 +1,17 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import {
 	safeParseUrl,
 	sanitizeHeaders,
 	sanitizeUrl,
 } from '../listeners/network-listener/utils/network-sanitizer'
 import {
+	enhanceSpanWithHttpRequestAttributes,
 	parseXhrResponseHeaders,
 	splitHeaderValue,
 	convertHeadersToOtelAttributes,
+	convertSearchParamsToOtelAttributes,
 } from './index'
+import type { Span } from '@opentelemetry/api'
 
 describe('Network Instrumentation Custom Attributes', () => {
 	describe('splitHeaderValue', () => {
@@ -382,6 +385,93 @@ describe('Network Instrumentation Custom Attributes', () => {
 				'http.request.header',
 			)
 			expect(result).toEqual({})
+		})
+	})
+
+	describe('convertSearchParamsToOtelAttributes', () => {
+		it('should emit one dotted attribute per query param', () => {
+			const params = new URLSearchParams('foo=bar&baz=qux')
+
+			const result = convertSearchParamsToOtelAttributes(
+				params,
+				'url.query_params',
+			)
+
+			expect(result).toEqual({
+				'url.query_params.foo': 'bar',
+				'url.query_params.baz': 'qux',
+			})
+		})
+
+		it('should keep single-value params as strings', () => {
+			const params = new URLSearchParams('only=once')
+
+			const result = convertSearchParamsToOtelAttributes(
+				params,
+				'url.query_params',
+			)
+
+			expect(result['url.query_params.only']).toBe('once')
+			expect(result['url.query_params.only']).not.toBeInstanceOf(Array)
+		})
+
+		it('should collect repeated keys into an array preserving order', () => {
+			const params = new URLSearchParams('id=1&id=2&id=3')
+
+			const result = convertSearchParamsToOtelAttributes(
+				params,
+				'url.query_params',
+			)
+
+			expect(result['url.query_params.id']).toEqual(['1', '2', '3'])
+		})
+
+		it('should handle empty values', () => {
+			const params = new URLSearchParams('flag=&name=alice')
+
+			const result = convertSearchParamsToOtelAttributes(
+				params,
+				'url.query_params',
+			)
+
+			expect(result).toEqual({
+				'url.query_params.flag': '',
+				'url.query_params.name': 'alice',
+			})
+		})
+
+		it('should preserve URL-decoded values', () => {
+			const params = new URLSearchParams('q=hello%20world&filter=a%26b')
+
+			const result = convertSearchParamsToOtelAttributes(
+				params,
+				'url.query_params',
+			)
+
+			expect(result['url.query_params.q']).toBe('hello world')
+			expect(result['url.query_params.filter']).toBe('a&b')
+		})
+
+		it('should return an empty object when there are no params', () => {
+			const result = convertSearchParamsToOtelAttributes(
+				new URLSearchParams(),
+				'url.query_params',
+			)
+
+			expect(result).toEqual({})
+		})
+
+		it('should respect a custom prefix', () => {
+			const params = new URLSearchParams('utm_source=email')
+
+			const result = convertSearchParamsToOtelAttributes(
+				params,
+				'request.query',
+			)
+
+			expect(result).toEqual({
+				'request.query.utm_source': 'email',
+			})
 		})
 	})
 
@@ -1102,6 +1192,33 @@ describe('Network Instrumentation Custom Attributes', () => {
 				const result = sanitizeUrl(url)
 				expect(result).toBe('https://example.com/path?foo=bar&baz=qux')
 			})
+
+			it('should redact OAuth access_token in query params', () => {
+				const url =
+					'https://example.com/callback?access_token=eyJhbGciOiJS&token_type=bearer'
+				const result = sanitizeUrl(url)
+				expect(result).toBe(
+					'https://example.com/callback?access_token=REDACTED&token_type=bearer',
+				)
+			})
+
+			it('should redact OAuth code in query params (authorization code flow)', () => {
+				const url =
+					'https://example.com/callback?code=auth_code_123&state=xyz'
+				const result = sanitizeUrl(url)
+				expect(result).toBe(
+					'https://example.com/callback?code=REDACTED&state=xyz',
+				)
+			})
+
+			it('should redact multiple OAuth params in query string', () => {
+				const url =
+					'https://example.com/token?refresh_token=rt_abc&id_token=eyJ&session_state=sess123'
+				const result = sanitizeUrl(url)
+				expect(result).toBe(
+					'https://example.com/token?refresh_token=REDACTED&id_token=REDACTED&session_state=REDACTED',
+				)
+			})
 		})
 
 		describe('combined scenarios', () => {
@@ -1114,7 +1231,7 @@ describe('Network Instrumentation Custom Attributes', () => {
 				)
 			})
 
-			it('should handle URLs with fragments', () => {
+			it('should preserve harmless fragments in URLs', () => {
 				const url =
 					'https://user:pass@example.com/path?sig=secret#fragment'
 				const result = sanitizeUrl(url)
@@ -1139,6 +1256,60 @@ describe('Network Instrumentation Custom Attributes', () => {
 				expect(result).toBe(
 					'https://REDACTED:REDACTED@api.example.com/v1/users?AWSAccessKeyId=REDACTED&Signature=REDACTED&filter=active#section',
 				)
+			})
+		})
+
+		describe('graphql operation attributes', () => {
+			const createMockSpan = (url: string) => {
+				const attributes: Record<string, unknown> = {
+					'url.full': url,
+				}
+				const updateName = vi.fn()
+				const span = {
+					attributes,
+					setAttribute: (key: string, value: unknown) => {
+						attributes[key] = value
+						return span
+					},
+					setAttributes: (attrs: Record<string, unknown>) => {
+						Object.assign(attributes, attrs)
+						return span
+					},
+					updateName,
+				}
+				return { span: span as unknown as Span, attributes, updateName }
+			}
+
+			it('sets semconv attributes without renaming the span', () => {
+				const { span, attributes, updateName } = createMockSpan(
+					'https://api.example.com/graphql',
+				)
+				const body = JSON.stringify({
+					query: 'query GetUser($id: ID!) { user(id: $id) { id } }',
+					operationName: 'GetUser',
+				})
+
+				enhanceSpanWithHttpRequestAttributes(span, body, {}, undefined)
+
+				expect(attributes['graphql.operation.name']).toBe('GetUser')
+				expect(attributes['graphql.operation.type']).toBe('query')
+				expect(updateName).not.toHaveBeenCalled()
+			})
+
+			it('leaves a non-GraphQL request untouched', () => {
+				const { span, attributes, updateName } = createMockSpan(
+					'https://api.example.com/rest',
+				)
+
+				enhanceSpanWithHttpRequestAttributes(
+					span,
+					JSON.stringify({ hello: 'world' }),
+					{},
+					undefined,
+				)
+
+				expect(attributes['graphql.operation.name']).toBeUndefined()
+				expect(updateName).not.toHaveBeenCalled()
 			})
 		})
 
@@ -1233,7 +1404,7 @@ describe('Network Instrumentation Custom Attributes', () => {
 				expect(result).toBe('/api/data')
 			})
 
-			it('should handle relative URLs with fragment', () => {
+			it('should preserve harmless fragments in relative URLs', () => {
 				const url = '/api?sig=secret#section'
 				const result = sanitizeUrl(url)
 				expect(result).toBe('/api?sig=REDACTED#section')
@@ -1271,7 +1442,7 @@ describe('Network Instrumentation Custom Attributes', () => {
 				expect(result).toBe('//example.com:8080/api?sig=REDACTED')
 			})
 
-			it('should handle protocol-relative URLs with fragment', () => {
+			it('should preserve harmless fragments in protocol-relative URLs', () => {
 				const url = '//example.com/path?sig=secret#section'
 				const result = sanitizeUrl(url)
 				expect(result).toBe('//example.com/path?sig=REDACTED#section')
@@ -1304,6 +1475,59 @@ describe('Network Instrumentation Custom Attributes', () => {
 				const result = sanitizeUrl(url)
 				expect(result).toBe(
 					'//REDACTED:REDACTED@api.example.com:443/v1/data?AWSAccessKeyId=REDACTED&sig=REDACTED#hash',
+				)
+			})
+		})
+
+		describe('fragment sanitization (OAuth token leak prevention)', () => {
+			it('should strip OAuth access_token from URL fragment', () => {
+				const url =
+					'https://example.com/callback#access_token=eyJhbGciOiJS&token_type=bearer'
+				const result = sanitizeUrl(url)
+				expect(result).toBe('https://example.com/callback')
+			})
+
+			it('should strip fragment containing id_token', () => {
+				const url =
+					'https://example.com/path?foo=bar&sig=secret#id_token=eyJ'
+				const result = sanitizeUrl(url)
+				expect(result).toBe(
+					'https://example.com/path?foo=bar&sig=REDACTED',
+				)
+			})
+
+			it('should preserve hash-based route fragments', () => {
+				const url = 'https://example.com/#/dashboard'
+				const result = sanitizeUrl(url)
+				expect(result).toBe('https://example.com/#/dashboard')
+			})
+
+			it('should preserve simple anchor fragments', () => {
+				const url = 'https://example.com/page#section'
+				const result = sanitizeUrl(url)
+				expect(result).toBe('https://example.com/page#section')
+			})
+
+			it('should preserve non-sensitive key=value fragments', () => {
+				const url = 'https://example.com/page#tab=settings&view=detail'
+				const result = sanitizeUrl(url)
+				expect(result).toBe(
+					'https://example.com/page#tab=settings&view=detail',
+				)
+			})
+
+			it('should strip hash-router OAuth callbacks with query params', () => {
+				const url =
+					'https://example.com/#/callback?access_token=eyJhbGciOiJS&token_type=bearer'
+				const result = sanitizeUrl(url)
+				expect(result).toBe('https://example.com/')
+			})
+
+			it('should preserve hash-router routes with non-sensitive query params', () => {
+				const url = 'https://example.com/#/users?page=2&sort=name'
+				const result = sanitizeUrl(url)
+				expect(result).toBe(
+					'https://example.com/#/users?page=2&sort=name',
 				)
 			})
 		})

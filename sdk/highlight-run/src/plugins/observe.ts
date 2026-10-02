@@ -16,6 +16,7 @@ import {
 	getContextKeys,
 	Hook,
 	LD_IDENTIFY_RESULT_STATUS,
+	LD_TRACK_SPAN_NAME,
 	LDClient,
 } from '../integrations/launchdarkly'
 import { Observe as ObserveAPI } from '../api/observe'
@@ -23,9 +24,11 @@ import { ObserveSDK } from '../sdk/observe'
 import { LDObserve } from '../sdk/LDObserve'
 import type { ObserveOptions } from '../client/types/observe'
 import { Plugin } from './common'
+import { ExposureDeduper } from '@launchdarkly/observability-shared'
 import {
 	ATTR_TELEMETRY_SDK_NAME,
 	ATTR_TELEMETRY_SDK_VERSION,
+	ATTR_URL_FULL,
 } from '@opentelemetry/semantic-conventions'
 import { Attributes } from '@opentelemetry/api'
 import { internalLog } from '../sdk/util'
@@ -34,10 +37,15 @@ import { LDEvaluationReason } from '@launchdarkly/js-sdk-common/dist/cjs/api/dat
 export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 	observe: ObserveAPI | undefined
 	options: ObserveOptions | undefined
+	private readonly exposureDeduper: ExposureDeduper
 
 	constructor(options?: ObserveOptions) {
 		super(options)
 		this.options = options
+		this.exposureDeduper = new ExposureDeduper(
+			options?.flagExposureDedupeWindowMillis,
+			options?.flagExposureDedupeMaxSize,
+		)
 	}
 
 	private initialize(
@@ -126,9 +134,18 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 						hook.afterIdentify?.(hookContext, data, result)
 					}
 
+					const ldContextKeys = getContextKeys(hookContext.context)
+					this.observe?.setLDContextKeyAttributes(ldContextKeys)
+
 					if (result.status === 'completed') {
+						// The evaluation context changed, so previously
+						// recorded exposures are no longer relevant for
+						// deduplication. Only reset on a completed identify; a
+						// failed one leaves the context unchanged.
+						this.exposureDeduper.reset()
+
 						const metadata = {
-							...getContextKeys(hookContext.context),
+							...ldContextKeys,
 							key:
 								this.options?.contextFriendlyName?.(
 									hookContext.context,
@@ -172,16 +189,47 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 						}
 					}
 
+					const canonicalKey = hookContext.context
+						? getCanonicalKey(hookContext.context)
+						: undefined
 					if (hookContext.context) {
 						eventAttributes[FEATURE_FLAG_CONTEXT_ATTR] =
 							JSON.stringify(getContextKeys(hookContext.context))
 						eventAttributes[FEATURE_FLAG_CONTEXT_ID_ATTR] =
-							getCanonicalKey(hookContext.context)
+							canonicalKey
 					}
+
+					// Deduplicate repeated exposures that resolve to the same
+					// result within the configured window, so that frequent
+					// re-evaluations (e.g. React re-renders) don't emit a span
+					// per evaluation.
+					const dedupeKey = [
+						hookContext.flagKey,
+						JSON.stringify(detail.value),
+						detail.variationIndex ?? '',
+						detail.reason?.kind ?? '',
+						detail.reason?.ruleId ?? '',
+						canonicalKey ?? '',
+					].join('|')
+					if (!this.observe) {
+						// No exposure is emitted when the SDK isn't initialized,
+						// so don't start a dedupe window that would suppress
+						// later evaluations.
+						return data
+					}
+					if (!this.exposureDeduper.shouldRecord(dedupeKey)) {
+						return data
+					}
+
 					const attributes = { ...metaAttrs, ...eventAttributes }
-					this.observe?.startSpan(FEATURE_FLAG_SPAN_NAME, (s) => {
-						if (s) {
+					this.observe.startSpan(FEATURE_FLAG_SPAN_NAME, (s) => {
+						// Only start the dedupe window once an exposure is
+						// actually recorded; a non-recording span (e.g.
+						// manualStart before start()) shouldn't suppress later
+						// evaluations.
+						if (s?.isRecording()) {
 							s.addEvent(FEATURE_FLAG_SCOPE, attributes)
+							this.exposureDeduper.markRecorded(dedupeKey)
 						}
 					})
 
@@ -192,13 +240,31 @@ export class Observe extends Plugin<ObserveOptions> implements LDPlugin {
 						[]) {
 						hook.afterTrack?.(hookContext)
 					}
-					this.observe?.recordLog('LD.track', 'info', {
+
+					const trackEventsEnabled =
+						this.options?.productAnalytics !== false &&
+						(typeof this.options?.productAnalytics !== 'object' ||
+							this.options.productAnalytics.trackEvents !== false)
+
+					if (!trackEventsEnabled) {
+						return
+					}
+
+					const trackAttrs: Attributes = {
+						[ATTR_URL_FULL]: window.location.href,
+						...(this.observe?.getLDContextKeyAttributes() ?? {}),
 						...metaAttrs,
 						key: hookContext.key,
 						value: hookContext.metricValue,
 						...(typeof hookContext.data === 'object'
 							? hookContext.data
 							: {}),
+					}
+
+					this.observe?.startSpan(LD_TRACK_SPAN_NAME, (s) => {
+						if (s) {
+							s.setAttributes(trackAttrs)
+						}
 					})
 				},
 			},

@@ -1,0 +1,309 @@
+import NativeSessionReplayReactNative from '../NativeSessionReplayReactNative';
+import {
+  afterIdentify,
+  configureSessionReplay,
+  createSessionReplayPlugin,
+  LDClick,
+  startSessionReplay,
+} from '../index';
+
+jest.mock('../NativeSessionReplayReactNative', () => ({
+  configure: jest.fn().mockResolvedValue(undefined),
+  initializeSessionReplay: jest.fn().mockResolvedValue(undefined),
+  startSessionReplay: jest.fn().mockResolvedValue(undefined),
+  stopSessionReplay: jest.fn().mockResolvedValue(undefined),
+  afterIdentify: jest.fn().mockResolvedValue(undefined),
+}));
+
+// register() resolves the shared session id asynchronously before touching native, so tests
+// have to cross a macrotask boundary before asserting.
+const flushAsync = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+describe('configureSessionReplay', () => {
+  it('rejects if key is empty', async () => {
+    await expect(configureSessionReplay('')).rejects.toThrow();
+  });
+
+  it('rejects if key is whitespace', async () => {
+    await expect(configureSessionReplay('   ')).rejects.toThrow();
+  });
+
+  it('forwards frameRate, scale, imageQuality, and sampleRate to native configure', async () => {
+    await configureSessionReplay('mob-key-123', {
+      frameRate: 2,
+      scale: 2.5,
+      imageQuality: 0.75,
+      sampleRate: 0.25,
+    });
+    expect(NativeSessionReplayReactNative.configure).toHaveBeenCalledWith(
+      'mob-key-123',
+      expect.objectContaining({
+        frameRate: 2,
+        scale: 2.5,
+        imageQuality: 0.75,
+        sampleRate: 0.25,
+        maskTestIDs: ['__LD_INTERNAL_MASK__'],
+        unmaskTestIDs: ['__LD_INTERNAL_UNMASK__'],
+      })
+    );
+  });
+
+  it('prepends LDMask / LDUnmask sentinels to the user lists', async () => {
+    // configure with user-supplied testID lists
+    await configureSessionReplay('mob-key-123', {
+      maskTestIDs: ['password'],
+      unmaskTestIDs: ['safe'],
+    });
+    // sentinels are prepended; user entries follow in their original order
+    expect(NativeSessionReplayReactNative.configure).toHaveBeenCalledWith(
+      'mob-key-123',
+      expect.objectContaining({
+        maskTestIDs: ['__LD_INTERNAL_MASK__', 'password'],
+        unmaskTestIDs: ['__LD_INTERNAL_UNMASK__', 'safe'],
+      })
+    );
+  });
+});
+
+describe('afterIdentify', () => {
+  it('passes kind and key for a single-kind context', async () => {
+    await afterIdentify({ kind: 'user', key: 'abc' }, true);
+    expect(NativeSessionReplayReactNative.afterIdentify).toHaveBeenCalledWith(
+      { user: 'abc' },
+      'abc',
+      true
+    );
+  });
+
+  it('uses kind:key canonical key for non-user single-kind context', async () => {
+    await afterIdentify({ kind: 'org', key: 'acme' }, true);
+    expect(NativeSessionReplayReactNative.afterIdentify).toHaveBeenCalledWith(
+      { org: 'acme' },
+      'org:acme',
+      true
+    );
+  });
+
+  it('escapes colons and percent signs in keys', async () => {
+    await afterIdentify({ kind: 'org', key: 'a:b%c' }, true);
+    expect(NativeSessionReplayReactNative.afterIdentify).toHaveBeenCalledWith(
+      { org: 'a:b%c' },
+      'org:a%3Ab%25c',
+      true
+    );
+  });
+
+  it('passes all sub-context kind/key pairs for a multi-kind context', async () => {
+    await afterIdentify(
+      { kind: 'multi', org: { key: 'acme' }, user: { key: 'abc' } },
+      true
+    );
+    expect(NativeSessionReplayReactNative.afterIdentify).toHaveBeenCalledWith(
+      { org: 'acme', user: 'abc' },
+      'org:acme:user:abc',
+      true
+    );
+  });
+
+  it('sorts sub-contexts by kind for the canonical key', async () => {
+    await afterIdentify(
+      { kind: 'multi', user: { key: 'abc' }, org: { key: 'acme' } },
+      true
+    );
+    expect(NativeSessionReplayReactNative.afterIdentify).toHaveBeenCalledWith(
+      { user: 'abc', org: 'acme' },
+      'org:acme:user:abc',
+      true
+    );
+  });
+
+  it('sorts by kind name, not by kind:key string', async () => {
+    // "org-team" sorts before "org" when sorting full "kind:key" strings because
+    // '-' (45) < ':' (58). Sorting by kind name only keeps "org" first.
+    await afterIdentify(
+      { 'kind': 'multi', 'org-team': { key: 'eng' }, 'org': { key: 'acme' } },
+      true
+    );
+    expect(NativeSessionReplayReactNative.afterIdentify).toHaveBeenCalledWith(
+      { 'org-team': 'eng', 'org': 'acme' },
+      'org:acme:org-team:eng',
+      true
+    );
+  });
+
+  it('handles legacy LDUser with implicit user kind', async () => {
+    await afterIdentify({ key: 'legacy-user' }, true);
+    expect(NativeSessionReplayReactNative.afterIdentify).toHaveBeenCalledWith(
+      { user: 'legacy-user' },
+      'legacy-user',
+      true
+    );
+  });
+
+  it('passes completed=false through', async () => {
+    await afterIdentify({ kind: 'user', key: 'abc' }, false);
+    expect(NativeSessionReplayReactNative.afterIdentify).toHaveBeenCalledWith(
+      { user: 'abc' },
+      'abc',
+      false
+    );
+  });
+});
+
+describe('LDClick', () => {
+  it('carries the id to the native view via nativeID', () => {
+    const element = LDClick({ id: 'checkout_button', children: null }) as any;
+    expect(element.props.nativeID).toBe('checkout_button');
+  });
+
+  it('disables view flattening so the tag survives to native', () => {
+    const element = LDClick({ id: 'checkout_button', children: null }) as any;
+    expect(element.props.collapsable).toBe(false);
+  });
+});
+
+describe('SessionReplayPluginAdapter', () => {
+  it('returns a hook from getHooks', () => {
+    const plugin = createSessionReplayPlugin();
+    const hooks = plugin.getHooks!({
+      sdk: { name: 'test', version: '0.0.0' },
+      mobileKey: 'mob-key-123',
+    });
+    expect(hooks).toHaveLength(1);
+    expect(hooks[0]!.getMetadata().name).toBe('session-replay-react-native');
+  });
+
+  it('hook afterIdentify calls native afterIdentify with context', async () => {
+    const plugin = createSessionReplayPlugin();
+    const [hook] = plugin.getHooks!({
+      sdk: { name: 'test', version: '0.0.0' },
+      mobileKey: 'mob-key-123',
+    });
+    hook!.afterIdentify!(
+      { context: { kind: 'user', key: 'abc' } },
+      {},
+      { status: 'completed' }
+    );
+    await new Promise(process.nextTick);
+    expect(NativeSessionReplayReactNative.afterIdentify).toHaveBeenCalledWith(
+      { user: 'abc' },
+      'abc',
+      true
+    );
+  });
+
+  it('hook afterIdentify passes completed=false for shed status', async () => {
+    const plugin = createSessionReplayPlugin();
+    const [hook] = plugin.getHooks!({
+      sdk: { name: 'test', version: '0.0.0' },
+      mobileKey: 'mob-key-123',
+    });
+    hook!.afterIdentify!(
+      { context: { kind: 'user', key: 'abc' } },
+      {},
+      { status: 'shed' }
+    );
+    await new Promise(process.nextTick);
+    expect(NativeSessionReplayReactNative.afterIdentify).toHaveBeenCalledWith(
+      { user: 'abc' },
+      'abc',
+      false
+    );
+  });
+
+  it('calls configure and initializeSessionReplay on register', async () => {
+    const plugin = createSessionReplayPlugin({
+      frameRate: 4,
+      scale: 2,
+      imageQuality: 0.2,
+      sampleRate: 0.5,
+    });
+    plugin.register(
+      {},
+      { sdk: { name: 'test', version: '0.0.0' }, mobileKey: 'mob-key-123' }
+    );
+
+    await flushAsync();
+
+    expect(NativeSessionReplayReactNative.configure).toHaveBeenCalledWith(
+      'mob-key-123',
+      expect.objectContaining({
+        frameRate: 4,
+        scale: 2,
+        imageQuality: 0.2,
+        sampleRate: 0.5,
+        maskTestIDs: ['__LD_INTERNAL_MASK__'],
+        unmaskTestIDs: ['__LD_INTERNAL_UNMASK__'],
+      })
+    );
+    // The auto-start must go through the init path, which honors the configured isEnabled.
+    // Using startSessionReplay here would force recording on for `isEnabled: false` users.
+    expect(
+      NativeSessionReplayReactNative.initializeSessionReplay
+    ).toHaveBeenCalled();
+    expect(
+      NativeSessionReplayReactNative.startSessionReplay
+    ).not.toHaveBeenCalled();
+  });
+
+  it('does not force recording on when registered with isEnabled false', async () => {
+    const plugin = createSessionReplayPlugin({ isEnabled: false });
+    plugin.register(
+      {},
+      { sdk: { name: 'test', version: '0.0.0' }, mobileKey: 'mob-key-123' }
+    );
+
+    await flushAsync();
+
+    expect(NativeSessionReplayReactNative.configure).toHaveBeenCalledWith(
+      'mob-key-123',
+      expect.objectContaining({ isEnabled: false })
+    );
+    expect(
+      NativeSessionReplayReactNative.startSessionReplay
+    ).not.toHaveBeenCalled();
+  });
+
+  it('falls back to startSessionReplay when native has no initializeSessionReplay', async () => {
+    // A JS-only (OTA) update can run against an older native binary. Losing the init path
+    // entirely would leave replay uninitialized, so register() degrades to the old call.
+    const native = NativeSessionReplayReactNative as unknown as Record<
+      string,
+      unknown
+    >;
+    const initialize = native.initializeSessionReplay;
+    delete native.initializeSessionReplay;
+    try {
+      const plugin = createSessionReplayPlugin({});
+      plugin.register(
+        {},
+        { sdk: { name: 'test', version: '0.0.0' }, mobileKey: 'mob-key-123' }
+      );
+
+      await flushAsync();
+
+      expect(
+        NativeSessionReplayReactNative.startSessionReplay
+      ).toHaveBeenCalled();
+    } finally {
+      native.initializeSessionReplay = initialize;
+    }
+  });
+});
+
+describe('startSessionReplay', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('starts without re-sending configure', async () => {
+    // The whole point of the fix: a deferred start needs no configure round-trip, so callers
+    // cannot accidentally clobber the options the plugin already applied.
+    await startSessionReplay();
+
+    expect(
+      NativeSessionReplayReactNative.startSessionReplay
+    ).toHaveBeenCalledTimes(1);
+    expect(NativeSessionReplayReactNative.configure).not.toHaveBeenCalled();
+  });
+});

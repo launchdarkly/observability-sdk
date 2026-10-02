@@ -20,6 +20,10 @@ jobs:
             android-plugin-tag-name: ${{ steps.release.outputs['sdk/@launchdarkly/observability-android--tag_name'] }}
             dotnet-plugin-released: ${{ steps.release.outputs['sdk/@launchdarkly/observability-dotnet--release_created'] }}
             dotnet-plugin-tag-name: ${{ steps.release.outputs['sdk/@launchdarkly/observability-dotnet--tag_name'] }}
+            ruby-plugin-released: ${{ steps.release.outputs['sdk/@launchdarkly/observability-ruby--release_created'] }}
+            ruby-plugin-tag-name: ${{ steps.release.outputs['sdk/@launchdarkly/observability-ruby--tag_name'] }}
+            flutter-plugin-released: ${{ steps.release.outputs['sdk/@launchdarkly/flutter/packages/observability--release_created'] }}
+            flutter-plugin-tag-name: ${{ steps.release.outputs['sdk/@launchdarkly/flutter/packages/observability--tag_name'] }}
         steps:
             # Normally a workflow cannot trigger another workflow. For this workflow we need to run required checks.
             # Github determines that something is created by a workflow/bot based on the token.
@@ -28,7 +32,7 @@ jobs:
               with:
                   aws_assume_role: ${{ vars.AWS_ROLE_ARN }}
                   ssm_parameter_pairs: '/production/common/releasing/o11y_gh_pat = GITHUB_PAT'
-            - uses: googleapis/release-please-action@a02a34c4d625f9be7cb89156071d8567266a2445
+            - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
               id: release
               with:
                   token: ${{ env.GITHUB_PAT }}
@@ -137,3 +141,41 @@ jobs:
             base64-subjects: '${{ needs.release-dotnet-plugin.outputs.package-hashes }}'
             upload-assets: true
             upload-tag-name: ${{ needs.release-package.outputs.dotnet-plugin-tag-name }}
+
+    release-ruby-plugin:
+        runs-on: ubuntu-latest
+        permissions:
+            id-token: write
+        needs: ['release-package']
+        if: ${{ needs.release-package.outputs.ruby-plugin-released == 'true' }}
+        outputs:
+            package-hashes: ${{ steps.publish.outputs.package-hashes }}
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Publish Ruby SDK
+              id: publish
+              uses: ./.github/actions/publish-ruby-sdk
+              with:
+                  workspace-path: sdk/@launchdarkly/observability-ruby
+                  aws-role-arn: ${{ vars.AWS_ROLE_ARN }}
+                  dry-run: false
+
+    release-ruby-provenance:
+        needs: ['release-package', 'release-ruby-plugin']
+        if: ${{ needs.release-package.outputs.ruby-plugin-released == 'true' }}
+        permissions:
+            actions: read
+            id-token: write
+            contents: write
+        uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.0.0
+        with:
+            base64-subjects: '${{ needs.release-ruby-plugin.outputs.package-hashes }}'
+            upload-assets: true
+            upload-tag-name: ${{ needs.release-package.outputs.ruby-plugin-tag-name }}
+
+    # NOTE: Flutter publishing is handled by .github/workflows/flutter-observability-publish.yml,
+    # which is triggered by the git tag that release-please creates. This mirrors the
+    # launchdarkly/flutter-client-sdk setup: pub.dev OIDC publishing is only permitted from a
+    # tag-triggered workflow, not from this branch-triggered (push: main) run.

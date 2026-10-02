@@ -10,6 +10,20 @@ export class BufferedClass<T extends object> {
 	protected _capacity: number = 10_000
 	protected _droppedEvents: number = 0
 	protected _exceededCapacity: boolean = false
+	private _loadResolvers: Array<() => void> = []
+
+	/**
+	 * Resolves once {@link load} has been called (i.e. the underlying SDK is
+	 * ready). Resolves immediately if already loaded. Never rejects; callers that
+	 * need to bound the wait should race it against a timeout, since a failed
+	 * initialization means load() may never be called.
+	 */
+	protected _whenLoaded(): Promise<void> {
+		if (this._isLoaded) return Promise.resolve()
+		return new Promise<void>((resolve) => {
+			this._loadResolvers.push(resolve)
+		})
+	}
 
 	protected _bufferCall(method: keyof T, args: any[]) {
 		if (this._isLoaded) {
@@ -46,6 +60,12 @@ export class BufferedClass<T extends object> {
 		this._sdk = sdk
 		this._isLoaded = true
 
+		const resolvers = this._loadResolvers
+		this._loadResolvers = []
+		for (const resolve of resolvers) {
+			resolve()
+		}
+
 		for (const { method, args } of this._callBuffer) {
 			try {
 				;(this._sdk as any)[method](...args)
@@ -76,6 +96,7 @@ export class BufferedClass<T extends object> {
 		this._droppedEvents = 0
 		this._exceededCapacity = false
 		this._isLoaded = false
+		this._loadResolvers = []
 		this._sdk = undefined as any
 	}
 }

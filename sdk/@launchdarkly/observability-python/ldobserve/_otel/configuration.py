@@ -29,6 +29,10 @@ from opentelemetry.sdk.metrics import (
 )
 
 from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
+from ldobserve._otel.logging_handler import (
+    LDLoggingHandler,
+    install_on_root_logger,
+)
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 import opentelemetry._logs as _logs
@@ -132,7 +136,12 @@ class _OTELConfiguration:
 
         # The log handler is always created even if logging is not instrumented.
         # This allows directly logging to OpenTelemetry.
-        self._log_handler = LoggingHandler(
+        #
+        # LDLoggingHandler is a hardened LoggingHandler: it is safe to install on
+        # the root logger alongside other logging instrumentation (e.g. the New
+        # Relic agent) because it guards against re-entrancy and never forwards
+        # non-serializable record attributes. See logging_handler.py.
+        self._log_handler = LDLoggingHandler(
             level=self._config.log_level, logger_provider=self._logger_provider
         )
 
@@ -158,7 +167,11 @@ class _OTELConfiguration:
             # If log_correlation is false, then the LoggingInstrumentor will not
             # configure basic logging. If it does, then this call has no effect.
             logging.basicConfig(level=self._config.log_level)
-            logging.getLogger().addHandler(self._log_handler)
+            # Registration is idempotent: if the SDK is initialized more than
+            # once in the same process (e.g. a repeated set_config, a test suite,
+            # or a gunicorn preload + worker) this never stacks duplicate handlers
+            # on the root logger, which would double-export every log record.
+            install_on_root_logger(self._log_handler)
 
         metric_reader = PeriodicExportingMetricReader(
             exporter=OTLPMetricExporter(

@@ -1,5 +1,47 @@
 # @launchdarkly/observability-node
 
+## [1.3.0](https://github.com/launchdarkly/observability-sdk/compare/observability-node-1.2.0...observability-node-1.3.0) (2026-08-07)
+
+
+### Features
+
+* emit UCUM units for first-party SDK instruments (O11Y-1820) ([#707](https://github.com/launchdarkly/observability-sdk/issues/707)) ([1d83bd5](https://github.com/launchdarkly/observability-sdk/commit/1d83bd5c484ca3d30b6f09012d02ddf8b3134ea6))
+
+## [1.2.0](https://github.com/launchdarkly/observability-sdk/compare/observability-node-1.1.3...observability-node-1.2.0) (2026-06-29)
+
+
+### Features
+
+* add GraphQL operation attributes to instrumented spans ([#644](https://github.com/launchdarkly/observability-sdk/issues/644)) ([4772f5e](https://github.com/launchdarkly/observability-sdk/commit/4772f5e938f0020e43c0d5725ca879dc2476041d))
+
+## [1.1.3](https://github.com/launchdarkly/observability-sdk/compare/observability-node-1.1.2...observability-node-1.1.3) (2026-06-05)
+
+
+### Bug Fixes
+
+* upgrade vulnerable dependencies flagged by Dependabot ([#596](https://github.com/launchdarkly/observability-sdk/issues/596)) ([c15b3d9](https://github.com/launchdarkly/observability-sdk/commit/c15b3d9547946f6dfe334f0a5b43002f5f8781a2))
+
+## [1.1.2](https://github.com/launchdarkly/observability-sdk/compare/observability-node-1.1.1...observability-node-1.1.2) (2026-06-03)
+
+
+### Bug Fixes
+
+* update vite and vitest to resolve security vulnerabilities ([#589](https://github.com/launchdarkly/observability-sdk/issues/589)) ([4538396](https://github.com/launchdarkly/observability-sdk/commit/45383961bdd2d07caa7804034dda79cf42a8a8f4))
+
+## [1.1.1](https://github.com/launchdarkly/observability-sdk/compare/observability-node-1.1.0...observability-node-1.1.1) (2026-04-20)
+
+
+### Bug Fixes
+
+* Upgrade to latest version of graphql-codegen cli ([#479](https://github.com/launchdarkly/observability-sdk/issues/479)) ([97061e6](https://github.com/launchdarkly/observability-sdk/commit/97061e6ce49d73c083f14b45424437074212f30e))
+
+## [1.1.0](https://github.com/launchdarkly/observability-sdk/compare/observability-node-1.0.1...observability-node-1.1.0) (2026-03-26)
+
+
+### Features
+
+* **@launchdarkly/session-replay-react-native:** use cocoapods for native session replay ([#434](https://github.com/launchdarkly/observability-sdk/issues/434)) ([41988e1](https://github.com/launchdarkly/observability-sdk/commit/41988e196b02901964efdad0e25f892d5ba55fc4))
+
 ## [1.0.1](https://github.com/launchdarkly/observability-sdk/compare/observability-node-1.0.0...observability-node-1.0.1) (2026-02-18)
 
 

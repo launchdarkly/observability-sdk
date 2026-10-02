@@ -1,3 +1,15 @@
+# This workflow handles CI (build/test) for all PRs and pushes to main,
+# as well as npm publishing for @launchdarkly and @highlight-run packages.
+#
+# AUTOMATED PUBLISHING (on push to main):
+#   - Publishes @highlight-run/* and highlight.run packages using NPM token
+#   - Publishes @launchdarkly/* packages using OIDC authentication
+#
+# MANUAL PUBLISHING (via workflow_dispatch):
+#   - Can be triggered manually from the Actions tab
+#   - Supports prerelease and dry-run modes for @launchdarkly/* packages
+#   - OIDC requires a single workflow per npm package, so manual publishing
+#     is consolidated here rather than in a separate workflow
 name: Monorepo
 
 on:
@@ -5,6 +17,16 @@ on:
         branches: ['main']
     pull_request:
         types: [opened, synchronize]
+    workflow_dispatch:
+        inputs:
+            dry-run:
+                description: 'Is this a dry run. If so no package will be published.'
+                type: boolean
+                required: true
+            prerelease:
+                description: 'Is this a prerelease. If so, then the latest tag will not be updated in npm.'
+                type: boolean
+                required: true
 
 permissions:
     id-token: write
@@ -15,8 +37,47 @@ permissions:
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 jobs:
+    detect-changes:
+        name: Detect JS monorepo changes
+        runs-on: ubuntu-latest
+        outputs:
+            yarn-test: ${{ steps.changes.outputs.yarn-test }}
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Detect JS monorepo changes
+              uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+              id: changes
+              with:
+                  # Without a quantifier the patterns below are OR-ed, so '**'
+                  # matches every file and the exclusions never subtract
+                  # anything. This mode requires a file to match an inclusion
+                  # and no exclusion, which is what the list means to say.
+                  predicate-quantifier: some-with-excludes
+                  filters: |
+                      yarn-test:
+                        - '**'
+                        - '!sdk/@launchdarkly/observability-android/**'
+                        - '!sdk/@launchdarkly/mobile-dotnet/**'
+                        - '!sdk/@launchdarkly/flutter/**'
+                        - '!sdk/@launchdarkly/launchdarkly_flutter_observability/**'
+                        - '!sdk/@launchdarkly/observability-dotnet/**'
+                        - '!sdk/@launchdarkly/observability-python/**'
+                        - '!sdk/@launchdarkly/observability-ruby/**'
+                        - '!e2e/android/**'
+                        - '!.github/workflows/android-observability.yml'
+                        - '!.github/workflows/android-e2e.yml'
+                        - '!.github/workflows/flutter-observability.yml'
+                        - '!.github/workflows/flutter-observability-publish.yml'
+                        - '!.github/workflows/dotnet-plugin.yml'
+                        - '!.github/workflows/python-plugin.yml'
+                        - '!.github/workflows/ruby-plugin.yml'
+
     yarn-monorepo:
         name: Build Yarn Turborepo
+        needs: detect-changes
+        if: needs.detect-changes.outputs.yarn-test == 'true' || github.event_name == 'workflow_dispatch'
         timeout-minutes: 60
         runs-on: ubuntu-22.04-8core-32gb
         # configures turborepo Remote Caching
@@ -32,7 +93,10 @@ jobs:
             - name: Setup Node.js environment
               uses: actions/setup-node@v4
               with:
-                  node-version: lts/*
+                  # Pinned: lts/* floated to Node 24.16.0, which hangs the rrvideo
+                  # Playwright browser download during `yarn install` until the job
+                  # times out. 24.15.0 is the last known-good. See PR #575.
+                  node-version: 24.15.0
                   cache: 'yarn'
 
             - name: Install js dependencies
@@ -50,6 +114,13 @@ jobs:
                   NEXT_PUBLIC_HIGHLIGHT_PROJECT_ID: 1jdkoe52
                   REACT_APP_COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
+            # Guard against shipping unresolvable types: install the freshly
+            # built package into a clean consumer and type-check it with
+            # skipLibCheck:false. Runs before publish so a broken .d.ts blocks
+            # the release. See scripts/check-published-types.mjs.
+            - name: Verify published types resolve in a clean consumer
+              run: node scripts/check-published-types.mjs
+
             - name: Configure yarn npm registry credentials
               if: github.ref == 'refs/heads/main'
               run: |
@@ -62,23 +133,15 @@ jobs:
               if: github.ref == 'refs/heads/main'
               run: yarn publish:highlight
 
-            - uses: launchdarkly/gh-actions/actions/release-secrets@release-secrets-v1.2.0
-              if: github.ref == 'refs/heads/main'
-              name: 'Get NPM token'
-              with:
-                  aws_assume_role: ${{ vars.AWS_ROLE_ARN }}
-                  ssm_parameter_pairs: '/production/common/releasing/npm/token = NODE_AUTH_TOKEN'
+            # Publishing credentials for @launchdarkly/* NPM packages come from OIDC.
+            - name: Setup Node.js for OIDC publishing
+              if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+              uses: ./.github/actions/setup-release-node
 
-            - name: Configure yarn npm registry credentials for launchdarkly
-              if: github.ref == 'refs/heads/main'
-              run: |
-                  yarn config set npmRegistryServer "https://registry.npmjs.org"
-                  yarn config set npmAuthToken "${NODE_AUTH_TOKEN}"
-
-            - name: Publish
-              if: github.ref == 'refs/heads/main'
+            - name: Publish @launchdarkly npm packages
+              if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
               shell: bash
               run: ./scripts/publish-npm.sh
               env:
-                  LD_RELEASE_IS_PRERELEASE: false
-                  LD_RELEASE_IS_DRYRUN: false
+                  LD_RELEASE_IS_PRERELEASE: ${{ github.event_name == 'workflow_dispatch' && inputs.prerelease || false }}
+                  LD_RELEASE_IS_DRYRUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry-run || false }}

@@ -34,7 +34,10 @@ import {
 	registerInstrumentations,
 } from '@opentelemetry/instrumentation'
 import { CompressionAlgorithm } from '@opentelemetry/otlp-exporter-base'
-import { processDetectorSync, Resource } from '@opentelemetry/resources'
+import {
+	processDetector,
+	resourceFromAttributes,
+} from '@opentelemetry/resources'
 import { NodeSDK } from '@opentelemetry/sdk-node'
 import {
 	AlwaysOnSampler,
@@ -205,7 +208,7 @@ export class Highlight {
 				attributes[otelAttr] = options[option]
 			}
 		}
-		const resource = new Resource(attributes)
+		const resource = resourceFromAttributes(attributes)
 
 		const exporter = new OTLPTraceExporter({
 			...config,
@@ -213,15 +216,15 @@ export class Highlight {
 		})
 		this.processor = new BatchSpanProcessor(exporter, opts)
 
-		this.loggerProvider = new LoggerProvider({
-			resource,
-		})
 		const logsExporter = new OTLPLogExporter({
 			...config,
 			url: `${config.url}/v1/logs`,
 		})
 		const logsProcessor = new BatchLogRecordProcessor(logsExporter, opts)
-		this.loggerProvider.addLogRecordProcessor(logsProcessor)
+		this.loggerProvider = new LoggerProvider({
+			resource,
+			processors: [logsProcessor],
+		})
 
 		const metricsExporter = new OTLPMetricExporter({
 			...config,
@@ -235,7 +238,7 @@ export class Highlight {
 
 		this.otel = new NodeSDK({
 			autoDetectResources: true,
-			resourceDetectors: [processDetectorSync],
+			resourceDetectors: [processDetector],
 			resource,
 			spanProcessors: [this.processor],
 			logRecordProcessors: [logsProcessor],
@@ -301,7 +304,10 @@ export class Highlight {
 
 		let gauge = this._gauges.get(metric.name)
 		if (!gauge) {
-			gauge = this.meter.createGauge(metric.name)
+			gauge = this.meter.createGauge(
+				metric.name,
+				metric.unit ? { unit: metric.unit } : undefined,
+			)
 			this._gauges.set(metric.name, gauge)
 		}
 
@@ -316,7 +322,10 @@ export class Highlight {
 
 		let counter = this._counters.get(metric.name)
 		if (!counter) {
-			counter = this.meter.createCounter(metric.name)
+			counter = this.meter.createCounter(
+				metric.name,
+				metric.unit ? { unit: metric.unit } : undefined,
+			)
 			this._counters.set(metric.name, counter)
 		}
 
@@ -335,7 +344,10 @@ export class Highlight {
 
 		let histogram = this._histograms.get(metric.name)
 		if (!histogram) {
-			histogram = this.meter.createHistogram(metric.name)
+			histogram = this.meter.createHistogram(
+				metric.name,
+				metric.unit ? { unit: metric.unit } : undefined,
+			)
 			this._histograms.set(metric.name, histogram)
 		}
 
@@ -350,7 +362,10 @@ export class Highlight {
 
 		let up_down_counter = this._up_down_counters.get(metric.name)
 		if (!up_down_counter) {
-			up_down_counter = this.meter.createUpDownCounter(metric.name)
+			up_down_counter = this.meter.createUpDownCounter(
+				metric.name,
+				metric.unit ? { unit: metric.unit } : undefined,
+			)
 			this._up_down_counters.set(metric.name, up_down_counter)
 		}
 

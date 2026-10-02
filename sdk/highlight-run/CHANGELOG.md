@@ -1,5 +1,185 @@
 # highlight.run
 
+## [10.7.5](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.7.4...highlight.run-10.7.5) (2026-09-15)
+
+
+### Bug Fixes
+
+* **observability:** run span callbacks instead of buffering them pre-init ([#764](https://github.com/launchdarkly/observability-sdk/issues/764)) ([194ed01](https://github.com/launchdarkly/observability-sdk/commit/194ed0170000dcccd2dc8595d56da7b066626c08))
+
+## [10.7.4](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.7.3...highlight.run-10.7.4) (2026-09-09)
+
+
+### Bug Fixes
+
+* **highlight.run:** never JSON.stringify binary XHR bodies or capture the SDK's own exports (iPad crash root cause) ([#760](https://github.com/launchdarkly/observability-sdk/issues/760)) ([2ad7c4f](https://github.com/launchdarkly/observability-sdk/commit/2ad7c4fffbc11e2e7b6e59cf712e339de844fede))
+
+## [10.7.3](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.7.2...highlight.run-10.7.3) (2026-09-09)
+
+
+### Bug Fixes
+
+* **highlight.run:** WebKit/iPad performance hardening — dedupe OpenTelemetry bundles, cap body capture, resync option, telemetry-intake blocklist ([#758](https://github.com/launchdarkly/observability-sdk/issues/758)) ([bdf077a](https://github.com/launchdarkly/observability-sdk/commit/bdf077ad5a363f9163f2a20b12163558d3e39ec6))
+
+## [10.7.2](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.7.1...highlight.run-10.7.2) (2026-09-03)
+
+
+### Bug Fixes
+
+* **highlight.run:** capture XMLHttpRequest bodies and headers on traces without the session replay listener ([#752](https://github.com/launchdarkly/observability-sdk/issues/752)) ([68eb0fe](https://github.com/launchdarkly/observability-sdk/commit/68eb0fee05540147a87eba1133c1ebc83c2122c4))
+* **highlight.run:** record fetch request bodies and headers that are not plain strings or objects ([#753](https://github.com/launchdarkly/observability-sdk/issues/753)) ([dc97c02](https://github.com/launchdarkly/observability-sdk/commit/dc97c022e6d68cd95fb6e9a5f1c604eb5da010b1))
+
+## [10.7.1](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.7.0...highlight.run-10.7.1) (2026-08-13)
+
+
+### Bug Fixes
+
+* **highlight.run:** recover CSS-in-JS rules when another script unhooks rrweb ([#725](https://github.com/launchdarkly/observability-sdk/issues/725)) ([9faca28](https://github.com/launchdarkly/observability-sdk/commit/9faca2864c0a3f87b6a89eac7593431f3a485235))
+
+## [10.7.0](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.6.0...highlight.run-10.7.0) (2026-08-07)
+
+
+### Features
+
+* emit UCUM units for first-party SDK instruments (O11Y-1820) ([#707](https://github.com/launchdarkly/observability-sdk/issues/707)) ([1d83bd5](https://github.com/launchdarkly/observability-sdk/commit/1d83bd5c484ca3d30b6f09012d02ddf8b3134ea6))
+
+## [10.6.0](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.5.0...highlight.run-10.6.0) (2026-07-16)
+
+
+### Features
+
+* **observability:** dedupe feature flag exposures within a time window (web + React Native) ([#676](https://github.com/launchdarkly/observability-sdk/issues/676)) ([c34b390](https://github.com/launchdarkly/observability-sdk/commit/c34b390d68ff642e13f2863d1aa3f2732c61b70b))
+
+## [10.5.0](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.4.1...highlight.run-10.5.0) (2026-06-29)
+
+
+### Features
+
+* add GraphQL operation attributes to instrumented spans ([#644](https://github.com/launchdarkly/observability-sdk/issues/644)) ([4772f5e](https://github.com/launchdarkly/observability-sdk/commit/4772f5e938f0020e43c0d5725ca879dc2476041d))
+
+## [10.4.1](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.4.0...highlight.run-10.4.1) (2026-06-16)
+
+
+### Bug Fixes
+
+* **highlight.run:** make published TypeScript declarations resolvable ([#629](https://github.com/launchdarkly/observability-sdk/issues/629)) ([38453be](https://github.com/launchdarkly/observability-sdk/commit/38453be49323615ea6879899c8825a6cbae65a29))
+
+## [10.4.0](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.3.4...highlight.run-10.4.0) (2026-06-11)
+
+
+### Features
+
+* update rrweb submodule to upstream v2.0.1 refresh ([#615](https://github.com/launchdarkly/observability-sdk/issues/615)) ([f63b07f](https://github.com/launchdarkly/observability-sdk/commit/f63b07f96c4d7e66334d434a4bbb0a5ebe134588))
+
+## [10.3.4](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.3.3...highlight.run-10.3.4) (2026-06-08)
+
+
+### Bug Fixes
+
+* **highlight.run:** stub blob: workers in tests to fix flaky CI teardown ([#606](https://github.com/launchdarkly/observability-sdk/issues/606)) ([fb3fa19](https://github.com/launchdarkly/observability-sdk/commit/fb3fa192ef0de699ec8a0cec1f2b7e1ec8dca1a2))
+
+## [10.3.3](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.3.2...highlight.run-10.3.3) (2026-06-08)
+
+
+### Bug Fixes
+
+* record session replay Click events in capture phase ([#602](https://github.com/launchdarkly/observability-sdk/issues/602)) ([485f922](https://github.com/launchdarkly/observability-sdk/commit/485f92277371bd22a3169d6edd9cdf2ead85beae))
+
+## [10.3.2](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.3.1...highlight.run-10.3.2) (2026-06-05)
+
+
+### Bug Fixes
+
+* strip URL fragments from sanitizeUrl to prevent OAuth token leaks ([#595](https://github.com/launchdarkly/observability-sdk/issues/595)) ([4925031](https://github.com/launchdarkly/observability-sdk/commit/49250315ec48aef5322a0cd9f5363e6cdd476c37))
+* upgrade vulnerable dependencies flagged by Dependabot ([#596](https://github.com/launchdarkly/observability-sdk/issues/596)) ([c15b3d9](https://github.com/launchdarkly/observability-sdk/commit/c15b3d9547946f6dfe334f0a5b43002f5f8781a2))
+
+## [10.3.1](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.3.0...highlight.run-10.3.1) (2026-05-15)
+
+
+### Bug Fixes
+
+* prune stale sessionData_* cookies and stop noisy parse log ([#554](https://github.com/launchdarkly/observability-sdk/issues/554)) ([3523733](https://github.com/launchdarkly/observability-sdk/commit/35237339870deca3010075cddde46f3b24550334))
+
+## [10.3.0](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.2.0...highlight.run-10.3.0) (2026-05-06)
+
+
+### Features
+
+* forward LD context keys to errors, logs, and custom spans ([#530](https://github.com/launchdarkly/observability-sdk/issues/530)) ([5a6d164](https://github.com/launchdarkly/observability-sdk/commit/5a6d164129c98518681dc22da1db082803ad9a04))
+
+## [10.2.0](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.1.2...highlight.run-10.2.0) (2026-05-01)
+
+
+### Features
+
+* emit element-selector attribution on web-vitals metrics ([#515](https://github.com/launchdarkly/observability-sdk/issues/515)) ([d8288b1](https://github.com/launchdarkly/observability-sdk/commit/d8288b173a7b36d7392d518c45b4a7ad33ecac93))
+* include LD context keys in metric event attributes ([#514](https://github.com/launchdarkly/observability-sdk/issues/514)) ([edefe2c](https://github.com/launchdarkly/observability-sdk/commit/edefe2c7ea39fb6fb852cd83aa086ec3df1bc83a))
+
+
+### Bug Fixes
+
+* emit url.query_params as nested otel attributes ([#517](https://github.com/launchdarkly/observability-sdk/issues/517)) ([69629e1](https://github.com/launchdarkly/observability-sdk/commit/69629e18ab4a7fe4317d219e31059dec83de72eb))
+
+## [10.1.2](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.1.1...highlight.run-10.1.2) (2026-04-24)
+
+
+### Bug Fixes
+
+* scope tracingOrigins matching to the URL origin ([#502](https://github.com/launchdarkly/observability-sdk/issues/502)) ([f12201c](https://github.com/launchdarkly/observability-sdk/commit/f12201caa4dcecd31cde439958c9c31adef7b36f))
+
+## [10.1.1](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.1.0...highlight.run-10.1.1) (2026-04-24)
+
+
+### Bug Fixes
+
+* avoid ReDoS in error-stack-parser by not re-parsing console stacks ([#498](https://github.com/launchdarkly/observability-sdk/issues/498)) ([1ec2f20](https://github.com/launchdarkly/observability-sdk/commit/1ec2f2075db617e5744de6da767ea46536991ef1))
+
+## [10.1.0](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.0.1...highlight.run-10.1.0) (2026-04-22)
+
+
+### Features
+
+* add ReportingObserver and longtask listeners ([#491](https://github.com/launchdarkly/observability-sdk/issues/491)) ([fa2c607](https://github.com/launchdarkly/observability-sdk/commit/fa2c60799064993e14d11a0f9291bbce9800aa3f))
+
+## [10.0.1](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-10.0.0...highlight.run-10.0.1) (2026-04-22)
+
+
+### Bug Fixes
+
+* flush OTEL spans on page unload via keepalive fetch ([#483](https://github.com/launchdarkly/observability-sdk/issues/483)) ([0eff054](https://github.com/launchdarkly/observability-sdk/commit/0eff0544482d57d685ae00ff72b0d5b4cf224e47))
+
+## [10.0.0](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-9.28.0...highlight.run-10.0.0) (2026-03-30)
+
+
+### ⚠ BREAKING CHANGES
+
+* Support clicks and custom event tracing ([#432](https://github.com/launchdarkly/observability-sdk/issues/432))
+
+### Features
+
+* Support clicks and custom event tracing ([#432](https://github.com/launchdarkly/observability-sdk/issues/432)) ([b6b10ea](https://github.com/launchdarkly/observability-sdk/commit/b6b10eaf24488ef9545ab58b745daf8b30680242))
+
+## [9.28.0](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-9.27.1...highlight.run-9.28.0) (2026-03-26)
+
+
+### Features
+
+* **@launchdarkly/session-replay-react-native:** use cocoapods for native session replay ([#434](https://github.com/launchdarkly/observability-sdk/issues/434)) ([41988e1](https://github.com/launchdarkly/observability-sdk/commit/41988e196b02901964efdad0e25f892d5ba55fc4))
+
+## [9.27.1](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-9.27.0...highlight.run-9.27.1) (2026-02-26)
+
+
+### Bug Fixes
+
+* improve network response capture ([#379](https://github.com/launchdarkly/observability-sdk/issues/379)) ([43d2dc3](https://github.com/launchdarkly/observability-sdk/commit/43d2dc3ea6054b2fcdf7f8971bbbe492a9175804))
+
+## [9.27.0](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-9.26.1...highlight.run-9.27.0) (2026-02-23)
+
+
+### Features
+
+* add session replay support for react native ([#357](https://github.com/launchdarkly/observability-sdk/issues/357)) ([7f6ed30](https://github.com/launchdarkly/observability-sdk/commit/7f6ed3041ed641be47b1f5c2e0d30d4ef1727bd0))
+
 ## [9.26.1](https://github.com/launchdarkly/observability-sdk/compare/highlight.run-9.26.0...highlight.run-9.26.1) (2026-02-13)
 
 

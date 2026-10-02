@@ -4,7 +4,6 @@ import {
 	Span as OtelSpan,
 	SpanOptions,
 } from '@opentelemetry/api'
-import { ResourceAttributes } from '@opentelemetry/resources'
 import { Highlight } from './client'
 import log from './log'
 import type { HighlightContext, Metric, NodeOptions } from './types.js'
@@ -61,7 +60,7 @@ export interface HighlightInterface {
 		requestId?: string,
 		metadata?: Attributes,
 	) => Promise<void>
-	setAttributes: (attributes: ResourceAttributes) => void
+	setAttributes: (attributes: Attributes) => void
 	_debug: (...data: any[]) => void
 }
 
@@ -195,7 +194,7 @@ export const H: HighlightInterface = {
 			console.warn('highlight-node consumeAndFlush error: ', e)
 		}
 	},
-	setAttributes: (attributes: ResourceAttributes) => {
+	setAttributes: (attributes: Attributes) => {
 		return highlight_obj.setAttributes(attributes)
 	},
 

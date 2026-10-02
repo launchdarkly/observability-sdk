@@ -57,6 +57,7 @@ import {
 } from './listeners/jank-listener/jank-listener'
 import { HighlightFetchWindow } from './listeners/network-listener/utils/fetch-listener'
 import { RequestResponsePair } from './listeners/network-listener/utils/models'
+import { sanitizeUrl } from './listeners/network-listener/utils/network-sanitizer'
 import { PageVisibilityListener } from './listeners/page-visibility-listener'
 import {
 	PerformanceListener,
@@ -108,6 +109,7 @@ import {
 	setStorageMode,
 } from './utils/storage'
 import { getDefaultDataURLOptions, isMetricSafeNumber } from './utils/utils'
+import { metricInstrumentOptions } from './utils/metricUnits'
 import { type HighlightClientRequestWorker } from './workers/highlight-client-worker'
 import { payloadToBase64 } from './utils/payload'
 import HighlightClientWorker from './workers/highlight-client-worker?worker&inline'
@@ -127,6 +129,7 @@ import { CustomSampler } from './otel/sampling/CustomSampler'
 import randomUuidV4 from './utils/randomUuidV4'
 import { LDContext } from '@launchdarkly/js-client-sdk'
 import { MaskInputOptions } from './types/record'
+import { ProductAnalyticsEvents } from './types/observe'
 
 export const HighlightWarning = (context: string, msg: any) => {
 	console.warn(`Highlight Warning: (${context}): `, { output: msg })
@@ -161,6 +164,7 @@ export type HighlightClassOptions = {
 	inlineImages?: boolean
 	inlineVideos?: boolean
 	inlineStylesheet?: boolean
+	styleSheetResyncInterval?: number
 	recordCrossOriginIframe?: boolean
 	firstloadVersion?: string
 	environment?: 'development' | 'production' | 'staging' | string
@@ -174,6 +178,7 @@ export type HighlightClassOptions = {
 	sendMode?: 'webworker' | 'local'
 	otlpEndpoint?: HighlightOptions['otlpEndpoint']
 	otel?: HighlightOptions['otel']
+	productAnalytics?: boolean | ProductAnalyticsEvents
 	contextFriendlyName?: (context: LDContext) => string | undefined
 }
 
@@ -191,7 +196,10 @@ export class Highlight {
 	isRunningOnHighlight!: boolean
 	/** Verbose project ID that is exposed to users. Legacy users may still be using ints. */
 	organizationID!: string
-	graphqlSDK!: Sdk
+	// ECMAScript-private (#) so the internal GraphQL SDK type — which
+	// references graphql-request / graphql — does not leak into the published
+	// declaration file and break consumer type-checking.
+	#graphqlSDK!: Sdk
 	events!: eventWithTime[]
 	sessionData!: SessionData
 	ready!: boolean
@@ -206,6 +214,7 @@ export class Highlight {
 	inlineImages!: boolean
 	inlineVideos!: boolean
 	inlineStylesheet!: boolean
+	styleSheetResyncInterval!: number
 	debugOptions!: DebugOptions
 	listeners!: listenerHandler[]
 	firstloadVersion!: string
@@ -408,6 +417,7 @@ export class Highlight {
 		this.inlineImages = options.inlineImages ?? this._isOnLocalHost
 		this.inlineVideos = options.inlineVideos ?? this._isOnLocalHost
 		this.inlineStylesheet = options.inlineStylesheet ?? this._isOnLocalHost
+		this.styleSheetResyncInterval = options.styleSheetResyncInterval ?? 2000
 		this.samplingStrategy = {
 			canvasFactor: 0.5,
 			canvasMaxSnapshotDimension: 360,
@@ -428,7 +438,7 @@ export class Highlight {
 		const client = new GraphQLClient(`${this._backendUrl}`, {
 			headers: {},
 		})
-		this.graphqlSDK = getSdk(client, getGraphQLRequestWrapper())
+		this.#graphqlSDK = getSdk(client, getGraphQLRequestWrapper())
 		this.environment = options.environment ?? 'production'
 		this.appVersion = options.appVersion
 		this.serviceName = options.serviceName ?? ''
@@ -634,8 +644,8 @@ export class Highlight {
 					serviceName:
 						this.options?.serviceName ?? 'highlight-browser',
 					instrumentations: this.options?.otel?.instrumentations,
-					eventNames: this.options?.otel?.eventNames,
 					getIntegrations: () => [...this._integrations],
+					productAnalyticsEvents: this._productAnalyticsEvents(),
 				},
 				sampler,
 			)
@@ -698,7 +708,7 @@ export class Highlight {
 				// wait for 'cross-origin iframe ready' message
 				await this._setupCrossOriginIframe()
 			} else {
-				const gr = await this.graphqlSDK.initializeSession({
+				const gr = await this.#graphqlSDK.initializeSession({
 					organization_verbose_id: this.organizationID,
 					enable_strict_privacy: this.privacySetting === 'strict',
 					privacy_setting: this.privacySetting,
@@ -873,6 +883,7 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 				inlineVideos: this.inlineVideos,
 				collectFonts: this.inlineImages,
 				inlineStylesheet: this.inlineStylesheet,
+				styleSheetResyncInterval: this.styleSheetResyncInterval,
 				plugins: [getRecordSequentialIdPlugin()],
 				logger:
 					(typeof this.options.debug === 'boolean' &&
@@ -933,6 +944,29 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 				HighlightWarning('initializeSession', e)
 			}
 		}
+	}
+
+	private _productAnalyticsEvents(): ProductAnalyticsEvents {
+		const pa = this.options?.productAnalytics
+		if (pa === false) {
+			return {}
+		}
+
+		const paEvents = {
+			clicks: true,
+			pageViews: true,
+			trackEvents: true,
+		}
+		if (pa === undefined || pa === true) {
+			return paEvents
+		}
+
+		for (const event of Object.keys(pa)) {
+			if (pa[event as keyof ProductAnalyticsEvents] === false) {
+				paEvents[event as keyof ProductAnalyticsEvents] = false
+			}
+		}
+		return paEvents
 	}
 
 	async _visibilityHandler(hidden: boolean) {
@@ -1097,11 +1131,53 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 			this.listeners.push(
 				WebVitalsListener((data) => {
 					const { name, value } = data
+					const tags: { name: string; value: string }[] = []
+					const addTag = (n: string, v: string | undefined) => {
+						if (v) tags.push({ name: n, value: v })
+					}
+					switch (data.name) {
+						case 'LCP': {
+							const a = data.attribution
+							addTag('web_vital.element', a.element)
+							addTag(
+								'web_vital.attribution.url',
+								a.url ? sanitizeUrl(a.url) : undefined,
+							)
+							break
+						}
+						case 'CLS': {
+							const a = data.attribution
+							addTag('web_vital.element', a.largestShiftTarget)
+							addTag('web_vital.load_state', a.loadState)
+							break
+						}
+						case 'INP': {
+							const a = data.attribution
+							addTag('web_vital.element', a.eventTarget)
+							addTag('web_vital.event_type', a.eventType)
+							addTag('web_vital.load_state', a.loadState)
+							break
+						}
+						case 'FID': {
+							const a = data.attribution
+							addTag('web_vital.element', a.eventTarget)
+							addTag('web_vital.event_type', a.eventType)
+							break
+						}
+						case 'FCP': {
+							const a = data.attribution
+							addTag('web_vital.load_state', a.loadState)
+							break
+						}
+						case 'TTFB':
+							break
+					}
 					this.recordGauge({
 						name,
 						value,
 						group: window.location.href,
 						category: MetricCategory.WebVital,
+						tags: tags.length ? tags : undefined,
 					})
 				}),
 			)
@@ -1293,7 +1369,10 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 	recordGauge(metric: RecordMetric) {
 		let gauge = this._gauges.get(metric.name)
 		if (!gauge) {
-			gauge = getMeter()?.createGauge(metric.name)
+			gauge = getMeter()?.createGauge(
+				metric.name,
+				metricInstrumentOptions(metric.name, metric.unit),
+			)
 			if (!gauge) return
 			this._gauges.set(metric.name, gauge)
 		}
@@ -1311,7 +1390,10 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 	recordCount(metric: RecordMetric) {
 		let counter = this._counters.get(metric.name)
 		if (!counter) {
-			counter = getMeter()?.createCounter(metric.name)
+			counter = getMeter()?.createCounter(
+				metric.name,
+				metricInstrumentOptions(metric.name, metric.unit),
+			)
 			if (!counter) return
 			this._counters.set(metric.name, counter)
 		}
@@ -1330,7 +1412,10 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 	recordHistogram(metric: RecordMetric) {
 		let histogram = this._histograms.get(metric.name)
 		if (!histogram) {
-			histogram = getMeter()?.createHistogram(metric.name)
+			histogram = getMeter()?.createHistogram(
+				metric.name,
+				metricInstrumentOptions(metric.name, metric.unit),
+			)
 			if (!histogram) return
 			this._histograms.set(metric.name, histogram)
 		}
@@ -1345,7 +1430,10 @@ SessionSecureID: ${this.sessionData.sessionSecureID}`,
 	recordUpDownCounter(metric: RecordMetric) {
 		let up_down_counter = this._up_down_counters.get(metric.name)
 		if (!up_down_counter) {
-			up_down_counter = getMeter()?.createUpDownCounter(metric.name)
+			up_down_counter = getMeter()?.createUpDownCounter(
+				metric.name,
+				metricInstrumentOptions(metric.name, metric.unit),
+			)
 			if (!up_down_counter) return
 			this._up_down_counters.set(metric.name, up_down_counter)
 		}

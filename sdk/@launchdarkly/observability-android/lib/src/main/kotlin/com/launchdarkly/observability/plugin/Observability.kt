@@ -1,22 +1,23 @@
 package com.launchdarkly.observability.plugin
 
 import android.app.Application
-import com.launchdarkly.logging.LDLogLevel
-import com.launchdarkly.logging.LDLogger
-import com.launchdarkly.logging.Logs
+import com.launchdarkly.observability.context.ObserveLogger
 import com.launchdarkly.observability.BuildConfig
 import com.launchdarkly.observability.api.ObservabilityOptions
-import com.launchdarkly.observability.client.ObservabilityClient
+import com.launchdarkly.observability.client.DEFAULT_DISTRO_ATTRIBUTES
+import com.launchdarkly.observability.client.ObservabilityService
 import com.launchdarkly.observability.client.ObservabilityContext
 import com.launchdarkly.observability.client.TelemetryInspector
+import com.launchdarkly.observability.client.buildObservabilityResource
+import com.launchdarkly.observability.client.readInjectedSymbolsId
 import com.launchdarkly.observability.sdk.LDObserve
 import com.launchdarkly.sdk.android.LDClient
+import com.launchdarkly.sdk.android.integrations.DedupingHook
 import com.launchdarkly.sdk.android.integrations.EnvironmentMetadata
 import com.launchdarkly.sdk.android.integrations.Hook
 import com.launchdarkly.sdk.android.integrations.Plugin
 import com.launchdarkly.sdk.android.integrations.PluginMetadata
 import com.launchdarkly.sdk.android.integrations.RegistrationCompleteResult
-import io.opentelemetry.sdk.resources.Resource
 import java.util.Collections
 
 /**
@@ -48,19 +49,24 @@ import java.util.Collections
  * @param application The application instance.
  * @param options The options for the plugin.
  * @param mobileKey The primary mobile key used in LDConfig.
+ * @param customSessionId Optional session id to adopt instead of generating one. Lets the native
+ *   instance share a single `session.id` with another LaunchDarkly SDK on the device (e.g. the
+ *   JavaScript SDK in a React Native app). When null, a session id is generated automatically.
  */
 class Observability(
     private val application: Application,
     private val mobileKey: String,
-    private val options: ObservabilityOptions = ObservabilityOptions() // new instance has reasonable defaults
+    private val options: ObservabilityOptions = ObservabilityOptions(), // new instance has reasonable defaults
+    private val customSessionId: String? = null,
 ) : Plugin() {
-    private val logger: LDLogger
-    private var observabilityClient: ObservabilityClient? = null
+    var distroAttributes: Map<String, String> = DEFAULT_DISTRO_ATTRIBUTES
+    private val logger: ObserveLogger
+    private val observabilityHook = ObservabilityHook()
+    private var observabilityClient: ObservabilityService? = null
     private var client: LDClient? = null
 
     init {
-        val actualLogAdapter = Logs.level(options.logAdapter, if (options.debug) LDLogLevel.DEBUG else DEFAULT_LOG_LEVEL)
-        logger = LDLogger.withAdapter(actualLogAdapter, options.loggerName)
+        logger = ObserveLogger.build(options.logAdapter, options.loggerName, options.debug)
     }
 
     override fun getMetadata(): PluginMetadata {
@@ -73,69 +79,81 @@ class Observability(
     override fun register(client: LDClient, metadata: EnvironmentMetadata?) {
         this.client = client
         val sdkKey = metadata?.credential ?: ""
-
-        if (mobileKey == sdkKey) {
-            LDObserve.context = ObservabilityContext(
-                sdkKey = sdkKey,
-                options = options,
-                application = application,
-                logger = logger
-            )
-        } else {
+        if (mobileKey != sdkKey) {
             logger.warn("ObservabilityContext could not be initialized for sdkKey: $sdkKey")
+            return
         }
+        LDObserve.context = ObservabilityContext(
+            sdkKey = sdkKey,
+            options = options,
+            application = application,
+            logger = logger
+        )
     }
 
     override fun getHooks(metadata: EnvironmentMetadata?): MutableList<Hook> {
-        return Collections.singletonList(
-            ObservabilityHook(withSpans = true, withValue = true) { observabilityClient?.getTracer() }
-        )
+        // Deduplicate repeated identical evaluations (default 10-minute window).
+        // Resets after identify or when the evaluation result changes.
+        return Collections.singletonList(DedupingHook(observabilityHook))
     }
 
     override fun onPluginsReady(result: RegistrationCompleteResult?, metadata: EnvironmentMetadata?) {
         val sdkKey = metadata?.credential ?: ""
 
-        client?.let { lDClient ->
-            if (mobileKey == sdkKey) {
-                val resourceBuilder = Resource.getDefault().toBuilder()
-                resourceBuilder.put("service.name", options.serviceName)
-                resourceBuilder.put("service.version", options.serviceVersion)
-                resourceBuilder.put("highlight.project_id", sdkKey)
-                resourceBuilder.putAll(options.resourceAttributes)
-
-                metadata?.applicationInfo?.applicationId?.let {
-                    resourceBuilder.put("launchdarkly.application.id", it)
-                }
-
-                metadata?.applicationInfo?.applicationVersion?.let {
-                    resourceBuilder.put("launchdarkly.application.version", it)
-                }
-
-                metadata?.sdkMetadata?.name?.let { sdkName ->
-                    metadata.sdkMetadata?.version?.let { sdkVersion ->
-                        resourceBuilder.put("launchdarkly.sdk.version", "$sdkName/$sdkVersion")
-                    }
-                }
-
-                val instrumentations = InstrumentationContributorManager.get(lDClient).flatMap { it.provideInstrumentations() }
-                observabilityClient = ObservabilityClient(
-                    application, sdkKey, resourceBuilder.build(), logger, options, instrumentations
-                )
-                observabilityClient?.let {
-                    LDObserve.init(it)
-                }
-            } else {
-                logger.warn("Observability could not be initialized for sdkKey: $sdkKey")
-            }
+        if (client == null) {
+            logger.error("Observability could not be initialized: LDClient is null in onPluginsReady")
+            return
         }
+        if (mobileKey != sdkKey) {
+            logger.warn("Observability could not be initialized for sdkKey: $sdkKey")
+            return
+        }
+
+        val resource = buildObservabilityResource(
+            sdkKey = sdkKey,
+            options = options,
+            distroAttributes = distroAttributes,
+            applicationId = metadata?.applicationInfo?.applicationId,
+            applicationVersion = metadata?.applicationInfo?.applicationVersion,
+            sdkVersion = composeLaunchDarklySdkVersion(metadata),
+            symbolsId = readInjectedSymbolsId(application),
+        )
+        LDObserve.context?.resourceAttributes = resource.attributes
+
+        val observabilityService = ObservabilityService(
+            application, sdkKey, resource, logger, options, customSessionId,
+        )
+        observabilityClient = observabilityService
+        LDObserve.context?.sessionManager = observabilityService.sessionManager
+        LDObserve.context?.userInteractionManager = observabilityService.userInteractionManager
+        LDObserve.context?.screenViewFlow = observabilityService.screenViewFlow
+        LDObserve.context?.clickFlow = observabilityService.clickFlow
+        LDObserve.context?.screenViewManager = observabilityService.screenViewManager
+        LDObserve.context?.trackFlow = observabilityService.trackFlow
+        LDObserve.context?.appLifecycleFlow = observabilityService.appLifecycleFlow
+        LDObserve.context?.appLaunchSignal = observabilityService.appLaunchSignal
+        LDObserve.init(observabilityService)
+
+        observabilityHook.delegate = observabilityService.hookExporter
+    }
+
+    /**
+     * Combines `EnvironmentMetadata.sdkMetadata.{name, version}` into the single
+     * `launchdarkly.sdk.version` attribute value (`"$name/$version"`). Returns `null` if
+     * either piece is missing, in which case [buildObservabilityResource] omits the attribute.
+     */
+    private fun composeLaunchDarklySdkVersion(metadata: EnvironmentMetadata?): String? {
+        val sdk = metadata?.sdkMetadata ?: return null
+        val name = sdk.name ?: return null
+        val version = sdk.version ?: return null
+        return "$name/$version"
     }
 
     fun getTelemetryInspector(): TelemetryInspector? {
-        return observabilityClient?.getTelemetryInspector()
+        return options.telemetryInspector
     }
 
     companion object {
-        val DEFAULT_LOG_LEVEL: LDLogLevel = LDLogLevel.INFO
         const val PLUGIN_NAME = "@launchdarkly/observability-android"
     }
 }

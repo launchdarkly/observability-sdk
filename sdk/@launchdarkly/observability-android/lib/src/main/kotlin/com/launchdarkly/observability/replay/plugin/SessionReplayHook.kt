@@ -1,28 +1,18 @@
 package com.launchdarkly.observability.replay.plugin
 
-import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
-import com.launchdarkly.observability.replay.ReplayInstrumentation
+import com.launchdarkly.observability.sdk.SessionReplayServicing
 import com.launchdarkly.sdk.android.integrations.Hook
 import com.launchdarkly.sdk.android.integrations.IdentifySeriesContext
 import com.launchdarkly.sdk.android.integrations.IdentifySeriesResult
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
 
 /**
- * This class is a hook implementation for recording flag evaluation and identify events
- * on spans.
+ * Hook protocol adapter for the native Android SDK.
+ * Extracts data from SDK types and delegates to [SessionReplayServicing].
  */
-class SessionReplayHook
+class SessionReplayHook internal constructor() : Hook(HOOK_NAME) {
 
-/**
- * Creates an [SessionReplayHook]
- *
- */
-internal constructor(
-    val plugin: SessionReplay
-) : Hook(HOOK_NAME) {
-    private val coroutineScope = CoroutineScope(DispatcherProviderHolder.current.default)
+    @Volatile
+    internal var delegate: SessionReplayServicing? = null
 
     override fun beforeIdentify(
         seriesContext: IdentifySeriesContext,
@@ -36,15 +26,33 @@ internal constructor(
         seriesData: Map<String, Any>,
         result: IdentifySeriesResult
     ): Map<String, Any> {
-        if (result.status != IdentifySeriesResult.IdentifySeriesStatus.COMPLETED) {
-            return seriesData
+        val delegate = delegate ?: return seriesData
+
+        val contextKeys = mutableMapOf<String, String>()
+        val context = seriesContext.context
+        if (context.isMultiple) {
+            for (i in 0 until context.individualContextCount) {
+                val individual = context.getIndividualContext(i)
+                if (individual != null) {
+                    contextKeys[individual.kind.toString()] = individual.key
+                }
+            }
+        } else {
+            contextKeys[context.kind.toString()] = context.key
         }
 
-        coroutineScope.launch {
-            plugin.replayInstrumentation?.identifySession(seriesContext.context)
-        }
+        delegate.afterIdentify(
+            contextKeys = contextKeys,
+            canonicalKey = context.fullyQualifiedKey,
+            completed = result.status == IdentifySeriesResult.IdentifySeriesStatus.COMPLETED
+        )
         return seriesData
     }
+
+    // Note: there is intentionally no afterTrack override. `Track` replay events are recorded from
+    // Observability's single track emitter via ObservabilityContext.trackFlow, so they cover both
+    // LDClient.track and the manual LDObserve.track API without double-recording. The native
+    // LDClient.track path reaches the emitter through ObservabilityHook.afterTrack.
 
     companion object {
         const val HOOK_NAME: String = "Session Replay Hook"

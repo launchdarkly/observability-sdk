@@ -1,0 +1,444 @@
+package com.launchdarkly.observability.replay.capture
+
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Rect
+import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.view.PixelCopy
+import android.view.SurfaceView
+import android.view.View
+import android.view.ViewGroup
+import android.view.Window
+import android.view.WindowManager.LayoutParams.TYPE_APPLICATION
+import android.view.WindowManager.LayoutParams.TYPE_BASE_APPLICATION
+import androidx.annotation.RequiresApi
+import androidx.core.graphics.createBitmap
+import androidx.core.graphics.withTranslation
+import com.launchdarkly.observability.context.ObserveLogger
+import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
+import com.launchdarkly.observability.replay.ReplayOptions
+import com.launchdarkly.observability.replay.calculateScaleFactor
+import com.launchdarkly.observability.replay.masking.Mask
+import com.launchdarkly.observability.replay.masking.MaskApplier
+import com.launchdarkly.observability.replay.masking.MaskCollector
+import com.launchdarkly.observability.replay.scaleCoordinate
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
+import kotlin.coroutines.resume
+
+class ImageCaptureService(
+    private val options: ReplayOptions,
+    private val logger: ObserveLogger,
+) : ImageCaptureServicing {
+    data class RawFrame(
+        val bitmap: Bitmap,
+        val timestamp: Long,
+        val orientation: Int,
+    )
+
+    private data class CaptureResult(
+        val windowEntry: WindowEntry,
+        val bitmap: Bitmap,
+    )
+
+    private val windowInspector = WindowInspector(logger)
+    private val maskCollector = MaskCollector(logger)
+    private val maskApplier = MaskApplier()
+    private val frameSynchronizer = FrameSynchronizer(logger)
+    private val explicitMaskMatchers = options.privacyProfile.explicitMaskMatchers
+    private val explicitUnmaskMatchers = options.privacyProfile.explicitUnmaskMatchers
+    private val globalMaskMatchers = options.privacyProfile.globalMaskMatchers
+    private val minimumAlpha = options.privacyProfile.minimumAlpha
+
+    override suspend fun captureRawFrame(): RawFrame? =
+        withContext(DispatcherProviderHolder.current.main) {
+            // Start on a frame boundary so the window list isn't read mid-traversal.
+            frameSynchronizer.awaitVsync()
+
+            val timestamp = System.currentTimeMillis()
+            val windowsEntries = windowInspector.appWindows()
+            if (windowsEntries.isEmpty()) {
+                return@withContext null
+            }
+
+            val baseIndex = pickBaseWindow(windowsEntries) ?: return@withContext null
+            val baseWindowEntry = windowsEntries[baseIndex]
+            val rect = baseWindowEntry.rect()
+
+            val scaleFactor = calculateScaleFactor(options.scale, baseWindowEntry.rootView)
+
+            // protect against race condition where decor view has no size
+            if (rect.right <= 0 || rect.bottom <= 0) {
+                return@withContext null
+            }
+
+            // TODO: O11Y-625 - optimize memory allocations
+            // TODO: O11Y-625 - see if holding bitmap is more efficient than base64 encoding immediately after compression
+            // TODO: O11Y-628 - use captureQuality option for scaling and adjust this bitmap accordingly, may need to investigate power of 2 rounding for performance
+
+            val capturingWindowEntries = windowsEntries.subList(baseIndex, windowsEntries.size)
+            val baseRootView = baseWindowEntry.rootView
+            val baseWindow = windowInspector.findWindow(baseRootView)
+
+            // Read the geometry from inside the draw pass that produces the next frame, and let
+            // that frame reach the surface before copying pixels below. Without this the masks
+            // describe a traversal the captured pixels haven't caught up with yet, which is what
+            // makes them slip off scrolling or animating content.
+            //
+            // The base window is the anchor: every window's traversal runs off the same
+            // Choreographer frame, so its draw is the moment they all agree on. A capture where
+            // only an overlay animates sees no base draw and falls back to an unanchored read.
+            val beforeMasks = frameSynchronizer.sampleAtRenderedFrame(baseRootView, baseWindow) {
+                collectMasks(capturingWindowEntries)
+            }
+
+            val captureResults: MutableList<CaptureResult?> = MutableList(capturingWindowEntries.size) { null }
+            try {
+                var captured = 0
+                for (i in capturingWindowEntries.indices) {
+                    val windowEntry = capturingWindowEntries[i]
+                    val captureResult = captureViewResult(
+                        windowEntry,
+                        scaleFactor = scaleFactor
+                    )
+                    if (captureResult == null) {
+                        if (i == 0) {
+                            return@withContext null
+                        }
+                        beforeMasks[i] = null
+                        continue
+                    }
+
+                    captured++
+                    captureResults[i] = captureResult
+                }
+                if (captured == 0) {
+                    return@withContext null
+                }
+
+                // Sample again from the next frame that draws. Because the captured pixels are no
+                // older than beforeMasks and no newer than this pass, the two bracket the frame
+                // and the hull spanning them covers wherever the content actually was.
+                //
+                // This second pass is also the safety net for content that appears during capture
+                // (e.g. an instantly-shown dialog): such a mask is absent from beforeMasks but
+                // present in afterMasks, so mergeMasksMap sees mismatched counts and drops the
+                // frame instead of leaking it unmasked. So we must NOT skip this pass when
+                // beforeMasks is empty.
+                val afterMasks = frameSynchronizer.sampleAtDraw(baseRootView) {
+                    collectMasksFromResults(captureResults)
+                }
+
+                // off the main thread to avoid blocking the UI thread
+                return@withContext withContext(DispatcherProviderHolder.current.default) {
+                    val baseResult = captureResults[0] ?: return@withContext null
+
+                    val mergedMasks = maskApplier.mergeMasksMap(beforeMasks, afterMasks)
+                        ?: run {
+                            // Mask instability is expected during animations/scrolling; ensure we always
+                            // recycle already-captured bitmaps before bailing out to avoid native OOM.
+                            return@withContext null
+                        }
+
+                    // if need to draw something on base bitmap additionally
+                    if (captureResults.size > 1 || (mergedMasks.isNotEmpty() && mergedMasks[0] != null)) {
+                        val canvas = Canvas(baseResult.bitmap)
+                        mergedMasks[0]?.let { maskApplier.drawMasks(canvas, it, scaleFactor = scaleFactor) }
+
+                        for (i in 1 until captureResults.size) {
+                            val res = captureResults[i] ?: continue
+                            val entry = res.windowEntry
+                            val dx = ((entry.screenLeft - baseWindowEntry.screenLeft) * scaleFactor).toFloat()
+                            val dy = ((entry.screenTop - baseWindowEntry.screenTop) * scaleFactor).toFloat()
+
+                            canvas.withTranslation(dx, dy) {
+                                drawBitmap(res.bitmap, 0f, 0f, null)
+                                mergedMasks[i]?.let { maskApplier.drawMasks(canvas, it, scaleFactor = scaleFactor) }
+                            }
+                            if (!res.bitmap.isRecycled) {
+                                res.bitmap.recycle()
+                            }
+                        }
+                    }
+
+                    // Keep base bitmap alive after leaving this scope; all others are recycled in finally.
+                    captureResults[0] = null
+                    RawFrame(
+                        bitmap = baseResult.bitmap,
+                        timestamp = timestamp,
+                        orientation = 0
+                    )
+                }
+            } finally {
+                recycleCaptureResults(captureResults)
+            }
+        }
+
+    private fun recycleCaptureResults(captureResults: List<CaptureResult?>) {
+        for (res in captureResults) {
+            val bitmap = res?.bitmap ?: continue
+            if (!bitmap.isRecycled) {
+                bitmap.recycle()
+            }
+        }
+    }
+
+    private fun collectMasks(capturingWindowEntries: List<WindowEntry>): MutableList<List<Mask>?> {
+        return capturingWindowEntries.map {
+            maskCollector.collectMasks(
+                it.rootView,
+                explicitMaskMatchers,
+                explicitUnmaskMatchers,
+                globalMaskMatchers,
+                minimumAlpha,
+            )
+        }.toMutableList()
+    }
+
+    private fun collectMasksFromResults(captureResults: List<CaptureResult?>): MutableList<List<Mask>?> {
+        return captureResults.map { result ->
+            result?.windowEntry?.rootView?.let { rv ->
+                maskCollector.collectMasks(
+                    rv,
+                    explicitMaskMatchers,
+                    explicitUnmaskMatchers,
+                    globalMaskMatchers,
+                    minimumAlpha,
+                )
+            }
+        }.toMutableList()
+    }
+
+    private fun pickBaseWindow(windowsEntries: List<WindowEntry>): Int? {
+        val appIdx = windowsEntries.indexOfFirst {
+            val wmType = it.layoutParams?.type ?: 0
+            wmType == TYPE_APPLICATION || wmType == TYPE_BASE_APPLICATION
+        }
+        if (appIdx >= 0) return appIdx
+
+        val activityIdx = windowsEntries.indexOfFirst { it.type == WindowType.ACTIVITY }
+        if (activityIdx >= 0) return activityIdx
+
+        val dialogIdx = windowsEntries.indexOfFirst { it.type == WindowType.DIALOG }
+        if (dialogIdx >= 0) return dialogIdx
+
+        // Fallback to the first available
+        return if (windowsEntries.isNotEmpty()) 0 else null
+    }
+
+    private suspend fun captureViewResult(windowEntry: WindowEntry, scaleFactor: Double): CaptureResult? {
+        val bitmap = captureViewBitmap(windowEntry, scaleFactor) ?: return null
+        return CaptureResult(windowEntry, bitmap)
+    }
+
+    private suspend fun captureViewBitmap(windowEntry: WindowEntry, scaleFactor: Double): Bitmap? {
+        val view = windowEntry.rootView
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && windowEntry.isPixelCopyCandidate()) {
+            val window = windowInspector.findWindow(view)
+            if (window != null) {
+                pixelCopy(window, view, windowEntry.rect(), scaleFactor)?.let {
+                    return it
+                }
+            }
+        }
+
+        // Fallback if window not available or old version
+        return withContext(Dispatchers.Main.immediate) {
+            if (!view.isAttachedToWindow || !view.isShown) return@withContext null
+
+            return@withContext canvasDrawBitmap(view, scaleFactor)
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    private suspend fun pixelCopy(
+        window: Window,
+        view: View,
+        rect: Rect,
+        scaleFactor: Double
+    ): Bitmap? {
+        val bitmap = createBitmapForView(view, scaleFactor) ?: return null
+
+        val result = suspendCancellableCoroutine { continuation ->
+            val handler = Handler(Looper.getMainLooper())
+            try {
+                PixelCopy.request(
+                    window,
+                    rect,
+                    bitmap,
+                    { copyResult ->
+                        if (!continuation.isActive) {
+                            bitmap.recycle()
+                            return@request
+                        }
+                        if (copyResult == PixelCopy.SUCCESS) {
+                            continuation.resume(bitmap)
+                        } else {
+                            continuation.resume(null)
+                        }
+                    }, handler
+                )
+            } catch (t: Throwable) {
+                // It could normally happen when view is being closed during screenshot
+                logger.warn("Failed to capture window", t)
+                continuation.resume(null)
+            }
+        }
+
+        if (result == null) {
+            if (!bitmap.isRecycled) {
+                bitmap.recycle()
+            }
+            return null
+        }
+
+        // Window-level PixelCopy excludes SurfaceView surfaces (they are composited
+        // by SurfaceFlinger, not the View drawing pipeline), so any SurfaceView in
+        // the tree appears as a black "punch hole" in the captured bitmap. This
+        // matters for hosts that render their entire UI into a SurfaceView — for
+        // example, Flutter on Android renders into a FlutterSurfaceView by default.
+        // Re-capture each SurfaceView via PixelCopy and composite it into the
+        // captured bitmap so the punch holes are filled in.
+        compositeSurfaceViews(view, result, scaleFactor)
+        return result
+    }
+
+    /**
+     * Walks [rootView]'s tree, runs `PixelCopy` against every visible [SurfaceView],
+     * and composites each captured surface on top of [target] at its position
+     * within the window. No-op when there are no SurfaceViews in the tree.
+     *
+     * `PixelCopy.request(SurfaceView, ...)` is API 24+, so this is a no-op on older
+     * devices (where the regular `view.draw(canvas)` fallback already runs without
+     * any SurfaceView contents).
+     */
+    @RequiresApi(Build.VERSION_CODES.N)
+    private suspend fun compositeSurfaceViews(
+        rootView: View,
+        target: Bitmap,
+        scaleFactor: Double
+    ) {
+        val surfaceViews = mutableListOf<SurfaceView>()
+        collectSurfaceViews(rootView, surfaceViews)
+        if (surfaceViews.isEmpty()) {
+            return
+        }
+
+        val canvas = Canvas(target)
+        val location = IntArray(2)
+
+        for (surfaceView in surfaceViews) {
+            if (!surfaceView.isAttachedToWindow || !surfaceView.isShown) continue
+            val width = scaleCoordinate(surfaceView.width.toFloat(), scaleFactor)
+            val height = scaleCoordinate(surfaceView.height.toFloat(), scaleFactor)
+            if (width <= 0 || height <= 0) continue
+
+            val surfaceBitmap = createBitmap(width, height)
+            val captured = pixelCopySurfaceView(surfaceView, surfaceBitmap)
+            if (captured == null) {
+                if (!surfaceBitmap.isRecycled) {
+                    surfaceBitmap.recycle()
+                }
+                continue
+            }
+
+            // SurfaceView coordinates are computed in window-local space because the
+            // window-level PixelCopy source rect uses the same space (see WindowEntry.rect()
+            // which is `Rect(0, 0, width, height)` in window coords).
+            surfaceView.getLocationInWindow(location)
+            val dx = (location[0] * scaleFactor).toFloat()
+            val dy = (location[1] * scaleFactor).toFloat()
+
+            try {
+                canvas.drawBitmap(captured, dx, dy, null)
+            } finally {
+                if (!captured.isRecycled) {
+                    captured.recycle()
+                }
+            }
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.N)
+    private suspend fun pixelCopySurfaceView(
+        surfaceView: SurfaceView,
+        bitmap: Bitmap
+    ): Bitmap? = suspendCancellableCoroutine { continuation ->
+        val handler = Handler(Looper.getMainLooper())
+        try {
+            PixelCopy.request(
+                surfaceView,
+                bitmap,
+                { copyResult ->
+                    if (!continuation.isActive) {
+                        if (!bitmap.isRecycled) bitmap.recycle()
+                        return@request
+                    }
+                    if (copyResult == PixelCopy.SUCCESS) {
+                        continuation.resume(bitmap)
+                    } else {
+                        continuation.resume(null)
+                    }
+                },
+                handler
+            )
+        } catch (t: Throwable) {
+            // E.g. SurfaceView's surface is not yet valid, or it is FLAG_SECURE.
+            logger.debug("Failed to capture SurfaceView: ${t.message}")
+            continuation.resume(null)
+        }
+    }
+
+    private fun collectSurfaceViews(view: View, out: MutableList<SurfaceView>) {
+        when (view) {
+            is SurfaceView -> {
+                // SurfaceView's own children draw on top of its surface in the View
+                // hierarchy; those are already captured by the window-level PixelCopy
+                // that ran before this. Don't recurse.
+                out.add(view)
+            }
+            is ViewGroup -> {
+                for (i in 0 until view.childCount) {
+                    collectSurfaceViews(view.getChildAt(i), out)
+                }
+            }
+        }
+    }
+
+    private fun canvasDrawBitmap(
+        view: View,
+        scaleFactor: Double
+    ): Bitmap? {
+        val bitmap = createBitmapForView(view, scaleFactor) ?: return null
+
+        val canvas = Canvas(bitmap)
+        canvas.save()
+        canvas.scale(scaleFactor.toFloat(), scaleFactor.toFloat())
+
+        try {
+            view.draw(canvas)
+        } catch (t: Throwable) {
+            logger.warn("Failed to draw Canvas. This view might be better processed by PixelCopy", t)
+            bitmap.recycle()
+            return null
+        } finally {
+            canvas.restore()
+        }
+
+        return bitmap
+    }
+
+    private fun createBitmapForView(view: View, scaleFactor: Double): Bitmap? {
+        val width = scaleCoordinate(view.width.toFloat(), scaleFactor)
+        val height = scaleCoordinate(view.height.toFloat(), scaleFactor)
+        if (width <= 0 || height <= 0) {
+            logger.warn("Cannot draw view with zero dimensions: ${view.width}x${view.height}")
+            return null
+        }
+        return createBitmap(width, height)
+    }
+}
