@@ -1,0 +1,22 @@
+plugins {
+    id 'application'
+}
+
+repositories {
+    mavenCentral()
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
+}
+
+dependencies {
+    implementation 'com.launchdarkly:launchdarkly-observability-java:0.1.0'
+    implementation 'com.launchdarkly:launchdarkly-java-server-sdk:7.12.0'
+    implementation 'io.opentelemetry:opentelemetry-api:1.51.0'
+}
+
+application {
+    mainClass = 'com.launchdarkly.observability.example.PluginExample'
+}
