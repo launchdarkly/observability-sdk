@@ -57,7 +57,7 @@ class SessionReplayTest {
     @Test
     fun `initialize wires up LDReplay when service install succeeds`() {
         // Substitute a stub service for the one register() created so we can decide the
-        // SessionReplayService.initialize() outcome without standing up a real SessionManager,
+        // SessionReplayService.initialize() outcome without standing up a real SessionProvider,
         // ProcessLifecycleOwner, etc. — none of which are available in plain JVM tests.
         val service = mockk<SessionReplayService>(relaxed = true)
         every { service.initialize() } returns true

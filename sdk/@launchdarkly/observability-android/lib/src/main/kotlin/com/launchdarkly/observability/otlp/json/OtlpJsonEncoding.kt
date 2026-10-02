@@ -112,6 +112,7 @@ private fun JsonByteWriter.write(value: OtlpJsonAnyValue) {
             endObject()
         }
         is OtlpJsonAnyValue.BytesVal -> name("bytesValue").value(value.value)
+        is OtlpJsonAnyValue.EmptyVal -> Unit
     }
     endObject()
 }

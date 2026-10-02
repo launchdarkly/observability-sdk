@@ -5,7 +5,7 @@ import com.launchdarkly.observability.api.ObservabilityOptions
 import com.launchdarkly.observability.client.screen.ScreenViewEvent
 import com.launchdarkly.observability.client.screen.ScreenViewManager
 import com.launchdarkly.observability.context.ObserveLogger
-import io.opentelemetry.android.session.SessionManager
+import io.opentelemetry.android.session.SessionProvider
 import io.opentelemetry.api.common.Attributes
 import kotlinx.coroutines.flow.SharedFlow
 
@@ -17,7 +17,7 @@ data class ObservabilityContext(
     val options: ObservabilityOptions,
     val application: Application,
     val logger: ObserveLogger,
-    var sessionManager: SessionManager? = null,
+    var sessionManager: SessionProvider? = null,
     var resourceAttributes: Attributes = Attributes.empty(),
     /**
      * The single touch-capture hook owned by Observability. Session Replay consumes its

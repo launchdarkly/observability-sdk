@@ -112,4 +112,5 @@ private fun reKey(original: AttributeKey<*>, newName: String): AttributeKey<*> =
     AttributeType.BOOLEAN_ARRAY -> AttributeKey.booleanArrayKey(newName)
     AttributeType.LONG_ARRAY -> AttributeKey.longArrayKey(newName)
     AttributeType.DOUBLE_ARRAY -> AttributeKey.doubleArrayKey(newName)
+    AttributeType.VALUE -> AttributeKey.valueKey(newName)
 }

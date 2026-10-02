@@ -68,6 +68,8 @@ object JsonCommonAdapter {
             @Suppress("UNCHECKED_CAST")
             (value as List<Double>).map { OtlpJsonAnyValue.double(it) }
         )
+        // Extended attributes carry a nested Value, which the Value overload already handles.
+        AttributeType.VALUE -> toJsonAnyValue(value as Value<*>)
     }
 
     /**
@@ -99,5 +101,6 @@ object JsonCommonAdapter {
             buffer.asReadOnlyBuffer().get(bytes)
             OtlpJsonAnyValue.bytes(Base64.getEncoder().encodeToString(bytes))
         }
+        ValueType.EMPTY -> OtlpJsonAnyValue.empty()
     }
 }
