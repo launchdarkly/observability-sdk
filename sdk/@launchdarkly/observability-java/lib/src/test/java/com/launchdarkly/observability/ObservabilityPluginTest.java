@@ -49,8 +49,8 @@ class ObservabilityPluginTest {
                 .serviceName("test-service")
                 .serviceVersion("2.0.0")
                 .environment("staging")
-                .otlpEndpoint("http://localhost:4318")
-                .backendUrl("http://localhost:8080")
+                .otlpEndpoint("https://otel.example.test:4318")
+                .backendUrl("https://backend.example.test")
                 .debug(true)
                 .manualStart(true)
                 .build();
@@ -58,8 +58,8 @@ class ObservabilityPluginTest {
         assertEquals("test-service", options.getServiceName());
         assertEquals("2.0.0", options.getServiceVersion());
         assertEquals("staging", options.getEnvironment());
-        assertEquals("http://localhost:4318", options.getOtlpEndpoint());
-        assertEquals("http://localhost:8080", options.getBackendUrl());
+        assertEquals("https://otel.example.test:4318", options.getOtlpEndpoint());
+        assertEquals("https://backend.example.test", options.getBackendUrl());
         assertTrue(options.isDebug());
         assertTrue(options.isManualStart());
     }

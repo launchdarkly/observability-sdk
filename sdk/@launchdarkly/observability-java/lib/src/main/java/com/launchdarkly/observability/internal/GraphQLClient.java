@@ -14,7 +14,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
-import java.util.logging.Level;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 import java.util.zip.GZIPOutputStream;
 
@@ -27,6 +27,7 @@ public final class GraphQLClient {
     private static final int CONNECT_TIMEOUT = 10_000;
     private static final int READ_TIMEOUT = 10_000;
     private static final Gson GSON = new Gson();
+    private static final ConcurrentHashMap<String, String> QUERY_CACHE = new ConcurrentHashMap<>();
 
     private final String endpoint;
 
@@ -81,9 +82,17 @@ public final class GraphQLClient {
     }
 
     /**
-     * Loads a GraphQL query from a classpath resource file.
+     * Loads a GraphQL query from a classpath resource.
+     *
+     * <p>The resource is read at most once per path. Concurrent callers share
+     * the cached string, so a server process does not re-read the query for
+     * every request or every client.</p>
      */
     public static String loadQuery(String resourcePath) {
+        return QUERY_CACHE.computeIfAbsent(resourcePath, GraphQLClient::readQuery);
+    }
+
+    private static String readQuery(String resourcePath) {
         try (InputStream is = GraphQLClient.class.getClassLoader().getResourceAsStream(resourcePath)) {
             if (is == null) {
                 throw new IllegalArgumentException("Resource not found: " + resourcePath);

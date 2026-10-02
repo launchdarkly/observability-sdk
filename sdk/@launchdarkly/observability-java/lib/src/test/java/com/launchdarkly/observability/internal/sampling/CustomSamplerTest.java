@@ -118,7 +118,7 @@ class CustomSamplerTest {
         CustomSampler.SamplingResult result = ALWAYS_SAMPLE.sampleSpan(span);
         assertTrue(result.isSampled());
         assertNotNull(result.getAttributes());
-        assertEquals(5L, result.getAttributes().get(AttributeKey.longKey("highlight.sampling.ratio")));
+        assertEquals(5L, result.getAttributes().get(AttributeKey.longKey("launchdarkly.sampling.ratio")));
     }
 
     @Test
@@ -163,8 +163,8 @@ class CustomSamplerTest {
                 .setName(name)
                 .setKind(SpanKind.INTERNAL)
                 .setSpanContext(SpanContext.create(
-                        "00000000000000000000000000000001",
-                        "0000000000000001",
+                        traceId(),
+                        spanId('1'),
                         TraceFlags.getSampled(),
                         TraceState.getDefault()
                 ))
@@ -174,5 +174,13 @@ class CustomSamplerTest {
                 .setEndEpochNanos(1)
                 .setAttributes(attributes)
                 .build();
+    }
+
+    private static String traceId() {
+        return "0".repeat(31) + "1";
+    }
+
+    private static String spanId(char tail) {
+        return "0".repeat(15) + tail;
     }
 }

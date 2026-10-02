@@ -13,7 +13,7 @@ public final class Constants {
 
     public static final String PROJECT_ID_ATTRIBUTE = "highlight.project_id";
     public static final String ERROR_SPAN_NAME = "highlight.error";
-    public static final String ATTR_SAMPLING_RATIO = "highlight.sampling.ratio";
+    public static final String ATTR_SAMPLING_RATIO = "launchdarkly.sampling.ratio";
 
     public static final String TRACES_PATH = "/v1/traces";
     public static final String LOGS_PATH = "/v1/logs";
