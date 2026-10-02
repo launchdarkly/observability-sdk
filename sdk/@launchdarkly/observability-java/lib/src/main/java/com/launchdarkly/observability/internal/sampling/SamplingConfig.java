@@ -136,8 +136,12 @@ public final class SamplingConfig {
                     if (depth <= 0) {
                         return true;
                     }
-                    prevGroupHadQuantifier = groupHasQuantifier[depth];
+                    boolean closedHadQuantifier = groupHasQuantifier[depth];
                     depth--;
+                    if (closedHadQuantifier && depth > 0) {
+                        groupHasQuantifier[depth] = true;
+                    }
+                    prevGroupHadQuantifier = closedHadQuantifier;
                     prevWasGroup = true;
                     prevWasQuantifier = false;
                     continue;
