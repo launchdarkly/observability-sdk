@@ -13,7 +13,6 @@ buildscript {
     // at 4.1.93.Final (CVE-2023-44487). The BOM aligns every io.netty module.
     classpath platform("io.netty:netty-bom:4.1.137.Final")
     classpath "com.android.tools.build:gradle:8.7.2"
-    classpath platform("io.netty:netty-bom:4.1.137.Final")
     // noinspection DifferentKotlinGradleVersion
     classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${getExtOrDefault('kotlinVersion')}"
   }
