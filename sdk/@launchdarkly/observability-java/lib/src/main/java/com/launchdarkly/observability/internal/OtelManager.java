@@ -6,6 +6,7 @@ import com.launchdarkly.observability.internal.sampling.SamplingConfig;
 import com.launchdarkly.observability.internal.sampling.SamplingLogProcessor;
 import com.launchdarkly.observability.internal.sampling.SamplingTraceExporter;
 import io.opentelemetry.api.GlobalOpenTelemetry;
+import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.logs.Logger;
 import io.opentelemetry.api.metrics.Meter;
@@ -207,18 +208,30 @@ public final class OtelManager {
     }
 
     public static Tracer getTracer() {
-        OtelManager m = INSTANCE.get();
-        return m != null ? m.tracer : GlobalOpenTelemetry.getTracer(Constants.INSTRUMENTATION_SCOPE_NAME);
+        OtelManager manager = INSTANCE.get();
+        if (manager != null) {
+            return manager.tracer;
+        }
+        // OpenTelemetry.noop() does not install a process-wide global. Calling
+        // GlobalOpenTelemetry.getTracer before init would lock the JVM onto a
+        // no-op, and TracingHook would never see the plugin's exporters.
+        return OpenTelemetry.noop().getTracer(Constants.INSTRUMENTATION_SCOPE_NAME);
     }
 
     public static Logger getLogger() {
-        OtelManager m = INSTANCE.get();
-        return m != null ? m.logger : GlobalOpenTelemetry.get().getLogsBridge().get(Constants.INSTRUMENTATION_SCOPE_NAME);
+        OtelManager manager = INSTANCE.get();
+        if (manager != null) {
+            return manager.logger;
+        }
+        return OpenTelemetry.noop().getLogsBridge().get(Constants.INSTRUMENTATION_SCOPE_NAME);
     }
 
     public static Meter getMeter() {
-        OtelManager m = INSTANCE.get();
-        return m != null ? m.meter : GlobalOpenTelemetry.getMeter(Constants.INSTRUMENTATION_SCOPE_NAME);
+        OtelManager manager = INSTANCE.get();
+        if (manager != null) {
+            return manager.meter;
+        }
+        return OpenTelemetry.noop().getMeter(Constants.INSTRUMENTATION_SCOPE_NAME);
     }
 
     /**

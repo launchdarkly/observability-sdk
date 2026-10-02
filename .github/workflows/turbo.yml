@@ -63,6 +63,7 @@ jobs:
                         - '!sdk/@launchdarkly/flutter/**'
                         - '!sdk/@launchdarkly/launchdarkly_flutter_observability/**'
                         - '!sdk/@launchdarkly/observability-dotnet/**'
+                        - '!sdk/@launchdarkly/observability-java/**'
                         - '!sdk/@launchdarkly/observability-python/**'
                         - '!sdk/@launchdarkly/observability-ruby/**'
                         - '!e2e/android/**'
@@ -71,6 +72,7 @@ jobs:
                         - '!.github/workflows/flutter-observability.yml'
                         - '!.github/workflows/flutter-observability-publish.yml'
                         - '!.github/workflows/dotnet-plugin.yml'
+                        - '!.github/workflows/java-observability.yml'
                         - '!.github/workflows/python-plugin.yml'
                         - '!.github/workflows/ruby-plugin.yml'
 

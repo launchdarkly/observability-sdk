@@ -10,6 +10,7 @@ import com.launchdarkly.sdk.server.LDConfig;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import io.opentelemetry.api.GlobalOpenTelemetry;
+import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.logs.Severity;
 import org.junit.jupiter.api.AfterEach;
@@ -27,6 +28,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.zip.GZIPInputStream;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -108,6 +110,33 @@ class PluginUserFlowTest {
             LDObserve.start("sdk-test", options);
             assertTrue(waitForSamplingApplied(), "manual start lost the sampling config");
             assertTrue(waitUntilHealthCheckDropped(), "manual start did not apply the sampling rule");
+        }
+    }
+
+    @Test
+    void preInitCallDoesNotStickGlobalOnNoopAndLaterSpanExports() throws Exception {
+        OtelManager.resetForTest();
+        GlobalOpenTelemetry.resetForTest();
+        LDObserve.startSpan("before-init", Attributes.empty()).end();
+        LDObserve.recordLog("before init", Severity.INFO, Attributes.empty());
+
+        startCollector();
+        ObservabilityOptions options = options(false);
+        LDConfig config = new LDConfig.Builder()
+                .offline(true)
+                .startWait(Duration.ofSeconds(5))
+                .plugins(Components.plugins().setPlugins(List.of(new ObservabilityPlugin(options))))
+                .build();
+
+        try (LDClient client = new LDClient("sdk-test", config)) {
+            assertNotSame(OpenTelemetry.noop(), GlobalOpenTelemetry.get());
+            client.boolVariation("checkout-enabled", LDContext.create("user-key-test"), false);
+            LDObserve.startSpan("after-init", Attributes.empty()).end();
+            LDObserve.flush();
+            assertTrue(payloadContains(traces, "after-init"),
+                    "span started after a pre-init call was not exported: " + summarize(traces));
+            assertTrue(payloadContains(traces, "checkout-enabled"),
+                    "flag evaluation was not exported after a pre-init call: " + summarize(traces));
         }
     }
 
