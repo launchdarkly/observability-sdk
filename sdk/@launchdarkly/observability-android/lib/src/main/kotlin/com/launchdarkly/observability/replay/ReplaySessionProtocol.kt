@@ -1,6 +1,9 @@
 package com.launchdarkly.observability.replay
 
 import com.launchdarkly.observability.network.SamplingConfigResponse
+import com.launchdarkly.observability.network.intOrNull
+import com.launchdarkly.observability.network.objectOrNull
+import com.launchdarkly.observability.network.stringOrNull
 import com.launchdarkly.observability.sampling.SamplingConfig
 import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.ExperimentalSerializationApi
@@ -15,17 +18,28 @@ import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
+import org.json.JSONObject
 import kotlin.reflect.KClass
 
-@Serializable
 data class InitializeReplaySessionResponse(
     val initializeSession: InitializeSessionResponse?
-)
+) {
+    internal companion object {
+        fun fromJson(json: JSONObject) = InitializeReplaySessionResponse(
+            initializeSession = json.objectOrNull("initializeSession", InitializeSessionResponse::fromJson)
+        )
+    }
+}
 
-@Serializable
 data class IdentifySessionResponse(
     val identifySession: String? = null
-)
+) {
+    internal companion object {
+        fun fromJson(json: JSONObject) = IdentifySessionResponse(
+            identifySession = json.stringOrNull("identifySession")
+        )
+    }
+}
 
 data class SessionInitializationEntity(
     val secureId: String?,
@@ -33,11 +47,8 @@ data class SessionInitializationEntity(
     val sampling: SamplingConfig?
 )
 
-@Serializable
 data class InitializeSessionResponse(
-    @SerialName("secure_id")
     val secureId: String? = null,
-    @SerialName("project_id")
     val projectId: String? = null,
     val sampling: SamplingConfigResponse? = null
 ) {
@@ -46,6 +57,14 @@ data class InitializeSessionResponse(
             secureId = secureId,
             projectId = projectId,
             sampling = sampling?.mapToEntity()
+        )
+    }
+
+    internal companion object {
+        fun fromJson(json: JSONObject) = InitializeSessionResponse(
+            secureId = json.stringOrNull("secure_id"),
+            projectId = json.stringOrNull("project_id"),
+            sampling = json.objectOrNull("sampling", SamplingConfigResponse::fromJson)
         )
     }
 }
@@ -247,7 +266,12 @@ data class ErrorObjectInput(
     val timestamp: Long? = null
 )
 
-@Serializable
 data class PushPayloadResponse(
     val pushPayload: Int? = null
-)
+) {
+    internal companion object {
+        fun fromJson(json: JSONObject) = PushPayloadResponse(
+            pushPayload = json.intOrNull("pushPayload")
+        )
+    }
+}

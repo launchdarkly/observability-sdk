@@ -48,10 +48,10 @@ class SamplingApiServiceTest {
                 )
             )
             coEvery {
-                mockGraphqlClient.execute(
+                mockGraphqlClient.execute<SamplingResponse>(
                     any(),
                     mapOf("organization_verbose_id" to JsonPrimitive(organizationId)),
-                    SamplingResponse.serializer()
+                    any()
                 )
             } returns samplingResponse
 
@@ -61,10 +61,10 @@ class SamplingApiServiceTest {
             assertEquals(samplingResponse.mapToEntity(), result)
 
             coVerify(exactly = 1) {
-                mockGraphqlClient.execute(
+                mockGraphqlClient.execute<SamplingResponse>(
                     any(),
                     mapOf("organization_verbose_id" to JsonPrimitive(organizationId)),
-                    SamplingResponse.serializer()
+                    any()
                 )
             }
         }

@@ -5,8 +5,8 @@ import io.mockk.mockk
 import io.mockk.unmockkAll
 import io.mockk.verify
 import kotlinx.coroutines.test.runTest
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonPrimitive
+import org.json.JSONObject
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
@@ -20,8 +20,11 @@ import java.net.HttpURLConnection
 
 class GraphQLClientTest {
 
-    @Serializable
-    data class TestData(val id: String, val name: String)
+    data class TestData(val id: String, val name: String) {
+        companion object {
+            fun fromJson(json: JSONObject) = TestData(id = json.getString("id"), name = json.getString("name"))
+        }
+    }
 
     private val testQuery = """
         query EmptyQuery {
@@ -64,7 +67,7 @@ class GraphQLClientTest {
         val result = graphQLClient.execute(
             query = testQuery,
             variables = mapOf("test_variable" to JsonPrimitive("567")),
-            dataSerializer = TestData.serializer()
+            dataParser = TestData::fromJson
         )
 
         assertEquals("123", result.id)
@@ -190,5 +193,5 @@ class GraphQLClientTest {
     }
 
     private suspend fun execute(): TestData =
-        graphQLClient.execute(query = testQuery, dataSerializer = TestData.serializer())
+        graphQLClient.execute(query = testQuery, dataParser = TestData::fromJson)
 }

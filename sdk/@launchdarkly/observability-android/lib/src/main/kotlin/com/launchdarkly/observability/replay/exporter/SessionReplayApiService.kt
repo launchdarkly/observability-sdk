@@ -10,13 +10,13 @@ import com.launchdarkly.observability.replay.IdentifySessionResponse
 import com.launchdarkly.observability.replay.InitializeReplaySessionResponse
 import com.launchdarkly.observability.replay.PushPayloadResponse
 import com.launchdarkly.observability.replay.ReplayEventsInput
-import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import org.json.JSONObject
 
 class SessionReplayApiService(
     private val graphqlClient: GraphQLClient,
@@ -182,7 +182,7 @@ class SessionReplayApiService(
             operation = "initializeReplaySession",
             query = INITIALIZE_REPLAY_SESSION_QUERY,
             variables = variables,
-            dataSerializer = InitializeReplaySessionResponse.serializer()
+            dataParser = InitializeReplaySessionResponse::fromJson
         )
     }
 
@@ -206,7 +206,7 @@ class SessionReplayApiService(
             operation = "identifyReplaySession",
             query = IDENTIFY_REPLAY_SESSION_QUERY,
             variables = variables,
-            dataSerializer = IdentifySessionResponse.serializer()
+            dataParser = IdentifySessionResponse::fromJson
         )
     }
 
@@ -251,7 +251,7 @@ class SessionReplayApiService(
             operation = "pushPayload",
             query = PUSH_PAYLOAD_QUERY,
             variables = variables,
-            dataSerializer = PushPayloadResponse.serializer()
+            dataParser = PushPayloadResponse::fromJson
         )
     }
 
@@ -263,10 +263,10 @@ class SessionReplayApiService(
         operation: String,
         query: String,
         variables: Map<String, JsonElement>,
-        dataSerializer: KSerializer<T>,
+        dataParser: (JSONObject) -> T,
     ) {
         try {
-            graphqlClient.execute(query = query, variables = variables, dataSerializer = dataSerializer)
+            graphqlClient.execute(query = query, variables = variables, dataParser = dataParser)
         } catch (e: GraphQLClientException) {
             throw SessionReplayApiException(operation, e)
         }

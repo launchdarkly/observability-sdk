@@ -3,10 +3,10 @@ package com.launchdarkly.observability.network
 import com.launchdarkly.observability.context.ObserveLogger
 import com.launchdarkly.observability.coroutines.DispatcherProviderHolder
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
+import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 import kotlin.coroutines.cancellation.CancellationException
@@ -15,13 +15,6 @@ import kotlin.coroutines.cancellation.CancellationException
 data class GraphQLRequest(
     val query: String,
     val variables: Map<String, JsonElement> = emptyMap()
-)
-
-/** Standard GraphQL envelope: `{ data, errors }`. */
-@Serializable
-private data class GraphQLResponse<T>(
-    val data: T?,
-    val errors: List<GraphQLError>? = null
 )
 
 /**
@@ -55,18 +48,30 @@ sealed class GraphQLClientException(message: String, cause: Throwable? = null) :
     class Decoding(cause: Throwable) : GraphQLClientException("Decoding error: ${cause.message}", cause)
 }
 
-@Serializable
 data class GraphQLError(
     val message: String,
     val locations: List<GraphQLLocation>? = null,
     val path: List<String>? = null,
     val extensions: GraphQLErrorExtensions? = null
-)
+) {
+    internal companion object {
+        fun fromJson(json: JSONObject) = GraphQLError(
+            message = json.getString("message"),
+            locations = json.objectListOrNull("locations", GraphQLLocation::fromJson)?.filterNotNull(),
+            // GraphQL paths mix field names and list indices; both are kept as their string form.
+            path = json.listOrNull("path") { array, index -> array.get(index).toString() },
+            extensions = json.objectOrNull("extensions", GraphQLErrorExtensions::fromJson)
+        )
+
+        /** The `errors` of a GraphQL envelope, or `null` when it has none. */
+        fun listFromEnvelope(envelope: JSONObject): List<GraphQLError>? =
+            envelope.objectListOrNull("errors", ::fromJson)?.filterNotNull()?.takeIf { it.isNotEmpty() }
+    }
+}
 
 /**
  * Server-supplied metadata about a [GraphQLError].
  */
-@Serializable
 data class GraphQLErrorExtensions(
     /** Machine-readable error identifier, e.g. `SESSION_REPLAY_BLOCKED_IN_REGION`. */
     val code: String? = null,
@@ -75,22 +80,26 @@ data class GraphQLErrorExtensions(
      * any status-code based classification when present.
      */
     val retryable: Boolean? = null
-)
+) {
+    internal companion object {
+        fun fromJson(json: JSONObject) = GraphQLErrorExtensions(
+            code = json.stringOrNull("code"),
+            retryable = json.booleanOrNull("retryable")
+        )
+    }
+}
 
-/**
- * Errors-only view of the GraphQL envelope. The public graph also returns this shape alongside a
- * non-2xx status, where `data` is absent, so error metadata can still be read from the raw body.
- */
-@Serializable
-private data class GraphQLErrorEnvelope(
-    val errors: List<GraphQLError>? = null
-)
-
-@Serializable
 data class GraphQLLocation(
     val line: Int,
     val column: Int
-)
+) {
+    internal companion object {
+        fun fromJson(json: JSONObject) = GraphQLLocation(
+            line = json.getInt("line"),
+            column = json.getInt("column")
+        )
+    }
+}
 
 interface UrlConnectionProvider {
     fun openConnection(url: String): HttpURLConnection
@@ -124,14 +133,15 @@ class GraphQLClient(
      * Executes a GraphQL query
      * @param query The GraphQL query string
      * @param variables Query variables
-     * @param dataSerializer Kotlinx serialization serializer for the expected response data type
-     * @return the deserialized `data` of the response
+     * @param dataParser Builds the expected response data type from the response's `data` object.
+     * It should throw when the object is not the shape the operation expects.
+     * @return the parsed `data` of the response
      * @throws GraphQLClientException for every failure, including a GraphQL `errors` response
      */
     suspend fun <T> execute(
         query: String,
         variables: Map<String, JsonElement> = emptyMap(),
-        dataSerializer: KSerializer<T>,
+        dataParser: (JSONObject) -> T,
         compress: Boolean = true
     ): T = withContext(DispatcherProviderHolder.current.io) {
         var connection: HttpURLConnection? = null
@@ -178,15 +188,22 @@ class GraphQLClient(
             }
 
             val responseJson = connectionLocal.inputStream.bufferedReader().use { it.readText() }
-            val envelope = try {
-                json.decodeFromString(GraphQLResponse.serializer(dataSerializer), responseJson)
+            val (errors, data) = try {
+                val envelope = JSONObject(responseJson)
+                GraphQLError.listFromEnvelope(envelope) to envelope.objectOrNull("data")
             } catch (e: Exception) {
                 throw GraphQLClientException.Decoding(e)
             }
 
-            envelope.errors?.takeIf { it.isNotEmpty() }?.let { throw GraphQLClientException.GraphQLErrors(it) }
+            errors?.let { throw GraphQLClientException.GraphQLErrors(it) }
 
-            envelope.data ?: throw GraphQLClientException.MissingData()
+            data ?: throw GraphQLClientException.MissingData()
+
+            try {
+                dataParser(data)
+            } catch (e: Exception) {
+                throw GraphQLClientException.Decoding(e)
+            }
         } catch (e: GraphQLClientException) {
             logFailure(e)
             throw e
@@ -206,7 +223,7 @@ class GraphQLClient(
      * `extensions` are more specific than the status code, so they are worth reading off a rejection.
      */
     private fun errorsIn(body: String): List<GraphQLError>? = try {
-        json.decodeFromString(GraphQLErrorEnvelope.serializer(), body).errors?.takeIf { it.isNotEmpty() }
+        GraphQLError.listFromEnvelope(JSONObject(body))
     } catch (_: Exception) {
         null
     }

@@ -80,7 +80,7 @@ class SamplingApiService(
             return graphqlClient.execute(
                 query = GET_SAMPLING_CONFIG_QUERY,
                 variables = variables,
-                dataSerializer = SamplingResponse.serializer()
+                dataParser = SamplingResponse::fromJson
             ).mapToEntity()
         } catch (e: Exception) {
             // Sampling falls back to "sample everything" when the config cannot be read, so every failure
