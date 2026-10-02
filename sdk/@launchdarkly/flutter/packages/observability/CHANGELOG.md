@@ -2,6 +2,13 @@
 
 All notable changes to the LaunchDarkly Observability SDK for Flutter will be documented in this file. This project adheres to [Semantic Versioning](https://semver.org).
 
+## [1.0.1](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-1.0.0...launchdarkly_flutter_observability-1.0.1) (2026-10-02)
+
+
+### Bug Fixes
+
+* bump AGP buildscript Netty off CVE-2023-44487 ([#788](https://github.com/launchdarkly/observability-sdk/issues/788)) ([982ba5a](https://github.com/launchdarkly/observability-sdk/commit/982ba5ad062c50c520d2d2e67335f9b11f7f9f69))
+
 ## [1.0.0](https://github.com/launchdarkly/observability-sdk/compare/launchdarkly_flutter_observability-0.19.1...launchdarkly_flutter_observability-1.0.0) (2026-09-24)
 
 
