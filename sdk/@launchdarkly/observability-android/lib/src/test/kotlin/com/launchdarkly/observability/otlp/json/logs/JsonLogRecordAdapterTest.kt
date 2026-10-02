@@ -2,6 +2,8 @@ package com.launchdarkly.observability.otlp.json.logs
 
 import com.launchdarkly.observability.otlp.json.JsonTestHelpers.array
 import com.launchdarkly.observability.otlp.json.JsonTestHelpers.encodeToTree
+import com.launchdarkly.observability.otlp.json.JsonTree
+import com.launchdarkly.observability.otlp.json.toJsonBytes
 import com.launchdarkly.observability.otlp.json.JsonTestHelpers.int
 import com.launchdarkly.observability.otlp.json.JsonTestHelpers.obj
 import com.launchdarkly.observability.otlp.json.JsonTestHelpers.string
@@ -16,7 +18,6 @@ import io.opentelemetry.api.trace.TraceState
 import io.opentelemetry.sdk.common.InstrumentationScopeInfo
 import io.opentelemetry.sdk.resources.Resource
 import io.opentelemetry.sdk.testing.logs.TestLogRecordData
-import kotlinx.serialization.json.JsonObject
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
@@ -180,12 +181,12 @@ class JsonLogRecordAdapterTest {
         assertEquals(Severity.ERROR.severityNumber, int(logRecord["severityNumber"]))
     }
 
-    private fun encode(record: io.opentelemetry.sdk.logs.data.LogRecordData): JsonObject {
+    private fun encode(record: io.opentelemetry.sdk.logs.data.LogRecordData): JsonTree {
         val request = JsonLogRecordAdapter.toJsonRequest(listOf(record))
-        return encodeToTree(request, OtlpJsonExportLogsServiceRequest.serializer())
+        return encodeToTree(request.toJsonBytes())
     }
 
-    private fun drillToLogRecord(tree: JsonObject): JsonObject {
+    private fun drillToLogRecord(tree: JsonTree): JsonTree {
         val resourceLog = obj(array(tree["resourceLogs"])[0])
         val scopeLog = obj(array(resourceLog["scopeLogs"])[0])
         return obj(array(scopeLog["logRecords"])[0])

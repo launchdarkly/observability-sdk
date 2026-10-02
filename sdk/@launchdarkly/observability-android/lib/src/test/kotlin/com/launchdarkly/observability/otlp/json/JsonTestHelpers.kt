@@ -1,74 +1,74 @@
 package com.launchdarkly.observability.otlp.json
 
-import kotlinx.serialization.KSerializer
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonNull
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.boolean
-import kotlinx.serialization.json.double
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
+import org.json.JSONArray
+import org.json.JSONObject
+import org.json.JSONTokener
+
+/** A parsed JSON object, with nested objects as [JsonTree] and arrays as [List]. Explicit `null`s stay as `null` values. */
+typealias JsonTree = Map<String, Any?>
 
 /**
  * Helpers mirroring the Swift `JsonTestHelpers` for poking at the OTLP/JSON tree produced by the
- * per-signal adapters. All parsing is done through kotlinx-serialization (no reflection), so the
- * resulting tree faithfully represents what the HTTP client will actually send on the wire.
+ * per-signal adapters. The tree is parsed from the exact bytes the HTTP client sends, so it faithfully
+ * represents what goes on the wire.
  */
 object JsonTestHelpers {
-    private val ENCODER: Json = Json { encodeDefaults = false; explicitNulls = false }
 
-    fun <T> encodeToTree(value: T, serializer: KSerializer<T>): JsonObject {
-        val text = ENCODER.encodeToString(serializer, value)
-        return ENCODER.parseToJsonElement(text).jsonObject
+    fun encodeToTree(bytes: ByteArray): JsonTree = obj(parse(String(bytes, Charsets.UTF_8)))
+
+    fun parse(json: String): Any? = toTree(JSONTokener(json).nextValue())
+
+    private fun toTree(value: Any?): Any? = when (value) {
+        JSONObject.NULL, null -> null
+        is JSONObject -> value.keys().asSequence().associateWith { toTree(value.get(it)) }
+        is JSONArray -> List(value.length()) { toTree(value.get(it)) }
+        else -> value
     }
 
-    fun obj(element: JsonElement?): JsonObject {
+    @Suppress("UNCHECKED_CAST")
+    fun obj(element: Any?): JsonTree {
         checkNotNull(element) { "expected object, got null" }
-        check(element is JsonObject) { "expected object, got $element" }
-        return element
+        check(element is Map<*, *>) { "expected object, got $element" }
+        return element as JsonTree
     }
 
-    fun array(element: JsonElement?): JsonArray {
+    fun array(element: Any?): List<Any?> {
         checkNotNull(element) { "expected array, got null" }
-        check(element is JsonArray) { "expected array, got $element" }
+        check(element is List<*>) { "expected array, got $element" }
         return element
     }
 
-    fun stringOrNull(element: JsonElement?): String? {
-        if (element == null || element is JsonNull) return null
-        val primitive = element as? JsonPrimitive ?: error("expected primitive, got $element")
-        if (!primitive.isString) error("expected string, got $primitive")
-        return primitive.content
+    fun stringOrNull(element: Any?): String? {
+        if (element == null) return null
+        check(element is String) { "expected string, got $element" }
+        return element
     }
 
-    fun string(element: JsonElement?): String =
+    fun string(element: Any?): String =
         stringOrNull(element) ?: error("expected string, got null")
 
-    fun intOrNull(element: JsonElement?): Int? {
-        if (element == null || element is JsonNull) return null
-        val primitive = element as? JsonPrimitive ?: error("expected primitive, got $element")
-        return primitive.content.toIntOrNull()
-            ?: error("expected int, got ${primitive.content}")
+    fun intOrNull(element: Any?): Int? = when (element) {
+        null -> null
+        is Number -> element.toInt().also { check(it.toDouble() == element.toDouble()) { "expected int, got $element" } }
+        is String -> element.toIntOrNull() ?: error("expected int, got $element")
+        else -> error("expected int, got $element")
     }
 
-    fun int(element: JsonElement?): Int =
+    fun int(element: Any?): Int =
         intOrNull(element) ?: error("expected int, got null")
 
-    fun doubleOrNull(element: JsonElement?): Double? {
-        if (element == null || element is JsonNull) return null
-        val primitive = element as? JsonPrimitive ?: error("expected primitive, got $element")
-        return primitive.double
+    fun doubleOrNull(element: Any?): Double? = when (element) {
+        null -> null
+        is Number -> element.toDouble()
+        is String -> element.toDoubleOrNull() ?: error("expected double, got $element")
+        else -> error("expected double, got $element")
     }
 
-    fun double(element: JsonElement?): Double =
+    fun double(element: Any?): Double =
         doubleOrNull(element) ?: error("expected double, got null")
 
-    fun boolean(element: JsonElement?): Boolean {
-        val primitive = element as? JsonPrimitive ?: error("expected primitive, got $element")
-        return primitive.boolean
+    fun boolean(element: Any?): Boolean {
+        check(element is Boolean) { "expected boolean, got $element" }
+        return element
     }
 }

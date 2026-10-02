@@ -5,8 +5,7 @@ import io.mockk.mockk
 import io.mockk.unmockkAll
 import io.mockk.verify
 import kotlinx.coroutines.test.runTest
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonPrimitive
+import org.json.JSONObject
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
@@ -15,13 +14,17 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.net.HttpURLConnection
 
 class GraphQLClientTest {
 
-    @Serializable
-    data class TestData(val id: String, val name: String)
+    data class TestData(val id: String, val name: String) {
+        companion object {
+            fun fromJson(json: JSONObject) = TestData(id = json.getString("id"), name = json.getString("name"))
+        }
+    }
 
     private val testQuery = """
         query EmptyQuery {
@@ -63,8 +66,8 @@ class GraphQLClientTest {
 
         val result = graphQLClient.execute(
             query = testQuery,
-            variables = mapOf("test_variable" to JsonPrimitive("567")),
-            dataSerializer = TestData.serializer()
+            variables = mapOf("test_variable" to "567"),
+            dataParser = TestData::fromJson
         )
 
         assertEquals("123", result.id)
@@ -185,10 +188,48 @@ class GraphQLClientTest {
         }
     }
 
+    @Test
+    fun `request body leaves out variables when there are none`() = runTest {
+        val body = captureRequestBody()
+        respondWith("""{"data": {"id": "1", "name": "n"}}""")
+
+        graphQLClient.execute(query = "query Q { f }", dataParser = TestData::fromJson, compress = false)
+
+        assertEquals("""{"query":"query Q { f }"}""", body.toString(Charsets.UTF_8.name()))
+    }
+
+    @Test
+    fun `request body writes variables by their runtime type`() = runTest {
+        val body = captureRequestBody()
+        respondWith("""{"data": {"id": "1", "name": "n"}}""")
+
+        graphQLClient.execute(
+            query = "q",
+            variables = linkedMapOf(
+                "s" to "a\"b",
+                "b" to false,
+                "n" to null,
+                "i" to 1,
+                "list" to emptyList<String>(),
+                "obj" to mapOf("k" to "v"),
+            ),
+            dataParser = TestData::fromJson,
+            compress = false,
+        )
+
+        assertEquals(
+            """{"query":"q","variables":{"s":"a\"b","b":false,"n":null,"i":1,"list":[],"obj":{"k":"v"}}}""",
+            body.toString(Charsets.UTF_8.name())
+        )
+    }
+
+    private fun captureRequestBody(): ByteArrayOutputStream =
+        ByteArrayOutputStream().also { every { mockConnection.outputStream } returns it }
+
     private fun respondWith(responseJson: String) {
         every { mockConnection.inputStream } returns ByteArrayInputStream(responseJson.toByteArray())
     }
 
     private suspend fun execute(): TestData =
-        graphQLClient.execute(query = testQuery, dataSerializer = TestData.serializer())
+        graphQLClient.execute(query = testQuery, dataParser = TestData::fromJson)
 }

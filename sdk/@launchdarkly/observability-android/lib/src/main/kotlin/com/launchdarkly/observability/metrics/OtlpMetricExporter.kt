@@ -3,7 +3,7 @@ package com.launchdarkly.observability.metrics
 import com.launchdarkly.observability.otlp.OtlpConfiguration
 import com.launchdarkly.observability.otlp.OtlpHttpClient
 import com.launchdarkly.observability.otlp.json.metrics.JsonMetricsAdapter
-import com.launchdarkly.observability.otlp.json.metrics.OtlpJsonExportMetricsServiceRequest
+import com.launchdarkly.observability.otlp.json.toJsonBytes
 import com.launchdarkly.observability.replay.transport.EventExporting
 import com.launchdarkly.observability.replay.transport.EventQueueItem
 import io.opentelemetry.sdk.metrics.data.MetricData
@@ -30,9 +30,6 @@ class OtlpMetricExporter(
         if (metrics.isEmpty()) return
 
         val body = JsonMetricsAdapter.toJsonRequest(metrics)
-        httpClient.send(
-            body = body,
-            serializer = OtlpJsonExportMetricsServiceRequest.serializer(),
-        )
+        httpClient.send(body.toJsonBytes())
     }
 }

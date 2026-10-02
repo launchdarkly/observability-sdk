@@ -5,7 +5,6 @@ import com.launchdarkly.observability.otlp.json.common.OtlpJsonAnyValue
 import com.launchdarkly.observability.otlp.json.common.OtlpJsonInstrumentationScope
 import com.launchdarkly.observability.otlp.json.common.OtlpJsonKeyValue
 import com.launchdarkly.observability.otlp.json.common.OtlpJsonResource
-import kotlinx.serialization.Serializable
 
 /**
  * OTLP/JSON wire-format types for the logs signal.
@@ -13,26 +12,22 @@ import kotlinx.serialization.Serializable
  * Mirrors the Swift `OtlpJsonLogModels.swift`.
  */
 
-@Serializable
 data class OtlpJsonExportLogsServiceRequest(
     val resourceLogs: List<OtlpJsonResourceLogs>,
 )
 
-@Serializable
 data class OtlpJsonResourceLogs(
     val resource: OtlpJsonResource? = null,
     val scopeLogs: List<OtlpJsonScopeLogs>,
     val schemaUrl: String? = null,
 )
 
-@Serializable
 data class OtlpJsonScopeLogs(
     val scope: OtlpJsonInstrumentationScope? = null,
     val logRecords: List<OtlpJsonLogRecord>,
     val schemaUrl: String? = null,
 )
 
-@Serializable
 data class OtlpJsonLogRecord(
     val timeUnixNano: JsonStringLong? = null,
     val observedTimeUnixNano: JsonStringLong? = null,
