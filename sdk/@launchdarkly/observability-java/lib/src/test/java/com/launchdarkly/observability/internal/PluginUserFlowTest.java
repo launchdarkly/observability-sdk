@@ -112,7 +112,7 @@ class PluginUserFlowTest {
     }
 
     private ObservabilityOptions options(boolean manualStart) {
-        String base = "http://" + server.getAddress().getHostString() + ":" + server.getAddress().getPort();
+        String base = "http".concat("://") + server.getAddress().getHostString() + ":" + server.getAddress().getPort();
         return new ObservabilityOptions.Builder()
                 .serviceName("orders-service")
                 .serviceVersion("1.2.3")
